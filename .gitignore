@@ -1,0 +1,6 @@
+McfunctionSharp.iml
+/.idea/
+/antlr/.antlr/
+/node_modules/
+/build/
+/.vscode/

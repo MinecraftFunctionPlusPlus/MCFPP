@@ -1,0 +1,1 @@
+mv ../build/esm/index.js ../build/esm/index.mjs
