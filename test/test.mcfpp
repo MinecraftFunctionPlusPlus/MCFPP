@@ -1,0 +1,14 @@
+func qwq(){
+    const int qwq = 9;
+    int p;
+    int i = p + qwq;
+}
+
+class UwU{
+    int i;
+
+    public UwU(){
+        int p;
+        i = p;
+    }
+}

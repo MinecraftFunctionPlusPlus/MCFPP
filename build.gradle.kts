@@ -22,6 +22,7 @@ dependencies {
     testImplementation(kotlin("test"))
     implementation("org.apache.groovy:groovy-all:4.0.11")
     implementation("com.alibaba.fastjson2:fastjson2:2.0.28")
+    implementation("org.apache.logging.log4j:log4j-api:2.20.0")
     implementation("org.apache.logging.log4j:log4j-core:2.20.0")
     antlr("org.antlr:antlr4:4.12.0")
 
@@ -38,7 +39,7 @@ tasks.generateGrammarSource {
 
 tasks.jar{
     manifest{
-        attributes("Main-Class" to "MainKt")
+        attributes("Main-Class" to "MCFPPKt")
     }
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
     from(configurations.runtimeClasspath.get().filter { it.name.endsWith("jar") }.map { zipTree(it) })
@@ -55,5 +56,5 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
 
 
 application {
-    mainClass.set("MainKt")
+    mainClass.set("MCFPPKt")
 }

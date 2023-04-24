@@ -1,5 +1,9 @@
 grammar mcfpp;
 
+@header{
+package top.alumopper.mcfpp.lib;
+}
+
 //一个mcfpp文件
 compilationUnit
     :   namespaceDeclaration?
@@ -21,13 +25,19 @@ typeDeclaration
 classOrFunctionDeclaration
     :   classDeclaration
     |   functionDeclaration
-    |   nativeDeclaration
+    |   nativeFuncDeclaration
+    |   nativeClassDeclaration
     ;
 
 //类声明
 classDeclaration
     :   STATIC? FINAL? 'class' className (EXTENDS className)? classBody
     ;
+
+nativeClassDeclaration
+    :   NATIVE 'class' className '->' javaRefer ';'
+    ;
+
 
 classBody
     :   '{' (classMemberDeclaration|staticClassMemberDeclaration)* '}'
@@ -46,7 +56,7 @@ classMember
     :   classFunctionDeclaration
     |   fieldDeclaration ';'
     |   constructorDeclaration
-    |   nativeDeclaration
+    |   nativeFuncDeclaration
     |   nativeConstructorDeclaration
     ;
 
@@ -56,14 +66,14 @@ classFunctionDeclaration
 
 //函数声明
 functionDeclaration
-    :    functionTag? 'func' namespaceID '(' parameterList? ')' '{' functionBody '}'
+    :    INLINE? functionTag? 'func' namespaceID '(' parameterList? ')' '{' functionBody '}'
     ;
 
 namespaceID
     : (Identifier ':')? Identifier
     ;
 
-nativeDeclaration
+nativeFuncDeclaration
     :   accessModifier? NATIVE 'func' Identifier '(' parameterList? ')' '->' javaRefer ';'
     ;
 
@@ -100,8 +110,8 @@ constructorCall
 
 //变量声明
 fieldDeclaration
-    :   type Identifier
-    |   type Identifier '=' expression
+    :   CONST? type Identifier
+    |   CONST? type Identifier '=' expression
     ;
 
 //参数列表
@@ -121,7 +131,7 @@ expression
 
 //能作为语句的表达式
 statementExpression
-    :   varWithSelector '=' expression
+    :   basicExpression '=' expression
     ;
 
 //条件表达式
@@ -372,6 +382,9 @@ PUBLIC:'public';
 PROTECTED:'protected';
 PRIVATE:'private';
 
+CONST:'const';
+INLINE:'inline';
+
 InsideClass
     :   'entity'
     |   'selector'
@@ -393,7 +406,7 @@ VEC:'vec';
 WAVE:'~';
 
 Identifier
-    :   [a-z0-9_]+
+    :   [a-z_][a-zA-Z0-9_]*
     ;
 
 ClassIdentifier

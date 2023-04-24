@@ -5,16 +5,16 @@ import org.antlr.v4.runtime.CommonTokenStream
 fun main(args: Array<String>) {
     println("Hello World!")
 
-    val code = ""
-    val input = CharStreams.fromString(code)
-    val lexer = mcfppLexer(input)
-    val tokens = CommonTokenStream(lexer)
-    val parser = mcfppParser(tokens).apply {
-        buildParseTree = true
-    }
-    val tree = parser.compilationUnit()
-    val visitor = mcfppBaseVisitor<String>()
-    visitor.visit(tree)
+    //val code = ""
+    //val input = CharStreams.fromString(code)
+    //val lexer = mcfppLexer(input)
+    //val tokens = CommonTokenStream(lexer)
+    //val parser = mcfppParser(tokens).apply {
+    //    buildParseTree = true
+    //}
+    //val tree = parser.compilationUnit()
+    //val visitor = mcfppBaseVisitor<String>()
+    //visitor.visit(tree)
 
     println("Program arguments: ${args.joinToString()}")
     evalute("""
