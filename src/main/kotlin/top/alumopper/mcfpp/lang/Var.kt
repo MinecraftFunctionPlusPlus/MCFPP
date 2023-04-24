@@ -5,7 +5,6 @@ import top.alumopper.mcfpp.exception.VariableConverseException
 import top.alumopper.mcfpp.lib.CacheContainer
 import top.alumopper.mcfpp.lib.Class
 import top.alumopper.mcfpp.lib.ClassMember
-import top.alumopper.mcfpp.lib.mcfppParser
 import java.util.*
 
 /**
@@ -70,7 +69,7 @@ abstract class Var : ClassMember, Cloneable {
     /**
      * 访问修饰符
      */
-    var accessModifier: ClassMember.AccessModifier = ClassMember.AccessModifier.PRIVATE
+    override var accessModifier: ClassMember.AccessModifier = ClassMember.AccessModifier.PRIVATE
 
     /**
      * 成员所在的类
@@ -114,15 +113,6 @@ abstract class Var : ClassMember, Cloneable {
      * @param type 要转换到的目标类型
      */
     abstract fun cast(type: String): Var?
-    @Override
-    override fun setAccessModifier(accessModifier: ClassMember.AccessModifier) {
-        this.accessModifier = accessModifier
-    }
-
-    @Override
-    override fun getAccessModifier(): ClassMember.AccessModifier {
-        return accessModifier
-    }
 
     @Override
     override fun Class(): Class? {

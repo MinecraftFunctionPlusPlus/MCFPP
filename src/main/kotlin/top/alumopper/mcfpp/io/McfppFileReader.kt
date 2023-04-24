@@ -1,5 +1,7 @@
 package top.alumopper.mcfpp.io
 
+import mcfppLexer
+import mcfppParser
 import org.antlr.v4.runtime.*
 import top.alumopper.mcfpp.Project
 import top.alumopper.mcfpp.lib.*

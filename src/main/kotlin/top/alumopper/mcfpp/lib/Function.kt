@@ -146,7 +146,7 @@ open class Function : ClassMember, CacheContainer {
     /**
      * 访问修饰符
      */
-    var accessModifier: ClassMember.AccessModifier = ClassMember.AccessModifier.PRIVATE
+    override var accessModifier: ClassMember.AccessModifier = ClassMember.AccessModifier.PRIVATE
 
     /**
      * 是否是静态的
@@ -359,16 +359,6 @@ open class Function : ClassMember, CacheContainer {
             }
         }
         return false
-    }
-
-    @Override
-    override fun setAccessModifier(accessModifier: ClassMember.AccessModifier) {
-        this.accessModifier = accessModifier
-    }
-
-    @Override
-    override fun getAccessModifier(): ClassMember.AccessModifier {
-        return accessModifier
     }
 
     @Override

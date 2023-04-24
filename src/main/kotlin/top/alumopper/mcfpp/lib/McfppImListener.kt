@@ -1,11 +1,11 @@
 package top.alumopper.mcfpp.lib
 
+import mcfppBaseListener
 import org.antlr.v4.runtime.RuleContext
 import top.alumopper.mcfpp.Project
 import top.alumopper.mcfpp.command.Commands
 import top.alumopper.mcfpp.exception.*
 import top.alumopper.mcfpp.lang.*
-import top.alumopper.mcfpp.lib.mcfppParser.*
 
 class McfppImListener : mcfppBaseListener() {
     /**
@@ -13,13 +13,13 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun enterFunctionBody(ctx: FunctionBodyContext) {
+    override fun enterFunctionBody(ctx: mcfppParser.FunctionBodyContext) {
         var f: Function
         //获取函数对象
-        if (ctx.parent.parent !is ClassMemberContext) {
+        if (ctx.parent.parent !is mcfppParser.ClassMemberContext) {
             //不是类成员
             //创建函数对象
-            val parent: FunctionDeclarationContext = ctx.parent as FunctionDeclarationContext
+            val parent: mcfppParser.FunctionDeclarationContext = ctx.parent as mcfppParser.FunctionDeclarationContext
             f = if (parent.namespaceID().Identifier().size == 1) {
                 Function(parent.namespaceID().Identifier(0).text)
             } else {
@@ -30,23 +30,23 @@ class McfppImListener : mcfppBaseListener() {
             }
             //解析参数
             if (parent.parameterList() != null) {
-                f.addParams((ctx.parent as FunctionDeclarationContext).parameterList())
+                f.addParams((ctx.parent as mcfppParser.FunctionDeclarationContext).parameterList())
             }
             //获取缓存中的对象
             f = Project.global.cache.getFunction(f.namespace, f.name, f.paramTypeList)!!
-        } else if (ctx.parent is ConstructorDeclarationContext) {
+        } else if (ctx.parent is mcfppParser.ConstructorDeclarationContext) {
             //是构造函数
             //创建构造函数对象并解析参数
             val temp = Function("temp")
-            if ((ctx.parent as ConstructorDeclarationContext).parameterList() != null) {
-                temp.addParams((ctx.parent as ConstructorDeclarationContext).parameterList())
+            if ((ctx.parent as mcfppParser.ConstructorDeclarationContext).parameterList() != null) {
+                temp.addParams((ctx.parent as mcfppParser.ConstructorDeclarationContext).parameterList())
             }
             //获取缓存中的对象
             f = Class.currClass!!.getConstructor(FunctionParam.toStringList(temp.params))!!
         } else {
             //是类的成员函数
             //创建函数对象并解析参数
-            val qwq: ClassFunctionDeclarationContext = ctx.parent as ClassFunctionDeclarationContext
+            val qwq: mcfppParser.ClassFunctionDeclarationContext = ctx.parent as mcfppParser.ClassFunctionDeclarationContext
             f = Function(qwq.Identifier().text, Class.currClass, false)
             if (qwq.parameterList() != null) {
                 f.addParams(qwq.parameterList())
@@ -62,7 +62,7 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun exitFunctionBody(ctx: FunctionBodyContext?) {
+    override fun exitFunctionBody(ctx: mcfppParser.FunctionBodyContext?) {
         if (Class.currClass == null) {
             //不在类中
             Function.currFunction = Project.global.globalInit
@@ -76,7 +76,7 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun exitNamespaceDeclaration(ctx: NamespaceDeclarationContext) {
+    override fun exitNamespaceDeclaration(ctx: mcfppParser.NamespaceDeclarationContext) {
         Project.currNamespace = ctx.Identifier().text
     }
 
@@ -85,11 +85,11 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun exitFieldDeclaration(ctx: FieldDeclarationContext) {
+    override fun exitFieldDeclaration(ctx: mcfppParser.FieldDeclarationContext) {
         //变量生成
 
         //变量生成
-        val `var`: Var = if (ctx.parent is ClassMemberContext) {
+        val `var`: Var = if (ctx.parent is mcfppParser.ClassMemberContext) {
             return
         } else {
             //函数变量，生成
@@ -130,7 +130,7 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun exitStatementExpression(ctx: StatementExpressionContext) {
+    override fun exitStatementExpression(ctx: mcfppParser.StatementExpressionContext) {
         Function.addCommand("#" + ctx.text)
         val left: Var = McfppExprVisitor().visit(ctx.basicExpression())!!
         if (left.isConst == Var.ConstStatus.ASSIGNED) {
@@ -161,7 +161,7 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun exitSelfAddOrMinusStatement(ctx: SelfAddOrMinusStatementContext) {
+    override fun exitSelfAddOrMinusStatement(ctx: mcfppParser.SelfAddOrMinusStatementContext) {
         Function.addCommand("#" + ctx.text)
         val re: Var? = Function.currFunction!!.getVar(ctx.selfAddOrMinusExpression().Identifier().text)
         if (re == null) {
@@ -197,7 +197,7 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun exitFunctionCall(ctx: FunctionCallContext) {
+    override fun exitFunctionCall(ctx: mcfppParser.FunctionCallContext) {
         Function.addCommand("#" + ctx.text)
         //参数获取
         val args: ArrayList<Var> = ArrayList()
@@ -237,9 +237,9 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun enterIfBlock(ctx: IfBlockContext) {
+    override fun enterIfBlock(ctx: mcfppParser.IfBlockContext) {
         Function.addCommand("#if start")
-        val parent: IfStatementContext = ctx.parent as IfStatementContext
+        val parent: mcfppParser.IfStatementContext = ctx.parent as mcfppParser.IfStatementContext
         //是if语句，获取参数
         val index: Int = parent.ifBlock().indexOf(ctx)
         //匿名函数的定义
@@ -289,7 +289,7 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun exitIfBlock(ctx: IfBlockContext?) {
+    override fun exitIfBlock(ctx: mcfppParser.IfBlockContext?) {
         Function.currFunction = Function.currFunction!!.parent[0]
         //调用完毕，将子函数的栈销毁
         Function.addCommand("data remove storage mcfpp:system " + Project.name + ".stack_frame[0]")
@@ -301,7 +301,7 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun enterElseIfStatement(ctx: ElseIfStatementContext) {
+    override fun enterElseIfStatement(ctx: mcfppParser.ElseIfStatementContext) {
         Function.addCommand("#else if start")
         //匿名函数的定义
         val f: Function = InternalFunction("_if_", Function.currFunction!!)
@@ -341,7 +341,7 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun exitElseIfStatement(ctx: ElseIfStatementContext?) {
+    override fun exitElseIfStatement(ctx: mcfppParser.ElseIfStatementContext?) {
         Function.currFunction = Function.currFunction!!.parent[0]
         //调用完毕，将子函数的栈销毁
         Function.addCommand("data remove storage mcfpp:system " + Project.name + ".stack_frame[0]")
@@ -353,9 +353,9 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun enterWhileBlock(ctx: WhileBlockContext) {
+    override fun enterWhileBlock(ctx: mcfppParser.WhileBlockContext) {
         Function.addCommand("#while start")
-        val parent: WhileStatementContext = ctx.parent as WhileStatementContext
+        val parent: mcfppParser.WhileStatementContext = ctx.parent as mcfppParser.WhileStatementContext
         val exp: MCBool = McfppExprVisitor().visit(parent.expression()) as MCBool
         //匿名函数的定义
         val f: Function = InternalFunction("_while_", Function.currFunction!!)
@@ -397,13 +397,13 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun exitWhileBlock(ctx: WhileBlockContext) {
+    override fun exitWhileBlock(ctx: mcfppParser.WhileBlockContext) {
         if (!Function.isBreak && Function.isLastFunctionEnd != 0) {
             Function.currFunction = Function.currFunction!!.parent[0]
         }
         //递归调用函数
         //重新计算表达式
-        val parent: WhileStatementContext = ctx.parent as WhileStatementContext
+        val parent: mcfppParser.WhileStatementContext = ctx.parent as mcfppParser.WhileStatementContext
         val exp: MCBool = McfppExprVisitor().visit(parent.expression()) as MCBool
         //给子函数开栈
         Function.addCommand("data modify storage mcfpp:system " + Project.name + ".stack_frame prepend value {}")
@@ -423,7 +423,7 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun enterDoWhileBlock(ctx: DoWhileBlockContext?) {
+    override fun enterDoWhileBlock(ctx: mcfppParser.DoWhileBlockContext?) {
         Function.addCommand("#do while start")
         //匿名函数的定义
         val f: Function = InternalFunction("_dowhile_", Function.currFunction!!)
@@ -443,7 +443,7 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun exitDoWhileStatement(ctx: DoWhileStatementContext) {
+    override fun exitDoWhileStatement(ctx: mcfppParser.DoWhileStatementContext) {
         val exp: MCBool = McfppExprVisitor().visit(ctx.expression()) as MCBool
         if (exp.isConcrete && exp.value) {
             //给子函数开栈
@@ -482,7 +482,7 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun enterForStatement(ctx: ForStatementContext?) {
+    override fun enterForStatement(ctx: mcfppParser.ForStatementContext?) {
         Function.addCommand("#for start")
         Function.addCommand("data modify storage mcfpp:system " + Project.name + ".stack_frame prepend value {}")
         val forFunc: Function = InternalFunction("_for_", Function.currFunction!!)
@@ -493,7 +493,7 @@ class McfppImListener : mcfppBaseListener() {
     }
 
     @Override
-    override fun exitForStatement(ctx: ForStatementContext?) {
+    override fun exitForStatement(ctx: mcfppParser.ForStatementContext?) {
         Function.currFunction = Function.currFunction!!.parent[0]
         Function.addCommand("data remove storage mcfpp:system " + Project.name + ".stack_frame[0]")
         Function.addCommand("#for end")
@@ -511,7 +511,7 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun enterForUpdate(ctx: ForUpdateContext?) {
+    override fun enterForUpdate(ctx: mcfppParser.ForUpdateContext?) {
         Function.currFunction = InternalFunction("_forblock_", Function.currFunction!!)
     }
 
@@ -522,7 +522,7 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun exitForUpdate(ctx: ForUpdateContext?) {
+    override fun exitForUpdate(ctx: mcfppParser.ForUpdateContext?) {
         forupdate = Function.currFunction
         Function.currFunction = forupdate!!.parent[0]
     }
@@ -532,8 +532,8 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun enterForBlock(ctx: ForBlockContext) {
-        val parent: ForStatementContext = ctx.parent as ForStatementContext
+    override fun enterForBlock(ctx: mcfppParser.ForBlockContext) {
+        val parent: mcfppParser.ForStatementContext = ctx.parent as mcfppParser.ForStatementContext
         val exp: MCBool = McfppExprVisitor().visit(parent.forControl().expression()) as MCBool
         //匿名函数的定义。这里才是正式的for函数哦喵
         val f: Function = InternalFunction("_forblock_", Function.currFunction!!)
@@ -572,13 +572,13 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun exitForBlock(ctx: ForBlockContext) {
+    override fun exitForBlock(ctx: mcfppParser.ForBlockContext) {
         //for update的命令压入
         Function.currFunction!!.commands.addAll(forupdate!!.commands)
         forupdate = null
         //递归调用函数
         //重新计算表达式
-        val parent: ForStatementContext = ctx.parent as ForStatementContext
+        val parent: mcfppParser.ForStatementContext = ctx.parent as mcfppParser.ForStatementContext
         val exp: MCBool = McfppExprVisitor().visit(parent.forControl().expression()) as MCBool
         //这里就需要给子函数开栈
         Function.addCommand("data modify storage mcfpp:system " + Project.name + ".stack_frame prepend value {}")
@@ -593,7 +593,7 @@ class McfppImListener : mcfppBaseListener() {
     }
 
     @Override
-    override fun exitOrgCommand(ctx: OrgCommandContext) {
+    override fun exitOrgCommand(ctx: mcfppParser.OrgCommandContext) {
         Function.addCommand(ctx.text.substring(1))
     }
 
@@ -602,7 +602,7 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun enterStatement(ctx: StatementContext) {
+    override fun enterStatement(ctx: mcfppParser.StatementContext) {
         if (Function.currFunction!!.isEnd) {
             Project.logger.warn(
                 "Unreachable code: " + ctx.text +
@@ -635,7 +635,7 @@ class McfppImListener : mcfppBaseListener() {
 
     private var temp: MCBool? = null
     @Override
-    override fun exitControlStatement(ctx: ControlStatementContext) {
+    override fun exitControlStatement(ctx: mcfppParser.ControlStatementContext) {
         if (!inLoopStatement(ctx)) {
             Project.logger.error(
                 "'continue' or 'break' can only be used in loop statements: " +
@@ -662,16 +662,16 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun exitBlock(ctx: BlockContext) {
+    override fun exitBlock(ctx: mcfppParser.BlockContext) {
         if (!Function.currFunction!!.isEnd && Function.isLastFunctionEnd == 2) {
-            if (ctx.parent is IfBlockContext) {
+            if (ctx.parent is mcfppParser.IfBlockContext) {
                 //如果是if语句，出栈
                 Function.currFunction = Function.currFunction!!.parent.get(0)
                 Function.isLastFunctionEnd = 1
             }
-            if (ctx.parent is ForBlockContext
-                || ctx.parent is WhileBlockContext
-                || ctx.parent is DoWhileBlockContext
+            if (ctx.parent is mcfppParser.ForBlockContext
+                || ctx.parent is mcfppParser.WhileBlockContext
+                || ctx.parent is mcfppParser.DoWhileBlockContext
             ) {
                 //是循环语句，出栈的同时重置isLastFunctionEnd标志
                 Function.currFunction = Function.currFunction!!.parent.get(0)
@@ -685,9 +685,9 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun enterClassBody(ctx: ClassBodyContext) {
+    override fun enterClassBody(ctx: mcfppParser.ClassBodyContext) {
         //获取类的对象
-        val parent: ClassDeclarationContext = ctx.parent as ClassDeclarationContext
+        val parent: mcfppParser.ClassDeclarationContext = ctx.parent as mcfppParser.ClassDeclarationContext
         val identifier: String = parent.className(0).text
         //设置作用域
         Class.currClass = Project.global.cache.classes[identifier]
@@ -699,7 +699,7 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun exitClassBody(ctx: ClassBodyContext?) {
+    override fun exitClassBody(ctx: mcfppParser.ClassBodyContext?) {
         Class.currClass = null
         Function.currFunction = Project.global.globalInit
     }
@@ -709,8 +709,8 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun exitClassMemberDeclaration(ctx: ClassMemberDeclarationContext) {
-        val memberContext: ClassMemberContext = ctx.classMember()
+    override fun exitClassMemberDeclaration(ctx: mcfppParser.ClassMemberDeclarationContext) {
+        val memberContext: mcfppParser.ClassMemberContext = ctx.classMember()
         if (memberContext.classFunctionDeclaration() != null) {
             //函数声明由函数的listener处理
             return
@@ -724,13 +724,13 @@ class McfppImListener : mcfppBaseListener() {
          * @return 是否在嵌套中
          */
         private fun inLoopStatement(ctx: RuleContext): Boolean {
-            if (ctx is ForStatementContext) {
+            if (ctx is mcfppParser.ForStatementContext) {
                 return true
             }
-            if (ctx is DoWhileStatementContext) {
+            if (ctx is mcfppParser.DoWhileStatementContext) {
                 return true
             }
-            if (ctx is WhileStatementContext) {
+            if (ctx is mcfppParser.WhileStatementContext) {
                 return true
             }
             return if (ctx.parent != null) {

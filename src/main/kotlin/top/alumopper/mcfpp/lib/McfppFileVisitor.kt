@@ -1,5 +1,6 @@
 package top.alumopper.mcfpp.lib
 
+import mcfppBaseVisitor
 import top.alumopper.mcfpp.Project
 import top.alumopper.mcfpp.exception.*
 import top.alumopper.mcfpp.exception.IllegalFormatException
@@ -7,7 +8,6 @@ import top.alumopper.mcfpp.lang.INativeClass
 import top.alumopper.mcfpp.lang.Var
 import top.alumopper.mcfpp.lang.Var.ConstStatus
 import top.alumopper.mcfpp.lib.ClassMember.AccessModifier
-import top.alumopper.mcfpp.lib.mcfppParser.*
 import java.util.*
 
 /**
@@ -29,7 +29,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
      * @return null
      */
     @Override
-    override fun visitCompilationUnit(ctx: CompilationUnitContext): Any? {
+    override fun visitCompilationUnit(ctx: mcfppParser.CompilationUnitContext): Any? {
         //命名空间
         if (ctx.namespaceDeclaration() != null) {
             Project.currNamespace = ctx.namespaceDeclaration()!!.Identifier().text
@@ -47,7 +47,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
      * @return null
      */
     @Override
-    override fun visitTypeDeclaration(ctx: TypeDeclarationContext): Any? {
+    override fun visitTypeDeclaration(ctx: mcfppParser.TypeDeclarationContext): Any? {
         visit(ctx.classOrFunctionDeclaration())
         return null
     }
@@ -65,7 +65,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
      * @return null
      */
     @Override
-    override fun visitClassOrFunctionDeclaration(ctx: ClassOrFunctionDeclarationContext): Any? {
+    override fun visitClassOrFunctionDeclaration(ctx: mcfppParser.ClassOrFunctionDeclarationContext): Any? {
         if (ctx.classDeclaration() != null) {
             visit(ctx.classDeclaration())
         } else if (ctx.functionDeclaration() != null) {
@@ -83,10 +83,10 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
      * @param ctx the parse tree
      * @return null
      */
-    override fun visitNativeClassDeclaration(ctx: NativeClassDeclarationContext): Any? {
+    override fun visitNativeClassDeclaration(ctx: mcfppParser.NativeClassDeclarationContext): Any? {
         //注册类
         val identifier: String = ctx.className().text
-        return if (Project.global.cache!!.classes.containsKey(identifier)) {
+        return if (Project.global.cache.classes.containsKey(identifier)) {
             //重复声明
             Project.logger.error(
                 "The class has extended " + Class.currClass!!.identifier +
@@ -109,7 +109,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             } else {
                 NativeClass(identifier, cls)
             }
-            Project.global.cache!!.classes[identifier] = ncls
+            Project.global.cache.classes[identifier] = ncls
             null
         }
     }
@@ -120,10 +120,10 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
      * @return null
      */
     @Override
-    override fun visitClassDeclaration(ctx: ClassDeclarationContext): Any? {
+    override fun visitClassDeclaration(ctx: mcfppParser.ClassDeclarationContext): Any? {
         //注册类
         val identifier: String = ctx.className(0).text
-        if (Project.global.cache!!.classes.containsKey(identifier)) {
+        if (Project.global.cache.classes.containsKey(identifier)) {
             //重复声明
             Project.logger.error(
                 "The class has extended " + Class.currClass!!.identifier +
@@ -140,8 +140,8 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
                 Class(identifier)
             }
             if (ctx.className().size != 1) {
-                if (Project.global.cache!!.classes.containsKey(ctx.className(1).text)) {
-                    cls.parent = Project.global.cache!!.classes[ctx.className(1).text]
+                if (Project.global.cache.classes.containsKey(ctx.className(1).text)) {
+                    cls.parent = Project.global.cache.classes[ctx.className(1).text]
                 } else {
                     Project.logger.error(
                         "Undefined class: " + ctx.className(1).text +
@@ -150,7 +150,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
                     Project.errorCount++
                 }
             }
-            Project.global.cache!!.classes[identifier] = cls
+            Project.global.cache.classes[identifier] = cls
             Class.currClass = cls
             cls.isStaticClass = ctx.STATIC() != null
         }
@@ -190,12 +190,11 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
     }
 
     @Override
-    override fun visitStaticClassMemberDeclaration(ctx: StaticClassMemberDeclarationContext): Any? {
+    override fun visitStaticClassMemberDeclaration(ctx: mcfppParser.StaticClassMemberDeclarationContext): Any? {
         val m = visit(ctx.classMember()) as ClassMember
         //访问修饰符
         if (ctx.accessModifier() != null) {
-            m.setAccessModifier(
-                AccessModifier.valueOf(ctx.accessModifier().text.uppercase(Locale.getDefault())))
+            m.accessModifier = AccessModifier.valueOf(ctx.accessModifier().text.uppercase(Locale.getDefault()))
         }
         m.isStatic = true
         Class.currClass!!.addMember(m)
@@ -213,12 +212,11 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
      * @return null
      */
     @Override
-    override fun visitClassMemberDeclaration(ctx: ClassMemberDeclarationContext): Any? {
+    override fun visitClassMemberDeclaration(ctx: mcfppParser.ClassMemberDeclarationContext): Any? {
         val m = visit(ctx.classMember()) as ClassMember
         //访问修饰符
         if (ctx.accessModifier() != null) {
-            m.setAccessModifier(
-                AccessModifier.valueOf(ctx.accessModifier().text.uppercase(Locale.getDefault())))
+            m.accessModifier = AccessModifier.valueOf(ctx.accessModifier().text.uppercase(Locale.getDefault()))
         }
         if (m !is Constructor) {
             Class.currClass!!.addMember(m)
@@ -227,7 +225,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
     }
 
     @Override
-    override fun visitClassMember(ctx: ClassMemberContext): Any? {
+    override fun visitClassMember(ctx: mcfppParser.ClassMemberContext): Any? {
         return if (ctx.nativeFuncDeclaration() != null) {
             visit(ctx.nativeFuncDeclaration())
         } else if (ctx.classFunctionDeclaration() != null) {
@@ -247,12 +245,12 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
      * @return 这个类方法的对象
      */
     @Override
-    override fun visitClassFunctionDeclaration(ctx: ClassFunctionDeclarationContext): Any? {
+    override fun visitClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext): Any? {
         //创建函数对象
         val f = Function(
             ctx.Identifier().text,
             Class.currClass,
-            ctx.parent is StaticClassMemberDeclarationContext
+            ctx.parent is mcfppParser.StaticClassMemberDeclarationContext
         )
         //解析参数
         if (ctx.parameterList() != null) {
@@ -280,7 +278,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
      * @return 这个构造函数的对象
      */
     @Override
-    override fun visitConstructorDeclaration(ctx: ConstructorDeclarationContext): Any? {
+    override fun visitConstructorDeclaration(ctx: mcfppParser.ConstructorDeclarationContext): Any? {
         //是构造函数
         //创建构造函数对象，注册函数
         var f: Constructor? = null
@@ -301,7 +299,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
     }
 
     @Override
-    override fun visitNativeConstructorDeclaration(ctx: NativeConstructorDeclarationContext?): Any? {
+    override fun visitNativeConstructorDeclaration(ctx: mcfppParser.NativeConstructorDeclarationContext?): Any? {
         //TODO
         throw TODOException("")
     }
@@ -312,7 +310,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
      * @return null
      */
     @Override
-    override fun visitFunctionDeclaration(ctx: FunctionDeclarationContext): Any? {
+    override fun visitFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext): Any? {
         //创建函数对象
         val f: Function
         //是否是内联函数
@@ -361,8 +359,8 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         }
         //不是类的成员
         f.isClassMember = false
-        if (Project.global.cache!!.getFunction(f.namespace, f.name, f.paramTypeList) == null) {
-            Project.global.cache!!.functions.add(f)
+        if (Project.global.cache.getFunction(f.namespace, f.name, f.paramTypeList) == null) {
+            Project.global.cache.functions.add(f)
         } else {
             Project.logger.error(
                 "Already defined function:" + f.namespaceID +
@@ -371,7 +369,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             Project.errorCount++
             Function.currFunction = Function.nullFunction
         }
-        if (f.tag != null && (f.tag!! == FunctionTag.TICK || f.tag!! == FunctionTag.LOAD) && (ctx.parent as FunctionDeclarationContext).parameterList()!!
+        if (f.tag != null && (f.tag!! == FunctionTag.TICK || f.tag!! == FunctionTag.LOAD) && (ctx.parent as mcfppParser.FunctionDeclarationContext).parameterList()!!
                 .parameter().size != 0
         ) {
             Project.logger.error(
@@ -389,7 +387,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
      * @return 如果是全局，返回null，否则返回这个函数对象
      */
     @Override
-    override fun visitNativeFuncDeclaration(ctx: NativeFuncDeclarationContext): Any? {
+    override fun visitNativeFuncDeclaration(ctx: mcfppParser.NativeFuncDeclarationContext): Any? {
         val nf: NativeFunction = try {
             NativeFunction(ctx.Identifier().text, ctx.javaRefer())
         } catch (e: IllegalFormatException) {
@@ -417,8 +415,8 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         if (Class.currClass == null) {
             //是普通的函数
             nf.isClassMember = false
-            if (!Project.global.cache!!.functions.contains(nf)) {
-                Project.global.cache!!.functions.add(nf)
+            if (!Project.global.cache.functions.contains(nf)) {
+                Project.global.cache.functions.add(nf)
             } else {
                 Project.logger.error(
                     "Already defined function:" + ctx.Identifier().text +
@@ -441,7 +439,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
      * @return null
      */
     @Override
-    override fun visitFieldDeclaration(ctx: FieldDeclarationContext): Any? {
+    override fun visitFieldDeclaration(ctx: mcfppParser.FieldDeclarationContext): Any? {
         //变量生成
         val `var`: Var = Var.build(ctx, Class.currClass!!)!!
         //只有可能是类变量

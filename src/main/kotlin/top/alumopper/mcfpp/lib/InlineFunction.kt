@@ -17,7 +17,7 @@ class InlineFunction : Function {
     }
 
     @Override
-    operator fun invoke(args: ArrayList<Var?>?, lineNo: Int) {
+    override operator fun invoke(args: ArrayList<Var>, lineNo: Int) {
         TODO()
     }
 }

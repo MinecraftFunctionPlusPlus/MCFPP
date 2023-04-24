@@ -8,8 +8,8 @@ interface ClassMember {
         PRIVATE, PROTECTED, PUBLIC
     }
 
-    fun setAccessModifier(accessModifier: AccessModifier)
-    fun getAccessModifier(): AccessModifier
+    var accessModifier : AccessModifier
+
     var isStatic: Boolean
     fun Class(): Class?
 }

@@ -1,9 +1,5 @@
 grammar mcfpp;
 
-@header{
-package top.alumopper.mcfpp.lib;
-}
-
 //一个mcfpp文件
 compilationUnit
     :   namespaceDeclaration?

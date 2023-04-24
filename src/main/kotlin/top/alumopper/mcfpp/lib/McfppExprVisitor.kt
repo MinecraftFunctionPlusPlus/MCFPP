@@ -1,5 +1,6 @@
 package top.alumopper.mcfpp.lib
 
+import mcfppBaseVisitor
 import top.alumopper.mcfpp.Project
 import top.alumopper.mcfpp.exception.*
 import top.alumopper.mcfpp.lang.*
