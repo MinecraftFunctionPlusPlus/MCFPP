@@ -1,6 +1,5 @@
 package top.alumopper.mcfpp.lang
 
-import top.alumopper.mcfpp.type.JsonText
 import java.util.*
 
 /**
@@ -28,6 +27,10 @@ class SbObject(name: String, rule: String, var display: JsonText?) {
     @Override
     override fun equals(other: Any?): Boolean {
         return other is SbObject && name == other.name
+    }
+
+    override fun hashCode(): Int {
+        return name.hashCode()
     }
 
     companion object {

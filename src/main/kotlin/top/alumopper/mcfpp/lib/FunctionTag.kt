@@ -7,7 +7,7 @@ import top.alumopper.mcfpp.Project
  * 一个函数的标签
  */
 class FunctionTag(
-    namespace: String?,
+    namespace: String,
     /**
      * 函数标签的名字
      */
@@ -16,7 +16,7 @@ class FunctionTag(
     /**
      * 函数标签的命名空间
      */
-    var namespace: String? = null
+    var namespace: String
 
     /**
      * 这个标签含有那些函数
@@ -29,11 +29,11 @@ class FunctionTag(
         } else {
             this.namespace = namespace
         }
-        cache = Cache(Project.global.cache!!)
+        cache = Cache(Project.global.cache)
     }
 
     val namespaceID: String
-        get() = namespace.toString() + ":" + tag
+        get() = "$namespace:$tag"
     val tagJSON: String
         get() {
             val json = JSONObject()
@@ -48,8 +48,12 @@ class FunctionTag(
     @Override
     override fun equals(other: Any?): Boolean {
         return if (other is FunctionTag) {
-            other.namespace.equals(namespace) && other.tag == tag
+            other.namespace == namespace && other.tag == tag
         } else false
+    }
+
+    override fun hashCode(): Int {
+        return namespace.hashCode()
     }
 
     companion object {

@@ -103,8 +103,6 @@ object DatapackCreator {
         } catch (e: IOException) {
             throw RuntimeException(e)
         }
-        Project.global.globalInit!!.namespace = Project.name
-        Project.global.cache!!.functions.add(Project.global.globalInit!!)
     }
 
     /**

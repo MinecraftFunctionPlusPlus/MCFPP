@@ -1,5 +1,6 @@
 package top.alumopper.mcfpp.lib
 
+import org.jetbrains.annotations.Nullable
 import top.alumopper.mcfpp.Project
 import top.alumopper.mcfpp.lang.*
 import java.util.*
@@ -41,11 +42,13 @@ class Cache {
     /**
      * 父级缓存。函数的父级缓存可能是类，也可能是全局。类的父级缓存总是全局，而全局则没有父级缓存
      */
+    @Nullable
     var parent: Cache?
 
     /**
      * 这个缓存在哪一个容器中
      */
+    @Nullable
     var container: CacheContainer? = null
 
     /**
@@ -79,16 +82,17 @@ class Cache {
      * @param namespace 命名空间
      * @return 如果此缓存中存在这个函数，则返回这个函数的对象，否则返回null
      */
-    fun getFunction(namespace: String?, key: String?, argsTypes: List<String?>?): Function? {
+    @Nullable
+    fun getFunction(namespace: String, key: String, argsTypes: List<String>): Function? {
         for (f in functions) {
-            if (f.namespace.equals(namespace) && f.name == key && f.params.size == argsTypes!!.size) {
+            if (f.namespace == namespace && f.name == key && f.params.size == argsTypes.size) {
                 if (f.params.size == 0) {
                     return f
                 }
                 var hasFoundFunc = true
                 //参数比对
                 for (i in argsTypes.indices) {
-                    if (!argsTypes[i].equals(f.params[i].type)) {
+                    if (argsTypes[i] != f.params[i].type) {
                         hasFoundFunc = false
                         break
                     }

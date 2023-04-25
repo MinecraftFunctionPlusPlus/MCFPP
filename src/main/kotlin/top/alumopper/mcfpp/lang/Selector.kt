@@ -1,7 +1,6 @@
 package top.alumopper.mcfpp.lang
 
 import top.alumopper.mcfpp.exception.VariableConverseException
-import top.alumopper.mcfpp.lib.Class
 
 class Selector(identifier: String?) : Var() {
     @get:Override

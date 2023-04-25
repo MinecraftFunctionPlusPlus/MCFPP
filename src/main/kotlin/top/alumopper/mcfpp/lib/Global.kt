@@ -6,7 +6,6 @@ import top.alumopper.mcfpp.Project
  * 全局
  */
 class Global : CacheContainer {
-    var globalInit: Function? = null
 
     /**
      * 全局函数
@@ -16,17 +15,14 @@ class Global : CacheContainer {
     /**
      *
      */
-    var functionTags: HashMap<String, FunctionTag>? = null
+    var functionTags: HashMap<String, FunctionTag> = HashMap()
 
     fun init(): Global {
         cache = Cache(null, this)
-        globalInit = Function("_global_init")
-        functionTags = HashMap()
-        Function.Companion.currFunction = globalInit
         return this
     }
 
     @get:Override
     override val prefix: String
-        get() = Project.name.toString() + "_global_"
+        get() = Project.name + "_global_"
 }

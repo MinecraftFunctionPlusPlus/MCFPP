@@ -47,7 +47,7 @@ class McfppImListener : mcfppBaseListener() {
             //是类的成员函数
             //创建函数对象并解析参数
             val qwq: mcfppParser.ClassFunctionDeclarationContext = ctx.parent as mcfppParser.ClassFunctionDeclarationContext
-            f = Function(qwq.Identifier().text, Class.currClass, false)
+            f = Function(qwq.Identifier().text, Class.currClass!!, false)
             if (qwq.parameterList() != null) {
                 f.addParams(qwq.parameterList())
             }
@@ -65,7 +65,7 @@ class McfppImListener : mcfppBaseListener() {
     override fun exitFunctionBody(ctx: mcfppParser.FunctionBodyContext?) {
         if (Class.currClass == null) {
             //不在类中
-            Function.currFunction = Project.global.globalInit
+            Function.currFunction = Function.nullFunction
         } else {
             Function.currFunction = Class.currClass!!.classPreInit
         }
@@ -93,14 +93,14 @@ class McfppImListener : mcfppBaseListener() {
             return
         } else {
             //函数变量，生成
-            Var.build(ctx, Function.currFunction!!)!!
+            Var.build(ctx, Function.currFunction)!!
         }
         //变量注册
         //一定是函数变量
-        if (!Function.currFunction!!.cache.putVar(ctx.Identifier().text, `var`)) {
+        if (!Function.currFunction.cache.putVar(ctx.Identifier().text, `var`)) {
             Project.logger.error(
                 "Duplicate defined variable name:" + ctx.Identifier().text +
-                        " at " + Project.currFile!!.name + " line:" + ctx.getStart().line
+                        " at " + Project.currFile.name + " line:" + ctx.getStart().line
             )
             Project.errorCount++
             throw VariableDuplicationException()
@@ -117,7 +117,7 @@ class McfppImListener : mcfppBaseListener() {
             } catch (e: VariableConverseException) {
                 Project.logger.error(
                     "Cannot convert " + init.javaClass + " to " + `var`.javaClass +
-                            " at " + Function.currFunction!!.GetID() + " line:" + ctx.getStart().line
+                            " at " + Function.currFunction.GetID() + " line:" + ctx.getStart().line
                 )
                 Project.errorCount++
                 throw VariableConverseException()
@@ -136,7 +136,7 @@ class McfppImListener : mcfppBaseListener() {
         if (left.isConst == Var.ConstStatus.ASSIGNED) {
             Project.logger.error(
                 "Cannot assign a constant repeatedly: " + left.key +
-                        " at " + Function.currFunction!!.GetID() + " line:" + ctx.getStart().line
+                        " at " + Function.currFunction.GetID() + " line:" + ctx.getStart().line
             )
             Project.errorCount++
             throw ConstChangeException()
@@ -149,7 +149,7 @@ class McfppImListener : mcfppBaseListener() {
         } catch (e: VariableConverseException) {
             Project.logger.error(
                 "Cannot convert " + right.javaClass + " to " + left.javaClass +
-                        " at " + Function.currFunction!!.GetID() + " line:" + ctx.getStart().line
+                        " at " + Function.currFunction.GetID() + " line:" + ctx.getStart().line
             )
             Project.errorCount++
             throw VariableConverseException()
@@ -163,11 +163,11 @@ class McfppImListener : mcfppBaseListener() {
     @Override
     override fun exitSelfAddOrMinusStatement(ctx: mcfppParser.SelfAddOrMinusStatementContext) {
         Function.addCommand("#" + ctx.text)
-        val re: Var? = Function.currFunction!!.getVar(ctx.selfAddOrMinusExpression().Identifier().text)
+        val re: Var? = Function.currFunction.getVar(ctx.selfAddOrMinusExpression().Identifier().text)
         if (re == null) {
             Project.logger.error(
                 "Undefined variable:" + ctx.selfAddOrMinusExpression().Identifier().text +
-                        " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                        " at " + Project.currFile.name + " line: " + ctx.getStart().line
             )
             Project.errorCount++
             throw VariableNotDefineException()
@@ -210,7 +210,7 @@ class McfppImListener : mcfppBaseListener() {
         if (curr == null) {
             Project.logger.error(
                 "Function " + ctx.text + " not defined " +
-                        " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                        " at " + Project.currFile.name + " line: " + ctx.getStart().line
             )
             throw FunctionNotDefineException()
         }
@@ -226,8 +226,8 @@ class McfppImListener : mcfppBaseListener() {
         }
         curr.invoke(args, ctx.getStart().line)
         //函数树
-        Function.currFunction!!.child.add(curr)
-        curr.parent.add(Function.currFunction!!)
+        Function.currFunction.child.add(curr)
+        curr.parent.add(Function.currFunction)
     }
 
     var lastBool: MCBool? = null //if语句的条件
@@ -243,7 +243,7 @@ class McfppImListener : mcfppBaseListener() {
         //是if语句，获取参数
         val index: Int = parent.ifBlock().indexOf(ctx)
         //匿名函数的定义
-        val f: Function = InternalFunction("_if_", Function.currFunction!!)
+        val f: Function = InternalFunction("_if_", Function.currFunction)
         Project.global.cache.functions.add(f)
         if (index == 0) {
             //第一个if
@@ -255,13 +255,13 @@ class McfppImListener : mcfppBaseListener() {
                 Function.addCommand(Commands.Function(f))
                 Project.logger.warn(
                     "The condition is always true. " +
-                            " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                            " at " + Project.currFile.name + " line: " + ctx.getStart().line
                 )
             } else if (exp.isConcrete) {
                 Function.addCommand("#" + Commands.Function(f))
                 Project.logger.warn(
                     "The condition is always false. " +
-                            " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                            " at " + Project.currFile.name + " line: " + ctx.getStart().line
                 )
             } else {
                 //给子函数开栈
@@ -290,7 +290,7 @@ class McfppImListener : mcfppBaseListener() {
      */
     @Override
     override fun exitIfBlock(ctx: mcfppParser.IfBlockContext?) {
-        Function.currFunction = Function.currFunction!!.parent[0]
+        Function.currFunction = Function.currFunction.parent[0]
         //调用完毕，将子函数的栈销毁
         Function.addCommand("data remove storage mcfpp:system " + Project.name + ".stack_frame[0]")
         Function.addCommand("#if end")
@@ -304,7 +304,7 @@ class McfppImListener : mcfppBaseListener() {
     override fun enterElseIfStatement(ctx: mcfppParser.ElseIfStatementContext) {
         Function.addCommand("#else if start")
         //匿名函数的定义
-        val f: Function = InternalFunction("_if_", Function.currFunction!!)
+        val f: Function = InternalFunction("_if_", Function.currFunction)
         Project.global.cache.functions.add(f)
         if (lastBool!!.isConcrete && !lastBool!!.value) {
             //函数调用的命令
@@ -313,7 +313,7 @@ class McfppImListener : mcfppBaseListener() {
             Function.addCommand("#" + Commands.Function(f))
             Project.logger.warn(
                 "The condition is always false. " +
-                        " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                        " at " + Project.currFile.name + " line: " + ctx.getStart().line
             )
         } else if (lastBool!!.isConcrete) {
             //给子函数开栈
@@ -321,7 +321,7 @@ class McfppImListener : mcfppBaseListener() {
             Function.addCommand(Commands.Function(f))
             Project.logger.warn(
                 "The condition is always true. " +
-                        " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                        " at " + Project.currFile.name + " line: " + ctx.getStart().line
             )
         } else {
             //给子函数开栈
@@ -342,7 +342,7 @@ class McfppImListener : mcfppBaseListener() {
      */
     @Override
     override fun exitElseIfStatement(ctx: mcfppParser.ElseIfStatementContext?) {
-        Function.currFunction = Function.currFunction!!.parent[0]
+        Function.currFunction = Function.currFunction.parent[0]
         //调用完毕，将子函数的栈销毁
         Function.addCommand("data remove storage mcfpp:system " + Project.name + ".stack_frame[0]")
         Function.addCommand("#else if end")
@@ -358,7 +358,7 @@ class McfppImListener : mcfppBaseListener() {
         val parent: mcfppParser.WhileStatementContext = ctx.parent as mcfppParser.WhileStatementContext
         val exp: MCBool = McfppExprVisitor().visit(parent.expression()) as MCBool
         //匿名函数的定义
-        val f: Function = InternalFunction("_while_", Function.currFunction!!)
+        val f: Function = InternalFunction("_while_", Function.currFunction)
         f.child.add(f)
         f.parent.add(f)
         Project.global.cache.functions.add(f)
@@ -368,7 +368,7 @@ class McfppImListener : mcfppBaseListener() {
             Function.addCommand(Commands.Function(f))
             Project.logger.warn(
                 "The condition is always true. " +
-                        " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                        " at " + Project.currFile.name + " line: " + ctx.getStart().line
             )
         } else if (exp.isConcrete) {
             //给子函数开栈
@@ -376,7 +376,7 @@ class McfppImListener : mcfppBaseListener() {
             Function.addCommand("#" + Commands.Function(f))
             Project.logger.warn(
                 "The condition is always false. " +
-                        " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                        " at " + Project.currFile.name + " line: " + ctx.getStart().line
             )
         } else {
             //给子函数开栈
@@ -399,7 +399,7 @@ class McfppImListener : mcfppBaseListener() {
     @Override
     override fun exitWhileBlock(ctx: mcfppParser.WhileBlockContext) {
         if (!Function.isBreak && Function.isLastFunctionEnd != 0) {
-            Function.currFunction = Function.currFunction!!.parent[0]
+            Function.currFunction = Function.currFunction.parent[0]
         }
         //递归调用函数
         //重新计算表达式
@@ -410,10 +410,10 @@ class McfppImListener : mcfppBaseListener() {
         Function.addCommand(
             "execute " +
                     "if score " + exp.identifier + " " + SbObject.MCS_boolean + " matches 1 " +
-                    "run " + Commands.Function(Function.currFunction!!)
+                    "run " + Commands.Function(Function.currFunction)
         )
         //调用完毕，将子函数的栈销毁
-        Function.currFunction = Function.currFunction!!.parent[0]
+        Function.currFunction = Function.currFunction.parent[0]
         Function.addCommand("data remove storage mcfpp:system " + Project.name + ".stack_frame[0]")
         Function.addCommand("#while end")
     }
@@ -426,7 +426,7 @@ class McfppImListener : mcfppBaseListener() {
     override fun enterDoWhileBlock(ctx: mcfppParser.DoWhileBlockContext?) {
         Function.addCommand("#do while start")
         //匿名函数的定义
-        val f: Function = InternalFunction("_dowhile_", Function.currFunction!!)
+        val f: Function = InternalFunction("_dowhile_", Function.currFunction)
         f.child.add(f)
         f.parent.add(f)
         Project.global.cache.functions.add(f)
@@ -448,18 +448,18 @@ class McfppImListener : mcfppBaseListener() {
         if (exp.isConcrete && exp.value) {
             //给子函数开栈
             Function.addCommand("data modify storage mcfpp:system " + Project.name + ".stack_frame prepend value {}")
-            Function.addCommand(Commands.Function(Function.currFunction!!))
+            Function.addCommand(Commands.Function(Function.currFunction))
             Project.logger.warn(
                 "The condition is always true. " +
-                        " at " + Project.currFile!!.name + " line: " + ctx.getStop().line
+                        " at " + Project.currFile.name + " line: " + ctx.getStop().line
             )
         } else if (exp.isConcrete) {
             //给子函数开栈
             Function.addCommand("data modify storage mcfpp:system " + Project.name + ".stack_frame prepend value {}")
-            Function.addCommand("#" + Commands.Function(Function.currFunction!!))
+            Function.addCommand("#" + Commands.Function(Function.currFunction))
             Project.logger.warn(
                 "The condition is always false. " +
-                        " at " + Project.currFile!!.name + " line: " + ctx.getStop().line
+                        " at " + Project.currFile.name + " line: " + ctx.getStop().line
             )
         } else {
             //给子函数开栈
@@ -467,12 +467,12 @@ class McfppImListener : mcfppBaseListener() {
             Function.addCommand(
                 "execute " +
                         "if score " + exp.identifier + " " + SbObject.MCS_boolean + " matches 1 " +
-                        "run " + Commands.Function(Function.currFunction!!)
+                        "run " + Commands.Function(Function.currFunction)
             )
         }
         Function.addCommand("data remove storage mcfpp:system " + Project.name + ".stack_frame[0]")
         //调用完毕，将子函数的栈销毁
-        Function.currFunction = Function.currFunction!!.parent[0]
+        Function.currFunction = Function.currFunction.parent[0]
         Function.addCommand("data remove storage mcfpp:system " + Project.name + ".stack_frame[0]")
         Function.addCommand("#do while end")
     }
@@ -485,8 +485,8 @@ class McfppImListener : mcfppBaseListener() {
     override fun enterForStatement(ctx: mcfppParser.ForStatementContext?) {
         Function.addCommand("#for start")
         Function.addCommand("data modify storage mcfpp:system " + Project.name + ".stack_frame prepend value {}")
-        val forFunc: Function = InternalFunction("_for_", Function.currFunction!!)
-        forFunc.parent.add(Function.currFunction!!)
+        val forFunc: Function = InternalFunction("_for_", Function.currFunction)
+        forFunc.parent.add(Function.currFunction)
         Project.global.cache.functions.add(forFunc)
         Function.addCommand(Commands.Function(forFunc))
         Function.currFunction = forFunc
@@ -494,7 +494,7 @@ class McfppImListener : mcfppBaseListener() {
 
     @Override
     override fun exitForStatement(ctx: mcfppParser.ForStatementContext?) {
-        Function.currFunction = Function.currFunction!!.parent[0]
+        Function.currFunction = Function.currFunction.parent[0]
         Function.addCommand("data remove storage mcfpp:system " + Project.name + ".stack_frame[0]")
         Function.addCommand("#for end")
     }
@@ -512,7 +512,7 @@ class McfppImListener : mcfppBaseListener() {
      */
     @Override
     override fun enterForUpdate(ctx: mcfppParser.ForUpdateContext?) {
-        Function.currFunction = InternalFunction("_forblock_", Function.currFunction!!)
+        Function.currFunction = InternalFunction("_forblock_", Function.currFunction)
     }
 
     var forupdate: Function? = null
@@ -536,7 +536,7 @@ class McfppImListener : mcfppBaseListener() {
         val parent: mcfppParser.ForStatementContext = ctx.parent as mcfppParser.ForStatementContext
         val exp: MCBool = McfppExprVisitor().visit(parent.forControl().expression()) as MCBool
         //匿名函数的定义。这里才是正式的for函数哦喵
-        val f: Function = InternalFunction("_forblock_", Function.currFunction!!)
+        val f: Function = InternalFunction("_forblock_", Function.currFunction)
         f.child.add(f)
         f.parent.add(f)
         Project.global.cache.functions.add(f)
@@ -545,14 +545,14 @@ class McfppImListener : mcfppBaseListener() {
             Function.addCommand(Commands.Function(f))
             Project.logger.warn(
                 "The condition is always true. " +
-                        " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                        " at " + Project.currFile.name + " line: " + ctx.getStart().line
             )
         } else if (exp.isConcrete) {
             Function.addCommand("data modify storage mcfpp:system " + Project.name + ".stack_frame prepend value {}")
             Function.addCommand("#" + Commands.Function(f))
             Project.logger.warn(
                 "The condition is always false. " +
-                        " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                        " at " + Project.currFile.name + " line: " + ctx.getStart().line
             )
         } else {
             Function.addCommand("data modify storage mcfpp:system " + Project.name + ".stack_frame prepend value {}")
@@ -574,7 +574,7 @@ class McfppImListener : mcfppBaseListener() {
     @Override
     override fun exitForBlock(ctx: mcfppParser.ForBlockContext) {
         //for update的命令压入
-        Function.currFunction!!.commands.addAll(forupdate!!.commands)
+        Function.currFunction.commands.addAll(forupdate!!.commands)
         forupdate = null
         //递归调用函数
         //重新计算表达式
@@ -585,11 +585,11 @@ class McfppImListener : mcfppBaseListener() {
         Function.addCommand(
             "execute " +
                     "if score " + exp.identifier + " " + SbObject.MCS_boolean + " matches 1 " +
-                    "run " + Commands.Function(Function.currFunction!!)
+                    "run " + Commands.Function(Function.currFunction)
         )
         //调用完毕，将子函数的栈销毁
         Function.addCommand("data remove storage mcfpp:system " + Project.name + ".stack_frame[0]")
-        Function.currFunction = Function.currFunction!!.parent[0]
+        Function.currFunction = Function.currFunction.parent[0]
     }
 
     @Override
@@ -603,10 +603,10 @@ class McfppImListener : mcfppBaseListener() {
      */
     @Override
     override fun enterStatement(ctx: mcfppParser.StatementContext) {
-        if (Function.currFunction!!.isEnd) {
+        if (Function.currFunction.isEnd) {
             Project.logger.warn(
                 "Unreachable code: " + ctx.text +
-                        " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                        " at " + Project.currFile.name + " line: " + ctx.getStart().line
             )
         }
         if (Function.isLastFunctionEnd == 1) {
@@ -615,7 +615,7 @@ class McfppImListener : mcfppBaseListener() {
             //匿名函数的定义
             val f: Function = InternalFunction(
                 "_" + (if (Function.isBreak) "break" else "continue") + "_",
-                Function.currFunction!!
+                Function.currFunction
             )
             f.child.add(f)
             f.parent.add(f)
@@ -639,18 +639,18 @@ class McfppImListener : mcfppBaseListener() {
         if (!inLoopStatement(ctx)) {
             Project.logger.error(
                 "'continue' or 'break' can only be used in loop statements: " +
-                        " at " + Project.currFile!!.getName() + " line: " + ctx.getStart().line
+                        " at " + Project.currFile.getName() + " line: " + ctx.getStart().line
             )
             throw SyntaxException()
         }
-        if (Function.currFunction!!.isEnd || Function.isLastFunctionEnd != 0) {
+        if (Function.currFunction.isEnd || Function.isLastFunctionEnd != 0) {
             return
         }
         Function.addCommand("#" + ctx.text)
         temp = MCBool()
         //变量进栈
         Function.addCommand("scoreboard players set " + temp!!.identifier + " " + SbObject.MCS_boolean + " = " + 1)
-        Function.currFunction!!.isEnd = true
+        Function.currFunction.isEnd = true
         Function.isLastFunctionEnd = 1
         if (ctx.BREAK() != null) {
             Function.isBreak = true
@@ -663,10 +663,10 @@ class McfppImListener : mcfppBaseListener() {
      */
     @Override
     override fun exitBlock(ctx: mcfppParser.BlockContext) {
-        if (!Function.currFunction!!.isEnd && Function.isLastFunctionEnd == 2) {
+        if (!Function.currFunction.isEnd && Function.isLastFunctionEnd == 2) {
             if (ctx.parent is mcfppParser.IfBlockContext) {
                 //如果是if语句，出栈
-                Function.currFunction = Function.currFunction!!.parent.get(0)
+                Function.currFunction = Function.currFunction.parent.get(0)
                 Function.isLastFunctionEnd = 1
             }
             if (ctx.parent is mcfppParser.ForBlockContext
@@ -674,7 +674,7 @@ class McfppImListener : mcfppBaseListener() {
                 || ctx.parent is mcfppParser.DoWhileBlockContext
             ) {
                 //是循环语句，出栈的同时重置isLastFunctionEnd标志
-                Function.currFunction = Function.currFunction!!.parent.get(0)
+                Function.currFunction = Function.currFunction.parent.get(0)
                 Function.isLastFunctionEnd = 0
             }
         }
@@ -701,7 +701,7 @@ class McfppImListener : mcfppBaseListener() {
     @Override
     override fun exitClassBody(ctx: mcfppParser.ClassBodyContext?) {
         Class.currClass = null
-        Function.currFunction = Project.global.globalInit
+        Function.currFunction = Function.nullFunction
     }
 
     /**

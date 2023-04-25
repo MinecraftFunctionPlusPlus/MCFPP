@@ -147,11 +147,11 @@ abstract class Var : ClassMember, Cloneable {
                 //自定义的类的类型
                 val cls: String = ctx.type().className().text
                 //取出类
-                val type: Class? = Project.global.cache!!.classes.getOrDefault(cls, null)
+                val type: Class? = Project.global.cache.classes.getOrDefault(cls, null)
                 if (type == null) {
                     Project.logger.error(
                         "Undefined class:" + cls +
-                                " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                                " at " + Project.currFile.name + " line: " + ctx.getStart().line
                     )
                     Project.errorCount++
                 }
@@ -174,13 +174,13 @@ abstract class Var : ClassMember, Cloneable {
                 when (ctx.type().text) {
                     "int" -> {
                         `var` =
-                            MCInt("@s").setObj(SbObject(cls.namespace.toString() + "_class_" + cls.identifier + "_int_" + ctx.Identifier()))
+                            MCInt("@s").setObj(SbObject(cls.namespace + "_class_" + cls.identifier + "_int_" + ctx.Identifier()))
                         `var`.key = ctx.Identifier().text
                     }
 
                     "bool" -> {
                         `var` =
-                            MCBool("@s").setObj(SbObject(cls.namespace.toString() + "_class_" + cls.identifier + "_bool_" + ctx.Identifier()))
+                            MCBool("@s").setObj(SbObject(cls.namespace + "_class_" + cls.identifier + "_bool_" + ctx.Identifier()))
                         `var`.key = ctx.Identifier().text
                     }
                 }
@@ -194,18 +194,18 @@ abstract class Var : ClassMember, Cloneable {
                 //自定义的类的类型
                 val clsType: String = ctx.type().className().text
                 //取出类
-                val type: Class? = Project.global.cache!!.classes.getOrDefault(clsType, null)
+                val type: Class? = Project.global.cache.classes.getOrDefault(clsType, null)
                 if (type == null) {
                     Project.logger.error(
                         "Undefined class:" + clsType +
-                                " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                                " at " + Project.currFile.name + " line: " + ctx.getStart().line
                     )
                     Project.errorCount++
                 }
                 assert(type != null)
                 val classPointer = ClassPointer(type!!, cls, ctx.Identifier().text)
                 classPointer.address =
-                    (MCInt("@s").setObj(SbObject(cls.namespace.toString() + "_class_" + cls.identifier + "_" + clsType + "_" + ctx.Identifier())) as MCInt)
+                    (MCInt("@s").setObj(SbObject(cls.namespace + "_class_" + cls.identifier + "_" + clsType + "_" + ctx.Identifier())) as MCInt)
                 classPointer.identifier = ctx.Identifier().text
                 `var` = classPointer
             }

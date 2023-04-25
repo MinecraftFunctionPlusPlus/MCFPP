@@ -37,12 +37,12 @@ class ClassPointer : Var, CanSelectMember {
      */
     constructor(type: Class, container: CacheContainer, identifier: String) {
         clsType = type
-        this.type = clsType.identifier.toString()
+        this.type = clsType.identifier
         key = identifier
         this.identifier = container.prefix + identifier
         address =
-            MCInt(Function.currFunction!!.namespace.toString() + "_class_" + type.identifier + "_pointer_" + identifier).setObj(
-                type.addressSbObject!!
+            MCInt(Function.currFunction!!.namespace + "_class_" + type.identifier + "_pointer_" + identifier).setObj(
+                type.addressSbObject
             ) as MCInt
     }
 

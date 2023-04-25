@@ -14,8 +14,8 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
     /**
      * 此构造函数对应的类。
      */
-    var target: Class?
-) : Function("_init_" + target!!.identifier!!.lowercase(Locale.getDefault()) + "_" + target.constructors.size, target, false) {
+    var target: Class
+) : Function("_init_" + target.identifier.lowercase(Locale.getDefault()) + "_" + target.constructors.size, target, false) {
     /**
      * 调用构造函数
      * @param args 函数的参数
@@ -74,7 +74,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
 
     @get:Override
     override val prefix: String
-        get() = namespace.toString() + "_class_" + target!!.identifier + "_init_"
+        get() = namespace + "_class_" + target.identifier + "_init_"
 
     @Override
     override fun equals(other: Any?): Boolean {
@@ -91,5 +91,9 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
             }
         }
         return false
+    }
+
+    override fun hashCode(): Int {
+        return target.hashCode() ?: 0
     }
 }

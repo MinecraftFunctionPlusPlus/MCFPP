@@ -90,7 +90,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             //重复声明
             Project.logger.error(
                 "The class has extended " + Class.currClass!!.identifier +
-                        " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                        " at " + Project.currFile.name + " line: " + ctx.getStart().line
             )
             Project.errorCount++
             throw ClassDuplicationException()
@@ -127,7 +127,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             //重复声明
             Project.logger.error(
                 "The class has extended " + Class.currClass!!.identifier +
-                        " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                        " at " + Project.currFile.name + " line: " + ctx.getStart().line
             )
             Project.errorCount++
             throw ClassDuplicationException()
@@ -145,7 +145,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
                 } else {
                     Project.logger.error(
                         "Undefined class: " + ctx.className(1).text +
-                                " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                                " at " + Project.currFile.name + " line: " + ctx.getStart().line
                     )
                     Project.errorCount++
                 }
@@ -183,7 +183,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         }
         //如果没有构造函数，自动添加默认的空构造函数
         if (Class.currClass!!.constructors.size == 0) {
-            Class.currClass!!.addConstructor(Constructor(Class.currClass))
+            Class.currClass!!.addConstructor(Constructor(Class.currClass!!))
         }
         Class.currClass = null
         return null
@@ -245,11 +245,11 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
      * @return 这个类方法的对象
      */
     @Override
-    override fun visitClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext): Any? {
+    override fun visitClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext): Any {
         //创建函数对象
         val f = Function(
             ctx.Identifier().text,
-            Class.currClass,
+            Class.currClass!!,
             ctx.parent is mcfppParser.StaticClassMemberDeclarationContext
         )
         //解析参数
@@ -264,7 +264,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             Project.logger.error(
                 "Already defined function:" + ctx.Identifier()
                     .text + "in class " + Class.currClass!!.identifier +
-                        " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                        " at " + Project.currFile.name + " line: " + ctx.getStart().line
             )
             Project.errorCount++
             Function.currFunction = Function.nullFunction
@@ -283,12 +283,12 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         //创建构造函数对象，注册函数
         var f: Constructor? = null
         try {
-            f = Constructor(Class.currClass)
+            f = Constructor(Class.currClass!!)
             Class.currClass!!.addConstructor(f)
         } catch (e: FunctionDuplicationException) {
             Project.logger.error(
                 "Already defined function: " + ctx.className().text + "(" + ctx.parameterList().text + ")" +
-                        " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                        " at " + Project.currFile.name + " line: " + ctx.getStart().line
             )
         }
         assert(f != null)
@@ -349,10 +349,10 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
                     ctx.functionTag()!!.namespaceID().Identifier(1).text
                 )
             }
-            if (Project.global.functionTags!!.containsKey(functionTag.namespaceID)) {
-                f.tag = Project.global.functionTags!![functionTag.namespaceID]
+            if (Project.global.functionTags.containsKey(functionTag.namespaceID)) {
+                f.tag = Project.global.functionTags[functionTag.namespaceID]
             } else {
-                Project.global.functionTags!![functionTag.namespaceID] = functionTag
+                Project.global.functionTags[functionTag.namespaceID] = functionTag
                 f.tag = functionTag
             }
             f.tag!!.cache.functions.add(f)
@@ -364,7 +364,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         } else {
             Project.logger.error(
                 "Already defined function:" + f.namespaceID +
-                        " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                        " at " + Project.currFile.name + " line: " + ctx.getStart().line
             )
             Project.errorCount++
             Function.currFunction = Function.nullFunction
@@ -374,7 +374,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         ) {
             Project.logger.error(
                 "Entrance function shouldn't have parameter:" + f.namespaceID +
-                        " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                        " at " + Project.currFile.name + " line: " + ctx.getStart().line
             )
             Project.errorCount++
         }
@@ -393,19 +393,19 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         } catch (e: IllegalFormatException) {
             Project.logger.error(
                 "Illegal Java Method Name:" + e.message +
-                        " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                        " at " + Project.currFile.name + " line: " + ctx.getStart().line
             )
             return null
         } catch (e: ClassNotFoundException) {
             Project.logger.error(
                 "Cannot find java class:" + e.message +
-                        " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                        " at " + Project.currFile.name + " line: " + ctx.getStart().line
             )
             return null
         } catch (e: NoSuchMethodException) {
             Project.logger.error(
                 "No such method:" + e.message +
-                        " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                        " at " + Project.currFile.name + " line: " + ctx.getStart().line
             )
             return null
         }
@@ -420,7 +420,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             } else {
                 Project.logger.error(
                     "Already defined function:" + ctx.Identifier().text +
-                            " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                            " at " + Project.currFile.name + " line: " + ctx.getStart().line
                 )
                 Project.errorCount++
                 Function.currFunction = Function.nullFunction
@@ -439,7 +439,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
      * @return null
      */
     @Override
-    override fun visitFieldDeclaration(ctx: mcfppParser.FieldDeclarationContext): Any? {
+    override fun visitFieldDeclaration(ctx: mcfppParser.FieldDeclarationContext): Any {
         //变量生成
         val `var`: Var = Var.build(ctx, Class.currClass!!)!!
         //只有可能是类变量
@@ -449,7 +449,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         ) {
             Project.logger.error(
                 "Duplicate defined variable name:" + ctx.Identifier().text +
-                        " at " + Project.currFile!!.name + " line:" + ctx.getStart().line
+                        " at " + Project.currFile.name + " line:" + ctx.getStart().line
             )
             Project.errorCount++
             throw VariableDuplicationException()
@@ -457,7 +457,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         //变量的初始化
         if (ctx.expression() != null) {
             `var`.isConst = ConstStatus.ASSIGNED
-            Function.currFunction = Class.currClass!!.classPreInit
+            Function.currFunction = Class.currClass!!.classPreInit!!
             Function.addCommand("#" + ctx.text)
             val init: Var = McfppExprVisitor().visit(ctx.expression())!!
             try {
@@ -468,10 +468,10 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
                             " at " + Class.currClass!!.identifier + " line:" + ctx.getStart().line
                 )
                 Project.errorCount++
-                Function.currFunction = null
+                Function.currFunction = Function.nullFunction
                 throw VariableConverseException()
             }
-            Function.currFunction = null
+            Function.currFunction = Function.nullFunction
         }
         return `var`
     }

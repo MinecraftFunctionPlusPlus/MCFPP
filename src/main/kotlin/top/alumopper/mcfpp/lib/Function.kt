@@ -1,8 +1,10 @@
 package top.alumopper.mcfpp.lib
 
+import org.jetbrains.annotations.Nullable
 import top.alumopper.mcfpp.Project
 import top.alumopper.mcfpp.command.Commands
 import top.alumopper.mcfpp.lang.*
+import java.lang.NullPointerException
 import java.util.ArrayList
 
 /**
@@ -94,7 +96,7 @@ import java.util.ArrayList
  */
 open class Function : ClassMember, CacheContainer {
     /**
-     * 包含的所有命令
+     * 包含所有命令的列表
      */
     var commands: ArrayList<String>
 
@@ -105,13 +107,14 @@ open class Function : ClassMember, CacheContainer {
 
     /**
      * 函数的标签
+     * TODO 函数的标签应该是一个列表
      */
     var tag: FunctionTag? = null
 
     /**
-     * 函数的命名空间
+     * 函数的命名空间。默认为工程文件的明明空间
      */
-    var namespace: String?
+    var namespace: String
 
     /**
      * 参数列表
@@ -119,7 +122,7 @@ open class Function : ClassMember, CacheContainer {
     var params: ArrayList<FunctionParam>
 
     /**
-     * 是否是类的成员函数
+     * 是否是类的成员函数。默认为否
      */
     var isClassMember = false
 
@@ -144,12 +147,12 @@ open class Function : ClassMember, CacheContainer {
     var isEnd = false
 
     /**
-     * 访问修饰符
+     * 访问修饰符。默认为private
      */
     override var accessModifier: ClassMember.AccessModifier = ClassMember.AccessModifier.PRIVATE
 
     /**
-     * 是否是静态的
+     * 是否是静态的。默认为否
      */
     @get:Override
     @set:Override
@@ -158,6 +161,7 @@ open class Function : ClassMember, CacheContainer {
     /**
      * 所在的类。如果不是类成员，则为null
      */
+    @Nullable
     var parentClass: Class? = null
 
     /**
@@ -176,11 +180,11 @@ open class Function : ClassMember, CacheContainer {
      * 创建一个函数，并指定它所属的类。
      * @param name 函数的标识符
      */
-    constructor(name: String, cls: Class?, isStatic: Boolean) {
+    constructor(name: String, cls: Class, isStatic: Boolean) {
         this.name = name
         commands = ArrayList()
         params = ArrayList()
-        namespace = cls!!.namespace
+        namespace = cls.namespace
         parentClass = cls
         isClassMember = true
         if (isStatic) {
@@ -195,7 +199,7 @@ open class Function : ClassMember, CacheContainer {
      * @param name 函数的标识符
      * @param namespace 函数的命名空间
      */
-    constructor(name: String, namespace: String?) : this(name) {
+    constructor(name: String, namespace: String) : this(name) {
         this.namespace = namespace
     }
 
@@ -213,7 +217,7 @@ open class Function : ClassMember, CacheContainer {
          * @return 函数的命名空间id
          */
         get() {
-            val re: StringBuilder = StringBuilder(namespace.toString() + ":" + name)
+            val re: StringBuilder = StringBuilder("$namespace:$name")
             for (p in params) {
                 re.append("_").append(p.type)
             }
@@ -300,7 +304,7 @@ open class Function : ClassMember, CacheContainer {
         //调用完毕，将子函数的栈销毁
         addCommand("data remove storage mcfpp:system " + Project.name + ".stack_frame[0]")
         //取出栈内的值到记分板
-        for (`var` in currFunction!!.cache.allVars) {
+        for (`var` in currFunction.cache.allVars) {
             if (`var` is MCInt) {
                 //如果是int取出到记分板
                 addCommand(
@@ -332,7 +336,7 @@ open class Function : ClassMember, CacheContainer {
 
     @get:Override
     override val prefix: String
-        get() = Project.currNamespace.toString() + "_func_" + name + "_"
+        get() = Project.currNamespace + "_func_" + name + "_"
 
     /**
      * 判断两个函数是否相同.判据包括:命名空间ID,是否是类成员,父类,标签和参数列表
@@ -342,10 +346,7 @@ open class Function : ClassMember, CacheContainer {
     @Override
     override fun equals(other: Any?): Boolean {
         if (other is Function) {
-            if (!((other.tag != null && other.tag!! == tag || other.tag == null && tag == null) && other.isClassMember == isClassMember && other.namespaceID
-                    .equals(
-                        namespaceID
-                    ) && other.parentClass === parentClass)
+            if (!((other.tag != null && other.tag!! == tag || other.tag == null && tag == null) && other.isClassMember == isClassMember && other.namespaceID == namespaceID && other.parentClass === parentClass)
             ) {
                 return false
             }
@@ -368,6 +369,10 @@ open class Function : ClassMember, CacheContainer {
         } else null
     }
 
+    override fun hashCode(): Int {
+        return namespace.hashCode()
+    }
+
     companion object {
         /**
          * 是不是break。用于break和continue语句。
@@ -384,10 +389,6 @@ open class Function : ClassMember, CacheContainer {
          */
         var isLastFunctionEnd = 0
 
-        /**
-         * 目前编译器处在的函数。允许编译器在全局获取并访问当前正在编译的函数对象。默认为全局初始化函数
-         */
-        var currFunction: Function? = null
 
         /**
          * 一个空的函数，通常用于作为占位符
@@ -395,12 +396,21 @@ open class Function : ClassMember, CacheContainer {
         var nullFunction = Function("null")
 
         /**
+         * 目前编译器处在的函数。允许编译器在全局获取并访问当前正在编译的函数对象。默认为全局初始化函数
+         */
+        var currFunction: Function = nullFunction
+
+        /**
          * 向此函数的末尾添加一条命令。
          * @param str 要添加的命令。
          */
         fun addCommand(str: String?) {
-            if (!currFunction!!.isEnd) {
-                currFunction!!.commands.add(str!!)
+            if(this.equals(nullFunction)){
+                Project.logger.warn("Unexpected command added to NullFunction")
+                throw NullPointerException()
+            }
+            if (!currFunction.isEnd) {
+                currFunction.commands.add(str!!)
             }
         }
     }

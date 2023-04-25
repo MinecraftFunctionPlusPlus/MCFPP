@@ -49,7 +49,7 @@ class InternalFunction(prefix: String, parent: Function) : Function(prefix + UUI
      */
     fun setParentFunction(parent: Function) {
         this.parent.add(parent)
-        parent!!.child.add(this)
+        parent.child.add(this)
     }
 
     /**

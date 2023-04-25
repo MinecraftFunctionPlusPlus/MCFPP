@@ -37,19 +37,19 @@ open class ClassObject : Var, CanSelectMember {
 
     constructor(cls: Class) : super() {
         this.clsType = cls
-        type = cls.identifier.toString()
+        type = cls.identifier
         initPointer = ClassPointer(cls, cls, UUID.randomUUID().toString())
-        initPointer.address = (MCInt().setObj(cls.addressSbObject!!) as MCInt)
+        initPointer.address = (MCInt().setObj(cls.addressSbObject) as MCInt)
         initPointer.obj = this
     }
 
     constructor(cls: Class, container: CacheContainer, identifier: String) {
         this.clsType = cls
-        type = cls.identifier.toString()
+        type = cls.identifier
         key = identifier
         this.identifier = container.prefix + identifier
         initPointer = ClassPointer(cls, cls, UUID.randomUUID().toString())
-        initPointer.address = (MCInt().setObj(cls.addressSbObject!!) as MCInt)
+        initPointer.address = (MCInt().setObj(cls.addressSbObject) as MCInt)
         initPointer.obj = this
     }
 
@@ -67,7 +67,7 @@ open class ClassObject : Var, CanSelectMember {
          * 获取这个类的实例的指针实体在mcfunction中拥有的tag
          * @return 返回它的tag
          */
-        get() = clsType.namespace.toString() + "_class_" + clsType.identifier + "_pointer"
+        get() = clsType.namespace + "_class_" + clsType.identifier + "_pointer"
 
     @Override
     @Throws(VariableConverseException::class)

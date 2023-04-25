@@ -17,17 +17,17 @@ object Project {
     /**
      * 工程的根目录
      */
-    var root: File? = null
+    lateinit var root: File
 
     /**
      * 工程的名字
      */
-    var name: String? = null
+    lateinit var name: String
 
     /**
      * 工程包含的所有文件。以绝对路径保存
      */
-    var files: ArrayList<String>? = null
+    var files: ArrayList<String> = ArrayList()
 
     /**
      * 工程对应的mc版本
@@ -42,17 +42,17 @@ object Project {
     /**
      * 工程包含的所有引用
      */
-    var includes: ArrayList<String>? = null
+    var includes: ArrayList<String> = ArrayList()
 
     /**
      * 编译时，当前编译的文件
      */
-    var currFile: File? = null
+    lateinit var currFile: File
 
     /**
      * 当前的命名空间
      */
-    var currNamespace: String? = null
+    lateinit var currNamespace: String
 
     /**
      * 工程中的总错误数量
@@ -103,7 +103,7 @@ object Project {
                     File(s)
                 } else {
                     //相对路径
-                    File(root!!.absolutePath + s)
+                    File(root.absolutePath + s)
                 }
                 logger.info("Finding file in \"" + r.absolutePath + "\"")
                 getFiles(r, files)
@@ -116,10 +116,9 @@ object Project {
             if (description == null) {
                 description = "A datapack compiled by MCFPP"
             }
-            includes = ArrayList()
-            val includesJson: JSONArray = jsonObject.getJSONArray("includes")
+            val includesJson: JSONArray = jsonObject.getJSONArray("includes")?: JSONArray()
             for (i in 0 until includesJson.size) {
-                includes!!.add(includesJson.getString(i))
+                includes.add(includesJson.getString(i))
             }
         } catch (e: Exception) {
             logger.error("Error while reading project from file \"$path\"")
@@ -132,10 +131,9 @@ object Project {
      * 解析工程
      */
     fun analyse() {
-        assert(files != null)
         logger.debug("Analysing project...")
         //解析文件
-        for (file in files!!) {
+        for (file in files) {
             try {
                 McfppFileReader(file).analyse()
             } catch (e: IOException) {
@@ -151,9 +149,8 @@ object Project {
      */
     fun compile() {
         //工程文件编译
-        assert(files != null)
         //解析文件
-        for (file in files!!) {
+        for (file in files) {
             logger.debug("Compiling mcfpp code in \"$file\"")
             try {
                 McfppFileReader(file).compile()
@@ -172,7 +169,7 @@ object Project {
         logger.debug("Optimizing...")
         //寻找入口函数
         var hasEntrance = false
-        for (f in global.cache!!.functions) {
+        for (f in global.cache.functions) {
             if (f.parent.size == 0 && f !is Native) {
                 //找到了入口函数
                 hasEntrance = true
@@ -184,7 +181,7 @@ object Project {
             logger.warn("No valid entrance function in Project $name")
             warningCount++
         }
-        logger.info("Complete compiling project " + root!!.name + " with [" + errorCount + "] error and [" + warningCount + "] warning")
+        logger.info("Complete compiling project " + root.name + " with [" + errorCount + "] error and [" + warningCount + "] warning")
     }
 
     /**
@@ -193,13 +190,13 @@ object Project {
      */
     fun genIndex() {
         try {
-            val writer = BufferedWriter(FileWriter(root!!.absolutePath + "/.mclib"))
+            val writer = BufferedWriter(FileWriter(root.absolutePath + "/.mclib"))
             writer.write("[function]\n")
-            for (f in global.cache!!.functions) {
+            for (f in global.cache.functions) {
                 writer.write(f.namespaceID + "\n")
             }
             writer.write("[class]\n")
-            for (c in global.cache!!.classes.values) {
+            for (c in global.cache.classes.values) {
                 writer.write(c.namespace.toString() + ":" + c.identifier + "\n")
             }
             writer.write("[end]\n")

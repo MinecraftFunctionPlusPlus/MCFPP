@@ -1,3 +1,3 @@
-package top.alumopper.mcfpp.type
+package top.alumopper.mcfpp.lang
 
 class JsonText 

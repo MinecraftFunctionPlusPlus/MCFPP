@@ -29,7 +29,7 @@ class NativeClassObject : Var {
 
     constructor(clsType: NativeClass, args: ArrayList<Var>) {
         this.clsType = clsType
-        type = clsType.identifier.toString()
+        type = clsType.identifier
         initPointer = ClassPointer(clsType, clsType, UUID.randomUUID().toString())
         //创建java实例
         //列表转数组

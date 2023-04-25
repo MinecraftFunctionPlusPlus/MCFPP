@@ -20,12 +20,12 @@ open class Class : CacheContainer {
     /**
      * 这个类的标识符
      */
-    var identifier: String? = null
+    lateinit var identifier: String
 
     /**
      * 类的命名空间
      */
-    var namespace: String? = null
+    lateinit var namespace: String
 
     /**
      * 这个类的父类
@@ -45,7 +45,7 @@ open class Class : CacheContainer {
     /**
      * 记录这个类所有实例地址的记分板
      */
-    var addressSbObject: SbObject? = null
+    lateinit var addressSbObject: SbObject
 
     /**
      * 成员变量对应的初始化计算表达式
@@ -70,18 +70,18 @@ open class Class : CacheContainer {
     /**
      * 类的字段初始化函数
      */
-    var classPreInit: Function? = null
+    lateinit var classPreInit: Function
 
     /**
      * 类的静态字段的初始化函数
      */
-    var classPreStaticInit: Function? = null
+    lateinit var classPreStaticInit: Function
 
     /**
      * 生成一个类。它拥有指定的标识符和默认的命名空间
      * @param identifier 类的标识符
      */
-    constructor(identifier: String) : this(identifier, Project.currNamespace!!)
+    constructor(identifier: String) : this(identifier, Project.currNamespace)
 
     /**
      * 生成一个类，它拥有指定的标识符和命名空间
@@ -92,14 +92,15 @@ open class Class : CacheContainer {
         this.identifier = identifier
         this.namespace = namespace
         classPreInit = Function("_class_preinit_$identifier", this, false)
-        staticCache = Cache(Project.global.cache!!, this)
+        classPreStaticInit = Function("_class_preinit_$identifier", this, true)
+        staticCache = Cache(Project.global.cache, this)
         cache = Cache(staticCache!!, this)
-        cache!!.functions.add(classPreInit!!)
-        staticCache!!.functions.add(classPreStaticInit!!)
+        cache!!.functions.add(classPreInit)
+        staticCache!!.functions.add(classPreStaticInit)
         addressSbObject = SbObject(namespace + "_class_" + identifier + "_index")
         //init函数的初始化置入，即地址分配，原preinit函数合并于此。同时生成新的临时指针
-        classPreInit!!.commands.add("scoreboard players operation @s " + addressSbObject!!.name + " = \$index " + addressSbObject!!.name)
-        classPreInit!!.commands.add("scoreboard players add \$index " + addressSbObject!!.name + " 1")
+        classPreInit.commands.add("scoreboard players operation @s " + addressSbObject.name + " = \$index " + addressSbObject.name)
+        classPreInit.commands.add("scoreboard players add \$index " + addressSbObject.name + " 1")
     }
 
     constructor()
@@ -182,7 +183,7 @@ open class Class : CacheContainer {
         val obj = ClassObject(this, this, "temp")
         //给这个类添加成员
         obj.cache = Cache(cache!!)
-        obj.address = MCInt("@s").setObj(addressSbObject!!) as MCInt
+        obj.address = MCInt("@s").setObj(addressSbObject) as MCInt
         return obj
     }
 

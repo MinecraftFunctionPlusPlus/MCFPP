@@ -248,11 +248,11 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             Function.currFunction!!.getVar(ctx.text) as ClassPointer
         } else {
             //ClassName
-            val qwq: Class? = Project.global.cache!!.classes.getOrDefault(ctx.className().text, null)
+            val qwq: Class? = Project.global.cache.classes.getOrDefault(ctx.className().text, null)
             if (qwq == null) {
                 Project.logger.error(
                     "Undefined class:" + ctx.className().text +
-                            " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                            " at " + Project.currFile.name + " line: " + ctx.getStart().line
                 )
                 Project.errorCount++
             }
@@ -266,7 +266,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             if (member == null) {
                 Project.logger.error(
                     "Undefined member " + ctx.selector(i).text + " in class " + curr.Class()!!.identifier +
-                            " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                            " at " + Project.currFile.name + " line: " + ctx.getStart().line
                 )
                 Project.errorCount++
             }
@@ -320,7 +320,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
                 */if (re == null) {
                     Project.logger.error(
                         "Undefined variable:" + qwq +
-                                " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                                " at " + Project.currFile.name + " line: " + ctx.getStart().line
                     )
                     Project.errorCount++
                 }
@@ -343,11 +343,11 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
 
     @Override
     override fun visitConstructorCall(ctx: mcfppParser.ConstructorCallContext): Var? {
-        val cls: Class? = Project.global.cache!!.classes.getOrDefault(ctx.className().text, null)
+        val cls: Class? = Project.global.cache.classes.getOrDefault(ctx.className().text, null)
         if (cls == null) {
             Project.logger.error(
                 "Undefined class:" + ctx.className().text +
-                        " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                        " at " + Project.currFile.name + " line: " + ctx.getStart().line
             )
             Project.errorCount++
         }
@@ -368,28 +368,28 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             } catch (e: InvocationTargetException) {
                 Project.logger.error(
                     "Catch Exception when instantiate native class: " + cls.cls +
-                            " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                            " at " + Project.currFile.name + " line: " + ctx.getStart().line
                 )
                 Project.logger.error(e.message + " " + e.cause + "\n")
                 throw RuntimeException(e)
             } catch (e: InstantiationException) {
                 Project.logger.error(
                     "Catch Exception when instantiate native class: " + cls.cls +
-                            " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                            " at " + Project.currFile.name + " line: " + ctx.getStart().line
                 )
                 Project.logger.error(e.message + " " + e.cause + "\n")
                 throw RuntimeException(e)
             } catch (e: IllegalAccessException) {
                 Project.logger.error(
                     "Catch Exception when instantiate native class: " + cls.cls +
-                            " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                            " at " + Project.currFile.name + " line: " + ctx.getStart().line
                 )
                 Project.logger.error(e.message + " " + e.cause + "\n")
                 throw RuntimeException(e)
             } catch (e: NoSuchMethodException) {
                 Project.logger.error(
                     "Catch Exception when instantiate native class: " + cls.cls +
-                            " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                            " at " + Project.currFile.name + " line: " + ctx.getStart().line
                 )
                 Project.logger.error(e.message + " " + e.cause + "\n")
                 throw RuntimeException(e)
@@ -401,7 +401,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             Project.logger.error(
                 "No constructor like: " + FunctionParam.getVarTypes(args) + " defined in class " + ctx.className()
                     .text +
-                        " at " + Project.currFile!!.name + " line: " + ctx.getStart().line
+                        " at " + Project.currFile.name + " line: " + ctx.getStart().line
             )
             Project.errorCount++
             throw FunctionNotDefineException()
