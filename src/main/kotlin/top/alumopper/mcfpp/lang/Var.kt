@@ -149,11 +149,7 @@ abstract class Var : ClassMember, Cloneable {
                 //取出类
                 val type: Class? = Project.global.cache.classes.getOrDefault(cls, null)
                 if (type == null) {
-                    Project.logger.error(
-                        "Undefined class:" + cls +
-                                " at " + Project.currFile.name + " line: " + ctx.getStart().line
-                    )
-                    Project.errorCount++
+                    Project.error("Undefined class:$cls")
                 }
                 assert(type != null)
                 `var` = ClassPointer(type!!, container, ctx.Identifier().text)
@@ -196,11 +192,7 @@ abstract class Var : ClassMember, Cloneable {
                 //取出类
                 val type: Class? = Project.global.cache.classes.getOrDefault(clsType, null)
                 if (type == null) {
-                    Project.logger.error(
-                        "Undefined class:" + clsType +
-                                " at " + Project.currFile.name + " line: " + ctx.getStart().line
-                    )
-                    Project.errorCount++
+                    Project.error("Undefined class:$clsType")
                 }
                 assert(type != null)
                 val classPointer = ClassPointer(type!!, cls, ctx.Identifier().text)

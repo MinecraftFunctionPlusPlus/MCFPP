@@ -44,19 +44,19 @@ import java.lang.NullPointerException
  * *      }
  * * }
  * 位置①：现在父函数还没调用 funA，堆栈情况是：<br></br>
- * low address [ [父函数栈帧] ... ] high address<br></br>
+ * low address [ \[父函数栈帧] ... ] high address<br></br>
  * （执行 funA(?) ）<br></br>
  * 位置②：当父函数调用 funA 时，会从栈顶开一块新的空间来保存 funA 的栈帧，堆栈情况是：<br></br>
- * low address [ [funA栈帧] [父函数栈帧] ... ] high address<br></br>
+ * low address [ \[funA栈帧] \[父函数栈帧] ... ] high address<br></br>
  * （执行 a = a + 1）<br></br>
  * （执行 funB(a) ）<br></br>
  * 位置③：当 funA 调用 funB 时，会从栈顶开一块新的空间来保存 funB 的栈帧，堆栈情况是：<br></br>
- * low address [ [funB栈帧] [funA栈帧] [父函数栈帧] ... ] high address<br></br>
+ * low address [ \[funB栈帧] \[funA栈帧] \[父函数栈帧] ... ] high address<br></br>
  * （执行 a = a + 2）<br></br>
  * 位置④：funB 调用结束，funB 的栈帧被销毁，程序回到 funA 继续执行，堆栈情况是：<br></br>
- * low address [ [funA栈帧] [父函数栈帧] ... ] high address<br></br>
+ * low address [ \[funA栈帧] \[父函数栈帧] ... ] high address<br></br>
  * 位置⑤：funA 调用结束，funA 的栈帧被销毁，程序回到 父函数 继续执行，堆栈情况是：<br></br>
- * low address [ [父函数栈帧] ... ] high address<br></br>
+ * low address [ \[父函数栈帧] ... ] high address<br></br>
  * 我们会发现，funA 和 funB 使用的变量都叫 a，但它们的位置是不同的，此处当前函数只会在属于自己的栈帧的内存空间上
  * 操作，不同函数之间的变量之所以不会互相干扰，也是因为它们在栈中使用的位置不同，此 a 非彼 a
  *
@@ -186,10 +186,10 @@ open class Function : ClassMember, CacheContainer {
         namespace = cls.namespace
         parentClass = cls
         isClassMember = true
-        if (isStatic) {
-            cache = Cache(cls.cache, this)
+        cache = if (isStatic) {
+            Cache(cls.cache, this)
         } else {
-            cache = Cache(cls.staticCache, this)
+            Cache(cls.staticCache, this)
         }
     }
 
@@ -206,7 +206,7 @@ open class Function : ClassMember, CacheContainer {
      * 获取这个函数的id，它包含了这个函数的路径和函数的标识符。每一个函数的id都是唯一的
      * @return 函数id
      */
-    fun GetID(): String {
+    fun getID(): String {
         return name
     }
 
@@ -404,10 +404,11 @@ open class Function : ClassMember, CacheContainer {
         /**
          * 当一个函数被break或continue截断的时候，使用此标记，表示此函数执行完毕后的函数应当重新建立一个匿名内部函数，
          * 从而实现break和continue的逻辑控制。
-         * 即同时满足isEnd == false和isLastFunctionEnd = 2的时候进入新的匿名break/continue内部函数
-         * 0    未截断
-         * 1    被截断，需要进入匿名函数
-         * 2    被截断，但是已经在匿名函数里面了
+         *
+         * 即同时满足isEnd == false和isLastFunctionEnd = 2的时候进入新的匿名break/continue内部函数<br>
+         * * 0    未截断
+         * * 1    被截断，需要进入匿名函数
+         * * 2    被截断，但是已经在匿名函数里面了
          */
         var isLastFunctionEnd = 0
 
@@ -428,7 +429,7 @@ open class Function : ClassMember, CacheContainer {
          */
         fun addCommand(str: String?) {
             if(this.equals(nullFunction)){
-                Project.logger.warn("Unexpected command added to NullFunction")
+                Project.warn("Unexpected command added to NullFunction")
                 throw NullPointerException()
             }
             if (!currFunction.isEnd) {

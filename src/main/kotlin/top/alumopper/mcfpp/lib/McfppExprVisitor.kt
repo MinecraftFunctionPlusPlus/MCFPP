@@ -19,6 +19,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
      */
     @Override
     override fun visitExpression(ctx: mcfppParser.ExpressionContext): Var? {
+        Project.ctx = ctx
         return visit(ctx.conditionalOrExpression())
     }
     //TODO 三目表达式。可能会实现，但是泠雪是懒狐，不想做。
@@ -37,6 +38,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
      */
     @Override
     override fun visitConditionalOrExpression(ctx: mcfppParser.ConditionalOrExpressionContext): Var? {
+        Project.ctx = ctx
         var re: Var? = visit(ctx.conditionalAndExpression(0))
         for (i in 1 until ctx.conditionalAndExpression().size) {
             val b: Var? = visit(ctx.conditionalAndExpression(i))
@@ -57,6 +59,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     //和
     @Override
     override fun visitConditionalAndExpression(ctx: mcfppParser.ConditionalAndExpressionContext): Var? {
+        Project.ctx = ctx
         var re: Var? = visit(ctx.equalityExpression(0))
         for (i in 1 until ctx.equalityExpression().size) {
             val b: Var? = visit(ctx.equalityExpression(i))
@@ -77,6 +80,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     //等于或不等于
     @Override
     override fun visitEqualityExpression(ctx: mcfppParser.EqualityExpressionContext): Var? {
+        Project.ctx = ctx
         var re: Var? = visit(ctx.relationalExpression(0))
         for (i in 1 until ctx.relationalExpression().size) {
             val b: Var? = visit(ctx.relationalExpression(i))
@@ -104,6 +108,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
      */
     @Override
     override fun visitRelationalExpression(ctx: mcfppParser.RelationalExpressionContext): Var? {
+        Project.ctx = ctx
         var re: Var? = visit(ctx.additiveExpression(0))
         if (ctx.additiveExpression().size != 1) {
             val b: Var? = visit(ctx.additiveExpression(1))
@@ -128,6 +133,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
      */
     @Override
     override fun visitAdditiveExpression(ctx: mcfppParser.AdditiveExpressionContext): Var? {
+        Project.ctx = ctx
         var re: Var? = visit(ctx.multiplicativeExpression(0))
         for (i in 1 until ctx.multiplicativeExpression().size) {
             val b: Var? = visit(ctx.multiplicativeExpression(i))
@@ -160,6 +166,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     //乘法
     @Override
     override fun visitMultiplicativeExpression(ctx: mcfppParser.MultiplicativeExpressionContext): Var? {
+        Project.ctx = ctx
         var re: Var? = visit(ctx.unaryExpression(0))
         for (i in 1 until ctx.unaryExpression().size) {
             val b: Var? = visit(ctx.unaryExpression(i))
@@ -198,6 +205,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
      */
     @Override
     override fun visitUnaryExpression(ctx: mcfppParser.UnaryExpressionContext): Var? {
+        Project.ctx = ctx
         return if (ctx.basicExpression() != null) {
             visit(ctx.basicExpression())
         } else if (ctx.unaryExpression() != null) {
@@ -220,6 +228,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
      */
     @Override
     override fun visitCastExpression(ctx: mcfppParser.CastExpressionContext): Var? {
+        Project.ctx = ctx
         val a: Var? = visit(ctx.unaryExpression())
         return a!!.cast(ctx.type().text)
     }
@@ -232,6 +241,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     //基本表达式
     @Override
     override fun visitBasicExpression(ctx: mcfppParser.BasicExpressionContext): Var? {
+        Project.ctx = ctx
         return if (ctx.primary() != null) {
             visit(ctx.primary())
         } else {
@@ -242,19 +252,22 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
 
     @Override
     override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var? {
+        Project.ctx = ctx
+        Project.ctx = ctx
         var curr: CanSelectMember
         curr = if (ctx.`var`() != null) {
             //Var
-            Function.currFunction!!.getVar(ctx.text) as ClassPointer
+            if(Function.currFunction.getVar(ctx.text) is ClassPointer){
+                Function.currFunction.getVar(ctx.text) as ClassPointer
+            }else{
+                Project.error(ctx.text + "is not a class pointer")
+                throw ArgumentNotMatchException(ctx.text + "is not a class pointer")
+            }
         } else {
             //ClassName
-            val qwq: Class? = Project.global.cache.classes.getOrDefault(ctx.className().text, null)
+            val qwq: Class? = Project.global.cache.classes[ctx.className().text]
             if (qwq == null) {
-                Project.logger.error(
-                    "Undefined class:" + ctx.className().text +
-                            " at " + Project.currFile.name + " line: " + ctx.getStart().line
-                )
-                Project.errorCount++
+                Project.error("Undefined class:" + ctx.className().text)
             }
             ClassType(qwq!!)
         }
@@ -264,11 +277,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         while (i < ctx.selector().size) {
             member = curr.getVarMember(ctx.selector(i).text.substring(1))
             if (member == null) {
-                Project.logger.error(
-                    "Undefined member " + ctx.selector(i).text + " in class " + curr.Class()!!.identifier +
-                            " at " + Project.currFile.name + " line: " + ctx.getStart().line
-                )
-                Project.errorCount++
+                Project.error("Undefined member " + ctx.selector(i).text + " in class " + curr.Class()!!.identifier)
             }
             i++
             curr = (member as CanSelectMember?)!!
@@ -283,6 +292,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
      */
     @Override
     override fun visitPrimary(ctx: mcfppParser.PrimaryContext): Var? {
+        Project.ctx = ctx
         if (ctx.`var`() != null) {
             //变量
             return visit(ctx.`var`())
@@ -306,23 +316,20 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
      */
     @Override
     override fun visitVar(ctx: mcfppParser.VarContext): Var? {
+        Project.ctx = ctx
         return if (ctx.Identifier() != null) {
             // Identifier identifierSuffix*
             if (ctx.identifierSuffix() == null || ctx.identifierSuffix().size == 0) {
                 //没有数组选取
                 val qwq: String = ctx.Identifier().text
-                val re: Var? = Function.currFunction!!.getVar(qwq)
+                val re: Var? = Function.currFunction.getVar(qwq)
                 //TODO 从类的成员中选取。待定特性。
                 /*
                 if(re == null && Function.currFunction.Class() != null){
                     re = Function.currFunction.Class().getMemberVar(ctx.getText());
                 }
                 */if (re == null) {
-                    Project.logger.error(
-                        "Undefined variable:" + qwq +
-                                " at " + Project.currFile.name + " line: " + ctx.getStart().line
-                    )
-                    Project.errorCount++
+                    Project.error("Undefined variable:$qwq")
                 }
                 re
             } else {
@@ -343,13 +350,10 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
 
     @Override
     override fun visitConstructorCall(ctx: mcfppParser.ConstructorCallContext): Var? {
+        Project.ctx = ctx
         val cls: Class? = Project.global.cache.classes.getOrDefault(ctx.className().text, null)
         if (cls == null) {
-            Project.logger.error(
-                "Undefined class:" + ctx.className().text +
-                        " at " + Project.currFile.name + " line: " + ctx.getStart().line
-            )
-            Project.errorCount++
+            Project.error("Undefined class:" + ctx.className().text)
         }
         //获取参数列表
         //参数获取
@@ -366,44 +370,23 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             return try {
                 cls.newInstance(args)
             } catch (e: InvocationTargetException) {
-                Project.logger.error(
-                    "Catch Exception when instantiate native class: " + cls.cls +
-                            " at " + Project.currFile.name + " line: " + ctx.getStart().line
-                )
-                Project.logger.error(e.message + " " + e.cause + "\n")
+                Project.error("Catch Exception when instantiate native class: " + cls.cls + "\n" + e.message + " " + e.cause + "\n")
                 throw RuntimeException(e)
             } catch (e: InstantiationException) {
-                Project.logger.error(
-                    "Catch Exception when instantiate native class: " + cls.cls +
-                            " at " + Project.currFile.name + " line: " + ctx.getStart().line
-                )
-                Project.logger.error(e.message + " " + e.cause + "\n")
+                Project.error("Catch Exception when instantiate native class: " + cls.cls + "\n" + e.message + " " + e.cause + "\n")
                 throw RuntimeException(e)
             } catch (e: IllegalAccessException) {
-                Project.logger.error(
-                    "Catch Exception when instantiate native class: " + cls.cls +
-                            " at " + Project.currFile.name + " line: " + ctx.getStart().line
-                )
-                Project.logger.error(e.message + " " + e.cause + "\n")
+                Project.error("Catch Exception when instantiate native class: " + cls.cls + "\n" + e.message + " " + e.cause + "\n")
                 throw RuntimeException(e)
             } catch (e: NoSuchMethodException) {
-                Project.logger.error(
-                    "Catch Exception when instantiate native class: " + cls.cls +
-                            " at " + Project.currFile.name + " line: " + ctx.getStart().line
-                )
-                Project.logger.error(e.message + " " + e.cause + "\n")
+                Project.error("Catch Exception when instantiate native class: " + cls.cls + "\n" + e.message + " " + e.cause + "\n")
                 throw RuntimeException(e)
             }
         }
         cls!!
         val constructor = cls.getConstructor(FunctionParam.getVarTypes(args))
         if (constructor == null) {
-            Project.logger.error(
-                "No constructor like: " + FunctionParam.getVarTypes(args) + " defined in class " + ctx.className()
-                    .text +
-                        " at " + Project.currFile.name + " line: " + ctx.getStart().line
-            )
-            Project.errorCount++
+            Project.error("No constructor like: " + FunctionParam.getVarTypes(args) + " defined in class " + ctx.className().text)
             throw FunctionNotDefineException()
         }
         //调用构造函数

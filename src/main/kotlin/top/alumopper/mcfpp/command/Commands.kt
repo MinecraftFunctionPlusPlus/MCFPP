@@ -9,7 +9,6 @@ import top.alumopper.mcfpp.lang.MCInt
  * 尽量不要打开或编辑这个文件，不然会感受痛苦。
  * 尽量少地使用这个文件中的内容
  */
-@Deprecated("")
 object Commands {
     fun Function(function: Function): String {
         return "function " + function.namespaceID.lowercase(Locale.getDefault())
