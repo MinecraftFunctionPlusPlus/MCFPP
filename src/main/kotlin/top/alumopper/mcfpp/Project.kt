@@ -1,6 +1,7 @@
 package top.alumopper.mcfpp
 
 import com.alibaba.fastjson2.*
+import org.antlr.v4.runtime.ParserRuleContext
 import org.apache.logging.log4j.*
 import top.alumopper.mcfpp.io.McfppFileReader
 import top.alumopper.mcfpp.lib.*
@@ -12,8 +13,10 @@ import java.io.*
  * 同时，这个工程文件的名字也是此文件编译生成的数据包的命名空间。
  */
 object Project {
-    var logger: Logger = LogManager.getLogger("mcfpp")
+    private var logger: Logger = LogManager.getLogger("mcfpp")
 //TODO config
+
+    var ctx: ParserRuleContext? = null
 
     /**
      * 工程的根目录
@@ -37,7 +40,7 @@ object Project {
     /**
      * 数据包的描述。原始Json文本 TODO
      */
-    var description: String? = null
+    private var description: String? = null
 
     /**
      * 工程包含的所有引用
@@ -62,12 +65,12 @@ object Project {
     /**
      * 工程中的总错误数量
      */
-    var errorCount = 0
+    private var errorCount = 0
 
     /**
      * 工程中的总警告数量
      */
-    var warningCount = 0
+    private var warningCount = 0
 
     /**
      * 全局缓存
@@ -249,6 +252,32 @@ object Project {
                 }
             }
         }
+    }
+
+    fun debug(msg: String){
+        logger.debug(
+            msg + " at " + currFile.name + " line: " + ctx!!.getStart().line
+        )
+    }
+
+    fun info(msg: String){
+        logger.info(
+            msg + " at " + currFile.name + " line: " + ctx!!.getStart().line
+        )
+    }
+
+    fun warn(msg: String){
+        logger.warn(
+            msg + " at " + currFile.name + " line: " + ctx!!.getStart().line
+        )
+        warningCount ++
+    }
+
+    fun error(msg: String){
+        logger.error(
+            msg + " at " + currFile.name + " line: " + ctx!!.getStart().line
+        )
+        errorCount ++
     }
 
     /**

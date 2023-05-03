@@ -8,6 +8,7 @@ import top.alumopper.mcfpp.Project
  */
 class McfppFuncVisitor : mcfppBaseVisitor<Function?>() {
     fun getFunction(ctx: mcfppParser.FunctionCallContext, args: ArrayList<String>): Function? {
+        Project.ctx = ctx
         return if (ctx.namespaceID() != null && ctx.basicExpression() == null) {
             val qwq: Function? = if (ctx.namespaceID().Identifier().size == 1) {
                 Project.global.cache.getFunction(Project.currNamespace, ctx.namespaceID().Identifier(0).text, args)
