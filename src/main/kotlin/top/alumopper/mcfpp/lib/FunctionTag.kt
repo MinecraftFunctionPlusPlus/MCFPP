@@ -7,7 +7,7 @@ import top.alumopper.mcfpp.Project
  * 一个函数的标签
  */
 class FunctionTag(
-    namespace: String,
+    namespace: String?,
     /**
      * 函数标签的名字
      */
@@ -24,9 +24,13 @@ class FunctionTag(
     var cache: Cache
 
     init {
-        if (tag == "tick" || tag == "load") {
-            this.namespace = MINECRAFT
-        } else {
+        if(namespace == null){
+            if (tag == "tick" || tag == "load") {
+                this.namespace = MINECRAFT
+            } else {
+                this.namespace = Project.currNamespace
+            }
+        }else{
             this.namespace = namespace
         }
         cache = Cache(Project.global.cache)

@@ -5,7 +5,6 @@ import top.alumopper.mcfpp.Project
 import top.alumopper.mcfpp.command.Commands
 import top.alumopper.mcfpp.lang.*
 import java.lang.NullPointerException
-import java.util.ArrayList
 
 /**
  * 一个minecraft中的命令函数。
@@ -109,7 +108,7 @@ open class Function : ClassMember, CacheContainer {
      * 函数的标签
      * TODO 函数的标签应该是一个列表
      */
-    var tag: FunctionTag? = null
+    var tags: ArrayList<FunctionTag> = ArrayList()
 
     /**
      * 函数的命名空间。默认为工程文件的明明空间
@@ -195,7 +194,7 @@ open class Function : ClassMember, CacheContainer {
     }
 
     /**
-     * 创建一个函数，它有指定的标签
+     * 创建一个函数，它有指定的命名空间
      * @param name 函数的标识符
      * @param namespace 函数的命名空间
      */
@@ -211,13 +210,27 @@ open class Function : ClassMember, CacheContainer {
         return name
     }
 
+    fun addTag(tag : FunctionTag):Function{
+        if(!tags.contains(tag)){
+            tags.add(tag)
+        }
+        return this
+    }
+
     val namespaceID: String
         /**
          * 获取这个函数的命名空间id，即xxx:xxx形式。可以用于命令
          * @return 函数的命名空间id
          */
         get() {
-            val re: StringBuilder = StringBuilder("$namespace:$name")
+            val re: StringBuilder = if(!isClassMember){
+                StringBuilder("$namespace:$name")
+            }else{
+                if(isStatic){
+                    StringBuilder("$namespace:${parentClass!!.identifier}/static/$name")
+                }
+                StringBuilder("$namespace:${parentClass!!.identifier}/$name")
+            }
             for (p in params) {
                 re.append("_").append(p.type)
             }
@@ -268,9 +281,9 @@ open class Function : ClassMember, CacheContainer {
      * 调用这个函数
      * @param args 函数的参数
      */
-    open operator fun invoke(args: ArrayList<Var>, lineNo: Int) {
+    open fun invoke(args: ArrayList<Var>, lineNo: Int) {
         //给函数开栈
-        addCommand("data modify storage mcfpp:system " + Project.name + ".stack_frame prepend value {}")
+        addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
         //参数传递
         for (i in 0 until params.size) {
             when (params[i].type) {
@@ -278,7 +291,7 @@ open class Function : ClassMember, CacheContainer {
                     val tg = args[i].cast(params[i].type) as MCInt
                     //参数传递和子函数的参数压栈
                     addCommand(
-                        "execute store result storage mcfpp:system " + Project.name + ".stack_frame[0]." + params[i].identifier + " run "
+                        "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]." + params[i].identifier + " run "
                                 + Commands.SbPlayerOperation(MCInt("_param_" + params[i].identifier, this), "=", tg)
                     )
                 }
@@ -295,21 +308,21 @@ open class Function : ClassMember, CacheContainer {
                         //如果是int取出到记分板
                         addCommand(
                             "execute store result score " + (args[i] as MCInt).identifier + " " + (args[i] as MCInt).`object` + " run "
-                                    + "data get storage mcfpp:system " + Project.name + ".stack_frame[0]." + params[i].identifier
+                                    + "data get storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]." + params[i].identifier
                         )
                     }
                 }
             }
         }
         //调用完毕，将子函数的栈销毁
-        addCommand("data remove storage mcfpp:system " + Project.name + ".stack_frame[0]")
+        addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
         //取出栈内的值到记分板
         for (`var` in currFunction.cache.allVars) {
             if (`var` is MCInt) {
                 //如果是int取出到记分板
                 addCommand(
                     "execute store result score " + `var`.identifier + " " + `var`.`object` + " run "
-                            + "data get storage mcfpp:system " + Project.name + ".stack_frame[0]." + `var`.key
+                            + "data get storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]." + `var`.key
                 )
             }
         }
@@ -321,9 +334,19 @@ open class Function : ClassMember, CacheContainer {
      * @param lineNo 调用此函数的上下文的行数，用于错误日志
      * @param cls 调用函数的实例
      */
-    open operator fun invoke(args: ArrayList<Var>, lineNo: Int, cls: ClassPointer) {
+    open fun invoke(args: ArrayList<Var>, lineNo: Int, cls: ClassPointer) {
         TODO()
     }
+
+    val isEntrance: Boolean
+        get() {
+            for (tag in tags){
+                if(tags.equals(FunctionTag.TICK) || tags.equals(FunctionTag.LOAD)){
+                    return true
+                }
+            }
+            return false
+        }
 
     val cmdStr: String
         get() {
@@ -339,15 +362,14 @@ open class Function : ClassMember, CacheContainer {
         get() = Project.currNamespace + "_func_" + name + "_"
 
     /**
-     * 判断两个函数是否相同.判据包括:命名空间ID,是否是类成员,父类,标签和参数列表
+     * 判断两个函数是否相同.判据包括:命名空间ID,是否是类成员,父类和参数列表
      * @param other 要比较的对象
      * @return 若相同,则返回true
      */
     @Override
     override fun equals(other: Any?): Boolean {
         if (other is Function) {
-            if (!((other.tag != null && other.tag!! == tag || other.tag == null && tag == null) && other.isClassMember == isClassMember && other.namespaceID == namespaceID && other.parentClass === parentClass)
-            ) {
+            if (!(other.isClassMember == isClassMember && other.namespaceID == namespaceID && other.parentClass === parentClass)) {
                 return false
             }
             if (other.params.size == params.size) {

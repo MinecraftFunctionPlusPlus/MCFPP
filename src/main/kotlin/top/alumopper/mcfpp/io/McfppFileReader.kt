@@ -27,7 +27,6 @@ class McfppFileReader(path: String?) : McfppReader() {
      */
     @Throws(IOException::class)
     fun analyse() {
-        Project.currNamespace = Project.name
         Project.currFile = File(path!!)
         val charStream: CharStream = CharStreams.fromStream(input)
         val tokens = CommonTokenStream(mcfppLexer(charStream))
@@ -39,7 +38,7 @@ class McfppFileReader(path: String?) : McfppReader() {
      */
     @Throws(IOException::class)
     fun compile() {
-        Project.currNamespace = Project.name
+        Project.currNamespace = Project.defaultNamespace
         Project.currFile = File(path!!)
         val charStream: CharStream = CharStreams.fromStream(input)
         val lexer = mcfppLexer(charStream)

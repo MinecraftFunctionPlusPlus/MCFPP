@@ -96,7 +96,7 @@ class MCInt : Number<Int> {
             isConcrete = false
             //变量进栈
             Function.addCommand(
-                "execute store result storage mcfpp:system " + Project.name + ".stack_frame[" + stackIndex + "]." + key + " run "
+                "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + key + " run "
                         + Commands.SbPlayerOperation(this, "=", a as MCInt)
             )
         }

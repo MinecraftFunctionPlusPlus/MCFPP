@@ -23,14 +23,14 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
      * @param cls 调用函数的实例
      */
     @Override
-    override operator fun invoke(args: ArrayList<Var>, lineNo: Int, cls: ClassPointer) {
+    override fun invoke(args: ArrayList<Var>, lineNo: Int, cls: ClassPointer) {
         //对象创建
         Function.addCommand(
             "execute in minecraft:overworld " +
                     "run summon marker 0 0 0 {Tags:[" + cls.obj!!.tag + ",mcfpp_classPointer_just],data:{pointers:[]}}"
         )
         //给函数开栈
-        Function.addCommand("data modify storage mcfpp:system " + Project.name + ".stack_frame prepend value {}")
+        Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
         //参数传递
         for (i in 0 until params.size) {
             when (params[i].type) {
@@ -38,7 +38,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
                     val tg = args[i].cast(params[i].type) as MCInt
                     //参数传递和子函数的参数压栈
                     Function.addCommand(
-                        "execute store result storage mcfpp:system " + Project.name + ".stack_frame[0]." + params[i].identifier + " run "
+                        "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]." + params[i].identifier + " run "
                                 + Commands.SbPlayerOperation(MCInt("_param_" + params[i].identifier, this), "=", tg)
                     )
                 }
@@ -55,14 +55,14 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
                     Commands.Function(this)
         )
         //调用完毕，将子函数的栈销毁
-        Function.addCommand("data remove storage mcfpp:system " + Project.name + ".stack_frame[0]")
+        Function.addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
         //取出栈内的值到记分板
         for (`var` in Function.currFunction!!.cache.allVars) {
             if (`var` is MCInt) {
                 //如果是int取出到记分板
                 Function.addCommand(
                     "execute store result score " + `var`.identifier + " " + `var`.`object` + " run "
-                            + "data get storage mcfpp:system " + Project.name + ".stack_frame[0]." + `var`.key
+                            + "data get storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]." + `var`.key
                 )
             }
         }

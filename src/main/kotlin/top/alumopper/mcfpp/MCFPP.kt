@@ -11,8 +11,8 @@ fun main(args: Array<String>) {
         val start: Long = System.currentTimeMillis()
         Project.logger.info("Tips: " + UwU.tip) //生成tips
         val path = args[0]
-        Project.init() //初始化
         Project.readProject(path) //读取
+        Project.init() //初始化
         Project.analyse() //解析
         Project.compile() //编译
         Project.optimization() //优化

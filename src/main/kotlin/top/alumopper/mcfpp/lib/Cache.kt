@@ -156,7 +156,11 @@ class Cache {
                 if (s is NativeFunction) {
                     println("native " + s.namespace + " -> " + s.javaReferContext!!.text)
                 } else {
-                    println(s.namespaceID)
+                    val n = StringBuilder("")
+                    for(tag in s.tags){
+                        n.append("@${tag.namespaceID}")
+                    }
+                    println("$n ${s.namespaceID}")
                     for (c in s.commands) {
                         println("\t" + c)
                     }

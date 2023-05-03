@@ -2,4 +2,7 @@ func qwq(){
     const int qwq = 9;
     int p;
     int i = p + qwq;
+    if(i == 5){
+        int q = i;
+    }
 }

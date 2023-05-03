@@ -107,7 +107,7 @@ open class Class : CacheContainer {
 
     @get:Override
     override val prefix: String
-        get() = Project.name.toString() + "_class_" + identifier + "_"
+        get() = Project.defaultNamespace.toString() + "_class_" + identifier + "_"
 
     /**
      * 根据参数列表获取一个类的构造函数

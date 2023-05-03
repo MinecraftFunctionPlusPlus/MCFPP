@@ -51,7 +51,7 @@ class NativeFunction(name: String, javaMethod: mcfppParser.JavaReferContext?) : 
     }
 
     @Override
-    override operator fun invoke(args: ArrayList<Var>, lineNo: Int) {
+    override fun invoke(args: ArrayList<Var>, lineNo: Int) {
         val argsArray = arrayOfNulls<Var>(args.size)
         args.toArray(argsArray)
         try {
@@ -64,7 +64,7 @@ class NativeFunction(name: String, javaMethod: mcfppParser.JavaReferContext?) : 
     }
 
     @Override
-    override operator fun invoke(args: ArrayList<Var>, lineNo: Int, cls: ClassPointer) {
+    override fun invoke(args: ArrayList<Var>, lineNo: Int, cls: ClassPointer) {
         val argsArray = arrayOfNulls<Var>(args.size)
         args.toArray(argsArray)
         try {

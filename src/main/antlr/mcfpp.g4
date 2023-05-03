@@ -62,7 +62,7 @@ classFunctionDeclaration
 
 //函数声明
 functionDeclaration
-    :    INLINE? functionTag? 'func' namespaceID '(' parameterList? ')' '{' functionBody '}'
+    :    INLINE? functionTag* 'func' namespaceID '(' parameterList? ')' '{' functionBody '}'
     ;
 
 namespaceID
@@ -348,7 +348,7 @@ className
     ;
 
 functionTag
-    :   namespaceID
+    :   AT namespaceID
     ;
 
 TargetSelector
@@ -416,6 +416,8 @@ NORMALSTRING
 STRING
     :   '"' .*? '"'
     ;
+
+AT:'@';
 
 //
 // Whitespace and comments
