@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.*
 import org.apache.logging.log4j.*
 import top.alumopper.mcfpp.io.McfppFileReader
 import top.alumopper.mcfpp.lib.*
+import top.alumopper.mcfpp.lib.Function
 import java.io.*
 
 /**
@@ -18,12 +19,6 @@ object Project {
      * 工程的根目录
      */
     lateinit var root: File
-
-    /**
-     * 工程的名字
-     */
-    lateinit var name: String
-
     /**
      * 工程包含的所有文件。以绝对路径保存
      */
@@ -33,6 +28,11 @@ object Project {
      * 工程对应的mc版本
      */
     var version: String? = null
+
+    /**
+     * 工程的名字
+     */
+    lateinit var name: String
 
     /**
      * 数据包的描述。原始Json文本 TODO
@@ -50,9 +50,14 @@ object Project {
     lateinit var currFile: File
 
     /**
+     * 工程的名字
+     */
+    var defaultNamespace: String = "default"
+
+    /**
      * 当前的命名空间
      */
-    lateinit var currNamespace: String
+    var currNamespace = defaultNamespace
 
     /**
      * 工程中的总错误数量
@@ -68,8 +73,18 @@ object Project {
      * 全局缓存
      */
     var global: Global = Global()
+
+    /**
+     * 初始化
+     */
     fun init() {
+        //全局缓存初始化
         global.init()
+        //初始化mcfpp的tick和load函数
+        val mcfppTick = Function("tick","mcfpp")
+        val mcfppLoad = Function("load","mcfpp")
+        global.cache.functions.add(mcfppLoad)
+        global.cache.functions.add(mcfppTick)
     }
 
     /**
@@ -115,6 +130,11 @@ object Project {
             description = jsonObject.getString("description")
             if (description == null) {
                 description = "A datapack compiled by MCFPP"
+            }
+            defaultNamespace = if(jsonObject.getString("namespace") != null){
+                jsonObject.getString("namespace")
+            }else{
+                "default"
             }
             val includesJson: JSONArray = jsonObject.getJSONArray("includes")?: JSONArray()
             for (i in 0 until includesJson.size) {
@@ -173,15 +193,16 @@ object Project {
             if (f.parent.size == 0 && f !is Native) {
                 //找到了入口函数
                 hasEntrance = true
-                f.commands.add(0, "data modify storage mcfpp:system $name.stack_frame prepend value {}")
-                logger.debug("Find entrance function:" + (if (f.tag == null) "" else f.tag) + " " + f.name)
+                f.commands.add(0, "data modify storage mcfpp:system $defaultNamespace.stack_frame prepend value {}")
+                f.commands.add("data remove storage mcfpp:system $defaultNamespace.stack_frame[0]")
+                logger.debug("Find entrance function:${f.tags} ${f.name}")
             }
         }
         if (!hasEntrance) {
-            logger.warn("No valid entrance function in Project $name")
+            logger.warn("No valid entrance function in Project $defaultNamespace")
             warningCount++
         }
-        logger.info("Complete compiling project " + root.name + " with [" + errorCount + "] error and [" + warningCount + "] warning")
+        logger.info("Complete compiling project " + root.name + " with [$errorCount] error and [$warningCount] warning")
     }
 
     /**

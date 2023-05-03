@@ -24,6 +24,7 @@ dependencies {
     implementation("com.alibaba.fastjson2:fastjson2:2.0.28")
     implementation("org.apache.logging.log4j:log4j-api:2.20.0")
     implementation("org.apache.logging.log4j:log4j-core:2.20.0")
+    implementation("org.openjdk.nashorn:nashorn-core:15.4")
     antlr("org.antlr:antlr4:4.12.0")
 
 }

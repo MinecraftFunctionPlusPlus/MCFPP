@@ -207,7 +207,7 @@ class MCBool : Var, OnScoreboard {
             //变量进栈
             Function.addCommand(
                 "execute" +
-                        " store result storage mcfpp:system " + Project.name + ".stack_frame[" + stackIndex + "]." + key +
+                        " store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + key +
                         " run scoreboard players operation " + identifier + " " + boolObject + " = " + a.identifier + " " + a.boolObject
             )
         }

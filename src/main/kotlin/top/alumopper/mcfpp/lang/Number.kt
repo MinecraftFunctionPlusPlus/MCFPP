@@ -83,6 +83,7 @@ abstract class Number<T> : Var, OnScoreboard {
      */
     abstract fun greaterCommand(a: Number<T>): MCBool?
 
+
     /**
      * 这个数是否小于a
      * @param a 右侧值

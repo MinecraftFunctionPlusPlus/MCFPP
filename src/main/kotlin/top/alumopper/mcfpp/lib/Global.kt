@@ -8,7 +8,7 @@ import top.alumopper.mcfpp.Project
 class Global : CacheContainer {
 
     /**
-     * 全局函数
+     * 全局函数和类
      */
     lateinit var cache: Cache
 
@@ -19,10 +19,12 @@ class Global : CacheContainer {
 
     fun init(): Global {
         cache = Cache(null, this)
+        functionTags["minecraft:tick"] = FunctionTag.TICK
+        functionTags["minecraft:load"] = FunctionTag.LOAD
         return this
     }
 
     @get:Override
     override val prefix: String
-        get() = Project.name + "_global_"
+        get() = Project.defaultNamespace + "_global_"
 }

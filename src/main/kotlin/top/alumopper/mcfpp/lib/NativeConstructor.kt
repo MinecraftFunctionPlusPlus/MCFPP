@@ -5,7 +5,7 @@ import top.alumopper.mcfpp.lang.Var
 
 class NativeConstructor(cls: Class) : Constructor(cls), Native {
     @Override
-    override operator fun invoke(args: ArrayList<Var>, lineNo: Int, cls: ClassPointer) {
+    override fun invoke(args: ArrayList<Var>, lineNo: Int, cls: ClassPointer) {
         TODO()
     }
 }

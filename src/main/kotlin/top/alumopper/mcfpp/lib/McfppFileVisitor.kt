@@ -33,6 +33,8 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         //命名空间
         if (ctx.namespaceDeclaration() != null) {
             Project.currNamespace = ctx.namespaceDeclaration()!!.Identifier().text
+        }else{
+            Project.currNamespace = Project.defaultNamespace
         }
         //文件结构，类和函数
         for (t in ctx.typeDeclaration()) {
@@ -315,7 +317,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         val f: Function
         //是否是内联函数
         //是否是内联函数
-        if (ctx.INLINE() == null) {
+        if (ctx.INLINE() != null) {
             //获取函数的文本内容
             //函数是否拥有命名空间声明
             f = if (ctx.namespaceID().Identifier().size == 1) {
@@ -340,22 +342,25 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             f.addParams(ctx.parameterList())
         }
         //解析函数的tag
-        if (ctx.functionTag() != null) {
-            val functionTag: FunctionTag = if (ctx.functionTag()!!.namespaceID().Identifier().size == 1) {
-                FunctionTag(FunctionTag.MINECRAFT, ctx.functionTag()!!.namespaceID().Identifier(0).text)
-            } else {
-                FunctionTag(
-                    ctx.functionTag()!!.namespaceID().Identifier(0).text,
-                    ctx.functionTag()!!.namespaceID().Identifier(1).text
-                )
+        if (ctx.functionTag() != null && ctx.functionTag().size != 0) {
+            for(fTag in ctx.functionTag()){
+                //构建函数标签对象
+                var functionTag: FunctionTag = if (fTag.namespaceID().Identifier().size == 1) {
+                    FunctionTag(null, fTag.namespaceID().Identifier(0).text)
+                } else {
+                    FunctionTag(
+                        fTag.namespaceID().Identifier(0).text,
+                        fTag.namespaceID().Identifier(1).text
+                    )
+                }
+                if (Project.global.functionTags.containsKey(functionTag.namespaceID)) {
+                    functionTag = Project.global.functionTags[functionTag.namespaceID]!!
+                } else {
+                    Project.global.functionTags[functionTag.namespaceID] = functionTag
+                }
+                f.tags.add(functionTag)
+                functionTag.cache.functions.add(f)
             }
-            if (Project.global.functionTags.containsKey(functionTag.namespaceID)) {
-                f.tag = Project.global.functionTags[functionTag.namespaceID]
-            } else {
-                Project.global.functionTags[functionTag.namespaceID] = functionTag
-                f.tag = functionTag
-            }
-            f.tag!!.cache.functions.add(f)
         }
         //不是类的成员
         f.isClassMember = false
@@ -369,9 +374,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             Project.errorCount++
             Function.currFunction = Function.nullFunction
         }
-        if (f.tag != null && (f.tag!! == FunctionTag.TICK || f.tag!! == FunctionTag.LOAD) && (ctx.parent as mcfppParser.FunctionDeclarationContext).parameterList()!!
-                .parameter().size != 0
-        ) {
+        if (f.isEntrance && ctx.parameterList()!!.parameter().size != 0) {
             Project.logger.error(
                 "Entrance function shouldn't have parameter:" + f.namespaceID +
                         " at " + Project.currFile.name + " line: " + ctx.getStart().line
