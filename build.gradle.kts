@@ -3,9 +3,10 @@ plugins {
     groovy
     application
     antlr
+    id("org.jetbrains.dokka") version "1.8.10"
 }
 
-group = "top.alumopper"
+group = "top.mcfpp"
 version = "1.0-SNAPSHOT"
 
 repositories {

@@ -1,8 +1,10 @@
 func qwq(){
-    const int qwq = 9;
-    int p;
-    int i = p + qwq;
-    if(i == 5){
-        int q = i;
-    }
+    Test t = new Test();
+    int n;
+    t.qwq = n;
+    int i = t.qwq;
+}
+
+class Test{
+    int qwq;
 }
