@@ -177,7 +177,12 @@ multiplicativeExpression
 unaryExpression
     :   '!' unaryExpression
     |   castExpression
-    |   basicExpression
+    |   rightVarExpression
+    ;
+
+//右侧计算式取出的变量
+rightVarExpression
+    :   basicExpression
     ;
 
 basicExpression
