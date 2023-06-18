@@ -1,6 +1,7 @@
 package top.mcfpp.lib
 
 import top.mcfpp.lang.CanSelectMember
+import top.mcfpp.lang.ClassBase
 import top.mcfpp.lang.ClassPointer
 
 /**
@@ -15,6 +16,6 @@ interface ClassMember {
 
     var isStatic: Boolean
 
-    var pointer: CanSelectMember?
+    var cls: ClassBase?
     fun Class(): Class?
 }

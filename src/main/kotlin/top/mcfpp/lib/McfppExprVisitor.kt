@@ -20,7 +20,11 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     @Override
     override fun visitExpression(ctx: mcfppParser.ExpressionContext): Var? {
         Project.ctx = ctx
-        return visit(ctx.conditionalOrExpression())
+        return if(ctx.primary() != null){
+            visit(ctx.primary())
+        }else{
+            visit(ctx.conditionalOrExpression())
+        }
     }
     //TODO 三目表达式。可能会实现，但是泠雪是懒狐，不想做。
     //@Override
@@ -228,7 +232,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
      * @return
      */
     @Override
-    override fun visitRightVarExpression(ctx: mcfppParser.RightVarExpressionContext?): Var? {
+    override fun visitRightVarExpression(ctx: mcfppParser.RightVarExpressionContext?): Var {
         return visit(ctx!!.basicExpression())!!.getTempVar()
     }
 
@@ -293,7 +297,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         while (i < ctx.selector().size) {
             member = curr.getVarMember(ctx.selector(i).text.substring(1))
             if (member == null) {
-                Project.error("Undefined member " + ctx.selector(i).text + " in class " + curr.Class()!!.identifier)
+                Project.error("Undefined member " + ctx.selector(i).text.substring(1) + " in class " + curr.Class()!!.identifier)
             }
             i++
             if(i < ctx.selector().size){
@@ -355,9 +359,20 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         } else if (ctx.constructorCall() != null) {
             // constructorCall
             visit(ctx.constructorCall())
-        } else {
-            //TODO
-            throw TODOException("")
+        } else if(ctx.TargetSelector() != null) {
+            TODO()
+        } else{
+            //this或者super
+            val s = if(ctx.SUPER() != null){
+                "super"
+            }else{
+                "this"
+            }
+            val re: Var? = Function.currFunction.getVar(s)
+            if (re == null) {
+                Project.error("$s can only be used in member functions.")
+            }
+            re
         }
     }
 

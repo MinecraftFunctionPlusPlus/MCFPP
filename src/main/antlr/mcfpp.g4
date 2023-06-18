@@ -122,8 +122,13 @@ parameter
 
 //表达式
 expression
-    :   conditionalOrExpression
+    :   primary
+    |   conditionalOrExpression
     ;
+
+//expression
+//    :   conditionalOrExpression
+//    ;
 
 //能作为语句的表达式
 statementExpression
@@ -233,9 +238,7 @@ functionBody
 
 functionCall
     :   namespaceID arguments
-    |   'this' arguments
-    |   'super' arguments
-    |   basicExpression arguments
+    |   varWithSelector arguments
     ;
 
 statement

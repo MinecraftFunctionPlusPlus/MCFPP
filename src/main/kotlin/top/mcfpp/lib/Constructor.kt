@@ -23,7 +23,12 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
      * @param cls 构造方法将要构建的对象的临时指针
      */
     @Override
-    override fun invoke(args: ArrayList<Var>, cls: ClassPointer) {
+    override fun invoke(args: ArrayList<Var>, cls: ClassBase?) {
+        cls!!
+        //this变量构建
+        val thisObj = cls.clone() as ClassPointer
+        thisObj.key = "this"
+        args.add(thisObj)
         //对象创建
         addCommand(
             "execute in minecraft:overworld " +
@@ -50,6 +55,10 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
             "execute as @e[tag=" + cls.tag + ",tag=mcfpp_classObject_just,limit=1] at @s run " +
                     Commands.Function(parentClass!!.classPreInit)
         )
+        //调用完毕，将子函数的栈销毁
+        addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
+        //给函数开栈
+        addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
         addCommand(
             "execute as @e[tag=" + cls.tag + ",tag=mcfpp_classObject_just,limit=1] at @s run " +
                     Commands.Function(this)

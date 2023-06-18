@@ -10,7 +10,7 @@ import java.util.*
  *
  * 类的实例的本质是一个marker实体，它在模拟堆中的地址即是一个记分板值，即[address]。指针通过记录这个记分板值获取这个实例的堆地址
  */
-open class ClassObject : CanSelectMember {
+open class ClassObject : ClassBase {
 
     /**
      * 类的对象的类型
@@ -37,6 +37,9 @@ open class ClassObject : CanSelectMember {
      * 初始化类实例的时候自动生成的初始指针
      */
     var initPointer: ClassPointer
+
+    override val tag: String
+        get() = TODO("Not yet implemented")
 
     /**
      * 构造指定类的一个实例。注意此构造函数仅仅构造了一个对象，对于对象的地址分配等操作是在[Class.newInstance]方法中完成的。

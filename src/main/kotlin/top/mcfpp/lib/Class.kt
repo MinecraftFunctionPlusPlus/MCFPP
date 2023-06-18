@@ -193,7 +193,7 @@ open class Class : CacheContainer {
      * @return 如果可以,返回true,反之返回false
      */
     fun canCastTo(target: Class): Boolean {
-        if (identifier.equals(target.identifier)) {
+        if (identifier == target.identifier) {
             return true
         }
         return if (parent != null) {

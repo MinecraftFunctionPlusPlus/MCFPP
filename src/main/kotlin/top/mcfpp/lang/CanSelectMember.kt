@@ -17,10 +17,6 @@ abstract class CanSelectMember : Var{
      */
     abstract var clsType: Class
 
-    /**
-     * 这个对象的记分板地址
-     */
-    abstract var address: MCInt
 
     /**
      * 获取类中的一个成员。如果没有这个成员，则返回null

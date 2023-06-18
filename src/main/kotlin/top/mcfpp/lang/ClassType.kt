@@ -8,7 +8,7 @@ import top.mcfpp.lib.Class
 /**
  * ClassType是类的类型指针。它是一种特殊的指针，能够指向这个类的静态成员。
  */
-class ClassType: CanSelectMember{
+class ClassType: ClassBase{
 
     /**
      * 类
@@ -23,7 +23,7 @@ class ClassType: CanSelectMember{
     /**
      * 获取这个类的实例的指针实体在mcfunction中拥有的tag
      */
-    val tag: String
+    override val tag: String
         get() = clsType.namespace + "_class_" + clsType.identifier + "_type"
 
     /**
@@ -73,7 +73,7 @@ class ClassType: CanSelectMember{
 
     @Override
     override fun getFunctionMember(key: String, params: List<String>): Function? {
-        TODO()
+        return clsType.staticCache.getFunction(clsType.namespace, key, params)
     }
 
     override fun getTempVar(): Var {

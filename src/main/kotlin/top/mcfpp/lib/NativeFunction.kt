@@ -1,6 +1,8 @@
 package top.mcfpp.lib
 
 import top.mcfpp.exception.IllegalFormatException
+import top.mcfpp.lang.CanSelectMember
+import top.mcfpp.lang.ClassBase
 import top.mcfpp.lang.ClassPointer
 import top.mcfpp.lang.Var
 import java.lang.reflect.InvocationTargetException
@@ -51,20 +53,7 @@ class NativeFunction(name: String, javaMethod: mcfppParser.JavaReferContext?) : 
     }
 
     @Override
-    override fun invoke(args: ArrayList<Var>) {
-        val argsArray = arrayOfNulls<Var>(args.size)
-        args.toArray(argsArray)
-        try {
-            javaMethod.invoke(null, argsArray, null)
-        } catch (e: IllegalAccessException) {
-            throw RuntimeException(e)
-        } catch (e: InvocationTargetException) {
-            throw RuntimeException(e)
-        }
-    }
-
-    @Override
-    override fun invoke(args: ArrayList<Var>, cls: ClassPointer) {
+    override fun invoke(args: ArrayList<Var>, cls: ClassBase?) {
         val argsArray = arrayOfNulls<Var>(args.size)
         args.toArray(argsArray)
         try {
