@@ -54,8 +54,6 @@ abstract class Var : ClassMember, Cloneable {
      */
     var isConst = ConstStatus.NOT_CONST
 
-    override var pointer: CanSelectMember? = null
-
     enum class ConstStatus {
         NOT_CONST, NULL, ASSIGNED
     }
@@ -68,7 +66,7 @@ abstract class Var : ClassMember, Cloneable {
     /**
      * 成员所在的类的对象，既可以是[ClassPointer]，也可以是[ClassType]
      */
-    open var cls: CanSelectMember? = null
+    override var cls: ClassBase? = null
 
     val isClassMember: Boolean
         get() = cls != null
@@ -118,9 +116,9 @@ abstract class Var : ClassMember, Cloneable {
     @Override
     public abstract override fun clone(): Any
 
-    fun clone(pointer: CanSelectMember): Var{
+    fun clone(pointer: ClassBase): Var{
         val `var`: Var = this.clone() as Var
-        `var`.pointer = pointer
+        `var`.cls = pointer
         return `var`
     }
 

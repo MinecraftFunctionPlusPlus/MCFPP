@@ -1,10 +1,14 @@
 func qwq(){
     Test t = new Test();
-    int n;
-    t.qwq = n;
-    int i = t.qwq;
+    int a = t.b;
 }
 
 class Test{
-    int qwq;
+    int b;
+
+    func getB(static int b){
+        b = this.b;
+        int t;
+        this.b = t;
+    }
 }

@@ -111,8 +111,8 @@ class MCInt : Number<Int> {
                 isConcrete = false
                 //变量进栈
                 Function.addCommand(
-                    "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + key + " run "
-                            + Commands.SbPlayerOperation(this, "=", a as MCInt)
+                    "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + key +
+                            " run " + Commands.SbPlayerOperation(this, "=", a as MCInt)
                 )
             }
         }
@@ -366,9 +366,9 @@ class MCInt : Number<Int> {
         val re = MCInt()
         if(isClassMember){
             Function.addCommand(
-                "execute as @e[type=marker,tag=${cls!!.clsType.tag}]" +
-                        "if score @s ${cls!!.address.`object`.name} = ${cls!!.address.identifier} ${cls!!.address.`object`.name}" +
-                        "run" +
+                "execute as @e[type=marker,tag=${cls!!.clsType.tag}] " +
+                        "if score @s ${cls!!.address.`object`.name} = ${cls!!.address.identifier} ${cls!!.address.`object`.name} " +
+                        "run " +
                         "scoreboard players operation ${re.identifier} ${re.`object`.name} = @s ${`object`.name}"
             )
         }else{

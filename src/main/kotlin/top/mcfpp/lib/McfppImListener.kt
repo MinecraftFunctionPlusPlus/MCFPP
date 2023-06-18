@@ -53,7 +53,8 @@ class McfppImListener : mcfppBaseListener() {
                 f.addParams(qwq.parameterList())
             }
             //获取缓存中的对象
-            f = Class.currClass!!.cache.getFunction(f.namespace, f.name, f.paramTypeList)!!
+            val fun1 = Class.currClass!!.cache.getFunction(f.namespace, f.name, f.paramTypeList)
+            f = (fun1 ?: Class.currClass!!.staticCache.getFunction(f.namespace, f.name, f.paramTypeList))!!
         }
         Function.currFunction = f
     }
@@ -187,29 +188,23 @@ class McfppImListener : mcfppBaseListener() {
         //参数获取
         val args: ArrayList<Var> = ArrayList()
         val exprVisitor = McfppExprVisitor()
-        for (expr in ctx.arguments().expressionList().expression()) {
-            args.add(exprVisitor.visit(expr)!!)
+        if(ctx.arguments().expressionList() != null){
+            for (expr in ctx.arguments().expressionList().expression()) {
+                args.add(exprVisitor.visit(expr)!!)
+            }
         }
         //函数对象获取
         val curr = McfppFuncVisitor().getFunction(ctx, FunctionParam.getVarTypes(args))
-        if (curr == null) {
-            Project.error("Function " + ctx.text + " not defined ")
+        val func = curr.first
+        val obj = curr.second
+        if (func == null) {
+            Project.error("Function " + ctx.text + " not defined")
             throw FunctionNotDefineException()
         }
-        if (curr is NativeFunction) {
-            //是native方法
-            if (curr.isClassMember) {
-                //TODO
-                throw TODOException("")
-            } else {
-                curr.invoke(args)
-            }
-            return
-        }
-        curr.invoke(args)
+        func.invoke(args,obj)
         //函数树
-        Function.currFunction.child.add(curr)
-        curr.parent.add(Function.currFunction)
+        Function.currFunction.child.add(func)
+        func.parent.add(Function.currFunction)
     }
 
     //region 逻辑语句

@@ -1,5 +1,7 @@
 package top.mcfpp.lib
 
+import top.mcfpp.lang.CanSelectMember
+import top.mcfpp.lang.ClassBase
 import top.mcfpp.lang.Var
 
 /**
@@ -17,7 +19,7 @@ class InlineFunction : Function {
     }
 
     @Override
-    override operator fun invoke(args: ArrayList<Var>) {
+    override operator fun invoke(args: ArrayList<Var>, cls: ClassBase?) {
         TODO()
     }
 }
