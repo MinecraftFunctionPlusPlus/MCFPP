@@ -1,14 +1,14 @@
 func qwq(){
-    Test t = new Test();
-    int a = t.b;
+    int a = Test.b;
+    Test.getB(a);
 }
 
 class Test{
-    int b;
+    static int b;
 
-    func getB(static int b){
-        b = this.b;
+    static func getB(static int b){
+        b = Test.b;
         int t;
-        this.b = t;
+        Test.b = t;
     }
 }

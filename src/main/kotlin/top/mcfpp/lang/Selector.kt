@@ -42,11 +42,11 @@ class Selector : CanSelectMember {
         TODO("Not yet implemented")
     }
 
-    override fun getVarMember(key: String): Var? {
+    override fun getMemberVar(key: String): Var? {
         TODO("Not yet implemented")
     }
 
-    override fun getFunctionMember(key: String, params: List<String>): Function? {
+    override fun getMemberFunction(key: String, params: List<String>): Function? {
         TODO("Not yet implemented")
     }
 }

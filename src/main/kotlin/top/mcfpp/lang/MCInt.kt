@@ -8,7 +8,7 @@ import top.mcfpp.lib.Function
 import java.util.*
 
 /**
- * 代表了mc中的一个整数。实质上是记分板中的一个记分项。
+ * 代表了mc中的一个整数。实质上是记分板中的一个记分项。你可以对它进行加减乘除等基本运算操作，以及大小比较等逻辑运算。
  */
 class MCInt : Number<Int> {
     /**

@@ -2,10 +2,7 @@ package top.mcfpp.lib
 
 import top.mcfpp.Project
 import top.mcfpp.exception.FunctionDuplicationException
-import top.mcfpp.lang.ClassObject
-import top.mcfpp.lang.MCInt
-import top.mcfpp.lang.Var
-import top.mcfpp.lang.SbObject
+import top.mcfpp.lang.*
 import java.util.ArrayList
 
 /**
@@ -15,6 +12,11 @@ import java.util.ArrayList
  * 和[mcfpp面向对象——类的创建和销毁](https://alumopper.top/mcfpp%e9%9d%a2%e5%90%91%e5%af%b9%e8%b1%a1-%e7%b1%bb%e7%9a%84%e5%88%9b%e5%bb%ba%e5%92%8c%e9%94%80%e6%af%81/)
  *
  * 类编译后的名字和声明时的名字是一致的。除了某些编译器硬编码的特殊的类以外，mcfpp中的类总是以大写字母开头。
+ * 但是由于mcfunction包括路径在内都不能存在大写字母，因此在编译期间，会将大写字母转换为下划线加小写字母的形式，例如A转化为_a
+ *
+ * @see ClassPointer 类的指针
+ * @see ClassObject 类的实例。指针的目标
+ * @see ClassType 表示类的类型，同时也是类的静态成员的指针
  */
 open class Class : CacheContainer {
     /**
@@ -105,6 +107,9 @@ open class Class : CacheContainer {
     val tag: String
         get() = namespace + "_class_" + identifier + "_pointer"
 
+    val namespaceID : String
+        get() = "$namespace:$identifier"
+
     /**
      * 根据参数列表获取一个类的构造函数
      * @param params 构造函数的参数列表
@@ -188,17 +193,59 @@ open class Class : CacheContainer {
     }
 
     /**
-     * 这个类是否可以被强制转换为目标类型
+     * 这个类是否可以被强制转换为目标类型。
+     *
+     * TODO
+     *
      * @param target 目标类型
      * @return 如果可以,返回true,反之返回false
      */
     fun canCastTo(target: Class): Boolean {
-        if (identifier == target.identifier) {
+        if (namespaceID == target.namespaceID) {
             return true
         }
         return if (parent != null) {
             parent!!.canCastTo(target)
         } else false
+    }
+
+    /**
+     * 这个类是否是指定类的子类
+     *
+     * @param cls 指定类
+     * @return 是否是指定类的子类
+     */
+    fun isSubclass(cls: Class): Boolean{
+        return if(parent != null){
+            if(parent!!.namespaceID == cls.namespaceID){
+                true
+            }else{
+                parent!!.isSubclass(cls)
+            }
+        }else{
+            false
+        }
+    }
+
+    /**
+     * 指定类相对此类的访问权限。
+     * 将会返回若在`cls`的函数中，能访问到此类哪一层成员
+     *
+     * @param cls
+     * @return 返回指定类相对此类的访问权限
+     */
+    fun getAccess(cls : Class): ClassMember.AccessModifier{
+        //是否是本类
+        return if(cls.namespaceID == namespaceID){
+            ClassMember.AccessModifier.PRIVATE
+        }else{
+            //是否是子类
+            if(this.isSubclass(cls)){
+                ClassMember.AccessModifier.PROTECTED
+            }else{
+                ClassMember.AccessModifier.PUBLIC
+            }
+        }
     }
 
     companion object {

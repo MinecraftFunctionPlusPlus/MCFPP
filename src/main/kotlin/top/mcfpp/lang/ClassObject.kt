@@ -9,6 +9,12 @@ import java.util.*
  * 一个类的实例。实例是一种特殊的变量，它永远是匿名的，对实例的访问通过指针完成。
  *
  * 类的实例的本质是一个marker实体，它在模拟堆中的地址即是一个记分板值，即[address]。指针通过记录这个记分板值获取这个实例的堆地址
+ *
+ * 类的实例的过程在[top.mcfpp.lib.Class.newInstance]方法中进行。
+ *
+ * @see Class 类的核心实现
+ * @see ClassPointer 类的指针
+ * @see ClassType 表示类的类型，同时也是类的静态成员的指针
  */
 open class ClassObject : ClassBase {
 
@@ -79,13 +85,13 @@ open class ClassObject : ClassBase {
     }
 
     @Override
-    override fun getVarMember(key: String): Var? {
-        return null
+    override fun getMemberVar(key: String, accessModifier: ClassMember.AccessModifier): Pair<Var, Boolean> {
+        TODO()
     }
 
     @Override
-    override fun getFunctionMember(key: String, params: List<String>): Function? {
-        return null
+    override fun getMemberFunction(key: String, params: List<String>, accessModifier: ClassMember.AccessModifier): Pair<Function, Boolean> {
+        TODO()
     }
 
     @Override

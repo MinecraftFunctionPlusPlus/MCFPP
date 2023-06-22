@@ -276,9 +276,13 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         var curr: CanSelectMember
         curr = if (ctx.`var`() != null) {
             val varName = ctx.text.substring(0,ctx.text.indexOf("."))
+            val pwp = Function.currFunction.getVar(varName)
             //Var
-            if(Function.currFunction.getVar(varName) is ClassPointer){
-                Function.currFunction.getVar(varName) as ClassPointer
+            if(pwp is ClassPointer){
+                pwp
+            }else if(pwp == null){
+                Project.error("Undefined variable:$varName")
+                throw ArgumentNotMatchException("Undefined variable:$varName")
             }else{
                 Project.error("$varName is not a class pointer")
                 throw ArgumentNotMatchException("$varName is not a class pointer")
@@ -295,7 +299,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         //开始选择
         var i = 0
         while (i < ctx.selector().size) {
-            member = curr.getVarMember(ctx.selector(i).text.substring(1))
+            member = curr.getMemberVar(ctx.selector(i).text.substring(1))
             if (member == null) {
                 Project.error("Undefined member " + ctx.selector(i).text.substring(1) + " in class " + curr.Class()!!.identifier)
             }

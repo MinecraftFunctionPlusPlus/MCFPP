@@ -13,6 +13,10 @@ import top.mcfpp.lib.*
  *
  * 创建一个类的对象的时候，在分配完毕类的地址之后，将会立刻创建一个初始指针，这个指针指向了刚刚创建的对象的地址，在记分板上的名字是一个随机的uuid。
  * 而后进行的引用操作无非是把这个初始指针的记分板值赋给其他的指针。
+ *
+ * @see Class 类的核心实现
+ * @see ClassObject 类的实例。指针的目标
+ * @see ClassType 表示类的类型，同时也是类的静态成员的指针
  */
 class ClassPointer : ClassBase {
     /**
@@ -135,14 +139,24 @@ class ClassPointer : ClassBase {
     }
 
     @Override
-    override fun getVarMember(key: String): Var? {
-        return clsType.getMemberVar(key)?.clone(this)
+    override fun getMemberVar(key: String, accessModifier: ClassMember.AccessModifier): Pair<Var?, Boolean> {
+        val member = clsType.getMemberVar(key)?.clone(this)
+        return if(member == null){
+            Pair(null, true)
+        }else{
+            Pair(member, accessModifier >= member.accessModifier)
+        }
     }
 
     @Override
-    override fun getFunctionMember(key: String, params: List<String>): Function? {
+    override fun getMemberFunction(key: String, params: List<String>, accessModifier: ClassMember.AccessModifier): Pair<Function?, Boolean> {
         //获取函数
-        return clsType.cache.getFunction(clsType.namespace, key, params)
+        val member = clsType.cache.getFunction(clsType.namespace, key, params)
+        return if(member == null){
+            Pair(null, true)
+        }else{
+            Pair(member, accessModifier >= member.accessModifier)
+        }
     }
 
     @Override
