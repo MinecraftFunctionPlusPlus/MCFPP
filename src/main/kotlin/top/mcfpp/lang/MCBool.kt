@@ -5,8 +5,23 @@ import top.mcfpp.lib.*
 import java.util.*
 import top.mcfpp.lib.Function
 
+/**
+ * 布尔型变量是mcfpp的基本类型之一，它表示一个只有0，1两种取值可能性的值。
+ *
+ * 在实际实现过程中，它仍然是由记分板实现的，也就是说它本质仍然是一个记分板的int型变量。如果直接对mcfunction操作，你也可以对布尔型进行加减法。
+ * 但是在mcfpp中你是不允许这么做的。
+ *
+ * bool型变量实现了多种计算方法，比如与，或，非等基本的逻辑运算。
+ */
 class MCBool : Var, OnScoreboard {
+    /**
+     * 此bool变量含有的值。仅在它为字面量时才有效。
+     */
     var value = false
+
+    /**
+     * 此bool变量依托的记分板
+     */
     var boolObject: SbObject = SbObject.MCS_boolean
 
     constructor(id: String, curr: CacheContainer) {
@@ -35,6 +50,7 @@ class MCBool : Var, OnScoreboard {
         isConcrete = true
         value = b
     }
+
     @get:Override
     override val type: String
         get() = "bool"

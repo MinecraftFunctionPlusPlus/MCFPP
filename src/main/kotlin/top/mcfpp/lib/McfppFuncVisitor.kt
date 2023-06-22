@@ -43,12 +43,21 @@ class McfppFuncVisitor : mcfppBaseVisitor<Function?>() {
                 ClassType(qwq!!)
             }
             var member: ClassBase?
+            val accessModifier = if(Function.currFunction.isClassMember){
+                Function.currFunction.cls!!.clsType.getAccess(curr.clsType)
+            }else{
+                ClassMember.AccessModifier.PUBLIC
+            }
             //开始选择成员对象。最后一个成员应该是函数。
             var i = 0
             while (i < selectCtx.selector().size - 1) {
-                member = curr.getVarMember(selectCtx.selector(i).text.substring(1)) as ClassBase?
+                val re = curr.getMemberVar(selectCtx.selector(i).text.substring(1), accessModifier)
+                member = re.first as ClassBase?
                 if (member == null) {
                     Project.error("Undefined member " + selectCtx.selector(i).text.substring(1) + " in class " + curr.Class()!!.identifier)
+                }
+                if (!re.second){
+                    Project.error("Cannot access member ${selectCtx.selector(i).text.substring(1)} in class ${curr.clsType.identifier}")
                 }
                 i++
                 if(i < selectCtx.selector().size){
@@ -56,8 +65,11 @@ class McfppFuncVisitor : mcfppBaseVisitor<Function?>() {
                 }
             }
             //开始选择函数
-            val func = curr.getFunctionMember(selectCtx.selector(i).text.substring(1),args)
-            return Pair(func,curr)
+            val func = curr.getMemberFunction(selectCtx.selector(i).text.substring(1),args,accessModifier)
+            if (!func.second){
+                Project.error("Cannot access member ${selectCtx.selector(i).text.substring(1)} in class ${curr.clsType.identifier}")
+            }
+            return Pair(func.first,curr)
         } else {
             TODO()
         }

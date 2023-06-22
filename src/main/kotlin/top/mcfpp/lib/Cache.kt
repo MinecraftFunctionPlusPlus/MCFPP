@@ -140,8 +140,18 @@ class Cache {
      * @param id 变量名
      * @return 如果包含则返回true，否则返回false
      */
-    fun containVar(id: String?): Boolean {
+    fun containVar(id: String): Boolean {
         return vars.containsKey(id)
+    }
+
+    /**
+     * 移除缓存中的某个变量
+     *
+     * @param id 变量名
+     * @return 若变量存在，则返回被移除的变量，否则返回空
+     */
+    fun removeVar(id : String): Var?{
+        return vars.remove(id)
     }
 
     companion object {
@@ -187,12 +197,12 @@ class Cache {
                     if (f is NativeFunction) {
                         println(
                             "\t\t" + f.accessModifier.name
-                                .lowercase(Locale.getDefault()) + " native " + (if (f.isStatic) "static" else "") + f.namespaceID
+                                .lowercase(Locale.getDefault()) + " native " + f.namespaceID
                         )
                     } else {
                         println(
                             "\t\t" + f.accessModifier.name
-                                .lowercase(Locale.getDefault()) + " " + (if (f.isStatic) "static" else "") + f.namespaceID
+                                .lowercase(Locale.getDefault()) + " " + f.namespaceID
                         )
                         for (d in f.commands) {
                             println("\t\t\t" + d)
@@ -203,11 +213,36 @@ class Cache {
                 for (v in s.cache.vars.values) {
                     println(
                         "\t\t" + v.accessModifier.name
-                            .lowercase(Locale.getDefault()) + " " + (if (v.isStatic) "static " else "") + v.type + " " + v.key
+                            .lowercase(Locale.getDefault()) + " " + v.type + " " + v.key
+                    )
+                }
+                println("\tfunctions:")
+                for (f in s.staticCache.functions) {
+                    if (f is NativeFunction) {
+                        println(
+                            "\t\t" + f.accessModifier.name
+                                .lowercase(Locale.getDefault()) + " native " + "static" + f.namespaceID
+                        )
+                    } else {
+                        println(
+                            "\t\t" + f.accessModifier.name
+                                .lowercase(Locale.getDefault()) + " " + "static" + f.namespaceID
+                        )
+                        for (d in f.commands) {
+                            println("\t\t\t" + d)
+                        }
+                    }
+                }
+                println("\tattributes:")
+                for (v in s.staticCache.vars.values) {
+                    println(
+                        "\t\t" + v.accessModifier.name
+                            .lowercase(Locale.getDefault()) + " " + "static " + v.type + " " + v.key
                     )
                 }
             }
-        } //public static Object getKey(Map<?,?> map, Object value){
+        }
+        //public static Object getKey(Map<?,?> map, Object value){
         //    List<Object> keyList = new ArrayList<>();
         //    for(Object key: map.keySet()){
         //        if(map.get(key).equals(value)){

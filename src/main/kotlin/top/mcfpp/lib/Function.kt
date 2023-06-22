@@ -290,6 +290,7 @@ open class Function : ClassMember, CacheContainer {
         //如果是非静态成员方法
         //构造名为this的变量
         //如果是ClassType则不必构造。因此需要构造的变量一定是ClassPointer
+        //由于静态的判断是在函数构造后进行的，此处无法进行isStatic判断。届时判断静态的时候去除第一个元素即可。
         if(isClassMember){
             val thisObj = ClassPointer(parentClass!!,"this")
             thisObj.key = "this"

@@ -4,9 +4,14 @@ import top.mcfpp.exception.TODOException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Class
+import top.mcfpp.lib.ClassMember
 
 /**
  * ClassType是类的类型指针。它是一种特殊的指针，能够指向这个类的静态成员。
+ *
+ * @see Class 类的核心实现
+ * @see ClassObject 类的实例。指针的目标
+ * @see ClassPointer 类的指针
  */
 class ClassType: ClassBase{
 
@@ -67,13 +72,24 @@ class ClassType: ClassBase{
     }
 
     @Override
-    override fun getVarMember(key: String): Var? {
-        return clsType.getStaticMemberVar(key)?.clone(this)
+    override fun getMemberVar(key: String, accessModifier: ClassMember.AccessModifier): Pair<Var?, Boolean> {
+        val member = clsType.getMemberVar(key)?.clone(this)
+        return if(member == null){
+            Pair(null, true)
+        }else{
+            Pair(member, accessModifier >= member.accessModifier)
+        }
     }
 
     @Override
-    override fun getFunctionMember(key: String, params: List<String>): Function? {
-        return clsType.staticCache.getFunction(clsType.namespace, key, params)
+    override fun getMemberFunction(key: String, params: List<String>, accessModifier: ClassMember.AccessModifier): Pair<Function?, Boolean> {
+        //获取函数
+        val member = clsType.cache.getFunction(clsType.namespace, key, params)
+        return if(member == null){
+            Pair(null, true)
+        }else{
+            Pair(member, accessModifier >= member.accessModifier)
+        }
     }
 
     override fun getTempVar(): Var {

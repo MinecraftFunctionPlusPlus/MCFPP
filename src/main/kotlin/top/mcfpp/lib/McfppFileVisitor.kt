@@ -195,6 +195,9 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         }
         m.isStatic = true
         Class.currClass!!.addMember(m)
+        if(m is Function){
+            m.cache.removeVar("this")
+        }
         return null
     }
 
@@ -257,10 +260,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             f.addParams(ctx.parameterList())
         }
         //注册函数
-        if (Class.currClass!!.cache.functions.contains(f) || Class.currClass!!.staticCache.functions.contains(
-                f
-            )
-        ) {
+        if (Class.currClass!!.cache.functions.contains(f) || Class.currClass!!.staticCache.functions.contains(f)) {
             Project.error("Already defined function:" + ctx.Identifier().text + "in class " + Class.currClass!!.identifier)
             Function.currFunction = Function.nullFunction
         }
