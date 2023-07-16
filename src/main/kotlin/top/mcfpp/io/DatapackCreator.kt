@@ -35,7 +35,7 @@ object DatapackCreator {
     fun createDatapack(path: String) {
         Project.debug("Clearing output folder...")
         //清空原输出文件夹
-        delAllFile(File("$path/out"))
+        delAllFile(File("$path/${Project.name}"))
         Project.debug("Creating datapack...")
         //生成
         val datapackMcMeta = DatapackMcMeta(
@@ -47,18 +47,18 @@ object DatapackCreator {
         val datapackMcMetaJson: String = JSON.toJSONString(datapackMcMeta)
         //创建文件夹
         try {
-            Files.createDirectories(Paths.get("$path/out/data"))
+            Files.createDirectories(Paths.get("$path/${Project.name}/data"))
             //创建pack.mcmeta
-            Files.write(Paths.get("$path/out/pack.mcmeta"), datapackMcMetaJson.toByteArray())
+            Files.write(Paths.get("$path/${Project.name}/pack.mcmeta"), datapackMcMetaJson.toByteArray())
             //写入函数文件
             for (f in Project.global.cache.functions) {
                 if (f is Native) {
                     continue
                 }
-                Project.debug("Writing File: " + path + "/out/data/" + f.namespace + "/functions/" + f.name + ".mcfunction")
-                Files.createDirectories(Paths.get(path + "/out/data/" + f.namespace + "/functions"))
+                Project.debug("Writing File: $path/${Project.name}/data/${f.namespace}/functions/${f.IdentifyWithParams}.mcfunction")
+                Files.createDirectories(Paths.get("$path/${Project.name}/data/${f.namespace}/functions"))
                 Files.write(
-                    Paths.get(path + "/out/data/" + f.namespace + "/functions/" + f.name + ".mcfunction"),
+                    Paths.get("$path/${Project.name}/data/${f.namespace}/functions/${f.IdentifyWithParams}.mcfunction"),
                     f.cmdStr.toByteArray()
                 )
             }
@@ -72,10 +72,11 @@ object DatapackCreator {
                     if (f is Native) {
                         continue
                     }
-                    Project.debug("Writing File: " + path + "/out/data/" + cls.namespace + "/functions/" + cls.identifier + "/" + f.name + ".mcfunction")
-                    Files.createDirectories(Paths.get(path + "/out/data/" + cls.namespace + "/functions/" + cls.identifier))
+                    Project.debug("Writing File: " + path + "/${Project.name}/data/" + cls.namespace + "/functions/" + f.IdentifyWithParams + ".mcfunction")
+                    //TODO 可能无法正确创建文件夹
+                    Files.createDirectories(Paths.get(path + "/${Project.name}/data/" + cls.namespace + "/functions/" + cls.identifier))
                     Files.write(
-                        Paths.get(path + "/out/data/" + cls.namespace + "/functions/" + cls.identifier + "/" + f.name + ".mcfunction"),
+                        Paths.get(path + "/${Project.name}/data/" + cls.namespace + "/functions/" + f.IdentifyWithParams + ".mcfunction"),
                         f.cmdStr.toByteArray()
                     )
                 }
@@ -84,24 +85,26 @@ object DatapackCreator {
                     if (f is Native) {
                         continue
                     }
-                    Project.debug("Writing File: " + path + "/out/data/" + cls.namespace + "/functions/" + cls.identifier + "/static/" + f.name + ".mcfunction")
-                    Files.createDirectories(Paths.get(path + "/out/data/" + f.namespace + "/functions/" + cls.identifier + "/static"))
+                    Project.debug("Writing File: " + path + "/${Project.name}/data/" + cls.namespace + "/functions/" + f.IdentifyWithParams + ".mcfunction")
+                    //TODO 可能无法正确创建文件夹
+                    Files.createDirectories(Paths.get(path + "/${Project.name}/data/" + f.namespace + "/functions/" + cls.identifier + "/static"))
                     Files.write(
-                        Paths.get(path + "/out/data/" + cls.namespace + "/functions/" + cls.identifier + "/static/" + f.name + ".mcfunction"),
+                        Paths.get(path + "/${Project.name}/data/" + cls.namespace + "/functions/" + f.IdentifyWithParams + ".mcfunction"),
                         f.cmdStr.toByteArray()
                     )
                 }
             }
             //写入标签json文件
             for (tag in Project.global.functionTags.values) {
-                Project.debug("Writing File: " + path + "/out/data/" + tag.namespace + "/tags/functions/" + tag.tag + ".json")
+                Project.debug("Writing File: " + path + "/${Project.name}/data/" + tag.namespace + "/tags/functions/" + tag.tag + ".json")
+                Files.createDirectories(Paths.get(path + "/${Project.name}/data/" + tag.namespace + "/tags/functions"))
                 Files.write(
-                    Paths.get(path + "/out/data/" + tag.namespace + "/tags/functions/" + tag.tag + ".json"),
+                    Paths.get(path + "/${Project.name}/data/" + tag.namespace + "/tags/functions/" + tag.tag + ".json"),
                     tag.tagJSON.toByteArray()
                 )
             }
         } catch (e: IOException) {
-            throw RuntimeException(e)
+            throw e
         }
     }
 

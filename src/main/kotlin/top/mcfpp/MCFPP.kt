@@ -27,8 +27,8 @@ fun main(args: Array<String>) {
         Project.compile() //编译
         Project.optimization() //优化
         Project.genIndex() //生成索引
-        //DatapackCreator.createDatapack(Project.root.getAbsolutePath()) //生成数据包
-        Project.ctx = null;
+        Project.ctx = null
+        DatapackCreator.createDatapack(Project.targetPath) //生成数据包
         Project.info("Finished in " + (System.currentTimeMillis() - start) + "ms")
         Cache.printAll()
     }
