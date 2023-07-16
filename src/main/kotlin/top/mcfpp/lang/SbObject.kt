@@ -43,15 +43,9 @@ class SbObject(name: String, rule: String, var display: JsonText?) {
 
     companion object {
         /**
-         * mcfpp数学计算使用的计分板对象。
-         */
-        var MCS_intvar = SbObject("mcs_intvar", "dummy")
-
-        /**
          * mcfpp默认的计分板变量
          */
         var MCS_default = SbObject("mcs_default", "dummy")
-        var MCS_params = SbObject("mcs_params", "dummy")
         var MCS_boolean = SbObject("mcs_boolean", "dummy")
     }
 }

@@ -78,7 +78,7 @@ import java.lang.NullPointerException
  * `#父函数为子函数创建变量内存空间
  * data modify storage mny:program stack_frame prepend value {}
  * #父函数处理子函数的参数，压栈
- * execute store result storage mny:program stack_frame[0].xxx run ...
+ * execute store result storage mny:program stack_frame[0].xxx int 1 run ...
  * #给子函数打电话（划去）调用子函数
  * function xxx:xxx
  * #父函数销毁子函数变量内存空间
@@ -182,6 +182,22 @@ open class Function : ClassMember, CacheContainer {
                     StringBuilder("$namespace:${parentClass!!.identifier}/static/$name")
                 }
                 StringBuilder("$namespace:${parentClass!!.identifier}/$name")
+            }
+            for (p in params) {
+                re.append("_").append(p.type)
+            }
+            return StringHelper.toLowerCase(re.toString())
+        }
+
+    val IdentifyWithParams: String
+        get() {
+            val re: StringBuilder = if(!isClassMember){
+                StringBuilder(name)
+            }else{
+                if(isStatic){
+                    StringBuilder("${parentClass!!.identifier}/static/$name")
+                }
+                StringBuilder("${parentClass!!.identifier}/$name")
             }
             for (p in params) {
                 re.append("_").append(p.type)
@@ -358,7 +374,7 @@ open class Function : ClassMember, CacheContainer {
                     //参数传递和子函数的参数压栈
                     addCommand(
                         "execute " +
-                                "store result storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].int.${params[i].identifier} " +
+                                "store result storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].int.${params[i].identifier} int 1 " +
                                 "run " + Commands.SbPlayerOperation(MCInt("_param_" + params[i].identifier, this), "=", tg)
                     )
                 }
@@ -367,7 +383,7 @@ open class Function : ClassMember, CacheContainer {
                     val tg = args[i].cast(params[i].type) as ClassBase
                     addCommand(
                         "execute " +
-                                "store result storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].class.${tg.clsType.identifier}.${params[i].identifier} " +
+                                "store result storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].class.${tg.clsType.identifier}.${params[i].identifier} int 1" +
                                 "run " + Commands.SbPlayerOperation(MCInt("_param_" + params[i].identifier, this), "=", tg.address)
                     )
                 }
@@ -388,7 +404,7 @@ open class Function : ClassMember, CacheContainer {
                             addCommand(
                                 "execute " +
                                         "store result score ${(args[i] as MCInt).identifier} ${(args[i] as MCInt).`object`} " +
-                                        "run data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].int.${params[i].identifier}"
+                                        "run data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].int.${params[i].identifier} int 1 "
                             )
                         }
                         else -> {
@@ -397,7 +413,7 @@ open class Function : ClassMember, CacheContainer {
                             addCommand(
                                 "execute " +
                                         "store result score ${tg.address.identifier} ${tg.address.`object`} " +
-                                        "run data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].int.${params[i].identifier}"
+                                        "run data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].int.${params[i].identifier} int 1 "
                             )
                         }
                     }

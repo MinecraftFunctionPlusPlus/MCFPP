@@ -77,7 +77,7 @@ object Project {
      */
     var global: Global = Global()
 
-    var outputPath : String = "out/"
+    var targetPath : String = "out/"
 
     /**
      * 初始化
@@ -99,6 +99,7 @@ object Project {
     fun readProject(path: String) {
         //工程信息读取
         try {
+            //读取json
             logger.debug("Reading project from file \"$path\"")
             val reader = BufferedReader(FileReader(path))
             val qwq = File(path)
@@ -109,7 +110,9 @@ object Project {
             while (reader.readLine().also { line = it } != null) {
                 json.append(line)
             }
+            //解析json
             val jsonObject: JSONObject = JSONObject.parse(json.toString()) as JSONObject
+            //代码文件
             files = ArrayList()
             val filesJson: JSONArray = jsonObject.getJSONArray("files")
             for (o in filesJson.toArray()) {
@@ -128,23 +131,29 @@ object Project {
                 logger.info("Finding file in \"" + r.absolutePath + "\"")
                 getFiles(r, files)
             }
+            //版本
             version = jsonObject.getString("version")
             if (version == null) {
                 version = "1.20"
             }
+            //描述
             description = jsonObject.getString("description")
             if (description == null) {
                 description = "A datapack compiled by MCFPP"
             }
+            //默认命名空间
             defaultNamespace = if(jsonObject.getString("namespace") != null){
                 jsonObject.getString("namespace")
             }else{
                 "default"
             }
+            //调用库
             val includesJson: JSONArray = jsonObject.getJSONArray("includes")?: JSONArray()
             for (i in 0 until includesJson.size) {
                 includes.add(includesJson.getString(i))
             }
+            //输出目录
+            targetPath = jsonObject.getString("targetPath")?: "out/"
         } catch (e: Exception) {
             logger.error("Error while reading project from file \"$path\"")
             errorCount++
@@ -192,6 +201,12 @@ object Project {
      */
     fun optimization() {
         logger.debug("Optimizing...")
+        logger.debug("Adding scoreboards in mcfpp:load function")
+        //向load函数中添加记分板初始化命令
+        for (scoreboard in global.scoreboards){
+            global.cache.getFunction("mcfpp","load", ArrayList())!!.commands
+                .add("scoreboard objectives add ${scoreboard.name} ${scoreboard.rule}")
+        }
         //寻找入口函数
         var hasEntrance = false
         for (f in global.cache.functions) {
@@ -200,7 +215,7 @@ object Project {
                 hasEntrance = true
                 f.commands.add(0, "data modify storage mcfpp:system $defaultNamespace.stack_frame prepend value {}")
                 f.commands.add("data remove storage mcfpp:system $defaultNamespace.stack_frame[0]")
-                logger.debug("Find entrance function:${f.tags} ${f.name}")
+                logger.debug("Find entrance function: ${f.tags} ${f.name}")
             }
         }
         if (!hasEntrance) {

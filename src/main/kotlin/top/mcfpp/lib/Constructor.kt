@@ -43,7 +43,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
                     val tg = args[i].cast(params[i].type) as MCInt
                     //参数传递和子函数的参数压栈
                     addCommand(
-                        "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]." + params[i].identifier + " run "
+                        "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]." + params[i].identifier + " int 1 run "
                                 + Commands.SbPlayerOperation(MCInt("_param_" + params[i].identifier, this), "=", tg)
                     )
                 }

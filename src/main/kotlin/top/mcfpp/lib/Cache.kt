@@ -4,6 +4,7 @@ import org.jetbrains.annotations.Nullable
 import top.mcfpp.Project
 import top.mcfpp.lang.*
 import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  * 一个缓存。在编译过程中，编译器读取到的变量，函数等会以键值对的方式储存在其中。键为函数的id或者变量的

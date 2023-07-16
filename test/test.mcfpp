@@ -1,14 +1,9 @@
 func qwq(){
-    int a = Test.b;
-    Test.getB(a);
+    int a;
+    test(a);
 }
 
-class Test{
-    public static int b;
-
-    public static func getB(static int b){
-        b = Test.b;
-        int t;
-        Test.b = t;
-    }
+func test(int a){
+    int b;
+    a = b;
 }
