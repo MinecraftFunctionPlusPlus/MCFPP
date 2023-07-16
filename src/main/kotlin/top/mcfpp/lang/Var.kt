@@ -66,10 +66,10 @@ abstract class Var : ClassMember, Cloneable {
     /**
      * 成员所在的类的对象，既可以是[ClassPointer]，也可以是[ClassType]
      */
-    override var cls: ClassBase? = null
+    override var clsPointer: ClassBase? = null
 
     val isClassMember: Boolean
-        get() = cls != null
+        get() = clsPointer != null
 
     init {
         identifier = UUID.randomUUID().toString()
@@ -83,7 +83,7 @@ abstract class Var : ClassMember, Cloneable {
         isConcrete = `var`.isConcrete
         stackIndex = `var`.stackIndex
         isConst = `var`.isConst
-        cls = `var`.cls
+        clsPointer = `var`.clsPointer
     }
 
     constructor()
@@ -118,7 +118,7 @@ abstract class Var : ClassMember, Cloneable {
 
     fun clone(pointer: ClassBase): Var{
         val `var`: Var = this.clone() as Var
-        `var`.cls = pointer
+        `var`.clsPointer = pointer
         return `var`
     }
 

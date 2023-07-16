@@ -4,9 +4,9 @@ func qwq(){
 }
 
 class Test{
-    static int b;
+    public static int b;
 
-    static func getB(static int b){
+    public static func getB(static int b){
         b = Test.b;
         int t;
         Test.b = t;

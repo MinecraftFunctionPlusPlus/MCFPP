@@ -226,8 +226,8 @@ class MCBool : Var, OnScoreboard {
         val re = MCBool()
         if(isClassMember) {
             Function.addCommand(
-                "execute as @e[type=marker,tag=${cls!!.clsType.tag}]" +
-                        "if score @s ${cls!!.address.`object`.name} = ${cls!!.address.identifier} ${cls!!.address.`object`.name}" +
+                "execute as @e[type=marker,tag=${clsPointer!!.clsType.tag}]" +
+                        "if score @s ${clsPointer!!.address.`object`.name} = ${clsPointer!!.address.identifier} ${clsPointer!!.address.`object`.name}" +
                         "run" +
                         "scoreboard players operation ${re.identifier} ${SbObject.MCS_boolean.name} = @s ${SbObject.MCS_boolean.name}"
             )

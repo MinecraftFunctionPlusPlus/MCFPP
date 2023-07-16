@@ -1,5 +1,7 @@
 package top.mcfpp.lang
 
+import top.mcfpp.lib.Class
+
 /**
  * 此抽象类对类的基本性质进行了一些声明，例如类的地址。和mcfpp类有关的类都应当继承于此抽象方法
  *

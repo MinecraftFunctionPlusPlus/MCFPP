@@ -77,6 +77,8 @@ object Project {
      */
     var global: Global = Global()
 
+    var outputPath : String = "out/"
+
     /**
      * 初始化
      */

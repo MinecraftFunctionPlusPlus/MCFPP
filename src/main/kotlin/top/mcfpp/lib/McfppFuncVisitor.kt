@@ -44,7 +44,7 @@ class McfppFuncVisitor : mcfppBaseVisitor<Function?>() {
             }
             var member: ClassBase?
             val accessModifier = if(Function.currFunction.isClassMember){
-                Function.currFunction.cls!!.clsType.getAccess(curr.clsType)
+                Function.currFunction.parentClass!!.getAccess(curr.clsType)
             }else{
                 ClassMember.AccessModifier.PUBLIC
             }
@@ -54,7 +54,7 @@ class McfppFuncVisitor : mcfppBaseVisitor<Function?>() {
                 val re = curr.getMemberVar(selectCtx.selector(i).text.substring(1), accessModifier)
                 member = re.first as ClassBase?
                 if (member == null) {
-                    Project.error("Undefined member " + selectCtx.selector(i).text.substring(1) + " in class " + curr.Class()!!.identifier)
+                    Project.error("Undefined member ${selectCtx.selector(i).text.substring(1)} in class ${curr.clsType.identifier}")
                 }
                 if (!re.second){
                     Project.error("Cannot access member ${selectCtx.selector(i).text.substring(1)} in class ${curr.clsType.identifier}")

@@ -73,7 +73,7 @@ class ClassType: ClassBase{
 
     @Override
     override fun getMemberVar(key: String, accessModifier: ClassMember.AccessModifier): Pair<Var?, Boolean> {
-        val member = clsType.getMemberVar(key)?.clone(this)
+        val member = clsType.getStaticMemberVar(key)?.clone(this)
         return if(member == null){
             Pair(null, true)
         }else{
@@ -84,7 +84,7 @@ class ClassType: ClassBase{
     @Override
     override fun getMemberFunction(key: String, params: List<String>, accessModifier: ClassMember.AccessModifier): Pair<Function?, Boolean> {
         //获取函数
-        val member = clsType.cache.getFunction(clsType.namespace, key, params)
+        val member = clsType.staticCache.getFunction(clsType.namespace, key, params)
         return if(member == null){
             Pair(null, true)
         }else{
@@ -95,5 +95,4 @@ class ClassType: ClassBase{
     override fun getTempVar(): Var {
         return this
     }
-
 }
