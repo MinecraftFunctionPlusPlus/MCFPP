@@ -27,11 +27,10 @@ interface ClassMember {
     /**
      * 这个成员所在的类的对象的指针。在使用方法[ClassPointer.getMemberVar]来获取类的时候，才会被赋值。
      */
-    var cls: ClassBase?
+    var clsPointer: ClassBase?
 
     /**
      * 啊？这是什么？我也布吉岛啊
-     *
      * @return
      */
     fun Class(): Class?

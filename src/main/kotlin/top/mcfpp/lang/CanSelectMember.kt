@@ -24,10 +24,11 @@ abstract class CanSelectMember : Var{
 
 
     /**
-     * 根据标识符获取一个成员。如果没有这个成员，则返回null
+     * 根据标识符获取一个成员。
      *
      * @param key 成员的mcfpp标识符
-     * @return 成员变量或null
+     * @param accessModifier 访问者的访问权限
+     * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
      */
     abstract fun getMemberVar(key: String, accessModifier: ClassMember.AccessModifier): Pair<Var?, Boolean>
 

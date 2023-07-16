@@ -10,6 +10,7 @@ object UwU {
     init {
         tips.add("Hello Minecraft!")
         tips.add("Also try JustMCF!")
+        tips.add("Also try FrostLeaf ToolBox!")
         tips.add("\$time")
         tips.add("今天你也很努力呢喵！")
         tips.add("Mojang什么时候出动态命令捏……（呆")
@@ -33,7 +34,6 @@ object UwU {
         tips.add("就决定是你了！使用NullPointerException")
         tips.add("此代码妙不可言，唯有你和上帝知道")
         tips.add("注意休息喵（歪头")
-        tips.add("你知道嘛，这个编译器的制作者是学材料学的哦w")
         tips.add("给我玩Minecraft!.jpg")
         tips.add("嗯~是第几次看到这条tips了呢？")
         tips.add("Never gonna give you up~")
@@ -44,7 +44,9 @@ object UwU {
         tips.add("mcfpp至少应当在1.18的版本以上运行，因为1.18解除了记分板长度限制")
         tips.add("少用nbt可以有效地提升数据包的性能")
         tips.add("mcfpp会在编译的时候自动计算一些确定的值")
-        tips.add("MNI调用的java方法只能是静态的哦")
+        tips.add("MNI调用的java/kotlin方法只能是静态的哦")
+        tips.add("最新支持到1.20.1")
+        tips.add("库的完善需要社区的共同参与~")
     }
 
     val tip: String

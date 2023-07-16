@@ -152,9 +152,9 @@ open class Function : ClassMember, CacheContainer {
     override var accessModifier: ClassMember.AccessModifier = ClassMember.AccessModifier.PRIVATE
 
     /**
-     * 属于哪个类
+     * 这个方法所在的类的对象的指针。
      */
-    override var cls: ClassBase? = null
+    override var clsPointer: ClassBase? = null
 
     /**
      * 是否是静态的。默认为否

@@ -297,11 +297,20 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         }
         var member: Var? = null
         //开始选择
+        val accessModifier = if(Function.currFunction.isClassMember){
+            Function.currFunction.parentClass!!.getAccess(curr.clsType)
+        }else{
+            ClassMember.AccessModifier.PUBLIC
+        }
         var i = 0
         while (i < ctx.selector().size) {
-            member = curr.getMemberVar(ctx.selector(i).text.substring(1))
+            val re = curr.getMemberVar(ctx.selector(i).text.substring(1),accessModifier)
+            member = re.first
             if (member == null) {
-                Project.error("Undefined member " + ctx.selector(i).text.substring(1) + " in class " + curr.Class()!!.identifier)
+                Project.error("Undefined member ${ctx.selector(i).text.substring(1)} in class ${curr.clsType.identifier}")
+            }
+            if (!re.second){
+                Project.error("Cannot access member ${ctx.selector(i).text.substring(1)} in class ${curr.clsType.identifier}")
             }
             i++
             if(i < ctx.selector().size){

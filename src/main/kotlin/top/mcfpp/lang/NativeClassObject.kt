@@ -39,7 +39,7 @@ class NativeClassObject : Var {
     }
 
     constructor(b: NativeClassObject) {
-        cls = b.cls
+        clsPointer = b.clsPointer
         javaClassObject = b.javaClassObject
         type = b.type
         initPointer = b.initPointer

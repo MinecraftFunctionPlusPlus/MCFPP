@@ -97,8 +97,8 @@ class MCInt : Number<Int> {
                 isConcrete = false
                 //对类中的成员的值进行修改
                 Function.addCommand(
-                    "execute as @e[tag=${cls!!.clsType.tag}] " +
-                            "if score @s ${cls!!.address.`object`.name} = ${cls!!.identifier} ${cls!!.address.`object`.name} " +
+                    "execute as @e[tag=${clsPointer!!.clsType.tag}] " +
+                            "if score @s ${clsPointer!!.address.`object`.name} = ${clsPointer!!.identifier} ${clsPointer!!.address.`object`.name} " +
                             "run scoreboard players operation @s $`object` = ${a.identifier} ${a.`object`}"
                 )
             }
@@ -366,8 +366,8 @@ class MCInt : Number<Int> {
         val re = MCInt()
         if(isClassMember){
             Function.addCommand(
-                "execute as @e[type=marker,tag=${cls!!.clsType.tag}] " +
-                        "if score @s ${cls!!.address.`object`.name} = ${cls!!.address.identifier} ${cls!!.address.`object`.name} " +
+                "execute as @e[type=marker,tag=${clsPointer!!.clsType.tag}] " +
+                        "if score @s ${clsPointer!!.address.`object`.name} = ${clsPointer!!.address.identifier} ${clsPointer!!.address.`object`.name} " +
                         "run " +
                         "scoreboard players operation ${re.identifier} ${re.`object`.name} = @s ${`object`.name}"
             )

@@ -133,7 +133,7 @@ open class Class : CacheContainer {
     }
 
     /**
-     * 返回此类中的一个成员字段。优先获取成员变量中的字段
+     * 返回此类中的一个成员字段。
      * @param key 字段名
      * @return 如果字段存在，则返回此字段，否则返回null
      */
@@ -141,6 +141,12 @@ open class Class : CacheContainer {
         return cache.getVar(key)
     }
 
+    /**
+     * 返回此类中的一个静态字段
+     *
+     * @param key 字段名
+     * @return 如果存在，则返回此字段，否则返回null
+     */
     fun getStaticMemberVar(key : String): Var? {
         return staticCache.getVar(key)
     }
