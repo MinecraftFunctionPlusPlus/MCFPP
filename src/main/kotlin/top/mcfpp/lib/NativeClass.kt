@@ -18,14 +18,4 @@ class NativeClass(identifier: String, namespace: String, cls: Class<INativeClass
         this.namespace = namespace
         this.cls = cls
     }
-
-    @Throws(
-        InvocationTargetException::class,
-        NoSuchMethodException::class,
-        InstantiationException::class,
-        IllegalAccessException::class
-    )
-    fun newInstance(args: ArrayList<Var>): NativeClassObject {
-        return NativeClassObject(this, args)
-    }
 }

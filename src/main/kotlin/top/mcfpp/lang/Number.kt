@@ -20,7 +20,7 @@ abstract class Number<T> : Var, OnScoreboard {
      * @param i 标识符
      */
     constructor(i: String) {
-        identifier = i
+        name = i
         `object` = SbObject.MCS_default
     }
 

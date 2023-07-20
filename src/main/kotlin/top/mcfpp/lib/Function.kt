@@ -94,7 +94,7 @@ import java.lang.NullPointerException
  *
  * @see InternalFunction
  */
-open class Function : ClassMember, CacheContainer {
+open class Function : ClassMember, FieldContainer {
     /**
      * 包含所有命令的列表
      */
@@ -129,7 +129,7 @@ open class Function : ClassMember, CacheContainer {
     /**
      * 函数编译时的缓存
      */
-    var cache: Cache
+    var field: FunctionField
 
     /**
      * 这个函数调用的函数
@@ -237,7 +237,7 @@ open class Function : ClassMember, CacheContainer {
         commands = ArrayList()
         params = ArrayList()
         namespace = Project.currNamespace
-        cache = Cache(null, this)
+        field = FunctionField(null, this)
     }
 
     /**
@@ -251,10 +251,10 @@ open class Function : ClassMember, CacheContainer {
         namespace = cls.namespace
         parentClass = cls
         isClassMember = true
-        cache = if (isStatic) {
-            Cache(cls.cache, this)
+        field = if (isStatic) {
+            FunctionField(cls.field, this)
         } else {
-            Cache(cls.staticCache, this)
+            FunctionField(cls.staticField, this)
         }
     }
 
@@ -289,7 +289,7 @@ open class Function : ClassMember, CacheContainer {
      * @return 如果这个变量存在缓存中，则返回这个变量，否则返回null
      */
     open fun getVar(id: String): Var? {
-        val re: Var? = cache.getVar(id)
+        val re: Var? = field.getVar(id)
         if (re != null) {
             re.stackIndex = 0
         }
@@ -309,8 +309,8 @@ open class Function : ClassMember, CacheContainer {
         //由于静态的判断是在函数构造后进行的，此处无法进行isStatic判断。届时判断静态的时候去除第一个元素即可。
         if(isClassMember){
             val thisObj = ClassPointer(parentClass!!,"this")
-            thisObj.key = "this"
-            cache.putVar("this",thisObj)
+            thisObj.identifier = "this"
+            field.putVar("this",thisObj)
         }
         for (param in ctx.parameter()) {
             val param1 = FunctionParam(
@@ -322,18 +322,23 @@ open class Function : ClassMember, CacheContainer {
             //向函数缓存中写入变量
             when(param1.type){
                 "int" -> {
-                    cache.putVar(param1.identifier, MCInt(namespaceID + "_param_" + param1.identifier, this))
+                    field.putVar(param1.identifier, MCInt(namespaceID + "_param_" + param1.identifier, this))
                 }
                 "bool" -> {
-                    cache.putVar(param1.identifier, MCBool(namespaceID + "_param_" + param1.identifier, this))
+                    field.putVar(param1.identifier, MCBool(namespaceID + "_param_" + param1.identifier, this))
                 }
                 else -> {
                     //引用类型
-                    val cls : Class? = Project.global.cache.classes[param1.type]
+                    val q = param1.type.split(":")
+                    val cls : Class?  = if(q.size == 1){
+                        GlobalField.getClass(null, param1.type)
+                    }else{
+                        GlobalField.getClass(q[0],q[1])
+                    }
                     if(cls == null){
                         Project.error("Undefined class:" + param1.type)
                     }else{
-                        cache.putVar(param1.identifier, ClassPointer(cls, param1.identifier))
+                        field.putVar(param1.identifier, ClassPointer(cls, param1.identifier))
                     }
                 }
             }
@@ -363,7 +368,7 @@ open class Function : ClassMember, CacheContainer {
         addCommand("data modify storage mcfpp:system ${Project.defaultNamespace}.stack_frame prepend value {}")
         //传入this参数
         if (cls is ClassPointer) {
-            val thisPoint = cache.getVar("this")!! as ClassPointer
+            val thisPoint = field.getVar("this")!! as ClassPointer
             thisPoint.assign(cls)
         }
         //参数传递
@@ -403,7 +408,7 @@ open class Function : ClassMember, CacheContainer {
                             //如果是int取出到记分板
                             addCommand(
                                 "execute " +
-                                        "store result score ${(args[i] as MCInt).identifier} ${(args[i] as MCInt).`object`} " +
+                                        "store result score ${(args[i] as MCInt).name} ${(args[i] as MCInt).`object`} " +
                                         "run data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].int.${params[i].identifier} int 1 "
                             )
                         }
@@ -412,7 +417,7 @@ open class Function : ClassMember, CacheContainer {
                             val tg = args[i].cast(params[i].type) as ClassBase
                             addCommand(
                                 "execute " +
-                                        "store result score ${tg.address.identifier} ${tg.address.`object`} " +
+                                        "store result score ${tg.address.name} ${tg.address.`object`} " +
                                         "run data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].int.${params[i].identifier} int 1 "
                             )
                         }
@@ -433,16 +438,16 @@ open class Function : ClassMember, CacheContainer {
                     //参数传递和子函数的参数压栈
                     //如果是int取出到记分板
                     addCommand(
-                        "execute store result score ${tg.identifier} ${tg.`object`} run "
-                                + "data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].int.${tg.key}"
+                        "execute store result score ${tg.name} ${tg.`object`} run "
+                                + "data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].int.${tg.identifier}"
                     )
                 }
                 else -> {
                     //是引用类型
                     val tg = args[i].cast(params[i].type) as ClassBase
                     addCommand(
-                        "execute store result score ${tg.address.identifier} ${tg.address.`object`} run "
-                                + "data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].int.${tg.key}"
+                        "execute store result score ${tg.address.name} ${tg.address.`object`} run "
+                                + "data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].int.${tg.identifier}"
                     )
                 }
             }
@@ -477,6 +482,36 @@ open class Function : ClassMember, CacheContainer {
         return if (isClassMember) {
             parentClass
         } else null
+    }
+
+    /**
+     * 返回由函数的类（如果有），函数的标识符以及函数的形参类型组成的字符串
+     *
+     * 类的命名空间:类名@方法名(参数)
+     * @return
+     */
+    open fun toString(containClassName: Boolean, containNamespace: Boolean): String {
+        //类名
+        val clsName = if(containClassName){
+            if (isClassMember) {
+                parentClass!!.namespaceID + "@"
+            } else ""
+        }else ""
+        //参数
+        val paramStr = StringBuilder()
+        for (i in params.indices) {
+            if(params[i].isStatic){
+                paramStr.append("static ")
+            }
+            paramStr.append(params[i].type + " " + params[i].identifier)
+            if (i != params.size - 1) {
+                paramStr.append(",")
+            }
+        }
+        if(containNamespace){
+            return "$namespace:$clsName$name($paramStr)"
+        }
+        return "$clsName$name($paramStr)"
     }
 
     override fun hashCode(): Int {

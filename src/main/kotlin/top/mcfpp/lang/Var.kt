@@ -2,9 +2,10 @@ package top.mcfpp.lang
 
 import top.mcfpp.Project
 import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.lib.CacheContainer
+import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Class
 import top.mcfpp.lib.ClassMember
+import top.mcfpp.lib.GlobalField
 import java.util.*
 
 /**
@@ -25,12 +26,12 @@ abstract class Var : ClassMember, Cloneable {
     /**
      * 在Minecraft中的标识符
      */
-    var identifier: String
+    var name: String
 
     /**
-     * 在缓存中的名字
+     * 在mcfpp中的标识符，在域中的键名
      */
-    var key: String? = null
+    var identifier: String
 
     /**
      * 是否是已知的（固定的）
@@ -72,12 +73,13 @@ abstract class Var : ClassMember, Cloneable {
         get() = clsPointer != null
 
     init {
-        identifier = UUID.randomUUID().toString()
+        name = UUID.randomUUID().toString()
+        identifier = name
     }
 
     constructor(`var` : Var)  {
+        name = `var`.name
         identifier = `var`.identifier
-        key = `var`.key
         isStatic = `var`.isStatic
         accessModifier = `var`.accessModifier
         isConcrete = `var`.isConcrete
@@ -131,12 +133,45 @@ abstract class Var : ClassMember, Cloneable {
 
     companion object {
         /**
+         * 根据所给的类型、标识符和域构造一个变量
+         * @param identifier 标识符
+         * @param type 变量的类型
+         * @param container 变量所在的域
+         * @return
+         */
+        fun build(identifier: String, type: String, container: FieldContainer): Var?{
+            val `var`: Var?
+            when (type) {
+                "int" -> `var` = MCInt(identifier, container)
+                "bool" -> `var` = MCBool(identifier, container)
+                "selector" -> `var` = Selector(identifier)
+                "entity" -> `var` = null
+                "string" -> `var` = null
+                else -> {
+                    //自定义的类的类型
+                    val c = type.split(":")
+                    //取出类
+                    val clsType: Class? = if(c.size == 1){
+                        GlobalField.getClass(null,c[0])
+                    }else{
+                        GlobalField.getClass(c[0],c[1])
+                    }
+                    if (clsType == null) {
+                        Project.error("Undefined class:$c")
+                    }
+                    `var` = ClassPointer(clsType!!, identifier)
+                }
+            }
+            return `var`
+        }
+
+        /**
          * 解析变量上下文，构造上下文声明的变量
          * @param ctx 变量声明的上下文
          * @param container 变量所在缓存
          * @return 声明的变量
          */
-        fun build(ctx: mcfppParser.FieldDeclarationContext, container: CacheContainer): Var? {
+        fun build(ctx: mcfppParser.FieldDeclarationContext, container: FieldContainer): Var? {
             var `var`: Var? = null
             if (ctx.type().className() == null) {
                 //普通类型
@@ -144,17 +179,21 @@ abstract class Var : ClassMember, Cloneable {
                     "int" -> `var` = MCInt(ctx.Identifier().text, container)
                     "bool" -> `var` = MCBool(ctx.Identifier().text, container)
                 }
-            } else if (ctx.type().className().InsideClass() != null) {
-                when (ctx.type().className().InsideClass().text) {
+            } else if (ctx.type().className().classWithoutNamespace().InsideClass() != null) {
+                when (ctx.type().className().classWithoutNamespace().InsideClass().text) {
                     "selector" -> `var` = Selector(ctx.Identifier().text)
                     "entity" -> `var` = null
                     "string" -> `var` = null
                 }
             } else {
                 //自定义的类的类型
-                val cls: String = ctx.type().className().text
+                val cls = ctx.type().className().text.split(":")
                 //取出类
-                val type: Class? = Project.global.cache.classes.getOrDefault(cls, null)
+                val type: Class? = if(cls.size == 1){
+                    GlobalField.getClass(null,cls[0])
+                }else{
+                    GlobalField.getClass(cls[0],cls[1])
+                }
                 if (type == null) {
                     Project.error("Undefined class:$cls")
                 }
@@ -177,33 +216,37 @@ abstract class Var : ClassMember, Cloneable {
                     "int" -> {
                         `var` =
                             MCInt("@s").setObj(SbObject(cls.namespace + "_class_" + cls.identifier + "_int_" + ctx.Identifier()))
-                        `var`.key = ctx.Identifier().text
+                        `var`.identifier = ctx.Identifier().text
                     }
 
                     "bool" -> {
                         `var` =
                             MCBool("@s").setObj(SbObject(cls.namespace + "_class_" + cls.identifier + "_bool_" + ctx.Identifier()))
-                        `var`.key = ctx.Identifier().text
+                        `var`.identifier = ctx.Identifier().text
                     }
                 }
-            } else if (ctx.type().className().InsideClass() != null) {
-                when (ctx.type().className().InsideClass().text) {
+            } else if (ctx.type().className().classWithoutNamespace().InsideClass() != null) {
+                when (ctx.type().className().classWithoutNamespace().InsideClass().text) {
                     "selector" -> `var` = Selector(ctx.Identifier().text)
                     "entity" -> `var` = null
                     "string" -> `var` = null
                 }
             } else {
                 //自定义的类的类型
-                val clsType: String = ctx.type().className().text
+                val clsType = ctx.type().className().text.split(":")
                 //取出类
-                val type: Class? = Project.global.cache.classes.getOrDefault(clsType, null)
+                val type: Class? = if(clsType.size == 1){
+                    GlobalField.getClass(null,clsType[0])
+                }else{
+                    GlobalField.getClass(clsType[0],clsType[1])
+                }
                 if (type == null) {
                     Project.error("Undefined class:$clsType")
                 }
                 val classPointer = ClassPointer(type!!, ctx.Identifier().text)
                 classPointer.address =
                     (MCInt("@s").setObj(SbObject(cls.namespace + "_class_" + cls.identifier + "_" + clsType + "_" + ctx.Identifier())) as MCInt)
-                classPointer.identifier = ctx.Identifier().text
+                classPointer.name = ctx.Identifier().text
                 `var` = classPointer
             }
             //是否是常量

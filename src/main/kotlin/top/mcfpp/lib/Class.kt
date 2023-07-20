@@ -18,7 +18,7 @@ import java.util.ArrayList
  * @see ClassObject 类的实例。指针的目标
  * @see ClassType 表示类的类型，同时也是类的静态成员的指针
  */
-open class Class : CacheContainer {
+open class Class : FieldContainer {
     /**
      * 这个类的标识符
      */
@@ -37,12 +37,12 @@ open class Class : CacheContainer {
     /**
      * 成员变量和成员函数
      */
-    lateinit var cache: Cache
+    lateinit var field: ClassField
 
     /**
      * 静态变量和静态函数
      */
-    lateinit var staticCache: Cache
+    lateinit var staticField: ClassField
 
     /**
      * 记录这个类所有实例地址的记分板
@@ -83,12 +83,12 @@ open class Class : CacheContainer {
     constructor(identifier: String, namespace: String) {
         this.identifier = identifier
         this.namespace = namespace
-        staticCache = Cache(Project.global.cache, this)
-        cache = Cache(staticCache, this)
+        staticField = ClassField(null, this)
+        field = ClassField(staticField, this)
         classPreInit = Function("_class_preinit_$identifier", this, false)
         classPreStaticInit = Function("_class_preinit_$identifier", this, true)
-        cache.functions.add(classPreInit)
-        staticCache.functions.add(classPreStaticInit)
+        field.addFunction(classPreInit)
+        staticField.addFunction(classPreStaticInit)
         addressSbObject = SbObject(namespace + "_class_" + identifier + "_index")
         //init函数的初始化置入，即地址分配，原preinit函数合并于此。同时生成新的临时指针
         classPreInit.commands.add("scoreboard players operation @s " + addressSbObject.name + " = \$index " + addressSbObject.name)
@@ -138,7 +138,7 @@ open class Class : CacheContainer {
      * @return 如果字段存在，则返回此字段，否则返回null
      */
     fun getMemberVar(key: String): Var? {
-        return cache.getVar(key)
+        return field.getVar(key)
     }
 
     /**
@@ -148,7 +148,7 @@ open class Class : CacheContainer {
      * @return 如果存在，则返回此字段，否则返回null
      */
     fun getStaticMemberVar(key : String): Var? {
-        return staticCache.getVar(key)
+        return staticField.getVar(key)
     }
 
     /**
@@ -159,17 +159,17 @@ open class Class : CacheContainer {
         //非静态成员
         if (!classMember.isStatic) {
             if (classMember is Function) {
-                currClass!!.cache.functions.add(classMember)
+                currClass!!.field.addFunction(classMember)
             } else if (classMember is Var) {
-                currClass!!.cache.putVar(classMember.key!!, classMember)
+                currClass!!.field.putVar(classMember.identifier!!, classMember)
             }
             return
         }
         //静态成员
         if (classMember is Function) {
-            currClass!!.staticCache.functions.add(classMember)
+            currClass!!.staticField.addFunction(classMember)
         } else if (classMember is Var) {
-            currClass!!.staticCache.putVar(classMember.key!!, classMember)
+            currClass!!.staticField.putVar(classMember.identifier!!, classMember)
         }
     }
 
@@ -193,7 +193,7 @@ open class Class : CacheContainer {
         //创建实例
         val obj = ClassObject(this)
         //给这个类添加成员缓存
-        obj.cache = Cache(cache)
+        obj.cache = ClassField(field)
         obj.address = MCInt("@s").setObj(addressSbObject) as MCInt
         return obj
     }

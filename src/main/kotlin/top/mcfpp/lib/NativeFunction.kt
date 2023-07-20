@@ -1,22 +1,18 @@
 package top.mcfpp.lib
 
+import top.mcfpp.Project
 import top.mcfpp.exception.IllegalFormatException
-import top.mcfpp.lang.CanSelectMember
-import top.mcfpp.lang.ClassBase
-import top.mcfpp.lang.ClassPointer
-import top.mcfpp.lang.Var
+import top.mcfpp.lang.*
+import top.mcfpp.sys.System
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.lang.Class
+import javax.xml.stream.events.Namespace
 
 /**
  * 表示了一个native方法
  */
-class NativeFunction(name: String, javaMethod: mcfppParser.JavaReferContext?) : Function(name), Native {
-    /**
-     * native方法引用的java方法的词法上下文
-     */
-    var javaReferContext: mcfppParser.JavaReferContext?
+class NativeFunction : Function, Native {
 
     /**
      * 要调用的java方法
@@ -29,27 +25,32 @@ class NativeFunction(name: String, javaMethod: mcfppParser.JavaReferContext?) : 
     var javaClassName: String
 
     /**
-     * 引用的java方法的参数名。
+     * 引用的java方法名。
      */
     var javaMethodName: String
 
-    init {
-        javaReferContext = javaMethod
-        val strs: List<mcfppParser.StringNameContext> = javaMethod!!.stringName()
+    constructor(name: String, javaMethod: String, namespace: String = Project.currNamespace) : super(name, namespace){
+        val strs = javaMethod.split(".")
         try {
-            javaMethodName = strs[strs.size - 1].text
-            javaClassName = javaMethod.text.substring(0, javaMethod.text.lastIndexOf(javaMethodName) - 1)
+            javaMethodName = strs[strs.size - 1]
+            javaClassName = javaMethod.substring(0, javaMethod.lastIndexOf(javaMethodName) - 1)
         } catch (e: StringIndexOutOfBoundsException) {
-            throw IllegalFormatException(javaReferContext!!.text)
+            throw IllegalFormatException(javaMethod)
         }
         try{
             val cls: Class<*> = Class.forName(javaClassName)
-            this.javaMethod = cls.getMethod(javaMethodName, Array<Var>::class.java, ClassPointer::class.java)
+            this.javaMethod = cls.getMethod(javaMethodName, Array<Var?>::class.java, ClassPointer::class.java)
         } catch (e: NoSuchMethodException) {
             throw NoSuchMethodException(javaMethodName)
         } catch (e: ClassNotFoundException) {
             throw ClassNotFoundException(javaClassName)
         }
+    }
+
+    constructor(name: String, javaMethod: Method, namespace: String = Project.currNamespace) : super(name, namespace) {
+        this.javaMethod = javaMethod
+        this.javaClassName = javaMethod.declaringClass.`package`.name + "." + javaMethod.declaringClass.name
+        this.javaMethodName = javaMethod.name
     }
 
     @Override
@@ -59,9 +60,19 @@ class NativeFunction(name: String, javaMethod: mcfppParser.JavaReferContext?) : 
         try {
             javaMethod.invoke(null, argsArray, cls)
         } catch (e: IllegalAccessException) {
+            Project.error("Cannot access method: ${javaMethod.name}")
             throw RuntimeException(e)
         } catch (e: InvocationTargetException) {
+            Project.error("Exception occurred in method: ${javaMethod.name}")
+            throw RuntimeException(e)
+        } catch (e: NullPointerException){
+            Project.error("Method should be static: ${javaMethod.name}")
             throw RuntimeException(e)
         }
+    }
+
+    @Override
+    override fun toString(containClassName: Boolean, containNamespace: Boolean): String {
+        return super.toString(containClassName,containNamespace ) + "->" + javaClassName + "." + javaMethodName
     }
 }

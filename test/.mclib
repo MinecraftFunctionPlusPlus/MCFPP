@@ -1,7 +1,17 @@
-[function]
-mcfpp:load
-mcfpp:tick
-test:qwq
-test:test_int
-[class]
-[end]
+{
+	"namespaces":[
+		{
+			"id":"mcfpp",
+			"functions":[
+				"load()",
+				"tick()"
+			]
+		},
+		{
+			"id":"test",
+			"functions":[
+				"qwq()"
+			]
+		}
+	]
+}

@@ -24,19 +24,19 @@ class MCBool : Var, OnScoreboard {
      */
     var boolObject: SbObject = SbObject.MCS_boolean
 
-    constructor(id: String, curr: CacheContainer) {
-        key = id
-        identifier = curr.prefix + "_" + id
+    constructor(id: String, curr: FieldContainer) {
+        identifier = id
+        name = curr.prefix + "_" + id
     }
 
-    constructor(b: Boolean, id: String, curr: CacheContainer) : this(id, curr) {
+    constructor(b: Boolean, id: String, curr: FieldContainer) : this(id, curr) {
         value = b
         isConcrete = true
     }
 
     constructor(id: String) {
-        key = id
         identifier = id
+        name = id
     }
 
     constructor() : this(UUID.randomUUID().toString())
@@ -82,14 +82,14 @@ class MCBool : Var, OnScoreboard {
             //execute store success score qwq qwq if score qwq qwq = owo owo
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.identifier + " " + re.boolObject
-                        + " if score " + identifier + " " + boolObject + " matches " + if (a.value) 1 else 0
+                "execute store success score " + re.name + " " + re.boolObject
+                        + " if score " + name + " " + boolObject + " matches " + if (a.value) 1 else 0
             )
         } else {
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.identifier + " " + re.boolObject
-                        + " if score " + identifier + " " + boolObject + " = " + a.identifier + " " + a.boolObject
+                "execute store success score " + re.name + " " + re.boolObject
+                        + " if score " + name + " " + boolObject + " = " + a.name + " " + a.boolObject
             )
         }
         return re
@@ -106,14 +106,14 @@ class MCBool : Var, OnScoreboard {
             //execute store success score qwq qwq if score qwq qwq = owo owo
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.identifier + " " + re.boolObject
-                        + " unless score " + identifier + " " + boolObject + " matches " + if (a.value) 1 else 0
+                "execute store success score " + re.name + " " + re.boolObject
+                        + " unless score " + name + " " + boolObject + " matches " + if (a.value) 1 else 0
             )
         } else {
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.identifier + " " + re.boolObject
-                        + " unless score " + identifier + " " + boolObject + " = " + a.identifier + " " + a.boolObject
+                "execute store success score " + re.name + " " + re.boolObject
+                        + " unless score " + name + " " + boolObject + " = " + a.name + " " + a.boolObject
             )
         }
         return re
@@ -124,8 +124,8 @@ class MCBool : Var, OnScoreboard {
             value = !value
         } else {
             Function.addCommand(
-                "execute store success score " + identifier + " " + boolObject
-                        + " if score " + identifier + " " + boolObject + " matches " + 0
+                "execute store success score " + name + " " + boolObject
+                        + " if score " + name + " " + boolObject + " matches " + 0
             )
         }
         return this
@@ -143,21 +143,21 @@ class MCBool : Var, OnScoreboard {
             } else {
                 re = MCBool()
                 Function.addCommand(
-                    "execute store success score " + re.identifier + " " + re.boolObject
-                            + " if score " + identifier + " " + boolObject + " matches " + 1
+                    "execute store success score " + re.name + " " + re.boolObject
+                            + " if score " + name + " " + boolObject + " matches " + 1
                 )
             }
         } else {
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.identifier + " " + re.boolObject
-                        + " if score " + identifier + " " + boolObject + " matches " + 1
+                "execute store success score " + re.name + " " + re.boolObject
+                        + " if score " + name + " " + boolObject + " matches " + 1
             )
             Function.addCommand(
                 "execute" +
-                        " if score " + re.identifier + " " + re.boolObject + " matches " + 0 +
-                        " store success score " + re.identifier + " " + re.boolObject +
-                        " if score " + a.identifier + " " + a.boolObject + " matches " + 1
+                        " if score " + re.name + " " + re.boolObject + " matches " + 0 +
+                        " store success score " + re.name + " " + re.boolObject +
+                        " if score " + a.name + " " + a.boolObject + " matches " + 1
             )
         }
         return re
@@ -175,21 +175,21 @@ class MCBool : Var, OnScoreboard {
             } else {
                 re = MCBool()
                 Function.addCommand(
-                    "execute store success score " + re.identifier + " " + re.boolObject
-                            + " if score " + identifier + " " + boolObject + " matches " + 1
+                    "execute store success score " + re.name + " " + re.boolObject
+                            + " if score " + name + " " + boolObject + " matches " + 1
                 )
             }
         } else {
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.identifier + " " + re.boolObject
-                        + " if score " + identifier + " " + boolObject + " matches " + 1
+                "execute store success score " + re.name + " " + re.boolObject
+                        + " if score " + name + " " + boolObject + " matches " + 1
             )
             Function.addCommand(
                 "execute" +
-                        " if score " + re.identifier + " " + re.boolObject + " matches " + 1 +
-                        " store success score " + re.identifier + " " + re.boolObject +
-                        " if score " + a.identifier + " " + a.boolObject + " matches " + 1
+                        " if score " + re.name + " " + re.boolObject + " matches " + 1 +
+                        " store success score " + re.name + " " + re.boolObject +
+                        " if score " + a.name + " " + a.boolObject + " matches " + 1
             )
         }
         return re
@@ -204,8 +204,8 @@ class MCBool : Var, OnScoreboard {
             //变量进栈
             Function.addCommand(
                 "execute" +
-                        " store result storage mcfpp:system " + top.mcfpp.Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + key + " int 1" +
-                        " run scoreboard players operation " + identifier + " " + boolObject + " = " + a.identifier + " " + a.boolObject
+                        " store result storage mcfpp:system " + top.mcfpp.Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1" +
+                        " run scoreboard players operation " + name + " " + boolObject + " = " + a.name + " " + a.boolObject
             )
         }
     }
@@ -227,13 +227,13 @@ class MCBool : Var, OnScoreboard {
         if(isClassMember) {
             Function.addCommand(
                 "execute as @e[type=marker,tag=${clsPointer!!.clsType.tag}]" +
-                        "if score @s ${clsPointer!!.address.`object`.name} = ${clsPointer!!.address.identifier} ${clsPointer!!.address.`object`.name}" +
+                        "if score @s ${clsPointer!!.address.`object`.name} = ${clsPointer!!.address.name} ${clsPointer!!.address.`object`.name}" +
                         "run" +
-                        "scoreboard players operation ${re.identifier} ${SbObject.MCS_boolean.name} = @s ${SbObject.MCS_boolean.name}"
+                        "scoreboard players operation ${re.name} ${SbObject.MCS_boolean.name} = @s ${SbObject.MCS_boolean.name}"
             )
         }else{
             Function.addCommand(
-                "scoreboard players operation ${re.identifier} ${SbObject.MCS_boolean.name} = $identifier ${SbObject.MCS_boolean.name}"
+                "scoreboard players operation ${re.name} ${SbObject.MCS_boolean.name} = $name ${SbObject.MCS_boolean.name}"
             )
         }
         return re

@@ -2,14 +2,19 @@ grammar mcfpp;
 
 //一个mcfpp文件
 compilationUnit
-    :   namespaceDeclaration?
+    :   importDeclaration*
+        namespaceDeclaration?
         typeDeclaration *
         EOF
     ;
 
 //命名空间声明
 namespaceDeclaration
-    :   'namespace' Identifier ';'
+    :   'namespace' Identifier ('.' Identifier)* ';'
+    ;
+
+importDeclaration
+    :   'import' Identifier ('.' Identifier)* ('.' (className|'*')) ';'
     ;
 
 //类或函数声明
@@ -27,16 +32,16 @@ classOrFunctionDeclaration
 
 //类声明
 classDeclaration
-    :   STATIC? FINAL? 'class' className (EXTENDS className)? classBody
+    :   STATIC? FINAL? 'class' classWithoutNamespace (EXTENDS className)? classBody
     ;
 
 nativeClassDeclaration
-    :   NATIVE 'class' className '->' javaRefer ';'
+    :   NATIVE 'class' classWithoutNamespace '->' javaRefer ';'
+    |   NATIVE 'class' classWithoutNamespace '->' javaRefer '{' nativeClassBody '}'
     ;
 
-
-classBody
-    :   '{' (classMemberDeclaration|staticClassMemberDeclaration)* '}'
+nativeClassBody
+    :   '{' nativeClassFunctionDeclaration* '}'
     ;
 
 staticClassMemberDeclaration
@@ -45,6 +50,10 @@ staticClassMemberDeclaration
 
 classMemberDeclaration
     :   accessModifier? classMember
+    ;
+
+classBody
+    :   '{' (classMemberDeclaration|staticClassMemberDeclaration)* '}'
     ;
 
 //类成员
@@ -60,17 +69,21 @@ classFunctionDeclaration
     :    'func' Identifier '(' parameterList? ')' '{' functionBody '}'
     ;
 
+nativeClassFunctionDeclaration
+    :   accessModifier? NATIVE 'func' Identifier '(' parameterList? ')' ';'
+    ;
+
 //函数声明
 functionDeclaration
-    :    INLINE? functionTag* 'func' namespaceID '(' parameterList? ')' '{' functionBody '}'
+    :    INLINE? functionTag* 'func' Identifier '(' parameterList? ')' '{' functionBody '}'
     ;
 
 namespaceID
-    : (Identifier ':')? Identifier
+    : (Identifier ( '.' Identifier) ':')? Identifier
     ;
 
 nativeFuncDeclaration
-    :   accessModifier? NATIVE 'func' Identifier '(' parameterList? ')' '->' javaRefer ';'
+    :   NATIVE 'func' Identifier '(' parameterList? ')' '->' javaRefer ';'
     ;
 
 javaRefer
@@ -96,7 +109,7 @@ constructorDeclaration
 
 //构造函数声明
 nativeConstructorDeclaration
-    :   accessModifier? NATIVE? className '(' parameterList? ')' '->' javaRefer ';'
+    :   accessModifier? NATIVE? classWithoutNamespace '(' parameterList? ')' '->' javaRefer ';'
     ;
 
 //构造函数的调用
@@ -351,8 +364,12 @@ value
     ;
 
 className
-    :   (Identifier ':')? ClassIdentifier
-    |   (Identifier ':')? InsideClass
+    :   (Identifier ('.' Identifier)* ':')? classWithoutNamespace
+    ;
+
+classWithoutNamespace
+    :   ClassIdentifier
+    |   InsideClass
     ;
 
 functionTag

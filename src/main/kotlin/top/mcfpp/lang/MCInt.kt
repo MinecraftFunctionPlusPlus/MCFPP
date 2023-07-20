@@ -3,7 +3,7 @@ package top.mcfpp.lang
 import top.mcfpp.Project
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.lib.CacheContainer
+import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Function
 import java.util.*
 
@@ -33,7 +33,7 @@ class MCInt : Number<Int> {
     constructor(id: String, value: Int) : super(
         Function.currFunction.namespaceID + "_" + id
     ) {
-        key = id
+        identifier = id
         isConcrete = true
         this.value = value
     }
@@ -43,8 +43,8 @@ class MCInt : Number<Int> {
      * @param id 值
      * @param curr 这边变量被储存在的缓存。用于命名。
      */
-    constructor(id: String, curr: CacheContainer) : super(curr.prefix + id) {
-        key = id
+    constructor(id: String, curr: FieldContainer) : super(curr.prefix + id) {
+        identifier = id
     }
 
     /**
@@ -52,7 +52,7 @@ class MCInt : Number<Int> {
      * @param id identifier
      */
     constructor(id: String) : super(id) {
-        key = id
+        identifier = id
     }
 
     /**
@@ -98,8 +98,8 @@ class MCInt : Number<Int> {
                 //对类中的成员的值进行修改
                 Function.addCommand(
                     "execute as @e[tag=${clsPointer!!.clsType.tag}] " +
-                            "if score @s ${clsPointer!!.address.`object`.name} = ${clsPointer!!.identifier} ${clsPointer!!.address.`object`.name} " +
-                            "run scoreboard players operation @s $`object` = ${a.identifier} ${a.`object`}"
+                            "if score @s ${clsPointer!!.address.`object`.name} = ${clsPointer!!.name} ${clsPointer!!.address.`object`.name} " +
+                            "run scoreboard players operation @s $`object` = ${a.name} ${a.`object`}"
                 )
             }
         }else{
@@ -111,7 +111,7 @@ class MCInt : Number<Int> {
                 isConcrete = false
                 //变量进栈
                 Function.addCommand(
-                    "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + key + " int 1" +
+                    "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1" +
                             " run " + Commands.SbPlayerOperation(this, "=", a as MCInt)
                 )
             }
@@ -218,14 +218,14 @@ class MCInt : Number<Int> {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.identifier + " " + SbObject.MCS_boolean
-                        + " if score " + identifier + " " + `object` + " matches " + (a.value!! + 1) + ".."
+                "execute store success score " + re.name + " " + SbObject.MCS_boolean
+                        + " if score " + name + " " + `object` + " matches " + (a.value!! + 1) + ".."
             )
         } else {
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.identifier + " " + SbObject.MCS_boolean
-                        + " if score " + identifier + " " + `object` + " > " + a.identifier + " " + a.`object`
+                "execute store success score " + re.name + " " + SbObject.MCS_boolean
+                        + " if score " + name + " " + `object` + " > " + a.name + " " + a.`object`
             )
         }
         return re
@@ -243,14 +243,14 @@ class MCInt : Number<Int> {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.identifier + " " + SbObject.MCS_boolean
-                        + " if score " + identifier + " " + `object` + " matches " + ".." + (a.value!! - 1)
+                "execute store success score " + re.name + " " + SbObject.MCS_boolean
+                        + " if score " + name + " " + `object` + " matches " + ".." + (a.value!! - 1)
             )
         } else {
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.identifier + " " + SbObject.MCS_boolean
-                        + " if score " + identifier + " " + `object` + " < " + a.identifier + " " + a.`object`
+                "execute store success score " + re.name + " " + SbObject.MCS_boolean
+                        + " if score " + name + " " + `object` + " < " + a.name + " " + a.`object`
             )
         }
         return re
@@ -268,14 +268,14 @@ class MCInt : Number<Int> {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.identifier + " " + SbObject.MCS_boolean
-                        + " if score " + identifier + " " + `object` + " matches " + ".." + a.value
+                "execute store success score " + re.name + " " + SbObject.MCS_boolean
+                        + " if score " + name + " " + `object` + " matches " + ".." + a.value
             )
         } else {
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.identifier + " " + SbObject.MCS_boolean
-                        + " if score " + identifier + " " + `object` + " <= " + a.identifier + " " + a.`object`
+                "execute store success score " + re.name + " " + SbObject.MCS_boolean
+                        + " if score " + name + " " + `object` + " <= " + a.name + " " + a.`object`
             )
         }
         return re
@@ -293,14 +293,14 @@ class MCInt : Number<Int> {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.identifier + " " + SbObject.MCS_boolean
-                        + " if score " + identifier + " " + `object` + " matches " + a.value + ".."
+                "execute store success score " + re.name + " " + SbObject.MCS_boolean
+                        + " if score " + name + " " + `object` + " matches " + a.value + ".."
             )
         } else {
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.identifier + " " + SbObject.MCS_boolean
-                        + " if score " + identifier + " " + `object` + " >= " + a.identifier + " " + a.`object`
+                "execute store success score " + re.name + " " + SbObject.MCS_boolean
+                        + " if score " + name + " " + `object` + " >= " + a.name + " " + a.`object`
             )
         }
         return re
@@ -318,14 +318,14 @@ class MCInt : Number<Int> {
             //execute store success score qwq qwq if score qwq qwq = owo owo
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.identifier + " " + SbObject.MCS_boolean
-                        + " if score " + identifier + " " + `object` + " matches " + a.value
+                "execute store success score " + re.name + " " + SbObject.MCS_boolean
+                        + " if score " + name + " " + `object` + " matches " + a.value
             )
         } else {
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.identifier + " " + SbObject.MCS_boolean
-                        + " if score " + identifier + " " + `object` + " = " + a.identifier + " " + a.`object`
+                "execute store success score " + re.name + " " + SbObject.MCS_boolean
+                        + " if score " + name + " " + `object` + " = " + a.name + " " + a.`object`
             )
         }
         return re
@@ -343,14 +343,14 @@ class MCInt : Number<Int> {
             //execute store success score qwq qwq if score qwq qwq = owo owo
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.identifier + " " + SbObject.MCS_boolean
-                        + " unless score " + identifier + " " + `object` + " matches " + a.value
+                "execute store success score " + re.name + " " + SbObject.MCS_boolean
+                        + " unless score " + name + " " + `object` + " matches " + a.value
             )
         } else {
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.identifier + " " + SbObject.MCS_boolean
-                        + " unless score " + identifier + " " + `object` + " = " + a.identifier + " " + a.`object`
+                "execute store success score " + re.name + " " + SbObject.MCS_boolean
+                        + " unless score " + name + " " + `object` + " = " + a.name + " " + a.`object`
             )
         }
         return re
@@ -367,13 +367,13 @@ class MCInt : Number<Int> {
         if(isClassMember){
             Function.addCommand(
                 "execute as @e[type=marker,tag=${clsPointer!!.clsType.tag}] " +
-                        "if score @s ${clsPointer!!.address.`object`.name} = ${clsPointer!!.address.identifier} ${clsPointer!!.address.`object`.name} " +
+                        "if score @s ${clsPointer!!.address.`object`.name} = ${clsPointer!!.address.name} ${clsPointer!!.address.`object`.name} " +
                         "run " +
-                        "scoreboard players operation ${re.identifier} ${re.`object`.name} = @s ${`object`.name}"
+                        "scoreboard players operation ${re.name} ${re.`object`.name} = @s ${`object`.name}"
             )
         }else{
             Function.addCommand(
-                "scoreboard players operation ${re.identifier} ${re.`object`.name} = $identifier ${`object`.name}"
+                "scoreboard players operation ${re.name} ${re.`object`.name} = $name ${`object`.name}"
             )
         }
         return re

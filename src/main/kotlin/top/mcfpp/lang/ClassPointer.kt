@@ -8,8 +8,8 @@ import top.mcfpp.lib.*
  * 一个类的指针。类的地址储存在记分板中，因此一个类的指针实际上包含了两个信息，一个是指针代表的是[哪一个类][clsType]，一个是指针指向的这个类的对象
  *[在堆中的地址][address]，即记分板的值是多少。
  *
- * 指针继承于类[Var]，然而它的[identifier]并没有额外的用处，因为我们并不需要关注这个指针处于哪一个类或者哪一个函数中。起到标识符作用的更多是[key]。
- * 事实上，指针的[identifier]和[key]拥有相同的值。
+ * 指针继承于类[Var]，然而它的[name]并没有额外的用处，因为我们并不需要关注这个指针处于哪一个类或者哪一个函数中。起到标识符作用的更多是[identifier]。
+ * 事实上，指针的[name]和[identifier]拥有相同的值。
  *
  * 创建一个类的对象的时候，在分配完毕类的地址之后，将会立刻创建一个初始指针，这个指针指向了刚刚创建的对象的地址，在记分板上的名字是一个随机的uuid。
  * 而后进行的引用操作无非是把这个初始指针的记分板值赋给其他的指针。
@@ -54,8 +54,8 @@ class ClassPointer : ClassBase {
     constructor(type: Class, identifier: String) {
         clsType = type
         this.type = clsType.identifier
-        key = identifier
         this.identifier = identifier
+        this.name = identifier
         address = MCInt("pointer_$identifier",type).setObj(type.addressSbObject) as MCInt
     }
 
@@ -87,7 +87,7 @@ class ClassPointer : ClassBase {
                 Function.addCommand(
                     "execute " +
                             "as @e[tag=${obj!!.clsType.tag}] " +
-                            "if score @s " + obj!!.address.`object`.name + " = " + address.identifier + " " + address.`object`.name + " " +
+                            "if score @s " + obj!!.address.`object`.name + " = " + address.name + " " + address.`object`.name + " " +
                             "run data remove entity @s data.pointers[0]"
                 )
             }
@@ -98,7 +98,7 @@ class ClassPointer : ClassBase {
             Function.addCommand(
                 "execute " +
                         "as @e[tag=${obj!!.clsType.tag}] " +
-                        "if score @s " + b.address.`object`.name + " = " + address.identifier + " " + address.`object`.name + " " +
+                        "if score @s " + b.address.`object`.name + " = " + address.name + " " + address.`object`.name + " " +
                         "run data modify entity @s data.pointers append value 0"
             )
         }
@@ -111,7 +111,7 @@ class ClassPointer : ClassBase {
                 Function.addCommand(
                     "execute " +
                             "as @e[tag=${obj!!.clsType.tag}] " +
-                            "if score @s " + obj!!.address.`object`.name + " = " + address.identifier + " " + address.`object`.name + " " +
+                            "if score @s " + obj!!.address.`object`.name + " = " + address.name + " " + address.`object`.name + " " +
                             "run data remove entity @s data.pointers[0]"
                 )
             }
@@ -122,7 +122,7 @@ class ClassPointer : ClassBase {
             Function.addCommand(
                 "execute " +
                         "as @e[tag=${obj!!.clsType.tag}] " +
-                        "if score @s " + b.address.`object`.name + " = " + address.identifier + " " + address.`object`.name + " " +
+                        "if score @s " + b.address.`object`.name + " = " + address.name + " " + address.`object`.name + " " +
                         "run data modify entity @s data.pointers append value 0"
             )
         }
@@ -151,7 +151,7 @@ class ClassPointer : ClassBase {
     @Override
     override fun getMemberFunction(key: String, params: List<String>, accessModifier: ClassMember.AccessModifier): Pair<Function?, Boolean> {
         //获取函数
-        val member = clsType.cache.getFunction(clsType.namespace, key, params)
+        val member = clsType.field.getFunction(clsType.namespace, key, params)
         return if(member == null){
             Pair(null, true)
         }else{

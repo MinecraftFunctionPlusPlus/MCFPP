@@ -11,7 +11,7 @@ class MCString : Var {
     }
 
     constructor(value: String?, identifier: String?) {
-        this.identifier = identifier!!
+        this.name = identifier!!
     }
 
     constructor(b: MCString) {

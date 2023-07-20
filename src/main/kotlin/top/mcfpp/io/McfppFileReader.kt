@@ -9,12 +9,9 @@ import java.io.*
 
 /**
  * 用于读取和分析mcfpp代码。
+ * @param path mcfpp文件的路径
  */
 class McfppFileReader(path: String?) : McfppReader() {
-    /**
-     * 从指定路径读取mcfpp文件
-     * @param path mcfpp文件的路径
-     */
     init {
         this.path = path
         rpath = getRelativePath(Project.root.absolutePath, File(path!!).parentFile.absolutePath)

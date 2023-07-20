@@ -1,0 +1,3 @@
+native func print(int i) -> top.mcfpp.sys.System.print;
+native func print(bool b) -> top.mcfpp.sys.System.print;
+native func test(int i) -> top.mcfpp.sys.System.test;
