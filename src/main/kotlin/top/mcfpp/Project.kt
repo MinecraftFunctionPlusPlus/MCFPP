@@ -3,7 +3,10 @@ package top.mcfpp
 import com.alibaba.fastjson2.*
 import org.antlr.v4.runtime.ParserRuleContext
 import org.apache.logging.log4j.*
+import top.mcfpp.io.IndexReader
+import top.mcfpp.io.IndexWriter
 import top.mcfpp.io.McfppFileReader
+import top.mcfpp.lang.UnresolvedVar
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
 import java.io.*
@@ -72,11 +75,6 @@ object Project {
      */
     private var warningCount = 0
 
-    /**
-     * 全局缓存
-     */
-    var global: Global = Global()
-
     var targetPath : String = "out/"
 
     /**
@@ -84,12 +82,14 @@ object Project {
      */
     fun init() {
         //全局缓存初始化
-        global.init()
+        GlobalField.init()
         //初始化mcfpp的tick和load函数
+        //添加命名空间
+        GlobalField.localNamespaces["mcfpp"] = NamespaceField()
         val mcfppTick = Function("tick","mcfpp")
         val mcfppLoad = Function("load","mcfpp")
-        global.cache.functions.add(mcfppLoad)
-        global.cache.functions.add(mcfppTick)
+        GlobalField.localNamespaces["mcfpp"]!!.addFunction(mcfppLoad)
+        GlobalField.localNamespaces["mcfpp"]!!.addFunction(mcfppTick)
     }
 
     /**
@@ -101,17 +101,13 @@ object Project {
         try {
             //读取json
             logger.debug("Reading project from file \"$path\"")
-            val reader = BufferedReader(FileReader(path))
+            val reader = FileReader(path)
             val qwq = File(path)
             root = qwq.parentFile
             name = qwq.name.substring(0, qwq.name.lastIndexOf('.'))
-            val json: StringBuilder = StringBuilder()
-            var line: String?
-            while (reader.readLine().also { line = it } != null) {
-                json.append(line)
-            }
+            val json = reader.readText()
             //解析json
-            val jsonObject: JSONObject = JSONObject.parse(json.toString()) as JSONObject
+            val jsonObject: JSONObject = JSONObject.parse(json) as JSONObject
             //代码文件
             files = ArrayList()
             val filesJson: JSONArray = jsonObject.getJSONArray("files")
@@ -162,6 +158,45 @@ object Project {
     }
 
     /**
+     * 读取库文件，并将库写入缓存
+     */
+    fun readIndex(){
+        //默认的
+        includes.add("mcfpp")
+        //写入缓存
+        for (include in includes) {
+            val filePath = if(!include.endsWith("/.mclib")) {
+                "$include/.mclib"
+            }else{
+                include
+            }
+            val file = File(filePath)
+            if(file.exists()){
+                IndexReader.read(filePath)
+            }else{
+                error("Cannot find lib file at: $filePath")
+            }
+        }
+        //库读取完了，现在实例化所有类中的成员字段吧
+        for(namespace in GlobalField.libNamespaces.values){
+            namespace.forEachClass { c ->
+                run {
+                    for (v in c.field.allVars){
+                        if(v is UnresolvedVar){
+                            c.field.putVar(c.identifier, v, true)
+                        }
+                    }
+                    for (v in c.staticField.allVars){
+                        if(v is UnresolvedVar){
+                            c.staticField.putVar(c.identifier, v, true)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * 解析工程
      */
     fun analyse() {
@@ -203,19 +238,24 @@ object Project {
         logger.debug("Optimizing...")
         logger.debug("Adding scoreboards in mcfpp:load function")
         //向load函数中添加记分板初始化命令
-        for (scoreboard in global.scoreboards){
-            global.cache.getFunction("mcfpp","load", ArrayList())!!.commands
+        for (scoreboard in GlobalField.scoreboards){
+            GlobalField.localNamespaces["mcfpp"]!!.getFunction(
+                "load", ArrayList())!!.commands
                 .add("scoreboard objectives add ${scoreboard.name} ${scoreboard.rule}")
         }
         //寻找入口函数
         var hasEntrance = false
-        for (f in global.cache.functions) {
-            if (f.parent.size == 0 && f !is Native) {
-                //找到了入口函数
-                hasEntrance = true
-                f.commands.add(0, "data modify storage mcfpp:system $defaultNamespace.stack_frame prepend value {}")
-                f.commands.add("data remove storage mcfpp:system $defaultNamespace.stack_frame[0]")
-                logger.debug("Find entrance function: ${f.tags} ${f.name}")
+        for(field in GlobalField.localNamespaces.values){
+            field.forEachFunction { f->
+                run {
+                    if (f.parent.size == 0 && f !is Native) {
+                        //找到了入口函数
+                        hasEntrance = true
+                        f.commands.add(0, "data modify storage mcfpp:system $defaultNamespace.stack_frame prepend value {}")
+                        f.commands.add("data remove storage mcfpp:system $defaultNamespace.stack_frame[0]")
+                        logger.debug("Find entrance function: {} {}", f.tags, f.name)
+                    }
+                }
             }
         }
         if (!hasEntrance) {
@@ -230,22 +270,7 @@ object Project {
      * 在和工程信息json文件的同一个目录下生成一个.mclib文件
      */
     fun genIndex() {
-        try {
-            val writer = BufferedWriter(FileWriter(root.absolutePath + "/.mclib"))
-            writer.write("[function]\n")
-            for (f in global.cache.functions) {
-                writer.write(f.namespaceID + "\n")
-            }
-            writer.write("[class]\n")
-            for (c in global.cache.classes.values) {
-                writer.write(c.namespace.toString() + ":" + c.identifier + "\n")
-            }
-            writer.write("[end]\n")
-            writer.flush()
-            writer.close()
-        } catch (e: IOException) {
-            throw RuntimeException(e)
-        }
+        IndexWriter.write(root.absolutePath)
     }
 
     /**

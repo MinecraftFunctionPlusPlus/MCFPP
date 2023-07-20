@@ -1,4 +1,4 @@
-package top.mcfpp.lib
+package top.mcfpp.util
 
 import java.text.SimpleDateFormat
 import java.util.*
@@ -24,7 +24,8 @@ object UwU {
         tips.add("让我猜猜现在是什么时候呢~是早上嘤？")
         tips.add("让我猜猜现在是什么时候呢~是下午喵？")
         tips.add("让我猜猜现在是什么时候呢~是中午嘛？")
-        tips.add("来自java！")
+        tips.add("来自Java！")
+        tips.add("来自Kotlin！")
         tips.add("不好看，在IDE睡了三小时")
         tips.add("不好看。睡了IDE三小时")
         tips.add("外面的天空怎么样呢~")

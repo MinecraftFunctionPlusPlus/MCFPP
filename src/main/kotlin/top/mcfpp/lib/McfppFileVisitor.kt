@@ -4,7 +4,6 @@ import mcfppBaseVisitor
 import top.mcfpp.Project
 import top.mcfpp.exception.*
 import top.mcfpp.exception.IllegalFormatException
-import top.mcfpp.lang.INativeClass
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.Var.ConstStatus
 import top.mcfpp.lib.ClassMember.AccessModifier
@@ -34,10 +33,21 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         Project.ctx = ctx
         //命名空间
         if (ctx.namespaceDeclaration() != null) {
-            Project.currNamespace = ctx.namespaceDeclaration()!!.Identifier().text
+            //获取命名空间
+            var namespaceStr = ctx.namespaceDeclaration().Identifier()[0].text
+            if(ctx.namespaceDeclaration().Identifier().size > 1){
+                ctx.namespaceDeclaration().Identifier().forEach{e ->
+                    run {
+                        namespaceStr += ".${e.text}"
+                    }
+                }
+            }
+            Project.currNamespace = namespaceStr
         }else{
             Project.currNamespace = Project.defaultNamespace
         }
+        if(!GlobalField.localNamespaces.containsKey(Project.currNamespace))
+            GlobalField.localNamespaces[Project.currNamespace] = NamespaceField()
         //文件结构，类和函数
         for (t in ctx.typeDeclaration()) {
             visit(t)
@@ -90,31 +100,8 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
      * @return null
      */
     override fun visitNativeClassDeclaration(ctx: mcfppParser.NativeClassDeclarationContext): Any? {
-        Project.ctx = ctx
-        //注册类
-        val identifier: String = ctx.className().text
-        return if (Project.global.cache.classes.containsKey(identifier)) {
-            //重复声明
-            Project.error("The class has extended " + Class.currClass!!.identifier)
-            throw ClassDuplicationException()
-        } else {
-            //获取它指向的java类
-            val cls: java.lang.Class<INativeClass> = try {
-                java.lang.Class.forName(ctx.javaRefer().text) as java.lang.Class<INativeClass>
-            } catch (e: ClassNotFoundException) {
-                throw RuntimeException(e)
-            } catch (e: ClassCastException) {
-                throw RuntimeException(e)
-            }
-            val ncls: NativeClass = if (ctx.className().Identifier() != null) {
-                //声明了命名空间
-                NativeClass(identifier, ctx.className().Identifier().text, cls)
-            } else {
-                NativeClass(identifier, cls)
-            }
-            Project.global.cache.classes[identifier] = ncls
-            null
-        }
+        NativeClassVisitor().visit(ctx)
+        return null
     }
 
     /**
@@ -126,27 +113,35 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
     override fun visitClassDeclaration(ctx: mcfppParser.ClassDeclarationContext): Any? {
         Project.ctx = ctx
         //注册类
-        val identifier: String = ctx.className(0).text
-        if (Project.global.cache.classes.containsKey(identifier)) {
+        val id = ctx.classWithoutNamespace().text
+        val field = GlobalField.localNamespaces[Project.currNamespace]!!
+
+        if (field.hasClass(id)) {
             //重复声明
-            Project.error("The class has extended " + Class.currClass!!.identifier)
+            Project.error("Class has been defined: $id in namespace ${Project.currNamespace}")
             throw ClassDuplicationException()
         } else {
             //如果没有声明过这个类
-            val cls: Class = if (ctx.className(0).Identifier() != null) {
-                //声明了命名空间
-                Class(identifier, ctx.className(0).Identifier().text)
-            } else {
-                Class(identifier)
-            }
-            if (ctx.className().size != 1) {
-                if (Project.global.cache.classes.containsKey(ctx.className(1).text)) {
-                    cls.parent = Project.global.cache.classes[ctx.className(1).text]
+            val cls: Class = Class(id, Project.currNamespace)
+            if (ctx.className() != null) {
+                //是否存在继承
+                if (field.hasClass(ctx.className().text)) {
+                    val qwq = ctx.className().text.split(":")
+                    val identifier: String
+                    val namespace : String?
+                    if(qwq.size == 1){
+                        identifier = qwq[0]
+                        namespace = null
+                    }else{
+                        namespace = qwq[0]
+                        identifier = qwq[1]
+                    }
+                    cls.parent = GlobalField.getClass(namespace,identifier)
                 } else {
-                    Project.error("Undefined class: " + ctx.className(1).text)
+                    Project.error("Undefined class: " + ctx.className().text)
                 }
             }
-            Project.global.cache.classes[identifier] = cls
+            field.addClass(id, cls)
             Class.currClass = cls
             cls.isStaticClass = ctx.STATIC() != null
         }
@@ -196,7 +191,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         m.isStatic = true
         Class.currClass!!.addMember(m)
         if(m is Function){
-            m.cache.removeVar("this")
+            m.field.removeVar("this")
         }
         return null
     }
@@ -260,7 +255,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             f.addParams(ctx.parameterList())
         }
         //注册函数
-        if (Class.currClass!!.cache.functions.contains(f) || Class.currClass!!.staticCache.functions.contains(f)) {
+        if (Class.currClass!!.field.hasFunction(f) || Class.currClass!!.staticField.hasFunction(f)) {
             Project.error("Already defined function:" + ctx.Identifier().text + "in class " + Class.currClass!!.identifier)
             Function.currFunction = Function.nullFunction
         }
@@ -310,25 +305,11 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         val f: Function
         //是否是内联函数
         //是否是内联函数
-        if (ctx.INLINE() != null) {
-            //获取函数的文本内容
-            //函数是否拥有命名空间声明
-            f = if (ctx.namespaceID().Identifier().size == 1) {
-                InlineFunction(ctx.namespaceID().Identifier(0).text, ctx)
-            } else {
-                InlineFunction(
-                    ctx.namespaceID().Identifier(0).text,
-                    ctx.namespaceID().Identifier(1).text,
-                    ctx
-                )
-            }
+        val identifier : String = ctx.Identifier().text
+        f = if (ctx.INLINE() != null) {
+            InlineFunction(identifier, Project.currNamespace, ctx)
         } else {
-            //函数是否拥有命名空间声明
-            f = if (ctx.namespaceID().Identifier().size == 1) {
-                Function(ctx.namespaceID().Identifier(0).text)
-            } else {
-                Function(ctx.namespaceID().Identifier(0).text, ctx.namespaceID().Identifier(1).text)
-            }
+            Function(identifier, Project.currNamespace)
         }
         //解析参数
         if (ctx.parameterList() != null) {
@@ -346,19 +327,21 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
                         fTag.namespaceID().Identifier(1).text
                     )
                 }
-                if (Project.global.functionTags.containsKey(functionTag.namespaceID)) {
-                    functionTag = Project.global.functionTags[functionTag.namespaceID]!!
+                if (GlobalField.functionTags.containsKey(functionTag.namespaceID)) {
+                    functionTag = GlobalField.functionTags[functionTag.namespaceID]!!
                 } else {
-                    Project.global.functionTags[functionTag.namespaceID] = functionTag
+                    GlobalField.functionTags[functionTag.namespaceID] = functionTag
                 }
                 f.tags.add(functionTag)
-                functionTag.cache.functions.add(f)
+                functionTag.functions.add(f)
             }
         }
         //不是类的成员
         f.isClassMember = false
-        if (Project.global.cache.getFunction(f.namespace, f.name, f.paramTypeList) == null) {
-            Project.global.cache.functions.add(f)
+        //写入域
+        val field = GlobalField.localNamespaces[f.namespace]!!
+        if (field.getFunction(f.name, f.paramTypeList) == null) {
+            field.addFunction(f)
         } else {
             Project.error("Already defined function:" + f.namespaceID)
             Function.currFunction = Function.nullFunction
@@ -378,7 +361,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
     override fun visitNativeFuncDeclaration(ctx: mcfppParser.NativeFuncDeclarationContext): Any? {
         Project.ctx = ctx
         val nf: NativeFunction = try {
-            NativeFunction(ctx.Identifier().text, ctx.javaRefer())
+            NativeFunction(ctx.Identifier().text, ctx.javaRefer().text)
         } catch (e: IllegalFormatException) {
             Project.error("Illegal Java Method Name:" + e.message)
             return null
@@ -392,11 +375,13 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         if (ctx.parameterList() != null) {
             nf.addParams(ctx.parameterList())
         }
+        //写入域
+        val field = GlobalField.localNamespaces[nf.namespace]!!
         if (Class.currClass == null) {
             //是普通的函数
             nf.isClassMember = false
-            if (!Project.global.cache.functions.contains(nf)) {
-                Project.global.cache.functions.add(nf)
+            if (!field.hasFunction(nf)) {
+                field.addFunction(nf)
             } else {
                 Project.error("Already defined function:" + ctx.Identifier().text)
                 Function.currFunction = Function.nullFunction
@@ -420,9 +405,9 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         //变量生成
         val `var`: Var = Var.build(ctx, Class.currClass!!)!!
         //只有可能是类变量
-        if (Class.currClass!!.cache.containVar(
+        if (Class.currClass!!.field.containVar(
                 ctx.Identifier().text
-            ) || Class.currClass!!.staticCache.containVar(ctx.Identifier().text)
+            ) || Class.currClass!!.staticField.containVar(ctx.Identifier().text)
         ) {
             Project.error("Duplicate defined variable name:" + ctx.Identifier().text)
             throw VariableDuplicationException()

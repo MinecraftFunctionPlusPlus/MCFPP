@@ -4,6 +4,7 @@ import org.apache.logging.log4j.core.config.ConfigurationSource
 import org.apache.logging.log4j.core.config.Configurator
 import top.mcfpp.io.DatapackCreator
 import top.mcfpp.lib.*
+import top.mcfpp.util.UwU
 import java.io.FileInputStream
 
 /**
@@ -22,14 +23,17 @@ fun main(args: Array<String>) {
         Project.info("Tips: " + UwU.tip) //生成tips
         val path = args[0]
         Project.readProject(path) //读取
+        Project.readIndex() //读取引用的库的索引
         Project.init() //初始化
         Project.analyse() //解析
         Project.compile() //编译
         Project.optimization() //优化
         Project.genIndex() //生成索引
         Project.ctx = null
-        DatapackCreator.createDatapack(Project.targetPath) //生成数据包
+        if(Project.targetPath != "null"){
+            DatapackCreator.createDatapack(Project.targetPath) //生成数据包
+        }
         Project.info("Finished in " + (System.currentTimeMillis() - start) + "ms")
-        Cache.printAll()
+        GlobalField.printAll()
     }
 }

@@ -11,18 +11,19 @@ import top.mcfpp.lang.*
 class McfppFuncVisitor : mcfppBaseVisitor<Function?>() {
     fun getFunction(ctx: mcfppParser.FunctionCallContext, args: ArrayList<String>): Pair<Function?, ClassBase?> {
         Project.ctx = ctx
+
         if (ctx.namespaceID() != null && ctx.varWithSelector() == null) {
-            val qwq: Function? = if (ctx.namespaceID().Identifier().size == 1) {
-                Project.global.cache.getFunction(Project.currNamespace, ctx.namespaceID().Identifier(0).text, args)
+            //不是类的成员
+            val pwp = ctx.namespaceID().text.split(":")
+            val qwq: Function? = if (pwp.size == 1) {
+                GlobalField.getFunction(null , pwp[0], args)
             } else {
-                Project.global.cache.getFunction(
-                    ctx.namespaceID().Identifier(0).text,
-                    ctx.namespaceID().Identifier(1).text,
-                    args
-                )
+                GlobalField.getFunction(pwp[0], pwp[1], args)
             }
             return Pair<Function?, ClassBase?>(qwq,null)
+
         } else if (ctx.varWithSelector() != null) {
+            //是类的成员方法
             val selectCtx = ctx.varWithSelector()
             var curr: ClassBase
             curr = if (selectCtx.`var`() != null) {
@@ -36,7 +37,17 @@ class McfppFuncVisitor : mcfppBaseVisitor<Function?>() {
                 }
             } else {
                 //ClassName
-                val qwq: Class? = Project.global.cache.classes[selectCtx.className().text]
+                val clsstr = selectCtx.className().text.split(":")
+                val i : String
+                val nsp : String?
+                if(clsstr.size == 1){
+                    i = clsstr[0]
+                    nsp = null
+                }else{
+                    i = clsstr[1]
+                    nsp = clsstr[0]
+                }
+                val qwq: Class? = GlobalField.getClass(nsp, i)
                 if (qwq == null) {
                     Project.error("Undefined class:" + selectCtx.className().text)
                 }

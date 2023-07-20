@@ -35,7 +35,7 @@ import java.util.UUID
 class InternalFunction(prefix: String, parent: Function) : Function(prefix + UUID.randomUUID()) {
 
     init {
-        cache.parent = parent.cache
+        field.parent = parent.field
         setParentFunction(parent)
         isClassMember = false
     }
@@ -57,8 +57,8 @@ class InternalFunction(prefix: String, parent: Function) : Function(prefix + UUI
      */
     @Override
     override fun getVar(id: String): Var? {
-        if (cache.containVar(id)) {
-            val re: Var? = cache.getVar(id)
+        if (field.containVar(id)) {
+            val re: Var? = field.getVar(id)
             re!!.stackIndex = 0
             return re
         }

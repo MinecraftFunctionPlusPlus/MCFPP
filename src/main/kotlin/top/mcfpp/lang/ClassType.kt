@@ -1,6 +1,5 @@
 package top.mcfpp.lang
 
-import top.mcfpp.exception.TODOException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Class
@@ -84,7 +83,7 @@ class ClassType: ClassBase{
     @Override
     override fun getMemberFunction(key: String, params: List<String>, accessModifier: ClassMember.AccessModifier): Pair<Function?, Boolean> {
         //获取函数
-        val member = clsType.staticCache.getFunction(clsType.namespace, key, params)
+        val member = clsType.staticField.getFunction(clsType.namespace, key, params)
         return if(member == null){
             Pair(null, true)
         }else{

@@ -4,7 +4,6 @@ import mcfppBaseVisitor
 import top.mcfpp.Project
 import top.mcfpp.exception.*
 import top.mcfpp.lang.*
-import java.lang.reflect.InvocationTargetException
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -289,7 +288,12 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             }
         } else {
             //ClassName
-            val qwq: Class? = Project.global.cache.classes[ctx.className().text]
+            val clsstr = ctx.className().text.split(":")
+            val qwq: Class? = if(clsstr.size == 2) {
+                GlobalField.getClass(clsstr[0],clsstr[1])
+            }else{
+                GlobalField.getClass(null,clsstr[0])
+            }
             if (qwq == null) {
                 Project.error("Undefined class:" + ctx.className().text)
             }
@@ -392,7 +396,12 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     @Override
     override fun visitConstructorCall(ctx: mcfppParser.ConstructorCallContext): Var? {
         Project.ctx = ctx
-        val cls: Class? = Project.global.cache.classes.getOrDefault(ctx.className().text, null)
+        val clsstr = ctx.className().text.split(":")
+        val cls: Class? = if(clsstr.size == 2) {
+            GlobalField.getClass(clsstr[0],clsstr[1])
+        }else{
+            GlobalField.getClass(null,clsstr[0])
+        }
         if (cls == null) {
             Project.error("Undefined class:" + ctx.className().text)
         }
@@ -403,25 +412,6 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         if (ctx.arguments().expressionList() != null) {
             for (expr in ctx.arguments().expressionList().expression()) {
                 args.add(exprVisitor.visit(expr)!!)
-            }
-        }
-        //如果是native类
-        if (cls is NativeClass) {
-            //创建新实例并返回
-            return try {
-                cls.newInstance(args)
-            } catch (e: InvocationTargetException) {
-                Project.error("Catch Exception when instantiate native class: " + cls.cls + "\n" + e.message + " " + e.cause + "\n")
-                throw RuntimeException(e)
-            } catch (e: InstantiationException) {
-                Project.error("Catch Exception when instantiate native class: " + cls.cls + "\n" + e.message + " " + e.cause + "\n")
-                throw RuntimeException(e)
-            } catch (e: IllegalAccessException) {
-                Project.error("Catch Exception when instantiate native class: " + cls.cls + "\n" + e.message + " " + e.cause + "\n")
-                throw RuntimeException(e)
-            } catch (e: NoSuchMethodException) {
-                Project.error("Catch Exception when instantiate native class: " + cls.cls + "\n" + e.message + " " + e.cause + "\n")
-                throw RuntimeException(e)
             }
         }
         cls!!

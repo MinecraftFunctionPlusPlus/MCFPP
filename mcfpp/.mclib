@@ -1,0 +1,14 @@
+{
+	"namespaces":[
+		{
+			"id":"mcfpp",
+			"functions":[
+				"load()",
+				"tick()",
+				"print(int i)->top.mcfpp.sys.System.print",
+				"print(bool b)->top.mcfpp.sys.System.print",
+				"test(int i)->top.mcfpp.sys.System.test"
+			]
+		}
+	]
+}

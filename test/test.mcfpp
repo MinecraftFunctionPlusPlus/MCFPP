@@ -1,9 +1,5 @@
-func qwq(){
-    int a;
-    test(a);
-}
+namespace test;
 
-func test(int a){
-    int b;
-    a = b;
+func qwq(){
+    print(4);
 }

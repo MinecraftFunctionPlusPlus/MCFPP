@@ -37,7 +37,7 @@ open class ClassObject : ClassBase {
     /**
      * 类中的成员
      */
-    var cache: Cache? = null
+    var cache: ClassField? = null
 
     /**
      * 初始化类实例的时候自动生成的初始指针

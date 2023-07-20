@@ -21,7 +21,7 @@ class FunctionTag(
     /**
      * 这个标签含有那些函数
      */
-    var cache: Cache
+    var functions: ArrayList<Function> = ArrayList()
 
     init {
         if(namespace == null){
@@ -33,7 +33,6 @@ class FunctionTag(
         }else{
             this.namespace = namespace
         }
-        cache = Cache(Project.global.cache)
     }
 
     val namespaceID: String
@@ -42,7 +41,7 @@ class FunctionTag(
         get() {
             val json = JSONObject()
             val values = JSONArray()
-            for (f in cache.functions) {
+            for (f in functions) {
                 values.add(f.namespaceID)
             }
             json["values"] = values

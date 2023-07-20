@@ -27,7 +27,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
         cls!!
         //this变量构建
         val thisObj = cls.clone() as ClassPointer
-        thisObj.key = "this"
+        thisObj.identifier = "this"
         args.add(thisObj)
         //对象创建
         addCommand(
@@ -66,17 +66,17 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
         //调用完毕，将子函数的栈销毁
         addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
         //取出栈内的值到记分板
-        for (`var` in currFunction.cache.allVars) {
+        for (`var` in currFunction.field.allVars) {
             if (`var` is MCInt) {
                 //如果是int取出到记分板
                 addCommand(
-                    "execute store result score " + `var`.identifier + " " + `var`.`object` + " run "
-                            + "data get storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]." + `var`.key
+                    "execute store result score " + `var`.name + " " + `var`.`object` + " run "
+                            + "data get storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]." + `var`.identifier
                 )
             }
         }
         //临时指针的创建
-        addCommand("scoreboard players operation " + cls.address.identifier + " " + cls.address.`object`.name + " = @e[tag=" + cls.tag + ",tag=mcfpp_classObject_just,limit=1] " + cls.address.`object`.name)
+        addCommand("scoreboard players operation " + cls.address.name + " " + cls.address.`object`.name + " = @e[tag=" + cls.tag + ",tag=mcfpp_classObject_just,limit=1] " + cls.address.`object`.name)
         //去除临时标签
         addCommand("tag remove @e[tag=" + cls.tag + ",tag=mcfpp_classPointer_just,limit=1] mcfpp_classObject_just")
     }
