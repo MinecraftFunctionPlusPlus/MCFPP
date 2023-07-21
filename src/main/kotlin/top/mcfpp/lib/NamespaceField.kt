@@ -24,7 +24,7 @@ import kotlin.collections.ArrayList
  *
  * 函数储存在一个列表中
  */
-class NamespaceField {
+class NamespaceField: IFieldWithClass, IFieldWithFunction {
     /**
      * 变量
      */
@@ -89,7 +89,7 @@ class NamespaceField {
      * @return 如果此缓存中存在这个函数，则返回这个函数的对象，否则返回null
      */
     @Nullable
-    fun getFunction(key: String, argsTypes: List<String>): Function? {
+    override fun getFunction(key: String, argsTypes: List<String>): Function? {
         for (f in functions) {
             if (f.name == key && f.params.size == argsTypes.size) {
                 if (f.params.size == 0) {
@@ -117,33 +117,52 @@ class NamespaceField {
      *
      * @param function
      */
-    fun addFunction(function: Function){
+    override fun addFunction(function: Function){
         functions.add(function)
     }
 
-    fun hasFunction(function: Function): Boolean{
+    override fun hasFunction(function: Function): Boolean{
         return functions.contains(function)
     }
 
     /**
      * 根据所给的id获取一个类
      *
-     * @param id
+     * @param identifier
      */
-    fun getClass(id: String): Class? {
-        return classes[id]
+    override fun getClass(identifier: String): Class? {
+        return classes[identifier]
     }
 
-    fun hasClass(cls: Class): Boolean{
+    override fun hasClass(cls: Class): Boolean{
         return classes.containsKey(cls.identifier)
     }
 
-    fun hasClass(cls: String): Boolean{
-        return classes.containsKey(cls)
+    override fun hasClass(identifier: String): Boolean{
+        return classes.containsKey(identifier)
     }
 
-    fun addClass(identifier: String, cls: Class){
-        classes[identifier] = cls
+    override fun addClass(identifier: String, cls: Class, force : Boolean): Boolean{
+        return if (force){
+            classes[identifier] = cls
+            true
+        }else{
+            if(classes.containsKey(identifier)){
+                classes[identifier] = cls
+                true
+            }else{
+                false
+            }
+        }
+    }
+
+    override fun removeClass(identifier: String): Boolean {
+        return if(classes.containsKey(identifier)) {
+            classes.remove(identifier)
+            true
+        }else{
+            false
+        }
     }
 
     //region Var

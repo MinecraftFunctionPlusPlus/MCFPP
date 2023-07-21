@@ -1,5 +1,10 @@
 namespace test;
 
 func qwq(){
-    print(4);
+    int i;
+    bool f;
+    if(f){
+        i = 6;
+    }
+    print(i);
 }

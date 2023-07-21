@@ -4,12 +4,12 @@ import org.jetbrains.annotations.Nullable
 import top.mcfpp.lang.Var
 import java.util.HashMap
 
-class FunctionField :IField {
+open class FunctionField : IFieldWithVar {
 
     /**
      * 变量
      */
-    private val vars: HashMap<String, Var> = HashMap()
+    protected val vars: HashMap<String, Var> = HashMap()
 
     /**
      * 父级域。函数的父级域可能是全局，也可能是类
@@ -53,7 +53,11 @@ class FunctionField :IField {
      * @param var 变量的对象
      * @return 如果缓存中已经存在此对象，则返回false，否则返回true。
      */
-    fun putVar(key: String, `var`: Var): Boolean {
+    override fun putVar(key: String, `var`: Var, forced: Boolean): Boolean {
+        if(forced){
+            vars[key] = `var`
+            return true
+        }
         return if (vars.containsKey(key)) {
             false
         } else {
@@ -67,12 +71,16 @@ class FunctionField :IField {
      * @param key 变量的标识符
      * @return 变量的对象。若不存在，则返回null。
      */
-    fun getVar(key: String): Var? {
-        return vars.getOrDefault(key, null)
+    override fun getVar(key: String): Var? {
+        val re: Var? = vars.getOrDefault(key, null)
+        if (re != null) {
+            re.stackIndex = 0
+        }
+        return re
     }
 
 
-    val allVars: Collection<Var>
+    override val allVars: Collection<Var>
         /**
          * 获取此缓存中的全部变量。不会从父缓存搜索。
          * @return 一个包含了此缓存全部变量的集合。
@@ -84,7 +92,7 @@ class FunctionField :IField {
      * @param id 变量名
      * @return 如果包含则返回true，否则返回false
      */
-    fun containVar(id: String): Boolean {
+    override fun containVar(id: String): Boolean {
         return vars.containsKey(id)
     }
 
@@ -94,10 +102,13 @@ class FunctionField :IField {
      * @param id 变量名
      * @return 若变量存在，则返回被移除的变量，否则返回空
      */
-    fun removeVar(id : String): Var?{
+    override fun removeVar(id : String): Var?{
         return vars.remove(id)
     }
 
-//endregion
+    open fun clone():FunctionField{
+        return FunctionField(this)
+    }
 
+//endregion
 }

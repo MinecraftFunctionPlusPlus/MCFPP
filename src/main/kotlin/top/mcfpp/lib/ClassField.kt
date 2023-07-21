@@ -4,7 +4,7 @@ import org.jetbrains.annotations.Nullable
 import top.mcfpp.lang.Var
 import java.util.HashMap
 
-class ClassField : IField {
+class ClassField : IFieldWithFunction, IFieldWithVar {
     /**
      * 变量
      */
@@ -69,7 +69,7 @@ class ClassField : IField {
      * @param forced 是否在存在此变量的情况下仍然强制将原变量替换
      * @return 如果缓存中已经存在此对象，则返回false，否则返回true。
      */
-    fun putVar(key: String, `var`: Var, forced: Boolean = false): Boolean {
+    override fun putVar(key: String, `var`: Var, forced: Boolean): Boolean {
         if(forced){
             vars[key] = `var`
             return true
@@ -87,12 +87,12 @@ class ClassField : IField {
      * @param key 变量的标识符
      * @return 变量的对象。若不存在，则返回null。
      */
-    fun getVar(key: String): Var? {
+    override fun getVar(key: String): Var? {
         return vars.getOrDefault(key, null)
     }
 
 
-    val allVars: Collection<Var>
+    override val allVars: Collection<Var>
         /**
          * 获取此缓存中的全部变量。不会从父缓存搜索。
          * @return 一个包含了此缓存全部变量的集合。
@@ -104,7 +104,7 @@ class ClassField : IField {
      * @param id 变量名
      * @return 如果包含则返回true，否则返回false
      */
-    fun containVar(id: String): Boolean {
+    override fun containVar(id: String): Boolean {
         return vars.containsKey(id)
     }
 
@@ -114,23 +114,23 @@ class ClassField : IField {
      * @param id 变量名
      * @return 若变量存在，则返回被移除的变量，否则返回空
      */
-    fun removeVar(id : String): Var?{
+    override fun removeVar(id : String): Var?{
         return vars.remove(id)
     }
 
 //endregion
 
+    //region Function
     /**
      * 根据所给的函数名和参数获取一个函数
      * @param key 函数名
      * @param argsTypes 参数类型
-     * @param namespace 命名空间
      * @return 如果此缓存中存在这个函数，则返回这个函数的对象，否则返回null
      */
     @Nullable
-    fun getFunction(namespace: String, key: String, argsTypes: List<String>): Function? {
+    override fun getFunction(key: String, argsTypes: List<String>): Function? {
         for (f in functions) {
-            if (f.namespace == namespace && f.name == key && f.params.size == argsTypes.size) {
+            if (f.name == key && f.params.size == argsTypes.size) {
                 if (f.params.size == 0) {
                     return f
                 }
@@ -155,13 +155,12 @@ class ClassField : IField {
      *
      * @param function
      */
-    fun addFunction(function: Function){
+    override fun addFunction(function: Function){
         functions.add(function)
     }
 
-    fun hasFunction(function: Function): Boolean{
+    override fun hasFunction(function: Function): Boolean{
         return functions.contains(function)
     }
-
-
+    //endregion
 }

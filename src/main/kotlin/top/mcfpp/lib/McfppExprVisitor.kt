@@ -275,7 +275,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         var curr: CanSelectMember
         curr = if (ctx.`var`() != null) {
             val varName = ctx.text.substring(0,ctx.text.indexOf("."))
-            val pwp = Function.currFunction.getVar(varName)
+            val pwp = Function.currFunction.field.getVar(varName)
             //Var
             if(pwp is ClassPointer){
                 pwp
@@ -361,7 +361,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             if (ctx.identifierSuffix() == null || ctx.identifierSuffix().size == 0) {
                 //没有数组选取
                 val qwq: String = ctx.Identifier().text
-                val re: Var? = Function.currFunction.getVar(qwq)
+                val re: Var? = Function.currFunction.field.getVar(qwq)
                 if (re == null) {
                     Project.error("Undefined variable:$qwq")
                 }
@@ -385,7 +385,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             }else{
                 "this"
             }
-            val re: Var? = Function.currFunction.getVar(s)
+            val re: Var? = Function.currFunction.field.getVar(s)
             if (re == null) {
                 Project.error("$s can only be used in member functions.")
             }

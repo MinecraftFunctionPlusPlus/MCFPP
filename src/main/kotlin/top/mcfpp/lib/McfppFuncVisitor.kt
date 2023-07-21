@@ -29,8 +29,8 @@ class McfppFuncVisitor : mcfppBaseVisitor<Function?>() {
             curr = if (selectCtx.`var`() != null) {
                 val varName = ctx.text.substring(0,ctx.text.indexOf("."))
                 //Var
-                if(Function.currFunction.getVar(varName) is ClassPointer){
-                    Function.currFunction.getVar(varName) as ClassPointer
+                if(Function.currFunction.field.getVar(varName) is ClassPointer){
+                    Function.currFunction.field.getVar(varName) as ClassPointer
                 }else{
                     Project.error("$varName is not a class pointer")
                     throw ArgumentNotMatchException("$varName is not a class pointer")

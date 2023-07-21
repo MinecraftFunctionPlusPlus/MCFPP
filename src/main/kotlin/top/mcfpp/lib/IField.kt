@@ -1,5 +1,7 @@
 package top.mcfpp.lib
 
+import java.io.Serializable
+
 
 /**
  * 一个域。在编译过程中，编译器读取到的变量，函数等会以键值对的方式储存在其中。键为函数的id或者变量的
