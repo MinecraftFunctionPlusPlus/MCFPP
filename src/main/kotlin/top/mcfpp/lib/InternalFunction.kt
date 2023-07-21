@@ -35,7 +35,7 @@ import java.util.UUID
 class InternalFunction(prefix: String, parent: Function) : Function(prefix + UUID.randomUUID()) {
 
     init {
-        field.parent = parent.field
+        field = InternalFunctionField(parent.field.clone(),this)
         setParentFunction(parent)
         isClassMember = false
     }
@@ -49,28 +49,9 @@ class InternalFunction(prefix: String, parent: Function) : Function(prefix + UUI
         parent.child.add(this)
     }
 
-    /**
-     * 根据标识符从这个函数的变量声明缓存中取出一个变量对象。首先从它自己的
-     * 栈中查找，如果没用再从父函数的栈中查找。
-     * @param id 变量的标识符
-     * @return 标识符对应的变量对象
-     */
-    @Override
-    override fun getVar(id: String): Var? {
-        if (field.containVar(id)) {
-            val re: Var? = field.getVar(id)
-            re!!.stackIndex = 0
-            return re
-        }
-        val re: Var? = parent[0].getVar(id)
-        if (re != null) {
-            re.stackIndex++
-        }
-        return re
-    }
-
     @Override
     override fun Class(): Class? {
         return parent[0].Class()
     }
+
 }

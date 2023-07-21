@@ -151,7 +151,7 @@ class ClassPointer : ClassBase {
     @Override
     override fun getMemberFunction(key: String, params: List<String>, accessModifier: ClassMember.AccessModifier): Pair<Function?, Boolean> {
         //获取函数
-        val member = clsType.field.getFunction(clsType.namespace, key, params)
+        val member = clsType.field.getFunction(key, params)
         return if(member == null){
             Pair(null, true)
         }else{

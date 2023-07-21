@@ -46,8 +46,8 @@ class McfppImListener : mcfppBaseListener() {
                 f.addParams(qwq.parameterList())
             }
             //获取缓存中的对象
-            val fun1 = Class.currClass!!.field.getFunction(f.namespace, f.name, f.paramTypeList)
-            f = (fun1 ?: Class.currClass!!.staticField.getFunction(f.namespace, f.name, f.paramTypeList))!!
+            val fun1 = Class.currClass!!.field.getFunction(f.name, f.paramTypeList)
+            f = (fun1 ?: Class.currClass!!.staticField.getFunction(f.name, f.paramTypeList))!!
         }
         Function.currFunction = f
     }
@@ -150,7 +150,7 @@ class McfppImListener : mcfppBaseListener() {
     override fun exitSelfAddOrMinusStatement(ctx: mcfppParser.SelfAddOrMinusStatementContext) {
         Project.ctx = ctx
         Function.addCommand("#" + ctx.text)
-        val re: Var? = Function.currFunction.getVar(ctx.selfAddOrMinusExpression().Identifier().text)
+        val re: Var? = Function.currFunction.field.getVar(ctx.selfAddOrMinusExpression().Identifier().text)
         if (re == null) {
             Project.error("Undefined variable:" + ctx.selfAddOrMinusExpression().Identifier().text)
             throw VariableNotDefineException()

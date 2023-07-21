@@ -5,9 +5,9 @@
 			"functions":[
 				"load()",
 				"tick()",
-				"print(int i)->top.mcfpp.sys.System.print",
-				"print(bool b)->top.mcfpp.sys.System.print",
-				"test(int i)->top.mcfpp.sys.System.test"
+				"print(int i)->top.mcfpp.lang.System.print",
+				"print(bool b)->top.mcfpp.lang.System.print",
+				"test(int i)->top.mcfpp.lang.System.test"
 			]
 		}
 	]

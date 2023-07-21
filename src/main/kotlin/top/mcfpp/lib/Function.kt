@@ -282,20 +282,6 @@ open class Function : ClassMember, FieldContainer {
         return this
     }
 
-
-    /**
-     * 从这个函数的变量声明缓存中获取一个变量。
-     * @param id 这个变量的标识符
-     * @return 如果这个变量存在缓存中，则返回这个变量，否则返回null
-     */
-    open fun getVar(id: String): Var? {
-        val re: Var? = field.getVar(id)
-        if (re != null) {
-            re.stackIndex = 0
-        }
-        return re
-    }
-
     /**
      * 写入这个函数的形参信息，同时为这个函数准备好包含形参的缓存
      *
@@ -515,7 +501,7 @@ open class Function : ClassMember, FieldContainer {
     }
 
     override fun hashCode(): Int {
-        return namespace.hashCode()
+        return namespaceID.hashCode()
     }
 
     companion object {

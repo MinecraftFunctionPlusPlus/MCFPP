@@ -3,11 +3,9 @@ package top.mcfpp.lib
 import top.mcfpp.Project
 import top.mcfpp.exception.IllegalFormatException
 import top.mcfpp.lang.*
-import top.mcfpp.sys.System
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.lang.Class
-import javax.xml.stream.events.Namespace
 
 /**
  * 表示了一个native方法
