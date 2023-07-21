@@ -11,13 +11,10 @@ import kotlin.collections.HashMap
  *
  * 一个文件中，能被访问的域分为两种，一种是同命名空间下的类和函数，一种是通过import语句导入的库文件和库函数。
  * 根据import的先后顺序，应当是后导入的库优先于先导入的库，而同命名空间下的库永远是最高优先级的。
+ *
+ * 全局域只含有命名空间域作为内容，而命名空间域则又分为本地域和库域。本地域即编译时，源代码的域，包含了源代码的内容，而库域则是引用的mcfpp库的域，包含了库的内容
  */
 object GlobalField : FieldContainer, IField {
-
-    /**
-     * 全局函数和类
-     */
-    //lateinit var field: Field
 
     /**
      * 命名空间
@@ -25,9 +22,14 @@ object GlobalField : FieldContainer, IField {
     val localNamespaces = Hashtable<String, NamespaceField>()
 
     /**
-     * 来自库的命名空间
+     * import引用后的，来自库的命名空间。
      */
-    val libNamespaces = Hashtable<String, NamespaceField>()
+    val importedLibNamespaces = Hashtable<String, NamespaceField>()
+
+    /**
+     * 库的命名空间域。这个域中的内容是在编译时就已经确定的，不会随着代码的变化而变化。
+     */
+    val libNamespace = Hashtable<String, NamespaceField>()
 
     /**
      * 函数的标签
@@ -49,27 +51,29 @@ object GlobalField : FieldContainer, IField {
     }
 
     /**
-     * 从当前的全局域获取一个函数。若不存在，则返回null
+     * 从当前的全局域获取一个函数。若不存在，则返回null。
      *
-     * @param namespace
-     * @param identifier
-     * @param args
+     * 如果没有提供命名空间，则只会从import导入的库和本地命名空间中搜索。否则则在指定的命名空间中搜索。
+     *
+     * @param namespace 可选。这个函数的命名空间。如果为null，则会从当前所有的命名空间中寻找此函数。
+     * @param identifier 函数的标识符
+     * @param args 函数的参数
+     *
+     * @return 获取的函数。如果有多个相同函数（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
      */
     fun getFunction(namespace:String? = Project.currNamespace, identifier: String, args : List<String>): Function?{
         if(namespace == null){
-            for (n in localNamespaces.values){
-                val f = n.getFunction(identifier, args)
-                if(f != null) return f
-            }
-            for (n in libNamespaces.values){
-                val f = n.getFunction(identifier, args)
-                if(f != null) return f
+            val f = localNamespaces[Project.currNamespace]!!.getFunction(identifier, args)
+            if(f != null) return f
+            for (n in importedLibNamespaces.values){
+                val f1 = n.getFunction(identifier, args)
+                if(f1 != null) return f1
             }
             return null
         }
         var field = localNamespaces[namespace]
         if(field == null){
-            field = libNamespaces[namespace]
+            field = libNamespace[namespace]
         }
         return field?.getFunction(identifier, args)
     }
@@ -77,19 +81,18 @@ object GlobalField : FieldContainer, IField {
     /**
      * 从当前的全局域中获取一个类。若不存在，则返回null
      *
-     * @param namespace
-     * @param identifier
-     * @return
+     * 如果没有提供命名空间，则只会从import导入的库和本地命名空间中搜索。否则则在指定的命名空间中搜索。
+     * @param namespace 可选。这个类的命名空间。如果为null，则会从当前所有的命名空间中寻找此类。
+     * @param identifier 类的标识符
+     * @return 获取的类。如果有多个相同标识符的类（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
      */
     fun getClass(namespace: String? = null, identifier: String): Class?{
         if(namespace == null){
             var cls:Class?
             //命名空间为空，从全局寻找
-            for (nsp in localNamespaces.values){
-                cls = nsp.getClass(identifier)
-                if(cls != null) return cls
-            }
-            for (nsp in libNamespaces.values){
+            cls = localNamespaces[Project.currNamespace]!!.getClass(identifier)
+            if(cls != null) return cls
+            for (nsp in importedLibNamespaces.values){
                 cls = nsp.getClass(identifier)
                 if(cls != null) return cls
             }
@@ -98,18 +101,15 @@ object GlobalField : FieldContainer, IField {
         //按照指定的命名空间寻找
         var field = localNamespaces[namespace]
         if(field == null){
-            field = libNamespaces[namespace]
+            field = importedLibNamespaces[namespace]
         }
         return field?.getClass(identifier)
     }
 
 
-
     @get:Override
     override val prefix: String
         get() = Project.defaultNamespace + "_global_"
-
-
 
     /**
      * TODO:DEBUG

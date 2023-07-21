@@ -6,6 +6,7 @@ import top.mcfpp.lang.Var
 
 /**
  * 内联函数
+ * TODO
  */
 class InlineFunction : Function {
     var context: mcfppParser.FunctionDeclarationContext

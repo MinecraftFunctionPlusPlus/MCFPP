@@ -11,10 +11,22 @@ import top.mcfpp.lib.NamespaceField
 import top.mcfpp.lib.NativeFunction
 import java.io.FileReader
 
+/**
+ * 包含了用于读取一个mcfpp库索引的方法。
+ *
+ * @see IndexWriter
+ */
 object IndexReader {
+    /**
+     * 用于读取路径指向的.mclib文件，即mcfpp的库索引文件。.mclib文件是一个json文件形式。
+     *
+     * 读取的结果将会按照命名空间的分类，被直接加入到[GlobalField.importedLibNamespaces]中。
+     *
+     * @param path .mclib文件的路径
+     */
     fun read(path : String){
         //逐行读取
-        val fileReader: FileReader = FileReader(path)
+        val fileReader = FileReader(path)
         val jsonString = fileReader.readText()
         fileReader.close()
         //解析json
@@ -23,11 +35,11 @@ object IndexReader {
             val oo = o as JSONObject
             val nspId = oo["id"] as String
             val namespaceField : NamespaceField
-            if(GlobalField.libNamespaces.containsKey(nspId)){
-                namespaceField = GlobalField.libNamespaces["id"]!!
+            if(GlobalField.libNamespace.containsKey(nspId)){
+                namespaceField = GlobalField.libNamespace["id"]!!
             }else{
                 namespaceField = NamespaceField()
-                GlobalField.libNamespaces["id"] = namespaceField
+                GlobalField.libNamespace["id"] = namespaceField
             }
             //读取内容
             //函数

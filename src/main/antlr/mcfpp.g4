@@ -14,7 +14,7 @@ namespaceDeclaration
     ;
 
 importDeclaration
-    :   'import' Identifier ('.' Identifier)* ('.' (className|'*')) ';'
+    :   'import' Identifier ('.' Identifier)* ('.' cls = (ClassIdentifier|'*'))? ';'
     ;
 
 //类或函数声明

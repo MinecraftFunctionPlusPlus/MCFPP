@@ -5,10 +5,11 @@ import java.util.*
 import top.mcfpp.lang.MCInt
 
 /**
- * 命令总类，提供了大量用于生成命令的方法，避免频繁的新建类（调用命令类的各种极度抽象的构造方法（x
- * 尽量不要打开或编辑这个文件，不然会感受痛苦。
- * 尽量少地使用这个文件中的内容
+ * 命令总类，提供了大量用于生成命令的方法。来自MCSharp。
+ * 此类已被弃用。
+ * 尽量少地使用这个类中的函数。
  */
+@Deprecated("")
 object Commands {
     fun Function(function: Function): String {
         return "function " + function.namespaceID.lowercase(Locale.getDefault())

@@ -3,12 +3,29 @@ package top.mcfpp.io
 import com.alibaba.fastjson2.JSONArray
 import com.alibaba.fastjson2.JSONObject
 import com.alibaba.fastjson2.JSONWriter
+import top.mcfpp.lib.ClassMember
 import top.mcfpp.lib.GlobalField
 import top.mcfpp.lib.NativeClass
 import top.mcfpp.lib.NativeFunction
 import java.io.FileWriter
 
+/**
+ * 包含了生成索引文件的方法
+ *
+ * 索引文件是一个json格式的文件。mcfpp通过读取索引文件获取这个mcfpp库中包含的命名空间以及命名空间下的函数和类。
+ * 索引文件主要包含由命名空间构成的列表，而命名空间下则储存了函数以及类。
+ * 对于函数，索引文件会保存函数的名字，参数类型和参数的标识符。
+ * 对于类，索引文件会保存类中成员字段的类型，以及成员方法。成员方法的保存内容和函数相同。只有被标记为public的成员才会被写入索引中，因为只有它们能被外部代码访问到。
+ *
+ * @see IndexReader
+ */
 object IndexWriter {
+
+    /**
+     * 向指定路径写入一个.mclib文件。会直接读取[GlobalField.localNamespaces]中的内容进行写入。
+     *
+     * @param path
+     */
     fun write(path: String){
         //写json
         val json = JSONObject()
@@ -47,29 +64,44 @@ object IndexWriter {
                         cls["isNative"] = false
                         //方法
                         val func = JSONArray()
-                        c.field.forEachFunction { m -> func.add(m.toString(false,containNamespace = false)) }
+                        c.field.forEachFunction {
+                            m ->
+                            run {
+                                if(m.accessModifier == ClassMember.AccessModifier.PUBLIC)
+                                    func.add(m.toString(false,containNamespace = false))
+                            }
+                        }
                         val staticFunc = JSONArray()
-                        c.staticField.forEachFunction { m -> staticFunc.add(m.toString(false,containNamespace = false)) }
+                        c.staticField.forEachFunction {m ->
+                            run {
+                                if(m.accessModifier == ClassMember.AccessModifier.PUBLIC)
+                                    func.add(m.toString(false,containNamespace = false))
+                            }
+                        }
                         cls["functions"] = func
                         cls["staticFunctions"] = staticFunc
                         //成员
                         val vars = JSONArray()
                         c.field.forEachVar { v ->
                             run {
-                                val qwq = JSONObject()
-                                qwq["id"] = v.identifier
-                                qwq["type"] = v.type
-                                vars.add(qwq)
+                                if(v.accessModifier == ClassMember.AccessModifier.PUBLIC){
+                                    val qwq = JSONObject()
+                                    qwq["id"] = v.identifier
+                                    qwq["type"] = v.type
+                                    vars.add(qwq)
+                                }
                             }
                         }
                         //静态成员
                         val staticVars = JSONArray()
                         c.staticField.forEachVar { v ->
                             run {
-                                val qwq = JSONObject()
-                                qwq["id"] = v.identifier
-                                qwq["type"] = v.type
-                                staticVars.add(qwq)
+                                if(v.accessModifier == ClassMember.AccessModifier.PUBLIC){
+                                    val qwq = JSONObject()
+                                    qwq["id"] = v.identifier
+                                    qwq["type"] = v.type
+                                    vars.add(qwq)
+                                }
                             }
                         }
                         cls["vars"] = vars

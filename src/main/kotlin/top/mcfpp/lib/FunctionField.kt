@@ -4,6 +4,11 @@ import org.jetbrains.annotations.Nullable
 import top.mcfpp.lang.Var
 import java.util.HashMap
 
+/**
+ * 一个函数的域。储存了这个函数中的变量
+ *
+ * @constructor Create empty Function field
+ */
 open class FunctionField : IFieldWithVar {
 
     /**

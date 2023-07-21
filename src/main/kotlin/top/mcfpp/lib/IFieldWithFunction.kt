@@ -1,8 +1,27 @@
 package top.mcfpp.lib
 
 interface IFieldWithFunction: IField {
+
+    /**
+     * 根据所给的函数名和参数获取一个函数
+     * @param key 函数名
+     * @param argsTypes 参数类型
+     * @return 如果此缓存中存在这个函数，则返回这个函数的对象，否则返回null
+     */
     fun getFunction(key: String, argsTypes: List<String>): Function?
+
+    /**
+     * 添加一个函数
+     *
+     * @param function
+     */
     fun addFunction(function: Function)
 
+    /**
+     * 这个域中是否有这个函数
+     *
+     * @param function
+     * @return
+     */
     fun hasFunction(function: Function): Boolean
 }
