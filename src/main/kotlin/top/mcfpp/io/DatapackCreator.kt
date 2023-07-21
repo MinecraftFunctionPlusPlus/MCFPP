@@ -25,10 +25,12 @@ import java.nio.file.*
  *  * 世界生成(worldgen)
  *
  * 加粗的部分表示对一般数据包的逻辑实现几乎必不可少的部分。
+ *
+ *
  */
 object DatapackCreator {
+
     /**
-     * TODO
      * 在指定的路径生成一个数据包的框架
      * @param path 路径
      */
@@ -117,7 +119,7 @@ object DatapackCreator {
     }
 
     /**
-     * 删除文件或文件夹
+     * 删除原有的数据包中的全部内容。
      * @param directory 文件或文件夹
      */
     private fun delAllFile(directory: File) {
@@ -146,6 +148,12 @@ object DatapackCreator {
         }
     }
 
+    /**
+     * 数据包的元数据。用于创建pack.mcmeta文件。
+     *
+     * @property pack
+     * @constructor Create empty Datapack mc meta
+     */
     internal class DatapackMcMeta(var pack: Pack) {
         internal class Pack(var pack_format: Int, var description: String)
     }

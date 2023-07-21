@@ -10,10 +10,7 @@ import java.lang.NullPointerException
 /**
  * 一个minecraft中的命令函数。
  *
- *
  * 在mcfpp中，一个命令函数可能是单独存在的，也有可能是一个类的成员。
- *
- *
  *
  * 在一般的数据包中，命令函数的调用通常只会是一个简单的`function xxx:xxx`
  * 这样的形式。这条命令本身的意义便确实是调用一个函数。然而我们需要注意的是，在mc中，
@@ -21,43 +18,40 @@ import java.lang.NullPointerException
  * 一般的高级语言的规范的。在mcfpp中，我们通过`storage`的方法来模拟一个函数
  * 的栈。
  *
- *
- *
  * mcfpp栈的模拟参考了[https://www.mcbbs.net/thread-1393132-1-1.html](https://www.mcbbs.net/thread-1393132-1-1.html)
  * 的方法。在下面的描述中，也是摘抄于此文。
  *
- *
- *
  * c语言底层是如何实现“局部变量”的？我们以 c 语言为例，看看函数底层的堆栈实现过程是什么样的？请看下面这段代码：
- * {@snippet :
- * *      int test() {
- * *              int a = 1;// 位置1
- * *              funA(a);
- * *              // 位置5
- * *      }
- * *      int funA(int a) {// 位置2
- * *              a = a + 1;
- * *              funB(a);
- * *              // 位置4
- * *      }
- * *      int funB(int a) {// 位置3
- * *              a = a + 1;
- * *      }
- * * }
+ * ```c
+ * int test() {
+ *         int a = 1;// 位置1
+ *         funA(a);
+ *         // 位置5
+ * }
+ * int funA(int a) {// 位置2
+ *         a = a + 1;
+ *         funB(a);
+ *         // 位置4
+ * }
+ * int funB(int a) {// 位置3
+ *         a = a + 1;
+ * }
+ * ```
+ *
  * 位置①：现在父函数还没调用 funA，堆栈情况是：<br></br>
- * low address [ \[父函数栈帧] ... ] high address<br></br>
+ * low address {父函数栈帧 ...  }high address<br></br>
  * （执行 funA(?) ）<br></br>
  * 位置②：当父函数调用 funA 时，会从栈顶开一块新的空间来保存 funA 的栈帧，堆栈情况是：<br></br>
- * low address [ \[funA栈帧] \[父函数栈帧] ... ] high address<br></br>
+ * low address{ funA栈帧 父函数栈帧 ... } high address<br></br>
  * （执行 a = a + 1）<br></br>
  * （执行 funB(a) ）<br></br>
  * 位置③：当 funA 调用 funB 时，会从栈顶开一块新的空间来保存 funB 的栈帧，堆栈情况是：<br></br>
- * low address [ \[funB栈帧] \[funA栈帧] \[父函数栈帧] ... ] high address<br></br>
+ * low address { funB栈帧 funA栈帧 父函数栈帧 ... } high address<br></br>
  * （执行 a = a + 2）<br></br>
  * 位置④：funB 调用结束，funB 的栈帧被销毁，程序回到 funA 继续执行，堆栈情况是：<br></br>
- * low address [ \[funA栈帧] \[父函数栈帧] ... ] high address<br></br>
+ * low address { funA栈帧 父函数栈帧 ... } high address<br></br>
  * 位置⑤：funA 调用结束，funA 的栈帧被销毁，程序回到 父函数 继续执行，堆栈情况是：<br></br>
- * low address [ \[父函数栈帧] ... ] high address<br></br>
+ * low address { 父函数栈帧 ... } high address<br></br>
  * 我们会发现，funA 和 funB 使用的变量都叫 a，但它们的位置是不同的，此处当前函数只会在属于自己的栈帧的内存空间上
  * 操作，不同函数之间的变量之所以不会互相干扰，也是因为它们在栈中使用的位置不同，此 a 非彼 a
  *
@@ -71,10 +65,8 @@ import java.lang.NullPointerException
  * 列表的大致模样： stack_frame [{funB变量内存空间}, {funA变量内存空间}, {父函数变量内存空间}]<br></br>
  * 每次我们要调用一个函数，只需要在 stack_frame 列表中前插一个 {}，然后压入参数<br></br>
  *
- *
- *
  * 思路有了，接下来就是命令了。虽然前面的思路看起来非常复杂，但是实际上转化为命令的时候就非常简单了。
- * <pre>
+ * ```
  * `#父函数为子函数创建变量内存空间
  * data modify storage mny:program stack_frame prepend value {}
  * #父函数处理子函数的参数，压栈
@@ -85,12 +77,9 @@ import java.lang.NullPointerException
  * data remove storage mny:program stack_frame[0]
  * #父函数恢复记分板值
  * xxx（命令略去）
-` *
-</pre> *
+ * ```
  *
- *
- *
- * 你可以在[McfppImListener]中的`exitFunctionCall`方法中看到mcfpp是如何实现的。
+ * 你可以在[McfppImListener]中的[McfppImListener.exitFunctionCall]方法中看到mcfpp是如何实现的。
  *
  * @see InternalFunction
  */
@@ -107,7 +96,6 @@ open class Function : ClassMember, FieldContainer {
 
     /**
      * 函数的标签
-     * TODO 函数的标签应该是一个列表
      */
     var tags: ArrayList<FunctionTag> = ArrayList()
 
@@ -189,6 +177,9 @@ open class Function : ClassMember, FieldContainer {
             return StringHelper.toLowerCase(re.toString())
         }
 
+    /**
+     * 获取这个函数的不带有命名空间的id。仍然包含了参数信息
+     */
     val IdentifyWithParams: String
         get() {
             val re: StringBuilder = if(!isClassMember){
@@ -205,6 +196,9 @@ open class Function : ClassMember, FieldContainer {
             return StringHelper.toLowerCase(re.toString())
         }
 
+    /**
+     * 这个函数是否是入口函数。入口函数就是没有其他函数调用的函数，会额外在函数的开头结尾进行入栈和出栈的操作。
+     */
     val isEntrance: Boolean
         get() {
             for (tag in tags){
@@ -215,6 +209,9 @@ open class Function : ClassMember, FieldContainer {
             return false
         }
 
+    /**
+     * 函数含有的所有的命令。一个命令一行
+     */
     val cmdStr: String
         get() {
             val qwq: StringBuilder = StringBuilder()
@@ -224,6 +221,9 @@ open class Function : ClassMember, FieldContainer {
             return qwq.toString()
         }
 
+    /**
+     * 函数会给它的域中的变量的minecraft标识符加上的前缀。
+     */
     @get:Override
     override val prefix: String
         get() = Project.currNamespace + "_func_" + name + "_"
@@ -275,6 +275,12 @@ open class Function : ClassMember, FieldContainer {
         return name
     }
 
+    /**
+     * 向这个函数对象添加一个函数标签。如果已经存在这个标签，则不会添加。
+     *
+     * @param tag 要添加的标签
+     * @return 返回添加了标签以后的函数对象
+     */
     fun addTag(tag : FunctionTag):Function{
         if(!tags.contains(tag)){
             tags.add(tag)
@@ -463,6 +469,11 @@ open class Function : ClassMember, FieldContainer {
         return false
     }
 
+    /**
+     * 获取函数所在的类。可能不存在
+     *
+     * @return 返回这个函数所在的类，如果不存在则返回null
+     */
     @Override
     override fun Class(): Class? {
         return if (isClassMember) {
@@ -546,6 +557,11 @@ open class Function : ClassMember, FieldContainer {
             }
         }
 
+        /**
+         * 向此函数的末尾添加一行注释。
+         *
+         * @param str
+         */
         fun addComment(str: String){
             addCommand("#$str")
         }

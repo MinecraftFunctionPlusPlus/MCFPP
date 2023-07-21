@@ -5,6 +5,9 @@ import top.mcfpp.lib.Class
 import top.mcfpp.lib.ClassMember
 import top.mcfpp.lib.Function
 
+
+//TODO
+//一个目标选择器
 class Selector : CanSelectMember {
 
     @get:Override

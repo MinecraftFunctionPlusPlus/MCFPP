@@ -178,7 +178,7 @@ object Project {
             }
         }
         //库读取完了，现在实例化所有类中的成员字段吧
-        for(namespace in GlobalField.libNamespaces.values){
+        for(namespace in GlobalField.importedLibNamespaces.values){
             namespace.forEachClass { c ->
                 run {
                     for (v in c.field.allVars){
@@ -241,7 +241,7 @@ object Project {
         for (scoreboard in GlobalField.scoreboards){
             GlobalField.localNamespaces["mcfpp"]!!.getFunction(
                 "load", ArrayList())!!.commands
-                .add("scoreboard objectives add ${scoreboard.name} ${scoreboard.rule}")
+                .add("scoreboard objectives add ${scoreboard.name} ${scoreboard.criterion}")
         }
         //寻找入口函数
         var hasEntrance = false

@@ -4,9 +4,9 @@ import java.util.*
 
 /**
  * 一个计分板对象。
+ *
+ * @constructor 创建一个记分板，它有指定的名字，准则以及显示名称
  */
-//C# TO JAVA CONVERTER TODO TASK: Java annotations will not correspond to .NET attributes:
-//ORIGINAL LINE: [Inline] public class SbObject
 class SbObject(name: String, rule: String, var display: JsonText?) {
 
     /**
@@ -17,14 +17,21 @@ class SbObject(name: String, rule: String, var display: JsonText?) {
     /**
      * 记分板的准则
      */
-    var rule: String
+    var criterion: String
 
+    /**
+     * 创建一个记分板，它有指定的名字和准则
+     */
     constructor(name: String, rule: String) : this(name, rule, null)
+
+    /**
+     * 创建一个记分板，它有指定的名字，且准则默认为dummy
+     */
     constructor(name: String) : this(name, "dummy", null)
 
     init {
         this.name = name.lowercase(Locale.getDefault())
-        this.rule = rule.lowercase(Locale.getDefault())
+        this.criterion = rule.lowercase(Locale.getDefault())
     }
 
     @Override

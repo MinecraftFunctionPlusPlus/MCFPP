@@ -2,6 +2,12 @@ package top.mcfpp.lib
 
 import top.mcfpp.lang.Var
 
+
+/**
+ * 内联函数的域。内联函数的域的父级可能是一个内联函数域，也可能是一个普通函数的域。
+ *
+ * @see InternalFunction
+ */
 class InternalFunctionField: FunctionField {
 
     /**
@@ -19,7 +25,7 @@ class InternalFunctionField: FunctionField {
 
 
     /**
-     * 从缓存中取出一个变量。如果此缓存中没有，则从父缓存中寻找。
+     * 从域中取出一个变量。如果此域中没有，则从父域中寻找。同时记录当前栈的级数，也就是向父级追溯了多少级栈
      * @param key 变量的标识符
      * @return 变量的对象。若不存在，则返回null。
      */
@@ -35,6 +41,7 @@ class InternalFunctionField: FunctionField {
         }
         return re
     }
+
     override fun clone(): InternalFunctionField{
         return InternalFunctionField(this)
     }

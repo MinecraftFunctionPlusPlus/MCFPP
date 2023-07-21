@@ -4,6 +4,10 @@ import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.collections.ArrayList
 
+/**
+ * 写tips用的
+ *
+ */
 object UwU {
     var tips: ArrayList<String> = ArrayList()
 
