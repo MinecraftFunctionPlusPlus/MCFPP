@@ -106,7 +106,7 @@ class ClassType: ClassBase{
         }
     }
 
-    override fun getTempVar(): Var {
+    override fun getTempVar(cache: HashMap<Var, String>): Var {
         return this
     }
 }

@@ -29,7 +29,7 @@ object GlobalField : FieldContainer, IField {
     /**
      * 库的命名空间域。这个域中的内容是在编译时就已经确定的，不会随着代码的变化而变化。
      */
-    val libNamespace = Hashtable<String, NamespaceField>()
+    val libNamespaces = Hashtable<String, NamespaceField>()
 
     /**
      * 函数的标签
@@ -39,14 +39,13 @@ object GlobalField : FieldContainer, IField {
     /**
      * 记分板
      */
-    var scoreboards: ArrayList<SbObject> = ArrayList()
+    var scoreboards: HashMap<String ,SbObject> = HashMap()
 
     fun init(): GlobalField {
-        //field = Field(null, this)
         functionTags["minecraft:tick"] = FunctionTag.TICK
         functionTags["minecraft:load"] = FunctionTag.LOAD
-        scoreboards.add(SbObject.MCS_boolean)
-        scoreboards.add(SbObject.MCS_default)
+        scoreboards[SbObject.MCS_boolean.name] = SbObject.MCS_boolean
+        scoreboards[SbObject.MCS_default.name] = SbObject.MCS_default
         return this
     }
 
@@ -73,7 +72,7 @@ object GlobalField : FieldContainer, IField {
         }
         var field = localNamespaces[namespace]
         if(field == null){
-            field = libNamespace[namespace]
+            field = libNamespaces[namespace]
         }
         return field?.getFunction(identifier, args)
     }
@@ -177,7 +176,7 @@ object GlobalField : FieldContainer, IField {
                                 .lowercase(Locale.getDefault()) + " " + v.type + " " + v.identifier
                         )
                     }
-                    println("\tfunctions:")
+                    println("\tstatic functions:")
                     s.staticField.forEachFunction { f ->
                         run {
                             if (f is NativeFunction) {
@@ -196,7 +195,7 @@ object GlobalField : FieldContainer, IField {
                             }
                         }
                     }
-                    println("\tattributes:")
+                    println("\tstatic attributes:")
                     for (v in s.staticField.allVars) {
                         println(
                             "\t\t" + v.accessModifier.name

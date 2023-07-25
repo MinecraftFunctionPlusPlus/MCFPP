@@ -18,7 +18,13 @@ fun main(args: Array<String>) {
     }catch (e:Exception){
         println("Failed to load log4j2.xml")
     }
-    if (args.size == 1) {
+    if (args.isNotEmpty()) {
+        if(args.size > 1){
+            if(args[1] == "debug"){
+                CompileSettings.isDebug = true
+                Project.info("Compiling in debug mode.")
+            }
+        }
         val start: Long = System.currentTimeMillis()
         Project.info("Tips: " + UwU.tip) //生成tips
         val path = args[0]
@@ -34,6 +40,6 @@ fun main(args: Array<String>) {
             DatapackCreator.createDatapack(Project.targetPath) //生成数据包
         }
         Project.info("Finished in " + (System.currentTimeMillis() - start) + "ms")
-        GlobalField.printAll()
+        //GlobalField.printAll()
     }
 }

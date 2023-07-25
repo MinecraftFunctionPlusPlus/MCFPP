@@ -62,7 +62,6 @@ classMember
     |   fieldDeclaration ';'
     |   constructorDeclaration
     |   nativeFuncDeclaration
-    |   nativeConstructorDeclaration
     ;
 
 classFunctionDeclaration
@@ -107,14 +106,9 @@ constructorDeclaration
     :   className '(' parameterList? ')' '{' functionBody '}'
     ;
 
-//构造函数声明
-nativeConstructorDeclaration
-    :   accessModifier? NATIVE? classWithoutNamespace '(' parameterList? ')' '->' javaRefer ';'
-    ;
-
 //构造函数的调用
 constructorCall
-    :   'new' className arguments
+    :   className arguments
     ;
 
 //变量声明
@@ -274,7 +268,7 @@ orgCommand
     ;
 
 OrgCommand
-    :   '/' [a-z]* ([ ][a-z:_{}\\[0-9A-Z\]]*)+
+    :   '/' [a-z]* ([ ][a-z:._{}\\[0-9A-Z\]]*)+
     ;
 
 controlStatement
@@ -344,7 +338,7 @@ block
     ;
 
 selfAddOrMinusExpression
-    :   Identifier op = ('++'|'--')
+    :   rightVarExpression op = ('++'|'--')
     ;
 
 expressionList

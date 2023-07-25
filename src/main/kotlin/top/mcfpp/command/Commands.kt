@@ -12,7 +12,7 @@ import top.mcfpp.lang.MCInt
 @Deprecated("")
 object Commands {
     fun Function(function: Function): String {
-        return "function " + function.namespaceID.lowercase(Locale.getDefault())
+        return "function " + function.namespaceID
     }
 
     fun SbPlayerAdd(target: MCInt, value: Int): String {

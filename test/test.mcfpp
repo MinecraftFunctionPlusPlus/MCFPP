@@ -1,10 +1,42 @@
 namespace test;
 
 func qwq(){
-    int i;
-    bool f;
-    if(f){
-        i = 6;
-    }
+//    Test t1 = Test();
+//    Test t2 = Test();
+//    Test t3 = Test();
+//    t1.tell();
+//    t2.tell();
+//    t3.tell();
+//    print(Test.index);
+
+    Test t = Test();
+    t.i = 5;
+    int i = t.i;
+    uwu(i);
     print(i);
+    print(t.i);
+}
+
+func uwu(int i){
+    i = i + 2;
+    Test t = Test();
+    t.i = 3;
+    print(i);
+    print(t.i);
+}
+
+
+class Test{
+    public static int index = 0;
+
+    public int i;
+
+    Test(){
+        this.i = Test.index;
+        Test.index = Test.index + 1;
+    }
+
+    public func tell(){
+        print(this.i);
+    }
 }

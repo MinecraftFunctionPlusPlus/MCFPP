@@ -4,6 +4,7 @@ import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
 import java.util.*
+import kotlin.collections.HashMap
 
 /**
  * 一个类的实例。实例是一种特殊的变量，它永远是匿名的，对实例的访问通过指针完成。
@@ -54,7 +55,7 @@ open class ClassObject : ClassBase {
     constructor(cls: Class) {
         this.clsType = cls
         type = cls.identifier
-        initPointer = ClassPointer(cls, "INIT")
+        initPointer = cls.initPointer
         initPointer.obj = this
     }
 
@@ -95,7 +96,7 @@ open class ClassObject : ClassBase {
     }
 
     @Override
-    override fun getTempVar(): Var {
+    override fun getTempVar(cache: HashMap<Var, String>): Var {
         return this
     }
 }

@@ -2,7 +2,8 @@ package top.mcfpp.lang
 
 /**
  * 代表了mcfpp中的一个数字类型。数字类型都是以记分板为基础的。
- * 泛型T代表了这个数字类型中包装的类型
+ *
+ * @param T 这个数字类型中包装的类型
  */
 abstract class Number<T> : Var, OnScoreboard {
     var value: T? = null

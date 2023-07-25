@@ -3,6 +3,7 @@ package top.mcfpp.io
 import com.alibaba.fastjson2.JSON
 import top.mcfpp.Project
 import top.mcfpp.lib.*
+import top.mcfpp.util.StringHelper
 import java.io.*
 import java.nio.file.*
 
@@ -53,13 +54,13 @@ object DatapackCreator {
             //创建pack.mcmeta
             Files.write(Paths.get("$path/${Project.name}/pack.mcmeta"), datapackMcMetaJson.toByteArray())
             for(namespace in GlobalField.localNamespaces){
-                val currPath = "$path/${Project.name}/data/${namespace.key}"
+                val currPath = "$path\\${Project.name}\\data\\${namespace.key}"
                 namespace.value.forEachFunction {f ->
                     run {
                         if (f is Native) {
                             return@run
                         }
-                        Project.debug("Writing File: $currPath/functions/${f.IdentifyWithParams}.mcfunction")
+                        Project.debug("Writing File: $currPath\\functions\\${f.IdentifyWithParams}.mcfunction")
                         Files.createDirectories(Paths.get("$currPath/functions"))
                         Files.write(
                             Paths.get("$currPath/functions/${f.IdentifyWithParams}.mcfunction"),
@@ -78,26 +79,38 @@ object DatapackCreator {
                                 if (f is Native) {
                                     return@run
                                 }
-                                Project.debug("$currPath/functions/" + f.IdentifyWithParams + ".mcfunction")
+                                Project.debug("Writing File: $currPath\\functions\\" + f.IdentifyWithParams + ".mcfunction")
                                 //TODO 可能无法正确创建文件夹
-                                Files.createDirectories(Paths.get("$currPath/functions/" + cls.identifier))
+                                Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(cls.identifier)))
+                                Files.write(
+                                    Paths.get("$currPath/functions/"  + f.IdentifyWithParams + ".mcfunction"),
+                                    f.cmdStr.toByteArray()
+                                )
+                            }
+                        }
+                        cls.staticField.forEachFunction { f ->
+                            run {
+                                if (f is Native) {
+                                    return@run
+                                }
+                                Project.debug("Writing File: $currPath\\functions\\"  + f.IdentifyWithParams + ".mcfunction")
+                                //TODO 可能无法正确创建文件夹
+                                Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(cls.identifier) + "/static"))
                                 Files.write(
                                     Paths.get("$currPath/functions/" + f.IdentifyWithParams + ".mcfunction"),
                                     f.cmdStr.toByteArray()
                                 )
                             }
                         }
-                        cls.field.forEachFunction { f ->
+                        //构造函数
+                        cls.constructors.forEach{ c ->
                             run {
-                                if (f is Native) {
-                                    return@run
-                                }
-                                Project.debug("Writing File: " + path + "/${Project.name}/data/" + cls.namespace + "/functions/" + f.IdentifyWithParams + ".mcfunction")
+                                Project.debug("Writing File: $currPath\\functions\\"  + c.IdentifyWithParams + ".mcfunction")
                                 //TODO 可能无法正确创建文件夹
-                                Files.createDirectories(Paths.get(path + "/${Project.name}/data/" + f.namespace + "/functions/" + cls.identifier + "/static"))
+                                Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(cls.identifier)))
                                 Files.write(
-                                    Paths.get(path + "/${Project.name}/data/" + cls.namespace + "/functions/" + f.IdentifyWithParams + ".mcfunction"),
-                                    f.cmdStr.toByteArray()
+                                    Paths.get("$currPath/functions/" + c.IdentifyWithParams + ".mcfunction"),
+                                    c.cmdStr.toByteArray()
                                 )
                             }
                         }
@@ -106,7 +119,7 @@ object DatapackCreator {
             }
             //写入标签json文件
             for (tag in GlobalField.functionTags.values) {
-                Project.debug("Writing File: " + path + "/${Project.name}/data/" + tag.namespace + "/tags/functions/" + tag.tag + ".json")
+                Project.debug("Writing File: " + path + "\\${Project.name}\\data\\" + tag.namespace + "\\tags\\functions\\" + tag.tag + ".json")
                 Files.createDirectories(Paths.get(path + "/${Project.name}/data/" + tag.namespace + "/tags/functions"))
                 Files.write(
                     Paths.get(path + "/${Project.name}/data/" + tag.namespace + "/tags/functions/" + tag.tag + ".json"),

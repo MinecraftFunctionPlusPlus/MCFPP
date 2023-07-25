@@ -1,11 +1,14 @@
 package top.mcfpp.lib
 
 import org.jetbrains.annotations.Nullable
+import top.mcfpp.CompileSettings
 import top.mcfpp.Project
+import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Commands
 import top.mcfpp.lang.*
 import top.mcfpp.util.StringHelper
 import java.lang.NullPointerException
+import java.lang.reflect.Method
 
 /**
  * 一个minecraft中的命令函数。
@@ -87,22 +90,22 @@ open class Function : ClassMember, FieldContainer {
     /**
      * 包含所有命令的列表
      */
-    var commands: ArrayList<String>
+    val commands: ArrayList<String>
 
     /**
      * 函数的名字
      */
-    var name: String
+    val name: String
 
     /**
      * 函数的标签
      */
-    var tags: ArrayList<FunctionTag> = ArrayList()
+    val tags: ArrayList<FunctionTag> = ArrayList()
 
     /**
      * 函数的命名空间。默认为工程文件的明明空间
      */
-    var namespace: String
+    val namespace: String
 
     /**
      * 参数列表
@@ -112,7 +115,7 @@ open class Function : ClassMember, FieldContainer {
     /**
      * 是否是类的成员函数。默认为否
      */
-    var isClassMember = false
+    var isClassMember : Boolean
 
     /**
      * 函数编译时的缓存
@@ -122,12 +125,12 @@ open class Function : ClassMember, FieldContainer {
     /**
      * 这个函数调用的函数
      */
-    var child: ArrayList<Function> = ArrayList()
+    val child: ArrayList<Function> = ArrayList()
 
     /**
      * 调用这个函数的函数
      */
-    var parent: ArrayList<Function> = ArrayList()
+    val parent: ArrayList<Function> = ArrayList()
 
     /**
      * 函数是否已经实际中止。用于break和continue语句。
@@ -147,9 +150,7 @@ open class Function : ClassMember, FieldContainer {
     /**
      * 是否是静态的。默认为否
      */
-    @get:Override
-    @set:Override
-    override var isStatic = false
+    override var isStatic : Boolean
 
     /**
      * 所在的类。如果不是类成员，则为null
@@ -168,8 +169,9 @@ open class Function : ClassMember, FieldContainer {
             }else{
                 if(isStatic){
                     StringBuilder("$namespace:${parentClass!!.identifier}/static/$name")
+                }else{
+                    StringBuilder("$namespace:${parentClass!!.identifier}/$name")
                 }
-                StringBuilder("$namespace:${parentClass!!.identifier}/$name")
             }
             for (p in params) {
                 re.append("_").append(p.type)
@@ -187,8 +189,9 @@ open class Function : ClassMember, FieldContainer {
             }else{
                 if(isStatic){
                     StringBuilder("${parentClass!!.identifier}/static/$name")
+                }else{
+                    StringBuilder("${parentClass!!.identifier}/$name")
                 }
-                StringBuilder("${parentClass!!.identifier}/$name")
             }
             for (p in params) {
                 re.append("_").append(p.type)
@@ -238,6 +241,8 @@ open class Function : ClassMember, FieldContainer {
         params = ArrayList()
         namespace = Project.currNamespace
         field = FunctionField(null, this)
+        isStatic = false
+        isClassMember = false
     }
 
     /**
@@ -251,6 +256,7 @@ open class Function : ClassMember, FieldContainer {
         namespace = cls.namespace
         parentClass = cls
         isClassMember = true
+        this.isStatic = isStatic
         field = if (isStatic) {
             FunctionField(cls.field, this)
         } else {
@@ -263,7 +269,13 @@ open class Function : ClassMember, FieldContainer {
      * @param name 函数的标识符
      * @param namespace 函数的命名空间
      */
-    constructor(name: String, namespace: String) : this(name) {
+    constructor(name: String, namespace: String){
+        this.name = name
+        commands = ArrayList()
+        params = ArrayList()
+        field = FunctionField(null, this)
+        isStatic = false
+        isClassMember = false
         this.namespace = namespace
     }
 
@@ -293,7 +305,7 @@ open class Function : ClassMember, FieldContainer {
      *
      * @param ctx
      */
-    fun addParams(ctx: mcfppParser.ParameterListContext) {
+    fun addParams(ctx: mcfppParser.ParameterListContext?) {
         //函数参数解析
         //如果是非静态成员方法
         //构造名为this的变量
@@ -304,6 +316,7 @@ open class Function : ClassMember, FieldContainer {
             thisObj.identifier = "this"
             field.putVar("this",thisObj)
         }
+        if(ctx == null) return
         for (param in ctx.parameter()) {
             val param1 = FunctionParam(
                 param.type().text,
@@ -314,10 +327,10 @@ open class Function : ClassMember, FieldContainer {
             //向函数缓存中写入变量
             when(param1.type){
                 "int" -> {
-                    field.putVar(param1.identifier, MCInt(namespaceID + "_param_" + param1.identifier, this))
+                    field.putVar(param1.identifier, MCInt("_param_" + param1.identifier, this))
                 }
                 "bool" -> {
-                    field.putVar(param1.identifier, MCBool(namespaceID + "_param_" + param1.identifier, this))
+                    field.putVar(param1.identifier, MCBool("_param_" + param1.identifier, this))
                 }
                 else -> {
                     //引用类型
@@ -354,8 +367,9 @@ open class Function : ClassMember, FieldContainer {
      * @param args 函数的参数
      * @param cls 调用函数的实例
      */
+    @InsertCommand
     open fun invoke(args: ArrayList<Var>, cls: ClassBase? = null) {
-        addComment("[Function ${this.namespaceID}] Function Pushing and argument passing")
+        addCommand("#[Function ${this.namespaceID}] Function Pushing and argument passing")
         //给函数开栈
         addCommand("data modify storage mcfpp:system ${Project.defaultNamespace}.stack_frame prepend value {}")
         //传入this参数
@@ -368,20 +382,22 @@ open class Function : ClassMember, FieldContainer {
             when (params[i].type) {
                 "int" -> {
                     val tg = args[i].cast(params[i].type) as MCInt
-                    //参数传递和子函数的参数压栈
+                    //参数传递和子函数的参数进栈
+                    val p = MCInt("_param_" + params[i].identifier, this)
                     addCommand(
                         "execute " +
-                                "store result storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].int.${params[i].identifier} int 1 " +
-                                "run " + Commands.SbPlayerOperation(MCInt("_param_" + params[i].identifier, this), "=", tg)
+                                "store result storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${p.identifier} int 1 " +
+                                "run " + Commands.SbPlayerOperation(p, "=", tg)
                     )
                 }
                 else -> {
                     //是引用类型
                     val tg = args[i].cast(params[i].type) as ClassBase
+                    val p = MCInt("_param_" + params[i].identifier, this)
                     addCommand(
                         "execute " +
-                                "store result storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].class.${tg.clsType.identifier}.${params[i].identifier} int 1" +
-                                "run " + Commands.SbPlayerOperation(MCInt("_param_" + params[i].identifier, this), "=", tg.address)
+                                "store result storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${p.identifier} int 1" +
+                                "run " + Commands.SbPlayerOperation(p, "=", tg.address)
                     )
                 }
             }
@@ -389,7 +405,7 @@ open class Function : ClassMember, FieldContainer {
         //函数调用的命令
         addCommand(Commands.Function(this))
 
-        addComment("[Function ${this.namespaceID}] Static arguments")
+        addCommand("#[Function ${this.namespaceID}] Static arguments")
         //static关键字，将值传回
         for (i in 0 until params.size) {
             if (params[i].isStatic) {
@@ -401,7 +417,7 @@ open class Function : ClassMember, FieldContainer {
                             addCommand(
                                 "execute " +
                                         "store result score ${(args[i] as MCInt).name} ${(args[i] as MCInt).`object`} " +
-                                        "run data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].int.${params[i].identifier} int 1 "
+                                        "run data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${params[i].identifier} int 1 "
                             )
                         }
                         else -> {
@@ -410,7 +426,7 @@ open class Function : ClassMember, FieldContainer {
                             addCommand(
                                 "execute " +
                                         "store result score ${tg.address.name} ${tg.address.`object`} " +
-                                        "run data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].int.${params[i].identifier} int 1 "
+                                        "run data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${params[i].identifier} int 1 "
                             )
                         }
                     }
@@ -418,28 +434,34 @@ open class Function : ClassMember, FieldContainer {
             }
         }
 
+        //销毁指针，释放堆内存
+        for (p in field.allVars){
+            if (p is ClassPointer){
+                p.dispose()
+            }
+        }
         //调用完毕，将子函数的栈销毁
         addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
 
-        //取出栈内的值到记分板
-        addComment("[Function ${this.namespaceID}] Take vars out of the Stack")
-        for (i in 0 until params.size) {
-            when (params[i].type) {
+        //取出栈内的值
+        addCommand("#[Function ${this.namespaceID}] Take vars out of the Stack")
+        for (v in Function.currFunction.field.allVars){
+            when (v.type) {
                 "int" -> {
-                    val tg = args[i].cast(params[i].type) as MCInt
+                    val tg = v as MCInt
                     //参数传递和子函数的参数压栈
                     //如果是int取出到记分板
                     addCommand(
                         "execute store result score ${tg.name} ${tg.`object`} run "
-                                + "data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].int.${tg.identifier}"
+                                + "data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${tg.identifier}"
                     )
                 }
                 else -> {
                     //是引用类型
-                    val tg = args[i].cast(params[i].type) as ClassBase
+                    val tg = v as ClassBase
                     addCommand(
                         "execute store result score ${tg.address.name} ${tg.address.`object`} run "
-                                + "data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].int.${tg.identifier}"
+                                + "data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${tg.identifier}"
                     )
                 }
             }
@@ -543,18 +565,63 @@ open class Function : ClassMember, FieldContainer {
          */
         var currFunction: Function = nullFunction
 
+        fun replaceCommand(command: String, index: Int){
+            if(CompileSettings.isDebug){
+                //检查当前方法是否有InsertCommand注解
+                val stackTrace = Thread.currentThread().stackTrace
+                //调用此方法的类名
+                val className = stackTrace[2].className
+                //调用此方法的方法名
+                val methodName = stackTrace[2].methodName
+                //调用此方法的代码行数
+                val lineNumber = stackTrace[2].lineNumber
+                val methods: Array<Method> = java.lang.Class.forName(className).declaredMethods
+                for (method in methods) {
+                    if (method.name == methodName) {
+                        if (!method.isAnnotationPresent(InsertCommand::class.java)) {
+                            Project.warn("(JVM)Function.addCommand() was called in a method without the @InsertCommand annotation. at $className.$methodName:$lineNumber\"")
+                        }
+                    }
+                }
+            }
+            if(this.equals(nullFunction)){
+                Project.error("Unexpected command added to NullFunction")
+                throw NullPointerException()
+            }
+            currFunction.commands[index] = command
+        }
+
         /**
          * 向此函数的末尾添加一条命令。
          * @param str 要添加的命令。
          */
-        fun addCommand(str: String) {
+        fun addCommand(str: String): Int {
+            if(CompileSettings.isDebug){
+                //检查当前方法是否有InsertCommand注解
+                val stackTrace = Thread.currentThread().stackTrace
+                //调用此方法的类名
+                val className = stackTrace[2].className
+                //调用此方法的方法名
+                val methodName = stackTrace[2].methodName
+                //调用此方法的代码行数
+                val lineNumber = stackTrace[2].lineNumber
+                val methods: Array<Method> = java.lang.Class.forName(className).declaredMethods
+                for (method in methods) {
+                    if (method.name == methodName) {
+                        if (!method.isAnnotationPresent(InsertCommand::class.java)) {
+                            Project.warn("(JVM)Function.addCommand() was called in a method without the @InsertCommand annotation. at $className.$methodName:$lineNumber\"")
+                        }
+                    }
+                }
+            }
             if(this.equals(nullFunction)){
-                Project.warn("Unexpected command added to NullFunction")
+                Project.error("Unexpected command added to NullFunction")
                 throw NullPointerException()
             }
             if (!currFunction.isEnd) {
                 currFunction.commands.add(str)
             }
+            return currFunction.commands.size
         }
 
         /**
@@ -562,8 +629,15 @@ open class Function : ClassMember, FieldContainer {
          *
          * @param str
          */
+        @Deprecated("Use addCommand() instead")
         fun addComment(str: String){
-            addCommand("#$str")
+            if(this.equals(nullFunction)){
+                Project.warn("Unexpected command added to NullFunction")
+                throw NullPointerException()
+            }
+            if (!currFunction.isEnd) {
+                currFunction.commands.add("#$str")
+            }
         }
     }
 }

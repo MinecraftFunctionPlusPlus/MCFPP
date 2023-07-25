@@ -1,9 +1,11 @@
 package top.mcfpp.lang
 
+import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.*
 import java.util.*
 import top.mcfpp.lib.Function
+import kotlin.collections.HashMap
 
 /**
  * 布尔型变量是mcfpp的基本类型之一，它表示一个只有0，1两种取值可能性的值。
@@ -71,6 +73,7 @@ class MCBool : Var, OnScoreboard {
         } else null
     }
 
+    @InsertCommand
     fun equalCommand(a: MCBool): MCBool {
         //re = t == a
         val re: MCBool
@@ -95,6 +98,7 @@ class MCBool : Var, OnScoreboard {
         return re
     }
 
+    @InsertCommand
     fun notEqualCommand(a: MCBool): MCBool {
         //re = t != a
         val re: MCBool
@@ -119,6 +123,7 @@ class MCBool : Var, OnScoreboard {
         return re
     }
 
+    @InsertCommand
     fun negation(): MCBool {
         if (isConcrete) {
             value = !value
@@ -131,6 +136,7 @@ class MCBool : Var, OnScoreboard {
         return this
     }
 
+    @InsertCommand
     fun or(a: MCBool): MCBool {
         val re: MCBool
         if (isConcrete && a.isConcrete) {
@@ -163,6 +169,7 @@ class MCBool : Var, OnScoreboard {
         return re
     }
 
+    @InsertCommand
     fun and(a: MCBool): MCBool {
         val re: MCBool
         if (isConcrete && a.isConcrete) {
@@ -195,6 +202,7 @@ class MCBool : Var, OnScoreboard {
         return re
     }
 
+    @InsertCommand
     private fun assignCommand(a: MCBool) {
         if (a.isConcrete) {
             isConcrete = true
@@ -222,7 +230,12 @@ class MCBool : Var, OnScoreboard {
     }
 
     @Override
-    override fun getTempVar(): Var {
+    @InsertCommand
+    override fun getTempVar(cache: HashMap<Var, String>): Var {
+        if(isTemp) return this
+        if(isConcrete){
+            return MCBool(value)
+        }
         val re = MCBool()
         if(isClassMember) {
             Function.addCommand(

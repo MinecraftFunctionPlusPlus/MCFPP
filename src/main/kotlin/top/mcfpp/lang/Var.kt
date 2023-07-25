@@ -1,12 +1,14 @@
 package top.mcfpp.lang
 
 import top.mcfpp.Project
+import top.mcfpp.exception.ClassNotDefineException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Class
 import top.mcfpp.lib.ClassMember
 import top.mcfpp.lib.GlobalField
 import java.util.*
+import kotlin.collections.HashMap
 
 /**
  * mcfpp所有类型的基类。在mcfpp中，一个变量可以是固定的，也就是mcfpp编译
@@ -44,7 +46,7 @@ abstract class Var : ClassMember, Cloneable {
     var stackIndex: Int = 0
 
     /**
-     *
+     * 是否是静态的成员
      */
     @get:Override
     @set:Override
@@ -54,6 +56,8 @@ abstract class Var : ClassMember, Cloneable {
      * 这个变量是否是常量
      */
     var isConst = ConstStatus.NOT_CONST
+
+    var isTemp = false
 
     enum class ConstStatus {
         NOT_CONST, NULL, ASSIGNED
@@ -129,7 +133,7 @@ abstract class Var : ClassMember, Cloneable {
      *
      * @return
      */
-    abstract fun getTempVar(): Var
+    abstract fun getTempVar(cache : HashMap<Var, String>): Var
 
     companion object {
         /**
@@ -196,8 +200,9 @@ abstract class Var : ClassMember, Cloneable {
                 }
                 if (type == null) {
                     Project.error("Undefined class:$cls")
+                    throw ClassNotDefineException()
                 }
-                `var` = ClassPointer(type!!, ctx.Identifier().text)
+                `var` = ClassPointer(type, ctx.Identifier().text)
             }
             return `var`
         }
@@ -208,20 +213,20 @@ abstract class Var : ClassMember, Cloneable {
          * @param cls 成员所在的类
          * @return 这个变量
          */
-        fun build(ctx: mcfppParser.FieldDeclarationContext, cls: Class): Var? {
+        fun build(ctx: mcfppParser.FieldDeclarationContext, cls: ClassBase): Var? {
             var `var`: Var? = null
             if (ctx.type().className() == null) {
                 //普通类型
                 when (ctx.type().text) {
                     "int" -> {
                         `var` =
-                            MCInt("@s").setObj(SbObject(cls.namespace + "_class_" + cls.identifier + "_int_" + ctx.Identifier()))
+                            MCInt("@s").setObj(SbObject(cls.clsType.namespace + "_class_" + cls.clsType.identifier + "_int_" + ctx.Identifier()))
                         `var`.identifier = ctx.Identifier().text
                     }
 
                     "bool" -> {
                         `var` =
-                            MCBool("@s").setObj(SbObject(cls.namespace + "_class_" + cls.identifier + "_bool_" + ctx.Identifier()))
+                            MCBool("@s").setObj(SbObject(cls.clsType.namespace + "_class_" + cls.clsType.identifier + "_bool_" + ctx.Identifier()))
                         `var`.identifier = ctx.Identifier().text
                     }
                 }
@@ -245,13 +250,14 @@ abstract class Var : ClassMember, Cloneable {
                 }
                 val classPointer = ClassPointer(type!!, ctx.Identifier().text)
                 classPointer.address =
-                    (MCInt("@s").setObj(SbObject(cls.namespace + "_class_" + cls.identifier + "_" + clsType + "_" + ctx.Identifier())) as MCInt)
+                    (MCInt("@s").setObj(SbObject(cls.clsType.namespace + "_class_" + cls.clsType.identifier + "_" + clsType + "_" + ctx.Identifier())) as MCInt)
                 classPointer.name = ctx.Identifier().text
                 `var` = classPointer
             }
+            `var`!!.clsPointer = cls
             //是否是常量
             if (ctx.CONST() != null) {
-                `var`!!.isConst = ConstStatus.NULL
+                `var`.isConst = ConstStatus.NULL
                 `var`.isConcrete = true
             }
             return `var`

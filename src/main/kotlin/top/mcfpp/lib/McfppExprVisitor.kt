@@ -6,11 +6,15 @@ import top.mcfpp.exception.*
 import top.mcfpp.lang.*
 import java.util.*
 import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 
 /**
  * 获取表达式结果用的visitor。解析并计算一个形如a+b*c的表达式。
  */
 class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
+
+    private val tempVarCommandCache = HashMap<Var, String>()
+
     /**
      * 计算一个复杂表达式
      * @param ctx the parse tree
@@ -25,15 +29,18 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             visit(ctx.conditionalOrExpression())
         }
     }
-    //TODO 三目表达式。可能会实现，但是泠雪是懒狐，不想做。
-    //@Override
-    //public Var visitConditionalExpression(mcfppParser.ConditionalExpressionContext ctx){
-    //    if(ctx.expression().size() == 0){
-    //        return visit(ctx.conditionalOrExpression());
-    //    }else {
-    //        return null;
-    //    }
-    //}
+
+    /*TODO 三目表达式。可能会实现，但是泠雪是懒狐，不想做。
+     *@Override
+     *public Var visitConditionalExpression(mcfppParser.ConditionalExpressionContext ctx){
+     *    if(ctx.expression().size() == 0){
+     *        return visit(ctx.conditionalOrExpression());
+     *    }else {
+     *        return null;
+     *    }
+     *}
+    */
+
     /**
      * 计算一个或表达式。例如 a || b。
      * @param ctx the parse tree
@@ -224,16 +231,6 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         }
     }
 
-    /**
-     * 对获取到的变量进行包装处理
-     *
-     * @param ctx
-     * @return
-     */
-    @Override
-    override fun visitRightVarExpression(ctx: mcfppParser.RightVarExpressionContext?): Var {
-        return visit(ctx!!.basicExpression())!!.getTempVar()
-    }
 
     /**
      * 计算一个强制转换表达式。
@@ -245,6 +242,17 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         Project.ctx = ctx
         val a: Var? = visit(ctx.unaryExpression())
         return a!!.cast(ctx.type().text)
+    }
+
+    /**
+     * 对获取到的变量进行包装处理
+     *
+     * @param ctx
+     * @return
+     */
+    @Override
+    override fun visitRightVarExpression(ctx: mcfppParser.RightVarExpressionContext?): Var {
+        return visit(ctx!!.basicExpression())!!.getTempVar(tempVarCommandCache)
     }
 
     /**

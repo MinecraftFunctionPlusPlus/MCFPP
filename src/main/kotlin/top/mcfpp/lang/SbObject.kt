@@ -1,5 +1,6 @@
 package top.mcfpp.lang
 
+import top.mcfpp.lib.GlobalField
 import java.util.*
 
 /**
@@ -32,6 +33,9 @@ class SbObject(name: String, rule: String, var display: JsonText?) {
     init {
         this.name = name.lowercase(Locale.getDefault())
         this.criterion = rule.lowercase(Locale.getDefault())
+        if(!GlobalField.scoreboards.containsKey(this.name)){
+            GlobalField.scoreboards[this.name] = this
+        }
     }
 
     @Override
