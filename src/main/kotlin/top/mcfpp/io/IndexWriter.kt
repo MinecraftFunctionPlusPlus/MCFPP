@@ -1,5 +1,6 @@
 package top.mcfpp.io
 
+import com.alibaba.fastjson2.JSON
 import com.alibaba.fastjson2.JSONArray
 import com.alibaba.fastjson2.JSONObject
 import com.alibaba.fastjson2.JSONWriter
@@ -106,6 +107,14 @@ object IndexWriter {
                         }
                         cls["vars"] = vars
                         cls["staticVars"] = staticVars
+                        //构造函数
+                        val constructor = JSONArray()
+                        c.constructors.forEach{ c ->
+                            run {
+                                constructor.add(c.toString(false, containNamespace = false))
+                            }
+                        }
+                        cls["constructors"] = constructor
                     }
                     classes.add(cls)
                     namespace["classes"] = classes

@@ -3,6 +3,7 @@ package top.mcfpp
 import com.alibaba.fastjson2.*
 import org.antlr.v4.runtime.ParserRuleContext
 import org.apache.logging.log4j.*
+import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.io.IndexReader
 import top.mcfpp.io.IndexWriter
 import top.mcfpp.io.McfppFileReader
@@ -90,6 +91,8 @@ object Project {
         val mcfppLoad = Function("load","mcfpp")
         GlobalField.localNamespaces["mcfpp"]!!.addFunction(mcfppLoad)
         GlobalField.localNamespaces["mcfpp"]!!.addFunction(mcfppTick)
+        GlobalField.functionTags["minecraft:tick"]!!.functions.add(mcfppTick)
+        GlobalField.functionTags["minecraft:load"]!!.functions.add(mcfppLoad)
     }
 
     /**
@@ -162,7 +165,7 @@ object Project {
      */
     fun readIndex(){
         //默认的
-        includes.add("mcfpp")
+        includes.add("mcfpp/sys")
         //写入缓存
         for (include in includes) {
             val filePath = if(!include.endsWith("/.mclib")) {
@@ -174,7 +177,7 @@ object Project {
             if(file.exists()){
                 IndexReader.read(filePath)
             }else{
-                error("Cannot find lib file at: $filePath")
+                error("Cannot find lib file at: ${file.absolutePath}")
             }
         }
         //库读取完了，现在实例化所有类中的成员字段吧
@@ -203,6 +206,8 @@ object Project {
         logger.debug("Analysing project...")
         //解析文件
         for (file in files) {
+            //添加域
+            GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
             try {
                 McfppFileReader(file).analyse()
             } catch (e: IOException) {
@@ -210,6 +215,7 @@ object Project {
                 errorCount++
                 e.printStackTrace()
             }
+            GlobalField.importedLibNamespaces.clear()
         }
     }
 
@@ -221,6 +227,8 @@ object Project {
         //解析文件
         for (file in files) {
             logger.debug("Compiling mcfpp code in \"$file\"")
+            //添加域
+            GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
             try {
                 McfppFileReader(file).compile()
             } catch (e: IOException) {
@@ -234,14 +242,22 @@ object Project {
     /**
      * 整理并优化工程
      */
+    @InsertCommand
     fun optimization() {
         logger.debug("Optimizing...")
-        logger.debug("Adding scoreboards in mcfpp:load function")
+        logger.debug("Adding scoreboards declare in mcfpp:load function")
         //向load函数中添加记分板初始化命令
-        for (scoreboard in GlobalField.scoreboards){
-            GlobalField.localNamespaces["mcfpp"]!!.getFunction(
-                "load", ArrayList())!!.commands
-                .add("scoreboard objectives add ${scoreboard.name} ${scoreboard.criterion}")
+        Function.currFunction = GlobalField.localNamespaces["mcfpp"]!!.getFunction("load", ArrayList())!!
+        for (scoreboard in GlobalField.scoreboards.values){
+            Function.addCommand("scoreboard objectives add ${scoreboard.name} ${scoreboard.criterion}")
+        }
+        //向load中添加类初始化命令
+        for (n in GlobalField.localNamespaces.values){
+            n.forEachClass { c->
+                run {
+                    c.classPreStaticInit.invoke(ArrayList())
+                }
+            }
         }
         //寻找入口函数
         var hasEntrance = false
@@ -298,26 +314,26 @@ object Project {
 
     fun debug(msg: String){
         logger.debug(
-            msg + if(ctx !=null) {" at " + currFile.name + " line: " + ctx!!.getStart().line}else{""}
+            msg + if(ctx !=null) {" at " + currFile.name + ":" + ctx!!.getStart().line}else{""}
         )
     }
 
     fun info(msg: String){
         logger.info(
-            msg + if(ctx !=null) {" at " + currFile.name + " line: " + ctx!!.getStart().line}else{""}
+            msg + if(ctx !=null) {" at " + currFile.name + ":" + ctx!!.getStart().line}else{""}
         )
     }
 
     fun warn(msg: String){
         logger.warn(
-            msg + if(ctx !=null) {" at " + currFile.name + " line: " + ctx!!.getStart().line}else{""}
+            msg + if(ctx !=null) {" at " + currFile.name + ":" + ctx!!.getStart().line}else{""}
         )
         warningCount++
     }
 
     fun error(msg: String){
         logger.error(
-            msg + if(ctx !=null) {" at " + currFile.name + " line: " + ctx!!.getStart().line}else{""}
+            msg + if(ctx !=null) {" at " + currFile.name + ":" + ctx!!.getStart().line}else{""}
         )
         errorCount++
     }

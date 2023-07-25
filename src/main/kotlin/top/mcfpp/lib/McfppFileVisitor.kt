@@ -2,8 +2,10 @@ package top.mcfpp.lib
 
 import mcfppBaseVisitor
 import top.mcfpp.Project
+import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.exception.*
 import top.mcfpp.exception.IllegalFormatException
+import top.mcfpp.lang.ClassType
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.Var.ConstStatus
 import top.mcfpp.lib.ClassMember.AccessModifier
@@ -122,7 +124,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             throw ClassDuplicationException()
         } else {
             //如果没有声明过这个类
-            val cls: Class = Class(id, Project.currNamespace)
+            val cls = Class(id, Project.currNamespace)
             if (ctx.className() != null) {
                 //是否存在继承
                 if (field.hasClass(ctx.className().text)) {
@@ -231,8 +233,8 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             visit(ctx.fieldDeclaration())
         } else if (ctx.constructorDeclaration() != null) {
             visit(ctx.constructorDeclaration())
-        } else {
-            visit(ctx.nativeConstructorDeclaration())
+        }else{
+            return null
         }
     }
 
@@ -251,9 +253,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             ctx.parent is mcfppParser.StaticClassMemberDeclarationContext
         )
         //解析参数
-        if (ctx.parameterList() != null) {
-            f.addParams(ctx.parameterList())
-        }
+        f.addParams(ctx.parameterList())
         //注册函数
         if (Class.currClass!!.field.hasFunction(f) || Class.currClass!!.staticField.hasFunction(f)) {
             Project.error("Already defined function:" + ctx.Identifier().text + "in class " + Class.currClass!!.identifier)
@@ -272,25 +272,16 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         Project.ctx = ctx
         //是构造函数
         //创建构造函数对象，注册函数
-        var f: Constructor? = null
+        val f: Constructor?
         try {
             f = Constructor(Class.currClass!!)
             Class.currClass!!.addConstructor(f)
+            f.addParams(ctx.parameterList())
+            return f
         } catch (e: FunctionDuplicationException) {
             Project.error("Already defined function: " + ctx.className().text + "(" + ctx.parameterList().text + ")")
         }
-        assert(f != null)
-        if (ctx.parameterList() != null) {
-            f!!.addParams(ctx.parameterList())
-        }
-        return f
-    }
-
-    @Override
-    override fun visitNativeConstructorDeclaration(ctx: mcfppParser.NativeConstructorDeclarationContext?): Any? {
-        Project.ctx = ctx
-        //TODO
-        throw TODOException("")
+        return null
     }
 
     /**
@@ -312,9 +303,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             Function(identifier, Project.currNamespace)
         }
         //解析参数
-        if (ctx.parameterList() != null) {
-            f.addParams(ctx.parameterList())
-        }
+        f.addParams(ctx.parameterList())
         //解析函数的tag
         if (ctx.functionTag() != null && ctx.functionTag().size != 0) {
             for(fTag in ctx.functionTag()){
@@ -372,9 +361,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             Project.error("No such method:" + e.message)
             return null
         }
-        if (ctx.parameterList() != null) {
-            nf.addParams(ctx.parameterList())
-        }
+        nf.addParams(ctx.parameterList())
         //写入域
         val field = GlobalField.localNamespaces[nf.namespace]!!
         if (Class.currClass == null) {
@@ -400,23 +387,30 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
      * @return null
      */
     @Override
+    @InsertCommand
     override fun visitFieldDeclaration(ctx: mcfppParser.FieldDeclarationContext): Any {
         Project.ctx = ctx
         //变量生成
-        val `var`: Var = Var.build(ctx, Class.currClass!!)!!
+        val `var`: Var = Var.build(ctx, ClassType(Class.currClass!!))!!
+        //是否是静态的
         //只有可能是类变量
-        if (Class.currClass!!.field.containVar(
-                ctx.Identifier().text
-            ) || Class.currClass!!.staticField.containVar(ctx.Identifier().text)
+        if (Class.currClass!!.field.containVar(ctx.Identifier().text)
+            || Class.currClass!!.staticField.containVar(ctx.Identifier().text)
         ) {
             Project.error("Duplicate defined variable name:" + ctx.Identifier().text)
             throw VariableDuplicationException()
         }
         //变量的初始化
         if (ctx.expression() != null) {
-            `var`.isConst = ConstStatus.ASSIGNED
-            Function.currFunction = Class.currClass!!.classPreInit
-            Function.addCommand("#" + ctx.text)
+            if(`var`.isConst == ConstStatus.NULL) `var`.isConst = ConstStatus.ASSIGNED
+            Function.currFunction = if(ctx.parent.parent is mcfppParser.StaticClassMemberDeclarationContext){
+                `var`.isStatic = true
+                Class.currClass!!.classPreStaticInit
+            }else{
+                Class.currClass!!.classPreInit
+            }
+            //是类的成员
+            Function.addCommand("#"+ctx.text)
             val init: Var = McfppExprVisitor().visit(ctx.expression())!!
             try {
                 `var`.assign(init)

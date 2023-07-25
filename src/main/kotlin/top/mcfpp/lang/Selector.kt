@@ -42,7 +42,7 @@ class Selector : CanSelectMember {
         TODO()
     }
 
-    override fun getTempVar(): Var {
+    override fun getTempVar(cache: HashMap<Var, String>): Var {
         TODO("Not yet implemented")
     }
 

@@ -73,7 +73,7 @@ class UnresolvedVar : Var {
      *
      * @throws VariableNotResolvedException 调用此方法就会抛出此异常
      */
-    override fun getTempVar(): Var {
+    override fun getTempVar(cache: HashMap<Var, String>): Var {
         throw VariableNotResolvedException()
     }
 }

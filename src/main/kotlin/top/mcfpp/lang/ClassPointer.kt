@@ -1,5 +1,6 @@
 package top.mcfpp.lang
 
+import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.*
@@ -55,8 +56,8 @@ class ClassPointer : ClassBase {
         clsType = type
         this.type = clsType.identifier
         this.identifier = identifier
-        this.name = identifier
-        address = MCInt("pointer_$identifier",type).setObj(type.addressSbObject) as MCInt
+        address = MCInt(identifier,type).setObj(type.addressSbObject) as MCInt
+        this.name = address.name
     }
 
     /**
@@ -71,59 +72,84 @@ class ClassPointer : ClassBase {
     }
 
     /**
-     * 将b中的值赋值给此变量。一个指针只能指向它的类型的类或者其子类的实例
+     * 将b中的值赋值给此变量。一个指针只能指向它的类型的类或者其子类的实例。
      * @param b 变量的对象
      * @throws VariableConverseException 如果隐式转换失败
      */
     @Override
+    @InsertCommand
     @Throws(VariableConverseException::class)
     override fun assign(b: Var?) {
-        if (b is ClassObject) {
-            if (!b.clsType.canCastTo(clsType)) {
-                throw VariableConverseException()
-            }
-            if (obj != null) {
-                //原实体中的实例减少一个指针
+        when (b) {
+            is ClassObject -> {
+                if (!b.clsType.canCastTo(clsType)) {
+                    throw VariableConverseException()
+                }
+                if (obj != null) {
+                    //原实体中的实例减少一个指针
+                    Function.addCommand(
+                        "execute " +
+                                "as @e[tag=${obj!!.clsType.tag}] " +
+                                "if score @s " + obj!!.address.`object`.name + " = " + address.name + " " + address.`object`.name + " " +
+                                "run data remove entity @s data.pointers[0]"
+                    )
+                }
+                obj = b
+                //地址储存
+                address.assign(b.initPointer.address)
+                //实例中的指针列表
                 Function.addCommand(
                     "execute " +
                             "as @e[tag=${obj!!.clsType.tag}] " +
-                            "if score @s " + obj!!.address.`object`.name + " = " + address.name + " " + address.`object`.name + " " +
-                            "run data remove entity @s data.pointers[0]"
+                            "if score @s " + b.address.`object`.name + " = " + address.name + " " + address.`object`.name + " " +
+                            "run data modify entity @s data.pointers append value 0"
                 )
             }
-            obj = b
-            //地址储存
-            address.assign(b.address)
-            //实例中的指针列表
-            Function.addCommand(
-                "execute " +
-                        "as @e[tag=${obj!!.clsType.tag}] " +
-                        "if score @s " + b.address.`object`.name + " = " + address.name + " " + address.`object`.name + " " +
-                        "run data modify entity @s data.pointers append value 0"
-            )
+
+            is ClassPointer -> {
+                if (!b.clsType.canCastTo(clsType)) {
+                    throw VariableConverseException()
+                }
+                if (obj != null) {
+                    //原实体中的实例减少一个指针
+                    Function.addCommand(
+                        "execute " +
+                                "as @e[tag=${obj!!.clsType.tag}] " +
+                                "if score @s " + obj!!.address.`object`.name + " = " + address.name + " " + address.`object`.name + " " +
+                                "run data remove entity @s data.pointers[0]"
+                    )
+                }
+                obj = b.obj
+                //地址储存
+                address.assign(b.address)
+                //实例中的指针列表
+                Function.addCommand(
+                    "execute " +
+                            "as @e[tag=${obj!!.clsType.tag}] " +
+                            "if score @s " + b.address.`object`.name + " = " + address.name + " " + address.`object`.name + " " +
+                            "run data modify entity @s data.pointers append value 0"
+                )
+            }
+
+            else -> {
+                throw VariableConverseException()
+            }
         }
-        if (b is ClassPointer) {
-            if (!b.clsType.canCastTo(clsType)) {
-                throw VariableConverseException()
-            }
-            if (obj != null) {
-                //原实体中的实例减少一个指针
-                Function.addCommand(
-                    "execute " +
-                            "as @e[tag=${obj!!.clsType.tag}] " +
-                            "if score @s " + obj!!.address.`object`.name + " = " + address.name + " " + address.`object`.name + " " +
-                            "run data remove entity @s data.pointers[0]"
-                )
-            }
-            obj = b.obj
-            //地址储存
-            address.assign(b.address)
-            //实例中的指针列表
+    }
+
+    /**
+     * 销毁一个指针
+     *
+     */
+    @InsertCommand
+    fun dispose(){
+        if (obj != null) {
+            //原实体中的实例减少一个指针
             Function.addCommand(
                 "execute " +
                         "as @e[tag=${obj!!.clsType.tag}] " +
-                        "if score @s " + b.address.`object`.name + " = " + address.name + " " + address.`object`.name + " " +
-                        "run data modify entity @s data.pointers append value 0"
+                        "if score @s " + obj!!.address.`object`.name + " = " + address.name + " " + address.`object`.name + " " +
+                        "run data remove entity @s data.pointers[0]"
             )
         }
     }
@@ -180,7 +206,7 @@ class ClassPointer : ClassBase {
      * @return 一个此变量生成的临时变量
      */
     @Override
-    override fun getTempVar(): Var {
+    override fun getTempVar(cache: HashMap<Var, String>): Var {
         return this
     }
 }

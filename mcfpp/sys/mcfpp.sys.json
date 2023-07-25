@@ -3,6 +3,6 @@
         "*"
     ],
     "description": "",
-    "namespace": "mcfpp",
+    "namespace": "mcfpp.sys",
     "targetPath": "null"
 }

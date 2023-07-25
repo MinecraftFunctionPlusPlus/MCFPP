@@ -147,7 +147,7 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction {
             classes[identifier] = cls
             true
         }else{
-            if(classes.containsKey(identifier)){
+            if(!classes.containsKey(identifier)){
                 classes[identifier] = cls
                 true
             }else{

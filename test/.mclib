@@ -11,7 +11,35 @@
 			"id":"test",
 			"functions":[
 				"qwq()",
-				"_if_82ac488d-a9c4-469e-bbcd-52186a6e75f7()"
+				"uwu(int i)"
+			],
+			"classes":[
+				{
+					"id":"Test",
+					"isNative":false,
+					"functions":[
+						"tell()"
+					],
+					"staticFunctions":[
+						
+					],
+					"vars":[
+						{
+							"id":"i",
+							"type":"int"
+						},
+						{
+							"id":"index",
+							"type":"int"
+						}
+					],
+					"staticVars":[
+						
+					],
+					"constructors":[
+						"_init_test_0()"
+					]
+				}
 			]
 		}
 	]

@@ -3,12 +3,8 @@ package top.mcfpp.io
 import com.alibaba.fastjson2.JSONArray
 import com.alibaba.fastjson2.JSONObject
 import top.mcfpp.lang.UnresolvedVar
-import top.mcfpp.lib.Class
+import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
-import top.mcfpp.lib.FunctionParam
-import top.mcfpp.lib.GlobalField
-import top.mcfpp.lib.NamespaceField
-import top.mcfpp.lib.NativeFunction
 import java.io.FileReader
 
 /**
@@ -35,11 +31,11 @@ object IndexReader {
             val oo = o as JSONObject
             val nspId = oo["id"] as String
             val namespaceField : NamespaceField
-            if(GlobalField.libNamespace.containsKey(nspId)){
-                namespaceField = GlobalField.libNamespace["id"]!!
+            if(GlobalField.libNamespaces.containsKey(nspId)){
+                namespaceField = GlobalField.libNamespaces[nspId]!!
             }else{
                 namespaceField = NamespaceField()
-                GlobalField.libNamespace["id"] = namespaceField
+                GlobalField.libNamespaces[nspId] = namespaceField
             }
             //读取内容
             //函数
@@ -151,6 +147,27 @@ object IndexReader {
                 for (v in cc["staticVars"] as JSONArray){
                     val vv = v as JSONObject
                     cls.staticField.putVar(vv["id"] as String, UnresolvedVar(vv["id"] as String,vv["type"] as String))
+                }
+                //构造函数
+                for (constructor in cc["constructors"] as JSONArray){
+                    val s = constructor as String
+                    //参数解析
+                    val params = s.substring(s.indexOf('(') + 1, s.indexOf(')')).split(",")
+                    val paramList = ArrayList<FunctionParam>()
+                    if(params[0] != ""){
+                        for (param in params){
+                            val info = param.split(" ")
+                            val p = if(info.size == 2){
+                                FunctionParam(info[0], info[1],false)
+                            }else{
+                                FunctionParam(info[1], info[2], true)
+                            }
+                            paramList.add(p)
+                        }
+                    }
+                    val co = Constructor(cls)
+                    co.params = paramList
+                    cls.constructors.add(co)
                 }
             }
         }

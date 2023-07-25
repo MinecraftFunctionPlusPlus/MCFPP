@@ -1,6 +1,7 @@
 package top.mcfpp.lib
 
 import top.mcfpp.Project
+import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.exception.FunctionDuplicationException
 import top.mcfpp.lang.*
 import java.util.ArrayList
@@ -70,6 +71,11 @@ open class Class : FieldContainer {
     lateinit var classPreStaticInit: Function
 
     /**
+     * 临时指针。所有的类都共用一个临时指针。临时指针只能在创建对象的期间使用。
+     */
+    lateinit var initPointer : ClassPointer
+
+    /**
      * 生成一个类。它拥有指定的标识符和默认的命名空间
      * @param identifier 类的标识符
      */
@@ -80,19 +86,27 @@ open class Class : FieldContainer {
      * @param identifier 类的标识符
      * @param namespace 类的命名空间
      */
+    @InsertCommand
     constructor(identifier: String, namespace: String) {
         this.identifier = identifier
         this.namespace = namespace
         staticField = ClassField(null, this)
         field = ClassField(staticField, this)
         classPreInit = Function("_class_preinit_$identifier", this, false)
-        classPreStaticInit = Function("_class_preinit_$identifier", this, true)
+        classPreStaticInit = Function("_class_prestaticinit_$identifier", this, true)
         field.addFunction(classPreInit)
         staticField.addFunction(classPreStaticInit)
         addressSbObject = SbObject(namespace + "_class_" + identifier + "_index")
         //init函数的初始化置入，即地址分配，原preinit函数合并于此。同时生成新的临时指针
+        initPointer =  ClassPointer(this, "INIT")
         classPreInit.commands.add("scoreboard players operation @s " + addressSbObject.name + " = \$index " + addressSbObject.name)
         classPreInit.commands.add("scoreboard players add \$index " + addressSbObject.name + " 1")
+        classPreInit.commands.add("scoreboard players operation ${initPointer.name} ${addressSbObject.name} = @s ${addressSbObject.name}")
+        //staticinit函数的初始化直入。生成static实体
+        classPreStaticInit.commands.add(
+            "execute in minecraft:overworld " +
+                "run summon marker 0 1 0 {Tags:[$staticTag]}"
+        )
     }
 
     constructor()
@@ -106,6 +120,9 @@ open class Class : FieldContainer {
      */
     val tag: String
         get() = namespace + "_class_" + identifier + "_pointer"
+
+    val staticTag: String
+        get() = namespace + "_class_" + identifier + "_static_pointer"
 
     val namespaceID : String
         get() = "$namespace:$identifier"
