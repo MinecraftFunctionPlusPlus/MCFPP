@@ -39,4 +39,37 @@ class Test{
     public func tell(){
         print(this.i);
     }
+
+@event(UseCarrotOnAStick,2)
+func say(entity player){
+    player.say("hi");
 }
+
+func load(){
+    sys.UseCarrotOnAStick += say;
+}
+
+event TestEvent(int i){
+    
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

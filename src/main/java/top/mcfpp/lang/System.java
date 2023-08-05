@@ -10,6 +10,7 @@ public class System {
         //只会有一个参数哦
         Var var = vars[0];
         if (var instanceof MCInt) print((MCInt) var);
+        if (var instanceof JsonString) print((JsonString) var);
         else print(var);
     }
 
@@ -21,6 +22,11 @@ public class System {
         }else {
             Function.Companion.addCommand("tellraw @a " + new JsonTextNumber(var).toJson());
         }
+    }
+
+    @InsertCommand
+    public static void print(JsonString var){
+        Function.Companion.addCommand("tellraw @a " + var.getJsonText().toJson());
     }
 
     @InsertCommand
