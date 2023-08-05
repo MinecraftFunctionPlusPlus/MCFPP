@@ -45,5 +45,17 @@ class Example{
   }
 }
 ```
+## MCFPP支持库的调用
+MCFPP supports libraries. 
+```
+import mcfpp.math;
+
+func example{
+    double i = 1.5;
+    double out;
+    pow(i, 2, static out);
+    print(out);
+}
+```
 # 快速开始 QuickStart
 MCFPP Guider

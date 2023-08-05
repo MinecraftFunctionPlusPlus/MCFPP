@@ -261,6 +261,7 @@ statement
     |   tryStoreStatement
     |   controlStatement ';'
     |   orgCommand
+    |   returnStatement ';'
     ;
 
 orgCommand
@@ -333,6 +334,10 @@ tryStoreStatement
     :   TRY block  STORE '(' Identifier ')' ';'
     ;
 
+returnStatement
+    : 'return' expression
+    ;
+
 block
     :   '{' statement* '}'
     ;
@@ -348,12 +353,13 @@ expressionList
 type
     :   'int'
     |   'bool'
+    |   'float'
     |   className
     ;
 
 value
     :   INT
-    |   DECIMAL
+    |   FLOAT
     |   STRING
     ;
 
@@ -411,9 +417,8 @@ INT
     :   [1-9][0-9]*|[0]
     ;
 
-DECIMAL
-    :   INT
-    |   INT '.' [0-9]+
+FLOAT
+    :   INT '.' [0-9]+
     ;
 
 VEC:'vec';

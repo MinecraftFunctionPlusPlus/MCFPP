@@ -351,6 +351,8 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             } else if (num.STRING() != null) {
                 val r: String = num.STRING().text
                 return MCString(r.substring(1, r.length - 1))
+            } else if (num.DECIMAL() != null){
+                
             }
         }
         return null
