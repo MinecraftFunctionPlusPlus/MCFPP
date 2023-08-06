@@ -250,7 +250,8 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         val f = Function(
             ctx.Identifier().text,
             Class.currClass!!,
-            ctx.parent is mcfppParser.StaticClassMemberDeclarationContext
+            ctx.parent is mcfppParser.StaticClassMemberDeclarationContext,
+            ctx.functionReturnType().text
         )
         //解析参数
         f.addParams(ctx.parameterList())
@@ -300,31 +301,11 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         f = if (ctx.INLINE() != null) {
             InlineFunction(identifier, Project.currNamespace, ctx)
         } else {
-            Function(identifier, Project.currNamespace)
+            Function(identifier, Project.currNamespace, ctx.functionReturnType().text)
         }
         //解析参数
         f.addParams(ctx.parameterList())
-        //解析函数的tag
-        if (ctx.functionTag() != null && ctx.functionTag().size != 0) {
-            for(fTag in ctx.functionTag()){
-                //构建函数标签对象
-                var functionTag: FunctionTag = if (fTag.namespaceID().Identifier().size == 1) {
-                    FunctionTag(null, fTag.namespaceID().Identifier(0).text)
-                } else {
-                    FunctionTag(
-                        fTag.namespaceID().Identifier(0).text,
-                        fTag.namespaceID().Identifier(1).text
-                    )
-                }
-                if (GlobalField.functionTags.containsKey(functionTag.namespaceID)) {
-                    functionTag = GlobalField.functionTags[functionTag.namespaceID]!!
-                } else {
-                    GlobalField.functionTags[functionTag.namespaceID] = functionTag
-                }
-                f.tags.add(functionTag)
-                functionTag.functions.add(f)
-            }
-        }
+        //TODO 解析函数的tag
         //不是类的成员
         f.isClassMember = false
         //写入域

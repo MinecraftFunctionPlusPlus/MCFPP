@@ -19,7 +19,8 @@ importDeclaration
 
 //类或函数声明
 typeDeclaration
-    :   classOrFunctionDeclaration
+    :   annoation
+    |   classOrFunctionDeclaration
     ;
 
 //类或函数声明
@@ -65,7 +66,7 @@ classMember
     ;
 
 classFunctionDeclaration
-    :    'func' Identifier '(' parameterList? ')' '{' functionBody '}'
+    :    functionReturnType 'func' Identifier '(' parameterList? ')' '{' functionBody '}'
     ;
 
 nativeClassFunctionDeclaration
@@ -74,7 +75,7 @@ nativeClassFunctionDeclaration
 
 //函数声明
 functionDeclaration
-    :    INLINE? functionTag* 'func' Identifier '(' parameterList? ')' '{' functionBody '}'
+    :    INLINE? functionReturnType 'func' Identifier '(' parameterList? ')' '{' functionBody '}'
     ;
 
 namespaceID
@@ -224,6 +225,9 @@ var
     |   THIS
     |   SUPER
     |   constructorCall
+    |   namespaceID arguments
+    |   var selector* arguments
+    |   className selector+ arguments
     |   TargetSelector
     ;
 
@@ -339,7 +343,7 @@ tryStoreStatement
     ;
 
 returnStatement
-    : 'return' expression
+    : 'return' expression?
     ;
 
 block
@@ -361,6 +365,11 @@ type
     |   className
     ;
 
+functionReturnType
+    :   type
+    |   'void'
+    ;
+
 value
     :   INT
     |   FLOAT
@@ -376,8 +385,8 @@ classWithoutNamespace
     |   InsideClass
     ;
 
-functionTag
-    :   AT namespaceID
+annoation
+    :   '@' Identifier arguments?
     ;
 
 TargetSelector
