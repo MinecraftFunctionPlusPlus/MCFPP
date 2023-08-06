@@ -87,6 +87,12 @@ import java.lang.reflect.Method
  * @see InternalFunction
  */
 open class Function : ClassMember, FieldContainer {
+
+    /**
+     * 函数的返回变量
+     */
+    var returnVar: Var?
+
     /**
      * 包含所有命令的列表
      */
@@ -136,6 +142,16 @@ open class Function : ClassMember, FieldContainer {
      * 函数是否已经实际中止。用于break和continue语句。
      */
     var isEnd = false
+
+    /**
+     * 函数的返回类型
+     */
+    val returnType : String
+
+    /**
+     * 函数是否有返回语句
+     */
+    var hasReturnStatement : Boolean = false
 
     /**
      * 访问修饰符。默认为private
@@ -235,7 +251,7 @@ open class Function : ClassMember, FieldContainer {
      * 创建一个函数
      * @param name 函数的标识符
      */
-    constructor(name: String) {
+    constructor(name: String, returnType: String = "void") {
         this.name = name
         commands = ArrayList()
         params = ArrayList()
@@ -243,13 +259,15 @@ open class Function : ClassMember, FieldContainer {
         field = FunctionField(null, this)
         isStatic = false
         isClassMember = false
+        this.returnType = returnType
+        this.returnVar = buildReturnVar(returnType)
     }
 
     /**
      * 创建一个函数，并指定它所属的类。
      * @param name 函数的标识符
      */
-    constructor(name: String, cls: Class, isStatic: Boolean) {
+    constructor(name: String, cls: Class, isStatic: Boolean, returnType: String = "void") {
         this.name = name
         commands = ArrayList()
         params = ArrayList()
@@ -262,6 +280,8 @@ open class Function : ClassMember, FieldContainer {
         } else {
             FunctionField(cls.staticField, this)
         }
+        this.returnType = returnType
+        this.returnVar = buildReturnVar(returnType)
     }
 
     /**
@@ -269,7 +289,7 @@ open class Function : ClassMember, FieldContainer {
      * @param name 函数的标识符
      * @param namespace 函数的命名空间
      */
-    constructor(name: String, namespace: String){
+    constructor(name: String, namespace: String, returnType: String = "void"){
         this.name = name
         commands = ArrayList()
         params = ArrayList()
@@ -277,6 +297,8 @@ open class Function : ClassMember, FieldContainer {
         isStatic = false
         isClassMember = false
         this.namespace = namespace
+        this.returnType = returnType
+        this.returnVar = buildReturnVar(returnType)
     }
 
     /**
@@ -298,6 +320,16 @@ open class Function : ClassMember, FieldContainer {
             tags.add(tag)
         }
         return this
+    }
+
+    /**
+     * 构造函数的返回值
+     *
+     * @param returnType
+     */
+    fun buildReturnVar(returnType: String): Var?{
+        return if(returnType == "void") null
+        else Var.build("return",returnType,this)
     }
 
     /**
@@ -363,9 +395,11 @@ open class Function : ClassMember, FieldContainer {
         }
 
     /**
-     * 调用这个函数
+     * 调用这个函数。
+     *
      * @param args 函数的参数
      * @param cls 调用函数的实例
+     * @see McfppExprVisitor.visitVar
      */
     @InsertCommand
     open fun invoke(args: ArrayList<Var>, cls: ClassBase? = null) {
@@ -402,8 +436,17 @@ open class Function : ClassMember, FieldContainer {
                 }
             }
         }
+
         //函数调用的命令
-        addCommand(Commands.Function(this))
+        if(this is InternalFunction){
+            addCommand(
+                "execute "+
+                        "if function " + this.namespaceID + " " +
+                        "run return 1"
+            )
+        }else{
+            addCommand("function " + this.namespaceID)
+        }
 
         addCommand("#[Function ${this.namespaceID}] Static arguments")
         //static关键字，将值传回
@@ -547,6 +590,18 @@ open class Function : ClassMember, FieldContainer {
          * 目前编译器处在的函数。允许编译器在全局获取并访问当前正在编译的函数对象。默认为全局初始化函数
          */
         var currFunction: Function = nullFunction
+
+        /**
+         * 编译器目前所处的非匿名函数
+         */
+        val currBaseFunction: Function
+            get() {
+                var ret = currFunction
+                while(ret is InternalFunction){
+                    ret = ret.parent[0]
+                }
+                return ret
+            }
 
         fun replaceCommand(command: String, index: Int){
             if(CompileSettings.isDebug){

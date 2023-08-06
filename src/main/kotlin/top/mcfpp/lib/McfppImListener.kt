@@ -120,6 +120,10 @@ class McfppImListener : mcfppBaseListener() {
     @Override
     override fun exitFunctionBody(ctx: mcfppParser.FunctionBodyContext?) {
         Project.ctx = ctx
+        //函数是否有返回值
+        if(Function.currFunction.returnType != "void" && !Function.currFunction.hasReturnStatement){
+            Project.error("A 'return' expression required in function: " + Function.currFunction.namespaceID)
+        }
         if (Class.currClass == null) {
             //不在类中
             Function.currFunction = Function.nullFunction
@@ -266,6 +270,29 @@ class McfppImListener : mcfppBaseListener() {
         //函数树
         Function.currFunction.child.add(func)
         func.parent.add(Function.currFunction)
+    }
+
+    @Override
+    @InsertCommand
+    override fun exitReturnStatement(ctx: mcfppParser.ReturnStatementContext?) {
+        Project.ctx = ctx
+        Function.addCommand("#" + ctx!!.text)
+        if (ctx.expression() != null) {
+            if(Function.currBaseFunction.returnType == "void"){
+                Project.error("Function ${Function.currBaseFunction.name} has no return value")
+                throw FunctionHasNoReturnValueException()
+            }
+            val ret: Var = McfppExprVisitor().visit(ctx.expression())!!
+            try {
+                Function.currBaseFunction.returnVar!!.assign(ret)
+            } catch (e: VariableConverseException) {
+                Project.error("Cannot convert " + ret.javaClass + " to " + Function.currBaseFunction.returnVar!!.javaClass)
+                throw VariableConverseException()
+            }
+        }
+        if(Function.currFunction !is InternalFunction)
+            Function.currFunction.hasReturnStatement = true
+        Function.addCommand("return 1")
     }
 
     //region 逻辑语句
@@ -796,6 +823,8 @@ class McfppImListener : mcfppBaseListener() {
         }
     }
 
+    //endregion
+
     companion object {
         /**
          * 判断这个语句是否在循环语句中。包括嵌套形式。
@@ -817,5 +846,4 @@ class McfppImListener : mcfppBaseListener() {
             } else false
         }
     }
-    //endregion
 }

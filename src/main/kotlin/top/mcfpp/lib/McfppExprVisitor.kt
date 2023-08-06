@@ -351,8 +351,6 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             } else if (num.STRING() != null) {
                 val r: String = num.STRING().text
                 return MCString(r.substring(1, r.length - 1))
-            } else if (num.DECIMAL() != null){
-                
             }
         }
         return null
@@ -388,7 +386,41 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             visit(ctx.constructorCall())
         } else if(ctx.TargetSelector() != null) {
             TODO()
-        } else{
+        } else if (ctx.arguments() != null){
+            //函数的调用
+            //   namespaceID arguments
+            //   var selector* arguments
+            //   className selector+ arguments
+            Function.addCommand("#" + ctx.text)
+            //参数获取
+            val args: ArrayList<Var> = ArrayList()
+            val exprVisitor = McfppExprVisitor()
+            if(ctx.arguments().expressionList() != null){
+                for (expr in ctx.arguments().expressionList().expression()) {
+                    args.add(exprVisitor.visit(expr)!!)
+                }
+            }
+            val functionCallCTX = mcfppParser.FunctionCallContext(ctx,0)
+            functionCallCTX.addChild(ctx.arguments())
+            //函数对象获取
+            val curr = if(ctx.namespaceID() != null)
+                McfppFuncVisitor().getFunction(ctx.namespaceID(),FunctionParam.getVarTypes(args))
+            else if(ctx.`var`() != null)
+                McfppFuncVisitor().getFunction(ctx.`var`(),ctx.selector(),FunctionParam.getVarTypes(args))
+            else
+                McfppFuncVisitor().getFunction(ctx.className(),ctx.selector(),FunctionParam.getVarTypes(args))
+            val func = curr.first
+            val obj = curr.second
+            if (func == null) {
+                Project.error("Function " + ctx.text + " not defined")
+                throw FunctionNotDefineException()
+            }
+            func.invoke(args,obj)
+            //函数树
+            Function.currFunction.child.add(func)
+            func.parent.add(Function.currFunction)
+            func.returnVar
+        }else{
             //this或者super
             val s = if(ctx.SUPER() != null){
                 "super"
