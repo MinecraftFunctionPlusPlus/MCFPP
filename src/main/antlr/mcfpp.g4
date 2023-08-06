@@ -278,11 +278,15 @@ controlStatement
     ;
 
 ifStatement
-    :   IF'('expression')' ifBlock (ELSE (elseIfStatement|ifBlock))?
+    :   IF'('expression')' ifBlock elseIfStatement* elseStatement?
     ;
 
 elseIfStatement
-    :   ifStatement
+    :   ELSE IF '('expression')' ifBlock
+    ;
+
+elseStatement
+    :   ELSE ifBlock
     ;
 
 ifBlock
@@ -298,12 +302,12 @@ forBlock
     ;
 
 forControl
-    :   forInit* ';' expression? ';' forUpdate
+    :   forInit ';' expression? ';' forUpdate
     ;
 
 forInit
-    :   fieldDeclaration
-    |   statementExpression
+    :   (fieldDeclaration|statementExpression)?
+    |   (fieldDeclaration|statementExpression) (',' (fieldDeclaration|statementExpression))+
     ;
 
 forUpdate

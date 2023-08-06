@@ -90,7 +90,7 @@ open class Function : ClassMember, FieldContainer {
     /**
      * 包含所有命令的列表
      */
-    val commands: ArrayList<String>
+    var commands: ArrayList<String>
 
     /**
      * 函数的名字
@@ -538,23 +538,6 @@ open class Function : ClassMember, FieldContainer {
     }
 
     companion object {
-        /**
-         * 是不是break。用于break和continue语句。
-         */
-        var isBreak = false
-
-        /**
-         * 当一个函数被break或continue截断的时候，使用此标记，表示此函数执行完毕后的函数应当重新建立一个匿名内部函数，
-         * 从而实现break和continue的逻辑控制。
-         *
-         * 即同时满足isEnd == false和isLastFunctionEnd = 2的时候进入新的匿名break/continue内部函数<br>
-         * * 0    未截断
-         * * 1    被截断，需要进入匿名函数
-         * * 2    被截断，但是已经在匿名函数里面了
-         */
-        var isLastFunctionEnd = 0
-
-
         /**
          * 一个空的函数，通常用于作为占位符
          */
