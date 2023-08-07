@@ -52,5 +52,4 @@ class JsonTextNumber(val value: MCInt) : ChatComponent {
     override fun toJson(): String {
         return "{\"score\":{\"name\":\"${value.name}\",\"objective\":\"${value.`object`.name}\"}}"
     }
-
 }

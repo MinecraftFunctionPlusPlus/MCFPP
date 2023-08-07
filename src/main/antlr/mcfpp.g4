@@ -215,7 +215,7 @@ primary
     ;
 
 varWithSelector
-    : var selector*
+    : var selector+
     | className selector+
     ;
 
@@ -226,7 +226,7 @@ var
     |   SUPER
     |   constructorCall
     |   namespaceID arguments
-    |   var selector* arguments
+    |   var selector+ arguments
     |   className selector+ arguments
     |   TargetSelector
     ;

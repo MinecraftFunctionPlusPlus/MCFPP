@@ -87,8 +87,8 @@ object Project {
         //初始化mcfpp的tick和load函数
         //添加命名空间
         GlobalField.localNamespaces["mcfpp"] = NamespaceField()
-        val mcfppTick = Function("tick","mcfpp")
-        val mcfppLoad = Function("load","mcfpp")
+        val mcfppTick = Function("tick","mcfpp","void")
+        val mcfppLoad = Function("load","mcfpp","void")
         GlobalField.localNamespaces["mcfpp"]!!.addFunction(mcfppLoad)
         GlobalField.localNamespaces["mcfpp"]!!.addFunction(mcfppTick)
         GlobalField.functionTags["minecraft:tick"]!!.functions.add(mcfppTick)
@@ -165,7 +165,9 @@ object Project {
      */
     fun readIndex(){
         //默认的
-        includes.add("mcfpp/sys")
+        if(!CompileSettings.ignoreStdLib){
+            includes.add("mcfpp/sys")
+        }
         //写入缓存
         for (include in includes) {
             val filePath = if(!include.endsWith("/.mclib")) {
@@ -206,8 +208,10 @@ object Project {
         logger.debug("Analysing project...")
         //解析文件
         for (file in files) {
-            //添加域
-            GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
+            //添加默认库的域
+            if(!CompileSettings.ignoreStdLib){
+                GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
+            }
             try {
                 McfppFileReader(file).analyse()
             } catch (e: IOException) {
@@ -227,8 +231,10 @@ object Project {
         //解析文件
         for (file in files) {
             logger.debug("Compiling mcfpp code in \"$file\"")
-            //添加域
-            GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
+            //添加默认库域
+            if(!CompileSettings.ignoreStdLib){
+                GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
+            }
             try {
                 McfppFileReader(file).compile()
             } catch (e: IOException) {

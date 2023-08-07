@@ -10,7 +10,7 @@ public class System {
         //只会有一个参数哦
         Var var = vars[0];
         if (var instanceof MCInt) print((MCInt) var);
-        if (var instanceof JsonString) print((JsonString) var);
+        else if (var instanceof JsonString) print((JsonString) var);
         else print(var);
     }
 
@@ -31,7 +31,7 @@ public class System {
 
     @InsertCommand
     public static void print(@NotNull Var var){
-        Function.Companion.addCommand("tellraw @a " + var);
+        Function.Companion.addCommand("tellraw @a " + "\"" +var + "\"");
     }
 
     public static void test(Var[] vars,  ClassPointer cls){

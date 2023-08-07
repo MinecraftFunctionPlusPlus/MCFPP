@@ -24,7 +24,7 @@ class McfppFuncVisitor : mcfppBaseVisitor<Function?>() {
     fun getFunction(varCtx: mcfppParser.VarContext, sctCtx: List<mcfppParser.SelectorContext>, args: ArrayList<String>): Pair<Function?, ClassBase?>{
         //是类的成员方法
         var curr: ClassBase
-        val varName = varCtx.text.substring(0,varCtx.text.indexOf("."))
+        val varName = varCtx.text
         //Var
         if(Function.currFunction.field.getVar(varName) is ClassPointer){
             curr = Function.currFunction.field.getVar(varName) as ClassPointer

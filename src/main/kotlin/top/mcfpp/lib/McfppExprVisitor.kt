@@ -2,6 +2,7 @@ package top.mcfpp.lib
 
 import mcfppBaseVisitor
 import top.mcfpp.Project
+import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.exception.*
 import top.mcfpp.lang.*
 import java.util.*
@@ -362,6 +363,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
      * @return 变量
      */
     @Override
+    @InsertCommand
     override fun visitVar(ctx: mcfppParser.VarContext): Var? {
         Project.ctx = ctx
         return if (ctx.Identifier() != null) {

@@ -20,9 +20,13 @@ fun main(args: Array<String>) {
     }
     if (args.isNotEmpty()) {
         if(args.size > 1){
-            if(args[1] == "debug"){
+            if(args.contains("debug")){
                 CompileSettings.isDebug = true
-                Project.info("Compiling in debug mode.")
+                Project.warn("Compiling in debug mode.")
+            }
+            if(args.contains("ignoreStdLib")){
+                CompileSettings.ignoreStdLib = true
+                Project.warn("Ignoring standard library.")
             }
         }
         val start: Long = System.currentTimeMillis()

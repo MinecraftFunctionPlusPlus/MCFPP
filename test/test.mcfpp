@@ -1,75 +1,11 @@
 namespace test;
 
-func qwq(){
-//    Test t1 = Test();
-//    Test t2 = Test();
-//    Test t3 = Test();
-//    t1.tell();
-//    t2.tell();
-//    t3.tell();
-//    print(Test.index);
-
-    Test t = Test();
-    t.i = 5;
-    int i = t.i;
-    uwu(i);
-    print(i);
-    print(t.i);
+int func test1(int p){
+    return p+1;
 }
 
-func uwu(int i){
-    i = i + 2;
-    Test t = Test();
-    t.i = 3;
-    print(i);
-    print(t.i);
+void func main(){
+    int qwq;
+    int p = test1(qwq);
+    print(test1(p));
 }
-
-
-class Test{
-    public static int index = 0;
-
-    public int i;
-
-    Test(){
-        this.i = Test.index;
-        Test.index = Test.index + 1;
-    }
-
-    public func tell(){
-        print(this.i);
-    }
-
-@event(UseCarrotOnAStick,2)
-func say(entity player){
-    player.say("hi");
-}
-
-func load(){
-    sys.UseCarrotOnAStick += say;
-}
-
-event TestEvent(int i){
-    
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
