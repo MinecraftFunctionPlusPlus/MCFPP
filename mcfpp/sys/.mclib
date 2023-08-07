@@ -3,15 +3,15 @@
 		{
 			"id":"mcfpp.sys",
 			"functions":[
-				"print(int i)->top.mcfpp.lang.System.print",
-				"print(bool b)->top.mcfpp.lang.System.print"
+				"void print(int i)->top.mcfpp.lang.System.print",
+				"void print(bool b)->top.mcfpp.lang.System.print"
 			]
 		},
 		{
 			"id":"mcfpp",
 			"functions":[
-				"load()",
-				"tick()"
+				"void load()",
+				"void tick()"
 			]
 		}
 	]

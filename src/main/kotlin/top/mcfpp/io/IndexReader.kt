@@ -42,6 +42,8 @@ object IndexReader {
             if(oo["functions"] != null)
             for(f in oo["functions"] as JSONArray){
                 val s = f as String
+                //获取返回值
+                val returnType = s.substring(0,s.indexOf(' '))
                 //参数解析
                 val params = s.substring(s.indexOf('(') + 1, s.indexOf(')')).split(",")
                 val paramList = ArrayList<FunctionParam>()
@@ -61,12 +63,12 @@ object IndexReader {
                     val functionHead = s.split("->")[0]
                     val javaFunction = s.split("->")[1]
                     //获取java方法
-                    val nf = NativeFunction(functionHead.substring(0,functionHead.indexOf('(')),javaFunction, nspId)
+                    val nf = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction, nspId)
                     nf.params = paramList
                     namespaceField.addFunction(nf)
                 }else{
                     //不是native函数
-                    val func = Function(s.substring(0,s.indexOf('(')), nspId)
+                    val func = Function(s.substring(s.indexOf(' ') + 1,s.indexOf('(')), nspId, returnType)
                     namespaceField.addFunction(func)
                 }
 
@@ -81,6 +83,8 @@ object IndexReader {
                 //函数
                 for (f in cc["functions"] as JSONArray){
                     val s = f as String
+                    //获取返回值
+                    val returnType = s.substring(0,s.indexOf(' '))
                     //参数解析
                     val params = s.substring(s.indexOf('(') + 1, s.indexOf(')')).split(",")
                     val paramList = ArrayList<FunctionParam>()
@@ -100,12 +104,12 @@ object IndexReader {
                         val functionHead = s.split("->")[0]
                         val javaFunction = s.split("->")[1]
                         //获取java方法
-                        val nf = NativeFunction(functionHead.substring(0,functionHead.indexOf('(')),javaFunction, nspId)
+                        val nf = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction, nspId)
                         nf.params = paramList
                         cls.field.addFunction(nf)
                     }else{
                         //不是native函数
-                        val func = Function(s.substring(0,s.indexOf('(')), cls, isStatic = false)
+                        val func = Function(s.substring(s.indexOf(' ')+1,s.indexOf('(')), cls, isStatic = false, returnType)
                         cls.field.addFunction(func)
                     }
                 }
@@ -130,12 +134,12 @@ object IndexReader {
                         val functionHead = s.split("->")[0]
                         val javaFunction = s.split("->")[1]
                         //获取java方法
-                        val nf = NativeFunction(functionHead.substring(0,functionHead.indexOf('(')),javaFunction, nspId)
+                        val nf = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction, nspId)
                         nf.params = paramList
                         cls.staticField.addFunction(nf)
                     }else{
                         //不是native函数
-                        val func = Function(s.substring(0,s.indexOf('(')), cls, isStatic = true)
+                        val func = Function(s.substring(s.indexOf(' ')+1,s.indexOf('(')), cls, isStatic = true)
                         cls.staticField.addFunction(func)
                     }
                 }

@@ -91,7 +91,7 @@ open class Function : ClassMember, FieldContainer {
     /**
      * 函数的返回变量
      */
-    var returnVar: Var?
+    var returnVar: Var? = null
 
     /**
      * 包含所有命令的列表
@@ -251,14 +251,21 @@ open class Function : ClassMember, FieldContainer {
      * 创建一个函数
      * @param name 函数的标识符
      */
-    constructor(name: String, returnType: String = "void") {
+    constructor(name: String, returnType: String = "void"):this(name, Project.currNamespace, returnType)
+
+    /**
+     * 创建一个函数，它有指定的命名空间
+     * @param name 函数的标识符
+     * @param namespace 函数的命名空间
+     */
+    constructor(name: String, namespace: String, returnType: String = "void"){
         this.name = name
         commands = ArrayList()
         params = ArrayList()
-        namespace = Project.currNamespace
         field = FunctionField(null, this)
         isStatic = false
         isClassMember = false
+        this.namespace = namespace
         this.returnType = returnType
         this.returnVar = buildReturnVar(returnType)
     }
@@ -280,23 +287,6 @@ open class Function : ClassMember, FieldContainer {
         } else {
             FunctionField(cls.staticField, this)
         }
-        this.returnType = returnType
-        this.returnVar = buildReturnVar(returnType)
-    }
-
-    /**
-     * 创建一个函数，它有指定的命名空间
-     * @param name 函数的标识符
-     * @param namespace 函数的命名空间
-     */
-    constructor(name: String, namespace: String, returnType: String = "void"){
-        this.name = name
-        commands = ArrayList()
-        params = ArrayList()
-        field = FunctionField(null, this)
-        isStatic = false
-        isClassMember = false
-        this.namespace = namespace
         this.returnType = returnType
         this.returnVar = buildReturnVar(returnType)
     }
@@ -448,10 +438,14 @@ open class Function : ClassMember, FieldContainer {
             addCommand("function " + this.namespaceID)
         }
 
-        addCommand("#[Function ${this.namespaceID}] Static arguments")
+        var hasAddComment = false
         //static关键字，将值传回
         for (i in 0 until params.size) {
             if (params[i].isStatic) {
+                if(!hasAddComment){
+                    addCommand("#[Function ${this.namespaceID}] Static arguments")
+                    hasAddComment = true
+                }
                 //如果是static参数
                 if (args[i] is MCInt) {
                     when(params[i].type){
@@ -547,7 +541,7 @@ open class Function : ClassMember, FieldContainer {
     }
 
     /**
-     * 返回由函数的类（如果有），函数的标识符以及函数的形参类型组成的字符串
+     * 返回由函数的类（如果有），函数的标识符，函数的返回值以及函数的形参类型组成的字符串
      *
      * 类的命名空间:类名@方法名(参数)
      * @return
@@ -573,7 +567,7 @@ open class Function : ClassMember, FieldContainer {
         if(containNamespace){
             return "$namespace:$clsName$name($paramStr)"
         }
-        return "$clsName$name($paramStr)"
+        return "$returnType $clsName$name($paramStr)"
     }
 
     override fun hashCode(): Int {

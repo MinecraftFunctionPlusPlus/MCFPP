@@ -3,43 +3,15 @@
 		{
 			"id":"mcfpp",
 			"functions":[
-				"load()",
-				"tick()"
+				"void load()",
+				"void tick()"
 			]
 		},
 		{
 			"id":"test",
 			"functions":[
-				"qwq()",
-				"uwu(int i)"
-			],
-			"classes":[
-				{
-					"id":"Test",
-					"isNative":false,
-					"functions":[
-						"tell()"
-					],
-					"staticFunctions":[
-						
-					],
-					"vars":[
-						{
-							"id":"i",
-							"type":"int"
-						},
-						{
-							"id":"index",
-							"type":"int"
-						}
-					],
-					"staticVars":[
-						
-					],
-					"constructors":[
-						"_init_test_0()"
-					]
-				}
+				"int test1(int p)",
+				"void main()"
 			]
 		}
 	]
