@@ -281,7 +281,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     @Override
     override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var? {
         Project.ctx = ctx
-        var curr: CanSelectMember
+        var curr: ClassBase
         curr = if (ctx.`var`() != null) {
             val varName = ctx.text.substring(0,ctx.text.indexOf("."))
             val pwp = Function.currFunction.field.getVar(varName)
@@ -311,9 +311,9 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         var member: Var? = null
         //开始选择
         val accessModifier = if(Function.currFunction.isClassMember){
-            Function.currFunction.parentClass!!.getAccess(curr.clsType)
+            Function.currFunction.ownerClass!!.getAccess(curr.clsType)
         }else{
-            ClassMember.AccessModifier.PUBLIC
+            Member.AccessModifier.PUBLIC
         }
         var i = 0
         while (i < ctx.selector().size) {
@@ -327,7 +327,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             }
             i++
             if(i < ctx.selector().size){
-                curr = member as CanSelectMember
+                curr = member as ClassBase
             }
         }
         return member

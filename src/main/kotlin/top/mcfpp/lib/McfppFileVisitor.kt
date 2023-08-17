@@ -8,7 +8,7 @@ import top.mcfpp.exception.IllegalFormatException
 import top.mcfpp.lang.ClassType
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.Var.ConstStatus
-import top.mcfpp.lib.ClassMember.AccessModifier
+import top.mcfpp.lib.Member.AccessModifier
 import java.util.*
 
 /**
@@ -65,7 +65,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
     @Override
     override fun visitTypeDeclaration(ctx: mcfppParser.TypeDeclarationContext): Any? {
         Project.ctx = ctx
-        visit(ctx.classOrFunctionDeclaration())
+        visit(ctx.classOrFunctionOrStructDeclaration())
         return null
     }
 
@@ -82,7 +82,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
      * @return null
      */
     @Override
-    override fun visitClassOrFunctionDeclaration(ctx: mcfppParser.ClassOrFunctionDeclarationContext): Any? {
+    override fun visitClassOrFunctionOrStructDeclaration(ctx: mcfppParser.ClassOrFunctionOrStructDeclarationContext): Any? {
         Project.ctx = ctx
         if (ctx.classDeclaration() != null) {
             visit(ctx.classDeclaration())
@@ -90,8 +90,10 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             visit(ctx.functionDeclaration())
         } else if (ctx.nativeFuncDeclaration() != null) {
             visit(ctx.nativeFuncDeclaration())
-        } else {
+        } else if (ctx.nativeClassDeclaration() != null ) {
             visit(ctx.nativeClassDeclaration())
+        } else if (ctx.structDeclaration() != null){
+            visit(ctx.structDeclaration())
         }
         return null
     }
@@ -151,7 +153,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         //先静态
         //先解析函数
         for (c in ctx.classBody().staticClassMemberDeclaration()) {
-            if (c!!.classMember().fieldDeclaration() == null) {
+            if (c!!.classMember().classFunctionDeclaration() != null) {
                 visit(c)
             }
         }
@@ -164,7 +166,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         //后成员
         //先解析函数和构造函数
         for (c in ctx.classBody().classMemberDeclaration()) {
-            if (c!!.classMember().fieldDeclaration() == null) {
+            if (c!!.classMember().classFunctionDeclaration() != null) {
                 visit(c)
             }
         }
@@ -185,7 +187,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
     @Override
     override fun visitStaticClassMemberDeclaration(ctx: mcfppParser.StaticClassMemberDeclarationContext): Any? {
         Project.ctx = ctx
-        val m = visit(ctx.classMember()) as ClassMember
+        val m = visit(ctx.classMember()) as Member
         //访问修饰符
         if (ctx.accessModifier() != null) {
             m.accessModifier = AccessModifier.valueOf(ctx.accessModifier().text.uppercase(Locale.getDefault()))
@@ -211,7 +213,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
     @Override
     override fun visitClassMemberDeclaration(ctx: mcfppParser.ClassMemberDeclarationContext): Any? {
         Project.ctx = ctx
-        val m = visit(ctx.classMember()) as ClassMember
+        val m = visit(ctx.classMember()) as Member
         //访问修饰符
         if (ctx.accessModifier() != null) {
             m.accessModifier = AccessModifier.valueOf(ctx.accessModifier().text.uppercase(Locale.getDefault()))
@@ -271,16 +273,30 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
     @Override
     override fun visitConstructorDeclaration(ctx: mcfppParser.ConstructorDeclarationContext): Any? {
         Project.ctx = ctx
-        //是构造函数
-        //创建构造函数对象，注册函数
-        val f: Constructor?
-        try {
-            f = Constructor(Class.currClass!!)
-            Class.currClass!!.addConstructor(f)
-            f.addParams(ctx.parameterList())
-            return f
-        } catch (e: FunctionDuplicationException) {
-            Project.error("Already defined function: " + ctx.className().text + "(" + ctx.parameterList().text + ")")
+        if(ctx.parent is mcfppParser.StructMemberContext){
+            //是结构体构造函数
+            //创建构造函数对象，注册函数
+            val f: StructConstructor?
+            try {
+                f = StructConstructor(Struct.currStruct!!)
+                Struct.currStruct!!.addConstructor(f)
+                f.addParams(ctx.parameterList())
+                return f
+            } catch (e: FunctionDuplicationException) {
+                Project.error("Already defined constructor: " + ctx.className().text + "(" + ctx.parameterList().text + ")")
+            }
+        }else{
+            //是类构造函数
+            //创建构造函数对象，注册函数
+            val f: Constructor?
+            try {
+                f = Constructor(Class.currClass!!)
+                Class.currClass!!.addConstructor(f)
+                f.addParams(ctx.parameterList())
+                return f
+            } catch (e: FunctionDuplicationException) {
+                Project.error("Already defined constructor: " + ctx.className().text + "(" + ctx.parameterList().text + ")")
+            }
         }
         return null
     }
@@ -358,7 +374,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         }
         //是类成员
         nf.isClassMember = true
-        nf.parentClass = Class.currClass
+        nf.ownerClass = Class.currClass
         return nf
     }
 
@@ -374,6 +390,9 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         //变量生成
         val `var`: Var = Var.build(ctx, ClassType(Class.currClass!!))!!
         //是否是静态的
+        if(ctx.parent.parent is mcfppParser.StaticClassMemberDeclarationContext){
+            `var`.isStatic = true
+        }
         //只有可能是类变量
         if (Class.currClass!!.field.containVar(ctx.Identifier().text)
             || Class.currClass!!.staticField.containVar(ctx.Identifier().text)
@@ -404,4 +423,165 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         }
         return `var`
     }
+
+    override fun visitStructDeclaration(ctx: mcfppParser.StructDeclarationContext?): Any? {
+        Project.ctx = ctx!!
+        //注册类
+        val id = ctx.classWithoutNamespace().text
+        val field = GlobalField.localNamespaces[Project.currNamespace]!!
+
+        if (field.hasStruct(id)) {
+            //重复声明
+            Project.error("Struct has been defined: $id in namespace ${Project.currNamespace}")
+            throw StructDuplicationException()
+        } else {
+            //如果没有声明过这个结构体
+            val struct = Struct(id, Project.currNamespace)
+            if (ctx.className() != null) {
+                //是否存在继承
+                if (field.hasStruct(ctx.className().text)) {
+                    val qwq = ctx.className().text.split(":")
+                    val identifier: String
+                    val namespace : String?
+                    if(qwq.size == 1){
+                        identifier = qwq[0]
+                        namespace = null
+                    }else{
+                        namespace = qwq[0]
+                        identifier = qwq[1]
+                    }
+                    struct.parent = GlobalField.getStruct(namespace,identifier)
+                } else {
+                    Project.error("Undefined struct: " + ctx.className().text)
+                }
+            }
+            field.addStruct(id, struct)
+            Struct.currStruct = struct
+        }
+        //解析类中的成员
+        //先静态
+        //先解析函数
+        for (c in ctx.structBody().staticStructMemberDeclaration()) {
+            if (c!!.structMember().structFunctionDeclaration() != null) {
+                visit(c)
+            }
+        }
+        //再解析变量
+        for (c in ctx.structBody().staticStructMemberDeclaration()) {
+            if (c!!.structMember().structFieldDeclaration() != null) {
+                visit(c)
+            }
+        }
+        //后成员
+        //先解析函数和构造函数
+        for (c in ctx.structBody().structMemberDeclaration()) {
+            if (c!!.structMember().structFunctionDeclaration() != null) {
+                visit(c)
+            }
+        }
+        //再解析变量
+        for (c in ctx.structBody().structMemberDeclaration()) {
+            if (c!!.structMember().structFieldDeclaration() != null) {
+                visit(c)
+            }
+        }
+        //如果没有构造函数，自动添加默认的空构造函数
+        if (Struct.currStruct!!.constructors.size == 0) {
+            Struct.currStruct!!.addConstructor(StructConstructor(Struct.currStruct!!))
+        }
+        Struct.currStruct = null
+        return null
+    }
+
+    @Override
+    override fun visitStaticStructMemberDeclaration(ctx: mcfppParser.StaticStructMemberDeclarationContext): Any? {
+        Project.ctx = ctx
+        val m = visit(ctx.structMember()) as Member
+        //访问修饰符
+        if (ctx.accessModifier() != null) {
+            m.accessModifier = AccessModifier.valueOf(ctx.accessModifier().text.uppercase(Locale.getDefault()))
+        }
+        m.isStatic = true
+        Struct.currStruct!!.addMember(m)
+        if(m is Function){
+            m.field.removeVar("this")
+        }
+        return null
+    }
+
+    /**
+     * 类成员的声明。由于函数声明可以后置，因此需要先查明函数声明情况再进行变量的注册以及初始化。
+     * <pre>
+     * `classMemberDeclaration
+     * :   accessModifier? (STATIC)? classMember
+     * ;
+    `</pre> *
+     * @param ctx the parse tree
+     * @return null
+     */
+    @Override
+    override fun visitStructMemberDeclaration(ctx: mcfppParser.StructMemberDeclarationContext): Any? {
+        Project.ctx = ctx
+        val m = visit(ctx.structMember()) as Member
+        //访问修饰符
+        if (ctx.accessModifier() != null) {
+            m.accessModifier = AccessModifier.valueOf(ctx.accessModifier().text.uppercase(Locale.getDefault()))
+        }
+        if (m !is Constructor) {
+            Struct.currStruct!!.addMember(m)
+        }
+        return null
+    }
+
+    @Override
+    override fun visitStructMember(ctx: mcfppParser.StructMemberContext): Any? {
+        Project.ctx = ctx
+        return if (ctx.structFunctionDeclaration() != null) {
+            visit(ctx.structFunctionDeclaration())
+        } else if (ctx.structFieldDeclaration() != null) {
+            visit(ctx.structFieldDeclaration())
+        } else if (ctx.constructorDeclaration() != null) {
+            visit(ctx.constructorDeclaration())
+        }else{
+            return null
+        }
+    }
+
+    override fun visitStructFunctionDeclaration(ctx: mcfppParser.StructFunctionDeclarationContext): Any {
+        Project.ctx = ctx
+        //创建函数对象
+        val f = Function(
+            ctx.Identifier().text,
+            Struct.currStruct!!,
+            ctx.parent is mcfppParser.StaticStructMemberDeclarationContext,
+            ctx.functionReturnType().text
+        )
+        //解析参数
+        f.addParams(ctx.parameterList())
+        //注册函数
+        if (Struct.currStruct!!.field.hasFunction(f) || Struct.currStruct!!.staticField.hasFunction(f)) {
+            Project.error("Already defined function:" + ctx.Identifier().text + "in struct " + Struct.currStruct!!.identifier)
+            Function.currFunction = Function.nullFunction
+        }
+        return f
+    }
+
+    override fun visitStructFieldDeclaration(ctx: mcfppParser.StructFieldDeclarationContext): Any {
+        Project.ctx = ctx
+        //变量生成
+        val `var`: Var = Var.build(ctx.Identifier().text,"int", Struct.currStruct!!)!!
+        //是否是静态的
+        if(ctx.parent.parent is mcfppParser.StaticStructMemberDeclarationContext){
+            `var`.isStatic = true
+        }
+        //只有可能是结构体成员
+        if (Struct.currStruct!!.field.containVar(ctx.Identifier().text)
+            || Struct.currStruct!!.staticField.containVar(ctx.Identifier().text)
+        ) {
+            Project.error("Duplicate defined variable name:" + ctx.Identifier().text)
+            throw VariableDuplicationException()
+        }
+        return `var`
+    }
+
 }

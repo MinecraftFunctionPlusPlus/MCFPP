@@ -59,10 +59,10 @@ class NativeClassVisitor: mcfppBaseVisitor<Any?>() {
     override fun visitNativeClassFunctionDeclaration(ctx: mcfppParser.NativeClassFunctionDeclarationContext?): Any? {
         //accessModifier? NATIVE 'func' Identifier '(' parameterList? ')' ';'
         ctx!!
-        val accessModifier: ClassMember.AccessModifier = if (ctx.accessModifier() != null) {
-            ClassMember.AccessModifier.valueOf(ctx.accessModifier().text.lowercase())
+        val accessModifier: Member.AccessModifier = if (ctx.accessModifier() != null) {
+            Member.AccessModifier.valueOf(ctx.accessModifier().text.lowercase())
         } else {
-            ClassMember.AccessModifier.PUBLIC
+            Member.AccessModifier.PUBLIC
         }
         //获取这个java方法
         val javaMethod : Method

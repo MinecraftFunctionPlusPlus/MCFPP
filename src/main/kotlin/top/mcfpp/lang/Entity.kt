@@ -1,19 +1,15 @@
 package top.mcfpp.lang
 
-import top.mcfpp.lib.Class
-import top.mcfpp.lib.ClassMember
+import top.mcfpp.lib.Member
 import top.mcfpp.lib.Function
 import java.util.UUID
 
 /**
  * 代表了一个实体。
+ *
+ * 利用一个记分板
  */
 class Entity : CanSelectMember{
-
-    /**
-     * 实体的记分板编号。适用于1.20.2以前的版本
-     */
-    val address: MCInt
 
     /**
      * 实体的id
@@ -21,22 +17,24 @@ class Entity : CanSelectMember{
     val entityID: String
 
     /**
-     * 实体的uuid，用于选择实体，适用于1.20.2及以后的版本
+     * 实体的uuid，用于选择实体
      */
-    val uuid: UUID
+    val uuid: UUID?
 
-    constructor(entityID: String, address: MCInt, uuid: UUID = UUID.randomUUID()){
-        this.address = address
+    override val type: String
+        get() = "Entity"
+
+    constructor(entityID: String){
         this.entityID = entityID
-        this.uuid = uuid
+        isConcrete = false
+        uuid = null
     }
 
-    /**
-     * 它的类型
-     */
-    override var clsType: Class
-        get() = TODO("Not yet implemented")
-        set(value) {}
+    constructor(entityID: String, uuid: UUID){
+        this.entityID = entityID
+        this.uuid = uuid
+        isConcrete = true
+    }
 
     /**
      * 根据标识符获取实体的NBT
@@ -45,7 +43,7 @@ class Entity : CanSelectMember{
      * @param accessModifier 访问者的访问权限
      * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
      */
-    override fun getMemberVar(key: String, accessModifier: ClassMember.AccessModifier): Pair<Var?, Boolean> {
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
         TODO("Not yet implemented")
     }
 
@@ -59,17 +57,17 @@ class Entity : CanSelectMember{
     override fun getMemberFunction(
         key: String,
         params: List<String>,
-        accessModifier: ClassMember.AccessModifier
+        accessModifier: Member.AccessModifier
     ): Pair<Function?, Boolean> {
         TODO("Not yet implemented")
     }
 
     /**
-     * 将b中的值赋值给此变量
+     * 将b中的值赋值给此实体变量
      * @param b 变量的对象
      */
     override fun assign(b: Var?) {
-        TODO("Not yet implemented")
+
     }
 
     /**

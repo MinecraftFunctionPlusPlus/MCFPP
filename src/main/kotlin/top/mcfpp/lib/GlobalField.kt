@@ -1,9 +1,9 @@
 package top.mcfpp.lib
 
+import org.jetbrains.annotations.Nullable
 import top.mcfpp.Project
 import top.mcfpp.lang.SbObject
 import java.util.*
-import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
 /**
@@ -60,7 +60,7 @@ object GlobalField : FieldContainer, IField {
      *
      * @return 获取的函数。如果有多个相同函数（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
      */
-    fun getFunction(namespace:String? = Project.currNamespace, identifier: String, args : List<String>): Function?{
+    fun getFunction(@Nullable namespace:String?, identifier: String, args : List<String>): Function?{
         if(namespace == null){
             val f = localNamespaces[Project.currNamespace]!!.getFunction(identifier, args)
             if(f != null) return f
@@ -85,7 +85,7 @@ object GlobalField : FieldContainer, IField {
      * @param identifier 类的标识符
      * @return 获取的类。如果有多个相同标识符的类（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
      */
-    fun getClass(namespace: String? = null, identifier: String): Class?{
+    fun getClass(@Nullable namespace: String? = null, identifier: String): Class?{
         if(namespace == null){
             var cls:Class?
             //命名空间为空，从全局寻找
@@ -106,6 +106,34 @@ object GlobalField : FieldContainer, IField {
     }
 
 
+
+    /**
+     * 从当前的全局域中获取一个结构体。若不存在，则返回null
+     *
+     * 如果没有提供命名空间，则只会从import导入的库和本地命名空间中搜索。否则则在指定的命名空间中搜索。
+     * @param namespace 可选。这个结构体的命名空间。如果为null，则会从当前所有的命名空间中寻找此结构体。
+     * @param identifier 结构体的标识符
+     * @return 获取的结构体。如果有多个相同标识符的结构体（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
+     */
+    fun getStruct(@Nullable namespace: String?, identifier: String): Struct? {
+        if(namespace == null){
+            var struct:Struct?
+            //命名空间为空，从全局寻找
+            struct = localNamespaces[Project.currNamespace]!!.getStruct(identifier)
+            if(struct != null) return struct
+            for (nsp in importedLibNamespaces.values){
+                struct = nsp.getStruct(identifier)
+                if(struct != null) return struct
+            }
+            return null
+        }
+        //按照指定的命名空间寻找
+        var field = localNamespaces[namespace]
+        if(field == null){
+            field = importedLibNamespaces[namespace]
+        }
+        return field?.getStruct(identifier)
+    }
     @get:Override
     override val prefix: String
         get() = Project.defaultNamespace + "_global_"
@@ -192,6 +220,56 @@ object GlobalField : FieldContainer, IField {
                                 for (d in f.commands) {
                                     println("\t\t\t" + d)
                                 }
+                            }
+                        }
+                    }
+                    println("\tstatic attributes:")
+                    for (v in s.staticField.allVars) {
+                        println(
+                            "\t\t" + v.accessModifier.name
+                                .lowercase(Locale.getDefault()) + " " + "static " + v.type + " " + v.identifier
+                        )
+                    }
+                }
+            }
+            field.forEachStruct { s ->
+                run {
+                    println("struct " + s.identifier)
+                    println("\tconstructors:")
+                    for (c in s.constructors) {
+                        println("\t\t" + c.namespaceID)
+                        for (d in c.commands) {
+                            println("\t\t\t" + d)
+                        }
+                    }
+                    println("\tfunctions:")
+                    s.field.forEachFunction {f ->
+                        run {
+                            println(
+                                "\t\t" + f.accessModifier.name
+                                    .lowercase(Locale.getDefault()) + " " + f.namespaceID
+                            )
+                            for (d in f.commands) {
+                                println("\t\t\t" + d)
+                            }
+                        }
+                    }
+                    println("\tattributes:")
+                    for (v in s.field.allVars.toList()) {
+                        println(
+                            "\t\t" + v.accessModifier.name
+                                .lowercase(Locale.getDefault()) + " " + v.type + " " + v.identifier
+                        )
+                    }
+                    println("\tstatic functions:")
+                    s.staticField.forEachFunction { f ->
+                        run {
+                            println(
+                                "\t\t" + f.accessModifier.name
+                                    .lowercase(Locale.getDefault()) + " " + "static" + f.namespaceID
+                            )
+                            for (d in f.commands) {
+                                println("\t\t\t" + d)
                             }
                         }
                     }

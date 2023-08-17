@@ -6,7 +6,7 @@ import top.mcfpp.lib.Function
 import java.util.*
 import kotlin.collections.HashMap
 
-class MCDecimal: Number<Float> {
+class MCFloat : Number<Float> {
     /**
      * 创建一个匿名的动态int
      */
@@ -57,7 +57,7 @@ class MCDecimal: Number<Float> {
      * 复制一个int
      * @param b 被复制的int值
      */
-    constructor(b: MCDecimal) : super(b)
+    constructor(b: MCFloat) : super(b)
 
     @get:Override
     override val type: String
@@ -72,7 +72,7 @@ class MCDecimal: Number<Float> {
     @Throws(VariableConverseException::class)
     override fun assign(b: Var?) {
         when(b){
-            is MCDecimal ->{
+            is MCFloat ->{
                 assignCommand(b)
             }
             else ->{

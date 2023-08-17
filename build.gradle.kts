@@ -17,6 +17,9 @@ repositories {
     maven {
         setUrl("https://maven.aliyun.com/nexus/content/groups/public/")
     }
+    maven {
+        setUrl("https://jitpack.io/")
+    }
 }
 
 dependencies {
@@ -26,6 +29,7 @@ dependencies {
     implementation("org.apache.logging.log4j:log4j-api:2.20.0")
     implementation("org.apache.logging.log4j:log4j-core:2.20.0")
     implementation("org.openjdk.nashorn:nashorn-core:15.4")
+    implementation("com.github.Querz:NBT:6.1")
     antlr("org.antlr:antlr4:4.12.0")
 
 }

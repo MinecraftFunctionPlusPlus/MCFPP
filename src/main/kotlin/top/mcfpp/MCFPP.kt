@@ -44,6 +44,6 @@ fun main(args: Array<String>) {
             DatapackCreator.createDatapack(Project.targetPath) //生成数据包
         }
         Project.info("Finished in " + (System.currentTimeMillis() - start) + "ms")
-        //GlobalField.printAll()
+        GlobalField.printAll()
     }
 }

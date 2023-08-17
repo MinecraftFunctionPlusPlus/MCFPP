@@ -34,9 +34,9 @@ class McfppFuncVisitor : mcfppBaseVisitor<Function?>() {
         }
         var member: ClassBase?
         val accessModifier = if(Function.currFunction.isClassMember){
-            Function.currFunction.parentClass!!.getAccess(curr.clsType)
+            Function.currFunction.ownerClass!!.getAccess(curr.clsType)
         }else{
-            ClassMember.AccessModifier.PUBLIC
+            Member.AccessModifier.PUBLIC
         }
         //开始选择成员对象。最后一个成员应该是函数。
         var i = 0
@@ -83,9 +83,9 @@ class McfppFuncVisitor : mcfppBaseVisitor<Function?>() {
         curr = ClassType(qwq!!)
         var member: ClassBase?
         val accessModifier = if(Function.currFunction.isClassMember){
-            Function.currFunction.parentClass!!.getAccess(curr.clsType)
+            Function.currFunction.ownerClass!!.getAccess(curr.clsType)
         }else{
-            ClassMember.AccessModifier.PUBLIC
+            Member.AccessModifier.PUBLIC
         }
         //开始选择成员对象。最后一个成员应该是函数。
         var i = 0

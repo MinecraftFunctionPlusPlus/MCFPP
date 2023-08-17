@@ -86,12 +86,12 @@ open class ClassObject : ClassBase {
     }
 
     @Override
-    override fun getMemberVar(key: String, accessModifier: ClassMember.AccessModifier): Pair<Var, Boolean> {
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var, Boolean> {
         TODO()
     }
 
     @Override
-    override fun getMemberFunction(key: String, params: List<String>, accessModifier: ClassMember.AccessModifier): Pair<Function, Boolean> {
+    override fun getMemberFunction(key: String, params: List<String>, accessModifier: Member.AccessModifier): Pair<Function, Boolean> {
         TODO()
     }
 

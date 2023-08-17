@@ -1,4 +1,5 @@
 package top.mcfpp.lang
 
-class Range {
-}
+/**
+ * 这个类在java包中
+ */

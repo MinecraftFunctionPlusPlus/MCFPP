@@ -2,8 +2,8 @@ package top.mcfpp.lib
 
 import org.jetbrains.annotations.Nullable
 import top.mcfpp.lang.*
-import java.util.*
 import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 
 /**
  * 一个域。在编译过程中，编译器读取到的变量，函数等会以键值对的方式储存在其中。键为函数的id或者变量的
@@ -24,7 +24,7 @@ import kotlin.collections.ArrayList
  *
  * 函数储存在一个列表中
  */
-class NamespaceField: IFieldWithClass, IFieldWithFunction {
+class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithStruct {
     /**
      * 变量
      */
@@ -53,6 +53,16 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction {
         }
     }
 
+    /**
+     * 结构体
+     */
+    private var structs: HashMap<String, Struct> = HashMap()
+
+    fun forEachStruct(operation: (Struct) -> Any?){
+        for (struct in structs.values){
+            operation(struct)
+        }
+    }
 
     /**
      * 父级域。命名空间的父级域应当是全局
@@ -82,6 +92,7 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction {
         functions.addAll(cache.functions)
     }
 
+    //region function
     /**
      * 根据所给的函数名和参数获取一个函数
      * @param key 函数名
@@ -124,7 +135,9 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction {
     override fun hasFunction(function: Function): Boolean{
         return functions.contains(function)
     }
+    //endregion
 
+    //region class
     /**
      * 根据所给的id获取一个类
      *
@@ -164,7 +177,9 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction {
             false
         }
     }
+    //endregion
 
+/*
     //region Var
     /**
      * 向此缓存中添加一个新的变量键值对。如果已存在此对象，将不会进行覆盖。
@@ -214,6 +229,75 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction {
      */
     fun removeVar(id : String): Var?{
         return vars.remove(id)
+    }
+    //endregion
+*/
+
+    /**
+     * 向域中添加一个结构体
+     *
+     * @param identifier 结构体的标识符
+     * @param struct 结构体
+     * @param force 是否强制添加。如果为true，则即使已经添加过相同标识符的结构体，也会覆盖原来的结构体进行添加。
+     * @return 是否添加成功。如果已经存在相同标识符的结构体，且不是强制添加则为false
+     */
+    override fun addStruct(identifier: String, struct: Struct, force: Boolean): Boolean {
+        return if (force){
+            structs[identifier] = struct
+            true
+        }else{
+            if(!structs.containsKey(identifier)){
+                structs[identifier] = struct
+                true
+            }else{
+                false
+            }
+        }
+    }
+
+    /**
+     * 移除一个结构体
+     *
+     * @param identifier 这个结构体的标识符
+     * @return 是否移除成功。如果不存在此结构体，则返回false
+     */
+    override fun removeStruct(identifier: String): Boolean {
+        return if(structs.containsKey(identifier)) {
+            structs.remove(identifier)
+            true
+        }else{
+            false
+        }
+    }
+
+    /**
+     * 获取一个结构体。可能不存在
+     *
+     * @param identifier 结构体的标识符
+     * @return 获取到的结构体。如果不存在，则返回null
+     */
+    override fun getStruct(identifier: String): Struct? {
+        return structs[identifier]
+    }
+
+    /**
+     * 是否存在此结构体
+     *
+     * @param identifier 结构体的标识符
+     * @return
+     */
+    override fun hasStruct(identifier: String): Boolean {
+        return structs.containsKey(identifier)
+    }
+
+    /**
+     * 是否存在此结构体
+     *
+     * @param struct 结构体
+     * @return
+     */
+    override fun hasStruct(struct: Struct): Boolean {
+        return structs.containsKey(struct.identifier)
     }
 
 

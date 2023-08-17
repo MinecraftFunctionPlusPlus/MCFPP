@@ -86,7 +86,7 @@ import java.lang.reflect.Method
  *
  * @see InternalFunction
  */
-open class Function : ClassMember, FieldContainer {
+open class Function : Member, FieldContainer {
 
     /**
      * 函数的返回变量
@@ -121,7 +121,12 @@ open class Function : ClassMember, FieldContainer {
     /**
      * 是否是类的成员函数。默认为否
      */
-    var isClassMember : Boolean
+    var isClassMember = false
+
+    /**
+     * 是否是结构体的成员函数。默认为否
+     */
+    var isStructMember = false
 
     /**
      * 函数编译时的缓存
@@ -156,7 +161,7 @@ open class Function : ClassMember, FieldContainer {
     /**
      * 访问修饰符。默认为private
      */
-    override var accessModifier: ClassMember.AccessModifier = ClassMember.AccessModifier.PRIVATE
+    override var accessModifier: Member.AccessModifier = Member.AccessModifier.PRIVATE
 
     /**
      * 这个方法所在的类的对象的指针。
@@ -169,10 +174,16 @@ open class Function : ClassMember, FieldContainer {
     override var isStatic : Boolean
 
     /**
-     * 所在的类。如果不是类成员，则为null
+     * 所在的类。如果不是成员，则为null
      */
     @Nullable
-    var parentClass: Class? = null
+    var ownerClass: Class? = null
+
+    /**
+     * 所在的类。如果不是成员，则为null
+     */
+    @Nullable
+    var ownerStruct: Struct? = null
 
     val namespaceID: String
         /**
@@ -180,13 +191,19 @@ open class Function : ClassMember, FieldContainer {
          * @return 函数的命名空间id
          */
         get() {
-            val re: StringBuilder = if(!isClassMember){
+            val re: StringBuilder = if(!isClassMember && !isStructMember){
                 StringBuilder("$namespace:$name")
+            }else if(isClassMember){
+                if(isStatic){
+                    StringBuilder("$namespace:${ownerClass!!.identifier}/static/$name")
+                }else{
+                    StringBuilder("$namespace:${ownerClass!!.identifier}/$name")
+                }
             }else{
                 if(isStatic){
-                    StringBuilder("$namespace:${parentClass!!.identifier}/static/$name")
+                    StringBuilder("$namespace:${ownerStruct!!.identifier}/static/$name")
                 }else{
-                    StringBuilder("$namespace:${parentClass!!.identifier}/$name")
+                    StringBuilder("$namespace:${ownerStruct!!.identifier}/$name")
                 }
             }
             for (p in params) {
@@ -200,13 +217,19 @@ open class Function : ClassMember, FieldContainer {
      */
     val IdentifyWithParams: String
         get() {
-            val re: StringBuilder = if(!isClassMember){
+            val re: StringBuilder = if(!isClassMember && !isStructMember){
                 StringBuilder(name)
+            }else if(isClassMember){
+                if(isStatic){
+                    StringBuilder("${ownerClass!!.identifier}/static/$name")
+                }else{
+                    StringBuilder("${ownerClass!!.identifier}/$name")
+                }
             }else{
                 if(isStatic){
-                    StringBuilder("${parentClass!!.identifier}/static/$name")
+                    StringBuilder("${ownerStruct!!.identifier}/static/$name")
                 }else{
-                    StringBuilder("${parentClass!!.identifier}/$name")
+                    StringBuilder("${ownerStruct!!.identifier}/$name")
                 }
             }
             for (p in params) {
@@ -279,7 +302,7 @@ open class Function : ClassMember, FieldContainer {
         commands = ArrayList()
         params = ArrayList()
         namespace = cls.namespace
-        parentClass = cls
+        ownerClass = cls
         isClassMember = true
         this.isStatic = isStatic
         field = if (isStatic) {
@@ -291,6 +314,26 @@ open class Function : ClassMember, FieldContainer {
         this.returnVar = buildReturnVar(returnType)
     }
 
+    /**
+     * 创建一个函数，并指定它所属的结构体。
+     * @param name 函数的标识符
+     */
+    constructor(name: String, struct: Struct, isStatic: Boolean, returnType: String = "void") {
+        this.name = name
+        commands = ArrayList()
+        params = ArrayList()
+        namespace = struct.namespace
+        ownerStruct = struct
+        isStructMember = true
+        this.isStatic = isStatic
+        field = if (isStatic) {
+            FunctionField(struct.field, this)
+        } else {
+            FunctionField(struct.staticField, this)
+        }
+        this.returnType = returnType
+        this.returnVar = buildReturnVar(returnType)
+    }
     /**
      * 获取这个函数的id，它包含了这个函数的路径和函数的标识符。每一个函数的id都是唯一的
      * @return 函数id
@@ -334,9 +377,15 @@ open class Function : ClassMember, FieldContainer {
         //如果是ClassType则不必构造。因此需要构造的变量一定是ClassPointer
         //由于静态的判断是在函数构造后进行的，此处无法进行isStatic判断。届时判断静态的时候去除第一个元素即可。
         if(isClassMember){
-            val thisObj = ClassPointer(parentClass!!,"this")
+            val thisObj = ClassPointer(ownerClass!!,"this")
             thisObj.identifier = "this"
             field.putVar("this",thisObj)
+        }
+        if(isStructMember){
+            val thisObj = StructPointer("this",ownerStruct!!)
+            thisObj.identifier = "this"
+            field.putVar("this",thisObj)
+
         }
         if(ctx == null) return
         for (param in ctx.parameter()) {
@@ -506,6 +555,16 @@ open class Function : ClassMember, FieldContainer {
     }
 
     /**
+     * 调用这个函数。这个函数是结构体的成员方法
+     *
+     * @param args
+     * @param struct
+     */
+    open fun invoke(args: ArrayList<Var>, struct: Struct){
+
+    }
+
+    /**
      * 判断两个函数是否相同.判据包括:命名空间ID,是否是类成员,父类和参数列表
      * @param other 要比较的对象
      * @return 若相同,则返回true
@@ -513,7 +572,7 @@ open class Function : ClassMember, FieldContainer {
     @Override
     override fun equals(other: Any?): Boolean {
         if (other is Function) {
-            if (!(other.isClassMember == isClassMember && other.namespaceID == namespaceID && other.parentClass === parentClass)) {
+            if (!(other.isClassMember == isClassMember &&other.isStructMember == isStructMember && other.namespaceID == namespaceID && other.ownerClass === ownerClass)) {
                 return false
             }
             if (other.params.size == params.size) {
@@ -536,7 +595,7 @@ open class Function : ClassMember, FieldContainer {
     @Override
     override fun Class(): Class? {
         return if (isClassMember) {
-            parentClass
+            ownerClass
         } else null
     }
 
@@ -550,8 +609,10 @@ open class Function : ClassMember, FieldContainer {
         //类名
         val clsName = if(containClassName){
             if (isClassMember) {
-                parentClass!!.namespaceID + "@"
-            } else ""
+                ownerClass!!.namespaceID + "@"
+            } else if(isStructMember){
+                ownerStruct!!.namespaceID + "@"
+            }else ""
         }else ""
         //参数
         val paramStr = StringBuilder()

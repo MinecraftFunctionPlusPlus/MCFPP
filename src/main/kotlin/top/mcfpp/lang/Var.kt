@@ -5,7 +5,7 @@ import top.mcfpp.exception.ClassNotDefineException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Class
-import top.mcfpp.lib.ClassMember
+import top.mcfpp.lib.Member
 import top.mcfpp.lib.GlobalField
 import java.util.*
 import kotlin.collections.HashMap
@@ -24,7 +24,7 @@ import kotlin.collections.HashMap
  * mcfpp本身的语法并不支持匿名变量。
  *
  */
-abstract class Var : ClassMember, Cloneable {
+abstract class Var : Member, Cloneable {
     /**
      * 在Minecraft中的标识符
      */
@@ -66,7 +66,7 @@ abstract class Var : ClassMember, Cloneable {
     /**
      * 访问修饰符
      */
-    override var accessModifier: ClassMember.AccessModifier = ClassMember.AccessModifier.PRIVATE
+    override var accessModifier: Member.AccessModifier = Member.AccessModifier.PRIVATE
 
     /**
      * 成员所在的类的对象，既可以是[ClassPointer]，也可以是[ClassType]

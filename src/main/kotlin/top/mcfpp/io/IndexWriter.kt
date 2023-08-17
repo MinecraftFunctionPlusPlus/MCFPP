@@ -1,10 +1,9 @@
 package top.mcfpp.io
 
-import com.alibaba.fastjson2.JSON
 import com.alibaba.fastjson2.JSONArray
 import com.alibaba.fastjson2.JSONObject
 import com.alibaba.fastjson2.JSONWriter
-import top.mcfpp.lib.ClassMember
+import top.mcfpp.lib.Member
 import top.mcfpp.lib.GlobalField
 import top.mcfpp.lib.NativeClass
 import top.mcfpp.lib.NativeFunction
@@ -32,8 +31,10 @@ object IndexWriter {
         val json = JSONObject()
         val namespaces = JSONArray()
         for(n in GlobalField.localNamespaces){
+
             val namespace = JSONObject()
             namespace["id"] = n.key
+
             val functions = JSONArray()
             n.value.forEachFunction { f ->
                 run {
@@ -41,6 +42,7 @@ object IndexWriter {
                 }
             }
             namespace["functions"] = functions
+
             val classes = JSONArray()
             n.value.forEachClass { c ->
                 run {
@@ -68,14 +70,14 @@ object IndexWriter {
                         c.field.forEachFunction {
                             m ->
                             run {
-                                if(m.accessModifier == ClassMember.AccessModifier.PUBLIC)
+                                if(m.accessModifier == Member.AccessModifier.PUBLIC)
                                     func.add(m.toString(false,containNamespace = false))
                             }
                         }
                         val staticFunc = JSONArray()
                         c.staticField.forEachFunction {m ->
                             run {
-                                if(m.accessModifier == ClassMember.AccessModifier.PUBLIC)
+                                if(m.accessModifier == Member.AccessModifier.PUBLIC)
                                     func.add(m.toString(false,containNamespace = false))
                             }
                         }
@@ -85,7 +87,7 @@ object IndexWriter {
                         val vars = JSONArray()
                         c.field.forEachVar { v ->
                             run {
-                                if(v.accessModifier == ClassMember.AccessModifier.PUBLIC){
+                                if(v.accessModifier == Member.AccessModifier.PUBLIC){
                                     val qwq = JSONObject()
                                     qwq["id"] = v.identifier
                                     qwq["type"] = v.type
@@ -97,7 +99,7 @@ object IndexWriter {
                         val staticVars = JSONArray()
                         c.staticField.forEachVar { v ->
                             run {
-                                if(v.accessModifier == ClassMember.AccessModifier.PUBLIC){
+                                if(v.accessModifier == Member.AccessModifier.PUBLIC){
                                     val qwq = JSONObject()
                                     qwq["id"] = v.identifier
                                     qwq["type"] = v.type
@@ -117,9 +119,73 @@ object IndexWriter {
                         cls["constructors"] = constructor
                     }
                     classes.add(cls)
-                    namespace["classes"] = classes
                 }
             }
+            namespace["classes"] = classes
+
+            val structs = JSONArray()
+            n.value.forEachStruct { s ->
+                run {
+                    val struct = JSONObject()
+                    struct["id"] = s.identifier
+                    struct["isNative"] = false
+                    //方法
+                    val func = JSONArray()
+                    s.field.forEachFunction {
+                            m ->
+                        run {
+                            if(m.accessModifier == Member.AccessModifier.PUBLIC)
+                                func.add(m.toString(false,containNamespace = false))
+                        }
+                    }
+                    val staticFunc = JSONArray()
+                    s.staticField.forEachFunction {m ->
+                        run {
+                            if(m.accessModifier == Member.AccessModifier.PUBLIC)
+                                func.add(m.toString(false,containNamespace = false))
+                        }
+                    }
+                    struct["functions"] = func
+                    struct["staticFunctions"] = staticFunc
+                    //成员
+                    val vars = JSONArray()
+                    s.field.forEachVar { v ->
+                        run {
+                            if(v.accessModifier == Member.AccessModifier.PUBLIC){
+                                val qwq = JSONObject()
+                                qwq["id"] = v.identifier
+                                qwq["type"] = v.type
+                                vars.add(qwq)
+                            }
+                        }
+                    }
+                    //静态成员
+                    val staticVars = JSONArray()
+                    s.staticField.forEachVar { v ->
+                        run {
+                            if(v.accessModifier == Member.AccessModifier.PUBLIC){
+                                val qwq = JSONObject()
+                                qwq["id"] = v.identifier
+                                qwq["type"] = v.type
+                                vars.add(qwq)
+                            }
+                        }
+                    }
+                    struct["vars"] = vars
+                    struct["staticVars"] = staticVars
+                    //构造函数
+                    val constructor = JSONArray()
+                    s.constructors.forEach{ c ->
+                        run {
+                            constructor.add(c.toString(false, containNamespace = false))
+                        }
+                    }
+                    struct["constructors"] = constructor
+                    structs.add(struct)
+                }
+            }
+            namespace["structs"] = structs
+
             namespaces.add(namespace)
         }
 

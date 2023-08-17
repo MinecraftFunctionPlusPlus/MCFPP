@@ -9,7 +9,7 @@ import top.mcfpp.lang.ClassPointer
  *
  * 成员在编译器读取类的声明的时候，即被添加到类的成员缓存中。
  */
-interface ClassMember {
+interface Member {
     enum class AccessModifier {
         PUBLIC, PROTECTED, PRIVATE
     }
