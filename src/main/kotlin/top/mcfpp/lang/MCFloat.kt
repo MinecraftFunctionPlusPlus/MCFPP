@@ -1,14 +1,12 @@
 package top.mcfpp.lang
 
-import top.mcfpp.Project
-import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Function
 import java.util.*
 import kotlin.collections.HashMap
 
-class MCFloat: Number<Float> {
+class MCDecimal: Number<Float> {
     /**
      * 创建一个匿名的动态int
      */
@@ -59,7 +57,7 @@ class MCFloat: Number<Float> {
      * 复制一个int
      * @param b 被复制的int值
      */
-    constructor(b: MCFloat) : super(b)
+    constructor(b: MCDecimal) : super(b)
 
     @get:Override
     override val type: String
@@ -74,7 +72,7 @@ class MCFloat: Number<Float> {
     @Throws(VariableConverseException::class)
     override fun assign(b: Var?) {
         when(b){
-            is MCFloat ->{
+            is MCDecimal ->{
                 assignCommand(b)
             }
             else ->{
