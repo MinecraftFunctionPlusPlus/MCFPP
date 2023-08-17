@@ -1,9 +1,7 @@
 package top.mcfpp.lang
 
 import top.mcfpp.lib.Function
-import top.mcfpp.lib.Class
-import top.mcfpp.lib.ClassMember
-import javax.swing.text.StyledEditorKit.BoldAction
+import top.mcfpp.lib.Member
 
 /**
  * 实现此抽象类即代表这个Kotlin类所代表的mcfpp数据结构能够被访问成员。
@@ -17,11 +15,6 @@ abstract class CanSelectMember : Var{
 
     constructor()
 
-    /**
-     * 它的类型
-     */
-    abstract var clsType: Class
-
 
     /**
      * 根据标识符获取一个成员。
@@ -30,7 +23,7 @@ abstract class CanSelectMember : Var{
      * @param accessModifier 访问者的访问权限
      * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
      */
-    abstract fun getMemberVar(key: String, accessModifier: ClassMember.AccessModifier): Pair<Var?, Boolean>
+    abstract fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean>
 
     /**
      * 根据方法标识符和方法的参数列表获取一个方法。如果没有这个方法，则返回null
@@ -39,5 +32,5 @@ abstract class CanSelectMember : Var{
      * @param params 成员方法的参数
      * @return
      */
-    abstract fun getMemberFunction(key: String, params: List<String>, accessModifier: ClassMember.AccessModifier): Pair<Function?, Boolean>
+    abstract fun getMemberFunction(key: String, params: List<String>, accessModifier: Member.AccessModifier): Pair<Function?, Boolean>
 }

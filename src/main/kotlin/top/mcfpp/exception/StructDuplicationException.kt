@@ -1,4 +1,4 @@
 package top.mcfpp.exception
 
-class StructDuplicationException {
+class StructDuplicationException: RuntimeException() {
 }

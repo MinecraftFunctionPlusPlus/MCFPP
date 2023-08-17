@@ -13,6 +13,11 @@ abstract class ClassBase: CanSelectMember {
     constructor()
 
     /**
+     * 它的类型
+     */
+    abstract var clsType: Class
+
+    /**
      * 这个对象的记分板地址
      */
     abstract var address: MCInt

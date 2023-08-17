@@ -1,96 +1,128 @@
-package top.mcfpp.lang
+package top.mcfpp.lang;
 
-import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.lib.Class
-import top.mcfpp.lib.ClassMember
-import top.mcfpp.lib.Function
-import java.util.Objects
+import kotlin.Pair;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import top.mcfpp.exception.ArgumentNotMatchException;
+import top.mcfpp.exception.TODOException;
+import top.mcfpp.exception.VariableConverseException;
+import top.mcfpp.lib.Function;
+
+import java.util.HashMap;
+import java.util.List;
 
 
 //TODO
-//ä¸€ä¸ªç›®æ ‡é€‰æ‹©å™¨
-class Selector : CanSelectMember {
+//Ò»¸öÄ¿±êÑ¡ÔñÆ÷
+public class Selector extends CanSelectMember {
 
-    @get:Override
-    override var type = "selector"
-    var text: String? = null
-    var selectorType: String? = null
-    var selectorArgs: HashMap<String, Any> = HashMap()
+    public String type = "selector";
+    public String text = null;
+    public String selectorType = null;
+    public HashMap<String, Object> selectorArgs = new HashMap<>();
 
-    var singleEntity: Boolean = false
+    public boolean singleEntity = false;
 
-    constructor(b:Var):super(b){
-
+    public Selector(Var b){
+        super(b);
     }
 
-    constructor(string: String){
-        text = string
+    public Selector(String string){
+        text = string;
         //@a[a=b,b=c]
-        //è§£æå‚æ•°
-        val args = string.split("[", "]")
-        selectorType = args[0]
-        if (args.size != 1){
-            //è§£æå‚æ•°
-        }
+        //½âÎö²ÎÊı
+        String args = string.split("\\[")[1].split("]")[0];
+        selectorType = string.substring(0,2);
+
+    }
+
+    @NotNull
+    @Override
+    public Pair<Var, Boolean> getMemberVar(@NotNull String key, @NotNull AccessModifier accessModifier) {
+        throw new TODOException("");
+    }
+
+    @NotNull
+    @Override
+    public Pair<Function, Boolean> getMemberFunction(@NotNull String key, @NotNull List<String> params, @NotNull AccessModifier accessModifier) {
+        throw new TODOException("");
     }
 
     @Override
-    override fun assign(b: Var?) {
-        if (b is MCString) {
-            text = b.toString()
-        } else {
-            throw VariableConverseException()
-        }
+    public void assign(@Nullable Var b) throws VariableConverseException {
+        throw new TODOException("");
     }
 
+    @Nullable
     @Override
-    override fun cast(type: String): Var? {
-        return null
+    public Var cast(@NotNull String type) {
+        throw new TODOException("");
     }
 
+    @NotNull
     @Override
-    override fun clone(): Selector {
-        TODO()
+    public Object clone() {
+        throw new TODOException("");
     }
 
-    override fun getTempVar(cache: HashMap<Var, String>): Var {
-        TODO("Not yet implemented")
+    @NotNull
+    @Override
+    public Var getTempVar(@NotNull HashMap<Var, String> cache) {
+        throw new TODOException("");
     }
 
-    override fun getMemberVar(key: String, accessModifier: ClassMember.AccessModifier): Pair<Var?, Boolean> {
-        TODO("Not yet implemented")
-    }
+    private static Object resolveSelectorParam(String key, String value){
+        switch (key){
+            case "x":
+            case "y":
+            case "z":
+            case "dx":
+            case "dy":
+            case "dz":
+                return Double.parseDouble(value);
+            case "distance":
+                String start = value.split("\\.\\.")[0];
+                String end = value.split("\\.\\.")[1];
+                Double startD,endD;
+                if(start.equals(""))
+                    start = null;
+                else {
+                    startD = Double.parseDouble(start);
+                }
+                if(end.equals("")) end = null;
+                try {
 
-    override fun getMemberFunction(key: String, params: List<String>, accessModifier: ClassMember.AccessModifier): Pair<Function?, Boolean> {
-        TODO("Not yet implemented")
-    }
-
-    fun addParam(key: String, value: String){
-
-    }
-
-    companion object{
-
-        val paramMap: HashMap<String, (value: String) -> Any> = hashMapOf(
-            "x" to {value: String -> value.toDouble() },
-            "y" to {value: String -> value.toDouble() },
-            "z" to {value: String -> value.toDouble() },
-            "dx" to {value: String -> value.toDouble() },
-            "dy" to {value: String -> value.toDouble() },
-            "dz" to {value: String -> value.toDouble() },
-            "distance" to {value: String -> run {
-                
-            }},
-            )
-        /**
-         * è§£æå‚æ•°
-         *
-         * @param string
-         * @return è¿”å›ä¸€ä¸ªPairï¼Œç¬¬ä¸€ä¸ªå€¼æ˜¯å‚æ•°çš„keyï¼Œç¬¬äºŒä¸ªå€¼æ˜¯å‚æ•°çš„value
-         */
-        fun resolveParam(string: String): Pair<String, String>{
-            val args = string.split("=")
-            return Pair(args[0], args[1])
+                } catch (NumberFormatException e) {
+                    throw new TODOException("Î´ÊµÏÖµÄÌØĞÔ£º¶¯Ì¬Ä¿±êÑ¡ÔñÆ÷");
+                }
+                break;
+            case "scores":
+                break;
+            case "tag":
+                break;
+            case "team":
+                break;
+            case "limit":
+                break;
+            case "sort":
+                break;
+            case "gamemode":
+                break;
+            case "level":
+                break;
+            case "name":
+                break;
+            case "type":
+                break;
+            case "nbt":
+                break;
+            case "advancements":
+                break;
+            case "predicate":
+                break;
+            default:
+                throw new ArgumentNotMatchException("");
         }
+        return null;
     }
 }

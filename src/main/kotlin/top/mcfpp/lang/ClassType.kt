@@ -3,7 +3,7 @@ package top.mcfpp.lang
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Class
-import top.mcfpp.lib.ClassMember
+import top.mcfpp.lib.Member
 
 /**
  * ClassType是类的类型指针。它是一种特殊的指针，能够指向这个类的静态成员。
@@ -78,7 +78,7 @@ class ClassType: ClassBase{
      * @return 第一个值是对象中获取到的字段，若不存在此字段则为null；第二个值是是否有足够的访问权限访问此字段。如果第一个值是null，那么第二个值总是为true
      */
     @Override
-    override fun getMemberVar(key: String, accessModifier: ClassMember.AccessModifier): Pair<Var?, Boolean> {
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
         val member = clsType.getStaticMemberVar(key)?.clone(this)
         return if(member == null){
             Pair(null, true)
@@ -96,7 +96,7 @@ class ClassType: ClassBase{
      * @return 第一个值是对象中获取到的方法，若不存在此方法则为null；第二个值是是否有足够的访问权限访问此方法。如果第一个值是null，那么第二个值总是为true
      */
     @Override
-    override fun getMemberFunction(key: String, params: List<String>, accessModifier: ClassMember.AccessModifier): Pair<Function?, Boolean> {
+    override fun getMemberFunction(key: String, params: List<String>, accessModifier: Member.AccessModifier): Pair<Function?, Boolean> {
         //获取函数
         val member = clsType.staticField.getFunction(key, params)
         return if(member == null){

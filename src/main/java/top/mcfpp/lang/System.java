@@ -34,7 +34,4 @@ public class System {
         Function.Companion.addCommand("tellraw @a " + "\"" +var + "\"");
     }
 
-    public static void test(Var[] vars,  ClassPointer cls){
-        java.lang.System.out.println("qwq");
-    }
 }

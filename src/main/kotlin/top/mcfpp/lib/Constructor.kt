@@ -20,7 +20,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
 
     init {
         //添加this指针
-        val thisObj = ClassPointer(parentClass!!,"this")
+        val thisObj = ClassPointer(ownerClass!!,"this")
         thisObj.identifier = "this"
         field.putVar("this",thisObj)
     }
@@ -41,16 +41,16 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
         )
 
         //初始化
-        if(parentClass!!.classPreInit.commands.size > 3){
+        if(ownerClass!!.classPreInit.commands.size > 3){
             //给函数开栈
             addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
         }
         //不应当立即调用它自己的函数，应当先调用init，再调用constructor
         addCommand(
             "execute as @e[tag=" + cls.tag + ",tag=mcfpp_classObject_just,limit=1] at @s run " +
-                    Commands.Function(parentClass!!.classPreInit)
+                    Commands.Function(ownerClass!!.classPreInit)
         )
-        if(parentClass!!.classPreInit.commands.size > 3){
+        if(ownerClass!!.classPreInit.commands.size > 3){
             //调用完毕，将子函数的栈销毁
             addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
         }
@@ -123,7 +123,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
     @Override
     override fun equals(other: Any?): Boolean {
         if (other is Constructor) {
-            if (other.parentClass?.equals(parentClass) == true) {
+            if (other.ownerClass?.equals(ownerClass) == true) {
                 if (other.params.size == params.size) {
                     for (i in 0 until other.params.size) {
                         if (other.params[i] != params[i]) {

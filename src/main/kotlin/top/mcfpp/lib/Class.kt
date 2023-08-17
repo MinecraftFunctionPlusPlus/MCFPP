@@ -172,21 +172,21 @@ open class Class : FieldContainer {
      * 向这个类中添加一个成员
      * @param classMember 要添加的成员
      */
-    fun addMember(classMember: ClassMember) {
+    fun addMember(classMember: Member) {
         //非静态成员
         if (!classMember.isStatic) {
             if (classMember is Function) {
-                currClass!!.field.addFunction(classMember)
+                field.addFunction(classMember)
             } else if (classMember is Var) {
-                currClass!!.field.putVar(classMember.identifier!!, classMember)
+                field.putVar(classMember.identifier, classMember)
             }
             return
         }
         //静态成员
         if (classMember is Function) {
-            currClass!!.staticField.addFunction(classMember)
+            staticField.addFunction(classMember)
         } else if (classMember is Var) {
-            currClass!!.staticField.putVar(classMember.identifier!!, classMember)
+            staticField.putVar(classMember.identifier, classMember)
         }
     }
 
@@ -257,16 +257,16 @@ open class Class : FieldContainer {
      * @param cls
      * @return 返回指定类相对此类的访问权限
      */
-    fun getAccess(cls : Class): ClassMember.AccessModifier{
+    fun getAccess(cls : Class): Member.AccessModifier{
         //是否是本类
         return if(cls.namespaceID == namespaceID){
-            ClassMember.AccessModifier.PRIVATE
+            Member.AccessModifier.PRIVATE
         }else{
             //是否是子类
             if(this.isSubclass(cls)){
-                ClassMember.AccessModifier.PROTECTED
+                Member.AccessModifier.PROTECTED
             }else{
-                ClassMember.AccessModifier.PUBLIC
+                Member.AccessModifier.PUBLIC
             }
         }
     }

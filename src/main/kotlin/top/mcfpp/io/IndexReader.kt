@@ -13,6 +13,7 @@ import java.io.FileReader
  * @see IndexWriter
  */
 object IndexReader {
+
     /**
      * 用于读取路径指向的.mclib文件，即mcfpp的库索引文件。.mclib文件是一个json文件形式。
      *
@@ -42,36 +43,7 @@ object IndexReader {
             if(oo["functions"] != null)
             for(f in oo["functions"] as JSONArray){
                 val s = f as String
-                //获取返回值
-                val returnType = s.substring(0,s.indexOf(' '))
-                //参数解析
-                val params = s.substring(s.indexOf('(') + 1, s.indexOf(')')).split(",")
-                val paramList = ArrayList<FunctionParam>()
-                if(params[0] != ""){
-                    for (param in params){
-                        val info = param.split(" ")
-                        val p = if(info.size == 2){
-                            FunctionParam(info[0], info[1],false)
-                        }else{
-                            FunctionParam(info[1], info[2], true)
-                        }
-                        paramList.add(p)
-                    }
-                }
-                if(s.contains("->")){
-                    //是native函数
-                    val functionHead = s.split("->")[0]
-                    val javaFunction = s.split("->")[1]
-                    //获取java方法
-                    val nf = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction, nspId)
-                    nf.params = paramList
-                    namespaceField.addFunction(nf)
-                }else{
-                    //不是native函数
-                    val func = Function(s.substring(s.indexOf(' ') + 1,s.indexOf('(')), nspId, returnType)
-                    namespaceField.addFunction(func)
-                }
-
+                readGlobalFunction(s,namespaceField,nspId)
             }
             //类
             if(oo["classes"] != null)
@@ -83,65 +55,11 @@ object IndexReader {
                 //函数
                 for (f in cc["functions"] as JSONArray){
                     val s = f as String
-                    //获取返回值
-                    val returnType = s.substring(0,s.indexOf(' '))
-                    //参数解析
-                    val params = s.substring(s.indexOf('(') + 1, s.indexOf(')')).split(",")
-                    val paramList = ArrayList<FunctionParam>()
-                    if(params[0] != ""){
-                        for (param in params){
-                            val info = param.split(" ")
-                            val p = if(info.size == 2){
-                                FunctionParam(info[0], info[1],false)
-                            }else{
-                                FunctionParam(info[1], info[2], true)
-                            }
-                            paramList.add(p)
-                        }
-                    }
-                    if(s.contains("->")){
-                        //是native函数
-                        val functionHead = s.split("->")[0]
-                        val javaFunction = s.split("->")[1]
-                        //获取java方法
-                        val nf = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction, nspId)
-                        nf.params = paramList
-                        cls.field.addFunction(nf)
-                    }else{
-                        //不是native函数
-                        val func = Function(s.substring(s.indexOf(' ')+1,s.indexOf('(')), cls, isStatic = false, returnType)
-                        cls.field.addFunction(func)
-                    }
+                    readClassFunction(s,cls.field,cls,nspId)
                 }
                 for (f in cc["staticFunctions"] as JSONArray){
                     val s = f as String
-                    //参数解析
-                    val params = s.substring(s.indexOf('(') + 1, s.indexOf(')')).split(",")
-                    val paramList = ArrayList<FunctionParam>()
-                    if(params[0] != ""){
-                        for (param in params){
-                            val info = param.split(" ")
-                            val p = if(info.size == 2){
-                                FunctionParam(info[0], info[1],false)
-                            }else{
-                                FunctionParam(info[1], info[2], true)
-                            }
-                            paramList.add(p)
-                        }
-                    }
-                    if(s.contains("->")){
-                        //是native函数
-                        val functionHead = s.split("->")[0]
-                        val javaFunction = s.split("->")[1]
-                        //获取java方法
-                        val nf = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction, nspId)
-                        nf.params = paramList
-                        cls.staticField.addFunction(nf)
-                    }else{
-                        //不是native函数
-                        val func = Function(s.substring(s.indexOf(' ')+1,s.indexOf('(')), cls, isStatic = true)
-                        cls.staticField.addFunction(func)
-                    }
+                    readClassFunction(s,cls.staticField,cls,nspId)
                 }
                 //字段
                 for (v in cc["vars"] as JSONArray){
@@ -155,25 +73,161 @@ object IndexReader {
                 //构造函数
                 for (constructor in cc["constructors"] as JSONArray){
                     val s = constructor as String
-                    //参数解析
-                    val params = s.substring(s.indexOf('(') + 1, s.indexOf(')')).split(",")
-                    val paramList = ArrayList<FunctionParam>()
-                    if(params[0] != ""){
-                        for (param in params){
-                            val info = param.split(" ")
-                            val p = if(info.size == 2){
-                                FunctionParam(info[0], info[1],false)
-                            }else{
-                                FunctionParam(info[1], info[2], true)
-                            }
-                            paramList.add(p)
-                        }
-                    }
-                    val co = Constructor(cls)
-                    co.params = paramList
-                    cls.constructors.add(co)
+                    readConstructor(s,cls)
+                }
+            }
+            if(oo["structs"] != null)
+            for (s in oo["structs"] as JSONArray){
+                val ss = s as JSONObject
+                val strId = ss["id"] as String
+                val struct = Struct(strId, nspId)
+                //结构体的成员
+                //函数
+                for (f in ss["functions"] as JSONArray){
+                    val str = f as String
+                    readStructFunction(str, struct.field, struct)
+                }
+                for (f in ss["staticFunctions"] as JSONArray){
+                    val str = f as String
+                    readStructFunction(str, struct.staticField, struct)
+                }
+                //字段
+                for (v in ss["vars"] as JSONArray){
+                    val vv = v as JSONObject
+                    struct.field.putVar(vv["id"] as String, UnresolvedVar(vv["id"] as String,"int"))
+                }
+                for (v in ss["staticVars"] as JSONArray){
+                    val vv = v as JSONObject
+                    struct.staticField.putVar(vv["id"] as String, UnresolvedVar(vv["id"] as String,"int"))
+                }
+                //构造函数
+                for (constructor in ss["constructors"] as JSONArray){
+                    val str = constructor as String
+                    readStructConstructor(str, struct)
                 }
             }
         }
+    }
+
+    private fun readGlobalFunction(jsonStr: String, field: IFieldWithFunction, nspId: String){
+        //获取返回值
+        val returnType = jsonStr.substring(0,jsonStr.indexOf(' '))
+        //参数解析
+        val params = jsonStr.substring(jsonStr.indexOf('(') + 1, jsonStr.indexOf(')')).split(",")
+        val paramList = ArrayList<FunctionParam>()
+        if(params[0] != ""){
+            for (param in params){
+                val info = param.split(" ")
+                val p = if(info.size == 2){
+                    FunctionParam(info[0], info[1],false)
+                }else{
+                    FunctionParam(info[1], info[2], true)
+                }
+                paramList.add(p)
+            }
+        }
+        if(jsonStr.contains("->")){
+            //是native函数
+            val functionHead = jsonStr.split("->")[0]
+            val javaFunction = jsonStr.split("->")[1]
+            //获取java方法
+            val nf = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction, nspId)
+            nf.params = paramList
+            field.addFunction(nf)
+        }else{
+            //不是native函数
+            val func = Function(jsonStr.substring(jsonStr.indexOf(' ') + 1,jsonStr.indexOf('(')), nspId, returnType)
+            field.addFunction(func)
+        }
+    }
+
+    private fun readClassFunction(jsonStr: String, field: IFieldWithFunction, cls: Class, nspId: String){
+        //参数解析
+        val params = jsonStr.substring(jsonStr.indexOf('(') + 1, jsonStr.indexOf(')')).split(",")
+        val paramList = ArrayList<FunctionParam>()
+        if(params[0] != ""){
+            for (param in params){
+                val info = param.split(" ")
+                val p = if(info.size == 2){
+                    FunctionParam(info[0], info[1],false)
+                }else{
+                    FunctionParam(info[1], info[2], true)
+                }
+                paramList.add(p)
+            }
+        }
+        if(jsonStr.contains("->")){
+            //是native函数
+            val functionHead = jsonStr.split("->")[0]
+            val javaFunction = jsonStr.split("->")[1]
+            //获取java方法
+            val nf = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction, nspId)
+            nf.params = paramList
+            cls.staticField.addFunction(nf)
+        }else{
+            //不是native函数
+            val func = Function(jsonStr.substring(jsonStr.indexOf(' ')+1,jsonStr.indexOf('(')), cls, isStatic = true)
+            cls.staticField.addFunction(func)
+        }
+    }
+
+    private fun readStructFunction(jsonStr: String ,field: IFieldWithFunction, struct: Struct){
+        //参数解析
+        val params = jsonStr.substring(jsonStr.indexOf('(') + 1, jsonStr.indexOf(')')).split(",")
+        val paramList = ArrayList<FunctionParam>()
+        if(params[0] != ""){
+            for (param in params){
+                val info = param.split(" ")
+                val p = if(info.size == 2){
+                    FunctionParam(info[0], info[1],false)
+                }else{
+                    FunctionParam(info[1], info[2], true)
+                }
+                paramList.add(p)
+            }
+        }
+        //不是native函数
+        val func = Function(jsonStr.substring(jsonStr.indexOf(' ')+1,jsonStr.indexOf('(')), struct, isStatic = true)
+        field.addFunction(func)
+    }
+
+    private fun readConstructor(jsonStr: String, cls: Class){
+        //参数解析
+        val params = jsonStr.substring(jsonStr.indexOf('(') + 1, jsonStr.indexOf(')')).split(",")
+        val paramList = ArrayList<FunctionParam>()
+        if(params[0] != ""){
+            for (param in params){
+                val info = param.split(" ")
+                val p = if(info.size == 2){
+                    FunctionParam(info[0], info[1],false)
+                }else{
+                    FunctionParam(info[1], info[2], true)
+                }
+                paramList.add(p)
+            }
+        }
+        val co = Constructor(cls)
+        co.params = paramList
+        cls.constructors.add(co)
+    }
+
+    private fun readStructConstructor(jsonStr: String, struct: Struct){
+        //参数解析
+        val params = jsonStr.substring(jsonStr.indexOf('(') + 1, jsonStr.indexOf(')')).split(",")
+        val paramList = ArrayList<FunctionParam>()
+        if(params[0] != ""){
+            for (param in params){
+                val info = param.split(" ")
+                val p = if(info.size == 2){
+                    FunctionParam(info[0], info[1],false)
+                }else{
+                    FunctionParam(info[1], info[2], true)
+                }
+                paramList.add(p)
+            }
+        }
+        val co = StructConstructor(struct)
+        co.params = paramList
+        struct.constructors.add(co)
     }
 }

@@ -78,10 +78,10 @@ class McfppImListener : mcfppBaseListener() {
         Project.ctx = ctx
         var f: Function
         //获取函数对象
-        if (ctx.parent.parent !is mcfppParser.ClassMemberContext) {
-            //不是类成员
+        if (ctx.parent.parent !is mcfppParser.ClassMemberContext && ctx.parent.parent !is mcfppParser.StructMemberContext) {
+            //不是类成员和结构体成员
             //创建函数对象
-            val parent: mcfppParser.FunctionDeclarationContext = ctx.parent as mcfppParser.FunctionDeclarationContext
+            val parent = ctx.parent as mcfppParser.FunctionDeclarationContext
             f = Function(parent.Identifier().text)
             //解析参数
             if (parent.parameterList() != null) {
@@ -97,11 +97,15 @@ class McfppImListener : mcfppBaseListener() {
                 temp.addParams((ctx.parent as mcfppParser.ConstructorDeclarationContext).parameterList())
             }
             //获取缓存中的对象
-            f = Class.currClass!!.getConstructor(FunctionParam.toStringList(temp.params))!!
-        } else {
+            f = if(ctx.parent.parent is mcfppParser.ClassMemberContext){
+                Class.currClass!!.getConstructor(FunctionParam.toStringList(temp.params))!!
+            }else{
+                Struct.currStruct!!.getConstructor(FunctionParam.toStringList(temp.params))!!
+            }
+        } else if(ctx.parent is mcfppParser.ClassMemberContext){
             //是类的成员函数
             //创建函数对象并解析参数
-            val qwq: mcfppParser.ClassFunctionDeclarationContext = ctx.parent as mcfppParser.ClassFunctionDeclarationContext
+            val qwq = ctx.parent as mcfppParser.ClassFunctionDeclarationContext
             f = Function(qwq.Identifier().text, Class.currClass!!, false)
             if (qwq.parameterList() != null) {
                 f.addParams(qwq.parameterList())
@@ -109,6 +113,17 @@ class McfppImListener : mcfppBaseListener() {
             //获取缓存中的对象
             val fun1 = Class.currClass!!.field.getFunction(f.name, f.paramTypeList)
             f = (fun1 ?: Class.currClass!!.staticField.getFunction(f.name, f.paramTypeList))!!
+        }else{
+            //是结构体成员
+            //创建函数对象并解析参数
+            val qwq = ctx.parent as mcfppParser.StructFunctionDeclarationContext
+            f = Function(qwq.Identifier().text, Struct.currStruct!!, false)
+            if (qwq.parameterList() != null) {
+                f.addParams(qwq.parameterList())
+            }
+            //获取缓存中的对象
+            val fun1 = Struct.currStruct!!.field.getFunction(f.name, f.paramTypeList)
+            f = (fun1 ?: Struct.currStruct!!.staticField.getFunction(f.name, f.paramTypeList))!!
         }
         Function.currFunction = f
     }
@@ -824,6 +839,35 @@ class McfppImListener : mcfppBaseListener() {
     }
 
     //endregion
+
+    //struct
+
+    /**
+     * 进入类体。
+     * @param ctx the parse tree
+     */
+    @Override
+    override fun enterStructBody(ctx: mcfppParser.StructBodyContext) {
+        Project.ctx = ctx
+        //获取类的对象
+        val parent = ctx.parent as mcfppParser.StructDeclarationContext
+        val identifier: String = parent.classWithoutNamespace().text
+        //设置作用域
+        Struct.currStruct = GlobalField.getStruct(Project.currNamespace,identifier)
+    }
+
+    /**
+     * 离开类体。将缓存重新指向全局
+     * @param ctx the parse tree
+     */
+    @Override
+    override fun exitStructBody(ctx: mcfppParser.StructBodyContext?) {
+        Project.ctx = ctx
+        Struct.currStruct = null
+    }
+
+    //endregion
+
 
     companion object {
         /**

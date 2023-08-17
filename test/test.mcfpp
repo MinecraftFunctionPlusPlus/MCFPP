@@ -1,11 +1,16 @@
 namespace test;
 
-int func test1(int p){
-    return p+1;
-}
+struct FloatStruct{
+    public static int index;
+    public int member1;
+    public member2;
 
-void func main(){
-    int qwq;
-    int p = test1(qwq);
-    print(test1(p));
+    public FloatStruct(){
+        //member1 = index;
+        //index++;
+    }
+
+    public void print(){
+        //print(this);
+    }
 }

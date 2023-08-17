@@ -1,6 +1,5 @@
 package top.mcfpp.lib
 
-import top.mcfpp.lang.Var
 import java.util.UUID
 
 /**

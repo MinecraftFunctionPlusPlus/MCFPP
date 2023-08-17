@@ -20,15 +20,18 @@ importDeclaration
 //类或函数声明
 typeDeclaration
     :   annoation
-    |   classOrFunctionDeclaration
+    |   classOrFunctionOrStructDeclaration
     ;
 
+
+
 //类或函数声明
-classOrFunctionDeclaration
+classOrFunctionOrStructDeclaration
     :   classDeclaration
     |   functionDeclaration
     |   nativeFuncDeclaration
     |   nativeClassDeclaration
+    |   structDeclaration
     ;
 
 //类声明
@@ -66,16 +69,47 @@ classMember
     ;
 
 classFunctionDeclaration
-    :    functionReturnType 'func' Identifier '(' parameterList? ')' '{' functionBody '}'
+    :    functionReturnType Identifier '(' parameterList? ')' '{' functionBody '}'
     ;
 
 nativeClassFunctionDeclaration
-    :   accessModifier? NATIVE 'func' Identifier '(' parameterList? ')' ';'
+    :   accessModifier? NATIVE Identifier '(' parameterList? ')' ';'
+    ;
+
+//结构体
+structDeclaration
+    :   FINAL? 'struct' classWithoutNamespace (EXTENDS className)? structBody
+    ;
+
+structBody
+    :   '{' (structMemberDeclaration|staticStructMemberDeclaration)* '}'
+    ;
+
+structMemberDeclaration
+    :   accessModifier? structMember
+    ;
+
+staticStructMemberDeclaration
+    :   accessModifier? STATIC? structMember
+    ;
+
+structMember
+    :   structFunctionDeclaration
+    |   structFieldDeclaration ';'
+    |   constructorDeclaration
+    ;
+
+structFunctionDeclaration
+    :   functionReturnType Identifier '(' parameterList? ')' '{' functionBody '}'
+    ;
+
+structFieldDeclaration
+    :   CONST? 'int'? Identifier
     ;
 
 //函数声明
 functionDeclaration
-    :    INLINE? functionReturnType 'func' Identifier '(' parameterList? ')' '{' functionBody '}'
+    :    INLINE? functionReturnType Identifier '(' parameterList? ')' '{' functionBody '}'
     ;
 
 namespaceID
@@ -83,7 +117,7 @@ namespaceID
     ;
 
 nativeFuncDeclaration
-    :   NATIVE 'func' Identifier '(' parameterList? ')' '->' javaRefer ';'
+    :   NATIVE Identifier '(' parameterList? ')' '->' javaRefer ';'
     ;
 
 javaRefer

@@ -1,7 +1,7 @@
 package top.mcfpp.lib
 
 import top.mcfpp.Project
-import top.mcfpp.lang.CanSelectMember
+import top.mcfpp.exception.FunctionDuplicationException
 import top.mcfpp.lang.Var
 
 /**
@@ -14,17 +14,51 @@ import top.mcfpp.lang.Var
  *
  * 除此之外，结构体是一种值类型的变量，而不是引用类型。因此在赋值的时候会把整个结构体进行一次赋值。
  */
-class DataStruct : FieldContainer {
+class Struct : FieldContainer {
 
+    /**
+     * 结构体的标识符
+     */
     val identifier: String
 
+    /**
+     * 结构体命名空间
+     */
     val namespace: String
 
+    /**
+     * 结构体的域
+     */
     val field: StructField
 
+    /**
+     * 结构体的静态域
+     */
     val staticField: StructField
 
+    /**
+     * 结构体的构造函数
+     */
     val constructors: ArrayList<StructConstructor>
+
+    /**
+     * 结构体的父结构体
+     */
+    var parent: Struct? = null
+
+    /**
+     * 命名空间id
+     */
+    val namespaceID : String
+        get() = "$namespace:$identifier"
+
+    /**
+     * 获取这个容器中变量应该拥有的前缀
+     * @return 其中的变量将会添加的前缀
+     */
+    override val prefix: String
+        get() = namespace + "_struct_" + identifier + "_"
+
 
     constructor(identifier: String, namespace: String = Project.currNamespace){
         this.identifier = identifier
@@ -61,10 +95,61 @@ class DataStruct : FieldContainer {
     }
 
     /**
-     * 获取这个容器中变量应该拥有的前缀
-     * @return 其中的变量将会添加的前缀
+     * 向这个结构体中添加一个成员
+     * @param structMember 要添加的成员
      */
-    override val prefix: String
-        get() = TODO("Not yet implemented")
+    fun addMember(structMember: Member) {
+        //非静态成员
+        if (!structMember.isStatic) {
+            if (structMember is Function) {
+                field.addFunction(structMember)
+            } else if (structMember is Var) {
+                field.putVar(structMember.identifier, structMember)
+            }
+            return
+        }
+        //静态成员
+        if (structMember is Function) {
+            staticField.addFunction(structMember)
+        } else if (structMember is Var) {
+            staticField.putVar(structMember.identifier, structMember)
+        }
+    }
+
+    /**
+     * 向这个类中添加一个构造函数
+     * @param constructor 构造函数
+     */
+    fun addConstructor(constructor: StructConstructor) {
+        if (constructors.contains(constructor)) {
+            throw FunctionDuplicationException()
+        } else {
+            constructors.add(constructor)
+        }
+    }
+    /**
+     * 根据参数列表获取一个类的构造函数
+     * @param params 构造函数的参数列表
+     * @return 返回这个类的参数
+     */
+    fun getConstructor(params: java.util.ArrayList<String>): StructConstructor? {
+        for (f in constructors) {
+            if (f.params.size == params.size) {
+                if (f.params.size == 0) {
+                    return f
+                }
+                //参数比对
+                for (i in 0 until params.size) {
+                    if (params[i] == f.params[i].type) {
+                        return f
+                    }
+                }
+            }
+        }
+        return null
+    }
+    companion object{
+        var currStruct: Struct? = null
+    }
 
 }
