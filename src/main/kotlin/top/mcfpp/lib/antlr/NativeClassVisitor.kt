@@ -1,4 +1,4 @@
-package top.mcfpp.lib
+package top.mcfpp.lib.antlr
 
 import mcfppBaseVisitor
 import top.mcfpp.Project
@@ -6,6 +6,11 @@ import top.mcfpp.exception.ClassDuplicationException
 import top.mcfpp.lang.ClassPointer
 import top.mcfpp.lang.INativeClass
 import top.mcfpp.lang.Var
+import top.mcfpp.lib.Class
+import top.mcfpp.lib.GlobalField
+import top.mcfpp.lib.Member
+import top.mcfpp.lib.NativeClass
+import top.mcfpp.lib.NativeFunction
 import java.lang.reflect.Method
 
 /**

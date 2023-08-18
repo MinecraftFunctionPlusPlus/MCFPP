@@ -5,6 +5,8 @@ import mcfppParser
 import org.antlr.v4.runtime.*
 import top.mcfpp.Project
 import top.mcfpp.lib.*
+import top.mcfpp.lib.antlr.McfppFileVisitor
+import top.mcfpp.lib.antlr.McfppImListener
 import java.io.*
 
 /**

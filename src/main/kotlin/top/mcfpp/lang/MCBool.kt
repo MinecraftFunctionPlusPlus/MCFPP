@@ -231,12 +231,15 @@ class MCBool : Var, OnScoreboard {
 
     @Override
     @InsertCommand
-    override fun getTempVar(cache: HashMap<Var, String>): Var {
+    override fun getTempVar(cache: HashMap<Var, String>): MCBool {
         if(isTemp) return this
+        val re : MCBool
         if(isConcrete){
-            return MCBool(value)
+            re = MCBool(value)
+            re.isTemp = true
+            return re
         }
-        val re = MCBool()
+        re = MCBool()
         if(isClassMember) {
             Function.addCommand(
                 "execute as @e[type=marker,tag=${clsPointer!!.clsType.tag}]" +
@@ -249,6 +252,7 @@ class MCBool : Var, OnScoreboard {
                 "scoreboard players operation ${re.name} ${SbObject.MCS_boolean.name} = $name ${SbObject.MCS_boolean.name}"
             )
         }
+        re.isTemp = true
         return re
     }
 }

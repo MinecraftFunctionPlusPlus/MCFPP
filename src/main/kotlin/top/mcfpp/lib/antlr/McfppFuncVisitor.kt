@@ -1,9 +1,13 @@
-package top.mcfpp.lib
+package top.mcfpp.lib.antlr
 
 import mcfppBaseVisitor
 import top.mcfpp.Project
 import top.mcfpp.exception.ArgumentNotMatchException
 import top.mcfpp.lang.*
+import top.mcfpp.lib.Class
+import top.mcfpp.lib.Function
+import top.mcfpp.lib.GlobalField
+import top.mcfpp.lib.Member
 
 /**
  * 获取函数用的visitor
@@ -14,7 +18,7 @@ class McfppFuncVisitor : mcfppBaseVisitor<Function?>() {
         Project.ctx = ctx
         val pwp = ctx.text.split(":")
         val qwq: Function? = if (pwp.size == 1) {
-            GlobalField.getFunction(null , pwp[0], args)
+            GlobalField.getFunction(null, pwp[0], args)
         } else {
             GlobalField.getFunction(pwp[0], pwp[1], args)
         }

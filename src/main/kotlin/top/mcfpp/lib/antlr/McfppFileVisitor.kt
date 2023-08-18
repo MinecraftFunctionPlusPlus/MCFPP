@@ -1,4 +1,4 @@
-package top.mcfpp.lib
+package top.mcfpp.lib.antlr
 
 import mcfppBaseVisitor
 import top.mcfpp.Project
@@ -8,6 +8,9 @@ import top.mcfpp.exception.IllegalFormatException
 import top.mcfpp.lang.ClassType
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.Var.ConstStatus
+import top.mcfpp.lib.*
+import top.mcfpp.lib.Class
+import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member.AccessModifier
 import java.util.*
 
@@ -140,7 +143,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
                         namespace = qwq[0]
                         identifier = qwq[1]
                     }
-                    cls.parent = GlobalField.getClass(namespace,identifier)
+                    cls.parent = GlobalField.getClass(namespace, identifier)
                 } else {
                     Project.error("Undefined class: " + ctx.className().text)
                 }
@@ -410,7 +413,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
                 Class.currClass!!.classPreInit
             }
             //是类的成员
-            Function.addCommand("#"+ctx.text)
+            Function.addCommand("#" + ctx.text)
             val init: Var = McfppExprVisitor().visit(ctx.expression())!!
             try {
                 `var`.assign(init)
@@ -450,7 +453,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
                         namespace = qwq[0]
                         identifier = qwq[1]
                     }
-                    struct.parent = GlobalField.getStruct(namespace,identifier)
+                    struct.parent = GlobalField.getStruct(namespace, identifier)
                 } else {
                     Project.error("Undefined struct: " + ctx.className().text)
                 }

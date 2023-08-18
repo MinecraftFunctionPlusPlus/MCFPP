@@ -1,4 +1,4 @@
-package top.mcfpp.lib
+package top.mcfpp.lib.antlr
 
 import mcfppBaseListener
 import org.antlr.v4.runtime.RuleContext
@@ -7,6 +7,8 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.*
 import top.mcfpp.lang.*
+import top.mcfpp.lib.*
+import top.mcfpp.lib.Function
 
 class McfppImListener : mcfppBaseListener() {
 
@@ -183,7 +185,7 @@ class McfppImListener : mcfppBaseListener() {
             Project.error("Duplicate defined variable name:" + ctx.Identifier().text)
             throw VariableDuplicationException()
         }
-        Function.addCommand("#"+ctx.type().text + " " + ctx.Identifier().text + if (ctx.expression() != null) " = " + ctx.expression().text else "")
+        Function.addCommand("#" + ctx.type().text + " " + ctx.Identifier().text + if (ctx.expression() != null) " = " + ctx.expression().text else "")
         //变量初始化
         if (ctx.expression() != null) {
             val init: Var = McfppExprVisitor().visit(ctx.expression())!!
@@ -322,7 +324,7 @@ class McfppImListener : mcfppBaseListener() {
     override fun enterIfStatement(ctx: mcfppParser.IfStatementContext?) {
         //进入if函数
         Project.ctx = ctx
-        Function.addCommand("#"+"if start")
+        Function.addCommand("#" + "if start")
         val ifFunction = InternalFunction("_if_", Function.currFunction)
         Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
         Function.addCommand("function " + ifFunction.namespaceID)
@@ -345,7 +347,7 @@ class McfppImListener : mcfppBaseListener() {
         Project.ctx = ctx
         Function.currFunction = Function.currFunction.parent[0]
         //调用完毕，将子函数的栈销毁
-        Function.addCommand("#"+"if end")
+        Function.addCommand("#" + "if end")
     }
 
     /**
@@ -462,7 +464,7 @@ class McfppImListener : mcfppBaseListener() {
         Project.ctx = ctx
         //入栈
         Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
-        Function.addCommand("#"+"while start")
+        Function.addCommand("#" + "while start")
         val parent: mcfppParser.WhileStatementContext = ctx.parent as mcfppParser.WhileStatementContext
         val exp: MCBool = McfppExprVisitor().visit(parent.expression()) as MCBool
         //匿名函数的定义
@@ -568,8 +570,8 @@ class McfppImListener : mcfppBaseListener() {
         Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
         Function.addCommand(
             "execute " +
-                "unless function " + f.namespaceID + " " +
-                "run return 1"
+                    "unless function " + f.namespaceID + " " +
+                    "run return 1"
         )
         val parent = ctx!!.parent as mcfppParser.DoWhileStatementContext
         val exp: MCBool = McfppExprVisitor().visit(parent.expression()) as MCBool
@@ -586,7 +588,7 @@ class McfppImListener : mcfppBaseListener() {
             Project.warn("The condition is always true. ")
         } else if (exp.isConcrete) {
             //给子函数开栈
-            Function.addCommand("#"+Commands.Function(Function.currFunction))
+            Function.addCommand("#" + Commands.Function(Function.currFunction))
             Project.warn("The condition is always false. ")
         } else {
             //给子函数开栈
@@ -809,7 +811,7 @@ class McfppImListener : mcfppBaseListener() {
         val parent: mcfppParser.ClassDeclarationContext = ctx.parent as mcfppParser.ClassDeclarationContext
         val identifier: String = parent.classWithoutNamespace().text
         //设置作用域
-        Class.currClass = GlobalField.getClass(Project.currNamespace,identifier)
+        Class.currClass = GlobalField.getClass(Project.currNamespace, identifier)
         Function.currFunction = Class.currClass!!.classPreInit
     }
 
@@ -853,7 +855,7 @@ class McfppImListener : mcfppBaseListener() {
         val parent = ctx.parent as mcfppParser.StructDeclarationContext
         val identifier: String = parent.classWithoutNamespace().text
         //设置作用域
-        Struct.currStruct = GlobalField.getStruct(Project.currNamespace,identifier)
+        Struct.currStruct = GlobalField.getStruct(Project.currNamespace, identifier)
     }
 
     /**

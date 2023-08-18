@@ -1,16 +1,24 @@
 namespace test;
 
-struct FloatStruct{
-    public static int index;
-    public int member1;
-    public member2;
+void main(){
+    int i;
+    int p;
+    int qwq;
+    i = p + qwq * p + 2;
 
-    public FloatStruct(){
-        //member1 = index;
-        //index++;
-    }
-
-    public void print(){
-        //print(this);
-    }
 }
+
+//struct FloatStruct{
+//    public static int index;
+//    public int member1;
+//    public member2;
+//
+//    public FloatStruct(){
+//        //member1 = index;
+//        //index++;
+//    }
+//
+//    public void print(){
+//        //print(this);
+//    }
+//}

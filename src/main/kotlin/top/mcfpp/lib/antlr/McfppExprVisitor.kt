@@ -1,10 +1,12 @@
-package top.mcfpp.lib
+package top.mcfpp.lib.antlr
 
 import mcfppBaseVisitor
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.exception.*
 import top.mcfpp.lang.*
+import top.mcfpp.lib.*
+import top.mcfpp.lib.Function
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
@@ -13,6 +15,11 @@ import kotlin.collections.HashMap
  * 获取表达式结果用的visitor。解析并计算一个形如a+b*c的表达式。
  */
 class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
+
+    /**
+     * 是左值，需要进行临时变量的处理
+     */
+    private var isLeft = false
 
     private val tempVarCommandCache = HashMap<Var, String>()
 
@@ -51,6 +58,9 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     override fun visitConditionalOrExpression(ctx: mcfppParser.ConditionalOrExpressionContext): Var? {
         Project.ctx = ctx
         var re: Var? = visit(ctx.conditionalAndExpression(0))
+        if(!re!!.isTemp){
+            re = re.getTempVar(tempVarCommandCache)
+        }
         for (i in 1 until ctx.conditionalAndExpression().size) {
             val b: Var? = visit(ctx.conditionalAndExpression(i))
             re = if (re is MCBool && b is MCBool) {
@@ -72,6 +82,9 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     override fun visitConditionalAndExpression(ctx: mcfppParser.ConditionalAndExpressionContext): Var? {
         Project.ctx = ctx
         var re: Var? = visit(ctx.equalityExpression(0))
+        if(!re!!.isTemp){
+            re = re.getTempVar(tempVarCommandCache)
+        }
         for (i in 1 until ctx.equalityExpression().size) {
             val b: Var? = visit(ctx.equalityExpression(i))
             re = if (re is MCBool && b is MCBool) {
@@ -93,6 +106,9 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     override fun visitEqualityExpression(ctx: mcfppParser.EqualityExpressionContext): Var? {
         Project.ctx = ctx
         var re: Var? = visit(ctx.relationalExpression(0))
+        if(!re!!.isTemp){
+            re = re.getTempVar(tempVarCommandCache)
+        }
         for (i in 1 until ctx.relationalExpression().size) {
             val b: Var? = visit(ctx.relationalExpression(i))
             if (ctx.op.text.equals("==")) {
@@ -146,6 +162,9 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     override fun visitAdditiveExpression(ctx: mcfppParser.AdditiveExpressionContext): Var? {
         Project.ctx = ctx
         var re: Var? = visit(ctx.multiplicativeExpression(0))
+        if(!re!!.isTemp){
+            re = re.getTempVar(tempVarCommandCache)
+        }
         for (i in 1 until ctx.multiplicativeExpression().size) {
             val b: Var? = visit(ctx.multiplicativeExpression(i))
             re = if (Objects.equals(ctx.op.text, "+")) {
@@ -179,6 +198,9 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     override fun visitMultiplicativeExpression(ctx: mcfppParser.MultiplicativeExpressionContext): Var? {
         Project.ctx = ctx
         var re: Var? = visit(ctx.unaryExpression(0))
+        if(!re!!.isTemp){
+            re = re.getTempVar(tempVarCommandCache)
+        }
         for (i in 1 until ctx.unaryExpression().size) {
             val b: Var? = visit(ctx.unaryExpression(i))
             re = if (ctx.op.text == "*") {
@@ -220,8 +242,11 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         return if (ctx.rightVarExpression() != null) {
             visit(ctx.rightVarExpression())
         } else if (ctx.unaryExpression() != null) {
-            val a: Var? = visit(ctx.unaryExpression())
+            var a: Var? = visit(ctx.unaryExpression())
             if (a is MCBool) {
+                if(!a.isTemp){
+                    a = a.getTempVar(tempVarCommandCache)
+                }
                 a.negation()
             } else {
                 throw ArgumentNotMatchException("运算符'!'只能用于bool类型")
@@ -253,7 +278,8 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
      */
     @Override
     override fun visitRightVarExpression(ctx: mcfppParser.RightVarExpressionContext?): Var {
-        return visit(ctx!!.basicExpression())!!.getTempVar(tempVarCommandCache)
+        return visit(ctx!!.basicExpression())!!
+        //return visit(ctx!!.basicExpression())!!.getTempVar(tempVarCommandCache)
     }
 
     /**
@@ -299,9 +325,9 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             //ClassName
             val clsstr = ctx.className().text.split(":")
             val qwq: Class? = if(clsstr.size == 2) {
-                GlobalField.getClass(clsstr[0],clsstr[1])
+                GlobalField.getClass(clsstr[0], clsstr[1])
             }else{
-                GlobalField.getClass(null,clsstr[0])
+                GlobalField.getClass(null, clsstr[0])
             }
             if (qwq == null) {
                 Project.error("Undefined class:" + ctx.className().text)
@@ -406,11 +432,11 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             functionCallCTX.addChild(ctx.arguments())
             //函数对象获取
             val curr = if(ctx.namespaceID() != null)
-                McfppFuncVisitor().getFunction(ctx.namespaceID(),FunctionParam.getVarTypes(args))
+                McfppFuncVisitor().getFunction(ctx.namespaceID(), FunctionParam.getVarTypes(args))
             else if(ctx.`var`() != null)
-                McfppFuncVisitor().getFunction(ctx.`var`(),ctx.selector(),FunctionParam.getVarTypes(args))
+                McfppFuncVisitor().getFunction(ctx.`var`(),ctx.selector(), FunctionParam.getVarTypes(args))
             else
-                McfppFuncVisitor().getFunction(ctx.className(),ctx.selector(),FunctionParam.getVarTypes(args))
+                McfppFuncVisitor().getFunction(ctx.className(),ctx.selector(), FunctionParam.getVarTypes(args))
             val func = curr.first
             val obj = curr.second
             if (func == null) {
@@ -442,9 +468,9 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         Project.ctx = ctx
         val clsstr = ctx.className().text.split(":")
         val cls: Class? = if(clsstr.size == 2) {
-            GlobalField.getClass(clsstr[0],clsstr[1])
+            GlobalField.getClass(clsstr[0], clsstr[1])
         }else{
-            GlobalField.getClass(null,clsstr[0])
+            GlobalField.getClass(null, clsstr[0])
         }
         if (cls == null) {
             Project.error("Undefined class:" + ctx.className().text)
