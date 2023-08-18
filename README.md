@@ -25,7 +25,7 @@ JustMCF is a project to simplify mcfunction projects. Using JustMCF, you can not
 ## MCFPP支持基本的逻辑语句
 MCFPP supports basic logical statements
 ```
-func example(){
+void example(){
   int i = @s.pos[0];
   if(i > 0){
     @s.say("Hello Minecraft!");
@@ -40,7 +40,7 @@ class Example{
   public Example(int i){
     this.i = i;
   }
-  public func print(){
+  public void print(){
     sys.print(this.i);
   }
 }
@@ -50,12 +50,12 @@ MCFPP supports libraries.
 ```
 import mcfpp.math;
 
-func example{
-    double i = 1.5;
-    double out;
-    pow(i, 2, static out);
+void example{
+    float i = 1.5;
+    float out;
+    out = pow(i, 2);
     print(out);
 }
 ```
 # 快速开始 QuickStart
-MCFPP Guider
+[MCFPP Guider](http://alumopper.top:8001/quickstart)
