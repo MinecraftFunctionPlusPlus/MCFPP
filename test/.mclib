@@ -16,42 +16,13 @@
 		{
 			"id":"test",
 			"functions":[
-				
+				"void main()"
 			],
 			"classes":[
 				
 			],
 			"structs":[
-				{
-					"id":"FloatStruct",
-					"isNative":false,
-					"functions":[
-						"void print()"
-					],
-					"staticFunctions":[
-						
-					],
-					"vars":[
-						{
-							"id":"member2",
-							"type":"int"
-						},
-						{
-							"id":"member1",
-							"type":"int"
-						},
-						{
-							"id":"index",
-							"type":"int"
-						}
-					],
-					"staticVars":[
-						
-					],
-					"constructors":[
-						"void _init_floatstruct_0()"
-					]
-				}
+				
 			]
 		}
 	]

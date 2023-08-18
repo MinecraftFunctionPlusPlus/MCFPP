@@ -76,11 +76,9 @@ abstract class Var : Member, Cloneable {
     val isClassMember: Boolean
         get() = clsPointer != null
 
-    init {
-        name = UUID.randomUUID().toString()
-        identifier = name
-    }
-
+    /**
+     * 复制一个变量
+     */
     constructor(`var` : Var)  {
         name = `var`.name
         identifier = `var`.identifier
@@ -92,7 +90,15 @@ abstract class Var : Member, Cloneable {
         clsPointer = `var`.clsPointer
     }
 
-    constructor()
+    /**
+     * 创建一个变量。它的标识符和mc名一致
+     *
+     * @param identifier 变量的标识符。默认为随机的uuid
+     */
+    constructor(identifier: String = UUID.randomUUID().toString()){
+        this.name = identifier
+        this.identifier = identifier
+    }
 
     open val type: String
         /**

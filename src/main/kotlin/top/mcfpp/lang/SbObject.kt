@@ -56,7 +56,11 @@ class SbObject(name: String, rule: String, var display: JsonText?) {
         /**
          * mcfpp默认的计分板变量
          */
-        var MCS_default = SbObject("mcs_default", "dummy")
-        var MCS_boolean = SbObject("mcs_boolean", "dummy")
+        var MCS_default = SbObject("mcs_default")
+        var MCS_boolean = SbObject("mcs_boolean")
+        var MCS_float_sign = SbObject("mcs_float_sign")
+        var MCS_float_int0 = SbObject("mcs_float_int0")
+        var MCS_float_int1 = SbObject("mcs_float_int1")
+        var MCS_float_exp = SbObject("mcs_float_exp")
     }
 }

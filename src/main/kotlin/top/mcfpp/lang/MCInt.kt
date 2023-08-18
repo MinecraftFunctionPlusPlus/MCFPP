@@ -6,7 +6,6 @@ import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Function
-import java.time.DateTimeException
 import java.util.*
 import kotlin.collections.HashMap
 
@@ -14,50 +13,43 @@ import kotlin.collections.HashMap
  * 代表了mc中的一个整数。实质上是记分板中的一个记分项。你可以对它进行加减乘除等基本运算操作，以及大小比较等逻辑运算。
  */
 class MCInt : Number<Int> {
-    /**
-     * 创建一个匿名的动态int
-     */
-    constructor() : this(UUID.randomUUID().toString()){
-        isTemp = true
-    }
 
     /**
-     * 创建一个固定的匿名int
-     * @param value 值
+     * 创建一个int类型的变量。它的mc名和变量所在的域容器有关。
+     *
+     * @param identifier 标识符。默认为
      */
-    constructor(value: Int) : this(UUID.randomUUID().toString()) {
-        isConcrete = true
-        this.value = value
+    constructor(curr: FieldContainer, identifier: String = UUID.randomUUID().toString()) : this(curr.prefix + identifier){
+        this.identifier = identifier
     }
+
+
+    /**
+     * 创建一个int值。它的标识符和mc名相同。
+     * @param identifier identifier
+     */
+    constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier)
 
     /**
      * 创建一个固定的int
-     * @param id 标识符
+     *
+     * @param identifier 标识符
+     * @param curr 域容器
      * @param value 值
      */
-    constructor(id: String, value: Int) : super(
-        Function.currFunction.namespaceID + "_" + id
-    ) {
-        identifier = id
+    constructor(curr: FieldContainer, value: Int, identifier: String = UUID.randomUUID().toString()) : super(curr.prefix + identifier) {
         isConcrete = true
         this.value = value
     }
 
     /**
-     * 创建一个int
-     * @param id 值
-     * @param curr 这边变量被储存在的缓存。用于命名。
+     * 创建一个固定的int。它的标识符和mc名一致/
+     * @param identifier 标识符。如不指定，则为随机uuid
+     * @param value 值
      */
-    constructor(id: String, curr: FieldContainer) : super(curr.prefix + id) {
-        identifier = id
-    }
-
-    /**
-     * 创建一个int值。它的key和identifier相同。
-     * @param id identifier
-     */
-    constructor(id: String) : super(id) {
-        identifier = id
+    constructor(value: Int, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
+        isConcrete = true
+        this.value = value
     }
 
     /**

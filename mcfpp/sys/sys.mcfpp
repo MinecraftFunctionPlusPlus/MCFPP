@@ -1,2 +1,2 @@
-native func print(int i) -> top.mcfpp.lang.System.print;
-native func print(bool b) -> top.mcfpp.lang.System.print;
+native print(int i) -> top.mcfpp.lang.System.print;
+native print(bool b) -> top.mcfpp.lang.System.print;

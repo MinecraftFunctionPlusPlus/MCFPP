@@ -1,30 +1,30 @@
 package top.mcfpp.lang
 
+import org.intellij.lang.annotations.Identifier
+import java.util.UUID
+
 /**
  * 代表了mcfpp中的一个数字类型。数字类型都是以记分板为基础的。
  *
  * @param T 这个数字类型中包装的类型
  */
 abstract class Number<T> : Var, OnScoreboard {
+
     var value: T? = null
     var `object`: SbObject
 
     /**
-     * 创建一个匿名数字类型变量
+     * 创建一个数字类型变量
+     *
+     * @param identifier 标识符。默认为随机的uuid
      */
-    constructor() : super() {
+    constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier) {
         `object` = SbObject.MCS_default
     }
 
     /**
-     * 创建一个数字类型变量
-     * @param i 标识符
+     * 复制一个数字类型变量
      */
-    constructor(i: String) {
-        name = i
-        `object` = SbObject.MCS_default
-    }
-
     constructor(b: Number<T>) : super(b) {
         value = b.value
         `object` = b.`object`
