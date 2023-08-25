@@ -1,0 +1,17 @@
+{
+	"replace": false,
+	"values": [
+		"minecraft:area_effect_cloud",
+		"minecraft:interaction",
+		"minecraft:slime",
+		"minecraft:magma_cube",
+		"minecraft:phantom",
+		"minecraft:armor_stand",
+		"minecraft:glow_item_frame",
+		"minecraft:item_frame",
+		"minecraft:painting",
+		"minecraft:shulker",
+		"minecraft:player",
+		"minecraft:pufferfish"
+	]
+}

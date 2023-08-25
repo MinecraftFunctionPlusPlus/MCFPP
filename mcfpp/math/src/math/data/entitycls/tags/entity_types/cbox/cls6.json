@@ -1,0 +1,15 @@
+{
+	"replace": false,
+	"values": [
+		"minecraft:item",
+		"minecraft:egg",
+		"minecraft:ender_pearl",
+		"minecraft:experience_bottle",
+		"minecraft:eye_of_ender",
+		"minecraft:snowball",
+		"minecraft:firework_rocket",
+		"minecraft:firework_rocket",
+		"minecraft:fishing_bobber",
+		"minecraft:llama_spit"
+	]
+}

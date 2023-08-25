@@ -101,7 +101,6 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
      * @param ctx the parse tree
      * @return 表达式的值
      */
-    //等于或不等于
     @Override
     override fun visitEqualityExpression(ctx: mcfppParser.EqualityExpressionContext): Var? {
         Project.ctx = ctx
@@ -495,5 +494,12 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         //调用构造函数
         constructor.invoke(args, obj.initPointer)
         return obj
+    }
+
+    companion object{
+        /**
+         * 遍历到的计算的树的深度
+         */
+        var treeDepth : Int = -1
     }
 }

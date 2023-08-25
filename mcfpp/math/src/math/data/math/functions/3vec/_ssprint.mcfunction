@@ -1,0 +1,2 @@
+#math:3vec/_ssprint
+tellraw @a [{"text":"(3vec) ssobj: ["},{"score":{"name":"3vec_x","objective":"int"}},{"text":","},{"score":{"name":"3vec_y","objective":"int"}},{"text":","},{"score":{"name":"3vec_z","objective":"int"}},{"text":"]"}]

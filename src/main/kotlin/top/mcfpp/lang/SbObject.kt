@@ -62,5 +62,10 @@ class SbObject(name: String, rule: String, var display: JsonText?) {
         var MCS_float_int0 = SbObject("mcs_float_int0")
         var MCS_float_int1 = SbObject("mcs_float_int1")
         var MCS_float_exp = SbObject("mcs_float_exp")
+        var Math_float_sign = SbObject("float_sign")
+        var Math_float_int0 = SbObject("float_int0")
+        var Math_float_int1 = SbObject("float_int1")
+        var Math_float_exp = SbObject("float_exp")
+        var Math_int = SbObject("int")
     }
 }

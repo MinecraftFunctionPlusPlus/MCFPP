@@ -398,10 +398,10 @@ open class Function : Member, FieldContainer {
             //向函数缓存中写入变量
             when(param1.type){
                 "int" -> {
-                    field.putVar(param1.identifier, MCInt("_param_" + param1.identifier, this))
+                    field.putVar(param1.identifier, MCInt(this,"_param_" + param1.identifier))
                 }
                 "bool" -> {
-                    field.putVar(param1.identifier, MCBool("_param_" + param1.identifier, this))
+                    field.putVar(param1.identifier, MCBool(this, "_param_" + param1.identifier))
                 }
                 else -> {
                     //引用类型
@@ -456,7 +456,7 @@ open class Function : Member, FieldContainer {
                 "int" -> {
                     val tg = args[i].cast(params[i].type) as MCInt
                     //参数传递和子函数的参数进栈
-                    val p = MCInt("_param_" + params[i].identifier, this)
+                    val p = MCInt(this,"_param_" + params[i].identifier)
                     addCommand(
                         "execute " +
                                 "store result storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${p.identifier} int 1 " +
@@ -466,7 +466,7 @@ open class Function : Member, FieldContainer {
                 else -> {
                     //是引用类型
                     val tg = args[i].cast(params[i].type) as ClassBase
-                    val p = MCInt("_param_" + params[i].identifier, this)
+                    val p = MCInt(this,"_param_" + params[i].identifier)
                     addCommand(
                         "execute " +
                                 "store result storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${p.identifier} int 1" +

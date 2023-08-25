@@ -1,0 +1,2 @@
+#float类型的临时对象
+{<float_sign,int>,<float_int0,int>,<float_int1,int>,<float_exp,int>}
