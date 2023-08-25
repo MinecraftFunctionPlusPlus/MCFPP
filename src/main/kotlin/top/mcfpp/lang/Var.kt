@@ -152,8 +152,8 @@ abstract class Var : Member, Cloneable {
         fun build(identifier: String, type: String, container: FieldContainer): Var?{
             val `var`: Var?
             when (type) {
-                "int" -> `var` = MCInt(identifier, container)
-                "bool" -> `var` = MCBool(identifier, container)
+                "int" -> `var` = MCInt(container,identifier)
+                "bool" -> `var` = MCBool(container, identifier)
                 "selector" -> `var` = Selector(identifier)
                 "entity" -> `var` = null
                 "string" -> `var` = null
@@ -186,8 +186,8 @@ abstract class Var : Member, Cloneable {
             if (ctx.type().className() == null) {
                 //普通类型
                 when (ctx.type().text) {
-                    "int" -> `var` = MCInt(ctx.Identifier().text, container)
-                    "bool" -> `var` = MCBool(ctx.Identifier().text, container)
+                    "int" -> `var` = MCInt(container, ctx.Identifier().text)
+                    "bool" -> `var` = MCBool(container, ctx.Identifier().text)
                 }
             } else if (ctx.type().className().classWithoutNamespace().InsideClass() != null) {
                 when (ctx.type().className().classWithoutNamespace().InsideClass().text) {

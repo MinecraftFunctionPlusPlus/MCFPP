@@ -40,6 +40,7 @@ class MCInt : Number<Int> {
     constructor(curr: FieldContainer, value: Int, identifier: String = UUID.randomUUID().toString()) : super(curr.prefix + identifier) {
         isConcrete = true
         this.value = value
+        isDynamic = false
     }
 
     /**
@@ -50,6 +51,7 @@ class MCInt : Number<Int> {
     constructor(value: Int, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
         isConcrete = true
         this.value = value
+        isDynamic = false
     }
 
     /**
@@ -61,6 +63,9 @@ class MCInt : Number<Int> {
     @get:Override
     override val type: String
         get() = "int"
+
+
+    override var isDynamic: Boolean = true
 
     @Override
     @Throws(VariableConverseException::class)
@@ -85,6 +90,7 @@ class MCInt : Number<Int> {
     @Override
     @InsertCommand
     override fun assignCommand(a: Number<Int>) {
+        if(a.isClassMember) TODO()
         if(isClassMember){
             //如果是类的成员
             val cmd : String = if(!isStatic){
@@ -95,15 +101,14 @@ class MCInt : Number<Int> {
                 "execute as @e[type=marker,tag=${clsPointer!!.clsType.staticTag}]"
             }
             //类的成员是运行时动态的
+            isConcrete = false
             //t = a
             if(a.isConcrete){
-                isConcrete = false
                 //对类中的成员的值进行修改
                 Function.addCommand("$cmd run scoreboard players set @s $`object` ${a.value}")
             }else{
                 //对类中的成员的值进行修改
-                Function.addCommand("$cmd run scoreboard players operation @s $`object` = ${a.name} ${a.`object`}"
-                )
+                Function.addCommand("$cmd run scoreboard players operation @s $`object` = ${a.name} ${a.`object`}")
             }
         }else{
             //t = a
@@ -118,6 +123,27 @@ class MCInt : Number<Int> {
                             " run " + Commands.SbPlayerOperation(this, "=", a as MCInt)
                 )
             }
+        }
+    }
+    /**
+     * 动态化
+     *
+     */
+    override fun toDynamic(){
+        isDynamic = true
+        if(isClassMember){
+            //如果是类的成员
+            val cmd : String = if(!isStatic){
+                //静态
+                "execute as @e[type=marker,tag=${clsPointer!!.clsType.tag}] " +
+                        "if score @s ${clsPointer!!.address.`object`.name} = ${clsPointer!!.name} ${clsPointer!!.address.`object`.name}"
+            }else{
+                "execute as @e[type=marker,tag=${clsPointer!!.clsType.staticTag}]"
+            }
+            Function.addCommand("$cmd run scoreboard players set @s $`object` $value")
+        }else{
+            val cmd : String = "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1"
+            Function.addCommand("$cmd run scoreboard players set $name $`object` $value")
         }
     }
 
@@ -237,6 +263,7 @@ class MCInt : Number<Int> {
                         + " if score " + name + " " + `object` + " > " + a.name + " " + a.`object`
             )
         }
+        re.isTemp = true
         return re
     }
 
@@ -263,6 +290,7 @@ class MCInt : Number<Int> {
                         + " if score " + name + " " + `object` + " < " + a.name + " " + a.`object`
             )
         }
+        re.isTemp = true
         return re
     }
 
@@ -289,6 +317,7 @@ class MCInt : Number<Int> {
                         + " if score " + name + " " + `object` + " <= " + a.name + " " + a.`object`
             )
         }
+        re.isTemp = true
         return re
     }
 
@@ -315,6 +344,7 @@ class MCInt : Number<Int> {
                         + " if score " + name + " " + `object` + " >= " + a.name + " " + a.`object`
             )
         }
+        re.isTemp = true
         return re
     }
 
@@ -341,6 +371,7 @@ class MCInt : Number<Int> {
                         + " if score " + name + " " + `object` + " = " + a.name + " " + a.`object`
             )
         }
+        re.isTemp = true
         return re
     }
 
@@ -367,6 +398,7 @@ class MCInt : Number<Int> {
                         + " unless score " + name + " " + `object` + " = " + a.name + " " + a.`object`
             )
         }
+        re.isTemp = true
         return re
     }
 
@@ -375,10 +407,18 @@ class MCInt : Number<Int> {
         return MCInt(this)
     }
 
+
     private var index : Int = -1
+
+    /**
+     * 获取临时变量
+     *
+     * @param cache 忘记这个变量是干嘛的了qwq
+     * @return 返回临时变量
+     */
     @Override
     @InsertCommand
-    override fun getTempVar(cache: HashMap<Var, String>): Var {
+    override fun getTempVar(cache: HashMap<Var, String>): MCInt {
         if(isTemp) return this
         if(isConcrete){
             return MCInt(value!!)

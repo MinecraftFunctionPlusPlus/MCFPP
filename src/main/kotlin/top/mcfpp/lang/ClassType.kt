@@ -35,7 +35,7 @@ class ClassType: ClassBase{
      */
     constructor(cls: Class){
         clsType = cls
-        address = MCInt("\$classType",-1).setObj(clsType.addressSbObject) as MCInt
+        address = MCInt(-1, "\$classType").setObj(clsType.addressSbObject) as MCInt
     }
 
     /**

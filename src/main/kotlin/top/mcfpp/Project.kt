@@ -7,6 +7,7 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.io.IndexReader
 import top.mcfpp.io.IndexWriter
 import top.mcfpp.io.McfppFileReader
+import top.mcfpp.lang.MCFloat
 import top.mcfpp.lang.UnresolvedVar
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
@@ -252,6 +253,7 @@ object Project {
     fun optimization() {
         logger.debug("Optimizing...")
         logger.debug("Adding scoreboards declare in mcfpp:load function")
+        //region load init command
         //向load函数中添加记分板初始化命令
         Function.currFunction = GlobalField.localNamespaces["mcfpp"]!!.getFunction("load", ArrayList())!!
         for (scoreboard in GlobalField.scoreboards.values){
@@ -265,6 +267,10 @@ object Project {
                 }
             }
         }
+        //浮点数临时marker实体
+        Function.addCommand("summon marker 0 0 0 {Tags:[\"mcfpp:float_marker\"],UUID:${MCFloat.tempFloatEntityUUIDNBT}}")
+        //endregion
+        //浮点数的
         //寻找入口函数
         var hasEntrance = false
         for(field in GlobalField.localNamespaces.values){

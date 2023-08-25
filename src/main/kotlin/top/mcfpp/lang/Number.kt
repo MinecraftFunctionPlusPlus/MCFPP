@@ -1,6 +1,7 @@
 package top.mcfpp.lang
 
 import org.intellij.lang.annotations.Identifier
+import top.mcfpp.annotations.InsertCommand
 import java.util.UUID
 
 /**
@@ -10,8 +11,10 @@ import java.util.UUID
  */
 abstract class Number<T> : Var, OnScoreboard {
 
-    var value: T? = null
+    open var value: T? = null
     var `object`: SbObject
+
+    abstract var isDynamic: Boolean
 
     /**
      * 创建一个数字类型变量
@@ -28,6 +31,7 @@ abstract class Number<T> : Var, OnScoreboard {
     constructor(b: Number<T>) : super(b) {
         value = b.value
         `object` = b.`object`
+        isDynamic = b.isDynamic
     }
 
     @Override
@@ -119,4 +123,6 @@ abstract class Number<T> : Var, OnScoreboard {
      * @return 计算结果
      */
     abstract fun notEqual(a: Number<T>): MCBool
+
+    abstract fun toDynamic()
 }

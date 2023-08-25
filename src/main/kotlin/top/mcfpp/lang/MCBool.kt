@@ -26,32 +26,49 @@ class MCBool : Var, OnScoreboard {
      */
     var boolObject: SbObject = SbObject.MCS_boolean
 
-    constructor(id: String, curr: FieldContainer) {
-        identifier = id
-        name = curr.prefix + "_" + id
+    /**
+     * 创建一个bool类型的变量。它的mc名和变量所在的域容器有关。
+     *
+     * @param identifier 标识符。默认为
+     */
+    constructor(curr: FieldContainer, identifier: String = UUID.randomUUID().toString()) : this(curr.prefix + identifier){
+        this.identifier = identifier
     }
 
-    constructor(b: Boolean, id: String, curr: FieldContainer) : this(id, curr) {
-        value = b
+
+    /**
+     * 创建一个bool值。它的标识符和mc名相同。
+     * @param identifier identifier
+     */
+    constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier)
+
+    /**
+     * 创建一个固定的bool
+     *
+     * @param identifier 标识符
+     * @param curr 域容器
+     * @param value 值
+     */
+    constructor(curr: FieldContainer, value: Boolean, identifier: String = UUID.randomUUID().toString()) : super(curr.prefix + identifier) {
         isConcrete = true
+        this.value = value
     }
 
-    constructor(id: String) {
-        identifier = id
-        name = id
-    }
-
-    constructor() : this(UUID.randomUUID().toString())
-
-    constructor(b: MCBool) : super(b) {
-        this.value = b.value;
-        this.boolObject = b.boolObject;
-    }
-
-    constructor(b: Boolean) : this(UUID.randomUUID().toString()) {
+    /**
+     * 创建一个固定的bool。它的标识符和mc名一致/
+     * @param identifier 标识符。如不指定，则为随机uuid
+     * @param value 值
+     */
+    constructor(value: Boolean, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
         isConcrete = true
-        value = b
+        this.value = value
     }
+
+    /**
+     * 复制一个bool
+     * @param b 被复制的int值
+     */
+    constructor(b: MCBool) : super(b)
 
     @get:Override
     override val type: String

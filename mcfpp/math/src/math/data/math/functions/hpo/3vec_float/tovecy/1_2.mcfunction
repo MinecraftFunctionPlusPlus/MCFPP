@@ -1,0 +1,2 @@
+execute if score 3vec_float_y_exp int matches 2 run scoreboard players operation 3vec_y int /= 100 int
+execute if score 3vec_float_y_exp int matches 1 run scoreboard players operation 3vec_y int /= 1000 int

@@ -71,7 +71,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
                     //参数传递和子函数的参数压栈
                     addCommand(
                         "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]." + params[i].identifier + " int 1 run "
-                                + Commands.SbPlayerOperation(MCInt("_param_" + params[i].identifier, this), "=", tg)
+                                + Commands.SbPlayerOperation(MCInt(this,"_param_" + params[i].identifier), "=", tg)
                     )
                 }
             }

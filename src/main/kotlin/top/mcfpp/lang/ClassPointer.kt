@@ -56,7 +56,7 @@ class ClassPointer : ClassBase {
         clsType = type
         this.type = clsType.identifier
         this.identifier = identifier
-        address = MCInt(identifier,type).setObj(type.addressSbObject) as MCInt
+        address = MCInt(type, identifier).setObj(type.addressSbObject) as MCInt
         this.name = address.name
     }
 

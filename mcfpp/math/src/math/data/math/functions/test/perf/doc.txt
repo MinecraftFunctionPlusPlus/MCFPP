@@ -1,0 +1,8 @@
+execute store result score sstemp int run scoreboard players operation perf_line_mult_max int -= perf_line_mult_avg int
+scoreboard players operation perf_line_mult_max int += perf_line_mult_avg int
+scoreboard players operation perf_line_mult_avg int -= perf_line_mult_min int
+scoreboard players operation sstemp int > perf_line_mult_avg int
+scoreboard players operation perf_line_mult_avg int += perf_line_mult_min int
+scoreboard players operation sstemp int *= 100 int
+scoreboard players operation sstemp int /= perf_line_mult_avg int
+tellraw @a ["line_mult: {avg:",{"score":{"name":"perf_line_mult_avg","objective":"int"}},{"text":", min:"},{"score":{"name":"perf_line_mult_min","objective":"int"}},{"text":", max:"},{"score":{"name":"perf_line_mult_max","objective":"int"}},{"text":", max_err:"},{"score":{"name":"sstemp","objective":"int"}},"%}"]
