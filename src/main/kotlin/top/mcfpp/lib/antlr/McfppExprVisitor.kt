@@ -5,22 +5,20 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.exception.*
 import top.mcfpp.lang.*
+import top.mcfpp.lang.Number
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
+import top.mcfpp.util.Utils
+import java.lang.IllegalArgumentException
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
+import kotlin.system.exitProcess
 
 /**
  * 获取表达式结果用的visitor。解析并计算一个形如a+b*c的表达式。
  */
 class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
-
-    /**
-     * 是左值，需要进行临时变量的处理
-     */
-    private var isLeft = false
-
     private val tempVarCommandCache = HashMap<Var, String>()
 
     /**
@@ -58,15 +56,16 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     override fun visitConditionalOrExpression(ctx: mcfppParser.ConditionalOrExpressionContext): Var? {
         Project.ctx = ctx
         var re: Var? = visit(ctx.conditionalAndExpression(0))
-        if(!re!!.isTemp){
-            re = re.getTempVar(tempVarCommandCache)
-        }
         for (i in 1 until ctx.conditionalAndExpression().size) {
             val b: Var? = visit(ctx.conditionalAndExpression(i))
+            if(!re!!.isTemp){
+                re = re.getTempVar(tempVarCommandCache)
+            }
             re = if (re is MCBool && b is MCBool) {
                 re.or(b)
             } else {
-                throw ArgumentNotMatchException("运算符'||'只能用于bool类型")
+                Project.error("The operator \"||\" cannot be used between ${re.type} and ${b!!.type}")
+                throw IllegalArgumentException("")
             }
         }
         return re
@@ -82,15 +81,16 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     override fun visitConditionalAndExpression(ctx: mcfppParser.ConditionalAndExpressionContext): Var? {
         Project.ctx = ctx
         var re: Var? = visit(ctx.equalityExpression(0))
-        if(!re!!.isTemp){
-            re = re.getTempVar(tempVarCommandCache)
-        }
         for (i in 1 until ctx.equalityExpression().size) {
             val b: Var? = visit(ctx.equalityExpression(i))
+            if(!re!!.isTemp){
+                re = re.getTempVar(tempVarCommandCache)
+            }
             re = if (re is MCBool && b is MCBool) {
                 re.and(b)
             } else {
-                throw ArgumentNotMatchException("运算符'&&'只能用于bool类型")
+                Project.error("The operator \"&&\" cannot be used between ${re.type} and ${b!!.type}")
+                throw IllegalArgumentException("")
             }
         }
         return re
@@ -105,22 +105,32 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     override fun visitEqualityExpression(ctx: mcfppParser.EqualityExpressionContext): Var? {
         Project.ctx = ctx
         var re: Var? = visit(ctx.relationalExpression(0))
-        if(!re!!.isTemp){
-            re = re.getTempVar(tempVarCommandCache)
-        }
         for (i in 1 until ctx.relationalExpression().size) {
             val b: Var? = visit(ctx.relationalExpression(i))
+            if(!re!!.isTemp){
+                re = re.getTempVar(tempVarCommandCache)
+            }
             if (ctx.op.text.equals("==")) {
-                if (re is MCInt && b is MCInt) {
-                    re = re.isEqual(b)
+                re = if (re is MCInt && b is MCInt) {
+                    re.isEqual(b)
                 } else if (re is MCBool && b is MCBool) {
-                    re = re.equalCommand(b)
+                    re.equalCommand(b)
+                } else if (re is MCFloat && b is MCFloat){
+                    re.isEqual(b)
+                } else{
+                    Project.error("The operator \"${ctx.op.text}\" cannot be used between ${re.type} and ${b!!.type}")
+                    throw IllegalArgumentException("")
                 }
             } else {
-                if (re is MCInt && b is MCInt) {
-                    re = re.notEqual(b)
+                re = if (re is MCInt && b is MCInt) {
+                    re.notEqual(b)
                 } else if (re is MCBool && b is MCBool) {
-                    re = re.notEqualCommand(b)
+                    re.notEqualCommand(b)
+                } else if (re is MCFloat && b is MCFloat){
+                    re.notEqual(b)
+                }else{
+                    Project.error("The operator \"${ctx.op.text}\" cannot be used between ${re.type} and ${b!!.type}")
+                    throw IllegalArgumentException("")
                 }
             }
         }
@@ -138,6 +148,9 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         var re: Var? = visit(ctx.additiveExpression(0))
         if (ctx.additiveExpression().size != 1) {
             val b: Var? = visit(ctx.additiveExpression(1))
+            if(!re!!.isTemp){
+                re = re.getTempVar(tempVarCommandCache)
+            }
             if (re is MCInt && b is MCInt) {
                 when (ctx.relationalOp().text) {
                     ">" -> re = re.isGreater(b)
@@ -145,8 +158,16 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
                     "<" -> re = re.isLess(b)
                     "<=" -> re = re.isLessOrEqual(b)
                 }
-            } else {
-                TODO()
+            } else if(re is MCFloat && b is MCFloat){
+                when (ctx.relationalOp().text) {
+                    ">" -> re = re.isGreater(b)
+                    ">=" -> re = re.isGreaterOrEqual(b)
+                    "<" -> re = re.isLess(b)
+                    "<=" -> re = re.isLessOrEqual(b)
+                }
+            }else {
+                Project.error("The operator \"${ctx.relationalOp()}\" cannot be used between ${re.type} and ${b!!.type}")
+                throw IllegalArgumentException("")
             }
         }
         return re
@@ -161,27 +182,32 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     override fun visitAdditiveExpression(ctx: mcfppParser.AdditiveExpressionContext): Var? {
         Project.ctx = ctx
         var re: Var? = visit(ctx.multiplicativeExpression(0))
-        if(!re!!.isTemp){
-            re = re.getTempVar(tempVarCommandCache)
-        }
         for (i in 1 until ctx.multiplicativeExpression().size) {
-            val b: Var? = visit(ctx.multiplicativeExpression(i))
+            var b: Var? = visit(ctx.multiplicativeExpression(i))
+            if(b is MCFloat) b = b.toTempEntity()
+            if(!re!!.isTemp){
+                re = re.getTempVar(tempVarCommandCache)
+            }
+            val qwq = re
             re = if (Objects.equals(ctx.op.text, "+")) {
-                if (re is MCInt && b is MCInt) {
+                if (re is Number<*> && b is Number<*>) {
                     re.plus(b)
-                } else {
-                    //TODO
-                    throw TODOException("")
+                }else{
+                    null
                 }
             } else if (Objects.equals(ctx.op.text, "-")) {
-                if (re is MCInt && b is MCInt) {
+                if (re is Number<*> && b is Number<*>) {
                     re.minus(b)
                 } else {
-                    //TODO
-                    throw TODOException("")
+                    null
                 }
             } else {
-                return null
+                null
+            }
+            if(re == null){
+                Project.error("The operator \"${ctx.op.text}\" cannot be used between ${qwq!!.type} and ${b!!.type}.")
+                Utils.stopCompile(IllegalArgumentException(""))
+                exitProcess(1)
             }
         }
         return re
@@ -197,34 +223,41 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     override fun visitMultiplicativeExpression(ctx: mcfppParser.MultiplicativeExpressionContext): Var? {
         Project.ctx = ctx
         var re: Var? = visit(ctx.unaryExpression(0))
-        if(!re!!.isTemp){
-            re = re.getTempVar(tempVarCommandCache)
-        }
         for (i in 1 until ctx.unaryExpression().size) {
-            val b: Var? = visit(ctx.unaryExpression(i))
-            re = if (ctx.op.text == "*") {
-                if (re is MCInt && b is MCInt) {
-                    re.multiple(b)
-                } else {
-                    //TODO
-                    throw TODOException("")
+            var b: Var? = visit(ctx.unaryExpression(i))
+            if(b is MCFloat) b = b.toTempEntity()
+            if(!re!!.isTemp){
+                re = re.getTempVar(tempVarCommandCache)
+            }
+            val qwq = re
+            re = when(ctx.op.text){
+                "*" -> {
+                    if (re is Number<*> && b is Number<*>) {
+                        re.multiple(b)
+                    }else{
+                        null
+                    }
                 }
-            } else if (ctx.op.text == "/") {
-                if (re is MCInt && b is MCInt) {
-                    re.divide(b)
-                } else {
-                    //TODO
-                    throw TODOException("")
+                "/" -> {
+                    if (re is Number<*> && b is Number<*>) {
+                        re.divide(b)
+                    }else{
+                        null
+                    }
                 }
-            } else if (ctx.op.text == "%") {
-                if (re is MCInt && b is MCInt) {
-                    re.modular(b)
-                } else {
-                    //TODO
-                    throw TODOException("")
+                "%" -> {
+                    if (re is MCInt && b is MCInt) {
+                        re.modular(b)
+                    }else{
+                        null
+                    }
                 }
-            } else {
-                return null
+                else -> null
+            }
+            if(re == null){
+                Project.error("The operator \"${ctx.op.text}\" cannot be used between ${qwq.type} and ${b!!.type}.")
+                Utils.stopCompile(IllegalArgumentException(""))
+                exitProcess(1)
             }
         }
         return re
@@ -248,7 +281,9 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
                 }
                 a.negation()
             } else {
-                throw ArgumentNotMatchException("运算符'!'只能用于bool类型")
+                Project.error("The operator \"!\" cannot be used with ${a!!.type}")
+                Utils.stopCompile(IllegalArgumentException(""))
+                exitProcess(1)
             }
         } else {
             //类型强制转换
@@ -315,10 +350,12 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
                 pwp
             }else if(pwp == null){
                 Project.error("Undefined variable:$varName")
-                throw ArgumentNotMatchException("Undefined variable:$varName")
+                Utils.stopCompile(ArgumentNotMatchException("Undefined variable:$varName"))
+                exitProcess(1)
             }else{
                 Project.error("$varName is not a class pointer")
-                throw ArgumentNotMatchException("$varName is not a class pointer")
+                Utils.stopCompile(ArgumentNotMatchException("$varName is not a class pointer"))
+                exitProcess(1)
             }
         } else {
             //ClassName

@@ -188,6 +188,7 @@ abstract class Var : Member, Cloneable {
                 when (ctx.type().text) {
                     "int" -> `var` = MCInt(container, ctx.Identifier().text)
                     "bool" -> `var` = MCBool(container, ctx.Identifier().text)
+                    "float" -> `var` = MCFloat(container, ctx.Identifier().text)
                 }
             } else if (ctx.type().className().classWithoutNamespace().InsideClass() != null) {
                 when (ctx.type().className().classWithoutNamespace().InsideClass().text) {

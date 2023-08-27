@@ -82,9 +82,36 @@ class MCInt : Number<Int> {
 
     @Override
     override fun cast(type: String): Var? {
-        return if (type == this.type) {
-            this
-        } else null
+        if(isConcrete){
+            return when(type){
+                this.type -> {
+                    this
+                }
+                "float" -> {
+                    MCFloat(value!!.toFloat())
+                }
+                else -> {
+                    null
+                }
+            }
+        }else{
+            return when(type){
+                this.type -> {
+                    this
+                }
+                "float" -> {
+                    val inp = MCInt("inp")
+                    inp.assign(this)
+                    Function.addCommand("function math:hpo/float/_scoreto")
+                    val re = MCFloat()
+                    re.assign(MCFloat.ssObj)
+                    re
+                }
+                else -> {
+                    null
+                }
+            }
+        }
     }
 
     @Override
@@ -149,20 +176,26 @@ class MCInt : Number<Int> {
 
     @Override
     @InsertCommand
-    override fun plus(a: Number<Int>): Number<Int> {
+    override fun plus(a: Number<*>): Number<*>? {
         //t = t + a
-        if (a.isConcrete) {
+        val qwq: MCInt? = if(a !is MCInt){
+            a.cast("int") as MCInt?
+        }else{
+            a
+        }
+        if(qwq == null) return null
+        if (qwq.isConcrete) {
             if (isConcrete) {
-                value = value!! + a.value!!
+                value = value!! + qwq.value!!
             } else {
-                Function.addCommand(Commands.SbPlayerAdd(this, a.value!!))
+                Function.addCommand(Commands.SbPlayerAdd(this, qwq.value!!))
             }
             return this
         } else {
             if (isConcrete) {
-                return a.plus(this)
+                return qwq.plus(this)
             } else {
-                Function.addCommand(Commands.SbPlayerOperation(this, "+=", a as MCInt))
+                Function.addCommand(Commands.SbPlayerOperation(this, "+=", qwq))
             }
             return this
         }
@@ -170,20 +203,26 @@ class MCInt : Number<Int> {
 
     @Override
     @InsertCommand
-    override fun minus(a: Number<Int>): Number<Int> {
+    override fun minus(a: Number<*>): Number<*>? {
         //t = t - a
+        val qwq: MCInt? = if(a !is MCInt){
+            a.cast("int") as MCInt?
+        }else{
+            a
+        }
+        if(qwq == null) return null
         if (a.isConcrete) {
             if (isConcrete) {
-                value = value!! - a.value!!
+                value = value!! - qwq.value!!
             } else {
-                Function.addCommand(Commands.SbPlayerRemove(this, a.value!!))
+                Function.addCommand(Commands.SbPlayerRemove(this, qwq.value!!))
             }
             return this
         } else {
             if (isConcrete) {
-                return a.minus(this)
+                return qwq.minus(this)
             } else {
-                Function.addCommand(Commands.SbPlayerOperation(this, "-=", a as MCInt))
+                Function.addCommand(Commands.SbPlayerOperation(this, "-=", qwq))
             }
             return this
         }
@@ -191,76 +230,100 @@ class MCInt : Number<Int> {
 
     @Override
     @InsertCommand
-    override fun multiple(a: Number<Int>): Number<Int> {
+    override fun multiple(a: Number<*>): Number<*>? {
         //t = t * a
-        if (a.isConcrete && isConcrete) {
-            value = value!! * a.value!!
+        val qwq: MCInt? = if(a !is MCInt){
+            a.cast("int") as MCInt?
+        }else{
+            a
+        }
+        if(qwq == null) return null
+        if (qwq.isConcrete && isConcrete) {
+            value = value!! * qwq.value!!
         } else {
             if (a.isConcrete) {
-                Function.addCommand(Commands.SbPlayerSet(a as MCInt, a.value!!))
+                Function.addCommand(Commands.SbPlayerSet(qwq, qwq.value!!))
             }else if(this.isConcrete){
                 Function.addCommand(Commands.SbPlayerSet(this, value!!))
             }
-            Function.addCommand(Commands.SbPlayerOperation(this, "*=", a as MCInt))
+            Function.addCommand(Commands.SbPlayerOperation(this, "*=", qwq))
         }
         return this
     }
 
     @Override
     @InsertCommand
-    override fun divide(a: Number<Int>): Number<Int> {
+    override fun divide(a: Number<*>): Number<*>? {
         //t = t / a
-        if (a.isConcrete && isConcrete) {
-            value = value!! / a.value!!
+        val qwq: MCInt? = if(a !is MCInt){
+            a.cast("int") as MCInt?
+        }else{
+            a
+        }
+        if(qwq == null) return null
+        if (qwq.isConcrete && isConcrete) {
+            value = value!! / qwq.value!!
         } else {
             if (a.isConcrete) {
-                Function.addCommand(Commands.SbPlayerSet(a as MCInt, a.value!!))
+                Function.addCommand(Commands.SbPlayerSet(qwq, qwq.value!!))
             }else if(this.isConcrete){
                 Function.addCommand(Commands.SbPlayerSet(this, value!!))
             }
-            Function.addCommand(Commands.SbPlayerOperation(this, "/=", a as MCInt))
+            Function.addCommand(Commands.SbPlayerOperation(this, "/=", qwq))
         }
         return this
     }
 
     @Override
     @InsertCommand
-    override fun modular(a: Number<Int>): Number<Int> {
+    override fun modular(a: Number<*>): Number<*>? {
         //t = t % a
+        val qwq: MCInt? = if(a !is MCInt){
+            a.cast("int") as MCInt?
+        }else{
+            a
+        }
+        if(qwq == null) return null
         if (a.isConcrete && isConcrete) {
-            value = value!! % a.value!!
+            value = value!! % qwq.value!!
         } else {
             if (a.isConcrete) {
-                Function.addCommand(Commands.SbPlayerSet(a as MCInt, a.value!!))
+                Function.addCommand(Commands.SbPlayerSet(qwq, qwq.value!!))
             }else if(this.isConcrete){
                 Function.addCommand(Commands.SbPlayerSet(this, value!!))
             }
-            Function.addCommand(Commands.SbPlayerOperation(this, "%=", a as MCInt))
+            Function.addCommand(Commands.SbPlayerOperation(this, "%=", qwq))
         }
         return this
     }
 
     @Override
     @InsertCommand
-    override fun isGreater(a: Number<Int>): MCBool {
+    override fun isGreater(a: Number<*>): MCBool? {
         //re = t > a
+        val qwq: MCInt? = if(a !is MCInt){
+            a.cast("int") as MCInt?
+        }else{
+            a
+        }
+        if(qwq == null) return null
         val re: MCBool
-        if (isConcrete && a.isConcrete) {
-            re = MCBool(value!! > a.value!!)
+        if (isConcrete && qwq.isConcrete) {
+            re = MCBool(value!! > qwq.value!!)
         } else if (isConcrete) {
-            re = a.isLess(this)
-        } else if (a.isConcrete) {
+            re = qwq.isLess(this)!!
+        } else if (qwq.isConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
             re = MCBool()
             Function.addCommand(
                 "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " if score " + name + " " + `object` + " matches " + (a.value!! + 1) + ".."
+                        + " if score " + name + " " + `object` + " matches " + (qwq.value!! + 1) + ".."
             )
         } else {
             re = MCBool()
             Function.addCommand(
                 "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " if score " + name + " " + `object` + " > " + a.name + " " + a.`object`
+                        + " if score " + name + " " + `object` + " > " + qwq.name + " " + qwq.`object`
             )
         }
         re.isTemp = true
@@ -269,25 +332,31 @@ class MCInt : Number<Int> {
 
     @Override
     @InsertCommand
-    override fun isLess(a: Number<Int>): MCBool {
+    override fun isLess(a: Number<*>): MCBool? {
         //re = t < a
+        val qwq: MCInt? = if(a !is MCInt){
+            a.cast("int") as MCInt?
+        }else{
+            a
+        }
+        if(qwq == null) return null
         val re: MCBool
-        if (isConcrete && a.isConcrete) {
-            re = MCBool(value!! < a.value!!)
+        if (isConcrete && qwq.isConcrete) {
+            re = MCBool(value!! < qwq.value!!)
         } else if (isConcrete) {
-            re = a.isGreater(this)
+            re = qwq.isGreater(this)!!
         } else if (a.isConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
             re = MCBool()
             Function.addCommand(
                 "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " if score " + name + " " + `object` + " matches " + ".." + (a.value!! - 1)
+                        + " if score " + name + " " + `object` + " matches " + ".." + (qwq.value!! - 1)
             )
         } else {
             re = MCBool()
             Function.addCommand(
                 "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " if score " + name + " " + `object` + " < " + a.name + " " + a.`object`
+                        + " if score " + name + " " + `object` + " < " + qwq.name + " " + qwq.`object`
             )
         }
         re.isTemp = true
@@ -296,25 +365,31 @@ class MCInt : Number<Int> {
 
     @Override
     @InsertCommand
-    override fun isLessOrEqual(a: Number<Int>): MCBool {
+    override fun isLessOrEqual(a: Number<*>): MCBool? {
         //re = t <= a
+        val qwq: MCInt? = if(a !is MCInt){
+            a.cast("int") as MCInt?
+        }else{
+            a
+        }
+        if(qwq == null) return null
         val re: MCBool
-        if (isConcrete && a.isConcrete) {
-            re = MCBool(value!! <= a.value!!)
+        if (isConcrete && qwq.isConcrete) {
+            re = MCBool(value!! <= qwq.value!!)
         } else if (isConcrete) {
-            re = a.isGreater(this)
-        } else if (a.isConcrete) {
+            re = qwq.isGreater(this)!!
+        } else if (qwq.isConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
             re = MCBool()
             Function.addCommand(
                 "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " if score " + name + " " + `object` + " matches " + ".." + a.value
+                        + " if score " + name + " " + `object` + " matches " + ".." + qwq.value
             )
         } else {
             re = MCBool()
             Function.addCommand(
                 "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " if score " + name + " " + `object` + " <= " + a.name + " " + a.`object`
+                        + " if score " + name + " " + `object` + " <= " + qwq.name + " " + qwq.`object`
             )
         }
         re.isTemp = true
@@ -323,25 +398,31 @@ class MCInt : Number<Int> {
 
     @Override
     @InsertCommand
-    override fun isGreaterOrEqual(a: Number<Int>): MCBool {
+    override fun isGreaterOrEqual(a: Number<*>): MCBool? {
         //re = t <= a
+        val qwq: MCInt? = if(a !is MCInt){
+            a.cast("int") as MCInt?
+        }else{
+            a
+        }
+        if(qwq == null) return null
         val re: MCBool
-        if (isConcrete && a.isConcrete) {
-            re = MCBool(value!! >= a.value!!)
+        if (isConcrete && qwq.isConcrete) {
+            re = MCBool(value!! >= qwq.value!!)
         } else if (isConcrete) {
-            re = a.isGreater(this)
-        } else if (a.isConcrete) {
+            re = qwq.isGreater(this)!!
+        } else if (qwq.isConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
             re = MCBool()
             Function.addCommand(
                 "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " if score " + name + " " + `object` + " matches " + a.value + ".."
+                        + " if score " + name + " " + `object` + " matches " + qwq.value + ".."
             )
         } else {
             re = MCBool()
             Function.addCommand(
                 "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " if score " + name + " " + `object` + " >= " + a.name + " " + a.`object`
+                        + " if score " + name + " " + `object` + " >= " + qwq.name + " " + qwq.`object`
             )
         }
         re.isTemp = true
@@ -350,25 +431,31 @@ class MCInt : Number<Int> {
 
     @Override
     @InsertCommand
-    override fun isEqual(a: Number<Int>): MCBool {
+    override fun isEqual(a: Number<*>): MCBool? {
         //re = t == a
+        val qwq: MCInt? = if(a !is MCInt){
+            a.cast("int") as MCInt?
+        }else{
+            a
+        }
+        if(qwq == null) return null
         val re: MCBool
-        if (isConcrete && a.isConcrete) {
-            re = MCBool(Objects.equals(value, a.value))
+        if (isConcrete && qwq.isConcrete) {
+            re = MCBool(Objects.equals(value, qwq.value))
         } else if (isConcrete) {
-            re = a.isEqual(this)
-        } else if (a.isConcrete) {
+            re = qwq.isEqual(this)!!
+        } else if (qwq.isConcrete) {
             //execute store success score qwq qwq if score qwq qwq = owo owo
             re = MCBool()
             Function.addCommand(
                 "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " if score " + name + " " + `object` + " matches " + a.value
+                        + " if score " + name + " " + `object` + " matches " + qwq.value
             )
         } else {
             re = MCBool()
             Function.addCommand(
                 "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " if score " + name + " " + `object` + " = " + a.name + " " + a.`object`
+                        + " if score " + name + " " + `object` + " = " + qwq.name + " " + qwq.`object`
             )
         }
         re.isTemp = true
@@ -377,25 +464,31 @@ class MCInt : Number<Int> {
 
     @Override
     @InsertCommand
-    override fun notEqual(a: Number<Int>): MCBool {
+    override fun notEqual(a: Number<*>): MCBool? {
         //re = t != a
+        val qwq: MCInt? = if(a !is MCInt){
+            a.cast("int") as MCInt?
+        }else{
+            a
+        }
+        if(qwq == null) return null
         val re: MCBool
-        if (isConcrete && a.isConcrete) {
-            re = MCBool(!Objects.equals(value, a.value))
+        if (isConcrete && qwq.isConcrete) {
+            re = MCBool(!Objects.equals(value, qwq.value))
         } else if (isConcrete) {
-            re = a.isEqual(this)
-        } else if (a.isConcrete) {
+            re = qwq.notEqual(this)!!
+        } else if (qwq.isConcrete) {
             //execute store success score qwq qwq if score qwq qwq = owo owo
             re = MCBool()
             Function.addCommand(
                 "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " unless score " + name + " " + `object` + " matches " + a.value
+                        + " unless score " + name + " " + `object` + " matches " + qwq.value
             )
         } else {
             re = MCBool()
             Function.addCommand(
                 "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " unless score " + name + " " + `object` + " = " + a.name + " " + a.`object`
+                        + " unless score " + name + " " + `object` + " = " + qwq.name + " " + qwq.`object`
             )
         }
         re.isTemp = true
