@@ -51,42 +51,42 @@ abstract class Number<T> : Var, OnScoreboard {
      * @param a 加数
      * @return 计算的结果
      */
-    abstract fun plus(a: Number<T>): Number<T>
+    abstract fun plus(a: Number<*>): Number<*>?
 
     /**
      * 减法
      * @param a 减数
      * @return 计算的结果
      */
-    abstract fun minus(a: Number<T>): Number<T>
+    abstract fun minus(a: Number<*>): Number<*>?
 
     /**
      * 乘法
      * @param a 乘数
      * @return 计算的结果
      */
-    abstract fun multiple(a: Number<T>): Number<T>
+    abstract fun multiple(a: Number<*>): Number<*>?
 
     /**
      * 除法
      * @param a 除数
      * @return 计算的结果
      */
-    abstract fun divide(a: Number<T>): Number<T>
+    abstract fun divide(a: Number<*>): Number<*>?
 
     /**
      * 取余
      * @param a 除数
      * @return 计算的结果
      */
-    abstract fun modular(a: Number<T>): Number<T>
+    abstract fun modular(a: Number<*>): Number<*>?
 
     /**
      * 这个数是否大于a
      * @param a 右侧值
      * @return 计算结果
      */
-    abstract fun isGreater(a: Number<T>): MCBool
+    abstract fun isGreater(a: Number<*>): MCBool?
 
 
     /**
@@ -94,35 +94,35 @@ abstract class Number<T> : Var, OnScoreboard {
      * @param a 右侧值
      * @return 计算结果
      */
-    abstract fun isLess(a: Number<T>): MCBool
+    abstract fun isLess(a: Number<*>): MCBool?
 
     /**
      * 这个数是否小于等于a
      * @param a 右侧值
      * @return 计算结果
      */
-    abstract fun isLessOrEqual(a: Number<T>): MCBool
+    abstract fun isLessOrEqual(a: Number<*>): MCBool?
 
     /**
      * 这个数是否大于等于a
      * @param a 右侧值
      * @return 计算结果
      */
-    abstract fun isGreaterOrEqual(a: Number<T>): MCBool
+    abstract fun isGreaterOrEqual(a: Number<*>): MCBool?
 
     /**
      * 这个数是否等于a
      * @param a 右侧值
      * @return 计算结果
      */
-    abstract fun isEqual(a: Number<T>): MCBool
+    abstract fun isEqual(a: Number<*>): MCBool?
 
     /**
      * 这个数是否不等于a
      * @param a 右侧值
      * @return 计算结果
      */
-    abstract fun notEqual(a: Number<T>): MCBool
+    abstract fun notEqual(a: Number<*>): MCBool?
 
     abstract fun toDynamic()
 }

@@ -1,9 +1,9 @@
 namespace test;
 
 void main(){
-    int i;
-    int p;
-    int qwq;
+    float i;
+    float p;
+    float qwq;
     i = p + qwq * p + 2;
 
 }

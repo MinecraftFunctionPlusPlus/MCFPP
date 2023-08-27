@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSON
 import top.mcfpp.Project
 import top.mcfpp.lib.*
 import top.mcfpp.util.StringHelper
+import top.mcfpp.util.Utils
 import java.io.*
 import java.nio.file.*
 
@@ -43,7 +44,7 @@ object DatapackCreator {
         //生成
         val datapackMcMeta = DatapackMcMeta(
             DatapackMcMeta.Pack(
-                Project.getVersion(Project.version!!),
+                Utils.getVersion(Project.version!!),
                 Project.description!!
             )
         )
