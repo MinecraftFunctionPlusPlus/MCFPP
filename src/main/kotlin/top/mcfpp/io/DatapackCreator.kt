@@ -1,12 +1,18 @@
 package top.mcfpp.io
 
 import com.alibaba.fastjson2.JSON
+import com.alibaba.fastjson2.JSONObject
 import top.mcfpp.Project
 import top.mcfpp.lib.*
 import top.mcfpp.util.StringHelper
 import top.mcfpp.util.Utils
 import java.io.*
 import java.nio.file.*
+import java.nio.file.attribute.BasicFileAttributes
+import java.util.stream.Collectors
+import kotlin.io.path.absolutePathString
+import kotlin.io.path.name
+
 
 /**
  * 用于创建一个数据包的框架。
@@ -40,6 +46,36 @@ object DatapackCreator {
         Project.debug("Clearing output folder...")
         //清空原输出文件夹
         delAllFile(File("$path/${Project.name}"))
+        Project.debug("Copy libs...")
+        //复制库
+        for (lib in Project.includes){
+            val filePath = if(!lib.endsWith("/.mclib")) {
+                "$lib/.mclib"
+            }else{
+                lib
+            }
+            //逐行读取
+            val fileReader = FileReader(filePath)
+            val jsonString = fileReader.readText()
+            fileReader.close()
+            //解析json
+            val json = JSONObject.parse(jsonString) as JSONObject
+            val scr = json.getString("src")
+            if(scr != null){
+                val scrPath = filePath.substring(0,filePath.lastIndexOf(".")) + scr
+                val qwq = Paths.get(scrPath)
+                // 获取所有子文件夹
+                val subdirectories = Files.walk(qwq, 1)
+                    .filter(Files::isDirectory)
+                    .skip(1)
+                    .collect(Collectors.toList())
+                for (subdirectory in subdirectories) {
+                    //复制文件夹
+                    delAllFile(File(path + "\\" + subdirectory.name))
+                    copyAllFiles(subdirectory.absolutePathString(),path + "\\" + subdirectory.name)
+                }
+            }
+        }
         Project.debug("Creating datapack...")
         //生成
         val datapackMcMeta = DatapackMcMeta(
@@ -141,13 +177,11 @@ object DatapackCreator {
             directory.delete()
         } else {
             val files: Array<out File>? = directory.listFiles()
-
             // 空文件夹
             if (files!!.isEmpty()) {
                 directory.delete()
                 return
             }
-
             // 删除子文件夹和子文件
             for (file in files) {
                     if (file.isDirectory) {
@@ -162,6 +196,29 @@ object DatapackCreator {
         }
     }
 
+    @Throws(IOException::class)
+    fun copyAllFiles(src: String, dst: String) {
+        val srcFolder = Paths.get(src)
+        val dstFolder = Paths.get(dst)
+        Files.walkFileTree(srcFolder, object : SimpleFileVisitor<Path>() {
+            @Throws(IOException::class)
+            override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult {
+                val targetPath = dstFolder.resolve(srcFolder.relativize(dir))
+                try {
+                    Files.copy(dir, targetPath, StandardCopyOption.REPLACE_EXISTING)
+                } catch (e: FileAlreadyExistsException) {
+                    if (!Files.isDirectory(targetPath)) throw e
+                }
+                return FileVisitResult.CONTINUE
+            }
+
+            @Throws(IOException::class)
+            override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+                Files.copy(file, dstFolder.resolve(srcFolder.relativize(file)), StandardCopyOption.REPLACE_EXISTING)
+                return FileVisitResult.CONTINUE
+            }
+        })
+    }
     /**
      * 数据包的元数据。用于创建pack.mcmeta文件。
      *

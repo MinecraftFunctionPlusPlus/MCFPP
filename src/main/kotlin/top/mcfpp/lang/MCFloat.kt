@@ -683,6 +683,9 @@ class MCFloat : Number<Float> {
      */
     @InsertCommand
     override fun getTempVar(cache: HashMap<Var, String>): MCFloat {
+        //if(ssObjRef != null){
+        //    Project.warn("(JVM)Assignment conflict, temporary variable(${this.identifier}) has an unretrieved value ")
+        //}
         if(isConcrete){
             ssObj.setValue(value)
             ssObj.isConcrete = true
@@ -706,12 +709,13 @@ class MCFloat : Number<Float> {
             val absFloat = float.absoluteValue
             val exponent = floor(log10(absFloat.toDouble())).toInt()
             val factor = 10.0.pow((8 - exponent - 1).toDouble()).toInt()
-            val n =  8 - exponent - 1
+            val n =  exponent + 1
             val qwq = (absFloat * factor).toInt()
             return arrayOf(sign, qwq/10000, qwq%10000, n)
         }
 
         val ssObj : MCFloat = MCFloat()
+
         val tempFloat : MCFloat = MCFloat()
 
         init {
@@ -725,6 +729,13 @@ class MCFloat : Number<Float> {
             tempFloat.int0 = MCInt(tempFloatEntityUUID).setObj(SbObject.MCS_float_int0) as MCInt
             tempFloat.int1 = MCInt(tempFloatEntityUUID).setObj(SbObject.MCS_float_int1) as MCInt
             tempFloat.isTemp = true
+        }
+
+        fun ssObjToVar(identifier: String = UUID.randomUUID().toString()) : MCFloat{
+            val re = MCFloat(identifier)
+            re.isTemp = true
+            re.assign(ssObj)
+            return re
         }
     }
 }

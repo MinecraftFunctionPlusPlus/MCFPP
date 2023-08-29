@@ -46,6 +46,7 @@ object GlobalField : FieldContainer, IField {
         functionTags["minecraft:load"] = FunctionTag.LOAD
         scoreboards[SbObject.MCS_boolean.name] = SbObject.MCS_boolean
         scoreboards[SbObject.MCS_default.name] = SbObject.MCS_default
+        scoreboards[SbObject.MCFPP_INIT.name] = SbObject.MCFPP_INIT
         return this
     }
 

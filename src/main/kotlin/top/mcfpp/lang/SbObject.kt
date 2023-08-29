@@ -58,6 +58,9 @@ class SbObject(name: String, rule: String, var display: JsonText?) {
          */
         var MCS_default = SbObject("mcs_default")
         var MCS_boolean = SbObject("mcs_boolean")
+
+        var MCFPP_INIT = SbObject("mcfpp_init")
+
         var MCS_float_sign = SbObject("mcs_float_sign")
         var MCS_float_int0 = SbObject("mcs_float_int0")
         var MCS_float_int1 = SbObject("mcs_float_int1")

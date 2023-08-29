@@ -173,6 +173,8 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         return re
     }
 
+
+    private var visitAdditiveExpressionRe : Var? = null
     /**
      * 计算一个加减法表达式，例如a + b
      * @param ctx the parse tree
@@ -181,36 +183,36 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     @Override
     override fun visitAdditiveExpression(ctx: mcfppParser.AdditiveExpressionContext): Var? {
         Project.ctx = ctx
-        var re: Var? = visit(ctx.multiplicativeExpression(0))
+        visitAdditiveExpressionRe = visit(ctx.multiplicativeExpression(0))
         for (i in 1 until ctx.multiplicativeExpression().size) {
             var b: Var? = visit(ctx.multiplicativeExpression(i))
             if(b is MCFloat) b = b.toTempEntity()
-            if(!re!!.isTemp){
-                re = re.getTempVar(tempVarCommandCache)
+            if(visitAdditiveExpressionRe!! != MCFloat.ssObj){
+                visitAdditiveExpressionRe = visitAdditiveExpressionRe!!.getTempVar(tempVarCommandCache)
             }
-            val qwq = re
-            re = if (Objects.equals(ctx.op.text, "+")) {
-                if (re is Number<*> && b is Number<*>) {
-                    re.plus(b)
+            val qwq = visitAdditiveExpressionRe
+            visitAdditiveExpressionRe = if (Objects.equals(ctx.op.text, "+")) {
+                if (visitAdditiveExpressionRe is Number<*> && b is Number<*>) {
+                    (visitAdditiveExpressionRe as Number<*>).plus(b)
                 }else{
                     null
                 }
             } else if (Objects.equals(ctx.op.text, "-")) {
-                if (re is Number<*> && b is Number<*>) {
-                    re.minus(b)
+                if (visitAdditiveExpressionRe is Number<*> && b is Number<*>) {
+                    (visitAdditiveExpressionRe as Number<*>).minus(b)
                 } else {
                     null
                 }
             } else {
                 null
             }
-            if(re == null){
+            if(visitAdditiveExpressionRe == null){
                 Project.error("The operator \"${ctx.op.text}\" cannot be used between ${qwq!!.type} and ${b!!.type}.")
                 Utils.stopCompile(IllegalArgumentException(""))
                 exitProcess(1)
             }
         }
-        return re
+        return visitAdditiveExpressionRe
     }
 
     /**
@@ -224,6 +226,9 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         Project.ctx = ctx
         var re: Var? = visit(ctx.unaryExpression(0))
         for (i in 1 until ctx.unaryExpression().size) {
+            if(visitAdditiveExpressionRe == MCFloat.ssObj){
+                visitAdditiveExpressionRe = MCFloat.ssObjToVar()
+            }
             var b: Var? = visit(ctx.unaryExpression(i))
             if(b is MCFloat) b = b.toTempEntity()
             if(!re!!.isTemp){
