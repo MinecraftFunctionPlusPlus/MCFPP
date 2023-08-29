@@ -8,7 +8,7 @@ import kotlin.math.pow
 fun convertToEightDigit(input: Float): Pair<Int, Int> {
     val exponent = floor(log10(input.toDouble())).toInt()
     val factor = 10.0.pow((8 - exponent - 1).toDouble()).toInt()
-    return Pair((input * factor).toInt(), 8 - exponent - 1)
+    return Pair((input * factor).toInt(), exponent+1)
 }
 
 fun printArray(array: Array<Int>) {

@@ -14,7 +14,7 @@ namespaceDeclaration
     ;
 
 importDeclaration
-    :   'import' Identifier ('.' Identifier)* ('.' cls = (ClassIdentifier|'*'))? ';'
+    :   IMPORT Identifier ('.' Identifier)* ('.' cls = (ClassIdentifier|'*'))? ';'
     ;
 
 //类或函数声明
@@ -148,9 +148,11 @@ constructorCall
 
 //变量声明
 fieldDeclaration
-    :   CONST? type Identifier
-    |   CONST? type Identifier '=' expression
+    :   fieldModifier* type Identifier
+    |   fieldModifier* type Identifier '=' expression
     ;
+
+fieldModifier : CONST|DYNAMIC|IMPORT;
 
 //参数列表
 parameterList
@@ -451,6 +453,9 @@ PROTECTED:'protected';
 PRIVATE:'private';
 
 CONST:'const';
+DYNAMIC:'dynamic';
+IMPORT: 'import';
+
 INLINE:'inline';
 
 InsideClass

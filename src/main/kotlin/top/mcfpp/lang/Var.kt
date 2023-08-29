@@ -221,6 +221,8 @@ abstract class Var : Member, Cloneable {
          * @return 这个变量
          */
         fun build(ctx: mcfppParser.FieldDeclarationContext, cls: ClassBase): Var? {
+            //TODO 浮点数
+            
             var `var`: Var? = null
             if (ctx.type().className() == null) {
                 //普通类型
@@ -262,11 +264,11 @@ abstract class Var : Member, Cloneable {
                 `var` = classPointer
             }
             `var`!!.clsPointer = cls
-            //是否是常量
-            if (ctx.CONST() != null) {
-                `var`.isConst = ConstStatus.NULL
-                `var`.isConcrete = true
-            }
+            ////是否是常量 TODO
+            //if (ctx.CONST() != null) {
+            //    `var`.isConst = ConstStatus.NULL
+            //    `var`.isConcrete = true
+            //}
             return `var`
         }
     }

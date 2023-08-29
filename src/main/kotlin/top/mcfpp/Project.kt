@@ -168,6 +168,7 @@ object Project {
         //默认的
         if(!CompileSettings.ignoreStdLib){
             includes.add("mcfpp/sys")
+            includes.add("mcfpp/math")
         }
         //写入缓存
         for (include in includes) {
@@ -259,6 +260,8 @@ object Project {
         for (scoreboard in GlobalField.scoreboards.values){
             Function.addCommand("scoreboard objectives add ${scoreboard.name} ${scoreboard.criterion}")
         }
+        //向load函数中添加库初始化命令
+        Function.addCommand("execute unless score math mcfpp_init matches 1 run function math:_init")
         //向load中添加类初始化命令
         for (n in GlobalField.localNamespaces.values){
             n.forEachClass { c->

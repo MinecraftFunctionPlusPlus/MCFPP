@@ -5,6 +5,8 @@ import top.mcfpp.annotations.InsertCommand;
 import top.mcfpp.lang.*;
 import top.mcfpp.lib.Function;
 
+import java.util.Random;
+
 public class System {
     public static void print(@NotNull Var[] vars, ClassPointer cls) {
         //只会有一个参数哦

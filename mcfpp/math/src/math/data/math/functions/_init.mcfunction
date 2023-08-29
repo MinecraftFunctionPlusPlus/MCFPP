@@ -77,26 +77,11 @@ data modify storage math:io rec set value [{}]
 #三维向量初始化
 function math:3vec/init
 
-#列表初始化
-function math:list/init
-
-#四元数初始化
-function math:qrot/init
-
-#局部坐标系初始化
-function math:uvw/init
-
-#空间模块初始化
-function math:space/init
-
-#实体碰撞箱初始化
-function math:cbox/init
-
-#几何图形初始化
-function math:geom/init
-
 #高精度模块初始化
 function math:hpo/init
 
 #集合初始化
 function math:set/init
+
+#标记已经初始化
+scoreboard players set math mcfpp_init 1
