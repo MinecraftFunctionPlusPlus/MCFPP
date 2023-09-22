@@ -43,14 +43,13 @@ object UwU {
         tips.add("嗯~是第几次看到这条tips了呢？")
         tips.add("Never gonna give you up~")
         tips.add("mcfpp中的函数没有返回值哦")
-        tips.add("支持1.19.4+")
+        tips.add("支持1.20.3+")
         tips.add("别写错别字哦（盯")
         tips.add("mcfpp会在函数中同时生成一些注释，让抽象的命令变得不那么抽象（或许（")
         tips.add("mcfpp至少应当在1.18的版本以上运行，因为1.18解除了记分板长度限制")
         tips.add("少用nbt可以有效地提升数据包的性能")
         tips.add("mcfpp会在编译的时候自动计算一些确定的值")
         tips.add("MNI调用的java/kotlin方法只能是静态的哦")
-        tips.add("最新支持到1.20.1")
         tips.add("库的完善需要社区的共同参与~")
     }
 

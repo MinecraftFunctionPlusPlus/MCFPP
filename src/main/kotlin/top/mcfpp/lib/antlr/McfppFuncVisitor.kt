@@ -8,6 +8,7 @@ import top.mcfpp.lib.Class
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.GlobalField
 import top.mcfpp.lib.Member
+import kotlin.reflect.KFunction
 
 /**
  * 获取函数用的visitor
@@ -25,43 +26,66 @@ class McfppFuncVisitor : mcfppBaseVisitor<Function?>() {
         return Pair<Function?, ClassBase?>(qwq,null)
     }
 
-    fun getFunction(varCtx: mcfppParser.VarContext, sctCtx: List<mcfppParser.SelectorContext>, args: ArrayList<String>): Pair<Function?, ClassBase?>{
+    fun getFunction(primaryCtx: mcfppParser.PrimaryContext, sctCtx: List<mcfppParser.SelectorContext>, args: ArrayList<String>): Pair<Function?, ClassBase?>{
         //是类的成员方法
-        var curr: ClassBase
-        val varName = varCtx.text
-        //Var
-        if(Function.currFunction.field.getVar(varName) is ClassPointer){
-            curr = Function.currFunction.field.getVar(varName) as ClassPointer
-        }else{
-            Project.error("$varName is not a class pointer")
-            throw ArgumentNotMatchException("$varName is not a class pointer")
-        }
-        var member: ClassBase?
-        val accessModifier = if(Function.currFunction.isClassMember){
-            Function.currFunction.ownerClass!!.getAccess(curr.clsType)
-        }else{
-            Member.AccessModifier.PUBLIC
-        }
-        //开始选择成员对象。最后一个成员应该是函数。
-        var i = 0
-        while (i < sctCtx.size - 1) {
-            val re = curr.getMemberVar(sctCtx[i].text.substring(1), accessModifier)
-            member = re.first as ClassBase?
-            if (member == null) {
-                Project.error("Undefined member ${sctCtx[i].text.substring(1)} in class ${curr.clsType.identifier}")
+        var curr: ClassBase? = null
+        val getter : KFunction<Pair<Function?, Boolean>>
+        val accessModifier : Member.AccessModifier
+        if(primaryCtx.`var`() != null){
+            val varName = primaryCtx.`var`().text
+            //Var
+            val v = Function.currFunction.field.getVar(varName)
+            if(v == null){
+                Project.error("Undefined var $varName")
             }
-            if (!re.second){
-                Project.error("Cannot access member ${sctCtx[i].text.substring(1)} in class ${curr.clsType.identifier}")
+            if(v is ClassPointer){
+                //类指针
+                curr = Function.currFunction.field.getVar(varName) as ClassPointer
+                var member: ClassBase?
+                accessModifier = if(Function.currFunction.isClassMember){
+                    Function.currFunction.ownerClass!!.getAccess(curr.clsType)
+                }else{
+                    Member.AccessModifier.PUBLIC
+                }
+                //开始选择成员对象。最后一个成员应该是函数。
+                var i = 0
+                while (i < sctCtx.size - 1) {
+                    val re = curr!!.getMemberVar(sctCtx[i].text.substring(1), accessModifier)
+                    member = re.first as ClassBase?
+                    if (member == null) {
+                        Project.error("Undefined member ${sctCtx[i].text.substring(1)} in class ${curr.clsType.identifier}")
+                    }
+                    if (!re.second){
+                        Project.error("Cannot access member ${sctCtx[i].text.substring(1)} in class ${curr.clsType.identifier}")
+                    }
+                    i++
+                    if(i < sctCtx.size){
+                        curr = member as ClassBase
+                    }
+                }
+                getter = curr!!::getMemberFunction
+            }else{
+                //基本类型
+                getter = v!!::getMemberFunction
+                accessModifier = Member.AccessModifier.PUBLIC
             }
-            i++
-            if(i < sctCtx.size){
-                curr = member as ClassBase
+        }else {
+            //常量
+            getter = if (primaryCtx.value().INT() != null) {
+                MCInt()::getMemberFunction
+            } else if (primaryCtx.value().FLOAT() != null) {
+                MCFloat()::getMemberFunction
+            } else if (primaryCtx.value().BOOL() != null) {
+                MCBool()::getMemberFunction
+            } else {
+                MCString("")::getMemberFunction
             }
+            accessModifier = Member.AccessModifier.PUBLIC
         }
         //开始选择函数
-        val func = curr.getMemberFunction(sctCtx[i].text.substring(1),args,accessModifier)
+        val func = getter.call(sctCtx.last().text.substring(1),args,accessModifier)
         if (!func.second){
-            Project.error("Cannot access member ${sctCtx[i].text.substring(1)} in class ${curr.clsType.identifier}")
+            Project.error("Cannot access member ${sctCtx.last().text.substring(1)}")
         }
         return Pair(func.first,curr)
     }
@@ -120,9 +144,9 @@ class McfppFuncVisitor : mcfppBaseVisitor<Function?>() {
         return if (ctx.namespaceID() != null && ctx.varWithSelector() == null) {
             getFunction(ctx.namespaceID(),args)
         } else if (ctx.varWithSelector() != null) {
-            //是类的成员方法
-            if(ctx.varWithSelector().`var`() != null)
-                getFunction(ctx.varWithSelector().`var`(), ctx.varWithSelector().selector(), args)
+            //是成员方法
+            if(ctx.varWithSelector().primary() != null)
+                getFunction(ctx.varWithSelector().primary(), ctx.varWithSelector().selector(), args)
             else
                 getFunction(ctx.varWithSelector().className(), ctx.varWithSelector().selector(), args)
         } else {

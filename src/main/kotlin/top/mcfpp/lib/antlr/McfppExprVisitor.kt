@@ -347,7 +347,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var? {
         Project.ctx = ctx
         var curr: ClassBase
-        curr = if (ctx.`var`() != null) {
+        curr = if (ctx.primary() != null) {
             val varName = ctx.text.substring(0,ctx.text.indexOf("."))
             val pwp = Function.currFunction.field.getVar(varName)
             //Var
@@ -474,8 +474,16 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             //函数对象获取
             val curr = if(ctx.namespaceID() != null)
                 McfppFuncVisitor().getFunction(ctx.namespaceID(), FunctionParam.getVarTypes(args))
-            else if(ctx.`var`() != null)
-                McfppFuncVisitor().getFunction(ctx.`var`(),ctx.selector(), FunctionParam.getVarTypes(args))
+            else if(ctx.`var`() != null) {
+                val qwq = mcfppParser.PrimaryContext(ctx, 0)
+                qwq.children.add(ctx.`var`())
+                McfppFuncVisitor().getFunction(qwq, ctx.selector(), FunctionParam.getVarTypes(args))
+            }
+            else if(ctx.value() != null){
+                val qwq = mcfppParser.PrimaryContext(ctx, 0)
+                qwq.children.add(ctx.value())
+                McfppFuncVisitor().getFunction(qwq, ctx.selector(), FunctionParam.getVarTypes(args))
+            }
             else
                 McfppFuncVisitor().getFunction(ctx.className(),ctx.selector(), FunctionParam.getVarTypes(args))
             val func = curr.first

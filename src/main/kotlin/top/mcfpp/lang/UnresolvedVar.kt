@@ -1,7 +1,10 @@
 package top.mcfpp.lang
 
+import top.mcfpp.Project
 import top.mcfpp.exception.VariableNotResolvedException
 import top.mcfpp.lib.FieldContainer
+import top.mcfpp.lib.Function
+import top.mcfpp.lib.Member
 
 /**
  * 一个未被解析的变量。在读取类的字段部分的时候，由于字段的类型对应的类还没有被加载到编译器中，因此会将字段作为未解析的变量暂存在类的域中。
@@ -74,6 +77,34 @@ class UnresolvedVar : Var {
      * @throws VariableNotResolvedException 调用此方法就会抛出此异常
      */
     override fun getTempVar(cache: HashMap<Var, String>): Var {
+        throw VariableNotResolvedException()
+    }
+
+    /**
+     * 根据标识符获取一个成员。
+     *
+     * @param key 成员的mcfpp标识符
+     * @param accessModifier 访问者的访问权限
+     * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
+     */
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
+        Project.error("UnresolvedVar.getMemberVar() is called")
+        throw VariableNotResolvedException()
+    }
+
+    /**
+     * 根据方法标识符和方法的参数列表获取一个方法。如果没有这个方法，则返回null
+     *
+     * @param key 成员方法的标识符
+     * @param params 成员方法的参数
+     * @return
+     */
+    override fun getMemberFunction(
+        key: String,
+        params: List<String>,
+        accessModifier: Member.AccessModifier
+    ): Pair<Function?, Boolean> {
+        Project.error("UnresolvedVar.getMemberFunction() is called")
         throw VariableNotResolvedException()
     }
 }

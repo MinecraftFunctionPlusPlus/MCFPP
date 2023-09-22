@@ -9,7 +9,7 @@ import java.util.UUID
  *
  * 利用一个记分板
  */
-class Entity : CanSelectMember{
+class Entity : Var{
 
     /**
      * 实体的id
