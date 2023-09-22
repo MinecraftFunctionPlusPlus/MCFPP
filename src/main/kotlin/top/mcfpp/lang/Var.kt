@@ -5,10 +5,12 @@ import top.mcfpp.exception.ClassNotDefineException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Class
+import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
 import top.mcfpp.lib.GlobalField
 import java.util.*
 import kotlin.collections.HashMap
+import kotlin.reflect.KFunction
 
 /**
  * mcfpp所有类型的基类。在mcfpp中，一个变量可以是固定的，也就是mcfpp编译
@@ -24,7 +26,7 @@ import kotlin.collections.HashMap
  * mcfpp本身的语法并不支持匿名变量。
  *
  */
-abstract class Var : Member, Cloneable {
+abstract class Var : Member, Cloneable, CanSelectMember {
     /**
      * 在Minecraft中的标识符
      */
@@ -58,6 +60,11 @@ abstract class Var : Member, Cloneable {
     var isConst = ConstStatus.NOT_CONST
 
     var isTemp = false
+
+    /**
+     * 这个变量是否已经被初始化
+     */
+    var hasInit = false
 
     enum class ConstStatus {
         NOT_CONST, NULL, ASSIGNED
@@ -271,5 +278,19 @@ abstract class Var : Member, Cloneable {
             //}
             return `var`
         }
+
+        fun getBasicVarTypeMemberFunctionGetter(varType: String): KFunction<Pair<Function?, Boolean>> {
+            return when(varType){
+                "int" -> MCInt::getMemberFunction
+                "bool" -> MCBool::getMemberFunction
+                "float" -> MCFloat::getMemberFunction
+                else -> {
+                    //错误的基本类型
+                    Project.error("Undefined basic type:$varType")
+                    throw Exception()
+                }
+            }
+        }
+
     }
 }

@@ -9,12 +9,7 @@ import top.mcfpp.lib.Member
  *
  * 此抽象类继承于Var类，意味着只有变量才能实现此类，并需要实现变量应当拥有的方法，例如赋值，复制等
  */
-abstract class CanSelectMember : Var{
-
-    constructor(b: Var):super(b)
-
-    constructor()
-
+interface CanSelectMember{
 
     /**
      * 根据标识符获取一个成员。

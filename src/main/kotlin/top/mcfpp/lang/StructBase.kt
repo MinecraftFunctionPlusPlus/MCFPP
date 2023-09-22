@@ -2,7 +2,7 @@ package top.mcfpp.lang
 
 import top.mcfpp.lib.Struct
 
-abstract class StructBase : CanSelectMember {
+abstract class StructBase : Var {
 
     constructor(b: Var):super(b)
 

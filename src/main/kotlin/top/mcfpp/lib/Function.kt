@@ -82,7 +82,7 @@ import java.lang.reflect.Method
  * xxx（命令略去）
  * ```
  *
- * 你可以在[McfppImListener]中的[McfppImListener.exitFunctionCall]方法中看到mcfpp是如何实现的。
+ * 你可以在[top.mcfpp.lib.antlr.McfppImListener]中的[top.mcfpp.lib.antlr.McfppImListener.exitFunctionCall]方法中看到mcfpp是如何实现的。
  *
  * @see InternalFunction
  */

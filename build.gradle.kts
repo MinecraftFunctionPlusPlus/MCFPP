@@ -20,6 +20,9 @@ repositories {
     maven {
         setUrl("https://jitpack.io/")
     }
+    maven {
+        setUrl("https://libraries.minecraft.net")
+    }
 }
 
 dependencies {
@@ -30,7 +33,9 @@ dependencies {
     implementation("org.apache.logging.log4j:log4j-core:2.20.0")
     implementation("org.openjdk.nashorn:nashorn-core:15.4")
     implementation("com.github.Querz:NBT:6.1")
+    implementation("com.mojang:brigadier:1.0.18")
     antlr("org.antlr:antlr4:4.12.0")
+    implementation(kotlin("reflect"))
 
 }
 

@@ -10,11 +10,11 @@ import top.mcfpp.lib.Function;
 
 import java.util.HashMap;
 import java.util.List;
-
+import com.mojang.brigadier.*;
 
 //TODO
 //一个目标选择器
-public class Selector extends CanSelectMember {
+public class Selector extends Var {
 
     public String type = "selector";
     public String text = null;
@@ -28,6 +28,7 @@ public class Selector extends CanSelectMember {
     }
 
     public Selector(String string){
+        super("");
         text = string;
         //@a[a=b,b=c]
         //解析参数

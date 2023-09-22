@@ -100,7 +100,7 @@ structMember
     ;
 
 structFunctionDeclaration
-    :   functionReturnType Identifier '(' parameterList? ')' '{' functionBody '}'
+    :   functionReturnType (className '.')? Identifier '(' parameterList? ')' '{' functionBody '}'
     ;
 
 structFieldDeclaration
@@ -109,7 +109,7 @@ structFieldDeclaration
 
 //函数声明
 functionDeclaration
-    :    INLINE? functionReturnType Identifier '(' parameterList? ')' '{' functionBody '}'
+    :    INLINE? functionReturnType (className '.')? Identifier '(' parameterList? ')' '{' functionBody '}'
     ;
 
 namespaceID
@@ -251,7 +251,7 @@ primary
     ;
 
 varWithSelector
-    : var selector+
+    : primary selector+
     | className selector+
     ;
 
@@ -263,6 +263,7 @@ var
     |   constructorCall
     |   namespaceID arguments
     |   var selector+ arguments
+    |   value selector+ arguments
     |   className selector+ arguments
     |   TargetSelector
     ;
@@ -410,6 +411,7 @@ value
     :   INT
     |   FLOAT
     |   STRING
+    |   BOOL
     ;
 
 className
@@ -472,6 +474,11 @@ INT
 FLOAT
     :   INT '.' [0-9]+
     |   [0-9] '.' [0-9]+ 'e' '-'? [0-9]
+    ;
+
+BOOL
+    :   'true'
+    |   'false'
     ;
 
 VEC:'vec';

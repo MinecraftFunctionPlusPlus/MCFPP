@@ -1,11 +1,7 @@
 namespace test;
 
 void main(){
-    float i;
-    float p;
-    float qwq;
-    i = p + qwq * p + 2;
-
+    1.test();
 }
 
 //struct FloatStruct{
