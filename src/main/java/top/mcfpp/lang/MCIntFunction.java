@@ -5,8 +5,8 @@ import top.mcfpp.Project;
 import top.mcfpp.lib.Function;
 
 public class MCIntFunction {
-    public static void test(@NotNull Var[] vars, ClassPointer cls) {
+    public static void test(@NotNull Var[] vars, Var caller) {
         //不会有参数
-        Function.Companion.addCommand("say test");
+        Function.Companion.addCommand("say " + caller);
     }
 }

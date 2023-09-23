@@ -433,15 +433,134 @@ open class Function : Member, FieldContainer {
             return re
         }
 
+
+    open fun invoke(args: ArrayList<Var>, caller: Var? = null){
+        when(caller){
+            null -> invoke(args, cls = null)
+            is ClassBase -> invoke(args, caller)
+            is StructBase -> invoke(args, caller)
+            else -> {
+                //基本类型
+                addCommand("#[Function ${this.namespaceID}] Function Pushing and argument passing")
+                //给函数开栈
+                addCommand("data modify storage mcfpp:system ${Project.defaultNamespace}.stack_frame prepend value {}")
+                //传入this参数
+                field.putVar("this",caller,true)
+                //参数传递
+                for (i in 0 until params.size) {
+                    when (params[i].type) {
+                        "int" -> {
+                            val tg = args[i].cast(params[i].type) as MCInt
+                            //参数传递和子函数的参数进栈
+                            val p = MCInt(this,"_param_" + params[i].identifier)
+                            addCommand(
+                                "execute " +
+                                        "store result storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${p.identifier} int 1 " +
+                                        "run " + Commands.SbPlayerOperation(p, "=", tg)
+                            )
+                        }
+                        else -> {
+                            //是引用类型
+                            val tg = args[i].cast(params[i].type) as ClassBase
+                            val p = MCInt(this,"_param_" + params[i].identifier)
+                            addCommand(
+                                "execute " +
+                                        "store result storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${p.identifier} int 1" +
+                                        "run " + Commands.SbPlayerOperation(p, "=", tg.address)
+                            )
+                        }
+                    }
+                }
+
+                //函数调用的命令
+                if(this is InternalFunction){
+                    addCommand(
+                        "execute "+
+                                "if function " + this.namespaceID + " " +
+                                "run return 1"
+                    )
+                }else{
+                    addCommand("function " + this.namespaceID)
+                }
+
+                var hasAddComment = false
+                //static关键字，将值传回
+                for (i in 0 until params.size) {
+                    if (params[i].isStatic) {
+                        if(!hasAddComment){
+                            addCommand("#[Function ${this.namespaceID}] Static arguments")
+                            hasAddComment = true
+                        }
+                        //如果是static参数
+                        if (args[i] is MCInt) {
+                            when(params[i].type){
+                                "int" -> {
+                                    //如果是int取出到记分板
+                                    addCommand(
+                                        "execute " +
+                                                "store result score ${(args[i] as MCInt).name} ${(args[i] as MCInt).`object`} " +
+                                                "run data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${params[i].identifier} int 1 "
+                                    )
+                                }
+                                else -> {
+                                    //引用类型
+                                    val tg = args[i].cast(params[i].type) as ClassBase
+                                    addCommand(
+                                        "execute " +
+                                                "store result score ${tg.address.name} ${tg.address.`object`} " +
+                                                "run data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${params[i].identifier} int 1 "
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                //销毁指针，释放堆内存
+                for (p in field.allVars){
+                    if (p is ClassPointer){
+                        p.dispose()
+                    }
+                }
+                //调用完毕，将子函数的栈销毁
+                addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
+
+                //取出栈内的值
+                addCommand("#[Function ${this.namespaceID}] Take vars out of the Stack")
+                for (v in Function.currFunction.field.allVars){
+                    when (v.type) {
+                        "int" -> {
+                            val tg = v as MCInt
+                            //参数传递和子函数的参数压栈
+                            //如果是int取出到记分板
+                            addCommand(
+                                "execute store result score ${tg.name} ${tg.`object`} run "
+                                        + "data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${tg.identifier}"
+                            )
+                        }
+                        else -> {
+                            //是引用类型
+                            val tg = v as ClassBase
+                            addCommand(
+                                "execute store result score ${tg.address.name} ${tg.address.`object`} run "
+                                        + "data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${tg.identifier}"
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     /**
      * 调用这个函数。
      *
      * @param args 函数的参数
      * @param cls 调用函数的实例
-     * @see McfppExprVisitor.visitVar
+     * @see top.mcfpp.lib.antlr.McfppExprVisitor.visitVar
      */
     @InsertCommand
-    open fun invoke(args: ArrayList<Var>, cls: ClassBase? = null) {
+    private fun invoke(args: ArrayList<Var>, cls: ClassBase? = null) {
         addCommand("#[Function ${this.namespaceID}] Function Pushing and argument passing")
         //给函数开栈
         addCommand("data modify storage mcfpp:system ${Project.defaultNamespace}.stack_frame prepend value {}")
@@ -560,8 +679,8 @@ open class Function : Member, FieldContainer {
      * @param args
      * @param struct
      */
-    open fun invoke(args: ArrayList<Var>, struct: Struct){
-
+    private fun invoke(args: ArrayList<Var>, struct: StructBase){
+        TODO()
     }
 
     /**

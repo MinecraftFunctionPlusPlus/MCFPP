@@ -37,7 +37,7 @@ class NativeFunction : Function, Native {
         }
         try{
             val cls: Class<*> = Class.forName(javaClassName)
-            this.javaMethod = cls.getMethod(javaMethodName, Array<Var?>::class.java, ClassPointer::class.java)
+            this.javaMethod = cls.getMethod(javaMethodName, Array<Var?>::class.java, Var::class.java)
         } catch (e: NoSuchMethodException) {
             throw NoSuchMethodException(javaMethodName)
         } catch (e: ClassNotFoundException) {
@@ -52,11 +52,11 @@ class NativeFunction : Function, Native {
     }
 
     @Override
-    override fun invoke(args: ArrayList<Var>, cls: ClassBase?) {
+    override fun invoke(args: ArrayList<Var>, caller: Var?) {
         val argsArray = arrayOfNulls<Var>(args.size)
         args.toArray(argsArray)
         try {
-            javaMethod.invoke(null, argsArray, cls)
+            javaMethod.invoke(null, argsArray, caller)
         } catch (e: IllegalAccessException) {
             Project.error("Cannot access method: ${javaMethod.name}")
             throw RuntimeException(e)
