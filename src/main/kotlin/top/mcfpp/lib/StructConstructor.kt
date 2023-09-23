@@ -17,7 +17,7 @@ class StructConstructor: Function {
 
     @Override
     @InsertCommand
-    override fun invoke(args: ArrayList<Var>, struct: Struct) {
+    override fun invoke(args: ArrayList<Var>, caller: Var?) {
         addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
         //传入this参数
         val thisPoint = field.getVar("this")!! as ClassPointer

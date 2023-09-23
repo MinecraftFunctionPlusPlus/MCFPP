@@ -28,16 +28,16 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
     /**
      * 调用构造函数。类的实例的实体的生成，类的初始化（preinit和init函数），自身的调用和地址分配都在此方法进行。
      * @param args 函数的参数
-     * @param cls 构造方法将要构建的对象的临时指针
+     * @param caller 构造方法将要构建的对象的临时指针
      */
     @Override
     @InsertCommand
-    override fun invoke(args: ArrayList<Var>, cls: ClassBase?) {
-        cls!!
+    override fun invoke(args: ArrayList<Var>, caller: Var?) {
+        caller as ClassBase
         //对象实体创建
         addCommand(
             "execute in minecraft:overworld " +
-                    "run summon marker 0 1 0 {Tags:[" + cls.tag + ",mcfpp_classObject_just],data:{pointers:[]}}"
+                    "run summon marker 0 1 0 {Tags:[" + caller.tag + ",mcfpp_classObject_just],data:{pointers:[]}}"
         )
 
         //初始化
@@ -47,7 +47,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
         }
         //不应当立即调用它自己的函数，应当先调用init，再调用constructor
         addCommand(
-            "execute as @e[tag=" + cls.tag + ",tag=mcfpp_classObject_just,limit=1] at @s run " +
+            "execute as @e[tag=" + caller.tag + ",tag=mcfpp_classObject_just,limit=1] at @s run " +
                     Commands.Function(ownerClass!!.classPreInit)
         )
         if(ownerClass!!.classPreInit.commands.size > 3){
@@ -58,9 +58,9 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
         addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
 
         //传入this参数
-        if (cls is ClassPointer) {
+        if (caller is ClassPointer) {
             val thisPoint = field.getVar("this")!! as ClassPointer
-            thisPoint.assign(cls)
+            thisPoint.assign(caller)
         }
 
         //参数传递
@@ -113,7 +113,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
             }
         }
         //去除临时标签
-        addCommand("tag @e[tag=" + cls.tag + ",tag=mcfpp_classObject_just,limit=1] remove mcfpp_classObject_just")
+        addCommand("tag @e[tag=" + caller.tag + ",tag=mcfpp_classObject_just,limit=1] remove mcfpp_classObject_just")
     }
 
     @get:Override
