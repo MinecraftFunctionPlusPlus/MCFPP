@@ -69,7 +69,7 @@ class StructPointer : StructBase {
      *
      * @return
      */
-    override fun getTempVar(cache: HashMap<Var, String>): Var {
+    override fun getTempVar(): Var {
         TODO("Not yet implemented")
     }
 }

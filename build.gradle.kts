@@ -36,7 +36,6 @@ dependencies {
     implementation("com.mojang:brigadier:1.0.18")
     antlr("org.antlr:antlr4:4.12.0")
     implementation(kotlin("reflect"))
-
 }
 
 tasks.test {

@@ -1,20 +1,13 @@
 namespace test;
 
 void main(){
-    1.test();
+    Test().test();
 }
 
-//struct FloatStruct{
-//    public static int index;
-//    public int member1;
-//    public member2;
-//
-//    public FloatStruct(){
-//        //member1 = index;
-//        //index++;
-//    }
-//
-//    public void print(){
-//        //print(this);
-//    }
-//}
+class Test{
+    public int index = 0;
+}
+
+void Test.test(){
+    print(this.index);
+}

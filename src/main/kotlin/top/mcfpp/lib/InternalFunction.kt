@@ -31,21 +31,26 @@ class InternalFunction(prefix: String, parent: Function) : Function(prefix + UUI
     init {
         field = InternalFunctionField(parent.field.clone(),this)
         setParentFunction(parent)
-        isClassMember = false
+        ownerType = Companion.OwnerType.NONE
     }
 
     /**
      * 设置它的父函数
      * @param parent 父函数对象
      */
-    fun setParentFunction(parent: Function) {
+    private fun setParentFunction(parent: Function) {
         this.parent.add(parent)
         parent.child.add(this)
     }
 
     @Override
-    override fun Class(): Class? {
-        return parent[0].Class()
+    override fun parentClass(): Class? {
+        return parent[0].parentClass()
+    }
+
+    @Override
+    override fun parentStruct(): Struct? {
+        return parent[0].parentStruct()
     }
 
 }

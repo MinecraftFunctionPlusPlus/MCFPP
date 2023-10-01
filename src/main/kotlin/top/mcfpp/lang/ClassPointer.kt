@@ -15,7 +15,7 @@ import top.mcfpp.lib.*
  * 创建一个类的对象的时候，在分配完毕类的地址之后，将会立刻创建一个初始指针，这个指针指向了刚刚创建的对象的地址，在记分板上的名字是一个随机的uuid。
  * 而后进行的引用操作无非是把这个初始指针的记分板值赋给其他的指针。
  *
- * @see Class 类的核心实现
+ * @see parentClass 类的核心实现
  * @see ClassObject 类的实例。指针的目标
  * @see ClassType 表示类的类型，同时也是类的静态成员的指针
  */
@@ -80,6 +80,7 @@ class ClassPointer : ClassBase {
     @InsertCommand
     @Throws(VariableConverseException::class)
     override fun assign(b: Var?) {
+        //TODO 不支持指针作为类成员的时候
         when (b) {
             is ClassObject -> {
                 if (!b.clsType.canCastTo(clsType)) {
@@ -160,7 +161,7 @@ class ClassPointer : ClassBase {
     }
 
     @Override
-    override fun clone(): Any {
+    override fun clone(): ClassPointer {
         return ClassPointer(this)
     }
 
@@ -173,7 +174,7 @@ class ClassPointer : ClassBase {
      */
     @Override
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
-        val member = clsType.getMemberVar(key)?.clone(this)
+        val member = clsType.getVar(key)?.clone(this)
         return if(member == null){
             Pair(null, true)
         }else{
@@ -206,7 +207,7 @@ class ClassPointer : ClassBase {
      * @return 一个此变量生成的临时变量
      */
     @Override
-    override fun getTempVar(cache: HashMap<Var, String>): Var {
+    override fun getTempVar(): Var {
         return this
     }
 }

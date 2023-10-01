@@ -8,6 +8,7 @@ import top.mcfpp.lang.*
 import top.mcfpp.lang.Number
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
+import top.mcfpp.util.StringHelper
 import top.mcfpp.util.Utils
 import java.lang.IllegalArgumentException
 import java.util.*
@@ -19,7 +20,10 @@ import kotlin.system.exitProcess
  * 获取表达式结果用的visitor。解析并计算一个形如a+b*c的表达式。
  */
 class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
+
     private val tempVarCommandCache = HashMap<Var, String>()
+
+    private var currSelector : CanSelectMember? = null
 
     /**
      * 计算一个复杂表达式
@@ -59,7 +63,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         for (i in 1 until ctx.conditionalAndExpression().size) {
             val b: Var? = visit(ctx.conditionalAndExpression(i))
             if(!re!!.isTemp){
-                re = re.getTempVar(tempVarCommandCache)
+                re = re.getTempVar()
             }
             re = if (re is MCBool && b is MCBool) {
                 re.or(b)
@@ -84,7 +88,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         for (i in 1 until ctx.equalityExpression().size) {
             val b: Var? = visit(ctx.equalityExpression(i))
             if(!re!!.isTemp){
-                re = re.getTempVar(tempVarCommandCache)
+                re = re.getTempVar()
             }
             re = if (re is MCBool && b is MCBool) {
                 re.and(b)
@@ -108,7 +112,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         for (i in 1 until ctx.relationalExpression().size) {
             val b: Var? = visit(ctx.relationalExpression(i))
             if(!re!!.isTemp){
-                re = re.getTempVar(tempVarCommandCache)
+                re = re.getTempVar()
             }
             if (ctx.op.text.equals("==")) {
                 re = if (re is MCInt && b is MCInt) {
@@ -149,7 +153,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         if (ctx.additiveExpression().size != 1) {
             val b: Var? = visit(ctx.additiveExpression(1))
             if(!re!!.isTemp){
-                re = re.getTempVar(tempVarCommandCache)
+                re = re.getTempVar()
             }
             if (re is MCInt && b is MCInt) {
                 when (ctx.relationalOp().text) {
@@ -188,12 +192,12 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             var b: Var? = visit(ctx.multiplicativeExpression(i))
             if(b is MCFloat) b = b.toTempEntity()
             if(visitAdditiveExpressionRe!! != MCFloat.ssObj){
-                visitAdditiveExpressionRe = visitAdditiveExpressionRe!!.getTempVar(tempVarCommandCache)
+                visitAdditiveExpressionRe = visitAdditiveExpressionRe!!.getTempVar()
             }
             val qwq = visitAdditiveExpressionRe
             visitAdditiveExpressionRe = if (Objects.equals(ctx.op.text, "+")) {
                 if (visitAdditiveExpressionRe is Number<*> && b is Number<*>) {
-                    (visitAdditiveExpressionRe as Number<*>).plus(b)
+                    (visitAdditiveExpressionRe as Number<*>).plus(b,)
                 }else{
                     null
                 }
@@ -232,7 +236,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             var b: Var? = visit(ctx.unaryExpression(i))
             if(b is MCFloat) b = b.toTempEntity()
             if(!re!!.isTemp){
-                re = re.getTempVar(tempVarCommandCache)
+                re = re.getTempVar()
             }
             val qwq = re
             re = when(ctx.op.text){
@@ -282,7 +286,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             var a: Var? = visit(ctx.unaryExpression())
             if (a is MCBool) {
                 if(!a.isTemp){
-                    a = a.getTempVar(tempVarCommandCache)
+                    a = a.getTempVar()
                 }
                 a.negation()
             } else {
@@ -346,58 +350,42 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     @Override
     override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var? {
         Project.ctx = ctx
-        var curr: ClassBase
-        curr = if (ctx.primary() != null) {
-            val varName = ctx.text.substring(0,ctx.text.indexOf("."))
-            val pwp = Function.currFunction.field.getVar(varName)
-            //Var
-            if(pwp is ClassPointer){
-                pwp
-            }else if(pwp == null){
-                Project.error("Undefined variable:$varName")
-                Utils.stopCompile(ArgumentNotMatchException("Undefined variable:$varName"))
-                exitProcess(1)
-            }else{
-                Project.error("$varName is not a class pointer")
-                Utils.stopCompile(ArgumentNotMatchException("$varName is not a class pointer"))
-                exitProcess(1)
-            }
-        } else {
-            //ClassName
-            val clsstr = ctx.className().text.split(":")
-            val qwq: Class? = if(clsstr.size == 2) {
-                GlobalField.getClass(clsstr[0], clsstr[1])
-            }else{
-                GlobalField.getClass(null, clsstr[0])
-            }
-            if (qwq == null) {
-                Project.error("Undefined class:" + ctx.className().text)
-            }
-            ClassType(qwq!!)
-        }
-        var member: Var? = null
-        //开始选择
-        val accessModifier = if(Function.currFunction.isClassMember){
-            Function.currFunction.ownerClass!!.getAccess(curr.clsType)
+        currSelector = if(ctx.primary() != null){
+            visit(ctx.primary())
         }else{
-            Member.AccessModifier.PUBLIC
+            if(ctx.type().className() != null){
+                //ClassName
+                val clsstr = ctx.type().text.split(":")
+                val qwq: Class? = if(clsstr.size == 2) {
+                    GlobalField.getClass(clsstr[0], clsstr[1])
+                }else{
+                    GlobalField.getClass(null, clsstr[0])
+                }
+                if (qwq == null) {
+                    Project.error("Undefined class:" + ctx.type().className().text)
+                }
+                ClassType(qwq!!)
+            }else{
+                CompoundDataType(
+                    //基本类型
+                    when(ctx.type().text){
+                        "int" -> MCInt.data
+                        else -> TODO()
+                    }
+                )
+            }
+
         }
-        var i = 0
-        while (i < ctx.selector().size) {
-            val re = curr.getMemberVar(ctx.selector(i).text.substring(1),accessModifier)
-            member = re.first
-            if (member == null) {
-                Project.error("Undefined member ${ctx.selector(i).text.substring(1)} in class ${curr.clsType.identifier}")
-            }
-            if (!re.second){
-                Project.error("Cannot access member ${ctx.selector(i).text.substring(1)} in class ${curr.clsType.identifier}")
-            }
-            i++
-            if(i < ctx.selector().size){
-                curr = member as ClassBase
-            }
+        for (selector in ctx.selector()){
+            visit(selector)
         }
-        return member
+        return currSelector as? Var
+    }
+
+    @Override
+    override fun visitSelector(ctx: mcfppParser.SelectorContext?): Var? {
+        currSelector = visit(ctx!!.`var`())
+        return null
     }
 
     /**
@@ -411,7 +399,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         if (ctx.`var`() != null) {
             //变量
             return visit(ctx.`var`())
-        } else {
+        } else if (ctx.value() != null) {
             //数字
             val num: mcfppParser.ValueContext = ctx.value()
             if (num.INT() != null) {
@@ -420,6 +408,20 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
                 val r: String = num.STRING().text
                 return MCString(r.substring(1, r.length - 1))
             }
+        } else if(ctx.constructorCall() != null){
+            return visit(ctx.constructorCall())
+        } else{
+            //this或者super
+            val s = if(ctx.SUPER() != null){
+                "super"
+            }else{
+                "this"
+            }
+            val re: Var? = Function.currFunction.field.getVar(s)
+            if (re == null) {
+                Project.error("$s can only be used in member functions.")
+            }
+            return re
         }
         return null
     }
@@ -433,16 +435,39 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     @InsertCommand
     override fun visitVar(ctx: mcfppParser.VarContext): Var? {
         Project.ctx = ctx
-        return if (ctx.Identifier() != null) {
+        return if (ctx.Identifier() != null && ctx.arguments() == null) {
             // Identifier identifierSuffix*
             if (ctx.identifierSuffix() == null || ctx.identifierSuffix().size == 0) {
                 //没有数组选取
                 val qwq: String = ctx.Identifier().text
-                val re: Var? = Function.currFunction.field.getVar(qwq)
-                if (re == null) {
-                    Project.error("Undefined variable:$qwq")
+                if(currSelector == null){
+                    val re: Var? = Function.currFunction.field.getVar(qwq)
+                    if (re == null) {
+                        Project.error("Undefined variable:$qwq")
+                    }
+                    re
+                }else{
+                    val cpd = when(currSelector){
+                        is CompoundDataType -> (currSelector as CompoundDataType).dataType
+                        is ClassPointer -> (currSelector as ClassPointer).clsType
+                        else -> TODO()
+                    }
+                    val am = if(Function.currFunction.ownerType == Function.Companion.OwnerType.CLASS){
+                        Function.currFunction.parentClass()!!.getAccess(cpd)
+                    }else if(Function.currFunction.ownerType == Function.Companion.OwnerType.STRUCT){
+                        Function.currFunction.parentStruct()!!.getAccess(cpd)
+                    }else{
+                        Member.AccessModifier.PUBLIC
+                    }
+                    val re  = currSelector!!.getMemberVar(qwq,am)
+                    if (re.first == null) {
+                        Project.error("Undefined variable:$qwq")
+                    }
+                    if (!re.second){
+                        Project.error("Cannot access member $qwq")
+                    }
+                    re.first
                 }
-                re
             } else {
                 //TODO 是数组调用
                 throw TODOException("")
@@ -450,16 +475,8 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         } else if (ctx.expression() != null) {
             // '(' expression ')'
             visit(ctx.expression())
-        } else if (ctx.constructorCall() != null) {
-            // constructorCall
-            visit(ctx.constructorCall())
-        } else if(ctx.TargetSelector() != null) {
-            TODO()
-        } else if (ctx.arguments() != null){
+        } else {
             //函数的调用
-            //   namespaceID arguments
-            //   var selector* arguments
-            //   className selector+ arguments
             Function.addCommand("#" + ctx.text)
             //参数获取
             val args: ArrayList<Var> = ArrayList()
@@ -469,46 +486,24 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
                     args.add(exprVisitor.visit(expr)!!)
                 }
             }
-            val functionCallCTX = mcfppParser.FunctionCallContext(ctx,0)
-            functionCallCTX.addChild(ctx.arguments())
-            //函数对象获取
-            val curr = if(ctx.namespaceID() != null)
-                McfppFuncVisitor().getFunction(ctx.namespaceID(), FunctionParam.getVarTypes(args))
-            else if(ctx.`var`() != null) {
-                val qwq = mcfppParser.PrimaryContext(ctx, 0)
-                qwq.children.add(ctx.`var`())
-                McfppFuncVisitor().getFunction(qwq, ctx.selector(), FunctionParam.getVarTypes(args))
+            val p = StringHelper.splitNamespaceID(ctx.namespaceID().text)
+            val func = if(currSelector == null){
+                McfppFuncVisitor().getFunction(p.first,p.second,FunctionParam.getVarTypes(args))
+            }else{
+                if(p.first != null){
+                    Project.warn("Invalid namespace usage ${p.first} in function call ")
+                }
+                McfppFuncVisitor().getFunction(currSelector!!,p.second,FunctionParam.getVarTypes(args))
             }
-            else if(ctx.value() != null){
-                val qwq = mcfppParser.PrimaryContext(ctx, 0)
-                qwq.children.add(ctx.value())
-                McfppFuncVisitor().getFunction(qwq, ctx.selector(), FunctionParam.getVarTypes(args))
-            }
-            else
-                McfppFuncVisitor().getFunction(ctx.className(),ctx.selector(), FunctionParam.getVarTypes(args))
-            val func = curr.first
-            val obj = curr.second
             if (func == null) {
                 Project.error("Function " + ctx.text + " not defined")
                 throw FunctionNotDefineException()
             }
-            func.invoke(args,obj)
+            func.invoke(args,currSelector)
             //函数树
             Function.currFunction.child.add(func)
             func.parent.add(Function.currFunction)
             func.returnVar
-        }else{
-            //this或者super
-            val s = if(ctx.SUPER() != null){
-                "super"
-            }else{
-                "this"
-            }
-            val re: Var? = Function.currFunction.field.getVar(s)
-            if (re == null) {
-                Project.error("$s can only be used in member functions.")
-            }
-            re
         }
     }
 
@@ -542,7 +537,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         //获取对象
         val obj: ClassObject = cls.newInstance()
         //调用构造函数
-        constructor.invoke(args, obj.initPointer)
+        constructor.invoke(args, cls = obj.initPointer)
         return obj
     }
 

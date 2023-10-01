@@ -90,8 +90,8 @@ object Project {
         GlobalField.localNamespaces["mcfpp"] = NamespaceField()
         val mcfppTick = Function("tick","mcfpp","void")
         val mcfppLoad = Function("load","mcfpp","void")
-        GlobalField.localNamespaces["mcfpp"]!!.addFunction(mcfppLoad)
-        GlobalField.localNamespaces["mcfpp"]!!.addFunction(mcfppTick)
+        GlobalField.localNamespaces["mcfpp"]!!.addFunction(mcfppLoad,true)
+        GlobalField.localNamespaces["mcfpp"]!!.addFunction(mcfppTick,true)
         GlobalField.functionTags["minecraft:tick"]!!.functions.add(mcfppTick)
         GlobalField.functionTags["minecraft:load"]!!.functions.add(mcfppLoad)
     }
@@ -266,7 +266,7 @@ object Project {
         for (n in GlobalField.localNamespaces.values){
             n.forEachClass { c->
                 run {
-                    c.classPreStaticInit.invoke(ArrayList())
+                    c.classPreStaticInit.invoke(ArrayList(), caller = null)
                 }
             }
         }

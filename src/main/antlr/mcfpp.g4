@@ -23,8 +23,6 @@ typeDeclaration
     |   classOrFunctionOrStructDeclaration
     ;
 
-
-
 //类或函数声明
 classOrFunctionOrStructDeclaration
     :   classDeclaration
@@ -32,6 +30,7 @@ classOrFunctionOrStructDeclaration
     |   nativeFuncDeclaration
     |   nativeClassDeclaration
     |   structDeclaration
+    |   extensionFunctionDeclaration
     ;
 
 //类声明
@@ -109,11 +108,15 @@ structFieldDeclaration
 
 //函数声明
 functionDeclaration
-    :    INLINE? functionReturnType (className '.')? Identifier '(' parameterList? ')' '{' functionBody '}'
+    :    INLINE? functionReturnType Identifier '(' parameterList? ')' '{' functionBody '}'
+    ;
+
+extensionFunctionDeclaration
+    :   STATIC? functionReturnType (type '.')? Identifier '(' parameterList? ')' '{' functionBody '}'
     ;
 
 namespaceID
-    : (Identifier ( '.' Identifier) ':')? Identifier
+    : (Identifier ( '.' Identifier)* ':')? Identifier
     ;
 
 nativeFuncDeclaration
@@ -148,8 +151,7 @@ constructorCall
 
 //变量声明
 fieldDeclaration
-    :   fieldModifier* type Identifier
-    |   fieldModifier* type Identifier '=' expression
+    :   fieldModifier* type Identifier ( '=' expression)?
     ;
 
 fieldModifier : CONST|DYNAMIC|IMPORT;
@@ -176,7 +178,7 @@ expression
 
 //能作为语句的表达式
 statementExpression
-    :   basicExpression '=' expression
+    :   (basicExpression '=' )? expression
     ;
 
 //条件表达式
@@ -234,38 +236,34 @@ rightVarExpression
     :   basicExpression
     ;
 
-basicExpression
-    :   primary
-    |   varWithSelector
-    ;
-
 //强制类型转换表达式
 castExpression
     :  '(' type ')' unaryExpression
     ;
 
+basicExpression
+    :   primary
+    |   varWithSelector
+    ;
 //初级表达式
 primary
     :   var
     |   value
+    |   constructorCall
+    |   THIS
+    |   SUPER
+    |   TargetSelector
     ;
 
 varWithSelector
     : primary selector+
-    | className selector+
+    | type selector+
     ;
 
 var
     :   '(' expression ')'
     |   Identifier identifierSuffix*
-    |   THIS
-    |   SUPER
-    |   constructorCall
     |   namespaceID arguments
-    |   var selector+ arguments
-    |   value selector+ arguments
-    |   className selector+ arguments
-    |   TargetSelector
     ;
 
 identifierSuffix
@@ -284,15 +282,15 @@ functionBody
     :   statement*
     ;
 
-functionCall
-    :   namespaceID arguments
-    |   varWithSelector arguments
-    ;
+//functionCall
+//    :   namespaceID arguments
+//    |   varWithSelector arguments
+//    ;
 
 statement
     :   fieldDeclaration ';'
     |   statementExpression ';'
-    |   functionCall ';'
+//    |   functionCall ';'
     |   ifStatement
     |   forStatement
     |   whileStatement

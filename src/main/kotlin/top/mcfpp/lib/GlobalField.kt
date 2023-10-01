@@ -180,7 +180,7 @@ object GlobalField : FieldContainer, IField {
                         }
                     }
                     println("\tfunctions:")
-                    field.forEachFunction {f ->
+                    s.field.forEachFunction {f ->
                         run {
                             if (f is NativeFunction) {
                                 println(

@@ -1,37 +1,44 @@
 package top.mcfpp.lang
 
+import top.mcfpp.Project
+import top.mcfpp.exception.VoidVarException
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
 
-class JsonString : Var{
-
-    val jsonText : JsonText
-
-    constructor(jsonText: JsonText){
-        this.jsonText = jsonText
-    }
-
-    constructor(jsonString: JsonString):super(jsonString){
-        jsonText = jsonString.jsonText
-    }
+class Void: Var("void") {
 
     override val type: String
-        get() = "jstring"
+        get() = "void"
 
+    /**
+     * 将b中的值赋值给此变量
+     * @param b 变量的对象
+     */
     override fun assign(b: Var?) {
-        TODO("Not yet implemented")
+        Project.error("无法对void类型变量进行赋值")
+        throw VoidVarException()
     }
 
+    /**
+     * 将这个变量强制转换为一个类型
+     * @param type 要转换到的目标类型
+     */
     override fun cast(type: String): Var? {
-        TODO("Not yet implemented")
+        Project.error("无法对void类型变量进行类型转换")
+        throw VoidVarException()
     }
 
     override fun clone(): Any {
-        TODO("Not yet implemented")
+        return Void()
     }
 
+    /**
+     * 返回一个临时变量。这个变量将用于右值的计算过程中，用于避免计算时对原来的变量进行修改
+     *
+     * @return
+     */
     override fun getTempVar(): Var {
-        TODO("Not yet implemented")
+        return this
     }
 
     /**
@@ -42,7 +49,8 @@ class JsonString : Var{
      * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
      */
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
-        TODO("Not yet implemented")
+        Project.error("无法从void类型变量获取成员")
+        throw VoidVarException()
     }
 
     /**
@@ -57,6 +65,7 @@ class JsonString : Var{
         params: List<String>,
         accessModifier: Member.AccessModifier
     ): Pair<Function?, Boolean> {
-        TODO("Not yet implemented")
+        Project.error("无法从void类型变量获取成员")
+        throw VoidVarException()
     }
 }

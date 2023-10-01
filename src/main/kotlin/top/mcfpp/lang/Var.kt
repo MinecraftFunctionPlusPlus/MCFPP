@@ -3,11 +3,8 @@ package top.mcfpp.lang
 import top.mcfpp.Project
 import top.mcfpp.exception.ClassNotDefineException
 import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.lib.FieldContainer
-import top.mcfpp.lib.Class
+import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
-import top.mcfpp.lib.Member
-import top.mcfpp.lib.GlobalField
 import java.util.*
 import kotlin.collections.HashMap
 import kotlin.reflect.KFunction
@@ -59,6 +56,9 @@ abstract class Var : Member, Cloneable, CanSelectMember {
      */
     var isConst = ConstStatus.NOT_CONST
 
+    /**
+     * 是否是临时变量
+     */
     var isTemp = false
 
     /**
@@ -66,22 +66,15 @@ abstract class Var : Member, Cloneable, CanSelectMember {
      */
     var hasInit = false
 
-    enum class ConstStatus {
-        NOT_CONST, NULL, ASSIGNED
-    }
+    var parent : CanSelectMember? = null
 
     /**
      * 访问修饰符
      */
     override var accessModifier: Member.AccessModifier = Member.AccessModifier.PRIVATE
 
-    /**
-     * 成员所在的类的对象，既可以是[ClassPointer]，也可以是[ClassType]
-     */
-    override var clsPointer: ClassBase? = null
-
-    val isClassMember: Boolean
-        get() = clsPointer != null
+    //val isClassMember: Boolean
+    //    get() = parentClass() != null
 
     /**
      * 复制一个变量
@@ -94,7 +87,6 @@ abstract class Var : Member, Cloneable, CanSelectMember {
         isConcrete = `var`.isConcrete
         stackIndex = `var`.stackIndex
         isConst = `var`.isConst
-        clsPointer = `var`.clsPointer
     }
 
     /**
@@ -115,6 +107,31 @@ abstract class Var : Member, Cloneable, CanSelectMember {
         get() = "var"
 
     /**
+     * 获取这个成员的父类，可能不存在
+     * @return
+     */
+    override fun parentClass(): Class? {
+        return when (val parent = parent) {
+            is ClassPointer -> parent.clsType
+            is ClassType -> parent.dataType as? Class
+            else -> null
+        }
+    }
+
+    /**
+     * 获取这个成员的父结构体，可能不存在
+     *
+     * @return
+     */
+    override fun parentStruct(): Struct? {
+        return when (val parent = parent) {
+            is StructPointer -> parent.structType
+            is StructType -> parent.dataType as? Struct
+            else -> null
+        }
+    }
+
+    /**
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
@@ -128,16 +145,11 @@ abstract class Var : Member, Cloneable, CanSelectMember {
     abstract fun cast(type: String): Var?
 
     @Override
-    override fun Class(): Class? {
-        return null
-    }
-
-    @Override
     public abstract override fun clone(): Any
 
     fun clone(pointer: ClassBase): Var{
         val `var`: Var = this.clone() as Var
-        `var`.clsPointer = pointer
+        `var`.parent = pointer
         return `var`
     }
 
@@ -146,7 +158,12 @@ abstract class Var : Member, Cloneable, CanSelectMember {
      *
      * @return
      */
-    abstract fun getTempVar(cache : HashMap<Var, String>): Var
+    abstract fun getTempVar(): Var
+
+
+    enum class ConstStatus {
+        NOT_CONST, NULL, ASSIGNED
+    }
 
     companion object {
         /**
@@ -156,14 +173,14 @@ abstract class Var : Member, Cloneable, CanSelectMember {
          * @param container 变量所在的域
          * @return
          */
-        fun build(identifier: String, type: String, container: FieldContainer): Var?{
-            val `var`: Var?
+        fun build(identifier: String, type: String, container: FieldContainer): Var{
+            val `var`: Var
             when (type) {
                 "int" -> `var` = MCInt(container,identifier)
                 "bool" -> `var` = MCBool(container, identifier)
                 "selector" -> `var` = Selector(identifier)
-                "entity" -> `var` = null
-                "string" -> `var` = null
+                "entity" -> TODO()
+                "string" -> TODO()
                 else -> {
                     //自定义的类的类型
                     val c = type.split(":")
@@ -175,8 +192,9 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                     }
                     if (clsType == null) {
                         Project.error("Undefined class:$c")
+                        throw ClassNotDefineException()
                     }
-                    `var` = ClassPointer(clsType!!, identifier)
+                    `var` = ClassPointer(clsType, identifier)
                 }
             }
             return `var`
@@ -188,20 +206,21 @@ abstract class Var : Member, Cloneable, CanSelectMember {
          * @param container 变量所在缓存
          * @return 声明的变量
          */
-        fun build(ctx: mcfppParser.FieldDeclarationContext, container: FieldContainer): Var? {
-            var `var`: Var? = null
+        fun build(ctx: mcfppParser.FieldDeclarationContext, container: FieldContainer): Var {
+            val `var`: Var
             if (ctx.type().className() == null) {
                 //普通类型
-                when (ctx.type().text) {
-                    "int" -> `var` = MCInt(container, ctx.Identifier().text)
-                    "bool" -> `var` = MCBool(container, ctx.Identifier().text)
-                    "float" -> `var` = MCFloat(container, ctx.Identifier().text)
+                `var` = when (ctx.type().text) {
+                    "int" -> MCInt(container, ctx.Identifier().text)
+                    "bool" -> MCBool(container, ctx.Identifier().text)
+                    else -> MCFloat(container, ctx.Identifier().text)
                 }
             } else if (ctx.type().className().classWithoutNamespace().InsideClass() != null) {
                 when (ctx.type().className().classWithoutNamespace().InsideClass().text) {
                     "selector" -> `var` = Selector(ctx.Identifier().text)
-                    "entity" -> `var` = null
-                    "string" -> `var` = null
+                    "entity" -> TODO()
+                    "string" -> TODO()
+                    else -> throw Exception()
                 }
             } else {
                 //自定义的类的类型
@@ -224,35 +243,39 @@ abstract class Var : Member, Cloneable, CanSelectMember {
         /**
          * 解析变量声明上下文，构造上下文声明的变量，作为类的成员
          * @param ctx 变量声明上下文
-         * @param cls 成员所在的类
+         * @param compoundData 成员所在的复合类型
          * @return 这个变量
          */
-        fun build(ctx: mcfppParser.FieldDeclarationContext, cls: ClassBase): Var? {
+        fun build(ctx: mcfppParser.FieldDeclarationContext, compoundData: CompoundData): Var {
             //TODO 浮点数
             
-            var `var`: Var? = null
+            var `var`: Var
             if (ctx.type().className() == null) {
                 //普通类型
                 when (ctx.type().text) {
                     "int" -> {
                         `var` =
-                            MCInt("@s").setObj(SbObject(cls.clsType.namespace + "_class_" + cls.clsType.identifier + "_int_" + ctx.Identifier()))
+                            MCInt("@s").setObj(SbObject(compoundData.prefix + "_int_" + ctx.Identifier()))
                         `var`.identifier = ctx.Identifier().text
                     }
 
                     "bool" -> {
                         `var` =
-                            MCBool("@s").setObj(SbObject(cls.clsType.namespace + "_class_" + cls.clsType.identifier + "_bool_" + ctx.Identifier()))
+                            MCBool("@s").setObj(SbObject(compoundData.prefix + "_bool_" + ctx.Identifier()))
                         `var`.identifier = ctx.Identifier().text
                     }
+
+                    else -> TODO()
                 }
             } else if (ctx.type().className().classWithoutNamespace().InsideClass() != null) {
                 when (ctx.type().className().classWithoutNamespace().InsideClass().text) {
                     "selector" -> `var` = Selector(ctx.Identifier().text)
-                    "entity" -> `var` = null
-                    "string" -> `var` = null
+                    "entity" -> TODO()
+                    "string" -> TODO()
+                    else -> TODO()
                 }
             } else {
+                //TODO 不支持复合类型
                 //自定义的类的类型
                 val clsType = ctx.type().className().text.split(":")
                 //取出类
@@ -266,11 +289,10 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                 }
                 val classPointer = ClassPointer(type!!, ctx.Identifier().text)
                 classPointer.address =
-                    (MCInt("@s").setObj(SbObject(cls.clsType.namespace + "_class_" + cls.clsType.identifier + "_" + clsType + "_" + ctx.Identifier())) as MCInt)
+                    (MCInt("@s").setObj(SbObject(compoundData.prefix + "_" + clsType + "_" + ctx.Identifier())) as MCInt)
                 classPointer.name = ctx.Identifier().text
                 `var` = classPointer
             }
-            `var`!!.clsPointer = cls
             ////是否是常量 TODO
             //if (ctx.CONST() != null) {
             //    `var`.isConst = ConstStatus.NULL
@@ -278,19 +300,5 @@ abstract class Var : Member, Cloneable, CanSelectMember {
             //}
             return `var`
         }
-
-        fun getBasicVarTypeMemberFunctionGetter(varType: String): KFunction<Pair<Function?, Boolean>> {
-            return when(varType){
-                "int" -> MCInt::getMemberFunction
-                "bool" -> MCBool::getMemberFunction
-                "float" -> MCFloat::getMemberFunction
-                else -> {
-                    //错误的基本类型
-                    Project.error("Undefined basic type:$varType")
-                    throw Exception()
-                }
-            }
-        }
-
     }
 }
