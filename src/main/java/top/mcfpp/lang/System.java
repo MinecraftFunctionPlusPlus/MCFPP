@@ -2,13 +2,16 @@ package top.mcfpp.lang;
 
 import org.jetbrains.annotations.NotNull;
 import top.mcfpp.annotations.InsertCommand;
+import top.mcfpp.annotations.MCFPPNative;
 import top.mcfpp.lang.*;
 import top.mcfpp.lib.Function;
 
 import java.util.Random;
 
 public class System {
-    public static void print(@NotNull Var[] vars, Var caller) {
+
+    @MCFPPNative
+    public static void print(@NotNull Var[] vars, CanSelectMember caller) {
         //只会有一个参数哦
         Var var = vars[0];
         if (var instanceof MCInt) print((MCInt) var);

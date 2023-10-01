@@ -51,6 +51,7 @@ object IndexReader {
                 val cc = c as JSONObject
                 val clsId = cc["id"] as String
                 val cls = Class(clsId, nspId)
+                cls.initialize()
                 //类的成员
                 //函数
                 for (f in cc["functions"] as JSONArray){
@@ -133,11 +134,11 @@ object IndexReader {
             //获取java方法
             val nf = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction, nspId)
             nf.params = paramList
-            field.addFunction(nf)
+            field.addFunction(nf,false)
         }else{
             //不是native函数
             val func = Function(jsonStr.substring(jsonStr.indexOf(' ') + 1,jsonStr.indexOf('(')), nspId, returnType)
-            field.addFunction(func)
+            field.addFunction(func,false)
         }
     }
 
@@ -163,11 +164,11 @@ object IndexReader {
             //获取java方法
             val nf = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction, nspId)
             nf.params = paramList
-            cls.staticField.addFunction(nf)
+            cls.staticField.addFunction(nf,false)
         }else{
             //不是native函数
             val func = Function(jsonStr.substring(jsonStr.indexOf(' ')+1,jsonStr.indexOf('(')), cls, isStatic = true)
-            cls.staticField.addFunction(func)
+            cls.staticField.addFunction(func,false)
         }
     }
 
@@ -188,7 +189,7 @@ object IndexReader {
         }
         //不是native函数
         val func = Function(jsonStr.substring(jsonStr.indexOf(' ')+1,jsonStr.indexOf('(')), struct, isStatic = true)
-        field.addFunction(func)
+        field.addFunction(func,false)
     }
 
     private fun readConstructor(jsonStr: String, cls: Class){

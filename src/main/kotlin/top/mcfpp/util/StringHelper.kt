@@ -18,4 +18,12 @@ object StringHelper {
         }
         return s.toString()
     }
+
+    fun splitNamespaceID(str: String): Pair<String?, String>{
+        val s = str.split(":")
+        if(s.size == 1){
+            return Pair(null, s[0])
+        }
+        return Pair(s[0], s[1])
+    }
 }

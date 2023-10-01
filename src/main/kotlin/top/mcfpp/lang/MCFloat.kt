@@ -109,15 +109,18 @@ class MCFloat : Number<Float> {
      */
     @InsertCommand
     fun toTempEntity() : MCFloat{
+        val parent = parent
         if (isConcrete){
-            if (isClassMember) {
-                //如果是类的成员
-                val cmd: String = if (!isStatic) {
-                    //静态
-                    "execute as @e[type=marker,tag=${clsPointer!!.clsType.tag}] " +
-                            "if score @s ${clsPointer!!.address.`object`.name} = ${clsPointer!!.name} ${clsPointer!!.address.`object`.name}"
-                } else {
-                    "execute as @e[type=marker,tag=${clsPointer!!.clsType.staticTag}]"
+            if (parent != null) {
+                val cmd: String = when(parent){
+                    is ClassType -> {
+                        "execute as @e[type=marker,tag=${parent.tag}]"
+                    }
+                    is ClassPointer -> {
+                        "execute as @e[type=marker,tag=${parent.clsType.tag}] " +
+                                "if score @s ${parent.address.`object`.name} = ${parent.name} ${parent.address.`object`.name}"
+                    }
+                    else -> TODO()
                 }
                 Function.addCommand("$cmd run scoreboard players set $tempFloatEntityUUID ${SbObject.Math_float_sign} ${sign.value}")
                 Function.addCommand("$cmd run scoreboard players set $tempFloatEntityUUID ${SbObject.Math_float_int0} ${int0.value}")
@@ -130,14 +133,16 @@ class MCFloat : Number<Float> {
                 Function.addCommand("scoreboard players set $tempFloatEntityUUID ${SbObject.Math_float_exp} ${exp.value}")
             }
         }else{
-            if (isClassMember) {
-                //如果是类的成员
-                val cmd: String = if (!isStatic) {
-                    //静态
-                    "execute as @e[type=marker,tag=${clsPointer!!.clsType.tag}] " +
-                            "if score @s ${clsPointer!!.address.`object`.name} = ${clsPointer!!.name} ${clsPointer!!.address.`object`.name}"
-                } else {
-                    "execute as @e[type=marker,tag=${clsPointer!!.clsType.staticTag}]"
+            if (parent != null) {
+                val cmd: String = when(parent){
+                    is ClassType -> {
+                        "execute as @e[type=marker,tag=${parent.tag}]"
+                    }
+                    is ClassPointer -> {
+                        "execute as @e[type=marker,tag=${parent.clsType.tag}] " +
+                                "if score @s ${parent.address.`object`.name} = ${parent.name} ${parent.address.`object`.name}"
+                    }
+                    else -> TODO()
                 }
                 Function.addCommand("$cmd run scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_sign} = @s ${sign.`object`} ")
                 Function.addCommand("$cmd run scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_int0} = @s ${int0.`object`} ")
@@ -176,15 +181,18 @@ class MCFloat : Number<Float> {
      */
     @InsertCommand
     override fun assignCommand(a: Number<Float>) {
-        if(a.isClassMember) TODO()
-        if(isClassMember){
-            //如果是类的成员
-            val cmd : String = if(!isStatic){
-                //静态
-                "execute as @e[type=marker,tag=${clsPointer!!.clsType.tag}] " +
-                        "if score @s ${clsPointer!!.address.`object`.name} = ${clsPointer!!.name} ${clsPointer!!.address.`object`.name}"
-            }else{
-                "execute as @e[type=marker,tag=${clsPointer!!.clsType.staticTag}]"
+        val parent = parent
+        if(a.parent != null) TODO()
+        if(parent != null){
+            val cmd: String = when(parent){
+                is ClassType -> {
+                    "execute as @e[type=marker,tag=${parent.tag}]"
+                }
+                is ClassPointer -> {
+                    "execute as @e[type=marker,tag=${parent.clsType.tag}] " +
+                            "if score @s ${parent.address.`object`.name} = ${parent.name} ${parent.address.`object`.name}"
+                }
+                else -> TODO()
             }
             //类的成员是运行时动态的
             isConcrete = false
@@ -243,9 +251,9 @@ class MCFloat : Number<Float> {
      * @return 计算的结果
      */
     @InsertCommand
-    override fun plus(a: Number<*>): Number<Float>? {
+    override fun plus(a: Number<*>): Number<*>? {
         //t = t + a
-        if(!isTemp) return getTempVar(HashMap()).plus(a)
+        if(!isTemp) return (getTempVar() as MCFloat).plus(a,)
         val qwq: MCFloat? = if(a !is MCFloat){
             a.cast("float") as MCFloat?
         }else{
@@ -277,7 +285,7 @@ class MCFloat : Number<Float> {
     @InsertCommand
     override fun minus(a: Number<*>): Number<Float>? {
         //t = t - a
-        if(!isTemp) return getTempVar(HashMap()).minus(a)
+        if(!isTemp) return (getTempVar() as MCFloat).minus(a)
         val qwq: MCFloat? = if(a !is MCFloat){
             a.cast("float") as MCFloat?
         }else{
@@ -309,7 +317,7 @@ class MCFloat : Number<Float> {
     @InsertCommand
     override fun multiple(a: Number<*>): Number<Float>? {
         //t = t * a
-        if(!isTemp) return getTempVar(HashMap()).multiple(a)
+        if(!isTemp) return (getTempVar() as MCFloat).multiple(a)
         val qwq: MCFloat? = if(a !is MCFloat){
             a.cast("float") as MCFloat?
         }else{
@@ -341,7 +349,7 @@ class MCFloat : Number<Float> {
     @InsertCommand
     override fun divide(a: Number<*>): Number<Float>? {
         //t = t - a
-        if(!isTemp) return getTempVar(HashMap()).divide(a)
+        if(!isTemp) return (getTempVar() as MCFloat).divide(a)
         val qwq: MCFloat? = if(a !is MCFloat){
             a.cast("float") as MCFloat?
         }else{
@@ -383,7 +391,7 @@ class MCFloat : Number<Float> {
     @InsertCommand
     override fun isGreater(a: Number<*>): MCBool? {
         //re = t > a
-        if(!isTemp) return getTempVar(HashMap()).isGreater(a)
+        if(!isTemp) return (getTempVar() as MCFloat).isGreater(a)
         val qwq: MCFloat? = if(a !is MCFloat){
             a.cast("float") as MCFloat?
         }else{
@@ -426,7 +434,7 @@ class MCFloat : Number<Float> {
     @InsertCommand
     override fun isLess(a: Number<*>): MCBool? {
         //re = t < a
-        if(!isTemp) return getTempVar(HashMap()).isLess(a)
+        if(!isTemp) return (getTempVar() as MCFloat).isLess(a)
         val qwq: MCFloat? = if(a !is MCFloat){
             a.cast("float") as MCFloat?
         }else{
@@ -469,7 +477,7 @@ class MCFloat : Number<Float> {
     @InsertCommand
     override fun isLessOrEqual(a: Number<*>): MCBool? {
         //re = t <= a
-        if(!isTemp) return getTempVar(HashMap()).isLessOrEqual(a)
+        if(!isTemp) return(getTempVar() as MCFloat).isLessOrEqual(a)
         val qwq: MCFloat? = if(a !is MCFloat){
             a.cast("float") as MCFloat?
         }else{
@@ -512,7 +520,7 @@ class MCFloat : Number<Float> {
     @InsertCommand
     override fun isGreaterOrEqual(a: Number<*>): MCBool? {
         //re = t >= a
-        if(!isTemp) return getTempVar(HashMap()).isGreaterOrEqual(a)
+        if(!isTemp) return (getTempVar() as MCFloat).isGreaterOrEqual(a)
         val qwq: MCFloat? = if(a !is MCFloat){
             a.cast("float") as MCFloat?
         }else{
@@ -555,7 +563,7 @@ class MCFloat : Number<Float> {
     @InsertCommand
     override fun isEqual(a: Number<*>): MCBool? {
         //re = t == a
-        if(!isTemp) return getTempVar(HashMap()).isEqual(a)
+        if(!isTemp) return (getTempVar() as MCFloat).isEqual(a)
         val qwq: MCFloat? = if(a !is MCFloat){
             a.cast("float") as MCFloat?
         }else{
@@ -598,7 +606,7 @@ class MCFloat : Number<Float> {
     @InsertCommand
     override fun notEqual(a: Number<*>): MCBool? {
         //re = t != a
-        if(!isTemp) return getTempVar(HashMap()).isEqual(a)
+        if(!isTemp) return (getTempVar() as MCFloat).notEqual(a)
         val qwq: MCFloat? = if(a !is MCFloat){
             a.cast("float") as MCFloat?
         }else{
@@ -683,10 +691,7 @@ class MCFloat : Number<Float> {
      * @return
      */
     @InsertCommand
-    override fun getTempVar(cache: HashMap<Var, String>): MCFloat {
-        //if(ssObjRef != null){
-        //    Project.warn("(JVM)Assignment conflict, temporary variable(${this.identifier}) has an unretrieved value ")
-        //}
+    override fun getTempVar(): Var {
         if(isConcrete){
             ssObj.setValue(value)
             ssObj.isConcrete = true

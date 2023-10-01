@@ -19,31 +19,7 @@ import java.util.ArrayList
  * @see ClassObject 类的实例。指针的目标
  * @see ClassType 表示类的类型，同时也是类的静态成员的指针
  */
-open class Class : FieldContainer {
-    /**
-     * 这个类的标识符
-     */
-    lateinit var identifier: String
-
-    /**
-     * 类的命名空间
-     */
-    lateinit var namespace: String
-
-    /**
-     * 这个类的父类
-     */
-    var parent: Class? = null
-
-    /**
-     * 成员变量和成员函数
-     */
-    lateinit var field: ClassField
-
-    /**
-     * 静态变量和静态函数
-     */
-    lateinit var staticField: ClassField
+open class Class : CompoundData {
 
     /**
      * 记录这个类所有实例地址的记分板
@@ -90,22 +66,24 @@ open class Class : FieldContainer {
     constructor(identifier: String, namespace: String) {
         this.identifier = identifier
         this.namespace = namespace
-        staticField = ClassField(null, this)
-        field = ClassField(staticField, this)
+    }
+
+    override fun initialize(){
+        super.initialize()
         classPreInit = Function("_class_preinit_$identifier", this, false)
         classPreStaticInit = Function("_class_prestaticinit_$identifier", this, true)
-        field.addFunction(classPreInit)
-        staticField.addFunction(classPreStaticInit)
+        field.addFunction(classPreInit,true)
+        staticField.addFunction(classPreStaticInit,true)
         addressSbObject = SbObject(namespace + "_class_" + identifier + "_index")
-        //init函数的初始化置入，即地址分配，原preinit函数合并于此。同时生成新的临时指针
         initPointer =  ClassPointer(this, "INIT")
+        //init函数的初始化置入，即地址分配，原preinit函数合并于此。同时生成新的临时指针
         classPreInit.commands.add("scoreboard players operation @s " + addressSbObject.name + " = \$index " + addressSbObject.name)
         classPreInit.commands.add("scoreboard players add \$index " + addressSbObject.name + " 1")
         classPreInit.commands.add("scoreboard players operation ${initPointer.name} ${addressSbObject.name} = @s ${addressSbObject.name}")
         //staticinit函数的初始化直入。生成static实体
         classPreStaticInit.commands.add(
             "execute in minecraft:overworld " +
-                "run summon marker 0 1 0 {Tags:[$staticTag]}"
+                    "run summon marker 0 1 0 {Tags:[$staticTag]}"
         )
     }
 
@@ -123,9 +101,6 @@ open class Class : FieldContainer {
 
     val staticTag: String
         get() = namespace + "_class_" + identifier + "_static_pointer"
-
-    val namespaceID : String
-        get() = "$namespace:$identifier"
 
     /**
      * 根据参数列表获取一个类的构造函数
@@ -150,47 +125,6 @@ open class Class : FieldContainer {
     }
 
     /**
-     * 返回此类中的一个成员字段。
-     * @param key 字段名
-     * @return 如果字段存在，则返回此字段，否则返回null
-     */
-    fun getMemberVar(key: String): Var? {
-        return field.getVar(key)
-    }
-
-    /**
-     * 返回此类中的一个静态字段
-     *
-     * @param key 字段名
-     * @return 如果存在，则返回此字段，否则返回null
-     */
-    fun getStaticMemberVar(key : String): Var? {
-        return staticField.getVar(key)
-    }
-
-    /**
-     * 向这个类中添加一个成员
-     * @param classMember 要添加的成员
-     */
-    fun addMember(classMember: Member) {
-        //非静态成员
-        if (!classMember.isStatic) {
-            if (classMember is Function) {
-                field.addFunction(classMember)
-            } else if (classMember is Var) {
-                field.putVar(classMember.identifier, classMember)
-            }
-            return
-        }
-        //静态成员
-        if (classMember is Function) {
-            staticField.addFunction(classMember)
-        } else if (classMember is Var) {
-            staticField.putVar(classMember.identifier, classMember)
-        }
-    }
-
-    /**
      * 向这个类中添加一个构造函数
      * @param constructor 构造函数
      */
@@ -209,66 +143,9 @@ open class Class : FieldContainer {
     fun newInstance(): ClassObject {
         //创建实例
         val obj = ClassObject(this)
-        //给这个类添加成员缓存
-        obj.cache = ClassField(field)
+        //地址分配
         obj.address = MCInt("@s").setObj(addressSbObject) as MCInt
         return obj
-    }
-
-    /**
-     * 这个类是否可以被强制转换为目标类型。
-     *
-     * TODO
-     *
-     * @param target 目标类型
-     * @return 如果可以,返回true,反之返回false
-     */
-    fun canCastTo(target: Class): Boolean {
-        if (namespaceID == target.namespaceID) {
-            return true
-        }
-        return if (parent != null) {
-            parent!!.canCastTo(target)
-        } else false
-    }
-
-    /**
-     * 这个类是否是指定类的子类
-     *
-     * @param cls 指定类
-     * @return 是否是指定类的子类
-     */
-    fun isSubclass(cls: Class): Boolean{
-        return if(parent != null){
-            if(parent!!.namespaceID == cls.namespaceID){
-                true
-            }else{
-                parent!!.isSubclass(cls)
-            }
-        }else{
-            false
-        }
-    }
-
-    /**
-     * 指定类相对此类的访问权限。
-     * 将会返回若在`cls`的函数中，能访问到此类哪一层成员
-     *
-     * @param cls
-     * @return 返回指定类相对此类的访问权限
-     */
-    fun getAccess(cls : Class): Member.AccessModifier{
-        //是否是本类
-        return if(cls.namespaceID == namespaceID){
-            Member.AccessModifier.PRIVATE
-        }else{
-            //是否是子类
-            if(this.isSubclass(cls)){
-                Member.AccessModifier.PROTECTED
-            }else{
-                Member.AccessModifier.PUBLIC
-            }
-        }
     }
 
     companion object {

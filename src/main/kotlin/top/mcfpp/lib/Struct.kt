@@ -17,43 +17,12 @@ import top.mcfpp.lang.Var
  *
  * 除此之外，结构体是一种值类型的变量，而不是引用类型。因此在赋值的时候会把整个结构体进行一次赋值。
  */
-class Struct : FieldContainer {
-
-    /**
-     * 结构体的标识符
-     */
-    val identifier: String
-
-    /**
-     * 结构体命名空间
-     */
-    val namespace: String
-
-    /**
-     * 结构体的域
-     */
-    val field: StructField
-
-    /**
-     * 结构体的静态域
-     */
-    val staticField: StructField
+class Struct : FieldContainer, CompoundData {
 
     /**
      * 结构体的构造函数
      */
     val constructors: ArrayList<StructConstructor>
-
-    /**
-     * 结构体的父结构体
-     */
-    var parent: Struct? = null
-
-    /**
-     * 命名空间id
-     */
-    val namespaceID : String
-        get() = "$namespace:$identifier"
 
     /**
      * 获取这个容器中变量应该拥有的前缀
@@ -65,58 +34,10 @@ class Struct : FieldContainer {
 
     constructor(identifier: String, namespace: String = Project.currNamespace){
         this.identifier = identifier
-        field = StructField(null,this)
-        staticField = StructField(null, this)
+        field = CompoundDataField(null,this)
+        staticField = CompoundDataField(null, this)
         constructors = ArrayList()
         this.namespace = namespace
-    }
-
-    /**
-     * 根据标识符获取一个成员。
-     *
-     * @param key 成员的mcfpp标识符
-     * @param accessModifier 访问者的访问权限
-     * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
-     */
-    fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
-        TODO("Not yet implemented")
-    }
-
-    /**
-     * 根据方法标识符和方法的参数列表获取一个方法。如果没有这个方法，则返回null
-     *
-     * @param key 成员方法的标识符
-     * @param params 成员方法的参数
-     * @return
-     */
-    fun getMemberFunction(
-        key: String,
-        params: List<String>,
-        accessModifier: Member.AccessModifier
-    ): Pair<Function?, Boolean> {
-        TODO("Not yet implemented")
-    }
-
-    /**
-     * 向这个结构体中添加一个成员
-     * @param structMember 要添加的成员
-     */
-    fun addMember(structMember: Member) {
-        //非静态成员
-        if (!structMember.isStatic) {
-            if (structMember is Function) {
-                field.addFunction(structMember)
-            } else if (structMember is Var) {
-                field.putVar(structMember.identifier, structMember)
-            }
-            return
-        }
-        //静态成员
-        if (structMember is Function) {
-            staticField.addFunction(structMember)
-        } else if (structMember is Var) {
-            staticField.putVar(structMember.identifier, structMember)
-        }
     }
 
     /**
@@ -130,6 +51,7 @@ class Struct : FieldContainer {
             constructors.add(constructor)
         }
     }
+
     /**
      * 根据参数列表获取一个类的构造函数
      * @param params 构造函数的参数列表

@@ -68,7 +68,7 @@ class MCString : Var {
         TODO()
     }
 
-    override fun getTempVar(cache: HashMap<Var, String>): Var {
+    override fun getTempVar(): Var {
         TODO("Not yet implemented")
     }
 }

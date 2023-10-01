@@ -15,7 +15,7 @@ interface IFieldWithFunction: IField {
      *
      * @param function
      */
-    fun addFunction(function: Function)
+    fun addFunction(function: Function, force: Boolean): Boolean
 
     /**
      * 这个域中是否有这个函数

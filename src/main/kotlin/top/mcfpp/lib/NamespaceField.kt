@@ -128,8 +128,16 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithStruct {
      *
      * @param function
      */
-    override fun addFunction(function: Function){
+    override fun addFunction(function: Function, force: Boolean): Boolean{
+        if(hasFunction(function)){
+            if(force){
+                functions[functions.indexOf(function)] = function
+                return true
+            }
+            return false
+        }
         functions.add(function)
+        return true
     }
 
     override fun hasFunction(function: Function): Boolean{

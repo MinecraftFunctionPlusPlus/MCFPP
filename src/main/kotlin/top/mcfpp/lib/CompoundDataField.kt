@@ -5,18 +5,18 @@ import top.mcfpp.lang.Var
 import java.util.HashMap
 
 /**
- * 一个结构体的域，储存了结构体的成员和方法。
+ * 一个域，储存了字段和方法。
  *
  */
-class StructField : IFieldWithFunction, IFieldWithVar {
+class CompoundDataField : IFieldWithFunction, IFieldWithVar {
 
     /**
-     * 成员
+     * 字段
      */
     private val vars: HashMap<String, Var> = HashMap()
 
     /**
-     * 遍历每一个成员
+     * 遍历每一个字段
      *
      * @param operation 要对字段执行的操作
      * @receiver
@@ -70,7 +70,7 @@ class StructField : IFieldWithFunction, IFieldWithVar {
      * 复制一个域。
      * @param field 原来的缓存
      */
-    constructor(field: StructField) {
+    constructor(field: CompoundDataField) {
         parent = field.parent
         //变量复制
         for (key in field.vars.keys) {
@@ -135,8 +135,16 @@ class StructField : IFieldWithFunction, IFieldWithVar {
         return null
     }
 
-    override fun addFunction(function: Function){
+    override fun addFunction(function: Function, force: Boolean): Boolean{
+        if(hasFunction(function)){
+            if(force){
+                functions[functions.indexOf(function)] = function
+                return true
+            }
+            return false
+        }
         functions.add(function)
+        return true
     }
 
     override fun hasFunction(function: Function): Boolean{

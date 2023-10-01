@@ -68,7 +68,7 @@ public class Selector extends Var {
 
     @NotNull
     @Override
-    public Var getTempVar(@NotNull HashMap<Var, String> cache) {
+    public Var getTempVar() {
         throw new TODOException("");
     }
 

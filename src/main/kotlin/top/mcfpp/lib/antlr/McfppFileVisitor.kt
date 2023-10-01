@@ -6,6 +6,7 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.exception.*
 import top.mcfpp.exception.IllegalFormatException
 import top.mcfpp.lang.ClassType
+import top.mcfpp.lang.MCInt
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.Var.ConstStatus
 import top.mcfpp.lib.*
@@ -13,6 +14,8 @@ import top.mcfpp.lib.Class
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member.AccessModifier
 import java.util.*
+import kotlin.reflect.KFunction
+import kotlin.reflect.full.functions
 
 /**
  * 在编译工程之前，应当首先将所有文件中的资源全部遍历一次并写入缓存。
@@ -97,6 +100,8 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             visit(ctx.nativeClassDeclaration())
         } else if (ctx.structDeclaration() != null){
             visit(ctx.structDeclaration())
+        } else if (ctx.extensionFunctionDeclaration() != null){
+            visit(ctx.extensionFunctionDeclaration())
         }
         return null
     }
@@ -130,6 +135,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         } else {
             //如果没有声明过这个类
             val cls = Class(id, Project.currNamespace)
+            cls.initialize()
             if (ctx.className() != null) {
                 //是否存在继承
                 if (field.hasClass(ctx.className().text)) {
@@ -326,17 +332,71 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         f.addParams(ctx.parameterList())
         //TODO 解析函数的tag
         //不是类的成员
-        f.isClassMember = false
+        f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
         val field = GlobalField.localNamespaces[f.namespace]!!
         if (field.getFunction(f.name, f.paramTypeList) == null) {
-            field.addFunction(f)
+            field.addFunction(f,false)
         } else {
             Project.error("Already defined function:" + f.namespaceID)
             Function.currFunction = Function.nullFunction
         }
         if (f.isEntrance && ctx.parameterList()!!.parameter().size != 0) {
             Project.error("Entrance function shouldn't have parameter:" + f.namespaceID)
+        }
+        return null
+    }
+
+    override fun visitExtensionFunctionDeclaration(ctx: mcfppParser.ExtensionFunctionDeclarationContext?): Any? {
+        Project.ctx = ctx!!
+        val ownerType : Function.Companion.OwnerType
+        //获取被拓展的类
+        val data : CompoundData = if(ctx.type().className() == null){
+            ownerType = Function.Companion.OwnerType.BASIC
+            when(ctx.type().text){
+                "int" -> MCInt.data
+                else -> {
+                    throw Exception("Cannot add extension function to ${ctx.type().text}")
+                }
+            }
+        }else{
+            val clsStr = ctx.type().className().text.split(":")
+            val id : String
+            val nsp : String?
+            if(clsStr.size == 1){
+                id = clsStr[0]
+                nsp = null
+            }else{
+                id = clsStr[1]
+                nsp = clsStr[0]
+            }
+            val qwq: Class? = GlobalField.getClass(nsp, id)
+            if (qwq == null) {
+                val pwp = GlobalField.getStruct(nsp, id)
+                if(pwp == null){
+                    Project.error("Undefined class or struct:" + ctx.type().className().text)
+                    throw ClassNotDefineException()
+                }else{
+                    ownerType = Function.Companion.OwnerType.STRUCT
+                    pwp
+                }
+            }else{
+                ownerType = Function.Companion.OwnerType.CLASS
+                qwq
+            }
+        }
+        //创建函数对象
+        val f = ExtensionFunction(ctx.Identifier().text, data, Project.currNamespace, ctx.functionReturnType().text)
+        //解析参数
+        f.accessModifier = AccessModifier.PUBLIC
+        f.ownerType = ownerType
+        f.isStatic = ctx.STATIC() != null
+        f.addParams(ctx.parameterList())
+        val field = if(f.isStatic) data.staticField else data.field
+        //注册函数
+        if (!field.addFunction(f,false)) {
+            Project.error("Already defined function:" + ctx.Identifier().text + "in class " + Class.currClass!!.identifier)
+            Function.currFunction = Function.nullFunction
         }
         return null
     }
@@ -366,9 +426,9 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         val field = GlobalField.localNamespaces[nf.namespace]!!
         if (Class.currClass == null) {
             //是普通的函数
-            nf.isClassMember = false
+            nf.ownerType = Function.Companion.OwnerType.NONE
             if (!field.hasFunction(nf)) {
-                field.addFunction(nf)
+                field.addFunction(nf,false)
             } else {
                 Project.error("Already defined function:" + ctx.Identifier().text)
                 Function.currFunction = Function.nullFunction
@@ -376,8 +436,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             return nf
         }
         //是类成员
-        nf.isClassMember = true
-        nf.ownerClass = Class.currClass
+        nf.ownerType = Function.Companion.OwnerType.CLASS
         return nf
     }
 
@@ -390,13 +449,12 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
     @InsertCommand
     override fun visitFieldDeclaration(ctx: mcfppParser.FieldDeclarationContext): Any {
         Project.ctx = ctx
-        //变量生成
-        val `var`: Var = Var.build(ctx, ClassType(Class.currClass!!))!!
+        //只有类字段构建
+        val `var`: Var = Var.build(ctx, compoundData = Class.currClass!!)
         //是否是静态的
         if(ctx.parent.parent is mcfppParser.StaticClassMemberDeclarationContext){
             `var`.isStatic = true
         }
-        //只有可能是类变量
         if (Class.currClass!!.field.containVar(ctx.Identifier().text)
             || Class.currClass!!.staticField.containVar(ctx.Identifier().text)
         ) {

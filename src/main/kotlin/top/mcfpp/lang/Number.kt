@@ -1,7 +1,5 @@
 package top.mcfpp.lang
 
-import org.intellij.lang.annotations.Identifier
-import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
 import java.util.UUID

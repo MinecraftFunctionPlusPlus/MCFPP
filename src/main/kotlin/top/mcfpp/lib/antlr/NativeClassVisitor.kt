@@ -54,7 +54,7 @@ class NativeClassVisitor: mcfppBaseVisitor<Any?>() {
         for (i in ctx.nativeClassFunctionDeclaration()) {
             val nf = visit(i) as NativeFunction?
             if(nf != null){
-                Class.currClass!!.staticField.addFunction(nf)
+                Class.currClass!!.staticField.addFunction(nf,false)
             }
         }
         return null

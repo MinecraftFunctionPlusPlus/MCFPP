@@ -37,7 +37,7 @@ class NativeFunction : Function, Native {
         }
         try{
             val cls: Class<*> = Class.forName(javaClassName)
-            this.javaMethod = cls.getMethod(javaMethodName, Array<Var?>::class.java, Var::class.java)
+            this.javaMethod = cls.getMethod(javaMethodName, Array<Var?>::class.java, CanSelectMember::class.java)
         } catch (e: NoSuchMethodException) {
             throw NoSuchMethodException(javaMethodName)
         } catch (e: ClassNotFoundException) {
@@ -52,7 +52,7 @@ class NativeFunction : Function, Native {
     }
 
     @Override
-    override fun invoke(args: ArrayList<Var>, caller: Var?) {
+    override fun invoke(args: ArrayList<Var>, caller: CanSelectMember?) {
         val argsArray = arrayOfNulls<Var>(args.size)
         args.toArray(argsArray)
         try {

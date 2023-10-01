@@ -19,7 +19,28 @@
 				"void main()"
 			],
 			"classes":[
-				
+				{
+					"id":"Test",
+					"isNative":false,
+					"functions":[
+						"void test()"
+					],
+					"staticFunctions":[
+						
+					],
+					"vars":[
+						{
+							"id":"index",
+							"type":"int"
+						}
+					],
+					"staticVars":[
+						
+					],
+					"constructors":[
+						"void _init_test_0()"
+					]
+				}
 			],
 			"structs":[
 				

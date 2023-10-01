@@ -41,7 +41,7 @@ class McfppImListener : mcfppBaseListener() {
             //只导入方法
             libNamespace.forEachFunction { f ->
                 run {
-                    nsp.addFunction(f)
+                    nsp.addFunction(f,false)
                 }
             }
             return
@@ -56,7 +56,7 @@ class McfppImListener : mcfppBaseListener() {
             }
             libNamespace.forEachFunction { f ->
                 run {
-                    nsp.addFunction(f)
+                    nsp.addFunction(f,false)
                 }
             }
         }else{
@@ -80,7 +80,7 @@ class McfppImListener : mcfppBaseListener() {
         Project.ctx = ctx
         var f: Function
         //获取函数对象
-        if (ctx.parent.parent !is mcfppParser.ClassMemberContext && ctx.parent.parent !is mcfppParser.StructMemberContext) {
+        if (ctx.parent.parent !is mcfppParser.ClassMemberContext && ctx.parent.parent !is mcfppParser.StructMemberContext && ctx.parent !is mcfppParser.ExtensionFunctionDeclarationContext) {
             //不是类成员和结构体成员
             //创建函数对象
             val parent = ctx.parent as mcfppParser.FunctionDeclarationContext
@@ -104,7 +104,7 @@ class McfppImListener : mcfppBaseListener() {
             }else{
                 Struct.currStruct!!.getConstructor(FunctionParam.toStringList(temp.params))!!
             }
-        } else if(ctx.parent is mcfppParser.ClassMemberContext){
+        } else if(ctx.parent.parent is mcfppParser.ClassMemberContext){
             //是类的成员函数
             //创建函数对象并解析参数
             val qwq = ctx.parent as mcfppParser.ClassFunctionDeclarationContext
@@ -115,7 +115,51 @@ class McfppImListener : mcfppBaseListener() {
             //获取缓存中的对象
             val fun1 = Class.currClass!!.field.getFunction(f.name, f.paramTypeList)
             f = (fun1 ?: Class.currClass!!.staticField.getFunction(f.name, f.paramTypeList))!!
-        }else{
+        } else if(ctx.parent is mcfppParser.ExtensionFunctionDeclarationContext){
+            //是扩展函数
+            val qwq = ctx.parent as mcfppParser.ExtensionFunctionDeclarationContext
+            //获取被拓展的类
+            //获取被拓展的类
+            val data : CompoundData = if(qwq.type().className() == null){
+                when(qwq.type().text){
+                    "int" -> MCInt.data
+                    else -> {
+                        throw Exception("Cannot add extension function to ${qwq.type().text}")
+                    }
+                }
+            }else{
+                val clsStr = qwq.type().className().text.split(":")
+                val id : String
+                val nsp : String?
+                if(clsStr.size == 1){
+                    id = clsStr[0]
+                    nsp = null
+                }else{
+                    id = clsStr[1]
+                    nsp = clsStr[0]
+                }
+                val owo: Class? = GlobalField.getClass(nsp, id)
+                if (owo == null) {
+                    val pwp = GlobalField.getStruct(nsp, id)
+                    if(pwp == null){
+                        Project.error("Undefined class or struct:" + qwq.type().className().text)
+                        throw ClassNotDefineException()
+                    }else{
+                        pwp
+                    }
+                }else{
+                    owo
+                }
+            }
+            //创建函数对象并解析参数
+            f = Function(qwq.Identifier().text)
+            if (qwq.parameterList() != null) {
+                f.addParams(qwq.parameterList())
+            }
+            val field = if(f.isStatic) data.staticField else data.field
+            //获取缓存中的对象
+            f = field.getFunction(qwq.Identifier().text,f.paramTypeList)!!
+        } else{
             //是结构体成员
             //创建函数对象并解析参数
             val qwq = ctx.parent as mcfppParser.StructFunctionDeclarationContext
@@ -177,7 +221,7 @@ class McfppImListener : mcfppBaseListener() {
             return
         } else {
             //函数变量，生成
-            Var.build(ctx, Function.currFunction)!!
+            Var.build(ctx, Function.currFunction)
         }
         //变量注册
         //一定是函数变量
@@ -207,20 +251,23 @@ class McfppImListener : mcfppBaseListener() {
     override fun exitStatementExpression(ctx: mcfppParser.StatementExpressionContext) {
         Project.ctx = ctx
         Function.addCommand("#" + ctx.text)
-        val left: Var = McfppExprVisitor().visit(ctx.basicExpression())!!
-        if (left.isConst == Var.ConstStatus.ASSIGNED) {
-            Project.error("Cannot assign a constant repeatedly: " + left.identifier)
-            throw ConstChangeException()
-        } else if (left.isConst == Var.ConstStatus.NULL) {
-            left.isConst = Var.ConstStatus.ASSIGNED
-        }
         val right: Var = McfppExprVisitor().visit(ctx.expression())!!
-        try {
-            left.assign(right)
-        } catch (e: VariableConverseException) {
-            Project.error("Cannot convert " + right.javaClass + " to " + left.javaClass)
-            throw VariableConverseException()
+        if(ctx.basicExpression() != null){
+            val left: Var = McfppExprVisitor().visit(ctx.basicExpression())!!
+            if (left.isConst == Var.ConstStatus.ASSIGNED) {
+                Project.error("Cannot assign a constant repeatedly: " + left.identifier)
+                throw ConstChangeException()
+            } else if (left.isConst == Var.ConstStatus.NULL) {
+                left.isConst = Var.ConstStatus.ASSIGNED
+            }
+            try {
+                left.assign(right)
+            } catch (e: VariableConverseException) {
+                Project.error("Cannot convert " + right.javaClass + " to " + left.javaClass)
+                throw VariableConverseException()
+            }
         }
+
     }
 
     /**
@@ -256,38 +303,6 @@ class McfppImListener : mcfppBaseListener() {
     *    }
     * }
     */
-
-    /**
-     * 调用一个函数。参考：
-     * [局部变量、程序控制流程在数据包中的实现 借助汇编语言函数堆栈思想 - mcbbs](https://www.mcbbs.net/thread-1393132-1-1.html)
-     * @param ctx the parse tree
-     */
-    @Override
-    @InsertCommand
-    override fun exitFunctionCall(ctx: mcfppParser.FunctionCallContext) {
-        Project.ctx = ctx
-        Function.addCommand("#" + ctx.text)
-        //参数获取
-        val args: ArrayList<Var> = ArrayList()
-        val exprVisitor = McfppExprVisitor()
-        if(ctx.arguments().expressionList() != null){
-            for (expr in ctx.arguments().expressionList().expression()) {
-                args.add(exprVisitor.visit(expr)!!)
-            }
-        }
-        //函数对象获取
-        val curr = McfppFuncVisitor().getFunction(ctx, FunctionParam.getVarTypes(args))
-        val func = curr.first
-        val obj = curr.second
-        if (func == null) {
-            Project.error("Function " + ctx.text + " not defined")
-            throw FunctionNotDefineException()
-        }
-        func.invoke(args,obj)
-        //函数树
-        Function.currFunction.child.add(func)
-        func.parent.add(Function.currFunction)
-    }
 
     @Override
     @InsertCommand
@@ -332,7 +347,7 @@ class McfppImListener : mcfppBaseListener() {
         Function.currFunction = ifFunction
         if(!GlobalField.localNamespaces.containsKey(ifFunction.namespace))
             GlobalField.localNamespaces[ifFunction.namespace] = NamespaceField()
-        GlobalField.localNamespaces[ifFunction.namespace]!!.addFunction(ifFunction)
+        GlobalField.localNamespaces[ifFunction.namespace]!!.addFunction(ifFunction,false)
     }
 
     /**
@@ -365,7 +380,7 @@ class McfppImListener : mcfppBaseListener() {
         //注册函数
         if(!GlobalField.localNamespaces.containsKey(f.namespace))
             GlobalField.localNamespaces[f.namespace] = NamespaceField()
-        GlobalField.localNamespaces[f.namespace]!!.addFunction(f)
+        GlobalField.localNamespaces[f.namespace]!!.addFunction(f,false)
         if (parent is mcfppParser.IfStatementContext || parent is mcfppParser.ElseIfStatementContext) {
             //第一个if
             parent as mcfppParser.IfStatementContext
@@ -442,7 +457,7 @@ class McfppImListener : mcfppBaseListener() {
         Function.currFunction = whileFunction
         if(!GlobalField.localNamespaces.containsKey(whileFunction.namespace))
             GlobalField.localNamespaces[whileFunction.namespace] = NamespaceField()
-        GlobalField.localNamespaces[whileFunction.namespace]!!.addFunction(whileFunction)
+        GlobalField.localNamespaces[whileFunction.namespace]!!.addFunction(whileFunction,false)
     }
 
     @Override
@@ -473,7 +488,7 @@ class McfppImListener : mcfppBaseListener() {
         f.parent.add(f)
         if(!GlobalField.localNamespaces.containsKey(f.namespace))
             GlobalField.localNamespaces[f.namespace] = NamespaceField()
-        GlobalField.localNamespaces[f.namespace]!!.addFunction(f)
+        GlobalField.localNamespaces[f.namespace]!!.addFunction(f,false)
         //条件判断
         if (exp.isConcrete && exp.value) {
             //给子函数开栈
@@ -533,7 +548,7 @@ class McfppImListener : mcfppBaseListener() {
         Function.currFunction = doWhileFunction
         if(!GlobalField.localNamespaces.containsKey(doWhileFunction.namespace))
             GlobalField.localNamespaces[doWhileFunction.namespace] = NamespaceField()
-        GlobalField.localNamespaces[doWhileFunction.namespace]!!.addFunction(doWhileFunction)
+        GlobalField.localNamespaces[doWhileFunction.namespace]!!.addFunction(doWhileFunction,false)
     }
 
 
@@ -565,7 +580,7 @@ class McfppImListener : mcfppBaseListener() {
         f.child.add(f)
         f.parent.add(f)
         if(!GlobalField.localNamespaces.containsKey(f.namespace)) GlobalField.localNamespaces[f.namespace] = NamespaceField()
-        GlobalField.localNamespaces[f.namespace]!!.addFunction(f)
+        GlobalField.localNamespaces[f.namespace]!!.addFunction(f,false)
         //给子函数开栈
         Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
         Function.addCommand(
@@ -626,7 +641,7 @@ class McfppImListener : mcfppBaseListener() {
         forFunc.parent.add(Function.currFunction)
         if(!GlobalField.localNamespaces.containsKey(forFunc.namespace))
             GlobalField.localNamespaces[forFunc.namespace] = NamespaceField()
-        GlobalField.localNamespaces[forFunc.namespace]!!.addFunction(forFunc)
+        GlobalField.localNamespaces[forFunc.namespace]!!.addFunction(forFunc,false)
         Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
         Function.addCommand(Commands.Function(forFunc))
         Function.addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
@@ -659,7 +674,7 @@ class McfppImListener : mcfppBaseListener() {
         forLoopFunc.parent.add(Function.currFunction)
         if(!GlobalField.localNamespaces.containsKey(forLoopFunc.namespace))
             GlobalField.localNamespaces[forLoopFunc.namespace] = NamespaceField()
-        GlobalField.localNamespaces[forLoopFunc.namespace]!!.addFunction(forLoopFunc)
+        GlobalField.localNamespaces[forLoopFunc.namespace]!!.addFunction(forLoopFunc,false)
         Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
         Function.addCommand(Commands.Function(forLoopFunc))
 
@@ -709,7 +724,7 @@ class McfppImListener : mcfppBaseListener() {
         f.parent.add(f)
         if(!GlobalField.localNamespaces.containsKey(f.namespace))
             GlobalField.localNamespaces[f.namespace] = NamespaceField()
-        GlobalField.localNamespaces[f.namespace]!!.addFunction(f)
+        GlobalField.localNamespaces[f.namespace]!!.addFunction(f,false)
         //条件循环判断
         if (exp.isConcrete && exp.value) {
             //给子函数开栈
