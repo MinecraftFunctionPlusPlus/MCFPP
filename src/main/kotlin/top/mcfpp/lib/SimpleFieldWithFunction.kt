@@ -29,7 +29,7 @@ class SimpleFieldWithFunction : IFieldWithFunction {
     @Nullable
     override fun getFunction(key: String, argsTypes: List<String>): Function? {
         for (f in functions) {
-            if (f.name == key && f.params.size == argsTypes.size) {
+            if (f.identifier == key && f.params.size == argsTypes.size) {
                 if (f.params.size == 0) {
                     return f
                 }

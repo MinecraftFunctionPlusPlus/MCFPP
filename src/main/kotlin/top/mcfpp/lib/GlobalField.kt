@@ -106,6 +106,34 @@ object GlobalField : FieldContainer, IField {
         return field?.getClass(identifier)
     }
 
+    /**
+     * 从当前的全局域中获取一个接口。若不存在，则返回null
+     *
+     * 如果没有提供命名空间，则只会从import导入的库和本地命名空间中搜索。否则则在指定的命名空间中搜索。
+     * @param namespace 可选。这个接口的命名空间。如果为null，则会从当前所有的命名空间中寻找此类。
+     * @param identifier 接口的标识符
+     * @return 获取的接口。如果有多个相同标识符的接口（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
+     */
+    fun getInterface(@Nullable namespace: String? = null, identifier: String): Interface?{
+        if(namespace == null){
+            var itf:Interface?
+            //命名空间为空，从全局寻找
+            itf = localNamespaces[Project.currNamespace]!!.getInterface(identifier)
+            if(itf != null) return itf
+            for (nsp in importedLibNamespaces.values){
+                itf = nsp.getInterface(identifier)
+                if(itf != null) return itf
+            }
+            return null
+        }
+        //按照指定的命名空间寻找
+        var field = localNamespaces[namespace]
+        if(field == null){
+            field = importedLibNamespaces[namespace]
+        }
+        return field?.getInterface(identifier)
+    }
+
 
 
     /**
@@ -280,6 +308,23 @@ object GlobalField : FieldContainer, IField {
                             "\t\t" + v.accessModifier.name
                                 .lowercase(Locale.getDefault()) + " " + "static " + v.type + " " + v.identifier
                         )
+                    }
+                }
+            }
+            field.forEachInterface { i ->
+                run {
+                    println("interface " + i.identifier)
+                    println("\tfunctions:")
+                    i.field.forEachFunction {f ->
+                        run {
+                            println(
+                                "\t\t" + f.accessModifier.name
+                                    .lowercase(Locale.getDefault()) + " " + f.namespaceID
+                            )
+                            for (d in f.commands) {
+                                println("\t\t\t" + d)
+                            }
+                        }
                     }
                 }
             }

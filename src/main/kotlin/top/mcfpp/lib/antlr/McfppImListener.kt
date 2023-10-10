@@ -90,7 +90,7 @@ class McfppImListener : mcfppBaseListener() {
                 f.addParams((ctx.parent as mcfppParser.FunctionDeclarationContext).parameterList())
             }
             //获取缓存中的对象
-            f = GlobalField.getFunction(f.namespace, f.name, f.paramTypeList)!!
+            f = GlobalField.getFunction(f.namespace, f.identifier, f.paramTypeList)!!
         } else if (ctx.parent is mcfppParser.ConstructorDeclarationContext) {
             //是构造函数
             //创建构造函数对象并解析参数
@@ -113,8 +113,8 @@ class McfppImListener : mcfppBaseListener() {
                 f.addParams(qwq.parameterList())
             }
             //获取缓存中的对象
-            val fun1 = Class.currClass!!.field.getFunction(f.name, f.paramTypeList)
-            f = (fun1 ?: Class.currClass!!.staticField.getFunction(f.name, f.paramTypeList))!!
+            val fun1 = Class.currClass!!.field.getFunction(f.identifier, f.paramTypeList)
+            f = (fun1 ?: Class.currClass!!.staticField.getFunction(f.identifier, f.paramTypeList))!!
         } else if(ctx.parent is mcfppParser.ExtensionFunctionDeclarationContext){
             //是扩展函数
             val qwq = ctx.parent as mcfppParser.ExtensionFunctionDeclarationContext
@@ -168,8 +168,8 @@ class McfppImListener : mcfppBaseListener() {
                 f.addParams(qwq.parameterList())
             }
             //获取缓存中的对象
-            val fun1 = Struct.currStruct!!.field.getFunction(f.name, f.paramTypeList)
-            f = (fun1 ?: Struct.currStruct!!.staticField.getFunction(f.name, f.paramTypeList))!!
+            val fun1 = Struct.currStruct!!.field.getFunction(f.identifier, f.paramTypeList)
+            f = (fun1 ?: Struct.currStruct!!.staticField.getFunction(f.identifier, f.paramTypeList))!!
         }
         Function.currFunction = f
     }
@@ -311,7 +311,7 @@ class McfppImListener : mcfppBaseListener() {
         Function.addCommand("#" + ctx!!.text)
         if (ctx.expression() != null) {
             if(Function.currBaseFunction.returnType == "void"){
-                Project.error("Function ${Function.currBaseFunction.name} has no return value")
+                Project.error("Function ${Function.currBaseFunction.identifier} has no return value")
                 throw FunctionHasNoReturnValueException()
             }
             val ret: Var = McfppExprVisitor().visit(ctx.expression())!!

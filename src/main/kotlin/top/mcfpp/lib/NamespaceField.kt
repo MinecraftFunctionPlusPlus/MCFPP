@@ -24,7 +24,7 @@ import kotlin.collections.HashMap
  *
  * 函数储存在一个列表中
  */
-class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithStruct {
+class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithStruct, IFieldWithInterface {
     /**
      * 变量
      */
@@ -61,6 +61,17 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithStruct {
     fun forEachStruct(operation: (Struct) -> Any?){
         for (struct in structs.values){
             operation(struct)
+        }
+    }
+
+    /**
+     * 接口
+     */
+    private var interfaces: HashMap<String, Interface> = HashMap()
+
+    fun forEachInterface(operation: (Interface) -> Any?){
+        for(`interface` in interfaces.values){
+            operation(`interface`)
         }
     }
 
@@ -102,7 +113,7 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithStruct {
     @Nullable
     override fun getFunction(key: String, argsTypes: List<String>): Function? {
         for (f in functions) {
-            if (f.name == key && f.params.size == argsTypes.size) {
+            if (f.identifier == key && f.params.size == argsTypes.size) {
                 if (f.params.size == 0) {
                     return f
                 }
@@ -241,6 +252,7 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithStruct {
     //endregion
 */
 
+    //region struct
     /**
      * 向域中添加一个结构体
      *
@@ -306,6 +318,74 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithStruct {
      */
     override fun hasStruct(struct: Struct): Boolean {
         return structs.containsKey(struct.identifier)
+    }
+
+    //endregion
+    /**
+     * 向域中添加一个接口
+     *
+     * @param identifier 接口的标识符
+     * @param itf 接口
+     * @param force 是否强制添加。如果为true，则即使已经添加过相同标识符的接口，也会覆盖原来的接口进行添加。
+     * @return 是否添加成功。如果已经存在相同标识符的接口，且不是强制添加则为false
+     */
+    override fun addInterface(identifier: String, itf: Interface, force: Boolean): Boolean {
+        return if (force){
+            interfaces[identifier] = itf
+            true
+        }else{
+            if(!interfaces.containsKey(identifier)){
+                interfaces[identifier] = itf
+                true
+            }else{
+                false
+            }
+        }
+    }
+
+    /**
+     * 移除一个接口
+     *
+     * @param identifier 这个接口的标识符
+     * @return 是否移除成功。如果不存在此接口，则返回false
+     */
+    override fun removeInterface(identifier: String): Boolean {
+        return if(interfaces.containsKey(identifier)) {
+            interfaces.remove(identifier)
+            true
+        }else{
+            false
+        }
+    }
+
+    /**
+     * 获取一个接口。可能不存在
+     *
+     * @param identifier 接口的标识符
+     * @return 获取到的接口。如果不存在，则返回null
+     */
+    override fun getInterface(identifier: String): Interface? {
+        return interfaces[identifier]
+    }
+
+    /**
+     * 是否存在此接口
+     *
+     * @param identifier 接口的标识符
+     * @return
+     */
+    override fun hasInterface(identifier: String): Boolean {
+        return interfaces.containsKey(identifier)
+    }
+
+    /**
+     * 是否存在此接口
+     *
+     * @param itf 接口
+     * @return
+     */
+    override fun hasInterface(itf: Interface): Boolean {
+        return interfaces.containsKey(itf.identifier)
     }
 
 

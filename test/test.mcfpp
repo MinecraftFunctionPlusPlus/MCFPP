@@ -5,7 +5,7 @@ void main(){
 }
 
 class Test{
-    public int index = 0;
+    private int index = 0;
 }
 
 void Test.test(){
