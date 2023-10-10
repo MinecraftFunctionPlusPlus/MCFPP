@@ -100,7 +100,7 @@ open class Function : Member, FieldContainer {
     /**
      * 函数的名字
      */
-    val name: String
+    val identifier: String
 
     /**
      * 函数的标签
@@ -136,6 +136,11 @@ open class Function : Member, FieldContainer {
      * 函数是否已经实际中止。用于break和continue语句。
      */
     var isEnd = false
+
+    /**
+     * 是否是抽象函数
+     */
+    var isAbstract = false
 
     /**
      * 函数的返回类型
@@ -174,12 +179,12 @@ open class Function : Member, FieldContainer {
          */
         get() {
             val re: StringBuilder = if(ownerType == OwnerType.NONE){
-                StringBuilder("$namespace:$name")
+                StringBuilder("$namespace:$identifier")
             }else{
                 if(isStatic){
-                    StringBuilder("$namespace:${owner!!.identifier}/static/$name")
+                    StringBuilder("$namespace:${owner!!.identifier}/static/$identifier")
                 }else{
-                    StringBuilder("$namespace:${owner!!.identifier}/$name")
+                    StringBuilder("$namespace:${owner!!.identifier}/$identifier")
                 }
             }
             for (p in params) {
@@ -191,15 +196,15 @@ open class Function : Member, FieldContainer {
     /**
      * 获取这个函数的不带有命名空间的id。仍然包含了参数信息
      */
-    open val identifyWithParams: String
+    open val nameWithNamespace: String
         get() {
             val re: StringBuilder = if(ownerType == OwnerType.NONE){
-                StringBuilder(name)
+                StringBuilder(identifier)
             }else{
                 if(isStatic){
-                    StringBuilder("${owner!!.identifier}/static/$name")
+                    StringBuilder("${owner!!.identifier}/static/$identifier")
                 }else{
-                    StringBuilder("${owner!!.identifier}/$name")
+                    StringBuilder("${owner!!.identifier}/$identifier")
                 }
             }
             for (p in params) {
@@ -238,21 +243,21 @@ open class Function : Member, FieldContainer {
      */
     @get:Override
     override val prefix: String
-        get() = Project.currNamespace + "_func_" + name + "_"
+        get() = Project.currNamespace + "_func_" + identifier + "_"
 
     /**
      * 创建一个函数
-     * @param name 函数的标识符
+     * @param identifier 函数的标识符
      */
-    constructor(name: String, returnType: String = "void"):this(name, Project.currNamespace, returnType)
+    constructor(identifier: String, returnType: String = "void"):this(identifier, Project.currNamespace, returnType)
 
     /**
      * 创建一个全局函数，它有指定的命名空间
-     * @param name 函数的标识符
+     * @param identifier 函数的标识符
      * @param namespace 函数的命名空间
      */
-    constructor(name: String, namespace: String, returnType: String = "void"){
-        this.name = name
+    constructor(identifier: String, namespace: String, returnType: String = "void"){
+        this.identifier = identifier
         commands = ArrayList()
         params = ArrayList()
         field = FunctionField(null, this)
@@ -265,10 +270,10 @@ open class Function : Member, FieldContainer {
 
     /**
      * 创建一个函数，并指定它所属的类。
-     * @param name 函数的标识符
+     * @param identifier 函数的标识符
      */
-    constructor(name: String, cls: Class, isStatic: Boolean, returnType: String = "void") {
-        this.name = name
+    constructor(identifier: String, cls: Class, isStatic: Boolean, returnType: String = "void") {
+        this.identifier = identifier
         commands = ArrayList()
         params = ArrayList()
         namespace = cls.namespace
@@ -285,11 +290,30 @@ open class Function : Member, FieldContainer {
     }
 
     /**
+     * 创建一个函数，并指定它所属的接口。接口的函数总是抽象并且公开的
+     * @param identifier 函数的标识符
+     */
+    constructor(identifier: String, itf: Interface, returnType: String = "void") {
+        this.identifier = identifier
+        commands = ArrayList()
+        params = ArrayList()
+        namespace = itf.namespace
+        ownerType = OwnerType.CLASS
+        owner = itf
+        this.isStatic = false
+        field = FunctionField(null,null)
+        this.returnType = returnType
+        this.returnVar = buildReturnVar(returnType)
+        this.isAbstract = true
+        this.accessModifier = Member.AccessModifier.PUBLIC
+    }
+
+    /**
      * 创建一个函数，并指定它所属的结构体。
      * @param name 函数的标识符
      */
     constructor(name: String, struct: Struct, isStatic: Boolean, returnType: String = "void") {
-        this.name = name
+        this.identifier = name
         commands = ArrayList()
         params = ArrayList()
         namespace = struct.namespace
@@ -309,7 +333,7 @@ open class Function : Member, FieldContainer {
      * @return 函数id
      */
     fun getID(): String {
-        return name
+        return identifier
     }
 
     /**
@@ -407,6 +431,12 @@ open class Function : Member, FieldContainer {
         }
     }
 
+    /**
+     * 调用一个变量的某个成员函数
+     *
+     * @param args
+     * @param caller
+     */
     open fun invoke(args: ArrayList<Var>, caller: Var){
         //基本类型
         addCommand("#[Function ${this.namespaceID}] Function Pushing and argument passing")
@@ -441,12 +471,14 @@ open class Function : Member, FieldContainer {
         }
 
         //函数调用的命令
-        if(this is InternalFunction){
+        if(caller is ClassBase){
             addCommand(
-                "execute "+
-                        "if function " + this.namespaceID + " " +
-                        "run return 1"
+                "execute " +
+                        "as @e[tag=${caller.clsType.tag}] " +
+                        "if score @s " + caller.address.`object`.name + " = " + caller.name + " " + caller.address.`object`.name + " " +
+                        "run data modify storage mcfpp:temp function_ID from entity @s data.functions.${identifier}"
             )
+            addCommand("function ${this.namespaceID} with storage mcfpp:temp")
         }else{
             addCommand("function " + this.namespaceID)
         }
@@ -721,9 +753,9 @@ open class Function : Member, FieldContainer {
             }
         }
         if(containNamespace){
-            return "$namespace:$clsName$name($paramStr)"
+            return "$namespace:$clsName$identifier($paramStr)"
         }
-        return "$returnType $clsName$name($paramStr)"
+        return "$returnType $clsName$identifier($paramStr)"
     }
 
     override fun hashCode(): Int {

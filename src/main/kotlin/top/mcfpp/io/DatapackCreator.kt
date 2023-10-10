@@ -97,10 +97,10 @@ object DatapackCreator {
                         if (f is Native) {
                             return@run
                         }
-                        Project.debug("Writing File: $currPath\\functions\\${f.identifyWithParams}.mcfunction")
+                        Project.debug("Writing File: $currPath\\functions\\${f.nameWithNamespace}.mcfunction")
                         Files.createDirectories(Paths.get("$currPath/functions"))
                         Files.write(
-                            Paths.get("$currPath/functions/${f.identifyWithParams}.mcfunction"),
+                            Paths.get("$currPath/functions/${f.nameWithNamespace}.mcfunction"),
                             f.cmdStr.toByteArray()
                         )
                     }
@@ -116,14 +116,14 @@ object DatapackCreator {
                                 if (f is Native) {
                                     return@run
                                 }
-                                Project.debug("Writing File: $currPath\\functions\\" + f.identifyWithParams + ".mcfunction")
+                                Project.debug("Writing File: $currPath\\functions\\" + f.nameWithNamespace + ".mcfunction")
                                 //TODO 可能无法正确创建文件夹
                                 Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(cls.identifier)))
                                 if (f is ExtensionFunction){
                                     Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(cls.identifier) + "/ex"))
                                 }
                                 Files.write(
-                                    Paths.get("$currPath/functions/"  + f.identifyWithParams + ".mcfunction"),
+                                    Paths.get("$currPath/functions/"  + f.nameWithNamespace + ".mcfunction"),
                                     f.cmdStr.toByteArray()
                                 )
                             }
@@ -133,14 +133,14 @@ object DatapackCreator {
                                 if (f is Native) {
                                     return@run
                                 }
-                                Project.debug("Writing File: $currPath\\functions\\"  + f.identifyWithParams + ".mcfunction")
+                                Project.debug("Writing File: $currPath\\functions\\"  + f.nameWithNamespace + ".mcfunction")
                                 //TODO 可能无法正确创建文件夹
                                 Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(cls.identifier) + "/static"))
                                 if (f is ExtensionFunction){
                                     Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(cls.identifier) + "/ex_static"))
                                 }
                                 Files.write(
-                                    Paths.get("$currPath/functions/" + f.identifyWithParams + ".mcfunction"),
+                                    Paths.get("$currPath/functions/" + f.nameWithNamespace + ".mcfunction"),
                                     f.cmdStr.toByteArray()
                                 )
                             }
@@ -148,11 +148,11 @@ object DatapackCreator {
                         //构造函数
                         cls.constructors.forEach{ c ->
                             run {
-                                Project.debug("Writing File: $currPath\\functions\\"  + c.identifyWithParams + ".mcfunction")
+                                Project.debug("Writing File: $currPath\\functions\\"  + c.nameWithNamespace + ".mcfunction")
                                 //TODO 可能无法正确创建文件夹
                                 Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(cls.identifier)))
                                 Files.write(
-                                    Paths.get("$currPath/functions/" + c.identifyWithParams + ".mcfunction"),
+                                    Paths.get("$currPath/functions/" + c.nameWithNamespace + ".mcfunction"),
                                     c.cmdStr.toByteArray()
                                 )
                             }

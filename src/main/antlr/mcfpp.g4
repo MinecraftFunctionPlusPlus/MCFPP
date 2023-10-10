@@ -20,27 +20,28 @@ importDeclaration
 //类或函数声明
 typeDeclaration
     :   annoation
-    |   classOrFunctionOrStructDeclaration
+    |   declarations
     ;
 
 //类或函数声明
-classOrFunctionOrStructDeclaration
+declarations
     :   classDeclaration
     |   functionDeclaration
     |   nativeFuncDeclaration
     |   nativeClassDeclaration
     |   structDeclaration
     |   extensionFunctionDeclaration
+    |   interfaceDeclaration
     ;
 
 //类声明
 classDeclaration
-    :   STATIC? FINAL? 'class' classWithoutNamespace (EXTENDS className)? classBody
+    :   STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace (':' className (',' className)*)? classBody
     ;
 
 nativeClassDeclaration
-    :   NATIVE 'class' classWithoutNamespace '->' javaRefer ';'
-    |   NATIVE 'class' classWithoutNamespace '->' javaRefer '{' nativeClassBody '}'
+    :   NATIVE CLASS classWithoutNamespace '->' javaRefer ';'
+    |   NATIVE CLASS classWithoutNamespace '->' javaRefer '{' nativeClassBody '}'
     ;
 
 nativeClassBody
@@ -65,10 +66,15 @@ classMember
     |   fieldDeclaration ';'
     |   constructorDeclaration
     |   nativeFuncDeclaration
+    |   abstractClassFunctionDeclaration
     ;
 
 classFunctionDeclaration
-    :    functionReturnType Identifier '(' parameterList? ')' '{' functionBody '}'
+    :   OVERRIDE functionReturnType Identifier '(' parameterList? ')' '{' functionBody '}'
+    ;
+
+abstractClassFunctionDeclaration
+    :   OVERRIDE ABSTRACT functionReturnType Identifier '(' parameterList? ')' ';'
     ;
 
 nativeClassFunctionDeclaration
@@ -77,7 +83,7 @@ nativeClassFunctionDeclaration
 
 //结构体
 structDeclaration
-    :   FINAL? 'struct' classWithoutNamespace (EXTENDS className)? structBody
+    :   FINAL? STRUCT classWithoutNamespace (EXTENDS className)? structBody
     ;
 
 structBody
@@ -104,6 +110,19 @@ structFunctionDeclaration
 
 structFieldDeclaration
     :   CONST? 'int'? Identifier
+    ;
+
+//接口声明
+interfaceDeclaration
+    :   INTERFACE classWithoutNamespace (':' className (',' className)*)? interfaceBody
+    ;
+
+interfaceBody
+    :   '{' interfaceFunctionDeclaration* '}'
+    ;
+
+interfaceFunctionDeclaration
+    :   functionReturnType Identifier '(' parameterList? ')' ';'
     ;
 
 //函数声明
@@ -378,7 +397,7 @@ tryStoreStatement
     ;
 
 returnStatement
-    : 'return' expression?
+    : RETURN expression?
     ;
 
 block
@@ -441,6 +460,7 @@ STORE:'store';
 
 BREAK:'break';
 CONTINUE:'continue';
+RETURN:'return';
 
 STATIC:'static';
 EXTENDS:'extends';
@@ -452,11 +472,18 @@ PUBLIC:'public';
 PROTECTED:'protected';
 PRIVATE:'private';
 
+OVERRIDE: 'override';
+ABSTRACT: 'abstract';
+
 CONST:'const';
 DYNAMIC:'dynamic';
 IMPORT: 'import';
 
 INLINE:'inline';
+
+CLASS:'class';
+INTERFACE:'interface';
+STRUCT:'struct';
 
 InsideClass
     :   'entity'

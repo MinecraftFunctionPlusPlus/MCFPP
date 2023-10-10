@@ -29,10 +29,7 @@
 						
 					],
 					"vars":[
-						{
-							"id":"index",
-							"type":"int"
-						}
+						
 					],
 					"staticVars":[
 						

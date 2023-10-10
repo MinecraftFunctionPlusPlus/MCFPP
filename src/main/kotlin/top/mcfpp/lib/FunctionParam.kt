@@ -1,7 +1,10 @@
 package top.mcfpp.lib
 
+import top.mcfpp.Project
+import top.mcfpp.lang.ClassPointer
+import top.mcfpp.lang.MCBool
+import top.mcfpp.lang.MCInt
 import top.mcfpp.lang.Var
-import java.util.ArrayList
 
 /**
  * 函数的参数。用于函数声明的时候。
@@ -45,6 +48,14 @@ class FunctionParam(
                 qwq.add(param.type)
             }
             return qwq
+        }
+
+        fun getParams(params: mcfppParser.ParameterListContext): ArrayList<String>{
+            val re = ArrayList<String>()
+            for (param in params.parameter()) {
+                re.add(param.type().text)
+            }
+            return re
         }
     }
 }

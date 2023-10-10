@@ -8,7 +8,7 @@ open class CompoundData : FieldContainer {
     /**
      * 这个类的父类
      */
-    var parent: CompoundData? = null
+    var parent: ArrayList<CompoundData> = ArrayList()
 
     /**
      * 这个类的标识符
@@ -126,9 +126,12 @@ open class CompoundData : FieldContainer {
         if (namespaceID == compoundData.namespaceID) {
             return true
         }
-        return if (parent != null) {
-            parent!!.canCastTo(compoundData)
-        } else false
+        if (parent.size != 0) {
+            for(p in parent){
+                if(p.canCastTo(compoundData)) return true
+            }
+        }
+        return false
     }
 
     /**
@@ -138,15 +141,13 @@ open class CompoundData : FieldContainer {
      * @return 是否是指定类型的子类型
      */
     fun isSub(compoundData: CompoundData): Boolean{
-        return if(parent != null){
-            if(parent!!.namespaceID == compoundData.namespaceID){
-                true
-            }else{
-                (parent as Class).isSub(compoundData)
+        if(parent.size != 0){
+            for (p in parent){
+                if(p.namespaceID == compoundData.namespaceID || p.isSub(compoundData)){
+                    return true
+                }
             }
-        }else{
-            false
         }
+        return false
     }
-
 }

@@ -22,9 +22,9 @@ class ExtensionFunction: Function {
         get() {
             val re: StringBuilder =
                 if(isStatic){
-                    StringBuilder("$namespace:${owner!!.identifier}/ex_static/$name")
+                    StringBuilder("$namespace:${owner!!.identifier}/ex_static/$identifier")
                 }else{
-                    StringBuilder("$namespace:${owner!!.identifier}/ex/$name")
+                    StringBuilder("$namespace:${owner!!.identifier}/ex/$identifier")
                 }
             for (p in params) {
                 re.append("_").append(p.type)
@@ -35,13 +35,13 @@ class ExtensionFunction: Function {
     /**
      * 获取这个函数的不带有命名空间的id。仍然包含了参数信息
      */
-    override val identifyWithParams: String
+    override val nameWithNamespace: String
         get() {
             val re: StringBuilder =
                 if(isStatic){
-                    StringBuilder("${owner!!.identifier}/ex_static/$name")
+                    StringBuilder("${owner!!.identifier}/ex_static/$identifier")
                 }else{
-                    StringBuilder("${owner!!.identifier}/ex/$name")
+                    StringBuilder("${owner!!.identifier}/ex/$identifier")
                 }
             for (p in params) {
                 re.append("_").append(p.type)
@@ -54,6 +54,6 @@ class ExtensionFunction: Function {
      */
     @get:Override
     override val prefix: String
-        get() = Project.currNamespace + "_func_" + name + "_"
+        get() = Project.currNamespace + "_func_" + identifier + "_"
 
 }

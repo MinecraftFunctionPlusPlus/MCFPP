@@ -284,7 +284,7 @@ object Project {
                         hasEntrance = true
                         f.commands.add(0, "data modify storage mcfpp:system $defaultNamespace.stack_frame prepend value {}")
                         f.commands.add("data remove storage mcfpp:system $defaultNamespace.stack_frame[0]")
-                        logger.debug("Find entrance function: {} {}", f.tags, f.name)
+                        logger.debug("Find entrance function: {} {}", f.tags, f.identifier)
                     }
                 }
             }

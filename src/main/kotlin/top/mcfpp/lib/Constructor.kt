@@ -34,10 +34,18 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
     @InsertCommand
     override fun invoke(args: ArrayList<Var>, cls: ClassBase?) {
         cls as ClassPointer
+        //获取所有函数
+        val funcs = StringBuilder("functions:{")
+        target.field.forEachFunction { f ->
+            run {
+                funcs.append("${f.identifier}:\"${f.namespaceID}\",")
+            }
+        }
+        funcs.append("}")
         //对象实体创建
         addCommand(
             "execute in minecraft:overworld " +
-                    "run summon marker 0 1 0 {Tags:[" + cls.tag + ",mcfpp_classObject_just],data:{pointers:[]}}"
+                    "run summon marker 0 1 0 {Tags:[" + cls.tag + ",mcfpp_classObject_just],data:{pointers:[],$funcs}}"
         )
 
         //初始化

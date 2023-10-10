@@ -452,9 +452,9 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
                         is ClassPointer -> (currSelector as ClassPointer).clsType
                         else -> TODO()
                     }
-                    val am = if(Function.currFunction.ownerType == Function.Companion.OwnerType.CLASS){
+                    val am = if(Function.currFunction !is ExtensionFunction && Function.currFunction.ownerType == Function.Companion.OwnerType.CLASS){
                         Function.currFunction.parentClass()!!.getAccess(cpd)
-                    }else if(Function.currFunction.ownerType == Function.Companion.OwnerType.STRUCT){
+                    }else if(Function.currFunction !is ExtensionFunction && Function.currFunction.ownerType == Function.Companion.OwnerType.STRUCT){
                         Function.currFunction.parentStruct()!!.getAccess(cpd)
                     }else{
                         Member.AccessModifier.PUBLIC
