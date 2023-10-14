@@ -1,11 +1,32 @@
 namespace test;
 
 void main(){
+    Test t = Test();
+
+    if(t.index > 1 && Test.i == 3){
+        /say yes
+    }else{
+        /say no
+    }
+
+    print(t.getDoubleI());
+
     Test().test();
 }
 
 class Test{
-    private int index = 0;
+    public static int i = 0;
+
+    public int index = 0;
+
+    public Test(){
+        this.index = Test.i;
+        Test.i = Test.i + 1;
+    }
+
+    public int getDoubleI(){
+        return this.index * 2;
+    }
 }
 
 void Test.test(){

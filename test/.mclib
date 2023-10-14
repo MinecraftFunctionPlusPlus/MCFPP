@@ -16,20 +16,31 @@
 		{
 			"id":"test",
 			"functions":[
-				"void main()"
+				"void main()",
+				"void _if_f378583d-8941-40a3-9e78-c89a73719107()",
+				"void _if_branch_b9a021fa-7dd5-484c-959c-1ab58dcd7c65()",
+				"void _if_branch_f1ab4b5d-4fd5-41e9-bfd2-15f52c3b3bb9()"
 			],
 			"classes":[
 				{
 					"id":"Test",
 					"isNative":false,
 					"functions":[
+						"int getDoubleI()",
 						"void test()"
 					],
 					"staticFunctions":[
 						
 					],
 					"vars":[
-						
+						{
+							"id":"index",
+							"type":"int"
+						},
+						{
+							"id":"i",
+							"type":"int"
+						}
 					],
 					"staticVars":[
 						

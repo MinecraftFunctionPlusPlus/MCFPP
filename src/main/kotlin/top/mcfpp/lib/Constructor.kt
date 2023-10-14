@@ -28,12 +28,12 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
     /**
      * 调用构造函数。类的实例的实体的生成，类的初始化（preinit和init函数），自身的调用和地址分配都在此方法进行。
      * @param args 函数的参数
-     * @param cls 构造方法将要构建的对象的临时指针
+     * @param callerClassP 构造方法将要构建的对象的临时指针
      */
     @Override
     @InsertCommand
-    override fun invoke(args: ArrayList<Var>, cls: ClassBase?) {
-        cls as ClassPointer
+    override fun invoke(args: ArrayList<Var>, callerClassP: ClassBase?) {
+        callerClassP as ClassPointer
         //获取所有函数
         val funcs = StringBuilder("functions:{")
         target.field.forEachFunction { f ->
@@ -45,7 +45,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
         //对象实体创建
         addCommand(
             "execute in minecraft:overworld " +
-                    "run summon marker 0 1 0 {Tags:[" + cls.tag + ",mcfpp_classObject_just],data:{pointers:[],$funcs}}"
+                    "run summon marker 0 1 0 {Tags:[" + callerClassP.tag + ",mcfpp_classObject_just],data:{pointers:[],$funcs}}"
         )
 
         //初始化
@@ -55,7 +55,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
         }
         //不应当立即调用它自己的函数，应当先调用init，再调用constructor
         addCommand(
-            "execute as @e[tag=" + cls.tag + ",tag=mcfpp_classObject_just,limit=1] at @s run " +
+            "execute as @e[tag=mcfpp_classObject_just,limit=1] at @s run " +
                     Commands.Function(target.classPreInit)
         )
         if(target.classPreInit.commands.size > 3){
@@ -64,12 +64,6 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
         }
         //给函数开栈，调用构造函数
         addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
-
-        //传入this参数
-
-        val thisPoint = field.getVar("this")!! as ClassPointer
-        thisPoint.assign(cls)
-
         //参数传递
         for (i in 0 until params.size) {
             when (params[i].type) {
@@ -84,7 +78,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
             }
         }
 
-        addCommand(Commands.Function(this))
+        addCommand("execute as @e[tag=mcfpp_classObject_just,limit=1] at @s run function " + this.namespaceID)
 
         //销毁指针，释放堆内存
         for (p in field.allVars){
@@ -97,7 +91,6 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
 
 
         //取出栈内的值到记分板
-        addCommand("#[Function ${this.namespaceID}] Take vars out of the Stack")
         for (i in 0 until params.size) {
             when (params[i].type) {
                 "int" -> {
@@ -120,7 +113,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
             }
         }
         //去除临时标签
-        addCommand("tag @e[tag=" + cls.tag + ",tag=mcfpp_classObject_just,limit=1] remove mcfpp_classObject_just")
+        addCommand("tag @e[tag=" + callerClassP.tag + ",tag=mcfpp_classObject_just,limit=1] remove mcfpp_classObject_just")
     }
 
     @get:Override

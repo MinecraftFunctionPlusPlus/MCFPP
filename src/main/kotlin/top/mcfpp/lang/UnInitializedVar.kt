@@ -1,42 +1,46 @@
 package top.mcfpp.lang
 
 import top.mcfpp.Project
+import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.exception.VariableNotResolvedException
-import top.mcfpp.lib.FieldContainer
+import top.mcfpp.lib.Class
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
+import top.mcfpp.lib.antlr.McfppExprVisitor
 
-/**
- * 一个未被解析的变量。在读取类的字段部分的时候，由于字段的类型对应的类还没有被加载到编译器中，因此会将字段作为未解析的变量暂存在类的域中。
- * 当类被完全解析完毕并加载后，才会将类中的未解析变量逐个解析
- *
- * @constructor Create empty Unresolved var
- */
-class UnresolvedVar : Var {
-    /**
-     * 变量的类型。与普通的变量不同，这里作为字符串储存，从而在解析的时候能够通过[top.mcfpp.lib.IFieldWithClass.getClass]方法获取到作为类型的类。
-     */
-    private val varType: String
+class UnInitializedVar: Var {
 
-    override val type: String
-        get() = varType
+    val ctx: mcfppParser.FieldDeclarationContext
 
     /**
      * 创建一个未被解析的变量，它有指定的标识符和类型
      */
-    constructor(identifier: String, type: String){
-        varType = type
-        this.identifier = identifier
+    constructor(ctx: mcfppParser.FieldDeclarationContext){
+        this.ctx = ctx
+        this.identifier = ctx.Identifier().text
     }
 
-    /**
-     * 根据域对这个未解析的变量进行的
-     *
-     * @param fieldContainer
-     * @return
-     */
-    fun resolve(fieldContainer: FieldContainer): Var{
-        return build(identifier, type, fieldContainer)
+    override val type: String
+        get() = ctx.type().text
+
+    fun initialize(cls: Class): Var{
+        //变量的初始化
+        val `var`: Var = Var.build(ctx, compoundData = cls)
+        if (ctx.expression() != null) {
+            Function.currFunction = Class.currClass!!.classPreInit
+            //是类的成员
+            Function.addCommand("#" + ctx.text)
+            val init: Var = McfppExprVisitor().visit(ctx.expression())!!
+            try {
+                `var`.assign(init)
+            } catch (e: VariableConverseException) {
+                Project.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
+                Function.currFunction = Function.nullFunction
+                throw VariableConverseException()
+            }
+            Function.currFunction = Function.nullFunction
+        }
+        return `var`
     }
 
     /**
@@ -67,7 +71,7 @@ class UnresolvedVar : Var {
      * @return 复制的结果
      */
     override fun clone(): Any {
-        return UnresolvedVar(identifier,varType)
+        return UnInitializedVar(ctx)
     }
 
     /**

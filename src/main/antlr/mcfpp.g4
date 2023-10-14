@@ -70,11 +70,11 @@ classMember
     ;
 
 classFunctionDeclaration
-    :   OVERRIDE functionReturnType Identifier '(' parameterList? ')' '{' functionBody '}'
+    :   OVERRIDE? functionReturnType Identifier '(' parameterList? ')' '{' functionBody '}'
     ;
 
 abstractClassFunctionDeclaration
-    :   OVERRIDE ABSTRACT functionReturnType Identifier '(' parameterList? ')' ';'
+    :   OVERRIDE? ABSTRACT functionReturnType Identifier '(' parameterList? ')' ';'
     ;
 
 nativeClassFunctionDeclaration

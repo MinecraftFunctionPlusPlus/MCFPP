@@ -330,7 +330,6 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
      * @param ctx the parse tree
      * @return 表达式的值
      */
-    //基本表达式
     @Override
     override fun visitBasicExpression(ctx: mcfppParser.BasicExpressionContext): Var? {
         Project.ctx = ctx
@@ -384,7 +383,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
 
     @Override
     override fun visitSelector(ctx: mcfppParser.SelectorContext?): Var? {
-        currSelector = visit(ctx!!.`var`())
+        currSelector = visit(ctx!!.`var`())!!.getTempVar()
         return null
     }
 
@@ -412,14 +411,9 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             return visit(ctx.constructorCall())
         } else{
             //this或者super
-            val s = if(ctx.SUPER() != null){
-                "super"
-            }else{
-                "this"
-            }
-            val re: Var? = Function.currFunction.field.getVar(s)
+            val re: Var? = Function.currFunction.field.getVar(ctx.text)
             if (re == null) {
-                Project.error("$s can only be used in member functions.")
+                Project.error("${ctx.text} can only be used in member functions.")
             }
             return re
         }
@@ -450,6 +444,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
                     val cpd = when(currSelector){
                         is CompoundDataType -> (currSelector as CompoundDataType).dataType
                         is ClassPointer -> (currSelector as ClassPointer).clsType
+                        is ClassObject -> (currSelector as ClassObject).clsType
                         else -> TODO()
                     }
                     val am = if(Function.currFunction !is ExtensionFunction && Function.currFunction.ownerType == Function.Companion.OwnerType.CLASS){
@@ -537,14 +532,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         //获取对象
         val obj: ClassObject = cls.newInstance()
         //调用构造函数
-        constructor.invoke(args, cls = obj.initPointer)
-        return obj
-    }
-
-    companion object{
-        /**
-         * 遍历到的计算的树的深度
-         */
-        var treeDepth : Int = -1
+        constructor.invoke(args, callerClassP = obj.initPointer)
+        return obj.initPointer
     }
 }

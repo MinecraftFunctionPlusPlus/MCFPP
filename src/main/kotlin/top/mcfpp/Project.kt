@@ -169,6 +169,7 @@ object Project {
         if(!CompileSettings.ignoreStdLib){
             includes.add("mcfpp/sys")
             includes.add("mcfpp/math")
+            includes.add("mcfpp/dynamic")
         }
         //写入缓存
         for (include in includes) {
@@ -266,7 +267,7 @@ object Project {
         for (n in GlobalField.localNamespaces.values){
             n.forEachClass { c->
                 run {
-                    c.classPreStaticInit.invoke(ArrayList(), caller = null)
+                    c.classPreStaticInit.invoke(ArrayList(), callerClassP = null)
                 }
             }
         }

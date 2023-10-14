@@ -5,8 +5,7 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.exception.*
 import top.mcfpp.exception.IllegalFormatException
-import top.mcfpp.lang.MCInt
-import top.mcfpp.lang.Var
+import top.mcfpp.lang.*
 import top.mcfpp.lang.Var.ConstStatus
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Class
@@ -164,7 +163,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
     }
 //endregion
 
-//region native class
+    //region native class
     /**
      * native类的声明
      * @param ctx the parse tree
@@ -176,7 +175,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
     }
 //endregion
 
-//region class
+    //region class
     /**
      * 类的声明
      * @param ctx the parse tree
@@ -436,6 +435,9 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         //是否是静态的
         if(ctx.parent.parent is mcfppParser.StaticClassMemberDeclarationContext){
             `var`.isStatic = true
+            `var`.parent = ClassType(Class.currClass!!)
+        }else{
+            `var`.parent = ClassPointer(Class.currClass!!,"temp")
         }
         if (Class.currClass!!.field.containVar(ctx.Identifier().text)
             || Class.currClass!!.staticField.containVar(ctx.Identifier().text)
@@ -469,7 +471,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
 
 //endregion
 
-//region function
+    //region function
     /**
      * 函数的声明
      * @param ctx the parse tree
