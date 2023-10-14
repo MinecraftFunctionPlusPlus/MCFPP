@@ -20,7 +20,6 @@ interface CanSelectMember{
      */
     fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean>
 
-
     /**
      * 根据方法标识符和方法的参数列表获取一个方法。如果没有这个方法，则返回null
      *

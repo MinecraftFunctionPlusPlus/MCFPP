@@ -422,9 +422,9 @@ open class Function : Member, FieldContainer {
 
     open fun invoke(args: ArrayList<Var>, caller: CanSelectMember? = null){
         when(caller){
-            is CompoundDataType -> invoke(args, cls = null)
-            null -> invoke(args, cls = null)
-            is ClassBase -> invoke(args, cls = caller)
+            is CompoundDataType -> invoke(args, callerClassP = null)
+            null -> invoke(args, callerClassP = null)
+            is ClassBase -> invoke(args, callerClassP = caller)
             is StructBase -> invoke(args, caller)
             is Var -> invoke(args, caller)
 
@@ -469,20 +469,7 @@ open class Function : Member, FieldContainer {
                 }
             }
         }
-
-        //函数调用的命令
-        if(caller is ClassBase){
-            addCommand(
-                "execute " +
-                        "as @e[tag=${caller.clsType.tag}] " +
-                        "if score @s " + caller.address.`object`.name + " = " + caller.name + " " + caller.address.`object`.name + " " +
-                        "run data modify storage mcfpp:temp function_ID from entity @s data.functions.${identifier}"
-            )
-            addCommand("function ${this.namespaceID} with storage mcfpp:temp")
-        }else{
-            addCommand("function " + this.namespaceID)
-        }
-
+        addCommand("function " + this.namespaceID)
         var hasAddComment = false
         //static关键字，将值传回
         for (i in 0 until params.size) {
@@ -554,23 +541,14 @@ open class Function : Member, FieldContainer {
      * 调用这个函数。
      *
      * @param args 函数的参数
-     * @param cls 调用函数的实例
+     * @param callerClassP 调用函数的实例
      * @see top.mcfpp.lib.antlr.McfppExprVisitor.visitVar
      */
     @InsertCommand
-    open fun invoke(args: ArrayList<Var>, cls: ClassBase? = null) {
+    open fun invoke(args: ArrayList<Var>, callerClassP: ClassBase? = null) {
         addCommand("#[Function ${this.namespaceID}] Function Pushing and argument passing")
         //给函数开栈
         addCommand("data modify storage mcfpp:system ${Project.defaultNamespace}.stack_frame prepend value {}")
-        //传入this参数
-        if (cls is ClassPointer) {
-            val thisPoint = field.getVar("this")!! as ClassPointer
-            thisPoint.assign(cls)
-        }
-        if (cls is ClassObject) {
-            val thisPoint = field.getVar("this")!! as ClassPointer
-            thisPoint.assign(cls)
-        }
         //参数传递
         for (i in 0 until params.size) {
             when (params[i].type) {
@@ -596,18 +574,22 @@ open class Function : Member, FieldContainer {
                 }
             }
         }
-
         //函数调用的命令
-        if(this is InternalFunction){
+        if (callerClassP is ClassPointer) {
             addCommand(
-                "execute "+
-                        "if function " + this.namespaceID + " " +
-                        "run return 1"
-            )
-        }else{
-            addCommand("function " + this.namespaceID)
-        }
+                "execute " +
+                        "as @e[tag=${callerClassP.clsType.tag}] " +
+                        "if score @s ${callerClassP.address.`object`.name} = ${callerClassP.address.name} ${callerClassP.address.`object`.name} " +
+                        "run function mcfpp.dynamic:function with entity @s data.functions.${identifier}")
 
+        }
+        if (callerClassP is ClassObject) {
+            addCommand(
+                "execute " +
+                        "as @e[tag=${callerClassP.clsType.tag}] " +
+                        "if score @s ${callerClassP.address.`object`.name} = ${callerClassP.initPointer.address.name} ${callerClassP.initPointer.address.`object`.name} " +
+                        "run function mcfpp.dynamic:function with entity @s data.function.${identifier}")
+        }
         var hasAddComment = false
         //static关键字，将值传回
         for (i in 0 until params.size) {

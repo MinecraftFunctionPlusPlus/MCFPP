@@ -149,7 +149,10 @@ abstract class Var : Member, Cloneable, CanSelectMember {
 
     fun clone(pointer: ClassBase): Var{
         val `var`: Var = this.clone() as Var
-        `var`.parent = pointer
+        if(pointer.identifier != "this"){
+            //不是this指针才需要额外指定引用者
+            `var`.parent = pointer
+        }
         return `var`
     }
 
@@ -248,8 +251,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
          */
         fun build(ctx: mcfppParser.FieldDeclarationContext, compoundData: CompoundData): Var {
             //TODO 浮点数
-            
-            var `var`: Var
+            val `var`: Var
             if (ctx.type().className() == null) {
                 //普通类型
                 when (ctx.type().text) {
@@ -264,7 +266,6 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                             MCBool("@s").setObj(SbObject(compoundData.prefix + "_bool_" + ctx.Identifier()))
                         `var`.identifier = ctx.Identifier().text
                     }
-
                     else -> TODO()
                 }
             } else if (ctx.type().className().classWithoutNamespace().InsideClass() != null) {

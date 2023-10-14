@@ -253,7 +253,7 @@ class McfppImListener : mcfppBaseListener() {
         Function.addCommand("#" + ctx.text)
         val right: Var = McfppExprVisitor().visit(ctx.expression())!!
         if(ctx.basicExpression() != null){
-            val left: Var = McfppExprVisitor().visit(ctx.basicExpression())!!
+            val left: Var = McfppLeftExprVisitor().visit(ctx.basicExpression())!!
             if (left.isConst == Var.ConstStatus.ASSIGNED) {
                 Project.error("Cannot assign a constant repeatedly: " + left.identifier)
                 throw ConstChangeException()
@@ -304,6 +304,7 @@ class McfppImListener : mcfppBaseListener() {
     * }
     */
 
+//region 逻辑语句
     @Override
     @InsertCommand
     override fun exitReturnStatement(ctx: mcfppParser.ReturnStatementContext?) {
@@ -327,7 +328,6 @@ class McfppImListener : mcfppBaseListener() {
         Function.addCommand("return 1")
     }
 
-    //region 逻辑语句
     /**
      * 进入if语句
      * Enter if statement

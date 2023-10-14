@@ -124,15 +124,16 @@ class MCInt : Number<Int> {
     @Override
     @InsertCommand
     override fun assignCommand(a: Number<Int>) {
-        val parent = parent
         if (parent != null) {
+            val b = if(a.parent != null){
+                a.getTempVar() as Number<*>
+            }else a
             //是成员
-            val cmd: String = when(parent){
+            val cmd: String = when(val parent = parent){
                 is ClassPointer -> {
                     //静态
                     "execute as @e[type=marker,tag=${parent.tag}] " +
                             "if score @s ${parent.address.`object`.name} = ${parent.name} ${parent.address.`object`.name}"
-
                 }
                 is ClassType -> {
                     "execute as @e[type=marker,tag=${parent.tag}]"
@@ -142,12 +143,12 @@ class MCInt : Number<Int> {
             //类的成员是运行时动态的
             isConcrete = false
             //t = a
-            if (a.isConcrete) {
+            if (b.isConcrete) {
                 //对类中的成员的值进行修改
-                Function.addCommand("$cmd run scoreboard players set @s $`object` ${a.value}")
+                Function.addCommand("$cmd run scoreboard players set @s $`object` ${b.value}")
             } else {
                 //对类中的成员的值进行修改
-                Function.addCommand("$cmd run scoreboard players operation @s $`object` = ${a.name} ${a.`object`}")
+                Function.addCommand("$cmd run scoreboard players operation @s $`object` = ${b.name} ${b.`object`}")
             }
         } else {
             //t = a
@@ -156,11 +157,27 @@ class MCInt : Number<Int> {
                 value = a.value
             } else {
                 isConcrete = false
-                //变量进栈
-                Function.addCommand(
-                    "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1" +
-                            " run " + Commands.SbPlayerOperation(this, "=", a as MCInt)
-                )
+                if(a.parent != null){
+                    val head = if(isTemp) "execute " else "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1 "
+                    //是成员
+                    val cmd: String = when(val parent = a.parent){
+                        is ClassPointer -> {
+                            //静态
+                            "as @e[type=marker,tag=${parent.tag}] " +
+                                    "if score @s ${parent.address.`object`.name} = ${parent.name} ${parent.address.`object`.name} "
+                        }
+                        is ClassType -> {
+                            "as @e[type=marker,tag=${parent.tag}] "
+                        }
+                        else -> TODO()
+                    }
+                    Function.addCommand(head + cmd +
+                            "run " + Commands.SbPlayerOperation(this, "=", a as MCInt))
+                }else{
+                    val head = if(isTemp) "" else "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1 run "
+                    //变量进栈
+                    Function.addCommand(head + Commands.SbPlayerOperation(this, "=", a as MCInt))
+                }
             }
         }
     }
@@ -535,6 +552,7 @@ class MCInt : Number<Int> {
             return MCInt(value!!)
         }
         val re = MCInt()
+        re.isTemp = true
         re.assign(this)
         return re
     }
