@@ -41,6 +41,8 @@ class Void: Var("void") {
         return this
     }
 
+    override fun toDynamic() {}
+
     /**
      * 根据标识符获取一个成员。
      *

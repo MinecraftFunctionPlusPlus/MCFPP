@@ -80,6 +80,7 @@ class ClassPointer : ClassBase {
     @InsertCommand
     @Throws(VariableConverseException::class)
     override fun assign(b: Var?) {
+        hasAssigned = true
         //TODO 不支持指针作为类成员的时候
         when (b) {
             is ClassObject -> {
@@ -209,5 +210,9 @@ class ClassPointer : ClassBase {
     @Override
     override fun getTempVar(): Var {
         return this
+    }
+
+    override fun toDynamic() {
+        TODO("Not yet implemented")
     }
 }

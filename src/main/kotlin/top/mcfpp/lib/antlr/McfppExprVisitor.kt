@@ -469,7 +469,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             }
         } else if (ctx.expression() != null) {
             // '(' expression ')'
-            visit(ctx.expression())
+            McfppExprVisitor().visit(ctx.expression())
         } else {
             //函数的调用
             Function.addCommand("#" + ctx.text)
@@ -478,7 +478,8 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             val exprVisitor = McfppExprVisitor()
             if(ctx.arguments().expressionList() != null){
                 for (expr in ctx.arguments().expressionList().expression()) {
-                    args.add(exprVisitor.visit(expr)!!)
+                    val arg = exprVisitor.visit(expr)!!
+                    args.add(arg)
                 }
             }
             val p = StringHelper.splitNamespaceID(ctx.namespaceID().text)

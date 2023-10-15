@@ -14,8 +14,6 @@ abstract class Number<T> : Var, OnScoreboard {
     open var value: T? = null
     var `object`: SbObject
 
-    abstract var isDynamic: Boolean
-
     /**
      * 创建一个数字类型变量
      *
@@ -31,7 +29,6 @@ abstract class Number<T> : Var, OnScoreboard {
     constructor(b: Number<T>) : super(b) {
         value = b.value
         `object` = b.`object`
-        isDynamic = b.isDynamic
     }
 
     @Override
@@ -124,7 +121,7 @@ abstract class Number<T> : Var, OnScoreboard {
      */
     abstract fun notEqual(a: Number<*>): MCBool?
 
-    abstract fun toDynamic()
+    abstract override fun toDynamic()
 
     /**
      * 根据标识符获取一个成员。

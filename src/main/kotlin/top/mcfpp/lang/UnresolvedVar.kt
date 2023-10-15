@@ -79,6 +79,10 @@ class UnresolvedVar : Var {
         throw VariableNotResolvedException()
     }
 
+    override fun toDynamic() {
+        TODO("Not yet implemented")
+    }
+
     /**
      * 根据标识符获取一个成员。
      *

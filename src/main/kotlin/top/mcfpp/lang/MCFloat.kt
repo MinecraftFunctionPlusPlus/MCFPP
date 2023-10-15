@@ -51,7 +51,6 @@ class MCFloat : Number<Float> {
      */
     constructor(curr: FieldContainer, value: Float, identifier: String = UUID.randomUUID().toString()) : super(curr.prefix + identifier) {
         isConcrete = true
-        isDynamic = false
         setValue(value)
     }
 
@@ -62,7 +61,6 @@ class MCFloat : Number<Float> {
      */
     constructor(value: Float, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
         isConcrete = true
-        isDynamic = false
         setValue(value)
     }
 
@@ -81,9 +79,7 @@ class MCFloat : Number<Float> {
     override val type: String
         get() = "float"
 
-    override var isDynamic: Boolean = true
     override fun toDynamic() {
-        isDynamic = true
         exp.toDynamic()
         int0.toDynamic()
         int1.toDynamic()
@@ -165,6 +161,7 @@ class MCFloat : Number<Float> {
     @Override
     @Throws(VariableConverseException::class)
     override fun assign(b: Var?) {
+        hasAssigned = true
         when(b){
             is MCFloat ->{
                 assignCommand(b)
@@ -268,7 +265,7 @@ class MCFloat : Number<Float> {
                 Function.addCommand("execute as $tempFloatEntityUUID run function math:hpo/float/_add")
             }
         } else {
-            if (!isDynamic) {
+            if (isConcrete) {
                 toDynamic()
             }
             if(qwq != tempFloat) qwq.toTempEntity()
@@ -300,7 +297,7 @@ class MCFloat : Number<Float> {
                 Function.addCommand("execute as $tempFloatEntityUUID run function math:hpo/float/_rmv")
             }
         } else {
-            if (!isDynamic) {
+            if (isConcrete) {
                 toDynamic()
             }
             if(qwq != tempFloat) qwq.toTempEntity()
@@ -332,7 +329,7 @@ class MCFloat : Number<Float> {
                 Function.addCommand("execute as $tempFloatEntityUUID run function math:hpo/float/_mult")
             }
         } else {
-            if (!isDynamic) {
+            if (isConcrete) {
                 toDynamic()
             }
             if(qwq != tempFloat) qwq.toTempEntity()
@@ -364,7 +361,7 @@ class MCFloat : Number<Float> {
                 Function.addCommand("execute as $tempFloatEntityUUID run function math:hpo/float/_div")
             }
         } else {
-            if (!isDynamic) {
+            if (isConcrete) {
                 toDynamic()
             }
             if(qwq != tempFloat) qwq.toTempEntity()
@@ -412,7 +409,7 @@ class MCFloat : Number<Float> {
                         "run function math:hpo/float/_isbigger")
             }
         } else {
-            if (!isDynamic) {
+            if (isConcrete) {
                 toDynamic()
             }
             if(qwq != tempFloat) qwq.toTempEntity()
@@ -455,7 +452,7 @@ class MCFloat : Number<Float> {
                             "run function math:hpo/float/_issmaller")
             }
         } else {
-            if (!isDynamic) {
+            if (isConcrete) {
                 toDynamic()
             }
             if(qwq != tempFloat) qwq.toTempEntity()
@@ -498,7 +495,7 @@ class MCFloat : Number<Float> {
                             "run function math:hpo/float/_issmallerorequal")
             }
         } else {
-            if (!isDynamic) {
+            if (isConcrete) {
                 toDynamic()
             }
             if(qwq != tempFloat) qwq.toTempEntity()
@@ -541,7 +538,7 @@ class MCFloat : Number<Float> {
                             "run function math:hpo/float/_isbiggerorequal")
             }
         } else {
-            if (!isDynamic) {
+            if (isConcrete) {
                 toDynamic()
             }
             if(qwq != tempFloat) qwq.toTempEntity()
@@ -584,7 +581,7 @@ class MCFloat : Number<Float> {
                             "run function math:hpo/float/_equal")
             }
         } else {
-            if (!isDynamic) {
+            if (isConcrete) {
                 toDynamic()
             }
             if(qwq != tempFloat) qwq.toTempEntity()
@@ -627,7 +624,7 @@ class MCFloat : Number<Float> {
                             "run function math:hpo/float/_notequal")
             }
         } else {
-            if (!isDynamic) {
+            if (isConcrete) {
                 toDynamic()
             }
             if(qwq != tempFloat) qwq.toTempEntity()
@@ -695,7 +692,6 @@ class MCFloat : Number<Float> {
         if(isConcrete){
             ssObj.setValue(value)
             ssObj.isConcrete = true
-            ssObj.isDynamic = false
         }
         Function.addCommand("scoreboard players operation float_exp int = ${exp.name} ${exp.`object`}")
         Function.addCommand("scoreboard players operation float_int0 int = ${int0.name} ${int0.`object`}")

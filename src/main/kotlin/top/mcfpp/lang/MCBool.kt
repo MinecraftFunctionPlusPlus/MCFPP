@@ -76,6 +76,7 @@ class MCBool : Var, OnScoreboard {
 
     @Override
     override fun assign(b: Var?) {
+        hasAssigned = true
         if (b is MCBool) {
             assignCommand(b)
         } else {
@@ -256,6 +257,10 @@ class MCBool : Var, OnScoreboard {
         val re = MCBool()
         re.assign(this)
         return re
+    }
+
+    override fun toDynamic() {
+        TODO("Not yet implemented")
     }
 
     /**

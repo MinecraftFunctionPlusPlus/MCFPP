@@ -91,5 +91,9 @@ class Entity : Var{
         TODO("Not yet implemented")
     }
 
+    override fun toDynamic() {
+        TODO("Not yet implemented")
+    }
+
 
 }

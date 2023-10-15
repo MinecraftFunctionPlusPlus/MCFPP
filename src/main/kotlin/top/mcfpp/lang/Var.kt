@@ -35,11 +35,6 @@ abstract class Var : Member, Cloneable, CanSelectMember {
     var identifier: String
 
     /**
-     * 是否是已知的（固定的）
-     */
-    var isConcrete = false
-
-    /**
      * 变量在栈里面的位置
      */
     var stackIndex: Int = 0
@@ -52,9 +47,20 @@ abstract class Var : Member, Cloneable, CanSelectMember {
     override var isStatic = false
 
     /**
-     * 这个变量是否是常量
+     * 这个变量是否是常量。对应const关键字
      */
-    var isConst = ConstStatus.NOT_CONST
+    var isConst = false
+    var hasAssigned = false
+
+    /**
+     * 这个变量是否是已知的（固定的）。对应dynamic关键字
+     */
+    var isConcrete = false
+
+    /**
+     * 这个变量是否是引入的。对应import关键字
+     */
+    var isImport = false
 
     /**
      * 是否是临时变量
@@ -163,10 +169,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
      */
     abstract fun getTempVar(): Var
 
-
-    enum class ConstStatus {
-        NOT_CONST, NULL, ASSIGNED
-    }
+    abstract fun toDynamic()
 
     companion object {
         /**
@@ -209,17 +212,18 @@ abstract class Var : Member, Cloneable, CanSelectMember {
          * @param container 变量所在缓存
          * @return 声明的变量
          */
-        fun build(ctx: mcfppParser.FieldDeclarationContext, container: FieldContainer): Var {
+        fun build(ctx: mcfppParser.FieldDeclarationExpressionContext, container: FieldContainer): Var {
             val `var`: Var
-            if (ctx.type().className() == null) {
+            val typeContext = (ctx.parent as mcfppParser.FieldDeclarationContext).type()
+            if (typeContext.className() == null) {
                 //普通类型
-                `var` = when (ctx.type().text) {
+                `var` = when (typeContext.text) {
                     "int" -> MCInt(container, ctx.Identifier().text)
                     "bool" -> MCBool(container, ctx.Identifier().text)
                     else -> MCFloat(container, ctx.Identifier().text)
                 }
-            } else if (ctx.type().className().classWithoutNamespace().InsideClass() != null) {
-                when (ctx.type().className().classWithoutNamespace().InsideClass().text) {
+            } else if (typeContext.className().classWithoutNamespace().InsideClass() != null) {
+                when (typeContext.className().classWithoutNamespace().InsideClass().text) {
                     "selector" -> `var` = Selector(ctx.Identifier().text)
                     "entity" -> TODO()
                     "string" -> TODO()
@@ -227,7 +231,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                 }
             } else {
                 //自定义的类的类型
-                val cls = ctx.type().className().text.split(":")
+                val cls = typeContext.className().text.split(":")
                 //取出类
                 val type: Class? = if(cls.size == 1){
                     GlobalField.getClass(null,cls[0])
@@ -249,12 +253,13 @@ abstract class Var : Member, Cloneable, CanSelectMember {
          * @param compoundData 成员所在的复合类型
          * @return 这个变量
          */
-        fun build(ctx: mcfppParser.FieldDeclarationContext, compoundData: CompoundData): Var {
+        fun build(ctx: mcfppParser.FieldDeclarationExpressionContext, compoundData: CompoundData): Var {
             //TODO 浮点数
             val `var`: Var
-            if (ctx.type().className() == null) {
+            val typeContext = (ctx.parent as mcfppParser.FieldDeclarationContext).type()
+            if (typeContext.className() == null) {
                 //普通类型
-                when (ctx.type().text) {
+                when (typeContext.text) {
                     "int" -> {
                         `var` =
                             MCInt("@s").setObj(SbObject(compoundData.prefix + "_int_" + ctx.Identifier()))
@@ -268,8 +273,8 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                     }
                     else -> TODO()
                 }
-            } else if (ctx.type().className().classWithoutNamespace().InsideClass() != null) {
-                when (ctx.type().className().classWithoutNamespace().InsideClass().text) {
+            } else if (typeContext.className().classWithoutNamespace().InsideClass() != null) {
+                when (typeContext.className().classWithoutNamespace().InsideClass().text) {
                     "selector" -> `var` = Selector(ctx.Identifier().text)
                     "entity" -> TODO()
                     "string" -> TODO()
@@ -278,7 +283,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
             } else {
                 //TODO 不支持复合类型
                 //自定义的类的类型
-                val clsType = ctx.type().className().text.split(":")
+                val clsType = typeContext.className().text.split(":")
                 //取出类
                 val type: Class? = if(clsType.size == 1){
                     GlobalField.getClass(null,clsType[0])

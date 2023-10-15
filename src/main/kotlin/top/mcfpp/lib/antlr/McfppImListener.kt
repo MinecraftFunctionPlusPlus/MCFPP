@@ -4,6 +4,7 @@ import mcfppBaseListener
 import org.antlr.v4.runtime.RuleContext
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
+import top.mcfpp.command.CommandList
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.*
 import top.mcfpp.lang.*
@@ -217,27 +218,50 @@ class McfppImListener : mcfppBaseListener() {
     override fun exitFieldDeclaration(ctx: mcfppParser.FieldDeclarationContext) {
         Project.ctx = ctx
         //变量生成
-        val `var`: Var = if (ctx.parent is mcfppParser.ClassMemberContext) {
+        val fieldModifier = ctx.fieldModifier()?.text
+        if (ctx.parent is mcfppParser.ClassMemberContext) {
             return
-        } else {
+        }
+        for (c in ctx.fieldDeclarationExpression()){
             //函数变量，生成
-            Var.build(ctx, Function.currFunction)
-        }
-        //变量注册
-        //一定是函数变量
-        if (!Function.currFunction.field.putVar(ctx.Identifier().text, `var`)) {
-            Project.error("Duplicate defined variable name:" + ctx.Identifier().text)
-            throw VariableDuplicationException()
-        }
-        Function.addCommand("#" + ctx.type().text + " " + ctx.Identifier().text + if (ctx.expression() != null) " = " + ctx.expression().text else "")
-        //变量初始化
-        if (ctx.expression() != null) {
-            val init: Var = McfppExprVisitor().visit(ctx.expression())!!
-            try {
-                `var`.assign(init)
-            } catch (e: VariableConverseException) {
-                Project.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
-                throw VariableConverseException()
+            val `var` = Var.build(c, Function.currFunction)
+            //变量注册
+            //一定是函数变量
+            if (!Function.currFunction.field.putVar(c.Identifier().text, `var`)) {
+                Project.error("Duplicate defined variable name:" + c.Identifier().text)
+                throw VariableDuplicationException()
+            }
+            Function.addCommand("#" + ctx.type().text + " " + c.Identifier().text + if (c.expression() != null) " = " + c.expression().text else "")
+            //变量初始化
+            if (c.expression() != null) {
+                val init: Var = McfppExprVisitor().visit(c.expression())!!
+                try {
+                    if(`var` is MCInt){
+                        Function.currFunction.commands.replaceThenAnalyze(`var`.name to `var`.`object`.name)
+                        `var`.assignCommand(init as MCInt,Function.currFunction.commands.last().toString())
+                    }else{
+                        `var`.assign(init)
+                    }
+                } catch (e: VariableConverseException) {
+                    Project.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
+                    throw VariableConverseException()
+                }
+            }
+            when(fieldModifier){
+                "const" -> {
+                    if(!`var`.hasAssigned){
+                        Project.error("The const field ${`var`.identifier} must be initialized.")
+                    }
+                    `var`.isConst = true
+                }
+                "dynamic" -> {
+                    if(`var`.isConcrete){
+                        `var`.toDynamic()
+                    }
+                }
+                "import" -> {
+                    `var`.isImport = true
+                }
             }
         }
     }
@@ -254,14 +278,17 @@ class McfppImListener : mcfppBaseListener() {
         val right: Var = McfppExprVisitor().visit(ctx.expression())!!
         if(ctx.basicExpression() != null){
             val left: Var = McfppLeftExprVisitor().visit(ctx.basicExpression())!!
-            if (left.isConst == Var.ConstStatus.ASSIGNED) {
+            if (left.isConst) {
                 Project.error("Cannot assign a constant repeatedly: " + left.identifier)
                 throw ConstChangeException()
-            } else if (left.isConst == Var.ConstStatus.NULL) {
-                left.isConst = Var.ConstStatus.ASSIGNED
             }
             try {
-                left.assign(right)
+                if(left is MCInt){
+                    Function.currFunction.commands.replaceThenAnalyze((right as MCInt).name to left.name, right.`object`.name to left.`object`.name)
+                    left.assignCommand(right,Function.currFunction.commands.last().toString())
+                }else{
+                    left.assign(right)
+                }
             } catch (e: VariableConverseException) {
                 Project.error("Cannot convert " + right.javaClass + " to " + left.javaClass)
                 throw VariableConverseException()
@@ -531,6 +558,7 @@ class McfppImListener : mcfppBaseListener() {
         Function.addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
         //这里取出while函数的栈
         Function.addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
+        Function.addCommand("return 1")
         Function.currFunction = Function.currFunction.parent[0]
         Function.addCommand("#while loop end")
     }
@@ -603,7 +631,7 @@ class McfppImListener : mcfppBaseListener() {
             Project.warn("The condition is always true. ")
         } else if (exp.isConcrete) {
             //给子函数开栈
-            Function.addCommand("#" + Commands.Function(Function.currFunction))
+            Function.addCommand("#" + Commands.function(Function.currFunction))
             Project.warn("The condition is always false. ")
         } else {
             //给子函数开栈
@@ -611,7 +639,7 @@ class McfppImListener : mcfppBaseListener() {
             Function.addCommand(
                 "execute " +
                         "if score " + exp.name + " " + SbObject.MCS_boolean + " matches 1 " +
-                        "run " + Commands.Function(Function.currFunction)
+                        "run " + Commands.function(Function.currFunction)
             )
         }
         Function.currFunction = f //后续块中的命令解析到递归的函数中
@@ -643,7 +671,7 @@ class McfppImListener : mcfppBaseListener() {
             GlobalField.localNamespaces[forFunc.namespace] = NamespaceField()
         GlobalField.localNamespaces[forFunc.namespace]!!.addFunction(forFunc,false)
         Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
-        Function.addCommand(Commands.Function(forFunc))
+        Function.addCommand(Commands.function(forFunc))
         Function.addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
         Function.currFunction = forFunc
     }
@@ -676,7 +704,7 @@ class McfppImListener : mcfppBaseListener() {
             GlobalField.localNamespaces[forLoopFunc.namespace] = NamespaceField()
         GlobalField.localNamespaces[forLoopFunc.namespace]!!.addFunction(forLoopFunc,false)
         Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
-        Function.addCommand(Commands.Function(forLoopFunc))
+        Function.addCommand(Commands.function(forLoopFunc))
 
     }
 
@@ -695,8 +723,8 @@ class McfppImListener : mcfppBaseListener() {
     }
 
     //暂存
-    private var forInitCommands = ArrayList<String>()
-    private var forUpdateCommands = ArrayList<String>()
+    private var forInitCommands = CommandList()
+    private var forUpdateCommands = CommandList()
 
     /**
      * 离开for update。暂存for update缓存，恢复主缓存，准备forblock编译

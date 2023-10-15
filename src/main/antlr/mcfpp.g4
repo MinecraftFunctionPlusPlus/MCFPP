@@ -170,7 +170,11 @@ constructorCall
 
 //变量声明
 fieldDeclaration
-    :   fieldModifier* type Identifier ( '=' expression)?
+    :   fieldModifier? type fieldDeclarationExpression (',' fieldDeclarationExpression)*
+    ;
+
+fieldDeclarationExpression
+    :   Identifier ( '=' expression)?
     ;
 
 fieldModifier : CONST|DYNAMIC|IMPORT;
