@@ -67,6 +67,7 @@ open class ClassObject : ClassBase {
     @Override
     @Throws(VariableConverseException::class)
     override fun assign(b: Var?) {
+        hasAssigned = true
     }
 
     @Override
@@ -117,5 +118,9 @@ open class ClassObject : ClassBase {
     @Override
     override fun getTempVar(): Var {
         return this
+    }
+
+    override fun toDynamic() {
+        TODO("Not yet implemented")
     }
 }

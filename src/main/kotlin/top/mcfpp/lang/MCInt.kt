@@ -2,6 +2,7 @@ package top.mcfpp.lang
 
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
+import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.*
@@ -45,7 +46,6 @@ class MCInt : Number<Int> {
     ) : super(curr.prefix + identifier) {
         isConcrete = true
         this.value = value
-        isDynamic = false
     }
 
     /**
@@ -56,7 +56,6 @@ class MCInt : Number<Int> {
     constructor(value: Int, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
         isConcrete = true
         this.value = value
-        isDynamic = false
     }
 
     /**
@@ -69,11 +68,10 @@ class MCInt : Number<Int> {
     override val type: String
         get() = "int"
 
-    override var isDynamic: Boolean = true
-
     @Override
     @Throws(VariableConverseException::class)
     override fun assign(b: Var?) {
+        hasAssigned = true
         when (b) {
             is MCInt -> {
                 assignCommand(b)
@@ -122,8 +120,12 @@ class MCInt : Number<Int> {
     }
 
     @Override
-    @InsertCommand
     override fun assignCommand(a: Number<Int>) {
+        assignCommand(a,null)
+    }
+
+    @InsertCommand
+    fun assignCommand(a: Number<Int>, replace: String?) {
         if (parent != null) {
             val b = if(a.parent != null){
                 a.getTempVar() as Number<*>
@@ -145,10 +147,28 @@ class MCInt : Number<Int> {
             //t = a
             if (b.isConcrete) {
                 //对类中的成员的值进行修改
-                Function.addCommand("$cmd run scoreboard players set @s $`object` ${b.value}")
+                if(replace == null){
+                    Function.addCommand(Command.build(cmd).build(" run ")
+                        .build(Commands.sbPlayerSet(this,b.value as Int))
+                    )
+                }else{
+                    Function.replaceCommand(Command.build(cmd).build(" run ")
+                        .build(replace)
+                        , Function.currFunction.commands.size - 1
+                    )
+                }
             } else {
                 //对类中的成员的值进行修改
-                Function.addCommand("$cmd run scoreboard players operation @s $`object` = ${b.name} ${b.`object`}")
+                if(replace == null){
+                    Function.addCommand(Command.build(cmd).build(" run ")
+                        .build(Commands.sbPlayerOperation(this," ",b as MCInt))
+                    )
+                }else{
+                    Function.replaceCommand(Command.build(cmd).build(" run ")
+                        .build(replace)
+                        , Function.currFunction.commands.size - 1
+                    )
+                }
             }
         } else {
             //t = a
@@ -171,12 +191,23 @@ class MCInt : Number<Int> {
                         }
                         else -> TODO()
                     }
-                    Function.addCommand(head + cmd +
-                            "run " + Commands.SbPlayerOperation(this, "=", a as MCInt))
+                    if(replace == null){
+                        Function.addCommand(Command.build(cmd + "run ")
+                            .build(Commands.sbPlayerOperation(this, "=", a as MCInt)))
+                    }else{
+                        Function.replaceCommand(Command.build(cmd + "run ")
+                            .build(replace),Function.currFunction.commands.size-1)
+                    }
                 }else{
                     val head = if(isTemp) "" else "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1 run "
                     //变量进栈
-                    Function.addCommand(head + Commands.SbPlayerOperation(this, "=", a as MCInt))
+                    if(replace == null){
+                        Function.addCommand(Command.build(head)
+                            .build(Commands.sbPlayerOperation(this, "=", a as MCInt)))
+                    }else{
+                        Function.replaceCommand(Command.build(head)
+                            .build(replace),Function.currFunction.commands.size-1)
+                    }
                 }
             }
         }
@@ -188,8 +219,8 @@ class MCInt : Number<Int> {
      */
     override fun toDynamic() {
         val parent = parent
-        if(isDynamic) return
-        isDynamic = true
+        if(!isConcrete) return
+        isConcrete = false
         if (parent != null) {
             val cmd = when(parent){
                 is ClassPointer -> {
@@ -204,9 +235,12 @@ class MCInt : Number<Int> {
             }
             Function.addCommand("$cmd run scoreboard players set @s $`object` $value")
         } else {
-            val cmd: String =
-                "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1"
-            Function.addCommand("$cmd run scoreboard players set $name $`object` $value")
+            val cmd: String = if (!isTemp){
+                "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1 run "
+            }else{
+                ""
+            }
+            Function.addCommand(cmd + "scoreboard players set $name $`object` $value")
         }
     }
 
@@ -224,14 +258,14 @@ class MCInt : Number<Int> {
             if (isConcrete) {
                 value = value!! + qwq.value!!
             } else {
-                Function.addCommand(Commands.SbPlayerAdd(this, qwq.value!!))
+                Function.addCommand(Commands.sbPlayerAdd(this, qwq.value!!))
             }
             return this
         } else {
             if (isConcrete) {
                 return qwq.plus(this,)
             } else {
-                Function.addCommand(Commands.SbPlayerOperation(this, "+=", qwq))
+                Function.addCommand(Commands.sbPlayerOperation(this, "+=", qwq))
             }
             return this
         }
@@ -251,14 +285,14 @@ class MCInt : Number<Int> {
             if (isConcrete) {
                 value = value!! - qwq.value!!
             } else {
-                Function.addCommand(Commands.SbPlayerRemove(this, qwq.value!!))
+                Function.addCommand(Commands.sbPlayerRemove(this, qwq.value!!))
             }
             return this
         } else {
             if (isConcrete) {
                 return qwq.minus(this)
             } else {
-                Function.addCommand(Commands.SbPlayerOperation(this, "-=", qwq))
+                Function.addCommand(Commands.sbPlayerOperation(this, "-=", qwq))
             }
             return this
         }
@@ -278,11 +312,11 @@ class MCInt : Number<Int> {
             value = value!! * qwq.value!!
         } else {
             if (a.isConcrete) {
-                Function.addCommand(Commands.SbPlayerSet(qwq, qwq.value!!))
+                Function.addCommand(Commands.sbPlayerSet(qwq, qwq.value!!))
             } else if (this.isConcrete) {
-                Function.addCommand(Commands.SbPlayerSet(this, value!!))
+                Function.addCommand(Commands.sbPlayerSet(this, value!!))
             }
-            Function.addCommand(Commands.SbPlayerOperation(this, "*=", qwq))
+            Function.addCommand(Commands.sbPlayerOperation(this, "*=", qwq))
         }
         return this
     }
@@ -301,11 +335,11 @@ class MCInt : Number<Int> {
             value = value!! / qwq.value!!
         } else {
             if (a.isConcrete) {
-                Function.addCommand(Commands.SbPlayerSet(qwq, qwq.value!!))
+                Function.addCommand(Commands.sbPlayerSet(qwq, qwq.value!!))
             } else if (this.isConcrete) {
-                Function.addCommand(Commands.SbPlayerSet(this, value!!))
+                Function.addCommand(Commands.sbPlayerSet(this, value!!))
             }
-            Function.addCommand(Commands.SbPlayerOperation(this, "/=", qwq))
+            Function.addCommand(Commands.sbPlayerOperation(this, "/=", qwq))
         }
         return this
     }
@@ -324,11 +358,11 @@ class MCInt : Number<Int> {
             value = value!! % qwq.value!!
         } else {
             if (a.isConcrete) {
-                Function.addCommand(Commands.SbPlayerSet(qwq, qwq.value!!))
+                Function.addCommand(Commands.sbPlayerSet(qwq, qwq.value!!))
             } else if (this.isConcrete) {
-                Function.addCommand(Commands.SbPlayerSet(this, value!!))
+                Function.addCommand(Commands.sbPlayerSet(this, value!!))
             }
-            Function.addCommand(Commands.SbPlayerOperation(this, "%=", qwq))
+            Function.addCommand(Commands.sbPlayerOperation(this, "%=", qwq))
         }
         return this
     }

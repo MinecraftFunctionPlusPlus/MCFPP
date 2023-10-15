@@ -3,6 +3,8 @@ package top.mcfpp.lib
 import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
+import top.mcfpp.command.Command
+import top.mcfpp.command.CommandList
 import top.mcfpp.command.Commands
 import top.mcfpp.lang.*
 import top.mcfpp.util.StringHelper
@@ -95,7 +97,7 @@ open class Function : Member, FieldContainer {
     /**
      * 包含所有命令的列表
      */
-    var commands: ArrayList<String>
+    var commands: CommandList
 
     /**
      * 函数的名字
@@ -258,7 +260,7 @@ open class Function : Member, FieldContainer {
      */
     constructor(identifier: String, namespace: String, returnType: String = "void"){
         this.identifier = identifier
-        commands = ArrayList()
+        commands = CommandList()
         params = ArrayList()
         field = FunctionField(null, this)
         isStatic = false
@@ -274,7 +276,7 @@ open class Function : Member, FieldContainer {
      */
     constructor(identifier: String, cls: Class, isStatic: Boolean, returnType: String = "void") {
         this.identifier = identifier
-        commands = ArrayList()
+        commands = CommandList()
         params = ArrayList()
         namespace = cls.namespace
         ownerType = OwnerType.CLASS
@@ -295,7 +297,7 @@ open class Function : Member, FieldContainer {
      */
     constructor(identifier: String, itf: Interface, returnType: String = "void") {
         this.identifier = identifier
-        commands = ArrayList()
+        commands = CommandList()
         params = ArrayList()
         namespace = itf.namespace
         ownerType = OwnerType.CLASS
@@ -314,7 +316,7 @@ open class Function : Member, FieldContainer {
      */
     constructor(name: String, struct: Struct, isStatic: Boolean, returnType: String = "void") {
         this.identifier = name
-        commands = ArrayList()
+        commands = CommandList()
         params = ArrayList()
         namespace = struct.namespace
         ownerType = OwnerType.STRUCT
@@ -451,11 +453,8 @@ open class Function : Member, FieldContainer {
                     val tg = args[i].cast(params[i].type) as MCInt
                     //参数传递和子函数的参数进栈
                     val p = MCInt(this,"_param_" + params[i].identifier)
-                    addCommand(
-                        "execute " +
-                                "store result storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${p.identifier} int 1 " +
-                                "run " + Commands.SbPlayerOperation(p, "=", tg)
-                    )
+                    p.assign(tg)
+                    p.toDynamic()
                 }
                 else -> {
                     //是引用类型
@@ -464,7 +463,7 @@ open class Function : Member, FieldContainer {
                     addCommand(
                         "execute " +
                                 "store result storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${p.identifier} int 1" +
-                                "run " + Commands.SbPlayerOperation(p, "=", tg.address)
+                                "run " + Commands.sbPlayerOperation(p, "=", tg.address)
                     )
                 }
             }
@@ -556,11 +555,8 @@ open class Function : Member, FieldContainer {
                     val tg = args[i].cast(params[i].type) as MCInt
                     //参数传递和子函数的参数进栈
                     val p = MCInt(this,"_param_" + params[i].identifier)
-                    addCommand(
-                        "execute " +
-                                "store result storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${p.identifier} int 1 " +
-                                "run " + Commands.SbPlayerOperation(p, "=", tg)
-                    )
+                    p.assign(tg)
+                    p.toDynamic()
                 }
                 else -> {
                     //是引用类型
@@ -569,7 +565,7 @@ open class Function : Member, FieldContainer {
                     addCommand(
                         "execute " +
                                 "store result storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${p.identifier} int 1" +
-                                "run " + Commands.SbPlayerOperation(p, "=", tg.address)
+                                "run " + Commands.sbPlayerOperation(p, "=", tg.address)
                     )
                 }
             }
@@ -582,14 +578,15 @@ open class Function : Member, FieldContainer {
                         "if score @s ${callerClassP.address.`object`.name} = ${callerClassP.address.name} ${callerClassP.address.`object`.name} " +
                         "run function mcfpp.dynamic:function with entity @s data.functions.${identifier}")
 
-        }
-        if (callerClassP is ClassObject) {
+        }else if (callerClassP is ClassObject) {
             addCommand(
                 "execute " +
                         "as @e[tag=${callerClassP.clsType.tag}] " +
                         "if score @s ${callerClassP.address.`object`.name} = ${callerClassP.initPointer.address.name} ${callerClassP.initPointer.address.`object`.name} " +
                         "run function mcfpp.dynamic:function with entity @s data.function.${identifier}")
-        }
+        }else if(callerClassP == null){
+            addCommand("function ${namespaceID}")
+        }else TODO()
         var hasAddComment = false
         //static关键字，将值传回
         for (i in 0 until params.size) {
@@ -768,6 +765,10 @@ open class Function : Member, FieldContainer {
             }
 
         fun replaceCommand(command: String, index: Int){
+            replaceCommand(Command(command),index)
+        }
+
+        fun replaceCommand(command: Command, index: Int){
             if(CompileSettings.isDebug){
                 //检查当前方法是否有InsertCommand注解
                 val stackTrace = Thread.currentThread().stackTrace
@@ -794,11 +795,15 @@ open class Function : Member, FieldContainer {
             currFunction.commands[index] = command
         }
 
+        fun addCommand(command: String): Int{
+            return addCommand(Command.build(command))
+        }
+
         /**
          * 向此函数的末尾添加一条命令。
          * @param command 要添加的命令。
          */
-        fun addCommand(command: String): Int {
+        fun addCommand(command: Command): Int {
             if(CompileSettings.isDebug){
                 //检查当前方法是否有InsertCommand注解
                 val stackTrace = Thread.currentThread().stackTrace

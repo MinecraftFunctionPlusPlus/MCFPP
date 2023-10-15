@@ -1,34 +1,18 @@
 namespace test;
 
-void main(){
-    Test t = Test();
+//void main(){
+//    f(1,1);
+//}
 
-    if(t.index > 1 && Test.i == 3){
-        /say yes
-    }else{
-        /say no
-    }
-
-    print(t.getDoubleI());
-
-    Test().test();
+void test(){
+    int a,b,c,d,e;
+    a = c + (c + b);
 }
 
-class Test{
-    public static int i = 0;
-
-    public int index = 0;
-
-    public Test(){
-        this.index = Test.i;
-        Test.i = Test.i + 1;
-    }
-
-    public int getDoubleI(){
-        return this.index * 2;
-    }
-}
-
-void Test.test(){
-    print(this.index);
-}
+//void f(int a, int b){
+//    int c = a + b;
+//    print(c);
+//    if(c < 200){
+//        f(b,c);
+//    }
+//}

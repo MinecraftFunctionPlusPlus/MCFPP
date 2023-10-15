@@ -56,7 +56,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
         //不应当立即调用它自己的函数，应当先调用init，再调用constructor
         addCommand(
             "execute as @e[tag=mcfpp_classObject_just,limit=1] at @s run " +
-                    Commands.Function(target.classPreInit)
+                    Commands.function(target.classPreInit)
         )
         if(target.classPreInit.commands.size > 3){
             //调用完毕，将子函数的栈销毁
@@ -72,7 +72,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
                     //参数传递和子函数的参数压栈
                     addCommand(
                         "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]." + params[i].identifier + " int 1 run "
-                                + Commands.SbPlayerOperation(MCInt(this,"_param_" + params[i].identifier), "=", tg)
+                                + Commands.sbPlayerOperation(MCInt(this,"_param_" + params[i].identifier), "=", tg)
                     )
                 }
             }

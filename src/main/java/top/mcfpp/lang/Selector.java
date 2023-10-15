@@ -126,4 +126,9 @@ public class Selector extends Var {
         }
         return null;
     }
+
+    @Override
+    public void toDynamic() {
+        throw new TODOException("");
+    }
 }

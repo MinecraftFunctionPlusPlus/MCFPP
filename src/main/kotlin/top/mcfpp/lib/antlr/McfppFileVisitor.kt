@@ -6,13 +6,13 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.exception.*
 import top.mcfpp.exception.IllegalFormatException
 import top.mcfpp.lang.*
-import top.mcfpp.lang.Var.ConstStatus
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Class
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member.AccessModifier
 import top.mcfpp.util.StringHelper
 import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  * 在编译工程之前，应当首先将所有文件中的资源全部遍历一次并写入缓存。
@@ -301,13 +301,27 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
     @Override
     override fun visitClassMemberDeclaration(ctx: mcfppParser.ClassMemberDeclarationContext): Any? {
         Project.ctx = ctx
-        val m = visit(ctx.classMember()) as Member
-        //访问修饰符
-        if (ctx.accessModifier() != null) {
-            m.accessModifier = AccessModifier.valueOf(ctx.accessModifier().text.uppercase(Locale.getDefault()))
-        }
-        if (m !is Constructor) {
-            Class.currClass!!.addMember(m)
+        val m = visit(ctx.classMember())
+        if(m is Member){
+            //访问修饰符
+            if (ctx.accessModifier() != null) {
+                m.accessModifier = AccessModifier.valueOf(ctx.accessModifier().text.uppercase(Locale.getDefault()))
+            }
+            if (m !is Constructor) {
+                Class.currClass!!.addMember(m)
+            }
+        }else if(m is ArrayList<*>){
+            //变量列表
+            for (c in m){
+                c as Member
+                //访问修饰符
+                if (ctx.accessModifier() != null) {
+                    c.accessModifier = AccessModifier.valueOf(ctx.accessModifier().text.uppercase(Locale.getDefault()))
+                }
+                if (c !is Constructor) {
+                    Class.currClass!!.addMember(c)
+                }
+            }
         }
         return null
     }
@@ -431,42 +445,63 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
     override fun visitFieldDeclaration(ctx: mcfppParser.FieldDeclarationContext): Any {
         Project.ctx = ctx
         //只有类字段构建
-        val `var`: Var = Var.build(ctx, compoundData = Class.currClass!!)
-        //是否是静态的
-        if(ctx.parent.parent is mcfppParser.StaticClassMemberDeclarationContext){
-            `var`.isStatic = true
-            `var`.parent = ClassType(Class.currClass!!)
-        }else{
-            `var`.parent = ClassPointer(Class.currClass!!,"temp")
-        }
-        if (Class.currClass!!.field.containVar(ctx.Identifier().text)
-            || Class.currClass!!.staticField.containVar(ctx.Identifier().text)
-        ) {
-            Project.error("Duplicate defined variable name:" + ctx.Identifier().text)
-            throw VariableDuplicationException()
-        }
-        //变量的初始化
-        if (ctx.expression() != null) {
-            if(`var`.isConst == ConstStatus.NULL) `var`.isConst = ConstStatus.ASSIGNED
-            Function.currFunction = if(ctx.parent.parent is mcfppParser.StaticClassMemberDeclarationContext){
+        val fieldModifier = ctx.fieldModifier()?.text
+        val reList = ArrayList<Member>()
+        for (c in ctx.fieldDeclarationExpression()){
+            val `var`: Var = Var.build(c, compoundData = Class.currClass!!)
+            //是否是静态的
+            if(ctx.parent.parent is mcfppParser.StaticClassMemberDeclarationContext){
                 `var`.isStatic = true
-                Class.currClass!!.classPreStaticInit
+                `var`.parent = ClassType(Class.currClass!!)
             }else{
-                Class.currClass!!.classPreInit
+                `var`.parent = ClassPointer(Class.currClass!!,"temp")
             }
-            //是类的成员
-            Function.addCommand("#" + ctx.text)
-            val init: Var = McfppExprVisitor().visit(ctx.expression())!!
-            try {
-                `var`.assign(init)
-            } catch (e: VariableConverseException) {
-                Project.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
+            if (Class.currClass!!.field.containVar(c.Identifier().text)
+                || Class.currClass!!.staticField.containVar(c.Identifier().text)
+            ) {
+                Project.error("Duplicate defined variable name:" + c.Identifier().text)
+                throw VariableDuplicationException()
+            }
+            //变量的初始化
+            if (c.expression() != null) {
+                Function.currFunction = if(ctx.parent.parent is mcfppParser.StaticClassMemberDeclarationContext){
+                    `var`.isStatic = true
+                    Class.currClass!!.classPreStaticInit
+                }else{
+                    Class.currClass!!.classPreInit
+                }
+                //是类的成员
+                Function.addCommand("#" + ctx.text)
+                val init: Var = McfppExprVisitor().visit(c.expression())!!
+                try {
+                    `var`.assign(init)
+                } catch (e: VariableConverseException) {
+                    Project.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
+                    Function.currFunction = Function.nullFunction
+                    throw VariableConverseException()
+                }
                 Function.currFunction = Function.nullFunction
-                throw VariableConverseException()
+                `var`.hasAssigned = true
             }
-            Function.currFunction = Function.nullFunction
+            when(fieldModifier){
+                "const" -> {
+                    if(!`var`.hasAssigned){
+                        Project.error("The const field ${`var`.identifier} must be initialized.")
+                    }
+                    `var`.isConst = true
+                }
+                "dynamic" -> {
+                    if(`var`.isConcrete){
+                        `var`.toDynamic()
+                    }
+                }
+                "import" -> {
+                    `var`.isImport = true
+                }
+            }
+            reList.add(`var`)
         }
-        return `var`
+        return reList
     }
 
 //endregion

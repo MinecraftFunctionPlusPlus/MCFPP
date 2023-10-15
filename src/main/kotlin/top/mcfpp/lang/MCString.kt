@@ -56,6 +56,7 @@ class MCString : Var {
     @Override
     @Throws(VariableConverseException::class)
     override fun assign(b: Var?) {
+        hasAssigned = true
     }
 
     @Override
@@ -69,6 +70,10 @@ class MCString : Var {
     }
 
     override fun getTempVar(): Var {
+        TODO("Not yet implemented")
+    }
+
+    override fun toDynamic() {
         TODO("Not yet implemented")
     }
 }

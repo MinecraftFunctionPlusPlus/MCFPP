@@ -49,6 +49,7 @@ class StructPointer : StructBase {
      * @param b 变量的对象
      */
     override fun assign(b: Var?) {
+        hasAssigned = true
         TODO("Not yet implemented")
     }
 
@@ -70,6 +71,10 @@ class StructPointer : StructBase {
      * @return
      */
     override fun getTempVar(): Var {
+        TODO("Not yet implemented")
+    }
+
+    override fun toDynamic() {
         TODO("Not yet implemented")
     }
 }
