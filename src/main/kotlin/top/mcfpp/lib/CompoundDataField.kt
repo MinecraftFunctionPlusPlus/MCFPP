@@ -21,7 +21,7 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar {
      * @param operation 要对字段执行的操作
      * @receiver
      */
-    fun forEachVar(operation: (Var) -> Any?){
+    override fun forEachVar(operation: (Var) -> Any?){
         for (`var` in vars.values){
             operation(`var`)
         }
@@ -38,7 +38,7 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar {
      * @param operation 要对方法进行的操作
      * @receiver
      */
-    fun forEachFunction(operation: (Function) -> Any?){
+    override fun forEachFunction(operation: (Function) -> Any?){
         for (function in functions){
             operation(function)
         }

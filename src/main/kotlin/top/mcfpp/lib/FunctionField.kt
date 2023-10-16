@@ -3,6 +3,7 @@ package top.mcfpp.lib
 import org.jetbrains.annotations.Nullable
 import top.mcfpp.lang.Var
 import java.util.HashMap
+import java.util.HashSet
 
 /**
  * 一个函数的域。储存了这个函数中的变量
@@ -10,6 +11,8 @@ import java.util.HashMap
  * @constructor Create empty Function field
  */
 open class FunctionField : IFieldWithVar {
+
+    val fieldVarSet = HashSet<String>()
 
     /**
      * 变量
@@ -49,6 +52,7 @@ open class FunctionField : IFieldWithVar {
             val `var`: Var? = functionField.vars[key]
             vars[key] = `var`!!.clone() as Var
         }
+        fieldVarSet.addAll(functionField.fieldVarSet)
     }
 
     //region Var
@@ -59,6 +63,7 @@ open class FunctionField : IFieldWithVar {
      * @return 如果缓存中已经存在此对象，则返回false，否则返回true。
      */
     override fun putVar(key: String, `var`: Var, forced: Boolean): Boolean {
+        fieldVarSet.add(key)
         if(forced){
             vars[key] = `var`
             return true
@@ -109,6 +114,12 @@ open class FunctionField : IFieldWithVar {
      */
     override fun removeVar(id : String): Var?{
         return vars.remove(id)
+    }
+
+    override fun forEachVar(action: (Var) -> Any?) {
+        for (v in vars.values){
+            action(v)
+        }
     }
 
     open fun clone():FunctionField{

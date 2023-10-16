@@ -35,6 +35,8 @@ interface IFieldWithVar : IField {
      */
     fun removeVar(id : String): Var?
 
+    fun forEachVar(action: (Var) -> Any?)
+
     /**
      * 获取此缓存中的全部变量。不会从父缓存搜索。
      * @return 一个包含了此缓存全部变量的集合。

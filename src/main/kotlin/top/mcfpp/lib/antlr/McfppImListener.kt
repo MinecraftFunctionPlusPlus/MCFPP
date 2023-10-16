@@ -368,9 +368,7 @@ class McfppImListener : mcfppBaseListener() {
         Project.ctx = ctx
         Function.addCommand("#" + "if start")
         val ifFunction = InternalFunction("_if_", Function.currFunction)
-        Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
-        Function.addCommand("function " + ifFunction.namespaceID)
-        Function.addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
+        ifFunction.invoke(ArrayList(),null)
         Function.currFunction = ifFunction
         if(!GlobalField.localNamespaces.containsKey(ifFunction.namespace))
             GlobalField.localNamespaces[ifFunction.namespace] = NamespaceField()

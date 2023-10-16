@@ -19,7 +19,7 @@ class SimpleFieldWithFunction : IFieldWithFunction {
      * @param operation 要对方法进行的操作
      * @receiver
      */
-    fun forEachFunction(operation: (Function) -> Any?){
+    override fun forEachFunction(operation: (Function) -> Any?){
         for (function in functions){
             operation(function)
         }

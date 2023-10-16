@@ -16,7 +16,10 @@
 		{
 			"id":"test",
 			"functions":[
-				"void test()"
+				"void main()",
+				"void f(int a,int b)",
+				"void _if_ae922076-0666-43aa-a8ce-b13fe58985a9()",
+				"void _if_branch_db3fdbe8-3e4b-44eb-ab2e-3bc6c0b68085()"
 			],
 			"classes":[
 				

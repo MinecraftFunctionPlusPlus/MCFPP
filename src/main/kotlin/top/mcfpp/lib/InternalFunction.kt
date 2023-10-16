@@ -1,5 +1,8 @@
 package top.mcfpp.lib
 
+import top.mcfpp.Project
+import top.mcfpp.lang.ClassBase
+import top.mcfpp.lang.MCInt
 import java.util.UUID
 
 /**
@@ -52,5 +55,4 @@ class InternalFunction(prefix: String, parent: Function) : Function(prefix + UUI
     override fun parentStruct(): Struct? {
         return parent[0].parentStruct()
     }
-
 }

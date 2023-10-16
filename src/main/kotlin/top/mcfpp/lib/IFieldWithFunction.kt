@@ -24,4 +24,6 @@ interface IFieldWithFunction: IField {
      * @return
      */
     fun hasFunction(function: Function): Boolean
+
+    fun forEachFunction(operation: (Function) -> Any?)
 }
