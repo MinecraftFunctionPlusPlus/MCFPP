@@ -422,14 +422,13 @@ open class Function : Member, FieldContainer {
             return re
         }
 
-    open fun invoke(args: ArrayList<Var>, caller: CanSelectMember? = null){
+    open fun invoke(args: ArrayList<Var>, caller: CanSelectMember?){
         when(caller){
             is CompoundDataType -> invoke(args, callerClassP = null)
             null -> invoke(args, callerClassP = null)
             is ClassBase -> invoke(args, callerClassP = caller)
             is StructBase -> invoke(args, caller)
             is Var -> invoke(args, caller)
-
         }
     }
 
@@ -447,61 +446,10 @@ open class Function : Member, FieldContainer {
         //传入this参数
         field.putVar("this",caller,true)
         //参数传递
-        for (i in 0 until params.size) {
-            when (params[i].type) {
-                "int" -> {
-                    val tg = args[i].cast(params[i].type) as MCInt
-                    //参数传递和子函数的参数进栈
-                    val p = MCInt(this,"_param_" + params[i].identifier)
-                    p.assign(tg)
-                    p.toDynamic()
-                }
-                else -> {
-                    //是引用类型
-                    val tg = args[i].cast(params[i].type) as ClassBase
-                    val p = MCInt(this,"_param_" + params[i].identifier)
-                    addCommand(
-                        "execute " +
-                                "store result storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${p.identifier} int 1" +
-                                "run " + Commands.sbPlayerOperation(p, "=", tg.address)
-                    )
-                }
-            }
-        }
+        argPass(args)
         addCommand("function " + this.namespaceID)
-        var hasAddComment = false
-        //static关键字，将值传回
-        for (i in 0 until params.size) {
-            if (params[i].isStatic) {
-                if(!hasAddComment){
-                    addCommand("#[Function ${this.namespaceID}] Static arguments")
-                    hasAddComment = true
-                }
-                //如果是static参数
-                if (args[i] is MCInt) {
-                    when(params[i].type){
-                        "int" -> {
-                            //如果是int取出到记分板
-                            addCommand(
-                                "execute " +
-                                        "store result score ${(args[i] as MCInt).name} ${(args[i] as MCInt).`object`} " +
-                                        "run data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${params[i].identifier} int 1 "
-                            )
-                        }
-                        else -> {
-                            //引用类型
-                            val tg = args[i].cast(params[i].type) as ClassBase
-                            addCommand(
-                                "execute " +
-                                        "store result score ${tg.address.name} ${tg.address.`object`} " +
-                                        "run data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${params[i].identifier} int 1 "
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
+        //static参数传回
+        staticArgRef(args)
         //销毁指针，释放堆内存
         for (p in field.allVars){
             if (p is ClassPointer){
@@ -510,30 +458,8 @@ open class Function : Member, FieldContainer {
         }
         //调用完毕，将子函数的栈销毁
         addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
-
         //取出栈内的值
-        addCommand("#[Function ${this.namespaceID}] Take vars out of the Stack")
-        for (v in Function.currFunction.field.allVars){
-            when (v.type) {
-                "int" -> {
-                    val tg = v as MCInt
-                    //参数传递和子函数的参数压栈
-                    //如果是int取出到记分板
-                    addCommand(
-                        "execute store result score ${tg.name} ${tg.`object`} run "
-                                + "data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${tg.identifier}"
-                    )
-                }
-                else -> {
-                    //是引用类型
-                    val tg = v as ClassBase
-                    addCommand(
-                        "execute store result score ${tg.address.name} ${tg.address.`object`} run "
-                                + "data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${tg.identifier}"
-                    )
-                }
-            }
-        }
+        fieldRestore()
     }
 
     /**
@@ -544,11 +470,63 @@ open class Function : Member, FieldContainer {
      * @see top.mcfpp.lib.antlr.McfppExprVisitor.visitVar
      */
     @InsertCommand
-    open fun invoke(args: ArrayList<Var>, callerClassP: ClassBase? = null) {
-        addCommand("#[Function ${this.namespaceID}] Function Pushing and argument passing")
+    open fun invoke(args: ArrayList<Var>, callerClassP: ClassBase?) {
         //给函数开栈
         addCommand("data modify storage mcfpp:system ${Project.defaultNamespace}.stack_frame prepend value {}")
         //参数传递
+        argPass(args)
+        //函数调用的命令
+        when(callerClassP){
+            is ClassPointer -> {
+                addCommand(
+                    "execute " +
+                            "as @e[tag=${callerClassP.clsType.tag}] " +
+                            "if score @s ${callerClassP.address.`object`.name} = ${callerClassP.address.name} ${callerClassP.address.`object`.name} " +
+                            "run function mcfpp.dynamic:function with entity @s data.functions.${identifier}")
+            }
+            is ClassObject -> {
+                addCommand(
+                    "execute " +
+                            "as @e[tag=${callerClassP.clsType.tag}] " +
+                            "if score @s ${callerClassP.address.`object`.name} = ${callerClassP.initPointer.address.name} ${callerClassP.initPointer.address.`object`.name} " +
+                            "run function mcfpp.dynamic:function with entity @s data.function.${identifier}")
+            }
+            null -> {
+                addCommand("function ${namespaceID}")
+            }
+            else -> TODO()
+        }
+        //static关键字，将值传回
+        staticArgRef(args)
+        //销毁指针，释放堆内存
+        for (p in field.allVars){
+            if (p is ClassPointer){
+                p.dispose()
+            }
+        }
+        //调用完毕，将子函数的栈销毁
+        addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
+        //取出栈内的值
+        fieldRestore()
+    }
+
+    /**
+     * 调用这个函数。这个函数是结构体的成员方法
+     *
+     * @param args
+     * @param struct
+     */
+    open fun invoke(args: ArrayList<Var>, struct: StructBase){
+        TODO()
+    }
+
+    /**
+     * 在创建函数栈，调用函数之前，将参数传递到函数栈中
+     *
+     * @param args
+     */
+    @InsertCommand
+    open fun argPass(args: ArrayList<Var>){
         for (i in 0 until params.size) {
             when (params[i].type) {
                 "int" -> {
@@ -570,25 +548,16 @@ open class Function : Member, FieldContainer {
                 }
             }
         }
-        //函数调用的命令
-        if (callerClassP is ClassPointer) {
-            addCommand(
-                "execute " +
-                        "as @e[tag=${callerClassP.clsType.tag}] " +
-                        "if score @s ${callerClassP.address.`object`.name} = ${callerClassP.address.name} ${callerClassP.address.`object`.name} " +
-                        "run function mcfpp.dynamic:function with entity @s data.functions.${identifier}")
+    }
 
-        }else if (callerClassP is ClassObject) {
-            addCommand(
-                "execute " +
-                        "as @e[tag=${callerClassP.clsType.tag}] " +
-                        "if score @s ${callerClassP.address.`object`.name} = ${callerClassP.initPointer.address.name} ${callerClassP.initPointer.address.`object`.name} " +
-                        "run function mcfpp.dynamic:function with entity @s data.function.${identifier}")
-        }else if(callerClassP == null){
-            addCommand("function ${namespaceID}")
-        }else TODO()
+    /**
+     * 在函数执行完毕，销毁函数栈之前，将函数参数中的static参数的值返回到函数调用栈中
+     *
+     * @param args
+     */
+    @InsertCommand
+    open fun staticArgRef(args: ArrayList<Var>){
         var hasAddComment = false
-        //static关键字，将值传回
         for (i in 0 until params.size) {
             if (params[i].isStatic) {
                 if(!hasAddComment){
@@ -619,49 +588,39 @@ open class Function : Member, FieldContainer {
                 }
             }
         }
-
-        //销毁指针，释放堆内存
-        for (p in field.allVars){
-            if (p is ClassPointer){
-                p.dispose()
-            }
-        }
-        //调用完毕，将子函数的栈销毁
-        addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
-
-        //取出栈内的值
-        addCommand("#[Function ${this.namespaceID}] Take vars out of the Stack")
-        for (v in Function.currFunction.field.allVars){
-            when (v.type) {
-                "int" -> {
-                    val tg = v as MCInt
-                    //参数传递和子函数的参数压栈
-                    //如果是int取出到记分板
-                    addCommand(
-                        "execute store result score ${tg.name} ${tg.`object`} run "
-                                + "data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${tg.identifier}"
-                    )
-                }
-                else -> {
-                    //是引用类型
-                    val tg = v as ClassBase
-                    addCommand(
-                        "execute store result score ${tg.address.name} ${tg.address.`object`} run "
-                                + "data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${tg.identifier}"
-                    )
-                }
-            }
-        }
     }
 
+
     /**
-     * 调用这个函数。这个函数是结构体的成员方法
+     * 在函数执行完毕，销毁函数栈之后，将调用栈中的变量值还原到变量中
      *
-     * @param args
-     * @param struct
      */
-    open fun invoke(args: ArrayList<Var>, struct: StructBase){
-        TODO()
+    @InsertCommand
+    open fun fieldRestore(){
+        addCommand("#[Function ${this.namespaceID}] Take vars out of the Stack")
+        Function.currFunction.field.forEachVar {v ->
+            run {
+                when (v.type) {
+                    "int" -> {
+                        val tg = v as MCInt
+                        //参数传递和子函数的参数压栈
+                        //如果是int取出到记分板
+                        addCommand(
+                            "execute store result score ${tg.name} ${tg.`object`} run "
+                                    + "data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${tg.identifier}"
+                        )
+                    }
+                    else -> {
+                        //是引用类型
+                        val tg = v as ClassBase
+                        addCommand(
+                            "execute store result score ${tg.address.name} ${tg.address.`object`} run "
+                                    + "data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${tg.identifier}"
+                        )
+                    }
+                }
+            }
+        }
     }
 
     /**

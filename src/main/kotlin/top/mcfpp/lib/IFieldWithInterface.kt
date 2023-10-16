@@ -43,4 +43,6 @@ interface IFieldWithInterface {
      * @return
      */
     fun hasInterface(itf: Interface): Boolean
+
+    fun forEachInterface(operation: (Interface) -> Any?)
 }

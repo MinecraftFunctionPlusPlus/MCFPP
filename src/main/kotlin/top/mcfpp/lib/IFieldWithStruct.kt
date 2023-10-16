@@ -45,4 +45,6 @@ interface IFieldWithStruct:IField {
      * @return
      */
     fun hasStruct(struct: Struct): Boolean
+
+    fun forEachStruct(operation: (Struct) -> Any?)
 }

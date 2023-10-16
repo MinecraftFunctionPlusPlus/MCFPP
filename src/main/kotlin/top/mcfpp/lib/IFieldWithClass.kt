@@ -1,5 +1,7 @@
 package top.mcfpp.lib
 
+import javax.swing.Action
+
 /**
  * 包含了类作为内容的域应该实现此接口
  *
@@ -47,4 +49,6 @@ interface IFieldWithClass:IField {
      * @return
      */
     fun hasClass(cls: Class): Boolean
+
+    fun forEachClass(operation: (Class) -> Any?)
 }

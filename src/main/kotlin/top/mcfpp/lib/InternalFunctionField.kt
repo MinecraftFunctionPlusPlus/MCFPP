@@ -10,18 +10,21 @@ import top.mcfpp.lang.Var
  */
 class InternalFunctionField: FunctionField {
 
+
     /**
      * 创建一个缓存，并指定它的父级
      * @param parent 父级缓存。若没有则设置为null
      * @param cacheContainer 此缓存所在的容器
      */
-    constructor(parent: IField?, cacheContainer: FieldContainer?):super(parent,cacheContainer)
+    constructor(parent: FunctionField, cacheContainer: FieldContainer?):super(parent,cacheContainer){
+        fieldVarSet.addAll(parent.fieldVarSet)
+    }
 
     /**
      * 复制一个域。
      * @param functionField 原来的域
      */
-    constructor(functionField: FunctionField):super(functionField)
+    constructor(functionField: InternalFunctionField):super(functionField)
 
 
     /**
@@ -30,6 +33,7 @@ class InternalFunctionField: FunctionField {
      * @return 变量的对象。若不存在，则返回null。
      */
     override fun getVar(key: String): Var? {
+        if(!fieldVarSet.contains(key)) return null
         if (containVar(key)) {
             val re: Var? = vars.getOrDefault(key, null)
             re!!.stackIndex = 0
@@ -40,6 +44,17 @@ class InternalFunctionField: FunctionField {
             re.stackIndex++
         }
         return re
+    }
+
+    override fun putVar(key: String, `var`: Var, forced: Boolean): Boolean {
+        fieldVarSet.add(key)
+        return super.putVar(key, `var`, forced)
+    }
+
+    override fun forEachVar(action: (Var) -> Any?) {
+        for (key in fieldVarSet){
+            action(getVar(key)!!)
+        }
     }
 
     override fun clone(): InternalFunctionField{

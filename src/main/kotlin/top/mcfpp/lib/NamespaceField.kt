@@ -35,7 +35,7 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithStruct, IFi
      */
     private var functions: ArrayList<Function> = ArrayList()
 
-    fun forEachFunction(operation: (Function) -> Any?){
+    override fun forEachFunction(operation: (Function) -> Any?){
         for (function in functions){
             operation(function)
         }
@@ -47,7 +47,7 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithStruct, IFi
     private var classes: HashMap<String, Class> = HashMap()
 
 
-    fun forEachClass(operation: (Class) -> Any?){
+    override fun forEachClass(operation: (Class) -> Any?){
         for (`class` in classes.values){
             operation(`class`)
         }
@@ -58,7 +58,7 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithStruct, IFi
      */
     private var structs: HashMap<String, Struct> = HashMap()
 
-    fun forEachStruct(operation: (Struct) -> Any?){
+    override fun forEachStruct(operation: (Struct) -> Any?){
         for (struct in structs.values){
             operation(struct)
         }
@@ -69,7 +69,7 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithStruct, IFi
      */
     private var interfaces: HashMap<String, Interface> = HashMap()
 
-    fun forEachInterface(operation: (Interface) -> Any?){
+    override fun forEachInterface(operation: (Interface) -> Any?){
         for(`interface` in interfaces.values){
             operation(`interface`)
         }
@@ -169,6 +169,7 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithStruct, IFi
     override fun hasClass(cls: Class): Boolean{
         return classes.containsKey(cls.identifier)
     }
+
 
     override fun hasClass(identifier: String): Boolean{
         return classes.containsKey(identifier)

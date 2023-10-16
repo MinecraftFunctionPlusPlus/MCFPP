@@ -1,18 +1,13 @@
 namespace test;
 
-//void main(){
-//    f(1,1);
-//}
-
-void test(){
-    int a,b,c,d,e;
-    a = c + (c + b);
+void main(){
+    f(1,1);
 }
 
-//void f(int a, int b){
-//    int c = a + b;
-//    print(c);
-//    if(c < 200){
-//        f(b,c);
-//    }
-//}
+void f(int a, int b){
+    int c = a + b;
+    print(c);
+    if(c < 200){
+        f(b,c);
+    }
+}
