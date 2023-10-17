@@ -15,7 +15,7 @@ import kotlin.collections.HashMap
  *
  * bool型变量实现了多种计算方法，比如与，或，非等基本的逻辑运算。
  */
-class MCBool : Var, OnScoreboard {
+open class MCBool : Var, OnScoreboard {
     /**
      * 此bool变量含有的值。仅在它为字面量时才有效。
      */
@@ -222,17 +222,26 @@ class MCBool : Var, OnScoreboard {
 
     @InsertCommand
     private fun assignCommand(a: MCBool) {
-        if (a.isConcrete) {
-            isConcrete = true
-            value = true
-        } else {
-            isConcrete = false
-            //变量进栈
+        if(a is ReturnedMCBool){
             Function.addCommand(
                 "execute" +
                         " store result storage mcfpp:system " + top.mcfpp.Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1" +
-                        " run scoreboard players operation " + name + " " + boolObject + " = " + a.name + " " + a.boolObject
+                        " store result score $name $boolObject" +
+                        " run function ${a.parentFunction.namespaceID}"
             )
+        }else{
+            if (a.isConcrete) {
+                isConcrete = true
+                value = true
+            } else {
+                isConcrete = false
+                //变量进栈
+                Function.addCommand(
+                    "execute" +
+                            " store result storage mcfpp:system " + top.mcfpp.Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1" +
+                            " run scoreboard players operation " + name + " " + boolObject + " = " + a.name + " " + a.boolObject
+                )
+            }
         }
     }
 

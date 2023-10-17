@@ -231,14 +231,14 @@ class McfppImListener : mcfppBaseListener() {
                 Project.error("Duplicate defined variable name:" + c.Identifier().text)
                 throw VariableDuplicationException()
             }
-            Function.addCommand("#" + ctx.type().text + " " + c.Identifier().text + if (c.expression() != null) " = " + c.expression().text else "")
+            Function.addCommand("#field: " + ctx.type().text + " " + c.Identifier().text + if (c.expression() != null) " = " + c.expression().text else "")
             //变量初始化
             if (c.expression() != null) {
                 val init: Var = McfppExprVisitor().visit(c.expression())!!
                 try {
-                    if(`var` is MCInt){
-                        Function.currFunction.commands.replaceThenAnalyze(`var`.name to `var`.`object`.name)
-                        `var`.assignCommand(init as MCInt,Function.currFunction.commands.last().toString())
+                    if(`var` is MCInt && init is MCInt){
+                        Function.currFunction.commands.replaceThenAnalyze(init.name to `var`.name, init.`object`.name to `var`.`object`.name)
+                        `var`.assignCommand(init,Function.currFunction.commands.last().toString())
                     }else{
                         `var`.assign(init)
                     }
@@ -274,7 +274,7 @@ class McfppImListener : mcfppBaseListener() {
     @InsertCommand
     override fun exitStatementExpression(ctx: mcfppParser.StatementExpressionContext) {
         Project.ctx = ctx
-        Function.addCommand("#" + ctx.text)
+        Function.addCommand("#expression: " + ctx.text)
         val right: Var = McfppExprVisitor().visit(ctx.expression())!!
         if(ctx.basicExpression() != null){
             val left: Var = McfppLeftExprVisitor().visit(ctx.basicExpression())!!
@@ -283,8 +283,8 @@ class McfppImListener : mcfppBaseListener() {
                 throw ConstChangeException()
             }
             try {
-                if(left is MCInt){
-                    Function.currFunction.commands.replaceThenAnalyze((right as MCInt).name to left.name, right.`object`.name to left.`object`.name)
+                if(left is MCInt && right is MCInt){
+                    Function.currFunction.commands.replaceThenAnalyze(right.name to left.name, right.`object`.name to left.`object`.name)
                     left.assignCommand(right,Function.currFunction.commands.last().toString())
                 }else{
                     left.assign(right)
@@ -426,25 +426,28 @@ class McfppImListener : mcfppBaseListener() {
                 Function.addCommand("return 1")
                 Project.warn("The condition is always false. ")
             } else {
+                exp as ReturnedMCBool
+                val exp1 = MCBool()
+                exp1.assign(exp)
                 //给子函数开栈
                 Function.addCommand(
                     "execute " +
-                            "if score " + exp.name + " " + SbObject.MCS_boolean + " matches 1 " +
+                            "if score " + exp1.name + " " + SbObject.MCS_boolean + " matches 1 " +
                             "run data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}"
                 )
                 Function.addCommand(
                     "execute " +
-                            "if score " + exp.name + " " + SbObject.MCS_boolean + " matches 1 " +
+                            "if score " + exp1.name + " " + SbObject.MCS_boolean + " matches 1 " +
                             "run function " + f.namespaceID
                 )
                 Function.addCommand(
                     "execute " +
-                            "if score " + exp.name + " " + SbObject.MCS_boolean + " matches 1 " +
+                            "if score " + exp1.name + " " + SbObject.MCS_boolean + " matches 1 " +
                             "run data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]"
                 )
                 Function.addCommand(
                     "execute " +
-                            "if score " + exp.name + " " + SbObject.MCS_boolean + " matches 1 " +
+                            "if score " + exp1.name + " " + SbObject.MCS_boolean + " matches 1 " +
                             "run return 1"
                 )
             }
@@ -529,12 +532,13 @@ class McfppImListener : mcfppBaseListener() {
             Function.addCommand("#function " + f.namespaceID)
             Project.warn("The condition is always false. ")
         } else {
+            exp as ReturnedMCBool
             //给子函数开栈
             Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
             //函数返回1才会继续执行(continue或者正常循环完毕)，返回0则不继续循环(break)
             Function.addCommand(
                 "execute " +
-                        "if score " + exp.name + " " + SbObject.MCS_boolean + " matches 1 " +
+                        "if function " + exp.parentFunction.namespaceID + " " +
                         "if function " + f.namespaceID + " " +
                         "run function " + Function.currFunction.namespaceID
             )
@@ -632,11 +636,12 @@ class McfppImListener : mcfppBaseListener() {
             Function.addCommand("#" + Commands.function(Function.currFunction))
             Project.warn("The condition is always false. ")
         } else {
+            exp as ReturnedMCBool
             //给子函数开栈
             Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
             Function.addCommand(
                 "execute " +
-                        "if score " + exp.name + " " + SbObject.MCS_boolean + " matches 1 " +
+                        "if function ${exp.parentFunction.namespaceID} " +
                         "run " + Commands.function(Function.currFunction)
             )
         }
@@ -766,12 +771,13 @@ class McfppImListener : mcfppBaseListener() {
             Function.addCommand("#function " + f.namespaceID)
             Project.warn("The condition is always false. ")
         } else {
+            exp as ReturnedMCBool
             //给子函数开栈
             Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
             //函数返回1才会继续执行(continue或者正常循环完毕)，返回0则不继续循环(break)
             Function.addCommand(
                 "execute " +
-                        "if score " + exp.name + " " + SbObject.MCS_boolean + " matches 1 " +
+                        "if function ${exp.parentFunction.namespaceID} " +
                         "if function " + f.namespaceID + " " +
                         "run function " + Function.currFunction.namespaceID
             )

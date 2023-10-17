@@ -384,17 +384,17 @@ class MCInt : Number<Int> {
             re = qwq.isLess(this)!!
         } else if (qwq.isConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
-            re = MCBool()
+            re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
-                "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " if score " + name + " " + `object` + " matches " + (qwq.value!! + 1) + ".."
+                "execute if score " + name + " " + `object` + " matches " + (qwq.value!! + 1) + ".. run return 1"
             )
+            Function.addCommand("return 0")
         } else {
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " if score " + name + " " + `object` + " > " + qwq.name + " " + qwq.`object`
+                "execute if score " + name + " " + `object` + " > " + qwq.name + " " + qwq.`object` + " run return 1"
             )
+            Function.addCommand("return 0")
         }
         re.isTemp = true
         return re
@@ -417,17 +417,17 @@ class MCInt : Number<Int> {
             re = qwq.isGreater(this)!!
         } else if (a.isConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
-            re = MCBool()
+            re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
-                "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " if score " + name + " " + `object` + " matches " + ".." + (qwq.value!! - 1)
+                "execute if score " + name + " " + `object` + " matches " + ".." + (qwq.value!! - 1) + " run return 1"
             )
+            Function.addCommand("return 0")
         } else {
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " if score " + name + " " + `object` + " < " + qwq.name + " " + qwq.`object`
+                "execute if score " + name + " " + `object` + " < " + qwq.name + " " + qwq.`object` + " run return 1"
             )
+            Function.addCommand("return 0")
         }
         re.isTemp = true
         return re
@@ -452,15 +452,15 @@ class MCInt : Number<Int> {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " if score " + name + " " + `object` + " matches " + ".." + qwq.value
+                "execute if score " + name + " " + `object` + " matches " + ".." + qwq.value + " run return 1"
             )
+            Function.addCommand("return 0")
         } else {
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " if score " + name + " " + `object` + " <= " + qwq.name + " " + qwq.`object`
+                "execute if score " + name + " " + `object` + " <= " + qwq.name + " " + qwq.`object` + " run return 1"
             )
+            Function.addCommand("return 0")
         }
         re.isTemp = true
         return re
@@ -485,15 +485,15 @@ class MCInt : Number<Int> {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " if score " + name + " " + `object` + " matches " + qwq.value + ".."
+                "execute if score " + name + " " + `object` + " matches " + qwq.value + ".. run return 1"
             )
+            Function.addCommand("return 0")
         } else {
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " if score " + name + " " + `object` + " >= " + qwq.name + " " + qwq.`object`
+                "execute if score " + name + " " + `object` + " >= " + qwq.name + " " + qwq.`object` + " run return 1"
             )
+            Function.addCommand("return 0")
         }
         re.isTemp = true
         return re
@@ -518,15 +518,15 @@ class MCInt : Number<Int> {
             //execute store success score qwq qwq if score qwq qwq = owo owo
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " if score " + name + " " + `object` + " matches " + qwq.value
+                "execute if score " + name + " " + `object` + " matches " + qwq.value + " run return 1"
             )
+            Function.addCommand("return 0")
         } else {
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " if score " + name + " " + `object` + " = " + qwq.name + " " + qwq.`object`
+                "execute if score " + name + " " + `object` + " = " + qwq.name + " " + qwq.`object` + " run return 1"
             )
+            Function.addCommand("return 0")
         }
         re.isTemp = true
         return re
@@ -551,15 +551,15 @@ class MCInt : Number<Int> {
             //execute store success score qwq qwq if score qwq qwq = owo owo
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " unless score " + name + " " + `object` + " matches " + qwq.value
+                "execute unless score " + name + " " + `object` + " matches " + qwq.value + " run return 1"
             )
+            Function.addCommand("return 0")
         } else {
             re = MCBool()
             Function.addCommand(
-                "execute store success score " + re.name + " " + SbObject.MCS_boolean
-                        + " unless score " + name + " " + `object` + " = " + qwq.name + " " + qwq.`object`
+                "execute unless score " + name + " " + `object` + " = " + qwq.name + " " + qwq.`object` + " run return 1"
             )
+            Function.addCommand("return 0")
         }
         re.isTemp = true
         return re
