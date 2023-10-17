@@ -11,6 +11,7 @@ import top.mcfpp.lib.Function
 import top.mcfpp.util.StringHelper
 import top.mcfpp.util.Utils
 import java.lang.IllegalArgumentException
+import java.lang.StringBuilder
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
@@ -33,10 +34,26 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     @Override
     override fun visitExpression(ctx: mcfppParser.ExpressionContext): Var? {
         Project.ctx = ctx
+        val l = Function.currFunction
+        val f = NoStackFunction("expression_${UUID.randomUUID()}",Function.currFunction)
+        Function.currFunction = f
         return if(ctx.primary() != null){
-            visit(ctx.primary())
+            val q = visit(ctx.primary())
+            Function.currFunction = l
+            l.commands.addAll(f.commands)
+            q
         }else{
-            visit(ctx.conditionalOrExpression())
+            val q = visit(ctx.conditionalOrExpression())
+            Function.currFunction = l
+            if(q !is ReturnedMCBool){
+                l.commands.addAll(f.commands)
+            }else{
+                //注册函数
+                if(!GlobalField.localNamespaces.containsKey(f.namespace))
+                    GlobalField.localNamespaces[f.namespace] = NamespaceField()
+                GlobalField.localNamespaces[f.namespace]!!.addFunction(f,false)
+            }
+            q
         }
     }
 
@@ -59,20 +76,41 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     @Override
     override fun visitConditionalOrExpression(ctx: mcfppParser.ConditionalOrExpressionContext): Var? {
         Project.ctx = ctx
-        var re: Var? = visit(ctx.conditionalAndExpression(0))
-        for (i in 1 until ctx.conditionalAndExpression().size) {
-            val b: Var? = visit(ctx.conditionalAndExpression(i))
-            if(!re!!.isTemp){
-                re = re.getTempVar()
+        if(ctx.conditionalAndExpression().size != 1){
+            val list = ArrayList<ReturnedMCBool>()
+            val l = Function.currFunction
+            var isConcrete = true
+            var result = false
+            for (i in 0 until ctx.conditionalAndExpression().size) {
+                val temp = NoStackFunction("bool_${UUID.randomUUID()}",Function.currFunction)
+                //注册函数
+                if(!GlobalField.localNamespaces.containsKey(temp.namespace))
+                    GlobalField.localNamespaces[temp.namespace] = NamespaceField()
+                GlobalField.localNamespaces[temp.namespace]!!.addFunction(temp,false)
+                Function.currFunction = temp
+                val b: Var? = visit(ctx.conditionalAndExpression(i))
+                Function.currFunction = l
+                if (b !is MCBool) {
+                    Project.error("The operator \"&&\" cannot be used with ${b!!.type}")
+                    throw IllegalArgumentException("")
+                }
+                if(b.isConcrete && isConcrete){
+                    result = result || b.value
+                }else{
+                    isConcrete = false
+                }
             }
-            re = if (re is MCBool && b is MCBool) {
-                re.or(b)
-            } else {
-                Project.error("The operator \"||\" cannot be used between ${re.type} and ${b!!.type}")
-                throw IllegalArgumentException("")
+            if(isConcrete){
+                return MCBool(result)
             }
+            for (v in list){
+                Function.addCommand("execute if function ${v.parentFunction.namespaceID} run return 1")
+            }
+            Function.addCommand("return 0")
+            return ReturnedMCBool(Function.currFunction)
+        }else{
+            return visit(ctx.conditionalAndExpression(0))
         }
-        return re
     }
 
     /**
@@ -84,20 +122,44 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     @Override
     override fun visitConditionalAndExpression(ctx: mcfppParser.ConditionalAndExpressionContext): Var? {
         Project.ctx = ctx
-        var re: Var? = visit(ctx.equalityExpression(0))
-        for (i in 1 until ctx.equalityExpression().size) {
-            val b: Var? = visit(ctx.equalityExpression(i))
-            if(!re!!.isTemp){
-                re = re.getTempVar()
+        if(ctx.equalityExpression().size != 1){
+            val list = ArrayList<ReturnedMCBool>()
+            val l = Function.currFunction
+            var isConcrete = true
+            var result = true
+            for (i in 0 until ctx.equalityExpression().size) {
+                val temp = NoStackFunction("bool_${UUID.randomUUID()}",Function.currFunction)
+                //注册函数
+                if(!GlobalField.localNamespaces.containsKey(temp.namespace))
+                    GlobalField.localNamespaces[temp.namespace] = NamespaceField()
+                GlobalField.localNamespaces[temp.namespace]!!.addFunction(temp,false)
+                Function.currFunction = temp
+                val b: Var? = visit(ctx.equalityExpression(i))
+                Function.currFunction = l
+                if (b !is MCBool) {
+                    Project.error("The operator \"&&\" cannot be used with ${b!!.type}")
+                    throw IllegalArgumentException("")
+                }
+                if(b.isConcrete && isConcrete){
+                    result = result && b.value
+                }else{
+                    isConcrete = false
+                }
             }
-            re = if (re is MCBool && b is MCBool) {
-                re.and(b)
-            } else {
-                Project.error("The operator \"&&\" cannot be used between ${re.type} and ${b!!.type}")
-                throw IllegalArgumentException("")
+            if(isConcrete){
+                return MCBool(result)
             }
+            val sb = StringBuilder("execute ")
+            for (v in list){
+                sb.append("if function ${v.parentFunction.namespaceID} ")
+            }
+            sb.append("run return 1")
+            Function.addCommand(sb.toString())
+            Function.addCommand("return 0")
+            return ReturnedMCBool(Function.currFunction)
+        }else{
+            return visit(ctx.equalityExpression(0))
         }
-        return re
     }
 
     /**
@@ -109,8 +171,8 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     override fun visitEqualityExpression(ctx: mcfppParser.EqualityExpressionContext): Var? {
         Project.ctx = ctx
         var re: Var? = visit(ctx.relationalExpression(0))
-        for (i in 1 until ctx.relationalExpression().size) {
-            val b: Var? = visit(ctx.relationalExpression(i))
+        if (ctx.relationalExpression().size != 1) {
+            val b: Var? = visit(ctx.relationalExpression(1))
             if(!re!!.isTemp){
                 re = re.getTempVar()
             }
@@ -152,9 +214,6 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         var re: Var? = visit(ctx.additiveExpression(0))
         if (ctx.additiveExpression().size != 1) {
             val b: Var? = visit(ctx.additiveExpression(1))
-            if(!re!!.isTemp){
-                re = re.getTempVar()
-            }
             if (re is MCInt && b is MCInt) {
                 when (ctx.relationalOp().text) {
                     ">" -> re = re.isGreater(b)
@@ -170,13 +229,12 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
                     "<=" -> re = re.isLessOrEqual(b)
                 }
             }else {
-                Project.error("The operator \"${ctx.relationalOp()}\" cannot be used between ${re.type} and ${b!!.type}")
+                Project.error("The operator \"${ctx.relationalOp()}\" cannot be used between ${re!!.type} and ${b!!.type}")
                 throw IllegalArgumentException("")
             }
         }
         return re
     }
-
 
     private var visitAdditiveExpressionRe : Var? = null
     /**
@@ -438,6 +496,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
                     val re: Var? = Function.currFunction.field.getVar(qwq)
                     if (re == null) {
                         Project.error("Undefined variable:$qwq")
+                        throw Exception()
                     }
                     re
                 }else{

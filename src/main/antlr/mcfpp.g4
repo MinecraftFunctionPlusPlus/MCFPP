@@ -209,19 +209,19 @@ conditionalExpression
     :   conditionalOrExpression ( '?' expression ':' expression )?
     ;
 
-//或门
+//或
 conditionalOrExpression
     :   conditionalAndExpression ( '||' conditionalAndExpression )*
     ;
 
-//与门
+//与
 conditionalAndExpression
     :   equalityExpression ( '&&' equalityExpression )*
     ;
 
 //等同
 equalityExpression
-    :   relationalExpression ( op=('==' | '!=') relationalExpression )*
+    :   relationalExpression ( op=('==' | '!=') relationalExpression )?
     ;
 
 //比较关系
