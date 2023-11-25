@@ -294,6 +294,7 @@ class McfppImListener : mcfppBaseListener() {
                 throw VariableConverseException()
             }
         }
+        Function.addCommand("#expression end: " + ctx.text)
 
     }
 
@@ -440,6 +441,12 @@ class McfppImListener : mcfppBaseListener() {
                             "if score " + exp1.name + " " + SbObject.MCS_boolean + " matches 1 " +
                             "run function " + f.namespaceID
                 )
+                Function.addCommand(
+                    "execute " +
+                            "if score " + exp1.name + " " + SbObject.MCS_boolean + " matches 1 " +
+                            "run data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]"
+                )
+                //由于下一个函数被直接中断，因此需要自己把自己的栈去掉
                 Function.addCommand(
                     "execute " +
                             "if score " + exp1.name + " " + SbObject.MCS_boolean + " matches 1 " +

@@ -1,5 +1,9 @@
 package top.mcfpp.command
 
+import top.mcfpp.Project
+import top.mcfpp.lang.ClassBase
+import top.mcfpp.lang.ClassObject
+import top.mcfpp.lang.ClassPointer
 import top.mcfpp.lib.Function
 import top.mcfpp.lang.MCInt
 
@@ -59,8 +63,8 @@ object Commands {
      */
     fun sbPlayerRemove(target: MCInt, value: Int): Command {
         return Command.build("scoreboard players remove ")
-            .build(target.name,target.name).build(" ")
-            .build(target.`object`.toString(),target.`object`.toString()).build(" ")
+            .build(target.name, target.name).build(" ")
+            .build(target.`object`.toString(), target.`object`.toString()).build(" ")
             .build(value.toString())
     }
 
@@ -69,5 +73,19 @@ object Commands {
             .build(a.name,a.name).build(" ")
             .build(a.`object`.toString(),a.`object`.toString()).build(" ")
             .build(value.toString())
+    }
+
+    fun selectRun(a: ClassPointer): Array<Command>{
+        return arrayOf(
+            Command.build("data modify storage entity ${ClassPointer.tempItemEntityUUID} Thrower set from storage mcfpp:system ${Project.defaultNamespace}.stack_frame[${a.stackIndex}].${a.identifier}"),
+            Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin ").build("run ","run")
+        )
+    }
+
+    fun selectRun(a: ClassObject): Array<Command>{
+        return arrayOf(
+            Command.build("data modify storage entity ${ClassPointer.tempItemEntityUUID} Thrower set from storage mcfpp:temp INIT.${a.clsType.namespace}.${a.clsType.identifier}"),
+            Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin ").build("run ","run")
+        )
     }
 }

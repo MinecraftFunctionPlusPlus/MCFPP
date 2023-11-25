@@ -79,8 +79,16 @@ class UnresolvedVar : Var {
         throw VariableNotResolvedException()
     }
 
+    override fun storeToStack() {
+        throw VariableNotResolvedException()
+    }
+
+    override fun getFromStack() {
+        throw VariableNotResolvedException()
+    }
+
     override fun toDynamic() {
-        TODO("Not yet implemented")
+        throw VariableNotResolvedException()
     }
 
     /**

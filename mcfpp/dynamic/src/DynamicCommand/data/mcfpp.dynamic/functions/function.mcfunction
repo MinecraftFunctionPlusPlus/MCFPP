@@ -1,2 +1,4 @@
-#function(string ID)
-$function $(function_ID)
+#> mcfpp.dynamic:function
+# @api
+# @input id
+$function $(id)

@@ -56,19 +56,20 @@ class SbObject(name: String, rule: String, var display: JsonText?) {
         /**
          * mcfpp默认的计分板变量
          */
-        var MCS_default = SbObject("mcs_default")
-        var MCS_boolean = SbObject("mcs_boolean")
+        val MCS_default = SbObject("mcs_default")
+        val MCS_boolean = SbObject("mcs_boolean")
 
-        var MCFPP_INIT = SbObject("mcfpp_init")
+        val MCFPP_INIT = SbObject("mcfpp_init")
+        val MCFPP_POINTER_COUNTER = SbObject("mcfpp_pointer_counter")
 
-        var MCS_float_sign = SbObject("mcs_float_sign")
-        var MCS_float_int0 = SbObject("mcs_float_int0")
-        var MCS_float_int1 = SbObject("mcs_float_int1")
-        var MCS_float_exp = SbObject("mcs_float_exp")
-        var Math_float_sign = SbObject("float_sign")
-        var Math_float_int0 = SbObject("float_int0")
-        var Math_float_int1 = SbObject("float_int1")
-        var Math_float_exp = SbObject("float_exp")
-        var Math_int = SbObject("int")
+        val MCS_float_sign = SbObject("mcs_float_sign")
+        val MCS_float_int0 = SbObject("mcs_float_int0")
+        val MCS_float_int1 = SbObject("mcs_float_int1")
+        val MCS_float_exp = SbObject("mcs_float_exp")
+        val Math_float_sign = SbObject("float_sign")
+        val Math_float_int0 = SbObject("float_int0")
+        val Math_float_int1 = SbObject("float_int1")
+        val Math_float_exp = SbObject("float_exp")
+        val Math_int = SbObject("int")
     }
 }
