@@ -2,7 +2,10 @@ package top.mcfpp.lang
 
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
+import top.mcfpp.command.Command
+import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lib.Class
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
@@ -108,20 +111,22 @@ class MCFloat : Number<Float> {
         val parent = parent
         if (isConcrete){
             if (parent != null) {
-                val cmd: String = when(parent){
+                val cmd = when(parent){
                     is ClassType -> {
-                        "execute as @e[type=marker,tag=${parent.tag}]"
+                        arrayOf(Command.build("execute as ${(parent.dataType as Class).uuid} run "))
                     }
                     is ClassPointer -> {
-                        "execute as @e[type=marker,tag=${parent.clsType.tag}] " +
-                                "if score @s ${parent.address.`object`.name} = ${parent.name} ${parent.address.`object`.name}"
+                        Commands.selectRun(parent)
                     }
                     else -> TODO()
                 }
-                Function.addCommand("$cmd run scoreboard players set $tempFloatEntityUUID ${SbObject.Math_float_sign} ${sign.value}")
-                Function.addCommand("$cmd run scoreboard players set $tempFloatEntityUUID ${SbObject.Math_float_int0} ${int0.value}")
-                Function.addCommand("$cmd run scoreboard players set $tempFloatEntityUUID ${SbObject.Math_float_int1} ${int1.value}")
-                Function.addCommand("$cmd run scoreboard players set $tempFloatEntityUUID ${SbObject.Math_float_exp} ${exp.value}")
+                if(cmd.size == 2){
+                    Function.addCommand(cmd[0])
+                }
+                Function.addCommand(cmd.last().build("scoreboard players set $tempFloatEntityUUID ${SbObject.Math_float_sign} ${sign.value}"))
+                Function.addCommand(cmd.last().build("scoreboard players set $tempFloatEntityUUID ${SbObject.Math_float_int0} ${int0.value}"))
+                Function.addCommand(cmd.last().build("scoreboard players set $tempFloatEntityUUID ${SbObject.Math_float_int1} ${int1.value}"))
+                Function.addCommand(cmd.last().build("scoreboard players set $tempFloatEntityUUID ${SbObject.Math_float_exp} ${exp.value}"))
             } else {
                 Function.addCommand("scoreboard players set $tempFloatEntityUUID ${SbObject.Math_float_sign} ${sign.value}")
                 Function.addCommand("scoreboard players set $tempFloatEntityUUID ${SbObject.Math_float_int0} ${int0.value}")
@@ -130,20 +135,22 @@ class MCFloat : Number<Float> {
             }
         }else{
             if (parent != null) {
-                val cmd: String = when(parent){
+                val cmd = when(parent){
                     is ClassType -> {
-                        "execute as @e[type=marker,tag=${parent.tag}]"
+                        arrayOf(Command.build("execute as ${(parent.dataType as Class).uuid} run "))
                     }
                     is ClassPointer -> {
-                        "execute as @e[type=marker,tag=${parent.clsType.tag}] " +
-                                "if score @s ${parent.address.`object`.name} = ${parent.name} ${parent.address.`object`.name}"
+                        Commands.selectRun(parent)
                     }
                     else -> TODO()
                 }
-                Function.addCommand("$cmd run scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_sign} = @s ${sign.`object`} ")
-                Function.addCommand("$cmd run scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_int0} = @s ${int0.`object`} ")
-                Function.addCommand("$cmd run scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_int1} = @s ${int1.`object`} ")
-                Function.addCommand("$cmd run scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_exp} = @s ${exp.`object`} ")
+                if(cmd.size == 2){
+                    Function.addCommand(cmd[0])
+                }
+                Function.addCommand(cmd.last().build("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_sign} = @s ${sign.`object`} "))
+                Function.addCommand(cmd.last().build("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_int0} = @s ${int0.`object`} "))
+                Function.addCommand(cmd.last().build("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_int1} = @s ${int1.`object`} "))
+                Function.addCommand(cmd.last().build("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_exp} = @s ${exp.`object`} "))
             } else {
                 Function.addCommand("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_exp} = ${exp.name} ${exp.`object`}")
                 Function.addCommand("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_sign} = ${sign.name} ${sign.`object`}")
@@ -181,13 +188,12 @@ class MCFloat : Number<Float> {
         val parent = parent
         if(a.parent != null) TODO()
         if(parent != null){
-            val cmd: String = when(parent){
+            val cmd = when(parent){
                 is ClassType -> {
-                    "execute as @e[type=marker,tag=${parent.tag}]"
+                    arrayOf(Command.build("execute as ${(parent.dataType as Class).uuid} run "))
                 }
                 is ClassPointer -> {
-                    "execute as @e[type=marker,tag=${parent.clsType.tag}] " +
-                            "if score @s ${parent.address.`object`.name} = ${parent.name} ${parent.address.`object`.name}"
+                    Commands.selectRun(parent)
                 }
                 else -> TODO()
             }
@@ -195,19 +201,22 @@ class MCFloat : Number<Float> {
             isConcrete = false
             //t = a
             val pwp = a as MCFloat
+            if(cmd.size == 2){
+                Function.addCommand(cmd[0])
+            }
             if(pwp.isConcrete){
                 //对类中的成员的值进行修改
                 val qwq = floatToMCFloat(pwp.value!!)
-                Function.addCommand("$cmd run scoreboard players set @s ${sign.`object`} ${qwq[0]}")
-                Function.addCommand("$cmd run scoreboard players set @s ${int0.`object`} ${qwq[1]}")
-                Function.addCommand("$cmd run scoreboard players set @s ${int1.`object`} ${qwq[2]}")
-                Function.addCommand("$cmd run scoreboard players set @s ${exp.`object`} ${qwq[3]}")
+                Function.addCommand(cmd.last().build("scoreboard players set @s ${sign.`object`} ${qwq[0]}"))
+                Function.addCommand(cmd.last().build("scoreboard players set @s ${int0.`object`} ${qwq[1]}"))
+                Function.addCommand(cmd.last().build("scoreboard players set @s ${int1.`object`} ${qwq[2]}"))
+                Function.addCommand(cmd.last().build("scoreboard players set @s ${exp.`object`} ${qwq[3]}"))
             }else{
                 //对类中的成员的值进行修改
-                Function.addCommand("$cmd run scoreboard players operation @s ${sign.`object`} = ${pwp.sign.name} ${pwp.sign.`object`}")
-                Function.addCommand("$cmd run scoreboard players operation @s ${int0.`object`} = ${pwp.int0.name} ${pwp.int0.`object`}")
-                Function.addCommand("$cmd run scoreboard players operation @s ${int1.`object`} = ${pwp.int1.name} ${pwp.int1.`object`}")
-                Function.addCommand("$cmd run scoreboard players operation @s ${exp.`object`} = ${pwp.exp.name} ${pwp.exp.`object`}")
+                Function.addCommand(cmd.last().build("scoreboard players operation @s ${sign.`object`} = ${pwp.sign.name} ${pwp.sign.`object`}"))
+                Function.addCommand(cmd.last().build("scoreboard players operation @s ${int0.`object`} = ${pwp.int0.name} ${pwp.int0.`object`}"))
+                Function.addCommand(cmd.last().build("scoreboard players operation @s ${int1.`object`} = ${pwp.int1.name} ${pwp.int1.`object`}"))
+                Function.addCommand(cmd.last().build("scoreboard players operation @s ${exp.`object`} = ${pwp.exp.name} ${pwp.exp.`object`}"))
                 //Function.addCommand("$cmd run scoreboard players operation @s $`object` = ${a.name} ${a.`object`}")
             }
         }else{
@@ -248,7 +257,7 @@ class MCFloat : Number<Float> {
      * @return 计算的结果
      */
     @InsertCommand
-    override fun plus(a: Number<*>): Number<*>? {
+    override fun plus(a: Var): Var? {
         //t = t + a
         if(!isTemp) return (getTempVar() as MCFloat).plus(a,)
         val qwq: MCFloat? = if(a !is MCFloat){
@@ -280,7 +289,7 @@ class MCFloat : Number<Float> {
      * @return 计算的结果
      */
     @InsertCommand
-    override fun minus(a: Number<*>): Number<Float>? {
+    override fun minus(a: Var): Var? {
         //t = t - a
         if(!isTemp) return (getTempVar() as MCFloat).minus(a)
         val qwq: MCFloat? = if(a !is MCFloat){
@@ -312,7 +321,7 @@ class MCFloat : Number<Float> {
      * @return 计算的结果
      */
     @InsertCommand
-    override fun multiple(a: Number<*>): Number<Float>? {
+    override fun multiple(a: Var): Var? {
         //t = t * a
         if(!isTemp) return (getTempVar() as MCFloat).multiple(a)
         val qwq: MCFloat? = if(a !is MCFloat){
@@ -344,7 +353,7 @@ class MCFloat : Number<Float> {
      * @return 计算的结果
      */
     @InsertCommand
-    override fun divide(a: Number<*>): Number<Float>? {
+    override fun divide(a: Var): Var? {
         //t = t - a
         if(!isTemp) return (getTempVar() as MCFloat).divide(a)
         val qwq: MCFloat? = if(a !is MCFloat){
@@ -376,7 +385,7 @@ class MCFloat : Number<Float> {
      * @return 计算的结果
      */
     @InsertCommand
-    override fun modular(a: Number<*>): Number<Float> {
+    override fun modular(a: Var): Var? {
         throw IllegalArgumentException("")
     }
 
@@ -386,7 +395,7 @@ class MCFloat : Number<Float> {
      * @return 计算结果
      */
     @InsertCommand
-    override fun isGreater(a: Number<*>): MCBool? {
+    override fun isGreater(a: Var): MCBool? {
         //re = t > a
         if(!isTemp) return (getTempVar() as MCFloat).isGreater(a)
         val qwq: MCFloat? = if(a !is MCFloat){
@@ -429,7 +438,7 @@ class MCFloat : Number<Float> {
      * @return 计算结果
      */
     @InsertCommand
-    override fun isLess(a: Number<*>): MCBool? {
+    override fun isLess(a: Var): MCBool? {
         //re = t < a
         if(!isTemp) return (getTempVar() as MCFloat).isLess(a)
         val qwq: MCFloat? = if(a !is MCFloat){
@@ -472,7 +481,7 @@ class MCFloat : Number<Float> {
      * @return 计算结果
      */
     @InsertCommand
-    override fun isLessOrEqual(a: Number<*>): MCBool? {
+    override fun isLessOrEqual(a: Var): MCBool? {
         //re = t <= a
         if(!isTemp) return(getTempVar() as MCFloat).isLessOrEqual(a)
         val qwq: MCFloat? = if(a !is MCFloat){
@@ -515,7 +524,7 @@ class MCFloat : Number<Float> {
      * @return 计算结果
      */
     @InsertCommand
-    override fun isGreaterOrEqual(a: Number<*>): MCBool? {
+    override fun isGreaterOrEqual(a: Var): MCBool? {
         //re = t >= a
         if(!isTemp) return (getTempVar() as MCFloat).isGreaterOrEqual(a)
         val qwq: MCFloat? = if(a !is MCFloat){
@@ -558,7 +567,7 @@ class MCFloat : Number<Float> {
      * @return 计算结果
      */
     @InsertCommand
-    override fun isEqual(a: Number<*>): MCBool? {
+    override fun isEqual(a: Var): MCBool? {
         //re = t == a
         if(!isTemp) return (getTempVar() as MCFloat).isEqual(a)
         val qwq: MCFloat? = if(a !is MCFloat){
@@ -601,7 +610,7 @@ class MCFloat : Number<Float> {
      * @return 计算结果
      */
     @InsertCommand
-    override fun notEqual(a: Number<*>): MCBool? {
+    override fun notEqual(a: Var): MCBool? {
         //re = t != a
         if(!isTemp) return (getTempVar() as MCFloat).notEqual(a)
         val qwq: MCFloat? = if(a !is MCFloat){
@@ -698,6 +707,14 @@ class MCFloat : Number<Float> {
         Function.addCommand("scoreboard players operation float_int1 int = ${int1.name} ${int1.`object`}")
         Function.addCommand("scoreboard players operation float_sign int = ${sign.name} ${sign.`object`}")
         return ssObj
+    }
+
+    override fun storeToStack() {
+        TODO("Not yet implemented")
+    }
+
+    override fun getFromStack() {
+        TODO("Not yet implemented")
     }
 
     /**

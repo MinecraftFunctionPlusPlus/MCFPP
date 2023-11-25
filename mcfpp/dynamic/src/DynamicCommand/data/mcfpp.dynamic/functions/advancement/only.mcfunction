@@ -1,0 +1,1 @@
+$advancement $(grant_revoke) $(targets) only $(id)

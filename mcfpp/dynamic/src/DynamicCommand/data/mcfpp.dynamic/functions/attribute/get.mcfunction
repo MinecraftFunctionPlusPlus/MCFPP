@@ -1,0 +1,1 @@
+$$(preCommand) attribute $(target) $(id) get

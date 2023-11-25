@@ -478,21 +478,17 @@ open class Function : Member, FieldContainer {
         //函数调用的命令
         when(callerClassP){
             is ClassPointer -> {
-                addCommand(
-                    "execute " +
-                            "as @e[tag=${callerClassP.clsType.tag}] " +
-                            "if score @s ${callerClassP.address.`object`.name} = ${callerClassP.address.name} ${callerClassP.address.`object`.name} " +
-                            "run function mcfpp.dynamic:function with entity @s data.functions.${identifier}")
+                val qwq = Commands.selectRun(callerClassP)
+                addCommand(qwq[0])
+                addCommand(qwq[1].build("function mcfpp.dynamic:function with entity @s data.functions.$identifier"))
             }
             is ClassObject -> {
-                addCommand(
-                    "execute " +
-                            "as @e[tag=${callerClassP.clsType.tag}] " +
-                            "if score @s ${callerClassP.address.`object`.name} = ${callerClassP.initPointer.address.name} ${callerClassP.initPointer.address.`object`.name} " +
-                            "run function mcfpp.dynamic:function with entity @s data.function.${identifier}")
+                val qwq = Commands.selectRun(callerClassP)
+                addCommand(qwq[0])
+                addCommand(qwq[1].build("function mcfpp.dynamic:function with entity @s data.functions.$identifier"))
             }
             null -> {
-                addCommand("function ${namespaceID}")
+                addCommand("function $namespaceID")
             }
             else -> TODO()
         }
@@ -537,14 +533,7 @@ open class Function : Member, FieldContainer {
                     p.toDynamic()
                 }
                 else -> {
-                    //是引用类型
-                    val tg = args[i].cast(params[i].type) as ClassBase
-                    val p = MCInt(this,"_param_" + params[i].identifier)
-                    addCommand(
-                        "execute " +
-                                "store result storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${p.identifier} int 1" +
-                                "run " + Commands.sbPlayerOperation(p, "=", tg.address)
-                    )
+                    //是引用类型，不用传递
                 }
             }
         }
@@ -576,13 +565,7 @@ open class Function : Member, FieldContainer {
                             )
                         }
                         else -> {
-                            //引用类型
-                            val tg = args[i].cast(params[i].type) as ClassBase
-                            addCommand(
-                                "execute " +
-                                        "store result score ${tg.address.name} ${tg.address.`object`} " +
-                                        "run data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${params[i].identifier} int 1 "
-                            )
+                            //引用类型，不用还原
                         }
                     }
                 }
@@ -607,16 +590,11 @@ open class Function : Member, FieldContainer {
                         //如果是int取出到记分板
                         addCommand(
                             "execute store result score ${tg.name} ${tg.`object`} run "
-                                    + "data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${tg.identifier}"
+                                    + "data get storage mcfpp:system ${Project.currNamespace}.stack_frame[0].${tg.identifier}"
                         )
                     }
                     else -> {
-                        //是引用类型
-                        val tg = v as ClassBase
-                        addCommand(
-                            "execute store result score ${tg.address.name} ${tg.address.`object`} run "
-                                    + "data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${tg.identifier}"
-                        )
+                        //是引用类型，不用还原
                     }
                 }
             }
@@ -752,6 +730,10 @@ open class Function : Member, FieldContainer {
                 throw NullPointerException()
             }
             currFunction.commands[index] = command
+        }
+
+        fun addCommand(command: Array<Command>){
+            command.forEach { addCommand(it) }
         }
 
         fun addCommand(command: String): Int{

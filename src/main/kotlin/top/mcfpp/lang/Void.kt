@@ -41,6 +41,16 @@ class Void: Var("void") {
         return this
     }
 
+    override fun storeToStack() {
+        Project.error("无法对void类型变量进行栈操作")
+        throw VoidVarException()
+    }
+
+    override fun getFromStack() {
+        Project.error("无法对void类型变量进行栈操作")
+        throw VoidVarException()
+    }
+
     override fun toDynamic() {}
 
     /**

@@ -131,4 +131,14 @@ public class Selector extends Var {
     public void toDynamic() {
         throw new TODOException("");
     }
+
+    @Override
+    public void storeToStack() {
+
+    }
+
+    @Override
+    public void getFromStack() {
+
+    }
 }

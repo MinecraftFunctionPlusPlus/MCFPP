@@ -3,6 +3,8 @@ package top.mcfpp.lang
 import top.mcfpp.lib.Class
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Member
+import top.mcfpp.util.Utils
+import java.util.UUID
 
 /**
  * ClassType是类的类型指针。它是一种特殊的指针，能够指向这个类的静态成员。

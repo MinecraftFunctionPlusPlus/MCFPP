@@ -1,11 +1,11 @@
 package top.mcfpp.lib.antlr
 
 import mcfppBaseVisitor
+import net.querz.nbt.io.SNBTUtil
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.exception.*
 import top.mcfpp.lang.*
-import top.mcfpp.lang.Number
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
 import top.mcfpp.util.StringHelper
@@ -23,6 +23,8 @@ import kotlin.system.exitProcess
 class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
 
     private val tempVarCommandCache = HashMap<Var, String>()
+
+    var processVarCache : ArrayList<Var> = ArrayList()
 
     private var currSelector : CanSelectMember? = null
 
@@ -246,36 +248,32 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     override fun visitAdditiveExpression(ctx: mcfppParser.AdditiveExpressionContext): Var? {
         Project.ctx = ctx
         visitAdditiveExpressionRe = visit(ctx.multiplicativeExpression(0))
+        processVarCache.add(visitAdditiveExpressionRe!!)
         for (i in 1 until ctx.multiplicativeExpression().size) {
             var b: Var? = visit(ctx.multiplicativeExpression(i))
             if(b is MCFloat) b = b.toTempEntity()
             if(visitAdditiveExpressionRe!! != MCFloat.ssObj){
                 visitAdditiveExpressionRe = visitAdditiveExpressionRe!!.getTempVar()
             }
-            val qwq = visitAdditiveExpressionRe
             visitAdditiveExpressionRe = if (Objects.equals(ctx.op.text, "+")) {
-                if (visitAdditiveExpressionRe is Number<*> && b is Number<*>) {
-                    (visitAdditiveExpressionRe as Number<*>).plus(b,)
-                }else{
-                    null
-                }
+                visitAdditiveExpressionRe!!.plus(b!!)
             } else if (Objects.equals(ctx.op.text, "-")) {
-                if (visitAdditiveExpressionRe is Number<*> && b is Number<*>) {
-                    (visitAdditiveExpressionRe as Number<*>).minus(b)
-                } else {
-                    null
-                }
+                visitAdditiveExpressionRe!!.minus(b!!)
             } else {
                 null
             }
             if(visitAdditiveExpressionRe == null){
-                Project.error("The operator \"${ctx.op.text}\" cannot be used between ${qwq!!.type} and ${b!!.type}.")
+                Project.error("The operator \"${ctx.op.text}\" cannot be used between ${visitAdditiveExpressionRe!!.type} and ${b!!.type}.")
                 Utils.stopCompile(IllegalArgumentException(""))
                 exitProcess(1)
             }
+            processVarCache[processVarCache.size - 1] = visitAdditiveExpressionRe!!
         }
+        processVarCache.remove(visitAdditiveExpressionRe!!)
         return visitAdditiveExpressionRe
     }
+
+    private var visitMultiplicativeExpressionRe : Var? = null
 
     /**
      * 计算一个乘除法表达式，例如a * b
@@ -286,48 +284,35 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     @Override
     override fun visitMultiplicativeExpression(ctx: mcfppParser.MultiplicativeExpressionContext): Var? {
         Project.ctx = ctx
-        var re: Var? = visit(ctx.unaryExpression(0))
+        visitMultiplicativeExpressionRe = visit(ctx.unaryExpression(0))
+        processVarCache.add(visitMultiplicativeExpressionRe!!)
         for (i in 1 until ctx.unaryExpression().size) {
-            if(visitAdditiveExpressionRe == MCFloat.ssObj){
-                visitAdditiveExpressionRe = MCFloat.ssObjToVar()
-            }
             var b: Var? = visit(ctx.unaryExpression(i))
             if(b is MCFloat) b = b.toTempEntity()
-            if(!re!!.isTemp){
-                re = re.getTempVar()
+            if(visitMultiplicativeExpressionRe != MCFloat.ssObj){
+                visitMultiplicativeExpressionRe = visitMultiplicativeExpressionRe!!.getTempVar()
             }
-            val qwq = re
-            re = when(ctx.op.text){
+            visitMultiplicativeExpressionRe = when(ctx.op.text){
                 "*" -> {
-                    if (re is Number<*> && b is Number<*>) {
-                        re.multiple(b)
-                    }else{
-                        null
-                    }
+                    visitAdditiveExpressionRe!!.multiple(b!!)
                 }
                 "/" -> {
-                    if (re is Number<*> && b is Number<*>) {
-                        re.divide(b)
-                    }else{
-                        null
-                    }
+                    visitAdditiveExpressionRe!!.divide(b!!)
                 }
                 "%" -> {
-                    if (re is MCInt && b is MCInt) {
-                        re.modular(b)
-                    }else{
-                        null
-                    }
+                    visitAdditiveExpressionRe!!.modular(b!!)
                 }
                 else -> null
             }
-            if(re == null){
-                Project.error("The operator \"${ctx.op.text}\" cannot be used between ${qwq.type} and ${b!!.type}.")
+            if(visitMultiplicativeExpressionRe == null){
+                Project.error("The operator \"${ctx.op.text}\" cannot be used between ${visitMultiplicativeExpressionRe!!.type} and ${b!!.type}.")
                 Utils.stopCompile(IllegalArgumentException(""))
                 exitProcess(1)
             }
+            processVarCache[processVarCache.size - 1] = visitMultiplicativeExpressionRe!!
         }
-        return re
+        processVarCache.remove(visitMultiplicativeExpressionRe!!)
+        return visitMultiplicativeExpressionRe
     }
 
     /**
@@ -457,13 +442,19 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             //变量
             return visit(ctx.`var`())
         } else if (ctx.value() != null) {
-            //数字
-            val num: mcfppParser.ValueContext = ctx.value()
-            if (num.INT() != null) {
-                return MCInt(Integer.parseInt(num.INT().text))
-            } else if (num.STRING() != null) {
-                val r: String = num.STRING().text
-                return MCString(r.substring(1, r.length - 1))
+            //常量
+            val valueContext: mcfppParser.ValueContext = ctx.value()
+            if (valueContext.INT() != null) {
+                return MCInt(Integer.parseInt(valueContext.INT().text))
+            } else if (valueContext.STRING() != null) {
+                val r: String = valueContext.STRING().text
+                return MCString(null,null,r.substring(1, r.length - 1))
+            } else if (valueContext.FLOAT() != null){
+                return MCFloat(valueContext.FLOAT()!!.text.toFloat())
+            } else if (valueContext.BOOL() != null){
+                return MCBool(valueContext.BOOL()!!.text.toBoolean())
+            } else if (valueContext.nbtUnit() != null){
+                return NBT(SNBTUtil.fromSNBT(valueContext.nbtUnit().text))
             }
         } else if(ctx.constructorCall() != null){
             return visit(ctx.constructorCall())
@@ -530,6 +521,10 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             // '(' expression ')'
             McfppExprVisitor().visit(ctx.expression())
         } else {
+            //是函数调用，将已经计算好的中间量存储到栈中
+            for (v in processVarCache){
+                v.storeToStack()
+            }
             //函数的调用
             Function.addCommand("#" + ctx.text)
             //参数获取
@@ -555,6 +550,9 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
                 throw FunctionNotDefineException()
             }
             func.invoke(args,currSelector)
+            for (v in processVarCache){
+                v.getFromStack()
+            }
             //函数树
             Function.currFunction.child.add(func)
             func.parent.add(Function.currFunction)

@@ -76,7 +76,6 @@ class MCInt : Number<Int> {
             is MCInt -> {
                 assignCommand(b)
             }
-
             else -> {
                 throw VariableConverseException()
             }
@@ -130,44 +129,38 @@ class MCInt : Number<Int> {
             val b = if(a.parent != null){
                 a.getTempVar() as Number<*>
             }else a
-            //是成员
-            val cmd: String = when(val parent = parent){
-                is ClassPointer -> {
-                    //静态
-                    "execute as @e[type=marker,tag=${parent.tag}] " +
-                            "if score @s ${parent.address.`object`.name} = ${parent.name} ${parent.address.`object`.name}"
-                }
-                is ClassType -> {
-                    "execute as @e[type=marker,tag=${parent.tag}]"
-                }
-                else -> TODO()
-            }
             //类的成员是运行时动态的
             isConcrete = false
             //t = a
+            //是成员
+            val final = when(val parent = parent){
+                is ClassPointer -> {
+                    Commands.selectRun(parent)
+                }
+                is ClassType -> {
+                    arrayOf(Command.build("execute as ${(parent.dataType as Class).uuid} run "))
+                }
+                else -> TODO()
+            }
             if (b.isConcrete) {
                 //对类中的成员的值进行修改
                 if(replace == null){
-                    Function.addCommand(Command.build(cmd).build(" run ")
-                        .build(Commands.sbPlayerSet(this,b.value as Int))
-                    )
+                    if(final.size == 2){
+                        Function.addCommand(final[0])
+                    }
+                    final.last().build(Commands.sbPlayerSet(this,b.value as Int))
                 }else{
-                    Function.replaceCommand(Command.build(cmd).build(" run ")
-                        .build(replace)
-                        , Function.currFunction.commands.size - 1
-                    )
+                    Function.replaceCommand(final.last().build(replace), Function.currFunction.commands.size - 1)
                 }
             } else {
                 //对类中的成员的值进行修改
                 if(replace == null){
-                    Function.addCommand(Command.build(cmd).build(" run ")
-                        .build(Commands.sbPlayerOperation(this," ",b as MCInt))
-                    )
+                    if(final.size == 2){
+                        Function.addCommand(final[0])
+                    }
+                    Function.addCommand(final.last().build(Commands.sbPlayerOperation(this,"=",b as MCInt)))
                 }else{
-                    Function.replaceCommand(Command.build(cmd).build(" run ")
-                        .build(replace)
-                        , Function.currFunction.commands.size - 1
-                    )
+                    Function.replaceCommand(final.last().build(replace), Function.currFunction.commands.size - 1)
                 }
             }
         } else {
@@ -178,25 +171,47 @@ class MCInt : Number<Int> {
             } else {
                 isConcrete = false
                 if(a.parent != null){
-                    val head = if(isTemp) "execute " else "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1 "
+                    if(isTemp){
+                        //a是成员
+                        val cmd = when(val parent = a.parent){
+                            is ClassPointer -> {
+                                Commands.selectRun(parent)
+                            }
+                            is ClassType -> {
+                                arrayOf(Command.build("execute as ${(parent.dataType as Class).uuid} run "))
+                            }
+                            else -> TODO()
+                        }
+                        if(replace == null){
+                            if(cmd.size == 2){
+                                Function.addCommand(cmd[0])
+                            }
+                            Function.addCommand(cmd.last()
+                                .build(Commands.sbPlayerOperation(this, "=", a as MCInt)))
+                        }else{
+                            Function.replaceCommand(cmd.last()
+                                .build(replace),Function.currFunction.commands.size-1)
+                        }
+                    }
+                    val append = "store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1 run "
                     //是成员
-                    val cmd: String = when(val parent = a.parent){
+                    val cmd = when(val parent = a.parent){
                         is ClassPointer -> {
-                            //静态
-                            "as @e[type=marker,tag=${parent.tag}] " +
-                                    "if score @s ${parent.address.`object`.name} = ${parent.name} ${parent.address.`object`.name} "
+                            Commands.selectRun(parent)
                         }
                         is ClassType -> {
-                            "as @e[type=marker,tag=${parent.tag}] "
+                            arrayOf(Command.build("execute as ${(parent.dataType as Class).uuid} ").build("run ","run"))
                         }
                         else -> TODO()
                     }
+                    cmd.last().replace("run" to append)
                     if(replace == null){
-                        Function.addCommand(Command.build(cmd + "run ")
-                            .build(Commands.sbPlayerOperation(this, "=", a as MCInt)))
+                        if(cmd.size == 2){
+                            Function.addCommand(cmd[0])
+                        }
+                        Function.addCommand(cmd.last().build(Commands.sbPlayerOperation(this, "=", a as MCInt)))
                     }else{
-                        Function.replaceCommand(Command.build(cmd + "run ")
-                            .build(replace),Function.currFunction.commands.size-1)
+                        Function.replaceCommand(cmd.last().build(replace),Function.currFunction.commands.size-1)
                     }
                 }else{
                     val head = if(isTemp) "" else "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1 run "
@@ -224,34 +239,37 @@ class MCInt : Number<Int> {
         if (parent != null) {
             val cmd = when(parent){
                 is ClassPointer -> {
-                    "execute as @e[type=marker,tag=${parent.clsType.tag}] " +
-                            "if score @s ${parent.address.`object`.name} = ${parent.name} ${parent.address.`object`.name}"
-
+                    Commands.selectRun(parent)
                 }
                 is ClassType -> {
-                    "execute as @e[type=marker,tag=${parent.tag}]"
+                    arrayOf(Command.build("execute as ${(parent.dataType as Class).uuid} run "))
                 }
                 else -> TODO()
             }
-            Function.addCommand("$cmd run scoreboard players set @s $`object` $value")
-        } else {
-            val cmd: String = if (!isTemp){
-                "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1 run "
-            }else{
-                ""
+            if(cmd.size == 2){
+                Function.addCommand(cmd[0])
             }
+            Function.addCommand(cmd.last().build("scoreboard players set @s $`object` $value"))
+        } else {
+            val cmd: String = if (!isTemp)
+                "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1 run "
+            else
+                ""
             Function.addCommand(cmd + "scoreboard players set $name $`object` $value")
         }
     }
 
     @Override
     @InsertCommand
-    override fun plus(a: Number<*>): Number<*>? {
+    override fun plus(a: Var): Var? {
         //t = t + a
         val qwq: MCInt? = if (a !is MCInt) {
             a.cast("int") as MCInt?
         } else {
             a
+        }
+        if(!isTemp && !isConcrete){
+            return a.plus(getTempVar() as MCInt)
         }
         if (qwq == null) return null
         if (qwq.isConcrete) {
@@ -263,7 +281,7 @@ class MCInt : Number<Int> {
             return this
         } else {
             if (isConcrete) {
-                return qwq.plus(this,)
+                return qwq.plus(this)
             } else {
                 Function.addCommand(Commands.sbPlayerOperation(this, "+=", qwq))
             }
@@ -273,8 +291,11 @@ class MCInt : Number<Int> {
 
     @Override
     @InsertCommand
-    override fun minus(a: Number<*>): Number<*>? {
+    override fun minus(a: Var): Var? {
         //t = t - a
+        if(!isTemp){
+            return (getTempVar() as MCInt).minus(a)
+        }
         val qwq: MCInt? = if (a !is MCInt) {
             a.cast("int") as MCInt?
         } else {
@@ -300,8 +321,11 @@ class MCInt : Number<Int> {
 
     @Override
     @InsertCommand
-    override fun multiple(a: Number<*>): Number<*>? {
+    override fun multiple(a: Var): Var? {
         //t = t * a
+        if(!isTemp){
+            return (getTempVar() as MCInt).multiple(a)
+        }
         val qwq: MCInt? = if (a !is MCInt) {
             a.cast("int") as MCInt?
         } else {
@@ -323,7 +347,10 @@ class MCInt : Number<Int> {
 
     @Override
     @InsertCommand
-    override fun divide(a: Number<*>): Number<*>? {
+    override fun divide(a: Var): Var? {
+        if(!isTemp){
+            return (getTempVar() as MCInt).divide(a)
+        }
         //t = t / a
         val qwq: MCInt? = if (a !is MCInt) {
             a.cast("int") as MCInt?
@@ -346,7 +373,10 @@ class MCInt : Number<Int> {
 
     @Override
     @InsertCommand
-    override fun modular(a: Number<*>): Number<*>? {
+    override fun modular(a: Var): Var? {
+        if(!isTemp){
+            return (getTempVar() as MCInt).modular(a)
+        }
         //t = t % a
         val qwq: MCInt? = if (a !is MCInt) {
             a.cast("int") as MCInt?
@@ -369,7 +399,7 @@ class MCInt : Number<Int> {
 
     @Override
     @InsertCommand
-    override fun isGreater(a: Number<*>): MCBool? {
+    override fun isGreater(a: Var): MCBool? {
         //re = t > a
         val qwq: MCInt? = if (a !is MCInt) {
             a.cast("int") as MCInt?
@@ -390,7 +420,7 @@ class MCInt : Number<Int> {
             )
             Function.addCommand("return 0")
         } else {
-            re = MCBool()
+            re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
                 "execute if score " + name + " " + `object` + " > " + qwq.name + " " + qwq.`object` + " run return 1"
             )
@@ -402,7 +432,7 @@ class MCInt : Number<Int> {
 
     @Override
     @InsertCommand
-    override fun isLess(a: Number<*>): MCBool? {
+    override fun isLess(a: Var): MCBool? {
         //re = t < a
         val qwq: MCInt? = if (a !is MCInt) {
             a.cast("int") as MCInt?
@@ -423,7 +453,7 @@ class MCInt : Number<Int> {
             )
             Function.addCommand("return 0")
         } else {
-            re = MCBool()
+            re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
                 "execute if score " + name + " " + `object` + " < " + qwq.name + " " + qwq.`object` + " run return 1"
             )
@@ -435,7 +465,7 @@ class MCInt : Number<Int> {
 
     @Override
     @InsertCommand
-    override fun isLessOrEqual(a: Number<*>): MCBool? {
+    override fun isLessOrEqual(a: Var): MCBool? {
         //re = t <= a
         val qwq: MCInt? = if (a !is MCInt) {
             a.cast("int") as MCInt?
@@ -450,13 +480,13 @@ class MCInt : Number<Int> {
             re = qwq.isGreater(this)!!
         } else if (qwq.isConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
-            re = MCBool()
+            re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
                 "execute if score " + name + " " + `object` + " matches " + ".." + qwq.value + " run return 1"
             )
             Function.addCommand("return 0")
         } else {
-            re = MCBool()
+            re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
                 "execute if score " + name + " " + `object` + " <= " + qwq.name + " " + qwq.`object` + " run return 1"
             )
@@ -468,7 +498,7 @@ class MCInt : Number<Int> {
 
     @Override
     @InsertCommand
-    override fun isGreaterOrEqual(a: Number<*>): MCBool? {
+    override fun isGreaterOrEqual(a: Var): MCBool? {
         //re = t <= a
         val qwq: MCInt? = if (a !is MCInt) {
             a.cast("int") as MCInt?
@@ -483,13 +513,13 @@ class MCInt : Number<Int> {
             re = qwq.isGreater(this)!!
         } else if (qwq.isConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
-            re = MCBool()
+            re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
                 "execute if score " + name + " " + `object` + " matches " + qwq.value + ".. run return 1"
             )
             Function.addCommand("return 0")
         } else {
-            re = MCBool()
+            re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
                 "execute if score " + name + " " + `object` + " >= " + qwq.name + " " + qwq.`object` + " run return 1"
             )
@@ -501,7 +531,7 @@ class MCInt : Number<Int> {
 
     @Override
     @InsertCommand
-    override fun isEqual(a: Number<*>): MCBool? {
+    override fun isEqual(a: Var): MCBool? {
         //re = t == a
         val qwq: MCInt? = if (a !is MCInt) {
             a.cast("int") as MCInt?
@@ -516,13 +546,13 @@ class MCInt : Number<Int> {
             re = qwq.isEqual(this)!!
         } else if (qwq.isConcrete) {
             //execute store success score qwq qwq if score qwq qwq = owo owo
-            re = MCBool()
+            re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
                 "execute if score " + name + " " + `object` + " matches " + qwq.value + " run return 1"
             )
             Function.addCommand("return 0")
         } else {
-            re = MCBool()
+            re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
                 "execute if score " + name + " " + `object` + " = " + qwq.name + " " + qwq.`object` + " run return 1"
             )
@@ -534,7 +564,7 @@ class MCInt : Number<Int> {
 
     @Override
     @InsertCommand
-    override fun notEqual(a: Number<*>): MCBool? {
+    override fun notEqual(a: Var): MCBool? {
         //re = t != a
         val qwq: MCInt? = if (a !is MCInt) {
             a.cast("int") as MCInt?
@@ -549,13 +579,13 @@ class MCInt : Number<Int> {
             re = qwq.notEqual(this)!!
         } else if (qwq.isConcrete) {
             //execute store success score qwq qwq if score qwq qwq = owo owo
-            re = MCBool()
+            re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
                 "execute unless score " + name + " " + `object` + " matches " + qwq.value + " run return 1"
             )
             Function.addCommand("return 0")
         } else {
-            re = MCBool()
+            re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
                 "execute unless score " + name + " " + `object` + " = " + qwq.name + " " + qwq.`object` + " run return 1"
             )
@@ -571,7 +601,7 @@ class MCInt : Number<Int> {
     }
 
 
-    private var index: Int = -1
+    //private var index: Int = -1
 
     /**
      * 获取临时变量
@@ -589,6 +619,18 @@ class MCInt : Number<Int> {
         re.isTemp = true
         re.assign(this)
         return re
+    }
+
+    override fun storeToStack() {
+        Function.addCommand("execute " +
+                "store result storage mcfpp:system ${Project.defaultNamespace}.stack_frame[$stackIndex].$identifier int 1 " +
+                "run scoreboard players get $name $`object`")
+    }
+
+    override fun getFromStack() {
+        Function.addCommand("execute " +
+                "store result score $name $`object` " +
+                "run data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].$identifier")
     }
 
     /**

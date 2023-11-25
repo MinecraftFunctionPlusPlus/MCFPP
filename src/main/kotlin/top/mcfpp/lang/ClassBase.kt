@@ -18,11 +18,6 @@ abstract class ClassBase: Var {
     abstract var clsType: Class
 
     /**
-     * 这个对象的记分板地址
-     */
-    abstract var address: MCInt
-
-    /**
      * 表示这个类的对象的实体拥有的标签
      */
     abstract val tag: String

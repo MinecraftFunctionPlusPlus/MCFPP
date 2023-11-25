@@ -17,10 +17,11 @@
 			"id":"test",
 			"functions":[
 				"void main()",
-				"void f(int a,int b)",
-				"void _if_10362398-533a-4bc9-9afa-e97de6999c73()",
-				"void _if_branch_86339be8-916f-4bab-9e4e-757fbcb39184()",
-				"void expression_8ef3ae66-c1b7-44cb-bc95-60526811a030()"
+				"void f0(int n)",
+				"int f1(int n)",
+				"void _if_9fb9fb94-89aa-4851-88a5-f38d1a40c1e2()",
+				"void _if_branch_172ede99-9759-4be2-9a74-1628e2c31c13()",
+				"void expression_81e3fca4-6976-45fc-9c8d-3495ba894fc4()"
 			],
 			"classes":[
 				

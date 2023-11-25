@@ -1,6 +1,9 @@
 package top.mcfpp.lang
 
+import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
+import top.mcfpp.command.Command
+import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.*
@@ -31,11 +34,6 @@ class ClassPointer : ClassBase {
     override var type: String
 
     /**
-     * 指针指向的地址
-     */
-    override var address: MCInt
-
-    /**
      * 指针指向的类的实例
      */
     var obj: ClassObject? = null
@@ -56,8 +54,6 @@ class ClassPointer : ClassBase {
         clsType = type
         this.type = clsType.identifier
         this.identifier = identifier
-        address = MCInt(type, identifier).setObj(type.addressSbObject) as MCInt
-        this.name = address.name
     }
 
     /**
@@ -68,7 +64,6 @@ class ClassPointer : ClassBase {
         clsType = classPointer.clsType
         type = classPointer.type
         obj = classPointer.obj
-        address = classPointer.address
     }
 
     /**
@@ -89,23 +84,18 @@ class ClassPointer : ClassBase {
                 }
                 if (obj != null) {
                     //原实体中的实例减少一个指针
-                    Function.addCommand(
-                        "execute " +
-                                "as @e[tag=${obj!!.clsType.tag}] " +
-                                "if score @s " + obj!!.address.`object`.name + " = " + address.name + " " + address.`object`.name + " " +
-                                "run data remove entity @s data.pointers[0]"
-                    )
+                    val c = Commands.selectRun(this)
+                    c.last().build(Commands.sbPlayerRemove(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1))
+                    Function.addCommand(c)
                 }
                 obj = b
                 //地址储存
-                address.assign(b.initPointer.address)
+                Function.addCommand(Command.build(
+                    "data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[${stackIndex}].${identifier} " +
+                            "set from storage mcfpp:temp INIT"))
                 //实例中的指针列表
-                Function.addCommand(
-                    "execute " +
-                            "as @e[tag=${obj!!.clsType.tag}] " +
-                            "if score @s " + b.address.`object`.name + " = " + address.name + " " + address.`object`.name + " " +
-                            "run data modify entity @s data.pointers append value 0"
-                )
+                val c = Commands.selectRun(this)
+                Function.addCommand(c.last().build(Commands.sbPlayerAdd(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1)))
             }
 
             is ClassPointer -> {
@@ -114,25 +104,19 @@ class ClassPointer : ClassBase {
                 }
                 if (obj != null) {
                     //原实体中的实例减少一个指针
-                    Function.addCommand(
-                        "execute " +
-                                "as @e[tag=${obj!!.clsType.tag}] " +
-                                "if score @s " + obj!!.address.`object`.name + " = " + address.name + " " + address.`object`.name + " " +
-                                "run data remove entity @s data.pointers[0]"
-                    )
+                    val c = Commands.selectRun(this)
+                    c.last().build(Commands.sbPlayerRemove(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1))
+                    Function.addCommand(c)
                 }
                 obj = b.obj
                 //地址储存
-                address.assign(b.address)
+                Function.addCommand(Command.build(
+                    "data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[${stackIndex}].${identifier} " +
+                            "set from storage mcfpp:system ${Project.currNamespace}.stack_frame[${b.stackIndex}].${b.identifier}"))
                 //实例中的指针列表
-                Function.addCommand(
-                    "execute " +
-                            "as @e[tag=${obj!!.clsType.tag}] " +
-                            "if score @s " + b.address.`object`.name + " = " + address.name + " " + address.`object`.name + " " +
-                            "run data modify entity @s data.pointers append value 0"
-                )
+                val c = Commands.selectRun(this)
+                Function.addCommand(c.last().build(Commands.sbPlayerAdd(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1)))
             }
-
             else -> {
                 throw VariableConverseException()
             }
@@ -147,12 +131,9 @@ class ClassPointer : ClassBase {
     fun dispose(){
         if (obj != null) {
             //原实体中的实例减少一个指针
-            Function.addCommand(
-                "execute " +
-                        "as @e[tag=${obj!!.clsType.tag}] " +
-                        "if score @s " + obj!!.address.`object`.name + " = " + address.name + " " + address.`object`.name + " " +
-                        "run data remove entity @s data.pointers[0]"
-            )
+            val c = Commands.selectRun(this)
+            c.last().build(Commands.sbPlayerRemove(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1))
+            Function.addCommand(c)
         }
     }
 
@@ -212,7 +193,20 @@ class ClassPointer : ClassBase {
         return this
     }
 
+    override fun storeToStack() {
+        TODO("Not yet implemented")
+    }
+
+    override fun getFromStack() {
+        TODO("Not yet implemented")
+    }
+
     override fun toDynamic() {
         TODO("Not yet implemented")
+    }
+
+    companion object{
+        const val tempItemEntityUUID = "810d6071-f121-4972-80d6-60cc19b40cf8"
+        const val tempItemEntityUUIDNBT = "[I;-2129829775,-249476750,-2133434164,431230200]"
     }
 }

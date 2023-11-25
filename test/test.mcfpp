@@ -1,13 +1,18 @@
 namespace test;
 
 void main(){
-    f(1,1);
+    f0(0);
+    f1(0);
 }
 
-void f(int a, int b){
-    int c = a + b;
-    print(c);
-    if(c < 200){
-        f(b,c);
+void f0(int n){
+    print(1+n);
+}
+
+int f1(int n){
+    if(n>=2){
+        return 0;
     }
+    print(1+n+f1(n+1));
+    return 0;
 }

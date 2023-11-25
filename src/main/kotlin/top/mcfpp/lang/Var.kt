@@ -2,6 +2,7 @@ package top.mcfpp.lang
 
 import top.mcfpp.Project
 import top.mcfpp.exception.ClassNotDefineException
+import top.mcfpp.exception.OperationNotImplementException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
@@ -163,11 +164,117 @@ abstract class Var : Member, Cloneable, CanSelectMember {
     }
 
     /**
+     * 加法
+     * @param a 加数
+     * @return 计算的结果
+     */
+    open fun plus(a: Var): Var? {
+        throw OperationNotImplementException()
+    }
+
+    /**
+     * 减法
+     * @param a 减数
+     * @return 计算的结果
+     */
+    open fun minus(a: Var): Var? {
+        throw OperationNotImplementException()
+    }
+
+    /**
+     * 乘法
+     * @param a 乘数
+     * @return 计算的结果
+     */
+    open fun multiple(a: Var): Var? {
+        throw OperationNotImplementException()
+    }
+
+    /**
+     * 除法
+     * @param a 除数
+     * @return 计算的结果
+     */
+    open fun divide(a: Var): Var? {
+        throw OperationNotImplementException()
+    }
+
+    /**
+     * 取余
+     * @param a 除数
+     * @return 计算的结果
+     */
+    open fun modular(a: Var): Var? {
+        throw OperationNotImplementException()
+    }
+
+
+    /**
+     * 这个数是否大于a
+     * @param a 右侧值
+     * @return 计算结果
+     */
+    open fun isGreater(a: Var): MCBool? {
+        throw OperationNotImplementException()
+    }
+
+
+    /**
+     * 这个数是否小于a
+     * @param a 右侧值
+     * @return 计算结果
+     */
+    open fun isLess(a: Var): MCBool? {
+        throw OperationNotImplementException()
+    }
+
+    /**
+     * 这个数是否小于等于a
+     * @param a 右侧值
+     * @return 计算结果
+     */
+    open fun isLessOrEqual(a: Var): MCBool? {
+        throw OperationNotImplementException()
+    }
+
+    /**
+     * 这个数是否大于等于a
+     * @param a 右侧值
+     * @return 计算结果
+     */
+    open fun isGreaterOrEqual(a: Var): MCBool? {
+        throw OperationNotImplementException()
+    }
+
+    /**
+     * 这个数是否等于a
+     * @param a 右侧值
+     * @return 计算结果
+     */
+    open fun isEqual(a: Var): MCBool? {
+        throw OperationNotImplementException()
+    }
+
+    /**
+     * 这个数是否不等于a
+     * @param a 右侧值
+     * @return 计算结果
+     */
+    open fun notEqual(a: Var): MCBool? {
+        throw OperationNotImplementException()
+    }
+
+
+    /**
      * 返回一个临时变量。这个变量将用于右值的计算过程中，用于避免计算时对原来的变量进行修改
      *
      * @return
      */
     abstract fun getTempVar(): Var
+
+    abstract fun storeToStack()
+
+    abstract fun getFromStack()
 
     abstract fun toDynamic()
 
@@ -185,7 +292,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                 "int" -> `var` = MCInt(container,identifier)
                 "bool" -> `var` = MCBool(container, identifier)
                 "selector" -> `var` = Selector(identifier)
-                "entity" -> TODO()
+                "entity" -> `var` = MCString(container, identifier, null)
                 "string" -> TODO()
                 else -> {
                     //自定义的类的类型
@@ -220,14 +327,8 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                 `var` = when (typeContext.text) {
                     "int" -> MCInt(container, ctx.Identifier().text)
                     "bool" -> MCBool(container, ctx.Identifier().text)
+                    "string" -> MCString(container, ctx.Identifier().text, null)
                     else -> MCFloat(container, ctx.Identifier().text)
-                }
-            } else if (typeContext.className().classWithoutNamespace().InsideClass() != null) {
-                when (typeContext.className().classWithoutNamespace().InsideClass().text) {
-                    "selector" -> `var` = Selector(ctx.Identifier().text)
-                    "entity" -> TODO()
-                    "string" -> TODO()
-                    else -> throw Exception()
                 }
             } else {
                 //自定义的类的类型
@@ -271,10 +372,6 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                             MCBool("@s").setObj(SbObject(compoundData.prefix + "_bool_" + ctx.Identifier()))
                         `var`.identifier = ctx.Identifier().text
                     }
-                    else -> TODO()
-                }
-            } else if (typeContext.className().classWithoutNamespace().InsideClass() != null) {
-                when (typeContext.className().classWithoutNamespace().InsideClass().text) {
                     "selector" -> `var` = Selector(ctx.Identifier().text)
                     "entity" -> TODO()
                     "string" -> TODO()

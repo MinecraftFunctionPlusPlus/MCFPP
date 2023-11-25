@@ -31,11 +31,6 @@ open class ClassObject : ClassBase {
     override val type: String
 
     /**
-     * 在模拟堆中的地址
-     */
-    override lateinit var address: MCInt
-
-    /**
      * 初始化类实例的时候自动生成的初始指针
      */
     var initPointer: ClassPointer
@@ -60,7 +55,6 @@ open class ClassObject : ClassBase {
     constructor(classObject: ClassObject) : super(classObject) {
         this.clsType = classObject.clsType
         initPointer = classObject.initPointer
-        address = classObject.address
         type = classObject.type
     }
 
@@ -118,6 +112,14 @@ open class ClassObject : ClassBase {
     @Override
     override fun getTempVar(): Var {
         return this
+    }
+
+    override fun storeToStack() {
+        TODO("Not yet implemented")
+    }
+
+    override fun getFromStack() {
+        TODO("Not yet implemented")
     }
 
     override fun toDynamic() {

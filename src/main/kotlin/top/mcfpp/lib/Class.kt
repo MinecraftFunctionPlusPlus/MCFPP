@@ -4,7 +4,8 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.exception.FunctionDuplicationException
 import top.mcfpp.lang.*
-import java.util.ArrayList
+import top.mcfpp.util.Utils
+import java.util.*
 
 /**
  * 一个类。在mcfpp中一个类通常类似下面的样子
@@ -38,6 +39,9 @@ import java.util.ArrayList
  * @see ClassType 表示类的类型，同时也是类的静态成员的指针
  */
 open class Class : CompoundData {
+
+    val uuid: UUID = UUID.randomUUID()
+    val uuidNBT = Utils.toNBTArrayUUID(uuid)
 
     /**
      * 记录这个类所有实例地址的记分板
@@ -99,14 +103,10 @@ open class Class : CompoundData {
         staticField.addFunction(classPreStaticInit,true)
         addressSbObject = SbObject(namespace + "_class_" + identifier + "_index")
         initPointer =  ClassPointer(this, "INIT")
-        //init函数的初始化置入，即地址分配，原preinit函数合并于此。同时生成新的临时指针
-        classPreInit.commands.add("scoreboard players operation @s " + addressSbObject.name + " = \$index " + addressSbObject.name)
-        classPreInit.commands.add("scoreboard players add \$index " + addressSbObject.name + " 1")
-        classPreInit.commands.add("scoreboard players operation ${initPointer.name} ${addressSbObject.name} = @s ${addressSbObject.name}")
         //staticinit函数的初始化直入。生成static实体
         classPreStaticInit.commands.add(
             "execute in minecraft:overworld " +
-                    "run summon marker 0 1 0 {Tags:[$staticTag]}"
+                    "run summon marker 0 1 0 {Tags:[$staticTag],UUID:$uuidNBT}"
         )
     }
 
@@ -169,8 +169,6 @@ open class Class : CompoundData {
         }
         //创建实例
         val obj = ClassObject(this)
-        //地址分配
-        obj.address = MCInt("@s").setObj(addressSbObject) as MCInt
         return obj
     }
 

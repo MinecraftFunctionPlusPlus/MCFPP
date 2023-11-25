@@ -74,6 +74,14 @@ class StructPointer : StructBase {
         TODO("Not yet implemented")
     }
 
+    override fun storeToStack() {
+        TODO("Not yet implemented")
+    }
+
+    override fun getFromStack() {
+        TODO("Not yet implemented")
+    }
+
     override fun toDynamic() {
         TODO("Not yet implemented")
     }
