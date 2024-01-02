@@ -9,6 +9,8 @@ import java.lang.StringBuilder
  */
 class Command {
 
+    val tags = ArrayList<String>()
+
     val commandStringList = ArrayList<String>()
 
     val replacePoint = HashMap<String,Int>()
@@ -20,6 +22,16 @@ class Command {
     constructor(command: String, pointID: String){
         replacePoint[pointID] = commandStringList.size
         commandStringList.add(command)
+    }
+
+    /**
+     * 这个动态命令是否拥有指定的tag
+     *
+     * @param tag 目标tag
+     * @return 是否有这个tag
+     */
+    fun hasTag(tag: String): Boolean{
+        return tags.contains(tag)
     }
 
     /**
@@ -58,6 +70,11 @@ class Command {
             if(replace(pt.first,pt.second)) suc++
         }
         return suc
+    }
+
+    fun get(pointID: String): String?{
+        val point = replacePoint[pointID] ?: return null
+        return commandStringList[point]
     }
 
     fun prepend(command: String){

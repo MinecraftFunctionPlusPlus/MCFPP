@@ -1,4 +1,4 @@
-package top.mcfpp.lib.antlr
+package top.mcfpp.antlr
 
 import mcfppBaseListener
 import org.antlr.v4.runtime.RuleContext
@@ -222,30 +222,26 @@ class McfppImListener : mcfppBaseListener() {
         if (ctx.parent is mcfppParser.ClassMemberContext) {
             return
         }
-        for (c in ctx.fieldDeclarationExpression()){
-            //函数变量，生成
-            val `var` = Var.build(c, Function.currFunction)
+        if(ctx.VAR() != null){
+            //自动判断类型
+            val init: Var = McfppExprVisitor().visit(ctx.expression())!!
+            val `var` = Var.build(ctx.Identifier().text, init.type, Function.currFunction)
             //变量注册
             //一定是函数变量
-            if (!Function.currFunction.field.putVar(c.Identifier().text, `var`)) {
-                Project.error("Duplicate defined variable name:" + c.Identifier().text)
+            if (!Function.currFunction.field.putVar(ctx.Identifier().text, `var`)) {
+                Project.error("Duplicate defined variable name:" + ctx.Identifier().text)
                 throw VariableDuplicationException()
             }
-            Function.addCommand("#field: " + ctx.type().text + " " + c.Identifier().text + if (c.expression() != null) " = " + c.expression().text else "")
-            //变量初始化
-            if (c.expression() != null) {
-                val init: Var = McfppExprVisitor().visit(c.expression())!!
-                try {
-                    if(`var` is MCInt && init is MCInt){
-                        Function.currFunction.commands.replaceThenAnalyze(init.name to `var`.name, init.`object`.name to `var`.`object`.name)
-                        `var`.assignCommand(init,Function.currFunction.commands.last().toString())
-                    }else{
-                        `var`.assign(init)
-                    }
-                } catch (e: VariableConverseException) {
-                    Project.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
-                    throw VariableConverseException()
+            try {
+                if(`var` is MCInt && init is MCInt && !init.isConcrete){
+                    Function.currFunction.commands.replaceThenAnalyze(init.name to `var`.name, init.`object`.name to `var`.`object`.name)
+                    `var`.assignCommand(init,Function.currFunction.commands.last().toString())
+                }else{
+                    `var`.assign(init)
                 }
+            } catch (e: VariableConverseException) {
+                Project.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
+                throw VariableConverseException()
             }
             when(fieldModifier){
                 "const" -> {
@@ -261,6 +257,49 @@ class McfppImListener : mcfppBaseListener() {
                 }
                 "import" -> {
                     `var`.isImport = true
+                }
+            }
+        }else{
+            for (c in ctx.fieldDeclarationExpression()){
+                //函数变量，生成
+                val `var` = Var.build(c, Function.currFunction)
+                //变量注册
+                //一定是函数变量
+                if (!Function.currFunction.field.putVar(c.Identifier().text, `var`)) {
+                    Project.error("Duplicate defined variable name:" + c.Identifier().text)
+                    throw VariableDuplicationException()
+                }
+                Function.addCommand("#field: " + ctx.type().text + " " + c.Identifier().text + if (c.expression() != null) " = " + c.expression().text else "")
+                //变量初始化
+                if (c.expression() != null) {
+                    val init: Var = McfppExprVisitor().visit(c.expression())!!
+                    try {
+                        if(`var` is MCInt && init is MCInt && !init.isConcrete){
+                            Function.currFunction.commands.replaceThenAnalyze(init.name to `var`.name, init.`object`.name to `var`.`object`.name)
+                            `var`.assignCommand(init,Function.currFunction.commands.last().toString())
+                        }else{
+                            `var`.assign(init)
+                        }
+                    } catch (e: VariableConverseException) {
+                        Project.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
+                        throw VariableConverseException()
+                    }
+                }
+                when(fieldModifier){
+                    "const" -> {
+                        if(!`var`.hasAssigned){
+                            Project.error("The const field ${`var`.identifier} must be initialized.")
+                        }
+                        `var`.isConst = true
+                    }
+                    "dynamic" -> {
+                        if(`var`.isConcrete){
+                            `var`.toDynamic()
+                        }
+                    }
+                    "import" -> {
+                        `var`.isImport = true
+                    }
                 }
             }
         }

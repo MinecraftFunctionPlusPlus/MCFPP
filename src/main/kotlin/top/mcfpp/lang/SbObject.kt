@@ -60,6 +60,7 @@ class SbObject(name: String, rule: String, var display: JsonText?) {
         val MCS_boolean = SbObject("mcs_boolean")
 
         val MCFPP_INIT = SbObject("mcfpp_init")
+        val MCFPP_TEMP = SbObject("mcfpp_temp")
         val MCFPP_POINTER_COUNTER = SbObject("mcfpp_pointer_counter")
 
         val MCS_float_sign = SbObject("mcs_float_sign")

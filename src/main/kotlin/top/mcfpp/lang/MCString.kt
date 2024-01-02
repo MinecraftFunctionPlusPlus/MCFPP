@@ -1,6 +1,11 @@
 package top.mcfpp.lang
 
+import net.querz.nbt.io.SNBTUtil
+import top.mcfpp.Project
+import top.mcfpp.command.Command
+import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lib.Class
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
@@ -49,6 +54,8 @@ class MCString : Var {
         }
     }
 
+    constructor(value: String?) : this(null, null, value)
+
     constructor(b: MCString) {
         value = b.value
         isConcrete = b.isConcrete
@@ -89,6 +96,62 @@ class MCString : Var {
     @Throws(VariableConverseException::class)
     override fun assign(b: Var?) {
         hasAssigned = true
+        if(b is MCString){
+            assignCommand(b)
+        }else{
+            throw VariableConverseException()
+        }
+    }
+
+    private fun assignCommand(a: MCString){
+        if (parent != null){
+            //是成员
+            val b = if(a.parent != null){
+                a.getTempVar() as NBT
+            }else a
+            isConcrete = false
+            val final = when(val parent = parent){
+                is ClassPointer -> {
+                    Commands.selectRun(parent)
+                }
+                is ClassType -> {
+                    arrayOf(Command.build("execute as ${(parent.dataType as Class).uuid} run "))
+                }
+                else -> TODO()
+            }
+            final.last().build("data modify entity @s data.$identifier set from storage mcfpp:temp temp.${b.identifier}")
+            if(final.size == 2){
+                Function.addCommand(final[0])
+            }
+            Function.addCommand(final.last())
+        }else{
+            //是局部变量
+            if(a.isConcrete){
+                value = a.value
+                isConcrete = true
+            }else{
+                isConcrete = false
+                if(a.parent != null){
+                    val final = when(val parent = a.parent){
+                        is ClassPointer -> {
+                            Commands.selectRun(parent)
+                        }
+                        is ClassType -> {
+                            arrayOf(Command.build("execute as ${(parent.dataType as Class).uuid} run "))
+                        }
+                        else -> TODO()
+                    }
+                    final.last().build("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set from entity @s data.${a.identifier}")
+                    if(final.size == 2){
+                        Function.addCommand(final[0])
+                    }
+                    Function.addCommand(final.last())
+                }else{
+                    val command = Command.build("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set from storage mcfpp:system ${Project.currNamespace}.stack_frame[${a.stackIndex}].${a.identifier}")
+                    Function.addCommand(command)
+                }
+            }
+        }
     }
 
     @Override
@@ -98,7 +161,7 @@ class MCString : Var {
 
     @Override
     override fun clone(): MCString {
-        TODO()
+        return MCString(this)
     }
 
     override fun getTempVar(): Var {
@@ -106,14 +169,36 @@ class MCString : Var {
     }
 
     override fun storeToStack() {
-        TODO("Not yet implemented")
+        //什么都不用做哦
+        return
     }
 
     override fun getFromStack() {
-        TODO("Not yet implemented")
+        //什么都不用做哦
+        return
     }
 
     override fun toDynamic() {
-        TODO("Not yet implemented")
+        val parent = parent
+        if(!isConcrete) return
+        isConcrete = false
+        if (parent != null) {
+            val cmd = when(parent){
+                is ClassPointer -> {
+                    Commands.selectRun(parent)
+                }
+                is ClassType -> {
+                    arrayOf(Command.build("execute as ${(parent.dataType as Class).uuid} run "))
+                }
+                else -> TODO()
+            }
+            if(cmd.size == 2){
+                Function.addCommand(cmd[0])
+            }
+            Function.addCommand(cmd.last().build("data modify entity @s data.${identifier} set value \"$value\""))
+        } else {
+            val cmd = Command.build("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set value \"$value\"")
+            Function.addCommand(cmd)
+        }
     }
 }

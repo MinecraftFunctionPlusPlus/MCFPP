@@ -294,6 +294,8 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                 "selector" -> `var` = Selector(identifier)
                 "entity" -> `var` = MCString(container, identifier, null)
                 "string" -> TODO()
+                "float" -> TODO()
+                "nbt" -> `var` = NBT(container, identifier)
                 else -> {
                     //自定义的类的类型
                     val c = type.split(":")
@@ -328,7 +330,9 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                     "int" -> MCInt(container, ctx.Identifier().text)
                     "bool" -> MCBool(container, ctx.Identifier().text)
                     "string" -> MCString(container, ctx.Identifier().text, null)
-                    else -> MCFloat(container, ctx.Identifier().text)
+                    "float" -> MCFloat(container, ctx.Identifier().text)
+                    "nbt" -> NBT(container, ctx.Identifier().text)
+                    else -> TODO()
                 }
             } else {
                 //自定义的类的类型
@@ -375,6 +379,8 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                     "selector" -> `var` = Selector(ctx.Identifier().text)
                     "entity" -> TODO()
                     "string" -> TODO()
+                    "nbt" -> TODO()
+                    "float" -> TODO()
                     else -> TODO()
                 }
             } else {
@@ -391,16 +397,9 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                     Project.error("Undefined class:$clsType")
                 }
                 val classPointer = ClassPointer(type!!, ctx.Identifier().text)
-                classPointer.address =
-                    (MCInt("@s").setObj(SbObject(compoundData.prefix + "_" + clsType + "_" + ctx.Identifier())) as MCInt)
                 classPointer.name = ctx.Identifier().text
                 `var` = classPointer
             }
-            ////是否是常量 TODO
-            //if (ctx.CONST() != null) {
-            //    `var`.isConst = ConstStatus.NULL
-            //    `var`.isConcrete = true
-            //}
             return `var`
         }
     }

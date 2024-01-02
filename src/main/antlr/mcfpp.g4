@@ -97,7 +97,7 @@ classBody
 //类成员
 classMember
     :   classFunctionDeclaration
-    |   fieldDeclaration ';'
+    |   classFieldDeclaration ';'
     |   constructorDeclaration
     |   nativeFuncDeclaration
     |   abstractClassFunctionDeclaration
@@ -113,6 +113,10 @@ abstractClassFunctionDeclaration
 
 nativeClassFunctionDeclaration
     :   accessModifier? NATIVE Identifier '(' parameterList? ')' ';'
+    ;
+
+classFieldDeclaration
+    :   accessModifier? type fieldDeclarationExpression
     ;
 
 //结构体
@@ -205,6 +209,7 @@ constructorCall
 //变量声明
 fieldDeclaration
     :   fieldModifier? type fieldDeclarationExpression (',' fieldDeclarationExpression)*
+    |   fieldModifier? VAR Identifier '=' expression
     ;
 
 fieldDeclarationExpression
@@ -488,38 +493,6 @@ annoation
     :   '@' Identifier arguments?
     ;
 
-nbtValue
-    :   NBTSTRING
-    |   nbtByte
-    |   nbtShort
-    |   nbtInt
-    |   nbtLong
-    |   nbtFloat
-    |   nbtDouble
-    |   nbtCompound
-    |   nbtList
-    |   nbtByteArray
-    |   nbtIntArray
-    |   nbtLongArray
-    ;
-
-nbtByte: INT 'b' | 'B';
-nbtShort: INT 's' | 'S';
-nbtInt: INT;
-nbtLong: INT 'l' | 'L';
-nbtFloat: FLOAT 'f' | 'F';
-nbtDouble: FLOAT ('d' | 'D')?;
-
-nbtByteArray: '[B;' nbtByte (',' nbtByte)* ']';
-nbtIntArray: '[I;' nbtInt (',' nbtInt)* ']';
-nbtLongArray: '[L;' nbtLong (',' nbtLong)* ']';
-
-nbtList: '[' (nbtValue (',' nbtValue)* )* ']';
-nbtKeyValuePair: key=(Identifier|ClassIdentifier) ':' nbtValue;
-nbtCompound: '{'( nbtKeyValuePair (',' nbtKeyValuePair)* )*'}';
-
-NBTSTRING: ('"' .*? '"' )|( '\'' .*? '\'' );
-
 TargetSelector
     :   '@' ('a'|'r'|'p'|'s'|'e')
     ;
@@ -563,19 +536,19 @@ STRUCT:'struct';
 
 GLOBAL:'global';
 
-INT
-    :   [1-9][0-9]*|[0]
-    ;
+INT:[1-9][0-9]*|[0];
 
 FLOAT
     :   INT '.' [0-9]+
     |   [0-9] '.' [0-9]+ 'e' '-'? [0-9]
     ;
 
+
 BOOL
     :   'true'
     |   'false'
     ;
+VAR:'var';
 
 VEC:'vec';
 
@@ -593,11 +566,40 @@ NORMALSTRING
     :   [A-Za-z0-9_]+
     ;
 
-STRING
-    :   '"' .*? '"'
+AT:'@';
+
+nbtValue
+    :   STRING
+    |   NBTBYTE
+    |   NBTSHORT
+    |   NBTINT
+    |   NBTLONG
+    |   NBTFLOAT
+    |   NBTDOUBLE
+    |   nbtCompound
+    |   nbtList
+    |   nbtByteArray
+    |   nbtIntArray
+    |   nbtLongArray
     ;
 
-AT:'@';
+NBTBYTE: ([1-9][0-9]*|[0])[b|B];
+NBTSHORT: ([1-9][0-9]*|[0])[s|S];
+NBTINT: INT;
+NBTLONG: ([1-9][0-9]*|[0])[l|L];
+NBTFLOAT: INT '.' [0-9]+[f|F];
+NBTDOUBLE: INT '.' [0-9]+[f|D]?;
+
+nbtByteArray: '[B;' NBTBYTE (',' NBTBYTE)* ']';
+nbtIntArray: '[I;' NBTINT (',' NBTINT)* ']';
+nbtLongArray: '[L;' NBTLONG (',' NBTLONG)* ']';
+
+nbtList: '[' (nbtValue (',' nbtValue)* )* ']';
+nbtKeyValuePair: key=(Identifier|ClassIdentifier) ':' nbtValue;
+nbtCompound: '{'( nbtKeyValuePair (',' nbtKeyValuePair)* )*'}';
+
+STRING: ('"' .*? '"' )|( '\'' .*? '\'' );
+
 
 //
 // Whitespace and comments
