@@ -1,4 +1,4 @@
-package top.mcfpp.lib.antlr
+package top.mcfpp.antlr
 
 import mcfppBaseVisitor
 import net.querz.nbt.io.SNBTUtil
@@ -453,8 +453,8 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
                 return MCFloat(valueContext.FLOAT()!!.text.toFloat())
             } else if (valueContext.BOOL() != null){
                 return MCBool(valueContext.BOOL()!!.text.toBoolean())
-            } else if (valueContext.nbtUnit() != null){
-                return NBT(SNBTUtil.fromSNBT(valueContext.nbtUnit().text))
+            } else if (valueContext.nbtValue() != null){
+                return NBT(SNBTUtil.fromSNBT(valueContext.nbtValue().text))
             }
         } else if(ctx.constructorCall() != null){
             return visit(ctx.constructorCall())
@@ -478,48 +478,66 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
     @InsertCommand
     override fun visitVar(ctx: mcfppParser.VarContext): Var? {
         Project.ctx = ctx
-        return if (ctx.Identifier() != null && ctx.arguments() == null) {
+        if (ctx.Identifier() != null && ctx.arguments() == null) {
+            //没有数组选取
+            val qwq: String = ctx.Identifier().text
+            var re = if(currSelector == null){
+                val re: Var? = Function.currFunction.field.getVar(qwq)
+                if (re == null) {
+                    Project.error("Undefined variable:$qwq")
+                    throw Exception()
+                }
+                re
+            }else{
+                val cpd = when(currSelector){
+                    is CompoundDataType -> (currSelector as CompoundDataType).dataType
+                    is ClassPointer -> (currSelector as ClassPointer).clsType
+                    is ClassObject -> (currSelector as ClassObject).clsType
+                    else -> TODO()
+                }
+                val am = if(Function.currFunction !is ExtensionFunction && Function.currFunction.ownerType == Function.Companion.OwnerType.CLASS){
+                    Function.currFunction.parentClass()!!.getAccess(cpd)
+                }else if(Function.currFunction !is ExtensionFunction && Function.currFunction.ownerType == Function.Companion.OwnerType.STRUCT){
+                    Function.currFunction.parentStruct()!!.getAccess(cpd)
+                }else{
+                    Member.AccessModifier.PUBLIC
+                }
+                val re  = currSelector!!.getMemberVar(qwq,am)
+                if (re.first == null) {
+                    Project.error("Undefined variable:$qwq")
+                }
+                if (!re.second){
+                    Project.error("Cannot access member $qwq")
+                }
+                re.first
+            }
             // Identifier identifierSuffix*
             if (ctx.identifierSuffix() == null || ctx.identifierSuffix().size == 0) {
-                //没有数组选取
-                val qwq: String = ctx.Identifier().text
-                if(currSelector == null){
-                    val re: Var? = Function.currFunction.field.getVar(qwq)
-                    if (re == null) {
-                        Project.error("Undefined variable:$qwq")
-                        throw Exception()
-                    }
-                    re
-                }else{
-                    val cpd = when(currSelector){
-                        is CompoundDataType -> (currSelector as CompoundDataType).dataType
-                        is ClassPointer -> (currSelector as ClassPointer).clsType
-                        is ClassObject -> (currSelector as ClassObject).clsType
-                        else -> TODO()
-                    }
-                    val am = if(Function.currFunction !is ExtensionFunction && Function.currFunction.ownerType == Function.Companion.OwnerType.CLASS){
-                        Function.currFunction.parentClass()!!.getAccess(cpd)
-                    }else if(Function.currFunction !is ExtensionFunction && Function.currFunction.ownerType == Function.Companion.OwnerType.STRUCT){
-                        Function.currFunction.parentStruct()!!.getAccess(cpd)
-                    }else{
-                        Member.AccessModifier.PUBLIC
-                    }
-                    val re  = currSelector!!.getMemberVar(qwq,am)
-                    if (re.first == null) {
-                        Project.error("Undefined variable:$qwq")
-                    }
-                    if (!re.second){
-                        Project.error("Cannot access member $qwq")
-                    }
-                    re.first
-                }
+                return re
             } else {
-                //TODO 是数组调用
-                throw TODOException("")
+                if(re is Indexable<*>){
+                    for (value in ctx.identifierSuffix()) {
+                        val index = visit(value.conditionalExpression())!!
+                        re = when(index){
+                            is MCString -> {
+                                (re as Indexable<*>).getByStringIndex(index)
+                            }
+                            is MCInt -> {
+                                (re as Indexable<*>).getByIntIndex(index)
+                            }
+                            else -> {
+                                throw IllegalArgumentException("${index.type} cannot be used as index")
+                            }
+                        }
+                    }
+                }else{
+                    throw IllegalArgumentException("Cannot index ${re!!.type}")
+                }
+                return re
             }
         } else if (ctx.expression() != null) {
             // '(' expression ')'
-            McfppExprVisitor().visit(ctx.expression())
+            return McfppExprVisitor().visit(ctx.expression())
         } else {
             //是函数调用，将已经计算好的中间量存储到栈中
             for (v in processVarCache){
@@ -556,7 +574,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             //函数树
             Function.currFunction.child.add(func)
             func.parent.add(Function.currFunction)
-            func.returnVar
+            return func.returnVar
         }
     }
 

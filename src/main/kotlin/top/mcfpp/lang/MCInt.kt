@@ -622,12 +622,14 @@ class MCInt : Number<Int> {
     }
 
     override fun storeToStack() {
+        if(parent != null) return
         Function.addCommand("execute " +
                 "store result storage mcfpp:system ${Project.defaultNamespace}.stack_frame[$stackIndex].$identifier int 1 " +
                 "run scoreboard players get $name $`object`")
     }
 
     override fun getFromStack() {
+        if(parent != null) return
         Function.addCommand("execute " +
                 "store result score $name $`object` " +
                 "run data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].$identifier")

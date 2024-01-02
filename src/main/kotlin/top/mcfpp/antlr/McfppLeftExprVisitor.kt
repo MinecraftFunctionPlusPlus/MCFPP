@@ -1,4 +1,4 @@
-package top.mcfpp.lib.antlr
+package top.mcfpp.antlr
 
 import mcfppBaseVisitor
 import top.mcfpp.Project

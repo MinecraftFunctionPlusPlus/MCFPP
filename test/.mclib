@@ -16,12 +16,7 @@
 		{
 			"id":"test",
 			"functions":[
-				"void main()",
-				"void f0(int n)",
-				"int f1(int n)",
-				"void _if_9fb9fb94-89aa-4851-88a5-f38d1a40c1e2()",
-				"void _if_branch_172ede99-9759-4be2-9a74-1628e2c31c13()",
-				"void expression_81e3fca4-6976-45fc-9c8d-3495ba894fc4()"
+				"void main()"
 			],
 			"classes":[
 				

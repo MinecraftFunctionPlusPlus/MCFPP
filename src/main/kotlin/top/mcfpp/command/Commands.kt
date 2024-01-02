@@ -1,11 +1,9 @@
 package top.mcfpp.command
 
 import top.mcfpp.Project
-import top.mcfpp.lang.ClassBase
-import top.mcfpp.lang.ClassObject
-import top.mcfpp.lang.ClassPointer
+import top.mcfpp.lang.*
+import top.mcfpp.lib.Class
 import top.mcfpp.lib.Function
-import top.mcfpp.lang.MCInt
 
 /**
  * 命令总类，提供了大量用于生成命令的方法。默认提供了一些可替换的位点
@@ -20,6 +18,19 @@ object Commands {
      */
     fun function(function: Function): Command {
         return Command.build("function").build(function.namespaceID,function.namespaceID)
+    }
+
+
+    /**
+     * scoreboard players get <target.name> <target.object>
+     *
+     * @param target
+     * @return
+     */
+    fun sbPlayerGet(target: MCInt): Command{
+        return Command.build("scoreboard players get ")
+            .build(target.name,target.name).build(" ")
+            .build(target.`object`.toString(),target.`object`.toString())
     }
 
     /**
@@ -87,5 +98,19 @@ object Commands {
             Command.build("data modify storage entity ${ClassPointer.tempItemEntityUUID} Thrower set from storage mcfpp:temp INIT.${a.clsType.namespace}.${a.clsType.identifier}"),
             Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin ").build("run ","run")
         )
+    }
+
+    fun selectRun(a : CanSelectMember, command: Command) : Array<Command>{
+        val final = when(a){
+            is ClassPointer -> {
+                Commands.selectRun(a)
+            }
+            is ClassType -> {
+                arrayOf(Command.build("execute as ${(a.dataType as Class).uuid} run "))
+            }
+            else -> TODO()
+        }
+        final.last().build(command)
+        return final
     }
 }

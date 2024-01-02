@@ -30,6 +30,10 @@ class Storage {
 
     companion object {
         val NbtData = Storage("mcfpp","data")
+        val MCFPP_SYSTEM = Storage("mcfpp","system")
+        val MCFPP_TEMP = Storage("mcfpp","temp")
+        val MCFPP_ARG = Storage("mcfpp","arg")
+        val MCFPP_OUTPUT = Storage("mcfpp","output")
     }
 
 }

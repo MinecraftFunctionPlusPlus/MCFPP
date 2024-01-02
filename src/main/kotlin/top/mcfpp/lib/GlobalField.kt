@@ -47,6 +47,7 @@ object GlobalField : FieldContainer, IField {
         scoreboards[SbObject.MCS_boolean.name] = SbObject.MCS_boolean
         scoreboards[SbObject.MCS_default.name] = SbObject.MCS_default
         scoreboards[SbObject.MCFPP_INIT.name] = SbObject.MCFPP_INIT
+        scoreboards[SbObject.MCFPP_TEMP.name] = SbObject.MCFPP_TEMP
         return this
     }
 
