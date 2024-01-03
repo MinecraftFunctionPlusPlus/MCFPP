@@ -50,6 +50,7 @@ class NBT : Var, Indexable<NBT>{
      * @param identifier identifier
      */
     constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier){
+        isTemp = true
         path.add(MCString(identifier))
     }
 
@@ -100,6 +101,10 @@ class NBT : Var, Indexable<NBT>{
             if(p.isConcrete){
                 if(index == 0){
                     pathStr = when(p){
+                        is NBT -> {
+                            "{${SNBTUtil.toSNBT(p.value)}}"
+                        }
+
                         is MCInt -> {
                             "[${p.value}]"
                         }
@@ -113,6 +118,10 @@ class NBT : Var, Indexable<NBT>{
                 }
                 else{
                     pathStr += when(p){
+                        is NBT -> {
+                            "{${SNBTUtil.toSNBT(p.value)}}"
+                        }
+
                         is MCInt -> {
                             "[${p.value}]"
                         }
@@ -136,7 +145,7 @@ class NBT : Var, Indexable<NBT>{
                         if(p.parent != null){
                             Function.addCommand(
                                 Commands.selectRun(
-                                    parent!!,
+                                    p.parent!!,
                                     Command.build("execute store result storage mcfpp:arg append_int.index int 1 run ")
                                         .build(Commands.sbPlayerGet(p)))
                             )
@@ -150,7 +159,7 @@ class NBT : Var, Indexable<NBT>{
                         if(p.parent != null){
                             Function.addCommand(
                                 Commands.selectRun(
-                                    parent!!,
+                                    p.parent!!,
                                     Command.build("data modify storage mcfpp:arg path_join.pathList append from entity @s data.${p.identifier}")
                                 )
                             )
@@ -158,11 +167,15 @@ class NBT : Var, Indexable<NBT>{
                             Function.addCommand("data modify storage mcfpp:arg path_join.pathList append from storage mcfpp:system ${Project.currNamespace}.stack_frame[${p.stackIndex}].${p.identifier}")
                         }
                     }
+                    is NBT -> {
+                        val temp = p.getTempVar()
+                        Function.addCommand("data modify storage mcfpp:arg path_join.pathList append from storage mcfpp:temp temp.${temp.identifier}")
+                    }
                     else -> throw IllegalArgumentException("Invalid path type ${p.type}")
                 }
             }
         }
-        if(!isBase && pathStr != ""){
+        if(pathStr != ""){
             //动态路径
             Function.addCommand("data modify storage mcfpp:arg path_join.base set value \"$pathStr\"")
             pathStr = ""
@@ -208,10 +221,11 @@ class NBT : Var, Indexable<NBT>{
                     Function.addCommand(
                         Commands.selectRun(
                             parent!!,
-                            Command.build("function mcfpp.dynamic:data/modify/entity.from.storage_sp")
+                            Command.build("function mcfpp.dynamic:data/modify/entity.from.storage_sp with storage mcfpp:arg dynamic")
                         )
                     )
-                }else{
+                }
+                else{
                     Function.addCommand(
                         Commands.selectRun(
                             parent!!,
@@ -246,7 +260,7 @@ class NBT : Var, Indexable<NBT>{
                     Function.addCommand(
                         Commands.selectRun(
                             parent!!,
-                            Command.build("function mcfpp.dynamic:data/modify/entity.from.storage_sp2")
+                            Command.build("function mcfpp.dynamic:data/modify/entity.from.storage_sp2 with storage mcfpp:arg dynamic")
                         )
                     )
                 }else{
@@ -291,7 +305,7 @@ class NBT : Var, Indexable<NBT>{
                         Function.addCommand(
                             Commands.selectRun(
                                 a.parent!!,
-                                Command.build("function mcfpp.dynamic:data/modify/storage.from.entity_sp3")
+                                Command.build("function mcfpp.dynamic:data/modify/storage.from.entity_sp3 with storage mcfpp:arg dynamic")
                             )
                         )
                     }else{
@@ -326,7 +340,7 @@ class NBT : Var, Indexable<NBT>{
                         }
                         //调用宏
                         Function.addCommand(
-                            Command.build("function mcfpp.dynamic:data/modify/storage.from.storage_sp4")
+                            Command.build("function mcfpp.dynamic:data/modify/storage.from.storage_sp4 with storage mcfpp:arg dynamic")
                         )
                     }
                     Function.addCommand(
@@ -362,7 +376,43 @@ class NBT : Var, Indexable<NBT>{
      * @return
      */
     override fun getTempVar(): Var {
-        TODO("Not yet implemented")
+        if(isConcrete){
+            return NBT(this.value!!)
+        }
+        val temp = NBT()
+        if(isDynamicPath()){
+            if(parent != null){
+                this.getPathString()
+                //动态的，进行解析
+                Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
+                Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set from storage mcfpp:arg path_join.base")
+                Function.addCommand("data modify storage mcfpp:arg dynamic.sourcePath set value ${temp.identifier}")
+                //调用宏
+                Function.addCommand(
+                    Commands.selectRun(
+                        parent!!,
+                        Command.build("function mcfpp.dynamic:data/modify/storage.from.entity_sp5 with storage mcfpp:arg dynamic")
+                    )
+                )
+            }else{
+                this.getPathString("${Project.currNamespace}.stack_frame[$stackIndex]")
+                Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
+                Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set from storage mcfpp:arg path_join.base")
+                Function.addCommand("data modify storage mcfpp:arg dynamic.sourcePath set value ${temp.identifier}")
+                //调用宏
+                Function.addCommand("function mcfpp.dynamic:data/modify/storage.from.entity_sp6 with storage mcfpp:arg dynamic")
+            }
+        }else if(parent != null){
+            Function.addCommand(
+                Commands.selectRun(
+                    parent!!,
+                    Command.build("data modify storage mcfpp:temp temp.${temp.identifier} set from entity @s data.${getPathString()}")
+                )
+            )
+        }else{
+            Function.addCommand("data modify storage mcfpp:temp temp.${temp.identifier} set from storage mcfpp:system ${Project.currNamespace}.stack_frame[${stackIndex}].${getPathString()}")
+        }
+        return temp
     }
 
     override fun storeToStack() {
@@ -425,7 +475,28 @@ class NBT : Var, Indexable<NBT>{
         TODO("Not yet implemented")
     }
 
-    override fun getByStringIndex(index: MCString): NBT {
+    override fun getByIndex(index: Var): NBT {
+        return when(index){
+            is MCInt -> getByIntIndex(index)
+            is MCString -> getByStringIndex(index)
+            is NBT -> getByNBTIndex(index)
+            else -> throw IllegalArgumentException("Invalid index type ${index.type}")
+        }
+    }
+
+    fun getByNBTIndex(index: NBT): NBT{
+        if(nbtType != NBTType.LIST && nbtType != NBTType.ANY){
+            throw NBTTypeException()
+        }
+        if(index.nbtType != NBTType.COMPOUND && index.nbtType != NBTType.ANY){
+            throw NBTTypeException()
+        }
+        val re = NBT(this)
+        re.path.add(index)
+        return re
+    }
+
+    fun getByStringIndex(index: MCString): NBT {
         if(nbtType != NBTType.COMPOUND && nbtType != NBTType.ANY){
             throw NBTTypeException()
         }
@@ -434,7 +505,7 @@ class NBT : Var, Indexable<NBT>{
         return re
     }
 
-    override fun getByIntIndex(index: MCInt): NBT {
+    fun getByIntIndex(index: MCInt): NBT {
         if(nbtType != NBTType.LIST && nbtType != NBTType.ANY){
             throw NBTTypeException()
         }
