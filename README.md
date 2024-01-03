@@ -1,6 +1,6 @@
 ![](https://user-images.githubusercontent.com/90548686/236462051-b901f99c-bdef-435c-8ca2-0dda37b25285.png)
 # 介绍 Introduce
-MCFPP是一个能被编译为Minecraft数据包的全新的面向对象的语言。它旨在以类似C系语言的语法，进行数据包的编写，并引入编程中常用的概念，从而使数据包的编 写更加的便利。
+MCFPP是一个能被编译为Minecraft数据包的全新的面向对象的语言。它旨在以类似C系语言的语法，进行数据包的编写，并引入编程中常用的概念，从而使数据包的编写更加的便利。
 
 MCFPP is a brand new objected-oriented language that can be compiled into Minecraft Datapack. It aims to write datapacks in a syntax similar to C language, and introduces commonly used concepts in programming, thereby making the writing of datapacks more efficient.
 
@@ -20,6 +20,22 @@ MCSharp is a CSharp library. Using MCSharp, developers can develop datapacks usi
 JustMCF是一个简化mcfunction工程的项目。使用JustMCF，你不但可以使用原版的命令，还可以使用项目设计的简化命令，可以使你的命令更加简洁高效。
 
 JustMCF is a project to simplify mcfunction projects. Using JustMCF, you can not only use the original commands, but also use the simplified commands designed by the project, which can make your commands more concise and efficient.
+
+# 更新计划 Update Plan
+* 代码优化  Code optimization
+* 垃圾回收机制  Garbage collection mechanism
+* 更多的变量特性(const, dynamic, import)  More variable features (const, dynamic, import)
+* 接口  Interface
+* 类的继承和多态  Inheritance and polymorphism
+* 结构体  Struct
+* 运算符重载  Operator overload
+* 内联函数(Inline Function)  Inline Function
+* 沙箱  Sandbox
+    * native的语法糖形式  Syntactic sugar form of native
+* 分版本编译  Versioned compilation
+* 基本库  Basic library
+* 枚举  Enum
+
 
 # 特性 Features
 ## MCFPP支持基本的逻辑语句
@@ -58,4 +74,6 @@ void example{
 }
 ```
 # 快速开始 QuickStart
-[MCFPP Guider](http://alumopper.top:8001/quickstart)
+[MCFPP Guider(简体中文)](https://alumopper.github.io/mcfppguide/quickstart)
+
+[MCFPP Guider(English)](https://alumopper.github.io/mcfppguide/en-US/quickstart)
