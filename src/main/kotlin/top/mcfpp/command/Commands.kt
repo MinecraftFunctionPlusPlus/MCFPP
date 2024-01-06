@@ -113,4 +113,8 @@ object Commands {
         final.last().build(command)
         return final
     }
+
+    fun selectRun(a : CanSelectMember, command: String) : Array<Command>{
+        return selectRun(a, Command.build(command))
+    }
 }
