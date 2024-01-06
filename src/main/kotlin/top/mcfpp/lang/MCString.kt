@@ -110,20 +110,12 @@ class MCString : Var {
                 a.getTempVar() as NBT
             }else a
             isConcrete = false
-            val final = when(val parent = parent){
-                is ClassPointer -> {
-                    Commands.selectRun(parent)
-                }
-                is ClassType -> {
-                    arrayOf(Command.build("execute as ${(parent.dataType as Class).uuid} run "))
-                }
-                else -> TODO()
-            }
-            final.last().build("data modify entity @s data.$identifier set from storage mcfpp:temp temp.${b.identifier}")
-            if(final.size == 2){
-                Function.addCommand(final[0])
-            }
-            Function.addCommand(final.last())
+            Function.addCommand(
+                Commands.selectRun(
+                    parent!!,
+                    Command.build("data modify entity @s data.$identifier set from storage mcfpp:temp temp.${b.identifier}")
+                )
+            )
         }else{
             //是局部变量
             if(a.isConcrete){
@@ -132,20 +124,10 @@ class MCString : Var {
             }else{
                 isConcrete = false
                 if(a.parent != null){
-                    val final = when(val parent = a.parent){
-                        is ClassPointer -> {
-                            Commands.selectRun(parent)
-                        }
-                        is ClassType -> {
-                            arrayOf(Command.build("execute as ${(parent.dataType as Class).uuid} run "))
-                        }
-                        else -> TODO()
-                    }
-                    final.last().build("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set from entity @s data.${a.identifier}")
-                    if(final.size == 2){
-                        Function.addCommand(final[0])
-                    }
-                    Function.addCommand(final.last())
+                    Commands.selectRun(
+                        a.parent!!,
+                        Command.build("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set from entity @s data.${a.identifier}")
+                    )
                 }else{
                     val command = Command.build("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set from storage mcfpp:system ${Project.currNamespace}.stack_frame[${a.stackIndex}].${a.identifier}")
                     Function.addCommand(command)
