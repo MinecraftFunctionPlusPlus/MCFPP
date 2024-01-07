@@ -518,17 +518,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
                 if(re is Indexable<*>){
                     for (value in ctx.identifierSuffix()) {
                         val index = visit(value.conditionalExpression())!!
-                        re = when(index){
-                            is MCString -> {
-                                (re as Indexable<*>).getByStringIndex(index)
-                            }
-                            is MCInt -> {
-                                (re as Indexable<*>).getByIntIndex(index)
-                            }
-                            else -> {
-                                throw IllegalArgumentException("${index.type} cannot be used as index")
-                            }
-                        }
+                        re = (re as Indexable<*>).getByIndex(index)
                     }
                 }else{
                     throw IllegalArgumentException("Cannot index ${re!!.type}")
