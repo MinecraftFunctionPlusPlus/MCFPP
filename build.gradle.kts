@@ -1,9 +1,12 @@
+import org.gradle.kotlin.dsl.cpp
+
 plugins {
     kotlin("jvm") version "1.8.0"
     groovy
     application
     antlr
     id("org.jetbrains.dokka") version "1.8.10"
+    java
 }
 
 group = "top.mcfpp"
@@ -54,6 +57,29 @@ tasks.jar{
     }
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
     from(configurations.runtimeClasspath.get().filter { it.name.endsWith("jar") }.map { zipTree(it) })
+
+    from("build/dll"){
+        into("native")
+        include("**/*.dll")
+    }
+}
+
+val jniSourceDir = file("src/main/java/top/mcfpp/jni")
+val cppSourceDir = file("src/main/cpp")
+
+tasks.register<JavaCompile>("generateJni") {
+    group = "build"
+    destinationDirectory.set(file("$buildDir/generated/jni"))
+    source = fileTree(jniSourceDir)
+    classpath = files()
+    options.compilerArgs = listOf("-h", "$buildDir/generated/jni")
+}
+
+tasks.register<Exec>("compileCpp") {
+    group = "build"
+    workingDir(cppSourceDir)
+    commandLine("g++", "-I", "${System.getProperty("java.home")}/include", "-I", "${System.getProperty("java.home")}/include/win32", "-I", "$buildDir/generated/jni", "-shared", "-o", "$buildDir/dll/native.dll", "*.cpp")
+
 }
 
 kotlin {
