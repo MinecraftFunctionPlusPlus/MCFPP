@@ -1,40 +1,74 @@
 package top.mcfpp.lang
 
+import net.querz.nbt.tag.IntArrayTag
+import net.querz.nbt.tag.Tag
+import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Member
 import top.mcfpp.lib.Function
 import java.util.UUID
 
 /**
- * 代表了一个实体。
+ * 代表了一个实体。一个实体类型的变量通常是一个UUID数组，可以通过Thrower法来选择实体，从而实现对实体的操作。
  *
- * 利用一个记分板
  */
-class Entity : Var{
-
-    /**
-     * 实体的id
-     */
-    val entityID: String
-
-    /**
-     * 实体的uuid，用于选择实体
-     */
-    val uuid: UUID?
+class Entity : NBTBasedData{
 
     override val type: String
-        get() = "Entity"
+        get() = "entity"
 
-    constructor(entityID: String){
-        this.entityID = entityID
-        isConcrete = false
-        uuid = null
+    /**
+     * 创建一个list类型的变量。它的mc名和变量所在的域容器有关。
+     *
+     * @param identifier 标识符。默认为
+     */
+    constructor(
+        curr: FieldContainer,
+        identifier: String = UUID.randomUUID().toString()
+    ) : this(curr.prefix + identifier) {
+        this.identifier = identifier
+
     }
 
-    constructor(entityID: String, uuid: UUID){
-        this.entityID = entityID
-        this.uuid = uuid
+    /**
+     * 创建一个list值。它的标识符和mc名相同。
+     * @param identifier identifier
+     */
+    constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier)
+
+    /**
+     * 创建一个固定的list
+     *
+     * @param identifier 标识符
+     * @param curr 域容器
+     * @param value 值
+     */
+    constructor(
+        curr: FieldContainer,
+        value: IntArrayTag,
+        identifier: String = UUID.randomUUID().toString()
+    ) : super(curr.prefix + identifier) {
         isConcrete = true
+        if(value.value.size != 4) throw VariableConverseException()
+        this.value = value
     }
+
+    /**
+     * 创建一个固定的list。它的标识符和mc名一致/
+     * @param identifier 标识符。如不指定，则为随机uuid
+     * @param value 值
+     */
+    constructor(value: IntArrayTag, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
+        isConcrete = true
+        if(value.value.size != 4) throw VariableConverseException()
+        this.value = value
+    }
+
+    /**
+     * 复制一个list
+     * @param b 被复制的list值
+     */
+    constructor(b: NBTBasedData) : super(b)
 
     /**
      * 根据标识符获取实体的NBT
@@ -67,41 +101,30 @@ class Entity : Var{
      * @param b 变量的对象
      */
     override fun assign(b: Var?) {
-
+        hasAssigned = true
+        when (b) {
+            is Entity -> {
+                assignCommand(b)
+            }
+            else -> {
+                throw VariableConverseException()
+            }
+        }
     }
 
     /**
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型
      */
-    override fun cast(type: String): Var? {
-        TODO("Not yet implemented")
+    override fun cast(type: String): Var {
+        return when(type){
+            "entity" -> this
+            "nbt" -> NBT(value!!)
+            else -> throw VariableConverseException()
+        }
     }
 
-    override fun clone(): Any {
-        TODO("Not yet implemented")
-    }
+    override fun createTempVar(): Var = Entity()
 
-    /**
-     * 返回一个临时变量。这个变量将用于右值的计算过程中，用于避免计算时对原来的变量进行修改
-     *
-     * @return
-     */
-    override fun getTempVar(): Var {
-        TODO("Not yet implemented")
-    }
-
-    override fun storeToStack() {
-        TODO("Not yet implemented")
-    }
-
-    override fun getFromStack() {
-        TODO("Not yet implemented")
-    }
-
-    override fun toDynamic() {
-        TODO("Not yet implemented")
-    }
-
-
+    override fun createTempVar(value: Tag<*>): Var = Entity(value as IntArrayTag)
 }

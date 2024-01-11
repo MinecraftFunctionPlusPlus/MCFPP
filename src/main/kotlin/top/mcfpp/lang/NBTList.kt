@@ -97,23 +97,9 @@ class NBTList<T : Tag<*>?> : NBTBasedData, Indexable<NBT> {
         }
     }
 
-    /**
-     * 返回一个临时变量。这个变量将用于右值的计算过程中，用于避免计算时对原来的变量进行修改
-     *
-     * @return
-     */
-    override fun getTempVar(): Var {
-        if (isTemp) return this
-        if (isConcrete) {
-            return NBTList(value as ListTag<T>)
-        }
-        val re = NBTList<T>()
-        re.isTemp = true
-        re.assign(this)
-        return re
-    }
-
-
+    override fun createTempVar(): Var = NBTList<T>()
+    override fun createTempVar(value: Tag<*>): Var = NBTList<T>(value as ListTag<T>)
+    
     /**
      * 根据标识符获取一个成员。
      *

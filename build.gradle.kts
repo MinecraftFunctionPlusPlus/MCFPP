@@ -7,6 +7,7 @@ plugins {
     antlr
     id("org.jetbrains.dokka") version "1.8.10"
     java
+    cpp
 }
 
 group = "top.mcfpp"
@@ -90,7 +91,6 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
     kotlinOptions.jvmTarget = "1.8"
     dependsOn(tasks.generateGrammarSource)
 }
-
 
 application {
     mainClass.set("MCFPPKt")

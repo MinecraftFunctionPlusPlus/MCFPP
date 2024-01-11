@@ -64,7 +64,7 @@ abstract class NBTBasedData : Var {
      * 复制一个list
      * @param b 被复制的list值
      */
-    constructor(b: MCInt) : super(b)
+    constructor(b: NBTBasedData) : super(b)
     protected fun assignCommand(a: NBTBasedData){
         if(parent != null){
             val b = if(a.parent != null){
@@ -91,11 +91,13 @@ abstract class NBTBasedData : Var {
     }
 
     override fun storeToStack() {
-        TODO("Not yet implemented")
+        //什么都不用做哦
+        return
     }
 
     override fun getFromStack() {
-        TODO("Not yet implemented")
+        //什么都不用做哦
+        return
     }
 
     override fun toDynamic() {
@@ -109,6 +111,20 @@ abstract class NBTBasedData : Var {
             Function.addCommand("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[${stackIndex}].$identifier set value ${SNBTUtil.toSNBT(value)}")
         }
     }
+
+    override fun getTempVar(): Var {
+        if (isTemp) return this
+        if (isConcrete) {
+            return createTempVar(value!!)
+        }
+        val re = createTempVar()
+        re.isTemp = true
+        re.assign(this)
+        return re
+    }
+
+    abstract fun createTempVar(): Var
+    abstract fun createTempVar(value: Tag<*>): Var
 
     override fun clone(): Any {
         TODO("Not yet implemented")

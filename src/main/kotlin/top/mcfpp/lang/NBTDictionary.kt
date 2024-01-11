@@ -2,6 +2,7 @@ package top.mcfpp.lang
 
 import net.querz.nbt.tag.CompoundTag
 import net.querz.nbt.tag.ListTag
+import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Function
@@ -93,21 +94,8 @@ open class NBTDictionary : NBTBasedData, Indexable<NBT> {
         }
     }
 
-    /**
-     * 返回一个临时变量。这个变量将用于右值的计算过程中，用于避免计算时对原来的变量进行修改
-     *
-     * @return
-     */
-    override fun getTempVar(): Var {
-        if (isTemp) return this
-        if (isConcrete) {
-            return NBTDictionary(value as CompoundTag)
-        }
-        val re = NBTDictionary()
-        re.isTemp = true
-        re.assign(this)
-        return re
-    }
+    override fun createTempVar(): Var = NBTMap()
+    override fun createTempVar(value: Tag<*>): Var = NBTMap(value as CompoundTag)
 
     /**
      * 根据标识符获取一个成员。
