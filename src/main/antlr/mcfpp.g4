@@ -479,6 +479,7 @@ value
     |   STRING
     |   BOOL
     |   nbtValue
+    |   range
     ;
 
 className
@@ -540,7 +541,13 @@ INT:[1-9][0-9]*|[0];
 
 FLOAT
     :   INT '.' [0-9]+
-    |   [0-9] '.' [0-9]+ 'e' '-'? [0-9]
+    |   [0-9] ('.' [0-9]+)? 'e' '-'? [0-9]
+    ;
+
+range
+    :   num1=(INT|FLOAT) '..' num2=(INT|FLOAT)
+    |   num1=(INT|FLOAT) '..'
+    |   '..' num2=(INT|FLOAT)
     ;
 
 
@@ -548,6 +555,7 @@ BOOL
     :   'true'
     |   'false'
     ;
+
 VAR:'var';
 
 VEC:'vec';

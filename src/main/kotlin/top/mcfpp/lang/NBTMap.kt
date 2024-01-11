@@ -1,6 +1,8 @@
 package top.mcfpp.lang
 
 import net.querz.nbt.tag.CompoundTag
+import net.querz.nbt.tag.ListTag
+import net.querz.nbt.tag.Tag
 import top.mcfpp.lib.FieldContainer
 import java.util.*
 
@@ -47,5 +49,8 @@ class NBTMap : NBTDictionary{
      * @param b 被复制的list值
      */
     constructor(b: CompoundTag) : super(b)
+
+    override fun createTempVar(): Var = NBTMap()
+    override fun createTempVar(value: Tag<*>): Var = NBTMap(value as CompoundTag)
 
 }
