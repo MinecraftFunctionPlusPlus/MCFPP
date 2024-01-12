@@ -2,6 +2,7 @@ package top.mcfpp.lang
 
 import net.querz.nbt.tag.CompoundTag
 import net.querz.nbt.tag.ListTag
+import net.querz.nbt.tag.StringTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.FieldContainer
@@ -126,10 +127,10 @@ open class NBTDictionary : NBTBasedData, Indexable<NBT> {
     override fun getByIndex(index: Var): NBT {
         return if(index is MCString){
             if(index.isConcrete && isConcrete){
-                if((value as CompoundTag).containsKey(index.value)){
+                if((value as CompoundTag).containsKey((index.value as StringTag).valueToString())){
                     throw IndexOutOfBoundsException("Index out of bounds")
                 }else{
-                    NBT((value as CompoundTag)[index.value])
+                    NBT((value as CompoundTag)[(index.value as StringTag).valueToString()])
                 }
             }else {
                 (cast("nbt") as NBT).getByStringIndex(index)

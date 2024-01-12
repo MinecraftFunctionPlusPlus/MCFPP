@@ -1,6 +1,8 @@
 package top.mcfpp.lang
 
 import net.querz.nbt.io.SNBTUtil
+import net.querz.nbt.tag.StringTag
+import net.querz.nbt.tag.Tag
 import top.mcfpp.Project
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
@@ -25,46 +27,60 @@ import java.util.*
  *态的字符串和原始JSON文本功能。
  *
  */
-class MCString : Var {
-    var value: String? = null
+class MCString : NBTBasedData {
+
     override var type = "string"
 
     /**
-     * 构造一个字符串
+     * 创建一个list类型的变量。它的mc名和变量所在的域容器有关。
      *
-     * @param container 域容器，用于确定字符串的mc名。如果不指定identifier，则此项指定无效。如果为null则标识符名和mc名相同
-     * @param identifier 标识符。如果为null则为随机uuid
-     * @param value 字符串的值，可以为null
+     * @param identifier 标识符。默认为
      */
-    constructor(container: FieldContainer?, identifier: String?, value: String?) {
-        if(value != null){
-            this.value = value
-            isConcrete = true
-        }else{
-            isConcrete = false
-        }
-        if(identifier == null){
-            this.identifier = UUID.randomUUID().toString()
-        }else{
-            if(container != null){
-                this.identifier = container.prefix + identifier
-            }else{
-                this.identifier = identifier
-            }
-        }
+    constructor(
+        curr: FieldContainer,
+        identifier: String = UUID.randomUUID().toString()
+    ) : this(curr.prefix + identifier) {
+        this.identifier = identifier
+
     }
 
-    constructor(value: String?) : this(null, null, value)
+    /**
+     * 创建一个list值。它的标识符和mc名相同。
+     * @param identifier identifier
+     */
+    constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier)
 
-    constructor(b: MCString) {
-        value = b.value
-        isConcrete = b.isConcrete
+    /**
+     * 创建一个固定的list
+     *
+     * @param identifier 标识符
+     * @param curr 域容器
+     * @param value 值
+     */
+    constructor(
+        curr: FieldContainer,
+        value: StringTag,
+        identifier: String = UUID.randomUUID().toString()
+    ) : super(curr.prefix + identifier) {
+        isConcrete = true
+        this.value = value
     }
 
-    @Override
-    override fun toString(): String {
-        return value!!
+    /**
+     * 创建一个固定的list。它的标识符和mc名一致/
+     * @param identifier 标识符。如不指定，则为随机uuid
+     * @param value 值
+     */
+    constructor(value: StringTag, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
+        isConcrete = true
+        this.value = value
     }
+
+    /**
+     * 复制一个list
+     * @param b 被复制的list值
+     */
+    constructor(b: MCString) : super(b)
 
     /**
      * 根据标识符获取一个成员。
@@ -103,84 +119,16 @@ class MCString : Var {
         }
     }
 
-    private fun assignCommand(a: MCString){
-        if (parent != null){
-            //是成员
-            val b = if(a.parent != null){
-                a.getTempVar() as NBT
-            }else a
-            isConcrete = false
-            Function.addCommand(
-                Commands.selectRun(
-                    parent!!,
-                    Command.build("data modify entity @s data.$identifier set from storage mcfpp:temp temp.${b.identifier}")
-                )
-            )
-        }else{
-            //是局部变量
-            if(a.isConcrete){
-                value = a.value
-                isConcrete = true
-            }else{
-                isConcrete = false
-                if(a.parent != null){
-                    Commands.selectRun(
-                        a.parent!!,
-                        Command.build("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set from entity @s data.${a.identifier}")
-                    )
-                }else{
-                    val command = Command.build("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set from storage mcfpp:system ${Project.currNamespace}.stack_frame[${a.stackIndex}].${a.identifier}")
-                    Function.addCommand(command)
-                }
-            }
+    @Override
+    override fun cast(type: String): Var {
+        return when(type){
+            "string" -> this
+            "nbt" -> NBT(value!!)
+            else -> throw VariableConverseException()
         }
     }
 
-    @Override
-    override fun cast(type: String): Var? {
-        return null
-    }
+    override fun createTempVar(): Var = MCString()
 
-    @Override
-    override fun clone(): MCString {
-        return MCString(this)
-    }
-
-    override fun getTempVar(): Var {
-        TODO("Not yet implemented")
-    }
-
-    override fun storeToStack() {
-        //什么都不用做哦
-        return
-    }
-
-    override fun getFromStack() {
-        //什么都不用做哦
-        return
-    }
-
-    override fun toDynamic() {
-        val parent = parent
-        if(!isConcrete) return
-        isConcrete = false
-        if (parent != null) {
-            val cmd = when(parent){
-                is ClassPointer -> {
-                    Commands.selectRun(parent)
-                }
-                is ClassType -> {
-                    arrayOf(Command.build("execute as ${(parent.dataType as Class).uuid} run "))
-                }
-                else -> TODO()
-            }
-            if(cmd.size == 2){
-                Function.addCommand(cmd[0])
-            }
-            Function.addCommand(cmd.last().build("data modify entity @s data.${identifier} set value \"$value\""))
-        } else {
-            val cmd = Command.build("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set value \"$value\"")
-            Function.addCommand(cmd)
-        }
-    }
+    override fun createTempVar(value: Tag<*>): Var = MCString(value as StringTag)
 }

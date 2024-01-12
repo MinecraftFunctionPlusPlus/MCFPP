@@ -1,6 +1,5 @@
 package top.mcfpp.antlr
 
-import mcfppBaseVisitor
 import net.querz.nbt.io.SNBTUtil
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
