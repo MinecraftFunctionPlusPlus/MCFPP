@@ -48,8 +48,9 @@ tasks.test {
 }
 
 tasks.generateGrammarSource {
-    arguments = arguments + listOf("-visitor", "-long-messages")
-//    outputDirectory =  File("src/gen")
+    mkdir("build")
+    arguments = arguments + listOf("-visitor", "-long-messages", "-package", "top.mcfpp.antlr")
+    outputDirectory =  File("build/generated-src/antlr/main/top/mcfpp/antlr")
 }
 
 tasks.jar{

@@ -1,69 +1,95 @@
 package top.mcfpp.lang
 
+import net.querz.nbt.tag.Tag
+import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
+import java.util.*
 
-class JsonString : Var{
+class JsonString : NBTBasedData{
 
-    val jsonText : JsonText
+    val jsonText : JsonText? = null
 
-    constructor(jsonText: JsonText){
-        this.jsonText = jsonText
+    /**
+     * 创建一个list类型的变量。它的mc名和变量所在的域容器有关。
+     *
+     * @param identifier 标识符。默认为
+     */
+    constructor(
+        curr: FieldContainer,
+        identifier: String = UUID.randomUUID().toString()
+    ) : this(curr.prefix + identifier) {
+        this.identifier = identifier
+
     }
 
-    constructor(jsonString: JsonString):super(jsonString){
-        jsonText = jsonString.jsonText
+    /**
+     * 创建一个list值。它的标识符和mc名相同。
+     * @param identifier identifier
+     */
+    constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier)
+
+    /**
+     * 创建一个固定的list
+     *
+     * @param identifier 标识符
+     * @param curr 域容器
+     * @param value 值
+     */
+    constructor(
+        curr: FieldContainer,
+        value: Tag<*>,
+        identifier: String = UUID.randomUUID().toString()
+    ) : super(curr.prefix + identifier) {
+        isConcrete = true
+        this.value = value
     }
+
+    /**
+     * 创建一个固定的list。它的标识符和mc名一致/
+     * @param identifier 标识符。如不指定，则为随机uuid
+     * @param value 值
+     */
+    constructor(value: Tag<*>, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
+        isConcrete = true
+        this.value = value
+    }
+
+    /**
+     * 复制一个list
+     * @param b 被复制的list值
+     */
+    constructor(b: NBTBasedData) : super(b)
 
     override val type: String
         get() = "jstring"
 
     override fun assign(b: Var?) {
-        TODO("Not yet implemented")
+        if(b is JsonString){
+            assignCommand(b)
+        }else{
+            throw VariableConverseException()
+        }
     }
 
-    override fun cast(type: String): Var? {
-        TODO("Not yet implemented")
+    override fun cast(type: String): Var {
+        return when(type){
+            "jstring" -> this
+            "nbt" -> NBT(value!!)
+            "string" -> TODO()
+            else -> throw VariableConverseException()
+        }
     }
 
-    override fun clone(): Any {
-        TODO("Not yet implemented")
-    }
+    override fun createTempVar(): Var = JsonString()
 
-    override fun getTempVar(): Var {
-        TODO("Not yet implemented")
-    }
+    override fun createTempVar(value: Tag<*>) = JsonString(value)
 
-    override fun storeToStack() {
-        TODO("Not yet implemented")
-    }
-
-    override fun getFromStack() {
-        TODO("Not yet implemented")
-    }
-
-    override fun toDynamic() {
-        TODO("Not yet implemented")
-    }
-
-    /**
-     * 根据标识符获取一个成员。
-     *
-     * @param key 成员的mcfpp标识符
-     * @param accessModifier 访问者的访问权限
-     * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
-     */
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
         TODO("Not yet implemented")
     }
 
-    /**
-     * 根据方法标识符和方法的参数列表获取一个方法。如果没有这个方法，则返回null
-     *
-     * @param key 成员方法的标识符
-     * @param params 成员方法的参数
-     * @return
-     */
     override fun getMemberFunction(
         key: String,
         params: List<String>,

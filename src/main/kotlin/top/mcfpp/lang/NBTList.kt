@@ -6,11 +6,11 @@ import top.mcfpp.Project
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.lib.FieldContainer
+import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
-import top.mcfpp.lib.Member
 import java.util.*
 import kotlin.Number
+import kotlin.reflect.jvm.javaMethod
 
 class NBTList<T : Tag<*>?> : NBTBasedData, Indexable<NBT> {
 
@@ -140,5 +140,15 @@ class NBTList<T : Tag<*>?> : NBTBasedData, Indexable<NBT> {
         }else{
             throw IllegalArgumentException("Index must be a int")
         }
+    }
+
+    companion object {
+        val data = CompoundData("list", "mcfpp")
+        //注册函数
+        init {
+            data.field.addFunction(NativeFunction("add",NBTListData::add.javaMethod!!,"mcfpp"),false)
+        }
+
+
     }
 }

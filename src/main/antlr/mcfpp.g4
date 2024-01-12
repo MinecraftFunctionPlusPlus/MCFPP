@@ -38,7 +38,7 @@ compilationUnit
 
 //命名空间声明
 namespaceDeclaration
-    :   'namespace' Identifier ('.' Identifier)* ';'
+    :   doc_comment? 'namespace' Identifier ('.' Identifier)* ';'
     ;
 
 importDeclaration
@@ -47,8 +47,8 @@ importDeclaration
 
 //类或函数声明
 typeDeclaration
-    :   annoation
-    |   declarations
+    :   doc_comment? annoation
+    |   doc_comment? declarations
     ;
 
 //类或函数声明
@@ -65,7 +65,7 @@ declarations
 
 //全局声明
 globalDeclaration
-    :   GLOBAL '{' (fieldDeclaration ';')* '}'
+    :   GLOBAL '{' (doc_comment? fieldDeclaration ';')* '}'
     ;
 
 //类声明
@@ -79,7 +79,7 @@ nativeClassDeclaration
     ;
 
 nativeClassBody
-    :   '{' nativeClassFunctionDeclaration* '}'
+    :   '{' (doc_comment? nativeClassFunctionDeclaration)* '}'
     ;
 
 staticClassMemberDeclaration
@@ -91,7 +91,7 @@ classMemberDeclaration
     ;
 
 classBody
-    :   '{' (classMemberDeclaration|staticClassMemberDeclaration)* '}'
+    :   '{' (doc_comment? (classMemberDeclaration|staticClassMemberDeclaration))* '}'
     ;
 
 //类成员
@@ -125,7 +125,7 @@ structDeclaration
     ;
 
 structBody
-    :   '{' (structMemberDeclaration|staticStructMemberDeclaration)* '}'
+    :   '{' (doc_comment? (structMemberDeclaration|staticStructMemberDeclaration))* '}'
     ;
 
 structMemberDeclaration
@@ -156,7 +156,7 @@ interfaceDeclaration
     ;
 
 interfaceBody
-    :   '{' interfaceFunctionDeclaration* '}'
+    :   '{'( doc_comment? interfaceFunctionDeclaration )* '}'
     ;
 
 interfaceFunctionDeclaration
@@ -616,9 +616,17 @@ STRING: ('"' .*? '"' )|( '\'' .*? '\'' );
 WS  :  [ \t\r\n\u000C]+ -> skip
     ;
 
-//COMMENT
-//    :   '/*' .*? '*/' -> skip
-//    ;
+doc_comment
+    :   DOC_COMMENT
+    ;
+
+DOC_COMMENT
+    :   '/**' .*? '*/'
+    ;
+
+BLOCK_COMMENT
+    :   '/*' .*? '*/' -> skip
+    ;
 
 LINE_COMMENT
     :   '//' ~[\r\n]* -> skip
