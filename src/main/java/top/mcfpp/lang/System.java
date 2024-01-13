@@ -12,7 +12,7 @@ public class System {
 
     @MCFPPNative
     public static void print(@NotNull Var[] vars, CanSelectMember caller) {
-        //Ö»»áÓĞÒ»¸ö²ÎÊıÅ¶
+        //åªä¼šæœ‰ä¸€ä¸ªå‚æ•°å“¦
         Var var = vars[0];
         if (var instanceof MCInt) print((MCInt) var);
         else if (var instanceof JsonString) print((JsonString) var);
@@ -22,7 +22,7 @@ public class System {
     @InsertCommand
     public static void print(@NotNull MCInt var) {
         if (var.isConcrete()) {
-            //ÊÇÈ·¶¨µÄ£¬Ö±½ÓÊä³öÊıÖµ
+            //æ˜¯ç¡®å®šçš„ï¼Œç›´æ¥è¾“å‡ºæ•°å€¼
             Function.Companion.addCommand("tellraw @a " + var.getValue());
         }else {
             Function.Companion.addCommand("tellraw @a " + new JsonTextNumber(var).toJson());

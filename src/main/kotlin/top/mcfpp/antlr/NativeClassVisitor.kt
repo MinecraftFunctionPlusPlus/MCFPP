@@ -1,6 +1,6 @@
 package top.mcfpp.antlr
 
-import mcfppBaseVisitor
+import top.mcfpp.antlr.mcfppBaseVisitor
 import top.mcfpp.Project
 import top.mcfpp.exception.ClassDuplicationException
 import top.mcfpp.lang.ClassPointer

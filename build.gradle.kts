@@ -15,18 +15,10 @@ version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
-    maven {
-        setUrl("https://jitpack.io")
-    }
-    maven {
-        setUrl("https://maven.aliyun.com/nexus/content/groups/public/")
-    }
-    maven {
-        setUrl("https://jitpack.io/")
-    }
-    maven {
-        setUrl("https://libraries.minecraft.net")
-    }
+    maven("https://jitpack.io")
+    maven("https://maven.aliyun.com/nexus/content/groups/public/")
+    maven("https://jitpack.io/")
+    maven("https://libraries.minecraft.net")
 }
 
 dependencies {
@@ -85,11 +77,11 @@ tasks.register<Exec>("compileCpp") {
 }
 
 kotlin {
-    jvmToolchain(8)
+    jvmToolchain(17)
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-    kotlinOptions.jvmTarget = "1.8"
+    kotlinOptions.jvmTarget = "17"
     dependsOn(tasks.generateGrammarSource)
 }
 
