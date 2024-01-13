@@ -1,7 +1,7 @@
 package top.mcfpp.io
 
-import mcfppLexer
-import mcfppParser
+import top.mcfpp.antlr.mcfppLexer
+import top.mcfpp.antlr.mcfppParser
 import org.antlr.v4.runtime.*
 import top.mcfpp.Project
 import top.mcfpp.lib.*

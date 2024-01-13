@@ -1,6 +1,6 @@
 package top.mcfpp.antlr
 
-import mcfppBaseListener
+import top.mcfpp.antlr.mcfppBaseListener
 import org.antlr.v4.runtime.RuleContext
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand

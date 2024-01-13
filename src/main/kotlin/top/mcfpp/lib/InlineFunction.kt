@@ -1,5 +1,6 @@
 package top.mcfpp.lib
 
+import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.lang.CanSelectMember
 import top.mcfpp.lang.Var
 
