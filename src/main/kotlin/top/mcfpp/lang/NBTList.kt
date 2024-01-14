@@ -146,7 +146,7 @@ class NBTList<T : Tag<*>?> : NBTBasedData, Indexable<NBT> {
         val data = CompoundData("list", "mcfpp")
         //注册函数
         init {
-            data.field.addFunction(NativeFunction("add",NBTListData::add.javaMethod!!,"mcfpp"),false)
+            //data.field.addFunction(NativeFunction("add",NBTListData::add.javaMethod!!,"mcfpp"),false)
         }
 
 
