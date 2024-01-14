@@ -2,20 +2,20 @@ package top.mcfpp.lang;
 public class Range<T extends Number<?>> {
 
     /**
-     * ±ÕÇø¼ä×ó¶Ë
+     * é—­åŒºé—´å·¦ç«¯
      */
     public T start;
 
     /**
-     * ±ÕÇø¼äÓÒ¶Ë
+     * é—­åŒºé—´å³ç«¯
      */
     public T end;
 
 
     /**
-     * ¹¹ÔìÒ»¸öÇø¼ä
-     * @param start Çø¼ä×ó¶Ë¡£ÈôÎªnullÔòÃ»ÓĞ×ó¶Ë¡£
-     * @param end Çø¼äÓÒ¶Ë¡£ÈôÎªnullÔòÃ»ÓĞÓÒ¶Ë¡£
+     * æ„é€ ä¸€ä¸ªåŒºé—´
+     * @param start åŒºé—´å·¦ç«¯ã€‚è‹¥ä¸ºnullåˆ™æ²¡æœ‰å·¦ç«¯ã€‚
+     * @param end åŒºé—´å³ç«¯ã€‚è‹¥ä¸ºnullåˆ™æ²¡æœ‰å³ç«¯ã€‚
      */
     public Range(T start, T end){
         this.start = start;

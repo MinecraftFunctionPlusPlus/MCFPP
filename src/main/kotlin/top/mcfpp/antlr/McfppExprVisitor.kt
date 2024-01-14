@@ -447,7 +447,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
                 return MCInt(Integer.parseInt(valueContext.INT().text))
             } else if (valueContext.STRING() != null) {
                 val r: String = valueContext.STRING().text
-                return MCString(null,null,r.substring(1, r.length - 1))
+                return MCString(r.substring(1, r.length - 1))
             } else if (valueContext.FLOAT() != null){
                 return MCFloat(valueContext.FLOAT()!!.text.toFloat())
             } else if (valueContext.BOOL() != null){

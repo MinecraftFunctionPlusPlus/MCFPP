@@ -1,6 +1,7 @@
 package top.mcfpp.lang
 
 import top.mcfpp.Project
+import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.exception.ClassNotDefineException
 import top.mcfpp.exception.OperationNotImplementException
 import top.mcfpp.exception.VariableConverseException
@@ -292,7 +293,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                 "int" -> `var` = MCInt(container,identifier)
                 "bool" -> `var` = MCBool(container, identifier)
                 "selector" -> `var` = Selector(identifier)
-                "entity" -> `var` = MCString(container, identifier, null)
+                "entity" -> `var` = MCString(container, identifier)
                 "string" -> TODO()
                 "float" -> TODO()
                 "nbt" -> `var` = NBT(container, identifier)
@@ -329,7 +330,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                 `var` = when (typeContext.text) {
                     "int" -> MCInt(container, ctx.Identifier().text)
                     "bool" -> MCBool(container, ctx.Identifier().text)
-                    "string" -> MCString(container, ctx.Identifier().text, null)
+                    "string" -> MCString(container, ctx.Identifier().text)
                     "float" -> MCFloat(container, ctx.Identifier().text)
                     "nbt" -> NBT(container, ctx.Identifier().text)
                     else -> TODO()
