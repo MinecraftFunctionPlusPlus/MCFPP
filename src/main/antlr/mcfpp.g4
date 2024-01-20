@@ -107,7 +107,7 @@ abstractClassFunctionDeclaration
     ;
 
 nativeClassFunctionDeclaration
-    :   OVERRIDE? FUNCTION Identifier '(' parameterList? ')' '=' javaRefer ';'
+    :   OVERRIDE? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '=' javaRefer ';'
     ;
 
 classFieldDeclaration
@@ -171,7 +171,7 @@ namespaceID
     ;
 
 nativeFuncDeclaration
-    :   FUNCTION Identifier '(' parameterList? ')' '=' javaRefer ';'
+    :   FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '=' javaRefer ';'
     ;
 
 javaRefer

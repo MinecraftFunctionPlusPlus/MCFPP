@@ -27,7 +27,7 @@ class NativeFunction : Function, Native {
      */
     var javaMethodName: String
 
-    constructor(name: String, javaMethod: String, namespace: String = Project.currNamespace) : super(name, namespace, "void"){
+    constructor(name: String, javaMethod: String, returnType: String, namespace: String = Project.currNamespace) : super(name, namespace, returnType){
         val strs = javaMethod.split(".")
         try {
             javaMethodName = strs[strs.size - 1]
@@ -45,10 +45,17 @@ class NativeFunction : Function, Native {
         }
     }
 
-    constructor(name: String, javaMethod: Method, namespace: String = Project.currNamespace) : super(name, namespace, "void") {
+    constructor(javaMethod: Method, returnType: String, namespace: String = Project.currNamespace): super(javaMethod.name, namespace, returnType){
         this.javaMethod = javaMethod
         this.javaClassName = javaMethod.declaringClass.`package`.name + "." + javaMethod.declaringClass.name
         this.javaMethodName = javaMethod.name
+        this.params
+    }
+
+    constructor(name: String, javaMethod: Method, returnType: String, namespace: String = Project.currNamespace) : super(name, namespace, returnType) {
+        this.javaMethod = javaMethod
+        this.javaClassName = javaMethod.declaringClass.`package`.name + "." + javaMethod.declaringClass.name
+        this.javaMethodName = name
     }
 
     @Override

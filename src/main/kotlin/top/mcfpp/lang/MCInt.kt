@@ -666,7 +666,6 @@ class MCInt : Number<Int> {
 
         init {
             data.initialize()
-            data.field.addFunction(NativeFunction("test", "top.mcfpp.lang.MCIntFunction.test", "mcfpp.lang"), false)
         }
     }
 }

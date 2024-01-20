@@ -1,5 +1,6 @@
 package top.mcfpp.lang
 
+import net.querz.nbt.tag.Tag
 import top.mcfpp.Project
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.exception.ClassNotDefineException
@@ -293,6 +294,9 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                 "entity" -> `var` = MCString(container, identifier)
                 "string" -> TODO()
                 "float" -> TODO()
+                "list" -> `var` = NBTList<Tag<*>>(container, identifier)
+                "dict" -> TODO()
+                "map" -> TODO()
                 "nbt" -> `var` = NBT(container, identifier)
                 else -> {
                     //自定义的类的类型

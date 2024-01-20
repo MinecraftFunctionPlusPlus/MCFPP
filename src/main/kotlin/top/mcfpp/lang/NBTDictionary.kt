@@ -5,10 +5,10 @@ import net.querz.nbt.tag.ListTag
 import net.querz.nbt.tag.StringTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.lib.FieldContainer
+import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
-import top.mcfpp.lib.Member
 import java.util.*
+import kotlin.reflect.jvm.javaMethod
 
 open class NBTDictionary : NBTBasedData, Indexable<NBT> {
 
@@ -121,7 +121,7 @@ open class NBTDictionary : NBTBasedData, Indexable<NBT> {
         params: List<String>,
         accessModifier: Member.AccessModifier
     ): Pair<Function?, Boolean> {
-        TODO("Not yet implemented")
+        return data.field.getFunction(key, params) to true
     }
 
     override fun getByIndex(index: Var): NBT {
@@ -137,6 +137,17 @@ open class NBTDictionary : NBTBasedData, Indexable<NBT> {
             }
         }else{
             throw IllegalArgumentException("Index must be a string")
+        }
+    }
+
+    companion object{
+        val data = CompoundData("dict", "mcfpp")
+
+        init {
+            data.initialize()
+            data.field.addFunction(NativeFunction(NBTDictionaryData::remove.javaMethod!!,"void","mcfpp").appendParam("string","e"),false)
+            data.field.addFunction(NativeFunction(NBTDictionaryData::merge.javaMethod!!,"void","mcfpp").appendParam("dict","d"),false)
+            data.field.addFunction(NativeFunction(NBTDictionaryData::containsKey.javaMethod!!,"bool","mcfpp").appendParam("string","key"),false)
         }
     }
 }

@@ -1,30 +1,10 @@
 namespace test;
 
-//这是一个类
-class Test{
-    int i = 0;
-    nbt b = {a:b};
-
-    //普通方法
-    func normal() {
-
-    }
-
-    //抽象方法
-    func abstract();
-
-    //native方法
-    func native() = top.mcfpp.lang.System.print;
+inline func test(int a){
+    a = a + 1;
 }
 
-//这是一个模板
-//T代表模板中的数据类型，目前可以为int和nbt
-template<T : TemplateData> Test{
-    a,b,c;
-    d;
-}
-
-//这是一个枚举
-enum Test{
-    A,B,C,D
+func main(){
+    dynamic int a = 1;
+    test(a);
 }
