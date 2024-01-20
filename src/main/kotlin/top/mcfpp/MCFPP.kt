@@ -41,7 +41,11 @@ fun main(args: Array<String>) {
         Project.genIndex() //生成索引
         Project.ctx = null
         if(Project.targetPath != "null"){
-            DatapackCreator.createDatapack(Project.targetPath) //生成数据包
+            try{
+                DatapackCreator.createDatapack(Project.targetPath) //生成数据包
+            }catch (e: Exception){
+                Project.error("Cannot create datapack in path: ${Project.targetPath}")
+            }
         }
         Project.info("Finished in " + (System.currentTimeMillis() - start) + "ms")
         GlobalField.printAll()

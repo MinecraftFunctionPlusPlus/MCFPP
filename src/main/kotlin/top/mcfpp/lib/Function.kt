@@ -3,6 +3,7 @@ package top.mcfpp.lib
 import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
+import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.command.Command
 import top.mcfpp.command.CommandList
 import top.mcfpp.command.Commands

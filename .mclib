@@ -1,0 +1,29 @@
+{
+	"namespaces":[
+		{
+			"id":"default",
+			"functions":[
+				"void main()"
+			],
+			"classes":[
+				
+			],
+			"structs":[
+				
+			]
+		},
+		{
+			"id":"mcfpp",
+			"functions":[
+				"void load()",
+				"void tick()"
+			],
+			"classes":[
+				
+			],
+			"structs":[
+				
+			]
+		}
+	]
+}

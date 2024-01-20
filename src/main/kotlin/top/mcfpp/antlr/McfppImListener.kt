@@ -80,7 +80,7 @@ class McfppImListener : mcfppBaseListener() {
         Project.ctx = ctx
         var f: Function
         //获取函数对象
-        if (ctx.parent.parent !is mcfppParser.ClassMemberContext && ctx.parent.parent !is mcfppParser.StructMemberContext && ctx.parent !is mcfppParser.ExtensionFunctionDeclarationContext) {
+        if (ctx.parent.parent !is mcfppParser.ClassMemberContext && ctx.parent.parent !is mcfppParser.TemplateDeclarationContext && ctx.parent !is mcfppParser.ExtensionFunctionDeclarationContext) {
             //不是类成员和结构体成员
             //创建函数对象
             val parent = ctx.parent as mcfppParser.FunctionDeclarationContext
@@ -162,7 +162,7 @@ class McfppImListener : mcfppBaseListener() {
         } else{
             //是结构体成员
             //创建函数对象并解析参数
-            val qwq = ctx.parent as mcfppParser.StructFunctionDeclarationContext
+            val qwq = ctx.parent as mcfppParser.TemplateFunctionDeclarationContext
             f = Function(qwq.Identifier().text, Template.currTemplate!!, false)
             if (qwq.parameterList() != null) {
                 f.addParams(qwq.parameterList())
@@ -941,10 +941,10 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun enterStructBody(ctx: mcfppParser.StructBodyContext) {
+    override fun enterTemplateBody(ctx: mcfppParser.TemplateBodyContext) {
         Project.ctx = ctx
         //获取类的对象
-        val parent = ctx.parent as mcfppParser.StructDeclarationContext
+        val parent = ctx.parent as mcfppParser.TemplateDeclarationContext
         val identifier: String = parent.classWithoutNamespace().text
         //设置作用域
         Template.currTemplate = GlobalField.getStruct(Project.currNamespace, identifier)
@@ -955,7 +955,7 @@ class McfppImListener : mcfppBaseListener() {
      * @param ctx the parse tree
      */
     @Override
-    override fun exitStructBody(ctx: mcfppParser.StructBodyContext?) {
+    override fun exitTemplateBody(ctx: mcfppParser.TemplateBodyContext?) {
         Project.ctx = ctx
         Template.currTemplate = null
     }

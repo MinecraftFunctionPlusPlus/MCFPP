@@ -1,6 +1,5 @@
 package top.mcfpp.antlr
 
-import mcfppBaseVisitor
 import top.mcfpp.Project
 import top.mcfpp.lang.*
 import top.mcfpp.lib.Function
