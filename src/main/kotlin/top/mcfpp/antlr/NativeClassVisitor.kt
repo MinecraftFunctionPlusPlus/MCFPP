@@ -39,49 +39,49 @@ class NativeClassVisitor: mcfppBaseVisitor<Any?>() {
             val ncls = NativeClass(identifier, cls)
             GlobalField.localNamespaces[Project.currNamespace]!!.addClass(identifier, ncls)
             Class.currClass = ncls
-            if(ctx.nativeClassBody() != null){
-                visit(ctx.nativeClassBody())
-            }
+//            if(ctx.nativeClassBody() != null){
+//                visit(ctx.nativeClassBody())
+//            }
             Class.currClass = null
         }
         return null
     }
 
-    @Override
-    override fun visitNativeClassBody(ctx: mcfppParser.NativeClassBodyContext?): Any? {
-        ctx!!
-        for (i in ctx.nativeClassFunctionDeclaration()) {
-            val nf = visit(i) as NativeFunction?
-            if(nf != null){
-                Class.currClass!!.staticField.addFunction(nf,false)
-            }
-        }
-        return null
-    }
+//    @Override
+//    override fun visitNativeClassBody(ctx: mcfppParser.NativeClassBodyContext?): Any? {
+//        ctx!!
+//        for (i in ctx.nativeClassFunctionDeclaration()) {
+//            val nf = visit(i) as NativeFunction?
+//            if(nf != null){
+//                Class.currClass!!.staticField.addFunction(nf,false)
+//            }
+//        }
+//        return null
+//    }
 
-    @Override
-    override fun visitNativeClassFunctionDeclaration(ctx: mcfppParser.NativeClassFunctionDeclarationContext?): Any? {
-        //accessModifier? NATIVE 'func' Identifier '(' parameterList? ')' ';'
-        ctx!!
-        val accessModifier: Member.AccessModifier = if (ctx.accessModifier() != null) {
-            Member.AccessModifier.valueOf(ctx.accessModifier().text.lowercase())
-        } else {
-            Member.AccessModifier.PUBLIC
-        }
-        //获取这个java方法
-        val javaMethod : Method
-        try{
-            val cls: java.lang.Class<*> = (Class.currClass as NativeClass).cls
-            javaMethod = cls.getMethod(ctx.Identifier().text , Array<Var>::class.java, ClassPointer::class.java)
-        } catch (e: NoSuchMethodException) {
-            Project.error("No such method:" + ctx.Identifier().text)
-            return null
-        }
-        val nf = NativeFunction(ctx.Identifier().text, javaMethod)
-        nf.accessModifier = accessModifier
-        if (ctx.parameterList() != null) {
-            nf.addParams(ctx.parameterList())
-        }
-        return nf
-    }
+//    @Override
+//    override fun visitNativeClassFunctionDeclaration(ctx: mcfppParser.NativeClassFunctionDeclarationContext?): Any? {
+//        //accessModifier? NATIVE 'func' Identifier '(' parameterList? ')' ';'
+//        ctx!!
+//        val accessModifier: Member.AccessModifier = if (ctx.accessModifier() != null) {
+//            Member.AccessModifier.valueOf(ctx.accessModifier().text.lowercase())
+//        } else {
+//            Member.AccessModifier.PUBLIC
+//        }
+//        //获取这个java方法
+//        val javaMethod : Method
+//        try{
+//            val cls: java.lang.Class<*> = (Class.currClass as NativeClass).cls
+//            javaMethod = cls.getMethod(ctx.Identifier().text , Array<Var>::class.java, ClassPointer::class.java)
+//        } catch (e: NoSuchMethodException) {
+//            Project.error("No such method:" + ctx.Identifier().text)
+//            return null
+//        }
+//        val nf = NativeFunction(ctx.Identifier().text, javaMethod)
+//        nf.accessModifier = accessModifier
+//        if (ctx.parameterList() != null) {
+//            nf.addParams(ctx.parameterList())
+//        }
+//        return nf
+//    }
 }

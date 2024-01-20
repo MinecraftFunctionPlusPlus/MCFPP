@@ -12,6 +12,9 @@ import top.mcfpp.lang.UnresolvedVar
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
 import java.io.*
+import java.nio.file.Path
+import kotlin.io.path.absolutePathString
+import kotlin.io.path.name
 
 /**
  * 一个工程。工程文件包含了这个mcfpp工程编译需要的所有信息。编译器将会以这个文件为入口开始编译。
@@ -26,7 +29,7 @@ object Project {
     /**
      * 工程的根目录
      */
-    lateinit var root: File
+    lateinit var root: Path
     /**
      * 工程包含的所有文件。以绝对路径保存
      */
@@ -107,7 +110,7 @@ object Project {
             logger.debug("Reading project from file \"$path\"")
             val reader = FileReader(path)
             val qwq = File(path)
-            root = qwq.parentFile
+            root = Path.of(path).parent
             name = qwq.name.substring(0, qwq.name.lastIndexOf('.'))
             val json = reader.readText()
             //解析json
@@ -126,7 +129,7 @@ object Project {
                     File(s)
                 } else {
                     //相对路径
-                    File(root.absolutePath + s)
+                    File(root.absolutePathString() + s)
                 }
                 logger.info("Finding file in \"" + r.absolutePath + "\"")
                 getFiles(r, files)
@@ -302,7 +305,7 @@ object Project {
      * 在和工程信息json文件的同一个目录下生成一个.mclib文件
      */
     fun genIndex() {
-        IndexWriter.write(root.absolutePath)
+        IndexWriter.write(root.absolutePathString())
     }
 
     /**

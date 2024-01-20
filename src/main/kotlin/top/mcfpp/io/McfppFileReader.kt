@@ -8,6 +8,7 @@ import top.mcfpp.lib.*
 import top.mcfpp.antlr.McfppFileVisitor
 import top.mcfpp.antlr.McfppImListener
 import java.io.*
+import kotlin.io.path.absolutePathString
 
 /**
  * 用于读取和分析mcfpp代码。
@@ -16,7 +17,7 @@ import java.io.*
 class McfppFileReader(path: String?) : McfppReader() {
     init {
         this.path = path
-        rpath = getRelativePath(Project.root.absolutePath, File(path!!).parentFile.absolutePath)
+        rpath = getRelativePath(Project.root.absolutePathString(), File(path!!).parentFile.absolutePath)
         currPath = rpath
         input = FileInputStream(path)
     }
