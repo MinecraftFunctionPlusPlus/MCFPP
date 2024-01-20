@@ -1,6 +1,7 @@
 package top.mcfpp.lib
 
 import top.mcfpp.Project
+import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.lang.ClassPointer
 import top.mcfpp.lang.MCBool
 import top.mcfpp.lang.MCInt
