@@ -314,7 +314,7 @@ open class Function : Member, FieldContainer {
      * 创建一个函数，并指定它所属的结构体。
      * @param name 函数的标识符
      */
-    constructor(name: String, struct: Struct, isStatic: Boolean, returnType: String = "void") {
+    constructor(name: String, struct: Template, isStatic: Boolean, returnType: String = "void") {
         this.identifier = name
         commands = CommandList()
         params = ArrayList()
@@ -427,7 +427,7 @@ open class Function : Member, FieldContainer {
             is CompoundDataType -> invoke(args, callerClassP = null)
             null -> invoke(args, callerClassP = null)
             is ClassBase -> invoke(args, callerClassP = caller)
-            is StructBase -> invoke(args, caller)
+            is IntTemplateBase -> invoke(args, caller)
             is Var -> invoke(args, caller)
         }
     }
@@ -512,7 +512,7 @@ open class Function : Member, FieldContainer {
      * @param args
      * @param struct
      */
-    open fun invoke(args: ArrayList<Var>, struct: StructBase){
+    open fun invoke(args: ArrayList<Var>, struct: IntTemplateBase){
         TODO()
     }
 
@@ -642,9 +642,9 @@ open class Function : Member, FieldContainer {
      * @return 返回这个函数所在的类，如果不存在则返回null
      */
     @Override
-    override fun parentStruct(): Struct? {
+    override fun parentStruct(): Template? {
         return if (ownerType == OwnerType.STRUCT) {
-            owner as Struct
+            owner as Template
         } else null
     }
 

@@ -81,7 +81,7 @@ object IndexReader {
             for (s in oo["structs"] as JSONArray){
                 val ss = s as JSONObject
                 val strId = ss["id"] as String
-                val struct = Struct(strId, nspId)
+                val struct = Template(strId, nspId)
                 //结构体的成员
                 //函数
                 for (f in ss["functions"] as JSONArray){
@@ -172,7 +172,7 @@ object IndexReader {
         }
     }
 
-    private fun readStructFunction(jsonStr: String ,field: IFieldWithFunction, struct: Struct){
+    private fun readStructFunction(jsonStr: String ,field: IFieldWithFunction, struct: Template){
         //参数解析
         val params = jsonStr.substring(jsonStr.indexOf('(') + 1, jsonStr.indexOf(')')).split(",")
         val paramList = ArrayList<FunctionParam>()
@@ -212,7 +212,7 @@ object IndexReader {
         cls.constructors.add(co)
     }
 
-    private fun readStructConstructor(jsonStr: String, struct: Struct){
+    private fun readStructConstructor(jsonStr: String, struct: Template){
         //参数解析
         val params = jsonStr.substring(jsonStr.indexOf('(') + 1, jsonStr.indexOf(')')).split(",")
         val paramList = ArrayList<FunctionParam>()

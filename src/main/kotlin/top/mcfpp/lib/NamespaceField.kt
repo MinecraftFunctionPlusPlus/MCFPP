@@ -24,7 +24,7 @@ import kotlin.collections.HashMap
  *
  * 函数储存在一个列表中
  */
-class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithStruct, IFieldWithInterface {
+class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTemplate, IFieldWithInterface {
     /**
      * 变量
      */
@@ -56,10 +56,10 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithStruct, IFi
     /**
      * 结构体
      */
-    private var structs: HashMap<String, Struct> = HashMap()
+    private var template: HashMap<String, Template> = HashMap()
 
-    override fun forEachStruct(operation: (Struct) -> Any?){
-        for (struct in structs.values){
+    override fun forEachTemplate(operation: (Template) -> Any?){
+        for (struct in template.values){
             operation(struct)
         }
     }
@@ -258,17 +258,17 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithStruct, IFi
      * 向域中添加一个结构体
      *
      * @param identifier 结构体的标识符
-     * @param struct 结构体
+     * @param template 结构体
      * @param force 是否强制添加。如果为true，则即使已经添加过相同标识符的结构体，也会覆盖原来的结构体进行添加。
      * @return 是否添加成功。如果已经存在相同标识符的结构体，且不是强制添加则为false
      */
-    override fun addStruct(identifier: String, struct: Struct, force: Boolean): Boolean {
+    override fun addTemplate(identifier: String, template: Template, force: Boolean): Boolean {
         return if (force){
-            structs[identifier] = struct
+            this.template[identifier] = template
             true
         }else{
-            if(!structs.containsKey(identifier)){
-                structs[identifier] = struct
+            if(!this.template.containsKey(identifier)){
+                this.template[identifier] = template
                 true
             }else{
                 false
@@ -282,9 +282,9 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithStruct, IFi
      * @param identifier 这个结构体的标识符
      * @return 是否移除成功。如果不存在此结构体，则返回false
      */
-    override fun removeStruct(identifier: String): Boolean {
-        return if(structs.containsKey(identifier)) {
-            structs.remove(identifier)
+    override fun removeTemplate(identifier: String): Boolean {
+        return if(template.containsKey(identifier)) {
+            template.remove(identifier)
             true
         }else{
             false
@@ -297,8 +297,8 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithStruct, IFi
      * @param identifier 结构体的标识符
      * @return 获取到的结构体。如果不存在，则返回null
      */
-    override fun getStruct(identifier: String): Struct? {
-        return structs[identifier]
+    override fun getTemplate(identifier: String): Template? {
+        return template[identifier]
     }
 
     /**
@@ -307,18 +307,18 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithStruct, IFi
      * @param identifier 结构体的标识符
      * @return
      */
-    override fun hasStruct(identifier: String): Boolean {
-        return structs.containsKey(identifier)
+    override fun hasTemplate(identifier: String): Boolean {
+        return template.containsKey(identifier)
     }
 
     /**
      * 是否存在此结构体
      *
-     * @param struct 结构体
+     * @param template 结构体
      * @return
      */
-    override fun hasStruct(struct: Struct): Boolean {
-        return structs.containsKey(struct.identifier)
+    override fun hasTemplate(template: Template): Boolean {
+        return this.template.containsKey(template.identifier)
     }
 
     //endregion

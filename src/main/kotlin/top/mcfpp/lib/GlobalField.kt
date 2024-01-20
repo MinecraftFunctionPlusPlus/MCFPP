@@ -145,14 +145,14 @@ object GlobalField : FieldContainer, IField {
      * @param identifier 结构体的标识符
      * @return 获取的结构体。如果有多个相同标识符的结构体（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
      */
-    fun getStruct(@Nullable namespace: String?, identifier: String): Struct? {
+    fun getStruct(@Nullable namespace: String?, identifier: String): Template? {
         if(namespace == null){
-            var struct:Struct?
+            var struct:Template?
             //命名空间为空，从全局寻找
-            struct = localNamespaces[Project.currNamespace]!!.getStruct(identifier)
+            struct = localNamespaces[Project.currNamespace]!!.getTemplate(identifier)
             if(struct != null) return struct
             for (nsp in importedLibNamespaces.values){
-                struct = nsp.getStruct(identifier)
+                struct = nsp.getTemplate(identifier)
                 if(struct != null) return struct
             }
             return null
@@ -162,7 +162,7 @@ object GlobalField : FieldContainer, IField {
         if(field == null){
             field = importedLibNamespaces[namespace]
         }
-        return field?.getStruct(identifier)
+        return field?.getTemplate(identifier)
     }
     @get:Override
     override val prefix: String
@@ -262,7 +262,7 @@ object GlobalField : FieldContainer, IField {
                     }
                 }
             }
-            field.forEachStruct { s ->
+            field.forEachTemplate { s ->
                 run {
                     println("struct " + s.identifier)
                     println("\tconstructors:")
