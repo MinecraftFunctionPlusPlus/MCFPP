@@ -10,7 +10,7 @@ import top.mcfpp.lang.*
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
 
-class McfppImListener : mcfppBaseListener() {
+open class McfppImListener : mcfppBaseListener() {
 
     /**
      * 完成一次库的import
@@ -377,17 +377,8 @@ class McfppImListener : mcfppBaseListener() {
         Project.ctx = ctx
         Function.addCommand("#" + ctx!!.text)
         if (ctx.expression() != null) {
-            if(Function.currBaseFunction.returnType == "void"){
-                Project.error("Function ${Function.currBaseFunction.identifier} has no return value")
-                throw FunctionHasNoReturnValueException()
-            }
             val ret: Var = McfppExprVisitor().visit(ctx.expression())!!
-            try {
-                Function.currBaseFunction.returnVar!!.assign(ret)
-            } catch (e: VariableConverseException) {
-                Project.error("Cannot convert " + ret.javaClass + " to " + Function.currBaseFunction.returnVar!!.javaClass)
-                throw VariableConverseException()
-            }
+            Function.currBaseFunction.returnVar(ret)
         }
         if(Function.currFunction !is InternalFunction)
             Function.currFunction.hasReturnStatement = true

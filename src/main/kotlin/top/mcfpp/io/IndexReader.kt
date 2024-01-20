@@ -12,6 +12,7 @@ import java.io.FileReader
  *
  * @see IndexWriter
  */
+@Deprecated("等待重写以匹配语法规则的更改")
 object IndexReader {
 
     /**
@@ -132,7 +133,7 @@ object IndexReader {
             val functionHead = jsonStr.split("->")[0]
             val javaFunction = jsonStr.split("->")[1]
             //获取java方法
-            val nf = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction, nspId)
+            val nf = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction, functionHead.substring(0,functionHead.indexOf(' ')) , nspId)
             nf.params = paramList
             field.addFunction(nf,false)
         }else{

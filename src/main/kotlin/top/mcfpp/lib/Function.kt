@@ -7,6 +7,8 @@ import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.command.Command
 import top.mcfpp.command.CommandList
 import top.mcfpp.command.Commands
+import top.mcfpp.exception.FunctionHasNoReturnValueException
+import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.*
 import top.mcfpp.util.StringHelper
 import java.lang.NullPointerException
@@ -359,7 +361,23 @@ open class Function : Member, FieldContainer {
      */
     private fun buildReturnVar(returnType: String): Var{
         return if(returnType == "void") Void()
-        else Var.build("return",returnType,this)
+            else Var.build("return",returnType,this)
+    }
+
+    open fun appendParam(param: Var, isStatic: Boolean = false) : Function{
+        params.add(FunctionParam(param.type,param.identifier,isStatic))
+        field.putVar(param.identifier,param)
+        return this
+    }
+
+    open fun appendParam(param: FunctionParam) : Function{
+        params.add(param)
+        return this
+    }
+
+    open fun appendParam(type: String, identifier: String, isStatic: Boolean = false) : Function{
+        params.add(FunctionParam(type,identifier,isStatic))
+        return this
     }
 
     /**
@@ -368,15 +386,6 @@ open class Function : Member, FieldContainer {
      * @param ctx
      */
     open fun addParams(ctx: mcfppParser.ParameterListContext?) {
-        //函数参数解析
-        //如果是非静态成员方法
-        //构造名为this的变量
-        //如果是ClassType则不必构造。因此需要构造的变量一定是ClassPointer
-        //由于静态的判断是在函数构造后进行的，此处无法进行isStatic判断。届时判断静态的时候去除第一个元素即可。
-        if(ownerType != OwnerType.NONE && !isStatic){
-            val thisObj = Var.build("this", owner!!.identifier, this)
-            field.putVar("this",thisObj)
-        }
         if(ctx == null) return
         for (param in ctx.parameter()) {
             val param1 = FunctionParam(
@@ -428,8 +437,8 @@ open class Function : Member, FieldContainer {
             is CompoundDataType -> invoke(args, callerClassP = null)
             null -> invoke(args, callerClassP = null)
             is ClassBase -> invoke(args, callerClassP = caller)
-            is IntTemplateBase -> invoke(args, caller)
-            is Var -> invoke(args, caller)
+            is IntTemplateBase -> invoke(args, caller = caller)
+            is Var -> invoke(args, caller = caller)
         }
     }
 
@@ -468,7 +477,7 @@ open class Function : Member, FieldContainer {
      *
      * @param args 函数的参数
      * @param callerClassP 调用函数的实例
-     * @see top.mcfpp.lib.antlr.McfppExprVisitor.visitVar
+     * @see top.mcfpp.antlr.McfppExprVisitor.visitVar
      */
     @InsertCommand
     open fun invoke(args: ArrayList<Var>, callerClassP: ClassBase?) {
@@ -527,9 +536,9 @@ open class Function : Member, FieldContainer {
         for (i in 0 until params.size) {
             when (params[i].type) {
                 "int" -> {
-                    val tg = args[i].cast(params[i].type) as MCInt
+                    val tg = args[i].cast(params[i].type)
                     //参数传递和子函数的参数进栈
-                    val p = MCInt(this,"_param_" + params[i].identifier)
+                    val p = field.getVar(params[i].identifier)!!
                     p.assign(tg)
                     p.toDynamic()
                 }
@@ -599,6 +608,25 @@ open class Function : Member, FieldContainer {
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * 让函数返回一个值。如果函数的返回值类型是void，则会抛出异常。
+     *
+     * @param v
+     */
+    @InsertCommand
+    open fun returnVar(v: Var){
+        if(returnType == "void"){
+            Project.error("Function $identifier has no return value")
+            throw FunctionHasNoReturnValueException()
+        }
+        try {
+            returnVar!!.assign(v)
+        } catch (e: VariableConverseException) {
+            Project.error("Cannot convert " + v.javaClass + " to " + Function.currBaseFunction.returnVar!!.javaClass)
+            throw VariableConverseException()
         }
     }
 

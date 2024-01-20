@@ -18,6 +18,7 @@ import kotlin.collections.ArrayList
  */
 class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
 
+    var isStatic = false
     /**
      * 遍历整个文件。一个文件包含了命名空间的声明，函数的声明，类的声明以及全局变量的声明。全局变量是可以跨文件调用的。
      * <pre>
@@ -221,6 +222,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         }
         //解析类中的成员
         //先静态
+        isStatic = true
         //先解析函数
         for (c in ctx.classBody().staticClassMemberDeclaration()) {
             c!!
@@ -235,6 +237,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             }
         }
         //后成员
+        isStatic = false
         //先解析函数和构造函数
         for (c in ctx.classBody().classMemberDeclaration()) {
             c!!
@@ -356,12 +359,16 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             ctx.parent is mcfppParser.StaticClassMemberDeclarationContext,
             ctx.functionReturnType().text
         )
+        if(!isStatic){
+            val thisObj = Var.build("this", Class.currClass!!.identifier, f)
+            f.field.putVar("this",thisObj)
+        }
         //解析参数
         f.addParams(ctx.parameterList())
         //注册函数
         if (Class.currClass!!.field.hasFunction(f) || Class.currClass!!.staticField.hasFunction(f)) {
             if(ctx.OVERRIDE() != null){
-                if(ctx.parent is mcfppParser.StaticClassMemberDeclarationContext){
+                if(isStatic){
                     Project.error("Cannot override static method ${ctx.Identifier()}")
                     throw Exception()
                 }
@@ -401,7 +408,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
     override fun visitNativeClassFunctionDeclaration(ctx: mcfppParser.NativeClassFunctionDeclarationContext): Any? {
         Project.ctx = ctx
         val nf: NativeFunction = try {
-            NativeFunction(ctx.Identifier().text, ctx.javaRefer().text)
+            NativeFunction(ctx.Identifier().text, ctx.javaRefer().text, ctx.functionReturnType().text)
         } catch (e: IllegalFormatException) {
             Project.error("Illegal Java Method Name:" + e.message)
             return null
@@ -454,7 +461,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         val c = ctx.fieldDeclarationExpression()
         val `var`: Var = Var.build(c, compoundData = Class.currClass!!)
         //是否是静态的
-        if(ctx.parent.parent is mcfppParser.StaticClassMemberDeclarationContext){
+        if(isStatic){
             `var`.isStatic = true
             `var`.parent = ClassType(Class.currClass!!)
         }else{
@@ -468,7 +475,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         }
         //变量的初始化
         if (c.expression() != null) {
-            Function.currFunction = if(ctx.parent.parent is mcfppParser.StaticClassMemberDeclarationContext){
+            Function.currFunction = if(isStatic){
                 `var`.isStatic = true
                 Class.currClass!!.classPreStaticInit
             }else{
@@ -510,11 +517,11 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         f = if (ctx.INLINE() != null) {
             InlineFunction(identifier, Project.currNamespace, ctx)
         } else {
-            Function(identifier, Project.currNamespace, ctx.functionReturnType().text)
+            Function(identifier, Project.currNamespace, if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text)
         }
         //解析参数
         f.addParams(ctx.parameterList())
-        //TODO 解析函数的tag
+        //TODO 解析函数的注解
         //不是类的成员
         f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
@@ -594,7 +601,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
     override fun visitNativeFuncDeclaration(ctx: mcfppParser.NativeFuncDeclarationContext): Any? {
         Project.ctx = ctx
         val nf: NativeFunction = try {
-            NativeFunction(ctx.Identifier().text, ctx.javaRefer().text)
+            NativeFunction(ctx.Identifier().text, ctx.javaRefer().text, ctx.functionReturnType().text)
         } catch (e: IllegalFormatException) {
             Project.error("Illegal Java Method Name:" + e.message)
             return null
@@ -655,6 +662,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         Template.currTemplate = struct
         //解析成员
         //先静态
+        isStatic = true
         //先解析函数
         for (c in ctx.templateBody().staticTemplateMemberDeclaration()) {
             if (c!!.templateMember().templateFunctionDeclaration() != null) {
@@ -668,6 +676,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             }
         }
         //后成员
+        isStatic = false
         //先解析函数和构造函数
         for (c in ctx.templateBody().templateMemberDeclaration()) {
             if (c!!.templateMember().templateFunctionDeclaration() != null) {
@@ -749,6 +758,10 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             ctx.parent is mcfppParser.StaticTemplateMemberDeclarationContext,
             if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text
         )
+        if(!isStatic){
+            val thisObj = Var.build("this", Template.currTemplate!!.identifier, f)
+            f.field.putVar("this",thisObj)
+        }
         //解析参数
         f.addParams(ctx.parameterList())
         //注册函数
@@ -766,9 +779,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             //变量生成
             val `var`: Var = Var.build(i.text,Template.currTemplate!!.dataType, Template.currTemplate!!)
             //是否是静态的
-            if(ctx.parent.parent is mcfppParser.StaticTemplateMemberDeclarationContext){
-                `var`.isStatic = true
-            }
+            `var`.isStatic = isStatic
             //只有可能是结构体成员
             if (Template.currTemplate!!.field.containVar(i.text) || Template.currTemplate!!.staticField.containVar(i.text)
             ) {

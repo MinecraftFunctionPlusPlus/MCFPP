@@ -18,6 +18,8 @@ import java.lang.reflect.Method
  * @constructor Create empty Native class visitor
  */
 class NativeClassVisitor: mcfppBaseVisitor<Any?>() {
+
+    /*
     @Override
     override fun visitNativeClassDeclaration(ctx: mcfppParser.NativeClassDeclarationContext?): Any? {
         Project.ctx = ctx
@@ -84,4 +86,5 @@ class NativeClassVisitor: mcfppBaseVisitor<Any?>() {
         }
         return nf
     }
+     */
 }
