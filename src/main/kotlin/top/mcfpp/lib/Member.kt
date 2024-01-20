@@ -1,9 +1,5 @@
 package top.mcfpp.lib
 
-import top.mcfpp.lang.ClassBase
-import top.mcfpp.lang.ClassPointer
-import top.mcfpp.lang.StructBase
-
 /**
  * 一个类的成员。类的成员拥有三种访问级别，即[私有][AccessModifier.PRIVATE]、[保护][AccessModifier.PROTECTED]和[公开][AccessModifier.PUBLIC]。
  * 具体细则和java一致。
@@ -37,5 +33,5 @@ interface Member {
      *
      * @return
      */
-    fun parentStruct(): Struct?
+    fun parentStruct(): Template?
 }

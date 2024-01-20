@@ -5,10 +5,7 @@ import top.mcfpp.exception.ClassNotDefineException
 import top.mcfpp.exception.OperationNotImplementException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.*
-import top.mcfpp.lib.Function
 import java.util.*
-import kotlin.collections.HashMap
-import kotlin.reflect.KFunction
 
 /**
  * mcfpp所有类型的基类。在mcfpp中，一个变量可以是固定的，也就是mcfpp编译
@@ -130,10 +127,10 @@ abstract class Var : Member, Cloneable, CanSelectMember {
      *
      * @return
      */
-    override fun parentStruct(): Struct? {
+    override fun parentStruct(): Template? {
         return when (val parent = parent) {
-            is StructPointer -> parent.structType
-            is StructType -> parent.dataType as? Struct
+            is IntTemplatePointer -> parent.structType
+            is IntTemplateType -> parent.dataType as? Template
             else -> null
         }
     }

@@ -1,18 +1,17 @@
 package top.mcfpp.lang
 
-import org.intellij.lang.annotations.Identifier
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
-import top.mcfpp.lib.Struct
+import top.mcfpp.lib.Template
 
-class StructPointer : StructBase {
+class IntTemplatePointer : IntTemplateBase {
 
-    override val structType: Struct
+    override val structType: Template
 
     override val type: String
         get() = structType.identifier
 
-    constructor(identifier: String, type: Struct){
+    constructor(identifier: String, type: Template){
         this.identifier = identifier
         this.structType = type
     }

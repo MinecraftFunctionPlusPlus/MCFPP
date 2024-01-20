@@ -1,8 +1,8 @@
 package top.mcfpp.lang
 
-import top.mcfpp.lib.Struct
+import top.mcfpp.lib.Template
 
-abstract class StructBase : Var {
+abstract class IntTemplateBase : Var {
 
     constructor(b: Var):super(b)
 
@@ -11,5 +11,5 @@ abstract class StructBase : Var {
     /**
      * 它的类型
      */
-    abstract val structType: Struct
+    abstract val structType: Template
 }

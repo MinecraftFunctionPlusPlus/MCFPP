@@ -1,6 +1,5 @@
 package top.mcfpp.antlr
 
-import mcfppBaseListener
 import org.antlr.v4.runtime.RuleContext
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
@@ -103,7 +102,7 @@ class McfppImListener : mcfppBaseListener() {
             f = if(ctx.parent.parent is mcfppParser.ClassMemberContext){
                 Class.currClass!!.getConstructor(FunctionParam.toStringList(temp.params))!!
             }else{
-                Struct.currStruct!!.getConstructor(FunctionParam.toStringList(temp.params))!!
+                Template.currTemplate!!.getConstructor(FunctionParam.toStringList(temp.params))!!
             }
         } else if(ctx.parent.parent is mcfppParser.ClassMemberContext){
             //是类的成员函数
@@ -164,13 +163,13 @@ class McfppImListener : mcfppBaseListener() {
             //是结构体成员
             //创建函数对象并解析参数
             val qwq = ctx.parent as mcfppParser.StructFunctionDeclarationContext
-            f = Function(qwq.Identifier().text, Struct.currStruct!!, false)
+            f = Function(qwq.Identifier().text, Template.currTemplate!!, false)
             if (qwq.parameterList() != null) {
                 f.addParams(qwq.parameterList())
             }
             //获取缓存中的对象
-            val fun1 = Struct.currStruct!!.field.getFunction(f.identifier, f.paramTypeList)
-            f = (fun1 ?: Struct.currStruct!!.staticField.getFunction(f.identifier, f.paramTypeList))!!
+            val fun1 = Template.currTemplate!!.field.getFunction(f.identifier, f.paramTypeList)
+            f = (fun1 ?: Template.currTemplate!!.staticField.getFunction(f.identifier, f.paramTypeList))!!
         }
         Function.currFunction = f
     }
@@ -948,7 +947,7 @@ class McfppImListener : mcfppBaseListener() {
         val parent = ctx.parent as mcfppParser.StructDeclarationContext
         val identifier: String = parent.classWithoutNamespace().text
         //设置作用域
-        Struct.currStruct = GlobalField.getStruct(Project.currNamespace, identifier)
+        Template.currTemplate = GlobalField.getStruct(Project.currNamespace, identifier)
     }
 
     /**
@@ -958,7 +957,7 @@ class McfppImListener : mcfppBaseListener() {
     @Override
     override fun exitStructBody(ctx: mcfppParser.StructBodyContext?) {
         Project.ctx = ctx
-        Struct.currStruct = null
+        Template.currTemplate = null
     }
 
     //endregion

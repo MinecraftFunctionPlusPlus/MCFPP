@@ -124,7 +124,7 @@ object IndexWriter {
             namespace["classes"] = classes
 
             val structs = JSONArray()
-            n.value.forEachStruct { s ->
+            n.value.forEachTemplate { s ->
                 run {
                     val struct = JSONObject()
                     struct["id"] = s.identifier

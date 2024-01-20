@@ -2,7 +2,6 @@ package top.mcfpp.lib
 
 import top.mcfpp.Project
 import top.mcfpp.exception.FunctionDuplicationException
-import top.mcfpp.lang.Var
 
 /**
  * 结构体是一种和类的语法极为相似的数据结构。在结构体中，只能有int类型的数据，或者说记分板的数据作为结构体的成员。
@@ -17,7 +16,9 @@ import top.mcfpp.lang.Var
  *
  * 除此之外，结构体是一种值类型的变量，而不是引用类型。因此在赋值的时候会把整个结构体进行一次赋值。
  */
-class Struct : FieldContainer, CompoundData {
+class Template : FieldContainer, CompoundData {
+
+    val dataType : String
 
     /**
      * 结构体的构造函数
@@ -29,14 +30,15 @@ class Struct : FieldContainer, CompoundData {
      * @return 其中的变量将会添加的前缀
      */
     override val prefix: String
-        get() = namespace + "_struct_" + identifier + "_"
+        get() = namespace + "_template_" + identifier + "_"
 
 
-    constructor(identifier: String, namespace: String = Project.currNamespace){
+    constructor(identifier: String, dataType: String, namespace: String = Project.currNamespace){
         this.identifier = identifier
         field = CompoundDataField(null,this)
         staticField = CompoundDataField(null, this)
         constructors = ArrayList()
+        this.dataType = dataType
         this.namespace = namespace
     }
 
@@ -74,7 +76,7 @@ class Struct : FieldContainer, CompoundData {
         return null
     }
     companion object{
-        var currStruct: Struct? = null
+        var currTemplate: Template? = null
     }
 
 }

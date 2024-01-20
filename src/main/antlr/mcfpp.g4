@@ -57,7 +57,7 @@ declarations
     |   functionDeclaration
     |   nativeFuncDeclaration
     |   nativeClassDeclaration
-    |   structDeclaration
+    |   templateDeclaration
     |   extensionFunctionDeclaration
     |   interfaceDeclaration
     |   globalDeclaration
@@ -74,12 +74,7 @@ classDeclaration
     ;
 
 nativeClassDeclaration
-    :   NATIVE CLASS classWithoutNamespace '->' javaRefer ';'
-    |   NATIVE CLASS classWithoutNamespace '->' javaRefer '{' nativeClassBody '}'
-    ;
-
-nativeClassBody
-    :   '{' (doc_comment? nativeClassFunctionDeclaration)* '}'
+    :   CLASS classWithoutNamespace '=' javaRefer ';'
     ;
 
 staticClassMemberDeclaration
@@ -99,55 +94,54 @@ classMember
     :   classFunctionDeclaration
     |   classFieldDeclaration ';'
     |   constructorDeclaration
-    |   nativeFuncDeclaration
+    |   nativeClassFunctionDeclaration
     |   abstractClassFunctionDeclaration
     ;
 
 classFunctionDeclaration
-    :   OVERRIDE? functionReturnType Identifier '(' parameterList? ')' '{' functionBody '}'
+    :   OVERRIDE? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
     ;
 
 abstractClassFunctionDeclaration
-    :   OVERRIDE? ABSTRACT functionReturnType Identifier '(' parameterList? ')' ';'
+    :   OVERRIDE? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? ';'
     ;
 
 nativeClassFunctionDeclaration
-    :   accessModifier? NATIVE Identifier '(' parameterList? ')' ';'
+    :   OVERRIDE? FUNCTION Identifier '(' parameterList? ')' '=' javaRefer ';'
     ;
 
 classFieldDeclaration
     :   accessModifier? type fieldDeclarationExpression
     ;
 
-//结构体
-structDeclaration
-    :   FINAL? STRUCT classWithoutNamespace (EXTENDS className)? structBody
+//数据模板
+templateDeclaration
+    :   FINAL? TEMPLATE genericity classWithoutNamespace (EXTENDS className)? templateBody
     ;
 
-structBody
-    :   '{' (doc_comment? (structMemberDeclaration|staticStructMemberDeclaration))* '}'
+templateBody
+    :   '{' (doc_comment? (templateMemberDeclaration|staticTemplateMemberDeclaration))* '}'
     ;
 
-structMemberDeclaration
-    :   accessModifier? structMember
+templateMemberDeclaration
+    :   accessModifier? templateMember
     ;
 
-staticStructMemberDeclaration
-    :   accessModifier? STATIC? structMember
+staticTemplateMemberDeclaration
+    :   accessModifier? STATIC? templateMember
     ;
 
-structMember
-    :   structFunctionDeclaration
-    |   structFieldDeclaration ';'
-    |   constructorDeclaration
+templateMember
+    :   templateFunctionDeclaration
+    |   templateFieldDeclaration ';'
     ;
 
-structFunctionDeclaration
-    :   functionReturnType (className '.')? Identifier '(' parameterList? ')' '{' functionBody '}'
+templateFunctionDeclaration
+    :  FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
     ;
 
-structFieldDeclaration
-    :   CONST? 'int'? Identifier
+templateFieldDeclaration
+    :   CONST? Identifier (',' CONST? Identifier)*
     ;
 
 //接口声明
@@ -160,16 +154,16 @@ interfaceBody
     ;
 
 interfaceFunctionDeclaration
-    :   functionReturnType Identifier '(' parameterList? ')' ';'
+    :   FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? ';'
     ;
 
 //函数声明
 functionDeclaration
-    :    INLINE? functionReturnType Identifier '(' parameterList? ')' '{' functionBody '}'
+    :   INLINE? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
     ;
 
 extensionFunctionDeclaration
-    :   STATIC? functionReturnType (type '.')? Identifier '(' parameterList? ')' '{' functionBody '}'
+    :   STATIC? FUNCTION (type '.')? Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
     ;
 
 namespaceID
@@ -177,7 +171,7 @@ namespaceID
     ;
 
 nativeFuncDeclaration
-    :   NATIVE Identifier '(' parameterList? ')' '->' javaRefer ';'
+    :   FUNCTION Identifier '(' parameterList? ')' '=' javaRefer ';'
     ;
 
 javaRefer
@@ -494,6 +488,10 @@ annoation
     :   '@' Identifier arguments?
     ;
 
+genericity
+    : '<' type '>'
+    ;
+
 TargetSelector
     :   '@' ('a'|'r'|'p'|'s'|'e')
     ;
@@ -514,7 +512,7 @@ RETURN:'return';
 
 STATIC:'static';
 EXTENDS:'extends';
-NATIVE:'native';
+NATIVEq:'native';
 CONCRETE:'concrete';
 FINAL:'final ';
 
@@ -533,7 +531,8 @@ INLINE:'inline';
 
 CLASS:'class';
 INTERFACE:'interface';
-STRUCT:'struct';
+TEMPLATE:'template';
+FUNCTION:'func';
 
 GLOBAL:'global';
 
