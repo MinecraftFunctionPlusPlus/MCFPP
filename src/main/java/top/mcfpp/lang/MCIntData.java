@@ -8,7 +8,7 @@ public class MCIntData {
 
     @MCFPPNative
     public static void test(@NotNull Var[] vars, CanSelectMember caller) {
-        //²»»áÓĞ²ÎÊı
+        //ä¸ä¼šæœ‰å‚æ•°
         Function.Companion.addCommand("say " + caller);
     }
 

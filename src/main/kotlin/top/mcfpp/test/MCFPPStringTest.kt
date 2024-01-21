@@ -14,6 +14,7 @@ import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.lib.GlobalField
 import java.io.File
 import java.io.FileInputStream
+import java.nio.file.Path
 
 object MCFPPStringTest {
     fun readFromString(str: String){
@@ -27,7 +28,7 @@ object MCFPPStringTest {
         try {
             //读取json
             Project.debug("Generate debug project for a string string")
-            Project.root = File("./")
+            Project.root = Path.of("./")
             Project.name = "debug"
             //版本77
             Project.version = "1.20"
@@ -80,7 +81,7 @@ object MCFPPStringTest {
             //读取json
             Project.debug("Generate debug project for single file \"$path\"")
             val qwq = File(path)
-            Project.root = qwq.parentFile
+            Project.root = Path.of(path).parent
             Project.name = qwq.name.substring(0, qwq.name.lastIndexOf('.'))
             val code = qwq.readText()
             //版本
