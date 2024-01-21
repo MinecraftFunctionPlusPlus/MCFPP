@@ -8,3 +8,36 @@ func main(){
     dynamic int a = 1;
     test(a);
 }
+
+annotation tag(string){
+    func forfunction(Function function){
+        function.tagList.add(string);
+    }
+
+    func class(Class clazz){
+        throw new RuntimeException("Tag annotation can only be used on functions");
+    }
+}
+
+@tag("tick")
+func main(){
+}
+
+//java实现
+public class Tag extends Annotation{
+    private String value;
+    public Tag(String value){
+        this.value = value;
+    }
+
+    @Override
+    public void forFunction(Function function){
+        function.tagList.add(value);
+    }
+
+    @Override
+    public void forClass(Class clazz){
+        throw new RuntimeException("Tag annotation can only be used on functions");
+    }
+
+}

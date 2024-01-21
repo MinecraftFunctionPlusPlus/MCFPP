@@ -485,7 +485,7 @@ classWithoutNamespace
     ;
 
 annoation
-    :   '@' Identifier arguments?
+    :   '@' id=(Identifier|ClassIdentifier) arguments?
     ;
 
 genericity
