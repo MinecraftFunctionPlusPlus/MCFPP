@@ -3,6 +3,7 @@ package top.mcfpp.lib
 import org.jetbrains.annotations.Nullable
 import top.mcfpp.Project
 import top.mcfpp.lang.SbObject
+import top.mcfpp.lang.annotation.CompileTimeAnnotation
 import java.util.*
 import kotlin.collections.HashMap
 
@@ -41,13 +42,24 @@ object GlobalField : FieldContainer, IField {
      */
     var scoreboards: HashMap<String ,SbObject> = HashMap()
 
+    /**
+     * 注解
+     *
+     */
+    var annotations = HashMap<String, java.lang.Class<out Annotation>>()
+
     fun init(): GlobalField {
+
         functionTags["minecraft:tick"] = FunctionTag.TICK
         functionTags["minecraft:load"] = FunctionTag.LOAD
+
         scoreboards[SbObject.MCS_boolean.name] = SbObject.MCS_boolean
         scoreboards[SbObject.MCS_default.name] = SbObject.MCS_default
         scoreboards[SbObject.MCFPP_INIT.name] = SbObject.MCFPP_INIT
         scoreboards[SbObject.MCFPP_TEMP.name] = SbObject.MCFPP_TEMP
+
+        annotations["CompileTimeAnnotation"] = CompileTimeAnnotation::class.java
+
         return this
     }
 

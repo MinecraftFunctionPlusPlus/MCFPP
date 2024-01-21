@@ -8,6 +8,7 @@ import top.mcfpp.command.Commands
 import top.mcfpp.exception.*
 import top.mcfpp.lang.*
 import top.mcfpp.lib.*
+import top.mcfpp.lib.Annotation
 import top.mcfpp.lib.Function
 
 open class McfppImListener : mcfppBaseListener() {
@@ -172,6 +173,10 @@ open class McfppImListener : mcfppBaseListener() {
             f = (fun1 ?: Template.currTemplate!!.staticField.getFunction(f.identifier, f.paramTypeList))!!
         }
         Function.currFunction = f
+        //对函数进行注解处理
+        for (a in annotations){
+            a.forFunction(f)
+        }
     }
 
     /**
@@ -334,6 +339,30 @@ open class McfppImListener : mcfppBaseListener() {
         }
         Function.addCommand("#expression end: " + ctx.text)
 
+    }
+
+    val annotations = ArrayList<Annotation>()
+
+    /**
+     * 注解
+     *
+     * @param ctx
+     */
+    override fun exitAnnoation(ctx: mcfppParser.AnnoationContext?) {
+        Project.ctx = ctx
+        val anno = GlobalField.annotations[ctx!!.id.text]
+        if(anno == null){
+            Project.error("Annotation ${ctx.id.text} not found")
+            throw AnnotationNotFoundException()
+        }
+        //参数解析
+        val params = ArrayList<Var>()
+        if(ctx.arguments().expressionList() != null){
+            for (e in ctx.arguments().expressionList().expression()){
+                params.add(McfppExprVisitor().visit(e)!!)
+            }
+        }
+        annotations.add(Annotation.newInstance(anno,params))
     }
 
     /**
@@ -925,7 +954,7 @@ open class McfppImListener : mcfppBaseListener() {
 
     //endregion
 
-    //struct
+    //region struct
 
     /**
      * 进入类体。
@@ -952,7 +981,6 @@ open class McfppImListener : mcfppBaseListener() {
     }
 
     //endregion
-
 
     companion object {
         /**
