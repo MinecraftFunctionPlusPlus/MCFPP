@@ -357,7 +357,7 @@ open class McfppImListener : mcfppBaseListener() {
         }
         //参数解析
         val params = ArrayList<Var>()
-        if(ctx.arguments().expressionList() != null){
+        if(ctx.arguments()?.expressionList() != null){
             for (e in ctx.arguments().expressionList().expression()){
                 params.add(McfppExprVisitor().visit(e)!!)
             }
