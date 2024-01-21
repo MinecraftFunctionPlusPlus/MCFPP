@@ -68,7 +68,9 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
     @Override
     override fun visitTypeDeclaration(ctx: mcfppParser.TypeDeclarationContext): Any? {
         Project.ctx = ctx
-        visit(ctx.declarations())
+        if(ctx.declarations() != null){
+            visit(ctx.declarations())
+        }
         return null
     }
 

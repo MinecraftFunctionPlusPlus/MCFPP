@@ -15,6 +15,6 @@ public class CompileTimeAnnotation extends FunctionAnnotation {
 
     @Override
     public void forFunction(@NotNull Function function) {
-
+        System.out.println("CompileTimeAnnotation.forFunction");
     }
 }

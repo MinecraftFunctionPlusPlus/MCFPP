@@ -58,7 +58,7 @@ object GlobalField : FieldContainer, IField {
         scoreboards[SbObject.MCFPP_INIT.name] = SbObject.MCFPP_INIT
         scoreboards[SbObject.MCFPP_TEMP.name] = SbObject.MCFPP_TEMP
 
-        annotations["CompileTimeAnnotation"] = CompileTimeAnnotation::class.java
+        annotations["CompileTime"] = CompileTimeAnnotation::class.java
 
         return this
     }
