@@ -129,9 +129,9 @@ class JavaVar : Var{
             Project.error("Cannot access properties in $identifier because its value is null")
             throw NullPointerException()
         }
-        val member = value!!::class.memberProperties.find { it.name == key } as KProperty1<out Any, Any>?
+        val member = value!!::class.memberProperties.find { it.name == key } as KProperty1<Any, *>?
         if(member != null){
-            return Pair(JavaVar(member), member.visibility == KVisibility.PUBLIC)
+            return Pair(JavaVar(member.get(value!!)), member.visibility == KVisibility.PUBLIC)
         }
         return Pair(null, true)
     }

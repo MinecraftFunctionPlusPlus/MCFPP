@@ -174,8 +174,16 @@ open class McfppImListener : mcfppBaseListener() {
         }
         Function.currFunction = f
         //对函数进行注解处理
-        for (a in annotations){
-            a.forFunction(f)
+        if(Class.currClass == null && Template.currTemplate == null){
+            for (a in annoInGlobal){
+                a.forFunction(f)
+            }
+            annoInGlobal.clear()
+        }else{
+            for (a in annoInCompound){
+                a.forFunction(f)
+            }
+            annoInCompound.clear()
         }
     }
 
@@ -341,7 +349,8 @@ open class McfppImListener : mcfppBaseListener() {
 
     }
 
-    val annotations = ArrayList<Annotation>()
+    val annoInGlobal = ArrayList<Annotation>()
+    val annoInCompound = ArrayList<Annotation>()
 
     /**
      * 注解
@@ -362,7 +371,12 @@ open class McfppImListener : mcfppBaseListener() {
                 params.add(McfppExprVisitor().visit(e)!!)
             }
         }
-        annotations.add(Annotation.newInstance(anno,params))
+        if(Class.currClass == null && Template.currTemplate == null){
+            //在全局
+            annoInGlobal.add(Annotation.newInstance(anno,params))
+        }else{
+            annoInCompound.add(Annotation.newInstance(anno,params))
+        }
     }
 
     /**
@@ -925,6 +939,11 @@ open class McfppImListener : mcfppBaseListener() {
         //设置作用域
         Class.currClass = GlobalField.getClass(Project.currNamespace, identifier)
         Function.currFunction = Class.currClass!!.classPreInit
+        //注解
+        for (a in annoInGlobal){
+            a.forClass(Class.currClass!!)
+        }
+        annoInGlobal.clear()
     }
 
     /**
