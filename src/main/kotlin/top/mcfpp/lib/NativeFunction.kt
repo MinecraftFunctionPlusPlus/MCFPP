@@ -3,6 +3,7 @@ package top.mcfpp.lib
 import top.mcfpp.Project
 import top.mcfpp.exception.IllegalFormatException
 import top.mcfpp.lang.*
+import top.mcfpp.util.ValueWrapper
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.lang.Class
@@ -37,7 +38,7 @@ class NativeFunction : Function, Native {
         }
         try{
             val cls: Class<*> = Class.forName(javaClassName)
-            this.javaMethod = cls.getMethod(javaMethodName, Array<Var?>::class.java, CanSelectMember::class.java)
+            this.javaMethod = cls.getMethod(javaMethodName, Array<Var?>::class.java, CanSelectMember::class.java, ValueWrapper::class.java)
         } catch (e: NoSuchMethodException) {
             throw NoSuchMethodException(javaMethodName)
         } catch (e: ClassNotFoundException) {
@@ -63,7 +64,9 @@ class NativeFunction : Function, Native {
         val argsArray = arrayOfNulls<Var>(args.size)
         args.toArray(argsArray)
         try {
-            javaMethod.invoke(null, argsArray, caller)
+            val valueWrapper = ValueWrapper(returnVar)
+            javaMethod.invoke(null, argsArray, caller, valueWrapper)
+            returnVar = valueWrapper.value
         } catch (e: IllegalAccessException) {
             Project.error("Cannot access method: ${javaMethod.name}")
             throw RuntimeException(e)

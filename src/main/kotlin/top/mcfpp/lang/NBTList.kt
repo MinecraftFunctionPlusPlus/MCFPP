@@ -1,7 +1,6 @@
 package top.mcfpp.lang
 
-import net.querz.nbt.tag.ListTag
-import net.querz.nbt.tag.Tag
+import net.querz.nbt.tag.*
 import top.mcfpp.Project
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
@@ -10,6 +9,7 @@ import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
 import java.util.*
 import kotlin.Number
+import kotlin.collections.ArrayList
 import kotlin.reflect.jvm.javaMethod
 
 class NBTList<T : Tag<*>?> : NBTBasedData, Indexable<NBT> {

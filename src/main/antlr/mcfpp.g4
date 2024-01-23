@@ -512,7 +512,7 @@ RETURN:'return';
 
 STATIC:'static';
 EXTENDS:'extends';
-NATIVEq:'native';
+NATIVE:'native';
 CONCRETE:'concrete';
 FINAL:'final ';
 

@@ -68,4 +68,14 @@ open class CompoundDataType : CanSelectMember {
             Pair(member, accessModifier >= member.accessModifier)
         }
     }
+
+    override fun getAccess(function: Function): Member.AccessModifier {
+        return if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.CLASS){
+            function.parentClass()!!.getAccess(dataType)
+        }else if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.STRUCT){
+            function.parentStruct()!!.getAccess(dataType)
+        }else{
+            Member.AccessModifier.PUBLIC
+        }
+    }
 }

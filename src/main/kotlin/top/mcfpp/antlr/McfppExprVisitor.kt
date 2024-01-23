@@ -488,22 +488,10 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
                 }
                 re
             }else{
-                val cpd = when(currSelector){
-                    is CompoundDataType -> (currSelector as CompoundDataType).dataType
-                    is ClassPointer -> (currSelector as ClassPointer).clsType
-                    is ClassObject -> (currSelector as ClassObject).clsType
-                    else -> TODO()
-                }
-                val am = if(Function.currFunction !is ExtensionFunction && Function.currFunction.ownerType == Function.Companion.OwnerType.CLASS){
-                    Function.currFunction.parentClass()!!.getAccess(cpd)
-                }else if(Function.currFunction !is ExtensionFunction && Function.currFunction.ownerType == Function.Companion.OwnerType.STRUCT){
-                    Function.currFunction.parentStruct()!!.getAccess(cpd)
-                }else{
-                    Member.AccessModifier.PUBLIC
-                }
-                val re  = currSelector!!.getMemberVar(qwq,am)
+                //获取成员
+                val re  = currSelector!!.getMemberVar(qwq, currSelector!!.getAccess(Function.currFunction))
                 if (re.first == null) {
-                    Project.error("Undefined variable:$qwq")
+                    Project.error("Undefined field: $qwq")
                 }
                 if (!re.second){
                     Project.error("Cannot access member $qwq")

@@ -1,4 +1,6 @@
 namespace test;
 
-@CompileTime
-func qwq(){}
+func qwq(){
+    var t = print(2);
+    print(t.identifier);
+}
