@@ -5,15 +5,17 @@ import top.mcfpp.annotations.InsertCommand;
 import top.mcfpp.annotations.MCFPPNative;
 import top.mcfpp.lang.*;
 import top.mcfpp.lib.Function;
+import top.mcfpp.util.ValueWrapper;
 
 import java.util.Random;
 
 public class System {
 
     @MCFPPNative
-    public static void print(@NotNull Var[] vars, CanSelectMember caller) {
+    public static void print(@NotNull Var[] vars, CanSelectMember caller, ValueWrapper<Var> output) {
         //只会有一个参数哦
         Var var = vars[0];
+        output.setValue(new JavaVar(new MCInt(0,"test"),"test"));
         if (var instanceof MCInt) print((MCInt) var);
         else if (var instanceof JsonString) print((JsonString) var);
         else print(var);

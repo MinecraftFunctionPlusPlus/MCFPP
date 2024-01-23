@@ -1,2 +1,3 @@
-native print(int i) -> top.mcfpp.lang.System.print;
-native print(bool b) -> top.mcfpp.lang.System.print;
+func print(int i) = top.mcfpp.lang.System.print;
+func print(bool b) = top.mcfpp.lang.System.print;
+func print(JavaVar b) = top.mcfpp.lang.System.print;

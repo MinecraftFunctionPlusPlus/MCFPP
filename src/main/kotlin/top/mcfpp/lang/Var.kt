@@ -7,6 +7,7 @@ import top.mcfpp.exception.ClassNotDefineException
 import top.mcfpp.exception.OperationNotImplementException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.*
+import top.mcfpp.lib.Function
 import java.util.*
 
 /**
@@ -277,6 +278,10 @@ abstract class Var : Member, Cloneable, CanSelectMember {
 
     abstract fun toDynamic()
 
+    override fun getAccess(function: Function): Member.AccessModifier {
+        return Member.AccessModifier.PUBLIC
+    }
+
     companion object {
         /**
          * 根据所给的类型、标识符和域构造一个变量
@@ -298,6 +303,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                 "dict" -> TODO()
                 "map" -> TODO()
                 "nbt" -> `var` = NBT(container, identifier)
+                "JavaVar" -> `var` = JavaVar(null,identifier)
                 else -> {
                     //自定义的类的类型
                     val c = type.split(":")

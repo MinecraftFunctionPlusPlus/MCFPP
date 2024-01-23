@@ -28,4 +28,6 @@ interface CanSelectMember{
      * @return
      */
     fun getMemberFunction(key: String, params: List<String>, accessModifier: Member.AccessModifier): Pair<Function?, Boolean>
+
+    fun getAccess(function: Function): Member.AccessModifier
 }

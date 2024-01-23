@@ -4,7 +4,14 @@
 			"id":"mcfpp.sys",
 			"functions":[
 				"void print(int i)->top.mcfpp.lang.System.print",
-				"void print(bool b)->top.mcfpp.lang.System.print"
+				"void print(bool b)->top.mcfpp.lang.System.print",
+				"void print(JavaVar b)->top.mcfpp.lang.System.print"
+			],
+			"classes":[
+				
+			],
+			"structs":[
+				
 			]
 		},
 		{
@@ -12,6 +19,12 @@
 			"functions":[
 				"void load()",
 				"void tick()"
+			],
+			"classes":[
+				
+			],
+			"structs":[
+				
 			]
 		}
 	]

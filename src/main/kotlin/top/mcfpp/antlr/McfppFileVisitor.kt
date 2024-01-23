@@ -603,7 +603,7 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
     override fun visitNativeFuncDeclaration(ctx: mcfppParser.NativeFuncDeclarationContext): Any? {
         Project.ctx = ctx
         val nf: NativeFunction = try {
-            NativeFunction(ctx.Identifier().text, ctx.javaRefer().text, ctx.functionReturnType().text)
+            NativeFunction(ctx.Identifier().text, ctx.javaRefer().text, if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text)
         } catch (e: IllegalFormatException) {
             Project.error("Illegal Java Method Name:" + e.message)
             return null
