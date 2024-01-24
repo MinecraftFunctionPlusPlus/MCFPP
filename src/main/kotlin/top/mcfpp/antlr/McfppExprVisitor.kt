@@ -533,12 +533,12 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             }
             val p = StringHelper.splitNamespaceID(ctx.namespaceID().text)
             val func = if(currSelector == null){
-                McfppFuncVisitor().getFunction(p.first,p.second,FunctionParam.getVarTypes(args))
+                McfppFuncManager().getFunction(p.first,p.second,FunctionParam.getVarTypes(args))
             }else{
                 if(p.first != null){
                     Project.warn("Invalid namespace usage ${p.first} in function call ")
                 }
-                McfppFuncVisitor().getFunction(currSelector!!,p.second,FunctionParam.getVarTypes(args))
+                McfppFuncManager().getFunction(currSelector!!,p.second,FunctionParam.getVarTypes(args))
             }
             if (func == null) {
                 Project.error("Function " + ctx.text + " not defined")
