@@ -47,8 +47,7 @@ importDeclaration
 
 //类或函数声明
 typeDeclaration
-    :   doc_comment? annoation
-    |   doc_comment? declarations
+    :   doc_comment? declarations
     ;
 
 //类或函数声明
@@ -70,7 +69,7 @@ globalDeclaration
 
 //类声明
 classDeclaration
-    :   STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace (':' className (',' className)*)? classBody
+    :   annotation? STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace (':' className (',' className)*)? classBody
     ;
 
 nativeClassDeclaration
@@ -99,15 +98,15 @@ classMember
     ;
 
 classFunctionDeclaration
-    :   OVERRIDE? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
+    :   annotation? OVERRIDE? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
     ;
 
 abstractClassFunctionDeclaration
-    :   OVERRIDE? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? ';'
+    :   annotation? OVERRIDE? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? ';'
     ;
 
 nativeClassFunctionDeclaration
-    :   OVERRIDE? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '=' javaRefer ';'
+    :   annotation? OVERRIDE? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '=' javaRefer ';'
     ;
 
 classFieldDeclaration
@@ -146,7 +145,7 @@ templateFieldDeclaration
 
 //接口声明
 interfaceDeclaration
-    :   INTERFACE classWithoutNamespace (':' className (',' className)*)? interfaceBody
+    :   annotation? INTERFACE classWithoutNamespace (':' className (',' className)*)? interfaceBody
     ;
 
 interfaceBody
@@ -154,16 +153,16 @@ interfaceBody
     ;
 
 interfaceFunctionDeclaration
-    :   FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? ';'
+    :   annotation? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? ';'
     ;
 
 //函数声明
 functionDeclaration
-    :   INLINE? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
+    :   annotation? INLINE? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
     ;
 
 extensionFunctionDeclaration
-    :   STATIC? FUNCTION (type '.')? Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
+    :   annotation? STATIC? FUNCTION (type '.')? Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
     ;
 
 namespaceID
@@ -171,7 +170,7 @@ namespaceID
     ;
 
 nativeFuncDeclaration
-    :   FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '=' javaRefer ';'
+    :   annotation? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '=' javaRefer ';'
     ;
 
 javaRefer
@@ -192,7 +191,7 @@ accessModifier
 
 //构造函数声明
 constructorDeclaration
-    :   className '(' parameterList? ')' '{' functionBody '}'
+    :   annotation? className '(' parameterList? ')' '{' functionBody '}'
     ;
 
 //构造函数的调用
