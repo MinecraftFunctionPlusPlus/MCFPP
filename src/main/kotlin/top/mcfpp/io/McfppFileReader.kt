@@ -3,10 +3,11 @@ package top.mcfpp.io
 import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.antlr.mcfppParser
 import org.antlr.v4.runtime.*
+import org.antlr.v4.runtime.tree.ParseTree
 import top.mcfpp.Project
 import top.mcfpp.lib.*
 import top.mcfpp.antlr.McfppFileVisitor
-import top.mcfpp.antlr.McfppImListener
+import top.mcfpp.antlr.McfppImVisitor
 import java.io.*
 import kotlin.io.path.absolutePathString
 
@@ -22,30 +23,32 @@ class McfppFileReader(path: String?) : McfppReader() {
         input = FileInputStream(path)
     }
 
+    @Throws(IOException::class)
+    fun tree():ParseTree{
+        Project.currFile = File(path!!)
+        if(!Project.trees.contains(Project.currFile)){
+            val charStream: CharStream = CharStreams.fromStream(input)
+            val tokens = CommonTokenStream(mcfppLexer(charStream))
+            val parser = mcfppParser(tokens)
+            Project.trees[Project.currFile] = parser.compilationUnit()
+        }
+        return Project.trees[Project.currFile]!!
+    }
+
     /**
      * 解析这个文件
      */
-    @Throws(IOException::class)
+
     fun analyse() {
-        Project.currFile = File(path!!)
-        val charStream: CharStream = CharStreams.fromStream(input)
-        val tokens = CommonTokenStream(mcfppLexer(charStream))
-        McfppFileVisitor().visit(mcfppParser(tokens).compilationUnit())
+        McfppFileVisitor().visit(tree())
     }
 
     /**
      * 编译这个文件
      */
-    @Throws(IOException::class)
     fun compile() {
         Project.currNamespace = Project.defaultNamespace
-        Project.currFile = File(path!!)
-        val charStream: CharStream = CharStreams.fromStream(input)
-        val lexer = mcfppLexer(charStream)
-        val tokens = CommonTokenStream(lexer)
-        val parser = mcfppParser(tokens)
-        parser.addParseListener(McfppImListener())
-        parser.compilationUnit()
+        McfppImVisitor().visit(tree())
     }
 
     companion object {

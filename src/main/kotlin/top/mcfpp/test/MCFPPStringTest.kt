@@ -7,10 +7,7 @@ import org.apache.logging.log4j.core.config.ConfigurationSource
 import org.apache.logging.log4j.core.config.Configurator
 import top.mcfpp.CompileSettings
 import top.mcfpp.Project
-import top.mcfpp.antlr.McfppFileVisitor
-import top.mcfpp.antlr.McfppImListener
-import top.mcfpp.antlr.mcfppLexer
-import top.mcfpp.antlr.mcfppParser
+import top.mcfpp.antlr.*
 import top.mcfpp.lib.GlobalField
 import java.io.File
 import java.io.FileInputStream
@@ -46,19 +43,17 @@ object MCFPPStringTest {
             if(!CompileSettings.ignoreStdLib){
                 GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
             }
-            var charStream: CharStream = CharStreams.fromString(str)
-            var tokens = CommonTokenStream(mcfppLexer(charStream))
-            McfppFileVisitor().visit(mcfppParser(tokens).compilationUnit())
+            val charStream: CharStream = CharStreams.fromString(str)
+            val tokens = CommonTokenStream(mcfppLexer(charStream))
+            val parser = mcfppParser(tokens)
+            McfppFileVisitor().visit(parser.compilationUnit())
             GlobalField.importedLibNamespaces.clear()
             //添加默认库域
             if(!CompileSettings.ignoreStdLib){
                 GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
             }
-            charStream = CharStreams.fromString(str)
-            tokens = CommonTokenStream(mcfppLexer(charStream))
-            val parser = mcfppParser(tokens)
-            parser.addParseListener(McfppImListener())
-            parser.compilationUnit()
+            val visitor = McfppImVisitor()
+            visitor.visit(parser.compilationUnit())
             Project.optimization() //优化
             Project.genIndex() //生成索引
             Project.ctx = null
@@ -102,17 +97,15 @@ object MCFPPStringTest {
             }
             var charStream: CharStream = CharStreams.fromString(code)
             var tokens = CommonTokenStream(mcfppLexer(charStream))
-            McfppFileVisitor().visit(mcfppParser(tokens).compilationUnit())
+            val parser = mcfppParser(tokens)
+            McfppFileVisitor().visit(parser.compilationUnit())
             GlobalField.importedLibNamespaces.clear()
             //添加默认库域
             if(!CompileSettings.ignoreStdLib){
                 GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
             }
-            charStream = CharStreams.fromString(code)
-            tokens = CommonTokenStream(mcfppLexer(charStream))
-            val parser = mcfppParser(tokens)
-            parser.addParseListener(McfppImListener())
-            parser.compilationUnit()
+            val visitor = McfppImVisitor()
+            visitor.visit(parser.compilationUnit())
             Project.optimization() //优化
             Project.genIndex() //生成索引
             Project.ctx = null
