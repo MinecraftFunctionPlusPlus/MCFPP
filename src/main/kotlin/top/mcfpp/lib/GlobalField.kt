@@ -3,7 +3,6 @@ package top.mcfpp.lib
 import org.jetbrains.annotations.Nullable
 import top.mcfpp.Project
 import top.mcfpp.lang.SbObject
-import top.mcfpp.lang.annotation.CompileTimeAnnotation
 import java.util.*
 import kotlin.collections.HashMap
 
@@ -57,8 +56,6 @@ object GlobalField : FieldContainer, IField {
         scoreboards[SbObject.MCS_default.name] = SbObject.MCS_default
         scoreboards[SbObject.MCFPP_INIT.name] = SbObject.MCFPP_INIT
         scoreboards[SbObject.MCFPP_TEMP.name] = SbObject.MCFPP_TEMP
-
-        annotations["CompileTime"] = CompileTimeAnnotation::class.java
 
         return this
     }
