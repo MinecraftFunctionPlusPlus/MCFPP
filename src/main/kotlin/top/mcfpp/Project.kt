@@ -2,6 +2,7 @@ package top.mcfpp
 
 import com.alibaba.fastjson2.*
 import org.antlr.v4.runtime.ParserRuleContext
+import org.antlr.v4.runtime.tree.ParseTree
 import org.apache.logging.log4j.*
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.io.IndexReader
@@ -59,6 +60,11 @@ object Project {
      * 编译时，当前编译的文件
      */
     lateinit var currFile: File
+
+    /**
+     * 当前解析文件的语法树
+     */
+    var trees:MutableMap<File,ParseTree> = mutableMapOf()
 
     /**
      * 工程的名字
@@ -250,6 +256,8 @@ object Project {
             }
         }
     }
+
+
 
     /**
      * 整理并优化工程
