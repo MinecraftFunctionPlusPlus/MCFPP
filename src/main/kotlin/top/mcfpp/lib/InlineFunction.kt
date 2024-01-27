@@ -48,7 +48,7 @@ class InlineFunction : Function {
         //参数传递
         argPass(args)
         //重新遍历这个函数
-        val charStream: CharStream = CharStreams.fromString(context.text)
+        val charStream: CharStream = CharStreams.fromString(AntlrUtil.getReadableText(context.functionBody()))
         val lexer = mcfppLexer(charStream)
         val tokens = CommonTokenStream(lexer)
         val parser = mcfppParser(tokens)
