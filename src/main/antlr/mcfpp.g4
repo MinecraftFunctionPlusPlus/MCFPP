@@ -47,15 +47,17 @@ importDeclaration
 
 //类或函数声明
 typeDeclaration
-    :   doc_comment? annoation
-    |   doc_comment? declarations
+    :   doc_comment? declarations
     ;
 
 //类或函数声明
 declarations
     :   classDeclaration
     |   functionDeclaration
+    |   inlineFunctionDeclaration
     |   nativeFuncDeclaration
+    |   compileTimeFuncDeclaration
+    |   compileTimeClassDeclaration
     |   nativeClassDeclaration
     |   templateDeclaration
     |   extensionFunctionDeclaration
@@ -70,7 +72,11 @@ globalDeclaration
 
 //类声明
 classDeclaration
-    :   STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace (':' className (',' className)*)? classBody
+    :   classAnnotation? STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace (':' className (',' className)*)? classBody
+    ;
+
+compileTimeClassDeclaration
+    :   CONST CLASS classWithoutNamespace (':' className (',' className)*)? classBody
     ;
 
 nativeClassDeclaration
@@ -99,15 +105,15 @@ classMember
     ;
 
 classFunctionDeclaration
-    :   OVERRIDE? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
+    :   funcAnnoation? OVERRIDE? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
     ;
 
 abstractClassFunctionDeclaration
-    :   OVERRIDE? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? ';'
+    :   funcAnnoation? OVERRIDE? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? ';'
     ;
 
 nativeClassFunctionDeclaration
-    :   OVERRIDE? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '=' javaRefer ';'
+    :   funcAnnoation? OVERRIDE? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '=' javaRefer ';'
     ;
 
 classFieldDeclaration
@@ -141,12 +147,17 @@ templateFunctionDeclaration
     ;
 
 templateFieldDeclaration
-    :   CONST? Identifier (',' CONST? Identifier)*
+    :   (templateFieldDeclarationExpression ',')* templateFieldDeclarationExpression ';'
     ;
+
+templateFieldDeclarationExpression
+    :   CONST? type? Identifier ':' expression
+    ;
+
 
 //接口声明
 interfaceDeclaration
-    :   INTERFACE classWithoutNamespace (':' className (',' className)*)? interfaceBody
+    :   classAnnotation? INTERFACE classWithoutNamespace (':' className (',' className)*)? interfaceBody
     ;
 
 interfaceBody
@@ -154,16 +165,24 @@ interfaceBody
     ;
 
 interfaceFunctionDeclaration
-    :   FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? ';'
+    :   funcAnnoation? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? ';'
+    ;
+
+compileTimeFuncDeclaration
+    :   CONST FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
+    ;
+
+inlineFunctionDeclaration
+    :   funcAnnoation? INLINE FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
     ;
 
 //函数声明
 functionDeclaration
-    :   INLINE? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
+    :   funcAnnoation? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
     ;
 
 extensionFunctionDeclaration
-    :   STATIC? FUNCTION (type '.')? Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
+    :   funcAnnoation? STATIC? FUNCTION (type '.')? Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
     ;
 
 namespaceID
@@ -171,7 +190,7 @@ namespaceID
     ;
 
 nativeFuncDeclaration
-    :   FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '=' javaRefer ';'
+    :   funcAnnoation? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '=' javaRefer ';'
     ;
 
 javaRefer
@@ -192,7 +211,7 @@ accessModifier
 
 //构造函数声明
 constructorDeclaration
-    :   className '(' parameterList? ')' '{' functionBody '}'
+    :   funcAnnoation? className '(' parameterList? ')' '{' functionBody '}'
     ;
 
 //构造函数的调用
@@ -484,7 +503,10 @@ classWithoutNamespace
     :   ClassIdentifier
     ;
 
-annoation
+funcAnnoation
+    :   '@' id=(Identifier|ClassIdentifier) arguments?
+    ;
+classAnnotation
     :   '@' id=(Identifier|ClassIdentifier) arguments?
     ;
 

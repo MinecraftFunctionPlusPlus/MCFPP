@@ -5,10 +5,7 @@ import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
-import top.mcfpp.antlr.McfppImListener
-import top.mcfpp.antlr.McfppInlineFunctionListener
-import top.mcfpp.antlr.mcfppLexer
-import top.mcfpp.antlr.mcfppParser
+import top.mcfpp.antlr.*
 import top.mcfpp.command.Commands
 import top.mcfpp.lang.*
 import top.mcfpp.util.AntlrUtil
@@ -18,13 +15,13 @@ import top.mcfpp.util.AntlrUtil
  */
 class InlineFunction : Function {
 
-    var context: mcfppParser.FunctionDeclarationContext
+    var context: mcfppParser.InlineFunctionDeclarationContext
 
-    constructor(name: String, context: mcfppParser.FunctionDeclarationContext) : super(name) {
+    constructor(name: String, context: mcfppParser.InlineFunctionDeclarationContext) : super(name) {
         this.context = context
     }
 
-    constructor(name: String, namespace: String, context: mcfppParser.FunctionDeclarationContext) : super(name, namespace, "void") {
+    constructor(name: String, namespace: String, context: mcfppParser.InlineFunctionDeclarationContext) : super(name, namespace, "void") {
         this.context = context
     }
 
@@ -48,12 +45,15 @@ class InlineFunction : Function {
         //参数传递
         argPass(args)
         //重新遍历这个函数
-        val charStream: CharStream = CharStreams.fromString(AntlrUtil.getReadableText(context.functionBody()))
-        val lexer = mcfppLexer(charStream)
-        val tokens = CommonTokenStream(lexer)
-        val parser = mcfppParser(tokens)
-        parser.addParseListener(McfppImListener())
-        parser.functionDeclaration()
+        val visitor = McfppImVisitor()
+        visitor.visit(context)
+
+//        val charStream: CharStream = CharStreams.fromString(context.text)
+//        val lexer = mcfppLexer(charStream)
+//        val tokens = CommonTokenStream(lexer)
+//        val parser = mcfppParser(tokens)
+//        parser.addParseListener(McfppImListener())
+//        parser.functionDeclaration()
     }
 
     /**
@@ -70,12 +70,16 @@ class InlineFunction : Function {
         //参数传递
         argPass(args)
         //重新遍历这个函数
-        val charStream: CharStream = CharStreams.fromString(AntlrUtil.getReadableText(context.functionBody()))
-        val lexer = mcfppLexer(charStream)
-        val tokens = CommonTokenStream(lexer)
-        val parser = mcfppParser(tokens)
-        parser.addParseListener(McfppInlineFunctionListener())
-        parser.functionBody()
+
+        //这边其实直接用visitor会更好，因为visitor不用加parser，直接visitor.visit(context)
+        val visitor = McfppInlineFunctionVisitor()
+        visitor.visit(context)
+//        val charStream: CharStream = CharStreams.fromString(AntlrUtil.getReadableText(context.functionBody()))
+//        val lexer = mcfppLexer(charStream)
+//        val tokens = CommonTokenStream(lexer)
+//        val parser = mcfppParser(tokens)
+//        parser.addParseListener(McfppInlineFunctionListener())
+//        parser.functionBody()
     }
 
     /**

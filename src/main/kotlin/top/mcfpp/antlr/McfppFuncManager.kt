@@ -10,7 +10,7 @@ import kotlin.reflect.KFunction
 /**
  * 获取函数用的visitor
  */
-class McfppFuncVisitor{
+class McfppFuncManager{
 
     /**
      * 获取一个全局函数
