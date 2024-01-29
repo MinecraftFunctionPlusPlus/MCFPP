@@ -19,11 +19,12 @@ import kotlin.system.exitProcess
 /**
  * 获取表达式结果用的visitor。解析并计算一个形如a+b*c的表达式。
  */
-class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
+class McfppExprVisitor: mcfppBaseVisitor<Var?>() {
 
     private val tempVarCommandCache = HashMap<Var, String>()
 
     var processVarCache : ArrayList<Var> = ArrayList()
+    fun clearCache(){processVarCache.clear()}
 
     private var currSelector : CanSelectMember? = null
 
@@ -459,7 +460,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             return visit(ctx.constructorCall())
         } else{
             //this或者super
-            val re: Var? = Function.currFunction.field.getVar(ctx.text)
+            val re: Var? = Function.field.getVar(ctx.text)
             if (re == null) {
                 Project.error("${ctx.text} can only be used in member functions.")
             }
@@ -481,7 +482,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             //没有数组选取
             val qwq: String = ctx.Identifier().text
             var re = if(currSelector == null){
-                val re: Var? = Function.currFunction.field.getVar(qwq)
+                val re: Var? = Function.field.getVar(qwq)
                 if (re == null) {
                     Project.error("Undefined variable:$qwq")
                     throw Exception()
@@ -588,4 +589,6 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         constructor.invoke(args, callerClassP = obj.initPointer)
         return obj.initPointer
     }
+
+
 }

@@ -26,6 +26,7 @@ object MCFPPStringTest {
             //读取json
             Project.debug("Generate debug project for a string string")
             Project.root = Path.of("./")
+            Project.currFile = File("./test.mcfpp")
             Project.name = "debug"
             //版本77
             Project.version = "1.20"
@@ -46,14 +47,15 @@ object MCFPPStringTest {
             val charStream: CharStream = CharStreams.fromString(str)
             val tokens = CommonTokenStream(mcfppLexer(charStream))
             val parser = mcfppParser(tokens)
-            McfppFileVisitor().visit(parser.compilationUnit())
+            val context = parser.compilationUnit()
+            McfppFileVisitor().visit(context)
             GlobalField.importedLibNamespaces.clear()
             //添加默认库域
             if(!CompileSettings.ignoreStdLib){
                 GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
             }
             val visitor = McfppImVisitor()
-            visitor.visit(parser.compilationUnit())
+            visitor.visit(context)
             Project.optimization() //优化
             Project.genIndex() //生成索引
             Project.ctx = null
@@ -98,14 +100,15 @@ object MCFPPStringTest {
             var charStream: CharStream = CharStreams.fromString(code)
             var tokens = CommonTokenStream(mcfppLexer(charStream))
             val parser = mcfppParser(tokens)
-            McfppFileVisitor().visit(parser.compilationUnit())
+            val context = parser.compilationUnit()
+            McfppFileVisitor().visit(context)
             GlobalField.importedLibNamespaces.clear()
             //添加默认库域
             if(!CompileSettings.ignoreStdLib){
                 GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
             }
             val visitor = McfppImVisitor()
-            visitor.visit(parser.compilationUnit())
+            visitor.visit(context)
             Project.optimization() //优化
             Project.genIndex() //生成索引
             Project.ctx = null

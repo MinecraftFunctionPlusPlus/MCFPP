@@ -3,6 +3,7 @@ package top.mcfpp.antlr
 import org.antlr.v4.runtime.RuleContext
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
+import top.mcfpp.antlr.mcfppParser.CompileTimeFuncDeclarationContext
 import top.mcfpp.command.CommandList
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.*
@@ -73,6 +74,7 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
     }
 
     override fun visitFunctionBody(ctx: mcfppParser.FunctionBodyContext): Any? {
+        if(ctx.parent is CompileTimeFuncDeclarationContext) return null
         enterFunctionBody(ctx)
         super.visitFunctionBody(ctx)
         exitFunctionBody(ctx)
@@ -248,7 +250,7 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
             val `var` = Var.build(ctx.Identifier().text, init.type, Function.currFunction)
             //变量注册
             //一定是函数变量
-            if (!Function.currFunction.field.putVar(ctx.Identifier().text, `var`)) {
+            if (!Function.field.putVar(ctx.Identifier().text, `var`)) {
                 Project.error("Duplicate defined variable name:" + ctx.Identifier().text)
                 throw VariableDuplicationException()
             }
@@ -285,7 +287,7 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
                 val `var` = Var.build(c, Function.currFunction)
                 //变量注册
                 //一定是函数变量
-                if (!Function.currFunction.field.putVar(c.Identifier().text, `var`)) {
+                if (!Function.field.putVar(c.Identifier().text, `var`)) {
                     Project.error("Duplicate defined variable name:" + c.Identifier().text)
                     throw VariableDuplicationException()
                 }
@@ -367,7 +369,7 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
      * @param ctx
      */
     //TODO: Func
-    override fun visitClassAnnotation(ctx: mcfppParser.ClassAnnotationContext?): Any? {
+    override fun visitClassAnnotation(ctx: mcfppParser.ClassAnnotationContext): Any? {
         Project.ctx = ctx
         val anno = GlobalField.annotations[ctx!!.id.text]
         if(anno == null){
@@ -399,7 +401,7 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
     * override fun exitSelfAddOrMinusStatement(ctx: mcfppParser.SelfAddOrMinusStatementContext) {
     *    Project.ctx = ctx
     *    Function.addCommand("#" + ctx.text)
-    *    val re: Var? = Function.currFunction.field.getVar(ctx.selfAddOrMinusExpression().Identifier().text)
+    *    val re: Var? = Function.field.getVar(ctx.selfAddOrMinusExpression().Identifier().text)
     *    if (re == null) {
     *        Project.error("Undefined variable:" + ctx.selfAddOrMinusExpression().Identifier().text)
     *        throw VariableNotDefineException()
@@ -427,7 +429,7 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
 //region 逻辑语句
     
     @InsertCommand
-    override fun visitReturnStatement(ctx: mcfppParser.ReturnStatementContext?):Any? {
+    override fun visitReturnStatement(ctx: mcfppParser.ReturnStatementContext):Any? {
         Project.ctx = ctx
         Function.addCommand("#" + ctx!!.text)
         if (ctx.expression() != null) {
@@ -440,7 +442,7 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
         return null
     }
 
-    override fun visitIfStatement(ctx: mcfppParser.IfStatementContext?): Any? {
+    override fun visitIfStatement(ctx: mcfppParser.IfStatementContext): Any? {
         enterIfStatement(ctx)
         super.visitIfStatement(ctx)
         exitIfStatement(ctx)
@@ -455,7 +457,7 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
      */
     
     @InsertCommand
-    fun enterIfStatement(ctx: mcfppParser.IfStatementContext?) {
+    fun enterIfStatement(ctx: mcfppParser.IfStatementContext) {
         //进入if函数
         Project.ctx = ctx
         Function.addCommand("#" + "if start")
@@ -475,7 +477,7 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
      */
     
     @InsertCommand
-    fun exitIfStatement(ctx: mcfppParser.IfStatementContext?) {
+    fun exitIfStatement(ctx: mcfppParser.IfStatementContext) {
         Project.ctx = ctx
         Function.currFunction = Function.currFunction.parent[0]
         //调用完毕，将子函数的栈销毁
@@ -572,13 +574,13 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
      */
     
     @InsertCommand
-    fun exitIfBlock(ctx: mcfppParser.IfBlockContext?) {
+    fun exitIfBlock(ctx: mcfppParser.IfBlockContext) {
         Project.ctx = ctx
         Function.currFunction = Function.currFunction.parent[0]
         Function.addCommand("#if branch end")
     }
 
-    override fun visitWhileStatement(ctx: mcfppParser.WhileStatementContext?): Any? {
+    override fun visitWhileStatement(ctx: mcfppParser.WhileStatementContext): Any? {
         enterWhileStatement(ctx)
         super.visitWhileStatement(ctx)
         exitWhileStatement(ctx)
@@ -586,7 +588,7 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
     }
 
     @InsertCommand
-    fun enterWhileStatement(ctx: mcfppParser.WhileStatementContext?) {
+    fun enterWhileStatement(ctx: mcfppParser.WhileStatementContext) {
         //进入if函数
         Project.ctx = ctx
         Function.addCommand("#while start")
@@ -601,7 +603,7 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
 
     
     @InsertCommand
-    fun exitWhileStatement(ctx: mcfppParser.WhileStatementContext?) {
+    fun exitWhileStatement(ctx: mcfppParser.WhileStatementContext) {
         Project.ctx = ctx
         Function.currFunction = Function.currFunction.parent[0]
         //调用完毕，将子函数的栈销毁
@@ -692,7 +694,7 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
     }
 
     @InsertCommand
-    fun enterDoWhileStatement(ctx: mcfppParser.DoWhileStatementContext?) {
+    fun enterDoWhileStatement(ctx: mcfppParser.DoWhileStatementContext) {
         //进入do-while函数
         Project.ctx = ctx
         Function.addCommand("#do-while start")
@@ -722,7 +724,7 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
     }
 
 
-    override fun visitDoWhileBlock(ctx: mcfppParser.DoWhileBlockContext?): Any? {
+    override fun visitDoWhileBlock(ctx: mcfppParser.DoWhileBlockContext): Any? {
         enterDoWhileBlock(ctx)
         super.visitDoWhileBlock(ctx)
         exitDoWhileBlock(ctx)
@@ -735,7 +737,7 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
      */
     
     @InsertCommand
-    fun enterDoWhileBlock(ctx: mcfppParser.DoWhileBlockContext?) {
+    fun enterDoWhileBlock(ctx: mcfppParser.DoWhileBlockContext) {
         Project.ctx = ctx
         Function.addCommand("#do while start")
         //匿名函数的定义
@@ -783,7 +785,7 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
 
     
     @InsertCommand
-    fun exitDoWhileBlock(ctx: mcfppParser.DoWhileBlockContext?) {
+    fun exitDoWhileBlock(ctx: mcfppParser.DoWhileBlockContext) {
         Project.ctx = ctx
         //调用完毕，将子函数的栈销毁
         Function.addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
@@ -793,7 +795,7 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
     }
 
 
-    override fun visitForStatement(ctx: mcfppParser.ForStatementContext?): Any? {
+    override fun visitForStatement(ctx: mcfppParser.ForStatementContext): Any? {
         enterForStatement(ctx)
         super.visitForStatement(ctx)
         exitForStatement(ctx)
@@ -806,7 +808,7 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
      */
     
     @InsertCommand
-    fun enterForStatement(ctx: mcfppParser.ForStatementContext?) {
+    fun enterForStatement(ctx: mcfppParser.ForStatementContext) {
         Project.ctx = ctx
         Function.addCommand("#for start")
         val forFunc: Function = InternalFunction("_for_", Function.currFunction)
@@ -822,13 +824,13 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
 
     
     @InsertCommand
-    fun exitForStatement(ctx: mcfppParser.ForStatementContext?) {
+    fun exitForStatement(ctx: mcfppParser.ForStatementContext) {
         Project.ctx = ctx
         Function.currFunction = Function.currFunction.parent[0]
         Function.addCommand("#for end")
     }
 
-    override fun visitForInit(ctx: mcfppParser.ForInitContext?): Any? {
+    override fun visitForInit(ctx: mcfppParser.ForInitContext): Any? {
         enterForInit(ctx)
         super.visitForInit(ctx)
         exitForInit(ctx)
@@ -836,14 +838,14 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
     }
     
     @InsertCommand
-    fun enterForInit(ctx: mcfppParser.ForInitContext?) {
+    fun enterForInit(ctx: mcfppParser.ForInitContext) {
         Project.ctx = ctx
         Function.addCommand("#for init start")
     }
 
     
     @InsertCommand
-    fun exitForInit(ctx: mcfppParser.ForInitContext?) {
+    fun exitForInit(ctx: mcfppParser.ForInitContext) {
         Project.ctx = ctx
         Function.addCommand("#for init end")
         //进入for循环主体
@@ -867,14 +869,14 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
      * @param ctx the parse tree
      */
 
-    override fun visitForUpdate(ctx: mcfppParser.ForUpdateContext?): Any? {
+    override fun visitForUpdate(ctx: mcfppParser.ForUpdateContext): Any? {
         enterForUpdate(ctx)
         super.visitForUpdate(ctx)
         exitForUpdate(ctx)
         return null
     }
 
-    fun enterForUpdate(ctx: mcfppParser.ForUpdateContext?) {
+    fun enterForUpdate(ctx: mcfppParser.ForUpdateContext) {
         Project.ctx = ctx
         forInitCommands = Function.currFunction.commands
         Function.currFunction.commands = forUpdateCommands
@@ -889,7 +891,7 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
      * @param ctx the parse tree
      */
     
-    fun exitForUpdate(ctx: mcfppParser.ForUpdateContext?) {
+    fun exitForUpdate(ctx: mcfppParser.ForUpdateContext) {
         Project.ctx = ctx
         Function.currFunction.commands = forInitCommands
     }
@@ -1046,7 +1048,7 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
      * @param ctx the parse tree
      */
     
-    fun exitClassBody(ctx: mcfppParser.ClassBodyContext?) {
+    fun exitClassBody(ctx: mcfppParser.ClassBodyContext) {
         Project.ctx = ctx
         Class.currClass = null
         Function.currFunction = Function.nullFunction
@@ -1097,7 +1099,7 @@ open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
      * @param ctx the parse tree
      */
     
-    fun exitTemplateBody(ctx: mcfppParser.TemplateBodyContext?) {
+    fun exitTemplateBody(ctx: mcfppParser.TemplateBodyContext) {
         Project.ctx = ctx
         Template.currTemplate = null
     }
