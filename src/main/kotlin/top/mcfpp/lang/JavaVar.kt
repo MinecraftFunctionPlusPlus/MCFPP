@@ -1,17 +1,7 @@
 package top.mcfpp.lang
 
-import net.querz.nbt.tag.ByteTag
 import net.querz.nbt.tag.CompoundTag
-import net.querz.nbt.tag.DoubleTag
-import net.querz.nbt.tag.FloatTag
-import net.querz.nbt.tag.IntArrayTag
-import net.querz.nbt.tag.IntTag
-import net.querz.nbt.tag.ListTag
-import net.querz.nbt.tag.LongTag
-import net.querz.nbt.tag.ShortTag
-import net.querz.nbt.tag.StringTag
 import net.querz.nbt.tag.Tag
-import org.apache.tools.ant.taskdefs.launcher.MacCommandLauncher
 import top.mcfpp.Project
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.*
@@ -21,7 +11,6 @@ import java.lang.Class
 import java.util.*
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
-import kotlin.reflect.KProperty
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KVisibility
 import kotlin.reflect.full.memberProperties
@@ -95,6 +84,7 @@ class JavaVar : Var{
     override fun cast(type: String): Var {
         return when(type){
             "JavaVar" -> this
+            "any" -> MCAny(this)
             else -> throw VariableConverseException()
         }
     }

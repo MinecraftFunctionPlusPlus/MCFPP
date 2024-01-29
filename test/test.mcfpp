@@ -1,6 +1,9 @@
 namespace test;
 
 func qwq(){
-    var t = print(2);
-    print(t.identifier);
+    var t = 1;
+    any p = 5;
+    p = (int)p + t;
+    print(t);
+    print(p);
 }

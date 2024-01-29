@@ -13,7 +13,6 @@ import top.mcfpp.command.Commands
 import top.mcfpp.exception.NBTTypeException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.Class
-import kotlin.Number
 import kotlin.collections.ArrayList
 
 /**
@@ -356,13 +355,10 @@ class NBT : Var, Indexable<NBT>{
      * @param type 要转换到的目标类型
      */
     override fun cast(type: String): Var {
-        when(type){
-            "nbt" -> {
-                return this
-            }
-            else -> {
-                throw VariableConverseException()
-            }
+        return when(type){
+            "nbt" -> this
+            "any" -> MCAny(this)
+            else -> throw VariableConverseException()
         }
     }
 

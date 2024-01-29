@@ -53,22 +53,44 @@ open class CompoundData : FieldContainer {
     }
 
     /**
-     * 返回此类中的一个成员字段。
+     * 返回一个成员字段。如果没有，则从父类中寻找
      * @param key 字段名
+     * @param isStatic 是否是静态成员
      * @return 如果字段存在，则返回此字段，否则返回null
      */
-    fun getVar(key: String): Var? {
-        return field.getVar(key)
+    fun getVar(key: String, isStatic: Boolean = false): Var? {
+        var re = if(isStatic){
+            staticField.getVar(key)
+        }else{
+            field.getVar(key)
+        }
+        val iterator = parent.iterator()
+        while (re == null && iterator.hasNext()){
+            re = iterator.next().getVar(key,isStatic)
+        }
+        return re
     }
 
     /**
-     * 返回此类中的一个静态字段
+     * 返回一个成员函数。如果没有，则从父类中寻找
      *
-     * @param key 字段名
-     * @return 如果存在，则返回此字段，否则返回null
+     * @param key 函数名
+     * @param params 函数参数
+     * @param isStatic 是否是静态成员
+     *
+     * @return 如果函数存在，则返回此函数，否则返回null
      */
-    fun getStaticVar(key : String): Var? {
-        return staticField.getVar(key)
+    fun getFunction(key: String, params: List<String>, isStatic: Boolean = false): Function? {
+        var re = if(isStatic){
+            staticField.getFunction(key, params)
+        }else{
+            field.getFunction(key, params)
+        }
+        val iterator = parent.iterator()
+        while (re == null && iterator.hasNext()){
+            re = iterator.next().getFunction(key,params,isStatic)
+        }
+        return re
     }
 
     /**
@@ -149,5 +171,10 @@ open class CompoundData : FieldContainer {
             }
         }
         return false
+    }
+
+    open fun extends(compoundData: CompoundData): CompoundData{
+        parent.add(compoundData)
+        return this
     }
 }

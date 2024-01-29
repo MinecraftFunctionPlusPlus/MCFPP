@@ -85,10 +85,12 @@ open class MCBool : Var, OnScoreboard {
     }
 
     @Override
-    override fun cast(type: String): Var? {
-        return if (type == this.type) {
-            this
-        } else null
+    override fun cast(type: String): Var {
+        return when(type){
+            "bool" -> this
+            "any" -> MCAny(this)
+            else -> throw VariableConverseException()
+        }
     }
 
     @InsertCommand

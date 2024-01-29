@@ -36,7 +36,7 @@ class ReturnedMCBool(val parentFunction: Function) : MCBool() {
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型
      */
-    override fun cast(type: String): Var? {
+    override fun cast(type: String): Var {
         Project.error("The bool type returned by the function is read-only")
         throw Exception()
     }

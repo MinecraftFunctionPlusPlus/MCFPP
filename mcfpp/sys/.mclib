@@ -4,8 +4,7 @@
 			"id":"mcfpp.sys",
 			"functions":[
 				"void print(int i)->top.mcfpp.lang.System.print",
-				"void print(bool b)->top.mcfpp.lang.System.print",
-				"void print(JavaVar b)->top.mcfpp.lang.System.print"
+				"void print(any a)->top.mcfpp.lang.System.print"
 			],
 			"classes":[
 				

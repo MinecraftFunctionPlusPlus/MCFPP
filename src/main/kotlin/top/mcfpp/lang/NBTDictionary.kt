@@ -79,6 +79,7 @@ open class NBTDictionary : NBTBasedData, Indexable<NBT> {
             when(type){
                 "dict" -> this
                 "nbt" -> NBT(value!!)
+                "any" -> this
                 else -> throw VariableConverseException()
             }
         }else{
@@ -90,6 +91,7 @@ open class NBTDictionary : NBTBasedData, Indexable<NBT> {
                     re.parent = parent
                     re
                 }
+                "any" -> MCAny(this)
                 else -> throw VariableConverseException()
             }
         }

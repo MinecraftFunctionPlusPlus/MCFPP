@@ -79,6 +79,11 @@ open class Class : CompoundData {
     lateinit var initPointer : ClassPointer
 
     /**
+     * 是否已经继承了一个类
+     */
+    private var hasParentClass = false
+
+    /**
      * 生成一个类。它拥有指定的标识符和默认的命名空间
      * @param identifier 类的标识符
      */
@@ -173,44 +178,20 @@ open class Class : CompoundData {
     }
 
     /**
-     * 实现某个接口
+     * 继承某个类或接口的字段和方法
      *
-     * @param itf
+     * @param compoundData
      */
-    fun implements(itf: Interface){
-        itf.field.forEachFunction { f ->
-            run {
-                field.addFunction(f,false)
+    override fun extends(compoundData: CompoundData) : CompoundData{
+        if(compoundData is Class){
+            if(hasParentClass){
+                Project.error("A class can only inherit one class")
+                throw Exception()
             }
+            hasParentClass = true
         }
-    }
-
-    /**
-     * 继承某个类的字段和方法
-     *
-     * @param cls
-     */
-    fun extends(cls: Class){
-        cls.field.forEachVar { v ->
-            run {
-                field.putVar(v.identifier,v)
-            }
-        }
-        cls.field.forEachFunction { f ->
-            run {
-                field.addFunction(f,false)
-            }
-        }
-        cls.staticField.forEachVar { v ->
-            run {
-                field.putVar(v.identifier,v)
-            }
-        }
-        cls.staticField.forEachFunction { f ->
-            run {
-                field.addFunction(f,false)
-            }
-        }
+        this.parent.add(compoundData)
+        return this
     }
 
     companion object {

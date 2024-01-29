@@ -13,12 +13,11 @@ public class System {
 
     @MCFPPNative
     public static void print(@NotNull Var[] vars, CanSelectMember caller, ValueWrapper<Var> output) {
+        var value = vars[0];
         //只会有一个参数哦
-        Var var = vars[0];
-        output.setValue(new JavaVar(new MCInt(0,"test"),"test"));
-        if (var instanceof MCInt) print((MCInt) var);
-        else if (var instanceof JsonString) print((JsonString) var);
-        else print(var);
+        if (value instanceof MCInt) print((MCInt) value);
+        else if (value instanceof JsonString) print((JsonString) value);
+        else print(value);
     }
 
     @InsertCommand

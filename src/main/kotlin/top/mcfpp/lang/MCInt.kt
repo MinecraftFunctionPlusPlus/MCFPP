@@ -87,21 +87,14 @@ class MCInt : Number<Int> {
         //TODO 类支持
         if (isConcrete) {
             return when (type) {
-                this.type -> {
-                    this
-                }
-                "float" -> {
-                    MCFloat(value!!.toFloat())
-                }
-                else -> {
-                    null
-                }
+                this.type -> this
+                "float" -> MCFloat(value!!.toFloat())
+                "any" -> this
+                else -> null
             }
         } else {
             return when (type) {
-                this.type -> {
-                    this
-                }
+                this.type -> this
                 "float" -> {
                     val inp = MCInt("inp")
                     inp.assign(this)
@@ -110,10 +103,8 @@ class MCInt : Number<Int> {
                     re.assign(MCFloat.ssObj)
                     re
                 }
-
-                else -> {
-                    null
-                }
+                "any" -> MCAny(this)
+                else -> null
             }
         }
     }
@@ -666,6 +657,7 @@ class MCInt : Number<Int> {
 
         init {
             data.initialize()
+            data.extends(MCAny.data)
         }
     }
 }
