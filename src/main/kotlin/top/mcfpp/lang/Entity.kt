@@ -120,6 +120,7 @@ class Entity : NBTBasedData{
         return when(type){
             "entity" -> this
             "nbt" -> NBT(value!!)
+            "any" -> MCAny(this)
             else -> throw VariableConverseException()
         }
     }

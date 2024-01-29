@@ -28,6 +28,15 @@ class NativeFunction : Function, Native {
      */
     var javaMethodName: String
 
+
+    /**
+     * 通过一个java方法的字符串来构造一个NativeFunction
+     *
+     * @param name mcfpp方法的名字
+     * @param javaMethod java方法的字符串。格式为：包名.类名.方法名
+     * @param returnType 返回值的类型
+     * @param namespace 命名空间
+     */
     constructor(name: String, javaMethod: String, returnType: String, namespace: String = Project.currNamespace) : super(name, namespace, returnType){
         val strs = javaMethod.split(".")
         try {
@@ -46,13 +55,41 @@ class NativeFunction : Function, Native {
         }
     }
 
+    /**
+     * 从一个java类中搜索一个方法来创建一个NativeFunction
+     *
+     * @param name mcfpp方法的名字
+     * @param dataClass java类
+     * @param returnType 返回值的类型
+     * @param namespace 命名空间
+     */
+    constructor(name: String, dataClass: Class<*>, returnType: String, namespace: String): super(name, namespace, returnType){
+        this.javaMethod = dataClass.getMethod(name, Array<Var?>::class.java, CanSelectMember::class.java, ValueWrapper::class.java)
+        this.javaClassName = dataClass.`package`.name + "." + dataClass.name
+        this.javaMethodName = name
+    }
+
+    /**
+     * 通过一个java方法来构造一个NativeFunction。mcfpp方法的名字将会和java方法的名字相同
+     *
+     * @param javaMethod java方法
+     * @param returnType 返回值的类型
+     * @param namespace 命名空间
+     */
     constructor(javaMethod: Method, returnType: String, namespace: String = Project.currNamespace): super(javaMethod.name, namespace, returnType){
         this.javaMethod = javaMethod
         this.javaClassName = javaMethod.declaringClass.`package`.name + "." + javaMethod.declaringClass.name
         this.javaMethodName = javaMethod.name
-        this.params
     }
 
+    /**
+     * 通过一个java方法来构造一个NativeFunction，同时手动指定mcfpp方法的名字
+     *
+     * @param name mcfpp方法的名字
+     * @param javaMethod java方法
+     * @param returnType 返回值的类型
+     * @param namespace 命名空间
+     */
     constructor(name: String, javaMethod: Method, returnType: String, namespace: String = Project.currNamespace) : super(name, namespace, returnType) {
         this.javaMethod = javaMethod
         this.javaClassName = javaMethod.declaringClass.`package`.name + "." + javaMethod.declaringClass.name
@@ -61,8 +98,9 @@ class NativeFunction : Function, Native {
 
     @Override
     override fun invoke(args: ArrayList<Var>, caller: CanSelectMember?) {
-        val argsArray = arrayOfNulls<Var>(args.size)
-        args.toArray(argsArray)
+        argPass(args)
+        val argsArray = arrayOfNulls<Var>(field.allVars.size)
+        field.allVars.toTypedArray().copyInto(argsArray)
         try {
             val valueWrapper = ValueWrapper(returnVar)
             javaMethod.invoke(null, argsArray, caller, valueWrapper)
@@ -79,6 +117,14 @@ class NativeFunction : Function, Native {
         }
     }
 
+    override fun argPass(args: ArrayList<Var>){
+        for (i in params.indices) {
+            val tg = args[i].cast(params[i].type)
+            //参数传递和子函数的参数进栈
+            val p = field.getVar(params[i].identifier)!!
+            p.assign(tg)
+        }
+    }
     @Override
     override fun toString(containClassName: Boolean, containNamespace: Boolean): String {
         return super.toString(containClassName,containNamespace ) + "->" + javaClassName + "." + javaMethodName

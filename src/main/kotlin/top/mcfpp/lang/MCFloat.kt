@@ -655,21 +655,14 @@ class MCFloat : Number<Float> {
     override fun cast(type: String): Var? {
         if(isConcrete){
             return when(type) {
-                this.type -> {
-                    this
-                }
-                "int" -> {
-                    MCInt(value!!.toInt())
-                }
-                else -> {
-                    null
-                }
+                this.type -> this
+                "int" -> MCInt(value!!.toInt())
+                "any" -> MCAny(this)
+                else -> null
             }
         }else{
             return when(type){
-                this.type -> {
-                    this
-                }
+                this.type -> this
                 "int" -> {
                     ssObj.assign(this)
                     Function.addCommand("function math:hpo/float/_toscore")
@@ -678,9 +671,8 @@ class MCFloat : Number<Float> {
                     re.assign(temp)
                     re
                 }
-                else -> {
-                    null
-                }
+                "any" -> MCAny(this)
+                else -> null
             }
         }
     }

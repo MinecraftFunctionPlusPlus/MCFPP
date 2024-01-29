@@ -296,14 +296,15 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                 "int" -> `var` = MCInt(container,identifier)
                 "bool" -> `var` = MCBool(container, identifier)
                 "selector" -> `var` = Selector(identifier)
-                "entity" -> `var` = MCString(container, identifier)
-                "string" -> TODO()
+                "entity" -> TODO()
+                "string" -> `var` = MCString(container, identifier)
                 "float" -> TODO()
                 "list" -> `var` = NBTList<Tag<*>>(container, identifier)
                 "dict" -> TODO()
                 "map" -> TODO()
                 "nbt" -> `var` = NBT(container, identifier)
                 "JavaVar" -> `var` = JavaVar(null,identifier)
+                "any" -> `var` = MCAny(container, identifier)
                 else -> {
                     //自定义的类的类型
                     val c = type.split(":")
@@ -340,6 +341,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                     "string" -> MCString(container, ctx.Identifier().text)
                     "float" -> MCFloat(container, ctx.Identifier().text)
                     "nbt" -> NBT(container, ctx.Identifier().text)
+                    "any" -> MCAny(container, ctx.Identifier().text)
                     else -> TODO()
                 }
             } else {
@@ -389,6 +391,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                     "string" -> TODO()
                     "nbt" -> TODO()
                     "float" -> TODO()
+                    "any" -> TODO()
                     else -> TODO()
                 }
             } else {
@@ -403,6 +406,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                 }
                 if (type == null) {
                     Project.error("Undefined class:$clsType")
+                    throw ClassNotDefineException()
                 }
                 val classPointer = ClassPointer(type!!, ctx.Identifier().text)
                 classPointer.name = ctx.Identifier().text

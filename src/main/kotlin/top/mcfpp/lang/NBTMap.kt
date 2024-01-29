@@ -3,6 +3,7 @@ package top.mcfpp.lang
 import net.querz.nbt.tag.CompoundTag
 import net.querz.nbt.tag.ListTag
 import net.querz.nbt.tag.Tag
+import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.CompoundData
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.NativeFunction
@@ -52,6 +53,14 @@ class NBTMap : NBTDictionary{
      * @param b 被复制的list值
      */
     constructor(b: CompoundTag) : super(b)
+
+    override fun cast(type: String): Var {
+        return when(type){
+            "map" -> this
+            "any" -> MCAny(this)
+            else -> throw VariableConverseException()
+        }
+    }
 
     override fun createTempVar(): Var = NBTMap()
     override fun createTempVar(value: Tag<*>): Var = NBTMap(value as CompoundTag)

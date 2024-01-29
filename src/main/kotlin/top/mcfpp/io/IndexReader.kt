@@ -134,11 +134,12 @@ object IndexReader {
             val javaFunction = jsonStr.split("->")[1]
             //获取java方法
             val nf = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction, functionHead.substring(0,functionHead.indexOf(' ')) , nspId)
-            nf.params = paramList
+            nf.addParams(paramList)
             field.addFunction(nf,false)
         }else{
             //不是native函数
             val func = Function(jsonStr.substring(jsonStr.indexOf(' ') + 1,jsonStr.indexOf('(')), nspId, returnType)
+            func.addParams(paramList)
             field.addFunction(func,false)
         }
     }

@@ -81,6 +81,7 @@ class NBTList<T : Tag<*>?> : NBTBasedData, Indexable<NBT> {
             return when(type){
                 "list" -> this
                 "nbt" -> NBT(value!!)
+                "any" -> this
                 else -> throw VariableConverseException()
             }
         }else{
@@ -92,6 +93,7 @@ class NBTList<T : Tag<*>?> : NBTBasedData, Indexable<NBT> {
                     re.parent = parent
                     re
                 }
+                "any" -> MCAny(this)
                 else -> throw VariableConverseException()
             }
         }

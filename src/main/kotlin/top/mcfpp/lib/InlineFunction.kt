@@ -1,17 +1,13 @@
 package top.mcfpp.lib
 
-import org.antlr.v4.runtime.CharStream
-import org.antlr.v4.runtime.CharStreams
-import org.antlr.v4.runtime.CommonTokenStream
-import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.antlr.*
-import top.mcfpp.command.Commands
 import top.mcfpp.lang.*
-import top.mcfpp.util.AntlrUtil
 
 /**
- * 内联函数
+ * 内联函数。
+ *
+ * 内联函数在编译的时候，会使用一种变量替换的方式，使用函数体的内容替换函数调用处的内容
  */
 class InlineFunction : Function {
 

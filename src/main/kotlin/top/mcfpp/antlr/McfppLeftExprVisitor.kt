@@ -2,6 +2,7 @@ package top.mcfpp.antlr
 
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
+import top.mcfpp.exception.ClassNotDefineException
 import top.mcfpp.exception.FunctionNotDefineException
 import top.mcfpp.exception.TODOException
 import top.mcfpp.lang.*
@@ -45,6 +46,7 @@ class McfppLeftExprVisitor : mcfppBaseVisitor<Var?>(){
                 val qwq: Class? = GlobalField.getClass(clsstr.first, clsstr.second)
                 if (qwq == null) {
                     Project.error("Undefined class:" + ctx.type().className().text)
+                    throw ClassNotDefineException()
                 }
                 ClassType(qwq!!)
             }else{
@@ -199,6 +201,7 @@ class McfppLeftExprVisitor : mcfppBaseVisitor<Var?>(){
         }
         if (cls == null) {
             Project.error("Undefined class:" + ctx.className().text)
+            throw ClassNotDefineException()
         }
         //获取参数列表
         //参数获取

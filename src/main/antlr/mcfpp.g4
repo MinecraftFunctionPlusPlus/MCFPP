@@ -477,6 +477,7 @@ type
     |   'string'
     |   'jstring'
     |   'nbt'
+    |   'any'
     |   VEC INT         //向量
     |   className
     ;

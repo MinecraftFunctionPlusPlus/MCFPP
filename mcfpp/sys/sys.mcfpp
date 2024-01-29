@@ -1,3 +1,2 @@
 func print(int i) = top.mcfpp.lang.System.print;
-func print(bool b) = top.mcfpp.lang.System.print;
-func print(JavaVar b) = top.mcfpp.lang.System.print;
+func print(any a) = top.mcfpp.lang.System.print;

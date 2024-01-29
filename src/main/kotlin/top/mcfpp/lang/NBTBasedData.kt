@@ -1,12 +1,9 @@
 package top.mcfpp.lang
 
 import net.querz.nbt.io.SNBTUtil
-import net.querz.nbt.tag.ListTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.Project
-import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Function
 import java.util.*

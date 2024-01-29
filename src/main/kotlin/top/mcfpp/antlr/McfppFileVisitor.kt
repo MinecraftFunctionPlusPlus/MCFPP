@@ -198,25 +198,31 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
             //如果没有声明过这个类
             val cls = Class(id, Project.currNamespace)
             cls.initialize()
-            for (p in ctx.className()){
-                //是否存在继承
-                val qwq = StringHelper.splitNamespaceID(p.text)
-                val identifier: String = qwq.second
-                val namespace : String? = qwq.first
-                var pc : CompoundData? = GlobalField.getClass(namespace, identifier)
-                if(pc == null){
-                    pc = GlobalField.getInterface(namespace, identifier)
+            if(ctx.className().size != 0){
+                for (p in ctx.className()){
+                    //是否存在继承
+                    val qwq = StringHelper.splitNamespaceID(p.text)
+                    val identifier: String = qwq.second
+                    val namespace : String? = qwq.first
+                    var pc : CompoundData? = GlobalField.getClass(namespace, identifier)
                     if(pc == null){
-                        Project.error("Undefined class or interface: " + p.text)
+                        pc = GlobalField.getInterface(namespace, identifier)
+                        if(pc == null){
+                            Project.error("Undefined class or interface: " + p.text)
+                        }else{
+                            cls.parent.add(pc)
+                            cls.extends(pc)
+                        }
                     }else{
                         cls.parent.add(pc)
-                        cls.implements(pc)
+                        cls.extends(pc as Class)
                     }
-                }else{
-                    cls.parent.add(pc)
-                    cls.extends(pc as Class)
                 }
+            }else{
+                //继承Any类
+                cls.extends(MCAny.data)
             }
+
             field.addClass(id, cls)
             Class.currClass = cls
             cls.isStaticClass = ctx.STATIC() != null

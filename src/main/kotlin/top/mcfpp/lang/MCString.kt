@@ -124,6 +124,7 @@ class MCString : NBTBasedData {
         return when(type){
             "string" -> this
             "nbt" -> NBT(value!!)
+            "any" -> MCAny(this)
             else -> throw VariableConverseException()
         }
     }

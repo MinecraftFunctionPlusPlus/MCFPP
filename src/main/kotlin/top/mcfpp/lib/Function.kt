@@ -7,6 +7,7 @@ import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.command.Command
 import top.mcfpp.command.CommandList
 import top.mcfpp.command.Commands
+import top.mcfpp.exception.ClassNotDefineException
 import top.mcfpp.exception.FunctionHasNoReturnValueException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.*
@@ -394,29 +395,14 @@ open class Function : Member, FieldContainer {
                 param.STATIC() != null
             )
             params.add(param1)
-            //向函数缓存中写入变量
-            when(param1.type){
-                "int" -> {
-                    field.putVar(param1.identifier, MCInt(this,"_param_" + param1.identifier))
-                }
-                "bool" -> {
-                    field.putVar(param1.identifier, MCBool(this, "_param_" + param1.identifier))
-                }
-                else -> {
-                    //引用类型
-                    val q = param1.type.split(":")
-                    val cls : Class?  = if(q.size == 1){
-                        GlobalField.getClass(null, param1.type)
-                    }else{
-                        GlobalField.getClass(q[0],q[1])
-                    }
-                    if(cls == null){
-                        Project.error("Undefined class:" + param1.type)
-                    }else{
-                        field.putVar(param1.identifier, ClassPointer(cls, param1.identifier))
-                    }
-                }
-            }
+            field.putVar(param1.identifier, Var.build("_param_" + param1.identifier, param1.type, this))
+        }
+    }
+
+    open fun addParams(ctx: ArrayList<FunctionParam>){
+        params.addAll(ctx)
+        for (param in ctx){
+            field.putVar(param.identifier, Var.build("_param_" + param.identifier, param.type, this))
         }
     }
 
@@ -533,19 +519,12 @@ open class Function : Member, FieldContainer {
      */
     @InsertCommand
     open fun argPass(args: ArrayList<Var>){
-        for (i in 0 until params.size) {
-            when (params[i].type) {
-                "int" -> {
-                    val tg = args[i].cast(params[i].type)
-                    //参数传递和子函数的参数进栈
-                    val p = field.getVar(params[i].identifier)!!
-                    p.assign(tg)
-                    p.toDynamic()
-                }
-                else -> {
-                    //是引用类型，不用传递
-                }
-            }
+        for (i in params.indices) {
+            val tg = args[i].cast(params[i].type)
+            //参数传递和子函数的参数进栈
+            val p = field.getVar(params[i].identifier)!!
+            p.assign(tg)
+            p.toDynamic()
         }
     }
 

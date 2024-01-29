@@ -404,6 +404,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
                 }
                 if (qwq == null) {
                     Project.error("Undefined class:" + ctx.type().className().text)
+                    throw ClassNotDefineException()
                 }
                 ClassType(qwq!!)
             }else{
@@ -533,7 +534,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
             }
             val p = StringHelper.splitNamespaceID(ctx.namespaceID().text)
             val func = if(currSelector == null){
-                McfppFuncManager().getFunction(p.first,p.second,FunctionParam.getVarTypes(args))
+                GlobalField.getFunction(p.first, p.second, FunctionParam.getVarTypes(args))
             }else{
                 if(p.first != null){
                     Project.warn("Invalid namespace usage ${p.first} in function call ")
@@ -566,6 +567,7 @@ class McfppExprVisitor : mcfppBaseVisitor<Var?>() {
         }
         if (cls == null) {
             Project.error("Undefined class:" + ctx.className().text)
+            throw ClassNotDefineException()
         }
         //获取参数列表
         //参数获取

@@ -4,7 +4,6 @@ import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
 import java.util.*
-import kotlin.collections.HashMap
 
 /**
  * 一个类的实例。实例是一种特殊的变量，它永远是匿名的，对实例的访问通过指针完成。

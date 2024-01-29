@@ -122,7 +122,7 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar {
                 var hasFoundFunc = true
                 //参数比对
                 for (i in argsTypes.indices) {
-                    if (argsTypes[i] != f.params[i].type) {
+                    if (!FunctionParam.isSubOf(argsTypes[i],f.params[i].type)) {
                         hasFoundFunc = false
                         break
                     }

@@ -42,7 +42,7 @@ open class CompoundDataType : CanSelectMember {
      */
     @Override
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
-        val member = dataType.getStaticVar(key)
+        val member = dataType.getVar(key,true)
         return if(member == null){
             Pair(null, true)
         }else{
