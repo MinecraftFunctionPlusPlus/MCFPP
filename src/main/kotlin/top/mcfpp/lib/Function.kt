@@ -165,7 +165,7 @@ open class Function : Member, FieldContainer {
     /**
      * 是否是静态的。默认为否
      */
-    override var isStatic : Boolean
+    override var isStatic : Boolean = false
 
     /**
      * 所在的复合类型（类/结构体/基本类型）。如果不是成员，则为null
@@ -591,7 +591,7 @@ open class Function : Member, FieldContainer {
     @InsertCommand
     open fun fieldRestore(){
         addCommand("#[Function ${this.namespaceID}] Take vars out of the Stack")
-        Function.currFunction.field.forEachVar {v ->
+        Function.field.forEachVar {v ->
             run {
                 when (v.type) {
                     "int" -> {
@@ -717,6 +717,10 @@ open class Function : Member, FieldContainer {
          * 目前编译器处在的函数。允许编译器在全局获取并访问当前正在编译的函数对象。默认为全局初始化函数
          */
         var currFunction: Function = nullFunction
+
+        var forcedField:FunctionField? = null
+        val field:FunctionField
+            get() = forcedField ?: Function.currFunction.field
 
         /**
          * 编译器目前所处的非匿名函数

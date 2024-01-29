@@ -16,15 +16,9 @@ class InternalFunctionField: FunctionField {
      * @param parent 父级缓存。若没有则设置为null
      * @param cacheContainer 此缓存所在的容器
      */
-    constructor(parent: FunctionField, cacheContainer: FieldContainer?):super(parent,cacheContainer){
-        fieldVarSet.addAll(parent.fieldVarSet)
+    constructor(parent: FunctionField?, cacheContainer: FieldContainer?):super(parent,cacheContainer){
+        parent?.let { fieldVarSet.addAll(it.fieldVarSet) }
     }
-
-    /**
-     * 复制一个域。
-     * @param functionField 原来的域
-     */
-    constructor(functionField: InternalFunctionField):super(functionField)
 
 
     /**
@@ -58,6 +52,24 @@ class InternalFunctionField: FunctionField {
     }
 
     override fun clone(): InternalFunctionField{
-        return InternalFunctionField(this)
+        return clone(this)
+    }
+
+    companion object{
+        /**
+         * 复制一个域。
+         * @param functionField 原来的域
+         */
+        fun clone(functionField: InternalFunctionField):InternalFunctionField {
+            val newFunctionField = InternalFunctionField(null,null)
+            newFunctionField.parent = functionField.parent
+            //变量复制
+            for (key in functionField.vars.keys) {
+                val `var`: Var? = functionField.vars[key]
+                newFunctionField.vars[key] = `var`!!.clone() as Var
+            }
+            newFunctionField.fieldVarSet.addAll(functionField.fieldVarSet)
+            return newFunctionField
+        }
     }
 }

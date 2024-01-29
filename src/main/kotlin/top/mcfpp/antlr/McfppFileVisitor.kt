@@ -2,6 +2,7 @@ package top.mcfpp.antlr
 
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
+import top.mcfpp.compiletime.CompileTimeFunction
 import top.mcfpp.exception.*
 import top.mcfpp.exception.IllegalFormatException
 import top.mcfpp.lang.*
@@ -89,21 +90,10 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
     
     override fun visitDeclarations(ctx: mcfppParser.DeclarationsContext): Any? {
         Project.ctx = ctx
-        if (ctx.classDeclaration() != null) {
-            visit(ctx.classDeclaration())
-        } else if (ctx.functionDeclaration() != null) {
-            visit(ctx.functionDeclaration())
-        } else if (ctx.nativeFuncDeclaration() != null) {
-            visit(ctx.nativeFuncDeclaration())
-        } else if (ctx.nativeClassDeclaration() != null ) {
-            visit(ctx.nativeClassDeclaration())
-        } else if (ctx.templateDeclaration() != null){
-            visit(ctx.templateDeclaration())
-        } else if (ctx.extensionFunctionDeclaration() != null){
-            visit(ctx.extensionFunctionDeclaration())
-        } else if (ctx.interfaceDeclaration() != null){
-            visit(ctx.interfaceDeclaration())
+        if (ctx.globalDeclaration() != null) {
+            return null
         }
+        super.visitDeclarations(ctx)
         return null
     }
 
@@ -552,6 +542,33 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         //写入域
         val field = GlobalField.localNamespaces[f.namespace]!!
         if (field.getFunction(f.identifier, f.paramTypeList) == null) {
+            field.addFunction(f,false)
+        } else {
+            Project.error("Already defined function:" + f.namespaceID)
+            Function.currFunction = Function.nullFunction
+        }
+        if (f.isEntrance && ctx.parameterList()!!.parameter().size != 0) {
+            Project.error("Entrance function shouldn't have parameter:" + f.namespaceID)
+        }
+        return null
+    }
+
+    override fun visitCompileTimeFuncDeclaration(ctx: mcfppParser.CompileTimeFuncDeclarationContext): Any? {
+        Project.ctx = ctx
+        //创建函数对象
+        val f: Function
+        //是否是编译时函数
+        val identifier : String = ctx.Identifier().text
+        f = CompileTimeFunction(identifier,Project.currNamespace,if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text ,ctx.functionBody())
+        //解析参数
+        f.addParams(ctx.parameterList())
+        //TODO 解析函数的注解
+        //不是类的成员
+        f.ownerType = Function.Companion.OwnerType.NONE
+        //写入域
+        val field = GlobalField.localNamespaces[f.namespace]!!
+        if (field.getFunction(f.identifier, f.paramTypeList) == null) {
+            f.setField(field)
             field.addFunction(f,false)
         } else {
             Project.error("Already defined function:" + f.namespaceID)
