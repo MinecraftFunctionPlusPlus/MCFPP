@@ -2,7 +2,6 @@ package top.mcfpp.compiletime
 
 import top.mcfpp.antlr.McfppExprVisitor
 import top.mcfpp.antlr.McfppImVisitor
-import top.mcfpp.antlr.mcfppBaseVisitor
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.lang.MCBool
 import top.mcfpp.lang.Var

@@ -1,5 +1,6 @@
 package top.mcfpp.lang;
 
+import net.querz.nbt.tag.StringTag;
 import org.jetbrains.annotations.NotNull;
 import top.mcfpp.annotations.InsertCommand;
 import top.mcfpp.annotations.MCFPPNative;
@@ -10,6 +11,15 @@ import top.mcfpp.util.ValueWrapper;
 import java.util.Random;
 
 public class System {
+    @MCFPPNative
+    @InsertCommand
+    public static void insert(@NotNull Var[] vars, CanSelectMember caller, ValueWrapper<Var> output){
+        var value = vars[0];
+        //只会有一个参数哦
+        if(value instanceof MCString mcString)
+            Function.Companion.addCommand(((StringTag) mcString.getValue()).getValue());
+
+    }
 
     @MCFPPNative
     public static void print(@NotNull Var[] vars, CanSelectMember caller, ValueWrapper<Var> output) {

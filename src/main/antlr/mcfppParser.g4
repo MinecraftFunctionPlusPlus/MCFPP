@@ -26,7 +26,11 @@
  THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-grammar mcfpp;
+parser grammar mcfppParser;
+
+options {
+    tokenVocab = mcfppLexer;
+}
 
 //一个mcfpp文件
 compilationUnit
@@ -200,7 +204,7 @@ javaRefer
 stringName
     :   Identifier
     |   ClassIdentifier
-    |   NORMALSTRING
+    |   NormalString
     ;
 
 accessModifier
@@ -382,9 +386,7 @@ orgCommand
     :   OrgCommand
     ;
 
-OrgCommand
-    :   '/' [a-z]* ([ ][a-z:._{}\\[0-9A-Z\]]*)+
-    ;
+
 
 controlStatement
     :   BREAK
@@ -469,29 +471,30 @@ expressionList
     ;
 
 type
-    :   'int'
-    |   'entity'
-    |   'bool'
-    |   'float'
-    |   'selector'
-    |   'string'
-    |   'jstring'
-    |   'nbt'
-    |   'any'
-    |   VEC INT         //向量
+    :   INT
+    |   ENTITY
+    |   BOOL
+    |   FLOAT
+    |   SELECTOR
+    |   STRING
+    |   JTEXT
+    |   NBT
+    |   ANY
+    |   VEC IntegerLiteral         //向量
     |   className
     ;
 
 functionReturnType
     :   type
-    |   'void'
+    |   VOID
     ;
 
 value
-    :   INT
-    |   FLOAT
-    |   STRING
-    |   BOOL
+    :   IntegerLiteral
+    |   FloatLiteral
+    |   LineString
+    |   BooleanLiteral
+    |   multiLineStringLiteral
     |   nbtValue
     |   range
     ;
@@ -515,97 +518,25 @@ genericity
     : '<' type '>'
     ;
 
-TargetSelector
-    :   '@' ('a'|'r'|'p'|'s'|'e')
-    ;
 
-THIS:'this';
-SUPER:'super';
-IF:'if';
-ELSE:'else';
-WHILE:'while';
-FOR:'for';
-DO:'do';
-TRY:'try';
-STORE:'store';
-
-BREAK:'break';
-CONTINUE:'continue';
-RETURN:'return';
-
-STATIC:'static';
-EXTENDS:'extends';
-NATIVE:'native';
-CONCRETE:'concrete';
-FINAL:'final ';
-
-PUBLIC:'public';
-PROTECTED:'protected';
-PRIVATE:'private';
-
-OVERRIDE: 'override';
-ABSTRACT: 'abstract';
-
-CONST:'const';
-DYNAMIC:'dynamic';
-IMPORT: 'import';
-
-INLINE:'inline';
-
-CLASS:'class';
-INTERFACE:'interface';
-TEMPLATE:'template';
-FUNCTION:'func';
-
-GLOBAL:'global';
-
-INT:[1-9][0-9]*|[0];
-
-FLOAT
-    :   INT '.' [0-9]+
-    |   [0-9] ('.' [0-9]+)? 'e' '-'? [0-9]
-    ;
 
 range
-    :   num1=(INT|FLOAT) '..' num2=(INT|FLOAT)
-    |   num1=(INT|FLOAT) '..'
-    |   '..' num2=(INT|FLOAT)
+    :   num1=(IntegerLiteral|FloatLiteral) '..' num2=(IntegerLiteral|FloatLiteral)
+    |   num1=(IntegerLiteral|FloatLiteral) '..'
+    |   '..' num2=(IntegerLiteral|FloatLiteral)
     ;
 
 
-BOOL
-    :   'true'
-    |   'false'
-    ;
 
-VAR:'var';
-
-VEC:'vec';
-
-WAVE:'~';
-
-Identifier
-    :   [a-z_][a-zA-Z0-9_]*
-    ;
-
-ClassIdentifier
-    :   [A-Z][a-zA-Z0-9_]*
-    ;
-
-NORMALSTRING
-    :   [A-Za-z0-9_]+
-    ;
-
-AT:'@';
 
 nbtValue
-    :   STRING
-    |   NBTBYTE
-    |   NBTSHORT
-    |   NBTINT
-    |   NBTLONG
-    |   NBTFLOAT
-    |   NBTDOUBLE
+    :   LineString
+    |   NBTByteLiteral
+    |   NBTShortLiteral
+    |   NBTIntLiteral
+    |   NBTLongLiteral
+    |   NBTFloatLiteral
+    |   NBTDoubleLiteral
     |   nbtCompound
     |   nbtList
     |   nbtByteArray
@@ -613,43 +544,35 @@ nbtValue
     |   nbtLongArray
     ;
 
-NBTBYTE: ([1-9][0-9]*|[0])[b|B];
-NBTSHORT: ([1-9][0-9]*|[0])[s|S];
-NBTINT: INT;
-NBTLONG: ([1-9][0-9]*|[0])[l|L];
-NBTFLOAT: INT '.' [0-9]+[f|F];
-NBTDOUBLE: INT '.' [0-9]+[f|D]?;
 
-nbtByteArray: '[B;' NBTBYTE (',' NBTBYTE)* ']';
-nbtIntArray: '[I;' NBTINT (',' NBTINT)* ']';
-nbtLongArray: '[L;' NBTLONG (',' NBTLONG)* ']';
+
+nbtByteArray: '[B;' NBTByteLiteral (',' NBTByteLiteral)* ']';
+nbtIntArray: '[I;' NBTIntLiteral (',' NBTIntLiteral)* ']';
+nbtLongArray: '[L;' NBTLongLiteral (',' NBTLongLiteral)* ']';
 
 nbtList: '[' (nbtValue (',' nbtValue)* )* ']';
 nbtKeyValuePair: key=(Identifier|ClassIdentifier) ':' nbtValue;
 nbtCompound: '{'( nbtKeyValuePair (',' nbtKeyValuePair)* )*'}';
 
-STRING: ('"' .*? '"' )|( '\'' .*? '\'' );
+multiLineStringLiteral
+    : TRIPLE_QUOTE_OPEN multiLineStringContent * TRIPLE_QUOTE_CLOSE
+    ;
 
+multiLineStringContent
+    : multiLineStringExpression
+    | MultiLineStrText
+    | MultiLineStringQuote
+    ;
 
+multiLineStringExpression
+    : MultiLineStrExprStart  expression '}'
+    ;
 //
 // Whitespace and comments
 //
 
-WS  :  [ \t\r\n\u000C]+ -> skip
-    ;
 
 doc_comment
     :   DOC_COMMENT
     ;
 
-DOC_COMMENT
-    :   '/**' .*? '*/'
-    ;
-
-BLOCK_COMMENT
-    :   '/*' .*? '*/' -> skip
-    ;
-
-LINE_COMMENT
-    :   '//' ~[\r\n]* -> skip
-    ;
