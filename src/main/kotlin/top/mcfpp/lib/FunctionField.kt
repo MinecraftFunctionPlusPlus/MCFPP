@@ -41,19 +41,6 @@ open class FunctionField : IFieldWithVar {
         container = cacheContainer
     }
 
-    /**
-     * 复制一个域。
-     * @param functionField 原来的域
-     */
-    constructor(functionField: FunctionField) {
-        parent = functionField.parent
-        //变量复制
-        for (key in functionField.vars.keys) {
-            val `var`: Var? = functionField.vars[key]
-            vars[key] = `var`!!.clone() as Var
-        }
-        fieldVarSet.addAll(functionField.fieldVarSet)
-    }
 
     //region Var
     /**
@@ -122,8 +109,28 @@ open class FunctionField : IFieldWithVar {
         }
     }
 
+
+
+
     open fun clone():FunctionField{
-        return FunctionField(this)
+        return clone(this)
+    }
+
+    companion object{
+        /**
+         * 复制一个域。
+         * @param functionField 原来的域
+         */
+        fun clone(functionField: FunctionField):FunctionField {
+            val newFunctionField = FunctionField(functionField.parent,null)
+            //变量复制
+            for (key in functionField.vars.keys) {
+                val `var`: Var? = functionField.vars[key]
+                newFunctionField.vars[key] = `var`!!.clone() as Var
+            }
+            newFunctionField.fieldVarSet.addAll(functionField.fieldVarSet)
+            return newFunctionField
+        }
     }
 
 //endregion

@@ -100,7 +100,7 @@ class McfppLeftExprVisitor : mcfppBaseVisitor<Var?>(){
             }else{
                 "this"
             }
-            val re: Var? = Function.currFunction.field.getVar(s)
+            val re: Var? = Function.field.getVar(s)
             if (re == null) {
                 Project.error("$s can only be used in member functions.")
             }
@@ -124,7 +124,7 @@ class McfppLeftExprVisitor : mcfppBaseVisitor<Var?>(){
                 //没有数组选取
                 val qwq: String = ctx.Identifier().text
                 if(currSelector == null){
-                    val re: Var? = Function.currFunction.field.getVar(qwq)
+                    val re: Var? = Function.field.getVar(qwq)
                     if (re == null) {
                         Project.error("Undefined variable:$qwq")
                     }
