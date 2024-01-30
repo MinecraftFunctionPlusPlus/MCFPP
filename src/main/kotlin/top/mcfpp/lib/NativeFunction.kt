@@ -119,6 +119,10 @@ class NativeFunction : Function, Native {
 
     override fun argPass(args: ArrayList<Var>){
         for (i in params.indices) {
+            if(params[i].isConcrete && !args[i].isConcrete){
+                Project.error("Cannot pass a non-concrete value to a concrete parameter")
+                throw IllegalArgumentException()
+            }
             val tg = args[i].cast(params[i].type)
             //参数传递和子函数的参数进栈
             val p = field.getVar(params[i].identifier)!!

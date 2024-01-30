@@ -365,8 +365,8 @@ open class Function : Member, FieldContainer {
             else Var.build("return",returnType,this)
     }
 
-    open fun appendParam(param: Var, isStatic: Boolean = false) : Function{
-        params.add(FunctionParam(param.type,param.identifier,isStatic))
+    open fun appendParam(param: Var, isStatic: Boolean = false, isConcrete: Boolean = false) : Function{
+        params.add(FunctionParam(param.type,param.identifier,isStatic, isConcrete))
         field.putVar(param.identifier,param)
         return this
     }
@@ -376,8 +376,8 @@ open class Function : Member, FieldContainer {
         return this
     }
 
-    open fun appendParam(type: String, identifier: String, isStatic: Boolean = false) : Function{
-        params.add(FunctionParam(type,identifier,isStatic))
+    open fun appendParam(type: String, identifier: String, isStatic: Boolean = false, isConcrete: Boolean = false) : Function{
+        params.add(FunctionParam(type,identifier,isStatic, isConcrete))
         return this
     }
 
@@ -392,7 +392,8 @@ open class Function : Member, FieldContainer {
             val param1 = FunctionParam(
                 param.type().text,
                 param.Identifier().text,
-                param.STATIC() != null
+                param.STATIC() != null,
+                param.CONCRETE() != null
             )
             params.add(param1)
             field.putVar(param1.identifier, Var.build("_param_" + param1.identifier, param1.type, this))
@@ -520,6 +521,10 @@ open class Function : Member, FieldContainer {
     @InsertCommand
     open fun argPass(args: ArrayList<Var>){
         for (i in params.indices) {
+            if(params[i].isConcrete && !args[i].isConcrete){
+                Project.error("Cannot pass a non-concrete value to a concrete parameter")
+                throw IllegalArgumentException()
+            }
             val tg = args[i].cast(params[i].type)
             //参数传递和子函数的参数进栈
             val p = field.getVar(params[i].identifier)!!
