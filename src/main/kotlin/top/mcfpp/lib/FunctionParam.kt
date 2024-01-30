@@ -32,7 +32,7 @@ class FunctionParam(
     /**
      * 参数是否是确定的
      */
-    var isConcrete: Boolean
+    var isConcrete: Boolean = false
 ) {
 
     companion object {

@@ -5,6 +5,7 @@ import kotlin.test.Test
 class CompileTimeTest {
     @Test
     fun test(){
+        println(""" """")
         val code = """
             func main(){
                 test();
@@ -29,11 +30,11 @@ class CompileTimeTest {
                     
                 }
                 for(int j=0;j<3;j=j+1){
-                    print(j);
+                    insert(${"\"\"\""}${'$'}{j}${"\"\"\""});
                 }
             }
         """.trimIndent()
-        MCFPPStringTest.readFromString(code)
-        //MCFPPStringTest.readFromSingleFile("./test/test.mcfpp")
+        //MCFPPStringTest.readFromString(code)
+        MCFPPStringTest.readFromSingleFile("./test/test.mcfpp")
     }
 }
