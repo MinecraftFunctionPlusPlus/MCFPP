@@ -8,11 +8,9 @@ class StringCompileTest {
     fun main(){
         val string =
             """
-                void main(){
-                    dynamic int a;
-                    print(a);
-                    a = a + 1;
-                }
+                func main(){test();}
+                
+                func test(){}
             """.trimIndent()
         MCFPPStringTest.readFromString(string)
     }

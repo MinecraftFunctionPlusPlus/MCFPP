@@ -16,7 +16,8 @@
 		{
 			"id":"test",
 			"functions":[
-				"void qwq()"
+				"void main()",
+				"void test()"
 			],
 			"classes":[
 				

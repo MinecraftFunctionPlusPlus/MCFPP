@@ -3,7 +3,8 @@
 		{
 			"id":"default",
 			"functions":[
-				"void main()"
+				"void main()",
+				"void test()"
 			],
 			"classes":[
 				

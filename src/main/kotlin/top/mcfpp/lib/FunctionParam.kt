@@ -13,18 +13,26 @@ import top.mcfpp.util.StringHelper
  * 函数的参数。用于函数声明的时候。
  */
 class FunctionParam(
+
     /**
      * 参数类型
      */
     var type: String,
+
     /**
      * 参数的名字
      */
     var identifier: String,
+
     /**
      * 参数是否为静态的
      */
-    var isStatic: Boolean
+    var isStatic: Boolean,
+
+    /**
+     * 参数是否是确定的
+     */
+    var isConcrete: Boolean
 ) {
 
     companion object {

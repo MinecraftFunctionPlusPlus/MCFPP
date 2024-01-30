@@ -1,9 +1,8 @@
 namespace test;
 
-func qwq(){
-    var t = 1;
-    any p = 5;
-    p = (int)p + t;
-    print(t);
-    print(p);
+func main(){
+    test();
+}
+
+func test(){
 }
