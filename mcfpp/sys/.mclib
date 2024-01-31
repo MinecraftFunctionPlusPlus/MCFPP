@@ -4,7 +4,8 @@
 			"id":"mcfpp.sys",
 			"functions":[
 				"void print(int i)->top.mcfpp.lang.System.print",
-				"void print(any a)->top.mcfpp.lang.System.print"
+				"void print(any a)->top.mcfpp.lang.System.print",
+				"void insert(string i)->top.mcfpp.lang.System.insert"
 			],
 			"classes":[
 				

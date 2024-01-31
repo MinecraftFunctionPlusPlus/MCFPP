@@ -10,7 +10,7 @@ import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
 import top.mcfpp.util.StringHelper
 
-class McfppLeftExprVisitor : mcfppBaseVisitor<Var?>(){
+class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var?>(){
     private var currSelector : CanSelectMember? = null
 
     /**
@@ -85,10 +85,10 @@ class McfppLeftExprVisitor : mcfppBaseVisitor<Var?>(){
         } else if (ctx.value() != null) {
             //数字
             val num: mcfppParser.ValueContext = ctx.value()
-            if (num.INT() != null) {
-                return MCInt(Integer.parseInt(num.INT().text))
-            } else if (num.STRING() != null) {
-                val r: String = num.STRING().text
+            if (num.IntegerLiteral() != null) {
+                return MCInt(Integer.parseInt(num.IntegerLiteral().text))
+            } else if (num.LineString() != null) {
+                val r: String = num.LineString().text
                 return MCString(r.substring(1, r.length - 1))
             }
         } else if(ctx.constructorCall() != null){
