@@ -12,7 +12,7 @@ import top.mcfpp.lib.*
 import top.mcfpp.lib.Annotation
 import top.mcfpp.lib.Function
 
-open class McfppImVisitor: mcfppBaseVisitor<Any?>() {
+open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     /**
      * 完成一次库的import
      *

@@ -17,7 +17,7 @@ import java.lang.reflect.Method
  *
  * @constructor Create empty Native class visitor
  */
-class NativeClassVisitor: mcfppBaseVisitor<Any?>() {
+class NativeClassVisitor: mcfppParserBaseVisitor<Any?>() {
 
     /*
     @Override

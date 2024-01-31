@@ -46,7 +46,9 @@ tasks.test {
 
 tasks.generateGrammarSource {
     mkdir("build")
-    arguments = arguments + listOf("-visitor", "-long-messages", "-package", "top.mcfpp.antlr")
+    arguments = arguments +
+            listOf("-visitor", "-long-messages") +
+            listOf( "-package", "top.mcfpp.antlr")
     outputDirectory =  File("build/generated-src/antlr/main/top/mcfpp/antlr")
 }
 

@@ -1,6 +1,7 @@
 package top.mcfpp.antlr
 
 import net.querz.nbt.io.SNBTUtil
+import net.querz.nbt.tag.StringTag
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.exception.*
@@ -19,7 +20,7 @@ import kotlin.system.exitProcess
 /**
  * 获取表达式结果用的visitor。解析并计算一个形如a+b*c的表达式。
  */
-class McfppExprVisitor: mcfppBaseVisitor<Var?>() {
+class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
 
     private val tempVarCommandCache = HashMap<Var, String>()
 
@@ -445,15 +446,41 @@ class McfppExprVisitor: mcfppBaseVisitor<Var?>() {
         } else if (ctx.value() != null) {
             //常量
             val valueContext: mcfppParser.ValueContext = ctx.value()
-            if (valueContext.INT() != null) {
-                return MCInt(Integer.parseInt(valueContext.INT().text))
-            } else if (valueContext.STRING() != null) {
-                val r: String = valueContext.STRING().text
-                return MCString(r.substring(1, r.length - 1))
-            } else if (valueContext.FLOAT() != null){
-                return MCFloat(valueContext.FLOAT()!!.text.toFloat())
-            } else if (valueContext.BOOL() != null){
-                return MCBool(valueContext.BOOL()!!.text.toBoolean())
+            if (valueContext.IntegerLiteral() != null) {
+                return MCInt(Integer.parseInt(valueContext.IntegerLiteral().text))
+            } else if (valueContext.LineString() != null) {
+                val r: String = valueContext.LineString().text
+                return MCString(StringTag(r.substring(1, r.length - 1)))
+            } else if (valueContext.multiLineStringLiteral()!=null){
+                val stringArray = mutableListOf<String>()
+                var isConcrete = true
+                for(stringContext in valueContext.multiLineStringLiteral().multiLineStringContent()){
+                    var r:String
+                    if(stringContext.MultiLineStrText()!=null) r= stringContext.MultiLineStrText().text
+                    else if(stringContext.MultiLineStringQuote()!=null) r= stringContext.MultiLineStringQuote().text
+                    else {
+                        val expressionContext = stringContext.multiLineStringExpression().expression()
+                        //TODO: 这边只是简单写了一下有解析值的情况
+                        val res = visit(expressionContext) //没有解析值的话，应该变成jtext
+                        if(res!=null && !res.isConcrete){ isConcrete = false } //这个条件就是说，整个模版中出现没有解析值的情况了
+                        if(res is MCInt){
+                            r = res.value.toString()
+                        }
+                        else{
+                            r=res.toString()
+                        }
+                    }
+                    stringArray.add(r);
+                }
+                val tailQuote = valueContext.multiLineStringLiteral().TRIPLE_QUOTE_CLOSE().text
+                if(tailQuote.length>3) {
+                    stringArray.add(tailQuote.substring(3,tailQuote.length))
+                }
+                return MCString(StringTag(stringArray.joinToString("")) ) //没有解析值就变不了MCString了
+            } else if (valueContext.FloatLiteral() != null){
+                return MCFloat(valueContext.FloatLiteral()!!.text.toFloat())
+            } else if (valueContext.BooleanLiteral() != null){
+                return MCBool(valueContext.BooleanLiteral()!!.text.toBoolean())
             } else if (valueContext.nbtValue() != null){
                 return NBT(SNBTUtil.fromSNBT(valueContext.nbtValue().text))
             }
@@ -591,6 +618,5 @@ class McfppExprVisitor: mcfppBaseVisitor<Var?>() {
         constructor.invoke(args, callerClassP = obj.initPointer)
         return obj.initPointer
     }
-
 
 }
