@@ -94,7 +94,6 @@ open class Class : CompoundData {
      * @param identifier 类的标识符
      * @param namespace 类的命名空间
      */
-    @InsertCommand
     constructor(identifier: String, namespace: String) {
         this.identifier = identifier
         this.namespace = namespace
@@ -195,6 +194,18 @@ open class Class : CompoundData {
     }
 
     companion object {
+        class UndefinedClassOrInterface(identifier: String, namespace: String?)
+            : Class(identifier, namespace?:Project.currNamespace) {
+
+            fun getDefinedClassOrInterface(): CompoundData?{
+                var re : CompoundData? = GlobalField.getClass(namespace, identifier)
+                if(re == null){
+                    re = GlobalField.getInterface(namespace, identifier)
+                }
+                return re
+            }
+
+        }
         /**
          * 当前编译器正在编译的类
          */

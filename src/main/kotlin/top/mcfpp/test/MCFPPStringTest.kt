@@ -36,7 +36,7 @@ object MCFPPStringTest {
             Project.defaultNamespace = "default"
             //输出目录
             Project.targetPath = "null"
-            Project.readIndex() //读取引用的库的索引
+            Project.readLib() //读取引用的库的索引
             Project.init() //初始化
             Project.debug("Analysing project...")
             //解析文件
@@ -89,7 +89,7 @@ object MCFPPStringTest {
             Project.defaultNamespace = "default"
             //输出目录
             Project.targetPath = "null"
-            Project.readIndex() //读取引用的库的索引
+            Project.readLib() //读取引用的库的索引
             Project.init() //初始化
             Project.debug("Analysing project...")
             //解析文件

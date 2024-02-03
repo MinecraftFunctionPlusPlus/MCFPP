@@ -198,15 +198,10 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
                     if(pc == null){
                         pc = GlobalField.getInterface(namespace, identifier)
                         if(pc == null){
-                            Project.error("Undefined class or interface: " + p.text)
-                        }else{
-                            cls.parent.add(pc)
-                            cls.extends(pc)
+                            pc = Class.Companion.UndefinedClassOrInterface(identifier,namespace)
                         }
-                    }else{
-                        cls.parent.add(pc)
-                        cls.extends(pc as Class)
                     }
+                    cls.extends(pc)
                 }
             }else{
                 //继承Any类
@@ -326,7 +321,6 @@ class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
         return null
     }
 
-    
     override fun visitClassMember(ctx: mcfppParser.ClassMemberContext): Any? {
         Project.ctx = ctx
         return if (ctx.nativeClassFunctionDeclaration() != null) {

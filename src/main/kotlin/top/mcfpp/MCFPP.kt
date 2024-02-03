@@ -33,7 +33,7 @@ fun main(args: Array<String>) {
         Project.info("Tips: " + UwU.tip) //生成tips
         val path = args[0]
         Project.readProject(path) //读取
-        Project.readIndex() //读取引用的库的索引
+        Project.readLib() //读取引用的库的索引
         Project.init() //初始化
         Project.analyse() //解析
         Project.compile() //编译
