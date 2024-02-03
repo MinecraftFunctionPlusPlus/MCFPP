@@ -17,7 +17,7 @@ import kotlin.collections.ArrayList
 /**
  * 在编译工程之前，应当首先将所有文件中的资源全部遍历一次并写入缓存。
  */
-class McfppFileVisitor : mcfppBaseVisitor<Any?>() {
+class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
 
     var isStatic = false
     /**
