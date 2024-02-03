@@ -173,7 +173,7 @@ object Project {
     /**
      * 读取库文件，并将库写入缓存
      */
-    fun readIndex(){
+    fun readLib(){
         //默认的
         if(!CompileSettings.ignoreStdLib){
             includes.add("mcfpp/sys")
@@ -182,11 +182,7 @@ object Project {
         }
         //写入缓存
         for (include in includes) {
-            val filePath = if(!include.endsWith("/.mclib")) {
-                "$include/.mclib"
-            }else{
-                include
-            }
+            val filePath = if(!include.endsWith("/.mclib")) "$include/.mclib" else include
             val file = File(filePath)
             if(file.exists()){
                 IndexReader.read(filePath)
@@ -195,7 +191,7 @@ object Project {
             }
         }
         //库读取完了，现在实例化所有类中的成员字段吧
-        for(namespace in GlobalField.importedLibNamespaces.values){
+        for(namespace in GlobalField.libNamespaces.values){
             namespace.forEachClass { c ->
                 run {
                     for (v in c.field.allVars){

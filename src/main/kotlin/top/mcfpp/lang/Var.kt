@@ -80,8 +80,6 @@ abstract class Var : Member, Cloneable, CanSelectMember {
      */
     override var accessModifier: Member.AccessModifier = Member.AccessModifier.PRIVATE
 
-    //val isClassMember: Boolean
-    //    get() = parentClass() != null
 
     /**
      * 复制一个变量

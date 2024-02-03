@@ -8,6 +8,7 @@ import top.mcfpp.Project
 import top.mcfpp.lib.*
 import top.mcfpp.antlr.McfppFileVisitor
 import top.mcfpp.antlr.McfppImVisitor
+import top.mcfpp.exception.ClassNotDefineException
 import java.io.*
 import kotlin.io.path.absolutePathString
 
@@ -41,6 +42,22 @@ class McfppFileReader(path: String?) : McfppReader() {
 
     fun analyse() {
         McfppFileVisitor().visit(tree())
+        //类是否有空继承
+        GlobalField.localNamespaces.forEach { _, u ->
+            u.forEachClass { c ->
+                for ((index,p) in c.parent.withIndex()){
+                    if(p is Class.Companion.UndefinedClassOrInterface){
+                        val r = p.getDefinedClassOrInterface()
+                        if(r == null){
+                            Project.error("Undefined class or interface: ${p.namespaceID}")
+                            throw ClassNotDefineException()
+                        }
+                        c.parent.remove(p)
+                        c.parent.add(index,r)
+                    }
+                }
+            }
+        }
     }
 
     /**

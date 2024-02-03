@@ -17,17 +17,17 @@ import kotlin.collections.HashMap
 object GlobalField : FieldContainer, IField {
 
     /**
-     * 命名空间
+     * 当前项目内声明的命名空间
      */
     val localNamespaces = Hashtable<String, NamespaceField>()
 
     /**
-     * import引用后的，来自库的命名空间。
+     * 每个文件中，使用import语句引用库以后的库命名空间，只作用于当前编译的文件
      */
     val importedLibNamespaces = Hashtable<String, NamespaceField>()
 
     /**
-     * 库的命名空间域。这个域中的内容是在编译时就已经确定的，不会随着代码的变化而变化。
+     * 库的命名空间域。在分析项目前，使用readLib函数读取所有在项目配置文件中被声明引用的库，并将所有的命名空间存放进去
      */
     val libNamespaces = Hashtable<String, NamespaceField>()
 

@@ -29,6 +29,7 @@ object IndexReader {
         fileReader.close()
         //解析json
         val json = JSONObject.parse(jsonString) as JSONObject
+        //获取命名空间
         for(o in json["namespaces"] as JSONArray){
             val oo = o as JSONObject
             val nspId = oo["id"] as String

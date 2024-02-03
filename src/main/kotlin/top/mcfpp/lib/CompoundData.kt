@@ -6,17 +6,17 @@ import top.mcfpp.lang.Var
 open class CompoundData : FieldContainer {
 
     /**
-     * 这个类的父类
+     * 父结构
      */
     var parent: ArrayList<CompoundData> = ArrayList()
 
     /**
-     * 这个类的标识符
+     * 标识符
      */
     lateinit var identifier: String
 
     /**
-     * 类的命名空间
+     * 命名空间
      */
     lateinit var namespace: String
 
