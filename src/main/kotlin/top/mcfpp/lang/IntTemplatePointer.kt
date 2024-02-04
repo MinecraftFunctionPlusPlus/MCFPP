@@ -56,7 +56,7 @@ class IntTemplatePointer : IntTemplateBase {
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型
      */
-    override fun cast(type: String): Var? {
+    override fun cast(type: String): Var {
         TODO("Not yet implemented")
     }
 
@@ -83,5 +83,9 @@ class IntTemplatePointer : IntTemplateBase {
 
     override fun toDynamic() {
         TODO("Not yet implemented")
+    }
+
+    override fun getVarValue(): Any? {
+        return "Unknown"
     }
 }

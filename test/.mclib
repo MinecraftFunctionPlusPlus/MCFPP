@@ -16,11 +16,28 @@
 		{
 			"id":"test",
 			"functions":[
-				"void main()",
-				"void test()"
+				"void main()"
 			],
 			"classes":[
-				
+				{
+					"id":"Test",
+					"isNative":false,
+					"functions":[
+						"void qwq()"
+					],
+					"staticFunctions":[
+						
+					],
+					"vars":[
+						
+					],
+					"staticVars":[
+						
+					],
+					"constructors":[
+						"void _init_test_0()"
+					]
+				}
 			],
 			"structs":[
 				

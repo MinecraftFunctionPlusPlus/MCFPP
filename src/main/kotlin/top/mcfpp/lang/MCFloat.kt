@@ -652,13 +652,16 @@ class MCFloat : Number<Float> {
      * @param type 要转换到的目标类型
      */
     @InsertCommand
-    override fun cast(type: String): Var? {
+    override fun cast(type: String): Var {
         if(isConcrete){
             return when(type) {
                 this.type -> this
                 "int" -> MCInt(value!!.toInt())
                 "any" -> MCAny(this)
-                else -> null
+                else -> {
+                    Project.error("Cannot cast [${this.type}] to [$type]")
+                    throw VariableConverseException()
+                }
             }
         }else{
             return when(type){
@@ -672,7 +675,10 @@ class MCFloat : Number<Float> {
                     re
                 }
                 "any" -> MCAny(this)
-                else -> null
+                else -> {
+                    Project.error("Cannot cast [${this.type}] to [$type]")
+                    throw VariableConverseException()
+                }
             }
         }
     }

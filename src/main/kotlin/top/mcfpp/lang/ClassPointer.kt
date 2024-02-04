@@ -4,9 +4,12 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
+import top.mcfpp.exception.ClassNotDefineException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.*
+import top.mcfpp.util.MCUUID
+import top.mcfpp.util.StringHelper
 
 /**
  * 一个类的指针。类的地址储存在记分板中，因此一个类的指针实际上包含了两个信息，一个是指针代表的是[哪一个类][clsType]，一个是指针指向的这个类的对象
@@ -18,32 +21,36 @@ import top.mcfpp.lib.*
  * 创建一个类的对象的时候，在分配完毕类的地址之后，将会立刻创建一个初始指针，这个指针指向了刚刚创建的对象的地址，在记分板上的名字是一个随机的uuid。
  * 而后进行的引用操作无非是把这个初始指针的记分板值赋给其他的指针。
  *
+ * TODO 空指针
+ *
  * @see parentClass 类的核心实现
- * @see ClassObject 类的实例。指针的目标
  * @see ClassType 表示类的类型，同时也是类的静态成员的指针
  */
-class ClassPointer : ClassBase {
+class ClassPointer : Var{
     /**
      * 指针对应的类的类型
      */
-    override var clsType: Class
+    var clsType: Class
 
     /**
      * 指针对应的类的标识符
      */
     override var type: String
 
-    /**
-     * 指针指向的类的实例
-     */
-    var obj: ClassObject? = null
-
-    override val tag: String
+    val tag: String
         /**
          * 获取这个类的实例的指针实体在mcfunction中拥有的tag
          * @return 返回它的tag
          */
         get() = clsType.namespace + "_class_" + clsType.identifier + "_pointer"
+
+    var mcuuid : MCUUID? = null
+
+    var isNull : Boolean = true
+
+    override fun getVarValue(): Any {
+        return mcuuid.toString()
+    }
 
     /**
      * 创建一个指针
@@ -63,7 +70,7 @@ class ClassPointer : ClassBase {
     constructor(classPointer: ClassPointer) : super(classPointer) {
         clsType = classPointer.clsType
         type = classPointer.type
-        obj = classPointer.obj
+        mcuuid = classPointer.mcuuid
     }
 
     /**
@@ -78,48 +85,36 @@ class ClassPointer : ClassBase {
         hasAssigned = true
         //TODO 不支持指针作为类成员的时候
         when (b) {
-            is ClassObject -> {
-                if (!b.clsType.canCastTo(clsType)) {
-                    throw VariableConverseException()
-                }
-                if (obj != null) {
-                    //原实体中的实例减少一个指针
-                    val c = Commands.selectRun(this)
-                    c.last().build(Commands.sbPlayerRemove(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1))
-                    Function.addCommand(c)
-                }
-                obj = b
-                //地址储存
-                Function.addCommand(Command.build(
-                    "data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[${stackIndex}].${identifier} " +
-                            "set from storage mcfpp:temp INIT"))
-                //实例中的指针列表
-                val c = Commands.selectRun(this)
-                Function.addCommand(c.last().build(Commands.sbPlayerAdd(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1)))
-            }
 
             is ClassPointer -> {
                 if (!b.clsType.canCastTo(clsType)) {
                     throw VariableConverseException()
                 }
-                if (obj != null) {
-                    //原实体中的实例减少一个指针
-                    val c = Commands.selectRun(this)
-                    c.last().build(Commands.sbPlayerRemove(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1))
-                    Function.addCommand(c)
+                if(b.isConcrete){
+                    this.mcuuid = b.mcuuid
+                    this.isNull = b.isNull
+                    this.isConcrete = true
+                    return
                 }
-                obj = b.obj
+                if (!isNull) {
+                    //原实体中的实例减少一个指针
+                    val c = Commands.selectRun(this,Commands.sbPlayerRemove(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1))
+                    Function.addCommands(c)
+                }
+                isNull = b.isNull
                 //地址储存
                 Function.addCommand(Command.build(
                     "data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[${stackIndex}].${identifier} " +
                             "set from storage mcfpp:system ${Project.currNamespace}.stack_frame[${b.stackIndex}].${b.identifier}"))
                 //实例中的指针列表
-                val c = Commands.selectRun(this)
-                Function.addCommand(c.last().build(Commands.sbPlayerAdd(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1)))
+                val c = Commands.selectRun(this,Commands.sbPlayerAdd(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1))
+                Function.addCommands(c)
             }
+
             else -> {
                 throw VariableConverseException()
             }
+
         }
     }
 
@@ -129,17 +124,32 @@ class ClassPointer : ClassBase {
      */
     @InsertCommand
     fun dispose(){
-        if (obj != null) {
+        if (!isNull) {
             //原实体中的实例减少一个指针
-            val c = Commands.selectRun(this)
-            c.last().build(Commands.sbPlayerRemove(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1))
-            Function.addCommand(c)
+            val c = Commands.selectRun(this,Commands.sbPlayerRemove(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1))
+            Function.addCommands(c)
         }
     }
 
     @Override
-    override fun cast(type: String): Var? {
-        TODO()
+    override fun cast(type: String): Var {
+        if(FunctionParam.baseType.contains(type)){
+            Project.error("Cannot cast [${this.type}] to [$type]")
+            throw VariableConverseException()
+        }
+        val namespace = StringHelper.splitNamespaceID(type)
+        val c = GlobalField.getClass(namespace.first,namespace.second)
+        if(c == null){
+            Project.error("Undefined class: $type")
+            throw ClassNotDefineException()
+        }
+        if (!this.clsType.canCastTo(c)) {
+            Project.error("Cannot cast [${this.type}] to [$type]")
+            throw VariableConverseException()
+        }
+        val re = ClassPointer(this)
+        re.clsType = c
+        return re
     }
 
     @Override
@@ -205,8 +215,19 @@ class ClassPointer : ClassBase {
         TODO("Not yet implemented")
     }
 
+    override fun getAccess(function: Function): Member.AccessModifier {
+        return if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.CLASS){
+            function.parentClass()!!.getAccess(clsType)
+        }else if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.STRUCT){
+            function.parentStruct()!!.getAccess(clsType)
+        }else{
+            Member.AccessModifier.PUBLIC
+        }
+    }
+
     companion object{
         const val tempItemEntityUUID = "810d6071-f121-4972-80d6-60cc19b40cf8"
         const val tempItemEntityUUIDNBT = "[I;-2129829775,-249476750,-2133434164,431230200]"
+
     }
 }

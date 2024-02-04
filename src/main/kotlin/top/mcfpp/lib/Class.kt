@@ -1,9 +1,9 @@
 package top.mcfpp.lib
 
 import top.mcfpp.Project
-import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.exception.FunctionDuplicationException
 import top.mcfpp.lang.*
+import top.mcfpp.util.MCUUID
 import top.mcfpp.util.Utils
 import java.util.*
 
@@ -167,13 +167,15 @@ open class Class : CompoundData {
      * 创建这个类的一个实例
      * @return 创建的实例
      */
-    fun newInstance(): ClassObject {
+    fun newInstance(): ClassPointer {
         if(isAbstract){
             Project.error("Abstract classes cannot be instantiated: $identifier")
         }
         //创建实例
-        val obj = ClassObject(this)
-        return obj
+        val ptr = ClassPointer(this,"init")
+        ptr.mcuuid = MCUUID()
+        ptr.isConcrete = true
+        return ptr
     }
 
     /**

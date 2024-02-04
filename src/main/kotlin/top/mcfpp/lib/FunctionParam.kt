@@ -37,8 +37,8 @@ class FunctionParam(
 
     companion object {
 
-        private val baseType: ArrayList<String> = arrayListOf("any","int", "bool", "string", "float", "entity", "selector","string", "jstring", "nbt")
-        private val nbtType: ArrayList<String> = arrayListOf("nbt", "list","dict","map","string","jstring","selector","entity")
+        val baseType: ArrayList<String> = arrayListOf("any","int", "bool", "string", "float", "entity", "selector","string", "jstring", "nbt")
+        val nbtType: ArrayList<String> = arrayListOf("nbt", "list","dict","map","string","jstring","selector","entity")
 
         /**
          * 是否是给定类型的子类型

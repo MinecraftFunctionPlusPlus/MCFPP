@@ -9,6 +9,8 @@ import top.mcfpp.lib.*
 import top.mcfpp.antlr.McfppFileVisitor
 import top.mcfpp.antlr.McfppImVisitor
 import top.mcfpp.exception.ClassNotDefineException
+import top.mcfpp.lib.Function
+import top.mcfpp.util.StringHelper
 import java.io.*
 import kotlin.io.path.absolutePathString
 
@@ -16,10 +18,11 @@ import kotlin.io.path.absolutePathString
  * 用于读取和分析mcfpp代码。
  * @param path mcfpp文件的路径
  */
-class McfppFileReader(path: String?) : McfppReader() {
+class McfppFileReader(path: String) : McfppReader() {
     init {
         this.path = path
-        rpath = getRelativePath(Project.root.absolutePathString(), File(path!!).parentFile.absolutePath)
+        this.file = File(path)
+        rpath = getRelativePath(Project.root.absolutePathString(), this.file.parentFile.absolutePath)
         currPath = rpath
         input = FileInputStream(path)
     }
@@ -65,7 +68,14 @@ class McfppFileReader(path: String?) : McfppReader() {
      */
     fun compile() {
         Project.currNamespace = Project.defaultNamespace
+        //创建默认函数
+        val func = Function(StringHelper.toLowerCase(file.nameWithoutExtension + "_default"),Project.currNamespace,"void")
+        Function.defaultFunction = func
+        Function.currFunction = func
         McfppImVisitor().visit(tree())
+        if(Function.defaultFunction.commands.size != 0){
+            GlobalField.localNamespaces[func.namespace]!!.addFunction(func,false)
+        }
     }
 
     companion object {
