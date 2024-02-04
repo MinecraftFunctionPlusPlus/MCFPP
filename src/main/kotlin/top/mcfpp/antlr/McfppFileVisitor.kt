@@ -349,7 +349,7 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
             ctx.Identifier().text,
             Class.currClass!!,
             ctx.parent is mcfppParser.StaticClassMemberDeclarationContext,
-            ctx.functionReturnType().text
+            if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text
         )
         if(!isStatic){
             val thisObj = Var.build("this", Class.currClass!!.identifier, f)
@@ -446,12 +446,12 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
      */
     
     @InsertCommand
-    override fun visitClassFieldDeclaration(ctx: mcfppParser.ClassFieldDeclarationContext): Any? {
+    override fun visitClassFieldDeclaration(ctx: mcfppParser.ClassFieldDeclarationContext): Any {
         Project.ctx = ctx
         //只有类字段构建
         val reList = ArrayList<Member>()
         val c = ctx.fieldDeclarationExpression()
-        val `var`: Var = Var.build(c, compoundData = Class.currClass!!)
+        val `var`: Var = Var.build(c.Identifier().text, ctx.type().text, Class.currClass!!)
         //是否是静态的
         if(isStatic){
             `var`.isStatic = true
@@ -559,7 +559,11 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
         val f: Function
         //是否是编译时函数
         val identifier : String = ctx.Identifier().text
-        f = CompileTimeFunction(identifier,Project.currNamespace,if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text ,ctx.functionBody())
+        f = CompileTimeFunction(
+            identifier,Project.currNamespace,
+            if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text ,
+            ctx.functionBody()
+        )
         //解析参数
         f.addParams(ctx.parameterList())
         //TODO 解析函数的注解

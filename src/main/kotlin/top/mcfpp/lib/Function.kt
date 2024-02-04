@@ -7,7 +7,6 @@ import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.command.Command
 import top.mcfpp.command.CommandList
 import top.mcfpp.command.Commands
-import top.mcfpp.exception.ClassNotDefineException
 import top.mcfpp.exception.FunctionHasNoReturnValueException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.*
@@ -116,7 +115,7 @@ open class Function : Member, FieldContainer {
     /**
      * 函数的命名空间。默认为工程文件的明明空间
      */
-    val namespace: String
+    var namespace: String
 
     /**
      * 参数列表
@@ -252,17 +251,11 @@ open class Function : Member, FieldContainer {
         get() = Project.currNamespace + "_func_" + identifier + "_"
 
     /**
-     * 创建一个函数
-     * @param identifier 函数的标识符
-     */
-    constructor(identifier: String, returnType: String = "void"):this(identifier, Project.currNamespace, returnType)
-
-    /**
      * 创建一个全局函数，它有指定的命名空间
      * @param identifier 函数的标识符
      * @param namespace 函数的命名空间
      */
-    constructor(identifier: String, namespace: String, returnType: String = "void"){
+    constructor(identifier: String, namespace: String = Project.currNamespace, returnType: String = "void"){
         this.identifier = identifier
         commands = CommandList()
         params = ArrayList()
@@ -423,7 +416,7 @@ open class Function : Member, FieldContainer {
         when(caller){
             is CompoundDataType -> invoke(args, callerClassP = null)
             null -> invoke(args, callerClassP = null)
-            is ClassBase -> invoke(args, callerClassP = caller)
+            is ClassPointer -> invoke(args, callerClassP = caller)
             is IntTemplateBase -> invoke(args, caller = caller)
             is Var -> invoke(args, caller = caller)
         }
@@ -467,7 +460,7 @@ open class Function : Member, FieldContainer {
      * @see top.mcfpp.antlr.McfppExprVisitor.visitVar
      */
     @InsertCommand
-    open fun invoke(args: ArrayList<Var>, callerClassP: ClassBase?) {
+    open fun invoke(args: ArrayList<Var>, callerClassP: ClassPointer?) {
         //给函数开栈
         addCommand("data modify storage mcfpp:system ${Project.defaultNamespace}.stack_frame prepend value {}")
         //参数传递
@@ -475,14 +468,7 @@ open class Function : Member, FieldContainer {
         //函数调用的命令
         when(callerClassP){
             is ClassPointer -> {
-                val qwq = Commands.selectRun(callerClassP)
-                addCommand(qwq[0])
-                addCommand(qwq[1].build("function mcfpp.dynamic:function with entity @s data.functions.$identifier"))
-            }
-            is ClassObject -> {
-                val qwq = Commands.selectRun(callerClassP)
-                addCommand(qwq[0])
-                addCommand(qwq[1].build("function mcfpp.dynamic:function with entity @s data.functions.$identifier"))
+                addCommands(Commands.selectRun(callerClassP,Command.build("function mcfpp.dynamic:function with entity @s data.functions.$identifier")))
             }
             null -> {
                 addCommand("function $namespaceID")
@@ -698,6 +684,11 @@ open class Function : Member, FieldContainer {
         var nullFunction = Function("null")
 
         /**
+         * 默认函数，用于顶层语句。每个文件的默认函数不同
+         */
+        var defaultFunction = nullFunction
+
+        /**
          * 目前编译器处在的函数。允许编译器在全局获取并访问当前正在编译的函数对象。默认为全局初始化函数
          */
         var currFunction: Function = nullFunction
@@ -749,7 +740,7 @@ open class Function : Member, FieldContainer {
             currFunction.commands[index] = command
         }
 
-        fun addCommand(command: Array<Command>){
+        fun addCommands(command: Array<Command>){
             command.forEach { addCommand(it) }
         }
 

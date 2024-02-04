@@ -83,14 +83,17 @@ class MCInt : Number<Int> {
     }
 
     @Override
-    override fun cast(type: String): Var? {
+    override fun cast(type: String): Var {
         //TODO 类支持
         if (isConcrete) {
             return when (type) {
                 this.type -> this
                 "float" -> MCFloat(value!!.toFloat())
                 "any" -> this
-                else -> null
+                else -> {
+                    Project.error("Cannot cast [${this.type}] to [$type]")
+                    throw VariableConverseException()
+                }
             }
         } else {
             return when (type) {
@@ -104,7 +107,10 @@ class MCInt : Number<Int> {
                     re
                 }
                 "any" -> MCAny(this)
-                else -> null
+                else -> {
+                    Project.error("Cannot cast [${this.type}] to [$type]")
+                    throw VariableConverseException()
+                }
             }
         }
     }

@@ -147,12 +147,12 @@ abstract class Var : Member, Cloneable, CanSelectMember {
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型
      */
-    abstract fun cast(type: String): Var?
+    abstract fun cast(type: String): Var
 
     @Override
     public abstract override fun clone(): Any
 
-    fun clone(pointer: ClassBase): Var{
+    fun clone(pointer: ClassPointer): Var{
         val `var`: Var = this.clone() as Var
         if(pointer.identifier != "this"){
             //不是this指针才需要额外指定引用者
@@ -276,8 +276,14 @@ abstract class Var : Member, Cloneable, CanSelectMember {
 
     abstract fun toDynamic()
 
+    abstract fun getVarValue(): Any?
+
     override fun getAccess(function: Function): Member.AccessModifier {
         return Member.AccessModifier.PUBLIC
+    }
+
+    override fun toString(): String {
+        return "[$type,value=${if(isConcrete) getVarValue() else "Unknown"}]"
     }
 
     companion object {
@@ -323,92 +329,51 @@ abstract class Var : Member, Cloneable, CanSelectMember {
         }
 
         /**
-         * 解析变量上下文，构造上下文声明的变量
-         * @param ctx 变量声明的上下文
-         * @param container 变量所在缓存
-         * @return 声明的变量
-         */
-        fun build(ctx: mcfppParser.FieldDeclarationExpressionContext, container: FieldContainer): Var {
-            val `var`: Var
-            val typeContext = (ctx.parent as mcfppParser.FieldDeclarationContext).type()
-            if (typeContext.className() == null) {
-                //普通类型
-                `var` = when (typeContext.text) {
-                    "int" -> MCInt(container, ctx.Identifier().text)
-                    "bool" -> MCBool(container, ctx.Identifier().text)
-                    "string" -> MCString(container, ctx.Identifier().text)
-                    "float" -> MCFloat(container, ctx.Identifier().text)
-                    "nbt" -> NBT(container, ctx.Identifier().text)
-                    "any" -> MCAny(container, ctx.Identifier().text)
-                    else -> TODO()
-                }
-            } else {
-                //自定义的类的类型
-                val cls = typeContext.className().text.split(":")
-                //取出类
-                val type: Class? = if(cls.size == 1){
-                    GlobalField.getClass(null,cls[0])
-                }else{
-                    GlobalField.getClass(cls[0],cls[1])
-                }
-                if (type == null) {
-                    Project.error("Undefined class:$cls")
-                    throw ClassNotDefineException()
-                }
-                `var` = ClassPointer(type, ctx.Identifier().text)
-            }
-            return `var`
-        }
-
-        /**
-         * 解析变量声明上下文，构造上下文声明的变量，作为类的成员
+         * 解析变量声明上下文，构造上下文声明的变量，作为成员
          * @param ctx 变量声明上下文
          * @param compoundData 成员所在的复合类型
          * @return 这个变量
          */
-        fun build(ctx: mcfppParser.FieldDeclarationExpressionContext, compoundData: CompoundData): Var {
+        fun build(identifier: String, type: String, compoundData: CompoundData): Var {
             //TODO 浮点数
             val `var`: Var
-            val typeContext = (ctx.parent as mcfppParser.FieldDeclarationContext).type()
-            if (typeContext.className() == null) {
-                //普通类型
-                when (typeContext.text) {
-                    "int" -> {
-                        `var` =
-                            MCInt("@s").setObj(SbObject(compoundData.prefix + "_int_" + ctx.Identifier()))
-                        `var`.identifier = ctx.Identifier().text
-                    }
+            //普通类型
+            when (type) {
+                "int" -> {
+                    `var` =
+                        MCInt("@s").setObj(SbObject(compoundData.prefix + "_int_" + identifier))
+                    `var`.identifier = identifier
+                }
 
-                    "bool" -> {
-                        `var` =
-                            MCBool("@s").setObj(SbObject(compoundData.prefix + "_bool_" + ctx.Identifier()))
-                        `var`.identifier = ctx.Identifier().text
+                "bool" -> {
+                    `var` =
+                        MCBool("@s").setObj(SbObject(compoundData.prefix + "_bool_" + identifier))
+                    `var`.identifier = identifier
+                }
+                "selector" -> `var` = Selector(identifier)
+                "entity" -> TODO()
+                "string" -> TODO()
+                "nbt" -> TODO()
+                "float" -> TODO()
+                "any" -> TODO()
+                else -> {
+                    //TODO 不支持复合类型
+                    //自定义的类的类型
+                    val clsType = type.split(":")
+                    //取出类
+                    val type: Class? = if (clsType.size == 1) {
+                        GlobalField.getClass(null, clsType[0])
+                    } else {
+                        GlobalField.getClass(clsType[0], clsType[1])
                     }
-                    "selector" -> `var` = Selector(ctx.Identifier().text)
-                    "entity" -> TODO()
-                    "string" -> TODO()
-                    "nbt" -> TODO()
-                    "float" -> TODO()
-                    "any" -> TODO()
-                    else -> TODO()
+                    if (type == null) {
+                        Project.error("Undefined class:$clsType")
+                        throw ClassNotDefineException()
+                    }
+                    val classPointer = ClassPointer(type, identifier)
+                    classPointer.name = identifier
+                    `var` = classPointer
                 }
-            } else {
-                //TODO 不支持复合类型
-                //自定义的类的类型
-                val clsType = typeContext.className().text.split(":")
-                //取出类
-                val type: Class? = if(clsType.size == 1){
-                    GlobalField.getClass(null,clsType[0])
-                }else{
-                    GlobalField.getClass(clsType[0],clsType[1])
-                }
-                if (type == null) {
-                    Project.error("Undefined class:$clsType")
-                    throw ClassNotDefineException()
-                }
-                val classPointer = ClassPointer(type!!, ctx.Identifier().text)
-                classPointer.name = ctx.Identifier().text
-                `var` = classPointer
             }
             return `var`
         }

@@ -37,6 +37,10 @@ abstract class Number<T> : Var, OnScoreboard {
         return this
     }
 
+    override fun getVarValue(): Any? {
+        return value
+    }
+
     /**
      * 赋值
      * @param a 值来源

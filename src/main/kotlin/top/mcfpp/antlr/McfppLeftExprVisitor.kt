@@ -212,16 +212,15 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var?>(){
                 args.add(exprVisitor.visit(expr)!!)
             }
         }
-        cls!!
         val constructor = cls.getConstructor(FunctionParam.getVarTypes(args))
         if (constructor == null) {
             Project.error("No constructor like: " + FunctionParam.getVarTypes(args) + " defined in class " + ctx.className().text)
             throw FunctionNotDefineException()
         }
         //获取对象
-        val obj: ClassObject = cls.newInstance()
+        val ptr = cls.newInstance()
         //调用构造函数
-        constructor.invoke(args, caller = obj.initPointer)
-        return obj
+        constructor.invoke(args, caller = ptr)
+        return ptr
     }
 }

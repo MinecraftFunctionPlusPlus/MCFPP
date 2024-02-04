@@ -16,6 +16,7 @@ import java.util.*
  * @see ClassPointer 类的指针
  * @see ClassType 表示类的类型，同时也是类的静态成员的指针
  */
+/*
 open class ClassObject : ClassBase {
 
     /**
@@ -124,4 +125,4 @@ open class ClassObject : ClassBase {
     override fun toDynamic() {
         TODO("Not yet implemented")
     }
-}
+}*/

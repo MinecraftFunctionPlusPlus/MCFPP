@@ -70,7 +70,7 @@ abstract class NBTBasedData : Var {
             //类的成员是运行时动态的
             isConcrete = false
             //t = a
-            Function.addCommand(
+            Function.addCommands(
                 Commands.selectRun(parent!!,"data modify entity @s data.$identifier set from storage mcfpp:temp temp.${b.identifier}")
             )
         }else{
@@ -78,7 +78,7 @@ abstract class NBTBasedData : Var {
                 isConcrete = true
                 value = a.value
             } else if(a.parent != null){
-                Function.addCommand(
+                Function.addCommands(
                     Commands.selectRun(a.parent!!, "data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set from entity @s data.${a.identifier}")
                 )
             }else{
@@ -101,7 +101,7 @@ abstract class NBTBasedData : Var {
         if(!isConcrete) return
         isConcrete = false
         if(parent != null){
-            Function.addCommand(
+            Function.addCommands(
                 Commands.selectRun(parent!!,"data modify entity @s data.$identifier set value ${SNBTUtil.toSNBT(value)}")
             )
         }else{
@@ -125,5 +125,9 @@ abstract class NBTBasedData : Var {
 
     override fun clone(): Any {
         TODO("Not yet implemented")
+    }
+
+    override fun getVarValue(): Any? {
+        return value
     }
 }

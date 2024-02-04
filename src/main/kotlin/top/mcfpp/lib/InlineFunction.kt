@@ -60,7 +60,7 @@ class InlineFunction : Function {
      * @see top.mcfpp.antlr.McfppExprVisitor.visitVar
      */
     @InsertCommand
-    override fun invoke(args: ArrayList<Var>, callerClassP: ClassBase?) {
+    override fun invoke(args: ArrayList<Var>, callerClassP: ClassPointer?) {
         //基本类型
         addCommand("#[Inline Function ${this.namespaceID}]")
         //参数传递

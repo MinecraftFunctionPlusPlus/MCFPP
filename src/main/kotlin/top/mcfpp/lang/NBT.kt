@@ -142,7 +142,7 @@ class NBT : Var, Indexable<NBT>{
                 when(p){
                     is MCInt -> {
                         if(p.parent != null){
-                            Function.addCommand(
+                            Function.addCommands(
                                 Commands.selectRun(
                                     p.parent!!,
                                     Command.build("execute store result storage mcfpp:arg append_int.index int 1 run ")
@@ -156,7 +156,7 @@ class NBT : Var, Indexable<NBT>{
                     }
                     is MCString -> {
                         if(p.parent != null){
-                            Function.addCommand(
+                            Function.addCommands(
                                 Commands.selectRun(
                                     p.parent!!,
                                     Command.build("data modify storage mcfpp:arg path_join.pathList append from entity @s data.${p.identifier}")
@@ -217,7 +217,7 @@ class NBT : Var, Indexable<NBT>{
                     //b的路径直接写入
                     Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set value \"${b.identifier}\"")
                     //调用宏
-                    Function.addCommand(
+                    Function.addCommands(
                         Commands.selectRun(
                             parent!!,
                             Command.build("function mcfpp.dynamic:data/modify/entity.from.storage_sp with storage mcfpp:arg dynamic")
@@ -225,7 +225,7 @@ class NBT : Var, Indexable<NBT>{
                     )
                 }
                 else{
-                    Function.addCommand(
+                    Function.addCommands(
                         Commands.selectRun(
                             parent!!,
                             Command.build("data modify entity @s data.${getPathString()} set from storage mcfpp:temp temp.${b.getPathString()}")
@@ -256,14 +256,14 @@ class NBT : Var, Indexable<NBT>{
                         Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set value \"$target\"")
                     }
                     //调用宏
-                    Function.addCommand(
+                    Function.addCommands(
                         Commands.selectRun(
                             parent!!,
                             Command.build("function mcfpp.dynamic:data/modify/entity.from.storage_sp2 with storage mcfpp:arg dynamic")
                         )
                     )
                 }else{
-                    Function.addCommand(
+                    Function.addCommands(
                         Commands.selectRun(
                             parent!!,
                             Command.build("data modify entity @s data.${getPathString()} set from storage mcfpp:system ${Project.currNamespace}.stack_frame[${a.stackIndex}].${a.getPathString()}")
@@ -301,14 +301,14 @@ class NBT : Var, Indexable<NBT>{
                             Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set value \"$target\"")
                         }
                         //调用宏
-                        Function.addCommand(
+                        Function.addCommands(
                             Commands.selectRun(
                                 a.parent!!,
                                 Command.build("function mcfpp.dynamic:data/modify/storage.from.entity_sp3 with storage mcfpp:arg dynamic")
                             )
                         )
                     }else{
-                        Function.addCommand(
+                        Function.addCommands(
                             Commands.selectRun(
                                 parent!!,
                                 Command.build("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].${getPathString()} set from entity @s data.${a.getPathString()}")
@@ -384,7 +384,7 @@ class NBT : Var, Indexable<NBT>{
                 Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set from storage mcfpp:arg path_join.base")
                 Function.addCommand("data modify storage mcfpp:arg dynamic.sourcePath set value ${temp.identifier}")
                 //调用宏
-                Function.addCommand(
+                Function.addCommands(
                     Commands.selectRun(
                         parent!!,
                         Command.build("function mcfpp.dynamic:data/modify/storage.from.entity_sp5 with storage mcfpp:arg dynamic")
@@ -399,7 +399,7 @@ class NBT : Var, Indexable<NBT>{
                 Function.addCommand("function mcfpp.dynamic:data/modify/storage.from.entity_sp6 with storage mcfpp:arg dynamic")
             }
         }else if(parent != null){
-            Function.addCommand(
+            Function.addCommands(
                 Commands.selectRun(
                     parent!!,
                     Command.build("data modify storage mcfpp:temp temp.${temp.identifier} set from entity @s data.${getPathString()}")
@@ -508,6 +508,10 @@ class NBT : Var, Indexable<NBT>{
         val re = NBT(this)
         re.path.add(index)
         return re
+    }
+
+    override fun getVarValue(): Any? {
+        return value
     }
 
     companion object {

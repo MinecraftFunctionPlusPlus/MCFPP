@@ -172,6 +172,10 @@ class JavaVar : Var{
         return "JavaVar[$value]"
     }
 
+    override fun getVarValue(): Any? {
+        return value
+    }
+
     companion object{
         fun mcToJava(v : Var) : Any{
             if(!v.isConcrete){

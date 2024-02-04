@@ -39,7 +39,7 @@ class McfppFuncManager{
     ): Function?{
         //是类的成员方法或扩展方法
         val getter : KFunction<Pair<Function?, Boolean>> = curr::getMemberFunction
-        val accessModifier : Member.AccessModifier = if(curr is ClassBase){
+        val accessModifier : Member.AccessModifier = if(curr is ClassPointer){
             //类指针
             if(Function.currFunction.ownerType == Function.Companion.OwnerType.CLASS){
                 Function.currFunction.parentClass()!!.getAccess(curr.clsType)

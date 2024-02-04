@@ -2,7 +2,6 @@ package top.mcfpp.lib
 
 import top.mcfpp.lang.CanSelectMember
 import top.mcfpp.lang.JavaVar
-import top.mcfpp.lang.MCInt
 import top.mcfpp.lang.Var
 import java.lang.reflect.Method
 

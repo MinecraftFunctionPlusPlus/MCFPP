@@ -4,11 +4,8 @@ import net.querz.nbt.tag.StringTag;
 import org.jetbrains.annotations.NotNull;
 import top.mcfpp.annotations.InsertCommand;
 import top.mcfpp.annotations.MCFPPNative;
-import top.mcfpp.lang.*;
 import top.mcfpp.lib.Function;
 import top.mcfpp.util.ValueWrapper;
-
-import java.util.Random;
 
 public class System {
     @MCFPPNative

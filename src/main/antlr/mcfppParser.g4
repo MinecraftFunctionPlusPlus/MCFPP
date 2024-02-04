@@ -36,13 +36,14 @@ options {
 compilationUnit
     :   importDeclaration*
         namespaceDeclaration?
-        typeDeclaration *
+        statement*
+        typeDeclaration*
         EOF
     ;
 
 //命名空间声明
 namespaceDeclaration
-    :   doc_comment? 'namespace' Identifier ('.' Identifier)* ';'
+    :   doc_comment? NAMESPACE Identifier (DOT Identifier)* ';'
     ;
 
 importDeclaration

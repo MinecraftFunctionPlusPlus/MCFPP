@@ -85,7 +85,6 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      * 进入一个函数体
      * @param ctx the parse tree
      */
-    
     fun enterFunctionBody(ctx: mcfppParser.FunctionBodyContext) {
         Project.ctx = ctx
         var f: Function
@@ -209,7 +208,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         }
         if (Class.currClass == null) {
             //不在类中
-            Function.currFunction = Function.nullFunction
+            Function.currFunction = Function.defaultFunction
         } else {
             Function.currFunction = Class.currClass!!.classPreInit
         }
@@ -228,6 +227,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 Project.currNamespace += ".$n"
             }
         }
+        Function.defaultFunction.namespace = Project.currNamespace
         return null
     }
 
@@ -284,7 +284,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         }else{
             for (c in ctx.fieldDeclarationExpression()){
                 //函数变量，生成
-                val `var` = Var.build(c, Function.currFunction)
+                val `var` = Var.build(c.Identifier().text, ctx.type().text, Function.currFunction)
                 //变量注册
                 //一定是函数变量
                 if (!Function.field.putVar(c.Identifier().text, `var`)) {
@@ -355,6 +355,8 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 Project.error("Cannot convert " + right.javaClass + " to " + left.javaClass)
                 throw VariableConverseException()
             }
+        }else{
+
         }
         Function.addCommand("#expression end: " + ctx.text)
         return null

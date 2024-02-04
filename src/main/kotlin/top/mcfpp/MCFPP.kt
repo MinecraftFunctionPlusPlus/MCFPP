@@ -51,3 +51,7 @@ fun main(args: Array<String>) {
         GlobalField.printAll()
     }
 }
+
+object MCFPP {
+    val version = "0.1.0"
+}

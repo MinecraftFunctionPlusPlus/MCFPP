@@ -585,7 +585,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
     }
 
     @Override
-    override fun visitConstructorCall(ctx: mcfppParser.ConstructorCallContext): Var? {
+    override fun visitConstructorCall(ctx: mcfppParser.ConstructorCallContext): Var {
         Project.ctx = ctx
         val clsstr = ctx.className().text.split(":")
         val cls: Class? = if(clsstr.size == 2) {
@@ -606,17 +606,18 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
                 args.add(exprVisitor.visit(expr)!!)
             }
         }
-        cls!!
         val constructor = cls.getConstructor(FunctionParam.getVarTypes(args))
         if (constructor == null) {
             Project.error("No constructor like: " + FunctionParam.getVarTypes(args) + " defined in class " + ctx.className().text)
             throw FunctionNotDefineException()
         }
+
         //获取对象
-        val obj: ClassObject = cls.newInstance()
+        val ptr = cls.newInstance()
         //调用构造函数
-        constructor.invoke(args, callerClassP = obj.initPointer)
-        return obj.initPointer
+        constructor.invoke(args, callerClassP = ptr)
+        return ptr
+
     }
 
 }

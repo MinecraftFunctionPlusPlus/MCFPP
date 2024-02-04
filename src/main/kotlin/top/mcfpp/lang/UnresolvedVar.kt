@@ -57,7 +57,7 @@ class UnresolvedVar : Var {
      *
      * @throws VariableNotResolvedException 调用此方法就会抛出此异常
      */
-    override fun cast(type: String): Var? {
+    override fun cast(type: String): Var {
         throw VariableNotResolvedException()
     }
 
@@ -117,5 +117,9 @@ class UnresolvedVar : Var {
     ): Pair<Function?, Boolean> {
         Project.error("UnresolvedVar.getMemberFunction() is called")
         throw VariableNotResolvedException()
+    }
+
+    override fun getVarValue(): Any {
+        return "Unknown"
     }
 }
