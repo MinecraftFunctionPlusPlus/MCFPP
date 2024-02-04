@@ -13,65 +13,6 @@ import top.mcfpp.lib.Annotation
 import top.mcfpp.lib.Function
 
 open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
-    /**
-     * 完成一次库的import
-     *
-     * @param ctx
-     */
-    override fun visitImportDeclaration(ctx: mcfppParser.ImportDeclarationContext):Any? {
-        Project.ctx = ctx
-        //获取命名空间
-        var namespace = ctx.Identifier(0).text
-        if (ctx.Identifier().size > 1) {
-            for (n in ctx.Identifier().subList(1, ctx.Identifier().size - 1)) {
-                namespace += ".$n"
-            }
-        }
-        //获取库的命名空间
-        val libNamespace = GlobalField.libNamespaces[namespace]
-        if (libNamespace == null) {
-            Project.error("Namespace $namespace not found")
-            throw NamespaceNotFoundException()
-        }
-        //将库的命名空间加入到importedLibNamespaces中
-        val nsp = NamespaceField()
-        GlobalField.importedLibNamespaces[namespace] = nsp
-
-        //这个库被引用的类
-        if(ctx.cls == null){
-            //只导入方法
-            libNamespace.forEachFunction { f ->
-                run {
-                    nsp.addFunction(f,false)
-                }
-            }
-            return null
-        }
-        //导入类和方法
-        if(ctx.cls.text == "*"){
-            //全部导入
-            libNamespace.forEachClass { c ->
-                run {
-                    nsp.addClass(c.identifier,c)
-                }
-            }
-            libNamespace.forEachFunction { f ->
-                run {
-                    nsp.addFunction(f,false)
-                }
-            }
-        }else{
-            //只导入声明的类
-            val cls = libNamespace.getClass(ctx.cls.text)
-            if(cls != null){
-                nsp.addClass(cls.identifier,cls)
-            }else{
-                Project.error("Class ${ctx.cls.text} not found in namespace $namespace")
-                throw ClassNotDefineException()
-            }
-        }
-        return null
-    }
 
     override fun visitFunctionBody(ctx: mcfppParser.FunctionBodyContext): Any? {
         if(ctx.parent is CompileTimeFuncDeclarationContext) return null

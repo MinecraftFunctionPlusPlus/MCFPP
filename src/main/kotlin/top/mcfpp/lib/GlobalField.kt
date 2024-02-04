@@ -57,6 +57,8 @@ object GlobalField : FieldContainer, IField {
         scoreboards[SbObject.MCFPP_INIT.name] = SbObject.MCFPP_INIT
         scoreboards[SbObject.MCFPP_TEMP.name] = SbObject.MCFPP_TEMP
 
+        localNamespaces["default"] = NamespaceField()
+
         return this
     }
 
