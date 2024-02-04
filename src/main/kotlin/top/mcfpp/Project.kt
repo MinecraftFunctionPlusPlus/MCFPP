@@ -5,8 +5,8 @@ import org.antlr.v4.runtime.ParserRuleContext
 import org.antlr.v4.runtime.tree.ParseTree
 import org.apache.logging.log4j.*
 import top.mcfpp.annotations.InsertCommand
-import top.mcfpp.io.IndexReader
-import top.mcfpp.io.IndexWriter
+import top.mcfpp.io.LibReader
+import top.mcfpp.io.LibWriter
 import top.mcfpp.io.McfppFileReader
 import top.mcfpp.lang.MCFloat
 import top.mcfpp.lang.UnresolvedVar
@@ -59,7 +59,7 @@ object Project {
     /**
      * 编译时，当前编译的文件
      */
-    lateinit var currFile: File
+    var currFile: File = File("commandFile")
 
     /**
      * 当前解析文件的语法树
@@ -87,6 +87,8 @@ object Project {
     private var warningCount = 0
 
     var targetPath : String = "out/"
+
+    val stdLib = listOf("mcfpp/sys/.mclib","mcfpp/math/.mclib","mcfpp/dynamic/.mclib")
 
     /**
      * 初始化
@@ -176,16 +178,14 @@ object Project {
     fun readLib(){
         //默认的
         if(!CompileSettings.ignoreStdLib){
-            includes.add("mcfpp/sys")
-            includes.add("mcfpp/math")
-            includes.add("mcfpp/dynamic")
+            includes.addAll(stdLib)
         }
         //写入缓存
         for (include in includes) {
             val filePath = if(!include.endsWith("/.mclib")) "$include/.mclib" else include
             val file = File(filePath)
             if(file.exists()){
-                IndexReader.read(filePath)
+                LibReader.read(filePath)
             }else{
                 error("Cannot find lib file at: ${file.absolutePath}")
             }
@@ -309,7 +309,7 @@ object Project {
      * 在和工程信息json文件的同一个目录下生成一个.mclib文件
      */
     fun genIndex() {
-        IndexWriter.write(root.absolutePathString())
+        LibWriter.write(root.absolutePathString())
     }
 
     /**
