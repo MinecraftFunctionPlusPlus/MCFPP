@@ -44,12 +44,10 @@ class ClassPointer : Var{
          */
         get() = clsType.namespace + "_class_" + clsType.identifier + "_pointer"
 
-    var mcuuid : MCUUID? = null
-
     var isNull : Boolean = true
 
     override fun getVarValue(): Any {
-        return mcuuid.toString()
+        return ""
     }
 
     /**
@@ -70,7 +68,6 @@ class ClassPointer : Var{
     constructor(classPointer: ClassPointer) : super(classPointer) {
         clsType = classPointer.clsType
         type = classPointer.type
-        mcuuid = classPointer.mcuuid
     }
 
     /**
@@ -85,16 +82,9 @@ class ClassPointer : Var{
         hasAssigned = true
         //TODO 不支持指针作为类成员的时候
         when (b) {
-
             is ClassPointer -> {
                 if (!b.clsType.canCastTo(clsType)) {
                     throw VariableConverseException()
-                }
-                if(b.isConcrete){
-                    this.mcuuid = b.mcuuid
-                    this.isNull = b.isNull
-                    this.isConcrete = true
-                    return
                 }
                 if (!isNull) {
                     //原实体中的实例减少一个指针

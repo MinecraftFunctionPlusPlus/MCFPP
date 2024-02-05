@@ -89,16 +89,10 @@ object Commands {
     fun selectRun(a : CanSelectMember, command: Command) : Array<Command>{
         val final = when(a){
             is ClassPointer -> {
-                if(a.isConcrete){
-                    arrayOf(
-                        Command.build("execute as ${a.mcuuid!!.uuid} run ").build(command)
-                    )
-                }else{
-                    arrayOf(
-                        Command.build("data modify storage entity ${ClassPointer.tempItemEntityUUID} Thrower set from storage mcfpp:system ${Project.defaultNamespace}.stack_frame[${a.stackIndex}].${a.identifier}"),
-                        Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin ").build("run ","run").build(command)
-                    )
-                }
+                arrayOf(
+                    Command.build("data modify storage entity ${ClassPointer.tempItemEntityUUID} Thrower set from storage mcfpp:system ${Project.defaultNamespace}.stack_frame[${a.stackIndex}].${a.identifier}"),
+                    Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin ").build("run ","run").build(command)
+                )
             }
             is ClassType -> {
                 arrayOf(Command.build("execute as ${(a.dataType as Class).uuid} run ").build(command))
@@ -111,16 +105,10 @@ object Commands {
     fun selectRun(a : CanSelectMember) : Array<Command>{
         val final = when(a){
             is ClassPointer -> {
-                if(a.isConcrete){
-                    arrayOf(
-                        Command.build("execute as ${a.mcuuid!!.uuid} ").build("run ","run")
-                    )
-                }else{
-                    arrayOf(
-                        Command.build("data modify storage entity ${ClassPointer.tempItemEntityUUID} Thrower set from storage mcfpp:system ${Project.defaultNamespace}.stack_frame[${a.stackIndex}].${a.identifier}"),
-                        Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin ").build("run ","run")
-                    )
-                }
+                arrayOf(
+                    Command.build("data modify storage entity ${ClassPointer.tempItemEntityUUID} Thrower set from storage mcfpp:system ${Project.defaultNamespace}.stack_frame[${a.stackIndex}].${a.identifier}"),
+                    Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin ").build("run ","run")
+                )
             }
             is ClassType -> {
                 arrayOf(Command.build("execute as ${(a.dataType as Class).uuid} ").build("run ","run"))

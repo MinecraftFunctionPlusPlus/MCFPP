@@ -38,8 +38,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
     @InsertCommand
     override fun invoke(args: ArrayList<Var>, callerClassP: ClassPointer?) {
         callerClassP as ClassPointer
-        addCommand("execute in minecraft:overworld positioned 0 1 0 run summon marker ~ ~ ~ {UUID:${callerClassP.mcuuid!!.uuidArrayStr}}")
-        addCommand("execute as ${callerClassP.mcuuid!!.uuid} run function " + leadFunction.namespaceID)
+        addCommand("execute in minecraft:overworld positioned 0 1 0 summon marker run function " + leadFunction.namespaceID)
         val qwq = currFunction
         currFunction = leadFunction
         //获取所有函数
@@ -51,7 +50,9 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
         }
         funcs.append("}")
         //对象实体创建
-        addCommand("data merge entity @s {Tags:[" + callerClassP.tag + "],data:{pointers:[],$funcs}}")
+        addCommand("data merge entity @s {Tags:[${callerClassP.tag}],data:{$funcs}}")
+        //初始指针
+        addCommand("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[${callerClassP.stackIndex}].${callerClassP.identifier} set from entity @s UUID")
         //初始化
         if(target.classPreInit.commands.size > 0){
             //给函数开栈
