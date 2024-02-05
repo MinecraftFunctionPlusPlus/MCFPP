@@ -125,8 +125,7 @@ class NativeFunction : Function, Native {
             }
             val tg = args[i].cast(params[i].type)
             //参数传递和子函数的参数进栈
-            val p = field.getVar(params[i].identifier)!!
-            p.assign(tg)
+            field.putVar(params[i].identifier, tg, true)
         }
     }
     @Override
