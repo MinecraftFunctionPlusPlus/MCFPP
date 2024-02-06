@@ -1,7 +1,7 @@
 namespace test;
 
 class Test{
-    private int i;
+    private it i;
 
     public func qwq(){
         i = i + 5;

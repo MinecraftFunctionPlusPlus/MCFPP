@@ -1,8 +1,10 @@
 package top.mcfpp.lib
 
 import top.mcfpp.Project
-import top.mcfpp.exception.FunctionDuplicationException
+import top.mcfpp.antlr.mcfppParser
+import top.mcfpp.antlr.mcfppParser.ConstructorDeclarationContext
 import top.mcfpp.lang.*
+import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.Utils
 import java.util.*
 
@@ -83,17 +85,11 @@ open class Class : CompoundData {
     private var hasParentClass = false
 
     /**
-     * 生成一个类。它拥有指定的标识符和默认的命名空间
-     * @param identifier 类的标识符
-     */
-    constructor(identifier: String) : this(identifier, Project.currNamespace)
-
-    /**
      * 生成一个类，它拥有指定的标识符和命名空间
      * @param identifier 类的标识符
      * @param namespace 类的命名空间
      */
-    constructor(identifier: String, namespace: String) {
+    constructor(identifier: String, namespace: String = Project.currNamespace) {
         this.identifier = identifier
         this.namespace = namespace
     }
@@ -154,11 +150,12 @@ open class Class : CompoundData {
      * 向这个类中添加一个构造函数
      * @param constructor 构造函数
      */
-    fun addConstructor(constructor: Constructor) {
+    fun addConstructor(constructor: Constructor) : Boolean {
         if (constructors.contains(constructor)) {
-            throw FunctionDuplicationException()
+            return false
         } else {
             constructors.add(constructor)
+            return true
         }
     }
 
@@ -168,7 +165,7 @@ open class Class : CompoundData {
      */
     fun newInstance(): ClassPointer {
         if (isAbstract) {
-            Project.error("Abstract classes cannot be instantiated: $identifier")
+            LogProcessor.error("Abstract classes cannot be instantiated: $identifier")
         }
         //创建实例
         return ClassPointer(this, "init")
@@ -182,7 +179,7 @@ open class Class : CompoundData {
     override fun extends(compoundData: CompoundData) : CompoundData{
         if(compoundData is Class){
             if(hasParentClass){
-                Project.error("A class can only inherit one class")
+                LogProcessor.error("A class can only inherit one class")
                 throw Exception()
             }
             hasParentClass = true

@@ -7,6 +7,7 @@ import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
+import top.mcfpp.util.LogProcessor
 import java.util.*
 
 /**
@@ -91,7 +92,7 @@ class MCInt : Number<Int> {
                 "float" -> MCFloat(value!!.toFloat())
                 "any" -> this
                 else -> {
-                    Project.error("Cannot cast [${this.type}] to [$type]")
+                    LogProcessor.error("Cannot cast [${this.type}] to [$type]")
                     throw VariableConverseException()
                 }
             }
@@ -108,7 +109,7 @@ class MCInt : Number<Int> {
                 }
                 "any" -> MCAny(this)
                 else -> {
-                    Project.error("Cannot cast [${this.type}] to [$type]")
+                    LogProcessor.error("Cannot cast [${this.type}] to [$type]")
                     throw VariableConverseException()
                 }
             }
@@ -654,7 +655,7 @@ class MCInt : Number<Int> {
         key: String,
         params: List<String>,
         accessModifier: Member.AccessModifier
-    ): Pair<Function?, Boolean> {
+    ): Pair<Function, Boolean> {
         return data.field.getFunction(key, params) to true
     }
 

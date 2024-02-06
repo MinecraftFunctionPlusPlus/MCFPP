@@ -8,8 +8,8 @@ import top.mcfpp.Project
 import top.mcfpp.lib.*
 import top.mcfpp.antlr.McfppFileVisitor
 import top.mcfpp.antlr.McfppImVisitor
-import top.mcfpp.exception.ClassNotDefineException
 import top.mcfpp.lib.Function
+import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import java.io.*
 import kotlin.io.path.absolutePathString
@@ -52,8 +52,8 @@ class McfppFileReader(path: String) : McfppReader() {
                     if(p is Class.Companion.UndefinedClassOrInterface){
                         val r = p.getDefinedClassOrInterface()
                         if(r == null){
-                            Project.error("Undefined class or interface: ${p.namespaceID}")
-                            throw ClassNotDefineException()
+                            LogProcessor.error("Undefined class or interface: ${p.namespaceID}")
+                            continue
                         }
                         c.parent.remove(p)
                         c.parent.add(index,r)

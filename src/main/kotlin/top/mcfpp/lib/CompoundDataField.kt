@@ -113,7 +113,7 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar {
 
     //region Function
     @Nullable
-    override fun getFunction(key: String, argsTypes: List<String>): Function? {
+    override fun getFunction(key: String, argsTypes: List<String>): Function {
         for (f in functions) {
             if (f.identifier == key && f.params.size == argsTypes.size) {
                 if (f.params.size == 0) {
@@ -132,7 +132,7 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar {
                 }
             }
         }
-        return null
+        return UnknownFunction(key)
     }
 
     override fun addFunction(function: Function, force: Boolean): Boolean{

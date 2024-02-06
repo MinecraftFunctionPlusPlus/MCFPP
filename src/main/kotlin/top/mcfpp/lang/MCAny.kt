@@ -161,7 +161,7 @@ class MCAny : Var {
         key: String,
         params: List<String>,
         accessModifier: Member.AccessModifier
-    ): Pair<Function?, Boolean> {
+    ): Pair<Function, Boolean> {
         return data.field.getFunction(key, params) to true
     }
 

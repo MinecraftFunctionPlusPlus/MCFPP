@@ -69,7 +69,7 @@ object Utils {
             }
 
             else -> {
-                Project.warn("Unknown version: \"$version\". Using 1.20 (13)")
+                LogProcessor.warn("Unknown version: \"$version\". Using 1.20 (13)")
                 13
             }
         }

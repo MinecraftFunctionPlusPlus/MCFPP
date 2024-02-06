@@ -10,9 +10,9 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.exception.NBTTypeException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.Class
+import top.mcfpp.util.LogProcessor
 import kotlin.collections.ArrayList
 
 /**
@@ -467,7 +467,7 @@ class NBT : Var, Indexable<NBT>{
         key: String,
         params: List<String>,
         accessModifier: Member.AccessModifier
-    ): Pair<Function?, Boolean> {
+    ): Pair<Function, Boolean> {
         TODO("Not yet implemented")
     }
 
@@ -482,10 +482,10 @@ class NBT : Var, Indexable<NBT>{
 
     fun getByNBTIndex(index: NBT): NBT{
         if(nbtType != NBTType.LIST && nbtType != NBTType.ANY){
-            throw NBTTypeException()
+            LogProcessor.error("Invalid nbt type")
         }
         if(index.nbtType != NBTType.COMPOUND && index.nbtType != NBTType.ANY){
-            throw NBTTypeException()
+            LogProcessor.error("Invalid nbt type")
         }
         val re = NBT(this)
         re.path.add(index)
@@ -494,7 +494,7 @@ class NBT : Var, Indexable<NBT>{
 
     fun getByStringIndex(index: MCString): NBT {
         if(nbtType != NBTType.COMPOUND && nbtType != NBTType.ANY){
-            throw NBTTypeException()
+            LogProcessor.error("Invalid nbt type")
         }
         val re = NBT(this)
         re.path.add(index)
@@ -503,7 +503,7 @@ class NBT : Var, Indexable<NBT>{
 
     fun getByIntIndex(index: MCInt): NBT {
         if(nbtType != NBTType.LIST && nbtType != NBTType.ANY){
-            throw NBTTypeException()
+            LogProcessor.error("Invalid nbt type")
         }
         val re = NBT(this)
         re.path.add(index)

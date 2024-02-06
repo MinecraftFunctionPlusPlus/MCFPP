@@ -1,55 +1,41 @@
 package top.mcfpp.lang
 
-import top.mcfpp.Project
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
 import top.mcfpp.lib.UnknownFunction
-import top.mcfpp.util.LogProcessor
 
-class Void: Var("void") {
+class UnknownVar : Var {
 
-    override val type: String
-        get() = "void"
+    constructor(identifier: String):super(identifier)
 
     /**
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var?) {
-        LogProcessor.error("Cannot assign value to void type variable")
-    }
+    override fun assign(b: Var?) {}
 
     /**
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型
      */
-    override fun cast(type: String): Var {
-        LogProcessor.error("Cannot cast void type variable")
-        return build("unknown", type, Function.currFunction)
-    }
+    override fun cast(type: String): Var = build(identifier,type,Function.currFunction)
 
-    override fun clone(): Any {
-        return Void()
-    }
+    override fun clone(): Any = this
 
     /**
      * 返回一个临时变量。这个变量将用于右值的计算过程中，用于避免计算时对原来的变量进行修改
      *
      * @return
      */
-    override fun getTempVar(): Var {
-        return this
-    }
+    override fun getTempVar(): Var = this
 
-    override fun storeToStack() {
-        LogProcessor.error("Cannot store void type variable to stack")
-    }
+    override fun storeToStack(){}
 
-    override fun getFromStack() {
-        LogProcessor.error("Cannot get void type variable from stack")
-    }
+    override fun getFromStack() {}
 
     override fun toDynamic() {}
+
+    override fun getVarValue(): Any = "Unknown"
 
     /**
      * 根据标识符获取一个成员。
@@ -59,7 +45,6 @@ class Void: Var("void") {
      * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
      */
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
-        LogProcessor.error("Cannot get member from void type variable")
         return UnknownVar(key) to true
     }
 
@@ -75,11 +60,7 @@ class Void: Var("void") {
         params: List<String>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        LogProcessor.error("Cannot get member function from void type variable")
-        return UnknownFunction(key) to true
+        return UnknownFunction("unknown") to true
     }
 
-    override fun getVarValue(): Any {
-        return "Unknown"
-    }
 }

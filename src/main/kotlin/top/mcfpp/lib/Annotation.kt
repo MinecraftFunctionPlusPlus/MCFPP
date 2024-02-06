@@ -2,6 +2,7 @@ package top.mcfpp.lib
 
 import top.mcfpp.Project
 import top.mcfpp.lang.Var
+import top.mcfpp.util.LogProcessor
 
 
 /**
@@ -54,10 +55,10 @@ abstract class Annotation {
                 val constructor = clazz.getConstructor(*varType)
                 return constructor.newInstance(*param.toArray())
             }catch (e: NoSuchMethodException){
-                Project.error("Cannot find constructor for annotation ${clazz.name} with param ${param.joinToString(",")}")
+                LogProcessor.error("Cannot find constructor for annotation ${clazz.name} with param ${param.joinToString(",")}")
                 throw e
             }catch (e: Exception){
-                Project.error("Cannot create instance for annotation ${clazz.name}")
+                LogProcessor.error("Cannot create instance for annotation ${clazz.name}")
                 throw e
             }
         }

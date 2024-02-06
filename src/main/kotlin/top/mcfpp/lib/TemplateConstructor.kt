@@ -8,7 +8,7 @@ import top.mcfpp.lang.Var
 import java.util.*
 import kotlin.collections.ArrayList
 
-class StructConstructor(target: Template) : Function(
+class TemplateConstructor(target: Template) : Function(
     "_init_" + target.identifier.lowercase(Locale.getDefault()) + "_" + target.constructors.size,
     target,
     false
