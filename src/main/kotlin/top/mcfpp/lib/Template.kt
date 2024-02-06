@@ -1,7 +1,6 @@
 package top.mcfpp.lib
 
 import top.mcfpp.Project
-import top.mcfpp.exception.FunctionDuplicationException
 
 /**
  * 结构体是一种和类的语法极为相似的数据结构。在结构体中，只能有int类型的数据，或者说记分板的数据作为结构体的成员。
@@ -23,7 +22,7 @@ class Template : FieldContainer, CompoundData {
     /**
      * 结构体的构造函数
      */
-    val constructors: ArrayList<StructConstructor>
+    val constructors: ArrayList<TemplateConstructor>
 
     /**
      * 获取这个容器中变量应该拥有的前缀
@@ -46,11 +45,12 @@ class Template : FieldContainer, CompoundData {
      * 向这个类中添加一个构造函数
      * @param constructor 构造函数
      */
-    fun addConstructor(constructor: StructConstructor) {
-        if (constructors.contains(constructor)) {
-            throw FunctionDuplicationException()
+    fun addConstructor(constructor: TemplateConstructor) : Boolean {
+        return if (constructors.contains(constructor)) {
+            false
         } else {
             constructors.add(constructor)
+            true
         }
     }
 
@@ -59,7 +59,7 @@ class Template : FieldContainer, CompoundData {
      * @param params 构造函数的参数列表
      * @return 返回这个类的参数
      */
-    fun getConstructor(params: java.util.ArrayList<String>): StructConstructor? {
+    fun getConstructor(params: java.util.ArrayList<String>): TemplateConstructor? {
         for (f in constructors) {
             if (f.params.size == params.size) {
                 if (f.params.size == 0) {

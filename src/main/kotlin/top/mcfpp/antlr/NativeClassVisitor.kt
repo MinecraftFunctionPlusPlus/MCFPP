@@ -1,7 +1,6 @@
 package top.mcfpp.antlr
 
 import top.mcfpp.Project
-import top.mcfpp.exception.ClassDuplicationException
 import top.mcfpp.lang.ClassPointer
 import top.mcfpp.lang.INativeClass
 import top.mcfpp.lang.Var
@@ -27,7 +26,7 @@ class NativeClassVisitor: mcfppParserBaseVisitor<Any?>() {
         val identifier: String = ctx!!.classWithoutNamespace().text
         if (GlobalField.localNamespaces[Project.currNamespace]!!.hasClass(identifier)) {
             //重复声明
-            Project.error("Already defined class: $identifier")
+            LogProcessor.error("Already defined class: $identifier")
             throw ClassDuplicationException()
         } else {
             //获取它指向的java类
@@ -76,7 +75,7 @@ class NativeClassVisitor: mcfppParserBaseVisitor<Any?>() {
             val cls: java.lang.Class<*> = (Class.currClass as NativeClass).cls
             javaMethod = cls.getMethod(ctx.Identifier().text , Array<Var>::class.java, ClassPointer::class.java)
         } catch (e: NoSuchMethodException) {
-            Project.error("No such method:" + ctx.Identifier().text)
+            LogProcessor.error("No such method:" + ctx.Identifier().text)
             return null
         }
         val nf = NativeFunction(ctx.Identifier().text, javaMethod)

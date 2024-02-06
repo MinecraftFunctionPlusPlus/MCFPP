@@ -80,14 +80,14 @@ open class CompoundData : FieldContainer {
      *
      * @return 如果函数存在，则返回此函数，否则返回null
      */
-    fun getFunction(key: String, params: List<String>, isStatic: Boolean = false): Function? {
+    fun getFunction(key: String, params: List<String>, isStatic: Boolean = false): Function {
         var re = if(isStatic){
             staticField.getFunction(key, params)
         }else{
             field.getFunction(key, params)
         }
         val iterator = parent.iterator()
-        while (re == null && iterator.hasNext()){
+        while (re is UnknownFunction && iterator.hasNext()){
             re = iterator.next().getFunction(key,params,isStatic)
         }
         return re

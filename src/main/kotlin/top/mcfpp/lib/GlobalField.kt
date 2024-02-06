@@ -73,7 +73,7 @@ object GlobalField : FieldContainer, IField {
      *
      * @return 获取的函数。如果有多个相同函数（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
      */
-    fun getFunction(@Nullable namespace:String?, identifier: String, args : List<String>): Function?{
+    fun getFunction(@Nullable namespace:String?, identifier: String, args : List<String>): Function{
         if(namespace == null){
             val f = localNamespaces[Project.currNamespace]!!.getFunction(identifier, args)
             if(f != null) return f
@@ -81,13 +81,13 @@ object GlobalField : FieldContainer, IField {
                 val f1 = n.getFunction(identifier, args)
                 if(f1 != null) return f1
             }
-            return null
+            return UnknownFunction(identifier)
         }
         var field = localNamespaces[namespace]
         if(field == null){
             field = libNamespaces[namespace]
         }
-        return field?.getFunction(identifier, args)
+        return field?.getFunction(identifier, args)?:UnknownFunction(identifier)
     }
 
     /**

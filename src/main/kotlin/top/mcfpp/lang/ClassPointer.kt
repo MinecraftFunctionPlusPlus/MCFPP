@@ -4,12 +4,13 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.exception.ClassNotDefineException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.*
+import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.MCUUID
 import top.mcfpp.util.StringHelper
+import java.util.*
 
 /**
  * 一个类的指针。类的地址储存在记分板中，因此一个类的指针实际上包含了两个信息，一个是指针代表的是[哪一个类][clsType]，一个是指针指向的这个类的对象
@@ -124,17 +125,17 @@ class ClassPointer : Var{
     @Override
     override fun cast(type: String): Var {
         if(FunctionParam.baseType.contains(type)){
-            Project.error("Cannot cast [${this.type}] to [$type]")
+            LogProcessor.error("Cannot cast [${this.type}] to [$type]")
             throw VariableConverseException()
         }
         val namespace = StringHelper.splitNamespaceID(type)
         val c = GlobalField.getClass(namespace.first,namespace.second)
         if(c == null){
-            Project.error("Undefined class: $type")
-            throw ClassNotDefineException()
+            LogProcessor.error("Undefined class: $type")
+            return UnknownVar("${type}_ptr" + UUID.randomUUID())
         }
         if (!this.clsType.canCastTo(c)) {
-            Project.error("Cannot cast [${this.type}] to [$type]")
+            LogProcessor.error("Cannot cast [${this.type}] to [$type]")
             throw VariableConverseException()
         }
         val re = ClassPointer(this)
@@ -173,11 +174,11 @@ class ClassPointer : Var{
      * @return 第一个值是对象中获取到的方法，若不存在此方法则为null；第二个值是是否有足够的访问权限访问此方法。如果第一个值是null，那么第二个值总是为true
      */
     @Override
-    override fun getMemberFunction(key: String, params: List<String>, accessModifier: Member.AccessModifier): Pair<Function?, Boolean> {
+    override fun getMemberFunction(key: String, params: List<String>, accessModifier: Member.AccessModifier): Pair<Function, Boolean> {
         //获取函数
         val member = clsType.field.getFunction(key, params)
         return if(member == null){
-            Pair(null, true)
+            Pair(UnknownFunction(key), true)
         }else{
             Pair(member, accessModifier >= member.accessModifier)
         }

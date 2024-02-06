@@ -230,7 +230,7 @@ object LibReader {
                 paramList.add(p)
             }
         }
-        val co = StructConstructor(struct)
+        val co = TemplateConstructor(struct)
         co.params = paramList
         struct.constructors.add(co)
     }

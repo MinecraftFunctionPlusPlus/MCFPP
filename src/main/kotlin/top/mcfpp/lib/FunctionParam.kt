@@ -1,12 +1,8 @@
 package top.mcfpp.lib
 
-import top.mcfpp.Project
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.exception.ClassNotDefineException
-import top.mcfpp.lang.ClassPointer
-import top.mcfpp.lang.MCBool
-import top.mcfpp.lang.MCInt
 import top.mcfpp.lang.Var
+import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 
 /**
@@ -57,12 +53,12 @@ class FunctionParam(
             val thisTypeWithNamespace = StringHelper.splitNamespaceID(subType)
             val thisTypeClass = GlobalField.getClass(thisTypeWithNamespace.first, thisTypeWithNamespace.second)
             if(typeClass == null){
-                Project.error("Undefined class:$parentType")
-                throw ClassNotDefineException()
+                LogProcessor.error("Undefined class:$parentType")
+                return true
             }
             if(thisTypeClass == null){
-                Project.error("Undefined class:${subType}")
-                throw ClassNotDefineException()
+                LogProcessor.error("Undefined class:${subType}")
+                return true
             }
             return thisTypeClass.isSub(typeClass)
         }

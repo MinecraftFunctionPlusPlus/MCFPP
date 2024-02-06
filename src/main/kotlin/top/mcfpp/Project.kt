@@ -12,6 +12,7 @@ import top.mcfpp.lang.MCFloat
 import top.mcfpp.lang.UnresolvedVar
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
+import top.mcfpp.util.LogProcessor
 import java.io.*
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString
@@ -187,7 +188,7 @@ object Project {
             if(file.exists()){
                 LibReader.read(filePath)
             }else{
-                error("Cannot find lib file at: ${file.absolutePath}")
+                LogProcessor.error("Cannot find lib file at: ${file.absolutePath}")
             }
         }
         //库读取完了，现在实例化所有类中的成员字段吧
@@ -333,31 +334,5 @@ object Project {
                 }
             }
         }
-    }
-
-    fun debug(msg: String){
-        logger.debug(
-            msg + if(ctx !=null) {" at " + currFile.name + ":" + ctx!!.getStart().line}else{""}
-        )
-    }
-
-    fun info(msg: String){
-        logger.info(
-            msg + if(ctx !=null) {" at " + currFile.name + ":" + ctx!!.getStart().line}else{""}
-        )
-    }
-
-    fun warn(msg: String){
-        logger.warn(
-            msg + if(ctx !=null) {" at " + currFile.name + ":" + ctx!!.getStart().line}else{""}
-        )
-        warningCount++
-    }
-
-    fun error(msg: String){
-        logger.error(
-            msg + if(ctx !=null) {" at " + currFile.name + ":" + ctx!!.getStart().line}else{""}
-        )
-        errorCount++
     }
 }

@@ -5,6 +5,7 @@ import top.mcfpp.exception.VariableNotResolvedException
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
+import top.mcfpp.util.LogProcessor
 
 /**
  * 一个未被解析的变量。在读取类的字段部分的时候，由于字段的类型对应的类还没有被加载到编译器中，因此会将字段作为未解析的变量暂存在类的域中。
@@ -99,7 +100,7 @@ class UnresolvedVar : Var {
      * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
      */
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
-        Project.error("UnresolvedVar.getMemberVar() is called")
+        LogProcessor.error("UnresolvedVar.getMemberVar() is called")
         throw VariableNotResolvedException()
     }
 
@@ -114,8 +115,8 @@ class UnresolvedVar : Var {
         key: String,
         params: List<String>,
         accessModifier: Member.AccessModifier
-    ): Pair<Function?, Boolean> {
-        Project.error("UnresolvedVar.getMemberFunction() is called")
+    ): Pair<Function, Boolean> {
+        LogProcessor.error("UnresolvedVar.getMemberFunction() is called")
         throw VariableNotResolvedException()
     }
 

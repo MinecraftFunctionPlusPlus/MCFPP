@@ -1,13 +1,11 @@
 package top.mcfpp.lang
 
 import net.querz.nbt.tag.Tag
-import top.mcfpp.Project
-import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.exception.ClassNotDefineException
 import top.mcfpp.exception.OperationNotImplementException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
+import top.mcfpp.util.LogProcessor
 import java.util.*
 
 /**
@@ -318,11 +316,12 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                     }else{
                         GlobalField.getClass(c[0],c[1])
                     }
-                    if (clsType == null) {
-                        Project.error("Undefined class:$c")
-                        throw ClassNotDefineException()
+                    `var` = if (clsType == null) {
+                        LogProcessor.error("Undefined class:$c")
+                        UnknownVar(identifier)
+                    }else{
+                        ClassPointer(clsType, identifier)
                     }
-                    `var` = ClassPointer(clsType, identifier)
                 }
             }
             return `var`
@@ -361,18 +360,19 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                     //自定义的类的类型
                     val clsType = type.split(":")
                     //取出类
-                    val type: Class? = if (clsType.size == 1) {
+                    val clazz: Class? = if (clsType.size == 1) {
                         GlobalField.getClass(null, clsType[0])
                     } else {
                         GlobalField.getClass(clsType[0], clsType[1])
                     }
-                    if (type == null) {
-                        Project.error("Undefined class:$clsType")
-                        throw ClassNotDefineException()
+                    if (clazz == null) {
+                        LogProcessor.error("Undefined class:$clsType")
+                        `var` = UnknownVar(identifier)
+                    }else{
+                        val classPointer = ClassPointer(clazz, identifier)
+                        classPointer.name = identifier
+                        `var` = classPointer
                     }
-                    val classPointer = ClassPointer(type, identifier)
-                    classPointer.name = identifier
-                    `var` = classPointer
                 }
             }
             return `var`

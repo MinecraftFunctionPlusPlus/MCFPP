@@ -7,9 +7,9 @@ import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.command.Command
 import top.mcfpp.command.CommandList
 import top.mcfpp.command.Commands
-import top.mcfpp.exception.FunctionHasNoReturnValueException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.*
+import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import java.lang.NullPointerException
 import java.lang.reflect.Method
@@ -251,6 +251,18 @@ open class Function : Member, FieldContainer {
         get() = Project.currNamespace + "_func_" + identifier + "_"
 
     /**
+     * 这个函数的形参类型
+     */
+    val paramTypeList: ArrayList<String>
+        get() {
+            val re: ArrayList<String> = ArrayList()
+            for (p in params) {
+                re.add(p.type)
+            }
+            return re
+        }
+
+    /**
      * 创建一个全局函数，它有指定的命名空间
      * @param identifier 函数的标识符
      * @param namespace 函数的命名空间
@@ -348,16 +360,6 @@ open class Function : Member, FieldContainer {
         return this
     }
 
-    /**
-     * 构造函数的返回值
-     *
-     * @param returnType
-     */
-    private fun buildReturnVar(returnType: String): Var{
-        return if(returnType == "void") Void()
-            else Var.build("return",returnType,this)
-    }
-
     open fun appendParam(param: Var, isStatic: Boolean = false, isConcrete: Boolean = false) : Function{
         params.add(FunctionParam(param.type,param.identifier,isStatic, isConcrete))
         field.putVar(param.identifier,param)
@@ -401,16 +403,14 @@ open class Function : Member, FieldContainer {
     }
 
     /**
-     * 这个函数的形参类型
+     * 构造函数的返回值
+     *
+     * @param returnType
      */
-    val paramTypeList: ArrayList<String>
-        get() {
-            val re: ArrayList<String> = ArrayList()
-            for (p in params) {
-                re.add(p.type)
-            }
-            return re
-        }
+    fun buildReturnVar(returnType: String): Var{
+        return if(returnType == "void") Void()
+        else Var.build("return",returnType,this)
+    }
 
     open fun invoke(args: ArrayList<Var>, caller: CanSelectMember?){
         when(caller){
@@ -508,7 +508,7 @@ open class Function : Member, FieldContainer {
     open fun argPass(args: ArrayList<Var>){
         for (i in params.indices) {
             if(params[i].isConcrete && !args[i].isConcrete){
-                Project.error("Cannot pass a non-concrete value to a concrete parameter")
+                LogProcessor.error("Cannot pass a non-concrete value to a concrete parameter")
                 throw IllegalArgumentException()
             }
             val tg = args[i].cast(params[i].type)
@@ -589,13 +589,13 @@ open class Function : Member, FieldContainer {
     @InsertCommand
     open fun returnVar(v: Var){
         if(returnType == "void"){
-            Project.error("Function $identifier has no return value")
-            throw FunctionHasNoReturnValueException()
+            LogProcessor.error("Function $identifier has no return value")
+            return
         }
         try {
             returnVar!!.assign(v)
         } catch (e: VariableConverseException) {
-            Project.error("Cannot convert " + v.javaClass + " to " + Function.currBaseFunction.returnVar!!.javaClass)
+            LogProcessor.error("Cannot convert " + v.javaClass + " to " + Function.currBaseFunction.returnVar!!.javaClass)
             throw VariableConverseException()
         }
     }
@@ -727,14 +727,14 @@ open class Function : Member, FieldContainer {
                 for (method in methods) {
                     if (method.name == methodName) {
                         if (!method.isAnnotationPresent(InsertCommand::class.java)) {
-                            Project.warn("(JVM)Function.addCommand() was called in a method without the @InsertCommand annotation. at $className.$methodName:$lineNumber\"")
+                            LogProcessor.warn("(JVM)Function.addCommand() was called in a method without the @InsertCommand annotation. at $className.$methodName:$lineNumber\"")
                         }
                         break
                     }
                 }
             }
             if(this.equals(nullFunction)){
-                Project.error("Unexpected command added to NullFunction")
+                LogProcessor.error("Unexpected command added to NullFunction")
                 throw NullPointerException()
             }
             currFunction.commands[index] = command
@@ -770,14 +770,14 @@ open class Function : Member, FieldContainer {
                     cache.add(method.toGenericString())
                     if (method.name == methodName) {
                         if (!method.isAnnotationPresent(InsertCommand::class.java)) {
-                            Project.warn("(JVM)Function.addCommand() was called in a method without the @InsertCommand annotation. at $className.$methodName:$lineNumber\"")
+                            LogProcessor.warn("(JVM)Function.addCommand() was called in a method without the @InsertCommand annotation. at $className.$methodName:$lineNumber\"")
                         }
                         break
                     }
                 }
             }
             if(this.equals(nullFunction)){
-                Project.error("Unexpected command added to NullFunction")
+                LogProcessor.error("Unexpected command added to NullFunction")
                 throw NullPointerException()
             }
             if (!currFunction.isEnd) {
@@ -794,7 +794,7 @@ open class Function : Member, FieldContainer {
         @Deprecated("Use addCommand() instead")
         fun addComment(str: String){
             if(this.equals(nullFunction)){
-                Project.warn("Unexpected command added to NullFunction")
+                LogProcessor.warn("Unexpected command added to NullFunction")
                 throw NullPointerException()
             }
             if (!currFunction.isEnd) {

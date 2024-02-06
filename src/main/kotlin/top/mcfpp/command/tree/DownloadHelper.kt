@@ -3,6 +3,7 @@ package top.mcfpp.command.tree
 import com.alibaba.fastjson2.JSON
 import com.alibaba.fastjson2.JSONArray
 import top.mcfpp.Project
+import top.mcfpp.util.LogProcessor
 import java.io.FileNotFoundException
 import java.io.IOException
 import java.net.URL
@@ -230,7 +231,7 @@ class Downloader(){
             if(job.ttl!=null&& memoryCaches.contains(job.uri)){
                 val memoryCache = memoryCaches[job.uri]!!
                 if(memoryCache.time <= System.currentTimeMillis()+ job.ttl){
-                    Project.info(
+                    LogProcessor.info(
                         "[Downloader] [${job.id}] Skipped thanks to valid cache in memory",
                     )
                     return job.transformer(memoryCache.buffer)
@@ -271,7 +272,7 @@ class Downloader(){
                                     if(job.ttl!=null){
                                         memoryCaches[job.uri] = MemoryCache(cachedBuffer,System.currentTimeMillis())
                                         val deserializer = job.cache.deserializer?:{it}
-                                        Project.info("[Downloader] [${job.id}] Skipped downloading thanks to cache ${cacheChecksum}",)
+                                        LogProcessor.info("[Downloader] [${job.id}] Skipped downloading thanks to cache ${cacheChecksum}",)
                                         return job.transformer(deserializer(cachedBuffer))
                                     }
                                 }
@@ -282,21 +283,21 @@ class Downloader(){
                                         Files.delete(cacheChecksumUri)
                                 }
                                 catch (_:IOException){
-                                    Project.error("[Downloader] [${job.id}] Removing invalid cache checksum “${cacheChecksumUri}")
+                                    LogProcessor.error("[Downloader] [${job.id}] Removing invalid cache checksum “${cacheChecksumUri}")
                                 }
                             }
                             catch (_:IOException){
-                                Project.error("[Downloader] [${job.id}] Loading cached file “${cacheUri}")
+                                LogProcessor.error("[Downloader] [${job.id}] Loading cached file “${cacheUri}")
                             }
                         }
                     }
                     catch (_:FileNotFoundException){ }
                     catch (_:IOException){
-                        Project.error("[Downloader] [${job.id}] Loading cache checksum “${cacheChecksumUri}”",)
+                        LogProcessor.error("[Downloader] [${job.id}] Loading cache checksum “${cacheChecksumUri}”",)
                     }
                 }
                 catch (_:IOException){
-                    Project.error("[Downloader] [${job.id}] Fetching latest checksum “${checksumJob.uri}”",)
+                    LogProcessor.error("[Downloader] [${job.id}] Fetching latest checksum “${checksumJob.uri}”",)
                 }
             }
 
@@ -312,7 +313,7 @@ class Downloader(){
                                 Files.writeString(cacheChecksumUri,checksum)
                             }
                             catch (_:IOException){
-                                Project.error("[Downloader] [${job.id}] Saving cache checksum “${cacheChecksumUri}")
+                                LogProcessor.error("[Downloader] [${job.id}] Saving cache checksum “${cacheChecksumUri}")
                             }
                         }
                         try{
@@ -320,16 +321,16 @@ class Downloader(){
                             Files.write(cacheUri,serializer(buffer))
                         }
                         catch (_:IOException){
-                            Project.error("[Downloader] [${job.id}] Caching file “${cacheUri}")
+                            LogProcessor.error("[Downloader] [${job.id}] Caching file “${cacheUri}")
                         }
                     }
-                    Project.info("[Downloader] [${job.id}] Downloaded from “${job.uri}”")
+                    LogProcessor.info("[Downloader] [${job.id}] Downloaded from “${job.uri}”")
                     return job.transformer(buffer)
                 }
 
             }
             catch (_:IOException){
-                Project.error("[Downloader] [${job.id}] Downloading “${job.uri}”")
+                LogProcessor.error("[Downloader] [${job.id}] Downloading “${job.uri}”")
             }
             return null
         }

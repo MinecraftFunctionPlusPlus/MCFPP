@@ -6,6 +6,7 @@ import top.mcfpp.Project
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
+import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil.toJava
 import java.lang.Class
 import java.util.*
@@ -116,7 +117,7 @@ class JavaVar : Var{
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
         //获取value中的一个成员变量
         if(value == null) {
-            Project.error("Cannot access properties in $identifier because its value is null")
+            LogProcessor.error("Cannot access properties in $identifier because its value is null")
             throw NullPointerException()
         }
         val member = value!!::class.memberProperties.find { it.name == key } as KProperty1<Any, *>?
@@ -137,17 +138,17 @@ class JavaVar : Var{
         key: String,
         params: List<String>,
         accessModifier: Member.AccessModifier
-    ): Pair<Function?, Boolean> {
+    ): Pair<Function, Boolean> {
         //获取value中的一个成员方法
         if(value == null) {
-            Project.error("Cannot access properties in $identifier because its value is null")
+            LogProcessor.error("Cannot access properties in $identifier because its value is null")
             throw NullPointerException()
         }
         try{
             val member = value!!::class.java.getDeclaredMethod(key, *getTypeArray(params))
             return Pair(JavaFunction(member, this), member.canAccess(Any()))
         }catch (e: NoSuchMethodException){
-            Project.error("No method '$key' in $identifier}")
+            LogProcessor.error("No method '$key' in $identifier}")
             throw e
         }
     }

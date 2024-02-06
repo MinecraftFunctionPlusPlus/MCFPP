@@ -10,6 +10,7 @@ import top.mcfpp.lib.*
 import top.mcfpp.lib.Class
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member.AccessModifier
+import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import java.util.*
 import kotlin.collections.ArrayList
@@ -74,8 +75,8 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
         //获取库的命名空间
         val libNamespace = GlobalField.libNamespaces[namespace]
         if (libNamespace == null) {
-            Project.error("Namespace $namespace not found")
-            throw NamespaceNotFoundException()
+            LogProcessor.error("Namespace $namespace not found")
+            return null
         }
         //将库的命名空间加入到importedLibNamespaces中
         val nsp = NamespaceField()
@@ -110,8 +111,8 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
             if(cls != null){
                 nsp.addClass(cls.identifier,cls)
             }else{
-                Project.error("Class ${ctx.cls.text} not found in namespace $namespace")
-                throw ClassNotDefineException()
+                LogProcessor.error("Class ${ctx.cls.text} not found in namespace $namespace")
+                return null
             }
         }
         return null
@@ -163,8 +164,8 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
 
         if (field.hasInterface(id)) {
             //重复声明
-            Project.error("Interface has been defined: $id in namespace ${Project.currNamespace}")
-            throw ClassDuplicationException()
+            LogProcessor.error("Interface has been defined: $id in namespace ${Project.currNamespace}")
+            Interface.currInterface = field.getInterface(id)
         } else {
             //如果没有声明过这个类
             val itf = Interface(id, Project.currNamespace)
@@ -175,7 +176,7 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
                 val identifier = nsn.second
                 val pc = GlobalField.getInterface(namespace, identifier)
                 if(pc == null){
-                    Project.error("Undefined Interface: " + p.text)
+                    LogProcessor.error("Undefined Interface: " + p.text)
                 }else{
                     itf.parent.add(pc)
                 }
@@ -204,7 +205,7 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
         f.addParams(ctx.parameterList())
         //注册函数
         if (Interface.currInterface!!.field.hasFunction(f)) {
-            Project.error("Already defined function:" + ctx.Identifier().text + "in class " + Class.currClass!!.identifier)
+            LogProcessor.error("Already defined function:" + ctx.Identifier().text + "in class " + Class.currClass!!.identifier)
             Function.currFunction = Function.nullFunction
         }
         return null
@@ -238,8 +239,8 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
 
         if (field.hasClass(id)) {
             //重复声明
-            Project.error("Class has been defined: $id in namespace ${Project.currNamespace}")
-            throw ClassDuplicationException()
+            LogProcessor.error("Class has been defined: $id in namespace ${Project.currNamespace}")
+            Class.currClass = field.getClass(id)
         } else {
             //如果没有声明过这个类
             val cls = Class(id, Project.currNamespace)
@@ -290,13 +291,13 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
         //先解析函数和构造函数
         for (c in ctx.classBody().classMemberDeclaration()) {
             c!!
-            if (c.classMember().classFunctionDeclaration() != null || c.classMember().abstractClassFunctionDeclaration() != null) {
+            if (c.classMember() != null && (c.classMember().classFunctionDeclaration() != null || c.classMember().abstractClassFunctionDeclaration() != null)) {
                 visit(c)
             }
         }
         //再解析变量
         for (c in ctx.classBody().classMemberDeclaration()) {
-            if (c!!.classMember().classFieldDeclaration() != null) {
+            if (c!!.classMember() != null && c.classMember().classFieldDeclaration() != null) {
                 visit(c)
             }
         }
@@ -316,7 +317,7 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
                 }
             }
             if(il != null){
-                Project.error("Class ${Class.currClass} must either be declared abstract or implement abstract method ${il!!.nameWithNamespace}")
+                LogProcessor.error("Class ${Class.currClass} must either be declared abstract or implement abstract method ${il!!.nameWithNamespace}")
             }
         }
         Class.currClass = null
@@ -417,11 +418,11 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
         if (Class.currClass!!.field.hasFunction(f) || Class.currClass!!.staticField.hasFunction(f)) {
             if(ctx.OVERRIDE() != null){
                 if(isStatic){
-                    Project.error("Cannot override static method ${ctx.Identifier()}")
+                    LogProcessor.error("Cannot override static method ${ctx.Identifier()}")
                     throw Exception()
                 }
             }else{
-                Project.error("Already defined function:" + ctx.Identifier().text + "in class " + Class.currClass!!.identifier)
+                LogProcessor.error("Already defined function:" + ctx.Identifier().text + "in class " + Class.currClass!!.identifier)
                 Function.currFunction = Function.nullFunction
             }
         }
@@ -440,14 +441,14 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
         )
         f.isAbstract = true
         if(f.isStatic){
-            Project.error("Static Function cannot be abstract: ${ctx.Identifier().text} in class ${Class.currClass!!.identifier}" )
+            LogProcessor.error("Static Function cannot be abstract: ${ctx.Identifier().text} in class ${Class.currClass!!.identifier}" )
             throw Exception()
         }
         //解析参数
         f.addParams(ctx.parameterList())
         //注册函数
         if (Class.currClass!!.field.hasFunction(f)) {
-            Project.error("Already defined function:" + ctx.Identifier().text + "in class " + Class.currClass!!.identifier)
+            LogProcessor.error("Already defined function:" + ctx.Identifier().text + "in class " + Class.currClass!!.identifier)
             Function.currFunction = Function.nullFunction
         }
         return f
@@ -458,13 +459,13 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
         val nf: NativeFunction = try {
             NativeFunction(ctx.Identifier().text, ctx.javaRefer().text, ctx.functionReturnType().text)
         } catch (e: IllegalFormatException) {
-            Project.error("Illegal Java Method Name:" + e.message)
+            LogProcessor.error("Illegal Java Method Name:" + e.message)
             return null
         } catch (e: ClassNotFoundException) {
-            Project.error("Cannot find java class:" + e.message)
+            LogProcessor.error("Cannot find java class:" + e.message)
             return null
         } catch (e: NoSuchMethodException) {
-            Project.error("No such method:" + e.message)
+            LogProcessor.error("No such method:" + e.message)
             return null
         }
         nf.addParams(ctx.parameterList())
@@ -479,20 +480,16 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
      * @return 这个构造函数的对象
      */
     
-    override fun visitConstructorDeclaration(ctx: mcfppParser.ConstructorDeclarationContext): Any? {
+    override fun visitConstructorDeclaration(ctx: mcfppParser.ConstructorDeclarationContext): Any {
         Project.ctx = ctx
         //类构造函数
         //创建构造函数对象，注册函数
-        val f: Constructor?
-        try {
-            f = Constructor(Class.currClass!!)
-            Class.currClass!!.addConstructor(f)
-            f.addParams(ctx.parameterList())
-            return f
-        } catch (e: FunctionDuplicationException) {
-            Project.error("Already defined constructor: " + ctx.className().text + "(" + ctx.parameterList().text + ")")
+        val f = Constructor(Class.currClass!!)
+        f.addParams(ctx.parameterList())
+        if(!Class.currClass!!.addConstructor(f)){
+            LogProcessor.error("Already defined constructor: " + ctx.className().text + "(" + ctx.parameterList().text + ")")
         }
-        return null
+        return f
     }
 
     /**
@@ -518,8 +515,8 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
         if (Class.currClass!!.field.containVar(c.Identifier().text)
             || Class.currClass!!.staticField.containVar(c.Identifier().text)
         ) {
-            Project.error("Duplicate defined variable name:" + c.Identifier().text)
-            throw VariableDuplicationException()
+            LogProcessor.error("Duplicate defined variable name:" + c.Identifier().text)
+            return reList
         }
         //变量的初始化
         if (c.expression() != null) {
@@ -535,7 +532,7 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
             try {
                 `var`.assign(init)
             } catch (e: VariableConverseException) {
-                Project.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
+                LogProcessor.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
                 Function.currFunction = Function.nullFunction
                 throw VariableConverseException()
             }
@@ -573,11 +570,11 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
         if (field.getFunction(f.identifier, f.paramTypeList) == null) {
             field.addFunction(f,false)
         } else {
-            Project.error("Already defined function:" + f.namespaceID)
+            LogProcessor.error("Already defined function:" + f.namespaceID)
             Function.currFunction = Function.nullFunction
         }
         if (f.isEntrance && ctx.parameterList()!!.parameter().size != 0) {
-            Project.error("Entrance function shouldn't have parameter:" + f.namespaceID)
+            LogProcessor.error("Entrance function shouldn't have parameter:" + f.namespaceID)
         }
         return null
     }
@@ -600,11 +597,11 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
         if (field.getFunction(f.identifier, f.paramTypeList) == null) {
             field.addFunction(f,false)
         } else {
-            Project.error("Already defined function:" + f.namespaceID)
+            LogProcessor.error("Already defined function:" + f.namespaceID)
             Function.currFunction = Function.nullFunction
         }
         if (f.isEntrance && ctx.parameterList()!!.parameter().size != 0) {
-            Project.error("Entrance function shouldn't have parameter:" + f.namespaceID)
+            LogProcessor.error("Entrance function shouldn't have parameter:" + f.namespaceID)
         }
         return null
     }
@@ -631,11 +628,11 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
             f.setField(field)
             field.addFunction(f,false)
         } else {
-            Project.error("Already defined function:" + f.namespaceID)
+            LogProcessor.error("Already defined function:" + f.namespaceID)
             Function.currFunction = Function.nullFunction
         }
         if (f.isEntrance && ctx.parameterList()!!.parameter().size != 0) {
-            Project.error("Entrance function shouldn't have parameter:" + f.namespaceID)
+            LogProcessor.error("Entrance function shouldn't have parameter:" + f.namespaceID)
         }
         return null
     }
@@ -650,7 +647,8 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
             when(ctx.type().text){
                 "int" -> MCInt.data
                 else -> {
-                    throw Exception("Cannot add extension function to ${ctx.type().text}")
+                    LogProcessor.error("Cannot add extension function to ${ctx.type().text}")
+                    return null
                 }
             }
         }else{
@@ -668,8 +666,8 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
             if (qwq == null) {
                 val pwp = GlobalField.getStruct(nsp, id)
                 if(pwp == null){
-                    Project.error("Undefined class or struct:" + ctx.type().className().text)
-                    throw ClassNotDefineException()
+                    LogProcessor.error("Undefined class or struct:" + ctx.type().className().text)
+                    return null
                 }else{
                     ownerType = Function.Companion.OwnerType.STRUCT
                     pwp
@@ -689,7 +687,7 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
         val field = if(f.isStatic) data.staticField else data.field
         //注册函数
         if (!field.addFunction(f,false)) {
-            Project.error("Already defined function:" + ctx.Identifier().text + "in class " + Class.currClass!!.identifier)
+            LogProcessor.error("Already defined function:" + ctx.Identifier().text + "in class " + Class.currClass!!.identifier)
             Function.currFunction = Function.nullFunction
         }
         return null
@@ -706,13 +704,13 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
         val nf: NativeFunction = try {
             NativeFunction(ctx.Identifier().text, ctx.javaRefer().text, if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text)
         } catch (e: IllegalFormatException) {
-            Project.error("Illegal Java Method Name:" + e.message)
+            LogProcessor.error("Illegal Java Method Name:" + e.message)
             return null
         } catch (e: ClassNotFoundException) {
-            Project.error("Cannot find java class:" + e.message)
+            LogProcessor.error("Cannot find java class:" + e.message)
             return null
         } catch (e: NoSuchMethodException) {
-            Project.error("No such method:" + e.message)
+            LogProcessor.error("No such method:" + e.message)
             return null
         }
         nf.addParams(ctx.parameterList())
@@ -723,7 +721,7 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
         if (!field.hasFunction(nf)) {
             field.addFunction(nf,false)
         } else {
-            Project.error("Already defined function:" + ctx.Identifier().text)
+            LogProcessor.error("Already defined function:" + ctx.Identifier().text)
             Function.currFunction = Function.nullFunction
         }
         return nf
@@ -738,8 +736,8 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
         val field = GlobalField.localNamespaces[Project.currNamespace]!!
         if (field.hasTemplate(id)) {
             //重复声明
-            Project.error("Template has been defined: $id in namespace ${Project.currNamespace}")
-            throw StructDuplicationException()
+            LogProcessor.error("Template has been defined: $id in namespace ${Project.currNamespace}")
+            Template.currTemplate = field.getTemplate(id)
         }
         val struct = Template(id, ctx.genericity().type().text, Project.currNamespace)
         if (ctx.className() != null) {
@@ -756,7 +754,7 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
             }
             val s = GlobalField.getStruct(namespace, identifier)
             if(s == null){
-                Project.error("Undefined struct: " + ctx.className().text)
+                LogProcessor.error("Undefined struct: " + ctx.className().text)
             }else{
                 struct.parent.add(s)
             }
@@ -869,7 +867,7 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
         f.addParams(ctx.parameterList())
         //注册函数
         if (Template.currTemplate!!.field.hasFunction(f) || Template.currTemplate!!.staticField.hasFunction(f)) {
-            Project.error("Already defined function:" + ctx.Identifier().text + "in struct " + Template.currTemplate!!.identifier)
+            LogProcessor.error("Already defined function:" + ctx.Identifier().text + "in struct " + Template.currTemplate!!.identifier)
             Function.currFunction = Function.nullFunction
         }
         return f
@@ -886,15 +884,15 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
         return re
     }
 
-    override fun visitTemplateFieldDeclarationExpression(ctx: mcfppParser.TemplateFieldDeclarationExpressionContext): Var {
+    override fun visitTemplateFieldDeclarationExpression(ctx: mcfppParser.TemplateFieldDeclarationExpressionContext): Var? {
         val `var`: Var = Var.build(ctx.Identifier().text,Template.currTemplate!!.dataType, Template.currTemplate!!)
         //是否是静态的
         `var`.isStatic = isStatic
         //只有可能是结构体成员
         if (Template.currTemplate!!.field.containVar(ctx.Identifier().text) || Template.currTemplate!!.staticField.containVar(ctx.Identifier().text)
         ) {
-            Project.error("Duplicate defined variable name:" + ctx.Identifier().text)
-            throw VariableDuplicationException()
+            LogProcessor.error("Duplicate defined variable name:" + ctx.Identifier().text)
+            return null
         }
         return `var`
     }

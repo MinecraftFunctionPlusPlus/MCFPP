@@ -1,6 +1,18 @@
 {
 	"namespaces":[
 		{
+			"id":"default",
+			"functions":[
+				
+			],
+			"classes":[
+				
+			],
+			"structs":[
+				
+			]
+		},
+		{
 			"id":"mcfpp",
 			"functions":[
 				"void load()",
