@@ -7,7 +7,8 @@ import top.mcfpp.lib.Class
  * 这里还得找出父类是哪些
  */
 class MCFPPClassType(
-    var cls:Class
+    var cls:Class,
+    override var parentType: List<MCFPPType>
 ):MCFPPType {
     override var typeName: String = cls.identifier
 

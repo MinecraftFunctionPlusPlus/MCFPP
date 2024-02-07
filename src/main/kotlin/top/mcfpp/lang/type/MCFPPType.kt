@@ -5,4 +5,5 @@ package top.mcfpp.lang.type
  */
 interface MCFPPType {
     var typeName:String
+    var parentType: List<MCFPPType>
 }
