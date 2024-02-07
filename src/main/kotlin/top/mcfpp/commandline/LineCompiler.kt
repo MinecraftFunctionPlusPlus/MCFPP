@@ -17,9 +17,31 @@ class LineCompiler {
 
     val default = Function("default","mcfpp")
 
+    var unmatchedBraces : String = ""
+    var leftBraces = 0
+
     fun compile(line: String) {
+        //处理未匹配的括号
+        for (char in line) {
+            when (char) {
+                '{' -> leftBraces++
+                '}' -> {
+                    if (leftBraces == 0) {
+                        throw Exception("Unmatched right brace")
+                    }
+                    leftBraces--
+                }
+            }
+        }
+        if (leftBraces > 0) {
+            unmatchedBraces += line
+            return
+        }
+        leftBraces = 0
+        val input = unmatchedBraces + line
+        unmatchedBraces = ""
         Function.currFunction = default
-        val charStream: CharStream = CharStreams.fromString(line + if(!line.endsWith(';')) ";" else "")
+        val charStream: CharStream = CharStreams.fromString(input + if(!line.endsWith(';')) ";" else "")
         val tokens = CommonTokenStream(mcfppLexer(charStream))
         val unit = mcfppParser(tokens).compilationUnit()
         if(unit.statement().size != 0){
