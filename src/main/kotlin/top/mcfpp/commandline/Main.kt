@@ -8,6 +8,8 @@ import top.mcfpp.Project
 import top.mcfpp.io.LibReader
 import top.mcfpp.lang.UnresolvedVar
 import top.mcfpp.lib.GlobalField
+import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.UwU
 import java.io.File
 import java.io.FileInputStream
 import java.time.Instant
@@ -45,10 +47,13 @@ fun main(){
     }
     GlobalField.init()
     println("MCFPP ${MCFPP.version} (${Instant.now()})")
+    println("Tips: " + UwU.tip) //生成tips
     val compiler = LineCompiler()
     //等待输入
     while(true){
-        print(">")
+        if(compiler.leftBraces == 0){
+            print(">")
+        }
         when(val line = readln()){
             "exit" -> return
             "version" -> println("MCFPP ${MCFPP.version}")
