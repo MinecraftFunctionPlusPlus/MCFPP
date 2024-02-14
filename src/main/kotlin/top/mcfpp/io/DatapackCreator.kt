@@ -4,6 +4,7 @@ import com.alibaba.fastjson2.JSON
 import com.alibaba.fastjson2.JSONObject
 import top.mcfpp.Project
 import top.mcfpp.lib.*
+import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import top.mcfpp.util.Utils
 import java.io.*
@@ -43,10 +44,10 @@ object DatapackCreator {
      * @param path 路径
      */
     fun createDatapack(path: String) {
-        Project.debug("Clearing output folder...")
+        LogProcessor.debug("Clearing output folder...")
         //清空原输出文件夹
         delAllFile(File("$path/${Project.name}"))
-        Project.debug("Copy libs...")
+        LogProcessor.debug("Copy libs...")
         //复制库
         for (lib in Project.includes){
             val filePath = if(!lib.endsWith("/.mclib")) {
@@ -76,7 +77,7 @@ object DatapackCreator {
                 }
             }
         }
-        Project.debug("Creating datapack...")
+        LogProcessor.debug("Creating datapack...")
         //生成
         val datapackMcMeta = DatapackMcMeta(
             DatapackMcMeta.Pack(
@@ -97,7 +98,7 @@ object DatapackCreator {
                         if (f is Native) {
                             return@run
                         }
-                        Project.debug("Writing File: $currPath\\functions\\${f.nameWithNamespace}.mcfunction")
+                        LogProcessor.debug("Writing File: $currPath\\functions\\${f.nameWithNamespace}.mcfunction")
                         Files.createDirectories(Paths.get("$currPath/functions"))
                         Files.write(
                             Paths.get("$currPath/functions/${f.nameWithNamespace}.mcfunction"),
@@ -116,7 +117,7 @@ object DatapackCreator {
                                 if (f is Native) {
                                     return@run
                                 }
-                                Project.debug("Writing File: $currPath\\functions\\" + f.nameWithNamespace + ".mcfunction")
+                                LogProcessor.debug("Writing File: $currPath\\functions\\" + f.nameWithNamespace + ".mcfunction")
                                 //TODO 可能无法正确创建文件夹
                                 Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(cls.identifier)))
                                 if (f is ExtensionFunction){
@@ -133,7 +134,7 @@ object DatapackCreator {
                                 if (f is Native) {
                                     return@run
                                 }
-                                Project.debug("Writing File: $currPath\\functions\\"  + f.nameWithNamespace + ".mcfunction")
+                                LogProcessor.debug("Writing File: $currPath\\functions\\"  + f.nameWithNamespace + ".mcfunction")
                                 //TODO 可能无法正确创建文件夹
                                 Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(cls.identifier) + "/static"))
                                 if (f is ExtensionFunction){
@@ -148,7 +149,7 @@ object DatapackCreator {
                         //构造函数
                         cls.constructors.forEach{ c ->
                             run {
-                                Project.debug("Writing File: $currPath\\functions\\"  + c.nameWithNamespace + ".mcfunction")
+                                LogProcessor.debug("Writing File: $currPath\\functions\\"  + c.nameWithNamespace + ".mcfunction")
                                 //TODO 可能无法正确创建文件夹
                                 Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(cls.identifier)))
                                 Files.write(
@@ -162,7 +163,7 @@ object DatapackCreator {
             }
             //写入标签json文件
             for (tag in GlobalField.functionTags.values) {
-                Project.debug("Writing File: " + path + "\\${Project.name}\\data\\" + tag.namespace + "\\tags\\functions\\" + tag.tag + ".json")
+                LogProcessor.debug("Writing File: " + path + "\\${Project.name}\\data\\" + tag.namespace + "\\tags\\functions\\" + tag.tag + ".json")
                 Files.createDirectories(Paths.get(path + "/${Project.name}/data/" + tag.namespace + "/tags/functions"))
                 Files.write(
                     Paths.get(path + "/${Project.name}/data/" + tag.namespace + "/tags/functions/" + tag.tag + ".json"),

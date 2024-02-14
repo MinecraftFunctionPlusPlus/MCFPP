@@ -3,6 +3,7 @@ package top.mcfpp.lib
 import top.mcfpp.Project
 import top.mcfpp.exception.IllegalFormatException
 import top.mcfpp.lang.*
+import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.ValueWrapper
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
@@ -43,6 +44,7 @@ class NativeFunction : Function, Native {
             javaMethodName = strs[strs.size - 1]
             javaClassName = javaMethod.substring(0, javaMethod.lastIndexOf(javaMethodName) - 1)
         } catch (e: StringIndexOutOfBoundsException) {
+            LogProcessor.error("Illegal format of java method: $javaMethod")
             throw IllegalFormatException(javaMethod)
         }
         try{
@@ -106,13 +108,13 @@ class NativeFunction : Function, Native {
             javaMethod.invoke(null, argsArray, caller, valueWrapper)
             returnVar = valueWrapper.value
         } catch (e: IllegalAccessException) {
-            Project.error("Cannot access method: ${javaMethod.name}")
+            LogProcessor.error("Cannot access method: ${javaMethod.name}")
             throw RuntimeException(e)
         } catch (e: InvocationTargetException) {
-            Project.error("Exception occurred in method: ${javaMethod.name}")
+            LogProcessor.error("Exception occurred in method: ${javaMethod.name}")
             throw RuntimeException(e)
         } catch (e: NullPointerException){
-            Project.error("Method should be static: ${javaMethod.name}")
+            LogProcessor.error("Method should be static: ${javaMethod.name}")
             throw RuntimeException(e)
         }
     }
@@ -120,13 +122,12 @@ class NativeFunction : Function, Native {
     override fun argPass(args: ArrayList<Var>){
         for (i in params.indices) {
             if(params[i].isConcrete && !args[i].isConcrete){
-                Project.error("Cannot pass a non-concrete value to a concrete parameter")
+                LogProcessor.error("Cannot pass a non-concrete value to a concrete parameter")
                 throw IllegalArgumentException()
             }
             val tg = args[i].cast(params[i].type)
             //参数传递和子函数的参数进栈
-            val p = field.getVar(params[i].identifier)!!
-            p.assign(tg)
+            field.putVar(params[i].identifier, tg, true)
         }
     }
     @Override

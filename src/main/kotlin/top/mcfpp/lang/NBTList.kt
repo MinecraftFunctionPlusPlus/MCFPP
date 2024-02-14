@@ -1,16 +1,10 @@
 package top.mcfpp.lang
 
 import net.querz.nbt.tag.*
-import top.mcfpp.Project
-import top.mcfpp.command.Command
-import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
 import java.util.*
-import kotlin.Number
-import kotlin.collections.ArrayList
-import kotlin.reflect.jvm.javaMethod
 
 class NBTList<T : Tag<*>?> : NBTBasedData, Indexable<NBT> {
 
@@ -124,7 +118,7 @@ class NBTList<T : Tag<*>?> : NBTBasedData, Indexable<NBT> {
         key: String,
         params: List<String>,
         accessModifier: Member.AccessModifier
-    ): Pair<Function?, Boolean> {
+    ): Pair<Function, Boolean> {
         TODO("Not yet implemented")
     }
 

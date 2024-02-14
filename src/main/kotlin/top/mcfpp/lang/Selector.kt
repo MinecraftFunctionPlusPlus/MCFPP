@@ -3,11 +3,11 @@ package top.mcfpp.lang
 import net.querz.nbt.tag.ListTag
 import net.querz.nbt.tag.StringTag
 import net.querz.nbt.tag.Tag
-import top.mcfpp.exception.ArgumentNotMatchException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
+import top.mcfpp.util.LogProcessor
 import java.util.*
 import kotlin.collections.HashMap
 
@@ -117,7 +117,7 @@ class Selector : NBTBasedData {
         key: String,
         params: List<String>,
         accessModifier: Member.AccessModifier
-    ): Pair<Function?, Boolean> {
+    ): Pair<Function, Boolean> {
         TODO()
     }
 
@@ -146,7 +146,10 @@ class Selector : NBTBasedData {
                 'p' -> SelectorType.NEAREST_PLAYER
                 'r' -> SelectorType.RANDOM_PLAYER
                 's' -> SelectorType.SELF
-                else -> throw ArgumentNotMatchException("Selector type")
+                else -> {
+                    LogProcessor.error("Invalid selector type: @$char")
+                    SelectorType.ALL_ENTITIES
+                }
             }
         }
 

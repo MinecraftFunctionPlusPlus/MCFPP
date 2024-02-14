@@ -17,17 +17,17 @@ import kotlin.collections.HashMap
 object GlobalField : FieldContainer, IField {
 
     /**
-     * 命名空间
+     * 当前项目内声明的命名空间
      */
     val localNamespaces = Hashtable<String, NamespaceField>()
 
     /**
-     * import引用后的，来自库的命名空间。
+     * 每个文件中，使用import语句引用库以后的库命名空间，只作用于当前编译的文件
      */
     val importedLibNamespaces = Hashtable<String, NamespaceField>()
 
     /**
-     * 库的命名空间域。这个域中的内容是在编译时就已经确定的，不会随着代码的变化而变化。
+     * 库的命名空间域。在分析项目前，使用readLib函数读取所有在项目配置文件中被声明引用的库，并将所有的命名空间存放进去
      */
     val libNamespaces = Hashtable<String, NamespaceField>()
 
@@ -57,6 +57,8 @@ object GlobalField : FieldContainer, IField {
         scoreboards[SbObject.MCFPP_INIT.name] = SbObject.MCFPP_INIT
         scoreboards[SbObject.MCFPP_TEMP.name] = SbObject.MCFPP_TEMP
 
+        localNamespaces["default"] = NamespaceField()
+
         return this
     }
 
@@ -71,7 +73,7 @@ object GlobalField : FieldContainer, IField {
      *
      * @return 获取的函数。如果有多个相同函数（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
      */
-    fun getFunction(@Nullable namespace:String?, identifier: String, args : List<String>): Function?{
+    fun getFunction(@Nullable namespace:String?, identifier: String, args : List<String>): Function{
         if(namespace == null){
             val f = localNamespaces[Project.currNamespace]!!.getFunction(identifier, args)
             if(f != null) return f
@@ -79,13 +81,13 @@ object GlobalField : FieldContainer, IField {
                 val f1 = n.getFunction(identifier, args)
                 if(f1 != null) return f1
             }
-            return null
+            return UnknownFunction(identifier)
         }
         var field = localNamespaces[namespace]
         if(field == null){
             field = libNamespaces[namespace]
         }
-        return field?.getFunction(identifier, args)
+        return field?.getFunction(identifier, args)?:UnknownFunction(identifier)
     }
 
     /**

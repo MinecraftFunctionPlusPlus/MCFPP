@@ -102,7 +102,7 @@ class MCAny : Var {
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型
      */
-    override fun cast(type: String): Var? {
+    override fun cast(type: String): Var {
         return if(isConcrete){
             when(type){
                 "MCAny" -> this
@@ -114,6 +114,10 @@ class MCAny : Var {
                 else -> throw VariableConverseException()
             }
         }
+    }
+
+    override fun getVarValue(): Any? {
+        return value
     }
 
     override fun clone(): Any {
@@ -157,7 +161,7 @@ class MCAny : Var {
         key: String,
         params: List<String>,
         accessModifier: Member.AccessModifier
-    ): Pair<Function?, Boolean> {
+    ): Pair<Function, Boolean> {
         return data.field.getFunction(key, params) to true
     }
 

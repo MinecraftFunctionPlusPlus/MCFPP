@@ -6,17 +6,17 @@ import top.mcfpp.lang.Var
 open class CompoundData : FieldContainer {
 
     /**
-     * 这个类的父类
+     * 父结构
      */
     var parent: ArrayList<CompoundData> = ArrayList()
 
     /**
-     * 这个类的标识符
+     * 标识符
      */
     lateinit var identifier: String
 
     /**
-     * 类的命名空间
+     * 命名空间
      */
     lateinit var namespace: String
 
@@ -80,14 +80,14 @@ open class CompoundData : FieldContainer {
      *
      * @return 如果函数存在，则返回此函数，否则返回null
      */
-    fun getFunction(key: String, params: List<String>, isStatic: Boolean = false): Function? {
+    fun getFunction(key: String, params: List<String>, isStatic: Boolean = false): Function {
         var re = if(isStatic){
             staticField.getFunction(key, params)
         }else{
             field.getFunction(key, params)
         }
         val iterator = parent.iterator()
-        while (re == null && iterator.hasNext()){
+        while (re is UnknownFunction && iterator.hasNext()){
             re = iterator.next().getFunction(key,params,isStatic)
         }
         return re

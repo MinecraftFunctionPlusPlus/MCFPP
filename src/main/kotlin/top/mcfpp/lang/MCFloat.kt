@@ -9,6 +9,7 @@ import top.mcfpp.lib.Class
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
+import top.mcfpp.util.LogProcessor
 import java.util.*
 import kotlin.math.absoluteValue
 import kotlin.math.floor
@@ -652,13 +653,16 @@ class MCFloat : Number<Float> {
      * @param type 要转换到的目标类型
      */
     @InsertCommand
-    override fun cast(type: String): Var? {
+    override fun cast(type: String): Var {
         if(isConcrete){
             return when(type) {
                 this.type -> this
                 "int" -> MCInt(value!!.toInt())
                 "any" -> MCAny(this)
-                else -> null
+                else -> {
+                    LogProcessor.error("Cannot cast [${this.type}] to [$type]")
+                    throw VariableConverseException()
+                }
             }
         }else{
             return when(type){
@@ -672,7 +676,10 @@ class MCFloat : Number<Float> {
                     re
                 }
                 "any" -> MCAny(this)
-                else -> null
+                else -> {
+                    LogProcessor.error("Cannot cast [${this.type}] to [$type]")
+                    throw VariableConverseException()
+                }
             }
         }
     }
@@ -731,7 +738,7 @@ class MCFloat : Number<Float> {
         key: String,
         params: List<String>,
         accessModifier: Member.AccessModifier
-    ): Pair<Function?, Boolean> {
+    ): Pair<Function, Boolean> {
         TODO("Not yet implemented")
     }
 

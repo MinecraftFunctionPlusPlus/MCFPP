@@ -4,6 +4,7 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Commands
 import top.mcfpp.lang.*
+import top.mcfpp.util.MCUUID
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -18,13 +19,14 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
     var target: Class
 ) : Function("_init_" + target.identifier.lowercase(Locale.getDefault()) + "_" + target.constructors.size, target, false) {
 
-    val leadFunction: Function
+    private val leadFunction: Function
     init {
         //添加this指针
         val thisObj = ClassPointer(target,"this")
         thisObj.identifier = "this"
         field.putVar("this",thisObj)
-        leadFunction = Function(this.identifier,this.namespaceID,"void")
+        leadFunction = Function(this.identifier + "_lead",this.namespace,"void")
+        target.field.addFunction(leadFunction,false)
     }
 
     /**
@@ -34,7 +36,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
      */
     @Override
     @InsertCommand
-    override fun invoke(args: ArrayList<Var>, callerClassP: ClassBase?) {
+    override fun invoke(args: ArrayList<Var>, callerClassP: ClassPointer?) {
         callerClassP as ClassPointer
         addCommand("execute in minecraft:overworld positioned 0 1 0 summon marker run function " + leadFunction.namespaceID)
         val qwq = currFunction
@@ -48,9 +50,9 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
         }
         funcs.append("}")
         //对象实体创建
-        addCommand("data merge entity @s {Tags:[" + callerClassP.tag + "],data:{pointers:[],$funcs}}")
+        addCommand("data merge entity @s {Tags:[${callerClassP.tag}],data:{$funcs}}")
         //初始指针
-        addCommand("data modify storage mcfpp:temp INIT.${(owner as Class).namespace}.${(owner as Class).identifier} set from entity @s UUID")
+        addCommand("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[${callerClassP.stackIndex}].${callerClassP.identifier} set from entity @s UUID")
         //初始化
         if(target.classPreInit.commands.size > 0){
             //给函数开栈
@@ -63,22 +65,9 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
         //给函数开栈，调用构造函数
         addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
         //参数传递
-        for (i in 0 until params.size) {
-            when (params[i].type) {
-                "int" -> {
-                    val tg = args[i].cast(params[i].type) as MCInt
-                    //参数传递和子函数的参数压栈
-                    addCommand(
-                        "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]." + params[i].identifier + " int 1 run "
-                                + Commands.sbPlayerOperation(MCInt(this,"_param_" + params[i].identifier), "=", tg)
-                    )
-                }
-            }
-        }
-
+        argPass(args)
         //调用构造函数
         addCommand("function " + this.namespaceID)
-
         //销毁指针，释放堆内存
         for (p in field.allVars){
             if (p is ClassPointer){
@@ -87,24 +76,8 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
         }
         //调用完毕，将子函数的栈销毁
         addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
-
         //取出栈内的值到记分板
-        for (i in 0 until params.size) {
-            when (params[i].type) {
-                "int" -> {
-                    val tg = args[i].cast(params[i].type) as MCInt
-                    //参数传递和子函数的参数压栈
-                    //如果是int取出到记分板
-                    addCommand(
-                        "execute store result score ${tg.name} ${tg.`object`} run "
-                                + "data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].int.${tg.identifier}"
-                    )
-                }
-                else -> {
-                    //是引用类型，不用取出
-                }
-            }
-        }
+        fieldRestore()
         currFunction = qwq
     }
 

@@ -2,13 +2,13 @@ package top.mcfpp.antlr
 
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
-import top.mcfpp.exception.ClassNotDefineException
-import top.mcfpp.exception.FunctionNotDefineException
-import top.mcfpp.exception.TODOException
 import top.mcfpp.lang.*
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
+import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
+import java.util.*
+import kotlin.collections.ArrayList
 
 class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var?>(){
     private var currSelector : CanSelectMember? = null
@@ -45,10 +45,10 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var?>(){
                 val clsstr = StringHelper.splitNamespaceID(ctx.type().text)
                 val qwq: Class? = GlobalField.getClass(clsstr.first, clsstr.second)
                 if (qwq == null) {
-                    Project.error("Undefined class:" + ctx.type().className().text)
-                    throw ClassNotDefineException()
+                    LogProcessor.error("Undefined class:" + ctx.type().className().text)
+                    return UnknownVar("${ctx.type().className().text}_type_" + UUID.randomUUID())
                 }
-                ClassType(qwq!!)
+                ClassType(qwq)
             }else{
                 CompoundDataType(
                     //基本类型
@@ -102,7 +102,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var?>(){
             }
             val re: Var? = Function.field.getVar(s)
             if (re == null) {
-                Project.error("$s can only be used in member functions.")
+                LogProcessor.error("$s can only be used in member functions.")
             }
             return re
         }
@@ -126,7 +126,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var?>(){
                 if(currSelector == null){
                     val re: Var? = Function.field.getVar(qwq)
                     if (re == null) {
-                        Project.error("Undefined variable:$qwq")
+                        LogProcessor.error("Undefined variable:$qwq")
                     }
                     re
                 }else{
@@ -144,16 +144,15 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var?>(){
                     }
                     val re  = currSelector!!.getMemberVar(qwq,am)
                     if (re.first == null) {
-                        Project.error("Undefined variable:$qwq")
+                        LogProcessor.error("Undefined variable:$qwq")
                     }
                     if (!re.second){
-                        Project.error("Cannot access member $qwq")
+                        LogProcessor.error("Cannot access member $qwq")
                     }
                     re.first
                 }
             } else {
-                //TODO 是数组调用
-                throw TODOException("")
+                TODO("数组调用")
             }
         } else if (ctx.expression() != null) {
             // '(' expression ')'
@@ -174,19 +173,23 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var?>(){
                 McfppFuncManager().getFunction(p.first,p.second, FunctionParam.getVarTypes(args))
             }else{
                 if(p.first != null){
-                    Project.warn("Invalid namespace usage ${p.first} in function call ")
+                    LogProcessor.warn("Invalid namespace usage ${p.first} in function call ")
                 }
                 McfppFuncManager().getFunction(currSelector!!,p.second, FunctionParam.getVarTypes(args))
             }
-            if (func == null) {
-                Project.error("Function " + ctx.text + " not defined")
-                throw FunctionNotDefineException()
+
+            return if (func is UnknownFunction) {
+                LogProcessor.error("Function " + ctx.text + " not defined")
+                Function.addCommand("[Failed to Compile]${ctx.text}")
+                func.invoke(args,currSelector)
+                func.returnVar
+            }else{
+                func.invoke(args,currSelector)
+                //函数树
+                Function.currFunction.child.add(func)
+                func.parent.add(Function.currFunction)
+                func.returnVar
             }
-            func.invoke(args,currSelector)
-            //函数树
-            Function.currFunction.child.add(func)
-            func.parent.add(Function.currFunction)
-            func.returnVar
         }
     }
 
@@ -200,8 +203,8 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var?>(){
             GlobalField.getClass(null, clsstr[0])
         }
         if (cls == null) {
-            Project.error("Undefined class:" + ctx.className().text)
-            throw ClassNotDefineException()
+            LogProcessor.error("Undefined class:" + ctx.className().text)
+            return UnknownVar("${ctx.className().text}_ptr_" + UUID.randomUUID())
         }
         //获取参数列表
         //参数获取
@@ -212,16 +215,16 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var?>(){
                 args.add(exprVisitor.visit(expr)!!)
             }
         }
-        cls!!
+        //获取对象
+        val ptr = cls.newInstance()
+        //调用构造函数
         val constructor = cls.getConstructor(FunctionParam.getVarTypes(args))
         if (constructor == null) {
-            Project.error("No constructor like: " + FunctionParam.getVarTypes(args) + " defined in class " + ctx.className().text)
-            throw FunctionNotDefineException()
+            LogProcessor.error("No constructor like: " + FunctionParam.getVarTypes(args) + " defined in class " + ctx.className().text)
+            Function.addCommand("[Failed to compile]${ctx.text}")
+        }else{
+            constructor.invoke(args, callerClassP = ptr)
         }
-        //获取对象
-        val obj: ClassObject = cls.newInstance()
-        //调用构造函数
-        constructor.invoke(args, caller = obj.initPointer)
-        return obj
+        return ptr
     }
 }

@@ -17,9 +17,9 @@ import java.io.FileWriter
  * 对于函数，索引文件会保存函数的名字，参数类型和参数的标识符。
  * 对于类，索引文件会保存类中成员字段的类型，以及成员方法。成员方法的保存内容和函数相同。只有被标记为public的成员才会被写入索引中，因为只有它们能被外部代码访问到。
  *
- * @see IndexReader
+ * @see LibReader
  */
-object IndexWriter {
+object LibWriter {
 
     /**
      * 向指定路径写入一个.mclib文件。会直接读取[GlobalField.localNamespaces]中的内容进行写入。

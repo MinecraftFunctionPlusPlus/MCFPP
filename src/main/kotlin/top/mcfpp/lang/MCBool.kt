@@ -5,7 +5,6 @@ import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.*
 import java.util.*
 import top.mcfpp.lib.Function
-import kotlin.collections.HashMap
 
 /**
  * 布尔型变量是mcfpp的基本类型之一，它表示一个只有0，1两种取值可能性的值。
@@ -258,6 +257,10 @@ open class MCBool : Var, OnScoreboard {
         return this
     }
 
+    override fun getVarValue(): Any? {
+        return value
+    }
+
     @Override
     @InsertCommand
     override fun getTempVar(): MCBool {
@@ -304,7 +307,7 @@ open class MCBool : Var, OnScoreboard {
         key: String,
         params: List<String>,
         accessModifier: Member.AccessModifier
-    ): Pair<Function?, Boolean> {
+    ): Pair<Function, Boolean> {
         TODO("Not yet implemented")
     }
 }

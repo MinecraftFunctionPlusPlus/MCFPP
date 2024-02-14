@@ -3,7 +3,7 @@ package top.mcfpp.lib
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 
-class Interface : CompoundData {
+open class Interface : CompoundData {
 
     /**
      * 生成一个接口。它拥有指定的标识符和默认的命名空间

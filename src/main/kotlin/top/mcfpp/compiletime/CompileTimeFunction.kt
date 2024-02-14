@@ -1,7 +1,7 @@
 package top.mcfpp.compiletime
 
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.lang.ClassBase
+import top.mcfpp.lang.ClassPointer
 import top.mcfpp.lang.Var
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.IField
@@ -27,7 +27,7 @@ class CompileTimeFunction :Function{
         }
     }
 
-    override fun invoke(args: ArrayList<Var>, callerClassP: ClassBase?) {
+    override fun invoke(args: ArrayList<Var>, callerClassP: ClassPointer?) {
         val field = makeField()
         argPass(field,args)
         val visitor = McfppCompileTimeVisitor(field)

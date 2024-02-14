@@ -1,9 +1,10 @@
 package top.mcfpp.lib
 
 import top.mcfpp.Project
-import top.mcfpp.annotations.InsertCommand
-import top.mcfpp.exception.FunctionDuplicationException
+import top.mcfpp.antlr.mcfppParser
+import top.mcfpp.antlr.mcfppParser.ConstructorDeclarationContext
 import top.mcfpp.lang.*
+import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.Utils
 import java.util.*
 
@@ -84,18 +85,11 @@ open class Class : CompoundData {
     private var hasParentClass = false
 
     /**
-     * 生成一个类。它拥有指定的标识符和默认的命名空间
-     * @param identifier 类的标识符
-     */
-    constructor(identifier: String) : this(identifier, Project.currNamespace)
-
-    /**
      * 生成一个类，它拥有指定的标识符和命名空间
      * @param identifier 类的标识符
      * @param namespace 类的命名空间
      */
-    @InsertCommand
-    constructor(identifier: String, namespace: String) {
+    constructor(identifier: String, namespace: String = Project.currNamespace) {
         this.identifier = identifier
         this.namespace = namespace
     }
@@ -156,11 +150,12 @@ open class Class : CompoundData {
      * 向这个类中添加一个构造函数
      * @param constructor 构造函数
      */
-    fun addConstructor(constructor: Constructor) {
+    fun addConstructor(constructor: Constructor) : Boolean {
         if (constructors.contains(constructor)) {
-            throw FunctionDuplicationException()
+            return false
         } else {
             constructors.add(constructor)
+            return true
         }
     }
 
@@ -168,13 +163,12 @@ open class Class : CompoundData {
      * 创建这个类的一个实例
      * @return 创建的实例
      */
-    fun newInstance(): ClassObject {
-        if(isAbstract){
-            Project.error("Abstract classes cannot be instantiated: $identifier")
+    fun newInstance(): ClassPointer {
+        if (isAbstract) {
+            LogProcessor.error("Abstract classes cannot be instantiated: $identifier")
         }
         //创建实例
-        val obj = ClassObject(this)
-        return obj
+        return ClassPointer(this, "init")
     }
 
     /**
@@ -185,7 +179,7 @@ open class Class : CompoundData {
     override fun extends(compoundData: CompoundData) : CompoundData{
         if(compoundData is Class){
             if(hasParentClass){
-                Project.error("A class can only inherit one class")
+                LogProcessor.error("A class can only inherit one class")
                 throw Exception()
             }
             hasParentClass = true
@@ -195,6 +189,18 @@ open class Class : CompoundData {
     }
 
     companion object {
+        class UndefinedClassOrInterface(identifier: String, namespace: String?)
+            : Class(identifier, namespace?:Project.currNamespace) {
+
+            fun getDefinedClassOrInterface(): CompoundData?{
+                var re : CompoundData? = GlobalField.getClass(namespace, identifier)
+                if(re == null){
+                    re = GlobalField.getInterface(namespace, identifier)
+                }
+                return re
+            }
+
+        }
         /**
          * 当前编译器正在编译的类
          */
