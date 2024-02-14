@@ -3,6 +3,7 @@ package top.mcfpp.lang
 import top.mcfpp.Project
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
+import top.mcfpp.util.LogProcessor
 
 /**
  * 一个函数由函数返回的bool类型变量。
@@ -28,7 +29,7 @@ class ReturnedMCBool(val parentFunction: Function) : MCBool() {
      * @param b 变量的对象
      */
     override fun assign(b: Var?) {
-        Project.error("The bool type returned by the function is read-only")
+        LogProcessor.error("The bool type returned by the function is read-only")
         throw Exception()
     }
 
@@ -37,7 +38,7 @@ class ReturnedMCBool(val parentFunction: Function) : MCBool() {
      * @param type 要转换到的目标类型
      */
     override fun cast(type: String): Var {
-        Project.error("The bool type returned by the function is read-only")
+        LogProcessor.error("The bool type returned by the function is read-only")
         throw Exception()
     }
 
@@ -57,7 +58,7 @@ class ReturnedMCBool(val parentFunction: Function) : MCBool() {
     }
 
     override fun toDynamic() {
-        Project.warn("The bool type returned by function is always dynamic")
+        LogProcessor.warn("The bool type returned by function is always dynamic")
     }
 
     /**
@@ -82,7 +83,7 @@ class ReturnedMCBool(val parentFunction: Function) : MCBool() {
         key: String,
         params: List<String>,
         accessModifier: Member.AccessModifier
-    ): Pair<Function?, Boolean> {
+    ): Pair<Function, Boolean> {
         TODO("Not yet implemented")
     }
 

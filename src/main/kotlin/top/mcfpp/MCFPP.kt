@@ -4,6 +4,7 @@ import org.apache.logging.log4j.core.config.ConfigurationSource
 import org.apache.logging.log4j.core.config.Configurator
 import top.mcfpp.io.DatapackCreator
 import top.mcfpp.lib.GlobalField
+import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.UwU
 import java.io.FileInputStream
 
@@ -22,18 +23,18 @@ fun main(args: Array<String>) {
         if(args.size > 1){
             if(args.contains("debug")){
                 CompileSettings.isDebug = true
-                Project.warn("Compiling in debug mode.")
+                LogProcessor.warn("Compiling in debug mode.")
             }
             if(args.contains("ignoreStdLib")){
                 CompileSettings.ignoreStdLib = true
-                Project.warn("Ignoring standard library.")
+                LogProcessor.warn("Ignoring standard library.")
             }
         }
         val start: Long = System.currentTimeMillis()
-        Project.info("Tips: " + UwU.tip) //生成tips
+        LogProcessor.info("Tips: " + UwU.tip) //生成tips
         val path = args[0]
         Project.readProject(path) //读取
-        Project.readIndex() //读取引用的库的索引
+        Project.readLib() //读取引用的库的索引
         Project.init() //初始化
         Project.analyse() //解析
         Project.compile() //编译
@@ -44,10 +45,14 @@ fun main(args: Array<String>) {
             try{
                 DatapackCreator.createDatapack(Project.targetPath) //生成数据包
             }catch (e: Exception){
-                Project.error("Cannot create datapack in path: ${Project.targetPath}")
+                LogProcessor.error("Cannot create datapack in path: ${Project.targetPath}")
             }
         }
-        Project.info("Finished in " + (System.currentTimeMillis() - start) + "ms")
+        LogProcessor.info("Finished in " + (System.currentTimeMillis() - start) + "ms")
         GlobalField.printAll()
     }
+}
+
+object MCFPP {
+    val version = "0.1.0"
 }

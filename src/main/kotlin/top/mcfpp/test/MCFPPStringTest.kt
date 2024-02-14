@@ -9,6 +9,7 @@ import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.antlr.*
 import top.mcfpp.lib.GlobalField
+import top.mcfpp.util.LogProcessor
 import java.io.File
 import java.io.FileInputStream
 import java.nio.file.Path
@@ -24,7 +25,7 @@ object MCFPPStringTest {
         }
         try {
             //读取json
-            Project.debug("Generate debug project for a string string")
+            LogProcessor.debug("Generate debug project for a string string")
             Project.root = Path.of("./")
             Project.currFile = File("./test.mcfpp")
             Project.name = "debug"
@@ -36,9 +37,9 @@ object MCFPPStringTest {
             Project.defaultNamespace = "default"
             //输出目录
             Project.targetPath = "null"
-            Project.readIndex() //读取引用的库的索引
+            Project.readLib() //读取引用的库的索引
             Project.init() //初始化
-            Project.debug("Analysing project...")
+            LogProcessor.debug("Analysing project...")
             //解析文件
             //添加默认库的域
             if(!CompileSettings.ignoreStdLib){
@@ -61,7 +62,7 @@ object MCFPPStringTest {
             Project.ctx = null
             GlobalField.printAll()
         } catch (e: Exception) {
-            Project.error("Error while reading project from string")
+            LogProcessor.error("Error while reading project from string")
             e.printStackTrace()
         }
     }
@@ -76,7 +77,7 @@ object MCFPPStringTest {
         }
         try {
             //读取json
-            Project.debug("Generate debug project for single file \"$path\"")
+            LogProcessor.debug("Generate debug project for single file \"$path\"")
             val qwq = File(path)
             Project.root = Path.of(path).parent
             Project.name = qwq.name.substring(0, qwq.name.lastIndexOf('.'))
@@ -89,9 +90,9 @@ object MCFPPStringTest {
             Project.defaultNamespace = "default"
             //输出目录
             Project.targetPath = "null"
-            Project.readIndex() //读取引用的库的索引
+            Project.readLib() //读取引用的库的索引
             Project.init() //初始化
-            Project.debug("Analysing project...")
+            LogProcessor.debug("Analysing project...")
             //解析文件
             //添加默认库的域
             if(!CompileSettings.ignoreStdLib){
@@ -114,7 +115,7 @@ object MCFPPStringTest {
             Project.ctx = null
             GlobalField.printAll()
         } catch (e: Exception) {
-            Project.error("Error while reading project from file \"$path\"")
+            LogProcessor.error("Error while reading project from file \"$path\"")
             e.printStackTrace()
         }
     }

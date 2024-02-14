@@ -11,67 +11,9 @@ import top.mcfpp.lang.*
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Annotation
 import top.mcfpp.lib.Function
+import top.mcfpp.util.LogProcessor
 
 open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
-    /**
-     * 完成一次库的import
-     *
-     * @param ctx
-     */
-    override fun visitImportDeclaration(ctx: mcfppParser.ImportDeclarationContext):Any? {
-        Project.ctx = ctx
-        //获取命名空间
-        var namespace = ctx.Identifier(0).text
-        if (ctx.Identifier().size > 1) {
-            for (n in ctx.Identifier().subList(1, ctx.Identifier().size - 1)) {
-                namespace += ".$n"
-            }
-        }
-        //获取库的命名空间
-        val libNamespace = GlobalField.libNamespaces[namespace]
-        if (libNamespace == null) {
-            Project.error("Namespace $namespace not found")
-            throw NamespaceNotFoundException()
-        }
-        //将库的命名空间加入到importedLibNamespaces中
-        val nsp = NamespaceField()
-        GlobalField.importedLibNamespaces[namespace] = nsp
-
-        //这个库被引用的类
-        if(ctx.cls == null){
-            //只导入方法
-            libNamespace.forEachFunction { f ->
-                run {
-                    nsp.addFunction(f,false)
-                }
-            }
-            return null
-        }
-        //导入类和方法
-        if(ctx.cls.text == "*"){
-            //全部导入
-            libNamespace.forEachClass { c ->
-                run {
-                    nsp.addClass(c.identifier,c)
-                }
-            }
-            libNamespace.forEachFunction { f ->
-                run {
-                    nsp.addFunction(f,false)
-                }
-            }
-        }else{
-            //只导入声明的类
-            val cls = libNamespace.getClass(ctx.cls.text)
-            if(cls != null){
-                nsp.addClass(cls.identifier,cls)
-            }else{
-                Project.error("Class ${ctx.cls.text} not found in namespace $namespace")
-                throw ClassNotDefineException()
-            }
-        }
-        return null
-    }
 
     override fun visitFunctionBody(ctx: mcfppParser.FunctionBodyContext): Any? {
         if(ctx.parent is CompileTimeFuncDeclarationContext) return null
@@ -85,7 +27,6 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      * 进入一个函数体
      * @param ctx the parse tree
      */
-    
     fun enterFunctionBody(ctx: mcfppParser.FunctionBodyContext) {
         Project.ctx = ctx
         var f: Function
@@ -152,8 +93,10 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 if (owo == null) {
                     val pwp = GlobalField.getStruct(nsp, id)
                     if(pwp == null){
-                        Project.error("Undefined class or struct:" + qwq.type().className().text)
-                        throw ClassNotDefineException()
+                        LogProcessor.error("Undefined class or struct:" + qwq.type().className().text)
+                        f = UnknownFunction(qwq.Identifier().text)
+                        Function.currFunction = f
+                        return
                     }else{
                         pwp
                     }
@@ -205,11 +148,11 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         Project.ctx = ctx
         //函数是否有返回值
         if(Function.currFunction.returnType != "void" && !Function.currFunction.hasReturnStatement){
-            Project.error("A 'return' expression required in function: " + Function.currFunction.namespaceID)
+            LogProcessor.error("A 'return' expression required in function: " + Function.currFunction.namespaceID)
         }
         if (Class.currClass == null) {
             //不在类中
-            Function.currFunction = Function.nullFunction
+            Function.currFunction = Function.defaultFunction
         } else {
             Function.currFunction = Class.currClass!!.classPreInit
         }
@@ -228,6 +171,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 Project.currNamespace += ".$n"
             }
         }
+        Function.defaultFunction.namespace = Project.currNamespace
         return null
     }
 
@@ -250,9 +194,8 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
             val `var` = Var.build(ctx.Identifier().text, init.type, Function.currFunction)
             //变量注册
             //一定是函数变量
-            if (!Function.field.putVar(ctx.Identifier().text, `var`)) {
-                Project.error("Duplicate defined variable name:" + ctx.Identifier().text)
-                throw VariableDuplicationException()
+            if (!Function.field.putVar(ctx.Identifier().text, `var`, true)) {
+                LogProcessor.error("Duplicate defined variable name:" + ctx.Identifier().text)
             }
             try {
                 if(`var` is MCInt && init is MCInt && !init.isConcrete){
@@ -262,13 +205,13 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                     `var`.assign(init)
                 }
             } catch (e: VariableConverseException) {
-                Project.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
+                LogProcessor.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
                 throw VariableConverseException()
             }
             when(fieldModifier){
                 "const" -> {
                     if(!`var`.hasAssigned){
-                        Project.error("The const field ${`var`.identifier} must be initialized.")
+                        LogProcessor.error("The const field ${`var`.identifier} must be initialized.")
                     }
                     `var`.isConst = true
                 }
@@ -284,12 +227,11 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         }else{
             for (c in ctx.fieldDeclarationExpression()){
                 //函数变量，生成
-                val `var` = Var.build(c, Function.currFunction)
+                val `var` = Var.build(c.Identifier().text, ctx.type().text, Function.currFunction)
                 //变量注册
                 //一定是函数变量
-                if (!Function.field.putVar(c.Identifier().text, `var`)) {
-                    Project.error("Duplicate defined variable name:" + c.Identifier().text)
-                    throw VariableDuplicationException()
+                if (!Function.field.putVar(c.Identifier().text, `var`,true)) {
+                    LogProcessor.error("Duplicate defined variable name:" + c.Identifier().text)
                 }
                 Function.addCommand("#field: " + ctx.type().text + " " + c.Identifier().text + if (c.expression() != null) " = " + c.expression().text else "")
                 //变量初始化
@@ -303,14 +245,14 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                             `var`.assign(init)
                         }
                     } catch (e: VariableConverseException) {
-                        Project.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
+                        LogProcessor.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
                         throw VariableConverseException()
                     }
                 }
                 when(fieldModifier){
                     "const" -> {
                         if(!`var`.hasAssigned){
-                            Project.error("The const field ${`var`.identifier} must be initialized.")
+                            LogProcessor.error("The const field ${`var`.identifier} must be initialized.")
                         }
                         `var`.isConst = true
                     }
@@ -341,8 +283,8 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         if(ctx.basicExpression() != null){
             val left: Var = McfppLeftExprVisitor().visit(ctx.basicExpression())!!
             if (left.isConst) {
-                Project.error("Cannot assign a constant repeatedly: " + left.identifier)
-                throw ConstChangeException()
+                LogProcessor.error("Cannot assign a constant repeatedly: " + left.identifier)
+                return null
             }
             try {
                 if(left is MCInt && right is MCInt){
@@ -352,9 +294,11 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                     left.assign(right)
                 }
             } catch (e: VariableConverseException) {
-                Project.error("Cannot convert " + right.javaClass + " to " + left.javaClass)
+                LogProcessor.error("Cannot convert " + right.javaClass + " to " + left.javaClass)
                 throw VariableConverseException()
             }
+        }else{
+            //TODO 只有一个表达式的计算
         }
         Function.addCommand("#expression end: " + ctx.text)
         return null
@@ -371,10 +315,10 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     //TODO: Func
     override fun visitClassAnnotation(ctx: mcfppParser.ClassAnnotationContext): Any? {
         Project.ctx = ctx
-        val anno = GlobalField.annotations[ctx!!.id.text]
+        val anno = GlobalField.annotations[ctx.id.text]
         if(anno == null){
-            Project.error("Annotation ${ctx.id.text} not found")
-            throw AnnotationNotFoundException()
+            LogProcessor.error("Annotation ${ctx.id.text} not found")
+            return null
         }
         //参数解析
         val params = ArrayList<Var>()
@@ -403,7 +347,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     *    Function.addCommand("#" + ctx.text)
     *    val re: Var? = Function.field.getVar(ctx.selfAddOrMinusExpression().Identifier().text)
     *    if (re == null) {
-    *        Project.error("Undefined variable:" + ctx.selfAddOrMinusExpression().Identifier().text)
+    *        LogProcessor.error("Undefined variable:" + ctx.selfAddOrMinusExpression().Identifier().text)
     *        throw VariableNotDefineException()
     *    }
     *    if (ctx.selfAddOrMinusExpression().op.text.equals("++")) {
@@ -521,11 +465,11 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 Function.addCommand("function " + f.namespaceID)
                 Function.addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
                 Function.addCommand("return 1")
-                Project.warn("The condition is always true. ")
+                LogProcessor.warn("The condition is always true. ")
             } else if (exp.isConcrete) {
                 Function.addCommand("#function " + f.namespaceID)
                 Function.addCommand("return 1")
-                Project.warn("The condition is always false. ")
+                LogProcessor.warn("The condition is always false. ")
             } else {
                 exp as ReturnedMCBool
                 val exp1 = MCBool()
@@ -647,11 +591,11 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                         "if function " + f.namespaceID + " " +
                         "run function " + Function.currFunction.namespaceID
             )
-            Project.warn("The condition is always true. ")
+            LogProcessor.warn("The condition is always true. ")
         } else if (exp.isConcrete) {
             //给子函数开栈
             Function.addCommand("#function " + f.namespaceID)
-            Project.warn("The condition is always false. ")
+            LogProcessor.warn("The condition is always false. ")
         } else {
             exp as ReturnedMCBool
             //给子函数开栈
@@ -765,11 +709,11 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                         "if function " + f.namespaceID + " " +
                         "run function " + Function.currFunction.namespaceID
             )
-            Project.warn("The condition is always true. ")
+            LogProcessor.warn("The condition is always true. ")
         } else if (exp.isConcrete) {
             //给子函数开栈
             Function.addCommand("#" + Commands.function(Function.currFunction))
-            Project.warn("The condition is always false. ")
+            LogProcessor.warn("The condition is always false. ")
         } else {
             exp as ReturnedMCBool
             //给子函数开栈
@@ -929,11 +873,11 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                         "if function " + f.namespaceID + " " +
                         "run function " + Function.currFunction.namespaceID
             )
-            Project.warn("The condition is always true. ")
+            LogProcessor.warn("The condition is always true. ")
         } else if (exp.isConcrete) {
             //给子函数开栈
             Function.addCommand("#function " + f.namespaceID)
-            Project.warn("The condition is always false. ")
+            LogProcessor.warn("The condition is always false. ")
         } else {
             exp as ReturnedMCBool
             //给子函数开栈
@@ -987,7 +931,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     override fun visitStatement(ctx: mcfppParser.StatementContext): Any? {
         Project.ctx = ctx
         if (Function.currFunction.isEnd) {
-            Project.warn("Unreachable code: " + ctx.text)
+            LogProcessor.warn("Unreachable code: " + ctx.text)
         }
         super.visitStatement(ctx)
         return null
@@ -999,8 +943,8 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     override fun visitControlStatement(ctx: mcfppParser.ControlStatementContext):Any? {
         Project.ctx = ctx
         if (!inLoopStatement(ctx)) {
-            Project.error("'continue' or 'break' can only be used in loop statements.")
-            throw SyntaxException()
+            LogProcessor.error("'continue' or 'break' can only be used in loop statements.")
+            return null
         }
         Function.addCommand("#" + ctx.text)
         //return语句
@@ -1061,7 +1005,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     
     override fun visitClassMemberDeclaration(ctx: mcfppParser.ClassMemberDeclarationContext):Any? {
         Project.ctx = ctx
-        val memberContext: mcfppParser.ClassMemberContext = ctx.classMember()
+        val memberContext: mcfppParser.ClassMemberContext = ctx.classMember()?:return null
         if (memberContext.classFunctionDeclaration() != null) {
             //函数声明由函数的listener处理
             return null

@@ -5,6 +5,7 @@ import top.mcfpp.lang.*
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.GlobalField
 import top.mcfpp.lib.Member
+import top.mcfpp.util.LogProcessor
 import kotlin.reflect.KFunction
 
 /**
@@ -20,7 +21,7 @@ class McfppFuncManager{
      * @param args
      * @return
      */
-    fun getFunction(namespace: String?, identifier: String, args: ArrayList<String>): Function?{
+    fun getFunction(namespace: String?, identifier: String, args: ArrayList<String>): Function{
         return GlobalField.getFunction(namespace, identifier, args)
     }
 
@@ -36,10 +37,10 @@ class McfppFuncManager{
         curr: Var,
         identifier: String,
         args: ArrayList<String>
-    ): Function?{
+    ): Function{
         //是类的成员方法或扩展方法
-        val getter : KFunction<Pair<Function?, Boolean>> = curr::getMemberFunction
-        val accessModifier : Member.AccessModifier = if(curr is ClassBase){
+        val getter : KFunction<Pair<Function, Boolean>> = curr::getMemberFunction
+        val accessModifier : Member.AccessModifier = if(curr is ClassPointer){
             //类指针
             if(Function.currFunction.ownerType == Function.Companion.OwnerType.CLASS){
                 Function.currFunction.parentClass()!!.getAccess(curr.clsType)
@@ -53,7 +54,7 @@ class McfppFuncManager{
         //开始选择函数
         val func = getter.call(identifier,args,accessModifier)
         if (!func.second){
-            Project.error("Cannot access member $identifier")
+            LogProcessor.error("Cannot access member $identifier")
         }
         return func.first
     }
@@ -71,7 +72,7 @@ class McfppFuncManager{
         type: CompoundDataType,
         identifier : String,
         args: ArrayList<String>
-    ): Function?{
+    ): Function{
         //是类的成员方法
         val accessModifier = if(Function.currFunction.ownerType == Function.Companion.OwnerType.CLASS){
             Function.currFunction.parentClass()!!.getAccess(type.dataType)
@@ -81,7 +82,7 @@ class McfppFuncManager{
         //开始选择函数
         val func = type.getMemberFunction(identifier,args,accessModifier)
         if (!func.second){
-            Project.error("Cannot access member $identifier in class ${type.dataType.identifier}")
+            LogProcessor.error("Cannot access member $identifier in class ${type.dataType.identifier}")
         }
         return func.first
     }
@@ -90,7 +91,7 @@ class McfppFuncManager{
         selector: CanSelectMember,
         identifier: String,
         args: ArrayList<String>
-    ): Function?{
+    ): Function{
         return when(selector){
             is CompoundDataType -> getFunction(selector, identifier, args)
             is Var -> getFunction(selector, identifier, args)

@@ -10,10 +10,10 @@ import java.io.FileReader
 /**
  * 包含了用于读取一个mcfpp库索引的方法。
  *
- * @see IndexWriter
+ * @see LibWriter
  */
 @Deprecated("等待重写以匹配语法规则的更改")
-object IndexReader {
+object LibReader {
 
     /**
      * 用于读取路径指向的.mclib文件，即mcfpp的库索引文件。.mclib文件是一个json文件形式。
@@ -29,6 +29,7 @@ object IndexReader {
         fileReader.close()
         //解析json
         val json = JSONObject.parse(jsonString) as JSONObject
+        //获取命名空间
         for(o in json["namespaces"] as JSONArray){
             val oo = o as JSONObject
             val nspId = oo["id"] as String
@@ -229,7 +230,7 @@ object IndexReader {
                 paramList.add(p)
             }
         }
-        val co = StructConstructor(struct)
+        val co = TemplateConstructor(struct)
         co.params = paramList
         struct.constructors.add(co)
     }

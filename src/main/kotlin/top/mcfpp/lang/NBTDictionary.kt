@@ -1,7 +1,6 @@
 package top.mcfpp.lang
 
 import net.querz.nbt.tag.CompoundTag
-import net.querz.nbt.tag.ListTag
 import net.querz.nbt.tag.StringTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.VariableConverseException
@@ -122,7 +121,7 @@ open class NBTDictionary : NBTBasedData, Indexable<NBT> {
         key: String,
         params: List<String>,
         accessModifier: Member.AccessModifier
-    ): Pair<Function?, Boolean> {
+    ): Pair<Function, Boolean> {
         return data.field.getFunction(key, params) to true
     }
 

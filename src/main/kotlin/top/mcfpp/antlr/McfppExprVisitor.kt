@@ -8,6 +8,7 @@ import top.mcfpp.exception.*
 import top.mcfpp.lang.*
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
+import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import top.mcfpp.util.Utils
 import java.lang.IllegalArgumentException
@@ -94,7 +95,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
                 val b: Var? = visit(ctx.conditionalAndExpression(i))
                 Function.currFunction = l
                 if (b !is MCBool) {
-                    Project.error("The operator \"&&\" cannot be used with ${b!!.type}")
+                    LogProcessor.error("The operator \"&&\" cannot be used with ${b!!.type}")
                     throw IllegalArgumentException("")
                 }
                 if(b.isConcrete && isConcrete){
@@ -140,7 +141,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
                 val b: Var? = visit(ctx.equalityExpression(i))
                 Function.currFunction = l
                 if (b !is MCBool) {
-                    Project.error("The operator \"&&\" cannot be used with ${b!!.type}")
+                    LogProcessor.error("The operator \"&&\" cannot be used with ${b!!.type}")
                     throw IllegalArgumentException("")
                 }
                 if(b.isConcrete && isConcrete){
@@ -187,7 +188,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
                 } else if (re is MCFloat && b is MCFloat){
                     re.isEqual(b)
                 } else{
-                    Project.error("The operator \"${ctx.op.text}\" cannot be used between ${re.type} and ${b!!.type}")
+                    LogProcessor.error("The operator \"${ctx.op.text}\" cannot be used between ${re.type} and ${b!!.type}")
                     throw IllegalArgumentException("")
                 }
             } else {
@@ -198,7 +199,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
                 } else if (re is MCFloat && b is MCFloat){
                     re.notEqual(b)
                 }else{
-                    Project.error("The operator \"${ctx.op.text}\" cannot be used between ${re.type} and ${b!!.type}")
+                    LogProcessor.error("The operator \"${ctx.op.text}\" cannot be used between ${re.type} and ${b!!.type}")
                     throw IllegalArgumentException("")
                 }
             }
@@ -232,7 +233,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
                     "<=" -> re = re.isLessOrEqual(b)
                 }
             }else {
-                Project.error("The operator \"${ctx.relationalOp()}\" cannot be used between ${re!!.type} and ${b!!.type}")
+                LogProcessor.error("The operator \"${ctx.relationalOp()}\" cannot be used between ${re!!.type} and ${b!!.type}")
                 throw IllegalArgumentException("")
             }
         }
@@ -264,7 +265,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
                 null
             }
             if(visitAdditiveExpressionRe == null){
-                Project.error("The operator \"${ctx.op.text}\" cannot be used between ${visitAdditiveExpressionRe!!.type} and ${b!!.type}.")
+                LogProcessor.error("The operator \"${ctx.op.text}\" cannot be used between ${visitAdditiveExpressionRe!!.type} and ${b!!.type}.")
                 Utils.stopCompile(IllegalArgumentException(""))
                 exitProcess(1)
             }
@@ -306,7 +307,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
                 else -> null
             }
             if(visitMultiplicativeExpressionRe == null){
-                Project.error("The operator \"${ctx.op.text}\" cannot be used between ${visitMultiplicativeExpressionRe!!.type} and ${b!!.type}.")
+                LogProcessor.error("The operator \"${ctx.op.text}\" cannot be used between ${visitMultiplicativeExpressionRe!!.type} and ${b!!.type}.")
                 Utils.stopCompile(IllegalArgumentException(""))
                 exitProcess(1)
             }
@@ -334,7 +335,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
                 }
                 a.negation()
             } else {
-                Project.error("The operator \"!\" cannot be used with ${a!!.type}")
+                LogProcessor.error("The operator \"!\" cannot be used with ${a!!.type}")
                 Utils.stopCompile(IllegalArgumentException(""))
                 exitProcess(1)
             }
@@ -405,10 +406,10 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
                     GlobalField.getClass(null, clsstr[0])
                 }
                 if (qwq == null) {
-                    Project.error("Undefined class:" + ctx.type().className().text)
-                    throw ClassNotDefineException()
+                    LogProcessor.error("Undefined class:" + ctx.type().className().text)
+                    return UnknownVar("${ctx.type().className().text}_type_" + UUID.randomUUID())
                 }
-                ClassType(qwq!!)
+                ClassType(qwq)
             }else{
                 CompoundDataType(
                     //基本类型
@@ -490,7 +491,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
             //this或者super
             val re: Var? = Function.field.getVar(ctx.text)
             if (re == null) {
-                Project.error("${ctx.text} can only be used in member functions.")
+                LogProcessor.error("${ctx.text} can only be used in member functions.")
             }
             return re
         }
@@ -512,7 +513,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
             var re = if(currSelector == null){
                 val re: Var? = Function.field.getVar(qwq)
                 if (re == null) {
-                    Project.error("Undefined variable:$qwq")
+                    LogProcessor.error("Undefined variable:$qwq")
                     throw Exception()
                 }
                 re
@@ -520,10 +521,10 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
                 //获取成员
                 val re  = currSelector!!.getMemberVar(qwq, currSelector!!.getAccess(Function.currFunction))
                 if (re.first == null) {
-                    Project.error("Undefined field: $qwq")
+                    LogProcessor.error("Undefined field: $qwq")
                 }
                 if (!re.second){
-                    Project.error("Cannot access member $qwq")
+                    LogProcessor.error("Cannot access member $qwq")
                 }
                 re.first
             }
@@ -565,27 +566,30 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
                 GlobalField.getFunction(p.first, p.second, FunctionParam.getVarTypes(args))
             }else{
                 if(p.first != null){
-                    Project.warn("Invalid namespace usage ${p.first} in function call ")
+                    LogProcessor.warn("Invalid namespace usage ${p.first} in function call ")
                 }
                 McfppFuncManager().getFunction(currSelector!!,p.second,FunctionParam.getVarTypes(args))
             }
-            if (func == null) {
-                Project.error("Function " + ctx.text + " not defined")
-                throw FunctionNotDefineException()
+            return if (func is UnknownFunction) {
+                LogProcessor.error("Function " + ctx.text + " not defined")
+                Function.addCommand("[Failed to Compile]${ctx.text}")
+                func.invoke(args,currSelector)
+                func.returnVar
+            }else{
+                func.invoke(args,currSelector)
+                for (v in processVarCache){
+                    v.getFromStack()
+                }
+                //函数树
+                Function.currFunction.child.add(func)
+                func.parent.add(Function.currFunction)
+                func.returnVar
             }
-            func.invoke(args,currSelector)
-            for (v in processVarCache){
-                v.getFromStack()
-            }
-            //函数树
-            Function.currFunction.child.add(func)
-            func.parent.add(Function.currFunction)
-            return func.returnVar
         }
     }
 
     @Override
-    override fun visitConstructorCall(ctx: mcfppParser.ConstructorCallContext): Var? {
+    override fun visitConstructorCall(ctx: mcfppParser.ConstructorCallContext): Var {
         Project.ctx = ctx
         val clsstr = ctx.className().text.split(":")
         val cls: Class? = if(clsstr.size == 2) {
@@ -594,8 +598,8 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
             GlobalField.getClass(null, clsstr[0])
         }
         if (cls == null) {
-            Project.error("Undefined class:" + ctx.className().text)
-            throw ClassNotDefineException()
+            LogProcessor.error("Undefined class:" + ctx.className().text)
+            return UnknownVar("${ctx.className().text}_ptr_" + UUID.randomUUID())
         }
         //获取参数列表
         //参数获取
@@ -606,17 +610,17 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
                 args.add(exprVisitor.visit(expr)!!)
             }
         }
-        cls!!
+        //获取对象
+        val ptr = cls.newInstance()
+        //调用构造函数
         val constructor = cls.getConstructor(FunctionParam.getVarTypes(args))
         if (constructor == null) {
-            Project.error("No constructor like: " + FunctionParam.getVarTypes(args) + " defined in class " + ctx.className().text)
-            throw FunctionNotDefineException()
+            LogProcessor.error("No constructor like: " + FunctionParam.getVarTypes(args) + " defined in class " + ctx.className().text)
+            Function.addCommand("[Failed to compile]${ctx.text}")
+        }else{
+            constructor.invoke(args, callerClassP = ptr)
         }
-        //获取对象
-        val obj: ClassObject = cls.newInstance()
-        //调用构造函数
-        constructor.invoke(args, callerClassP = obj.initPointer)
-        return obj.initPointer
+        return ptr
     }
 
 }

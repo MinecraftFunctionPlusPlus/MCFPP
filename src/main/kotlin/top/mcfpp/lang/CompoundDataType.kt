@@ -59,11 +59,11 @@ open class CompoundDataType : CanSelectMember {
      * @return 第一个值是对象中获取到的方法，若不存在此方法则为null；第二个值是是否有足够的访问权限访问此方法。如果第一个值是null，那么第二个值总是为true
      */
     @Override
-    override fun getMemberFunction(key: String, params: List<String>, accessModifier: Member.AccessModifier): Pair<Function?, Boolean> {
+    override fun getMemberFunction(key: String, params: List<String>, accessModifier: Member.AccessModifier): Pair<Function, Boolean> {
         //获取函数
         val member = dataType.staticField.getFunction(key, params)
         return if(member == null){
-            Pair(null, true)
+            Pair(UnknownFunction(key), true)
         }else{
             Pair(member, accessModifier >= member.accessModifier)
         }

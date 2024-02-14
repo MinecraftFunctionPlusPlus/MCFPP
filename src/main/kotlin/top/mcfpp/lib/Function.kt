@@ -7,10 +7,9 @@ import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.command.Command
 import top.mcfpp.command.CommandList
 import top.mcfpp.command.Commands
-import top.mcfpp.exception.ClassNotDefineException
-import top.mcfpp.exception.FunctionHasNoReturnValueException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.*
+import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import java.lang.NullPointerException
 import java.lang.reflect.Method
@@ -116,7 +115,7 @@ open class Function : Member, FieldContainer {
     /**
      * 函数的命名空间。默认为工程文件的明明空间
      */
-    val namespace: String
+    var namespace: String
 
     /**
      * 参数列表
@@ -252,17 +251,23 @@ open class Function : Member, FieldContainer {
         get() = Project.currNamespace + "_func_" + identifier + "_"
 
     /**
-     * 创建一个函数
-     * @param identifier 函数的标识符
+     * 这个函数的形参类型
      */
-    constructor(identifier: String, returnType: String = "void"):this(identifier, Project.currNamespace, returnType)
+    val paramTypeList: ArrayList<String>
+        get() {
+            val re: ArrayList<String> = ArrayList()
+            for (p in params) {
+                re.add(p.type)
+            }
+            return re
+        }
 
     /**
      * 创建一个全局函数，它有指定的命名空间
      * @param identifier 函数的标识符
      * @param namespace 函数的命名空间
      */
-    constructor(identifier: String, namespace: String, returnType: String = "void"){
+    constructor(identifier: String, namespace: String = Project.currNamespace, returnType: String = "void"){
         this.identifier = identifier
         commands = CommandList()
         params = ArrayList()
@@ -355,16 +360,6 @@ open class Function : Member, FieldContainer {
         return this
     }
 
-    /**
-     * 构造函数的返回值
-     *
-     * @param returnType
-     */
-    private fun buildReturnVar(returnType: String): Var{
-        return if(returnType == "void") Void()
-            else Var.build("return",returnType,this)
-    }
-
     open fun appendParam(param: Var, isStatic: Boolean = false, isConcrete: Boolean = false) : Function{
         params.add(FunctionParam(param.type,param.identifier,isStatic, isConcrete))
         field.putVar(param.identifier,param)
@@ -408,22 +403,20 @@ open class Function : Member, FieldContainer {
     }
 
     /**
-     * 这个函数的形参类型
+     * 构造函数的返回值
+     *
+     * @param returnType
      */
-    val paramTypeList: ArrayList<String>
-        get() {
-            val re: ArrayList<String> = ArrayList()
-            for (p in params) {
-                re.add(p.type)
-            }
-            return re
-        }
+    fun buildReturnVar(returnType: String): Var{
+        return if(returnType == "void") Void()
+        else Var.build("return",returnType,this)
+    }
 
     open fun invoke(args: ArrayList<Var>, caller: CanSelectMember?){
         when(caller){
             is CompoundDataType -> invoke(args, callerClassP = null)
             null -> invoke(args, callerClassP = null)
-            is ClassBase -> invoke(args, callerClassP = caller)
+            is ClassPointer -> invoke(args, callerClassP = caller)
             is IntTemplateBase -> invoke(args, caller = caller)
             is Var -> invoke(args, caller = caller)
         }
@@ -467,7 +460,7 @@ open class Function : Member, FieldContainer {
      * @see top.mcfpp.antlr.McfppExprVisitor.visitVar
      */
     @InsertCommand
-    open fun invoke(args: ArrayList<Var>, callerClassP: ClassBase?) {
+    open fun invoke(args: ArrayList<Var>, callerClassP: ClassPointer?) {
         //给函数开栈
         addCommand("data modify storage mcfpp:system ${Project.defaultNamespace}.stack_frame prepend value {}")
         //参数传递
@@ -475,14 +468,7 @@ open class Function : Member, FieldContainer {
         //函数调用的命令
         when(callerClassP){
             is ClassPointer -> {
-                val qwq = Commands.selectRun(callerClassP)
-                addCommand(qwq[0])
-                addCommand(qwq[1].build("function mcfpp.dynamic:function with entity @s data.functions.$identifier"))
-            }
-            is ClassObject -> {
-                val qwq = Commands.selectRun(callerClassP)
-                addCommand(qwq[0])
-                addCommand(qwq[1].build("function mcfpp.dynamic:function with entity @s data.functions.$identifier"))
+                addCommands(Commands.selectRun(callerClassP,Command.build("function mcfpp.dynamic:function with entity @s data.functions.$identifier")))
             }
             null -> {
                 addCommand("function $namespaceID")
@@ -522,7 +508,7 @@ open class Function : Member, FieldContainer {
     open fun argPass(args: ArrayList<Var>){
         for (i in params.indices) {
             if(params[i].isConcrete && !args[i].isConcrete){
-                Project.error("Cannot pass a non-concrete value to a concrete parameter")
+                LogProcessor.error("Cannot pass a non-concrete value to a concrete parameter")
                 throw IllegalArgumentException()
             }
             val tg = args[i].cast(params[i].type)
@@ -603,13 +589,13 @@ open class Function : Member, FieldContainer {
     @InsertCommand
     open fun returnVar(v: Var){
         if(returnType == "void"){
-            Project.error("Function $identifier has no return value")
-            throw FunctionHasNoReturnValueException()
+            LogProcessor.error("Function $identifier has no return value")
+            return
         }
         try {
             returnVar!!.assign(v)
         } catch (e: VariableConverseException) {
-            Project.error("Cannot convert " + v.javaClass + " to " + Function.currBaseFunction.returnVar!!.javaClass)
+            LogProcessor.error("Cannot convert " + v.javaClass + " to " + Function.currBaseFunction.returnVar!!.javaClass)
             throw VariableConverseException()
         }
     }
@@ -698,6 +684,11 @@ open class Function : Member, FieldContainer {
         var nullFunction = Function("null")
 
         /**
+         * 默认函数，用于顶层语句。每个文件的默认函数不同
+         */
+        var defaultFunction = nullFunction
+
+        /**
          * 目前编译器处在的函数。允许编译器在全局获取并访问当前正在编译的函数对象。默认为全局初始化函数
          */
         var currFunction: Function = nullFunction
@@ -736,20 +727,20 @@ open class Function : Member, FieldContainer {
                 for (method in methods) {
                     if (method.name == methodName) {
                         if (!method.isAnnotationPresent(InsertCommand::class.java)) {
-                            Project.warn("(JVM)Function.addCommand() was called in a method without the @InsertCommand annotation. at $className.$methodName:$lineNumber\"")
+                            LogProcessor.warn("(JVM)Function.addCommand() was called in a method without the @InsertCommand annotation. at $className.$methodName:$lineNumber\"")
                         }
                         break
                     }
                 }
             }
             if(this.equals(nullFunction)){
-                Project.error("Unexpected command added to NullFunction")
+                LogProcessor.error("Unexpected command added to NullFunction")
                 throw NullPointerException()
             }
             currFunction.commands[index] = command
         }
 
-        fun addCommand(command: Array<Command>){
+        fun addCommands(command: Array<Command>){
             command.forEach { addCommand(it) }
         }
 
@@ -779,14 +770,14 @@ open class Function : Member, FieldContainer {
                     cache.add(method.toGenericString())
                     if (method.name == methodName) {
                         if (!method.isAnnotationPresent(InsertCommand::class.java)) {
-                            Project.warn("(JVM)Function.addCommand() was called in a method without the @InsertCommand annotation. at $className.$methodName:$lineNumber\"")
+                            LogProcessor.warn("(JVM)Function.addCommand() was called in a method without the @InsertCommand annotation. at $className.$methodName:$lineNumber\"")
                         }
                         break
                     }
                 }
             }
             if(this.equals(nullFunction)){
-                Project.error("Unexpected command added to NullFunction")
+                LogProcessor.error("Unexpected command added to NullFunction")
                 throw NullPointerException()
             }
             if (!currFunction.isEnd) {
@@ -803,7 +794,7 @@ open class Function : Member, FieldContainer {
         @Deprecated("Use addCommand() instead")
         fun addComment(str: String){
             if(this.equals(nullFunction)){
-                Project.warn("Unexpected command added to NullFunction")
+                LogProcessor.warn("Unexpected command added to NullFunction")
                 throw NullPointerException()
             }
             if (!currFunction.isEnd) {

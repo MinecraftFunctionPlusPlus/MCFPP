@@ -1,4 +1,5 @@
 package top.mcfpp.exception
 
-class OperationNotImplementException : RuntimeException() {
+class OperationNotImplementException: RuntimeException() {
+
 }

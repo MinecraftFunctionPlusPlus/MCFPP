@@ -8,6 +8,9 @@ import top.mcfpp.Project
 import top.mcfpp.lib.*
 import top.mcfpp.antlr.McfppFileVisitor
 import top.mcfpp.antlr.McfppImVisitor
+import top.mcfpp.lib.Function
+import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.StringHelper
 import java.io.*
 import kotlin.io.path.absolutePathString
 
@@ -15,10 +18,11 @@ import kotlin.io.path.absolutePathString
  * 用于读取和分析mcfpp代码。
  * @param path mcfpp文件的路径
  */
-class McfppFileReader(path: String?) : McfppReader() {
+class McfppFileReader(path: String) : McfppReader() {
     init {
         this.path = path
-        rpath = getRelativePath(Project.root.absolutePathString(), File(path!!).parentFile.absolutePath)
+        this.file = File(path)
+        rpath = getRelativePath(Project.root.absolutePathString(), this.file.parentFile.absolutePath)
         currPath = rpath
         input = FileInputStream(path)
     }
@@ -41,6 +45,22 @@ class McfppFileReader(path: String?) : McfppReader() {
 
     fun analyse() {
         McfppFileVisitor().visit(tree())
+        //类是否有空继承
+        GlobalField.localNamespaces.forEach { _, u ->
+            u.forEachClass { c ->
+                for ((index,p) in c.parent.withIndex()){
+                    if(p is Class.Companion.UndefinedClassOrInterface){
+                        val r = p.getDefinedClassOrInterface()
+                        if(r == null){
+                            LogProcessor.error("Undefined class or interface: ${p.namespaceID}")
+                            continue
+                        }
+                        c.parent.remove(p)
+                        c.parent.add(index,r)
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -48,7 +68,14 @@ class McfppFileReader(path: String?) : McfppReader() {
      */
     fun compile() {
         Project.currNamespace = Project.defaultNamespace
+        //创建默认函数
+        val func = Function(StringHelper.toLowerCase(file.nameWithoutExtension + "_default"),Project.currNamespace,"void")
+        Function.defaultFunction = func
+        Function.currFunction = func
         McfppImVisitor().visit(tree())
+        if(Function.defaultFunction.commands.size != 0){
+            GlobalField.localNamespaces[func.namespace]!!.addFunction(func,false)
+        }
     }
 
     companion object {

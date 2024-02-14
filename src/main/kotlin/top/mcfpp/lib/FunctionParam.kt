@@ -1,12 +1,8 @@
 package top.mcfpp.lib
 
-import top.mcfpp.Project
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.exception.ClassNotDefineException
-import top.mcfpp.lang.ClassPointer
-import top.mcfpp.lang.MCBool
-import top.mcfpp.lang.MCInt
 import top.mcfpp.lang.Var
+import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 
 /**
@@ -27,7 +23,7 @@ class FunctionParam(
     /**
      * 参数是否为静态的
      */
-    var isStatic: Boolean,
+    var isStatic: Boolean = false,
 
     /**
      * 参数是否是确定的
@@ -37,8 +33,8 @@ class FunctionParam(
 
     companion object {
 
-        private val baseType: ArrayList<String> = arrayListOf("any","int", "bool", "string", "float", "entity", "selector","string", "jstring", "nbt")
-        private val nbtType: ArrayList<String> = arrayListOf("nbt", "list","dict","map","string","jstring","selector","entity")
+        val baseType: ArrayList<String> = arrayListOf("any","int", "bool", "string", "float", "entity", "selector","string", "jstring", "nbt")
+        val nbtType: ArrayList<String> = arrayListOf("nbt", "list","dict","map","string","jstring","selector","entity")
 
         /**
          * 是否是给定类型的子类型
@@ -57,12 +53,12 @@ class FunctionParam(
             val thisTypeWithNamespace = StringHelper.splitNamespaceID(subType)
             val thisTypeClass = GlobalField.getClass(thisTypeWithNamespace.first, thisTypeWithNamespace.second)
             if(typeClass == null){
-                Project.error("Undefined class:$parentType")
-                throw ClassNotDefineException()
+                LogProcessor.error("Undefined class:$parentType")
+                return true
             }
             if(thisTypeClass == null){
-                Project.error("Undefined class:${subType}")
-                throw ClassNotDefineException()
+                LogProcessor.error("Undefined class:${subType}")
+                return true
             }
             return thisTypeClass.isSub(typeClass)
         }
