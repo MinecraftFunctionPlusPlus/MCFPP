@@ -16,9 +16,9 @@ class JavaFunction: Function {
         this.caller = caller
     }
 
-    override fun invoke(args: ArrayList<Var>, caller: CanSelectMember?) {
+    override fun invoke(args: ArrayList<Var<*>>, caller: CanSelectMember?) {
         //将变量转换为Java变量
         val javaVars = JavaVar.mcToJava(args)
-        returnVar = JavaVar(method.invoke(this.caller.value, *javaVars.toArray()))
+        returnVar = JavaVar(method.invoke(this.caller.javaValue, *javaVars.toArray()))
     }
 }

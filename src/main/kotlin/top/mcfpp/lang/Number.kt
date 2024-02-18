@@ -1,5 +1,6 @@
 package top.mcfpp.lang
 
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
 import java.util.UUID
@@ -9,9 +10,9 @@ import java.util.UUID
  *
  * @param T 这个数字类型中包装的类型
  */
-abstract class Number<T> : Var, OnScoreboard {
+abstract class Number<T> : Var<T>, OnScoreboard {
 
-    open var value: T? = null
+    override var javaValue: T? = null
     var `object`: SbObject
 
     /**
@@ -26,8 +27,8 @@ abstract class Number<T> : Var, OnScoreboard {
     /**
      * 复制一个数字类型变量
      */
-    constructor(b: Number<T>) : super(b) {
-        value = b.value
+constructor(b: Number<T>) : super(b as Var<*>) {
+        javaValue = b.javaValue
         `object` = b.`object`
     }
 
@@ -38,7 +39,7 @@ abstract class Number<T> : Var, OnScoreboard {
     }
 
     override fun getVarValue(): Any? {
-        return value
+        return javaValue
     }
 
     /**
@@ -52,42 +53,42 @@ abstract class Number<T> : Var, OnScoreboard {
      * @param a 加数
      * @return 计算的结果
      */
-    abstract override fun plus(a: Var): Var?
+    abstract override fun plus(a: Var<*>): Var<*>?
 
     /**
      * 减法
      * @param a 减数
      * @return 计算的结果
      */
-    abstract override fun minus(a: Var): Var?
+    abstract override fun minus(a: Var<*>): Var<*>?
 
     /**
      * 乘法
      * @param a 乘数
      * @return 计算的结果
      */
-    abstract override fun multiple(a: Var): Var?
+    abstract override fun multiple(a: Var<*>): Var<*>?
 
     /**
      * 除法
      * @param a 除数
      * @return 计算的结果
      */
-    abstract override fun divide(a: Var): Var?
+    abstract override fun divide(a: Var<*>): Var<*>?
 
     /**
      * 取余
      * @param a 除数
      * @return 计算的结果
      */
-    abstract override fun modular(a: Var): Var?
+    abstract override fun modular(a: Var<*>): Var<*>?
 
     /**
      * 这个数是否大于a
      * @param a 右侧值
      * @return 计算结果
      */
-    abstract override fun isGreater(a: Var): MCBool?
+    abstract override fun isGreater(a: Var<*>): MCBool?
 
 
     /**
@@ -95,35 +96,35 @@ abstract class Number<T> : Var, OnScoreboard {
      * @param a 右侧值
      * @return 计算结果
      */
-    abstract override fun isLess(a: Var): MCBool?
+    abstract override fun isLess(a: Var<*>): MCBool?
 
     /**
      * 这个数是否小于等于a
      * @param a 右侧值
      * @return 计算结果
      */
-    abstract override fun isLessOrEqual(a: Var): MCBool?
+    abstract override fun isLessOrEqual(a: Var<*>): MCBool?
 
     /**
      * 这个数是否大于等于a
      * @param a 右侧值
      * @return 计算结果
      */
-    abstract override fun isGreaterOrEqual(a: Var): MCBool?
+    abstract override fun isGreaterOrEqual(a: Var<*>): MCBool?
 
     /**
      * 这个数是否等于a
      * @param a 右侧值
      * @return 计算结果
      */
-    abstract override fun isEqual(a: Var): MCBool?
+    abstract override fun isEqual(a: Var<*>): MCBool?
 
     /**
      * 这个数是否不等于a
      * @param a 右侧值
      * @return 计算结果
      */
-    abstract override fun notEqual(a: Var): MCBool?
+    abstract override fun notEqual(a: Var<*>): MCBool?
 
     abstract override fun toDynamic()
 
@@ -134,7 +135,7 @@ abstract class Number<T> : Var, OnScoreboard {
      * @param accessModifier 访问者的访问权限
      * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
      */
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         TODO("Not yet implemented")
     }
 
@@ -147,7 +148,7 @@ abstract class Number<T> : Var, OnScoreboard {
      */
     override fun getMemberFunction(
         key: String,
-        params: List<String>,
+        params: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         TODO("Not yet implemented")

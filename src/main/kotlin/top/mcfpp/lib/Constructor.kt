@@ -4,7 +4,6 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Commands
 import top.mcfpp.lang.*
-import top.mcfpp.util.MCUUID
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -25,7 +24,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
         val thisObj = ClassPointer(target,"this")
         thisObj.identifier = "this"
         field.putVar("this",thisObj)
-        leadFunction = Function(this.identifier + "_lead",this.namespace,"void")
+        leadFunction = Function(this.identifier + "_lead",this.namespace,MCFPPVoidType)
         target.field.addFunction(leadFunction,false)
     }
 
@@ -36,7 +35,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
      */
     @Override
     @InsertCommand
-    override fun invoke(args: ArrayList<Var>, callerClassP: ClassPointer?) {
+    override fun invoke(args: ArrayList<Var<*>>, callerClassP: ClassPointer?) {
         callerClassP as ClassPointer
         addCommand("execute in minecraft:overworld positioned 0 1 0 summon marker run function " + leadFunction.namespaceID)
         val qwq = currFunction

@@ -2,8 +2,9 @@ package top.mcfpp.lang
 
 import net.querz.nbt.tag.CompoundTag
 import net.querz.nbt.tag.Tag
-import top.mcfpp.Project
 import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
 import top.mcfpp.util.LogProcessor
@@ -16,6 +17,8 @@ import kotlin.reflect.KProperty1
 import kotlin.reflect.KVisibility
 import kotlin.reflect.full.memberProperties
 
+object MCFPPJavaVarType:MCFPPType("JavaVar",listOf(MCFPPBaseType.Any)){}
+
 /**
  * Java var是一个仅仅在编译期间存在的变量。JavaVar对应了编译过程中，编译器的一个变量的对象，可以通过它访问一个编译器变量的成员甚至方法。
  *
@@ -23,13 +26,12 @@ import kotlin.reflect.full.memberProperties
  *
  * @constructor Create empty Java var
  */
-class JavaVar : Var{
 
-    var value : Any? = null
+class JavaVar : Var<Any>{
 
-    override val type: String
-        get() = "JavaVar"
+    override var javaValue : Any? = null
 
+    override var type: MCFPPType = MCFPPJavaVarType
     /**
      * 创建一个固定的list
      *
@@ -43,7 +45,7 @@ class JavaVar : Var{
         identifier: String = UUID.randomUUID().toString()
     ) : super(curr.prefix + identifier) {
         isConcrete = true
-        this.value = value
+        this.javaValue = value
     }
 
     /**
@@ -53,7 +55,7 @@ class JavaVar : Var{
      */
     constructor(value: Any?, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
         isConcrete = true
-        this.value = value
+        this.javaValue = value
     }
 
     /**
@@ -66,14 +68,14 @@ class JavaVar : Var{
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var?) {
+    override fun assign(b: Var<*>?) {
         hasAssigned = true
         when (b) {
             is JavaVar -> {
-                this.value = b.value
+                this.javaValue = b.javaValue
             }
             else -> {
-                this.value = b
+                this.javaValue = b
             }
         }
     }
@@ -82,15 +84,15 @@ class JavaVar : Var{
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型
      */
-    override fun cast(type: String): Var {
+    override fun cast(type: MCFPPType): Var<*> {
         return when(type){
-            "JavaVar" -> this
-            "any" -> MCAny(this)
+            MCFPPJavaVarType -> this
+            MCFPPBaseType.Any -> MCAny(this)
             else -> throw VariableConverseException()
         }
     }
 
-    override fun clone(): Any {
+    override fun clone(): JavaVar {
         return JavaVar(this)
     }
 
@@ -99,7 +101,7 @@ class JavaVar : Var{
      *
      * @return
      */
-    override fun getTempVar(): Var { return this }
+    override fun getTempVar(): Var<*> { return this }
 
     override fun storeToStack() {}
 
@@ -114,15 +116,15 @@ class JavaVar : Var{
      * @param accessModifier 访问者的访问权限
      * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
      */
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         //获取value中的一个成员变量
-        if(value == null) {
+        if(javaValue == null) {
             LogProcessor.error("Cannot access properties in $identifier because its value is null")
             throw NullPointerException()
         }
-        val member = value!!::class.memberProperties.find { it.name == key } as KProperty1<Any, *>?
+        val member = javaValue!!::class.memberProperties.find { it.name == key } as KProperty1<Any, *>?
         if(member != null){
-            return Pair(JavaVar(member.get(value!!)), member.visibility == KVisibility.PUBLIC)
+            return Pair(JavaVar(member.get(javaValue!!)), member.visibility == KVisibility.PUBLIC)
         }
         return Pair(null, true)
     }
@@ -136,16 +138,16 @@ class JavaVar : Var{
      */
     override fun getMemberFunction(
         key: String,
-        params: List<String>,
+        params: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         //获取value中的一个成员方法
-        if(value == null) {
+        if(javaValue == null) {
             LogProcessor.error("Cannot access properties in $identifier because its value is null")
             throw NullPointerException()
         }
         try{
-            val member = value!!::class.java.getDeclaredMethod(key, *getTypeArray(params))
+            val member = javaValue!!::class.java.getDeclaredMethod(key, *getTypeArray(params))
             return Pair(JavaFunction(member, this), member.canAccess(Any()))
         }catch (e: NoSuchMethodException){
             LogProcessor.error("No method '$key' in $identifier}")
@@ -153,49 +155,64 @@ class JavaVar : Var{
         }
     }
 
-    private fun getTypeArray(params: List<String>): Array<Class<*>>{
+    private fun getTypeArray(params: List<MCFPPType>): Array<Class<*>>{
         return params.map {
             when(it){
-                "int" -> Int::class.java
-                "float" -> Float::class.java
-                "bool" -> Long::class.java
-                "string" -> String::class.java
-                "list" -> ArrayList::class.java
-                "dict" -> HashMap::class.java
-                "map" -> HashMap::class.java
-                "nbt" -> Tag::class.java
+                MCFPPBaseType.Int -> Int::class.java
+                MCFPPBaseType.Float -> Float::class.java
+                MCFPPBaseType.Bool -> Long::class.java
+                MCFPPBaseType.String -> String::class.java
+                MCFPPBaseListType -> ArrayList::class.java
+                MCFPPDictType -> HashMap::class.java
+                MCFPPMapType -> HashMap::class.java
+                MCFPPNBTType -> Tag::class.java
                 else -> Var::class.java
             }
         }.toTypedArray()
     }
+//    private fun getTypeArray(params: List<String>): Array<Class<*>>{
+//        return params.map {
+//            when(it){
+//                "int" -> Int::class.java
+//                "float" -> Float::class.java
+//                "bool" -> Long::class.java
+//                "string" -> String::class.java
+//                "list" -> ArrayList::class.java
+//                "dict" -> HashMap::class.java
+//                "map" -> HashMap::class.java
+//                "nbt" -> Tag::class.java
+//                else -> Var::class.java
+//            }
+//        }.toTypedArray()
+//    }
 
     override fun toString(): String {
-        return "JavaVar[$value]"
+        return "JavaVar[$javaValue]"
     }
 
     override fun getVarValue(): Any? {
-        return value
+        return javaValue
     }
 
     companion object{
-        fun mcToJava(v : Var) : Any{
+        fun mcToJava(v : Var<*>) : Any{
             if(!v.isConcrete){
                 return v
             }
             return when(v){
-                is MCInt -> v.value!!
-                is MCFloat -> v.value!!
-                is MCBool -> v.value
-                is MCString -> v.value!!.valueToString()
-                is NBTList<*> -> v.value!!.toJava()
-                is NBTMap -> ((v.value!! as CompoundTag)["data"] as CompoundTag).toJava()
-                is NBTDictionary -> v.value!!.toJava()
-                is NBT -> v.value!!.toJava()
+                is MCInt -> v.javaValue!!
+                is MCFloat -> v.javaValue!!
+                is MCBool -> v.javaValue!!
+                is MCString -> v.javaValue!!.valueToString()
+                is NBTList<*> -> v.javaValue!!.toJava()
+                is NBTMap -> ((v.javaValue!! as CompoundTag)["data"] as CompoundTag).toJava()
+                is NBTDictionary -> v.javaValue!!.toJava()
+                is NBT -> v.javaValue!!.toJava()
                 else -> v
             }
         }
 
-        fun mcToJava(v: ArrayList<Var>): ArrayList<Any>{
+        fun mcToJava(v: ArrayList<Var<*>>): ArrayList<Any>{
             val re = ArrayList<Any>()
             for (i in v){
                 re.add(mcToJava(i))

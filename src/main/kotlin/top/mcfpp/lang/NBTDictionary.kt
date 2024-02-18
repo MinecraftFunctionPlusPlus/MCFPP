@@ -4,13 +4,20 @@ import net.querz.nbt.tag.CompoundTag
 import net.querz.nbt.tag.StringTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
 import java.util.*
 import kotlin.reflect.jvm.javaMethod
 
-open class NBTDictionary : NBTBasedData, Indexable<NBT> {
+object MCFPPDictType:MCFPPType("dict",listOf(MCFPPNBTType)){}
 
+open class NBTDictionary : NBTBasedData<CompoundTag>, Indexable<NBT> {
+
+    override var type: MCFPPType = MCFPPDictType
+
+    override var javaValue: CompoundTag? = null
     /**
      * 创建一个list类型的变量。它的mc名和变量所在的域容器有关。
      *
@@ -57,7 +64,7 @@ open class NBTDictionary : NBTBasedData, Indexable<NBT> {
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var?) {
+    override fun assign(b: Var<*>?) {
         hasAssigned = true
         when (b) {
             is NBTDictionary -> {
@@ -73,31 +80,31 @@ open class NBTDictionary : NBTBasedData, Indexable<NBT> {
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型
      */
-    override fun cast(type: String): Var {
+    override fun cast(type: MCFPPType): Var<*> {
         return if(isConcrete){
             when(type){
-                "dict" -> this
-                "nbt" -> NBT(value!!)
-                "any" -> this
+                MCFPPDictType -> this
+                MCFPPNBTType -> NBT(javaValue!!)
+                MCFPPBaseType.Any -> this
                 else -> throw VariableConverseException()
             }
         }else{
             when(type){
-                "dict" -> this
-                "nbt" -> {
+                MCFPPDictType -> this
+                MCFPPNBTType -> {
                     val re = NBT(identifier)
                     re.nbtType = NBT.Companion.NBTType.COMPOUND
                     re.parent = parent
                     re
                 }
-                "any" -> MCAny(this)
+                MCFPPBaseType.Any -> MCAny(this)
                 else -> throw VariableConverseException()
             }
         }
     }
 
-    override fun createTempVar(): Var = NBTMap()
-    override fun createTempVar(value: Tag<*>): Var = NBTMap(value as CompoundTag)
+    override fun createTempVar(): Var<*> = NBTMap()
+    override fun createTempVar(value: Tag<*>): Var<*> = NBTMap(value as CompoundTag)
 
     /**
      * 根据标识符获取一个成员。
@@ -106,7 +113,7 @@ open class NBTDictionary : NBTBasedData, Indexable<NBT> {
      * @param accessModifier 访问者的访问权限
      * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
      */
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         TODO("Not yet implemented")
     }
 
@@ -119,22 +126,24 @@ open class NBTDictionary : NBTBasedData, Indexable<NBT> {
      */
     override fun getMemberFunction(
         key: String,
-        params: List<String>,
+        params: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         return data.field.getFunction(key, params) to true
     }
 
-    override fun getByIndex(index: Var): NBT {
+
+
+    override fun getByIndex(index: Var<*>): NBT {
         return if(index is MCString){
             if(index.isConcrete && isConcrete){
-                if((value as CompoundTag).containsKey((index.value as StringTag).valueToString())){
+                if((javaValue as CompoundTag).containsKey((index.javaValue as StringTag).valueToString())){
                     throw IndexOutOfBoundsException("Index out of bounds")
                 }else{
-                    NBT((value as CompoundTag)[(index.value as StringTag).valueToString()])
+                    NBT((javaValue as CompoundTag)[(index.javaValue as StringTag).valueToString()])
                 }
             }else {
-                (cast("nbt") as NBT).getByStringIndex(index)
+                (cast(MCFPPNBTType) as NBT).getByStringIndex(index)
             }
         }else{
             throw IllegalArgumentException("Index must be a string")
@@ -146,9 +155,9 @@ open class NBTDictionary : NBTBasedData, Indexable<NBT> {
 
         init {
             data.initialize()
-            data.field.addFunction(NativeFunction(NBTDictionaryData::remove.javaMethod!!,"void","mcfpp").appendParam("string","e"),false)
-            data.field.addFunction(NativeFunction(NBTDictionaryData::merge.javaMethod!!,"void","mcfpp").appendParam("dict","d"),false)
-            data.field.addFunction(NativeFunction(NBTDictionaryData::containsKey.javaMethod!!,"bool","mcfpp").appendParam("string","key"),false)
+            data.field.addFunction(NativeFunction(NBTDictionaryData::remove.javaMethod!!,MCFPPVoidType,"mcfpp").appendParam(MCFPPBaseType.String,"e"),false)
+            data.field.addFunction(NativeFunction(NBTDictionaryData::merge.javaMethod!!,MCFPPVoidType,"mcfpp").appendParam(MCFPPDictType,"d"),false)
+            data.field.addFunction(NativeFunction(NBTDictionaryData::containsKey.javaMethod!!,MCFPPVoidType,"mcfpp").appendParam(MCFPPBaseType.String,"key"),false)
         }
     }
 }

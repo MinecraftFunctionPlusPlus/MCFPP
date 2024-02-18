@@ -2,6 +2,7 @@ package top.mcfpp.lib
 
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.lang.Var
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 
@@ -13,7 +14,7 @@ class FunctionParam(
     /**
      * 参数类型
      */
-    var type: String,
+    var type: MCFPPType,
 
     /**
      * 参数的名字
@@ -31,9 +32,11 @@ class FunctionParam(
     var isConcrete: Boolean = false
 ) {
 
+    constructor(type: String,identifier: String,isStatic: Boolean = false,isConcrete: Boolean = false) :
+            this(MCFPPType.parse(type),identifier,isStatic,isConcrete) {}
     companion object {
 
-        val baseType: ArrayList<String> = arrayListOf("any","int", "bool", "string", "float", "entity", "selector","string", "jstring", "nbt")
+        val baseType: ArrayList<String> = arrayListOf("any","int", "bool", "string", "float", "entity", "selector","string", "jtext", "nbt")
         val nbtType: ArrayList<String> = arrayListOf("nbt", "list","dict","map","string","jstring","selector","entity")
 
         /**
@@ -42,6 +45,11 @@ class FunctionParam(
          * @param type
          * @return
          */
+
+        fun isSubOf(subType: MCFPPType ,parentType: MCFPPType): Boolean{
+            return subType.isSub(parentType)
+        }
+        /*
         fun isSubOf(subType: String ,parentType: String): Boolean{
             if(subType == parentType) return true   //相同类型返回true
             if(parentType == "any") return true   //any是所有类型的基类型
@@ -63,6 +71,8 @@ class FunctionParam(
             return thisTypeClass.isSub(typeClass)
         }
 
+         */
+
         /**
          * 将一个参数列表转换为对应的字符串列表
          * @param params 参数列表
@@ -71,7 +81,7 @@ class FunctionParam(
         fun toStringList(params: ArrayList<FunctionParam>): ArrayList<String> {
             val qwq: ArrayList<String> = ArrayList()
             for (param in params) {
-                qwq.add(param.type)
+                qwq.add(param.type.toString())
             }
             return qwq
         }
@@ -81,10 +91,10 @@ class FunctionParam(
          * @param params 参数列表
          * @return 它的字符串列表
          */
-        fun getVarTypes(params: ArrayList<Var>): ArrayList<String> {
+        fun getVarTypes(params: ArrayList<Var<*>>): ArrayList<String> {
             val qwq: ArrayList<String> = ArrayList()
             for (param in params) {
-                qwq.add(param.type)
+                qwq.add(param.type.toString())
             }
             return qwq
         }

@@ -1,12 +1,12 @@
 package top.mcfpp.lib
 
 import top.mcfpp.Project
-import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.antlr.mcfppParser.ConstructorDeclarationContext
 import top.mcfpp.lang.*
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.Utils
 import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  * 一个类。在mcfpp中一个类通常类似下面的样子
@@ -124,12 +124,16 @@ open class Class : CompoundData {
     val staticTag: String
         get() = namespace + "_class_" + identifier + "_static_pointer"
 
+    fun getConstructor(params: ArrayList<String>): Constructor?{
+        return getConstructorInner(ArrayList<MCFPPType>(params.map { MCFPPType.parse(it) }))
+    }
+
     /**
      * 根据参数列表获取一个类的构造函数
      * @param params 构造函数的参数列表
      * @return 返回这个类的参数
      */
-    fun getConstructor(params: ArrayList<String>): Constructor? {
+    fun getConstructorInner(params: ArrayList<MCFPPType>): Constructor? {
         for (f in constructors) {
             if (f.params.size == params.size) {
                 if (f.params.size == 0) {

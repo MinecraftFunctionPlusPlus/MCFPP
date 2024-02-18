@@ -1,10 +1,13 @@
 package top.mcfpp.lang
 
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
 import top.mcfpp.lib.UnknownFunction
 
-class UnknownVar : Var {
+class UnknownVar : Var<Any> {
+
+    override var javaValue: Any? = null
 
     constructor(identifier: String):super(identifier)
 
@@ -12,22 +15,22 @@ class UnknownVar : Var {
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var?) {}
+    override fun assign(b: Var<*>?) {}
 
     /**
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型
      */
-    override fun cast(type: String): Var = build(identifier,type,Function.currFunction)
+    override fun cast(type: MCFPPType): Var<*> = build(identifier,type,Function.currFunction)
 
-    override fun clone(): Any = this
+    override fun clone(): UnknownVar = this
 
     /**
      * 返回一个临时变量。这个变量将用于右值的计算过程中，用于避免计算时对原来的变量进行修改
      *
      * @return
      */
-    override fun getTempVar(): Var = this
+    override fun getTempVar(): Var<*> = this
 
     override fun storeToStack(){}
 
@@ -44,7 +47,7 @@ class UnknownVar : Var {
      * @param accessModifier 访问者的访问权限
      * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
      */
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         return UnknownVar(key) to true
     }
 
@@ -57,10 +60,11 @@ class UnknownVar : Var {
      */
     override fun getMemberFunction(
         key: String,
-        params: List<String>,
+        params: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         return UnknownFunction("unknown") to true
     }
+
 
 }

@@ -1,7 +1,6 @@
 package top.mcfpp.lib
 
 import top.mcfpp.Project
-import top.mcfpp.command.CommandList
 import top.mcfpp.lang.CanSelectMember
 import top.mcfpp.lang.UnknownVar
 import top.mcfpp.lang.Var
@@ -16,7 +15,7 @@ class UnknownFunction: Function {
         returnVar = UnknownVar("return")
     }
 
-    override fun invoke(args: ArrayList<Var>, caller: CanSelectMember?) {
+    override fun invoke(args: ArrayList<Var<*>>, caller: CanSelectMember?) {
         Function.addCommand("[Failed to compile]invoke unknown function $namespaceID")
     }
 }

@@ -1,7 +1,7 @@
 package top.mcfpp.antlr
 
-import top.mcfpp.Project
 import top.mcfpp.lang.*
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.GlobalField
 import top.mcfpp.lib.Member
@@ -34,7 +34,7 @@ class McfppFuncManager{
      * @return
      */
     fun getFunction(
-        curr: Var,
+        curr: Var<*>,
         identifier: String,
         args: ArrayList<String>
     ): Function{
@@ -79,8 +79,9 @@ class McfppFuncManager{
         }else{
             Member.AccessModifier.PUBLIC
         }
+        val argTypesList = args.map { MCFPPType.parse(it) }
         //开始选择函数
-        val func = type.getMemberFunction(identifier,args,accessModifier)
+        val func = type.getMemberFunction(identifier,argTypesList,accessModifier)
         if (!func.second){
             LogProcessor.error("Cannot access member $identifier in class ${type.dataType.identifier}")
         }
@@ -94,7 +95,7 @@ class McfppFuncManager{
     ): Function{
         return when(selector){
             is CompoundDataType -> getFunction(selector, identifier, args)
-            is Var -> getFunction(selector, identifier, args)
+            is Var<*> -> getFunction(selector, identifier, args)
             else -> throw Exception()
         }
     }

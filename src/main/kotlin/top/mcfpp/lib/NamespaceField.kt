@@ -2,6 +2,7 @@ package top.mcfpp.lib
 
 import org.jetbrains.annotations.Nullable
 import top.mcfpp.lang.*
+import top.mcfpp.lang.type.MCFPPType
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
@@ -28,7 +29,7 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTemplate, I
     /**
      * 变量
      */
-    private val vars: HashMap<String, Var> = HashMap()
+    private val vars: HashMap<String, Var<*>> = HashMap()
 
     /**
      * 函数
@@ -97,8 +98,8 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTemplate, I
         parent = cache.parent
         //变量复制
         for (key in cache.vars.keys) {
-            val `var`: Var? = cache.vars[key]
-            vars[key] = `var`!!.clone() as Var
+            val `var`: Var<*>? = cache.vars[key]
+            vars[key] = `var`!!.clone() as Var<*>
         }
         functions.addAll(cache.functions)
     }
@@ -111,7 +112,7 @@ class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTemplate, I
      * @return 如果此缓存中存在这个函数，则返回这个函数的对象，否则返回null
      */
     @Nullable
-    override fun getFunction(key: String, argsTypes: List<String>): Function? {
+    override fun getFunction(key: String, argsTypes: List<MCFPPType>): Function? {
         for (f in functions) {
             if (f.identifier == key && f.params.size == argsTypes.size) {
                 if (f.params.size == 0) {

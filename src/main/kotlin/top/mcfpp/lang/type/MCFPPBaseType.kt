@@ -3,14 +3,12 @@ package top.mcfpp.lang.type
 /**
  * 类型单例
  */
-enum class MCFPPBaseType(
-    override var typeName:kotlin.String,
-    override var parentType: List<MCFPPType>
-):MCFPPType {
-    Any("any", listOf(Any)),
-    Int("int",listOf(Any)),
-    String("string",listOf(Any)),
-    Float("float",listOf(Any)),
-    Bool("bool",listOf(Any)),
+class MCFPPBaseType {
+   object Any:MCFPPType("any", listOf(Any))
+   object Int:MCFPPType("int",listOf(Any))
+   object String:MCFPPType("string",listOf(Any))
+   object Float:MCFPPType("float",listOf(Any))
+   object Bool:MCFPPType("bool",listOf(Any))
+   object Type:MCFPPType("type", listOf())
 }
 
