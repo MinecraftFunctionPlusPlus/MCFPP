@@ -3,6 +3,7 @@ package top.mcfpp.lib
 import top.mcfpp.Project
 import top.mcfpp.exception.IllegalFormatException
 import top.mcfpp.lang.*
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.ValueWrapper
 import java.lang.reflect.InvocationTargetException
@@ -38,7 +39,7 @@ class NativeFunction : Function, Native {
      * @param returnType 返回值的类型
      * @param namespace 命名空间
      */
-    constructor(name: String, javaMethod: String, returnType: String, namespace: String = Project.currNamespace) : super(name, namespace, returnType){
+    constructor(name: String, javaMethod: String, returnType: MCFPPType, namespace: String = Project.currNamespace) : super(name, namespace, returnType){
         val strs = javaMethod.split(".")
         try {
             javaMethodName = strs[strs.size - 1]
@@ -49,7 +50,7 @@ class NativeFunction : Function, Native {
         }
         try{
             val cls: Class<*> = Class.forName(javaClassName)
-            this.javaMethod = cls.getMethod(javaMethodName, Array<Var?>::class.java, CanSelectMember::class.java, ValueWrapper::class.java)
+            this.javaMethod = cls.getMethod(javaMethodName, (arrayOf<Var<*>?>())::class.java, CanSelectMember::class.java, ValueWrapper::class.java)
         } catch (e: NoSuchMethodException) {
             throw NoSuchMethodException(javaMethodName)
         } catch (e: ClassNotFoundException) {
@@ -65,8 +66,8 @@ class NativeFunction : Function, Native {
      * @param returnType 返回值的类型
      * @param namespace 命名空间
      */
-    constructor(name: String, dataClass: Class<*>, returnType: String, namespace: String): super(name, namespace, returnType){
-        this.javaMethod = dataClass.getMethod(name, Array<Var?>::class.java, CanSelectMember::class.java, ValueWrapper::class.java)
+    constructor(name: String, dataClass: Class<*>, returnType: MCFPPType, namespace: String): super(name, namespace, returnType){
+        this.javaMethod = dataClass.getMethod(name, (arrayOf<Var<*>?>())::class.java, CanSelectMember::class.java, ValueWrapper::class.java)
         this.javaClassName = dataClass.`package`.name + "." + dataClass.name
         this.javaMethodName = name
     }
@@ -78,7 +79,7 @@ class NativeFunction : Function, Native {
      * @param returnType 返回值的类型
      * @param namespace 命名空间
      */
-    constructor(javaMethod: Method, returnType: String, namespace: String = Project.currNamespace): super(javaMethod.name, namespace, returnType){
+    constructor(javaMethod: Method, returnType: MCFPPType, namespace: String = Project.currNamespace): super(javaMethod.name, namespace, returnType){
         this.javaMethod = javaMethod
         this.javaClassName = javaMethod.declaringClass.`package`.name + "." + javaMethod.declaringClass.name
         this.javaMethodName = javaMethod.name
@@ -92,16 +93,16 @@ class NativeFunction : Function, Native {
      * @param returnType 返回值的类型
      * @param namespace 命名空间
      */
-    constructor(name: String, javaMethod: Method, returnType: String, namespace: String = Project.currNamespace) : super(name, namespace, returnType) {
+    constructor(name: String, javaMethod: Method, returnType: MCFPPType, namespace: String = Project.currNamespace) : super(name, namespace, returnType) {
         this.javaMethod = javaMethod
         this.javaClassName = javaMethod.declaringClass.`package`.name + "." + javaMethod.declaringClass.name
         this.javaMethodName = name
     }
 
     @Override
-    override fun invoke(args: ArrayList<Var>, caller: CanSelectMember?) {
+    override fun invoke(args: ArrayList<Var<*>>, caller: CanSelectMember?) {
         argPass(args)
-        val argsArray = arrayOfNulls<Var>(field.allVars.size)
+        val argsArray = arrayOfNulls<Var<*>>(field.allVars.size)
         field.allVars.toTypedArray().copyInto(argsArray)
         try {
             val valueWrapper = ValueWrapper(returnVar)
@@ -119,7 +120,7 @@ class NativeFunction : Function, Native {
         }
     }
 
-    override fun argPass(args: ArrayList<Var>){
+    override fun argPass(args: ArrayList<Var<*>>){
         for (i in params.indices) {
             if(params[i].isConcrete && !args[i].isConcrete){
                 LogProcessor.error("Cannot pass a non-concrete value to a concrete parameter")

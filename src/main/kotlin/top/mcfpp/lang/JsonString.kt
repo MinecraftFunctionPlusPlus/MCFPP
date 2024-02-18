@@ -2,13 +2,17 @@ package top.mcfpp.lang
 
 import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
 import java.util.*
 
-class JsonString : NBTBasedData{
+object MCFPPJsonTextType:MCFPPType("jtext",listOf(MCFPPNBTType)){}
 
+class JsonString : NBTBasedData<Tag<*>>{
+    override var javaValue: Tag<*>? = null
     val jsonText : JsonText? = null
 
     /**
@@ -43,7 +47,7 @@ class JsonString : NBTBasedData{
         identifier: String = UUID.randomUUID().toString()
     ) : super(curr.prefix + identifier) {
         isConcrete = true
-        this.value = value
+        this.javaValue = value
     }
 
     /**
@@ -53,19 +57,18 @@ class JsonString : NBTBasedData{
      */
     constructor(value: Tag<*>, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
         isConcrete = true
-        this.value = value
+        this.javaValue = value
     }
 
     /**
      * 复制一个list
      * @param b 被复制的list值
      */
-    constructor(b: NBTBasedData) : super(b)
+    constructor(b: NBTBasedData<Tag<*>>) : super(b)
 
-    override val type: String
-        get() = "jstring"
+    override var type: MCFPPType =MCFPPJsonTextType
 
-    override fun assign(b: Var?) {
+    override fun assign(b: Var<*>?) {
         if(b is JsonString){
             assignCommand(b)
         }else{
@@ -73,26 +76,26 @@ class JsonString : NBTBasedData{
         }
     }
 
-    override fun cast(type: String): Var {
+    override fun cast(type: MCFPPType): Var<*> {
         return when(type){
-            "jstring" -> this
-            "nbt" -> NBT(value!!)
-            "string" -> TODO()
+            MCFPPJsonTextType -> this
+            MCFPPNBTType -> NBT(javaValue!!)
+            MCFPPBaseType.String -> TODO()
             else -> throw VariableConverseException()
         }
     }
 
-    override fun createTempVar(): Var = JsonString()
+    override fun createTempVar(): Var<*> = JsonString()
 
     override fun createTempVar(value: Tag<*>) = JsonString(value)
 
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         TODO("Not yet implemented")
     }
 
     override fun getMemberFunction(
         key: String,
-        params: List<String>,
+        params: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         TODO("Not yet implemented")

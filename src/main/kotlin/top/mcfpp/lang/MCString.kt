@@ -3,6 +3,8 @@ package top.mcfpp.lang
 import net.querz.nbt.tag.StringTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
@@ -22,9 +24,11 @@ import java.util.*
  *态的字符串和原始JSON文本功能。
  *
  */
-class MCString : NBTBasedData {
+class MCString : NBTBasedData<StringTag> {
 
-    override var type = "string"
+    override var javaValue: StringTag? = null
+
+    override var type: MCFPPType = MCFPPBaseType.String
 
     /**
      * 创建一个list类型的变量。它的mc名和变量所在的域容器有关。
@@ -58,7 +62,7 @@ class MCString : NBTBasedData {
         identifier: String = UUID.randomUUID().toString()
     ) : super(curr.prefix + identifier) {
         isConcrete = true
-        this.value = value
+        this.javaValue = value
     }
 
     /**
@@ -68,7 +72,7 @@ class MCString : NBTBasedData {
      */
     constructor(value: StringTag, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
         isConcrete = true
-        this.value = value
+        this.javaValue = value
     }
 
     /**
@@ -84,7 +88,7 @@ class MCString : NBTBasedData {
      * @param accessModifier 访问者的访问权限
      * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
      */
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         TODO("Not yet implemented")
     }
 
@@ -97,15 +101,16 @@ class MCString : NBTBasedData {
      */
     override fun getMemberFunction(
         key: String,
-        params: List<String>,
+        params: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         TODO("Not yet implemented")
     }
 
+
     @Override
     @Throws(VariableConverseException::class)
-    override fun assign(b: Var?) {
+    override fun assign(b: Var<*>?) {
         hasAssigned = true
         if(b is MCString){
             assignCommand(b)
@@ -115,16 +120,16 @@ class MCString : NBTBasedData {
     }
 
     @Override
-    override fun cast(type: String): Var {
+    override fun cast(type: MCFPPType): Var<*> {
         return when(type){
-            "string" -> this
-            "nbt" -> NBT(value!!)
-            "any" -> MCAny(this)
+            MCFPPBaseType.String -> this
+            MCFPPNBTType -> NBT(javaValue!!)
+            MCFPPBaseType.Any -> MCAny(this)
             else -> throw VariableConverseException()
         }
     }
 
-    override fun createTempVar(): Var = MCString()
+    override fun createTempVar(): Var<*> = MCString()
 
-    override fun createTempVar(value: Tag<*>): Var = MCString(value as StringTag)
+    override fun createTempVar(value: Tag<*>): Var<*> = MCString(value as StringTag)
 }

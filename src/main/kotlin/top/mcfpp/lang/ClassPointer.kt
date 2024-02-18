@@ -5,10 +5,11 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lang.type.MCFPPClassType
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.*
 import top.mcfpp.util.LogProcessor
-import top.mcfpp.util.MCUUID
 import top.mcfpp.util.StringHelper
 import java.util.*
 
@@ -27,7 +28,10 @@ import java.util.*
  * @see parentClass 类的核心实现
  * @see ClassType 表示类的类型，同时也是类的静态成员的指针
  */
-class ClassPointer : Var{
+class ClassPointer : Var<Int>{
+
+    //TODO: 这里是指针对应的address
+    override var javaValue: Int? = null
     /**
      * 指针对应的类的类型
      */
@@ -36,7 +40,7 @@ class ClassPointer : Var{
     /**
      * 指针对应的类的标识符
      */
-    override var type: String
+    override var type: MCFPPType
 
     val tag: String
         /**
@@ -58,7 +62,7 @@ class ClassPointer : Var{
      */
     constructor(type: Class, identifier: String) {
         clsType = type
-        this.type = clsType.identifier
+        this.type = MCFPPClassType(type, listOf()) // TODO：这里没写class的父类的class
         this.identifier = identifier
     }
 
@@ -79,7 +83,7 @@ class ClassPointer : Var{
     @Override
     @InsertCommand
     @Throws(VariableConverseException::class)
-    override fun assign(b: Var?) {
+    override fun assign(b: Var<*>?) {
         hasAssigned = true
         //TODO 不支持指针作为类成员的时候
         when (b) {
@@ -123,7 +127,8 @@ class ClassPointer : Var{
     }
 
     @Override
-    override fun cast(type: String): Var {
+    override fun cast(mcfppType: MCFPPType): Var<*> {
+        val type = mcfppType.typeName
         if(FunctionParam.baseType.contains(type)){
             LogProcessor.error("Cannot cast [${this.type}] to [$type]")
             throw VariableConverseException()
@@ -156,7 +161,7 @@ class ClassPointer : Var{
      * @return 第一个值是对象中获取到的字段，若不存在此字段则为null；第二个值是是否有足够的访问权限访问此字段。如果第一个值是null，那么第二个值总是为true
      */
     @Override
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         val member = clsType.getVar(key)?.clone(this)
         return if(member == null){
             Pair(null, true)
@@ -174,7 +179,7 @@ class ClassPointer : Var{
      * @return 第一个值是对象中获取到的方法，若不存在此方法则为null；第二个值是是否有足够的访问权限访问此方法。如果第一个值是null，那么第二个值总是为true
      */
     @Override
-    override fun getMemberFunction(key: String, params: List<String>, accessModifier: Member.AccessModifier): Pair<Function, Boolean> {
+    override fun getMemberFunction(key: String, params: List<MCFPPType>, accessModifier: Member.AccessModifier): Pair<Function, Boolean> {
         //获取函数
         val member = clsType.field.getFunction(key, params)
         return if(member == null){
@@ -190,7 +195,7 @@ class ClassPointer : Var{
      * @return 一个此变量生成的临时变量
      */
     @Override
-    override fun getTempVar(): Var {
+    override fun getTempVar(): Var<*> {
         return this
     }
 

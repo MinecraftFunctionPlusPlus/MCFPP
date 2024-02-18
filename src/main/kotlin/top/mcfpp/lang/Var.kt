@@ -3,6 +3,10 @@ package top.mcfpp.lang
 import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.OperationNotImplementException
 import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPClassType
+import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
 import top.mcfpp.util.LogProcessor
@@ -22,7 +26,7 @@ import java.util.*
  * mcfpp本身的语法并不支持匿名变量。
  *
  */
-abstract class Var : Member, Cloneable, CanSelectMember {
+abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
     /**
      * 在Minecraft中的标识符
      */
@@ -82,7 +86,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
     /**
      * 复制一个变量
      */
-    constructor(`var` : Var)  {
+    constructor(`var` : Var<*>)  {
         name = `var`.name
         identifier = `var`.identifier
         isStatic = `var`.isStatic
@@ -102,12 +106,11 @@ abstract class Var : Member, Cloneable, CanSelectMember {
         this.identifier = identifier
     }
 
-    open val type: String
+    override var type: MCFPPType = MCFPPBaseType.Any
         /**
          * 获取变量的类型
          * @return 变量类型的字符串
          */
-        get() = "var"
 
     /**
      * 获取这个成员的父类，可能不存在
@@ -139,19 +142,19 @@ abstract class Var : Member, Cloneable, CanSelectMember {
      * @param b 变量的对象
      */
     @Throws(VariableConverseException::class)
-    abstract fun assign(b: Var?)
+    abstract fun assign(b: Var<*>?)
 
     /**
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型
      */
-    abstract fun cast(type: String): Var
+    abstract fun cast(type: MCFPPType): Var<*>
 
     @Override
-    public abstract override fun clone(): Any
+    public abstract override fun clone(): Var<*>
 
-    fun clone(pointer: ClassPointer): Var{
-        val `var`: Var = this.clone() as Var
+    fun clone(pointer: ClassPointer): Var<*>{
+        val `var`: Var<*> = this.clone()
         if(pointer.identifier != "this"){
             //不是this指针才需要额外指定引用者
             `var`.parent = pointer
@@ -164,7 +167,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
      * @param a 加数
      * @return 计算的结果
      */
-    open fun plus(a: Var): Var? {
+    open fun plus(a: Var<*>): Var<*>? {
         throw OperationNotImplementException()
     }
 
@@ -173,7 +176,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
      * @param a 减数
      * @return 计算的结果
      */
-    open fun minus(a: Var): Var? {
+    open fun minus(a: Var<*>): Var<*>? {
         throw OperationNotImplementException()
     }
 
@@ -182,7 +185,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
      * @param a 乘数
      * @return 计算的结果
      */
-    open fun multiple(a: Var): Var? {
+    open fun multiple(a: Var<*>): Var<*>? {
         throw OperationNotImplementException()
     }
 
@@ -191,7 +194,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
      * @param a 除数
      * @return 计算的结果
      */
-    open fun divide(a: Var): Var? {
+    open fun divide(a: Var<*>): Var<*>? {
         throw OperationNotImplementException()
     }
 
@@ -200,7 +203,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
      * @param a 除数
      * @return 计算的结果
      */
-    open fun modular(a: Var): Var? {
+    open fun modular(a: Var<*>): Var<*>? {
         throw OperationNotImplementException()
     }
 
@@ -210,7 +213,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun isGreater(a: Var): MCBool? {
+    open fun isGreater(a: Var<*>): MCBool? {
         throw OperationNotImplementException()
     }
 
@@ -220,7 +223,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun isLess(a: Var): MCBool? {
+    open fun isLess(a: Var<*>): MCBool? {
         throw OperationNotImplementException()
     }
 
@@ -229,7 +232,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun isLessOrEqual(a: Var): MCBool? {
+    open fun isLessOrEqual(a: Var<*>): MCBool? {
         throw OperationNotImplementException()
     }
 
@@ -238,7 +241,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun isGreaterOrEqual(a: Var): MCBool? {
+    open fun isGreaterOrEqual(a: Var<*>): MCBool? {
         throw OperationNotImplementException()
     }
 
@@ -247,7 +250,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun isEqual(a: Var): MCBool? {
+    open fun isEqual(a: Var<*>): MCBool? {
         throw OperationNotImplementException()
     }
 
@@ -256,7 +259,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun notEqual(a: Var): MCBool? {
+    open fun notEqual(a: Var<*>): MCBool? {
         throw OperationNotImplementException()
     }
 
@@ -266,7 +269,7 @@ abstract class Var : Member, Cloneable, CanSelectMember {
      *
      * @return
      */
-    abstract fun getTempVar(): Var
+    abstract fun getTempVar(): Var<*>
 
     abstract fun storeToStack()
 
@@ -292,22 +295,28 @@ abstract class Var : Member, Cloneable, CanSelectMember {
          * @param container 变量所在的域
          * @return
          */
-        fun build(identifier: String, type: String, container: FieldContainer): Var{
-            val `var`: Var
+        fun build(identifier: String, type: MCFPPType, container: FieldContainer): Var<*>{
+            val `var`: Var<*>
             when (type) {
-                "int" -> `var` = MCInt(container,identifier)
-                "bool" -> `var` = MCBool(container, identifier)
-                "selector" -> `var` = Selector(identifier)
-                "entity" -> TODO()
-                "string" -> `var` = MCString(container, identifier)
-                "float" -> TODO()
-                "list" -> `var` = NBTList<Tag<*>>(container, identifier)
-                "dict" -> TODO()
-                "map" -> TODO()
-                "nbt" -> `var` = NBT(container, identifier)
-                "JavaVar" -> `var` = JavaVar(null,identifier)
-                "any" -> `var` = MCAny(container, identifier)
+                MCFPPBaseType.Int -> `var` = MCInt(container,identifier)
+                MCFPPBaseType.Bool -> `var` = MCBool(container, identifier)
+                MCFPPSelectorType -> `var` = Selector(identifier)
+                MCFPPBaseEntityType -> TODO()
+                MCFPPBaseType.String -> `var` = MCString(container, identifier)
+                MCFPPBaseType.Float -> TODO()
+                MCFPPBaseListType -> `var` = NBTList<Tag<*>>(container, identifier)
+                MCFPPDictType -> TODO()
+                MCFPPMapType -> TODO()
+                MCFPPNBTType -> `var` = NBT(container, identifier)
+                MCFPPJavaVarType -> `var` = JavaVar(null,identifier)
+                MCFPPBaseType.Any -> `var` = MCAny(container, identifier)
+                is MCFPPClassType ->{
+                    //TODO: 这里不一定拿得到type.cls!!!可能得从GlobalField拿！
+                    `var` = ClassPointer(type.cls, identifier)
+                }
                 else -> {
+                    `var` = UnknownVar(identifier)
+                    /*
                     //自定义的类的类型
                     val c = type.split(":")
                     //取出类
@@ -322,6 +331,8 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                     }else{
                         ClassPointer(clsType, identifier)
                     }
+
+                     */
                 }
             }
             return `var`
@@ -333,29 +344,35 @@ abstract class Var : Member, Cloneable, CanSelectMember {
          * @param compoundData 成员所在的复合类型
          * @return 这个变量
          */
-        fun build(identifier: String, type: String, compoundData: CompoundData): Var {
+        fun build(identifier: String, type: MCFPPType, compoundData: CompoundData): Var<*> {
             //TODO 浮点数
-            val `var`: Var
+            val `var`: Var<*>
             //普通类型
             when (type) {
-                "int" -> {
+                MCFPPBaseType.Int -> {
                     `var` =
                         MCInt("@s").setObj(SbObject(compoundData.prefix + "_int_" + identifier))
                     `var`.identifier = identifier
                 }
 
-                "bool" -> {
+                MCFPPBaseType.Bool -> {
                     `var` =
                         MCBool("@s").setObj(SbObject(compoundData.prefix + "_bool_" + identifier))
                     `var`.identifier = identifier
                 }
-                "selector" -> `var` = Selector(identifier)
-                "entity" -> TODO()
-                "string" -> TODO()
-                "nbt" -> TODO()
-                "float" -> TODO()
-                "any" -> TODO()
+                MCFPPSelectorType -> `var` = Selector(identifier)
+                MCFPPBaseEntityType -> TODO()
+                MCFPPBaseType.String -> TODO()
+                MCFPPNBTType -> TODO()
+                MCFPPBaseType.Float -> TODO()
+                MCFPPBaseType.Any -> TODO()
+                is MCFPPClassType ->{
+                    val classPointer = ClassPointer(type.cls,identifier)
+                    classPointer.name = identifier
+                    `var` = classPointer
+                }
                 else -> {
+                    /*
                     //TODO 不支持复合类型
                     //自定义的类的类型
                     val clsType = type.split(":")
@@ -373,6 +390,9 @@ abstract class Var : Member, Cloneable, CanSelectMember {
                         classPointer.name = identifier
                         `var` = classPointer
                     }
+
+                     */
+                    `var` = UnknownVar(identifier)
                 }
             }
             return `var`

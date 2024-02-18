@@ -1,6 +1,7 @@
 package top.mcfpp.lib
 
 import top.mcfpp.Project
+import top.mcfpp.lang.type.MCFPPType
 
 /**
  * 结构体是一种和类的语法极为相似的数据结构。在结构体中，只能有int类型的数据，或者说记分板的数据作为结构体的成员。
@@ -17,7 +18,7 @@ import top.mcfpp.Project
  */
 class Template : FieldContainer, CompoundData {
 
-    val dataType : String
+    val dataType : MCFPPType
 
     /**
      * 结构体的构造函数
@@ -32,7 +33,7 @@ class Template : FieldContainer, CompoundData {
         get() = namespace + "_template_" + identifier + "_"
 
 
-    constructor(identifier: String, dataType: String, namespace: String = Project.currNamespace){
+    constructor(identifier: String, dataType: MCFPPType, namespace: String = Project.currNamespace){
         this.identifier = identifier
         field = CompoundDataField(null,this)
         staticField = CompoundDataField(null, this)
@@ -53,13 +54,15 @@ class Template : FieldContainer, CompoundData {
             true
         }
     }
-
+    fun getConstructor(params: ArrayList<String>): TemplateConstructor?{
+        return getConstructorInner(ArrayList<MCFPPType>(params.map { MCFPPType.parse(it) }))
+    }
     /**
      * 根据参数列表获取一个类的构造函数
      * @param params 构造函数的参数列表
      * @return 返回这个类的参数
      */
-    fun getConstructor(params: java.util.ArrayList<String>): TemplateConstructor? {
+    fun getConstructorInner(params: ArrayList<MCFPPType>): TemplateConstructor? {
         for (f in constructors) {
             if (f.params.size == params.size) {
                 if (f.params.size == 0) {

@@ -1,8 +1,14 @@
 package top.mcfpp.lang.type
 
+import top.mcfpp.lang.value.MCTypeValue
 import top.mcfpp.lib.Function
 
 /**
+ *
+ * type T;
+ * 这里T既是值也是类型
+ * T作为类型的时候
+ *
  * 泛型类型
  * 泛型就是延迟拿到的类型
  * func test<type T,int i>(T k){
@@ -17,9 +23,9 @@ import top.mcfpp.lib.Function
 class MCFPPGenericType(
     var identifier:String,
     override var parentType: List<MCFPPType>
-) :MCFPPType {
-    override var typeName: String = "generic($identifier)"
-    fun getType():MCFPPType{
-        return Function.field.getVar()
+) :MCFPPType("generic($identifier)",parentType) {
+
+    fun toValue():MCTypeValue{
+        return MCTypeValue(identifier,parentType)
     }
 }

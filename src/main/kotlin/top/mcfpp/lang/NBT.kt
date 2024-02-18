@@ -11,25 +11,29 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.Class
 import top.mcfpp.util.LogProcessor
 import kotlin.collections.ArrayList
+
+
+object MCFPPNBTType:MCFPPType("nbt",listOf(MCFPPBaseType.Any))
 
 /**
  * 一个nbt数据
  *
  * @constructor Create empty Nbt
  */
-class NBT : Var, Indexable<NBT>{
+class NBT : Var<Tag<*>>, Indexable<NBT>{
 
-    var path = ArrayList<Var>()
+    var path = ArrayList<Var<*>>()
 
-    var value : Tag<*>? = null
+    override var javaValue : Tag<*>? = null
 
     var nbtType: NBTType = NBTType.ANY
 
-    override val type: String
-        get() = "nbt"
+    override var type: MCFPPType = MCFPPNBTType
 
     /**
      * 创建一个nbt类型的变量。它的mc名和变量所在的域容器有关。
@@ -66,7 +70,7 @@ class NBT : Var, Indexable<NBT>{
         identifier: String = UUID.randomUUID().toString()
     ) : super(curr.prefix + identifier) {
         isConcrete = true
-        this.value = value
+        this.javaValue = value
         path.add(MCString(identifier))
     }
 
@@ -77,7 +81,7 @@ class NBT : Var, Indexable<NBT>{
      */
     constructor(value: Tag<*>, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
         isConcrete = true
-        this.value = value
+        this.javaValue = value
         path.add(MCString(identifier))
     }
 
@@ -101,15 +105,15 @@ class NBT : Var, Indexable<NBT>{
                 if(index == 0){
                     pathStr = when(p){
                         is NBT -> {
-                            "{${SNBTUtil.toSNBT(p.value)}}"
+                            "{${SNBTUtil.toSNBT(p.javaValue)}}"
                         }
 
                         is MCInt -> {
-                            "[${p.value}]"
+                            "[${p.javaValue}]"
                         }
 
                         is MCString -> {
-                            "${p.value}"
+                            "${p.javaValue}"
                         }
 
                         else -> throw IllegalArgumentException("Invalid path type ${p.type}")
@@ -118,15 +122,15 @@ class NBT : Var, Indexable<NBT>{
                 else{
                     pathStr += when(p){
                         is NBT -> {
-                            "{${SNBTUtil.toSNBT(p.value)}}"
+                            "{${SNBTUtil.toSNBT(p.javaValue)}}"
                         }
 
                         is MCInt -> {
-                            "[${p.value}]"
+                            "[${p.javaValue}]"
                         }
 
                         is MCString -> {
-                            ".${p.value}"
+                            ".${p.javaValue}"
                         }
 
                         else -> throw IllegalArgumentException("Invalid path type ${p.type}")
@@ -186,7 +190,7 @@ class NBT : Var, Indexable<NBT>{
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var?) {
+    override fun assign(b: Var<*>?) {
         hasAssigned = true
         if(b is NBT){
             assignCommand(b)
@@ -274,7 +278,7 @@ class NBT : Var, Indexable<NBT>{
         }else{
             //是局部变量
             if(a.isConcrete){
-                value = a.value
+                javaValue = a.javaValue
                 isConcrete = true
             }else{
                 isConcrete = false
@@ -354,15 +358,15 @@ class NBT : Var, Indexable<NBT>{
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型
      */
-    override fun cast(type: String): Var {
+    override fun cast(type: MCFPPType): Var<*> {
         return when(type){
-            "nbt" -> this
-            "any" -> MCAny(this)
+            MCFPPNBTType -> this
+            MCFPPBaseType.Any -> MCAny(this)
             else -> throw VariableConverseException()
         }
     }
 
-    override fun clone(): Any {
+    override fun clone(): NBT {
         return NBT(this)
     }
 
@@ -371,9 +375,9 @@ class NBT : Var, Indexable<NBT>{
      *
      * @return
      */
-    override fun getTempVar(): Var {
+    override fun getTempVar(): Var<*> {
         if(isConcrete){
-            return NBT(this.value!!)
+            return NBT(this.javaValue!!)
         }
         val temp = NBT()
         if(isDynamicPath()){
@@ -438,9 +442,13 @@ class NBT : Var, Indexable<NBT>{
             if(cmd.size == 2){
                 Function.addCommand(cmd[0])
             }
-            Function.addCommand(cmd.last().build("data modify entity @s data.${identifier} set value ${SNBTUtil.toSNBT(value)}"))
+            Function.addCommand(cmd.last().build("data modify entity @s data.${identifier} set value ${SNBTUtil.toSNBT(
+                javaValue
+            )}"))
         } else {
-            val cmd = Command.build("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set value ${SNBTUtil.toSNBT(value)}")
+            val cmd = Command.build("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set value ${SNBTUtil.toSNBT(
+                javaValue
+            )}")
             Function.addCommand(cmd)
         }
     }
@@ -452,7 +460,7 @@ class NBT : Var, Indexable<NBT>{
      * @param accessModifier 访问者的访问权限
      * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
      */
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         TODO("Not yet implemented")
     }
 
@@ -465,13 +473,13 @@ class NBT : Var, Indexable<NBT>{
      */
     override fun getMemberFunction(
         key: String,
-        params: List<String>,
+        params: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         TODO("Not yet implemented")
     }
 
-    override fun getByIndex(index: Var): NBT {
+    override fun getByIndex(index: Var<*>): NBT {
         return when(index){
             is MCInt -> getByIntIndex(index)
             is MCString -> getByStringIndex(index)
@@ -511,7 +519,7 @@ class NBT : Var, Indexable<NBT>{
     }
 
     override fun getVarValue(): Any? {
-        return value
+        return javaValue
     }
 
     companion object {

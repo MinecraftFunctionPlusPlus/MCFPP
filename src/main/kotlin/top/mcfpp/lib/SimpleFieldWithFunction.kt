@@ -1,6 +1,7 @@
 package top.mcfpp.lib
 
 import org.jetbrains.annotations.Nullable
+import top.mcfpp.lang.type.MCFPPType
 
 /**
  * 对[IFieldWithFunction]接口的简单实现。
@@ -27,7 +28,7 @@ class SimpleFieldWithFunction : IFieldWithFunction {
 
 
     @Nullable
-    override fun getFunction(key: String, argsTypes: List<String>): Function? {
+    override fun getFunction(key: String, argsTypes: List<MCFPPType>): Function? {
         for (f in functions) {
             if (f.identifier == key && f.params.size == argsTypes.size) {
                 if (f.params.size == 0) {

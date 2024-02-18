@@ -20,8 +20,8 @@ class CompileTimeFunctionField(parent: IField?, cacheContainer: FieldContainer?)
             val newFunctionField = CompileTimeFunctionField(functionField.parent,null)
             //变量复制
             for (key in functionField.vars.keys) {
-                val `var`: Var? = functionField.vars[key]
-                newFunctionField.vars[key] = `var`!!.clone() as Var
+                val `var`: Var<*>? = functionField.vars[key]
+                newFunctionField.vars[key] = `var`!!.clone() as Var<*>
             }
             newFunctionField.fieldVarSet.addAll(functionField.fieldVarSet)
             return newFunctionField

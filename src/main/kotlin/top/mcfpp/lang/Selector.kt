@@ -4,12 +4,16 @@ import net.querz.nbt.tag.ListTag
 import net.querz.nbt.tag.StringTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
 import top.mcfpp.util.LogProcessor
 import java.util.*
 import kotlin.collections.HashMap
+
+
+object MCFPPSelectorType:MCFPPType("selector",listOf(MCFPPBaseEntityType)){}
 
 /**
  * 目标选择器（Target Selector）可在无需指定确切的玩家名称或UUID的情况下在命令中选择任意玩家与实体。目标选择器变量可以选择一个或多个实体，目标选择器参数可以根据特定条件筛选目标。
@@ -20,10 +24,10 @@ import kotlin.collections.HashMap
  *
  * @see Entity
  */
-class Selector : NBTBasedData {
+class Selector : NBTBasedData<ListTag<StringTag>> {
 
-    override var type = "selector"
-
+    override var javaValue: ListTag<StringTag>? = null
+    override var type: MCFPPType = MCFPPSelectorType
 
     var text: String? = null
 
@@ -75,7 +79,7 @@ class Selector : NBTBasedData {
         isConcrete = true
         val value = ListTag(StringTag::class.java)
         value.add(StringTag("@${toSelectorTypeString(type)}"))
-        this.value = value
+        this.javaValue = value
     }
 
     /**
@@ -87,7 +91,7 @@ class Selector : NBTBasedData {
         isConcrete = true
         val value = ListTag(StringTag::class.java)
         value.add(StringTag("@${toSelectorTypeString(type)}"))
-        this.value = value
+        this.javaValue = value
     }
 
     /**
@@ -101,7 +105,7 @@ class Selector : NBTBasedData {
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var?) {
+    override fun assign(b: Var<*>?) {
         if(b is Selector){
             assignCommand(b)
         }else{
@@ -109,30 +113,30 @@ class Selector : NBTBasedData {
         }
     }
 
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         TODO()
     }
 
     override fun getMemberFunction(
         key: String,
-        params: List<String>,
+        params: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         TODO()
     }
 
-    override fun cast(type: String): Var {
+    override fun cast(type: MCFPPType): Var<*> {
         return when(type){
-            "selector" -> this
-            "nbt" -> NBT(value!!)
+            MCFPPSelectorType -> this
+            MCFPPNBTType -> NBT(javaValue!!)
             else -> throw VariableConverseException()
         }
     }
 
-    override fun createTempVar(): Var = Selector()
-    override fun createTempVar(value: Tag<*>): Var {
+    override fun createTempVar(): Var<*> = Selector()
+    override fun createTempVar(value: Tag<*>): Var<*> {
         val re = Selector(this.selectorType)
-        re.value = this.value
+        re.javaValue = this.javaValue
         re.selectorArgs = this.selectorArgs
         return re
     }

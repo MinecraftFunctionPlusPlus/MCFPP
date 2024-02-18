@@ -16,7 +16,7 @@ class TemplateConstructor(target: Template) : Function(
 
     @Override
     @InsertCommand
-    override fun invoke(args: ArrayList<Var>, struct: IntTemplateBase) {
+    override fun invoke(args: ArrayList<Var<*>>, struct: IntTemplateBase) {
         addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
         //传入this参数
         val thisPoint = field.getVar("this")!! as ClassPointer
