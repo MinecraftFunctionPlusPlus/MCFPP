@@ -4,18 +4,15 @@ import net.querz.nbt.tag.CompoundTag
 import net.querz.nbt.tag.StringTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.lang.type.MCFPPBaseType
-import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lang.type.*
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
 import java.util.*
 import kotlin.reflect.jvm.javaMethod
 
-object MCFPPDictType:MCFPPType("dict",listOf(MCFPPNBTType)){}
-
 open class NBTDictionary : NBTBasedData<CompoundTag>, Indexable<NBT> {
 
-    override var type: MCFPPType = MCFPPDictType
+    override var type: MCFPPType = MCFPPNBTType.Dict
 
     override var javaValue: CompoundTag? = null
     /**
@@ -83,15 +80,15 @@ open class NBTDictionary : NBTBasedData<CompoundTag>, Indexable<NBT> {
     override fun cast(type: MCFPPType): Var<*> {
         return if(isConcrete){
             when(type){
-                MCFPPDictType -> this
-                MCFPPNBTType -> NBT(javaValue!!)
+                MCFPPNBTType.Dict -> this
+                MCFPPNBTType.NBT -> NBT(javaValue!!)
                 MCFPPBaseType.Any -> this
                 else -> throw VariableConverseException()
             }
         }else{
             when(type){
-                MCFPPDictType -> this
-                MCFPPNBTType -> {
+                MCFPPNBTType.Dict -> this
+                MCFPPNBTType.NBT -> {
                     val re = NBT(identifier)
                     re.nbtType = NBT.Companion.NBTType.COMPOUND
                     re.parent = parent
@@ -143,7 +140,7 @@ open class NBTDictionary : NBTBasedData<CompoundTag>, Indexable<NBT> {
                     NBT((javaValue as CompoundTag)[(index.javaValue as StringTag).valueToString()])
                 }
             }else {
-                (cast(MCFPPNBTType) as NBT).getByStringIndex(index)
+                (cast(MCFPPNBTType.NBT) as NBT).getByStringIndex(index)
             }
         }else{
             throw IllegalArgumentException("Index must be a string")
@@ -155,9 +152,11 @@ open class NBTDictionary : NBTBasedData<CompoundTag>, Indexable<NBT> {
 
         init {
             data.initialize()
-            data.field.addFunction(NativeFunction(NBTDictionaryData::remove.javaMethod!!,MCFPPVoidType,"mcfpp").appendParam(MCFPPBaseType.String,"e"),false)
-            data.field.addFunction(NativeFunction(NBTDictionaryData::merge.javaMethod!!,MCFPPVoidType,"mcfpp").appendParam(MCFPPDictType,"d"),false)
-            data.field.addFunction(NativeFunction(NBTDictionaryData::containsKey.javaMethod!!,MCFPPVoidType,"mcfpp").appendParam(MCFPPBaseType.String,"key"),false)
+            data.field.addFunction(NativeFunction(NBTDictionaryData::remove.javaMethod!!, MCFPPBaseType.Void,"mcfpp").appendParam(MCFPPBaseType.String,"e"),false)
+            data.field.addFunction(NativeFunction(NBTDictionaryData::merge.javaMethod!!, MCFPPBaseType.Void,"mcfpp").appendParam(
+                MCFPPNBTType.Dict,"d"),false)
+            data.field.addFunction(NativeFunction(NBTDictionaryData::containsKey.javaMethod!!,
+                MCFPPBaseType.Void,"mcfpp").appendParam(MCFPPBaseType.String,"key"),false)
         }
     }
 }

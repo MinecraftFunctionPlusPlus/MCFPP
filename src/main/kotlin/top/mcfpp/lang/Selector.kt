@@ -4,6 +4,8 @@ import net.querz.nbt.tag.ListTag
 import net.querz.nbt.tag.StringTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Function
@@ -12,8 +14,6 @@ import top.mcfpp.util.LogProcessor
 import java.util.*
 import kotlin.collections.HashMap
 
-
-object MCFPPSelectorType:MCFPPType("selector",listOf(MCFPPBaseEntityType)){}
 
 /**
  * 目标选择器（Target Selector）可在无需指定确切的玩家名称或UUID的情况下在命令中选择任意玩家与实体。目标选择器变量可以选择一个或多个实体，目标选择器参数可以根据特定条件筛选目标。
@@ -27,7 +27,7 @@ object MCFPPSelectorType:MCFPPType("selector",listOf(MCFPPBaseEntityType)){}
 class Selector : NBTBasedData<ListTag<StringTag>> {
 
     override var javaValue: ListTag<StringTag>? = null
-    override var type: MCFPPType = MCFPPSelectorType
+    override var type: MCFPPType = MCFPPBaseType.Selector
 
     var text: String? = null
 
@@ -127,8 +127,8 @@ class Selector : NBTBasedData<ListTag<StringTag>> {
 
     override fun cast(type: MCFPPType): Var<*> {
         return when(type){
-            MCFPPSelectorType -> this
-            MCFPPNBTType -> NBT(javaValue!!)
+            MCFPPBaseType.Selector -> this
+            MCFPPNBTType.NBT -> NBT(javaValue!!)
             else -> throw VariableConverseException()
         }
     }

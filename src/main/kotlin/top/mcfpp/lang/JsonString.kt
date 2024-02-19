@@ -3,13 +3,12 @@ package top.mcfpp.lang
 import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
 import java.util.*
-
-object MCFPPJsonTextType:MCFPPType("jtext",listOf(MCFPPNBTType)){}
 
 class JsonString : NBTBasedData<Tag<*>>{
     override var javaValue: Tag<*>? = null
@@ -66,7 +65,7 @@ class JsonString : NBTBasedData<Tag<*>>{
      */
     constructor(b: NBTBasedData<Tag<*>>) : super(b)
 
-    override var type: MCFPPType =MCFPPJsonTextType
+    override var type: MCFPPType = MCFPPBaseType.JsonText
 
     override fun assign(b: Var<*>?) {
         if(b is JsonString){
@@ -78,8 +77,8 @@ class JsonString : NBTBasedData<Tag<*>>{
 
     override fun cast(type: MCFPPType): Var<*> {
         return when(type){
-            MCFPPJsonTextType -> this
-            MCFPPNBTType -> NBT(javaValue!!)
+            MCFPPBaseType.JsonText -> this
+            MCFPPNBTType.NBT -> NBT(javaValue!!)
             MCFPPBaseType.String -> TODO()
             else -> throw VariableConverseException()
         }

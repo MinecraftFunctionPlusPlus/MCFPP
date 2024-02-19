@@ -12,13 +12,12 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.Class
 import top.mcfpp.util.LogProcessor
 import kotlin.collections.ArrayList
 
-
-object MCFPPNBTType:MCFPPType("nbt",listOf(MCFPPBaseType.Any))
 
 /**
  * 一个nbt数据
@@ -33,7 +32,7 @@ class NBT : Var<Tag<*>>, Indexable<NBT>{
 
     var nbtType: NBTType = NBTType.ANY
 
-    override var type: MCFPPType = MCFPPNBTType
+    override var type: MCFPPType = MCFPPNBTType.NBT
 
     /**
      * 创建一个nbt类型的变量。它的mc名和变量所在的域容器有关。
@@ -360,7 +359,7 @@ class NBT : Var<Tag<*>>, Indexable<NBT>{
      */
     override fun cast(type: MCFPPType): Var<*> {
         return when(type){
-            MCFPPNBTType -> this
+            MCFPPNBTType.NBT -> this
             MCFPPBaseType.Any -> MCAny(this)
             else -> throw VariableConverseException()
         }

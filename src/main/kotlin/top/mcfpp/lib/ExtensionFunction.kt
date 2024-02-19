@@ -1,7 +1,7 @@
 package top.mcfpp.lib
 
 import top.mcfpp.Project
-import top.mcfpp.lang.MCFPPVoidType
+import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.util.StringHelper
 
@@ -11,7 +11,7 @@ class ExtensionFunction: Function {
      * 创建一个函数
      * @param name 函数的标识符
      */
-    constructor(name: String, owner: CompoundData, namespace: String = Project.currNamespace, returnType: MCFPPType =MCFPPVoidType ):super(name, namespace, returnType){
+    constructor(name: String, owner: CompoundData, namespace: String = Project.currNamespace, returnType: MCFPPType = MCFPPBaseType.Void):super(name, namespace, returnType){
         this.owner = owner
     }
 

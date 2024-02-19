@@ -3,31 +3,16 @@ package top.mcfpp.lang
 import net.querz.nbt.tag.*
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
 import java.util.*
 
 
-class MCFPPListType(
-    type:MCFPPType
-):MCFPPType("list(${type.typeName})",listOf(MCFPPBaseListType)){
-    init {
-        MCFPPType.registerType({it.contains(regex)}){
-            val matcher = regex.find(it)!!.groupValues
-            MCFPPListType(parse(matcher[1]))
-        }
-    }
-    companion object{
-        val regex = Regex("^list\\(.+\\)$") //TODO：这个不一定能匹配得到嵌套的内容！
-    }
-}
-
-object MCFPPBaseListType:MCFPPType("list",listOf(MCFPPNBTType)){}
-
 class NBTList<T : Tag<*>?> : NBTBasedData<ListTag<T>>, Indexable<NBT> {
     override var javaValue: ListTag<T>? = null
-    override var type: MCFPPType = MCFPPBaseListType //TODO: 根据泛型的类型决定类型
+    override var type: MCFPPType = MCFPPNBTType.BaseList //TODO: 根据泛型的类型决定类型
     /**
      * 创建一个list类型的变量。它的mc名和变量所在的域容器有关。
      *
@@ -93,15 +78,15 @@ class NBTList<T : Tag<*>?> : NBTBasedData<ListTag<T>>, Indexable<NBT> {
     override fun cast(type: MCFPPType): Var<*> {
         if(isConcrete){
             return when(type){
-                MCFPPBaseListType -> this
-                MCFPPNBTType -> NBT(javaValue!!)
+                MCFPPNBTType.BaseList -> this
+                MCFPPNBTType.NBT -> NBT(javaValue!!)
                 MCFPPBaseType.Any -> this
                 else -> throw VariableConverseException()
             }
         }else{
             return when(type){
-                MCFPPBaseListType -> this
-                MCFPPNBTType -> {
+                MCFPPNBTType.BaseList -> this
+                MCFPPNBTType.NBT -> {
                     val re = NBT(identifier)
                     re.nbtType = NBT.Companion.NBTType.LIST
                     re.parent = parent
@@ -153,7 +138,7 @@ class NBTList<T : Tag<*>?> : NBTBasedData<ListTag<T>>, Indexable<NBT> {
                     NBT((javaValue as ListTag<T>)[index.javaValue!!]!!)
                 }
             }else {
-                (cast(MCFPPNBTType) as NBT).getByIntIndex(index)
+                (cast(MCFPPNBTType.NBT) as NBT).getByIntIndex(index)
             }
         }else{
             throw IllegalArgumentException("Index must be a int")

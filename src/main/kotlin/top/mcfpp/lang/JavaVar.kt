@@ -3,8 +3,7 @@ package top.mcfpp.lang
 import net.querz.nbt.tag.CompoundTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.lang.type.MCFPPBaseType
-import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lang.type.*
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
 import top.mcfpp.util.LogProcessor
@@ -16,8 +15,6 @@ import kotlin.collections.HashMap
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KVisibility
 import kotlin.reflect.full.memberProperties
-
-object MCFPPJavaVarType:MCFPPType("JavaVar",listOf(MCFPPBaseType.Any)){}
 
 /**
  * Java var是一个仅仅在编译期间存在的变量。JavaVar对应了编译过程中，编译器的一个变量的对象，可以通过它访问一个编译器变量的成员甚至方法。
@@ -31,7 +28,7 @@ class JavaVar : Var<Any>{
 
     override var javaValue : Any? = null
 
-    override var type: MCFPPType = MCFPPJavaVarType
+    override var type: MCFPPType = MCFPPBaseType.JavaVar
     /**
      * 创建一个固定的list
      *
@@ -86,7 +83,7 @@ class JavaVar : Var<Any>{
      */
     override fun cast(type: MCFPPType): Var<*> {
         return when(type){
-            MCFPPJavaVarType -> this
+            MCFPPBaseType.JavaVar -> this
             MCFPPBaseType.Any -> MCAny(this)
             else -> throw VariableConverseException()
         }
@@ -162,10 +159,10 @@ class JavaVar : Var<Any>{
                 MCFPPBaseType.Float -> Float::class.java
                 MCFPPBaseType.Bool -> Long::class.java
                 MCFPPBaseType.String -> String::class.java
-                MCFPPBaseListType -> ArrayList::class.java
-                MCFPPDictType -> HashMap::class.java
-                MCFPPMapType -> HashMap::class.java
-                MCFPPNBTType -> Tag::class.java
+                MCFPPNBTType.BaseList -> ArrayList::class.java
+                MCFPPNBTType.Dict -> HashMap::class.java
+                MCFPPNBTType.Map -> HashMap::class.java
+                MCFPPNBTType.NBT -> Tag::class.java
                 else -> Var::class.java
             }
         }.toTypedArray()

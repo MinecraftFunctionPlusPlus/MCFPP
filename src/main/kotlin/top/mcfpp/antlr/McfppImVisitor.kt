@@ -8,6 +8,7 @@ import top.mcfpp.command.CommandList
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.*
 import top.mcfpp.lang.*
+import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Annotation
@@ -148,7 +149,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     fun exitFunctionBody(ctx: mcfppParser.FunctionBodyContext) {
         Project.ctx = ctx
         //函数是否有返回值
-        if(Function.currFunction.returnType != MCFPPVoidType && !Function.currFunction.hasReturnStatement){
+        if(Function.currFunction.returnType !=  MCFPPBaseType.Void && !Function.currFunction.hasReturnStatement){
             LogProcessor.error("A 'return' expression required in function: " + Function.currFunction.namespaceID)
         }
         if (Class.currClass == null) {

@@ -7,11 +7,9 @@ import top.mcfpp.lib.Member
 import top.mcfpp.lib.UnknownFunction
 import top.mcfpp.util.LogProcessor
 
-object MCFPPVoidType:MCFPPType("void",listOf(MCFPPBaseType.Any)){}
-
 class Void: Var<Nothing>("void") {
     override var javaValue: Nothing? = null
-    override var type: MCFPPType = MCFPPVoidType
+    override var type: MCFPPType = MCFPPBaseType.Void
 
     /**
      * 将b中的值赋值给此变量

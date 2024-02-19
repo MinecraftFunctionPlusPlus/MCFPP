@@ -3,13 +3,10 @@ package top.mcfpp.lang
 import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.OperationNotImplementException
 import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.lang.type.MCFPPBaseType
-import top.mcfpp.lang.type.MCFPPClassType
-import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lang.type.*
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
-import top.mcfpp.util.LogProcessor
 import java.util.*
 
 /**
@@ -300,15 +297,15 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
             when (type) {
                 MCFPPBaseType.Int -> `var` = MCInt(container,identifier)
                 MCFPPBaseType.Bool -> `var` = MCBool(container, identifier)
-                MCFPPSelectorType -> `var` = Selector(identifier)
-                MCFPPBaseEntityType -> TODO()
+                MCFPPBaseType.Selector -> `var` = Selector(identifier)
+                MCFPPBaseType.BaseEntity -> TODO()
                 MCFPPBaseType.String -> `var` = MCString(container, identifier)
                 MCFPPBaseType.Float -> TODO()
-                MCFPPBaseListType -> `var` = NBTList<Tag<*>>(container, identifier)
-                MCFPPDictType -> TODO()
-                MCFPPMapType -> TODO()
-                MCFPPNBTType -> `var` = NBT(container, identifier)
-                MCFPPJavaVarType -> `var` = JavaVar(null,identifier)
+                MCFPPNBTType.BaseList -> `var` = NBTList<Tag<*>>(container, identifier)
+                MCFPPNBTType.Dict -> TODO()
+                MCFPPNBTType.Map -> TODO()
+                MCFPPNBTType.NBT -> `var` = NBT(container, identifier)
+                MCFPPBaseType.JavaVar -> `var` = JavaVar(null,identifier)
                 MCFPPBaseType.Any -> `var` = MCAny(container, identifier)
                 is MCFPPClassType ->{
                     //TODO: 这里不一定拿得到type.cls!!!可能得从GlobalField拿！
@@ -360,10 +357,10 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
                         MCBool("@s").setObj(SbObject(compoundData.prefix + "_bool_" + identifier))
                     `var`.identifier = identifier
                 }
-                MCFPPSelectorType -> `var` = Selector(identifier)
-                MCFPPBaseEntityType -> TODO()
+                MCFPPBaseType.Selector -> `var` = Selector(identifier)
+                MCFPPBaseType.BaseEntity -> TODO()
                 MCFPPBaseType.String -> TODO()
-                MCFPPNBTType -> TODO()
+                MCFPPNBTType.NBT -> TODO()
                 MCFPPBaseType.Float -> TODO()
                 MCFPPBaseType.Any -> TODO()
                 is MCFPPClassType ->{

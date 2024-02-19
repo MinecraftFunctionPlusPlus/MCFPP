@@ -4,6 +4,7 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Commands
 import top.mcfpp.lang.*
+import top.mcfpp.lang.type.MCFPPBaseType
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -24,7 +25,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
         val thisObj = ClassPointer(target,"this")
         thisObj.identifier = "this"
         field.putVar("this",thisObj)
-        leadFunction = Function(this.identifier + "_lead",this.namespace,MCFPPVoidType)
+        leadFunction = Function(this.identifier + "_lead",this.namespace, MCFPPBaseType.Void)
         target.field.addFunction(leadFunction,false)
     }
 

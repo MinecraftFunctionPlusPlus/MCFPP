@@ -36,9 +36,6 @@ class FunctionParam(
             this(MCFPPType.parse(type),identifier,isStatic,isConcrete) {}
     companion object {
 
-        val baseType: ArrayList<String> = arrayListOf("any","int", "bool", "string", "float", "entity", "selector","string", "jtext", "nbt")
-        val nbtType: ArrayList<String> = arrayListOf("nbt", "list","dict","map","string","jstring","selector","entity")
-
         /**
          * 是否是给定类型的子类型
          *

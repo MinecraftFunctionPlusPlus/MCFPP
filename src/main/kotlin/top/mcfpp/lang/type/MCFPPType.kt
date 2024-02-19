@@ -27,6 +27,28 @@ abstract class MCFPPType(
     companion object{
         private var typeCache:MutableMap<String,MCFPPType> = mutableMapOf()
         private var typeActionCache:MutableList<Pair<(String)->Boolean,(String)->MCFPPType>> = mutableListOf()
+        val baseType:Set<MCFPPType> = setOf(
+            MCFPPBaseType.Void,
+            MCFPPBaseType.BaseEntity,
+            MCFPPBaseType.Type,
+            MCFPPBaseType.Int,
+            MCFPPBaseType.Bool,
+            MCFPPBaseType.String,
+            MCFPPBaseType.Float,
+            MCFPPBaseType.Any,
+            MCFPPBaseType.Selector,
+            MCFPPBaseType.JavaVar,
+            MCFPPBaseType.JsonText,
+            MCFPPNBTType.NBT
+        )
+        val nbtType:Set<MCFPPType> = setOf(
+            MCFPPNBTType.NBT,
+            MCFPPNBTType.BaseList,
+            MCFPPNBTType.Map,
+            MCFPPNBTType.Dict
+        )
+
+
         fun registerType(
             predicate:(String)->Boolean,
             typeParser:(String)->MCFPPType

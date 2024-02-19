@@ -127,13 +127,13 @@ class ClassPointer : Var<Int>{
     }
 
     @Override
-    override fun cast(mcfppType: MCFPPType): Var<*> {
-        val type = mcfppType.typeName
-        if(FunctionParam.baseType.contains(type)){
+    override fun cast(type: MCFPPType): Var<*> {
+        if(MCFPPType.baseType.contains(type)){
             LogProcessor.error("Cannot cast [${this.type}] to [$type]")
             throw VariableConverseException()
         }
-        val namespace = StringHelper.splitNamespaceID(type)
+        //TODO: 这里有问题，class类型的问题
+        val namespace = StringHelper.splitNamespaceID(type.typeName)
         val c = GlobalField.getClass(namespace.first,namespace.second)
         if(c == null){
             LogProcessor.error("Undefined class: $type")
