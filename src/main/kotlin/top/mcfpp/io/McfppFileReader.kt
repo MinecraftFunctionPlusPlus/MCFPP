@@ -8,7 +8,7 @@ import top.mcfpp.Project
 import top.mcfpp.lib.*
 import top.mcfpp.antlr.McfppFileVisitor
 import top.mcfpp.antlr.McfppImVisitor
-import top.mcfpp.lang.MCFPPVoidType
+import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lib.Function
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
@@ -70,7 +70,9 @@ class McfppFileReader(path: String) : McfppReader() {
     fun compile() {
         Project.currNamespace = Project.defaultNamespace
         //创建默认函数
-        val func = Function(StringHelper.toLowerCase(file.nameWithoutExtension + "_default"),Project.currNamespace,MCFPPVoidType)
+        val func = Function(StringHelper.toLowerCase(file.nameWithoutExtension + "_default"),Project.currNamespace,
+            MCFPPBaseType.Void
+        )
         Function.defaultFunction = func
         Function.currFunction = func
         McfppImVisitor().visit(tree())

@@ -3,30 +3,15 @@ package top.mcfpp.lang
 import net.querz.nbt.tag.IntArrayTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lang.type.MCFPPBaseType.BaseEntity
 import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Member
 import top.mcfpp.lib.Function
-import top.mcfpp.util.ResourceLocation
 import java.util.UUID
 
-
-class MCFPPEntityType(
-    val resourceLocation: ResourceLocation
-) : MCFPPType("entity($resourceLocation)",listOf(MCFPPBaseEntityType)) {
-    init {
-        registerType({it.contains(regex)}){
-            val matcher = regex.find(it)!!.groupValues
-            MCFPPEntityType(ResourceLocation(matcher[1],matcher[2]))
-        }
-    }
-    companion object{
-        val regex = Regex("^entity\\((.+):(.+)\\)$")
-    }
-}
-
-object MCFPPBaseEntityType:MCFPPType("entity",listOf(MCFPPBaseType.Any)){}
 
 /**
  * 代表了一个实体。一个实体类型的变量通常是一个UUID数组，可以通过Thrower法来选择实体，从而实现对实体的操作。
@@ -38,7 +23,7 @@ class Entity : NBTBasedData<IntArrayTag>{
     override var javaValue: IntArrayTag? =null
 
     //TODO: 这里可以根据实体类型的不同用不同的type,比如zombie
-    override var type: MCFPPType = MCFPPBaseEntityType
+    override var type: MCFPPType = BaseEntity
 
     /**
      * 创建一个list类型的变量。它的mc名和变量所在的域容器有关。
@@ -142,8 +127,8 @@ class Entity : NBTBasedData<IntArrayTag>{
      */
     override fun cast(type: MCFPPType): Var<*> {
         return when(type){
-            MCFPPBaseEntityType -> this
-            MCFPPNBTType -> NBT(javaValue!!)
+            BaseEntity -> this
+            MCFPPNBTType.NBT -> NBT(javaValue!!)
             MCFPPBaseType.Any -> MCAny(this)
             else -> throw VariableConverseException()
         }

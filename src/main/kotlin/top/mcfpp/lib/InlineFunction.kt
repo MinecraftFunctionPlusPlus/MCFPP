@@ -3,6 +3,7 @@ package top.mcfpp.lib
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.antlr.*
 import top.mcfpp.lang.*
+import top.mcfpp.lang.type.MCFPPBaseType
 
 /**
  * 内联函数。
@@ -17,7 +18,9 @@ class InlineFunction : Function {
         this.context = context
     }
 
-    constructor(name: String, namespace: String, context: mcfppParser.InlineFunctionDeclarationContext) : super(name, namespace, MCFPPVoidType) {
+    constructor(name: String, namespace: String, context: mcfppParser.InlineFunctionDeclarationContext) : super(name, namespace,
+        MCFPPBaseType.Void
+    ) {
         this.context = context
     }
 

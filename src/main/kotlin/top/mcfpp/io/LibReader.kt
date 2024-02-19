@@ -2,7 +2,6 @@ package top.mcfpp.io
 
 import com.alibaba.fastjson2.JSONArray
 import com.alibaba.fastjson2.JSONObject
-import top.mcfpp.lang.MCFPPVoidType
 import top.mcfpp.lang.UnresolvedVar
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
@@ -171,7 +170,8 @@ object LibReader {
             val javaFunction = jsonStr.split("->")[1]
             //获取java方法
             //TODO: 这里的返回值类型怎么弄？
-            val nf = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction,MCFPPVoidType, nspId)
+            val nf = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction,
+                MCFPPBaseType.Void, nspId)
             nf.params = paramList
             cls.staticField.addFunction(nf,false)
         }else{

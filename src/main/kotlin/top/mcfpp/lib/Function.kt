@@ -269,7 +269,7 @@ open class Function : Member, FieldContainer {
      * @param identifier 函数的标识符
      * @param namespace 函数的命名空间
      */
-    constructor(identifier: String, namespace: String = Project.currNamespace, returnType: MCFPPType = MCFPPVoidType){
+    constructor(identifier: String, namespace: String = Project.currNamespace, returnType: MCFPPType = MCFPPBaseType.Void){
         this.identifier = identifier
         commands = CommandList()
         params = ArrayList()
@@ -285,7 +285,7 @@ open class Function : Member, FieldContainer {
      * 创建一个函数，并指定它所属的类。
      * @param identifier 函数的标识符
      */
-    constructor(identifier: String, cls: Class, isStatic: Boolean, returnType: MCFPPType = MCFPPVoidType) {
+    constructor(identifier: String, cls: Class, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void) {
         this.identifier = identifier
         commands = CommandList()
         params = ArrayList()
@@ -306,7 +306,7 @@ open class Function : Member, FieldContainer {
      * 创建一个函数，并指定它所属的接口。接口的函数总是抽象并且公开的
      * @param identifier 函数的标识符
      */
-    constructor(identifier: String, itf: Interface, returnType: MCFPPType = MCFPPVoidType) {
+    constructor(identifier: String, itf: Interface, returnType: MCFPPType = MCFPPBaseType.Void) {
         this.identifier = identifier
         commands = CommandList()
         params = ArrayList()
@@ -325,7 +325,7 @@ open class Function : Member, FieldContainer {
      * 创建一个函数，并指定它所属的结构体。
      * @param name 函数的标识符
      */
-    constructor(name: String, struct: Template, isStatic: Boolean, returnType: MCFPPType = MCFPPVoidType) {
+    constructor(name: String, struct: Template, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void) {
         this.identifier = name
         commands = CommandList()
         params = ArrayList()
@@ -410,7 +410,7 @@ open class Function : Member, FieldContainer {
      * @param returnType
      */
     fun buildReturnVar(returnType: MCFPPType): Var<*>{
-        return if(returnType == MCFPPVoidType) Void()
+        return if(returnType == MCFPPBaseType.Void) Void()
         else Var.build("return",returnType,this)
     }
 
@@ -590,7 +590,7 @@ open class Function : Member, FieldContainer {
      */
     @InsertCommand
     open fun returnVar(v: Var<*>){
-        if(returnType == MCFPPVoidType){
+        if(returnType == MCFPPBaseType.Void){
             LogProcessor.error("Function $identifier has no return value")
             return
         }

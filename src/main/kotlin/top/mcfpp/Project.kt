@@ -8,9 +8,9 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.io.LibReader
 import top.mcfpp.io.LibWriter
 import top.mcfpp.io.McfppFileReader
-import top.mcfpp.lang.MCFPPVoidType
 import top.mcfpp.lang.MCFloat
 import top.mcfpp.lang.UnresolvedVar
+import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
 import top.mcfpp.util.LogProcessor
@@ -101,8 +101,8 @@ object Project {
         //初始化mcfpp的tick和load函数
         //添加命名空间
         GlobalField.localNamespaces["mcfpp"] = NamespaceField()
-        val mcfppTick = Function("tick","mcfpp",MCFPPVoidType)
-        val mcfppLoad = Function("load","mcfpp",MCFPPVoidType)
+        val mcfppTick = Function("tick","mcfpp", MCFPPBaseType.Void)
+        val mcfppLoad = Function("load","mcfpp", MCFPPBaseType.Void)
         GlobalField.localNamespaces["mcfpp"]!!.addFunction(mcfppLoad,true)
         GlobalField.localNamespaces["mcfpp"]!!.addFunction(mcfppTick,true)
         GlobalField.functionTags["minecraft:tick"]!!.functions.add(mcfppTick)

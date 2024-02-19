@@ -3,19 +3,16 @@ package top.mcfpp.lang
 import net.querz.nbt.tag.CompoundTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.lang.type.MCFPPBaseType
-import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lang.type.*
 import top.mcfpp.lib.CompoundData
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.NativeFunction
 import java.util.*
 import kotlin.reflect.jvm.javaMethod
 
-object MCFPPMapType:MCFPPType("map",listOf(MCFPPDictType)){}
-
 class NBTMap : NBTDictionary{
 
-    override var type: MCFPPType = MCFPPMapType
+    override var type: MCFPPType = MCFPPNBTType.Map
     /**
      * 创建一个list类型的变量。它的mc名和变量所在的域容器有关。
      *
@@ -60,7 +57,7 @@ class NBTMap : NBTDictionary{
 
     override fun cast(type: MCFPPType): Var<*> {
         return when(type){
-            MCFPPMapType -> this
+            MCFPPNBTType.Map -> this
             MCFPPBaseType.Any -> MCAny(this)
             else -> throw VariableConverseException()
         }
@@ -74,14 +71,16 @@ class NBTMap : NBTDictionary{
 
         init {
             data.initialize()
-            data.field.addFunction(NativeFunction(NBTMapData::remove.javaMethod!!,MCFPPVoidType,"mcfpp").appendParam(MCFPPBaseType.String,"key"),false)
+            data.field.addFunction(NativeFunction(NBTMapData::remove.javaMethod!!, MCFPPBaseType.Void,"mcfpp").appendParam(MCFPPBaseType.String,"key"),false)
             data.field.addFunction(NativeFunction(NBTMapData::containsKey.javaMethod!!,MCFPPBaseType.Bool,"mcfpp").appendParam(MCFPPBaseType.String,"key"),false)
-            data.field.addFunction(NativeFunction(NBTMapData::containsValue.javaMethod!!,MCFPPBaseType.Bool,"mcfpp").appendParam(MCFPPNBTType,"value"),false)
+            data.field.addFunction(NativeFunction(NBTMapData::containsValue.javaMethod!!,MCFPPBaseType.Bool,"mcfpp").appendParam(
+                MCFPPNBTType.NBT,"value"),false)
             data.field.addFunction(NativeFunction(NBTMapData::isEmpty.javaMethod!!,MCFPPBaseType.Bool,"mcfpp"),false)
-            data.field.addFunction(NativeFunction(NBTMapData::getKeys.javaMethod!!,MCFPPBaseListType,"mcfpp"),false)
-            data.field.addFunction(NativeFunction(NBTMapData::getValues.javaMethod!!,MCFPPBaseListType,"mcfpp"),false)
-            data.field.addFunction(NativeFunction(NBTMapData::remove.javaMethod!!,MCFPPVoidType,"mcfpp").appendParam(MCFPPBaseType.String,"key"),false)
-            data.field.addFunction(NativeFunction(NBTMapData::merge.javaMethod!!,MCFPPVoidType,"mcfpp").appendParam(MCFPPMapType,"m"),false)
+            data.field.addFunction(NativeFunction(NBTMapData::getKeys.javaMethod!!, MCFPPNBTType.BaseList,"mcfpp"),false)
+            data.field.addFunction(NativeFunction(NBTMapData::getValues.javaMethod!!, MCFPPNBTType.BaseList,"mcfpp"),false)
+            data.field.addFunction(NativeFunction(NBTMapData::remove.javaMethod!!, MCFPPBaseType.Void,"mcfpp").appendParam(MCFPPBaseType.String,"key"),false)
+            data.field.addFunction(NativeFunction(NBTMapData::merge.javaMethod!!, MCFPPBaseType.Void,"mcfpp").appendParam(
+                MCFPPNBTType.Map,"m"),false)
             data.field.addFunction(NativeFunction(NBTMapData::size.javaMethod!!,MCFPPBaseType.Int,"mcfpp"),false)
         }
     }

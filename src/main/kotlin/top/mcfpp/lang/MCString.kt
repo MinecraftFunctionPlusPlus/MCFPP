@@ -4,6 +4,7 @@ import net.querz.nbt.tag.StringTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Function
@@ -123,7 +124,7 @@ class MCString : NBTBasedData<StringTag> {
     override fun cast(type: MCFPPType): Var<*> {
         return when(type){
             MCFPPBaseType.String -> this
-            MCFPPNBTType -> NBT(javaValue!!)
+            MCFPPNBTType.NBT -> NBT(javaValue!!)
             MCFPPBaseType.Any -> MCAny(this)
             else -> throw VariableConverseException()
         }
