@@ -18,8 +18,15 @@ class MCTypeValue(
     identifier:String,
     var parentType: List<MCFPPType>
 ): Var<MCFPPType>(identifier) {
+
+    /**
+     * **只读，不可更改**。此值的类型，为MCFPPBaseType.Type
+     */
     override var type: MCFPPType = MCFPPBaseType.Type
 
+    /**
+     * 它的值，应当是一个MCFPPType，可能不存在
+     */
     override var javaValue: MCFPPType? = MCFPPBaseType.Any
 
     fun toType():MCFPPGenericType{

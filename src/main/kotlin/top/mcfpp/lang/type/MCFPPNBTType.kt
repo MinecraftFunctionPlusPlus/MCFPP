@@ -1,5 +1,8 @@
 package top.mcfpp.lang.type
 
+/**
+ * 以NBT为底层的类型，包括普通的NBT类型，以及由nbt实现的map，list和dict
+ */
 class MCFPPNBTType{
     object Map: MCFPPType("map",listOf(Dict)){}
     object BaseList: MCFPPType("list",listOf(NBT)){}
