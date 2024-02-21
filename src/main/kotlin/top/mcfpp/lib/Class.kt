@@ -2,6 +2,8 @@ package top.mcfpp.lib
 
 import top.mcfpp.Project
 import top.mcfpp.lang.*
+import top.mcfpp.lang.type.MCFPPClassType
+import top.mcfpp.lang.type.MCFPPTemplateType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.Utils
@@ -190,6 +192,15 @@ open class Class : CompoundData {
         }
         this.parent.add(compoundData)
         return this
+    }
+
+    /**
+     * 获取这个类对于的classType
+     */
+    fun getType() : MCFPPClassType{
+        return MCFPPClassType(this,
+            parent.filterIsInstance<Class>().map { it.getType() }
+        )
     }
 
     companion object {

@@ -3,8 +3,6 @@ package top.mcfpp.lib
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.util.LogProcessor
-import top.mcfpp.util.StringHelper
 
 /**
  * 函数的参数。用于函数声明的时候。
@@ -44,31 +42,8 @@ class FunctionParam(
          */
 
         fun isSubOf(subType: MCFPPType ,parentType: MCFPPType): Boolean{
-            return subType.isSub(parentType)
+            return subType.isSubOf(parentType)
         }
-        /*
-        fun isSubOf(subType: String ,parentType: String): Boolean{
-            if(subType == parentType) return true   //相同类型返回true
-            if(parentType == "any") return true   //any是所有类型的基类型
-            if(nbtType.contains(subType) && parentType == "nbt") return true   //nbt类型是所有nbt类型的基类
-            if(baseType.contains(subType)) return false   //除此之外基本类型不是其他类型的基类
-            //不是基本类型，获取类
-            val typeWithNamespace = StringHelper.splitNamespaceID(parentType)
-            val typeClass = GlobalField.getClass(typeWithNamespace.first, typeWithNamespace.second)
-            val thisTypeWithNamespace = StringHelper.splitNamespaceID(subType)
-            val thisTypeClass = GlobalField.getClass(thisTypeWithNamespace.first, thisTypeWithNamespace.second)
-            if(typeClass == null){
-                LogProcessor.error("Undefined class:$parentType")
-                return true
-            }
-            if(thisTypeClass == null){
-                LogProcessor.error("Undefined class:${subType}")
-                return true
-            }
-            return thisTypeClass.isSub(typeClass)
-        }
-
-         */
 
         /**
          * 将一个参数列表转换为对应的字符串列表

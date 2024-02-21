@@ -5,7 +5,6 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.*
@@ -57,12 +56,12 @@ class ClassPointer : Var<Int>{
 
     /**
      * 创建一个指针
-     * @param type 指针的类型
+     * @param clazz 指针的类型
      * @param identifier 标识符
      */
-    constructor(type: Class, identifier: String) {
-        clsType = type
-        this.type = MCFPPClassType(type, listOf()) // TODO：这里没写class的父类的class
+    constructor(clazz: Class, identifier: String) {
+        clsType = clazz
+        this.type = clazz.getType()
         this.identifier = identifier
     }
 

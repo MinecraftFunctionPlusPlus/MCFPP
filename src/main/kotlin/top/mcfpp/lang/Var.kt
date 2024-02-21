@@ -22,6 +22,7 @@ import java.util.*
  * 的变量，从而在各种处理上进行优化。当然，匿名变量的声明往往在编译过程中声明。
  * mcfpp本身的语法并不支持匿名变量。
  *
+ * @param T 变量储存的类型
  */
 abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
     /**
@@ -103,11 +104,10 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
         this.identifier = identifier
     }
 
+    /**
+     * 变量的类型
+     */
     override var type: MCFPPType = MCFPPBaseType.Any
-        /**
-         * 获取变量的类型
-         * @return 变量类型的字符串
-         */
 
     /**
      * 获取这个成员的父类，可能不存在
@@ -342,7 +342,6 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
          * @return 这个变量
          */
         fun build(identifier: String, type: MCFPPType, compoundData: CompoundData): Var<*> {
-            //TODO 浮点数
             val `var`: Var<*>
             //普通类型
             when (type) {
@@ -363,6 +362,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
                 MCFPPNBTType.NBT -> TODO()
                 MCFPPBaseType.Float -> TODO()
                 MCFPPBaseType.Any -> TODO()
+                is MCFPPTemplateType -> TODO()
                 is MCFPPClassType ->{
                     val classPointer = ClassPointer(type.cls,identifier)
                     classPointer.name = identifier
@@ -370,7 +370,6 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
                 }
                 else -> {
                     /*
-                    //TODO 不支持复合类型
                     //自定义的类的类型
                     val clsType = type.split(":")
                     //取出类

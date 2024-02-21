@@ -3,6 +3,10 @@ package top.mcfpp.lang.type
 import top.mcfpp.lib.Class
 import top.mcfpp.lib.Template
 
+/**
+ * 模板类型
+ * @see Template
+ */
 class MCFPPTemplateType(
     var structType:Template,
     override var parentType: List<MCFPPType>
