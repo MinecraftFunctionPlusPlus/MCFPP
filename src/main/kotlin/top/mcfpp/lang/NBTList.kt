@@ -2,12 +2,17 @@ package top.mcfpp.lang
 
 import net.querz.nbt.tag.*
 import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPNBTType
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
 import java.util.*
 
-class NBTList<T : Tag<*>?> : NBTBasedData, Indexable<NBT> {
 
+class NBTList<T : Tag<*>?> : NBTBasedData<ListTag<T>>, Indexable<NBT> {
+    override var javaValue: ListTag<T>? = null
+    override var type: MCFPPType = MCFPPNBTType.BaseList //TODO: 根据泛型的类型决定类型
     /**
      * 创建一个list类型的变量。它的mc名和变量所在的域容器有关。
      *
@@ -54,7 +59,7 @@ class NBTList<T : Tag<*>?> : NBTBasedData, Indexable<NBT> {
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var?) {
+    override fun assign(b: Var<*>?) {
         hasAssigned = true
         when (b) {
             is NBTList<*> -> {
@@ -70,31 +75,31 @@ class NBTList<T : Tag<*>?> : NBTBasedData, Indexable<NBT> {
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型
      */
-    override fun cast(type: String): Var {
+    override fun cast(type: MCFPPType): Var<*> {
         if(isConcrete){
             return when(type){
-                "list" -> this
-                "nbt" -> NBT(value!!)
-                "any" -> this
+                MCFPPNBTType.BaseList -> this
+                MCFPPNBTType.NBT -> NBT(javaValue!!)
+                MCFPPBaseType.Any -> this
                 else -> throw VariableConverseException()
             }
         }else{
             return when(type){
-                "list" -> this
-                "nbt" -> {
+                MCFPPNBTType.BaseList -> this
+                MCFPPNBTType.NBT -> {
                     val re = NBT(identifier)
                     re.nbtType = NBT.Companion.NBTType.LIST
                     re.parent = parent
                     re
                 }
-                "any" -> MCAny(this)
+                MCFPPBaseType.Any -> MCAny(this)
                 else -> throw VariableConverseException()
             }
         }
     }
 
-    override fun createTempVar(): Var = NBTList<T>()
-    override fun createTempVar(value: Tag<*>): Var = NBTList<T>(value as ListTag<T>)
+    override fun createTempVar(): Var<*> = NBTList<T>()
+    override fun createTempVar(value: Tag<*>): Var<*> = NBTList<T>(value as ListTag<T>)
     
     /**
      * 根据标识符获取一个成员。
@@ -103,7 +108,7 @@ class NBTList<T : Tag<*>?> : NBTBasedData, Indexable<NBT> {
      * @param accessModifier 访问者的访问权限
      * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
      */
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         TODO("Not yet implemented")
     }
 
@@ -116,22 +121,24 @@ class NBTList<T : Tag<*>?> : NBTBasedData, Indexable<NBT> {
      */
     override fun getMemberFunction(
         key: String,
-        params: List<String>,
+        params: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         TODO("Not yet implemented")
     }
 
-    override fun getByIndex(index: Var): NBT {
+
+
+    override fun getByIndex(index: Var<*>): NBT {
         return if(index is MCInt){
             if(index.isConcrete && isConcrete){
-                if(index.value!! >= (value as ListTag<T>).size()){
+                if(index.javaValue!! >= (javaValue as ListTag<T>).size()){
                     throw IndexOutOfBoundsException("Index out of bounds")
                 }else{
-                    NBT((value as ListTag<T>)[index.value!!]!!)
+                    NBT((javaValue as ListTag<T>)[index.javaValue!!]!!)
                 }
             }else {
-                (cast("nbt") as NBT).getByIntIndex(index)
+                (cast(MCFPPNBTType.NBT) as NBT).getByIntIndex(index)
             }
         }else{
             throw IllegalArgumentException("Index must be a int")

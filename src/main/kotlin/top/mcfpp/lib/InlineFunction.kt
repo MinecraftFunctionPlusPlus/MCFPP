@@ -3,6 +3,7 @@ package top.mcfpp.lib
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.antlr.*
 import top.mcfpp.lang.*
+import top.mcfpp.lang.type.MCFPPBaseType
 
 /**
  * 内联函数。
@@ -17,11 +18,13 @@ class InlineFunction : Function {
         this.context = context
     }
 
-    constructor(name: String, namespace: String, context: mcfppParser.InlineFunctionDeclarationContext) : super(name, namespace, "void") {
+    constructor(name: String, namespace: String, context: mcfppParser.InlineFunctionDeclarationContext) : super(name, namespace,
+        MCFPPBaseType.Void
+    ) {
         this.context = context
     }
 
-    override fun argPass(args: ArrayList<Var>) {
+    override fun argPass(args: ArrayList<Var<*>>) {
         for (argi in args.withIndex()){
             field.putVar(params[argi.index].identifier,argi.value,true)
         }
@@ -33,7 +36,7 @@ class InlineFunction : Function {
      * @param args
      * @param caller
      */
-    override fun invoke(args: ArrayList<Var>, caller: Var){
+    override fun invoke(args: ArrayList<Var<*>>, caller: Var<*>){
         //基本类型
         addCommand("#[Inline Function ${this.namespaceID}]")
         //传入this参数
@@ -60,7 +63,7 @@ class InlineFunction : Function {
      * @see top.mcfpp.antlr.McfppExprVisitor.visitVar
      */
     @InsertCommand
-    override fun invoke(args: ArrayList<Var>, callerClassP: ClassPointer?) {
+    override fun invoke(args: ArrayList<Var<*>>, callerClassP: ClassPointer?) {
         //基本类型
         addCommand("#[Inline Function ${this.namespaceID}]")
         //参数传递
@@ -84,7 +87,7 @@ class InlineFunction : Function {
      * @param args
      * @param struct
      */
-    override fun invoke(args: ArrayList<Var>, struct: IntTemplateBase){
+    override fun invoke(args: ArrayList<Var<*>>, struct: IntTemplateBase){
         TODO()
     }
 }

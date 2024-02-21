@@ -1,11 +1,13 @@
 package top.mcfpp.lang
 
-import top.mcfpp.Project
 import top.mcfpp.exception.VariableNotResolvedException
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
 import top.mcfpp.util.LogProcessor
+
+
 
 /**
  * 一个未被解析的变量。在读取类的字段部分的时候，由于字段的类型对应的类还没有被加载到编译器中，因此会将字段作为未解析的变量暂存在类的域中。
@@ -13,14 +15,16 @@ import top.mcfpp.util.LogProcessor
  *
  * @constructor Create empty Unresolved var
  */
-class UnresolvedVar : Var {
+class UnresolvedVar : Var<Any> {
+
+    override var javaValue: Any? = null
+
     /**
      * 变量的类型。与普通的变量不同，这里作为字符串储存，从而在解析的时候能够通过[top.mcfpp.lib.IFieldWithClass.getClass]方法获取到作为类型的类。
      */
     private val varType: String
 
-    override val type: String
-        get() = varType
+    override var type: MCFPPType
 
     /**
      * 创建一个未被解析的变量，它有指定的标识符和类型
@@ -28,6 +32,7 @@ class UnresolvedVar : Var {
     constructor(identifier: String, type: String){
         varType = type
         this.identifier = identifier
+        this.type = MCFPPType.parse(varType)
     }
 
     /**
@@ -36,7 +41,7 @@ class UnresolvedVar : Var {
      * @param fieldContainer
      * @return
      */
-    fun resolve(fieldContainer: FieldContainer): Var{
+    fun resolve(fieldContainer: FieldContainer): Var<*>{
         return build(identifier, type, fieldContainer)
     }
 
@@ -47,7 +52,7 @@ class UnresolvedVar : Var {
      *
      * @throws VariableNotResolvedException 调用此方法就会抛出此异常
      */
-    override fun assign(b: Var?) {
+    override fun assign(b: Var<*>?) {
         throw VariableNotResolvedException()
     }
 
@@ -58,7 +63,7 @@ class UnresolvedVar : Var {
      *
      * @throws VariableNotResolvedException 调用此方法就会抛出此异常
      */
-    override fun cast(type: String): Var {
+    override fun cast(type: MCFPPType): Var<*> {
         throw VariableNotResolvedException()
     }
 
@@ -67,7 +72,7 @@ class UnresolvedVar : Var {
      *
      * @return 复制的结果
      */
-    override fun clone(): Any {
+    override fun clone(): UnresolvedVar {
         return UnresolvedVar(identifier,varType)
     }
 
@@ -76,7 +81,7 @@ class UnresolvedVar : Var {
      *
      * @throws VariableNotResolvedException 调用此方法就会抛出此异常
      */
-    override fun getTempVar(): Var {
+    override fun getTempVar(): Var<*> {
         throw VariableNotResolvedException()
     }
 
@@ -99,7 +104,7 @@ class UnresolvedVar : Var {
      * @param accessModifier 访问者的访问权限
      * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
      */
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         LogProcessor.error("UnresolvedVar.getMemberVar() is called")
         throw VariableNotResolvedException()
     }
@@ -113,12 +118,13 @@ class UnresolvedVar : Var {
      */
     override fun getMemberFunction(
         key: String,
-        params: List<String>,
+        params: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         LogProcessor.error("UnresolvedVar.getMemberFunction() is called")
         throw VariableNotResolvedException()
     }
+
 
     override fun getVarValue(): Any {
         return "Unknown"

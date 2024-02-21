@@ -1,21 +1,21 @@
 package top.mcfpp.lang
 
-import top.mcfpp.Project
+import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
 import top.mcfpp.lib.UnknownFunction
 import top.mcfpp.util.LogProcessor
 
-class Void: Var("void") {
-
-    override val type: String
-        get() = "void"
+class Void: Var<Nothing>("void") {
+    override var javaValue: Nothing? = null
+    override var type: MCFPPType = MCFPPBaseType.Void
 
     /**
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var?) {
+    override fun assign(b: Var<*>?) {
         LogProcessor.error("Cannot assign value to void type variable")
     }
 
@@ -23,12 +23,12 @@ class Void: Var("void") {
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型
      */
-    override fun cast(type: String): Var {
+    override fun cast(type: MCFPPType): Var<*> {
         LogProcessor.error("Cannot cast void type variable")
         return build("unknown", type, Function.currFunction)
     }
 
-    override fun clone(): Any {
+    override fun clone(): Void {
         return Void()
     }
 
@@ -37,7 +37,7 @@ class Void: Var("void") {
      *
      * @return
      */
-    override fun getTempVar(): Var {
+    override fun getTempVar(): Var<*> {
         return this
     }
 
@@ -58,7 +58,7 @@ class Void: Var("void") {
      * @param accessModifier 访问者的访问权限
      * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
      */
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         LogProcessor.error("Cannot get member from void type variable")
         return UnknownVar(key) to true
     }
@@ -72,7 +72,7 @@ class Void: Var("void") {
      */
     override fun getMemberFunction(
         key: String,
-        params: List<String>,
+        params: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         LogProcessor.error("Cannot get member function from void type variable")

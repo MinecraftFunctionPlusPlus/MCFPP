@@ -1,5 +1,6 @@
 package top.mcfpp.lang
 
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
 
@@ -18,7 +19,7 @@ interface CanSelectMember{
      * @param accessModifier 访问者的访问权限
      * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
      */
-    fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean>
+    fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean>
 
     /**
      * 根据方法标识符和方法的参数列表获取一个方法。如果没有这个方法，则返回null
@@ -27,7 +28,7 @@ interface CanSelectMember{
      * @param params 成员方法的参数
      * @return
      */
-    fun getMemberFunction(key: String, params: List<String>, accessModifier: Member.AccessModifier): Pair<Function, Boolean>
+    fun getMemberFunction(key: String, params: List<MCFPPType>, accessModifier: Member.AccessModifier): Pair<Function, Boolean>
 
     fun getAccess(function: Function): Member.AccessModifier
 }

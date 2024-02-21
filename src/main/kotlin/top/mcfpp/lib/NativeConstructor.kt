@@ -5,7 +5,7 @@ import top.mcfpp.lang.Var
 
 class NativeConstructor(cls: Class) : Constructor(cls), Native {
     @Override
-    override fun invoke(args: ArrayList<Var>, caller: CanSelectMember?) {
+    override fun invoke(args: ArrayList<Var<*>>, caller: CanSelectMember?) {
         TODO()
     }
 }
