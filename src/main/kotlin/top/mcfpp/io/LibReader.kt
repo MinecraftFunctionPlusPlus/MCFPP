@@ -3,6 +3,8 @@ package top.mcfpp.io
 import com.alibaba.fastjson2.JSONArray
 import com.alibaba.fastjson2.JSONObject
 import top.mcfpp.lang.UnresolvedVar
+import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
 import java.io.FileReader
@@ -83,7 +85,7 @@ object LibReader {
             for (s in oo["structs"] as JSONArray){
                 val ss = s as JSONObject
                 val strId = ss["id"] as String
-                val struct = Template(strId, nspId)
+                val struct = Template(strId,MCFPPBaseType.Int, nspId) //TODO: 这里只有是Int吗？
                 //结构体的成员
                 //函数
                 for (f in ss["functions"] as JSONArray){
@@ -133,13 +135,15 @@ object LibReader {
             //是native函数
             val functionHead = jsonStr.split("->")[0]
             val javaFunction = jsonStr.split("->")[1]
+            val resType = MCFPPType.parse(functionHead.substring(0,functionHead.indexOf(' ')))
             //获取java方法
-            val nf = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction, functionHead.substring(0,functionHead.indexOf(' ')) , nspId)
+            val nf = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction, resType , nspId)
             nf.addParams(paramList)
             field.addFunction(nf,false)
         }else{
             //不是native函数
-            val func = Function(jsonStr.substring(jsonStr.indexOf(' ') + 1,jsonStr.indexOf('(')), nspId, returnType)
+            val resType = MCFPPType.parse(returnType)
+            val func = Function(jsonStr.substring(jsonStr.indexOf(' ') + 1,jsonStr.indexOf('(')), nspId,resType )
             func.addParams(paramList)
             field.addFunction(func,false)
         }
@@ -165,7 +169,9 @@ object LibReader {
             val functionHead = jsonStr.split("->")[0]
             val javaFunction = jsonStr.split("->")[1]
             //获取java方法
-            val nf = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction, nspId)
+            //TODO: 这里的返回值类型怎么弄？
+            val nf = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction,
+                MCFPPBaseType.Void, nspId)
             nf.params = paramList
             cls.staticField.addFunction(nf,false)
         }else{

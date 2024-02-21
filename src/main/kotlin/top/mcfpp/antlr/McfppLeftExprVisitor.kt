@@ -10,7 +10,7 @@ import top.mcfpp.util.StringHelper
 import java.util.*
 import kotlin.collections.ArrayList
 
-class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var?>(){
+class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>?>(){
     private var currSelector : CanSelectMember? = null
 
     /**
@@ -19,7 +19,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var?>(){
      * @return 表达式的值
      */
     @Override
-    override fun visitBasicExpression(ctx: mcfppParser.BasicExpressionContext): Var? {
+    override fun visitBasicExpression(ctx: mcfppParser.BasicExpressionContext): Var<*>? {
         Project.ctx = ctx
         return if (ctx.primary() != null) {
             visit(ctx.primary())
@@ -35,7 +35,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var?>(){
      * @return
      */
     @Override
-    override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var? {
+    override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var<*>? {
         Project.ctx = ctx
         currSelector = if(ctx.primary() != null){
             visit(ctx.primary())
@@ -66,7 +66,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var?>(){
     }
 
     @Override
-    override fun visitSelector(ctx: mcfppParser.SelectorContext?): Var? {
+    override fun visitSelector(ctx: mcfppParser.SelectorContext?): Var<*>? {
         currSelector = visit(ctx!!.`var`())!!.getTempVar()
         return null
     }
@@ -77,7 +77,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var?>(){
      * @return 表达式的值
      */
     @Override
-    override fun visitPrimary(ctx: mcfppParser.PrimaryContext): Var? {
+    override fun visitPrimary(ctx: mcfppParser.PrimaryContext): Var<*>? {
         Project.ctx = ctx
         if (ctx.`var`() != null) {
             //变量
@@ -100,7 +100,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var?>(){
             }else{
                 "this"
             }
-            val re: Var? = Function.field.getVar(s)
+            val re: Var<*>? = Function.field.getVar(s)
             if (re == null) {
                 LogProcessor.error("$s can only be used in member functions.")
             }
@@ -116,7 +116,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var?>(){
      */
     @Override
     @InsertCommand
-    override fun visitVar(ctx: mcfppParser.VarContext): Var? {
+    override fun visitVar(ctx: mcfppParser.VarContext): Var<*>? {
         Project.ctx = ctx
         return if (ctx.Identifier() != null && ctx.arguments() == null) {
             // Identifier identifierSuffix*
@@ -124,7 +124,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var?>(){
                 //没有数组选取
                 val qwq: String = ctx.Identifier().text
                 if(currSelector == null){
-                    val re: Var? = Function.field.getVar(qwq)
+                    val re: Var<*>? = Function.field.getVar(qwq)
                     if (re == null) {
                         LogProcessor.error("Undefined variable:$qwq")
                     }
@@ -161,7 +161,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var?>(){
             //函数的调用
             Function.addCommand("#" + ctx.text)
             //参数获取
-            val args: ArrayList<Var> = ArrayList()
+            val args: ArrayList<Var<*>> = ArrayList()
             val exprVisitor = McfppExprVisitor()
             if(ctx.arguments().expressionList() != null){
                 for (expr in ctx.arguments().expressionList().expression()) {
@@ -194,7 +194,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var?>(){
     }
 
     @Override
-    override fun visitConstructorCall(ctx: mcfppParser.ConstructorCallContext): Var? {
+    override fun visitConstructorCall(ctx: mcfppParser.ConstructorCallContext): Var<*>? {
         Project.ctx = ctx
         val clsstr = ctx.className().text.split(":")
         val cls: Class? = if(clsstr.size == 2) {
@@ -208,7 +208,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var?>(){
         }
         //获取参数列表
         //参数获取
-        val args: ArrayList<Var> = ArrayList()
+        val args: ArrayList<Var<*>> = ArrayList()
         val exprVisitor = McfppExprVisitor()
         if (ctx.arguments().expressionList() != null) {
             for (expr in ctx.arguments().expressionList().expression()) {

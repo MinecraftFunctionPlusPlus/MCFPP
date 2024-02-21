@@ -2,6 +2,8 @@ package top.mcfpp.lang
 
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
 import java.util.*
 import top.mcfpp.lib.Function
@@ -14,11 +16,13 @@ import top.mcfpp.lib.Function
  *
  * bool型变量实现了多种计算方法，比如与，或，非等基本的逻辑运算。
  */
-open class MCBool : Var, OnScoreboard {
+open class MCBool : Var<Boolean>, OnScoreboard {
+
     /**
      * 此bool变量含有的值。仅在它为字面量时才有效。
      */
-    var value = false
+    override var javaValue:Boolean? = false
+
 
     /**
      * 此bool变量依托的记分板
@@ -50,7 +54,7 @@ open class MCBool : Var, OnScoreboard {
      */
     constructor(curr: FieldContainer, value: Boolean, identifier: String = UUID.randomUUID().toString()) : super(curr.prefix + identifier) {
         isConcrete = true
-        this.value = value
+        this.javaValue = value
     }
 
     /**
@@ -60,7 +64,7 @@ open class MCBool : Var, OnScoreboard {
      */
     constructor(value: Boolean, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
         isConcrete = true
-        this.value = value
+        this.javaValue = value
     }
 
     /**
@@ -69,12 +73,10 @@ open class MCBool : Var, OnScoreboard {
      */
     constructor(b: MCBool) : super(b)
 
-    @get:Override
-    override val type: String
-        get() = "bool"
+    override var type: MCFPPType = MCFPPBaseType.Bool
 
     @Override
-    override fun assign(b: Var?) {
+    override fun assign(b: Var<*>?) {
         hasAssigned = true
         if (b is MCBool) {
             assignCommand(b)
@@ -84,10 +86,10 @@ open class MCBool : Var, OnScoreboard {
     }
 
     @Override
-    override fun cast(type: String): Var {
+    override fun cast(type: MCFPPType): Var<*> {
         return when(type){
-            "bool" -> this
-            "any" -> MCAny(this)
+            MCFPPBaseType.Bool -> this
+            MCFPPBaseType.Any -> MCAny(this)
             else -> throw VariableConverseException()
         }
     }
@@ -97,7 +99,7 @@ open class MCBool : Var, OnScoreboard {
         //re = t == a
         val re: MCBool
         if (isConcrete && a.isConcrete) {
-            re = MCBool(Objects.equals(value, a.value))
+            re = MCBool(Objects.equals(javaValue, a.javaValue))
         } else if (isConcrete) {
             re = a.equalCommand(this)
         } else if (a.isConcrete) {
@@ -105,7 +107,7 @@ open class MCBool : Var, OnScoreboard {
             re = MCBool()
             Function.addCommand(
                 "execute store success score " + re.name + " " + re.boolObject
-                        + " if score " + name + " " + boolObject + " matches " + if (a.value) 1 else 0
+                        + " if score " + name + " " + boolObject + " matches " + if (a.javaValue!!) 1 else 0
             )
         } else {
             re = MCBool()
@@ -122,15 +124,16 @@ open class MCBool : Var, OnScoreboard {
         //re = t != a
         val re: MCBool
         if (isConcrete && a.isConcrete) {
-            re = MCBool(!Objects.equals(value, a.value))
+            re = MCBool(!Objects.equals(javaValue, a.javaValue))
         } else if (isConcrete) {
             re = a.equalCommand(this)
         } else if (a.isConcrete) {
             //execute store success score qwq qwq if score qwq qwq = owo owo
             re = MCBool()
+
             Function.addCommand(
                 "execute store success score " + re.name + " " + re.boolObject
-                        + " unless score " + name + " " + boolObject + " matches " + if (a.value) 1 else 0
+                        + " unless score " + name + " " + boolObject + " matches " + if (a.javaValue!!) 1 else 0
             )
         } else {
             re = MCBool()
@@ -145,7 +148,7 @@ open class MCBool : Var, OnScoreboard {
     @InsertCommand
     fun negation(): MCBool {
         if (isConcrete) {
-            value = !value
+            javaValue = !javaValue!!
         } else {
             Function.addCommand(
                 "execute store success score " + name + " " + boolObject
@@ -159,11 +162,11 @@ open class MCBool : Var, OnScoreboard {
     fun or(a: MCBool): MCBool {
         val re: MCBool
         if (isConcrete && a.isConcrete) {
-            re = MCBool(value || a.value)
+            re = MCBool(javaValue!! || a.javaValue!!)
         } else if (isConcrete) {
             re = a.or(this)
         } else if (a.isConcrete) {
-            if (a.value) {
+            if (a.javaValue!!) {
                 re = MCBool(true)
             } else {
                 re = MCBool()
@@ -192,11 +195,11 @@ open class MCBool : Var, OnScoreboard {
     fun and(a: MCBool): MCBool {
         val re: MCBool
         if (isConcrete && a.isConcrete) {
-            re = MCBool(value && a.value)
+            re = MCBool(javaValue!! && a.javaValue!!)
         } else if (isConcrete) {
             re = a.and(this)
         } else if (a.isConcrete) {
-            if (!a.value) {
+            if (!a.javaValue!!) {
                 re = MCBool(false)
             } else {
                 re = MCBool()
@@ -233,7 +236,7 @@ open class MCBool : Var, OnScoreboard {
         }else{
             if (a.isConcrete) {
                 isConcrete = true
-                value = true
+                javaValue = true
             } else {
                 isConcrete = false
                 //变量进栈
@@ -258,7 +261,7 @@ open class MCBool : Var, OnScoreboard {
     }
 
     override fun getVarValue(): Any? {
-        return value
+        return javaValue
     }
 
     @Override
@@ -266,7 +269,7 @@ open class MCBool : Var, OnScoreboard {
     override fun getTempVar(): MCBool {
         if (isTemp) return this
         if (isConcrete) {
-            return MCBool(value)
+            return MCBool(javaValue!!)
         }
         val re = MCBool()
         re.assign(this)
@@ -292,7 +295,7 @@ open class MCBool : Var, OnScoreboard {
      * @param accessModifier 访问者的访问权限
      * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
      */
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         TODO("Not yet implemented")
     }
 
@@ -305,7 +308,7 @@ open class MCBool : Var, OnScoreboard {
      */
     override fun getMemberFunction(
         key: String,
-        params: List<String>,
+        params: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         TODO("Not yet implemented")

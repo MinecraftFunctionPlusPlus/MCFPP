@@ -1,6 +1,8 @@
 package top.mcfpp.lang
 
 import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.CompoundData
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Function
@@ -25,11 +27,10 @@ import java.util.*
  *型为这个变量当时值的类型。例如，`any i = 5`中`i`的类型为`any`，而`var i = 5`中`i`的类型为`int`。
  * @constructor Create empty M c any
  */
-class MCAny : Var {
-    override val type: String
-        get() = "any"
+class MCAny : Var<Var<*>> {
+    override var type: MCFPPType = MCFPPBaseType.Any
 
-    var value : Var? = null
+    override var javaValue : Var<*>? = null
 
     /**
      * 创建一个int类型的变量。它的mc名和变量所在的域容器有关。
@@ -58,11 +59,11 @@ class MCAny : Var {
      */
     constructor(
         curr: FieldContainer,
-        value: Var,
+        value: Var<*>,
         identifier: String = UUID.randomUUID().toString()
     ) : super(curr.prefix + identifier) {
         isConcrete = true
-        this.value = value
+        this.javaValue = value
     }
 
     /**
@@ -70,9 +71,9 @@ class MCAny : Var {
      * @param identifier 标识符。如不指定，则为随机uuid
      * @param value 值
      */
-    constructor(value: Var, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
+    constructor(value: Var<*>, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
         isConcrete = true
-        this.value = value
+        this.javaValue = value
     }
 
     /**
@@ -85,15 +86,15 @@ class MCAny : Var {
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var?) {
+    override fun assign(b: Var<*>?) {
         hasAssigned = true
         isConcrete = true
         when (b) {
             is MCAny -> {
-                this.value = b.value
+                this.javaValue = b.javaValue
             }
             else -> {
-                this.value = b
+                this.javaValue = b
             }
         }
     }
@@ -102,25 +103,25 @@ class MCAny : Var {
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型
      */
-    override fun cast(type: String): Var {
+    override fun cast(type: MCFPPType): Var<*> {
         return if(isConcrete){
             when(type){
-                "MCAny" -> this
-                else -> value!!.cast(type)
+                MCFPPBaseType.Any -> this
+                else -> javaValue!!.cast(type)
             }
         }else{
             when(type){
-                "MCAny" -> this
+                MCFPPBaseType.Any -> this
                 else -> throw VariableConverseException()
             }
         }
     }
 
     override fun getVarValue(): Any? {
-        return value
+        return javaValue
     }
 
-    override fun clone(): Any {
+    override fun clone(): MCAny {
         return MCAny(this)
     }
 
@@ -129,7 +130,7 @@ class MCAny : Var {
      *
      * @return
      */
-    override fun getTempVar(): Var {
+    override fun getTempVar(): Var<*> {
         return this
     }
 
@@ -146,7 +147,7 @@ class MCAny : Var {
      * @param accessModifier 访问者的访问权限
      * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
      */
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var?, Boolean> {
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         return data.field.getVar(key) to true
     }
 
@@ -159,7 +160,7 @@ class MCAny : Var {
      */
     override fun getMemberFunction(
         key: String,
-        params: List<String>,
+        params: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         return data.field.getFunction(key, params) to true
@@ -170,7 +171,7 @@ class MCAny : Var {
 
         init {
             data.initialize()
-            data.field.addFunction(NativeFunction("toString",MCAnyData::class.java,"string","mcfpp"),false)
+            data.field.addFunction(NativeFunction("toString",MCAnyData::class.java,MCFPPBaseType.String,"mcfpp"),false)
         }
     }
 }

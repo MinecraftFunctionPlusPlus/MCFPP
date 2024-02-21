@@ -7,7 +7,7 @@ import top.mcfpp.util.ValueWrapper;
 
 public class MCAnyData {
     @MCFPPNative
-    public static void toString(@NotNull Var[] vars, CanSelectMember caller, ValueWrapper<Var> output) {
+    public static void toString(@NotNull Var<?>[] vars, CanSelectMember caller, ValueWrapper<Var> output) {
         //不会有参数
         Function.Companion.addCommand("tellraw @a " + caller);
     }

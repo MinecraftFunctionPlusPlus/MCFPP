@@ -8,6 +8,8 @@ import top.mcfpp.command.CommandList
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.*
 import top.mcfpp.lang.*
+import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Annotation
 import top.mcfpp.lib.Function
@@ -41,7 +43,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 f.addParams((ctx.parent as mcfppParser.FunctionDeclarationContext).parameterList())
             }
             //获取缓存中的对象
-            f = GlobalField.getFunction(f.namespace, f.identifier, f.paramTypeList)!!
+            f = GlobalField.getFunctionInner(f.namespace, f.identifier, f.paramTypeList)!!
         } else if (ctx.parent is mcfppParser.ConstructorDeclarationContext) {
             //是构造函数
             //创建构造函数对象并解析参数
@@ -147,7 +149,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     fun exitFunctionBody(ctx: mcfppParser.FunctionBodyContext) {
         Project.ctx = ctx
         //函数是否有返回值
-        if(Function.currFunction.returnType != "void" && !Function.currFunction.hasReturnStatement){
+        if(Function.currFunction.returnType !=  MCFPPBaseType.Void && !Function.currFunction.hasReturnStatement){
             LogProcessor.error("A 'return' expression required in function: " + Function.currFunction.namespaceID)
         }
         if (Class.currClass == null) {
@@ -190,7 +192,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         }
         if(ctx.VAR() != null){
             //自动判断类型
-            val init: Var = McfppExprVisitor().visit(ctx.expression())!!
+            val init: Var<*> = McfppExprVisitor().visit(ctx.expression())!!
             val `var` = Var.build(ctx.Identifier().text, init.type, Function.currFunction)
             //变量注册
             //一定是函数变量
@@ -226,8 +228,9 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
             }
         }else{
             for (c in ctx.fieldDeclarationExpression()){
+                val type = MCFPPType.parse(ctx.type().text)
                 //函数变量，生成
-                val `var` = Var.build(c.Identifier().text, ctx.type().text, Function.currFunction)
+                val `var` = Var.build(c.Identifier().text, type, Function.currFunction)
                 //变量注册
                 //一定是函数变量
                 if (!Function.field.putVar(c.Identifier().text, `var`,true)) {
@@ -236,7 +239,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 Function.addCommand("#field: " + ctx.type().text + " " + c.Identifier().text + if (c.expression() != null) " = " + c.expression().text else "")
                 //变量初始化
                 if (c.expression() != null) {
-                    val init: Var = McfppExprVisitor().visit(c.expression())!!
+                    val init: Var<*> = McfppExprVisitor().visit(c.expression())!!
                     try {
                         if(`var` is MCInt && init is MCInt && !init.isConcrete){
                             Function.currFunction.commands.replaceThenAnalyze(init.name to `var`.name, init.`object`.name to `var`.`object`.name)
@@ -279,9 +282,9 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     override fun visitStatementExpression(ctx: mcfppParser.StatementExpressionContext):Any? {
         Project.ctx = ctx
         Function.addCommand("#expression: " + ctx.text)
-        val right: Var = McfppExprVisitor().visit(ctx.expression())!!
+        val right: Var<*> = McfppExprVisitor().visit(ctx.expression())!!
         if(ctx.basicExpression() != null){
-            val left: Var = McfppLeftExprVisitor().visit(ctx.basicExpression())!!
+            val left: Var<*> = McfppLeftExprVisitor().visit(ctx.basicExpression())!!
             if (left.isConst) {
                 LogProcessor.error("Cannot assign a constant repeatedly: " + left.identifier)
                 return null
@@ -321,7 +324,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
             return null
         }
         //参数解析
-        val params = ArrayList<Var>()
+        val params = ArrayList<Var<*>>()
         if(ctx.arguments()?.expressionList() != null){
             for (e in ctx.arguments().expressionList().expression()){
                 params.add(McfppExprVisitor().visit(e)!!)
@@ -377,7 +380,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         Project.ctx = ctx
         Function.addCommand("#" + ctx!!.text)
         if (ctx.expression() != null) {
-            val ret: Var = McfppExprVisitor().visit(ctx.expression())!!
+            val ret: Var<*> = McfppExprVisitor().visit(ctx.expression())!!
             Function.currBaseFunction.returnVar(ret)
         }
         if(Function.currFunction !is InternalFunction)
@@ -458,7 +461,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
             if(exp !is MCBool){
                 throw TypeCastException()
             }
-            if (exp.isConcrete && exp.value) {
+            if (exp.isConcrete && exp.javaValue==true) {
                 //函数调用的命令
                 //给子函数开栈
                 Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
@@ -583,7 +586,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
             GlobalField.localNamespaces[f.namespace] = NamespaceField()
         GlobalField.localNamespaces[f.namespace]!!.addFunction(f,false)
         //条件判断
-        if (exp.isConcrete && exp.value) {
+        if (exp.isConcrete && exp.javaValue==true) {
             //给子函数开栈
             Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
             Function.addCommand(
@@ -701,7 +704,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         val exp: MCBool = McfppExprVisitor().visit(parent.expression()) as MCBool
         Function.addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
         //递归调用
-        if (exp.isConcrete && exp.value) {
+        if (exp.isConcrete && exp.javaValue==true) {
             //给子函数开栈
             Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
             Function.addCommand(
@@ -865,7 +868,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
             GlobalField.localNamespaces[f.namespace] = NamespaceField()
         GlobalField.localNamespaces[f.namespace]!!.addFunction(f,false)
         //条件循环判断
-        if (exp.isConcrete && exp.value) {
+        if (exp.isConcrete && exp.javaValue==true) {
             //给子函数开栈
             Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
             Function.addCommand(

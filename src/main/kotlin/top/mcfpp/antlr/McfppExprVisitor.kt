@@ -6,6 +6,7 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.exception.*
 import top.mcfpp.lang.*
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
 import top.mcfpp.util.LogProcessor
@@ -21,11 +22,11 @@ import kotlin.system.exitProcess
 /**
  * 获取表达式结果用的visitor。解析并计算一个形如a+b*c的表达式。
  */
-class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
+class McfppExprVisitor: mcfppParserBaseVisitor<Var<*>?>() {
 
-    private val tempVarCommandCache = HashMap<Var, String>()
+    private val tempVarCommandCache = HashMap<Var<*>, String>()
 
-    var processVarCache : ArrayList<Var> = ArrayList()
+    var processVarCache : ArrayList<Var<*>> = ArrayList()
     fun clearCache(){processVarCache.clear()}
 
     private var currSelector : CanSelectMember? = null
@@ -36,7 +37,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
      * @return 表达式的结果
      */
     @Override
-    override fun visitExpression(ctx: mcfppParser.ExpressionContext): Var? {
+    override fun visitExpression(ctx: mcfppParser.ExpressionContext): Var<*>? {
         Project.ctx = ctx
         val l = Function.currFunction
         val f = NoStackFunction("expression_${UUID.randomUUID()}",Function.currFunction)
@@ -78,7 +79,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
      * @return 表达式的值
      */
     @Override
-    override fun visitConditionalOrExpression(ctx: mcfppParser.ConditionalOrExpressionContext): Var? {
+    override fun visitConditionalOrExpression(ctx: mcfppParser.ConditionalOrExpressionContext): Var<*>? {
         Project.ctx = ctx
         if(ctx.conditionalAndExpression().size != 1){
             val list = ArrayList<ReturnedMCBool>()
@@ -92,14 +93,14 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
                     GlobalField.localNamespaces[temp.namespace] = NamespaceField()
                 GlobalField.localNamespaces[temp.namespace]!!.addFunction(temp,false)
                 Function.currFunction = temp
-                val b: Var? = visit(ctx.conditionalAndExpression(i))
+                val b: Var<*>? = visit(ctx.conditionalAndExpression(i))
                 Function.currFunction = l
                 if (b !is MCBool) {
                     LogProcessor.error("The operator \"&&\" cannot be used with ${b!!.type}")
                     throw IllegalArgumentException("")
                 }
                 if(b.isConcrete && isConcrete){
-                    result = result || b.value
+                    result = result || b.javaValue==true
                 }else{
                     isConcrete = false
                 }
@@ -124,7 +125,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
      */
     //和
     @Override
-    override fun visitConditionalAndExpression(ctx: mcfppParser.ConditionalAndExpressionContext): Var? {
+    override fun visitConditionalAndExpression(ctx: mcfppParser.ConditionalAndExpressionContext): Var<*>? {
         Project.ctx = ctx
         if(ctx.equalityExpression().size != 1){
             val list = ArrayList<ReturnedMCBool>()
@@ -138,14 +139,14 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
                     GlobalField.localNamespaces[temp.namespace] = NamespaceField()
                 GlobalField.localNamespaces[temp.namespace]!!.addFunction(temp,false)
                 Function.currFunction = temp
-                val b: Var? = visit(ctx.equalityExpression(i))
+                val b: Var<*>? = visit(ctx.equalityExpression(i))
                 Function.currFunction = l
                 if (b !is MCBool) {
                     LogProcessor.error("The operator \"&&\" cannot be used with ${b!!.type}")
                     throw IllegalArgumentException("")
                 }
                 if(b.isConcrete && isConcrete){
-                    result = result && b.value
+                    result = result && b.javaValue==true
                 }else{
                     isConcrete = false
                 }
@@ -172,11 +173,11 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
      * @return 表达式的值
      */
     @Override
-    override fun visitEqualityExpression(ctx: mcfppParser.EqualityExpressionContext): Var? {
+    override fun visitEqualityExpression(ctx: mcfppParser.EqualityExpressionContext): Var<*>? {
         Project.ctx = ctx
-        var re: Var? = visit(ctx.relationalExpression(0))
+        var re: Var<*>? = visit(ctx.relationalExpression(0))
         if (ctx.relationalExpression().size != 1) {
-            val b: Var? = visit(ctx.relationalExpression(1))
+            val b: Var<*>? = visit(ctx.relationalExpression(1))
             if(!re!!.isTemp){
                 re = re.getTempVar()
             }
@@ -213,11 +214,11 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
      * @return 表达式的值
      */
     @Override
-    override fun visitRelationalExpression(ctx: mcfppParser.RelationalExpressionContext): Var? {
+    override fun visitRelationalExpression(ctx: mcfppParser.RelationalExpressionContext): Var<*>? {
         Project.ctx = ctx
-        var re: Var? = visit(ctx.additiveExpression(0))
+        var re: Var<*>? = visit(ctx.additiveExpression(0))
         if (ctx.additiveExpression().size != 1) {
-            val b: Var? = visit(ctx.additiveExpression(1))
+            val b: Var<*>? = visit(ctx.additiveExpression(1))
             if (re is MCInt && b is MCInt) {
                 when (ctx.relationalOp().text) {
                     ">" -> re = re.isGreater(b)
@@ -240,19 +241,19 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
         return re
     }
 
-    private var visitAdditiveExpressionRe : Var? = null
+    private var visitAdditiveExpressionRe : Var<*>? = null
     /**
      * 计算一个加减法表达式，例如a + b
      * @param ctx the parse tree
      * @return 表达式的值
      */
     @Override
-    override fun visitAdditiveExpression(ctx: mcfppParser.AdditiveExpressionContext): Var? {
+    override fun visitAdditiveExpression(ctx: mcfppParser.AdditiveExpressionContext): Var<*>? {
         Project.ctx = ctx
         visitAdditiveExpressionRe = visit(ctx.multiplicativeExpression(0))
         processVarCache.add(visitAdditiveExpressionRe!!)
         for (i in 1 until ctx.multiplicativeExpression().size) {
-            var b: Var? = visit(ctx.multiplicativeExpression(i))
+            var b: Var<*>? = visit(ctx.multiplicativeExpression(i))
             if(b is MCFloat) b = b.toTempEntity()
             if(visitAdditiveExpressionRe!! != MCFloat.ssObj){
                 visitAdditiveExpressionRe = visitAdditiveExpressionRe!!.getTempVar()
@@ -275,7 +276,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
         return visitAdditiveExpressionRe
     }
 
-    private var visitMultiplicativeExpressionRe : Var? = null
+    private var visitMultiplicativeExpressionRe : Var<*>? = null
 
     /**
      * 计算一个乘除法表达式，例如a * b
@@ -284,12 +285,12 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
      */
     //乘法
     @Override
-    override fun visitMultiplicativeExpression(ctx: mcfppParser.MultiplicativeExpressionContext): Var? {
+    override fun visitMultiplicativeExpression(ctx: mcfppParser.MultiplicativeExpressionContext): Var<*>? {
         Project.ctx = ctx
         visitMultiplicativeExpressionRe = visit(ctx.unaryExpression(0))
         processVarCache.add(visitMultiplicativeExpressionRe!!)
         for (i in 1 until ctx.unaryExpression().size) {
-            var b: Var? = visit(ctx.unaryExpression(i))
+            var b: Var<*>? = visit(ctx.unaryExpression(i))
             if(b is MCFloat) b = b.toTempEntity()
             if(visitMultiplicativeExpressionRe != MCFloat.ssObj){
                 visitMultiplicativeExpressionRe = visitMultiplicativeExpressionRe!!.getTempVar()
@@ -323,12 +324,12 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
      * @return 表达式的值
      */
     @Override
-    override fun visitUnaryExpression(ctx: mcfppParser.UnaryExpressionContext): Var? {
+    override fun visitUnaryExpression(ctx: mcfppParser.UnaryExpressionContext): Var<*>? {
         Project.ctx = ctx
         return if (ctx.rightVarExpression() != null) {
             visit(ctx.rightVarExpression())
         } else if (ctx.unaryExpression() != null) {
-            var a: Var? = visit(ctx.unaryExpression())
+            var a: Var<*>? = visit(ctx.unaryExpression())
             if (a is MCBool) {
                 if(!a.isTemp){
                     a = a.getTempVar()
@@ -352,10 +353,10 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
      * @return 表达式的值
      */
     @Override
-    override fun visitCastExpression(ctx: mcfppParser.CastExpressionContext): Var? {
+    override fun visitCastExpression(ctx: mcfppParser.CastExpressionContext): Var<*>? {
         Project.ctx = ctx
-        val a: Var? = visit(ctx.unaryExpression())
-        return a!!.cast(ctx.type().text)
+        val a: Var<*>? = visit(ctx.unaryExpression())
+        return a!!.cast( MCFPPType.parse(ctx.type().text))
     }
 
     /**
@@ -365,7 +366,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
      * @return
      */
     @Override
-    override fun visitRightVarExpression(ctx: mcfppParser.RightVarExpressionContext?): Var {
+    override fun visitRightVarExpression(ctx: mcfppParser.RightVarExpressionContext?): Var<*> {
         return visit(ctx!!.basicExpression())!!
         //return visit(ctx!!.basicExpression())!!.getTempVar(tempVarCommandCache)
     }
@@ -376,7 +377,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
      * @return 表达式的值
      */
     @Override
-    override fun visitBasicExpression(ctx: mcfppParser.BasicExpressionContext): Var? {
+    override fun visitBasicExpression(ctx: mcfppParser.BasicExpressionContext): Var<*>? {
         Project.ctx = ctx
         return if (ctx.primary() != null) {
             visit(ctx.primary())
@@ -392,7 +393,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
      * @return
      */
     @Override
-    override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var? {
+    override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var<*>? {
         Project.ctx = ctx
         currSelector = if(ctx.primary() != null){
             visit(ctx.primary())
@@ -424,11 +425,11 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
         for (selector in ctx.selector()){
             visit(selector)
         }
-        return currSelector as? Var
+        return currSelector as? Var<*>
     }
 
     @Override
-    override fun visitSelector(ctx: mcfppParser.SelectorContext?): Var? {
+    override fun visitSelector(ctx: mcfppParser.SelectorContext?): Var<*>? {
         currSelector = visit(ctx!!.`var`())!!.getTempVar()
         return null
     }
@@ -439,7 +440,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
      * @return 表达式的值
      */
     @Override
-    override fun visitPrimary(ctx: mcfppParser.PrimaryContext): Var? {
+    override fun visitPrimary(ctx: mcfppParser.PrimaryContext): Var<*>? {
         Project.ctx = ctx
         if (ctx.`var`() != null) {
             //变量
@@ -465,7 +466,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
                         val res = visit(expressionContext) //没有解析值的话，应该变成jtext
                         if(res!=null && !res.isConcrete){ isConcrete = false } //这个条件就是说，整个模版中出现没有解析值的情况了
                         if(res is MCInt){
-                            r = res.value.toString()
+                            r = res.javaValue.toString()
                         }
                         else{
                             r=res.toString()
@@ -489,7 +490,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
             return visit(ctx.constructorCall())
         } else{
             //this或者super
-            val re: Var? = Function.field.getVar(ctx.text)
+            val re: Var<*>? = Function.field.getVar(ctx.text)
             if (re == null) {
                 LogProcessor.error("${ctx.text} can only be used in member functions.")
             }
@@ -505,13 +506,13 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
      */
     @Override
     @InsertCommand
-    override fun visitVar(ctx: mcfppParser.VarContext): Var? {
+    override fun visitVar(ctx: mcfppParser.VarContext): Var<*>? {
         Project.ctx = ctx
         if (ctx.Identifier() != null && ctx.arguments() == null) {
             //没有数组选取
             val qwq: String = ctx.Identifier().text
             var re = if(currSelector == null){
-                val re: Var? = Function.field.getVar(qwq)
+                val re: Var<*>? = Function.field.getVar(qwq)
                 if (re == null) {
                     LogProcessor.error("Undefined variable:$qwq")
                     throw Exception()
@@ -553,7 +554,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
             //函数的调用
             Function.addCommand("#" + ctx.text)
             //参数获取
-            val args: ArrayList<Var> = ArrayList()
+            val args: ArrayList<Var<*>> = ArrayList()
             val exprVisitor = McfppExprVisitor()
             if(ctx.arguments().expressionList() != null){
                 for (expr in ctx.arguments().expressionList().expression()) {
@@ -589,7 +590,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
     }
 
     @Override
-    override fun visitConstructorCall(ctx: mcfppParser.ConstructorCallContext): Var {
+    override fun visitConstructorCall(ctx: mcfppParser.ConstructorCallContext): Var<*> {
         Project.ctx = ctx
         val clsstr = ctx.className().text.split(":")
         val cls: Class? = if(clsstr.size == 2) {
@@ -603,7 +604,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var?>() {
         }
         //获取参数列表
         //参数获取
-        val args: ArrayList<Var> = ArrayList()
+        val args: ArrayList<Var<*>> = ArrayList()
         val exprVisitor = McfppExprVisitor()
         if (ctx.arguments().expressionList() != null) {
             for (expr in ctx.arguments().expressionList().expression()) {

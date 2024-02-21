@@ -3,6 +3,7 @@ package top.mcfpp.lib
 import org.jetbrains.annotations.Nullable
 import top.mcfpp.Project
 import top.mcfpp.lang.SbObject
+import top.mcfpp.lang.type.MCFPPType
 import java.util.*
 import kotlin.collections.HashMap
 
@@ -62,6 +63,11 @@ object GlobalField : FieldContainer, IField {
         return this
     }
 
+    fun getFunction(@Nullable namespace:String?, identifier: String, args : List<String>): Function {
+        val argTypesList = args.map { MCFPPType.parse(it) }
+        return getFunctionInner(namespace,identifier,argTypesList)
+    }
+
     /**
      * 从当前的全局域获取一个函数。若不存在，则返回null。
      *
@@ -73,12 +79,12 @@ object GlobalField : FieldContainer, IField {
      *
      * @return 获取的函数。如果有多个相同函数（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
      */
-    fun getFunction(@Nullable namespace:String?, identifier: String, args : List<String>): Function{
+    fun getFunctionInner(@Nullable namespace:String?, identifier: String, argTypesList : List<MCFPPType>): Function{
         if(namespace == null){
-            val f = localNamespaces[Project.currNamespace]!!.getFunction(identifier, args)
+            val f = localNamespaces[Project.currNamespace]!!.getFunction(identifier, argTypesList)
             if(f != null) return f
             for (n in importedLibNamespaces.values){
-                val f1 = n.getFunction(identifier, args)
+                val f1 = n.getFunction(identifier, argTypesList)
                 if(f1 != null) return f1
             }
             return UnknownFunction(identifier)
@@ -87,7 +93,7 @@ object GlobalField : FieldContainer, IField {
         if(field == null){
             field = libNamespaces[namespace]
         }
-        return field?.getFunction(identifier, args)?:UnknownFunction(identifier)
+        return field?.getFunction(identifier, argTypesList)?:UnknownFunction(identifier)
     }
 
     /**

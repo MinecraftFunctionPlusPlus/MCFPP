@@ -6,6 +6,7 @@ import top.mcfpp.compiletime.CompileTimeFunction
 import top.mcfpp.exception.*
 import top.mcfpp.exception.IllegalFormatException
 import top.mcfpp.lang.*
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Class
 import top.mcfpp.lib.Function
@@ -195,11 +196,12 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
     
     override fun visitInterfaceFunctionDeclaration(ctx: mcfppParser.InterfaceFunctionDeclarationContext): Any? {
         Project.ctx = ctx
+        val type = MCFPPType.parse(if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text)
         //创建函数对象
         val f = Function(
             ctx.Identifier().text,
             Interface.currInterface!!,
-            if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text
+            type
         )
         //解析参数
         f.addParams(ctx.parameterList())
@@ -401,15 +403,16 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
     
     override fun visitClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext): Any {
         Project.ctx = ctx
+        val type = MCFPPType.parse(if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text)
         //创建函数对象
         val f = Function(
             ctx.Identifier().text,
             Class.currClass!!,
             ctx.parent is mcfppParser.StaticClassMemberDeclarationContext,
-            if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text
+            type
         )
         if(!isStatic){
-            val thisObj = Var.build("this", Class.currClass!!.identifier, f)
+            val thisObj = Var.build("this", MCFPPType.parse(Class.currClass!!.identifier), f)
             f.field.putVar("this",thisObj)
         }
         //解析参数
@@ -432,12 +435,13 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
     
     override fun visitAbstractClassFunctionDeclaration(ctx: mcfppParser.AbstractClassFunctionDeclarationContext): Any {
         Project.ctx = ctx
+        val type = MCFPPType.parse(ctx.functionReturnType().text)
         //创建函数对象
         val f = Function(
             ctx.Identifier().text,
             Class.currClass!!,
             ctx.parent is mcfppParser.StaticClassMemberDeclarationContext,
-            ctx.functionReturnType().text
+            type
         )
         f.isAbstract = true
         if(f.isStatic){
@@ -456,8 +460,9 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
 
     override fun visitNativeClassFunctionDeclaration(ctx: mcfppParser.NativeClassFunctionDeclarationContext): Any? {
         Project.ctx = ctx
+        val type = MCFPPType.parse(ctx.functionReturnType().text)
         val nf: NativeFunction = try {
-            NativeFunction(ctx.Identifier().text, ctx.javaRefer().text, ctx.functionReturnType().text)
+            NativeFunction(ctx.Identifier().text, ctx.javaRefer().text, type)
         } catch (e: IllegalFormatException) {
             LogProcessor.error("Illegal Java Method Name:" + e.message)
             return null
@@ -504,7 +509,8 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
         //只有类字段构建
         val reList = ArrayList<Member>()
         val c = ctx.fieldDeclarationExpression()
-        val `var`: Var = Var.build(c.Identifier().text, ctx.type().text, Class.currClass!!)
+        val type = MCFPPType.parse(ctx.type().text)
+        val `var`: Var<*> = Var.build(c.Identifier().text,type , Class.currClass!!)
         //是否是静态的
         if(isStatic){
             `var`.isStatic = true
@@ -528,7 +534,7 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
             }
             //是类的成员
             Function.addCommand("#" + ctx.text)
-            val init: Var = McfppExprVisitor().visit(c.expression())!!
+            val init: Var<*> = McfppExprVisitor().visit(c.expression())!!
             try {
                 `var`.assign(init)
             } catch (e: VariableConverseException) {
@@ -559,7 +565,8 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
         //是否是内联函数
         //是否是内联函数
         val identifier : String = ctx.Identifier().text
-        f = Function(identifier, Project.currNamespace, if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text)
+        val type = MCFPPType.parse(if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text)
+        f = Function(identifier, Project.currNamespace,type )
         //解析参数
         f.addParams(ctx.parameterList())
         //TODO 解析函数的注解
@@ -611,10 +618,11 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
         //创建函数对象
         val f: Function
         //是否是编译时函数
+        val type = MCFPPType.parse(if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text )
         val identifier : String = ctx.Identifier().text
         f = CompileTimeFunction(
             identifier,Project.currNamespace,
-            if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text ,
+            type,
             ctx.functionBody()
         )
         //解析参数
@@ -678,7 +686,8 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
             }
         }
         //创建函数对象
-        val f = ExtensionFunction(ctx.Identifier().text, data, Project.currNamespace, ctx.functionReturnType().text)
+        val type = MCFPPType.parse(ctx.functionReturnType().text)
+        val f = ExtensionFunction(ctx.Identifier().text, data, Project.currNamespace,type )
         //解析参数
         f.accessModifier = AccessModifier.PUBLIC
         f.ownerType = ownerType
@@ -702,7 +711,8 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
     override fun visitNativeFuncDeclaration(ctx: mcfppParser.NativeFuncDeclarationContext): Any? {
         Project.ctx = ctx
         val nf: NativeFunction = try {
-            NativeFunction(ctx.Identifier().text, ctx.javaRefer().text, if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text)
+            val type = MCFPPType.parse(if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text)
+            NativeFunction(ctx.Identifier().text, ctx.javaRefer().text, type)
         } catch (e: IllegalFormatException) {
             LogProcessor.error("Illegal Java Method Name:" + e.message)
             return null
@@ -739,7 +749,8 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
             LogProcessor.error("Template has been defined: $id in namespace ${Project.currNamespace}")
             Template.currTemplate = field.getTemplate(id)
         }
-        val struct = Template(id, ctx.genericity().type().text, Project.currNamespace)
+        val type = MCFPPType.parse(ctx.genericity().type().text)
+        val struct = Template(id, type, Project.currNamespace)
         if (ctx.className() != null) {
             //是否存在继承
             val qwq = ctx.className().text.split(":")
@@ -832,7 +843,7 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
             }
         }else if(m is ArrayList<*>){
             for(v in m){
-                (v as Var).accessModifier = accessModifier
+                (v as Var<*>).accessModifier = accessModifier
             }
         }
         return null
@@ -852,15 +863,17 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
 
     override fun visitTemplateFunctionDeclaration(ctx: mcfppParser.TemplateFunctionDeclarationContext): Any {
         Project.ctx = ctx
+        val type = MCFPPType.parse(if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text)
         //创建函数对象
         val f = Function(
             ctx.Identifier().text,
             Template.currTemplate!!,
             ctx.parent is mcfppParser.StaticTemplateMemberDeclarationContext,
-            if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text
+            type
         )
         if(!isStatic){
-            val thisObj = Var.build("this", Template.currTemplate!!.identifier, f)
+            val varType = MCFPPType.parse(Template.currTemplate!!.identifier)
+            val thisObj = Var.build("this",varType , f)
             f.field.putVar("this",thisObj)
         }
         //解析参数
@@ -873,19 +886,19 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
         return f
     }
 
-    override fun visitTemplateFieldDeclaration(ctx: mcfppParser.TemplateFieldDeclarationContext): ArrayList<Var> {
+    override fun visitTemplateFieldDeclaration(ctx: mcfppParser.TemplateFieldDeclarationContext): ArrayList<Var<*>> {
         Project.ctx = ctx
-        val re = ArrayList<Var>()
+        val re = ArrayList<Var<*>>()
         for (i in ctx.templateFieldDeclarationExpression()){
             //变量生成
-            val `var` = visit(i) as Var
+            val `var` = visit(i) as Var<*>
             re.add(`var`)
         }
         return re
     }
 
-    override fun visitTemplateFieldDeclarationExpression(ctx: mcfppParser.TemplateFieldDeclarationExpressionContext): Var? {
-        val `var`: Var = Var.build(ctx.Identifier().text,Template.currTemplate!!.dataType, Template.currTemplate!!)
+    override fun visitTemplateFieldDeclarationExpression(ctx: mcfppParser.TemplateFieldDeclarationExpressionContext): Var<*>? {
+        val `var`: Var<*> = Var.build(ctx.Identifier().text,Template.currTemplate!!.dataType, Template.currTemplate!!)
         //是否是静态的
         `var`.isStatic = isStatic
         //只有可能是结构体成员

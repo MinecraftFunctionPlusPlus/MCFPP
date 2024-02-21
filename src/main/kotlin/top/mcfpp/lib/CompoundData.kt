@@ -2,6 +2,7 @@ package top.mcfpp.lib
 
 import top.mcfpp.Project
 import top.mcfpp.lang.Var
+import top.mcfpp.lang.type.MCFPPType
 
 open class CompoundData : FieldContainer {
 
@@ -58,7 +59,7 @@ open class CompoundData : FieldContainer {
      * @param isStatic 是否是静态成员
      * @return 如果字段存在，则返回此字段，否则返回null
      */
-    fun getVar(key: String, isStatic: Boolean = false): Var? {
+    fun getVar(key: String, isStatic: Boolean = false): Var<*>? {
         var re = if(isStatic){
             staticField.getVar(key)
         }else{
@@ -80,7 +81,7 @@ open class CompoundData : FieldContainer {
      *
      * @return 如果函数存在，则返回此函数，否则返回null
      */
-    fun getFunction(key: String, params: List<String>, isStatic: Boolean = false): Function {
+    fun getFunction(key: String, params: List<MCFPPType>, isStatic: Boolean = false): Function {
         var re = if(isStatic){
             staticField.getFunction(key, params)
         }else{
@@ -102,7 +103,7 @@ open class CompoundData : FieldContainer {
         if (!member.isStatic) {
             if (member is Function) {
                 field.addFunction(member, false)
-            } else if (member is Var) {
+            } else if (member is Var<*>) {
                 field.putVar(member.identifier, member)
             }
             return
@@ -110,7 +111,7 @@ open class CompoundData : FieldContainer {
         //静态成员
         if (member is Function) {
             staticField.addFunction(member, false)
-        } else if (member is Var) {
+        } else if (member is Var<*>) {
             staticField.putVar(member.identifier, member)
         }
     }

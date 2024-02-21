@@ -16,10 +16,10 @@ public class NBTListData {
      * @param vars 要添加的元素
      * @param caller 调用者
      */
-    public static void add(Var[] vars, CanSelectMember caller){
+    public static void add(Var<?>[] vars, CanSelectMember caller){
     }
 
-    public static void addAll(Var[] vars, CanSelectMember caller){
+    public static void addAll(Var<?>[] vars, CanSelectMember caller){
 
     }
 
