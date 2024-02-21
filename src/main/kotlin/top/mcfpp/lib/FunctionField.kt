@@ -17,7 +17,7 @@ open class FunctionField : IFieldWithVar {
     /**
      * 变量
      */
-    protected val vars: HashMap<String, Var> = HashMap()
+    protected val vars: HashMap<String, Var<*>> = HashMap()
 
     /**
      * 父级域。函数的父级域可能是全局，也可能是类
@@ -49,7 +49,7 @@ open class FunctionField : IFieldWithVar {
      * @param var 变量的对象
      * @return 如果缓存中已经存在此对象，则返回false，否则返回true。
      */
-    override fun putVar(key: String, `var`: Var, forced: Boolean): Boolean {
+    override fun putVar(key: String, `var`: Var<*>, forced: Boolean): Boolean {
         fieldVarSet.add(key)
         if(forced){
             vars[key] = `var`
@@ -68,8 +68,8 @@ open class FunctionField : IFieldWithVar {
      * @param key 变量的标识符
      * @return 变量的对象。若不存在，则返回null。
      */
-    override fun getVar(key: String): Var? {
-        val re: Var? = vars.getOrDefault(key, null)
+    override fun getVar(key: String): Var<*>? {
+        val re: Var<*>? = vars.getOrDefault(key, null)
         if (re != null) {
             re.stackIndex = 0
         }
@@ -77,7 +77,7 @@ open class FunctionField : IFieldWithVar {
     }
 
 
-    override val allVars: Collection<Var>
+    override val allVars: Collection<Var<*>>
         /**
          * 获取此缓存中的全部变量。不会从父缓存搜索。
          * @return 一个包含了此缓存全部变量的集合。
@@ -99,11 +99,11 @@ open class FunctionField : IFieldWithVar {
      * @param id 变量名
      * @return 若变量存在，则返回被移除的变量，否则返回空
      */
-    override fun removeVar(id : String): Var?{
+    override fun removeVar(id : String): Var<*>?{
         return vars.remove(id)
     }
 
-    override fun forEachVar(action: (Var) -> Any?) {
+    override fun forEachVar(action: (Var<*>) -> Any?) {
         for (v in vars.values){
             action(v)
         }
@@ -125,8 +125,8 @@ open class FunctionField : IFieldWithVar {
             val newFunctionField = FunctionField(functionField.parent,null)
             //变量复制
             for (key in functionField.vars.keys) {
-                val `var`: Var? = functionField.vars[key]
-                newFunctionField.vars[key] = `var`!!.clone() as Var
+                val `var`: Var<*>? = functionField.vars[key]
+                newFunctionField.vars[key] = `var`!!.clone() as Var<*>
             }
             newFunctionField.fieldVarSet.addAll(functionField.fieldVarSet)
             return newFunctionField

@@ -1,5 +1,7 @@
 package top.mcfpp.lib
 
+import top.mcfpp.lang.type.MCFPPType
+
 interface IFieldWithFunction: IField {
 
     /**
@@ -8,7 +10,7 @@ interface IFieldWithFunction: IField {
      * @param argsTypes 参数类型
      * @return 如果此缓存中存在这个函数，则返回这个函数的对象，否则返回null
      */
-    fun getFunction(key: String, argsTypes: List<String>): Function?
+    fun getFunction(key: String, argsTypes: List<MCFPPType>): Function?
 
     /**
      * 添加一个函数

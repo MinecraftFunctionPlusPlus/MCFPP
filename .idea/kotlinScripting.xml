@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<project version="4">
-  <component name="KotlinScriptingSettings" supportWarning="false">
-    <scriptDefinition className="org.jetbrains.kotlin.idea.core.script.StandardIdeScriptDefinition" definitionName="Kotlin Script">
-      <order>2147483647</order>
-      <autoReloadConfigurations>true</autoReloadConfigurations>
-    </scriptDefinition>
-  </component>
-</project>

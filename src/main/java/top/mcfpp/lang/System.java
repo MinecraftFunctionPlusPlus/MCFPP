@@ -10,16 +10,16 @@ import top.mcfpp.util.ValueWrapper;
 public class System {
     @MCFPPNative
     @InsertCommand
-    public static void insert(@NotNull Var[] vars, CanSelectMember caller, ValueWrapper<Var> output){
+    public static void insert(@NotNull Var<?>[] vars, CanSelectMember caller, ValueWrapper<Var> output){
         var value = vars[0];
         //只会有一个参数哦
         if(value instanceof MCString mcString)
-            Function.Companion.addCommand(((StringTag) mcString.getValue()).getValue());
+            Function.Companion.addCommand(((StringTag) mcString.getJavaValue()).getValue());
 
     }
 
     @MCFPPNative
-    public static void print(@NotNull Var[] vars, CanSelectMember caller, ValueWrapper<Var> output) {
+    public static void print(@NotNull Var<?>[] vars, CanSelectMember caller, ValueWrapper<Var> output) {
         var value = vars[0];
         //只会有一个参数哦
         if (value instanceof MCInt) print((MCInt) value);
@@ -31,7 +31,7 @@ public class System {
     public static void print(@NotNull MCInt var) {
         if (var.isConcrete()) {
             //是确定的，直接输出数值
-            Function.Companion.addCommand("tellraw @a " + var.getValue());
+            Function.Companion.addCommand("tellraw @a " + var.getJavaValue());
         }else {
             Function.Companion.addCommand("tellraw @a " + new JsonTextNumber(var).toJson());
         }
@@ -43,7 +43,7 @@ public class System {
     }
 
     @InsertCommand
-    public static void print(@NotNull Var var){
+    public static void print(@NotNull Var<?> var){
         Function.Companion.addCommand("tellraw @a " + "\"" +var + "\"");
     }
 

@@ -9,6 +9,8 @@ import top.mcfpp.command.CommandList
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.*
+import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import java.lang.NullPointerException
@@ -95,7 +97,7 @@ open class Function : Member, FieldContainer {
     /**
      * 函数的返回变量
      */
-    var returnVar: Var? = null
+    var returnVar: Var<*>? = null
 
     /**
      * 包含所有命令的列表
@@ -150,7 +152,7 @@ open class Function : Member, FieldContainer {
     /**
      * 函数的返回类型
      */
-    val returnType : String
+    val returnType : MCFPPType
 
     /**
      * 函数是否有返回语句
@@ -253,9 +255,9 @@ open class Function : Member, FieldContainer {
     /**
      * 这个函数的形参类型
      */
-    val paramTypeList: ArrayList<String>
+    val paramTypeList: ArrayList<MCFPPType>
         get() {
-            val re: ArrayList<String> = ArrayList()
+            val re: ArrayList<MCFPPType> = ArrayList()
             for (p in params) {
                 re.add(p.type)
             }
@@ -267,7 +269,7 @@ open class Function : Member, FieldContainer {
      * @param identifier 函数的标识符
      * @param namespace 函数的命名空间
      */
-    constructor(identifier: String, namespace: String = Project.currNamespace, returnType: String = "void"){
+    constructor(identifier: String, namespace: String = Project.currNamespace, returnType: MCFPPType = MCFPPBaseType.Void){
         this.identifier = identifier
         commands = CommandList()
         params = ArrayList()
@@ -283,7 +285,7 @@ open class Function : Member, FieldContainer {
      * 创建一个函数，并指定它所属的类。
      * @param identifier 函数的标识符
      */
-    constructor(identifier: String, cls: Class, isStatic: Boolean, returnType: String = "void") {
+    constructor(identifier: String, cls: Class, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void) {
         this.identifier = identifier
         commands = CommandList()
         params = ArrayList()
@@ -304,7 +306,7 @@ open class Function : Member, FieldContainer {
      * 创建一个函数，并指定它所属的接口。接口的函数总是抽象并且公开的
      * @param identifier 函数的标识符
      */
-    constructor(identifier: String, itf: Interface, returnType: String = "void") {
+    constructor(identifier: String, itf: Interface, returnType: MCFPPType = MCFPPBaseType.Void) {
         this.identifier = identifier
         commands = CommandList()
         params = ArrayList()
@@ -323,7 +325,7 @@ open class Function : Member, FieldContainer {
      * 创建一个函数，并指定它所属的结构体。
      * @param name 函数的标识符
      */
-    constructor(name: String, struct: Template, isStatic: Boolean, returnType: String = "void") {
+    constructor(name: String, struct: Template, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void) {
         this.identifier = name
         commands = CommandList()
         params = ArrayList()
@@ -360,7 +362,7 @@ open class Function : Member, FieldContainer {
         return this
     }
 
-    open fun appendParam(param: Var, isStatic: Boolean = false, isConcrete: Boolean = false) : Function{
+    open fun appendParam(param: Var<*>, isStatic: Boolean = false, isConcrete: Boolean = false) : Function{
         params.add(FunctionParam(param.type,param.identifier,isStatic, isConcrete))
         field.putVar(param.identifier,param)
         return this
@@ -371,7 +373,7 @@ open class Function : Member, FieldContainer {
         return this
     }
 
-    open fun appendParam(type: String, identifier: String, isStatic: Boolean = false, isConcrete: Boolean = false) : Function{
+    open fun appendParam(type: MCFPPType, identifier: String, isStatic: Boolean = false, isConcrete: Boolean = false) : Function{
         params.add(FunctionParam(type,identifier,isStatic, isConcrete))
         return this
     }
@@ -385,7 +387,7 @@ open class Function : Member, FieldContainer {
         if(ctx == null) return
         for (param in ctx.parameter()) {
             val param1 = FunctionParam(
-                param.type().text,
+                MCFPPType.parse(param.type().text),
                 param.Identifier().text,
                 param.STATIC() != null,
                 param.CONCRETE() != null
@@ -407,18 +409,18 @@ open class Function : Member, FieldContainer {
      *
      * @param returnType
      */
-    fun buildReturnVar(returnType: String): Var{
-        return if(returnType == "void") Void()
+    fun buildReturnVar(returnType: MCFPPType): Var<*>{
+        return if(returnType == MCFPPBaseType.Void) Void()
         else Var.build("return",returnType,this)
     }
 
-    open fun invoke(args: ArrayList<Var>, caller: CanSelectMember?){
+    open fun invoke(args: ArrayList<Var<*>>, caller: CanSelectMember?){
         when(caller){
             is CompoundDataType -> invoke(args, callerClassP = null)
             null -> invoke(args, callerClassP = null)
             is ClassPointer -> invoke(args, callerClassP = caller)
             is IntTemplateBase -> invoke(args, caller = caller)
-            is Var -> invoke(args, caller = caller)
+            is Var<*> -> invoke(args, caller = caller)
         }
     }
 
@@ -428,7 +430,7 @@ open class Function : Member, FieldContainer {
      * @param args
      * @param caller
      */
-    open fun invoke(args: ArrayList<Var>, caller: Var){
+    open fun invoke(args: ArrayList<Var<*>>, caller: Var<*>){
         //基本类型
         addCommand("#[Function ${this.namespaceID}] Function Pushing and argument passing")
         //给函数开栈
@@ -460,7 +462,7 @@ open class Function : Member, FieldContainer {
      * @see top.mcfpp.antlr.McfppExprVisitor.visitVar
      */
     @InsertCommand
-    open fun invoke(args: ArrayList<Var>, callerClassP: ClassPointer?) {
+    open fun invoke(args: ArrayList<Var<*>>, callerClassP: ClassPointer?) {
         //给函数开栈
         addCommand("data modify storage mcfpp:system ${Project.defaultNamespace}.stack_frame prepend value {}")
         //参数传递
@@ -495,7 +497,7 @@ open class Function : Member, FieldContainer {
      * @param args
      * @param struct
      */
-    open fun invoke(args: ArrayList<Var>, struct: IntTemplateBase){
+    open fun invoke(args: ArrayList<Var<*>>, struct: IntTemplateBase){
         TODO()
     }
 
@@ -505,7 +507,7 @@ open class Function : Member, FieldContainer {
      * @param args
      */
     @InsertCommand
-    open fun argPass(args: ArrayList<Var>){
+    open fun argPass(args: ArrayList<Var<*>>){
         for (i in params.indices) {
             if(params[i].isConcrete && !args[i].isConcrete){
                 LogProcessor.error("Cannot pass a non-concrete value to a concrete parameter")
@@ -525,7 +527,7 @@ open class Function : Member, FieldContainer {
      * @param args
      */
     @InsertCommand
-    open fun staticArgRef(args: ArrayList<Var>){
+    open fun staticArgRef(args: ArrayList<Var<*>>){
         var hasAddComment = false
         for (i in 0 until params.size) {
             if (params[i].isStatic) {
@@ -536,7 +538,7 @@ open class Function : Member, FieldContainer {
                 //如果是static参数
                 if (args[i] is MCInt) {
                     when(params[i].type){
-                        "int" -> {
+                        MCFPPBaseType.Int -> {
                             //如果是int取出到记分板
                             addCommand(
                                 "execute " +
@@ -564,7 +566,7 @@ open class Function : Member, FieldContainer {
         Function.field.forEachVar {v ->
             run {
                 when (v.type) {
-                    "int" -> {
+                    MCFPPBaseType.Int -> {
                         val tg = v as MCInt
                         //参数传递和子函数的参数压栈
                         //如果是int取出到记分板
@@ -587,8 +589,8 @@ open class Function : Member, FieldContainer {
      * @param v
      */
     @InsertCommand
-    open fun returnVar(v: Var){
-        if(returnType == "void"){
+    open fun returnVar(v: Var<*>){
+        if(returnType == MCFPPBaseType.Void){
             LogProcessor.error("Function $identifier has no return value")
             return
         }
@@ -662,7 +664,7 @@ open class Function : Member, FieldContainer {
             if(params[i].isStatic){
                 paramStr.append("static ")
             }
-            paramStr.append(params[i].type + " " + params[i].identifier)
+            paramStr.append("${params[i].type} ${params[i].identifier}")
             if (i != params.size - 1) {
                 paramStr.append(",")
             }
