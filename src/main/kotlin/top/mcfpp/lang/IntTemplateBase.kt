@@ -2,9 +2,9 @@ package top.mcfpp.lang
 
 import top.mcfpp.lib.Template
 
-abstract class IntTemplateBase : Var {
+abstract class IntTemplateBase : Var<MutableMap<String,String>> {
 
-    constructor(b: Var):super(b)
+    constructor(b: Var<*>):super(b)
 
     constructor()
 

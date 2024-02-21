@@ -48,7 +48,7 @@ abstract class Annotation {
     abstract fun forFunction(function: Function)
 
     companion object {
-        fun newInstance(clazz: java.lang.Class<out Annotation>, param: ArrayList<Var>): Annotation {
+        fun newInstance(clazz: java.lang.Class<out Annotation>, param: ArrayList<Var<*>>): Annotation {
             //比对参数
             try {
                 val varType = Array(param.size) { i -> param[i]::class.java }

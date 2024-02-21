@@ -8,9 +8,7 @@ import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Function
 import java.util.*
 
-abstract class NBTBasedData : Var {
-
-    open var value : Tag<*>? = null
+abstract class NBTBasedData<T:Tag<*>> : Var<T> {
 
     /**
      * 创建一个list类型的变量。它的mc名和变量所在的域容器有关。
@@ -40,11 +38,11 @@ abstract class NBTBasedData : Var {
      */
     constructor(
         curr: FieldContainer,
-        value: Tag<*>,
+        value: T,
         identifier: String = UUID.randomUUID().toString()
     ) : super(curr.prefix + identifier) {
         isConcrete = true
-        this.value = value
+        this.javaValue = value
     }
 
     /**
@@ -52,20 +50,20 @@ abstract class NBTBasedData : Var {
      * @param identifier 标识符。如不指定，则为随机uuid
      * @param value 值
      */
-    constructor(value: Tag<*>, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
+    constructor(value: T, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
         isConcrete = true
-        this.value = value
+        this.javaValue = value
     }
 
     /**
      * 复制一个list
      * @param b 被复制的list值
      */
-    constructor(b: NBTBasedData) : super(b)
-    protected fun assignCommand(a: NBTBasedData){
+    constructor(b: NBTBasedData<T>) : super(b)
+    protected fun assignCommand(a: NBTBasedData<T>){
         if(parent != null){
             val b = if(a.parent != null){
-                a.getTempVar() as NBTBasedData
+                a.getTempVar() as NBTBasedData<T>
             }else a
             //类的成员是运行时动态的
             isConcrete = false
@@ -76,7 +74,7 @@ abstract class NBTBasedData : Var {
         }else{
             if (a.isConcrete) {
                 isConcrete = true
-                value = a.value
+                javaValue = a.javaValue
             } else if(a.parent != null){
                 Function.addCommands(
                     Commands.selectRun(a.parent!!, "data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set from entity @s data.${a.identifier}")
@@ -102,17 +100,19 @@ abstract class NBTBasedData : Var {
         isConcrete = false
         if(parent != null){
             Function.addCommands(
-                Commands.selectRun(parent!!,"data modify entity @s data.$identifier set value ${SNBTUtil.toSNBT(value)}")
+                Commands.selectRun(parent!!,"data modify entity @s data.$identifier set value ${SNBTUtil.toSNBT(javaValue)}")
             )
         }else{
-            Function.addCommand("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[${stackIndex}].$identifier set value ${SNBTUtil.toSNBT(value)}")
+            Function.addCommand("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[${stackIndex}].$identifier set value ${SNBTUtil.toSNBT(
+                javaValue
+            )}")
         }
     }
 
-    override fun getTempVar(): Var {
+    override fun getTempVar(): Var<*> {
         if (isTemp) return this
         if (isConcrete) {
-            return createTempVar(value!!)
+            return createTempVar(javaValue!!)
         }
         val re = createTempVar()
         re.isTemp = true
@@ -120,14 +120,14 @@ abstract class NBTBasedData : Var {
         return re
     }
 
-    abstract fun createTempVar(): Var
-    abstract fun createTempVar(value: Tag<*>): Var
+    abstract fun createTempVar(): Var<*>
+    abstract fun createTempVar(value: Tag<*>): Var<*>
 
-    override fun clone(): Any {
+    override fun clone(): NBTBasedData<*> {
         TODO("Not yet implemented")
     }
 
     override fun getVarValue(): Any? {
-        return value
+        return javaValue
     }
 }

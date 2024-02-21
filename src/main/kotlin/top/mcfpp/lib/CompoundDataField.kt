@@ -2,6 +2,7 @@ package top.mcfpp.lib
 
 import org.jetbrains.annotations.Nullable
 import top.mcfpp.lang.Var
+import top.mcfpp.lang.type.MCFPPType
 import java.util.HashMap
 
 /**
@@ -13,7 +14,7 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar {
     /**
      * 字段
      */
-    private val vars: HashMap<String, Var> = HashMap()
+    private val vars: HashMap<String, Var<*>> = HashMap()
 
     /**
      * 遍历每一个字段
@@ -21,7 +22,7 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar {
      * @param operation 要对字段执行的操作
      * @receiver
      */
-    override fun forEachVar(operation: (Var) -> Any?){
+    override fun forEachVar(operation: (Var<*>) -> Any?){
         for (`var` in vars.values){
             operation(`var`)
         }
@@ -74,13 +75,13 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar {
         parent = field.parent
         //变量复制
         for (key in field.vars.keys) {
-            val `var`: Var? = field.vars[key]
-            vars[key] = `var`!!.clone() as Var
+            val `var`: Var<*>? = field.vars[key]
+            vars[key] = `var`!!.clone() as Var<*>
         }
         functions.addAll(field.functions)
     }
-    //region Var
-    override fun putVar(key: String, `var`: Var, forced: Boolean): Boolean {
+    //region Var<*>
+    override fun putVar(key: String, `var`: Var<*>, forced: Boolean): Boolean {
         if(forced){
             vars[key] = `var`
             return true
@@ -93,19 +94,19 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar {
         }
     }
 
-    override fun getVar(key: String): Var? {
+    override fun getVar(key: String): Var<*>? {
         return vars.getOrDefault(key, null)
     }
 
 
-    override val allVars: Collection<Var>
+    override val allVars: Collection<Var<*>>
         get() = vars.values
 
     override fun containVar(id: String): Boolean {
         return vars.containsKey(id)
     }
 
-    override fun removeVar(id : String): Var?{
+    override fun removeVar(id : String): Var<*>?{
         return vars.remove(id)
     }
 
@@ -113,7 +114,7 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar {
 
     //region Function
     @Nullable
-    override fun getFunction(key: String, argsTypes: List<String>): Function {
+    override fun getFunction(key: String, argsTypes: List<MCFPPType>): Function {
         for (f in functions) {
             if (f.identifier == key && f.params.size == argsTypes.size) {
                 if (f.params.size == 0) {
