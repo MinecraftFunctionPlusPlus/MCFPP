@@ -31,7 +31,7 @@ class FunctionParam(
 ) {
 
     constructor(type: String,identifier: String,isStatic: Boolean = false,isConcrete: Boolean = false) :
-            this(MCFPPType.parse(type),identifier,isStatic,isConcrete) {}
+            this(MCFPPType.parseFromIdentifier(type),identifier,isStatic,isConcrete) {}
     companion object {
 
         /**

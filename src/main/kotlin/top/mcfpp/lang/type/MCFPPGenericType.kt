@@ -1,5 +1,6 @@
 package top.mcfpp.lang.type
 
+import top.mcfpp.lang.MCAny
 import top.mcfpp.lang.value.MCTypeValue
 import top.mcfpp.lib.Function
 
@@ -23,7 +24,7 @@ import top.mcfpp.lib.Function
 class MCFPPGenericType(
     var identifier:String,
     override var parentType: List<MCFPPType>
-) :MCFPPType("generic($identifier)",parentType) {
+) :MCFPPType("generic($identifier)",parentType, MCAny.data) {   //TODO: 泛型的CompoundData
 
     fun toValue():MCTypeValue{
         return MCTypeValue(identifier,parentType)

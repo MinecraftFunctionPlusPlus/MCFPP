@@ -1,5 +1,7 @@
 package top.mcfpp.lang
 
+import top.mcfpp.lib.CompoundData
+
 interface ChatComponent {
 
     /**
@@ -39,6 +41,11 @@ class JsonText: ChatComponent {
         }
         return str.toString()
     }
+
+    companion object {
+        val data = CompoundData("jtext","mcfpp")
+    }
+
 }
 
 class JsonTextPlain(val value: String) : ChatComponent {

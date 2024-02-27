@@ -126,7 +126,7 @@ open class Class : CompoundData {
         get() = namespace + "_class_" + identifier + "_static_pointer"
 
     fun getConstructor(params: ArrayList<String>): Constructor?{
-        return getConstructorInner(ArrayList<MCFPPType>(params.map { MCFPPType.parse(it) }))
+        return getConstructorInner(ArrayList(params.map { MCFPPType.parseFromIdentifier(it) }))
     }
 
     /**

@@ -357,7 +357,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var<*>?>() {
     override fun visitCastExpression(ctx: mcfppParser.CastExpressionContext): Var<*>? {
         Project.ctx = ctx
         val a: Var<*>? = visit(ctx.unaryExpression())
-        return a!!.cast( MCFPPType.parse(ctx.type().text))
+        return a!!.cast( MCFPPType.parseFromIdentifier(ctx.type().text))
     }
 
     /**

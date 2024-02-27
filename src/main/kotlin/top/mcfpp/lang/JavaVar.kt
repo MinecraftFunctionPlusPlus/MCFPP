@@ -192,6 +192,9 @@ class JavaVar : Var<Any>{
     }
 
     companion object{
+
+        val data = CompoundData("JavaVar","mcfpp")
+
         fun mcToJava(v : Var<*>) : Any{
             if(!v.isConcrete){
                 return v

@@ -64,7 +64,7 @@ object GlobalField : FieldContainer, IField {
     }
 
     fun getFunction(@Nullable namespace:String?, identifier: String, args : List<String>): Function {
-        val argTypesList = args.map { MCFPPType.parse(it) }
+        val argTypesList = args.map { MCFPPType.parseFromTypeName(it) }
         return getFunctionInner(namespace,identifier,argTypesList)
     }
 
