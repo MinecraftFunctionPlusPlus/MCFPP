@@ -24,8 +24,8 @@ import java.util.*
  *
  * TODO 空指针
  *
- * @see parentClass 类的核心实现
- * @see ClassType 表示类的类型，同时也是类的静态成员的指针
+ * @see Class 类的核心实现
+ * @see top.mcfpp.lang.type.MCFPPClassType 表示类的类型，同时也是类的静态成员的指针
  */
 class ClassPointer : Var<Int>{
 

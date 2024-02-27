@@ -6,6 +6,7 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.Class
 import top.mcfpp.lib.FieldContainer
@@ -113,8 +114,8 @@ class MCFloat : Number<Float> {
         if (isConcrete){
             if (parent != null) {
                 val cmd = when(parent){
-                    is ClassType -> {
-                        arrayOf(Command.build("execute as ${(parent.dataType as Class).uuid} run "))
+                    is MCFPPClassType -> {
+                        arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
                     }
                     is ClassPointer -> {
                         Commands.selectRun(parent)
@@ -137,8 +138,8 @@ class MCFloat : Number<Float> {
         }else{
             if (parent != null) {
                 val cmd = when(parent){
-                    is ClassType -> {
-                        arrayOf(Command.build("execute as ${(parent.dataType as Class).uuid} run "))
+                    is MCFPPClassType -> {
+                        arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
                     }
                     is ClassPointer -> {
                         Commands.selectRun(parent)
@@ -190,8 +191,8 @@ class MCFloat : Number<Float> {
         if(a.parent != null) TODO()
         if(parent != null){
             val cmd = when(parent){
-                is ClassType -> {
-                    arrayOf(Command.build("execute as ${(parent.dataType as Class).uuid} run "))
+                is MCFPPClassType -> {
+                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
                 }
                 is ClassPointer -> {
                     Commands.selectRun(parent)

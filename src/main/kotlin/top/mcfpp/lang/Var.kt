@@ -116,7 +116,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
     override fun parentClass(): Class? {
         return when (val parent = parent) {
             is ClassPointer -> parent.clsType
-            is ClassType -> parent.dataType as? Class
+            is MCFPPClassType -> parent.cls
             else -> null
         }
     }

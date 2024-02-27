@@ -6,6 +6,7 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
@@ -134,8 +135,8 @@ class MCInt : Number<Int> {
                 is ClassPointer -> {
                     Commands.selectRun(parent)
                 }
-                is ClassType -> {
-                    arrayOf(Command.build("execute as ${(parent.dataType as Class).uuid} run "))
+                is MCFPPClassType -> {
+                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
                 }
                 else -> TODO()
             }
@@ -174,8 +175,8 @@ class MCInt : Number<Int> {
                             is ClassPointer -> {
                                 Commands.selectRun(parent)
                             }
-                            is ClassType -> {
-                                arrayOf(Command.build("execute as ${(parent.dataType as Class).uuid} run "))
+                            is MCFPPClassType -> {
+                                arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
                             }
                             else -> TODO()
                         }
@@ -196,8 +197,8 @@ class MCInt : Number<Int> {
                         is ClassPointer -> {
                             Commands.selectRun(parent)
                         }
-                        is ClassType -> {
-                            arrayOf(Command.build("execute as ${(parent.dataType as Class).uuid} ").build("run ","run"))
+                        is MCFPPClassType -> {
+                            arrayOf(Command.build("execute as ${parent.cls.uuid} ").build("run ","run"))
                         }
                         else -> TODO()
                     }
@@ -238,8 +239,8 @@ class MCInt : Number<Int> {
                 is ClassPointer -> {
                     Commands.selectRun(parent)
                 }
-                is ClassType -> {
-                    arrayOf(Command.build("execute as ${(parent.dataType as Class).uuid} run "))
+                is MCFPPClassType -> {
+                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
                 }
                 else -> TODO()
             }
