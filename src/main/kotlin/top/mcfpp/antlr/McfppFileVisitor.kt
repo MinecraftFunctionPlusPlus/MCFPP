@@ -514,7 +514,7 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
         //是否是静态的
         if(isStatic){
             `var`.isStatic = true
-            `var`.parent = ClassType(Class.currClass!!)
+            `var`.parent = Class.currClass!!.getType()
         }else{
             `var`.parent = ClassPointer(Class.currClass!!,"temp")
         }

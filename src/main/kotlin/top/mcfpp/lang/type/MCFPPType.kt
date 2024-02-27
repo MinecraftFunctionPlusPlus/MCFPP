@@ -1,5 +1,6 @@
 package top.mcfpp.lang.type
 
+import top.mcfpp.lang.CanSelectMember
 import top.mcfpp.lib.GlobalField
 
 /**
@@ -15,8 +16,8 @@ abstract class MCFPPType(
     /**
      * 父类型，一个列表
      */
-    open var parentType: List<MCFPPType>
-) {
+    open var parentType: List<MCFPPType> = listOf()
+) : CanSelectMember {
     init {
         registerType()
     }

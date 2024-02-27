@@ -2,6 +2,7 @@ package top.mcfpp.command
 
 import top.mcfpp.Project
 import top.mcfpp.lang.*
+import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lib.Class
 import top.mcfpp.lib.Function
 
@@ -94,8 +95,8 @@ object Commands {
                     Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin ").build("run ","run").build(command)
                 )
             }
-            is ClassType -> {
-                arrayOf(Command.build("execute as ${(a.dataType as Class).uuid} run ").build(command))
+            is MCFPPClassType -> {
+                arrayOf(Command.build("execute as ${a.cls.uuid} run ").build(command))
             }
             else -> TODO()
         }
@@ -110,8 +111,8 @@ object Commands {
                     Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin ").build("run ","run")
                 )
             }
-            is ClassType -> {
-                arrayOf(Command.build("execute as ${(a.dataType as Class).uuid} ").build("run ","run"))
+            is MCFPPClassType -> {
+                arrayOf(Command.build("execute as ${a.cls.uuid} ").build("run ","run"))
             }
             else -> TODO()
         }

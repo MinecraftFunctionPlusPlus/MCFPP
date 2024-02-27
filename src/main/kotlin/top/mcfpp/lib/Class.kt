@@ -38,8 +38,7 @@ import kotlin.collections.ArrayList
  * 但是由于mcfunction包括路径在内都不能存在大写字母，因此在编译期间，会将大写字母转换为下划线加小写字母的形式，例如A转化为_a
  *
  * @see ClassPointer 类的指针
- * @see ClassObject 类的实例。指针的目标
- * @see ClassType 表示类的类型，同时也是类的静态成员的指针
+ * @see MCFPPClassType 表示类的类型，同时也是类的静态成员的指针
  */
 open class Class : CompoundData {
 

@@ -6,6 +6,7 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.exception.*
 import top.mcfpp.lang.*
+import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
@@ -410,7 +411,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var<*>?>() {
                     LogProcessor.error("Undefined class:" + ctx.type().className().text)
                     return UnknownVar("${ctx.type().className().text}_type_" + UUID.randomUUID())
                 }
-                ClassType(qwq)
+                qwq.getType()
             }else{
                 CompoundDataType(
                     //基本类型

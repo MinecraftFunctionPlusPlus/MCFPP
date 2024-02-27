@@ -48,7 +48,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>?>(){
                     LogProcessor.error("Undefined class:" + ctx.type().className().text)
                     return UnknownVar("${ctx.type().className().text}_type_" + UUID.randomUUID())
                 }
-                ClassType(qwq)
+                qwq.getType()
             }else{
                 CompoundDataType(
                     //基本类型
