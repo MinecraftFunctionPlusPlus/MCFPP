@@ -672,7 +672,7 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
             }
             val qwq: Class? = GlobalField.getClass(nsp, id)
             if (qwq == null) {
-                val pwp = GlobalField.getStruct(nsp, id)
+                val pwp = GlobalField.getTemplate(nsp, id)
                 if(pwp == null){
                     LogProcessor.error("Undefined class or struct:" + ctx.type().className().text)
                     return null
@@ -763,7 +763,7 @@ class McfppFileVisitor : mcfppParserBaseVisitor<Any?>() {
                 namespace = qwq[0]
                 identifier = qwq[1]
             }
-            val s = GlobalField.getStruct(namespace, identifier)
+            val s = GlobalField.getTemplate(namespace, identifier)
             if(s == null){
                 LogProcessor.error("Undefined struct: " + ctx.className().text)
             }else{

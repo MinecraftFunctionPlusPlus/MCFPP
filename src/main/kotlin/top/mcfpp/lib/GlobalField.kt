@@ -99,7 +99,7 @@ object GlobalField : FieldContainer, IField {
     /**
      * 从当前的全局域中获取一个类。若不存在，则返回null
      *
-     * 如果没有提供命名空间，则只会从import导入的库和本地命名空间中搜索。否则则在指定的命名空间中搜索。
+     * 如果没有提供命名空间，则会从import导入的库和本地命名空间中搜索。否则则在指定的命名空间中搜索。
      * @param namespace 可选。这个类的命名空间。如果为null，则会从当前所有的命名空间中寻找此类。
      * @param identifier 类的标识符
      * @return 获取的类。如果有多个相同标识符的类（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
@@ -162,7 +162,7 @@ object GlobalField : FieldContainer, IField {
      * @param identifier 结构体的标识符
      * @return 获取的结构体。如果有多个相同标识符的结构体（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
      */
-    fun getStruct(@Nullable namespace: String?, identifier: String): Template? {
+    fun getTemplate(@Nullable namespace: String?, identifier: String): Template? {
         if(namespace == null){
             var struct:Template?
             //命名空间为空，从全局寻找

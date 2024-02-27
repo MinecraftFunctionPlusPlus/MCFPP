@@ -89,9 +89,9 @@ abstract class MCFPPType(
         }
 
         /**
-         * 从字符串中获取一个类型
+         * 从类型字符串中获取一个类型
          */
-        fun parse(typeName: String):MCFPPType{
+        fun parseFromTypeName(typeName: String):MCFPPType{
             if(typeCache.contains(typeName)) return typeCache[typeName]!!
             for(typeAction in typeActionCache){
                 //判断字符串是否满足条件
@@ -99,19 +99,23 @@ abstract class MCFPPType(
                     return typeAction.second(typeName)
                 }
             }
-            //接下来就是说可能是类的类型/泛型变量类型
-            val clazz = GlobalField.getClass(null,typeName)
-            if(clazz!=null)
-                return MCFPPClassType(
-                    clazz,
-                    listOf() //TODO: 没有输入父类，这个父类应该要和那个CompoundData那个合并！
-                )
-            //TODO: 泛型变量类型也是在这里取的
-
-
             return MCFPPBaseType.Any
         }
 
+        /**
+         * 从类型标识符中获取一个类型。通常是从类名或者模板名中获取
+         * TODO: 只能从类名和模板名中获取类型
+         */
+        fun parseFromIdentifier(identifier: String):MCFPPType{
+            //接下来就是说可能是类的类型/泛型变量类型
+            val clazz = GlobalField.getClass(null,identifier)
+            if(clazz!=null) return clazz.getType()
+            val template = GlobalField.getTemplate(null,identifier)
+            if(template!=null) return template.getType()
+            //TODO: 泛型变量类型也是在这里取的
+
+            return MCFPPBaseType.Any
+        }
 
     }
 }

@@ -93,7 +93,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 }
                 val owo: Class? = GlobalField.getClass(nsp, id)
                 if (owo == null) {
-                    val pwp = GlobalField.getStruct(nsp, id)
+                    val pwp = GlobalField.getTemplate(nsp, id)
                     if(pwp == null){
                         LogProcessor.error("Undefined class or struct:" + qwq.type().className().text)
                         f = UnknownFunction(qwq.Identifier().text)
@@ -1038,7 +1038,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         val parent = ctx.parent as mcfppParser.TemplateDeclarationContext
         val identifier: String = parent.classWithoutNamespace().text
         //设置作用域
-        Template.currTemplate = GlobalField.getStruct(Project.currNamespace, identifier)
+        Template.currTemplate = GlobalField.getTemplate(Project.currNamespace, identifier)
     }
 
     /**
