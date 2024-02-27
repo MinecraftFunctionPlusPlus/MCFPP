@@ -1,6 +1,8 @@
 package top.mcfpp.lib
 
 import top.mcfpp.Project
+import top.mcfpp.lang.type.MCFPPClassType
+import top.mcfpp.lang.type.MCFPPTemplateType
 import top.mcfpp.lang.type.MCFPPType
 
 /**
@@ -54,6 +56,7 @@ class Template : FieldContainer, CompoundData {
             true
         }
     }
+
     fun getConstructor(params: ArrayList<String>): TemplateConstructor?{
         return getConstructorInner(ArrayList<MCFPPType>(params.map { MCFPPType.parse(it) }))
     }
@@ -78,6 +81,16 @@ class Template : FieldContainer, CompoundData {
         }
         return null
     }
+
+    /**
+     * 获取这个类对于的classType
+     */
+    fun getType() : MCFPPTemplateType {
+        return MCFPPTemplateType(this,
+            parent.filterIsInstance<Class>().map { it.getType() }
+        )
+    }
+
     companion object{
         var currTemplate: Template? = null
     }
