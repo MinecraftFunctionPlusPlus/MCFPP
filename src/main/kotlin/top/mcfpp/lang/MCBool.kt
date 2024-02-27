@@ -313,4 +313,8 @@ open class MCBool : Var<Boolean>, OnScoreboard {
     ): Pair<Function, Boolean> {
         TODO("Not yet implemented")
     }
+
+    companion object{
+        val data = CompoundData("bool","mcfpp")
+    }
 }

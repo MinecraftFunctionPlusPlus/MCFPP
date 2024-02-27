@@ -6,6 +6,7 @@ import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lib.CompoundData
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
@@ -133,4 +134,9 @@ class MCString : NBTBasedData<StringTag> {
     override fun createTempVar(): Var<*> = MCString()
 
     override fun createTempVar(value: Tag<*>): Var<*> = MCString(value as StringTag)
+
+    companion object {
+        val data = CompoundData("string","mcfpp")
+    }
+
 }

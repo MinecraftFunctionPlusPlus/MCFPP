@@ -32,7 +32,7 @@ class UnresolvedVar : Var<Any> {
     constructor(identifier: String, type: String){
         varType = type
         this.identifier = identifier
-        this.type = MCFPPType.parse(varType)
+        this.type = MCFPPType.parseFromIdentifier(varType)
     }
 
     /**

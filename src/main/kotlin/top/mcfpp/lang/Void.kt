@@ -2,6 +2,7 @@ package top.mcfpp.lang
 
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lib.CompoundData
 import top.mcfpp.lib.Function
 import top.mcfpp.lib.Member
 import top.mcfpp.lib.UnknownFunction
@@ -81,5 +82,9 @@ class Void: Var<Nothing>("void") {
 
     override fun getVarValue(): Any {
         return "Unknown"
+    }
+
+    companion object {
+        val data = CompoundData("void","mcfpp")
     }
 }

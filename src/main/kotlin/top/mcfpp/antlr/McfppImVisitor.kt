@@ -228,7 +228,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
             }
         }else{
             for (c in ctx.fieldDeclarationExpression()){
-                val type = MCFPPType.parse(ctx.type().text)
+                val type = MCFPPType.parseFromIdentifier(ctx.type().text)
                 //函数变量，生成
                 val `var` = Var.build(c.Identifier().text, type, Function.currFunction)
                 //变量注册

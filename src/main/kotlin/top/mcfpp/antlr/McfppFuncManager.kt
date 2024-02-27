@@ -79,7 +79,7 @@ class McfppFuncManager{
         }else{
             Member.AccessModifier.PUBLIC
         }
-        val argTypesList = args.map { MCFPPType.parse(it) }
+        val argTypesList = args.map { MCFPPType.parseFromTypeName(it) }
         //开始选择函数
         val func = type.getMemberFunction(identifier,argTypesList,accessModifier)
         if (!func.second){

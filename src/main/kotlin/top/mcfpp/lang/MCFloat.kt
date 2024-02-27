@@ -8,10 +8,8 @@ import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.Class
-import top.mcfpp.lib.FieldContainer
+import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
-import top.mcfpp.lib.Member
 import top.mcfpp.util.LogProcessor
 import java.util.*
 import kotlin.math.absoluteValue
@@ -743,6 +741,8 @@ class MCFloat : Number<Float> {
     }
 
     companion object{
+
+        val data = CompoundData("float","mcfpp")
 
         const val tempFloatEntityUUID = "53aa19cc-a067-402b-8ba1-9328cc5fb6c1"
         const val tempFloatEntityUUIDNBT = "[I;1403656652,-1603846101,-1952345304,-866142527]"

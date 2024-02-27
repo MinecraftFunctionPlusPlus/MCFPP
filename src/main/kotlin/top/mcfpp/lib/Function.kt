@@ -387,7 +387,7 @@ open class Function : Member, FieldContainer {
         if(ctx == null) return
         for (param in ctx.parameter()) {
             val param1 = FunctionParam(
-                MCFPPType.parse(param.type().text),
+                MCFPPType.parseFromIdentifier(param.type().text),
                 param.Identifier().text,
                 param.STATIC() != null,
                 param.CONCRETE() != null

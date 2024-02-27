@@ -135,14 +135,14 @@ object LibReader {
             //是native函数
             val functionHead = jsonStr.split("->")[0]
             val javaFunction = jsonStr.split("->")[1]
-            val resType = MCFPPType.parse(functionHead.substring(0,functionHead.indexOf(' ')))
+            val resType = MCFPPType.parseFromIdentifier(functionHead.substring(0,functionHead.indexOf(' ')))
             //获取java方法
             val nf = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction, resType , nspId)
             nf.addParams(paramList)
             field.addFunction(nf,false)
         }else{
             //不是native函数
-            val resType = MCFPPType.parse(returnType)
+            val resType = MCFPPType.parseFromIdentifier(returnType)
             val func = Function(jsonStr.substring(jsonStr.indexOf(' ') + 1,jsonStr.indexOf('(')), nspId,resType )
             func.addParams(paramList)
             field.addFunction(func,false)

@@ -10,7 +10,7 @@ import top.mcfpp.lib.Function
 class MCFPPClassType(
     var cls:Class,
     override var parentType: List<MCFPPType>
-):MCFPPType("class(${cls.namespace}:${cls.identifier})",parentType) {
+):MCFPPType("class(${cls.namespace}:${cls.identifier})",parentType,cls) {
 
     init {
         registerType({it.contains(regex)}){

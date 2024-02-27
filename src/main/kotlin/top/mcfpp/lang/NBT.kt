@@ -1,9 +1,6 @@
 package top.mcfpp.lang
 
 import net.querz.nbt.io.SNBTUtil
-import top.mcfpp.lib.FieldContainer
-import top.mcfpp.lib.Function
-import top.mcfpp.lib.Member
 import java.util.*
 import net.querz.nbt.tag.*
 import top.mcfpp.Project
@@ -15,7 +12,8 @@ import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.Class
+import top.mcfpp.lib.*
+import top.mcfpp.lib.Function
 import top.mcfpp.util.LogProcessor
 import kotlin.collections.ArrayList
 
@@ -523,6 +521,8 @@ class NBT : Var<Tag<*>>, Indexable<NBT>{
     }
 
     companion object {
+
+        val data = CompoundData("nbt","mcfpp")
         enum class NBTType {
             COMPOUND, LIST, VALUE, ANY
         }

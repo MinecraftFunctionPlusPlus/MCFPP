@@ -7,6 +7,7 @@ import top.mcfpp.lang.type.MCFPPBaseType.BaseEntity
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lib.CompoundData
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Member
 import top.mcfpp.lib.Function
@@ -137,4 +138,9 @@ class Entity : NBTBasedData<IntArrayTag>{
     override fun createTempVar(): Var<*> = Entity()
 
     override fun createTempVar(value: Tag<*>): Var<*> = Entity(value as IntArrayTag)
+
+    companion object {
+        val data = CompoundData("entity","mcfpp")
+    }
+
 }

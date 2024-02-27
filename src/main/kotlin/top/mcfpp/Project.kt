@@ -11,6 +11,7 @@ import top.mcfpp.io.McfppFileReader
 import top.mcfpp.lang.MCFloat
 import top.mcfpp.lang.UnresolvedVar
 import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Function
 import top.mcfpp.util.LogProcessor

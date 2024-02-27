@@ -152,11 +152,20 @@ open class NBTDictionary : NBTBasedData<CompoundTag>, Indexable<NBT> {
 
         init {
             data.initialize()
-            data.field.addFunction(NativeFunction(NBTDictionaryData::remove.javaMethod!!, MCFPPBaseType.Void,"mcfpp").appendParam(MCFPPBaseType.String,"e"),false)
-            data.field.addFunction(NativeFunction(NBTDictionaryData::merge.javaMethod!!, MCFPPBaseType.Void,"mcfpp").appendParam(
-                MCFPPNBTType.Dict,"d"),false)
-            data.field.addFunction(NativeFunction(NBTDictionaryData::containsKey.javaMethod!!,
-                MCFPPBaseType.Void,"mcfpp").appendParam(MCFPPBaseType.String,"key"),false)
+            data.field.addFunction(
+                NativeFunction(NBTDictionaryData::remove.javaMethod!!, MCFPPBaseType.Void,"mcfpp")
+                    .appendParam(MCFPPBaseType.String,"e")
+                ,false
+            )
+            data.field.addFunction(
+                NativeFunction(NBTDictionaryData::merge.javaMethod!!, MCFPPBaseType.Void,"mcfpp")
+                    .appendParam(MCFPPNBTType.Dict,"d")
+                ,false)
+            data.field.addFunction(
+                NativeFunction(NBTDictionaryData::containsKey.javaMethod!!, MCFPPBaseType.Void,"mcfpp")
+                    .appendParam(MCFPPBaseType.String,"key")
+                ,false
+            )
         }
     }
 }

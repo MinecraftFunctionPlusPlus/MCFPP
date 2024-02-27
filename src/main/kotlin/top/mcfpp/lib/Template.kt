@@ -58,7 +58,7 @@ class Template : FieldContainer, CompoundData {
     }
 
     fun getConstructor(params: ArrayList<String>): TemplateConstructor?{
-        return getConstructorInner(ArrayList<MCFPPType>(params.map { MCFPPType.parse(it) }))
+        return getConstructorInner(ArrayList(params.map { MCFPPType.parseFromIdentifier(it) }))
     }
     /**
      * 根据参数列表获取一个类的构造函数
