@@ -3,8 +3,7 @@ package top.mcfpp
 import org.apache.logging.log4j.core.config.ConfigurationSource
 import org.apache.logging.log4j.core.config.Configurator
 import top.mcfpp.io.DatapackCreator
-import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.GlobalField
+import top.mcfpp.lib.field.GlobalField
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.UwU
 import java.io.FileInputStream
@@ -37,7 +36,8 @@ fun main(args: Array<String>) {
         Project.readProject(path) //读取
         Project.readLib() //读取引用的库的索引
         Project.init() //初始化
-        Project.analyse() //解析
+        Project.indexType() //编制类型索引
+        Project.indexFunction() //编制函数索引
         Project.compile() //编译
         Project.optimization() //优化
         Project.genIndex() //生成索引

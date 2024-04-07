@@ -2,7 +2,7 @@ package top.mcfpp.lang
 
 import top.mcfpp.lang.type.MCFPPTemplateType
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.Function
+import top.mcfpp.lib.function.Function
 import top.mcfpp.lib.Member
 import top.mcfpp.lib.Template
 
@@ -37,12 +37,13 @@ class IntTemplatePointer : IntTemplateBase {
      * 根据方法标识符和方法的参数列表获取一个方法。如果没有这个方法，则返回null
      *
      * @param key 成员方法的标识符
-     * @param params 成员方法的参数
+     * @param normalParams 成员方法的参数
      * @return
      */
     override fun getMemberFunction(
         key: String,
-        params: List<MCFPPType>,
+        readOnlyParams: List<MCFPPType>,
+        normalParams: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         TODO("Not yet implemented")

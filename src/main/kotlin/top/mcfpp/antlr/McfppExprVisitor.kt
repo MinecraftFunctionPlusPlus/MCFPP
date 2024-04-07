@@ -4,12 +4,17 @@ import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.StringTag
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
-import top.mcfpp.exception.*
 import top.mcfpp.lang.*
-import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
-import top.mcfpp.lib.Function
+import top.mcfpp.lib.function.Function
+import top.mcfpp.lib.field.GlobalField
+import top.mcfpp.lib.field.NamespaceField
+import top.mcfpp.lib.function.FunctionParam
+import top.mcfpp.lib.function.NoStackFunction
+import top.mcfpp.lib.function.UnknownFunction
+import top.mcfpp.lib.function.generic.Generic
+import top.mcfpp.lib.function.generic.GenericConstructor
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import top.mcfpp.util.Utils
@@ -354,10 +359,10 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var<*>?>() {
      * @return 表达式的值
      */
     @Override
-    override fun visitCastExpression(ctx: mcfppParser.CastExpressionContext): Var<*>? {
+    override fun visitCastExpression(ctx: mcfppParser.CastExpressionContext): Var<*> {
         Project.ctx = ctx
         val a: Var<*>? = visit(ctx.unaryExpression())
-        return a!!.cast( MCFPPType.parseFromIdentifier(ctx.type().text))
+        return a!!.cast(MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field))
     }
 
     /**
@@ -513,7 +518,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var<*>?>() {
             //没有数组选取
             val qwq: String = ctx.Identifier().text
             var re = if(currSelector == null){
-                val re: Var<*>? = Function.field.getVar(qwq)
+                val re: Var<*>? = Function.currFunction.field.getVar(qwq)
                 if (re == null) {
                     LogProcessor.error("Undefined variable:$qwq")
                     throw Exception()
@@ -555,30 +560,43 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var<*>?>() {
             //函数的调用
             Function.addCommand("#" + ctx.text)
             //参数获取
-            val args: ArrayList<Var<*>> = ArrayList()
+            val normalArgs: ArrayList<Var<*>> = ArrayList()
+            val readOnlyParams: ArrayList<Var<*>> = ArrayList()
             val exprVisitor = McfppExprVisitor()
-            if(ctx.arguments().expressionList() != null){
-                for (expr in ctx.arguments().expressionList().expression()) {
+            ctx.arguments().readOnlyArgs()?.let {
+                for (expr in it.expressionList().expression()) {
                     val arg = exprVisitor.visit(expr)!!
-                    args.add(arg)
+                    readOnlyParams.add(arg)
                 }
             }
+            for (expr in ctx.arguments().normalArgs().expressionList().expression()) {
+                val arg = exprVisitor.visit(expr)!!
+                normalArgs.add(arg)
+            }
+            //获取函数
             val p = StringHelper.splitNamespaceID(ctx.namespaceID().text)
             val func = if(currSelector == null){
-                GlobalField.getFunction(p.first, p.second, FunctionParam.getVarTypes(args))
+                GlobalField.getFunction(p.first, p.second, FunctionParam.getArgTypeNames(readOnlyParams), FunctionParam.getArgTypeNames(normalArgs))
             }else{
                 if(p.first != null){
                     LogProcessor.warn("Invalid namespace usage ${p.first} in function call ")
                 }
-                McfppFuncManager().getFunction(currSelector!!,p.second,FunctionParam.getVarTypes(args))
+                McfppFuncManager().getFunction(currSelector!!,p.second,
+                    FunctionParam.getArgTypeNames(readOnlyParams),
+                    FunctionParam.getArgTypeNames(normalArgs))
             }
+            //调用函数
             return if (func is UnknownFunction) {
                 LogProcessor.error("Function " + ctx.text + " not defined")
                 Function.addCommand("[Failed to Compile]${ctx.text}")
-                func.invoke(args,currSelector)
+                func.invoke(normalArgs,currSelector)
                 func.returnVar
             }else{
-                func.invoke(args,currSelector)
+                if(func is Generic<*>){
+                    func.invoke(readOnlyParams, normalArgs, currSelector)
+                }else{
+                    func.invoke(normalArgs,currSelector)
+                }
                 for (v in processVarCache){
                     v.getFromStack()
                 }
@@ -605,22 +623,31 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var<*>?>() {
         }
         //获取参数列表
         //参数获取
-        val args: ArrayList<Var<*>> = ArrayList()
+        val normalArgs: ArrayList<Var<*>> = ArrayList()
+        val readOnlyParams: ArrayList<Var<*>> = ArrayList()
         val exprVisitor = McfppExprVisitor()
-        if (ctx.arguments().expressionList() != null) {
-            for (expr in ctx.arguments().expressionList().expression()) {
-                args.add(exprVisitor.visit(expr)!!)
+        ctx.arguments().readOnlyArgs()?.let {
+            for (expr in it.expressionList().expression()) {
+                val arg = exprVisitor.visit(expr)!!
+                readOnlyParams.add(arg)
             }
+        }
+        for (expr in ctx.arguments().normalArgs().expressionList().expression()) {
+            val arg = exprVisitor.visit(expr)!!
+            normalArgs.add(arg)
         }
         //获取对象
         val ptr = cls.newInstance()
         //调用构造函数
-        val constructor = cls.getConstructor(FunctionParam.getVarTypes(args))
+        val constructor = cls.getConstructor(FunctionParam.getArgTypeNames(readOnlyParams) ,FunctionParam.getArgTypeNames(normalArgs))
         if (constructor == null) {
-            LogProcessor.error("No constructor like: " + FunctionParam.getVarTypes(args) + " defined in class " + ctx.className().text)
+            LogProcessor.error("No constructor like: " + FunctionParam.getArgTypeNames(normalArgs) + " defined in class " + ctx.className().text)
             Function.addCommand("[Failed to compile]${ctx.text}")
         }else{
-            constructor.invoke(args, callerClassP = ptr)
+            if(constructor is GenericConstructor){
+                constructor.invoke(readOnlyParams, normalArgs, ptr)
+            }
+            constructor.invoke(normalArgs, callerClassP = ptr)
         }
         return ptr
     }

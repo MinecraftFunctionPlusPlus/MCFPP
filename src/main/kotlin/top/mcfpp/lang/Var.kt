@@ -6,7 +6,7 @@ import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.lib.*
-import top.mcfpp.lib.Function
+import top.mcfpp.lib.function.Function
 import java.util.*
 
 /**
@@ -284,6 +284,17 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
         return "[$type,value=${if(isConcrete) getVarValue() else "Unknown"}]"
     }
 
+    override fun equals(other: Any?): Boolean {
+        if(other !is Var<*>) return false
+        if(this.parent != other.parent) return false
+        if(this.name != other.name) return false
+        if(this.isConcrete != other.isConcrete) return false
+        if(this.isConcrete){
+            return this.getVarValue() == other.getVarValue()
+        }
+        return true
+    }
+
     companion object {
         /**
          * 根据所给的类型、标识符和域构造一个变量
@@ -337,7 +348,8 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
 
         /**
          * 解析变量声明上下文，构造上下文声明的变量，作为成员
-         * @param ctx 变量声明上下文
+         * @param identifier 变量标识符
+         * @param type 变量类型
          * @param compoundData 成员所在的复合类型
          * @return 这个变量
          */

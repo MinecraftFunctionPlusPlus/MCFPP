@@ -4,9 +4,9 @@ import com.alibaba.fastjson2.JSONArray
 import com.alibaba.fastjson2.JSONObject
 import com.alibaba.fastjson2.JSONWriter
 import top.mcfpp.lib.Member
-import top.mcfpp.lib.GlobalField
+import top.mcfpp.lib.field.GlobalField
 import top.mcfpp.lib.NativeClass
-import top.mcfpp.lib.NativeFunction
+import top.mcfpp.lib.function.NativeFunction
 import java.io.FileWriter
 
 /**

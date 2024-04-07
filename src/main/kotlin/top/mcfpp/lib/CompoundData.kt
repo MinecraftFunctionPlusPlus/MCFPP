@@ -3,6 +3,9 @@ package top.mcfpp.lib
 import top.mcfpp.Project
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lib.field.CompoundDataField
+import top.mcfpp.lib.function.Function
+import top.mcfpp.lib.function.UnknownFunction
 
 open class CompoundData : FieldContainer {
 
@@ -76,20 +79,20 @@ open class CompoundData : FieldContainer {
      * 返回一个成员函数。如果没有，则从父类中寻找
      *
      * @param key 函数名
-     * @param params 函数参数
+     * @param normalParams 函数参数
      * @param isStatic 是否是静态成员
      *
      * @return 如果函数存在，则返回此函数，否则返回null
      */
-    fun getFunction(key: String, params: List<MCFPPType>, isStatic: Boolean = false): Function {
+    fun getFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>, isStatic: Boolean = false): Function {
         var re = if(isStatic){
-            staticField.getFunction(key, params)
+            staticField.getFunction(key, readOnlyParams, normalParams)
         }else{
-            field.getFunction(key, params)
+            field.getFunction(key, readOnlyParams, normalParams)
         }
         val iterator = parent.iterator()
         while (re is UnknownFunction && iterator.hasNext()){
-            re = iterator.next().getFunction(key,params,isStatic)
+            re = iterator.next().getFunction(key,readOnlyParams , normalParams ,isStatic)
         }
         return re
     }

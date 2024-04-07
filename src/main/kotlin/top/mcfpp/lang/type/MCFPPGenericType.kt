@@ -2,7 +2,6 @@ package top.mcfpp.lang.type
 
 import top.mcfpp.lang.MCAny
 import top.mcfpp.lang.value.MCTypeValue
-import top.mcfpp.lib.Function
 
 /**
  *

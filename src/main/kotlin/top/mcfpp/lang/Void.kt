@@ -3,9 +3,9 @@ package top.mcfpp.lang
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.CompoundData
-import top.mcfpp.lib.Function
+import top.mcfpp.lib.function.Function
 import top.mcfpp.lib.Member
-import top.mcfpp.lib.UnknownFunction
+import top.mcfpp.lib.function.UnknownFunction
 import top.mcfpp.util.LogProcessor
 
 class Void: Var<Nothing>("void") {
@@ -73,7 +73,8 @@ class Void: Var<Nothing>("void") {
      */
     override fun getMemberFunction(
         key: String,
-        params: List<MCFPPType>,
+        readOnlyParams: List<MCFPPType>,
+        normalParams: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         LogProcessor.error("Cannot get member function from void type variable")

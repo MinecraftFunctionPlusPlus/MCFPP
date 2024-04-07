@@ -80,7 +80,6 @@ tasks.register<Exec>("compileCpp") {
     group = "build"
     workingDir(cppSourceDir)
     commandLine("g++", "-I", "${System.getProperty("java.home")}/include", "-I", "${System.getProperty("java.home")}/include/win32", "-I", "$buildDir/generated/jni", "-shared", "-o", "$buildDir/dll/native.dll", "*.cpp")
-
 }
 
 kotlin {

@@ -3,11 +3,11 @@ package top.mcfpp.commandline
 import org.antlr.v4.runtime.CharStream
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
-import top.mcfpp.antlr.McfppFileVisitor
+import top.mcfpp.antlr.McfppFieldVisitor
 import top.mcfpp.antlr.McfppImVisitor
 import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.lib.Function
+import top.mcfpp.lib.function.Function
 
 class LineCompiler {
 
@@ -47,7 +47,7 @@ class LineCompiler {
         if(unit.statement().size != 0){
             McfppImVisitor().visit(unit)
         }else{
-            McfppFileVisitor().visit(unit)
+            McfppFieldVisitor().visit(unit)
         }
         for (i in Function.currFunction.commands){
             printOutput(i.toString())

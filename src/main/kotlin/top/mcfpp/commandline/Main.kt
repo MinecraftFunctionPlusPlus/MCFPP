@@ -2,20 +2,14 @@ package top.mcfpp.commandline
 
 import org.apache.logging.log4j.core.config.ConfigurationSource
 import org.apache.logging.log4j.core.config.Configurator
-import top.mcfpp.CompileSettings
 import top.mcfpp.MCFPP
 import top.mcfpp.Project
 import top.mcfpp.io.LibReader
 import top.mcfpp.lang.UnresolvedVar
-import top.mcfpp.lib.GlobalField
-import top.mcfpp.util.LogProcessor
+import top.mcfpp.lib.field.GlobalField
 import top.mcfpp.util.UwU
-import java.io.File
 import java.io.FileInputStream
 import java.time.Instant
-import java.time.LocalDateTime
-import java.util.Calendar
-import java.util.Date
 
 fun main(){
     val source: ConfigurationSource

@@ -9,7 +9,7 @@ import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
-import top.mcfpp.lib.Function
+import top.mcfpp.lib.function.Function
 import top.mcfpp.util.LogProcessor
 import java.util.*
 import kotlin.math.absoluteValue
@@ -722,21 +722,6 @@ class MCFloat : Number<Float> {
      * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
      */
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        TODO("Not yet implemented")
-    }
-
-    /**
-     * 根据方法标识符和方法的参数列表获取一个方法。如果没有这个方法，则返回null
-     *
-     * @param key 成员方法的标识符
-     * @param params 成员方法的参数
-     * @return
-     */
-    override fun getMemberFunction(
-        key: String,
-        params: List<MCFPPType>,
-        accessModifier: Member.AccessModifier
-    ): Pair<Function, Boolean> {
         TODO("Not yet implemented")
     }
 

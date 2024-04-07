@@ -3,8 +3,7 @@ package top.mcfpp.command
 import top.mcfpp.Project
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPClassType
-import top.mcfpp.lib.Class
-import top.mcfpp.lib.Function
+import top.mcfpp.lib.function.Function
 
 /**
  * 命令总类，提供了大量用于生成命令的方法。默认提供了一些可替换的位点

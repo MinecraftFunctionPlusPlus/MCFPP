@@ -3,8 +3,12 @@ package top.mcfpp.lib
 import top.mcfpp.Project
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPClassType
-import top.mcfpp.lang.type.MCFPPTemplateType
 import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lib.field.GlobalField
+import top.mcfpp.lib.function.Constructor
+import top.mcfpp.lib.function.Function
+import top.mcfpp.lib.function.generic.Generic
+import top.mcfpp.lib.function.generic.GenericConstructor
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.Utils
 import java.util.*
@@ -125,27 +129,23 @@ open class Class : CompoundData {
     val staticTag: String
         get() = namespace + "_class_" + identifier + "_static_pointer"
 
-    fun getConstructor(params: ArrayList<String>): Constructor?{
-        return getConstructorInner(ArrayList(params.map { MCFPPType.parseFromIdentifier(it) }))
+    fun getConstructor(readOnlyParams: ArrayList<String>, normalParams: ArrayList<String>): Constructor?{
+        return getConstructorInner(
+            ArrayList(readOnlyParams.map { MCFPPType.parseFromIdentifier(it, field) }),
+            ArrayList(normalParams.map { MCFPPType.parseFromIdentifier(it, field) }))
     }
 
     /**
      * 根据参数列表获取一个类的构造函数
-     * @param params 构造函数的参数列表
      * @return 返回这个类的参数
      */
-    fun getConstructorInner(params: ArrayList<MCFPPType>): Constructor? {
+    fun getConstructorInner(readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>): Constructor? {
         for (f in constructors) {
-            if (f.params.size == params.size) {
-                if (f.params.size == 0) {
-                    return f
-                }
-                //参数比对
-                for (i in 0 until params.size) {
-                    if (params[i] == f.params[i].type) {
-                        return f
-                    }
-                }
+            if(f is GenericConstructor && f.isSelf(this, readOnlyParams, normalParams)){
+                return f
+            }
+            if(f.isSelf(this, normalParams)){
+                return f
             }
         }
         return null

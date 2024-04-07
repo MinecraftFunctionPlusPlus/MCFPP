@@ -1,7 +1,7 @@
 package top.mcfpp.lang
 
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.Function
+import top.mcfpp.lib.function.Function
 import top.mcfpp.lib.Member
 
 /**
@@ -28,7 +28,7 @@ interface CanSelectMember{
      * @param params 成员方法的参数
      * @return
      */
-    fun getMemberFunction(key: String, params: List<MCFPPType>, accessModifier: Member.AccessModifier): Pair<Function, Boolean>
+    fun getMemberFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>, accessModifier: Member.AccessModifier): Pair<Function, Boolean>
 
     fun getAccess(function: Function): Member.AccessModifier
 }

@@ -1,8 +1,7 @@
 package top.mcfpp.lang.type
 
-import top.mcfpp.lang.Var
 import top.mcfpp.lib.*
-import top.mcfpp.lib.Function
+import top.mcfpp.util.LazyWrapper
 
 /**
  * 模板类型
@@ -16,7 +15,7 @@ class MCFPPTemplateType(
         registerType({it.contains(regex)}){
             val matcher = regex.find(it)!!.groupValues
             MCFPPTemplateType(
-                Template(matcher[2],MCFPPBaseType.Int,matcher[1]), //TODO: 这里肯定有问题
+                Template(matcher[2], LazyWrapper(MCFPPBaseType.Int),matcher[1]), //TODO: 这里肯定有问题
                 parentType
             )
         }

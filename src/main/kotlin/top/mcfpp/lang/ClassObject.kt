@@ -1,8 +1,6 @@
 package top.mcfpp.lang
 
-import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.*
-import top.mcfpp.lib.Function
 import java.util.*
 
 /**

@@ -1,5 +1,7 @@
 lexer grammar mcfppLexer;
 
+
+//Base Character Set
 WAVE:'~';
 RESERVED: '...' ;
 DOT: '.' ;
@@ -59,6 +61,11 @@ BIT_XOR_ASSIGN:                   '^=';
 BIT_OR_ASSIGN:                    '|=';
 TRIPLE_QUOTE_OPEN: '"""' -> pushMode(MultiLineString) ;
 
+//Wrapped Characters
+FunctionReturn: ARROW;
+ClassExtends: COLON;
+
+//KeyWords
 THIS:'this';
 SUPER:'super';
 IF:'if';
@@ -68,6 +75,8 @@ FOR:'for';
 DO:'do';
 TRY:'try';
 STORE:'store';
+AS:'as';
+FROM:'from';
 
 BREAK:'break';
 CONTINUE:'continue';
@@ -113,6 +122,7 @@ NBT:  'nbt';
 ANY:   'any';
 VOID: 'void';
 
+//Identifiers
 TargetSelector
     :   '@' ('a'|'r'|'p'|'s'|'e')
     ;
@@ -128,9 +138,6 @@ BooleanLiteral
     :   'true'
     |   'false'
     ;
-
-
-
 
 Identifier
     :   [a-z_][a-zA-Z0-9_]*
