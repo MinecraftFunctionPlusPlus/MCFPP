@@ -4,7 +4,7 @@ import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPGenericType
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.Function
+import top.mcfpp.lib.function.Function
 import top.mcfpp.lib.Member
 
 /**
@@ -12,7 +12,6 @@ import top.mcfpp.lib.Member
  * 这里T既是值也是类型
  * 作为值的时候，存储的是一个类型
  */
-
 
 class MCTypeValue(
     identifier:String,
@@ -70,10 +69,10 @@ class MCTypeValue(
 
     override fun getMemberFunction(
         key: String,
-        params: List<MCFPPType>,
+        readOnlyParams: List<MCFPPType>,
+        normalParams: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         TODO("Not yet implemented")
     }
-
 }

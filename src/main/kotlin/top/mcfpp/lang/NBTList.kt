@@ -6,7 +6,7 @@ import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
-import top.mcfpp.lib.Function
+import top.mcfpp.lib.function.Function
 import java.util.*
 
 
@@ -121,12 +121,12 @@ class NBTList<T : Tag<*>?> : NBTBasedData<ListTag<T>>, Indexable<NBT> {
      */
     override fun getMemberFunction(
         key: String,
-        params: List<MCFPPType>,
+        readOnlyParams: List<MCFPPType>,
+        normalParams: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         TODO("Not yet implemented")
     }
-
 
 
     override fun getByIndex(index: Var<*>): NBT {

@@ -1,9 +1,12 @@
 package top.mcfpp.lib
 
 import top.mcfpp.Project
-import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPTemplateType
 import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lib.field.CompoundDataField
+import top.mcfpp.lib.function.Constructor
+import top.mcfpp.lib.function.TemplateConstructor
+import top.mcfpp.util.LazyWrapper
 
 /**
  * 结构体是一种和类的语法极为相似的数据结构。在结构体中，只能有int类型的数据，或者说记分板的数据作为结构体的成员。
@@ -20,7 +23,7 @@ import top.mcfpp.lang.type.MCFPPType
  */
 class Template : FieldContainer, CompoundData {
 
-    val dataType : MCFPPType
+    val dataType : LazyWrapper<MCFPPType>
 
     /**
      * 结构体的构造函数
@@ -35,7 +38,7 @@ class Template : FieldContainer, CompoundData {
         get() = namespace + "_template_" + identifier + "_"
 
 
-    constructor(identifier: String, dataType: MCFPPType, namespace: String = Project.currNamespace){
+    constructor(identifier: String, dataType: LazyWrapper<MCFPPType>, namespace: String = Project.currNamespace){
         this.identifier = identifier
         field = CompoundDataField(null,this)
         staticField = CompoundDataField(null, this)
@@ -57,9 +60,14 @@ class Template : FieldContainer, CompoundData {
         }
     }
 
-    fun getConstructor(params: ArrayList<String>): TemplateConstructor?{
-        return getConstructorInner(ArrayList(params.map { MCFPPType.parseFromIdentifier(it) }))
+    //TODO 只读参数
+    fun getConstructor(readOnlyParams: ArrayList<String>, normalParams: ArrayList<String>): TemplateConstructor?{
+        return getConstructorInner(
+            ArrayList(readOnlyParams.map { MCFPPType.parseFromIdentifier(it, field) }),
+            //ArrayList(normalParams.map { MCFPPType.parseFromIdentifier(it, field) })
+        )
     }
+
     /**
      * 根据参数列表获取一个类的构造函数
      * @param params 构造函数的参数列表
@@ -67,13 +75,13 @@ class Template : FieldContainer, CompoundData {
      */
     fun getConstructorInner(params: ArrayList<MCFPPType>): TemplateConstructor? {
         for (f in constructors) {
-            if (f.params.size == params.size) {
-                if (f.params.size == 0) {
+            if (f.normalParams.size == params.size) {
+                if (f.normalParams.size == 0) {
                     return f
                 }
                 //参数比对
                 for (i in 0 until params.size) {
-                    if (params[i] == f.params[i].type) {
+                    if (params[i] == f.normalParams[i].type) {
                         return f
                     }
                 }

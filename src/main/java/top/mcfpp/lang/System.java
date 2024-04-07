@@ -4,13 +4,13 @@ import net.querz.nbt.tag.StringTag;
 import org.jetbrains.annotations.NotNull;
 import top.mcfpp.annotations.InsertCommand;
 import top.mcfpp.annotations.MCFPPNative;
-import top.mcfpp.lib.Function;
+import top.mcfpp.lib.function.Function;
 import top.mcfpp.util.ValueWrapper;
 
 public class System {
     @MCFPPNative
     @InsertCommand
-    public static void insert(@NotNull Var<?>[] vars, CanSelectMember caller, ValueWrapper<Var> output){
+    public static void insert(@NotNull Var<?>[] vars, CanSelectMember caller, ValueWrapper<Var<?>> output){
         var value = vars[0];
         //只会有一个参数哦
         if(value instanceof MCString mcString)
@@ -19,7 +19,7 @@ public class System {
     }
 
     @MCFPPNative
-    public static void print(@NotNull Var<?>[] vars, CanSelectMember caller, ValueWrapper<Var> output) {
+    public static void print(@NotNull Var<?>[] vars, CanSelectMember caller, ValueWrapper<Var<?>> output) {
         var value = vars[0];
         //只会有一个参数哦
         if (value instanceof MCInt) print((MCInt) value);

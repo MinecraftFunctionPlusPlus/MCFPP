@@ -1,12 +1,5 @@
 package top.mcfpp.lang
 
-import net.querz.nbt.tag.IntArrayTag
-import top.mcfpp.lib.Class
-import top.mcfpp.lib.ExtensionFunction
-import top.mcfpp.lib.Function
-import top.mcfpp.lib.Member
-import top.mcfpp.util.MCUUID
-
 /**
  * 此抽象类对类的基本性质进行了一些声明，例如类的地址。和mcfpp类有关的类都应当继承于此抽象方法
  *

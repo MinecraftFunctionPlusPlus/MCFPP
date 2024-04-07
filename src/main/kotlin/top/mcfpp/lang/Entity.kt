@@ -10,7 +10,7 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.CompoundData
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.Member
-import top.mcfpp.lib.Function
+import top.mcfpp.lib.function.Function
 import java.util.UUID
 
 
@@ -94,12 +94,13 @@ class Entity : NBTBasedData<IntArrayTag>{
      * 根据标识符，以实体为
      *
      * @param key 成员方法的标识符
-     * @param params 成员方法的参数
+     * @param normalParams 成员方法的参数
      * @return
      */
     override fun getMemberFunction(
         key: String,
-        params: List<MCFPPType>,
+        readOnlyParams:List<MCFPPType>,
+        normalParams: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         TODO("Not yet implemented")

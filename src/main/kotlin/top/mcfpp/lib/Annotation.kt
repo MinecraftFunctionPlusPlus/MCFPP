@@ -1,7 +1,7 @@
 package top.mcfpp.lib
 
-import top.mcfpp.Project
 import top.mcfpp.lang.Var
+import top.mcfpp.lib.function.Function
 import top.mcfpp.util.LogProcessor
 
 

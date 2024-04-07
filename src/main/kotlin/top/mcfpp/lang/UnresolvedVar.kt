@@ -3,8 +3,9 @@ package top.mcfpp.lang
 import top.mcfpp.exception.VariableNotResolvedException
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.FieldContainer
-import top.mcfpp.lib.Function
+import top.mcfpp.lib.function.Function
 import top.mcfpp.lib.Member
+import top.mcfpp.lib.field.IFieldWithType
 import top.mcfpp.util.LogProcessor
 
 
@@ -17,22 +18,22 @@ import top.mcfpp.util.LogProcessor
  */
 class UnresolvedVar : Var<Any> {
 
+    val typeScope : IFieldWithType
+
     override var javaValue: Any? = null
 
     /**
-     * 变量的类型。与普通的变量不同，这里作为字符串储存，从而在解析的时候能够通过[top.mcfpp.lib.IFieldWithClass.getClass]方法获取到作为类型的类。
+     * 变量的类型。与普通的变量不同，这里作为字符串储存，从而在解析的时候能够通过[top.mcfpp.lib.field.IFieldWithClass.getClass]方法获取到作为类型的类。
      */
     private val varType: String
-
-    override var type: MCFPPType
 
     /**
      * 创建一个未被解析的变量，它有指定的标识符和类型
      */
-    constructor(identifier: String, type: String){
+    constructor(identifier: String, type: String, typeScope: IFieldWithType){
         varType = type
         this.identifier = identifier
-        this.type = MCFPPType.parseFromIdentifier(varType)
+        this.typeScope = typeScope
     }
 
     /**
@@ -42,7 +43,7 @@ class UnresolvedVar : Var<Any> {
      * @return
      */
     fun resolve(fieldContainer: FieldContainer): Var<*>{
-        return build(identifier, type, fieldContainer)
+        return build(identifier, MCFPPType.parseFromTypeName(varType), fieldContainer)
     }
 
     /**
@@ -73,7 +74,7 @@ class UnresolvedVar : Var<Any> {
      * @return 复制的结果
      */
     override fun clone(): UnresolvedVar {
-        return UnresolvedVar(identifier,varType)
+        return UnresolvedVar(identifier, varType, typeScope)
     }
 
     /**
@@ -113,12 +114,13 @@ class UnresolvedVar : Var<Any> {
      * 根据方法标识符和方法的参数列表获取一个方法。如果没有这个方法，则返回null
      *
      * @param key 成员方法的标识符
-     * @param params 成员方法的参数
+     * @param normalParams 成员方法的参数
      * @return
      */
     override fun getMemberFunction(
         key: String,
-        params: List<MCFPPType>,
+        readOnlyParams: List<MCFPPType>,
+        normalParams: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         LogProcessor.error("UnresolvedVar.getMemberFunction() is called")

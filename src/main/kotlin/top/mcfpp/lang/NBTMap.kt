@@ -6,7 +6,7 @@ import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
 import top.mcfpp.lib.CompoundData
 import top.mcfpp.lib.FieldContainer
-import top.mcfpp.lib.NativeFunction
+import top.mcfpp.lib.function.NativeFunction
 import java.util.*
 import kotlin.reflect.jvm.javaMethod
 
@@ -71,17 +71,21 @@ class NBTMap : NBTDictionary{
 
         init {
             data.initialize()
-            data.field.addFunction(NativeFunction(NBTMapData::remove.javaMethod!!, MCFPPBaseType.Void,"mcfpp").appendParam(MCFPPBaseType.String,"key"),false)
-            data.field.addFunction(NativeFunction(NBTMapData::containsKey.javaMethod!!,MCFPPBaseType.Bool,"mcfpp").appendParam(MCFPPBaseType.String,"key"),false)
-            data.field.addFunction(NativeFunction(NBTMapData::containsValue.javaMethod!!,MCFPPBaseType.Bool,"mcfpp").appendParam(
-                MCFPPNBTType.NBT,"value"),false)
-            data.field.addFunction(NativeFunction(NBTMapData::isEmpty.javaMethod!!,MCFPPBaseType.Bool,"mcfpp"),false)
+            /* TODO
+            data.field.addFunction(NativeFunction(NBTMapData::remove.javaMethod!!, MCFPPBaseType.Void,"mcfpp").appendReadOnlyParam(MCFPPBaseType.String.typeName,"key"),false)
+            data.field.addFunction(NativeFunction(NBTMapData::containsKey.javaMethod!!, MCFPPBaseType.Bool,"mcfpp").appendReadOnlyParam(MCFPPBaseType.String.typeName,"key"),false)
+            data.field.addFunction(
+                NativeFunction(NBTMapData::containsValue.javaMethod!!, MCFPPBaseType.Bool,"mcfpp").appendReadOnlyParam(
+                MCFPPNBTType.NBT.typeName,"value"),false)
+            data.field.addFunction(NativeFunction(NBTMapData::isEmpty.javaMethod!!, MCFPPBaseType.Bool,"mcfpp"),false)
             data.field.addFunction(NativeFunction(NBTMapData::getKeys.javaMethod!!, MCFPPNBTType.BaseList,"mcfpp"),false)
             data.field.addFunction(NativeFunction(NBTMapData::getValues.javaMethod!!, MCFPPNBTType.BaseList,"mcfpp"),false)
-            data.field.addFunction(NativeFunction(NBTMapData::remove.javaMethod!!, MCFPPBaseType.Void,"mcfpp").appendParam(MCFPPBaseType.String,"key"),false)
-            data.field.addFunction(NativeFunction(NBTMapData::merge.javaMethod!!, MCFPPBaseType.Void,"mcfpp").appendParam(
-                MCFPPNBTType.Map,"m"),false)
-            data.field.addFunction(NativeFunction(NBTMapData::size.javaMethod!!,MCFPPBaseType.Int,"mcfpp"),false)
+            data.field.addFunction(NativeFunction(NBTMapData::remove.javaMethod!!, MCFPPBaseType.Void,"mcfpp").appendReadOnlyParam(MCFPPBaseType.String.typeName,"key"),false)
+            data.field.addFunction(
+                NativeFunction(NBTMapData::merge.javaMethod!!, MCFPPBaseType.Void,"mcfpp").appendReadOnlyParam(
+                MCFPPNBTType.Map.typeName,"m"),false)
+            data.field.addFunction(NativeFunction(NBTMapData::size.javaMethod!!, MCFPPBaseType.Int,"mcfpp"),false)
+             */
         }
     }
 }

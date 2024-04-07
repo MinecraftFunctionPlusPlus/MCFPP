@@ -7,13 +7,14 @@ import org.apache.logging.log4j.*
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.io.LibReader
 import top.mcfpp.io.LibWriter
-import top.mcfpp.io.McfppFileReader
+import top.mcfpp.io.McfppFile
 import top.mcfpp.lang.MCFloat
 import top.mcfpp.lang.UnresolvedVar
 import top.mcfpp.lang.type.MCFPPBaseType
-import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
-import top.mcfpp.lib.Function
+import top.mcfpp.lib.function.Function
+import top.mcfpp.lib.field.GlobalField
+import top.mcfpp.lib.field.NamespaceField
 import top.mcfpp.util.LogProcessor
 import java.io.*
 import java.nio.file.Path
@@ -35,9 +36,9 @@ object Project {
      */
     lateinit var root: Path
     /**
-     * 工程包含的所有文件。以绝对路径保存
+     * 工程包含的所有文件
      */
-    var files: ArrayList<String> = ArrayList()
+    var files: ArrayList<McfppFile> = ArrayList()
 
     /**
      * 工程对应的mc版本
@@ -60,14 +61,9 @@ object Project {
     var includes: ArrayList<String> = ArrayList()
 
     /**
-     * 编译时，当前编译的文件
-     */
-    var currFile: File = File("commandFile")
-
-    /**
      * 当前解析文件的语法树
      */
-    var trees:MutableMap<File,ParseTree> = mutableMapOf()
+    var trees:MutableMap<McfppFile,ParseTree> = mutableMapOf()
 
     /**
      * 工程的名字
@@ -143,7 +139,7 @@ object Project {
                     File(root.absolutePathString() + s)
                 }
                 logger.info("Finding file in \"" + r.absolutePath + "\"")
-                getFiles(r, files)
+                files = getFiles(r)
             }
             //版本
             version = jsonObject.getString("version")
@@ -199,12 +195,12 @@ object Project {
                 run {
                     for (v in c.field.allVars){
                         if(v is UnresolvedVar){
-                            c.field.putVar(c.identifier, v, true)
+                            c.field.putVar(c.identifier, v.resolve(c), true)
                         }
                     }
                     for (v in c.staticField.allVars){
                         if(v is UnresolvedVar){
-                            c.staticField.putVar(c.identifier, v, true)
+                            c.staticField.putVar(c.identifier, v.resolve(c), true)
                         }
                     }
                 }
@@ -213,10 +209,10 @@ object Project {
     }
 
     /**
-     * 解析工程
+     * 编制类型索引
      */
-    fun analyse() {
-        logger.debug("Analysing project...")
+    fun indexType(){
+        logger.debug("Generate Type Index...")
         //解析文件
         for (file in files) {
             //添加默认库的域
@@ -224,13 +220,31 @@ object Project {
                 GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
             }
             try {
-                McfppFileReader(file).analyse()
+                file.indexType()
             } catch (e: IOException) {
-                logger.error("Error while analysing file \"$file\"")
+                logger.error("Error while generate type index in file \"$file\"")
                 errorCount++
                 e.printStackTrace()
             }
             GlobalField.importedLibNamespaces.clear()
+        }
+
+    }
+
+    /**
+     * 编制函数索引
+     */
+    fun indexFunction() {
+        logger.debug("Generate Function Index...")
+        //解析文件
+        for (file in files) {
+            try {
+                file.indexFunction()
+            } catch (e: IOException) {
+                logger.error("Error while generate function index in file \"$file\"")
+                errorCount++
+                e.printStackTrace()
+            }
         }
     }
 
@@ -241,13 +255,13 @@ object Project {
         //工程文件编译
         //解析文件
         for (file in files) {
-            logger.debug("Compiling mcfpp code in \"$file\"")
+            LogProcessor.debug("Compiling mcfpp code in \"$file\"")
             //添加默认库域
             if(!CompileSettings.ignoreStdLib){
                 GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
             }
             try {
-                McfppFileReader(file).compile()
+                file.compile()
             } catch (e: IOException) {
                 logger.error("Error while compiling file \"$file\"")
                 errorCount++
@@ -267,7 +281,7 @@ object Project {
         logger.debug("Adding scoreboards declare in mcfpp:load function")
         //region load init command
         //向load函数中添加记分板初始化命令
-        Function.currFunction = GlobalField.localNamespaces["mcfpp"]!!.getFunction("load", ArrayList())!!
+        Function.currFunction = GlobalField.localNamespaces["mcfpp"]!!.getFunction("load", ArrayList(), ArrayList())!!
         for (scoreboard in GlobalField.scoreboards.values){
             Function.addCommand("scoreboard objectives add ${scoreboard.name} ${scoreboard.criterion}")
         }
@@ -318,23 +332,25 @@ object Project {
     /**
      * 获取文件列表
      * @param file 根目录
-     * @param files 储存文件用的数组
+     * @return 这个根目录下包含的所有文件
      */
-    private fun getFiles(file: File, files: ArrayList<String>?) {
+    private fun getFiles(file: File) : ArrayList<McfppFile> {
+        val files = ArrayList<McfppFile>()
         if (!file.exists()) {
             logger.warn("Path \"" + file.absolutePath + "\" doesn't exist. Ignoring.")
             warningCount++
-            return
+            return ArrayList()
         }
-        val fs: Array<File> = file.listFiles() ?: return
+        val fs: Array<File> = file.listFiles() ?: return ArrayList()
         for (f in fs) {
             if (f.isDirectory) //若是目录，则递归打印该目录下的文件
-                getFiles(f, files)
+                files += getFiles(f)
             if (f.isFile && f.name.substring(f.name.lastIndexOf(".") + 1) == "mcfpp") {
-                if (!files!!.contains(f.absolutePath)) {
-                    files.add(f.absolutePath)
+                if (!files.contains(McfppFile(f))) {
+                    files.add(McfppFile(f))
                 }
             }
         }
+        return files
     }
 }

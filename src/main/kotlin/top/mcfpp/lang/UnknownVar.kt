@@ -1,9 +1,9 @@
 package top.mcfpp.lang
 
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.Function
+import top.mcfpp.lib.function.Function
 import top.mcfpp.lib.Member
-import top.mcfpp.lib.UnknownFunction
+import top.mcfpp.lib.function.UnknownFunction
 
 class UnknownVar : Var<Any> {
 
@@ -21,7 +21,7 @@ class UnknownVar : Var<Any> {
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型
      */
-    override fun cast(type: MCFPPType): Var<*> = build(identifier,type,Function.currFunction)
+    override fun cast(type: MCFPPType): Var<*> = build(identifier,type, Function.currFunction)
 
     override fun clone(): UnknownVar = this
 
@@ -60,7 +60,8 @@ class UnknownVar : Var<Any> {
      */
     override fun getMemberFunction(
         key: String,
-        params: List<MCFPPType>,
+        readOnlyParams: List<MCFPPType>,
+        normalParams: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         return UnknownFunction("unknown") to true

@@ -9,7 +9,7 @@ import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
-import top.mcfpp.lib.Function
+import top.mcfpp.lib.function.Function
 import top.mcfpp.util.LogProcessor
 import java.util.*
 
@@ -188,7 +188,7 @@ class MCInt : Number<Int> {
                                 .build(Commands.sbPlayerOperation(this, "=", a as MCInt)))
                         }else{
                             Function.replaceCommand(cmd.last()
-                                .build(replace),Function.currFunction.commands.size-1)
+                                .build(replace), Function.currFunction.commands.size-1)
                         }
                     }
                     val append = "store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1 run "
@@ -209,7 +209,7 @@ class MCInt : Number<Int> {
                         }
                         Function.addCommand(cmd.last().build(Commands.sbPlayerOperation(this, "=", a as MCInt)))
                     }else{
-                        Function.replaceCommand(cmd.last().build(replace),Function.currFunction.commands.size-1)
+                        Function.replaceCommand(cmd.last().build(replace), Function.currFunction.commands.size-1)
                     }
                 }else{
                     val head = if(isTemp) "" else "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1 run "
@@ -219,7 +219,7 @@ class MCInt : Number<Int> {
                             .build(Commands.sbPlayerOperation(this, "=", a as MCInt)))
                     }else{
                         Function.replaceCommand(Command.build(head)
-                            .build(replace),Function.currFunction.commands.size-1)
+                            .build(replace), Function.currFunction.commands.size-1)
                     }
                 }
             }
@@ -648,15 +648,16 @@ class MCInt : Number<Int> {
      * 根据方法标识符和方法的参数列表获取一个方法。如果没有这个方法，则返回null
      *
      * @param key 成员方法的标识符
-     * @param params 成员方法的参数
+     * @param normalParams 成员方法的参数
      * @return 返回一个值对。第一个值是成员变量或null（如果成员方法不存在），第二个值是访问者是否能够访问此变量。
      */
     override fun getMemberFunction(
         key: String,
-        params: List<MCFPPType>,
+        readOnlyParams:List<MCFPPType>,
+        normalParams: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        return data.field.getFunction(key, params) to true
+        return data.field.getFunction(key, readOnlyParams, normalParams) to true
     }
 
     companion object {

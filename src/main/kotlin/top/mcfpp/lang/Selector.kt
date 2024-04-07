@@ -9,7 +9,7 @@ import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.CompoundData
 import top.mcfpp.lib.FieldContainer
-import top.mcfpp.lib.Function
+import top.mcfpp.lib.function.Function
 import top.mcfpp.lib.Member
 import top.mcfpp.util.LogProcessor
 import java.util.*
@@ -120,10 +120,11 @@ class Selector : NBTBasedData<ListTag<StringTag>> {
 
     override fun getMemberFunction(
         key: String,
-        params: List<MCFPPType>,
+        readOnlyParams: List<MCFPPType>,
+        normalParams: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        TODO()
+        TODO("Not yet implemented")
     }
 
     override fun cast(type: MCFPPType): Var<*> {

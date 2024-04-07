@@ -32,10 +32,11 @@ options {
     tokenVocab = mcfppLexer;
 }
 
+//TODO 类型别名和导入库文件的语句顺序不用这么严格
 //一个mcfpp文件
 compilationUnit
-    :   importDeclaration*
-        namespaceDeclaration?
+    :   namespaceDeclaration?
+        importDeclaration*
         statement*
         typeDeclaration*
         EOF
@@ -47,7 +48,7 @@ namespaceDeclaration
     ;
 
 importDeclaration
-    :   IMPORT Identifier ('.' Identifier)* ('.' cls = (ClassIdentifier|'*'))? ';'
+    :   IMPORT Identifier ('.' Identifier)* ('.' cls = (ClassIdentifier|'*'))? (AS ClassIdentifier)? (FROM NormalString)? ';'
     ;
 
 //类或函数声明
@@ -77,11 +78,11 @@ globalDeclaration
 
 //类声明
 classDeclaration
-    :   classAnnotation? STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace (':' className (',' className)*)? classBody
+    :   classAnnotation? STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace (ClassExtends className (',' className)*)? classBody
     ;
 
 compileTimeClassDeclaration
-    :   CONST CLASS classWithoutNamespace (':' className (',' className)*)? classBody
+    :   CONST CLASS classWithoutNamespace (ClassExtends className (',' className)*)? classBody
     ;
 
 nativeClassDeclaration
@@ -110,15 +111,15 @@ classMember
     ;
 
 classFunctionDeclaration
-    :   funcAnnoation? OVERRIDE? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
+    :   funcAnnoation? OVERRIDE? FUNCTION Identifier functionParams (FunctionReturn functionReturnType)? '{' functionBody '}'
     ;
 
 abstractClassFunctionDeclaration
-    :   funcAnnoation? OVERRIDE? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? ';'
+    :   funcAnnoation? OVERRIDE? FUNCTION Identifier functionParams (FunctionReturn functionReturnType)? ';'
     ;
 
 nativeClassFunctionDeclaration
-    :   funcAnnoation? OVERRIDE? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '=' javaRefer ';'
+    :   funcAnnoation? OVERRIDE? FUNCTION Identifier functionParams (FunctionReturn functionReturnType)? '=' javaRefer ';'
     ;
 
 classFieldDeclaration
@@ -127,7 +128,7 @@ classFieldDeclaration
 
 //数据模板
 templateDeclaration
-    :   FINAL? TEMPLATE genericity classWithoutNamespace (EXTENDS className)? templateBody
+    :   FINAL? type TEMPLATE classWithoutNamespace (EXTENDS className)? templateBody
     ;
 
 templateBody
@@ -148,7 +149,7 @@ templateMember
     ;
 
 templateFunctionDeclaration
-    :  FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
+    :  FUNCTION Identifier functionParams (FunctionReturn functionReturnType)? '{' functionBody '}'
     ;
 
 templateFieldDeclaration
@@ -156,13 +157,13 @@ templateFieldDeclaration
     ;
 
 templateFieldDeclarationExpression
-    :   CONST? type? Identifier ':' expression
+    :   CONST? Identifier '=' expression
     ;
 
 
 //接口声明
 interfaceDeclaration
-    :   classAnnotation? INTERFACE classWithoutNamespace (':' className (',' className)*)? interfaceBody
+    :   classAnnotation? INTERFACE classWithoutNamespace (FunctionReturn className (',' className)*)? interfaceBody
     ;
 
 interfaceBody
@@ -170,24 +171,24 @@ interfaceBody
     ;
 
 interfaceFunctionDeclaration
-    :   funcAnnoation? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? ';'
+    :   funcAnnoation? FUNCTION Identifier functionParams (FunctionReturn functionReturnType)? ';'
     ;
 
 compileTimeFuncDeclaration
-    :   CONST FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
+    :   CONST FUNCTION Identifier functionParams (FunctionReturn functionReturnType)? '{' functionBody '}'
     ;
 
 inlineFunctionDeclaration
-    :   funcAnnoation? INLINE FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
+    :   funcAnnoation? INLINE FUNCTION Identifier functionParams (FunctionReturn functionReturnType)? '{' functionBody '}'
     ;
 
 //函数声明
 functionDeclaration
-    :   funcAnnoation? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
+    :   funcAnnoation? FUNCTION Identifier functionParams (FunctionReturn functionReturnType)? '{' functionBody '}'
     ;
 
 extensionFunctionDeclaration
-    :   funcAnnoation? STATIC? FUNCTION (type '.')? Identifier '(' parameterList? ')' (':' functionReturnType)? '{' functionBody '}'
+    :   funcAnnoation? STATIC? FUNCTION (type '.')? Identifier functionParams (FunctionReturn functionReturnType)? '{' functionBody '}'
     ;
 
 namespaceID
@@ -195,7 +196,7 @@ namespaceID
     ;
 
 nativeFuncDeclaration
-    :   funcAnnoation? FUNCTION Identifier '(' parameterList? ')' (':' functionReturnType)? '=' javaRefer ';'
+    :   funcAnnoation? FUNCTION Identifier functionParams (FunctionReturn functionReturnType)? '=' javaRefer ';'
     ;
 
 javaRefer
@@ -216,7 +217,7 @@ accessModifier
 
 //构造函数声明
 constructorDeclaration
-    :   funcAnnoation? className '(' parameterList? ')' '{' functionBody '}'
+    :   funcAnnoation? className functionParams '{' functionBody '}'
     ;
 
 //构造函数的调用
@@ -236,6 +237,18 @@ fieldDeclarationExpression
 
 fieldModifier : CONST|DYNAMIC|IMPORT;
 
+functionParams
+    :   readOnlyParams? normalParams
+    ;
+
+readOnlyParams
+    :   '<' parameterList? '>'
+    ;
+
+normalParams
+    :   '(' parameterList? ')'
+    ;
+
 //参数列表
 parameterList
     :   parameter (',' parameter)*
@@ -243,7 +256,7 @@ parameterList
 
 //参数
 parameter
-    :   STATIC? CONCRETE? type Identifier
+    :   STATIC? type Identifier
     ;
 
 //表达式
@@ -355,6 +368,14 @@ selector
     ;
 
 arguments
+    :   readOnlyArgs? normalArgs
+    ;
+
+readOnlyArgs
+    :   '<' expressionList? '>'
+    ;
+
+normalArgs
     :   '(' expressionList? ')'
     ;
 
@@ -515,19 +536,15 @@ classAnnotation
     :   '@' id=(Identifier|ClassIdentifier) arguments?
     ;
 
-genericity
-    : '<' type '>'
-    ;
-
-
-
 range
     :   num1=(IntegerLiteral|FloatLiteral) '..' num2=(IntegerLiteral|FloatLiteral)
     |   num1=(IntegerLiteral|FloatLiteral) '..'
     |   '..' num2=(IntegerLiteral|FloatLiteral)
     ;
 
-
+namespacePath
+    :   NormalString ':' NormalString ('/' NormalString)*
+    ;
 
 
 nbtValue
@@ -576,4 +593,3 @@ multiLineStringExpression
 doc_comment
     :   DOC_COMMENT
     ;
-

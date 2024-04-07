@@ -6,7 +6,7 @@ import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
 import java.util.*
-import top.mcfpp.lib.Function
+import top.mcfpp.lib.function.Function
 
 /**
  * 布尔型变量是mcfpp的基本类型之一，它表示一个只有0，1两种取值可能性的值。
@@ -299,16 +299,10 @@ open class MCBool : Var<Boolean>, OnScoreboard {
         TODO("Not yet implemented")
     }
 
-    /**
-     * 根据方法标识符和方法的参数列表获取一个方法。如果没有这个方法，则返回null
-     *
-     * @param key 成员方法的标识符
-     * @param params 成员方法的参数
-     * @return
-     */
     override fun getMemberFunction(
         key: String,
-        params: List<MCFPPType>,
+        readOnlyParams: List<MCFPPType>,
+        normalParams: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         TODO("Not yet implemented")

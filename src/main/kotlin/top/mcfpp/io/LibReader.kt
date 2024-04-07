@@ -6,15 +6,19 @@ import top.mcfpp.lang.UnresolvedVar
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
-import top.mcfpp.lib.Function
+import top.mcfpp.lib.field.CompoundDataField
+import top.mcfpp.lib.field.GlobalField
+import top.mcfpp.lib.field.NamespaceField
+import top.mcfpp.lib.function.*
+import top.mcfpp.lib.function.Function
+import top.mcfpp.util.LazyWrapper
 import java.io.FileReader
 
 /**
  * 包含了用于读取一个mcfpp库索引的方法。
- *
+ * TODO 匹配语法规则更改
  * @see LibWriter
  */
-@Deprecated("等待重写以匹配语法规则的更改")
 object LibReader {
 
     /**
@@ -69,11 +73,11 @@ object LibReader {
                 //字段
                 for (v in cc["vars"] as JSONArray){
                     val vv = v as JSONObject
-                    cls.field.putVar(vv["id"] as String, UnresolvedVar(vv["id"] as String,vv["type"] as String))
+                    cls.field.putVar(vv["id"] as String, UnresolvedVar(vv["id"] as String,vv["type"] as String, cls.field))
                 }
                 for (v in cc["staticVars"] as JSONArray){
                     val vv = v as JSONObject
-                    cls.staticField.putVar(vv["id"] as String, UnresolvedVar(vv["id"] as String,vv["type"] as String))
+                    cls.staticField.putVar(vv["id"] as String, UnresolvedVar(vv["id"] as String,vv["type"] as String, cls.field))
                 }
                 //构造函数
                 for (constructor in cc["constructors"] as JSONArray){
@@ -81,123 +85,125 @@ object LibReader {
                     readConstructor(s,cls)
                 }
             }
+            //TODO 这里要把struct改成template了
             if(oo["structs"] != null)
             for (s in oo["structs"] as JSONArray){
                 val ss = s as JSONObject
                 val strId = ss["id"] as String
-                val struct = Template(strId,MCFPPBaseType.Int, nspId) //TODO: 这里只有是Int吗？
+                val template = Template(strId, LazyWrapper(MCFPPBaseType.Int), nspId) //TODO: 这里只有是Int吗？
                 //结构体的成员
                 //函数
                 for (f in ss["functions"] as JSONArray){
                     val str = f as String
-                    readStructFunction(str, struct.field, struct)
+                    readTemplateFunction(str, template.field, template)
                 }
                 for (f in ss["staticFunctions"] as JSONArray){
                     val str = f as String
-                    readStructFunction(str, struct.staticField, struct)
+                    readTemplateFunction(str, template.staticField, template)
                 }
                 //字段
                 for (v in ss["vars"] as JSONArray){
                     val vv = v as JSONObject
-                    struct.field.putVar(vv["id"] as String, UnresolvedVar(vv["id"] as String,"int"))
+                    template.field.putVar(vv["id"] as String, UnresolvedVar(vv["id"] as String,"int", template.field))
                 }
                 for (v in ss["staticVars"] as JSONArray){
                     val vv = v as JSONObject
-                    struct.staticField.putVar(vv["id"] as String, UnresolvedVar(vv["id"] as String,"int"))
+                    template.staticField.putVar(vv["id"] as String, UnresolvedVar(vv["id"] as String,"int", template.field))
                 }
                 //构造函数
                 for (constructor in ss["constructors"] as JSONArray){
                     val str = constructor as String
-                    readStructConstructor(str, struct)
+                    readStructConstructor(str, template)
                 }
             }
         }
     }
 
-    private fun readGlobalFunction(jsonStr: String, field: IFieldWithFunction, nspId: String){
+    private fun readGlobalFunction(jsonStr: String, field: NamespaceField, nspId: String){
         //获取返回值
-        val returnType = jsonStr.substring(0,jsonStr.indexOf(' '))
+        val returnTypeID = jsonStr.substring(0,jsonStr.indexOf(' '))
         //参数解析
         val params = jsonStr.substring(jsonStr.indexOf('(') + 1, jsonStr.indexOf(')')).split(",")
         val paramList = ArrayList<FunctionParam>()
-        if(params[0] != ""){
-            for (param in params){
-                val info = param.split(" ")
-                val p = if(info.size == 2){
-                    FunctionParam(info[0], info[1],false)
-                }else{
-                    FunctionParam(info[1], info[2], true)
-                }
-                paramList.add(p)
-            }
-        }
+        val func : Function
         if(jsonStr.contains("->")){
             //是native函数
             val functionHead = jsonStr.split("->")[0]
             val javaFunction = jsonStr.split("->")[1]
-            val resType = MCFPPType.parseFromIdentifier(functionHead.substring(0,functionHead.indexOf(' ')))
+            val resType = MCFPPType.parseFromIdentifier(functionHead.substring(0,functionHead.indexOf(' ')), field)
             //获取java方法
-            val nf = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction, resType , nspId)
-            nf.addParams(paramList)
-            field.addFunction(nf,false)
+            func = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction, resType , nspId)
+            field.addFunction(func,false)
         }else{
             //不是native函数
-            val resType = MCFPPType.parseFromIdentifier(returnType)
-            val func = Function(jsonStr.substring(jsonStr.indexOf(' ') + 1,jsonStr.indexOf('(')), nspId,resType )
-            func.addParams(paramList)
-            field.addFunction(func,false)
+            val returnType = MCFPPType.parseFromIdentifier(returnTypeID, field)
+            func = Function(jsonStr.substring(jsonStr.indexOf(' ') + 1,jsonStr.indexOf('(')), nspId, returnType )
         }
-    }
-
-    private fun readClassFunction(jsonStr: String, field: IFieldWithFunction, cls: Class, nspId: String){
-        //参数解析
-        val params = jsonStr.substring(jsonStr.indexOf('(') + 1, jsonStr.indexOf(')')).split(",")
-        val paramList = ArrayList<FunctionParam>()
         if(params[0] != ""){
             for (param in params){
                 val info = param.split(" ")
                 val p = if(info.size == 2){
-                    FunctionParam(info[0], info[1],false)
+                    FunctionParam(info[0], info[1], func)
                 }else{
-                    FunctionParam(info[1], info[2], true)
+                    FunctionParam(info[1], info[2], func)
                 }
                 paramList.add(p)
             }
         }
+        func.addParams(paramList, false)
+        field.addFunction(func,false)
+    }
+
+    private fun readClassFunction(jsonStr: String, field: CompoundDataField, cls: Class, nspId: String){
+        //参数解析
+        val params = jsonStr.substring(jsonStr.indexOf('(') + 1, jsonStr.indexOf(')')).split(",")
+        val paramList = ArrayList<FunctionParam>()
+        val func : Function
         if(jsonStr.contains("->")){
             //是native函数
             val functionHead = jsonStr.split("->")[0]
             val javaFunction = jsonStr.split("->")[1]
             //获取java方法
             //TODO: 这里的返回值类型怎么弄？
-            val nf = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction,
+            func = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction,
                 MCFPPBaseType.Void, nspId)
-            nf.params = paramList
-            cls.staticField.addFunction(nf,false)
+            func.normalParams = paramList
+            cls.staticField.addFunction(func,false)
         }else{
             //不是native函数
-            val func = Function(jsonStr.substring(jsonStr.indexOf(' ')+1,jsonStr.indexOf('(')), cls, isStatic = true)
+            func = Function(jsonStr.substring(jsonStr.indexOf(' ')+1,jsonStr.indexOf('(')), cls, isStatic = true)
             cls.staticField.addFunction(func,false)
         }
-    }
-
-    private fun readStructFunction(jsonStr: String ,field: IFieldWithFunction, struct: Template){
-        //参数解析
-        val params = jsonStr.substring(jsonStr.indexOf('(') + 1, jsonStr.indexOf(')')).split(",")
-        val paramList = ArrayList<FunctionParam>()
         if(params[0] != ""){
             for (param in params){
                 val info = param.split(" ")
                 val p = if(info.size == 2){
-                    FunctionParam(info[0], info[1],false)
+                    FunctionParam(info[0], info[1], func,false)
                 }else{
-                    FunctionParam(info[1], info[2], true)
+                    FunctionParam(info[1], info[2], func, true)
                 }
                 paramList.add(p)
             }
         }
+    }
+
+    private fun readTemplateFunction(jsonStr: String, field: CompoundDataField, struct: Template){
+        //参数解析
+        val params = jsonStr.substring(jsonStr.indexOf('(') + 1, jsonStr.indexOf(')')).split(",")
+        val paramList = ArrayList<FunctionParam>()
         //不是native函数
         val func = Function(jsonStr.substring(jsonStr.indexOf(' ')+1,jsonStr.indexOf('(')), struct, isStatic = true)
+        if(params[0] != ""){
+            for (param in params){
+                val info = param.split(" ")
+                val p = if(info.size == 2){
+                    FunctionParam(info[0], info[1], func,false)
+                }else{
+                    FunctionParam(info[1], info[2], func, true)
+                }
+                paramList.add(p)
+            }
+        }
         field.addFunction(func,false)
     }
 
@@ -205,39 +211,39 @@ object LibReader {
         //参数解析
         val params = jsonStr.substring(jsonStr.indexOf('(') + 1, jsonStr.indexOf(')')).split(",")
         val paramList = ArrayList<FunctionParam>()
+        val co = Constructor(cls)
         if(params[0] != ""){
             for (param in params){
                 val info = param.split(" ")
                 val p = if(info.size == 2){
-                    FunctionParam(info[0], info[1],false)
+                    FunctionParam(info[0], info[1], co,false)
                 }else{
-                    FunctionParam(info[1], info[2], true)
+                    FunctionParam(info[1], info[2], co, true)
                 }
                 paramList.add(p)
             }
         }
-        val co = Constructor(cls)
-        co.params = paramList
+        co.normalParams = paramList
         cls.constructors.add(co)
     }
 
-    private fun readStructConstructor(jsonStr: String, struct: Template){
+    private fun readStructConstructor(jsonStr: String, template: Template){
         //参数解析
         val params = jsonStr.substring(jsonStr.indexOf('(') + 1, jsonStr.indexOf(')')).split(",")
         val paramList = ArrayList<FunctionParam>()
+        val co = TemplateConstructor(template)
         if(params[0] != ""){
             for (param in params){
                 val info = param.split(" ")
                 val p = if(info.size == 2){
-                    FunctionParam(info[0], info[1],false)
+                    FunctionParam(info[0], info[1], co,false)
                 }else{
-                    FunctionParam(info[1], info[2], true)
+                    FunctionParam(info[1], info[2], co, true)
                 }
                 paramList.add(p)
             }
         }
-        val co = TemplateConstructor(struct)
-        co.params = paramList
-        struct.constructors.add(co)
+        co.normalParams = paramList
+        template.constructors.add(co)
     }
 }

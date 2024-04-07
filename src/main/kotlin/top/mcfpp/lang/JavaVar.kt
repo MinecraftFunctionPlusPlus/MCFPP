@@ -5,7 +5,8 @@ import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
 import top.mcfpp.lib.*
-import top.mcfpp.lib.Function
+import top.mcfpp.lib.function.Function
+import top.mcfpp.lib.function.JavaFunction
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil.toJava
 import java.lang.Class
@@ -130,12 +131,13 @@ class JavaVar : Var<Any>{
      * 根据方法标识符和方法的参数列表获取一个方法。如果没有这个方法，则返回null
      *
      * @param key 成员方法的标识符
-     * @param params 成员方法的参数
+     * @param normalParams 成员方法的参数
      * @return
      */
     override fun getMemberFunction(
         key: String,
-        params: List<MCFPPType>,
+        readOnlyParams: List<MCFPPType>,
+        normalParams: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         //获取value中的一个成员方法
@@ -144,7 +146,7 @@ class JavaVar : Var<Any>{
             throw NullPointerException()
         }
         try{
-            val member = javaValue!!::class.java.getDeclaredMethod(key, *getTypeArray(params))
+            val member = javaValue!!::class.java.getDeclaredMethod(key, *getTypeArray(normalParams))
             return Pair(JavaFunction(member, this), member.canAccess(Any()))
         }catch (e: NoSuchMethodException){
             LogProcessor.error("No method '$key' in $identifier}")
