@@ -3,9 +3,10 @@
 		{
 			"id":"default",
 			"functions":[
-				"void test(int p)",
+				"int test()",
 				"void main()",
-				"void test_0(int p)"
+				"int test_0()",
+				"int test_1()"
 			],
 			"classes":[
 				

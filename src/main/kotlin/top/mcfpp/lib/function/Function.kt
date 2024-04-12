@@ -668,7 +668,7 @@ open class Function : Member, FieldContainer {
      * @param v
      */
     @InsertCommand
-    open fun returnVar(v: Var<*>){
+    open fun assignReturnVar(v: Var<*>){
         if(returnType == MCFPPBaseType.Void){
             LogProcessor.error("Function $identifier has no return value")
             return

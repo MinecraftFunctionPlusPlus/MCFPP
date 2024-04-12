@@ -74,7 +74,7 @@ internal class CompileTest {
                 func main(){
                     var q = test<2>();
                     print(q);
-                    print(test<6>);
+                    print(test<6>());
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test)

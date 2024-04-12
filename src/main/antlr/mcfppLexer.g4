@@ -61,10 +61,6 @@ BIT_XOR_ASSIGN:                   '^=';
 BIT_OR_ASSIGN:                    '|=';
 TRIPLE_QUOTE_OPEN: '"""' -> pushMode(MultiLineString) ;
 
-//Wrapped Characters
-FunctionReturn: ARROW;
-ClassExtends: COLON;
-
 //KeyWords
 THIS:'this';
 SUPER:'super';
