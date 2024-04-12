@@ -145,11 +145,10 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      * 离开一个函数体
      * @param ctx the parse tree
      */
-    
     fun exitFunctionBody(ctx: mcfppParser.FunctionBodyContext) {
         Project.ctx = ctx
         //函数是否有返回值
-        if(Function.currFunction.returnType !=  MCFPPBaseType.Void && !Function.currFunction.hasReturnStatement){
+        if(Function.currFunction !is Generic<*> && Function.currFunction.returnType !=  MCFPPBaseType.Void && !Function.currFunction.hasReturnStatement){
             LogProcessor.error("A 'return' expression required in function: " + Function.currFunction.namespaceID)
         }
         if (Class.currClass == null) {
@@ -164,7 +163,6 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      * 进入命名空间声明的时候
      * @param ctx the parse tree
      */
-    
     override fun visitNamespaceDeclaration(ctx: mcfppParser.NamespaceDeclarationContext):Any? {
         Project.ctx = ctx
         Project.currNamespace = ctx.Identifier(0).text
@@ -181,7 +179,6 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      * 变量声明
      * @param ctx the parse tree
      */
-    
     @InsertCommand
     override fun visitFieldDeclaration(ctx: mcfppParser.FieldDeclarationContext):Any? {
         Project.ctx = ctx
@@ -277,7 +274,6 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      * 一个赋值的语句
      * @param ctx the parse tree
      */
-    
     @InsertCommand
     override fun visitStatementExpression(ctx: mcfppParser.StatementExpressionContext):Any? {
         Project.ctx = ctx
@@ -388,7 +384,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addCommand("#" + ctx.text)
         if (ctx.expression() != null) {
             val ret: Var<*> = McfppExprVisitor().visit(ctx.expression())!!
-            Function.currBaseFunction.returnVar(ret)
+            Function.currBaseFunction.assignReturnVar(ret)
         }
         if(Function.currFunction !is InternalFunction)
             Function.currFunction.hasReturnStatement = true
@@ -429,7 +425,6 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      *
      * @param ctx
      */
-    
     @InsertCommand
     fun exitIfStatement(ctx: mcfppParser.IfStatementContext) {
         Project.ctx = ctx

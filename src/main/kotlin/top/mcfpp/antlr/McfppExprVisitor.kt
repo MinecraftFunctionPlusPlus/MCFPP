@@ -563,13 +563,11 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var<*>?>() {
             val normalArgs: ArrayList<Var<*>> = ArrayList()
             val readOnlyParams: ArrayList<Var<*>> = ArrayList()
             val exprVisitor = McfppExprVisitor()
-            ctx.arguments().readOnlyArgs()?.let {
-                for (expr in it.expressionList().expression()) {
-                    val arg = exprVisitor.visit(expr)!!
-                    readOnlyParams.add(arg)
-                }
+            for (expr in ctx.arguments().readOnlyArgs()?.expressionList()?.expression()?: emptyList()) {
+                val arg = exprVisitor.visit(expr)!!
+                readOnlyParams.add(arg)
             }
-            for (expr in ctx.arguments().normalArgs().expressionList().expression()) {
+            for (expr in ctx.arguments().normalArgs().expressionList()?.expression()?: emptyList()) {
                 val arg = exprVisitor.visit(expr)!!
                 normalArgs.add(arg)
             }
@@ -626,13 +624,11 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var<*>?>() {
         val normalArgs: ArrayList<Var<*>> = ArrayList()
         val readOnlyParams: ArrayList<Var<*>> = ArrayList()
         val exprVisitor = McfppExprVisitor()
-        ctx.arguments().readOnlyArgs()?.let {
-            for (expr in it.expressionList().expression()) {
-                val arg = exprVisitor.visit(expr)!!
-                readOnlyParams.add(arg)
-            }
+        for (expr in ctx.arguments().readOnlyArgs()?.expressionList()?.expression()?: emptyList()) {
+            val arg = exprVisitor.visit(expr)!!
+            readOnlyParams.add(arg)
         }
-        for (expr in ctx.arguments().normalArgs().expressionList().expression()) {
+        for (expr in ctx.arguments().normalArgs().expressionList()?.expression()?: emptyList()) {
             val arg = exprVisitor.visit(expr)!!
             normalArgs.add(arg)
         }

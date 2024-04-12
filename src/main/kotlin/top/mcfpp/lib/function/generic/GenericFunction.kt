@@ -13,6 +13,7 @@ import top.mcfpp.lang.Var
 import top.mcfpp.lib.field.GlobalField
 import top.mcfpp.lib.function.Function
 import top.mcfpp.lib.function.FunctionParam
+import top.mcfpp.util.LogProcessor
 
 class GenericFunction : Function, Generic<Function> {
 
@@ -66,7 +67,7 @@ class GenericFunction : Function, Generic<Function> {
         val r = ctx.readOnlyParams().parameterList()
         val n = ctx.normalParams().parameterList()
         if(r == null && n == null) return
-        for (param in r.parameter()){
+        for (param in r?.parameter()?:ArrayList()){
             val param1 = FunctionParam(
                 param.type().text,
                 param.Identifier().text,
@@ -75,7 +76,7 @@ class GenericFunction : Function, Generic<Function> {
             )
             readOnlyParams.add(param1)
         }
-        for (param in n.parameter()) {
+        for (param in n?.parameter()?:ArrayList()) {
             val param1 = FunctionParam(
                 param.type().text,
                 param.Identifier().text,
@@ -134,16 +135,21 @@ class GenericFunction : Function, Generic<Function> {
             val r = field.getVar(normalParams[i].identifier)!!
             compiledFunction.field.putVar(normalParams[i].identifier, r, false)
         }
-        for (i in readOnlyArgs.indices) {
-            val r = field.getVar(readOnlyParams[i].identifier)
-            r!!.assign(readOnlyArgs[i])
+        for (i in readOnlyParams.indices) {
+            val r = field.getVar(readOnlyParams[i].identifier)!!
+            r.assign(readOnlyArgs[i])
             compiledFunction.field.putVar(readOnlyParams[i].identifier, r, false)
         }
         index ++
         //编译这个函数
         McfppImVisitor().visitFunctionBody(ctx, compiledFunction)
+        if(compiledFunction.returnType !=  MCFPPBaseType.Void && !compiledFunction.hasReturnStatement){
+            LogProcessor.error("A 'return' expression required in function: " + compiledFunction.namespaceID)
+        }
         //注册这个函数
         GlobalField.localNamespaces[namespace]!!.addFunction(compiledFunction, false)
+        //传递函数的返回值
+        this.returnVar = compiledFunction.returnVar
         return compiledFunction
     }
 

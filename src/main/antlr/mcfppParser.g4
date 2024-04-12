@@ -184,7 +184,7 @@ inlineFunctionDeclaration
 
 //函数声明
 functionDeclaration
-    :   funcAnnoation? FUNCTION Identifier functionParams (FunctionReturn functionReturnType)? '{' functionBody '}'
+    :   funcAnnoation? FUNCTION Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
     ;
 
 extensionFunctionDeclaration
