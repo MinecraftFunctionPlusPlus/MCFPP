@@ -13,6 +13,7 @@ import java.lang.Class
 
 /**
  * 表示了一个native方法
+ * TODO Native 和 Generic 的关系
  */
 class NativeFunction : Function, Native {
 
@@ -32,7 +33,6 @@ class NativeFunction : Function, Native {
     var javaMethodName: String
 
     val readOnlyParams: ArrayList<FunctionParam> = ArrayList()
-
 
     /**
      * 通过一个java方法的字符串来构造一个NativeFunction
@@ -102,9 +102,13 @@ class NativeFunction : Function, Native {
         this.javaMethodName = name
     }
 
+    override fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?) {
+        invoke(ArrayList(), normalArgs, caller)
+    }
+
     @Override
-    override fun invoke(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?) {
-        argPass(/*readOnlyArgs, */normalArgs)
+    fun invoke(readOnlyArgs: ArrayList<Var<*>>, normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?) {
+        argPass(readOnlyArgs, normalArgs)
         val argsArray = arrayOfNulls<Var<*>>(field.allVars.size)
         field.allVars.toTypedArray().copyInto(argsArray)
         try {
@@ -123,12 +127,11 @@ class NativeFunction : Function, Native {
         }
     }
 
-    override fun argPass(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>,){
+    private fun argPass(readOnlyArgs: ArrayList<Var<*>>, normalArgs: ArrayList<Var<*>>,){
         for (i in this.normalParams.indices) {
             val p = field.getVar(this.normalParams[i].identifier)!!
             p.assign(normalArgs[i])
         }
-        /*
         for(i in this.readOnlyParams.indices){
             if(!readOnlyArgs[i].isConcrete){
                 LogProcessor.error("Cannot pass a non-concrete value to a readonly parameter")
@@ -138,8 +141,22 @@ class NativeFunction : Function, Native {
             val p = field.getVar(this.readOnlyParams[i].identifier)!!
             p.assign(readOnlyArgs[i])
         }
-         */
     }
+
+    val readOnlyParamTypeList: ArrayList<MCFPPType>
+        get() {
+            val re = ArrayList<MCFPPType>()
+            for (p in readOnlyParams) {
+                re.add(p.type)
+            }
+            return re
+        }
+
+    fun appendReadOnlyParam(type: String, identifier: String, isStatic: Boolean = false) : Function {
+        readOnlyParams.add(FunctionParam(type,identifier, this, isStatic))
+        return this
+    }
+
     @Override
     override fun toString(containClassName: Boolean, containNamespace: Boolean): String {
         return super.toString(containClassName,containNamespace ) + "->" + javaClassName + "." + javaMethodName

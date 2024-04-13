@@ -191,7 +191,7 @@ class MCInt : Number<Int> {
                                 .build(replace), Function.currFunction.commands.size-1)
                         }
                     }
-                    val append = "store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1 run "
+                    val append = "store result storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1 run "
                     //是成员
                     val cmd = when(val parent = a.parent){
                         is ClassPointer -> {
@@ -212,7 +212,7 @@ class MCInt : Number<Int> {
                         Function.replaceCommand(cmd.last().build(replace), Function.currFunction.commands.size-1)
                     }
                 }else{
-                    val head = if(isTemp) "" else "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1 run "
+                    val head = if(isTemp) "" else "execute store result storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1 run "
                     //变量进栈
                     if(replace == null){
                         Function.addCommand(Command.build(head)
@@ -250,7 +250,7 @@ class MCInt : Number<Int> {
             Function.addCommand(cmd.last().build("scoreboard players set @s $`object` $javaValue"))
         } else {
             val cmd: String = if (!isTemp)
-                "execute store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1 run "
+                "execute store result storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1 run "
             else
                 ""
             Function.addCommand(cmd + "scoreboard players set $name $`object` $javaValue")
@@ -622,7 +622,7 @@ class MCInt : Number<Int> {
     override fun storeToStack() {
         if(parent != null) return
         Function.addCommand("execute " +
-                "store result storage mcfpp:system ${Project.defaultNamespace}.stack_frame[$stackIndex].$identifier int 1 " +
+                "store result storage mcfpp:system ${Project.config.defaultNamespace}.stack_frame[$stackIndex].$identifier int 1 " +
                 "run scoreboard players get $name $`object`")
     }
 
@@ -630,7 +630,7 @@ class MCInt : Number<Int> {
         if(parent != null) return
         Function.addCommand("execute " +
                 "store result score $name $`object` " +
-                "run data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].$identifier")
+                "run data get storage mcfpp:system ${Project.config.defaultNamespace}.stack_frame[0].$identifier")
     }
 
     /**

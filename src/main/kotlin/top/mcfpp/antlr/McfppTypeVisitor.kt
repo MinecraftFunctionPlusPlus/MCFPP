@@ -36,7 +36,7 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             }
             Project.currNamespace = namespaceStr
         }else{
-            Project.currNamespace = Project.defaultNamespace
+            Project.currNamespace = Project.config.defaultNamespace
         }
         //导入库
         for (lib in ctx.importDeclaration()){

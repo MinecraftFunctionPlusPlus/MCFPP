@@ -30,9 +30,9 @@ import kotlin.collections.ArrayList
  */
 class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 
-    var isStatic = false
+    private var isStatic = false
 
-    lateinit var typeScope : IFieldWithType
+    private lateinit var typeScope : IFieldWithType
 
     /**
      * 遍历整个文件。一个文件包含了命名空间的声明，函数的声明，类的声明以及全局变量的声明。全局变量是可以跨文件调用的。
@@ -53,7 +53,7 @@ class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 }
             }
             namespaceStr
-        }?: Project.defaultNamespace
+        }?: Project.config.defaultNamespace
         typeScope = GlobalField.localNamespaces[Project.currNamespace]!!
         //文件结构，类和函数
         for (t in ctx.typeDeclaration()) {

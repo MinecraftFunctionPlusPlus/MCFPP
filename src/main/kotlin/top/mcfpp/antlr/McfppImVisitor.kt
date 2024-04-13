@@ -466,9 +466,9 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
             if (exp.isConcrete && exp.javaValue==true) {
                 //函数调用的命令
                 //给子函数开栈
-                Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
+                Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
                 Function.addCommand("function " + f.namespaceID)
-                Function.addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
+                Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
                 Function.addCommand("return 1")
                 LogProcessor.warn("The condition is always true. ")
             } else if (exp.isConcrete) {
@@ -482,37 +482,37 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 //给子函数开栈
                 Function.addCommand(
                     "execute " +
-                            "if score " + exp1.name + " " + SbObject.MCS_boolean + " matches 1 " +
-                            "run data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}"
+                            "if score " + exp1.name + " " + SbObject.MCFPP_boolean + " matches 1 " +
+                            "run data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}"
                 )
                 Function.addCommand(
                     "execute " +
-                            "if score " + exp1.name + " " + SbObject.MCS_boolean + " matches 1 " +
+                            "if score " + exp1.name + " " + SbObject.MCFPP_boolean + " matches 1 " +
                             "run function " + f.namespaceID
                 )
                 Function.addCommand(
                     "execute " +
-                            "if score " + exp1.name + " " + SbObject.MCS_boolean + " matches 1 " +
-                            "run data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]"
+                            "if score " + exp1.name + " " + SbObject.MCFPP_boolean + " matches 1 " +
+                            "run data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]"
                 )
                 //由于下一个函数被直接中断，因此需要自己把自己的栈去掉
                 Function.addCommand(
                     "execute " +
-                            "if score " + exp1.name + " " + SbObject.MCS_boolean + " matches 1 " +
-                            "run data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]"
+                            "if score " + exp1.name + " " + SbObject.MCFPP_boolean + " matches 1 " +
+                            "run data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]"
                 )
                 Function.addCommand(
                     "execute " +
-                            "if score " + exp1.name + " " + SbObject.MCS_boolean + " matches 1 " +
+                            "if score " + exp1.name + " " + SbObject.MCFPP_boolean + " matches 1 " +
                             "run return 1"
                 )
             }
         }
         else {
             //else语句
-            Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
+            Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
             Function.addCommand("function " + f.namespaceID)
-            Function.addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
+            Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
         }
         Function.currFunction = f
     }
@@ -543,7 +543,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addCommand("#while start")
         val whileFunction = InternalFunction("_while_", Function.currFunction)
         Function.addCommand("function " + whileFunction.namespaceID)
-        Function.addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
+        Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
         Function.currFunction = whileFunction
         if(!GlobalField.localNamespaces.containsKey(whileFunction.namespace))
             GlobalField.localNamespaces[whileFunction.namespace] = NamespaceField()
@@ -576,7 +576,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     fun enterWhileBlock(ctx: mcfppParser.WhileBlockContext) {
         Project.ctx = ctx
         //入栈
-        Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
+        Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
         Function.addCommand("#" + "while start")
         val parent: mcfppParser.WhileStatementContext = ctx.parent as mcfppParser.WhileStatementContext
         val exp: MCBool = McfppExprVisitor().visit(parent.expression()) as MCBool
@@ -590,7 +590,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         //条件判断
         if (exp.isConcrete && exp.javaValue==true) {
             //给子函数开栈
-            Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
+            Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
             Function.addCommand(
                 "execute " +
                         "if function " + f.namespaceID + " " +
@@ -604,7 +604,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         } else {
             exp as ReturnedMCBool
             //给子函数开栈
-            Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
+            Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
             //函数返回1才会继续执行(continue或者正常循环完毕)，返回0则不继续循环(break)
             Function.addCommand(
                 "execute " +
@@ -627,9 +627,9 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         Project.ctx = ctx
         //调用完毕，将子函数的栈销毁
         //由于在同一个命令中完成了两个函数的调用，因此需要在子函数内部进行子函数栈的销毁工作
-        Function.addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
+        Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
         //这里取出while函数的栈
-        Function.addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
+        Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
         Function.addCommand("return 1")
         Function.currFunction = Function.currFunction.parent[0]
         Function.addCommand("#while loop end")
@@ -648,9 +648,9 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         Project.ctx = ctx
         Function.addCommand("#do-while start")
         val doWhileFunction = InternalFunction("_dowhile_", Function.currFunction)
-        Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
+        Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
         Function.addCommand("function " + doWhileFunction.namespaceID)
-        Function.addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
+        Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
         Function.currFunction = doWhileFunction
         if(!GlobalField.localNamespaces.containsKey(doWhileFunction.namespace))
             GlobalField.localNamespaces[doWhileFunction.namespace] = NamespaceField()
@@ -696,7 +696,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         if(!GlobalField.localNamespaces.containsKey(f.namespace)) GlobalField.localNamespaces[f.namespace] = NamespaceField()
         GlobalField.localNamespaces[f.namespace]!!.addFunction(f,false)
         //给子函数开栈
-        Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
+        Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
         Function.addCommand(
             "execute " +
                     "unless function " + f.namespaceID + " " +
@@ -704,11 +704,11 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         )
         val parent = ctx.parent as mcfppParser.DoWhileStatementContext
         val exp: MCBool = McfppExprVisitor().visit(parent.expression()) as MCBool
-        Function.addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
+        Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
         //递归调用
         if (exp.isConcrete && exp.javaValue==true) {
             //给子函数开栈
-            Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
+            Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
             Function.addCommand(
                 "execute " +
                         "if function " + f.namespaceID + " " +
@@ -722,7 +722,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         } else {
             exp as ReturnedMCBool
             //给子函数开栈
-            Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
+            Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
             Function.addCommand(
                 "execute " +
                         "if function ${exp.parentFunction.namespaceID} " +
@@ -737,7 +737,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     fun exitDoWhileBlock(ctx: mcfppParser.DoWhileBlockContext) {
         Project.ctx = ctx
         //调用完毕，将子函数的栈销毁
-        Function.addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
+        Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
         //调用完毕，将子函数的栈销毁
         Function.currFunction = Function.currFunction.parent[0]
         Function.addCommand("#do while end")
@@ -765,9 +765,9 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         if(!GlobalField.localNamespaces.containsKey(forFunc.namespace))
             GlobalField.localNamespaces[forFunc.namespace] = NamespaceField()
         GlobalField.localNamespaces[forFunc.namespace]!!.addFunction(forFunc,false)
-        Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
+        Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
         Function.addCommand(Commands.function(forFunc))
-        Function.addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
+        Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
         Function.currFunction = forFunc
     }
 
@@ -804,7 +804,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         if(!GlobalField.localNamespaces.containsKey(forLoopFunc.namespace))
             GlobalField.localNamespaces[forLoopFunc.namespace] = NamespaceField()
         GlobalField.localNamespaces[forLoopFunc.namespace]!!.addFunction(forLoopFunc,false)
-        Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
+        Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
         Function.addCommand(Commands.function(forLoopFunc))
 
     }
@@ -872,7 +872,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         //条件循环判断
         if (exp.isConcrete && exp.javaValue==true) {
             //给子函数开栈
-            Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
+            Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
             Function.addCommand(
                 "execute " +
                         "if function " + f.namespaceID + " " +
@@ -886,7 +886,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         } else {
             exp as ReturnedMCBool
             //给子函数开栈
-            Function.addCommand("data modify storage mcfpp:system " + Project.defaultNamespace + ".stack_frame prepend value {}")
+            Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
             //函数返回1才会继续执行(continue或者正常循环完毕)，返回0则不继续循环(break)
             Function.addCommand(
                 "execute " +
@@ -896,7 +896,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
             )
         }
         //调用完毕，将子函数的栈销毁。这条命令仍然是在for函数中的。
-        Function.addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
+        Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
         Function.currFunction = f //后续块中的命令解析到递归的函数中
     }
 
@@ -908,13 +908,13 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     @InsertCommand
     fun exitForBlock(ctx: mcfppParser.ForBlockContext) {
         Project.ctx = ctx
-        //for update的命令压入
+        //for-update的命令压入
         Function.currFunction.commands.addAll(forUpdateCommands)
         forUpdateCommands.clear()
         //调用完毕，将子函数的栈销毁
-        Function.addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
-        //继续销毁forloop函数的栈
-        Function.addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
+        Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
+        //继续销毁for-loop函数的栈
+        Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
         Function.currFunction = Function.currFunction.parent[0]
     }
 //endregion

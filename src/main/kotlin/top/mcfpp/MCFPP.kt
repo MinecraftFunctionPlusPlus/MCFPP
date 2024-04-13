@@ -42,11 +42,11 @@ fun main(args: Array<String>) {
         Project.optimization() //优化
         Project.genIndex() //生成索引
         Project.ctx = null
-        if(Project.targetPath != "null"){
+        if(Project.config.targetPath != "null"){
             try{
-                DatapackCreator.createDatapack(Project.targetPath) //生成数据包
+                DatapackCreator.createDatapack(Project.config.targetPath) //生成数据包
             }catch (e: Exception){
-                LogProcessor.error("Cannot create datapack in path: ${Project.targetPath}")
+                LogProcessor.error("Cannot create datapack in path: ${Project.config.targetPath}")
             }
         }
         LogProcessor.info("Finished in " + (System.currentTimeMillis() - start) + "ms")

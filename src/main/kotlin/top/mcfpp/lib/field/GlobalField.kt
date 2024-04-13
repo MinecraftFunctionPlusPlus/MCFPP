@@ -57,8 +57,8 @@ object GlobalField : FieldContainer, IField {
         functionTags["minecraft:tick"] = FunctionTag.TICK
         functionTags["minecraft:load"] = FunctionTag.LOAD
 
-        scoreboards[SbObject.MCS_boolean.name] = SbObject.MCS_boolean
-        scoreboards[SbObject.MCS_default.name] = SbObject.MCS_default
+        scoreboards[SbObject.MCFPP_boolean.name] = SbObject.MCFPP_boolean
+        scoreboards[SbObject.MCFPP_default.name] = SbObject.MCFPP_default
         scoreboards[SbObject.MCFPP_INIT.name] = SbObject.MCFPP_INIT
         scoreboards[SbObject.MCFPP_TEMP.name] = SbObject.MCFPP_TEMP
 
@@ -187,7 +187,7 @@ object GlobalField : FieldContainer, IField {
     }
     @get:Override
     override val prefix: String
-        get() = Project.defaultNamespace + "_global_"
+        get() = Project.config.defaultNamespace + "_global_"
 
     /**
      * TODO:DEBUG

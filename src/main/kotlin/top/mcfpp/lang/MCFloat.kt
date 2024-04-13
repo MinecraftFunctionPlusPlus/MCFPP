@@ -234,16 +234,16 @@ class MCFloat : Number<Float> {
                     Function.addCommand("scoreboard players operation ${exp.name} ${exp.`object`} = ${pwp.exp.name} ${pwp.exp.`object`}")
                 }else{
                     Function.addCommand("execute " +
-                            "store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + ".sign" + " int 1 " +
+                            "store result storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + ".sign" + " int 1 " +
                             "run scoreboard players operation ${sign.name} ${sign.`object`} = ${pwp.sign.name} ${pwp.sign.`object`}")
                     Function.addCommand("execute " +
-                            "store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + ".int0" + " int 1 " +
+                            "store result storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + ".int0" + " int 1 " +
                             "run scoreboard players operation ${int0.name} ${int0.`object`} = ${pwp.int0.name} ${pwp.int0.`object`}")
                     Function.addCommand("execute " +
-                            "store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + ".int1" + " int 1 " +
+                            "store result storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + ".int1" + " int 1 " +
                             "run scoreboard players operation ${int1.name} ${int1.`object`} = ${pwp.int1.name} ${pwp.int1.`object`}")
                     Function.addCommand("execute " +
-                            "store result storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + ".exp" + " int 1 " +
+                            "store result storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + ".exp" + " int 1 " +
                             "run scoreboard players operation ${exp.name} ${exp.`object`} = ${pwp.exp.name} ${pwp.exp.`object`}")
                 }
              }

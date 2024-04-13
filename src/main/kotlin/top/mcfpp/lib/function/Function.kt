@@ -4,9 +4,7 @@ import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.command.Command
-import top.mcfpp.command.CommandList
-import top.mcfpp.command.Commands
+import top.mcfpp.command.*
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPBaseType
@@ -505,7 +503,7 @@ open class Function : Member, FieldContainer {
         //基本类型
         addCommand("#[Function ${this.namespaceID}] Function Pushing and argument passing")
         //给函数开栈
-        addCommand("data modify storage mcfpp:system ${Project.defaultNamespace}.stack_frame prepend value {}")
+        addCommand("data modify storage mcfpp:system ${Project.config.defaultNamespace}.stack_frame prepend value {}")
         //传入this参数
         field.putVar("this",caller,true)
         //参数传递
@@ -520,7 +518,7 @@ open class Function : Member, FieldContainer {
             }
         }
         //调用完毕，将子函数的栈销毁
-        addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
+        addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
         //取出栈内的值
         fieldRestore()
     }
@@ -535,7 +533,7 @@ open class Function : Member, FieldContainer {
     @InsertCommand
     open fun invoke(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, callerClassP: ClassPointer?) {
         //给函数开栈
-        addCommand("data modify storage mcfpp:system ${Project.defaultNamespace}.stack_frame prepend value {}")
+        addCommand("data modify storage mcfpp:system ${Project.config.defaultNamespace}.stack_frame prepend value {}")
         //参数传递
         argPass(/*readOnlyArgs, */normalArgs)
         //函数调用的命令
@@ -557,7 +555,7 @@ open class Function : Member, FieldContainer {
             }
         }
         //调用完毕，将子函数的栈销毁
-        addCommand("data remove storage mcfpp:system " + Project.defaultNamespace + ".stack_frame[0]")
+        addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
         //取出栈内的值
         fieldRestore()
     }
@@ -621,7 +619,7 @@ open class Function : Member, FieldContainer {
                             addCommand(
                                 "execute " +
                                         "store result score ${(args[i] as MCInt).name} ${(args[i] as MCInt).`object`} " +
-                                        "run data get storage mcfpp:system ${Project.defaultNamespace}.stack_frame[0].${normalParams[i].identifier} int 1 "
+                                        "run data get storage mcfpp:system ${Project.config.defaultNamespace}.stack_frame[0].${normalParams[i].identifier} int 1 "
                             )
                         }
                         else -> {
@@ -853,6 +851,7 @@ open class Function : Member, FieldContainer {
          * @param command 要添加的命令。
          */
         fun addCommand(command: Command): Int {
+
             if(CompileSettings.isDebug){
                 //检查当前方法是否有InsertCommand注解
                 val stackTrace = Thread.currentThread().stackTrace
@@ -863,6 +862,9 @@ open class Function : Member, FieldContainer {
                 //调用此方法的代码行数
                 val lineNumber = stackTrace[2].lineNumber
                 val methods: Array<Method> = java.lang.Class.forName(className).declaredMethods
+                if(command.toString().startsWith("#")){
+                    LogProcessor.warn("(JVM)Should use addComment() to add a Comment instead of addCommand(). at $className.$methodName:$lineNumber\"")
+                }
                 for (method in methods) {
                     if (cache.contains(method.toGenericString())){
                         break
@@ -891,14 +893,13 @@ open class Function : Member, FieldContainer {
          *
          * @param str
          */
-        @Deprecated("Use addCommand() instead")
-        fun addComment(str: String){
+        fun addComment(str: String, type: CommentType = CommentType.INFO){
             if(this.equals(nullFunction)){
                 LogProcessor.warn("Unexpected command added to NullFunction")
                 throw NullPointerException()
             }
             if (!currFunction.isEnd) {
-                currFunction.commands.add("#$str")
+                currFunction.commands.add(Comment("#$str", type))
             }
         }
 
