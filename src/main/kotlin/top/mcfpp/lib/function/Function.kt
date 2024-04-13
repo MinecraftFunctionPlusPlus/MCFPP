@@ -782,11 +782,6 @@ open class Function : Member, FieldContainer {
         var nullFunction = Function("null")
 
         /**
-         * 默认函数，用于顶层语句。每个文件的默认函数不同
-         */
-        var defaultFunction = nullFunction
-
-        /**
          * 目前编译器处在的函数。允许编译器在全局获取并访问当前正在编译的函数对象。默认为全局初始化函数
          */
         var currFunction: Function = nullFunction

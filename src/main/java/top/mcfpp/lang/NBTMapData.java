@@ -1,41 +1,58 @@
 package top.mcfpp.lang;
 
-public class NBTMapData {
+import kotlin.NotImplementedError;
+import kotlin.jvm.functions.Function4;
+import org.jetbrains.annotations.NotNull;
+import top.mcfpp.lib.function.MNIMethodContainer;
+import top.mcfpp.util.ValueWrapper;
 
-    public static void clear(Var<?>[] vars, CanSelectMember caller) {
+import java.util.HashMap;
 
+public class NBTMapData extends MNIMethodContainer {
+    static HashMap<String, Function4<Var<?>[], Var<?>[], CanSelectMember, ValueWrapper<Var<?>>, java.lang.Void>> methods;
+
+    static {
+        methods = new HashMap<>();
+        methods.put("clear", (vars, vars2, canSelectMember, varValueWrapper) -> {
+            return null;
+        });
+
+        methods.put("containsKey", (vars, vars2, canSelectMember, varValueWrapper) -> {
+            return null;
+        });
+
+        methods.put("containsValue", (vars, vars2, canSelectMember, varValueWrapper) -> {
+            return null;
+        });
+
+        methods.put("isEmpty", (vars, vars2, canSelectMember, varValueWrapper) -> {
+            return null;
+        });
+
+        methods.put("getKeys", (vars, vars2, canSelectMember, varValueWrapper) -> {
+            return null;
+        });
+
+        methods.put("getValues", (vars, vars2, canSelectMember, varValueWrapper) -> {
+            return null;
+        });
+
+        methods.put("remove", (vars, vars2, canSelectMember, varValueWrapper) -> {
+            return null;
+        });
+
+        methods.put("merge", (vars, vars2, canSelectMember, varValueWrapper) -> {
+            return null;
+        });
+
+        methods.put("size", (vars, vars2, canSelectMember, varValueWrapper) -> {
+            return null;
+        });
     }
 
-    public static void containsKey(Var<?>[] vars, CanSelectMember caller) {
-
+    @NotNull
+    @Override
+    public Function4<Var<?>[], Var<?>[], CanSelectMember, ValueWrapper<Var<?>>, java.lang.Void> getMNIMethod(@NotNull String name) {
+        return methods.get(name);
     }
-
-    public static void containsValue(Var<?>[] vars, CanSelectMember caller) {
-
-    }
-
-    public static void isEmpty(Var<?>[] vars, CanSelectMember caller) {
-
-    }
-
-    public static void getKeys(Var<?>[] vars, CanSelectMember caller) {
-
-    }
-
-    public static void getValues(Var<?>[] vars, CanSelectMember caller) {
-
-    }
-
-    public static void remove(Var<?>[] vars, CanSelectMember caller) {
-
-    }
-
-    public static void merge(Var<?>[] vars, CanSelectMember caller) {
-
-    }
-
-    public static void size(Var<?>[] vars, CanSelectMember caller) {
-
-    }
-
 }

@@ -2,6 +2,8 @@ package top.mcfpp.io
 
 import com.alibaba.fastjson2.JSONArray
 import com.alibaba.fastjson2.JSONObject
+import top.mcfpp.Project
+import top.mcfpp.exception.IllegalFormatException
 import top.mcfpp.lang.UnresolvedVar
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
@@ -12,6 +14,7 @@ import top.mcfpp.lib.field.NamespaceField
 import top.mcfpp.lib.function.*
 import top.mcfpp.lib.function.Function
 import top.mcfpp.util.LazyWrapper
+import top.mcfpp.util.LogProcessor
 import java.io.FileReader
 
 /**
@@ -132,7 +135,27 @@ object LibReader {
             val javaFunction = jsonStr.split("->")[1]
             val resType = MCFPPType.parseFromIdentifier(functionHead.substring(0,functionHead.indexOf(' ')), field)
             //获取java方法
-            func = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction, resType , nspId)
+            func = try {
+                val clsName = javaFunction.substring(0,javaFunction.lastIndexOf('.'))
+                val clazz = java.lang.Class.forName(clsName).getConstructor().newInstance()
+                if(clazz !is MNIMethodContainer){
+                    LogProcessor.error("Class $clsName should extends MNIMethodContainer")
+                    throw IllegalArgumentException("Class $clsName should extends MNIMethodContainer")
+                }
+                NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')), clazz, resType, nspId)
+            } catch (e: IllegalFormatException) {
+                LogProcessor.error("Illegal Java Method Name: " + e.message)
+                throw e
+            } catch (e: ClassNotFoundException) {
+                LogProcessor.error("Cannot find java class: " + e.message)
+                throw e
+            } catch (e: NoSuchMethodException) {
+                LogProcessor.error("MNIMethodContainer should have a non-parameter constructor: " + e.message)
+                throw e
+            } catch (e: SecurityException){
+                LogProcessor.error("Cannot access to the constructor: " + e.message)
+                throw e
+            }
             field.addFunction(func,false)
         }else{
             //不是native函数
@@ -165,8 +188,27 @@ object LibReader {
             val javaFunction = jsonStr.split("->")[1]
             //获取java方法
             //TODO: 这里的返回值类型怎么弄？
-            func = NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')),javaFunction,
-                MCFPPBaseType.Void, nspId)
+            func = try {
+                val clsName = javaFunction.substring(0,javaFunction.lastIndexOf('.'))
+                val clazz = java.lang.Class.forName(clsName).getConstructor().newInstance()
+                if(clazz !is MNIMethodContainer){
+                    LogProcessor.error("Class $clsName should extends MNIMethodContainer")
+                    throw IllegalArgumentException("Class $clsName should extends MNIMethodContainer")
+                }
+                NativeFunction(functionHead.substring(functionHead.indexOf(' ')+1,functionHead.indexOf('(')), clazz, MCFPPBaseType.Any, nspId)
+            } catch (e: IllegalFormatException) {
+                LogProcessor.error("Illegal Java Method Name: " + e.message)
+                throw e
+            } catch (e: ClassNotFoundException) {
+                LogProcessor.error("Cannot find java class: " + e.message)
+                throw e
+            } catch (e: NoSuchMethodException) {
+                LogProcessor.error("MNIMethodContainer should have a non-parameter constructor: " + e.message)
+                throw e
+            } catch (e: SecurityException){
+                LogProcessor.error("Cannot access to the constructor: " + e.message)
+                throw e
+            }
             func.normalParams = paramList
             cls.staticField.addFunction(func,false)
         }else{

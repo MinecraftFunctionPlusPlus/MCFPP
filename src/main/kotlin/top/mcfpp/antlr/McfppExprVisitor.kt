@@ -452,46 +452,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var<*>?>() {
             //变量
             return visit(ctx.`var`())
         } else if (ctx.value() != null) {
-            //常量
-            val valueContext: mcfppParser.ValueContext = ctx.value()
-            if (valueContext.IntegerLiteral() != null) {
-                return MCInt(Integer.parseInt(valueContext.IntegerLiteral().text))
-            } else if (valueContext.LineString() != null) {
-                val r: String = valueContext.LineString().text
-                return MCString(StringTag(r.substring(1, r.length - 1)))
-            } else if (valueContext.multiLineStringLiteral()!=null){
-                val stringArray = mutableListOf<String>()
-                var isConcrete = true
-                for(stringContext in valueContext.multiLineStringLiteral().multiLineStringContent()){
-                    var r:String
-                    if(stringContext.MultiLineStrText()!=null) r= stringContext.MultiLineStrText().text
-                    else if(stringContext.MultiLineStringQuote()!=null) r= stringContext.MultiLineStringQuote().text
-                    else {
-                        val expressionContext = stringContext.multiLineStringExpression().expression()
-                        //TODO: 这边只是简单写了一下有解析值的情况
-                        val res = visit(expressionContext) //没有解析值的话，应该变成jtext
-                        if(res!=null && !res.isConcrete){ isConcrete = false } //这个条件就是说，整个模版中出现没有解析值的情况了
-                        if(res is MCInt){
-                            r = res.javaValue.toString()
-                        }
-                        else{
-                            r=res.toString()
-                        }
-                    }
-                    stringArray.add(r);
-                }
-                val tailQuote = valueContext.multiLineStringLiteral().TRIPLE_QUOTE_CLOSE().text
-                if(tailQuote.length>3) {
-                    stringArray.add(tailQuote.substring(3,tailQuote.length))
-                }
-                return MCString(StringTag(stringArray.joinToString("")) ) //没有解析值就变不了MCString了
-            } else if (valueContext.FloatLiteral() != null){
-                return MCFloat(valueContext.FloatLiteral()!!.text.toFloat())
-            } else if (valueContext.BooleanLiteral() != null){
-                return MCBool(valueContext.BooleanLiteral()!!.text.toBoolean())
-            } else if (valueContext.nbtValue() != null){
-                return NBT(SNBTUtil.fromSNBT(valueContext.nbtValue().text))
-            }
+            return visit(ctx.value())
         } else if(ctx.constructorCall() != null){
             return visit(ctx.constructorCall())
         } else{
@@ -646,6 +607,51 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var<*>?>() {
             constructor.invoke(normalArgs, callerClassP = ptr)
         }
         return ptr
+    }
+
+    override fun visitValue(ctx: mcfppParser.ValueContext): Var<*>? {
+        //常量
+        if (ctx.IntegerLiteral() != null) {
+            return MCInt(Integer.parseInt(ctx.IntegerLiteral().text))
+        } else if (ctx.LineString() != null) {
+            val r: String = ctx.LineString().text
+            return MCString(StringTag(r.substring(1, r.length - 1)))
+        } else if (ctx.multiLineStringLiteral()!=null){
+            val stringArray = mutableListOf<String>()
+            var isConcrete = true
+            for(stringContext in ctx.multiLineStringLiteral().multiLineStringContent()){
+                var r:String
+                if(stringContext.MultiLineStrText()!=null) r= stringContext.MultiLineStrText().text
+                else if(stringContext.MultiLineStringQuote()!=null) r= stringContext.MultiLineStringQuote().text
+                else {
+                    val expressionContext = stringContext.multiLineStringExpression().expression()
+                    //TODO: 这边只是简单写了一下有解析值的情况
+                    val res = visit(expressionContext) //没有解析值的话，应该变成jtext
+                    if(res!=null && !res.isConcrete){ isConcrete = false } //这个条件就是说，整个模版中出现没有解析值的情况了
+                    if(res is MCInt){
+                        r = res.javaValue.toString()
+                    }
+                    else{
+                        r=res.toString()
+                    }
+                }
+                stringArray.add(r);
+            }
+            val tailQuote = ctx.multiLineStringLiteral().TRIPLE_QUOTE_CLOSE().text
+            if(tailQuote.length>3) {
+                stringArray.add(tailQuote.substring(3,tailQuote.length))
+            }
+            return MCString(StringTag(stringArray.joinToString("")) ) //没有解析值就变不了MCString了
+        } else if (ctx.FloatLiteral() != null){
+            return MCFloat(ctx.FloatLiteral()!!.text.toFloat())
+        } else if (ctx.BooleanLiteral() != null){
+            return MCBool(ctx.BooleanLiteral()!!.text.toBoolean())
+        } else if (ctx.nbtValue() != null){
+            return NBT(SNBTUtil.fromSNBT(ctx.nbtValue().text))
+        } else if (ctx.type() != null){
+            return MCFPPTypeVar(MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field))
+        }
+        return null
     }
 
 }
