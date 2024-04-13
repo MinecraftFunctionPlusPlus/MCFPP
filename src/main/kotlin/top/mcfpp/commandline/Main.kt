@@ -20,7 +20,7 @@ fun main(){
         println("Failed to load log4j2.xml")
     }
     //导入基础库
-    for (include in Project.stdLib) {
+    for (include in Project.config.stdLib) {
         LibReader.read(include)
     }
     for(namespace in GlobalField.libNamespaces.values){

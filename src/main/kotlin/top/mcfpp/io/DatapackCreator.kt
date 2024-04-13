@@ -48,10 +48,10 @@ object DatapackCreator {
     fun createDatapack(path: String) {
         LogProcessor.debug("Clearing output folder...")
         //清空原输出文件夹
-        delAllFile(File("$path/${Project.name}"))
+        delAllFile(File("$path/${Project.config.name}"))
         LogProcessor.debug("Copy libs...")
         //复制库
-        for (lib in Project.includes){
+        for (lib in Project.config.includes){
             val filePath = if(!lib.endsWith("/.mclib")) {
                 "$lib/.mclib"
             }else{
@@ -83,18 +83,18 @@ object DatapackCreator {
         //生成
         val datapackMcMeta = DatapackMcMeta(
             DatapackMcMeta.Pack(
-                Utils.getVersion(Project.version!!),
-                Project.description!!
+                Utils.getVersion(Project.config.version!!),
+                Project.config.description!!
             )
         )
         val datapackMcMetaJson: String = JSON.toJSONString(datapackMcMeta)
         //创建文件夹
         try {
-            Files.createDirectories(Paths.get("$path/${Project.name}/data"))
+            Files.createDirectories(Paths.get("$path/${Project.config.name}/data"))
             //创建pack.mcmeta
-            Files.write(Paths.get("$path/${Project.name}/pack.mcmeta"), datapackMcMetaJson.toByteArray())
+            Files.write(Paths.get("$path/${Project.config.name}/pack.mcmeta"), datapackMcMetaJson.toByteArray())
             for(namespace in GlobalField.localNamespaces){
-                val currPath = "$path\\${Project.name}\\data\\${namespace.key}"
+                val currPath = "$path\\${Project.config.name}\\data\\${namespace.key}"
                 namespace.value.forEachFunction {f ->
                     run {
                         if (f is Native) {
@@ -165,10 +165,10 @@ object DatapackCreator {
             }
             //写入标签json文件
             for (tag in GlobalField.functionTags.values) {
-                LogProcessor.debug("Writing File: " + path + "\\${Project.name}\\data\\" + tag.namespace + "\\tags\\functions\\" + tag.tag + ".json")
-                Files.createDirectories(Paths.get(path + "/${Project.name}/data/" + tag.namespace + "/tags/functions"))
+                LogProcessor.debug("Writing File: " + path + "\\${Project.config.name}\\data\\" + tag.namespace + "\\tags\\functions\\" + tag.tag + ".json")
+                Files.createDirectories(Paths.get(path + "/${Project.config.name}/data/" + tag.namespace + "/tags/functions"))
                 Files.write(
-                    Paths.get(path + "/${Project.name}/data/" + tag.namespace + "/tags/functions/" + tag.tag + ".json"),
+                    Paths.get(path + "/${Project.config.name}/data/" + tag.namespace + "/tags/functions/" + tag.tag + ".json"),
                     tag.tagJSON.toByteArray()
                 )
             }

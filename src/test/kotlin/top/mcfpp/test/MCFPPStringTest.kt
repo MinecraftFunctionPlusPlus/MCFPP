@@ -22,17 +22,17 @@ object MCFPPStringTest {
         Configurator.initialize(null,source)
         //读取json
         LogProcessor.debug("Generate debug project for a string string")
-        Project.root = Path.of("./")
+        Project.config.root = Path.of("./")
         McfppFile.currFile = McfppFile("./test.mcfpp")
-        Project.name = "debug"
+        Project.config.name = "debug"
         //版本77
-        Project.version = "1.20"
+        Project.config.version = "1.20"
         //描述
-        Project.description = "debug datapacks"
+        Project.config.description = "debug datapacks"
         //默认命名空间
         Project.config.defaultNamespace = "default"
         //输出目录
-        Project.targetPath = "null"
+        Project.config.targetPath = "null"
         Project.readLib() //读取引用的库的索引
         Project.init() //初始化
         //解析文件
@@ -74,17 +74,17 @@ object MCFPPStringTest {
             //读取json
             LogProcessor.debug("Generate debug project for single file \"$path\"")
             val qwq = File(path)
-            Project.root = Path.of(path).parent
-            Project.name = qwq.name.substring(0, qwq.name.lastIndexOf('.'))
+            Project.config.root = Path.of(path).parent
+            Project.config.name = qwq.name.substring(0, qwq.name.lastIndexOf('.'))
             val code = qwq.readText()
             //版本
-            Project.version = "1.20"
+            Project.config.version = "1.20"
             //描述
-            Project.description = "debug datapacks"
+            Project.config.description = "debug datapacks"
             //默认命名空间
             Project.config.defaultNamespace = "default"
             //输出目录
-            Project.targetPath = "null"
+            Project.config.targetPath = "null"
             Project.readLib() //读取引用的库的索引
             Project.init() //初始化
             LogProcessor.debug("Analysing project...")

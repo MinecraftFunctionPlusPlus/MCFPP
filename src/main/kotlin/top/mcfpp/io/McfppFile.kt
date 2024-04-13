@@ -26,7 +26,7 @@ class McfppFile(path : String) : File(path) {
 
     val inputStream : FileInputStream by lazy { FileInputStream(this) }
 
-    val relativePath : String = getRelativePath(Project.root.absolutePathString(), parentFile.absolutePath)
+    val relativePath : String = getRelativePath(Project.config.root.absolutePathString(), parentFile.absolutePath)
 
     @Throws(IOException::class)
     fun tree(): ParseTree {
