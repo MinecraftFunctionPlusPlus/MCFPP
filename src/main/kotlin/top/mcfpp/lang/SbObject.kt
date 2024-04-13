@@ -56,8 +56,8 @@ class SbObject(name: String, rule: String, var display: JsonText?) {
         /**
          * mcfpp默认的计分板变量
          */
-        val MCS_default = SbObject("mcs_default")
-        val MCS_boolean = SbObject("mcs_boolean")
+        val MCFPP_default = SbObject("mcfpp_default")
+        val MCFPP_boolean = SbObject("mcfpp_boolean")
 
         val MCFPP_INIT = SbObject("mcfpp_init")
         val MCFPP_TEMP = SbObject("mcfpp_temp")

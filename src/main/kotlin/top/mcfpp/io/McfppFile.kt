@@ -78,7 +78,7 @@ class McfppFile(path : String) : File(path) {
      */
     fun compile() {
         currFile = this
-        Project.currNamespace = Project.defaultNamespace
+        Project.currNamespace = Project.config.defaultNamespace
         //创建默认函数
         val func = Function(
             StringHelper.toLowerCase(nameWithoutExtension + "_default"), Project.currNamespace,

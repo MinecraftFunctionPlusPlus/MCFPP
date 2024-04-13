@@ -154,7 +154,6 @@ open class NBTDictionary : NBTBasedData<CompoundTag>, Indexable<NBT> {
 
         init {
             data.initialize()
-            /* TODO
             data.field.addFunction(
                 NativeFunction(NBTDictionaryData::remove.javaMethod!!, MCFPPBaseType.Void,"mcfpp")
                     .appendReadOnlyParam(MCFPPBaseType.String.typeName,"e")
@@ -169,7 +168,6 @@ open class NBTDictionary : NBTBasedData<CompoundTag>, Indexable<NBT> {
                     .appendReadOnlyParam(MCFPPBaseType.String.typeName,"key")
                 ,false
             )
-             */
         }
     }
 }

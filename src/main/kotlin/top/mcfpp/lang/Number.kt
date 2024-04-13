@@ -21,7 +21,7 @@ abstract class Number<T> : Var<T>, OnScoreboard {
      * @param identifier 标识符。默认为随机的uuid
      */
     constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier) {
-        `object` = SbObject.MCS_default
+        `object` = SbObject.MCFPP_default
     }
 
     /**

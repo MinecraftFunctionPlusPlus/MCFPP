@@ -27,7 +27,7 @@ open class MCBool : Var<Boolean>, OnScoreboard {
     /**
      * 此bool变量依托的记分板
      */
-    var boolObject: SbObject = SbObject.MCS_boolean
+    var boolObject: SbObject = SbObject.MCFPP_boolean
 
     /**
      * 创建一个bool类型的变量。它的mc名和变量所在的域容器有关。
@@ -229,7 +229,7 @@ open class MCBool : Var<Boolean>, OnScoreboard {
         if(a is ReturnedMCBool){
             Function.addCommand(
                 "execute" +
-                        " store result storage mcfpp:system " + top.mcfpp.Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1" +
+                        " store result storage mcfpp:system " + top.mcfpp.Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1" +
                         " store result score $name $boolObject" +
                         " run function ${a.parentFunction.namespaceID}"
             )
@@ -242,7 +242,7 @@ open class MCBool : Var<Boolean>, OnScoreboard {
                 //变量进栈
                 Function.addCommand(
                     "execute" +
-                            " store result storage mcfpp:system " + top.mcfpp.Project.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1" +
+                            " store result storage mcfpp:system " + top.mcfpp.Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1" +
                             " run scoreboard players operation " + name + " " + boolObject + " = " + a.name + " " + a.boolObject
                 )
             }

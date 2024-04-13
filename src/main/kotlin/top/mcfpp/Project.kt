@@ -5,6 +5,7 @@ import org.antlr.v4.runtime.ParserRuleContext
 import org.antlr.v4.runtime.tree.ParseTree
 import org.apache.logging.log4j.*
 import top.mcfpp.annotations.InsertCommand
+import top.mcfpp.command.CommentType
 import top.mcfpp.io.LibReader
 import top.mcfpp.io.LibWriter
 import top.mcfpp.io.McfppFile
@@ -26,39 +27,12 @@ import kotlin.io.path.name
  * 同时，这个工程文件的名字也是此文件编译生成的数据包的命名空间。
  */
 object Project {
+
     private var logger: Logger = LogManager.getLogger("mcfpp")
-//TODO config
+
+    val config = ProjectConfig()
 
     var ctx: ParserRuleContext? = null
-
-    /**
-     * 工程的根目录
-     */
-    lateinit var root: Path
-    /**
-     * 工程包含的所有文件
-     */
-    var files: ArrayList<McfppFile> = ArrayList()
-
-    /**
-     * 工程对应的mc版本
-     */
-    var version: String? = null
-
-    /**
-     * 工程的名字
-     */
-    lateinit var name: String
-
-    /**
-     * 数据包的描述。原始Json文本 TODO
-     */
-    var description: String? = null
-
-    /**
-     * 工程包含的所有引用
-     */
-    var includes: ArrayList<String> = ArrayList()
 
     /**
      * 当前解析文件的语法树
@@ -66,14 +40,9 @@ object Project {
     var trees:MutableMap<McfppFile,ParseTree> = mutableMapOf()
 
     /**
-     * 工程的名字
-     */
-    var defaultNamespace: String = "default"
-
-    /**
      * 当前的命名空间
      */
-    var currNamespace = defaultNamespace
+    var currNamespace = config.defaultNamespace
 
     /**
      * 工程中的总错误数量
@@ -84,10 +53,6 @@ object Project {
      * 工程中的总警告数量
      */
     private var warningCount = 0
-
-    var targetPath : String = "out/"
-
-    val stdLib = listOf("mcfpp/sys/.mclib","mcfpp/math/.mclib","mcfpp/dynamic/.mclib")
 
     /**
      * 初始化
@@ -117,13 +82,13 @@ object Project {
             logger.debug("Reading project from file \"$path\"")
             val reader = FileReader(path)
             val qwq = File(path)
-            root = Path.of(path).parent
-            name = qwq.name.substring(0, qwq.name.lastIndexOf('.'))
+            config.root = Path.of(path).parent
+            config.name = qwq.name.substring(0, qwq.name.lastIndexOf('.'))
             val json = reader.readText()
             //解析json
             val jsonObject: JSONObject = JSONObject.parse(json) as JSONObject
             //代码文件
-            files = ArrayList()
+            config.files = ArrayList()
             val filesJson: JSONArray = jsonObject.getJSONArray("files")
             for (o in filesJson.toArray()) {
                 var s = o as String
@@ -136,23 +101,23 @@ object Project {
                     File(s)
                 } else {
                     //相对路径
-                    File(root.absolutePathString() + s)
+                    File(config.root.absolutePathString() + s)
                 }
                 logger.info("Finding file in \"" + r.absolutePath + "\"")
-                files = getFiles(r)
+                config.files = getFiles(r)
             }
             //版本
-            version = jsonObject.getString("version")
-            if (version == null) {
-                version = "1.20"
+            config.version = jsonObject.getString("version")
+            if (config.version == null) {
+                config.version = "1.20"
             }
             //描述
-            description = jsonObject.getString("description")
-            if (description == null) {
-                description = "A datapack compiled by MCFPP"
+            config.description = jsonObject.getString("description")
+            if (config.description == null) {
+                config.description = "A datapack compiled by MCFPP"
             }
             //默认命名空间
-            defaultNamespace = if(jsonObject.getString("namespace") != null){
+            config.defaultNamespace = if(jsonObject.getString("namespace") != null){
                 jsonObject.getString("namespace")
             }else{
                 "default"
@@ -160,10 +125,10 @@ object Project {
             //调用库
             val includesJson: JSONArray = jsonObject.getJSONArray("includes")?: JSONArray()
             for (i in 0 until includesJson.size) {
-                includes.add(includesJson.getString(i))
+                config.includes.add(includesJson.getString(i))
             }
             //输出目录
-            targetPath = jsonObject.getString("targetPath")?: "out/"
+            config.targetPath = jsonObject.getString("targetPath")?: "out/"
         } catch (e: Exception) {
             logger.error("Error while reading project from file \"$path\"")
             errorCount++
@@ -177,10 +142,10 @@ object Project {
     fun readLib(){
         //默认的
         if(!CompileSettings.ignoreStdLib){
-            includes.addAll(stdLib)
+            config.includes.addAll(config.stdLib)
         }
         //写入缓存
-        for (include in includes) {
+        for (include in config.includes) {
             val filePath = if(!include.endsWith("/.mclib")) "$include/.mclib" else include
             val file = File(filePath)
             if(file.exists()){
@@ -214,7 +179,7 @@ object Project {
     fun indexType(){
         logger.debug("Generate Type Index...")
         //解析文件
-        for (file in files) {
+        for (file in config.files) {
             //添加默认库的域
             if(!CompileSettings.ignoreStdLib){
                 GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
@@ -237,7 +202,7 @@ object Project {
     fun indexFunction() {
         logger.debug("Generate Function Index...")
         //解析文件
-        for (file in files) {
+        for (file in config.files) {
             try {
                 file.indexFunction()
             } catch (e: IOException) {
@@ -254,7 +219,7 @@ object Project {
     fun compile() {
         //工程文件编译
         //解析文件
-        for (file in files) {
+        for (file in config.files) {
             LogProcessor.debug("Compiling mcfpp code in \"$file\"")
             //添加默认库域
             if(!CompileSettings.ignoreStdLib){
@@ -269,8 +234,6 @@ object Project {
             }
         }
     }
-
-
 
     /**
      * 整理并优化工程
@@ -307,18 +270,18 @@ object Project {
                     if (f.parent.size == 0 && f !is Native) {
                         //找到了入口函数
                         hasEntrance = true
-                        f.commands.add(0, "data modify storage mcfpp:system $defaultNamespace.stack_frame prepend value {}")
-                        f.commands.add("data remove storage mcfpp:system $defaultNamespace.stack_frame[0]")
+                        f.commands.add(0, "data modify storage mcfpp:system ${config.defaultNamespace}.stack_frame prepend value {}")
+                        f.commands.add("data remove storage mcfpp:system ${config.defaultNamespace}.stack_frame[0]")
                         logger.debug("Find entrance function: {} {}", f.tags, f.identifier)
                     }
                 }
             }
         }
         if (!hasEntrance) {
-            logger.warn("No valid entrance function in Project $defaultNamespace")
+            logger.warn("No valid entrance function in Project ${config.defaultNamespace}")
             warningCount++
         }
-        logger.info("Complete compiling project " + root.name + " with [$errorCount] error and [$warningCount] warning")
+        logger.info("Complete compiling project " + config.root.name + " with [$errorCount] error and [$warningCount] warning")
     }
 
     /**
@@ -326,7 +289,7 @@ object Project {
      * 在和工程信息json文件的同一个目录下生成一个.mclib文件
      */
     fun genIndex() {
-        LibWriter.write(root.absolutePathString())
+        LibWriter.write(config.root.absolutePathString())
     }
 
     /**
@@ -354,3 +317,54 @@ object Project {
         return files
     }
 }
+
+data class ProjectConfig(
+    /**
+     * 工程对应的mc版本
+     */
+    var version: String? = null,
+
+    /**
+     * 工程的名字
+     */
+    var defaultNamespace: String = "default",
+
+    /**
+     * 数据包输出的文件夹
+     */
+    var targetPath : String = "out/",
+
+    /**
+     * 标准库列表
+     */
+    val stdLib: List<String> = listOf("mcfpp/sys/.mclib","mcfpp/math/.mclib","mcfpp/dynamic/.mclib"),
+
+    /**
+     * 注释输出等级
+     */
+    var commentLevel : CommentType = CommentType.DEBUG,
+
+    /**
+     * 工程的根目录
+     */
+    var root: Path = Path.of("."),
+    /**
+     * 工程包含的所有文件
+     */
+    var files: ArrayList<McfppFile> = ArrayList(),
+
+    /**
+     * 工程的名字
+     */
+    var name: String = "new_mcfpp_project",
+
+    /**
+     * 数据包的描述。原始Json文本 TODO
+     */
+    var description: String? = null,
+
+    /**
+     * 工程包含的所有引用
+     */
+    var includes: ArrayList<String> = ArrayList()
+)

@@ -1,5 +1,6 @@
 package top.mcfpp.command
 
+import top.mcfpp.exception.CommandException
 import java.lang.StringBuilder
 
 /**
@@ -7,13 +8,15 @@ import java.lang.StringBuilder
  *
  * @constructor Create empty Command
  */
-class Command {
+open class Command {
 
-    val tags = ArrayList<String>()
+    protected val commandStringList = ArrayList<String>()
 
-    val commandStringList = ArrayList<String>()
+    private val tags = ArrayList<String>()
 
-    val replacePoint = HashMap<String,Int>()
+    private val replacePoint = HashMap<String,Int>()
+
+    var isCompleted = false
 
     constructor(command: String){
         commandStringList.add(command)
@@ -39,7 +42,7 @@ class Command {
      *
      * @return
      */
-    fun analyze(): String{
+    open fun analyze(): String{
         val sb = StringBuilder()
         for (c in commandStringList){
             sb.append(c)
@@ -78,10 +81,16 @@ class Command {
     }
 
     fun prepend(command: String){
+        if(isCompleted){
+            throw CommandException("Try to prepend argument to a completed command")
+        }
         commandStringList.add(0,command)
     }
 
     fun prepend(command: Command){
+        if(isCompleted){
+            throw CommandException("Try to prepend argument to a completed command")
+        }
         for (c in command.commandStringList){
             commandStringList.add(0,c)
         }

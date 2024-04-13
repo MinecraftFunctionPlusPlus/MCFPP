@@ -71,7 +71,6 @@ class NBTMap : NBTDictionary{
 
         init {
             data.initialize()
-            /* TODO
             data.field.addFunction(NativeFunction(NBTMapData::remove.javaMethod!!, MCFPPBaseType.Void,"mcfpp").appendReadOnlyParam(MCFPPBaseType.String.typeName,"key"),false)
             data.field.addFunction(NativeFunction(NBTMapData::containsKey.javaMethod!!, MCFPPBaseType.Bool,"mcfpp").appendReadOnlyParam(MCFPPBaseType.String.typeName,"key"),false)
             data.field.addFunction(
@@ -85,7 +84,6 @@ class NBTMap : NBTDictionary{
                 NativeFunction(NBTMapData::merge.javaMethod!!, MCFPPBaseType.Void,"mcfpp").appendReadOnlyParam(
                 MCFPPNBTType.Map.typeName,"m"),false)
             data.field.addFunction(NativeFunction(NBTMapData::size.javaMethod!!, MCFPPBaseType.Int,"mcfpp"),false)
-             */
         }
     }
 }
