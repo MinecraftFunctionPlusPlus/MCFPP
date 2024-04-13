@@ -28,6 +28,9 @@ class McfppFile(path : String) : File(path) {
 
     val relativePath : String = getRelativePath(Project.config.root.absolutePathString(), parentFile.absolutePath)
 
+    //TODO 同名文件的顶级函数之间的命名冲突
+    val topFunction = Function(StringHelper.toLowerCase(this.name))
+
     @Throws(IOException::class)
     fun tree(): ParseTree {
         if(!Project.trees.contains(this)){
@@ -84,12 +87,8 @@ class McfppFile(path : String) : File(path) {
             StringHelper.toLowerCase(nameWithoutExtension + "_default"), Project.currNamespace,
             MCFPPBaseType.Void
         )
-        Function.defaultFunction = func
         Function.currFunction = func
         McfppImVisitor().visit(tree())
-        if(Function.defaultFunction.commands.size != 0){
-            GlobalField.localNamespaces[func.namespace]!!.addFunction(func,false)
-        }
         currFile = null
     }
 

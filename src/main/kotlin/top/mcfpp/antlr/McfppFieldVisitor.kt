@@ -352,15 +352,26 @@ class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     override fun visitNativeClassFunctionDeclaration(ctx: mcfppParser.NativeClassFunctionDeclarationContext): Any? {
         Project.ctx = ctx
         val nf: NativeFunction = try {
-            NativeFunction(ctx.Identifier().text, ctx.javaRefer().text, MCFPPType.parseFromIdentifier(ctx.functionReturnType().text, typeScope))
+            //根据JavaRefer找到类
+            val refer = ctx.javaRefer().text
+            val clsName = refer.substring(0,refer.lastIndexOf('.'))
+            val clazz = java.lang.Class.forName(clsName).getConstructor().newInstance()
+            if(clazz !is MNIMethodContainer){
+                LogProcessor.error("Class $clsName should extends MNIMethodContainer")
+                throw IllegalArgumentException("Class $clsName should extends MNIMethodContainer")
+            }
+            NativeFunction(ctx.Identifier().text, clazz, MCFPPType.parseFromIdentifier(ctx.functionReturnType().text, typeScope), Project.currNamespace)
         } catch (e: IllegalFormatException) {
-            LogProcessor.error("Illegal Java Method Name:" + e.message)
+            LogProcessor.error("Illegal Java Method Name: " + e.message)
             return null
         } catch (e: ClassNotFoundException) {
-            LogProcessor.error("Cannot find java class:" + e.message)
+            LogProcessor.error("Cannot find java class: " + e.message)
             return null
         } catch (e: NoSuchMethodException) {
-            LogProcessor.error("No such method:" + e.message)
+            LogProcessor.error("MNIMethodContainer should have a non-parameter constructor: " + e.message)
+            return null
+        } catch (e: SecurityException){
+            LogProcessor.error("Cannot access to the constructor: " + e.message)
             return null
         }
         nf.addParamsFromContext(ctx.functionParams())
@@ -615,15 +626,26 @@ class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     override fun visitNativeFuncDeclaration(ctx: mcfppParser.NativeFuncDeclarationContext): Any? {
         Project.ctx = ctx
         val nf: NativeFunction = try {
-            NativeFunction(ctx.Identifier().text, ctx.javaRefer().text, MCFPPType.parseFromIdentifier(if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text,typeScope))
+            //根据JavaRefer找到类
+            val refer = ctx.javaRefer().text
+            val clsName = refer.substring(0,refer.lastIndexOf('.'))
+            val clazz = java.lang.Class.forName(clsName).getConstructor().newInstance()
+            if(clazz !is MNIMethodContainer){
+                LogProcessor.error("Class $clsName should extends MNIMethodContainer")
+                throw IllegalArgumentException("Class $clsName should extends MNIMethodContainer")
+            }
+            NativeFunction(ctx.Identifier().text, clazz, MCFPPType.parseFromIdentifier(ctx.functionReturnType().text, typeScope), Project.currNamespace)
         } catch (e: IllegalFormatException) {
-            LogProcessor.error("Illegal Java Method Name:" + e.message)
+            LogProcessor.error("Illegal Java Method Name: " + e.message)
             return null
         } catch (e: ClassNotFoundException) {
-            LogProcessor.error("Cannot find java class:" + e.message)
+            LogProcessor.error("Cannot find java class: " + e.message)
             return null
         } catch (e: NoSuchMethodException) {
-            LogProcessor.error("No such method:" + e.message)
+            LogProcessor.error("MNIMethodContainer should have a non-parameter constructor: " + e.message)
+            return null
+        } catch (e: SecurityException){
+            LogProcessor.error("Cannot access to the constructor: " + e.message)
             return null
         }
         nf.addParamsFromContext(ctx.functionParams())

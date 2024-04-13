@@ -172,7 +172,7 @@ class MCAny : Var<Var<*>> {
 
         init {
             data.initialize()
-            data.field.addFunction(NativeFunction("toString",MCAnyData::class.java, MCFPPBaseType.String,"mcfpp"),false)
+            data.field.addFunction(NativeFunction("toString",MCAnyData(), MCFPPBaseType.String,"mcfpp"),false)
         }
     }
 }

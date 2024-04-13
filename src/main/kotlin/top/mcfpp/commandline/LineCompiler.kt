@@ -44,7 +44,7 @@ class LineCompiler {
         val charStream: CharStream = CharStreams.fromString(input + if(!line.endsWith(';')) ";" else "")
         val tokens = CommonTokenStream(mcfppLexer(charStream))
         val unit = mcfppParser(tokens).compilationUnit()
-        if(unit.statement().size != 0){
+        if(unit.topStatement().statement().size != 0){
             McfppImVisitor().visit(unit)
         }else{
             McfppFieldVisitor().visit(unit)

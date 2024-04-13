@@ -1,8 +1,8 @@
 package top.mcfpp.test
 
-import org.junit.Test
+import kotlin.test.Test
 
-internal class CompileTest {
+class CompileTest {
 
     @Test
     fun baseTest(){
@@ -71,6 +71,31 @@ internal class CompileTest {
                      return i;
                 }
 
+                func main(){
+                    var q = test<2>();
+                    print(q);
+                    print(test<6>());
+                }
+            """.trimIndent()
+        MCFPPStringTest.readFromString(test)
+    }
+
+    @Test
+    fun topStatementTest(){
+        val test =
+            """
+                int i = 0;
+                dynamic int qwq;
+                print(i);
+                print(qwq);
+            """.trimIndent()
+        MCFPPStringTest.readFromString(test)
+    }
+
+    @Test
+    fun typeFieldTest(){
+        val test =
+            """
                 func main(){
                     var q = test<2>();
                     print(q);

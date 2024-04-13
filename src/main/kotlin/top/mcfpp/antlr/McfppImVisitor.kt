@@ -7,6 +7,7 @@ import top.mcfpp.antlr.mcfppParser.CompileTimeFuncDeclarationContext
 import top.mcfpp.command.CommandList
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.*
+import top.mcfpp.io.McfppFile
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
@@ -23,6 +24,16 @@ import top.mcfpp.lib.function.generic.Generic
 import top.mcfpp.util.LogProcessor
 
 open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
+
+    override fun visitTopStatement(ctx: mcfppParser.TopStatementContext): Any? {
+        if(ctx.statement().size == 0) return null
+        Function.currFunction = McfppFile.currFile!!.topFunction
+        //注册函数
+        GlobalField.localNamespaces[Project.currNamespace]!!.addFunction(Function.currFunction, force = false)
+        super.visitTopStatement(ctx)
+        Function.currFunction = Function.nullFunction
+        return null
+    }
 
     override fun visitFunctionBody(ctx: mcfppParser.FunctionBodyContext): Any? {
         if(ctx.parent is CompileTimeFuncDeclarationContext) return null
@@ -153,7 +164,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         }
         if (Class.currClass == null) {
             //不在类中
-            Function.currFunction = Function.defaultFunction
+            Function.currFunction = Function.nullFunction
         } else {
             Function.currFunction = Class.currClass!!.classPreInit
         }
@@ -171,7 +182,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 Project.currNamespace += ".$n"
             }
         }
-        Function.defaultFunction.namespace = Project.currNamespace
+        McfppFile.currFile!!.topFunction.namespace = Project.currNamespace
         return null
     }
 
@@ -976,8 +987,8 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      * 进入类体。
      * @param ctx the parse tree
      */
-    
-    fun enterClassBody(ctx: mcfppParser.ClassBodyContext) {
+
+    private fun enterClassBody(ctx: mcfppParser.ClassBodyContext) {
         Project.ctx = ctx
         //获取类的对象
         val parent: mcfppParser.ClassDeclarationContext = ctx.parent as mcfppParser.ClassDeclarationContext
@@ -996,8 +1007,8 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      * 离开类体。将缓存重新指向全局
      * @param ctx the parse tree
      */
-    
-    fun exitClassBody(ctx: mcfppParser.ClassBodyContext) {
+
+    private fun exitClassBody(ctx: mcfppParser.ClassBodyContext) {
         Project.ctx = ctx
         Class.currClass = null
         Function.currFunction = Function.nullFunction

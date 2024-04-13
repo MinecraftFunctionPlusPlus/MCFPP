@@ -1,14 +1,31 @@
 package top.mcfpp.lang;
 
+import kotlin.NotImplementedError;
+import kotlin.jvm.functions.Function4;
 import org.jetbrains.annotations.NotNull;
 import top.mcfpp.annotations.MCFPPNative;
 import top.mcfpp.lib.function.Function;
+import top.mcfpp.lib.function.MNIMethodContainer;
 import top.mcfpp.util.ValueWrapper;
 
-public class MCAnyData {
-    @MCFPPNative
-    public static void toString(@NotNull Var<?>[] vars, CanSelectMember caller, ValueWrapper<Var> output) {
-        //不会有参数
-        Function.Companion.addCommand("tellraw @a " + caller);
+import java.util.HashMap;
+
+public class MCAnyData extends MNIMethodContainer {
+
+    static HashMap<String, Function4<Var<?>[], Var<?>[], CanSelectMember, ValueWrapper<Var<?>>, java.lang.Void>> methods;
+
+    static {
+        methods = new HashMap<>();
+        methods.put("toString", (vars, vars2, canSelectMember, varValueWrapper) -> {
+            //不会有参数
+            Function.Companion.addCommand("tellraw @a " + canSelectMember);
+            return null;
+        });
+    }
+
+    @NotNull
+    @Override
+    public Function4<Var<?>[], Var<?>[], CanSelectMember, ValueWrapper<Var<?>>, java.lang.Void> getMNIMethod(@NotNull String name) {
+        return methods.get(name);
     }
 }

@@ -58,7 +58,7 @@ object LibWriter {
                                 val o = JSONObject()
                                 m as NativeFunction
                                 o["id"] = m.toString(false,containNamespace = false)
-                                o["javaMethod"] = m.javaMethod.name
+                                o["javaMethod"] = m.javaMethodName
                                 func.add(o)
                             }
                         }

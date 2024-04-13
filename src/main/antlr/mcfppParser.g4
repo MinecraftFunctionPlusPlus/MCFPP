@@ -37,9 +37,13 @@ options {
 compilationUnit
     :   namespaceDeclaration?
         importDeclaration*
-        statement*
+        topStatement
         typeDeclaration*
         EOF
+    ;
+
+topStatement
+    : statement*
     ;
 
 //命名空间声明
@@ -78,11 +82,11 @@ globalDeclaration
 
 //类声明
 classDeclaration
-    :   classAnnotation? STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace (ClassExtends className (',' className)*)? classBody
+    :   classAnnotation? STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace (COLON className (',' className)*)? classBody
     ;
 
 compileTimeClassDeclaration
-    :   CONST CLASS classWithoutNamespace (ClassExtends className (',' className)*)? classBody
+    :   CONST CLASS classWithoutNamespace (COLON className (',' className)*)? classBody
     ;
 
 nativeClassDeclaration
@@ -111,15 +115,15 @@ classMember
     ;
 
 classFunctionDeclaration
-    :   funcAnnoation? OVERRIDE? FUNCTION Identifier functionParams (FunctionReturn functionReturnType)? '{' functionBody '}'
+    :   funcAnnoation? OVERRIDE? FUNCTION Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
     ;
 
 abstractClassFunctionDeclaration
-    :   funcAnnoation? OVERRIDE? FUNCTION Identifier functionParams (FunctionReturn functionReturnType)? ';'
+    :   funcAnnoation? OVERRIDE? FUNCTION Identifier functionParams (ARROW functionReturnType)? ';'
     ;
 
 nativeClassFunctionDeclaration
-    :   funcAnnoation? OVERRIDE? FUNCTION Identifier functionParams (FunctionReturn functionReturnType)? '=' javaRefer ';'
+    :   funcAnnoation? OVERRIDE? FUNCTION Identifier functionParams (ARROW functionReturnType)? '=' javaRefer ';'
     ;
 
 classFieldDeclaration
@@ -149,7 +153,7 @@ templateMember
     ;
 
 templateFunctionDeclaration
-    :  FUNCTION Identifier functionParams (FunctionReturn functionReturnType)? '{' functionBody '}'
+    :  FUNCTION Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
     ;
 
 templateFieldDeclaration
@@ -163,7 +167,7 @@ templateFieldDeclarationExpression
 
 //接口声明
 interfaceDeclaration
-    :   classAnnotation? INTERFACE classWithoutNamespace (FunctionReturn className (',' className)*)? interfaceBody
+    :   classAnnotation? INTERFACE classWithoutNamespace (ARROW className (',' className)*)? interfaceBody
     ;
 
 interfaceBody
@@ -171,15 +175,15 @@ interfaceBody
     ;
 
 interfaceFunctionDeclaration
-    :   funcAnnoation? FUNCTION Identifier functionParams (FunctionReturn functionReturnType)? ';'
+    :   funcAnnoation? FUNCTION Identifier functionParams (ARROW functionReturnType)? ';'
     ;
 
 compileTimeFuncDeclaration
-    :   CONST FUNCTION Identifier functionParams (FunctionReturn functionReturnType)? '{' functionBody '}'
+    :   CONST FUNCTION Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
     ;
 
 inlineFunctionDeclaration
-    :   funcAnnoation? INLINE FUNCTION Identifier functionParams (FunctionReturn functionReturnType)? '{' functionBody '}'
+    :   funcAnnoation? INLINE FUNCTION Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
     ;
 
 //函数声明
@@ -188,7 +192,7 @@ functionDeclaration
     ;
 
 extensionFunctionDeclaration
-    :   funcAnnoation? STATIC? FUNCTION (type '.')? Identifier functionParams (FunctionReturn functionReturnType)? '{' functionBody '}'
+    :   funcAnnoation? STATIC? FUNCTION (type '.')? Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
     ;
 
 namespaceID
@@ -196,7 +200,7 @@ namespaceID
     ;
 
 nativeFuncDeclaration
-    :   funcAnnoation? FUNCTION Identifier functionParams (FunctionReturn functionReturnType)? '=' javaRefer ';'
+    :   funcAnnoation? FUNCTION Identifier functionParams (ARROW functionReturnType)? '=' javaRefer ';'
     ;
 
 javaRefer
@@ -519,6 +523,7 @@ value
     |   multiLineStringLiteral
     |   nbtValue
     |   range
+    |   type
     ;
 
 className

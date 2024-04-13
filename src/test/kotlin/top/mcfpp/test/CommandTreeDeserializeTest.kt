@@ -88,7 +88,7 @@ class CommandTreeDeserializeTest {
 
     @Test
     fun testDownload(){
-        Project.root = Path.of("./")
+        Project.config.root = Path.of("./")
         val commandTree =DownloadHelper.getMcmetaCommands("24w03b",false,"fastly")
         println(commandTree.children?.get("teleport")?.children?.get("destination")?.properties )
 
