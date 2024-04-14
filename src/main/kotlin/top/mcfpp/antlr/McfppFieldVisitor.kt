@@ -16,9 +16,9 @@ import top.mcfpp.lib.field.GlobalField
 import top.mcfpp.lib.field.IFieldWithType
 import top.mcfpp.lib.function.*
 import top.mcfpp.lib.function.Function
-import top.mcfpp.lib.function.generic.GenericConstructor
-import top.mcfpp.lib.function.generic.GenericExtensionFunction
-import top.mcfpp.lib.function.generic.GenericFunction
+import top.mcfpp.lib.generic.GenericClass
+import top.mcfpp.lib.generic.GenericExtensionFunction
+import top.mcfpp.lib.generic.GenericFunction
 import top.mcfpp.util.LazyWrapper
 import top.mcfpp.util.LogProcessor
 import java.util.*
@@ -28,11 +28,11 @@ import kotlin.collections.ArrayList
  * 在编译工程之前，应当首先将所有文件中的资源全部遍历一次并写入缓存。
  * TODO 存在优化空间，因为部分代码和McfppTypeVisitor有高度重合和相关性
  */
-class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
+open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 
-    private var isStatic = false
+    protected var isStatic = false
 
-    private lateinit var typeScope : IFieldWithType
+    protected lateinit var typeScope : IFieldWithType
 
     /**
      * 遍历整个文件。一个文件包含了命名空间的声明，函数的声明，类的声明以及全局变量的声明。全局变量是可以跨文件调用的。
@@ -144,12 +144,15 @@ class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //注册类
         val id = ctx.classWithoutNamespace().text
         val field = GlobalField.localNamespaces[Project.currNamespace]!!
-        if (field.hasClass(id)) {
-            Class.currClass = field.getClass(id)
+        val clazz = if (field.hasClass(id)) {
+            field.getClass(id)
         } else {
-            throw UndefinedException("Interface Should have been defined: $id")
+            throw UndefinedException("Class Should have been defined: $id")
         }
-
+        if(clazz is GenericClass){
+            return null
+        }
+        Class.currClass = clazz
         typeScope = Class.currClass!!.field
         //解析类中的成员
         //先静态
@@ -389,14 +392,10 @@ class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         Project.ctx = ctx
         //类构造函数
         //创建构造函数对象，注册函数
-        val f = if(ctx.functionParams().readOnlyParams() != null && ctx.functionParams().readOnlyParams().parameterList().parameter().size != 0){
-            GenericConstructor(Class.currClass!!, ctx.functionBody())
-        }else{
-            Constructor(Class.currClass!!)
-        }
-        f.addParamsFromContext(ctx.functionParams())
+        val f = Constructor(Class.currClass!!)
+        f.addParamsFromContext(ctx.normalParams())
         if(!Class.currClass!!.addConstructor(f)){
-            LogProcessor.error("Already defined constructor: " + ctx.className().text + "(" + ctx.functionParams().text + ")")
+            LogProcessor.error("Already defined constructor: " + ctx.className().text + "(" + ctx.normalParams().text + ")")
         }
         return f
     }

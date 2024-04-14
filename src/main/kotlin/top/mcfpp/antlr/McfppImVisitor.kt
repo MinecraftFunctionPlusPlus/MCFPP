@@ -20,7 +20,7 @@ import top.mcfpp.lib.function.FunctionParam
 import top.mcfpp.lib.function.FunctionParam.Companion.typeToStringList
 import top.mcfpp.lib.function.InternalFunction
 import top.mcfpp.lib.function.UnknownFunction
-import top.mcfpp.lib.function.generic.Generic
+import top.mcfpp.lib.generic.Generic
 import top.mcfpp.util.LogProcessor
 
 open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
@@ -70,12 +70,12 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
             val parent = ctx.parent as mcfppParser.ConstructorDeclarationContext
             //是构造函数
             //解析参数
-            val types = FunctionParam.parseReadonlyAndNormalParamTypes(parent.functionParams())
+            val types = FunctionParam.parseNormalParamTypes(parent.normalParams())
             //获取缓存中的对象
             f = if(ctx.parent.parent is mcfppParser.ClassMemberContext){
-                Class.currClass!!.getConstructor(types.first.typeToStringList(), types.second.typeToStringList())!!
+                Class.currClass!!.getConstructor(types.typeToStringList())!!
             }else{
-                Template.currTemplate!!.getConstructor(types.first.typeToStringList(), types.second.typeToStringList())!!
+                Template.currTemplate!!.getConstructor(types.typeToStringList())!!
             }
         } else if(ctx.parent.parent is mcfppParser.ClassMemberContext){
             val parent = ctx.parent as mcfppParser.ClassFunctionDeclarationContext

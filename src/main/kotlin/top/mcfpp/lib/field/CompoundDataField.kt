@@ -7,7 +7,7 @@ import top.mcfpp.lib.*
 import top.mcfpp.lib.function.Function
 import top.mcfpp.lib.function.FunctionParam
 import top.mcfpp.lib.function.UnknownFunction
-import top.mcfpp.lib.function.generic.Generic
+import top.mcfpp.lib.generic.Generic
 import top.mcfpp.util.LazyWrapper
 import java.util.HashMap
 

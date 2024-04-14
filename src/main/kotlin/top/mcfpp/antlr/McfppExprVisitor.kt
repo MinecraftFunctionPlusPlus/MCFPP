@@ -13,8 +13,8 @@ import top.mcfpp.lib.field.NamespaceField
 import top.mcfpp.lib.function.FunctionParam
 import top.mcfpp.lib.function.NoStackFunction
 import top.mcfpp.lib.function.UnknownFunction
-import top.mcfpp.lib.function.generic.Generic
-import top.mcfpp.lib.function.generic.GenericConstructor
+import top.mcfpp.lib.generic.Generic
+import top.mcfpp.lib.generic.GenericClass
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import top.mcfpp.util.Utils
@@ -453,9 +453,7 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var<*>?>() {
             return visit(ctx.`var`())
         } else if (ctx.value() != null) {
             return visit(ctx.value())
-        } else if(ctx.constructorCall() != null){
-            return visit(ctx.constructorCall())
-        } else{
+        } else {
             //this或者super
             val re: Var<*>? = Function.field.getVar(ctx.text)
             if (re == null) {
@@ -463,7 +461,6 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var<*>?>() {
             }
             return re
         }
-        return null
     }
 
     /**
@@ -522,11 +519,11 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var<*>?>() {
             Function.addCommand("#" + ctx.text)
             //参数获取
             val normalArgs: ArrayList<Var<*>> = ArrayList()
-            val readOnlyParams: ArrayList<Var<*>> = ArrayList()
+            val readOnlyArgs: ArrayList<Var<*>> = ArrayList()
             val exprVisitor = McfppExprVisitor()
             for (expr in ctx.arguments().readOnlyArgs()?.expressionList()?.expression()?: emptyList()) {
                 val arg = exprVisitor.visit(expr)!!
-                readOnlyParams.add(arg)
+                readOnlyArgs.add(arg)
             }
             for (expr in ctx.arguments().normalArgs().expressionList()?.expression()?: emptyList()) {
                 val arg = exprVisitor.visit(expr)!!
@@ -535,24 +532,43 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var<*>?>() {
             //获取函数
             val p = StringHelper.splitNamespaceID(ctx.namespaceID().text)
             val func = if(currSelector == null){
-                GlobalField.getFunction(p.first, p.second, FunctionParam.getArgTypeNames(readOnlyParams), FunctionParam.getArgTypeNames(normalArgs))
+                GlobalField.getFunction(p.first, p.second, FunctionParam.getArgTypeNames(readOnlyArgs), FunctionParam.getArgTypeNames(normalArgs))
             }else{
                 if(p.first != null){
                     LogProcessor.warn("Invalid namespace usage ${p.first} in function call ")
                 }
                 McfppFuncManager().getFunction(currSelector!!,p.second,
-                    FunctionParam.getArgTypeNames(readOnlyParams),
+                    FunctionParam.getArgTypeNames(readOnlyArgs),
                     FunctionParam.getArgTypeNames(normalArgs))
             }
             //调用函数
             return if (func is UnknownFunction) {
-                LogProcessor.error("Function " + ctx.text + " not defined")
-                Function.addCommand("[Failed to Compile]${ctx.text}")
-                func.invoke(normalArgs,currSelector)
-                func.returnVar
+                //可能是构造函数
+                var cls: Class? = GlobalField.getClass(p.first, p.second)
+                if (cls == null) {
+                    LogProcessor.error("Function " + ctx.text + " not defined")
+                    Function.addCommand("[Failed to Compile]${ctx.text}")
+                    func.invoke(normalArgs,currSelector)
+                    return func.returnVar
+                }
+                if(cls is GenericClass){
+                    //实例化泛型函数
+                    cls = cls.compile(readOnlyArgs)
+                }
+                //获取对象
+                val ptr = cls.newInstance()
+                //调用构造函数
+                val constructor = cls.getConstructor(FunctionParam.getArgTypeNames(normalArgs))
+                if (constructor == null) {
+                    LogProcessor.error("No constructor like: " + FunctionParam.getArgTypeNames(normalArgs) + " defined in class " + ctx.namespaceID().text)
+                    Function.addCommand("[Failed to compile]${ctx.text}")
+                }else{
+                    constructor.invoke(normalArgs, callerClassP = ptr)
+                }
+                return ptr
             }else{
                 if(func is Generic<*>){
-                    func.invoke(readOnlyParams, normalArgs, currSelector)
+                    func.invoke(readOnlyArgs, normalArgs, currSelector)
                 }else{
                     func.invoke(normalArgs,currSelector)
                 }
@@ -565,48 +581,6 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var<*>?>() {
                 func.returnVar
             }
         }
-    }
-
-    @Override
-    override fun visitConstructorCall(ctx: mcfppParser.ConstructorCallContext): Var<*> {
-        Project.ctx = ctx
-        val clsstr = ctx.className().text.split(":")
-        val cls: Class? = if(clsstr.size == 2) {
-            GlobalField.getClass(clsstr[0], clsstr[1])
-        }else{
-            GlobalField.getClass(null, clsstr[0])
-        }
-        if (cls == null) {
-            LogProcessor.error("Undefined class:" + ctx.className().text)
-            return UnknownVar("${ctx.className().text}_ptr_" + UUID.randomUUID())
-        }
-        //获取参数列表
-        //参数获取
-        val normalArgs: ArrayList<Var<*>> = ArrayList()
-        val readOnlyParams: ArrayList<Var<*>> = ArrayList()
-        val exprVisitor = McfppExprVisitor()
-        for (expr in ctx.arguments().readOnlyArgs()?.expressionList()?.expression()?: emptyList()) {
-            val arg = exprVisitor.visit(expr)!!
-            readOnlyParams.add(arg)
-        }
-        for (expr in ctx.arguments().normalArgs().expressionList()?.expression()?: emptyList()) {
-            val arg = exprVisitor.visit(expr)!!
-            normalArgs.add(arg)
-        }
-        //获取对象
-        val ptr = cls.newInstance()
-        //调用构造函数
-        val constructor = cls.getConstructor(FunctionParam.getArgTypeNames(readOnlyParams) ,FunctionParam.getArgTypeNames(normalArgs))
-        if (constructor == null) {
-            LogProcessor.error("No constructor like: " + FunctionParam.getArgTypeNames(normalArgs) + " defined in class " + ctx.className().text)
-            Function.addCommand("[Failed to compile]${ctx.text}")
-        }else{
-            if(constructor is GenericConstructor){
-                constructor.invoke(readOnlyParams, normalArgs, ptr)
-            }
-            constructor.invoke(normalArgs, callerClassP = ptr)
-        }
-        return ptr
     }
 
     override fun visitValue(ctx: mcfppParser.ValueContext): Var<*>? {

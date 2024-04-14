@@ -43,7 +43,6 @@ skipWhitespace
 	| NEWLINE
 	;
 
-
 description
 	: descriptionLine (descriptionNewline+ descriptionLine)*
 	;

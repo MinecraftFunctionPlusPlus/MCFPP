@@ -4,7 +4,7 @@ import org.jetbrains.annotations.Nullable
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.function.Function
 import top.mcfpp.lib.function.FunctionParam
-import top.mcfpp.lib.function.generic.Generic
+import top.mcfpp.lib.generic.Generic
 
 /**
  * 对[IFieldWithFunction]接口的简单实现。

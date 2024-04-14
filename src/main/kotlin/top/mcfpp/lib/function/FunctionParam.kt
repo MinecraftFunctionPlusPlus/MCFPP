@@ -94,6 +94,15 @@ class FunctionParam(
             return r to n
         }
 
+        fun parseNormalParamTypes(params: mcfppParser.NormalParamsContext): ArrayList<MCFPPType>{
+            val n = ArrayList<MCFPPType>()
+            val typeScope = SimpleFieldWithType()
+            for (param in (params.parameterList()?.parameter()?: emptyList())) {
+                n.add(MCFPPType.parseFromIdentifier(param.type().text, typeScope))
+            }
+            return n
+        }
+
         fun ArrayList<MCFPPType>.typeToStringList(): ArrayList<String> {
             val qwq: ArrayList<String> = ArrayList()
             for (param in this) {

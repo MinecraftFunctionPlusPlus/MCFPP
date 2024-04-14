@@ -52,7 +52,7 @@ namespaceDeclaration
     ;
 
 importDeclaration
-    :   IMPORT Identifier ('.' Identifier)* ('.' cls = (ClassIdentifier|'*'))? (AS ClassIdentifier)? (FROM NormalString)? ';'
+    :   IMPORT Identifier ('.' Identifier)* ('.' cls = (Identifier|'*'))? (AS Identifier)? (FROM Identifier)? ';'
     ;
 
 //类或函数声明
@@ -82,7 +82,7 @@ globalDeclaration
 
 //类声明
 classDeclaration
-    :   classAnnotation? STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace (COLON className (',' className)*)? classBody
+    :   classAnnotation? STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? classBody
     ;
 
 compileTimeClassDeclaration
@@ -204,13 +204,7 @@ nativeFuncDeclaration
     ;
 
 javaRefer
-    :   stringName ('.' stringName)*
-    ;
-
-stringName
-    :   Identifier
-    |   ClassIdentifier
-    |   NormalString
+    :   Identifier ('.' Identifier)*
     ;
 
 accessModifier
@@ -221,12 +215,7 @@ accessModifier
 
 //构造函数声明
 constructorDeclaration
-    :   funcAnnoation? className functionParams '{' functionBody '}'
-    ;
-
-//构造函数的调用
-constructorCall
-    :   className arguments
+    :   funcAnnoation? className normalParams '{' functionBody '}'
     ;
 
 //变量声明
@@ -346,7 +335,6 @@ basicExpression
 primary
     :   var
     |   value
-    |   constructorCall
     |   THIS
     |   SUPER
     |   TargetSelector
@@ -505,9 +493,11 @@ type
     |   STRING
     |   JTEXT
     |   NBT
+    |   TYPE
     |   ANY
     |   VEC IntegerLiteral         //向量
     |   className
+    |   Identifier
     ;
 
 functionReturnType
@@ -531,14 +521,14 @@ className
     ;
 
 classWithoutNamespace
-    :   ClassIdentifier
+    :   Identifier
     ;
 
 funcAnnoation
-    :   '@' id=(Identifier|ClassIdentifier) arguments?
+    :   '@' id=Identifier arguments?
     ;
 classAnnotation
-    :   '@' id=(Identifier|ClassIdentifier) arguments?
+    :   '@' id=Identifier arguments?
     ;
 
 range
@@ -548,7 +538,7 @@ range
     ;
 
 namespacePath
-    :   NormalString ':' NormalString ('/' NormalString)*
+    :   Identifier ':' Identifier ('/' Identifier)*
     ;
 
 
@@ -574,7 +564,7 @@ nbtIntArray: '[I;' NBTIntLiteral (',' NBTIntLiteral)* ']';
 nbtLongArray: '[L;' NBTLongLiteral (',' NBTLongLiteral)* ']';
 
 nbtList: '[' (nbtValue (',' nbtValue)* )* ']';
-nbtKeyValuePair: key=(Identifier|ClassIdentifier) ':' nbtValue;
+nbtKeyValuePair: key=Identifier ':' nbtValue;
 nbtCompound: '{'( nbtKeyValuePair (',' nbtKeyValuePair)* )*'}';
 
 multiLineStringLiteral

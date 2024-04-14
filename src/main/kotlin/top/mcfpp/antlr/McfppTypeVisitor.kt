@@ -7,6 +7,9 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.field.GlobalField
 import top.mcfpp.lib.field.NamespaceField
+import top.mcfpp.lib.function.FunctionParam
+import top.mcfpp.lib.generic.ClassParam
+import top.mcfpp.lib.generic.GenericClass
 import top.mcfpp.util.LazyWrapper
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
@@ -178,37 +181,44 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         val id = ctx.classWithoutNamespace().text
         val field = GlobalField.localNamespaces[Project.currNamespace]!!
 
-        if (field.hasClass(id)) {
+        val cls = if (field.hasClass(id)) {
             //重复声明
             LogProcessor.error("Class has been defined: $id in namespace ${Project.currNamespace}")
-            Class.currClass = field.getClass(id)
+            return
+        } else if(ctx.readOnlyParams() != null){
+            //泛型类
+            val qwq = GenericClass(id, Project.currNamespace, ctx.classBody())
+            qwq.readOnlyParams.addAll(ctx.readOnlyParams().parameterList().parameter().map {
+                ClassParam(it.type().text, it.Identifier().text)
+            })
+            qwq
         } else {
             //如果没有声明过这个类
-            val cls = Class(id, Project.currNamespace)
-            cls.initialize()
-            if(ctx.className().size != 0){
-                for (p in ctx.className()){
-                    //是否存在继承
-                    val qwq = StringHelper.splitNamespaceID(p.text)
-                    val identifier: String = qwq.second
-                    val namespace : String? = qwq.first
-                    var pc : CompoundData? = GlobalField.getClass(namespace, identifier)
-                    if(pc == null){
-                        pc = GlobalField.getInterface(namespace, identifier)
-                        if(pc == null){
-                            pc = Class.Companion.UndefinedClassOrInterface(identifier,namespace)
-                        }
-                    }
-                    cls.extends(pc)
-                }
-            }else{
-                //继承Any类
-                cls.extends(MCAny.data)
-            }
-            cls.isStaticClass = ctx.STATIC() != null
-            cls.isAbstract = ctx.ABSTRACT() != null
-            field.addClass(id, cls)
+            Class(id, Project.currNamespace)
         }
+        cls.initialize()
+        if(ctx.className().size != 0){
+            for (p in ctx.className()){
+                //是否存在继承
+                val qwq = StringHelper.splitNamespaceID(p.text)
+                val identifier: String = qwq.second
+                val namespace : String? = qwq.first
+                var pc : CompoundData? = GlobalField.getClass(namespace, identifier)
+                if(pc == null){
+                    pc = GlobalField.getInterface(namespace, identifier)
+                    if(pc == null){
+                        pc = Class.Companion.UndefinedClassOrInterface(identifier,namespace)
+                    }
+                }
+                cls.extends(pc)
+            }
+        }else{
+            //继承Any类
+            cls.extends(MCAny.data)
+        }
+        cls.isStaticClass = ctx.STATIC() != null
+        cls.isAbstract = ctx.ABSTRACT() != null
+        field.addClass(id, cls)
     }
 
     /**

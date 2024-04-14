@@ -1,4 +1,4 @@
-package top.mcfpp.lib.function.generic
+package top.mcfpp.lib.generic
 
 import top.mcfpp.Project
 import top.mcfpp.antlr.McfppImVisitor

@@ -318,29 +318,15 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
                 MCFPPNBTType.NBT -> `var` = NBT(container, identifier)
                 MCFPPBaseType.JavaVar -> `var` = JavaVar(null,identifier)
                 MCFPPBaseType.Any -> `var` = MCAny(container, identifier)
+                MCFPPBaseType.Type -> `var` = MCFPPTypeVar(identifier)
                 is MCFPPClassType ->{
                     //TODO: 这里不一定拿得到type.cls!!!可能得从GlobalField拿！
+                    //什么意思？ - Alumopper 2024.4.14
                     `var` = ClassPointer(type.cls, identifier)
                 }
+                //还有模板什么的
                 else -> {
                     `var` = UnknownVar(identifier)
-                    /*
-                    //自定义的类的类型
-                    val c = type.split(":")
-                    //取出类
-                    val clsType: Class? = if(c.size == 1){
-                        GlobalField.getClass(null,c[0])
-                    }else{
-                        GlobalField.getClass(c[0],c[1])
-                    }
-                    `var` = if (clsType == null) {
-                        LogProcessor.error("Undefined class:$c")
-                        UnknownVar(identifier)
-                    }else{
-                        ClassPointer(clsType, identifier)
-                    }
-
-                     */
                 }
             }
             return `var`
@@ -381,25 +367,6 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
                     `var` = classPointer
                 }
                 else -> {
-                    /*
-                    //自定义的类的类型
-                    val clsType = type.split(":")
-                    //取出类
-                    val clazz: Class? = if (clsType.size == 1) {
-                        GlobalField.getClass(null, clsType[0])
-                    } else {
-                        GlobalField.getClass(clsType[0], clsType[1])
-                    }
-                    if (clazz == null) {
-                        LogProcessor.error("Undefined class:$clsType")
-                        `var` = UnknownVar(identifier)
-                    }else{
-                        val classPointer = ClassPointer(clazz, identifier)
-                        classPointer.name = identifier
-                        `var` = classPointer
-                    }
-
-                     */
                     `var` = UnknownVar(identifier)
                 }
             }

@@ -1,5 +1,6 @@
 lexer grammar mcfppLexer;
 
+import unicodeClass;
 
 //Base Character Set
 WAVE:'~';
@@ -116,6 +117,7 @@ STRING:   'string';
 JTEXT:   'jtext';
 NBT:  'nbt';
 ANY:   'any';
+TYPE: 'type';
 VOID: 'void';
 
 //Identifiers
@@ -136,16 +138,20 @@ BooleanLiteral
     ;
 
 Identifier
-    :   [a-z_][a-zA-Z0-9_]*
+    : (Letter | '_') (Letter | '_' | UnicodeDigit)*
     ;
 
-ClassIdentifier
-    :   [A-Z][a-zA-Z0-9_]*
+Letter
+    : UNICODE_CLASS_LU
+    | UNICODE_CLASS_LL
+    | UNICODE_CLASS_LT
+    | UNICODE_CLASS_LM
+    | UNICODE_CLASS_LO
     ;
 
-NormalString
-    :   [A-Za-z0-9_]+
-    ;
+UnicodeDigit
+  : UNICODE_CLASS_ND
+  ;
 
 NBT_BYTE_ARRAY_BEGIN: '[B;';
 NBT_INT_ARRAY_BEGIN: '[I;';
@@ -171,15 +177,15 @@ WS  :  [ \t\r\n\u000C]+ -> skip
     ;
 
 DOC_COMMENT
-    :   '/**' .*? '*/'
+    :   '#{' .*? '}#'
     ;
 
 BLOCK_COMMENT
-    :   '/*' .*? '*/' -> skip
+    :   '##' .*? '##' -> skip
     ;
 
 LINE_COMMENT
-    :   '//' ~[\r\n]* -> skip
+    :   '#' ~[\r\n]* -> skip
     ;
 
 

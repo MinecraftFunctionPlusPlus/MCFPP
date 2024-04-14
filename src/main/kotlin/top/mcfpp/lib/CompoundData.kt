@@ -34,6 +34,11 @@ open class CompoundData : FieldContainer {
      */
     lateinit var staticField: CompoundDataField
 
+    /**
+     * 只读属性
+     */
+    var readOnlyField: CompoundDataField = CompoundDataField(null, null)
+
     val namespaceID : String
         get() = "$namespace:$identifier"
 
