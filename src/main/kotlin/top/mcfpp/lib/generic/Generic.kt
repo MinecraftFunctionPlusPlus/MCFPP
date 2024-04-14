@@ -1,4 +1,4 @@
-package top.mcfpp.lib.function.generic
+package top.mcfpp.lib.generic
 
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.lang.CanSelectMember

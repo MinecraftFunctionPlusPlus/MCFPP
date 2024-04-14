@@ -6,7 +6,7 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.function.Function
 import top.mcfpp.lib.function.FunctionParam
-import top.mcfpp.lib.function.generic.Generic
+import top.mcfpp.lib.generic.Generic
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 

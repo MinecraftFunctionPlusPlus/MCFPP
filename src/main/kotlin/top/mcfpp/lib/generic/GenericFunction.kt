@@ -1,4 +1,4 @@
-package top.mcfpp.lib.function.generic
+package top.mcfpp.lib.generic
 
 import top.mcfpp.Project
 import top.mcfpp.antlr.McfppImVisitor
@@ -9,6 +9,7 @@ import top.mcfpp.lib.Interface
 import top.mcfpp.lib.Template
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.lang.CanSelectMember
+import top.mcfpp.lang.MCFPPTypeVar
 import top.mcfpp.lang.Var
 import top.mcfpp.lib.field.GlobalField
 import top.mcfpp.lib.function.Function
@@ -138,6 +139,9 @@ class GenericFunction : Function, Generic<Function> {
         for (i in readOnlyParams.indices) {
             val r = field.getVar(readOnlyParams[i].identifier)!!
             r.assign(readOnlyArgs[i])
+            if(r is MCFPPTypeVar){
+                compiledFunction.field.putType(readOnlyParams[i].identifier, r.javaValue!!)
+            }
             compiledFunction.field.putVar(readOnlyParams[i].identifier, r, false)
         }
         index ++

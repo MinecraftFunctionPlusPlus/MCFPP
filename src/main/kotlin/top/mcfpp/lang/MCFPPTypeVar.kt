@@ -1,19 +1,27 @@
 package top.mcfpp.lang
 
+import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.CompoundData
 import top.mcfpp.lib.function.Function
 import top.mcfpp.lib.Member
+import top.mcfpp.lib.field.IFieldWithType
+import java.util.*
 
 class MCFPPTypeVar : Var<MCFPPType> {
 
 
     override var javaValue: MCFPPType? = null
+
+    override var type: MCFPPType = MCFPPBaseType.Type
+
+    constructor(identifier: String): super(identifier)
+
     constructor(identifier: String, type: MCFPPType) : super(identifier) {
         this.javaValue = type
     }
 
-    constructor(type: MCFPPType) : super() {
+    constructor(type: MCFPPType) : super(){
         this.javaValue = type
     }
 

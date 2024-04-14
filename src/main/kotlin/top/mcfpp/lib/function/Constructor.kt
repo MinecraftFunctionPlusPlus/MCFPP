@@ -2,6 +2,7 @@ package top.mcfpp.lib.function
 
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
+import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.command.Commands
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPBaseType
@@ -81,6 +82,19 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
         //取出栈内的值到记分板
         fieldRestore()
         currFunction = qwq
+    }
+
+    fun addParamsFromContext(ctx: mcfppParser.NormalParamsContext) {
+        for (param in ctx.parameterList()?.parameter()?:ArrayList()) {
+            val param1 = FunctionParam(
+                param.type().text,
+                param.Identifier().text,
+                this,
+                param.STATIC() != null
+            )
+            normalParams.add(param1)
+        }
+        parseParams()
     }
 
     @get:Override

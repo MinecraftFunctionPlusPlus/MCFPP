@@ -97,9 +97,30 @@ class CompileTest {
         val test =
             """
                 func main(){
-                    var q = test<2>();
-                    print(q);
-                    print(test<6>());
+                    type qwq = int;
+                    test<qwq>();
+                }
+                
+                func test<type T>(){
+                    T i = 5;
+                    print(i);
+                }
+            """.trimIndent()
+        MCFPPStringTest.readFromString(test)
+    }
+
+    @Test
+    fun classGenericTest(){
+        val test =
+            """
+                class Test<type T>{
+                    public T i;
+                }
+                
+                func main(){
+                    var test = Test<int>();
+                    test.i = 5;
+                    print(test.i);
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test)

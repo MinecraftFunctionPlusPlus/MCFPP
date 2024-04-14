@@ -166,7 +166,7 @@ abstract class MCFPPType(
         /**
          * 从类型标识符中获取一个类型。通常是从类名或者模板名中获取，也可以从泛型中获取
          */
-        fun parseFromIdentifier(identifier: String, typeScope: IFieldWithType):MCFPPType{
+        fun parseFromIdentifier(identifier: String, typeScope: IFieldWithType): MCFPPType{
             if(typeCache.contains(identifier)) return typeCache[identifier]!!
             //类和模板
             val clazz = GlobalField.getClass(null,identifier)
@@ -177,6 +177,7 @@ abstract class MCFPPType(
             if(typeScope.containType(identifier)){
                 return typeScope.getType(identifier)!!
             }
+            LogProcessor.warn("Unknown type: $identifier")
             return MCFPPBaseType.Any
         }
 

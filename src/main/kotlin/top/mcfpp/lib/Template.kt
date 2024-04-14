@@ -61,10 +61,9 @@ class Template : FieldContainer, CompoundData {
     }
 
     //TODO 只读参数
-    fun getConstructor(readOnlyParams: ArrayList<String>, normalParams: ArrayList<String>): TemplateConstructor?{
+    fun getConstructor(normalParams: ArrayList<String>): TemplateConstructor?{
         return getConstructorInner(
-            ArrayList(readOnlyParams.map { MCFPPType.parseFromIdentifier(it, field) }),
-            //ArrayList(normalParams.map { MCFPPType.parseFromIdentifier(it, field) })
+            ArrayList(normalParams.map { MCFPPType.parseFromIdentifier(it, field) })
         )
     }
 
