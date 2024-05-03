@@ -321,7 +321,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
                 MCFPPBaseType.Type -> `var` = MCFPPTypeVar(identifier)
                 is MCFPPClassType ->{
                     //TODO: 这里不一定拿得到type.cls!!!可能得从GlobalField拿！
-                    //什么意思？ - Alumopper 2024.4.14
+                    //什么意思捏？ - Alumopper 2024.4.14
                     `var` = ClassPointer(type.cls, identifier)
                 }
                 //还有模板什么的

@@ -9,10 +9,12 @@ import top.mcfpp.lib.function.ExtensionFunction
 /**
  * 用于标识由mcfpp class定义出来的类
  */
-class MCFPPClassType(
+open class MCFPPClassType(
     var cls:Class,
     override var parentType: List<MCFPPType>
-):MCFPPType("class(${cls.namespace}:${cls.identifier})",parentType,cls) {
+):MCFPPType(parentType,cls) {
+
+    val genericType : List<MCFPPType> = ArrayList()
 
     init {
         registerType({it.contains(regex)}){
@@ -29,8 +31,25 @@ class MCFPPClassType(
      * 获取这个类的实例的指针实体在mcfunction中拥有的tag
      */
     val tag: String
-        get() = cls.namespace + "_class_" + cls.identifier + "_type"
+        get() {
+            if(genericType.isNotEmpty()){
+                return cls.namespace + "_class_" + cls.identifier + "_type[" + genericType.sortedBy { it.typeName }.joinToString("_") { it.typeName } + "]"
+            }
+            return cls.namespace + "_class_" + cls.identifier + "_type"
+        }
 
+    override val typeName: String
+        get() = "class(${cls.namespace}:${cls.identifier})[${
+            genericType.joinToString("_") { it.typeName }
+        }]"
+
+    fun getGenericClassType(args: List<Var<*>>) : MCFPPGenericClassType{
+        val t = MCFPPGenericClassType(cls, parentType)
+        for(arg in args){
+            t.genericVar.add(arg)
+        }
+        return t
+    }
 
     /**
      * 获取这个类中的一个静态成员字段。

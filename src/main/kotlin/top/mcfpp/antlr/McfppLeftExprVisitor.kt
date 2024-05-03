@@ -3,6 +3,7 @@ package top.mcfpp.antlr
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.lang.*
+import top.mcfpp.lang.type.MCFPPGenericClassType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.function.Function
 import top.mcfpp.lib.field.GlobalField
@@ -18,7 +19,6 @@ import kotlin.collections.ArrayList
 
 class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>?>(){
     private var currSelector : CanSelectMember? = null
-
     /**
      * 计算一个基本的表达式。可能是一个变量，也可能是一个数值
      * @param ctx the parse tree

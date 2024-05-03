@@ -8,17 +8,50 @@ import top.mcfpp.util.ResourceLocation
  * 类型单例
  */
 class MCFPPBaseType {
-    object Any:MCFPPType("any", listOf())
-    object Int:MCFPPType("int",listOf(Any))
-    object String:MCFPPType("string",listOf(Any))
-    object Float:MCFPPType("float",listOf(Any))
-    object Bool:MCFPPType("bool",listOf(Any))
-    object Type:MCFPPType("type", listOf())
-    object Void: MCFPPType("void",listOf())
-    object Selector: MCFPPType("selector",listOf(BaseEntity))
-    object JavaVar: MCFPPType("JavaVar",listOf(Any))
-    object BaseEntity: MCFPPType("entity",listOf(Any))
-    object JsonText: MCFPPType("jtext",listOf(MCFPPNBTType.NBT))
+    object Any:MCFPPType(listOf()){
+        override val typeName: kotlin.String
+            get() = "any"
+    }
+    object Int:MCFPPType(listOf(Any)){
+        override val typeName: kotlin.String
+            get() = "int"
+    }
+    object String:MCFPPType(listOf(Any)){
+        override val typeName: kotlin.String
+            get() = "string"
+    }
+    object Float:MCFPPType(listOf(Any)){
+        override val typeName: kotlin.String
+            get() = "float"
+    }
+    object Bool:MCFPPType(listOf(Any)){
+        override val typeName: kotlin.String
+            get() = "bool"
+    }
+    object Type:MCFPPType(listOf()){
+        override val typeName: kotlin.String
+            get() = "type"
+    }
+    object Void: MCFPPType(listOf()){
+        override val typeName: kotlin.String
+            get() = "void"
+    }
+    object Selector: MCFPPType(listOf(BaseEntity)){
+        override val typeName: kotlin.String
+            get() = "selector"
+    }
+    object JavaVar: MCFPPType(listOf(Any)){
+        override val typeName: kotlin.String
+            get() = "JavaVar"
+    }
+    object BaseEntity: MCFPPType(listOf(Any)){
+        override val typeName: kotlin.String
+            get() = "entity"
+    }
+    object JsonText: MCFPPType(listOf(MCFPPNBTType.NBT)){
+        override val typeName: kotlin.String
+            get() = "jtext"
+    }
 
     init {
         Any.data = top.mcfpp.lang.MCAny.data
@@ -38,7 +71,7 @@ class MCFPPBaseType {
 
 class MCFPPEntityType(
     val resourceLocation: ResourceLocation
-) : MCFPPType("entity($resourceLocation)",listOf(MCFPPBaseType.BaseEntity), Entity.data) {
+) : MCFPPType(listOf(MCFPPBaseType.BaseEntity), Entity.data) {
     init {
        registerType({ it.contains(regex) }) {
           val matcher = regex.find(it)!!.groupValues

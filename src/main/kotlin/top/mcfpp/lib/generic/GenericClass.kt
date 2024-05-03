@@ -8,6 +8,7 @@ import top.mcfpp.io.McfppFile
 import top.mcfpp.lang.MCAny
 import top.mcfpp.lang.MCFPPTypeVar
 import top.mcfpp.lang.Var
+import top.mcfpp.lang.type.MCFPPGenericClassType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.Class
 import top.mcfpp.lib.CompoundData
@@ -65,6 +66,8 @@ class GenericClass : Class {
         val visitor = McfppGenericClassVisitor(cls)
         visitor.visitClassDeclaration(ctx.parent as mcfppParser.ClassDeclarationContext)
         index ++
+
+        cls.getType = {cls.getType().getGenericClassType(readOnlyArgs)}
 
         return cls
     }

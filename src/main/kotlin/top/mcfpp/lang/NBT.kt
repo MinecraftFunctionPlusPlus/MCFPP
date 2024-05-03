@@ -8,14 +8,14 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.lang.type.MCFPPBaseType
-import top.mcfpp.lang.type.MCFPPClassType
-import top.mcfpp.lang.type.MCFPPNBTType
-import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lang.type.*
 import top.mcfpp.lib.*
 import top.mcfpp.lib.function.Function
 import top.mcfpp.util.LogProcessor
 import kotlin.collections.ArrayList
+import kotlin.reflect.full.isSubtypeOf
+import kotlin.reflect.full.starProjectedType
+import kotlin.reflect.typeOf
 
 
 /**
@@ -29,7 +29,7 @@ class NBT : Var<Tag<*>>, Indexable<NBT>{
 
     override var javaValue : Tag<*>? = null
 
-    var nbtType: NBTType = NBTType.ANY
+    var nbtType: NBTTypeWithTag = NBTTypeWithTag.ANY
 
     override var type: MCFPPType = MCFPPNBTType.NBT
 
@@ -70,6 +70,8 @@ class NBT : Var<Tag<*>>, Indexable<NBT>{
         isConcrete = true
         this.javaValue = value
         path.add(MCString(identifier))
+        //记录nbt字面量类型
+        nbtType = NBTTypeWithTag.getType(value)
     }
 
     /**
@@ -81,6 +83,8 @@ class NBT : Var<Tag<*>>, Indexable<NBT>{
         isConcrete = true
         this.javaValue = value
         path.add(MCString(identifier))
+        //记录nbt字面量类型
+        nbtType = NBTTypeWithTag.getType(value)
     }
 
     /**
@@ -199,6 +203,7 @@ class NBT : Var<Tag<*>>, Indexable<NBT>{
 
     @InsertCommand
     private fun assignCommand(a: NBT){
+        nbtType = a.nbtType
         if (parent != null){
             //是成员
             if(a.parent != null){
@@ -359,6 +364,7 @@ class NBT : Var<Tag<*>>, Indexable<NBT>{
     override fun cast(type: MCFPPType): Var<*> {
         return when(type){
             MCFPPNBTType.NBT -> this
+            MCFPPNBTType.BaseList -> this
             MCFPPBaseType.Any -> MCAny(this)
             else -> throw VariableConverseException()
         }
@@ -488,10 +494,10 @@ class NBT : Var<Tag<*>>, Indexable<NBT>{
     }
 
     fun getByNBTIndex(index: NBT): NBT{
-        if(nbtType != NBTType.LIST && nbtType != NBTType.ANY){
+        if(nbtType != NBTTypeWithTag.LIST && nbtType != NBTTypeWithTag.ANY){
             LogProcessor.error("Invalid nbt type")
         }
-        if(index.nbtType != NBTType.COMPOUND && index.nbtType != NBTType.ANY){
+        if(index.nbtType != NBTTypeWithTag.COMPOUND && index.nbtType != NBTTypeWithTag.ANY){
             LogProcessor.error("Invalid nbt type")
         }
         val re = NBT(this)
@@ -500,7 +506,7 @@ class NBT : Var<Tag<*>>, Indexable<NBT>{
     }
 
     fun getByStringIndex(index: MCString): NBT {
-        if(nbtType != NBTType.COMPOUND && nbtType != NBTType.ANY){
+        if(nbtType != NBTTypeWithTag.COMPOUND && nbtType != NBTTypeWithTag.ANY){
             LogProcessor.error("Invalid nbt type")
         }
         val re = NBT(this)
@@ -509,7 +515,7 @@ class NBT : Var<Tag<*>>, Indexable<NBT>{
     }
 
     fun getByIntIndex(index: MCInt): NBT {
-        if(nbtType != NBTType.LIST && nbtType != NBTType.ANY){
+        if(nbtType != NBTTypeWithTag.LIST && nbtType != NBTTypeWithTag.ANY){
             LogProcessor.error("Invalid nbt type")
         }
         val re = NBT(this)
@@ -524,8 +530,46 @@ class NBT : Var<Tag<*>>, Indexable<NBT>{
     companion object {
 
         val data = CompoundData("nbt","mcfpp")
+
+        enum class NBTTypeWithTag(val type: NBTType){
+            BYTE(NBTType.VALUE),
+            BOOL(NBTType.VALUE),
+            SHORT(NBTType.VALUE),
+            INT(NBTType.VALUE),
+            LONG(NBTType.VALUE),
+            FLOAT(NBTType.VALUE),
+            DOUBLE(NBTType.VALUE),
+            STRING(NBTType.VALUE),
+            BYTE_ARRAY(NBTType.ARRAY),
+            INT_ARRAY(NBTType.ARRAY),
+            LONG_ARRAY(NBTType.ARRAY),
+            COMPOUND(NBTType.COMPOUND),
+            LIST(NBTType.LIST),
+            ANY(NBTType.ANY);
+
+            companion object{
+                fun getType(tag: Tag<*>): NBTTypeWithTag{
+                    return when(tag){
+                        is ByteTag -> BYTE
+                        is ShortTag -> SHORT
+                        is IntTag -> INT
+                        is LongTag -> LONG
+                        is FloatTag -> FLOAT
+                        is DoubleTag -> DOUBLE
+                        is StringTag -> STRING
+                        is ByteArrayTag -> BYTE_ARRAY
+                        is IntArrayTag -> INT_ARRAY
+                        is LongArrayTag -> LONG_ARRAY
+                        is CompoundTag -> COMPOUND
+                        is ListTag<*> -> LIST
+                        else -> ANY
+                    }
+                }
+            }
+        }
+
         enum class NBTType {
-            COMPOUND, LIST, VALUE, ANY
+            COMPOUND, LIST, VALUE, ANY, ARRAY
         }
     }
 }

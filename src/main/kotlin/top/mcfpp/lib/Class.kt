@@ -190,8 +190,8 @@ open class Class : CompoundData {
     /**
      * 获取这个类对于的classType
      */
-    fun getType() : MCFPPClassType{
-        return MCFPPClassType(this,
+    var getType : () -> MCFPPClassType = {
+        MCFPPClassType(this,
             parent.filterIsInstance<Class>().map { it.getType() }
         )
     }

@@ -60,6 +60,11 @@ abstract class NBTBasedData<T:Tag<*>> : Var<T> {
      * @param b 被复制的list值
      */
     constructor(b: NBTBasedData<T>) : super(b)
+
+    protected  fun assignCommand(a : NBT){
+
+    }
+
     protected fun assignCommand(a: NBTBasedData<T>){
         if(parent != null){
             val b = if(a.parent != null){

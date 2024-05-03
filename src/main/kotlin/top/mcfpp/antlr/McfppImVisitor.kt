@@ -10,6 +10,7 @@ import top.mcfpp.exception.*
 import top.mcfpp.io.McfppFile
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPGenericClassType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.Annotation
@@ -236,7 +237,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
             }
         }else{
             for (c in ctx.fieldDeclarationExpression()){
-                val type = MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field)
+                val type = MCFPPType.parseFromContext(ctx.type(), Function.currFunction.field)
                 //函数变量，生成
                 val `var` = Var.build(c.Identifier().text, type, Function.currFunction)
                 //变量注册
@@ -247,7 +248,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 Function.addCommand("#field: " + ctx.type().text + " " + c.Identifier().text + if (c.expression() != null) " = " + c.expression().text else "")
                 //变量初始化
                 if (c.expression() != null) {
-                    val init: Var<*> = McfppExprVisitor().visit(c.expression())!!
+                    val init: Var<*> = McfppExprVisitor(if(type is MCFPPGenericClassType) type else null).visit(c.expression())!!
                     try {
                         if(`var` is MCInt && init is MCInt && !init.isConcrete){
                             Function.currFunction.commands.replaceThenAnalyze(init.name to `var`.name, init.`object`.name to `var`.`object`.name)

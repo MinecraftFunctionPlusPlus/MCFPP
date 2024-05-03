@@ -1,6 +1,9 @@
 package top.mcfpp.lang
 
 import net.querz.nbt.tag.*
+import top.mcfpp.CompileSettings
+import top.mcfpp.Project
+import top.mcfpp.ProjectConfig
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPNBTType
@@ -8,11 +11,14 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.function.Function
 import java.util.*
+import kotlin.reflect.full.isSubtypeOf
+import kotlin.reflect.full.starProjectedType
 
 
 class NBTList<T : Tag<*>?> : NBTBasedData<ListTag<T>>, Indexable<NBT> {
     override var javaValue: ListTag<T>? = null
     override var type: MCFPPType = MCFPPNBTType.BaseList //TODO: 根据泛型的类型决定类型
+
     /**
      * 创建一个list类型的变量。它的mc名和变量所在的域容器有关。
      *
@@ -65,6 +71,23 @@ class NBTList<T : Tag<*>?> : NBTBasedData<ListTag<T>>, Indexable<NBT> {
             is NBTList<*> -> {
                 assignCommand(b as NBTList<T>)
             }
+            is NBT -> {
+                if(b.nbtType != NBT.Companion.NBTTypeWithTag.LIST) throw VariableConverseException()
+                if(b.isConcrete){
+                    val value : ListTag<*>
+                    try{
+                        value = b.javaValue as ListTag<T>
+                    }catch (e: Exception){
+                        if(CompileSettings.isDebug){
+                            println(e)
+                        }
+                        throw VariableConverseException()
+                    }
+                    assignCommand(NBTList(value))
+                }else{
+                    throw VariableConverseException()
+                }
+            }
             else -> {
                 throw VariableConverseException()
             }
@@ -88,7 +111,7 @@ class NBTList<T : Tag<*>?> : NBTBasedData<ListTag<T>>, Indexable<NBT> {
                 MCFPPNBTType.BaseList -> this
                 MCFPPNBTType.NBT -> {
                     val re = NBT(identifier)
-                    re.nbtType = NBT.Companion.NBTType.LIST
+                    re.nbtType = NBT.Companion.NBTTypeWithTag.LIST
                     re.parent = parent
                     re
                 }

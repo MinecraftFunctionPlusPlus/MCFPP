@@ -1,5 +1,7 @@
 package top.mcfpp.lang.type
 
+import top.mcfpp.antlr.McfppExprVisitor
+import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.lang.CanSelectMember
 import top.mcfpp.lang.Var
 import top.mcfpp.lib.*
@@ -8,17 +10,13 @@ import top.mcfpp.lib.field.GlobalField
 import top.mcfpp.lib.field.IFieldWithType
 import top.mcfpp.lib.function.ExtensionFunction
 import top.mcfpp.lib.function.UnknownFunction
+import top.mcfpp.lib.generic.GenericClass
 import top.mcfpp.util.LogProcessor
 
 /**
  * 所有类型的接口
  */
 abstract class MCFPPType(
-
-    /**
-     * 类型名
-     */
-    open var typeName:String,
 
     /**
      * 父类型，一个列表
@@ -31,6 +29,13 @@ abstract class MCFPPType(
     init {
         registerType()
     }
+
+    /**
+     * 类型名
+     */
+    open val typeName
+        get() = "unknown"
+
 
     /**
      * 是否是指定类型的子类型
@@ -181,5 +186,38 @@ abstract class MCFPPType(
             return MCFPPBaseType.Any
         }
 
+        fun parseFromContext(ctx: mcfppParser.TypeContext, typeScope: IFieldWithType): MCFPPType{
+            if(ctx.normalType() != null){
+                return typeCache[ctx.text]!!
+            }
+            //list类型
+            if(ctx.LIST() != null){
+                return MCFPPListType(parseFromContext(ctx.type(), typeScope))
+            }
+            //普通的类类型
+            if(ctx.className() != null){
+                val clazz = GlobalField.getClass(null, ctx.className().text)
+                if(clazz !=null) {
+                    val t = clazz.getType()
+                    if(clazz is GenericClass){
+                        if(clazz.readOnlyParams.size != ctx.type().readOnlyArgs()?.expressionList()?.expression()?.size){
+                            LogProcessor.error("Generic class ${clazz.identifier} requires ${clazz.readOnlyParams.size} type arguments, but ${ctx.readOnlyArgs().expressionList().expression().size} were provided")
+                            return MCFPPBaseType.Any
+                        }
+                        val expr = McfppExprVisitor()
+                        val readOnlyArgs = ctx.type().readOnlyArgs()?.expressionList()?.expression()?.map { expr.visit(it)!! } ?: listOf()
+                        return t.getGenericClassType(readOnlyArgs)
+                    }
+                }
+            }
+            //泛型类型
+            if(typeScope.containType(ctx.text)){
+                return typeScope.getType(ctx.text)!!
+            }
+            LogProcessor.warn("Unknown type: ${ctx.text}")
+            return MCFPPBaseType.Any
+        }
+
     }
+
 }
