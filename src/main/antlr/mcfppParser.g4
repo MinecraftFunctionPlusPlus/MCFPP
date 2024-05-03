@@ -485,6 +485,13 @@ expressionList
     ;
 
 type
+    :   normalType
+    |   LIST '<' type '>'
+    |   className readOnlyArgs?
+    |   Identifier
+    ;
+
+normalType
     :   INT
     |   ENTITY
     |   BOOL
@@ -496,8 +503,8 @@ type
     |   TYPE
     |   ANY
     |   VEC IntegerLiteral         //向量
-    |   className
-    |   Identifier
+    |   MAP
+    |   DICT
     ;
 
 functionReturnType
@@ -518,6 +525,10 @@ value
 
 className
     :   (Identifier ('.' Identifier)* ':')? classWithoutNamespace
+    ;
+
+typeList
+    :   '<' typeList? '>'
     ;
 
 classWithoutNamespace

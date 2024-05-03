@@ -5,6 +5,8 @@ import net.querz.nbt.tag.StringTag
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.lang.*
+import top.mcfpp.lang.type.MCFPPGenericClassType
+import top.mcfpp.lang.type.MCFPPGenericType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.function.Function
@@ -28,14 +30,16 @@ import kotlin.system.exitProcess
 /**
  * 获取表达式结果用的visitor。解析并计算一个形如a+b*c的表达式。
  */
-class McfppExprVisitor: mcfppParserBaseVisitor<Var<*>?>() {
+class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassType? = null): mcfppParserBaseVisitor<Var<*>?>() {
 
     private val tempVarCommandCache = HashMap<Var<*>, String>()
 
     var processVarCache : ArrayList<Var<*>> = ArrayList()
-    fun clearCache(){processVarCache.clear()}
+    fun clearCache(){ processVarCache.clear() }
 
     private var currSelector : CanSelectMember? = null
+
+
 
     /**
      * 计算一个复杂表达式
@@ -552,6 +556,18 @@ class McfppExprVisitor: mcfppParserBaseVisitor<Var<*>?>() {
                     return func.returnVar
                 }
                 if(cls is GenericClass){
+                    if(defaultGenericClassType != null){
+                        //比对实例化参数
+                        //参数不一致
+                        if(defaultGenericClassType!!.genericVar.size != readOnlyArgs.size){
+                            LogProcessor.error("Generic class ${cls.identifier} requires ${cls.readOnlyParams.size} type arguments, but ${readOnlyArgs.size} were provided")
+                            return UnknownVar("${cls.identifier}_type_" + UUID.randomUUID())
+                        }
+                        //参数缺省
+                        if(readOnlyArgs.isEmpty()){
+                            readOnlyArgs.addAll(defaultGenericClassType!!.genericVar)
+                        }
+                    }
                     //实例化泛型函数
                     cls = cls.compile(readOnlyArgs)
                 }

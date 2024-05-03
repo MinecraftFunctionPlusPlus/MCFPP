@@ -91,7 +91,7 @@ open class NBTDictionary : NBTBasedData<CompoundTag>, Indexable<NBT> {
                 MCFPPNBTType.Dict -> this
                 MCFPPNBTType.NBT -> {
                     val re = NBT(identifier)
-                    re.nbtType = NBT.Companion.NBTType.COMPOUND
+                    re.nbtType = NBT.Companion.NBTTypeWithTag.COMPOUND
                     re.parent = parent
                     re
                 }
