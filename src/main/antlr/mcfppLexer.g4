@@ -123,6 +123,8 @@ LIST:       'list';
 MAP:        'map';
 DICT:       'dict';
 
+VecType: VEC DecimalConstant;
+
 //Identifiers
 TargetSelector
     :   '@' ('a'|'r'|'p'|'s'|'e')
@@ -142,14 +144,7 @@ fragment ExponentPart
 
 fragment IntConstant : DecimalConstant|HexadecimalConstant|OctalConstant;
 
-IntegerConstant: IntConstant;
 
-FloatConstant: FractionalConstant ExponentPart?;
-
-BooleanConstant
-    :   'true'
-    |   'false'
-    ;
 
 Identifier
     : (Letter | '_') (Letter | '_' | UnicodeDigit)*
@@ -163,7 +158,7 @@ Letter
     | UNICODE_CLASS_LO
     ;
 
-UnicodeDigit
+fragment UnicodeDigit
   : UNICODE_CLASS_ND
   ;
 
@@ -171,18 +166,30 @@ NBT_BYTE_ARRAY_BEGIN: '[B;';
 NBT_INT_ARRAY_BEGIN: '[I;';
 NBT_LONG_ARRAY_BEGIN: '[L;';
 
-NBTByteSuffix: [b|B];
-NBTShortSuffix: [s|S];
-NBTLongSuffix: [l|L];
-NBTFloatSuffix: [f|F];
-NBTDoubleSuffix: [d|D];
+fragment NBTByteSuffix: [bB];
+fragment NBTShortSuffix: [sS];
+fragment NBTLongSuffix: [lL];
+fragment NBTFloatSuffix: [fF];
+fragment NBTDoubleSuffix: [dD];
 
 NBTByte: IntConstant NBTByteSuffix;
 NBTShort: IntConstant NBTShortSuffix;
-NBTInt: IntConstant;
+//NBTInt: IntConstant;
 NBTLong: IntConstant NBTLongSuffix;
-NBTFloat: FractionalConstant ExponentPart?;
-NBTDouble: FractionalConstant ExponentPart? NBTDoubleSuffix;
+//NBTFloat: FractionalConstant ExponentPart?;
+NBTDouble: (DigitSequence|FractionalConstant) ExponentPart? NBTDoubleSuffix;
+
+IntegerConstant: IntConstant;
+
+FloatConstant
+    : DigitSequence NBTFloatSuffix
+    | FractionalConstant ExponentPart? NBTFloatSuffix?
+    ;
+
+BooleanConstant
+    :   'true'
+    |   'false'
+    ;
 
 LineString: ('"' .*? '"' )|( '\'' .*? '\'' );
 
