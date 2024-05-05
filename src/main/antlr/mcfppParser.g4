@@ -502,7 +502,7 @@ normalType
     |   NBT
     |   TYPE
     |   ANY
-    |   VEC DecimalConstant         //向量
+    |   VecType         //向量
     |   MAP
     |   DICT
     ;
@@ -524,13 +524,11 @@ value
     ;
 
 intValue
-    :   DecimalConstant
-    |   HexadecimalConstant
-    |   OctalConstant
+    :   IntegerConstant
     ;
 
 floatValue
-    :   FloatingConstant
+    :   FloatConstant
     ;
 
 boolValue
@@ -557,9 +555,9 @@ classAnnotation
     ;
 
 range
-    :   num1=(IntegerLiteral|FloatLiteral) '..' num2=(IntegerLiteral|FloatLiteral)
-    |   num1=(IntegerLiteral|FloatLiteral) '..'
-    |   '..' num2=(IntegerLiteral|FloatLiteral)
+    :   num1=(IntegerConstant|FloatConstant) '..' num2=(IntegerConstant|FloatConstant)
+    |   num1=(IntegerConstant|FloatConstant) '..'
+    |   '..' num2=(IntegerConstant|FloatConstant)
     ;
 
 namespacePath
@@ -584,9 +582,9 @@ nbtValue
 
 nbtByte: NBTByte;
 nbtShort:  NBTShort;
-nbtInt:  NBTInt;
+nbtInt:  IntegerConstant;
 nbtLong: NBTLong;
-nbtFloat: NBTFloat;
+nbtFloat: FloatConstant;
 nbtDouble: NBTDouble;
 
 nbtByteArray: NBT_BYTE_ARRAY_BEGIN nbtByte (',' nbtByte)* ']';
