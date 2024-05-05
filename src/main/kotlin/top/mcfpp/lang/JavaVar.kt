@@ -161,7 +161,7 @@ class JavaVar : Var<Any>{
                 MCFPPBaseType.Float -> Float::class.java
                 MCFPPBaseType.Bool -> Long::class.java
                 MCFPPBaseType.String -> String::class.java
-                MCFPPNBTType.BaseList -> ArrayList::class.java
+                is MCFPPListType -> ArrayList::class.java
                 MCFPPNBTType.Dict -> HashMap::class.java
                 MCFPPNBTType.Map -> HashMap::class.java
                 MCFPPNBTType.NBT -> Tag::class.java

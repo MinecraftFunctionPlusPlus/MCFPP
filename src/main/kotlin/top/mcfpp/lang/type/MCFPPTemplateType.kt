@@ -10,7 +10,11 @@ import top.mcfpp.util.LazyWrapper
 class MCFPPTemplateType(
     var template: Template,
     override var parentType: List<MCFPPType>
-) :MCFPPType("template(${template.namespace}:${template.identifier})",parentType, template) {
+) :MCFPPType(parentType, template) {
+
+    override val typeName: String
+        get() = "template(${template.namespace}:${template.identifier})"
+
     init {
         registerType({it.contains(regex)}){
             val matcher = regex.find(it)!!.groupValues

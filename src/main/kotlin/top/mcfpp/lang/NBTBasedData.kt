@@ -1,9 +1,13 @@
 package top.mcfpp.lang
 
 import net.querz.nbt.io.SNBTUtil
+import net.querz.nbt.tag.IntTag
+import net.querz.nbt.tag.ListTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.Project
 import top.mcfpp.command.Commands
+import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lang.NBT.Companion.getListType
 import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.function.Function
 import java.util.*
@@ -61,14 +65,10 @@ abstract class NBTBasedData<T:Tag<*>> : Var<T> {
      */
     constructor(b: NBTBasedData<T>) : super(b)
 
-    protected  fun assignCommand(a : NBT){
-
-    }
-
     protected fun assignCommand(a: NBTBasedData<T>){
         if(parent != null){
             val b = if(a.parent != null){
-                a.getTempVar() as NBTBasedData<T>
+                a.getTempVar() as NBTBasedData<*>
             }else a
             //类的成员是运行时动态的
             isConcrete = false

@@ -601,8 +601,8 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
 
     override fun visitValue(ctx: mcfppParser.ValueContext): Var<*>? {
         //常量
-        if (ctx.IntegerLiteral() != null) {
-            return MCInt(Integer.parseInt(ctx.IntegerLiteral().text))
+        if (ctx.intValue() != null) {
+            return MCInt(Integer.parseInt(ctx.intValue().text))
         } else if (ctx.LineString() != null) {
             val r: String = ctx.LineString().text
             return MCString(StringTag(r.substring(1, r.length - 1)))
@@ -632,10 +632,10 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 stringArray.add(tailQuote.substring(3,tailQuote.length))
             }
             return MCString(StringTag(stringArray.joinToString("")) ) //没有解析值就变不了MCString了
-        } else if (ctx.FloatLiteral() != null){
-            return MCFloat(ctx.FloatLiteral()!!.text.toFloat())
-        } else if (ctx.BooleanLiteral() != null){
-            return MCBool(ctx.BooleanLiteral()!!.text.toBoolean())
+        } else if (ctx.floatValue() != null){
+            return MCFloat(ctx.floatValue()!!.text.toFloat())
+        } else if (ctx.boolValue() != null){
+            return MCBool(ctx.boolValue()!!.text.toBoolean())
         } else if (ctx.nbtValue() != null){
             return NBT(SNBTUtil.fromSNBT(ctx.nbtValue().text))
         } else if (ctx.type() != null){
