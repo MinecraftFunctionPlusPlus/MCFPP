@@ -12,6 +12,7 @@ import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.function.Function
+import top.mcfpp.lib.function.NativeFunction
 import java.util.*
 import javax.swing.text.View
 import kotlin.reflect.full.isSubtypeOf
@@ -196,10 +197,10 @@ class NBTList<T> : NBTBasedData<ListTag<*>>, Indexable<NBT> {
     companion object {
         val data = CompoundData("list", "mcfpp")
         //注册函数
-        init {
-            //data.field.addFunction(NativeFunction("add",NBTListData::add.javaMethod!!,"mcfpp"),false)
-        }
 
+        init {
+            data.field.addFunction(NativeFunction("add", NBTListData(),MCFPPBaseType.Void,"mcfpp"),false)
+        }
 
     }
 }
