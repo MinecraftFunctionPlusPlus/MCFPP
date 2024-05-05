@@ -23,11 +23,15 @@ abstract class MCFPPType(
      */
     open var parentType: List<MCFPPType> = listOf(),
 
-    open var data: CompoundData = CompoundData("unknown","mcfpp")
+    open var data: CompoundData = CompoundData("unknown","mcfpp"),
+
+    ifRegister : Boolean = true
 
 ) : CanSelectMember {
     init {
-        registerType()
+        if(ifRegister){
+            registerType()
+        }
     }
 
     /**
@@ -100,6 +104,17 @@ abstract class MCFPPType(
         }
     }
 
+    override fun equals(other: Any?): Boolean {
+        if(other !is MCFPPType){
+            return false
+        }
+        return other.typeName == this.typeName
+    }
+
+    override fun hashCode(): Int {
+        return typeName.hashCode()
+    }
+
     companion object{
 
         val data = CompoundData("type","mcfpp")
@@ -126,7 +141,6 @@ abstract class MCFPPType(
         )
         val nbtType:Set<MCFPPType> = setOf(
             MCFPPNBTType.NBT,
-            MCFPPNBTType.BaseList,
             MCFPPNBTType.Map,
             MCFPPNBTType.Dict
         )

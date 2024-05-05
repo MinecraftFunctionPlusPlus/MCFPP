@@ -90,6 +90,7 @@ class NBTMap : NBTDictionary{
                 NativeFunction("isEmpty", NBTMapData(), MCFPPBaseType.Bool,"mcfpp"),
                 false
             )
+            /* TODO
             data.field.addFunction(
                 NativeFunction("getKeys" ,NBTMapData(), MCFPPNBTType.BaseList,"mcfpp"),
                 false
@@ -98,6 +99,7 @@ class NBTMap : NBTDictionary{
                 NativeFunction("getValues" ,NBTMapData(), MCFPPNBTType.BaseList,"mcfpp"),
                 false
             )
+             */
             data.field.addFunction(
                 NativeFunction("merge", NBTMapData(), MCFPPBaseType.Void,"mcfpp")
                     .appendReadOnlyParam(MCFPPNBTType.Map.typeName,"m"),

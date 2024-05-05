@@ -128,14 +128,25 @@ TargetSelector
     :   '@' ('a'|'r'|'p'|'s'|'e')
     ;
 
-IntegerLiteral:[1-9][0-9]*|[0];
+fragment DigitSequence: [0-9]+;
+fragment HexSequence: [0-9a-fA-F]+;
+fragment OctalSequence: [0-7]+;
 
-FloatLiteral
-    :   IntegerLiteral '.' [0-9]+
-    |   [0-9] ('.' [0-9]+)? 'e' '-'? [0-9]
-    ;
+fragment DecimalConstant: DigitSequence;
+fragment HexadecimalConstant: '0x' HexSequence;
+fragment OctalConstant: '0' | '0' OctalSequence;
+fragment FractionalConstant: DigitSequence DOT DigitSequence;
 
-BooleanLiteral
+fragment ExponentPart
+    :   [e|E] (ADD|SUB)? DigitSequence;
+
+fragment IntConstant : DecimalConstant|HexadecimalConstant|OctalConstant;
+
+IntegerConstant: IntConstant;
+
+FloatConstant: FractionalConstant ExponentPart?;
+
+BooleanConstant
     :   'true'
     |   'false'
     ;
@@ -160,15 +171,18 @@ NBT_BYTE_ARRAY_BEGIN: '[B;';
 NBT_INT_ARRAY_BEGIN: '[I;';
 NBT_LONG_ARRAY_BEGIN: '[L;';
 
-NBTByteLiteral: ([1-9][0-9]*|[0])[b|B];
-NBTShortLiteral: ([1-9][0-9]*|[0])[s|S];
-NBTIntLiteral: IntegerLiteral;
-NBTLongLiteral: ([1-9][0-9]*|[0])[l|L];
-NBTFloatLiteral: IntegerLiteral '.' [0-9]+[f|F];
-NBTDoubleLiteral: IntegerLiteral '.' [0-9]+[f|D]?;
+NBTByteSuffix: [b|B];
+NBTShortSuffix: [s|S];
+NBTLongSuffix: [l|L];
+NBTFloatSuffix: [f|F];
+NBTDoubleSuffix: [d|D];
 
-
-
+NBTByte: IntConstant NBTByteSuffix;
+NBTShort: IntConstant NBTShortSuffix;
+NBTInt: IntConstant;
+NBTLong: IntConstant NBTLongSuffix;
+NBTFloat: FractionalConstant ExponentPart?;
+NBTDouble: FractionalConstant ExponentPart? NBTDoubleSuffix;
 
 LineString: ('"' .*? '"' )|( '\'' .*? '\'' );
 

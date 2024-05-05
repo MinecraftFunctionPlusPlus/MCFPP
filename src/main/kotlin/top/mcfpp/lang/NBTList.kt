@@ -5,19 +5,26 @@ import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.ProjectConfig
 import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lang.NBT.Companion.getListType
 import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPListType
 import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.function.Function
 import java.util.*
+import javax.swing.text.View
 import kotlin.reflect.full.isSubtypeOf
 import kotlin.reflect.full.starProjectedType
 
 
-class NBTList<T : Tag<*>?> : NBTBasedData<ListTag<T>>, Indexable<NBT> {
-    override var javaValue: ListTag<T>? = null
-    override var type: MCFPPType = MCFPPNBTType.BaseList //TODO: 根据泛型的类型决定类型
+class NBTList<T> : NBTBasedData<ListTag<*>>, Indexable<NBT> {
+
+    override var javaValue: ListTag<*>? = null
+
+    override var type: MCFPPType
+
+    val genericType: MCFPPType
 
     /**
      * 创建一个list类型的变量。它的mc名和变量所在的域容器有关。
@@ -26,14 +33,22 @@ class NBTList<T : Tag<*>?> : NBTBasedData<ListTag<T>>, Indexable<NBT> {
      */
     constructor(
         curr: FieldContainer,
-        identifier: String = UUID.randomUUID().toString()
-    ) : super(curr, identifier)
+        identifier: String = UUID.randomUUID().toString(),
+        genericType : MCFPPType
+    ) : super(curr, identifier){
+        type = MCFPPListType(genericType)
+        this.genericType = genericType
+    }
 
     /**
      * 创建一个list值。它的标识符和mc名相同。
      * @param identifier identifier
      */
-    constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier)
+    constructor(identifier: String = UUID.randomUUID().toString(),
+                genericType : MCFPPType) : super(identifier){
+        type = MCFPPListType(genericType)
+        this.genericType = genericType
+    }
 
     /**
      * 创建一个固定的list
@@ -44,22 +59,33 @@ class NBTList<T : Tag<*>?> : NBTBasedData<ListTag<T>>, Indexable<NBT> {
      */
     constructor(
         curr: FieldContainer,
-        value: ListTag<T>,
-        identifier: String = UUID.randomUUID().toString()
-    ) : super(curr, value, identifier)
+        value: ListTag<*>,
+        identifier: String = UUID.randomUUID().toString(),
+        genericType : MCFPPType
+    ) : super(curr, value, identifier){
+        type = MCFPPListType(genericType)
+        this.genericType = genericType
+    }
 
     /**
      * 创建一个固定的list。它的标识符和mc名一致/
      * @param identifier 标识符。如不指定，则为随机uuid
      * @param value 值
      */
-    constructor(value: ListTag<T>, identifier: String = UUID.randomUUID().toString()) : super(value, identifier)
+    constructor(value: ListTag<*>, identifier: String = UUID.randomUUID().toString(),
+                genericType : MCFPPType) : super(value, identifier){
+        type = MCFPPListType(genericType)
+        this.genericType = genericType
+    }
 
     /**
      * 复制一个list
      * @param b 被复制的list值
      */
-    constructor(b: ListTag<T>) : super(b)
+    constructor(b: ListTag<*>) : super(b){
+        type = b.getListType()
+        this.genericType = (type as MCFPPListType).generic
+    }
 
     /**
      * 将b中的值赋值给此变量
@@ -69,28 +95,27 @@ class NBTList<T : Tag<*>?> : NBTBasedData<ListTag<T>>, Indexable<NBT> {
         hasAssigned = true
         when (b) {
             is NBTList<*> -> {
-                assignCommand(b as NBTList<T>)
-            }
-            is NBT -> {
-                if(b.nbtType != NBT.Companion.NBTTypeWithTag.LIST) throw VariableConverseException()
-                if(b.isConcrete){
-                    val value : ListTag<*>
-                    try{
-                        value = b.javaValue as ListTag<T>
-                    }catch (e: Exception){
-                        if(CompileSettings.isDebug){
-                            println(e)
-                        }
-                        throw VariableConverseException()
-                    }
-                    assignCommand(NBTList(value))
-                }else{
+                if(b.type != this.type){
                     throw VariableConverseException()
                 }
+                assignCommand(b)
             }
-            else -> {
+            is NBT -> assignCommand(b)
+            else -> throw VariableConverseException()
+        }
+    }
+
+    fun assignCommand(a: NBT) {
+        if(a.nbtType != NBT.Companion.NBTTypeWithTag.LIST) throw VariableConverseException()
+        if(a.isConcrete){
+            val type = (a.javaValue as ListTag<*>).getListType()
+            //列表非空且类型不一致
+            if(type != this.type && type.generic != MCFPPBaseType.Any){
                 throw VariableConverseException()
             }
+            this.javaValue = a.javaValue as ListTag<*>
+        }else{
+            throw VariableConverseException()
         }
     }
 
@@ -101,14 +126,14 @@ class NBTList<T : Tag<*>?> : NBTBasedData<ListTag<T>>, Indexable<NBT> {
     override fun cast(type: MCFPPType): Var<*> {
         if(isConcrete){
             return when(type){
-                MCFPPNBTType.BaseList -> this
+                this.type -> this
                 MCFPPNBTType.NBT -> NBT(javaValue!!)
                 MCFPPBaseType.Any -> this
                 else -> throw VariableConverseException()
             }
         }else{
             return when(type){
-                MCFPPNBTType.BaseList -> this
+                this.type -> this
                 MCFPPNBTType.NBT -> {
                     val re = NBT(identifier)
                     re.nbtType = NBT.Companion.NBTTypeWithTag.LIST
@@ -121,8 +146,8 @@ class NBTList<T : Tag<*>?> : NBTBasedData<ListTag<T>>, Indexable<NBT> {
         }
     }
 
-    override fun createTempVar(): Var<*> = NBTList<T>()
-    override fun createTempVar(value: Tag<*>): Var<*> = NBTList<T>(value as ListTag<T>)
+    override fun createTempVar(): Var<*> = TODO()
+    override fun createTempVar(value: Tag<*>): Var<*> = NBTList<T>(value as ListTag<*>)
     
     /**
      * 根据标识符获取一个成员。
@@ -155,10 +180,10 @@ class NBTList<T : Tag<*>?> : NBTBasedData<ListTag<T>>, Indexable<NBT> {
     override fun getByIndex(index: Var<*>): NBT {
         return if(index is MCInt){
             if(index.isConcrete && isConcrete){
-                if(index.javaValue!! >= (javaValue as ListTag<T>).size()){
+                if(index.javaValue!! >= (javaValue as ListTag<*>).size()){
                     throw IndexOutOfBoundsException("Index out of bounds")
                 }else{
-                    NBT((javaValue as ListTag<T>)[index.javaValue!!]!!)
+                    NBT((javaValue as ListTag<*>)[index.javaValue!!]!!)
                 }
             }else {
                 (cast(MCFPPNBTType.NBT) as NBT).getByIntIndex(index)

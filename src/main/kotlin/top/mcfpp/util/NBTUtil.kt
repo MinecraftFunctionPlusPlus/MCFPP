@@ -1,5 +1,6 @@
 package top.mcfpp.util
 
+import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.*
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.util.NBTUtil.toArrayList

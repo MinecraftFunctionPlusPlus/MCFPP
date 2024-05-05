@@ -502,7 +502,7 @@ normalType
     |   NBT
     |   TYPE
     |   ANY
-    |   VEC IntegerLiteral         //向量
+    |   VEC DecimalConstant         //向量
     |   MAP
     |   DICT
     ;
@@ -513,14 +513,28 @@ functionReturnType
     ;
 
 value
-    :   IntegerLiteral
-    |   FloatLiteral
+    :   intValue
+    |   floatValue
     |   LineString
-    |   BooleanLiteral
+    |   boolValue
     |   multiLineStringLiteral
     |   nbtValue
     |   range
     |   type
+    ;
+
+intValue
+    :   DecimalConstant
+    |   HexadecimalConstant
+    |   OctalConstant
+    ;
+
+floatValue
+    :   FloatingConstant
+    ;
+
+boolValue
+    :   BooleanConstant
     ;
 
 className
@@ -555,12 +569,12 @@ namespacePath
 
 nbtValue
     :   LineString
-    |   NBTByteLiteral
-    |   NBTShortLiteral
-    |   NBTIntLiteral
-    |   NBTLongLiteral
-    |   NBTFloatLiteral
-    |   NBTDoubleLiteral
+    |   nbtByte
+    |   nbtShort
+    |   nbtInt
+    |   nbtLong
+    |   nbtFloat
+    |   nbtDouble
     |   nbtCompound
     |   nbtList
     |   nbtByteArray
@@ -568,11 +582,16 @@ nbtValue
     |   nbtLongArray
     ;
 
+nbtByte: NBTByte;
+nbtShort:  NBTShort;
+nbtInt:  NBTInt;
+nbtLong: NBTLong;
+nbtFloat: NBTFloat;
+nbtDouble: NBTDouble;
 
-
-nbtByteArray: '[B;' NBTByteLiteral (',' NBTByteLiteral)* ']';
-nbtIntArray: '[I;' NBTIntLiteral (',' NBTIntLiteral)* ']';
-nbtLongArray: '[L;' NBTLongLiteral (',' NBTLongLiteral)* ']';
+nbtByteArray: NBT_BYTE_ARRAY_BEGIN nbtByte (',' nbtByte)* ']';
+nbtIntArray: NBT_INT_ARRAY_BEGIN nbtInt (',' nbtInt)* ']';
+nbtLongArray: NBT_LONG_ARRAY_BEGIN nbtLong (',' nbtLong)* ']';
 
 nbtList: '[' (nbtValue (',' nbtValue)* )* ']';
 nbtKeyValuePair: key=Identifier ':' nbtValue;

@@ -312,7 +312,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
                 MCFPPBaseType.BaseEntity -> TODO()
                 MCFPPBaseType.String -> `var` = MCString(container, identifier)
                 MCFPPBaseType.Float -> TODO()
-                MCFPPNBTType.BaseList -> `var` = NBTList<Tag<*>>(container, identifier)
+                is MCFPPListType -> `var` = NBTList<Tag<*>>(container, identifier, type.generic)
                 MCFPPNBTType.Dict -> TODO()
                 MCFPPNBTType.Map -> TODO()
                 MCFPPNBTType.NBT -> `var` = NBT(container, identifier)

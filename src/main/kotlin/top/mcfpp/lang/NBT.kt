@@ -13,9 +13,6 @@ import top.mcfpp.lib.*
 import top.mcfpp.lib.function.Function
 import top.mcfpp.util.LogProcessor
 import kotlin.collections.ArrayList
-import kotlin.reflect.full.isSubtypeOf
-import kotlin.reflect.full.starProjectedType
-import kotlin.reflect.typeOf
 
 
 /**
@@ -71,7 +68,7 @@ class NBT : Var<Tag<*>>, Indexable<NBT>{
         this.javaValue = value
         path.add(MCString(identifier))
         //记录nbt字面量类型
-        nbtType = NBTTypeWithTag.getType(value)
+        nbtType = NBTTypeWithTag.getTagType(value)
     }
 
     /**
@@ -84,7 +81,7 @@ class NBT : Var<Tag<*>>, Indexable<NBT>{
         this.javaValue = value
         path.add(MCString(identifier))
         //记录nbt字面量类型
-        nbtType = NBTTypeWithTag.getType(value)
+        nbtType = NBTTypeWithTag.getTagType(value)
     }
 
     /**
@@ -364,7 +361,7 @@ class NBT : Var<Tag<*>>, Indexable<NBT>{
     override fun cast(type: MCFPPType): Var<*> {
         return when(type){
             MCFPPNBTType.NBT -> this
-            MCFPPNBTType.BaseList -> this
+            is MCFPPListType -> this
             MCFPPBaseType.Any -> MCAny(this)
             else -> throw VariableConverseException()
         }
@@ -527,7 +524,86 @@ class NBT : Var<Tag<*>>, Indexable<NBT>{
         return javaValue
     }
 
+    //TODO 逻辑待优化。这里的处理不是很优雅
     companion object {
+
+        /**
+         * 获取一个NBT列表的MCFPP类型
+         */
+        fun ListTag<*>.getListType(): MCFPPListType{
+            if(this.size() != 0){
+                val t = NBTTypeWithTag.getTagType(this[0])
+                if(t == NBTTypeWithTag.LIST) {
+                    val elementType = (this[0] as ListTag<*>).getListType()
+                    for (i in this.drop(1)) {
+                        if (elementType != (i as ListTag<*>).getListType()) {
+                            return MCFPPListType(MCFPPNBTType.NBT)
+                        }
+                    }
+                    return MCFPPListType(elementType)
+                    //是复合标签
+                }
+                if(t == NBTTypeWithTag.COMPOUND){
+                    val elementType = (this[0] as CompoundTag).getCompoundType()
+                    for (i in this.drop(1)) {
+                        if (elementType != (i as CompoundTag).getCompoundType()) {
+                            return MCFPPListType(MCFPPNBTType.NBT)
+                        }
+                    }
+                    return MCFPPListType(elementType)
+                }
+                return MCFPPListType(t.getMCFPPType())
+            }
+            //列表为空
+            return MCFPPListType(MCFPPBaseType.Any)
+        }
+
+        /**
+         * 获取一个NBT复合标签的MCFPP类型
+         */
+        fun CompoundTag.getCompoundType(): MCFPPCompoundType{
+            val values = this.values()
+            //复合标签为空，用any标记
+            if(values.isEmpty()){
+                return MCFPPCompoundType(MCFPPBaseType.Any)
+            }
+            //判断所有元素是不是和第一个元素一样的
+            val t = NBTTypeWithTag.getTagType(values.first())
+            //如果是列表
+            if(t == NBTTypeWithTag.LIST){
+                val listType = (values.first() as ListTag<*>).getListType()
+                for (value in values.drop(1)){
+                    //并不全是列表
+                    if(NBTTypeWithTag.getTagType(value) != NBTTypeWithTag.LIST){
+                        return MCFPPCompoundType(MCFPPNBTType.NBT)
+                    }
+                    if((value as ListTag<*>).getListType() != listType){
+                        return MCFPPCompoundType(MCFPPListType(MCFPPNBTType.NBT))
+                    }
+                }
+            }
+            //如果是复合标签
+            if(t == NBTTypeWithTag.COMPOUND){
+                val compoundType = (values.first() as CompoundTag).getCompoundType()
+                for (value in values.drop(1)){
+                    //并不全是复合标签
+                    if(NBTTypeWithTag.getTagType(value) != NBTTypeWithTag.COMPOUND){
+                        return MCFPPCompoundType(MCFPPNBTType.NBT)
+                    }
+                    if((value as CompoundTag).getCompoundType() != compoundType){
+                        return MCFPPCompoundType(MCFPPCompoundType(MCFPPNBTType.NBT))
+                    }
+                }
+            }
+            //不是复杂类型
+            for (value in values.drop(1)){
+                if(NBTTypeWithTag.getTagType(value) != t){
+                    return MCFPPCompoundType(MCFPPNBTType.NBT)
+                }
+            }
+            return MCFPPCompoundType(t.getMCFPPType())
+        }
+
 
         val data = CompoundData("nbt","mcfpp")
 
@@ -547,8 +623,29 @@ class NBT : Var<Tag<*>>, Indexable<NBT>{
             LIST(NBTType.LIST),
             ANY(NBTType.ANY);
 
+            fun getMCFPPType(): MCFPPType{
+                return when(this){
+                    BYTE -> MCFPPBaseType.Int
+                    BOOL -> MCFPPBaseType.Bool
+                    SHORT -> MCFPPBaseType.Int
+                    INT -> MCFPPBaseType.Int
+                    LONG -> MCFPPBaseType.Int
+                    FLOAT -> MCFPPBaseType.Float
+                    DOUBLE -> MCFPPBaseType.Float
+                    STRING -> MCFPPBaseType.String
+                    BYTE_ARRAY -> MCFPPBaseType.Any
+                    INT_ARRAY -> MCFPPBaseType.Any
+                    LONG_ARRAY -> MCFPPBaseType.Any
+                    COMPOUND -> MCFPPNBTType.NBT
+                    LIST -> {
+                        throw Exception("不应该运行到这个地方吧")
+                    }
+                    ANY -> MCFPPBaseType.Any
+                }
+            }
+
             companion object{
-                fun getType(tag: Tag<*>): NBTTypeWithTag{
+                fun getTagType(tag: Tag<*>): NBTTypeWithTag{
                     return when(tag){
                         is ByteTag -> BYTE
                         is ShortTag -> SHORT
