@@ -42,7 +42,7 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
         if(r == null && n == null) return
         for (param in r.parameter()){
             val param1 = FunctionParam(
-                param.type().text,
+                MCFPPType.parseFromContext(param.type(), this.field),
                 param.Identifier().text,
                 this,
                 param.STATIC() != null
@@ -51,7 +51,7 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
         }
         for (param in n.parameter()) {
             val param1 = FunctionParam(
-                param.type().text,
+                MCFPPType.parseFromContext(param.type(), this.field),
                 param.Identifier().text,
                 this,
                 param.STATIC() != null

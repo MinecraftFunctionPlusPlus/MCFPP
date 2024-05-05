@@ -33,7 +33,7 @@ fun main(args: Array<String>) {
         val start: Long = System.currentTimeMillis()
         LogProcessor.info("Tips: " + UwU.tip) //生成tips
         val path = args[0]
-        Project.readProject(path) //读取
+        Project.readProject(path) //读取配置文件
         Project.readLib() //读取引用的库的索引
         Project.init() //初始化
         Project.indexType() //编制类型索引

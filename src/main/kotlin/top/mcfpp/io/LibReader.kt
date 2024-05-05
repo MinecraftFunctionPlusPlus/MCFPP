@@ -166,9 +166,9 @@ object LibReader {
             for (param in params){
                 val info = param.split(" ")
                 val p = if(info.size == 2){
-                    FunctionParam(info[0], info[1], func)
+                    FunctionParam(MCFPPType.parseFromIdentifier(info[0], field), info[1], func)
                 }else{
-                    FunctionParam(info[1], info[2], func)
+                    FunctionParam(MCFPPType.parseFromIdentifier(info[1], field), info[2], func)
                 }
                 paramList.add(p)
             }
@@ -220,9 +220,9 @@ object LibReader {
             for (param in params){
                 val info = param.split(" ")
                 val p = if(info.size == 2){
-                    FunctionParam(info[0], info[1], func,false)
+                    FunctionParam(MCFPPType.parseFromIdentifier(info[0], field), info[1], func,false)
                 }else{
-                    FunctionParam(info[1], info[2], func, true)
+                    FunctionParam(MCFPPType.parseFromIdentifier(info[1], field), info[2], func, true)
                 }
                 paramList.add(p)
             }
@@ -239,9 +239,9 @@ object LibReader {
             for (param in params){
                 val info = param.split(" ")
                 val p = if(info.size == 2){
-                    FunctionParam(info[0], info[1], func,false)
+                    FunctionParam(MCFPPType.parseFromIdentifier(info[0], field), info[1], func,false)
                 }else{
-                    FunctionParam(info[1], info[2], func, true)
+                    FunctionParam(MCFPPType.parseFromIdentifier(info[1], field), info[2], func, true)
                 }
                 paramList.add(p)
             }
@@ -258,9 +258,9 @@ object LibReader {
             for (param in params){
                 val info = param.split(" ")
                 val p = if(info.size == 2){
-                    FunctionParam(info[0], info[1], co,false)
+                    FunctionParam(MCFPPType.parseFromIdentifier(info[0], cls.field), info[1], co,false)
                 }else{
-                    FunctionParam(info[1], info[2], co, true)
+                    FunctionParam(MCFPPType.parseFromIdentifier(info[1], cls.field), info[2], co, true)
                 }
                 paramList.add(p)
             }
@@ -278,9 +278,9 @@ object LibReader {
             for (param in params){
                 val info = param.split(" ")
                 val p = if(info.size == 2){
-                    FunctionParam(info[0], info[1], co,false)
+                    FunctionParam(MCFPPType.parseFromIdentifier(info[0], template.field), info[1], co,false)
                 }else{
-                    FunctionParam(info[1], info[2], co, true)
+                    FunctionParam(MCFPPType.parseFromIdentifier(info[0], template.field), info[2], co, true)
                 }
                 paramList.add(p)
             }

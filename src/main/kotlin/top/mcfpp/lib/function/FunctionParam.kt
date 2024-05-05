@@ -15,8 +15,7 @@ class FunctionParam(
     /**
      * 参数类型
      */
-    var typeIdentifier: String,
-
+    var type : MCFPPType,
     /**
      * 参数的名字
      */
@@ -33,11 +32,7 @@ class FunctionParam(
     var isStatic: Boolean = false
 ) {
 
-    var type : MCFPPType
-
-    init {
-        type = MCFPPType.parseFromIdentifier(typeIdentifier, function.field)
-    }
+    var typeIdentifier: String = type.typeName
 
     companion object {
 

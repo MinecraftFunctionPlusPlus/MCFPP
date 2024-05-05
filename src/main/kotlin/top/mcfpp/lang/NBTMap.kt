@@ -73,17 +73,17 @@ class NBTMap : NBTDictionary{
             data.initialize()
             data.field.addFunction(
                 NativeFunction("remove" ,NBTMapData(), MCFPPBaseType.Void,"mcfpp")
-                    .appendReadOnlyParam(MCFPPBaseType.String.typeName,"key"),
+                    .appendReadOnlyParam(MCFPPBaseType.String,"key"),
                 false
             )
             data.field.addFunction(
                 NativeFunction("containsKey", NBTMapData(), MCFPPBaseType.Bool,"mcfpp")
-                    .appendReadOnlyParam(MCFPPBaseType.String.typeName,"key"),
+                    .appendReadOnlyParam(MCFPPBaseType.String,"key"),
                 false
             )
             data.field.addFunction(
                 NativeFunction("containsValue", NBTMapData(), MCFPPBaseType.Bool,"mcfpp")
-                    .appendReadOnlyParam(MCFPPNBTType.NBT.typeName,"value"),
+                    .appendReadOnlyParam(MCFPPNBTType.NBT,"value"),
                 false
             )
             data.field.addFunction(
@@ -102,7 +102,7 @@ class NBTMap : NBTDictionary{
              */
             data.field.addFunction(
                 NativeFunction("merge", NBTMapData(), MCFPPBaseType.Void,"mcfpp")
-                    .appendReadOnlyParam(MCFPPNBTType.Map.typeName,"m"),
+                    .appendReadOnlyParam(MCFPPNBTType.Map,"m"),
                 false
             )
             data.field.addFunction(

@@ -156,16 +156,16 @@ open class NBTDictionary : NBTBasedData<CompoundTag>, Indexable<NBT> {
             data.initialize()
             data.field.addFunction(
                 NativeFunction("remove", NBTDictionaryData(), MCFPPBaseType.Void,"mcfpp")
-                    .appendReadOnlyParam(MCFPPBaseType.String.typeName,"e")
+                    .appendReadOnlyParam(MCFPPBaseType.String,"e")
                 ,false
             )
             data.field.addFunction(
                 NativeFunction("merge", NBTDictionaryData(), MCFPPBaseType.Void,"mcfpp")
-                    .appendReadOnlyParam(MCFPPNBTType.Dict.typeName,"d")
+                    .appendReadOnlyParam(MCFPPNBTType.Dict,"d")
                 ,false)
             data.field.addFunction(
                 NativeFunction("containsKey", NBTDictionaryData(), MCFPPBaseType.Void,"mcfpp")
-                    .appendReadOnlyParam(MCFPPBaseType.String.typeName,"key")
+                    .appendReadOnlyParam(MCFPPBaseType.String,"key")
                 ,false
             )
         }

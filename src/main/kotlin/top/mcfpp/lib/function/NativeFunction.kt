@@ -9,6 +9,7 @@ import top.mcfpp.util.ValueWrapper
 import java.lang.reflect.InvocationTargetException
 import java.lang.Class
 import java.lang.Void
+import java.util.Dictionary
 
 /**
  * 表示了一个native方法
@@ -93,9 +94,18 @@ class NativeFunction : Function, Native {
         }
     }
 
-    fun appendReadOnlyParam(type: String, identifier: String, isStatic: Boolean = false) : Function {
-        readOnlyParams.add(FunctionParam(type,identifier, this, isStatic))
+    fun appendReadOnlyParam(type: MCFPPType, identifier: String, isStatic: Boolean = false) : Function {
+        readOnlyParams.add(FunctionParam(type ,identifier, this, isStatic))
         return this
+    }
+
+    fun replaceGenericParams(genericParams: Dictionary<String, MCFPPType>){
+        val n = NativeFunction(this.identifier, this.javaMethod, this.returnType, this.namespace)
+        for(np in normalParams){
+            if(genericParams[np.typeIdentifier] != null){
+                n.appendNormalParam(genericParams[np.typeIdentifier], np.identifier, np.isStatic)
+            }
+        }
     }
 
     @Override

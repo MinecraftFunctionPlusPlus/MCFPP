@@ -70,7 +70,7 @@ class GenericFunction : Function, Generic<Function> {
         if(r == null && n == null) return
         for (param in r?.parameter()?:ArrayList()){
             val param1 = FunctionParam(
-                param.type().text,
+                MCFPPType.parseFromContext(param.type(), this.field),
                 param.Identifier().text,
                 this,
                 param.STATIC() != null
@@ -79,7 +79,7 @@ class GenericFunction : Function, Generic<Function> {
         }
         for (param in n?.parameter()?:ArrayList()) {
             val param1 = FunctionParam(
-                param.type().text,
+                MCFPPType.parseFromContext(param.type(), this.field),
                 param.Identifier().text,
                 this,
                 param.STATIC() != null

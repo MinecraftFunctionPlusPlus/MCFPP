@@ -387,8 +387,8 @@ open class Function : Member, FieldContainer {
         return this
     }
 
-    open fun appendNormalParam(type: String, identifier: String, isStatic: Boolean = false) : Function {
-        normalParams.add(FunctionParam(type,identifier, this, isStatic))
+    open fun appendNormalParam(type: MCFPPType, identifier: String, isStatic: Boolean = false): Function {
+        normalParams.add(FunctionParam(type ,identifier, this, isStatic))
         return this
     }
 
@@ -432,7 +432,7 @@ open class Function : Member, FieldContainer {
         n = ctx.normalParams().parameterList()?:return
         for (param in n.parameter()) {
             val param1 = FunctionParam(
-                param.type().text,
+                MCFPPType.parseFromContext(param.type(), this.field),
                 param.Identifier().text,
                 this,
                 param.STATIC() != null
