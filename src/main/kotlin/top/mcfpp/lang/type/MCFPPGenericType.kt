@@ -25,6 +25,9 @@ class MCFPPGenericType(
     override var parentType: List<MCFPPType>
 ) :MCFPPType(parentType, MCAny.data) {   //TODO: 泛型的CompoundData
 
+    override val typeName: String
+        get() = identifier
+
     fun toValue():MCTypeValue{
         return MCTypeValue(identifier,parentType)
     }

@@ -10,7 +10,7 @@ import java.util.UUID
  *
  * @param T 这个数字类型中包装的类型
  */
-abstract class Number<T> : Var<T>, OnScoreboard {
+abstract class MCNumber<T> : Var<T>, OnScoreboard {
 
     override var javaValue: T? = null
     var `object`: SbObject
@@ -27,13 +27,13 @@ abstract class Number<T> : Var<T>, OnScoreboard {
     /**
      * 复制一个数字类型变量
      */
-constructor(b: Number<T>) : super(b as Var<*>) {
+    constructor(b: MCNumber<T>) : super(b as Var<*>) {
         javaValue = b.javaValue
         `object` = b.`object`
     }
 
     @Override
-    override fun setObj(sbObject: SbObject): Number<T> {
+    override fun setObj(sbObject: SbObject): MCNumber<T> {
         `object` = sbObject
         return this
     }
@@ -46,7 +46,7 @@ constructor(b: Number<T>) : super(b as Var<*>) {
      * 赋值
      * @param a 值来源
      */
-    abstract fun assignCommand(a: Number<T>)
+    abstract fun assignCommand(a: MCNumber<T>)
 
     /**
      * 加法

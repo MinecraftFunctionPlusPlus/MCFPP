@@ -775,6 +775,7 @@ open class Function : Member, FieldContainer {
         }
     }
 
+
     companion object {
         /**
          * 一个空的函数，通常用于作为占位符

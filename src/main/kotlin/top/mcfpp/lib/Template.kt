@@ -40,7 +40,7 @@ class Template : FieldContainer, CompoundData {
 
     constructor(identifier: String, dataType: LazyWrapper<MCFPPType>, namespace: String = Project.currNamespace){
         this.identifier = identifier
-        field = CompoundDataField(null,this)
+        field = CompoundDataField(staticField,this)
         staticField = CompoundDataField(null, this)
         constructors = ArrayList()
         this.dataType = dataType

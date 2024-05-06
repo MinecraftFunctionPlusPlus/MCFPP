@@ -6,20 +6,20 @@ import top.mcfpp.Project
 import top.mcfpp.ProjectConfig
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.NBT.Companion.getListType
-import top.mcfpp.lang.type.MCFPPBaseType
-import top.mcfpp.lang.type.MCFPPListType
-import top.mcfpp.lang.type.MCFPPNBTType
-import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lang.type.*
 import top.mcfpp.lib.*
 import top.mcfpp.lib.function.Function
 import top.mcfpp.lib.function.NativeFunction
+import top.mcfpp.lib.function.UnknownFunction
 import java.util.*
 import javax.swing.text.View
 import kotlin.reflect.full.isSubtypeOf
 import kotlin.reflect.full.starProjectedType
 
-
-class NBTList<T> : NBTBasedData<ListTag<*>>, Indexable<NBT> {
+/**
+ * 表示一个列表类型。基于NBTBasedData实现。
+ */
+class NBTList<E> : NBTBasedData<ListTag<*>>, Indexable<NBT> {
 
     override var javaValue: ListTag<*>? = null
 
@@ -109,6 +109,7 @@ class NBTList<T> : NBTBasedData<ListTag<*>>, Indexable<NBT> {
     fun assignCommand(a: NBT) {
         if(a.nbtType != NBT.Companion.NBTTypeWithTag.LIST) throw VariableConverseException()
         if(a.isConcrete){
+            this.isConcrete = true
             val type = (a.javaValue as ListTag<*>).getListType()
             //列表非空且类型不一致
             if(type != this.type && type.generic != MCFPPBaseType.Any){
@@ -148,7 +149,7 @@ class NBTList<T> : NBTBasedData<ListTag<*>>, Indexable<NBT> {
     }
 
     override fun createTempVar(): Var<*> = TODO()
-    override fun createTempVar(value: Tag<*>): Var<*> = NBTList<T>(value as ListTag<*>)
+    override fun createTempVar(value: Tag<*>): Var<*> = NBTList<E>(value as ListTag<*>)
     
     /**
      * 根据标识符获取一个成员。
@@ -165,7 +166,8 @@ class NBTList<T> : NBTBasedData<ListTag<*>>, Indexable<NBT> {
      * 根据方法标识符和方法的参数列表获取一个方法。如果没有这个方法，则返回null
      *
      * @param key 成员方法的标识符
-     * @param params 成员方法的参数
+     * @param readOnlyParams 只读参数
+     * @param normalParams 普通参数
      * @return
      */
     override fun getMemberFunction(
@@ -174,9 +176,21 @@ class NBTList<T> : NBTBasedData<ListTag<*>>, Indexable<NBT> {
         normalParams: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        TODO("Not yet implemented")
+        var re: Function = UnknownFunction(key)
+        data.field.forEachFunction {
+            //TODO 我们约定it为NativeFunction
+            assert(it is NativeFunction)
+            val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to genericType))
+            if(nf.isSelf(key, normalParams)){
+                re = nf
+            }
+        }
+        val iterator = data.parent.iterator()
+        while (re is UnknownFunction && iterator.hasNext()){
+            re = iterator.next().getFunction(key,readOnlyParams , normalParams ,isStatic)
+        }
+        return re to true
     }
-
 
     override fun getByIndex(index: Var<*>): NBT {
         return if(index is MCInt){
@@ -199,7 +213,9 @@ class NBTList<T> : NBTBasedData<ListTag<*>>, Indexable<NBT> {
         //注册函数
 
         init {
-            data.field.addFunction(NativeFunction("add", NBTListData(),MCFPPBaseType.Void,"mcfpp"),false)
+            data.parent.add(MCAny.data)
+            data.field.addFunction(NativeFunction("add", NBTListData(),MCFPPBaseType.Void,"mcfpp")
+                .appendNormalParam(MCFPPGenericType("E", emptyList()), "e"),false)
         }
 
     }

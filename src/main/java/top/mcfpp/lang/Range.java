@@ -1,5 +1,5 @@
 package top.mcfpp.lang;
-public class Range<T extends Number<?>> {
+public class Range<T extends MCNumber<?>> {
 
     /**
      * 闭区间左端

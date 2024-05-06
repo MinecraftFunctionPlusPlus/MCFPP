@@ -11,6 +11,9 @@ class NBTTypeTest {
             """
                 func main(){
                     list<int> l = [];
+                    l.add(1);
+                    l.add(2);
+                    print(l.getJavaVar());
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test)

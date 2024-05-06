@@ -27,17 +27,12 @@ open class CompoundData : FieldContainer {
     /**
      * 成员变量和成员函数
      */
-    lateinit var field: CompoundDataField
+    var field: CompoundDataField
 
     /**
      * 静态变量和静态函数
      */
-    lateinit var staticField: CompoundDataField
-
-    /**
-     * 只读属性
-     */
-    var readOnlyField: CompoundDataField = CompoundDataField(null, null)
+    var staticField: CompoundDataField
 
     val namespaceID : String
         get() = "$namespace:$identifier"
@@ -52,14 +47,16 @@ open class CompoundData : FieldContainer {
     constructor(identifier: String, namespace: String = Project.currNamespace){
         this.identifier = identifier
         this.namespace = namespace
-    }
-
-    protected constructor()
-
-    open fun initialize(){
         staticField = CompoundDataField(null, this)
-        field = CompoundDataField(staticField, this)
+        field = CompoundDataField(staticField,this)
     }
+
+    protected constructor(){
+        staticField = CompoundDataField(null, this)
+        field = CompoundDataField(staticField,this)
+    }
+
+    open fun initialize(){}
 
     /**
      * 返回一个成员字段。如果没有，则从父类中寻找

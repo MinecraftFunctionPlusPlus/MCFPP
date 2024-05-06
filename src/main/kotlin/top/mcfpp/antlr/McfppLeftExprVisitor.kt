@@ -185,8 +185,8 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>?>(){
                     LogProcessor.warn("Invalid namespace usage ${p.first} in function call ")
                 }
                 McfppFuncManager().getFunction(currSelector!!,p.second,
-                    FunctionParam.getArgTypeNames(readOnlyArgs),
-                    FunctionParam.getArgTypeNames(normalArgs))
+                    FunctionParam.getArgTypes(readOnlyArgs),
+                    FunctionParam.getArgTypes(normalArgs))
             }
             //调用函数
             return if (func is UnknownFunction) {
