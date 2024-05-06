@@ -6,8 +6,8 @@
         <PerGrammarGenerationSettings>
           <option name="fileName" value="$PROJECT_DIR$/src/main/antlr/mcfppParser.g4" />
           <option name="autoGen" value="true" />
-          <option name="outputDir" value="$PROJECT_DIR$/../MCFPP\build\generated-src\antlr\main\top\mcfpp\antlr" />
-          <option name="libDir" value="$PROJECT_DIR$/../MCFPP\build\generated-src\antlr\main\top\mcfpp\antlr" />
+          <option name="outputDir" value="$PROJECT_DIR$/build/generated-src/antlr/main/top/mcfpp/antlr" />
+          <option name="libDir" value="$PROJECT_DIR$/build/generated-src/antlr/main/top/mcfpp/antlr" />
           <option name="encoding" value="" />
           <option name="pkg" value="top.mcfpp.antlr" />
           <option name="language" value="" />
@@ -16,7 +16,7 @@
         <PerGrammarGenerationSettings>
           <option name="fileName" value="$PROJECT_DIR$/src/main/antlr/mcfppLexer.g4" />
           <option name="autoGen" value="true" />
-          <option name="outputDir" value="$PROJECT_DIR$/../MCFPP\build\generated-src\antlr\main\top\mcfpp\antlr" />
+          <option name="outputDir" value="$PROJECT_DIR$/build/generated-src/antlr/main/top/mcfpp/antlr" />
         </PerGrammarGenerationSettings>
       </list>
     </option>
