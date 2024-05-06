@@ -16,7 +16,7 @@ import java.util.*
 /**
  * 代表了mc中的一个整数。实质上是记分板中的一个记分项。你可以对它进行加减乘除等基本运算操作，以及大小比较等逻辑运算。
  */
-class MCInt : Number<Int> {
+class MCInt : MCNumber<Int> {
     /**
      * 创建一个int类型的变量。它的mc名和变量所在的域容器有关。
      *
@@ -117,15 +117,15 @@ class MCInt : Number<Int> {
     }
 
     @Override
-    override fun assignCommand(a: Number<Int>) {
+    override fun assignCommand(a: MCNumber<Int>) {
         assignCommand(a,null)
     }
 
     @InsertCommand
-    fun assignCommand(a: Number<Int>, replace: String?) {
+    fun assignCommand(a: MCNumber<Int>, replace: String?) {
         if (parent != null) {
             val b = if(a.parent != null){
-                a.getTempVar() as Number<*>
+                a.getTempVar() as MCNumber<*>
             }else a
             //类的成员是运行时动态的
             isConcrete = false
@@ -657,7 +657,7 @@ class MCInt : Number<Int> {
         normalParams: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        return data.field.getFunction(key, readOnlyParams, normalParams) to true
+        return data.getFunction(key, readOnlyParams, normalParams) to true
     }
 
     companion object {

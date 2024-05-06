@@ -17,7 +17,7 @@ import kotlin.math.floor
 import kotlin.math.log10
 import kotlin.math.pow
 
-class MCFloat : Number<Float> {
+class MCFloat : MCNumber<Float> {
 
     lateinit var sign: MCInt
     lateinit var int0: MCInt
@@ -184,7 +184,7 @@ class MCFloat : Number<Float> {
      * @param a 值来源
      */
     @InsertCommand
-    override fun assignCommand(a: Number<Float>) {
+    override fun assignCommand(a: MCNumber<Float>) {
         val parent = parent
         if(a.parent != null) TODO()
         if(parent != null){

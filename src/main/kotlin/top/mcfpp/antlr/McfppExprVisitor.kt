@@ -406,8 +406,11 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var<*>? {
         Project.ctx = ctx
         currSelector = if(ctx.primary() != null){
+            //从变量中选择（非静态成员）
             visit(ctx.primary())
         }else{
+            //从类型中选择（静态成员）
+            //TODO 此处的词法需要更改，className和Identifier有冲突
             if(ctx.type().className() != null){
                 //ClassName
                 val clsstr = ctx.type().text.split(":")
@@ -440,6 +443,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
 
     @Override
     override fun visitSelector(ctx: mcfppParser.SelectorContext?): Var<*>? {
+        //进入visitVar，currSelector作为成员选择的上下文
         currSelector = visit(ctx!!.`var`())!!.getTempVar()
         return null
     }
@@ -477,6 +481,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     override fun visitVar(ctx: mcfppParser.VarContext): Var<*>? {
         Project.ctx = ctx
         if (ctx.Identifier() != null && ctx.arguments() == null) {
+            //变量
             //没有数组选取
             val qwq: String = ctx.Identifier().text
             var re = if(currSelector == null){
@@ -542,8 +547,8 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                     LogProcessor.warn("Invalid namespace usage ${p.first} in function call ")
                 }
                 McfppFuncManager().getFunction(currSelector!!,p.second,
-                    FunctionParam.getArgTypeNames(readOnlyArgs),
-                    FunctionParam.getArgTypeNames(normalArgs))
+                    FunctionParam.getArgTypes(readOnlyArgs),
+                    FunctionParam.getArgTypes(normalArgs))
             }
             //调用函数
             return if (func is UnknownFunction) {

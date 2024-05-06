@@ -22,6 +22,8 @@ import kotlin.reflect.full.memberProperties
  *
  * 一个变量如果被转换为编译器变量就不能够再被转换为普通的变量。编译器变量不能在数据包中被找到。因此JavaVar必定是编译器已知的。
  *
+ * Java var只能通过调用NativeFunction获取。
+ *
  * @constructor Create empty Java var
  */
 
@@ -31,7 +33,7 @@ class JavaVar : Var<Any>{
 
     override var type: MCFPPType = MCFPPBaseType.JavaVar
     /**
-     * 创建一个固定的list
+     * 创建一个固定的JavaVar
      *
      * @param identifier 标识符
      * @param curr 域容器
@@ -47,7 +49,7 @@ class JavaVar : Var<Any>{
     }
 
     /**
-     * 创建一个固定的list。它的标识符和mc名一致/
+     * 创建一个固定的JavaVar。它的标识符和mc名一致
      * @param identifier 标识符。如不指定，则为随机uuid
      * @param value 值
      */
@@ -57,8 +59,8 @@ class JavaVar : Var<Any>{
     }
 
     /**
-     * 复制一个list
-     * @param b 被复制的list值
+     * 复制一个JavaVar
+     * @param b 被复制的JavaVar值
      */
     constructor(b: JavaVar) : super(b)
 

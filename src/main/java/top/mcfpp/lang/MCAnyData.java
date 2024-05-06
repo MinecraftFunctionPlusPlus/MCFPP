@@ -9,6 +9,7 @@ import top.mcfpp.lib.function.MNIMethodContainer;
 import top.mcfpp.util.ValueWrapper;
 
 import java.util.HashMap;
+import java.util.UUID;
 
 public class MCAnyData extends MNIMethodContainer {
 
@@ -19,6 +20,11 @@ public class MCAnyData extends MNIMethodContainer {
         methods.put("toString", (vars, vars2, canSelectMember, varValueWrapper) -> {
             //不会有参数
             Function.Companion.addCommand("tellraw @a " + canSelectMember);
+            return null;
+        });
+        methods.put("getJavaVar", (r, n, caller, re) -> {
+            //不会有参数
+            re.setValue(new JavaVar(caller, UUID.randomUUID().toString()));
             return null;
         });
     }

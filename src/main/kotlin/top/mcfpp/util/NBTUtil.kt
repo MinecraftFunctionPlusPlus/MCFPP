@@ -2,10 +2,36 @@ package top.mcfpp.util
 
 import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.*
+import org.apache.tools.ant.taskdefs.Java
 import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lang.*
 import top.mcfpp.util.NBTUtil.toArrayList
 
 object NBTUtil {
+
+    fun toNBT(v : Var<*>): Tag<*>?{
+        if(!v.isConcrete) return null
+        when(v){
+            is ClassPointer -> TODO()
+            is Entity -> TODO()
+            is IntTemplatePointer -> TODO()
+            is JavaVar -> return AnyTag(v)
+            is JsonString -> TODO()
+            is MCAny -> TODO()
+            is MCBool -> return ByteTag(v.javaValue!!)
+            is MCFloat -> return FloatTag(v.javaValue!!)
+            is MCFPPTypeVar -> TODO()
+            is MCInt -> return IntTag(v.javaValue!!)
+            is MCString -> return v.javaValue
+            is NBT -> return v.javaValue
+            is NBTBasedData<*> -> return v.javaValue
+            is UnknownVar -> TODO()
+            is UnresolvedVar -> TODO()
+            is Void -> TODO()
+            else -> TODO()
+        }
+    }
+
     fun toNBT(int: Int): Tag<Int>{
         return IntTag(int)
     }

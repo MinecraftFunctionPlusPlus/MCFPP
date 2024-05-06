@@ -68,6 +68,7 @@ class NativeFunction : Function, Native {
 
     @Override
     fun invoke(readOnlyArgs: ArrayList<Var<*>>, normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?) {
+        /*
         argPass(readOnlyArgs, normalArgs)
         val normalArgsArray = arrayOfNulls<Var<*>>(field.allVars.size)
         field.allVars.toTypedArray().copyInto(normalArgsArray)
@@ -76,8 +77,13 @@ class NativeFunction : Function, Native {
         val valueWrapper = ValueWrapper(returnVar)
         javaMethod(readOnlyArgsArray, normalArgsArray, caller, valueWrapper)
         returnVar = valueWrapper.value
+         */
+        val valueWrapper = ValueWrapper(returnVar)
+        javaMethod(readOnlyArgs.toTypedArray(), normalArgs.toTypedArray(), caller, valueWrapper)
+        returnVar = valueWrapper.value
     }
 
+    /*
     private fun argPass(readOnlyArgs: ArrayList<Var<*>>, normalArgs: ArrayList<Var<*>>,){
         for (i in this.normalParams.indices) {
             val p = field.getVar(this.normalParams[i].identifier)!!
@@ -93,19 +99,30 @@ class NativeFunction : Function, Native {
             p.assign(readOnlyArgs[i])
         }
     }
+    */
 
     fun appendReadOnlyParam(type: MCFPPType, identifier: String, isStatic: Boolean = false) : Function {
         readOnlyParams.add(FunctionParam(type ,identifier, this, isStatic))
         return this
     }
 
-    fun replaceGenericParams(genericParams: Dictionary<String, MCFPPType>){
+    fun replaceGenericParams(genericParams: Map<String, MCFPPType>) : NativeFunction{
         val n = NativeFunction(this.identifier, this.javaMethod, this.returnType, this.namespace)
         for(np in normalParams){
             if(genericParams[np.typeIdentifier] != null){
-                n.appendNormalParam(genericParams[np.typeIdentifier], np.identifier, np.isStatic)
+                n.appendNormalParam(genericParams[np.typeIdentifier]!!, np.identifier, np.isStatic)
+            }else{
+                n.appendNormalParam(np.type, np.identifier, np.isStatic)
             }
         }
+        for(rp in readOnlyParams){
+            if(genericParams[rp.typeIdentifier] != null){
+                n.appendReadOnlyParam(genericParams[rp.typeIdentifier]!!, rp.identifier, rp.isStatic)
+            }else{
+                n.appendReadOnlyParam(rp.type, rp.identifier, rp.isStatic)
+            }
+        }
+        return n
     }
 
     @Override
@@ -114,6 +131,7 @@ class NativeFunction : Function, Native {
     }
 }
 
+//TODO 改成java用interface实现的lambda？
 typealias MNIMethod = (Array<Var<*>?>, Array<Var<*>?>, CanSelectMember?, ValueWrapper<Var<*>>) -> Void
 
 abstract class MNIMethodContainer{

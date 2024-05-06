@@ -12,6 +12,17 @@ import top.mcfpp.lib.FieldContainer
 import top.mcfpp.lib.function.Function
 import java.util.*
 
+/**
+ * 基于nbt实现的数据类型。包括实体[Entity]，原始Json文本[JsonText]，字符串[MCString]，还有三种集合类型[NBTList],[NBTMap],[NBTDictionary]，以及目标选择器[Selector]
+ *
+ * 对于基于nbt实现的数据类型来说，堆数据存在marker.data中，栈数据存在stack_frame中。而nbt的键名就是变量名，值就是变量的值
+ *
+ * 例如对于
+ * ```
+ * list l = []
+ * ```
+ * 它声明在函数中，是一个栈数据，那么它的储存路径就是在名为`mcfpp:system`的storage下的`项目名.stack_frame\[x].l`下（其中x是函数的栈帧）
+ */
 abstract class NBTBasedData<T:Tag<*>> : Var<T> {
 
     /**
@@ -108,9 +119,9 @@ abstract class NBTBasedData<T:Tag<*>> : Var<T> {
                 Commands.selectRun(parent!!,"data modify entity @s data.$identifier set value ${SNBTUtil.toSNBT(javaValue)}")
             )
         }else{
-            Function.addCommand("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[${stackIndex}].$identifier set value ${SNBTUtil.toSNBT(
-                javaValue
-            )}")
+            Function.addCommand(
+                "data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[${stackIndex}].$identifier set value ${SNBTUtil.toSNBT(javaValue)}"
+            )
         }
     }
 
@@ -134,5 +145,9 @@ abstract class NBTBasedData<T:Tag<*>> : Var<T> {
 
     override fun getVarValue(): Any? {
         return javaValue
+    }
+
+    override fun toString(): String {
+        return "[$type,value=${if(isConcrete) SNBTUtil.toSNBT(javaValue) else "Unknown"}]"
     }
 }
