@@ -1,6 +1,7 @@
 package top.mcfpp.lang
 
 import net.querz.nbt.tag.CompoundTag
+import net.querz.nbt.tag.ListTag
 import net.querz.nbt.tag.StringTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.VariableConverseException
@@ -9,9 +10,8 @@ import top.mcfpp.lib.*
 import top.mcfpp.lib.function.Function
 import top.mcfpp.lib.function.NativeFunction
 import java.util.*
-import kotlin.reflect.jvm.javaMethod
 
-open class NBTDictionary : NBTBasedData<CompoundTag>, Indexable<NBT> {
+open class NBTDictionary : NBTBasedData<CompoundTag> {
 
     override var type: MCFPPType = MCFPPNBTType.Dict
 
@@ -82,27 +82,25 @@ open class NBTDictionary : NBTBasedData<CompoundTag>, Indexable<NBT> {
         return if(isConcrete){
             when(type){
                 MCFPPNBTType.Dict -> this
-                MCFPPNBTType.NBT -> NBT(javaValue!!)
+                MCFPPNBTType.NBT -> NBTBasedData(javaValue!!)
                 MCFPPBaseType.Any -> this
                 else -> throw VariableConverseException()
             }
         }else{
             when(type){
                 MCFPPNBTType.Dict -> this
-                MCFPPNBTType.NBT -> {
-                    val re = NBT(identifier)
-                    re.nbtType = NBT.Companion.NBTTypeWithTag.COMPOUND
-                    re.parent = parent
-                    re
-                }
+                MCFPPNBTType.NBT -> this
                 MCFPPBaseType.Any -> MCAny(this)
                 else -> throw VariableConverseException()
             }
         }
     }
 
+    /*
     override fun createTempVar(): Var<*> = NBTMap()
     override fun createTempVar(value: Tag<*>): Var<*> = NBTMap(value as CompoundTag)
+
+     */
 
     /**
      * 根据标识符获取一个成员。
@@ -133,16 +131,16 @@ open class NBTDictionary : NBTBasedData<CompoundTag>, Indexable<NBT> {
 
 
 
-    override fun getByIndex(index: Var<*>): NBT {
+    override fun getByIndex(index: Var<*>): NBTBasedData<*> {
         return if(index is MCString){
             if(index.isConcrete && isConcrete){
                 if((javaValue as CompoundTag).containsKey((index.javaValue as StringTag).valueToString())){
                     throw IndexOutOfBoundsException("Index out of bounds")
                 }else{
-                    NBT((javaValue as CompoundTag)[(index.javaValue as StringTag).valueToString()])
+                    NBTBasedData((javaValue as CompoundTag)[(index.javaValue as StringTag).valueToString()])
                 }
             }else {
-                (cast(MCFPPNBTType.NBT) as NBT).getByStringIndex(index)
+                (cast(MCFPPNBTType.NBT) as NBTBasedData).getByStringIndex(index)
             }
         }else{
             throw IllegalArgumentException("Index must be a string")

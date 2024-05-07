@@ -211,7 +211,7 @@ class JavaVar : Var<Any>{
                 is NBTList<*> -> v.javaValue!!.toJava()
                 is NBTMap -> ((v.javaValue!! as CompoundTag)["data"] as CompoundTag).toJava()
                 is NBTDictionary -> v.javaValue!!.toJava()
-                is NBT -> v.javaValue!!.toJava()
+                is NBTBasedData -> v.javaValue!!
                 else -> v
             }
         }

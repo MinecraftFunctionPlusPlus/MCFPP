@@ -25,7 +25,7 @@ import kotlin.collections.HashMap
  *
  * @see Entity
  */
-class Selector : NBTBasedData<ListTag<StringTag>> {
+class Selector : NBTAny<ListTag<StringTag>> {
 
     override var javaValue: ListTag<StringTag>? = null
     override var type: MCFPPType = MCFPPBaseType.Selector
@@ -130,7 +130,7 @@ class Selector : NBTBasedData<ListTag<StringTag>> {
     override fun cast(type: MCFPPType): Var<*> {
         return when(type){
             MCFPPBaseType.Selector -> this
-            MCFPPNBTType.NBT -> NBT(javaValue!!)
+            MCFPPNBTType.NBT -> NBTBasedData(javaValue!!)
             else -> throw VariableConverseException()
         }
     }

@@ -80,6 +80,8 @@ public class NBTListData extends MNIMethodContainer {
         });
 
         methods.put("addAll", (readOnlyArgs, normalArgs, caller, returnVar) -> {
+            var e = normalArgs[0];  //要添加的成员
+            var list = (NBTList)caller;
             return null;
         });
 

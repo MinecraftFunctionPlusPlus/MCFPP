@@ -1,31 +1,26 @@
 package top.mcfpp.lang
 
 import net.querz.nbt.tag.*
-import top.mcfpp.CompileSettings
-import top.mcfpp.Project
-import top.mcfpp.ProjectConfig
 import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.lang.NBT.Companion.getListType
 import top.mcfpp.lang.type.*
 import top.mcfpp.lib.*
 import top.mcfpp.lib.function.Function
 import top.mcfpp.lib.function.NativeFunction
 import top.mcfpp.lib.function.UnknownFunction
 import java.util.*
-import javax.swing.text.View
-import kotlin.reflect.full.isSubtypeOf
-import kotlin.reflect.full.starProjectedType
 
 /**
  * 表示一个列表类型。基于NBTBasedData实现。
  */
-class NBTList<E> : NBTBasedData<ListTag<*>>, Indexable<NBT> {
+class NBTList<E : Var<*>> : NBTBasedData<ListTag<*>> {
 
     override var javaValue: ListTag<*>? = null
 
     override var type: MCFPPType
 
     val genericType: MCFPPType
+
+    override var nbtType = NBTBasedData.Companion.NBTTypeWithTag.LIST
 
     /**
      * 创建一个list类型的变量。它的mc名和变量所在的域容器有关。
@@ -88,38 +83,6 @@ class NBTList<E> : NBTBasedData<ListTag<*>>, Indexable<NBT> {
         this.genericType = (type as MCFPPListType).generic
     }
 
-    /**
-     * 将b中的值赋值给此变量
-     * @param b 变量的对象
-     */
-    override fun assign(b: Var<*>?) {
-        hasAssigned = true
-        when (b) {
-            is NBTList<*> -> {
-                if(b.type != this.type){
-                    throw VariableConverseException()
-                }
-                assignCommand(b)
-            }
-            is NBT -> assignCommand(b)
-            else -> throw VariableConverseException()
-        }
-    }
-
-    fun assignCommand(a: NBT) {
-        if(a.nbtType != NBT.Companion.NBTTypeWithTag.LIST) throw VariableConverseException()
-        if(a.isConcrete){
-            this.isConcrete = true
-            val type = (a.javaValue as ListTag<*>).getListType()
-            //列表非空且类型不一致
-            if(type != this.type && type.generic != MCFPPBaseType.Any){
-                throw VariableConverseException()
-            }
-            this.javaValue = a.javaValue as ListTag<*>
-        }else{
-            throw VariableConverseException()
-        }
-    }
 
     /**
      * 将这个变量强制转换为一个类型
@@ -129,28 +92,25 @@ class NBTList<E> : NBTBasedData<ListTag<*>>, Indexable<NBT> {
         if(isConcrete){
             return when(type){
                 this.type -> this
-                MCFPPNBTType.NBT -> NBT(javaValue!!)
+                MCFPPNBTType.NBT -> this
                 MCFPPBaseType.Any -> this
                 else -> throw VariableConverseException()
             }
         }else{
             return when(type){
                 this.type -> this
-                MCFPPNBTType.NBT -> {
-                    val re = NBT(identifier)
-                    re.nbtType = NBT.Companion.NBTTypeWithTag.LIST
-                    re.parent = parent
-                    re
-                }
+                MCFPPNBTType.NBT -> this
                 MCFPPBaseType.Any -> MCAny(this)
                 else -> throw VariableConverseException()
             }
         }
     }
 
+    /*
     override fun createTempVar(): Var<*> = TODO()
     override fun createTempVar(value: Tag<*>): Var<*> = NBTList<E>(value as ListTag<*>)
-    
+    */
+
     /**
      * 根据标识符获取一个成员。
      *
@@ -192,16 +152,16 @@ class NBTList<E> : NBTBasedData<ListTag<*>>, Indexable<NBT> {
         return re to true
     }
 
-    override fun getByIndex(index: Var<*>): NBT {
+    override fun getByIndex(index: Var<*>): NBTBasedData<*> {
         return if(index is MCInt){
             if(index.isConcrete && isConcrete){
                 if(index.javaValue!! >= (javaValue as ListTag<*>).size()){
                     throw IndexOutOfBoundsException("Index out of bounds")
                 }else{
-                    NBT((javaValue as ListTag<*>)[index.javaValue!!]!!)
+                    NBTBasedData((javaValue as ListTag<*>)[index.javaValue!!]!!)
                 }
             }else {
-                (cast(MCFPPNBTType.NBT) as NBT).getByIntIndex(index)
+                (cast(MCFPPNBTType.NBT) as NBTBasedData).getByIntIndex(index)
             }
         }else{
             throw IllegalArgumentException("Index must be a int")

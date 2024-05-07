@@ -1,11 +1,8 @@
 package top.mcfpp.util
 
-import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.*
-import org.apache.tools.ant.taskdefs.Java
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.*
-import top.mcfpp.util.NBTUtil.toArrayList
 
 object NBTUtil {
 
@@ -23,8 +20,8 @@ object NBTUtil {
             is MCFPPTypeVar -> TODO()
             is MCInt -> return IntTag(v.javaValue!!)
             is MCString -> return v.javaValue
-            is NBT -> return v.javaValue
             is NBTBasedData<*> -> return v.javaValue
+            is NBTAny<*> -> return v.javaValue
             is UnknownVar -> TODO()
             is UnresolvedVar -> TODO()
             is Void -> TODO()
