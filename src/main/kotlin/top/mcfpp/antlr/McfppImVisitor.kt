@@ -258,7 +258,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                         }
                     } catch (e: VariableConverseException) {
                         LogProcessor.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
-                        throw VariableConverseException()
+                        throw VariableConverseException(e)
                     }
                 }
                 when(fieldModifier){

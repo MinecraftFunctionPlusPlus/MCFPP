@@ -26,7 +26,7 @@ import java.util.*
  *态的字符串和原始JSON文本功能。
  *
  */
-class MCString : NBTBasedData<StringTag> {
+class MCString : NBTAny<StringTag> {
 
     override var javaValue: StringTag? = null
 
@@ -125,7 +125,7 @@ class MCString : NBTBasedData<StringTag> {
     override fun cast(type: MCFPPType): Var<*> {
         return when(type){
             MCFPPBaseType.String -> this
-            MCFPPNBTType.NBT -> NBT(javaValue!!)
+            MCFPPNBTType.NBT -> NBTBasedData(javaValue!!)
             MCFPPBaseType.Any -> MCAny(this)
             else -> throw VariableConverseException()
         }

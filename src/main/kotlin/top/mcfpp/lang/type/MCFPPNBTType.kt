@@ -1,6 +1,5 @@
 package top.mcfpp.lang.type
 
-import top.mcfpp.lang.NBT
 import top.mcfpp.lang.NBTDictionary
 import top.mcfpp.lang.NBTList
 import top.mcfpp.lang.NBTMap
@@ -31,7 +30,7 @@ class MCFPPNBTType{
     }
 
     init {
-        NBT.data = top.mcfpp.lang.NBT.data
+        NBT.data = top.mcfpp.lang.NBTBasedData.data
         Dict.data = NBTDictionary.data
         Map.data = NBTMap.data
     }

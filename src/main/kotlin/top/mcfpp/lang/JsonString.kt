@@ -10,7 +10,7 @@ import top.mcfpp.lib.function.Function
 import top.mcfpp.lib.Member
 import java.util.*
 
-class JsonString : NBTBasedData<Tag<*>>{
+class JsonString : NBTAny<Tag<*>>{
     override var javaValue: Tag<*>? = null
     val jsonText : JsonText? = null
 
@@ -63,7 +63,7 @@ class JsonString : NBTBasedData<Tag<*>>{
      * 复制一个list
      * @param b 被复制的list值
      */
-    constructor(b: NBTBasedData<Tag<*>>) : super(b)
+    constructor(b: NBTAny<Tag<*>>) : super(b)
 
     override var type: MCFPPType = MCFPPBaseType.JsonText
 
@@ -78,7 +78,7 @@ class JsonString : NBTBasedData<Tag<*>>{
     override fun cast(type: MCFPPType): Var<*> {
         return when(type){
             MCFPPBaseType.JsonText -> this
-            MCFPPNBTType.NBT -> NBT(javaValue!!)
+            MCFPPNBTType.NBT -> NBTBasedData(javaValue!!)
             MCFPPBaseType.String -> TODO()
             else -> throw VariableConverseException()
         }

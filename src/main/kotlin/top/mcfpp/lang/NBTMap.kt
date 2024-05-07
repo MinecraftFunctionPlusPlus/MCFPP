@@ -63,8 +63,11 @@ class NBTMap : NBTDictionary{
         }
     }
 
+    /*
     override fun createTempVar(): Var<*> = NBTMap()
     override fun createTempVar(value: Tag<*>): Var<*> = NBTMap(value as CompoundTag)
+
+     */
 
     companion object{
         val data = CompoundData("map","mcfpp")

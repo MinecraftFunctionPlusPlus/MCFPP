@@ -6,7 +6,6 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPGenericClassType
-import top.mcfpp.lang.type.MCFPPGenericType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.function.Function
@@ -642,7 +641,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         } else if (ctx.boolValue() != null){
             return MCBool(ctx.boolValue()!!.text.toBoolean())
         } else if (ctx.nbtValue() != null){
-            return NBT(SNBTUtil.fromSNBT(ctx.nbtValue().text))
+            return NBTBasedData(SNBTUtil.fromSNBT(ctx.nbtValue().text))
         } else if (ctx.type() != null){
             return MCFPPTypeVar(MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field))
         }

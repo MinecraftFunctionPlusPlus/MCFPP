@@ -18,7 +18,7 @@ import java.util.UUID
  * 代表了一个实体。一个实体类型的变量通常是一个UUID数组，可以通过Thrower法来选择实体，从而实现对实体的操作。
  *
  */
-class Entity : NBTBasedData<IntArrayTag>{
+class Entity : NBTAny<IntArrayTag>{
 
     //TODO: 当Concrete时的值
     override var javaValue: IntArrayTag? =null
@@ -77,7 +77,7 @@ class Entity : NBTBasedData<IntArrayTag>{
      * 复制一个list
      * @param b 被复制的list值
      */
-    constructor(b: NBTBasedData<IntArrayTag>) : super(b)
+    constructor(b: NBTAny<IntArrayTag>) : super(b)
 
     /**
      * 根据标识符获取实体的NBT
@@ -130,7 +130,7 @@ class Entity : NBTBasedData<IntArrayTag>{
     override fun cast(type: MCFPPType): Var<*> {
         return when(type){
             BaseEntity -> this
-            MCFPPNBTType.NBT -> NBT(javaValue!!)
+            MCFPPNBTType.NBT -> NBTBasedData(javaValue!!)
             MCFPPBaseType.Any -> MCAny(this)
             else -> throw VariableConverseException()
         }

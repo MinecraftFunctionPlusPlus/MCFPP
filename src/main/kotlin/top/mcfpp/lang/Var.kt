@@ -312,10 +312,10 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
                 MCFPPBaseType.BaseEntity -> TODO()
                 MCFPPBaseType.String -> `var` = MCString(container, identifier)
                 MCFPPBaseType.Float -> TODO()
-                is MCFPPListType -> `var` = NBTList<Tag<*>>(container, identifier, type.generic)
+                is MCFPPListType -> `var` = NBTList<NBTBasedData<*>>(container, identifier, type.generic)
                 MCFPPNBTType.Dict -> TODO()
                 MCFPPNBTType.Map -> TODO()
-                MCFPPNBTType.NBT -> `var` = NBT(container, identifier)
+                MCFPPNBTType.NBT -> `var` = NBTBasedData<Tag<*>>(container, identifier)
                 MCFPPBaseType.JavaVar -> `var` = JavaVar(null,identifier)
                 MCFPPBaseType.Any -> `var` = MCAny(container, identifier)
                 MCFPPBaseType.Type -> `var` = MCFPPTypeVar(identifier)
@@ -331,7 +331,6 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
             }
             return `var`
         }
-
         /**
          * 解析变量声明上下文，构造上下文声明的变量，作为成员
          * @param identifier 变量标识符
