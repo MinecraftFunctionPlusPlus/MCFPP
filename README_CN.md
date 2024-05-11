@@ -9,7 +9,7 @@ MCFPP是一个能被编译为Minecraft数据包的全新的面向对象的语言
 # 快速开始
 [MCFPP Guider](https://alumopper.github.io/mcfppguide/quickstart)
 
-# 更新计划
+# [更新计划](./TODO_CN.md)
 * [ ] 代码优化
 * [ ] 垃圾回收机制
 * [ ] 更多的变量特性
