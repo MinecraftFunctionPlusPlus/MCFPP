@@ -29,6 +29,7 @@ public class System extends MNIMethodContainer {
             //只会有一个参数哦
             if (value instanceof MCInt) print((MCInt) value);
             else if (value instanceof JsonString) print((JsonString) value);
+            else if (value instanceof MCFloat) print((MCFloat) value);
             else print(value);
             return null;
         });
@@ -48,6 +49,16 @@ public class System extends MNIMethodContainer {
             Function.Companion.addCommand("tellraw @a " + var.getJavaValue());
         }else {
             Function.Companion.addCommand("tellraw @a " + new JsonTextNumber(var).toJson());
+        }
+    }
+
+    @InsertCommand
+    public static void print(@NotNull MCFloat var) {
+        if (var.isConcrete()) {
+            //是确定的，直接输出数值
+            Function.Companion.addCommand("tellraw @a " + "\"" + var.getJavaValue() + "\"");
+        }else {
+            Function.Companion.addCommand("tellraw @a " + "\"" + var + "\"");
         }
     }
 
