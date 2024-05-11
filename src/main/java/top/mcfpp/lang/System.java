@@ -30,6 +30,7 @@ public class System extends MNIMethodContainer {
             if (value instanceof MCInt) print((MCInt) value);
             else if (value instanceof JsonString) print((JsonString) value);
             else if (value instanceof MCFloat) print((MCFloat) value);
+            else if (value instanceof MCString) print((MCString) value);
             else print(value);
             return null;
         });
@@ -70,5 +71,20 @@ public class System extends MNIMethodContainer {
     @InsertCommand
     public static void print(@NotNull Var<?> var){
         Function.Companion.addCommand("tellraw @a " + "\"" +var + "\"");
+    }
+
+    @InsertCommand
+    public static void print(@NotNull MCString var){
+        if (var.isConcrete()) {
+            var javaValue = var.getJavaValue();
+            var text = "null";
+            if (javaValue != null) {
+                text = javaValue.getValue();
+            }
+
+            Function.Companion.addCommand("tellraw @a " + "\"" + text + "\"");
+        } else {
+            Function.Companion.addCommand("tellraw @a " + "\"" + var.toString().replaceAll("\"", "\\\\\"") + "\"");
+        }
     }
 }
