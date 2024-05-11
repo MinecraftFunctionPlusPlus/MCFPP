@@ -44,7 +44,6 @@ void example(){
 }
 ```
 ## 面向对象的编程
-MCFPP supports object-oriented programming
 ```
 class Example{
   int i;
@@ -57,7 +56,6 @@ class Example{
 }
 ```
 ## 库的调用
-MCFPP supports libraries. 
 ```
 import mcfpp.math;
 
