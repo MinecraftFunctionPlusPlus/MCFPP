@@ -17,7 +17,7 @@ MCSharp is a CSharp library. Using MCSharp, developers can develop datapacks usi
 
 JustMCF is a project to simplify mcfunction projects. Using JustMCF, you can not only use the original commands, but also use the simplified commands designed by the project, which can make your commands more concise and efficient.
 
-# (Update Plan)[./TODO.md]
+# [Update Plan](./TODO.md)
 * [ ] Code optimization
 * [ ] Garbage collection mechanism
 * [ ] More variable features (const, dynamic, import)
