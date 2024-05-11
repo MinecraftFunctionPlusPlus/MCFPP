@@ -47,7 +47,7 @@ public class System extends MNIMethodContainer {
     public static void print(@NotNull MCInt var) {
         if (var.isConcrete()) {
             //是确定的，直接输出数值
-            Function.Companion.addCommand("tellraw @a " + var.getJavaValue());
+            Function.Companion.addCommand("tellraw @a \"" + var.getJavaValue() + "\"");
         }else {
             Function.Companion.addCommand("tellraw @a " + new JsonTextNumber(var).toJson());
         }
