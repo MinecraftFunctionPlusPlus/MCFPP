@@ -3,9 +3,9 @@ package top.mcfpp.io
 import com.alibaba.fastjson2.JSON
 import com.alibaba.fastjson2.JSONObject
 import top.mcfpp.Project
-import top.mcfpp.lib.*
-import top.mcfpp.lib.field.GlobalField
-import top.mcfpp.lib.function.ExtensionFunction
+import top.mcfpp.model.*
+import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import top.mcfpp.util.Utils

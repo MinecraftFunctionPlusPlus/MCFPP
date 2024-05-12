@@ -3,7 +3,7 @@ package top.mcfpp
 import org.apache.logging.log4j.core.config.ConfigurationSource
 import org.apache.logging.log4j.core.config.Configurator
 import top.mcfpp.io.DatapackCreator
-import top.mcfpp.lib.field.GlobalField
+import top.mcfpp.model.field.GlobalField
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.UwU
 import java.io.FileInputStream

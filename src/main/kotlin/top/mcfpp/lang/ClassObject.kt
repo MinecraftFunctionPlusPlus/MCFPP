@@ -1,6 +1,6 @@
 package top.mcfpp.lang
 
-import top.mcfpp.lib.*
+import top.mcfpp.model.*
 import java.util.*
 
 /**

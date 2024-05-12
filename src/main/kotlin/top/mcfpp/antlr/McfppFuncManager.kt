@@ -2,9 +2,9 @@ package top.mcfpp.antlr
 
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.function.Function
-import top.mcfpp.lib.field.GlobalField
-import top.mcfpp.lib.Member
+import top.mcfpp.model.function.Function
+import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.Member
 import top.mcfpp.util.LogProcessor
 import kotlin.reflect.KFunction
 

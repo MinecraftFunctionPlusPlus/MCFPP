@@ -8,14 +8,15 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.CommentType
 import top.mcfpp.io.LibReader
 import top.mcfpp.io.LibWriter
-import top.mcfpp.io.McfppFile
+import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lang.MCFloat
 import top.mcfpp.lang.UnresolvedVar
 import top.mcfpp.lang.type.MCFPPBaseType
-import top.mcfpp.lib.*
-import top.mcfpp.lib.function.Function
-import top.mcfpp.lib.field.GlobalField
-import top.mcfpp.lib.field.NamespaceField
+import top.mcfpp.model.*
+import top.mcfpp.model.function.Function
+import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.field.NamespaceField
+import top.mcfpp.lang.Var
 import top.mcfpp.util.LogProcessor
 import java.io.*
 import java.nio.file.Path
@@ -37,7 +38,7 @@ object Project {
     /**
      * 当前解析文件的语法树
      */
-    var trees:MutableMap<McfppFile,ParseTree> = mutableMapOf()
+    var trees:MutableMap<MCFPPFile,ParseTree> = mutableMapOf()
 
     /**
      * 当前的命名空间
@@ -54,6 +55,22 @@ object Project {
      */
     private var warningCount = 0
 
+    lateinit var mcfppTick : Function
+
+    lateinit var mcfppLoad : Function
+
+    lateinit var mcfppInit : Function
+
+    /**
+     * 常量池
+     */
+    val constants : HashMap<Any, Var<*>> = HashMap()
+
+    /**
+     * 宏命令
+     */
+    val macroFunction : LinkedHashMap<String, String> = LinkedHashMap()
+
     /**
      * 初始化
      */
@@ -63,12 +80,15 @@ object Project {
         //初始化mcfpp的tick和load函数
         //添加命名空间
         GlobalField.localNamespaces["mcfpp"] = NamespaceField()
-        val mcfppTick = Function("tick","mcfpp", MCFPPBaseType.Void)
-        val mcfppLoad = Function("load","mcfpp", MCFPPBaseType.Void)
+        mcfppTick = Function("tick","mcfpp", MCFPPBaseType.Void)
+        mcfppLoad = Function("load","mcfpp", MCFPPBaseType.Void)
+        mcfppInit = Function("init", "mcfpp", MCFPPBaseType.Void)
         GlobalField.localNamespaces["mcfpp"]!!.addFunction(mcfppLoad,true)
         GlobalField.localNamespaces["mcfpp"]!!.addFunction(mcfppTick,true)
+        GlobalField.localNamespaces["mcfpp"]!!.addFunction(mcfppInit, true)
         GlobalField.functionTags["minecraft:tick"]!!.functions.add(mcfppTick)
         GlobalField.functionTags["minecraft:load"]!!.functions.add(mcfppLoad)
+        GlobalField.functionTags["minecraft:load"]!!.functions.add(mcfppInit)
     }
 
     /**
@@ -297,8 +317,8 @@ object Project {
      * @param file 根目录
      * @return 这个根目录下包含的所有文件
      */
-    private fun getFiles(file: File) : ArrayList<McfppFile> {
-        val files = ArrayList<McfppFile>()
+    private fun getFiles(file: File) : ArrayList<MCFPPFile> {
+        val files = ArrayList<MCFPPFile>()
         if (!file.exists()) {
             logger.warn("Path \"" + file.absolutePath + "\" doesn't exist. Ignoring.")
             warningCount++
@@ -309,8 +329,8 @@ object Project {
             if (f.isDirectory) //若是目录，则递归打印该目录下的文件
                 files += getFiles(f)
             if (f.isFile && f.name.substring(f.name.lastIndexOf(".") + 1) == "mcfpp") {
-                if (!files.contains(McfppFile(f))) {
-                    files.add(McfppFile(f))
+                if (!files.contains(MCFPPFile(f))) {
+                    files.add(MCFPPFile(f))
                 }
             }
         }
@@ -351,7 +371,7 @@ data class ProjectConfig(
     /**
      * 工程包含的所有文件
      */
-    var files: ArrayList<McfppFile> = ArrayList(),
+    var files: ArrayList<MCFPPFile> = ArrayList(),
 
     /**
      * 工程的名字

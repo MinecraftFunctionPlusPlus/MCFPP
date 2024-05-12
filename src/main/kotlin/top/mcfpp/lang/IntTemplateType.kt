@@ -1,6 +1,6 @@
 package top.mcfpp.lang
 
-import top.mcfpp.lib.Template
+import top.mcfpp.model.Template
 
 class IntTemplateType: CompoundDataType {
 

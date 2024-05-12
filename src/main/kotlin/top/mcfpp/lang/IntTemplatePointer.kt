@@ -2,14 +2,11 @@ package top.mcfpp.lang
 
 import top.mcfpp.lang.type.MCFPPTemplateType
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.function.Function
-import top.mcfpp.lib.Member
-import top.mcfpp.lib.Template
+import top.mcfpp.model.function.Function
+import top.mcfpp.model.Member
+import top.mcfpp.model.Template
 
 class IntTemplatePointer : IntTemplateBase {
-
-    //TODO: 当Concrete时的成分
-    override var javaValue: MutableMap<String, String>? = null
 
     override val structType: Template
 
@@ -90,9 +87,5 @@ class IntTemplatePointer : IntTemplateBase {
 
     override fun toDynamic() {
         TODO("Not yet implemented")
-    }
-
-    override fun getVarValue(): Any? {
-        return "Unknown"
     }
 }

@@ -1,15 +1,13 @@
 package top.mcfpp.lang;
 
 import kotlin.jvm.functions.Function4;
-import net.querz.nbt.tag.StringTag;
 import org.jetbrains.annotations.NotNull;
 import top.mcfpp.annotations.InsertCommand;
-import top.mcfpp.annotations.MCFPPNative;
-import top.mcfpp.lib.function.Function;
-import top.mcfpp.lib.function.MNIMethodContainer;
+import top.mcfpp.model.function.Function;
+import top.mcfpp.model.function.MNIMethodContainer;
+import top.mcfpp.util.NBTUtil;
 import top.mcfpp.util.ValueWrapper;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 
 public class System extends MNIMethodContainer {
@@ -28,7 +26,9 @@ public class System extends MNIMethodContainer {
             var value = vars2[0];
             //只会有一个参数哦
             if (value instanceof MCInt) print((MCInt) value);
+            else if (value instanceof MCString) print((MCString) value);
             else if (value instanceof JsonString) print((JsonString) value);
+            else if (value instanceof NBTBasedData<?>) print((NBTBasedData<?>) value);
             else print(value);
             return null;
         });
@@ -59,5 +59,23 @@ public class System extends MNIMethodContainer {
     @InsertCommand
     public static void print(@NotNull Var<?> var){
         Function.Companion.addCommand("tellraw @a " + "\"" +var + "\"");
+    }
+
+    @InsertCommand
+    public static void print(@NotNull NBTBasedData<?> var){
+        if(var.isConcrete()){
+            Function.Companion.addCommand("tellraw @a " + NBTUtil.INSTANCE.toJava(var.getJavaValue()));
+        }else {
+            //TODO
+        }
+    }
+
+    @InsertCommand
+    public static void print(@NotNull MCString var) {
+        if(var.isConcrete()){
+            Function.Companion.addCommand("tellraw @a \"" + var.getJavaValue().getValue() + "\"");
+        }else{
+            //TODO
+        }
     }
 }

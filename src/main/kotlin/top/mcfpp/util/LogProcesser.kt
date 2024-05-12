@@ -3,7 +3,7 @@ package top.mcfpp.util
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import top.mcfpp.Project
-import top.mcfpp.io.McfppFile
+import top.mcfpp.io.MCFPPFile
 
 object LogProcessor {
 
@@ -33,14 +33,14 @@ object LogProcessor {
 
     fun compileWarn(msg: String){
         logger.warn(
-            msg + if(Project.ctx !=null) {" at " + McfppFile.currFile!!.name + ":" + Project.ctx!!.getStart().line}else{""}
+            msg + if(Project.ctx !=null) {" at " + MCFPPFile.currFile!!.name + ":" + Project.ctx!!.getStart().line}else{""}
         )
         warningCount++
     }
 
     fun compileError(msg: String){
         logger.error(
-            msg + if(Project.ctx !=null) {" at " + McfppFile.currFile!!.name + ":" + Project.ctx!!.getStart().line}else{""}
+            msg + if(Project.ctx !=null) {" at " + MCFPPFile.currFile!!.name + ":" + Project.ctx!!.getStart().line}else{""}
         )
         errorCount++
     }

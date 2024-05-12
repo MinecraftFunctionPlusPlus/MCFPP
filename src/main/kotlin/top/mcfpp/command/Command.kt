@@ -54,6 +54,21 @@ open class Command {
     }
 
     /**
+     * 转为宏命令。将会把所有可以替换的位点设置为宏参数。宏参数的名字和替换位点id相同
+     */
+    fun toMacro() : String{
+        val sb = StringBuilder()
+        for (c in commandStringList.indices){
+            if(replacePoint.containsValue(c)){
+                sb.append("{{${replacePoint.filter { it.value == c }.keys.first()}}}")
+            }else{
+                sb.append(commandStringList[c])
+            }
+        }
+        return sb.toString()
+    }
+
+    /**
      * 替换目标位点中的字符串
      *
      * @param pointID 位点的ID

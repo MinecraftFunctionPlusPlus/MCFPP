@@ -2,10 +2,10 @@ package top.mcfpp.lang
 
 import top.mcfpp.exception.VariableNotResolvedException
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.FieldContainer
-import top.mcfpp.lib.function.Function
-import top.mcfpp.lib.Member
-import top.mcfpp.lib.field.IFieldWithType
+import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.function.Function
+import top.mcfpp.model.Member
+import top.mcfpp.model.field.IFieldWithType
 import top.mcfpp.util.LogProcessor
 
 
@@ -23,7 +23,7 @@ class UnresolvedVar : Var<Any> {
     override var javaValue: Any? = null
 
     /**
-     * 变量的类型。与普通的变量不同，这里作为字符串储存，从而在解析的时候能够通过[top.mcfpp.lib.field.IFieldWithClass.getClass]方法获取到作为类型的类。
+     * 变量的类型。与普通的变量不同，这里作为字符串储存，从而在解析的时候能够通过[top.mcfpp.model.field.IFieldWithClass.getClass]方法获取到作为类型的类。
      */
     private val varType: String
 

@@ -7,5 +7,5 @@ import top.mcfpp.lang.type.MCFPPType
  */
 interface MCFPPValue<T> {
     var type: MCFPPType
-    var javaValue: T?
+    var value: T
 }

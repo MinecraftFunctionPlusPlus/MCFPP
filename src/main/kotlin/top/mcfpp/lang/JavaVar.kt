@@ -4,9 +4,10 @@ import net.querz.nbt.tag.CompoundTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
-import top.mcfpp.lib.*
-import top.mcfpp.lib.function.Function
-import top.mcfpp.lib.function.JavaFunction
+import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.model.*
+import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.JavaFunction
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil.toJava
 import java.lang.Class
@@ -27,9 +28,9 @@ import kotlin.reflect.full.memberProperties
  * @constructor Create empty Java var
  */
 
-class JavaVar : Var<Any>{
+class JavaVar : Var<Any>, MCFPPValue<Any?>{
 
-    override var javaValue : Any? = null
+    override var value : Any? = null
 
     override var type: MCFPPType = MCFPPBaseType.JavaVar
     /**
@@ -44,8 +45,7 @@ class JavaVar : Var<Any>{
         value: Any?,
         identifier: String = UUID.randomUUID().toString()
     ) : super(curr.prefix + identifier) {
-        isConcrete = true
-        this.javaValue = value
+        this.value = value
     }
 
     /**
@@ -54,8 +54,7 @@ class JavaVar : Var<Any>{
      * @param value 值
      */
     constructor(value: Any?, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
-        isConcrete = true
-        this.javaValue = value
+        this.value = value
     }
 
     /**
@@ -68,16 +67,17 @@ class JavaVar : Var<Any>{
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var<*>?) {
+    override fun assign(b: Var<*>): Var<Any> {
         hasAssigned = true
         when (b) {
             is JavaVar -> {
-                this.javaValue = b.javaValue
+                this.value = b.value
             }
             else -> {
-                this.javaValue = b
+                this.value = b
             }
         }
+        return this
     }
 
     /**
@@ -87,7 +87,7 @@ class JavaVar : Var<Any>{
     override fun cast(type: MCFPPType): Var<*> {
         return when(type){
             MCFPPBaseType.JavaVar -> this
-            MCFPPBaseType.Any -> MCAny(this)
+            MCFPPBaseType.Any -> MCAnyConcrete(this)
             else -> throw VariableConverseException()
         }
     }
@@ -118,13 +118,13 @@ class JavaVar : Var<Any>{
      */
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         //获取value中的一个成员变量
-        if(javaValue == null) {
+        if(value == null) {
             LogProcessor.error("Cannot access properties in $identifier because its value is null")
             throw NullPointerException()
         }
-        val member = javaValue!!::class.memberProperties.find { it.name == key } as KProperty1<Any, *>?
+        val member = value!!::class.memberProperties.find { it.name == key } as KProperty1<Any, *>?
         if(member != null){
-            return Pair(JavaVar(member.get(javaValue!!)), member.visibility == KVisibility.PUBLIC)
+            return Pair(JavaVar(member.get(value!!)), member.visibility == KVisibility.PUBLIC)
         }
         return Pair(null, true)
     }
@@ -143,12 +143,12 @@ class JavaVar : Var<Any>{
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         //获取value中的一个成员方法
-        if(javaValue == null) {
+        if(value == null) {
             LogProcessor.error("Cannot access properties in $identifier because its value is null")
             throw NullPointerException()
         }
         try{
-            val member = javaValue!!::class.java.getDeclaredMethod(key, *getTypeArray(normalParams))
+            val member = value!!::class.java.getDeclaredMethod(key, *getTypeArray(normalParams))
             return Pair(JavaFunction(member, this), member.canAccess(Any()))
         }catch (e: NoSuchMethodException){
             LogProcessor.error("No method '$key' in $identifier}")
@@ -188,11 +188,7 @@ class JavaVar : Var<Any>{
 //    }
 
     override fun toString(): String {
-        return "JavaVar[$javaValue]"
-    }
-
-    override fun getVarValue(): Any? {
-        return javaValue
+        return "JavaVar[$value]"
     }
 
     companion object{
@@ -200,18 +196,18 @@ class JavaVar : Var<Any>{
         val data = CompoundData("JavaVar","mcfpp")
 
         fun mcToJava(v : Var<*>) : Any{
-            if(!v.isConcrete){
+            if(v !is MCFPPValue<*>){
                 return v
             }
             return when(v){
-                is MCInt -> v.javaValue!!
-                is MCFloat -> v.javaValue!!
-                is MCBool -> v.javaValue!!
-                is MCString -> v.javaValue!!.valueToString()
-                is NBTList<*> -> v.javaValue!!.toJava()
-                is NBTMap -> ((v.javaValue!! as CompoundTag)["data"] as CompoundTag).toJava()
-                is NBTDictionary -> v.javaValue!!.toJava()
-                is NBTBasedData -> v.javaValue!!
+                is MCIntConcrete -> v.value
+                is MCFloatConcrete -> v.value
+                is MCBoolConcrete -> v.value
+                is MCStringConcrete -> v.value.valueToString()
+                is NBTListConcrete<*> -> v.value.toJava()
+                is NBTMapConcrete -> ((v.value as CompoundTag)["data"] as CompoundTag).toJava()
+                is NBTDictionaryConcrete -> v.value.toJava()
+                is NBTBasedDataConcrete -> v.value
                 else -> v
             }
         }

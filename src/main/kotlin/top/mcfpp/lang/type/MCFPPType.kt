@@ -4,13 +4,13 @@ import top.mcfpp.antlr.McfppExprVisitor
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.lang.CanSelectMember
 import top.mcfpp.lang.Var
-import top.mcfpp.lib.*
-import top.mcfpp.lib.function.Function
-import top.mcfpp.lib.field.GlobalField
-import top.mcfpp.lib.field.IFieldWithType
-import top.mcfpp.lib.function.ExtensionFunction
-import top.mcfpp.lib.function.UnknownFunction
-import top.mcfpp.lib.generic.GenericClass
+import top.mcfpp.model.*
+import top.mcfpp.model.function.Function
+import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.field.IFieldWithType
+import top.mcfpp.model.function.ExtensionFunction
+import top.mcfpp.model.function.UnknownFunction
+import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.util.LogProcessor
 
 /**

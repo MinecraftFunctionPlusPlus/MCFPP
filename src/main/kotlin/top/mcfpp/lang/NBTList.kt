@@ -3,10 +3,10 @@ package top.mcfpp.lang
 import net.querz.nbt.tag.*
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
-import top.mcfpp.lib.*
-import top.mcfpp.lib.function.Function
-import top.mcfpp.lib.function.NativeFunction
-import top.mcfpp.lib.function.UnknownFunction
+import top.mcfpp.model.*
+import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.NativeFunction
+import top.mcfpp.model.function.UnknownFunction
 import java.util.*
 
 /**

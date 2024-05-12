@@ -8,8 +8,8 @@ import org.apache.logging.log4j.core.config.Configurator
 import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.antlr.*
-import top.mcfpp.io.McfppFile
-import top.mcfpp.lib.field.GlobalField
+import top.mcfpp.io.MCFPPFile
+import top.mcfpp.model.field.GlobalField
 import top.mcfpp.util.LogProcessor
 import java.io.File
 import java.io.FileInputStream
@@ -23,7 +23,7 @@ object MCFPPStringTest {
         //读取json
         LogProcessor.debug("Generate debug project for a string string")
         Project.config.root = Path.of("./")
-        McfppFile.currFile = McfppFile("./test.mcfpp")
+        MCFPPFile.currFile = MCFPPFile("./test.mcfpp")
         Project.config.name = "debug"
         //版本77
         Project.config.version = "1.20"

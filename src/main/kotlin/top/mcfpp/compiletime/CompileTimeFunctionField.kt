@@ -1,9 +1,9 @@
 package top.mcfpp.compiletime
 
 import top.mcfpp.lang.Var
-import top.mcfpp.lib.FieldContainer
-import top.mcfpp.lib.field.FunctionField
-import top.mcfpp.lib.field.IField
+import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.field.FunctionField
+import top.mcfpp.model.field.IField
 
 class CompileTimeFunctionField(parent: IField?, cacheContainer: FieldContainer?): FunctionField(parent,cacheContainer)  {
     override fun clone(): CompileTimeFunctionField {

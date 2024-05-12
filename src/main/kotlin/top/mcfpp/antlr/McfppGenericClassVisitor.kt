@@ -1,12 +1,10 @@
 package top.mcfpp.antlr
 
 import top.mcfpp.Project
-import top.mcfpp.exception.UndefinedException
-import top.mcfpp.io.McfppFile
-import top.mcfpp.lib.Class
-import top.mcfpp.lib.field.GlobalField
-import top.mcfpp.lib.function.Constructor
-import top.mcfpp.lib.function.Function
+import top.mcfpp.io.MCFPPFile
+import top.mcfpp.model.Class
+import top.mcfpp.model.function.Constructor
+import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
 
 class McfppGenericClassVisitor(val clazz: Class) : McfppFieldVisitor() {
@@ -67,7 +65,7 @@ class McfppGenericClassVisitor(val clazz: Class) : McfppFieldVisitor() {
             }
         }
         Class.currClass = null
-        typeScope = McfppFile.currFile!!.field
+        typeScope = MCFPPFile.currFile!!.field
         return null
     }
 }

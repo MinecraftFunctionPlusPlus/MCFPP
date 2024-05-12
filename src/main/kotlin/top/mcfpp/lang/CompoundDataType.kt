@@ -1,10 +1,10 @@
 package top.mcfpp.lang
 
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.*
-import top.mcfpp.lib.function.ExtensionFunction
-import top.mcfpp.lib.function.Function
-import top.mcfpp.lib.function.UnknownFunction
+import top.mcfpp.model.*
+import top.mcfpp.model.function.ExtensionFunction
+import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.UnknownFunction
 
 open class CompoundDataType : CanSelectMember {
 

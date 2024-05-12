@@ -1,10 +1,10 @@
 package top.mcfpp.lang.type
 
 import top.mcfpp.lang.Var
-import top.mcfpp.lib.*
-import top.mcfpp.lib.function.Function
-import top.mcfpp.lib.field.GlobalField
-import top.mcfpp.lib.function.ExtensionFunction
+import top.mcfpp.model.*
+import top.mcfpp.model.function.Function
+import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.function.ExtensionFunction
 
 /**
  * 用于标识由mcfpp class定义出来的类

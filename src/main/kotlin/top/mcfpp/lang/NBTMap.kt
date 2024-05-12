@@ -1,14 +1,12 @@
 package top.mcfpp.lang
 
 import net.querz.nbt.tag.CompoundTag
-import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
-import top.mcfpp.lib.CompoundData
-import top.mcfpp.lib.FieldContainer
-import top.mcfpp.lib.function.NativeFunction
+import top.mcfpp.model.CompoundData
+import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.function.NativeFunction
 import java.util.*
-import kotlin.reflect.jvm.javaMethod
 
 class NBTMap : NBTDictionary{
 

@@ -8,8 +8,8 @@ import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.*
-import top.mcfpp.lib.function.Function
+import top.mcfpp.model.*
+import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
 import java.util.*
 import kotlin.math.absoluteValue

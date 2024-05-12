@@ -6,11 +6,11 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.function.Function
-import top.mcfpp.lib.*
-import top.mcfpp.lib.field.GlobalField
-import top.mcfpp.lib.function.ExtensionFunction
-import top.mcfpp.lib.function.UnknownFunction
+import top.mcfpp.model.function.Function
+import top.mcfpp.model.*
+import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.function.ExtensionFunction
+import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import java.util.*
@@ -32,8 +32,6 @@ import java.util.*
  */
 class ClassPointer : Var<Int>{
 
-    //TODO: 这里是指针对应的address
-    override var javaValue: Int? = null
     /**
      * 指针对应的类的类型
      */
@@ -52,10 +50,6 @@ class ClassPointer : Var<Int>{
         get() = clsType.namespace + "_class_" + clsType.identifier + "_pointer"
 
     var isNull : Boolean = true
-
-    override fun getVarValue(): Any {
-        return ""
-    }
 
     /**
      * 创建一个指针

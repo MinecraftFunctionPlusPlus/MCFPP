@@ -1,6 +1,6 @@
 package top.mcfpp.lang
 
-import top.mcfpp.lib.CompoundData
+import top.mcfpp.model.CompoundData
 
 interface ChatComponent {
 
@@ -27,7 +27,7 @@ class JsonText: ChatComponent {
      * 向末尾添加一个聊天组件
      */
     fun append(value : MCInt){
-        if(value.isConcrete){
+        if(TODO() /*value.isConcrete*/){
             components.add(JsonTextPlain(value.javaValue!!.toString()))
         }else{
             components.add(JsonTextNumber(value))
