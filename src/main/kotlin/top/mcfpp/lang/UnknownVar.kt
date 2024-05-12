@@ -1,9 +1,9 @@
 package top.mcfpp.lang
 
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.function.Function
-import top.mcfpp.lib.Member
-import top.mcfpp.lib.function.UnknownFunction
+import top.mcfpp.model.function.Function
+import top.mcfpp.model.Member
+import top.mcfpp.model.function.UnknownFunction
 
 class UnknownVar : Var<Any> {
 

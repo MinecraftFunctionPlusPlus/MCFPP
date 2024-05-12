@@ -9,8 +9,8 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
-import top.mcfpp.lib.*
-import top.mcfpp.lib.function.Function
+import top.mcfpp.model.*
+import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
 import kotlin.collections.ArrayList
 

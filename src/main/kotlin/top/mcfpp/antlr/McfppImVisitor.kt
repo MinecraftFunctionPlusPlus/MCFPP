@@ -7,28 +7,28 @@ import top.mcfpp.antlr.mcfppParser.CompileTimeFuncDeclarationContext
 import top.mcfpp.command.CommandList
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.*
-import top.mcfpp.io.McfppFile
+import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPGenericClassType
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.*
-import top.mcfpp.lib.Annotation
-import top.mcfpp.lib.function.Function
-import top.mcfpp.lib.field.GlobalField
-import top.mcfpp.lib.field.NamespaceField
-import top.mcfpp.lib.function.FunctionParam
-import top.mcfpp.lib.function.FunctionParam.Companion.typeToStringList
-import top.mcfpp.lib.function.InternalFunction
-import top.mcfpp.lib.function.UnknownFunction
-import top.mcfpp.lib.generic.Generic
+import top.mcfpp.model.*
+import top.mcfpp.model.Annotation
+import top.mcfpp.model.function.Function
+import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.field.NamespaceField
+import top.mcfpp.model.function.FunctionParam
+import top.mcfpp.model.function.FunctionParam.Companion.typeToStringList
+import top.mcfpp.model.function.InternalFunction
+import top.mcfpp.model.function.UnknownFunction
+import top.mcfpp.model.generic.Generic
 import top.mcfpp.util.LogProcessor
 
 open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
 
     override fun visitTopStatement(ctx: mcfppParser.TopStatementContext): Any? {
         if(ctx.statement().size == 0) return null
-        Function.currFunction = McfppFile.currFile!!.topFunction
+        Function.currFunction = MCFPPFile.currFile!!.topFunction
         //注册函数
         GlobalField.localNamespaces[Project.currNamespace]!!.addFunction(Function.currFunction, force = false)
         super.visitTopStatement(ctx)
@@ -183,7 +183,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 Project.currNamespace += ".$n"
             }
         }
-        McfppFile.currFile!!.topFunction.namespace = Project.currNamespace
+        MCFPPFile.currFile!!.topFunction.namespace = Project.currNamespace
         return null
     }
 

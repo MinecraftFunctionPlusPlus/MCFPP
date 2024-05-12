@@ -3,10 +3,10 @@ package top.mcfpp.io
 import com.alibaba.fastjson2.JSONArray
 import com.alibaba.fastjson2.JSONObject
 import com.alibaba.fastjson2.JSONWriter
-import top.mcfpp.lib.Member
-import top.mcfpp.lib.field.GlobalField
-import top.mcfpp.lib.NativeClass
-import top.mcfpp.lib.function.NativeFunction
+import top.mcfpp.model.Member
+import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.NativeClass
+import top.mcfpp.model.function.NativeFunction
 import java.io.FileWriter
 
 /**

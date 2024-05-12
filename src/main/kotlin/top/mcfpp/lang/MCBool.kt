@@ -4,9 +4,10 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.*
+import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.model.*
 import java.util.*
-import top.mcfpp.lib.function.Function
+import top.mcfpp.model.function.Function
 
 /**
  * 布尔型变量是mcfpp的基本类型之一，它表示一个只有0，1两种取值可能性的值。
@@ -17,13 +18,6 @@ import top.mcfpp.lib.function.Function
  * bool型变量实现了多种计算方法，比如与，或，非等基本的逻辑运算。
  */
 open class MCBool : Var<Boolean>, OnScoreboard {
-
-    /**
-     * 此bool变量含有的值。仅在它为字面量时才有效。
-     */
-    override var javaValue:Boolean? = false
-
-
     /**
      * 此bool变量依托的记分板
      */
@@ -46,28 +40,6 @@ open class MCBool : Var<Boolean>, OnScoreboard {
     constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier)
 
     /**
-     * 创建一个固定的bool
-     *
-     * @param identifier 标识符
-     * @param curr 域容器
-     * @param value 值
-     */
-    constructor(curr: FieldContainer, value: Boolean, identifier: String = UUID.randomUUID().toString()) : super(curr.prefix + identifier) {
-        isConcrete = true
-        this.javaValue = value
-    }
-
-    /**
-     * 创建一个固定的bool。它的标识符和mc名一致/
-     * @param identifier 标识符。如不指定，则为随机uuid
-     * @param value 值
-     */
-    constructor(value: Boolean, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
-        isConcrete = true
-        this.javaValue = value
-    }
-
-    /**
      * 复制一个bool
      * @param b 被复制的int值
      */
@@ -76,10 +48,10 @@ open class MCBool : Var<Boolean>, OnScoreboard {
     override var type: MCFPPType = MCFPPBaseType.Bool
 
     @Override
-    override fun assign(b: Var<*>?) {
+    override fun assign(b: Var<*>) : MCBool {
         hasAssigned = true
         if (b is MCBool) {
-            assignCommand(b)
+            return assignCommand(b)
         } else {
             throw VariableConverseException()
         }
@@ -89,25 +61,21 @@ open class MCBool : Var<Boolean>, OnScoreboard {
     override fun cast(type: MCFPPType): Var<*> {
         return when(type){
             MCFPPBaseType.Bool -> this
-            MCFPPBaseType.Any -> MCAny(this)
+            MCFPPBaseType.Any -> MCAnyConcrete(this)
             else -> throw VariableConverseException()
         }
     }
 
     @InsertCommand
-    fun equalCommand(a: MCBool): MCBool {
+    open fun equalCommand(a: MCBool): MCBool {
         //re = t == a
         val re: MCBool
-        if (isConcrete && a.isConcrete) {
-            re = MCBool(Objects.equals(javaValue, a.javaValue))
-        } else if (isConcrete) {
-            re = a.equalCommand(this)
-        } else if (a.isConcrete) {
+        if (a is MCBoolConcrete) {
             //execute store success score qwq qwq if score qwq qwq = owo owo
             re = MCBool()
             Function.addCommand(
                 "execute store success score " + re.name + " " + re.boolObject
-                        + " if score " + name + " " + boolObject + " matches " + if (a.javaValue!!) 1 else 0
+                        + " if score " + name + " " + boolObject + " matches " + if (a.value) 1 else 0
             )
         } else {
             re = MCBool()
@@ -120,20 +88,16 @@ open class MCBool : Var<Boolean>, OnScoreboard {
     }
 
     @InsertCommand
-    fun notEqualCommand(a: MCBool): MCBool {
+    open fun notEqualCommand(a: MCBool): MCBool {
         //re = t != a
         val re: MCBool
-        if (isConcrete && a.isConcrete) {
-            re = MCBool(!Objects.equals(javaValue, a.javaValue))
-        } else if (isConcrete) {
-            re = a.equalCommand(this)
-        } else if (a.isConcrete) {
+        if (a is MCBoolConcrete) {
             //execute store success score qwq qwq if score qwq qwq = owo owo
             re = MCBool()
 
             Function.addCommand(
                 "execute store success score " + re.name + " " + re.boolObject
-                        + " unless score " + name + " " + boolObject + " matches " + if (a.javaValue!!) 1 else 0
+                        + " unless score " + name + " " + boolObject + " matches " + if (a.value) 1 else 0
             )
         } else {
             re = MCBool()
@@ -146,28 +110,20 @@ open class MCBool : Var<Boolean>, OnScoreboard {
     }
 
     @InsertCommand
-    fun negation(): MCBool {
-        if (isConcrete) {
-            javaValue = !javaValue!!
-        } else {
-            Function.addCommand(
-                "execute store success score " + name + " " + boolObject
-                        + " if score " + name + " " + boolObject + " matches " + 0
-            )
-        }
+    open fun negation(): MCBool {
+        Function.addCommand(
+            "execute store success score " + name + " " + boolObject
+                    + " if score " + name + " " + boolObject + " matches " + 0
+        )
         return this
     }
 
     @InsertCommand
-    fun or(a: MCBool): MCBool {
+    open fun or(a: MCBool): MCBool {
         val re: MCBool
-        if (isConcrete && a.isConcrete) {
-            re = MCBool(javaValue!! || a.javaValue!!)
-        } else if (isConcrete) {
-            re = a.or(this)
-        } else if (a.isConcrete) {
-            if (a.javaValue!!) {
-                re = MCBool(true)
+        if (a is MCBoolConcrete) {
+            if (a.value) {
+                re = MCBoolConcrete(true)
             } else {
                 re = MCBool()
                 Function.addCommand(
@@ -192,15 +148,11 @@ open class MCBool : Var<Boolean>, OnScoreboard {
     }
 
     @InsertCommand
-    fun and(a: MCBool): MCBool {
+    open fun and(a: MCBool): MCBool {
         val re: MCBool
-        if (isConcrete && a.isConcrete) {
-            re = MCBool(javaValue!! && a.javaValue!!)
-        } else if (isConcrete) {
-            re = a.and(this)
-        } else if (a.isConcrete) {
-            if (!a.javaValue!!) {
-                re = MCBool(false)
+        if (a is MCBoolConcrete) {
+            if (!a.value) {
+                re = MCBoolConcrete(false)
             } else {
                 re = MCBool()
                 Function.addCommand(
@@ -225,7 +177,7 @@ open class MCBool : Var<Boolean>, OnScoreboard {
     }
 
     @InsertCommand
-    private fun assignCommand(a: MCBool) {
+    private fun assignCommand(a: MCBool) : MCBool {
         if(a is ReturnedMCBool){
             Function.addCommand(
                 "execute" +
@@ -233,44 +185,32 @@ open class MCBool : Var<Boolean>, OnScoreboard {
                         " store result score $name $boolObject" +
                         " run function ${a.parentFunction.namespaceID}"
             )
+            return this
+        }else if(a is MCBoolConcrete){
+            return MCBoolConcrete(this,a.value)
         }else{
-            if (a.isConcrete) {
-                isConcrete = true
-                javaValue = true
-            } else {
-                isConcrete = false
-                //变量进栈
-                Function.addCommand(
-                    "execute" +
-                            " store result storage mcfpp:system " + top.mcfpp.Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1" +
-                            " run scoreboard players operation " + name + " " + boolObject + " = " + a.name + " " + a.boolObject
-                )
-            }
+            //变量进栈
+            Function.addCommand(
+                "execute" +
+                        " store result storage mcfpp:system " + top.mcfpp.Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1" +
+                        " run scoreboard players operation " + name + " " + boolObject + " = " + a.name + " " + a.boolObject
+            )
+            return this
         }
     }
 
-    @Override
     override fun clone(): MCBool {
         return MCBool(this)
     }
 
-    @Override
     override fun setObj(sbObject: SbObject): MCBool {
         boolObject = sbObject
         return this
     }
 
-    override fun getVarValue(): Any? {
-        return javaValue
-    }
-
-    @Override
     @InsertCommand
     override fun getTempVar(): MCBool {
         if (isTemp) return this
-        if (isConcrete) {
-            return MCBool(javaValue!!)
-        }
         val re = MCBool()
         re.assign(this)
         return re
@@ -310,5 +250,88 @@ open class MCBool : Var<Boolean>, OnScoreboard {
 
     companion object{
         val data = CompoundData("bool","mcfpp")
+    }
+}
+
+class MCBoolConcrete : MCBool, MCFPPValue<Boolean>{
+
+    override var value: Boolean
+
+    /**
+     * 创建一个固定的bool
+     *
+     * @param identifier 标识符
+     * @param curr 域容器
+     * @param value 值
+     */
+    constructor(curr: FieldContainer, value: Boolean, identifier: String = UUID.randomUUID().toString()) : super(curr.prefix + identifier) {
+        this.value = value
+    }
+
+    /**
+     * 创建一个固定的bool。它的标识符和mc名一致/
+     * @param identifier 标识符。如不指定，则为随机uuid
+     * @param value 值
+     */
+    constructor(value: Boolean, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
+        this.value = value
+    }
+
+    constructor(bool: MCBool, value: Boolean) : super(bool){
+        this.value = value
+    }
+
+    @InsertCommand
+    override fun equalCommand(a: MCBool): MCBool {
+        //re = t == a
+        return if (a is MCBoolConcrete) {
+            MCBoolConcrete(value == a.value)
+        } else {
+            a.equalCommand(this)
+        }
+    }
+
+    @InsertCommand
+    override fun notEqualCommand(a: MCBool): MCBool {
+        //re = t != a
+        return if (a is MCBoolConcrete) {
+            MCBoolConcrete(value != a.value)
+        } else{
+            a.notEqualCommand(this)
+        }
+    }
+
+    //取反
+    @InsertCommand
+    override fun negation(): MCBool {
+        value = !value
+        return this
+    }
+
+    @InsertCommand
+    override fun or(a: MCBool): MCBool {
+        //re = this || a
+        return if (a is MCBoolConcrete) {
+            MCBoolConcrete(value || a.value)
+        } else {
+            a.or(this)
+        }
+    }
+
+
+    @InsertCommand
+    override fun and(a: MCBool): MCBool {
+        //re = this && a
+        return if (a is MCBoolConcrete) {
+            MCBoolConcrete(value && a.value)
+        } else {
+            a.or(this)
+        }
+    }
+
+    @InsertCommand
+    override fun getTempVar(): MCBoolConcrete {
+        if (isTemp) return this
+        return MCBoolConcrete(value)
     }
 }

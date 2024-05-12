@@ -7,10 +7,10 @@ import top.mcfpp.lang.type.MCFPPBaseType.BaseEntity
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.CompoundData
-import top.mcfpp.lib.FieldContainer
-import top.mcfpp.lib.Member
-import top.mcfpp.lib.function.Function
+import top.mcfpp.model.CompoundData
+import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.Member
+import top.mcfpp.model.function.Function
 import java.util.UUID
 
 
@@ -19,9 +19,6 @@ import java.util.UUID
  *
  */
 class Entity : NBTAny<IntArrayTag>{
-
-    //TODO: 当Concrete时的值
-    override var javaValue: IntArrayTag? =null
 
     //TODO: 这里可以根据实体类型的不同用不同的type,比如zombie
     override var type: MCFPPType = BaseEntity
@@ -59,7 +56,6 @@ class Entity : NBTAny<IntArrayTag>{
     ) : super(curr.prefix + identifier) {
         isConcrete = true
         if(value.value.size != 4) throw VariableConverseException()
-        this.javaValue = value
     }
 
     /**
@@ -70,7 +66,6 @@ class Entity : NBTAny<IntArrayTag>{
     constructor(value: IntArrayTag, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
         isConcrete = true
         if(value.value.size != 4) throw VariableConverseException()
-        this.javaValue = value
     }
 
     /**
@@ -130,7 +125,7 @@ class Entity : NBTAny<IntArrayTag>{
     override fun cast(type: MCFPPType): Var<*> {
         return when(type){
             BaseEntity -> this
-            MCFPPNBTType.NBT -> NBTBasedData(javaValue!!)
+            //MCFPPNBTType.NBT -> NBTBasedData(javaValue!!)
             MCFPPBaseType.Any -> MCAny(this)
             else -> throw VariableConverseException()
         }

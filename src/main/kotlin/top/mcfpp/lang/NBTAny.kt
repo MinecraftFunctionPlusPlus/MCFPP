@@ -4,8 +4,8 @@ import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.Tag
 import top.mcfpp.Project
 import top.mcfpp.command.Commands
-import top.mcfpp.lib.FieldContainer
-import top.mcfpp.lib.function.Function
+import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.function.Function
 import java.util.*
 
 /**

@@ -6,19 +6,19 @@ import top.mcfpp.antlr.mcfppParser.TemplateDeclarationContext
 import top.mcfpp.compiletime.CompileTimeFunction
 import top.mcfpp.exception.*
 import top.mcfpp.exception.IllegalFormatException
-import top.mcfpp.io.McfppFile
+import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.*
-import top.mcfpp.lib.Class
-import top.mcfpp.lib.Member.AccessModifier
-import top.mcfpp.lib.field.GlobalField
-import top.mcfpp.lib.field.IFieldWithType
-import top.mcfpp.lib.function.*
-import top.mcfpp.lib.function.Function
-import top.mcfpp.lib.generic.GenericClass
-import top.mcfpp.lib.generic.GenericExtensionFunction
-import top.mcfpp.lib.generic.GenericFunction
+import top.mcfpp.model.*
+import top.mcfpp.model.Class
+import top.mcfpp.model.Member.AccessModifier
+import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.field.IFieldWithType
+import top.mcfpp.model.function.*
+import top.mcfpp.model.function.Function
+import top.mcfpp.model.generic.GenericClass
+import top.mcfpp.model.generic.GenericExtensionFunction
+import top.mcfpp.model.generic.GenericFunction
 import top.mcfpp.util.LazyWrapper
 import top.mcfpp.util.LogProcessor
 import java.util.*
@@ -96,7 +96,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         for (m in ctx.interfaceBody().interfaceFunctionDeclaration()){
             visit(m)
         }
-        typeScope = McfppFile.currFile!!.field
+        typeScope = MCFPPFile.currFile!!.field
         return null
     }
 
@@ -205,7 +205,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             }
         }
         Class.currClass = null
-        typeScope = McfppFile.currFile!!.field
+        typeScope = MCFPPFile.currFile!!.field
         return null
     }
 
@@ -726,7 +726,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             }
         }
         Template.currTemplate = null
-        typeScope = McfppFile.currFile!!.field
+        typeScope = MCFPPFile.currFile!!.field
         return null
     }
 

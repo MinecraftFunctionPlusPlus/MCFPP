@@ -7,7 +7,8 @@ import top.mcfpp.antlr.McfppFieldVisitor
 import top.mcfpp.antlr.McfppImVisitor
 import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.lib.function.Function
+import top.mcfpp.io.MCFPPFile
+import top.mcfpp.model.function.Function
 
 class LineCompiler {
 
@@ -16,6 +17,7 @@ class LineCompiler {
     val RESET_COLOR = "\u001B[0m"
 
     val default = Function("default","mcfpp")
+    val defaultFile = MCFPPFile("default")
 
     var unmatchedBraces : String = ""
     var leftBraces = 0
@@ -41,6 +43,7 @@ class LineCompiler {
         val input = unmatchedBraces + line
         unmatchedBraces = ""
         Function.currFunction = default
+        MCFPPFile.currFile = defaultFile
         val charStream: CharStream = CharStreams.fromString(input + if(!line.endsWith(';')) ";" else "")
         val tokens = CommonTokenStream(mcfppLexer(charStream))
         val unit = mcfppParser(tokens).compilationUnit()
@@ -49,10 +52,10 @@ class LineCompiler {
         }else{
             McfppFieldVisitor().visit(unit)
         }
-        for (i in Function.currFunction.commands){
+        for (i in MCFPPFile.currFile!!.topFunction.commands){
             printOutput(i.toString())
         }
-        Function.currFunction.commands.clear()
+        MCFPPFile.currFile!!.topFunction.commands.clear()
         Function.currFunction = Function.nullFunction
     }
 

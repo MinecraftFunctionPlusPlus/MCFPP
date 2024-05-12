@@ -6,7 +6,7 @@ import top.mcfpp.MCFPP
 import top.mcfpp.Project
 import top.mcfpp.io.LibReader
 import top.mcfpp.lang.UnresolvedVar
-import top.mcfpp.lib.field.GlobalField
+import top.mcfpp.model.field.GlobalField
 import top.mcfpp.util.UwU
 import java.io.FileInputStream
 import java.time.Instant
@@ -40,6 +40,7 @@ fun main(){
         }
     }
     GlobalField.init()
+    GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
     println("MCFPP ${MCFPP.version} (${Instant.now()})")
     println("Tips: " + UwU.tip) //生成tips
     val compiler = LineCompiler()

@@ -4,8 +4,8 @@ import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPGenericType
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.function.Function
-import top.mcfpp.lib.Member
+import top.mcfpp.model.function.Function
+import top.mcfpp.model.Member
 
 /**
  * type T;

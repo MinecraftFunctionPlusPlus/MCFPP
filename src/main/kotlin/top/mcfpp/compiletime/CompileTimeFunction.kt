@@ -4,8 +4,8 @@ import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.lang.ClassPointer
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.function.Function
-import top.mcfpp.lib.field.IField
+import top.mcfpp.model.function.Function
+import top.mcfpp.model.field.IField
 import kotlin.collections.ArrayList
 
 class CompileTimeFunction : Function {

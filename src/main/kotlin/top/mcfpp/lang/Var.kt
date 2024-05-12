@@ -5,8 +5,8 @@ import top.mcfpp.exception.OperationNotImplementException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
 import top.mcfpp.lang.value.MCFPPValue
-import top.mcfpp.lib.*
-import top.mcfpp.lib.function.Function
+import top.mcfpp.model.*
+import top.mcfpp.model.function.Function
 import java.util.*
 
 /**
@@ -24,7 +24,7 @@ import java.util.*
  *
  * @param T 变量储存的类型
  */
-abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
+abstract class Var<T> : Member, Cloneable, CanSelectMember{
     /**
      * 在Minecraft中的标识符
      */
@@ -54,11 +54,6 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
     var hasAssigned = false
 
     /**
-     * 这个变量是否是已知的（固定的）。对应dynamic关键字
-     */
-    var isConcrete = false
-
-    /**
      * 这个变量是否是引入的。对应import关键字
      */
     var isImport = false
@@ -80,6 +75,10 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
      */
     override var accessModifier: Member.AccessModifier = Member.AccessModifier.PRIVATE
 
+    /**
+     * 变量的类型
+     */
+    open var type: MCFPPType = MCFPPBaseType.Any
 
     /**
      * 复制一个变量
@@ -103,11 +102,6 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
         this.name = identifier
         this.identifier = identifier
     }
-
-    /**
-     * 变量的类型
-     */
-    override var type: MCFPPType = MCFPPBaseType.Any
 
     /**
      * 获取这个成员的父类，可能不存在
@@ -139,7 +133,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
      * @param b 变量的对象
      */
     @Throws(VariableConverseException::class)
-    abstract fun assign(b: Var<*>?)
+    abstract fun assign(b: Var<*>) : Var<T>
 
     /**
      * 将这个变量强制转换为一个类型
@@ -274,14 +268,12 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
 
     abstract fun toDynamic()
 
-    abstract fun getVarValue(): Any?
-
     override fun getAccess(function: Function): Member.AccessModifier {
         return Member.AccessModifier.PUBLIC
     }
 
     override fun toString(): String {
-        return "[$type,value=${if(isConcrete) getVarValue() else "Unknown"}]"
+        return "[$type,value=Unknown]"
     }
 
     override fun equals(other: Any?): Boolean {
@@ -289,10 +281,18 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember,MCFPPValue<T> {
         if(this.parent != other.parent) return false
         if(this.name != other.name) return false
         if(this.isConcrete != other.isConcrete) return false
-        if(this.isConcrete){
-            return this.getVarValue() == other.getVarValue()
-        }
         return true
+    }
+
+    override fun hashCode(): Int {
+        var result = name.hashCode()
+        result = 31 * result + identifier.hashCode()
+        result = 31 * result + stackIndex
+        result = 31 * result + hasAssigned.hashCode()
+        result = 31 * result + (parent?.hashCode() ?: 0)
+        result = 31 * result + accessModifier.hashCode()
+        result = 31 * result + type.hashCode()
+        return result
     }
 
     companion object {

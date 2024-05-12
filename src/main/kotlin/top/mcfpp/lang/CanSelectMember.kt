@@ -1,8 +1,8 @@
 package top.mcfpp.lang
 
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.function.Function
-import top.mcfpp.lib.Member
+import top.mcfpp.model.function.Function
+import top.mcfpp.model.Member
 
 /**
  * 实现此抽象类即代表这个Kotlin类所代表的mcfpp数据结构能够被访问成员。

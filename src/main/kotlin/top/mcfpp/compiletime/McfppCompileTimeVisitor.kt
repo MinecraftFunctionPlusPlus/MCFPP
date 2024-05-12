@@ -5,7 +5,7 @@ import top.mcfpp.antlr.McfppImVisitor
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.lang.MCBool
 import top.mcfpp.lang.Var
-import top.mcfpp.lib.function.Function
+import top.mcfpp.model.function.Function
 
 class McfppCompileTimeVisitor(
     var field:CompileTimeFunctionField,

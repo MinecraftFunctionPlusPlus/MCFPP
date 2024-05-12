@@ -6,10 +6,10 @@ import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.CompoundData
-import top.mcfpp.lib.FieldContainer
-import top.mcfpp.lib.function.Function
-import top.mcfpp.lib.Member
+import top.mcfpp.model.CompoundData
+import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.function.Function
+import top.mcfpp.model.Member
 import java.util.*
 
 /**

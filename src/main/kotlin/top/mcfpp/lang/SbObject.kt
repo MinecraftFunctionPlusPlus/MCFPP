@@ -1,6 +1,6 @@
 package top.mcfpp.lang
 
-import top.mcfpp.lib.field.GlobalField
+import top.mcfpp.model.field.GlobalField
 import java.util.*
 
 /**

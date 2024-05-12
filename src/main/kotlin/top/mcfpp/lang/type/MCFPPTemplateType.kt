@@ -1,6 +1,6 @@
 package top.mcfpp.lang.type
 
-import top.mcfpp.lib.*
+import top.mcfpp.model.*
 import top.mcfpp.util.LazyWrapper
 
 /**

@@ -5,13 +5,12 @@ import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.FieldContainer
-import top.mcfpp.lib.function.Function
-import top.mcfpp.lib.Member
+import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.function.Function
+import top.mcfpp.model.Member
 import java.util.*
 
 class JsonString : NBTAny<Tag<*>>{
-    override var javaValue: Tag<*>? = null
     val jsonText : JsonText? = null
 
     /**
@@ -45,8 +44,6 @@ class JsonString : NBTAny<Tag<*>>{
         value: Tag<*>,
         identifier: String = UUID.randomUUID().toString()
     ) : super(curr.prefix + identifier) {
-        isConcrete = true
-        this.javaValue = value
     }
 
     /**
@@ -55,8 +52,6 @@ class JsonString : NBTAny<Tag<*>>{
      * @param value 值
      */
     constructor(value: Tag<*>, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
-        isConcrete = true
-        this.javaValue = value
     }
 
     /**
@@ -67,18 +62,19 @@ class JsonString : NBTAny<Tag<*>>{
 
     override var type: MCFPPType = MCFPPBaseType.JsonText
 
-    override fun assign(b: Var<*>?) {
+    override fun assign(b: Var<*>): Var<Tag<*>> {
         if(b is JsonString){
             assignCommand(b)
         }else{
             throw VariableConverseException()
         }
+        TODO()
     }
 
     override fun cast(type: MCFPPType): Var<*> {
         return when(type){
             MCFPPBaseType.JsonText -> this
-            MCFPPNBTType.NBT -> NBTBasedData(javaValue!!)
+            //MCFPPNBTType.NBT -> NBTBasedData(javaValue!!)
             MCFPPBaseType.String -> TODO()
             else -> throw VariableConverseException()
         }

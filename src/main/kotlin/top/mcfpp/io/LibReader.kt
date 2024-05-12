@@ -2,17 +2,16 @@ package top.mcfpp.io
 
 import com.alibaba.fastjson2.JSONArray
 import com.alibaba.fastjson2.JSONObject
-import top.mcfpp.Project
 import top.mcfpp.exception.IllegalFormatException
 import top.mcfpp.lang.UnresolvedVar
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.*
-import top.mcfpp.lib.field.CompoundDataField
-import top.mcfpp.lib.field.GlobalField
-import top.mcfpp.lib.field.NamespaceField
-import top.mcfpp.lib.function.*
-import top.mcfpp.lib.function.Function
+import top.mcfpp.model.*
+import top.mcfpp.model.field.CompoundDataField
+import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.field.NamespaceField
+import top.mcfpp.model.function.*
+import top.mcfpp.model.function.Function
 import top.mcfpp.util.LazyWrapper
 import top.mcfpp.util.LogProcessor
 import java.io.FileReader

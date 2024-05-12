@@ -2,11 +2,9 @@ package top.mcfpp.lang
 
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.CompoundData
-import top.mcfpp.lib.function.Function
-import top.mcfpp.lib.Member
-import top.mcfpp.lib.field.IFieldWithType
-import java.util.*
+import top.mcfpp.model.CompoundData
+import top.mcfpp.model.function.Function
+import top.mcfpp.model.Member
 
 class MCFPPTypeVar : Var<MCFPPType> {
 

@@ -1,6 +1,6 @@
 package top.mcfpp.lang
 
-import top.mcfpp.lib.Native
+import top.mcfpp.model.Native
 
 /**
  * 一个native类需要实现这个接口，从而被mcfpp正确地实例化以及和mcfpp进行交互

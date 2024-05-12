@@ -1,9 +1,9 @@
 package top.mcfpp.lang.annotation
 
 import top.mcfpp.lang.MCString
-import top.mcfpp.lib.Class
-import top.mcfpp.lib.ClassAnnotation
-import top.mcfpp.lib.CompoundData
+import top.mcfpp.model.Class
+import top.mcfpp.model.ClassAnnotation
+import top.mcfpp.model.CompoundData
 import top.mcfpp.util.LogProcessor
 import kotlin.reflect.full.companionObject
 import kotlin.reflect.full.declaredMemberProperties

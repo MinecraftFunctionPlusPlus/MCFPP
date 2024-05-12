@@ -1,15 +1,14 @@
 package top.mcfpp.antlr
 
 import top.mcfpp.Project
-import top.mcfpp.io.McfppFile
+import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lang.MCAny
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lib.*
-import top.mcfpp.lib.field.GlobalField
-import top.mcfpp.lib.field.NamespaceField
-import top.mcfpp.lib.function.FunctionParam
-import top.mcfpp.lib.generic.ClassParam
-import top.mcfpp.lib.generic.GenericClass
+import top.mcfpp.model.*
+import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.field.NamespaceField
+import top.mcfpp.model.generic.ClassParam
+import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.util.LazyWrapper
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
@@ -234,7 +233,7 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             LogProcessor.error("Template has been defined: $id in namespace ${Project.currNamespace}")
             Template.currTemplate = field.getTemplate(id)
         }
-        val template = Template(id, LazyWrapper{ MCFPPType.parseFromIdentifier(ctx.type().text, McfppFile.currFile!!.field)}, Project.currNamespace)
+        val template = Template(id, LazyWrapper{ MCFPPType.parseFromIdentifier(ctx.type().text, MCFPPFile.currFile!!.field)}, Project.currNamespace)
         if (ctx.className() != null) {
             //是否存在继承
             val qwq = ctx.className().text.split(":")
