@@ -148,7 +148,9 @@ open class Command {
         val sb = StringBuilder()
         for (c in commandStringList){
             sb.append(c)
+            sb.append(" ")
         }
+        sb.deleteAt(sb.length - 1)
         return sb.toString()
     }
 

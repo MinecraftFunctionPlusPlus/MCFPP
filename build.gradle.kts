@@ -54,7 +54,7 @@ tasks.generateGrammarSource {
 
 tasks.jar{
     manifest{
-        attributes("Main-Class" to "MCFPPKt")
+        attributes("Main-Class" to "top.mcfpp.MCFPPKt")
     }
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
     from(configurations.runtimeClasspath.get().filter { it.name.endsWith("jar") }.map { zipTree(it) })
@@ -92,5 +92,5 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
 }
 
 application {
-    mainClass.set("MCFPPKt")
+    mainClass.set("top.mcfpp.MCFPPKt")
 }
