@@ -29,6 +29,8 @@ public class System extends MNIMethodContainer {
             //只会有一个参数哦
             if (value instanceof MCInt) print((MCInt) value);
             else if (value instanceof JsonString) print((JsonString) value);
+            else if (value instanceof MCFloat) print((MCFloat) value);
+            else if (value instanceof MCString) print((MCString) value);
             else print(value);
             return null;
         });
@@ -45,9 +47,19 @@ public class System extends MNIMethodContainer {
     public static void print(@NotNull MCInt var) {
         if (var.isConcrete()) {
             //是确定的，直接输出数值
-            Function.Companion.addCommand("tellraw @a " + var.getJavaValue());
+            Function.Companion.addCommand("tellraw @a \"" + var.getJavaValue() + "\"");
         }else {
             Function.Companion.addCommand("tellraw @a " + new JsonTextNumber(var).toJson());
+        }
+    }
+
+    @InsertCommand
+    public static void print(@NotNull MCFloat var) {
+        if (var.isConcrete()) {
+            //是确定的，直接输出数值
+            Function.Companion.addCommand("tellraw @a " + "\"" + var.getJavaValue() + "\"");
+        }else {
+            Function.Companion.addCommand("tellraw @a " + "\"" + var + "\"");
         }
     }
 
@@ -59,5 +71,20 @@ public class System extends MNIMethodContainer {
     @InsertCommand
     public static void print(@NotNull Var<?> var){
         Function.Companion.addCommand("tellraw @a " + "\"" +var + "\"");
+    }
+
+    @InsertCommand
+    public static void print(@NotNull MCString var){
+        if (var.isConcrete()) {
+            var javaValue = var.getJavaValue();
+            var text = "null";
+            if (javaValue != null) {
+                text = javaValue.getValue();
+            }
+
+            Function.Companion.addCommand("tellraw @a " + "\"" + text + "\"");
+        } else {
+            Function.Companion.addCommand("tellraw @a " + "\"" + var.toString().replaceAll("\"", "\\\\\"") + "\"");
+        }
     }
 }
