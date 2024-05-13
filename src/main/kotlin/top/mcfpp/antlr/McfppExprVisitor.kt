@@ -203,11 +203,11 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 }
             } else {
                 re = if (re is MCInt && b is MCInt) {
-                    re.notEqual(b)
+                    re.isNotEqual(b)
                 } else if (re is MCBool && b is MCBool) {
                     re.notEqualCommand(b)
                 } else if (re is MCFloat && b is MCFloat){
-                    re.notEqual(b)
+                    re.isNotEqual(b)
                 }else{
                     LogProcessor.error("The operator \"${ctx.op.text}\" cannot be used between ${re.type} and ${b!!.type}")
                     throw IllegalArgumentException("")
@@ -230,17 +230,17 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             val b: Var<*>? = visit(ctx.additiveExpression(1))
             if (re is MCInt && b is MCInt) {
                 when (ctx.relationalOp().text) {
-                    ">" -> re = re.isGreater(b)
+                    ">" -> re = re.isBigger(b)
                     ">=" -> re = re.isGreaterOrEqual(b)
-                    "<" -> re = re.isLess(b)
-                    "<=" -> re = re.isLessOrEqual(b)
+                    "<" -> re = re.isSmaller(b)
+                    "<=" -> re = re.isSmallerOrEqual(b)
                 }
             } else if(re is MCFloat && b is MCFloat){
                 when (ctx.relationalOp().text) {
-                    ">" -> re = re.isGreater(b)
+                    ">" -> re = re.isBigger(b)
                     ">=" -> re = re.isGreaterOrEqual(b)
-                    "<" -> re = re.isLess(b)
-                    "<=" -> re = re.isLessOrEqual(b)
+                    "<" -> re = re.isSmaller(b)
+                    "<=" -> re = re.isSmallerOrEqual(b)
                 }
             }else {
                 LogProcessor.error("The operator \"${ctx.relationalOp()}\" cannot be used between ${re!!.type} and ${b!!.type}")

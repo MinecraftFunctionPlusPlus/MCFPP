@@ -1,6 +1,7 @@
 package top.mcfpp.lang
 
 import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
 import java.util.UUID
@@ -12,7 +13,6 @@ import java.util.UUID
  */
 abstract class MCNumber<T> : Var<T>, OnScoreboard {
 
-    override var javaValue: T? = null
     var `object`: SbObject
 
     /**
@@ -28,7 +28,6 @@ abstract class MCNumber<T> : Var<T>, OnScoreboard {
      * 复制一个数字类型变量
      */
     constructor(b: MCNumber<T>) : super(b as Var<*>) {
-        javaValue = b.javaValue
         `object` = b.`object`
     }
 
@@ -38,15 +37,11 @@ abstract class MCNumber<T> : Var<T>, OnScoreboard {
         return this
     }
 
-    override fun getVarValue(): Any? {
-        return javaValue
-    }
-
     /**
      * 赋值
      * @param a 值来源
      */
-    abstract fun assignCommand(a: MCNumber<T>)
+    abstract fun assignCommand(a: MCNumber<T>) : MCNumber<T>
 
     /**
      * 加法
@@ -88,7 +83,7 @@ abstract class MCNumber<T> : Var<T>, OnScoreboard {
      * @param a 右侧值
      * @return 计算结果
      */
-    abstract override fun isGreater(a: Var<*>): MCBool?
+    abstract override fun isBigger(a: Var<*>): MCBool?
 
 
     /**
@@ -96,14 +91,14 @@ abstract class MCNumber<T> : Var<T>, OnScoreboard {
      * @param a 右侧值
      * @return 计算结果
      */
-    abstract override fun isLess(a: Var<*>): MCBool?
+    abstract override fun isSmaller(a: Var<*>): MCBool?
 
     /**
      * 这个数是否小于等于a
      * @param a 右侧值
      * @return 计算结果
      */
-    abstract override fun isLessOrEqual(a: Var<*>): MCBool?
+    abstract override fun isSmallerOrEqual(a: Var<*>): MCBool?
 
     /**
      * 这个数是否大于等于a
@@ -124,9 +119,7 @@ abstract class MCNumber<T> : Var<T>, OnScoreboard {
      * @param a 右侧值
      * @return 计算结果
      */
-    abstract override fun notEqual(a: Var<*>): MCBool?
-
-    abstract override fun toDynamic()
+    abstract override fun isNotEqual(a: Var<*>): MCBool?
 
     /**
      * 根据标识符获取一个成员。
@@ -154,4 +147,8 @@ abstract class MCNumber<T> : Var<T>, OnScoreboard {
     ): Pair<Function, Boolean> {
         TODO("Not yet implemented")
     }
+}
+
+interface MCNumberConcrete<T> : MCFPPValue<T> {
+    fun toDynamic() : MCNumber<T>
 }

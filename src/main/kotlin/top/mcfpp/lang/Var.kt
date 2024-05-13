@@ -4,7 +4,6 @@ import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.OperationNotImplementException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
-import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import java.util.*
@@ -88,7 +87,6 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
         identifier = `var`.identifier
         isStatic = `var`.isStatic
         accessModifier = `var`.accessModifier
-        isConcrete = `var`.isConcrete
         stackIndex = `var`.stackIndex
         isConst = `var`.isConst
     }
@@ -158,7 +156,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      * @param a 加数
      * @return 计算的结果
      */
-    open fun plus(a: Var<*>): Var<*>? {
+    open fun plus(a: Var<*>): Var<*> {
         throw OperationNotImplementException()
     }
 
@@ -167,7 +165,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      * @param a 减数
      * @return 计算的结果
      */
-    open fun minus(a: Var<*>): Var<*>? {
+    open fun minus(a: Var<*>): Var<*> {
         throw OperationNotImplementException()
     }
 
@@ -176,7 +174,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      * @param a 乘数
      * @return 计算的结果
      */
-    open fun multiple(a: Var<*>): Var<*>? {
+    open fun multiple(a: Var<*>): Var<*> {
         throw OperationNotImplementException()
     }
 
@@ -185,7 +183,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      * @param a 除数
      * @return 计算的结果
      */
-    open fun divide(a: Var<*>): Var<*>? {
+    open fun divide(a: Var<*>): Var<*> {
         throw OperationNotImplementException()
     }
 
@@ -194,7 +192,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      * @param a 除数
      * @return 计算的结果
      */
-    open fun modular(a: Var<*>): Var<*>? {
+    open fun modular(a: Var<*>): Var<*> {
         throw OperationNotImplementException()
     }
 
@@ -204,7 +202,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun isGreater(a: Var<*>): MCBool? {
+    open fun isBigger(a: Var<*>): MCBool {
         throw OperationNotImplementException()
     }
 
@@ -214,7 +212,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun isLess(a: Var<*>): MCBool? {
+    open fun isSmaller(a: Var<*>): MCBool {
         throw OperationNotImplementException()
     }
 
@@ -223,7 +221,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun isLessOrEqual(a: Var<*>): MCBool? {
+    open fun isSmallerOrEqual(a: Var<*>): MCBool {
         throw OperationNotImplementException()
     }
 
@@ -232,7 +230,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun isGreaterOrEqual(a: Var<*>): MCBool? {
+    open fun isGreaterOrEqual(a: Var<*>): MCBool {
         throw OperationNotImplementException()
     }
 
@@ -241,7 +239,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun isEqual(a: Var<*>): MCBool? {
+    open fun isEqual(a: Var<*>): MCBool {
         throw OperationNotImplementException()
     }
 
@@ -250,7 +248,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun notEqual(a: Var<*>): MCBool? {
+    open fun isNotEqual(a: Var<*>): MCBool {
         throw OperationNotImplementException()
     }
 
@@ -265,8 +263,6 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
     abstract fun storeToStack()
 
     abstract fun getFromStack()
-
-    abstract fun toDynamic()
 
     override fun getAccess(function: Function): Member.AccessModifier {
         return Member.AccessModifier.PUBLIC

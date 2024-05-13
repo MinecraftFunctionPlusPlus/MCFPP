@@ -16,7 +16,7 @@ import java.util.*
 /**
  * 代表了mc中的一个整数。实质上是记分板中的一个记分项。你可以对它进行加减乘除等基本运算操作，以及大小比较等逻辑运算。
  */
-class MCInt : MCNumber<Int> {
+open class MCInt : MCNumber<Int> {
     /**
      * 创建一个int类型的变量。它的mc名和变量所在的域容器有关。
      *
@@ -36,32 +36,6 @@ class MCInt : MCNumber<Int> {
     constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier)
 
     /**
-     * 创建一个固定的int
-     *
-     * @param identifier 标识符
-     * @param curr 域容器
-     * @param value 值
-     */
-    constructor(
-        curr: FieldContainer,
-        value: Int,
-        identifier: String = UUID.randomUUID().toString()
-    ) : super(curr.prefix + identifier) {
-        isConcrete = true
-        this.javaValue = value
-    }
-
-    /**
-     * 创建一个固定的int。它的标识符和mc名一致/
-     * @param identifier 标识符。如不指定，则为随机uuid
-     * @param value 值
-     */
-    constructor(value: Int, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
-        isConcrete = true
-        this.javaValue = value
-    }
-
-    /**
      * 复制一个int
      * @param b 被复制的int值
      */
@@ -71,9 +45,9 @@ class MCInt : MCNumber<Int> {
 
     @Override
     @Throws(VariableConverseException::class)
-    override fun assign(b: Var<*>?) {
+    override fun assign(b: Var<*>) : MCInt {
         hasAssigned = true
-        when (b) {
+        return when (b) {
             is MCInt -> {
                 assignCommand(b)
             }
@@ -86,49 +60,33 @@ class MCInt : MCNumber<Int> {
     @Override
     override fun cast(type: MCFPPType): Var<*> {
         //TODO 类支持
-        if (isConcrete) {
-            return when (type) {
-                this.type -> this
-                MCFPPBaseType.Float -> MCFloat(javaValue!!.toFloat())
-                MCFPPBaseType.Any -> this
-                else -> {
-                    LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                    throw VariableConverseException()
-                }
+        return when (type) {
+            this.type -> this
+            MCFPPBaseType.Float -> {
+                MCInt("inp").assign(this)
+                Function.addCommand("function math:hpo/float/_scoreto")
+                return MCFloat().assign(MCFloat.ssObj)
             }
-        } else {
-            return when (type) {
-                this.type -> this
-                MCFPPBaseType.Float -> {
-                    val inp = MCInt("inp")
-                    inp.assign(this)
-                    Function.addCommand("function math:hpo/float/_scoreto")
-                    val re = MCFloat()
-                    re.assign(MCFloat.ssObj)
-                    re
-                }
-                MCFPPBaseType.Any -> MCAny(this)
-                else -> {
-                    LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                    throw VariableConverseException()
-                }
+            MCFPPBaseType.Any -> MCAnyConcrete(this)
+            else -> {
+                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
+                throw VariableConverseException()
             }
         }
     }
 
     @Override
-    override fun assignCommand(a: MCNumber<Int>) {
-        assignCommand(a,null)
+    override fun assignCommand(a: MCNumber<Int>): MCInt {
+        return assignCommand(a,null)
     }
 
     @InsertCommand
-    fun assignCommand(a: MCNumber<Int>, replace: String?) {
+    fun assignCommand(a: MCNumber<Int>, replace: String?) : MCInt {
         if (parent != null) {
             val b = if(a.parent != null){
                 a.getTempVar() as MCNumber<*>
             }else a
             //类的成员是运行时动态的
-            isConcrete = false
             //t = a
             //是成员
             val final = when(val parent = parent){
@@ -140,13 +98,13 @@ class MCInt : MCNumber<Int> {
                 }
                 else -> TODO()
             }
-            if (b.isConcrete) {
+            if (b is MCIntConcrete) {
                 //对类中的成员的值进行修改
                 if(replace == null){
                     if(final.size == 2){
                         Function.addCommand(final[0])
                     }
-                    final.last().build(Commands.sbPlayerSet(this,b.javaValue as Int))
+                    final.last().build(Commands.sbPlayerSet(this,b.value as Int))
                 }else{
                     Function.replaceCommand(final.last().build(replace), Function.currFunction.commands.size - 1)
                 }
@@ -161,13 +119,12 @@ class MCInt : MCNumber<Int> {
                     Function.replaceCommand(final.last().build(replace), Function.currFunction.commands.size - 1)
                 }
             }
+            return this
         } else {
             //t = a
-            if (a.isConcrete) {
-                isConcrete = true
-                javaValue = a.javaValue
+            if (a is MCIntConcrete) {
+                return MCIntConcrete(this, a.value)
             } else {
-                isConcrete = false
                 if(a.parent != null){
                     if(isTemp){
                         //a是成员
@@ -223,198 +180,100 @@ class MCInt : MCNumber<Int> {
                     }
                 }
             }
-        }
-    }
-
-    /**
-     * 动态化
-     *
-     */
-    override fun toDynamic() {
-        val parent = parent
-        if(!isConcrete) return
-        isConcrete = false
-        if (parent != null) {
-            val cmd = when(parent){
-                is ClassPointer -> {
-                    Commands.selectRun(parent)
-                }
-                is MCFPPClassType -> {
-                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
-                }
-                else -> TODO()
-            }
-            if(cmd.size == 2){
-                Function.addCommand(cmd[0])
-            }
-            Function.addCommand(cmd.last().build("scoreboard players set @s $`object` $javaValue"))
-        } else {
-            val cmd: String = if (!isTemp)
-                "execute store result storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1 run "
-            else
-                ""
-            Function.addCommand(cmd + "scoreboard players set $name $`object` $javaValue")
+            return MCInt(this)  //复制为未跟踪变量
         }
     }
 
     @Override
     @InsertCommand
-    override fun plus(a: Var<*>): Var<*>? {
-        //t = t + a
-        val qwq: MCInt? = if (a !is MCInt) {
-            a.cast(MCFPPBaseType.Int) as MCInt?
-        } else {
-            a
-        }
-        if(!isTemp && !isConcrete){
+    override fun plus(a: Var<*>): Var<*> {
+        //t += a
+        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        if(!isTemp){
             return a.plus(getTempVar() as MCInt)
         }
-        if (qwq == null) return null
-        if (qwq.isConcrete) {
-            if (isConcrete) {
-                javaValue = javaValue!! + qwq.javaValue!!
-            } else {
-                Function.addCommand(Commands.sbPlayerAdd(this, qwq.javaValue!!))
-            }
+        if (qwq is MCIntConcrete) {
+            Function.addCommand(Commands.sbPlayerAdd(this, qwq.value))
             return this
         } else {
-            if (isConcrete) {
-                return qwq.plus(this)
-            } else {
-                Function.addCommand(Commands.sbPlayerOperation(this, "+=", qwq))
-            }
+            Function.addCommand(Commands.sbPlayerOperation(this, "+=", qwq))
             return this
         }
     }
 
     @Override
     @InsertCommand
-    override fun minus(a: Var<*>): Var<*>? {
-        //t = t - a
+    override fun minus(a: Var<*>): Var<*> {
+        //t -= a
+        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
         if(!isTemp){
-            return (getTempVar() as MCInt).minus(a)
+            return a.minus(getTempVar() as MCInt)
         }
-        val qwq: MCInt? = if (a !is MCInt) {
-            a.cast(MCFPPBaseType.Int) as MCInt?
-        } else {
-            a
-        }
-        if (qwq == null) return null
-        if (a.isConcrete) {
-            if (isConcrete) {
-                javaValue = javaValue!! - qwq.javaValue!!
-            } else {
-                Function.addCommand(Commands.sbPlayerRemove(this, qwq.javaValue!!))
-            }
+        if (qwq is MCIntConcrete) {
+            Function.addCommand(Commands.sbPlayerRemove(this, qwq.value))
             return this
         } else {
-            if (isConcrete) {
-                return qwq.minus(this)
-            } else {
-                Function.addCommand(Commands.sbPlayerOperation(this, "-=", qwq))
-            }
+            Function.addCommand(Commands.sbPlayerOperation(this, "-=", qwq))
             return this
         }
     }
 
     @Override
     @InsertCommand
-    override fun multiple(a: Var<*>): Var<*>? {
-        //t = t * a
+    override fun multiple(a: Var<*>): Var<*> {
+        //t *= a
         if(!isTemp){
             return (getTempVar() as MCInt).multiple(a)
         }
-        val qwq: MCInt? = if (a !is MCInt) {
-            a.cast(MCFPPBaseType.Int) as MCInt?
-        } else {
-            a
+        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        if (qwq is MCIntConcrete) {
+            Function.addCommand(Commands.sbPlayerSet(qwq, qwq.value))
         }
-        if (qwq == null) return null
-        if (qwq.isConcrete && isConcrete) {
-            javaValue = javaValue!! * qwq.javaValue!!
-        } else {
-            if (a.isConcrete) {
-                Function.addCommand(Commands.sbPlayerSet(qwq, qwq.javaValue!!))
-            } else if (this.isConcrete) {
-                Function.addCommand(Commands.sbPlayerSet(this, javaValue!!))
-            }
-            Function.addCommand(Commands.sbPlayerOperation(this, "*=", qwq))
-        }
+        Function.addCommand(Commands.sbPlayerOperation(this, "*=", qwq))
         return this
     }
 
     @Override
     @InsertCommand
-    override fun divide(a: Var<*>): Var<*>? {
+    override fun divide(a: Var<*>): Var<*> {
         if(!isTemp){
             return (getTempVar() as MCInt).divide(a)
         }
-        //t = t / a
-        val qwq: MCInt? = if (a !is MCInt) {
-            a.cast(MCFPPBaseType.Int) as MCInt?
-        } else {
-            a
+        //t /= a
+        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        if (qwq is MCIntConcrete) {
+            Function.addCommand(Commands.sbPlayerSet(qwq, qwq.value))
         }
-        if (qwq == null) return null
-        if (qwq.isConcrete && isConcrete) {
-            javaValue = javaValue!! / qwq.javaValue!!
-        } else {
-            if (a.isConcrete) {
-                Function.addCommand(Commands.sbPlayerSet(qwq, qwq.javaValue!!))
-            } else if (this.isConcrete) {
-                Function.addCommand(Commands.sbPlayerSet(this, javaValue!!))
-            }
-            Function.addCommand(Commands.sbPlayerOperation(this, "/=", qwq))
-        }
+        Function.addCommand(Commands.sbPlayerOperation(this, "/=", qwq))
         return this
     }
 
     @Override
     @InsertCommand
-    override fun modular(a: Var<*>): Var<*>? {
+    override fun modular(a: Var<*>): Var<*> {
         if(!isTemp){
             return (getTempVar() as MCInt).modular(a)
         }
-        //t = t % a
-        val qwq: MCInt? = if (a !is MCInt) {
-            a.cast(MCFPPBaseType.Int) as MCInt?
-        } else {
-            a
+        //t %= a
+        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        if (qwq is MCIntConcrete) {
+            Function.addCommand(Commands.sbPlayerSet(qwq, qwq.value))
         }
-        if (qwq == null) return null
-        if (a.isConcrete && isConcrete) {
-            javaValue = javaValue!! % qwq.javaValue!!
-        } else {
-            if (a.isConcrete) {
-                Function.addCommand(Commands.sbPlayerSet(qwq, qwq.javaValue!!))
-            } else if (this.isConcrete) {
-                Function.addCommand(Commands.sbPlayerSet(this, javaValue!!))
-            }
-            Function.addCommand(Commands.sbPlayerOperation(this, "%=", qwq))
-        }
+        Function.addCommand(Commands.sbPlayerOperation(this, "%=", qwq))
         return this
     }
 
     @Override
     @InsertCommand
-    override fun isGreater(a: Var<*>): MCBool? {
+    override fun isBigger(a: Var<*>): MCBool {
         //re = t > a
-        val qwq: MCInt? = if (a !is MCInt) {
-            a.cast(MCFPPBaseType.Int) as MCInt?
-        } else {
-            a
-        }
-        if (qwq == null) return null
+        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
         val re: MCBool
-        if (isConcrete && qwq.isConcrete) {
-            re = MCBool(javaValue!! > qwq.javaValue!!)
-        } else if (isConcrete) {
-            re = qwq.isLess(this)!!
-        } else if (qwq.isConcrete) {
+        if (qwq is MCIntConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
             re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
-                "execute if score " + name + " " + `object` + " matches " + (qwq.javaValue!! + 1) + ".. run return 1"
+                "execute if score " + name + " " + `object` + " matches " + (qwq.value + 1) + ".. run return 1"
             )
             Function.addCommand("return 0")
         } else {
@@ -430,24 +289,15 @@ class MCInt : MCNumber<Int> {
 
     @Override
     @InsertCommand
-    override fun isLess(a: Var<*>): MCBool? {
+    override fun isSmaller(a: Var<*>): MCBool {
         //re = t < a
-        val qwq: MCInt? = if (a !is MCInt) {
-            a.cast(MCFPPBaseType.Int) as MCInt?
-        } else {
-            a
-        }
-        if (qwq == null) return null
+        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
         val re: MCBool
-        if (isConcrete && qwq.isConcrete) {
-            re = MCBool(javaValue!! < qwq.javaValue!!)
-        } else if (isConcrete) {
-            re = qwq.isGreater(this)!!
-        } else if (a.isConcrete) {
+        if (qwq is MCIntConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
             re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
-                "execute if score " + name + " " + `object` + " matches " + ".." + (qwq.javaValue!! - 1) + " run return 1"
+                "execute if score " + name + " " + `object` + " matches " + ".." + (qwq.value - 1) + " run return 1"
             )
             Function.addCommand("return 0")
         } else {
@@ -463,24 +313,15 @@ class MCInt : MCNumber<Int> {
 
     @Override
     @InsertCommand
-    override fun isLessOrEqual(a: Var<*>): MCBool? {
+    override fun isSmallerOrEqual(a: Var<*>): MCBool {
         //re = t <= a
-        val qwq: MCInt? = if (a !is MCInt) {
-            a.cast(MCFPPBaseType.Int) as MCInt?
-        } else {
-            a
-        }
-        if (qwq == null) return null
+        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
         val re: MCBool
-        if (isConcrete && qwq.isConcrete) {
-            re = MCBool(javaValue!! <= qwq.javaValue!!)
-        } else if (isConcrete) {
-            re = qwq.isGreater(this)!!
-        } else if (qwq.isConcrete) {
+        if (qwq is MCIntConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
             re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
-                "execute if score " + name + " " + `object` + " matches " + ".." + qwq.javaValue + " run return 1"
+                "execute if score " + name + " " + `object` + " matches " + ".." + qwq.value + " run return 1"
             )
             Function.addCommand("return 0")
         } else {
@@ -496,24 +337,15 @@ class MCInt : MCNumber<Int> {
 
     @Override
     @InsertCommand
-    override fun isGreaterOrEqual(a: Var<*>): MCBool? {
+    override fun isGreaterOrEqual(a: Var<*>): MCBool {
         //re = t <= a
-        val qwq: MCInt? = if (a !is MCInt) {
-            a.cast(MCFPPBaseType.Int) as MCInt?
-        } else {
-            a
-        }
-        if (qwq == null) return null
+        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
         val re: MCBool
-        if (isConcrete && qwq.isConcrete) {
-            re = MCBool(javaValue!! >= qwq.javaValue!!)
-        } else if (isConcrete) {
-            re = qwq.isGreater(this)!!
-        } else if (qwq.isConcrete) {
+        if (qwq is MCIntConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
             re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
-                "execute if score " + name + " " + `object` + " matches " + qwq.javaValue + ".. run return 1"
+                "execute if score " + name + " " + `object` + " matches " + qwq.value + ".. run return 1"
             )
             Function.addCommand("return 0")
         } else {
@@ -529,24 +361,15 @@ class MCInt : MCNumber<Int> {
 
     @Override
     @InsertCommand
-    override fun isEqual(a: Var<*>): MCBool? {
+    override fun isEqual(a: Var<*>): MCBool {
         //re = t == a
-        val qwq: MCInt? = if (a !is MCInt) {
-            a.cast(MCFPPBaseType.Int) as MCInt?
-        } else {
-            a
-        }
-        if (qwq == null) return null
+        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
         val re: MCBool
-        if (isConcrete && qwq.isConcrete) {
-            re = MCBool(Objects.equals(javaValue, qwq.javaValue))
-        } else if (isConcrete) {
-            re = qwq.isEqual(this)!!
-        } else if (qwq.isConcrete) {
+        if (qwq is MCIntConcrete) {
             //execute store success score qwq qwq if score qwq qwq = owo owo
             re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
-                "execute if score " + name + " " + `object` + " matches " + qwq.javaValue + " run return 1"
+                "execute if score " + name + " " + `object` + " matches " + qwq.value + " run return 1"
             )
             Function.addCommand("return 0")
         } else {
@@ -562,24 +385,15 @@ class MCInt : MCNumber<Int> {
 
     @Override
     @InsertCommand
-    override fun notEqual(a: Var<*>): MCBool? {
+    override fun isNotEqual(a: Var<*>): MCBool {
         //re = t != a
-        val qwq: MCInt? = if (a !is MCInt) {
-            a.cast(MCFPPBaseType.Int) as MCInt?
-        } else {
-            a
-        }
-        if (qwq == null) return null
+        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
         val re: MCBool
-        if (isConcrete && qwq.isConcrete) {
-            re = MCBool(!Objects.equals(javaValue, qwq.javaValue))
-        } else if (isConcrete) {
-            re = qwq.notEqual(this)!!
-        } else if (qwq.isConcrete) {
+        if (qwq is MCIntConcrete) {
             //execute store success score qwq qwq if score qwq qwq = owo owo
             re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
-                "execute unless score " + name + " " + `object` + " matches " + qwq.javaValue + " run return 1"
+                "execute unless score " + name + " " + `object` + " matches " + qwq.value + " run return 1"
             )
             Function.addCommand("return 0")
         } else {
@@ -610,13 +424,9 @@ class MCInt : MCNumber<Int> {
     @InsertCommand
     override fun getTempVar(): Var<*> {
         if (isTemp) return this
-        if (isConcrete) {
-            return MCInt(javaValue!!)
-        }
         val re = MCInt()
         re.isTemp = true
-        re.assign(this)
-        return re
+        return re.assign(this)
     }
 
     override fun storeToStack() {
@@ -667,5 +477,231 @@ class MCInt : MCNumber<Int> {
             data.initialize()
             data.extends(MCAny.data)
         }
+    }
+}
+
+class MCIntConcrete : MCInt, MCNumberConcrete<Int>{
+
+    override var value: Int
+
+    /**
+     * 创建一个固定的int
+     *
+     * @param identifier 标识符
+     * @param curr 域容器
+     * @param value 值
+     */
+    constructor(
+        curr: FieldContainer,
+        value: Int,
+        identifier: String = UUID.randomUUID().toString()
+    ) : super(curr.prefix + identifier) {
+        this.value = value
+    }
+
+    /**
+     * 创建一个固定的int。它的标识符和mc名一致/
+     * @param identifier 标识符。如不指定，则为随机uuid
+     * @param value 值
+     */
+    constructor(value: Int, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
+        this.value = value
+    }
+
+    constructor(int: MCInt, value: Int) : super(int){
+        this.value = value
+    }
+
+    /**
+     * 动态化
+     *
+     */
+    override fun toDynamic() : MCInt {
+        //避免错误 Smart cast to 'ClassPointer' is impossible, because 'parent' is a mutable property that could have been changed by this time
+        val parent = parent
+
+        if (parent != null) {
+            val cmd = when(parent){
+                is ClassPointer -> {
+                    Commands.selectRun(parent)
+                }
+                is MCFPPClassType -> {
+                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
+                }
+                else -> TODO()
+            }
+            if(cmd.size == 2){
+                Function.addCommand(cmd[0])
+            }
+            Function.addCommand(cmd.last().build("scoreboard players set @s $`object` $value"))
+        } else {
+            val cmd: String = if (!isTemp)
+                "execute store result storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1 run "
+            else
+                ""
+            Function.addCommand(cmd + "scoreboard players set $name $`object` $value")
+        }
+        return MCInt(this)
+    }
+
+    @Override
+    override fun cast(type: MCFPPType): Var<*> {
+        //TODO 类支持
+        return when (type) {
+            this.type -> this
+            MCFPPBaseType.Float -> MCFloatConcrete(value.toFloat())
+            MCFPPBaseType.Any -> this
+            else -> {
+                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
+                throw VariableConverseException()
+            }
+        }
+    }
+
+    @InsertCommand
+    override fun plus(a: Var<*>): Var<*> {
+        //t = t + a
+        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        if (qwq is MCIntConcrete) {
+            value += qwq.value
+            return this
+        } else {
+            return qwq.plus(this)
+        }
+    }
+
+    @InsertCommand
+    override fun minus(a: Var<*>): Var<*> {
+        //t = t + a
+        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        if (qwq is MCIntConcrete) {
+            value -= qwq.value
+            return this
+        } else {
+            return qwq.minus(this)
+        }
+    }
+
+
+    @Override
+    @InsertCommand
+    override fun multiple(a: Var<*>): Var<*> {
+        //t = t * a
+        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        if (qwq is MCIntConcrete) {
+            value *= qwq.value
+            return this
+        } else {
+            return qwq.multiple(this)
+        }
+    }
+
+    @Override
+    @InsertCommand
+    override fun divide(a: Var<*>): Var<*> {
+        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        if (qwq is MCIntConcrete) {
+            value /= qwq.value
+            return this
+        } else {
+            return qwq.divide(this)
+        }
+    }
+
+    @Override
+    @InsertCommand
+    override fun modular(a: Var<*>): Var<*> {
+        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        if (qwq is MCIntConcrete) {
+            value %= qwq.value
+            return this
+        } else {
+            return qwq.modular(this)
+        }
+    }
+
+    @Override
+    @InsertCommand
+    override fun isBigger(a: Var<*>): MCBool {
+        //re = t > a
+        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        return if (qwq is MCIntConcrete) {
+            MCBoolConcrete(value > qwq.value)
+        } else {
+            //注意大小于换符号！
+            qwq.isSmaller(this)
+        }
+    }
+
+    @Override
+    @InsertCommand
+    override fun isSmaller(a: Var<*>): MCBool {
+        //re = t < a
+        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        return if (qwq is MCIntConcrete) {
+            MCBoolConcrete(value < qwq.value)
+        } else {
+            qwq.isBigger(this)
+        }
+    }
+
+    @Override
+    @InsertCommand
+    override fun isSmallerOrEqual(a: Var<*>): MCBool {
+        //re = t <= a
+        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        return if (qwq is MCIntConcrete) {
+            MCBoolConcrete(value <= qwq.value)
+        } else {
+            qwq.isGreaterOrEqual(this)
+        }
+    }
+
+    @Override
+    @InsertCommand
+    override fun isGreaterOrEqual(a: Var<*>): MCBool {
+        //re = t <= a
+        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        return if (qwq is MCIntConcrete) {
+            MCBoolConcrete(value >= qwq.value)
+        } else {
+            qwq.isSmallerOrEqual(this)
+        }
+    }
+
+    @Override
+    @InsertCommand
+    override fun isEqual(a: Var<*>): MCBool {
+        //re = t == a
+        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        return if (qwq is MCIntConcrete) {
+            MCBoolConcrete(value == qwq.value)
+        } else {
+            qwq.isEqual(this)
+        }
+    }
+
+    @Override
+    @InsertCommand
+    override fun isNotEqual(a: Var<*>): MCBool {
+        //re = t != a
+        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        return if (qwq is MCIntConcrete) {
+            MCBoolConcrete(value != qwq.value)
+        } else {
+            qwq.isNotEqual(this)
+        }
+    }
+
+    /**
+     * 获取临时变量
+     *
+     * @return 返回临时变量
+     */
+    @Override
+    @InsertCommand
+    override fun getTempVar(): Var<*> {
+        if (isTemp) return this
+        return MCIntConcrete(value)
     }
 }
