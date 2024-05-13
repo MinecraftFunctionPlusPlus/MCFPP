@@ -49,6 +49,7 @@ fun main(){
             print(">")
         }
         when(val line = readln()){
+            "help" -> printHelp()
             "exit" -> return
             "version" -> println("MCFPP ${MCFPP.version}")
             else -> {
@@ -62,4 +63,19 @@ fun main(){
         }
 
     }
+}
+
+fun printHelp() {
+    val helpMessage = """
+        Welcome to MCFPP ${MCFPP.version}'s help utility! If this is your first time using
+        MCFPP, you should definitely check out the documentation at
+        https://www.mcfpp.top/.
+        
+        Enter any valid MCFPP code to execute in this interactive shell.
+        
+        To display version details, enter "version".
+        
+        To quit the shell, enter "quit".
+    """.trimIndent()
+    println(helpMessage)
 }
