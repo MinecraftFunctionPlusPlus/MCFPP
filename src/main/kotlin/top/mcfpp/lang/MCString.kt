@@ -12,6 +12,7 @@ import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.function.Function
@@ -125,7 +126,7 @@ open class MCString : NBTBasedData<StringTag> {
 
 }
 
-class MCStringConcrete: MCString, INBTBasedDataConcrete<StringTag>{
+class MCStringConcrete: MCString, MCFPPValue<StringTag>{
 
     override var value: StringTag
 
@@ -153,7 +154,7 @@ class MCStringConcrete: MCString, INBTBasedDataConcrete<StringTag>{
         this.value = value
     }
 
-    override fun toDynamic(): MCString {
+    override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
         if (parent != null) {
             val cmd = when(parent){
@@ -177,7 +178,11 @@ class MCStringConcrete: MCString, INBTBasedDataConcrete<StringTag>{
             )
             Function.addCommand(cmd)
         }
-        return MCString(this)
+        val re = MCString(this)
+        if(replace){
+            Function.currFunction.field.putVar(identifier, re, true)
+        }
+        return re
     }
 
     @Override

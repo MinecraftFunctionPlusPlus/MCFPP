@@ -41,7 +41,7 @@ class GenericClass : Class {
             val r = readOnlyArgs[i].clone()
             r.isConst = true
             if(r is MCFPPTypeVar){
-                cls.field.putType(readOnlyParams[i].identifier, r.javaValue!!)
+                cls.field.putType(readOnlyParams[i].identifier, r.value)
             }
             cls.field.putVar(readOnlyParams[i].identifier, r, false)
         }

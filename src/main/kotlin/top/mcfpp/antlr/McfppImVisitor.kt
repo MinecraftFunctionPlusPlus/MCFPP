@@ -12,6 +12,7 @@ import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPGenericClassType
 import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.Annotation
 import top.mcfpp.model.function.Function
@@ -209,7 +210,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 LogProcessor.error("Duplicate defined variable name:" + ctx.Identifier().text)
             }
             try {
-                if(`var` is MCInt && init is MCInt && !init.isConcrete){
+                if(`var` is MCInt && init is MCInt && init !is MCIntConcrete){
                     Function.currFunction.commands.replaceThenAnalyze(init.name to `var`.name, init.`object`.name to `var`.`object`.name)
                     `var`.assignCommand(init, Function.currFunction.commands.last().toString())
                 }else{
@@ -227,8 +228,8 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                     `var`.isConst = true
                 }
                 "dynamic" -> {
-                    if(`var`.isConcrete){
-                        `var`.toDynamic()
+                    if(`var` is MCFPPValue<*>){
+                        `var`.toDynamic(true)
                     }
                 }
                 "import" -> {
@@ -250,7 +251,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 if (c.expression() != null) {
                     val init: Var<*> = McfppExprVisitor(if(type is MCFPPGenericClassType) type else null).visit(c.expression())!!
                     try {
-                        if(`var` is MCInt && init is MCInt && !init.isConcrete){
+                        if(`var` is MCInt && init is MCInt && init !is MCIntConcrete){
                             Function.currFunction.commands.replaceThenAnalyze(init.name to `var`.name, init.`object`.name to `var`.`object`.name)
                             `var`.assignCommand(init, Function.currFunction.commands.last().toString())
                         }else{
@@ -269,8 +270,8 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                         `var`.isConst = true
                     }
                     "dynamic" -> {
-                        if(`var`.isConcrete){
-                            `var`.toDynamic()
+                        if(`var` is MCFPPValue<*>){
+                            `var`.toDynamic(true)
                         }
                     }
                     "import" -> {
@@ -475,7 +476,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
             if(exp !is MCBool){
                 throw TypeCastException()
             }
-            if (exp.isConcrete && exp.javaValue==true) {
+            if (exp is MCBoolConcrete && exp.value) {
                 //函数调用的命令
                 //给子函数开栈
                 Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
@@ -483,7 +484,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
                 Function.addCommand("return 1")
                 LogProcessor.warn("The condition is always true. ")
-            } else if (exp.isConcrete) {
+            } else if (exp is MCBoolConcrete) {
                 Function.addCommand("#function " + f.namespaceID)
                 Function.addCommand("return 1")
                 LogProcessor.warn("The condition is always false. ")
@@ -600,7 +601,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
             GlobalField.localNamespaces[f.namespace] = NamespaceField()
         GlobalField.localNamespaces[f.namespace]!!.addFunction(f,false)
         //条件判断
-        if (exp.isConcrete && exp.javaValue==true) {
+        if (exp is MCBoolConcrete && exp.value) {
             //给子函数开栈
             Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
             Function.addCommand(
@@ -609,7 +610,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                         "run function " + Function.currFunction.namespaceID
             )
             LogProcessor.warn("The condition is always true. ")
-        } else if (exp.isConcrete) {
+        } else if (exp is MCBoolConcrete) {
             //给子函数开栈
             Function.addCommand("#function " + f.namespaceID)
             LogProcessor.warn("The condition is always false. ")
@@ -718,7 +719,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         val exp: MCBool = McfppExprVisitor().visit(parent.expression()) as MCBool
         Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
         //递归调用
-        if (exp.isConcrete && exp.javaValue==true) {
+        if (exp is MCBoolConcrete && exp.value) {
             //给子函数开栈
             Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
             Function.addCommand(
@@ -727,7 +728,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                         "run function " + Function.currFunction.namespaceID
             )
             LogProcessor.warn("The condition is always true. ")
-        } else if (exp.isConcrete) {
+        } else if (exp is MCBoolConcrete) {
             //给子函数开栈
             Function.addCommand("#" + Commands.function(Function.currFunction))
             LogProcessor.warn("The condition is always false. ")
@@ -882,7 +883,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
             GlobalField.localNamespaces[f.namespace] = NamespaceField()
         GlobalField.localNamespaces[f.namespace]!!.addFunction(f,false)
         //条件循环判断
-        if (exp.isConcrete && exp.javaValue==true) {
+        if (exp is MCBoolConcrete && exp.value) {
             //给子函数开栈
             Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
             Function.addCommand(
@@ -891,7 +892,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                         "run function " + Function.currFunction.namespaceID
             )
             LogProcessor.warn("The condition is always true. ")
-        } else if (exp.isConcrete) {
+        } else if (exp is MCBoolConcrete) {
             //给子函数开栈
             Function.addCommand("#function " + f.namespaceID)
             LogProcessor.warn("The condition is always false. ")

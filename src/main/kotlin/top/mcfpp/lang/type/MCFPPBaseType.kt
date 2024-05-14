@@ -61,25 +61,25 @@ class MCFPPBaseType {
         Bool.data = top.mcfpp.lang.MCBool.data
         Type.data = top.mcfpp.lang.type.MCFPPType.data
         Void.data = top.mcfpp.lang.Void.data
-        Selector.data = top.mcfpp.lang.Selector.data
+        //Selector.data = top.mcfpp.lang.Selector.data
         JavaVar.data = top.mcfpp.lang.JavaVar.data
-        BaseEntity.data = top.mcfpp.lang.Entity.data
+        //BaseEntity.data = top.mcfpp.lang.Entity.data
         JsonText.data = top.mcfpp.lang.JsonText.data
     }
 
 }
 
-class MCFPPEntityType(
-    val resourceLocation: ResourceLocation
-) : MCFPPType(listOf(MCFPPBaseType.BaseEntity), Entity.data) {
-    init {
-       registerType({ it.contains(regex) }) {
-          val matcher = regex.find(it)!!.groupValues
-          MCFPPEntityType(ResourceLocation(matcher[1], matcher[2]))
-       }
-    }
-    companion object{
-        val regex = Regex("^entity\\((.+):(.+)\\)$")
-    }
-}
+//class MCFPPEntityType(
+//    val resourceLocation: ResourceLocation
+//) : MCFPPType(listOf(MCFPPBaseType.BaseEntity), Entity.data) {
+//    init {
+//       registerType({ it.contains(regex) }) {
+//          val matcher = regex.find(it)!!.groupValues
+//          MCFPPEntityType(ResourceLocation(matcher[1], matcher[2]))
+//       }
+//    }
+//    companion object{
+//        val regex = Regex("^entity\\((.+):(.+)\\)$")
+//    }
+//}
 

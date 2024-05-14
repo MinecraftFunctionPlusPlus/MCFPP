@@ -61,6 +61,10 @@ open class MCFPPTypeVar : Var<MCFPPType>, MCFPPValue<MCFPPType> {
         TODO("Not yet implemented")
     }
 
+    override fun toDynamic(replace: Boolean): Var<*> {
+        TODO("Not yet implemented")
+    }
+
     companion object {
         val data = CompoundData("type","mcfpp")
     }

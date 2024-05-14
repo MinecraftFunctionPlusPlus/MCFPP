@@ -32,7 +32,7 @@ open class FunctionField : IFieldWithVar, IFieldWithType {
      * 父级域。函数的父级域可能是全局，也可能是类
      */
     @Nullable
-    var parent : IField?
+    open var parent : IField?
 
     /**
      * 这个缓存在哪一个容器中
@@ -74,7 +74,7 @@ open class FunctionField : IFieldWithVar, IFieldWithType {
 
     /**
      * 从缓存中取出一个变量。如果此缓存中没有，则从父缓存中寻找。
-     * TODO 这里真的有从父缓存找吗
+     * TODO 这里真的有从父缓存找吗，我是说比如这个函数的类什么的，InternalFunction那边是对的
      * @param key 变量的标识符
      * @return 变量的对象。若不存在，则返回null。
      */

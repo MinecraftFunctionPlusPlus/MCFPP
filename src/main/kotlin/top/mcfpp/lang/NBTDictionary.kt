@@ -8,6 +8,7 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
+import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
@@ -132,7 +133,7 @@ open class NBTDictionary : NBTBasedData<CompoundTag> {
     }
 }
 
-open class NBTDictionaryConcrete : NBTDictionary, INBTBasedDataConcrete<CompoundTag>{
+open class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<CompoundTag>{
 
     override var value: CompoundTag
 
@@ -160,7 +161,7 @@ open class NBTDictionaryConcrete : NBTDictionary, INBTBasedDataConcrete<Compound
         this.value = value
     }
 
-    override fun toDynamic(): NBTDictionary {
+    override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
         if (parent != null) {
             val cmd = when(parent){
@@ -184,7 +185,11 @@ open class NBTDictionaryConcrete : NBTDictionary, INBTBasedDataConcrete<Compound
             )
             Function.addCommand(cmd)
         }
-        return NBTDictionary(this)
+        val re = NBTDictionary(this)
+        if(replace){
+            Function.currFunction.field.putVar(identifier, re, true)
+        }
+        return re
     }
 
     /**

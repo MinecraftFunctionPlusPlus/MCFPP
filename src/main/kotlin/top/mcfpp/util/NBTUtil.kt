@@ -3,28 +3,26 @@ package top.mcfpp.util
 import net.querz.nbt.tag.*
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.*
+import top.mcfpp.lang.value.MCFPPValue
 
 object NBTUtil {
 
     fun toNBT(v : Var<*>): Tag<*>?{
-        if(!v.isConcrete) return null
+        if(v !is MCFPPValue<*>) return null
         when(v){
-            is ClassPointer -> TODO()
-            is Entity -> TODO()
-            is IntTemplatePointer -> TODO()
+            //is ClassPointer -> TODO()
+            //is Entity -> TODO()
+            //is IntTemplatePointer -> TODO()
             is JavaVar -> return AnyTag(v)
-            is JsonString -> TODO()
-            is MCAny -> TODO()
-            is MCBool -> return ByteTag(v.javaValue!!)
-            is MCFloat -> return FloatTag(v.javaValue!!)
+            //is JsonString -> TODO()
+            is MCAnyConcrete -> TODO()
+            is MCBoolConcrete -> return ByteTag(v.value)
+            is MCFloatConcrete -> return FloatTag(v.value)
             is MCFPPTypeVar -> TODO()
-            is MCInt -> return IntTag(v.javaValue!!)
-            is MCString -> return v.javaValue
-            is NBTBasedData<*> -> return v.javaValue
-            is NBTAny<*> -> return v.javaValue
-            is UnknownVar -> TODO()
-            is UnresolvedVar -> TODO()
-            is Void -> TODO()
+            is MCIntConcrete -> return IntTag(v.value)
+            is MCStringConcrete -> return v.value
+            is NBTBasedDataConcrete<*> -> return v.value
+            //is NBTAny<*> -> return v.value
             else -> TODO()
         }
     }

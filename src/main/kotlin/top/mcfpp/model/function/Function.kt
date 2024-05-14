@@ -9,6 +9,7 @@ import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.field.FunctionField
 import top.mcfpp.util.LogProcessor
@@ -582,7 +583,7 @@ open class Function : Member, FieldContainer {
             //参数传递和子函数的参数进栈
             val p = field.getVar(this.normalParams[i].identifier)!!
             p.assign(tg)
-            p.toDynamic()
+            if(p is MCFPPValue<*>) p.toDynamic(true)
         }
         /*
         for (i in readOnlyParams.indices){

@@ -148,7 +148,3 @@ abstract class MCNumber<T> : Var<T>, OnScoreboard {
         TODO("Not yet implemented")
     }
 }
-
-interface MCNumberConcrete<T> : MCFPPValue<T> {
-    fun toDynamic() : MCNumber<T>
-}

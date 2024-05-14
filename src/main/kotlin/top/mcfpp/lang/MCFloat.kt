@@ -8,6 +8,7 @@ import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
@@ -466,7 +467,7 @@ open class MCFloat : MCNumber<Float> {
     }
 }
 
-class MCFloatConcrete : MCFloat, MCNumberConcrete<Float>{
+class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
 
     override var value: Float
         set(value) {
@@ -498,12 +499,15 @@ class MCFloatConcrete : MCFloat, MCNumberConcrete<Float>{
         this.value = value
     }
 
-    override fun toDynamic(): MCFloat {
+    override fun toDynamic(replace: Boolean): Var<*> {
         val qwq = MCFloat(this)
-        (sign as MCIntConcrete).toDynamic()
-        (int0 as MCIntConcrete).toDynamic()
-        (int1 as MCIntConcrete).toDynamic()
-        (exp as MCIntConcrete).toDynamic()
+        (sign as MCIntConcrete).toDynamic(false)
+        (int0 as MCIntConcrete).toDynamic(false)
+        (int1 as MCIntConcrete).toDynamic(false)
+        (exp as MCIntConcrete).toDynamic(false)
+        if(replace){
+            Function.currFunction.field.putVar(identifier, qwq, true)
+        }
         return qwq
     }
 
@@ -600,9 +604,10 @@ class MCFloatConcrete : MCFloat, MCNumberConcrete<Float>{
         if (qwq is MCFloatConcrete) {
             this.value += qwq.value
         } else {
-            toDynamic()
+            val re = toDynamic(true)
             if(qwq != tempFloat) qwq.toTempEntity()
             Function.addCommand("execute as $tempFloatEntityUUID run function math:hpo/float/_add")
+            return re
         }
         return this
     }
@@ -620,9 +625,10 @@ class MCFloatConcrete : MCFloat, MCNumberConcrete<Float>{
         if (qwq is MCFloatConcrete) {
             this.value -= qwq.value
         } else {
-            toDynamic()
+            val re = toDynamic(true)
             if(qwq != tempFloat) qwq.toTempEntity()
             Function.addCommand("execute as $tempFloatEntityUUID run function math:hpo/float/_rmv")
+            return re
         }
         return this
     }
@@ -640,9 +646,10 @@ class MCFloatConcrete : MCFloat, MCNumberConcrete<Float>{
         if (qwq is MCFloatConcrete) {
             this.value *= qwq.value
         } else {
-            toDynamic()
+            val re = toDynamic(true)
             if(qwq != tempFloat) qwq.toTempEntity()
             Function.addCommand("execute as $tempFloatEntityUUID run function math:hpo/float/_mult")
+            return re
         }
         return this
     }
@@ -660,9 +667,10 @@ class MCFloatConcrete : MCFloat, MCNumberConcrete<Float>{
         if (qwq is MCFloatConcrete) {
             this.value /= qwq.value
         } else {
-            toDynamic()
+            val re = toDynamic(true)
             if(qwq != tempFloat) qwq.toTempEntity()
             Function.addCommand("execute as $tempFloatEntityUUID run function math:hpo/float/_div")
+            return re
         }
         return this
     }
@@ -691,7 +699,7 @@ class MCFloatConcrete : MCFloat, MCNumberConcrete<Float>{
         if (qwq is MCFloatConcrete) {
             re = MCBoolConcrete(value > qwq.value)
         } else {
-            toDynamic()
+            toDynamic(true)
             if(qwq != tempFloat) qwq.toTempEntity()
             re = MCBool()
             Function.addCommand(
@@ -717,7 +725,7 @@ class MCFloatConcrete : MCFloat, MCNumberConcrete<Float>{
         if (qwq is MCFloatConcrete) {
             re = MCBoolConcrete(value < qwq.value)
         } else {
-            toDynamic()
+            toDynamic(true)
             if(qwq != tempFloat) qwq.toTempEntity()
             re = MCBool()
             Function.addCommand(
@@ -743,7 +751,7 @@ class MCFloatConcrete : MCFloat, MCNumberConcrete<Float>{
         if (qwq is MCFloatConcrete) {
             re = MCBoolConcrete(value <= qwq.value)
         } else {
-            toDynamic()
+            toDynamic(true)
             if(qwq != tempFloat) qwq.toTempEntity()
             re = MCBool()
             Function.addCommand(
@@ -769,7 +777,7 @@ class MCFloatConcrete : MCFloat, MCNumberConcrete<Float>{
         if (qwq is MCFloatConcrete) {
             re = MCBoolConcrete(value >= qwq.value)
         } else {
-            toDynamic()
+            toDynamic(true)
             if(qwq != tempFloat) qwq.toTempEntity()
             re = MCBool()
             Function.addCommand(
@@ -795,7 +803,7 @@ class MCFloatConcrete : MCFloat, MCNumberConcrete<Float>{
         if (qwq is MCFloatConcrete) {
             re = MCBoolConcrete(value >= qwq.value)
         } else {
-            toDynamic()
+            toDynamic(true)
             if(qwq != tempFloat) qwq.toTempEntity()
             re = MCBool()
             Function.addCommand(
@@ -821,7 +829,7 @@ class MCFloatConcrete : MCFloat, MCNumberConcrete<Float>{
         if (qwq is MCFloatConcrete) {
             re = MCBoolConcrete(value >= qwq.value)
         } else {
-            toDynamic()
+            toDynamic(true)
             if(qwq != tempFloat) qwq.toTempEntity()
             re = MCBool()
             Function.addCommand(

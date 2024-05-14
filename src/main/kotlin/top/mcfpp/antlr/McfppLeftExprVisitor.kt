@@ -91,7 +91,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>?>(){
             //数字
             val num: mcfppParser.ValueContext = ctx.value()
             if (num.intValue() != null) {
-                return MCInt(Integer.parseInt(num.intValue().text))
+                return MCIntConcrete(Integer.parseInt(num.intValue().text))
             } else if (num.LineString() != null) {
                 val r: String = num.LineString().text
                 return MCString(r.substring(1, r.length - 1))

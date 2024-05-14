@@ -11,13 +11,12 @@ import top.mcfpp.model.FieldContainer
  */
 class InternalFunctionField: FunctionField {
 
-
     /**
      * 创建一个缓存，并指定它的父级
      * @param parent 父级缓存。若没有则设置为null
      * @param cacheContainer 此缓存所在的容器
      */
-    constructor(parent: FunctionField?, cacheContainer: FieldContainer?):super(parent,cacheContainer){
+    constructor(parent: FunctionField?, cacheContainer: FieldContainer?): super(parent,cacheContainer){
         parent?.let { fieldVarSet.addAll(it.fieldVarSet) }
     }
 
@@ -42,6 +41,12 @@ class InternalFunctionField: FunctionField {
     }
 
     override fun putVar(key: String, `var`: Var<*>, forced: Boolean): Boolean {
+        if(`var`.stackIndex != 0){
+            `var`.stackIndex --
+            val result = (parent as FunctionField).putVar(key, `var`, forced)
+            `var`.stackIndex ++
+            return result
+        }
         fieldVarSet.add(key)
         return super.putVar(key, `var`, forced)
     }

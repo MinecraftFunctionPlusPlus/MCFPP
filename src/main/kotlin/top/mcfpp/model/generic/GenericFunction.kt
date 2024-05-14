@@ -95,7 +95,6 @@ class GenericFunction : Function, Generic<Function> {
     override fun parseParams(){
         for (p in readOnlyParams){
             val r = Var.build("_param_" + p.identifier, MCFPPType.parseFromIdentifier(p.typeIdentifier, field), this)
-            r.isConcrete = true
             field.putVar(p.identifier, r)
         }
         for (p in normalParams){
@@ -137,10 +136,10 @@ class GenericFunction : Function, Generic<Function> {
             compiledFunction.field.putVar(normalParams[i].identifier, r, false)
         }
         for (i in readOnlyParams.indices) {
-            val r = field.getVar(readOnlyParams[i].identifier)!!
-            r.assign(readOnlyArgs[i])
+            var r = field.getVar(readOnlyParams[i].identifier)!!
+            r = r.assign(readOnlyArgs[i])
             if(r is MCFPPTypeVar){
-                compiledFunction.field.putType(readOnlyParams[i].identifier, r.javaValue!!)
+                compiledFunction.field.putType(readOnlyParams[i].identifier, r.value)
             }
             compiledFunction.field.putVar(readOnlyParams[i].identifier, r, false)
         }

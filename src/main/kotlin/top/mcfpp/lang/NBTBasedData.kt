@@ -600,11 +600,7 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
     }
 }
 
-interface INBTBasedDataConcrete<T : Tag<*>> : MCFPPValue<T> {
-    fun toDynamic() : NBTBasedData<T>
-}
-
-class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData<T>, INBTBasedDataConcrete<T> {
+class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData<T>, MCFPPValue<T> {
 
     override var value : T
 
@@ -651,7 +647,7 @@ class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData<T>, INBTBasedDataConcrete<T
         return NBTBasedDataConcrete(this.value)
     }
 
-    override fun toDynamic() : NBTBasedData<T>{
+    override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
         if (parent != null) {
             val cmd = when(parent){
@@ -675,6 +671,10 @@ class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData<T>, INBTBasedDataConcrete<T
             )
             Function.addCommand(cmd)
         }
-        return NBTBasedData(this)
+        val re = NBTBasedData(this)
+        if(replace){
+            Function.currFunction.field.putVar(identifier, re, true)
+        }
+        return re
     }
 }
