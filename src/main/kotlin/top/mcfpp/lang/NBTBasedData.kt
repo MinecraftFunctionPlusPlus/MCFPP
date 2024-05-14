@@ -9,6 +9,7 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
+import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
@@ -23,8 +24,6 @@ import kotlin.collections.ArrayList
 open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
 
     var path = ArrayList<Var<*>>()
-
-    override var javaValue : T? = null
 
     open var nbtType: NBTTypeWithTag = NBTTypeWithTag.ANY
 
@@ -53,38 +52,6 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
     }
 
     /**
-     * 创建一个固定的int
-     *
-     * @param identifier 标识符
-     * @param curr 域容器
-     * @param value 值
-     */
-    constructor(
-        curr: FieldContainer,
-        value: T,
-        identifier: String = UUID.randomUUID().toString()
-    ) : super(curr.prefix + identifier) {
-        isConcrete = true
-        this.javaValue = value
-        path.add(MCString(identifier))
-        //记录nbt字面量类型
-        nbtType = NBTTypeWithTag.getTagType(value)
-    }
-
-    /**
-     * 创建一个固定的int。它的标识符和mc名一致/
-     * @param identifier 标识符。如不指定，则为随机uuid
-     * @param value 值
-     */
-    constructor(value: T, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
-        isConcrete = true
-        this.javaValue = value
-        path.add(MCString(identifier))
-        //记录nbt字面量类型
-        nbtType = NBTTypeWithTag.getTagType(value)
-    }
-
-    /**
      * 复制一个int
      * @param b 被复制的int值
      */
@@ -92,27 +59,27 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
         this.path = b.path
     }
 
-    fun isDynamicPath(): Boolean{
-        return path.any { !it.isConcrete }
+    private fun isDynamicPath(): Boolean{
+        return path.any { it !is MCFPPValue<*> }
     }
 
     private fun getPathString(base: String = ""): String {
         var isBase = true
         var pathStr = base
         for ((index, p) in path.withIndex()){
-            if(p.isConcrete){
+            if(p is MCFPPValue<*>){
                 if(index == 0){
                     pathStr = when(p){
-                        is NBTBasedData<*> -> {
-                            "{${SNBTUtil.toSNBT(p.javaValue)}}"
+                        is NBTBasedDataConcrete<*> -> {
+                            "{${SNBTUtil.toSNBT(p.value)}}"
                         }
 
-                        is MCInt -> {
-                            "[${p.javaValue}]"
+                        is MCIntConcrete -> {
+                            "[${p.value}]"
                         }
 
-                        is MCString -> {
-                            "${p.javaValue}"
+                        is MCStringConcrete -> {
+                            "${p.value}"
                         }
 
                         else -> throw IllegalArgumentException("Invalid path type ${p.type}")
@@ -120,16 +87,16 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
                 }
                 else{
                     pathStr += when(p){
-                        is NBTBasedData<*> -> {
-                            "{${SNBTUtil.toSNBT(p.javaValue)}}"
+                        is NBTBasedDataConcrete<*> -> {
+                            "{${SNBTUtil.toSNBT(p.value)}}"
                         }
 
-                        is MCInt -> {
-                            "[${p.javaValue}]"
+                        is MCIntConcrete -> {
+                            "[${p.value}]"
                         }
 
-                        is MCString -> {
-                            ".${p.javaValue}"
+                        is MCStringConcrete -> {
+                            ".${p.value}"
                         }
 
                         else -> throw IllegalArgumentException("Invalid path type ${p.type}")
@@ -189,24 +156,22 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var<*>?) {
+    override fun assign(b: Var<*>) : NBTBasedData<T> {
         hasAssigned = true
         if(b is NBTBasedData<*> && b.nbtType == this.nbtType){
-            assignCommand(b as NBTBasedData<T>)
-            return
+            return assignCommand(b as NBTBasedData<T>)
         }
         throw VariableConverseException()
     }
 
     @InsertCommand
-    protected fun assignCommand(a: NBTBasedData<T>){
+    protected fun assignCommand(a: NBTBasedData<T>) : NBTBasedData<T>{
         nbtType = a.nbtType
         if (parent != null){
             //是成员
             if(a.parent != null){
                 //a也是成员
                 val b = a.getTempVar() as NBTBasedData
-                isConcrete = false
                 if(this.isDynamicPath() || b.isDynamicPath()){
                     //获取路径至macro
                     val source = this.getPathString()
@@ -237,7 +202,6 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
                     )
                 }
             }else{
-                isConcrete = false
                 if(this.isDynamicPath() || a.isDynamicPath()){
                     //获取路径至macro
                     val source = this.getPathString()
@@ -277,11 +241,9 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
             }
         }else{
             //是局部变量
-            if(a.isConcrete){
-                javaValue = a.javaValue
-                isConcrete = true
+            if(a is NBTBasedDataConcrete<*>){
+                return NBTBasedDataConcrete(this, a.value as T)
             }else{
-                isConcrete = false
                 if(a.parent != null){
                     if(this.isDynamicPath() || a.isDynamicPath()){
                         //获取路径至macro
@@ -352,6 +314,8 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
                 }
             }
         }
+        //去除值
+        return NBTBasedData(this)
     }
 
     /**
@@ -362,7 +326,7 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
         return when(type){
             MCFPPNBTType.NBT -> this
             is MCFPPListType -> this
-            MCFPPBaseType.Any -> MCAny(this)
+            MCFPPBaseType.Any -> MCAnyConcrete(this)
             else -> throw VariableConverseException()
         }
     }
@@ -377,9 +341,6 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
      * @return
      */
     override fun getTempVar(): Var<*> {
-        if(isConcrete){
-            return NBTBasedData(this.javaValue!!)
-        }
         val temp = NBTBasedData<T>()
         if(isDynamicPath()){
             if(parent != null){
@@ -426,34 +387,6 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
         return
     }
 
-    override fun toDynamic() {
-        val parent = parent
-        if(!isConcrete) return
-        isConcrete = false
-        if (parent != null) {
-            val cmd = when(parent){
-                is ClassPointer -> {
-                    Commands.selectRun(parent)
-                }
-                is MCFPPClassType -> {
-                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
-                }
-                else -> TODO()
-            }
-            if(cmd.size == 2){
-                Function.addCommand(cmd[0])
-            }
-            Function.addCommand(cmd.last().build("data modify entity @s data.${identifier} set value ${SNBTUtil.toSNBT(
-                javaValue
-            )}"))
-        } else {
-            val cmd = Command.build("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set value ${SNBTUtil.toSNBT(
-                javaValue
-            )}")
-            Function.addCommand(cmd)
-        }
-    }
-
     /**
      * 根据标识符获取一个成员。
      *
@@ -490,7 +423,7 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
         }
     }
 
-    fun getByNBTIndex(index: NBTBasedData<*>): NBTBasedData<*>{
+    protected fun getByNBTIndex(index: NBTBasedData<*>): NBTBasedData<*>{
         if(nbtType != NBTTypeWithTag.LIST && nbtType != NBTTypeWithTag.ANY){
             LogProcessor.error("Invalid nbt type")
         }
@@ -502,7 +435,7 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
         return re
     }
 
-    fun getByStringIndex(index: MCString): NBTBasedData<*> {
+    protected fun getByStringIndex(index: MCString): NBTBasedData<*> {
         if(nbtType != NBTTypeWithTag.COMPOUND && nbtType != NBTTypeWithTag.ANY){
             LogProcessor.error("Invalid nbt type")
         }
@@ -511,17 +444,13 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
         return re
     }
 
-    fun getByIntIndex(index: MCInt): NBTBasedData<*> {
+    protected fun getByIntIndex(index: MCInt): NBTBasedData<*> {
         if(nbtType != NBTTypeWithTag.LIST && nbtType != NBTTypeWithTag.ANY){
             LogProcessor.error("Invalid nbt type")
         }
         val re = NBTBasedData(this)
         re.path.add(index)
         return re
-    }
-
-    override fun getVarValue(): Any? {
-        return javaValue
     }
 
     //TODO 逻辑待优化。这里的处理不是很优雅
@@ -668,5 +597,84 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
         enum class NBTType {
             COMPOUND, LIST, VALUE, ANY, ARRAY
         }
+    }
+}
+
+interface INBTBasedDataConcrete<T : Tag<*>> : MCFPPValue<T> {
+    fun toDynamic() : NBTBasedData<T>
+}
+
+class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData<T>, INBTBasedDataConcrete<T> {
+
+    override var value : T
+
+    /**
+     * 创建一个固定的int
+     *
+     * @param identifier 标识符
+     * @param curr 域容器
+     * @param value 值
+     */
+    constructor(
+        curr: FieldContainer,
+        value: T,
+        identifier: String = UUID.randomUUID().toString()
+    ) : super(curr.prefix + identifier) {
+        this.value = value
+        path.add(MCString(identifier))
+        //记录nbt字面量类型
+        nbtType = NBTBasedData.Companion.NBTTypeWithTag.getTagType(value)
+    }
+
+    /**
+     * 创建一个固定的int。它的标识符和mc名一致/
+     * @param identifier 标识符。如不指定，则为随机uuid
+     * @param value 值
+     */
+    constructor(value: T, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
+        this.value = value
+        path.add(MCString(identifier))
+        //记录nbt字面量类型
+        nbtType = NBTBasedData.Companion.NBTTypeWithTag.getTagType(value)
+    }
+
+    /**
+     * 创建一个固定的int。它的标识符和mc名一致/
+     * @param identifier 标识符。如不指定，则为随机uuid
+     * @param value 值
+     */
+    constructor(data: NBTBasedData<T>, value: T) : super(data) {
+        this.value = value
+    }
+
+    override fun getTempVar(): Var<*> {
+        return NBTBasedDataConcrete(this.value)
+    }
+
+    override fun toDynamic() : NBTBasedData<T>{
+        val parent = parent
+        if (parent != null) {
+            val cmd = when(parent){
+                is ClassPointer -> {
+                    Commands.selectRun(parent)
+                }
+                is MCFPPClassType -> {
+                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
+                }
+                else -> TODO()
+            }
+            if(cmd.size == 2){
+                Function.addCommand(cmd[0])
+            }
+            Function.addCommand(cmd.last().build(
+                "data modify entity @s data.${identifier} set value ${SNBTUtil.toSNBT(value)}")
+            )
+        } else {
+            val cmd = Command.build(
+                "data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set value ${SNBTUtil.toSNBT(value)}"
+            )
+            Function.addCommand(cmd)
+        }
+        return NBTBasedData(this)
     }
 }

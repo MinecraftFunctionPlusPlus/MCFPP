@@ -25,154 +25,154 @@ import kotlin.collections.HashMap
  *
  * @see Entity
  */
-class Selector : NBTAny<ListTag<StringTag>> {
-
-    override var javaValue: ListTag<StringTag>? = null
-    override var type: MCFPPType = MCFPPBaseType.Selector
-
-    var text: String? = null
-
-    /**
-     * 目标选择器的类型
-     */
-    var selectorType: SelectorType = SelectorType.ALL_ENTITIES
-
-    /**
-     * 目标选择器的参数
-     */
-    var selectorArgs = HashMap<String, Any>()
-
-    /**
-     * 是否选择的单个实体
-     */
-    var singleEntity = false
-
-    /**
-     * 创建一个list类型的变量。它的mc名和变量所在的域容器有关。
-     *
-     * @param identifier 标识符。默认为
-     */
-    constructor(
-        curr: FieldContainer,
-        identifier: String = UUID.randomUUID().toString()
-    ) : this(curr.prefix + identifier) {
-        this.identifier = identifier
-    }
-
-    /**
-     * 创建一个list值。它的标识符和mc名相同。
-     * @param identifier identifier
-     */
-    constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier)
-
-    /**
-     * 创建一个固定的list
-     *
-     * @param identifier 标识符
-     * @param curr 域容器
-     * @param type 类型
-     */
-    constructor(
-        curr: FieldContainer,
-        type: SelectorType,
-        identifier: String = UUID.randomUUID().toString()
-    ) : super(curr.prefix + identifier) {
-        isConcrete = true
-        val value = ListTag(StringTag::class.java)
-        value.add(StringTag("@${toSelectorTypeString(type)}"))
-        this.javaValue = value
-    }
-
-    /**
-     * 创建一个固定的list。它的标识符和mc名一致/
-     * @param identifier 标识符。如不指定，则为随机uuid
-     *
-     */
-    constructor(type: SelectorType, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
-        isConcrete = true
-        val value = ListTag(StringTag::class.java)
-        value.add(StringTag("@${toSelectorTypeString(type)}"))
-        this.javaValue = value
-    }
-
-    /**
-     * 复制一个list
-     * @param b 被复制的list值
-     */
-    constructor(b: Selector) : super(b)
-
-
-    /**
-     * 将b中的值赋值给此变量
-     * @param b 变量的对象
-     */
-    override fun assign(b: Var<*>?) {
-        if(b is Selector){
-            assignCommand(b)
-        }else{
-            throw VariableConverseException()
-        }
-    }
-
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        TODO()
-    }
-
-    override fun getMemberFunction(
-        key: String,
-        readOnlyParams: List<MCFPPType>,
-        normalParams: List<MCFPPType>,
-        accessModifier: Member.AccessModifier
-    ): Pair<Function, Boolean> {
-        TODO("Not yet implemented")
-    }
-
-    override fun cast(type: MCFPPType): Var<*> {
-        return when(type){
-            MCFPPBaseType.Selector -> this
-            MCFPPNBTType.NBT -> NBTBasedData(javaValue!!)
-            else -> throw VariableConverseException()
-        }
-    }
-
-    override fun createTempVar(): Var<*> = Selector()
-    override fun createTempVar(value: Tag<*>): Var<*> {
-        val re = Selector(this.selectorType)
-        re.javaValue = this.javaValue
-        re.selectorArgs = this.selectorArgs
-        return re
-    }
-
-    companion object {
-
-        val data = CompoundData("selector","mcfpp")
-
-        fun getSelectorType(char: Char): SelectorType{
-            return when(char){
-                'a' -> SelectorType.ALL_PLAYERS
-                'e' -> SelectorType.ALL_ENTITIES
-                'p' -> SelectorType.NEAREST_PLAYER
-                'r' -> SelectorType.RANDOM_PLAYER
-                's' -> SelectorType.SELF
-                else -> {
-                    LogProcessor.error("Invalid selector type: @$char")
-                    SelectorType.ALL_ENTITIES
-                }
-            }
-        }
-
-        fun toSelectorTypeString(type: SelectorType): Char{
-            return when(type){
-                SelectorType.ALL_PLAYERS -> 'a'
-                SelectorType.ALL_ENTITIES -> 'e'
-                SelectorType.NEAREST_PLAYER -> 'p'
-                SelectorType.RANDOM_PLAYER -> 'r'
-                SelectorType.SELF -> 's'
-            }
-        }
-
-        enum class SelectorType {
-            ALL_PLAYERS, ALL_ENTITIES, NEAREST_PLAYER, RANDOM_PLAYER, SELF
-        }
-    }
+class Selector : NBTBasedData<ListTag<StringTag>>() {
+//
+//    override var javaValue: ListTag<StringTag>? = null
+//    override var type: MCFPPType = MCFPPBaseType.Selector
+//
+//    var text: String? = null
+//
+//    /**
+//     * 目标选择器的类型
+//     */
+//    var selectorType: SelectorType = SelectorType.ALL_ENTITIES
+//
+//    /**
+//     * 目标选择器的参数
+//     */
+//    var selectorArgs = HashMap<String, Any>()
+//
+//    /**
+//     * 是否选择的单个实体
+//     */
+//    var singleEntity = false
+//
+//    /**
+//     * 创建一个list类型的变量。它的mc名和变量所在的域容器有关。
+//     *
+//     * @param identifier 标识符。默认为
+//     */
+//    constructor(
+//        curr: FieldContainer,
+//        identifier: String = UUID.randomUUID().toString()
+//    ) : this(curr.prefix + identifier) {
+//        this.identifier = identifier
+//    }
+//
+//    /**
+//     * 创建一个list值。它的标识符和mc名相同。
+//     * @param identifier identifier
+//     */
+//    constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier)
+//
+//    /**
+//     * 创建一个固定的list
+//     *
+//     * @param identifier 标识符
+//     * @param curr 域容器
+//     * @param type 类型
+//     */
+//    constructor(
+//        curr: FieldContainer,
+//        type: SelectorType,
+//        identifier: String = UUID.randomUUID().toString()
+//    ) : super(curr.prefix + identifier) {
+//        isConcrete = true
+//        val value = ListTag(StringTag::class.java)
+//        value.add(StringTag("@${toSelectorTypeString(type)}"))
+//        this.javaValue = value
+//    }
+//
+//    /**
+//     * 创建一个固定的list。它的标识符和mc名一致/
+//     * @param identifier 标识符。如不指定，则为随机uuid
+//     *
+//     */
+//    constructor(type: SelectorType, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
+//        isConcrete = true
+//        val value = ListTag(StringTag::class.java)
+//        value.add(StringTag("@${toSelectorTypeString(type)}"))
+//        this.javaValue = value
+//    }
+//
+//    /**
+//     * 复制一个list
+//     * @param b 被复制的list值
+//     */
+//    constructor(b: Selector) : super(b)
+//
+//
+//    /**
+//     * 将b中的值赋值给此变量
+//     * @param b 变量的对象
+//     */
+//    override fun assign(b: Var<*>?) {
+//        if(b is Selector){
+//            assignCommand(b)
+//        }else{
+//            throw VariableConverseException()
+//        }
+//    }
+//
+//    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
+//        TODO()
+//    }
+//
+//    override fun getMemberFunction(
+//        key: String,
+//        readOnlyParams: List<MCFPPType>,
+//        normalParams: List<MCFPPType>,
+//        accessModifier: Member.AccessModifier
+//    ): Pair<Function, Boolean> {
+//        TODO("Not yet implemented")
+//    }
+//
+//    override fun cast(type: MCFPPType): Var<*> {
+//        return when(type){
+//            MCFPPBaseType.Selector -> this
+//            MCFPPNBTType.NBT -> NBTBasedData(javaValue!!)
+//            else -> throw VariableConverseException()
+//        }
+//    }
+//
+//    override fun createTempVar(): Var<*> = Selector()
+//    override fun createTempVar(value: Tag<*>): Var<*> {
+//        val re = Selector(this.selectorType)
+//        re.javaValue = this.javaValue
+//        re.selectorArgs = this.selectorArgs
+//        return re
+//    }
+//
+//    companion object {
+//
+//        val data = CompoundData("selector","mcfpp")
+//
+//        fun getSelectorType(char: Char): SelectorType{
+//            return when(char){
+//                'a' -> SelectorType.ALL_PLAYERS
+//                'e' -> SelectorType.ALL_ENTITIES
+//                'p' -> SelectorType.NEAREST_PLAYER
+//                'r' -> SelectorType.RANDOM_PLAYER
+//                's' -> SelectorType.SELF
+//                else -> {
+//                    LogProcessor.error("Invalid selector type: @$char")
+//                    SelectorType.ALL_ENTITIES
+//                }
+//            }
+//        }
+//
+//        fun toSelectorTypeString(type: SelectorType): Char{
+//            return when(type){
+//                SelectorType.ALL_PLAYERS -> 'a'
+//                SelectorType.ALL_ENTITIES -> 'e'
+//                SelectorType.NEAREST_PLAYER -> 'p'
+//                SelectorType.RANDOM_PLAYER -> 'r'
+//                SelectorType.SELF -> 's'
+//            }
+//        }
+//
+//        enum class SelectorType {
+//            ALL_PLAYERS, ALL_ENTITIES, NEAREST_PLAYER, RANDOM_PLAYER, SELF
+//        }
+//    }
 }

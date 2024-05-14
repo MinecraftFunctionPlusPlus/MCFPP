@@ -27,36 +27,10 @@ class NBTMap : NBTDictionary{
      */
     constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier)
 
-    /**
-     * 创建一个固定的list
-     *
-     * @param identifier 标识符
-     * @param curr 域容器
-     * @param value 值
-     */
-    constructor(
-        curr: FieldContainer,
-        value: CompoundTag,
-        identifier: String = UUID.randomUUID().toString()
-    ) : super(curr, value, identifier)
-
-    /**
-     * 创建一个固定的list。它的标识符和mc名一致/
-     * @param identifier 标识符。如不指定，则为随机uuid
-     * @param value 值
-     */
-    constructor(value: CompoundTag, identifier: String = UUID.randomUUID().toString()) : super(value, identifier)
-
-    /**
-     * 复制一个list
-     * @param b 被复制的list值
-     */
-    constructor(b: CompoundTag) : super(b)
-
     override fun cast(type: MCFPPType): Var<*> {
         return when(type){
             MCFPPNBTType.Map -> this
-            MCFPPBaseType.Any -> MCAny(this)
+            MCFPPBaseType.Any -> MCAnyConcrete(this)
             else -> throw VariableConverseException()
         }
     }
@@ -112,4 +86,34 @@ class NBTMap : NBTDictionary{
             )
         }
     }
+}
+
+class NBTMapConcrete : NBTDictionaryConcrete{
+
+    override var type: MCFPPType = MCFPPNBTType.Map
+    /**
+     * 创建一个固定的list
+     *
+     * @param identifier 标识符
+     * @param curr 域容器
+     * @param value 值
+     */
+    constructor(
+        curr: FieldContainer,
+        value: CompoundTag,
+        identifier: String = UUID.randomUUID().toString()
+    ) : super(curr, value, identifier)
+
+    /**
+     * 创建一个固定的list。它的标识符和mc名一致/
+     * @param identifier 标识符。如不指定，则为随机uuid
+     * @param value 值
+     */
+    constructor(value: CompoundTag, identifier: String = UUID.randomUUID().toString()) : super(value, identifier)
+
+    /**
+     * 复制一个list
+     * @param b 被复制的list值
+     */
+    constructor(b: CompoundTag) : super(b)
 }

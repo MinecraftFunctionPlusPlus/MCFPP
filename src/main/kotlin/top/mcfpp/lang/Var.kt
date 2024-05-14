@@ -276,7 +276,6 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
         if(other !is Var<*>) return false
         if(this.parent != other.parent) return false
         if(this.name != other.name) return false
-        if(this.isConcrete != other.isConcrete) return false
         return true
     }
 
@@ -304,7 +303,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
             when (type) {
                 MCFPPBaseType.Int -> `var` = MCInt(container,identifier)
                 MCFPPBaseType.Bool -> `var` = MCBool(container, identifier)
-                MCFPPBaseType.Selector -> `var` = Selector(identifier)
+                MCFPPBaseType.Selector -> TODO()
                 MCFPPBaseType.BaseEntity -> TODO()
                 MCFPPBaseType.String -> `var` = MCString(container, identifier)
                 MCFPPBaseType.Float -> TODO()
@@ -314,7 +313,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
                 MCFPPNBTType.NBT -> `var` = NBTBasedData<Tag<*>>(container, identifier)
                 MCFPPBaseType.JavaVar -> `var` = JavaVar(null,identifier)
                 MCFPPBaseType.Any -> `var` = MCAny(container, identifier)
-                MCFPPBaseType.Type -> `var` = MCFPPTypeVar(identifier)
+                MCFPPBaseType.Type -> `var` = MCFPPTypeVar(identifier = identifier)
                 is MCFPPClassType ->{
                     //TODO: 这里不一定拿得到type.cls!!!可能得从GlobalField拿！
                     //什么意思捏？ - Alumopper 2024.4.14
@@ -349,7 +348,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
                         MCBool("@s").setObj(SbObject(compoundData.prefix + "_bool_" + identifier))
                     `var`.identifier = identifier
                 }
-                MCFPPBaseType.Selector -> `var` = Selector(identifier)
+                MCFPPBaseType.Selector -> TODO()
                 MCFPPBaseType.BaseEntity -> TODO()
                 MCFPPBaseType.String -> TODO()
                 MCFPPNBTType.NBT -> TODO()

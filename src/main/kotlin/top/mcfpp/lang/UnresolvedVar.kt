@@ -20,8 +20,6 @@ class UnresolvedVar : Var<Any> {
 
     val typeScope : IFieldWithType
 
-    override var javaValue: Any? = null
-
     /**
      * 变量的类型。与普通的变量不同，这里作为字符串储存，从而在解析的时候能够通过[top.mcfpp.model.field.IFieldWithClass.getClass]方法获取到作为类型的类。
      */
@@ -53,7 +51,7 @@ class UnresolvedVar : Var<Any> {
      *
      * @throws VariableNotResolvedException 调用此方法就会抛出此异常
      */
-    override fun assign(b: Var<*>?) {
+    override fun assign(b: Var<*>): UnresolvedVar {
         throw VariableNotResolvedException()
     }
 
@@ -94,10 +92,6 @@ class UnresolvedVar : Var<Any> {
         throw VariableNotResolvedException()
     }
 
-    override fun toDynamic() {
-        throw VariableNotResolvedException()
-    }
-
     /**
      * 根据标识符获取一个成员。
      *
@@ -125,10 +119,5 @@ class UnresolvedVar : Var<Any> {
     ): Pair<Function, Boolean> {
         LogProcessor.error("UnresolvedVar.getMemberFunction() is called")
         throw VariableNotResolvedException()
-    }
-
-
-    override fun getVarValue(): Any {
-        return "Unknown"
     }
 }
