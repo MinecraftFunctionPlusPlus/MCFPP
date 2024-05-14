@@ -2,7 +2,6 @@ package top.mcfpp.lib
 
 import top.mcfpp.Project
 import top.mcfpp.lang.*
-import java.lang.reflect.InvocationTargetException
 import java.lang.Class
 
 /**

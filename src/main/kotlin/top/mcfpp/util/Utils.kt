@@ -1,7 +1,6 @@
 package top.mcfpp.util
 
 import net.querz.nbt.tag.IntArrayTag
-import top.mcfpp.Project
 import java.util.UUID
 import kotlin.system.exitProcess
 

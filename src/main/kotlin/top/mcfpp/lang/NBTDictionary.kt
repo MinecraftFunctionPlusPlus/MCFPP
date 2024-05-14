@@ -1,9 +1,7 @@
 package top.mcfpp.lang
 
 import net.querz.nbt.tag.CompoundTag
-import net.querz.nbt.tag.ListTag
 import net.querz.nbt.tag.StringTag
-import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
 import top.mcfpp.lib.*
