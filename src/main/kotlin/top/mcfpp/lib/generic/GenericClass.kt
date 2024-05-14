@@ -2,23 +2,11 @@ package top.mcfpp.lib.generic
 
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.Project
-import top.mcfpp.antlr.McfppFieldVisitor
 import top.mcfpp.antlr.McfppGenericClassVisitor
-import top.mcfpp.io.McfppFile
-import top.mcfpp.lang.MCAny
 import top.mcfpp.lang.MCFPPTypeVar
 import top.mcfpp.lang.Var
-import top.mcfpp.lang.type.MCFPPGenericClassType
-import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.Class
-import top.mcfpp.lib.CompoundData
 import top.mcfpp.lib.field.GlobalField
-import top.mcfpp.lib.field.SimpleFieldWithVar
-import top.mcfpp.lib.function.Constructor
-import top.mcfpp.lib.function.Function
-import top.mcfpp.lib.function.FunctionParam
-import top.mcfpp.util.LogProcessor
-import top.mcfpp.util.StringHelper
 
 class GenericClass : Class {
 

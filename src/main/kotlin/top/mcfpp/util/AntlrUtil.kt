@@ -1,6 +1,5 @@
 package top.mcfpp.util
 
-import org.antlr.v4.runtime.ParserRuleContext
 import org.antlr.v4.runtime.tree.ParseTree
 
 object AntlrUtil {

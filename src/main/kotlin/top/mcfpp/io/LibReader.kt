@@ -2,7 +2,6 @@ package top.mcfpp.io
 
 import com.alibaba.fastjson2.JSONArray
 import com.alibaba.fastjson2.JSONObject
-import top.mcfpp.Project
 import top.mcfpp.exception.IllegalFormatException
 import top.mcfpp.lang.UnresolvedVar
 import top.mcfpp.lang.type.MCFPPBaseType

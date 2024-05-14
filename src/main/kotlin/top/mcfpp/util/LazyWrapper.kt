@@ -1,8 +1,5 @@
 package top.mcfpp.util
 
-import top.mcfpp.lang.Var
-
-
 /**
  * 懒加载包装器
  * @param T 被包装的对象的类型

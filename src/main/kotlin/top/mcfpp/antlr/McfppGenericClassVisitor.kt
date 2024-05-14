@@ -1,10 +1,8 @@
 package top.mcfpp.antlr
 
 import top.mcfpp.Project
-import top.mcfpp.exception.UndefinedException
 import top.mcfpp.io.McfppFile
 import top.mcfpp.lib.Class
-import top.mcfpp.lib.field.GlobalField
 import top.mcfpp.lib.function.Constructor
 import top.mcfpp.lib.function.Function
 import top.mcfpp.util.LogProcessor

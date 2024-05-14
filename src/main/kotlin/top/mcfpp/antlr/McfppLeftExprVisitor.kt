@@ -3,7 +3,6 @@ package top.mcfpp.antlr
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.lang.*
-import top.mcfpp.lang.type.MCFPPGenericClassType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.function.Function
 import top.mcfpp.lib.field.GlobalField
