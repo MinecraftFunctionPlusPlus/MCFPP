@@ -7,15 +7,13 @@ import top.mcfpp.model.function.UnknownFunction
 
 class UnknownVar : Var<Any> {
 
-    override var javaValue: Any? = null
-
     constructor(identifier: String):super(identifier)
 
     /**
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var<*>?) {}
+    override fun assign(b: Var<*>) : UnknownVar {return this}
 
     /**
      * 将这个变量强制转换为一个类型
@@ -35,10 +33,6 @@ class UnknownVar : Var<Any> {
     override fun storeToStack(){}
 
     override fun getFromStack() {}
-
-    override fun toDynamic() {}
-
-    override fun getVarValue(): Any = "Unknown"
 
     /**
      * 根据标识符获取一个成员。

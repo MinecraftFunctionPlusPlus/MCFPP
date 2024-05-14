@@ -2,33 +2,30 @@ package top.mcfpp.lang
 
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
+import java.util.UUID
 
-class MCFPPTypeVar : Var<MCFPPType> {
+open class MCFPPTypeVar : Var<MCFPPType>, MCFPPValue<MCFPPType> {
 
-
-    override var javaValue: MCFPPType? = null
+    override var value: MCFPPType
 
     override var type: MCFPPType = MCFPPBaseType.Type
 
-    constructor(identifier: String): super(identifier)
-
-    constructor(identifier: String, type: MCFPPType) : super(identifier) {
-        this.javaValue = type
+    constructor(type: MCFPPType = MCFPPBaseType.Any, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
+        this.value = type
     }
 
-    constructor(type: MCFPPType) : super(){
-        this.javaValue = type
-    }
-
-    override fun assign(b: Var<*>?) {
+    override fun assign(b: Var<*>) : MCFPPTypeVar {
         if(b is MCFPPTypeVar){
-            this.javaValue = b.javaValue
+            this.value = b.value
+            hasAssigned = true
         }else{
-            throw Exception("Cannot assign a ${b?.type} to a MCFPPTypeVar")
+            throw Exception("Cannot assign a ${b.type} to a MCFPPTypeVar")
         }
+        return this
     }
 
     override fun cast(type: MCFPPType): Var<*> {
@@ -44,16 +41,12 @@ class MCFPPTypeVar : Var<MCFPPType> {
     }
 
     override fun getTempVar(): Var<*> {
-        return MCFPPTypeVar(javaValue!!)
+        return MCFPPTypeVar(value)
     }
 
     override fun storeToStack() {}
 
     override fun getFromStack() {}
-
-    override fun toDynamic() {}
-
-    override fun getVarValue(): Any? = javaValue
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         TODO("Not yet implemented")

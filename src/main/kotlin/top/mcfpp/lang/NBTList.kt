@@ -1,6 +1,10 @@
 package top.mcfpp.lang
 
+import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.*
+import top.mcfpp.Project
+import top.mcfpp.command.Command
+import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
 import top.mcfpp.model.*
@@ -12,11 +16,9 @@ import java.util.*
 /**
  * 表示一个列表类型。基于NBTBasedData实现。
  */
-class NBTList<E : Var<*>> : NBTBasedData<ListTag<*>> {
+open class NBTList<E : Var<*>> : NBTBasedData<ListTag<*>> {
 
-    override var javaValue: ListTag<*>? = null
-
-    override var type: MCFPPType
+    final override var type: MCFPPType
 
     val genericType: MCFPPType
 
@@ -47,39 +49,11 @@ class NBTList<E : Var<*>> : NBTBasedData<ListTag<*>> {
     }
 
     /**
-     * 创建一个固定的list
-     *
-     * @param identifier 标识符
-     * @param curr 域容器
-     * @param value 值
-     */
-    constructor(
-        curr: FieldContainer,
-        value: ListTag<*>,
-        identifier: String = UUID.randomUUID().toString(),
-        genericType : MCFPPType
-    ) : super(curr, value, identifier){
-        type = MCFPPListType(genericType)
-        this.genericType = genericType
-    }
-
-    /**
-     * 创建一个固定的list。它的标识符和mc名一致/
-     * @param identifier 标识符。如不指定，则为随机uuid
-     * @param value 值
-     */
-    constructor(value: ListTag<*>, identifier: String = UUID.randomUUID().toString(),
-                genericType : MCFPPType) : super(value, identifier){
-        type = MCFPPListType(genericType)
-        this.genericType = genericType
-    }
-
-    /**
      * 复制一个list
      * @param b 被复制的list值
      */
-    constructor(b: ListTag<*>) : super(b){
-        type = b.getListType()
+    constructor(b: NBTList<E>) : super(b){
+        type = b.type
         this.genericType = (type as MCFPPListType).generic
     }
 
@@ -89,20 +63,11 @@ class NBTList<E : Var<*>> : NBTBasedData<ListTag<*>> {
      * @param type 要转换到的目标类型
      */
     override fun cast(type: MCFPPType): Var<*> {
-        if(isConcrete){
-            return when(type){
-                this.type -> this
-                MCFPPNBTType.NBT -> this
-                MCFPPBaseType.Any -> this
-                else -> throw VariableConverseException()
-            }
-        }else{
-            return when(type){
-                this.type -> this
-                MCFPPNBTType.NBT -> this
-                MCFPPBaseType.Any -> MCAny(this)
-                else -> throw VariableConverseException()
-            }
+        return when(type){
+            this.type -> this
+            MCFPPNBTType.NBT -> this
+            MCFPPBaseType.Any -> MCAnyConcrete(this)
+            else -> throw VariableConverseException()
         }
     }
 
@@ -154,15 +119,7 @@ class NBTList<E : Var<*>> : NBTBasedData<ListTag<*>> {
 
     override fun getByIndex(index: Var<*>): NBTBasedData<*> {
         return if(index is MCInt){
-            if(index.isConcrete && isConcrete){
-                if(index.javaValue!! >= (javaValue as ListTag<*>).size()){
-                    throw IndexOutOfBoundsException("Index out of bounds")
-                }else{
-                    NBTBasedData((javaValue as ListTag<*>)[index.javaValue!!]!!)
-                }
-            }else {
-                (cast(MCFPPNBTType.NBT) as NBTBasedData).getByIntIndex(index)
-            }
+            super.getByIntIndex(index)
         }else{
             throw IllegalArgumentException("Index must be a int")
         }
@@ -178,5 +135,90 @@ class NBTList<E : Var<*>> : NBTBasedData<ListTag<*>> {
                 .appendNormalParam(MCFPPGenericType("E", emptyList()), "e"),false)
         }
 
+    }
+}
+
+class NBTListConcrete<E : Var<*>>: NBTList<E>, INBTBasedDataConcrete<ListTag<*>> {
+
+    override var value: ListTag<*>
+
+    /**
+     * 创建一个固定的list
+     *
+     * @param identifier 标识符
+     * @param curr 域容器
+     * @param value 值
+     */
+    constructor(
+        curr: FieldContainer,
+        value: ListTag<*>,
+        identifier: String = UUID.randomUUID().toString(),
+        genericType : MCFPPType
+    ) : this(value, curr.prefix + identifier, genericType)
+
+    constructor(value: ListTag<*>, identifier: String, genericType: MCFPPType) : super(identifier, genericType){
+        type = MCFPPListType(genericType)
+        this.value = value
+    }
+
+    constructor(list : NBTList<E>, value: ListTag<*>):super(list){
+        this.value = value
+    }
+
+    override fun toDynamic(): NBTBasedData<ListTag<*>>{
+        val parent = parent
+        if (parent != null) {
+            val cmd = when(parent){
+                is ClassPointer -> {
+                    Commands.selectRun(parent)
+                }
+                is MCFPPClassType -> {
+                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
+                }
+                else -> TODO()
+            }
+            if(cmd.size == 2){
+                Function.addCommand(cmd[0])
+            }
+            Function.addCommand(cmd.last().build(
+                "data modify entity @s data.${identifier} set value ${SNBTUtil.toSNBT(value)}")
+            )
+        } else {
+            val cmd = Command.build(
+                "data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set value ${SNBTUtil.toSNBT(value)}"
+            )
+            Function.addCommand(cmd)
+        }
+        return NBTList(this)
+    }
+
+    /**
+     * 将这个变量强制转换为一个类型
+     * @param type 要转换到的目标类型
+     */
+    override fun cast(type: MCFPPType): Var<*> {
+        return when(type){
+            this.type -> this
+            MCFPPNBTType.NBT -> this
+            MCFPPBaseType.Any -> this
+            else -> throw VariableConverseException()
+        }
+    }
+
+    override fun getByIndex(index: Var<*>): NBTBasedData<*> {
+        return if(index is MCInt){
+            if(index is MCIntConcrete){
+                if(index.value >= value.size()){
+                    throw IndexOutOfBoundsException("Index out of bounds")
+                }else{
+                    NBTBasedDataConcrete(value[index.value]!!)
+                }
+            }else {
+                //index未知
+                super.getByIntIndex(index)
+            }
+        }else{
+            throw IllegalArgumentException("Index must be a int")
+        }
     }
 }

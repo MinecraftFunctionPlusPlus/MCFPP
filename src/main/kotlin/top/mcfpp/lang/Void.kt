@@ -9,15 +9,15 @@ import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.util.LogProcessor
 
 class Void: Var<Nothing>("void") {
-    override var javaValue: Nothing? = null
     override var type: MCFPPType = MCFPPBaseType.Void
 
     /**
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var<*>?) {
+    override fun assign(b: Var<*>) : Void {
         LogProcessor.error("Cannot assign value to void type variable")
+        return this
     }
 
     /**
@@ -50,8 +50,6 @@ class Void: Var<Nothing>("void") {
         LogProcessor.error("Cannot get void type variable from stack")
     }
 
-    override fun toDynamic() {}
-
     /**
      * 根据标识符获取一个成员。
      *
@@ -79,10 +77,6 @@ class Void: Var<Nothing>("void") {
     ): Pair<Function, Boolean> {
         LogProcessor.error("Cannot get member function from void type variable")
         return UnknownFunction(key) to true
-    }
-
-    override fun getVarValue(): Any {
-        return "Unknown"
     }
 
     companion object {

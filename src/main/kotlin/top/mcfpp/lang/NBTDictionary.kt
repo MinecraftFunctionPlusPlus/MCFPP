@@ -1,7 +1,11 @@
 package top.mcfpp.lang
 
+import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.CompoundTag
 import net.querz.nbt.tag.StringTag
+import top.mcfpp.Project
+import top.mcfpp.command.Command
+import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
 import top.mcfpp.model.*
@@ -13,7 +17,6 @@ open class NBTDictionary : NBTBasedData<CompoundTag> {
 
     override var type: MCFPPType = MCFPPNBTType.Dict
 
-    override var javaValue: CompoundTag? = null
     /**
      * 创建一个list类型的变量。它的mc名和变量所在的域容器有关。
      *
@@ -31,40 +34,20 @@ open class NBTDictionary : NBTBasedData<CompoundTag> {
     constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier)
 
     /**
-     * 创建一个固定的list
-     *
-     * @param identifier 标识符
-     * @param curr 域容器
-     * @param value 值
-     */
-    constructor(
-        curr: FieldContainer,
-        value: CompoundTag,
-        identifier: String = UUID.randomUUID().toString()
-    ) : super(curr, value, identifier)
-
-    /**
-     * 创建一个固定的list。它的标识符和mc名一致/
-     * @param identifier 标识符。如不指定，则为随机uuid
-     * @param value 值
-     */
-    constructor(value: CompoundTag, identifier: String = UUID.randomUUID().toString()) : super(value, identifier)
-
-    /**
      * 复制一个list
      * @param b 被复制的list值
      */
-    constructor(b: CompoundTag) : super(b)
+    constructor(b: NBTDictionary) : super(b)
 
     /**
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var<*>?) {
+    override fun assign(b: Var<*>): NBTDictionary {
         hasAssigned = true
         when (b) {
             is NBTDictionary -> {
-                assignCommand(b)
+                return assignCommand(b) as NBTDictionary
             }
             else -> {
                 throw VariableConverseException()
@@ -77,20 +60,11 @@ open class NBTDictionary : NBTBasedData<CompoundTag> {
      * @param type 要转换到的目标类型
      */
     override fun cast(type: MCFPPType): Var<*> {
-        return if(isConcrete){
-            when(type){
-                MCFPPNBTType.Dict -> this
-                MCFPPNBTType.NBT -> NBTBasedData(javaValue!!)
-                MCFPPBaseType.Any -> this
-                else -> throw VariableConverseException()
-            }
-        }else{
-            when(type){
-                MCFPPNBTType.Dict -> this
-                MCFPPNBTType.NBT -> this
-                MCFPPBaseType.Any -> MCAny(this)
-                else -> throw VariableConverseException()
-            }
+        return when(type){
+            MCFPPNBTType.Dict -> this
+            MCFPPNBTType.NBT -> this
+            MCFPPBaseType.Any -> MCAnyConcrete(this)
+            else -> throw VariableConverseException()
         }
     }
 
@@ -127,19 +101,9 @@ open class NBTDictionary : NBTBasedData<CompoundTag> {
         return data.field.getFunction(key,readOnlyParams , normalParams) to true
     }
 
-
-
     override fun getByIndex(index: Var<*>): NBTBasedData<*> {
         return if(index is MCString){
-            if(index.isConcrete && isConcrete){
-                if((javaValue as CompoundTag).containsKey((index.javaValue as StringTag).valueToString())){
-                    throw IndexOutOfBoundsException("Index out of bounds")
-                }else{
-                    NBTBasedData((javaValue as CompoundTag)[(index.javaValue as StringTag).valueToString()])
-                }
-            }else {
-                (cast(MCFPPNBTType.NBT) as NBTBasedData).getByStringIndex(index)
-            }
+            super.getByStringIndex(index)
         }else{
             throw IllegalArgumentException("Index must be a string")
         }
@@ -166,4 +130,92 @@ open class NBTDictionary : NBTBasedData<CompoundTag> {
             )
         }
     }
+}
+
+open class NBTDictionaryConcrete : NBTDictionary, INBTBasedDataConcrete<CompoundTag>{
+
+    override var value: CompoundTag
+
+    /**
+     * 创建一个固定的list
+     *
+     * @param identifier 标识符
+     * @param curr 域容器
+     * @param value 值
+     */
+    constructor(
+        curr: FieldContainer,
+        value: CompoundTag,
+        identifier: String = UUID.randomUUID().toString()
+    ) : super(curr, identifier){
+        this.value = value
+    }
+
+    /**
+     * 创建一个固定的list。它的标识符和mc名一致/
+     * @param identifier 标识符。如不指定，则为随机uuid
+     * @param value 值
+     */
+    constructor(value: CompoundTag, identifier: String = UUID.randomUUID().toString()) : super(identifier){
+        this.value = value
+    }
+
+    override fun toDynamic(): NBTDictionary {
+        val parent = parent
+        if (parent != null) {
+            val cmd = when(parent){
+                is ClassPointer -> {
+                    Commands.selectRun(parent)
+                }
+                is MCFPPClassType -> {
+                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
+                }
+                else -> TODO()
+            }
+            if(cmd.size == 2){
+                Function.addCommand(cmd[0])
+            }
+            Function.addCommand(cmd.last().build(
+                "data modify entity @s data.${identifier} set value ${SNBTUtil.toSNBT(value)}")
+            )
+        } else {
+            val cmd = Command.build(
+                "data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set value ${SNBTUtil.toSNBT(value)}"
+            )
+            Function.addCommand(cmd)
+        }
+        return NBTDictionary(this)
+    }
+
+    /**
+     * 将这个变量强制转换为一个类型
+     * @param type 要转换到的目标类型
+     */
+    override fun cast(type: MCFPPType): Var<*> {
+        return when(type){
+            MCFPPNBTType.Dict -> this
+            MCFPPNBTType.NBT -> NBTBasedDataConcrete(value)
+            MCFPPBaseType.Any -> this
+            else -> throw VariableConverseException()
+        }
+    }
+
+
+    override fun getByIndex(index: Var<*>): NBTBasedData<*> {
+        return if(index is MCString){
+            if(index is MCStringConcrete){
+                if(value.containsKey(index.value.valueToString())){
+                    throw IndexOutOfBoundsException("Index out of bounds")
+                }else{
+                    NBTBasedDataConcrete(value[index.value.valueToString()])
+                }
+            }else {
+                super.getByStringIndex(index)
+            }
+        }else{
+            throw IllegalArgumentException("Index must be a string")
+        }
+    }
+
+
 }

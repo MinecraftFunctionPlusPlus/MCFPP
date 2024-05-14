@@ -1,9 +1,15 @@
 package top.mcfpp.lang
 
+import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.StringTag
 import net.querz.nbt.tag.Tag
+import top.mcfpp.Project
+import top.mcfpp.command.Command
+import top.mcfpp.command.Commands
+import top.mcfpp.exception.OperationNotImplementException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.CompoundData
@@ -26,9 +32,7 @@ import java.util.*
  *态的字符串和原始JSON文本功能。
  *
  */
-class MCString : NBTAny<StringTag> {
-
-    override var javaValue: StringTag? = null
+open class MCString : NBTBasedData<StringTag> {
 
     override var type: MCFPPType = MCFPPBaseType.String
 
@@ -50,32 +54,6 @@ class MCString : NBTAny<StringTag> {
      * @param identifier identifier
      */
     constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier)
-
-    /**
-     * 创建一个固定的list
-     *
-     * @param identifier 标识符
-     * @param curr 域容器
-     * @param value 值
-     */
-    constructor(
-        curr: FieldContainer,
-        value: StringTag,
-        identifier: String = UUID.randomUUID().toString()
-    ) : super(curr.prefix + identifier) {
-        isConcrete = true
-        this.javaValue = value
-    }
-
-    /**
-     * 创建一个固定的list。它的标识符和mc名一致/
-     * @param identifier 标识符。如不指定，则为随机uuid
-     * @param value 值
-     */
-    constructor(value: StringTag, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
-        isConcrete = true
-        this.javaValue = value
-    }
 
     /**
      * 复制一个list
@@ -110,12 +88,16 @@ class MCString : NBTAny<StringTag> {
         TODO("Not yet implemented")
     }
 
+    override fun getByIndex(index: Var<*>): NBTBasedData<*> {
+        throw OperationNotImplementException()
+    }
+
     @Override
     @Throws(VariableConverseException::class)
-    override fun assign(b: Var<*>?) {
+    override fun assign(b: Var<*>): MCString {
         hasAssigned = true
         if(b is MCString){
-            assignCommand(b)
+            return assignCommand(b) as MCString
         }else{
             throw VariableConverseException()
         }
@@ -125,18 +107,86 @@ class MCString : NBTAny<StringTag> {
     override fun cast(type: MCFPPType): Var<*> {
         return when(type){
             MCFPPBaseType.String -> this
-            MCFPPNBTType.NBT -> NBTBasedData(javaValue!!)
-            MCFPPBaseType.Any -> MCAny(this)
+            MCFPPNBTType.NBT -> this
+            MCFPPBaseType.Any -> MCAnyConcrete(this)
             else -> throw VariableConverseException()
         }
     }
 
+    /*
     override fun createTempVar(): Var<*> = MCString()
 
     override fun createTempVar(value: Tag<*>): Var<*> = MCString(value as StringTag)
 
+    */
     companion object {
         val data = CompoundData("string","mcfpp")
     }
 
+}
+
+class MCStringConcrete: MCString, INBTBasedDataConcrete<StringTag>{
+
+    override var value: StringTag
+
+    /**
+     * 创建一个固定的list
+     *
+     * @param identifier 标识符
+     * @param curr 域容器
+     * @param value 值
+     */
+    constructor(
+        curr: FieldContainer,
+        value: StringTag,
+        identifier: String = UUID.randomUUID().toString()
+    ) : super(curr.prefix + identifier) {
+        this.value = value
+    }
+
+    /**
+     * 创建一个固定的list。它的标识符和mc名一致/
+     * @param identifier 标识符。如不指定，则为随机uuid
+     * @param value 值
+     */
+    constructor(value: StringTag, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
+        this.value = value
+    }
+
+    override fun toDynamic(): MCString {
+        val parent = parent
+        if (parent != null) {
+            val cmd = when(parent){
+                is ClassPointer -> {
+                    Commands.selectRun(parent)
+                }
+                is MCFPPClassType -> {
+                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
+                }
+                else -> TODO()
+            }
+            if(cmd.size == 2){
+                Function.addCommand(cmd[0])
+            }
+            Function.addCommand(cmd.last().build(
+                "data modify entity @s data.${identifier} set value ${SNBTUtil.toSNBT(value)}")
+            )
+        } else {
+            val cmd = Command.build(
+                "data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set value ${SNBTUtil.toSNBT(value)}"
+            )
+            Function.addCommand(cmd)
+        }
+        return MCString(this)
+    }
+
+    @Override
+    override fun cast(type: MCFPPType): Var<*> {
+        return when(type){
+            MCFPPBaseType.String -> this
+            MCFPPNBTType.NBT -> NBTBasedDataConcrete(value)
+            MCFPPBaseType.Any -> MCAnyConcrete(this)
+            else -> throw VariableConverseException()
+        }
+    }
 }

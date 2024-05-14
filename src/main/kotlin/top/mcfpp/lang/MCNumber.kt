@@ -48,42 +48,42 @@ abstract class MCNumber<T> : Var<T>, OnScoreboard {
      * @param a 加数
      * @return 计算的结果
      */
-    abstract override fun plus(a: Var<*>): Var<*>?
+    abstract override fun plus(a: Var<*>): Var<*>
 
     /**
      * 减法
      * @param a 减数
      * @return 计算的结果
      */
-    abstract override fun minus(a: Var<*>): Var<*>?
+    abstract override fun minus(a: Var<*>): Var<*>
 
     /**
      * 乘法
      * @param a 乘数
      * @return 计算的结果
      */
-    abstract override fun multiple(a: Var<*>): Var<*>?
+    abstract override fun multiple(a: Var<*>): Var<*>
 
     /**
      * 除法
      * @param a 除数
      * @return 计算的结果
      */
-    abstract override fun divide(a: Var<*>): Var<*>?
+    abstract override fun divide(a: Var<*>): Var<*>
 
     /**
      * 取余
      * @param a 除数
      * @return 计算的结果
      */
-    abstract override fun modular(a: Var<*>): Var<*>?
+    abstract override fun modular(a: Var<*>): Var<*>
 
     /**
      * 这个数是否大于a
      * @param a 右侧值
      * @return 计算结果
      */
-    abstract override fun isBigger(a: Var<*>): MCBool?
+    abstract override fun isBigger(a: Var<*>): MCBool
 
 
     /**
@@ -91,35 +91,35 @@ abstract class MCNumber<T> : Var<T>, OnScoreboard {
      * @param a 右侧值
      * @return 计算结果
      */
-    abstract override fun isSmaller(a: Var<*>): MCBool?
+    abstract override fun isSmaller(a: Var<*>): MCBool
 
     /**
      * 这个数是否小于等于a
      * @param a 右侧值
      * @return 计算结果
      */
-    abstract override fun isSmallerOrEqual(a: Var<*>): MCBool?
+    abstract override fun isSmallerOrEqual(a: Var<*>): MCBool
 
     /**
      * 这个数是否大于等于a
      * @param a 右侧值
      * @return 计算结果
      */
-    abstract override fun isGreaterOrEqual(a: Var<*>): MCBool?
+    abstract override fun isGreaterOrEqual(a: Var<*>): MCBool
 
     /**
      * 这个数是否等于a
      * @param a 右侧值
      * @return 计算结果
      */
-    abstract override fun isEqual(a: Var<*>): MCBool?
+    abstract override fun isEqual(a: Var<*>): MCBool
 
     /**
      * 这个数是否不等于a
      * @param a 右侧值
      * @return 计算结果
      */
-    abstract override fun isNotEqual(a: Var<*>): MCBool?
+    abstract override fun isNotEqual(a: Var<*>): MCBool
 
     /**
      * 根据标识符获取一个成员。
