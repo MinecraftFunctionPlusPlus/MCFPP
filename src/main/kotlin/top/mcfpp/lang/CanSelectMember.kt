@@ -8,7 +8,6 @@ import top.mcfpp.model.Member
  * 实现此抽象类即代表这个Kotlin类所代表的mcfpp数据结构能够被访问成员。
  * 在mcfpp中，成员的访问通常通过`.`运算符完成。最常见的可以访问成员的结构便是类，其次也包含了结构体和部分基本类型。
  *
- * 此抽象类继承于Var类，意味着只有变量才能实现此类，并需要实现变量应当拥有的方法，例如赋值，复制等
  */
 interface CanSelectMember{
 

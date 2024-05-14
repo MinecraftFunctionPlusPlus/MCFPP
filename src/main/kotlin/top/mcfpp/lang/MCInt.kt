@@ -8,6 +8,7 @@ import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
@@ -480,7 +481,7 @@ open class MCInt : MCNumber<Int> {
     }
 }
 
-class MCIntConcrete : MCInt, MCNumberConcrete<Int>{
+class MCIntConcrete : MCInt, MCFPPValue<Int>{
 
     override var value: Int
 
@@ -516,7 +517,7 @@ class MCIntConcrete : MCInt, MCNumberConcrete<Int>{
      * 动态化
      *
      */
-    override fun toDynamic() : MCInt {
+    override fun toDynamic(replace: Boolean): Var<*> {
         //避免错误 Smart cast to 'ClassPointer' is impossible, because 'parent' is a mutable property that could have been changed by this time
         val parent = parent
 
@@ -541,7 +542,11 @@ class MCIntConcrete : MCInt, MCNumberConcrete<Int>{
                 ""
             Function.addCommand(cmd + "scoreboard players set $name $`object` $value")
         }
-        return MCInt(this)
+        val re = MCInt(this)
+        if(replace){
+            Function.currFunction.field.putVar(identifier, re, true)
+        }
+        return re
     }
 
     @Override

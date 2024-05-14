@@ -5,8 +5,10 @@ import net.querz.nbt.tag.StringTag
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.lang.*
+import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPGenericClassType
 import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.field.GlobalField
@@ -108,14 +110,14 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                     LogProcessor.error("The operator \"&&\" cannot be used with ${b!!.type}")
                     throw IllegalArgumentException("")
                 }
-                if(b.isConcrete && isConcrete){
-                    result = result || b.javaValue==true
+                if(b is MCFPPValue<*> && isConcrete){
+                    result = result || b.value == true
                 }else{
                     isConcrete = false
                 }
             }
             if(isConcrete){
-                return MCBool(result)
+                return MCBoolConcrete(result)
             }
             for (v in list){
                 Function.addCommand("execute if function ${v.parentFunction.namespaceID} run return 1")
@@ -154,14 +156,14 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                     LogProcessor.error("The operator \"&&\" cannot be used with ${b!!.type}")
                     throw IllegalArgumentException("")
                 }
-                if(b.isConcrete && isConcrete){
-                    result = result && b.javaValue==true
+                if(b is MCFPPValue<*> && isConcrete){
+                    result = result && b.value == true
                 }else{
                     isConcrete = false
                 }
             }
             if(isConcrete){
-                return MCBool(result)
+                return MCBoolConcrete(result)
             }
             val sb = StringBuilder("execute ")
             for (v in list){
@@ -606,10 +608,10 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     override fun visitValue(ctx: mcfppParser.ValueContext): Var<*>? {
         //常量
         if (ctx.intValue() != null) {
-            return MCInt(Integer.parseInt(ctx.intValue().text))
+            return MCIntConcrete(Integer.parseInt(ctx.intValue().text))
         } else if (ctx.LineString() != null) {
             val r: String = ctx.LineString().text
-            return MCString(StringTag(r.substring(1, r.length - 1)))
+            return MCStringConcrete(StringTag(r.substring(1, r.length - 1)))
         } else if (ctx.multiLineStringLiteral()!=null){
             val stringArray = mutableListOf<String>()
             var isConcrete = true
@@ -621,9 +623,9 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                     val expressionContext = stringContext.multiLineStringExpression().expression()
                     //TODO: 这边只是简单写了一下有解析值的情况
                     val res = visit(expressionContext) //没有解析值的话，应该变成jtext
-                    if(res!=null && !res.isConcrete){ isConcrete = false } //这个条件就是说，整个模版中出现没有解析值的情况了
-                    if(res is MCInt){
-                        r = res.javaValue.toString()
+                    if(res!=null && res !is MCFPPValue<*>){ isConcrete = false } //这个条件就是说，整个模版中出现没有解析值的情况了
+                    if(res is MCIntConcrete){
+                        r = res.value.toString()
                     }
                     else{
                         r=res.toString()
@@ -635,13 +637,13 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             if(tailQuote.length>3) {
                 stringArray.add(tailQuote.substring(3,tailQuote.length))
             }
-            return MCString(StringTag(stringArray.joinToString("")) ) //没有解析值就变不了MCString了
+            return MCStringConcrete(StringTag(stringArray.joinToString("")) ) //没有解析值就变不了MCString了
         } else if (ctx.floatValue() != null){
-            return MCFloat(ctx.floatValue()!!.text.toFloat())
+            return MCFloatConcrete(ctx.floatValue()!!.text.toFloat())
         } else if (ctx.boolValue() != null){
-            return MCBool(ctx.boolValue()!!.text.toBoolean())
+            return MCBoolConcrete(ctx.boolValue()!!.text.toBoolean())
         } else if (ctx.nbtValue() != null){
-            return NBTBasedData(SNBTUtil.fromSNBT(ctx.nbtValue().text))
+            return NBTBasedDataConcrete(SNBTUtil.fromSNBT(ctx.nbtValue().text))
         } else if (ctx.type() != null){
             return MCFPPTypeVar(MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field))
         }

@@ -330,4 +330,12 @@ class MCBoolConcrete : MCBool, MCFPPValue<Boolean>{
         if (isTemp) return this
         return MCBoolConcrete(value)
     }
+
+    override fun toDynamic(replace: Boolean): Var<*> {
+        val re = MCBool(this)
+        if(replace){
+            Function.currFunction.field.putVar(identifier, re, true)
+        }
+        return re
+    }
 }

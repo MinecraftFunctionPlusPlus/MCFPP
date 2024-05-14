@@ -67,7 +67,6 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
     override fun parseParams(){
         for (p in readOnlyParams){
             val r = Var.build("_param_" + p.identifier, MCFPPType.parseFromIdentifier(p.typeIdentifier, field), this)
-            r.isConcrete = true
             field.putVar(p.identifier, r)
         }
         for (p in normalParams){
@@ -104,8 +103,7 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
         //传递只读参数
         for (i in readOnlyArgs.indices) {
             val r = field.getVar(readOnlyParams[i].identifier)
-            r!!.assign(readOnlyArgs[i])
-            compiledFunction.field.putVar(readOnlyParams[i].identifier, r, false)
+            compiledFunction.field.putVar(readOnlyParams[i].identifier, r!!.assign(readOnlyArgs[i]), false)
         }
         index ++
         //编译这个函数

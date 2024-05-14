@@ -54,8 +54,4 @@ class ReturnedMCBool(val parentFunction: Function) : MCBool() {
         re.assign(this)
         return re
     }
-
-    override fun toDynamic() {
-        LogProcessor.warn("The bool type returned by function is always dynamic")
-    }
 }

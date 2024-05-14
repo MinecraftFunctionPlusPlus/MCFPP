@@ -7,6 +7,7 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
+import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
@@ -138,7 +139,7 @@ open class NBTList<E : Var<*>> : NBTBasedData<ListTag<*>> {
     }
 }
 
-class NBTListConcrete<E : Var<*>>: NBTList<E>, INBTBasedDataConcrete<ListTag<*>> {
+class NBTListConcrete<E : Var<*>>: NBTList<E>, MCFPPValue<ListTag<*>> {
 
     override var value: ListTag<*>
 
@@ -165,7 +166,7 @@ class NBTListConcrete<E : Var<*>>: NBTList<E>, INBTBasedDataConcrete<ListTag<*>>
         this.value = value
     }
 
-    override fun toDynamic(): NBTBasedData<ListTag<*>>{
+    override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
         if (parent != null) {
             val cmd = when(parent){
@@ -189,7 +190,11 @@ class NBTListConcrete<E : Var<*>>: NBTList<E>, INBTBasedDataConcrete<ListTag<*>>
             )
             Function.addCommand(cmd)
         }
-        return NBTList(this)
+        val re = NBTList(this)
+        if(replace){
+            Function.currFunction.field.putVar(identifier, re, true)
+        }
+        return re
     }
 
     /**

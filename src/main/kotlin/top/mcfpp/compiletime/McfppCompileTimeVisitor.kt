@@ -4,6 +4,7 @@ import top.mcfpp.antlr.McfppExprVisitor
 import top.mcfpp.antlr.McfppImVisitor
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.lang.MCBool
+import top.mcfpp.lang.MCBoolConcrete
 import top.mcfpp.lang.Var
 import top.mcfpp.model.function.Function
 
@@ -37,14 +38,14 @@ class McfppCompileTimeVisitor(
 
     override fun visitIfStatement(ctx: mcfppParser.IfStatementContext): Any? {
         val condtion= exprVisitor.visit(ctx.expression())
-        if(condtion is MCBool && condtion.javaValue == true){
+        if(condtion is MCBoolConcrete && condtion.value){
             visit(ctx.ifBlock())
         }
         else{
             var elseIfBool = false
             for(elseIfStatementContext in ctx.elseIfStatement()){
                 val elseIfCondition = exprVisitor.visit(elseIfStatementContext.expression())
-                if(elseIfCondition is MCBool && elseIfCondition.javaValue == true){
+                if(elseIfCondition is MCBoolConcrete && elseIfCondition.value){
                     visit(elseIfStatementContext.ifBlock())
                     elseIfBool = true
                     break
@@ -66,7 +67,7 @@ class McfppCompileTimeVisitor(
         visit(forControlContext.forInit())
         while(true){
             val condition = exprVisitor.visit(forControlContext.expression())
-            if(condition is MCBool && condition.javaValue == true){
+            if(condition is MCBoolConcrete && condition.value){
                 visit(ctx.forBlock())
                 if(curBreak||curReturn){
                     curBreak = false
@@ -112,7 +113,7 @@ class McfppCompileTimeVisitor(
     override fun visitWhileStatement(ctx: mcfppParser.WhileStatementContext): Any? {
         while(true){
             val condition = exprVisitor.visit(ctx.expression())
-            if(condition is MCBool && condition.javaValue == true){
+            if(condition is MCBoolConcrete && condition.value){
                 visit(ctx.whileBlock())
                 if(curBreak||curReturn){
                     curBreak = false
@@ -137,7 +138,7 @@ class McfppCompileTimeVisitor(
         if(!curBreak||!curReturn||!curContinue){
             while(true){
                 val condition = exprVisitor.visit(ctx.expression())
-                if(condition is MCBool && condition.javaValue == true){
+                if(condition is MCBoolConcrete && condition.value){
                     visit(ctx.doWhileBlock())
                     if(curBreak||curReturn){
                         curBreak = false

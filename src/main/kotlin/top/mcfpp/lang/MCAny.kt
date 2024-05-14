@@ -260,4 +260,12 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>>{
         }
     }
 
+    override fun toDynamic(replace: Boolean): Var<*> {
+        val re = MCAny(this)
+        if(replace){
+            Function.currFunction.field.putVar(identifier, re, true)
+        }
+        return re
+    }
+
 }

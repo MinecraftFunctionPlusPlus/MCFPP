@@ -1,5 +1,6 @@
 package top.mcfpp.lang.value
 
+import top.mcfpp.lang.MCFPPTypeVar
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPGenericType
@@ -23,15 +24,10 @@ class MCTypeValue(
      */
     override var type: MCFPPType = MCFPPBaseType.Type
 
-    /**
-     * 它的值，应当是一个MCFPPType，可能不存在
-     */
-    override var javaValue: MCFPPType? = MCFPPBaseType.Any
-
     fun toType():MCFPPGenericType{
         return MCFPPGenericType(identifier,parentType)
     }
-    override fun assign(b: Var<*>?) {
+    override fun assign(b: Var<*>): MCFPPTypeVar {
         TODO("Not yet implemented")
     }
 
@@ -52,14 +48,6 @@ class MCTypeValue(
     }
 
     override fun getFromStack() {
-        TODO("Not yet implemented")
-    }
-
-    override fun toDynamic() {
-        TODO("Not yet implemented")
-    }
-
-    override fun getVarValue(): Any? {
         TODO("Not yet implemented")
     }
 

@@ -2,6 +2,7 @@ package top.mcfpp.lang
 
 import net.querz.nbt.tag.CompoundTag
 import net.querz.nbt.tag.Tag
+import top.mcfpp.exception.OperationNotImplementException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
 import top.mcfpp.lang.value.MCFPPValue
@@ -152,6 +153,11 @@ class JavaVar : Var<Any>, MCFPPValue<Any?>{
             LogProcessor.error("No method '$key' in $identifier}")
             throw e
         }
+    }
+
+    override fun toDynamic(replace: Boolean): Var<*> {
+        LogProcessor.error("Lost tracking of JavaVar type variable values")
+        throw OperationNotImplementException("Lost tracking of JavaVar type variable values")
     }
 
     private fun getTypeArray(params: List<MCFPPType>): Array<Class<*>>{
