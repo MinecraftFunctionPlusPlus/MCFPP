@@ -51,7 +51,7 @@ class IntTemplatePointer : IntTemplateBase {
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var<*>?) {
+    override fun assign(b: Var<*>): IntTemplatePointer {
         hasAssigned = true
         TODO("Not yet implemented")
     }
@@ -82,10 +82,6 @@ class IntTemplatePointer : IntTemplateBase {
     }
 
     override fun getFromStack() {
-        TODO("Not yet implemented")
-    }
-
-    override fun toDynamic() {
         TODO("Not yet implemented")
     }
 }

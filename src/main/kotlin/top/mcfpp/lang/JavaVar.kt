@@ -107,8 +107,6 @@ class JavaVar : Var<Any>, MCFPPValue<Any?>{
 
     override fun getFromStack() {}
 
-    override fun toDynamic() {}
-
     /**
      * 根据标识符获取一个成员。
      *
@@ -205,11 +203,11 @@ class JavaVar : Var<Any>, MCFPPValue<Any?>{
                 is MCBoolConcrete -> v.value
                 is MCStringConcrete -> v.value.valueToString()
                 is NBTListConcrete<*> -> v.value.toJava()
-                is NBTMapConcrete -> ((v.value as CompoundTag)["data"] as CompoundTag).toJava()
+                is NBTMapConcrete -> (v.value["data"] as CompoundTag).toJava()
                 is NBTDictionaryConcrete -> v.value.toJava()
                 is NBTBasedDataConcrete -> v.value
                 else -> v
-            }
+            }!!
         }
 
         fun mcToJava(v: ArrayList<Var<*>>): ArrayList<Any>{

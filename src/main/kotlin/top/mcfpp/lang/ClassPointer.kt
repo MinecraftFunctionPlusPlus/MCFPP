@@ -79,7 +79,7 @@ class ClassPointer : Var<Int>{
     @Override
     @InsertCommand
     @Throws(VariableConverseException::class)
-    override fun assign(b: Var<*>?) {
+    override fun assign(b: Var<*>): ClassPointer {
         hasAssigned = true
         //TODO 不支持指针作为类成员的时候
         when (b) {
@@ -105,8 +105,8 @@ class ClassPointer : Var<Int>{
             else -> {
                 throw VariableConverseException()
             }
-
         }
+        return this
     }
 
     /**
@@ -200,10 +200,6 @@ class ClassPointer : Var<Int>{
     }
 
     override fun getFromStack() {
-        TODO("Not yet implemented")
-    }
-
-    override fun toDynamic() {
         TODO("Not yet implemented")
     }
 

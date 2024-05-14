@@ -26,9 +26,9 @@ class JsonText: ChatComponent {
     /**
      * 向末尾添加一个聊天组件
      */
-    fun append(value : MCInt){
+    fun append(value : MCIntConcrete){
         if(TODO() /*value.isConcrete*/){
-            components.add(JsonTextPlain(value.javaValue!!.toString()))
+            components.add(JsonTextPlain(value.value!!.toString()))
         }else{
             components.add(JsonTextNumber(value))
         }
