@@ -140,8 +140,6 @@ open class MCAny : Var<Var<*>> {
 
     override fun getFromStack() {}
 
-    override fun toDynamic() {}
-
     /**
      * 根据标识符获取一个成员。
      *
