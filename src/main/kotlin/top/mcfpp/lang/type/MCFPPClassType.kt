@@ -43,11 +43,8 @@ open class MCFPPClassType(
             genericType.joinToString("_") { it.typeName }
         }]"
 
-    fun getGenericClassType(args: List<Var<*>>) : MCFPPGenericClassType{
-        val t = MCFPPGenericClassType(cls, parentType)
-        for(arg in args){
-            t.genericVar.add(arg)
-        }
+    fun getGenericClassType(compiledClass: Class) : MCFPPClassType{
+        val t = MCFPPClassType(compiledClass, parentType)
         return t
     }
 

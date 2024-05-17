@@ -75,12 +75,12 @@ public class NBTListData extends MNIMethodContainer {
 
         //list<E>.addAll(list<E> list)
         methods.put("addAll", (readOnlyArgs, normalArgs, caller, returnVar) -> {
-            var e = (NBTList<?>)normalArgs[0];  //要添加的成员
-            var list = (NBTList<?>)caller;
+            var e = (NBTList)normalArgs[0];  //要添加的成员
+            var list = (NBTList)caller;
             String command;
             NBTBasedData<?> l;
             if(e.parentClass() != null) {
-                l = (NBTList<?>) e.getTempVar();
+                l = (NBTList) e.getTempVar();
             }else if(e instanceof NBTListConcrete<?> eC){
                 l = e;
                 eC.toDynamic(false);

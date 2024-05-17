@@ -4,7 +4,7 @@
 			"id":"default",
 			"functions":[
 				{
-					"id":"hello",
+					"id":"main",
 					"normalParams":[
 						
 					],
