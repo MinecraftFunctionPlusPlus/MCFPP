@@ -5,7 +5,6 @@ import top.mcfpp.Project
 import top.mcfpp.command.tree.CommandTreeNode
 import top.mcfpp.command.tree.DownloadHelper
 import java.nio.file.Path
-import kotlin.io.path.absolutePathString
 import kotlin.test.Test
 class CommandTreeDeserializeTest {
     @Test

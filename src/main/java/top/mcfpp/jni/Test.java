@@ -1,7 +1,6 @@
 package top.mcfpp.jni;
 
 import java.io.File;
-import java.net.URL;
 
 public class Test {
     static {

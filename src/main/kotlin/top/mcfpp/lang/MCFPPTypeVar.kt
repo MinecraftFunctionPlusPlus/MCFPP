@@ -5,8 +5,6 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.CompoundData
 import top.mcfpp.lib.function.Function
 import top.mcfpp.lib.Member
-import top.mcfpp.lib.field.IFieldWithType
-import java.util.*
 
 class MCFPPTypeVar : Var<MCFPPType> {
 

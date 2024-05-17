@@ -1,6 +1,5 @@
 package top.mcfpp.test
 
-import top.mcfpp.lib.field.GlobalField
 import kotlin.test.Test
 
 class NBTTypeTest {

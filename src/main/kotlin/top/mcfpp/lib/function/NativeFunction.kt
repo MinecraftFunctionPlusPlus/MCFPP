@@ -4,12 +4,8 @@ import top.mcfpp.Project
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.Native
-import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.ValueWrapper
-import java.lang.reflect.InvocationTargetException
-import java.lang.Class
 import java.lang.Void
-import java.util.Dictionary
 
 /**
  * 表示了一个native方法

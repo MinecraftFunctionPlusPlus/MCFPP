@@ -1,9 +1,7 @@
 package top.mcfpp.lang;
 
-import kotlin.NotImplementedError;
 import kotlin.jvm.functions.Function4;
 import org.jetbrains.annotations.NotNull;
-import top.mcfpp.annotations.MCFPPNative;
 import top.mcfpp.lib.function.Function;
 import top.mcfpp.lib.function.MNIMethodContainer;
 import top.mcfpp.util.ValueWrapper;

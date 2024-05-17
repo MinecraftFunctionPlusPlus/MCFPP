@@ -4,7 +4,6 @@ import top.mcfpp.Project
 import top.mcfpp.lang.type.MCFPPTemplateType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.field.CompoundDataField
-import top.mcfpp.lib.function.Constructor
 import top.mcfpp.lib.function.TemplateConstructor
 import top.mcfpp.util.LazyWrapper
 
