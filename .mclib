@@ -13,6 +13,17 @@
 					"tags":[
 						
 					]
+				},
+				{
+					"id":"test",
+					"normalParams":[
+						
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
 				}
 			],
 			"classes":[
