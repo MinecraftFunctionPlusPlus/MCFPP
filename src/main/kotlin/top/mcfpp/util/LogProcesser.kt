@@ -17,8 +17,16 @@ object LogProcessor {
         logger.debug(msg)
     }
 
+    fun debug(msg: String, e: Exception){
+        logger.debug(msg, e)
+    }
+
     fun info(msg: String){
         logger.info(msg)
+    }
+
+    fun info(msg: String, e: Exception){
+        logger.info(msg, e)
     }
 
     fun warn(msg: String){
@@ -26,8 +34,18 @@ object LogProcessor {
         warningCount++
     }
 
+    fun warn(msg: String, e: Exception){
+        logger.warn(msg, e)
+        warningCount++
+    }
+
     fun error(msg: String){
         logger.error(msg)
+        errorCount++
+    }
+
+    fun error(msg: String, e: Exception){
+        logger.error(msg, e)
         errorCount++
     }
 

@@ -3,27 +3,118 @@
 		{
 			"id":"mcfpp.sys",
 			"functions":[
-				"void print(int i)->top.mcfpp.lang.System.print",
-				"void print(any a)->top.mcfpp.lang.System.print",
-				"void insert(string i)->top.mcfpp.lang.System.insert"
+				{
+					"id":"print",
+					"dataClass":"top.mcfpp.lang.System",
+					"javaMethodName":"print",
+					"normalParams":[
+						{
+							"id":"i",
+							"type":"int",
+							"isStatic":false
+						}
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				},
+				{
+					"id":"print",
+					"dataClass":"top.mcfpp.lang.System",
+					"javaMethodName":"print",
+					"normalParams":[
+						{
+							"id":"a",
+							"type":"any",
+							"isStatic":false
+						}
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				},
+				{
+					"id":"insert",
+					"dataClass":"top.mcfpp.lang.System",
+					"javaMethodName":"insert",
+					"normalParams":[
+						{
+							"id":"i",
+							"type":"string",
+							"isStatic":false
+						}
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				}
 			],
 			"classes":[
 				
 			],
-			"structs":[
+			"template":[
+				
+			]
+		},
+		{
+			"id":"default",
+			"functions":[
+				
+			],
+			"classes":[
+				
+			],
+			"template":[
 				
 			]
 		},
 		{
 			"id":"mcfpp",
 			"functions":[
-				"void load()",
-				"void tick()"
+				{
+					"id":"load",
+					"normalParams":[
+						
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				},
+				{
+					"id":"tick",
+					"normalParams":[
+						
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				},
+				{
+					"id":"init",
+					"normalParams":[
+						
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				}
 			],
 			"classes":[
 				
 			],
-			"structs":[
+			"template":[
 				
 			]
 		}

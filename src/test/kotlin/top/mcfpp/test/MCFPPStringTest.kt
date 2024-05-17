@@ -21,7 +21,7 @@ object MCFPPStringTest {
         source = ConfigurationSource(FileInputStream("log4j2.xml"))
         Configurator.initialize(null,source)
         //读取json
-        LogProcessor.debug("Generate debug project for a string string")
+        LogProcessor.debug("Generate debug project for a string")
         Project.config.root = Path.of("./")
         MCFPPFile.currFile = MCFPPFile("./test.mcfpp")
         Project.config.name = "debug"

@@ -12,6 +12,7 @@ import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Constructor
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam
+import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.generic.ClassParam
 import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.model.generic.GenericFunction
@@ -21,7 +22,7 @@ import java.io.FileWriter
 object LibWriter {
     fun write(path: String){
         val json = GlobalWriter.toJson(GlobalField)
-        val writer = FileWriter(path)
+        val writer = FileWriter("$path\\.mclib")
         writer.write(json.toJSONString(JSONWriter.Feature.PrettyFormat))
         writer.flush()
         writer.close()
@@ -87,7 +88,15 @@ object FunctionWriter: ILibJsonWriter<Function>{
                 json["readonlyParam"] = readonlyParam
             } }
             json["context"] = Utils.toByteArrayString(t.ctx)
-
+        }
+        if(t is NativeFunction){
+            val readonlyParam = JSONArray()
+            t.readOnlyParams.forEach { v -> run {
+                readonlyParam.add(FunctionParamWriter.toJson(v))
+                json["readonlyParam"] = readonlyParam
+            } }
+            json["dataClass"] = t.javaClassName
+            json["javaMethodName"] = t.javaMethodName
         }
         json["normalParams"] = normalParams
         json["returnType"] = t.returnType.typeName

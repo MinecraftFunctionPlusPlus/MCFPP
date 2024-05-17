@@ -10,15 +10,16 @@ import top.mcfpp.model.Template
 import top.mcfpp.model.UnknownClass
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.field.GlobalField
-import top.mcfpp.model.function.Constructor
+import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function
-import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.model.generic.ClassParam
 import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.model.generic.GenericFunction
+import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import top.mcfpp.util.Utils
 import java.io.FileReader
+import java.lang.reflect.InvocationTargetException
 
 
 object LibReader{
@@ -42,11 +43,11 @@ object GlobalReader: ILibJsonReader<GlobalField>{
         val namespaces = jsonObject.getJSONArray("namespaces")
         for (i in 0 until namespaces.size){
             val namespace = namespaces.getJSONObject(i)
-            GlobalField.localNamespaces[namespace.getString("id")] = NamespaceReader.fromJson(namespace)
+            GlobalField.libNamespaces[namespace.getString("id")] = NamespaceReader.fromJson(namespace)
         }
 
         //解析类型
-        for (n in GlobalField.localNamespaces.values){
+        for (n in GlobalField.libNamespaces.values){
             n.field.forEachFunction { f -> run{
                 f.normalParams.forEach { p -> run{
                     if(p.type is UnresolvedType){
@@ -119,7 +120,30 @@ object FunctionReader: ILibJsonReader<Function> {
         val identifier = jsonObject.getString("id")
         val namespace = NamespaceReader.currNamespace!!.identifier
         val returnType = UnresolvedType(jsonObject.getString("returnType"))
-        val function = if(jsonObject.containsKey("readonlyParam")){
+        val function = if(jsonObject.containsKey("dataClass")){
+            try {
+                val dataClass = java.lang.Class.forName(jsonObject.getString("dataClass")).getDeclaredConstructor().newInstance()
+                NativeFunction(identifier, dataClass as MNIMethodContainer, returnType, namespace)
+            } catch (e: ClassNotFoundException) {
+                LogProcessor.error("Cannot find class: ${jsonObject.getString("dataClass")}", e)
+                UnknownFunction(identifier, namespace)
+            } catch (e: NoSuchMethodException) {
+                LogProcessor.error("Cannot find default constructor for class: ${jsonObject.getString("dataClass")}", e)
+                UnknownFunction(identifier, namespace)
+            } catch (e: InstantiationException) {
+                LogProcessor.error("Cannot instantiate class: ${jsonObject.getString("dataClass")}", e)
+                UnknownFunction(identifier, namespace)
+            } catch (e: IllegalAccessException) {
+                LogProcessor.error("Cannot access constructor for class: ${jsonObject.getString("dataClass")}", e)
+                UnknownFunction(identifier, namespace)
+            } catch (e: ClassCastException) {
+                LogProcessor.error("Cannot cast class: ${jsonObject.getString("dataClass")} to MNIMethodContainer", e)
+                UnknownFunction(identifier, namespace)
+            } catch (e: InvocationTargetException) {
+                LogProcessor.error("Cannot invoke constructor for class: ${jsonObject.getString("dataClass")}", e)
+                UnknownFunction(identifier, namespace)
+            }
+        } else if(jsonObject.containsKey("readonlyParam")){
             val ctx = Utils.fromByteArrayString<mcfppParser.FunctionBodyContext>(jsonObject["context"].toString())
             GenericFunction(identifier, namespace, returnType, ctx)
         }else{

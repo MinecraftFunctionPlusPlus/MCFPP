@@ -142,6 +142,10 @@ object Project {
             }else{
                 "default"
             }
+            //是否包含标准库
+            jsonObject["ignoreStdLib"]?.let {
+                CompileSettings.ignoreStdLib = it as Boolean
+            }
             //调用库
             val includesJson: JSONArray = jsonObject.getJSONArray("includes")?: JSONArray()
             for (i in 0 until includesJson.size) {
