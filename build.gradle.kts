@@ -1,4 +1,6 @@
 import org.gradle.kotlin.dsl.cpp
+import java.nio.file.Files
+import java.util.Optional
 
 plugins {
     kotlin("jvm") version "1.8.0"
@@ -79,7 +81,55 @@ tasks.register<JavaCompile>("generateJni") {
 tasks.register<Exec>("compileCpp") {
     group = "build"
     workingDir(cppSourceDir)
-    commandLine("g++", "-I", "${System.getProperty("java.home")}/include", "-I", "${System.getProperty("java.home")}/include/win32", "-I", "$buildDir/generated/jni", "-shared", "-o", "$buildDir/dll/native.dll", "*.cpp")
+
+    val osOptional = OperatingSystem.current()
+    if (osOptional.isEmpty)
+        throw RuntimeException("Failed to compile JNI source due to unsupported operating system.")
+    val os = osOptional.get()
+
+    fun dirName(): String {
+        return when (os) {
+            OperatingSystem.WINDOWS -> "win32"
+            OperatingSystem.MACOS -> "darwin"
+            OperatingSystem.LINUX -> "linux"
+        }
+    }
+    fun extName(): String {
+        return when (os) {
+            OperatingSystem.WINDOWS -> ".dll"
+            OperatingSystem.MACOS -> ".dylib"
+            OperatingSystem.LINUX -> ".so"
+        }
+    }
+
+    val outputDirStr = "$buildDir/dll"
+    val outputDir = File(outputDirStr)
+    if (!outputDir.exists()) {
+        outputDir.mkdir()
+    }
+
+    val cmdArgs = ArrayList<String>()
+    cmdArgs.addAll(listOf(
+        "g++",
+        "-fPIC",
+        "-I",
+        "${System.getProperty("java.home")}/include",
+        "-I",
+        "${System.getProperty("java.home")}/include/${dirName()}",
+        "-I",
+        "$buildDir/generated/jni",
+        "-shared",
+        "-o",
+        "$outputDirStr/native${extName()}"
+    ))
+
+    val cppPath = cppSourceDir.toPath()
+    Files.walk(cppPath)
+        .map { it.toAbsolutePath().toString() }
+        .filter { it.endsWith(".cpp") }
+        .forEach { cmdArgs.add(it) }
+
+    commandLine(cmdArgs)
 }
 
 kotlin {
@@ -93,4 +143,35 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
 
 application {
     mainClass.set("top.mcfpp.MCFPPKt")
+}
+
+enum class OperatingSystem {
+    WINDOWS,
+    LINUX,
+    MACOS;
+    companion object {
+        private fun isWindows(): Boolean {
+            val osName = System.getProperty("os.name")
+            return osName != null && osName.startsWith("Windows")
+        }
+
+        private fun isMacOs(): Boolean {
+            val osName = System.getProperty("os.name")
+            return osName != null && osName.startsWith("Mac")
+        }
+
+        private fun isLinux(): Boolean {
+            val osName = System.getProperty("os.name")
+            return osName != null && osName.startsWith("Linux")
+        }
+
+        fun current(): Optional<OperatingSystem> {
+            return when {
+                isWindows() -> Optional.of(WINDOWS)
+                isMacOs() -> Optional.of(MACOS)
+                isLinux() -> Optional.of(LINUX)
+                else -> Optional.empty()
+            }
+        }
+    }
 }
