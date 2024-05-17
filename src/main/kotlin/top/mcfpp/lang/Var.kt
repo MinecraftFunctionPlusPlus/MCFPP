@@ -88,6 +88,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
         identifier = `var`.identifier
         isStatic = `var`.isStatic
         accessModifier = `var`.accessModifier
+        isTemp = `var`.isTemp
         stackIndex = `var`.stackIndex
         isConst = `var`.isConst
     }
@@ -289,6 +290,32 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
         result = 31 * result + accessModifier.hashCode()
         result = 31 * result + type.hashCode()
         return result
+    }
+
+    fun replacedBy(v : Var<*>){
+        if(v == this) return
+        if(parent == null){
+            Function.currFunction.field.putVar(v.identifier, v, true)
+        }else{
+            v.parent = this.parent
+            when (val parent = parent){
+                is ClassPointer -> {
+                    parent.clsType.field.putVar(v.identifier, v, true)
+                }
+                is MCFPPTypeVar -> {
+                    when(val type = parent.type){
+                        is MCFPPClassType ->{
+                            type.cls.staticField.putVar(v.identifier, v, true)
+                        }
+                        is MCFPPCompoundType -> {
+                            type.data.staticField.putVar(v.identifier, v, true)
+                        }
+                        else -> TODO()
+                    }
+                }
+                else -> TODO()
+            }
+        }
     }
 
     companion object {

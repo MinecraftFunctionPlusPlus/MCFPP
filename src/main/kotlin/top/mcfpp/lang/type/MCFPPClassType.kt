@@ -16,16 +16,16 @@ open class MCFPPClassType(
 
     val genericType : List<MCFPPType> = ArrayList()
 
-    init {
-        registerType({it.contains(regex)}){
-            val matcher = regex.find(it)!!.groupValues
-            val clazz = GlobalField.getClass(matcher[1],matcher[2])
-            if(clazz!=null)
-                MCFPPClassType(clazz, parentType)
-            else
-                MCFPPBaseType.Any //TODO: 找不到该类型
-        }
-    }
+//    init {
+//        registerType({it.contains(regex)}){
+//            val matcher = regex.find(it)!!.groupValues
+//            val clazz = GlobalField.getClass(matcher[1],matcher[2])
+//            if(clazz!=null)
+//                MCFPPClassType(clazz, parentType)
+//            else
+//                MCFPPBaseType.Any //TODO: 找不到该类型
+//        }
+//    }
 
     /**
      * 获取这个类的实例的指针实体在mcfunction中拥有的tag

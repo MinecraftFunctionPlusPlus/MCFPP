@@ -47,8 +47,8 @@ class GenericClass : Class {
         }
 
         //注册
-        val field = GlobalField.localNamespaces[namespace]!!
-        field.addClass(cls.identifier, cls)
+        val namespace = GlobalField.localNamespaces[namespace]!!
+        namespace.field.addClass(cls.identifier, cls)
         Class.currClass = cls
 
         val visitor = McfppGenericClassVisitor(cls)
@@ -72,6 +72,4 @@ class ClassParam(
      * 参数的名字
      */
     var identifier: String,
-){
-
-}
+)

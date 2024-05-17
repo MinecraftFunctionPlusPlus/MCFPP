@@ -28,11 +28,12 @@ abstract class MCFPPType(
     ifRegister : Boolean = true
 
 ) : CanSelectMember {
-    init {
-        if(ifRegister){
-            registerType()
-        }
-    }
+
+//    init {
+//        if(ifRegister){
+//            registerType()
+//        }
+//    }
 
     /**
      * 类型名

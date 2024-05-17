@@ -9,6 +9,7 @@ import top.mcfpp.exception.IllegalFormatException
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lang.type.UnresolvedType
 import top.mcfpp.model.*
 import top.mcfpp.model.Class
 import top.mcfpp.model.Member.AccessModifier
@@ -54,7 +55,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             }
             namespaceStr
         }?: Project.config.defaultNamespace
-        typeScope = GlobalField.localNamespaces[Project.currNamespace]!!
+        typeScope = GlobalField.localNamespaces[Project.currNamespace]!!.field
         //文件结构，类和函数
         for (t in ctx.typeDeclaration()) {
             visit(t)
@@ -83,11 +84,11 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         Project.ctx = ctx
         //注册类
         val id = ctx.classWithoutNamespace().text
-        val field = GlobalField.localNamespaces[Project.currNamespace]!!
+        val namespace = GlobalField.localNamespaces[Project.currNamespace]!!
 
-        if (field.hasInterface(id)) {
+        if (namespace.field.hasInterface(id)) {
             //重复声明
-            Interface.currInterface = field.getInterface(id)
+            Interface.currInterface = namespace.field.getInterface(id)
         } else {
             throw UndefinedException("Interface Should have been defined: $id")
         }
@@ -143,9 +144,9 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         Project.ctx = ctx
         //注册类
         val id = ctx.classWithoutNamespace().text
-        val field = GlobalField.localNamespaces[Project.currNamespace]!!
-        val clazz = if (field.hasClass(id)) {
-            field.getClass(id)
+        val namespace = GlobalField.localNamespaces[Project.currNamespace]!!
+        val clazz = if (namespace.field.hasClass(id)) {
+            namespace.field.getClass(id)
         } else {
             throw UndefinedException("Class Should have been defined: $id")
         }
@@ -477,9 +478,9 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //不是类的成员
         f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
-        val field = GlobalField.localNamespaces[f.namespace]!!
-        if (!field.hasFunction(f)) {
-            field.addFunction(f,false)
+        val namespace = GlobalField.localNamespaces[f.namespace]!!
+        if (!namespace.field.hasFunction(f)) {
+            namespace.field.addFunction(f,false)
         } else {
             LogProcessor.error("Already defined function:" + f.namespaceID)
             Function.currFunction = Function.nullFunction
@@ -506,9 +507,9 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //不是类的成员
         f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
-        val field = GlobalField.localNamespaces[f.namespace]!!
-        if (!field.hasFunction(f)) {
-            field.addFunction(f,false)
+        val namespace = GlobalField.localNamespaces[f.namespace]!!
+        if (!namespace.field.hasFunction(f)) {
+            namespace.field.addFunction(f,false)
         } else {
             LogProcessor.error("Already defined function:" + f.namespaceID)
             Function.currFunction = Function.nullFunction
@@ -539,10 +540,10 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //不是类的成员
         f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
-        val field = GlobalField.localNamespaces[f.namespace]!!
-        if (!field.hasFunction(f)) {
-            f.setField(field)
-            field.addFunction(f,false)
+        val namespace = GlobalField.localNamespaces[f.namespace]!!
+        if (!namespace.field.hasFunction(f)) {
+            f.setField(namespace.field)
+            namespace.field.addFunction(f,false)
         } else {
             LogProcessor.error("Already defined function:" + f.namespaceID)
             Function.currFunction = Function.nullFunction
@@ -649,11 +650,11 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
         nf.addParamsFromContext(ctx.functionParams())
         //写入域
-        val field = GlobalField.localNamespaces[nf.namespace]!!
+        val namespace = GlobalField.localNamespaces[nf.namespace]!!
         //是普通的函数
         nf.ownerType = Function.Companion.OwnerType.NONE
-        if (!field.hasFunction(nf)) {
-            field.addFunction(nf,false)
+        if (!namespace.field.hasFunction(nf)) {
+            namespace.field.addFunction(nf,false)
         } else {
             LogProcessor.error("Already defined function:" + ctx.Identifier().text)
             Function.currFunction = Function.nullFunction
@@ -667,11 +668,11 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         Project.ctx = ctx!!
         //注册模板
         val id = ctx.classWithoutNamespace().text
-        val field = GlobalField.localNamespaces[Project.currNamespace]!!
-        if (field.hasTemplate(id)) {
+        val namespace1 = GlobalField.localNamespaces[Project.currNamespace]!!
+        if (namespace1.field.hasTemplate(id)) {
             //重复声明
             LogProcessor.error("Template has been defined: $id in namespace ${Project.currNamespace}")
-            Template.currTemplate = field.getTemplate(id)
+            Template.currTemplate = namespace1.field.getTemplate(id)
         }
         val template = Template(id, LazyWrapper{MCFPPType.parseFromIdentifier(ctx.type().text, typeScope)}, Project.currNamespace)
         if (ctx.className() != null) {
@@ -693,7 +694,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 template.parent.add(s)
             }
         }
-        field.addTemplate(id, template)
+        namespace1.field.addTemplate(id, template)
         Template.currTemplate = template
         typeScope = template.field
         //解析成员
@@ -834,7 +835,11 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 
     override fun visitTemplateFieldDeclarationExpression(ctx: mcfppParser.TemplateFieldDeclarationExpressionContext): Var<*>? {
         //TODO 地狱绘图（指parent串）
-        val `var` = UnresolvedVar(ctx.Identifier().text, (ctx.parent.parent.parent.parent.parent as TemplateDeclarationContext).type().text, typeScope)
+        val `var` = UnresolvedVar(
+            ctx.Identifier().text,
+            UnresolvedType ((ctx.parent.parent.parent.parent.parent as TemplateDeclarationContext).type().text),
+            typeScope
+        )
         //是否是静态的
         `var`.isStatic = isStatic
         //只有可能是结构体成员

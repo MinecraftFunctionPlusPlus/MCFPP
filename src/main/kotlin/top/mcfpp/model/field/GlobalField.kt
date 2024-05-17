@@ -24,17 +24,17 @@ object GlobalField : FieldContainer, IField {
     /**
      * 当前项目内声明的命名空间
      */
-    val localNamespaces = Hashtable<String, NamespaceField>()
+    val localNamespaces = Hashtable<String, Namespace>()
 
     /**
      * 每个文件中，使用import语句引用库以后的库命名空间，只作用于当前编译的文件
      */
-    val importedLibNamespaces = Hashtable<String, NamespaceField>()
+    val importedLibNamespaces = Hashtable<String, Namespace>()
 
     /**
      * 库的命名空间域。在分析项目前，使用readLib函数读取所有在项目配置文件中被声明引用的库，并将所有的命名空间存放进去
      */
-    val libNamespaces = Hashtable<String, NamespaceField>()
+    val libNamespaces = Hashtable<String, Namespace>()
 
     /**
      * 函数的标签
@@ -62,7 +62,7 @@ object GlobalField : FieldContainer, IField {
         scoreboards[SbObject.MCFPP_INIT.name] = SbObject.MCFPP_INIT
         scoreboards[SbObject.MCFPP_TEMP.name] = SbObject.MCFPP_TEMP
 
-        localNamespaces["default"] = NamespaceField()
+        localNamespaces["default"] = Namespace("default")
 
         return this
     }
@@ -85,19 +85,19 @@ object GlobalField : FieldContainer, IField {
      */
     fun getFunctionInner(@Nullable namespace:String?, identifier: String, readOnlyParams: List<MCFPPType>, normalParams : List<MCFPPType>): Function {
         if(namespace == null){
-            val f = localNamespaces[Project.currNamespace]!!.getFunction(identifier, readOnlyParams, normalParams)
+            val f = localNamespaces[Project.currNamespace]!!.field.getFunction(identifier, readOnlyParams, normalParams)
             if(f != null) return f
             for (n in importedLibNamespaces.values){
-                val f1 = n.getFunction(identifier, readOnlyParams, normalParams)
+                val f1 = n.field.getFunction(identifier, readOnlyParams, normalParams)
                 if(f1 != null) return f1
             }
             return UnknownFunction(identifier)
         }
-        var field = localNamespaces[namespace]
-        if(field == null){
-            field = libNamespaces[namespace]
+        var np = localNamespaces[namespace]
+        if(np == null){
+            np = libNamespaces[namespace]
         }
-        return field?.getFunction(identifier, readOnlyParams, normalParams)?: UnknownFunction(identifier)
+        return np?.field?.getFunction(identifier, readOnlyParams, normalParams)?: UnknownFunction(identifier)
     }
 
     /**
@@ -112,20 +112,20 @@ object GlobalField : FieldContainer, IField {
         if(namespace == null){
             var cls: Class?
             //命名空间为空，从全局寻找
-            cls = localNamespaces[Project.currNamespace]!!.getClass(identifier)
+            cls = localNamespaces[Project.currNamespace]!!.field.getClass(identifier)
             if(cls != null) return cls
             for (nsp in importedLibNamespaces.values){
-                cls = nsp.getClass(identifier)
+                cls = nsp.field.getClass(identifier)
                 if(cls != null) return cls
             }
             return null
         }
         //按照指定的命名空间寻找
-        var field = localNamespaces[namespace]
-        if(field == null){
-            field = importedLibNamespaces[namespace]
+        var np = localNamespaces[namespace]
+        if(np == null){
+            np = importedLibNamespaces[namespace]
         }
-        return field?.getClass(identifier)
+        return np?.field?.getClass(identifier)
     }
 
     /**
@@ -140,20 +140,20 @@ object GlobalField : FieldContainer, IField {
         if(namespace == null){
             var itf: Interface?
             //命名空间为空，从全局寻找
-            itf = localNamespaces[Project.currNamespace]!!.getInterface(identifier)
+            itf = localNamespaces[Project.currNamespace]!!.field.getInterface(identifier)
             if(itf != null) return itf
             for (nsp in importedLibNamespaces.values){
-                itf = nsp.getInterface(identifier)
+                itf = nsp.field.getInterface(identifier)
                 if(itf != null) return itf
             }
             return null
         }
         //按照指定的命名空间寻找
-        var field = localNamespaces[namespace]
-        if(field == null){
-            field = importedLibNamespaces[namespace]
+        var np = localNamespaces[namespace]
+        if(np == null){
+            np = importedLibNamespaces[namespace]
         }
-        return field?.getInterface(identifier)
+        return np?.field?.getInterface(identifier)
     }
 
 
@@ -170,20 +170,20 @@ object GlobalField : FieldContainer, IField {
         if(namespace == null){
             var struct: Template?
             //命名空间为空，从全局寻找
-            struct = localNamespaces[Project.currNamespace]!!.getTemplate(identifier)
+            struct = localNamespaces[Project.currNamespace]!!.field.getTemplate(identifier)
             if(struct != null) return struct
             for (nsp in importedLibNamespaces.values){
-                struct = nsp.getTemplate(identifier)
+                struct = nsp.field.getTemplate(identifier)
                 if(struct != null) return struct
             }
             return null
         }
         //按照指定的命名空间寻找
-        var field = localNamespaces[namespace]
-        if(field == null){
-            field = importedLibNamespaces[namespace]
+        var np = localNamespaces[namespace]
+        if(np == null){
+            np = importedLibNamespaces[namespace]
         }
-        return field?.getTemplate(identifier)
+        return np?.field?.getTemplate(identifier)
     }
     @get:Override
     override val prefix: String
@@ -194,8 +194,8 @@ object GlobalField : FieldContainer, IField {
      * 打印所有的函数和类
      */
     fun printAll() {
-        for(field in localNamespaces.values){
-            field.forEachFunction { s ->
+        for(namespace in localNamespaces.values){
+            namespace.field.forEachFunction { s ->
                 run {
                     if (s is NativeFunction) {
                         println("native " + s.namespaceID + " -> " + s.javaClassName +  "." + s.javaMethodName )
@@ -211,12 +211,12 @@ object GlobalField : FieldContainer, IField {
                     }
                 }
             }
-            field.forEachClass { s ->
+            namespace.field.forEachClass { s ->
                 run{
-                    if (s is NativeClass) {
-                        println("native class " + s.namespace + ":" + s.identifier + " -> " + s.cls.toString())
-                        return@run
-                    }
+//                    if (s is NativeClass) {
+//                        println("native class " + s.namespace + ":" + s.identifier + " -> " + s.cls.toString())
+//                        return@run
+//                    }
                     println("class " + s.identifier)
                     println("\tconstructors:")
                     for (c in s.constructors) {
@@ -283,7 +283,7 @@ object GlobalField : FieldContainer, IField {
                     }
                 }
             }
-            field.forEachTemplate { s ->
+            namespace.field.forEachTemplate { s ->
                 run {
                     println("struct " + s.identifier)
                     println("\tconstructors:")
@@ -333,7 +333,7 @@ object GlobalField : FieldContainer, IField {
                     }
                 }
             }
-            field.forEachInterface { i ->
+            namespace.field.forEachInterface { i ->
                 run {
                     println("interface " + i.identifier)
                     println("\tfunctions:")

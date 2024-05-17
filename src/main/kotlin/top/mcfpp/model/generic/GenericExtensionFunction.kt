@@ -112,7 +112,7 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
         visitor.visit(ctx)
         currFunction = nullFunction
         //注册这个函数
-        GlobalField.localNamespaces[namespace]!!.addFunction(compiledFunction, false)
+        GlobalField.localNamespaces[namespace]!!.field.addFunction(compiledFunction, false)
         return compiledFunction
     }
 

@@ -31,7 +31,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         if(ctx.statement().size == 0) return null
         Function.currFunction = MCFPPFile.currFile!!.topFunction
         //注册函数
-        GlobalField.localNamespaces[Project.currNamespace]!!.addFunction(Function.currFunction, force = false)
+        GlobalField.localNamespaces[Project.currNamespace]!!.field.addFunction(Function.currFunction, force = false)
         super.visitTopStatement(ctx)
         Function.currFunction = Function.nullFunction
         return null
@@ -240,10 +240,10 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
             for (c in ctx.fieldDeclarationExpression()){
                 val type = MCFPPType.parseFromContext(ctx.type(), Function.currFunction.field)
                 //函数变量，生成
-                val `var` = Var.build(c.Identifier().text, type, Function.currFunction)
+                var `var` = Var.build(c.Identifier().text, type, Function.currFunction)
                 //变量注册
                 //一定是函数变量
-                if (!Function.field.putVar(c.Identifier().text, `var`,true)) {
+                if (Function.field.containVar(c.Identifier().text)) {
                     LogProcessor.error("Duplicate defined variable name:" + c.Identifier().text)
                 }
                 Function.addCommand("#field: " + ctx.type().text + " " + c.Identifier().text + if (c.expression() != null) " = " + c.expression().text else "")
@@ -253,15 +253,16 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                     try {
                         if(`var` is MCInt && init is MCInt && init !is MCIntConcrete){
                             Function.currFunction.commands.replaceThenAnalyze(init.name to `var`.name, init.`object`.name to `var`.`object`.name)
-                            `var`.assignCommand(init, Function.currFunction.commands.last().toString())
+                            `var` = `var`.assignCommand(init, Function.currFunction.commands.last().toString())
                         }else{
-                            `var`.assign(init)
+                             `var` = `var`.assign(init)
                         }
                     } catch (e: VariableConverseException) {
                         LogProcessor.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
                         throw VariableConverseException(e)
                     }
                 }
+                Function.field.putVar(`var`.identifier, `var`, true)
                 when(fieldModifier){
                     "const" -> {
                         if(!`var`.hasAssigned){
@@ -301,9 +302,9 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
             try {
                 if(left is MCInt && right is MCInt){
                     Function.currFunction.commands.replaceThenAnalyze(right.name to left.name, right.`object`.name to left.`object`.name)
-                    left.assignCommand(right, Function.currFunction.commands.last().toString())
+                    left.replacedBy(left.assignCommand(right, Function.currFunction.commands.last().toString()))
                 }else{
-                    left.assign(right)
+                    left.replacedBy(left.assign(right))
                 }
             } catch (e: VariableConverseException) {
                 LogProcessor.error("Cannot convert " + right.javaClass + " to " + left.javaClass)
@@ -428,8 +429,8 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         ifFunction.invoke(ArrayList(),null)
         Function.currFunction = ifFunction
         if(!GlobalField.localNamespaces.containsKey(ifFunction.namespace))
-            GlobalField.localNamespaces[ifFunction.namespace] = NamespaceField()
-        GlobalField.localNamespaces[ifFunction.namespace]!!.addFunction(ifFunction,false)
+            GlobalField.localNamespaces[ifFunction.namespace] = Namespace(ifFunction.namespace)
+        GlobalField.localNamespaces[ifFunction.namespace]!!.field.addFunction(ifFunction,false)
     }
 
     /**
@@ -467,8 +468,8 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         val f = InternalFunction("_if_branch_", Function.currFunction)
         //注册函数
         if(!GlobalField.localNamespaces.containsKey(f.namespace))
-            GlobalField.localNamespaces[f.namespace] = NamespaceField()
-        GlobalField.localNamespaces[f.namespace]!!.addFunction(f,false)
+            GlobalField.localNamespaces[f.namespace] = Namespace(f.namespace)
+        GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f,false)
         if (parent is mcfppParser.IfStatementContext || parent is mcfppParser.ElseIfStatementContext) {
             //第一个if
             parent as mcfppParser.IfStatementContext
@@ -559,8 +560,8 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
         Function.currFunction = whileFunction
         if(!GlobalField.localNamespaces.containsKey(whileFunction.namespace))
-            GlobalField.localNamespaces[whileFunction.namespace] = NamespaceField()
-        GlobalField.localNamespaces[whileFunction.namespace]!!.addFunction(whileFunction,false)
+            GlobalField.localNamespaces[whileFunction.namespace] = Namespace(whileFunction.namespace)
+        GlobalField.localNamespaces[whileFunction.namespace]!!.field.addFunction(whileFunction,false)
     }
 
     
@@ -598,8 +599,8 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         f.child.add(f)
         f.parent.add(f)
         if(!GlobalField.localNamespaces.containsKey(f.namespace))
-            GlobalField.localNamespaces[f.namespace] = NamespaceField()
-        GlobalField.localNamespaces[f.namespace]!!.addFunction(f,false)
+            GlobalField.localNamespaces[f.namespace] = Namespace(f.namespace)
+        GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f,false)
         //条件判断
         if (exp is MCBoolConcrete && exp.value) {
             //给子函数开栈
@@ -666,8 +667,8 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
         Function.currFunction = doWhileFunction
         if(!GlobalField.localNamespaces.containsKey(doWhileFunction.namespace))
-            GlobalField.localNamespaces[doWhileFunction.namespace] = NamespaceField()
-        GlobalField.localNamespaces[doWhileFunction.namespace]!!.addFunction(doWhileFunction,false)
+            GlobalField.localNamespaces[doWhileFunction.namespace] = Namespace(doWhileFunction.namespace)
+        GlobalField.localNamespaces[doWhileFunction.namespace]!!.field.addFunction(doWhileFunction,false)
     }
 
 
@@ -706,8 +707,10 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         val f: Function = InternalFunction("_dowhile_", Function.currFunction)
         f.child.add(f)
         f.parent.add(f)
-        if(!GlobalField.localNamespaces.containsKey(f.namespace)) GlobalField.localNamespaces[f.namespace] = NamespaceField()
-        GlobalField.localNamespaces[f.namespace]!!.addFunction(f,false)
+        if(!GlobalField.localNamespaces.containsKey(f.namespace)) {
+            GlobalField.localNamespaces[f.namespace] = Namespace(f.namespace)
+        }
+        GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f,false)
         //给子函数开栈
         Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
         Function.addCommand(
@@ -776,8 +779,8 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         val forFunc: Function = InternalFunction("_for_", Function.currFunction)
         forFunc.parent.add(Function.currFunction)
         if(!GlobalField.localNamespaces.containsKey(forFunc.namespace))
-            GlobalField.localNamespaces[forFunc.namespace] = NamespaceField()
-        GlobalField.localNamespaces[forFunc.namespace]!!.addFunction(forFunc,false)
+            GlobalField.localNamespaces[forFunc.namespace] = Namespace(forFunc.identifier)
+        GlobalField.localNamespaces[forFunc.namespace]!!.field.addFunction(forFunc,false)
         Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
         Function.addCommand(Commands.function(forFunc))
         Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
@@ -815,8 +818,8 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         val forLoopFunc: Function = InternalFunction("_for_loop_", Function.currFunction)
         forLoopFunc.parent.add(Function.currFunction)
         if(!GlobalField.localNamespaces.containsKey(forLoopFunc.namespace))
-            GlobalField.localNamespaces[forLoopFunc.namespace] = NamespaceField()
-        GlobalField.localNamespaces[forLoopFunc.namespace]!!.addFunction(forLoopFunc,false)
+            GlobalField.localNamespaces[forLoopFunc.namespace] = Namespace(forLoopFunc.identifier)
+        GlobalField.localNamespaces[forLoopFunc.namespace]!!.field.addFunction(forLoopFunc,false)
         Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
         Function.addCommand(Commands.function(forLoopFunc))
 
@@ -880,8 +883,8 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         f.child.add(f)
         f.parent.add(f)
         if(!GlobalField.localNamespaces.containsKey(f.namespace))
-            GlobalField.localNamespaces[f.namespace] = NamespaceField()
-        GlobalField.localNamespaces[f.namespace]!!.addFunction(f,false)
+            GlobalField.localNamespaces[f.namespace] = Namespace(f.namespace)
+        GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f,false)
         //条件循环判断
         if (exp is MCBoolConcrete && exp.value) {
             //给子函数开栈

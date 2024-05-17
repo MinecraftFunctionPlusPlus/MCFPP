@@ -2,6 +2,7 @@ package top.mcfpp.lang
 
 import top.mcfpp.exception.VariableNotResolvedException
 import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lang.type.UnresolvedType
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
@@ -21,15 +22,10 @@ class UnresolvedVar : Var<Any> {
     val typeScope : IFieldWithType
 
     /**
-     * 变量的类型。与普通的变量不同，这里作为字符串储存，从而在解析的时候能够通过[top.mcfpp.model.field.IFieldWithClass.getClass]方法获取到作为类型的类。
-     */
-    private val varType: String
-
-    /**
      * 创建一个未被解析的变量，它有指定的标识符和类型
      */
-    constructor(identifier: String, type: String, typeScope: IFieldWithType){
-        varType = type
+    constructor(identifier: String, type: UnresolvedType, typeScope: IFieldWithType){
+        this.type = type
         this.identifier = identifier
         this.typeScope = typeScope
     }
@@ -41,7 +37,7 @@ class UnresolvedVar : Var<Any> {
      * @return
      */
     fun resolve(fieldContainer: FieldContainer): Var<*>{
-        return build(identifier, MCFPPType.parseFromTypeName(varType), fieldContainer)
+        return build(identifier, (type as UnresolvedType).resolve(typeScope), fieldContainer)
     }
 
     /**
@@ -72,7 +68,7 @@ class UnresolvedVar : Var<Any> {
      * @return 复制的结果
      */
     override fun clone(): UnresolvedVar {
-        return UnresolvedVar(identifier, varType, typeScope)
+        return UnresolvedVar(identifier, type as UnresolvedType, typeScope)
     }
 
     /**

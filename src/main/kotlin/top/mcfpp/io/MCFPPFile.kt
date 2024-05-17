@@ -47,7 +47,7 @@ class MCFPPFile(path : String) : File(path) {
         McfppTypeVisitor().visit(tree())
         //类是否有空继承
         GlobalField.localNamespaces.forEach { _, u ->
-            u.forEachClass { c ->
+            u.field.forEachClass { c ->
                 for ((index,p) in c.parent.withIndex()){
                     if(p is Class.Companion.UndefinedClassOrInterface){
                         val r = p.getDefinedClassOrInterface()

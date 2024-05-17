@@ -6,9 +6,9 @@ import org.antlr.v4.runtime.tree.ParseTree
 import org.apache.logging.log4j.*
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.CommentType
-import top.mcfpp.io.LibReader
-import top.mcfpp.io.LibWriter
 import top.mcfpp.io.MCFPPFile
+import top.mcfpp.io.lib.LibReader
+import top.mcfpp.io.lib.LibWriter
 import top.mcfpp.lang.MCFloat
 import top.mcfpp.lang.UnresolvedVar
 import top.mcfpp.lang.type.MCFPPBaseType
@@ -79,13 +79,13 @@ object Project {
         GlobalField.init()
         //初始化mcfpp的tick和load函数
         //添加命名空间
-        GlobalField.localNamespaces["mcfpp"] = NamespaceField()
+        GlobalField.localNamespaces["mcfpp"] = Namespace("mcfpp")
         mcfppTick = Function("tick","mcfpp", MCFPPBaseType.Void)
         mcfppLoad = Function("load","mcfpp", MCFPPBaseType.Void)
         mcfppInit = Function("init", "mcfpp", MCFPPBaseType.Void)
-        GlobalField.localNamespaces["mcfpp"]!!.addFunction(mcfppLoad,true)
-        GlobalField.localNamespaces["mcfpp"]!!.addFunction(mcfppTick,true)
-        GlobalField.localNamespaces["mcfpp"]!!.addFunction(mcfppInit, true)
+        GlobalField.localNamespaces["mcfpp"]!!.field.addFunction(mcfppLoad,true)
+        GlobalField.localNamespaces["mcfpp"]!!.field.addFunction(mcfppTick,true)
+        GlobalField.localNamespaces["mcfpp"]!!.field.addFunction(mcfppInit, true)
         GlobalField.functionTags["minecraft:tick"]!!.functions.add(mcfppTick)
         GlobalField.functionTags["minecraft:load"]!!.functions.add(mcfppLoad)
         GlobalField.functionTags["minecraft:load"]!!.functions.add(mcfppInit)
@@ -176,7 +176,7 @@ object Project {
         }
         //库读取完了，现在实例化所有类中的成员字段吧
         for(namespace in GlobalField.libNamespaces.values){
-            namespace.forEachClass { c ->
+            namespace.field.forEachClass { c ->
                 run {
                     for (v in c.field.allVars){
                         if(v is UnresolvedVar){
@@ -264,7 +264,7 @@ object Project {
         logger.debug("Adding scoreboards declare in mcfpp:load function")
         //region load init command
         //向load函数中添加记分板初始化命令
-        Function.currFunction = GlobalField.localNamespaces["mcfpp"]!!.getFunction("load", ArrayList(), ArrayList())!!
+        Function.currFunction = GlobalField.localNamespaces["mcfpp"]!!.field.getFunction("load", ArrayList(), ArrayList())!!
         for (scoreboard in GlobalField.scoreboards.values){
             Function.addCommand("scoreboard objectives add ${scoreboard.name} ${scoreboard.criterion}")
         }
@@ -272,7 +272,7 @@ object Project {
         Function.addCommand("execute unless score math mcfpp_init matches 1 run function math:_init")
         //向load中添加类初始化命令
         for (n in GlobalField.localNamespaces.values){
-            n.forEachClass { c->
+            n.field.forEachClass { c->
                 run {
                     c.classPreStaticInit.invoke(ArrayList(), callerClassP = null)
                 }
@@ -285,7 +285,7 @@ object Project {
         //寻找入口函数
         var hasEntrance = false
         for(field in GlobalField.localNamespaces.values){
-            field.forEachFunction { f->
+            field.field.forEachFunction { f->
                 run {
                     if (f.parent.size == 0 && f !is Native) {
                         //找到了入口函数

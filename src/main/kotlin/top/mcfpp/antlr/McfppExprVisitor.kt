@@ -66,8 +66,8 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             }else{
                 //注册函数
                 if(!GlobalField.localNamespaces.containsKey(f.namespace))
-                    GlobalField.localNamespaces[f.namespace] = NamespaceField()
-                GlobalField.localNamespaces[f.namespace]!!.addFunction(f,false)
+                    GlobalField.localNamespaces[f.namespace] = Namespace(f.namespace)
+                GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f,false)
             }
             q
         }
@@ -101,8 +101,8 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 val temp = NoStackFunction("bool_${UUID.randomUUID()}",Function.currFunction)
                 //注册函数
                 if(!GlobalField.localNamespaces.containsKey(temp.namespace))
-                    GlobalField.localNamespaces[temp.namespace] = NamespaceField()
-                GlobalField.localNamespaces[temp.namespace]!!.addFunction(temp,false)
+                    GlobalField.localNamespaces[temp.namespace] = Namespace(temp.namespace)
+                GlobalField.localNamespaces[temp.namespace]!!.field.addFunction(temp,false)
                 Function.currFunction = temp
                 val b: Var<*>? = visit(ctx.conditionalAndExpression(i))
                 Function.currFunction = l
@@ -147,8 +147,8 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 val temp = NoStackFunction("bool_${UUID.randomUUID()}",Function.currFunction)
                 //注册函数
                 if(!GlobalField.localNamespaces.containsKey(temp.namespace))
-                    GlobalField.localNamespaces[temp.namespace] = NamespaceField()
-                GlobalField.localNamespaces[temp.namespace]!!.addFunction(temp,false)
+                    GlobalField.localNamespaces[temp.namespace] = Namespace(temp.namespace)
+                GlobalField.localNamespaces[temp.namespace]!!.field.addFunction(temp,false)
                 Function.currFunction = temp
                 val b: Var<*>? = visit(ctx.equalityExpression(i))
                 Function.currFunction = l
