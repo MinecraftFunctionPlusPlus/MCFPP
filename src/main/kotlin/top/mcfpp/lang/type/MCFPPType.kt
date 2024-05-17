@@ -236,7 +236,7 @@ abstract class MCFPPType(
                         }
                         val expr = McfppExprVisitor()
                         val readOnlyArgs = ctx.type().readOnlyArgs()?.expressionList()?.expression()?.map { expr.visit(it)!! } ?: listOf()
-                        return t.getGenericClassType(readOnlyArgs)
+                        return clazz.compile(readOnlyArgs).getType()
                     }
                 }
             }

@@ -158,160 +158,168 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
      */
     override fun assign(b: Var<*>) : NBTBasedData<T> {
         hasAssigned = true
-        if(b is NBTBasedData<*> && b.nbtType == this.nbtType){
+        if(b is NBTBasedData<*>){
             return assignCommand(b as NBTBasedData<T>)
         }
         throw VariableConverseException()
     }
 
+    protected fun assignWithMemberCommand(a: NBTBasedData<T>){
+        //是成员
+        if(a.parent != null){
+            //a也是成员
+            val b = a.getTempVar() as NBTBasedData
+            if(this.isDynamicPath() || b.isDynamicPath()){
+                //获取路径至macro
+                val source = this.getPathString()
+                if(source == ""){
+                    //动态的，进行解析
+                    Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
+                    Function.addCommand("data modify storage mcfpp:arg dynamic.sourcePath set from storage mcfpp:arg path_join.base")
+                }else{
+                    //直接写入
+                    Function.addCommand("data modity storage mcfpp:arg dynamic.sourcePath set value \"$source\"")
+                }
+                //b的路径直接写入
+                Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set value \"${b.identifier}\"")
+                //调用宏
+                Function.addCommands(
+                    Commands.selectRun(
+                        parent!!,
+                        Command.build("function mcfpp.dynamic:data/modify/entity.from.storage_sp with storage mcfpp:arg dynamic")
+                    )
+                )
+            }
+            else{
+                Function.addCommands(
+                    Commands.selectRun(
+                        parent!!,
+                        Command.build("data modify entity @s data.${getPathString()} set from storage mcfpp:temp temp.${b.getPathString()}")
+                    )
+                )
+            }
+        }else{
+            if(this.isDynamicPath() || a.isDynamicPath()){
+                //获取路径至macro
+                val source = this.getPathString()
+                if(source == ""){
+                    //动态的，进行解析
+                    Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
+                    Function.addCommand("data modify storage mcfpp:arg dynamic.sourcePath set from storage mcfpp:arg path_join.base")
+                }else{
+                    //直接写入
+                    Function.addCommand("data modity storage mcfpp:arg dynamic.sourcePath set value \"$source\"")
+                }
+                //获取a的路径
+                val target = a.getPathString("${Project.currNamespace}.stack_frame[${a.stackIndex}]")
+                if(target == "") {
+                    //动态的，进行解析
+                    Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
+                    Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set from storage mcfpp:arg path_join.base")
+                }else{
+                    //直接写入
+                    Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set value \"$target\"")
+                }
+                //调用宏
+                Function.addCommands(
+                    Commands.selectRun(
+                        parent!!,
+                        Command.build("function mcfpp.dynamic:data/modify/entity.from.storage_sp2 with storage mcfpp:arg dynamic")
+                    )
+                )
+            }else{
+                Function.addCommands(
+                    Commands.selectRun(
+                        parent!!,
+                        Command.build("data modify entity @s data.${getPathString()} set from storage mcfpp:system ${Project.currNamespace}.stack_frame[${a.stackIndex}].${a.getPathString()}")
+                    )
+                )
+            }
+        }
+    }
+
+    protected fun assignWithNotConcreteGlobalVarCommand(a: NBTBasedData<T>){
+        if(a.parent != null){
+            if(this.isDynamicPath() || a.isDynamicPath()){
+                //获取路径至macro
+                val source = this.getPathString("${Project.currNamespace}.stack_frame[$stackIndex]")
+                if(source == ""){
+                    //动态的，进行解析
+                    Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
+                    Function.addCommand("data modify storage mcfpp:arg dynamic.sourcePath set from storage mcfpp:arg path_join.base")
+                }else{
+                    //直接写入
+                    Function.addCommand("data modity storage mcfpp:arg dynamic.sourcePath set value \"$source\"")
+                }
+                //获取a的路径
+                val target = a.getPathString()
+                if(target == "") {
+                    //动态的，进行解析
+                    Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
+                    Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set from storage mcfpp:arg path_join.base")
+                }else{
+                    //直接写入
+                    Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set value \"$target\"")
+                }
+                //调用宏
+                Function.addCommands(
+                    Commands.selectRun(
+                        a.parent!!,
+                        Command.build("function mcfpp.dynamic:data/modify/storage.from.entity_sp3 with storage mcfpp:arg dynamic")
+                    )
+                )
+            }else{
+                Function.addCommands(
+                    Commands.selectRun(
+                        parent!!,
+                        Command.build("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].${getPathString()} set from entity @s data.${a.getPathString()}")
+                    )
+                )
+            }
+        }else{
+            if(this.isDynamicPath() || a.isDynamicPath()){
+                //获取路径至macro
+                val source = this.getPathString("${Project.currNamespace}.stack_frame[$stackIndex]")
+                if(source == ""){
+                    //动态的，进行解析
+                    Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
+                    Function.addCommand("data modify storage mcfpp:arg dynamic.sourcePath set from storage mcfpp:arg path_join.base")
+                }else{
+                    //直接写入
+                    Function.addCommand("data modity storage mcfpp:arg dynamic.sourcePath set value \"$source\"")
+                }
+                //获取a的路径
+                val target = a.getPathString("${Project.currNamespace}.stack_frame[${a.stackIndex}]")
+                if(target == "") {
+                    //动态的，进行解析
+                    Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
+                    Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set from storage mcfpp:arg path_join.base")
+                }else{
+                    //直接写入
+                    Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set value \"$target\"")
+                }
+                //调用宏
+                Function.addCommand(
+                    Command.build("function mcfpp.dynamic:data/modify/storage.from.storage_sp4 with storage mcfpp:arg dynamic")
+                )
+            }
+            Function.addCommand(
+                Command.build("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].${getPathString()} set from storage mcfpp:system ${Project.currNamespace}.stack_frame[${a.stackIndex}].${a.getPathString()}")
+            )
+        }
+    }
+
     @InsertCommand
-    protected fun assignCommand(a: NBTBasedData<T>) : NBTBasedData<T>{
+    protected open fun assignCommand(a: NBTBasedData<T>) : NBTBasedData<T>{
         nbtType = a.nbtType
         if (parent != null){
-            //是成员
-            if(a.parent != null){
-                //a也是成员
-                val b = a.getTempVar() as NBTBasedData
-                if(this.isDynamicPath() || b.isDynamicPath()){
-                    //获取路径至macro
-                    val source = this.getPathString()
-                    if(source == ""){
-                        //动态的，进行解析
-                        Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
-                        Function.addCommand("data modify storage mcfpp:arg dynamic.sourcePath set from storage mcfpp:arg path_join.base")
-                    }else{
-                        //直接写入
-                        Function.addCommand("data modity storage mcfpp:arg dynamic.sourcePath set value \"$source\"")
-                    }
-                    //b的路径直接写入
-                    Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set value \"${b.identifier}\"")
-                    //调用宏
-                    Function.addCommands(
-                        Commands.selectRun(
-                            parent!!,
-                            Command.build("function mcfpp.dynamic:data/modify/entity.from.storage_sp with storage mcfpp:arg dynamic")
-                        )
-                    )
-                }
-                else{
-                    Function.addCommands(
-                        Commands.selectRun(
-                            parent!!,
-                            Command.build("data modify entity @s data.${getPathString()} set from storage mcfpp:temp temp.${b.getPathString()}")
-                        )
-                    )
-                }
-            }else{
-                if(this.isDynamicPath() || a.isDynamicPath()){
-                    //获取路径至macro
-                    val source = this.getPathString()
-                    if(source == ""){
-                        //动态的，进行解析
-                        Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
-                        Function.addCommand("data modify storage mcfpp:arg dynamic.sourcePath set from storage mcfpp:arg path_join.base")
-                    }else{
-                        //直接写入
-                        Function.addCommand("data modity storage mcfpp:arg dynamic.sourcePath set value \"$source\"")
-                    }
-                    //获取a的路径
-                    val target = a.getPathString("${Project.currNamespace}.stack_frame[${a.stackIndex}]")
-                    if(target == "") {
-                        //动态的，进行解析
-                        Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
-                        Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set from storage mcfpp:arg path_join.base")
-                    }else{
-                        //直接写入
-                        Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set value \"$target\"")
-                    }
-                    //调用宏
-                    Function.addCommands(
-                        Commands.selectRun(
-                            parent!!,
-                            Command.build("function mcfpp.dynamic:data/modify/entity.from.storage_sp2 with storage mcfpp:arg dynamic")
-                        )
-                    )
-                }else{
-                    Function.addCommands(
-                        Commands.selectRun(
-                            parent!!,
-                            Command.build("data modify entity @s data.${getPathString()} set from storage mcfpp:system ${Project.currNamespace}.stack_frame[${a.stackIndex}].${a.getPathString()}")
-                        )
-                    )
-                }
-            }
+            assignWithMemberCommand(a)
         }else{
             //是局部变量
             if(a is NBTBasedDataConcrete<*>){
                 return NBTBasedDataConcrete(this, a.value as T)
             }else{
-                if(a.parent != null){
-                    if(this.isDynamicPath() || a.isDynamicPath()){
-                        //获取路径至macro
-                        val source = this.getPathString("${Project.currNamespace}.stack_frame[$stackIndex]")
-                        if(source == ""){
-                            //动态的，进行解析
-                            Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
-                            Function.addCommand("data modify storage mcfpp:arg dynamic.sourcePath set from storage mcfpp:arg path_join.base")
-                        }else{
-                            //直接写入
-                            Function.addCommand("data modity storage mcfpp:arg dynamic.sourcePath set value \"$source\"")
-                        }
-                        //获取a的路径
-                        val target = a.getPathString()
-                        if(target == "") {
-                            //动态的，进行解析
-                            Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
-                            Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set from storage mcfpp:arg path_join.base")
-                        }else{
-                            //直接写入
-                            Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set value \"$target\"")
-                        }
-                        //调用宏
-                        Function.addCommands(
-                            Commands.selectRun(
-                                a.parent!!,
-                                Command.build("function mcfpp.dynamic:data/modify/storage.from.entity_sp3 with storage mcfpp:arg dynamic")
-                            )
-                        )
-                    }else{
-                        Function.addCommands(
-                            Commands.selectRun(
-                                parent!!,
-                                Command.build("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].${getPathString()} set from entity @s data.${a.getPathString()}")
-                            )
-                        )
-                    }
-                }else{
-                    if(this.isDynamicPath() || a.isDynamicPath()){
-                        //获取路径至macro
-                        val source = this.getPathString("${Project.currNamespace}.stack_frame[$stackIndex]")
-                        if(source == ""){
-                            //动态的，进行解析
-                            Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
-                            Function.addCommand("data modify storage mcfpp:arg dynamic.sourcePath set from storage mcfpp:arg path_join.base")
-                        }else{
-                            //直接写入
-                            Function.addCommand("data modity storage mcfpp:arg dynamic.sourcePath set value \"$source\"")
-                        }
-                        //获取a的路径
-                        val target = a.getPathString("${Project.currNamespace}.stack_frame[${a.stackIndex}]")
-                        if(target == "") {
-                            //动态的，进行解析
-                            Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
-                            Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set from storage mcfpp:arg path_join.base")
-                        }else{
-                            //直接写入
-                            Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set value \"$target\"")
-                        }
-                        //调用宏
-                        Function.addCommand(
-                            Command.build("function mcfpp.dynamic:data/modify/storage.from.storage_sp4 with storage mcfpp:arg dynamic")
-                        )
-                    }
-                    Function.addCommand(
-                        Command.build("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].${getPathString()} set from storage mcfpp:system ${Project.currNamespace}.stack_frame[${a.stackIndex}].${a.getPathString()}")
-                    )
-                }
+                assignWithNotConcreteGlobalVarCommand(a)
             }
         }
         //去除值
@@ -676,5 +684,9 @@ class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData<T>, MCFPPValue<T> {
             Function.currFunction.field.putVar(identifier, re, true)
         }
         return re
+    }
+
+    override fun toString(): String {
+        return "[$type,value=${SNBTUtil.toSNBT(value)}]"
     }
 }

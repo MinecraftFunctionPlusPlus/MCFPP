@@ -16,16 +16,19 @@ import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.generic.ClassParam
 import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.model.generic.GenericFunction
+import top.mcfpp.util.SerializableClassBodyContext
+import top.mcfpp.util.SerializableFunctionBodyContext
 import top.mcfpp.util.Utils
 import java.io.FileWriter
 
 object LibWriter {
-    fun write(path: String){
+    fun write(path: String) : JSONObject{
         val json = GlobalWriter.toJson(GlobalField)
         val writer = FileWriter("$path\\.mclib")
         writer.write(json.toJSONString(JSONWriter.Feature.PrettyFormat))
         writer.flush()
         writer.close()
+        return json
     }
 
 }
@@ -87,7 +90,7 @@ object FunctionWriter: ILibJsonWriter<Function>{
                 readonlyParam.add(FunctionParamWriter.toJson(v))
                 json["readonlyParam"] = readonlyParam
             } }
-            json["context"] = Utils.toByteArrayString(t.ctx)
+            json["context"] = Utils.toByteArrayString(SerializableFunctionBodyContext(t.ctx))
         }
         if(t is NativeFunction){
             val readonlyParam = JSONArray()
@@ -118,7 +121,7 @@ object ClassWriter: ILibJsonWriter<Class>{
             val generic = JSONArray()
             t.readOnlyParams.forEach { generic.add(ClassParamWriter.toJson(it)) }
             json["generic"] = generic
-            json["context"] = Utils.toByteArrayString(t.ctx)
+            json["context"] = Utils.toByteArrayString(SerializableClassBodyContext(t.ctx))
         }
         //成员
         json["field"] = CompoundDataFieldWriter.toJson(t.field)

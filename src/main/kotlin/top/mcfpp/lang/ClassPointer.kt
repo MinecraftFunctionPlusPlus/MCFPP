@@ -5,6 +5,7 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.*
@@ -35,7 +36,8 @@ class ClassPointer : Var<Int>{
     /**
      * 指针对应的类的类型
      */
-    var clsType: Class
+    val clsType: Class
+        get() = (type as MCFPPClassType).cls
 
     /**
      * 指针对应的类的标识符
@@ -57,7 +59,6 @@ class ClassPointer : Var<Int>{
      * @param identifier 标识符
      */
     constructor(clazz: Class, identifier: String) {
-        clsType = clazz
         this.type = clazz.getType()
         this.identifier = identifier
     }
@@ -67,7 +68,6 @@ class ClassPointer : Var<Int>{
      * @param classPointer 被复制的指针
      */
     constructor(classPointer: ClassPointer) : super(classPointer) {
-        clsType = classPointer.clsType
         type = classPointer.type
     }
 
@@ -140,7 +140,6 @@ class ClassPointer : Var<Int>{
             throw VariableConverseException()
         }
         val re = ClassPointer(this)
-        re.clsType = c
         return re
     }
 

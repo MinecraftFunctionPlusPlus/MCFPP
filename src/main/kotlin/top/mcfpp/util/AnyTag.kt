@@ -7,8 +7,8 @@ import net.querz.nbt.tag.Tag
  *
  * 不适用于MC中，只存在于编译过程中
  */
-class AnyTag(value: Any) : Tag<Any>(value) {
-    override fun clone(): Tag<Any> {
+class AnyTag<T>(value: T) : Tag<T>(value) {
+    override fun clone(): Tag<T> {
         return AnyTag(value)
     }
 

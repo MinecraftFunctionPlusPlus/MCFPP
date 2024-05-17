@@ -2,10 +2,12 @@ package top.mcfpp.util
 
 import net.querz.nbt.tag.IntArrayTag
 import top.mcfpp.Project
+import top.mcfpp.antlr.mcfppParser
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
+import java.io.Serializable
 import java.util.UUID
 import kotlin.system.exitProcess
 
@@ -88,7 +90,7 @@ object Utils {
         return IntArrayTag(uuidArray)
     }
 
-    fun<T> toByteArrayString(obj: T): String{
+    fun<T> toByteArrayString(obj: T): String where T : Serializable{
         // 创建一个 ObjectOutputStream，将数据序列化为字节数组
         val byteArrayOutputStream = ByteArrayOutputStream()
         val objectOutputStream = ObjectOutputStream(byteArrayOutputStream)
@@ -117,5 +119,27 @@ object Utils {
         byteArrayInputStream.close()
 
         return obj
+    }
+}
+
+class SerializableFunctionBodyContext(ctx: mcfppParser.FunctionBodyContext) : mcfppParser.FunctionBodyContext(
+    ctx.getParent(),
+    ctx.invokingState
+), Serializable{
+    init {
+        this.children = ctx.children
+        this.start = ctx.start
+        this.stop = ctx.stop
+    }
+}
+
+class SerializableClassBodyContext(ctx: mcfppParser.ClassBodyContext): mcfppParser.ClassBodyContext(
+    ctx.getParent(),
+    ctx.invokingState
+), Serializable{
+    init {
+        this.children = ctx.children
+        this.start = ctx.start
+        this.stop = ctx.stop
     }
 }

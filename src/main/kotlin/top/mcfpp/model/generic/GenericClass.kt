@@ -5,6 +5,7 @@ import top.mcfpp.Project
 import top.mcfpp.antlr.McfppGenericClassVisitor
 import top.mcfpp.lang.MCFPPTypeVar
 import top.mcfpp.lang.Var
+import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.model.Class
 import top.mcfpp.model.field.GlobalField
 
@@ -27,7 +28,7 @@ class GenericClass : Class {
         this.ctx = ctx
     }
 
-    fun compile(readOnlyArgs: ArrayList<Var<*>>) : Class{
+    fun compile(readOnlyArgs: List<Var<*>>) : Class{
         val cls = Class(identifier + "_" + index, namespace)
         cls.initialize()
         for (parent in this.parent){
@@ -55,7 +56,7 @@ class GenericClass : Class {
         visitor.visitClassDeclaration(ctx.parent as mcfppParser.ClassDeclarationContext)
         index ++
 
-        cls.getType = {cls.getType().getGenericClassType(readOnlyArgs)}
+        cls.getType = {MCFPPClassType(cls, this.getType().parentType)}
 
         return cls
     }

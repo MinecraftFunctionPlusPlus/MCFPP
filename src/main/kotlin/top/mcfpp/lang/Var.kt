@@ -335,13 +335,16 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
                 MCFPPBaseType.BaseEntity -> TODO()
                 MCFPPBaseType.String -> `var` = MCString(container, identifier)
                 MCFPPBaseType.Float -> TODO()
-                is MCFPPListType -> `var` = NBTList<NBTBasedData<*>>(container, identifier, type.generic)
+                is MCFPPListType -> `var` = NBTList(container, identifier, type.generic)
                 MCFPPNBTType.Dict -> TODO()
                 MCFPPNBTType.Map -> TODO()
                 MCFPPNBTType.NBT -> `var` = NBTBasedData<Tag<*>>(container, identifier)
                 MCFPPBaseType.JavaVar -> `var` = JavaVar(null,identifier)
                 MCFPPBaseType.Any -> `var` = MCAny(container, identifier)
                 MCFPPBaseType.Type -> `var` = MCFPPTypeVar(identifier = identifier)
+                is MCFPPGenericClassType -> {
+                    `var` = ClassPointer(type.cls, identifier)
+                }
                 is MCFPPClassType ->{
                     //TODO: 这里不一定拿得到type.cls!!!可能得从GlobalField拿！
                     //什么意思捏？ - Alumopper 2024.4.14

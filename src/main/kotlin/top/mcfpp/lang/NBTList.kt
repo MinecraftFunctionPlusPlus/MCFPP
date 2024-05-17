@@ -3,6 +3,7 @@ package top.mcfpp.lang
 import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.*
 import top.mcfpp.Project
+import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
@@ -17,7 +18,7 @@ import java.util.*
 /**
  * 表示一个列表类型。基于NBTBasedData实现。
  */
-open class NBTList<E : Var<*>> : NBTBasedData<ListTag<*>> {
+open class NBTList : NBTBasedData<ListTag<*>> {
 
     final override var type: MCFPPType
 
@@ -53,11 +54,10 @@ open class NBTList<E : Var<*>> : NBTBasedData<ListTag<*>> {
      * 复制一个list
      * @param b 被复制的list值
      */
-    constructor(b: NBTList<E>) : super(b){
+    constructor(b: NBTList) : super(b){
         type = b.type
         this.genericType = (type as MCFPPListType).generic
     }
-
 
     /**
      * 将这个变量强制转换为一个类型
@@ -70,6 +70,45 @@ open class NBTList<E : Var<*>> : NBTBasedData<ListTag<*>> {
             MCFPPBaseType.Any -> MCAnyConcrete(this)
             else -> throw VariableConverseException()
         }
+    }
+
+    public override fun assign(b: Var<*>): NBTBasedData<ListTag<*>> {
+        return when(b){
+            is NBTList -> assignCommand(b)
+            is NBTBasedDataConcrete<*> -> {
+                if(b.nbtType == this.nbtType){
+                    assignCommand(b as NBTBasedDataConcrete<ListTag<*>>)
+                }else{
+                    throw VariableConverseException()
+                }
+            }
+            is NBTBasedData<*> -> {
+                if(b.nbtType == this.nbtType){
+                    assignCommand(b as NBTBasedData<ListTag<*>>)
+                }else{
+                    throw VariableConverseException()
+                }
+            }
+
+            else -> throw VariableConverseException()
+        }
+    }
+
+    @InsertCommand
+    override fun assignCommand(a: NBTBasedData<ListTag<*>>) : NBTList{
+        nbtType = a.nbtType
+        if (parent != null){
+            assignWithMemberCommand(a)
+        }else{
+            //是局部变量
+            if(a is NBTBasedDataConcrete<ListTag<*>>){
+                return NBTListConcrete<Any>(this, a.value)
+            }else{
+                assignWithNotConcreteGlobalVarCommand(a)
+            }
+        }
+        //去除值
+        return NBTList(this)
     }
 
     /*
@@ -104,7 +143,7 @@ open class NBTList<E : Var<*>> : NBTBasedData<ListTag<*>> {
     ): Pair<Function, Boolean> {
         var re: Function = UnknownFunction(key)
         data.field.forEachFunction {
-            //TODO 我们约定it为NativeFunction
+            //TODO 我们约定it为NativeFunction，但是没有考虑拓展函数
             assert(it is NativeFunction)
             val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to genericType))
             if(nf.isSelf(key, normalParams)){
@@ -139,7 +178,8 @@ open class NBTList<E : Var<*>> : NBTBasedData<ListTag<*>> {
     }
 }
 
-class NBTListConcrete<E : Var<*>>: NBTList<E>, MCFPPValue<ListTag<*>> {
+//不要随便删这个类型形参，会把NBTListConcreteData类弄坏
+class NBTListConcrete<E>: NBTList, MCFPPValue<ListTag<*>> {
 
     override var value: ListTag<*>
 
@@ -162,7 +202,7 @@ class NBTListConcrete<E : Var<*>>: NBTList<E>, MCFPPValue<ListTag<*>> {
         this.value = value
     }
 
-    constructor(list : NBTList<E>, value: ListTag<*>):super(list){
+    constructor(list : NBTList, value: ListTag<*>):super(list){
         this.value = value
     }
 
@@ -225,5 +265,43 @@ class NBTListConcrete<E : Var<*>>: NBTList<E>, MCFPPValue<ListTag<*>> {
         }else{
             throw IllegalArgumentException("Index must be a int")
         }
+    }
+
+    override fun toString(): String {
+        return "[$type,value=${SNBTUtil.toSNBT(value)}]"
+    }
+
+    override fun getMemberFunction(
+        key: String,
+        readOnlyParams: List<MCFPPType>,
+        normalParams: List<MCFPPType>,
+        accessModifier: Member.AccessModifier
+    ): Pair<Function, Boolean> {
+        var re: Function = UnknownFunction(key)
+        data.field.forEachFunction {
+            //TODO 我们约定it为NativeFunction，但是没有考虑拓展函数
+            assert(it is NativeFunction)
+            val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to genericType))
+            if(nf.isSelf(key, normalParams)){
+                re = nf
+            }
+        }
+        val iterator = data.parent.iterator()
+        while (re is UnknownFunction && iterator.hasNext()){
+            re = iterator.next().getFunction(key,readOnlyParams , normalParams ,isStatic)
+        }
+        return re to true
+    }
+
+    companion object {
+        val data = CompoundData("list", "mcfpp")
+        //注册函数
+
+        init {
+            data.parent.add(MCAny.data)
+            data.field.addFunction(NativeFunction("add", NBTListConcreteData(),MCFPPBaseType.Void,"mcfpp")
+                .appendNormalParam(MCFPPGenericType("E", emptyList()), "e"),false)
+        }
+
     }
 }
