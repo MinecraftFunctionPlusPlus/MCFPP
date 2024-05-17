@@ -7,7 +7,6 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.*
 import top.mcfpp.lib.field.GlobalField
 import top.mcfpp.lib.field.NamespaceField
-import top.mcfpp.lib.function.FunctionParam
 import top.mcfpp.lib.generic.ClassParam
 import top.mcfpp.lib.generic.GenericClass
 import top.mcfpp.util.LazyWrapper

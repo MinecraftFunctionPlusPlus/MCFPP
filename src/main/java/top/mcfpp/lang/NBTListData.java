@@ -1,23 +1,15 @@
 package top.mcfpp.lang;
 
-import kotlin.NotImplementedError;
 import kotlin.jvm.functions.Function4;
 import net.querz.nbt.io.SNBTUtil;
-import net.querz.nbt.tag.IntTag;
-import net.querz.nbt.tag.ListTag;
 import net.querz.nbt.tag.Tag;
 import org.jetbrains.annotations.NotNull;
 import top.mcfpp.Project;
-import top.mcfpp.annotations.MCFPPNative;
 import top.mcfpp.lib.function.Function;
 import top.mcfpp.lib.function.MNIMethodContainer;
-import top.mcfpp.util.LogProcessor;
 import top.mcfpp.util.NBTUtil;
 import top.mcfpp.util.ValueWrapper;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 
 public class NBTListData extends MNIMethodContainer {

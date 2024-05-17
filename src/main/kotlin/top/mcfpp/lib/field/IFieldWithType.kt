@@ -1,6 +1,5 @@
 package top.mcfpp.lib.field
 
-import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPType
 
 interface IFieldWithType : IField {

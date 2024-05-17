@@ -1,7 +1,6 @@
 package top.mcfpp.lang.type
 
 import top.mcfpp.lang.*
-import top.mcfpp.lang.Void
 import top.mcfpp.util.ResourceLocation
 
 /**

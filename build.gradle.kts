@@ -1,6 +1,5 @@
 import org.gradle.kotlin.dsl.cpp
 import java.nio.file.Files
-import java.nio.file.Paths
 import java.util.Optional
 
 plugins {

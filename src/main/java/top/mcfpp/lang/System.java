@@ -1,15 +1,12 @@
 package top.mcfpp.lang;
 
 import kotlin.jvm.functions.Function4;
-import net.querz.nbt.tag.StringTag;
 import org.jetbrains.annotations.NotNull;
 import top.mcfpp.annotations.InsertCommand;
-import top.mcfpp.annotations.MCFPPNative;
 import top.mcfpp.lib.function.Function;
 import top.mcfpp.lib.function.MNIMethodContainer;
 import top.mcfpp.util.ValueWrapper;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 
 public class System extends MNIMethodContainer {
