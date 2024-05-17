@@ -4,5 +4,6 @@
     ],
     "description": "",
     "namespace": "mcfpp.sys",
-    "targetPath": "null"
+    "targetPath": "null",
+    "ignoreStdLib": true
 }

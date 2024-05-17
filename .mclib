@@ -3,27 +3,66 @@
 		{
 			"id":"default",
 			"functions":[
-				"void main()",
-				"void test()"
+				{
+					"id":"hello",
+					"normalParams":[
+						
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				}
 			],
 			"classes":[
 				
 			],
-			"structs":[
+			"template":[
 				
 			]
 		},
 		{
 			"id":"mcfpp",
 			"functions":[
-				"void load()",
-				"void tick()",
-				"void init()"
+				{
+					"id":"load",
+					"normalParams":[
+						
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				},
+				{
+					"id":"tick",
+					"normalParams":[
+						
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				},
+				{
+					"id":"init",
+					"normalParams":[
+						
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				}
 			],
 			"classes":[
 				
 			],
-			"structs":[
+			"template":[
 				
 			]
 		}

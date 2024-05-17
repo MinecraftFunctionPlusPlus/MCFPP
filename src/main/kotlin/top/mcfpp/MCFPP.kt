@@ -25,10 +25,6 @@ fun main(args: Array<String>) {
                 CompileSettings.isDebug = true
                 LogProcessor.warn("Compiling in debug mode.")
             }
-            if(args.contains("ignoreStdLib")){
-                CompileSettings.ignoreStdLib = true
-                LogProcessor.warn("Ignoring standard library.")
-            }
         }
         val start: Long = System.currentTimeMillis()
         LogProcessor.info("Tips: " + UwU.tip) //生成tips

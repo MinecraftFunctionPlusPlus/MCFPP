@@ -40,7 +40,7 @@ class NativeFunction : Function, Native {
      */
     constructor(name: String, dataClass: MNIMethodContainer, returnType: MCFPPType, namespace: String): super(name, namespace, returnType){
         this.javaMethod = dataClass.getMNIMethod(name)
-        this.javaClassName = dataClass.javaClass.`package`.name + "." + dataClass.javaClass.name
+        this.javaClassName = dataClass.javaClass.name
         this.javaMethodName = name
     }
 

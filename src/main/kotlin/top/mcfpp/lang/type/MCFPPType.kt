@@ -120,7 +120,22 @@ abstract class MCFPPType(
 
         val data = CompoundData("type","mcfpp")
 
-        private var typeCache:MutableMap<String,MCFPPType> = mutableMapOf()
+        private val typeCache:MutableMap<String,MCFPPType> by lazy { mutableMapOf(
+            MCFPPBaseType.Void.typeName to MCFPPBaseType.Void,
+            MCFPPBaseType.BaseEntity.typeName to MCFPPBaseType.BaseEntity,
+            MCFPPBaseType.Type.typeName to MCFPPBaseType.Type,
+            MCFPPBaseType.Int.typeName to MCFPPBaseType.Int,
+            MCFPPBaseType.Bool.typeName to MCFPPBaseType.Bool,
+            MCFPPBaseType.String.typeName to MCFPPBaseType.String,
+            MCFPPBaseType.Float.typeName to MCFPPBaseType.Float,
+            MCFPPBaseType.Any.typeName to MCFPPBaseType.Any,
+            MCFPPBaseType.Selector.typeName to MCFPPBaseType.Selector,
+            MCFPPBaseType.JavaVar.typeName to MCFPPBaseType.JavaVar,
+            MCFPPBaseType.JsonText.typeName to MCFPPBaseType.JsonText,
+            MCFPPNBTType.NBT.typeName to MCFPPNBTType.NBT,
+            MCFPPNBTType.Map.typeName to MCFPPNBTType.Map,
+            MCFPPNBTType.Dict.typeName to MCFPPNBTType.Dict
+        )}
 
         /**
          * 类型注册缓存。键值对的第一个元素判断字符串是否满足条件，而第二个元素则是用于从一个字符串中解析出一个类型

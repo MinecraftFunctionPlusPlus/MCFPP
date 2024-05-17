@@ -8,6 +8,7 @@ import top.mcfpp.exception.*
 import top.mcfpp.exception.IllegalFormatException
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lang.*
+import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.type.UnresolvedType
 import top.mcfpp.model.*
@@ -634,7 +635,12 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 LogProcessor.error("Class $clsName should extends MNIMethodContainer")
                 throw IllegalArgumentException("Class $clsName should extends MNIMethodContainer")
             }
-            NativeFunction(ctx.Identifier().text, clazz, MCFPPType.parseFromIdentifier(ctx.functionReturnType().text, typeScope), Project.currNamespace)
+            NativeFunction(
+                ctx.Identifier().text,
+                clazz,
+                ctx.functionReturnType()?.let { MCFPPType.parseFromContext(it.type(),typeScope)}?:MCFPPBaseType.Void,
+                Project.currNamespace
+            )
         } catch (e: IllegalFormatException) {
             LogProcessor.error("Illegal Java Method Name: " + e.message)
             return null
