@@ -103,7 +103,7 @@ open class Function : Member, FieldContainer {
     /**
      * 函数的返回类型
      */
-    val returnType : MCFPPType
+    var returnType : MCFPPType
 
     /**
      * 包含所有命令的列表

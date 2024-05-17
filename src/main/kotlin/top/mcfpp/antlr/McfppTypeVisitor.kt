@@ -6,7 +6,6 @@ import top.mcfpp.lang.MCAny
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.*
 import top.mcfpp.model.field.GlobalField
-import top.mcfpp.model.field.NamespaceField
 import top.mcfpp.model.generic.ClassParam
 import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.util.LazyWrapper
@@ -45,7 +44,7 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             visit(lib)
         }
         if(!GlobalField.localNamespaces.containsKey(Project.currNamespace)){
-            GlobalField.localNamespaces[Project.currNamespace] = NamespaceField()
+            GlobalField.localNamespaces[Project.currNamespace] = Namespace(Project.currNamespace)
         }
         //文件结构，类和函数
         for (t in ctx.typeDeclaration()) {
@@ -75,15 +74,15 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             return
         }
         //将库的命名空间加入到importedLibNamespaces中
-        val nsp = NamespaceField()
+        val nsp = Namespace(namespace)
         GlobalField.importedLibNamespaces[namespace] = nsp
 
         //这个库被引用的类
         if(ctx.cls == null){
             //只导入方法
-            libNamespace.forEachFunction { f ->
+            libNamespace.field.forEachFunction { f ->
                 run {
-                    nsp.addFunction(f,false)
+                    nsp.field.addFunction(f,false)
                 }
             }
             return
@@ -91,21 +90,21 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         //导入类和方法
         if(ctx.cls.text == "*"){
             //全部导入
-            libNamespace.forEachClass { c ->
+            libNamespace.field.forEachClass { c ->
                 run {
-                    nsp.addClass(c.identifier,c)
+                    nsp.field.addClass(c.identifier,c)
                 }
             }
-            libNamespace.forEachFunction { f ->
+            libNamespace.field.forEachFunction { f ->
                 run {
-                    nsp.addFunction(f,false)
+                    nsp.field.addFunction(f,false)
                 }
             }
         }else{
             //只导入声明的类
-            val cls = libNamespace.getClass(ctx.cls.text)
+            val cls = libNamespace.field.getClass(ctx.cls.text)
             if(cls != null){
-                nsp.addClass(cls.identifier,cls)
+                nsp.field.addClass(cls.identifier,cls)
             }else{
                 LogProcessor.error("Class ${ctx.cls.text} not found in namespace $namespace")
             }
@@ -134,11 +133,11 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         Project.ctx = ctx
         //注册类
         val id = ctx.classWithoutNamespace().text
-        val field = GlobalField.localNamespaces[Project.currNamespace]!!
-        if (field.hasInterface(id)) {
+        val nsp = GlobalField.localNamespaces[Project.currNamespace]!!
+        if (nsp.field.hasInterface(id)) {
             //重复声明
             LogProcessor.error("Interface has been defined: $id in namespace ${Project.currNamespace}")
-            Interface.currInterface = field.getInterface(id)
+            Interface.currInterface = nsp.field.getInterface(id)
         } else {
             //如果没有声明过这个类
             val itf = Interface(id, Project.currNamespace)
@@ -154,7 +153,7 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
                     itf.parent.add(pc)
                 }
             }
-            field.addInterface(id, itf)
+            nsp.field.addInterface(id, itf)
         }
     }
 
@@ -178,9 +177,9 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         Project.ctx = ctx
         //注册类
         val id = ctx.classWithoutNamespace().text
-        val field = GlobalField.localNamespaces[Project.currNamespace]!!
+        val nsp = GlobalField.localNamespaces[Project.currNamespace]!!
 
-        val cls = if (field.hasClass(id)) {
+        val cls = if (nsp.field.hasClass(id)) {
             //重复声明
             LogProcessor.error("Class has been defined: $id in namespace ${Project.currNamespace}")
             return
@@ -217,7 +216,7 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         }
         cls.isStaticClass = ctx.STATIC() != null
         cls.isAbstract = ctx.ABSTRACT() != null
-        field.addClass(id, cls)
+        nsp.field.addClass(id, cls)
     }
 
     /**
@@ -227,11 +226,11 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         Project.ctx = ctx!!
         //注册模板
         val id = ctx.classWithoutNamespace().text
-        val field = GlobalField.localNamespaces[Project.currNamespace]!!
-        if (field.hasTemplate(id)) {
+        val nsp = GlobalField.localNamespaces[Project.currNamespace]!!
+        if (nsp.field.hasTemplate(id)) {
             //重复声明
             LogProcessor.error("Template has been defined: $id in namespace ${Project.currNamespace}")
-            Template.currTemplate = field.getTemplate(id)
+            Template.currTemplate = nsp.field.getTemplate(id)
         }
         val template = Template(id, LazyWrapper{ MCFPPType.parseFromIdentifier(ctx.type().text, MCFPPFile.currFile!!.field)}, Project.currNamespace)
         if (ctx.className() != null) {
@@ -253,6 +252,6 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
                 template.parent.add(s)
             }
         }
-        field.addTemplate(id, template)
+        nsp.field.addTemplate(id, template)
     }
 }

@@ -116,6 +116,7 @@ open class Command {
      * 在这条命令的末尾继续构建命令
      *
      * @param command 固定的命令字符串
+     * @param withBlank 是否会在此字符串和已有的字符串之间添加空格
      * @return
      */
     fun build(command: String) : Command{
@@ -140,6 +141,7 @@ open class Command {
      */
     fun build(command: String, pointID: String) : Command{
         replacePoint[pointID] = commandStringList.size
+        commandStringList.add(" ")
         commandStringList.add(command)
         return this
     }
@@ -148,9 +150,7 @@ open class Command {
         val sb = StringBuilder()
         for (c in commandStringList){
             sb.append(c)
-            sb.append(" ")
         }
-        sb.deleteAt(sb.length - 1)
         return sb.toString()
     }
 

@@ -2,6 +2,10 @@ package top.mcfpp.util
 
 import net.querz.nbt.tag.IntArrayTag
 import top.mcfpp.Project
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.ObjectInputStream
+import java.io.ObjectOutputStream
 import java.util.UUID
 import kotlin.system.exitProcess
 
@@ -82,5 +86,36 @@ object Utils {
         uuidArray[2] = uuid.mostSignificantBits.toInt()
         uuidArray[3] = (uuid.mostSignificantBits shr 32).toInt()
         return IntArrayTag(uuidArray)
+    }
+
+    fun<T> toByteArrayString(obj: T): String{
+        // 创建一个 ObjectOutputStream，将数据序列化为字节数组
+        val byteArrayOutputStream = ByteArrayOutputStream()
+        val objectOutputStream = ObjectOutputStream(byteArrayOutputStream)
+        objectOutputStream.writeObject(obj)
+        objectOutputStream.flush()
+        val bytes = byteArrayOutputStream.toByteArray()
+        objectOutputStream.close()
+        byteArrayOutputStream.close()
+
+        // 将字节数组转换为字符串
+        return bytes.joinToString("") { String.format("%02X", it) }
+    }
+
+    fun<T> fromByteArrayString(str: String): T{
+        // 将字符串转换为字节数组
+        val bytes = ByteArray(str.length / 2)
+        for (i in bytes.indices) {
+            bytes[i] = str.substring(i * 2, i * 2 + 2).toInt(16).toByte()
+        }
+
+        // 创建一个 ObjectInputStream，将字节数组反序列化为对象
+        val byteArrayInputStream = ByteArrayInputStream(bytes)
+        val objectInputStream = ObjectInputStream(byteArrayInputStream)
+        val obj = objectInputStream.readObject() as T
+        objectInputStream.close()
+        byteArrayInputStream.close()
+
+        return obj
     }
 }

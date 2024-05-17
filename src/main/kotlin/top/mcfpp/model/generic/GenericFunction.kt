@@ -150,7 +150,7 @@ class GenericFunction : Function, Generic<Function> {
             LogProcessor.error("A 'return' expression required in function: " + compiledFunction.namespaceID)
         }
         //注册这个函数
-        GlobalField.localNamespaces[namespace]!!.addFunction(compiledFunction, false)
+        GlobalField.localNamespaces[namespace]!!.field.addFunction(compiledFunction, false)
         //传递函数的返回值
         this.returnVar = compiledFunction.returnVar
         return compiledFunction

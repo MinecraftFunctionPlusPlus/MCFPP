@@ -95,7 +95,7 @@ object DatapackCreator {
             Files.write(Paths.get("$path/${Project.config.name}/pack.mcmeta"), datapackMcMetaJson.toByteArray())
             for(namespace in GlobalField.localNamespaces){
                 val currPath = "$path\\${Project.config.name}\\data\\${namespace.key}"
-                namespace.value.forEachFunction {f ->
+                namespace.value.field.forEachFunction {f ->
                     run {
                         if (f is Native) {
                             return@run
@@ -108,7 +108,7 @@ object DatapackCreator {
                         )
                     }
                 }
-                namespace.value.forEachClass { cls ->
+                namespace.value.field.forEachClass { cls ->
                     run {
                         if (cls is Native) {
                             return@run

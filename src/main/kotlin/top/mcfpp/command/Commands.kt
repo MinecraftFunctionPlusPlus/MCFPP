@@ -28,8 +28,8 @@ object Commands {
      * @return
      */
     fun sbPlayerGet(target: MCInt): Command{
-        return Command.build("scoreboard players get ")
-            .build(target.name,target.name).build(" ")
+        return Command.build("scoreboard players get")
+            .build(target.name,target.name)
             .build(target.`object`.toString(),target.`object`.toString())
     }
 
@@ -41,9 +41,8 @@ object Commands {
      * @return
      */
     fun sbPlayerAdd(target: MCInt, value: Int): Command {
-        return Command.build("scoreboard players add ")
+        return Command.build("scoreboard players add")
             .build(target.name, target.name)
-            .build(" ")
             .build(target.`object`.toString(), target.`object`.toString())
             .build(" $value")
     }
@@ -57,11 +56,11 @@ object Commands {
      * @return
      */
     fun sbPlayerOperation(a: MCInt, operation: String, b: MCInt): Command {
-        return Command.build("scoreboard players operation ")
-            .build(a.name,a.name).build(" ")
-            .build(a.`object`.toString(),a.`object`.toString()).build(" ")
-            .build(operation,"operation").build(" ")
-            .build(b.name,b.name).build(" ")
+        return Command.build("scoreboard players operation")
+            .build(a.name,a.name)
+            .build(a.`object`.toString(),a.`object`.toString())
+            .build(operation,"operation")
+            .build(b.name,b.name)
             .build(b.`object`.toString(),b.`object`.toString())
     }
 
@@ -74,15 +73,15 @@ object Commands {
      */
     fun sbPlayerRemove(target: MCInt, value: Int): Command {
         return Command.build("scoreboard players remove ")
-            .build(target.name, target.name).build(" ")
-            .build(target.`object`.toString(), target.`object`.toString()).build(" ")
+            .build(target.name, target.name)
+            .build(target.`object`.toString(), target.`object`.toString())
             .build(value.toString())
     }
 
     fun sbPlayerSet(a: MCInt, value: Int): Command {
         return Command.build("scoreboard players set ")
-            .build(a.name,a.name).build(" ")
-            .build(a.`object`.toString(),a.`object`.toString()).build(" ")
+            .build(a.name,a.name)
+            .build(a.`object`.toString(),a.`object`.toString())
             .build(value.toString())
     }
 
@@ -91,11 +90,11 @@ object Commands {
             is ClassPointer -> {
                 arrayOf(
                     Command.build("data modify storage entity ${ClassPointer.tempItemEntityUUID} Thrower set from storage mcfpp:system ${Project.config.defaultNamespace}.stack_frame[${a.stackIndex}].${a.identifier}"),
-                    Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin ").build("run ","run").build(command)
+                    Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin").build("run","run").build(command)
                 )
             }
             is MCFPPClassType -> {
-                arrayOf(Command.build("execute as ${a.cls.uuid} run ").build(command))
+                arrayOf(Command.build("execute as ${a.cls.uuid} run").build(command))
             }
             else -> TODO()
         }
@@ -107,11 +106,11 @@ object Commands {
             is ClassPointer -> {
                 arrayOf(
                     Command.build("data modify storage entity ${ClassPointer.tempItemEntityUUID} Thrower set from storage mcfpp:system ${Project.config.defaultNamespace}.stack_frame[${a.stackIndex}].${a.identifier}"),
-                    Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin ").build("run ","run")
+                    Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin").build("run","run")
                 )
             }
             is MCFPPClassType -> {
-                arrayOf(Command.build("execute as ${a.cls.uuid} ").build("run ","run"))
+                arrayOf(Command.build("execute as ${a.cls.uuid}").build("run","run"))
             }
             else -> TODO()
         }

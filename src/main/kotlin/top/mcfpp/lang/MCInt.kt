@@ -190,8 +190,10 @@ open class MCInt : MCNumber<Int> {
     override fun plus(a: Var<*>): Var<*> {
         //t += a
         val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
-        if(!isTemp){
-            return a.plus(getTempVar() as MCInt)
+        if(!isTemp && a.isTemp){
+            return a.plus(this)
+        }else if(!isTemp){
+            return (getTempVar() as MCInt).plus(a)
         }
         if (qwq is MCIntConcrete) {
             Function.addCommand(Commands.sbPlayerAdd(this, qwq.value))
@@ -207,8 +209,10 @@ open class MCInt : MCNumber<Int> {
     override fun minus(a: Var<*>): Var<*> {
         //t -= a
         val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
-        if(!isTemp){
-            return a.minus(getTempVar() as MCInt)
+        if(!isTemp && a.isTemp){
+            return a.minus(this)
+        }else if(!isTemp){
+            return (getTempVar() as MCInt).minus(a)
         }
         if (qwq is MCIntConcrete) {
             Function.addCommand(Commands.sbPlayerRemove(this, qwq.value))
@@ -223,7 +227,9 @@ open class MCInt : MCNumber<Int> {
     @InsertCommand
     override fun multiple(a: Var<*>): Var<*> {
         //t *= a
-        if(!isTemp){
+        if(!isTemp && a.isTemp){
+            return a.multiple(this)
+        }else if(!isTemp){
             return (getTempVar() as MCInt).multiple(a)
         }
         val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a

@@ -74,7 +74,7 @@ public class System extends MNIMethodContainer {
     @InsertCommand
     public static void print(@NotNull MCString var) {
         if(var instanceof MCStringConcrete varC){
-            Function.Companion.addCommand("tellraw @a \"" + varC.getValue() + "\"");
+            Function.Companion.addCommand("tellraw @a \"" + varC.getValue().getValue() + "\"");
         }else{
             //TODO
         }

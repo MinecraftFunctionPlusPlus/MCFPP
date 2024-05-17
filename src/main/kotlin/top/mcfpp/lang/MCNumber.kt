@@ -27,7 +27,7 @@ abstract class MCNumber<T> : Var<T>, OnScoreboard {
     /**
      * 复制一个数字类型变量
      */
-    constructor(b: MCNumber<T>) : super(b as Var<*>) {
+    constructor(b: MCNumber<T>) : super(b) {
         `object` = b.`object`
     }
 

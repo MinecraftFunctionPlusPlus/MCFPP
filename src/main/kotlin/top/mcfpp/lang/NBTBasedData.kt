@@ -39,7 +39,7 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
         identifier: String = UUID.randomUUID().toString()
     ) : super(curr.prefix + identifier) {
         this.identifier = identifier
-        path.add(MCString(identifier))
+        path.add(JavaVar(identifier))
     }
 
     /**
@@ -48,7 +48,7 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
      */
     constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier){
         isTemp = true
-        path.add(MCString(identifier))
+        path.add(JavaVar(identifier))
     }
 
     /**

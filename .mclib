@@ -3,7 +3,8 @@
 		{
 			"id":"default",
 			"functions":[
-				"void main()"
+				"void main()",
+				"void test()"
 			],
 			"classes":[
 				
@@ -16,7 +17,8 @@
 			"id":"mcfpp",
 			"functions":[
 				"void load()",
-				"void tick()"
+				"void tick()",
+				"void init()"
 			],
 			"classes":[
 				

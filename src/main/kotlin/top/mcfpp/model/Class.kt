@@ -1,5 +1,6 @@
 package top.mcfpp.model
 
+import net.querz.nbt.tag.IntArrayTag
 import top.mcfpp.Project
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPClassType
@@ -8,6 +9,7 @@ import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Constructor
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.NBTUtil
 import top.mcfpp.util.Utils
 import java.util.*
 import kotlin.collections.ArrayList
@@ -44,8 +46,8 @@ import kotlin.collections.ArrayList
  */
 open class Class : CompoundData {
 
-    val uuid: UUID = UUID.randomUUID()
-    val uuidNBT = Utils.toNBTArrayUUID(uuid)
+    val uuid: UUID
+    val uuidNBT : IntArrayTag
 
     /**
      * 记录这个类所有实例地址的记分板
@@ -95,6 +97,8 @@ open class Class : CompoundData {
     constructor(identifier: String, namespace: String = Project.currNamespace) {
         this.identifier = identifier
         this.namespace = namespace
+        uuid = UUID.nameUUIDFromBytes(namespaceID.toByteArray())
+        uuidNBT = Utils.toNBTArrayUUID(uuid)
     }
 
     override fun initialize(){
@@ -111,8 +115,6 @@ open class Class : CompoundData {
                     "run summon marker 0 1 0 {Tags:[$staticTag],UUID:$uuidNBT}"
         )
     }
-
-    constructor()
 
     @get:Override
     override val prefix: String
