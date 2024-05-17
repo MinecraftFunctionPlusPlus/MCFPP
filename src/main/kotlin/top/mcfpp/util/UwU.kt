@@ -65,7 +65,7 @@ object UwU {
                     "滴，编译器喵为您报时~现在是" + SimpleDateFormat("HH:mm").format(date)
                 }
             } else if (s == "疯狂星期四，vivo50") {
-                if (Calendar.DAY_OF_WEEK !== Calendar.THURSDAY) {
+                if (Calendar.getInstance().get(Calendar.DAY_OF_WEEK) != Calendar.THURSDAY) {
                     s += "。欸……什么，今天不是星期四吗（失落"
                 }
             }
