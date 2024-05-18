@@ -40,6 +40,7 @@ dependencies {
     antlr("org.antlr:antlr4:4.12.0")
     implementation(kotlin("reflect"))
     testImplementation(kotlin("script-runtime"))
+    implementation("com.google.guava:guava:33.2.0-jre")
 }
 
 tasks.test {

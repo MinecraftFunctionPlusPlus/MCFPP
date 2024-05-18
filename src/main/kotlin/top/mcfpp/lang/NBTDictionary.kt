@@ -161,6 +161,16 @@ open class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<CompoundTag>{
         this.value = value
     }
 
+
+    constructor(v: NBTDictionaryConcrete) : super(v){
+        this.value = v.value
+    }
+
+    override fun clone(): NBTDictionaryConcrete {
+        return NBTDictionaryConcrete(this)
+    }
+
+
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
         if (parent != null) {

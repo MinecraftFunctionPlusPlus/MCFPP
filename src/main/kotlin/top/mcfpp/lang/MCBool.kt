@@ -277,6 +277,14 @@ class MCBoolConcrete : MCBool, MCFPPValue<Boolean>{
         this.value = value
     }
 
+    constructor(v: MCBoolConcrete) : super(v){
+        this.value = v.value
+    }
+
+    override fun clone(): MCBoolConcrete {
+        return MCBoolConcrete(this)
+    }
+
     @InsertCommand
     override fun equalCommand(a: MCBool): MCBool {
         //re = t == a

@@ -8,6 +8,7 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Constructor
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil
 import top.mcfpp.util.Utils
@@ -46,8 +47,8 @@ import kotlin.collections.ArrayList
  */
 open class Class : CompoundData {
 
-    val uuid: UUID
-    val uuidNBT : IntArrayTag
+    lateinit var uuid: UUID
+    lateinit var uuidNBT : IntArrayTag
 
     /**
      * 记录这个类所有实例地址的记分板
@@ -97,12 +98,12 @@ open class Class : CompoundData {
     constructor(identifier: String, namespace: String = Project.currNamespace) {
         this.identifier = identifier
         this.namespace = namespace
-        uuid = UUID.nameUUIDFromBytes(namespaceID.toByteArray())
-        uuidNBT = Utils.toNBTArrayUUID(uuid)
     }
 
     override fun initialize(){
         super.initialize()
+        uuid = UUID.nameUUIDFromBytes(namespaceID.toByteArray())
+        uuidNBT = Utils.toNBTArrayUUID(uuid)
         classPreInit = Function("_class_preinit_$identifier", this, false)
         classPreStaticInit = Function("_class_prestaticinit_$identifier", this, true)
         field.addFunction(classPreInit,true)
@@ -123,10 +124,10 @@ open class Class : CompoundData {
     /**
      * 获取这个类指针对于的marker的tag
      */
-    val tag: String
+    open val tag: String
         get() = namespace + "_class_" + identifier + "_pointer"
 
-    val staticTag: String
+    open val staticTag: String
         get() = namespace + "_class_" + identifier + "_static_pointer"
 
     fun getConstructor(normalParams: ArrayList<String>): Constructor?{
@@ -216,4 +217,9 @@ open class Class : CompoundData {
          */
         var currClass: Class? = null
     }
+}
+
+class CompiledGenericClass(identifier: String, namespace: String = Project.currNamespace,
+                           var originClass: GenericClass) : Class(identifier, namespace) {
+
 }

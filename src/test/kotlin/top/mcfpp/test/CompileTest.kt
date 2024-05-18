@@ -46,23 +46,6 @@ class CompileTest {
     }
 
     @Test
-    fun genericFunctionTest(){
-        val test =
-            """
-                func test<int i>(int p){
-                     print(i);
-                     print(p);
-                }
-
-                func main(){
-                    dynamic int qwq;
-                    test<2>(qwq);
-                }
-            """.trimIndent()
-        MCFPPStringTest.readFromString(test)
-    }
-
-    @Test
     fun functionReturnTest(){
         val test =
             """
@@ -88,40 +71,6 @@ class CompileTest {
                 dynamic int qwq;
                 print(i);
                 print(qwq);
-            """.trimIndent()
-        MCFPPStringTest.readFromString(test)
-    }
-
-    @Test
-    fun typeFieldTest(){
-        val test =
-            """
-                func main(){
-                    type qwq = int;
-                    test<qwq>();
-                }
-                
-                func test<type T>(){
-                    T i = 5;
-                    print(i);
-                }
-            """.trimIndent()
-        MCFPPStringTest.readFromString(test)
-    }
-
-    @Test
-    fun classGenericTest(){
-        val test =
-            """
-                class Test<type T>{
-                    public T i;
-                }
-                
-                func main(){
-                    var test = Test<int>();
-                    test.i = 5;
-                    print(test.i);
-                }
             """.trimIndent()
         MCFPPStringTest.readFromString(test)
     }

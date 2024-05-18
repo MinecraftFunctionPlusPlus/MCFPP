@@ -651,6 +651,14 @@ class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData<T>, MCFPPValue<T> {
         this.value = value
     }
 
+    constructor(v: NBTBasedDataConcrete<T>) : super(v){
+        this.value = v.value
+    }
+
+    override fun clone(): NBTBasedDataConcrete<T> {
+        return NBTBasedDataConcrete(this)
+    }
+
     override fun getTempVar(): Var<*> {
         return NBTBasedDataConcrete(this.value)
     }

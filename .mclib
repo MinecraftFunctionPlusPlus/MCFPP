@@ -13,21 +13,269 @@
 					"tags":[
 						
 					]
-				},
-				{
-					"id":"test",
-					"normalParams":[
-						
-					],
-					"returnType":"void",
-					"isAbstract":false,
-					"tags":[
-						
-					]
 				}
 			],
 			"classes":[
-				
+				{
+					"id":"Test",
+					"parents":[
+						"mcfpp:any"
+					],
+					"generic":[
+						{
+							"id":"i",
+							"type":"int"
+						}
+					],
+					"context":"ACED00057372002B746F702E6D636670702E7574696C2E53657269616C697A61626C65436C617373426F6479436F6E74657874054A027FE4B581400200007870",
+					"field":{
+						"vars":[
+							
+						],
+						"functions":[
+							{
+								"id":"_class_preinit_Test",
+								"normalParams":[
+									
+								],
+								"returnType":"void",
+								"isAbstract":false,
+								"tags":[
+									
+								]
+							}
+						]
+					},
+					"staticField":{
+						"vars":[
+							
+						],
+						"functions":[
+							{
+								"id":"_class_prestaticinit_Test",
+								"normalParams":[
+									
+								],
+								"returnType":"void",
+								"isAbstract":false,
+								"tags":[
+									
+								]
+							}
+						]
+					},
+					"constructors":[
+						
+					]
+				},
+				{
+					"id":"Test",
+					"parents":[
+						"mcfpp:any"
+					],
+					"generic":[
+						{
+							"id":"i",
+							"type":"int"
+						},
+						{
+							"id":"j",
+							"type":"int"
+						}
+					],
+					"context":"ACED00057372002B746F702E6D636670702E7574696C2E53657269616C697A61626C65436C617373426F6479436F6E74657874054A027FE4B581400200007870",
+					"field":{
+						"vars":[
+							
+						],
+						"functions":[
+							{
+								"id":"_class_preinit_Test",
+								"normalParams":[
+									
+								],
+								"returnType":"void",
+								"isAbstract":false,
+								"tags":[
+									
+								]
+							}
+						]
+					},
+					"staticField":{
+						"vars":[
+							
+						],
+						"functions":[
+							{
+								"id":"_class_prestaticinit_Test",
+								"normalParams":[
+									
+								],
+								"returnType":"void",
+								"isAbstract":false,
+								"tags":[
+									
+								]
+							}
+						]
+					},
+					"constructors":[
+						
+					]
+				},
+				{
+					"id":"Test_int_int_0",
+					"parents":[
+						"mcfpp:any"
+					],
+					"field":{
+						"vars":[
+							{
+								"id":"e702de50-7f50-49f6-82f9-282fde1cbff8",
+								"type":"int"
+							},
+							{
+								"id":"a09cff90-4fad-425a-8fd6-0b7541219411",
+								"type":"int"
+							}
+						],
+						"functions":[
+							{
+								"id":"_class_preinit_Test_int_int_0",
+								"normalParams":[
+									
+								],
+								"returnType":"void",
+								"isAbstract":false,
+								"tags":[
+									
+								]
+							},
+							{
+								"id":"print",
+								"normalParams":[
+									
+								],
+								"returnType":"void",
+								"isAbstract":false,
+								"tags":[
+									
+								]
+							},
+							{
+								"id":"_init_test_int_int_0_0_lead",
+								"normalParams":[
+									
+								],
+								"returnType":"void",
+								"isAbstract":false,
+								"tags":[
+									
+								]
+							}
+						]
+					},
+					"staticField":{
+						"vars":[
+							
+						],
+						"functions":[
+							{
+								"id":"_class_prestaticinit_Test_int_int_0",
+								"normalParams":[
+									
+								],
+								"returnType":"void",
+								"isAbstract":false,
+								"tags":[
+									
+								]
+							}
+						]
+					},
+					"constructors":[
+						{
+							"normalParams":[
+								
+							]
+						}
+					]
+				},
+				{
+					"id":"Test_int_0",
+					"parents":[
+						"mcfpp:any"
+					],
+					"field":{
+						"vars":[
+							{
+								"id":"082e4970-deaa-4823-bb56-82e9482be6c1",
+								"type":"int"
+							}
+						],
+						"functions":[
+							{
+								"id":"_class_preinit_Test_int_0",
+								"normalParams":[
+									
+								],
+								"returnType":"void",
+								"isAbstract":false,
+								"tags":[
+									
+								]
+							},
+							{
+								"id":"print",
+								"normalParams":[
+									
+								],
+								"returnType":"void",
+								"isAbstract":false,
+								"tags":[
+									
+								]
+							},
+							{
+								"id":"_init_test_int_0_0_lead",
+								"normalParams":[
+									
+								],
+								"returnType":"void",
+								"isAbstract":false,
+								"tags":[
+									
+								]
+							}
+						]
+					},
+					"staticField":{
+						"vars":[
+							
+						],
+						"functions":[
+							{
+								"id":"_class_prestaticinit_Test_int_0",
+								"normalParams":[
+									
+								],
+								"returnType":"void",
+								"isAbstract":false,
+								"tags":[
+									
+								]
+							}
+						]
+					},
+					"constructors":[
+						{
+							"normalParams":[
+								
+							]
+						}
+					]
+				}
 			],
 			"template":[
 				

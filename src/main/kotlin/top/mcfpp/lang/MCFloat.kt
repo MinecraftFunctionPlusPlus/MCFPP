@@ -499,6 +499,14 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
         this.value = value
     }
 
+    constructor(v: MCFloatConcrete) : super(v){
+        this.value = v.value
+    }
+
+    override fun clone(): MCFloatConcrete {
+        return MCFloatConcrete(this)
+    }
+
     override fun toDynamic(replace: Boolean): Var<*> {
         val qwq = MCFloat(this)
         (sign as MCIntConcrete).toDynamic(false)

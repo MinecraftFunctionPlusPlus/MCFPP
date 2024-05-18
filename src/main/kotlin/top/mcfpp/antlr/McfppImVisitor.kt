@@ -15,13 +15,11 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.Annotation
-import top.mcfpp.model.function.Function
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.field.NamespaceField
-import top.mcfpp.model.function.FunctionParam
+import top.mcfpp.model.function.*
+import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam.Companion.typeToStringList
-import top.mcfpp.model.function.InternalFunction
-import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.Generic
 import top.mcfpp.util.LogProcessor
 
@@ -37,139 +35,59 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-    override fun visitFunctionBody(ctx: mcfppParser.FunctionBodyContext): Any? {
+    override fun visitFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext): Any? {
         if(ctx.parent is CompileTimeFuncDeclarationContext) return null
-        enterFunctionBody(ctx)
-        if(Function.currFunction !is Generic<*>){
-            super.visitFunctionBody(ctx)
-        }
-        exitFunctionBody(ctx)
+        enterFunctionDeclaration(ctx)
+        super.visitFunctionDeclaration(ctx)
+        exitFunctionDeclaration(ctx)
         return null
     }
 
-    fun visitFunctionBody(ctx: mcfppParser.FunctionBodyContext, function: Function){
-        val lastFunction = Function.currFunction
-        Function.currFunction = function
-        super.visitFunctionBody(ctx)
-        Function.currFunction = lastFunction
-    }
-
-    /**
-     * 进入一个函数体
-     * @param ctx the parse tree
-     */
-    fun enterFunctionBody(ctx: mcfppParser.FunctionBodyContext) {
+    private fun enterFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext){
         Project.ctx = ctx
         val f: Function
         //获取函数对象
-        if (ctx.parent.parent !is mcfppParser.ClassMemberContext && ctx.parent.parent !is mcfppParser.TemplateDeclarationContext && ctx.parent !is mcfppParser.ExtensionFunctionDeclarationContext) {
-            //不是类成员和结构体成员
-            val parent = ctx.parent as mcfppParser.FunctionDeclarationContext
-            val types = FunctionParam.parseReadonlyAndNormalParamTypes(parent.functionParams())
-            //获取缓存中的对象
-            f = GlobalField.getFunctionInner(Project.currNamespace, parent.Identifier().text, types.first, types.second)
-        } else if (ctx.parent is mcfppParser.ConstructorDeclarationContext) {
-            val parent = ctx.parent as mcfppParser.ConstructorDeclarationContext
-            //是构造函数
-            //解析参数
-            val types = FunctionParam.parseNormalParamTypes(parent.normalParams())
-            //获取缓存中的对象
-            f = if(ctx.parent.parent is mcfppParser.ClassMemberContext){
-                Class.currClass!!.getConstructor(types.typeToStringList())!!
-            }else{
-                Template.currTemplate!!.getConstructor(types.typeToStringList())!!
-            }
-        } else if(ctx.parent.parent is mcfppParser.ClassMemberContext){
-            val parent = ctx.parent as mcfppParser.ClassFunctionDeclarationContext
-            //是类的成员函数
-            //解析参数
-            val types = FunctionParam.parseReadonlyAndNormalParamTypes(parent.functionParams())
-            //获取缓存中的对象
-            val fun1 = Class.currClass!!.field.getFunction(parent.Identifier().text, types.first, types.second)
-            f = if(fun1 is UnknownFunction) Class.currClass!!.staticField.getFunction(parent.Identifier().text, types.first, types.second) else fun1
-        } else if(ctx.parent is mcfppParser.ExtensionFunctionDeclarationContext){
-            val parent = ctx.parent as mcfppParser.ExtensionFunctionDeclarationContext
-            //是扩展函数
-            val qwq = ctx.parent as mcfppParser.ExtensionFunctionDeclarationContext
-            //获取被拓展的类
-            //获取被拓展的类
-            val data : CompoundData = if(qwq.type().className() == null){
-                when(qwq.type().text){
-                    "int" -> MCInt.data
-                    else -> {
-                        throw Exception("Cannot add extension function to ${qwq.type().text}")
-                    }
-                }
-            }else{
-                val clsStr = qwq.type().className().text.split(":")
-                val id : String
-                val nsp : String?
-                if(clsStr.size == 1){
-                    id = clsStr[0]
-                    nsp = null
-                }else{
-                    id = clsStr[1]
-                    nsp = clsStr[0]
-                }
-                val owo: Class? = GlobalField.getClass(nsp, id)
-                if (owo == null) {
-                    val pwp = GlobalField.getTemplate(nsp, id)
-                    if(pwp == null){
-                        LogProcessor.error("Undefined class or struct:" + qwq.type().className().text)
-                        f = UnknownFunction(qwq.Identifier().text)
-                        Function.currFunction = f
-                        return
-                    }else{
-                        pwp
-                    }
-                }else{
-                    owo
-                }
-            }
-            //解析参数
-            val types = FunctionParam.parseReadonlyAndNormalParamTypes(parent.functionParams())
-            val field = if(parent.STATIC() != null) data.staticField else data.field
-            //获取缓存中的对象
-            f = field.getFunction(qwq.Identifier().text, types.first, types.second)
-        } else{
-            val parent = ctx.parent as mcfppParser.TemplateFunctionDeclarationContext
-            //解析参数
-            val types = FunctionParam.parseReadonlyAndNormalParamTypes(parent.functionParams())
-            //获取缓存中的对象
-            val fun1 = Template.currTemplate!!.field.getFunction(parent.Identifier().text, types.first, types.second)
-            f = if(fun1 is UnknownFunction) Class.currClass!!.staticField.getFunction(parent.Identifier().text, types.first, types.second) else fun1
-        }
+        val types = FunctionParam.parseReadonlyAndNormalParamTypes(ctx.functionParams())
+        //获取缓存中的对象
+        f = GlobalField.getFunctionInner(Project.currNamespace, ctx.Identifier().text, types.first, types.second)
         Function.currFunction = f
         //对函数进行注解处理
-        if(Class.currClass == null && Template.currTemplate == null){
-            for (a in annoInGlobal){
-                a.forFunction(f)
-            }
-            annoInGlobal.clear()
-        }else{
-            for (a in annoInCompound){
-                a.forFunction(f)
-            }
-            annoInCompound.clear()
+        for (a in annoInCompound){
+            a.forFunction(f)
         }
+        annoInCompound.clear()
     }
 
-    /**
-     * 离开一个函数体
-     * @param ctx the parse tree
-     */
-    fun exitFunctionBody(ctx: mcfppParser.FunctionBodyContext) {
+    private fun exitFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext){
         Project.ctx = ctx
         //函数是否有返回值
         if(Function.currFunction !is Generic<*> && Function.currFunction.returnType !=  MCFPPBaseType.Void && !Function.currFunction.hasReturnStatement){
             LogProcessor.error("A 'return' expression required in function: " + Function.currFunction.namespaceID)
         }
+        Function.currFunction = Function.nullFunction
         if (Class.currClass == null) {
             //不在类中
             Function.currFunction = Function.nullFunction
         } else {
             Function.currFunction = Class.currClass!!.classPreInit
         }
+    }
+
+    override fun visitFunctionBody(ctx: mcfppParser.FunctionBodyContext): Any? {
+        if(ctx.parent is CompileTimeFuncDeclarationContext) return null
+        if(Function.currFunction !is Generic<*>){
+            super.visitFunctionBody(ctx)
+        }
+        return null
+    }
+
+
+    //泛型函数编译使用的入口
+    fun visitFunctionBody(ctx: mcfppParser.FunctionBodyContext, function: Function){
+        val lastFunction = Function.currFunction
+        Function.currFunction = function
+        super.visitFunctionBody(ctx)
+        Function.currFunction = lastFunction
     }
 
     /**
@@ -321,42 +239,6 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     val annoInCompound = ArrayList<Annotation>()
 
     /**
-     * 注解
-     *
-     * @param ctx
-     */
-    //TODO: Func
-    override fun visitClassAnnotation(ctx: mcfppParser.ClassAnnotationContext): Any? {
-        Project.ctx = ctx
-        val anno = GlobalField.annotations[ctx.id.text]
-        if(anno == null){
-            LogProcessor.error("Annotation ${ctx.id.text} not found")
-            return null
-        }
-        //参数获取
-        val normalArgs: ArrayList<Var<*>> = ArrayList()
-        val readOnlyParams: ArrayList<Var<*>> = ArrayList()
-        val exprVisitor = McfppExprVisitor()
-        ctx.arguments().readOnlyArgs()?.let {
-            for (expr in it.expressionList().expression()) {
-                val arg = exprVisitor.visit(expr)!!
-                readOnlyParams.add(arg)
-            }
-        }
-        for (expr in ctx.arguments().normalArgs().expressionList().expression()) {
-            val arg = exprVisitor.visit(expr)!!
-            normalArgs.add(arg)
-        }
-        if(Class.currClass == null && Template.currTemplate == null){
-            //在全局
-            annoInGlobal.add(Annotation.newInstance(anno,normalArgs))
-        }else{
-            annoInCompound.add(Annotation.newInstance(anno,normalArgs))
-        }
-        return null
-    }
-
-    /**
      * 自加或自减语句
      * TODO
      * @param ctx the parse tree
@@ -389,6 +271,73 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     *    }
     * }
     */
+
+    override fun visitExtensionFunctionDeclaration(ctx: mcfppParser.ExtensionFunctionDeclarationContext): Any? {
+        //是扩展函数
+        enterExtensionFunctionDeclaration(ctx)
+        super.visitExtensionFunctionDeclaration(ctx)
+        exitExtensionFunctionDeclaration(ctx)
+
+        return null
+    }
+
+    fun enterExtensionFunctionDeclaration(ctx: mcfppParser.ExtensionFunctionDeclarationContext) {
+        val f: Function
+        val data: CompoundData = if (ctx.type().className() == null) {
+            when (ctx.type().text) {
+                "int" -> MCInt.data
+                else -> {
+                    throw Exception("Cannot add extension function to ${ctx.type().text}")
+                }
+            }
+        } else {
+            val clsStr = ctx.type().className().text.split(":")
+            val id: String
+            val nsp: String?
+            if (clsStr.size == 1) {
+                id = clsStr[0]
+                nsp = null
+            } else {
+                id = clsStr[1]
+                nsp = clsStr[0]
+            }
+            val owo: Class? = GlobalField.getClass(nsp, id)
+            if (owo == null) {
+                val pwp = GlobalField.getTemplate(nsp, id)
+                if (pwp == null) {
+                    LogProcessor.error("Undefined class or struct:" + ctx.type().className().text)
+                    f = UnknownFunction(ctx.Identifier().text)
+                    Function.currFunction = f
+                    return
+                } else {
+                    pwp
+                }
+            } else {
+                owo
+            }
+        }
+        //解析参数
+        val types = FunctionParam.parseReadonlyAndNormalParamTypes(ctx.functionParams())
+        val field = if (ctx.STATIC() != null) data.staticField else data.field
+        //获取缓存中的对象
+        f = field.getFunction(ctx.Identifier().text, types.first, types.second)
+
+        Function.currFunction = f
+
+        for (a in annoInGlobal) {
+            a.forFunction(f)
+        }
+        annoInGlobal.clear()
+    }
+
+    fun exitExtensionFunctionDeclaration(ctx: mcfppParser.ExtensionFunctionDeclarationContext) {
+        Project.ctx = ctx
+        //函数是否有返回值
+        if (Function.currFunction.returnType != MCFPPBaseType.Void && !Function.currFunction.hasReturnStatement) {
+            LogProcessor.error("A 'return' expression required in function: " + Function.currFunction.namespaceID)
+        }
+        Function.currFunction = Function.nullFunction
+    }
 
 //region 逻辑语句
     
@@ -980,6 +929,49 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
 
     //region class
 
+    /**
+     * 注解
+     *
+     * @param ctx
+     */
+    //TODO: Func
+    override fun visitClassAnnotation(ctx: mcfppParser.ClassAnnotationContext): Any? {
+        Project.ctx = ctx
+        val anno = GlobalField.annotations[ctx.id.text]
+        if(anno == null){
+            LogProcessor.error("Annotation ${ctx.id.text} not found")
+            return null
+        }
+        //参数获取
+        val normalArgs: ArrayList<Var<*>> = ArrayList()
+        val readOnlyParams: ArrayList<Var<*>> = ArrayList()
+        val exprVisitor = McfppExprVisitor()
+        ctx.arguments().readOnlyArgs()?.let {
+            for (expr in it.expressionList().expression()) {
+                val arg = exprVisitor.visit(expr)!!
+                readOnlyParams.add(arg)
+            }
+        }
+        for (expr in ctx.arguments().normalArgs().expressionList().expression()) {
+            val arg = exprVisitor.visit(expr)!!
+            normalArgs.add(arg)
+        }
+        if(Class.currClass == null && Template.currTemplate == null){
+            //在全局
+            annoInGlobal.add(Annotation.newInstance(anno,normalArgs))
+        }else{
+            annoInCompound.add(Annotation.newInstance(anno,normalArgs))
+        }
+        return null
+    }
+
+    override fun visitClassDeclaration(ctx: mcfppParser.ClassDeclarationContext): Any? {
+        if(ctx.readOnlyParams() == null){
+            super.visitClassDeclaration(ctx)
+        }
+        return null
+    }
+
     override fun visitClassBody(ctx: mcfppParser.ClassBodyContext): Any? {
         enterClassBody(ctx)
         super.visitClassBody(ctx)
@@ -987,12 +979,10 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-
     /**
      * 进入类体。
      * @param ctx the parse tree
      */
-
     private fun enterClassBody(ctx: mcfppParser.ClassBodyContext) {
         Project.ctx = ctx
         //获取类的对象
@@ -1029,11 +1019,65 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         val memberContext: mcfppParser.ClassMemberContext = ctx.classMember()?:return null
         if (memberContext.classFunctionDeclaration() != null) {
             //函数声明由函数的listener处理
+            visit(memberContext.classFunctionDeclaration())
             return null
         }
         return null
     }
 
+    override fun visitClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext): Any? {
+        //是类的成员函数
+        enterClassFunctionDeclaration(ctx)
+        super.visitClassFunctionDeclaration(ctx)
+        exitClassFunctionDeclaration(ctx)
+        return null
+    }
+
+    fun enterClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext) {
+        Project.ctx = ctx
+        //解析参数
+        val types = FunctionParam.parseReadonlyAndNormalParamTypes(ctx.functionParams())
+        //获取缓存中的对象
+        val fun1 = Class.currClass!!.field.getFunction(ctx.Identifier().text, types.first, types.second)
+        val f = if(fun1 is UnknownFunction) Class.currClass!!.staticField.getFunction(ctx.Identifier().text, types.first, types.second) else fun1
+        Function.currFunction = f
+
+        //对函数进行注解处理
+        for (a in annoInCompound){
+            a.forFunction(f)
+        }
+        annoInCompound.clear()
+    }
+
+    fun exitClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext) {
+        Project.ctx = ctx
+        Function.currFunction = Class.currClass!!.classPreInit
+    }
+
+    override fun visitConstructorDeclaration(ctx: mcfppParser.ConstructorDeclarationContext): Any? {
+        //是构造函数
+        enterConstructorDeclaration(ctx)
+        super.visitConstructorDeclaration(ctx)
+        exitConstructorDeclaration(ctx)
+        return null
+    }
+
+    fun enterConstructorDeclaration(ctx: mcfppParser.ConstructorDeclarationContext) {
+        Project.ctx = ctx
+        val types = FunctionParam.parseNormalParamTypes(ctx.normalParams())
+        val c = Class.currClass!!.getConstructor(types.typeToStringList())!!
+        Function.currFunction = c
+        //注解
+        for (a in annoInCompound){
+            a.forFunction(c)
+        }
+        annoInCompound.clear()
+    }
+
+    fun exitConstructorDeclaration(ctx: mcfppParser.ConstructorDeclarationContext) {
+        Project.ctx = ctx
+        Function.currFunction = Class.currClass!!.classPreInit
+    }
     //endregion
 
     //region struct
@@ -1067,6 +1111,34 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     fun exitTemplateBody(ctx: mcfppParser.TemplateBodyContext) {
         Project.ctx = ctx
         Template.currTemplate = null
+    }
+
+    override fun visitTemplateFunctionDeclaration(ctx: mcfppParser.TemplateFunctionDeclarationContext): Any? {
+        enterTemplateFunctionDeclaration(ctx)
+        super.visitTemplateFunctionDeclaration(ctx)
+        exitTemplateFunctionDeclaration(ctx)
+        return null
+    }
+
+    fun enterTemplateFunctionDeclaration(ctx: mcfppParser.TemplateFunctionDeclarationContext) {
+        Project.ctx = ctx
+        //解析参数
+        val types = FunctionParam.parseReadonlyAndNormalParamTypes(ctx.functionParams())
+        //获取缓存中的对象
+        val fun1 = Template.currTemplate!!.field.getFunction(ctx.Identifier().text, types.first, types.second)
+        val f = if(fun1 is UnknownFunction) Template.currTemplate!!.staticField.getFunction(ctx.Identifier().text, types.first, types.second) else fun1
+        Function.currFunction = f
+
+        //对函数进行注解处理
+        for (a in annoInCompound){
+            a.forFunction(f)
+        }
+        annoInCompound.clear()
+    }
+
+    fun exitTemplateFunctionDeclaration(ctx: mcfppParser.TemplateFunctionDeclarationContext) {
+        Project.ctx = ctx
+        Function.currFunction = Function.nullFunction
     }
 
     //endregion

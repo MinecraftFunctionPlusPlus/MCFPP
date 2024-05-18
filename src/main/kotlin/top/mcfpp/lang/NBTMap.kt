@@ -116,4 +116,12 @@ class NBTMapConcrete : NBTDictionaryConcrete{
      * @param b 被复制的list值
      */
     constructor(b: CompoundTag) : super(b)
+
+    constructor(v: NBTMapConcrete) : super(v){
+        this.value = v.value
+    }
+
+    override fun clone(): NBTMapConcrete {
+        return NBTMapConcrete(this)
+    }
 }

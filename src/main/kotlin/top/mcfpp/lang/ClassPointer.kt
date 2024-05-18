@@ -11,6 +11,7 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.*
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.ExtensionFunction
+import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
@@ -207,7 +208,10 @@ class ClassPointer : Var<Int>{
             function.parentClass()!!.getAccess(clsType)
         }else if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.TEMPLATE){
             function.parentStruct()!!.getAccess(clsType)
-        }else{
+        }else if(function is NoStackFunction){
+            getAccess(function.parent[0])
+        }
+        else{
             Member.AccessModifier.PUBLIC
         }
     }
