@@ -7,7 +7,7 @@ MCFPP is a brand new objected-oriented language that can be compiled into Minecr
 **This project is still in the early stage of development and cannot be used for actual use. Some functions have not been implemented, and features may change in future versions. The library is also not complete.**
 
 # QuickStart
-[MCFPP Guider](https://alumopper.github.io/mcfppguide/en-US/quickstart)
+[MCFPP API](https://www.mcfpp.top)
 # Relative Projects
 ## [MCSharp](https://github.com/Voziv/MCSharp)
 
@@ -34,28 +34,28 @@ JustMCF is a project to simplify mcfunction projects. Using JustMCF, you can not
 
 
 # Features
-## basic logical statements
+## Basic logical statements
 ```
-void example(){
-  int i = @s.pos[0];
+func example(){
+  int i = @s.nbt.pos[0];
   if(i > 0){
     @s.say("Hello Minecraft!");
   }
 }
 ```
-## object-oriented programming
+## Object-oriented programming
 ```
 class Example{
   int i;
   public Example(int i){
     this.i = i;
   }
-  public void print(){
-    sys.print(this.i);
+  public func print(){
+    print(this.i);
   }
 }
 ```
-## libraries
+## Libraries
 ```
 import mcfpp.math;
 
@@ -66,3 +66,26 @@ void example{
     print(out);
 }
 ```
+## Generics
+```
+class Example<type T>{
+  T i;
+  public Example(T i){
+    this.i = i;
+  }
+  public func print(){
+    print(this.i);
+  }
+}
+
+func test<type T>(T i){
+    print(i);
+}
+```
+## Original Minecraft Command
+```
+func test(){
+  /execute as @a run say Hello Minecraft!
+}
+```
+To see more features, please refer to the [MCFPP API](https://www.mcfpp.top)

@@ -7,7 +7,7 @@ MCFPP是一个能被编译为Minecraft数据包的全新的面向对象的语言
 **这个项目仍然处于早期的开发阶段中，尚不能用于实际运用。部分功能尚未实现，特性可能会在未来的版本中发生变化。库函数尚不齐全。**
 
 # 快速开始
-[MCFPP Guider](https://alumopper.github.io/mcfppguide/quickstart)
+[MCFPP API](https://www.mcfpp.top)
 
 # [更新计划](./TODO_CN.md)
 * [ ] 代码优化
@@ -66,3 +66,26 @@ void example{
     print(out);
 }
 ```
+## 泛型
+```
+class Example<type T>{
+  T i;
+  public Example(T i){
+    this.i = i;
+  }
+  public func print(){
+    print(this.i);
+  }
+}
+
+func test<type T>(T i){
+    print(i);
+}
+```
+## 直接使用原版Minecraft命令
+```
+func test(){
+  /execute as @a run say Hello Minecraft!
+}
+```
+To see more features, please refer to the [MCFPP API](https://www.mcfpp.top)
