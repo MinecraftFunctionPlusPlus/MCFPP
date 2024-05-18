@@ -34,7 +34,7 @@ open class CompoundData : FieldContainer {
      */
     var staticField: CompoundDataField
 
-    val namespaceID : String
+    open val namespaceID : String
         get() = "$namespace:$identifier"
 
     /**
@@ -128,7 +128,7 @@ open class CompoundData : FieldContainer {
      * @param compoundData
      * @return 返回指定类相对此类的访问权限
      */
-    fun getAccess(compoundData: CompoundData): Member.AccessModifier{
+    open fun getAccess(compoundData: CompoundData): Member.AccessModifier{
         //是否是本类
         return if(compoundData.namespaceID == namespaceID){
             Member.AccessModifier.PRIVATE

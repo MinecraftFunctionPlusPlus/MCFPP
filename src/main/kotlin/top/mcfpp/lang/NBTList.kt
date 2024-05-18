@@ -206,6 +206,15 @@ class NBTListConcrete<E>: NBTList, MCFPPValue<ListTag<*>> {
         this.value = value
     }
 
+
+    constructor(v: NBTListConcrete<E>) : super(v){
+        this.value = v.value
+    }
+
+    override fun clone(): NBTListConcrete<E> {
+        return NBTListConcrete(this)
+    }
+
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
         if (parent != null) {

@@ -8,6 +8,7 @@ import top.mcfpp.model.*
 import top.mcfpp.model.Annotation
 import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.generic.GenericClass
 import java.util.*
 import kotlin.collections.HashMap
 
@@ -98,6 +99,34 @@ object GlobalField : FieldContainer, IField {
             np = libNamespaces[namespace]
         }
         return np?.field?.getFunction(identifier, readOnlyParams, normalParams)?: UnknownFunction(identifier)
+    }
+
+    /**
+     * 从当前的全局域中获取一个泛型类。若不存在，则返回null
+     *
+     * 如果没有提供命名空间，则会从import导入的库和本地命名空间中搜索。否则则在指定的命名空间中搜索。
+     * @param namespace 可选。这个类的命名空间。如果为null，则会从当前所有的命名空间中寻找此类。
+     * @param identifier 类的标识符
+     * @return 获取的类。如果有多个相同标识符的类（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
+     */
+    fun getClass(@Nullable namespace: String? = null, identifier: String, readOnlyParams: List<MCFPPType>): Class?{
+        if(namespace == null){
+            var cls: Class?
+            //命名空间为空，从全局寻找
+            cls = localNamespaces[Project.currNamespace]!!.field.getClass(identifier, readOnlyParams)
+            if(cls != null) return cls
+            for (nsp in importedLibNamespaces.values){
+                cls = nsp.field.getClass(identifier, readOnlyParams)
+                if(cls != null) return cls
+            }
+            return null
+        }
+        //按照指定的命名空间寻找
+        var np = localNamespaces[namespace]
+        if(np == null){
+            np = importedLibNamespaces[namespace]
+        }
+        return np?.field?.getClass(identifier, readOnlyParams)
     }
 
     /**
@@ -217,6 +246,10 @@ object GlobalField : FieldContainer, IField {
 //                        println("native class " + s.namespace + ":" + s.identifier + " -> " + s.cls.toString())
 //                        return@run
 //                    }
+                    if(s is GenericClass){
+                        println("generic class " + s.namespaceID)
+                        return@run
+                    }
                     println("class " + s.identifier)
                     println("\tconstructors:")
                     for (c in s.constructors) {

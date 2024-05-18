@@ -146,13 +146,13 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //注册类
         val id = ctx.classWithoutNamespace().text
         val namespace = GlobalField.localNamespaces[Project.currNamespace]!!
+        if(ctx.readOnlyParams() != null){
+            return null
+        }
         val clazz = if (namespace.field.hasClass(id)) {
             namespace.field.getClass(id)
         } else {
             throw UndefinedException("Class Should have been defined: $id")
-        }
-        if(clazz is GenericClass){
-            return null
         }
         Class.currClass = clazz
         typeScope = Class.currClass!!.field

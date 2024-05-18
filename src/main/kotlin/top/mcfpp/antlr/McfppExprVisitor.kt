@@ -553,8 +553,12 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             }
             //调用函数
             return if (func is UnknownFunction) {
+                var cls: Class? = if(ctx.arguments().readOnlyArgs() != null){
+                   GlobalField.getClass(p.first, p.second ,readOnlyArgs.map { it.type })
+                }else{
+                    GlobalField.getClass(p.first, p.second)
+                }
                 //可能是构造函数
-                var cls: Class? = GlobalField.getClass(p.first, p.second)
                 if (cls == null) {
                     LogProcessor.error("Function " + ctx.text + " not defined")
                     Function.addCommand("[Failed to Compile]${ctx.text}")

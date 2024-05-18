@@ -1,11 +1,13 @@
 package top.mcfpp.model.field
 
+import com.google.common.collect.ArrayListMultimap
 import org.jetbrains.annotations.Nullable
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.generic.Generic
+import top.mcfpp.model.generic.GenericClass
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 
@@ -48,11 +50,11 @@ open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTempla
     /**
      * 类
      */
-    private var classes: HashMap<String, Class> = HashMap()
+    private var classes: ArrayListMultimap<String, Class> = ArrayListMultimap.create()
 
 
     override fun forEachClass(operation: (Class) -> Any?){
-        for (`class` in classes.values){
+        for (`class` in classes.values()){
             operation(`class`)
         }
     }
@@ -156,12 +158,26 @@ open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTempla
      *
      * @param identifier
      */
+    override fun getClass(identifier: String, readOnlyParam: List<MCFPPType>): GenericClass? {
+        for (`class` in classes[identifier]) {
+            if (`class` is GenericClass && `class`.isSelf(identifier, readOnlyParam)) {
+                return `class`
+            }
+        }
+        return null
+    }
+
     override fun getClass(identifier: String): Class? {
-        return classes[identifier]
+        for (clazz in classes[identifier]){
+            if(clazz !is GenericClass){
+                return clazz
+            }
+        }
+        return null
     }
 
     override fun hasClass(cls: Class): Boolean{
-        return classes.containsKey(cls.identifier)
+        return classes.containsValue(cls.identifier)
     }
 
 
@@ -171,21 +187,33 @@ open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTempla
 
     override fun addClass(identifier: String, cls: Class, force : Boolean): Boolean{
         return if (force){
-            classes[identifier] = cls
+            if(cls is GenericClass){
+                classes.put(identifier, cls)
+            }else{
+                val c = getClass(identifier)
+                if(c != null){
+                    classes.remove(identifier, c)
+                }
+                classes.put(identifier, cls)
+            }
             true
         }else{
-            if(!classes.containsKey(identifier)){
-                classes[identifier] = cls
-                true
+            if(cls is GenericClass){
+                classes.put(identifier, cls)
             }else{
-                false
+                val c = getClass(identifier)
+                if(c != null){
+                    return false
+                }
+                classes.put(identifier, cls)
             }
+            true
         }
     }
 
     override fun removeClass(identifier: String): Boolean {
         return if(classes.containsKey(identifier)) {
-            classes.remove(identifier)
+            classes.removeAll(identifier)
             true
         }else{
             false

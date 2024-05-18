@@ -154,6 +154,14 @@ class MCStringConcrete: MCString, MCFPPValue<StringTag>{
         this.value = value
     }
 
+    constructor(v: MCStringConcrete) : super(v){
+        this.value = v.value
+    }
+
+    override fun clone(): MCStringConcrete {
+        return MCStringConcrete(this)
+    }
+
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
         if (parent != null) {

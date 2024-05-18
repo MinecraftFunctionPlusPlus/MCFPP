@@ -172,18 +172,13 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
      * @param ctx the parse tree
      * @return null
      */
-
     override fun visitClassDeclaration(ctx: mcfppParser.ClassDeclarationContext){
         Project.ctx = ctx
         //注册类
         val id = ctx.classWithoutNamespace().text
         val nsp = GlobalField.localNamespaces[Project.currNamespace]!!
 
-        val cls = if (nsp.field.hasClass(id)) {
-            //重复声明
-            LogProcessor.error("Class has been defined: $id in namespace ${Project.currNamespace}")
-            return
-        } else if(ctx.readOnlyParams() != null){
+        val cls = if(ctx.readOnlyParams() != null){
             //泛型类
             val qwq = GenericClass(id, Project.currNamespace, ctx.classBody())
             qwq.readOnlyParams.addAll(ctx.readOnlyParams().parameterList().parameter().map {
@@ -193,6 +188,10 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         } else {
             //如果没有声明过这个类
             Class(id, Project.currNamespace)
+        }
+        if(!nsp.field.addClass(id, cls)){
+            LogProcessor.error("Class has been defined: $id in namespace ${Project.currNamespace}")
+            return
         }
         cls.initialize()
         if(ctx.className().size != 0){
@@ -216,7 +215,6 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         }
         cls.isStaticClass = ctx.STATIC() != null
         cls.isAbstract = ctx.ABSTRACT() != null
-        nsp.field.addClass(id, cls)
     }
 
     /**

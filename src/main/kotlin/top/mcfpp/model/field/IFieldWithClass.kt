@@ -1,6 +1,8 @@
 package top.mcfpp.model.field
 
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.Class
+import top.mcfpp.model.generic.GenericClass
 
 /**
  * 包含了类作为内容的域应该实现此接口
@@ -27,7 +29,15 @@ interface IFieldWithClass: IField {
     fun removeClass(identifier: String):Boolean
 
     /**
-     * 获取一个类。可能不存在
+     * 获取一个泛型类。可能不存在
+     *
+     * @param identifier 类的标识符
+     * @return 获取到的类。如果不存在，则返回null
+     */
+    fun getClass(identifier: String, readOnlyParam: List<MCFPPType>): GenericClass?
+
+    /**
+     * 获取一个非泛型类。可能不存在
      *
      * @param identifier 类的标识符
      * @return 获取到的类。如果不存在，则返回null

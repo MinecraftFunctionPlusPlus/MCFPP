@@ -234,6 +234,14 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>>{
         this.stackIndex = v.stackIndex
     }
 
+    constructor(v: MCAnyConcrete) : super(v){
+        this.value = v.value
+    }
+
+    override fun clone(): MCAnyConcrete {
+        return MCAnyConcrete(this)
+    }
+
     override fun assign(b: Var<*>): MCAnyConcrete {
         when (b) {
             is MCAnyConcrete -> {

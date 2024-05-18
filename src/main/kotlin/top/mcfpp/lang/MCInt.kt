@@ -519,6 +519,14 @@ class MCIntConcrete : MCInt, MCFPPValue<Int>{
         this.value = value
     }
 
+    constructor(int: MCIntConcrete) : super(int){
+        this.value = int.value
+    }
+
+    override fun clone(): MCIntConcrete {
+        return MCIntConcrete(this)
+    }
+
     /**
      * 动态化
      *
