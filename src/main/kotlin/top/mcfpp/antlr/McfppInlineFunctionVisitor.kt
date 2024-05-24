@@ -1,5 +1,5 @@
 package top.mcfpp.antlr
 
-class McfppInlineFunctionVisitor:McfppImVisitor(){
+class McfppInlineFunctionVisitor : McfppImVisitor() {
 
 }

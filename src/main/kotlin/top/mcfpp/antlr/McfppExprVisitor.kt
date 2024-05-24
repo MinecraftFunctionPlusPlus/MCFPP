@@ -5,14 +5,13 @@ import net.querz.nbt.tag.StringTag
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.lang.*
-import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPGenericClassType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
-import top.mcfpp.model.*
-import top.mcfpp.model.function.Function
+import top.mcfpp.model.Class
+import top.mcfpp.model.Namespace
 import top.mcfpp.model.field.GlobalField
-import top.mcfpp.model.field.NamespaceField
+import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.function.UnknownFunction
@@ -21,25 +20,23 @@ import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import top.mcfpp.util.Utils
-import java.lang.IllegalArgumentException
-import java.lang.StringBuilder
 import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
 import kotlin.system.exitProcess
 
 /**
  * 获取表达式结果用的visitor。解析并计算一个形如a+b*c的表达式。
  */
-class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassType? = null): mcfppParserBaseVisitor<Var<*>?>() {
+class McfppExprVisitor(private var defaultGenericClassType: MCFPPGenericClassType? = null) :
+    mcfppParserBaseVisitor<Var<*>?>() {
 
     private val tempVarCommandCache = HashMap<Var<*>, String>()
 
-    var processVarCache : ArrayList<Var<*>> = ArrayList()
-    fun clearCache(){ processVarCache.clear() }
+    var processVarCache: ArrayList<Var<*>> = ArrayList()
+    fun clearCache() {
+        processVarCache.clear()
+    }
 
-    private var currSelector : CanSelectMember? = null
-
+    private var currSelector: CanSelectMember? = null
 
 
     /**
@@ -51,23 +48,23 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     override fun visitExpression(ctx: mcfppParser.ExpressionContext): Var<*>? {
         Project.ctx = ctx
         val l = Function.currFunction
-        val f = NoStackFunction("expression_${UUID.randomUUID()}",Function.currFunction)
+        val f = NoStackFunction("expression_${UUID.randomUUID()}", Function.currFunction)
         Function.currFunction = f
-        return if(ctx.primary() != null){
+        return if (ctx.primary() != null) {
             val q = visit(ctx.primary())
             Function.currFunction = l
             l.commands.addAll(f.commands)
             q
-        }else{
+        } else {
             val q = visit(ctx.conditionalOrExpression())
             Function.currFunction = l
-            if(q !is ReturnedMCBool){
+            if (q !is ReturnedMCBool) {
                 l.commands.addAll(f.commands)
-            }else{
+            } else {
                 //注册函数
-                if(!GlobalField.localNamespaces.containsKey(f.namespace))
+                if (!GlobalField.localNamespaces.containsKey(f.namespace))
                     GlobalField.localNamespaces[f.namespace] = Namespace(f.namespace)
-                GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f,false)
+                GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f, false)
             }
             q
         }
@@ -92,17 +89,17 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     @Override
     override fun visitConditionalOrExpression(ctx: mcfppParser.ConditionalOrExpressionContext): Var<*>? {
         Project.ctx = ctx
-        if(ctx.conditionalAndExpression().size != 1){
+        if (ctx.conditionalAndExpression().size != 1) {
             val list = ArrayList<ReturnedMCBool>()
             val l = Function.currFunction
             var isConcrete = true
             var result = false
             for (i in 0 until ctx.conditionalAndExpression().size) {
-                val temp = NoStackFunction("bool_${UUID.randomUUID()}",Function.currFunction)
+                val temp = NoStackFunction("bool_${UUID.randomUUID()}", Function.currFunction)
                 //注册函数
-                if(!GlobalField.localNamespaces.containsKey(temp.namespace))
+                if (!GlobalField.localNamespaces.containsKey(temp.namespace))
                     GlobalField.localNamespaces[temp.namespace] = Namespace(temp.namespace)
-                GlobalField.localNamespaces[temp.namespace]!!.field.addFunction(temp,false)
+                GlobalField.localNamespaces[temp.namespace]!!.field.addFunction(temp, false)
                 Function.currFunction = temp
                 val b: Var<*>? = visit(ctx.conditionalAndExpression(i))
                 Function.currFunction = l
@@ -110,21 +107,21 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                     LogProcessor.error("The operator \"&&\" cannot be used with ${b!!.type}")
                     throw IllegalArgumentException("")
                 }
-                if(b is MCFPPValue<*> && isConcrete){
+                if (b is MCFPPValue<*> && isConcrete) {
                     result = result || b.value == true
-                }else{
+                } else {
                     isConcrete = false
                 }
             }
-            if(isConcrete){
+            if (isConcrete) {
                 return MCBoolConcrete(result)
             }
-            for (v in list){
+            for (v in list) {
                 Function.addCommand("execute if function ${v.parentFunction.namespaceID} run return 1")
             }
             Function.addCommand("return 0")
             return ReturnedMCBool(Function.currFunction)
-        }else{
+        } else {
             return visit(ctx.conditionalAndExpression(0))
         }
     }
@@ -138,17 +135,17 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     @Override
     override fun visitConditionalAndExpression(ctx: mcfppParser.ConditionalAndExpressionContext): Var<*>? {
         Project.ctx = ctx
-        if(ctx.equalityExpression().size != 1){
+        if (ctx.equalityExpression().size != 1) {
             val list = ArrayList<ReturnedMCBool>()
             val l = Function.currFunction
             var isConcrete = true
             var result = true
             for (i in 0 until ctx.equalityExpression().size) {
-                val temp = NoStackFunction("bool_${UUID.randomUUID()}",Function.currFunction)
+                val temp = NoStackFunction("bool_${UUID.randomUUID()}", Function.currFunction)
                 //注册函数
-                if(!GlobalField.localNamespaces.containsKey(temp.namespace))
+                if (!GlobalField.localNamespaces.containsKey(temp.namespace))
                     GlobalField.localNamespaces[temp.namespace] = Namespace(temp.namespace)
-                GlobalField.localNamespaces[temp.namespace]!!.field.addFunction(temp,false)
+                GlobalField.localNamespaces[temp.namespace]!!.field.addFunction(temp, false)
                 Function.currFunction = temp
                 val b: Var<*>? = visit(ctx.equalityExpression(i))
                 Function.currFunction = l
@@ -156,24 +153,24 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                     LogProcessor.error("The operator \"&&\" cannot be used with ${b!!.type}")
                     throw IllegalArgumentException("")
                 }
-                if(b is MCFPPValue<*> && isConcrete){
+                if (b is MCFPPValue<*> && isConcrete) {
                     result = result && b.value == true
-                }else{
+                } else {
                     isConcrete = false
                 }
             }
-            if(isConcrete){
+            if (isConcrete) {
                 return MCBoolConcrete(result)
             }
             val sb = StringBuilder("execute ")
-            for (v in list){
+            for (v in list) {
                 sb.append("if function ${v.parentFunction.namespaceID} ")
             }
             sb.append("run return 1")
             Function.addCommand(sb.toString())
             Function.addCommand("return 0")
             return ReturnedMCBool(Function.currFunction)
-        }else{
+        } else {
             return visit(ctx.equalityExpression(0))
         }
     }
@@ -189,7 +186,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         var re: Var<*>? = visit(ctx.relationalExpression(0))
         if (ctx.relationalExpression().size != 1) {
             val b: Var<*>? = visit(ctx.relationalExpression(1))
-            if(!re!!.isTemp){
+            if (!re!!.isTemp) {
                 re = re.getTempVar()
             }
             if (ctx.op.text.equals("==")) {
@@ -197,9 +194,9 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                     re.isEqual(b)
                 } else if (re is MCBool && b is MCBool) {
                     re.equalCommand(b)
-                } else if (re is MCFloat && b is MCFloat){
+                } else if (re is MCFloat && b is MCFloat) {
                     re.isEqual(b)
-                } else{
+                } else {
                     LogProcessor.error("The operator \"${ctx.op.text}\" cannot be used between ${re.type} and ${b!!.type}")
                     throw IllegalArgumentException("")
                 }
@@ -208,9 +205,9 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                     re.isNotEqual(b)
                 } else if (re is MCBool && b is MCBool) {
                     re.notEqualCommand(b)
-                } else if (re is MCFloat && b is MCFloat){
+                } else if (re is MCFloat && b is MCFloat) {
                     re.isNotEqual(b)
-                }else{
+                } else {
                     LogProcessor.error("The operator \"${ctx.op.text}\" cannot be used between ${re.type} and ${b!!.type}")
                     throw IllegalArgumentException("")
                 }
@@ -237,14 +234,14 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                     "<" -> re = re.isSmaller(b)
                     "<=" -> re = re.isSmallerOrEqual(b)
                 }
-            } else if(re is MCFloat && b is MCFloat){
+            } else if (re is MCFloat && b is MCFloat) {
                 when (ctx.relationalOp().text) {
                     ">" -> re = re.isBigger(b)
                     ">=" -> re = re.isGreaterOrEqual(b)
                     "<" -> re = re.isSmaller(b)
                     "<=" -> re = re.isSmallerOrEqual(b)
                 }
-            }else {
+            } else {
                 LogProcessor.error("The operator \"${ctx.relationalOp()}\" cannot be used between ${re!!.type} and ${b!!.type}")
                 throw IllegalArgumentException("")
             }
@@ -252,7 +249,8 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         return re
     }
 
-    private var visitAdditiveExpressionRe : Var<*>? = null
+    private var visitAdditiveExpressionRe: Var<*>? = null
+
     /**
      * 计算一个加减法表达式，例如a + b
      * @param ctx the parse tree
@@ -265,8 +263,8 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         processVarCache.add(visitAdditiveExpressionRe!!)
         for (i in 1 until ctx.multiplicativeExpression().size) {
             var b: Var<*>? = visit(ctx.multiplicativeExpression(i))
-            if(b is MCFloat) b = b.toTempEntity()
-            if(visitAdditiveExpressionRe!! != MCFloat.ssObj){
+            if (b is MCFloat) b = b.toTempEntity()
+            if (visitAdditiveExpressionRe!! != MCFloat.ssObj) {
                 visitAdditiveExpressionRe = visitAdditiveExpressionRe!!.getTempVar()
             }
             visitAdditiveExpressionRe = if (Objects.equals(ctx.op.text, "+")) {
@@ -276,7 +274,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             } else {
                 null
             }
-            if(visitAdditiveExpressionRe == null){
+            if (visitAdditiveExpressionRe == null) {
                 LogProcessor.error("The operator \"${ctx.op.text}\" cannot be used between ${visitAdditiveExpressionRe!!.type} and ${b!!.type}.")
                 Utils.stopCompile(IllegalArgumentException(""))
                 exitProcess(1)
@@ -287,7 +285,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         return visitAdditiveExpressionRe
     }
 
-    private var visitMultiplicativeExpressionRe : Var<*>? = null
+    private var visitMultiplicativeExpressionRe: Var<*>? = null
 
     /**
      * 计算一个乘除法表达式，例如a * b
@@ -302,23 +300,26 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         processVarCache.add(visitMultiplicativeExpressionRe!!)
         for (i in 1 until ctx.unaryExpression().size) {
             var b: Var<*>? = visit(ctx.unaryExpression(i))
-            if(b is MCFloat) b = b.toTempEntity()
-            if(visitMultiplicativeExpressionRe != MCFloat.ssObj){
+            if (b is MCFloat) b = b.toTempEntity()
+            if (visitMultiplicativeExpressionRe != MCFloat.ssObj) {
                 visitMultiplicativeExpressionRe = visitMultiplicativeExpressionRe!!.getTempVar()
             }
-            visitMultiplicativeExpressionRe = when(ctx.op.text){
+            visitMultiplicativeExpressionRe = when (ctx.op.text) {
                 "*" -> {
                     visitAdditiveExpressionRe!!.multiple(b!!)
                 }
+
                 "/" -> {
                     visitAdditiveExpressionRe!!.divide(b!!)
                 }
+
                 "%" -> {
                     visitAdditiveExpressionRe!!.modular(b!!)
                 }
+
                 else -> null
             }
-            if(visitMultiplicativeExpressionRe == null){
+            if (visitMultiplicativeExpressionRe == null) {
                 LogProcessor.error("The operator \"${ctx.op.text}\" cannot be used between ${visitMultiplicativeExpressionRe!!.type} and ${b!!.type}.")
                 Utils.stopCompile(IllegalArgumentException(""))
                 exitProcess(1)
@@ -342,7 +343,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         } else if (ctx.unaryExpression() != null) {
             var a: Var<*>? = visit(ctx.unaryExpression())
             if (a is MCBool) {
-                if(!a.isTemp){
+                if (!a.isTemp) {
                     a = a.getTempVar()
                 }
                 a.negation()
@@ -406,18 +407,18 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     @Override
     override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var<*>? {
         Project.ctx = ctx
-        currSelector = if(ctx.primary() != null){
+        currSelector = if (ctx.primary() != null) {
             //从变量中选择（非静态成员）
             visit(ctx.primary())
-        }else{
+        } else {
             //从类型中选择（静态成员）
             //TODO 此处的词法需要更改，className和Identifier有冲突
-            if(ctx.type().className() != null){
+            if (ctx.type().className() != null) {
                 //ClassName
                 val clsstr = ctx.type().text.split(":")
-                val qwq: Class? = if(clsstr.size == 2) {
+                val qwq: Class? = if (clsstr.size == 2) {
                     GlobalField.getClass(clsstr[0], clsstr[1])
-                }else{
+                } else {
                     GlobalField.getClass(null, clsstr[0])
                 }
                 if (qwq == null) {
@@ -425,10 +426,10 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                     return UnknownVar("${ctx.type().className().text}_type_" + UUID.randomUUID())
                 }
                 qwq.getType()
-            }else{
+            } else {
                 CompoundDataType(
                     //基本类型
-                    when(ctx.type().text){
+                    when (ctx.type().text) {
                         "int" -> MCInt.data
                         else -> TODO()
                     }
@@ -436,7 +437,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             }
 
         }
-        for (selector in ctx.selector()){
+        for (selector in ctx.selector()) {
             visit(selector)
         }
         return currSelector as? Var<*>
@@ -485,20 +486,20 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             //变量
             //没有数组选取
             val qwq: String = ctx.Identifier().text
-            var re = if(currSelector == null){
+            var re = if (currSelector == null) {
                 val re: Var<*>? = Function.currFunction.field.getVar(qwq)
                 if (re == null) {
                     LogProcessor.error("Undefined variable:$qwq")
                     throw Exception()
                 }
                 re
-            }else{
+            } else {
                 //获取成员
-                val re  = currSelector!!.getMemberVar(qwq, currSelector!!.getAccess(Function.currFunction))
+                val re = currSelector!!.getMemberVar(qwq, currSelector!!.getAccess(Function.currFunction))
                 if (re.first == null) {
                     LogProcessor.error("Undefined field: $qwq")
                 }
-                if (!re.second){
+                if (!re.second) {
                     LogProcessor.error("Cannot access member $qwq")
                 }
                 re.first
@@ -507,12 +508,12 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             if (ctx.identifierSuffix() == null || ctx.identifierSuffix().size == 0) {
                 return re
             } else {
-                if(re is Indexable<*>){
+                if (re is Indexable<*>) {
                     for (value in ctx.identifierSuffix()) {
                         val index = visit(value.conditionalExpression())!!
                         re = (re as Indexable<*>).getByIndex(index)
                     }
-                }else{
+                } else {
                     throw IllegalArgumentException("Cannot index ${re!!.type}")
                 }
                 return re
@@ -522,7 +523,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             return McfppExprVisitor().visit(ctx.expression())
         } else {
             //是函数调用，将已经计算好的中间量存储到栈中
-            for (v in processVarCache){
+            for (v in processVarCache) {
                 v.storeToStack()
             }
             //函数的调用
@@ -531,50 +532,57 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             val normalArgs: ArrayList<Var<*>> = ArrayList()
             val readOnlyArgs: ArrayList<Var<*>> = ArrayList()
             val exprVisitor = McfppExprVisitor()
-            for (expr in ctx.arguments().readOnlyArgs()?.expressionList()?.expression()?: emptyList()) {
+            for (expr in ctx.arguments().readOnlyArgs()?.expressionList()?.expression() ?: emptyList()) {
                 val arg = exprVisitor.visit(expr)!!
                 readOnlyArgs.add(arg)
             }
-            for (expr in ctx.arguments().normalArgs().expressionList()?.expression()?: emptyList()) {
+            for (expr in ctx.arguments().normalArgs().expressionList()?.expression() ?: emptyList()) {
                 val arg = exprVisitor.visit(expr)!!
                 normalArgs.add(arg)
             }
             //获取函数
             val p = StringHelper.splitNamespaceID(ctx.namespaceID().text)
-            val func = if(currSelector == null){
-                GlobalField.getFunction(p.first, p.second, FunctionParam.getArgTypeNames(readOnlyArgs), FunctionParam.getArgTypeNames(normalArgs))
-            }else{
-                if(p.first != null){
+            val func = if (currSelector == null) {
+                GlobalField.getFunction(
+                    p.first,
+                    p.second,
+                    FunctionParam.getArgTypeNames(readOnlyArgs),
+                    FunctionParam.getArgTypeNames(normalArgs)
+                )
+            } else {
+                if (p.first != null) {
                     LogProcessor.warn("Invalid namespace usage ${p.first} in function call ")
                 }
-                McfppFuncManager().getFunction(currSelector!!,p.second,
+                McfppFuncManager().getFunction(
+                    currSelector!!, p.second,
                     FunctionParam.getArgTypes(readOnlyArgs),
-                    FunctionParam.getArgTypes(normalArgs))
+                    FunctionParam.getArgTypes(normalArgs)
+                )
             }
             //调用函数
             return if (func is UnknownFunction) {
-                var cls: Class? = if(ctx.arguments().readOnlyArgs() != null){
-                   GlobalField.getClass(p.first, p.second ,readOnlyArgs.map { it.type })
-                }else{
+                var cls: Class? = if (ctx.arguments().readOnlyArgs() != null) {
+                    GlobalField.getClass(p.first, p.second, readOnlyArgs.map { it.type })
+                } else {
                     GlobalField.getClass(p.first, p.second)
                 }
                 //可能是构造函数
                 if (cls == null) {
                     LogProcessor.error("Function " + ctx.text + " not defined")
                     Function.addCommand("[Failed to Compile]${ctx.text}")
-                    func.invoke(normalArgs,currSelector)
+                    func.invoke(normalArgs, currSelector)
                     return func.returnVar
                 }
-                if(cls is GenericClass){
-                    if(defaultGenericClassType != null){
+                if (cls is GenericClass) {
+                    if (defaultGenericClassType != null) {
                         //比对实例化参数
                         //参数不一致
-                        if(defaultGenericClassType!!.genericVar.size != readOnlyArgs.size){
+                        if (defaultGenericClassType!!.genericVar.size != readOnlyArgs.size) {
                             LogProcessor.error("Generic class ${cls.identifier} requires ${cls.readOnlyParams.size} type arguments, but ${readOnlyArgs.size} were provided")
                             return UnknownVar("${cls.identifier}_type_" + UUID.randomUUID())
                         }
                         //参数缺省
-                        if(readOnlyArgs.isEmpty()){
+                        if (readOnlyArgs.isEmpty()) {
                             readOnlyArgs.addAll(defaultGenericClassType!!.genericVar)
                         }
                     }
@@ -588,17 +596,17 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 if (constructor == null) {
                     LogProcessor.error("No constructor like: " + FunctionParam.getArgTypeNames(normalArgs) + " defined in class " + ctx.namespaceID().text)
                     Function.addCommand("[Failed to compile]${ctx.text}")
-                }else{
+                } else {
                     constructor.invoke(normalArgs, callerClassP = ptr)
                 }
                 return ptr
-            }else{
-                if(func is Generic<*>){
+            } else {
+                if (func is Generic<*>) {
                     func.invoke(readOnlyArgs, normalArgs, currSelector)
-                }else{
-                    func.invoke(normalArgs,currSelector)
+                } else {
+                    func.invoke(normalArgs, currSelector)
                 }
-                for (v in processVarCache){
+                for (v in processVarCache) {
                     v.getFromStack()
                 }
                 //函数树
@@ -616,39 +624,40 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         } else if (ctx.LineString() != null) {
             val r: String = ctx.LineString().text
             return MCStringConcrete(StringTag(r.substring(1, r.length - 1)))
-        } else if (ctx.multiLineStringLiteral()!=null){
+        } else if (ctx.multiLineStringLiteral() != null) {
             val stringArray = mutableListOf<String>()
             var isConcrete = true
-            for(stringContext in ctx.multiLineStringLiteral().multiLineStringContent()){
-                var r:String
-                if(stringContext.MultiLineStrText()!=null) r= stringContext.MultiLineStrText().text
-                else if(stringContext.MultiLineStringQuote()!=null) r= stringContext.MultiLineStringQuote().text
+            for (stringContext in ctx.multiLineStringLiteral().multiLineStringContent()) {
+                var r: String
+                if (stringContext.MultiLineStrText() != null) r = stringContext.MultiLineStrText().text
+                else if (stringContext.MultiLineStringQuote() != null) r = stringContext.MultiLineStringQuote().text
                 else {
                     val expressionContext = stringContext.multiLineStringExpression().expression()
                     //TODO: 这边只是简单写了一下有解析值的情况
                     val res = visit(expressionContext) //没有解析值的话，应该变成jtext
-                    if(res!=null && res !is MCFPPValue<*>){ isConcrete = false } //这个条件就是说，整个模版中出现没有解析值的情况了
-                    if(res is MCIntConcrete){
+                    if (res != null && res !is MCFPPValue<*>) {
+                        isConcrete = false
+                    } //这个条件就是说，整个模版中出现没有解析值的情况了
+                    if (res is MCIntConcrete) {
                         r = res.value.toString()
-                    }
-                    else{
-                        r=res.toString()
+                    } else {
+                        r = res.toString()
                     }
                 }
                 stringArray.add(r);
             }
             val tailQuote = ctx.multiLineStringLiteral().TRIPLE_QUOTE_CLOSE().text
-            if(tailQuote.length>3) {
-                stringArray.add(tailQuote.substring(3,tailQuote.length))
+            if (tailQuote.length > 3) {
+                stringArray.add(tailQuote.substring(3, tailQuote.length))
             }
-            return MCStringConcrete(StringTag(stringArray.joinToString("")) ) //没有解析值就变不了MCString了
-        } else if (ctx.floatValue() != null){
+            return MCStringConcrete(StringTag(stringArray.joinToString(""))) //没有解析值就变不了MCString了
+        } else if (ctx.floatValue() != null) {
             return MCFloatConcrete(ctx.floatValue()!!.text.toFloat())
-        } else if (ctx.boolValue() != null){
+        } else if (ctx.boolValue() != null) {
             return MCBoolConcrete(ctx.boolValue()!!.text.toBoolean())
-        } else if (ctx.nbtValue() != null){
+        } else if (ctx.nbtValue() != null) {
             return NBTBasedDataConcrete(SNBTUtil.fromSNBT(ctx.nbtValue().text))
-        } else if (ctx.type() != null){
+        } else if (ctx.type() != null) {
             return MCFPPTypeVar(MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field))
         }
         return null

@@ -22,7 +22,7 @@ open class Interface : CompoundData {
         this.namespace = namespace
     }
 
-    companion object{
+    companion object {
         /**
          * 当前编译器正在编译的接口
          */

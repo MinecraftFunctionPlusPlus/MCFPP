@@ -2,14 +2,15 @@ package top.mcfpp.model.field
 
 import com.google.common.collect.ArrayListMultimap
 import org.jetbrains.annotations.Nullable
-import top.mcfpp.lang.*
+import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.model.*
+import top.mcfpp.model.Class
+import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.Interface
+import top.mcfpp.model.Template
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.generic.Generic
 import top.mcfpp.model.generic.GenericClass
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
 
 /**
  * 一个域。在编译过程中，编译器读取到的变量，函数等会以键值对的方式储存在其中。键为函数的id或者变量的
@@ -30,7 +31,8 @@ import kotlin.collections.HashMap
  *
  * 函数储存在一个列表中
  */
-open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTemplate, IFieldWithInterface, SimpleFieldWithType {
+open class NamespaceField : IFieldWithClass, IFieldWithFunction, IFieldWithTemplate, IFieldWithInterface,
+    SimpleFieldWithType {
     /**
      * 变量
      */
@@ -41,8 +43,8 @@ open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTempla
      */
     private var functions: ArrayList<Function> = ArrayList()
 
-    override fun forEachFunction(operation: (Function) -> Any?){
-        for (function in functions){
+    override fun forEachFunction(operation: (Function) -> Any?) {
+        for (function in functions) {
             operation(function)
         }
     }
@@ -53,8 +55,8 @@ open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTempla
     private var classes: ArrayListMultimap<String, Class> = ArrayListMultimap.create()
 
 
-    override fun forEachClass(operation: (Class) -> Any?){
-        for (`class` in classes.values()){
+    override fun forEachClass(operation: (Class) -> Any?) {
+        for (`class` in classes.values()) {
             operation(`class`)
         }
     }
@@ -64,8 +66,8 @@ open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTempla
      */
     private var template: HashMap<String, Template> = HashMap()
 
-    override fun forEachTemplate(operation: (Template) -> Any?){
-        for (struct in template.values){
+    override fun forEachTemplate(operation: (Template) -> Any?) {
+        for (struct in template.values) {
             operation(struct)
         }
     }
@@ -75,8 +77,8 @@ open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTempla
      */
     private var interfaces: HashMap<String, Interface> = HashMap()
 
-    override fun forEachInterface(operation: (Interface) -> Any?){
-        for(`interface` in interfaces.values){
+    override fun forEachInterface(operation: (Interface) -> Any?) {
+        for (`interface` in interfaces.values) {
             operation(`interface`)
         }
     }
@@ -119,10 +121,10 @@ open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTempla
     @Nullable
     override fun getFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>): Function? {
         for (f in functions) {
-            if(f is Generic<*> && f.isSelf(key, readOnlyParams, normalParams)){
+            if (f is Generic<*> && f.isSelf(key, readOnlyParams, normalParams)) {
                 return f
             }
-            if(f.isSelf(key, normalParams)){
+            if (f.isSelf(key, normalParams)) {
                 return f
             }
         }
@@ -135,9 +137,9 @@ open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTempla
      *
      * @param function
      */
-    override fun addFunction(function: Function, force: Boolean): Boolean{
-        if(hasFunction(function)){
-            if(force){
+    override fun addFunction(function: Function, force: Boolean): Boolean {
+        if (hasFunction(function)) {
+            if (force) {
                 functions[functions.indexOf(function)] = function
                 return true
             }
@@ -147,7 +149,7 @@ open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTempla
         return true
     }
 
-    override fun hasFunction(function: Function): Boolean{
+    override fun hasFunction(function: Function): Boolean {
         return functions.contains(function)
     }
     //endregion
@@ -168,41 +170,41 @@ open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTempla
     }
 
     override fun getClass(identifier: String): Class? {
-        for (clazz in classes[identifier]){
-            if(clazz !is GenericClass){
+        for (clazz in classes[identifier]) {
+            if (clazz !is GenericClass) {
                 return clazz
             }
         }
         return null
     }
 
-    override fun hasClass(cls: Class): Boolean{
+    override fun hasClass(cls: Class): Boolean {
         return classes.containsValue(cls.identifier)
     }
 
 
-    override fun hasClass(identifier: String): Boolean{
+    override fun hasClass(identifier: String): Boolean {
         return classes.containsKey(identifier)
     }
 
-    override fun addClass(identifier: String, cls: Class, force : Boolean): Boolean{
-        return if (force){
-            if(cls is GenericClass){
+    override fun addClass(identifier: String, cls: Class, force: Boolean): Boolean {
+        return if (force) {
+            if (cls is GenericClass) {
                 classes.put(identifier, cls)
-            }else{
+            } else {
                 val c = getClass(identifier)
-                if(c != null){
+                if (c != null) {
                     classes.remove(identifier, c)
                 }
                 classes.put(identifier, cls)
             }
             true
-        }else{
-            if(cls is GenericClass){
+        } else {
+            if (cls is GenericClass) {
                 classes.put(identifier, cls)
-            }else{
+            } else {
                 val c = getClass(identifier)
-                if(c != null){
+                if (c != null) {
                     return false
                 }
                 classes.put(identifier, cls)
@@ -212,68 +214,68 @@ open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTempla
     }
 
     override fun removeClass(identifier: String): Boolean {
-        return if(classes.containsKey(identifier)) {
+        return if (classes.containsKey(identifier)) {
             classes.removeAll(identifier)
             true
-        }else{
-            false
-        }
-    }
-    //endregion
-
-/*
-    //region Var
-    /**
-     * 向此缓存中添加一个新的变量键值对。如果已存在此对象，将不会进行覆盖。
-     * @param key 变量的标识符
-     * @param var 变量的对象
-     * @return 如果缓存中已经存在此对象，则返回false，否则返回true。
-     */
-    fun putVar(key: String, `var`: Var): Boolean {
-        return if (vars.containsKey(key)) {
-            false
         } else {
-            vars[key] = `var`
-            true
+            false
         }
     }
-
-    /**
-     * 从缓存中取出一个变量。如果此缓存中没有，则从父缓存中寻找。
-     * @param key 变量的标识符
-     * @return 变量的对象。若不存在，则返回null。
-     */
-    fun getVar(key: String): Var? {
-        return vars.getOrDefault(key, null)
-    }
-
-    val allVars: Collection<Var>
-        /**
-         * 获取此缓存中的全部变量。不会从父缓存搜索。
-         * @return 一个包含了此缓存全部变量的集合。
-         */
-        get() = vars.values
-
-    /**
-     * 缓存中是否包含某个变量
-     * @param id 变量名
-     * @return 如果包含则返回true，否则返回false
-     */
-    fun containVar(id: String): Boolean {
-        return vars.containsKey(id)
-    }
-
-    /**
-     * 移除缓存中的某个变量
-     *
-     * @param id 变量名
-     * @return 若变量存在，则返回被移除的变量，否则返回空
-     */
-    fun removeVar(id : String): Var?{
-        return vars.remove(id)
-    }
     //endregion
-*/
+
+    /*
+        //region Var
+        /**
+         * 向此缓存中添加一个新的变量键值对。如果已存在此对象，将不会进行覆盖。
+         * @param key 变量的标识符
+         * @param var 变量的对象
+         * @return 如果缓存中已经存在此对象，则返回false，否则返回true。
+         */
+        fun putVar(key: String, `var`: Var): Boolean {
+            return if (vars.containsKey(key)) {
+                false
+            } else {
+                vars[key] = `var`
+                true
+            }
+        }
+
+        /**
+         * 从缓存中取出一个变量。如果此缓存中没有，则从父缓存中寻找。
+         * @param key 变量的标识符
+         * @return 变量的对象。若不存在，则返回null。
+         */
+        fun getVar(key: String): Var? {
+            return vars.getOrDefault(key, null)
+        }
+
+        val allVars: Collection<Var>
+            /**
+             * 获取此缓存中的全部变量。不会从父缓存搜索。
+             * @return 一个包含了此缓存全部变量的集合。
+             */
+            get() = vars.values
+
+        /**
+         * 缓存中是否包含某个变量
+         * @param id 变量名
+         * @return 如果包含则返回true，否则返回false
+         */
+        fun containVar(id: String): Boolean {
+            return vars.containsKey(id)
+        }
+
+        /**
+         * 移除缓存中的某个变量
+         *
+         * @param id 变量名
+         * @return 若变量存在，则返回被移除的变量，否则返回空
+         */
+        fun removeVar(id : String): Var?{
+            return vars.remove(id)
+        }
+        //endregion
+    */
 
     //region struct
     /**
@@ -285,14 +287,14 @@ open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTempla
      * @return 是否添加成功。如果已经存在相同标识符的模板，且不是强制添加则为false
      */
     override fun addTemplate(identifier: String, template: Template, force: Boolean): Boolean {
-        return if (force){
+        return if (force) {
             this.template[identifier] = template
             true
-        }else{
-            if(!this.template.containsKey(identifier)){
+        } else {
+            if (!this.template.containsKey(identifier)) {
                 this.template[identifier] = template
                 true
-            }else{
+            } else {
                 false
             }
         }
@@ -305,10 +307,10 @@ open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTempla
      * @return 是否移除成功。如果不存在此模板，则返回false
      */
     override fun removeTemplate(identifier: String): Boolean {
-        return if(template.containsKey(identifier)) {
+        return if (template.containsKey(identifier)) {
             template.remove(identifier)
             true
-        }else{
+        } else {
             false
         }
     }
@@ -353,14 +355,14 @@ open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTempla
      * @return 是否添加成功。如果已经存在相同标识符的接口，且不是强制添加则为false
      */
     override fun addInterface(identifier: String, itf: Interface, force: Boolean): Boolean {
-        return if (force){
+        return if (force) {
             interfaces[identifier] = itf
             true
-        }else{
-            if(!interfaces.containsKey(identifier)){
+        } else {
+            if (!interfaces.containsKey(identifier)) {
                 interfaces[identifier] = itf
                 true
-            }else{
+            } else {
                 false
             }
         }
@@ -373,10 +375,10 @@ open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTempla
      * @return 是否移除成功。如果不存在此接口，则返回false
      */
     override fun removeInterface(identifier: String): Boolean {
-        return if(interfaces.containsKey(identifier)) {
+        return if (interfaces.containsKey(identifier)) {
             interfaces.remove(identifier)
             true
-        }else{
+        } else {
             false
         }
     }

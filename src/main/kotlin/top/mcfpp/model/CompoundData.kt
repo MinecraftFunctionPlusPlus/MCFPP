@@ -34,7 +34,7 @@ open class CompoundData : FieldContainer {
      */
     var staticField: CompoundDataField
 
-    open val namespaceID : String
+    open val namespaceID: String
         get() = "$namespace:$identifier"
 
     /**
@@ -44,19 +44,19 @@ open class CompoundData : FieldContainer {
     override val prefix: String
         get() = namespace + "_data_" + identifier
 
-    constructor(identifier: String, namespace: String = Project.currNamespace){
+    constructor(identifier: String, namespace: String = Project.currNamespace) {
         this.identifier = identifier
         this.namespace = namespace
         staticField = CompoundDataField(null, this)
-        field = CompoundDataField(staticField,this)
+        field = CompoundDataField(staticField, this)
     }
 
-    protected constructor(){
+    protected constructor() {
         staticField = CompoundDataField(null, this)
-        field = CompoundDataField(staticField,this)
+        field = CompoundDataField(staticField, this)
     }
 
-    open fun initialize(){}
+    open fun initialize() {}
 
     /**
      * 返回一个成员字段。如果没有，则从父类中寻找
@@ -65,14 +65,14 @@ open class CompoundData : FieldContainer {
      * @return 如果字段存在，则返回此字段，否则返回null
      */
     fun getVar(key: String, isStatic: Boolean = false): Var<*>? {
-        var re = if(isStatic){
+        var re = if (isStatic) {
             staticField.getVar(key)
-        }else{
+        } else {
             field.getVar(key)
         }
         val iterator = parent.iterator()
-        while (re == null && iterator.hasNext()){
-            re = iterator.next().getVar(key,isStatic)
+        while (re == null && iterator.hasNext()) {
+            re = iterator.next().getVar(key, isStatic)
         }
         return re
     }
@@ -86,15 +86,20 @@ open class CompoundData : FieldContainer {
      *
      * @return 如果函数存在，则返回此函数，否则返回null
      */
-    fun getFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>, isStatic: Boolean = false): Function {
-        var re = if(isStatic){
+    fun getFunction(
+        key: String,
+        readOnlyParams: List<MCFPPType>,
+        normalParams: List<MCFPPType>,
+        isStatic: Boolean = false
+    ): Function {
+        var re = if (isStatic) {
             staticField.getFunction(key, readOnlyParams, normalParams)
-        }else{
+        } else {
             field.getFunction(key, readOnlyParams, normalParams)
         }
         val iterator = parent.iterator()
-        while (re is UnknownFunction && iterator.hasNext()){
-            re = iterator.next().getFunction(key,readOnlyParams , normalParams ,isStatic)
+        while (re is UnknownFunction && iterator.hasNext()) {
+            re = iterator.next().getFunction(key, readOnlyParams, normalParams, isStatic)
         }
         return re
     }
@@ -128,15 +133,15 @@ open class CompoundData : FieldContainer {
      * @param compoundData
      * @return 返回指定类相对此类的访问权限
      */
-    open fun getAccess(compoundData: CompoundData): Member.AccessModifier{
+    open fun getAccess(compoundData: CompoundData): Member.AccessModifier {
         //是否是本类
-        return if(compoundData.namespaceID == namespaceID){
+        return if (compoundData.namespaceID == namespaceID) {
             Member.AccessModifier.PRIVATE
-        }else{
+        } else {
             //是否是子类
-            if(this.isSub(compoundData)){
+            if (this.isSub(compoundData)) {
                 Member.AccessModifier.PROTECTED
-            }else{
+            } else {
                 Member.AccessModifier.PUBLIC
             }
         }
@@ -155,8 +160,8 @@ open class CompoundData : FieldContainer {
             return true
         }
         if (parent.size != 0) {
-            for(p in parent){
-                if(p.canCastTo(compoundData)) return true
+            for (p in parent) {
+                if (p.canCastTo(compoundData)) return true
             }
         }
         return false
@@ -168,10 +173,10 @@ open class CompoundData : FieldContainer {
      * @param compoundData 指定类型
      * @return 是否是指定类型的子类型
      */
-    fun isSub(compoundData: CompoundData): Boolean{
-        if(parent.size != 0){
-            for (p in parent){
-                if(p.namespaceID == compoundData.namespaceID || p.isSub(compoundData)){
+    fun isSub(compoundData: CompoundData): Boolean {
+        if (parent.size != 0) {
+            for (p in parent) {
+                if (p.namespaceID == compoundData.namespaceID || p.isSub(compoundData)) {
                     return true
                 }
             }
@@ -179,7 +184,7 @@ open class CompoundData : FieldContainer {
         return false
     }
 
-    open fun extends(compoundData: CompoundData): CompoundData{
+    open fun extends(compoundData: CompoundData): CompoundData {
         parent.add(compoundData)
         return this
     }

@@ -6,8 +6,8 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
+import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.util.LogProcessor
 import java.util.*
@@ -90,17 +90,19 @@ open class MCAny : Var<Var<*>> {
      *
      * @return 重新获取跟踪的此变量
      */
-    override fun assign(b: Var<*>) : MCAnyConcrete {
+    override fun assign(b: Var<*>): MCAnyConcrete {
         when (b) {
             is MCAnyConcrete -> {
                 val q = MCAnyConcrete(this, b.value)
                 q.assign(b)
                 return q
             }
+
             is MCAny -> {
                 LogProcessor.error("Cannot assign any to any")
                 throw VariableConverseException()
             }
+
             else -> {
                 val q = MCAnyConcrete(this, b)
                 q.assign(b)
@@ -114,11 +116,11 @@ open class MCAny : Var<Var<*>> {
      * @param type 要转换到的目标类型
      */
     override fun cast(type: MCFPPType): Var<*> {
-        when(type){
+        when (type) {
             MCFPPBaseType.Any -> return this
             else -> {
                 LogProcessor.warn("Try to cast any to ${type.typeName}")
-                return Var.build(this.identifier, type, parentClass()?:parentStruct()?:Function.currFunction)
+                return Var.build(this.identifier, type, parentClass() ?: parentStruct() ?: Function.currFunction)
             }
         }
     }
@@ -167,12 +169,12 @@ open class MCAny : Var<Var<*>> {
         return data.field.getFunction(key, readOnlyParams, normalParams) to true
     }
 
-    companion object{
-        val data = CompoundData("any","mcfpp")
+    companion object {
+        val data = CompoundData("any", "mcfpp")
 
         init {
             data.initialize()
-            data.field.addFunction(NativeFunction("toString", MCAnyData(), MCFPPBaseType.String,"mcfpp"),false)
+            data.field.addFunction(NativeFunction("toString", MCAnyData(), MCFPPBaseType.String, "mcfpp"), false)
             data.field.addFunction(NativeFunction("getJavaVar", MCAnyData(), MCFPPBaseType.JavaVar, "mcfpp"), false)
         }
     }
@@ -195,7 +197,7 @@ open class MCAny : Var<Var<*>> {
  *
  * 这会警告表示两个的类型不一致，但是不会报错。允许这种赋值的存在，此后i的类型也被跟踪为`string`类型。
  */
-class MCAnyConcrete : MCAny, MCFPPValue<Var<*>>{
+class MCAnyConcrete : MCAny, MCFPPValue<Var<*>> {
 
     override var value: Var<*>
 
@@ -226,7 +228,7 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>>{
     /**
      * 创建一个MCAny类型的变量。它是v的跟踪版本
      */
-    constructor(v : MCAny, value: Var<*>){
+    constructor(v: MCAny, value: Var<*>) {
         this.value = value
         this.identifier = v.identifier
         this.parent = v.parent
@@ -234,7 +236,7 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>>{
         this.stackIndex = v.stackIndex
     }
 
-    constructor(v: MCAnyConcrete) : super(v){
+    constructor(v: MCAnyConcrete) : super(v) {
         this.value = v.value
     }
 
@@ -245,23 +247,27 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>>{
     override fun assign(b: Var<*>): MCAnyConcrete {
         when (b) {
             is MCAnyConcrete -> {
-                if(b.value.type != this.value.type){
+                if (b.value.type != this.value.type) {
                     LogProcessor.warn("Try to assign ${b.value.type.typeName} to ${this.value.type.typeName}")
                 }
                 //构造假设变量
-                val t = Var.build(this.identifier, b.value.type, parentClass()?:parentStruct()?:Function.currFunction)
-                val v = Var.build(b.identifier, b.value.type, b.parentClass()?:b.parentStruct()?:Function.currFunction)
+                val t =
+                    Var.build(this.identifier, b.value.type, parentClass() ?: parentStruct() ?: Function.currFunction)
+                val v =
+                    Var.build(b.identifier, b.value.type, b.parentClass() ?: b.parentStruct() ?: Function.currFunction)
                 t.assign(v)
                 this.value = b.value
                 return this
             }
+
             is MCAny -> {
                 LogProcessor.error("Cannot assign any to any")
                 throw VariableConverseException()
             }
+
             else -> {
                 this.value = b
-                val t = Var.build(this.identifier, b.type, parentClass()?:parentStruct()?:Function.currFunction)
+                val t = Var.build(this.identifier, b.type, parentClass() ?: parentStruct() ?: Function.currFunction)
                 t.assign(b)
                 return this
             }
@@ -270,7 +276,7 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>>{
 
     override fun toDynamic(replace: Boolean): Var<*> {
         val re = MCAny(this)
-        if(replace){
+        if (replace) {
             Function.currFunction.field.putVar(identifier, re, true)
         }
         return re

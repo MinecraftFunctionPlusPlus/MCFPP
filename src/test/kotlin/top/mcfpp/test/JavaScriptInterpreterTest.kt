@@ -5,7 +5,7 @@ import kotlin.test.Test
 
 class JavaScriptInterpreterTest {
     @Test
-    fun test(){
+    fun test() {
         JavaScriptInterpreter.eval("print(\"hello world\")")
     }
 }

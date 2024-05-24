@@ -33,7 +33,7 @@ interface IFieldWithType : IField {
      * @param id 变量名
      * @return 若变量存在，则返回被移除的变量，否则返回空
      */
-    fun removeType(id : String): MCFPPType?
+    fun removeType(id: String): MCFPPType?
 
     fun forEachType(action: (MCFPPType) -> Any?)
 

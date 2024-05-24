@@ -9,14 +9,14 @@ import top.mcfpp.model.FieldContainer
  *
  * @see InternalFunction
  */
-class InternalFunctionField: FunctionField {
+class InternalFunctionField : FunctionField {
 
     /**
      * 创建一个缓存，并指定它的父级
      * @param parent 父级缓存。若没有则设置为null
      * @param cacheContainer 此缓存所在的容器
      */
-    constructor(parent: FunctionField?, cacheContainer: FieldContainer?): super(parent,cacheContainer){
+    constructor(parent: FunctionField?, cacheContainer: FieldContainer?) : super(parent, cacheContainer) {
         parent?.let { fieldVarSet.addAll(it.fieldVarSet) }
     }
 
@@ -27,7 +27,7 @@ class InternalFunctionField: FunctionField {
      * @return 变量的对象。若不存在，则返回null。
      */
     override fun getVar(key: String): Var<*>? {
-        if(!fieldVarSet.contains(key)) return null
+        if (!fieldVarSet.contains(key)) return null
         if (containVar(key)) {
             val re: Var<*>? = vars.getOrDefault(key, null)
             re!!.stackIndex = 0
@@ -41,10 +41,10 @@ class InternalFunctionField: FunctionField {
     }
 
     override fun putVar(key: String, `var`: Var<*>, forced: Boolean): Boolean {
-        if(`var`.stackIndex != 0){
-            `var`.stackIndex --
+        if (`var`.stackIndex != 0) {
+            `var`.stackIndex--
             val result = (parent as FunctionField).putVar(key, `var`, forced)
-            `var`.stackIndex ++
+            `var`.stackIndex++
             return result
         }
         fieldVarSet.add(key)
@@ -52,7 +52,7 @@ class InternalFunctionField: FunctionField {
     }
 
     override fun forEachVar(action: (Var<*>) -> Any?) {
-        for (key in fieldVarSet){
+        for (key in fieldVarSet) {
             action(getVar(key)!!)
         }
     }
@@ -61,13 +61,13 @@ class InternalFunctionField: FunctionField {
         return clone(this)
     }
 
-    companion object{
+    companion object {
         /**
          * 复制一个域。
          * @param functionField 原来的域
          */
         fun clone(functionField: InternalFunctionField): InternalFunctionField {
-            val newFunctionField = InternalFunctionField(null,null)
+            val newFunctionField = InternalFunctionField(null, null)
             newFunctionField.parent = functionField.parent
             //变量复制
             for (key in functionField.vars.keys) {

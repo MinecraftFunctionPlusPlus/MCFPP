@@ -1,20 +1,20 @@
 package top.mcfpp.lang.type
 
 import top.mcfpp.lang.Var
-import top.mcfpp.model.*
-import top.mcfpp.model.function.Function
-import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.Class
+import top.mcfpp.model.Member
 import top.mcfpp.model.function.ExtensionFunction
+import top.mcfpp.model.function.Function
 
 /**
  * 用于标识由mcfpp class定义出来的类
  */
 open class MCFPPClassType(
-    var cls:Class,
+    var cls: Class,
     override var parentType: List<MCFPPType>
-):MCFPPType(parentType,cls) {
+) : MCFPPType(parentType, cls) {
 
-    val genericType : List<MCFPPType> = ArrayList()
+    val genericType: List<MCFPPType> = ArrayList()
 
 //    init {
 //        registerType({it.contains(regex)}){
@@ -32,8 +32,9 @@ open class MCFPPClassType(
      */
     val tag: String
         get() {
-            if(genericType.isNotEmpty()){
-                return cls.namespace + "_class_" + cls.identifier + "_type[" + genericType.sortedBy { it.typeName }.joinToString("_") { it.typeName } + "]"
+            if (genericType.isNotEmpty()) {
+                return cls.namespace + "_class_" + cls.identifier + "_type[" + genericType.sortedBy { it.typeName }
+                    .joinToString("_") { it.typeName } + "]"
             }
             return cls.namespace + "_class_" + cls.identifier + "_type"
         }
@@ -43,7 +44,7 @@ open class MCFPPClassType(
             genericType.joinToString("_") { it.typeName }
         }]"
 
-    fun getGenericClassType(compiledClass: Class) : MCFPPClassType{
+    fun getGenericClassType(compiledClass: Class): MCFPPClassType {
         val t = MCFPPClassType(compiledClass, parentType)
         return t
     }
@@ -57,10 +58,10 @@ open class MCFPPClassType(
      */
     @Override
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        val member = cls.getVar(key,true)
-        return if(member == null){
+        val member = cls.getVar(key, true)
+        return if (member == null) {
             Pair(null, true)
-        }else{
+        } else {
             Pair(member, accessModifier >= member.accessModifier)
         }
     }
@@ -74,23 +75,28 @@ open class MCFPPClassType(
      * @return 第一个值是对象中获取到的方法，若不存在此方法则为null；第二个值是是否有足够的访问权限访问此方法。如果第一个值是null，那么第二个值总是为true
      */
     @Override
-    override fun getMemberFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>, accessModifier: Member.AccessModifier): Pair<Function, Boolean> {
+    override fun getMemberFunction(
+        key: String,
+        readOnlyParams: List<MCFPPType>,
+        normalParams: List<MCFPPType>,
+        accessModifier: Member.AccessModifier
+    ): Pair<Function, Boolean> {
         //获取函数
         val member = cls.staticField.getFunction(key, readOnlyParams, normalParams)
         return Pair(member, accessModifier >= member.accessModifier)
     }
 
     override fun getAccess(function: Function): Member.AccessModifier {
-        return if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.CLASS){
+        return if (function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.CLASS) {
             function.parentClass()!!.getAccess(cls)
-        }else if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.TEMPLATE){
+        } else if (function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.TEMPLATE) {
             function.parentStruct()!!.getAccess(cls)
-        }else{
+        } else {
             Member.AccessModifier.PUBLIC
         }
     }
 
-    companion object{
+    companion object {
         val regex = Regex("^class\\((.+):(.+)\\)$")
     }
 }

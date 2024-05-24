@@ -2,8 +2,7 @@ package top.mcfpp.util
 
 import top.mcfpp.Project
 import top.mcfpp.command.Command
-import top.mcfpp.model.function.Function
-import java.util.UUID
+import java.util.*
 
 object MacroHelper {
 
@@ -12,7 +11,7 @@ object MacroHelper {
      *
      * @return 用来调用 执行宏参数的函数 的function命令
      */
-    fun addMacroCommand(command: Command) : Command{
+    fun addMacroCommand(command: Command): Command {
         val f = UUID.randomUUID().toString()
         Project.macroFunction[f] = command.toMacro()
         return Command.build("function mcfpp:dynamic/$f")

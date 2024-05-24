@@ -7,7 +7,6 @@ import top.mcfpp.lang.IntTemplateBase
 import top.mcfpp.lang.Var
 import top.mcfpp.model.Template
 import java.util.*
-import kotlin.collections.ArrayList
 
 class TemplateConstructor(target: Template) : Function(
     "_init_" + target.identifier.lowercase(Locale.getDefault()) + "_" + target.constructors.size,

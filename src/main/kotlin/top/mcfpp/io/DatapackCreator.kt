@@ -51,10 +51,10 @@ object DatapackCreator {
         delAllFile(File("$path/${Project.config.name}"))
         LogProcessor.debug("Copy libs...")
         //复制库
-        for (lib in Project.config.includes){
-            val filePath = if(!lib.endsWith("/.mclib")) {
+        for (lib in Project.config.includes) {
+            val filePath = if (!lib.endsWith("/.mclib")) {
                 "$lib/.mclib"
-            }else{
+            } else {
                 lib
             }
             //逐行读取
@@ -64,8 +64,8 @@ object DatapackCreator {
             //解析json
             val json = JSONObject.parse(jsonString) as JSONObject
             val scr = json.getString("src")
-            if(scr != null){
-                val scrPath = filePath.substring(0,filePath.lastIndexOf(".")) + scr
+            if (scr != null) {
+                val scrPath = filePath.substring(0, filePath.lastIndexOf(".")) + scr
                 val qwq = Paths.get(scrPath)
                 // 获取所有子文件夹
                 val subdirectories = Files.walk(qwq, 1)
@@ -75,7 +75,7 @@ object DatapackCreator {
                 for (subdirectory in subdirectories) {
                     //复制文件夹
                     delAllFile(File(path + "\\" + subdirectory.name))
-                    copyAllFiles(subdirectory.absolutePathString(),path + "\\" + subdirectory.name)
+                    copyAllFiles(subdirectory.absolutePathString(), path + "\\" + subdirectory.name)
                 }
             }
         }
@@ -93,9 +93,9 @@ object DatapackCreator {
             Files.createDirectories(Paths.get("$path/${Project.config.name}/data"))
             //创建pack.mcmeta
             Files.write(Paths.get("$path/${Project.config.name}/pack.mcmeta"), datapackMcMetaJson.toByteArray())
-            for(namespace in GlobalField.localNamespaces){
+            for (namespace in GlobalField.localNamespaces) {
                 val currPath = "$path\\${Project.config.name}\\data\\${namespace.key}"
-                namespace.value.field.forEachFunction {f ->
+                namespace.value.field.forEachFunction { f ->
                     run {
                         if (f is Native) {
                             return@run
@@ -114,7 +114,7 @@ object DatapackCreator {
                             return@run
                         }
                         //成员
-                        cls.field.forEachFunction { f->
+                        cls.field.forEachFunction { f ->
                             run {
                                 if (f is Native) {
                                     return@run
@@ -122,11 +122,17 @@ object DatapackCreator {
                                 LogProcessor.debug("Writing File: $currPath\\functions\\" + f.nameWithNamespace + ".mcfunction")
                                 //TODO 可能无法正确创建文件夹
                                 Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(cls.identifier)))
-                                if (f is ExtensionFunction){
-                                    Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(cls.identifier) + "/ex"))
+                                if (f is ExtensionFunction) {
+                                    Files.createDirectories(
+                                        Paths.get(
+                                            "$currPath/functions/" + StringHelper.toLowerCase(
+                                                cls.identifier
+                                            ) + "/ex"
+                                        )
+                                    )
                                 }
                                 Files.write(
-                                    Paths.get("$currPath/functions/"  + f.nameWithNamespace + ".mcfunction"),
+                                    Paths.get("$currPath/functions/" + f.nameWithNamespace + ".mcfunction"),
                                     f.cmdStr.toByteArray()
                                 )
                             }
@@ -136,11 +142,17 @@ object DatapackCreator {
                                 if (f is Native) {
                                     return@run
                                 }
-                                LogProcessor.debug("Writing File: $currPath\\functions\\"  + f.nameWithNamespace + ".mcfunction")
+                                LogProcessor.debug("Writing File: $currPath\\functions\\" + f.nameWithNamespace + ".mcfunction")
                                 //TODO 可能无法正确创建文件夹
                                 Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(cls.identifier) + "/static"))
-                                if (f is ExtensionFunction){
-                                    Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(cls.identifier) + "/ex_static"))
+                                if (f is ExtensionFunction) {
+                                    Files.createDirectories(
+                                        Paths.get(
+                                            "$currPath/functions/" + StringHelper.toLowerCase(
+                                                cls.identifier
+                                            ) + "/ex_static"
+                                        )
+                                    )
                                 }
                                 Files.write(
                                     Paths.get("$currPath/functions/" + f.nameWithNamespace + ".mcfunction"),
@@ -149,9 +161,9 @@ object DatapackCreator {
                             }
                         }
                         //构造函数
-                        cls.constructors.forEach{ c ->
+                        cls.constructors.forEach { c ->
                             run {
-                                LogProcessor.debug("Writing File: $currPath\\functions\\"  + c.nameWithNamespace + ".mcfunction")
+                                LogProcessor.debug("Writing File: $currPath\\functions\\" + c.nameWithNamespace + ".mcfunction")
                                 //TODO 可能无法正确创建文件夹
                                 Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(cls.identifier)))
                                 Files.write(
@@ -193,12 +205,12 @@ object DatapackCreator {
             }
             // 删除子文件夹和子文件
             for (file in files) {
-                    if (file.isDirectory) {
-                        delAllFile(file)
-                    } else {
-                        file.delete()
-                    }
+                if (file.isDirectory) {
+                    delAllFile(file)
+                } else {
+                    file.delete()
                 }
+            }
 
             // 删除文件夹本身
             directory.delete()
@@ -228,6 +240,7 @@ object DatapackCreator {
             }
         })
     }
+
     /**
      * 数据包的元数据。用于创建pack.mcmeta文件。
      *

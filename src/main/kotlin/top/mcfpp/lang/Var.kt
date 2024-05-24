@@ -4,7 +4,6 @@ import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.OperationNotImplementException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
-import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import java.util.*
@@ -24,7 +23,7 @@ import java.util.*
  *
  * @param T 变量储存的类型
  */
-abstract class Var<T> : Member, Cloneable, CanSelectMember{
+abstract class Var<T> : Member, Cloneable, CanSelectMember {
     /**
      * 在Minecraft中的标识符
      */
@@ -68,7 +67,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      */
     var hasInit = false
 
-    var parent : CanSelectMember? = null
+    var parent: CanSelectMember? = null
 
     /**
      * 访问修饰符
@@ -83,7 +82,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
     /**
      * 复制一个变量
      */
-    constructor(`var` : Var<*>)  {
+    constructor(`var`: Var<*>) {
         name = `var`.name
         identifier = `var`.identifier
         isStatic = `var`.isStatic
@@ -98,7 +97,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      *
      * @param identifier 变量的标识符。默认为随机的uuid
      */
-    constructor(identifier: String = UUID.randomUUID().toString()){
+    constructor(identifier: String = UUID.randomUUID().toString()) {
         this.name = identifier
         this.identifier = identifier
     }
@@ -133,7 +132,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      * @param b 变量的对象
      */
     @Throws(VariableConverseException::class)
-    abstract fun assign(b: Var<*>) : Var<T>
+    abstract fun assign(b: Var<*>): Var<T>
 
     /**
      * 将这个变量强制转换为一个类型
@@ -144,9 +143,9 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
     @Override
     public abstract override fun clone(): Var<*>
 
-    fun clone(pointer: ClassPointer): Var<*>{
+    fun clone(pointer: ClassPointer): Var<*> {
         val `var`: Var<*> = this.clone()
-        if(pointer.identifier != "this"){
+        if (pointer.identifier != "this") {
             //不是this指针才需要额外指定引用者
             `var`.parent = pointer
         }
@@ -275,9 +274,9 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
     }
 
     override fun equals(other: Any?): Boolean {
-        if(other !is Var<*>) return false
-        if(this.parent != other.parent) return false
-        if(this.name != other.name) return false
+        if (other !is Var<*>) return false
+        if (this.parent != other.parent) return false
+        if (this.name != other.name) return false
         return true
     }
 
@@ -292,27 +291,31 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
         return result
     }
 
-    fun replacedBy(v : Var<*>){
-        if(v == this) return
-        if(parent == null){
+    fun replacedBy(v: Var<*>) {
+        if (v == this) return
+        if (parent == null) {
             Function.currFunction.field.putVar(v.identifier, v, true)
-        }else{
+        } else {
             v.parent = this.parent
-            when (val parent = parent){
+            when (val parent = parent) {
                 is ClassPointer -> {
                     parent.clsType.field.putVar(v.identifier, v, true)
                 }
+
                 is MCFPPTypeVar -> {
-                    when(val type = parent.type){
-                        is MCFPPClassType ->{
+                    when (val type = parent.type) {
+                        is MCFPPClassType -> {
                             type.cls.staticField.putVar(v.identifier, v, true)
                         }
+
                         is MCFPPCompoundType -> {
                             type.data.staticField.putVar(v.identifier, v, true)
                         }
+
                         else -> TODO()
                     }
                 }
+
                 else -> TODO()
             }
         }
@@ -326,10 +329,10 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
          * @param container 变量所在的域
          * @return
          */
-        fun build(identifier: String, type: MCFPPType, container: FieldContainer): Var<*>{
+        fun build(identifier: String, type: MCFPPType, container: FieldContainer): Var<*> {
             val `var`: Var<*>
             when (type) {
-                MCFPPBaseType.Int -> `var` = MCInt(container,identifier)
+                MCFPPBaseType.Int -> `var` = MCInt(container, identifier)
                 MCFPPBaseType.Bool -> `var` = MCBool(container, identifier)
                 MCFPPBaseType.Selector -> TODO()
                 MCFPPBaseType.BaseEntity -> TODO()
@@ -339,13 +342,14 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
                 MCFPPNBTType.Dict -> TODO()
                 MCFPPNBTType.Map -> TODO()
                 MCFPPNBTType.NBT -> `var` = NBTBasedData<Tag<*>>(container, identifier)
-                MCFPPBaseType.JavaVar -> `var` = JavaVar(null,identifier)
+                MCFPPBaseType.JavaVar -> `var` = JavaVar(null, identifier)
                 MCFPPBaseType.Any -> `var` = MCAny(container, identifier)
                 MCFPPBaseType.Type -> `var` = MCFPPTypeVar(identifier = identifier)
                 is MCFPPGenericClassType -> {
                     `var` = ClassPointer(type.cls, identifier)
                 }
-                is MCFPPClassType ->{
+
+                is MCFPPClassType -> {
                     //TODO: 这里不一定拿得到type.cls!!!可能得从GlobalField拿！
                     //什么意思捏？ - Alumopper 2024.4.14
                     `var` = ClassPointer(type.cls, identifier)
@@ -357,6 +361,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
             }
             return `var`
         }
+
         /**
          * 解析变量声明上下文，构造上下文声明的变量，作为成员
          * @param identifier 变量标识符
@@ -379,6 +384,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
                         MCBool("@s").setObj(SbObject(compoundData.prefix + "_bool_" + identifier))
                     `var`.identifier = identifier
                 }
+
                 MCFPPBaseType.Selector -> TODO()
                 MCFPPBaseType.BaseEntity -> TODO()
                 MCFPPBaseType.String -> TODO()
@@ -386,11 +392,12 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
                 MCFPPBaseType.Float -> TODO()
                 MCFPPBaseType.Any -> TODO()
                 is MCFPPTemplateType -> TODO()
-                is MCFPPClassType ->{
-                    val classPointer = ClassPointer(type.cls,identifier)
+                is MCFPPClassType -> {
+                    val classPointer = ClassPointer(type.cls, identifier)
                     classPointer.name = identifier
                     `var` = classPointer
                 }
+
                 else -> {
                     `var` = UnknownVar(identifier)
                 }

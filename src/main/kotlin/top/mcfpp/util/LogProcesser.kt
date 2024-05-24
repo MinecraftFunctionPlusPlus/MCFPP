@@ -13,52 +13,60 @@ object LogProcessor {
 
     var warningCount = 0
 
-    fun debug(msg: String){
+    fun debug(msg: String) {
         logger.debug(msg)
     }
 
-    fun debug(msg: String, e: Exception){
+    fun debug(msg: String, e: Exception) {
         logger.debug(msg, e)
     }
 
-    fun info(msg: String){
+    fun info(msg: String) {
         logger.info(msg)
     }
 
-    fun info(msg: String, e: Exception){
+    fun info(msg: String, e: Exception) {
         logger.info(msg, e)
     }
 
-    fun warn(msg: String){
+    fun warn(msg: String) {
         logger.warn(msg)
         warningCount++
     }
 
-    fun warn(msg: String, e: Exception){
+    fun warn(msg: String, e: Exception) {
         logger.warn(msg, e)
         warningCount++
     }
 
-    fun error(msg: String){
+    fun error(msg: String) {
         logger.error(msg)
         errorCount++
     }
 
-    fun error(msg: String, e: Exception){
+    fun error(msg: String, e: Exception) {
         logger.error(msg, e)
         errorCount++
     }
 
-    fun compileWarn(msg: String){
+    fun compileWarn(msg: String) {
         logger.warn(
-            msg + if(Project.ctx !=null) {" at " + MCFPPFile.currFile!!.name + ":" + Project.ctx!!.getStart().line}else{""}
+            msg + if (Project.ctx != null) {
+                " at " + MCFPPFile.currFile!!.name + ":" + Project.ctx!!.getStart().line
+            } else {
+                ""
+            }
         )
         warningCount++
     }
 
-    fun compileError(msg: String){
+    fun compileError(msg: String) {
         logger.error(
-            msg + if(Project.ctx !=null) {" at " + MCFPPFile.currFile!!.name + ":" + Project.ctx!!.getStart().line}else{""}
+            msg + if (Project.ctx != null) {
+                " at " + MCFPPFile.currFile!!.name + ":" + Project.ctx!!.getStart().line
+            } else {
+                ""
+            }
         )
         errorCount++
     }

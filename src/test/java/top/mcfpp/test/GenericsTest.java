@@ -1,7 +1,6 @@
 package top.mcfpp.test;
 
 
-
 public class GenericsTest {
     public static void main(String[] args) {
         Test<A> a = new Test<>();
@@ -25,13 +24,13 @@ class Test<T extends A> {
         this.var = var;
     }
 
-    public void doSomething(){
+    public void doSomething() {
         var.foo();
     }
 }
 
-class A{
-    public void foo(){
+class A {
+    public void foo() {
         System.out.println("A.foo()");
     }
 }

@@ -7,9 +7,9 @@ import top.mcfpp.lang.value.MCFPPValue
 
 object NBTUtil {
 
-    fun toNBT(v : Var<*>): Tag<*>?{
-        if(v !is MCFPPValue<*>) return null
-        when(v){
+    fun toNBT(v: Var<*>): Tag<*>? {
+        if (v !is MCFPPValue<*>) return null
+        when (v) {
             //is ClassPointer -> TODO()
             //is Entity -> TODO()
             //is IntTemplatePointer -> TODO()
@@ -27,68 +27,68 @@ object NBTUtil {
         }
     }
 
-    fun toNBT(int: Int): Tag<Int>{
+    fun toNBT(int: Int): Tag<Int> {
         return IntTag(int)
     }
 
-    fun toNBT(double: Double): Tag<Double>{
+    fun toNBT(double: Double): Tag<Double> {
         return DoubleTag(double)
     }
 
-    fun toNBT(string: String): Tag<String>{
+    fun toNBT(string: String): Tag<String> {
         return StringTag(string)
     }
 
-    fun toNBT(long: Long): Tag<Long>{
+    fun toNBT(long: Long): Tag<Long> {
         return LongTag(long)
     }
 
-    fun toNBT(byte: Byte): Tag<Byte>{
+    fun toNBT(byte: Byte): Tag<Byte> {
         return ByteTag(byte)
     }
 
-    fun toNBT(short: Short): Tag<Short>{
+    fun toNBT(short: Short): Tag<Short> {
         return ShortTag(short)
     }
 
-    fun toNBT(float: Float): Tag<Float>{
+    fun toNBT(float: Float): Tag<Float> {
         return FloatTag(float)
     }
 
-    fun toNBT(byteArray: ByteArray): Tag<ByteArray>{
+    fun toNBT(byteArray: ByteArray): Tag<ByteArray> {
         return ByteArrayTag(byteArray)
     }
 
-    fun toNBT(longArray: LongArray): Tag<LongArray>{
+    fun toNBT(longArray: LongArray): Tag<LongArray> {
         return LongArrayTag(longArray)
     }
 
-    fun toNBT(int: IntArray): Tag<IntArray>{
+    fun toNBT(int: IntArray): Tag<IntArray> {
         return IntArrayTag(int)
     }
 
-    fun<T : Tag<*>?> ListTag<T>.toArrayList(): List<*>{
-        return when(typeClass){
-            ByteTag::class.java -> map { (it as ByteTag).asByte()}
-            ShortTag::class.java -> map { (it as ShortTag).asShort()}
-            IntTag::class.java -> map { (it as IntTag).asInt()}
-            LongTag::class.java -> map { (it as LongTag).asLong()}
-            FloatTag::class.java -> map { (it as FloatTag).asFloat()}
-            DoubleTag::class.java -> map { (it as DoubleTag).asDouble()}
-            StringTag::class.java -> map { (it as StringTag).valueToString()}
+    fun <T : Tag<*>?> ListTag<T>.toArrayList(): List<*> {
+        return when (typeClass) {
+            ByteTag::class.java -> map { (it as ByteTag).asByte() }
+            ShortTag::class.java -> map { (it as ShortTag).asShort() }
+            IntTag::class.java -> map { (it as IntTag).asInt() }
+            LongTag::class.java -> map { (it as LongTag).asLong() }
+            FloatTag::class.java -> map { (it as FloatTag).asFloat() }
+            DoubleTag::class.java -> map { (it as DoubleTag).asDouble() }
+            StringTag::class.java -> map { (it as StringTag).valueToString() }
             ListTag::class.java -> map { (it as ListTag<*>).toArrayList() }
             ByteArrayTag::class.java -> map { (it as ByteArrayTag).value }
-            IntArrayTag::class.java -> map { (it as IntArrayTag).value}
-            LongArrayTag::class.java -> map { (it as LongArrayTag).value}
+            IntArrayTag::class.java -> map { (it as IntArrayTag).value }
+            LongArrayTag::class.java -> map { (it as LongArrayTag).value }
             CompoundTag::class.java -> map { (it as CompoundTag).toMap() }
             else -> throw VariableConverseException()
         }
     }
 
-    fun CompoundTag.toMap(): HashMap<String, Any>{
+    fun CompoundTag.toMap(): HashMap<String, Any> {
         val map = HashMap<String, Any>()
-        for(key in keySet()){
-            when(val value = get(key)){
+        for (key in keySet()) {
+            when (val value = get(key)) {
                 is ByteTag -> map[key] = value.asByte()
                 is ShortTag -> map[key] = value.asShort()
                 is IntTag -> map[key] = value.asInt()
@@ -106,8 +106,8 @@ object NBTUtil {
         return map
     }
 
-    fun<T> Tag<T>.toJava(): Any{
-        return when(this){
+    fun <T> Tag<T>.toJava(): Any {
+        return when (this) {
             is ByteTag -> asByte()
             is ShortTag -> asShort()
             is IntTag -> asInt()

@@ -3,7 +3,7 @@ package top.mcfpp.model.function
 import top.mcfpp.model.Class
 import top.mcfpp.model.Template
 import top.mcfpp.model.field.InternalFunctionField
-import java.util.UUID
+import java.util.*
 
 /**
  * 一个匿名的内部函数。
@@ -32,7 +32,7 @@ import java.util.UUID
 class InternalFunction(prefix: String, parent: Function) : Function(prefix + UUID.randomUUID()) {
 
     init {
-        field = InternalFunctionField(parent.field.clone(),this)
+        field = InternalFunctionField(parent.field.clone(), this)
         setParentFunction(parent)
         ownerType = Companion.OwnerType.NONE
     }

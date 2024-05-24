@@ -8,7 +8,7 @@ import top.mcfpp.model.generic.GenericClass
  * 包含了类作为内容的域应该实现此接口
  *
  */
-interface IFieldWithClass: IField {
+interface IFieldWithClass : IField {
 
     /**
      * 向域中添加一个类
@@ -26,7 +26,7 @@ interface IFieldWithClass: IField {
      * @param identifier 这个类的标识符
      * @return 是否移除成功。如果不存在此类，则返回false
      */
-    fun removeClass(identifier: String):Boolean
+    fun removeClass(identifier: String): Boolean
 
     /**
      * 获取一个泛型类。可能不存在
@@ -50,7 +50,7 @@ interface IFieldWithClass: IField {
      * @param identifier 类的标识符
      * @return
      */
-    fun hasClass(identifier: String):Boolean
+    fun hasClass(identifier: String): Boolean
 
     /**
      * 是否存在此类

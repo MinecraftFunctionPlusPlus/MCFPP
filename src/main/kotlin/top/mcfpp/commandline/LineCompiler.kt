@@ -16,10 +16,10 @@ class LineCompiler {
     val OUTPUT_COLOR = "\u001B[38;5;15m"
     val RESET_COLOR = "\u001B[0m"
 
-    val default = Function("default","mcfpp")
+    val default = Function("default", "mcfpp")
     val defaultFile = MCFPPFile("default")
 
-    var unmatchedBraces : String = ""
+    var unmatchedBraces: String = ""
     var leftBraces = 0
 
     fun compile(line: String) {
@@ -44,26 +44,26 @@ class LineCompiler {
         unmatchedBraces = ""
         Function.currFunction = default
         MCFPPFile.currFile = defaultFile
-        val charStream: CharStream = CharStreams.fromString(input + if(!line.endsWith(';')) ";" else "")
+        val charStream: CharStream = CharStreams.fromString(input + if (!line.endsWith(';')) ";" else "")
         val tokens = CommonTokenStream(mcfppLexer(charStream))
         val unit = mcfppParser(tokens).compilationUnit()
-        if(unit.topStatement().statement().size != 0){
+        if (unit.topStatement().statement().size != 0) {
             McfppImVisitor().visit(unit)
-        }else{
+        } else {
             McfppFieldVisitor().visit(unit)
         }
-        for (i in MCFPPFile.currFile!!.topFunction.commands){
+        for (i in MCFPPFile.currFile!!.topFunction.commands) {
             printOutput(i.toString())
         }
         MCFPPFile.currFile!!.topFunction.commands.clear()
         Function.currFunction = Function.nullFunction
     }
 
-    private fun printCommand(string: String){
+    private fun printCommand(string: String) {
         println(COMMAND_COLOR + string + RESET_COLOR)
     }
 
-    private fun printOutput(string: String){
+    private fun printOutput(string: String) {
         println(OUTPUT_COLOR + string + RESET_COLOR)
     }
 }

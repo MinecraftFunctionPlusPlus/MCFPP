@@ -7,20 +7,20 @@ package top.mcfpp.lang
  */
 class Storage {
 
-    var namespace : String
-    var identifier : String
+    var namespace: String
+    var identifier: String
 
-    constructor(namespace: String, identifier: String){
+    constructor(namespace: String, identifier: String) {
         this.namespace = namespace
         this.identifier = identifier
     }
 
-    override fun toString():String{
+    override fun toString(): String {
         return "$namespace:$identifier"
     }
 
     override fun equals(other: Any?): Boolean {
-        if(other !is Storage) return false
+        if (other !is Storage) return false
         return namespace == other.namespace && identifier == other.identifier
     }
 
@@ -29,11 +29,11 @@ class Storage {
     }
 
     companion object {
-        val NbtData = Storage("mcfpp","data")
-        val MCFPP_SYSTEM = Storage("mcfpp","system")
-        val MCFPP_TEMP = Storage("mcfpp","temp")
-        val MCFPP_ARG = Storage("mcfpp","arg")
-        val MCFPP_OUTPUT = Storage("mcfpp","output")
+        val NbtData = Storage("mcfpp", "data")
+        val MCFPP_SYSTEM = Storage("mcfpp", "system")
+        val MCFPP_TEMP = Storage("mcfpp", "temp")
+        val MCFPP_ARG = Storage("mcfpp", "arg")
+        val MCFPP_OUTPUT = Storage("mcfpp", "output")
     }
 
 }

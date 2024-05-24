@@ -15,7 +15,7 @@ class FunctionParam(
     /**
      * 参数类型
      */
-    var type : MCFPPType,
+    var type: MCFPPType,
     /**
      * 参数的名字
      */
@@ -44,7 +44,7 @@ class FunctionParam(
          * @return
          */
 
-        fun isSubOf(subType: MCFPPType ,parentType: MCFPPType): Boolean{
+        fun isSubOf(subType: MCFPPType, parentType: MCFPPType): Boolean {
             return subType.isSubOf(parentType)
         }
 
@@ -61,38 +61,41 @@ class FunctionParam(
             return qwq
         }
 
-        fun getArgTypes(args: ArrayList<Var<*>>) : ArrayList<MCFPPType>{
+        fun getArgTypes(args: ArrayList<Var<*>>): ArrayList<MCFPPType> {
             val qwq: ArrayList<MCFPPType> = ArrayList()
-            for (arg in args){
+            for (arg in args) {
                 qwq.add(arg.type)
             }
             return qwq
         }
 
-        fun parseReadonlyAndNormalParamTypes(params: mcfppParser.FunctionParamsContext): Pair<ArrayList<MCFPPType>,ArrayList<MCFPPType>>{
+        fun parseReadonlyAndNormalParamTypes(params: mcfppParser.FunctionParamsContext): Pair<ArrayList<MCFPPType>, ArrayList<MCFPPType>> {
             val r = ArrayList<MCFPPType>()
             val n = ArrayList<MCFPPType>()
             val typeScope = SimpleFieldWithType()
             //解析只读参数
             params.readOnlyParams()?.let {
-                for (param in it.parameterList()?.parameter()?: emptyList()) {
+                for (param in it.parameterList()?.parameter() ?: emptyList()) {
                     val type = MCFPPType.parseFromIdentifier(param.type().text, typeScope)
                     r.add(type)
-                    if(type == MCFPPBaseType.Type){
-                        typeScope.putType(param.Identifier().text, MCFPPGenericType(param.Identifier().text, listOf(MCFPPBaseType.Any)))
+                    if (type == MCFPPBaseType.Type) {
+                        typeScope.putType(
+                            param.Identifier().text,
+                            MCFPPGenericType(param.Identifier().text, listOf(MCFPPBaseType.Any))
+                        )
                     }
                 }
             }
-            for (param in (params.normalParams().parameterList()?.parameter()?: emptyList())) {
+            for (param in (params.normalParams().parameterList()?.parameter() ?: emptyList())) {
                 n.add(MCFPPType.parseFromIdentifier(param.type().text, typeScope))
             }
             return r to n
         }
 
-        fun parseNormalParamTypes(params: mcfppParser.NormalParamsContext): ArrayList<MCFPPType>{
+        fun parseNormalParamTypes(params: mcfppParser.NormalParamsContext): ArrayList<MCFPPType> {
             val n = ArrayList<MCFPPType>()
             val typeScope = SimpleFieldWithType()
-            for (param in (params.parameterList()?.parameter()?: emptyList())) {
+            for (param in (params.parameterList()?.parameter() ?: emptyList())) {
                 n.add(MCFPPType.parseFromIdentifier(param.type().text, typeScope))
             }
             return n

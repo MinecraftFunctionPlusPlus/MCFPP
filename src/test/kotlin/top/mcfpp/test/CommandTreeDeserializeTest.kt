@@ -6,9 +6,10 @@ import top.mcfpp.command.tree.CommandTreeNode
 import top.mcfpp.command.tree.DownloadHelper
 import java.nio.file.Path
 import kotlin.test.Test
+
 class CommandTreeDeserializeTest {
     @Test
-    fun testDeserialize(){
+    fun testDeserialize() {
         val code = """
             {
                 "type": "root",
@@ -80,16 +81,16 @@ class CommandTreeDeserializeTest {
                 }
             }
         """.trimIndent()
-        val commandTree = JSON.parseObject(code,CommandTreeNode::class.java)
-        println(commandTree.children?.get("time")?.children?.get("set")?.children?.get("time")?.properties )
+        val commandTree = JSON.parseObject(code, CommandTreeNode::class.java)
+        println(commandTree.children?.get("time")?.children?.get("set")?.children?.get("time")?.properties)
 
     }
 
     @Test
-    fun testDownload(){
+    fun testDownload() {
         Project.config.root = Path.of("./")
-        val commandTree =DownloadHelper.getMcmetaCommands("24w03b",false,"fastly")
-        println(commandTree.children?.get("teleport")?.children?.get("destination")?.properties )
+        val commandTree = DownloadHelper.getMcmetaCommands("24w03b", false, "fastly")
+        println(commandTree.children?.get("teleport")?.children?.get("destination")?.properties)
 
     }
 

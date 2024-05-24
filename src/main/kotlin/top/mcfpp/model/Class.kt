@@ -2,7 +2,8 @@ package top.mcfpp.model
 
 import net.querz.nbt.tag.IntArrayTag
 import top.mcfpp.Project
-import top.mcfpp.lang.*
+import top.mcfpp.lang.ClassPointer
+import top.mcfpp.lang.SbObject
 import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.field.GlobalField
@@ -10,10 +11,8 @@ import top.mcfpp.model.function.Constructor
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.util.LogProcessor
-import top.mcfpp.util.NBTUtil
 import top.mcfpp.util.Utils
 import java.util.*
-import kotlin.collections.ArrayList
 
 /**
  * 一个类。在mcfpp中一个类通常类似下面的样子
@@ -48,7 +47,7 @@ import kotlin.collections.ArrayList
 open class Class : CompoundData {
 
     lateinit var uuid: UUID
-    lateinit var uuidNBT : IntArrayTag
+    lateinit var uuidNBT: IntArrayTag
 
     /**
      * 记录这个类所有实例地址的记分板
@@ -83,7 +82,7 @@ open class Class : CompoundData {
     /**
      * 临时指针。所有的类都共用一个临时指针。临时指针只能在创建对象的期间使用。
      */
-    lateinit var initPointer : ClassPointer
+    lateinit var initPointer: ClassPointer
 
     /**
      * 是否已经继承了一个类
@@ -100,16 +99,16 @@ open class Class : CompoundData {
         this.namespace = namespace
     }
 
-    override fun initialize(){
+    override fun initialize() {
         super.initialize()
         uuid = UUID.nameUUIDFromBytes(namespaceID.toByteArray())
         uuidNBT = Utils.toNBTArrayUUID(uuid)
         classPreInit = Function("_class_preinit_$identifier", this, false)
         classPreStaticInit = Function("_class_prestaticinit_$identifier", this, true)
-        field.addFunction(classPreInit,true)
-        staticField.addFunction(classPreStaticInit,true)
+        field.addFunction(classPreInit, true)
+        staticField.addFunction(classPreStaticInit, true)
         addressSbObject = SbObject(namespace + "_class_" + identifier + "_index")
-        initPointer =  ClassPointer(this, "INIT")
+        initPointer = ClassPointer(this, "INIT")
         //staticinit函数的初始化直入。生成static实体
         classPreStaticInit.commands.add(
             "execute in minecraft:overworld " +
@@ -130,9 +129,10 @@ open class Class : CompoundData {
     open val staticTag: String
         get() = namespace + "_class_" + identifier + "_static_pointer"
 
-    fun getConstructor(normalParams: ArrayList<String>): Constructor?{
+    fun getConstructor(normalParams: ArrayList<String>): Constructor? {
         return getConstructorInner(
-            ArrayList(normalParams.map { MCFPPType.parseFromIdentifier(it, field) }))
+            ArrayList(normalParams.map { MCFPPType.parseFromIdentifier(it, field) })
+        )
     }
 
     /**
@@ -141,7 +141,7 @@ open class Class : CompoundData {
      */
     private fun getConstructorInner(normalParams: List<MCFPPType>): Constructor? {
         for (f in constructors) {
-            if(f.isSelf(this, normalParams)){
+            if (f.isSelf(this, normalParams)) {
                 return f
             }
         }
@@ -152,7 +152,7 @@ open class Class : CompoundData {
      * 向这个类中添加一个构造函数
      * @param constructor 构造函数
      */
-    fun addConstructor(constructor: Constructor) : Boolean {
+    fun addConstructor(constructor: Constructor): Boolean {
         if (constructors.contains(constructor)) {
             return false
         } else {
@@ -178,9 +178,9 @@ open class Class : CompoundData {
      *
      * @param compoundData
      */
-    override fun extends(compoundData: CompoundData) : CompoundData{
-        if(compoundData is Class){
-            if(hasParentClass){
+    override fun extends(compoundData: CompoundData): CompoundData {
+        if (compoundData is Class) {
+            if (hasParentClass) {
                 LogProcessor.error("A class can only inherit one class")
                 throw Exception()
             }
@@ -193,25 +193,26 @@ open class Class : CompoundData {
     /**
      * 获取这个类对于的classType
      */
-    var getType : () -> MCFPPClassType = {
+    var getType: () -> MCFPPClassType = {
         MCFPPClassType(this,
             parent.filterIsInstance<Class>().map { it.getType() }
         )
     }
 
     companion object {
-        class UndefinedClassOrInterface(identifier: String, namespace: String?)
-            : Class(identifier, namespace?:Project.currNamespace) {
+        class UndefinedClassOrInterface(identifier: String, namespace: String?) :
+            Class(identifier, namespace ?: Project.currNamespace) {
 
-            fun getDefinedClassOrInterface(): CompoundData?{
-                var re : CompoundData? = GlobalField.getClass(namespace, identifier)
-                if(re == null){
+            fun getDefinedClassOrInterface(): CompoundData? {
+                var re: CompoundData? = GlobalField.getClass(namespace, identifier)
+                if (re == null) {
                     re = GlobalField.getInterface(namespace, identifier)
                 }
                 return re
             }
 
         }
+
         /**
          * 当前编译器正在编译的类
          */
@@ -219,7 +220,9 @@ open class Class : CompoundData {
     }
 }
 
-class CompiledGenericClass(identifier: String, namespace: String = Project.currNamespace,
-                           var originClass: GenericClass) : Class(identifier, namespace) {
+class CompiledGenericClass(
+    identifier: String, namespace: String = Project.currNamespace,
+    var originClass: GenericClass
+) : Class(identifier, namespace) {
 
 }

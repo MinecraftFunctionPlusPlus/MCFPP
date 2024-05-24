@@ -13,14 +13,15 @@ class Inject : ClassAnnotation {
 
     val data: CompoundData
 
-    constructor(targetClass: MCString): super("Inject", "mcfpp.lang.annotation"){
-        if(targetClass !is MCFPPValue<*>){
+    constructor(targetClass: MCString) : super("Inject", "mcfpp.lang.annotation") {
+        if (targetClass !is MCFPPValue<*>) {
             LogProcessor.error("Cannot pass a non-concrete value to a concrete parameter")
             throw IllegalArgumentException()
         }
         //找到目标类
         val clazz = java.lang.Class.forName(targetClass.value.toString()).kotlin
-        data = clazz.companionObject!!.declaredMemberProperties.find { it.name == "data" }!!.getter.call(null) as CompoundData
+        data =
+            clazz.companionObject!!.declaredMemberProperties.find { it.name == "data" }!!.getter.call(null) as CompoundData
     }
 
     override fun forClass(clazz: Class) {

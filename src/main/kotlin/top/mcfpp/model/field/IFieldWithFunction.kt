@@ -3,7 +3,7 @@ package top.mcfpp.model.field
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.function.Function
 
-interface IFieldWithFunction: IField {
+interface IFieldWithFunction : IField {
 
     /**
      * 根据所给的函数名和参数获取一个函数

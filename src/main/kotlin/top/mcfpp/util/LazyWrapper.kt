@@ -39,7 +39,7 @@ class LazyWrapper<T> {
         initialized = true
     }
 
-    fun clone(): LazyWrapper<T>{
+    fun clone(): LazyWrapper<T> {
         val re = LazyWrapper(initializer)
         re.value = value
         re.initialized = initialized

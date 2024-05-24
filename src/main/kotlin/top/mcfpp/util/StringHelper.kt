@@ -10,9 +10,9 @@ object StringHelper {
     fun toLowerCase(str: String): String {
         val s = StringBuilder("")
         for (c in str.withIndex()) {
-            if(c.value.isUpperCase()){
+            if (c.value.isUpperCase()) {
                 s.append("_").append(c.value.lowercase())
-            }else{
+            } else {
                 s.append(c.value)
             }
         }
@@ -22,20 +22,20 @@ object StringHelper {
     fun toLegalIdentifier(str: String): String {
         val s = StringBuilder("")
         for (c in str.withIndex()) {
-            if(c.value.isLowerCase() || c.value.isDigit() || c.value == '_' || c.value == '-' || c.value == '.'){
+            if (c.value.isLowerCase() || c.value.isDigit() || c.value == '_' || c.value == '-' || c.value == '.') {
                 s.append(c.value)
-            }else if (c.value.isUpperCase()){
+            } else if (c.value.isUpperCase()) {
                 s.append("_").append(c.value.lowercase())
-            }else{
+            } else {
                 s.append("u").append(c.value.code.toString(16))
             }
         }
         return s.toString()
     }
 
-    fun splitNamespaceID(str: String): Pair<String?, String>{
+    fun splitNamespaceID(str: String): Pair<String?, String> {
         val s = str.split(":")
-        if(s.size == 1){
+        if (s.size == 1) {
             return Pair(null, s[0])
         }
         return Pair(s[0], s[1])

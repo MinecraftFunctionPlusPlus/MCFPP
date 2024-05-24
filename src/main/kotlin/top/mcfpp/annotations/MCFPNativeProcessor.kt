@@ -18,8 +18,13 @@ class MCFPNativeProcessor : AbstractProcessor() {
             if (element.kind == ElementKind.METHOD) {
                 val methodElement = element as ExecutableElement
                 val parameters = methodElement.parameters
-                if (parameters.size != 2 || parameters[0].asType().toString() != "Var[]" || parameters[1].asType().toString() != "CanSelectMember") {
-                    processingEnv.messager.printMessage(Diagnostic.Kind.ERROR, "Method ${methodElement.simpleName} annotated with @MCFPNative must have parameters Var[] vars, CanSelectMember caller")
+                if (parameters.size != 2 || parameters[0].asType().toString() != "Var[]" || parameters[1].asType()
+                        .toString() != "CanSelectMember"
+                ) {
+                    processingEnv.messager.printMessage(
+                        Diagnostic.Kind.ERROR,
+                        "Method ${methodElement.simpleName} annotated with @MCFPNative must have parameters Var[] vars, CanSelectMember caller"
+                    )
                 }
             }
         }

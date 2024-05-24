@@ -5,7 +5,7 @@ package top.mcfpp.antlr
  *
  * @constructor Create empty Native class visitor
  */
-class NativeClassVisitor: mcfppParserBaseVisitor<Any?>() {
+class NativeClassVisitor : mcfppParserBaseVisitor<Any?>() {
 
     /*
     @Override

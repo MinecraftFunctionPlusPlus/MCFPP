@@ -16,10 +16,10 @@ import java.io.FileInputStream
 import java.nio.file.Path
 
 object MCFPPStringTest {
-    fun readFromString(str: String){
+    fun readFromString(str: String) {
         val source: ConfigurationSource
         source = ConfigurationSource(FileInputStream("log4j2.xml"))
-        Configurator.initialize(null,source)
+        Configurator.initialize(null, source)
         //读取json
         LogProcessor.debug("Generate debug project for a string")
         Project.config.root = Path.of("./")
@@ -37,7 +37,7 @@ object MCFPPStringTest {
         Project.init() //初始化
         //解析文件
         //添加默认库的域
-        if(!CompileSettings.ignoreStdLib){
+        if (!CompileSettings.ignoreStdLib) {
             GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
         }
         val charStream: CharStream = CharStreams.fromString(str)
@@ -50,7 +50,7 @@ object MCFPPStringTest {
         McfppFieldVisitor().visit(context)
         GlobalField.importedLibNamespaces.clear()
         //添加默认库域
-        if(!CompileSettings.ignoreStdLib){
+        if (!CompileSettings.ignoreStdLib) {
             GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
         }
         val visitor = McfppImVisitor()
@@ -62,12 +62,12 @@ object MCFPPStringTest {
         GlobalField.printAll()
     }
 
-    fun readFromSingleFile(path: String){
-        val source:ConfigurationSource
+    fun readFromSingleFile(path: String) {
+        val source: ConfigurationSource
         try {
             source = ConfigurationSource(FileInputStream("log4j2.xml"))
-            Configurator.initialize(null,source)
-        }catch (e:Exception){
+            Configurator.initialize(null, source)
+        } catch (e: Exception) {
             println("Failed to load log4j2.xml")
         }
         try {
@@ -90,7 +90,7 @@ object MCFPPStringTest {
             LogProcessor.debug("Analysing project...")
             //解析文件
             //添加默认库的域
-            if(!CompileSettings.ignoreStdLib){
+            if (!CompileSettings.ignoreStdLib) {
                 GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
             }
             var charStream: CharStream = CharStreams.fromString(code)
@@ -100,7 +100,7 @@ object MCFPPStringTest {
             McfppFieldVisitor().visit(context)
             GlobalField.importedLibNamespaces.clear()
             //添加默认库域
-            if(!CompileSettings.ignoreStdLib){
+            if (!CompileSettings.ignoreStdLib) {
                 GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
             }
             val visitor = McfppImVisitor()

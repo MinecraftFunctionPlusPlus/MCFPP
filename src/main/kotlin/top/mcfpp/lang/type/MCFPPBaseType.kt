@@ -1,53 +1,60 @@
 package top.mcfpp.lang.type
 
-import top.mcfpp.lang.*
-import top.mcfpp.util.ResourceLocation
-
 /**
  * 类型单例
  */
 class MCFPPBaseType {
-    object Any:MCFPPType(listOf()){
+    object Any : MCFPPType(listOf()) {
         override val typeName: kotlin.String
             get() = "any"
     }
-    object Int:MCFPPType(listOf(Any)){
+
+    object Int : MCFPPType(listOf(Any)) {
         override val typeName: kotlin.String
             get() = "int"
     }
-    object String:MCFPPType(listOf(Any)){
+
+    object String : MCFPPType(listOf(Any)) {
         override val typeName: kotlin.String
             get() = "string"
     }
-    object Float:MCFPPType(listOf(Any)){
+
+    object Float : MCFPPType(listOf(Any)) {
         override val typeName: kotlin.String
             get() = "float"
     }
-    object Bool:MCFPPType(listOf(Any)){
+
+    object Bool : MCFPPType(listOf(Any)) {
         override val typeName: kotlin.String
             get() = "bool"
     }
-    object Type:MCFPPType(listOf()){
+
+    object Type : MCFPPType(listOf()) {
         override val typeName: kotlin.String
             get() = "type"
     }
-    object Void: MCFPPType(listOf()){
+
+    object Void : MCFPPType(listOf()) {
         override val typeName: kotlin.String
             get() = "void"
     }
-    object Selector: MCFPPType(listOf(BaseEntity)){
+
+    object Selector : MCFPPType(listOf(BaseEntity)) {
         override val typeName: kotlin.String
             get() = "selector"
     }
-    object JavaVar: MCFPPType(listOf(Any)){
+
+    object JavaVar : MCFPPType(listOf(Any)) {
         override val typeName: kotlin.String
             get() = "JavaVar"
     }
-    object BaseEntity: MCFPPType(listOf(Any)){
+
+    object BaseEntity : MCFPPType(listOf(Any)) {
         override val typeName: kotlin.String
             get() = "entity"
     }
-    object JsonText: MCFPPType(listOf(MCFPPNBTType.NBT)){
+
+    object JsonText : MCFPPType(listOf(MCFPPNBTType.NBT)) {
         override val typeName: kotlin.String
             get() = "jtext"
     }

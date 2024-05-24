@@ -5,7 +5,7 @@ import kotlin.test.Test
 class GenericTest {
 
     @Test
-    fun genericFunctionTest(){
+    fun genericFunctionTest() {
         val test =
             """
                 func test<int i>(int p){
@@ -20,8 +20,9 @@ class GenericTest {
             """.trimIndent()
         MCFPPStringTest.readFromString(test)
     }
+
     @Test
-    fun typeFieldTest(){
+    fun typeFieldTest() {
         val test =
             """
                 func main(){
@@ -38,7 +39,7 @@ class GenericTest {
     }
 
     @Test
-    fun classGenericTest(){
+    fun classGenericTest() {
         val test =
             """
                 class Test<type T>{
@@ -55,7 +56,7 @@ class GenericTest {
     }
 
     @Test
-    fun classOverLoad(){
+    fun classOverLoad() {
         val test =
             """
                 class Test<int i>{

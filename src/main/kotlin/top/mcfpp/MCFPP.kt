@@ -12,16 +12,16 @@ import java.io.FileInputStream
  * 编译器的启动入口
  */
 fun main(args: Array<String>) {
-    val source:ConfigurationSource
+    val source: ConfigurationSource
     try {
         source = ConfigurationSource(FileInputStream("log4j2.xml"))
-        Configurator.initialize(null,source)
-    }catch (e:Exception){
+        Configurator.initialize(null, source)
+    } catch (e: Exception) {
         println("Failed to load log4j2.xml")
     }
     if (args.isNotEmpty()) {
-        if(args.size > 1){
-            if(args.contains("debug")){
+        if (args.size > 1) {
+            if (args.contains("debug")) {
                 CompileSettings.isDebug = true
                 LogProcessor.warn("Compiling in debug mode.")
             }
@@ -38,10 +38,10 @@ fun main(args: Array<String>) {
         Project.optimization() //优化
         Project.genIndex() //生成索引
         Project.ctx = null
-        if(Project.config.targetPath != "null"){
-            try{
+        if (Project.config.targetPath != "null") {
+            try {
                 DatapackCreator.createDatapack(Project.config.targetPath) //生成数据包
-            }catch (e: Exception){
+            } catch (e: Exception) {
                 LogProcessor.error("Cannot create datapack in path: ${Project.config.targetPath}")
             }
         }

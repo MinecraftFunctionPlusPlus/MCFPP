@@ -14,7 +14,6 @@ import top.mcfpp.model.*
 import top.mcfpp.model.field.FunctionField
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
-import java.lang.NullPointerException
 import java.lang.reflect.Method
 
 /**
@@ -103,7 +102,7 @@ open class Function : Member, FieldContainer {
     /**
      * 函数的返回类型
      */
-    var returnType : MCFPPType
+    var returnType: MCFPPType
 
     /**
      * 包含所有命令的列表
@@ -163,7 +162,7 @@ open class Function : Member, FieldContainer {
     /**
      * 函数是否有返回语句
      */
-    var hasReturnStatement : Boolean = false
+    var hasReturnStatement: Boolean = false
 
     /**
      * 访问修饰符。默认为private
@@ -173,17 +172,17 @@ open class Function : Member, FieldContainer {
     /**
      * 是否是静态的。默认为否
      */
-    override var isStatic : Boolean
+    override var isStatic: Boolean
 
     /**
      * 所在的复合类型（类/结构体/基本类型）。如果不是成员，则为null
      */
-    var owner : CompoundData? = null
+    var owner: CompoundData? = null
 
     /**
      * 在什么东西里面
      */
-    var ownerType : OwnerType = OwnerType.NONE
+    var ownerType: OwnerType = OwnerType.NONE
 
     open val namespaceID: String
         /**
@@ -191,12 +190,12 @@ open class Function : Member, FieldContainer {
          * @return 函数的命名空间id
          */
         get() {
-            val re: StringBuilder = if(ownerType == OwnerType.NONE){
+            val re: StringBuilder = if (ownerType == OwnerType.NONE) {
                 StringBuilder("$namespace:$identifier")
-            }else{
-                if(isStatic){
+            } else {
+                if (isStatic) {
                     StringBuilder("$namespace:${owner!!.identifier}/static/$identifier")
-                }else{
+                } else {
                     StringBuilder("$namespace:${owner!!.identifier}/$identifier")
                 }
             }
@@ -211,12 +210,12 @@ open class Function : Member, FieldContainer {
      */
     open val nameWithNamespace: String
         get() {
-            val re: StringBuilder = if(ownerType == OwnerType.NONE){
+            val re: StringBuilder = if (ownerType == OwnerType.NONE) {
                 StringBuilder(identifier)
-            }else{
-                if(isStatic){
+            } else {
+                if (isStatic) {
                     StringBuilder("${owner!!.identifier}/static/$identifier")
-                }else{
+                } else {
                     StringBuilder("${owner!!.identifier}/$identifier")
                 }
             }
@@ -231,8 +230,8 @@ open class Function : Member, FieldContainer {
      */
     val isEntrance: Boolean
         get() {
-            for (tag in tags){
-                if(tags.equals(FunctionTag.TICK) || tags.equals(FunctionTag.LOAD)){
+            for (tag in tags) {
+                if (tags.equals(FunctionTag.TICK) || tags.equals(FunctionTag.LOAD)) {
                     return true
                 }
             }
@@ -290,7 +289,11 @@ open class Function : Member, FieldContainer {
      * @param identifier 函数的标识符
      * @param namespace 函数的命名空间
      */
-    constructor(identifier: String, namespace: String = Project.currNamespace, returnType: MCFPPType = MCFPPBaseType.Void){
+    constructor(
+        identifier: String,
+        namespace: String = Project.currNamespace,
+        returnType: MCFPPType = MCFPPBaseType.Void
+    ) {
         this.identifier = identifier
         commands = CommandList()
         normalParams = ArrayList()
@@ -338,7 +341,7 @@ open class Function : Member, FieldContainer {
         ownerType = OwnerType.CLASS
         owner = itf
         this.isStatic = false
-        field = FunctionField(null,null)
+        field = FunctionField(null, null)
         this.returnType = returnType
         this.returnVar = buildReturnVar(returnType)
         this.isAbstract = true
@@ -381,15 +384,15 @@ open class Function : Member, FieldContainer {
      * @param tag 要添加的标签
      * @return 返回添加了标签以后的函数对象
      */
-    fun addTag(tag : FunctionTag): Function {
-        if(!tags.contains(tag)){
+    fun addTag(tag: FunctionTag): Function {
+        if (!tags.contains(tag)) {
             tags.add(tag)
         }
         return this
     }
 
     open fun appendNormalParam(type: MCFPPType, identifier: String, isStatic: Boolean = false): Function {
-        normalParams.add(FunctionParam(type ,identifier, this, isStatic))
+        normalParams.add(FunctionParam(type, identifier, this, isStatic))
         return this
     }
 
@@ -407,7 +410,7 @@ open class Function : Member, FieldContainer {
      */
     open fun addParamsFromContext(ctx: mcfppParser.FunctionParamsContext) {
         //val r : mcfppParser.ParameterListContext
-        val n : mcfppParser.ParameterListContext
+        val n: mcfppParser.ParameterListContext
         /*
         if(ctx.parameterList().size == 0) {
             return
@@ -430,7 +433,7 @@ open class Function : Member, FieldContainer {
             readOnlyParams.add(param1)
         }
          */
-        n = ctx.normalParams().parameterList()?:return
+        n = ctx.normalParams().parameterList() ?: return
         for (param in n.parameter()) {
             val param1 = FunctionParam(
                 MCFPPType.parseFromContext(param.type(), this.field),
@@ -443,10 +446,10 @@ open class Function : Member, FieldContainer {
         parseParams()
     }
 
-    fun addParams(params: ArrayList<FunctionParam>, isReadOnly: Boolean){
-        if(isReadOnly){
+    fun addParams(params: ArrayList<FunctionParam>, isReadOnly: Boolean) {
+        if (isReadOnly) {
             //readOnlyParams.addAll(params)
-        }else{
+        } else {
             normalParams.addAll(params)
         }
         parseParams()
@@ -455,7 +458,7 @@ open class Function : Member, FieldContainer {
     /**
      * 解析函数的参数
      */
-    protected open fun parseParams(){
+    protected open fun parseParams() {
         /*
         for (p in readOnlyParams){
             val r = Var.build("_param_" + p.identifier, MCFPPType.parseFromIdentifier(p.typeIdentifier, field), this)
@@ -463,8 +466,11 @@ open class Function : Member, FieldContainer {
             field.putVar(p.identifier, r)
         }
          */
-        for (p in normalParams){
-            field.putVar(p.identifier, Var.build("_param_" + p.identifier, MCFPPType.parseFromIdentifier(p.typeIdentifier, field), this))
+        for (p in normalParams) {
+            field.putVar(
+                p.identifier,
+                Var.build("_param_" + p.identifier, MCFPPType.parseFromIdentifier(p.typeIdentifier, field), this)
+            )
         }
     }
 
@@ -473,9 +479,9 @@ open class Function : Member, FieldContainer {
      *
      * @param returnType
      */
-    private fun buildReturnVar(returnType: MCFPPType): Var<*>{
-        return if(returnType == MCFPPBaseType.Void) Void()
-        else Var.build("return",returnType,this)
+    private fun buildReturnVar(returnType: MCFPPType): Var<*> {
+        return if (returnType == MCFPPBaseType.Void) Void()
+        else Var.build("return", returnType, this)
     }
 
     /**
@@ -484,8 +490,8 @@ open class Function : Member, FieldContainer {
      * @param normalArgs 函数的参数列表
      * @param caller 函数的调用者
      */
-    open fun invoke(/*readOnlyArgs: ArrayList<Var<*>>,*/ normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?){
-        when(caller){
+    open fun invoke(/*readOnlyArgs: ArrayList<Var<*>>,*/ normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?) {
+        when (caller) {
             is CompoundDataType -> invoke(/*readOnlyArgs, */normalArgs, callerClassP = null)
             null -> invoke(/*readOnlyArgs, */normalArgs, callerClassP = null)
             is ClassPointer -> invoke(/*readOnlyArgs, */normalArgs, callerClassP = caller)
@@ -500,21 +506,21 @@ open class Function : Member, FieldContainer {
      * @param normalArgs
      * @param caller
      */
-    open fun invoke(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, caller: Var<*>){
+    open fun invoke(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, caller: Var<*>) {
         //基本类型
         addCommand("#[Function ${this.namespaceID}] Function Pushing and argument passing")
         //给函数开栈
         addCommand("data modify storage mcfpp:system ${Project.config.defaultNamespace}.stack_frame prepend value {}")
         //传入this参数
-        field.putVar("this",caller,true)
+        field.putVar("this", caller, true)
         //参数传递
         argPass(/*readOnlyArgs, */normalArgs)
         addCommand("function " + this.namespaceID)
         //static参数传回
         staticArgRef(normalArgs)
         //销毁指针，释放堆内存
-        for (p in field.allVars){
-            if (p is ClassPointer){
+        for (p in field.allVars) {
+            if (p is ClassPointer) {
                 p.dispose()
             }
         }
@@ -538,20 +544,27 @@ open class Function : Member, FieldContainer {
         //参数传递
         argPass(/*readOnlyArgs, */normalArgs)
         //函数调用的命令
-        when(callerClassP){
+        when (callerClassP) {
             is ClassPointer -> {
-                addCommands(Commands.selectRun(callerClassP,Command.build("function mcfpp.dynamic:function with entity @s data.functions.$identifier")))
+                addCommands(
+                    Commands.selectRun(
+                        callerClassP,
+                        Command.build("function mcfpp.dynamic:function with entity @s data.functions.$identifier")
+                    )
+                )
             }
+
             null -> {
                 addCommand("function $namespaceID")
             }
+
             else -> TODO()
         }
         //static关键字，将值传回
         staticArgRef(normalArgs)
         //销毁指针，释放堆内存
-        for (p in field.allVars){
-            if (p is ClassPointer){
+        for (p in field.allVars) {
+            if (p is ClassPointer) {
                 p.dispose()
             }
         }
@@ -567,7 +580,7 @@ open class Function : Member, FieldContainer {
      * @param args
      * @param struct
      */
-    open fun invoke(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, struct: IntTemplateBase){
+    open fun invoke(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, struct: IntTemplateBase) {
         TODO()
     }
 
@@ -577,13 +590,13 @@ open class Function : Member, FieldContainer {
      * @param normalArgs
      */
     @InsertCommand
-    open fun argPass(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>){
+    open fun argPass(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>) {
         for (i in this.normalParams.indices) {
             val tg = normalArgs[i].cast(MCFPPType.parseFromIdentifier(this.normalParams[i].typeIdentifier, field))
             //参数传递和子函数的参数进栈
             val p = field.getVar(this.normalParams[i].identifier)!!
             p.assign(tg)
-            if(p is MCFPPValue<*>) p.toDynamic(true)
+            if (p is MCFPPValue<*>) p.toDynamic(true)
         }
         /*
         for (i in readOnlyParams.indices){
@@ -604,17 +617,17 @@ open class Function : Member, FieldContainer {
      * @param args
      */
     @InsertCommand
-    open fun staticArgRef(args: ArrayList<Var<*>>){
+    open fun staticArgRef(args: ArrayList<Var<*>>) {
         var hasAddComment = false
         for (i in 0 until normalParams.size) {
             if (normalParams[i].isStatic) {
-                if(!hasAddComment){
+                if (!hasAddComment) {
                     addCommand("#[Function ${this.namespaceID}] Static arguments")
                     hasAddComment = true
                 }
                 //如果是static参数
                 if (args[i] is MCInt) {
-                    when(normalParams[i].typeIdentifier){
+                    when (normalParams[i].typeIdentifier) {
                         MCFPPBaseType.Int.typeName -> {
                             //如果是int取出到记分板
                             addCommand(
@@ -623,6 +636,7 @@ open class Function : Member, FieldContainer {
                                         "run data get storage mcfpp:system ${Project.config.defaultNamespace}.stack_frame[0].${normalParams[i].identifier} int 1 "
                             )
                         }
+
                         else -> {
                             //TODO 其他参数类型
                             //引用类型，不用还原
@@ -639,7 +653,7 @@ open class Function : Member, FieldContainer {
      *
      */
     @InsertCommand
-    open fun fieldRestore(){
+    open fun fieldRestore() {
         addCommand("#[Function ${this.namespaceID}] Take vars out of the Stack")
         Companion.field.forEachVar { v ->
             run {
@@ -653,6 +667,7 @@ open class Function : Member, FieldContainer {
                                     + "data get storage mcfpp:system ${Project.currNamespace}.stack_frame[0].${tg.identifier}"
                         )
                     }
+
                     else -> {
                         //是引用类型，不用还原
                     }
@@ -667,8 +682,8 @@ open class Function : Member, FieldContainer {
      * @param v
      */
     @InsertCommand
-    open fun assignReturnVar(v: Var<*>){
-        if(returnType == MCFPPBaseType.Void){
+    open fun assignReturnVar(v: Var<*>) {
+        if (returnType == MCFPPBaseType.Void) {
             LogProcessor.error("Function $identifier has no return value")
             return
         }
@@ -735,11 +750,11 @@ open class Function : Member, FieldContainer {
      */
     open fun toString(containClassName: Boolean, containNamespace: Boolean): String {
         //类名
-        val clsName = if(containClassName && owner != null) owner!!.identifier else ""
+        val clsName = if (containClassName && owner != null) owner!!.identifier else ""
         //参数
         val paramStr = StringBuilder()
         for (i in normalParams.indices) {
-            if(normalParams[i].isStatic){
+            if (normalParams[i].isStatic) {
                 paramStr.append("static ")
             }
             paramStr.append("${normalParams[i].typeIdentifier} ${normalParams[i].identifier}")
@@ -747,7 +762,7 @@ open class Function : Member, FieldContainer {
                 paramStr.append(",")
             }
         }
-        if(containNamespace){
+        if (containNamespace) {
             return "$namespace:$clsName$identifier($paramStr)"
         }
         return "$returnType $clsName$identifier($paramStr)"
@@ -757,7 +772,7 @@ open class Function : Member, FieldContainer {
         return namespaceID.hashCode()
     }
 
-    open fun isSelf(key: String, normalParams: List<MCFPPType>) : Boolean{
+    open fun isSelf(key: String, normalParams: List<MCFPPType>): Boolean {
         if (this.identifier == key && this.normalParams.size == normalParams.size) {
             if (this.normalParams.size == 0) {
                 return true
@@ -765,13 +780,13 @@ open class Function : Member, FieldContainer {
             var hasFoundFunc = true
             //参数比对
             for (i in normalParams.indices) {
-                if (!FunctionParam.isSubOf(normalParams[i],this.normalParams[i].type)) {
+                if (!FunctionParam.isSubOf(normalParams[i], this.normalParams[i].type)) {
                     hasFoundFunc = false
                     break
                 }
             }
             return hasFoundFunc
-        }else{
+        } else {
             return false
         }
     }
@@ -798,18 +813,18 @@ open class Function : Member, FieldContainer {
         val currBaseFunction: Function
             get() {
                 var ret = currFunction
-                while(ret is InternalFunction){
+                while (ret is InternalFunction) {
                     ret = ret.parent[0]
                 }
                 return ret
             }
 
-        fun replaceCommand(command: String, index: Int){
-            replaceCommand(Command(command),index)
+        fun replaceCommand(command: String, index: Int) {
+            replaceCommand(Command(command), index)
         }
 
-        fun replaceCommand(command: Command, index: Int){
-            if(CompileSettings.isDebug){
+        fun replaceCommand(command: Command, index: Int) {
+            if (CompileSettings.isDebug) {
                 //检查当前方法是否有InsertCommand注解
                 val stackTrace = Thread.currentThread().stackTrace
                 //调用此方法的类名
@@ -828,18 +843,18 @@ open class Function : Member, FieldContainer {
                     }
                 }
             }
-            if(this.equals(nullFunction)){
+            if (this.equals(nullFunction)) {
                 LogProcessor.error("Unexpected command added to NullFunction")
                 throw NullPointerException()
             }
             currFunction.commands[index] = command
         }
 
-        fun addCommands(command: Array<Command>){
+        fun addCommands(command: Array<Command>) {
             command.forEach { addCommand(it) }
         }
 
-        fun addCommand(command: String): Int{
+        fun addCommand(command: String): Int {
             return addCommand(Command.build(command))
         }
 
@@ -849,7 +864,7 @@ open class Function : Member, FieldContainer {
          */
         fun addCommand(command: Command): Int {
 
-            if(CompileSettings.isDebug){
+            if (CompileSettings.isDebug) {
                 //检查当前方法是否有InsertCommand注解
                 val stackTrace = Thread.currentThread().stackTrace
                 //调用此方法的类名
@@ -859,11 +874,11 @@ open class Function : Member, FieldContainer {
                 //调用此方法的代码行数
                 val lineNumber = stackTrace[2].lineNumber
                 val methods: Array<Method> = java.lang.Class.forName(className).declaredMethods
-                if(command.toString().startsWith("#")){
+                if (command.toString().startsWith("#")) {
                     LogProcessor.warn("(JVM)Should use addComment() to add a Comment instead of addCommand(). at $className.$methodName:$lineNumber\"")
                 }
                 for (method in methods) {
-                    if (cache.contains(method.toGenericString())){
+                    if (cache.contains(method.toGenericString())) {
                         break
                     }
                     cache.add(method.toGenericString())
@@ -875,7 +890,7 @@ open class Function : Member, FieldContainer {
                     }
                 }
             }
-            if(this.equals(nullFunction)){
+            if (this.equals(nullFunction)) {
                 LogProcessor.error("Unexpected command added to NullFunction")
                 throw NullPointerException()
             }
@@ -890,8 +905,8 @@ open class Function : Member, FieldContainer {
          *
          * @param str
          */
-        fun addComment(str: String, type: CommentType = CommentType.INFO){
-            if(this.equals(nullFunction)){
+        fun addComment(str: String, type: CommentType = CommentType.INFO) {
+            if (this.equals(nullFunction)) {
                 LogProcessor.warn("Unexpected command added to NullFunction")
                 throw NullPointerException()
             }
@@ -900,7 +915,7 @@ open class Function : Member, FieldContainer {
             }
         }
 
-        enum class OwnerType{
+        enum class OwnerType {
             /**
              * 所有类型为基本类型
              */

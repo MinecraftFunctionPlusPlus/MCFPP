@@ -14,9 +14,7 @@ import top.mcfpp.util.NBTUtil;
 import top.mcfpp.util.ValueWrapper;
 
 import java.io.IOException;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.Objects;
 
 public class NBTListData extends MNIMethodContainer {
 
@@ -28,28 +26,28 @@ public class NBTListData extends MNIMethodContainer {
         methods.put("add", (readOnlyArgs, normalArgs, caller, returnVar) -> {
             //由于类型检查，必然是可以通过的
             var e = normalArgs[0];  //要添加的成员
-            var list = (NBTList)caller;
-            if(e instanceof MCFPPValue<?>){
+            var list = (NBTList) caller;
+            if (e instanceof MCFPPValue<?>) {
                 //e是确定的
                 Tag<?> tag = NBTUtil.INSTANCE.toNBT(e);
                 String command;
-                try{
-                    if(list.parentClass() != null){
+                try {
+                    if (list.parentClass() != null) {
                         command = "data modify " +
                                 "entity @s " +
                                 "data." + list.getIdentifier() + " " +
                                 "append value " + SNBTUtil.toSNBT(tag);
-                    }else {
+                    } else {
                         command = "data modify " +
                                 "storage mcfpp:system " +
                                 Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + list.getIdentifier() + " " +
                                 "append value " + SNBTUtil.toSNBT(tag);
                     }
-                }catch (Exception ex){
+                } catch (Exception ex) {
                     throw new RuntimeException(ex);
                 }
                 Function.Companion.addCommand(command);
-            }else {
+            } else {
                 //e不是确定的
                 String command;
                 if (e.parentClass() != null) e = e.getTempVar();
@@ -75,26 +73,26 @@ public class NBTListData extends MNIMethodContainer {
 
         //list<E>.addAll(list<E> list)
         methods.put("addAll", (readOnlyArgs, normalArgs, caller, returnVar) -> {
-            var e = (NBTList)normalArgs[0];  //要添加的成员
-            var list = (NBTList)caller;
+            var e = (NBTList) normalArgs[0];  //要添加的成员
+            var list = (NBTList) caller;
             String command;
             NBTBasedData<?> l;
-            if(e.parentClass() != null) {
+            if (e.parentClass() != null) {
                 l = (NBTList) e.getTempVar();
-            }else if(e instanceof NBTListConcrete<?> eC){
+            } else if (e instanceof NBTListConcrete<?> eC) {
                 l = e;
                 eC.toDynamic(false);
-            }else{
+            } else {
                 l = e;
             }
-            if(list.parentClass() != null){
+            if (list.parentClass() != null) {
                 command = "data modify " +
                         "entity @s " +
                         "data." + list.getIdentifier() + " " +
                         "append from " +
                         "storage mcfpp:system " +
                         Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + l.getIdentifier() + "[]";
-            }else {
+            } else {
                 command = "data modify " +
                         "storage mcfpp:system " +
                         Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + list.getIdentifier() + " " +
@@ -109,10 +107,10 @@ public class NBTListData extends MNIMethodContainer {
         //list<E>.insert(int index, E e)
         methods.put("insert", (readOnlyArgs, normalArgs, caller, returnVar) -> {
             //由于类型检查，必然是可以通过的
-            var index = (MCInt)normalArgs[0];   //索引
+            var index = (MCInt) normalArgs[0];   //索引
             var e = normalArgs[1];  //要添加的成员
-            var list = (NBTList)caller;
-            if(e instanceof MCFPPValue<?> && index instanceof MCIntConcrete indexC){
+            var list = (NBTList) caller;
+            if (e instanceof MCFPPValue<?> && index instanceof MCIntConcrete indexC) {
                 //都是确定的
                 Tag<?> tag = NBTUtil.INSTANCE.toNBT(e);
                 int i = indexC.getValue();
@@ -129,23 +127,23 @@ public class NBTListData extends MNIMethodContainer {
                                 Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + list.getIdentifier() + " " +
                                 "insert " + i + " value " + SNBTUtil.toSNBT(tag);
                     }
-                }catch (IOException ex){
+                } catch (IOException ex) {
                     throw new RuntimeException(ex);
                 }
                 Function.Companion.addCommand(command);
-            }else if(index instanceof MCIntConcrete indexC){
+            } else if (index instanceof MCIntConcrete indexC) {
                 //e不是确定的，index是确定的，所以可以直接调用命令而不需要宏
                 int i = indexC.getValue();
                 String command;
-                if(e.parentClass() != null) e = e.getTempVar();
-                if(list.parentClass() != null){
+                if (e.parentClass() != null) e = e.getTempVar();
+                if (list.parentClass() != null) {
                     command = "data modify " +
                             "entity @s " +
                             "data." + list.getIdentifier() + " " +
                             "insert " + i + " from " +
                             "storage mcfpp:system " +
                             Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + e.getIdentifier();
-                }else {
+                } else {
                     command = "data modify " +
                             "storage mcfpp:system " +
                             Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + list.getIdentifier() + " " +
@@ -154,16 +152,16 @@ public class NBTListData extends MNIMethodContainer {
                             Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + e.getIdentifier();
                 }
                 Function.Companion.addCommand(command);
-            }else if(e instanceof MCFPPValue<?> eC){
+            } else if (e instanceof MCFPPValue<?> eC) {
                 //e是确定的，index不是确定的，需要使用宏
                 Tag<?> tag = NBTUtil.INSTANCE.toNBT(e);
                 Command command;
                 try {
-                    if(list.parentClass() != null){
+                    if (list.parentClass() != null) {
                         command = new Command("data modify " +
                                 "entity @s " +
                                 "data." + list.getIdentifier() + " " +
-                                "insert ").build("", index.getIdentifier()).build (" value " + SNBTUtil.toSNBT(tag));
+                                "insert ").build("", index.getIdentifier()).build(" value " + SNBTUtil.toSNBT(tag));
                     } else {
                         command = new Command("data modify " +
                                 "storage mcfpp:system " +
@@ -176,15 +174,15 @@ public class NBTListData extends MNIMethodContainer {
                 var f = MacroHelper.INSTANCE.addMacroCommand(command).build("with storage mcfpp:system " +
                         Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]");
                 Function.Companion.addCommand(f);
-            } else{
+            } else {
                 //e是不确定的，index也不是确定的
-                if(e.parentClass() != null) e = e.getTempVar();
+                if (e.parentClass() != null) e = e.getTempVar();
                 Command command;
-                if(list.parentClass() != null){
+                if (list.parentClass() != null) {
                     command = new Command("data modify " +
                             "entity @s " +
                             "data." + list.getIdentifier() + " " +
-                            "insert ").build("", index.getIdentifier()).build (" from " +
+                            "insert ").build("", index.getIdentifier()).build(" from " +
                             "storage mcfpp:system " +
                             Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + e.getIdentifier());
                 } else {

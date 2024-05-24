@@ -26,7 +26,7 @@ class ReturnedMCBool(val parentFunction: Function) : MCBool() {
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    fun assign(b: Var<*>?) : ReturnedMCBool {
+    fun assign(b: Var<*>?): ReturnedMCBool {
         LogProcessor.error("The bool type returned by the function is read-only")
         throw Exception()
     }

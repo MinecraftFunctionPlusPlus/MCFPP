@@ -5,8 +5,8 @@ import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPGenericType
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
+import top.mcfpp.model.function.Function
 
 /**
  * type T;
@@ -15,18 +15,19 @@ import top.mcfpp.model.Member
  */
 
 class MCTypeValue(
-    identifier:String,
+    identifier: String,
     var parentType: List<MCFPPType>
-): Var<MCFPPType>(identifier) {
+) : Var<MCFPPType>(identifier) {
 
     /**
      * **只读，不可更改**。此值的类型，为MCFPPBaseType.Type
      */
     override var type: MCFPPType = MCFPPBaseType.Type
 
-    fun toType():MCFPPGenericType{
-        return MCFPPGenericType(identifier,parentType)
+    fun toType(): MCFPPGenericType {
+        return MCFPPGenericType(identifier, parentType)
     }
+
     override fun assign(b: Var<*>): MCFPPTypeVar {
         TODO("Not yet implemented")
     }

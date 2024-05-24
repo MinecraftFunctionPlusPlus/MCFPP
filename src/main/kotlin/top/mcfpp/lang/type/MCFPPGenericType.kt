@@ -21,14 +21,14 @@ import top.mcfpp.lang.value.MCTypeValue
  * @param parentType 泛型的父类型。如果有T:A t，那么A就是父类型
  */
 class MCFPPGenericType(
-    var identifier:String,
+    var identifier: String,
     override var parentType: List<MCFPPType>
-) :MCFPPType(parentType, MCAny.data) {   //TODO: 泛型的CompoundData
+) : MCFPPType(parentType, MCAny.data) {   //TODO: 泛型的CompoundData
 
     override val typeName: String
         get() = identifier
 
-    fun toValue():MCTypeValue{
-        return MCTypeValue(identifier,parentType)
+    fun toValue(): MCTypeValue {
+        return MCTypeValue(identifier, parentType)
     }
 }

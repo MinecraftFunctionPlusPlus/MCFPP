@@ -5,14 +5,15 @@ import top.mcfpp.lang.type.MCFPPType
 open class SimpleFieldWithType : IFieldWithType {
 
     val fieldTypeSet = HashSet<String>()
+
     /**
      * 类型
      */
-    protected val types : HashMap<String, MCFPPType> = HashMap()
+    protected val types: HashMap<String, MCFPPType> = HashMap()
 
     override fun putType(key: String, type: MCFPPType, forced: Boolean): Boolean {
         fieldTypeSet.add(key)
-        if(forced){
+        if (forced) {
             types[key] = type
             return true
         }
@@ -24,9 +25,10 @@ open class SimpleFieldWithType : IFieldWithType {
         }
     }
 
-    override fun getType(key: String) : MCFPPType? {
+    override fun getType(key: String): MCFPPType? {
         return types.getOrDefault(key, null)
     }
+
     override fun containType(id: String): Boolean {
         return types.containsKey(id)
     }
@@ -36,7 +38,7 @@ open class SimpleFieldWithType : IFieldWithType {
     }
 
     override fun forEachType(action: (MCFPPType) -> Any?) {
-        for (t in types.values){
+        for (t in types.values) {
             action(t)
         }
     }

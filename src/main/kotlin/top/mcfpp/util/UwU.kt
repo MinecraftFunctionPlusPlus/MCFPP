@@ -2,7 +2,6 @@ package top.mcfpp.util
 
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.collections.ArrayList
 
 /**
  * 写tips用的

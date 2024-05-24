@@ -6,7 +6,7 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.antlr.mcfppParser.CompileTimeFuncDeclarationContext
 import top.mcfpp.command.CommandList
 import top.mcfpp.command.Commands
-import top.mcfpp.exception.*
+import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPBaseType
@@ -16,17 +16,18 @@ import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.Annotation
 import top.mcfpp.model.field.GlobalField
-import top.mcfpp.model.field.NamespaceField
-import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.model.function.FunctionParam.Companion.typeToStringList
+import top.mcfpp.model.function.InternalFunction
+import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.Generic
 import top.mcfpp.util.LogProcessor
 
-open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
+open class McfppImVisitor : mcfppParserBaseVisitor<Any?>() {
 
     override fun visitTopStatement(ctx: mcfppParser.TopStatementContext): Any? {
-        if(ctx.statement().size == 0) return null
+        if (ctx.statement().size == 0) return null
         Function.currFunction = MCFPPFile.currFile!!.topFunction
         //注册函数
         GlobalField.localNamespaces[Project.currNamespace]!!.field.addFunction(Function.currFunction, force = false)
@@ -36,14 +37,14 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     override fun visitFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext): Any? {
-        if(ctx.parent is CompileTimeFuncDeclarationContext) return null
+        if (ctx.parent is CompileTimeFuncDeclarationContext) return null
         enterFunctionDeclaration(ctx)
         super.visitFunctionDeclaration(ctx)
         exitFunctionDeclaration(ctx)
         return null
     }
 
-    private fun enterFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext){
+    private fun enterFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext) {
         Project.ctx = ctx
         val f: Function
         //获取函数对象
@@ -52,16 +53,16 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         f = GlobalField.getFunctionInner(Project.currNamespace, ctx.Identifier().text, types.first, types.second)
         Function.currFunction = f
         //对函数进行注解处理
-        for (a in annoInCompound){
+        for (a in annoInCompound) {
             a.forFunction(f)
         }
         annoInCompound.clear()
     }
 
-    private fun exitFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext){
+    private fun exitFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext) {
         Project.ctx = ctx
         //函数是否有返回值
-        if(Function.currFunction !is Generic<*> && Function.currFunction.returnType !=  MCFPPBaseType.Void && !Function.currFunction.hasReturnStatement){
+        if (Function.currFunction !is Generic<*> && Function.currFunction.returnType != MCFPPBaseType.Void && !Function.currFunction.hasReturnStatement) {
             LogProcessor.error("A 'return' expression required in function: " + Function.currFunction.namespaceID)
         }
         Function.currFunction = Function.nullFunction
@@ -74,8 +75,8 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     override fun visitFunctionBody(ctx: mcfppParser.FunctionBodyContext): Any? {
-        if(ctx.parent is CompileTimeFuncDeclarationContext) return null
-        if(Function.currFunction !is Generic<*>){
+        if (ctx.parent is CompileTimeFuncDeclarationContext) return null
+        if (Function.currFunction !is Generic<*>) {
             super.visitFunctionBody(ctx)
         }
         return null
@@ -83,7 +84,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
 
 
     //泛型函数编译使用的入口
-    fun visitFunctionBody(ctx: mcfppParser.FunctionBodyContext, function: Function){
+    fun visitFunctionBody(ctx: mcfppParser.FunctionBodyContext, function: Function) {
         val lastFunction = Function.currFunction
         Function.currFunction = function
         super.visitFunctionBody(ctx)
@@ -94,11 +95,11 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      * 进入命名空间声明的时候
      * @param ctx the parse tree
      */
-    override fun visitNamespaceDeclaration(ctx: mcfppParser.NamespaceDeclarationContext):Any? {
+    override fun visitNamespaceDeclaration(ctx: mcfppParser.NamespaceDeclarationContext): Any? {
         Project.ctx = ctx
         Project.currNamespace = ctx.Identifier(0).text
-        if(ctx.Identifier().size > 1){
-            for (n in ctx.Identifier().subList(1,ctx.Identifier().size-1)){
+        if (ctx.Identifier().size > 1) {
+            for (n in ctx.Identifier().subList(1, ctx.Identifier().size - 1)) {
                 Project.currNamespace += ".$n"
             }
         }
@@ -111,14 +112,14 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      * @param ctx the parse tree
      */
     @InsertCommand
-    override fun visitFieldDeclaration(ctx: mcfppParser.FieldDeclarationContext):Any? {
+    override fun visitFieldDeclaration(ctx: mcfppParser.FieldDeclarationContext): Any? {
         Project.ctx = ctx
         //变量生成
         val fieldModifier = ctx.fieldModifier()?.text
         if (ctx.parent is mcfppParser.ClassMemberContext) {
             return null
         }
-        if(ctx.VAR() != null){
+        if (ctx.VAR() != null) {
             //自动判断类型
             val init: Var<*> = McfppExprVisitor().visit(ctx.expression())!!
             val `var` = Var.build(ctx.Identifier().text, init.type, Function.currFunction)
@@ -128,34 +129,39 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 LogProcessor.error("Duplicate defined variable name:" + ctx.Identifier().text)
             }
             try {
-                if(`var` is MCInt && init is MCInt && init !is MCIntConcrete){
-                    Function.currFunction.commands.replaceThenAnalyze(init.name to `var`.name, init.`object`.name to `var`.`object`.name)
+                if (`var` is MCInt && init is MCInt && init !is MCIntConcrete) {
+                    Function.currFunction.commands.replaceThenAnalyze(
+                        init.name to `var`.name,
+                        init.`object`.name to `var`.`object`.name
+                    )
                     `var`.assignCommand(init, Function.currFunction.commands.last().toString())
-                }else{
+                } else {
                     `var`.assign(init)
                 }
             } catch (e: VariableConverseException) {
                 LogProcessor.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
                 throw VariableConverseException()
             }
-            when(fieldModifier){
+            when (fieldModifier) {
                 "const" -> {
-                    if(!`var`.hasAssigned){
+                    if (!`var`.hasAssigned) {
                         LogProcessor.error("The const field ${`var`.identifier} must be initialized.")
                     }
                     `var`.isConst = true
                 }
+
                 "dynamic" -> {
-                    if(`var` is MCFPPValue<*>){
+                    if (`var` is MCFPPValue<*>) {
                         `var`.toDynamic(true)
                     }
                 }
+
                 "import" -> {
                     `var`.isImport = true
                 }
             }
-        }else{
-            for (c in ctx.fieldDeclarationExpression()){
+        } else {
+            for (c in ctx.fieldDeclarationExpression()) {
                 val type = MCFPPType.parseFromContext(ctx.type(), Function.currFunction.field)
                 //函数变量，生成
                 var `var` = Var.build(c.Identifier().text, type, Function.currFunction)
@@ -167,13 +173,17 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 Function.addCommand("#field: " + ctx.type().text + " " + c.Identifier().text + if (c.expression() != null) " = " + c.expression().text else "")
                 //变量初始化
                 if (c.expression() != null) {
-                    val init: Var<*> = McfppExprVisitor(if(type is MCFPPGenericClassType) type else null).visit(c.expression())!!
+                    val init: Var<*> =
+                        McfppExprVisitor(if (type is MCFPPGenericClassType) type else null).visit(c.expression())!!
                     try {
-                        if(`var` is MCInt && init is MCInt && init !is MCIntConcrete){
-                            Function.currFunction.commands.replaceThenAnalyze(init.name to `var`.name, init.`object`.name to `var`.`object`.name)
+                        if (`var` is MCInt && init is MCInt && init !is MCIntConcrete) {
+                            Function.currFunction.commands.replaceThenAnalyze(
+                                init.name to `var`.name,
+                                init.`object`.name to `var`.`object`.name
+                            )
                             `var` = `var`.assignCommand(init, Function.currFunction.commands.last().toString())
-                        }else{
-                             `var` = `var`.assign(init)
+                        } else {
+                            `var` = `var`.assign(init)
                         }
                     } catch (e: VariableConverseException) {
                         LogProcessor.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
@@ -181,18 +191,20 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                     }
                 }
                 Function.field.putVar(`var`.identifier, `var`, true)
-                when(fieldModifier){
+                when (fieldModifier) {
                     "const" -> {
-                        if(!`var`.hasAssigned){
+                        if (!`var`.hasAssigned) {
                             LogProcessor.error("The const field ${`var`.identifier} must be initialized.")
                         }
                         `var`.isConst = true
                     }
+
                     "dynamic" -> {
-                        if(`var` is MCFPPValue<*>){
+                        if (`var` is MCFPPValue<*>) {
                             `var`.toDynamic(true)
                         }
                     }
+
                     "import" -> {
                         `var`.isImport = true
                     }
@@ -207,28 +219,31 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      * @param ctx the parse tree
      */
     @InsertCommand
-    override fun visitStatementExpression(ctx: mcfppParser.StatementExpressionContext):Any? {
+    override fun visitStatementExpression(ctx: mcfppParser.StatementExpressionContext): Any? {
         Project.ctx = ctx
         Function.addCommand("#expression: " + ctx.text)
         val right: Var<*> = McfppExprVisitor().visit(ctx.expression())!!
-        if(ctx.basicExpression() != null){
+        if (ctx.basicExpression() != null) {
             val left: Var<*> = McfppLeftExprVisitor().visit(ctx.basicExpression())!!
             if (left.isConst) {
                 LogProcessor.error("Cannot assign a constant repeatedly: " + left.identifier)
                 return null
             }
             try {
-                if(left is MCInt && right is MCInt){
-                    Function.currFunction.commands.replaceThenAnalyze(right.name to left.name, right.`object`.name to left.`object`.name)
+                if (left is MCInt && right is MCInt) {
+                    Function.currFunction.commands.replaceThenAnalyze(
+                        right.name to left.name,
+                        right.`object`.name to left.`object`.name
+                    )
                     left.replacedBy(left.assignCommand(right, Function.currFunction.commands.last().toString()))
-                }else{
+                } else {
                     left.replacedBy(left.assign(right))
                 }
             } catch (e: VariableConverseException) {
                 LogProcessor.error("Cannot convert " + right.javaClass + " to " + left.javaClass)
                 throw VariableConverseException()
             }
-        }else{
+        } else {
             //TODO 只有一个表达式的计算
         }
         Function.addCommand("#expression end: " + ctx.text)
@@ -340,16 +355,16 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
 //region 逻辑语句
-    
+
     @InsertCommand
-    override fun visitReturnStatement(ctx: mcfppParser.ReturnStatementContext):Any? {
+    override fun visitReturnStatement(ctx: mcfppParser.ReturnStatementContext): Any? {
         Project.ctx = ctx
         Function.addCommand("#" + ctx.text)
         if (ctx.expression() != null) {
             val ret: Var<*> = McfppExprVisitor().visit(ctx.expression())!!
             Function.currBaseFunction.assignReturnVar(ret)
         }
-        if(Function.currFunction !is InternalFunction)
+        if (Function.currFunction !is InternalFunction)
             Function.currFunction.hasReturnStatement = true
         Function.addCommand("return 1")
         return null
@@ -368,18 +383,18 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      *
      * @param ctx
      */
-    
+
     @InsertCommand
     fun enterIfStatement(ctx: mcfppParser.IfStatementContext) {
         //进入if函数
         Project.ctx = ctx
         Function.addCommand("#" + "if start")
         val ifFunction = InternalFunction("_if_", Function.currFunction)
-        ifFunction.invoke(ArrayList(),null)
+        ifFunction.invoke(ArrayList(), null)
         Function.currFunction = ifFunction
-        if(!GlobalField.localNamespaces.containsKey(ifFunction.namespace))
+        if (!GlobalField.localNamespaces.containsKey(ifFunction.namespace))
             GlobalField.localNamespaces[ifFunction.namespace] = Namespace(ifFunction.namespace)
-        GlobalField.localNamespaces[ifFunction.namespace]!!.field.addFunction(ifFunction,false)
+        GlobalField.localNamespaces[ifFunction.namespace]!!.field.addFunction(ifFunction, false)
     }
 
     /**
@@ -416,14 +431,14 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         //匿名函数的定义
         val f = InternalFunction("_if_branch_", Function.currFunction)
         //注册函数
-        if(!GlobalField.localNamespaces.containsKey(f.namespace))
+        if (!GlobalField.localNamespaces.containsKey(f.namespace))
             GlobalField.localNamespaces[f.namespace] = Namespace(f.namespace)
-        GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f,false)
+        GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f, false)
         if (parent is mcfppParser.IfStatementContext || parent is mcfppParser.ElseIfStatementContext) {
             //第一个if
             parent as mcfppParser.IfStatementContext
             val exp = McfppExprVisitor().visit(parent.expression())
-            if(exp !is MCBool){
+            if (exp !is MCBool) {
                 throw TypeCastException()
             }
             if (exp is MCBoolConcrete && exp.value) {
@@ -470,8 +485,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                             "run return 1"
                 )
             }
-        }
-        else {
+        } else {
             //else语句
             Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
             Function.addCommand("function " + f.namespaceID)
@@ -484,7 +498,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      * 离开if语句块
      * @param ctx the parse tree
      */
-    
+
     @InsertCommand
     fun exitIfBlock(ctx: mcfppParser.IfBlockContext) {
         Project.ctx = ctx
@@ -508,12 +522,12 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addCommand("function " + whileFunction.namespaceID)
         Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
         Function.currFunction = whileFunction
-        if(!GlobalField.localNamespaces.containsKey(whileFunction.namespace))
+        if (!GlobalField.localNamespaces.containsKey(whileFunction.namespace))
             GlobalField.localNamespaces[whileFunction.namespace] = Namespace(whileFunction.namespace)
-        GlobalField.localNamespaces[whileFunction.namespace]!!.field.addFunction(whileFunction,false)
+        GlobalField.localNamespaces[whileFunction.namespace]!!.field.addFunction(whileFunction, false)
     }
 
-    
+
     @InsertCommand
     fun exitWhileStatement(ctx: mcfppParser.WhileStatementContext) {
         Project.ctx = ctx
@@ -534,7 +548,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      * 进入while语句块
      * @param ctx the parse tree
      */
-    
+
     @InsertCommand
     fun enterWhileBlock(ctx: mcfppParser.WhileBlockContext) {
         Project.ctx = ctx
@@ -547,9 +561,9 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         val f: Function = InternalFunction("_while_block_", Function.currFunction)
         f.child.add(f)
         f.parent.add(f)
-        if(!GlobalField.localNamespaces.containsKey(f.namespace))
+        if (!GlobalField.localNamespaces.containsKey(f.namespace))
             GlobalField.localNamespaces[f.namespace] = Namespace(f.namespace)
-        GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f,false)
+        GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f, false)
         //条件判断
         if (exp is MCBoolConcrete && exp.value) {
             //给子函数开栈
@@ -584,7 +598,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      * 离开while语句块
      * @param ctx the parse tree
      */
-    
+
     @InsertCommand
     fun exitWhileBlock(ctx: mcfppParser.WhileBlockContext) {
         Project.ctx = ctx
@@ -615,18 +629,17 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addCommand("function " + doWhileFunction.namespaceID)
         Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
         Function.currFunction = doWhileFunction
-        if(!GlobalField.localNamespaces.containsKey(doWhileFunction.namespace))
+        if (!GlobalField.localNamespaces.containsKey(doWhileFunction.namespace))
             GlobalField.localNamespaces[doWhileFunction.namespace] = Namespace(doWhileFunction.namespace)
-        GlobalField.localNamespaces[doWhileFunction.namespace]!!.field.addFunction(doWhileFunction,false)
+        GlobalField.localNamespaces[doWhileFunction.namespace]!!.field.addFunction(doWhileFunction, false)
     }
-
 
 
     /**
      * 离开do-while语句
      * @param ctx the parse tree
      */
-    
+
     @InsertCommand
     fun exitDoWhileStatement(ctx: mcfppParser.DoWhileStatementContext) {
         Project.ctx = ctx
@@ -647,7 +660,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      * 进入do-while语句块，开始匿名函数调用
      * @param ctx the parse tree
      */
-    
+
     @InsertCommand
     fun enterDoWhileBlock(ctx: mcfppParser.DoWhileBlockContext) {
         Project.ctx = ctx
@@ -656,10 +669,10 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         val f: Function = InternalFunction("_dowhile_", Function.currFunction)
         f.child.add(f)
         f.parent.add(f)
-        if(!GlobalField.localNamespaces.containsKey(f.namespace)) {
+        if (!GlobalField.localNamespaces.containsKey(f.namespace)) {
             GlobalField.localNamespaces[f.namespace] = Namespace(f.namespace)
         }
-        GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f,false)
+        GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f, false)
         //给子函数开栈
         Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
         Function.addCommand(
@@ -697,7 +710,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.currFunction = f //后续块中的命令解析到递归的函数中
     }
 
-    
+
     @InsertCommand
     fun exitDoWhileBlock(ctx: mcfppParser.DoWhileBlockContext) {
         Project.ctx = ctx
@@ -720,23 +733,23 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      * 整个for语句本身额外有一个栈，无条件调用函数
      * @param ctx the parse tree
      */
-    
+
     @InsertCommand
     fun enterForStatement(ctx: mcfppParser.ForStatementContext) {
         Project.ctx = ctx
         Function.addCommand("#for start")
         val forFunc: Function = InternalFunction("_for_", Function.currFunction)
         forFunc.parent.add(Function.currFunction)
-        if(!GlobalField.localNamespaces.containsKey(forFunc.namespace))
+        if (!GlobalField.localNamespaces.containsKey(forFunc.namespace))
             GlobalField.localNamespaces[forFunc.namespace] = Namespace(forFunc.identifier)
-        GlobalField.localNamespaces[forFunc.namespace]!!.field.addFunction(forFunc,false)
+        GlobalField.localNamespaces[forFunc.namespace]!!.field.addFunction(forFunc, false)
         Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
         Function.addCommand(Commands.function(forFunc))
         Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
         Function.currFunction = forFunc
     }
 
-    
+
     @InsertCommand
     fun exitForStatement(ctx: mcfppParser.ForStatementContext) {
         Project.ctx = ctx
@@ -750,14 +763,14 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         exitForInit(ctx)
         return null
     }
-    
+
     @InsertCommand
     fun enterForInit(ctx: mcfppParser.ForInitContext) {
         Project.ctx = ctx
         Function.addCommand("#for init start")
     }
 
-    
+
     @InsertCommand
     fun exitForInit(ctx: mcfppParser.ForInitContext) {
         Project.ctx = ctx
@@ -766,9 +779,9 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addCommand("#for loop start")
         val forLoopFunc: Function = InternalFunction("_for_loop_", Function.currFunction)
         forLoopFunc.parent.add(Function.currFunction)
-        if(!GlobalField.localNamespaces.containsKey(forLoopFunc.namespace))
+        if (!GlobalField.localNamespaces.containsKey(forLoopFunc.namespace))
             GlobalField.localNamespaces[forLoopFunc.namespace] = Namespace(forLoopFunc.identifier)
-        GlobalField.localNamespaces[forLoopFunc.namespace]!!.field.addFunction(forLoopFunc,false)
+        GlobalField.localNamespaces[forLoopFunc.namespace]!!.field.addFunction(forLoopFunc, false)
         Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
         Function.addCommand(Commands.function(forLoopFunc))
 
@@ -804,7 +817,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      * 离开for update。暂存for update缓存，恢复主缓存，准备forblock编译
      * @param ctx the parse tree
      */
-    
+
     fun exitForUpdate(ctx: mcfppParser.ForUpdateContext) {
         Project.ctx = ctx
         Function.currFunction.commands = forInitCommands
@@ -821,7 +834,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      * 进入for block语句。此时当前函数为父函数
      * @param ctx the parse tree
      */
-    
+
     @InsertCommand
     fun enterForBlock(ctx: mcfppParser.ForBlockContext) {
         Project.ctx = ctx
@@ -831,9 +844,9 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         val f: Function = InternalFunction("_forblock_", Function.currFunction)
         f.child.add(f)
         f.parent.add(f)
-        if(!GlobalField.localNamespaces.containsKey(f.namespace))
+        if (!GlobalField.localNamespaces.containsKey(f.namespace))
             GlobalField.localNamespaces[f.namespace] = Namespace(f.namespace)
-        GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f,false)
+        GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f, false)
         //条件循环判断
         if (exp is MCBoolConcrete && exp.value) {
             //给子函数开栈
@@ -869,7 +882,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      * 离开for block语句。此时当前函数仍然是for的函数
      * @param ctx the parse tree
      */
-    
+
     @InsertCommand
     fun exitForBlock(ctx: mcfppParser.ForBlockContext) {
         Project.ctx = ctx
@@ -884,9 +897,9 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 //endregion
 
-    
+
     @InsertCommand
-    override fun visitOrgCommand(ctx: mcfppParser.OrgCommandContext):Any? {
+    override fun visitOrgCommand(ctx: mcfppParser.OrgCommandContext): Any? {
         Project.ctx = ctx
         Function.addCommand(ctx.text.substring(1))
         return null
@@ -908,9 +921,9 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     private var temp: MCBool? = null
-    
+
     @InsertCommand
-    override fun visitControlStatement(ctx: mcfppParser.ControlStatementContext):Any? {
+    override fun visitControlStatement(ctx: mcfppParser.ControlStatementContext): Any? {
         Project.ctx = ctx
         if (!inLoopStatement(ctx)) {
             LogProcessor.error("'continue' or 'break' can only be used in loop statements.")
@@ -918,9 +931,9 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         }
         Function.addCommand("#" + ctx.text)
         //return语句
-        if(ctx.BREAK() != null){
+        if (ctx.BREAK() != null) {
             Function.addCommand("return 0")
-        }else{
+        } else {
             Function.addCommand("return 1")
         }
         Function.currFunction.isEnd = true
@@ -938,7 +951,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     override fun visitClassAnnotation(ctx: mcfppParser.ClassAnnotationContext): Any? {
         Project.ctx = ctx
         val anno = GlobalField.annotations[ctx.id.text]
-        if(anno == null){
+        if (anno == null) {
             LogProcessor.error("Annotation ${ctx.id.text} not found")
             return null
         }
@@ -956,17 +969,17 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
             val arg = exprVisitor.visit(expr)!!
             normalArgs.add(arg)
         }
-        if(Class.currClass == null && Template.currTemplate == null){
+        if (Class.currClass == null && Template.currTemplate == null) {
             //在全局
-            annoInGlobal.add(Annotation.newInstance(anno,normalArgs))
-        }else{
-            annoInCompound.add(Annotation.newInstance(anno,normalArgs))
+            annoInGlobal.add(Annotation.newInstance(anno, normalArgs))
+        } else {
+            annoInCompound.add(Annotation.newInstance(anno, normalArgs))
         }
         return null
     }
 
     override fun visitClassDeclaration(ctx: mcfppParser.ClassDeclarationContext): Any? {
-        if(ctx.readOnlyParams() == null){
+        if (ctx.readOnlyParams() == null) {
             super.visitClassDeclaration(ctx)
         }
         return null
@@ -992,7 +1005,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         Class.currClass = GlobalField.getClass(Project.currNamespace, identifier)
         Function.currFunction = Class.currClass!!.classPreInit
         //注解
-        for (a in annoInGlobal){
+        for (a in annoInGlobal) {
             a.forClass(Class.currClass!!)
         }
         annoInGlobal.clear()
@@ -1013,10 +1026,10 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      * 类成员的声明
      * @param ctx the parse tree
      */
-    
-    override fun visitClassMemberDeclaration(ctx: mcfppParser.ClassMemberDeclarationContext):Any? {
+
+    override fun visitClassMemberDeclaration(ctx: mcfppParser.ClassMemberDeclarationContext): Any? {
         Project.ctx = ctx
-        val memberContext: mcfppParser.ClassMemberContext = ctx.classMember()?:return null
+        val memberContext: mcfppParser.ClassMemberContext = ctx.classMember() ?: return null
         if (memberContext.classFunctionDeclaration() != null) {
             //函数声明由函数的listener处理
             visit(memberContext.classFunctionDeclaration())
@@ -1039,11 +1052,15 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         val types = FunctionParam.parseReadonlyAndNormalParamTypes(ctx.functionParams())
         //获取缓存中的对象
         val fun1 = Class.currClass!!.field.getFunction(ctx.Identifier().text, types.first, types.second)
-        val f = if(fun1 is UnknownFunction) Class.currClass!!.staticField.getFunction(ctx.Identifier().text, types.first, types.second) else fun1
+        val f = if (fun1 is UnknownFunction) Class.currClass!!.staticField.getFunction(
+            ctx.Identifier().text,
+            types.first,
+            types.second
+        ) else fun1
         Function.currFunction = f
 
         //对函数进行注解处理
-        for (a in annoInCompound){
+        for (a in annoInCompound) {
             a.forFunction(f)
         }
         annoInCompound.clear()
@@ -1068,7 +1085,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         val c = Class.currClass!!.getConstructor(types.typeToStringList())!!
         Function.currFunction = c
         //注解
-        for (a in annoInCompound){
+        for (a in annoInCompound) {
             a.forFunction(c)
         }
         annoInCompound.clear()
@@ -1093,8 +1110,8 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         exitTemplateBody(ctx)
         return null
     }
-    
-     fun enterTemplateBody(ctx: mcfppParser.TemplateBodyContext) {
+
+    fun enterTemplateBody(ctx: mcfppParser.TemplateBodyContext) {
         Project.ctx = ctx
         //获取类的对象
         val parent = ctx.parent as mcfppParser.TemplateDeclarationContext
@@ -1107,7 +1124,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      * 离开类体。将缓存重新指向全局
      * @param ctx the parse tree
      */
-    
+
     fun exitTemplateBody(ctx: mcfppParser.TemplateBodyContext) {
         Project.ctx = ctx
         Template.currTemplate = null
@@ -1126,11 +1143,15 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         val types = FunctionParam.parseReadonlyAndNormalParamTypes(ctx.functionParams())
         //获取缓存中的对象
         val fun1 = Template.currTemplate!!.field.getFunction(ctx.Identifier().text, types.first, types.second)
-        val f = if(fun1 is UnknownFunction) Template.currTemplate!!.staticField.getFunction(ctx.Identifier().text, types.first, types.second) else fun1
+        val f = if (fun1 is UnknownFunction) Template.currTemplate!!.staticField.getFunction(
+            ctx.Identifier().text,
+            types.first,
+            types.second
+        ) else fun1
         Function.currFunction = f
 
         //对函数进行注解处理
-        for (a in annoInCompound){
+        for (a in annoInCompound) {
             a.forFunction(f)
         }
         annoInCompound.clear()

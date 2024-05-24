@@ -13,7 +13,7 @@ import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.FunctionParam
 
-class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
+class GenericExtensionFunction : ExtensionFunction, Generic<ExtensionFunction> {
 
     override lateinit var ctx: mcfppParser.FunctionBodyContext
 
@@ -27,7 +27,13 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
      * 创建一个函数
      * @param name 函数的标识符
      */
-    constructor(name: String, owner: CompoundData, namespace: String = Project.currNamespace, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext):super(name, owner, namespace, returnType){
+    constructor(
+        name: String,
+        owner: CompoundData,
+        namespace: String = Project.currNamespace,
+        returnType: MCFPPType = MCFPPBaseType.Void,
+        ctx: mcfppParser.FunctionBodyContext
+    ) : super(name, owner, namespace, returnType) {
         this.ctx = ctx
     }
 
@@ -39,8 +45,8 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
     override fun addParamsFromContext(ctx: mcfppParser.FunctionParamsContext) {
         val r = ctx.readOnlyParams().parameterList()
         val n = ctx.normalParams().parameterList()
-        if(r == null && n == null) return
-        for (param in r.parameter()){
+        if (r == null && n == null) return
+        for (param in r.parameter()) {
             val param1 = FunctionParam(
                 MCFPPType.parseFromContext(param.type(), this.field),
                 param.Identifier().text,
@@ -64,22 +70,25 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
     /**
      * 解析函数的参数
      */
-    override fun parseParams(){
-        for (p in readOnlyParams){
+    override fun parseParams() {
+        for (p in readOnlyParams) {
             val r = Var.build("_param_" + p.identifier, MCFPPType.parseFromIdentifier(p.typeIdentifier, field), this)
             field.putVar(p.identifier, r)
         }
-        for (p in normalParams){
-            field.putVar(p.identifier, Var.build("_param_" + p.identifier, MCFPPType.parseFromIdentifier(p.typeIdentifier, field), this))
+        for (p in normalParams) {
+            field.putVar(
+                p.identifier,
+                Var.build("_param_" + p.identifier, MCFPPType.parseFromIdentifier(p.typeIdentifier, field), this)
+            )
         }
     }
 
     override fun compile(readOnlyArgs: ArrayList<Var<*>>): ExtensionFunction {
-        if(compiledFunctions.containsKey(readOnlyArgs)){
+        if (compiledFunctions.containsKey(readOnlyArgs)) {
             return compiledFunctions[readOnlyArgs]!!
         }
         //创建新的函数
-        val compiledFunction : ExtensionFunction = when(ownerType){
+        val compiledFunction: ExtensionFunction = when (ownerType) {
             Companion.OwnerType.CLASS -> {
                 ExtensionFunction("${identifier}_${index}", owner as Class, namespace, returnType)
             }
@@ -87,9 +96,11 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
             Companion.OwnerType.TEMPLATE -> {
                 TODO()
             }
+
             Companion.OwnerType.BASIC -> {
                 ExtensionFunction("${identifier}_${index}", owner as CompoundData, namespace, returnType)
             }
+
             else -> {
                 //拓展函数必定有成员
                 throw Exception()
@@ -105,7 +116,7 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
             val r = field.getVar(readOnlyParams[i].identifier)
             compiledFunction.field.putVar(readOnlyParams[i].identifier, r!!.assign(readOnlyArgs[i]), false)
         }
-        index ++
+        index++
         //编译这个函数
         currFunction = compiledFunction
         val visitor = McfppImVisitor()
@@ -124,21 +135,21 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
             var hasFoundFunc = true
             //参数比对
             for (i in normalParams.indices) {
-                if (!FunctionParam.isSubOf(normalParams[i],this.normalParams[i].type)) {
+                if (!FunctionParam.isSubOf(normalParams[i], this.normalParams[i].type)) {
                     hasFoundFunc = false
                     break
                 }
             }
-            if(hasFoundFunc){
+            if (hasFoundFunc) {
                 for (i in readOnlyParams.indices) {
-                    if (!FunctionParam.isSubOf(readOnlyParams[i],this.readOnlyParams[i].type)) {
+                    if (!FunctionParam.isSubOf(readOnlyParams[i], this.readOnlyParams[i].type)) {
                         hasFoundFunc = false
                         break
                     }
                 }
             }
             return hasFoundFunc
-        }else{
+        } else {
             return false
         }
     }

@@ -2,15 +2,15 @@ package top.mcfpp.model.generic
 
 import top.mcfpp.Project
 import top.mcfpp.antlr.McfppImVisitor
+import top.mcfpp.antlr.mcfppParser
+import top.mcfpp.lang.CanSelectMember
+import top.mcfpp.lang.MCFPPTypeVar
+import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.Class
 import top.mcfpp.model.Interface
 import top.mcfpp.model.Template
-import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.lang.CanSelectMember
-import top.mcfpp.lang.MCFPPTypeVar
-import top.mcfpp.lang.Var
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam
@@ -31,7 +31,12 @@ class GenericFunction : Function, Generic<Function> {
      * @param identifier 函数的标识符
      * @param namespace 函数的命名空间
      */
-    constructor(identifier: String, namespace: String = Project.currNamespace, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(identifier, namespace, returnType){
+    constructor(
+        identifier: String,
+        namespace: String = Project.currNamespace,
+        returnType: MCFPPType = MCFPPBaseType.Void,
+        ctx: mcfppParser.FunctionBodyContext
+    ) : super(identifier, namespace, returnType) {
         this.ctx = ctx
     }
 
@@ -39,7 +44,13 @@ class GenericFunction : Function, Generic<Function> {
      * 创建一个函数，并指定它所属的类。
      * @param identifier 函数的标识符
      */
-    constructor(identifier: String, cls: Class, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(identifier, cls, isStatic, returnType) {
+    constructor(
+        identifier: String,
+        cls: Class,
+        isStatic: Boolean,
+        returnType: MCFPPType = MCFPPBaseType.Void,
+        ctx: mcfppParser.FunctionBodyContext
+    ) : super(identifier, cls, isStatic, returnType) {
         this.ctx = ctx
     }
 
@@ -47,7 +58,12 @@ class GenericFunction : Function, Generic<Function> {
      * 创建一个函数，并指定它所属的接口。接口的函数总是抽象并且公开的
      * @param identifier 函数的标识符
      */
-    constructor(identifier: String, itf: Interface, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(identifier, itf, returnType) {
+    constructor(
+        identifier: String,
+        itf: Interface,
+        returnType: MCFPPType = MCFPPBaseType.Void,
+        ctx: mcfppParser.FunctionBodyContext
+    ) : super(identifier, itf, returnType) {
         this.ctx = ctx
     }
 
@@ -55,7 +71,13 @@ class GenericFunction : Function, Generic<Function> {
      * 创建一个函数，并指定它所属的结构体。
      * @param name 函数的标识符
      */
-    constructor(name: String, template: Template, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(name, template, isStatic, returnType){
+    constructor(
+        name: String,
+        template: Template,
+        isStatic: Boolean,
+        returnType: MCFPPType = MCFPPBaseType.Void,
+        ctx: mcfppParser.FunctionBodyContext
+    ) : super(name, template, isStatic, returnType) {
         this.ctx = ctx
     }
 
@@ -67,8 +89,8 @@ class GenericFunction : Function, Generic<Function> {
     override fun addParamsFromContext(ctx: mcfppParser.FunctionParamsContext) {
         val r = ctx.readOnlyParams().parameterList()
         val n = ctx.normalParams().parameterList()
-        if(r == null && n == null) return
-        for (param in r?.parameter()?:ArrayList()){
+        if (r == null && n == null) return
+        for (param in r?.parameter() ?: ArrayList()) {
             val param1 = FunctionParam(
                 MCFPPType.parseFromContext(param.type(), this.field),
                 param.Identifier().text,
@@ -77,7 +99,7 @@ class GenericFunction : Function, Generic<Function> {
             )
             readOnlyParams.add(param1)
         }
-        for (param in n?.parameter()?:ArrayList()) {
+        for (param in n?.parameter() ?: ArrayList()) {
             val param1 = FunctionParam(
                 MCFPPType.parseFromContext(param.type(), this.field),
                 param.Identifier().text,
@@ -92,36 +114,41 @@ class GenericFunction : Function, Generic<Function> {
     /**
      * 解析函数的参数
      */
-    override fun parseParams(){
-        for (p in readOnlyParams){
+    override fun parseParams() {
+        for (p in readOnlyParams) {
             val r = Var.build("_param_" + p.identifier, MCFPPType.parseFromIdentifier(p.typeIdentifier, field), this)
             field.putVar(p.identifier, r)
         }
-        for (p in normalParams){
-            field.putVar(p.identifier, Var.build("_param_" + p.identifier, MCFPPType.parseFromIdentifier(p.typeIdentifier, field), this))
+        for (p in normalParams) {
+            field.putVar(
+                p.identifier,
+                Var.build("_param_" + p.identifier, MCFPPType.parseFromIdentifier(p.typeIdentifier, field), this)
+            )
         }
     }
 
     override fun compile(readOnlyArgs: ArrayList<Var<*>>): Function {
-        if(compiledFunctions.containsKey(readOnlyArgs)){
+        if (compiledFunctions.containsKey(readOnlyArgs)) {
             return compiledFunctions[readOnlyArgs]!!
         }
         //创建新的函数
-        val compiledFunction = when(ownerType){
+        val compiledFunction = when (ownerType) {
             Companion.OwnerType.NONE -> {
                 Function("${identifier}_${index}", namespace, returnType)
             }
             //interface是和Class一起处理的
             Companion.OwnerType.CLASS -> {
-                if(owner is Class){
+                if (owner is Class) {
                     Function("${identifier}_${index}", owner as Class, isStatic, returnType)
-                }else{
+                } else {
                     Function("${identifier}_${index}", owner as Interface, returnType)
                 }
             }
+
             Companion.OwnerType.TEMPLATE -> {
                 Function("${identifier}_${index}", owner as Template, isStatic, returnType)
             }
+
             Companion.OwnerType.BASIC -> {
                 //拓展函数的编译在ExtensionGenericFunction中进行
                 nullFunction
@@ -138,15 +165,15 @@ class GenericFunction : Function, Generic<Function> {
         for (i in readOnlyParams.indices) {
             var r = field.getVar(readOnlyParams[i].identifier)!!
             r = r.assign(readOnlyArgs[i])
-            if(r is MCFPPTypeVar){
+            if (r is MCFPPTypeVar) {
                 compiledFunction.field.putType(readOnlyParams[i].identifier, r.value)
             }
             compiledFunction.field.putVar(readOnlyParams[i].identifier, r, false)
         }
-        index ++
+        index++
         //编译这个函数
         McfppImVisitor().visitFunctionBody(ctx, compiledFunction)
-        if(compiledFunction.returnType !=  MCFPPBaseType.Void && !compiledFunction.hasReturnStatement){
+        if (compiledFunction.returnType != MCFPPBaseType.Void && !compiledFunction.hasReturnStatement) {
             LogProcessor.error("A 'return' expression required in function: " + compiledFunction.namespaceID)
         }
         //注册这个函数
@@ -164,21 +191,21 @@ class GenericFunction : Function, Generic<Function> {
             var hasFoundFunc = true
             //参数比对
             for (i in normalParams.indices) {
-                if (!FunctionParam.isSubOf(normalParams[i],this.normalParams[i].type)) {
+                if (!FunctionParam.isSubOf(normalParams[i], this.normalParams[i].type)) {
                     hasFoundFunc = false
                     break
                 }
             }
-            if(hasFoundFunc){
+            if (hasFoundFunc) {
                 for (i in readOnlyParams.indices) {
-                    if (!FunctionParam.isSubOf(readOnlyParams[i],this.readOnlyParams[i].type)) {
+                    if (!FunctionParam.isSubOf(readOnlyParams[i], this.readOnlyParams[i].type)) {
                         hasFoundFunc = false
                         break
                     }
                 }
             }
             return hasFoundFunc
-        }else{
+        } else {
             return false
         }
     }

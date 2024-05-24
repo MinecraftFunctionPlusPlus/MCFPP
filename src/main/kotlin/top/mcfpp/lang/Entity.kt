@@ -1,18 +1,5 @@
 package top.mcfpp.lang
 
-import net.querz.nbt.tag.IntArrayTag
-import net.querz.nbt.tag.Tag
-import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.lang.type.MCFPPBaseType.BaseEntity
-import top.mcfpp.lang.type.MCFPPBaseType
-import top.mcfpp.lang.type.MCFPPNBTType
-import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.model.CompoundData
-import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.Member
-import top.mcfpp.model.function.Function
-import java.util.UUID
-
 //
 ///**
 // * 代表了一个实体。一个实体类型的变量通常是一个UUID数组，可以通过Thrower法来选择实体，从而实现对实体的操作。

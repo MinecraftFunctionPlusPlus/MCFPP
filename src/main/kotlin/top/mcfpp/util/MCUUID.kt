@@ -2,7 +2,7 @@ package top.mcfpp.util
 
 import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.IntArrayTag
-import java.util.UUID
+import java.util.*
 
 class MCUUID {
 
@@ -10,11 +10,11 @@ class MCUUID {
 
     val uuidArray: IntArrayTag
 
-    val uuidArrayStr : String
+    val uuidArrayStr: String
 
     constructor() : this(UUID.randomUUID())
 
-    constructor(uuid: UUID){
+    constructor(uuid: UUID) {
         this.uuid = uuid
         val array = IntArray(4)
         array[0] = uuid.leastSignificantBits.toInt()

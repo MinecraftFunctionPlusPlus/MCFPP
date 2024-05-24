@@ -2,9 +2,9 @@ package top.mcfpp.lang
 
 import top.mcfpp.lang.type.MCFPPTemplateType
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
 import top.mcfpp.model.Template
+import top.mcfpp.model.function.Function
 
 class IntTemplatePointer : IntTemplateBase {
 
@@ -12,7 +12,7 @@ class IntTemplatePointer : IntTemplateBase {
 
     override var type: MCFPPType
 
-    constructor(identifier: String, type: Template){
+    constructor(identifier: String, type: Template) {
         this.identifier = identifier
         this.structType = type
         this.type = MCFPPTemplateType(structType, listOf()) //TODO: 父类还没做

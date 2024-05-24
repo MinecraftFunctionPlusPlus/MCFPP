@@ -33,7 +33,7 @@ interface IFieldWithVar : IField {
      * @param id 变量名
      * @return 若变量存在，则返回被移除的变量，否则返回空
      */
-    fun removeVar(id : String): Var<*>?
+    fun removeVar(id: String): Var<*>?
 
     fun forEachVar(action: (Var<*>) -> Any?)
 
