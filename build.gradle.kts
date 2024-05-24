@@ -142,6 +142,10 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
     dependsOn(tasks.generateGrammarSource)
 }
 
+tasks.compileTestKotlin {
+    dependsOn(tasks.generateTestGrammarSource)
+}
+
 application {
     mainClass.set("top.mcfpp.MCFPPKt")
 }
