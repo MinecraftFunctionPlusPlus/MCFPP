@@ -109,7 +109,7 @@ open class MCInt : MCNumber<Int> {
                     if (final.size == 2) {
                         Function.addCommand(final[0])
                     }
-                    final.last().build(Commands.sbPlayerSet(this, b.value as Int))
+                    final.last().build(Commands.sbPlayerSet(this, b.value))
                 } else {
                     Function.replaceCommand(final.last().build(replace), Function.currFunction.commands.size - 1)
                 }

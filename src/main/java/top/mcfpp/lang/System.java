@@ -13,12 +13,6 @@ import java.util.UUID;
 
 public class System extends MNIMethodContainer {
 
-    @NotNull
-    @Override
-    public Function4<Var<?>[], Var<?>[], CanSelectMember, ValueWrapper<Var<?>>, java.lang.Void> getMNIMethod(@NotNull String name) {
-        return methods.get(name);
-    }
-
     static HashMap<String, Function4<Var<?>[], Var<?>[], CanSelectMember, ValueWrapper<Var<?>>, java.lang.Void>> methods;
 
     static {
@@ -52,15 +46,15 @@ public class System extends MNIMethodContainer {
         }
     }
 
-    //@InsertCommand
-    //public static void print(JsonString var){
-    //    Function.Companion.addCommand("tellraw @a " + var.getJsonText().toJson());
-    //}
-
     @InsertCommand
     public static void print(@NotNull Var<?> var) {
         Function.Companion.addCommand("tellraw @a " + "\"" + var + "\"");
     }
+
+    //@InsertCommand
+    //public static void print(JsonString var){
+    //    Function.Companion.addCommand("tellraw @a " + var.getJsonText().toJson());
+    //}
 
     @InsertCommand
     public static void print(@NotNull NBTBasedData<?> var) {
@@ -78,5 +72,11 @@ public class System extends MNIMethodContainer {
         } else {
             //TODO
         }
+    }
+
+    @NotNull
+    @Override
+    public Function4<Var<?>[], Var<?>[], CanSelectMember, ValueWrapper<Var<?>>, java.lang.Void> getMNIMethod(@NotNull String name) {
+        return methods.get(name);
     }
 }

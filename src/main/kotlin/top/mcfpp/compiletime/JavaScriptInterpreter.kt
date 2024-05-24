@@ -5,9 +5,9 @@ import javax.script.ScriptEngineManager
 
 class JavaScriptInterpreter {
     companion object {
-        val engine: ScriptEngine = ScriptEngineManager().getEngineByName("nashorn");
+        val engine: ScriptEngine = ScriptEngineManager().getEngineByName("nashorn")
         fun eval(str: String) {
-            engine.eval(str);
+            engine.eval(str)
         }
     }
 

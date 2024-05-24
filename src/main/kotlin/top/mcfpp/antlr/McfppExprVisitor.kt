@@ -644,7 +644,7 @@ class McfppExprVisitor(private var defaultGenericClassType: MCFPPGenericClassTyp
                         r = res.toString()
                     }
                 }
-                stringArray.add(r);
+                stringArray.add(r)
             }
             val tailQuote = ctx.multiLineStringLiteral().TRIPLE_QUOTE_CLOSE().text
             if (tailQuote.length > 3) {

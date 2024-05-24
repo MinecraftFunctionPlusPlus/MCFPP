@@ -65,7 +65,7 @@ class MCFPPBaseType {
         String.data = top.mcfpp.lang.MCString.data
         Float.data = top.mcfpp.lang.MCFloat.data
         Bool.data = top.mcfpp.lang.MCBool.data
-        Type.data = top.mcfpp.lang.type.MCFPPType.data
+        Type.data = MCFPPType.data
         Void.data = top.mcfpp.lang.Void.data
         //Selector.data = top.mcfpp.lang.Selector.data
         JavaVar.data = top.mcfpp.lang.JavaVar.data

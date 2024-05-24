@@ -1,4 +1,3 @@
 package top.mcfpp.lang
 
-class NBTTemplatePointer {
-}
+class NBTTemplatePointer

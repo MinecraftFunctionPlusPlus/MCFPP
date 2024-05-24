@@ -120,7 +120,7 @@ open class MCAny : Var<Var<*>> {
             MCFPPBaseType.Any -> return this
             else -> {
                 LogProcessor.warn("Try to cast any to ${type.typeName}")
-                return Var.build(this.identifier, type, parentClass() ?: parentStruct() ?: Function.currFunction)
+                return build(this.identifier, type, parentClass() ?: parentStruct() ?: Function.currFunction)
             }
         }
     }
@@ -252,9 +252,9 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>> {
                 }
                 //构造假设变量
                 val t =
-                    Var.build(this.identifier, b.value.type, parentClass() ?: parentStruct() ?: Function.currFunction)
+                    build(this.identifier, b.value.type, parentClass() ?: parentStruct() ?: Function.currFunction)
                 val v =
-                    Var.build(b.identifier, b.value.type, b.parentClass() ?: b.parentStruct() ?: Function.currFunction)
+                    build(b.identifier, b.value.type, b.parentClass() ?: b.parentStruct() ?: Function.currFunction)
                 t.assign(v)
                 this.value = b.value
                 return this
@@ -267,7 +267,7 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>> {
 
             else -> {
                 this.value = b
-                val t = Var.build(this.identifier, b.type, parentClass() ?: parentStruct() ?: Function.currFunction)
+                val t = build(this.identifier, b.type, parentClass() ?: parentStruct() ?: Function.currFunction)
                 t.assign(b)
                 return this
             }

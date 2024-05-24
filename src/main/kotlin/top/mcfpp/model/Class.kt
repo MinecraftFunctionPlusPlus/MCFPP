@@ -223,6 +223,4 @@ open class Class : CompoundData {
 class CompiledGenericClass(
     identifier: String, namespace: String = Project.currNamespace,
     var originClass: GenericClass
-) : Class(identifier, namespace) {
-
-}
+) : Class(identifier, namespace)

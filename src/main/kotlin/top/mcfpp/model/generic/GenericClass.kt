@@ -88,9 +88,9 @@ class GenericClass : Class {
         //注册
         val namespace = GlobalField.localNamespaces[namespace]!!
         namespace.field.addClass(cls.identifier, cls)
-        Class.currClass = cls
+        currClass = cls
         McfppGenericClassFieldVisitor(cls).visitClassDeclaration(ctx.parent as mcfppParser.ClassDeclarationContext)
-        Class.currClass = cls
+        currClass = cls
         McfppGenericClassImVisitor().visitClassBody(ctx)
         index++
 

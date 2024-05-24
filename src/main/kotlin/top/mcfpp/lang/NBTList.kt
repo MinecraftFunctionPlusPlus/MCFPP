@@ -76,7 +76,7 @@ open class NBTList : NBTBasedData<ListTag<*>> {
         }
     }
 
-    public override fun assign(b: Var<*>): NBTBasedData<ListTag<*>> {
+    override fun assign(b: Var<*>): NBTBasedData<ListTag<*>> {
         return when (b) {
             is NBTList -> assignCommand(b)
             is NBTBasedDataConcrete<*> -> {
