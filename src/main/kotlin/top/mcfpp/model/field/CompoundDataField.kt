@@ -3,12 +3,11 @@ package top.mcfpp.model.field
 import org.jetbrains.annotations.Nullable
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.model.*
+import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.Generic
 import top.mcfpp.util.LazyWrapper
-import java.util.HashMap
 
 /**
  * 一个域，储存了字段和方法。
@@ -24,7 +23,7 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
     /**
      * 类型
      */
-    private val types : HashMap<String, MCFPPType> = HashMap()
+    private val types: HashMap<String, MCFPPType> = HashMap()
 
     /**
      * 遍历每一个字段
@@ -32,8 +31,8 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
      * @param action 要对字段执行的操作
      * @receiver
      */
-    override fun forEachVar(action: (Var<*>) -> Any?){
-        for (`var` in vars.values){
+    override fun forEachVar(action: (Var<*>) -> Any?) {
+        for (`var` in vars.values) {
             //TODO 未检查获取变量的情况
             action(`var`.get()!!)
         }
@@ -50,8 +49,8 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
      * @param operation 要对方法进行的操作
      * @receiver
      */
-    override fun forEachFunction(operation: (Function) -> Any?){
-        for (function in functions){
+    override fun forEachFunction(operation: (Function) -> Any?) {
+        for (function in functions) {
             operation(function)
         }
     }
@@ -94,7 +93,7 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
 
     //region Var<*>
     override fun putVar(key: String, `var`: Var<*>, forced: Boolean): Boolean {
-        if(forced){
+        if (forced) {
             vars[key] = LazyWrapper(`var`)
             return true
         }
@@ -114,7 +113,7 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
     override val allVars: Collection<Var<*>>
         get() {
             val vs = ArrayList<Var<*>>()
-            for (lv in vars.values){
+            for (lv in vars.values) {
                 vs.add(lv.get()!!)
             }
             return vs
@@ -124,14 +123,14 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
         return vars.containsKey(id)
     }
 
-    override fun removeVar(id : String): Var<*>?{
+    override fun removeVar(id: String): Var<*>? {
         return vars.remove(id)?.get()
     }
 
 //endregion
 
     override fun putType(key: String, type: MCFPPType, forced: Boolean): Boolean {
-        if(forced){
+        if (forced) {
             types[key] = type
             return true
         }
@@ -154,7 +153,7 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
     }
 
     override fun forEachType(action: (MCFPPType) -> Any?) {
-        for (t in types.values){
+        for (t in types.values) {
             action(t)
         }
     }
@@ -167,19 +166,19 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
     @Nullable
     override fun getFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>): Function {
         for (f in functions) {
-            if(f is Generic<*> && f.isSelf(key, readOnlyParams, normalParams)){
+            if (f is Generic<*> && f.isSelf(key, readOnlyParams, normalParams)) {
                 return f
             }
-            if(f.isSelf(key, normalParams)){
+            if (f.isSelf(key, normalParams)) {
                 return f
             }
         }
         return UnknownFunction(key)
     }
 
-    override fun addFunction(function: Function, force: Boolean): Boolean{
-        if(hasFunction(function)){
-            if(force){
+    override fun addFunction(function: Function, force: Boolean): Boolean {
+        if (hasFunction(function)) {
+            if (force) {
                 functions[functions.indexOf(function)] = function
                 return true
             }
@@ -189,7 +188,7 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
         return true
     }
 
-    override fun hasFunction(function: Function): Boolean{
+    override fun hasFunction(function: Function): Boolean {
         return functions.contains(function)
     }
     //endregion

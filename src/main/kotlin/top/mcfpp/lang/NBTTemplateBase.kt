@@ -1,4 +1,3 @@
 package top.mcfpp.lang
 
-open class NBTTemplateBase {
-}
+open class NBTTemplateBase

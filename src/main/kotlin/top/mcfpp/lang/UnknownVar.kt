@@ -1,25 +1,27 @@
 package top.mcfpp.lang
 
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
+import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 
 class UnknownVar : Var<Any> {
 
-    constructor(identifier: String):super(identifier)
+    constructor(identifier: String) : super(identifier)
 
     /**
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var<*>) : UnknownVar {return this}
+    override fun assign(b: Var<*>): UnknownVar {
+        return this
+    }
 
     /**
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型
      */
-    override fun cast(type: MCFPPType): Var<*> = build(identifier,type, Function.currFunction)
+    override fun cast(type: MCFPPType): Var<*> = build(identifier, type, Function.currFunction)
 
     override fun clone(): UnknownVar = this
 
@@ -30,7 +32,7 @@ class UnknownVar : Var<Any> {
      */
     override fun getTempVar(): Var<*> = this
 
-    override fun storeToStack(){}
+    override fun storeToStack() {}
 
     override fun getFromStack() {}
 

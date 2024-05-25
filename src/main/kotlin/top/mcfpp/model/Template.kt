@@ -22,7 +22,7 @@ import top.mcfpp.util.LazyWrapper
  */
 class Template : FieldContainer, CompoundData {
 
-    val dataType : LazyWrapper<MCFPPType>
+    val dataType: LazyWrapper<MCFPPType>
 
     /**
      * 结构体的构造函数
@@ -37,9 +37,9 @@ class Template : FieldContainer, CompoundData {
         get() = namespace + "_template_" + identifier + "_"
 
 
-    constructor(identifier: String, dataType: LazyWrapper<MCFPPType>, namespace: String = Project.currNamespace){
+    constructor(identifier: String, dataType: LazyWrapper<MCFPPType>, namespace: String = Project.currNamespace) {
         this.identifier = identifier
-        field = CompoundDataField(staticField,this)
+        field = CompoundDataField(staticField, this)
         staticField = CompoundDataField(null, this)
         constructors = ArrayList()
         this.dataType = dataType
@@ -50,7 +50,7 @@ class Template : FieldContainer, CompoundData {
      * 向这个类中添加一个构造函数
      * @param constructor 构造函数
      */
-    fun addConstructor(constructor: TemplateConstructor) : Boolean {
+    fun addConstructor(constructor: TemplateConstructor): Boolean {
         return if (constructors.contains(constructor)) {
             false
         } else {
@@ -60,7 +60,7 @@ class Template : FieldContainer, CompoundData {
     }
 
     //TODO 只读参数
-    fun getConstructor(normalParams: ArrayList<String>): TemplateConstructor?{
+    fun getConstructor(normalParams: ArrayList<String>): TemplateConstructor? {
         return getConstructorInner(
             ArrayList(normalParams.map { MCFPPType.parseFromIdentifier(it, field) })
         )
@@ -91,13 +91,13 @@ class Template : FieldContainer, CompoundData {
     /**
      * 获取这个类对于的classType
      */
-    fun getType() : MCFPPTemplateType {
+    fun getType(): MCFPPTemplateType {
         return MCFPPTemplateType(this,
             parent.filterIsInstance<Class>().map { it.getType() }
         )
     }
 
-    companion object{
+    companion object {
         var currTemplate: Template? = null
     }
 

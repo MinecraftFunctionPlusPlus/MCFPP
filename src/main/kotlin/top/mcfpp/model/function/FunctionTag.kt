@@ -1,6 +1,8 @@
 package top.mcfpp.model.function
 
-import com.alibaba.fastjson2.*
+import com.alibaba.fastjson2.JSONArray
+import com.alibaba.fastjson2.JSONObject
+import com.alibaba.fastjson2.JSONWriter
 import top.mcfpp.Project
 
 /**
@@ -24,13 +26,13 @@ class FunctionTag(
     var functions: ArrayList<Function> = ArrayList()
 
     init {
-        if(namespace == null){
+        if (namespace == null) {
             if (tag == "tick" || tag == "load") {
                 this.namespace = MINECRAFT
             } else {
                 this.namespace = Project.currNamespace
             }
-        }else{
+        } else {
             this.namespace = namespace
         }
     }

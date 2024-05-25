@@ -1,9 +1,11 @@
 package top.mcfpp
 
-import com.alibaba.fastjson2.*
+import com.alibaba.fastjson2.JSONArray
+import com.alibaba.fastjson2.JSONObject
 import org.antlr.v4.runtime.ParserRuleContext
 import org.antlr.v4.runtime.tree.ParseTree
-import org.apache.logging.log4j.*
+import org.apache.logging.log4j.LogManager
+import org.apache.logging.log4j.Logger
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.CommentType
 import top.mcfpp.io.MCFPPFile
@@ -11,14 +13,16 @@ import top.mcfpp.io.lib.LibReader
 import top.mcfpp.io.lib.LibWriter
 import top.mcfpp.lang.MCFloat
 import top.mcfpp.lang.UnresolvedVar
-import top.mcfpp.lang.type.MCFPPBaseType
-import top.mcfpp.model.*
-import top.mcfpp.model.function.Function
-import top.mcfpp.model.field.GlobalField
-import top.mcfpp.model.field.NamespaceField
 import top.mcfpp.lang.Var
+import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.model.Namespace
+import top.mcfpp.model.Native
+import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
-import java.io.*
+import java.io.File
+import java.io.FileReader
+import java.io.IOException
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.name
@@ -38,7 +42,7 @@ object Project {
     /**
      * 当前解析文件的语法树
      */
-    var trees:MutableMap<MCFPPFile,ParseTree> = mutableMapOf()
+    var trees: MutableMap<MCFPPFile, ParseTree> = mutableMapOf()
 
     /**
      * 当前的命名空间
@@ -55,21 +59,21 @@ object Project {
      */
     private var warningCount = 0
 
-    lateinit var mcfppTick : Function
+    lateinit var mcfppTick: Function
 
-    lateinit var mcfppLoad : Function
+    lateinit var mcfppLoad: Function
 
-    lateinit var mcfppInit : Function
+    lateinit var mcfppInit: Function
 
     /**
      * 常量池
      */
-    val constants : HashMap<Any, Var<*>> = HashMap()
+    val constants: HashMap<Any, Var<*>> = HashMap()
 
     /**
      * 宏命令
      */
-    val macroFunction : LinkedHashMap<String, String> = LinkedHashMap()
+    val macroFunction: LinkedHashMap<String, String> = LinkedHashMap()
 
     /**
      * 初始化
@@ -80,11 +84,11 @@ object Project {
         //初始化mcfpp的tick和load函数
         //添加命名空间
         GlobalField.localNamespaces["mcfpp"] = Namespace("mcfpp")
-        mcfppTick = Function("tick","mcfpp", MCFPPBaseType.Void)
-        mcfppLoad = Function("load","mcfpp", MCFPPBaseType.Void)
+        mcfppTick = Function("tick", "mcfpp", MCFPPBaseType.Void)
+        mcfppLoad = Function("load", "mcfpp", MCFPPBaseType.Void)
         mcfppInit = Function("init", "mcfpp", MCFPPBaseType.Void)
-        GlobalField.localNamespaces["mcfpp"]!!.field.addFunction(mcfppLoad,true)
-        GlobalField.localNamespaces["mcfpp"]!!.field.addFunction(mcfppTick,true)
+        GlobalField.localNamespaces["mcfpp"]!!.field.addFunction(mcfppLoad, true)
+        GlobalField.localNamespaces["mcfpp"]!!.field.addFunction(mcfppTick, true)
         GlobalField.localNamespaces["mcfpp"]!!.field.addFunction(mcfppInit, true)
         GlobalField.functionTags["minecraft:tick"]!!.functions.add(mcfppTick)
         GlobalField.functionTags["minecraft:load"]!!.functions.add(mcfppLoad)
@@ -137,9 +141,9 @@ object Project {
                 config.description = "A datapack compiled by MCFPP"
             }
             //默认命名空间
-            config.defaultNamespace = if(jsonObject.getString("namespace") != null){
+            config.defaultNamespace = if (jsonObject.getString("namespace") != null) {
                 jsonObject.getString("namespace")
-            }else{
+            } else {
                 "default"
             }
             //是否包含标准库
@@ -147,12 +151,12 @@ object Project {
                 CompileSettings.ignoreStdLib = it as Boolean
             }
             //调用库
-            val includesJson: JSONArray = jsonObject.getJSONArray("includes")?: JSONArray()
+            val includesJson: JSONArray = jsonObject.getJSONArray("includes") ?: JSONArray()
             for (i in 0 until includesJson.size) {
                 config.includes.add(includesJson.getString(i))
             }
             //输出目录
-            config.targetPath = jsonObject.getString("targetPath")?: "out/"
+            config.targetPath = jsonObject.getString("targetPath") ?: "out/"
         } catch (e: Exception) {
             logger.error("Error while reading project from file \"$path\"")
             errorCount++
@@ -163,32 +167,32 @@ object Project {
     /**
      * 读取库文件，并将库写入缓存
      */
-    fun readLib(){
+    fun readLib() {
         //默认的
-        if(!CompileSettings.ignoreStdLib){
+        if (!CompileSettings.ignoreStdLib) {
             config.includes.addAll(config.stdLib)
         }
         //写入缓存
         for (include in config.includes) {
-            val filePath = if(!include.endsWith("/.mclib")) "$include/.mclib" else include
+            val filePath = if (!include.endsWith("/.mclib")) "$include/.mclib" else include
             val file = File(filePath)
-            if(file.exists()){
+            if (file.exists()) {
                 LibReader.read(filePath)
-            }else{
+            } else {
                 LogProcessor.error("Cannot find lib file at: ${file.absolutePath}")
             }
         }
         //库读取完了，现在实例化所有类中的成员字段吧
-        for(namespace in GlobalField.libNamespaces.values){
+        for (namespace in GlobalField.libNamespaces.values) {
             namespace.field.forEachClass { c ->
                 run {
-                    for (v in c.field.allVars){
-                        if(v is UnresolvedVar){
+                    for (v in c.field.allVars) {
+                        if (v is UnresolvedVar) {
                             c.field.putVar(c.identifier, v.resolve(c), true)
                         }
                     }
-                    for (v in c.staticField.allVars){
-                        if(v is UnresolvedVar){
+                    for (v in c.staticField.allVars) {
+                        if (v is UnresolvedVar) {
                             c.staticField.putVar(c.identifier, v.resolve(c), true)
                         }
                     }
@@ -200,12 +204,12 @@ object Project {
     /**
      * 编制类型索引
      */
-    fun indexType(){
+    fun indexType() {
         logger.debug("Generate Type Index...")
         //解析文件
         for (file in config.files) {
             //添加默认库的域
-            if(!CompileSettings.ignoreStdLib){
+            if (!CompileSettings.ignoreStdLib) {
                 GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
             }
             try {
@@ -246,7 +250,7 @@ object Project {
         for (file in config.files) {
             LogProcessor.debug("Compiling mcfpp code in \"$file\"")
             //添加默认库域
-            if(!CompileSettings.ignoreStdLib){
+            if (!CompileSettings.ignoreStdLib) {
                 GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
             }
             try {
@@ -268,15 +272,16 @@ object Project {
         logger.debug("Adding scoreboards declare in mcfpp:load function")
         //region load init command
         //向load函数中添加记分板初始化命令
-        Function.currFunction = GlobalField.localNamespaces["mcfpp"]!!.field.getFunction("load", ArrayList(), ArrayList())!!
-        for (scoreboard in GlobalField.scoreboards.values){
+        Function.currFunction =
+            GlobalField.localNamespaces["mcfpp"]!!.field.getFunction("load", ArrayList(), ArrayList())!!
+        for (scoreboard in GlobalField.scoreboards.values) {
             Function.addCommand("scoreboard objectives add ${scoreboard.name} ${scoreboard.criterion}")
         }
         //向load函数中添加库初始化命令
         Function.addCommand("execute unless score math mcfpp_init matches 1 run function math:_init")
         //向load中添加类初始化命令
-        for (n in GlobalField.localNamespaces.values){
-            n.field.forEachClass { c->
+        for (n in GlobalField.localNamespaces.values) {
+            n.field.forEachClass { c ->
                 run {
                     c.classPreStaticInit.invoke(ArrayList(), callerClassP = null)
                 }
@@ -288,13 +293,16 @@ object Project {
         //浮点数的
         //寻找入口函数
         var hasEntrance = false
-        for(field in GlobalField.localNamespaces.values){
-            field.field.forEachFunction { f->
+        for (field in GlobalField.localNamespaces.values) {
+            field.field.forEachFunction { f ->
                 run {
                     if (f.parent.size == 0 && f !is Native) {
                         //找到了入口函数
                         hasEntrance = true
-                        f.commands.add(0, "data modify storage mcfpp:system ${config.defaultNamespace}.stack_frame prepend value {}")
+                        f.commands.add(
+                            0,
+                            "data modify storage mcfpp:system ${config.defaultNamespace}.stack_frame prepend value {}"
+                        )
                         f.commands.add("data remove storage mcfpp:system ${config.defaultNamespace}.stack_frame[0]")
                         logger.debug("Find entrance function: {} {}", f.tags, f.identifier)
                     }
@@ -321,7 +329,7 @@ object Project {
      * @param file 根目录
      * @return 这个根目录下包含的所有文件
      */
-    private fun getFiles(file: File) : ArrayList<MCFPPFile> {
+    private fun getFiles(file: File): ArrayList<MCFPPFile> {
         val files = ArrayList<MCFPPFile>()
         if (!file.exists()) {
             logger.warn("Path \"" + file.absolutePath + "\" doesn't exist. Ignoring.")
@@ -356,17 +364,17 @@ data class ProjectConfig(
     /**
      * 数据包输出的文件夹
      */
-    var targetPath : String = "out/",
+    var targetPath: String = "out/",
 
     /**
      * 标准库列表
      */
-    val stdLib: List<String> = listOf("mcfpp/sys/.mclib","mcfpp/math/.mclib","mcfpp/dynamic/.mclib"),
+    val stdLib: List<String> = listOf("mcfpp/sys/.mclib", "mcfpp/math/.mclib", "mcfpp/dynamic/.mclib"),
 
     /**
      * 注释输出等级
      */
-    var commentLevel : CommentType = CommentType.DEBUG,
+    var commentLevel: CommentType = CommentType.DEBUG,
 
     /**
      * 工程的根目录

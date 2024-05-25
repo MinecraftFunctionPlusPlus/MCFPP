@@ -5,7 +5,7 @@ import kotlin.test.Test
 class NBTTypeTest {
 
     @Test
-    fun listTest(){
+    fun listTest() {
         val test =
             """
                 func main(){

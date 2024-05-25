@@ -1,15 +1,15 @@
 package top.mcfpp.lang
 
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
+import top.mcfpp.model.function.Function
 
 /**
  * 实现此抽象类即代表这个Kotlin类所代表的mcfpp数据结构能够被访问成员。
  * 在mcfpp中，成员的访问通常通过`.`运算符完成。最常见的可以访问成员的结构便是类，其次也包含了结构体和部分基本类型。
  *
  */
-interface CanSelectMember{
+interface CanSelectMember {
 
     /**
      * 根据标识符获取一个成员。
@@ -27,7 +27,12 @@ interface CanSelectMember{
      * @param params 成员方法的参数
      * @return
      */
-    fun getMemberFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>, accessModifier: Member.AccessModifier): Pair<Function, Boolean>
+    fun getMemberFunction(
+        key: String,
+        readOnlyParams: List<MCFPPType>,
+        normalParams: List<MCFPPType>,
+        accessModifier: Member.AccessModifier
+    ): Pair<Function, Boolean>
 
     fun getAccess(function: Function): Member.AccessModifier
 }

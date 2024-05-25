@@ -22,7 +22,7 @@ import top.mcfpp.util.Utils
 import java.io.FileWriter
 
 object LibWriter {
-    fun write(path: String) : JSONObject{
+    fun write(path: String): JSONObject {
         val json = GlobalWriter.toJson(GlobalField)
         val writer = FileWriter("$path\\.mclib")
         writer.write(json.toJSONString(JSONWriter.Feature.PrettyFormat))
@@ -33,15 +33,15 @@ object LibWriter {
 
 }
 
-interface ILibJsonWriter<T>{
-    fun toJson(t: T):JSONObject
+interface ILibJsonWriter<T> {
+    fun toJson(t: T): JSONObject
 }
 
-object GlobalWriter: ILibJsonWriter<GlobalField>{
+object GlobalWriter : ILibJsonWriter<GlobalField> {
     override fun toJson(t: GlobalField): JSONObject {
         val json = JSONObject()
         val namespaces = JSONArray()
-        for (n in t.localNamespaces){
+        for (n in t.localNamespaces) {
             val j = NamespaceWriter.toJson(n.value)
             namespaces.add(j)
         }
@@ -55,20 +55,26 @@ object NamespaceWriter : ILibJsonWriter<Namespace> {
         val namespace = JSONObject()
         namespace["id"] = t.identifier
         val functions = JSONArray()
-        t.field.forEachFunction { f -> run{
-            val j = FunctionWriter.toJson(f)
-            functions.add(j)
-        } }
+        t.field.forEachFunction { f ->
+            run {
+                val j = FunctionWriter.toJson(f)
+                functions.add(j)
+            }
+        }
         val classes = JSONArray()
-        t.field.forEachClass { cls -> run{
-            val j = ClassWriter.toJson(cls)
-            classes.add(j)
-        } }
+        t.field.forEachClass { cls ->
+            run {
+                val j = ClassWriter.toJson(cls)
+                classes.add(j)
+            }
+        }
         val template = JSONArray()
-        t.field.forEachTemplate { tpl -> run {
-            val j = TemplateWriter.toJson(tpl)
-            classes.add(j)
-        } }
+        t.field.forEachTemplate { tpl ->
+            run {
+                val j = TemplateWriter.toJson(tpl)
+                classes.add(j)
+            }
+        }
         namespace["functions"] = functions
         namespace["classes"] = classes
         namespace["template"] = template
@@ -76,28 +82,34 @@ object NamespaceWriter : ILibJsonWriter<Namespace> {
     }
 }
 
-object FunctionWriter: ILibJsonWriter<Function>{
+object FunctionWriter : ILibJsonWriter<Function> {
     override fun toJson(t: Function): JSONObject {
         val json = JSONObject()
         json["id"] = t.identifier
         val normalParams = JSONArray()
-        t.normalParams.forEach { v -> run {
-            normalParams.add(FunctionParamWriter.toJson(v))
-        } }
-        if(t is GenericFunction){
+        t.normalParams.forEach { v ->
+            run {
+                normalParams.add(FunctionParamWriter.toJson(v))
+            }
+        }
+        if (t is GenericFunction) {
             val readonlyParam = JSONArray()
-            t.readOnlyParams.forEach { v -> run {
-                readonlyParam.add(FunctionParamWriter.toJson(v))
-                json["readonlyParam"] = readonlyParam
-            } }
+            t.readOnlyParams.forEach { v ->
+                run {
+                    readonlyParam.add(FunctionParamWriter.toJson(v))
+                    json["readonlyParam"] = readonlyParam
+                }
+            }
             json["context"] = Utils.toByteArrayString(SerializableFunctionBodyContext(t.ctx))
         }
-        if(t is NativeFunction){
+        if (t is NativeFunction) {
             val readonlyParam = JSONArray()
-            t.readOnlyParams.forEach { v -> run {
-                readonlyParam.add(FunctionParamWriter.toJson(v))
-                json["readonlyParam"] = readonlyParam
-            } }
+            t.readOnlyParams.forEach { v ->
+                run {
+                    readonlyParam.add(FunctionParamWriter.toJson(v))
+                    json["readonlyParam"] = readonlyParam
+                }
+            }
             json["dataClass"] = t.javaClassName
             json["javaMethodName"] = t.javaMethodName
         }
@@ -109,7 +121,7 @@ object FunctionWriter: ILibJsonWriter<Function>{
     }
 }
 
-object ClassWriter: ILibJsonWriter<Class>{
+object ClassWriter : ILibJsonWriter<Class> {
     override fun toJson(t: Class): JSONObject {
         val json = JSONObject()
         json["id"] = t.identifier
@@ -117,7 +129,7 @@ object ClassWriter: ILibJsonWriter<Class>{
         val parents = t.parent.map { it.namespaceID }.toList()
         json["parents"] = parents
         //泛型
-        if(t is GenericClass){
+        if (t is GenericClass) {
             val generic = JSONArray()
             t.readOnlyParams.forEach { generic.add(ClassParamWriter.toJson(it)) }
             json["generic"] = generic
@@ -128,15 +140,17 @@ object ClassWriter: ILibJsonWriter<Class>{
         json["staticField"] = CompoundDataFieldWriter.toJson(t.staticField)
         //构造函数
         val constructors = JSONArray()
-        t.constructors.forEach { c -> run {
-            constructors.add(ConstructorWriter.toJson(c))
-        } }
+        t.constructors.forEach { c ->
+            run {
+                constructors.add(ConstructorWriter.toJson(c))
+            }
+        }
         json["constructors"] = constructors
         return json
     }
 }
 
-object ConstructorWriter: ILibJsonWriter<Constructor>{
+object ConstructorWriter : ILibJsonWriter<Constructor> {
     override fun toJson(t: Constructor): JSONObject {
         val json = JSONObject()
         val normalParams = JSONArray()
@@ -150,7 +164,7 @@ object ConstructorWriter: ILibJsonWriter<Constructor>{
     }
 }
 
-object CompoundDataFieldWriter : ILibJsonWriter<CompoundDataField>{
+object CompoundDataFieldWriter : ILibJsonWriter<CompoundDataField> {
     override fun toJson(t: CompoundDataField): JSONObject {
         val json = JSONObject()
         val v = JSONArray()
@@ -165,7 +179,7 @@ object CompoundDataFieldWriter : ILibJsonWriter<CompoundDataField>{
     }
 }
 
-object VarWriter: ILibJsonWriter<Var<*>>{
+object VarWriter : ILibJsonWriter<Var<*>> {
     override fun toJson(t: Var<*>): JSONObject {
         val json = JSONObject()
         json["id"] = t.identifier
@@ -174,7 +188,7 @@ object VarWriter: ILibJsonWriter<Var<*>>{
     }
 }
 
-object FunctionParamWriter: ILibJsonWriter<FunctionParam>{
+object FunctionParamWriter : ILibJsonWriter<FunctionParam> {
     override fun toJson(t: FunctionParam): JSONObject {
         val json = JSONObject()
         json["id"] = t.identifier
@@ -184,7 +198,7 @@ object FunctionParamWriter: ILibJsonWriter<FunctionParam>{
     }
 }
 
-object ClassParamWriter: ILibJsonWriter<ClassParam>{
+object ClassParamWriter : ILibJsonWriter<ClassParam> {
     override fun toJson(t: ClassParam): JSONObject {
         val json = JSONObject()
         json["id"] = t.identifier
@@ -193,7 +207,7 @@ object ClassParamWriter: ILibJsonWriter<ClassParam>{
     }
 }
 
-object TemplateWriter: ILibJsonWriter<Template>{
+object TemplateWriter : ILibJsonWriter<Template> {
     override fun toJson(t: Template): JSONObject {
         TODO()
     }

@@ -22,8 +22,8 @@ class SimpleFieldWithFunction : IFieldWithFunction {
      * @param operation 要对方法进行的操作
      * @receiver
      */
-    override fun forEachFunction(operation: (Function) -> Any?){
-        for (function in functions){
+    override fun forEachFunction(operation: (Function) -> Any?) {
+        for (function in functions) {
             operation(function)
         }
     }
@@ -32,19 +32,19 @@ class SimpleFieldWithFunction : IFieldWithFunction {
     @Nullable
     override fun getFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>): Function? {
         for (f in functions) {
-            if(f is Generic<*> && f.isSelf(key, readOnlyParams, normalParams)){
+            if (f is Generic<*> && f.isSelf(key, readOnlyParams, normalParams)) {
                 return f
             }
-            if(f.isSelf(key, normalParams)){
+            if (f.isSelf(key, normalParams)) {
                 return f
             }
         }
         return null
     }
 
-    override fun addFunction(function: Function, force: Boolean): Boolean{
-        if(hasFunction(function)){
-            if(force){
+    override fun addFunction(function: Function, force: Boolean): Boolean {
+        if (hasFunction(function)) {
+            if (force) {
                 functions[functions.indexOf(function)] = function
                 return true
             }
@@ -54,7 +54,7 @@ class SimpleFieldWithFunction : IFieldWithFunction {
         return true
     }
 
-    override fun hasFunction(function: Function): Boolean{
+    override fun hasFunction(function: Function): Boolean {
         return functions.contains(function)
     }
 

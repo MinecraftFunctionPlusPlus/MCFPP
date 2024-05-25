@@ -4,6 +4,6 @@ class VariableConverseException : RuntimeException {
 
     constructor()
 
-    constructor(e: Exception): super(e)
+    constructor(e: Exception) : super(e)
 
 }

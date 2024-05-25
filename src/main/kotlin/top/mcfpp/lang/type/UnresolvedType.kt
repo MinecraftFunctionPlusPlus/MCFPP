@@ -4,7 +4,7 @@ import top.mcfpp.model.field.IFieldWithType
 
 class UnresolvedType(type: String) : MCFPPType() {
 
-    val originalTypeString : String = type
+    val originalTypeString: String = type
 
     override val typeName: String
         get() = "UnresolvedType[${originalTypeString}]"
@@ -13,7 +13,7 @@ class UnresolvedType(type: String) : MCFPPType() {
         return typeName
     }
 
-    fun resolve(typeScope: IFieldWithType):MCFPPType{
+    fun resolve(typeScope: IFieldWithType): MCFPPType {
         return parseFromIdentifier(originalTypeString, typeScope)
     }
 }

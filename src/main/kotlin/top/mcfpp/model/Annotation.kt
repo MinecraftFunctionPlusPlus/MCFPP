@@ -25,12 +25,12 @@ abstract class Annotation {
     /**
      * 注解的标识符
      */
-    val identifier : String
+    val identifier: String
 
     /**
      * 注解的命名空间
      */
-    val namespace : String
+    val namespace: String
 
     /**
      * 注解的参数
@@ -54,10 +54,16 @@ abstract class Annotation {
                 val varType = Array(param.size) { i -> param[i]::class.java }
                 val constructor = clazz.getConstructor(*varType)
                 return constructor.newInstance(*param.toArray())
-            }catch (e: NoSuchMethodException){
-                LogProcessor.error("Cannot find constructor for annotation ${clazz.name} with param ${param.joinToString(",")}")
+            } catch (e: NoSuchMethodException) {
+                LogProcessor.error(
+                    "Cannot find constructor for annotation ${clazz.name} with param ${
+                        param.joinToString(
+                            ","
+                        )
+                    }"
+                )
                 throw e
-            }catch (e: Exception){
+            } catch (e: Exception) {
                 LogProcessor.error("Cannot create instance for annotation ${clazz.name}")
                 throw e
             }
@@ -65,13 +71,13 @@ abstract class Annotation {
     }
 }
 
-abstract class FunctionAnnotation(identifier: String, namespace: String) : Annotation(identifier,namespace) {
+abstract class FunctionAnnotation(identifier: String, namespace: String) : Annotation(identifier, namespace) {
     override fun forClass(clazz: Class) {
         throw Exception("Cannot use function annotation on class")
     }
 }
 
-abstract class ClassAnnotation(identifier: String, namespace: String) : Annotation(identifier,namespace) {
+abstract class ClassAnnotation(identifier: String, namespace: String) : Annotation(identifier, namespace) {
     override fun forFunction(function: Function) {
         throw Exception("Cannot use class annotation on function")
     }

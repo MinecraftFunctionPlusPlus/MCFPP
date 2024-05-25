@@ -2,18 +2,7 @@ package top.mcfpp.lang
 
 import net.querz.nbt.tag.ListTag
 import net.querz.nbt.tag.StringTag
-import net.querz.nbt.tag.Tag
-import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.lang.type.MCFPPBaseType
-import top.mcfpp.lang.type.MCFPPNBTType
-import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.model.CompoundData
-import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.function.Function
-import top.mcfpp.model.Member
-import top.mcfpp.util.LogProcessor
 import java.util.*
-import kotlin.collections.HashMap
 
 
 /**

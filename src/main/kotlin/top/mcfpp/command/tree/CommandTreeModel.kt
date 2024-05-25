@@ -1,17 +1,17 @@
 package top.mcfpp.command.tree
 
 
-enum class TreeNodeType{
-    argument,literal,root
+enum class TreeNodeType {
+    argument, literal, root
 }
 
-class CommandTreeNode{
-    var type: TreeNodeType=TreeNodeType.root
-    var children: MutableMap<String, CommandTreeNode>?=null
-    var executable: Boolean?=null
-    var redirect: List<String>?=null
-    var parser: String?=null
-    var properties: MutableMap<String, Any>?=null
+class CommandTreeNode {
+    var type: TreeNodeType = TreeNodeType.root
+    var children: MutableMap<String, CommandTreeNode>? = null
+    var executable: Boolean? = null
+    var redirect: List<String>? = null
+    var parser: String? = null
+    var properties: MutableMap<String, Any>? = null
 }
 
 /*

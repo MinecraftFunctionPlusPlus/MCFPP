@@ -3,19 +3,19 @@ package top.mcfpp.lang
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.CompoundData
-import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
+import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.util.LogProcessor
 
-class Void: Var<Nothing>("void") {
+class Void : Var<Nothing>("void") {
     override var type: MCFPPType = MCFPPBaseType.Void
 
     /**
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var<*>) : Void {
+    override fun assign(b: Var<*>): Void {
         LogProcessor.error("Cannot assign value to void type variable")
         return this
     }
@@ -80,6 +80,6 @@ class Void: Var<Nothing>("void") {
     }
 
     companion object {
-        val data = CompoundData("void","mcfpp")
+        val data = CompoundData("void", "mcfpp")
     }
 }

@@ -5,7 +5,7 @@ import kotlin.test.Test
 class StringCompileTest {
 
     @Test
-    fun main(){
+    fun main() {
         val string =
             """
                 func main(){test();}

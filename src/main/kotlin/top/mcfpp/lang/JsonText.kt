@@ -16,7 +16,7 @@ interface ChatComponent {
  * 一个json原始文本
  *
  */
-class JsonText: ChatComponent {
+class JsonText : ChatComponent {
 
     /**
      * 这个原始json文本中含有的聊天组件
@@ -26,24 +26,24 @@ class JsonText: ChatComponent {
     /**
      * 向末尾添加一个聊天组件
      */
-    fun append(value : MCIntConcrete){
-        if(TODO() /*value.isConcrete*/){
-            components.add(JsonTextPlain(value.value!!.toString()))
-        }else{
+    fun append(value: MCIntConcrete) {
+        if (TODO() /*value.isConcrete*/) {
+            components.add(JsonTextPlain(value.value.toString()))
+        } else {
             components.add(JsonTextNumber(value))
         }
     }
 
     override fun toJson(): String {
         val str = StringBuilder()
-        for (component in components){
+        for (component in components) {
             str.append(component.toJson())
         }
         return str.toString()
     }
 
     companion object {
-        val data = CompoundData("jtext","mcfpp")
+        val data = CompoundData("jtext", "mcfpp")
     }
 
 }

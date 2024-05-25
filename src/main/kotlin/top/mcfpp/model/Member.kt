@@ -15,7 +15,7 @@ interface Member {
     /**
      * 类的访问修饰符
      */
-    var accessModifier : AccessModifier
+    var accessModifier: AccessModifier
 
     /**
      * 这个成员是否是静态的

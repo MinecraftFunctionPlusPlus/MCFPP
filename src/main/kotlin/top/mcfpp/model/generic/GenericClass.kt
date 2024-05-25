@@ -1,10 +1,9 @@
 package top.mcfpp.model.generic
 
-import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.Project
 import top.mcfpp.antlr.McfppGenericClassFieldVisitor
 import top.mcfpp.antlr.McfppGenericClassImVisitor
-import top.mcfpp.antlr.McfppImVisitor
+import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.lang.MCFPPTypeVar
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPClassType
@@ -26,7 +25,7 @@ import top.mcfpp.model.field.GlobalField
  */
 class GenericClass : Class {
 
-    val ctx : mcfppParser.ClassBodyContext
+    val ctx: mcfppParser.ClassBodyContext
 
     val compiledClasses: HashMap<List<Var<*>>, Class> = HashMap()
 
@@ -34,7 +33,7 @@ class GenericClass : Class {
 
     val readOnlyParams: ArrayList<ClassParam> = ArrayList()
 
-    override val namespaceID : String
+    override val namespaceID: String
         get() = "$namespace:${identifier}_${readOnlyParams.joinToString("_") { it.typeIdentifier }}"
 
     @get:Override
@@ -55,14 +54,22 @@ class GenericClass : Class {
      * @param identifier 类的标识符
      * @param namespace 类的命名空间
      */
-    constructor(identifier: String, namespace: String = Project.currNamespace, ctx : mcfppParser.ClassBodyContext):super(identifier, namespace) {
+    constructor(
+        identifier: String,
+        namespace: String = Project.currNamespace,
+        ctx: mcfppParser.ClassBodyContext
+    ) : super(identifier, namespace) {
         this.ctx = ctx
     }
 
-    fun compile(readOnlyArgs: List<Var<*>>) : Class{
-        val cls = CompiledGenericClass("${identifier}_${readOnlyParams.joinToString("_") { it.typeIdentifier }}_$index", namespace, this)
+    fun compile(readOnlyArgs: List<Var<*>>): Class {
+        val cls = CompiledGenericClass(
+            "${identifier}_${readOnlyParams.joinToString("_") { it.typeIdentifier }}_$index",
+            namespace,
+            this
+        )
         cls.initialize()
-        for (parent in this.parent){
+        for (parent in this.parent) {
             cls.extends(parent)
         }
         cls.isStaticClass = this.isStaticClass
@@ -72,7 +79,7 @@ class GenericClass : Class {
         for (i in readOnlyParams.indices) {
             val r = readOnlyArgs[i].clone()
             r.isConst = true
-            if(r is MCFPPTypeVar){
+            if (r is MCFPPTypeVar) {
                 cls.field.putType(readOnlyParams[i].identifier, r.value)
             }
             cls.field.putVar(readOnlyParams[i].identifier, r, false)
@@ -81,13 +88,13 @@ class GenericClass : Class {
         //注册
         val namespace = GlobalField.localNamespaces[namespace]!!
         namespace.field.addClass(cls.identifier, cls)
-        Class.currClass = cls
+        currClass = cls
         McfppGenericClassFieldVisitor(cls).visitClassDeclaration(ctx.parent as mcfppParser.ClassDeclarationContext)
-        Class.currClass = cls
+        currClass = cls
         McfppGenericClassImVisitor().visitClassBody(ctx)
-        index ++
+        index++
 
-        cls.getType = {MCFPPClassType(cls, this.getType().parentType)}
+        cls.getType = { MCFPPClassType(cls, this.getType().parentType) }
 
         compiledClasses[readOnlyArgs] = cls
 

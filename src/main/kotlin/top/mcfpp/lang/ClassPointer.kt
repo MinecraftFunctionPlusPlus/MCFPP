@@ -7,10 +7,10 @@ import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.model.function.Function
 import top.mcfpp.model.*
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.ExtensionFunction
+import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.util.LogProcessor
@@ -32,7 +32,7 @@ import java.util.*
  * @see Class 类的核心实现
  * @see top.mcfpp.lang.type.MCFPPClassType 表示类的类型，同时也是类的静态成员的指针
  */
-class ClassPointer : Var<Int>{
+class ClassPointer : Var<Int> {
 
     /**
      * 指针对应的类的类型
@@ -52,7 +52,7 @@ class ClassPointer : Var<Int>{
          */
         get() = clsType.namespace + "_class_" + clsType.identifier + "_pointer"
 
-    var isNull : Boolean = true
+    var isNull: Boolean = true
 
     /**
      * 创建一个指针
@@ -90,16 +90,25 @@ class ClassPointer : Var<Int>{
                 }
                 if (!isNull) {
                     //原实体中的实例减少一个指针
-                    val c = Commands.selectRun(this,Commands.sbPlayerRemove(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1))
+                    val c = Commands.selectRun(
+                        this,
+                        Commands.sbPlayerRemove(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1)
+                    )
                     Function.addCommands(c)
                 }
                 isNull = b.isNull
                 //地址储存
-                Function.addCommand(Command.build(
-                    "data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[${stackIndex}].${identifier} " +
-                            "set from storage mcfpp:system ${Project.currNamespace}.stack_frame[${b.stackIndex}].${b.identifier}"))
+                Function.addCommand(
+                    Command.build(
+                        "data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[${stackIndex}].${identifier} " +
+                                "set from storage mcfpp:system ${Project.currNamespace}.stack_frame[${b.stackIndex}].${b.identifier}"
+                    )
+                )
                 //实例中的指针列表
-                val c = Commands.selectRun(this,Commands.sbPlayerAdd(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1))
+                val c = Commands.selectRun(
+                    this,
+                    Commands.sbPlayerAdd(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1)
+                )
                 Function.addCommands(c)
             }
 
@@ -115,24 +124,27 @@ class ClassPointer : Var<Int>{
      *
      */
     @InsertCommand
-    fun dispose(){
+    fun dispose() {
         if (!isNull) {
             //原实体中的实例减少一个指针
-            val c = Commands.selectRun(this,Commands.sbPlayerRemove(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1))
+            val c = Commands.selectRun(
+                this,
+                Commands.sbPlayerRemove(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1)
+            )
             Function.addCommands(c)
         }
     }
 
     @Override
     override fun cast(type: MCFPPType): Var<*> {
-        if(MCFPPType.baseType.contains(type)){
+        if (MCFPPType.baseType.contains(type)) {
             LogProcessor.error("Cannot cast [${this.type}] to [$type]")
             throw VariableConverseException()
         }
         //TODO: 这里有问题，class类型的问题
         val namespace = StringHelper.splitNamespaceID(type.typeName)
-        val c = GlobalField.getClass(namespace.first,namespace.second)
-        if(c == null){
+        val c = GlobalField.getClass(namespace.first, namespace.second)
+        if (c == null) {
             LogProcessor.error("Undefined class: $type")
             return UnknownVar("${type}_ptr" + UUID.randomUUID())
         }
@@ -159,9 +171,9 @@ class ClassPointer : Var<Int>{
     @Override
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         val member = clsType.getVar(key)?.clone(this)
-        return if(member == null){
+        return if (member == null) {
             Pair(null, true)
-        }else{
+        } else {
             Pair(member, accessModifier >= member.accessModifier)
         }
     }
@@ -175,12 +187,17 @@ class ClassPointer : Var<Int>{
      * @return 第一个值是对象中获取到的方法，若不存在此方法则为null；第二个值是是否有足够的访问权限访问此方法。如果第一个值是null，那么第二个值总是为true
      */
     @Override
-    override fun getMemberFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>, accessModifier: Member.AccessModifier): Pair<Function, Boolean> {
+    override fun getMemberFunction(
+        key: String,
+        readOnlyParams: List<MCFPPType>,
+        normalParams: List<MCFPPType>,
+        accessModifier: Member.AccessModifier
+    ): Pair<Function, Boolean> {
         //获取函数
         val member = clsType.field.getFunction(key, readOnlyParams, normalParams)
-        return if(member is UnknownFunction){
+        return if (member is UnknownFunction) {
             Pair(UnknownFunction(key), true)
-        }else{
+        } else {
             Pair(member, accessModifier >= member.accessModifier)
         }
     }
@@ -204,19 +221,18 @@ class ClassPointer : Var<Int>{
     }
 
     override fun getAccess(function: Function): Member.AccessModifier {
-        return if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.CLASS){
+        return if (function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.CLASS) {
             function.parentClass()!!.getAccess(clsType)
-        }else if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.TEMPLATE){
+        } else if (function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.TEMPLATE) {
             function.parentStruct()!!.getAccess(clsType)
-        }else if(function is NoStackFunction){
+        } else if (function is NoStackFunction) {
             getAccess(function.parent[0])
-        }
-        else{
+        } else {
             Member.AccessModifier.PUBLIC
         }
     }
 
-    companion object{
+    companion object {
         const val tempItemEntityUUID = "810d6071-f121-4972-80d6-60cc19b40cf8"
         const val tempItemEntityUUIDNBT = "[I;-2129829775,-249476750,-2133434164,431230200]"
 

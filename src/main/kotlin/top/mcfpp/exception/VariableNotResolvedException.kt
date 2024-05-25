@@ -1,5 +1,3 @@
 package top.mcfpp.exception
 
-class VariableNotResolvedException : RuntimeException() {
-
-}
+class VariableNotResolvedException : RuntimeException()

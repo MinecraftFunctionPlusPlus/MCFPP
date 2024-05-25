@@ -1,10 +1,9 @@
 package top.mcfpp.lang
 
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lang.value.MCFPPValue
-import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
-import java.util.UUID
+import top.mcfpp.model.function.Function
+import java.util.*
 
 /**
  * 代表了mcfpp中的一个数字类型。数字类型都是以记分板为基础的。
@@ -41,7 +40,7 @@ abstract class MCNumber<T> : Var<T>, OnScoreboard {
      * 赋值
      * @param a 值来源
      */
-    abstract fun assignCommand(a: MCNumber<T>) : MCNumber<T>
+    abstract fun assignCommand(a: MCNumber<T>): MCNumber<T>
 
     /**
      * 加法

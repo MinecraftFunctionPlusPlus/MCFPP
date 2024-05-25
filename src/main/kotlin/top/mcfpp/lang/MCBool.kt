@@ -5,9 +5,11 @@ import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
-import top.mcfpp.model.*
-import java.util.*
+import top.mcfpp.model.CompoundData
+import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
+import java.util.*
 
 /**
  * 布尔型变量是mcfpp的基本类型之一，它表示一个只有0，1两种取值可能性的值。
@@ -28,7 +30,10 @@ open class MCBool : Var<Boolean>, OnScoreboard {
      *
      * @param identifier 标识符。默认为
      */
-    constructor(curr: FieldContainer, identifier: String = UUID.randomUUID().toString()) : this(curr.prefix + identifier){
+    constructor(
+        curr: FieldContainer,
+        identifier: String = UUID.randomUUID().toString()
+    ) : this(curr.prefix + identifier) {
         this.identifier = identifier
     }
 
@@ -48,7 +53,7 @@ open class MCBool : Var<Boolean>, OnScoreboard {
     override var type: MCFPPType = MCFPPBaseType.Bool
 
     @Override
-    override fun assign(b: Var<*>) : MCBool {
+    override fun assign(b: Var<*>): MCBool {
         hasAssigned = true
         if (b is MCBool) {
             return assignCommand(b)
@@ -59,7 +64,7 @@ open class MCBool : Var<Boolean>, OnScoreboard {
 
     @Override
     override fun cast(type: MCFPPType): Var<*> {
-        return when(type){
+        return when (type) {
             MCFPPBaseType.Bool -> this
             MCFPPBaseType.Any -> MCAnyConcrete(this)
             else -> throw VariableConverseException()
@@ -177,8 +182,8 @@ open class MCBool : Var<Boolean>, OnScoreboard {
     }
 
     @InsertCommand
-    private fun assignCommand(a: MCBool) : MCBool {
-        if(a is ReturnedMCBool){
+    private fun assignCommand(a: MCBool): MCBool {
+        if (a is ReturnedMCBool) {
             Function.addCommand(
                 "execute" +
                         " store result storage mcfpp:system " + top.mcfpp.Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1" +
@@ -186,9 +191,9 @@ open class MCBool : Var<Boolean>, OnScoreboard {
                         " run function ${a.parentFunction.namespaceID}"
             )
             return this
-        }else if(a is MCBoolConcrete){
-            return MCBoolConcrete(this,a.value)
-        }else{
+        } else if (a is MCBoolConcrete) {
+            return MCBoolConcrete(this, a.value)
+        } else {
             //变量进栈
             Function.addCommand(
                 "execute" +
@@ -244,12 +249,12 @@ open class MCBool : Var<Boolean>, OnScoreboard {
         TODO("Not yet implemented")
     }
 
-    companion object{
-        val data = CompoundData("bool","mcfpp")
+    companion object {
+        val data = CompoundData("bool", "mcfpp")
     }
 }
 
-class MCBoolConcrete : MCBool, MCFPPValue<Boolean>{
+class MCBoolConcrete : MCBool, MCFPPValue<Boolean> {
 
     override var value: Boolean
 
@@ -260,7 +265,11 @@ class MCBoolConcrete : MCBool, MCFPPValue<Boolean>{
      * @param curr 域容器
      * @param value 值
      */
-    constructor(curr: FieldContainer, value: Boolean, identifier: String = UUID.randomUUID().toString()) : super(curr.prefix + identifier) {
+    constructor(
+        curr: FieldContainer,
+        value: Boolean,
+        identifier: String = UUID.randomUUID().toString()
+    ) : super(curr.prefix + identifier) {
         this.value = value
     }
 
@@ -273,11 +282,11 @@ class MCBoolConcrete : MCBool, MCFPPValue<Boolean>{
         this.value = value
     }
 
-    constructor(bool: MCBool, value: Boolean) : super(bool){
+    constructor(bool: MCBool, value: Boolean) : super(bool) {
         this.value = value
     }
 
-    constructor(v: MCBoolConcrete) : super(v){
+    constructor(v: MCBoolConcrete) : super(v) {
         this.value = v.value
     }
 
@@ -300,7 +309,7 @@ class MCBoolConcrete : MCBool, MCFPPValue<Boolean>{
         //re = t != a
         return if (a is MCBoolConcrete) {
             MCBoolConcrete(value != a.value)
-        } else{
+        } else {
             a.notEqualCommand(this)
         }
     }
@@ -341,7 +350,7 @@ class MCBoolConcrete : MCBool, MCFPPValue<Boolean>{
 
     override fun toDynamic(replace: Boolean): Var<*> {
         val re = MCBool(this)
-        if(replace){
+        if (replace) {
             Function.currFunction.field.putVar(identifier, re, true)
         }
         return re

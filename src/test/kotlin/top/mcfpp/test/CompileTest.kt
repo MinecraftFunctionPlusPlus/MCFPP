@@ -5,7 +5,7 @@ import kotlin.test.Test
 class CompileTest {
 
     @Test
-    fun baseTest(){
+    fun baseTest() {
         val test =
             """
                 func base(){
@@ -18,7 +18,7 @@ class CompileTest {
     }
 
     @Test
-    fun helloTest(){
+    fun helloTest() {
         val test =
             """
                 func hello(){
@@ -29,7 +29,7 @@ class CompileTest {
     }
 
     @Test
-    fun functionTest(){
+    fun functionTest() {
         val test =
             """
                 func main(){
@@ -46,7 +46,7 @@ class CompileTest {
     }
 
     @Test
-    fun functionReturnTest(){
+    fun functionReturnTest() {
         val test =
             """
                 func test<int i>()->int{
@@ -64,7 +64,7 @@ class CompileTest {
     }
 
     @Test
-    fun topStatementTest(){
+    fun topStatementTest() {
         val test =
             """
                 int i = 0;

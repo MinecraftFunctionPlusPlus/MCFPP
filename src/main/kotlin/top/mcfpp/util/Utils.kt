@@ -1,14 +1,9 @@
 package top.mcfpp.util
 
 import net.querz.nbt.tag.IntArrayTag
-import top.mcfpp.Project
 import top.mcfpp.antlr.mcfppParser
-import java.io.ByteArrayInputStream
-import java.io.ByteArrayOutputStream
-import java.io.ObjectInputStream
-import java.io.ObjectOutputStream
-import java.io.Serializable
-import java.util.UUID
+import java.io.*
+import java.util.*
 import kotlin.system.exitProcess
 
 object Utils {
@@ -18,7 +13,7 @@ object Utils {
      *
      * @param e 异常信息
      */
-    inline fun stopCompile(e : Exception?){
+    inline fun stopCompile(e: Exception?) {
         e?.printStackTrace()
         exitProcess(2)
     }
@@ -81,7 +76,7 @@ object Utils {
         }
     }
 
-    fun toNBTArrayUUID(uuid: UUID): IntArrayTag{
+    fun toNBTArrayUUID(uuid: UUID): IntArrayTag {
         val uuidArray = IntArray(4)
         uuidArray[0] = uuid.leastSignificantBits.toInt()
         uuidArray[1] = (uuid.leastSignificantBits shr 32).toInt()
@@ -90,7 +85,7 @@ object Utils {
         return IntArrayTag(uuidArray)
     }
 
-    fun<T> toByteArrayString(obj: T): String where T : Serializable{
+    fun <T> toByteArrayString(obj: T): String where T : Serializable {
         // 创建一个 ObjectOutputStream，将数据序列化为字节数组
         val byteArrayOutputStream = ByteArrayOutputStream()
         val objectOutputStream = ObjectOutputStream(byteArrayOutputStream)
@@ -104,7 +99,7 @@ object Utils {
         return bytes.joinToString("") { String.format("%02X", it) }
     }
 
-    fun<T> fromByteArrayString(str: String): T{
+    fun <T> fromByteArrayString(str: String): T {
         // 将字符串转换为字节数组
         val bytes = ByteArray(str.length / 2)
         for (i in bytes.indices) {
@@ -125,7 +120,7 @@ object Utils {
 class SerializableFunctionBodyContext(ctx: mcfppParser.FunctionBodyContext) : mcfppParser.FunctionBodyContext(
     ctx.getParent(),
     ctx.invokingState
-), Serializable{
+), Serializable {
     init {
         this.children = ctx.children
         this.start = ctx.start
@@ -133,10 +128,10 @@ class SerializableFunctionBodyContext(ctx: mcfppParser.FunctionBodyContext) : mc
     }
 }
 
-class SerializableClassBodyContext(ctx: mcfppParser.ClassBodyContext): mcfppParser.ClassBodyContext(
+class SerializableClassBodyContext(ctx: mcfppParser.ClassBodyContext) : mcfppParser.ClassBodyContext(
     ctx.getParent(),
     ctx.invokingState
-), Serializable{
+), Serializable {
     init {
         this.children = ctx.children
         this.start = ctx.start

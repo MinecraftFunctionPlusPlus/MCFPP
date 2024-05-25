@@ -9,7 +9,6 @@ import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.Class
 import java.util.*
-import kotlin.collections.ArrayList
 
 /**
  * 一个构造函数。它是一个特殊的成员方法，将会在类的初始化阶段之后调用。
@@ -20,16 +19,21 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
      * 此构造函数对应的类。
      */
     var target: Class
-) : Function("_init_" + target.identifier.lowercase(Locale.getDefault()) + "_" + target.constructors.size, target, false) {
+) : Function(
+    "_init_" + target.identifier.lowercase(Locale.getDefault()) + "_" + target.constructors.size,
+    target,
+    false
+) {
 
     private val leadFunction: Function
+
     init {
         //添加this指针
-        val thisObj = ClassPointer(target,"this")
+        val thisObj = ClassPointer(target, "this")
         thisObj.identifier = "this"
-        field.putVar("this",thisObj)
-        leadFunction = Function(this.identifier + "_lead",this.namespace, MCFPPBaseType.Void)
-        target.field.addFunction(leadFunction,false)
+        field.putVar("this", thisObj)
+        leadFunction = Function(this.identifier + "_lead", this.namespace, MCFPPBaseType.Void)
+        target.field.addFunction(leadFunction, false)
     }
 
     /**
@@ -39,7 +43,9 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
      */
     @Override
     @InsertCommand
-    override fun invoke(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, callerClassP: ClassPointer?) {
+    override fun invoke(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>,
+                        callerClassP: ClassPointer?
+    ) {
         callerClassP as ClassPointer
         addCommand("execute in minecraft:overworld positioned 0 1 0 summon marker run function " + leadFunction.namespaceID)
         val qwq = currFunction
@@ -57,7 +63,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
         //初始指针
         addCommand("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[${callerClassP.stackIndex}].${callerClassP.identifier} set from entity @s UUID")
         //初始化
-        if(target.classPreInit.commands.size > 0){
+        if (target.classPreInit.commands.size > 0) {
             //给函数开栈
             addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
             //不应当立即调用它自己的函数，应当先调用init，再调用constructor
@@ -72,8 +78,8 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
         //调用构造函数
         addCommand("function " + this.namespaceID)
         //销毁指针，释放堆内存
-        for (p in field.allVars){
-            if (p is ClassPointer){
+        for (p in field.allVars) {
+            if (p is ClassPointer) {
                 p.dispose()
             }
         }
@@ -85,7 +91,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
     }
 
     fun addParamsFromContext(ctx: mcfppParser.NormalParamsContext) {
-        for (param in ctx.parameterList()?.parameter()?:ArrayList()) {
+        for (param in ctx.parameterList()?.parameter() ?: ArrayList()) {
             val param1 = FunctionParam(
                 MCFPPType.parseFromContext(param.type(), this.field),
                 param.Identifier().text,
@@ -122,7 +128,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
         return target.hashCode()
     }
 
-    fun isSelf(cls: Class, normalParams: List<MCFPPType>) : Boolean{
+    fun isSelf(cls: Class, normalParams: List<MCFPPType>): Boolean {
         if (this.target == cls && this.normalParams.size == normalParams.size) {
             if (this.normalParams.size == 0) {
                 return true
@@ -130,13 +136,13 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
             var hasFoundFunc = true
             //参数比对
             for (i in normalParams.indices) {
-                if (!FunctionParam.isSubOf(normalParams[i],this.normalParams[i].type)) {
+                if (!FunctionParam.isSubOf(normalParams[i], this.normalParams[i].type)) {
                     hasFoundFunc = false
                     break
                 }
             }
             return hasFoundFunc
-        }else{
+        } else {
             return false
         }
     }

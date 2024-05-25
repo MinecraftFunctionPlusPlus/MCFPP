@@ -13,12 +13,6 @@ import java.util.UUID;
 
 public class System extends MNIMethodContainer {
 
-    @NotNull
-    @Override
-    public Function4<Var<?>[], Var<?>[], CanSelectMember, ValueWrapper<Var<?>>, java.lang.Void> getMNIMethod(@NotNull String name) {
-        return methods.get(name);
-    }
-
     static HashMap<String, Function4<Var<?>[], Var<?>[], CanSelectMember, ValueWrapper<Var<?>>, java.lang.Void>> methods;
 
     static {
@@ -28,7 +22,7 @@ public class System extends MNIMethodContainer {
             //只会有一个参数哦
             if (value instanceof MCInt) print((MCInt) value);
             else if (value instanceof MCString) print((MCString) value);
-            //else if (value instanceof JsonString) print((JsonString) value);
+                //else if (value instanceof JsonString) print((JsonString) value);
             else if (value instanceof NBTBasedData<?>) print((NBTBasedData<?>) value);
             else print(value);
             return null;
@@ -47,9 +41,14 @@ public class System extends MNIMethodContainer {
         if (var instanceof MCIntConcrete varC) {
             //是确定的，直接输出数值
             Function.Companion.addCommand("tellraw @a " + varC.getValue());
-        }else {
+        } else {
             Function.Companion.addCommand("tellraw @a " + new JsonTextNumber(var).toJson());
         }
+    }
+
+    @InsertCommand
+    public static void print(@NotNull Var<?> var) {
+        Function.Companion.addCommand("tellraw @a " + "\"" + var + "\"");
     }
 
     //@InsertCommand
@@ -58,25 +57,26 @@ public class System extends MNIMethodContainer {
     //}
 
     @InsertCommand
-    public static void print(@NotNull Var<?> var){
-        Function.Companion.addCommand("tellraw @a " + "\"" +var + "\"");
-    }
-
-    @InsertCommand
-    public static void print(@NotNull NBTBasedData<?> var){
-        if(var instanceof NBTBasedDataConcrete<?> varC){
+    public static void print(@NotNull NBTBasedData<?> var) {
+        if (var instanceof NBTBasedDataConcrete<?> varC) {
             Function.Companion.addCommand("tellraw @a " + NBTUtil.INSTANCE.toJava(varC.getValue()));
-        }else {
+        } else {
             //TODO
         }
     }
 
     @InsertCommand
     public static void print(@NotNull MCString var) {
-        if(var instanceof MCStringConcrete varC){
+        if (var instanceof MCStringConcrete varC) {
             Function.Companion.addCommand("tellraw @a \"" + varC.getValue().getValue() + "\"");
-        }else{
+        } else {
             //TODO
         }
+    }
+
+    @NotNull
+    @Override
+    public Function4<Var<?>[], Var<?>[], CanSelectMember, ValueWrapper<Var<?>>, java.lang.Void> getMNIMethod(@NotNull String name) {
+        return methods.get(name);
     }
 }

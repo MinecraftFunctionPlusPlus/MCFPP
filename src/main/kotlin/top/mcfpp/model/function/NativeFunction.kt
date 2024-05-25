@@ -1,11 +1,11 @@
 package top.mcfpp.model.function
 
 import top.mcfpp.Project
-import top.mcfpp.lang.*
+import top.mcfpp.lang.CanSelectMember
+import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.Native
 import top.mcfpp.util.ValueWrapper
-import java.lang.Void
 
 /**
  * 表示了一个native方法
@@ -38,7 +38,11 @@ class NativeFunction : Function, Native {
      * @param returnType 返回值的类型
      * @param namespace 命名空间
      */
-    constructor(name: String, dataClass: MNIMethodContainer, returnType: MCFPPType, namespace: String): super(name, namespace, returnType){
+    constructor(name: String, dataClass: MNIMethodContainer, returnType: MCFPPType, namespace: String) : super(
+        name,
+        namespace,
+        returnType
+    ) {
         this.javaMethod = dataClass.getMNIMethod(name)
         this.javaClassName = dataClass.javaClass.name
         this.javaMethodName = name
@@ -52,7 +56,12 @@ class NativeFunction : Function, Native {
      * @param returnType 返回值的类型
      * @param namespace 命名空间
      */
-    constructor(name: String, javaMethod: MNIMethod, returnType: MCFPPType, namespace: String = Project.currNamespace) : super(name, namespace, returnType) {
+    constructor(
+        name: String,
+        javaMethod: MNIMethod,
+        returnType: MCFPPType,
+        namespace: String = Project.currNamespace
+    ) : super(name, namespace, returnType) {
         this.javaMethod = javaMethod
         this.javaClassName = null
         this.javaMethodName = name
@@ -97,24 +106,24 @@ class NativeFunction : Function, Native {
     }
     */
 
-    fun appendReadOnlyParam(type: MCFPPType, identifier: String, isStatic: Boolean = false) : Function {
-        readOnlyParams.add(FunctionParam(type ,identifier, this, isStatic))
+    fun appendReadOnlyParam(type: MCFPPType, identifier: String, isStatic: Boolean = false): Function {
+        readOnlyParams.add(FunctionParam(type, identifier, this, isStatic))
         return this
     }
 
-    fun replaceGenericParams(genericParams: Map<String, MCFPPType>) : NativeFunction{
+    fun replaceGenericParams(genericParams: Map<String, MCFPPType>): NativeFunction {
         val n = NativeFunction(this.identifier, this.javaMethod, this.returnType, this.namespace)
-        for(np in normalParams){
-            if(genericParams[np.typeIdentifier] != null){
+        for (np in normalParams) {
+            if (genericParams[np.typeIdentifier] != null) {
                 n.appendNormalParam(genericParams[np.typeIdentifier]!!, np.identifier, np.isStatic)
-            }else{
+            } else {
                 n.appendNormalParam(np.type, np.identifier, np.isStatic)
             }
         }
-        for(rp in readOnlyParams){
-            if(genericParams[rp.typeIdentifier] != null){
+        for (rp in readOnlyParams) {
+            if (genericParams[rp.typeIdentifier] != null) {
                 n.appendReadOnlyParam(genericParams[rp.typeIdentifier]!!, rp.identifier, rp.isStatic)
-            }else{
+            } else {
                 n.appendReadOnlyParam(rp.type, rp.identifier, rp.isStatic)
             }
         }
@@ -123,14 +132,14 @@ class NativeFunction : Function, Native {
 
     @Override
     override fun toString(containClassName: Boolean, containNamespace: Boolean): String {
-        return super.toString(containClassName,containNamespace ) + "->" + javaClassName + "." + javaMethodName
+        return super.toString(containClassName, containNamespace) + "->" + javaClassName + "." + javaMethodName
     }
 }
 
 //TODO 改成java用interface实现的lambda？
 typealias MNIMethod = (Array<Var<*>?>, Array<Var<*>?>, CanSelectMember?, ValueWrapper<Var<*>>) -> Void
 
-abstract class MNIMethodContainer{
+abstract class MNIMethodContainer {
 
     abstract fun getMNIMethod(name: String): MNIMethod
 

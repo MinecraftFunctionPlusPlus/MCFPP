@@ -4,7 +4,7 @@ import kotlin.test.Test
 
 class CompileTimeTest {
     @Test
-    fun test(){
+    fun test() {
         println(""" """")
         val code = """
             func main(){

@@ -20,7 +20,7 @@ interface IFieldWithInterface {
      * @param identifier 这个类的标识符
      * @return 是否移除成功。如果不存在此类，则返回false
      */
-    fun removeInterface(identifier: String):Boolean
+    fun removeInterface(identifier: String): Boolean
 
     /**
      * 获取一个类。可能不存在
@@ -36,7 +36,7 @@ interface IFieldWithInterface {
      * @param identifier 类的标识符
      * @return
      */
-    fun hasInterface(identifier: String):Boolean
+    fun hasInterface(identifier: String): Boolean
 
     /**
      * 是否存在此类

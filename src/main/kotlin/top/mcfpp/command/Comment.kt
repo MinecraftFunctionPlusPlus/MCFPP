@@ -2,9 +2,9 @@ package top.mcfpp.command
 
 class Comment : Command {
 
-    val type : CommentType
+    val type: CommentType
 
-    constructor(comment: String, commentType: CommentType = CommentType.INFO):super(comment){
+    constructor(comment: String, commentType: CommentType = CommentType.INFO) : super(comment) {
         isCompleted = true
         this.type = commentType
     }
@@ -19,6 +19,6 @@ class Comment : Command {
 
 }
 
-enum class CommentType{
+enum class CommentType {
     DEBUG, INFO, WARN, ERROR
 }

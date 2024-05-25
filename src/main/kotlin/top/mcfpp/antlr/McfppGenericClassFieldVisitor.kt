@@ -20,7 +20,9 @@ class McfppGenericClassFieldVisitor(val clazz: Class) : McfppFieldVisitor() {
         //先解析函数
         for (c in ctx.classBody().staticClassMemberDeclaration()) {
             c!!
-            if (c.classMember().classFunctionDeclaration() != null || c.classMember().abstractClassFunctionDeclaration() != null) {
+            if (c.classMember().classFunctionDeclaration() != null || c.classMember()
+                    .abstractClassFunctionDeclaration() != null
+            ) {
                 visit(c)
             }
         }
@@ -35,7 +37,9 @@ class McfppGenericClassFieldVisitor(val clazz: Class) : McfppFieldVisitor() {
         //先解析函数和构造函数
         for (c in ctx.classBody().classMemberDeclaration()) {
             c!!
-            if (c.classMember() != null && (c.classMember().classFunctionDeclaration() != null || c.classMember().abstractClassFunctionDeclaration() != null)) {
+            if (c.classMember() != null && (c.classMember().classFunctionDeclaration() != null || c.classMember()
+                    .abstractClassFunctionDeclaration() != null)
+            ) {
                 visit(c)
             }
         }
@@ -50,17 +54,17 @@ class McfppGenericClassFieldVisitor(val clazz: Class) : McfppFieldVisitor() {
             Class.currClass!!.addConstructor(Constructor(Class.currClass!!))
         }
         //是否为抽象类
-        if(!Class.currClass!!.isAbstract){
-            var il : Function? = null
+        if (!Class.currClass!!.isAbstract) {
+            var il: Function? = null
             Class.currClass!!.field.forEachFunction { f ->
                 run {
-                    if(f.isAbstract){
+                    if (f.isAbstract) {
                         il = f
                         return@run
                     }
                 }
             }
-            if(il != null){
+            if (il != null) {
                 LogProcessor.error("Class ${Class.currClass} must either be declared abstract or implement abstract method ${il!!.nameWithNamespace}")
             }
         }

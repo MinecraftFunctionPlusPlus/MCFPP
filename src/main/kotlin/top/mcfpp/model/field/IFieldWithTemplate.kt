@@ -3,7 +3,7 @@ package top.mcfpp.model.field
 import org.jetbrains.annotations.Nullable
 import top.mcfpp.model.Template
 
-interface IFieldWithTemplate: IField {
+interface IFieldWithTemplate : IField {
     /**
      * 向域中添加一个模板
      *
@@ -20,7 +20,7 @@ interface IFieldWithTemplate: IField {
      * @param identifier 这个模板的标识符
      * @return 是否移除成功。如果不存在此模板，则返回false
      */
-    fun removeTemplate(identifier: String):Boolean
+    fun removeTemplate(identifier: String): Boolean
 
     /**
      * 获取一个模板。可能不存在
@@ -37,7 +37,7 @@ interface IFieldWithTemplate: IField {
      * @param identifier 模板的标识符
      * @return
      */
-    fun hasTemplate(identifier: String):Boolean
+    fun hasTemplate(identifier: String): Boolean
 
     /**
      * 是否存在此模板

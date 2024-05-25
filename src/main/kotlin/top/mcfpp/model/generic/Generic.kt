@@ -7,7 +7,7 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam
 
-interface Generic<T> where T : Function{
+interface Generic<T> where T : Function {
 
     var ctx: mcfppParser.FunctionBodyContext
 
@@ -19,7 +19,7 @@ interface Generic<T> where T : Function{
 
     fun invoke(readOnlyArgs: ArrayList<Var<*>>, normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?)
 
-    fun compile(readOnlyArgs: ArrayList<Var<*>>) : T
+    fun compile(readOnlyArgs: ArrayList<Var<*>>): T
 
     fun isSelf(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>): Boolean
 

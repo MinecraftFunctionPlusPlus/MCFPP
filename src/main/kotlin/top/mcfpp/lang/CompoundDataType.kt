@@ -1,7 +1,8 @@
 package top.mcfpp.lang
 
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.model.*
+import top.mcfpp.model.CompoundData
+import top.mcfpp.model.Member
 import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
@@ -11,12 +12,12 @@ open class CompoundDataType : CanSelectMember {
     /**
      * 类
      */
-    var dataType : CompoundData
+    var dataType: CompoundData
 
     /**
      * 新建一个指向这个类的类型指针
      */
-    constructor(dataType: CompoundData){
+    constructor(dataType: CompoundData) {
         this.dataType = dataType
     }
 
@@ -45,10 +46,10 @@ open class CompoundDataType : CanSelectMember {
      */
     @Override
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        val member = dataType.getVar(key,true)
-        return if(member == null){
+        val member = dataType.getVar(key, true)
+        return if (member == null) {
             Pair(null, true)
-        }else{
+        } else {
             Pair(member, accessModifier >= member.accessModifier)
         }
     }
@@ -62,22 +63,27 @@ open class CompoundDataType : CanSelectMember {
      * @return 第一个值是对象中获取到的方法，若不存在此方法则为null；第二个值是是否有足够的访问权限访问此方法。如果第一个值是null，那么第二个值总是为true
      */
     @Override
-    override fun getMemberFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>, accessModifier: Member.AccessModifier): Pair<Function, Boolean> {
+    override fun getMemberFunction(
+        key: String,
+        readOnlyParams: List<MCFPPType>,
+        normalParams: List<MCFPPType>,
+        accessModifier: Member.AccessModifier
+    ): Pair<Function, Boolean> {
         //获取函数
         val member = dataType.staticField.getFunction(key, readOnlyParams, normalParams)
-        return if(member is UnknownFunction){
+        return if (member is UnknownFunction) {
             Pair(UnknownFunction(key), true)
-        }else{
+        } else {
             Pair(member, accessModifier >= member.accessModifier)
         }
     }
 
     override fun getAccess(function: Function): Member.AccessModifier {
-        return if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.CLASS){
+        return if (function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.CLASS) {
             function.parentClass()!!.getAccess(dataType)
-        }else if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.TEMPLATE){
+        } else if (function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.TEMPLATE) {
             function.parentStruct()!!.getAccess(dataType)
-        }else{
+        } else {
             Member.AccessModifier.PUBLIC
         }
     }

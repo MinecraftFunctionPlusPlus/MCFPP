@@ -1,9 +1,5 @@
 package top.mcfpp.model
 
-import top.mcfpp.Project
-import top.mcfpp.lang.*
-import java.lang.Class
-
 /**
  * 代表了mcfpp中声明的一个native类
  */

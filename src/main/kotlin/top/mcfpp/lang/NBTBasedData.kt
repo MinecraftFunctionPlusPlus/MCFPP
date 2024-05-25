@@ -1,7 +1,6 @@
 package top.mcfpp.lang
 
 import net.querz.nbt.io.SNBTUtil
-import java.util.*
 import net.querz.nbt.tag.*
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
@@ -13,7 +12,7 @@ import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
-import kotlin.collections.ArrayList
+import java.util.*
 
 
 /**
@@ -21,7 +20,7 @@ import kotlin.collections.ArrayList
  *
  * @constructor Create empty Nbt
  */
-open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
+open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>> {
 
     var path = ArrayList<Var<*>>()
 
@@ -46,7 +45,7 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
      * 创建一个nbt值。它的标识符和mc名相同。
      * @param identifier identifier
      */
-    constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier){
+    constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier) {
         isTemp = true
         path.add(JavaVar(identifier))
     }
@@ -55,21 +54,21 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
      * 复制一个int
      * @param b 被复制的int值
      */
-    constructor(b: NBTBasedData<T>) : super(b){
+    constructor(b: NBTBasedData<T>) : super(b) {
         this.path = b.path
     }
 
-    private fun isDynamicPath(): Boolean{
+    private fun isDynamicPath(): Boolean {
         return path.any { it !is MCFPPValue<*> }
     }
 
     private fun getPathString(base: String = ""): String {
         var isBase = true
         var pathStr = base
-        for ((index, p) in path.withIndex()){
-            if(p is MCFPPValue<*>){
-                if(index == 0){
-                    pathStr = when(p){
+        for ((index, p) in path.withIndex()) {
+            if (p is MCFPPValue<*>) {
+                if (index == 0) {
+                    pathStr = when (p) {
                         is NBTBasedDataConcrete<*> -> {
                             "{${SNBTUtil.toSNBT(p.value)}}"
                         }
@@ -84,9 +83,8 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
 
                         else -> throw IllegalArgumentException("Invalid path type ${p.type}")
                     }
-                }
-                else{
-                    pathStr += when(p){
+                } else {
+                    pathStr += when (p) {
                         is NBTBasedDataConcrete<*> -> {
                             "{${SNBTUtil.toSNBT(p.value)}}"
                         }
@@ -103,48 +101,54 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
                     }
                 }
                 isBase = true
-            }else{
-                if(isBase && pathStr != ""){
+            } else {
+                if (isBase && pathStr != "") {
                     Function.addCommand("data modify storage mcfpp:arg path_join.base set value \"$pathStr\"")
                     pathStr = ""
                     isBase = false
                 }
-                when(p){
+                when (p) {
                     is MCInt -> {
-                        if(p.parent != null){
+                        if (p.parent != null) {
                             Function.addCommands(
                                 Commands.selectRun(
                                     p.parent!!,
                                     Command.build("execute store result storage mcfpp:arg append_int.index int 1 run ")
-                                        .build(Commands.sbPlayerGet(p)))
+                                        .build(Commands.sbPlayerGet(p))
+                                )
                             )
-                        }else{
-                            Function.addCommand("execute store result storage mcfpp:arg append_int.index int 1 run " +
-                                    "scoreboard players get ${p.identifier} ${p.`object`.name}")
+                        } else {
+                            Function.addCommand(
+                                "execute store result storage mcfpp:arg append_int.index int 1 run " +
+                                        "scoreboard players get ${p.identifier} ${p.`object`.name}"
+                            )
                         }
                         Function.addCommand("function mcfpp.dynamic.util:nbt/append_number_index with storage mcfpp:arg append_int")
                     }
+
                     is MCString -> {
-                        if(p.parent != null){
+                        if (p.parent != null) {
                             Function.addCommands(
                                 Commands.selectRun(
                                     p.parent!!,
                                     Command.build("data modify storage mcfpp:arg path_join.pathList append from entity @s data.${p.identifier}")
                                 )
                             )
-                        }else{
+                        } else {
                             Function.addCommand("data modify storage mcfpp:arg path_join.pathList append from storage mcfpp:system ${Project.currNamespace}.stack_frame[${p.stackIndex}].${p.identifier}")
                         }
                     }
+
                     is NBTBasedData -> {
                         val temp = p.getTempVar()
                         Function.addCommand("data modify storage mcfpp:arg path_join.pathList append from storage mcfpp:temp temp.${temp.identifier}")
                     }
+
                     else -> throw IllegalArgumentException("Invalid path type ${p.type}")
                 }
             }
         }
-        if(pathStr != ""){
+        if (pathStr != "") {
             //动态路径
             Function.addCommand("data modify storage mcfpp:arg path_join.base set value \"$pathStr\"")
             pathStr = ""
@@ -156,27 +160,27 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var<*>) : NBTBasedData<T> {
+    override fun assign(b: Var<*>): NBTBasedData<T> {
         hasAssigned = true
-        if(b is NBTBasedData<*>){
+        if (b is NBTBasedData<*>) {
             return assignCommand(b as NBTBasedData<T>)
         }
         throw VariableConverseException()
     }
 
-    protected fun assignWithMemberCommand(a: NBTBasedData<T>){
+    protected fun assignWithMemberCommand(a: NBTBasedData<T>) {
         //是成员
-        if(a.parent != null){
+        if (a.parent != null) {
             //a也是成员
             val b = a.getTempVar() as NBTBasedData
-            if(this.isDynamicPath() || b.isDynamicPath()){
+            if (this.isDynamicPath() || b.isDynamicPath()) {
                 //获取路径至macro
                 val source = this.getPathString()
-                if(source == ""){
+                if (source == "") {
                     //动态的，进行解析
                     Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
                     Function.addCommand("data modify storage mcfpp:arg dynamic.sourcePath set from storage mcfpp:arg path_join.base")
-                }else{
+                } else {
                     //直接写入
                     Function.addCommand("data modity storage mcfpp:arg dynamic.sourcePath set value \"$source\"")
                 }
@@ -189,8 +193,7 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
                         Command.build("function mcfpp.dynamic:data/modify/entity.from.storage_sp with storage mcfpp:arg dynamic")
                     )
                 )
-            }
-            else{
+            } else {
                 Function.addCommands(
                     Commands.selectRun(
                         parent!!,
@@ -198,25 +201,25 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
                     )
                 )
             }
-        }else{
-            if(this.isDynamicPath() || a.isDynamicPath()){
+        } else {
+            if (this.isDynamicPath() || a.isDynamicPath()) {
                 //获取路径至macro
                 val source = this.getPathString()
-                if(source == ""){
+                if (source == "") {
                     //动态的，进行解析
                     Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
                     Function.addCommand("data modify storage mcfpp:arg dynamic.sourcePath set from storage mcfpp:arg path_join.base")
-                }else{
+                } else {
                     //直接写入
                     Function.addCommand("data modity storage mcfpp:arg dynamic.sourcePath set value \"$source\"")
                 }
                 //获取a的路径
                 val target = a.getPathString("${Project.currNamespace}.stack_frame[${a.stackIndex}]")
-                if(target == "") {
+                if (target == "") {
                     //动态的，进行解析
                     Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
                     Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set from storage mcfpp:arg path_join.base")
-                }else{
+                } else {
                     //直接写入
                     Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set value \"$target\"")
                 }
@@ -227,7 +230,7 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
                         Command.build("function mcfpp.dynamic:data/modify/entity.from.storage_sp2 with storage mcfpp:arg dynamic")
                     )
                 )
-            }else{
+            } else {
                 Function.addCommands(
                     Commands.selectRun(
                         parent!!,
@@ -238,26 +241,26 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
         }
     }
 
-    protected fun assignWithNotConcreteGlobalVarCommand(a: NBTBasedData<T>){
-        if(a.parent != null){
-            if(this.isDynamicPath() || a.isDynamicPath()){
+    protected fun assignWithNotConcreteGlobalVarCommand(a: NBTBasedData<T>) {
+        if (a.parent != null) {
+            if (this.isDynamicPath() || a.isDynamicPath()) {
                 //获取路径至macro
                 val source = this.getPathString("${Project.currNamespace}.stack_frame[$stackIndex]")
-                if(source == ""){
+                if (source == "") {
                     //动态的，进行解析
                     Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
                     Function.addCommand("data modify storage mcfpp:arg dynamic.sourcePath set from storage mcfpp:arg path_join.base")
-                }else{
+                } else {
                     //直接写入
                     Function.addCommand("data modity storage mcfpp:arg dynamic.sourcePath set value \"$source\"")
                 }
                 //获取a的路径
                 val target = a.getPathString()
-                if(target == "") {
+                if (target == "") {
                     //动态的，进行解析
                     Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
                     Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set from storage mcfpp:arg path_join.base")
-                }else{
+                } else {
                     //直接写入
                     Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set value \"$target\"")
                 }
@@ -268,7 +271,7 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
                         Command.build("function mcfpp.dynamic:data/modify/storage.from.entity_sp3 with storage mcfpp:arg dynamic")
                     )
                 )
-            }else{
+            } else {
                 Function.addCommands(
                     Commands.selectRun(
                         parent!!,
@@ -276,25 +279,25 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
                     )
                 )
             }
-        }else{
-            if(this.isDynamicPath() || a.isDynamicPath()){
+        } else {
+            if (this.isDynamicPath() || a.isDynamicPath()) {
                 //获取路径至macro
                 val source = this.getPathString("${Project.currNamespace}.stack_frame[$stackIndex]")
-                if(source == ""){
+                if (source == "") {
                     //动态的，进行解析
                     Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
                     Function.addCommand("data modify storage mcfpp:arg dynamic.sourcePath set from storage mcfpp:arg path_join.base")
-                }else{
+                } else {
                     //直接写入
                     Function.addCommand("data modity storage mcfpp:arg dynamic.sourcePath set value \"$source\"")
                 }
                 //获取a的路径
                 val target = a.getPathString("${Project.currNamespace}.stack_frame[${a.stackIndex}]")
-                if(target == "") {
+                if (target == "") {
                     //动态的，进行解析
                     Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
                     Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set from storage mcfpp:arg path_join.base")
-                }else{
+                } else {
                     //直接写入
                     Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set value \"$target\"")
                 }
@@ -310,15 +313,15 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
     }
 
     @InsertCommand
-    protected open fun assignCommand(a: NBTBasedData<T>) : NBTBasedData<T>{
+    protected open fun assignCommand(a: NBTBasedData<T>): NBTBasedData<T> {
         nbtType = a.nbtType
-        if (parent != null){
+        if (parent != null) {
             assignWithMemberCommand(a)
-        }else{
+        } else {
             //是局部变量
-            if(a is NBTBasedDataConcrete<*>){
+            if (a is NBTBasedDataConcrete<*>) {
                 return NBTBasedDataConcrete(this, a.value as T)
-            }else{
+            } else {
                 assignWithNotConcreteGlobalVarCommand(a)
             }
         }
@@ -331,7 +334,7 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
      * @param type 要转换到的目标类型
      */
     override fun cast(type: MCFPPType): Var<*> {
-        return when(type){
+        return when (type) {
             MCFPPNBTType.NBT -> this
             is MCFPPListType -> this
             MCFPPBaseType.Any -> MCAnyConcrete(this)
@@ -350,8 +353,8 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
      */
     override fun getTempVar(): Var<*> {
         val temp = NBTBasedData<T>()
-        if(isDynamicPath()){
-            if(parent != null){
+        if (isDynamicPath()) {
+            if (parent != null) {
                 this.getPathString()
                 //动态的，进行解析
                 Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
@@ -364,7 +367,7 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
                         Command.build("function mcfpp.dynamic:data/modify/storage.from.entity_sp5 with storage mcfpp:arg dynamic")
                     )
                 )
-            }else{
+            } else {
                 this.getPathString("${Project.currNamespace}.stack_frame[$stackIndex]")
                 Function.addCommand("function mcfpp.dynamic.util:nbt/join_path")
                 Function.addCommand("data modify storage mcfpp:arg dynamic.targetPath set from storage mcfpp:arg path_join.base")
@@ -372,14 +375,14 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
                 //调用宏
                 Function.addCommand("function mcfpp.dynamic:data/modify/storage.from.entity_sp6 with storage mcfpp:arg dynamic")
             }
-        }else if(parent != null){
+        } else if (parent != null) {
             Function.addCommands(
                 Commands.selectRun(
                     parent!!,
                     Command.build("data modify storage mcfpp:temp temp.${temp.identifier} set from entity @s data.${getPathString()}")
                 )
             )
-        }else{
+        } else {
             Function.addCommand("data modify storage mcfpp:temp temp.${temp.identifier} set from storage mcfpp:system ${Project.currNamespace}.stack_frame[${stackIndex}].${getPathString()}")
         }
         return temp
@@ -423,7 +426,7 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
     }
 
     override fun getByIndex(index: Var<*>): NBTBasedData<*> {
-        return when(index){
+        return when (index) {
             is MCInt -> getByIntIndex(index)
             is MCString -> getByStringIndex(index)
             is NBTBasedData<*> -> getByNBTIndex(index)
@@ -431,11 +434,11 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
         }
     }
 
-    protected fun getByNBTIndex(index: NBTBasedData<*>): NBTBasedData<*>{
-        if(nbtType != NBTTypeWithTag.LIST && nbtType != NBTTypeWithTag.ANY){
+    protected fun getByNBTIndex(index: NBTBasedData<*>): NBTBasedData<*> {
+        if (nbtType != NBTTypeWithTag.LIST && nbtType != NBTTypeWithTag.ANY) {
             LogProcessor.error("Invalid nbt type")
         }
-        if(index.nbtType != NBTTypeWithTag.COMPOUND && index.nbtType != NBTTypeWithTag.ANY){
+        if (index.nbtType != NBTTypeWithTag.COMPOUND && index.nbtType != NBTTypeWithTag.ANY) {
             LogProcessor.error("Invalid nbt type")
         }
         val re = NBTBasedData(this)
@@ -444,7 +447,7 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
     }
 
     protected fun getByStringIndex(index: MCString): NBTBasedData<*> {
-        if(nbtType != NBTTypeWithTag.COMPOUND && nbtType != NBTTypeWithTag.ANY){
+        if (nbtType != NBTTypeWithTag.COMPOUND && nbtType != NBTTypeWithTag.ANY) {
             LogProcessor.error("Invalid nbt type")
         }
         val re = NBTBasedData(this)
@@ -453,7 +456,7 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
     }
 
     protected fun getByIntIndex(index: MCInt): NBTBasedData<*> {
-        if(nbtType != NBTTypeWithTag.LIST && nbtType != NBTTypeWithTag.ANY){
+        if (nbtType != NBTTypeWithTag.LIST && nbtType != NBTTypeWithTag.ANY) {
             LogProcessor.error("Invalid nbt type")
         }
         val re = NBTBasedData(this)
@@ -467,10 +470,10 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
         /**
          * 获取一个NBT列表的MCFPP类型
          */
-        fun ListTag<*>.getListType(): MCFPPListType{
-            if(this.size() != 0){
+        fun ListTag<*>.getListType(): MCFPPListType {
+            if (this.size() != 0) {
                 val t = NBTTypeWithTag.getTagType(this[0])
-                if(t == NBTTypeWithTag.LIST) {
+                if (t == NBTTypeWithTag.LIST) {
                     val elementType = (this[0] as ListTag<*>).getListType()
                     for (i in this.drop(1)) {
                         if (elementType != (i as ListTag<*>).getListType()) {
@@ -480,7 +483,7 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
                     return MCFPPListType(elementType)
                     //是复合标签
                 }
-                if(t == NBTTypeWithTag.COMPOUND){
+                if (t == NBTTypeWithTag.COMPOUND) {
                     val elementType = (this[0] as CompoundTag).getCompoundType()
                     for (i in this.drop(1)) {
                         if (elementType != (i as CompoundTag).getCompoundType()) {
@@ -498,43 +501,43 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
         /**
          * 获取一个NBT复合标签的MCFPP类型
          */
-        fun CompoundTag.getCompoundType(): MCFPPCompoundType{
+        fun CompoundTag.getCompoundType(): MCFPPCompoundType {
             val values = this.values()
             //复合标签为空，用any标记
-            if(values.isEmpty()){
+            if (values.isEmpty()) {
                 return MCFPPCompoundType(MCFPPBaseType.Any)
             }
             //判断所有元素是不是和第一个元素一样的
             val t = NBTTypeWithTag.getTagType(values.first())
             //如果是列表
-            if(t == NBTTypeWithTag.LIST){
+            if (t == NBTTypeWithTag.LIST) {
                 val listType = (values.first() as ListTag<*>).getListType()
-                for (value in values.drop(1)){
+                for (value in values.drop(1)) {
                     //并不全是列表
-                    if(NBTTypeWithTag.getTagType(value) != NBTTypeWithTag.LIST){
+                    if (NBTTypeWithTag.getTagType(value) != NBTTypeWithTag.LIST) {
                         return MCFPPCompoundType(MCFPPNBTType.NBT)
                     }
-                    if((value as ListTag<*>).getListType() != listType){
+                    if ((value as ListTag<*>).getListType() != listType) {
                         return MCFPPCompoundType(MCFPPListType(MCFPPNBTType.NBT))
                     }
                 }
             }
             //如果是复合标签
-            if(t == NBTTypeWithTag.COMPOUND){
+            if (t == NBTTypeWithTag.COMPOUND) {
                 val compoundType = (values.first() as CompoundTag).getCompoundType()
-                for (value in values.drop(1)){
+                for (value in values.drop(1)) {
                     //并不全是复合标签
-                    if(NBTTypeWithTag.getTagType(value) != NBTTypeWithTag.COMPOUND){
+                    if (NBTTypeWithTag.getTagType(value) != NBTTypeWithTag.COMPOUND) {
                         return MCFPPCompoundType(MCFPPNBTType.NBT)
                     }
-                    if((value as CompoundTag).getCompoundType() != compoundType){
+                    if ((value as CompoundTag).getCompoundType() != compoundType) {
                         return MCFPPCompoundType(MCFPPCompoundType(MCFPPNBTType.NBT))
                     }
                 }
             }
             //不是复杂类型
-            for (value in values.drop(1)){
-                if(NBTTypeWithTag.getTagType(value) != t){
+            for (value in values.drop(1)) {
+                if (NBTTypeWithTag.getTagType(value) != t) {
                     return MCFPPCompoundType(MCFPPNBTType.NBT)
                 }
             }
@@ -542,9 +545,9 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
         }
 
 
-        val data = CompoundData("nbt","mcfpp")
+        val data = CompoundData("nbt", "mcfpp")
 
-        enum class NBTTypeWithTag(val type: NBTType){
+        enum class NBTTypeWithTag(val type: NBTType) {
             BYTE(NBTType.VALUE),
             BOOL(NBTType.VALUE),
             SHORT(NBTType.VALUE),
@@ -560,8 +563,8 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
             LIST(NBTType.LIST),
             ANY(NBTType.ANY);
 
-            fun getMCFPPType(): MCFPPType{
-                return when(this){
+            fun getMCFPPType(): MCFPPType {
+                return when (this) {
                     BYTE -> MCFPPBaseType.Int
                     BOOL -> MCFPPBaseType.Bool
                     SHORT -> MCFPPBaseType.Int
@@ -577,13 +580,14 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
                     LIST -> {
                         throw Exception("不应该运行到这个地方吧")
                     }
+
                     ANY -> MCFPPBaseType.Any
                 }
             }
 
-            companion object{
-                fun getTagType(tag: Tag<*>): NBTTypeWithTag{
-                    return when(tag){
+            companion object {
+                fun getTagType(tag: Tag<*>): NBTTypeWithTag {
+                    return when (tag) {
                         is ByteTag -> BYTE
                         is ShortTag -> SHORT
                         is IntTag -> INT
@@ -608,9 +612,9 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
     }
 }
 
-class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData<T>, MCFPPValue<T> {
+class NBTBasedDataConcrete<T : Tag<*>> : NBTBasedData<T>, MCFPPValue<T> {
 
-    override var value : T
+    override var value: T
 
     /**
      * 创建一个固定的int
@@ -651,7 +655,7 @@ class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData<T>, MCFPPValue<T> {
         this.value = value
     }
 
-    constructor(v: NBTBasedDataConcrete<T>) : super(v){
+    constructor(v: NBTBasedDataConcrete<T>) : super(v) {
         this.value = v.value
     }
 
@@ -666,29 +670,37 @@ class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData<T>, MCFPPValue<T> {
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
         if (parent != null) {
-            val cmd = when(parent){
+            val cmd = when (parent) {
                 is ClassPointer -> {
                     Commands.selectRun(parent)
                 }
+
                 is MCFPPClassType -> {
                     arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
                 }
+
                 else -> TODO()
             }
-            if(cmd.size == 2){
+            if (cmd.size == 2) {
                 Function.addCommand(cmd[0])
             }
-            Function.addCommand(cmd.last().build(
-                "data modify entity @s data.${identifier} set value ${SNBTUtil.toSNBT(value)}")
+            Function.addCommand(
+                cmd.last().build(
+                    "data modify entity @s data.${identifier} set value ${SNBTUtil.toSNBT(value)}"
+                )
             )
         } else {
             val cmd = Command.build(
-                "data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set value ${SNBTUtil.toSNBT(value)}"
+                "data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set value ${
+                    SNBTUtil.toSNBT(
+                        value
+                    )
+                }"
             )
             Function.addCommand(cmd)
         }
         val re = NBTBasedData(this)
-        if(replace){
+        if (replace) {
             Function.currFunction.field.putVar(identifier, re, true)
         }
         return re

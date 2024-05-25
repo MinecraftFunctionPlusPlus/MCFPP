@@ -22,8 +22,8 @@ import java.io.FileReader
 import java.lang.reflect.InvocationTargetException
 
 
-object LibReader{
-    fun read(path: String){
+object LibReader {
+    fun read(path: String) {
         //读取json
         val fileReader = FileReader(path)
         val jsonString = fileReader.readText()
@@ -34,49 +34,63 @@ object LibReader{
     }
 }
 
-interface ILibJsonReader<T>{
+interface ILibJsonReader<T> {
     fun fromJson(jsonObject: JSONObject): T
 }
 
-object GlobalReader: ILibJsonReader<GlobalField>{
+object GlobalReader : ILibJsonReader<GlobalField> {
     override fun fromJson(jsonObject: JSONObject): GlobalField {
         val namespaces = jsonObject.getJSONArray("namespaces")
-        for (i in 0 until namespaces.size){
+        for (i in 0 until namespaces.size) {
             val namespace = namespaces.getJSONObject(i)
             GlobalField.libNamespaces[namespace.getString("id")] = NamespaceReader.fromJson(namespace)
         }
 
         //解析类型
-        for (n in GlobalField.libNamespaces.values){
-            n.field.forEachFunction { f -> run{
-                f.normalParams.forEach { p -> run{
-                    if(p.type is UnresolvedType){
-                        p.type = (p.type as UnresolvedType).resolve(f.field)
-                    }
-                } }
-                if(f.returnType is UnresolvedType){
-                    f.returnType = (f.returnType as UnresolvedType).resolve(f.field)
-                }
-            } }
-            n.field.forEachClass { c -> run{
-                c.staticField.forEachVar { v -> run{
-                    if(v is UnresolvedVar){
-                        v.replacedBy(v.resolve(c))
-                    }
-                } }
-                c.field.forEachVar { v -> run{
-                    if(v is UnresolvedVar){
-                        v.replacedBy(v.resolve(c))
-                    }
-                } }
-                c.constructors.forEach { constructor -> run{
-                    constructor.normalParams.forEach { p -> run{
-                        if(p.type is UnresolvedType){
-                            p.type = (p.type as UnresolvedType).resolve(constructor.field)
+        for (n in GlobalField.libNamespaces.values) {
+            n.field.forEachFunction { f ->
+                run {
+                    f.normalParams.forEach { p ->
+                        run {
+                            if (p.type is UnresolvedType) {
+                                p.type = (p.type as UnresolvedType).resolve(f.field)
+                            }
                         }
-                    } }
-                } }
-            } }
+                    }
+                    if (f.returnType is UnresolvedType) {
+                        f.returnType = (f.returnType as UnresolvedType).resolve(f.field)
+                    }
+                }
+            }
+            n.field.forEachClass { c ->
+                run {
+                    c.staticField.forEachVar { v ->
+                        run {
+                            if (v is UnresolvedVar) {
+                                v.replacedBy(v.resolve(c))
+                            }
+                        }
+                    }
+                    c.field.forEachVar { v ->
+                        run {
+                            if (v is UnresolvedVar) {
+                                v.replacedBy(v.resolve(c))
+                            }
+                        }
+                    }
+                    c.constructors.forEach { constructor ->
+                        run {
+                            constructor.normalParams.forEach { p ->
+                                run {
+                                    if (p.type is UnresolvedType) {
+                                        p.type = (p.type as UnresolvedType).resolve(constructor.field)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
 
@@ -84,45 +98,46 @@ object GlobalReader: ILibJsonReader<GlobalField>{
     }
 }
 
-object NamespaceReader: ILibJsonReader<Namespace> {
+object NamespaceReader : ILibJsonReader<Namespace> {
 
-    var currNamespace : Namespace? = null
+    var currNamespace: Namespace? = null
 
     override fun fromJson(jsonObject: JSONObject): Namespace {
         val id = jsonObject.getString("id")
         val namespace = Namespace(id)
         currNamespace = namespace
         val functions = jsonObject.getJSONArray("functions")
-        for (i in 0 until functions.size){
+        for (i in 0 until functions.size) {
             val function = functions.getJSONObject(i)
             namespace.field.addFunction(FunctionReader.fromJson(function), false)
         }
         val classes = jsonObject.getJSONArray("classes")
-        for (i in 0 until classes.size){
+        for (i in 0 until classes.size) {
             val cls = ClassReader.fromJson(classes.getJSONObject(i))
-            namespace.field.addClass(cls.identifier ,cls)
+            namespace.field.addClass(cls.identifier, cls)
         }
         val template = jsonObject.getJSONArray("template")
-        for (i in 0 until template.size){
+        for (i in 0 until template.size) {
             val t = TemplateReader.fromJson(template.getJSONObject(i))
-            namespace.field.addTemplate(t.identifier ,t)
+            namespace.field.addTemplate(t.identifier, t)
         }
         currNamespace = null
         return namespace
     }
 }
 
-object FunctionReader: ILibJsonReader<Function> {
+object FunctionReader : ILibJsonReader<Function> {
 
-    var currFunction : Function? = null
+    var currFunction: Function? = null
 
     override fun fromJson(jsonObject: JSONObject): Function {
         val identifier = jsonObject.getString("id")
         val namespace = NamespaceReader.currNamespace!!.identifier
         val returnType = UnresolvedType(jsonObject.getString("returnType"))
-        val function = if(jsonObject.containsKey("dataClass")){
+        val function = if (jsonObject.containsKey("dataClass")) {
             try {
-                val dataClass = java.lang.Class.forName(jsonObject.getString("dataClass")).getDeclaredConstructor().newInstance()
+                val dataClass =
+                    java.lang.Class.forName(jsonObject.getString("dataClass")).getDeclaredConstructor().newInstance()
                 NativeFunction(identifier, dataClass as MNIMethodContainer, returnType, namespace)
             } catch (e: ClassNotFoundException) {
                 LogProcessor.error("Cannot find class: ${jsonObject.getString("dataClass")}", e)
@@ -143,22 +158,22 @@ object FunctionReader: ILibJsonReader<Function> {
                 LogProcessor.error("Cannot invoke constructor for class: ${jsonObject.getString("dataClass")}", e)
                 UnknownFunction(identifier, namespace)
             }
-        } else if(jsonObject.containsKey("readonlyParam")){
+        } else if (jsonObject.containsKey("readonlyParam")) {
             val ctx = Utils.fromByteArrayString<mcfppParser.FunctionBodyContext>(jsonObject["context"].toString())
             GenericFunction(identifier, namespace, returnType, ctx)
-        }else{
+        } else {
             Function(identifier, namespace, returnType)
         }
         currFunction = function
         //参数获取
         val normalParams = jsonObject.getJSONArray("normalParams")
-        for (i in 0 until normalParams.size){
+        for (i in 0 until normalParams.size) {
             val param = normalParams.getJSONObject(i)
             function.normalParams.add(FunctionParamReader.fromJson(param))
         }
-        if(jsonObject.containsKey("readonlyParam")){
+        if (jsonObject.containsKey("readonlyParam")) {
             val readonlyParams = jsonObject.getJSONArray("readonlyParam")
-            for (i in 0 until readonlyParams.size){
+            for (i in 0 until readonlyParams.size) {
                 val param = readonlyParams.getJSONObject(i)
                 (function as GenericFunction).readOnlyParams.add(FunctionParamReader.fromJson(param))
             }
@@ -168,9 +183,9 @@ object FunctionReader: ILibJsonReader<Function> {
     }
 }
 
-object ClassReader: ILibJsonReader<Class> {
+object ClassReader : ILibJsonReader<Class> {
 
-    var currClass : Class? = null
+    var currClass: Class? = null
 
     override fun fromJson(jsonObject: JSONObject): Class {
         val id = jsonObject.getString("id")
@@ -190,7 +205,7 @@ object ClassReader: ILibJsonReader<Class> {
             }
         }
         //泛型参数
-        if(jsonObject.containsKey("generic")){
+        if (jsonObject.containsKey("generic")) {
             jsonObject.getJSONArray("generic").forEach {
                 run {
                     (clazz as GenericClass).readOnlyParams.add(ClassParamReader.fromJson(it as JSONObject))
@@ -211,7 +226,7 @@ object ClassReader: ILibJsonReader<Class> {
     }
 }
 
-object CompoundDataFieldReader: ILibJsonReader<CompoundDataField> {
+object CompoundDataFieldReader : ILibJsonReader<CompoundDataField> {
     override fun fromJson(jsonObject: JSONObject): CompoundDataField {
         val field = CompoundDataField(null, ClassReader.currClass)
         jsonObject.getJSONArray("vars").forEach {
@@ -231,14 +246,14 @@ object CompoundDataFieldReader: ILibJsonReader<CompoundDataField> {
     }
 }
 
-object ClassParamReader: ILibJsonReader<ClassParam> {
+object ClassParamReader : ILibJsonReader<ClassParam> {
     override fun fromJson(jsonObject: JSONObject): ClassParam {
         val identifier = jsonObject.getString("id")
         return ClassParam(jsonObject.getString("type"), identifier)
     }
 }
 
-object ConstructorReader: ILibJsonReader<Constructor> {
+object ConstructorReader : ILibJsonReader<Constructor> {
     override fun fromJson(jsonObject: JSONObject): Constructor {
         val constructor = Constructor(ClassReader.currClass!!)
         jsonObject.getJSONArray("normalParams").forEach {
@@ -250,13 +265,13 @@ object ConstructorReader: ILibJsonReader<Constructor> {
     }
 }
 
-object TemplateReader: ILibJsonReader<Template> {
+object TemplateReader : ILibJsonReader<Template> {
     override fun fromJson(jsonObject: JSONObject): Template {
         TODO()
     }
 }
 
-object FunctionParamReader: ILibJsonReader<FunctionParam> {
+object FunctionParamReader : ILibJsonReader<FunctionParam> {
     override fun fromJson(jsonObject: JSONObject): FunctionParam {
         val type = UnresolvedType(jsonObject.getString("type"))
         val identifier = jsonObject.getString("id")

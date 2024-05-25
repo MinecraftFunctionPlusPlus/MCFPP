@@ -2,15 +2,18 @@ package top.mcfpp.lang
 
 import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.lang.type.*
+import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPNBTType
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.function.NativeFunction
 import java.util.*
 
-class NBTMap : NBTDictionary{
+class NBTMap : NBTDictionary {
 
     override var type: MCFPPType = MCFPPNBTType.Map
+
     /**
      * 创建一个list类型的变量。它的mc名和变量所在的域容器有关。
      *
@@ -28,7 +31,7 @@ class NBTMap : NBTDictionary{
     constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier)
 
     override fun cast(type: MCFPPType): Var<*> {
-        return when(type){
+        return when (type) {
             MCFPPNBTType.Map -> this
             MCFPPBaseType.Any -> MCAnyConcrete(this)
             else -> throw VariableConverseException()
@@ -41,28 +44,28 @@ class NBTMap : NBTDictionary{
 
      */
 
-    companion object{
-        val data = CompoundData("map","mcfpp")
+    companion object {
+        val data = CompoundData("map", "mcfpp")
 
         init {
             data.initialize()
             data.field.addFunction(
-                NativeFunction("remove" ,NBTMapData(), MCFPPBaseType.Void,"mcfpp")
-                    .appendReadOnlyParam(MCFPPBaseType.String,"key"),
+                NativeFunction("remove", NBTMapData(), MCFPPBaseType.Void, "mcfpp")
+                    .appendReadOnlyParam(MCFPPBaseType.String, "key"),
                 false
             )
             data.field.addFunction(
-                NativeFunction("containsKey", NBTMapData(), MCFPPBaseType.Bool,"mcfpp")
-                    .appendReadOnlyParam(MCFPPBaseType.String,"key"),
+                NativeFunction("containsKey", NBTMapData(), MCFPPBaseType.Bool, "mcfpp")
+                    .appendReadOnlyParam(MCFPPBaseType.String, "key"),
                 false
             )
             data.field.addFunction(
-                NativeFunction("containsValue", NBTMapData(), MCFPPBaseType.Bool,"mcfpp")
-                    .appendReadOnlyParam(MCFPPNBTType.NBT,"value"),
+                NativeFunction("containsValue", NBTMapData(), MCFPPBaseType.Bool, "mcfpp")
+                    .appendReadOnlyParam(MCFPPNBTType.NBT, "value"),
                 false
             )
             data.field.addFunction(
-                NativeFunction("isEmpty", NBTMapData(), MCFPPBaseType.Bool,"mcfpp"),
+                NativeFunction("isEmpty", NBTMapData(), MCFPPBaseType.Bool, "mcfpp"),
                 false
             )
             /* TODO
@@ -76,21 +79,22 @@ class NBTMap : NBTDictionary{
             )
              */
             data.field.addFunction(
-                NativeFunction("merge", NBTMapData(), MCFPPBaseType.Void,"mcfpp")
-                    .appendReadOnlyParam(MCFPPNBTType.Map,"m"),
+                NativeFunction("merge", NBTMapData(), MCFPPBaseType.Void, "mcfpp")
+                    .appendReadOnlyParam(MCFPPNBTType.Map, "m"),
                 false
             )
             data.field.addFunction(
-                NativeFunction("size", NBTMapData(), MCFPPBaseType.Int,"mcfpp"),
+                NativeFunction("size", NBTMapData(), MCFPPBaseType.Int, "mcfpp"),
                 false
             )
         }
     }
 }
 
-class NBTMapConcrete : NBTDictionaryConcrete{
+class NBTMapConcrete : NBTDictionaryConcrete {
 
     override var type: MCFPPType = MCFPPNBTType.Map
+
     /**
      * 创建一个固定的list
      *
@@ -117,7 +121,7 @@ class NBTMapConcrete : NBTDictionaryConcrete{
      */
     constructor(b: CompoundTag) : super(b)
 
-    constructor(v: NBTMapConcrete) : super(v){
+    constructor(v: NBTMapConcrete) : super(v) {
         this.value = v.value
     }
 

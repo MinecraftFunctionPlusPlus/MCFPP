@@ -4,11 +4,10 @@ import top.mcfpp.exception.VariableNotResolvedException
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.type.UnresolvedType
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
 import top.mcfpp.model.field.IFieldWithType
+import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
-
 
 
 /**
@@ -19,12 +18,12 @@ import top.mcfpp.util.LogProcessor
  */
 class UnresolvedVar : Var<Any> {
 
-    val typeScope : IFieldWithType
+    val typeScope: IFieldWithType
 
     /**
      * 创建一个未被解析的变量，它有指定的标识符和类型
      */
-    constructor(identifier: String, type: UnresolvedType, typeScope: IFieldWithType){
+    constructor(identifier: String, type: UnresolvedType, typeScope: IFieldWithType) {
         this.type = type
         this.identifier = identifier
         this.typeScope = typeScope
@@ -36,7 +35,7 @@ class UnresolvedVar : Var<Any> {
      * @param fieldContainer
      * @return
      */
-    fun resolve(fieldContainer: FieldContainer): Var<*>{
+    fun resolve(fieldContainer: FieldContainer): Var<*> {
         return build(identifier, (type as UnresolvedType).resolve(typeScope), fieldContainer)
     }
 

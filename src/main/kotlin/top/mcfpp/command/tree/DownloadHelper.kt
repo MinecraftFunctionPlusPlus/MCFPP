@@ -49,54 +49,56 @@ fun parseGzippedJson(buffer: ByteArray): Any? {
     }
 }
 
-enum class DownloadResourceType{
-    blocks,commands,registries
+enum class DownloadResourceType {
+    blocks, commands, registries
 }
 
 class DownloadHelper {
-    companion object{
+    companion object {
         private fun getUri(
-            source:String,
-            user:String,
-            repo:String,
-            tag:String,
-            path:String
-            ): String = when(source){
-            "fastly"-> "https://fastly.jsdelivr.net/gh/${user}/${repo}@${tag}/${path}"
-            "github"-> "https://raw.githubusercontent.com/${user}/${repo}/${tag}/${path}"
-            "jsdelivr"-> "https://cdn.jsdelivr.net/gh/${user}/${repo}@${tag}/${path}"
+            source: String,
+            user: String,
+            repo: String,
+            tag: String,
+            path: String
+        ): String = when (source) {
+            "fastly" -> "https://fastly.jsdelivr.net/gh/${user}/${repo}@${tag}/${path}"
+            "github" -> "https://raw.githubusercontent.com/${user}/${repo}/${tag}/${path}"
+            "jsdelivr" -> "https://cdn.jsdelivr.net/gh/${user}/${repo}@${tag}/${path}"
             else -> ""
         }
 
         private fun getMcmetaSummaryUri(
-            type:DownloadResourceType,
+            type: DownloadResourceType,
             version: String,
             isLatest: Boolean,
             source: String,
-        ):String{
-            val tag = if(isLatest) "summary" else "${version}-summary"
+        ): String {
+            val tag = if (isLatest) "summary" else "${version}-summary"
             val path = "${type}/data.json.gz"
             val res = getUri(
                 source.lowercase(Locale.getDefault()),
-                user = "misode", repo = "mcmeta",tag, path)
+                user = "misode", repo = "mcmeta", tag, path
+            )
             return res
         }
+
         private fun getMcmetaSummary(
             type: DownloadResourceType,
             version: String,
             isLatest: Boolean,
             source: String,
-        ):Any? // JSON
+        ): Any? // JSON
         {
             val ref = Downloader.getGitRef(
                 defaultBranch = "summary",
-                getTag = { "${it}-summary"},
+                getTag = { "${it}-summary" },
                 isLatest,
                 version
             )
-            val uri = getMcmetaSummaryUri(type,version,isLatest,source)
-            var checksum:String? = null
-            fun getResource(type:DownloadResourceType):Any?{
+            val uri = getMcmetaSummaryUri(type, version, isLatest, source)
+            var checksum: String? = null
+            fun getResource(type: DownloadResourceType): Any? {
                 val out = Downloader.DownloadOut(null, null)
                 val data = Downloader.download(
                     Downloader.DownloadJob(
@@ -110,65 +112,71 @@ class DownloadHelper {
                         options = null
                     ), out
                 )
-                checksum = if(checksum==null ) out.checksum else checksum
+                checksum = if (checksum == null) out.checksum else checksum
                 return data
             }
             return getResource(DownloadResourceType.commands)
         }
+
         fun getMcmetaCommands(
             version: String,
             isLatest: Boolean,
             source: String,
-        ):CommandTreeNode{
-            return JSON.to(CommandTreeNode::class.java, getMcmetaSummary(DownloadResourceType.commands,version,isLatest,source))
+        ): CommandTreeNode {
+            return JSON.to(
+                CommandTreeNode::class.java,
+                getMcmetaSummary(DownloadResourceType.commands, version, isLatest, source)
+            )
         }
     }
 }
 
 
-class Downloader(){
+class Downloader {
     class ExternalDownloaderOptions(
-        val headers: MutableMap<String,String>?,
+        val headers: MutableMap<String, String>?,
         val timeout: Int?
-    ){}
+    )
 
 
     class DownloadJob<R>(
         val id: String?,
         val uri: String,//"http://" "https://"
         val cache: DownloadCache?,
-        val transformer:(data: ByteArray)->R,
+        val transformer: (data: ByteArray) -> R,
         val options: ExternalDownloaderOptions?,
         val ttl: Int?
-    ){
-        constructor(job: DownloadJob<R>,id:String) : this(
-            id,job.uri,job.cache,job.transformer,job.options,job.ttl
-        ) {}
+    ) {
+        constructor(job: DownloadJob<R>, id: String) : this(
+            id, job.uri, job.cache, job.transformer, job.options, job.ttl
+        )
     }
 
     class MemoryCache(
         var buffer: ByteArray,
-        var time:Long
-    ){}
+        var time: Long
+    )
+
     class DownloadCache(
         val checksumJob: DownloadJob<String>,
         val checksumExtension: String, //".${extension}"
-        val serializer: ((data: ByteArray)->ByteArray)?,
-        val deserializer: ((data: ByteArray)->ByteArray)?
-    ){
+        val serializer: ((data: ByteArray) -> ByteArray)?,
+        val deserializer: ((data: ByteArray) -> ByteArray)?
+    ) {
         class GitHubRefResponse(
             var message: String?,
             var ref: String,
-            var `object`:ShaObject
-        ){
-            class ShaObject(var sha:String)
+            var `object`: ShaObject
+        ) {
+            class ShaObject(var sha: String)
         }
-        companion object{
+
+        companion object {
             fun getCacheOptionsBasedOnGitHubCommitSha(
                 owner: String,
                 repo: String,
                 ref: String,
-            ):DownloadCache {
+            ): DownloadCache {
                 return DownloadCache(
                     checksumExtension = ".commit-sha",
                     checksumJob = DownloadJob(
@@ -189,8 +197,9 @@ class Downloader(){
     class DownloadOut(
         var cacheUri: Path?,
         var checksum: String?
-    ) {}
-    companion object{
+    )
+
+    companion object {
         val DownloaderTtl = 15_000
         val GitHubApiDownloadOptions = ExternalDownloaderOptions(
             headers = mutableMapOf(
@@ -199,128 +208,121 @@ class Downloader(){
             ),
             null
         )
-        fun getGitHubRefResponseSha(buffer:ByteArray):String{
+
+        fun getGitHubRefResponseSha(buffer: ByteArray): String {
             val response = JSON.parse(buffer)
-            if(response is JSONArray){
-                val gitHubRefResponse = JSON.to(DownloadCache.GitHubRefResponse::class.java,response[0])
-                return gitHubRefResponse.`object`.sha;
+            if (response is JSONArray) {
+                val gitHubRefResponse = JSON.to(DownloadCache.GitHubRefResponse::class.java, response[0])
+                return gitHubRefResponse.`object`.sha
             }
-            val gitHubRefResponse = JSON.to(DownloadCache.GitHubRefResponse::class.java,response)
-            if(gitHubRefResponse.message==null){
-                return gitHubRefResponse.`object`.sha;
-            }
-            else{
+            val gitHubRefResponse = JSON.to(DownloadCache.GitHubRefResponse::class.java, response)
+            if (gitHubRefResponse.message == null) {
+                return gitHubRefResponse.`object`.sha
+            } else {
                 throw Error(gitHubRefResponse.message)
             }
         }
+
         fun getGitRef(
             defaultBranch: String,
             getTag: (version: String) -> String,
             isLatest: Boolean,
             version: String
-        ):String{
-            return if(isLatest) "refs/heads/${defaultBranch}"
+        ): String {
+            return if (isLatest) "refs/heads/${defaultBranch}"
             else "refs/tags/${getTag(version)}"
         }
 
-        val memoryCaches:MutableMap<String,MemoryCache> = mutableMapOf()
+        val memoryCaches: MutableMap<String, MemoryCache> = mutableMapOf()
         fun <R> download(
             job: DownloadJob<R>,
-            out: DownloadOut = DownloadOut(null,null)
+            out: DownloadOut = DownloadOut(null, null)
         ): R? {
-            if(job.ttl!=null&& memoryCaches.contains(job.uri)){
+            if (job.ttl != null && memoryCaches.contains(job.uri)) {
                 val memoryCache = memoryCaches[job.uri]!!
-                if(memoryCache.time <= System.currentTimeMillis()+ job.ttl){
+                if (memoryCache.time <= System.currentTimeMillis() + job.ttl) {
                     LogProcessor.info(
                         "[Downloader] [${job.id}] Skipped thanks to valid cache in memory",
                     )
                     return job.transformer(memoryCache.buffer)
-                }
-                else{
+                } else {
                     memoryCaches.remove(job.uri)
                 }
 
             }
-            var checksum:String? = null
-            var cacheUri:Path? = null
+            var checksum: String? = null
+            var cacheUri: Path? = null
             var cacheChecksumUri: Path? = null
-            if(job.cache!=null){
+            if (job.cache != null) {
                 var checksumJob = job.cache.checksumJob
                 var checksumExtension = job.cache.checksumExtension
                 cacheUri = Project.config.root.resolve("downloader/${job.id}")
                 out.cacheUri = cacheUri
                 cacheChecksumUri = Project.config.root.resolve("downloader/${job.id}${checksumExtension}")
-                try{
-                    if(Files.notExists(cacheUri.parent)){
+                try {
+                    if (Files.notExists(cacheUri.parent)) {
                         Files.createDirectories(cacheUri.parent)
                     }
-                    if(Files.notExists(cacheChecksumUri.parent)){
+                    if (Files.notExists(cacheChecksumUri.parent)) {
                         Files.createDirectories(cacheChecksumUri.parent)
                     }
+                } catch (_: IOException) {
                 }
-                catch (_:IOException){ }
 
-                try{
-                    checksum = download(DownloadJob(checksumJob,job.id+checksumExtension))
+                try {
+                    checksum = download(DownloadJob(checksumJob, job.id + checksumExtension))
                     out.checksum = checksum
-                    try{
+                    try {
                         val cacheChecksum = Files.readString(cacheChecksumUri)
-                        if(checksum == cacheChecksum){
+                        if (checksum == cacheChecksum) {
                             try {
-                                if(cacheUri!=null){
+                                if (cacheUri != null) {
                                     val cachedBuffer = Files.readAllBytes(cacheUri)
-                                    if(job.ttl!=null){
-                                        memoryCaches[job.uri] = MemoryCache(cachedBuffer,System.currentTimeMillis())
-                                        val deserializer = job.cache.deserializer?:{it}
-                                        LogProcessor.info("[Downloader] [${job.id}] Skipped downloading thanks to cache ${cacheChecksum}",)
+                                    if (job.ttl != null) {
+                                        memoryCaches[job.uri] = MemoryCache(cachedBuffer, System.currentTimeMillis())
+                                        val deserializer = job.cache.deserializer ?: { it }
+                                        LogProcessor.info("[Downloader] [${job.id}] Skipped downloading thanks to cache ${cacheChecksum}")
                                         return job.transformer(deserializer(cachedBuffer))
                                     }
                                 }
-                            }
-                            catch (_:FileNotFoundException){
-                                try{
-                                    if(cacheChecksumUri!=null)
+                            } catch (_: FileNotFoundException) {
+                                try {
+                                    if (cacheChecksumUri != null)
                                         Files.delete(cacheChecksumUri)
-                                }
-                                catch (_:IOException){
+                                } catch (_: IOException) {
                                     LogProcessor.error("[Downloader] [${job.id}] Removing invalid cache checksum “${cacheChecksumUri}")
                                 }
-                            }
-                            catch (_:IOException){
+                            } catch (_: IOException) {
                                 LogProcessor.error("[Downloader] [${job.id}] Loading cached file “${cacheUri}")
                             }
                         }
+                    } catch (_: FileNotFoundException) {
+                    } catch (_: IOException) {
+                        LogProcessor.error("[Downloader] [${job.id}] Loading cache checksum “${cacheChecksumUri}”")
                     }
-                    catch (_:FileNotFoundException){ }
-                    catch (_:IOException){
-                        LogProcessor.error("[Downloader] [${job.id}] Loading cache checksum “${cacheChecksumUri}”",)
-                    }
-                }
-                catch (_:IOException){
-                    LogProcessor.error("[Downloader] [${job.id}] Fetching latest checksum “${checksumJob.uri}”",)
+                } catch (_: IOException) {
+                    LogProcessor.error("[Downloader] [${job.id}] Fetching latest checksum “${checksumJob.uri}”")
                 }
             }
 
-            try{
-                URL(job.uri).openStream().use {input->
+            try {
+                URL(job.uri).openStream().use { input ->
                     val buffer = input.readAllBytes()
-                    if(job.ttl!=null){
-                        memoryCaches[job.uri] = MemoryCache(buffer,System.currentTimeMillis())
+                    if (job.ttl != null) {
+                        memoryCaches[job.uri] = MemoryCache(buffer, System.currentTimeMillis())
                     }
-                    if(job.cache!=null&&cacheUri!=null&&cacheChecksumUri!=null){
-                        if(checksum!=null){
-                            try{
-                                Files.writeString(cacheChecksumUri,checksum)
-                            }
-                            catch (_:IOException){
+                    if (job.cache != null && cacheUri != null && cacheChecksumUri != null) {
+                        if (checksum != null) {
+                            try {
+                                Files.writeString(cacheChecksumUri, checksum)
+                            } catch (_: IOException) {
                                 LogProcessor.error("[Downloader] [${job.id}] Saving cache checksum “${cacheChecksumUri}")
                             }
                         }
-                        try{
-                            val serializer = job.cache.serializer?:{it}
-                            Files.write(cacheUri,serializer(buffer))
-                        }
-                        catch (_:IOException){
+                        try {
+                            val serializer = job.cache.serializer ?: { it }
+                            Files.write(cacheUri, serializer(buffer))
+                        } catch (_: IOException) {
                             LogProcessor.error("[Downloader] [${job.id}] Caching file “${cacheUri}")
                         }
                     }
@@ -328,8 +330,7 @@ class Downloader(){
                     return job.transformer(buffer)
                 }
 
-            }
-            catch (_:IOException){
+            } catch (_: IOException) {
                 LogProcessor.error("[Downloader] [${job.id}] Downloading “${job.uri}”")
             }
             return null

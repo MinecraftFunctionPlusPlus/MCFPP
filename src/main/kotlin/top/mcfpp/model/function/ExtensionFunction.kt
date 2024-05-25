@@ -6,13 +6,18 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.CompoundData
 import top.mcfpp.util.StringHelper
 
-open class ExtensionFunction: Function {
+open class ExtensionFunction : Function {
 
     /**
      * 创建一个函数
      * @param name 函数的标识符
      */
-    constructor(name: String, owner: CompoundData, namespace: String = Project.currNamespace, returnType: MCFPPType = MCFPPBaseType.Void):super(name, namespace, returnType){
+    constructor(
+        name: String,
+        owner: CompoundData,
+        namespace: String = Project.currNamespace,
+        returnType: MCFPPType = MCFPPBaseType.Void
+    ) : super(name, namespace, returnType) {
         this.owner = owner
     }
 
@@ -23,9 +28,9 @@ open class ExtensionFunction: Function {
          */
         get() {
             val re: StringBuilder =
-                if(isStatic){
+                if (isStatic) {
                     StringBuilder("$namespace:${owner!!.identifier}/ex_static/$identifier")
-                }else{
+                } else {
                     StringBuilder("$namespace:${owner!!.identifier}/ex/$identifier")
                 }
             for (p in normalParams) {
@@ -40,9 +45,9 @@ open class ExtensionFunction: Function {
     override val nameWithNamespace: String
         get() {
             val re: StringBuilder =
-                if(isStatic){
+                if (isStatic) {
                     StringBuilder("${owner!!.identifier}/ex_static/$identifier")
-                }else{
+                } else {
                     StringBuilder("${owner!!.identifier}/ex/$identifier")
                 }
             for (p in normalParams) {

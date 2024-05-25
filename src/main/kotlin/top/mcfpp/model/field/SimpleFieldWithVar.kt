@@ -8,6 +8,7 @@ class SimpleFieldWithVar : IFieldWithVar {
      * 变量
      */
     protected val vars: HashMap<String, Var<*>> = HashMap()
+
     /**
      * 向此缓存中添加一个新的变量键值对。如果已存在此对象，将不会进行覆盖。
      * @param key 变量的标识符
@@ -15,7 +16,7 @@ class SimpleFieldWithVar : IFieldWithVar {
      * @return 如果缓存中已经存在此对象，则返回false，否则返回true。
      */
     override fun putVar(key: String, `var`: Var<*>, forced: Boolean): Boolean {
-        if(forced){
+        if (forced) {
             vars[key] = `var`
             return true
         }
@@ -64,12 +65,12 @@ class SimpleFieldWithVar : IFieldWithVar {
      * @param id 变量名
      * @return 若变量存在，则返回被移除的变量，否则返回空
      */
-    override fun removeVar(id : String): Var<*>?{
+    override fun removeVar(id: String): Var<*>? {
         return vars.remove(id)
     }
 
     override fun forEachVar(action: (Var<*>) -> Any?) {
-        for (v in vars.values){
+        for (v in vars.values) {
             action(v)
         }
     }

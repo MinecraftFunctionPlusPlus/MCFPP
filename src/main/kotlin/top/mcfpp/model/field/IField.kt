@@ -21,6 +21,4 @@ package top.mcfpp.model.field
  * 函数储存在一个列表中
  *
  */
-interface IField {
-
-}
+interface IField

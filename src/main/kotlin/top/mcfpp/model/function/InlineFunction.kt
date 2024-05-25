@@ -18,7 +18,8 @@ class InlineFunction : Function {
         this.context = context
     }
 
-    constructor(name: String, namespace: String, context: mcfppParser.InlineFunctionDeclarationContext) : super(name, namespace,
+    constructor(name: String, namespace: String, context: mcfppParser.InlineFunctionDeclarationContext) : super(
+        name, namespace,
         MCFPPBaseType.Void
     ) {
         this.context = context
@@ -30,8 +31,8 @@ class InlineFunction : Function {
             field.putVar(this.readOnlyParams[argi.index].identifier,argi.value,true)
         }
          */
-        for (argi in normalArgs.withIndex()){
-            field.putVar(this.normalParams[argi.index].identifier,argi.value,true)
+        for (argi in normalArgs.withIndex()) {
+            field.putVar(this.normalParams[argi.index].identifier, argi.value, true)
         }
     }
 
@@ -41,11 +42,11 @@ class InlineFunction : Function {
      * @param normalParams
      * @param caller
      */
-    override fun invoke(/*readOnlyArgs:ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, caller: Var<*>){
+    override fun invoke(/*readOnlyArgs:ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, caller: Var<*>) {
         //基本类型
         addCommand("#[Inline Function ${this.namespaceID}]")
         //传入this参数
-        field.putVar("this",caller,true)
+        field.putVar("this", caller, true)
         //参数传递
         argPass(/*readOnlyArgs, */normalArgs)
         //重新遍历这个函数
@@ -68,7 +69,9 @@ class InlineFunction : Function {
      * @see top.mcfpp.antlr.McfppExprVisitor.visitVar
      */
     @InsertCommand
-    override fun invoke(/*readOnlyArgs:ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, callerClassP: ClassPointer?) {
+    override fun invoke(/*readOnlyArgs:ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>,
+                        callerClassP: ClassPointer?
+    ) {
         //基本类型
         addCommand("#[Inline Function ${this.namespaceID}]")
         //参数传递
@@ -93,7 +96,7 @@ class InlineFunction : Function {
      * @param normalArgs
      * @param struct
      */
-    override fun invoke(/*readOnlyArgs:ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, struct: IntTemplateBase){
+    override fun invoke(/*readOnlyArgs:ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, struct: IntTemplateBase) {
         TODO()
     }
 }

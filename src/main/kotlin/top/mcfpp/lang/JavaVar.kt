@@ -4,17 +4,19 @@ import net.querz.nbt.tag.CompoundTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.OperationNotImplementException
 import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.lang.type.*
+import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPListType
+import top.mcfpp.lang.type.MCFPPNBTType
+import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
-import top.mcfpp.model.*
+import top.mcfpp.model.CompoundData
+import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.JavaFunction
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil.toJava
-import java.lang.Class
 import java.util.*
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KVisibility
 import kotlin.reflect.full.memberProperties
@@ -29,11 +31,12 @@ import kotlin.reflect.full.memberProperties
  * @constructor Create empty Java var
  */
 
-class JavaVar : Var<Any>, MCFPPValue<Any?>{
+class JavaVar : Var<Any>, MCFPPValue<Any?> {
 
-    override var value : Any? = null
+    override var value: Any? = null
 
     override var type: MCFPPType = MCFPPBaseType.JavaVar
+
     /**
      * 创建一个固定的JavaVar
      *
@@ -74,6 +77,7 @@ class JavaVar : Var<Any>, MCFPPValue<Any?>{
             is JavaVar -> {
                 this.value = b.value
             }
+
             else -> {
                 this.value = b
             }
@@ -86,7 +90,7 @@ class JavaVar : Var<Any>, MCFPPValue<Any?>{
      * @param type 要转换到的目标类型
      */
     override fun cast(type: MCFPPType): Var<*> {
-        return when(type){
+        return when (type) {
             MCFPPBaseType.JavaVar -> this
             MCFPPBaseType.Any -> MCAnyConcrete(this)
             else -> throw VariableConverseException()
@@ -102,7 +106,9 @@ class JavaVar : Var<Any>, MCFPPValue<Any?>{
      *
      * @return
      */
-    override fun getTempVar(): Var<*> { return this }
+    override fun getTempVar(): Var<*> {
+        return this
+    }
 
     override fun storeToStack() {}
 
@@ -117,12 +123,12 @@ class JavaVar : Var<Any>, MCFPPValue<Any?>{
      */
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         //获取value中的一个成员变量
-        if(value == null) {
+        if (value == null) {
             LogProcessor.error("Cannot access properties in $identifier because its value is null")
             throw NullPointerException()
         }
         val member = value!!::class.memberProperties.find { it.name == key } as KProperty1<Any, *>?
-        if(member != null){
+        if (member != null) {
             return Pair(JavaVar(member.get(value!!)), member.visibility == KVisibility.PUBLIC)
         }
         return Pair(null, true)
@@ -142,14 +148,14 @@ class JavaVar : Var<Any>, MCFPPValue<Any?>{
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         //获取value中的一个成员方法
-        if(value == null) {
+        if (value == null) {
             LogProcessor.error("Cannot access properties in $identifier because its value is null")
             throw NullPointerException()
         }
-        try{
+        try {
             val member = value!!::class.java.getDeclaredMethod(key, *getTypeArray(normalParams))
             return Pair(JavaFunction(member, this), member.canAccess(Any()))
-        }catch (e: NoSuchMethodException){
+        } catch (e: NoSuchMethodException) {
             LogProcessor.error("No method '$key' in $identifier}")
             throw e
         }
@@ -160,9 +166,9 @@ class JavaVar : Var<Any>, MCFPPValue<Any?>{
         throw OperationNotImplementException("Lost tracking of JavaVar type variable values")
     }
 
-    private fun getTypeArray(params: List<MCFPPType>): Array<Class<*>>{
+    private fun getTypeArray(params: List<MCFPPType>): Array<Class<*>> {
         return params.map {
-            when(it){
+            when (it) {
                 MCFPPBaseType.Int -> Int::class.java
                 MCFPPBaseType.Float -> Float::class.java
                 MCFPPBaseType.Bool -> Long::class.java
@@ -195,15 +201,15 @@ class JavaVar : Var<Any>, MCFPPValue<Any?>{
         return "JavaVar[$value]"
     }
 
-    companion object{
+    companion object {
 
-        val data = CompoundData("JavaVar","mcfpp")
+        val data = CompoundData("JavaVar", "mcfpp")
 
-        fun mcToJava(v : Var<*>) : Any{
-            if(v !is MCFPPValue<*>){
+        fun mcToJava(v: Var<*>): Any {
+            if (v !is MCFPPValue<*>) {
                 return v
             }
-            return when(v){
+            return when (v) {
                 is MCIntConcrete -> v.value
                 is MCFloatConcrete -> v.value
                 is MCBoolConcrete -> v.value
@@ -216,9 +222,9 @@ class JavaVar : Var<Any>, MCFPPValue<Any?>{
             }!!
         }
 
-        fun mcToJava(v: ArrayList<Var<*>>): ArrayList<Any>{
+        fun mcToJava(v: ArrayList<Var<*>>): ArrayList<Any> {
             val re = ArrayList<Any>()
-            for (i in v){
+            for (i in v) {
                 re.add(mcToJava(i))
             }
             return re

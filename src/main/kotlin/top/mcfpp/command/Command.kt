@@ -1,7 +1,6 @@
 package top.mcfpp.command
 
 import top.mcfpp.exception.CommandException
-import java.lang.StringBuilder
 
 /**
  * 一条编译时动态命令。包含了可以被替换的字符串位点，每个位点都有一个唯一的ID。
@@ -14,15 +13,15 @@ open class Command {
 
     private val tags = ArrayList<String>()
 
-    private val replacePoint = HashMap<String,Int>()
+    private val replacePoint = HashMap<String, Int>()
 
     var isCompleted = false
 
-    constructor(command: String){
+    constructor(command: String) {
         commandStringList.add(command)
     }
 
-    constructor(command: String, pointID: String){
+    constructor(command: String, pointID: String) {
         replacePoint[pointID] = commandStringList.size
         commandStringList.add(command)
     }
@@ -33,7 +32,7 @@ open class Command {
      * @param tag 目标tag
      * @return 是否有这个tag
      */
-    fun hasTag(tag: String): Boolean{
+    fun hasTag(tag: String): Boolean {
         return tags.contains(tag)
     }
 
@@ -42,9 +41,9 @@ open class Command {
      *
      * @return
      */
-    open fun analyze(): String{
+    open fun analyze(): String {
         val sb = StringBuilder()
-        for (c in commandStringList){
+        for (c in commandStringList) {
             sb.append(c)
         }
         commandStringList.clear()
@@ -56,12 +55,12 @@ open class Command {
     /**
      * 转为宏命令。将会把所有可以替换的位点设置为宏参数。宏参数的名字和替换位点id相同
      */
-    fun toMacro() : String{
+    fun toMacro(): String {
         val sb = StringBuilder()
-        for (c in commandStringList.indices){
-            if(replacePoint.containsValue(c)){
+        for (c in commandStringList.indices) {
+            if (replacePoint.containsValue(c)) {
                 sb.append("{{${replacePoint.filter { it.value == c }.keys.first()}}}")
-            }else{
+            } else {
                 sb.append(commandStringList[c])
             }
         }
@@ -76,38 +75,38 @@ open class Command {
      *
      * @return 如果没有可以替换的位点，则返回false
      */
-    private fun replace(pointID: String, target: String): Boolean{
+    private fun replace(pointID: String, target: String): Boolean {
         val point = replacePoint[pointID] ?: return false
         commandStringList[point] = target
         return true
     }
 
-    fun replace(vararg pointIDtoTarget: Pair<String,String>): Int{
+    fun replace(vararg pointIDtoTarget: Pair<String, String>): Int {
         var suc = 0
-        for (pt in pointIDtoTarget){
-            if(replace(pt.first,pt.second)) suc++
+        for (pt in pointIDtoTarget) {
+            if (replace(pt.first, pt.second)) suc++
         }
         return suc
     }
 
-    fun get(pointID: String): String?{
+    fun get(pointID: String): String? {
         val point = replacePoint[pointID] ?: return null
         return commandStringList[point]
     }
 
-    fun prepend(command: String){
-        if(isCompleted){
+    fun prepend(command: String) {
+        if (isCompleted) {
             throw CommandException("Try to prepend argument to a completed command")
         }
-        commandStringList.add(0,command)
+        commandStringList.add(0, command)
     }
 
-    fun prepend(command: Command){
-        if(isCompleted){
+    fun prepend(command: Command) {
+        if (isCompleted) {
             throw CommandException("Try to prepend argument to a completed command")
         }
-        for (c in command.commandStringList){
-            commandStringList.add(0,c)
+        for (c in command.commandStringList) {
+            commandStringList.add(0, c)
         }
         replacePoint.putAll(command.replacePoint)
     }
@@ -119,13 +118,13 @@ open class Command {
      * @param withBlank 是否会在此字符串和已有的字符串之间添加空格
      * @return
      */
-    fun build(command: String) : Command{
+    fun build(command: String): Command {
         commandStringList.add(command)
         return this
     }
 
-    fun build(command: Command): Command{
-        for (kv in command.replacePoint){
+    fun build(command: Command): Command {
+        for (kv in command.replacePoint) {
             replacePoint[kv.key] = kv.value + commandStringList.size
         }
         commandStringList.addAll(command.commandStringList)
@@ -139,22 +138,22 @@ open class Command {
      * @param pointID 命令字符串的位点ID
      * @return
      */
-    fun build(command: String, pointID: String) : Command{
+    fun build(command: String, pointID: String): Command {
         replacePoint[pointID] = commandStringList.size
         commandStringList.add(" ")
         commandStringList.add(command)
         return this
     }
 
-    override fun toString(): String{
+    override fun toString(): String {
         val sb = StringBuilder()
-        for (c in commandStringList){
+        for (c in commandStringList) {
             sb.append(c)
         }
         return sb.toString()
     }
 
-    companion object{
+    companion object {
 
         /**
          * 构建命令
@@ -162,7 +161,7 @@ open class Command {
          * @param command 固定的命令字符串
          * @return
          */
-        fun build(command: String) : Command{
+        fun build(command: String): Command {
             return Command(command)
         }
 
@@ -173,7 +172,7 @@ open class Command {
          * @param pointID 命令字符串的位点ID
          * @return
          */
-        fun build(command: String, pointID: String) : Command{
+        fun build(command: String, pointID: String): Command {
             return Command(command, pointID)
         }
     }

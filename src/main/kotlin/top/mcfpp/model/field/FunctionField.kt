@@ -4,8 +4,6 @@ import org.jetbrains.annotations.Nullable
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.FieldContainer
-import kotlin.collections.HashMap
-import kotlin.collections.HashSet
 
 /**
  * 一个函数的域。储存了这个函数中的变量
@@ -26,13 +24,13 @@ open class FunctionField : IFieldWithVar, IFieldWithType {
     /**
      * 类型
      */
-    protected val types : HashMap<String, MCFPPType> = HashMap()
+    protected val types: HashMap<String, MCFPPType> = HashMap()
 
     /**
      * 父级域。函数的父级域可能是全局，也可能是类
      */
     @Nullable
-    open var parent : IField?
+    open var parent: IField?
 
     /**
      * 这个缓存在哪一个容器中
@@ -60,7 +58,7 @@ open class FunctionField : IFieldWithVar, IFieldWithType {
      */
     override fun putVar(key: String, `var`: Var<*>, forced: Boolean): Boolean {
         fieldVarSet.add(key)
-        if(forced){
+        if (forced) {
             vars[key] = `var`
             return true
         }
@@ -109,19 +107,19 @@ open class FunctionField : IFieldWithVar, IFieldWithType {
      * @param id 变量名
      * @return 若变量存在，则返回被移除的变量，否则返回空
      */
-    override fun removeVar(id : String): Var<*>?{
+    override fun removeVar(id: String): Var<*>? {
         return vars.remove(id)
     }
 
     override fun forEachVar(action: (Var<*>) -> Any?) {
-        for (v in vars.values){
+        for (v in vars.values) {
             action(v)
         }
     }
 
     override fun putType(key: String, type: MCFPPType, forced: Boolean): Boolean {
         fieldTypeSet.add(key)
-        if(forced){
+        if (forced) {
             types[key] = type
             return true
         }
@@ -133,13 +131,14 @@ open class FunctionField : IFieldWithVar, IFieldWithType {
         }
     }
 
-    override fun getType(key: String) : MCFPPType? {
+    override fun getType(key: String): MCFPPType? {
         var re = types.getOrDefault(key, null)
-        if(re == null && parent is IFieldWithType){
+        if (re == null && parent is IFieldWithType) {
             re = (parent as IFieldWithType).getType(key)
         }
         return re
     }
+
     override fun containType(id: String): Boolean {
         return types.containsKey(id)
     }
@@ -149,7 +148,7 @@ open class FunctionField : IFieldWithVar, IFieldWithType {
     }
 
     override fun forEachType(action: (MCFPPType) -> Any?) {
-        for (t in types.values){
+        for (t in types.values) {
             action(t)
         }
     }
@@ -161,13 +160,13 @@ open class FunctionField : IFieldWithVar, IFieldWithType {
         return clone(this)
     }
 
-    companion object{
+    companion object {
         /**
          * 复制一个域。
          * @param functionField 原来的域
          */
         fun clone(functionField: FunctionField): FunctionField {
-            val newFunctionField = FunctionField(functionField.parent,null)
+            val newFunctionField = FunctionField(functionField.parent, null)
             //变量复制
             for (key in functionField.vars.keys) {
                 val `var`: Var<*>? = functionField.vars[key]

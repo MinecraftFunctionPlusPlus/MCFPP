@@ -2,7 +2,6 @@ package top.mcfpp.lang
 
 import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.StringTag
-import net.querz.nbt.tag.Tag
 import top.mcfpp.Project
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
@@ -15,8 +14,8 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
+import top.mcfpp.model.function.Function
 import java.util.*
 
 /**
@@ -97,16 +96,16 @@ open class MCString : NBTBasedData<StringTag> {
     @Throws(VariableConverseException::class)
     override fun assign(b: Var<*>): MCString {
         hasAssigned = true
-        if(b is MCString){
+        if (b is MCString) {
             return assignCommand(b) as MCString
-        }else{
+        } else {
             throw VariableConverseException()
         }
     }
 
     @Override
     override fun cast(type: MCFPPType): Var<*> {
-        return when(type){
+        return when (type) {
             MCFPPBaseType.String -> this
             MCFPPNBTType.NBT -> this
             MCFPPBaseType.Any -> MCAnyConcrete(this)
@@ -121,12 +120,12 @@ open class MCString : NBTBasedData<StringTag> {
 
     */
     companion object {
-        val data = CompoundData("string","mcfpp")
+        val data = CompoundData("string", "mcfpp")
     }
 
 }
 
-class MCStringConcrete: MCString, MCFPPValue<StringTag>{
+class MCStringConcrete : MCString, MCFPPValue<StringTag> {
 
     override var value: StringTag
 
@@ -154,7 +153,7 @@ class MCStringConcrete: MCString, MCFPPValue<StringTag>{
         this.value = value
     }
 
-    constructor(v: MCStringConcrete) : super(v){
+    constructor(v: MCStringConcrete) : super(v) {
         this.value = v.value
     }
 
@@ -165,29 +164,37 @@ class MCStringConcrete: MCString, MCFPPValue<StringTag>{
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
         if (parent != null) {
-            val cmd = when(parent){
+            val cmd = when (parent) {
                 is ClassPointer -> {
                     Commands.selectRun(parent)
                 }
+
                 is MCFPPClassType -> {
                     arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
                 }
+
                 else -> TODO()
             }
-            if(cmd.size == 2){
+            if (cmd.size == 2) {
                 Function.addCommand(cmd[0])
             }
-            Function.addCommand(cmd.last().build(
-                "data modify entity @s data.${identifier} set value ${SNBTUtil.toSNBT(value)}")
+            Function.addCommand(
+                cmd.last().build(
+                    "data modify entity @s data.${identifier} set value ${SNBTUtil.toSNBT(value)}"
+                )
             )
         } else {
             val cmd = Command.build(
-                "data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set value ${SNBTUtil.toSNBT(value)}"
+                "data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set value ${
+                    SNBTUtil.toSNBT(
+                        value
+                    )
+                }"
             )
             Function.addCommand(cmd)
         }
         val re = MCString(this)
-        if(replace){
+        if (replace) {
             Function.currFunction.field.putVar(identifier, re, true)
         }
         return re
@@ -195,7 +202,7 @@ class MCStringConcrete: MCString, MCFPPValue<StringTag>{
 
     @Override
     override fun cast(type: MCFPPType): Var<*> {
-        return when(type){
+        return when (type) {
             MCFPPBaseType.String -> this
             MCFPPNBTType.NBT -> NBTBasedDataConcrete(value)
             MCFPPBaseType.Any -> MCAnyConcrete(this)
