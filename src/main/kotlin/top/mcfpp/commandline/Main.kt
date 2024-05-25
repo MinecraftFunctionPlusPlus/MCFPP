@@ -47,7 +47,7 @@ fun main(){
     //等待输入
     while(true){
         if(compiler.leftBraces == 0){
-            print(">")
+            print("> ")
         }
         when(val line = readln()){
             "help" -> printHelp()
