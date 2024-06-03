@@ -722,6 +722,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     fun enterForStatement(ctx: mcfppParser.ForStatementContext) {
         Project.ctx = ctx
         Function.addCommand("#for start")
+        //for语句对应的函数
         val forFunc: Function = InternalFunction("_for_", Function.currFunction)
         forFunc.parent.add(Function.currFunction)
         if(!GlobalField.localNamespaces.containsKey(forFunc.namespace))
@@ -768,43 +769,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         GlobalField.localNamespaces[forLoopFunc.namespace]!!.field.addFunction(forLoopFunc,false)
         Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
         Function.addCommand(Commands.function(forLoopFunc))
-
-    }
-
-
-    /**
-     * 进入for update语句块。
-     * 由于在编译过程中，编译器会首先编译for语句的for control部分，也就是for后面的括号，这就意味着forUpdate语句将会先forBlock
-     * 被写入到命令函数中。因此我们需要将forUpdate语句中的命令临时放在一个列表内部，然后在forBlock调用完毕后加上它的命令
-     *
-     * @param ctx the parse tree
-     */
-
-    override fun visitForUpdate(ctx: mcfppParser.ForUpdateContext): Any? {
-        enterForUpdate(ctx)
-        super.visitForUpdate(ctx)
-        exitForUpdate(ctx)
-        return null
-    }
-
-    fun enterForUpdate(ctx: mcfppParser.ForUpdateContext) {
-        Project.ctx = ctx
-        forInitCommands = Function.currFunction.commands
-        Function.currFunction.commands = forUpdateCommands
-    }
-
-    //暂存
-    private var forInitCommands = CommandList()
-    private var forUpdateCommands = CommandList()
-
-    /**
-     * 离开for update。暂存for update缓存，恢复主缓存，准备forblock编译
-     * @param ctx the parse tree
-     */
-    
-    fun exitForUpdate(ctx: mcfppParser.ForUpdateContext) {
-        Project.ctx = ctx
-        Function.currFunction.commands = forInitCommands
+        Function.currFunction = forLoopFunc
     }
 
     override fun visitForBlock(ctx: mcfppParser.ForBlockContext): Any? {
@@ -818,10 +783,10 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      * 进入for block语句。此时当前函数为父函数
      * @param ctx the parse tree
      */
-    
     @InsertCommand
     fun enterForBlock(ctx: mcfppParser.ForBlockContext) {
         Project.ctx = ctx
+        //currFunction 是 forLoop
         val parent: mcfppParser.ForStatementContext = ctx.parent as mcfppParser.ForStatementContext
         val exp: MCBool = McfppExprVisitor().visit(parent.forControl().expression()) as MCBool
         //匿名函数的定义。这里才是正式的for函数哦喵
@@ -866,7 +831,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
      * 离开for block语句。此时当前函数仍然是for的函数
      * @param ctx the parse tree
      */
-    
+
     @InsertCommand
     fun exitForBlock(ctx: mcfppParser.ForBlockContext) {
         Project.ctx = ctx
@@ -877,8 +842,45 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
         //继续销毁for-loop函数的栈
         Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
+        Function.addCommand("return 1")
         Function.currFunction = Function.currFunction.parent[0]
     }
+
+    /**
+     * 进入for update语句块。
+     * 由于在编译过程中，编译器会首先编译for语句的for control部分，也就是for后面的括号，这就意味着forUpdate语句将会先forBlock
+     * 被写入到命令函数中。因此我们需要将forUpdate语句中的命令临时放在一个列表内部，然后在forBlock调用完毕后加上它的命令
+     *
+     * @param ctx the parse tree
+     */
+
+    override fun visitForUpdate(ctx: mcfppParser.ForUpdateContext): Any? {
+        enterForUpdate(ctx)
+        super.visitForUpdate(ctx)
+        exitForUpdate(ctx)
+        return null
+    }
+
+    fun enterForUpdate(ctx: mcfppParser.ForUpdateContext) {
+        Project.ctx = ctx
+        forInitCommands = Function.currFunction.commands
+        Function.currFunction.commands = forUpdateCommands
+    }
+
+    //暂存
+    private var forInitCommands = CommandList()
+    private var forUpdateCommands = CommandList()
+
+    /**
+     * 离开for update。暂存for update缓存，恢复主缓存，准备forblock编译
+     * @param ctx the parse tree
+     */
+    
+    fun exitForUpdate(ctx: mcfppParser.ForUpdateContext) {
+        Project.ctx = ctx
+        Function.currFunction.commands = forInitCommands
+    }
+
 //endregion
 
     

@@ -4,7 +4,7 @@
 			"id":"default",
 			"functions":[
 				{
-					"id":"generateSequenceDoWhile",
+					"id":"generateSequenceFor",
 					"normalParams":[
 						
 					],
@@ -15,7 +15,7 @@
 					]
 				},
 				{
-					"id":"_dowhile_78ddf9e4-56ed-4439-93bc-bceb4e47f9ec",
+					"id":"_for_7f20e3fa-440c-4610-93e5-68d9961970f9",
 					"normalParams":[
 						
 					],
@@ -26,7 +26,7 @@
 					]
 				},
 				{
-					"id":"_dowhile_de4d3e61-9c4a-4c3f-81ae-3e7decf37e3b",
+					"id":"_for_loop_8ae8a0fe-449b-49ae-97cb-ec1a2751e85d",
 					"normalParams":[
 						
 					],
@@ -37,7 +37,18 @@
 					]
 				},
 				{
-					"id":"expression_52569370-85ad-4996-bbe1-8b209ead925a",
+					"id":"expression_8ab728bf-b02a-4a8b-8443-391cd9b62182",
+					"normalParams":[
+						
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				},
+				{
+					"id":"_forblock_671a526c-cac2-4fdd-8eb1-a8db3ab42369",
 					"normalParams":[
 						
 					],
