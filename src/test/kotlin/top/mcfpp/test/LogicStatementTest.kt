@@ -39,4 +39,32 @@ class LogicStatementTest {
             """.trimIndent()
         MCFPPStringTest.readFromString(test, "D:\\.minecraft\\saves\\MCFPP Studio\\datapacks")
     }
+
+    @Test
+    fun doWhileTest() {
+        val test =
+            """
+            func generateSequenceDoWhile(){
+                dynamic int i = 0;
+                do {
+                    print(i);
+                    i = i + 1;
+                } while(i < 10);
+            }
+        """.trimIndent()
+        MCFPPStringTest.readFromString(test, "D:\\.minecraft\\saves\\MCFPP Studio\\datapacks")
+    }
+
+    @Test
+    fun forTest() {
+        val test =
+            """
+            func generateSequenceFor(){
+                for(dynamic int i = 0; i < 10; i = i + 1){
+                    print(i);
+                }
+            }
+        """.trimIndent()
+        MCFPPStringTest.readFromString(test, "D:\\.minecraft\\saves\\MCFPP Studio\\datapacks")
+    }
 }

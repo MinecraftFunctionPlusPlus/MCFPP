@@ -699,7 +699,8 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         Project.ctx = ctx
         //调用完毕，将子函数的栈销毁
         Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
-        //调用完毕，将子函数的栈销毁
+        //返回1
+        Function.addCommand("return 1")
         Function.currFunction = Function.currFunction.parent[0]
         Function.addCommand("#do while end")
     }
@@ -919,8 +920,10 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addCommand("#" + ctx.text)
         //return语句
         if(ctx.BREAK() != null){
+            //break，完全跳出while
             Function.addCommand("return 0")
         }else{
+            //continue，跳过当次
             Function.addCommand("return 1")
         }
         Function.currFunction.isReturned = true
