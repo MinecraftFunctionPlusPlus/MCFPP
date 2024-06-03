@@ -1,5 +1,6 @@
 package top.mcfpp.test
 
+import top.mcfpp.test.util.MCFPPStringTest
 import kotlin.test.Test
 
 class GenericTest {

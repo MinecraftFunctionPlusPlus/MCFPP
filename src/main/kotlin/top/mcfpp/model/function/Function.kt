@@ -151,9 +151,14 @@ open class Function : Member, FieldContainer {
     val parent: ArrayList<Function> = ArrayList()
 
     /**
-     * 函数是否已经实际中止。用于break和continue语句。
+     * 函数是否被返回。用于break和continue语句。
      */
-    var isEnd = false
+    var isReturned = false
+
+    /**
+     * 函数是否因为if语句修改分支而中止。if语句会修改语法树，将if之后的语句移动到if语句的分支内，因此if语句之后的语句都不需要编译了。
+     */
+    var isEnded = false
 
     /**
      * 是否是抽象函数
@@ -879,7 +884,7 @@ open class Function : Member, FieldContainer {
                 LogProcessor.error("Unexpected command added to NullFunction")
                 throw NullPointerException()
             }
-            if (!currFunction.isEnd) {
+            if (!currFunction.isReturned) {
                 currFunction.commands.add(command)
             }
             return currFunction.commands.size
@@ -895,7 +900,7 @@ open class Function : Member, FieldContainer {
                 LogProcessor.warn("Unexpected command added to NullFunction")
                 throw NullPointerException()
             }
-            if (!currFunction.isEnd) {
+            if (!currFunction.isReturned) {
                 currFunction.commands.add(Comment("#$str", type))
             }
         }

@@ -6,6 +6,7 @@ import top.mcfpp.model.FieldContainer
 class NoStackFunctionField(parent: FunctionField, cacheContainer: FieldContainer?) : FunctionField(parent, cacheContainer) {
 
     override fun forEachVar(action: (Var<*>) -> Any?) {
+        allVars.forEach { action(it) }
         (parent as FunctionField).forEachVar(action)
     }
 
@@ -15,6 +16,7 @@ class NoStackFunctionField(parent: FunctionField, cacheContainer: FieldContainer
      * @return 变量的对象。若不存在，则返回null。
      */
     override fun getVar(key: String): Var<*>? {
+        super.getVar(key)?.let { return it }
         return (parent as FunctionField).getVar(key)
     }
 }
