@@ -1,4 +1,4 @@
-package top.mcfpp.test
+package top.mcfpp.test.util
 
 import org.antlr.v4.runtime.CharStream
 import org.antlr.v4.runtime.CharStreams
@@ -8,6 +8,7 @@ import org.apache.logging.log4j.core.config.Configurator
 import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.antlr.*
+import top.mcfpp.io.DatapackCreator
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.util.LogProcessor
@@ -16,7 +17,7 @@ import java.io.FileInputStream
 import java.nio.file.Path
 
 object MCFPPStringTest {
-    fun readFromString(str: String){
+    fun readFromString(str: String, targetPath: String = "null"){
         val source: ConfigurationSource
         source = ConfigurationSource(FileInputStream("log4j2.xml"))
         Configurator.initialize(null,source)
@@ -32,7 +33,7 @@ object MCFPPStringTest {
         //默认命名空间
         Project.config.defaultNamespace = "default"
         //输出目录
-        Project.config.targetPath = "null"
+        Project.config.targetPath = targetPath
         Project.readLib() //读取引用的库的索引
         Project.init() //初始化
         //解析文件
@@ -58,6 +59,14 @@ object MCFPPStringTest {
         visitor.visit(context)
         Project.optimization() //优化
         Project.genIndex() //生成索引
+        Project.ctx = null
+        if(Project.config.targetPath != "null"){
+            try{
+                DatapackCreator.createDatapack(Project.config.targetPath) //生成数据包
+            }catch (e: Exception){
+                LogProcessor.error("Cannot create datapack in path: ${Project.config.targetPath}")
+            }
+        }
         Project.ctx = null
         GlobalField.printAll()
     }

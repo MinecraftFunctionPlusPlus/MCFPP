@@ -1,6 +1,7 @@
 package top.mcfpp.test
 
 import kotlin.test.Test
+import top.mcfpp.test.util.MCFPPStringTest
 
 class StringCompileTest {
 

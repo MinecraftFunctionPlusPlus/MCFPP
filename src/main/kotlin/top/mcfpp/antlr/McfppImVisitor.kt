@@ -3,6 +3,7 @@ package top.mcfpp.antlr
 import org.antlr.v4.runtime.RuleContext
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
+import top.mcfpp.antlr.RuleContextExtension.children
 import top.mcfpp.antlr.mcfppParser.CompileTimeFuncDeclarationContext
 import top.mcfpp.command.CommandList
 import top.mcfpp.command.Commands
@@ -16,12 +17,13 @@ import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.Annotation
 import top.mcfpp.model.field.GlobalField
-import top.mcfpp.model.field.NamespaceField
 import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam.Companion.typeToStringList
 import top.mcfpp.model.generic.Generic
 import top.mcfpp.util.LogProcessor
+import java.util.*
+import kotlin.collections.ArrayList
 
 open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
 
@@ -374,12 +376,29 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         //进入if函数
         Project.ctx = ctx
         Function.addCommand("#" + "if start")
-        val ifFunction = InternalFunction("_if_", Function.currFunction)
-        ifFunction.invoke(ArrayList(),null)
-        Function.currFunction = ifFunction
-        if(!GlobalField.localNamespaces.containsKey(ifFunction.namespace))
-            GlobalField.localNamespaces[ifFunction.namespace] = Namespace(ifFunction.namespace)
-        GlobalField.localNamespaces[ifFunction.namespace]!!.field.addFunction(ifFunction,false)
+        /*
+        ifStatement
+            :   IF'('expression')' ifBlock elseIfStatement* elseStatement?
+            ;
+
+        elseIfStatement
+            :   ELSE IF '('expression')' ifBlock
+            ;
+
+        elseStatement
+            :   ELSE ifBlock
+            ;
+
+        ifBlock
+            :   block
+            ;
+         */
+        //将if以后的语句插入到if的分支后面
+        val index = ctx.parent.parent.children().indexOf(ctx.parent)
+        val list = ctx.parent.parent.children().subList(index + 1, ctx.parent.parent.children().size) as List<mcfppParser.StatementContext>
+        list.forEach { ctx.ifBlock().block().addChild(it) }
+        list.forEach { l -> ctx.elseIfStatement().forEach { it.ifBlock().block().addChild(l) } }
+        list.forEach { ctx.elseStatement()?.ifBlock()?.block()?.addChild(it) }
     }
 
     /**
@@ -391,9 +410,11 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     @InsertCommand
     fun exitIfStatement(ctx: mcfppParser.IfStatementContext) {
         Project.ctx = ctx
-        Function.currFunction = Function.currFunction.parent[0]
-        //调用完毕，将子函数的栈销毁
+        //Function.currFunction = Function.currFunction.parent[0]
         Function.addCommand("#" + "if end")
+        //if以后的语句已经被全部打包到if分支里面，所以if语句之后的statement没有意义
+        Function.currFunction.isEnded = true
+
     }
 
     override fun visitIfBlock(ctx: mcfppParser.IfBlockContext): Any? {
@@ -414,13 +435,13 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         val parent = ctx.parent
         Function.addCommand("#if branch start")
         //匿名函数的定义
-        val f = InternalFunction("_if_branch_", Function.currFunction)
+        val f = NoStackFunction("_if_branch_${UUID.randomUUID()}", Function.currFunction)
         //注册函数
         if(!GlobalField.localNamespaces.containsKey(f.namespace))
             GlobalField.localNamespaces[f.namespace] = Namespace(f.namespace)
         GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f,false)
         if (parent is mcfppParser.IfStatementContext || parent is mcfppParser.ElseIfStatementContext) {
-            //第一个if
+            //if()，需要进行条件计算
             parent as mcfppParser.IfStatementContext
             val exp = McfppExprVisitor().visit(parent.expression())
             if(exp !is MCBool){
@@ -429,14 +450,10 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
             if (exp is MCBoolConcrete && exp.value) {
                 //函数调用的命令
                 //给子函数开栈
-                Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
                 Function.addCommand("function " + f.namespaceID)
-                Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
-                Function.addCommand("return 1")
                 LogProcessor.warn("The condition is always true. ")
             } else if (exp is MCBoolConcrete) {
                 Function.addCommand("#function " + f.namespaceID)
-                Function.addCommand("return 1")
                 LogProcessor.warn("The condition is always false. ")
             } else {
                 exp as ReturnedMCBool
@@ -446,36 +463,13 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 Function.addCommand(
                     "execute " +
                             "if score " + exp1.name + " " + SbObject.MCFPP_boolean + " matches 1 " +
-                            "run data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}"
-                )
-                Function.addCommand(
-                    "execute " +
-                            "if score " + exp1.name + " " + SbObject.MCFPP_boolean + " matches 1 " +
-                            "run function " + f.namespaceID
-                )
-                Function.addCommand(
-                    "execute " +
-                            "if score " + exp1.name + " " + SbObject.MCFPP_boolean + " matches 1 " +
-                            "run data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]"
-                )
-                //由于下一个函数被直接中断，因此需要自己把自己的栈去掉
-                Function.addCommand(
-                    "execute " +
-                            "if score " + exp1.name + " " + SbObject.MCFPP_boolean + " matches 1 " +
-                            "run data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]"
-                )
-                Function.addCommand(
-                    "execute " +
-                            "if score " + exp1.name + " " + SbObject.MCFPP_boolean + " matches 1 " +
-                            "run return 1"
+                            "run return run function " + f.namespaceID
                 )
             }
         }
         else {
             //else语句
-            Function.addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
             Function.addCommand("function " + f.namespaceID)
-            Function.addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
         }
         Function.currFunction = f
     }
@@ -488,6 +482,8 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     @InsertCommand
     fun exitIfBlock(ctx: mcfppParser.IfBlockContext) {
         Project.ctx = ctx
+        //由于原来的调用if的函数已经被return命令返回，需要if_branch函数帮助清理它的栈
+        Function.addCommand("data remove storage mcfpp:system default.stack_frame[0]")
         Function.currFunction = Function.currFunction.parent[0]
         Function.addCommand("#if branch end")
     }
@@ -900,8 +896,12 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     @InsertCommand
     override fun visitStatement(ctx: mcfppParser.StatementContext): Any? {
         Project.ctx = ctx
-        if (Function.currFunction.isEnd) {
+        if (Function.currFunction.isReturned) {
             LogProcessor.warn("Unreachable code: " + ctx.text)
+            return null
+        }
+        if(Function.currFunction.isEnded){
+            return null
         }
         super.visitStatement(ctx)
         return null
@@ -923,7 +923,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         }else{
             Function.addCommand("return 1")
         }
-        Function.currFunction.isEnd = true
+        Function.currFunction.isReturned = true
         return null
     }
 
