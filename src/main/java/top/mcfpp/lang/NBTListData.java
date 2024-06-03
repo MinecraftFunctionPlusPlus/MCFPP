@@ -163,12 +163,12 @@ public class NBTListData extends MNIMethodContainer {
                         command = new Command("data modify " +
                                 "entity @s " +
                                 "data." + list.getIdentifier() + " " +
-                                "insert ").build("", index.getIdentifier()).build (" value " + SNBTUtil.toSNBT(tag));
+                                "insert ").build("", index.getIdentifier()).build ("value " + SNBTUtil.toSNBT(tag));
                     } else {
                         command = new Command("data modify " +
                                 "storage mcfpp:system " +
                                 Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + list.getIdentifier() + " " +
-                                "insert ").build("", index.getIdentifier()).build(" value " + SNBTUtil.toSNBT(tag));
+                                "insert ").build("", index.getIdentifier()).build("value " + SNBTUtil.toSNBT(tag));
                     }
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
@@ -191,7 +191,7 @@ public class NBTListData extends MNIMethodContainer {
                     command = new Command("data modify " +
                             "storage mcfpp:system " +
                             Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + list.getIdentifier() + " " +
-                            "insert ").build("", index.getIdentifier()).build(" from " +
+                            "insert ").build("", index.getIdentifier()).build("from " +
                             "storage mcfpp:system " +
                             Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + e.getIdentifier());
                 }

@@ -105,7 +105,7 @@ open class MCInt : MCNumber<Int> {
                     if(final.size == 2){
                         Function.addCommand(final[0])
                     }
-                    final.last().build(Commands.sbPlayerSet(this,b.value as Int))
+                    final.last().build(Commands.sbPlayerSet(this, b.value))
                 }else{
                     Function.replaceCommand(final.last().build(replace), Function.currFunction.commands.size - 1)
                 }
@@ -134,7 +134,7 @@ open class MCInt : MCNumber<Int> {
                                 Commands.selectRun(parent)
                             }
                             is MCFPPClassType -> {
-                                arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
+                                arrayOf(Command.build("execute as ${parent.cls.uuid} run"))
                             }
                             else -> TODO()
                         }
@@ -149,7 +149,7 @@ open class MCInt : MCNumber<Int> {
                                 .build(replace), Function.currFunction.commands.size-1)
                         }
                     }
-                    val append = "store result storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1 run "
+                    val append = "store result storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1 run"
                     //是成员
                     val cmd = when(val parent = a.parent){
                         is ClassPointer -> {
@@ -170,7 +170,7 @@ open class MCInt : MCNumber<Int> {
                         Function.replaceCommand(cmd.last().build(replace), Function.currFunction.commands.size-1)
                     }
                 }else{
-                    val head = if(isTemp) "" else "execute store result storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1 run "
+                    val head = if(isTemp) "" else "execute store result storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1 run"
                     //变量进栈
                     if(replace == null){
                         Function.addCommand(Command.build(head)
