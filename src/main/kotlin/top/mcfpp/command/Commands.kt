@@ -44,7 +44,7 @@ object Commands {
         return Command.build("scoreboard players add")
             .build(target.name, target.name)
             .build(target.`object`.toString(), target.`object`.toString())
-            .build(" $value")
+            .build("$value")
     }
 
     /**
