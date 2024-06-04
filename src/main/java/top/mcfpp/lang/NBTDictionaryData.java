@@ -7,11 +7,9 @@ import top.mcfpp.util.ValueWrapper;
 
 import java.util.HashMap;
 
-public class NBTDictionaryData extends MNIMethodContainer {
-    static HashMap<String, Function4<Var<?>[], Var<?>[], CanSelectMember, ValueWrapper<Var<?>>, java.lang.Void>> methods;
+public class NBTDictionaryData extends BaseMNIMethodContainer {
 
     static {
-        methods = new HashMap<>();
         methods.put("containsKey", (vars, vars2, canSelectMember, varValueWrapper) -> {
             return null;
         });
@@ -23,11 +21,5 @@ public class NBTDictionaryData extends MNIMethodContainer {
         methods.put("remove", (vars, vars2, canSelectMember, varValueWrapper) -> {
             return null;
         });
-    }
-
-    @NotNull
-    @Override
-    public Function4<Var<?>[], Var<?>[], CanSelectMember, ValueWrapper<Var<?>>, java.lang.Void> getMNIMethod(@NotNull String name) {
-        return methods.get(name);
     }
 }

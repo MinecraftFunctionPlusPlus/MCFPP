@@ -18,12 +18,11 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Objects;
 
-public class NBTListConcreteData extends MNIMethodContainer {
+public class NBTListConcreteData extends BaseMNIMethodContainer {
 
-    static HashMap<String, Function4<Var<?>[], Var<?>[], CanSelectMember, ValueWrapper<Var<?>>, java.lang.Void>> methods;
+    public static final NBTListConcreteData INSTANCE = new NBTListConcreteData();
 
     static {
-        methods = new HashMap<>();
         //list<E>.add(E e)
         methods.put("add", (readOnlyArgs, normalArgs, caller, returnVar) -> {
             //由于类型检查，必然是可以通过的
@@ -200,11 +199,5 @@ public class NBTListConcreteData extends MNIMethodContainer {
         methods.put("clear", (readOnlyArgs, normalArgs, caller, returnVar) -> {
             return null;
         });
-    }
-
-    @NotNull
-    @Override
-    public Function4<Var<?>[], Var<?>[], CanSelectMember, ValueWrapper<Var<?>>, java.lang.Void> getMNIMethod(@NotNull String name) {
-        return methods.get(name);
     }
 }

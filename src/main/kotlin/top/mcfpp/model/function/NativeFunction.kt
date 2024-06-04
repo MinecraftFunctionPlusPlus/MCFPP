@@ -97,7 +97,7 @@ class NativeFunction : Function, Native {
     }
     */
 
-    fun appendReadOnlyParam(type: MCFPPType, identifier: String, isStatic: Boolean = false) : Function {
+    fun appendReadOnlyParam(type: MCFPPType, identifier: String, isStatic: Boolean = false) : NativeFunction {
         readOnlyParams.add(FunctionParam(type ,identifier, this, isStatic))
         return this
     }

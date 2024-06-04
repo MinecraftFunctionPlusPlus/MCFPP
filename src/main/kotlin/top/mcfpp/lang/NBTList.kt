@@ -308,7 +308,7 @@ class NBTListConcrete<E>: NBTList, MCFPPValue<ListTag<*>> {
 
         init {
             data.parent.add(MCAny.data)
-            data.field.addFunction(NativeFunction("add", NBTListConcreteData(),MCFPPBaseType.Void,"mcfpp")
+            data.field.addFunction(NativeFunction("add", NBTListConcreteData.INSTANCE ,MCFPPBaseType.Void,"mcfpp")
                 .appendNormalParam(MCFPPGenericType("E", emptyList()), "e"),false)
         }
 

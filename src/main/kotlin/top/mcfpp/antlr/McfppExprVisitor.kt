@@ -650,6 +650,8 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             return NBTBasedDataConcrete(SNBTUtil.fromSNBT(ctx.nbtValue().text))
         } else if (ctx.type() != null){
             return MCFPPTypeVar(MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field))
+        } else if (ctx.TargetSelector() != null){
+            return Selector(ctx.TargetSelector().text)
         }
         return null
     }

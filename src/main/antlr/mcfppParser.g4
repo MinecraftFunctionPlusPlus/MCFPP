@@ -337,7 +337,6 @@ primary
     |   value
     |   THIS
     |   SUPER
-    |   TargetSelector
     ;
 
 varWithSelector
@@ -521,6 +520,7 @@ value
     |   nbtValue
     |   range
     |   type
+    |   TargetSelector
     ;
 
 intValue
