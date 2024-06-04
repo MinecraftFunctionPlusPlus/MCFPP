@@ -7,13 +7,14 @@ import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
+import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.util.LogProcessor
 import java.util.*
-import kotlin.collections.HashMap
 
 
 /**
@@ -175,4 +176,267 @@ class Selector : NBTBasedData<ListTag<StringTag>>() {
 //            ALL_PLAYERS, ALL_ENTITIES, NEAREST_PLAYER, RANDOM_PLAYER, SELF
 //        }
 //    }
+}
+
+
+//TODO 对非编译确定量的支持
+class SelectorConcrete : MCFPPValue<SelectorValue>, Var<SelectorValue>{
+
+    override var value: SelectorValue
+
+    /**
+     * 创建一个固定的JavaVar
+     *
+     * @param identifier 标识符
+     * @param curr 域容器
+     * @param value 值
+     */
+    constructor(
+        curr: FieldContainer,
+        value: SelectorValue,
+        identifier: String = UUID.randomUUID().toString()
+    ) : super(curr.prefix + identifier) {
+        this.value = value
+    }
+
+    /**
+     * 创建一个固定的JavaVar。它的标识符和mc名一致
+     * @param identifier 标识符。如不指定，则为随机uuid
+     * @param value 值
+     */
+    constructor(value: SelectorValue, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
+        this.value = value
+    }
+
+    override fun assign(b: Var<*>): Var<SelectorValue> {
+        if(b is SelectorConcrete){
+            this.value = b.value
+        }else{
+            LogProcessor.error("Cannot cast [${this.type}] to [$type]")
+        }
+        return this
+    }
+
+    override fun cast(type: MCFPPType): Var<*> {
+        if (type == MCFPPBaseType.Selector) return this
+        LogProcessor.error("Cannot cast [${this.type}] to [$type]")
+        throw VariableConverseException()
+    }
+
+    override fun clone(): Var<*> = getTempVar()
+
+    override fun getTempVar(): Var<*> = SelectorConcrete(value.clone(), identifier)
+
+    override fun storeToStack() {}
+
+    override fun getFromStack() {}
+
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
+        TODO("Not yet implemented")
+    }
+
+    override fun getMemberFunction(
+        key: String,
+        readOnlyParams: List<MCFPPType>,
+        normalParams: List<MCFPPType>,
+        accessModifier: Member.AccessModifier
+    ): Pair<Function, Boolean> {
+        TODO("Not yet implemented")
+    }
+
+    override fun toDynamic(replace: Boolean): Var<*> {
+        TODO("Not yet implemented")
+    }
+
+    companion object {
+        val data = CompoundData("selector","mcfpp")
+
+        init {
+            data.parent.add(MCAny.data)
+            data.field.addFunction(NativeFunction("x", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.Int, "x"), true)
+            data.field.addFunction(NativeFunction("y", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.Int, "y"), true)
+            data.field.addFunction(NativeFunction("z", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.Int, "z"), true)
+            data.field.addFunction(NativeFunction("distance", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.Int, "distance"), true)
+            data.field.addFunction(NativeFunction("dx", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.Int, "dx"), true)
+            data.field.addFunction(NativeFunction("dy", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.Int, "dy"), true)
+            data.field.addFunction(NativeFunction("dz", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.Int, "dz"), true)
+            //TODO score
+            data.field.addFunction(NativeFunction("tag", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.String, "tag"), true)
+            data.field.addFunction(NativeFunction("tagNot", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.String, "tag"), true)
+            data.field.addFunction(NativeFunction("team", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.String, "team"), true)
+            data.field.addFunction(NativeFunction("teamNot", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.String, "team"), true)
+            data.field.addFunction(NativeFunction("name", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.String, "name"), true)
+            data.field.addFunction(NativeFunction("nameNot", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.String, "name"), true)
+            data.field.addFunction(NativeFunction("type", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.String, "type"), true)
+            data.field.addFunction(NativeFunction("typeNot", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.String, "type"), true)
+            data.field.addFunction(NativeFunction("predicate", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.String, "predicate"), true)
+            data.field.addFunction(NativeFunction("predicateNot", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.String, "predicate"), true)
+            data.field.addFunction(NativeFunction("x_rotation", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.Int, "x_rotation"), true)
+            data.field.addFunction(NativeFunction("y_rotation", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.Int, "y_rotation"), true)
+            data.field.addFunction(NativeFunction("nbt", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPNBTType.NBT, "nbt"), true)
+            data.field.addFunction(NativeFunction("level", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.Int, "level"), true)
+            data.field.addFunction(NativeFunction("gamemode", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.String, "gamemode"), true)
+            data.field.addFunction(NativeFunction("advancements", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.String, "advancement")
+                .appendReadOnlyParam(MCFPPBaseType.Bool, "value"), true)
+            data.field.addFunction(NativeFunction("limit", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.Int, "limit"), true)
+            data.field.addFunction(NativeFunction("sort", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
+                .appendReadOnlyParam(MCFPPBaseType.String, "sort"), true)
+        }
+
+    }
+}
+
+class SelectorValue(var selectorType: SelectorType) {
+
+
+    var x : Int? = null
+    var y : Int? = null
+    var z : Int? = null
+    var distance : Range<Int>? = null
+    var dx: Int? = null
+    var dy: Int? = null
+    var dz: Int? = null
+
+    var scores: HashMap<SbObject, Range<*>> = HashMap()
+    var tag: HashMap<String, Boolean> = HashMap()
+    var team: HashMap<String, Boolean> = HashMap()
+    var name: Pair<String, Boolean>? = null
+    var type: Pair<String, Boolean>? = null
+    var predicate: HashMap<String, Boolean> = HashMap()
+
+    var x_rotation: Range<Int>? = null
+    var y_rotation: Range<Int>? = null
+    var nbt: Tag<*>? = null
+    var level : Range<*>? = null
+    var gamemode : Pair<String, Boolean>? = null
+        set(value){
+            if(value == null) {
+                field = null
+                return
+            }
+            if(!gamemodeValues.contains(value.first)){
+                LogProcessor.error("Invalid gamemode value: ${value.first}")
+            }else{
+                field = value
+            }
+        }
+
+    var advancements: HashMap<String, Boolean> = HashMap()
+
+    var limit: Int? = null
+    var sort: String? = null
+        set(value) {
+            if(!sortValues.contains(value)){
+                LogProcessor.error("Invalid sort value: $value")
+            }else{
+                field = value
+            }
+        }
+
+    fun onlyIncludingPlayers() : Boolean {
+        if(selectorType == SelectorType.RANDOM_PLAYER || selectorType == SelectorType.NEAREST_PLAYER || selectorType == SelectorType.ALL_PLAYERS){
+            return true
+        }
+        if(type?.first == "player" && type?.second == true){
+            return true
+        }
+        return false
+    }
+
+    fun selectingSingleEntity(): Boolean{
+        if(selectorType == SelectorType.NEAREST_ENTITY || selectorType == SelectorType.NEAREST_PLAYER || selectorType == SelectorType.SELF || selectorType == SelectorType.RANDOM_PLAYER){
+            return true
+        }
+        if(limit == 1){
+            return true
+        }
+        return false
+    }
+
+    fun clone(): SelectorValue{
+        val re = SelectorValue(selectorType)
+        re.x = x
+        re.y = y
+        re.z = z
+        re.distance = distance?.clone()
+        re.dx = dx
+        re.dy = dy
+        re.dz = dz
+        re.scores = HashMap(scores)
+        re.tag = HashMap(tag)
+        re.team = HashMap(team)
+        re.name = name
+        re.type = type
+        re.predicate = HashMap(predicate)
+        re.x_rotation = x_rotation?.clone()
+        re.y_rotation = y_rotation?.clone()
+        re.nbt = nbt
+        re.level = level?.clone()
+        re.gamemode = gamemode
+        re.advancements = HashMap(advancements)
+        re.limit = limit
+        re.sort = sort
+        return re
+    }
+
+    companion object{
+
+        val sortValues = arrayOf("nearest","furthest","random","arbitrary")
+        val gamemodeValues = arrayOf("survival","creative","adventure","spectator")
+
+
+        fun toSelectorTypeString(type: SelectorType): Char{
+            return when(type){
+                SelectorType.ALL_PLAYERS -> 'a'
+                SelectorType.ALL_ENTITIES -> 'e'
+                SelectorType.NEAREST_PLAYER -> 'p'
+                SelectorType.RANDOM_PLAYER -> 'r'
+                SelectorType.SELF -> 's'
+                SelectorType.NEAREST_ENTITY -> 'n'
+            }
+        }
+
+        fun fromSelectorTypeString(char: Char): SelectorType{
+            return when(char){
+                'a' -> SelectorType.ALL_PLAYERS
+                'e' -> SelectorType.ALL_ENTITIES
+                'p' -> SelectorType.NEAREST_PLAYER
+                'r' -> SelectorType.RANDOM_PLAYER
+                's' -> SelectorType.SELF
+                'n' -> SelectorType.NEAREST_ENTITY
+                else -> {
+                    LogProcessor.error("Invalid selector type: @$char")
+                    SelectorType.ALL_ENTITIES
+                }
+            }
+        }
+
+        enum class SelectorType {
+            ALL_PLAYERS, ALL_ENTITIES, NEAREST_PLAYER, RANDOM_PLAYER, SELF, NEAREST_ENTITY
+        }
+    }
 }

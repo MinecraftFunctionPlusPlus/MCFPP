@@ -11,15 +11,7 @@ import top.mcfpp.util.ValueWrapper;
 import java.util.HashMap;
 import java.util.UUID;
 
-public class System extends MNIMethodContainer {
-
-    @NotNull
-    @Override
-    public Function4<Var<?>[], Var<?>[], CanSelectMember, ValueWrapper<Var<?>>, java.lang.Void> getMNIMethod(@NotNull String name) {
-        return methods.get(name);
-    }
-
-    static HashMap<String, Function4<Var<?>[], Var<?>[], CanSelectMember, ValueWrapper<Var<?>>, java.lang.Void>> methods;
+public class System extends BaseMNIMethodContainer {
 
     static {
         methods = new HashMap<>();
