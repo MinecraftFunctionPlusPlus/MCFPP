@@ -5,12 +5,11 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.antlr.mcfppParser.TemplateDeclarationContext
 import top.mcfpp.compiletime.CompileTimeFunction
 import top.mcfpp.exception.*
-import top.mcfpp.exception.IllegalFormatException
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lang.*
-import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.type.UnresolvedType
+import top.mcfpp.annotations.MNIRegister
 import top.mcfpp.model.*
 import top.mcfpp.model.Class
 import top.mcfpp.model.Member.AccessModifier
@@ -18,7 +17,6 @@ import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.field.IFieldWithType
 import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function
-import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.model.generic.GenericExtensionFunction
 import top.mcfpp.model.generic.GenericFunction
 import top.mcfpp.util.LazyWrapper
@@ -288,7 +286,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     
     override fun visitClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext): Any {
         Project.ctx = ctx
-        val type = MCFPPType.parseFromIdentifier(if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text, typeScope)
+        val type = MCFPPType.parseFromIdentifier(ctx.functionReturnType()?.text?:"text", typeScope)
         //创建函数对象
         val f = if(ctx.functionParams().readOnlyParams() != null && ctx.functionParams().readOnlyParams().parameterList().parameter().size != 0){
             GenericFunction(
@@ -356,32 +354,40 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 
     override fun visitNativeClassFunctionDeclaration(ctx: mcfppParser.NativeClassFunctionDeclarationContext): Any? {
         Project.ctx = ctx
-        val nf: NativeFunction = try {
-            //根据JavaRefer找到类
-            val refer = ctx.javaRefer().text
-            val clsName = refer.substring(0,refer.lastIndexOf('.'))
-            val clazz = java.lang.Class.forName(clsName).getConstructor().newInstance()
-            if(clazz !is MNIMethodContainer){
-                LogProcessor.error("Class $clsName should extends MNIMethodContainer")
-                throw IllegalArgumentException("Class $clsName should extends MNIMethodContainer")
-            }
-            NativeFunction(ctx.Identifier().text, clazz, MCFPPType.parseFromIdentifier(ctx.functionReturnType().text, typeScope), Project.currNamespace)
-        } catch (e: IllegalFormatException) {
-            LogProcessor.error("Illegal Java Method Name: " + e.message)
-            return null
-        } catch (e: ClassNotFoundException) {
-            LogProcessor.error("Cannot find java class: " + e.message)
-            return null
-        } catch (e: NoSuchMethodException) {
-            LogProcessor.error("MNIMethodContainer should have a non-parameter constructor: " + e.message)
-            return null
-        } catch (e: SecurityException){
-            LogProcessor.error("Cannot access to the constructor: " + e.message)
-            return null
-        }
+        val nf = NativeFunction(ctx.Identifier().text, MCFPPType.parseFromIdentifier(ctx.functionReturnType()?.text?:"void", typeScope), Project.currNamespace)
         nf.addParamsFromContext(ctx.functionParams())
         //是类成员
         nf.ownerType = Function.Companion.OwnerType.CLASS
+        try {
+            //根据JavaRefer找到类
+            val refer = ctx.javaRefer().text
+            val clsName = refer.substring(0,refer.lastIndexOf('.'))
+            val clazz = java.lang.Class.forName(clsName)
+            val methods = clazz.methods
+            var hasFind = false
+            for(method in methods){
+                val mniRegister = method.getAnnotation(MNIRegister::class.java) ?: continue
+                //解析MNIMethod注解成员
+                val readOnlyType = mniRegister.readOnlyParams.map {
+                    MCFPPType.parseFromIdentifier(it.split(" ", limit = 2)[0], Namespace.currNamespaceField)
+                }
+                val normalType = mniRegister.normalParams.map {
+                    MCFPPType.parseFromIdentifier(it.split(" ", limit = 2)[0], Namespace.currNamespaceField)
+                }
+                //比对
+                if(nf.readOnlyParams.map { it.type } == readOnlyType && nf.normalParams.map { it.type } == normalType){
+                    hasFind = true
+                    nf.javaMethod = method
+                    break
+                }
+            }
+            if(!hasFind){
+                throw NoSuchMethodException("Cannot find method ${ctx.Identifier().text} with correct parameters in class $clsName")
+            }
+        } catch (e: ClassNotFoundException) {
+            LogProcessor.error("Cannot find java class: " + e.message)
+            return null
+        }
         return nf
     }
 
@@ -626,35 +632,39 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     
     override fun visitNativeFuncDeclaration(ctx: mcfppParser.NativeFuncDeclarationContext): Any? {
         Project.ctx = ctx
-        val nf: NativeFunction = try {
+        val nf = NativeFunction(ctx.Identifier().text, MCFPPType.parseFromIdentifier(ctx.functionReturnType()?.text?:"void", typeScope), Project.currNamespace)
+        nf.addParamsFromContext(ctx.functionParams())
+        try {
             //根据JavaRefer找到类
             val refer = ctx.javaRefer().text
             val clsName = refer.substring(0,refer.lastIndexOf('.'))
-            val clazz = java.lang.Class.forName(clsName).getConstructor().newInstance()
-            if(clazz !is MNIMethodContainer){
-                LogProcessor.error("Class $clsName should extends MNIMethodContainer")
-                throw IllegalArgumentException("Class $clsName should extends MNIMethodContainer")
+            val clazz = java.lang.Class.forName(clsName)
+            val methods = clazz.methods
+            var hasFind = false
+            for(method in methods){
+                val mniRegister = method.getAnnotation(MNIRegister::class.java) ?: continue
+                //解析MNIMethod注解成员
+                val readOnlyType = mniRegister.readOnlyParams.map {
+                    MCFPPType.parseFromIdentifier(it.split(" ", limit = 2)[0], Namespace.currNamespaceField)
+                }
+                val normalType = mniRegister.normalParams.map {
+                    MCFPPType.parseFromIdentifier(it.split(" ", limit = 2)[0], Namespace.currNamespaceField)
+                }
+                //比对
+                if(nf.readOnlyParams.map { it.type } == readOnlyType && nf.normalParams.map { it.type } == normalType){
+                    hasFind = true
+                    nf.javaMethod = method
+                    break
+                }
             }
-            NativeFunction(
-                ctx.Identifier().text,
-                clazz,
-                ctx.functionReturnType()?.let { MCFPPType.parseFromContext(it.type(),typeScope)}?:MCFPPBaseType.Void,
-                Project.currNamespace
-            )
-        } catch (e: IllegalFormatException) {
-            LogProcessor.error("Illegal Java Method Name: " + e.message)
-            return null
+            if(!hasFind){
+                throw NoSuchMethodException("Cannot find method ${ctx.Identifier().text} with correct parameters in class $clsName")
+            }
         } catch (e: ClassNotFoundException) {
             LogProcessor.error("Cannot find java class: " + e.message)
-            return null
-        } catch (e: NoSuchMethodException) {
-            LogProcessor.error("MNIMethodContainer should have a non-parameter constructor: " + e.message)
-            return null
-        } catch (e: SecurityException){
-            LogProcessor.error("Cannot access to the constructor: " + e.message)
+            e.printStackTrace()
             return null
         }
-        nf.addParamsFromContext(ctx.functionParams())
         //写入域
         val namespace = GlobalField.localNamespaces[nf.namespace]!!
         //是普通的函数

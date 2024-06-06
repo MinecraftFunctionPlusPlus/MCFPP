@@ -1,12 +1,11 @@
-package top.mcfpp.lang;
+package top.mcfpp.mni;
 
-import kotlin.jvm.functions.Function4;
 import org.jetbrains.annotations.NotNull;
 import top.mcfpp.annotations.InsertCommand;
+import top.mcfpp.annotations.MNIRegister;
+import top.mcfpp.lang.*;
 import top.mcfpp.model.function.Function;
-import top.mcfpp.model.function.MNIMethodContainer;
 import top.mcfpp.util.NBTUtil;
-import top.mcfpp.util.ValueWrapper;
 
 import java.util.HashMap;
 import java.util.UUID;
@@ -22,7 +21,7 @@ public class System extends BaseMNIMethodContainer {
             else if (value instanceof MCString) print((MCString) value);
             //else if (value instanceof JsonString) print((JsonString) value);
             else if (value instanceof NBTBasedData<?>) print((NBTBasedData<?>) value);
-            else print(value);
+            else Function.Companion.addCommand("tellraw @a " + "\"" + value + "\"");;
             return null;
         });
         methods.put("typeof", (vars, vars2, canSelectMember, varValueWrapper) -> {
@@ -35,6 +34,13 @@ public class System extends BaseMNIMethodContainer {
     }
 
     @InsertCommand
+    @MNIRegister(normalParams = {"any a"})
+    public static void print(@NotNull Var<?> value){
+        Function.Companion.addCommand("tellraw @a " + "\"" + value + "\"");
+    }
+
+    @InsertCommand
+    @MNIRegister(normalParams = {"int i"})
     public static void print(@NotNull MCInt var) {
         if (var instanceof MCIntConcrete varC) {
             //是确定的，直接输出数值
@@ -50,11 +56,7 @@ public class System extends BaseMNIMethodContainer {
     //}
 
     @InsertCommand
-    public static void print(@NotNull Var<?> var){
-        Function.Companion.addCommand("tellraw @a " + "\"" +var + "\"");
-    }
-
-    @InsertCommand
+    @MNIRegister(normalParams = {"nbt n"})
     public static void print(@NotNull NBTBasedData<?> var){
         if(var instanceof NBTBasedDataConcrete<?> varC){
             Function.Companion.addCommand("tellraw @a " + NBTUtil.INSTANCE.toJava(varC.getValue()));
@@ -64,6 +66,7 @@ public class System extends BaseMNIMethodContainer {
     }
 
     @InsertCommand
+    @MNIRegister(normalParams = {"string s"})
     public static void print(@NotNull MCString var) {
         if(var instanceof MCStringConcrete varC){
             Function.Companion.addCommand("tellraw @a \"" + varC.getValue().getValue() + "\"");

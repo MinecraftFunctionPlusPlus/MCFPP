@@ -411,31 +411,7 @@ open class Function : Member, FieldContainer {
      * @param ctx
      */
     open fun addParamsFromContext(ctx: mcfppParser.FunctionParamsContext) {
-        //val r : mcfppParser.ParameterListContext
-        val n : mcfppParser.ParameterListContext
-        /*
-        if(ctx.parameterList().size == 0) {
-            return
-        } else if(ctx.parameterList().size == 1) {
-            r = mcfppParser.ParameterListContext(ctx,0)
-            n = ctx.parameterList(0)
-        } else if(ctx.parameterList().size == 2){
-            r = ctx.parameterList(0)
-            n = ctx.parameterList(1)
-        } else{
-            return
-        }
-        for (param in r.parameter()){
-            val param1 = FunctionParam(
-                param.type().text,
-                param.Identifier().text,
-                this,
-                param.STATIC() != null
-            )
-            readOnlyParams.add(param1)
-        }
-         */
-        n = ctx.normalParams().parameterList()?:return
+        val n = ctx.normalParams().parameterList()?:return
         for (param in n.parameter()) {
             val param1 = FunctionParam(
                 MCFPPType.parseFromContext(param.type(), this.field),

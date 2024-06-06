@@ -68,12 +68,6 @@ object GlobalField : FieldContainer, IField {
         return this
     }
 
-    fun getFunction(@Nullable namespace:String?, identifier: String, readOnlyParams: List<String>, normalParams : List<String>): Function {
-        val rpls = readOnlyParams.map { MCFPPType.parseFromTypeName(it) }
-        val npls = normalParams.map { MCFPPType.parseFromTypeName(it) }
-        return getFunctionInner(namespace,identifier,rpls, npls)
-    }
-
     /**
      * 从当前的全局域获取一个函数。若不存在，则返回null。
      *
@@ -84,7 +78,7 @@ object GlobalField : FieldContainer, IField {
      *
      * @return 获取的函数。如果有多个相同函数（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
      */
-    fun getFunctionInner(@Nullable namespace:String?, identifier: String, readOnlyParams: List<MCFPPType>, normalParams : List<MCFPPType>): Function {
+    fun getFunction(@Nullable namespace:String?, identifier: String, readOnlyParams: List<MCFPPType>, normalParams : List<MCFPPType>): Function {
         if(namespace == null){
             val f = localNamespaces[Project.currNamespace]!!.field.getFunction(identifier, readOnlyParams, normalParams)
             if(f != null) return f

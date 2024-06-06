@@ -1,6 +1,10 @@
 package top.mcfpp.lang.type
 
+import org.antlr.v4.runtime.CharStream
+import org.antlr.v4.runtime.CharStreams
+import org.antlr.v4.runtime.CommonTokenStream
 import top.mcfpp.antlr.McfppExprVisitor
+import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.lang.CanSelectMember
 import top.mcfpp.lang.Var
@@ -133,14 +137,19 @@ abstract class MCFPPType(
             MCFPPBaseType.JavaVar.typeName to MCFPPBaseType.JavaVar,
             MCFPPBaseType.JsonText.typeName to MCFPPBaseType.JsonText,
             MCFPPNBTType.NBT.typeName to MCFPPNBTType.NBT,
-            MCFPPNBTType.Map.typeName to MCFPPNBTType.Map,
-            MCFPPNBTType.Dict.typeName to MCFPPNBTType.Dict
+            //MCFPPNBTType.Map.typeName to MCFPPNBTType.Map,
+            //MCFPPNBTType.Dict.typeName to MCFPPNBTType.Dict
         )}
 
         /**
          * 类型注册缓存。键值对的第一个元素判断字符串是否满足条件，而第二个元素则是用于从一个字符串中解析出一个类型
          */
-        private var typeActionCache:MutableList<Pair<(String)->Boolean,(String)->MCFPPType>> = mutableListOf()
+        private val genericTypeCache = mutableMapOf(
+            "list" to {generic: Array<MCFPPType> -> MCFPPListType(generic[0])},
+            "dict" to {generic: Array<MCFPPType> -> TODO()},
+            "map" to {generic: Array<MCFPPType> -> TODO()}
+        )
+
         val baseType:Set<MCFPPType> = setOf(
             MCFPPBaseType.Void,
             MCFPPBaseType.BaseEntity,
@@ -161,19 +170,19 @@ abstract class MCFPPType(
             MCFPPNBTType.Dict
         )
 
-        /**
-         * 注册一个类型
-         *
-         * @param predicate 判断字符串是否满足条件
-         * @param typeParser 从字符串中解析类型
-         *
-         */
-        fun registerType(
-            predicate:(String)->Boolean,
-            typeParser:(String)->MCFPPType
-        ){
-            typeActionCache.add(predicate to typeParser)
-        }
+        ///**
+        // * 注册一个类型
+        // *
+        // * @param predicate 判断字符串是否满足条件
+        // * @param typeParser 从字符串中解析类型
+        // *
+        // */
+        //fun registerType(
+        //    predicate:(String)->Boolean,
+        //    typeParser:(String)->MCFPPType
+        //){
+        //    genericTypeCache.add(predicate to typeParser)
+        //}
 
         /**
          * 将这个类型注册入缓存
@@ -182,32 +191,42 @@ abstract class MCFPPType(
             typeCache[this.typeName] = this
         }
 
-        /**
-         * 从类型字符串中获取一个类型。此类型将会进行正则条件匹配
-         */
-        fun parseFromTypeName(typeName: String) : MCFPPType{
-            if(typeCache.contains(typeName)) return typeCache[typeName]!!
-            for(typeAction in typeActionCache){
-                //判断字符串是否满足条件
-                if(typeAction.first(typeName)){
-                    return typeAction.second(typeName)
-                }
-            }
-            //TODO 是不是不应该在这里输出日志呢
-            LogProcessor.warn("Unknown type: $typeName")
-            return MCFPPBaseType.Any
-        }
+        ///**
+        // * 从类型字符串中获取一个类型。此类型将会进行正则条件匹配
+        // */
+        //fun parseFromTypeName(typeName: String) : MCFPPType{
+        //    if(typeCache.contains(typeName)) return typeCache[typeName]!!
+        //    for(typeAction in typeActionCache){
+        //        //判断字符串是否满足条件
+        //        if(typeAction.first(typeName)){
+        //            return typeAction.second(typeName)
+        //        }
+        //    }
+        //    //TODO 是不是不应该在这里输出日志呢
+        //    LogProcessor.warn("Unknown type: $typeName")
+        //    return MCFPPBaseType.Any
+        //}
 
         /**
-         * 从类型标识符中获取一个类型。通常是从类名或者模板名中获取，也可以从泛型中获取
+         * 根据类型标识符中获取一个类型
          */
         fun parseFromIdentifier(identifier: String, typeScope: IFieldWithType): MCFPPType{
+            if(identifier.contains("<")){
+                val charStream: CharStream = CharStreams.fromString("int")
+                val tokens = CommonTokenStream(mcfppLexer(charStream))
+                val parser = mcfppParser(tokens)
+                return parseFromContext(parser.type(), typeScope)
+            }
             if(typeCache.contains(identifier)) return typeCache[identifier]!!
+            if(genericTypeCache.contains(identifier)){
+                val genericParams = identifier.substring(identifier.indexOfFirst { it == '<' }+1,identifier.indexOfLast { it == '>' }).split(',')
+                return genericTypeCache[identifier]!!(genericParams.map { parseFromIdentifier(it, typeScope) }.toTypedArray())
+            }
             //类和模板
             val clazz = GlobalField.getClass(null,identifier)
-            if(clazz!=null) return clazz.getType()
-            val template = GlobalField.getTemplate(null,identifier)
-            if(template!=null) return template.getType()
+            if(clazz != null) return clazz.getType()
+            //val template = GlobalField.getTemplate(null,identifier)
+            //if(template!=null) return template.getType()
             //泛型
             if(typeScope.containType(identifier)){
                 return typeScope.getType(identifier)!!

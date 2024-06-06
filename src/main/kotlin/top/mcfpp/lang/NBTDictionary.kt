@@ -2,13 +2,13 @@ package top.mcfpp.lang
 
 import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.CompoundTag
-import net.querz.nbt.tag.StringTag
 import top.mcfpp.Project
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
 import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.mni.NBTDictionaryData
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
@@ -115,20 +115,7 @@ open class NBTDictionary : NBTBasedData<CompoundTag> {
 
         init {
             data.initialize()
-            data.field.addFunction(
-                NativeFunction("remove", NBTDictionaryData(), MCFPPBaseType.Void,"mcfpp")
-                    .appendReadOnlyParam(MCFPPBaseType.String,"e")
-                ,false
-            )
-            data.field.addFunction(
-                NativeFunction("merge", NBTDictionaryData(), MCFPPBaseType.Void,"mcfpp")
-                    .appendReadOnlyParam(MCFPPNBTType.Dict,"d")
-                ,false)
-            data.field.addFunction(
-                NativeFunction("containsKey", NBTDictionaryData(), MCFPPBaseType.Void,"mcfpp")
-                    .appendReadOnlyParam(MCFPPBaseType.String,"key")
-                ,false
-            )
+            NativeFunction.getFromClass(NBTDictionaryData::class.java).forEach { data.field.addFunction(it, false) }
         }
     }
 }

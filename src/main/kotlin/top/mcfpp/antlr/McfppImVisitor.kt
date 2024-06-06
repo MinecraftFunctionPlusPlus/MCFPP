@@ -51,7 +51,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         //获取函数对象
         val types = FunctionParam.parseReadonlyAndNormalParamTypes(ctx.functionParams())
         //获取缓存中的对象
-        f = GlobalField.getFunctionInner(Project.currNamespace, ctx.Identifier().text, types.first, types.second)
+        f = GlobalField.getFunction(Project.currNamespace, ctx.Identifier().text, types.first, types.second)
         Function.currFunction = f
         //对函数进行注解处理
         for (a in annoInCompound){
