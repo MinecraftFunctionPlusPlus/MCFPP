@@ -5,7 +5,13 @@ import top.mcfpp.lang.CanSelectMember
 import top.mcfpp.lang.UnknownVar
 import top.mcfpp.lang.Var
 
-class UnknownFunction: Function {
+open class UnknownFunction: Function {
+
+    /**
+     * 未知函数中的额外信息
+     */
+    var data : Any? = null
+
     /**
      * 创建一个全局函数，它有指定的命名空间
      * @param identifier 函数的标识符

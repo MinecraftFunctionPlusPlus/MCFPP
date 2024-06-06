@@ -178,7 +178,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>?>(){
             //获取函数
             val p = StringHelper.splitNamespaceID(ctx.namespaceID().text)
             val func = if(currSelector == null){
-                GlobalField.getFunction(p.first, p.second, FunctionParam.getArgTypeNames(readOnlyArgs), FunctionParam.getArgTypeNames(normalArgs))
+                GlobalField.getFunction(p.first, p.second, FunctionParam.getArgTypes(readOnlyArgs), FunctionParam.getArgTypes(normalArgs))
             }else{
                 if(p.first != null){
                     LogProcessor.warn("Invalid namespace usage ${p.first} in function call ")

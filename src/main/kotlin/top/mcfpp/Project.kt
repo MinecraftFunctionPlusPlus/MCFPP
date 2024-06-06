@@ -17,8 +17,11 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.field.NamespaceField
 import top.mcfpp.lang.Var
+import top.mcfpp.model.function.NativeFunction
+import top.mcfpp.model.function.UnresolvedNativeFunction
 import top.mcfpp.util.LogProcessor
 import java.io.*
+import java.lang.Class
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.name
@@ -178,8 +181,42 @@ object Project {
                 LogProcessor.error("Cannot find lib file at: ${file.absolutePath}")
             }
         }
-        //库读取完了，现在实例化所有类中的成员字段吧
+        //在所有的类型都读取到了以后，再解析Native函数
+        //同时，实例化所有类中的成员字段
+        val nativeFunctionCache = HashMap<Class<*>, ArrayList<NativeFunction>>()
         for(namespace in GlobalField.libNamespaces.values){
+            namespace.field.forEachFunction { f ->
+                run {
+                    if(f !is UnresolvedNativeFunction) return@run
+                    val clazz = Class.forName(f.data as String)
+                    if(!nativeFunctionCache.containsKey(clazz)){
+                        nativeFunctionCache[clazz] = NativeFunction.getFromClass(clazz)
+                    }
+                    //找这个函数
+                    val list = nativeFunctionCache[clazz]!!
+                    for (n in list){
+                        if((n.identifier == f.identifier && n.normalParams.size == f.normalParams.size && n.readOnlyParams.size == f.readOnlyParams.size)){
+                            continue
+                        }
+                        var hasFind = true
+                        for (nt in n.normalParams.withIndex()){
+                            if(nt.value.typeIdentifier == f.normalParams[nt.index].typeIdentifier){
+                                hasFind = false
+                                break
+                            }
+                        }
+                        for (rt in n.readOnlyParams.withIndex()){
+                            if(rt.value.typeIdentifier == f.readOnlyParams[rt.index].typeIdentifier){
+                                hasFind = false
+                                break
+                            }
+                        }
+                        if(hasFind){
+
+                        }
+                    }
+                }
+            }
             namespace.field.forEachClass { c ->
                 run {
                     for (v in c.field.allVars){

@@ -98,8 +98,7 @@ object FunctionWriter: ILibJsonWriter<Function>{
                 readonlyParam.add(FunctionParamWriter.toJson(v))
                 json["readonlyParam"] = readonlyParam
             } }
-            json["dataClass"] = t.javaClassName
-            json["javaMethodName"] = t.javaMethodName
+            json["javaMethod"] = NativeFunction.methodToString(t.javaMethod)
         }
         json["normalParams"] = normalParams
         json["returnType"] = t.returnType.typeName

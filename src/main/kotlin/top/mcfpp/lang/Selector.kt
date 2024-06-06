@@ -8,6 +8,8 @@ import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.mni.NBTListData
+import top.mcfpp.mni.SelectorConcreteData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
@@ -253,58 +255,7 @@ class SelectorConcrete : MCFPPValue<SelectorValue>, Var<SelectorValue>{
 
         init {
             data.parent.add(MCAny.data)
-            data.field.addFunction(NativeFunction("x", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.Int, "x"), true)
-            data.field.addFunction(NativeFunction("y", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.Int, "y"), true)
-            data.field.addFunction(NativeFunction("z", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.Int, "z"), true)
-            data.field.addFunction(NativeFunction("distance", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.Int, "distance"), true)
-            data.field.addFunction(NativeFunction("dx", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.Int, "dx"), true)
-            data.field.addFunction(NativeFunction("dy", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.Int, "dy"), true)
-            data.field.addFunction(NativeFunction("dz", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.Int, "dz"), true)
-            //TODO score
-            data.field.addFunction(NativeFunction("tag", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.String, "tag"), true)
-            data.field.addFunction(NativeFunction("tagNot", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.String, "tag"), true)
-            data.field.addFunction(NativeFunction("team", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.String, "team"), true)
-            data.field.addFunction(NativeFunction("teamNot", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.String, "team"), true)
-            data.field.addFunction(NativeFunction("name", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.String, "name"), true)
-            data.field.addFunction(NativeFunction("nameNot", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.String, "name"), true)
-            data.field.addFunction(NativeFunction("type", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.String, "type"), true)
-            data.field.addFunction(NativeFunction("typeNot", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.String, "type"), true)
-            data.field.addFunction(NativeFunction("predicate", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.String, "predicate"), true)
-            data.field.addFunction(NativeFunction("predicateNot", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.String, "predicate"), true)
-            data.field.addFunction(NativeFunction("x_rotation", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.Int, "x_rotation"), true)
-            data.field.addFunction(NativeFunction("y_rotation", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.Int, "y_rotation"), true)
-            data.field.addFunction(NativeFunction("nbt", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPNBTType.NBT, "nbt"), true)
-            data.field.addFunction(NativeFunction("level", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.Int, "level"), true)
-            data.field.addFunction(NativeFunction("gamemode", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.String, "gamemode"), true)
-            data.field.addFunction(NativeFunction("advancements", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.String, "advancement")
-                .appendReadOnlyParam(MCFPPBaseType.Bool, "value"), true)
-            data.field.addFunction(NativeFunction("limit", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.Int, "limit"), true)
-            data.field.addFunction(NativeFunction("sort", SelectorConcreteData.INSTANCE , MCFPPBaseType.Selector,"mcfpp")
-                .appendReadOnlyParam(MCFPPBaseType.String, "sort"), true)
+            NativeFunction.getFromClass(SelectorConcreteData::class.java).forEach { data.field.addFunction(it, false) }
         }
 
     }
@@ -356,6 +307,8 @@ class SelectorValue(var selectorType: SelectorType) {
                 field = value
             }
         }
+
+    constructor(char: Char):this(fromSelectorTypeString(char))
 
     fun onlyIncludingPlayers() : Boolean {
         if(selectorType == SelectorType.RANDOM_PLAYER || selectorType == SelectorType.NEAREST_PLAYER || selectorType == SelectorType.ALL_PLAYERS){

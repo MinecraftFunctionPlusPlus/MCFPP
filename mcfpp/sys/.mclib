@@ -5,8 +5,7 @@
 			"functions":[
 				{
 					"id":"print",
-					"dataClass":"top.mcfpp.lang.System",
-					"javaMethodName":"print",
+					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.lang.MCInt)",
 					"normalParams":[
 						{
 							"id":"i",
@@ -22,12 +21,11 @@
 				},
 				{
 					"id":"print",
-					"dataClass":"top.mcfpp.lang.System",
-					"javaMethodName":"print",
+					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.lang.MCString)",
 					"normalParams":[
 						{
-							"id":"a",
-							"type":"any",
+							"id":"s",
+							"type":"string",
 							"isStatic":false
 						}
 					],
@@ -38,13 +36,12 @@
 					]
 				},
 				{
-					"id":"insert",
-					"dataClass":"top.mcfpp.lang.System",
-					"javaMethodName":"insert",
+					"id":"print",
+					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.lang.Var)",
 					"normalParams":[
 						{
-							"id":"i",
-							"type":"string",
+							"id":"a",
+							"type":"any",
 							"isStatic":false
 						}
 					],

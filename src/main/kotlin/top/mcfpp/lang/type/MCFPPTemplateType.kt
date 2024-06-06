@@ -16,13 +16,13 @@ class MCFPPTemplateType(
         get() = "template(${template.namespace}:${template.identifier})"
 
     init {
-        registerType({it.contains(regex)}){
-            val matcher = regex.find(it)!!.groupValues
-            MCFPPTemplateType(
-                Template(matcher[2], LazyWrapper(MCFPPBaseType.Int),matcher[1]), //TODO: 这里肯定有问题
-                parentType
-            )
-        }
+        //registerType({it.contains(regex)}){
+        //    val matcher = regex.find(it)!!.groupValues
+        //    MCFPPTemplateType(
+        //        Template(matcher[2], LazyWrapper(MCFPPBaseType.Int),matcher[1]), //TODO: 这里肯定有问题
+        //        parentType
+        //    )
+        //}
     }
 
     companion object{

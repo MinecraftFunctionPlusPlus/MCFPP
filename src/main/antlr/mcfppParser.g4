@@ -230,6 +230,10 @@ fieldDeclarationExpression
 
 fieldModifier : CONST|DYNAMIC|IMPORT;
 
+javaMethodParams
+    :   '(' type (',' type)* ')'
+    ;
+
 functionParams
     :   readOnlyParams? normalParams
     ;

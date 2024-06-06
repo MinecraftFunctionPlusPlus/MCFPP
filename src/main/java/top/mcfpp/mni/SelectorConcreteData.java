@@ -1,13 +1,7 @@
-package top.mcfpp.lang;
+package top.mcfpp.mni;
 
 import kotlin.Pair;
-import kotlin.jvm.functions.Function4;
-import net.querz.nbt.tag.Tag;
-import org.jetbrains.annotations.NotNull;
-import top.mcfpp.model.function.MNIMethodContainer;
-import top.mcfpp.util.ValueWrapper;
-
-import java.util.HashMap;
+import top.mcfpp.lang.*;
 
 public class SelectorConcreteData extends BaseMNIMethodContainer {
 

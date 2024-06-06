@@ -1,4 +1,4 @@
-package top.mcfpp.lang;
+package top.mcfpp.mni;
 
 import kotlin.jvm.functions.Function4;
 import net.querz.nbt.io.SNBTUtil;
@@ -6,6 +6,7 @@ import net.querz.nbt.tag.Tag;
 import org.jetbrains.annotations.NotNull;
 import top.mcfpp.Project;
 import top.mcfpp.command.Command;
+import top.mcfpp.lang.*;
 import top.mcfpp.lang.value.MCFPPValue;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.model.function.MNIMethodContainer;
@@ -14,37 +15,54 @@ import top.mcfpp.util.NBTUtil;
 import top.mcfpp.util.ValueWrapper;
 
 import java.io.IOException;
+import java.lang.Void;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Objects;
 
-public class NBTListConcreteData extends BaseMNIMethodContainer {
+public class NBTListData extends MNIMethodContainer {
 
-    public static final NBTListConcreteData INSTANCE = new NBTListConcreteData();
+    static HashMap<String, Function4<Var<?>[], Var<?>[], CanSelectMember, ValueWrapper<Var<?>>, java.lang.Void>> methods;
 
     static {
+        methods = new HashMap<>();
         //list<E>.add(E e)
         methods.put("add", (readOnlyArgs, normalArgs, caller, returnVar) -> {
             //由于类型检查，必然是可以通过的
             var e = normalArgs[0];  //要添加的成员
-            var list = (NBTListConcrete)caller;
+            var list = (NBTList)caller;
             if(e instanceof MCFPPValue<?>){
-                //都是确定的
-                //直接添加值
-                list.getValue().add(NBTUtil.INSTANCE.toNBT(e));
+                //e是确定的
+                Tag<?> tag = NBTUtil.INSTANCE.toNBT(e);
+                String command;
+                try{
+                    if(list.parentClass() != null){
+                        command = "data modify " +
+                                "entity @s " +
+                                "data." + list.getIdentifier() + " " +
+                                "append value " + SNBTUtil.toSNBT(tag);
+                    }else {
+                        command = "data modify " +
+                                "storage mcfpp:system " +
+                                Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + list.getIdentifier() + " " +
+                                "append value " + SNBTUtil.toSNBT(tag);
+                    }
+                }catch (Exception ex){
+                    throw new RuntimeException(ex);
+                }
+                Function.Companion.addCommand(command);
             }else {
-                //e不是确定的，但是list可能是确定的可能不是确定的
-                list.toDynamic(true);
-                String command = "";
-                if(e.parentClass() != null) e = e.getTempVar();
-                if(list.parentClass() != null){
+                //e不是确定的
+                String command;
+                if (e.parentClass() != null) e = e.getTempVar();
+                if (list.parentClass() != null) {
                     command = "data modify " +
                             "entity @s " +
                             "data." + list.getIdentifier() + " " +
                             "append from " +
                             "storage mcfpp:system " +
                             Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + e.getIdentifier() + " ";
-                }else {
+                } else {
                     command = "data modify " +
                             "storage mcfpp:system " +
                             Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + list.getIdentifier() + " " +
@@ -60,37 +78,33 @@ public class NBTListConcreteData extends BaseMNIMethodContainer {
         //list<E>.addAll(list<E> list)
         methods.put("addAll", (readOnlyArgs, normalArgs, caller, returnVar) -> {
             var e = (NBTList)normalArgs[0];  //要添加的成员
-            var list = (NBTListConcrete)caller;
-            if(e instanceof MCFPPValue<?> ec){
-                //都是确定的
-                //直接添加值
-                list.getValue().addAll((Collection) ec.getValue());
-            }else {
-                list.toDynamic(true);
-                String command;
-                NBTBasedData<?> l;
-                if(e.parentClass() != null) {
-                    l = (NBTBasedData<?>) e.getTempVar();
-                }else{
-                    l = e;
-                }
-                if(list.parentClass() != null){
-                    command = "data modify " +
-                            "entity @s " +
-                            "data." + list.getIdentifier() + " " +
-                            "append from " +
-                            "storage mcfpp:system " +
-                            Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + l.getIdentifier() + "[]";
-                }else {
-                    command = "data modify " +
-                            "storage mcfpp:system " +
-                            Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + list.getIdentifier() + " " +
-                            "append from " +
-                            "storage mcfpp:system " +
-                            Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + l.getIdentifier() + "[]";
-                }
-                Function.Companion.addCommand(command);
+            var list = (NBTList)caller;
+            String command;
+            NBTBasedData<?> l;
+            if(e.parentClass() != null) {
+                l = (NBTList) e.getTempVar();
+            }else if(e instanceof NBTListConcrete<?> eC){
+                l = e;
+                eC.toDynamic(false);
+            }else{
+                l = e;
             }
+            if(list.parentClass() != null){
+                command = "data modify " +
+                        "entity @s " +
+                        "data." + list.getIdentifier() + " " +
+                        "append from " +
+                        "storage mcfpp:system " +
+                        Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + l.getIdentifier() + "[]";
+            }else {
+                command = "data modify " +
+                        "storage mcfpp:system " +
+                        Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + list.getIdentifier() + " " +
+                        "append from " +
+                        "storage mcfpp:system " +
+                        Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + l.getIdentifier() + "[]";
+            }
+            Function.Companion.addCommand(command);
             return null;
         });
 
@@ -98,17 +112,33 @@ public class NBTListConcreteData extends BaseMNIMethodContainer {
         methods.put("insert", (readOnlyArgs, normalArgs, caller, returnVar) -> {
             //由于类型检查，必然是可以通过的
             var index = (MCInt)normalArgs[0];   //索引
-            var e = (Var<?>) normalArgs[1];  //要添加的成员
-            var list = (NBTListConcrete)caller;
+            var e = normalArgs[1];  //要添加的成员
+            var list = (NBTList)caller;
             if(e instanceof MCFPPValue<?> && index instanceof MCIntConcrete indexC){
                 //都是确定的
-                //直接添加值
-                list.getValue().add(Objects.requireNonNull(indexC.getValue()), NBTUtil.INSTANCE.toNBT(e));
+                Tag<?> tag = NBTUtil.INSTANCE.toNBT(e);
+                int i = indexC.getValue();
+                String command;
+                try {
+                    if (list.parentClass() != null) {
+                        command = "data modify " +
+                                "entity @s " +
+                                "data." + list.getIdentifier() + " " +
+                                "insert " + i + " value " + SNBTUtil.toSNBT(tag);
+                    } else {
+                        command = "data modify " +
+                                "storage mcfpp:system " +
+                                Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + list.getIdentifier() + " " +
+                                "insert " + i + " value " + SNBTUtil.toSNBT(tag);
+                    }
+                }catch (IOException ex){
+                    throw new RuntimeException(ex);
+                }
+                Function.Companion.addCommand(command);
             }else if(index instanceof MCIntConcrete indexC){
                 //e不是确定的，index是确定的，所以可以直接调用命令而不需要宏
                 int i = indexC.getValue();
-                list.toDynamic(true);
-                String command = "";
+                String command;
                 if(e.parentClass() != null) e = e.getTempVar();
                 if(list.parentClass() != null){
                     command = "data modify " +
@@ -128,20 +158,19 @@ public class NBTListConcreteData extends BaseMNIMethodContainer {
                 Function.Companion.addCommand(command);
             }else if(e instanceof MCFPPValue<?> eC){
                 //e是确定的，index不是确定的，需要使用宏
-                list.toDynamic(true);
                 Tag<?> tag = NBTUtil.INSTANCE.toNBT(e);
                 Command command;
                 try {
                     if(list.parentClass() != null){
-                            command = new Command("data modify " +
-                                    "entity @s " +
-                                    "data." + list.getIdentifier() + " " +
-                                    "insert").build("", index.getIdentifier()).build ("value " + SNBTUtil.toSNBT(tag));
+                        command = new Command("data modify " +
+                                "entity @s " +
+                                "data." + list.getIdentifier() + " " +
+                                "insert ").build("", index.getIdentifier()).build ("value " + SNBTUtil.toSNBT(tag));
                     } else {
                         command = new Command("data modify " +
                                 "storage mcfpp:system " +
                                 Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + list.getIdentifier() + " " +
-                                "insert").build("", index.getIdentifier()).build("value " + SNBTUtil.toSNBT(tag));
+                                "insert ").build("", index.getIdentifier()).build("value " + SNBTUtil.toSNBT(tag));
                     }
                 } catch (IOException ex) {
                     throw new RuntimeException(ex);
@@ -151,21 +180,20 @@ public class NBTListConcreteData extends BaseMNIMethodContainer {
                 Function.Companion.addCommand(f);
             } else{
                 //e是不确定的，index也不是确定的
-                list.toDynamic(true);
                 if(e.parentClass() != null) e = e.getTempVar();
                 Command command;
                 if(list.parentClass() != null){
                     command = new Command("data modify " +
                             "entity @s " +
                             "data." + list.getIdentifier() + " " +
-                            "insert").build("", index.getIdentifier()).build ("from " +
+                            "insert ").build("", index.getIdentifier()).build (" from " +
                             "storage mcfpp:system " +
                             Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + e.getIdentifier());
                 } else {
                     command = new Command("data modify " +
                             "storage mcfpp:system " +
                             Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + list.getIdentifier() + " " +
-                            "insert").build("", index.getIdentifier()).build("from " +
+                            "insert ").build("", index.getIdentifier()).build("from " +
                             "storage mcfpp:system " +
                             Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + list.getStackIndex() + "]." + e.getIdentifier());
                 }
@@ -199,5 +227,11 @@ public class NBTListConcreteData extends BaseMNIMethodContainer {
         methods.put("clear", (readOnlyArgs, normalArgs, caller, returnVar) -> {
             return null;
         });
+    }
+
+    @NotNull
+    @Override
+    public Function4<Var<?>[], Var<?>[], CanSelectMember, ValueWrapper<Var<?>>, java.lang.Void> getMNIMethod(@NotNull String name) {
+        return methods.get(name);
     }
 }

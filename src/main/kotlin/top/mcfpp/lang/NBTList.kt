@@ -9,6 +9,9 @@ import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
 import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.mni.NBTDictionaryData
+import top.mcfpp.mni.NBTListConcreteData
+import top.mcfpp.mni.NBTListData
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
@@ -171,8 +174,7 @@ open class NBTList : NBTBasedData<ListTag<*>> {
 
         init {
             data.parent.add(MCAny.data)
-            data.field.addFunction(NativeFunction("add", NBTListData(),MCFPPBaseType.Void,"mcfpp")
-                .appendNormalParam(MCFPPGenericType("E", emptyList()), "e"),false)
+            NativeFunction.getFromClass(NBTListData::class.java).forEach { data.field.addFunction(it, false) }
         }
 
     }
@@ -308,8 +310,9 @@ class NBTListConcrete<E>: NBTList, MCFPPValue<ListTag<*>> {
 
         init {
             data.parent.add(MCAny.data)
-            data.field.addFunction(NativeFunction("add", NBTListConcreteData.INSTANCE ,MCFPPBaseType.Void,"mcfpp")
-                .appendNormalParam(MCFPPGenericType("E", emptyList()), "e"),false)
+            NativeFunction.getFromClass(NBTListConcreteData::class.java).forEach { data.field.addFunction(it, false) }
+            //data.field.addFunction(NativeFunction("add", NBTListConcreteData.INSTANCE ,MCFPPBaseType.Void,"mcfpp")
+            //    .appendNormalParam(MCFPPGenericType("E", emptyList()), "e"),false)
         }
 
     }

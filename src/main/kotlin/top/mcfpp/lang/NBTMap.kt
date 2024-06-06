@@ -3,6 +3,8 @@ package top.mcfpp.lang
 import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
+import top.mcfpp.mni.NBTListData
+import top.mcfpp.mni.NBTMapData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.function.NativeFunction
@@ -46,44 +48,8 @@ class NBTMap : NBTDictionary{
 
         init {
             data.initialize()
-            data.field.addFunction(
-                NativeFunction("remove" ,NBTMapData(), MCFPPBaseType.Void,"mcfpp")
-                    .appendReadOnlyParam(MCFPPBaseType.String,"key"),
-                false
-            )
-            data.field.addFunction(
-                NativeFunction("containsKey", NBTMapData(), MCFPPBaseType.Bool,"mcfpp")
-                    .appendReadOnlyParam(MCFPPBaseType.String,"key"),
-                false
-            )
-            data.field.addFunction(
-                NativeFunction("containsValue", NBTMapData(), MCFPPBaseType.Bool,"mcfpp")
-                    .appendReadOnlyParam(MCFPPNBTType.NBT,"value"),
-                false
-            )
-            data.field.addFunction(
-                NativeFunction("isEmpty", NBTMapData(), MCFPPBaseType.Bool,"mcfpp"),
-                false
-            )
-            /* TODO
-            data.field.addFunction(
-                NativeFunction("getKeys" ,NBTMapData(), MCFPPNBTType.BaseList,"mcfpp"),
-                false
-            )
-            data.field.addFunction(
-                NativeFunction("getValues" ,NBTMapData(), MCFPPNBTType.BaseList,"mcfpp"),
-                false
-            )
-             */
-            data.field.addFunction(
-                NativeFunction("merge", NBTMapData(), MCFPPBaseType.Void,"mcfpp")
-                    .appendReadOnlyParam(MCFPPNBTType.Map,"m"),
-                false
-            )
-            data.field.addFunction(
-                NativeFunction("size", NBTMapData(), MCFPPBaseType.Int,"mcfpp"),
-                false
-            )
+            data.parent.add(MCAny.data)
+            NativeFunction.getFromClass(NBTMapData::class.java).forEach { data.field.addFunction(it, false) }
         }
     }
 }

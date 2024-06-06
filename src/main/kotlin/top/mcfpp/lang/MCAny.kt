@@ -4,6 +4,8 @@ import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.mni.MCAnyData
+import top.mcfpp.mni.NBTListData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.function.Function
@@ -172,8 +174,7 @@ open class MCAny : Var<Var<*>> {
 
         init {
             data.initialize()
-            data.field.addFunction(NativeFunction("toString", MCAnyData(), MCFPPBaseType.String,"mcfpp"),false)
-            data.field.addFunction(NativeFunction("getJavaVar", MCAnyData(), MCFPPBaseType.JavaVar, "mcfpp"), false)
+            NativeFunction.getFromClass(MCAnyData::class.java).forEach { data.field.addFunction(it, false) }
         }
     }
 }

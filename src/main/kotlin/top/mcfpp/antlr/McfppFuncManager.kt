@@ -14,18 +14,6 @@ import kotlin.reflect.KFunction
 class McfppFuncManager{
 
     /**
-     * 获取一个全局函数
-     *
-     * @param namespace
-     * @param identifier
-     * @param normalParams
-     * @return
-     */
-    fun getFunction(namespace: String?, identifier: String, readOnlyParams: List<String>, normalParams: ArrayList<String>): Function {
-        return GlobalField.getFunction(namespace, identifier, readOnlyParams, normalParams)
-    }
-
-    /**
      * 获取成员函数
      *
      * @param curr 一个变量，用于从中选择函数

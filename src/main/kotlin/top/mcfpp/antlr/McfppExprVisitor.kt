@@ -542,7 +542,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             //获取函数
             val p = StringHelper.splitNamespaceID(ctx.namespaceID().text)
             val func = if(currSelector == null){
-                GlobalField.getFunction(p.first, p.second, FunctionParam.getArgTypeNames(readOnlyArgs), FunctionParam.getArgTypeNames(normalArgs))
+                GlobalField.getFunction(p.first, p.second, FunctionParam.getArgTypes(readOnlyArgs), FunctionParam.getArgTypes(normalArgs))
             }else{
                 if(p.first != null){
                     LogProcessor.warn("Invalid namespace usage ${p.first} in function call ")
@@ -651,7 +651,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         } else if (ctx.type() != null){
             return MCFPPTypeVar(MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field))
         } else if (ctx.TargetSelector() != null){
-            return Selector(ctx.TargetSelector().text)
+            return SelectorConcrete(SelectorValue(ctx.TargetSelector().text[1]))
         }
         return null
     }

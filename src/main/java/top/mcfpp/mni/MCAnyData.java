@@ -1,7 +1,10 @@
-package top.mcfpp.lang;
+package top.mcfpp.mni;
 
 import kotlin.jvm.functions.Function4;
 import org.jetbrains.annotations.NotNull;
+import top.mcfpp.lang.CanSelectMember;
+import top.mcfpp.lang.JavaVar;
+import top.mcfpp.lang.Var;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.model.function.MNIMethodContainer;
 import top.mcfpp.util.ValueWrapper;

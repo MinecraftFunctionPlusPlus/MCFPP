@@ -1,11 +1,4 @@
-package top.mcfpp.lang;
-
-import kotlin.jvm.functions.Function4;
-import org.jetbrains.annotations.NotNull;
-import top.mcfpp.model.function.MNIMethodContainer;
-import top.mcfpp.util.ValueWrapper;
-
-import java.util.HashMap;
+package top.mcfpp.mni;
 
 public class NBTDictionaryData extends BaseMNIMethodContainer {
 

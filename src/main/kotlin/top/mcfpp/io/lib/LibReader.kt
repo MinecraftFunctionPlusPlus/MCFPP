@@ -15,14 +15,13 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.generic.ClassParam
 import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.model.generic.GenericFunction
-import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import top.mcfpp.util.Utils
 import java.io.FileReader
-import java.lang.reflect.InvocationTargetException
 
 
 object LibReader{
+
     fun read(path: String){
         //读取json
         val fileReader = FileReader(path)
@@ -120,30 +119,28 @@ object FunctionReader: ILibJsonReader<Function> {
         val identifier = jsonObject.getString("id")
         val namespace = NamespaceReader.currNamespace!!.identifier
         val returnType = UnresolvedType(jsonObject.getString("returnType"))
-        val function = if(jsonObject.containsKey("dataClass")){
-            try {
-                val dataClass = java.lang.Class.forName(jsonObject.getString("dataClass")).getDeclaredConstructor().newInstance()
-                NativeFunction(identifier, dataClass as MNIMethodContainer, returnType, namespace)
-            } catch (e: ClassNotFoundException) {
-                LogProcessor.error("Cannot find class: ${jsonObject.getString("dataClass")}", e)
-                UnknownFunction(identifier, namespace)
-            } catch (e: NoSuchMethodException) {
-                LogProcessor.error("Cannot find default constructor for class: ${jsonObject.getString("dataClass")}", e)
-                UnknownFunction(identifier, namespace)
-            } catch (e: InstantiationException) {
-                LogProcessor.error("Cannot instantiate class: ${jsonObject.getString("dataClass")}", e)
-                UnknownFunction(identifier, namespace)
-            } catch (e: IllegalAccessException) {
-                LogProcessor.error("Cannot access constructor for class: ${jsonObject.getString("dataClass")}", e)
-                UnknownFunction(identifier, namespace)
-            } catch (e: ClassCastException) {
-                LogProcessor.error("Cannot cast class: ${jsonObject.getString("dataClass")} to MNIMethodContainer", e)
-                UnknownFunction(identifier, namespace)
-            } catch (e: InvocationTargetException) {
-                LogProcessor.error("Cannot invoke constructor for class: ${jsonObject.getString("dataClass")}", e)
-                UnknownFunction(identifier, namespace)
+        if(jsonObject.containsKey("javaMethod")){
+            //Native函数
+            val data = NativeFunction.stringToMethod(jsonObject.getString("javaMethod"))
+            val r = NativeFunction(identifier, returnType, namespace, data)
+            currFunction = r
+            //参数获取
+            val normalParams = jsonObject.getJSONArray("normalParams").map {
+                FunctionParamReader.fromJson(it as JSONObject)
             }
-        } else if(jsonObject.containsKey("readonlyParam")){
+            val readonlyParams = if(jsonObject.containsKey("readonlyParam")){
+                jsonObject.getJSONArray("readonlyParam").map {
+                    FunctionParamReader.fromJson(it as JSONObject)
+                }
+            }else{
+                emptyList()
+            }
+            r.normalParams.addAll(normalParams)
+            r.readOnlyParams.addAll(readonlyParams)
+            currFunction = null
+            return r
+        }
+        val function = if(jsonObject.containsKey("readonlyParam")){
             val ctx = Utils.fromByteArrayString<mcfppParser.FunctionBodyContext>(jsonObject["context"].toString())
             GenericFunction(identifier, namespace, returnType, ctx)
         }else{
@@ -151,16 +148,12 @@ object FunctionReader: ILibJsonReader<Function> {
         }
         currFunction = function
         //参数获取
-        val normalParams = jsonObject.getJSONArray("normalParams")
-        for (i in 0 until normalParams.size){
-            val param = normalParams.getJSONObject(i)
-            function.normalParams.add(FunctionParamReader.fromJson(param))
+        jsonObject.getJSONArray("normalParams").forEach {
+            function.normalParams.add(FunctionParamReader.fromJson(it as JSONObject))
         }
         if(jsonObject.containsKey("readonlyParam")){
-            val readonlyParams = jsonObject.getJSONArray("readonlyParam")
-            for (i in 0 until readonlyParams.size){
-                val param = readonlyParams.getJSONObject(i)
-                (function as GenericFunction).readOnlyParams.add(FunctionParamReader.fromJson(param))
+            jsonObject.getJSONArray("readonlyParam").forEach() {
+                (function as GenericFunction).readOnlyParams.add(FunctionParamReader.fromJson(it as JSONObject))
             }
         }
         currFunction = null
