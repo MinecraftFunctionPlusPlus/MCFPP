@@ -1,14 +1,14 @@
 package top.mcfpp.lang.type
 
+import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.model.*
-import top.mcfpp.util.LazyWrapper
 
 /**
  * 模板类型
- * @see Template
+ * @see DataTemplate
  */
-class MCFPPTemplateType(
-    var template: Template,
+class DataTemplateType(
+    var template: DataTemplate,
     override var parentType: List<MCFPPType>
 ) :MCFPPType(parentType, template) {
 

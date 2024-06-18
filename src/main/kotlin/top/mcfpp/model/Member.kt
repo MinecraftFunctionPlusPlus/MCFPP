@@ -33,5 +33,5 @@ interface Member {
      *
      * @return
      */
-    fun parentStruct(): Template?
+    fun parentTemplate(): DataTemplate?
 }

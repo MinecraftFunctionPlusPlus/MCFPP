@@ -1,10 +1,10 @@
 package top.mcfpp.lang
 
 import net.querz.nbt.tag.Tag
+import top.mcfpp.Project
 import top.mcfpp.exception.OperationNotImplementException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
-import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import java.util.*
@@ -81,6 +81,16 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
     open var type: MCFPPType = MCFPPBaseType.Any
 
     /**
+     * 变量是存在列表里面还是复合标签里面的
+     */
+    var inList = false
+
+    var parentPath = "storage mcfpp:system " + Project.currNamespace + ".stack_frame[" + stackIndex + "]"
+
+    open val nbtPath: String
+        get() = if(inList) parentPath else "$parentPath.$identifier"
+
+    /**
      * 复制一个变量
      */
     constructor(`var` : Var<*>)  {
@@ -91,6 +101,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
         isTemp = `var`.isTemp
         stackIndex = `var`.stackIndex
         isConst = `var`.isConst
+        parentPath = `var`.parentPath
     }
 
     /**
@@ -120,10 +131,8 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      *
      * @return
      */
-    override fun parentStruct(): Template? {
+    override fun parentTemplate(): DataTemplate? {
         return when (val parent = parent) {
-            is IntTemplatePointer -> parent.structType
-            is IntTemplateType -> parent.dataType as? Template
             else -> null
         }
     }
@@ -150,6 +159,16 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
             //不是this指针才需要额外指定引用者
             `var`.parent = pointer
         }
+        `var`.parentPath = "entity @s data.$identifier"
+        return `var`
+    }
+
+    fun clone(obj: DataTemplateObject): Var<*>{
+        val `var`: Var<*> = this.clone()
+        if(obj.identifier != "this"){
+            `var`.parent = obj
+        }
+        `var`.parentPath = obj.nbtPath
         return `var`
     }
 
@@ -350,6 +369,10 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
                     //什么意思捏？ - Alumopper 2024.4.14
                     `var` = ClassPointer(type.cls, identifier)
                 }
+                is DataTemplateType -> {
+                    //数据模板
+                    `var` = DataTemplateObject(type.template, identifier)
+                }
                 //还有模板什么的
                 else -> {
                     `var` = UnknownVar(identifier)
@@ -357,26 +380,68 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
             }
             return `var`
         }
+
+        /**
+         * 根据所给的类型、标识符和域构造一个变量
+         * @param identifier 标识符
+         * @param type 变量的类型
+         * @param container 变量所在的域
+         * @return
+         */
+        fun build(identifier: String, type: MCFPPType): Var<*>{
+            val `var`: Var<*>
+            when (type) {
+                MCFPPBaseType.Int -> `var` = MCInt(identifier)
+                MCFPPBaseType.Bool -> `var` = MCBool(identifier)
+                MCFPPBaseType.Selector -> TODO()
+                MCFPPBaseType.BaseEntity -> TODO()
+                MCFPPBaseType.String -> `var` = MCString(identifier)
+                MCFPPBaseType.Float -> TODO()
+                is MCFPPListType -> `var` = NBTList(identifier, type.generic)
+                MCFPPNBTType.Dict -> TODO()
+                MCFPPNBTType.Map -> TODO()
+                MCFPPNBTType.NBT -> `var` = NBTBasedData<Tag<*>>(identifier)
+                MCFPPBaseType.JavaVar -> `var` = JavaVar(null,identifier)
+                MCFPPBaseType.Any -> `var` = MCAny(identifier)
+                MCFPPBaseType.Type -> `var` = MCFPPTypeVar(identifier = identifier)
+                is MCFPPGenericClassType -> {
+                    `var` = ClassPointer(type.cls, identifier)
+                }
+                is MCFPPClassType ->{
+                    `var` = ClassPointer(type.cls, identifier)
+                }
+                is DataTemplateType -> {
+                    //数据模板
+                    `var` = DataTemplateObject(type.template, identifier)
+                }
+                //还有模板什么的
+                else -> {
+                    `var` = UnknownVar(identifier)
+                }
+            }
+            return `var`
+        }
+
         /**
          * 解析变量声明上下文，构造上下文声明的变量，作为成员
          * @param identifier 变量标识符
          * @param type 变量类型
-         * @param compoundData 成员所在的复合类型
+         * @param clazz 成员所在的复合类型
          * @return 这个变量
          */
-        fun build(identifier: String, type: MCFPPType, compoundData: CompoundData): Var<*> {
+        fun build(identifier: String, type: MCFPPType, clazz: Class): Var<*> {
             val `var`: Var<*>
             //普通类型
             when (type) {
                 MCFPPBaseType.Int -> {
                     `var` =
-                        MCInt("@s").setObj(SbObject(compoundData.prefix + "_int_" + identifier))
+                        MCInt("@s").setObj(SbObject(clazz.prefix + "_int_" + identifier))
                     `var`.identifier = identifier
                 }
 
                 MCFPPBaseType.Bool -> {
                     `var` =
-                        MCBool("@s").setObj(SbObject(compoundData.prefix + "_bool_" + identifier))
+                        MCBool("@s").setObj(SbObject(clazz.prefix + "_bool_" + identifier))
                     `var`.identifier = identifier
                 }
                 MCFPPBaseType.Selector -> TODO()
@@ -385,7 +450,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
                 MCFPPNBTType.NBT -> TODO()
                 MCFPPBaseType.Float -> TODO()
                 MCFPPBaseType.Any -> TODO()
-                is MCFPPTemplateType -> TODO()
+                is DataTemplateType -> TODO()
                 is MCFPPClassType ->{
                     val classPointer = ClassPointer(type.cls,identifier)
                     classPointer.name = identifier

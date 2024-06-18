@@ -132,7 +132,7 @@ classFieldDeclaration
 
 //数据模板
 templateDeclaration
-    :   FINAL? type TEMPLATE classWithoutNamespace (EXTENDS className)? templateBody
+    :   FINAL? DATA classWithoutNamespace (COLON className)? templateBody
     ;
 
 templateBody
@@ -144,12 +144,12 @@ templateMemberDeclaration
     ;
 
 staticTemplateMemberDeclaration
-    :   accessModifier? STATIC? templateMember
+    :   accessModifier? STATIC templateMember
     ;
 
 templateMember
     :   templateFunctionDeclaration
-    |   templateFieldDeclaration ';'
+    |   templateFieldDeclaration
     ;
 
 templateFunctionDeclaration
@@ -157,13 +157,8 @@ templateFunctionDeclaration
     ;
 
 templateFieldDeclaration
-    :   (templateFieldDeclarationExpression ',')* templateFieldDeclarationExpression ';'
+    :   CONST? type Identifier ('=' expression)? ';'
     ;
-
-templateFieldDeclarationExpression
-    :   CONST? Identifier '=' expression
-    ;
-
 
 //接口声明
 interfaceDeclaration
@@ -230,10 +225,6 @@ fieldDeclarationExpression
 
 fieldModifier : CONST|DYNAMIC|IMPORT;
 
-javaMethodParams
-    :   '(' type (',' type)* ')'
-    ;
-
 functionParams
     :   readOnlyParams? normalParams
     ;
@@ -261,10 +252,6 @@ expression
     :   primary
     |   conditionalOrExpression
     ;
-
-//expression
-//    :   conditionalOrExpression
-//    ;
 
 //能作为语句的表达式
 statementExpression
@@ -378,15 +365,9 @@ functionBody
     :   statement*
     ;
 
-//functionCall
-//    :   namespaceID arguments
-//    |   varWithSelector arguments
-//    ;
-
 statement
     :   fieldDeclaration ';'
     |   statementExpression ';'
-//    |   functionCall ';'
     |   ifStatement
     |   forStatement
     |   whileStatement
@@ -402,8 +383,6 @@ statement
 orgCommand
     :   OrgCommand
     ;
-
-
 
 controlStatement
     :   BREAK

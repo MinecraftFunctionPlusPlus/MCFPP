@@ -10,7 +10,6 @@ import top.mcfpp.model.function.Constructor
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.util.LogProcessor
-import top.mcfpp.util.NBTUtil
 import top.mcfpp.util.Utils
 import java.util.*
 import kotlin.collections.ArrayList

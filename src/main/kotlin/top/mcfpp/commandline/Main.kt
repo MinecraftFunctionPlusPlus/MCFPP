@@ -4,7 +4,7 @@ import org.apache.logging.log4j.core.config.ConfigurationSource
 import org.apache.logging.log4j.core.config.Configurator
 import top.mcfpp.MCFPP
 import top.mcfpp.Project
-import top.mcfpp.io.lib.LibReader
+import top.mcfpp.io.LibReader
 import top.mcfpp.lang.UnresolvedVar
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.util.UwU

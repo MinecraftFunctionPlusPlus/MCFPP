@@ -15,6 +15,7 @@ import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
+import top.mcfpp.model.function.NativeFunction.Companion.getNativeFunctionFromClass
 import top.mcfpp.util.LogProcessor
 import java.util.*
 
@@ -251,11 +252,11 @@ class SelectorConcrete : MCFPPValue<SelectorValue>, Var<SelectorValue>{
     }
 
     companion object {
-        val data = CompoundData("selector","mcfpp")
+        val data = CompoundData("selector","mcfpp.lang")
 
         init {
             data.parent.add(MCAny.data)
-            NativeFunction.getFromClass(SelectorConcreteData::class.java).forEach { data.field.addFunction(it, false) }
+            data.getNativeFunctionFromClass(SelectorConcreteData::class.java)
         }
 
     }

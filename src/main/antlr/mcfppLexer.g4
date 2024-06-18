@@ -100,7 +100,7 @@ INLINE:'inline';
 
 CLASS:'class';
 INTERFACE:'interface';
-TEMPLATE:'template';
+DATA:'data';
 FUNCTION:'func';
 
 GLOBAL:'global';

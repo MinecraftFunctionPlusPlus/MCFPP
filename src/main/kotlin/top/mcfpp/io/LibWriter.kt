@@ -1,4 +1,4 @@
-package top.mcfpp.io.lib
+package top.mcfpp.io
 
 import com.alibaba.fastjson2.JSONArray
 import com.alibaba.fastjson2.JSONObject
@@ -6,7 +6,7 @@ import com.alibaba.fastjson2.JSONWriter
 import top.mcfpp.lang.Var
 import top.mcfpp.model.Class
 import top.mcfpp.model.Namespace
-import top.mcfpp.model.Template
+import top.mcfpp.model.DataTemplate
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Constructor
@@ -37,7 +37,7 @@ interface ILibJsonWriter<T>{
     fun toJson(t: T):JSONObject
 }
 
-object GlobalWriter: ILibJsonWriter<GlobalField>{
+object GlobalWriter: ILibJsonWriter<GlobalField> {
     override fun toJson(t: GlobalField): JSONObject {
         val json = JSONObject()
         val namespaces = JSONArray()
@@ -76,7 +76,7 @@ object NamespaceWriter : ILibJsonWriter<Namespace> {
     }
 }
 
-object FunctionWriter: ILibJsonWriter<Function>{
+object FunctionWriter: ILibJsonWriter<Function> {
     override fun toJson(t: Function): JSONObject {
         val json = JSONObject()
         json["id"] = t.identifier
@@ -108,7 +108,7 @@ object FunctionWriter: ILibJsonWriter<Function>{
     }
 }
 
-object ClassWriter: ILibJsonWriter<Class>{
+object ClassWriter: ILibJsonWriter<Class> {
     override fun toJson(t: Class): JSONObject {
         val json = JSONObject()
         json["id"] = t.identifier
@@ -135,7 +135,7 @@ object ClassWriter: ILibJsonWriter<Class>{
     }
 }
 
-object ConstructorWriter: ILibJsonWriter<Constructor>{
+object ConstructorWriter: ILibJsonWriter<Constructor> {
     override fun toJson(t: Constructor): JSONObject {
         val json = JSONObject()
         val normalParams = JSONArray()
@@ -149,7 +149,7 @@ object ConstructorWriter: ILibJsonWriter<Constructor>{
     }
 }
 
-object CompoundDataFieldWriter : ILibJsonWriter<CompoundDataField>{
+object CompoundDataFieldWriter : ILibJsonWriter<CompoundDataField> {
     override fun toJson(t: CompoundDataField): JSONObject {
         val json = JSONObject()
         val v = JSONArray()
@@ -164,7 +164,7 @@ object CompoundDataFieldWriter : ILibJsonWriter<CompoundDataField>{
     }
 }
 
-object VarWriter: ILibJsonWriter<Var<*>>{
+object VarWriter: ILibJsonWriter<Var<*>> {
     override fun toJson(t: Var<*>): JSONObject {
         val json = JSONObject()
         json["id"] = t.identifier
@@ -173,7 +173,7 @@ object VarWriter: ILibJsonWriter<Var<*>>{
     }
 }
 
-object FunctionParamWriter: ILibJsonWriter<FunctionParam>{
+object FunctionParamWriter: ILibJsonWriter<FunctionParam> {
     override fun toJson(t: FunctionParam): JSONObject {
         val json = JSONObject()
         json["id"] = t.identifier
@@ -183,7 +183,7 @@ object FunctionParamWriter: ILibJsonWriter<FunctionParam>{
     }
 }
 
-object ClassParamWriter: ILibJsonWriter<ClassParam>{
+object ClassParamWriter: ILibJsonWriter<ClassParam> {
     override fun toJson(t: ClassParam): JSONObject {
         val json = JSONObject()
         json["id"] = t.identifier
@@ -192,8 +192,16 @@ object ClassParamWriter: ILibJsonWriter<ClassParam>{
     }
 }
 
-object TemplateWriter: ILibJsonWriter<Template>{
-    override fun toJson(t: Template): JSONObject {
-        TODO()
+object TemplateWriter: ILibJsonWriter<DataTemplate> {
+    override fun toJson(t: DataTemplate): JSONObject {
+        val json = JSONObject()
+        json["id"] = t.identifier
+        //父类
+        val parents = t.parent.map { it.namespaceID }.toList()
+        json["parents"] = parents
+        //成员
+        json["field"] = CompoundDataFieldWriter.toJson(t.field)
+        json["staticField"] = CompoundDataFieldWriter.toJson(t.staticField)
+        return json
     }
 }

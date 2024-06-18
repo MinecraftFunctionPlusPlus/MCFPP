@@ -6,7 +6,7 @@ import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 
-open class CompoundDataType : CanSelectMember {
+open class CompoundDataCompanion : CanSelectMember {
 
     /**
      * 类
@@ -23,13 +23,13 @@ open class CompoundDataType : CanSelectMember {
     /**
      * 复制一个类的类型指针
      */
-    constructor(compoundDataType: CompoundDataType) {
+    constructor(compoundDataType: CompoundDataCompanion) {
         this.dataType = compoundDataType.dataType
     }
 
     @Override
     fun clone(): Any {
-        return CompoundDataType(this)
+        return CompoundDataCompanion(this)
     }
 
     @get:Override
@@ -76,7 +76,7 @@ open class CompoundDataType : CanSelectMember {
         return if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.CLASS){
             function.parentClass()!!.getAccess(dataType)
         }else if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.TEMPLATE){
-            function.parentStruct()!!.getAccess(dataType)
+            function.parentTemplate()!!.getAccess(dataType)
         }else{
             Member.AccessModifier.PUBLIC
         }

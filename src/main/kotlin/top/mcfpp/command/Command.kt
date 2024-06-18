@@ -14,6 +14,9 @@ open class Command {
 
     private val tags = ArrayList<String>()
 
+    /**
+     * 可替换位点。键是位点的id，值是这个位点在commandStringList中的位置
+     */
     private val replacePoint = HashMap<String,Int>()
 
     var isCompleted = false
@@ -54,15 +57,15 @@ open class Command {
     }
 
     /**
-     * 转为宏命令。将会把所有可以替换的位点设置为宏参数。宏参数的名字和替换位点id相同
+     * 转为宏命令。将会把所有可以替换的，且id以$开头的位点设置为宏参数。宏参数的名字和替换位点id相同
      */
     fun toMacro() : String{
-        val sb = StringBuilder()
+        val sb = StringBuilder("$")
         for (c in commandStringList.indices){
             if(replacePoint.containsValue(c)){
-                sb.append("{{${replacePoint.filter { it.value == c }.keys.first()}}}")
+                sb.append("$(${replacePoint.filter { it.value == c && it.key.startsWith("$") }.keys.first().substring(1)}) ")
             }else{
-                sb.append(commandStringList[c])
+                sb.append(commandStringList[c]).append(" ")
             }
         }
         return sb.toString()
@@ -145,6 +148,8 @@ open class Command {
         commandStringList.add(command)
         return this
     }
+
+    fun buildMacro(id: String) = build("", "$$id")
 
     override fun toString(): String{
         val sb = StringBuilder()

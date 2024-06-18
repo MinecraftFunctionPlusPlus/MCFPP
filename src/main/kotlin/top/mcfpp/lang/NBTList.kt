@@ -15,6 +15,7 @@ import top.mcfpp.mni.NBTListData
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
+import top.mcfpp.model.function.NativeFunction.Companion.getNativeFunctionFromClass
 import top.mcfpp.model.function.UnknownFunction
 import java.util.*
 
@@ -169,12 +170,12 @@ open class NBTList : NBTBasedData<ListTag<*>> {
     }
 
     companion object {
-        val data = CompoundData("list", "mcfpp")
+        val data = CompoundData("list", "mcfpp.lang")
         //注册函数
 
         init {
             data.parent.add(MCAny.data)
-            NativeFunction.getFromClass(NBTListData::class.java).forEach { data.field.addFunction(it, false) }
+            data.getNativeFunctionFromClass(NBTListData::class.java)
         }
 
     }
@@ -305,12 +306,12 @@ class NBTListConcrete<E>: NBTList, MCFPPValue<ListTag<*>> {
     }
 
     companion object {
-        val data = CompoundData("list", "mcfpp")
+        val data = CompoundData("list", "mcfpp.lang")
         //注册函数
 
         init {
             data.parent.add(MCAny.data)
-            NativeFunction.getFromClass(NBTListConcreteData::class.java).forEach { data.field.addFunction(it, false) }
+            data.getNativeFunctionFromClass(NBTListConcreteData::class.java)
             //data.field.addFunction(NativeFunction("add", NBTListConcreteData.INSTANCE ,MCFPPBaseType.Void,"mcfpp")
             //    .appendNormalParam(MCFPPGenericType("E", emptyList()), "e"),false)
         }

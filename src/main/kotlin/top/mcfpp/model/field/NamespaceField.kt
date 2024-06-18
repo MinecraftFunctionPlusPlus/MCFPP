@@ -62,9 +62,9 @@ open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTempla
     /**
      * 模板
      */
-    private var template: HashMap<String, Template> = HashMap()
+    private var template: HashMap<String, DataTemplate> = HashMap()
 
-    override fun forEachTemplate(operation: (Template) -> Any?){
+    override fun forEachTemplate(operation: (DataTemplate) -> Any?){
         for (struct in template.values){
             operation(struct)
         }
@@ -284,7 +284,7 @@ open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTempla
      * @param force 是否强制添加。如果为true，则即使已经添加过相同标识符的模板，也会覆盖原来的模板进行添加。
      * @return 是否添加成功。如果已经存在相同标识符的模板，且不是强制添加则为false
      */
-    override fun addTemplate(identifier: String, template: Template, force: Boolean): Boolean {
+    override fun addTemplate(identifier: String, template: DataTemplate, force: Boolean): Boolean {
         return if (force){
             this.template[identifier] = template
             true
@@ -319,7 +319,7 @@ open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTempla
      * @param identifier 模板的标识符
      * @return 获取到的模板。如果不存在，则返回null
      */
-    override fun getTemplate(identifier: String): Template? {
+    override fun getTemplate(identifier: String): DataTemplate? {
         return template[identifier]
     }
 
@@ -339,7 +339,7 @@ open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTempla
      * @param template 模板
      * @return
      */
-    override fun hasTemplate(template: Template): Boolean {
+    override fun hasTemplate(template: DataTemplate): Boolean {
         return this.template.containsKey(template.identifier)
     }
 

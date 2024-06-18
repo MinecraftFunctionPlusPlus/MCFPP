@@ -5,14 +5,12 @@ import net.querz.nbt.tag.StringTag
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.lang.*
-import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPGenericClassType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.field.GlobalField
-import top.mcfpp.model.field.NamespaceField
 import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.function.UnknownFunction
@@ -426,7 +424,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 }
                 qwq.getType()
             }else{
-                CompoundDataType(
+                CompoundDataCompanion(
                     //基本类型
                     when(ctx.type().text){
                         "int" -> MCInt.data

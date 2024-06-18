@@ -1,5 +1,6 @@
 package top.mcfpp.lang.type
 
+import net.querz.nbt.tag.*
 import org.antlr.v4.runtime.CharStream
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
@@ -103,7 +104,7 @@ abstract class MCFPPType(
         return if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.CLASS){
             function.parentClass()!!.getAccess(data)
         }else if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.TEMPLATE){
-            function.parentStruct()!!.getAccess(data)
+            function.parentTemplate()!!.getAccess(data)
         }else{
             Member.AccessModifier.PUBLIC
         }
@@ -118,6 +119,60 @@ abstract class MCFPPType(
 
     override fun hashCode(): Int {
         return typeName.hashCode()
+    }
+
+    /**
+     * 判断所给的标签是否是此类型
+     */
+    fun checkNBTType(tag: Tag<*>): Boolean {
+        when (this) {
+            MCFPPBaseType.Int -> {
+                return tag is IntTag
+            }
+
+            MCFPPBaseType.Float -> {
+                return tag is FloatTag
+            }
+
+            MCFPPBaseType.String -> {
+                return tag is StringTag
+            }
+
+            MCFPPBaseType.Bool -> {
+                return tag is ByteTag
+            }
+
+            is MCFPPListType -> {
+                if (tag !is ListTag<*>) return false
+                if (tag.size() == 0) return true
+                //检查List中的元素是否符合泛型
+                return generic.checkNBTType(tag[0])
+            }
+
+            is MCFPPDictType -> {
+                if (tag !is CompoundTag) return false
+                //检查Dict中的元素是否符合泛型
+                for (key in tag.values()) {
+                    if (!generic.checkNBTType(key)) return false
+                }
+                return true
+            }
+
+            is MCFPPMapType -> {
+                if (tag !is CompoundTag) return false
+                //检查tag的结构
+                TODO()
+            }
+
+            is DataTemplateType -> {
+                if (tag !is CompoundTag) return false
+                return this.template.checkCompoundStruct(tag)
+            }
+
+            else -> {
+                 return tag is StringTag
+            }
+        }
     }
 
     companion object{
@@ -223,7 +278,7 @@ abstract class MCFPPType(
                 return genericTypeCache[identifier]!!(genericParams.map { parseFromIdentifier(it, typeScope) }.toTypedArray())
             }
             //类和模板
-            val clazz = GlobalField.getClass(null,identifier)
+            val clazz = GlobalField.getClass(null, identifier)
             if(clazz != null) return clazz.getType()
             //val template = GlobalField.getTemplate(null,identifier)
             //if(template!=null) return template.getType()
@@ -243,11 +298,12 @@ abstract class MCFPPType(
             if(ctx.LIST() != null){
                 return MCFPPListType(parseFromContext(ctx.type(), typeScope))
             }
-            //普通的类类型
+            //自定义类型
             if(ctx.className() != null){
+                //类
                 val clazz = GlobalField.getClass(null, ctx.className().text)
                 if(clazz !=null) {
-                    val t = clazz.getType()
+                    //val t = clazz.getType()
                     if(clazz is GenericClass){
                         if(clazz.readOnlyParams.size != ctx.type().readOnlyArgs()?.expressionList()?.expression()?.size){
                             LogProcessor.error("Generic class ${clazz.identifier} requires ${clazz.readOnlyParams.size} type arguments, but ${ctx.readOnlyArgs().expressionList().expression().size} were provided")
@@ -257,6 +313,11 @@ abstract class MCFPPType(
                         val readOnlyArgs = ctx.type().readOnlyArgs()?.expressionList()?.expression()?.map { expr.visit(it)!! } ?: listOf()
                         return clazz.compile(readOnlyArgs).getType()
                     }
+                }
+                //数据模板
+                val template = GlobalField.getTemplate(null, ctx.className().text)
+                if(template != null){
+                    return template.getType()
                 }
             }
             //泛型类型

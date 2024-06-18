@@ -157,8 +157,9 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 }
             }
         }else{
+            //获取类型
+            val type = MCFPPType.parseFromContext(ctx.type(), Function.currFunction.field)
             for (c in ctx.fieldDeclarationExpression()){
-                val type = MCFPPType.parseFromContext(ctx.type(), Function.currFunction.field)
                 //函数变量，生成
                 var `var` = Var.build(c.Identifier().text, type, Function.currFunction)
                 //变量注册
@@ -961,7 +962,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
             val arg = exprVisitor.visit(expr)!!
             normalArgs.add(arg)
         }
-        if(Class.currClass == null && Template.currTemplate == null){
+        if(Class.currClass == null && DataTemplate.currTemplate == null){
             //在全局
             annoInGlobal.add(Annotation.newInstance(anno,normalArgs))
         }else{
@@ -1105,17 +1106,16 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         val parent = ctx.parent as mcfppParser.TemplateDeclarationContext
         val identifier: String = parent.classWithoutNamespace().text
         //设置作用域
-        Template.currTemplate = GlobalField.getTemplate(Project.currNamespace, identifier)
+        DataTemplate.currTemplate = GlobalField.getTemplate(Project.currNamespace, identifier)
     }
 
     /**
      * 离开类体。将缓存重新指向全局
      * @param ctx the parse tree
      */
-    
     fun exitTemplateBody(ctx: mcfppParser.TemplateBodyContext) {
         Project.ctx = ctx
-        Template.currTemplate = null
+        DataTemplate.currTemplate = null
     }
 
     override fun visitTemplateFunctionDeclaration(ctx: mcfppParser.TemplateFunctionDeclarationContext): Any? {
@@ -1130,8 +1130,8 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         //解析参数
         val types = FunctionParam.parseReadonlyAndNormalParamTypes(ctx.functionParams())
         //获取缓存中的对象
-        val fun1 = Template.currTemplate!!.field.getFunction(ctx.Identifier().text, types.first, types.second)
-        val f = if(fun1 is UnknownFunction) Template.currTemplate!!.staticField.getFunction(ctx.Identifier().text, types.first, types.second) else fun1
+        val fun1 = DataTemplate.currTemplate!!.field.getFunction(ctx.Identifier().text, types.first, types.second)
+        val f = if(fun1 is UnknownFunction) DataTemplate.currTemplate!!.staticField.getFunction(ctx.Identifier().text, types.first, types.second) else fun1
         Function.currFunction = f
 
         //对函数进行注解处理

@@ -93,7 +93,7 @@ class InlineFunction : Function {
      * @param normalArgs
      * @param struct
      */
-    override fun invoke(/*readOnlyArgs:ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, struct: IntTemplateBase){
-        TODO()
-    }
+    //override fun invoke(/*readOnlyArgs:ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, struct: IntTemplateBase){
+    //    TODO()
+    //}
 }
