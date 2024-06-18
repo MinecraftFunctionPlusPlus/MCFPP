@@ -1,13 +1,10 @@
-package top.mcfpp.io.lib
+package top.mcfpp.io
 
 import com.alibaba.fastjson2.JSONObject
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.lang.UnresolvedVar
 import top.mcfpp.lang.type.UnresolvedType
-import top.mcfpp.model.Class
-import top.mcfpp.model.Namespace
-import top.mcfpp.model.Template
-import top.mcfpp.model.UnknownClass
+import top.mcfpp.model.*
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.*
@@ -37,11 +34,12 @@ interface ILibJsonReader<T>{
     fun fromJson(jsonObject: JSONObject): T
 }
 
-object GlobalReader: ILibJsonReader<GlobalField>{
+object GlobalReader: ILibJsonReader<GlobalField> {
     override fun fromJson(jsonObject: JSONObject): GlobalField {
         val namespaces = jsonObject.getJSONArray("namespaces")
         for (i in 0 until namespaces.size){
             val namespace = namespaces.getJSONObject(i)
+            //TODO BUG 应当是合并命名空间
             GlobalField.libNamespaces[namespace.getString("id")] = NamespaceReader.fromJson(namespace)
         }
 
@@ -206,7 +204,7 @@ object ClassReader: ILibJsonReader<Class> {
 
 object CompoundDataFieldReader: ILibJsonReader<CompoundDataField> {
     override fun fromJson(jsonObject: JSONObject): CompoundDataField {
-        val field = CompoundDataField(null, ClassReader.currClass)
+        val field = CompoundDataField(null, ClassReader.currClass?:TemplateReader.currTemplate)
         jsonObject.getJSONArray("vars").forEach {
             run {
                 val type = UnresolvedType(jsonObject.getString("type"))
@@ -243,9 +241,26 @@ object ConstructorReader: ILibJsonReader<Constructor> {
     }
 }
 
-object TemplateReader: ILibJsonReader<Template> {
-    override fun fromJson(jsonObject: JSONObject): Template {
-        TODO()
+object TemplateReader: ILibJsonReader<DataTemplate> {
+
+    var currTemplate : DataTemplate? = null
+    override fun fromJson(jsonObject: JSONObject): DataTemplate {
+        val id = jsonObject.getString("id")
+        val template = DataTemplate(id, NamespaceReader.currNamespace!!.identifier)
+        TemplateReader.currTemplate = template
+        //父模板
+        jsonObject.getJSONArray("parents").forEach {
+            run {
+                val nspid = it.toString()
+                val qwq = StringHelper.splitNamespaceID(nspid)
+                template.parent.add(UnknownTemplate(qwq.first!!, qwq.second))
+            }
+        }
+        //域
+        template.staticField = CompoundDataFieldReader.fromJson(jsonObject.getJSONObject("staticField"))
+        template.field = CompoundDataFieldReader.fromJson(jsonObject.getJSONObject("field"))
+        TemplateReader.currTemplate = null
+        return template
     }
 }
 

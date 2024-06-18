@@ -7,21 +7,17 @@ import org.apache.logging.log4j.*
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.CommentType
 import top.mcfpp.io.MCFPPFile
-import top.mcfpp.io.lib.LibReader
-import top.mcfpp.io.lib.LibWriter
+import top.mcfpp.io.LibReader
+import top.mcfpp.io.LibWriter
 import top.mcfpp.lang.MCFloat
 import top.mcfpp.lang.UnresolvedVar
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.field.GlobalField
-import top.mcfpp.model.field.NamespaceField
 import top.mcfpp.lang.Var
-import top.mcfpp.model.function.NativeFunction
-import top.mcfpp.model.function.UnresolvedNativeFunction
 import top.mcfpp.util.LogProcessor
 import java.io.*
-import java.lang.Class
 import java.nio.file.Path
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.name
@@ -171,6 +167,9 @@ object Project {
         if(!CompileSettings.ignoreStdLib){
             config.includes.addAll(config.stdLib)
         }
+        for (n in config.stdNamespace){
+            GlobalField.libNamespaces[n] = Namespace(n)
+        }
         //写入缓存
         for (include in config.includes) {
             val filePath = if(!include.endsWith("/.mclib")) "$include/.mclib" else include
@@ -181,42 +180,8 @@ object Project {
                 LogProcessor.error("Cannot find lib file at: ${file.absolutePath}")
             }
         }
-        //在所有的类型都读取到了以后，再解析Native函数
-        //同时，实例化所有类中的成员字段
-        val nativeFunctionCache = HashMap<Class<*>, ArrayList<NativeFunction>>()
+        //实例化所有类中的成员字段
         for(namespace in GlobalField.libNamespaces.values){
-            namespace.field.forEachFunction { f ->
-                run {
-                    if(f !is UnresolvedNativeFunction) return@run
-                    val clazz = Class.forName(f.data as String)
-                    if(!nativeFunctionCache.containsKey(clazz)){
-                        nativeFunctionCache[clazz] = NativeFunction.getFromClass(clazz)
-                    }
-                    //找这个函数
-                    val list = nativeFunctionCache[clazz]!!
-                    for (n in list){
-                        if((n.identifier == f.identifier && n.normalParams.size == f.normalParams.size && n.readOnlyParams.size == f.readOnlyParams.size)){
-                            continue
-                        }
-                        var hasFind = true
-                        for (nt in n.normalParams.withIndex()){
-                            if(nt.value.typeIdentifier == f.normalParams[nt.index].typeIdentifier){
-                                hasFind = false
-                                break
-                            }
-                        }
-                        for (rt in n.readOnlyParams.withIndex()){
-                            if(rt.value.typeIdentifier == f.readOnlyParams[rt.index].typeIdentifier){
-                                hasFind = false
-                                break
-                            }
-                        }
-                        if(hasFind){
-
-                        }
-                    }
-                }
-            }
             namespace.field.forEachClass { c ->
                 run {
                     for (v in c.field.allVars){
@@ -254,18 +219,17 @@ object Project {
             }
             GlobalField.importedLibNamespaces.clear()
         }
-
     }
 
     /**
      * 编制函数索引
      */
-    fun indexFunction() {
+    fun resolveField() {
         logger.debug("Generate Function Index...")
         //解析文件
         for (file in config.files) {
             try {
-                file.indexFunction()
+                file.resolveField()
             } catch (e: IOException) {
                 logger.error("Error while generate function index in file \"$file\"")
                 errorCount++
@@ -399,6 +363,11 @@ data class ProjectConfig(
      * 标准库列表
      */
     val stdLib: List<String> = listOf("mcfpp/sys/.mclib","mcfpp/math/.mclib","mcfpp/dynamic/.mclib"),
+
+    /**
+     * 默认命名空间注册
+     */
+    val stdNamespace: List<String> = listOf("mcfpp.lang","mcfpp.sys"),
 
     /**
      * 注释输出等级

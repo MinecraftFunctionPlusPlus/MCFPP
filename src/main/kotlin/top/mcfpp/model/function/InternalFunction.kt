@@ -1,7 +1,7 @@
 package top.mcfpp.model.function
 
 import top.mcfpp.model.Class
-import top.mcfpp.model.Template
+import top.mcfpp.model.DataTemplate
 import top.mcfpp.model.field.InternalFunctionField
 import java.util.UUID
 
@@ -52,7 +52,7 @@ class InternalFunction(prefix: String, parent: Function) : Function(prefix + UUI
     }
 
     @Override
-    override fun parentStruct(): Template? {
-        return parent[0].parentStruct()
+    override fun parentTemplate(): DataTemplate? {
+        return parent[0].parentTemplate()
     }
 }

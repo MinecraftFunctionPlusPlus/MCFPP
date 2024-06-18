@@ -78,7 +78,7 @@ object GlobalField : FieldContainer, IField {
      *
      * @return 获取的函数。如果有多个相同函数（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
      */
-    fun getFunction(@Nullable namespace:String?, identifier: String, readOnlyParams: List<MCFPPType>, normalParams : List<MCFPPType>): Function {
+    fun getFunction(namespace:String?, identifier: String, readOnlyParams: List<MCFPPType>, normalParams : List<MCFPPType>): Function {
         if(namespace == null){
             val f = localNamespaces[Project.currNamespace]!!.field.getFunction(identifier, readOnlyParams, normalParams)
             if(f != null) return f
@@ -103,11 +103,11 @@ object GlobalField : FieldContainer, IField {
      * @param identifier 类的标识符
      * @return 获取的类。如果有多个相同标识符的类（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
      */
-    fun getClass(@Nullable namespace: String? = null, identifier: String, readOnlyParams: List<MCFPPType>): Class?{
+    fun getClass(namespace: String? = null, identifier: String, readOnlyParams: List<MCFPPType>): Class?{
         if(namespace == null){
             var cls: Class?
             //命名空间为空，从全局寻找
-            cls = localNamespaces[Project.currNamespace]!!.field.getClass(identifier, readOnlyParams)
+            cls = localNamespaces[Project.currNamespace]?.field?.getClass(identifier, readOnlyParams)
             if(cls != null) return cls
             for (nsp in importedLibNamespaces.values){
                 cls = nsp.field.getClass(identifier, readOnlyParams)
@@ -131,11 +131,11 @@ object GlobalField : FieldContainer, IField {
      * @param identifier 类的标识符
      * @return 获取的类。如果有多个相同标识符的类（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
      */
-    fun getClass(@Nullable namespace: String? = null, identifier: String): Class?{
+    fun getClass(namespace: String? = null, identifier: String): Class?{
         if(namespace == null){
             var cls: Class?
             //命名空间为空，从全局寻找
-            cls = localNamespaces[Project.currNamespace]!!.field.getClass(identifier)
+            cls = localNamespaces[Project.currNamespace]?.field?.getClass(identifier)
             if(cls != null) return cls
             for (nsp in importedLibNamespaces.values){
                 cls = nsp.field.getClass(identifier)
@@ -159,7 +159,7 @@ object GlobalField : FieldContainer, IField {
      * @param identifier 接口的标识符
      * @return 获取的接口。如果有多个相同标识符的接口（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
      */
-    fun getInterface(@Nullable namespace: String? = null, identifier: String): Interface?{
+    fun getInterface(namespace: String? = null, identifier: String): Interface?{
         if(namespace == null){
             var itf: Interface?
             //命名空间为空，从全局寻找
@@ -189,15 +189,15 @@ object GlobalField : FieldContainer, IField {
      * @param identifier 结构体的标识符
      * @return 获取的结构体。如果有多个相同标识符的结构体（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
      */
-    fun getTemplate(@Nullable namespace: String?, identifier: String): Template? {
+    fun getTemplate(namespace: String?, identifier: String): DataTemplate? {
         if(namespace == null){
-            var struct: Template?
+            var template: DataTemplate?
             //命名空间为空，从全局寻找
-            struct = localNamespaces[Project.currNamespace]!!.field.getTemplate(identifier)
-            if(struct != null) return struct
+            template = localNamespaces[Project.currNamespace]!!.field.getTemplate(identifier)
+            if(template != null) return template
             for (nsp in importedLibNamespaces.values){
-                struct = nsp.field.getTemplate(identifier)
-                if(struct != null) return struct
+                template = nsp.field.getTemplate(identifier)
+                if(template != null) return template
             }
             return null
         }
@@ -221,7 +221,7 @@ object GlobalField : FieldContainer, IField {
             namespace.field.forEachFunction { s ->
                 run {
                     if (s is NativeFunction) {
-                        println("native " + s.namespaceID + " -> " + s.javaClassName +  "." + s.javaMethodName )
+                        println(s.namespaceID + " = " + s.javaClassName +  "." + s.javaMethodName )
                     } else {
                         val n = StringBuilder("")
                         for(tag in s.tags){
@@ -312,14 +312,7 @@ object GlobalField : FieldContainer, IField {
             }
             namespace.field.forEachTemplate { s ->
                 run {
-                    println("struct " + s.identifier)
-                    println("\tconstructors:")
-                    for (c in s.constructors) {
-                        println("\t\t" + c.namespaceID)
-                        for (d in c.commands) {
-                            println("\t\t\t" + d)
-                        }
-                    }
+                    println("template " + s.identifier)
                     println("\tfunctions:")
                     s.field.forEachFunction {f ->
                         run {

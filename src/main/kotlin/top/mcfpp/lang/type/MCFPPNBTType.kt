@@ -1,5 +1,6 @@
 package top.mcfpp.lang.type
 
+import net.querz.nbt.tag.*
 import top.mcfpp.lang.NBTDictionary
 import top.mcfpp.lang.NBTList
 import top.mcfpp.lang.NBTMap

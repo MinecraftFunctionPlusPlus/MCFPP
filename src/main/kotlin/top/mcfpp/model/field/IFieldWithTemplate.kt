@@ -1,7 +1,7 @@
 package top.mcfpp.model.field
 
 import org.jetbrains.annotations.Nullable
-import top.mcfpp.model.Template
+import top.mcfpp.model.DataTemplate
 
 interface IFieldWithTemplate: IField {
     /**
@@ -12,7 +12,7 @@ interface IFieldWithTemplate: IField {
      * @param force 是否强制添加。如果为true，则即使已经添加过相同标识符的模板，也会覆盖原来的模板进行添加。
      * @return 是否添加成功。如果已经存在相同标识符的模板，且不是强制添加则为false
      */
-    fun addTemplate(identifier: String, template: Template, force: Boolean = false): Boolean
+    fun addTemplate(identifier: String, template: DataTemplate, force: Boolean = false): Boolean
 
     /**
      * 移除一个模板
@@ -29,7 +29,7 @@ interface IFieldWithTemplate: IField {
      * @return 获取到的模板。如果不存在，则返回null
      */
     @Nullable
-    fun getTemplate(identifier: String): Template?
+    fun getTemplate(identifier: String): DataTemplate?
 
     /**
      * 是否存在此模板
@@ -45,7 +45,7 @@ interface IFieldWithTemplate: IField {
      * @param template 模板
      * @return
      */
-    fun hasTemplate(template: Template): Boolean
+    fun hasTemplate(template: DataTemplate): Boolean
 
-    fun forEachTemplate(operation: (Template) -> Any?)
+    fun forEachTemplate(operation: (DataTemplate) -> Any?)
 }

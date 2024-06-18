@@ -96,8 +96,7 @@ class ClassPointer : Var<Int>{
                 isNull = b.isNull
                 //地址储存
                 Function.addCommand(Command.build(
-                    "data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[${stackIndex}].${identifier} " +
-                            "set from storage mcfpp:system ${Project.currNamespace}.stack_frame[${b.stackIndex}].${b.identifier}"))
+                    "data modify $nbtPath set from ${b.nbtPath}"))
                 //实例中的指针列表
                 val c = Commands.selectRun(this,Commands.sbPlayerAdd(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1))
                 Function.addCommands(c)
@@ -131,7 +130,7 @@ class ClassPointer : Var<Int>{
         }
         //TODO: 这里有问题，class类型的问题
         val namespace = StringHelper.splitNamespaceID(type.typeName)
-        val c = GlobalField.getClass(namespace.first,namespace.second)
+        val c = GlobalField.getClass(namespace.first, namespace.second)
         if(c == null){
             LogProcessor.error("Undefined class: $type")
             return UnknownVar("${type}_ptr" + UUID.randomUUID())
@@ -207,7 +206,7 @@ class ClassPointer : Var<Int>{
         return if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.CLASS){
             function.parentClass()!!.getAccess(clsType)
         }else if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.TEMPLATE){
-            function.parentStruct()!!.getAccess(clsType)
+            function.parentTemplate()!!.getAccess(clsType)
         }else if(function is NoStackFunction){
             getAccess(function.parent[0])
         }

@@ -4,7 +4,7 @@
 			"id":"default",
 			"functions":[
 				{
-					"id":"hello",
+					"id":"main",
 					"normalParams":[
 						
 					],
@@ -16,7 +16,41 @@
 				}
 			],
 			"classes":[
-				
+				{
+					"id":"Test",
+					"parents":[
+						
+					],
+					"field":{
+						"vars":[
+							{
+								"id":"qwq",
+								"type":"nbt"
+							}
+						],
+						"functions":[
+							{
+								"id":"test",
+								"normalParams":[
+									
+								],
+								"returnType":"void",
+								"isAbstract":false,
+								"tags":[
+									
+								]
+							}
+						]
+					},
+					"staticField":{
+						"vars":[
+							
+						],
+						"functions":[
+							
+						]
+					}
+				}
 			],
 			"template":[
 				

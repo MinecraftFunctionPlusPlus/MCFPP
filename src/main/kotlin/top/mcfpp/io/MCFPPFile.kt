@@ -67,7 +67,7 @@ class MCFPPFile(path : String) : File(path) {
     /**
      * 编制函数索引
      */
-    fun indexFunction() {
+    fun resolveField() {
         currFile = this
         McfppFieldVisitor().visit(tree())
         currFile = null

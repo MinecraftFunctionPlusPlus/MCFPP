@@ -3,7 +3,6 @@ package top.mcfpp.antlr
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.function.Function
-import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.Member
 import top.mcfpp.util.LogProcessor
 import kotlin.reflect.KFunction
@@ -60,7 +59,7 @@ class McfppFuncManager{
      * @return
      */
     fun getFunction(
-        type: CompoundDataType,
+        type: CompoundDataCompanion,
         identifier : String,
         readOnlyParams: List<MCFPPType>,
         normalParams: ArrayList<MCFPPType>
@@ -86,7 +85,7 @@ class McfppFuncManager{
         normalParams: ArrayList<MCFPPType>
     ): Function {
         return when(selector){
-            is CompoundDataType -> getFunction(selector, identifier, readOnlyParams, normalParams)
+            is CompoundDataCompanion -> getFunction(selector, identifier, readOnlyParams, normalParams)
             is Var<*> -> getFunction(selector, identifier, readOnlyParams, normalParams)
             else -> throw Exception()
         }

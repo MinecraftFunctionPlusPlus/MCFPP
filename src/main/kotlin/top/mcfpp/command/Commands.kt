@@ -4,6 +4,7 @@ import top.mcfpp.Project
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.model.function.Function
+import java.util.*
 
 /**
  * 命令总类，提供了大量用于生成命令的方法。默认提供了一些可替换的位点
@@ -119,5 +120,16 @@ object Commands {
 
     fun selectRun(a : CanSelectMember, command: String) : Array<Command>{
         return selectRun(a, Command.build(command))
+    }
+
+    /**
+     * 将此命令以宏命令的方式调用。宏命令的转换方式参考[Command.toMacro]
+     *
+     * @return 用来调用 执行宏参数的函数 的function命令
+     */
+    fun buildMacroCommand(command: Command) : Command{
+        val f = UUID.randomUUID().toString()
+        Project.macroFunction[f] = command.toMacro()
+        return Command.build("function mcfpp:dynamic/$f")
     }
 }

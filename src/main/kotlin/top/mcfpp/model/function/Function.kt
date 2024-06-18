@@ -354,7 +354,7 @@ open class Function : Member, FieldContainer {
      * 创建一个函数，并指定它所属的结构体。
      * @param name 函数的标识符
      */
-    constructor(name: String, struct: Template, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void) {
+    constructor(name: String, struct: DataTemplate, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void) {
         this.identifier = name
         commands = CommandList()
         normalParams = ArrayList()
@@ -467,10 +467,10 @@ open class Function : Member, FieldContainer {
      */
     open fun invoke(/*readOnlyArgs: ArrayList<Var<*>>,*/ normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?){
         when(caller){
-            is CompoundDataType -> invoke(/*readOnlyArgs, */normalArgs, callerClassP = null)
+            is CompoundDataCompanion -> invoke(/*readOnlyArgs, */normalArgs, callerClassP = null)
             null -> invoke(/*readOnlyArgs, */normalArgs, callerClassP = null)
             is ClassPointer -> invoke(/*readOnlyArgs, */normalArgs, callerClassP = caller)
-            is IntTemplateBase -> invoke(/*readOnlyArgs, */normalArgs, caller = caller)
+            //is IntTemplateBase -> invoke(/*readOnlyArgs, */normalArgs, caller = caller)
             is Var<*> -> invoke(/*readOnlyArgs, */normalArgs, caller = caller)
         }
     }
@@ -548,9 +548,9 @@ open class Function : Member, FieldContainer {
      * @param args
      * @param struct
      */
-    open fun invoke(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, struct: IntTemplateBase){
-        TODO()
-    }
+    //open fun invoke(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, struct: IntTemplateBase){
+    //    TODO()
+    //}
 
     /**
      * 在创建函数栈，调用函数之前，将参数传递到函数栈中
@@ -702,9 +702,9 @@ open class Function : Member, FieldContainer {
      * @return 返回这个函数所在的类，如果不存在则返回null
      */
     @Override
-    override fun parentStruct(): Template? {
+    override fun parentTemplate(): DataTemplate? {
         return if (ownerType == OwnerType.TEMPLATE) {
-            owner as Template
+            owner as DataTemplate
         } else null
     }
 

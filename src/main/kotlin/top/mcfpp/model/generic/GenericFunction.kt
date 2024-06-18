@@ -6,7 +6,7 @@ import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.Class
 import top.mcfpp.model.Interface
-import top.mcfpp.model.Template
+import top.mcfpp.model.DataTemplate
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.lang.CanSelectMember
 import top.mcfpp.lang.MCFPPTypeVar
@@ -55,7 +55,7 @@ class GenericFunction : Function, Generic<Function> {
      * 创建一个函数，并指定它所属的结构体。
      * @param name 函数的标识符
      */
-    constructor(name: String, template: Template, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(name, template, isStatic, returnType){
+    constructor(name: String, template: DataTemplate, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(name, template, isStatic, returnType){
         this.ctx = ctx
     }
 
@@ -120,7 +120,7 @@ class GenericFunction : Function, Generic<Function> {
                 }
             }
             Companion.OwnerType.TEMPLATE -> {
-                Function("${identifier}_${index}", owner as Template, isStatic, returnType)
+                Function("${identifier}_${index}", owner as DataTemplate, isStatic, returnType)
             }
             Companion.OwnerType.BASIC -> {
                 //拓展函数的编译在ExtensionGenericFunction中进行

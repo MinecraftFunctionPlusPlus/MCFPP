@@ -3,7 +3,6 @@ package top.mcfpp.lang.type
 import top.mcfpp.lang.Var
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
-import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.ExtensionFunction
 
 /**
@@ -84,7 +83,7 @@ open class MCFPPClassType(
         return if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.CLASS){
             function.parentClass()!!.getAccess(cls)
         }else if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.TEMPLATE){
-            function.parentStruct()!!.getAccess(cls)
+            function.parentTemplate()!!.getAccess(cls)
         }else{
             Member.AccessModifier.PUBLIC
         }

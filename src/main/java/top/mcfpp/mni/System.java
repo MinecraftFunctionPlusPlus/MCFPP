@@ -6,32 +6,19 @@ import top.mcfpp.annotations.MNIRegister;
 import top.mcfpp.lang.*;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.util.NBTUtil;
+import top.mcfpp.util.ValueWrapper;
 
 import java.util.HashMap;
 import java.util.UUID;
 
-public class System extends BaseMNIMethodContainer {
+public class System {
 
-    static {
-        methods = new HashMap<>();
-        methods.put("print", (vars, vars2, canSelectMember, varValueWrapper) -> {
-            var value = vars2[0];
-            //只会有一个参数哦
-            if (value instanceof MCInt) print((MCInt) value);
-            else if (value instanceof MCString) print((MCString) value);
-            //else if (value instanceof JsonString) print((JsonString) value);
-            else if (value instanceof NBTBasedData<?>) print((NBTBasedData<?>) value);
-            else Function.Companion.addCommand("tellraw @a " + "\"" + value + "\"");;
-            return null;
-        });
-        methods.put("typeof", (vars, vars2, canSelectMember, varValueWrapper) -> {
-            //获取变量
-            var value = vars2[0];
-            var re = new MCFPPTypeVar(value.getType(), UUID.randomUUID().toString());
-            varValueWrapper.setValue(re);
-            return null;
-        });
+    @MNIRegister(normalParams = {"any a"})
+    public static void typeOf(@NotNull Var<?> value, ValueWrapper<MCFPPTypeVar> returnValue){
+        var re = new MCFPPTypeVar(value.getType(), UUID.randomUUID().toString());
+        returnValue.setValue(re);
     }
+
 
     @InsertCommand
     @MNIRegister(normalParams = {"any a"})

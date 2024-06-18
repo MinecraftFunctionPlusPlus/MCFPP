@@ -8,6 +8,7 @@ import top.mcfpp.mni.NBTMapData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.function.NativeFunction
+import top.mcfpp.model.function.NativeFunction.Companion.getNativeFunctionFromClass
 import java.util.*
 
 class NBTMap : NBTDictionary{
@@ -44,12 +45,12 @@ class NBTMap : NBTDictionary{
      */
 
     companion object{
-        val data = CompoundData("map","mcfpp")
+        val data = CompoundData("map","mcfpp.lang")
 
         init {
             data.initialize()
             data.parent.add(MCAny.data)
-            NativeFunction.getFromClass(NBTMapData::class.java).forEach { data.field.addFunction(it, false) }
+            data.getNativeFunctionFromClass(NBTMapData::class.java)
         }
     }
 }

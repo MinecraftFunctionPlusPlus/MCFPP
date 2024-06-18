@@ -55,7 +55,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>?>(){
                 }
                 qwq.getType()
             }else{
-                CompoundDataType(
+                CompoundDataCompanion(
                     //基本类型
                     when(ctx.type().text){
                         "int" -> MCInt.data
@@ -134,14 +134,14 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>?>(){
                     re
                 }else{
                     val cpd = when(currSelector){
-                        is CompoundDataType -> (currSelector as CompoundDataType).dataType
+                        is CompoundDataCompanion -> (currSelector as CompoundDataCompanion).dataType
                         is ClassPointer -> (currSelector as ClassPointer).clsType
                         else -> TODO()
                     }
                     val am = if(Function.currFunction !is ExtensionFunction && Function.currFunction.ownerType == Function.Companion.OwnerType.CLASS){
                         Function.currFunction.parentClass()!!.getAccess(cpd)
                     }else if(Function.currFunction !is ExtensionFunction && Function.currFunction.ownerType == Function.Companion.OwnerType.TEMPLATE){
-                        Function.currFunction.parentStruct()!!.getAccess(cpd)
+                        Function.currFunction.parentTemplate()!!.getAccess(cpd)
                     }else{
                         Member.AccessModifier.PUBLIC
                     }

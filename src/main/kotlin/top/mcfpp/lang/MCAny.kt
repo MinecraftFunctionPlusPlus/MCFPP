@@ -1,16 +1,18 @@
 package top.mcfpp.lang
 
+import top.mcfpp.Project
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.mni.MCAnyData
-import top.mcfpp.mni.NBTListData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
+import top.mcfpp.model.Namespace
 import top.mcfpp.model.function.NativeFunction
+import top.mcfpp.model.function.NativeFunction.Companion.getNativeFunctionFromClass
 import top.mcfpp.util.LogProcessor
 import java.util.*
 
@@ -120,7 +122,7 @@ open class MCAny : Var<Var<*>> {
             MCFPPBaseType.Any -> return this
             else -> {
                 LogProcessor.warn("Try to cast any to ${type.typeName}")
-                return Var.build(this.identifier, type, parentClass()?:parentStruct()?:Function.currFunction)
+                return Var.build(this.identifier, type, parentClass()?:parentTemplate()?:Function.currFunction)
             }
         }
     }
@@ -170,11 +172,11 @@ open class MCAny : Var<Var<*>> {
     }
 
     companion object{
-        val data = CompoundData("any","mcfpp")
+        val data = CompoundData("any","mcfpp.lang")
 
         init {
             data.initialize()
-            NativeFunction.getFromClass(MCAnyData::class.java).forEach { data.field.addFunction(it, false) }
+            data.getNativeFunctionFromClass(MCAnyData::class.java)
         }
     }
 }
@@ -250,8 +252,8 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>>{
                     LogProcessor.warn("Try to assign ${b.value.type.typeName} to ${this.value.type.typeName}")
                 }
                 //构造假设变量
-                val t = Var.build(this.identifier, b.value.type, parentClass()?:parentStruct()?:Function.currFunction)
-                val v = Var.build(b.identifier, b.value.type, b.parentClass()?:b.parentStruct()?:Function.currFunction)
+                val t = Var.build(this.identifier, b.value.type, parentClass()?:parentTemplate()?:Function.currFunction)
+                val v = Var.build(b.identifier, b.value.type, b.parentClass()?:b.parentTemplate()?:Function.currFunction)
                 t.assign(v)
                 this.value = b.value
                 return this
@@ -262,7 +264,7 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>>{
             }
             else -> {
                 this.value = b
-                val t = Var.build(this.identifier, b.type, parentClass()?:parentStruct()?:Function.currFunction)
+                val t = Var.build(this.identifier, b.type, parentClass()?:parentTemplate()?:Function.currFunction)
                 t.assign(b)
                 return this
             }

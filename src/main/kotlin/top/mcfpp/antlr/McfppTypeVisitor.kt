@@ -1,14 +1,11 @@
 package top.mcfpp.antlr
 
 import top.mcfpp.Project
-import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lang.MCAny
-import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.*
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.generic.ClassParam
 import top.mcfpp.model.generic.GenericClass
-import top.mcfpp.util.LazyWrapper
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 
@@ -159,13 +156,7 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
 
     /**
      * TODO native类的声明
-     * @param ctx the parse tree
-     * @return null
-     */
-    override fun visitNativeClassDeclaration(ctx: mcfppParser.NativeClassDeclarationContext){
-        //NativeClassVisitor().visit(ctx)
-    }
-
+     **/
 
     /**
      * 类的声明
@@ -228,9 +219,9 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         if (nsp.field.hasTemplate(id)) {
             //重复声明
             LogProcessor.error("Template has been defined: $id in namespace ${Project.currNamespace}")
-            Template.currTemplate = nsp.field.getTemplate(id)
+            DataTemplate.currTemplate = nsp.field.getTemplate(id)
         }
-        val template = Template(id, LazyWrapper{ MCFPPType.parseFromIdentifier(ctx.type().text, MCFPPFile.currFile!!.field)}, Project.currNamespace)
+        val template = DataTemplate(id,Project.currNamespace)
         if (ctx.className() != null) {
             //是否存在继承
             val qwq = ctx.className().text.split(":")

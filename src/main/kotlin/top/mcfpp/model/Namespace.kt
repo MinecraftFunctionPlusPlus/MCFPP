@@ -14,6 +14,6 @@ class Namespace(val identifier: String) {
 
     companion object {
         val currNamespaceField: NamespaceField
-            get() = GlobalField.localNamespaces[Project.currNamespace]!!.field
+            get() = GlobalField.localNamespaces[Project.currNamespace]?.field?:GlobalField.libNamespaces[Project.currNamespace]!!.field
     }
 }
