@@ -24,7 +24,6 @@ object MCFPPStringTest {
         //读取json
         LogProcessor.debug("Generate debug project for a string")
         Project.config.root = Path.of("./")
-        MCFPPFile.currFile = MCFPPFile("./test.mcfpp")
         Project.config.name = "debug"
         //版本77
         Project.config.version = "1.20"
@@ -34,26 +33,19 @@ object MCFPPStringTest {
         Project.config.defaultNamespace = "default"
         //输出目录
         Project.config.targetPath = targetPath
-        Project.readLib() //读取引用的库的索引
         Project.init() //初始化
+        Project.readLib() //读取引用的库的索引
         //解析文件
-        //添加默认库的域
-        if(!CompileSettings.ignoreStdLib){
-            GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
-        }
         val charStream: CharStream = CharStreams.fromString(str)
         val tokens = CommonTokenStream(mcfppLexer(charStream))
         val parser = mcfppParser(tokens)
         val context = parser.compilationUnit()
+        MCFPPFile.currFile = MCFPPFile("./test.mcfpp")
         LogProcessor.debug("Generate Type Index...")
         McfppTypeVisitor().visit(context)
         LogProcessor.debug("Generate Function Index...")
         McfppFieldVisitor().visit(context)
         GlobalField.importedLibNamespaces.clear()
-        //添加默认库域
-        if(!CompileSettings.ignoreStdLib){
-            GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
-        }
         val visitor = McfppImVisitor()
         LogProcessor.debug("Compiling mcfpp code...")
         visitor.visit(context)

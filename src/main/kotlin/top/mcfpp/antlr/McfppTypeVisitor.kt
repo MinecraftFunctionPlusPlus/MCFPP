@@ -222,6 +222,9 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             DataTemplate.currTemplate = nsp.field.getTemplate(id)
         }
         val template = DataTemplate(id,Project.currNamespace)
+        if(!template.parent.contains(DataTemplate.baseDataTemplate)) {
+            template.parent.add(DataTemplate.baseDataTemplate)
+        }
         if (ctx.className() != null) {
             //是否存在继承
             val qwq = ctx.className().text.split(":")

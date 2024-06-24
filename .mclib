@@ -19,7 +19,7 @@
 				{
 					"id":"Test",
 					"parents":[
-						
+						"mcfpp.lang:DataObject"
 					],
 					"field":{
 						"vars":[
@@ -51,50 +51,6 @@
 						]
 					}
 				}
-			],
-			"template":[
-				
-			]
-		},
-		{
-			"id":"mcfpp",
-			"functions":[
-				{
-					"id":"load",
-					"normalParams":[
-						
-					],
-					"returnType":"void",
-					"isAbstract":false,
-					"tags":[
-						
-					]
-				},
-				{
-					"id":"tick",
-					"normalParams":[
-						
-					],
-					"returnType":"void",
-					"isAbstract":false,
-					"tags":[
-						
-					]
-				},
-				{
-					"id":"init",
-					"normalParams":[
-						
-					],
-					"returnType":"void",
-					"isAbstract":false,
-					"tags":[
-						
-					]
-				}
-			],
-			"classes":[
-				
 			],
 			"template":[
 				

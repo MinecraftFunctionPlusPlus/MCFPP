@@ -50,12 +50,12 @@ open class DataTemplateObject : Var<CompoundTag> {
                     throw VariableConverseException()
                 }
                 if(templateType.checkCompoundStruct(b.value as CompoundTag))
-                replacedBy(DataTemplateObjectConcrete(this, b.value as CompoundTag))
+                return DataTemplateObjectConcrete(this, b.value as CompoundTag)
             }
 
             is DataTemplateObjectConcrete -> {
                 if(templateType.checkCompoundStruct(b.value))
-                replacedBy(DataTemplateObjectConcrete(this, b.value))
+                return DataTemplateObjectConcrete(this, b.value)
             }
 
             is DataTemplateObject -> {
@@ -94,14 +94,14 @@ open class DataTemplateObject : Var<CompoundTag> {
         when(type){
             MCFPPNBTType.NBT -> {
                 val re = NBTBasedData<CompoundTag>(this.identifier)
-                re.parentPath = parentPath
+                re.nbtPath = nbtPath
                 return re
             }
 
             is DataTemplateType -> {
                 if(type.template.canCastTo(templateType)){
                     val re = DataTemplateObject(type.template, this.identifier)
-                    re.parentPath = parentPath
+                    re.nbtPath = nbtPath
                     return re
                 }
                 LogProcessor.error("Cannot cast [${this.type}] to [$type]")
@@ -151,6 +151,9 @@ open class DataTemplateObject : Var<CompoundTag> {
         }else{
             Pair(member, accessModifier >= member.accessModifier)
         }
+    }
+
+    companion object{
     }
 
 }

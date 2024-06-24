@@ -130,19 +130,19 @@ public class NBTListConcreteData extends BaseMNIMethodContainer {
                             new Command("data modify " +
                                     "entity @s " +
                                     "data." + caller.getIdentifier() + " " +
-                                    "insert").build("", "$" + index.getIdentifier()).build ("value " + SNBTUtil.toSNBT(tag))
+                                    "insert").build("", "$" + index.getIdentifier(), true).build ("value " + SNBTUtil.toSNBT(tag), true)
                     );
                     Function.Companion.addCommand(command[0]);
                     var f = Commands.INSTANCE.buildMacroCommand(command[1]).build("with storage mcfpp:system " +
-                            Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]");
+                            Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]", true);
                     Function.Companion.addCommand(f);
                 } else {
                     var command = new Command("data modify " +
                             "storage mcfpp:system " +
                             Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + caller.getIdentifier() + " " +
-                            "insert").build("", "$" + index.getIdentifier()).build("value " + SNBTUtil.toSNBT(tag));
+                            "insert").build("", "$" + index.getIdentifier(), true).build("value " + SNBTUtil.toSNBT(tag), true);
                     var f = Commands.INSTANCE.buildMacroCommand(command).build("with storage mcfpp:system " +
-                            Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]");
+                            Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]", true);
                     Function.Companion.addCommand(f);
                 }
             } catch (IOException ex) {
@@ -157,20 +157,20 @@ public class NBTListConcreteData extends BaseMNIMethodContainer {
                 command = Commands.INSTANCE.selectRun(caller.getParent(), new Command("data modify " +
                         "entity @s " +
                         "data." + caller.getIdentifier() + " " +
-                        "insert").build("", "$" + index.getIdentifier()).build ("from " +
+                        "insert").build("", "$" + index.getIdentifier(), true).build ("from " +
                         "storage mcfpp:system " +
-                        Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + e.getIdentifier()));
+                        Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + e.getIdentifier(), true));
             } else {
                 command = new Command[] {new Command("data modify " +
                         "storage mcfpp:system " +
                         Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + caller.getIdentifier() + " " +
-                        "insert").build("", "$" + index.getIdentifier()).build("from " +
+                        "insert").build("", "$" + index.getIdentifier(), true).build("from " +
                         "storage mcfpp:system " +
-                        Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + e.getIdentifier())};
+                        Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + e.getIdentifier(), true)};
             }
             if(command.length == 2) Function.Companion.addCommand(command[0]);
             var f = Commands.INSTANCE.buildMacroCommand(command[command.length - 1]).build("with storage mcfpp:system " +
-                    Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]");
+                    Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]", true);
             Function.Companion.addCommand(f);
         }
     }

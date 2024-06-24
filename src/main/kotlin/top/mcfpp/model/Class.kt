@@ -198,7 +198,15 @@ open class Class : CompoundData {
         )
     }
 
+    override fun isSub(compoundData: CompoundData): Boolean {
+        if(compoundData == baseClass) return true
+        return super.isSub(compoundData)
+    }
+
     companion object {
+
+        val baseClass = Class("Object","mcfpp.lang")
+
         class UndefinedClassOrInterface(identifier: String, namespace: String?)
             : Class(identifier, namespace?:Project.currNamespace) {
 

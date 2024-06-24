@@ -9,13 +9,11 @@ import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
 import top.mcfpp.lang.value.MCFPPValue
-import top.mcfpp.mni.NBTDictionaryData
 import top.mcfpp.mni.NBTListConcreteData
 import top.mcfpp.mni.NBTListData
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
-import top.mcfpp.model.function.NativeFunction.Companion.getNativeFunctionFromClass
 import top.mcfpp.model.function.UnknownFunction
 import java.util.*
 
@@ -101,17 +99,67 @@ open class NBTList : NBTBasedData<ListTag<*>> {
     @InsertCommand
     override fun assignCommand(a: NBTBasedData<ListTag<*>>) : NBTList{
         nbtType = a.nbtType
-        if (parent != null){
-            assignWithMemberCommand(a)
+        if (parentClass() != null){
+            val b = if(a.parentClass() != null){
+                a.getTempVar()
+            }else a
+            val final = when(val parent = parent){
+                is ClassPointer -> {
+                    Commands.selectRun(parent)
+                }
+                is MCFPPClassType -> {
+                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
+                }
+                else -> TODO()
+            }
+            if (b is NBTBasedDataConcrete) {
+                //对类中的成员的值进行修改
+                if(final.size == 2){
+                    Function.addCommand(final[0])
+                }
+                final.last().build(Commands.dataSetValue(nbtPath, b.value as Tag<*>))
+                if(final.last().isMacro){
+                    Function.addCommand(Commands.buildMacroCommand(final.last()))
+                }else{
+                    Function.addCommand(final.last())
+                }
+            } else {
+                //对类中的成员的值进行修改
+                if(final.size == 2){
+                    Function.addCommand(final[0])
+                }
+                final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
+                if(final.last().isMacro){
+                    Function.addCommand(Commands.buildMacroCommand(final.last()))
+                }else{
+                    Function.addCommand(final.last())
+                }
+            }
         }else{
-            //是局部变量
-            if(a is NBTBasedDataConcrete<ListTag<*>>){
-                return NBTListConcrete<Any>(this, a.value)
-            }else{
-                assignWithNotConcreteGlobalVarCommand(a)
+            if(a.parentClass() != null){
+                val final = when(val parent = a.parent){
+                    is ClassPointer -> {
+                        Commands.selectRun(parent)
+                    }
+                    is MCFPPClassType -> {
+                        arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
+                    }
+                    else -> TODO()
+                }
+                //对类中的成员的值进行修改
+                //a必然是不确定的
+                if(final.size == 2){
+                    Function.addCommand(final[0])
+                }
+                final.last().build(Commands.dataSetFrom(nbtPath, a.nbtPath))
+                if(final.last().isMacro){
+                    Function.addCommand(Commands.buildMacroCommand(final.last()))
+                }else{
+                    Function.addCommand(final.last())
+                }
             }
         }
-        //去除值
+        //返回值
         return NBTList(this)
     }
 

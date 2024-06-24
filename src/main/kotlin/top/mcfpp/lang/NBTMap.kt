@@ -7,8 +7,6 @@ import top.mcfpp.mni.NBTListData
 import top.mcfpp.mni.NBTMapData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.function.NativeFunction
-import top.mcfpp.model.function.NativeFunction.Companion.getNativeFunctionFromClass
 import java.util.*
 
 class NBTMap : NBTDictionary{

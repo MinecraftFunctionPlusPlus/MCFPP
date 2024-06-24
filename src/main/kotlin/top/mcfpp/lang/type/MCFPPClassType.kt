@@ -11,7 +11,7 @@ import top.mcfpp.model.function.ExtensionFunction
 open class MCFPPClassType(
     var cls:Class,
     override var parentType: List<MCFPPType>
-):MCFPPType(parentType,cls) {
+):MCFPPType(cls, parentType) {
 
     val genericType : List<MCFPPType> = ArrayList()
 

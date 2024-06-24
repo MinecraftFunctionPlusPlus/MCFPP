@@ -1,11 +1,16 @@
 package top.mcfpp.model
 
 import top.mcfpp.Project
+import top.mcfpp.annotations.MNIRegister
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
+import top.mcfpp.util.LogProcessor
+import java.lang.Class
+import java.lang.reflect.Modifier
 
 open class CompoundData : FieldContainer {
 
@@ -168,7 +173,7 @@ open class CompoundData : FieldContainer {
      * @param compoundData 指定类型
      * @return 是否是指定类型的子类型
      */
-    fun isSub(compoundData: CompoundData): Boolean{
+    open fun isSub(compoundData: CompoundData): Boolean{
         if(parent.size != 0){
             for (p in parent){
                 if(p.namespaceID == compoundData.namespaceID || p.isSub(compoundData)){
@@ -182,5 +187,46 @@ open class CompoundData : FieldContainer {
     open fun extends(compoundData: CompoundData): CompoundData{
         parent.add(compoundData)
         return this
+    }
+
+    fun getNativeFunctionFromClass(cls: Class<*>){
+        val l = Project.currNamespace
+        Project.currNamespace = this.namespace
+        //获取所有带有注解MNIMethod的Java方法
+        val methods = cls.methods
+        for(method in methods){
+            val mniRegister = method.getAnnotation(MNIRegister::class.java)
+            if(mniRegister != null){
+                if(!Modifier.isStatic(method.modifiers)) {
+                    LogProcessor.error("MNIMethod ${method.name} in class ${cls.name} must be static")
+                    continue
+                }
+                //解析MNIMethod注解成员
+                val readOnlyType = mniRegister.readOnlyParams.map {
+                    val qwq = it.split(" ", limit = 2)
+                    qwq[1] to MCFPPType.parseFromIdentifier(qwq[0], Namespace.currNamespaceField)
+                }
+                val normalType = mniRegister.normalParams.map {
+                    val qwq = it.split(" ", limit = 2)
+                    qwq[1] to MCFPPType.parseFromIdentifier(qwq[0], Namespace.currNamespaceField)
+                }
+                val returnType = MCFPPType.parseFromIdentifier(mniRegister.returnType, Namespace.currNamespaceField)
+                //检查method的参数s
+                if(method.parameterCount != readOnlyType.size + normalType.size + 1){
+                    LogProcessor.error("Method ${method.name} in class ${cls.name} has wrong parameter count")
+                    continue
+                }
+                val nf = NativeFunction(method.name, returnType, javaMethod = method)
+                nf.caller = mniRegister.caller
+                for(rt in readOnlyType){
+                    nf.appendReadOnlyParam(rt.second, rt.first)
+                }
+                for(nt in normalType){
+                    nf.appendNormalParam(nt.second, nt.first)
+                }
+                this.field.addFunction(nf, false)
+            }
+        }
+        Project.currNamespace = l
     }
 }

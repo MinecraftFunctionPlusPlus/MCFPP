@@ -18,6 +18,7 @@ import java.util.*
  * 代表了mc中的一个整数。实质上是记分板中的一个记分项。你可以对它进行加减乘除等基本运算操作，以及大小比较等逻辑运算。
  */
 open class MCInt : MCNumber<Int> {
+
     /**
      * 创建一个int类型的变量。它的mc名和变量所在的域容器有关。
      *
@@ -76,113 +77,44 @@ open class MCInt : MCNumber<Int> {
         }
     }
 
-    @Override
-    override fun assignCommand(a: MCNumber<Int>): MCInt {
-        return assignCommand(a,null)
-    }
-
     @InsertCommand
-    fun assignCommand(a: MCNumber<Int>, replace: String?) : MCInt {
-        if (parent != null) {
-            val b = if(a.parent != null){
-                a.getTempVar() as MCNumber<*>
-            }else a
-            //类的成员是运行时动态的
-            //t = a
-            //是成员
-            val final = when(val parent = parent){
-                is ClassPointer -> {
-                    Commands.selectRun(parent)
-                }
-                is MCFPPClassType -> {
-                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
-                }
-                else -> TODO()
-            }
-            if (b is MCIntConcrete) {
+    override fun assignCommand(a: MCNumber<Int>) : MCInt {
+        return assignCommandLambda(
+            a,
+            ifThisIsClassMemberAndAIsConcrete =  { b, final ->
                 //对类中的成员的值进行修改
-                if(replace == null){
-                    if(final.size == 2){
-                        Function.addCommand(final[0])
-                    }
-                    final.last().build(Commands.sbPlayerSet(this, b.value))
-                }else{
-                    Function.replaceCommand(final.last().build(replace), Function.currFunction.commands.size - 1)
+                if(final.size == 2){
+                    Function.addCommand(final[0])
                 }
-            } else {
+                final.last().build(Commands.sbPlayerSet(this, (b as MCIntConcrete).value))
+                this
+            },
+            ifThisIsClassMemberAndAIsNotConcrete = { b, final ->
                 //对类中的成员的值进行修改
-                if(replace == null){
-                    if(final.size == 2){
-                        Function.addCommand(final[0])
-                    }
-                    Function.addCommand(final.last().build(Commands.sbPlayerOperation(this,"=",b as MCInt)))
-                }else{
-                    Function.replaceCommand(final.last().build(replace), Function.currFunction.commands.size - 1)
+                if(final.size == 2){
+                    Function.addCommand(final[0])
                 }
-            }
-            return this
-        } else {
-            //t = a
-            if (a is MCIntConcrete) {
-                return MCIntConcrete(this, a.value)
-            } else {
-                if(a.parent != null){
-                    if(isTemp){
-                        //a是成员
-                        val cmd = when(val parent = a.parent){
-                            is ClassPointer -> {
-                                Commands.selectRun(parent)
-                            }
-                            is MCFPPClassType -> {
-                                arrayOf(Command.build("execute as ${parent.cls.uuid} run"))
-                            }
-                            else -> TODO()
-                        }
-                        if(replace == null){
-                            if(cmd.size == 2){
-                                Function.addCommand(cmd[0])
-                            }
-                            Function.addCommand(cmd.last()
-                                .build(Commands.sbPlayerOperation(this, "=", a as MCInt)))
-                        }else{
-                            Function.replaceCommand(cmd.last()
-                                .build(replace), Function.currFunction.commands.size-1)
-                        }
-                    }
-                    val append = "store result $nbtPath int 1 run"
-                    //是成员
-                    val cmd = when(val parent = a.parent){
-                        is ClassPointer -> {
-                            Commands.selectRun(parent)
-                        }
-                        is MCFPPClassType -> {
-                            arrayOf(Command.build("execute as ${parent.cls.uuid} ").build("run ","run"))
-                        }
-                        else -> TODO()
-                    }
-                    cmd.last().replace("run" to append)
-                    if(replace == null){
-                        if(cmd.size == 2){
-                            Function.addCommand(cmd[0])
-                        }
-                        Function.addCommand(cmd.last().build(Commands.sbPlayerOperation(this, "=", a as MCInt)))
-                    }else{
-                        Function.replaceCommand(cmd.last().build(replace), Function.currFunction.commands.size-1)
-                    }
-                }else{
-                    val head = if(isTemp) "" else "execute store result $nbtPath int 1 run"
-                    //变量进栈
-                    if(replace == null){
-                        Function.addCommand(Command.build(head)
-                            .build(Commands.sbPlayerOperation(this, "=", a as MCInt)))
-                    }else{
-                        Function.replaceCommand(Command.build(head)
-                            .build(replace), Function.currFunction.commands.size-1)
-                    }
+                Function.addCommand(final.last().build(Commands.sbPlayerOperation(this,"=",b as MCInt)))
+                this
+            },
+            ifThisIsNormalVarAndAIsConcrete = { b, _ ->
+                MCIntConcrete(this, (b as MCIntConcrete).value)
+            },
+            ifThisIsNormalVarAndAIsClassMember = { a, cmd ->
+                if(cmd.size == 2){
+                    Function.addCommand(cmd[0])
                 }
+                Function.addCommand(cmd.last().build(Commands.sbPlayerOperation(this, "=", a as MCInt)))
+                MCInt(this)
+            },
+            ifThisIsNormalVarAndAIsNotConcrete = { a, _ ->
+                //变量进栈
+                Function.addCommand(
+                    (if(isTemp) Command("") else Command("execute store result storage mcfpp:system").build(nbtPath.toCommandPart()).build("int 1 run "))
+                        .build(Commands.sbPlayerOperation(this, "=", a as MCInt), false))
+                MCInt(this)
             }
-            return MCInt(this)  //复制为未跟踪变量
-        }
+        ) as MCInt
     }
 
     @Override

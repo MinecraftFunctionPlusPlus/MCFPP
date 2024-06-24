@@ -2,9 +2,13 @@ package top.mcfpp.lang
 
 import net.querz.nbt.tag.Tag
 import top.mcfpp.Project
+import top.mcfpp.command.Command
+import top.mcfpp.command.Commands
 import top.mcfpp.exception.OperationNotImplementException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
+import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import java.util.*
@@ -85,10 +89,12 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      */
     var inList = false
 
-    var parentPath = "storage mcfpp:system " + Project.currNamespace + ".stack_frame[" + stackIndex + "]"
-
-    open val nbtPath: String
-        get() = if(inList) parentPath else "$parentPath.$identifier"
+    /**
+     *
+     */
+    open var nbtPath = NBTPath(NBTPath.STORAGE, Storage.MCFPP_SYSTEM.toString())
+        .memberIndex(Project.currNamespace)
+        .memberIndex("stack_frame[$stackIndex]")
 
     /**
      * 复制一个变量
@@ -101,7 +107,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
         isTemp = `var`.isTemp
         stackIndex = `var`.stackIndex
         isConst = `var`.isConst
-        parentPath = `var`.parentPath
+        nbtPath = `var`.nbtPath
     }
 
     /**
@@ -112,6 +118,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
     constructor(identifier: String = UUID.randomUUID().toString()){
         this.name = identifier
         this.identifier = identifier
+        nbtPath.memberIndex(identifier)
     }
 
     /**
@@ -159,7 +166,9 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
             //不是this指针才需要额外指定引用者
             `var`.parent = pointer
         }
-        `var`.parentPath = "entity @s data.$identifier"
+        `var`.nbtPath = NBTPath(NBTPath.ENTITY, "@s")
+            .memberIndex("data")
+            .memberIndex( identifier)
         return `var`
     }
 
@@ -168,8 +177,68 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
         if(obj.identifier != "this"){
             `var`.parent = obj
         }
-        `var`.parentPath = obj.nbtPath
+        `var`.nbtPath = obj.nbtPath
         return `var`
+    }
+
+    /**
+     * @param a 源变量
+     * @param ifThisIsClassMemberAndAIsConcrete 如果此变量是类成员，且a是已知的。cmd参数是[Commands.selectRun]生成的访问类成员的命令，需要被续写
+     * @param ifThisIsClassMemberAndAIsNotConcrete 如果此变量是成员，且a不是已知的。cmd参数是[Commands.selectRun]生成的访问类成员的命令，需要被续写
+     * @param ifThisIsNormalVarAndAIsConcrete 如果此变量不是成员且a是已知的。cmd为空
+     * @param ifThisIsNormalVarAndAIsClassMember 如果此变量不是成员且a是成员。cmd参数是[Commands.selectRun]生成的访问类成员的命令，需要被续写
+     * @param ifThisIsNormalVarAndAIsNotConcrete 如果此变量不是成员且a也不是。cmd为空
+     */
+    fun assignCommandLambda(
+        a: Var<*>,
+        ifThisIsClassMemberAndAIsConcrete: (Var<*>, Array<Command>) -> Var<*>,
+        ifThisIsClassMemberAndAIsNotConcrete: (Var<*>, Array<Command>) -> Var<*>,
+        ifThisIsNormalVarAndAIsConcrete: (Var<*>, Array<Command>) -> Var<*>,
+        ifThisIsNormalVarAndAIsClassMember: (Var<*>, Array<Command>) -> Var<*>,
+        ifThisIsNormalVarAndAIsNotConcrete: (Var<*>, Array<Command>) -> Var<*>
+    ): Var<*> {
+        if (parentClass() != null) {
+            val b = if(a.parent != null){
+                a.getTempVar()
+            }else a
+            //是成员
+            //类的成员是运行时动态的
+            val final = when(val parent = parent){
+                is ClassPointer -> {
+                    Commands.selectRun(parent)
+                }
+                is MCFPPClassType -> {
+                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
+                }
+                else -> TODO()
+            }
+            return if (b is MCFPPValue<*>) {
+                ifThisIsClassMemberAndAIsConcrete(b, final)
+            } else {
+                ifThisIsClassMemberAndAIsNotConcrete(b, final)
+            }
+        } else {
+            //t = a
+            if (a is MCFPPValue<*>) {
+                return ifThisIsNormalVarAndAIsConcrete(a, emptyArray())
+            } else {
+                if(a.parentClass() != null){
+                    //是成员
+                    val final = when(val parent = a.parent){
+                        is ClassPointer -> {
+                            Commands.selectRun(parent)
+                        }
+                        is MCFPPClassType -> {
+                            arrayOf(Command.build("execute as ${parent.cls.uuid}").build("run","run"))
+                        }
+                        else -> TODO()
+                    }
+                    return ifThisIsNormalVarAndAIsClassMember(a, final)
+                }else{
+                    return ifThisIsNormalVarAndAIsNotConcrete(a, emptyArray())
+                }
+            }
+        }
     }
 
     /**
@@ -317,6 +386,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
             Function.currFunction.field.putVar(v.identifier, v, true)
         }else{
             v.parent = this.parent
+            //TODO
             when (val parent = parent){
                 is ClassPointer -> {
                     parent.clsType.field.putVar(v.identifier, v, true)
@@ -327,12 +397,12 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
                             type.cls.staticField.putVar(v.identifier, v, true)
                         }
                         is MCFPPCompoundType -> {
-                            type.data.staticField.putVar(v.identifier, v, true)
+                            type.compoundData.staticField.putVar(v.identifier, v, true)
                         }
                         else -> TODO()
                     }
                 }
-                else -> TODO()
+                else -> {}
             }
         }
     }

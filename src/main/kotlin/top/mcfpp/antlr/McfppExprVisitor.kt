@@ -263,16 +263,22 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         processVarCache.add(visitAdditiveExpressionRe!!)
         for (i in 1 until ctx.multiplicativeExpression().size) {
             var b: Var<*>? = visit(ctx.multiplicativeExpression(i))
-            if(b is MCFloat) b = b.toTempEntity()
-            if(visitAdditiveExpressionRe!! != MCFloat.ssObj){
-                visitAdditiveExpressionRe = visitAdditiveExpressionRe!!.getTempVar()
+            if(b is MCFloat) {
+                b = b.toTempEntity()
+                if(visitAdditiveExpressionRe!! != MCFloat.ssObj){
+                    visitAdditiveExpressionRe = visitAdditiveExpressionRe!!.getTempVar()
+                }
             }
-            visitAdditiveExpressionRe = if (Objects.equals(ctx.op.text, "+")) {
-                visitAdditiveExpressionRe!!.plus(b!!)
-            } else if (Objects.equals(ctx.op.text, "-")) {
-                visitAdditiveExpressionRe!!.minus(b!!)
-            } else {
-                null
+            visitAdditiveExpressionRe = when (ctx.op.text ){
+                "+" -> {
+                    visitAdditiveExpressionRe!!.plus(b!!)
+                }
+                "-" -> {
+                    visitAdditiveExpressionRe!!.minus(b!!)
+                }
+                else -> {
+                    null
+                }
             }
             if(visitAdditiveExpressionRe == null){
                 LogProcessor.error("The operator \"${ctx.op.text}\" cannot be used between ${visitAdditiveExpressionRe!!.type} and ${b!!.type}.")
@@ -443,7 +449,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     @Override
     override fun visitSelector(ctx: mcfppParser.SelectorContext?): Var<*>? {
         //进入visitVar，currSelector作为成员选择的上下文
-        currSelector = visit(ctx!!.`var`())!!.getTempVar()
+        currSelector = visit(ctx!!.`var`())!!
         return null
     }
 
@@ -558,7 +564,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 }
                 //可能是构造函数
                 if (cls == null) {
-                    LogProcessor.error("Function " + ctx.text + " not defined")
+                    LogProcessor.error("Function ${func.identifier}<${readOnlyArgs.map { it.type.typeName }.joinToString(",")}>(${normalArgs.map { it.type.typeName }.joinToString(",")}) not defined")
                     Function.addCommand("[Failed to Compile]${ctx.text}")
                     func.invoke(normalArgs,currSelector)
                     return func.returnVar

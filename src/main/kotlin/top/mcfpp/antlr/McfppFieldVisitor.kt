@@ -10,6 +10,7 @@ import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.type.UnresolvedType
 import top.mcfpp.annotations.MNIRegister
+import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.model.*
 import top.mcfpp.model.Class
 import top.mcfpp.model.Member.AccessModifier
@@ -626,7 +627,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     
     override fun visitNativeFuncDeclaration(ctx: mcfppParser.NativeFuncDeclarationContext): Any? {
         Project.ctx = ctx
-        val nf = NativeFunction(ctx.Identifier().text, MCFPPType.parseFromIdentifier(ctx.functionReturnType()?.text?:"void", typeScope), Project.currNamespace)
+        val nf = NativeFunction(ctx.Identifier().text, ctx.functionReturnType()?.let { MCFPPType.parseFromContext(it.type(), typeScope) }?:MCFPPBaseType.Void, Project.currNamespace)
         nf.addParamsFromContext(ctx.functionParams())
         try {
             //根据JavaRefer找到类

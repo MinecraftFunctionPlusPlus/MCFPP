@@ -16,6 +16,10 @@ class DataTemplateTest {
                 
                 func main(){
                     Test t = {qwq:1};
+                    print(t.qwq);
+                    print(t);
+                    t.qwq = 6;
+                    print(t.qwq);
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test)

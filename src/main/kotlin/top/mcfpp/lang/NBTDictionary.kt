@@ -11,8 +11,6 @@ import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.mni.NBTDictionaryData
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
-import top.mcfpp.model.function.NativeFunction
-import top.mcfpp.model.function.NativeFunction.Companion.getNativeFunctionFromClass
 import java.util.*
 
 open class NBTDictionary : NBTBasedData<CompoundTag> {
