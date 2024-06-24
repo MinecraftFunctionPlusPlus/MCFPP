@@ -37,6 +37,38 @@
 				},
 				{
 					"id":"print",
+					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.lang.DataTemplateObject)",
+					"normalParams":[
+						{
+							"id":"n",
+							"type":"mcfpp.lang:DataObject",
+							"isStatic":false
+						}
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				},
+				{
+					"id":"print",
+					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.lang.NBTBasedData)",
+					"normalParams":[
+						{
+							"id":"n",
+							"type":"nbt",
+							"isStatic":false
+						}
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				},
+				{
+					"id":"print",
 					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.lang.Var)",
 					"normalParams":[
 						{
@@ -44,6 +76,18 @@
 							"type":"any",
 							"isStatic":false
 						}
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				},
+				{
+					"id":"debug",
+					"javaMethod":"top.mcfpp.mni.System#debug()",
+					"normalParams":[
+						
 					],
 					"returnType":"void",
 					"isAbstract":false,
@@ -63,50 +107,6 @@
 			"id":"default",
 			"functions":[
 				
-			],
-			"classes":[
-				
-			],
-			"template":[
-				
-			]
-		},
-		{
-			"id":"mcfpp",
-			"functions":[
-				{
-					"id":"load",
-					"normalParams":[
-						
-					],
-					"returnType":"void",
-					"isAbstract":false,
-					"tags":[
-						
-					]
-				},
-				{
-					"id":"tick",
-					"normalParams":[
-						
-					],
-					"returnType":"void",
-					"isAbstract":false,
-					"tags":[
-						
-					]
-				},
-				{
-					"id":"init",
-					"normalParams":[
-						
-					],
-					"returnType":"void",
-					"isAbstract":false,
-					"tags":[
-						
-					]
-				}
 			],
 			"classes":[
 				

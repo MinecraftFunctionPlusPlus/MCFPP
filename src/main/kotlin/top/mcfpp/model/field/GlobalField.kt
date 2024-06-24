@@ -38,6 +38,11 @@ object GlobalField : FieldContainer, IField {
     val libNamespaces = Hashtable<String, Namespace>()
 
     /**
+     * 标准库命名。无论如何，这个命名空间都会被加入工程
+     */
+    val stdNamespaces = Hashtable<String, Namespace>()
+
+    /**
      * 函数的标签
      */
     var functionTags: HashMap<String, FunctionTag> = HashMap()
@@ -86,11 +91,18 @@ object GlobalField : FieldContainer, IField {
                 val f1 = n.field.getFunction(identifier, readOnlyParams, normalParams)
                 if(f1 != null) return f1
             }
+            for (n in stdNamespaces.values){
+                val f1 = n.field.getFunction(identifier, readOnlyParams, normalParams)
+                if(f1 != null) return f1
+            }
             return UnknownFunction(identifier)
         }
         var np = localNamespaces[namespace]
         if(np == null){
             np = libNamespaces[namespace]
+        }
+        if(np == null){
+            np = stdNamespaces[namespace]
         }
         return np?.field?.getFunction(identifier, readOnlyParams, normalParams)?: UnknownFunction(identifier)
     }
@@ -113,12 +125,19 @@ object GlobalField : FieldContainer, IField {
                 cls = nsp.field.getClass(identifier, readOnlyParams)
                 if(cls != null) return cls
             }
+            for (nsp in stdNamespaces.values){
+                cls = nsp.field.getClass(identifier, readOnlyParams)
+                if(cls != null) return cls
+            }
             return null
         }
         //按照指定的命名空间寻找
         var np = localNamespaces[namespace]
         if(np == null){
             np = importedLibNamespaces[namespace]
+        }
+        if(np == null){
+            np = stdNamespaces[namespace]
         }
         return np?.field?.getClass(identifier, readOnlyParams)
     }
@@ -141,12 +160,19 @@ object GlobalField : FieldContainer, IField {
                 cls = nsp.field.getClass(identifier)
                 if(cls != null) return cls
             }
+            for (nsp in stdNamespaces.values){
+                cls = nsp.field.getClass(identifier)
+                if(cls != null) return cls
+            }
             return null
         }
         //按照指定的命名空间寻找
         var np = localNamespaces[namespace]
         if(np == null){
             np = importedLibNamespaces[namespace]
+        }
+        if(np == null){
+            np = stdNamespaces[namespace]
         }
         return np?.field?.getClass(identifier)
     }
@@ -169,12 +195,19 @@ object GlobalField : FieldContainer, IField {
                 itf = nsp.field.getInterface(identifier)
                 if(itf != null) return itf
             }
+            for (nsp in stdNamespaces.values){
+                itf = nsp.field.getInterface(identifier)
+                if(itf != null) return itf
+            }
             return null
         }
         //按照指定的命名空间寻找
         var np = localNamespaces[namespace]
         if(np == null){
             np = importedLibNamespaces[namespace]
+        }
+        if(np == null){
+            np = stdNamespaces[namespace]
         }
         return np?.field?.getInterface(identifier)
     }
@@ -199,12 +232,19 @@ object GlobalField : FieldContainer, IField {
                 template = nsp.field.getTemplate(identifier)
                 if(template != null) return template
             }
+            for (nsp in stdNamespaces.values){
+                template = nsp.field.getTemplate(identifier)
+                if(template != null) return template
+            }
             return null
         }
         //按照指定的命名空间寻找
         var np = localNamespaces[namespace]
         if(np == null){
             np = importedLibNamespaces[namespace]
+        }
+        if(np == null){
+            np = stdNamespaces[namespace]
         }
         return np?.field?.getTemplate(identifier)
     }

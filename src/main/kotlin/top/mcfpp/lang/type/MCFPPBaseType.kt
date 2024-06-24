@@ -1,69 +1,66 @@
 package top.mcfpp.lang.type
 
-import top.mcfpp.lang.*
-import top.mcfpp.util.ResourceLocation
-
 /**
  * 类型单例
  */
 class MCFPPBaseType {
-    object Any:MCFPPType(listOf()){
+    object Any:MCFPPType(parentType = listOf()){
         override val typeName: kotlin.String
             get() = "any"
     }
-    object Int:MCFPPType(listOf(Any)){
+    object Int:MCFPPType(parentType = listOf(Any)){
         override val typeName: kotlin.String
             get() = "int"
     }
-    object String:MCFPPType(listOf(Any)){
+    object String:MCFPPType(parentType = listOf(Any)){
         override val typeName: kotlin.String
             get() = "string"
     }
-    object Float:MCFPPType(listOf(Any)){
+    object Float:MCFPPType(parentType = listOf(Any)){
         override val typeName: kotlin.String
             get() = "float"
     }
-    object Bool:MCFPPType(listOf(Any)){
+    object Bool:MCFPPType(parentType = listOf(Any)){
         override val typeName: kotlin.String
             get() = "bool"
     }
-    object Type:MCFPPType(listOf()){
+    object Type:MCFPPType(parentType = listOf()){
         override val typeName: kotlin.String
             get() = "type"
     }
-    object Void: MCFPPType(listOf()){
+    object Void: MCFPPType(parentType = listOf()){
         override val typeName: kotlin.String
             get() = "void"
     }
-    object Selector: MCFPPType(listOf(BaseEntity)){
+    object Selector: MCFPPType(parentType = listOf(BaseEntity)){
         override val typeName: kotlin.String
             get() = "selector"
     }
-    object JavaVar: MCFPPType(listOf(Any)){
+    object JavaVar: MCFPPType(parentType = listOf(Any)){
         override val typeName: kotlin.String
             get() = "JavaVar"
     }
-    object BaseEntity: MCFPPType(listOf(Any)){
+    object BaseEntity: MCFPPType(parentType = listOf(Any)){
         override val typeName: kotlin.String
             get() = "entity"
     }
-    object JsonText: MCFPPType(listOf(MCFPPNBTType.NBT)){
+    object JsonText: MCFPPType(parentType = listOf(MCFPPNBTType.NBT)){
         override val typeName: kotlin.String
             get() = "jtext"
     }
 
     init {
-        Any.data = top.mcfpp.lang.MCAny.data
-        Int.data = top.mcfpp.lang.MCInt.data
-        String.data = top.mcfpp.lang.MCString.data
-        Float.data = top.mcfpp.lang.MCFloat.data
-        Bool.data = top.mcfpp.lang.MCBool.data
-        Type.data = top.mcfpp.lang.type.MCFPPType.data
-        Void.data = top.mcfpp.lang.Void.data
+        Any.compoundData = top.mcfpp.lang.MCAny.data
+        Int.compoundData = top.mcfpp.lang.MCInt.data
+        String.compoundData = top.mcfpp.lang.MCString.data
+        Float.compoundData = top.mcfpp.lang.MCFloat.data
+        Bool.compoundData = top.mcfpp.lang.MCBool.data
+        Type.compoundData = top.mcfpp.lang.type.MCFPPType.data
+        Void.compoundData = top.mcfpp.lang.Void.data
         //Selector.data = top.mcfpp.lang.Selector.data
-        JavaVar.data = top.mcfpp.lang.JavaVar.data
+        JavaVar.compoundData = top.mcfpp.lang.JavaVar.data
         //BaseEntity.data = top.mcfpp.lang.Entity.data
-        JsonText.data = top.mcfpp.lang.JsonText.data
+        JsonText.compoundData = top.mcfpp.lang.JsonText.data
     }
 
 }

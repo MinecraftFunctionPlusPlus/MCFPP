@@ -17,20 +17,21 @@ import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.StringHelper
 
 /**
  * 所有类型的接口
  */
 abstract class MCFPPType(
 
+    open var compoundData: CompoundData = CompoundData("unknown", "mcfpp"),
+
     /**
      * 父类型，一个列表
      */
     open var parentType: List<MCFPPType> = listOf(),
 
-    open var data: CompoundData = CompoundData("unknown","mcfpp"),
-
-    ifRegister : Boolean = true
+    ifRegister: Boolean = true
 
 ) : CanSelectMember {
 
@@ -52,7 +53,7 @@ abstract class MCFPPType(
      *
      * @param parentType 指定类型
      */
-    fun isSubOf(parentType: MCFPPType):Boolean{
+    open fun isSubOf(parentType: MCFPPType):Boolean{
         if(this == parentType) return true
         for(parentTypeSingle in this.parentType){
             if(parentTypeSingle.isSubOf(parentType)) return true
@@ -73,7 +74,7 @@ abstract class MCFPPType(
      */
     @Override
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        val member = data.getVar(key,true)
+        val member = compoundData.getVar(key,true)
         return if(member == null){
             Pair(null, true)
         }else{
@@ -92,7 +93,7 @@ abstract class MCFPPType(
     @Override
     override fun getMemberFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>, accessModifier: Member.AccessModifier): Pair<Function, Boolean> {
         //获取函数
-        val member = data.staticField.getFunction(key, readOnlyParams, normalParams)
+        val member = compoundData.staticField.getFunction(key, readOnlyParams, normalParams)
         return if(member is UnknownFunction){
             Pair(UnknownFunction(key), true)
         }else{
@@ -102,9 +103,9 @@ abstract class MCFPPType(
 
     override fun getAccess(function: Function): Member.AccessModifier {
         return if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.CLASS){
-            function.parentClass()!!.getAccess(data)
+            function.parentClass()!!.getAccess(compoundData)
         }else if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.TEMPLATE){
-            function.parentTemplate()!!.getAccess(data)
+            function.parentTemplate()!!.getAccess(compoundData)
         }else{
             Member.AccessModifier.PUBLIC
         }
@@ -140,6 +141,10 @@ abstract class MCFPPType(
 
             MCFPPBaseType.Bool -> {
                 return tag is ByteTag
+            }
+
+            is MCFPPNBTType.NBT -> {
+                return true
             }
 
             is MCFPPListType -> {
@@ -278,10 +283,35 @@ abstract class MCFPPType(
                 return genericTypeCache[identifier]!!(genericParams.map { parseFromIdentifier(it, typeScope) }.toTypedArray())
             }
             //类和模板
-            val clazz = GlobalField.getClass(null, identifier)
+            //正则匹配
+            val clsResult = MCFPPClassType.regex.find(identifier)
+            if(clsResult != null){
+                val (first, second) = clsResult.destructured
+                val clazz = GlobalField.getClass(first, second)
+                if(clazz != null){
+                    return clazz.getType()
+                }else{
+                    LogProcessor.warn("Unknown type: $identifier")
+                    return MCFPPBaseType.Any
+                }
+            }
+            val templateResult = MCFPPClassType.regex.find(identifier)
+            if(templateResult != null){
+                val (first, second) = templateResult.destructured
+                val template = GlobalField.getClass(first, second)
+                if(template != null){
+                    return template.getType()
+                }else{
+                    LogProcessor.warn("Unknown type: $identifier")
+                    return MCFPPBaseType.Any
+                }
+            }
+            //普通匹配
+            val nspID = StringHelper.splitNamespaceID(identifier)
+            val clazz = GlobalField.getClass(nspID.first, nspID.second)
             if(clazz != null) return clazz.getType()
-            //val template = GlobalField.getTemplate(null,identifier)
-            //if(template!=null) return template.getType()
+            val template = GlobalField.getTemplate(nspID.first, nspID.second)
+            if(template!=null) return template.getType()
             //泛型
             if(typeScope.containType(identifier)){
                 return typeScope.getType(identifier)!!

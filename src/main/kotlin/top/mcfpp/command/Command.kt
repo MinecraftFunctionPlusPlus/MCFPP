@@ -21,6 +21,9 @@ open class Command {
 
     var isCompleted = false
 
+    val isMacro: Boolean
+        get() = commandStringList.any { it.startsWith("$") }
+
     constructor(command: String){
         commandStringList.add(command)
     }
@@ -85,6 +88,23 @@ open class Command {
         return true
     }
 
+    /**
+     * 替换目标位点中的字符串
+     *
+     * @param pointID 位点的ID
+     * @param target 目标命令
+     *
+     * @return 如果没有可以替换的位点，则返回false
+     */
+    private fun replace(pointID: String, target: Command): Boolean{
+        val point = replacePoint[pointID] ?: return false
+        commandStringList.removeAt(point)
+        for (c in target.commandStringList.withIndex()){
+            commandStringList.add(point + c.index, c.value)
+        }
+        return true
+    }
+
     fun replace(vararg pointIDtoTarget: Pair<String,String>): Int{
         var suc = 0
         for (pt in pointIDtoTarget){
@@ -121,13 +141,14 @@ open class Command {
      * @param command 固定的命令字符串
      * @return
      */
-    fun build(command: String) : Command{
-        commandStringList.add(" ")
+    fun build(command: String, blank: Boolean = true) : Command{
+        if(blank) commandStringList.add(" ")
         commandStringList.add(command)
         return this
     }
 
-    fun build(command: Command): Command{
+    fun build(command: Command, blank: Boolean = true): Command{
+        if(blank) commandStringList.add(" ")
         for (kv in command.replacePoint){
             replacePoint[kv.key] = kv.value + commandStringList.size
         }
@@ -142,14 +163,14 @@ open class Command {
      * @param pointID 命令字符串的位点ID
      * @return
      */
-    fun build(command: String, pointID: String) : Command{
-        commandStringList.add(" ")
+    fun build(command: String, pointID: String, blank: Boolean = true) : Command{
+        if(blank) commandStringList.add(" ")
         replacePoint[pointID] = commandStringList.size
         commandStringList.add(command)
         return this
     }
 
-    fun buildMacro(id: String) = build("", "$$id")
+    fun buildMacro(id: String, blank: Boolean = true) = build("", "$$id", blank)
 
     override fun toString(): String{
         val sb = StringBuilder()

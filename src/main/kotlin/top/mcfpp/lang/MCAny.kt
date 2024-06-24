@@ -12,7 +12,6 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.function.NativeFunction
-import top.mcfpp.model.function.NativeFunction.Companion.getNativeFunctionFromClass
 import top.mcfpp.util.LogProcessor
 import java.util.*
 

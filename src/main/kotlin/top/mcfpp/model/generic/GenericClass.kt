@@ -4,7 +4,6 @@ import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.Project
 import top.mcfpp.antlr.McfppGenericClassFieldVisitor
 import top.mcfpp.antlr.McfppGenericClassImVisitor
-import top.mcfpp.antlr.McfppImVisitor
 import top.mcfpp.lang.MCFPPTypeVar
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPClassType

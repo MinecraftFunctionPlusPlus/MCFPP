@@ -70,24 +70,40 @@ object Project {
      */
     val macroFunction : LinkedHashMap<String, String> = LinkedHashMap()
 
+    var compileStage = 0
+    val READ_PROJECT = 1
+    val READ_LIB = 2
+    val INIT = 3
+    val INDEX_TYPE = 4
+    val RESOVLE_FIELD = 5
+    val COMPILE = 6
+    val OPTIMIZATION = 7
+    val GEN_INDEX = 8
+    val GEN_DATAPACK = 9
+
     /**
      * 初始化
      */
     fun init() {
+        compileStage++
         //全局缓存初始化
         GlobalField.init()
         //初始化mcfpp的tick和load函数
         //添加命名空间
-        GlobalField.localNamespaces["mcfpp"] = Namespace("mcfpp")
+        GlobalField.stdNamespaces["mcfpp"] = Namespace("mcfpp")
+        GlobalField.stdNamespaces["mcfpp.sys"] = Namespace("mcfpp.sys")
+        GlobalField.stdNamespaces["mcfpp.lang"] = Namespace("mcfpp.lang")
         mcfppTick = Function("tick","mcfpp", MCFPPBaseType.Void)
         mcfppLoad = Function("load","mcfpp", MCFPPBaseType.Void)
         mcfppInit = Function("init", "mcfpp", MCFPPBaseType.Void)
-        GlobalField.localNamespaces["mcfpp"]!!.field.addFunction(mcfppLoad,true)
-        GlobalField.localNamespaces["mcfpp"]!!.field.addFunction(mcfppTick,true)
-        GlobalField.localNamespaces["mcfpp"]!!.field.addFunction(mcfppInit, true)
+        GlobalField.stdNamespaces["mcfpp"]!!.field.addFunction(mcfppLoad,true)
+        GlobalField.stdNamespaces["mcfpp"]!!.field.addFunction(mcfppTick,true)
+        GlobalField.stdNamespaces["mcfpp"]!!.field.addFunction(mcfppInit, true)
         GlobalField.functionTags["minecraft:tick"]!!.functions.add(mcfppTick)
         GlobalField.functionTags["minecraft:load"]!!.functions.add(mcfppLoad)
         GlobalField.functionTags["minecraft:load"]!!.functions.add(mcfppInit)
+        GlobalField.stdNamespaces["mcfpp.lang"]!!.field.addTemplate("DataObject", DataTemplate.baseDataTemplate)
+        GlobalField.stdNamespaces["mcfpp.lang"]!!.field.addClass("Object", Class.baseClass)
     }
 
     /**
@@ -95,6 +111,7 @@ object Project {
      * @param path 工程的json文件的路径
      */
     fun readProject(path: String) {
+        compileStage++
         //工程信息读取
         try {
             //读取json
@@ -145,6 +162,9 @@ object Project {
             jsonObject["ignoreStdLib"]?.let {
                 CompileSettings.ignoreStdLib = it as Boolean
             }
+            jsonObject["isLib"]?.let {
+                CompileSettings.isLib = it as Boolean
+            }
             //调用库
             val includesJson: JSONArray = jsonObject.getJSONArray("includes")?: JSONArray()
             for (i in 0 until includesJson.size) {
@@ -163,12 +183,10 @@ object Project {
      * 读取库文件，并将库写入缓存
      */
     fun readLib(){
+        compileStage++
         //默认的
         if(!CompileSettings.ignoreStdLib){
             config.includes.addAll(config.stdLib)
-        }
-        for (n in config.stdNamespace){
-            GlobalField.libNamespaces[n] = Namespace(n)
         }
         //写入缓存
         for (include in config.includes) {
@@ -197,19 +215,35 @@ object Project {
                 }
             }
         }
+        //实例化所有类中的成员字段
+        for(namespace in GlobalField.stdNamespaces.values){
+            namespace.field.forEachClass { c ->
+                run {
+                    for (v in c.field.allVars){
+                        if(v is UnresolvedVar){
+                            c.field.putVar(c.identifier, v.resolve(c), true)
+                        }
+                    }
+                    for (v in c.staticField.allVars){
+                        if(v is UnresolvedVar){
+                            c.staticField.putVar(c.identifier, v.resolve(c), true)
+                        }
+                    }
+                }
+            }
+        }
+        //函数参数解析
+        GlobalField.importedLibNamespaces.clear()
     }
 
     /**
      * 编制类型索引
      */
     fun indexType(){
+        compileStage++
         logger.debug("Generate Type Index...")
         //解析文件
         for (file in config.files) {
-            //添加默认库的域
-            if(!CompileSettings.ignoreStdLib){
-                GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
-            }
             try {
                 file.indexType()
             } catch (e: IOException) {
@@ -225,6 +259,7 @@ object Project {
      * 编制函数索引
      */
     fun resolveField() {
+        compileStage++
         logger.debug("Generate Function Index...")
         //解析文件
         for (file in config.files) {
@@ -235,6 +270,7 @@ object Project {
                 errorCount++
                 e.printStackTrace()
             }
+            GlobalField.importedLibNamespaces.clear()
         }
     }
 
@@ -242,14 +278,11 @@ object Project {
      * 编译工程
      */
     fun compile() {
+        compileStage++
         //工程文件编译
         //解析文件
         for (file in config.files) {
             LogProcessor.debug("Compiling mcfpp code in \"$file\"")
-            //添加默认库域
-            if(!CompileSettings.ignoreStdLib){
-                GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
-            }
             try {
                 file.compile()
             } catch (e: IOException) {
@@ -265,11 +298,12 @@ object Project {
      */
     @InsertCommand
     fun optimization() {
+        compileStage++
         logger.debug("Optimizing...")
         logger.debug("Adding scoreboards declare in mcfpp:load function")
         //region load init command
         //向load函数中添加记分板初始化命令
-        Function.currFunction = GlobalField.localNamespaces["mcfpp"]!!.field.getFunction("load", ArrayList(), ArrayList())!!
+        Function.currFunction = GlobalField.stdNamespaces["mcfpp"]!!.field.getFunction("load", ArrayList(), ArrayList())!!
         for (scoreboard in GlobalField.scoreboards.values){
             Function.addCommand("scoreboard objectives add ${scoreboard.name} ${scoreboard.criterion}")
         }
@@ -302,7 +336,7 @@ object Project {
                 }
             }
         }
-        if (!hasEntrance) {
+        if (!hasEntrance && !CompileSettings.isLib) {
             logger.warn("No valid entrance function in Project ${config.defaultNamespace}")
             warningCount++
         }
@@ -314,6 +348,7 @@ object Project {
      * 在和工程信息json文件的同一个目录下生成一个.mclib文件
      */
     fun genIndex() {
+        compileStage++
         LibWriter.write(config.root.absolutePathString())
     }
 
@@ -367,7 +402,7 @@ data class ProjectConfig(
     /**
      * 默认命名空间注册
      */
-    val stdNamespace: List<String> = listOf("mcfpp.lang","mcfpp.sys"),
+    val stdNamespace: List<String> = listOf("mcfpp.lang","mcfpp.sys","mcfpp"),
 
     /**
      * 注释输出等级

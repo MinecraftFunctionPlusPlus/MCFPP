@@ -1,8 +1,11 @@
 package top.mcfpp.command
 
+import net.querz.nbt.io.SNBTUtil
+import net.querz.nbt.tag.Tag
 import top.mcfpp.Project
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPClassType
+import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.function.Function
 import java.util.*
 
@@ -84,6 +87,19 @@ object Commands {
             .build(a.name,a.name)
             .build(a.`object`.toString(),a.`object`.toString())
             .build(value.toString())
+    }
+
+    fun dataSetValue(a: NBTPath, value: Tag<*>): Command{
+        return Command.build("data modify")
+            .build(a.toCommandPart())
+            .build("set value ${SNBTUtil.toSNBT(value)}")
+    }
+
+    fun dataSetFrom(a: NBTPath, b: NBTPath): Command{
+        return Command.build("data modify")
+            .build(a.toCommandPart())
+            .build("set from")
+            .build(b.toCommandPart())
     }
 
     fun selectRun(a : CanSelectMember, command: Command) : Array<Command>{

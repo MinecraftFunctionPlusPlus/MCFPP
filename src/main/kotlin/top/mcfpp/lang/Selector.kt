@@ -14,8 +14,6 @@ import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
-import top.mcfpp.model.function.NativeFunction
-import top.mcfpp.model.function.NativeFunction.Companion.getNativeFunctionFromClass
 import top.mcfpp.util.LogProcessor
 import java.util.*
 

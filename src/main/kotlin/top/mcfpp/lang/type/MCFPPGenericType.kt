@@ -23,7 +23,7 @@ import top.mcfpp.lang.value.MCTypeValue
 class MCFPPGenericType(
     var identifier:String,
     override var parentType: List<MCFPPType>
-) :MCFPPType(parentType, MCAny.data) {   //TODO: 泛型的CompoundData
+) :MCFPPType(MCAny.data, parentType) {   //TODO: 泛型的CompoundData
 
     override val typeName: String
         get() = identifier

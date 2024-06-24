@@ -61,4 +61,21 @@ public class System {
             //TODO
         }
     }
+
+    @InsertCommand
+    @MNIRegister(normalParams = {"DataObject o"})
+    public static void print(@NotNull DataTemplateObject object){
+        if(object instanceof DataTemplateObjectConcrete objectConcrete){
+            Function.Companion.addCommand("tellraw @a \"" + objectConcrete.getValue().valueToString());
+        }else {
+            //TODO
+            Function.Companion.addCommand("TODO: tellraw templateData");
+        }
+    }
+
+    @MNIRegister
+    public static void debug(){
+        //噢，在这里断点，这样就可以断点编译了
+        int i = 0;
+    }
 }

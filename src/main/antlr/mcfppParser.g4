@@ -350,7 +350,7 @@ selector
     ;
 
 arguments
-    :   readOnlyArgs? normalArgs
+    :   readOnlyArgs? normalArgs?
     ;
 
 readOnlyArgs

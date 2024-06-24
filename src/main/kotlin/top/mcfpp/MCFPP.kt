@@ -29,9 +29,9 @@ fun main(args: Array<String>) {
         val start: Long = System.currentTimeMillis()
         LogProcessor.info("Tips: " + UwU.tip) //生成tips
         val path = args[0]
+        Project.init() //初始化
         Project.readProject(path) //读取配置文件
         Project.readLib() //读取引用的库的索引
-        Project.init() //初始化
         Project.indexType() //编制类型索引
         Project.resolveField() //编制函数索引
         Project.compile() //编译
@@ -39,6 +39,7 @@ fun main(args: Array<String>) {
         Project.genIndex() //生成索引
         Project.ctx = null
         if(Project.config.targetPath != "null"){
+            Project.compileStage++
             try{
                 DatapackCreator.createDatapack(Project.config.targetPath) //生成数据包
             }catch (e: Exception){

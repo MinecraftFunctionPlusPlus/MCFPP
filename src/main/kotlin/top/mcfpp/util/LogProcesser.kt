@@ -30,7 +30,9 @@ object LogProcessor {
     }
 
     fun warn(msg: String){
-        logger.warn(msg)
+        logger.warn(
+            msg + if(Project.ctx !=null) {" at " + MCFPPFile.currFile!!.name + ":" + Project.ctx!!.getStart().line}else{""}
+        )
         warningCount++
     }
 
@@ -40,26 +42,14 @@ object LogProcessor {
     }
 
     fun error(msg: String){
-        logger.error(msg)
+        logger.error(
+            msg + if(Project.ctx !=null) {" at " + MCFPPFile.currFile!!.name + ":" + Project.ctx!!.getStart().line}else{""}
+        )
         errorCount++
     }
 
     fun error(msg: String, e: Exception){
         logger.error(msg, e)
-        errorCount++
-    }
-
-    fun compileWarn(msg: String){
-        logger.warn(
-            msg + if(Project.ctx !=null) {" at " + MCFPPFile.currFile!!.name + ":" + Project.ctx!!.getStart().line}else{""}
-        )
-        warningCount++
-    }
-
-    fun compileError(msg: String){
-        logger.error(
-            msg + if(Project.ctx !=null) {" at " + MCFPPFile.currFile!!.name + ":" + Project.ctx!!.getStart().line}else{""}
-        )
         errorCount++
     }
 }

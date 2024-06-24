@@ -1,6 +1,5 @@
 package top.mcfpp.lang.type
 
-import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.model.*
 
 /**
@@ -10,7 +9,7 @@ import top.mcfpp.model.*
 class DataTemplateType(
     var template: DataTemplate,
     override var parentType: List<MCFPPType>
-) :MCFPPType(parentType, template) {
+) :MCFPPType(template, parentType) {
 
     override val typeName: String
         get() = "template(${template.namespace}:${template.identifier})"
@@ -27,7 +26,8 @@ class DataTemplateType(
 
     companion object{
         val regex = Regex("^template\\((.+):(.+)\\)$")
-    }
 
+        val DataObject = DataTemplateType(DataTemplate.baseDataTemplate, listOf(MCFPPNBTType.NBT))
+    }
 
 }

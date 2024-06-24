@@ -436,7 +436,7 @@ open class Function : Member, FieldContainer {
     /**
      * 解析函数的参数
      */
-    protected open fun parseParams(){
+    open fun parseParams(){
         /*
         for (p in readOnlyParams){
             val r = Var.build("_param_" + p.identifier, MCFPPType.parseFromIdentifier(p.typeIdentifier, field), this)
@@ -445,7 +445,7 @@ open class Function : Member, FieldContainer {
         }
          */
         for (p in normalParams){
-            field.putVar(p.identifier, Var.build("_param_" + p.identifier, MCFPPType.parseFromIdentifier(p.typeIdentifier, field), this))
+            field.putVar(p.identifier, Var.build("_param_" + p.identifier, p.type, this))
         }
     }
 
@@ -454,7 +454,7 @@ open class Function : Member, FieldContainer {
      *
      * @param returnType
      */
-    private fun buildReturnVar(returnType: MCFPPType): Var<*>{
+    fun buildReturnVar(returnType: MCFPPType): Var<*>{
         return if(returnType == MCFPPBaseType.Void) Void()
         else Var.build("return",returnType,this)
     }

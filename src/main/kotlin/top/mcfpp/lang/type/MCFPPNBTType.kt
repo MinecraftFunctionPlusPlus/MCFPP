@@ -1,6 +1,5 @@
 package top.mcfpp.lang.type
 
-import net.querz.nbt.tag.*
 import top.mcfpp.lang.NBTDictionary
 import top.mcfpp.lang.NBTList
 import top.mcfpp.lang.NBTMap
@@ -9,7 +8,7 @@ import top.mcfpp.lang.NBTMap
  * 以NBT为底层的类型，包括普通的NBT类型，以及由nbt实现的map，list和dict
  */
 class MCFPPNBTType{
-    object NBT: MCFPPType(listOf(MCFPPBaseType.Any)){
+    object NBT: MCFPPType(parentType = listOf(MCFPPBaseType.Any)){
         override val typeName: String
             get() = "nbt"
     }
@@ -21,19 +20,19 @@ class MCFPPNBTType{
     }
     */
 
-    object Dict: MCFPPType(listOf(NBT)){
+    object Dict: MCFPPType(parentType = listOf(NBT)){
         override val typeName: String
             get() = "dict"
     }
-    object Map: MCFPPType(listOf(NBT)){
+    object Map: MCFPPType(parentType = listOf(NBT)){
         override val typeName: String
             get() = "map"
     }
 
     init {
-        NBT.data = top.mcfpp.lang.NBTBasedData.data
-        Dict.data = NBTDictionary.data
-        Map.data = NBTMap.data
+        NBT.compoundData = top.mcfpp.lang.NBTBasedData.data
+        Dict.compoundData = NBTDictionary.data
+        Map.compoundData = NBTMap.data
     }
 
 }
@@ -41,7 +40,7 @@ class MCFPPNBTType{
 
 class MCFPPListType(
     val generic: MCFPPType = MCFPPBaseType.Any
-): MCFPPType(listOf(MCFPPNBTType.NBT), NBTList.data, false){
+): MCFPPType(NBTList.data, listOf(MCFPPNBTType.NBT), false){
 
     /*
     init {
@@ -62,7 +61,7 @@ class MCFPPListType(
 
 open class MCFPPCompoundType(
     val generic: MCFPPType
-): MCFPPType(listOf(MCFPPNBTType.NBT), NBTDictionary.data, false){
+): MCFPPType(NBTDictionary.data, listOf(MCFPPNBTType.NBT), false){
 
     override val typeName: String
         get() = "compound[${generic.typeName}]"

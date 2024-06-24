@@ -130,12 +130,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 LogProcessor.error("Duplicate defined variable name:" + ctx.Identifier().text)
             }
             try {
-                if(`var` is MCInt && init is MCInt && init !is MCIntConcrete){
-                    Function.currFunction.commands.replaceThenAnalyze(init.name to `var`.name, init.`object`.name to `var`.`object`.name)
-                    `var`.assignCommand(init, Function.currFunction.commands.last().toString())
-                }else{
-                    `var`.assign(init)
-                }
+                `var`.assign(init)
             } catch (e: VariableConverseException) {
                 LogProcessor.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
                 throw VariableConverseException()
@@ -172,12 +167,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 if (c.expression() != null) {
                     val init: Var<*> = McfppExprVisitor(if(type is MCFPPGenericClassType) type else null).visit(c.expression())!!
                     try {
-                        if(`var` is MCInt && init is MCInt && init !is MCIntConcrete){
-                            Function.currFunction.commands.replaceThenAnalyze(init.name to `var`.name, init.`object`.name to `var`.`object`.name)
-                            `var` = `var`.assignCommand(init, Function.currFunction.commands.last().toString())
-                        }else{
-                             `var` = `var`.assign(init)
-                        }
+                        `var` = `var`.assign(init)
                     } catch (e: VariableConverseException) {
                         LogProcessor.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
                         throw VariableConverseException(e)
@@ -221,15 +211,10 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 return null
             }
             try {
-                if(left is MCInt && right is MCInt){
-                    Function.currFunction.commands.replaceThenAnalyze(right.name to left.name, right.`object`.name to left.`object`.name)
-                    left.replacedBy(left.assignCommand(right, Function.currFunction.commands.last().toString()))
-                }else{
-                    left.replacedBy(left.assign(right))
-                }
+                left.replacedBy(left.assign(right))
             } catch (e: VariableConverseException) {
                 LogProcessor.error("Cannot convert " + right.javaClass + " to " + left.javaClass)
-                throw VariableConverseException()
+                throw e
             }
         }else{
             //TODO 只有一个表达式的计算

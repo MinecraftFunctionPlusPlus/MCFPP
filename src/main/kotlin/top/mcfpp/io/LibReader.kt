@@ -1,6 +1,7 @@
 package top.mcfpp.io
 
 import com.alibaba.fastjson2.JSONObject
+import top.mcfpp.Project
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.lang.UnresolvedVar
 import top.mcfpp.lang.type.UnresolvedType
@@ -37,46 +38,22 @@ interface ILibJsonReader<T>{
 object GlobalReader: ILibJsonReader<GlobalField> {
     override fun fromJson(jsonObject: JSONObject): GlobalField {
         val namespaces = jsonObject.getJSONArray("namespaces")
+        val libNamespaceIds = ArrayList<String>()
         for (i in 0 until namespaces.size){
             val namespace = namespaces.getJSONObject(i)
-            //TODO BUG 应当是合并命名空间
-            GlobalField.libNamespaces[namespace.getString("id")] = NamespaceReader.fromJson(namespace)
+            val id = namespace.getString("id")
+            libNamespaceIds.add(id)
+            if(GlobalField.stdNamespaces.containsKey(id)){
+                GlobalField.stdNamespaces[id]!!.merge(NamespaceReader.fromJson(namespace))
+            }else if(GlobalField.libNamespaces.containsKey(id)){
+                GlobalField.libNamespaces[id]!!.merge(NamespaceReader.fromJson(namespace))
+            }else{
+                GlobalField.libNamespaces[id] = NamespaceReader.fromJson(namespace)
+            }
         }
-
-        //解析类型
-        for (n in GlobalField.libNamespaces.values){
-            n.field.forEachFunction { f -> run{
-                f.normalParams.forEach { p -> run{
-                    if(p.type is UnresolvedType){
-                        p.type = (p.type as UnresolvedType).resolve(f.field)
-                    }
-                } }
-                if(f.returnType is UnresolvedType){
-                    f.returnType = (f.returnType as UnresolvedType).resolve(f.field)
-                }
-            } }
-            n.field.forEachClass { c -> run{
-                c.staticField.forEachVar { v -> run{
-                    if(v is UnresolvedVar){
-                        v.replacedBy(v.resolve(c))
-                    }
-                } }
-                c.field.forEachVar { v -> run{
-                    if(v is UnresolvedVar){
-                        v.replacedBy(v.resolve(c))
-                    }
-                } }
-                c.constructors.forEach { constructor -> run{
-                    constructor.normalParams.forEach { p -> run{
-                        if(p.type is UnresolvedType){
-                            p.type = (p.type as UnresolvedType).resolve(constructor.field)
-                        }
-                    } }
-                } }
-            } }
-        }
-
-
+        //解析命名空间
+        GlobalField.libNamespaces.values.forEach { it.resolve() }
+        GlobalField.stdNamespaces.values.forEach { it.resolve() }
         return GlobalField
     }
 }
@@ -150,7 +127,7 @@ object FunctionReader: ILibJsonReader<Function> {
             function.normalParams.add(FunctionParamReader.fromJson(it as JSONObject))
         }
         if(jsonObject.containsKey("readonlyParam")){
-            jsonObject.getJSONArray("readonlyParam").forEach() {
+            jsonObject.getJSONArray("readonlyParam").forEach {
                 (function as GenericFunction).readOnlyParams.add(FunctionParamReader.fromJson(it as JSONObject))
             }
         }
@@ -247,7 +224,7 @@ object TemplateReader: ILibJsonReader<DataTemplate> {
     override fun fromJson(jsonObject: JSONObject): DataTemplate {
         val id = jsonObject.getString("id")
         val template = DataTemplate(id, NamespaceReader.currNamespace!!.identifier)
-        TemplateReader.currTemplate = template
+        currTemplate = template
         //父模板
         jsonObject.getJSONArray("parents").forEach {
             run {
@@ -256,10 +233,13 @@ object TemplateReader: ILibJsonReader<DataTemplate> {
                 template.parent.add(UnknownTemplate(qwq.first!!, qwq.second))
             }
         }
+        if(!template.parent.contains(DataTemplate.baseDataTemplate)) {
+            template.parent.add(DataTemplate.baseDataTemplate)
+        }
         //域
         template.staticField = CompoundDataFieldReader.fromJson(jsonObject.getJSONObject("staticField"))
         template.field = CompoundDataFieldReader.fromJson(jsonObject.getJSONObject("field"))
-        TemplateReader.currTemplate = null
+        currTemplate = null
         return template
     }
 }

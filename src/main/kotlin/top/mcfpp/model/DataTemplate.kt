@@ -16,6 +16,7 @@ import top.mcfpp.lang.NBTList
 import top.mcfpp.lang.type.DataTemplateType
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.model.field.CompoundDataField
+import top.mcfpp.model.field.GlobalField
 
 /**
  * 结构体是一种和类的语法极为相似的数据结构。在结构体中，只能有int类型的数据，或者说记分板的数据作为结构体的成员。
@@ -52,7 +53,7 @@ open class DataTemplate : FieldContainer, CompoundData {
      */
     fun getType() : DataTemplateType {
         return DataTemplateType(this,
-            parent.filterIsInstance<Class>().map { it.getType() }
+            parent.filterIsInstance<DataTemplate>().map { it.getType() }
         )
     }
 
@@ -64,13 +65,21 @@ open class DataTemplate : FieldContainer, CompoundData {
     fun checkCompoundStruct(compoundTag: CompoundTag) : Boolean{
         for (member in field.allVars){
             if(!compoundTag.containsKey(member.identifier)) return false
-            if(member.type.checkNBTType(compoundTag[member.identifier]!!)) return false
+            if(!member.type.checkNBTType(compoundTag[member.identifier]!!)) return false
         }
         return true
     }
 
+    override fun isSub(compoundData: CompoundData): Boolean {
+        if(compoundData == baseDataTemplate) return true
+        return super.isSub(compoundData)
+    }
+
     companion object{
         var currTemplate: DataTemplate? = null
+
+        val baseDataTemplate = DataTemplate("DataObject","mcfpp.lang")
+
     }
 
 }
