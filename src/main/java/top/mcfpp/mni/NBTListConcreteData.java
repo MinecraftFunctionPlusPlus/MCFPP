@@ -21,8 +21,6 @@ import java.util.UUID;
 
 public class NBTListConcreteData extends BaseMNIMethodContainer {
 
-    public static final NBTListConcreteData INSTANCE = new NBTListConcreteData();
-
     @InsertCommand
     @MNIRegister(normalParams = {"E e"}, caller = "list<E>")
     public static void add(Var<?> e, NBTListConcrete caller){

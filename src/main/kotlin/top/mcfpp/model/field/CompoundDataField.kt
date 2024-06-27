@@ -1,6 +1,7 @@
 package top.mcfpp.model.field
 
 import org.jetbrains.annotations.Nullable
+import top.mcfpp.lang.CanSelectMember
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.*
@@ -89,7 +90,10 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
             val `var`: LazyWrapper<Var<*>>? = field.vars[key]
             vars[key] = `var`!!.clone()
         }
+        //函数
         functions.addAll(field.functions)
+        //类型
+        types.putAll(field.types)
     }
 
     //region Var<*>
@@ -193,4 +197,10 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
         return functions.contains(function)
     }
     //endregion
+
+    fun createInstance(selector: CanSelectMember): CompoundDataField{
+        val re = CompoundDataField(this)
+        re.allVars.forEach { it.parent = selector }
+        return re
+    }
 }

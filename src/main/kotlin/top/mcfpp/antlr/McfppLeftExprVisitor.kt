@@ -14,7 +14,6 @@ import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import java.util.*
-import javax.xml.crypto.Data
 import kotlin.collections.ArrayList
 
 class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>?>(){
@@ -136,7 +135,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>?>(){
                 }else{
                     val cpd = when(currSelector){
                         is CompoundDataCompanion -> (currSelector as CompoundDataCompanion).dataType
-                        is ClassPointer -> (currSelector as ClassPointer).clsType
+                        is ClassPointer -> (currSelector as ClassPointer).clazz
                         is DataTemplateObject -> (currSelector as DataTemplateObject).templateType
                         else -> TODO(currSelector.toString())
                     }

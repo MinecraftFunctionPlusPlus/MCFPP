@@ -127,7 +127,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      */
     override fun parentClass(): Class? {
         return when (val parent = parent) {
-            is ClassPointer -> parent.clsType
+            is ClassPointer -> parent.clazz
             is MCFPPClassType -> parent.cls
             else -> null
         }
@@ -389,7 +389,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
             //TODO
             when (val parent = parent){
                 is ClassPointer -> {
-                    parent.clsType.field.putVar(v.identifier, v, true)
+                    parent.clazz.field.putVar(v.identifier, v, true)
                 }
                 is MCFPPTypeVar -> {
                     when(val type = parent.type){
@@ -401,6 +401,9 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
                         }
                         else -> TODO()
                     }
+                }
+                is DataTemplateObject -> {
+                    parent.instanceField.putVar(v.identifier, v, true)
                 }
                 else -> {}
             }

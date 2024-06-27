@@ -1,6 +1,5 @@
 package top.mcfpp.lang
 
-import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
@@ -9,6 +8,7 @@ import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.*
+import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.NoStackFunction
@@ -18,7 +18,7 @@ import top.mcfpp.util.StringHelper
 import java.util.*
 
 /**
- * 一个类的指针。类的地址储存在记分板中，因此一个类的指针实际上包含了两个信息，一个是指针代表的是[哪一个类][clsType]，一个是指针指向的这个类的对象
+ * 一个类的指针。类的地址储存在记分板中，因此一个类的指针实际上包含了两个信息，一个是指针代表的是[哪一个类][clazz]，一个是指针指向的这个类的对象
  *[在堆中的地址][address]，即记分板的值是多少。
  *
  * 指针继承于类[Var]，然而它的[name]并没有额外的用处，因为我们并不需要关注这个指针处于哪一个类或者哪一个函数中。起到标识符作用的更多是[identifier]。
@@ -37,7 +37,7 @@ class ClassPointer : Var<Int>{
     /**
      * 指针对应的类的类型
      */
-    val clsType: Class
+    val clazz: Class
         get() = (type as MCFPPClassType).cls
 
     /**
@@ -50,9 +50,11 @@ class ClassPointer : Var<Int>{
          * 获取这个类的实例的指针实体在mcfunction中拥有的tag
          * @return 返回它的tag
          */
-        get() = clsType.namespace + "_class_" + clsType.identifier + "_pointer"
+        get() = clazz.namespace + "_class_" + clazz.identifier + "_pointer"
 
     var isNull : Boolean = true
+
+    var instanceField: CompoundDataField
 
     /**
      * 创建一个指针
@@ -62,6 +64,7 @@ class ClassPointer : Var<Int>{
     constructor(clazz: Class, identifier: String) {
         this.type = clazz.getType()
         this.identifier = identifier
+        instanceField = CompoundDataField(clazz.field)
     }
 
     /**
@@ -70,6 +73,7 @@ class ClassPointer : Var<Int>{
      */
     constructor(classPointer: ClassPointer) : super(classPointer) {
         type = classPointer.type
+        instanceField = classPointer.instanceField
     }
 
     /**
@@ -85,7 +89,7 @@ class ClassPointer : Var<Int>{
         //TODO 不支持指针作为类成员的时候
         when (b) {
             is ClassPointer -> {
-                if (!b.clsType.canCastTo(clsType)) {
+                if (!b.clazz.canCastTo(clazz)) {
                     throw VariableConverseException()
                 }
                 if (!isNull) {
@@ -135,7 +139,7 @@ class ClassPointer : Var<Int>{
             LogProcessor.error("Undefined class: $type")
             return UnknownVar("${type}_ptr" + UUID.randomUUID())
         }
-        if (!this.clsType.canCastTo(c)) {
+        if (!this.clazz.canCastTo(c)) {
             LogProcessor.error("Cannot cast [${this.type}] to [$type]")
             throw VariableConverseException()
         }
@@ -157,7 +161,7 @@ class ClassPointer : Var<Int>{
      */
     @Override
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        val member = clsType.getVar(key)?.clone(this)
+        val member = instanceField.getVar(key)
         return if(member == null){
             Pair(null, true)
         }else{
@@ -176,7 +180,7 @@ class ClassPointer : Var<Int>{
     @Override
     override fun getMemberFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>, accessModifier: Member.AccessModifier): Pair<Function, Boolean> {
         //获取函数
-        val member = clsType.field.getFunction(key, readOnlyParams, normalParams)
+        val member = clazz.field.getFunction(key, readOnlyParams, normalParams)
         return if(member is UnknownFunction){
             Pair(UnknownFunction(key), true)
         }else{
@@ -204,9 +208,9 @@ class ClassPointer : Var<Int>{
 
     override fun getAccess(function: Function): Member.AccessModifier {
         return if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.CLASS){
-            function.parentClass()!!.getAccess(clsType)
+            function.parentClass()!!.getAccess(clazz)
         }else if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.TEMPLATE){
-            function.parentTemplate()!!.getAccess(clsType)
+            function.parentTemplate()!!.getAccess(clazz)
         }else if(function is NoStackFunction){
             getAccess(function.parent[0])
         }
