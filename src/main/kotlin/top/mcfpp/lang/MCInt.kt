@@ -1,5 +1,6 @@
 package top.mcfpp.lang
 
+import net.querz.nbt.tag.IntTag
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
@@ -52,6 +53,13 @@ open class MCInt : MCNumber<Int> {
         return when (b) {
             is MCInt -> {
                 assignCommand(b)
+            }
+            is NBTBasedDataConcrete<*> -> {
+                if(b.nbtType == NBTBasedData.Companion.NBTTypeWithTag.INT){
+                    assignCommand(MCIntConcrete((b.value as IntTag).asInt()))
+                }else{
+                    throw VariableConverseException()
+                }
             }
             else -> {
                 throw VariableConverseException()

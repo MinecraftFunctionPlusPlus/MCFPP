@@ -14,6 +14,7 @@ import top.mcfpp.model.Class
 import top.mcfpp.model.DataTemplate
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
+import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.util.LogProcessor
@@ -24,6 +25,8 @@ open class DataTemplateObject : Var<CompoundTag> {
     val templateType
         get() = (type as DataTemplateType).template
 
+    var instanceField: CompoundDataField
+
     /**
      * 创建一个模板对象
      * @param template 模板的类型
@@ -31,7 +34,9 @@ open class DataTemplateObject : Var<CompoundTag> {
      */
     constructor(template: DataTemplate, identifier: String = UUID.randomUUID().toString()) {
         this.type = template.getType()
+        this.name = identifier
         this.identifier = identifier
+        instanceField = template.field.createInstance(this)
     }
 
     /**
@@ -40,6 +45,7 @@ open class DataTemplateObject : Var<CompoundTag> {
      */
     constructor(templateObject: DataTemplateObject) : super(templateObject) {
         type = templateObject.type
+        instanceField = templateObject.instanceField
     }
 
 
@@ -49,20 +55,30 @@ open class DataTemplateObject : Var<CompoundTag> {
                 if(b.value !is CompoundTag){
                     throw VariableConverseException()
                 }
-                if(templateType.checkCompoundStruct(b.value as CompoundTag))
-                return DataTemplateObjectConcrete(this, b.value as CompoundTag)
+                if(templateType.checkCompoundStruct(b.value as CompoundTag)){
+                    this.assignMembers(b.value as CompoundTag)
+                    return this
+                }else{
+                    throw VariableConverseException()
+                }
             }
 
             is DataTemplateObjectConcrete -> {
-                if(templateType.checkCompoundStruct(b.value))
-                return DataTemplateObjectConcrete(this, b.value)
+                if(templateType.checkCompoundStruct(b.value)){
+                    this.assignMembers(b.value)
+                    return this
+                }else{
+                    throw VariableConverseException()
+                }
             }
 
             is DataTemplateObject -> {
                 if (!b.templateType.canCastTo(templateType)) {
                     throw VariableConverseException()
+                }else{
+                    assignCommand(b)
+                    return this
                 }
-
             }
 
             else -> {
@@ -70,6 +86,12 @@ open class DataTemplateObject : Var<CompoundTag> {
             }
         }
         return this
+    }
+
+    fun assignMembers(tag: CompoundTag){
+        instanceField.forEachVar {
+            it.replacedBy(it.assign(NBTBasedDataConcrete(tag.get(it.identifier))))
+        }
     }
 
     fun assignCommand(obj: DataTemplateObject){
@@ -130,10 +152,11 @@ open class DataTemplateObject : Var<CompoundTag> {
     override fun getFromStack() {}
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        val member = templateType.getVar(key)?.clone(this)
+        val member = instanceField.getVar(key)
         return if(member == null){
             Pair(null, true)
         }else{
+            member.parent = this
             Pair(member, accessModifier >= member.accessModifier)
         }
     }

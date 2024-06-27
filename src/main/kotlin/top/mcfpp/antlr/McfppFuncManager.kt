@@ -32,7 +32,7 @@ class McfppFuncManager{
         val accessModifier : Member.AccessModifier = if(curr is ClassPointer){
             //类指针
             if(Function.currFunction.ownerType == Function.Companion.OwnerType.CLASS){
-                Function.currFunction.parentClass()!!.getAccess(curr.clsType)
+                Function.currFunction.parentClass()!!.getAccess(curr.clazz)
             }else{
                 Member.AccessModifier.PUBLIC
             }
