@@ -65,6 +65,23 @@ class CompileTest {
     }
 
     @Test
+    fun funcDefaultValueTest(){
+        val test =
+            """
+                func test(int i = 1) -> int{
+                     i = i + 1;
+                     return i;
+                }
+
+                func main(){
+                    var a = test(10);
+                    var b = test();
+                }
+            """.trimIndent()
+        MCFPPStringTest.readFromString(test)
+    }
+
+    @Test
     fun topStatementTest(){
         val test =
             """

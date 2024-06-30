@@ -3,6 +3,7 @@ package top.mcfpp.model.function
 import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
+import top.mcfpp.antlr.McfppExprVisitor
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.command.*
 import top.mcfpp.exception.VariableConverseException
@@ -189,6 +190,11 @@ open class Function : Member, FieldContainer {
      * 在什么东西里面
      */
     var ownerType : OwnerType = OwnerType.NONE
+
+    /**
+     * 含有缺省参数
+     */
+    protected var hasDefaultValue = false
 
     open val namespaceID: String
         /**
@@ -398,13 +404,6 @@ open class Function : Member, FieldContainer {
         return this
     }
 
-    /*
-    open fun appendReadOnlyParam(type: String, identifier: String, isStatic: Boolean = false) : Function {
-        readOnlyParams.add(FunctionParam(type,identifier, this, isStatic))
-        return this
-    }
-     */
-
     /**
      * 写入这个函数的形参信息，同时为这个函数准备好包含形参的缓存
      *
@@ -413,40 +412,40 @@ open class Function : Member, FieldContainer {
     open fun addParamsFromContext(ctx: mcfppParser.FunctionParamsContext) {
         val n = ctx.normalParams().parameterList()?:return
         for (param in n.parameter()) {
-            val param1 = FunctionParam(
-                MCFPPType.parseFromContext(param.type(), this.field),
-                param.Identifier().text,
-                this,
-                param.STATIC() != null
-            )
-            normalParams.add(param1)
+            var (p,v) = parseParam(param)
+            normalParams.add(p)
+            if(v is MCFPPValue<*>) {
+                p.defaultCommand.addAll(Commands.fakeFunction(this){
+                    v = (v as MCFPPValue<*>).toDynamic(false)
+                })
+            }
+            field.putVar(p.identifier, v)
         }
-        parseParams()
     }
 
-    fun addParams(params: ArrayList<FunctionParam>, isReadOnly: Boolean){
-        if(isReadOnly){
-            //readOnlyParams.addAll(params)
-        }else{
-            normalParams.addAll(params)
+    protected fun parseParam(param: mcfppParser.ParameterContext) : Pair<FunctionParam,Var<*>>{
+        val param1 = FunctionParam(
+            MCFPPType.parseFromContext(param.type(), this.field),
+            param.Identifier().text,
+            this,
+            param.STATIC() != null,
+            param.expression() != null
+        )
+        //检查缺省参数是否合法
+        if(param.expression() == null && hasDefaultValue){
+            LogProcessor.error("Default value must be at the end of the parameter list")
+            throw Exception("Default value must be at the end of the parameter list")
         }
-        parseParams()
-    }
-
-    /**
-     * 解析函数的参数
-     */
-    open fun parseParams(){
-        /*
-        for (p in readOnlyParams){
-            val r = Var.build("_param_" + p.identifier, MCFPPType.parseFromIdentifier(p.typeIdentifier, field), this)
-            r.isConcrete = true
-            field.putVar(p.identifier, r)
+        var v = param1.buildVar()
+        if(param.expression() != null){
+            hasDefaultValue = true
+            //编译缺省值表达式，用于赋值参数
+            param1.defaultCommand.addAll(Commands.fakeFunction(this){
+                val default = McfppExprVisitor().visit(param.expression()) as Var<*>
+                v = v.assign(default)
+            })
         }
-         */
-        for (p in normalParams){
-            field.putVar(p.identifier, Var.build("_param_" + p.identifier, p.type, this))
-        }
+        return param1 to v
     }
 
     /**
@@ -460,18 +459,16 @@ open class Function : Member, FieldContainer {
     }
 
     /**
-     * TODO readOnlyArgs 已被弃用，保留以供后续万一需要新的参数列表类型
-     * @param readOnlyArgs 暂无用途，填写为ArrayList()即可
      * @param normalArgs 函数的参数列表
      * @param caller 函数的调用者
      */
-    open fun invoke(/*readOnlyArgs: ArrayList<Var<*>>,*/ normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?){
+    open fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?){
         when(caller){
-            is CompoundDataCompanion -> invoke(/*readOnlyArgs, */normalArgs, callerClassP = null)
-            null -> invoke(/*readOnlyArgs, */normalArgs, callerClassP = null)
-            is ClassPointer -> invoke(/*readOnlyArgs, */normalArgs, callerClassP = caller)
-            //is IntTemplateBase -> invoke(/*readOnlyArgs, */normalArgs, caller = caller)
-            is Var<*> -> invoke(/*readOnlyArgs, */normalArgs, caller = caller)
+            is CompoundDataCompanion -> invoke(normalArgs, callerClassP = null)
+            null -> invoke(normalArgs, callerClassP = null)
+            is ClassPointer -> invoke(normalArgs, callerClassP = caller)
+            //is IntTemplateBase -> invoke(normalArgs, caller = caller)
+            is Var<*> -> invoke(normalArgs, caller = caller)
         }
     }
 
@@ -513,7 +510,7 @@ open class Function : Member, FieldContainer {
      * @see top.mcfpp.antlr.McfppExprVisitor.visitVar
      */
     @InsertCommand
-    open fun invoke(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, callerClassP: ClassPointer?) {
+    open fun invoke(normalArgs: ArrayList<Var<*>>, callerClassP: ClassPointer?) {
         //给函数开栈
         addCommand("data modify storage mcfpp:system ${Project.config.defaultNamespace}.stack_frame prepend value {}")
         //参数传递
@@ -558,14 +555,19 @@ open class Function : Member, FieldContainer {
      * @param normalArgs
      */
     @InsertCommand
-    open fun argPass(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>){
+    open fun argPass(normalArgs: ArrayList<Var<*>>){
         for (i in this.normalParams.indices) {
-            val tg = normalArgs[i].cast(MCFPPType.parseFromIdentifier(this.normalParams[i].typeIdentifier, field))
-            //参数传递和子函数的参数进栈
-            val p = field.getVar(this.normalParams[i].identifier)!!
-            p.assign(tg)
-            if(p is MCFPPValue<*>) p.toDynamic(true)
+            if(i >= normalArgs.size){
+                addCommands(normalParams[i].defaultCommand.toTypedArray())
+            }else{
+                val tg = normalArgs[i].cast(this.normalParams[i].type)
+                //参数传递和子函数的参数进栈
+                var p = field.getVar(this.normalParams[i].identifier)!!
+                p = p.assign(tg)
+                if(p is MCFPPValue<*>) p.toDynamic(true)
+            }
         }
+
         /*
         for (i in readOnlyParams.indices){
             if(!readOnlyArgs[i].isConcrete){
@@ -738,7 +740,7 @@ open class Function : Member, FieldContainer {
         return namespaceID.hashCode()
     }
 
-    open fun isSelf(key: String, normalParams: List<MCFPPType>) : Boolean{
+    fun isSelf(key: String, normalParams: List<MCFPPType>) : Boolean{
         if (this.identifier == key && this.normalParams.size == normalParams.size) {
             if (this.normalParams.size == 0) {
                 return true
@@ -754,6 +756,28 @@ open class Function : Member, FieldContainer {
             return hasFoundFunc
         }else{
             return false
+        }
+    }
+
+    fun isSelfWithDefaultValue(key: String, normalParams: List<MCFPPType>) : Boolean{
+        if(key != this.identifier || normalParams.size > this.normalParams.size) return false
+        if (this.normalParams.size == 0) {
+            return true
+        }
+        var hasFoundFunc = true
+        //参数比对
+        var index = 0
+        while (index < normalParams.size) {
+            if (!FunctionParam.isSubOf(normalParams[index],this.normalParams[index].type)) {
+                hasFoundFunc = false
+                break
+            }
+            index++
+        }
+        return if(hasFoundFunc){
+            this.normalParams[index].hasDefault
+        }else{
+            false
         }
     }
 

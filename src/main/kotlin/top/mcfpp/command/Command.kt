@@ -141,14 +141,14 @@ open class Command {
      * @param command 固定的命令字符串
      * @return
      */
-    fun build(command: String, blank: Boolean = true) : Command{
-        if(blank) commandStringList.add(" ")
+    fun build(command: String, withBlank: Boolean = true) : Command{
+        if(withBlank) commandStringList.add(" ")
         commandStringList.add(command)
         return this
     }
 
-    fun build(command: Command, blank: Boolean = true): Command{
-        if(blank) commandStringList.add(" ")
+    fun build(command: Command, withBlank: Boolean = true): Command{
+        if(withBlank) commandStringList.add(" ")
         for (kv in command.replacePoint){
             replacePoint[kv.key] = kv.value + commandStringList.size
         }

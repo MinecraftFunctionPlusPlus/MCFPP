@@ -76,22 +76,24 @@ class Namespace(val identifier: String) {
             if(np.type is UnresolvedType){
                 f.normalParams[index].type = (np.type as UnresolvedType).resolve(f.field)
             }
+            f.field.putVar(np.identifier, np.buildVar())
         }
         if(f is GenericFunction){
-            for ((index, np) in f.readOnlyParams.withIndex()){
-                if(np.type is UnresolvedType){
-                    f.readOnlyParams[index].type = (np.type as UnresolvedType).resolve(f.field)
+            for ((index, rp) in f.readOnlyParams.withIndex()){
+                if(rp.type is UnresolvedType){
+                    f.readOnlyParams[index].type = (rp.type as UnresolvedType).resolve(f.field)
                 }
+                f.field.putVar(rp.identifier, rp.buildVar())
             }
         }
         if(f is NativeFunction){
-            for ((index, np) in f.readOnlyParams.withIndex()){
-                if(np.type is UnresolvedType){
-                    f.readOnlyParams[index].type = (np.type as UnresolvedType).resolve(f.field)
+            for ((index, rp) in f.readOnlyParams.withIndex()){
+                if(rp.type is UnresolvedType){
+                    f.readOnlyParams[index].type = (rp.type as UnresolvedType).resolve(f.field)
                 }
+                f.field.putVar(rp.identifier, rp.buildVar())
             }
         }
-        f.parseParams()
         if(f.returnType is UnresolvedType){
             f.returnType = (f.returnType as UnresolvedType).resolve(f.field)
         }

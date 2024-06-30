@@ -4,6 +4,21 @@
 			"id":"default",
 			"functions":[
 				{
+					"id":"test",
+					"normalParams":[
+						{
+							"id":"i",
+							"type":"int",
+							"isStatic":false
+						}
+					],
+					"returnType":"int",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				},
+				{
 					"id":"main",
 					"normalParams":[
 						
@@ -16,41 +31,7 @@
 				}
 			],
 			"classes":[
-				{
-					"id":"Test",
-					"parents":[
-						"mcfpp.lang:DataObject"
-					],
-					"field":{
-						"vars":[
-							{
-								"id":"qwq",
-								"type":"nbt"
-							}
-						],
-						"functions":[
-							{
-								"id":"test",
-								"normalParams":[
-									
-								],
-								"returnType":"void",
-								"isAbstract":false,
-								"tags":[
-									
-								]
-							}
-						]
-					},
-					"staticField":{
-						"vars":[
-							
-						],
-						"functions":[
-							
-						]
-					}
-				}
+				
 			],
 			"template":[
 				

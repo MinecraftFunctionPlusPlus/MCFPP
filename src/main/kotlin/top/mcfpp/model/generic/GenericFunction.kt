@@ -11,6 +11,7 @@ import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.lang.CanSelectMember
 import top.mcfpp.lang.MCFPPTypeVar
 import top.mcfpp.lang.Var
+import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam
@@ -68,37 +69,21 @@ class GenericFunction : Function, Generic<Function> {
         val r = ctx.readOnlyParams().parameterList()
         val n = ctx.normalParams().parameterList()
         if(r == null && n == null) return
-        for (param in r?.parameter()?:ArrayList()){
-            val param1 = FunctionParam(
-                MCFPPType.parseFromContext(param.type(), this.field),
-                param.Identifier().text,
-                this,
-                param.STATIC() != null
-            )
-            readOnlyParams.add(param1)
+        for (param in r.parameter()){
+            val (p,v) = parseParam(param)
+            readOnlyParams.add(p)
+            if(v !is MCFPPValue<*>){
+                LogProcessor.error("ReadOnly params must have a concrete value")
+                throw Exception()
+            }
+            field.putVar(p.identifier, v)
         }
-        for (param in n?.parameter()?:ArrayList()) {
-            val param1 = FunctionParam(
-                MCFPPType.parseFromContext(param.type(), this.field),
-                param.Identifier().text,
-                this,
-                param.STATIC() != null
-            )
-            normalParams.add(param1)
-        }
-        parseParams()
-    }
-
-    /**
-     * 解析函数的参数
-     */
-    override fun parseParams(){
-        for (p in readOnlyParams){
-            val r = Var.build("_param_" + p.identifier, MCFPPType.parseFromIdentifier(p.typeIdentifier, field), this)
-            field.putVar(p.identifier, r)
-        }
-        for (p in normalParams){
-            field.putVar(p.identifier, Var.build("_param_" + p.identifier, MCFPPType.parseFromIdentifier(p.typeIdentifier, field), this))
+        hasDefaultValue = false
+        for (param in n.parameter()) {
+            var (p,v) = parseParam(param)
+            normalParams.add(p)
+            if(v is MCFPPValue<*>) v = v.toDynamic(false)
+            field.putVar(p.identifier, v)
         }
     }
 
@@ -181,5 +166,33 @@ class GenericFunction : Function, Generic<Function> {
         }else{
             return false
         }
+    }
+
+    override fun isSelfWithDefaultValue(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>): Boolean {
+        if(key != this.identifier || normalParams.size > this.normalParams.size || readOnlyParams.size > this.normalParams.size) return false
+        if (this.normalParams.size == 0 && this.readOnlyParams.size == 0) {
+            return true
+        }
+        var hasFoundFunc = true
+        //参数比对
+        var index = 0
+        while (index < normalParams.size) {
+            if (!FunctionParam.isSubOf(normalParams[index],this.normalParams[index].type)) {
+                hasFoundFunc = false
+                break
+            }
+            index++
+        }
+        hasFoundFunc = hasFoundFunc && this.normalParams[index].hasDefault
+        if(!hasFoundFunc) return false
+        index = 0
+        while (index < readOnlyParams.size) {
+            if (!FunctionParam.isSubOf(readOnlyParams[index],this.readOnlyParams[index].type)) {
+                hasFoundFunc = false
+                break
+            }
+            index++
+        }
+        return hasFoundFunc && this.readOnlyParams[index].hasDefault
     }
 }

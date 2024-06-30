@@ -85,16 +85,12 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
     }
 
     fun addParamsFromContext(ctx: mcfppParser.NormalParamsContext) {
-        for (param in ctx.parameterList()?.parameter()?:ArrayList()) {
-            val param1 = FunctionParam(
-                MCFPPType.parseFromContext(param.type(), this.field),
-                param.Identifier().text,
-                this,
-                param.STATIC() != null
-            )
-            normalParams.add(param1)
+        val n = ctx.parameterList()?:return
+        for (param in n.parameter()) {
+            val (p,v) = parseParam(param)
+            normalParams.add(p)
+            field.putVar(p.identifier, v)
         }
-        parseParams()
     }
 
     @get:Override
