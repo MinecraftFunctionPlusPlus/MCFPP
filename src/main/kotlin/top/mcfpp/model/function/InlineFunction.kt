@@ -24,24 +24,24 @@ class InlineFunction : Function {
         this.context = context
     }
 
-    override fun argPass(/*readOnlyArgs:ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>) {
-        /*
-        for (argi in readOnlyArgs.withIndex()){
-            field.putVar(this.readOnlyParams[argi.index].identifier,argi.value,true)
-        }
-         */
-        for (argi in normalArgs.withIndex()){
-            field.putVar(this.normalParams[argi.index].identifier,argi.value,true)
+    override fun argPass(normalArgs: ArrayList<Var<*>>) {
+        for (i in this.normalParams.indices) {
+            if(i >= normalArgs.size){
+                addCommands(normalParams[i].defaultCommand.toTypedArray())
+                field.putVar(this.normalParams[i].identifier, field.getVar(this.normalParams[i].identifier)!!, true)
+            }else{
+                field.putVar(this.normalParams[i].identifier, normalArgs[i], true)
+            }
         }
     }
 
     /**
      * 调用一个变量的某个成员函数
      *
-     * @param normalParams
+     * @param normalArgs
      * @param caller
      */
-    override fun invoke(/*readOnlyArgs:ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, caller: Var<*>){
+    override fun invoke(normalArgs: ArrayList<Var<*>>, caller: Var<*>){
         //基本类型
         addCommand("#[Inline Function ${this.namespaceID}]")
         //传入this参数

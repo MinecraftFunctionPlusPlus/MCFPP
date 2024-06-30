@@ -23,4 +23,5 @@ interface Generic<T> where T : Function{
 
     fun isSelf(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>): Boolean
 
+    fun isSelfWithDefaultValue(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>): Boolean
 }

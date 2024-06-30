@@ -7,6 +7,7 @@ import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.NoStackFunction
 import java.util.*
 
 /**
@@ -147,5 +148,15 @@ object Commands {
         val f = UUID.randomUUID().toString()
         Project.macroFunction[f] = command.toMacro()
         return Command.build("function mcfpp:dynamic/$f")
+    }
+
+    fun fakeFunction(parent: Function , operation: () -> Unit) : Array<Command>{
+        val l = Function.currFunction
+        val f = NoStackFunction("", parent)
+        Function.currFunction = f
+        operation()
+        Function.currFunction = l
+        return f.commands.toTypedArray()
+
     }
 }

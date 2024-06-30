@@ -6,6 +6,7 @@ import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.annotations.MNIRegister
+import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.Native
@@ -135,24 +136,21 @@ class NativeFunction : Function, Native {
         val n = ctx.normalParams().parameterList()
         if(r == null && n == null) return
         for (param in r?.parameter()?:ArrayList()){
-            val param1 = FunctionParam(
-                MCFPPType.parseFromContext(param.type(), this.field),
-                param.Identifier().text,
-                this,
-                param.STATIC() != null
-            )
-            readOnlyParams.add(param1)
+            val (p,v) = parseParam(param)
+            readOnlyParams.add(p)
+            if(v !is MCFPPValue<*>){
+                LogProcessor.error("ReadOnly params must have a concrete value")
+                throw Exception()
+            }
+            field.putVar(p.identifier, v)
         }
-        for (param in n?.parameter()?:ArrayList()) {
-            val param1 = FunctionParam(
-                MCFPPType.parseFromContext(param.type(), this.field),
-                param.Identifier().text,
-                this,
-                param.STATIC() != null
-            )
-            normalParams.add(param1)
+        hasDefaultValue = false
+        for (param in n.parameter()) {
+            var (p,v) = parseParam(param)
+            normalParams.add(p)
+            if(v is MCFPPValue<*>) v = v.toDynamic(false)
+            field.putVar(p.identifier, v)
         }
-        parseParams()
     }
 
     companion object {

@@ -1,6 +1,7 @@
 package top.mcfpp.model.function
 
 import top.mcfpp.antlr.mcfppParser
+import top.mcfpp.command.Command
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPGenericType
@@ -29,10 +30,21 @@ class FunctionParam(
     /**
      * 参数是否为静态的
      */
-    var isStatic: Boolean = false
+    var isStatic: Boolean = false,
+
+    /**
+     * 是否有缺省值
+     */
+    var hasDefault: Boolean = false
 ) {
 
     var typeIdentifier: String = type.typeName
+
+    var defaultCommand = ArrayList<Command>()
+
+    fun buildVar(): Var<*>{
+        return Var.build(identifier, type, function)
+    }
 
     companion object {
 

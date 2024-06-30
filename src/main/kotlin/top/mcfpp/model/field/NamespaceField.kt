@@ -126,6 +126,14 @@ open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTempla
                 return f
             }
         }
+        for (f in functions) {
+            if(f is Generic<*> && f.isSelfWithDefaultValue(key, readOnlyParams, normalParams)){
+                return f
+            }
+            if(f.isSelfWithDefaultValue(key, normalParams)){
+                return f
+            }
+        }
         return null
     }
 

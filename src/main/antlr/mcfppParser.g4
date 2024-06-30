@@ -82,7 +82,7 @@ globalDeclaration
 
 //类声明
 classDeclaration
-    :   classAnnotation? STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? classBody
+    :   classAnnotation? STATIC? FINAL? ABSTRACT? OBJECT? CLASS classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? classBody
     ;
 
 compileTimeClassDeclaration
@@ -132,7 +132,7 @@ classFieldDeclaration
 
 //数据模板
 templateDeclaration
-    :   FINAL? DATA classWithoutNamespace (COLON className)? templateBody
+    :   FINAL? OBJECT? DATA classWithoutNamespace (COLON className)? templateBody
     ;
 
 templateBody
@@ -244,7 +244,7 @@ parameterList
 
 //参数
 parameter
-    :   STATIC? type Identifier
+    :   STATIC? type Identifier '=' expression
     ;
 
 //表达式
@@ -350,7 +350,7 @@ selector
     ;
 
 arguments
-    :   readOnlyArgs? normalArgs?
+    :   readOnlyArgs? normalArgs
     ;
 
 readOnlyArgs
@@ -533,6 +533,7 @@ classWithoutNamespace
 funcAnnoation
     :   '@' id=Identifier arguments?
     ;
+
 classAnnotation
     :   '@' id=Identifier arguments?
     ;

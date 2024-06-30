@@ -490,11 +490,11 @@ class MCIntConcrete : MCInt, MCFPPValue<Int>{
             }
             Function.addCommand(cmd.last().build("scoreboard players set @s $`object` $value"))
         } else {
-            val cmd: String = if (!isTemp)
-                "execute store result $nbtPath int 1 run "
+            val cmd = if (!isTemp)
+                Command("execute store result").build(nbtPath.toCommandPart()).build("int 1 run ")
             else
-                ""
-            Function.addCommand(cmd + "scoreboard players set $name $`object` $value")
+                Command("")
+            Function.addCommand(cmd.build("scoreboard players set $name $`object` $value", false))
         }
         val re = MCInt(this)
         if(replace){
