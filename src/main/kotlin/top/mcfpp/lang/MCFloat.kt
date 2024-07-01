@@ -81,15 +81,15 @@ open class MCFloat : MCNumber<Float> {
             if(cmd.size == 2){
                 Function.addCommand(cmd[0])
             }
-            Function.addCommand(cmd.last().build("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_sign} = @s ${sign.`object`} "))
-            Function.addCommand(cmd.last().build("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_int0} = @s ${int0.`object`} "))
-            Function.addCommand(cmd.last().build("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_int1} = @s ${int1.`object`} "))
-            Function.addCommand(cmd.last().build("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_exp} = @s ${exp.`object`} "))
+            Function.addCommand(cmd.last().build("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_sign} = @s ${sign.sbObject} "))
+            Function.addCommand(cmd.last().build("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_int0} = @s ${int0.sbObject} "))
+            Function.addCommand(cmd.last().build("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_int1} = @s ${int1.sbObject} "))
+            Function.addCommand(cmd.last().build("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_exp} = @s ${exp.sbObject} "))
         } else {
-            Function.addCommand("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_exp} = ${exp.name} ${exp.`object`}")
-            Function.addCommand("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_sign} = ${sign.name} ${sign.`object`}")
-            Function.addCommand("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_int0} = ${int0.name} ${int0.`object`}")
-            Function.addCommand("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_int1} = ${int1.name} ${int1.`object`}")
+            Function.addCommand("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_exp} = ${exp.name} ${exp.sbObject}")
+            Function.addCommand("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_sign} = ${sign.name} ${sign.sbObject}")
+            Function.addCommand("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_int0} = ${int0.name} ${int0.sbObject}")
+            Function.addCommand("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_int1} = ${int1.name} ${int1.sbObject}")
         }
         return tempFloat
     }
@@ -139,16 +139,16 @@ open class MCFloat : MCNumber<Float> {
             if(pwp is MCFloatConcrete){
                 //对类中的成员的值进行修改
                 val qwq = floatToMCFloat(pwp.value)
-                Function.addCommand(cmd.last().build("scoreboard players set @s ${sign.`object`} ${qwq[0]}"))
-                Function.addCommand(cmd.last().build("scoreboard players set @s ${int0.`object`} ${qwq[1]}"))
-                Function.addCommand(cmd.last().build("scoreboard players set @s ${int1.`object`} ${qwq[2]}"))
-                Function.addCommand(cmd.last().build("scoreboard players set @s ${exp.`object`} ${qwq[3]}"))
+                Function.addCommand(cmd.last().build("scoreboard players set @s ${sign.sbObject} ${qwq[0]}"))
+                Function.addCommand(cmd.last().build("scoreboard players set @s ${int0.sbObject} ${qwq[1]}"))
+                Function.addCommand(cmd.last().build("scoreboard players set @s ${int1.sbObject} ${qwq[2]}"))
+                Function.addCommand(cmd.last().build("scoreboard players set @s ${exp.sbObject} ${qwq[3]}"))
             }else{
                 //对类中的成员的值进行修改
-                Function.addCommand(cmd.last().build("scoreboard players operation @s ${sign.`object`} = ${pwp.sign.name} ${pwp.sign.`object`}"))
-                Function.addCommand(cmd.last().build("scoreboard players operation @s ${int0.`object`} = ${pwp.int0.name} ${pwp.int0.`object`}"))
-                Function.addCommand(cmd.last().build("scoreboard players operation @s ${int1.`object`} = ${pwp.int1.name} ${pwp.int1.`object`}"))
-                Function.addCommand(cmd.last().build("scoreboard players operation @s ${exp.`object`} = ${pwp.exp.name} ${pwp.exp.`object`}"))
+                Function.addCommand(cmd.last().build("scoreboard players operation @s ${sign.sbObject} = ${pwp.sign.name} ${pwp.sign.sbObject}"))
+                Function.addCommand(cmd.last().build("scoreboard players operation @s ${int0.sbObject} = ${pwp.int0.name} ${pwp.int0.sbObject}"))
+                Function.addCommand(cmd.last().build("scoreboard players operation @s ${int1.sbObject} = ${pwp.int1.name} ${pwp.int1.sbObject}"))
+                Function.addCommand(cmd.last().build("scoreboard players operation @s ${exp.sbObject} = ${pwp.exp.name} ${pwp.exp.sbObject}"))
                 //Function.addCommand("$cmd run scoreboard players operation @s $`object` = ${a.name} ${a.`object`}")
             }
             return this
@@ -159,23 +159,23 @@ open class MCFloat : MCNumber<Float> {
             }
             val pwp = a as MCFloat
             if(isTemp){
-                Function.addCommand("scoreboard players operation ${sign.name} ${sign.`object`} = ${pwp.sign.name} ${pwp.sign.`object`}")
-                Function.addCommand("scoreboard players operation ${int0.name} ${int0.`object`} = ${pwp.int0.name} ${pwp.int0.`object`}")
-                Function.addCommand("scoreboard players operation ${int1.name} ${int1.`object`} = ${pwp.int1.name} ${pwp.int1.`object`}")
-                Function.addCommand("scoreboard players operation ${exp.name} ${exp.`object`} = ${pwp.exp.name} ${pwp.exp.`object`}")
+                Function.addCommand("scoreboard players operation ${sign.name} ${sign.sbObject} = ${pwp.sign.name} ${pwp.sign.sbObject}")
+                Function.addCommand("scoreboard players operation ${int0.name} ${int0.sbObject} = ${pwp.int0.name} ${pwp.int0.sbObject}")
+                Function.addCommand("scoreboard players operation ${int1.name} ${int1.sbObject} = ${pwp.int1.name} ${pwp.int1.sbObject}")
+                Function.addCommand("scoreboard players operation ${exp.name} ${exp.sbObject} = ${pwp.exp.name} ${pwp.exp.sbObject}")
             }else{
                 Function.addCommand("execute " +
                         "store result storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + ".sign" + " int 1 " +
-                        "run scoreboard players operation ${sign.name} ${sign.`object`} = ${pwp.sign.name} ${pwp.sign.`object`}")
+                        "run scoreboard players operation ${sign.name} ${sign.sbObject} = ${pwp.sign.name} ${pwp.sign.sbObject}")
                 Function.addCommand("execute " +
                         "store result storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + ".int0" + " int 1 " +
-                        "run scoreboard players operation ${int0.name} ${int0.`object`} = ${pwp.int0.name} ${pwp.int0.`object`}")
+                        "run scoreboard players operation ${int0.name} ${int0.sbObject} = ${pwp.int0.name} ${pwp.int0.sbObject}")
                 Function.addCommand("execute " +
                         "store result storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + ".int1" + " int 1 " +
-                        "run scoreboard players operation ${int1.name} ${int1.`object`} = ${pwp.int1.name} ${pwp.int1.`object`}")
+                        "run scoreboard players operation ${int1.name} ${int1.sbObject} = ${pwp.int1.name} ${pwp.int1.sbObject}")
                 Function.addCommand("execute " +
                         "store result storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + ".exp" + " int 1 " +
-                        "run scoreboard players operation ${exp.name} ${exp.`object`} = ${pwp.exp.name} ${pwp.exp.`object`}")
+                        "run scoreboard players operation ${exp.name} ${exp.sbObject} = ${pwp.exp.name} ${pwp.exp.sbObject}")
             }
             return this
         }
@@ -397,10 +397,10 @@ open class MCFloat : MCNumber<Float> {
      */
     @InsertCommand
     override fun getTempVar(): Var<*> {
-        Function.addCommand("scoreboard players operation float_exp int = ${exp.name} ${exp.`object`}")
-        Function.addCommand("scoreboard players operation float_int0 int = ${int0.name} ${int0.`object`}")
-        Function.addCommand("scoreboard players operation float_int1 int = ${int1.name} ${int1.`object`}")
-        Function.addCommand("scoreboard players operation float_sign int = ${sign.name} ${sign.`object`}")
+        Function.addCommand("scoreboard players operation float_exp int = ${exp.name} ${exp.sbObject}")
+        Function.addCommand("scoreboard players operation float_int0 int = ${int0.name} ${int0.sbObject}")
+        Function.addCommand("scoreboard players operation float_int1 int = ${int1.name} ${int1.sbObject}")
+        Function.addCommand("scoreboard players operation float_sign int = ${sign.name} ${sign.sbObject}")
         return ssObj
     }
 

@@ -5,14 +5,12 @@ import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.lang.type.DataTemplateType
+import top.mcfpp.lang.type.MCFPPDataTemplateType
 import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
-import top.mcfpp.model.Class
 import top.mcfpp.model.DataTemplate
-import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.Function
@@ -23,7 +21,7 @@ import java.util.*
 open class DataTemplateObject : Var<CompoundTag> {
 
     val templateType
-        get() = (type as DataTemplateType).template
+        get() = (type as MCFPPDataTemplateType).template
 
     var instanceField: CompoundDataField
 
@@ -120,7 +118,7 @@ open class DataTemplateObject : Var<CompoundTag> {
                 return re
             }
 
-            is DataTemplateType -> {
+            is MCFPPDataTemplateType -> {
                 if(type.template.canCastTo(templateType)){
                     val re = DataTemplateObject(type.template, this.identifier)
                     re.nbtPath = nbtPath

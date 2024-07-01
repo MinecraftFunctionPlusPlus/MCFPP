@@ -11,6 +11,7 @@ import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
+import top.mcfpp.util.LogProcessor
 import java.util.*
 
 /**
@@ -359,7 +360,11 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
     }
 
     override fun toString(): String {
-        return "[$type,value=Unknown]"
+        return if(this is MCFPPValue<*>){
+            "[$type,value=$value]"
+        }else{
+            "[$type,value=Unknown]"
+        }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -442,12 +447,16 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
                     //什么意思捏？ - Alumopper 2024.4.14
                     `var` = ClassPointer(type.cls, identifier)
                 }
-                is DataTemplateType -> {
+                is MCFPPDataTemplateType -> {
                     //数据模板
                     `var` = DataTemplateObject(type.template, identifier)
                 }
+                is MCFPPEnumType -> {
+                    `var` = EnumVar(type.enum, container, identifier)
+                }
                 //还有模板什么的
                 else -> {
+                    LogProcessor.error("Unknown type: $type")
                     `var` = UnknownVar(identifier)
                 }
             }
@@ -483,12 +492,16 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
                 is MCFPPClassType ->{
                     `var` = ClassPointer(type.cls, identifier)
                 }
-                is DataTemplateType -> {
+                is MCFPPDataTemplateType -> {
                     //数据模板
                     `var` = DataTemplateObject(type.template, identifier)
                 }
+                is MCFPPEnumType -> {
+                    `var` = EnumVar(type.enum, identifier)
+                }
                 //还有模板什么的
                 else -> {
+                    LogProcessor.error("Unknown type: $type")
                     `var` = UnknownVar(identifier)
                 }
             }
@@ -523,13 +536,18 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
                 MCFPPNBTType.NBT -> TODO()
                 MCFPPBaseType.Float -> TODO()
                 MCFPPBaseType.Any -> TODO()
-                is DataTemplateType -> TODO()
+                is MCFPPDataTemplateType -> TODO()
                 is MCFPPClassType ->{
                     val classPointer = ClassPointer(type.cls,identifier)
                     classPointer.name = identifier
                     `var` = classPointer
                 }
+                is MCFPPEnumType -> {
+                    `var` = EnumVar(type.enum, identifier)
+                }
+                //还有模板什么的
                 else -> {
+                    LogProcessor.error("Unknown type: $type")
                     `var` = UnknownVar(identifier)
                 }
             }

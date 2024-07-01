@@ -169,7 +169,7 @@ abstract class MCFPPType(
                 TODO()
             }
 
-            is DataTemplateType -> {
+            is MCFPPDataTemplateType -> {
                 if (tag !is CompoundTag) return false
                 return this.template.checkCompoundStruct(tag)
             }
@@ -311,7 +311,9 @@ abstract class MCFPPType(
             val clazz = GlobalField.getClass(nspID.first, nspID.second)
             if(clazz != null) return clazz.getType()
             val template = GlobalField.getTemplate(nspID.first, nspID.second)
-            if(template!=null) return template.getType()
+            if(template !=null) return template.getType()
+            val enum = GlobalField.getEnum(nspID.first, nspID.second)
+            if(enum != null) return enum.getType()
             //泛型
             if(typeScope.containType(identifier)){
                 return typeScope.getType(identifier)!!
@@ -330,8 +332,9 @@ abstract class MCFPPType(
             }
             //自定义类型
             if(ctx.className() != null){
+                val nspID = StringHelper.splitNamespaceID(ctx.className().text)
                 //类
-                val clazz = GlobalField.getClass(null, ctx.className().text)
+                val clazz = GlobalField.getClass(nspID.first, nspID.second)
                 if(clazz !=null) {
                     //val t = clazz.getType()
                     if(clazz is GenericClass){
@@ -345,10 +348,11 @@ abstract class MCFPPType(
                     }
                 }
                 //数据模板
-                val template = GlobalField.getTemplate(null, ctx.className().text)
-                if(template != null){
-                    return template.getType()
-                }
+                val template = GlobalField.getTemplate(nspID.first, nspID.second)
+                if(template != null) return template.getType()
+                //枚举
+                val enum = GlobalField.getEnum(nspID.first, nspID.second)
+                if(enum != null) return enum.getType()
             }
             //泛型类型
             if(typeScope.containType(ctx.text)){

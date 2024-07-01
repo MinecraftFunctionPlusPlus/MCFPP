@@ -35,7 +35,7 @@ object Commands {
     fun sbPlayerGet(target: MCInt): Command{
         return Command.build("scoreboard players get")
             .build(target.name,target.name)
-            .build(target.`object`.toString(),target.`object`.toString())
+            .build(target.sbObject.toString(),target.sbObject.toString())
     }
 
     /**
@@ -48,7 +48,7 @@ object Commands {
     fun sbPlayerAdd(target: MCInt, value: Int): Command {
         return Command.build("scoreboard players add")
             .build(target.name, target.name)
-            .build(target.`object`.toString(), target.`object`.toString())
+            .build(target.sbObject.toString(), target.sbObject.toString())
             .build("$value")
     }
 
@@ -63,10 +63,10 @@ object Commands {
     fun sbPlayerOperation(a: MCInt, operation: String, b: MCInt): Command {
         return Command.build("scoreboard players operation")
             .build(a.name,a.name)
-            .build(a.`object`.toString(),a.`object`.toString())
+            .build(a.sbObject.toString(),a.sbObject.toString())
             .build(operation,"operation")
             .build(b.name,b.name)
-            .build(b.`object`.toString(),b.`object`.toString())
+            .build(b.sbObject.toString(),b.sbObject.toString())
     }
 
     /**
@@ -79,14 +79,14 @@ object Commands {
     fun sbPlayerRemove(target: MCInt, value: Int): Command {
         return Command.build("scoreboard players remove ")
             .build(target.name, target.name)
-            .build(target.`object`.toString(), target.`object`.toString())
+            .build(target.sbObject.toString(), target.sbObject.toString())
             .build(value.toString())
     }
 
     fun sbPlayerSet(a: MCInt, value: Int): Command {
         return Command.build("scoreboard players set ")
             .build(a.name,a.name)
-            .build(a.`object`.toString(),a.`object`.toString())
+            .build(a.sbObject.toString(),a.sbObject.toString())
             .build(value.toString())
     }
 

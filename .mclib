@@ -4,21 +4,6 @@
 			"id":"default",
 			"functions":[
 				{
-					"id":"test",
-					"normalParams":[
-						{
-							"id":"i",
-							"type":"int",
-							"isStatic":false
-						}
-					],
-					"returnType":"int",
-					"isAbstract":false,
-					"tags":[
-						
-					]
-				},
-				{
 					"id":"main",
 					"normalParams":[
 						

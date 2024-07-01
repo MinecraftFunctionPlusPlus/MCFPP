@@ -1,11 +1,11 @@
 package top.mcfpp.model.field
 
-import org.jetbrains.annotations.Nullable
 import top.mcfpp.Project
 import top.mcfpp.lang.SbObject
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.*
 import top.mcfpp.model.Annotation
+import top.mcfpp.model.Enum
 import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.generic.GenericClass
@@ -212,8 +212,6 @@ object GlobalField : FieldContainer, IField {
         return np?.field?.getInterface(identifier)
     }
 
-
-
     /**
      * 从当前的全局域中获取一个结构体。若不存在，则返回null
      *
@@ -248,6 +246,34 @@ object GlobalField : FieldContainer, IField {
         }
         return np?.field?.getTemplate(identifier)
     }
+
+    fun getEnum(namespace: String?, identifier: String): Enum? {
+        if(namespace == null){
+            var enum: Enum?
+            //命名空间为空，从全局寻找
+            enum = localNamespaces[Project.currNamespace]!!.field.getEnum(identifier)
+            if(enum != null) return enum
+            for (nsp in importedLibNamespaces.values){
+                enum = nsp.field.getEnum(identifier)
+                if(enum != null) return enum
+            }
+            for (nsp in stdNamespaces.values){
+                enum = nsp.field.getEnum(identifier)
+                if(enum != null) return enum
+            }
+            return null
+        }
+        //按照指定的命名空间寻找
+        var np = localNamespaces[namespace]
+        if(np == null){
+            np = importedLibNamespaces[namespace]
+        }
+        if(np == null){
+            np = stdNamespaces[namespace]
+        }
+        return np?.field?.getEnum(identifier)
+    }
+
     @get:Override
     override val prefix: String
         get() = Project.config.defaultNamespace + "_global_"

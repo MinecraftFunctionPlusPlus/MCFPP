@@ -19,9 +19,9 @@ import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import top.mcfpp.util.Utils
-import java.lang.IllegalArgumentException
 import java.lang.StringBuilder
 import java.util.*
+import kotlin.IllegalArgumentException
 import kotlin.collections.ArrayList
 import kotlin.collections.HashMap
 import kotlin.system.exitProcess
@@ -29,7 +29,7 @@ import kotlin.system.exitProcess
 /**
  * 获取表达式结果用的visitor。解析并计算一个形如a+b*c的表达式。
  */
-class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassType? = null): mcfppParserBaseVisitor<Var<*>?>() {
+class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassType? = null): mcfppParserBaseVisitor<Var<*>>() {
 
     private val tempVarCommandCache = HashMap<Var<*>, String>()
 
@@ -46,7 +46,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
      * @return 表达式的结果
      */
     @Override
-    override fun visitExpression(ctx: mcfppParser.ExpressionContext): Var<*>? {
+    override fun visitExpression(ctx: mcfppParser.ExpressionContext): Var<*> {
         Project.ctx = ctx
         val l = Function.currFunction
         val f = NoStackFunction("expression_${UUID.randomUUID()}",Function.currFunction)
@@ -88,7 +88,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
      * @return 表达式的值
      */
     @Override
-    override fun visitConditionalOrExpression(ctx: mcfppParser.ConditionalOrExpressionContext): Var<*>? {
+    override fun visitConditionalOrExpression(ctx: mcfppParser.ConditionalOrExpressionContext): Var<*> {
         Project.ctx = ctx
         if(ctx.conditionalAndExpression().size != 1){
             val list = ArrayList<ReturnedMCBool>()
@@ -134,7 +134,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
      */
     //和
     @Override
-    override fun visitConditionalAndExpression(ctx: mcfppParser.ConditionalAndExpressionContext): Var<*>? {
+    override fun visitConditionalAndExpression(ctx: mcfppParser.ConditionalAndExpressionContext): Var<*> {
         Project.ctx = ctx
         if(ctx.equalityExpression().size != 1){
             val list = ArrayList<ReturnedMCBool>()
@@ -182,12 +182,12 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
      * @return 表达式的值
      */
     @Override
-    override fun visitEqualityExpression(ctx: mcfppParser.EqualityExpressionContext): Var<*>? {
+    override fun visitEqualityExpression(ctx: mcfppParser.EqualityExpressionContext): Var<*> {
         Project.ctx = ctx
-        var re: Var<*>? = visit(ctx.relationalExpression(0))
+        var re: Var<*> = visit(ctx.relationalExpression(0))
         if (ctx.relationalExpression().size != 1) {
-            val b: Var<*>? = visit(ctx.relationalExpression(1))
-            if(!re!!.isTemp){
+            val b: Var<*> = visit(ctx.relationalExpression(1))
+            if(!re.isTemp){
                 re = re.getTempVar()
             }
             if (ctx.op.text.equals("==")) {
@@ -198,8 +198,8 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 } else if (re is MCFloat && b is MCFloat){
                     re.isEqual(b)
                 } else{
-                    LogProcessor.error("The operator \"${ctx.op.text}\" cannot be used between ${re.type} and ${b!!.type}")
-                    throw IllegalArgumentException("")
+                    LogProcessor.error("The operator \"${ctx.op.text}\" cannot be used between ${re.type} and ${b.type}")
+                    UnknownVar("${re.identifier}${ctx.op.text}${b.identifier}")
                 }
             } else {
                 re = if (re is MCInt && b is MCInt) {
@@ -209,8 +209,8 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 } else if (re is MCFloat && b is MCFloat){
                     re.isNotEqual(b)
                 }else{
-                    LogProcessor.error("The operator \"${ctx.op.text}\" cannot be used between ${re.type} and ${b!!.type}")
-                    throw IllegalArgumentException("")
+                    LogProcessor.error("The operator \"${ctx.op.text}\" cannot be used between ${re.type} and ${b.type}")
+                    UnknownVar("${re.identifier}${ctx.op.text}${b.identifier}")
                 }
             }
         }
@@ -223,11 +223,11 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
      * @return 表达式的值
      */
     @Override
-    override fun visitRelationalExpression(ctx: mcfppParser.RelationalExpressionContext): Var<*>? {
+    override fun visitRelationalExpression(ctx: mcfppParser.RelationalExpressionContext): Var<*> {
         Project.ctx = ctx
-        var re: Var<*>? = visit(ctx.additiveExpression(0))
+        var re: Var<*> = visit(ctx.additiveExpression(0))
         if (ctx.additiveExpression().size != 1) {
-            val b: Var<*>? = visit(ctx.additiveExpression(1))
+            val b: Var<*> = visit(ctx.additiveExpression(1))
             if (re is MCInt && b is MCInt) {
                 when (ctx.relationalOp().text) {
                     ">" -> re = re.isBigger(b)
@@ -243,7 +243,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                     "<=" -> re = re.isSmallerOrEqual(b)
                 }
             }else {
-                LogProcessor.error("The operator \"${ctx.relationalOp()}\" cannot be used between ${re!!.type} and ${b!!.type}")
+                LogProcessor.error("The operator \"${ctx.relationalOp()}\" cannot be used between ${re.type} and ${b.type}")
                 throw IllegalArgumentException("")
             }
         }
@@ -257,7 +257,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
      * @return 表达式的值
      */
     @Override
-    override fun visitAdditiveExpression(ctx: mcfppParser.AdditiveExpressionContext): Var<*>? {
+    override fun visitAdditiveExpression(ctx: mcfppParser.AdditiveExpressionContext): Var<*> {
         Project.ctx = ctx
         visitAdditiveExpressionRe = visit(ctx.multiplicativeExpression(0))
         processVarCache.add(visitAdditiveExpressionRe!!)
@@ -288,7 +288,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             processVarCache[processVarCache.size - 1] = visitAdditiveExpressionRe!!
         }
         processVarCache.remove(visitAdditiveExpressionRe!!)
-        return visitAdditiveExpressionRe
+        return visitAdditiveExpressionRe!!
     }
 
     private var visitMultiplicativeExpressionRe : Var<*>? = null
@@ -300,7 +300,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
      */
     //乘法
     @Override
-    override fun visitMultiplicativeExpression(ctx: mcfppParser.MultiplicativeExpressionContext): Var<*>? {
+    override fun visitMultiplicativeExpression(ctx: mcfppParser.MultiplicativeExpressionContext): Var<*> {
         Project.ctx = ctx
         visitMultiplicativeExpressionRe = visit(ctx.unaryExpression(0))
         processVarCache.add(visitMultiplicativeExpressionRe!!)
@@ -330,7 +330,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             processVarCache[processVarCache.size - 1] = visitMultiplicativeExpressionRe!!
         }
         processVarCache.remove(visitMultiplicativeExpressionRe!!)
-        return visitMultiplicativeExpressionRe
+        return visitMultiplicativeExpressionRe!!
     }
 
     /**
@@ -339,7 +339,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
      * @return 表达式的值
      */
     @Override
-    override fun visitUnaryExpression(ctx: mcfppParser.UnaryExpressionContext): Var<*>? {
+    override fun visitUnaryExpression(ctx: mcfppParser.UnaryExpressionContext): Var<*> {
         Project.ctx = ctx
         return if (ctx.rightVarExpression() != null) {
             visit(ctx.rightVarExpression())
@@ -392,7 +392,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
      * @return 表达式的值
      */
     @Override
-    override fun visitBasicExpression(ctx: mcfppParser.BasicExpressionContext): Var<*>? {
+    override fun visitBasicExpression(ctx: mcfppParser.BasicExpressionContext): Var<*> {
         Project.ctx = ctx
         return if (ctx.primary() != null) {
             visit(ctx.primary())
@@ -408,29 +408,38 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
      * @return
      */
     @Override
-    override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var<*>? {
+    override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var<*> {
         Project.ctx = ctx
-        currSelector = if(ctx.primary() != null){
-            //从变量中选择（非静态成员）
-            visit(ctx.primary())
-        }else{
-            //从类型中选择（静态成员）
-            //TODO 此处的词法需要更改，className和Identifier有冲突
-            if(ctx.type().className() != null){
-                //ClassName
-                val clsstr = ctx.type().text.split(":")
-                val qwq: Class? = if(clsstr.size == 2) {
-                    GlobalField.getClass(clsstr[0], clsstr[1])
+        val namespaceID : Pair<String?, String>
+        if(ctx.primary() != null){
+            currSelector = visit(ctx.primary())
+        }
+        if(currSelector is UnknownVar){
+            if(ctx.primary() != null || ctx.type().className() != null){
+                namespaceID = if(ctx.primary() != null){
+                    null to ctx.primary().text
+                } else{
+                    StringHelper.splitNamespaceID(ctx.type().text)
+                }
+                val clazz = GlobalField.getClass(namespaceID.first, namespaceID.second)
+                if (clazz != null) {
+                    currSelector = clazz.getType()
                 }else{
-                    GlobalField.getClass(null, clsstr[0])
+                    val template = GlobalField.getTemplate(namespaceID.first, namespaceID.second)
+                    if(template != null){
+                        currSelector = template.getType()
+                    }else{
+                        val enum = GlobalField.getEnum(namespaceID.first, namespaceID.second)
+                        if(enum != null){
+                            currSelector = enum.getType()
+                        }else{
+                            LogProcessor.error("Undefined type: ${namespaceID.second}")
+                            currSelector = UnknownVar("${ctx.type().className().text}_type_" + UUID.randomUUID())
+                        }
+                    }
                 }
-                if (qwq == null) {
-                    LogProcessor.error("Undefined class:" + ctx.type().className().text)
-                    return UnknownVar("${ctx.type().className().text}_type_" + UUID.randomUUID())
-                }
-                qwq.getType()
             }else{
-                CompoundDataCompanion(
+                currSelector = CompoundDataCompanion(
                     //基本类型
                     when(ctx.type().text){
                         "int" -> MCInt.data
@@ -438,19 +447,18 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                     }
                 )
             }
-
         }
         for (selector in ctx.selector()){
             visit(selector)
         }
-        return currSelector as? Var<*>
+        return currSelector as Var<*>
     }
 
     @Override
-    override fun visitSelector(ctx: mcfppParser.SelectorContext?): Var<*>? {
+    override fun visitSelector(ctx: mcfppParser.SelectorContext?): Var<*> {
         //进入visitVar，currSelector作为成员选择的上下文
-        currSelector = visit(ctx!!.`var`())!!
-        return null
+        currSelector = visit(ctx!!.`var`())
+        return currSelector as Var<*>
     }
 
     /**
@@ -459,7 +467,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
      * @return 表达式的值
      */
     @Override
-    override fun visitPrimary(ctx: mcfppParser.PrimaryContext): Var<*>? {
+    override fun visitPrimary(ctx: mcfppParser.PrimaryContext): Var<*> {
         Project.ctx = ctx
         if (ctx.`var`() != null) {
             //变量
@@ -471,6 +479,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             val re: Var<*>? = Function.field.getVar(ctx.text)
             if (re == null) {
                 LogProcessor.error("${ctx.text} can only be used in member functions.")
+                return UnknownVar("error_" + ctx.text)
             }
             return re
         }
@@ -483,29 +492,25 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
      */
     @Override
     @InsertCommand
-    override fun visitVar(ctx: mcfppParser.VarContext): Var<*>? {
+    override fun visitVar(ctx: mcfppParser.VarContext): Var<*> {
         Project.ctx = ctx
         if (ctx.Identifier() != null && ctx.arguments() == null) {
             //变量
             //没有数组选取
             val qwq: String = ctx.Identifier().text
-            var re = if(currSelector == null){
-                val re: Var<*>? = Function.currFunction.field.getVar(qwq)
-                if (re == null) {
-                    LogProcessor.error("Undefined variable:$qwq")
-                    throw Exception()
-                }
-                re
+            var re = if(currSelector == null) {
+                Function.currFunction.field.getVar(qwq) ?: UnknownVar(qwq)
             }else{
                 //获取成员
                 val re  = currSelector!!.getMemberVar(qwq, currSelector!!.getAccess(Function.currFunction))
                 if (re.first == null) {
-                    LogProcessor.error("Undefined field: $qwq")
-                }
-                if (!re.second){
+                    UnknownVar(qwq)
+                }else if (!re.second){
                     LogProcessor.error("Cannot access member $qwq")
+                    UnknownVar(qwq)
+                }else{
+                    re.first!!
                 }
-                re.first
             }
             // Identifier identifierSuffix*
             if (ctx.identifierSuffix() == null || ctx.identifierSuffix().size == 0) {
@@ -517,7 +522,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                         re = (re as Indexable<*>).getByIndex(index)
                     }
                 }else{
-                    throw IllegalArgumentException("Cannot index ${re!!.type}")
+                    throw IllegalArgumentException("Cannot index ${re.type}")
                 }
                 return re
             }
@@ -613,7 +618,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         }
     }
 
-    override fun visitValue(ctx: mcfppParser.ValueContext): Var<*>? {
+    override fun visitValue(ctx: mcfppParser.ValueContext): Var<*> {
         //常量
         if (ctx.intValue() != null) {
             return MCIntConcrete(Integer.parseInt(ctx.intValue().text))
@@ -639,7 +644,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                         r=res.toString()
                     }
                 }
-                stringArray.add(r);
+                stringArray.add(r)
             }
             val tailQuote = ctx.multiLineStringLiteral().TRIPLE_QUOTE_CLOSE().text
             if(tailQuote.length>3) {
@@ -657,7 +662,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         } else if (ctx.TargetSelector() != null){
             return SelectorConcrete(SelectorValue(ctx.TargetSelector().text[1]))
         }
-        return null
+        throw IllegalArgumentException("value_" + ctx.text)
     }
 
 }
