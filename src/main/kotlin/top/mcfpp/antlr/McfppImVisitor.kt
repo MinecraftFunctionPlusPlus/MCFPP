@@ -11,6 +11,7 @@ import top.mcfpp.exception.*
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPEnumType
 import top.mcfpp.lang.type.MCFPPGenericClassType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
@@ -165,7 +166,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 Function.addCommand("#field: " + ctx.type().text + " " + c.Identifier().text + if (c.expression() != null) " = " + c.expression().text else "")
                 //变量初始化
                 if (c.expression() != null) {
-                    val init: Var<*> = McfppExprVisitor(if(type is MCFPPGenericClassType) type else null).visit(c.expression())!!
+                    val init: Var<*> = McfppExprVisitor(if(type is MCFPPGenericClassType) type else null, if(type is MCFPPEnumType) type else null).visit(c.expression())!!
                     try {
                         `var` = `var`.assign(init)
                     } catch (e: VariableConverseException) {
@@ -203,13 +204,14 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     override fun visitStatementExpression(ctx: mcfppParser.StatementExpressionContext):Any? {
         Project.ctx = ctx
         Function.addCommand("#expression: " + ctx.text)
-        val right: Var<*> = McfppExprVisitor().visit(ctx.expression())!!
         if(ctx.basicExpression() != null){
             val left: Var<*> = McfppLeftExprVisitor().visit(ctx.basicExpression())!!
             if (left.isConst) {
                 LogProcessor.error("Cannot assign a constant repeatedly: " + left.identifier)
                 return null
             }
+            val type = left.type
+            val right: Var<*> = McfppExprVisitor(if(type is MCFPPGenericClassType) type else null, if(type is MCFPPEnumType) type else null).visit(ctx.expression())!!
             try {
                 left.replacedBy(left.assign(right))
             } catch (e: VariableConverseException) {

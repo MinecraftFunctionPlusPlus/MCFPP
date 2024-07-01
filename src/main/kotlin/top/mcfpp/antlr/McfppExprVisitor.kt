@@ -5,6 +5,7 @@ import net.querz.nbt.tag.StringTag
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.lang.*
+import top.mcfpp.lang.type.MCFPPEnumType
 import top.mcfpp.lang.type.MCFPPGenericClassType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
@@ -29,7 +30,7 @@ import kotlin.system.exitProcess
 /**
  * 获取表达式结果用的visitor。解析并计算一个形如a+b*c的表达式。
  */
-class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassType? = null): mcfppParserBaseVisitor<Var<*>>() {
+class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassType? = null, private var enumType: MCFPPEnumType? = null): mcfppParserBaseVisitor<Var<*>>() {
 
     private val tempVarCommandCache = HashMap<Var<*>, String>()
 
@@ -498,6 +499,9 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             //变量
             //没有数组选取
             val qwq: String = ctx.Identifier().text
+            if(enumType != null && currSelector == null){
+                currSelector = enumType
+            }
             var re = if(currSelector == null) {
                 Function.currFunction.field.getVar(qwq) ?: UnknownVar(qwq)
             }else{
