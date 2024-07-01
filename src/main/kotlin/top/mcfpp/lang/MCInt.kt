@@ -1,7 +1,6 @@
 package top.mcfpp.lang
 
 import net.querz.nbt.tag.IntTag
-import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
@@ -43,6 +42,8 @@ open class MCInt : MCNumber<Int> {
      * @param b 被复制的int值
      */
     constructor(b: MCInt) : super(b)
+
+    constructor(b: EnumVar): super(b)
 
     override var type: MCFPPType = MCFPPBaseType.Int
 
@@ -220,13 +221,13 @@ open class MCInt : MCNumber<Int> {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
             re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
-                "execute if score " + name + " " + `object` + " matches " + (qwq.value + 1) + ".. run return 1"
+                "execute if score " + name + " " + sbObject + " matches " + (qwq.value + 1) + ".. run return 1"
             )
             Function.addCommand("return 0")
         } else {
             re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
-                "execute if score " + name + " " + `object` + " > " + qwq.name + " " + qwq.`object` + " run return 1"
+                "execute if score " + name + " " + sbObject + " > " + qwq.name + " " + qwq.sbObject + " run return 1"
             )
             Function.addCommand("return 0")
         }
@@ -244,13 +245,13 @@ open class MCInt : MCNumber<Int> {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
             re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
-                "execute if score " + name + " " + `object` + " matches " + ".." + (qwq.value - 1) + " run return 1"
+                "execute if score " + name + " " + sbObject + " matches " + ".." + (qwq.value - 1) + " run return 1"
             )
             Function.addCommand("return 0")
         } else {
             re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
-                "execute if score " + name + " " + `object` + " < " + qwq.name + " " + qwq.`object` + " run return 1"
+                "execute if score " + name + " " + sbObject + " < " + qwq.name + " " + qwq.sbObject + " run return 1"
             )
             Function.addCommand("return 0")
         }
@@ -268,13 +269,13 @@ open class MCInt : MCNumber<Int> {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
             re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
-                "execute if score " + name + " " + `object` + " matches " + ".." + qwq.value + " run return 1"
+                "execute if score " + name + " " + sbObject + " matches " + ".." + qwq.value + " run return 1"
             )
             Function.addCommand("return 0")
         } else {
             re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
-                "execute if score " + name + " " + `object` + " <= " + qwq.name + " " + qwq.`object` + " run return 1"
+                "execute if score " + name + " " + sbObject + " <= " + qwq.name + " " + qwq.sbObject + " run return 1"
             )
             Function.addCommand("return 0")
         }
@@ -292,13 +293,13 @@ open class MCInt : MCNumber<Int> {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
             re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
-                "execute if score " + name + " " + `object` + " matches " + qwq.value + ".. run return 1"
+                "execute if score " + name + " " + sbObject + " matches " + qwq.value + ".. run return 1"
             )
             Function.addCommand("return 0")
         } else {
             re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
-                "execute if score " + name + " " + `object` + " >= " + qwq.name + " " + qwq.`object` + " run return 1"
+                "execute if score " + name + " " + sbObject + " >= " + qwq.name + " " + qwq.sbObject + " run return 1"
             )
             Function.addCommand("return 0")
         }
@@ -316,13 +317,13 @@ open class MCInt : MCNumber<Int> {
             //execute store success score qwq qwq if score qwq qwq = owo owo
             re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
-                "execute if score " + name + " " + `object` + " matches " + qwq.value + " run return 1"
+                "execute if score " + name + " " + sbObject + " matches " + qwq.value + " run return 1"
             )
             Function.addCommand("return 0")
         } else {
             re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
-                "execute if score " + name + " " + `object` + " = " + qwq.name + " " + qwq.`object` + " run return 1"
+                "execute if score " + name + " " + sbObject + " = " + qwq.name + " " + qwq.sbObject + " run return 1"
             )
             Function.addCommand("return 0")
         }
@@ -340,13 +341,13 @@ open class MCInt : MCNumber<Int> {
             //execute store success score qwq qwq if score qwq qwq = owo owo
             re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
-                "execute unless score " + name + " " + `object` + " matches " + qwq.value + " run return 1"
+                "execute unless score " + name + " " + sbObject + " matches " + qwq.value + " run return 1"
             )
             Function.addCommand("return 0")
         } else {
             re = ReturnedMCBool(Function.currFunction)
             Function.addCommand(
-                "execute unless score " + name + " " + `object` + " = " + qwq.name + " " + qwq.`object` + " run return 1"
+                "execute unless score " + name + " " + sbObject + " = " + qwq.name + " " + qwq.sbObject + " run return 1"
             )
             Function.addCommand("return 0")
         }
@@ -380,13 +381,13 @@ open class MCInt : MCNumber<Int> {
         if(parent != null) return
         Function.addCommand("execute " +
                 "store result $nbtPath int 1 " +
-                "run scoreboard players get $name $`object`")
+                "run scoreboard players get $name $sbObject")
     }
 
     override fun getFromStack() {
         if(parent != null) return
         Function.addCommand("execute " +
-                "store result score $name $`object` " +
+                "store result score $name $sbObject " +
                 "run data get $nbtPath")
     }
 
@@ -463,6 +464,10 @@ class MCIntConcrete : MCInt, MCFPPValue<Int>{
         this.value = int.value
     }
 
+    constructor(enum: EnumVarConcrete) : super(enum){
+        this.value = enum.value
+    }
+
     override fun clone(): MCIntConcrete {
         return MCIntConcrete(this)
     }
@@ -488,13 +493,13 @@ class MCIntConcrete : MCInt, MCFPPValue<Int>{
             if(cmd.size == 2){
                 Function.addCommand(cmd[0])
             }
-            Function.addCommand(cmd.last().build("scoreboard players set @s $`object` $value"))
+            Function.addCommand(cmd.last().build("scoreboard players set @s $sbObject $value"))
         } else {
             val cmd = if (!isTemp)
                 Command("execute store result").build(nbtPath.toCommandPart()).build("int 1 run ")
             else
                 Command("")
-            Function.addCommand(cmd.build("scoreboard players set $name $`object` $value", false))
+            Function.addCommand(cmd.build("scoreboard players set $name $sbObject $value", false))
         }
         val re = MCInt(this)
         if(replace){

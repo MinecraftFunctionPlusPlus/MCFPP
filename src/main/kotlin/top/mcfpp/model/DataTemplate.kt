@@ -1,22 +1,9 @@
 package top.mcfpp.model
 
-import net.querz.nbt.tag.ByteTag
 import net.querz.nbt.tag.CompoundTag
-import net.querz.nbt.tag.DoubleTag
-import net.querz.nbt.tag.FloatTag
-import net.querz.nbt.tag.IntTag
-import net.querz.nbt.tag.ListTag
-import net.querz.nbt.tag.StringTag
-import net.querz.nbt.tag.Tag
-import org.openjdk.nashorn.internal.codegen.types.BooleanType
 import top.mcfpp.Project
-import top.mcfpp.lang.DataTemplateObject
-import top.mcfpp.lang.NBTDictionary
-import top.mcfpp.lang.NBTList
-import top.mcfpp.lang.type.DataTemplateType
-import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.lang.type.MCFPPDataTemplateType
 import top.mcfpp.model.field.CompoundDataField
-import top.mcfpp.model.field.GlobalField
 
 /**
  * 结构体是一种和类的语法极为相似的数据结构。在结构体中，只能有int类型的数据，或者说记分板的数据作为结构体的成员。
@@ -51,8 +38,8 @@ open class DataTemplate : FieldContainer, CompoundData {
     /**
      * 获取这个类对于的classType
      */
-    fun getType() : DataTemplateType {
-        return DataTemplateType(this,
+    fun getType() : MCFPPDataTemplateType {
+        return MCFPPDataTemplateType(this,
             parent.filterIsInstance<DataTemplate>().map { it.getType() }
         )
     }

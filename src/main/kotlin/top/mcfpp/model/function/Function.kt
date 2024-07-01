@@ -10,6 +10,7 @@ import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lang.type.UnresolvedType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.field.FunctionField
@@ -311,7 +312,11 @@ open class Function : Member, FieldContainer {
         ownerType = OwnerType.NONE
         this.namespace = namespace
         this.returnType = returnType
-        this.returnVar = buildReturnVar(returnType)
+        if(returnType is UnresolvedType){
+            this.returnVar = UnknownVar("return")
+        }else{
+            this.returnVar = buildReturnVar(returnType)
+        }
     }
 
     /**
@@ -602,7 +607,7 @@ open class Function : Member, FieldContainer {
                             //如果是int取出到记分板
                             addCommand(
                                 "execute " +
-                                        "store result score ${(args[i] as MCInt).name} ${(args[i] as MCInt).`object`} " +
+                                        "store result score ${(args[i] as MCInt).name} ${(args[i] as MCInt).sbObject} " +
                                         "run data get storage mcfpp:system ${Project.config.defaultNamespace}.stack_frame[0].${normalParams[i].identifier} int 1 "
                             )
                         }
@@ -632,7 +637,7 @@ open class Function : Member, FieldContainer {
                         //参数传递和子函数的参数压栈
                         //如果是int取出到记分板
                         addCommand(
-                            "execute store result score ${tg.name} ${tg.`object`} run "
+                            "execute store result score ${tg.name} ${tg.sbObject} run "
                                     + "data get storage mcfpp:system ${Project.currNamespace}.stack_frame[0].${tg.identifier}"
                         )
                     }

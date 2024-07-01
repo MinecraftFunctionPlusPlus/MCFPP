@@ -1,7 +1,6 @@
 package top.mcfpp.lang
 
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
 import java.util.UUID
@@ -13,7 +12,7 @@ import java.util.UUID
  */
 abstract class MCNumber<T> : Var<T>, OnScoreboard {
 
-    var `object`: SbObject
+    var sbObject: SbObject
 
     /**
      * 创建一个数字类型变量
@@ -21,19 +20,23 @@ abstract class MCNumber<T> : Var<T>, OnScoreboard {
      * @param identifier 标识符。默认为随机的uuid
      */
     constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier) {
-        `object` = SbObject.MCFPP_default
+        sbObject = SbObject.MCFPP_default
     }
 
     /**
      * 复制一个数字类型变量
      */
     constructor(b: MCNumber<T>) : super(b) {
-        `object` = b.`object`
+        sbObject = b.sbObject
+    }
+
+    constructor(b: EnumVar) : super(b){
+        sbObject = b.sbObject
     }
 
     @Override
     override fun setObj(sbObject: SbObject): MCNumber<T> {
-        `object` = sbObject
+        this.sbObject = sbObject
         return this
     }
 

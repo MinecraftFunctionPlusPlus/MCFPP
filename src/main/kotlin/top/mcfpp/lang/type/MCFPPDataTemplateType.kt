@@ -6,7 +6,7 @@ import top.mcfpp.model.*
  * 模板类型
  * @see DataTemplate
  */
-class DataTemplateType(
+class MCFPPDataTemplateType(
     var template: DataTemplate,
     override var parentType: List<MCFPPType>
 ) :MCFPPType(template, parentType) {
@@ -27,7 +27,7 @@ class DataTemplateType(
     companion object{
         val regex = Regex("^template\\((.+):(.+)\\)$")
 
-        val DataObject = DataTemplateType(DataTemplate.baseDataTemplate, listOf(MCFPPNBTType.NBT))
+        val DataObject = MCFPPDataTemplateType(DataTemplate.baseDataTemplate, listOf(MCFPPNBTType.NBT))
     }
 
 }
