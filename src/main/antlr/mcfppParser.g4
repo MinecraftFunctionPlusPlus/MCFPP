@@ -73,6 +73,7 @@ declarations
     |   extensionFunctionDeclaration
     |   interfaceDeclaration
     |   globalDeclaration
+    |   enumDeclaration
     ;
 
 //全局声明
@@ -189,6 +190,20 @@ functionDeclaration
 extensionFunctionDeclaration
     :   funcAnnoation? STATIC? FUNCTION (type '.')? Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
     ;
+
+//枚举
+enumDeclaration
+    :   ENUM Identifier '{' enumBody '}'
+    ;
+
+enumBody
+    :   enumMember (',' enumMember)*
+    ;
+
+enumMember
+    :   Identifier ('=' intValue)?
+    ;
+
 
 namespaceID
     : (Identifier ( '.' Identifier)* ':')? Identifier
