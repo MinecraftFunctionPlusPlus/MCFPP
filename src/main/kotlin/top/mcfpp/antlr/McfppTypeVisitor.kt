@@ -3,6 +3,7 @@ package top.mcfpp.antlr
 import top.mcfpp.Project
 import top.mcfpp.lang.MCAny
 import top.mcfpp.model.*
+import top.mcfpp.model.Enum
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.generic.ClassParam
 import top.mcfpp.model.generic.GenericClass
@@ -131,9 +132,9 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         //注册类
         val id = ctx.classWithoutNamespace().text
         val nsp = GlobalField.localNamespaces[Project.currNamespace]!!
-        if (nsp.field.hasInterface(id)) {
+        if (nsp.field.hasDeclaredType(id)) {
             //重复声明
-            LogProcessor.error("Interface has been defined: $id in namespace ${Project.currNamespace}")
+            LogProcessor.error("Type has been defined: $id in namespace ${Project.currNamespace}")
             Interface.currInterface = nsp.field.getInterface(id)
         } else {
             //如果没有声明过这个类
@@ -180,8 +181,8 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             //如果没有声明过这个类
             Class(id, Project.currNamespace)
         }
-        if(!nsp.field.addClass(id, cls)){
-            LogProcessor.error("Class has been defined: $id in namespace ${Project.currNamespace}")
+        if(!nsp.field.hasDeclaredType(id)){
+            LogProcessor.error("Type has been defined: $id in namespace ${Project.currNamespace}")
             return
         }
         cls.initialize()
@@ -211,14 +212,14 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
     /**
      *
      */
-    override fun visitTemplateDeclaration(ctx: mcfppParser.TemplateDeclarationContext?){
-        Project.ctx = ctx!!
+    override fun visitTemplateDeclaration(ctx: mcfppParser.TemplateDeclarationContext){
+        Project.ctx = ctx
         //注册模板
         val id = ctx.classWithoutNamespace().text
         val nsp = GlobalField.localNamespaces[Project.currNamespace]!!
-        if (nsp.field.hasTemplate(id)) {
+        if (nsp.field.hasDeclaredType(id)) {
             //重复声明
-            LogProcessor.error("Template has been defined: $id in namespace ${Project.currNamespace}")
+            LogProcessor.error("Type has been defined: $id in namespace ${Project.currNamespace}")
             DataTemplate.currTemplate = nsp.field.getTemplate(id)
         }
         val template = DataTemplate(id,Project.currNamespace)
@@ -245,5 +246,29 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             }
         }
         nsp.field.addTemplate(id, template)
+    }
+
+    override fun visitEnumDeclaration(ctx: mcfppParser.EnumDeclarationContext) {
+        Project.ctx = ctx
+        //注册枚举
+        val id = ctx.Identifier().text
+        val nsp = GlobalField.localNamespaces[Project.currNamespace]!!
+        if (nsp.field.hasDeclaredType(id)) {
+            //重复声明
+            LogProcessor.error("Type has been defined: $id in namespace ${Project.currNamespace}")
+        }
+        val enum = Enum(id, Project.currNamespace)
+        nsp.field.addEnum(id, enum)
+        //添加成员
+        for (m in ctx.enumBody().enumMember()) {
+            val value = if(m.intValue() != null){
+                //获取enum的int值
+                m.intValue().text.toInt()
+            }else{
+                enum.getNextMemberValue()
+            }
+            val member = EnumMember(m.Identifier().text, value)
+            enum.addMember(member)
+        }
     }
 }

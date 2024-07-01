@@ -103,6 +103,7 @@ OBJECT:'object';
 INTERFACE:'interface';
 DATA:'data';
 FUNCTION:'func';
+ENUM:'enum';
 
 GLOBAL:'global';
 VAR:'var';

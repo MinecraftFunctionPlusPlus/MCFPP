@@ -30,7 +30,9 @@ import kotlin.collections.HashMap
  *
  * 函数储存在一个列表中
  */
-open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTemplate, IFieldWithInterface, SimpleFieldWithType {
+open class NamespaceField(private val simpleFieldWithType: SimpleFieldWithType = SimpleFieldWithType(), private val simpleFieldWithEnum: SimpleFieldWithEnum = SimpleFieldWithEnum())
+    : IFieldWithClass, IFieldWithFunction, IFieldWithTemplate, IFieldWithInterface,
+    IFieldWithType by simpleFieldWithType, IFieldWithEnum by simpleFieldWithEnum {
     /**
      * 变量
      */
@@ -93,13 +95,11 @@ open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTempla
     @Nullable
     var container: FieldContainer? = GlobalField
 
-    constructor()
-
     /**
      * 复制一个缓存。
      * @param cache 原来的缓存
      */
-    constructor(cache: NamespaceField) {
+    constructor(cache: NamespaceField) : this(cache.simpleFieldWithType, cache.simpleFieldWithEnum) {
         parent = cache.parent
         //变量复制
         for (key in cache.vars.keys) {
@@ -419,5 +419,9 @@ open class NamespaceField: IFieldWithClass, IFieldWithFunction, IFieldWithTempla
         return interfaces.containsKey(itf.identifier)
     }
 
+
+    fun hasDeclaredType(identifier: String): Boolean{
+        return hasEnum(identifier) || hasTemplate(identifier) || hasInterface(identifier) || hasClass(identifier)
+    }
 
 }
