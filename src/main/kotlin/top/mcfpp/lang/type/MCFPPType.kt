@@ -22,7 +22,7 @@ import top.mcfpp.util.StringHelper
 /**
  * 所有类型的接口
  */
-abstract class MCFPPType(
+open class MCFPPType(
 
     open var compoundData: CompoundData = CompoundData("unknown", "mcfpp"),
 
@@ -93,7 +93,7 @@ abstract class MCFPPType(
     @Override
     override fun getMemberFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>, accessModifier: Member.AccessModifier): Pair<Function, Boolean> {
         //获取函数
-        val member = compoundData.staticField.getFunction(key, readOnlyParams, normalParams)
+        val member = compoundData.field.getFunction(key, readOnlyParams, normalParams)
         return if(member is UnknownFunction){
             Pair(UnknownFunction(key), true)
         }else{

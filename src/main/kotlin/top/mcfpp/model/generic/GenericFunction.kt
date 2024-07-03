@@ -72,7 +72,7 @@ class GenericFunction : Function, Generic<Function> {
         for (param in r.parameter()){
             val (p,v) = parseParam(param)
             readOnlyParams.add(p)
-            if(v !is MCFPPValue<*>){
+            if(v.hasAssigned && v !is MCFPPValue<*>){
                 LogProcessor.error("ReadOnly params must have a concrete value")
                 throw Exception()
             }

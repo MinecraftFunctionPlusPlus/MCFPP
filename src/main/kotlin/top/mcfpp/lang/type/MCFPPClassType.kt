@@ -29,7 +29,7 @@ open class MCFPPClassType(
     /**
      * 获取这个类的实例的指针实体在mcfunction中拥有的tag
      */
-    val tag: String
+    open val tag: String
         get() {
             if(genericType.isNotEmpty()){
                 return cls.namespace + "_class_" + cls.identifier + "_type[" + genericType.sortedBy { it.typeName }.joinToString("_") { it.typeName } + "]"
@@ -42,7 +42,7 @@ open class MCFPPClassType(
             genericType.joinToString("_") { it.typeName }
         }]"
 
-    fun getGenericClassType(compiledClass: Class) : MCFPPClassType{
+    open fun getGenericClassType(compiledClass: Class) : MCFPPClassType{
         val t = MCFPPClassType(compiledClass, parentType)
         return t
     }
@@ -65,7 +65,7 @@ open class MCFPPClassType(
     }
 
     /**
-     * 获取这个类中的一个静态成员方法。
+     * 获取这个类中的一个成员方法。
      *
      * @param key 方法的标识符
      * @param normalParams 方法的参数
@@ -75,7 +75,7 @@ open class MCFPPClassType(
     @Override
     override fun getMemberFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>, accessModifier: Member.AccessModifier): Pair<Function, Boolean> {
         //获取函数
-        val member = cls.staticField.getFunction(key, readOnlyParams, normalParams)
+        val member = cls.field.getFunction(key, readOnlyParams, normalParams)
         return Pair(member, accessModifier >= member.accessModifier)
     }
 

@@ -7,6 +7,7 @@ import top.mcfpp.model.Enum
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.generic.ClassParam
 import top.mcfpp.model.generic.GenericClass
+import top.mcfpp.model.generic.GenericObjectClass
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 
@@ -156,10 +157,6 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
     }
 
     /**
-     * TODO native类的声明
-     **/
-
-    /**
      * 类的声明
      * @param ctx the parse tree
      * @return null
@@ -178,10 +175,10 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             })
             qwq
         } else {
-            //如果没有声明过这个类
             Class(id, Project.currNamespace)
         }
-        if(!nsp.field.hasDeclaredType(id)){
+        //如果没有声明过这个类
+        if(nsp.field.hasDeclaredType(id)){
             LogProcessor.error("Type has been defined: $id in namespace ${Project.currNamespace}")
             return
         }
@@ -207,12 +204,57 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         }
         cls.isStaticClass = ctx.STATIC() != null
         cls.isAbstract = ctx.ABSTRACT() != null
+        nsp.field.addClass(cls.identifier, cls)
     }
 
-    /**
-     *
-     */
-    override fun visitTemplateDeclaration(ctx: mcfppParser.TemplateDeclarationContext){
+    override fun visitObjectClassDeclaration(ctx: mcfppParser.ObjectClassDeclarationContext) {
+        Project.ctx = ctx
+        //注册类
+        val id = ctx.classWithoutNamespace().text
+        val nsp = GlobalField.localNamespaces[Project.currNamespace]!!
+
+        val objectClass = if(ctx.readOnlyParams() != null){
+            //泛型类
+            val qwq = GenericObjectClass(id, Project.currNamespace, ctx.classBody())
+            qwq.readOnlyParams.addAll(ctx.readOnlyParams().parameterList().parameter().map {
+                ClassParam(it.type().text, it.Identifier().text)
+            })
+            qwq
+        } else {
+            ObjectClass(id, Project.currNamespace)
+        }
+        //如果没有声明过这个类
+        if(nsp.field.hasObject(id)){
+            LogProcessor.error("Type has been defined: $id in namespace ${Project.currNamespace}")
+            return
+        }
+        if(ctx.className().size != 0){
+            for (p in ctx.className()){
+                //是否存在继承
+                val qwq = StringHelper.splitNamespaceID(p.text)
+                val identifier: String = qwq.second
+                val namespace : String? = qwq.first
+                var pc : CompoundData? = GlobalField.getClass(namespace, identifier)
+                if(pc == null){
+                    pc = GlobalField.getInterface(namespace, identifier)
+                    if(pc == null){
+                        pc = GlobalField.getObject(namespace, identifier)
+                        if(pc !is ObjectClass){
+                            LogProcessor.error("Undefined class: " + p.text)
+                            pc = Class.Companion.UndefinedClassOrInterface(identifier,namespace)
+                        }
+                    }
+                }
+                objectClass.extends(pc)
+            }
+        }else{
+            //继承Any类
+            objectClass.extends(MCAny.data)
+        }
+        nsp.field.addObject(objectClass.identifier, objectClass)
+    }
+
+    override fun visitTemplateDeclaration(ctx: mcfppParser.TemplateDeclarationContext) {
         Project.ctx = ctx
         //注册模板
         val id = ctx.classWithoutNamespace().text
@@ -246,6 +288,41 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             }
         }
         nsp.field.addTemplate(id, template)
+    }
+
+    /**
+     *
+     */
+    override fun visitObjectTemplateDeclaration(ctx: mcfppParser.ObjectTemplateDeclarationContext){
+        Project.ctx = ctx
+        //注册模板
+        val id = ctx.classWithoutNamespace().text
+        val nsp = GlobalField.localNamespaces[Project.currNamespace]!!
+        if (nsp.field.hasObject(id)) {
+            //重复声明
+            LogProcessor.error("Type has been defined: $id in namespace ${Project.currNamespace}")
+            return
+        }
+        val template = ObjectDataTemplate(id,Project.currNamespace)
+        if(!template.parent.contains(DataTemplate.baseDataTemplate)) {
+            template.parent.add(DataTemplate.baseDataTemplate)
+        }
+        if (ctx.className() != null) {
+            //是否存在继承
+            val (namespace, identifier) = StringHelper.splitNamespaceID(ctx.className().text)
+            val s = GlobalField.getTemplate(namespace, identifier)
+            if(s == null){
+                val o = GlobalField.getObject(namespace, identifier)
+                if(o is ObjectDataTemplate) {
+                    template.parent.add(o)
+                }else{
+                    LogProcessor.error("Undefined template: " + ctx.className().text)
+                }
+            }else{
+                template.parent.add(s)
+            }
+        }
+        nsp.field.addObject(id, template)
     }
 
     override fun visitEnumDeclaration(ctx: mcfppParser.EnumDeclarationContext) {

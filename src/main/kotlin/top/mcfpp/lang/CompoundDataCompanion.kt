@@ -64,7 +64,7 @@ open class CompoundDataCompanion : CanSelectMember {
     @Override
     override fun getMemberFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>, accessModifier: Member.AccessModifier): Pair<Function, Boolean> {
         //获取函数
-        val member = dataType.staticField.getFunction(key, readOnlyParams, normalParams)
+        val member = dataType.field.getFunction(key, readOnlyParams, normalParams)
         return if(member is UnknownFunction){
             Pair(UnknownFunction(key), true)
         }else{

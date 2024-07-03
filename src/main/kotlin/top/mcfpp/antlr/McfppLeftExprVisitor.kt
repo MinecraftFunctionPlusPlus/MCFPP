@@ -42,20 +42,26 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>?>(){
     @Override
     override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var<*>? {
         Project.ctx = ctx
-        currSelector = if(ctx.primary() != null){
-            visit(ctx.primary())
-        }else{
-            if(ctx.type().className() != null){
-                //ClassName
-                val clsstr = StringHelper.splitNamespaceID(ctx.type().text)
-                val qwq: Class? = GlobalField.getClass(clsstr.first, clsstr.second)
-                if (qwq == null) {
-                    LogProcessor.error("Undefined class:" + ctx.type().className().text)
-                    return UnknownVar("${ctx.type().className().text}_type_" + UUID.randomUUID())
+        val namespaceID : Pair<String?, String>
+        if(ctx.primary() != null){
+            currSelector = visit(ctx.primary())
+        }
+        if(currSelector is UnknownVar){
+            if(ctx.primary() != null || ctx.type().className() != null){
+                namespaceID = if(ctx.primary() != null){
+                    null to ctx.primary().text
+                } else{
+                    StringHelper.splitNamespaceID(ctx.type().text)
                 }
-                qwq.getType()
+                val o = GlobalField.getObject(namespaceID.first, namespaceID.second)
+                if(o != null) {
+                    currSelector = o.getType()
+                } else{
+                    LogProcessor.error("Undefined type: ${namespaceID.second}")
+                    currSelector = UnknownVar("${ctx.type().className().text}_type_" + UUID.randomUUID())
+                }
             }else{
-                CompoundDataCompanion(
+                currSelector = CompoundDataCompanion(
                     //基本类型
                     when(ctx.type().text){
                         "int" -> MCInt.data
@@ -64,10 +70,10 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>?>(){
                 )
             }
         }
-        for (selector in ctx.selector().subList(0,ctx.selector().size-1)){
+        for (selector in ctx.selector()){
             visit(selector)
         }
-        return visit(ctx.selector(ctx.selector().size-1).`var`())
+        return currSelector as Var<*>
     }
 
     @Override

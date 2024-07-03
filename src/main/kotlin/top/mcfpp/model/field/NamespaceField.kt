@@ -30,9 +30,16 @@ import kotlin.collections.HashMap
  *
  * 函数储存在一个列表中
  */
-open class NamespaceField(private val simpleFieldWithType: SimpleFieldWithType = SimpleFieldWithType(), private val simpleFieldWithEnum: SimpleFieldWithEnum = SimpleFieldWithEnum())
+open class NamespaceField(
+    private val simpleFieldWithType: SimpleFieldWithType = SimpleFieldWithType(),
+    private val simpleFieldWithEnum: SimpleFieldWithEnum = SimpleFieldWithEnum(),
+    private val simpleFieldWithObject: SimpleFieldWithObject = SimpleFieldWithObject()
+    )
     : IFieldWithClass, IFieldWithFunction, IFieldWithTemplate, IFieldWithInterface,
-    IFieldWithType by simpleFieldWithType, IFieldWithEnum by simpleFieldWithEnum {
+    IFieldWithType by simpleFieldWithType,
+    IFieldWithEnum by simpleFieldWithEnum,
+    IFieldWithObject by simpleFieldWithObject
+{
     /**
      * 变量
      */
@@ -67,8 +74,8 @@ open class NamespaceField(private val simpleFieldWithType: SimpleFieldWithType =
     private var template: HashMap<String, DataTemplate> = HashMap()
 
     override fun forEachTemplate(operation: (DataTemplate) -> Any?){
-        for (struct in template.values){
-            operation(struct)
+        for (t in template.values){
+            operation(t)
         }
     }
 

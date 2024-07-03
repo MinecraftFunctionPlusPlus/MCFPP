@@ -1,15 +1,17 @@
 package top.mcfpp.lang.type
 
-import top.mcfpp.model.*
+import top.mcfpp.model.DataTemplate
+import top.mcfpp.model.ObjectDataTemplate
+
 
 /**
  * 模板类型
  * @see DataTemplate
  */
-open class MCFPPDataTemplateType(
-    var template: DataTemplate,
-    override var parentType: List<MCFPPType>
-) :MCFPPType(template, parentType) {
+class MCFPPObjectDataTemplateType(
+    template: ObjectDataTemplate,
+    parentType: List<MCFPPType>
+) :MCFPPDataTemplateType(template, parentType) {
 
     override val typeName: String
         get() = "template(${template.namespace}:${template.identifier})"
@@ -23,11 +25,4 @@ open class MCFPPDataTemplateType(
         //    )
         //}
     }
-
-    companion object{
-        val regex = Regex("^template\\((.+):(.+)\\)$")
-
-        val DataObject = MCFPPDataTemplateType(DataTemplate.baseDataTemplate, listOf(MCFPPNBTType.NBT))
-    }
-
 }

@@ -4,9 +4,8 @@ import com.alibaba.fastjson2.JSONArray
 import com.alibaba.fastjson2.JSONObject
 import com.alibaba.fastjson2.JSONWriter
 import top.mcfpp.lang.Var
-import top.mcfpp.model.Class
-import top.mcfpp.model.Namespace
-import top.mcfpp.model.DataTemplate
+import top.mcfpp.model.*
+import top.mcfpp.model.Enum
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Constructor
@@ -67,11 +66,31 @@ object NamespaceWriter : ILibJsonWriter<Namespace> {
         val template = JSONArray()
         t.field.forEachTemplate { tpl -> run {
             val j = TemplateWriter.toJson(tpl)
-            classes.add(j)
+            template.add(j)
         } }
+        val enum = JSONArray()
+        t.field.forEachEnum { e ->
+            run {
+                val j = EnumWriter.toJson(e)
+                enum.add(j)
+            }
+        }
+        t.field.forEachObject { obj ->
+            run {
+                if (obj is ObjectClass) {
+                    val j = ClassWriter.toJson(obj)
+                    classes.add(j)
+                }
+                if (obj is ObjectDataTemplate) {
+                    val j = TemplateWriter.toJson(obj)
+                    template.add(j)
+                }
+            }
+        }
         namespace["functions"] = functions
         namespace["classes"] = classes
         namespace["template"] = template
+        namespace["enum"] = enum
         return namespace
     }
 }
@@ -111,7 +130,7 @@ object FunctionWriter: ILibJsonWriter<Function> {
 object ClassWriter: ILibJsonWriter<Class> {
     override fun toJson(t: Class): JSONObject {
         val json = JSONObject()
-        json["id"] = t.identifier
+        json["id"] = if(t is ObjectClass) t.identifier + "$" else t.identifier
         //父类
         val parents = t.parent.map { it.namespaceID }.toList()
         json["parents"] = parents
@@ -124,13 +143,32 @@ object ClassWriter: ILibJsonWriter<Class> {
         }
         //成员
         json["field"] = CompoundDataFieldWriter.toJson(t.field)
-        json["staticField"] = CompoundDataFieldWriter.toJson(t.staticField)
-        //构造函数
-        val constructors = JSONArray()
-        t.constructors.forEach { c -> run {
-            constructors.add(ConstructorWriter.toJson(c))
-        } }
-        json["constructors"] = constructors
+        if(t !is ObjectClass) {
+            //构造函数
+            val constructors = JSONArray()
+            t.constructors.forEach { constructors.add(ConstructorWriter.toJson(it)) }
+            json["constructors"] = constructors
+        }
+        return json
+    }
+}
+
+object EnumWriter: ILibJsonWriter<Enum>{
+    override fun toJson(t: Enum): JSONObject {
+        val json = JSONObject()
+        json["id"] = t.identifier
+        val values = JSONArray()
+        t.members.forEach { values.add(EnumMemberWriter.toJson(it.value)) }
+        json["values"] = values
+        return json
+    }
+}
+
+object EnumMemberWriter: ILibJsonWriter<EnumMember>{
+    override fun toJson(t: EnumMember): JSONObject {
+        val json = JSONObject()
+        json["id"] = t.identifier
+        json["value"] = t.value
         return json
     }
 }
@@ -139,11 +177,7 @@ object ConstructorWriter: ILibJsonWriter<Constructor> {
     override fun toJson(t: Constructor): JSONObject {
         val json = JSONObject()
         val normalParams = JSONArray()
-        t.normalParams.forEach { v ->
-            run {
-                normalParams.add(FunctionParamWriter.toJson(v))
-            }
-        }
+        t.normalParams.forEach { normalParams.add(FunctionParamWriter.toJson(it))}
         json["normalParams"] = normalParams
         return json
     }
@@ -195,13 +229,12 @@ object ClassParamWriter: ILibJsonWriter<ClassParam> {
 object TemplateWriter: ILibJsonWriter<DataTemplate> {
     override fun toJson(t: DataTemplate): JSONObject {
         val json = JSONObject()
-        json["id"] = t.identifier
+        json["id"] = if(t is ObjectDataTemplate) t.identifier + "$" else t.identifier
         //父类
         val parents = t.parent.map { it.namespaceID }.toList()
         json["parents"] = parents
         //成员
         json["field"] = CompoundDataFieldWriter.toJson(t.field)
-        json["staticField"] = CompoundDataFieldWriter.toJson(t.staticField)
         return json
     }
 }

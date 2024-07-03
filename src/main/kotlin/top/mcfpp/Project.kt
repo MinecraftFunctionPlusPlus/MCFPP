@@ -207,11 +207,6 @@ object Project {
                             c.field.putVar(c.identifier, v.resolve(c), true)
                         }
                     }
-                    for (v in c.staticField.allVars){
-                        if(v is UnresolvedVar){
-                            c.staticField.putVar(c.identifier, v.resolve(c), true)
-                        }
-                    }
                 }
             }
         }
@@ -222,11 +217,6 @@ object Project {
                     for (v in c.field.allVars){
                         if(v is UnresolvedVar){
                             c.field.putVar(c.identifier, v.resolve(c), true)
-                        }
-                    }
-                    for (v in c.staticField.allVars){
-                        if(v is UnresolvedVar){
-                            c.staticField.putVar(c.identifier, v.resolve(c), true)
                         }
                     }
                 }
@@ -311,9 +301,11 @@ object Project {
         Function.addCommand("execute unless score math mcfpp_init matches 1 run function math:_init")
         //向load中添加类初始化命令
         for (n in GlobalField.localNamespaces.values){
-            n.field.forEachClass { c->
+            n.field.forEachObject { c->
                 run {
-                    c.classPreStaticInit.invoke(ArrayList(), callerClassP = null)
+                    if(c is ObjectClass){
+                        c.classPreInit.invoke(ArrayList(), callerClassP =  null)
+                    }
                 }
             }
         }

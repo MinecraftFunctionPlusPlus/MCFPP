@@ -274,6 +274,41 @@ object GlobalField : FieldContainer, IField {
         return np?.field?.getEnum(identifier)
     }
 
+    /**
+     * 从当前的全局域中获取一个结构体。若不存在，则返回null
+     *
+     * 如果没有提供命名空间，则只会从import导入的库和本地命名空间中搜索。否则则在指定的命名空间中搜索。
+     * @param namespace 可选。这个结构体的命名空间。如果为null，则会从当前所有的命名空间中寻找此结构体。
+     * @param identifier 结构体的标识符
+     * @return 获取的结构体。如果有多个相同标识符的结构体（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
+     */
+    fun getObject(namespace: String?, identifier: String): CompoundData? {
+        if(namespace == null){
+            var obj: CompoundData?
+            //命名空间为空，从全局寻找
+            obj = localNamespaces[Project.currNamespace]!!.field.getObject(identifier)
+            if(obj != null) return obj
+            for (nsp in importedLibNamespaces.values){
+                obj = nsp.field.getObject(identifier)
+                if(obj != null) return obj
+            }
+            for (nsp in stdNamespaces.values){
+                obj = nsp.field.getObject(identifier)
+                if(obj != null) return obj
+            }
+            return null
+        }
+        //按照指定的命名空间寻找
+        var np = localNamespaces[namespace]
+        if(np == null){
+            np = importedLibNamespaces[namespace]
+        }
+        if(np == null){
+            np = stdNamespaces[namespace]
+        }
+        return np?.field?.getObject(identifier)
+    }
+
     @get:Override
     override val prefix: String
         get() = Project.config.defaultNamespace + "_global_"
@@ -302,10 +337,6 @@ object GlobalField : FieldContainer, IField {
             }
             namespace.field.forEachClass { s ->
                 run{
-//                    if (s is NativeClass) {
-//                        println("native class " + s.namespace + ":" + s.identifier + " -> " + s.cls.toString())
-//                        return@run
-//                    }
                     if(s is GenericClass){
                         println("generic class " + s.namespaceID)
                         return@run
@@ -348,32 +379,6 @@ object GlobalField : FieldContainer, IField {
                                 .lowercase(Locale.getDefault()) + " " + v.type + " " + v.identifier
                         )
                     }
-                    println("\tstatic functions:")
-                    s.staticField.forEachFunction { f ->
-                        run {
-                            if (f is NativeFunction) {
-                                println(
-                                    "\t\t" + f.accessModifier.name
-                                        .lowercase(Locale.getDefault()) + " native " + "static" + f.namespaceID
-                                )
-                            } else {
-                                println(
-                                    "\t\t" + f.accessModifier.name
-                                        .lowercase(Locale.getDefault()) + " " + "static" + f.namespaceID
-                                )
-                                for (d in f.commands) {
-                                    println("\t\t\t" + d)
-                                }
-                            }
-                        }
-                    }
-                    println("\tstatic attributes:")
-                    for (v in s.staticField.allVars) {
-                        println(
-                            "\t\t" + v.accessModifier.name
-                                .lowercase(Locale.getDefault()) + " " + "static " + v.type + " " + v.identifier
-                        )
-                    }
                 }
             }
             namespace.field.forEachTemplate { s ->
@@ -399,24 +404,6 @@ object GlobalField : FieldContainer, IField {
                         )
                     }
                     println("\tstatic functions:")
-                    s.staticField.forEachFunction { f ->
-                        run {
-                            println(
-                                "\t\t" + f.accessModifier.name
-                                    .lowercase(Locale.getDefault()) + " " + "static" + f.namespaceID
-                            )
-                            for (d in f.commands) {
-                                println("\t\t\t" + d)
-                            }
-                        }
-                    }
-                    println("\tstatic attributes:")
-                    for (v in s.staticField.allVars) {
-                        println(
-                            "\t\t" + v.accessModifier.name
-                                .lowercase(Locale.getDefault()) + " " + "static " + v.type + " " + v.identifier
-                        )
-                    }
                 }
             }
             namespace.field.forEachInterface { i ->

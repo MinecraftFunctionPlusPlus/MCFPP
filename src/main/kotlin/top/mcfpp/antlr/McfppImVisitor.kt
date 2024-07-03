@@ -219,7 +219,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 throw e
             }
         }else{
-            //TODO 只有一个表达式的计算
+            McfppExprVisitor().visit(ctx.expression())!!
         }
         Function.addCommand("#expression end: " + ctx.text)
         return null
@@ -308,7 +308,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         }
         //解析参数
         val types = FunctionParam.parseReadonlyAndNormalParamTypes(ctx.functionParams())
-        val field = if (ctx.STATIC() != null) data.staticField else data.field
+        val field = data.field
         //获取缓存中的对象
         f = field.getFunction(ctx.Identifier().text, types.first, types.second)
 
@@ -1031,8 +1031,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         //解析参数
         val types = FunctionParam.parseReadonlyAndNormalParamTypes(ctx.functionParams())
         //获取缓存中的对象
-        val fun1 = Class.currClass!!.field.getFunction(ctx.Identifier().text, types.first, types.second)
-        val f = if(fun1 is UnknownFunction) Class.currClass!!.staticField.getFunction(ctx.Identifier().text, types.first, types.second) else fun1
+        val f = Class.currClass!!.field.getFunction(ctx.Identifier().text, types.first, types.second)
         Function.currFunction = f
 
         //对函数进行注解处理
@@ -1117,8 +1116,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         //解析参数
         val types = FunctionParam.parseReadonlyAndNormalParamTypes(ctx.functionParams())
         //获取缓存中的对象
-        val fun1 = DataTemplate.currTemplate!!.field.getFunction(ctx.Identifier().text, types.first, types.second)
-        val f = if(fun1 is UnknownFunction) DataTemplate.currTemplate!!.staticField.getFunction(ctx.Identifier().text, types.first, types.second) else fun1
+        val f = DataTemplate.currTemplate!!.field.getFunction(ctx.Identifier().text, types.first, types.second)
         Function.currFunction = f
 
         //对函数进行注解处理

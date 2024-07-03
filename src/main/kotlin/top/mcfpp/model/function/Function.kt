@@ -207,7 +207,7 @@ open class Function : Member, FieldContainer {
                 StringBuilder("$namespace:$identifier")
             }else{
                 if(isStatic){
-                    StringBuilder("$namespace:${owner!!.identifier}/static/$identifier")
+                    StringBuilder("$namespace:${owner!!.identifier}/object/$identifier")
                 }else{
                     StringBuilder("$namespace:${owner!!.identifier}/$identifier")
                 }
@@ -332,11 +332,7 @@ open class Function : Member, FieldContainer {
         ownerType = OwnerType.CLASS
         owner = cls
         this.isStatic = isStatic
-        field = if (isStatic) {
-            FunctionField(cls.field, this)
-        } else {
-            FunctionField(cls.staticField, this)
-        }
+        field = FunctionField(cls.field, this)
         this.returnType = returnType
         this.returnVar = buildReturnVar(returnType)
     }
@@ -365,20 +361,16 @@ open class Function : Member, FieldContainer {
      * 创建一个函数，并指定它所属的结构体。
      * @param name 函数的标识符
      */
-    constructor(name: String, struct: DataTemplate, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void) {
+    constructor(name: String, template: DataTemplate, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void) {
         this.identifier = name
         commands = CommandList()
         normalParams = ArrayList()
         //readOnlyParams = ArrayList()
-        namespace = struct.namespace
+        namespace = template.namespace
         ownerType = OwnerType.TEMPLATE
-        owner = struct
+        owner = template
         this.isStatic = isStatic
-        field = if (isStatic) {
-            FunctionField(struct.field, this)
-        } else {
-            FunctionField(struct.staticField, this)
-        }
+        field = FunctionField(template.field, this)
         this.returnType = returnType
         this.returnVar = buildReturnVar(returnType)
     }
@@ -429,6 +421,7 @@ open class Function : Member, FieldContainer {
     }
 
     protected fun parseParam(param: mcfppParser.ParameterContext) : Pair<FunctionParam,Var<*>>{
+        //参数构建
         val param1 = FunctionParam(
             MCFPPType.parseFromContext(param.type(), this.field),
             param.Identifier().text,

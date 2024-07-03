@@ -8,7 +8,6 @@ import top.mcfpp.exception.*
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lang.type.UnresolvedType
 import top.mcfpp.annotations.MNIRegister
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.model.*
@@ -21,6 +20,7 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.generic.GenericExtensionFunction
 import top.mcfpp.model.generic.GenericFunction
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.StringHelper
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -155,23 +155,6 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         Class.currClass = clazz
         typeScope = Class.currClass!!.field
         //解析类中的成员
-        //先静态
-        isStatic = true
-        //先解析函数
-        for (c in ctx.classBody().staticClassMemberDeclaration()) {
-            c!!
-            if (c.classMember().classFunctionDeclaration() != null || c.classMember().abstractClassFunctionDeclaration() != null) {
-                visit(c)
-            }
-        }
-        //再解析变量
-        for (c in ctx.classBody().staticClassMemberDeclaration()) {
-            if (c!!.classMember().classFieldDeclaration() != null) {
-                visit(c)
-            }
-        }
-        //后成员
-        isStatic = false
         //先解析函数和构造函数
         for (c in ctx.classBody().classMemberDeclaration()) {
             c!!
@@ -209,19 +192,36 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-    
-    override fun visitStaticClassMemberDeclaration(ctx: mcfppParser.StaticClassMemberDeclarationContext): Any? {
+    override fun visitObjectClassDeclaration(ctx: mcfppParser.ObjectClassDeclarationContext): Any? {
         Project.ctx = ctx
-        val m = visit(ctx.classMember()) as Member
-        //访问修饰符
-        if (ctx.accessModifier() != null) {
-            m.accessModifier = AccessModifier.valueOf(ctx.accessModifier().text.uppercase(Locale.getDefault()))
+        //注册类
+        val id = ctx.classWithoutNamespace().text
+        val namespace = GlobalField.localNamespaces[Project.currNamespace]!!
+        if(ctx.readOnlyParams() != null){
+            return null
         }
-        m.isStatic = true
-        Class.currClass!!.addMember(m)
-        if(m is Function){
-            m.field.removeVar("this")
+        val clazz = namespace.field.getObject(id)
+        if(clazz !is ObjectClass){
+            throw UndefinedException("Class should have been defined: $id")
         }
+        Class.currClass = clazz
+        typeScope = Class.currClass!!.field
+        //解析类中的成员
+        //先解析函数和构造函数
+        for (c in ctx.classBody().classMemberDeclaration()) {
+            c!!
+            if (c.classMember() != null && (c.classMember().classFunctionDeclaration() != null || c.classMember().abstractClassFunctionDeclaration() != null)) {
+                visit(c)
+            }
+        }
+        //再解析变量
+        for (c in ctx.classBody().classMemberDeclaration()) {
+            if (c!!.classMember() != null && c.classMember().classFieldDeclaration() != null) {
+                visit(c)
+            }
+        }
+        Class.currClass = null
+        typeScope = MCFPPFile.currFile!!.field
         return null
     }
 
@@ -287,7 +287,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             GenericFunction(
                 ctx.Identifier().text,
                 Class.currClass!!,
-                ctx.parent is mcfppParser.StaticClassMemberDeclarationContext,
+                Class.currClass!! is ObjectClass,
                 type,
                 ctx.functionBody()
             )
@@ -295,7 +295,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             Function(
                 ctx.Identifier().text,
                 Class.currClass!!,
-                ctx.parent is mcfppParser.StaticClassMemberDeclarationContext,
+                Class.currClass!! is ObjectClass,
                 type
             )
         }
@@ -306,7 +306,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //解析参数
         f.addParamsFromContext(ctx.functionParams())
         //注册函数
-        if (Class.currClass!!.field.hasFunction(f) || Class.currClass!!.staticField.hasFunction(f)) {
+        if (Class.currClass!!.field.hasFunction(f)) {
             if(ctx.OVERRIDE() != null){
                 if(isStatic){
                     LogProcessor.error("Cannot override static method ${ctx.Identifier()}")
@@ -329,7 +329,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val f = Function(
             ctx.Identifier().text,
             Class.currClass!!,
-            ctx.parent is mcfppParser.StaticClassMemberDeclarationContext,
+            false,
             type
         )
         f.isAbstract = true
@@ -425,19 +425,13 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             `var`.parent = ClassPointer(Class.currClass!!,"temp")
         }
         if (Class.currClass!!.field.containVar(c.Identifier().text)
-            || Class.currClass!!.staticField.containVar(c.Identifier().text)
         ) {
             LogProcessor.error("Duplicate defined variable name:" + c.Identifier().text)
             return reList
         }
         //变量的初始化
         if (c.expression() != null) {
-            Function.currFunction = if(isStatic){
-                `var`.isStatic = true
-                Class.currClass!!.classPreStaticInit
-            }else{
-                Class.currClass!!.classPreInit
-            }
+            Function.currFunction = Class.currClass!!.classPreInit
             //是类的成员
             Function.addCommand("#" + ctx.text)
             val init: Var<*> = McfppExprVisitor().visit(c.expression())!!
@@ -560,6 +554,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     }
 
 
+    //TODO 单例的拓展函数
     override fun visitExtensionFunctionDeclaration(ctx: mcfppParser.ExtensionFunctionDeclarationContext?): Any? {
         Project.ctx = ctx!!
         val ownerType : Function.Companion.OwnerType
@@ -574,16 +569,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 }
             }
         }else{
-            val clsStr = ctx.type().className().text.split(":")
-            val id : String
-            val nsp : String?
-            if(clsStr.size == 1){
-                id = clsStr[0]
-                nsp = null
-            }else{
-                id = clsStr[1]
-                nsp = clsStr[0]
-            }
+            val (nsp, id) = StringHelper.splitNamespaceID(ctx.type().className().text)
             val qwq: Class? = GlobalField.getClass(nsp, id)
             if (qwq == null) {
                 val pwp = GlobalField.getTemplate(nsp, id)
@@ -610,7 +596,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         f.ownerType = ownerType
         f.isStatic = ctx.STATIC() != null
         f.addParamsFromContext(ctx.functionParams())
-        val field = if(f.isStatic) data.staticField else data.field
+        val field = data.field
         //注册函数
         if (!field.addFunction(f,false)) {
             LogProcessor.error("Already defined function:" + ctx.Identifier().text + "in class " + Class.currClass!!.identifier)
@@ -688,22 +674,6 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         DataTemplate.currTemplate = template
         typeScope = template.field
         //解析成员
-        //先静态
-        isStatic = true
-        //先解析函数
-        for (c in ctx.templateBody().staticTemplateMemberDeclaration()) {
-            if (c!!.templateMember().templateFunctionDeclaration() != null) {
-                visit(c)
-            }
-        }
-        //再解析变量
-        for (c in ctx.templateBody().staticTemplateMemberDeclaration()) {
-            if (c!!.templateMember().templateFieldDeclaration() != null) {
-                visit(c)
-            }
-        }
-        //后成员
-        isStatic = false
         //先解析函数和构造函数
         for (c in ctx.templateBody().templateMemberDeclaration()) {
             if (c!!.templateMember().templateFunctionDeclaration() != null) {
@@ -721,20 +691,35 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-    
-    override fun visitStaticTemplateMemberDeclaration(ctx: mcfppParser.StaticTemplateMemberDeclarationContext): Any? {
+    override fun visitObjectTemplateDeclaration(ctx: mcfppParser.ObjectTemplateDeclarationContext): Any? {
         Project.ctx = ctx
-        val m = visit(ctx.templateMember()) as Member
-        //访问修饰符
-        m.accessModifier = AccessModifier.valueOf(ctx.accessModifier().text?:"public".uppercase(Locale.getDefault()))
-        m.isStatic = true
-        DataTemplate.currTemplate!!.addMember(m)
-        if(m is Function){
-            m.field.removeVar("this")
+        //注册模板
+        val id = ctx.classWithoutNamespace().text
+        val namespace1 = GlobalField.localNamespaces[Project.currNamespace]!!
+        val objectTemplate = namespace1.field.getObject(id)
+        if(objectTemplate !is ObjectDataTemplate){
+            throw UndefinedException("Template should have been defined: $id")
         }
+        DataTemplate.currTemplate = objectTemplate
+        typeScope = objectTemplate.field
+        //解析成员
+        //先解析函数和构造函数
+        for (c in ctx.templateBody().templateMemberDeclaration()) {
+            if (c!!.templateMember().templateFunctionDeclaration() != null) {
+                visit(c)
+            }
+        }
+        //再解析变量
+        for (c in ctx.templateBody().templateMemberDeclaration()) {
+            if (c!!.templateMember().templateFieldDeclaration() != null) {
+                visit(c)
+            }
+        }
+        DataTemplate.currTemplate = null
+        typeScope = MCFPPFile.currFile!!.field
         return null
     }
-    
+
     override fun visitTemplateMemberDeclaration(ctx: mcfppParser.TemplateMemberDeclarationContext): Any? {
         Project.ctx = ctx
         val m = visit(ctx.templateMember())
@@ -772,7 +757,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             GenericFunction(
                 ctx.Identifier().text,
                 DataTemplate.currTemplate!!,
-                ctx.parent is mcfppParser.StaticTemplateMemberDeclarationContext,
+                DataTemplate.currTemplate is ObjectDataTemplate,
                 type,
                 ctx.functionBody()
             )
@@ -780,7 +765,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             Function(
                 ctx.Identifier().text,
                 DataTemplate.currTemplate!!,
-                ctx.parent is mcfppParser.StaticTemplateMemberDeclarationContext,
+                DataTemplate.currTemplate is ObjectDataTemplate,
                 type
             )
         }
@@ -792,7 +777,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //解析参数
         f.addParamsFromContext(ctx.functionParams())
         //注册函数
-        if (DataTemplate.currTemplate!!.field.hasFunction(f) || DataTemplate.currTemplate!!.staticField.hasFunction(f)) {
+        if (DataTemplate.currTemplate!!.field.hasFunction(f)) {
             LogProcessor.error("Already defined function:" + ctx.Identifier().text + "in struct " + DataTemplate.currTemplate!!.identifier)
             Function.currFunction = Function.nullFunction
         }
@@ -805,7 +790,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //是否是静态的
         `var`.isStatic = isStatic
         //只有可能是结构体成员
-        if (DataTemplate.currTemplate!!.field.containVar(ctx.Identifier().text) || DataTemplate.currTemplate!!.staticField.containVar(ctx.Identifier().text)
+        if (DataTemplate.currTemplate!!.field.containVar(ctx.Identifier().text)
         ) {
             LogProcessor.error("Duplicate defined variable name:" + ctx.Identifier().text)
             return null

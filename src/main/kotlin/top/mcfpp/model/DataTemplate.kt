@@ -30,16 +30,15 @@ open class DataTemplate : FieldContainer, CompoundData {
 
     constructor(identifier: String, namespace: String = Project.currNamespace){
         this.identifier = identifier
-        field = CompoundDataField(staticField,this)
-        staticField = CompoundDataField(null, this)
+        field = CompoundDataField(null ,this)
         this.namespace = namespace
     }
 
     /**
      * 获取这个类对于的classType
      */
-    fun getType() : MCFPPDataTemplateType {
-        return MCFPPDataTemplateType(this,
+    override val getType: () -> MCFPPDataTemplateType = {
+        MCFPPDataTemplateType(this,
             parent.filterIsInstance<DataTemplate>().map { it.getType() }
         )
     }
