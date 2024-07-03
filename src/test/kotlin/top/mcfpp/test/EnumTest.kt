@@ -9,7 +9,7 @@ class EnumTest {
         val test =
             """
                 enum Test{
-                    A,B,C,D
+                    A=1,B=5,C,D
                 } 
                 
                 func main(){

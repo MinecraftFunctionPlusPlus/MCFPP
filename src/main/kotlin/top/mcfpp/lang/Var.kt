@@ -397,12 +397,13 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
                     parent.clazz.field.putVar(v.identifier, v, true)
                 }
                 is MCFPPTypeVar -> {
+                    TODO()
                     when(val type = parent.type){
                         is MCFPPClassType ->{
-                            type.cls.staticField.putVar(v.identifier, v, true)
+                            type.cls.field.putVar(v.identifier, v, true)
                         }
                         is MCFPPCompoundType -> {
-                            type.compoundData.staticField.putVar(v.identifier, v, true)
+                            type.compoundData.field.putVar(v.identifier, v, true)
                         }
                         else -> TODO()
                     }

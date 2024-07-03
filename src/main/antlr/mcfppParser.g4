@@ -63,6 +63,7 @@ typeDeclaration
 //类或函数声明
 declarations
     :   classDeclaration
+    |   objectClassDeclaration
     |   functionDeclaration
     |   inlineFunctionDeclaration
     |   nativeFuncDeclaration
@@ -70,6 +71,7 @@ declarations
     |   compileTimeClassDeclaration
     |   nativeClassDeclaration
     |   templateDeclaration
+    |   objectTemplateDeclaration
     |   extensionFunctionDeclaration
     |   interfaceDeclaration
     |   globalDeclaration
@@ -83,7 +85,11 @@ globalDeclaration
 
 //类声明
 classDeclaration
-    :   classAnnotation? STATIC? FINAL? ABSTRACT? OBJECT? CLASS classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? classBody
+    :   classAnnotation? STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? classBody
+    ;
+
+objectClassDeclaration
+    :   classAnnotation? OBJECT CLASS classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? classBody
     ;
 
 compileTimeClassDeclaration
@@ -94,16 +100,12 @@ nativeClassDeclaration
     :   CLASS classWithoutNamespace '=' javaRefer ';'
     ;
 
-staticClassMemberDeclaration
-    :   accessModifier? STATIC classMember
-    ;
-
 classMemberDeclaration
     :   accessModifier? classMember
     ;
 
 classBody
-    :   '{' (doc_comment? (classMemberDeclaration|staticClassMemberDeclaration))* '}'
+    :   '{' (doc_comment? classMemberDeclaration)* '}'
     ;
 
 //类成员
@@ -136,16 +138,17 @@ templateDeclaration
     :   FINAL? OBJECT? DATA classWithoutNamespace (COLON className)? templateBody
     ;
 
+//数据模板
+objectTemplateDeclaration
+    :   FINAL? OBJECT DATA classWithoutNamespace (COLON className)? templateBody
+    ;
+
 templateBody
-    :   '{' (doc_comment? (templateMemberDeclaration|staticTemplateMemberDeclaration))* '}'
+    :   '{' (doc_comment? templateMemberDeclaration)* '}'
     ;
 
 templateMemberDeclaration
     :   accessModifier? templateMember
-    ;
-
-staticTemplateMemberDeclaration
-    :   accessModifier? STATIC templateMember
     ;
 
 templateMember
@@ -259,7 +262,7 @@ parameterList
 
 //参数
 parameter
-    :   STATIC? type Identifier '=' expression
+    :   STATIC? type Identifier ('=' expression)?
     ;
 
 //表达式

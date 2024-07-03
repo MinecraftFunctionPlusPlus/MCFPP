@@ -6,7 +6,6 @@ import top.mcfpp.lang.type.UnresolvedType
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.field.NamespaceField
 import top.mcfpp.model.function.Function
-import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.generic.GenericFunction
 
@@ -36,11 +35,6 @@ class Namespace(val identifier: String) {
                         c.field.putVar(c.identifier, v.resolve(c), true)
                     }
                 }
-                for (v in c.staticField.allVars){
-                    if(v is UnresolvedVar){
-                        c.staticField.putVar(c.identifier, v.resolve(c), true)
-                    }
-                }
                 c.constructors.forEach { constructor -> run{
                     constructor.normalParams.forEach {
                         if(it.type is UnresolvedType){
@@ -49,7 +43,6 @@ class Namespace(val identifier: String) {
                     }
                 } }
                 c.field.forEachFunction { resolveFunction(it) }
-                c.staticField.forEachFunction { resolveFunction(it) }
             }
         }
         field.forEachTemplate { t ->
@@ -59,13 +52,17 @@ class Namespace(val identifier: String) {
                         t.field.putVar(t.identifier, v.resolve(t), true)
                     }
                 }
-                for (v in t.staticField.allVars){
+                t.field.forEachFunction { resolveFunction(it) }
+            }
+        }
+        field.forEachObject { o ->
+            run {
+                for (v in o.field.allVars){
                     if(v is UnresolvedVar){
-                        t.staticField.putVar(t.identifier, v.resolve(t), true)
+                        o.field.putVar(o.identifier, v.resolve(o), true)
                     }
                 }
-                t.field.forEachFunction { resolveFunction(it) }
-                t.staticField.forEachFunction { resolveFunction(it) }
+                o.field.forEachFunction { resolveFunction(it) }
             }
         }
         field.forEachFunction { resolveFunction(it) }

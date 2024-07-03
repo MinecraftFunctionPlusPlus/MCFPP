@@ -2,6 +2,7 @@ package top.mcfpp.model
 
 import top.mcfpp.Project
 import top.mcfpp.annotations.MNIRegister
+import top.mcfpp.lang.CanSelectMember
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.field.CompoundDataField
@@ -34,11 +35,6 @@ open class CompoundData : FieldContainer {
      */
     var field: CompoundDataField
 
-    /**
-     * 静态变量和静态函数
-     */
-    var staticField: CompoundDataField
-
     open val namespaceID : String
         get() = "$namespace:$identifier"
 
@@ -52,16 +48,18 @@ open class CompoundData : FieldContainer {
     constructor(identifier: String, namespace: String = Project.currNamespace){
         this.identifier = identifier
         this.namespace = namespace
-        staticField = CompoundDataField(null, this)
-        field = CompoundDataField(staticField,this)
+        field = CompoundDataField(null, this)
     }
 
     protected constructor(){
-        staticField = CompoundDataField(null, this)
-        field = CompoundDataField(staticField,this)
+        field = CompoundDataField(null,this)
     }
 
     open fun initialize(){}
+
+    open val getType :() -> MCFPPType = {
+        MCFPPType(this, parent.map { it.getType() }.toList())
+    }
 
     /**
      * 返回一个成员字段。如果没有，则从父类中寻找
@@ -70,11 +68,7 @@ open class CompoundData : FieldContainer {
      * @return 如果字段存在，则返回此字段，否则返回null
      */
     fun getVar(key: String, isStatic: Boolean = false): Var<*>? {
-        var re = if(isStatic){
-            staticField.getVar(key)
-        }else{
-            field.getVar(key)
-        }
+        var re = field.getVar(key)
         val iterator = parent.iterator()
         while (re == null && iterator.hasNext()){
             re = iterator.next().getVar(key,isStatic)
@@ -92,11 +86,7 @@ open class CompoundData : FieldContainer {
      * @return 如果函数存在，则返回此函数，否则返回null
      */
     fun getFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>, isStatic: Boolean = false): Function {
-        var re = if(isStatic){
-            staticField.getFunction(key, readOnlyParams, normalParams)
-        }else{
-            field.getFunction(key, readOnlyParams, normalParams)
-        }
+        var re = field.getFunction(key, readOnlyParams, normalParams)
         val iterator = parent.iterator()
         while (re is UnknownFunction && iterator.hasNext()){
             re = iterator.next().getFunction(key,readOnlyParams , normalParams ,isStatic)
@@ -109,20 +99,10 @@ open class CompoundData : FieldContainer {
      * @param member 要添加的成员
      */
     fun addMember(member: Member) {
-        //非静态成员
-        if (!member.isStatic) {
-            if (member is Function) {
-                field.addFunction(member, false)
-            } else if (member is Var<*>) {
-                field.putVar(member.identifier, member)
-            }
-            return
-        }
-        //静态成员
         if (member is Function) {
-            staticField.addFunction(member, false)
+            field.addFunction(member, false)
         } else if (member is Var<*>) {
-            staticField.putVar(member.identifier, member)
+            field.putVar(member.identifier, member)
         }
     }
 

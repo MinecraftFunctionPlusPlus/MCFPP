@@ -3,17 +3,18 @@ package top.mcfpp.antlr
 import top.mcfpp.Project
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.model.Class
+import top.mcfpp.model.ObjectClass
 import top.mcfpp.model.function.Constructor
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
 
-class McfppGenericClassFieldVisitor(val clazz: Class) : McfppFieldVisitor() {
+class McfppGenericObjectClassFieldVisitor(val clazz: ObjectClass) : McfppFieldVisitor() {
     override fun visitClassDeclaration(ctx: mcfppParser.ClassDeclarationContext): Any? {
         Project.ctx = ctx
 
         Class.currClass = clazz
 
-        typeScope = Class.currClass!!.field
+        typeScope = clazz.field
         //解析类中的成员
         //先解析函数和构造函数
         for (c in ctx.classBody().classMemberDeclaration()) {
@@ -28,24 +29,18 @@ class McfppGenericClassFieldVisitor(val clazz: Class) : McfppFieldVisitor() {
                 visit(c)
             }
         }
-        //如果没有构造函数，自动添加默认的空构造函数
-        if (Class.currClass!!.constructors.size == 0) {
-            Class.currClass!!.addConstructor(Constructor(Class.currClass!!))
-        }
-        //是否为抽象类
-        if(!Class.currClass!!.isAbstract){
-            var il : Function? = null
-            Class.currClass!!.field.forEachFunction { f ->
-                run {
-                    if(f.isAbstract){
-                        il = f
-                        return@run
-                    }
+        //不可能为抽象类
+        var il : Function? = null
+        clazz.field.forEachFunction { f ->
+            run {
+                if(f.isAbstract){
+                    il = f
+                    return@run
                 }
             }
-            if(il != null){
-                LogProcessor.error("Class ${Class.currClass} must either be declared abstract or implement abstract method ${il!!.nameWithNamespace}")
-            }
+        }
+        if(il != null){
+            LogProcessor.error("Class $clazz must either be declared abstract or implement abstract method ${il!!.nameWithNamespace}")
         }
         Class.currClass = null
         typeScope = MCFPPFile.currFile!!.field

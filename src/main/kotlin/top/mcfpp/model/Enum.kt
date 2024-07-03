@@ -4,6 +4,7 @@ import top.mcfpp.lang.SbObject
 import top.mcfpp.lang.type.MCFPPDataTemplateType
 import top.mcfpp.lang.type.MCFPPEnumType
 import top.mcfpp.model.field.GlobalField
+import top.mcfpp.util.LogProcessor
 
 class Enum(identifier: String, namespace: String) : CompoundData(identifier, namespace){
 
@@ -12,11 +13,16 @@ class Enum(identifier: String, namespace: String) : CompoundData(identifier, nam
 
     var members: HashMap<String, EnumMember> = HashMap()
 
+    val values get() = members.map { it.value.value }
+
     init {
         GlobalField.scoreboards[namespaceID] = sbObject
     }
 
     fun addMember(member: EnumMember){
+        if(values.contains(member.value)){
+            LogProcessor.error("Enum member value conflict: ${member.identifier}(${member.value})")
+        }
         members[member.identifier] = member
     }
 
@@ -37,8 +43,8 @@ class Enum(identifier: String, namespace: String) : CompoundData(identifier, nam
     /**
      * 获取这个类对于的classType
      */
-    fun getType() : MCFPPEnumType {
-        return MCFPPEnumType(this)
+    override val getType: () -> MCFPPEnumType = {
+        MCFPPEnumType(this)
     }
 }
 

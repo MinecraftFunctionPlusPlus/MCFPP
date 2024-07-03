@@ -110,9 +110,6 @@ object DatapackCreator {
                 }
                 namespace.value.field.forEachClass { cls ->
                     run {
-                        if (cls is Native) {
-                            return@run
-                        }
                         //成员
                         cls.field.forEachFunction { f->
                             run {
@@ -131,23 +128,6 @@ object DatapackCreator {
                                 )
                             }
                         }
-                        cls.staticField.forEachFunction { f ->
-                            run {
-                                if (f is Native) {
-                                    return@run
-                                }
-                                LogProcessor.debug("Writing File: $currPath\\functions\\"  + f.nameWithNamespace + ".mcfunction")
-                                //TODO 可能无法正确创建文件夹
-                                Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(cls.identifier) + "/static"))
-                                if (f is ExtensionFunction){
-                                    Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(cls.identifier) + "/ex_static"))
-                                }
-                                Files.write(
-                                    Paths.get("$currPath/functions/" + f.nameWithNamespace + ".mcfunction"),
-                                    f.cmdStr.toByteArray()
-                                )
-                            }
-                        }
                         //构造函数
                         cls.constructors.forEach{ c ->
                             run {
@@ -157,6 +137,51 @@ object DatapackCreator {
                                 Files.write(
                                     Paths.get("$currPath/functions/" + c.nameWithNamespace + ".mcfunction"),
                                     c.cmdStr.toByteArray()
+                                )
+                            }
+                        }
+                    }
+                }
+
+                namespace.value.field.forEachTemplate { t ->
+                    run {
+                        //成员
+                        t.field.forEachFunction { f->
+                            run {
+                                if (f is Native) {
+                                    return@run
+                                }
+                                LogProcessor.debug("Writing File: $currPath\\functions\\" + f.nameWithNamespace + ".mcfunction")
+                                //TODO 可能无法正确创建文件夹
+                                Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(t.identifier)))
+                                if (f is ExtensionFunction){
+                                    Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(t.identifier) + "/ex"))
+                                }
+                                Files.write(
+                                    Paths.get("$currPath/functions/"  + f.nameWithNamespace + ".mcfunction"),
+                                    f.cmdStr.toByteArray()
+                                )
+                            }
+                        }
+                    }
+                }
+                namespace.value.field.forEachObject { obj ->
+                    run {
+                        //成员
+                        obj.field.forEachFunction { f->
+                            run {
+                                if (f is Native) {
+                                    return@run
+                                }
+                                LogProcessor.debug("Writing File: $currPath\\functions\\" + f.nameWithNamespace + ".mcfunction")
+                                //TODO 可能无法正确创建文件夹
+                                Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(obj.identifier)))
+                                if (f is ExtensionFunction){
+                                    Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(obj.identifier) + "/ex"))
+                                }
+                                Files.write(
+                                    Paths.get("$currPath/functions/"  + f.nameWithNamespace + ".mcfunction"),
+                                    f.cmdStr.toByteArray()
                                 )
                             }
                         }

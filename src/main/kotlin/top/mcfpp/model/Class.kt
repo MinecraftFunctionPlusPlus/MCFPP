@@ -46,13 +46,8 @@ import kotlin.collections.ArrayList
  */
 open class Class : CompoundData {
 
-    lateinit var uuid: UUID
-    lateinit var uuidNBT : IntArrayTag
-
-    /**
-     * 记录这个类所有实例地址的记分板
-     */
-    lateinit var addressSbObject: SbObject
+    var uuid: UUID
+    var uuidNBT : IntArrayTag
 
     /**
      * 构造函数
@@ -75,11 +70,6 @@ open class Class : CompoundData {
     lateinit var classPreInit: Function
 
     /**
-     * 类的静态字段的初始化函数
-     */
-    lateinit var classPreStaticInit: Function
-
-    /**
      * 临时指针。所有的类都共用一个临时指针。临时指针只能在创建对象的期间使用。
      */
     lateinit var initPointer : ClassPointer
@@ -87,7 +77,7 @@ open class Class : CompoundData {
     /**
      * 是否已经继承了一个类
      */
-    private var hasParentClass = false
+    protected var hasParentClass = false
 
     /**
      * 生成一个类，它拥有指定的标识符和命名空间
@@ -97,23 +87,15 @@ open class Class : CompoundData {
     constructor(identifier: String, namespace: String = Project.currNamespace) {
         this.identifier = identifier
         this.namespace = namespace
+        uuid = UUID.nameUUIDFromBytes("$namespace:$identifier".toByteArray())
+        uuidNBT = Utils.toNBTArrayUUID(uuid)
     }
 
     override fun initialize(){
         super.initialize()
-        uuid = UUID.nameUUIDFromBytes(namespaceID.toByteArray())
-        uuidNBT = Utils.toNBTArrayUUID(uuid)
         classPreInit = Function("_class_preinit_$identifier", this, false)
-        classPreStaticInit = Function("_class_prestaticinit_$identifier", this, true)
         field.addFunction(classPreInit,true)
-        staticField.addFunction(classPreStaticInit,true)
-        addressSbObject = SbObject(namespace + "_class_" + identifier + "_index")
         initPointer =  ClassPointer(this, "INIT")
-        //staticinit函数的初始化直入。生成static实体
-        classPreStaticInit.commands.add(
-            "execute in minecraft:overworld " +
-                    "run summon marker 0 1 0 {Tags:[$staticTag],UUID:$uuidNBT}"
-        )
     }
 
     @get:Override
@@ -125,9 +107,6 @@ open class Class : CompoundData {
      */
     open val tag: String
         get() = namespace + "_class_" + identifier + "_pointer"
-
-    open val staticTag: String
-        get() = namespace + "_class_" + identifier + "_static_pointer"
 
     fun getConstructor(normalParams: ArrayList<String>): Constructor?{
         return getConstructorInner(
@@ -192,7 +171,7 @@ open class Class : CompoundData {
     /**
      * 获取这个类对于的classType
      */
-    var getType : () -> MCFPPClassType = {
+    override var getType: () -> MCFPPType = {
         MCFPPClassType(this,
             parent.filterIsInstance<Class>().map { it.getType() }
         )

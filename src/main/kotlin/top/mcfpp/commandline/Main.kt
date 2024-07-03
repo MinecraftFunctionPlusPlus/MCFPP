@@ -31,11 +31,6 @@ fun main(){
                         c.field.putVar(c.identifier, v, true)
                     }
                 }
-                for (v in c.staticField.allVars){
-                    if(v is UnresolvedVar){
-                        c.staticField.putVar(c.identifier, v, true)
-                    }
-                }
             }
         }
     }

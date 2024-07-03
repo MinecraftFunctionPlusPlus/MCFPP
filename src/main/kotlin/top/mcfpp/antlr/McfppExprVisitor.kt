@@ -422,22 +422,12 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 } else{
                     StringHelper.splitNamespaceID(ctx.type().text)
                 }
-                val clazz = GlobalField.getClass(namespaceID.first, namespaceID.second)
-                if (clazz != null) {
-                    currSelector = clazz.getType()
-                }else{
-                    val template = GlobalField.getTemplate(namespaceID.first, namespaceID.second)
-                    if(template != null){
-                        currSelector = template.getType()
-                    }else{
-                        val enum = GlobalField.getEnum(namespaceID.first, namespaceID.second)
-                        if(enum != null){
-                            currSelector = enum.getType()
-                        }else{
-                            LogProcessor.error("Undefined type: ${namespaceID.second}")
-                            currSelector = UnknownVar("${ctx.type().className().text}_type_" + UUID.randomUUID())
-                        }
-                    }
+                val o = GlobalField.getObject(namespaceID.first, namespaceID.second)
+                if(o != null) {
+                    currSelector = o.getType()
+                } else{
+                    LogProcessor.error("Undefined type: ${namespaceID.second}")
+                    currSelector = UnknownVar("${ctx.type().className().text}_type_" + UUID.randomUUID())
                 }
             }else{
                 currSelector = CompoundDataCompanion(
