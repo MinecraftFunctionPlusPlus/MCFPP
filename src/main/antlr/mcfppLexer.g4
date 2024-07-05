@@ -105,6 +105,8 @@ DATA:'data';
 FUNCTION:'func';
 ENUM:'enum';
 
+CONSTRUCTOR:'constructor';
+
 GLOBAL:'global';
 VAR:'var';
 

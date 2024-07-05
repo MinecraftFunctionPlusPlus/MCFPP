@@ -67,7 +67,7 @@ open class Class : CompoundData {
     /**
      * 类的字段初始化函数
      */
-    lateinit var classPreInit: Function
+    var classPreInit: Function
 
     /**
      * 临时指针。所有的类都共用一个临时指针。临时指针只能在创建对象的期间使用。
@@ -89,12 +89,12 @@ open class Class : CompoundData {
         this.namespace = namespace
         uuid = UUID.nameUUIDFromBytes("$namespace:$identifier".toByteArray())
         uuidNBT = Utils.toNBTArrayUUID(uuid)
+        classPreInit = Function("_class_preinit_$identifier", this, false)
+        field.addFunction(classPreInit,true)
     }
 
     override fun initialize(){
         super.initialize()
-        classPreInit = Function("_class_preinit_$identifier", this, false)
-        field.addFunction(classPreInit,true)
         initPointer =  ClassPointer(this, "INIT")
     }
 

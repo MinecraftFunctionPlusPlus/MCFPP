@@ -99,8 +99,12 @@ class ClassPointer : Var<Int>{
                 }
                 isNull = b.isNull
                 //地址储存
-                Function.addCommand(Command.build(
-                    "data modify $nbtPath set from ${b.nbtPath}"))
+                Function.addCommand(
+                    Command.build("data modify")
+                        .build(nbtPath.toCommandPart())
+                        .build("set from")
+                        .build(b.nbtPath.toCommandPart())
+                )
                 //实例中的指针列表
                 val c = Commands.selectRun(this,Commands.sbPlayerAdd(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1))
                 Function.addCommands(c)

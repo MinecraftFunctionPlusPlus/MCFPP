@@ -187,7 +187,7 @@ inlineFunctionDeclaration
 
 //函数声明
 functionDeclaration
-    :   funcAnnoation? FUNCTION Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
+    :   funcAnnoation? FUNCTION Identifier functionParams? (ARROW functionReturnType)? '{' functionBody '}'
     ;
 
 extensionFunctionDeclaration
@@ -228,7 +228,7 @@ accessModifier
 
 //构造函数声明
 constructorDeclaration
-    :   funcAnnoation? className normalParams '{' functionBody '}'
+    :   funcAnnoation? accessModifier? CONSTRUCTOR normalParams '{' functionBody '}'
     ;
 
 //变量声明

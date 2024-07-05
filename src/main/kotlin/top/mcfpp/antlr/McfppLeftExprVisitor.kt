@@ -16,7 +16,7 @@ import top.mcfpp.util.StringHelper
 import java.util.*
 import kotlin.collections.ArrayList
 
-class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>?>(){
+class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
     private var currSelector : CanSelectMember? = null
     /**
      * 计算一个基本的表达式。可能是一个变量，也可能是一个数值
@@ -24,7 +24,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>?>(){
      * @return 表达式的值
      */
     @Override
-    override fun visitBasicExpression(ctx: mcfppParser.BasicExpressionContext): Var<*>? {
+    override fun visitBasicExpression(ctx: mcfppParser.BasicExpressionContext): Var<*> {
         Project.ctx = ctx
         return if (ctx.primary() != null) {
             visit(ctx.primary())
@@ -40,7 +40,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>?>(){
      * @return
      */
     @Override
-    override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var<*>? {
+    override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var<*> {
         Project.ctx = ctx
         val namespaceID : Pair<String?, String>
         if(ctx.primary() != null){
@@ -77,9 +77,9 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>?>(){
     }
 
     @Override
-    override fun visitSelector(ctx: mcfppParser.SelectorContext?): Var<*>? {
+    override fun visitSelector(ctx: mcfppParser.SelectorContext?): Var<*> {
         currSelector = visit(ctx!!.`var`())!!.getTempVar()
-        return null
+        return (currSelector as Var<*>)
     }
 
     /**
@@ -88,20 +88,14 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>?>(){
      * @return 表达式的值
      */
     @Override
-    override fun visitPrimary(ctx: mcfppParser.PrimaryContext): Var<*>? {
+    override fun visitPrimary(ctx: mcfppParser.PrimaryContext): Var<*> {
         Project.ctx = ctx
         if (ctx.`var`() != null) {
             //变量
             return visit(ctx.`var`())
         } else if (ctx.value() != null) {
             //数字
-            val num: mcfppParser.ValueContext = ctx.value()
-            if (num.intValue() != null) {
-                return MCIntConcrete(Integer.parseInt(num.intValue().text))
-            } else if (num.LineString() != null) {
-                val r: String = num.LineString().text
-                return MCString(r.substring(1, r.length - 1))
-            }
+            return visit(ctx.value())
         } else {
             //this或者super
             val s = if(ctx.SUPER() != null){
@@ -112,10 +106,10 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>?>(){
             val re: Var<*>? = Function.field.getVar(s)
             if (re == null) {
                 LogProcessor.error("$s can only be used in member functions.")
+                return UnknownVar("error_this")
             }
             return re
         }
-        return null
     }
 
     /**
@@ -125,44 +119,39 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>?>(){
      */
     @Override
     @InsertCommand
-    override fun visitVar(ctx: mcfppParser.VarContext): Var<*>? {
+    override fun visitVar(ctx: mcfppParser.VarContext): Var<*> {
         Project.ctx = ctx
         return if (ctx.Identifier() != null && ctx.arguments() == null) {
+            //变量
+            //没有数组选取
+            val qwq: String = ctx.Identifier().text
+            var re = if(currSelector == null) {
+                Function.currFunction.field.getVar(qwq) ?: UnknownVar(qwq)
+            }else{
+                //获取成员
+                val re  = currSelector!!.getMemberVar(qwq, currSelector!!.getAccess(Function.currFunction))
+                if (re.first == null) {
+                    UnknownVar(qwq)
+                }else if (!re.second){
+                    LogProcessor.error("Cannot access member $qwq")
+                    UnknownVar(qwq)
+                }else{
+                    re.first!!
+                }
+            }
             // Identifier identifierSuffix*
             if (ctx.identifierSuffix() == null || ctx.identifierSuffix().size == 0) {
-                //没有数组选取
-                val qwq: String = ctx.Identifier().text
-                if(currSelector == null){
-                    val re: Var<*>? = Function.field.getVar(qwq)
-                    if (re == null) {
-                        LogProcessor.error("Undefined variable:$qwq")
-                    }
-                    re
-                }else{
-                    val cpd = when(currSelector){
-                        is CompoundDataCompanion -> (currSelector as CompoundDataCompanion).dataType
-                        is ClassPointer -> (currSelector as ClassPointer).clazz
-                        is DataTemplateObject -> (currSelector as DataTemplateObject).templateType
-                        else -> TODO(currSelector.toString())
-                    }
-                    val am = if(Function.currFunction !is ExtensionFunction && Function.currFunction.ownerType == Function.Companion.OwnerType.CLASS){
-                        Function.currFunction.parentClass()!!.getAccess(cpd)
-                    }else if(Function.currFunction !is ExtensionFunction && Function.currFunction.ownerType == Function.Companion.OwnerType.TEMPLATE){
-                        Function.currFunction.parentTemplate()!!.getAccess(cpd)
-                    }else{
-                        Member.AccessModifier.PUBLIC
-                    }
-                    val re  = currSelector!!.getMemberVar(qwq,am)
-                    if (re.first == null) {
-                        LogProcessor.error("Undefined variable:$qwq")
-                    }
-                    if (!re.second){
-                        LogProcessor.error("Cannot access member $qwq")
-                    }
-                    re.first
-                }
+                return re
             } else {
-                TODO("数组调用")
+                if(re is Indexable<*>){
+                    for (value in ctx.identifierSuffix()) {
+                        val index = visit(value.conditionalExpression())!!
+                        re = (re as Indexable<*>).getByIndex(index)
+                    }
+                }else{
+                    throw IllegalArgumentException("Cannot index ${re.type}")
+                }
+                return re
             }
         } else if (ctx.expression() != null) {
             // '(' expression ')'
