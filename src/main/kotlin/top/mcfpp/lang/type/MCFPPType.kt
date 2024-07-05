@@ -336,7 +336,6 @@ open class MCFPPType(
                 //类
                 val clazz = GlobalField.getClass(nspID.first, nspID.second)
                 if(clazz !=null) {
-                    //val t = clazz.getType()
                     if(clazz is GenericClass){
                         if(clazz.readOnlyParams.size != ctx.type().readOnlyArgs()?.expressionList()?.expression()?.size){
                             LogProcessor.error("Generic class ${clazz.identifier} requires ${clazz.readOnlyParams.size} type arguments, but ${ctx.readOnlyArgs().expressionList().expression().size} were provided")
@@ -345,6 +344,8 @@ open class MCFPPType(
                         val expr = McfppExprVisitor()
                         val readOnlyArgs = ctx.type().readOnlyArgs()?.expressionList()?.expression()?.map { expr.visit(it)!! } ?: listOf()
                         return clazz.compile(readOnlyArgs).getType()
+                    }else{
+                        return clazz.getType()
                     }
                 }
                 //数据模板

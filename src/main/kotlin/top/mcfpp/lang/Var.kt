@@ -248,7 +248,8 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      * @return 计算的结果
      */
     open fun plus(a: Var<*>): Var<*> {
-        throw OperationNotImplementException()
+        LogProcessor.error("type ${type.typeName} not support operation '+'")
+        return UnknownVar("")
     }
 
     /**
@@ -257,7 +258,8 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      * @return 计算的结果
      */
     open fun minus(a: Var<*>): Var<*> {
-        throw OperationNotImplementException()
+        LogProcessor.error("type ${type.typeName} not support operation '-'")
+        return UnknownVar("")
     }
 
     /**
@@ -266,7 +268,8 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      * @return 计算的结果
      */
     open fun multiple(a: Var<*>): Var<*> {
-        throw OperationNotImplementException()
+        LogProcessor.error("type ${type.typeName} not support operation '*'")
+        return UnknownVar("")
     }
 
     /**
@@ -275,7 +278,8 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      * @return 计算的结果
      */
     open fun divide(a: Var<*>): Var<*> {
-        throw OperationNotImplementException()
+        LogProcessor.error("type ${type.typeName} not support operation '/'")
+        return UnknownVar("")
     }
 
     /**
@@ -284,7 +288,8 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      * @return 计算的结果
      */
     open fun modular(a: Var<*>): Var<*> {
-        throw OperationNotImplementException()
+        LogProcessor.error("type ${type.typeName} not support operation '%'")
+        return UnknownVar("")
     }
 
 
@@ -294,7 +299,8 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      * @return 计算结果
      */
     open fun isBigger(a: Var<*>): MCBool {
-        throw OperationNotImplementException()
+        LogProcessor.error("type ${type.typeName} not support operation '>'")
+        return MCBool("")
     }
 
 
@@ -304,7 +310,8 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      * @return 计算结果
      */
     open fun isSmaller(a: Var<*>): MCBool {
-        throw OperationNotImplementException()
+        LogProcessor.error("type ${type.typeName} not support operation '<'")
+        return MCBool("")
     }
 
     /**
@@ -313,7 +320,8 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      * @return 计算结果
      */
     open fun isSmallerOrEqual(a: Var<*>): MCBool {
-        throw OperationNotImplementException()
+        LogProcessor.error("type ${type.typeName} not support operation '<='")
+        return MCBool("")
     }
 
     /**
@@ -322,7 +330,8 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      * @return 计算结果
      */
     open fun isGreaterOrEqual(a: Var<*>): MCBool {
-        throw OperationNotImplementException()
+        LogProcessor.error("type ${type.typeName} not support operation '>='")
+        return MCBool("")
     }
 
     /**
@@ -331,7 +340,8 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      * @return 计算结果
      */
     open fun isEqual(a: Var<*>): MCBool {
-        throw OperationNotImplementException()
+        LogProcessor.error("type ${type.typeName} not support operation '=='")
+        return MCBool("")
     }
 
     /**
@@ -340,7 +350,8 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      * @return 计算结果
      */
     open fun isNotEqual(a: Var<*>): MCBool {
-        throw OperationNotImplementException()
+        LogProcessor.error("type ${type.typeName} not support operation '!='")
+        return MCBool("")
     }
 
 

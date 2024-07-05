@@ -50,9 +50,9 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         Project.ctx = ctx
         val f: Function
         //获取函数对象
-        val types = FunctionParam.parseReadonlyAndNormalParamTypes(ctx.functionParams())
+        val types = ctx.functionParams()?.let { FunctionParam.parseReadonlyAndNormalParamTypes(it) }
         //获取缓存中的对象
-        f = GlobalField.getFunction(Project.currNamespace, ctx.Identifier().text, types.first, types.second)
+        f = GlobalField.getFunction(Project.currNamespace, ctx.Identifier().text, types?.first?:ArrayList(), types?.second?:ArrayList())
         Function.currFunction = f
         //对函数进行注解处理
         for (a in annoInCompound){
@@ -65,7 +65,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         Project.ctx = ctx
         //函数是否有返回值
         if(Function.currFunction !is Generic<*> && Function.currFunction.returnType !=  MCFPPBaseType.Void && !Function.currFunction.hasReturnStatement){
-            LogProcessor.error("A 'return' expression required in function: " + Function.currFunction.namespaceID)
+            LogProcessor.error("Function should return a value: " + Function.currFunction.namespaceID)
         }
         Function.currFunction = Function.nullFunction
         if (Class.currClass == null) {
@@ -205,7 +205,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         Project.ctx = ctx
         Function.addCommand("#expression: " + ctx.text)
         if(ctx.basicExpression() != null){
-            val left: Var<*> = McfppLeftExprVisitor().visit(ctx.basicExpression())!!
+            val left: Var<*> = McfppLeftExprVisitor().visit(ctx.basicExpression())
             if (left.isConst) {
                 LogProcessor.error("Cannot assign a constant repeatedly: " + left.identifier)
                 return null
@@ -979,8 +979,13 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     private fun enterClassBody(ctx: mcfppParser.ClassBodyContext) {
         Project.ctx = ctx
         //获取类的对象
-        val parent: mcfppParser.ClassDeclarationContext = ctx.parent as mcfppParser.ClassDeclarationContext
-        val identifier: String = parent.classWithoutNamespace().text
+        val parent = ctx.parent
+        val identifier = if(parent is mcfppParser.ClassDeclarationContext){
+             parent.classWithoutNamespace().text
+        }else{
+            parent as mcfppParser.ObjectClassDeclarationContext
+            parent.classWithoutNamespace().text
+        }
         //设置作用域
         Class.currClass = GlobalField.getClass(Project.currNamespace, identifier)
         Function.currFunction = Class.currClass!!.classPreInit
@@ -1000,22 +1005,6 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         Project.ctx = ctx
         Class.currClass = null
         Function.currFunction = Function.nullFunction
-    }
-
-    /**
-     * 类成员的声明
-     * @param ctx the parse tree
-     */
-    
-    override fun visitClassMemberDeclaration(ctx: mcfppParser.ClassMemberDeclarationContext):Any? {
-        Project.ctx = ctx
-        val memberContext: mcfppParser.ClassMemberContext = ctx.classMember()?:return null
-        if (memberContext.classFunctionDeclaration() != null) {
-            //函数声明由函数的listener处理
-            visit(memberContext.classFunctionDeclaration())
-            return null
-        }
-        return null
     }
 
     override fun visitClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext): Any? {

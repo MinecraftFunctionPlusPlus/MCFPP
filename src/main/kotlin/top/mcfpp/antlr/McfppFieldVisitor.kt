@@ -398,7 +398,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val f = Constructor(Class.currClass!!)
         f.addParamsFromContext(ctx.normalParams())
         if(!Class.currClass!!.addConstructor(f)){
-            LogProcessor.error("Already defined constructor: " + ctx.className().text + "(" + ctx.normalParams().text + ")")
+            LogProcessor.error("Already defined constructor:  constructor(" + ctx.normalParams().text + ") in class " + Class.currClass)
         }
         return f
     }
@@ -463,23 +463,26 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //创建函数对象
         val identifier : String = ctx.Identifier().text
         val type = MCFPPType.parseFromIdentifier(if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text, typeScope)
-        val f = if(ctx.functionParams().readOnlyParams() != null && ctx.functionParams().readOnlyParams().parameterList().parameter().size != 0){
+        val f = if(ctx.functionParams()?.readOnlyParams() != null && ctx.functionParams().readOnlyParams().parameterList().parameter().size != 0){
             GenericFunction(identifier, Project.currNamespace, type, ctx.functionBody())
         }else {
             Function(identifier, Project.currNamespace,type)
         }
         //解析参数
-        f.addParamsFromContext(ctx.functionParams())
+        ctx.functionParams()?.let { f.addParamsFromContext(it) }
         //TODO 解析函数的注解
         //不是类的成员
         f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
         val namespace = GlobalField.localNamespaces[f.namespace]!!
-        if (!namespace.field.hasFunction(f)) {
-            namespace.field.addFunction(f,false)
-        } else {
-            LogProcessor.error("Already defined function:" + f.namespaceID)
+        if (namespace.field.hasFunction(f)) {
+            LogProcessor.error("Already defined function: " + f.namespaceID)
             Function.currFunction = Function.nullFunction
+        } else if(namespace.field.hasDeclaredType(f.identifier)) {
+            LogProcessor.error("Function name conflicted with type name: " + f.identifier)
+            Function.currFunction = Function.nullFunction
+        } else{
+            namespace.field.addFunction(f,false)
         }
         if (f.isEntrance
             && ctx.functionParams().normalParams().parameterList().parameter().size != 0

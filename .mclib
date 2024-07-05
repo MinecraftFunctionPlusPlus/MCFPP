@@ -4,29 +4,6 @@
 			"id":"default",
 			"functions":[
 				{
-					"id":"test",
-					"readonlyParam":[
-						{
-							"id":"i",
-							"type":"int",
-							"isStatic":false
-						}
-					],
-					"context":"ACED00057372002E746F702E6D636670702E7574696C2E53657269616C697A61626C6546756E6374696F6E426F6479436F6E746578745F70EEA0543D2A420200007870",
-					"normalParams":[
-						{
-							"id":"p",
-							"type":"int",
-							"isStatic":false
-						}
-					],
-					"returnType":"void",
-					"isAbstract":false,
-					"tags":[
-						
-					]
-				},
-				{
 					"id":"main",
 					"normalParams":[
 						
@@ -36,25 +13,81 @@
 					"tags":[
 						
 					]
-				},
-				{
-					"id":"test_0",
-					"normalParams":[
-						{
-							"id":"p",
-							"type":"int",
-							"isStatic":false
-						}
-					],
-					"returnType":"void",
-					"isAbstract":false,
-					"tags":[
-						
-					]
 				}
 			],
 			"classes":[
-				
+				{
+					"id":"Test",
+					"parents":[
+						"mcfpp.lang:any"
+					],
+					"field":{
+						"vars":[
+							{
+								"id":"i",
+								"type":"int"
+							}
+						],
+						"functions":[
+							{
+								"id":"_class_preinit_Test",
+								"normalParams":[
+									
+								],
+								"returnType":"void",
+								"isAbstract":false,
+								"tags":[
+									
+								]
+							},
+							{
+								"id":"_init_test_0_lead",
+								"normalParams":[
+									
+								],
+								"returnType":"void",
+								"isAbstract":false,
+								"tags":[
+									
+								]
+							}
+						]
+					},
+					"constructors":[
+						{
+							"normalParams":[
+								
+							]
+						}
+					]
+				},
+				{
+					"id":"Test$",
+					"parents":[
+						"mcfpp.lang:any"
+					],
+					"field":{
+						"vars":[
+							{
+								"id":"id",
+								"type":"int"
+							}
+						],
+						"functions":[
+							{
+								"id":"_class_preinit_Test",
+								"normalParams":[
+									
+								],
+								"returnType":"void",
+								"isAbstract":false,
+								"tags":[
+									
+								]
+							}
+						]
+					}
+				}
 			],
 			"template":[
 				
