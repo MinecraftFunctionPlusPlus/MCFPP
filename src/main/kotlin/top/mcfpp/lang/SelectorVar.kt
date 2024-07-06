@@ -126,6 +126,10 @@ open class SelectorVar : NBTBasedData<StringTag> {
         }
     }
 
+    override fun clone(): SelectorVar {
+        return SelectorVar(this)
+    }
+
     companion object {
 
         val data = CompoundData("selector","mcfpp")
@@ -208,7 +212,7 @@ class SelectorVarConcrete : MCFPPValue<EntitySelector>, SelectorVar{
         throw VariableConverseException()
     }
 
-    override fun clone(): NBTBasedData<StringTag> = SelectorVarConcrete(this, value.clone())
+    override fun clone(): SelectorVar = SelectorVarConcrete(this, value.clone())
 
     override fun getTempVar(): Var<*> = SelectorVarConcrete(value.clone(), identifier)
 

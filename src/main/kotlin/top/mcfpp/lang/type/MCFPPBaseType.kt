@@ -65,7 +65,6 @@ class MCFPPBaseType {
         //Selector.data = top.mcfpp.lang.Selector.data
         JavaVar.compoundData = top.mcfpp.lang.JavaVar.data
         //BaseEntity.data = top.mcfpp.lang.Entity.data
-        JsonText.compoundData = top.mcfpp.lang.ListChatComponent.data
     }
 
 }

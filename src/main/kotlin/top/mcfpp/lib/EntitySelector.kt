@@ -16,8 +16,8 @@ class EntitySelector(var selectorType: SelectorType) {
     var dz: MCInt? = null
 
     var scores: HashMap<SbObject, RangeVar> = HashMap()
-    var tag: HashMap<String, MCBool> = HashMap()
-    var team: HashMap<String, MCBool> = HashMap()
+    var tag: HashMap<MCString, MCBool> = HashMap()
+    var team: HashMap<MCString, MCBool> = HashMap()
     var name: Pair<MCString, MCBool>? = null
     var type: Pair<MCString, MCBool>? = null
     var predicate: HashMap<String, MCBool> = HashMap()
