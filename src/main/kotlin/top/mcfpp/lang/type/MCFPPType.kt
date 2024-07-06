@@ -224,6 +224,9 @@ open class MCFPPType(
             MCFPPBaseType.JsonText,
             MCFPPNBTType.NBT
         )
+
+        val baseResourceType: Set<MCFPPResourceType> = setOf()
+
         val nbtType:Set<MCFPPType> = setOf(
             MCFPPNBTType.NBT,
             MCFPPNBTType.Map,
