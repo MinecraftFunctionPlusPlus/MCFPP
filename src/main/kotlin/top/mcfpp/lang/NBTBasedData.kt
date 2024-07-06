@@ -441,9 +441,9 @@ class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData<T>, MCFPPValue<T> {
                 "data modify entity @s data.${identifier} set value ${SNBTUtil.toSNBT(value)}")
             )
         } else {
-            val cmd = Command.build(
-                "data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set value ${SNBTUtil.toSNBT(value)}"
-            )
+            val cmd = Command.build("data modify")
+                .build(nbtPath.toCommandPart())
+                .build("set value ${SNBTUtil.toSNBT(value)}")
             Function.addCommand(cmd)
         }
         val re = NBTBasedData(this)

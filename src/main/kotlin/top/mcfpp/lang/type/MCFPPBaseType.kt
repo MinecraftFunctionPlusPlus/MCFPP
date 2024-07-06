@@ -49,6 +49,11 @@ class MCFPPBaseType {
             get() = "jtext"
     }
 
+    object Range: MCFPPType(parentType = listOf(Any)){
+        override val typeName: kotlin.String
+            get() = "range"
+    }
+
     init {
         Any.compoundData = top.mcfpp.lang.MCAny.data
         Int.compoundData = top.mcfpp.lang.MCInt.data
@@ -60,7 +65,7 @@ class MCFPPBaseType {
         //Selector.data = top.mcfpp.lang.Selector.data
         JavaVar.compoundData = top.mcfpp.lang.JavaVar.data
         //BaseEntity.data = top.mcfpp.lang.Entity.data
-        JsonText.compoundData = top.mcfpp.lang.JsonText.data
+        JsonText.compoundData = top.mcfpp.lang.ListChatComponent.data
     }
 
 }

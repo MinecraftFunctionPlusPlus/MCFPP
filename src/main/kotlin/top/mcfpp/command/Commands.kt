@@ -25,7 +25,6 @@ object Commands {
         return Command.build("function").build(function.namespaceID,function.namespaceID)
     }
 
-
     /**
      * scoreboard players get <target.name> <target.object>
      *
@@ -157,6 +156,5 @@ object Commands {
         operation()
         Function.currFunction = l
         return f.commands.toTypedArray()
-
     }
 }

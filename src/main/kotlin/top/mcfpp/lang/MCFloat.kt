@@ -441,7 +441,7 @@ open class MCFloat : MCNumber<Float> {
             return arrayOf(sign, qwq/10000, qwq%10000, n)
         }
 
-        val ssObj = MCFloatConcrete(Float.NaN)
+        val ssObj = MCFloatConcrete(value = Float.NaN)
 
         val tempFloat : MCFloat = MCFloat()
 
@@ -491,7 +491,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
      * @param identifier 标识符。如不指定，则为随机uuid
      * @param value 值
      */
-    constructor(value: Float, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
+    constructor(identifier: String = UUID.randomUUID().toString(), value: Float) : super(identifier) {
         this.value = value
     }
 

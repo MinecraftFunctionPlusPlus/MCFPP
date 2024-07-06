@@ -465,6 +465,31 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             return visit(ctx.`var`())
         } else if (ctx.value() != null) {
             return visit(ctx.value())
+        } else if (ctx.range() != null){
+            //是范围
+            val left = ctx.range().num1?.let { visit(it) }
+            val right = ctx.range().num2?.let { visit(it) }
+            if(left is MCNumber? && right is MCNumber?){
+                if(left is MCFPPValue<*>? && right is MCFPPValue<*>?){
+                    val leftValue = left?.value.toString().toFloatOrNull()
+                    val rightValue = right?.value.toString().toFloatOrNull()
+                    return RangeVarConcrete(leftValue to rightValue)
+                }else{
+                    val range = RangeVar()
+                    if(left is MCInt){
+                        range.left = MCFloat(range.identifier + "_left")
+                    }
+                    if(right is MCInt){
+                        range.right = MCFloat(range.identifier + "_right")
+                    }
+                    left?.let { range.left.assign(it) }
+                    right?.let { range.right.assign(it) }
+                    return range
+                }
+            }else{
+                LogProcessor.error("Range sides should be a number: ${left?.type} and ${right?.type}")
+                return UnknownVar("range_" + UUID.randomUUID())
+            }
         } else {
             //this或者super
             val re: Var<*>? = Function.field.getVar(ctx.text)
@@ -646,7 +671,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             }
             return MCStringConcrete(StringTag(stringArray.joinToString("")) ) //没有解析值就变不了MCString了
         } else if (ctx.floatValue() != null){
-            return MCFloatConcrete(ctx.floatValue()!!.text.toFloat())
+            return MCFloatConcrete(value = ctx.floatValue()!!.text.toFloat())
         } else if (ctx.boolValue() != null){
             return MCBoolConcrete(ctx.boolValue()!!.text.toBoolean())
         } else if (ctx.nbtValue() != null){
@@ -654,7 +679,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         } else if (ctx.type() != null){
             return MCFPPTypeVar(MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field))
         } else if (ctx.TargetSelector() != null){
-            return SelectorConcrete(SelectorValue(ctx.TargetSelector().text[1]))
+            TODO()
         }
         throw IllegalArgumentException("value_" + ctx.text)
     }
