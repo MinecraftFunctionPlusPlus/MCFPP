@@ -513,7 +513,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int>{
         //TODO 类支持
         return when (type) {
             this.type -> this
-            MCFPPBaseType.Float -> MCFloatConcrete(value.toFloat())
+            MCFPPBaseType.Float -> MCFloatConcrete(value = value.toFloat())
             MCFPPBaseType.Any -> this
             else -> {
                 LogProcessor.error("Cannot cast [${this.type}] to [$type]")

@@ -8,7 +8,7 @@ import java.util.*
  *
  * @constructor 创建一个记分板，它有指定的名字，准则以及显示名称
  */
-class SbObject(name: String, rule: String, var display: JsonText?) {
+class SbObject(name: String, rule: String, var display: ListChatComponent?) {
 
     /**
      * 记分板的id

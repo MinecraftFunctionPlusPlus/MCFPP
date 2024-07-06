@@ -343,6 +343,7 @@ basicExpression
 //初级表达式
 primary
     :   var
+    |   range
     |   value
     |   THIS
     |   SUPER
@@ -519,7 +520,6 @@ value
     |   boolValue
     |   multiLineStringLiteral
     |   nbtValue
-    |   range
     |   type
     |   TargetSelector
     ;
@@ -557,9 +557,9 @@ classAnnotation
     ;
 
 range
-    :   num1=(IntegerConstant|FloatConstant) '..' num2=(IntegerConstant|FloatConstant)
-    |   num1=(IntegerConstant|FloatConstant) '..'
-    |   '..' num2=(IntegerConstant|FloatConstant)
+    :   num1=var '..' num2=var
+    |   num1=var '..'
+    |   '..' num2=var
     ;
 
 namespacePath

@@ -27,7 +27,7 @@ import java.util.*
  * 的变量，从而在各种处理上进行优化。当然，匿名变量的声明往往在编译过程中声明。
  * mcfpp本身的语法并不支持匿名变量。
  *
- * @param T 变量储存的类型
+ * @param T 已弃用。变量储存的类型。
  */
 abstract class Var<T> : Member, Cloneable, CanSelectMember{
     /**
