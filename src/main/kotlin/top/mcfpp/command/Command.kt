@@ -163,14 +163,14 @@ open class Command {
      * @param pointID 命令字符串的位点ID
      * @return
      */
-    fun build(command: String, pointID: String, blank: Boolean = true) : Command{
-        if(blank) commandStringList.add(" ")
+    fun build(command: String, pointID: String, withBlank: Boolean = true) : Command{
+        if(withBlank) commandStringList.add(" ")
         replacePoint[pointID] = commandStringList.size
         commandStringList.add(command)
         return this
     }
 
-    fun buildMacro(id: String, blank: Boolean = true) = build("", "$$id", blank)
+    fun buildMacro(id: String, withBlank: Boolean = true) = build("", "$$id", withBlank)
 
     override fun toString(): String{
         val sb = StringBuilder()

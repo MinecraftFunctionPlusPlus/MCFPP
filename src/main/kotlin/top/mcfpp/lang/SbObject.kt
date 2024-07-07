@@ -1,5 +1,6 @@
 package top.mcfpp.lang
 
+import top.mcfpp.lib.ListChatComponent
 import top.mcfpp.model.field.GlobalField
 import java.util.*
 

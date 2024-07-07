@@ -3,7 +3,7 @@ package top.mcfpp.lang
 /**
  * 一个储存对象
  *
- * @constructor Create empty Storage
+ * @constructor Create empty top.mcfpp.lang.resource.Storage
  */
 class Storage {
 

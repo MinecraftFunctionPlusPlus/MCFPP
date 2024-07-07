@@ -1,6 +1,7 @@
 package top.mcfpp.lang
 
 import top.mcfpp.annotations.InsertCommand
+import top.mcfpp.command.Command
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
@@ -110,6 +111,14 @@ open class RangeVar: Var<Int> {
     ): Pair<Function, Boolean> {
         TODO("Not yet implemented")
     }
+
+    open fun toCommandPart() : Command{
+        val command = Command("")
+        if(point and 2 != 0.toByte()) command.buildMacro(left.identifier, false)
+        command.build("..")
+        if(point and 1 != 0.toByte()) command.buildMacro(right.identifier, false)
+        return command
+    }
 }
 
 class RangeVarConcrete: MCFPPValue<Pair<Float?, Float?>>, RangeVar{
@@ -188,4 +197,13 @@ class RangeVarConcrete: MCFPPValue<Pair<Float?, Float?>>, RangeVar{
     override fun clone(): RangeVarConcrete {
         return RangeVarConcrete(this)
     }
+
+    override fun toCommandPart() : Command{
+        val command = Command("")
+        if(value.first != null) command.build(value.first!!.toString(), false)
+        command.build("..")
+        if(value.second != null) command.buildMacro(value.second!!.toString(), false)
+        return command
+    }
+
 }
