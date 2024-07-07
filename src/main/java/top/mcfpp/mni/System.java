@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import top.mcfpp.annotations.InsertCommand;
 import top.mcfpp.annotations.MNIRegister;
 import top.mcfpp.lang.*;
+import top.mcfpp.lib.ScoreChatComponent;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.util.NBTUtil;
 import top.mcfpp.util.ValueWrapper;

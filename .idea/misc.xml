@@ -22,8 +22,9 @@
     </option>
   </component>
   <component name="EntryPointsManager">
-    <list size="1">
+    <list size="2">
       <item index="0" class="java.lang.String" itemvalue="top.mcfpp.annotations.MCFPNative" />
+      <item index="1" class="java.lang.String" itemvalue="top.mcfpp.annotations.MNIRegister" />
     </list>
   </component>
   <component name="ExternalStorageConfigurationManager" enabled="true" />
