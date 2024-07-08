@@ -222,6 +222,15 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
         return re
     }
 
+    fun toJson(): NBTBasedData<*> {
+        when(nbtType){
+            NBTTypeWithTag.INT_ARRAY -> {
+                TODO()
+            }
+            else -> TODO()
+        }
+    }
+
     //TODO 逻辑待优化。这里的处理不是很优雅
     companion object {
 
@@ -301,7 +310,6 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
             }
             return MCFPPCompoundType(t.getMCFPPType())
         }
-
 
         val data = CompoundData("nbt","mcfpp")
 
