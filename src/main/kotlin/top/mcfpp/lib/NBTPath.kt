@@ -1,14 +1,12 @@
 package top.mcfpp.lib
 
 import net.querz.nbt.io.SNBTUtil
-import net.querz.nbt.tag.StringTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.command.Command
-import top.mcfpp.command.Commands
 import top.mcfpp.lang.*
 import top.mcfpp.util.LogProcessor
 
-class NBTPath(var sourceType: String = STORAGE, var source: String = "") {
+class NBTPath(var source: NBTSource) {
 
     val pathList = ArrayList<Path>()
 
@@ -33,7 +31,7 @@ class NBTPath(var sourceType: String = STORAGE, var source: String = "") {
     }
 
     fun toCommandPart(): Command{
-        val cmd = Command(sourceType).build(source)
+        val cmd = source.toCommand()
         for (path in pathList.withIndex()){
             if(path.index == 0 && path.value !is MemberPath){
                 LogProcessor.warn("Invalid nbt path: $path")

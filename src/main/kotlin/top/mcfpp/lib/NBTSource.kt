@@ -1,29 +1,33 @@
 package top.mcfpp.lib
 
 import top.mcfpp.command.Command
-import top.mcfpp.command.Commands
 import top.mcfpp.lang.SelectorVar
+import top.mcfpp.lang.arg.Pos
 import top.mcfpp.lang.resource.ResourceID
 import top.mcfpp.lang.resource.Storage
 import top.mcfpp.lang.resource.StorageConcrete
-import top.mcfpp.lang.value.MCFPPValue
 
 interface NBTSource {
     fun toCommand(): Command
 }
 
-class StorageSource(val storage: ResourceID): NBTSource{
+class StorageSource(val storage: Storage): NBTSource{
     override fun toCommand(): Command {
         if(storage is StorageConcrete){
             return Command("storage $storage")
         }
-        return Commands.buildMacroCommand(Command("storage").buildMacro(storage.identifier))
+        return Command.build("storage").buildMacro(storage.identifier)
     }
 }
 
 class EntitySource(val entity: SelectorVar): NBTSource{
     override fun toCommand(): Command {
-        TODO("Not yet implemented")
+        return Command.build("entity").build(entity.value.toCommandPart())
     }
+}
 
+class BlockSource(val pos: Pos): NBTSource{
+    override fun toCommand(): Command {
+        return Command.build("block").build(pos.toCommandPart())
+    }
 }

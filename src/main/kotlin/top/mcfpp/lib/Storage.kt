@@ -1,4 +1,4 @@
-package top.mcfpp.lang
+package top.mcfpp.lib
 
 /**
  * 一个储存对象

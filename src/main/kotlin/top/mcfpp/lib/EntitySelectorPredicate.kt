@@ -8,7 +8,7 @@ import top.mcfpp.lang.resource.EntityType
 import top.mcfpp.lang.resource.EntityTypeConcrete
 
 interface EntitySelectorPredicate {
-    fun toCommand(): Command
+    fun toCommandPart(): Command
 
     fun isConcrete(): Boolean
 
@@ -18,7 +18,7 @@ interface EntitySelectorPredicate {
 }
 
 class XPredicate(val x: MCInt): EntitySelectorPredicate {
-    override fun toCommand(): Command {
+    override fun toCommandPart(): Command {
         return if(x is MCIntConcrete){
             Command.build("x=${x.value}")
         }else{
@@ -30,7 +30,7 @@ class XPredicate(val x: MCInt): EntitySelectorPredicate {
 }
 
 class YPredicate(val y: MCInt): EntitySelectorPredicate {
-    override fun toCommand(): Command {
+    override fun toCommandPart(): Command {
         return if(y is MCIntConcrete){
             Command.build("y=${y.value}")
         }else{
@@ -42,7 +42,7 @@ class YPredicate(val y: MCInt): EntitySelectorPredicate {
 }
 
 class ZPredicate(val z: MCInt): EntitySelectorPredicate {
-    override fun toCommand(): Command {
+    override fun toCommandPart(): Command {
         return if(z is MCIntConcrete){
             Command.build("z=${z.value}")
         }else{
@@ -54,7 +54,7 @@ class ZPredicate(val z: MCInt): EntitySelectorPredicate {
 }
 
 class DistancePredicate(val distance: RangeVar): EntitySelectorPredicate {
-    override fun toCommand(): Command {
+    override fun toCommandPart(): Command {
         return Command.build("distance=").build(distance.toCommandPart(), false)
     }
 
@@ -62,7 +62,7 @@ class DistancePredicate(val distance: RangeVar): EntitySelectorPredicate {
 }
 
 class DXPredicate(val dx: MCInt): EntitySelectorPredicate {
-    override fun toCommand(): Command {
+    override fun toCommandPart(): Command {
         return if(dx is MCIntConcrete){
             Command.build("dx=${dx.value}")
         }else{
@@ -74,7 +74,7 @@ class DXPredicate(val dx: MCInt): EntitySelectorPredicate {
 }
 
 class DYPredicate(val dy: MCInt): EntitySelectorPredicate {
-    override fun toCommand(): Command {
+    override fun toCommandPart(): Command {
         return if(dy is MCIntConcrete){
             Command.build("dy=${dy.value}")
         }else{
@@ -86,7 +86,7 @@ class DYPredicate(val dy: MCInt): EntitySelectorPredicate {
 }
 
 class DZPredicate(val dz: MCInt): EntitySelectorPredicate {
-    override fun toCommand(): Command {
+    override fun toCommandPart(): Command {
         return if(dz is MCIntConcrete){
             Command.build("dz=${dz.value}")
         }else{
@@ -98,7 +98,7 @@ class DZPredicate(val dz: MCInt): EntitySelectorPredicate {
 }
 
 class ScoresPredicate(val scores: Map<String, RangeVar>): EntitySelectorPredicate {
-    override fun toCommand(): Command {
+    override fun toCommandPart(): Command {
         if(scores.isEmpty()) return Command.build("")
         val re = Command.build("scores={")
         scores.forEach { (t, u) ->
@@ -113,7 +113,7 @@ class ScoresPredicate(val scores: Map<String, RangeVar>): EntitySelectorPredicat
 }
 
 class TagPredicate(val tag: MCString,val reverse: Boolean): EntitySelectorPredicate {
-    override fun toCommand(): Command {
+    override fun toCommandPart(): Command {
         val re = Command.build("tag=")
         if(reverse) re.build("!", false)
         return if(tag is MCStringConcrete){
@@ -127,7 +127,7 @@ class TagPredicate(val tag: MCString,val reverse: Boolean): EntitySelectorPredic
 }
 
 class TeamPredicate(val team: MCString,val reverse: Boolean): EntitySelectorPredicate {
-    override fun toCommand(): Command {
+    override fun toCommandPart(): Command {
         val re = Command.build("team=")
         if(reverse) re.build("!", false)
         return if(team is MCStringConcrete){
@@ -141,7 +141,7 @@ class TeamPredicate(val team: MCString,val reverse: Boolean): EntitySelectorPred
 }
 
 class NamePredicate(val name: MCString,val reverse: Boolean): EntitySelectorPredicate {
-    override fun toCommand(): Command {
+    override fun toCommandPart(): Command {
         val re = Command.build("name=")
         if(reverse) re.build("!", false)
         return if(name is MCStringConcrete){
@@ -155,7 +155,7 @@ class NamePredicate(val name: MCString,val reverse: Boolean): EntitySelectorPred
 }
 
 class TypePredicate(val type: EntityType, val reverse: Boolean): EntitySelectorPredicate {
-    override fun toCommand(): Command {
+    override fun toCommandPart(): Command {
         val re = Command.build("type=")
         if(reverse) re.build("!", false)
         return if(type is EntityTypeConcrete){
@@ -169,7 +169,7 @@ class TypePredicate(val type: EntityType, val reverse: Boolean): EntitySelectorP
 }
 
 class PredicatePredicate(val predicate: MCString, val reverse: Boolean): EntitySelectorPredicate {
-    override fun toCommand(): Command {
+    override fun toCommandPart(): Command {
         val re = Command.build("predicate=")
         if(reverse) re.build("!", false)
         return if(predicate is MCStringConcrete){
@@ -183,7 +183,7 @@ class PredicatePredicate(val predicate: MCString, val reverse: Boolean): EntityS
 }
 
 class XRotationPredicate(val x_rotation: RangeVar): EntitySelectorPredicate {
-    override fun toCommand(): Command {
+    override fun toCommandPart(): Command {
         return Command.build("x_rotation=").build(x_rotation.toCommandPart(), false)
     }
 
@@ -191,7 +191,7 @@ class XRotationPredicate(val x_rotation: RangeVar): EntitySelectorPredicate {
 }
 
 class YRotationPredicate(val y_rotation: RangeVar): EntitySelectorPredicate {
-    override fun toCommand(): Command {
+    override fun toCommandPart(): Command {
         return Command.build("y_rotation=").build(y_rotation.toCommandPart(), false)
     }
 
@@ -199,7 +199,7 @@ class YRotationPredicate(val y_rotation: RangeVar): EntitySelectorPredicate {
 }
 
 class NBTPredicate(val nbt: NBTBasedData<*>): EntitySelectorPredicate {
-    override fun toCommand(): Command {
+    override fun toCommandPart(): Command {
         return if(nbt is NBTBasedDataConcrete){
             Command.build("nbt=").build(nbt.value.valueToString())
         }else{
@@ -211,7 +211,7 @@ class NBTPredicate(val nbt: NBTBasedData<*>): EntitySelectorPredicate {
 }
 
 class LevelPredicate(val level: RangeVar): EntitySelectorPredicate {
-    override fun toCommand(): Command {
+    override fun toCommandPart(): Command {
         return Command.build("level=").build(level.toCommandPart(), false)
     }
 
@@ -219,7 +219,7 @@ class LevelPredicate(val level: RangeVar): EntitySelectorPredicate {
 }
 
 class GamemodePredicate(val gamemode: MCString): EntitySelectorPredicate {
-    override fun toCommand(): Command {
+    override fun toCommandPart(): Command {
         return if(gamemode is MCStringConcrete){
             Command.build("gamemode=").build(gamemode.value.valueToString())
         }else{
@@ -231,7 +231,7 @@ class GamemodePredicate(val gamemode: MCString): EntitySelectorPredicate {
 }
 
 class AdvancementsPredicate(val advancements: Advancement, val reverse: Boolean): EntitySelectorPredicate {
-    override fun toCommand(): Command {
+    override fun toCommandPart(): Command {
         val re = Command.build("advancements=")
         if(reverse) re.build("!", false)
         return if(advancements is AdvancementConcrete){
@@ -245,7 +245,7 @@ class AdvancementsPredicate(val advancements: Advancement, val reverse: Boolean)
 }
 
 class LimitPredicate(val limit: MCInt): EntitySelectorPredicate {
-    override fun toCommand(): Command {
+    override fun toCommandPart(): Command {
         return if(limit is MCIntConcrete){
             Command.build("limit=${limit.value}")
         }else{
@@ -257,7 +257,7 @@ class LimitPredicate(val limit: MCInt): EntitySelectorPredicate {
 }
 
 class SortPredicate(val sort: MCString): EntitySelectorPredicate {
-    override fun toCommand(): Command {
+    override fun toCommandPart(): Command {
         return if(sort is MCStringConcrete){
             Command.build("sort=").build(sort.value.valueToString())
         }else{
