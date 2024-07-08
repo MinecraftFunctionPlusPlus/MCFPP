@@ -1,92 +1,222 @@
 package top.mcfpp.lib
 
+import net.querz.nbt.tag.IntArrayTag
+import top.mcfpp.command.Command
 import top.mcfpp.lang.MCInt
 import top.mcfpp.lang.NBTBasedData
+import top.mcfpp.lang.NBTBasedDataConcrete
+import top.mcfpp.lang.resource.EntityTypeConcrete
+import top.mcfpp.util.LogProcessor
 
-interface ChatComponent {
+abstract class ChatComponent {
+
+    val styles : ArrayList<ChatComponentStyle> = ArrayList()
 
     /**
      * 返回这个原始json文本的字符串形式
      *
      * @return
      */
-    fun toJson(): String
+    abstract fun toJson(): Command
+
+    fun styleToString(): Command{
+        val str = Command("{")
+        for (style in styles){
+            str.build(style.toJson(), false)
+            if(style != styles.last()) str.build(", ", false)
+        }
+        str.build("}", false)
+        return str
+    }
 }
 
 /**
  * 一个json原始文本
  *
  */
-class ListChatComponent: ChatComponent {
+class ListChatComponent: ChatComponent() {
 
     /**
      * 这个原始json文本中含有的聊天组件
      */
     val components = ArrayList<ChatComponent>()
 
-    override fun toJson(): String {
-        val str = StringBuilder("[")
+    override fun toJson(): Command {
+        val str = Command("[")
         for (component in components){
-            str.append(component.toJson())
-            str.append(",")
+            str.build(component.toJson(), false)
+            if(component != components.last()) str.build(",", false)
         }
-        str.replace(str.length-1,str.length,"]")
-        return str.toString()
+        str.build("]", false)
+        return str
     }
 }
 
-class PlainChatComponent(val value: String) : ChatComponent {
-    override fun toJson(): String {
-        return """{"type": "text", "text": "$value"}"""
+class PlainChatComponent(val value: String) : ChatComponent() {
+    override fun toJson(): Command {
+        return Command("""{"type": "text", "text": "$value", ${styleToString()}""")
     }
 
 }
 
-class TranslatableChatComponent(val key: String, val fallback: String? = null, val args: List<ChatComponent>? = null) :
-    ChatComponent {
-    override fun toJson(): String {
-        val str = StringBuilder("{\"type\": \"translatable\", \"translate\":\"$key\"")
+class TranslatableChatComponent(val key: String, val fallback: String? = null, val args: List<ChatComponent>? = null) : ChatComponent() {
+    override fun toJson(): Command {
+        val str = Command.build("{\"type\": \"translatable\", \"translate\":\"$key\"")
         if(fallback != null){
-            str.append(",\"fallback\":\"$fallback\"")
+            str.build(",\"fallback\":\"$fallback\"", false)
         }
         if(args != null){
-            str.append(",\"with\":[")
+            str.build(",\"with\":[", false)
             for (component in args){
-                str.append(component.toJson())
-                str.append(",")
+                str.build(component.toJson(), false)
+                if(component != args.last()) str.build(",", false)
             }
-            str.replace(str.length-1,str.length,"]")
+            str.build("]", false)
         }
-        str.append("}")
-        return str.toString()
+        str.build(", ${styleToString()}", false)
+        return str
     }
 }
 
-class ScoreChatComponent(val value: MCInt) : ChatComponent {
-    override fun toJson(): String {
-        return "{\"type\":\"score\",\"score\":{\"name\":\"${value.name}\",\"objective\":\"${value.sbObject.name}\"}}"
+class ScoreChatComponent(val value: MCInt) : ChatComponent() {
+    override fun toJson(): Command {
+        return Command("{\"type\":\"score\",\"score\":{\"name\":\"${value.name}\",\"objective\":\"${value.sbObject.name}\"}, ${styleToString()}}")
     }
 }
 
-class SelectorChatComponent(val selector: String, val separator: ChatComponent? = null) : ChatComponent {
-    override fun toJson(): String {
-        return if(separator != null){
-            "{\"type\":\"selector\",\"selector\":\"$selector\",\"separator\":${separator.toJson()}}"
+class SelectorChatComponent(val selector: String, val separator: ChatComponent? = null) : ChatComponent() {
+    override fun toJson(): Command {
+        return Command(if(separator != null){
+            "{\"type\":\"selector\",\"selector\":\"$selector\",\"separator\":${separator.toJson()}, ${styleToString()}"
         }else{
-            "{\"type\":\"selector\",\"selector\":\"$selector\"}"
+            "{\"type\":\"selector\",\"selector\":\"$selector\", ${styleToString()}"
+        })
+    }
+}
+
+class KeybindChatComponent(val key: String) : ChatComponent() {
+    override fun toJson(): Command {
+        return Command("{\"type\":\"keybind\",\"keybind\":\"$key\", ${styleToString()}")
+    }
+}
+
+class NBTChatComponent(val nbt: NBTBasedData<*>, val interpret: Boolean = false, val separator: ChatComponent? = null) : ChatComponent() {
+    override fun toJson(): Command {
+        return Command("{\"type\":\"nbt\",\"nbt\":\"$nbt\",\"interpret\":$interpret, ${styleToString()}")
+    }
+}
+
+interface ChatComponentStyle{
+    fun toJson(): Command
+}
+
+class ColorStyle(val hex: Int): ChatComponentStyle{
+    override fun toJson(): Command {
+        return Command("\"color\": \"#$hex\"")
+    }
+
+    companion object{
+        val BLACK = ColorStyle(0x000000)
+        val DARK_BLUE = ColorStyle(0x0000AA)
+        val DARK_GREEN = ColorStyle(0x00AA00)
+        val DARK_AQUA = ColorStyle(0x00AAAA)
+        val DARK_RED = ColorStyle(0xAA0000)
+        val DARK_PURPLE = ColorStyle(0xAA00AA)
+        val GOLD = ColorStyle(0xFFAA00)
+        val GRAY = ColorStyle(0xAAAAAA)
+        val DARK_GRAY = ColorStyle(0x555555)
+        val BLUE = ColorStyle(0x5555FF)
+        val GREEN = ColorStyle(0x55FF55)
+        val AQUA = ColorStyle(0x55FFFF)
+        val RED = ColorStyle(0xFF5555)
+        val LIGHT_PURPLE = ColorStyle(0xFF55FF)
+        val YELLOW = ColorStyle(0xFFFF55)
+        val WHITE = ColorStyle(0xFFFFFF)
+    }
+}
+
+class BoldStyle(val bold: Boolean): ChatComponentStyle{
+    override fun toJson(): Command {
+        return Command("\"bold\": $bold")
+    }
+}
+
+class ItalicStyle(val italic: Boolean): ChatComponentStyle{
+    override fun toJson(): Command {
+        return Command("\"italic\": $italic")
+    }
+}
+
+class UnderlineStyle(val underline: Boolean): ChatComponentStyle{
+    override fun toJson(): Command {
+        return Command("\"underline\": $underline")
+    }
+}
+
+class StrikethroughStyle(val strikethrough: Boolean): ChatComponentStyle{
+    override fun toJson(): Command {
+        return Command("\"strikethrough\": $strikethrough")
+    }
+}
+
+class ObfuscatedStyle(val obfuscated: Boolean): ChatComponentStyle{
+    override fun toJson(): Command {
+        return Command("\"obfuscated\": $obfuscated")
+    }
+}
+
+class InsertionStyle(val string: String): ChatComponentStyle{
+    override fun toJson(): Command {
+        return Command("\"insertion\": $string")
+    }
+}
+
+class ClickEventStyle(val action: ClickEventAction, val value: String): ChatComponentStyle{
+    override fun toJson(): Command {
+        return Command("\"clickEvent\": {\"action\": \"${action.name.lowercase()}\", \"value\": \"$value\"}")
+    }
+
+    enum class ClickEventAction{
+        OPEN_URL,
+        OPEN_FILE,
+        RUN_COMMAND,
+        SUGGEST_COMMAND,
+        CHANGE_PAGE
+    }
+}
+
+class HoverEventShowTextStyle(val content: ChatComponent): ChatComponentStyle{
+    override fun toJson(): Command {
+        return Command("\"hoverEvent\": {\"action\": \"show_text\", \"value\": \"$content\"}")
+    }
+}
+
+//class HoverEventShowItemStyle(val item: String): ChatComponentStyle{
+//    override fun toJson(): Command {
+//        return Command("\"hoverEvent\": {\"action\": \"show_item\", \"value\": \"$item\"}")
+//    }
+//}
+
+class HoverEventShowEntityStyle(val name: ChatComponent?, val type: EntityTypeConcrete, val uuid: NBTBasedData<*>): ChatComponentStyle{
+    override fun toJson(): Command {
+        val c = Command("\"hoverEvent\":{\"action\": \"show_entity\", \"contents\": {")
+        if(name != null){
+            c.build("\"name\": \"$name\", ", false)
         }
-    }
-}
-
-class KeybindChatComponent(val key: String) : ChatComponent {
-    override fun toJson(): String {
-        return "{\"type\":\"keybind\",\"keybind\":\"$key\"}"
-    }
-}
-
-class NBTChatComponent(val nbt: NBTBasedData<*>, val interpret: Boolean = false, val separator: ChatComponent? = null) :
-    ChatComponent {
-    override fun toJson(): String {
-        return "{\"type\":\"nbt\",\"nbt\":\"$nbt\",\"interpret\":$interpret}"
+        c.build("\"type\": \"${type.value}\"", false)
+        if(uuid is NBTBasedDataConcrete<*>){
+            if(uuid.value is IntArrayTag && (uuid.value as IntArrayTag).value.size == 4){
+                c.build("\"id\": \"${uuid.value}\"", false)
+            }else{
+                LogProcessor.error("Invalid UUID: $uuid")
+            }
+        }else{
+            if(uuid.nbtType == NBTBasedData.Companion.NBTTypeWithTag.INT_ARRAY){
+                c.build("\"id\": ", false).buildMacro(uuid.toJson().identifier, false)
+            }
+            c.build("\"id\": ").buildMacro(uuid.identifier, false)
+        }
+        c.build("}}")
+        return c
     }
 }
