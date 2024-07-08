@@ -1,14 +1,15 @@
 package top.mcfpp.lang
 
+import net.querz.nbt.tag.StringTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.Project
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.exception.OperationNotImplementException
 import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lang.resource.StorageConcrete
 import top.mcfpp.lang.type.*
 import top.mcfpp.lang.value.MCFPPValue
-import top.mcfpp.lib.NBTPath
+import top.mcfpp.lib.*
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
@@ -73,7 +74,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
      */
     var hasInit = false
 
-    var parent : CanSelectMember? = null
+    open var parent : CanSelectMember? = null
 
     /**
      * 访问修饰符
@@ -93,7 +94,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
     /**
      *
      */
-    open var nbtPath = NBTPath(NBTPath.STORAGE, Storage.MCFPP_SYSTEM.toString())
+    open var nbtPath = NBTPath(StorageSource(StorageConcrete("system")))
         .memberIndex(Project.currNamespace)
         .memberIndex("stack_frame[$stackIndex]")
 
@@ -167,7 +168,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
             //不是this指针才需要额外指定引用者
             `var`.parent = pointer
         }
-        `var`.nbtPath = NBTPath(NBTPath.ENTITY, "@s")
+        `var`.nbtPath = NBTPath(EntitySource(SelectorVarConcrete(EntitySelector('s'))))
             .memberIndex("data")
             .memberIndex( identifier)
         return `var`

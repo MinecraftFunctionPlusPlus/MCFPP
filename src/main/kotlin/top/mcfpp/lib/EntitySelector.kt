@@ -2,12 +2,8 @@ package top.mcfpp.lib
 
 import top.mcfpp.command.Command
 import top.mcfpp.lang.*
-import top.mcfpp.lang.resource.Advancement
 import top.mcfpp.lang.resource.EntityTypeConcrete
-import top.mcfpp.lang.resource.LootTablePredicate
-import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.util.LogProcessor
-import java.util.HashMap
 
 class EntitySelector(var selectorType: SelectorType) {
 
@@ -29,6 +25,36 @@ class EntitySelector(var selectorType: SelectorType) {
     private var hasSortPredicate: Boolean = false
 
     private val predicates: ArrayList<EntitySelectorPredicate> = ArrayList()
+
+    val limit: Int
+        get() {
+            if(hasLimitPredicate){
+                for (predicate in predicates) {
+                    if(predicate is LimitPredicate){
+                        if(predicate.limit is MCIntConcrete){
+                            return (predicate.limit).value
+                        }
+                        break
+                    }
+                }
+            }
+            return Int.MAX_VALUE
+        }
+
+    val type: Pair<EntityTypeConcrete, Boolean>?
+        get() {
+            if(hasTypePredicate){
+                for (predicate in predicates) {
+                    if(predicate is TypePredicate){
+                        if(predicate.type is EntityTypeConcrete){
+                            return predicate.type to predicate.reverse
+                        }
+                        break
+                    }
+                }
+            }
+            return null
+        }
 
     constructor(char: Char):this(fromSelectorTypeString(char))
 
@@ -192,7 +218,7 @@ class EntitySelector(var selectorType: SelectorType) {
         if(hasLimitPredicate){
             for (predicate in predicates) {
                 if(predicate is LimitPredicate){
-                    if(predicate.limit is MCIntConcrete && (predicate.limit as MCIntConcrete).value == 1){
+                    if(predicate.limit is MCIntConcrete && predicate.limit.value == 1){
                         return true
                     }
                     break
@@ -214,13 +240,13 @@ class EntitySelector(var selectorType: SelectorType) {
         return predicates.isNotEmpty()
     }
 
-    fun toCommand(): Command{
+    fun toCommandPart(): Command{
         val re = Command.build("@")
         re.build(toSelectorTypeString(selectorType).toString(), false)
         if(hasArgument()){
             re.build("[", false)
             for (predicate in predicates){
-                re.build(predicate.toCommand(), false)
+                re.build(predicate.toCommandPart(), false)
                 if(predicates.last() != predicate) re.build(",", false)
             }
             re.build("]", false)

@@ -34,28 +34,6 @@ open class SelectorVar : NBTBasedData<StringTag> {
 
     var text: String? = null
 
-    val limit: Int
-        get() {
-            return if(value.limit is MCIntConcrete){
-                (value.limit as MCIntConcrete).value
-            }else{
-                Int.MAX_VALUE
-            }
-        }
-
-    val entityType: String
-        get() {
-            return if(value.type?.first is MCStringConcrete && value.type?.second is MCBoolConcrete){
-                if((value.type!!.second as MCBoolConcrete).value){
-                    return (value.type!!.first as MCStringConcrete).value.valueToString()
-                }else{
-                    return "!"+(value.type!!.first as MCStringConcrete).value.valueToString()
-                }
-            }else{
-                "any"
-            }
-        }
-
     /**
      * 创建一个目标选择器类型的变量。它的mc名和变量所在的域容器有关。
      *
