@@ -213,7 +213,7 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
         return re
     }
 
-    protected fun getByIntIndex(index: MCInt): NBTBasedData<*> {
+    open protected fun getByIntIndex(index: MCInt): NBTBasedData<*> {
         if(nbtType != NBTTypeWithTag.LIST && nbtType != NBTTypeWithTag.ANY){
             LogProcessor.error("Invalid nbt type")
         }

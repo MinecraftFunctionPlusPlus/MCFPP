@@ -17,15 +17,14 @@ abstract class ChatComponent {
      *
      * @return
      */
-    abstract fun toJson(): Command
+    abstract fun toCommandPart(): Command
 
     fun styleToString(): Command{
-        val str = Command("{")
+        val str = Command("")
         for (style in styles){
-            str.build(style.toJson(), false)
+            str.build(style.toCommandPart(), false)
             if(style != styles.last()) str.build(", ", false)
         }
-        str.build("}", false)
         return str
     }
 }
@@ -41,10 +40,10 @@ class ListChatComponent: ChatComponent() {
      */
     val components = ArrayList<ChatComponent>()
 
-    override fun toJson(): Command {
+    override fun toCommandPart(): Command {
         val str = Command("[")
         for (component in components){
-            str.build(component.toJson(), false)
+            str.build(component.toCommandPart(), false)
             if(component != components.last()) str.build(",", false)
         }
         str.build("]", false)
@@ -53,14 +52,14 @@ class ListChatComponent: ChatComponent() {
 }
 
 class PlainChatComponent(val value: String) : ChatComponent() {
-    override fun toJson(): Command {
+    override fun toCommandPart(): Command {
         return Command("""{"type": "text", "text": "$value", ${styleToString()}""")
     }
 
 }
 
 class TranslatableChatComponent(val key: String, val fallback: String? = null, val args: List<ChatComponent>? = null) : ChatComponent() {
-    override fun toJson(): Command {
+    override fun toCommandPart(): Command {
         val str = Command.build("{\"type\": \"translatable\", \"translate\":\"$key\"")
         if(fallback != null){
             str.build(",\"fallback\":\"$fallback\"", false)
@@ -68,7 +67,7 @@ class TranslatableChatComponent(val key: String, val fallback: String? = null, v
         if(args != null){
             str.build(",\"with\":[", false)
             for (component in args){
-                str.build(component.toJson(), false)
+                str.build(component.toCommandPart(), false)
                 if(component != args.last()) str.build(",", false)
             }
             str.build("]", false)
@@ -79,15 +78,15 @@ class TranslatableChatComponent(val key: String, val fallback: String? = null, v
 }
 
 class ScoreChatComponent(val value: MCInt) : ChatComponent() {
-    override fun toJson(): Command {
+    override fun toCommandPart(): Command {
         return Command("{\"type\":\"score\",\"score\":{\"name\":\"${value.name}\",\"objective\":\"${value.sbObject.name}\"}, ${styleToString()}}")
     }
 }
 
 class SelectorChatComponent(val selector: String, val separator: ChatComponent? = null) : ChatComponent() {
-    override fun toJson(): Command {
+    override fun toCommandPart(): Command {
         return Command(if(separator != null){
-            "{\"type\":\"selector\",\"selector\":\"$selector\",\"separator\":${separator.toJson()}, ${styleToString()}"
+            "{\"type\":\"selector\",\"selector\":\"$selector\",\"separator\":${separator.toCommandPart()}, ${styleToString()}"
         }else{
             "{\"type\":\"selector\",\"selector\":\"$selector\", ${styleToString()}"
         })
@@ -95,23 +94,23 @@ class SelectorChatComponent(val selector: String, val separator: ChatComponent? 
 }
 
 class KeybindChatComponent(val key: String) : ChatComponent() {
-    override fun toJson(): Command {
+    override fun toCommandPart(): Command {
         return Command("{\"type\":\"keybind\",\"keybind\":\"$key\", ${styleToString()}")
     }
 }
 
 class NBTChatComponent(val nbt: NBTBasedData<*>, val interpret: Boolean = false, val separator: ChatComponent? = null) : ChatComponent() {
-    override fun toJson(): Command {
+    override fun toCommandPart(): Command {
         return Command("{\"type\":\"nbt\",\"nbt\":\"$nbt\",\"interpret\":$interpret, ${styleToString()}")
     }
 }
 
 interface ChatComponentStyle{
-    fun toJson(): Command
+    fun toCommandPart(): Command
 }
 
 class ColorStyle(val hex: Int): ChatComponentStyle{
-    override fun toJson(): Command {
+    override fun toCommandPart(): Command {
         return Command("\"color\": \"#$hex\"")
     }
 
@@ -136,43 +135,43 @@ class ColorStyle(val hex: Int): ChatComponentStyle{
 }
 
 class BoldStyle(val bold: Boolean): ChatComponentStyle{
-    override fun toJson(): Command {
+    override fun toCommandPart(): Command {
         return Command("\"bold\": $bold")
     }
 }
 
 class ItalicStyle(val italic: Boolean): ChatComponentStyle{
-    override fun toJson(): Command {
+    override fun toCommandPart(): Command {
         return Command("\"italic\": $italic")
     }
 }
 
 class UnderlineStyle(val underline: Boolean): ChatComponentStyle{
-    override fun toJson(): Command {
+    override fun toCommandPart(): Command {
         return Command("\"underline\": $underline")
     }
 }
 
 class StrikethroughStyle(val strikethrough: Boolean): ChatComponentStyle{
-    override fun toJson(): Command {
+    override fun toCommandPart(): Command {
         return Command("\"strikethrough\": $strikethrough")
     }
 }
 
 class ObfuscatedStyle(val obfuscated: Boolean): ChatComponentStyle{
-    override fun toJson(): Command {
+    override fun toCommandPart(): Command {
         return Command("\"obfuscated\": $obfuscated")
     }
 }
 
 class InsertionStyle(val string: String): ChatComponentStyle{
-    override fun toJson(): Command {
+    override fun toCommandPart(): Command {
         return Command("\"insertion\": $string")
     }
 }
 
 class ClickEventStyle(val action: ClickEventAction, val value: String): ChatComponentStyle{
-    override fun toJson(): Command {
+    override fun toCommandPart(): Command {
         return Command("\"clickEvent\": {\"action\": \"${action.name.lowercase()}\", \"value\": \"$value\"}")
     }
 
@@ -186,7 +185,7 @@ class ClickEventStyle(val action: ClickEventAction, val value: String): ChatComp
 }
 
 class HoverEventShowTextStyle(val content: ChatComponent): ChatComponentStyle{
-    override fun toJson(): Command {
+    override fun toCommandPart(): Command {
         return Command("\"hoverEvent\": {\"action\": \"show_text\", \"value\": \"$content\"}")
     }
 }
@@ -198,7 +197,7 @@ class HoverEventShowTextStyle(val content: ChatComponent): ChatComponentStyle{
 //}
 
 class HoverEventShowEntityStyle(val name: ChatComponent?, val type: EntityTypeConcrete, val uuid: NBTBasedData<*>): ChatComponentStyle{
-    override fun toJson(): Command {
+    override fun toCommandPart(): Command {
         val c = Command("\"hoverEvent\":{\"action\": \"show_entity\", \"contents\": {")
         if(name != null){
             c.build("\"name\": \"$name\", ", false)

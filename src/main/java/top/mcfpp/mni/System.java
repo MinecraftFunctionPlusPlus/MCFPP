@@ -33,7 +33,7 @@ public class System {
             //是确定的，直接输出数值
             Function.Companion.addCommand("tellraw @a " + varC.getValue());
         }else {
-            Function.Companion.addCommand("tellraw @a " + new ScoreChatComponent(var).toJson());
+            Function.Companion.addCommand("tellraw @a " + new ScoreChatComponent(var).toCommandPart());
         }
     }
 
