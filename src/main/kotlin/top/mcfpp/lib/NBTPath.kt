@@ -30,6 +30,11 @@ class NBTPath(var source: NBTSource) {
         return this
     }
 
+    fun iteratorIndex(): NBTPath{
+        pathList.add(IteratorPath())
+        return this
+    }
+
     fun toCommandPart(): Command{
         val cmd = source.toCommand()
         for (path in pathList.withIndex()){
@@ -64,6 +69,10 @@ class NBTPath(var source: NBTSource) {
                         cmd.build("[", false).buildMacro(value.identifier, false).build("]", false)
                     }
                 }
+
+                is IteratorPath -> {
+                    cmd.build("[]",false)
+                }
             }
         }
         return cmd
@@ -82,4 +91,6 @@ data class IntPath(val value : MCInt) : Path
 
 data class NBTPredicatePath(val value : NBTBasedData<Tag<*>>) : Path
 
-class MemberPath(val value : String, val isMacro: Boolean = false): Path
+data class MemberPath(val value : String, val isMacro: Boolean = false): Path
+
+class IteratorPath: Path

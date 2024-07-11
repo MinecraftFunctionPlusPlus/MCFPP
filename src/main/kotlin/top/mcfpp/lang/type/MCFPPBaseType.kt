@@ -16,6 +16,17 @@ class MCFPPBaseType {
         override val typeName: kotlin.String
             get() = "string"
     }
+
+    object JText: MCFPPType(parentType = listOf(Any)){
+        override val typeName: kotlin.String
+            get() = "jtext"
+    }
+
+    object JTextElement : MCFPPType(parentType = listOf(Any)){
+        override val typeName: kotlin.String
+            get() = "jtextE"
+    }
+
     object Float:MCFPPType(parentType = listOf(Any)){
         override val typeName: kotlin.String
             get() = "float"
