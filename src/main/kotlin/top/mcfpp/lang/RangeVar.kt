@@ -1,10 +1,12 @@
 package top.mcfpp.lang
 
+import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
@@ -39,7 +41,9 @@ open class RangeVar: Var<Int> {
      */
     constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier){
         left = MCFloat(identifier + "_left")
+        left.nbtPath = this.nbtPath.memberIndex("left")
         right = MCFloat(identifier + "_right")
+        right.nbtPath = this.nbtPath.memberIndex("right")
     }
 
     /**
@@ -101,6 +105,19 @@ open class RangeVar: Var<Int> {
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         TODO("Not yet implemented")
+    }
+
+    override fun toNBTVar(): NBTBasedData<*> {
+        val n = NBTBasedData<CompoundTag>()
+        n.name = name
+        n.identifier = identifier
+        n.isStatic = isStatic
+        n.accessModifier = accessModifier
+        n.isTemp = isTemp
+        n.stackIndex = stackIndex
+        n.isConst = isConst
+        n.nbtPath = nbtPath
+        return n
     }
 
     override fun getMemberFunction(

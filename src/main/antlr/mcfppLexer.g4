@@ -118,7 +118,7 @@ BOOL:       'bool';
 FLOAT:      'float';
 SELECTOR:   'selector';
 STRING:     'string';
-JTEXT:      'jtext';
+JTEXT:      'text';
 NBT:        'nbt';
 ANY:        'any';
 TYPE:       'type';

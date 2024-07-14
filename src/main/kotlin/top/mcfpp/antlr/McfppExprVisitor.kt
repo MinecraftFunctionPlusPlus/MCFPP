@@ -654,7 +654,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 else {
                     val expressionContext = stringContext.multiLineStringExpression().expression()
                     //TODO: 这边只是简单写了一下有解析值的情况
-                    val res = visit(expressionContext) //没有解析值的话，应该变成jtext
+                    val res = visit(expressionContext) //没有解析值的话，应该变成text
                     if(res!=null && res !is MCFPPValue<*>){ isConcrete = false } //这个条件就是说，整个模版中出现没有解析值的情况了
                     if(res is MCIntConcrete){
                         r = res.value.toString()

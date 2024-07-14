@@ -1,10 +1,12 @@
 package top.mcfpp.lang
 
+import net.querz.nbt.tag.ByteTag
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.lib.SbObject
 import top.mcfpp.model.*
 import java.util.*
 import top.mcfpp.model.function.Function

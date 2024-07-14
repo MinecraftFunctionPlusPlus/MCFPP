@@ -1,26 +1,44 @@
 package top.mcfpp.mni;
 
 import kotlin.NotImplementedError;
-import kotlin.jvm.functions.Function4;
 import net.querz.nbt.io.SNBTUtil;
+import net.querz.nbt.tag.IntTag;
+import net.querz.nbt.tag.ListTag;
 import net.querz.nbt.tag.Tag;
 import org.jetbrains.annotations.NotNull;
 import top.mcfpp.Project;
-import top.mcfpp.annotations.InsertCommand;
 import top.mcfpp.annotations.MNIRegister;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
 import top.mcfpp.lang.*;
+import top.mcfpp.lang.type.MCFPPBaseType;
 import top.mcfpp.lang.value.MCFPPValue;
+import top.mcfpp.lib.NBTPath;
+import top.mcfpp.lib.SbObject;
+import top.mcfpp.lib.Storage;
+import top.mcfpp.lib.StorageSource;
 import top.mcfpp.model.function.Function;
-import top.mcfpp.model.function.MNIMethodContainer;
+import top.mcfpp.util.AnyTag;
 import top.mcfpp.util.NBTUtil;
 import top.mcfpp.util.ValueWrapper;
 
 import java.io.IOException;
-import java.util.HashMap;
 
 public class NBTListData {
+
+    static NBTBasedData<AnyTag<Object>> list = new NBTBasedData("list.list");
+    static NBTBasedData<AnyTag<Object>> element = new NBTBasedData("list.element");
+    static MCInt index = new MCInt("list.index");
+    static MCBool contains = new MCBool("list.contains");
+
+    static {
+        list.setNbtPath(new NBTPath(new StorageSource(Storage.Companion.getMCFPP_SYSTEM().getResourceID())).memberIndex("list.list"));
+        element.setNbtPath(new NBTPath(new StorageSource(Storage.Companion.getMCFPP_SYSTEM().getResourceID())).memberIndex("list.element"));
+        index.setObj(SbObject.Companion.getMCFPP_TEMP());
+        contains.setObj(SbObject.Companion.getMCFPP_TEMP());
+    }
+
+
     @MNIRegister(normalParams = {"E e"}, caller = "list<E>")
     public static void add(Var<?> e, NBTList caller){
         if(e instanceof MCFPPValue<?>){
@@ -67,7 +85,7 @@ public class NBTListData {
     }
 
     @MNIRegister(normalParams = {"list<E> list"}, caller = "list<E>")
-    public static void addAll(NBTList list, NBTList caller){
+    public static void addAll(@NotNull NBTList list, NBTList caller){
         String command;
         NBTBasedData<?> l;
         if(list.parentClass() != null) {
@@ -193,10 +211,11 @@ public class NBTListData {
         }
     }
 
-    @MNIRegister(normalParams = {"E e"}, caller = "list<E>")
-    public static void remove(Var<?> e, NBTList caller){
-        throw new NotImplementedError();
-    }
+    // TODO
+    // @MNIRegister(normalParams = {"E e"}, caller = "list<E>")
+    //public static void remove(Var<?> e, NBTList caller){
+    //    throw new NotImplementedError();
+    //}
 
     @MNIRegister(normalParams = {"int index"}, caller = "list<E>")
     public static void removeAt(MCInt index, NBTList caller){
@@ -234,22 +253,40 @@ public class NBTListData {
     }
 
     @MNIRegister(normalParams = {"E e"}, caller = "list<E>", returnType = "int")
-    public static void indexOf(Var<?> e, NBTList caller, ValueWrapper<MCInt> returnVar){
-        throw new NotImplementedError();
+    public static void indexOf(@NotNull Var<?> e, NBTList caller, ValueWrapper<MCInt> returnVar){
+        var n = e.toNBTVar();
+        element.assign(n);
+        element.assign(caller);
+        Function.Companion.addCommand("scoreboard players set list.index " + SbObject.Companion.getMCFPP_TEMP() + " 0");
+        Function.Companion.addCommand("execute store result score list.size mcfpp_temp run data get storage mcfpp:system list.list");
+        Function.Companion.addCommand("function mcfpp.lang:list/index_of");
+        returnVar.setValue(index);
     }
 
     @MNIRegister(normalParams = {"E e"}, caller = "list<E>", returnType = "int")
     public static void lastIndexOf(Var<?> e, NBTList caller, ValueWrapper<MCInt> returnVar){
-        throw new NotImplementedError();
+        var n = e.toNBTVar();
+        element.assign(n);
+        element.assign(caller);
+        Function.Companion.addCommand("scoreboard players set list.index " + SbObject.Companion.getMCFPP_TEMP() + " 0");
+        Function.Companion.addCommand("execute store result score list.size mcfpp_temp run data get storage mcfpp:system list.list");
+        Function.Companion.addCommand("function mcfpp.lang:list/last_index_of");
+        returnVar.setValue(index);
     }
 
     @MNIRegister(normalParams = {"E e"}, caller = "list<E>", returnType = "bool")
     public static void contains(Var<?> e, NBTList caller, ValueWrapper<MCBool> returnVar){
-        throw new NotImplementedError();
+        var n = e.toNBTVar();
+        element.assign(n);
+        element.assign(caller);
+        Function.Companion.addCommand("scoreboard players set list.index " + SbObject.Companion.getMCFPP_TEMP() + " 0");
+        Function.Companion.addCommand("execute store result score list.size mcfpp_temp run data get storage mcfpp:system list.list");
+        Function.Companion.addCommand("function mcfpp.lang:list/contains");
+        returnVar.setValue(contains);
     }
 
     @MNIRegister(caller = "list<E>")
     public static void clear(NBTList caller){
-        throw new NotImplementedError();
+        caller.assign(NBTListConcrete.Companion.getEmpty());
     }
 }

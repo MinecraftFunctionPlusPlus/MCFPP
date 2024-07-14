@@ -10,8 +10,13 @@ import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
 import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.lib.NBTPath
+import top.mcfpp.lib.NBTSource
+import top.mcfpp.lib.Storage
+import top.mcfpp.lib.StorageSource
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
+import top.mcfpp.util.AnyTag
 import top.mcfpp.util.LogProcessor
 import kotlin.collections.ArrayList
 
@@ -231,6 +236,11 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
         }
     }
 
+
+    override fun toNBTVar(): NBTBasedData<*> {
+        return this
+    }
+
     //TODO 逻辑待优化。这里的处理不是很优雅
     companion object {
 
@@ -312,6 +322,11 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
         }
 
         val data = CompoundData("nbt","mcfpp")
+
+        init {
+            data.initialize()
+            data.extends(MCAny.data)
+        }
 
         enum class NBTTypeWithTag(val type: NBTType){
             BYTE(NBTType.VALUE),

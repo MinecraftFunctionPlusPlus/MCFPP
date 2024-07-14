@@ -1,5 +1,6 @@
 package top.mcfpp.lang
 
+import net.querz.nbt.tag.ByteTag
 import net.querz.nbt.tag.IntTag
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command

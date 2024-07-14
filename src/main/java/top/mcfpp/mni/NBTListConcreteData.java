@@ -1,6 +1,7 @@
 package top.mcfpp.mni;
 
 import net.querz.nbt.io.SNBTUtil;
+import net.querz.nbt.tag.ListTag;
 import net.querz.nbt.tag.Tag;
 import top.mcfpp.Project;
 import top.mcfpp.annotations.InsertCommand;
@@ -10,6 +11,7 @@ import top.mcfpp.command.Commands;
 import top.mcfpp.lang.*;
 import top.mcfpp.lang.type.MCFPPNBTType;
 import top.mcfpp.lang.value.MCFPPValue;
+import top.mcfpp.lib.SbObject;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.util.NBTUtil;
 import top.mcfpp.util.ValueWrapper;
@@ -56,7 +58,7 @@ public class NBTListConcreteData extends BaseMNIMethodContainer {
 
     @InsertCommand
     @MNIRegister(normalParams = {"list<E> list"}, caller = "list<E>")
-    public static void addAll(NBTList list, NBTListConcrete caller){
+    public static void addAll(NBTList list, NBTListConcrete<Tag<?>> caller){
         if(list instanceof MCFPPValue<?> ec){
             //都是确定的
             //直接添加值
@@ -220,13 +222,20 @@ public class NBTListConcreteData extends BaseMNIMethodContainer {
         }
     }
 
-    static {
-        methods.put("contains", (readOnlyArgs, normalArgs, caller, returnVar) -> {
-            return null;
-        });
+    @MNIRegister(normalParams = {"E e"}, caller = "list<E>", returnType = "bool")
+    public static void contains(Var<?> e, NBTListConcrete caller, ValueWrapper<MCBool> returnVar){
+        var n = e.toNBTVar();
+        if(n instanceof NBTBasedDataConcrete<?> nC){
+            var contains = caller.getValue().contains(nC.getValue());
+            returnVar.setValue(new MCBoolConcrete(contains, UUID.randomUUID().toString()));
+        }else {
+            caller.toDynamic(false);
+            NBTListData.contains(e, caller, returnVar);
+        }
+    }
 
-        methods.put("clear", (readOnlyArgs, normalArgs, caller, returnVar) -> {
-            return null;
-        });
+    @MNIRegister(caller = "list<E>")
+    public static void clear(NBTListConcrete<?> caller){
+        caller.getValue().clear();
     }
 }

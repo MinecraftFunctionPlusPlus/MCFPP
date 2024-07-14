@@ -1,5 +1,7 @@
 package top.mcfpp.lang
 
+import net.querz.nbt.tag.CompoundTag
+import net.querz.nbt.tag.StringTag
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.CompoundData
@@ -77,6 +79,11 @@ class Void: Var<Nothing>("void") {
     ): Pair<Function, Boolean> {
         LogProcessor.error("Cannot get member function from void type variable")
         return UnknownFunction(key) to true
+    }
+
+    override fun toNBTVar(): NBTBasedData<*> {
+        LogProcessor.error("Cannot convert void type variable to NBT")
+        return NBTBasedDataConcrete(StringTag("void"),"unknown")
     }
 
     companion object {

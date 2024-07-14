@@ -116,4 +116,9 @@ class UnresolvedVar : Var<Any> {
         LogProcessor.error("UnresolvedVar.getMemberFunction() is called")
         throw VariableNotResolvedException()
     }
+
+    override fun toNBTVar(): NBTBasedData<*> {
+        LogProcessor.error("UnresolvedVar.toNBTVar() is called")
+        throw VariableNotResolvedException()
+    }
 }

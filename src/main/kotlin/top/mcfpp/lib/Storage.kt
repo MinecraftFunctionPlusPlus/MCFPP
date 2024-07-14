@@ -1,5 +1,7 @@
 package top.mcfpp.lib
 
+import top.mcfpp.lang.resource.StorageConcrete
+
 /**
  * 一个储存对象
  *
@@ -26,6 +28,10 @@ class Storage {
 
     override fun hashCode(): Int {
         return toString().hashCode()
+    }
+
+    fun getResourceID() : top.mcfpp.lang.resource.Storage{
+        return StorageConcrete("$namespace:$identifier")
     }
 
     companion object {

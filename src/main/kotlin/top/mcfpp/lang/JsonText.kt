@@ -17,13 +17,13 @@ import top.mcfpp.util.LogProcessor
 import java.util.*
 
 /**
- * JsonText代表了Minecraft中的富文本格式，即文本组件，又叫原始JSON文本。在MCFPP中，使用类型jtext来定义。
+ * JsonText代表了Minecraft中的富文本格式，即文本组件，又叫原始JSON文本。在MCFPP中，使用类型text来定义。
  *
- * 原始JSON文本有多种格式，但是对于MCFPP的jtext，其原始JSON文本永远只会是列表形式。
+ * 原始JSON文本有多种格式，但是对于MCFPP的text，其原始JSON文本永远只会是列表形式。
  *
  * 对于非编译期的JSONText，其本质是一个和原始JSON文本格式一致的NBT列表数据结构。因此，可以使用整数索引访问原始JSON文本中的每一个部分。
  *
- * 访问所得的依然是一个jtext。
+ * 访问所得的依然是一个text。
  *
  */
 open class JsonText : NBTBasedData<CompoundTag> {
@@ -83,7 +83,7 @@ open class JsonText : NBTBasedData<CompoundTag> {
 
     override fun getByIndex(index: Var<*>): NBTBasedData<*> {
         if(isElement){
-            throw IllegalArgumentException("Cannot get index of jtext element")
+            throw IllegalArgumentException("Cannot get index of text element")
         }
         return when(index){
             is MCInt -> getByIntIndex(index)
