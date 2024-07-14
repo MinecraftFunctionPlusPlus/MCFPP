@@ -1,5 +1,6 @@
 package top.mcfpp.lang
 
+import net.querz.nbt.tag.StringTag
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
@@ -59,6 +60,10 @@ class UnknownVar : Var<Any> {
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         return UnknownFunction("unknown") to true
+    }
+
+    override fun toNBTVar(): NBTBasedData<*> {
+        return NBTBasedDataConcrete(StringTag("unknown"),"unknown")
     }
 
 

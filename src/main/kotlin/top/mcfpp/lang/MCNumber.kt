@@ -1,6 +1,7 @@
 package top.mcfpp.lang
 
 import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lib.SbObject
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
 import java.util.UUID

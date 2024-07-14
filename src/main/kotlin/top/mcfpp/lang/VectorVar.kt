@@ -148,6 +148,10 @@ open class VectorVar: Var<Int>, Indexable<MCInt> {
         }
     }
 
+    override fun toNBTVar(): NBTBasedData<*> {
+        TODO("Not yet implemented")
+    }
+
     companion object {
         val data = CompoundData("vector", "mcfpp")
 

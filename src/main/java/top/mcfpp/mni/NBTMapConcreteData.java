@@ -1,22 +1,26 @@
 package top.mcfpp.mni;
 
 import kotlin.jvm.functions.Function4;
+import net.querz.nbt.tag.CompoundTag;
 import net.querz.nbt.tag.StringTag;
 import org.jetbrains.annotations.NotNull;
+import org.stringtemplate.v4.ST;
 import top.mcfpp.annotations.MNIRegister;
 import top.mcfpp.lang.*;
 import top.mcfpp.model.function.MNIMethodContainer;
 import top.mcfpp.util.ValueWrapper;
 
+import java.lang.Void;
 import java.util.HashMap;
 
-public class NBTMapData {
+public class NBTMapConcreteData {
 
     @MNIRegister(caller = "dict")
-    public static void clear(NBTMap caller){
-        NBTListData.clear(caller.getKeyList());
-        NBTListData.clear(caller.getValueList());
-        NBTDictionaryData.clear(caller.getKeyValueSet());
+    public static void clear(NBTMapConcrete caller){
+        NBTDictionaryConcreteData.clear((NBTDictionaryConcrete) caller.getKeyValueSet());
+        NBTListConcreteData.clear((NBTListConcrete<?>) caller.getKeyList());
+        NBTListConcreteData.clear((NBTListConcrete<?>) caller.getValueList());
+        caller.getValue().clear();
     }
 
     @MNIRegister(normalParams = {"string key"}, caller = "dict", returnType = "bool")

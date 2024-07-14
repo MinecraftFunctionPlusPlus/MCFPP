@@ -19,12 +19,12 @@ class MCFPPBaseType {
 
     object JText: MCFPPType(parentType = listOf(Any)){
         override val typeName: kotlin.String
-            get() = "jtext"
+            get() = "text"
     }
 
     object JTextElement : MCFPPType(parentType = listOf(Any)){
         override val typeName: kotlin.String
-            get() = "jtextE"
+            get() = "textE"
     }
 
     object Float:MCFPPType(parentType = listOf(Any)){
@@ -57,7 +57,7 @@ class MCFPPBaseType {
     }
     object JsonText: MCFPPType(parentType = listOf(MCFPPNBTType.NBT)){
         override val typeName: kotlin.String
-            get() = "jtext"
+            get() = "text"
     }
 
     object Range: MCFPPType(parentType = listOf(Any)){

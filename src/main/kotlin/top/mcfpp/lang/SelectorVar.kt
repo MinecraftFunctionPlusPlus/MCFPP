@@ -108,6 +108,7 @@ open class SelectorVar : NBTBasedData<StringTag> {
         return SelectorVar(this)
     }
 
+
     companion object {
 
         val data = CompoundData("selector","mcfpp")

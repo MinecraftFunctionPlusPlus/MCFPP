@@ -1,7 +1,7 @@
 package top.mcfpp.model.field
 
 import top.mcfpp.Project
-import top.mcfpp.lang.SbObject
+import top.mcfpp.lib.SbObject
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.*
 import top.mcfpp.model.Annotation
@@ -50,7 +50,7 @@ object GlobalField : FieldContainer, IField {
     /**
      * 记分板
      */
-    var scoreboards: HashMap<String ,SbObject> = HashMap()
+    var scoreboards: HashMap<String , SbObject> = HashMap()
 
     /**
      * 注解

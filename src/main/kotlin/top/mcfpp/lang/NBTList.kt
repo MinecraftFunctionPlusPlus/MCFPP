@@ -229,7 +229,13 @@ open class NBTList : NBTBasedData<ListTag<*>> {
     }
 }
 
-//不要随便删这个类型形参，会把NBTListConcreteData类弄坏
+/**
+ *
+ * @param E 没有用，但是不要随便删这个类型形参，会把NBTListConcreteData类弄坏，我也不知道为什么qwq
+ *
+ * 2024.7.12：我试过了，是真的，会坏
+ *
+ */
 class NBTListConcrete<E>: NBTList, MCFPPValue<ListTag<*>> {
 
     override var value: ListTag<*>
@@ -363,6 +369,8 @@ class NBTListConcrete<E>: NBTList, MCFPPValue<ListTag<*>> {
             //data.field.addFunction(NativeFunction("add", NBTListConcreteData.INSTANCE ,MCFPPBaseType.Void,"mcfpp")
             //    .appendNormalParam(MCFPPGenericType("E", emptyList()), "e"),false)
         }
+
+        val empty = NBTListConcrete<Any>(ListTag.createUnchecked(IntTag::class.java), "empty", MCFPPBaseType.Any)
 
     }
 }

@@ -49,7 +49,7 @@ import java.util.*
  * ```java
  * any i;
  * i.method();  //错误
- * (object)i.method();  //正确
+ * ((object)i).method();  //正确
  * ```
  *
  * `any`与`var`的区别在于，`any`是一个变量的类型，而`var`是一个变量的声明关键字。用`any`声明的变量的类型为any，而用`var`声明的对象的类

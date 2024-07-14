@@ -1,20 +1,20 @@
 package top.mcfpp.mni;
 
 import top.mcfpp.annotations.MNIRegister;
-import top.mcfpp.lang.JavaVar;
 import top.mcfpp.lang.JsonTextConcrete;
 import top.mcfpp.lang.MCInt;
+import top.mcfpp.lang.MCIntConcrete;
 import top.mcfpp.lib.ListChatComponent;
+import top.mcfpp.lib.PlainChatComponent;
 import top.mcfpp.lib.ScoreChatComponent;
-import top.mcfpp.model.function.Function;
 import top.mcfpp.util.ValueWrapper;
 
-public class MCIntData {
+public class MCIntConcreteData {
 
     @MNIRegister(caller = "int", returnType = "text")
-    public static void toText(MCInt caller, ValueWrapper<JsonTextConcrete> returnValue) {
+    public static void toText(MCIntConcrete caller, ValueWrapper<JsonTextConcrete> returnValue) {
         var l = new ListChatComponent();
-        l.getComponents().add(new ScoreChatComponent(caller));
+        l.getComponents().add(new PlainChatComponent(caller.getValue().toString()));
         returnValue.setValue(new JsonTextConcrete(l, "re"));
     }
 }

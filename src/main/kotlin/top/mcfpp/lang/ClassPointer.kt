@@ -6,6 +6,7 @@ import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lib.SbObject
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.*
 import top.mcfpp.model.field.CompoundDataField

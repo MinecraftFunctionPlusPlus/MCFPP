@@ -8,6 +8,7 @@ import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.lib.SbObject
 import top.mcfpp.model.Enum
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member

@@ -1,6 +1,6 @@
 package top.mcfpp.lang
 
-import net.querz.nbt.tag.StringTag
+import net.querz.nbt.tag.ByteTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.Project
 import top.mcfpp.command.Command
@@ -355,6 +355,18 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember{
         return MCBool("")
     }
 
+    open fun toNBTVar(): NBTBasedData<*> {
+        val n = NBTBasedData<ByteTag>()
+        n.name = name
+        n.identifier = identifier
+        n.isStatic = isStatic
+        n.accessModifier = accessModifier
+        n.isTemp = isTemp
+        n.stackIndex = stackIndex
+        n.isConst = isConst
+        n.nbtPath = nbtPath
+        return n
+    }
 
     /**
      * 返回一个临时变量。这个变量将用于右值的计算过程中，用于避免计算时对原来的变量进行修改
