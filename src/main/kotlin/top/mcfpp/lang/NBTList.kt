@@ -222,7 +222,7 @@ open class NBTList : NBTBasedData<ListTag<*>> {
         //注册函数
 
         init {
-            data.parent.add(MCAny.data)
+            data.extends(NBTBasedData.data)
             data.getNativeFunctionFromClass(NBTListData::class.java)
         }
 

@@ -8,8 +8,9 @@ import top.mcfpp.model.field.NamespaceField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.generic.GenericFunction
+import java.io.Serializable
 
-class Namespace(val identifier: String) {
+class Namespace(val identifier: String): Serializable {
 
     val field : NamespaceField
 

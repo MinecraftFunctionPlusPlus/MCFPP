@@ -14,6 +14,7 @@ import top.mcfpp.lib.NBTPath
 import top.mcfpp.lib.NBTSource
 import top.mcfpp.lib.Storage
 import top.mcfpp.lib.StorageSource
+import top.mcfpp.mni.NBTBasedDataData
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.AnyTag
@@ -324,8 +325,8 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
         val data = CompoundData("nbt","mcfpp")
 
         init {
-            data.initialize()
             data.extends(MCAny.data)
+            data.getNativeFunctionFromClass(NBTBasedDataData::class.java)
         }
 
         enum class NBTTypeWithTag(val type: NBTType){
@@ -478,5 +479,14 @@ class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData<T>, MCFPPValue<T> {
 
     override fun toString(): String {
         return "[$type,value=${SNBTUtil.toSNBT(value)}]"
+    }
+
+    companion object {
+        val data = CompoundData("nbt","mcfpp")
+
+        init {
+            data.extends(MCAnyConcrete.data)
+            data.getNativeFunctionFromClass(NBTBasedDataData::class.java)
+        }
     }
 }

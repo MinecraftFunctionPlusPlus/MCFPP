@@ -6,8 +6,9 @@ import top.mcfpp.lang.arg.Pos
 import top.mcfpp.lang.resource.ResourceID
 import top.mcfpp.lang.resource.Storage
 import top.mcfpp.lang.resource.StorageConcrete
+import java.io.Serializable
 
-interface NBTSource {
+interface NBTSource: Serializable {
     fun toCommand(): Command
 }
 

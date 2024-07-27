@@ -4,8 +4,9 @@ import top.mcfpp.command.Command
 import top.mcfpp.lang.*
 import top.mcfpp.lang.resource.EntityTypeConcrete
 import top.mcfpp.util.LogProcessor
+import java.io.Serializable
 
-class EntitySelector(var selectorType: SelectorType) {
+class EntitySelector(var selectorType: SelectorType): Serializable {
 
     private var hasXPredicate: Boolean = false
     private var hasYPredicate: Boolean = false

@@ -13,6 +13,7 @@ import top.mcfpp.lib.*
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
+import java.io.Serializable
 import java.util.*
 
 /**
@@ -30,7 +31,7 @@ import java.util.*
  *
  * @param T 已弃用。变量储存的类型。
  */
-abstract class Var<T> : Member, Cloneable, CanSelectMember{
+abstract class Var<T> : Member, Cloneable, CanSelectMember, Serializable{
     /**
      * 在Minecraft中的标识符
      */

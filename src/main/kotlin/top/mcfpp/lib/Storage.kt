@@ -1,13 +1,14 @@
 package top.mcfpp.lib
 
 import top.mcfpp.lang.resource.StorageConcrete
+import java.io.Serializable
 
 /**
  * 一个储存对象
  *
  * @constructor Create empty top.mcfpp.lang.resource.Storage
  */
-class Storage {
+class Storage: Serializable {
 
     var namespace : String
     var identifier : String

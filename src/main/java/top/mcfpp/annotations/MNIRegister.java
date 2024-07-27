@@ -15,4 +15,6 @@ public @interface MNIRegister {
     String caller() default "void";
     String returnType() default "void";
 
+    boolean override() default false;
+
 }

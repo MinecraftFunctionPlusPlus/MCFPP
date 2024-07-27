@@ -1,6 +1,8 @@
 package top.mcfpp.lib
 
-class NamespaceID(var namespace: String?, var identifier: String) {
+import java.io.Serializable
+
+class NamespaceID(var namespace: String?, var identifier: String): Serializable {
     override fun toString(): String {
         if(namespace == null){
             return identifier

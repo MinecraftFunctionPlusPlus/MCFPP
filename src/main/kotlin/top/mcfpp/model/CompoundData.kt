@@ -2,7 +2,6 @@ package top.mcfpp.model
 
 import top.mcfpp.Project
 import top.mcfpp.annotations.MNIRegister
-import top.mcfpp.lang.CanSelectMember
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.field.CompoundDataField
@@ -10,10 +9,11 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.util.LogProcessor
+import java.io.Serializable
 import java.lang.Class
 import java.lang.reflect.Modifier
 
-open class CompoundData : FieldContainer {
+open class CompoundData : FieldContainer, Serializable {
 
     /**
      * 父结构
@@ -204,7 +204,22 @@ open class CompoundData : FieldContainer {
                 for(nt in normalType){
                     nf.appendNormalParam(nt.second, nt.first)
                 }
-                this.field.addFunction(nf, false)
+                //有继承
+                if(mniRegister.override){
+                    val result = field.hasFunction(nf)
+                    if(!result){
+                        LogProcessor.error("Method ${nf.identifier} in class ${cls.name} overrides nothing")
+                        continue
+                    }else{
+                        this.field.addFunction(nf, true)
+                    }
+                }else {
+                    val result = this.field.addFunction(nf, false)
+                    if(!result){
+                        LogProcessor.warn("Duplicate method ${nf.identifier} in class ${cls.name}. If you want to override it, please add @MNIRegister(override = true) to the method")
+                        this.field.addFunction(nf, true)
+                    }
+                }
             }
         }
         Project.currNamespace = l

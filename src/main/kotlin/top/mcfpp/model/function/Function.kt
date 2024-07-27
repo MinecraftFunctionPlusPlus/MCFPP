@@ -16,6 +16,7 @@ import top.mcfpp.model.*
 import top.mcfpp.model.field.FunctionField
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
+import java.io.Serializable
 import java.lang.NullPointerException
 import java.lang.reflect.Method
 
@@ -95,7 +96,7 @@ import java.lang.reflect.Method
  *
  * @see InternalFunction
  */
-open class Function : Member, FieldContainer {
+open class Function : Member, FieldContainer, Serializable {
 
     /**
      * 函数的返回变量

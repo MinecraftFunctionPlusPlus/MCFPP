@@ -2,6 +2,10 @@
     "files": [
         "*"
     ],
+    "mainSrc": {
+        "mcfpp": ["src/main/mcfpp"],
+        "resource": ["src/main/resource"]
+    },
     "description": "",
     "namespace": "mcfpp.lang",
     "targetPath": "null",

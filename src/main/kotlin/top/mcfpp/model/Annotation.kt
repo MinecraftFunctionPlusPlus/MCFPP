@@ -3,6 +3,7 @@ package top.mcfpp.model
 import top.mcfpp.lang.Var
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
+import java.io.Serializable
 
 
 /**
@@ -20,7 +21,7 @@ import top.mcfpp.util.LogProcessor
  *
  * @constructor Create empty Annotation
  */
-abstract class Annotation {
+abstract class Annotation : Serializable {
 
     /**
      * 注解的标识符

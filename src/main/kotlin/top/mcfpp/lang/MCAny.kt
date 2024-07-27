@@ -5,6 +5,7 @@ import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.mni.MCAnyConcreteData
 import top.mcfpp.mni.MCAnyData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
@@ -174,7 +175,6 @@ open class MCAny : Var<Var<*>> {
         val data = CompoundData("any","mcfpp.lang")
 
         init {
-            data.initialize()
             data.getNativeFunctionFromClass(MCAnyData::class.java)
         }
     }
@@ -276,6 +276,15 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>>{
             Function.currFunction.field.putVar(identifier, re, true)
         }
         return re
+    }
+
+    companion object {
+
+        val data = CompoundData("any","mcfpp.lang")
+
+        init {
+            data.getNativeFunctionFromClass(MCAnyConcreteData::class.java)
+        }
     }
 
 }

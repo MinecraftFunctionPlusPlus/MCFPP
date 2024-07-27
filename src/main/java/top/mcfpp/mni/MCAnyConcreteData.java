@@ -11,7 +11,8 @@ import top.mcfpp.util.ValueWrapper;
 
 import java.util.UUID;
 
-public class MCAnyData {
+public class MCAnyConcreteData {
+
     @MNIRegister(normalParams = {"any a"}, returnType = "JavaVar")
     public static void getJavaVar(@NotNull Var<?> value, ValueWrapper<Var<?>> returnValue){
         var re = new JavaVar(value, UUID.randomUUID().toString());

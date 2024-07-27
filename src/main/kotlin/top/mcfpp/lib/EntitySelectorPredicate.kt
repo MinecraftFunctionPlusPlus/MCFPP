@@ -2,10 +2,7 @@ package top.mcfpp.lib
 
 import top.mcfpp.command.Command
 import top.mcfpp.lang.*
-import top.mcfpp.lang.resource.Advancement
-import top.mcfpp.lang.resource.AdvancementConcrete
-import top.mcfpp.lang.resource.EntityType
-import top.mcfpp.lang.resource.EntityTypeConcrete
+import top.mcfpp.lang.resource.*
 
 interface EntitySelectorPredicate {
     fun toCommandPart(): Command
@@ -168,18 +165,18 @@ class TypePredicate(val type: EntityType, val reverse: Boolean): EntitySelectorP
     override fun isConcrete(): Boolean = type is EntityTypeConcrete
 }
 
-class PredicatePredicate(val predicate: MCString, val reverse: Boolean): EntitySelectorPredicate {
+class PredicatePredicate(val predicate: LootTablePredicate, val reverse: Boolean): EntitySelectorPredicate {
     override fun toCommandPart(): Command {
         val re = Command.build("predicate=")
         if(reverse) re.build("!", false)
-        return if(predicate is MCStringConcrete){
-            re.build(predicate.value.valueToString(), false)
+        return if(predicate is LootTablePredicateConcrete){
+            re.build(predicate.value, false)
         }else{
             re.buildMacro(predicate.identifier, false)
         }
     }
 
-    override fun isConcrete(): Boolean = predicate is MCStringConcrete
+    override fun isConcrete(): Boolean = predicate is LootTablePredicateConcrete
 }
 
 class XRotationPredicate(val x_rotation: RangeVar): EntitySelectorPredicate {
@@ -218,12 +215,16 @@ class LevelPredicate(val level: RangeVar): EntitySelectorPredicate {
     override fun isConcrete(): Boolean = level is RangeVarConcrete
 }
 
-class GamemodePredicate(val gamemode: MCString): EntitySelectorPredicate {
+class GamemodePredicate(val gamemode: MCString, val reverse: Boolean): EntitySelectorPredicate {
     override fun toCommandPart(): Command {
+        val c = Command.build("gamemode=")
+        if(reverse){
+            c.build("!", false)
+        }
         return if(gamemode is MCStringConcrete){
-            Command.build("gamemode=").build(gamemode.value.valueToString())
+            c.build(gamemode.value.valueToString())
         }else{
-            Command.build("gamemode=").buildMacro(gamemode.identifier)
+            c.buildMacro(gamemode.identifier)
         }
     }
 

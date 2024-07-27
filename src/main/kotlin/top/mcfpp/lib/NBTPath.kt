@@ -5,8 +5,9 @@ import net.querz.nbt.tag.Tag
 import top.mcfpp.command.Command
 import top.mcfpp.lang.*
 import top.mcfpp.util.LogProcessor
+import java.io.Serializable
 
-class NBTPath(var source: NBTSource) {
+class NBTPath(var source: NBTSource): Serializable {
 
     val pathList = ArrayList<Path>()
 
@@ -85,7 +86,7 @@ class NBTPath(var source: NBTSource) {
 
 }
 
-interface Path
+interface Path: Serializable
 
 data class IntPath(val value : MCInt) : Path
 
