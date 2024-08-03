@@ -63,6 +63,7 @@ typeDeclaration
 //类或函数声明
 declarations
     :   classDeclaration
+    |   genericClassImplement
     |   objectClassDeclaration
     |   functionDeclaration
     |   inlineFunctionDeclaration
@@ -131,6 +132,10 @@ nativeClassFunctionDeclaration
 
 classFieldDeclaration
     :   accessModifier? type fieldDeclarationExpression
+    ;
+
+genericClassImplement
+    :   IMPL classAnnotation? STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace readOnlyArgs (COLON className (',' className)*)? classBody
     ;
 
 //数据模板

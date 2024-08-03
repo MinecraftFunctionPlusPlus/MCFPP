@@ -2,12 +2,15 @@ package top.mcfpp.antlr
 
 import top.mcfpp.Project
 import top.mcfpp.lang.MCAny
+import top.mcfpp.lang.Var
+import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.Enum
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.generic.ClassParam
 import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.model.generic.GenericObjectClass
+import top.mcfpp.model.generic.ImplementedGenericClass
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 
@@ -252,6 +255,50 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             objectClass.extends(MCAny.data)
         }
         nsp.field.addObject(objectClass.identifier, objectClass)
+    }
+
+    override fun visitGenericClassImplement(ctx: mcfppParser.GenericClassImplementContext) {
+        Project.ctx = ctx
+        //注册类
+        val id = ctx.classWithoutNamespace().text
+
+        val readOnlyArgs: ArrayList<Var<*>> = ArrayList()
+        val exprVisitor = McfppExprVisitor()
+        for (expr in ctx.readOnlyArgs().expressionList().expression()) {
+            val arg = exprVisitor.visit(expr)!!
+            if(arg !is MCFPPValue<*>){
+                LogProcessor.error("Generic class implement must be a value")
+                return
+            }
+            readOnlyArgs.add(arg)
+        }
+
+        val genericClass = GlobalField.getClass(Project.currNamespace, id)
+        if(genericClass == null){
+            LogProcessor.error("Undefined generic class: $id in namespace ${Project.currNamespace}")
+            return
+        }
+        if(genericClass !is GenericClass){
+            LogProcessor.error("Class $id is not a generic class")
+            return
+        }
+
+        val cls = ImplementedGenericClass(id, Project.currNamespace, readOnlyArgs, genericClass)
+
+        if(ctx.className().size != 0){
+            for (p in ctx.className()){
+                //是否存在继承
+                val qwq = StringHelper.splitNamespaceID(p.text)
+                val identifier: String = qwq.second
+                val namespace : String? = qwq.first
+                cls.extends(Class.Companion.UndefinedClassOrInterface(identifier,namespace))
+            }
+        }else{
+            //继承Any类
+            cls.extends(MCAny.data)
+        }
+        cls.isStaticClass = ctx.STATIC() != null
+        cls.isAbstract = ctx.ABSTRACT() != null
     }
 
     override fun visitTemplateDeclaration(ctx: mcfppParser.TemplateDeclarationContext) {

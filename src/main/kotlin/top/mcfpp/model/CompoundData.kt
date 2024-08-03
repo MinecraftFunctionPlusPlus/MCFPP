@@ -98,11 +98,13 @@ open class CompoundData : FieldContainer, Serializable {
      * 向这个类中添加一个成员
      * @param member 要添加的成员
      */
-    fun addMember(member: Member) {
-        if (member is Function) {
+    fun addMember(member: Member): Boolean {
+        return if (member is Function) {
             field.addFunction(member, false)
         } else if (member is Var<*>) {
             field.putVar(member.identifier, member)
+        } else {
+            TODO()
         }
     }
 
@@ -224,4 +226,11 @@ open class CompoundData : FieldContainer, Serializable {
         }
         Project.currNamespace = l
     }
+
+
+    fun forMember(operation: (Member) -> Any?){
+        field.forEachFunction { operation(it) }
+        field.forEachVar { operation(it) }
+    }
+
 }

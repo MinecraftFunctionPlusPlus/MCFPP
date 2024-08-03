@@ -104,6 +104,10 @@ class GenericClass : Class {
         }
         return false
     }
+
+    companion object {
+        class Unknown
+    }
 }
 
 class ClassParam(

@@ -83,7 +83,7 @@ STATIC:'static';
 EXTENDS:'extends';
 NATIVE:'native';
 CONCRETE:'concrete';
-FINAL:'final ';
+FINAL:'final';
 
 PUBLIC:'public';
 PROTECTED:'protected';
@@ -91,6 +91,7 @@ PRIVATE:'private';
 
 OVERRIDE: 'override';
 ABSTRACT: 'abstract';
+IMPL: 'impl';
 
 CONST:'const';
 DYNAMIC:'dynamic';

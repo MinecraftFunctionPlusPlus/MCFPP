@@ -48,8 +48,6 @@ open class MCInt : MCNumber<Int> {
 
     override var type: MCFPPType = MCFPPBaseType.Int
 
-    @Override
-    @Throws(VariableConverseException::class)
     override fun assign(b: Var<*>) : MCInt {
         hasAssigned = true
         return when (b) {
@@ -69,7 +67,6 @@ open class MCInt : MCNumber<Int> {
         }
     }
 
-    @Override
     override fun cast(type: MCFPPType): Var<*> {
         //TODO 类支持
         return when (type) {
@@ -127,7 +124,6 @@ open class MCInt : MCNumber<Int> {
         ) as MCInt
     }
 
-    @Override
     @InsertCommand
     override fun plus(a: Var<*>): Var<*> {
         //t += a
@@ -146,7 +142,6 @@ open class MCInt : MCNumber<Int> {
         }
     }
 
-    @Override
     @InsertCommand
     override fun minus(a: Var<*>): Var<*> {
         //t -= a
@@ -165,7 +160,6 @@ open class MCInt : MCNumber<Int> {
         }
     }
 
-    @Override
     @InsertCommand
     override fun multiple(a: Var<*>): Var<*> {
         //t *= a
@@ -182,7 +176,6 @@ open class MCInt : MCNumber<Int> {
         return this
     }
 
-    @Override
     @InsertCommand
     override fun divide(a: Var<*>): Var<*> {
         if(!isTemp){
@@ -197,7 +190,6 @@ open class MCInt : MCNumber<Int> {
         return this
     }
 
-    @Override
     @InsertCommand
     override fun modular(a: Var<*>): Var<*> {
         if(!isTemp){
@@ -212,7 +204,6 @@ open class MCInt : MCNumber<Int> {
         return this
     }
 
-    @Override
     @InsertCommand
     override fun isBigger(a: Var<*>): MCBool {
         //re = t > a
@@ -236,7 +227,6 @@ open class MCInt : MCNumber<Int> {
         return re
     }
 
-    @Override
     @InsertCommand
     override fun isSmaller(a: Var<*>): MCBool {
         //re = t < a
@@ -260,7 +250,6 @@ open class MCInt : MCNumber<Int> {
         return re
     }
 
-    @Override
     @InsertCommand
     override fun isSmallerOrEqual(a: Var<*>): MCBool {
         //re = t <= a
@@ -284,7 +273,6 @@ open class MCInt : MCNumber<Int> {
         return re
     }
 
-    @Override
     @InsertCommand
     override fun isGreaterOrEqual(a: Var<*>): MCBool {
         //re = t <= a
@@ -308,7 +296,6 @@ open class MCInt : MCNumber<Int> {
         return re
     }
 
-    @Override
     @InsertCommand
     override fun isEqual(a: Var<*>): MCBool {
         //re = t == a
@@ -332,7 +319,6 @@ open class MCInt : MCNumber<Int> {
         return re
     }
 
-    @Override
     @InsertCommand
     override fun isNotEqual(a: Var<*>): MCBool {
         //re = t != a
@@ -356,7 +342,6 @@ open class MCInt : MCNumber<Int> {
         return re
     }
 
-    @Override
     override fun clone(): MCInt {
         return MCInt(this)
     }
@@ -369,7 +354,6 @@ open class MCInt : MCNumber<Int> {
      *
      * @return 返回临时变量
      */
-    @Override
     @InsertCommand
     override fun getTempVar(): Var<*> {
         if (isTemp) return this
