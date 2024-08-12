@@ -1,0 +1,125 @@
+{
+	"namespaces":[
+		{
+			"id":"default",
+			"functions":[
+				
+			],
+			"classes":[
+				
+			],
+			"template":[
+				
+			],
+			"enum":[
+				
+			]
+		},
+		{
+			"id":"mcfpp",
+			"functions":[
+				{
+					"id":"print",
+					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.lang.MCInt)",
+					"normalParams":[
+						{
+							"id":"i",
+							"type":"int",
+							"isStatic":false
+						}
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				},
+				{
+					"id":"print",
+					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.lang.MCString)",
+					"normalParams":[
+						{
+							"id":"s",
+							"type":"string",
+							"isStatic":false
+						}
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				},
+				{
+					"id":"print",
+					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.lang.DataTemplateObject)",
+					"normalParams":[
+						{
+							"id":"n",
+							"type":"template(mcfpp.lang:DataObject)",
+							"isStatic":false
+						}
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				},
+				{
+					"id":"print",
+					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.lang.NBTBasedData)",
+					"normalParams":[
+						{
+							"id":"n",
+							"type":"nbt",
+							"isStatic":false
+						}
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				},
+				{
+					"id":"print",
+					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.lang.Var)",
+					"normalParams":[
+						{
+							"id":"a",
+							"type":"any",
+							"isStatic":false
+						}
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				},
+				{
+					"id":"debug",
+					"javaMethod":"top.mcfpp.mni.System#debug()",
+					"normalParams":[
+						
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				}
+			],
+			"classes":[
+				
+			],
+			"template":[
+				
+			],
+			"enum":[
+				
+			]
+		}
+	]
+}

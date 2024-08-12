@@ -32,6 +32,11 @@ object LibReader{
         val json = JSONObject.parse(jsonString) as JSONObject
         GlobalReader.fromJson(json)
     }
+
+    fun readFromString(jsonString: String){
+        val json = JSONObject.parse(jsonString) as JSONObject
+        GlobalReader.fromJson(json)
+    }
 }
 
 interface ILibJsonReader<T>{

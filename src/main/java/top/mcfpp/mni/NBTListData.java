@@ -32,8 +32,8 @@ public class NBTListData {
     static MCBool contains = new MCBool("list.contains");
 
     static {
-        list.setNbtPath(new NBTPath(new StorageSource(Storage.Companion.getMCFPP_SYSTEM().getResourceID())).memberIndex("list.list"));
-        element.setNbtPath(new NBTPath(new StorageSource(Storage.Companion.getMCFPP_SYSTEM().getResourceID())).memberIndex("list.element"));
+        list.setNbtPath(new NBTPath(new StorageSource(Storage.Companion.getMCFPP_SYSTEM().toString())).memberIndex("list.list"));
+        element.setNbtPath(new NBTPath(new StorageSource(Storage.Companion.getMCFPP_SYSTEM().toString())).memberIndex("list.element"));
         index.setObj(SbObject.Companion.getMCFPP_TEMP());
         contains.setObj(SbObject.Companion.getMCFPP_TEMP());
     }

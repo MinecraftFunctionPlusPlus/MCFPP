@@ -38,7 +38,7 @@ fun main(args: Array<String>) {
         Project.optimization() //优化
         Project.genIndex() //生成索引
         Project.ctx = null
-        if(Project.config.targetPath != "null"){
+        if(!Project.config.noDatapack){
             Project.compileStage++
             try{
                 DatapackCreator.createDatapack(Project.config.targetPath) //生成数据包

@@ -166,16 +166,16 @@ open class MCFloat : MCNumber<Float> {
                 Function.addCommand("scoreboard players operation ${exp.name} ${exp.sbObject} = ${pwp.exp.name} ${pwp.exp.sbObject}")
             }else{
                 Function.addCommand("execute " +
-                        "store result storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + ".sign" + " int 1 " +
+                        "store result storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame[" + stackIndex + "]." + identifier + ".sign" + " int 1 " +
                         "run scoreboard players operation ${sign.name} ${sign.sbObject} = ${pwp.sign.name} ${pwp.sign.sbObject}")
                 Function.addCommand("execute " +
-                        "store result storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + ".int0" + " int 1 " +
+                        "store result storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame[" + stackIndex + "]." + identifier + ".int0" + " int 1 " +
                         "run scoreboard players operation ${int0.name} ${int0.sbObject} = ${pwp.int0.name} ${pwp.int0.sbObject}")
                 Function.addCommand("execute " +
-                        "store result storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + ".int1" + " int 1 " +
+                        "store result storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame[" + stackIndex + "]." + identifier + ".int1" + " int 1 " +
                         "run scoreboard players operation ${int1.name} ${int1.sbObject} = ${pwp.int1.name} ${pwp.int1.sbObject}")
                 Function.addCommand("execute " +
-                        "store result storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + ".exp" + " int 1 " +
+                        "store result storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame[" + stackIndex + "]." + identifier + ".exp" + " int 1 " +
                         "run scoreboard players operation ${exp.name} ${exp.sbObject} = ${pwp.exp.name} ${pwp.exp.sbObject}")
             }
             return this

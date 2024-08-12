@@ -1,8 +1,10 @@
 package top.mcfpp.model.field
 
 import top.mcfpp.Project
+import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lib.SbObject
 import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.mni.MinecraftData
 import top.mcfpp.model.*
 import top.mcfpp.model.Annotation
 import top.mcfpp.model.Enum
@@ -69,6 +71,30 @@ object GlobalField : FieldContainer, IField {
         scoreboards[SbObject.MCFPP_TEMP.name] = SbObject.MCFPP_TEMP
 
         localNamespaces["default"] = Namespace("default")
+
+
+        //初始化mcfpp的tick和load函数
+        //添加命名空间
+        stdNamespaces["mcfpp"] = Namespace("mcfpp")
+        stdNamespaces["mcfpp.sys"] = Namespace("mcfpp.sys")
+        stdNamespaces["mcfpp.lang"] = Namespace("mcfpp.lang")
+        stdNamespaces["mcfpp.minecraft"] = Namespace("mcfpp.minecraft")
+
+        Project.mcfppTick = Function("tick","mcfpp", MCFPPBaseType.Void)
+        Project.mcfppLoad = Function("load","mcfpp", MCFPPBaseType.Void)
+        Project.mcfppInit = Function("init", "mcfpp", MCFPPBaseType.Void)
+        stdNamespaces["mcfpp"]!!.field.addFunction(Project.mcfppLoad,true)
+        stdNamespaces["mcfpp"]!!.field.addFunction(Project.mcfppTick,true)
+        stdNamespaces["mcfpp"]!!.field.addFunction(Project.mcfppInit, true)
+
+        functionTags["minecraft:tick"]!!.functions.add(Project.mcfppTick)
+        functionTags["minecraft:load"]!!.functions.add(Project.mcfppLoad)
+        functionTags["minecraft:load"]!!.functions.add(Project.mcfppInit)
+
+        stdNamespaces["mcfpp.lang"]!!.field.addTemplate("DataObject", DataTemplate.baseDataTemplate)
+        stdNamespaces["mcfpp.lang"]!!.field.addClass("Object", Class.baseClass)
+
+        stdNamespaces["mcfpp.minecraft"]!!.getNativeFunctionFromClass(MinecraftData::class.java)
 
         return this
     }
@@ -311,7 +337,7 @@ object GlobalField : FieldContainer, IField {
 
     @get:Override
     override val prefix: String
-        get() = Project.config.defaultNamespace + "_global_"
+        get() = Project.config.rootNamespace + "_global_"
 
     /**
      * TODO:DEBUG

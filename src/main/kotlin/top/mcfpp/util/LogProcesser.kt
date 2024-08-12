@@ -7,49 +7,45 @@ import top.mcfpp.io.MCFPPFile
 
 object LogProcessor {
 
-    private var logger: Logger = LogManager.getLogger("mcfpp")
+    var logger: Logger = LogManager.getLogger("mcfpp")
 
-    var errorCount = 0
-
-    var warningCount = 0
-
-    fun debug(msg: String){
+    inline fun debug(msg: String){
         logger.debug(msg)
     }
 
-    fun debug(msg: String, e: Exception){
+    inline fun debug(msg: String, e: Exception){
         logger.debug(msg, e)
     }
 
-    fun info(msg: String){
+    inline fun info(msg: String){
         logger.info(msg)
     }
 
-    fun info(msg: String, e: Exception){
+    inline fun info(msg: String, e: Exception){
         logger.info(msg, e)
     }
 
-    fun warn(msg: String){
+    inline fun warn(msg: String){
         logger.warn(
             msg + if(Project.ctx !=null) {" at " + MCFPPFile.currFile!!.name + ":" + Project.ctx!!.getStart().line}else{""}
         )
-        warningCount++
+        Project.warningCount++
     }
 
-    fun warn(msg: String, e: Exception){
+    inline fun warn(msg: String, e: Exception){
         logger.warn(msg, e)
-        warningCount++
+        Project.warningCount++
     }
 
-    fun error(msg: String){
+    inline fun error(msg: String){
         logger.error(
             msg + if(Project.ctx !=null) {" at " + MCFPPFile.currFile!!.name + ":" + Project.ctx!!.getStart().line}else{""}
         )
-        errorCount++
+        Project.errorCount++
     }
 
-    fun error(msg: String, e: Exception){
+    inline fun error(msg: String, e: Exception){
         logger.error(msg, e)
-        errorCount++
+        Project.errorCount++
     }
 }

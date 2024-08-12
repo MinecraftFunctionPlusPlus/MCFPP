@@ -59,14 +59,14 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
         //初始化
         if(target.classPreInit.commands.size > 0){
             //给函数开栈
-            addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
+            addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
             //不应当立即调用它自己的函数，应当先调用init，再调用constructor
             addCommand(Commands.function(target.classPreInit))
             //调用完毕，将子函数的栈销毁
-            addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
+            addCommand("data remove storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame[0]")
         }
         //给函数开栈，调用构造函数
-        addCommand("data modify storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame prepend value {}")
+        addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
         //参数传递
         argPass(/*readOnlyArgs, */normalArgs)
         //调用构造函数
@@ -78,7 +78,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
             }
         }
         //调用完毕，将子函数的栈销毁
-        addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
+        addCommand("data remove storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame[0]")
         //取出栈内的值到记分板
         fieldRestore()
         currFunction = qwq

@@ -106,7 +106,7 @@ object Commands {
         val final = when(a){
             is ClassPointer -> {
                 arrayOf(
-                    Command.build("data modify storage entity ${ClassPointer.tempItemEntityUUID} Thrower set from storage mcfpp:system ${Project.config.defaultNamespace}.stack_frame[${a.stackIndex}].${a.identifier}"),
+                    Command.build("data modify storage entity ${ClassPointer.tempItemEntityUUID} Thrower set from storage mcfpp:system ${Project.config.rootNamespace}.stack_frame[${a.stackIndex}].${a.identifier}"),
                     Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin").build("run","run").build(command)
                 )
             }
@@ -122,7 +122,7 @@ object Commands {
         val final = when(a){
             is ClassPointer -> {
                 arrayOf(
-                    Command.build("data modify storage entity ${ClassPointer.tempItemEntityUUID} Thrower set from storage mcfpp:system ${Project.config.defaultNamespace}.stack_frame[${a.stackIndex}].${a.identifier}"),
+                    Command.build("data modify storage entity ${ClassPointer.tempItemEntityUUID} Thrower set from storage mcfpp:system ${Project.config.rootNamespace}.stack_frame[${a.stackIndex}].${a.identifier}"),
                     Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin").build("run","run")
                 )
             }

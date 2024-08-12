@@ -1,6 +1,5 @@
 package top.mcfpp.lang
 
-import net.querz.nbt.tag.ByteTag
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
@@ -183,7 +182,7 @@ open class MCBool : Var<Boolean>, OnScoreboard {
         if(a is ReturnedMCBool){
             Function.addCommand(
                 "execute" +
-                        " store result storage mcfpp:system " + top.mcfpp.Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1" +
+                        " store result storage mcfpp:system " + top.mcfpp.Project.config.rootNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1" +
                         " store result score $name $boolObject" +
                         " run function ${a.parentFunction.namespaceID}"
             )
@@ -194,7 +193,7 @@ open class MCBool : Var<Boolean>, OnScoreboard {
             //变量进栈
             Function.addCommand(
                 "execute" +
-                        " store result storage mcfpp:system " + top.mcfpp.Project.config.defaultNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1" +
+                        " store result storage mcfpp:system " + top.mcfpp.Project.config.rootNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1" +
                         " run scoreboard players operation " + name + " " + boolObject + " = " + a.name + " " + a.boolObject
             )
             return this

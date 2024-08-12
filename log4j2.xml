@@ -2,7 +2,7 @@
 <configuration>
     <appenders>
         <console name="console" target="SYSTEM_OUT">
-            <PatternLayout pattern="%highlight{[%p/%c.%M](%d{HH:mm:ss,SSS}): %m%n}{DEBUG=Bright Black, INFO=White, WARN=Bright YELLOW, ERROR=Bright Red, FATAL=Bright Red}"/>
+            <PatternLayout pattern="%highlight{[%p/%C{1}.%M](%d{HH:mm:ss,SSS}): %m%n}{DEBUG=Bright Black, INFO=White, WARN=Bright YELLOW, ERROR=Bright Red, FATAL=Bright Red}"/>
         </console>
     </appenders>
     <loggers>

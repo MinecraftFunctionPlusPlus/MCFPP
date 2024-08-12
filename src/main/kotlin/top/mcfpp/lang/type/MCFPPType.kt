@@ -280,7 +280,9 @@ open class MCFPPType(
                 val parser = mcfppParser(tokens)
                 return parseFromContext(parser.type(), typeScope)
             }
-            if(typeCache.contains(identifier)) return typeCache[identifier]!!
+            if(typeCache.contains(identifier)) {
+                return typeCache[identifier]!!
+            }
             if(genericTypeCache.contains(identifier)){
                 val genericParams = identifier.substring(identifier.indexOfFirst { it == '<' }+1,identifier.indexOfLast { it == '>' }).split(',')
                 return genericTypeCache[identifier]!!(genericParams.map { parseFromIdentifier(it, typeScope) }.toTypedArray())

@@ -1,0 +1,11 @@
+{
+    "files": [
+        "src/main/mcfpp/**"
+    ],
+    "description": "",
+    "namespace": "mcfpp",
+    "targetPath": "src/main/resources/lib",
+    "noDatapack": true,
+    "ignoreStdLib": true,
+    "isLib": true
+}

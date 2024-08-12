@@ -481,7 +481,7 @@ open class Function : Member, FieldContainer, Serializable {
         //基本类型
         addCommand("#[Function ${this.namespaceID}] Function Pushing and argument passing")
         //给函数开栈
-        addCommand("data modify storage mcfpp:system ${Project.config.defaultNamespace}.stack_frame prepend value {}")
+        addCommand("data modify storage mcfpp:system ${Project.config.rootNamespace}.stack_frame prepend value {}")
         //传入this参数
         field.putVar("this",caller,true)
         //参数传递
@@ -496,7 +496,7 @@ open class Function : Member, FieldContainer, Serializable {
             }
         }
         //调用完毕，将子函数的栈销毁
-        addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
+        addCommand("data remove storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame[0]")
         //取出栈内的值
         fieldRestore()
     }
@@ -511,7 +511,7 @@ open class Function : Member, FieldContainer, Serializable {
     @InsertCommand
     open fun invoke(normalArgs: ArrayList<Var<*>>, callerClassP: ClassPointer?) {
         //给函数开栈
-        addCommand("data modify storage mcfpp:system ${Project.config.defaultNamespace}.stack_frame prepend value {}")
+        addCommand("data modify storage mcfpp:system ${Project.config.rootNamespace}.stack_frame prepend value {}")
         //参数传递
         argPass(/*readOnlyArgs, */normalArgs)
         //函数调用的命令
@@ -533,7 +533,7 @@ open class Function : Member, FieldContainer, Serializable {
             }
         }
         //调用完毕，将子函数的栈销毁
-        addCommand("data remove storage mcfpp:system " + Project.config.defaultNamespace + ".stack_frame[0]")
+        addCommand("data remove storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame[0]")
         //取出栈内的值
         fieldRestore()
     }
@@ -602,7 +602,7 @@ open class Function : Member, FieldContainer, Serializable {
                             addCommand(
                                 "execute " +
                                         "store result score ${(args[i] as MCInt).name} ${(args[i] as MCInt).sbObject} " +
-                                        "run data get storage mcfpp:system ${Project.config.defaultNamespace}.stack_frame[0].${normalParams[i].identifier} int 1 "
+                                        "run data get storage mcfpp:system ${Project.config.rootNamespace}.stack_frame[0].${normalParams[i].identifier} int 1 "
                             )
                         }
                         else -> {

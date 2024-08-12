@@ -12,12 +12,9 @@ interface NBTSource: Serializable {
     fun toCommand(): Command
 }
 
-class StorageSource(val storage: Storage): NBTSource{
+class StorageSource(val storage: String): NBTSource{
     override fun toCommand(): Command {
-        if(storage is StorageConcrete){
-            return Command("storage $storage")
-        }
-        return Command.build("storage").buildMacro(storage.identifier)
+        return Command("storage $storage")
     }
 }
 

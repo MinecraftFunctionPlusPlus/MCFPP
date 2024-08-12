@@ -1,7 +1,7 @@
 {
     "pack": {
        "pack_format": 50,
-       "description": "Dynamic Command Pack"
+       "description": "Standard Library of MCFPP"
     }
  }
  

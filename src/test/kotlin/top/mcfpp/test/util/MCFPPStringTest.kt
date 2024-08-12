@@ -30,7 +30,7 @@ object MCFPPStringTest {
         //描述
         Project.config.description = "debug datapacks"
         //默认命名空间
-        Project.config.defaultNamespace = "default"
+        Project.config.rootNamespace = "default"
         //输出目录
         Project.config.targetPath = targetPath
         Project.init() //初始化
@@ -83,7 +83,7 @@ object MCFPPStringTest {
             //描述
             Project.config.description = "debug datapacks"
             //默认命名空间
-            Project.config.defaultNamespace = "default"
+            Project.config.rootNamespace = "default"
             //输出目录
             Project.config.targetPath = "null"
             Project.readLib() //读取引用的库的索引

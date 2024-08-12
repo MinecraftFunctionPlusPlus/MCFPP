@@ -14,7 +14,6 @@ import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.util.LogProcessor
 import java.util.*
-import top.mcfpp.model.function.Function
 
 open class Function: ResourceID {
 
@@ -115,20 +114,20 @@ class FunctionConcrete: MCFPPValue<String>, Function{
                 else -> TODO()
             }
             if(cmd.size == 2){
-                Function.addCommand(cmd[0])
+                top.mcfpp.model.function.Function.addCommand(cmd[0])
             }
-            Function.addCommand(cmd.last().build(
+            top.mcfpp.model.function.Function.addCommand(cmd.last().build(
                 "data modify entity @s data.${identifier} set value $value")
             )
         } else {
             val cmd = Command.build("data modify")
                 .build(nbtPath.toCommandPart())
                 .build("set value $value")
-            Function.addCommand(cmd)
+            top.mcfpp.model.function.Function.addCommand(cmd)
         }
         val re = Function(this)
         if(replace){
-            Function.currFunction.field.putVar(identifier, re, true)
+            top.mcfpp.model.function.Function.currFunction.field.putVar(identifier, re, true)
         }
         return re
     }

@@ -142,6 +142,10 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
     dependsOn(tasks.generateGrammarSource)
 }
 
+tasks.withType<JavaCompile>{
+    options.encoding = "UTF-8"
+}
+
 application {
     mainClass.set("top.mcfpp.MCFPPKt")
 }

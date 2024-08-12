@@ -53,7 +53,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 }
             }
             namespaceStr
-        }?: Project.config.defaultNamespace
+        }?: Project.config.rootNamespace
         typeScope = GlobalField.localNamespaces[Project.currNamespace]!!.field
         //文件结构，类和函数
         for (t in ctx.typeDeclaration()) {

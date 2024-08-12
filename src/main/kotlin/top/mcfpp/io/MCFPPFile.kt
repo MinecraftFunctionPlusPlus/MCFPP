@@ -8,25 +8,35 @@ import top.mcfpp.Project
 import top.mcfpp.antlr.*
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.model.Class
-import top.mcfpp.model.function.Function
 import top.mcfpp.model.field.FileField
 import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
+import java.nio.file.*
+import java.nio.file.attribute.BasicFileAttributes
+
 
 class MCFPPFile(path : String) : File(path) {
-
-    constructor(file: File) : this(file.absolutePath)
 
     val field = FileField()
 
     val inputStream : FileInputStream by lazy { FileInputStream(this) }
 
+    val namespace: String
+
     //TODO 同名文件的顶级函数之间的命名冲突
-    val topFunction = Function(StringHelper.toLowerCase(this.name))
+    val topFunction = Function(StringHelper.toLegalIdentifier(this.name))
+
+    init {
+        val n = Project.config.sourcePath.toAbsolutePath().relativize(this.toPath().toAbsolutePath().parent).toString()
+        namespace = Project.config.rootNamespace + "." + StringHelper.toLegalIdentifier(n.replace("\\",".").replace("/","."))
+    }
+
+    constructor(file: File) : this(file.absolutePath)
 
     @Throws(IOException::class)
     fun tree(): ParseTree {
@@ -44,6 +54,7 @@ class MCFPPFile(path : String) : File(path) {
      */
     fun indexType(){
         currFile = this
+        Project.currNamespace = namespace
         McfppTypeVisitor().visit(tree())
         //类是否有空继承
         GlobalField.localNamespaces.forEach { _, u ->
@@ -61,6 +72,7 @@ class MCFPPFile(path : String) : File(path) {
                 }
             }
         }
+        Project.currNamespace = Project.config.rootNamespace
         currFile = null
     }
 
@@ -69,7 +81,9 @@ class MCFPPFile(path : String) : File(path) {
      */
     fun resolveField() {
         currFile = this
+        Project.currNamespace = namespace
         McfppFieldVisitor().visit(tree())
+        Project.currNamespace = Project.config.rootNamespace
         currFile = null
     }
 
@@ -78,7 +92,7 @@ class MCFPPFile(path : String) : File(path) {
      */
     fun compile() {
         currFile = this
-        Project.currNamespace = Project.config.defaultNamespace
+        Project.currNamespace = namespace
         //创建默认函数
         val func = Function(
             StringHelper.toLowerCase(nameWithoutExtension + "_default"), Project.currNamespace,
@@ -86,6 +100,7 @@ class MCFPPFile(path : String) : File(path) {
         )
         Function.currFunction = func
         McfppImVisitor().visit(tree())
+        Project.currNamespace = Project.config.rootNamespace
         currFile = null
     }
 
@@ -130,6 +145,39 @@ class MCFPPFile(path : String) : File(path) {
             }
             return pathSB.toString()
         }
+
+        fun findFiles(inputPath: String): List<Path> {
+            val fileList = ArrayList<Path>()
+            val matcher = FileSystems.getDefault().getPathMatcher("glob:*.mcfpp")
+
+            val startPath: Path = Paths.get(inputPath.replaceFirst("[*?].*".toRegex(), ""))
+            val recursive = inputPath.contains("**")
+
+            try {
+                Files.walkFileTree(startPath, object : SimpleFileVisitor<Path>() {
+                    @Throws(IOException::class)
+                    override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+                        if (matcher.matches(file.fileName)) {
+                            fileList.add(file)
+                        }
+                        return FileVisitResult.CONTINUE
+                    }
+
+                    @Throws(IOException::class)
+                    override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult {
+                        if (!recursive && dir != startPath) {
+                            return FileVisitResult.SKIP_SUBTREE
+                        }
+                        return FileVisitResult.CONTINUE
+                    }
+                })
+            } catch (e: IOException) {
+                LogProcessor.error("Error while searching for files: $e")
+            }
+
+            return fileList
+        }
+
     }
 
 }

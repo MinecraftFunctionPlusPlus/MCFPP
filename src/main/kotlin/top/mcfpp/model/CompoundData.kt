@@ -3,6 +3,7 @@ package top.mcfpp.model
 import top.mcfpp.Project
 import top.mcfpp.annotations.MNIRegister
 import top.mcfpp.lang.Var
+import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.Function
@@ -193,8 +194,15 @@ open class CompoundData : FieldContainer, Serializable {
                     qwq[1] to MCFPPType.parseFromIdentifier(qwq[0], Namespace.currNamespaceField)
                 }
                 val returnType = MCFPPType.parseFromIdentifier(mniRegister.returnType, Namespace.currNamespaceField)
-                //检查method的参数s
-                if(method.parameterCount != readOnlyType.size + normalType.size + 1){
+                var exceptedParamCount = readOnlyType.size + normalType.size
+                if(returnType != MCFPPBaseType.Void){
+                    exceptedParamCount++
+                }
+                if(mniRegister.caller != "void"){
+                    exceptedParamCount++
+                }
+                //检查method的参数
+                if(method.parameterCount != exceptedParamCount){
                     LogProcessor.error("Method ${method.name} in class ${cls.name} has wrong parameter count")
                     continue
                 }

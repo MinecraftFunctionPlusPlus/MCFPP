@@ -95,7 +95,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember, Serializable{
     /**
      *
      */
-    open var nbtPath = NBTPath(StorageSource(StorageConcrete("system")))
+    open var nbtPath = NBTPath(StorageSource("system"))
         .memberIndex(Project.currNamespace)
         .memberIndex("stack_frame[$stackIndex]")
 
@@ -465,6 +465,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember, Serializable{
                 MCFPPBaseType.JavaVar -> `var` = JavaVar(null,identifier)
                 MCFPPBaseType.Any -> `var` = MCAny(container, identifier)
                 MCFPPBaseType.Type -> `var` = MCFPPTypeVar(identifier = identifier)
+                MCFPPBaseType.JsonText -> `var` = JsonText(container, identifier)
                 is MCFPPGenericClassType -> {
                     `var` = ClassPointer(type.cls, identifier)
                 }
@@ -512,6 +513,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember, Serializable{
                 MCFPPBaseType.JavaVar -> `var` = JavaVar(null,identifier)
                 MCFPPBaseType.Any -> `var` = MCAny(identifier)
                 MCFPPBaseType.Type -> `var` = MCFPPTypeVar(identifier = identifier)
+                MCFPPBaseType.JsonText -> `var` = JsonText(identifier)
                 is MCFPPGenericClassType -> {
                     `var` = ClassPointer(type.cls, identifier)
                 }
