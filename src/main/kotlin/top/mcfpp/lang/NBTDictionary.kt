@@ -11,6 +11,9 @@ import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.mni.NBTDictionaryData
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
+import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 
 open class NBTDictionary : NBTBasedData<CompoundTag> {
@@ -44,13 +47,18 @@ open class NBTDictionary : NBTBasedData<CompoundTag> {
      * @param b 变量的对象
      */
     override fun assign(b: Var<*>): NBTDictionary {
+        var v = b.implicitCast(this.type)
+        if(!v.isError){
+            v = b
+        }
         hasAssigned = true
-        when (b) {
+        when (v) {
             is NBTDictionary -> {
-                return assignCommand(b) as NBTDictionary
+                return assignCommand(v) as NBTDictionary
             }
             else -> {
-                throw VariableConverseException()
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+                return this
             }
         }
     }

@@ -1,7 +1,7 @@
 package top.mcfpp.model.generic
 
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.lang.CanSelectMember
+import top.mcfpp.model.CanSelectMember
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.function.Function

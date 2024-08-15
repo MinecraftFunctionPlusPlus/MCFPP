@@ -1,4 +1,4 @@
-package top.mcfpp.lang
+package top.mcfpp.model
 
 class DataTemplateCompanion {
 }

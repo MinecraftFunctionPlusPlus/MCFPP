@@ -16,6 +16,8 @@ import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 
 /**
@@ -86,19 +88,24 @@ class ClassPointer : Var<Int>{
     @InsertCommand
     @Throws(VariableConverseException::class)
     override fun assign(b: Var<*>): ClassPointer {
+        var v = b.implicitCast(this.type)
+        if(!v.isError){
+            v = b
+        }
         hasAssigned = true
         //TODO 不支持指针作为类成员的时候
-        when (b) {
+        when (v) {
             is ClassPointer -> {
-                if (!b.clazz.canCastTo(clazz)) {
-                    throw VariableConverseException()
+                if (!v.clazz.canCastTo(clazz)) {
+                    LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+                    return this
                 }
                 if (!isNull) {
                     //原实体中的实例减少一个指针
                     val c = Commands.selectRun(this,Commands.sbPlayerRemove(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1))
                     Function.addCommands(c)
                 }
-                isNull = b.isNull
+                isNull = v.isNull
                 //地址储存
                 Function.addCommand(
                     Command.build("data modify")
@@ -112,7 +119,7 @@ class ClassPointer : Var<Int>{
             }
 
             else -> {
-                throw VariableConverseException()
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
             }
         }
         return this

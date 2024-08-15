@@ -3,7 +3,7 @@ package top.mcfpp.lang
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.type.MCFPPVectorType
 import top.mcfpp.lang.value.MCFPPValue
-import top.mcfpp.lib.EntitySelector
+import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
@@ -55,7 +55,7 @@ open class VectorVar: Var<Int>, Indexable<MCInt> {
 
     override fun assign(b: Var<*>): Var<Int> {
         var v = b.implicitCast(this.type)
-        if(v.isError){
+        if(!v.isError){
            v = b
         }
         when(v){

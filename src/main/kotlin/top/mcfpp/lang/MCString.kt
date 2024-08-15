@@ -17,6 +17,9 @@ import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
+import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 
 /**
@@ -96,12 +99,16 @@ open class MCString : NBTBasedData<StringTag> {
     @Override
     @Throws(VariableConverseException::class)
     override fun assign(b: Var<*>): MCString {
-        hasAssigned = true
-        if(b is MCString){
-            return assignCommand(b) as MCString
-        }else{
-            throw VariableConverseException()
+        var v = b.implicitCast(this.type)
+        if(!v.isError){
+            v = b
         }
+        hasAssigned = true
+        when(v){
+            is MCString -> return assignCommand(v) as MCString
+            else -> LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+        }
+        return this
     }
 
     /*

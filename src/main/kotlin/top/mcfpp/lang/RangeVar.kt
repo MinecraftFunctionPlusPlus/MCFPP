@@ -59,14 +59,19 @@ open class RangeVar: Var<Int> {
     }
 
     override fun assign(b: Var<*>): RangeVar {
-        when(b){
+        var v = b.implicitCast(this.type)
+        if(!v.isError){
+            v = b
+        }
+        hasAssigned = true
+        when(v){
             is RangeVar -> {
-                this.point = b.point
-                if(point and 2 != 0.toByte()) left.assign(b.left)
-                if(point and 1 != 0.toByte()) right.assign(b.right)
+                this.point = v.point
+                if(point and 2 != 0.toByte()) left.assign(v.left)
+                if(point and 1 != 0.toByte()) right.assign(v.right)
             }
             else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
             }
         }
         return this

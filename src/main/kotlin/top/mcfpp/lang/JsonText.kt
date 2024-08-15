@@ -14,6 +14,8 @@ import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 
 /**
@@ -50,11 +52,14 @@ open class JsonText : NBTBasedData<CompoundTag> {
     constructor(b: JsonText) : super(b)
 
     override fun assign(b: Var<*>): NBTBasedData<CompoundTag> {
-        when(b){
-            is JsonText -> assignCommand(b)
-            else -> {
-                LogProcessor.error("Cannot assign [${b::class.simpleName}] to [${this::class.simpleName}]")
-            }
+        var v = b.implicitCast(this.type)
+        if(!v.isError){
+            v = b
+        }
+        hasAssigned = true
+        when(v){
+            is JsonText -> assignCommand(v)
+            else -> LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
         }
         return this
     }

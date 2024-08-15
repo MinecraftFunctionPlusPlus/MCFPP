@@ -14,7 +14,10 @@ class UnknownVar : Var<Any> {
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var<*>) : UnknownVar {return this}
+    override fun assign(b: Var<*>) : UnknownVar {
+        hasAssigned = true
+        return this
+    }
 
     /**
      * 将这个变量强制转换为一个类型

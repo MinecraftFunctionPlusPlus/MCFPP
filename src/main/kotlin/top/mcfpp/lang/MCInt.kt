@@ -13,6 +13,8 @@ import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 
 /**
@@ -49,20 +51,18 @@ open class MCInt : MCNumber<Int> {
     override var type: MCFPPType = MCFPPBaseType.Int
 
     override fun assign(b: Var<*>) : MCInt {
+        var v = b.implicitCast(this.type)
+        if(!v.isError){
+            v = b
+        }
         hasAssigned = true
-        return when (b) {
+        return when (v) {
             is MCInt -> {
-                assignCommand(b)
-            }
-            is NBTBasedDataConcrete<*> -> {
-                if(b.nbtType == NBTBasedData.Companion.NBTTypeWithTag.INT){
-                    assignCommand(MCIntConcrete((b.value as IntTag).asInt()))
-                }else{
-                    throw VariableConverseException()
-                }
+                assignCommand(v)
             }
             else -> {
-                throw VariableConverseException()
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+                this
             }
         }
     }

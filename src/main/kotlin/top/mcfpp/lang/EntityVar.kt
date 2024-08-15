@@ -18,6 +18,8 @@ import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 import java.util.UUID
 
 
@@ -73,13 +75,17 @@ open class EntityVar : NBTBasedData<IntArrayTag>{
      * @param b 变量的对象
      */
     override fun assign(b: Var<*>): EntityVar {
+        var v = b.implicitCast(this.type)
+        if(!v.isError){
+            v = b
+        }
         hasAssigned = true
-        when (b) {
+        when (v) {
             is EntityVar -> {
-                assignCommand(b)
+                assignCommand(v)
             }
             else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
             }
         }
         return this

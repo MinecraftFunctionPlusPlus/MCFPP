@@ -1,7 +1,7 @@
 package top.mcfpp.model.function
 
 import top.mcfpp.Project
-import top.mcfpp.lang.CanSelectMember
+import top.mcfpp.model.CanSelectMember
 import top.mcfpp.lang.UnknownVar
 import top.mcfpp.lang.Var
 

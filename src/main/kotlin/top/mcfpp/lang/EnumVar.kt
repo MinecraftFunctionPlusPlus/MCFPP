@@ -14,6 +14,8 @@ import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 
 open class EnumVar : Var<Int> {
@@ -60,14 +62,20 @@ open class EnumVar : Var<Int> {
     }
 
     override fun assign(b: Var<*>): Var<Int> {
-        return when(b){
+        var v = b.implicitCast(this.type)
+        if(!v.isError){
+            v = b
+        }
+        hasAssigned = true
+        return when(v){
             is EnumVar -> {
-                val i = this.getIntVar().assign(b.getIntVar())
+                val i = this.getIntVar().assign(v.getIntVar())
                 if(i is MCIntConcrete) EnumVarConcrete(i, enum)
                 else EnumVar(i, enum)
             }
             else -> {
-                throw Exception("Cannot assign ${b::class.simpleName} to EnumVar")
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+                this
             }
         }
     }

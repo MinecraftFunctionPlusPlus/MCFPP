@@ -95,10 +95,15 @@ open class MCAny : Var<Var<*>> {
      * @return 重新获取跟踪的此变量
      */
     override fun assign(b: Var<*>) : MCAnyConcrete {
-        when (b) {
+        var v = b.implicitCast(this.type)
+        if(!v.isError){
+            v = b
+        }
+        hasAssigned = true
+        when (v) {
             is MCAnyConcrete -> {
-                val q = MCAnyConcrete(this, b.value)
-                q.assign(b)
+                val q = MCAnyConcrete(this, v.value)
+                q.assign(v)
                 return q
             }
             is MCAny -> {
@@ -106,8 +111,8 @@ open class MCAny : Var<Var<*>> {
                 throw VariableConverseException()
             }
             else -> {
-                val q = MCAnyConcrete(this, b)
-                q.assign(b)
+                val q = MCAnyConcrete(this, v)
+                q.assign(v)
                 return q
             }
         }

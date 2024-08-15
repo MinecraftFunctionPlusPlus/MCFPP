@@ -7,7 +7,7 @@ import org.antlr.v4.runtime.CommonTokenStream
 import top.mcfpp.antlr.McfppExprVisitor
 import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.lang.CanSelectMember
+import top.mcfpp.model.CanSelectMember
 import top.mcfpp.lang.Var
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function

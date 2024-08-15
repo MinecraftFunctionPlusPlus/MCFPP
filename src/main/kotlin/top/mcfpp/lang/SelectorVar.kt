@@ -72,16 +72,21 @@ open class SelectorVar : NBTBasedData<StringTag> {
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var<*>): NBTBasedData<StringTag> {
-        when(b){
+    override fun assign(b: Var<*>): SelectorVar {
+        var v = b.implicitCast(this.type)
+        if(v.isError){
+            v = b
+        }
+        hasAssigned = true
+        when(v){
             is SelectorVarConcrete -> {
-                replacedBy(SelectorVarConcrete(this, b.value))
+                replacedBy(SelectorVarConcrete(this, v.value))
             }
             is SelectorVar -> {
-                assignCommand(b)
+                assignCommand(v)
             }
             else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
             }
         }
         return this
@@ -178,13 +183,18 @@ class SelectorVarConcrete : MCFPPValue<EntitySelector>, SelectorVar{
         this.value = value
     }
 
-    override fun assign(b: Var<*>): NBTBasedData<StringTag> {
-        when(b){
+    override fun assign(b: Var<*>): SelectorVarConcrete {
+        var v = b.implicitCast(this.type)
+        if(!v.isError){
+            v = b
+        }
+        hasAssigned = true
+        when(v){
             is SelectorVarConcrete -> {
-                this.value = b.value
+                this.value = v.value
             }
             else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
             }
         }
         return this

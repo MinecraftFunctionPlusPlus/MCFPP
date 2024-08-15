@@ -1,6 +1,6 @@
 package top.mcfpp.model.function
 
-import top.mcfpp.lang.CanSelectMember
+import top.mcfpp.model.CanSelectMember
 import top.mcfpp.lang.JavaVar
 import top.mcfpp.lang.Var
 import java.lang.reflect.Method

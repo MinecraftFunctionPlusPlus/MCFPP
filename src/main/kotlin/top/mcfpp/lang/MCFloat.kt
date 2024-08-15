@@ -13,6 +13,8 @@ import top.mcfpp.lib.SbObject
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 import kotlin.math.absoluteValue
 import kotlin.math.floor
@@ -102,13 +104,18 @@ open class MCFloat : MCNumber<Float> {
     @Override
     @Throws(VariableConverseException::class)
     override fun assign(b: Var<*>) : MCFloat {
+        var v = b.implicitCast(this.type)
+        if(!v.isError){
+            v = b
+        }
         hasAssigned = true
-        return when(b){
+        return when(v){
             is MCFloat ->{
-                assignCommand(b)
+                assignCommand(v)
             }
             else ->{
-                throw VariableConverseException()
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+                this
             }
         }
     }

@@ -9,6 +9,9 @@ import top.mcfpp.lib.SbObject
 import top.mcfpp.model.*
 import java.util.*
 import top.mcfpp.model.function.Function
+import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 
 /**
  * 布尔型变量是mcfpp的基本类型之一，它表示一个只有0，1两种取值可能性的值。
@@ -50,11 +53,16 @@ open class MCBool : Var<Boolean>, OnScoreboard {
 
     @Override
     override fun assign(b: Var<*>) : MCBool {
+        var v = b.implicitCast(this.type)
+        if(!v.isError){
+            v = b
+        }
         hasAssigned = true
-        if (b is MCBool) {
-            return assignCommand(b)
+        if (v is MCBool) {
+            return assignCommand(v)
         } else {
-            throw VariableConverseException()
+            LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+            return this
         }
     }
 

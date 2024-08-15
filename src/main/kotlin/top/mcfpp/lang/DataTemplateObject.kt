@@ -48,13 +48,18 @@ open class DataTemplateObject : Var<CompoundTag> {
 
 
     override fun assign(b: Var<*>): Var<CompoundTag> {
-        when(b){
+        var v = b.implicitCast(this.type)
+        if(!v.isError){
+            v = b
+        }
+        hasAssigned = true
+        when(v){
             is NBTBasedDataConcrete<*> -> {
-                if(b.value !is CompoundTag){
+                if(v.value !is CompoundTag){
                     throw VariableConverseException()
                 }
-                if(templateType.checkCompoundStruct(b.value as CompoundTag)){
-                    this.assignMembers(b.value as CompoundTag)
+                if(templateType.checkCompoundStruct(v.value as CompoundTag)){
+                    this.assignMembers(v.value as CompoundTag)
                     return this
                 }else{
                     throw VariableConverseException()
@@ -62,8 +67,8 @@ open class DataTemplateObject : Var<CompoundTag> {
             }
 
             is DataTemplateObjectConcrete -> {
-                if(templateType.checkCompoundStruct(b.value)){
-                    this.assignMembers(b.value)
+                if(templateType.checkCompoundStruct(v.value)){
+                    this.assignMembers(v.value)
                     return this
                 }else{
                     throw VariableConverseException()
@@ -71,10 +76,10 @@ open class DataTemplateObject : Var<CompoundTag> {
             }
 
             is DataTemplateObject -> {
-                if (!b.templateType.canCastTo(templateType)) {
+                if (!v.templateType.canCastTo(templateType)) {
                     throw VariableConverseException()
                 }else{
-                    assignCommand(b)
+                    assignCommand(v)
                     return this
                 }
             }
@@ -83,7 +88,6 @@ open class DataTemplateObject : Var<CompoundTag> {
                 throw VariableConverseException()
             }
         }
-        return this
     }
 
     fun assignMembers(tag: CompoundTag){

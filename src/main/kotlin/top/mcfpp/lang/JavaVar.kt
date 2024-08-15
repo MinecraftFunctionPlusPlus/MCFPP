@@ -70,13 +70,17 @@ class JavaVar : Var<Any>, MCFPPValue<Any?>{
      * @param b 变量的对象
      */
     override fun assign(b: Var<*>): Var<Any> {
+        var v = b.implicitCast(this.type)
+        if(!v.isError){
+            v = b
+        }
         hasAssigned = true
-        when (b) {
+        when (v) {
             is JavaVar -> {
-                this.value = b.value
+                this.value = v.value
             }
             else -> {
-                this.value = b
+                this.value = v
             }
         }
         return this

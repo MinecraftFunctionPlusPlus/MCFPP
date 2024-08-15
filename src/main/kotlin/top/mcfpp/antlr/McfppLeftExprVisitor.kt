@@ -6,7 +6,6 @@ import top.mcfpp.lang.*
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.field.GlobalField
-import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.Generic

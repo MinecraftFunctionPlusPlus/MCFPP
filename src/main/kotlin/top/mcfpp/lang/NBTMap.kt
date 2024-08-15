@@ -64,6 +64,10 @@ open class NBTMap : NBTDictionary{
         this.genericType = b.genericType
     }
 
+    override fun assign(b: Var<*>): NBTMap {
+        return super.assign(b) as NBTMap
+    }
+
     /*
     override fun createTempVar(): Var<*> = NBTMap()
     override fun createTempVar(value: Tag<*>): Var<*> = NBTMap(value as CompoundTag)

@@ -6,6 +6,7 @@ import top.mcfpp.Project
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lib.NBTPath
+import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NoStackFunction
 import java.util.*

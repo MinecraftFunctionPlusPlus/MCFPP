@@ -1,7 +1,7 @@
-package top.mcfpp.lang
+package top.mcfpp.model
 
+import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.model.*
 import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction

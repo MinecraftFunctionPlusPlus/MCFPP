@@ -1,6 +1,6 @@
 package top.mcfpp.model.function
 
-import top.mcfpp.lang.CanSelectMember
+import top.mcfpp.model.CanSelectMember
 import top.mcfpp.lang.Var
 import top.mcfpp.model.Class
 import top.mcfpp.model.Native

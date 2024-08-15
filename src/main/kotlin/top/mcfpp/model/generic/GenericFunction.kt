@@ -8,7 +8,7 @@ import top.mcfpp.model.Class
 import top.mcfpp.model.Interface
 import top.mcfpp.model.DataTemplate
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.lang.CanSelectMember
+import top.mcfpp.model.CanSelectMember
 import top.mcfpp.lang.MCFPPTypeVar
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.value.MCFPPValue

@@ -15,6 +15,9 @@ import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
+import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 
 /**
@@ -61,25 +64,33 @@ open class NBTList : NBTBasedData<ListTag<*>> {
         this.genericType = (type as MCFPPListType).generic
     }
 
-    public override fun assign(b: Var<*>): NBTBasedData<ListTag<*>> {
-        return when(b){
-            is NBTList -> assignCommand(b)
+    override fun assign(b: Var<*>): NBTList {
+        var v = b.implicitCast(this.type)
+        if(!v.isError){
+            v = b
+        }
+        hasAssigned = true
+        return when(v){
+            is NBTList -> assignCommand(v)
             is NBTBasedDataConcrete<*> -> {
-                if(b.nbtType == this.nbtType){
-                    assignCommand(b as NBTBasedDataConcrete<ListTag<*>>)
+                if(v.nbtType == this.nbtType){
+                    assignCommand(v as NBTBasedDataConcrete<ListTag<*>>)
                 }else{
                     throw VariableConverseException()
                 }
             }
             is NBTBasedData<*> -> {
-                if(b.nbtType == this.nbtType){
-                    assignCommand(b as NBTBasedData<ListTag<*>>)
+                if(v.nbtType == this.nbtType){
+                    assignCommand(v as NBTBasedData<ListTag<*>>)
                 }else{
                     throw VariableConverseException()
                 }
             }
 
-            else -> throw VariableConverseException()
+            else -> {
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+                this
+            }
         }
     }
 

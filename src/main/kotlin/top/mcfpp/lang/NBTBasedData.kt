@@ -19,6 +19,9 @@ import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.AnyTag
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.NBTUtil
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 import kotlin.collections.ArrayList
 
 
@@ -64,11 +67,18 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
      * @param b 变量的对象
      */
     override fun assign(b: Var<*>) : NBTBasedData<T> {
+        var v = b.implicitCast(this.type)
+        if(!v.isError){
+            v = b
+        }
         hasAssigned = true
-        return when(b){
-            is NBTBasedData<*> -> assignCommand(b as NBTBasedData<T>)
-            is MCIntConcrete -> assignCommand(NBTBasedDataConcrete(IntTag(b.value)) as NBTBasedData<T>)
-            else -> throw VariableConverseException()
+        return when(v){
+            is NBTBasedData<*> -> assignCommand(v as NBTBasedData<T>)
+            is MCFPPValue<*> -> assignCommand(NBTBasedDataConcrete(NBTUtil.toNBT(v)!!) as NBTBasedData<T>)
+            else -> {
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+                this
+            }
         }
     }
 
