@@ -14,7 +14,7 @@ import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 import kotlin.collections.ArrayList
 
-open class VectorVar: Var<Int>, Indexable<MCInt> {
+open class VectorVar: Var<VectorVar>, Indexable<MCInt> {
 
     val dimension: Int
 
@@ -53,27 +53,23 @@ open class VectorVar: Var<Int>, Indexable<MCInt> {
         type = MCFPPVectorType(dimension)
     }
 
-    override fun assign(b: Var<*>): Var<Int> {
-        var v = b.implicitCast(this.type)
-        if(!v.isError){
-           v = b
-        }
-        when(v){
+    override fun onAssign(b: Var<*>): VectorVar {
+        when(b){
             is VectorVar -> {
-                if(v.dimension != dimension){
-                    LogProcessor.error("Cannot assign vector '$identifier' with different dimension '${v.identifier}'")
+                if(b.dimension != dimension){
+                    LogProcessor.error("Cannot assign vector '$identifier' with different dimension '${b.identifier}'")
                 }
                 for (i in 0 until dimension){
-                    components[i].assign(v.components[i])
+                    components[i].assign(b.components[i])
                 }
             }
             is MCInt -> {
                 for (i in 0 until dimension){
-                    components[i].assign(v)
+                    components[i].assign(b)
                 }
             }
             else -> {
-                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
             }
         }
         return this
@@ -112,11 +108,11 @@ open class VectorVar: Var<Int>, Indexable<MCInt> {
         }
     }
 
-    override fun clone(): Var<*> {
+    override fun clone(): VectorVar {
         return VectorVar(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): VectorVar {
         if (isTemp) return this
         val re = VectorVar(dimension)
         re.isTemp = true

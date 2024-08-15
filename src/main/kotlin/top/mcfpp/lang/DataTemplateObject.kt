@@ -16,9 +16,13 @@ import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.NBTUtil
 import java.util.*
 
-open class DataTemplateObject : Var<CompoundTag> {
+/**
+ * 一个数据模板对象
+ */
+open class DataTemplateObject : Var<DataTemplateObject> {
 
     val templateType
         get() = (type as MCFPPDataTemplateType).template
@@ -47,7 +51,7 @@ open class DataTemplateObject : Var<CompoundTag> {
     }
 
 
-    override fun assign(b: Var<*>): Var<CompoundTag> {
+    override fun onAssign(b: Var<*>): DataTemplateObject {
         var v = b.implicitCast(this.type)
         if(!v.isError){
             v = b
@@ -90,7 +94,7 @@ open class DataTemplateObject : Var<CompoundTag> {
         }
     }
 
-    fun assignMembers(tag: CompoundTag){
+    private fun assignMembers(tag: CompoundTag){
         instanceField.forEachVar {
             it.replacedBy(it.assign(NBTBasedDataConcrete(tag.get(it.identifier))))
         }
@@ -100,7 +104,7 @@ open class DataTemplateObject : Var<CompoundTag> {
         if(parentClass() != null){
             //是成员
             //TODO 选择两个实体的代价和复制整个模板数据的代价谁更大？
-            val b = if(obj.parentClass() != null) obj.getTempVar() as DataTemplateObject else obj
+            val b = if(obj.parentClass() != null) obj.getTempVar() else obj
             val c = Commands.selectRun(parent!!, Command("data modify $nbtPath set from ${b.nbtPath}"))
             Function.addCommands(c)
         }else{
@@ -156,11 +160,11 @@ open class DataTemplateObject : Var<CompoundTag> {
         }
     }
 
-    override fun clone(): Var<*> {
+    override fun clone(): DataTemplateObject {
         return DataTemplateObject(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): DataTemplateObject {
         if(isTemp) return this
         val re = DataTemplateObject(templateType)
         re.isTemp = true
@@ -194,6 +198,46 @@ open class DataTemplateObject : Var<CompoundTag> {
         }else{
             Pair(member, accessModifier >= member.accessModifier)
         }
+    }
+
+    override fun onMemberChanged(member: Member) {
+        if(member is MCFPPValue<*> && isConcrete()){
+            this.replacedBy(this.toConcrete())
+        }
+    }
+
+    fun isConcrete(): Boolean{
+        if(this is DataTemplateObjectConcrete) return true
+        var re = true
+        instanceField.forEachVar {
+            run@{
+                if(it is DataTemplateObject){
+                    if(!it.isConcrete()) {
+                        re = false
+                        return@run
+                    }
+                }else{
+                    if (it !is MCFPPValue<*>) {
+                        re = false
+                        return@run
+                    }
+                }
+            }
+        }
+        return re
+    }
+
+    fun toConcrete(): DataTemplateObjectConcrete {
+        if (this is DataTemplateObjectConcrete) return this
+        val compoundTag = CompoundTag()
+        instanceField.forEachVar {
+            if(it is DataTemplateObject){
+                compoundTag.put(it.identifier, it.toConcrete().value)
+            }else{
+                compoundTag.put(it.identifier, NBTUtil.toNBT(it))
+            }
+        }
+        return DataTemplateObjectConcrete(this, compoundTag)
     }
 
     companion object{

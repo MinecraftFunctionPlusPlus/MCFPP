@@ -64,7 +64,7 @@ open class NBTList : NBTBasedData<ListTag<*>> {
         this.genericType = (type as MCFPPListType).generic
     }
 
-    override fun assign(b: Var<*>): NBTList {
+    override fun onAssign(b: Var<*>): NBTList {
         var v = b.implicitCast(this.type)
         if(!v.isError){
             v = b
@@ -110,7 +110,7 @@ open class NBTList : NBTBasedData<ListTag<*>> {
                 }
                 else -> TODO()
             }
-            if (b is NBTBasedDataConcrete) {
+            if (b is NBTBasedDataConcrete<*>) {
                 //对类中的成员的值进行修改
                 if(final.size == 2){
                     Function.addCommand(final[0])

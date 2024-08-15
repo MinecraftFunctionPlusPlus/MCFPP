@@ -30,9 +30,8 @@ import java.util.*
  * 的变量，从而在各种处理上进行优化。当然，匿名变量的声明往往在编译过程中声明。
  * mcfpp本身的语法并不支持匿名变量。
  *
- * @param T 已弃用。变量储存的类型。
  */
-abstract class Var<T> : Member, Cloneable, CanSelectMember, Serializable{
+abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serializable{
     /**
      * 在Minecraft中的标识符
      */
@@ -148,9 +147,20 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember, Serializable{
      * @return
      */
     override fun parentTemplate(): DataTemplate? {
-        return when (val parent = parent) {
+        return when (parent) {
             else -> null
         }
+    }
+
+    fun assign(b: Var<*>): Self {
+        var v = b.implicitCast(this.type)
+        if(v.isError){
+            v = b
+        }
+        hasAssigned = true
+        val re = onAssign(v)
+        parent?.onMemberChanged(re)
+        return re
     }
 
     /**
@@ -158,7 +168,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember, Serializable{
      * @param b 变量的对象
      */
     @Throws(VariableConverseException::class)
-    abstract fun assign(b: Var<*>) : Var<T>
+    protected abstract fun onAssign(b: Var<*>) : Self
 
     /**
      * 将这个变量强制转换为一个类型
@@ -193,10 +203,10 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember, Serializable{
     }
 
     @Override
-    public abstract override fun clone(): Var<*>
+    public abstract override fun clone(): Self
 
-    fun clone(pointer: ClassPointer): Var<*>{
-        val `var`: Var<*> = this.clone()
+    fun clone(pointer: ClassPointer): Self{
+        val `var` = this.clone()
         if(pointer.identifier != "this"){
             //不是this指针才需要额外指定引用者
             `var`.parent = pointer
@@ -207,8 +217,8 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember, Serializable{
         return `var`
     }
 
-    fun clone(obj: DataTemplateObject): Var<*>{
-        val `var`: Var<*> = this.clone()
+    fun clone(obj: DataTemplateObject): Self{
+        val `var` = this.clone()
         if(obj.identifier != "this"){
             `var`.parent = obj
         }
@@ -406,7 +416,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember, Serializable{
      *
      * @return
      */
-    abstract fun getTempVar(): Var<*>
+    abstract fun getTempVar(): Self
 
     abstract fun storeToStack()
 
@@ -587,8 +597,7 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember, Serializable{
             //普通类型
             when (type) {
                 MCFPPBaseType.Int -> {
-                    `var` =
-                        MCInt("@s").setObj(SbObject(clazz.prefix + "_int_" + identifier))
+                    `var` = MCInt("@s").setObj(SbObject(clazz.prefix + "_int_" + identifier))
                     `var`.identifier = identifier
                 }
 

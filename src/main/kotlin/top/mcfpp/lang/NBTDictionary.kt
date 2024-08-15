@@ -21,7 +21,7 @@ open class NBTDictionary : NBTBasedData<CompoundTag> {
     override var type: MCFPPType = MCFPPNBTType.Dict
 
     /**
-     * 创建一个list类型的变量。它的mc名和变量所在的域容器有关。
+     * 创建一个dict类型的变量。它的mc名和变量所在的域容器有关。
      *
      * @param identifier 标识符。默认为
      */
@@ -31,14 +31,14 @@ open class NBTDictionary : NBTBasedData<CompoundTag> {
     ) : super(curr, identifier)
 
     /**
-     * 创建一个list值。它的标识符和mc名相同。
+     * 创建一个dict值。它的标识符和mc名相同。
      * @param identifier identifier
      */
     constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier)
 
     /**
-     * 复制一个list
-     * @param b 被复制的list值
+     * 复制一个dict
+     * @param b 被复制的dict值
      */
     constructor(b: NBTDictionary) : super(b)
 
@@ -46,7 +46,7 @@ open class NBTDictionary : NBTBasedData<CompoundTag> {
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var<*>): NBTDictionary {
+    override fun onAssign(b: Var<*>): NBTDictionary {
         var v = b.implicitCast(this.type)
         if(!v.isError){
             v = b
@@ -63,30 +63,10 @@ open class NBTDictionary : NBTBasedData<CompoundTag> {
         }
     }
 
-    /*
-    override fun createTempVar(): Var<*> = NBTMap()
-    override fun createTempVar(value: Tag<*>): Var<*> = NBTMap(value as CompoundTag)
-
-     */
-
-    /**
-     * 根据标识符获取一个成员。
-     *
-     * @param key 成员的mcfpp标识符
-     * @param accessModifier 访问者的访问权限
-     * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
-     */
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         TODO("Not yet implemented")
     }
 
-    /**
-     * 根据方法标识符和方法的参数列表获取一个方法。如果没有这个方法，则返回null
-     *
-     * @param key 成员方法的标识符
-     * @param normalParams 成员方法的参数
-     * @return
-     */
     override fun getMemberFunction(
         key: String,
         readOnlyParams: List<MCFPPType>,
@@ -119,7 +99,7 @@ open class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<CompoundTag>{
     override var value: CompoundTag
 
     /**
-     * 创建一个固定的list
+     * 创建一个固定的dict
      *
      * @param identifier 标识符
      * @param curr 域容器
@@ -134,7 +114,7 @@ open class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<CompoundTag>{
     }
 
     /**
-     * 创建一个固定的list。它的标识符和mc名一致/
+     * 创建一个固定的dict。它的标识符和mc名一致
      * @param identifier 标识符。如不指定，则为随机uuid
      * @param value 值
      */

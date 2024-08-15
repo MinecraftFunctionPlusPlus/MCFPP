@@ -18,7 +18,7 @@ import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 
-open class EnumVar : Var<Int> {
+open class EnumVar : Var<EnumVar> {
 
     var sbObject: SbObject = SbObject.MCFPP_default
 
@@ -61,7 +61,7 @@ open class EnumVar : Var<Int> {
         type = enum.getType()
     }
 
-    override fun assign(b: Var<*>): Var<Int> {
+    override fun onAssign(b: Var<*>): EnumVar {
         var v = b.implicitCast(this.type)
         if(!v.isError){
             v = b
@@ -69,7 +69,7 @@ open class EnumVar : Var<Int> {
         hasAssigned = true
         return when(v){
             is EnumVar -> {
-                val i = this.getIntVar().assign(v.getIntVar())
+                val i = this.getIntVar().assign(v.getIntVar()) as MCInt
                 if(i is MCIntConcrete) EnumVarConcrete(i, enum)
                 else EnumVar(i, enum)
             }
@@ -80,11 +80,11 @@ open class EnumVar : Var<Int> {
         }
     }
 
-    override fun clone(): Var<*> {
+    override fun clone(): EnumVar {
         return EnumVar(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): EnumVar {
         if (isTemp) return this
         val re = EnumVar(enum)
         re.isTemp = true
@@ -227,7 +227,7 @@ class EnumVarConcrete : EnumVar, MCFPPValue<Int>{
      */
     @Override
     @InsertCommand
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): EnumVar {
         if (isTemp) return this
         return EnumVarConcrete(enum ,value)
     }

@@ -1,7 +1,6 @@
 package top.mcfpp.lang
 
 import net.querz.nbt.tag.StringTag
-import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
@@ -72,7 +71,7 @@ open class SelectorVar : NBTBasedData<StringTag> {
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var<*>): SelectorVar {
+    override fun onAssign(b: Var<*>): SelectorVar {
         var v = b.implicitCast(this.type)
         if(v.isError){
             v = b
@@ -183,18 +182,14 @@ class SelectorVarConcrete : MCFPPValue<EntitySelector>, SelectorVar{
         this.value = value
     }
 
-    override fun assign(b: Var<*>): SelectorVarConcrete {
-        var v = b.implicitCast(this.type)
-        if(!v.isError){
-            v = b
-        }
-        hasAssigned = true
-        when(v){
+    override fun onAssign(b: Var<*>): SelectorVarConcrete {
+        when (b) {
             is SelectorVarConcrete -> {
-                this.value = v.value
+                this.value = b.value
             }
+
             else -> {
-                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
             }
         }
         return this

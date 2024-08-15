@@ -8,7 +8,7 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
 import java.util.UUID
 
-open class MCFPPTypeVar : Var<MCFPPType>, MCFPPValue<MCFPPType> {
+open class MCFPPTypeVar : Var<MCFPPTypeVar>, MCFPPValue<MCFPPType> {
 
     override var value: MCFPPType
 
@@ -18,7 +18,7 @@ open class MCFPPTypeVar : Var<MCFPPType>, MCFPPValue<MCFPPType> {
         this.value = type
     }
 
-    override fun assign(b: Var<*>) : MCFPPTypeVar {
+    override fun onAssign(b: Var<*>) : MCFPPTypeVar {
         if(b is MCFPPTypeVar){
             this.value = b.value
             hasAssigned = true
@@ -28,11 +28,11 @@ open class MCFPPTypeVar : Var<MCFPPType>, MCFPPValue<MCFPPType> {
         return this
     }
 
-    override fun clone(): Var<*> {
+    override fun clone(): MCFPPTypeVar {
         return this
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): MCFPPTypeVar {
         return MCFPPTypeVar(value)
     }
 

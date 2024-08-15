@@ -29,7 +29,7 @@ import kotlin.reflect.full.memberProperties
  * @constructor Create empty Java var
  */
 
-class JavaVar : Var<Any>, MCFPPValue<Any?>{
+class JavaVar : Var<JavaVar>, MCFPPValue<Any?>{
 
     override var value : Any? = null
 
@@ -69,7 +69,7 @@ class JavaVar : Var<Any>, MCFPPValue<Any?>{
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var<*>): Var<Any> {
+    override fun onAssign(b: Var<*>): JavaVar {
         var v = b.implicitCast(this.type)
         if(!v.isError){
             v = b
@@ -95,7 +95,7 @@ class JavaVar : Var<Any>, MCFPPValue<Any?>{
      *
      * @return
      */
-    override fun getTempVar(): Var<*> { return this }
+    override fun getTempVar(): JavaVar = this
 
     override fun storeToStack() {}
 
@@ -204,7 +204,7 @@ class JavaVar : Var<Any>, MCFPPValue<Any?>{
                 is NBTListConcrete<*> -> v.value.toJava()
                 is NBTMapConcrete -> (v.value["data"] as CompoundTag).toJava()
                 is NBTDictionaryConcrete -> v.value.toJava()
-                is NBTBasedDataConcrete -> v.value
+                is NBTBasedDataConcrete<*> -> v.value
                 else -> v
             }!!
         }

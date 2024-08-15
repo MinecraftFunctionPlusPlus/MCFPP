@@ -22,29 +22,16 @@ class ReturnedMCBool(val parentFunction: Function) : MCBool() {
         this.isImport = false
     }
 
-    /**
-     * 将b中的值赋值给此变量
-     * @param b 变量的对象
-     */
-    fun assign(b: Var<*>?) : ReturnedMCBool {
+    override fun onAssign(b: Var<*>): MCBool {
         LogProcessor.error("The bool type returned by the function is read-only")
         throw Exception()
     }
 
-    /**
-     * 将这个变量强制转换为一个类型
-     * @param type 要转换到的目标类型
-     */
     override fun explicitCast(type: MCFPPType): Var<*> {
         LogProcessor.error("The bool type returned by the function is read-only")
         throw Exception()
     }
 
-
-    /**
-     * 将这个变量强制转换为一个类型
-     * @param type 要转换到的目标类型
-     */
     override fun implicitCast(type: MCFPPType): Var<*> {
         LogProcessor.error("The bool type returned by the function is read-only")
         throw Exception()
@@ -54,11 +41,6 @@ class ReturnedMCBool(val parentFunction: Function) : MCBool() {
         return ReturnedMCBool(parentFunction)
     }
 
-    /**
-     * 返回一个临时变量。这个变量将用于右值的计算过程中，用于避免计算时对原来的变量进行修改
-     *
-     * @return
-     */
     override fun getTempVar(): MCBool {
         val re = MCBool()
         re.assign(this)

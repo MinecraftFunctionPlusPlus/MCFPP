@@ -51,7 +51,7 @@ open class JsonText : NBTBasedData<CompoundTag> {
      */
     constructor(b: JsonText) : super(b)
 
-    override fun assign(b: Var<*>): NBTBasedData<CompoundTag> {
+    override fun onAssign(b: Var<*>): NBTBasedData<CompoundTag> {
         var v = b.implicitCast(this.type)
         if(!v.isError){
             v = b
@@ -68,10 +68,10 @@ open class JsonText : NBTBasedData<CompoundTag> {
         return JsonText(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): JsonText {
         val temp = JsonText()
         temp.isTemp = true
-        return temp.assignCommand(this)
+        return temp.assignCommand(this) as JsonText
     }
 
     override fun getByIndex(index: Var<*>): NBTBasedData<*> {

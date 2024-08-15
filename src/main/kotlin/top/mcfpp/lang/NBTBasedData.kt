@@ -30,7 +30,7 @@ import kotlin.collections.ArrayList
  *
  * @constructor Create empty Nbt
  */
-open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
+open class NBTBasedData<T : Tag<*>> : Var<NBTBasedData<T>>, Indexable<NBTBasedData<*>>{
 
     open var nbtType: NBTTypeWithTag = NBTTypeWithTag.ANY
 
@@ -66,7 +66,7 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun assign(b: Var<*>) : NBTBasedData<T> {
+    override fun onAssign(b: Var<*>) : NBTBasedData<T> {
         var v = b.implicitCast(this.type)
         if(!v.isError){
             v = b
@@ -87,7 +87,7 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
         nbtType = a.nbtType
         return assignCommandLambda(a,
             ifThisIsClassMemberAndAIsConcrete = {b, final ->
-                b as NBTBasedDataConcrete
+                b as NBTBasedDataConcrete<*>
                 //对类中的成员的值进行修改
                 if(final.size == 2){
                     Function.addCommand(final[0])
@@ -169,7 +169,7 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
      *
      * @return
      */
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): NBTBasedData<T> {
         val temp = NBTBasedData<T>()
         return temp.assignCommand(this)
     }
@@ -465,7 +465,7 @@ class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData<T>, MCFPPValue<T> {
         return NBTBasedDataConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): NBTBasedDataConcrete<T> {
         return NBTBasedDataConcrete(this.value)
     }
 

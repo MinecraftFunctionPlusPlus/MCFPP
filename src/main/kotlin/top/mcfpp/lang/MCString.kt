@@ -41,7 +41,7 @@ open class MCString : NBTBasedData<StringTag> {
     override var type: MCFPPType = MCFPPBaseType.String
 
     /**
-     * 创建一个list类型的变量。它的mc名和变量所在的域容器有关。
+     * 创建一个string类型的变量。它的mc名和变量所在的域容器有关。
      *
      * @param identifier 标识符。默认为
      */
@@ -54,35 +54,21 @@ open class MCString : NBTBasedData<StringTag> {
     }
 
     /**
-     * 创建一个list值。它的标识符和mc名相同。
+     * 创建一个string值。它的标识符和mc名相同。
      * @param identifier identifier
      */
     constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier)
 
     /**
-     * 复制一个list
-     * @param b 被复制的list值
+     * 复制一个string
+     * @param b 被复制的string值
      */
     constructor(b: MCString) : super(b)
 
-    /**
-     * 根据标识符获取一个成员。
-     *
-     * @param key 成员的mcfpp标识符
-     * @param accessModifier 访问者的访问权限
-     * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
-     */
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         TODO("Not yet implemented")
     }
 
-    /**
-     * 根据方法标识符和方法的参数列表获取一个方法。如果没有这个方法，则返回null
-     *
-     * @param key 成员方法的标识符
-     * @param params 成员方法的参数
-     * @return
-     */
     override fun getMemberFunction(
         key: String,
         readOnlyParams: List<MCFPPType>,
@@ -98,7 +84,7 @@ open class MCString : NBTBasedData<StringTag> {
 
     @Override
     @Throws(VariableConverseException::class)
-    override fun assign(b: Var<*>): MCString {
+    override fun onAssign(b: Var<*>): MCString {
         var v = b.implicitCast(this.type)
         if(!v.isError){
             v = b
@@ -111,12 +97,6 @@ open class MCString : NBTBasedData<StringTag> {
         return this
     }
 
-    /*
-    override fun createTempVar(): Var<*> = MCString()
-
-    override fun createTempVar(value: Tag<*>): Var<*> = MCString(value as StringTag)
-
-    */
     companion object {
         val data = CompoundData("string","mcfpp")
     }
@@ -128,7 +108,7 @@ class MCStringConcrete: MCString, MCFPPValue<StringTag>{
     override var value: StringTag
 
     /**
-     * 创建一个固定的list
+     * 创建一个固定的string
      *
      * @param identifier 标识符
      * @param curr 域容器
@@ -143,7 +123,7 @@ class MCStringConcrete: MCString, MCFPPValue<StringTag>{
     }
 
     /**
-     * 创建一个固定的list。它的标识符和mc名一致/
+     * 创建一个固定的string。它的标识符和mc名一致/
      * @param identifier 标识符。如不指定，则为随机uuid
      * @param value 值
      */

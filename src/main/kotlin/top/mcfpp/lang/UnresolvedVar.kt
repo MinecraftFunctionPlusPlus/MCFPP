@@ -17,7 +17,7 @@ import top.mcfpp.util.LogProcessor
  *
  * @constructor Create empty Unresolved var
  */
-class UnresolvedVar : Var<Any> {
+class UnresolvedVar : Var<UnresolvedVar> {
 
     val typeScope : IFieldWithType
 
@@ -40,55 +40,23 @@ class UnresolvedVar : Var<Any> {
         return build(identifier, (type as UnresolvedType).resolve(typeScope), fieldContainer)
     }
 
-    /**
-     * 赋值。总是不能进行，因为这个变量未解析
-     *
-     * @param b
-     *
-     * @throws VariableNotResolvedException 调用此方法就会抛出此异常
-     */
-    override fun assign(b: Var<*>): UnresolvedVar {
+    override fun onAssign(b: Var<*>): UnresolvedVar {
         throw VariableNotResolvedException()
     }
 
-    /**
-     * 类型的强制转换。总是不能进行，因为这个变量未解析
-     *
-     * @param type
-     *
-     * @throws VariableNotResolvedException 调用此方法就会抛出此异常
-     */
     override fun explicitCast(type: MCFPPType): Var<*> {
         throw VariableNotResolvedException()
     }
 
-
-    /**
-     * 类型的强制转换。总是不能进行，因为这个变量未解析
-     *
-     * @param type
-     *
-     * @throws VariableNotResolvedException 调用此方法就会抛出此异常
-     */
     override fun implicitCast(type: MCFPPType): Var<*> {
         throw VariableNotResolvedException()
     }
 
-    /**
-     * 复制一个有相同类型和标识符未解析变量
-     *
-     * @return 复制的结果
-     */
     override fun clone(): UnresolvedVar {
         return UnresolvedVar(identifier, type as UnresolvedType, typeScope)
     }
 
-    /**
-     * 获取临时变量。总是不能进行，因为这个变量未解析
-     *
-     * @throws VariableNotResolvedException 调用此方法就会抛出此异常
-     */
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): UnresolvedVar {
         throw VariableNotResolvedException()
     }
 
@@ -100,25 +68,11 @@ class UnresolvedVar : Var<Any> {
         throw VariableNotResolvedException()
     }
 
-    /**
-     * 根据标识符获取一个成员。
-     *
-     * @param key 成员的mcfpp标识符
-     * @param accessModifier 访问者的访问权限
-     * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
-     */
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         LogProcessor.error("UnresolvedVar.getMemberVar() is called")
         throw VariableNotResolvedException()
     }
 
-    /**
-     * 根据方法标识符和方法的参数列表获取一个方法。如果没有这个方法，则返回null
-     *
-     * @param key 成员方法的标识符
-     * @param normalParams 成员方法的参数
-     * @return
-     */
     override fun getMemberFunction(
         key: String,
         readOnlyParams: List<MCFPPType>,

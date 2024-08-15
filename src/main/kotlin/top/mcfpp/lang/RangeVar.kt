@@ -16,7 +16,7 @@ import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 import kotlin.experimental.and
 
-open class RangeVar: Var<Int> {
+open class RangeVar: Var<RangeVar> {
 
     //01 10 11 00(不合法)
     //1表示有，0表示没有
@@ -58,7 +58,7 @@ open class RangeVar: Var<Int> {
         point = b.point
     }
 
-    override fun assign(b: Var<*>): RangeVar {
+    override fun onAssign(b: Var<*>): RangeVar {
         var v = b.implicitCast(this.type)
         if(!v.isError){
             v = b
@@ -81,7 +81,7 @@ open class RangeVar: Var<Int> {
         return RangeVar(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): RangeVar {
         if (isTemp) return this
         val re = RangeVar()
         re.isTemp = true
@@ -138,7 +138,7 @@ class RangeVarConcrete: MCFPPValue<Pair<Float?, Float?>>, RangeVar{
     override var value: Pair<Float?, Float?>
 
     /**
-     * 创建一个固定的int
+     * 创建一个固定的range
      *
      * @param identifier 标识符
      * @param curr 域容器
@@ -161,7 +161,7 @@ class RangeVarConcrete: MCFPPValue<Pair<Float?, Float?>>, RangeVar{
     }
 
     /**
-     * 创建一个固定的int。它的标识符和mc名一致/
+     * 创建一个固定的range。它的标识符和mc名一致
      * @param identifier 标识符。如不指定，则为随机uuid
      * @param value 值
      */
@@ -201,7 +201,7 @@ class RangeVarConcrete: MCFPPValue<Pair<Float?, Float?>>, RangeVar{
         return RangeVar(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): RangeVarConcrete {
         if (isTemp) return this
         return RangeVarConcrete(value)
     }

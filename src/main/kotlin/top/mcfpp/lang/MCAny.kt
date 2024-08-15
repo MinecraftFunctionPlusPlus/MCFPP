@@ -59,7 +59,7 @@ import java.util.*
  *
  * @constructor Create empty MCAny
  */
-open class MCAny : Var<Var<*>> {
+open class MCAny : Var<MCAny> {
 
     override var type: MCFPPType = MCFPPBaseType.Any
 
@@ -94,7 +94,7 @@ open class MCAny : Var<Var<*>> {
      *
      * @return 重新获取跟踪的此变量
      */
-    override fun assign(b: Var<*>) : MCAnyConcrete {
+    override fun onAssign(b: Var<*>) : MCAnyConcrete {
         var v = b.implicitCast(this.type)
         if(!v.isError){
             v = b
@@ -141,7 +141,7 @@ open class MCAny : Var<Var<*>> {
      *
      * @return
      */
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): MCAny {
         return this
     }
 
@@ -249,7 +249,7 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>>{
         return MCAnyConcrete(this)
     }
 
-    override fun assign(b: Var<*>): MCAnyConcrete {
+    override fun onAssign(b: Var<*>): MCAnyConcrete {
         when (b) {
             is MCAnyConcrete -> {
                 if(b.value.type != this.value.type){

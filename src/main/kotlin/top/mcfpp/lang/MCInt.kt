@@ -50,7 +50,7 @@ open class MCInt : MCNumber<Int> {
 
     override var type: MCFPPType = MCFPPBaseType.Int
 
-    override fun assign(b: Var<*>) : MCInt {
+    override fun onAssign(b: Var<*>) : MCInt {
         var v = b.implicitCast(this.type)
         if(!v.isError){
             v = b
@@ -119,18 +119,18 @@ open class MCInt : MCNumber<Int> {
             ifThisIsNormalVarAndAIsConcrete = { b, _ ->
                 MCIntConcrete(this, (b as MCIntConcrete).value)
             },
-            ifThisIsNormalVarAndAIsClassMember = { a, cmd ->
+            ifThisIsNormalVarAndAIsClassMember = { c, cmd ->
                 if(cmd.size == 2){
                     Function.addCommand(cmd[0])
                 }
-                Function.addCommand(cmd.last().build(Commands.sbPlayerOperation(this, "=", a as MCInt)))
+                Function.addCommand(cmd.last().build(Commands.sbPlayerOperation(this, "=", c as MCInt)))
                 MCInt(this)
             },
-            ifThisIsNormalVarAndAIsNotConcrete = { a, _ ->
+            ifThisIsNormalVarAndAIsNotConcrete = { c, _ ->
                 //变量进栈
                 Function.addCommand(
                     (if(isTemp) Command("") else Command("execute store result storage mcfpp:system").build(nbtPath.toCommandPart()).build("int 1 run "))
-                        .build(Commands.sbPlayerOperation(this, "=", a as MCInt), false))
+                        .build(Commands.sbPlayerOperation(this, "=", c as MCInt), false))
                 MCInt(this)
             }
         ) as MCInt
@@ -143,7 +143,7 @@ open class MCInt : MCNumber<Int> {
         if(!isTemp && a.isTemp){
             return a.plus(this)
         }else if(!isTemp){
-            return (getTempVar() as MCInt).plus(a)
+            return getTempVar().plus(a)
         }
         if (qwq is MCIntConcrete) {
             Function.addCommand(Commands.sbPlayerAdd(this, qwq.value))
@@ -161,7 +161,7 @@ open class MCInt : MCNumber<Int> {
         if(!isTemp && a.isTemp){
             return a.minus(this)
         }else if(!isTemp){
-            return (getTempVar() as MCInt).minus(a)
+            return getTempVar().minus(a)
         }
         if (qwq is MCIntConcrete) {
             Function.addCommand(Commands.sbPlayerRemove(this, qwq.value))
@@ -178,7 +178,7 @@ open class MCInt : MCNumber<Int> {
         if(!isTemp && a.isTemp){
             return a.multiple(this)
         }else if(!isTemp){
-            return (getTempVar() as MCInt).multiple(a)
+            return getTempVar().multiple(a)
         }
         val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         if (qwq is MCIntConcrete) {
@@ -191,7 +191,7 @@ open class MCInt : MCNumber<Int> {
     @InsertCommand
     override fun divide(a: Var<*>): Var<*> {
         if(!isTemp){
-            return (getTempVar() as MCInt).divide(a)
+            return getTempVar().divide(a)
         }
         //t /= a
         val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
@@ -205,7 +205,7 @@ open class MCInt : MCNumber<Int> {
     @InsertCommand
     override fun modular(a: Var<*>): Var<*> {
         if(!isTemp){
-            return (getTempVar() as MCInt).modular(a)
+            return getTempVar().modular(a)
         }
         //t %= a
         val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
@@ -367,11 +367,11 @@ open class MCInt : MCNumber<Int> {
      * @return 返回临时变量
      */
     @InsertCommand
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): MCInt {
         if (isTemp) return this
         val re = MCInt()
         re.isTemp = true
-        return re.assign(this)
+        return re.assign(this) as MCInt
     }
 
     override fun storeToStack() {
@@ -661,7 +661,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int>{
      */
     @Override
     @InsertCommand
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): MCIntConcrete {
         if (isTemp) return this
         return MCIntConcrete(value)
     }

@@ -35,7 +35,7 @@ import java.util.*
  * @see Class 类的核心实现
  * @see top.mcfpp.lang.type.MCFPPClassType 表示类的类型，同时也是类的静态成员的指针
  */
-class ClassPointer : Var<Int>{
+class ClassPointer : Var<ClassPointer>{
 
     /**
      * 指针对应的类的类型
@@ -87,7 +87,7 @@ class ClassPointer : Var<Int>{
     @Override
     @InsertCommand
     @Throws(VariableConverseException::class)
-    override fun assign(b: Var<*>): ClassPointer {
+    override fun onAssign(b: Var<*>): ClassPointer {
         var v = b.implicitCast(this.type)
         if(!v.isError){
             v = b
@@ -204,7 +204,7 @@ class ClassPointer : Var<Int>{
      * @return 一个此变量生成的临时变量
      */
     @Override
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): ClassPointer {
         return this
     }
 

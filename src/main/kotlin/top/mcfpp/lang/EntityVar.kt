@@ -69,12 +69,7 @@ open class EntityVar : NBTBasedData<IntArrayTag>{
         return SelectorVar.data.getFunction(key, readOnlyParams, normalParams) to true
     }
 
-
-    /**
-     * 将b中的值赋值给此实体变量
-     * @param b 变量的对象
-     */
-    override fun assign(b: Var<*>): EntityVar {
+    override fun onAssign(b: Var<*>): EntityVar {
         var v = b.implicitCast(this.type)
         if(!v.isError){
             v = b

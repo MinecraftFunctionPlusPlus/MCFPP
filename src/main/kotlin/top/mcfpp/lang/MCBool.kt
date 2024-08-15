@@ -21,7 +21,7 @@ import top.mcfpp.util.TextTranslator.translate
  *
  * bool型变量实现了多种计算方法，比如与，或，非等基本的逻辑运算。
  */
-open class MCBool : Var<Boolean>, OnScoreboard {
+open class MCBool : Var<MCBool>, OnScoreboard {
     /**
      * 此bool变量依托的记分板
      */
@@ -52,7 +52,7 @@ open class MCBool : Var<Boolean>, OnScoreboard {
     override var type: MCFPPType = MCFPPBaseType.Bool
 
     @Override
-    override fun assign(b: Var<*>) : MCBool {
+    override fun onAssign(b: Var<*>) : MCBool {
         var v = b.implicitCast(this.type)
         if(!v.isError){
             v = b
@@ -224,13 +224,6 @@ open class MCBool : Var<Boolean>, OnScoreboard {
         TODO("Not yet implemented")
     }
 
-    /**
-     * 根据标识符获取一个成员。
-     *
-     * @param key 成员的mcfpp标识符
-     * @param accessModifier 访问者的访问权限
-     * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
-     */
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         TODO("Not yet implemented")
     }

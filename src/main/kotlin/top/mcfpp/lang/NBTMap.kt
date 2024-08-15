@@ -24,8 +24,9 @@ open class NBTMap : NBTDictionary{
     val genericType: MCFPPType
 
     override var type: MCFPPType = MCFPPNBTType.Map
+
     /**
-     * 创建一个list类型的变量。它的mc名和变量所在的域容器有关。
+     * 创建一个map类型的变量。它的mc名和变量所在的域容器有关。
      *
      * @param identifier 标识符。默认为
      */
@@ -44,7 +45,7 @@ open class NBTMap : NBTDictionary{
     }
 
     /**
-     * 创建一个list值。它的标识符和mc名相同。
+     * 创建一个map值。它的标识符和mc名相同。
      * @param identifier identifier
      */
     constructor(identifier: String = UUID.randomUUID().toString(), genericType : MCFPPType) : super(identifier){
@@ -64,14 +65,9 @@ open class NBTMap : NBTDictionary{
         this.genericType = b.genericType
     }
 
-    override fun assign(b: Var<*>): NBTMap {
+    override fun onAssign(b: Var<*>): NBTMap {
         return super.assign(b) as NBTMap
     }
-
-    /*
-    override fun createTempVar(): Var<*> = NBTMap()
-    override fun createTempVar(value: Tag<*>): Var<*> = NBTMap(value as CompoundTag)
-     */
 
     companion object{
         val data = CompoundData("map","mcfpp.lang")
@@ -93,7 +89,7 @@ class NBTMapConcrete : NBTMap, MCFPPValue<CompoundTag>{
 
     //TODO 构造函数未检查value的类型是否符合泛型要求
     /**
-     * 创建一个固定的list
+     * 创建一个固定的map
      *
      * @param identifier 标识符
      * @param curr 域容器
@@ -113,7 +109,7 @@ class NBTMapConcrete : NBTMap, MCFPPValue<CompoundTag>{
     }
 
     /**
-     * 创建一个固定的list。它的标识符和mc名一致/
+     * 创建一个固定的map。它的标识符和mc名一致
      * @param identifier 标识符。如不指定，则为随机uuid
      * @param value 值
      */
@@ -126,8 +122,8 @@ class NBTMapConcrete : NBTMap, MCFPPValue<CompoundTag>{
     }
 
     /**
-     * 复制一个list
-     * @param b 被复制的list值
+     * 复制一个map
+     * @param b 被复制的map值
      */
     constructor(b: NBTMap, value: CompoundTag) : super(b){
         this.value = value
