@@ -85,22 +85,6 @@ open class EntityVar : NBTBasedData<IntArrayTag>{
         return this
     }
 
-    /**
-     * 将这个变量强制转换为一个类型
-     * @param type 要转换到的目标类型
-     */
-    override fun cast(type: MCFPPType): Var<*> {
-        return when(type){
-            BaseEntity -> this
-            MCFPPNBTType.NBT -> this
-            MCFPPBaseType.Any -> MCAny(this.identifier)
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                UnknownVar(this.identifier)
-            }
-        }
-    }
-
     companion object {
         val data = CompoundData("entity","mcfpp")
     }

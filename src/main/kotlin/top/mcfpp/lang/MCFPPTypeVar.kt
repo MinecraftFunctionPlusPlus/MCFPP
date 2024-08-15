@@ -28,14 +28,6 @@ open class MCFPPTypeVar : Var<MCFPPType>, MCFPPValue<MCFPPType> {
         return this
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
-        if(type.typeName == "type"){
-            return this
-        }else{
-            throw Exception("Cannot cast a ${type.typeName} to a MCFPPTypeVar")
-        }
-    }
-
     override fun clone(): Var<*> {
         return this
     }

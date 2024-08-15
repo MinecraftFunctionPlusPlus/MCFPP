@@ -50,7 +50,7 @@ open class RecipeSerializer: ResourceID {
         return super.assign(b) as RecipeSerializer
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.RecipeSerializer -> return this
             else -> {

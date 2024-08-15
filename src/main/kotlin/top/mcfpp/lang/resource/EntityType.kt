@@ -50,7 +50,7 @@ open class EntityType: ResourceID {
         return super.assign(b) as EntityType
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.EntityType -> return this
             else -> {

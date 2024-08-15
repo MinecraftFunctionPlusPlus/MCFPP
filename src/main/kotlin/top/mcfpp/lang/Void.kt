@@ -9,6 +9,9 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
+import java.util.UUID
 
 class Void: Var<Nothing>("void") {
     override var type: MCFPPType = MCFPPBaseType.Void
@@ -26,9 +29,18 @@ class Void: Var<Nothing>("void") {
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型
      */
-    override fun cast(type: MCFPPType): Var<*> {
-        LogProcessor.error("Cannot cast void type variable")
-        return build("unknown", type, Function.currFunction)
+    override fun explicitCast(type: MCFPPType): Var<*> {
+        LogProcessor.error(TextTranslator.VOID_CAST_ERROR.translate())
+        return buildCastErrorVar(type)
+    }
+
+    /**
+     * 将这个变量隐式转换为一个类型
+     * @param type 要转换到的目标类型
+     */
+    override fun implicitCast(type: MCFPPType): Var<*> {
+        LogProcessor.error(TextTranslator.VOID_CAST_ERROR.translate())
+        return buildCastErrorVar(type)
     }
 
     override fun clone(): Void {

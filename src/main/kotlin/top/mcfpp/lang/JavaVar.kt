@@ -82,18 +82,6 @@ class JavaVar : Var<Any>, MCFPPValue<Any?>{
         return this
     }
 
-    /**
-     * 将这个变量强制转换为一个类型
-     * @param type 要转换到的目标类型
-     */
-    override fun cast(type: MCFPPType): Var<*> {
-        return when(type){
-            MCFPPBaseType.JavaVar -> this
-            MCFPPBaseType.Any -> MCAnyConcrete(this)
-            else -> throw VariableConverseException()
-        }
-    }
-
     override fun clone(): JavaVar {
         return JavaVar(this)
     }

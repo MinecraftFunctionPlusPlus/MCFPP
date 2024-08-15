@@ -11,6 +11,8 @@ import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 import kotlin.experimental.and
 
@@ -68,18 +70,6 @@ open class RangeVar: Var<Int> {
             }
         }
         return this
-    }
-
-    override fun cast(type: MCFPPType): Var<*> {
-        when(type){
-            is MCFPPBaseType.Range -> {
-                return this
-            }
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(identifier)
-            }
-        }
     }
 
     override fun clone(): RangeVar {

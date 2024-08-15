@@ -50,7 +50,7 @@ open class Effect: ResourceID {
         return super.assign(b) as Effect
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.Effect -> return this
             else -> {

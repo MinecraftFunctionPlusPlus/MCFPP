@@ -340,7 +340,7 @@ open class MCFPPType(
                 val nspID = StringHelper.splitNamespaceID(ctx.className().text)
                 //类
                 val clazz = GlobalField.getClass(nspID.first, nspID.second)
-                if(clazz !=null) {
+                if(clazz != null) {
                     if(clazz is GenericClass){
                         if(clazz.readOnlyParams.size != ctx.type().readOnlyArgs()?.expressionList()?.expression()?.size){
                             LogProcessor.error("Generic class ${clazz.identifier} requires ${clazz.readOnlyParams.size} type arguments, but ${ctx.readOnlyArgs().expressionList().expression().size} were provided")

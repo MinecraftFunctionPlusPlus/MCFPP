@@ -55,19 +55,6 @@ open class NBTDictionary : NBTBasedData<CompoundTag> {
         }
     }
 
-    /**
-     * 将这个变量强制转换为一个类型
-     * @param type 要转换到的目标类型
-     */
-    override fun cast(type: MCFPPType): Var<*> {
-        return when(type){
-            MCFPPNBTType.Dict -> this
-            MCFPPNBTType.NBT -> this
-            MCFPPBaseType.Any -> MCAnyConcrete(this)
-            else -> throw VariableConverseException()
-        }
-    }
-
     /*
     override fun createTempVar(): Var<*> = NBTMap()
     override fun createTempVar(value: Tag<*>): Var<*> = NBTMap(value as CompoundTag)
@@ -192,7 +179,7 @@ open class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<CompoundTag>{
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型
      */
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         return when(type){
             MCFPPNBTType.Dict -> this
             MCFPPNBTType.NBT -> NBTBasedDataConcrete(value)

@@ -72,17 +72,6 @@ open class EnumVar : Var<Int> {
         }
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
-        return when (type) {
-            this.type -> this
-            MCFPPBaseType.Any -> MCAnyConcrete(this)
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                throw VariableConverseException()
-            }
-        }
-    }
-
     override fun clone(): Var<*> {
         return EnumVar(this)
     }
@@ -211,7 +200,7 @@ class EnumVarConcrete : EnumVar, MCFPPValue<Int>{
     }
 
     @Override
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         //TODO 类支持
         return when (type) {
             this.type -> this

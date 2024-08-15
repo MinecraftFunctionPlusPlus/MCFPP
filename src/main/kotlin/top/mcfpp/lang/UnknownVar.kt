@@ -20,7 +20,9 @@ class UnknownVar : Var<Any> {
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型
      */
-    override fun cast(type: MCFPPType): Var<*> = build(identifier,type, Function.currFunction)
+    override fun explicitCast(type: MCFPPType): Var<*> = build(identifier, type, Function.currFunction)
+
+    override fun implicitCast(type: MCFPPType): Var<*> = build(identifier, type, Function.currFunction)
 
     override fun clone(): UnknownVar = this
 

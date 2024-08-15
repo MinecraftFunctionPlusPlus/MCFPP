@@ -14,11 +14,16 @@ import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 
 
 /**
- * 目标选择器（Target Selector）可在无需指定确切的玩家名称或UUID的情况下在命令中选择任意玩家与实体。目标选择器变量可以选择一个或多个实体，目标选择器参数可以根据特定条件筛选目标。
+ * 目标选择器（Target Selector）可在无需指定确切的玩家名称或UUID的情况下在命令中选择任意玩家与实体。目标选择器变量可以选择一个或多个实体，
+ * 目标选择器参数可以根据特定条件筛选目标。
+ *
+ * selector拥有一个可选泛型参数limit，用于限制目标选择器选择的实体数量。例如selector<1>将会选择一个实体。
  *
  * 在mcfpp中你可以直接让目标选择器作为命令函数的参数，也可以让目标选择器选择实体，得到一个实体或者一个实体列表，之后再对它们进行操作
  *
@@ -63,7 +68,6 @@ open class SelectorVar : NBTBasedData<StringTag> {
         this.value = b.value
     }
 
-
     /**
      * 将b中的值赋值给此变量
      * @param b 变量的对象
@@ -96,11 +100,12 @@ open class SelectorVar : NBTBasedData<StringTag> {
         return data.getFunction(key, readOnlyParams, normalParams) to true
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
+        val re = super.explicitCast(type)
+        if(!re.isError) return re
         return when(type){
-            MCFPPBaseType.Selector -> this
             MCFPPNBTType.NBT -> NBTBasedData(this)
-            else -> throw VariableConverseException()
+            else -> re
         }
     }
 
@@ -183,12 +188,6 @@ class SelectorVarConcrete : MCFPPValue<EntitySelector>, SelectorVar{
             }
         }
         return this
-    }
-
-    override fun cast(type: MCFPPType): Var<*> {
-        if (type == MCFPPBaseType.Selector) return this
-        LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-        throw VariableConverseException()
     }
 
     override fun clone(): SelectorVar = SelectorVarConcrete(this, value.clone())

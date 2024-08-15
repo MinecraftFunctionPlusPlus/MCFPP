@@ -59,18 +59,6 @@ open class JsonText : NBTBasedData<CompoundTag> {
         return this
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
-        return when(type){
-            MCFPPBaseType.JText -> this
-            MCFPPNBTType.NBT -> NBTBasedData(this)
-            MCFPPBaseType.Any -> MCAnyConcrete(this)
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                UnknownVar(this.identifier)
-            }
-        }
-    }
-
     override fun clone(): NBTBasedData<CompoundTag> {
         return JsonText(this)
     }

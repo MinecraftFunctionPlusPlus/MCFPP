@@ -9,6 +9,8 @@ import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -52,40 +54,61 @@ open class VectorVar: Var<Int>, Indexable<MCInt> {
     }
 
     override fun assign(b: Var<*>): Var<Int> {
-        when(b){
+        var v = b.implicitCast(this.type)
+        if(v.isError){
+           v = b
+        }
+        when(v){
             is VectorVar -> {
-                if(b.dimension != dimension){
-                    LogProcessor.error("Cannot assign vector '$identifier' with different dimension '${b.identifier}'")
+                if(v.dimension != dimension){
+                    LogProcessor.error("Cannot assign vector '$identifier' with different dimension '${v.identifier}'")
                 }
                 for (i in 0 until dimension){
-                    components[i].assign(b.components[i])
+                    components[i].assign(v.components[i])
                 }
             }
             is MCInt -> {
                 for (i in 0 until dimension){
-                    components[i].assign(b)
+                    components[i].assign(v)
                 }
             }
             else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
             }
         }
         return this
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
+        if(type !is MCFPPVectorType) {
+            val re = super.explicitCast(type)
+            if(!re.isError) return re
+        }
         return when(type){
             is MCFPPVectorType -> {
                 if(type.dimension != dimension){
                     LogProcessor.error("Cannot cast ${type.typeName} '$identifier' with different dimension '${type.dimension}'")
                 }
-                LogProcessor.warn("Redundant cast from ${type.typeName} to ${type.typeName}")
-                return this
-            }
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
+                LogProcessor.warn(TextTranslator.REDUNDANT_CAST_WARN.translate(this.type.typeName, type.typeName))
                 this
             }
+            else -> buildCastErrorVar(type)
+        }
+    }
+
+    override fun implicitCast(type: MCFPPType): Var<*> {
+        if(type !is MCFPPVectorType) {
+            val re = super.implicitCast(type)
+            if(!re.isError) return re
+        }
+        return when(type){
+            is MCFPPVectorType -> {
+                if(type.dimension != dimension){
+                    return buildCastErrorVar(type)
+                }
+                this
+            }
+            else -> buildCastErrorVar(type)
         }
     }
 

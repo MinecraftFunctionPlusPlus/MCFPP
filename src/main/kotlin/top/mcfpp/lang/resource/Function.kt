@@ -49,7 +49,7 @@ open class Function: ResourceID {
         return super.assign(b) as Function
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.Function -> return this
             else -> {

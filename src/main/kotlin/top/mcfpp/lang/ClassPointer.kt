@@ -132,10 +132,9 @@ class ClassPointer : Var<Int>{
     }
 
     @Override
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         if(MCFPPType.baseType.contains(type)){
-            LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-            throw VariableConverseException()
+            buildCastErrorVar(type)
         }
         //TODO: 这里有问题，class类型的问题
         val namespace = StringHelper.splitNamespaceID(type.typeName)
@@ -145,8 +144,7 @@ class ClassPointer : Var<Int>{
             return UnknownVar("${type}_ptr" + UUID.randomUUID())
         }
         if (!this.clazz.canCastTo(c)) {
-            LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-            throw VariableConverseException()
+            buildCastErrorVar(type)
         }
         val re = ClassPointer(this)
         return re

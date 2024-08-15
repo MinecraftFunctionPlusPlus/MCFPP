@@ -559,7 +559,7 @@ open class Function : Member, FieldContainer, Serializable {
             if(i >= normalArgs.size){
                 addCommands(normalParams[i].defaultCommand.toTypedArray())
             }else{
-                val tg = normalArgs[i].cast(this.normalParams[i].type)
+                val tg = normalArgs[i].explicitCast(this.normalParams[i].type)
                 //参数传递和子函数的参数进栈
                 var p = field.getVar(this.normalParams[i].identifier)!!
                 p = p.assign(tg)

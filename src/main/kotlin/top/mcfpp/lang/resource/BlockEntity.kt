@@ -50,7 +50,7 @@ open class BlockEntity: ResourceID {
         return super.assign(b) as BlockEntity
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.BlockEntity -> return this
             else -> {

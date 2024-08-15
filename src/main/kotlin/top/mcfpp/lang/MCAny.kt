@@ -117,12 +117,12 @@ open class MCAny : Var<Var<*>> {
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型
      */
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPBaseType.Any -> return this
             else -> {
                 LogProcessor.warn("Try to cast any to ${type.typeName}")
-                return Var.build(this.identifier, type, parentClass()?:parentTemplate()?:Function.currFunction)
+                return build(this.identifier, type, parentClass()?:parentTemplate()?:Function.currFunction)
             }
         }
     }
@@ -251,8 +251,8 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>>{
                     LogProcessor.warn("Try to assign ${b.value.type.typeName} to ${this.value.type.typeName}")
                 }
                 //构造假设变量
-                val t = Var.build(this.identifier, b.value.type, parentClass()?:parentTemplate()?:Function.currFunction)
-                val v = Var.build(b.identifier, b.value.type, b.parentClass()?:b.parentTemplate()?:Function.currFunction)
+                val t = build(this.identifier, b.value.type, parentClass()?:parentTemplate()?:Function.currFunction)
+                val v = build(b.identifier, b.value.type, b.parentClass()?:b.parentTemplate()?:Function.currFunction)
                 t.assign(v)
                 this.value = b.value
                 return this
@@ -263,7 +263,7 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>>{
             }
             else -> {
                 this.value = b
-                val t = Var.build(this.identifier, b.type, parentClass()?:parentTemplate()?:Function.currFunction)
+                val t = build(this.identifier, b.type, parentClass()?:parentTemplate()?:Function.currFunction)
                 t.assign(b)
                 return this
             }

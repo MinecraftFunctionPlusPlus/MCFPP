@@ -50,7 +50,7 @@ open class PaintingVariant: ResourceID {
         return super.assign(b) as PaintingVariant
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.PaintingVariant -> return this
             else -> {

@@ -50,7 +50,7 @@ open class Storage: ResourceID {
         return super.assign(b) as Storage
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.Storage -> return this
             else -> {

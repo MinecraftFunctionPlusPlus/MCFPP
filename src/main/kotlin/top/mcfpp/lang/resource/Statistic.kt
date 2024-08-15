@@ -50,7 +50,7 @@ open class Statistic: ResourceID {
         return super.assign(b) as Statistic
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.Statistic -> return this
             else -> {

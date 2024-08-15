@@ -50,7 +50,7 @@ open class Memory: ResourceID {
         return super.assign(b) as Memory
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.Memory -> return this
             else -> {

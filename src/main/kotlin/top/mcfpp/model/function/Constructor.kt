@@ -8,6 +8,7 @@ import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.Class
+import top.mcfpp.model.CompoundData
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -118,8 +119,8 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
         return target.hashCode()
     }
 
-    fun isSelf(cls: Class, normalParams: List<MCFPPType>) : Boolean{
-        if (this.target == cls && this.normalParams.size == normalParams.size) {
+    fun isSelf(d: CompoundData, normalParams: List<MCFPPType>) : Boolean{
+        if (this.target == d && this.normalParams.size == normalParams.size) {
             if (this.normalParams.size == 0) {
                 return true
             }

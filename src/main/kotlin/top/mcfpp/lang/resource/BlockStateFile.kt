@@ -50,7 +50,7 @@ open class BlockStateFile: ResourceID {
         return super.assign(b) as BlockStateFile
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.BlockStateFile -> return this
             else -> {

@@ -50,7 +50,7 @@ open class RecipeType: ResourceID {
         return super.assign(b) as RecipeType
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.RecipeType -> return this
             else -> {

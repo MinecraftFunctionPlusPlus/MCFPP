@@ -50,7 +50,7 @@ open class BossBar: ResourceID {
         return super.assign(b) as BossBar
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.BossBar -> return this
             else -> {

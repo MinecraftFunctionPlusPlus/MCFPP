@@ -128,12 +128,25 @@ open class NBTBasedData<T : Tag<*>> : Var<T>, Indexable<NBTBasedData<*>>{
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型
      */
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
+        val re = super.explicitCast(type)
+        if(!re.isError) return re
         return when(type){
             MCFPPNBTType.NBT -> this
-            is MCFPPListType -> this
-            MCFPPBaseType.Any -> MCAnyConcrete(this)
-            else -> throw VariableConverseException()
+            else -> re
+        }
+    }
+
+    /**
+     * 将这个变量强制转换为一个类型
+     * @param type 要转换到的目标类型
+     */
+    override fun implicitCast(type: MCFPPType): Var<*> {
+        val re = super.implicitCast(type)
+        if(!re.isError) return re
+        return when(type){
+            MCFPPNBTType.NBT -> this
+            else -> re
         }
     }
 

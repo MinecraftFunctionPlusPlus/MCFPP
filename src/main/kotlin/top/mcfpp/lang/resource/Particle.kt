@@ -50,7 +50,7 @@ open class Particle: ResourceID {
         return super.assign(b) as Particle
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.Particle -> return this
             else -> {

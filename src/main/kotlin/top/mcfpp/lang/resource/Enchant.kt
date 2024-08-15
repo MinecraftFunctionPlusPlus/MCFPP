@@ -50,7 +50,7 @@ open class Enchant: ResourceID {
         return super.assign(b) as Enchant
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.Enchant -> return this
             else -> {

@@ -50,7 +50,7 @@ open class Dimension: ResourceID {
         return super.assign(b) as Dimension
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.Dimension -> return this
             else -> {

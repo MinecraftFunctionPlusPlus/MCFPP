@@ -6,13 +6,14 @@ import top.mcfpp.Project
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.lang.resource.StorageConcrete
 import top.mcfpp.lang.type.*
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.lib.*
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 import java.io.Serializable
 import java.util.*
 
@@ -93,6 +94,11 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember, Serializable{
     var inList = false
 
     /**
+     * 这个变量是否是编译器编译错误的时候生成的用于保证编译器正常运行的变量
+     */
+    var isError = false
+
+    /**
      *
      */
     open var nbtPath = NBTPath(StorageSource("system"))
@@ -158,7 +164,33 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember, Serializable{
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型
      */
-    abstract fun cast(type: MCFPPType): Var<*>
+    open fun explicitCast(type: MCFPPType): Var<*> {
+        if(type == this.type){
+            LogProcessor.warn(TextTranslator.REDUNDANT_CAST_WARN.translate(this.type.typeName, type.typeName))
+            return this
+        }
+        return when(type){
+            MCFPPBaseType.Any -> MCAnyConcrete(this)
+            else -> {
+                buildCastErrorVar(type)
+            }
+        }
+    }
+
+    /**
+     * 将这个变量隐式转换为一个类型
+     */
+    open fun implicitCast(type: MCFPPType): Var<*> {
+        if(type == this.type){
+            return this
+        }
+        return when(type){
+            MCFPPBaseType.Any -> MCAnyConcrete(this)
+            else -> {
+                buildCastErrorVar(type)
+            }
+        }
+    }
 
     @Override
     public abstract override fun clone(): Var<*>
@@ -442,6 +474,13 @@ abstract class Var<T> : Member, Cloneable, CanSelectMember, Serializable{
     }
 
     companion object {
+
+        fun buildCastErrorVar(type: MCFPPType): Var<*>{
+            val qwq = build("error_cast_" + UUID.randomUUID().toString(), type, Function.currFunction)
+            qwq.isError = true
+            return qwq
+        }
+
         /**
          * 根据所给的类型、标识符和域构造一个变量
          * @param identifier 标识符

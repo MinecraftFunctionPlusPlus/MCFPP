@@ -110,7 +110,9 @@ open class DataTemplateObject : Var<CompoundTag> {
         }
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
+        val r = super.explicitCast(type)
+        if(!r.isError) return r
         when(type){
             MCFPPNBTType.NBT -> {
                 val re = NBTBasedData<CompoundTag>(this.identifier)
@@ -123,14 +125,30 @@ open class DataTemplateObject : Var<CompoundTag> {
                     val re = DataTemplateObject(type.template, this.identifier)
                     re.nbtPath = nbtPath
                     return re
+                }else{
+                    return buildCastErrorVar(type)
                 }
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                throw VariableConverseException()
             }
 
-            else -> {
-                throw VariableConverseException()
+            else -> return r
+        }
+    }
+
+    override fun implicitCast(type: MCFPPType): Var<*> {
+        val r = super.implicitCast(type)
+        if(!r.isError) return r
+        when(type){
+            is MCFPPDataTemplateType -> {
+                if(type.template.canCastTo(templateType)){
+                    val re = DataTemplateObject(type.template, this.identifier)
+                    re.nbtPath = nbtPath
+                    return re
+                }else{
+                    return buildCastErrorVar(type)
+                }
             }
+
+            else -> return r
         }
     }
 

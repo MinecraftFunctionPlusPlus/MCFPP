@@ -50,7 +50,7 @@ open class Texture: ResourceID {
         return super.assign(b) as Texture
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.Texture -> return this
             else -> {

@@ -1,6 +1,5 @@
 package top.mcfpp.lang
 
-import net.querz.nbt.tag.ByteTag
 import net.querz.nbt.tag.IntTag
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
@@ -8,6 +7,7 @@ import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPClassType
+import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.*
@@ -67,22 +67,34 @@ open class MCInt : MCNumber<Int> {
         }
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
+        val re = super.explicitCast(type)
+        if(!re.isError) return re
         //TODO 类支持
         return when (type) {
-            this.type -> this
             MCFPPBaseType.Float -> {
                 MCInt("inp").assign(this)
                 Function.addCommand("function math:hpo/float/_scoreto")
                 return MCFloat().assign(MCFloat.ssObj)
             }
-            MCFPPBaseType.Any -> MCAnyConcrete(this)
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                throw VariableConverseException()
-            }
+            else -> re
         }
     }
+
+    override fun implicitCast(type: MCFPPType): Var<*> {
+        val re = super.implicitCast(type)
+        if(!re.isError) return re
+        //TODO 类支持
+        return when (type) {
+            MCFPPBaseType.Float -> {
+                MCInt("inp").assign(this)
+                Function.addCommand("function math:hpo/float/_scoreto")
+                return MCFloat().assign(MCFloat.ssObj)
+            }
+            else -> re
+        }
+    }
+
 
     @InsertCommand
     override fun assignCommand(a: MCNumber<Int>) : MCInt {
@@ -127,7 +139,7 @@ open class MCInt : MCNumber<Int> {
     @InsertCommand
     override fun plus(a: Var<*>): Var<*> {
         //t += a
-        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         if(!isTemp && a.isTemp){
             return a.plus(this)
         }else if(!isTemp){
@@ -145,7 +157,7 @@ open class MCInt : MCNumber<Int> {
     @InsertCommand
     override fun minus(a: Var<*>): Var<*> {
         //t -= a
-        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         if(!isTemp && a.isTemp){
             return a.minus(this)
         }else if(!isTemp){
@@ -168,7 +180,7 @@ open class MCInt : MCNumber<Int> {
         }else if(!isTemp){
             return (getTempVar() as MCInt).multiple(a)
         }
-        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         if (qwq is MCIntConcrete) {
             Function.addCommand(Commands.sbPlayerSet(qwq, qwq.value))
         }
@@ -182,7 +194,7 @@ open class MCInt : MCNumber<Int> {
             return (getTempVar() as MCInt).divide(a)
         }
         //t /= a
-        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         if (qwq is MCIntConcrete) {
             Function.addCommand(Commands.sbPlayerSet(qwq, qwq.value))
         }
@@ -196,7 +208,7 @@ open class MCInt : MCNumber<Int> {
             return (getTempVar() as MCInt).modular(a)
         }
         //t %= a
-        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         if (qwq is MCIntConcrete) {
             Function.addCommand(Commands.sbPlayerSet(qwq, qwq.value))
         }
@@ -207,7 +219,7 @@ open class MCInt : MCNumber<Int> {
     @InsertCommand
     override fun isBigger(a: Var<*>): MCBool {
         //re = t > a
-        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         val re: MCBool
         if (qwq is MCIntConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
@@ -230,7 +242,7 @@ open class MCInt : MCNumber<Int> {
     @InsertCommand
     override fun isSmaller(a: Var<*>): MCBool {
         //re = t < a
-        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         val re: MCBool
         if (qwq is MCIntConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
@@ -253,7 +265,7 @@ open class MCInt : MCNumber<Int> {
     @InsertCommand
     override fun isSmallerOrEqual(a: Var<*>): MCBool {
         //re = t <= a
-        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         val re: MCBool
         if (qwq is MCIntConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
@@ -276,7 +288,7 @@ open class MCInt : MCNumber<Int> {
     @InsertCommand
     override fun isGreaterOrEqual(a: Var<*>): MCBool {
         //re = t <= a
-        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         val re: MCBool
         if (qwq is MCIntConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
@@ -299,7 +311,7 @@ open class MCInt : MCNumber<Int> {
     @InsertCommand
     override fun isEqual(a: Var<*>): MCBool {
         //re = t == a
-        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         val re: MCBool
         if (qwq is MCIntConcrete) {
             //execute store success score qwq qwq if score qwq qwq = owo owo
@@ -322,7 +334,7 @@ open class MCInt : MCNumber<Int> {
     @InsertCommand
     override fun isNotEqual(a: Var<*>): MCBool {
         //re = t != a
-        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         val re: MCBool
         if (qwq is MCIntConcrete) {
             //execute store success score qwq qwq if score qwq qwq = owo owo
@@ -494,7 +506,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int>{
     }
 
     @Override
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         //TODO 类支持
         return when (type) {
             this.type -> this
@@ -510,7 +522,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int>{
     @InsertCommand
     override fun plus(a: Var<*>): Var<*> {
         //t = t + a
-        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         if (qwq is MCIntConcrete) {
             value += qwq.value
             return this
@@ -522,7 +534,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int>{
     @InsertCommand
     override fun minus(a: Var<*>): Var<*> {
         //t = t + a
-        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         if (qwq is MCIntConcrete) {
             value -= qwq.value
             return this
@@ -536,7 +548,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int>{
     @InsertCommand
     override fun multiple(a: Var<*>): Var<*> {
         //t = t * a
-        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         if (qwq is MCIntConcrete) {
             value *= qwq.value
             return this
@@ -548,7 +560,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int>{
     @Override
     @InsertCommand
     override fun divide(a: Var<*>): Var<*> {
-        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         if (qwq is MCIntConcrete) {
             value /= qwq.value
             return this
@@ -560,7 +572,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int>{
     @Override
     @InsertCommand
     override fun modular(a: Var<*>): Var<*> {
-        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         if (qwq is MCIntConcrete) {
             value %= qwq.value
             return this
@@ -573,7 +585,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int>{
     @InsertCommand
     override fun isBigger(a: Var<*>): MCBool {
         //re = t > a
-        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         return if (qwq is MCIntConcrete) {
             MCBoolConcrete(value > qwq.value)
         } else {
@@ -586,7 +598,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int>{
     @InsertCommand
     override fun isSmaller(a: Var<*>): MCBool {
         //re = t < a
-        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         return if (qwq is MCIntConcrete) {
             MCBoolConcrete(value < qwq.value)
         } else {
@@ -598,7 +610,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int>{
     @InsertCommand
     override fun isSmallerOrEqual(a: Var<*>): MCBool {
         //re = t <= a
-        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         return if (qwq is MCIntConcrete) {
             MCBoolConcrete(value <= qwq.value)
         } else {
@@ -610,7 +622,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int>{
     @InsertCommand
     override fun isGreaterOrEqual(a: Var<*>): MCBool {
         //re = t <= a
-        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         return if (qwq is MCIntConcrete) {
             MCBoolConcrete(value >= qwq.value)
         } else {
@@ -622,7 +634,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int>{
     @InsertCommand
     override fun isEqual(a: Var<*>): MCBool {
         //re = t == a
-        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         return if (qwq is MCIntConcrete) {
             MCBoolConcrete(value == qwq.value)
         } else {
@@ -634,7 +646,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int>{
     @InsertCommand
     override fun isNotEqual(a: Var<*>): MCBool {
         //re = t != a
-        val qwq: MCInt = if (a !is MCInt) a.cast(MCFPPBaseType.Int) as MCInt else a
+        val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         return if (qwq is MCIntConcrete) {
             MCBoolConcrete(value != qwq.value)
         } else {

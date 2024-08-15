@@ -58,15 +58,6 @@ open class MCBool : Var<Boolean>, OnScoreboard {
         }
     }
 
-    @Override
-    override fun cast(type: MCFPPType): Var<*> {
-        return when(type){
-            MCFPPBaseType.Bool -> this
-            MCFPPBaseType.Any -> MCAnyConcrete(this)
-            else -> throw VariableConverseException()
-        }
-    }
-
     @InsertCommand
     open fun equalCommand(a: MCBool): MCBool {
         //re = t == a

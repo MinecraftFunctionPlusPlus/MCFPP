@@ -50,7 +50,7 @@ open class PotionEffect: ResourceID {
         return super.assign(b) as PotionEffect
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.PotionEffect -> return this
             else -> {

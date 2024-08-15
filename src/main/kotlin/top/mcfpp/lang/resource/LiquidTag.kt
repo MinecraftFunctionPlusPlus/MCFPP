@@ -50,7 +50,7 @@ open class LiquidTag: ResourceID {
         return super.assign(b) as LiquidTag
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.LiquidTag -> return this
             else -> {

@@ -50,7 +50,7 @@ open class DamageType: ResourceID {
         return super.assign(b) as DamageType
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.DamageType -> return this
             else -> {

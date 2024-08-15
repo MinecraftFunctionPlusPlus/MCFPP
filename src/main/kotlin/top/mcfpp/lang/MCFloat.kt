@@ -191,7 +191,7 @@ open class MCFloat : MCNumber<Float> {
     override fun plus(a: Var<*>): Var<*> {
         //t = t + a
         if(!isTemp) return (getTempVar() as MCFloat).plus(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.cast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         if(qwq != tempFloat) qwq.toTempEntity()
         Function.addCommand("execute as $tempFloatEntityUUID run function math:hpo/float/_add")
         return this
@@ -206,7 +206,7 @@ open class MCFloat : MCNumber<Float> {
     override fun minus(a: Var<*>): Var<*> {
         //t = t - a
         if(!isTemp) return (getTempVar() as MCFloat).minus(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.cast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         if(qwq != tempFloat) qwq.toTempEntity()
         Function.addCommand("execute as $tempFloatEntityUUID run function math:hpo/float/_rmv")
         return this
@@ -221,7 +221,7 @@ open class MCFloat : MCNumber<Float> {
     override fun multiple(a: Var<*>): Var<*> {
         //t = t * a
         if(!isTemp) return (getTempVar() as MCFloat).minus(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.cast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         if(qwq != tempFloat) qwq.toTempEntity()
         Function.addCommand("execute as $tempFloatEntityUUID run function math:hpo/float/_mult")
         return this
@@ -236,7 +236,7 @@ open class MCFloat : MCNumber<Float> {
     override fun divide(a: Var<*>): Var<*> {
         //t = t - a
         if(!isTemp) return (getTempVar() as MCFloat).divide(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.cast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         if(qwq != tempFloat) qwq.toTempEntity()
         Function.addCommand("execute as $tempFloatEntityUUID run function math:hpo/float/_div")
         return this
@@ -262,7 +262,7 @@ open class MCFloat : MCNumber<Float> {
     override fun isBigger(a: Var<*>): MCBool {
         //re = t > a
         if(!isTemp) return (getTempVar() as MCFloat).isBigger(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.cast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         val re = MCBool()
         if(qwq != tempFloat) qwq.toTempEntity()
         Function.addCommand(
@@ -280,7 +280,7 @@ open class MCFloat : MCNumber<Float> {
     override fun isSmaller(a: Var<*>): MCBool {
         //re = t < a
         if(!isTemp) return (getTempVar() as MCFloat).isSmaller(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.cast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         val re = MCBool()
         if(qwq != tempFloat) qwq.toTempEntity()
         Function.addCommand(
@@ -298,7 +298,7 @@ open class MCFloat : MCNumber<Float> {
     override fun isSmallerOrEqual(a: Var<*>): MCBool {
         //re = t <= a
         if(!isTemp) return (getTempVar() as MCFloat).isSmallerOrEqual(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.cast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         val re = MCBool()
         if(qwq != tempFloat) qwq.toTempEntity()
         Function.addCommand(
@@ -316,7 +316,7 @@ open class MCFloat : MCNumber<Float> {
     override fun isGreaterOrEqual(a: Var<*>): MCBool {
         //re = t >= a
         if(!isTemp) return (getTempVar() as MCFloat).isGreaterOrEqual(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.cast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         val re = MCBool()
         if(qwq != tempFloat) qwq.toTempEntity()
         Function.addCommand(
@@ -334,7 +334,7 @@ open class MCFloat : MCNumber<Float> {
     override fun isEqual(a: Var<*>): MCBool {
         //re = t == a
         if(!isTemp) return (getTempVar() as MCFloat).isEqual(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.cast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         val re = MCBool()
         if(qwq != tempFloat) qwq.toTempEntity()
         Function.addCommand(
@@ -352,7 +352,7 @@ open class MCFloat : MCNumber<Float> {
     override fun isNotEqual(a: Var<*>): MCBool {
         //re = t != a
         if(!isTemp) return (getTempVar() as MCFloat).isNotEqual(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.cast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         val re = MCBool()
         if(qwq != tempFloat) qwq.toTempEntity()
         Function.addCommand(
@@ -366,9 +366,10 @@ open class MCFloat : MCNumber<Float> {
      * @param type 要转换到的目标类型
      */
     @InsertCommand
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
+        val r = super.explicitCast(type)
+        if(!r.isError) return r
         return when(type){
-            this.type -> this
             MCFPPBaseType.Int -> {
                 ssObj.assign(this)
                 Function.addCommand("function math:hpo/float/_toscore")
@@ -377,11 +378,7 @@ open class MCFloat : MCNumber<Float> {
                 re.assign(temp)
                 re
             }
-            MCFPPBaseType.Any -> MCAnyConcrete(this)
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                throw VariableConverseException()
-            }
+            else -> r
         }
     }
 
@@ -538,7 +535,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
      * @param type 要转换到的目标类型
      */
     @InsertCommand
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         return when(type) {
             this.type -> this
             MCFPPBaseType.Int -> MCIntConcrete(value.toInt())
@@ -609,7 +606,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
     override fun plus(a: Var<*>): Var<*> {
         //t = t + a
         if(!isTemp) return (getTempVar() as MCFloat).plus(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.cast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         if (qwq is MCFloatConcrete) {
             this.value += qwq.value
         } else {
@@ -630,7 +627,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
     override fun minus(a: Var<*>): Var<*> {
         //t = t - a
         if(!isTemp) return (getTempVar() as MCFloat).minus(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.cast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         if (qwq is MCFloatConcrete) {
             this.value -= qwq.value
         } else {
@@ -651,7 +648,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
     override fun multiple(a: Var<*>): Var<*> {
         //t = t * a
         if(!isTemp) return (getTempVar() as MCFloat).multiple(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.cast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         if (qwq is MCFloatConcrete) {
             this.value *= qwq.value
         } else {
@@ -672,7 +669,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
     override fun divide(a: Var<*>): Var<*> {
         //t = t - a
         if(!isTemp) return (getTempVar() as MCFloat).divide(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.cast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         if (qwq is MCFloatConcrete) {
             this.value /= qwq.value
         } else {
@@ -703,7 +700,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
     override fun isBigger(a: Var<*>): MCBool {
         //re = t > a
         if(!isTemp) return (getTempVar() as MCFloat).isBigger(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.cast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         val re : MCBool
         if (qwq is MCFloatConcrete) {
             re = MCBoolConcrete(value > qwq.value)
@@ -729,7 +726,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
     override fun isSmaller(a: Var<*>): MCBool {
         //re = t < a
         if(!isTemp) return (getTempVar() as MCFloat).isSmaller(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.cast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         val re : MCBool
         if (qwq is MCFloatConcrete) {
             re = MCBoolConcrete(value < qwq.value)
@@ -755,7 +752,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
     override fun isSmallerOrEqual(a: Var<*>): MCBool {
         //re = t <= a
         if(!isTemp) return (getTempVar() as MCFloat).isSmallerOrEqual(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.cast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         val re : MCBool
         if (qwq is MCFloatConcrete) {
             re = MCBoolConcrete(value <= qwq.value)
@@ -781,7 +778,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
     override fun isGreaterOrEqual(a: Var<*>): MCBool {
         //re = t >= a
         if(!isTemp) return (getTempVar() as MCFloat).isSmallerOrEqual(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.cast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         val re : MCBool
         if (qwq is MCFloatConcrete) {
             re = MCBoolConcrete(value >= qwq.value)
@@ -807,7 +804,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
     override fun isEqual(a: Var<*>): MCBool {
         //re = t == a
         if(!isTemp) return (getTempVar() as MCFloat).isEqual(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.cast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         val re : MCBool
         if (qwq is MCFloatConcrete) {
             re = MCBoolConcrete(value >= qwq.value)
@@ -833,7 +830,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
     override fun isNotEqual(a: Var<*>): MCBool {
         //re = t != a
         if(!isTemp) return (getTempVar() as MCFloat).isNotEqual(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.cast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         val re : MCBool
         if (qwq is MCFloatConcrete) {
             re = MCBoolConcrete(value >= qwq.value)

@@ -50,7 +50,7 @@ open class LootTableCondition: ResourceID {
         return super.assign(b) as LootTableCondition
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.LootTableCondition -> return this
             else -> {

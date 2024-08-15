@@ -108,16 +108,17 @@ open class Class : CompoundData {
     open val tag: String
         get() = namespace + "_class_" + identifier + "_pointer"
 
-    fun getConstructor(normalParams: ArrayList<String>): Constructor?{
-        return getConstructorInner(
-            ArrayList(normalParams.map { MCFPPType.parseFromIdentifier(it, field) }))
+    fun getConstructor(normalParams: List<String>): Constructor?{
+        return getConstructor(
+            ArrayList(normalParams.map { MCFPPType.parseFromIdentifier(it, field) })
+        )
     }
 
     /**
      * 根据参数列表获取一个类的构造函数
      * @return 返回这个类的参数
      */
-    private fun getConstructorInner(normalParams: List<MCFPPType>): Constructor? {
+    fun getConstructor(normalParams: List<MCFPPType>): Constructor? {
         for (f in constructors) {
             if(f.isSelf(this, normalParams)){
                 return f

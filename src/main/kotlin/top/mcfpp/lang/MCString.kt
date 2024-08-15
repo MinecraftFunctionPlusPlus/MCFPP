@@ -104,16 +104,6 @@ open class MCString : NBTBasedData<StringTag> {
         }
     }
 
-    @Override
-    override fun cast(type: MCFPPType): Var<*> {
-        return when(type){
-            MCFPPBaseType.String -> this
-            MCFPPNBTType.NBT -> this
-            MCFPPBaseType.Any -> MCAnyConcrete(this)
-            else -> throw VariableConverseException()
-        }
-    }
-
     /*
     override fun createTempVar(): Var<*> = MCString()
 
@@ -194,7 +184,7 @@ class MCStringConcrete: MCString, MCFPPValue<StringTag>{
     }
 
     @Override
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         return when(type){
             MCFPPBaseType.String -> this
             MCFPPNBTType.NBT -> NBTBasedDataConcrete(value)

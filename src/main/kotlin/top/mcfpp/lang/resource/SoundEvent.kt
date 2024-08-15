@@ -50,7 +50,7 @@ open class SoundEvent: ResourceID {
         return super.assign(b) as SoundEvent
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.SoundEvent -> return this
             else -> {

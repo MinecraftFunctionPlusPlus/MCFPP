@@ -41,7 +41,7 @@ class Pos : Var<Int> {
         TODO("Not yet implemented")
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         TODO("Not yet implemented")
     }
 

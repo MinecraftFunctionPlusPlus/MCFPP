@@ -27,7 +27,7 @@ object LogProcessor {
 
     inline fun warn(msg: String){
         logger.warn(
-            msg + if(Project.ctx !=null) {" at " + MCFPPFile.currFile!!.name + ":" + Project.ctx!!.getStart().line}else{""}
+            msg + if(Project.ctx !=null) {"\n    at " + MCFPPFile.currFile!!.absolutePath + ":" + Project.ctx!!.getStart().line}else{""}
         )
         Project.warningCount++
     }
@@ -39,7 +39,7 @@ object LogProcessor {
 
     inline fun error(msg: String){
         logger.error(
-            msg + if(Project.ctx !=null) {" at " + MCFPPFile.currFile!!.name + ":" + Project.ctx!!.getStart().line}else{""}
+            msg + if(Project.ctx !=null) {"\n    at " + MCFPPFile.currFile!!.absolutePath + ":" + Project.ctx!!.getStart().line}else{""}
         )
         Project.errorCount++
     }
@@ -47,5 +47,9 @@ object LogProcessor {
     inline fun error(msg: String, e: Exception){
         logger.error(msg, e)
         Project.errorCount++
+    }
+
+    inline fun castError(type1: String, type2: String){
+        error("Cannot cast [$type1] to [$type2]")
     }
 }

@@ -50,7 +50,7 @@ open class CommandArgumentType: ResourceID {
         return super.assign(b) as CommandArgumentType
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.CommandArgumentType -> return this
             else -> {

@@ -372,7 +372,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     override fun visitCastExpression(ctx: mcfppParser.CastExpressionContext): Var<*> {
         Project.ctx = ctx
         val a: Var<*>? = visit(ctx.unaryExpression())
-        return a!!.cast(MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field))
+        return a!!.explicitCast(MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field))
     }
 
     /**

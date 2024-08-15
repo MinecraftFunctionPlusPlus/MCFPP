@@ -58,7 +58,19 @@ class UnresolvedVar : Var<Any> {
      *
      * @throws VariableNotResolvedException 调用此方法就会抛出此异常
      */
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
+        throw VariableNotResolvedException()
+    }
+
+
+    /**
+     * 类型的强制转换。总是不能进行，因为这个变量未解析
+     *
+     * @param type
+     *
+     * @throws VariableNotResolvedException 调用此方法就会抛出此异常
+     */
+    override fun implicitCast(type: MCFPPType): Var<*> {
         throw VariableNotResolvedException()
     }
 

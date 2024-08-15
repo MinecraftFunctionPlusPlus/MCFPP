@@ -50,7 +50,7 @@ open class Structure: ResourceID {
         return super.assign(b) as Structure
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.Structure -> return this
             else -> {

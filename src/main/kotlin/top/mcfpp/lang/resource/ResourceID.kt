@@ -49,7 +49,7 @@ open class ResourceID : NBTBasedData<StringTag> {
         return super.assign(b) as ResourceID
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.ResourceID -> return this
             else -> {

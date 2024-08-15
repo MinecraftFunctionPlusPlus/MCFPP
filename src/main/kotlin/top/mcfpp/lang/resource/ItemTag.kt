@@ -50,7 +50,7 @@ open class ItemTag: ResourceID {
         return super.assign(b) as ItemTag
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.ItemTag -> return this
             else -> {

@@ -1,0 +1,6 @@
+{
+    "error.mcfpp.castError": "无法将类型 %s 转换为类型 %s",
+    "error.mcfpp.voidCastError": "无法转换类型 void ",
+    "warn.mcfpp.redundantCast": "从类型 %s 到类型 %s 的转换是多余的",
+    "error.mcfpp.assignError": "无法将类型 %s 赋值给类型 %s"
+}

@@ -50,7 +50,7 @@ open class VillagerProfession: ResourceID {
         return super.assign(b) as VillagerProfession
     }
 
-    override fun cast(type: MCFPPType): Var<*> {
+    override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.VillagerProfession -> return this
             else -> {

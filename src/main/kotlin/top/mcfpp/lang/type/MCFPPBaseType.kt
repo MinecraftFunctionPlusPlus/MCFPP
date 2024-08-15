@@ -80,6 +80,11 @@ class MCFPPBaseType {
 
 }
 
+class LimitedSelectorType(val limit: Int): MCFPPType(parentType = listOf(MCFPPBaseType.BaseEntity)){
+    override val typeName: String
+        get() = "selector[$limit]"
+}
+
 //class MCFPPEntityType(
 //    val resourceLocation: ResourceLocation
 //) : MCFPPType(listOf(MCFPPBaseType.BaseEntity), Entity.data) {

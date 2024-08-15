@@ -10,6 +10,9 @@ import top.mcfpp.mni.NBTListData
 import top.mcfpp.mni.NBTMapData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
+import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 
 open class NBTMap : NBTDictionary{
@@ -59,14 +62,6 @@ open class NBTMap : NBTDictionary{
         this.valueList = b.valueList.clone() as NBTList
         this.keyValueSet = b.keyValueSet.clone() as NBTDictionary
         this.genericType = b.genericType
-    }
-
-    override fun cast(type: MCFPPType): Var<*> {
-        return when(type){
-            MCFPPNBTType.Map -> this
-            MCFPPBaseType.Any -> MCAnyConcrete(this)
-            else -> throw VariableConverseException()
-        }
     }
 
     /*
