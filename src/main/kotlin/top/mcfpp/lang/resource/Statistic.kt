@@ -46,18 +46,8 @@ open class Statistic: ResourceID {
      */
     constructor(b: Statistic) : super(b)
 
-    override fun assign(b: Var<*>): Statistic {
+    override fun onAssign(b: Var<*>): Statistic {
         return super.assign(b) as Statistic
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.Statistic -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class StatisticConcrete: MCFPPValue<String>, Statistic{
         return StatisticConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): StatisticConcrete {
         return StatisticConcrete(this.value)
     }
 

@@ -100,9 +100,9 @@ object ResourceID: MCFPPType(parentType = listOf(MCFPPNBTType.NBT)){
         override val typeName: String
             get() = "LootTablePredicate"
     }
-    object Function: MCFPPType(parentType = listOf(ResourceID)){
+    object FunctionID: MCFPPType(parentType = listOf(ResourceID)){
         override val typeName: String
-            get() = "Function"
+            get() = "FunctionID"
     }
     object Structure: MCFPPType(parentType = listOf(ResourceID)){
         override val typeName: String

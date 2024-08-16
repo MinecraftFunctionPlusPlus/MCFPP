@@ -3,6 +3,21 @@
 		{
 			"id":"default",
 			"functions":[
+				
+			],
+			"classes":[
+				
+			],
+			"template":[
+				
+			],
+			"enum":[
+				
+			]
+		},
+		{
+			"id":"test",
+			"functions":[
 				{
 					"id":"main",
 					"normalParams":[
@@ -16,81 +31,38 @@
 				}
 			],
 			"classes":[
+				
+			],
+			"template":[
 				{
 					"id":"Test",
 					"parents":[
-						"mcfpp.lang:any"
+						"mcfpp.lang:DataObject"
 					],
 					"field":{
 						"vars":[
 							{
-								"id":"i",
+								"id":"a",
 								"type":"int"
-							}
-						],
-						"functions":[
-							{
-								"id":"_class_preinit_Test",
-								"normalParams":[
-									
-								],
-								"returnType":"void",
-								"isAbstract":false,
-								"tags":[
-									
-								]
 							},
 							{
-								"id":"_init_test_0_lead",
-								"normalParams":[
-									
-								],
-								"returnType":"void",
-								"isAbstract":false,
-								"tags":[
-									
-								]
-							}
-						]
-					},
-					"constructors":[
-						{
-							"normalParams":[
-								
-							]
-						}
-					]
-				},
-				{
-					"id":"Test$",
-					"parents":[
-						"mcfpp.lang:any"
-					],
-					"field":{
-						"vars":[
+								"id":"b",
+								"type":"int"
+							},
 							{
-								"id":"id",
+								"id":"c",
+								"type":"int"
+							},
+							{
+								"id":"d",
 								"type":"int"
 							}
 						],
 						"functions":[
-							{
-								"id":"_class_preinit_Test",
-								"normalParams":[
-									
-								],
-								"returnType":"void",
-								"isAbstract":false,
-								"tags":[
-									
-								]
-							}
+							
 						]
 					}
 				}
-			],
-			"template":[
-				
 			],
 			"enum":[
 				

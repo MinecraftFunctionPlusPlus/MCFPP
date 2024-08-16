@@ -46,18 +46,8 @@ open class BlockTag: ResourceID {
      */
     constructor(b: BlockTag) : super(b)
 
-    override fun assign(b: Var<*>): BlockTag {
+    override fun onAssign(b: Var<*>): BlockTag {
         return super.assign(b) as BlockTag
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.BlockTag -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class BlockTagConcrete: MCFPPValue<String>, BlockTag{
         return BlockTagConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): BlockTagConcrete {
         return BlockTagConcrete(this.value)
     }
 

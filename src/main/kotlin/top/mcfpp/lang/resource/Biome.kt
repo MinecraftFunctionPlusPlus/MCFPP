@@ -46,18 +46,8 @@ open class Biome: ResourceID {
      */
     constructor(b: Biome) : super(b)
 
-    override fun assign(b: Var<*>): Biome {
+    override fun onAssign(b: Var<*>): Biome {
         return super.assign(b) as Biome
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.Biome -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class BiomeConcrete: MCFPPValue<String>, Biome{
         return BiomeConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): BiomeConcrete {
         return BiomeConcrete(this.value)
     }
 

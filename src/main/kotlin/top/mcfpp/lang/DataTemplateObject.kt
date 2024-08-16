@@ -241,6 +241,9 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     }
 
     companion object{
+
+
+
     }
 
 }

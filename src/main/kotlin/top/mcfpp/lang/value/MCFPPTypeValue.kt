@@ -17,29 +17,26 @@ import top.mcfpp.model.Member
 class MCTypeValue(
     identifier:String,
     var parentType: List<MCFPPType>
-): Var<MCFPPType>(identifier) {
+): Var<MCTypeValue>(identifier) {
 
     /**
      * **只读，不可更改**。此值的类型，为MCFPPBaseType.Type
      */
     override var type: MCFPPType = MCFPPBaseType.Type
+    
+    override fun onAssign(b: Var<*>): MCTypeValue {
+        TODO("Not yet implemented")
+    }
 
     fun toType():MCFPPGenericType{
         return MCFPPGenericType(identifier,parentType)
-    }
-    override fun assign(b: Var<*>): MCFPPTypeVar {
-        TODO("Not yet implemented")
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        TODO("Not yet implemented")
     }
 
     override fun clone(): MCTypeValue {
         TODO("Not yet implemented")
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): MCTypeValue {
         TODO("Not yet implemented")
     }
 

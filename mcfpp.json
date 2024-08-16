@@ -2,6 +2,7 @@
     "files": [
         "src/main/mcfpp/**"
     ],
+    "sourcePath": "src/main/mcfpp",
     "description": "",
     "namespace": "mcfpp",
     "targetPath": "src/main/resources/lib",

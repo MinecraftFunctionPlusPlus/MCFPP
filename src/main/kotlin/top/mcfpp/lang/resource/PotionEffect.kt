@@ -46,18 +46,8 @@ open class PotionEffect: ResourceID {
      */
     constructor(b: PotionEffect) : super(b)
 
-    override fun assign(b: Var<*>): PotionEffect {
+    override fun onAssign(b: Var<*>): PotionEffect {
         return super.assign(b) as PotionEffect
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.PotionEffect -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class PotionEffectConcrete: MCFPPValue<String>, PotionEffect{
         return PotionEffectConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): PotionEffectConcrete {
         return PotionEffectConcrete(this.value)
     }
 

@@ -132,7 +132,7 @@ object ClassWriter: ILibJsonWriter<Class> {
         val json = JSONObject()
         json["id"] = if(t is ObjectClass) t.identifier + "$" else t.identifier
         //父类
-        val parents = t.parent.map { it.namespaceID }.toList()
+        val parents = t.mapParent { it.namespaceID }.toList()
         json["parents"] = parents
         //泛型
         if(t is GenericClass){
@@ -231,7 +231,7 @@ object TemplateWriter: ILibJsonWriter<DataTemplate> {
         val json = JSONObject()
         json["id"] = if(t is ObjectDataTemplate) t.identifier + "$" else t.identifier
         //父类
-        val parents = t.parent.map { it.namespaceID }.toList()
+        val parents = t.mapParent { it.namespaceID }.toList()
         json["parents"] = parents
         //成员
         json["field"] = CompoundDataFieldWriter.toJson(t.field)

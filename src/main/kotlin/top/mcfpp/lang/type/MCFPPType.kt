@@ -300,10 +300,10 @@ open class MCFPPType(
                     return MCFPPBaseType.Any
                 }
             }
-            val templateResult = MCFPPClassType.regex.find(identifier)
+            val templateResult = MCFPPDataTemplateType.regex.find(identifier)
             if(templateResult != null){
                 val (first, second) = templateResult.destructured
-                val template = GlobalField.getClass(first, second)
+                val template = GlobalField.getTemplate(first, second)
                 if(template != null){
                     return template.getType()
                 }else{

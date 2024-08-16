@@ -46,18 +46,8 @@ open class CommandArgumentType: ResourceID {
      */
     constructor(b: CommandArgumentType) : super(b)
 
-    override fun assign(b: Var<*>): CommandArgumentType {
+    override fun onAssign(b: Var<*>): CommandArgumentType {
         return super.assign(b) as CommandArgumentType
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.CommandArgumentType -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class CommandArgumentTypeConcrete: MCFPPValue<String>, CommandArgumentType{
         return CommandArgumentTypeConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): CommandArgumentTypeConcrete {
         return CommandArgumentTypeConcrete(this.value)
     }
 

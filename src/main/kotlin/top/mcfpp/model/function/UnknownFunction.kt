@@ -22,7 +22,7 @@ open class UnknownFunction: Function {
     }
 
     override fun invoke(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?) {
-        addCommand("[Failed to compile]invoke unknown function $namespaceID")
+        addComment("[Failed to compile]invoke unknown function $namespaceID")
     }
 
     override fun toString(): String {

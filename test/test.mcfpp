@@ -1,14 +1,13 @@
 namespace test;
 
-class Test{
-    private int i;
-
-    public func qwq(){
-        i = i + 5;
-    }
+data Test{
+    int a;
+    int b;
+    int c;
+    int d;
 }
 
 func main(){
-    var t = Test();
-    t.qwq();
+    Test t = {a:1, b:2, c:3, d:4};
+    print(t.toText());
 }

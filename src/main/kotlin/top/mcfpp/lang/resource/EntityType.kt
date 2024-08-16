@@ -46,18 +46,8 @@ open class EntityType: ResourceID {
      */
     constructor(b: EntityType) : super(b)
 
-    override fun assign(b: Var<*>): EntityType {
+    override fun onAssign(b: Var<*>): EntityType {
         return super.assign(b) as EntityType
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.EntityType -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class EntityTypeConcrete: MCFPPValue<String>, EntityType{
         return EntityTypeConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): EntityTypeConcrete {
         return EntityTypeConcrete(this.value)
     }
 

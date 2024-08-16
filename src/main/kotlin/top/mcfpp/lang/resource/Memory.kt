@@ -46,18 +46,8 @@ open class Memory: ResourceID {
      */
     constructor(b: Memory) : super(b)
 
-    override fun assign(b: Var<*>): Memory {
+    override fun onAssign(b: Var<*>): Memory {
         return super.assign(b) as Memory
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.Memory -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class MemoryConcrete: MCFPPValue<String>, Memory{
         return MemoryConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): MemoryConcrete {
         return MemoryConcrete(this.value)
     }
 

@@ -46,18 +46,8 @@ open class Enchant: ResourceID {
      */
     constructor(b: Enchant) : super(b)
 
-    override fun assign(b: Var<*>): Enchant {
+    override fun onAssign(b: Var<*>): Enchant {
         return super.assign(b) as Enchant
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.Enchant -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class EnchantConcrete: MCFPPValue<String>, Enchant{
         return EnchantConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): EnchantConcrete {
         return EnchantConcrete(this.value)
     }
 

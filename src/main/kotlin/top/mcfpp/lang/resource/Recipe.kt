@@ -46,18 +46,8 @@ open class Recipe: ResourceID {
      */
     constructor(b: Recipe) : super(b)
 
-    override fun assign(b: Var<*>): Recipe {
+    override fun onAssign(b: Var<*>): Recipe {
         return super.assign(b) as Recipe
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.Recipe -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class RecipeConcrete: MCFPPValue<String>, Recipe{
         return RecipeConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): RecipeConcrete {
         return RecipeConcrete(this.value)
     }
 

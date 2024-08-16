@@ -46,18 +46,8 @@ open class Texture: ResourceID {
      */
     constructor(b: Texture) : super(b)
 
-    override fun assign(b: Var<*>): Texture {
+    override fun onAssign(b: Var<*>): Texture {
         return super.assign(b) as Texture
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.Texture -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class TextureConcrete: MCFPPValue<String>, Texture{
         return TextureConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): TextureConcrete {
         return TextureConcrete(this.value)
     }
 

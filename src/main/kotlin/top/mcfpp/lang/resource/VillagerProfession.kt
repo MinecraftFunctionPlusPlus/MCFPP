@@ -46,18 +46,8 @@ open class VillagerProfession: ResourceID {
      */
     constructor(b: VillagerProfession) : super(b)
 
-    override fun assign(b: Var<*>): VillagerProfession {
+    override fun onAssign(b: Var<*>): VillagerProfession {
         return super.assign(b) as VillagerProfession
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.VillagerProfession -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class VillagerProfessionConcrete: MCFPPValue<String>, VillagerProfession{
         return VillagerProfessionConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): VillagerProfessionConcrete {
         return VillagerProfessionConcrete(this.value)
     }
 

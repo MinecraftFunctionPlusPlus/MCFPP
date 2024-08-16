@@ -116,15 +116,6 @@ object Project {
             //源代码根目录
             config.sourcePath = Path.of(jsonObject.getString("sourcePath")?: ".")
 
-            //代码文件
-            config.files = ArrayList()
-            val filesJson: JSONArray = jsonObject.getJSONArray("files")
-            for (o in filesJson) {
-                MCFPPFile.findFiles(o.toString()).forEach {
-                    config.files.add(MCFPPFile(it.toFile()))
-                }
-            }
-
             //版本
             config.version = jsonObject.getString("version")?:"1.21"
 
@@ -149,6 +140,15 @@ object Project {
 
             //是否生成数据包
             config.noDatapack = jsonObject.getBooleanValue("noDatapack")
+
+            //代码文件
+            config.files = ArrayList()
+            val filesJson: JSONArray = jsonObject.getJSONArray("files")
+            for (o in filesJson) {
+                MCFPPFile.findFiles(o.toString()).forEach {
+                    config.files.add(MCFPPFile(it.toFile()))
+                }
+            }
 
         } catch (e: Exception) {
             LogProcessor.error("Error while reading project from file \"$path\"")

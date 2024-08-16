@@ -1,8 +1,11 @@
 {
   "files": [
-    "*"
+    "test/**"
   ],
-  "description": "qwq",
-  "namespace": "test",
-  "targetPath": "D:\\.minecraft\\saves\\DP Studio\\datapacks"
+  "description": "",
+  "namespace": "mcfpp",
+  "targetPath": ".",
+  "noDatapack": true,
+  "ignoreStdLib": false,
+  "isLib": false
 }

@@ -32,6 +32,8 @@ open class JsonText : NBTBasedData<CompoundTag> {
 
     var isElement = false
 
+    override var type: MCFPPType = MCFPPBaseType.JsonText
+
     constructor(
         curr: FieldContainer,
         identifier: String = UUID.randomUUID().toString()

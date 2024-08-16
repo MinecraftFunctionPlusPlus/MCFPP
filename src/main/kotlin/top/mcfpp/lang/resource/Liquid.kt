@@ -46,18 +46,8 @@ open class Liquid: ResourceID {
      */
     constructor(b: Liquid) : super(b)
 
-    override fun assign(b: Var<*>): Liquid {
+    override fun onAssign(b: Var<*>): Liquid {
         return super.assign(b) as Liquid
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.Liquid -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class LiquidConcrete: MCFPPValue<String>, Liquid{
         return LiquidConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): LiquidConcrete {
         return LiquidConcrete(this.value)
     }
 

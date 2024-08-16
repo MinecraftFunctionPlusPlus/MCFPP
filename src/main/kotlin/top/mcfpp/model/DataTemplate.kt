@@ -2,8 +2,11 @@ package top.mcfpp.model
 
 import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.Project
+import top.mcfpp.lang.MCAny
 import top.mcfpp.lang.type.MCFPPDataTemplateType
 import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.mni.DataObjectData
+import top.mcfpp.mni.MCAnyData
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.Constructor
 
@@ -31,7 +34,7 @@ open class DataTemplate : FieldContainer, CompoundData {
 
     constructor(identifier: String, namespace: String = Project.currNamespace){
         this.identifier = identifier
-        field = CompoundDataField(null ,this)
+        field = CompoundDataField(ArrayList() ,this)
         this.namespace = namespace
     }
 
@@ -49,7 +52,7 @@ open class DataTemplate : FieldContainer, CompoundData {
      * @param compoundTag 给定的复合标签
      * @return 返回值
      */
-    fun checkCompoundStruct(compoundTag: CompoundTag) : Boolean{
+    fun checkCompoundStruct(compoundTag: CompoundTag) : Boolean {
         for (member in field.allVars){
             if(!compoundTag.containsKey(member.identifier)) return false
             if(!member.type.checkNBTType(compoundTag[member.identifier]!!)) return false
@@ -63,9 +66,15 @@ open class DataTemplate : FieldContainer, CompoundData {
     }
 
     companion object{
+
         var currTemplate: DataTemplate? = null
 
         val baseDataTemplate = DataTemplate("DataObject","mcfpp.lang")
+
+        init {
+            baseDataTemplate.extends(MCAny.data)
+            baseDataTemplate.getNativeFunctionFromClass(DataObjectData::class.java)
+        }
 
     }
 

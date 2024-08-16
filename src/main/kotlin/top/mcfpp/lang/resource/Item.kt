@@ -46,18 +46,8 @@ open class Item: ResourceID {
      */
     constructor(b: Item) : super(b)
 
-    override fun assign(b: Var<*>): Item {
+    override fun onAssign(b: Var<*>): Item {
         return super.assign(b) as Item
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.Item -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class ItemConcrete: MCFPPValue<String>, Item{
         return ItemConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): ItemConcrete {
         return ItemConcrete(this.value)
     }
 

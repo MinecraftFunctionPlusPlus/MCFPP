@@ -46,18 +46,8 @@ open class RecipeSerializer: ResourceID {
      */
     constructor(b: RecipeSerializer) : super(b)
 
-    override fun assign(b: Var<*>): RecipeSerializer {
+    override fun onAssign(b: Var<*>): RecipeSerializer {
         return super.assign(b) as RecipeSerializer
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.RecipeSerializer -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class RecipeSerializerConcrete: MCFPPValue<String>, RecipeSerializer{
         return RecipeSerializerConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): RecipeSerializerConcrete {
         return RecipeSerializerConcrete(this.value)
     }
 

@@ -46,18 +46,8 @@ open class Particle: ResourceID {
      */
     constructor(b: Particle) : super(b)
 
-    override fun assign(b: Var<*>): Particle {
+    override fun onAssign(b: Var<*>): Particle {
         return super.assign(b) as Particle
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.Particle -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class ParticleConcrete: MCFPPValue<String>, Particle{
         return ParticleConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): ParticleConcrete {
         return ParticleConcrete(this.value)
     }
 

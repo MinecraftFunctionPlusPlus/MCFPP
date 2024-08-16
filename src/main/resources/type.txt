@@ -22,7 +22,7 @@ SoundEvent
 Advancement
 LootTable
 LootTablePredicate
-Function
+FunctionID
 Structure
 Recipe
 BlockTag

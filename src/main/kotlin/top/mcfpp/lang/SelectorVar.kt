@@ -197,7 +197,7 @@ class SelectorVarConcrete : MCFPPValue<EntitySelector>, SelectorVar{
 
     override fun clone(): SelectorVar = SelectorVarConcrete(this, value.clone())
 
-    override fun getTempVar(): Var<*> = SelectorVarConcrete(value.clone(), identifier)
+    override fun getTempVar(): SelectorVar = SelectorVarConcrete(value.clone(), identifier)
 
     override fun storeToStack() {}
 
@@ -229,7 +229,7 @@ class SelectorVarConcrete : MCFPPValue<EntitySelector>, SelectorVar{
         val data = CompoundData("selector","mcfpp.lang")
 
         init {
-            data.parent.add(MCAny.data)
+            data.extends(MCAny.data)
             data.getNativeFunctionFromClass(SelectorData::class.java)
         }
 

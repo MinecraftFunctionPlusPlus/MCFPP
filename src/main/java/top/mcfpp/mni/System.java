@@ -3,6 +3,7 @@ package top.mcfpp.mni;
 import org.jetbrains.annotations.NotNull;
 import top.mcfpp.annotations.InsertCommand;
 import top.mcfpp.annotations.MNIRegister;
+import top.mcfpp.command.Command;
 import top.mcfpp.lang.*;
 import top.mcfpp.lib.ScoreChatComponent;
 import top.mcfpp.model.function.Function;
@@ -19,6 +20,15 @@ public class System {
         returnValue.setValue(re);
     }
 
+    @InsertCommand
+    @MNIRegister(normalParams = {"text t"})
+    public static void print(@NotNull JsonText text){
+        if(text instanceof JsonTextConcrete textC){
+            Function.Companion.addCommand(new Command("tellraw @a").build(textC.getValue().toCommandPart(), true));
+        }else {
+            //TODO
+        }
+    }
 
     @InsertCommand
     @MNIRegister(normalParams = {"any a"})

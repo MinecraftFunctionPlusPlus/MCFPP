@@ -1,3 +1,4 @@
+func print(text t) = top.mcfpp.mni.System.print;
 func print(int i) = top.mcfpp.mni.System.print;
 func print(string s) = top.mcfpp.mni.System.print;
 func print(DataObject n) = top.mcfpp.mni.System.print;

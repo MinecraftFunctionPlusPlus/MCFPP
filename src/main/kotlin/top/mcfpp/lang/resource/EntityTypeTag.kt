@@ -46,18 +46,8 @@ open class EntityTypeTag: ResourceID {
      */
     constructor(b: EntityTypeTag) : super(b)
 
-    override fun assign(b: Var<*>): EntityTypeTag {
+    override fun onAssign(b: Var<*>): EntityTypeTag {
         return super.assign(b) as EntityTypeTag
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.EntityTypeTag -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class EntityTypeTagConcrete: MCFPPValue<String>, EntityTypeTag{
         return EntityTypeTagConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): EntityTypeTagConcrete {
         return EntityTypeTagConcrete(this.value)
     }
 

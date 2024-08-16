@@ -1,7 +1,7 @@
 {
 	"namespaces":[
 		{
-			"id":"default",
+			"id":"mcfpp.minecraft",
 			"functions":[
 				
 			],
@@ -16,8 +16,24 @@
 			]
 		},
 		{
-			"id":"mcfpp",
+			"id":"mcfpp.sys",
 			"functions":[
+				{
+					"id":"print",
+					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.lang.JsonText)",
+					"normalParams":[
+						{
+							"id":"t",
+							"type":"text",
+							"isStatic":false
+						}
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				},
 				{
 					"id":"print",
 					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.lang.MCInt)",
@@ -67,38 +83,6 @@
 					]
 				},
 				{
-					"id":"print",
-					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.lang.NBTBasedData)",
-					"normalParams":[
-						{
-							"id":"n",
-							"type":"nbt",
-							"isStatic":false
-						}
-					],
-					"returnType":"void",
-					"isAbstract":false,
-					"tags":[
-						
-					]
-				},
-				{
-					"id":"print",
-					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.lang.Var)",
-					"normalParams":[
-						{
-							"id":"a",
-							"type":"any",
-							"isStatic":false
-						}
-					],
-					"returnType":"void",
-					"isAbstract":false,
-					"tags":[
-						
-					]
-				},
-				{
 					"id":"debug",
 					"javaMethod":"top.mcfpp.mni.System#debug()",
 					"normalParams":[
@@ -110,6 +94,21 @@
 						
 					]
 				}
+			],
+			"classes":[
+				
+			],
+			"template":[
+				
+			],
+			"enum":[
+				
+			]
+		},
+		{
+			"id":"default",
+			"functions":[
+				
 			],
 			"classes":[
 				

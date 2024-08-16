@@ -59,15 +59,15 @@ class MCFPPFile(path : String) : File(path) {
         //类是否有空继承
         GlobalField.localNamespaces.forEach { _, u ->
             u.field.forEachClass { c ->
-                for ((index,p) in c.parent.withIndex()){
+                for (p in c.parent){
                     if(p is Class.Companion.UndefinedClassOrInterface){
                         val r = p.getDefinedClassOrInterface()
                         if(r == null){
                             LogProcessor.error("Undefined class or interface: ${p.namespaceID}")
                             continue
                         }
-                        c.parent.remove(p)
-                        c.parent.add(index,r)
+                        c.unExtends(p)
+                        c.extends(r)
                     }
                 }
             }

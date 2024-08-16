@@ -141,7 +141,7 @@ class Namespace(val identifier: String): Serializable {
                 }
                 //有继承
                 if(mniRegister.override){
-                    val result = field.hasFunction(nf)
+                    val result = field.hasFunction(nf, true)
                     if(!result){
                         LogProcessor.error("Method ${nf.identifier} in class ${cls.name} overrides nothing")
                         continue

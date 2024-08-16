@@ -43,7 +43,7 @@ class InlineFunction : Function {
      */
     override fun invoke(normalArgs: ArrayList<Var<*>>, caller: Var<*>){
         //基本类型
-        addCommand("#[Inline Function ${this.namespaceID}]")
+        addComment("[Inline Function ${this.namespaceID}]")
         //传入this参数
         field.putVar("this",caller,true)
         //参数传递
@@ -70,7 +70,7 @@ class InlineFunction : Function {
     @InsertCommand
     override fun invoke(/*readOnlyArgs:ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, callerClassP: ClassPointer?) {
         //基本类型
-        addCommand("#[Inline Function ${this.namespaceID}]")
+        addComment("[Inline Function ${this.namespaceID}]")
         //参数传递
         argPass(/*readOnlyArgs, */normalArgs)
         //重新遍历这个函数

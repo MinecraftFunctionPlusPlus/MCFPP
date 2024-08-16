@@ -6,6 +6,7 @@ import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.Generic
 import top.mcfpp.model.generic.GenericClass
 import kotlin.collections.ArrayList
@@ -124,7 +125,7 @@ open class NamespaceField(
      * @return 如果此缓存中存在这个函数，则返回这个函数的对象，否则返回null
      */
     @Nullable
-    override fun getFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>): Function? {
+    override fun getFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>): Function {
         for (f in functions) {
             if(f is Generic<*> && f.isSelf(key, readOnlyParams, normalParams)){
                 return f
@@ -141,7 +142,7 @@ open class NamespaceField(
                 return f
             }
         }
-        return null
+        return UnknownFunction(key)
     }
 
 
@@ -151,7 +152,7 @@ open class NamespaceField(
      * @param function
      */
     override fun addFunction(function: Function, force: Boolean): Boolean{
-        if(hasFunction(function)){
+        if(hasFunction(function, true)){
             if(force){
                 functions[functions.indexOf(function)] = function
                 return true
@@ -162,7 +163,7 @@ open class NamespaceField(
         return true
     }
 
-    override fun hasFunction(function: Function): Boolean{
+    override fun hasFunction(function: Function, considerParent: Boolean): Boolean{
         return functions.contains(function)
     }
     //endregion

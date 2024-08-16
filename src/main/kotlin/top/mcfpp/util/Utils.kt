@@ -30,16 +30,29 @@ object Utils {
      */
     fun getVersion(version: String): Int {
         return when (version) {
-            "1.20" -> {
-                13
+
+            "1.21", "1.21.1" -> {
+                48
+            }
+
+            "1.20.5", "1.20.6" -> {
+                41
+            }
+
+            "1.20.3", "1.20.4" -> {
+                26
+            }
+
+            "1.20.2" -> {
+                18
+            }
+
+            "1.20", "1.20.1" -> {
+                15
             }
 
             "1.19.4" -> {
                 12
-            }
-
-            "23w03a" -> {
-                11
             }
 
             "1.19.3", "1.19.2", "1.19.1", "1.19" -> {
@@ -70,12 +83,8 @@ object Utils {
                 4
             }
 
-            "17w43a" -> {
-                3
-            }
-
             else -> {
-                LogProcessor.warn("Unknown version: \"$version\". Using 1.20 (13)")
+                LogProcessor.warn("Unknown version: \"$version\". Using 1.21.1 (48)")
                 13
             }
         }

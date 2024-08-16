@@ -362,7 +362,7 @@ class NBTListConcrete<E>: NBTList, MCFPPValue<ListTag<*>> {
         //注册函数
 
         init {
-            data.parent.add(MCAny.data)
+            data.extends(MCAny.data)
             data.getNativeFunctionFromClass(NBTListConcreteData::class.java)
             //data.field.addFunction(NativeFunction("add", NBTListConcreteData.INSTANCE ,MCFPPBaseType.Void,"mcfpp")
             //    .appendNormalParam(MCFPPGenericType("E", emptyList()), "e"),false)

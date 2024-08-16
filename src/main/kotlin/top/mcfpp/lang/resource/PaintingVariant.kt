@@ -46,18 +46,8 @@ open class PaintingVariant: ResourceID {
      */
     constructor(b: PaintingVariant) : super(b)
 
-    override fun assign(b: Var<*>): PaintingVariant {
+    override fun onAssign(b: Var<*>): PaintingVariant {
         return super.assign(b) as PaintingVariant
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.PaintingVariant -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class PaintingVariantConcrete: MCFPPValue<String>, PaintingVariant{
         return PaintingVariantConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): PaintingVariantConcrete {
         return PaintingVariantConcrete(this.value)
     }
 

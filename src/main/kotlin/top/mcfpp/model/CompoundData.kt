@@ -19,7 +19,7 @@ open class CompoundData : FieldContainer, Serializable {
     /**
      * 父结构
      */
-    var parent: ArrayList<CompoundData> = ArrayList()
+    var parent: List<CompoundData> = ArrayList()
 
     /**
      * 标识符
@@ -49,11 +49,11 @@ open class CompoundData : FieldContainer, Serializable {
     constructor(identifier: String, namespace: String = Project.currNamespace){
         this.identifier = identifier
         this.namespace = namespace
-        field = CompoundDataField(null, this)
+        field = CompoundDataField(ArrayList(), this)
     }
 
     protected constructor(){
-        field = CompoundDataField(null,this)
+        field = CompoundDataField(ArrayList(),this)
     }
 
     open fun initialize(){}
@@ -168,8 +168,23 @@ open class CompoundData : FieldContainer, Serializable {
     }
 
     open fun extends(compoundData: CompoundData): CompoundData{
-        parent.add(compoundData)
+        (parent as ArrayList).add(compoundData)
+        field.parent.add(compoundData.field)
         return this
+    }
+
+    fun ifExtends(compoundData: CompoundData): Boolean{
+        return parent.contains(compoundData)
+    }
+
+    fun unExtends(compoundData: CompoundData): CompoundData{
+        (parent as ArrayList).remove(compoundData)
+        field.parent.remove(compoundData.field)
+        return this
+    }
+
+    fun <T> mapParent(operation: (CompoundData) -> T): List<T>{
+        return parent.map(operation)
     }
 
     fun getNativeFunctionFromClass(cls: Class<*>){
@@ -216,7 +231,7 @@ open class CompoundData : FieldContainer, Serializable {
                 }
                 //有继承
                 if(mniRegister.override){
-                    val result = field.hasFunction(nf)
+                    val result = field.hasFunction(nf, true)
                     if(!result){
                         LogProcessor.error("Method ${nf.identifier} in class ${cls.name} overrides nothing")
                         continue

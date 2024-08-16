@@ -11,7 +11,7 @@ interface IFieldWithFunction: IField {
      * @param normalParams 参数类型
      * @return 如果此缓存中存在这个函数，则返回这个函数的对象，否则返回[top.mcfpp.model.UnknownFunction]
      */
-    fun getFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>): Function?
+    fun getFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>): Function
 
     /**
      * 添加一个函数
@@ -26,7 +26,7 @@ interface IFieldWithFunction: IField {
      * @param function
      * @return
      */
-    fun hasFunction(function: Function): Boolean
+    fun hasFunction(function: Function, considerParent: Boolean = true): Boolean
 
     fun forEachFunction(operation: (Function) -> Any?)
 }

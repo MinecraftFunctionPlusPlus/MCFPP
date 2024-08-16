@@ -46,18 +46,8 @@ open class BossBar: ResourceID {
      */
     constructor(b: BossBar) : super(b)
 
-    override fun assign(b: Var<*>): BossBar {
+    override fun onAssign(b: Var<*>): BossBar {
         return super.assign(b) as BossBar
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.BossBar -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class BossBarConcrete: MCFPPValue<String>, BossBar{
         return BossBarConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): BossBarConcrete {
         return BossBarConcrete(this.value)
     }
 

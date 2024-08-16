@@ -46,18 +46,8 @@ open class SoundEvent: ResourceID {
      */
     constructor(b: SoundEvent) : super(b)
 
-    override fun assign(b: Var<*>): SoundEvent {
+    override fun onAssign(b: Var<*>): SoundEvent {
         return super.assign(b) as SoundEvent
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.SoundEvent -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class SoundEventConcrete: MCFPPValue<String>, SoundEvent{
         return SoundEventConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): SoundEventConcrete {
         return SoundEventConcrete(this.value)
     }
 

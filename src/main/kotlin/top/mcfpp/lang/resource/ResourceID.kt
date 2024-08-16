@@ -45,10 +45,6 @@ open class ResourceID : NBTBasedData<StringTag> {
      */
     constructor(b: ResourceID) : super(b)
 
-    override fun assign(b: Var<*>): ResourceID {
-        return super.assign(b) as ResourceID
-    }
-
     override fun explicitCast(type: MCFPPType): Var<*> {
         when(type){
             MCFPPResourceType.ResourceID -> return this
@@ -97,7 +93,7 @@ open class ResourceIDConcrete: MCFPPValue<String>, ResourceID{
         return ResourceIDConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): ResourceIDConcrete {
         return ResourceIDConcrete(this.value)
     }
 

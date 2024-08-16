@@ -30,7 +30,6 @@ class McfppFuncManager{
         normalParams: ArrayList<MCFPPType>
     ): Function {
         //是类的成员方法或扩展方法
-        val getter : KFunction<Pair<Function, Boolean>> = curr::getMemberFunction
         val accessModifier : Member.AccessModifier = if(curr is ClassPointer){
             //类指针
             if(Function.currFunction.ownerType == Function.Companion.OwnerType.CLASS){
@@ -38,12 +37,20 @@ class McfppFuncManager{
             }else{
                 Member.AccessModifier.PUBLIC
             }
-        }else{
+        }else if(curr is DataTemplateObject){
+            //类指针
+            if(Function.currFunction.ownerType == Function.Companion.OwnerType.CLASS){
+                Function.currFunction.parentTemplate()!!.getAccess(curr.templateType)
+            }else{
+                Member.AccessModifier.PUBLIC
+            }
+        }
+        else{
             //基本类型
             Member.AccessModifier.PUBLIC
         }
         //开始选择函数
-        val func = getter.call(identifier, readOnlyParams, normalParams, accessModifier)
+        val func = curr.getMemberFunction(identifier, readOnlyParams, normalParams, accessModifier)
         if (!func.second){
             LogProcessor.error("Cannot access member $identifier")
         }

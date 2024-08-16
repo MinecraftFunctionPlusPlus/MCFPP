@@ -469,7 +469,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             //是范围
             val left = ctx.range().num1?.let { visit(it) }
             val right = ctx.range().num2?.let { visit(it) }
-            if(left is MCNumber? && right is MCNumber?){
+            if(left is MCNumber<*>? && right is MCNumber<*>?){
                 if(left is MCFPPValue<*>? && right is MCFPPValue<*>?){
                     val leftValue = left?.value.toString().toFloatOrNull()
                     val rightValue = right?.value.toString().toFloatOrNull()
@@ -537,8 +537,14 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             } else {
                 if(re is Indexable<*>){
                     for (value in ctx.identifierSuffix()) {
-                        val index = visit(value.conditionalExpression())!!
-                        re = (re as Indexable<*>).getByIndex(index)
+                        if(value.conditionalExpression() != null){
+                            //索引
+                            val index = visit(value.conditionalExpression())!!
+                            re = (re as Indexable<*>).getByIndex(index)
+                        }else{
+                            //初始化
+                            TODO()
+                        }
                     }
                 }else{
                     throw IllegalArgumentException("Cannot index ${re.type}")
@@ -554,7 +560,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 v.storeToStack()
             }
             //函数的调用
-            Function.addCommand("#" + ctx.text)
+            Function.addComment(ctx.text)
             //参数获取
             val normalArgs: ArrayList<Var<*>> = ArrayList()
             val readOnlyArgs: ArrayList<Var<*>> = ArrayList()
@@ -588,8 +594,8 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 }
                 //可能是构造函数
                 if (cls == null) {
-                    LogProcessor.error("Function ${func.identifier}<${readOnlyArgs.map { it.type.typeName }.joinToString(",")}>(${normalArgs.map { it.type.typeName }.joinToString(",")}) not defined")
-                    Function.addCommand("[Failed to Compile]${ctx.text}")
+                    LogProcessor.error("Function ${func.identifier}<${readOnlyArgs.joinToString(",") { it.type.typeName }}>(${normalArgs.map { it.type.typeName }.joinToString(",")}) not defined")
+                    Function.addComment("[Failed to Compile]${ctx.text}")
                     func.invoke(normalArgs,currSelector)
                     return func.returnVar
                 }
@@ -612,10 +618,10 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 //获取对象
                 val ptr = cls.newInstance()
                 //调用构造函数
-                val constructor = cls.getConstructor(FunctionParam.getArgTypeNames(normalArgs))
+                val constructor = cls.getConstructorByString(FunctionParam.getArgTypeNames(normalArgs))
                 if (constructor == null) {
                     LogProcessor.error("No constructor like: " + FunctionParam.getArgTypeNames(normalArgs) + " defined in class " + ctx.namespaceID().text)
-                    Function.addCommand("[Failed to compile]${ctx.text}")
+                    Function.addComment("[Failed to compile]${ctx.text}")
                 }else{
                     constructor.invoke(normalArgs, callerClassP = ptr)
                 }

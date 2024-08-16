@@ -46,18 +46,8 @@ open class Dimension: ResourceID {
      */
     constructor(b: Dimension) : super(b)
 
-    override fun assign(b: Var<*>): Dimension {
+    override fun onAssign(b: Var<*>): Dimension {
         return super.assign(b) as Dimension
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.Dimension -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class DimensionConcrete: MCFPPValue<String>, Dimension{
         return DimensionConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): DimensionConcrete {
         return DimensionConcrete(this.value)
     }
 

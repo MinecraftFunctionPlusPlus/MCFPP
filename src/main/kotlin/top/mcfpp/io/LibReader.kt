@@ -176,7 +176,7 @@ object ClassReader: ILibJsonReader<Class> {
             run {
                 val nspid = it.toString()
                 val qwq = StringHelper.splitNamespaceID(nspid)
-                clazz.parent.add(UnknownClass(qwq.first!!, qwq.second))
+                clazz.extends(UnknownClass(qwq.first!!, qwq.second))
             }
         }
         //泛型参数
@@ -215,7 +215,7 @@ object ObjectClassReader: ILibJsonReader<ObjectClass> {
             run {
                 val nspid = it.toString()
                 val qwq = StringHelper.splitNamespaceID(nspid)
-                clazz.parent.add(UnknownClass(qwq.first!!, qwq.second))
+                clazz.extends(UnknownClass(qwq.first!!, qwq.second))
             }
         }
         //泛型参数
@@ -234,7 +234,7 @@ object ObjectClassReader: ILibJsonReader<ObjectClass> {
 
 object CompoundDataFieldReader: ILibJsonReader<CompoundDataField> {
     override fun fromJson(jsonObject: JSONObject): CompoundDataField {
-        val field = CompoundDataField(null, ClassReader.currClass?:TemplateReader.currTemplate)
+        val field = CompoundDataField(ArrayList(), ClassReader.currClass?:TemplateReader.currTemplate)
         jsonObject.getJSONArray("vars").forEach {
             run {
                 val type = UnresolvedType(jsonObject.getString("type"))
@@ -284,11 +284,11 @@ object TemplateReader: ILibJsonReader<DataTemplate> {
             run {
                 val nspid = it.toString()
                 val qwq = StringHelper.splitNamespaceID(nspid)
-                template.parent.add(UnknownTemplate(qwq.first!!, qwq.second))
+                template.extends(UnknownTemplate(qwq.first!!, qwq.second))
             }
         }
-        if(!template.parent.contains(DataTemplate.baseDataTemplate)) {
-            template.parent.add(DataTemplate.baseDataTemplate)
+        if(!template.ifExtends(DataTemplate.baseDataTemplate)) {
+            template.extends(DataTemplate.baseDataTemplate)
         }
         template.field = CompoundDataFieldReader.fromJson(jsonObject.getJSONObject("field"))
         currTemplate = null
@@ -307,11 +307,11 @@ object ObjectTemplateReader: ILibJsonReader<ObjectDataTemplate> {
             run {
                 val nspid = it.toString()
                 val qwq = StringHelper.splitNamespaceID(nspid)
-                template.parent.add(UnknownTemplate(qwq.first!!, qwq.second))
+                template.extends(UnknownTemplate(qwq.first!!, qwq.second))
             }
         }
-        if(!template.parent.contains(DataTemplate.baseDataTemplate)) {
-            template.parent.add(DataTemplate.baseDataTemplate)
+        if(!template.ifExtends(DataTemplate.baseDataTemplate)) {
+            template.extends(DataTemplate.baseDataTemplate)
         }
         template.field = CompoundDataFieldReader.fromJson(jsonObject.getJSONObject("field"))
         TemplateReader.currTemplate = null

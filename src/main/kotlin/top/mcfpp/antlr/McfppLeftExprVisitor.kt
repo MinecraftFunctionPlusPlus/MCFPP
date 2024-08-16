@@ -157,7 +157,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
             visit(ctx.expression())
         } else {
             //函数的调用
-            Function.addCommand("#" + ctx.text)
+            Function.addComment(ctx.text)
             //参数获取
             val normalArgs: ArrayList<Var<*>> = ArrayList()
             val readOnlyArgs: ArrayList<Var<*>> = ArrayList()
@@ -188,7 +188,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
                 var cls: Class? = GlobalField.getClass(p.first, p.second)
                 if (cls == null) {
                     LogProcessor.error("Function " + ctx.text + " not defined")
-                    Function.addCommand("[Failed to Compile]${ctx.text}")
+                    Function.addComment("[Failed to Compile]${ctx.text}")
                     func.invoke(normalArgs,currSelector)
                     return func.returnVar
                 }
@@ -199,10 +199,10 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
                 //获取对象
                 val ptr = cls.newInstance()
                 //调用构造函数
-                val constructor = cls.getConstructor(FunctionParam.getArgTypeNames(normalArgs))
+                val constructor = cls.getConstructorByString(FunctionParam.getArgTypeNames(normalArgs))
                 if (constructor == null) {
                     LogProcessor.error("No constructor like: " + FunctionParam.getArgTypeNames(normalArgs) + " defined in class " + ctx.namespaceID().text)
-                    Function.addCommand("[Failed to compile]${ctx.text}")
+                    Function.addComment("[Failed to compile]${ctx.text}")
                 }else{
                     constructor.invoke(normalArgs, callerClassP = ptr)
                 }

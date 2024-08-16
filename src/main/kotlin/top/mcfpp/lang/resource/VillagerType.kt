@@ -46,18 +46,8 @@ open class VillagerType: ResourceID {
      */
     constructor(b: VillagerType) : super(b)
 
-    override fun assign(b: Var<*>): VillagerType {
+    override fun onAssign(b: Var<*>): VillagerType {
         return super.assign(b) as VillagerType
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.VillagerType -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class VillagerTypeConcrete: MCFPPValue<String>, VillagerType{
         return VillagerTypeConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): VillagerTypeConcrete {
         return VillagerTypeConcrete(this.value)
     }
 

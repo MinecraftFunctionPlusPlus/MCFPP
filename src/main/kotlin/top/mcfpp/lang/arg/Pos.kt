@@ -13,7 +13,7 @@ import top.mcfpp.model.function.Function
 import java.util.*
 import kotlin.collections.HashMap
 
-class Pos : Var<Int> {
+class Pos : Var<Pos> {
 
     val coordinate: HashMap<MCInt, Boolean> = HashMap()
 
@@ -37,19 +37,15 @@ class Pos : Var<Int> {
         coordinate.putAll(b.coordinate)
     }
 
-    override fun assign(b: Var<*>): Var<Int> {
+    override fun onAssign(b: Var<*>): Pos {
         TODO("Not yet implemented")
     }
 
-    override fun explicitCast(type: MCFPPType): Var<*> {
+    override fun clone(): Pos {
         TODO("Not yet implemented")
     }
 
-    override fun clone(): Var<*> {
-        TODO("Not yet implemented")
-    }
-
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): Pos {
         TODO("Not yet implemented")
     }
 

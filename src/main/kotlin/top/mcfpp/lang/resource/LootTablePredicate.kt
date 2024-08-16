@@ -46,18 +46,8 @@ open class LootTablePredicate: ResourceID {
      */
     constructor(b: LootTablePredicate) : super(b)
 
-    override fun assign(b: Var<*>): LootTablePredicate {
+    override fun onAssign(b: Var<*>): LootTablePredicate {
         return super.assign(b) as LootTablePredicate
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.LootTablePredicate -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class LootTablePredicateConcrete: MCFPPValue<String>, LootTablePredicate{
         return LootTablePredicateConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): LootTablePredicateConcrete {
         return LootTablePredicateConcrete(this.value)
     }
 

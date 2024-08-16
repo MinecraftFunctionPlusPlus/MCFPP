@@ -174,9 +174,9 @@ open class Function : Member, FieldContainer, Serializable {
     var hasReturnStatement : Boolean = false
 
     /**
-     * 访问修饰符。默认为private
+     * 访问修饰符。默认为public
      */
-    override var accessModifier: Member.AccessModifier = Member.AccessModifier.PRIVATE
+    override var accessModifier: Member.AccessModifier = Member.AccessModifier.PUBLIC
 
     /**
      * 是否是静态的。默认为否
@@ -479,7 +479,7 @@ open class Function : Member, FieldContainer, Serializable {
      */
     open fun invoke(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, caller: Var<*>){
         //基本类型
-        addCommand("#[Function ${this.namespaceID}] Function Pushing and argument passing")
+        addComment("[Function ${this.namespaceID}] Function Pushing and argument passing")
         //给函数开栈
         addCommand("data modify storage mcfpp:system ${Project.config.rootNamespace}.stack_frame prepend value {}")
         //传入this参数
@@ -591,7 +591,7 @@ open class Function : Member, FieldContainer, Serializable {
         for (i in 0 until normalParams.size) {
             if (normalParams[i].isStatic) {
                 if(!hasAddComment){
-                    addCommand("#[Function ${this.namespaceID}] Static arguments")
+                    addComment("[Function ${this.namespaceID}] Static arguments")
                     hasAddComment = true
                 }
                 //如果是static参数
@@ -622,7 +622,7 @@ open class Function : Member, FieldContainer, Serializable {
      */
     @InsertCommand
     open fun fieldRestore(){
-        addCommand("#[Function ${this.namespaceID}] Take vars out of the Stack")
+        addComment("[Function ${this.namespaceID}] Take vars out of the Stack")
         Companion.field.forEachVar { v ->
             run {
                 when (v.type) {
@@ -670,17 +670,7 @@ open class Function : Member, FieldContainer, Serializable {
     @Override
     override fun equals(other: Any?): Boolean {
         if (other is Function) {
-            if (!(other.ownerType == ownerType && other.namespaceID == namespaceID && other.field === field)) {
-                return false
-            }
-            if (other.normalParams.size == normalParams.size) {
-                for (i in 0 until other.normalParams.size) {
-                    if (other.normalParams[i].typeIdentifier != normalParams[i].typeIdentifier) {
-                        return false
-                    }
-                }
-                return true
-            }
+            return isSelf(other.identifier, other.normalParams.map { it.type })
         }
         return false
     }
@@ -866,18 +856,18 @@ open class Function : Member, FieldContainer, Serializable {
                 if(command.toString().startsWith("#")){
                     LogProcessor.warn("(JVM)Should use addComment() to add a Comment instead of addCommand(). at $className.$methodName:$lineNumber\"")
                 }
-                for (method in methods) {
-                    if (cache.contains(method.toGenericString())){
-                        break
-                    }
-                    cache.add(method.toGenericString())
-                    if (method.name == methodName) {
-                        if (!method.isAnnotationPresent(InsertCommand::class.java)) {
-                            LogProcessor.warn("(JVM)Function.addCommand() was called in a method without the @InsertCommand annotation. at $className.$methodName:$lineNumber\"")
-                        }
-                        break
-                    }
-                }
+//                for (method in methods) {
+//                    if (cache.contains(method.toGenericString())){
+//                        break
+//                    }
+//                    cache.add(method.toGenericString())
+//                    if (method.name == methodName) {
+//                        if (!method.isAnnotationPresent(InsertCommand::class.java)) {
+//                            LogProcessor.warn("(JVM)Function.addCommand() was called in a method without the @InsertCommand annotation. at $className.$methodName:$lineNumber\"")
+//                        }
+//                        break
+//                    }
+//                }
             }
             if(this.equals(nullFunction)){
                 LogProcessor.error("Unexpected command added to NullFunction")

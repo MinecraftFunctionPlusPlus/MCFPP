@@ -367,6 +367,7 @@ var
 
 identifierSuffix
     :   '[' conditionalExpression ']'
+    |   '[' Identifier '=' expression  (',' basicExpression '=' expression)* ']'
     ;
 
 selector

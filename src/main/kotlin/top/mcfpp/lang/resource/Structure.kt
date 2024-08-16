@@ -46,18 +46,8 @@ open class Structure: ResourceID {
      */
     constructor(b: Structure) : super(b)
 
-    override fun assign(b: Var<*>): Structure {
+    override fun onAssign(b: Var<*>): Structure {
         return super.assign(b) as Structure
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.Structure -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class StructureConcrete: MCFPPValue<String>, Structure{
         return StructureConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): StructureConcrete {
         return StructureConcrete(this.value)
     }
 

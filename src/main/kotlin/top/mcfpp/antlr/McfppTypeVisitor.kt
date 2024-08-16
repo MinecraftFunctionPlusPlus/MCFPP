@@ -38,8 +38,6 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
                 }
             }
             Project.currNamespace = namespaceStr
-        }else{
-            Project.currNamespace = Project.config.rootNamespace
         }
         //导入库
         for (lib in ctx.importDeclaration()){
@@ -152,7 +150,7 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
                 if(pc == null){
                     LogProcessor.error("Undefined Interface: " + p.text)
                 }else{
-                    itf.parent.add(pc)
+                    itf.extends(pc)
                 }
             }
             nsp.field.addInterface(id, itf)
@@ -312,11 +310,8 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             DataTemplate.currTemplate = nsp.field.getTemplate(id)
         }
         val template = DataTemplate(id,Project.currNamespace)
-        if(!template.parent.contains(DataTemplate.baseDataTemplate)) {
-            template.parent.add(DataTemplate.baseDataTemplate)
-        }
         if (ctx.className() != null) {
-            //是否存在继承
+            //存在继承
             val qwq = ctx.className().text.split(":")
             val identifier: String
             val namespace : String?
@@ -331,8 +326,10 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             if(s == null){
                 LogProcessor.error("Undefined template: " + ctx.className().text)
             }else{
-                template.parent.add(s)
+                template.extends(s)
             }
+        }else{
+            template.extends(DataTemplate.baseDataTemplate)
         }
         nsp.field.addTemplate(id, template)
     }
@@ -351,9 +348,6 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             return
         }
         val template = ObjectDataTemplate(id,Project.currNamespace)
-        if(!template.parent.contains(DataTemplate.baseDataTemplate)) {
-            template.parent.add(DataTemplate.baseDataTemplate)
-        }
         if (ctx.className() != null) {
             //是否存在继承
             val (namespace, identifier) = StringHelper.splitNamespaceID(ctx.className().text)
@@ -361,13 +355,15 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             if(s == null){
                 val o = GlobalField.getObject(namespace, identifier)
                 if(o is ObjectDataTemplate) {
-                    template.parent.add(o)
+                    template.extends(o)
                 }else{
                     LogProcessor.error("Undefined template: " + ctx.className().text)
                 }
             }else{
-                template.parent.add(s)
+                template.extends(s)
             }
+        }else{
+            template.extends(DataTemplate.baseDataTemplate)
         }
         nsp.field.addObject(id, template)
     }

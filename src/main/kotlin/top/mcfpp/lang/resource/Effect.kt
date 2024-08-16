@@ -46,18 +46,8 @@ open class Effect: ResourceID {
      */
     constructor(b: Effect) : super(b)
 
-    override fun assign(b: Var<*>): Effect {
+    override fun onAssign(b: Var<*>): Effect {
         return super.assign(b) as Effect
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.Effect -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class EffectConcrete: MCFPPValue<String>, Effect{
         return EffectConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): EffectConcrete {
         return EffectConcrete(this.value)
     }
 

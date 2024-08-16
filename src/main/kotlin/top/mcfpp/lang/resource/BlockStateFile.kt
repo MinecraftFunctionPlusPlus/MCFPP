@@ -46,18 +46,8 @@ open class BlockStateFile: ResourceID {
      */
     constructor(b: BlockStateFile) : super(b)
 
-    override fun assign(b: Var<*>): BlockStateFile {
+    override fun onAssign(b: Var<*>): BlockStateFile {
         return super.assign(b) as BlockStateFile
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.BlockStateFile -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class BlockStateFileConcrete: MCFPPValue<String>, BlockStateFile{
         return BlockStateFileConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): BlockStateFileConcrete {
         return BlockStateFileConcrete(this.value)
     }
 

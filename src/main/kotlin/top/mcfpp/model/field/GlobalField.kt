@@ -112,14 +112,14 @@ object GlobalField : FieldContainer, IField {
     fun getFunction(namespace:String?, identifier: String, readOnlyParams: List<MCFPPType>, normalParams : List<MCFPPType>): Function {
         if(namespace == null){
             val f = localNamespaces[Project.currNamespace]!!.field.getFunction(identifier, readOnlyParams, normalParams)
-            if(f != null) return f
+            if(f !is UnknownFunction) return f
             for (n in importedLibNamespaces.values){
                 val f1 = n.field.getFunction(identifier, readOnlyParams, normalParams)
-                if(f1 != null) return f1
+                if(f1 !is UnknownFunction) return f1
             }
             for (n in stdNamespaces.values){
                 val f1 = n.field.getFunction(identifier, readOnlyParams, normalParams)
-                if(f1 != null) return f1
+                if(f1 !is UnknownFunction) return f1
             }
             return UnknownFunction(identifier)
         }

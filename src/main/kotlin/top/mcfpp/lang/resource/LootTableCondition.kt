@@ -46,18 +46,8 @@ open class LootTableCondition: ResourceID {
      */
     constructor(b: LootTableCondition) : super(b)
 
-    override fun assign(b: Var<*>): LootTableCondition {
+    override fun onAssign(b: Var<*>): LootTableCondition {
         return super.assign(b) as LootTableCondition
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.LootTableCondition -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class LootTableConditionConcrete: MCFPPValue<String>, LootTableCondition{
         return LootTableConditionConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): LootTableConditionConcrete {
         return LootTableConditionConcrete(this.value)
     }
 

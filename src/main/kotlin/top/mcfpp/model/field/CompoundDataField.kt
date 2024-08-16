@@ -61,7 +61,7 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
      * 父级域。
      */
     @Nullable
-    var parent: IField?
+    var parent: ArrayList<IField?>
 
     /**
      * 这个域在哪一个容器中
@@ -74,7 +74,7 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
      * @param parent 父级域。若没有则设置为null
      * @param cacheContainer 此域所在的容器
      */
-    constructor(parent: IField?, cacheContainer: FieldContainer?) {
+    constructor(parent: ArrayList<IField?>, cacheContainer: FieldContainer?) {
         this.parent = parent
         container = cacheContainer
     }
@@ -186,11 +186,17 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
                 return f
             }
         }
+        parent.forEach {
+            if(it is IFieldWithFunction){
+                val re = it.getFunction(key, readOnlyParams, normalParams)
+                if(re !is UnknownFunction) return re
+            }
+        }
         return UnknownFunction(key)
     }
 
     override fun addFunction(function: Function, force: Boolean): Boolean{
-        if(hasFunction(function)){
+        if(hasFunction(function, false)){
             if(force){
                 functions[functions.indexOf(function)] = function
                 return true
@@ -201,8 +207,13 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
         return true
     }
 
-    override fun hasFunction(function: Function): Boolean{
-        return functions.contains(function)
+    override fun hasFunction(function: Function, considerParent: Boolean): Boolean{
+        val qwq = functions.contains(function)
+        return if(considerParent && !qwq && parent.isNotEmpty()) {
+            parent.any { it is IFieldWithFunction && it.hasFunction(function, true) }
+        }else{
+            qwq
+        }
     }
     //endregion
 

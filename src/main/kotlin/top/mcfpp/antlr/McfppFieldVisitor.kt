@@ -53,7 +53,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 }
             }
             namespaceStr
-        }?: Project.config.rootNamespace
+        }?: Project.currNamespace
         typeScope = GlobalField.localNamespaces[Project.currNamespace]!!.field
         //文件结构，类和函数
         for (t in ctx.typeDeclaration()) {
@@ -112,7 +112,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //解析参数
         f.addParamsFromContext(ctx.functionParams())
         //注册函数
-        if (Interface.currInterface!!.field.hasFunction(f)) {
+        if (Interface.currInterface!!.field.hasFunction(f, true)) {
             LogProcessor.error("Already defined function:" + ctx.Identifier().text + "in class " + Class.currClass!!.identifier)
             Function.currFunction = Function.nullFunction
         }
@@ -306,7 +306,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //解析参数
         f.addParamsFromContext(ctx.functionParams())
         //注册函数
-        if (Class.currClass!!.field.hasFunction(f)) {
+        if (Class.currClass!!.field.hasFunction(f, true)) {
             if(ctx.OVERRIDE() != null){
                 if(isStatic){
                     LogProcessor.error("Cannot override static method ${ctx.Identifier()}")
@@ -340,7 +340,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //解析参数
         f.addParamsFromContext(ctx.functionParams())
         //注册函数
-        if (Class.currClass!!.field.hasFunction(f)) {
+        if (Class.currClass!!.field.hasFunction(f, true)) {
             LogProcessor.error("Already defined function:" + ctx.Identifier().text + "in class " + Class.currClass!!.identifier)
             Function.currFunction = Function.nullFunction
         }
@@ -433,7 +433,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         if (c.expression() != null) {
             Function.currFunction = Class.currClass!!.classPreInit
             //是类的成员
-            Function.addCommand("#" + ctx.text)
+            Function.addComment(ctx.text)
             val init: Var<*> = McfppExprVisitor().visit(c.expression())!!
             try {
                 `var`.assign(init)
@@ -475,7 +475,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
         val namespace = GlobalField.localNamespaces[f.namespace]!!
-        if (namespace.field.hasFunction(f)) {
+        if (namespace.field.hasFunction(f, true)) {
             LogProcessor.error("Already defined function: " + f.namespaceID)
             Function.currFunction = Function.nullFunction
         } else if(namespace.field.hasDeclaredType(f.identifier)) {
@@ -507,7 +507,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
         val namespace = GlobalField.localNamespaces[f.namespace]!!
-        if (!namespace.field.hasFunction(f)) {
+        if (!namespace.field.hasFunction(f, true)) {
             namespace.field.addFunction(f,false)
         } else {
             LogProcessor.error("Already defined function:" + f.namespaceID)
@@ -540,7 +540,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
         val namespace = GlobalField.localNamespaces[f.namespace]!!
-        if (!namespace.field.hasFunction(f)) {
+        if (!namespace.field.hasFunction(f, true)) {
             f.setField(namespace.field)
             namespace.field.addFunction(f,false)
         } else {
@@ -653,7 +653,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val namespace = GlobalField.localNamespaces[nf.namespace]!!
         //是普通的函数
         nf.ownerType = Function.Companion.OwnerType.NONE
-        if (!namespace.field.hasFunction(nf)) {
+        if (!namespace.field.hasFunction(nf, true)) {
             namespace.field.addFunction(nf,false)
         } else {
             LogProcessor.error("Already defined function:" + ctx.Identifier().text)
@@ -780,7 +780,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //解析参数
         f.addParamsFromContext(ctx.functionParams())
         //注册函数
-        if (DataTemplate.currTemplate!!.field.hasFunction(f)) {
+        if (DataTemplate.currTemplate!!.field.hasFunction(f, true)) {
             LogProcessor.error("Already defined function:" + ctx.Identifier().text + "in struct " + DataTemplate.currTemplate!!.identifier)
             Function.currFunction = Function.nullFunction
         }

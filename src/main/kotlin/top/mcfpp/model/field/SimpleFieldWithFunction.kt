@@ -3,6 +3,7 @@ package top.mcfpp.model.field
 import org.jetbrains.annotations.Nullable
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.Generic
 
 /**
@@ -30,7 +31,7 @@ class SimpleFieldWithFunction : IFieldWithFunction {
 
 
     @Nullable
-    override fun getFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>): Function? {
+    override fun getFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>): Function {
         for (f in functions) {
             if(f is Generic<*> && f.isSelf(key, readOnlyParams, normalParams)){
                 return f
@@ -39,11 +40,11 @@ class SimpleFieldWithFunction : IFieldWithFunction {
                 return f
             }
         }
-        return null
+        return UnknownFunction(key)
     }
 
     override fun addFunction(function: Function, force: Boolean): Boolean{
-        if(hasFunction(function)){
+        if(hasFunction(function, true)){
             if(force){
                 functions[functions.indexOf(function)] = function
                 return true
@@ -54,7 +55,7 @@ class SimpleFieldWithFunction : IFieldWithFunction {
         return true
     }
 
-    override fun hasFunction(function: Function): Boolean{
+    override fun hasFunction(function: Function, considerParent: Boolean): Boolean{
         return functions.contains(function)
     }
 

@@ -74,7 +74,7 @@ open class NBTMap : NBTDictionary{
 
         init {
             data.initialize()
-            data.parent.add(MCAny.data)
+            data.extends(MCAny.data)
             data.getNativeFunctionFromClass(NBTMapData::class.java)
         }
     }

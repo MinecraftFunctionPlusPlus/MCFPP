@@ -46,18 +46,8 @@ open class DamageType: ResourceID {
      */
     constructor(b: DamageType) : super(b)
 
-    override fun assign(b: Var<*>): DamageType {
+    override fun onAssign(b: Var<*>): DamageType {
         return super.assign(b) as DamageType
-    }
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPResourceType.DamageType -> return this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                return UnknownVar(this.identifier)
-            }
-        }
     }
 
     companion object {
@@ -98,7 +88,7 @@ class DamageTypeConcrete: MCFPPValue<String>, DamageType{
         return DamageTypeConcrete(this)
     }
 
-    override fun getTempVar(): Var<*> {
+    override fun getTempVar(): DamageTypeConcrete {
         return DamageTypeConcrete(this.value)
     }
 
