@@ -2,6 +2,7 @@ package top.mcfpp.model
 
 import net.querz.nbt.tag.IntArrayTag
 import top.mcfpp.Project
+import top.mcfpp.lang.ClassPointer
 import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPObjectClassType
 import top.mcfpp.lang.type.MCFPPType
@@ -15,6 +16,11 @@ import java.util.*
 
 open class ObjectClass(identifier: String, namespace: String = Project.currNamespace) : Class(identifier, namespace) {
 
+    var uuid: UUID = UUID.nameUUIDFromBytes("$namespace:$identifier".toByteArray())
+    var uuidNBT : IntArrayTag = Utils.toNBTArrayUUID(uuid)
+
+    var normalClass: Class? = null
+
     override val prefix: String
         get() = namespace + "_object_class_" + identifier + "_"
 
@@ -24,11 +30,15 @@ open class ObjectClass(identifier: String, namespace: String = Project.currNames
     override val tag: String
         get() = namespace + "_object_class_" + identifier
 
-
     override var getType : () -> MCFPPType = {
         MCFPPObjectClassType(this,
             parent.filterIsInstance<Class>().map { it.getType() }
         )
+    }
+
+    override fun newInstance(): ClassPointer {
+        LogProcessor.error("Cannot instantiate an object class")
+        return ClassPointer(this, "error_object_instance")
     }
 
     companion object{

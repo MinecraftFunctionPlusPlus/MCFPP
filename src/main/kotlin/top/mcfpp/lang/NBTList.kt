@@ -97,15 +97,7 @@ open class NBTList : NBTBasedData<ListTag<*>> {
             val b = if(a.parentClass() != null){
                 a.getTempVar()
             }else a
-            val final = when(val parent = parent){
-                is ClassPointer -> {
-                    Commands.selectRun(parent)
-                }
-                is MCFPPClassType -> {
-                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
-                }
-                else -> TODO()
-            }
+            val final = Commands.selectRun(parent!!)
             if (b is NBTBasedDataConcrete<*>) {
                 //对类中的成员的值进行修改
                 if(final.size == 2){
@@ -131,15 +123,7 @@ open class NBTList : NBTBasedData<ListTag<*>> {
             }
         }else{
             if(a.parentClass() != null){
-                val final = when(val parent = a.parent){
-                    is ClassPointer -> {
-                        Commands.selectRun(parent)
-                    }
-                    is MCFPPClassType -> {
-                        arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
-                    }
-                    else -> TODO()
-                }
+                val final = Commands.selectRun(parent!!)
                 //对类中的成员的值进行修改
                 //a必然是不确定的
                 if(final.size == 2){
@@ -269,15 +253,7 @@ class NBTListConcrete<E>: NBTList, MCFPPValue<ListTag<*>> {
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
         if (parent != null) {
-            val cmd = when(parent){
-                is ClassPointer -> {
-                    Commands.selectRun(parent)
-                }
-                is MCFPPClassType -> {
-                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
-                }
-                else -> TODO()
-            }
+            val cmd = Commands.selectRun(parent)
             if(cmd.size == 2){
                 Function.addCommand(cmd[0])
             }

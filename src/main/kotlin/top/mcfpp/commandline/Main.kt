@@ -3,8 +3,6 @@ package top.mcfpp.commandline
 import org.apache.logging.log4j.core.config.ConfigurationSource
 import org.apache.logging.log4j.core.config.Configurator
 import top.mcfpp.MCFPP
-import top.mcfpp.Project
-import top.mcfpp.io.LibReader
 import top.mcfpp.lang.UnresolvedVar
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.util.UwU
@@ -19,10 +17,6 @@ fun main(){
     }catch (e:Exception){
         println("Failed to load log4j2.xml")
     }
-    //导入基础库
-    for (include in Project.config.stdLib) {
-        LibReader.read(include)
-    }
     for(namespace in GlobalField.libNamespaces.values){
         namespace.field.forEachClass { c ->
             run {
@@ -35,7 +29,6 @@ fun main(){
         }
     }
     GlobalField.init()
-    GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]
     println("MCFPP ${MCFPP.version} (${Instant.now()})")
     println("Tips: " + UwU.tip) //生成tips
     val compiler = LineCompiler()
@@ -44,9 +37,20 @@ fun main(){
         if(compiler.leftBraces == 0){
             print("> ")
         }
-        when(val line = readln()){
+        val line = readln()
+        if(line.startsWith("get ")){
+            val name = line.substring(4)
+            val v = compiler.defaultFile.topFunction.field.getVar(name)
+            if(v == null){
+                println("No such variable")
+            }else{
+                println(v)
+            }
+            continue
+        }
+        when(line){
             "help" -> printHelp()
-            "exit" -> return
+            "quit" -> return
             "version" -> println("MCFPP ${MCFPP.version}")
             else -> {
                 try {

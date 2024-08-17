@@ -11,7 +11,6 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Class
-import top.mcfpp.model.CompoundDataCompanion
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
@@ -415,28 +414,8 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             currSelector = visit(ctx.primary())
         }
         if(currSelector is UnknownVar){
-            if(ctx.primary() != null || ctx.type().className() != null){
-                namespaceID = if(ctx.primary() != null){
-                    null to ctx.primary().text
-                } else{
-                    StringHelper.splitNamespaceID(ctx.type().text)
-                }
-                val o = GlobalField.getObject(namespaceID.first, namespaceID.second)
-                if(o != null) {
-                    currSelector = o.getType()
-                } else{
-                    LogProcessor.error("Undefined type: ${namespaceID.second}")
-                    currSelector = UnknownVar("${ctx.type().className().text}_type_" + UUID.randomUUID())
-                }
-            }else{
-                currSelector = CompoundDataCompanion(
-                    //基本类型
-                    when(ctx.type().text){
-                        "int" -> MCInt.data
-                        else -> TODO()
-                    }
-                )
-            }
+            val type = MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field)
+            currSelector = type
         }
         for (selector in ctx.selector()){
             visit(selector)

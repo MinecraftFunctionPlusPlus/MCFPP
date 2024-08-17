@@ -1,9 +1,11 @@
 package top.mcfpp.lang.type
 
 import top.mcfpp.lang.Var
-import top.mcfpp.model.*
-import top.mcfpp.model.function.Function
+import top.mcfpp.model.Class
+import top.mcfpp.model.CompoundData
+import top.mcfpp.model.Member
 import top.mcfpp.model.function.ExtensionFunction
+import top.mcfpp.model.function.Function
 
 /**
  * 用于标识由mcfpp class定义出来的类
@@ -12,6 +14,9 @@ open class MCFPPClassType(
     var cls:Class,
     override var parentType: List<MCFPPType>
 ):MCFPPType(cls, parentType) {
+
+    override val objectData: CompoundData
+        get() = cls.objectClass?: CompoundData(cls.identifier)
 
     val genericType : List<MCFPPType> = ArrayList()
 

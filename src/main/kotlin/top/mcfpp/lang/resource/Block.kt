@@ -3,18 +3,14 @@ package top.mcfpp.lang.resource
             
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.lang.ClassPointer
-import top.mcfpp.lang.UnknownVar
 import top.mcfpp.lang.Var
-import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPResourceType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.util.LogProcessor
-import java.util.*
 import top.mcfpp.model.function.Function
+import java.util.*
 
 open class Block: ResourceID {
 
@@ -95,21 +91,8 @@ class BlockConcrete: MCFPPValue<String>, Block{
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
         if (parentClass() != null) {
-            val cmd = when(parent){
-                is ClassPointer -> {
-                    Commands.selectRun(parent)
-                }
-                is MCFPPClassType -> {
-                    arrayOf(Command.build("execute as ${parentClass()!!.uuid} run "))
-                }
-                else -> TODO()
-            }
-            if(cmd.size == 2){
-                Function.addCommand(cmd[0])
-            }
-            Function.addCommand(cmd.last().build(
-                "data modify entity @s data.${identifier} set value $value")
-            )
+            val cmd = Commands.selectRun(parent!!, "data modify entity @s data.${identifier} set value $value")
+            Function.addCommands(cmd)
         } else {
             val cmd = Command.build("data modify")
                 .build(nbtPath.toCommandPart())

@@ -7,13 +7,14 @@ import org.antlr.v4.runtime.CommonTokenStream
 import top.mcfpp.antlr.McfppExprVisitor
 import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.model.CanSelectMember
 import top.mcfpp.lang.Var
-import top.mcfpp.model.*
-import top.mcfpp.model.function.Function
+import top.mcfpp.model.CanSelectMember
+import top.mcfpp.model.CompoundData
+import top.mcfpp.model.Member
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.field.IFieldWithType
 import top.mcfpp.model.function.ExtensionFunction
+import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.util.LogProcessor
@@ -24,7 +25,7 @@ import top.mcfpp.util.StringHelper
  */
 open class MCFPPType(
 
-    open var compoundData: CompoundData = CompoundData("unknown", "mcfpp"),
+    open val objectData: CompoundData = CompoundData("unknown", "mcfpp"),
 
     /**
      * 父类型，一个列表
@@ -74,7 +75,7 @@ open class MCFPPType(
      */
     @Override
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        val member = compoundData.getVar(key,true)
+        val member = objectData.getVar(key,true)
         return if(member == null){
             Pair(null, true)
         }else{
@@ -93,7 +94,7 @@ open class MCFPPType(
     @Override
     override fun getMemberFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>, accessModifier: Member.AccessModifier): Pair<Function, Boolean> {
         //获取函数
-        val member = compoundData.field.getFunction(key, readOnlyParams, normalParams)
+        val member = objectData.field.getFunction(key, readOnlyParams, normalParams)
         return if(member is UnknownFunction){
             Pair(UnknownFunction(key), true)
         }else{
@@ -103,9 +104,9 @@ open class MCFPPType(
 
     override fun getAccess(function: Function): Member.AccessModifier {
         return if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.CLASS){
-            function.parentClass()!!.getAccess(compoundData)
+            function.parentClass()!!.getAccess(objectData)
         }else if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.TEMPLATE){
-            function.parentTemplate()!!.getAccess(compoundData)
+            function.parentTemplate()!!.getAccess(objectData)
         }else{
             Member.AccessModifier.PUBLIC
         }
@@ -330,6 +331,10 @@ open class MCFPPType(
         fun parseFromContext(ctx: mcfppParser.TypeContext, typeScope: IFieldWithType): MCFPPType{
             if(ctx.normalType() != null){
                 return typeCache[ctx.text]!!
+            }
+            //向量
+            if(ctx.VecType() != null){
+                return MCFPPVectorType(ctx.VecType().text.substring(3).toInt())
             }
             //list类型
             if(ctx.LIST() != null){

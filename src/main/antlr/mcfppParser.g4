@@ -140,7 +140,7 @@ genericClassImplement
 
 //数据模板
 templateDeclaration
-    :   FINAL? OBJECT? DATA classWithoutNamespace (COLON className)? templateBody
+    :   FINAL? DATA classWithoutNamespace (COLON className)? templateBody
     ;
 
 //数据模板
@@ -497,6 +497,7 @@ expressionList
 
 type
     :   normalType
+    |   VecType
     |   LIST '<' type '>'
     |   className readOnlyArgs?
     |   Identifier
@@ -513,7 +514,6 @@ normalType
     |   NBT
     |   TYPE
     |   ANY
-    |   VecType         //向量
     |   MAP
     |   DICT
     ;

@@ -1,8 +1,7 @@
 package top.mcfpp.model
 
-import net.querz.nbt.tag.IntArrayTag
 import top.mcfpp.Project
-import top.mcfpp.lang.*
+import top.mcfpp.lang.ClassPointer
 import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.field.GlobalField
@@ -10,9 +9,6 @@ import top.mcfpp.model.function.Constructor
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.util.LogProcessor
-import top.mcfpp.util.Utils
-import java.util.*
-import kotlin.collections.ArrayList
 
 /**
  * 一个类。在mcfpp中一个类通常类似下面的样子
@@ -46,9 +42,6 @@ import kotlin.collections.ArrayList
  */
 open class Class : CompoundData {
 
-    var uuid: UUID
-    var uuidNBT : IntArrayTag
-
     /**
      * 构造函数
      */
@@ -80,6 +73,11 @@ open class Class : CompoundData {
     protected var hasParentClass = false
 
     /**
+     * 这个类的伴随对象
+     */
+    var objectClass : ObjectClass? = null
+
+    /**
      * 生成一个类，它拥有指定的标识符和命名空间
      * @param identifier 类的标识符
      * @param namespace 类的命名空间
@@ -87,8 +85,6 @@ open class Class : CompoundData {
     constructor(identifier: String, namespace: String = Project.currNamespace) {
         this.identifier = identifier
         this.namespace = namespace
-        uuid = UUID.nameUUIDFromBytes("$namespace:$identifier".toByteArray())
-        uuidNBT = Utils.toNBTArrayUUID(uuid)
         classPreInit = Function("_class_preinit_$identifier", this, false)
         field.addFunction(classPreInit,true)
     }
@@ -144,7 +140,7 @@ open class Class : CompoundData {
      * 创建这个类的一个实例
      * @return 创建的实例
      */
-    fun newInstance(): ClassPointer {
+    open fun newInstance(): ClassPointer {
         if (isAbstract) {
             LogProcessor.error("Abstract classes cannot be instantiated: $identifier")
         }

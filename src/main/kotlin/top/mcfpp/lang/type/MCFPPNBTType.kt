@@ -1,14 +1,20 @@
 package top.mcfpp.lang.type
 
+import top.mcfpp.lang.NBTBasedData
 import top.mcfpp.lang.NBTDictionary
 import top.mcfpp.lang.NBTList
 import top.mcfpp.lang.NBTMap
+import top.mcfpp.model.CompoundData
 
 /**
  * 以NBT为底层的类型，包括普通的NBT类型，以及由nbt实现的map，list和dict
  */
 class MCFPPNBTType{
     object NBT: MCFPPType(parentType = listOf(MCFPPBaseType.Any)){
+
+        override val objectData: CompoundData
+            get() = NBTBasedData.data
+
         override val typeName: String
             get() = "nbt"
     }
@@ -21,26 +27,30 @@ class MCFPPNBTType{
     */
 
     object Dict: MCFPPType(parentType = listOf(NBT)){
+
+        override val objectData: CompoundData
+            get() = NBTDictionary.data
+
         override val typeName: String
             get() = "dict"
     }
     object Map: MCFPPType(parentType = listOf(NBT)){
+
+        override val objectData: CompoundData
+            get() = NBTMap.data
+
         override val typeName: String
             get() = "map"
     }
-
-    init {
-        NBT.compoundData = top.mcfpp.lang.NBTBasedData.data
-        Dict.compoundData = NBTDictionary.data
-        Map.compoundData = NBTMap.data
-    }
-
 }
 
 
 class MCFPPListType(
     val generic: MCFPPType = MCFPPBaseType.Any
 ): MCFPPType(NBTList.data, listOf(MCFPPNBTType.NBT), false){
+
+    override val objectData: CompoundData
+        get() = NBTList.data
 
     /*
     init {

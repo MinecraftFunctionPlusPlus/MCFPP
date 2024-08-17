@@ -1,4 +1,3 @@
-##
 data Area{
     int startX;
     int startY;
@@ -29,6 +28,4 @@ object data Area{
         area.endY = ey;
         area.endZ = ez;
     }
-
 }
-##

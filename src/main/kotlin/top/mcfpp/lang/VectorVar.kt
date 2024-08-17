@@ -1,5 +1,8 @@
 package top.mcfpp.lang
 
+import net.querz.nbt.tag.CompoundTag
+import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.type.MCFPPVectorType
 import top.mcfpp.lang.value.MCFPPValue
@@ -9,24 +12,19 @@ import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.NBTUtil
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 import kotlin.collections.ArrayList
 
-open class VectorVar: Var<VectorVar>, Indexable<MCInt> {
+open class VectorVar: Var<VectorVar>, Indexable<MCInt>, ScoreHolder {
 
     val dimension: Int
 
     val components: ArrayList<MCInt> = ArrayList()
 
     override var parent : CanSelectMember? = null
-        set(value) {
-            for (i in components){
-                i.parent = value
-            }
-            field = value
-        }
 
     constructor(
         dimension: Int,
@@ -41,6 +39,7 @@ open class VectorVar: Var<VectorVar>, Indexable<MCInt> {
         //生成向量变量
         for (i in 0 until dimension){
             components.add(MCInt("$identifier$$i"))
+            components[i].holder = this
         }
         type = MCFPPVectorType(dimension)
     }
@@ -49,6 +48,7 @@ open class VectorVar: Var<VectorVar>, Indexable<MCInt> {
         this.dimension = b.dimension
         for (i in 0 until dimension){
             components.add(MCInt(b.components[i]))
+            components[i].holder = this
         }
         type = MCFPPVectorType(dimension)
     }
@@ -106,6 +106,24 @@ open class VectorVar: Var<VectorVar>, Indexable<MCInt> {
             }
             else -> buildCastErrorVar(type)
         }
+    }
+
+    override fun onScoreChange(score: MCInt) {
+        if(score is MCIntConcrete && isConcrete()){
+            this.replacedBy(this.toConcrete())
+        }
+    }
+
+    fun isConcrete(): Boolean{
+        if(this is VectorVarConcrete) return true
+        return components.all { it is MCIntConcrete }
+    }
+
+    fun toConcrete(): VectorVarConcrete {
+        if (this is VectorVarConcrete) return this
+        if(!isConcrete()) throw Exception("Cannot convert to concrete")
+        val value = components.map { (it as MCIntConcrete).value }.toTypedArray()
+        return VectorVarConcrete(this, value)
     }
 
     override fun clone(): VectorVar {

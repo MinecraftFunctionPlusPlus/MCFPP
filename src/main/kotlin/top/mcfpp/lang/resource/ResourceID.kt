@@ -100,21 +100,8 @@ open class ResourceIDConcrete: MCFPPValue<String>, ResourceID{
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
         if (parent != null) {
-            val cmd = when(parent){
-                is ClassPointer -> {
-                    Commands.selectRun(parent)
-                }
-                is MCFPPClassType -> {
-                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
-                }
-                else -> TODO()
-            }
-            if(cmd.size == 2){
-                Function.addCommand(cmd[0])
-            }
-            Function.addCommand(cmd.last().build(
-                "data modify entity @s data.${identifier} set value $value")
-            )
+            val cmd = Commands.selectRun(parent, "data modify entity @s data.${identifier} set value $value")
+            Function.addCommands(cmd)
         } else {
             val cmd = Command.build("data modify")
                 .build(nbtPath.toCommandPart())

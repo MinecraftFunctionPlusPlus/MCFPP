@@ -88,7 +88,7 @@ open class $id: ResourceID {
      */
     constructor(b: $id) : super(b)
 
-    override fun onAssign(b: Var<*>): $id {
+    override fun doAssign(b: Var<*>): $id {
         return super.assign(b) as $id
     }
 
@@ -137,21 +137,8 @@ class ${id}Concrete: MCFPPValue<String>, ${id}{
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
         if (parentClass() != null) {
-            val cmd = when(parent){
-                is ClassPointer -> {
-                    Commands.selectRun(parent)
-                }
-                is MCFPPClassType -> {
-                    arrayOf(Command.build("execute as ${'$'}{parentClass()!!.uuid} run "))
-                }
-                else -> TODO()
-            }
-            if(cmd.size == 2){
-                Function.addCommand(cmd[0])
-            }
-            Function.addCommand(cmd.last().build(
-                "data modify entity @s data.${'$'}{identifier} set value ${'$'}value")
-            )
+            val cmd = Commands.selectRun(parent!!, "data modify entity @s data.${'$'}{identifier} set value ${'$'}value")
+            Function.addCommands(cmd)
         } else {
             val cmd = Command.build("data modify")
                 .build(nbtPath.toCommandPart())

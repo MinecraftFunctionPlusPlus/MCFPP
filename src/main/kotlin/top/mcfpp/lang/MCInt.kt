@@ -5,10 +5,11 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
-import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
-import top.mcfpp.model.*
+import top.mcfpp.model.CompoundData
+import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TextTranslator
@@ -471,20 +472,9 @@ class MCIntConcrete : MCInt, MCFPPValue<Int>{
         //避免错误 Smart cast to 'ClassPointer' is impossible, because 'parent' is a mutable property that could have been changed by this time
         val parent = parent
 
-        if (parent != null) {
-            val cmd = when(parent){
-                is ClassPointer -> {
-                    Commands.selectRun(parent)
-                }
-                is MCFPPClassType -> {
-                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
-                }
-                else -> TODO()
-            }
-            if(cmd.size == 2){
-                Function.addCommand(cmd[0])
-            }
-            Function.addCommand(cmd.last().build("scoreboard players set @s $sbObject $value"))
+        if (parentClass() != null) {
+            val cmd = Commands.selectRun(parent!!, "scoreboard players set @s $sbObject $value")
+            Function.addCommands(cmd)
         } else {
             val cmd = if (!isTemp)
                 Command("execute store result").build(nbtPath.toCommandPart()).build("int 1 run ")

@@ -3,10 +3,11 @@ package top.mcfpp.command
 import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.Tag
 import top.mcfpp.Project
-import top.mcfpp.lang.*
-import top.mcfpp.lang.type.MCFPPClassType
+import top.mcfpp.lang.ClassPointer
+import top.mcfpp.lang.MCInt
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.CanSelectMember
+import top.mcfpp.model.ObjectClass
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NoStackFunction
 import java.util.*
@@ -111,8 +112,8 @@ object Commands {
                     Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin").build("run","run").build(command)
                 )
             }
-            is MCFPPClassType -> {
-                arrayOf(Command.build("execute as ${a.cls.uuid} run").build(command))
+            is ObjectClass -> {
+                arrayOf(Command.build("execute as ${a.uuid} run").build(command))
             }
             else -> TODO()
         }
@@ -127,8 +128,8 @@ object Commands {
                     Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin").build("run","run")
                 )
             }
-            is MCFPPClassType -> {
-                arrayOf(Command.build("execute as ${a.cls.uuid}").build("run","run"))
+            is ObjectClass -> {
+                arrayOf(Command.build("execute as ${a.uuid}").build("run","run"))
             }
             else -> TODO()
         }

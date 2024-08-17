@@ -17,7 +17,6 @@ object UwU {
         tips.add("Also try FrostLeaf ToolBox!")
         tips.add("\$time")
         tips.add("今天你也很努力呢喵！")
-        tips.add("Mojang什么时候出动态命令捏……（呆")
         tips.add("喂，刚刚咱在编译的时候，你有在看咱吧")
         tips.add("咕咕咕咕咕咕咕咕咕")
         tips.add("嘤嘤嘤嘤嘤嘤嘤嘤")

@@ -2,9 +2,9 @@ package top.mcfpp.lang
 
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lib.SbObject
-import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
-import java.util.UUID
+import top.mcfpp.model.function.Function
+import java.util.*
 
 /**
  * 代表了mcfpp中的一个数字类型。数字类型都是以记分板为基础的。
@@ -12,6 +12,8 @@ import java.util.UUID
  * @param T 这个数字类型中包装的类型
  */
 abstract class MCNumber<T> : Var<MCNumber<T>>, OnScoreboard {
+
+    var holder: ScoreHolder? = null
 
     var sbObject: SbObject
 

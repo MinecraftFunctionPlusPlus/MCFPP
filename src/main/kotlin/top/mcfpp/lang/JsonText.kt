@@ -4,7 +4,6 @@ import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.lang.type.MCFPPBaseType
-import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.lib.ChatComponent
@@ -151,23 +150,12 @@ class JsonTextConcrete : MCFPPValue<ChatComponent>, JsonText {
 
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
-        if (parent != null) {
-            val cmd = when(parent){
-                is ClassPointer -> {
-                    Commands.selectRun(parent)
-                }
-                is MCFPPClassType -> {
-                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
-                }
-                else -> TODO()
-            }
-            if(cmd.size == 2){
-                Function.addCommand(cmd[0])
-            }
-            Function.addCommand(cmd.last().build(
-                "data modify entity @s data.${identifier} set value ")
-                .build(value.toCommandPart())
+        if (parentClass() != null) {
+            val cmd = Commands.selectRun(parent!!,
+                Command("data modify entity @s data.${identifier} set value ")
+                    .build(value.toCommandPart())
             )
+            Function.addCommands(cmd)
         } else {
             val cmd = Command.build("data modify")
                 .build(nbtPath.toCommandPart())

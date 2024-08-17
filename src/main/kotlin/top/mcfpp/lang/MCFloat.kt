@@ -2,11 +2,9 @@ package top.mcfpp.lang
 
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
-import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
-import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.lib.SbObject
@@ -72,15 +70,7 @@ open class MCFloat : MCNumber<Float> {
     open fun toTempEntity() : MCFloat{
         val parent = parent
         if (parent != null) {
-            val cmd = when(parent){
-                is MCFPPClassType -> {
-                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
-                }
-                is ClassPointer -> {
-                    Commands.selectRun(parent)
-                }
-                else -> TODO()
-            }
+            val cmd = Commands.selectRun(parent)
             if(cmd.size == 2){
                 Function.addCommand(cmd[0])
             }
@@ -125,15 +115,7 @@ open class MCFloat : MCNumber<Float> {
         val parent = parent
         if(a.parent != null) TODO()
         if(parent != null){
-            val cmd = when(parent){
-                is MCFPPClassType -> {
-                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
-                }
-                is ClassPointer -> {
-                    Commands.selectRun(parent)
-                }
-                else -> TODO()
-            }
+            val cmd = Commands.selectRun(parent)
             //类的成员是运行时动态的
             //t = a
             val pwp = a as MCFloat
@@ -550,15 +532,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
     override fun toTempEntity() : MCFloat{
         val parent = parent
         if (parent != null) {
-            val cmd = when(parent){
-                is MCFPPClassType -> {
-                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
-                }
-                is ClassPointer -> {
-                    Commands.selectRun(parent)
-                }
-                else -> TODO()
-            }
+            val cmd = Commands.selectRun(parent)
             if(cmd.size == 2){
                 Function.addCommand(cmd[0])
             }

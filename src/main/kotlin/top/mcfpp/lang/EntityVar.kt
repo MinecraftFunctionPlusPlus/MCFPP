@@ -2,15 +2,9 @@ package top.mcfpp.lang
 
 import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.IntArrayTag
-import net.querz.nbt.tag.Tag
-import top.mcfpp.Project
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType.BaseEntity
-import top.mcfpp.lang.type.MCFPPBaseType
-import top.mcfpp.lang.type.MCFPPClassType
-import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.CompoundData
@@ -20,7 +14,7 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
-import java.util.UUID
+import java.util.*
 
 
 /**
@@ -114,21 +108,8 @@ class EntityVarConcrete: EntityVar, MCFPPValue<IntArrayTag>{
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
         if (parentClass() != null) {
-            val cmd = when(parent){
-                is ClassPointer -> {
-                    Commands.selectRun(parent)
-                }
-                is MCFPPClassType -> {
-                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
-                }
-                else -> TODO()
-            }
-            if(cmd.size == 2){
-                Function.addCommand(cmd[0])
-            }
-            Function.addCommand(cmd.last().build(
-                "data modify entity @s data.${identifier} set value ${SNBTUtil.toSNBT(value)}")
-            )
+            val cmd = Commands.selectRun(parent!!, "data modify entity @s data.${identifier} set value ${SNBTUtil.toSNBT(value)}")
+            Function.addCommands(cmd)
         } else {
             val cmd = Command.build("data modify")
                 .build(nbtPath.toCommandPart())

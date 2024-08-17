@@ -12,9 +12,9 @@ import top.mcfpp.util.ValueWrapper;
 import java.util.UUID;
 
 public class MCAnyData {
-    @MNIRegister(normalParams = {"any a"}, returnType = "JavaVar")
-    public static void getJavaVar(@NotNull Var<?> value, ValueWrapper<Var<?>> returnValue){
-        var re = new JavaVar(value, UUID.randomUUID().toString());
+    @MNIRegister(caller = "any", returnType = "JavaVar")
+    public static void getJavaVar(@NotNull Var<?> caller, ValueWrapper<Var<?>> returnValue){
+        var re = new JavaVar(caller, UUID.randomUUID().toString());
         returnValue.setValue(re);
     }
 

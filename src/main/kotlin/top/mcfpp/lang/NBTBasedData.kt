@@ -1,7 +1,6 @@
 package top.mcfpp.lang
 
 import net.querz.nbt.io.SNBTUtil
-import java.util.*
 import net.querz.nbt.tag.*
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
@@ -16,6 +15,7 @@ import top.mcfpp.util.NBTUtil
 import top.mcfpp.util.NBTUtil.toJava
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
+import java.util.*
 
 
 /**
@@ -180,24 +180,16 @@ open class NBTBasedData<T : Tag<*>> : Var<NBTBasedData<T>>, Indexable<NBTBasedDa
      * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
      */
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        TODO("Not yet implemented")
+        return data.getVar(key) to true
     }
 
-    /**
-     * 根据方法标识符和方法的参数列表获取一个方法。如果没有这个方法，则返回null
-     *
-     * @param key 成员方法的标识符
-     * @param readOnlyParams 成员方法的只读参数
-     * @param normalParams 成员方法的普通参数
-     * @return
-     */
     override fun getMemberFunction(
         key: String,
         readOnlyParams: List<MCFPPType>,
         normalParams: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        TODO("Not yet implemented")
+        return data.getFunction(key, readOnlyParams, normalParams) to true
     }
 
     override fun getByIndex(index: Var<*>): NBTBasedData<*> {
@@ -457,6 +449,18 @@ class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData<T>, MCFPPValue<T> {
                 buildCastErrorVar(type)
             }
         }
+        if((type is MCFPPVectorType)){
+            if((value is ListTag<*>) && (type.dimension == (value as ListTag<*>).size())){
+                //转换为向量
+                val first = (value as ListTag<*>)[0]
+                if(first !is IntTag){
+                    return buildCastErrorVar(type)
+                }
+                return VectorVarConcrete((value as ListTag<*>).map { (it as IntTag).asInt() }.toTypedArray())
+            }else{
+                return buildCastErrorVar(type)
+            }
+        }
         val t = JavaVar.javaToMC(value.toJava())
         if(t.type == type) return t
         return buildCastErrorVar(type)
@@ -472,22 +476,9 @@ class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData<T>, MCFPPValue<T> {
 
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
-        if (parent != null) {
-            val cmd = when(parent){
-                is ClassPointer -> {
-                    Commands.selectRun(parent)
-                }
-                is MCFPPClassType -> {
-                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
-                }
-                else -> TODO()
-            }
-            if(cmd.size == 2){
-                Function.addCommand(cmd[0])
-            }
-            Function.addCommand(cmd.last().build(
-                "data modify entity @s data.${identifier} set value ${SNBTUtil.toSNBT(value)}")
-            )
+        if (parentClass() != null) {
+            val cmd = Commands.selectRun(parent!!, "data modify entity @s data.${identifier} set value ${SNBTUtil.toSNBT(value)}")
+            Function.addCommands(cmd)
         } else {
             val cmd = Command.build("data modify")
                 .build(nbtPath.toCommandPart())

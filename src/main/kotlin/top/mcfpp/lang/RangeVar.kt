@@ -4,6 +4,7 @@ import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.command.Command
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
@@ -124,6 +125,16 @@ open class RangeVar: Var<RangeVar> {
         if(point and 1 != 0.toByte()) command.buildMacro(right.identifier, false)
         return command
     }
+
+    companion object {
+        val data = CompoundData("range","mcfpp")
+
+        init {
+            data.extends(MCAny.data)
+        }
+
+    }
+
 }
 
 class RangeVarConcrete: MCFPPValue<Pair<Float?, Float?>>, RangeVar{

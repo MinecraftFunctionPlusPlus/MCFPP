@@ -4,13 +4,13 @@ import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPDataTemplateType
 import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.DataTemplate
 import top.mcfpp.model.Member
+import top.mcfpp.model.ObjectClass
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
@@ -68,7 +68,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
             }
 
             is DataTemplateObjectConcrete -> {
-                if (b.type.compoundData.canCastTo(this.templateType)) {
+                if (b.type.objectData.canCastTo(this.templateType)) {
                     this.assignMembers(b.value)
                     return this
                 } else {
@@ -276,8 +276,8 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag>{
                 is ClassPointer -> {
                     Commands.selectRun(parent)
                 }
-                is MCFPPClassType -> {
-                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
+                is ObjectClass -> {
+                    arrayOf(Command.build("execute as ${parent.uuid} run "))
                 }
                 else -> TODO()
 

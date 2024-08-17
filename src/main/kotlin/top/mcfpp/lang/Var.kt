@@ -251,8 +251,8 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
                 is ClassPointer -> {
                     Commands.selectRun(parent)
                 }
-                is MCFPPClassType -> {
-                    arrayOf(Command.build("execute as ${parent.cls.uuid} run "))
+                is ObjectClass -> {
+                    arrayOf(Command.build("execute as ${parent.uuid} run "))
                 }
                 else -> TODO()
             }
@@ -272,8 +272,8 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
                         is ClassPointer -> {
                             Commands.selectRun(parent)
                         }
-                        is MCFPPClassType -> {
-                            arrayOf(Command.build("execute as ${parent.cls.uuid}").build("run","run"))
+                        is ObjectClass -> {
+                            arrayOf(Command.build("execute as ${parent.uuid}").build("run","run"))
                         }
                         else -> TODO()
                     }
@@ -455,7 +455,18 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
 
     fun replacedBy(v : Var<*>){
         if(v == this) return
-        if(parent == null){
+        if(v is MCInt && v.holder != null){
+            when(val holder = v.holder){
+                is VectorVar -> {
+                    holder.components.forEachIndexed { index, varr ->
+                        if(varr == this){
+                            holder.components[index] = v
+                        }
+                    }
+                    holder.onScoreChange(v)
+                }
+            }
+        }else if(parent == null){
             if(Function.currFunction.field.containVar(identifier)){
                 Function.currFunction.field.putVar(identifier, v, true)
             }
@@ -471,7 +482,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
                             type.cls.field.putVar(v.identifier, v, true)
                         }
                         is MCFPPCompoundType -> {
-                            type.compoundData.field.putVar(v.identifier, v, true)
+                            type.objectData.field.putVar(v.identifier, v, true)
                         }
                         else -> TODO()
                     }
