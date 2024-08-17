@@ -46,7 +46,7 @@ open class Texture: ResourceID {
      */
     constructor(b: Texture) : super(b)
 
-    override fun onAssign(b: Var<*>): Texture {
+    override fun doAssign(b: Var<*>): Texture {
         return super.assign(b) as Texture
     }
 

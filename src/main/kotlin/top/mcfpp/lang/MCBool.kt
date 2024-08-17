@@ -1,7 +1,6 @@
 package top.mcfpp.lang
 
 import top.mcfpp.annotations.InsertCommand
-import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
@@ -52,16 +51,11 @@ open class MCBool : Var<MCBool>, OnScoreboard {
     override var type: MCFPPType = MCFPPBaseType.Bool
 
     @Override
-    override fun onAssign(b: Var<*>) : MCBool {
-        var v = b.implicitCast(this.type)
-        if(!v.isError){
-            v = b
-        }
-        hasAssigned = true
-        if (v is MCBool) {
-            return assignCommand(v)
+    override fun doAssign(b: Var<*>) : MCBool {
+        if (b is MCBool) {
+            return assignCommand(b)
         } else {
-            LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+            LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
             return this
         }
     }

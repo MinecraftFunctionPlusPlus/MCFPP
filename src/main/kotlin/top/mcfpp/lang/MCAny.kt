@@ -1,6 +1,5 @@
 package top.mcfpp.lang
 
-import top.mcfpp.Project
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
@@ -11,8 +10,6 @@ import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
-import top.mcfpp.model.Namespace
-import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.util.LogProcessor
 import java.util.*
 
@@ -94,25 +91,22 @@ open class MCAny : Var<MCAny> {
      *
      * @return 重新获取跟踪的此变量
      */
-    override fun onAssign(b: Var<*>) : MCAnyConcrete {
-        var v = b.implicitCast(this.type)
-        if(!v.isError){
-            v = b
-        }
-        hasAssigned = true
-        when (v) {
+    override fun doAssign(b: Var<*>): MCAnyConcrete {
+        when (b) {
             is MCAnyConcrete -> {
-                val q = MCAnyConcrete(this, v.value)
-                q.assign(v)
+                val q = MCAnyConcrete(this, b.value)
+                q.assign(b)
                 return q
             }
+
             is MCAny -> {
                 LogProcessor.error("Cannot assign any to any")
                 throw VariableConverseException()
             }
+
             else -> {
-                val q = MCAnyConcrete(this, v)
-                q.assign(v)
+                val q = MCAnyConcrete(this, b)
+                q.assign(b)
                 return q
             }
         }
@@ -249,7 +243,7 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>>{
         return MCAnyConcrete(this)
     }
 
-    override fun onAssign(b: Var<*>): MCAnyConcrete {
+    override fun doAssign(b: Var<*>): MCAnyConcrete {
         when (b) {
             is MCAnyConcrete -> {
                 if(b.value.type != this.value.type){

@@ -46,7 +46,7 @@ open class Effect: ResourceID {
      */
     constructor(b: Effect) : super(b)
 
-    override fun onAssign(b: Var<*>): Effect {
+    override fun doAssign(b: Var<*>): Effect {
         return super.assign(b) as Effect
     }
 

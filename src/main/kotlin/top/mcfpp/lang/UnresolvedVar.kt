@@ -40,7 +40,7 @@ class UnresolvedVar : Var<UnresolvedVar> {
         return build(identifier, (type as UnresolvedType).resolve(typeScope), fieldContainer)
     }
 
-    override fun onAssign(b: Var<*>): UnresolvedVar {
+    override fun doAssign(b: Var<*>): UnresolvedVar {
         throw VariableNotResolvedException()
     }
 

@@ -46,18 +46,14 @@ open class NBTDictionary : NBTBasedData<CompoundTag> {
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun onAssign(b: Var<*>): NBTDictionary {
-        var v = b.implicitCast(this.type)
-        if(!v.isError){
-            v = b
-        }
-        hasAssigned = true
-        when (v) {
+    override fun doAssign(b: Var<*>): NBTDictionary {
+        when (b) {
             is NBTDictionary -> {
-                return assignCommand(v) as NBTDictionary
+                return assignCommand(b) as NBTDictionary
             }
+
             else -> {
-                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
                 return this
             }
         }

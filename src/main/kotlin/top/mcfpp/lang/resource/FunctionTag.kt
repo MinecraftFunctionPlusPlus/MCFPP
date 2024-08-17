@@ -46,7 +46,7 @@ open class FunctionTag: ResourceID {
      */
     constructor(b: FunctionTag) : super(b)
 
-    override fun onAssign(b: Var<*>): FunctionTag {
+    override fun doAssign(b: Var<*>): FunctionTag {
         return super.assign(b) as FunctionTag
     }
 

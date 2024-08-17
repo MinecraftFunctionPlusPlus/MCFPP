@@ -87,25 +87,23 @@ class ClassPointer : Var<ClassPointer>{
     @Override
     @InsertCommand
     @Throws(VariableConverseException::class)
-    override fun onAssign(b: Var<*>): ClassPointer {
-        var v = b.implicitCast(this.type)
-        if(!v.isError){
-            v = b
-        }
-        hasAssigned = true
+    override fun doAssign(b: Var<*>): ClassPointer {
         //TODO 不支持指针作为类成员的时候
-        when (v) {
+        when (b) {
             is ClassPointer -> {
-                if (!v.clazz.canCastTo(clazz)) {
-                    LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+                if (!b.clazz.canCastTo(clazz)) {
+                    LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
                     return this
                 }
                 if (!isNull) {
                     //原实体中的实例减少一个指针
-                    val c = Commands.selectRun(this,Commands.sbPlayerRemove(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1))
+                    val c = Commands.selectRun(
+                        this,
+                        Commands.sbPlayerRemove(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1)
+                    )
                     Function.addCommands(c)
                 }
-                isNull = v.isNull
+                isNull = b.isNull
                 //地址储存
                 Function.addCommand(
                     Command.build("data modify")
@@ -114,12 +112,15 @@ class ClassPointer : Var<ClassPointer>{
                         .build(b.nbtPath.toCommandPart())
                 )
                 //实例中的指针列表
-                val c = Commands.selectRun(this,Commands.sbPlayerAdd(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1))
+                val c = Commands.selectRun(
+                    this,
+                    Commands.sbPlayerAdd(MCInt("@s").setObj(SbObject.MCFPP_POINTER_COUNTER) as MCInt, 1)
+                )
                 Function.addCommands(c)
             }
 
             else -> {
-                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
             }
         }
         return this

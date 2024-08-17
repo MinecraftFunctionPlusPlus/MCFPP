@@ -46,7 +46,7 @@ open class BlockStateFile: ResourceID {
      */
     constructor(b: BlockStateFile) : super(b)
 
-    override fun onAssign(b: Var<*>): BlockStateFile {
+    override fun doAssign(b: Var<*>): BlockStateFile {
         return super.assign(b) as BlockStateFile
     }
 

@@ -53,7 +53,7 @@ open class VectorVar: Var<VectorVar>, Indexable<MCInt> {
         type = MCFPPVectorType(dimension)
     }
 
-    override fun onAssign(b: Var<*>): VectorVar {
+    override fun doAssign(b: Var<*>): VectorVar {
         when(b){
             is VectorVar -> {
                 if(b.dimension != dimension){

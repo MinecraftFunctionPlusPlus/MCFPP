@@ -46,7 +46,7 @@ open class LiquidTag: ResourceID {
      */
     constructor(b: LiquidTag) : super(b)
 
-    override fun onAssign(b: Var<*>): LiquidTag {
+    override fun doAssign(b: Var<*>): LiquidTag {
         return super.assign(b) as LiquidTag
     }
 

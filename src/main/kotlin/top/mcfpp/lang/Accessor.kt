@@ -46,7 +46,7 @@ class Accessor(override var value: Var<*>, identifier: String = UUID.randomUUID(
         return value.explicitCast(type)
     }
 
-    override fun onAssign(b: Var<*>): Accessor {
+    override fun doAssign(b: Var<*>): Accessor {
         TODO()
     }
 

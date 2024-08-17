@@ -37,7 +37,7 @@ class Pos : Var<Pos> {
         coordinate.putAll(b.coordinate)
     }
 
-    override fun onAssign(b: Var<*>): Pos {
+    override fun doAssign(b: Var<*>): Pos {
         TODO("Not yet implemented")
     }
 

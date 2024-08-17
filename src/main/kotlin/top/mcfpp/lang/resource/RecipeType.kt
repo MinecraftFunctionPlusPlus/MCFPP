@@ -46,7 +46,7 @@ open class RecipeType: ResourceID {
      */
     constructor(b: RecipeType) : super(b)
 
-    override fun onAssign(b: Var<*>): RecipeType {
+    override fun doAssign(b: Var<*>): RecipeType {
         return super.assign(b) as RecipeType
     }
 

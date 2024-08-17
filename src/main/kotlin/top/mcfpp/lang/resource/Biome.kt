@@ -46,7 +46,7 @@ open class Biome: ResourceID {
      */
     constructor(b: Biome) : super(b)
 
-    override fun onAssign(b: Var<*>): Biome {
+    override fun doAssign(b: Var<*>): Biome {
         return super.assign(b) as Biome
     }
 

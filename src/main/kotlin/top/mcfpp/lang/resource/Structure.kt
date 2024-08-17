@@ -46,7 +46,7 @@ open class Structure: ResourceID {
      */
     constructor(b: Structure) : super(b)
 
-    override fun onAssign(b: Var<*>): Structure {
+    override fun doAssign(b: Var<*>): Structure {
         return super.assign(b) as Structure
     }
 

@@ -46,7 +46,7 @@ open class DamageType: ResourceID {
      */
     constructor(b: DamageType) : super(b)
 
-    override fun onAssign(b: Var<*>): DamageType {
+    override fun doAssign(b: Var<*>): DamageType {
         return super.assign(b) as DamageType
     }
 

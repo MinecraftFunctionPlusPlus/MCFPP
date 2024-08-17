@@ -46,7 +46,7 @@ open class LootTableType: ResourceID {
      */
     constructor(b: LootTableType) : super(b)
 
-    override fun onAssign(b: Var<*>): LootTableType {
+    override fun doAssign(b: Var<*>): LootTableType {
         return super.assign(b) as LootTableType
     }
 

@@ -46,7 +46,7 @@ open class Memory: ResourceID {
      */
     constructor(b: Memory) : super(b)
 
-    override fun onAssign(b: Var<*>): Memory {
+    override fun doAssign(b: Var<*>): Memory {
         return super.assign(b) as Memory
     }
 

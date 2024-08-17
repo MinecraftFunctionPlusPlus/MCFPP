@@ -46,7 +46,7 @@ open class VillagerType: ResourceID {
      */
     constructor(b: VillagerType) : super(b)
 
-    override fun onAssign(b: Var<*>): VillagerType {
+    override fun doAssign(b: Var<*>): VillagerType {
         return super.assign(b) as VillagerType
     }
 

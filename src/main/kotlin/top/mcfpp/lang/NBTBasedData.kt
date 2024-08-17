@@ -3,26 +3,19 @@ package top.mcfpp.lang
 import net.querz.nbt.io.SNBTUtil
 import java.util.*
 import net.querz.nbt.tag.*
-import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
 import top.mcfpp.lang.value.MCFPPValue
-import top.mcfpp.lib.NBTPath
-import top.mcfpp.lib.NBTSource
-import top.mcfpp.lib.Storage
-import top.mcfpp.lib.StorageSource
 import top.mcfpp.mni.NBTBasedDataData
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
-import top.mcfpp.util.AnyTag
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil
+import top.mcfpp.util.NBTUtil.toJava
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
-import kotlin.collections.ArrayList
 
 
 /**
@@ -66,17 +59,12 @@ open class NBTBasedData<T : Tag<*>> : Var<NBTBasedData<T>>, Indexable<NBTBasedDa
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun onAssign(b: Var<*>) : NBTBasedData<T> {
-        var v = b.implicitCast(this.type)
-        if(!v.isError){
-            v = b
-        }
-        hasAssigned = true
-        return when(v){
-            is NBTBasedData<*> -> assignCommand(v as NBTBasedData<T>)
-            is MCFPPValue<*> -> assignCommand(NBTBasedDataConcrete(NBTUtil.toNBT(v)!!) as NBTBasedData<T>)
+    override fun doAssign(b: Var<*>) : NBTBasedData<T> {
+        return when (b) {
+            is NBTBasedData<*> -> assignCommand(b as NBTBasedData<T>)
+            is MCFPPValue<*> -> assignCommand(NBTBasedDataConcrete(NBTUtil.toNBT(b)!!) as NBTBasedData<T>)
             else -> {
-                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
                 this
             }
         }
@@ -459,6 +447,12 @@ class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData<T>, MCFPPValue<T> {
 
     constructor(v: NBTBasedDataConcrete<T>) : super(v){
         this.value = v.value
+    }
+
+    override fun implicitCast(type: MCFPPType): Var<*> {
+        val t = JavaVar.javaToMC(value.toJava())
+        if(t.type == type) return t
+        return buildCastErrorVar(type)
     }
 
     override fun clone(): NBTBasedDataConcrete<T> {

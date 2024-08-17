@@ -16,7 +16,7 @@ import java.util.UUID
 class Void: Var<Void>("void") {
     override var type: MCFPPType = MCFPPBaseType.Void
 
-    override fun onAssign(b: Var<*>) : Void {
+    override fun doAssign(b: Var<*>) : Void {
         LogProcessor.error("Cannot assign value to void type variable")
         return this
     }

@@ -34,12 +34,12 @@ object LogProcessor {
         Project.warningCount++
         if(CompileSettings.isDebug){
             val stackTrace = Thread.currentThread().stackTrace
-            val sb = StringBuilder("Compiler Stack trace:\n")
+            val sb = StringBuilder("Compiler Stack trace:")
             for (i in 1 until  min(stackTrace.size, 8)) {
-                sb.appendLine("    at " + stackTrace[i].toString())
+                sb.append("\n    at " + stackTrace[i].toString())
             }
             if(stackTrace.size > 6){
-                sb.appendLine("    ...")
+                sb.append("\n    ...")
             }
             logger.warn(sb.toString())
         }
@@ -50,12 +50,12 @@ object LogProcessor {
         Project.warningCount++
         if(CompileSettings.isDebug){
             val stackTrace = Thread.currentThread().stackTrace
-            val sb = StringBuilder("Compiler Stack trace:\n")
+            val sb = StringBuilder("Compiler Stack trace:")
             for (i in 1 until  min(stackTrace.size, 8)) {
-                sb.appendLine("    at " + stackTrace[i].toString())
+                sb.append("\n    at " + stackTrace[i].toString())
             }
             if(stackTrace.size > 6){
-                sb.appendLine("    ...")
+                sb.append("\n    ...")
             }
             logger.warn(sb.toString())
         }
@@ -68,12 +68,12 @@ object LogProcessor {
         Project.errorCount++
         if(CompileSettings.isDebug){
             val stackTrace = Thread.currentThread().stackTrace
-            val sb = StringBuilder("Compiler Stack trace:\n")
+            val sb = StringBuilder("Compiler Stack trace:")
             for (i in 1 until  min(stackTrace.size, 8)) {
-                sb.appendLine("    at " + stackTrace[i].toString())
+                sb.append("\n    at " + stackTrace[i].toString())
             }
             if(stackTrace.size > 6){
-                sb.appendLine("    ...")
+                sb.append("\n    ...")
             }
             logger.error(sb.toString())
         }
@@ -84,12 +84,12 @@ object LogProcessor {
         Project.errorCount++
         if(CompileSettings.isDebug){
             val stackTrace = Thread.currentThread().stackTrace
-            val sb = StringBuilder("Compiler Stack trace:\n")
+            val sb = StringBuilder("Compiler Stack trace:")
             for (i in 1 until  min(stackTrace.size, 8)) {
-                sb.appendLine("    at " + stackTrace[i].toString())
+                sb.append("\n    at " + stackTrace[i].toString())
             }
             if(stackTrace.size > 6){
-                sb.appendLine("    ...")
+                sb.append("\n    ...")
             }
             logger.error(sb.toString())
         }

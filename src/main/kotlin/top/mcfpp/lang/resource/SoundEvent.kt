@@ -46,7 +46,7 @@ open class SoundEvent: ResourceID {
      */
     constructor(b: SoundEvent) : super(b)
 
-    override fun onAssign(b: Var<*>): SoundEvent {
+    override fun doAssign(b: Var<*>): SoundEvent {
         return super.assign(b) as SoundEvent
     }
 

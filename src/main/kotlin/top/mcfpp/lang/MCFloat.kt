@@ -103,18 +103,14 @@ open class MCFloat : MCNumber<Float> {
      */
     @Override
     @Throws(VariableConverseException::class)
-    override fun onAssign(b: Var<*>) : MCFloat {
-        var v = b.implicitCast(this.type)
-        if(!v.isError){
-            v = b
-        }
-        hasAssigned = true
-        return when(v){
-            is MCFloat ->{
-                assignCommand(v)
+    override fun doAssign(b: Var<*>) : MCFloat {
+        return when (b) {
+            is MCFloat -> {
+                assignCommand(b)
             }
-            else ->{
-                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+
+            else -> {
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
                 this
             }
         }
@@ -489,7 +485,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
      * @param identifier 标识符。如不指定，则为随机uuid
      * @param value 值
      */
-    constructor(identifier: String = UUID.randomUUID().toString(), value: Float) : super(identifier) {
+    constructor(value: Float, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
         this.value = value
     }
 

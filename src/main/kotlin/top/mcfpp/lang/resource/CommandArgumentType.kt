@@ -46,7 +46,7 @@ open class CommandArgumentType: ResourceID {
      */
     constructor(b: CommandArgumentType) : super(b)
 
-    override fun onAssign(b: Var<*>): CommandArgumentType {
+    override fun doAssign(b: Var<*>): CommandArgumentType {
         return super.assign(b) as CommandArgumentType
     }
 

@@ -5,7 +5,6 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPClassType
-import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.lib.ChatComponent
@@ -53,15 +52,10 @@ open class JsonText : NBTBasedData<CompoundTag> {
      */
     constructor(b: JsonText) : super(b)
 
-    override fun onAssign(b: Var<*>): NBTBasedData<CompoundTag> {
-        var v = b.implicitCast(this.type)
-        if(!v.isError){
-            v = b
-        }
-        hasAssigned = true
-        when(v){
-            is JsonText -> assignCommand(v)
-            else -> LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+    override fun doAssign(b: Var<*>): NBTBasedData<CompoundTag> {
+        when (b) {
+            is JsonText -> assignCommand(b)
+            else -> LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
         }
         return this
     }

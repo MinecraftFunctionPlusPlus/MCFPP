@@ -46,7 +46,7 @@ open class Item: ResourceID {
      */
     constructor(b: Item) : super(b)
 
-    override fun onAssign(b: Var<*>): Item {
+    override fun doAssign(b: Var<*>): Item {
         return super.assign(b) as Item
     }
 

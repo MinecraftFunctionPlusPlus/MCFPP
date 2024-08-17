@@ -61,20 +61,15 @@ open class EnumVar : Var<EnumVar> {
         type = enum.getType()
     }
 
-    override fun onAssign(b: Var<*>): EnumVar {
-        var v = b.implicitCast(this.type)
-        if(!v.isError){
-            v = b
-        }
-        hasAssigned = true
-        return when(v){
+    override fun doAssign(b: Var<*>): EnumVar {
+        return when(b){
             is EnumVar -> {
-                val i = this.getIntVar().assign(v.getIntVar()) as MCInt
+                val i = this.getIntVar().assign(b.getIntVar()) as MCInt
                 if(i is MCIntConcrete) EnumVarConcrete(i, enum)
                 else EnumVar(i, enum)
             }
             else -> {
-                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
                 this
             }
         }

@@ -46,7 +46,7 @@ open class LootTableFunction: ResourceID {
      */
     constructor(b: LootTableFunction) : super(b)
 
-    override fun onAssign(b: Var<*>): LootTableFunction {
+    override fun doAssign(b: Var<*>): LootTableFunction {
         return super.assign(b) as LootTableFunction
     }
 

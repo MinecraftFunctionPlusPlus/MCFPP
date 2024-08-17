@@ -10,7 +10,7 @@ class UnknownVar : Var<UnknownVar> {
 
     constructor(identifier: String):super(identifier)
 
-    override fun onAssign(b: Var<*>) : UnknownVar {
+    override fun doAssign(b: Var<*>) : UnknownVar {
         hasAssigned = true
         return this
     }

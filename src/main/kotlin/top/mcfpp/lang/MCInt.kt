@@ -1,13 +1,11 @@
 package top.mcfpp.lang
 
-import net.querz.nbt.tag.IntTag
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPClassType
-import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.*
@@ -50,18 +48,14 @@ open class MCInt : MCNumber<Int> {
 
     override var type: MCFPPType = MCFPPBaseType.Int
 
-    override fun onAssign(b: Var<*>) : MCInt {
-        var v = b.implicitCast(this.type)
-        if(!v.isError){
-            v = b
-        }
-        hasAssigned = true
-        return when (v) {
+    override fun doAssign(b: Var<*>) : MCInt {
+        return when (b) {
             is MCInt -> {
-                assignCommand(v)
+                assignCommand(b)
             }
+
             else -> {
-                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
                 this
             }
         }

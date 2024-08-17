@@ -1,12 +1,9 @@
 package top.mcfpp.lang
 
 import net.querz.nbt.tag.CompoundTag
-import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
-import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
-import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
@@ -58,20 +55,16 @@ open class RangeVar: Var<RangeVar> {
         point = b.point
     }
 
-    override fun onAssign(b: Var<*>): RangeVar {
-        var v = b.implicitCast(this.type)
-        if(!v.isError){
-            v = b
-        }
-        hasAssigned = true
-        when(v){
+    override fun doAssign(b: Var<*>): RangeVar {
+        when (b) {
             is RangeVar -> {
-                this.point = v.point
-                if(point and 2 != 0.toByte()) left.assign(v.left)
-                if(point and 1 != 0.toByte()) right.assign(v.right)
+                this.point = b.point
+                if (point and 2 != 0.toByte()) left.assign(b.left)
+                if (point and 1 != 0.toByte()) right.assign(b.right)
             }
+
             else -> {
-                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
             }
         }
         return this
@@ -156,8 +149,8 @@ class RangeVarConcrete: MCFPPValue<Pair<Float?, Float?>>, RangeVar{
         if(value.first != null && value.second != null && value.second!! < value.first!!){
             LogProcessor.error("Left value should be smaller than right value")
         }
-        value.first?.let { left.assign(MCFloatConcrete(identifier + "_left", it)) }
-        value.second?.let { right.assign(MCFloatConcrete(identifier + "_right", it)) }
+        value.first?.let { left.assign(MCFloatConcrete(it, identifier + "_left")) }
+        value.second?.let { right.assign(MCFloatConcrete(it, identifier + "_right")) }
     }
 
     /**
@@ -173,8 +166,8 @@ class RangeVarConcrete: MCFPPValue<Pair<Float?, Float?>>, RangeVar{
         if(value.first != null && value.second != null && value.second!! < value.first!!){
             LogProcessor.error("Left value should be smaller than right value")
         }
-        value.first?.let { left.assign(MCFloatConcrete(identifier + "_left", it)) }
-        value.second?.let { right.assign(MCFloatConcrete(identifier + "_right", it)) }
+        value.first?.let { left.assign(MCFloatConcrete(it, identifier + "_left")) }
+        value.second?.let { right.assign(MCFloatConcrete(it, identifier + "_right")) }
     }
 
     constructor(range: RangeVar, value: Pair<Float?, Float?>) : super(range){
@@ -185,14 +178,14 @@ class RangeVarConcrete: MCFPPValue<Pair<Float?, Float?>>, RangeVar{
         if(value.first != null && value.second != null && value.second!! < value.first!!){
             LogProcessor.error("Left value should be smaller than right value")
         }
-        value.first?.let { left.assign(MCFloatConcrete(identifier + "_left", it)) }
-        value.second?.let { right.assign(MCFloatConcrete(identifier + "_right", it)) }
+        value.first?.let { left.assign(MCFloatConcrete(it, identifier + "_left")) }
+        value.second?.let { right.assign(MCFloatConcrete(it, identifier + "_right")) }
     }
 
     constructor(range: RangeVarConcrete) : super(range){
         this.value = range.value
-        value.first?.let { left.assign(MCFloatConcrete(identifier + "_left", it)) }
-        value.second?.let { right.assign(MCFloatConcrete(identifier + "_right", it)) }
+        value.first?.let { left.assign(MCFloatConcrete(it, identifier + "_left")) }
+        value.second?.let { right.assign(MCFloatConcrete(it, identifier + "_right")) }
     }
 
     override fun toDynamic(replace: Boolean): Var<*> {

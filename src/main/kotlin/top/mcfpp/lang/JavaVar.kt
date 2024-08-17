@@ -1,9 +1,10 @@
 package top.mcfpp.lang
 
 import net.querz.nbt.tag.CompoundTag
+import net.querz.nbt.tag.ListTag
+import net.querz.nbt.tag.StringTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.OperationNotImplementException
-import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.*
@@ -69,18 +70,14 @@ class JavaVar : Var<JavaVar>, MCFPPValue<Any?>{
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun onAssign(b: Var<*>): JavaVar {
-        var v = b.implicitCast(this.type)
-        if(!v.isError){
-            v = b
-        }
-        hasAssigned = true
-        when (v) {
+    override fun doAssign(b: Var<*>): JavaVar {
+        when (b) {
             is JavaVar -> {
-                this.value = v.value
+                this.value = b.value
             }
+
             else -> {
-                this.value = v
+                this.value = b
             }
         }
         return this
@@ -213,6 +210,27 @@ class JavaVar : Var<JavaVar>, MCFPPValue<Any?>{
             val re = ArrayList<Any>()
             for (i in v){
                 re.add(mcToJava(i))
+            }
+            return re
+        }
+
+        fun javaToMC(v : Any) : Var<*>{
+            return when(v){
+                is Int -> MCIntConcrete(v)
+                is Float -> MCFloatConcrete(v)
+                is Boolean -> MCBoolConcrete(v)
+                is String -> MCStringConcrete(StringTag(v))
+                is CompoundTag -> NBTBasedDataConcrete(v)
+                //is ArrayList<*> -> NBTListConcrete()
+                //is HashMap<*,*> -> NBTDictionaryConcrete(v.map { javaToMC(it.key!!) to javaToMC(it.value!!) }.toMap())
+                else -> JavaVar(v)
+            }
+        }
+
+        fun javaToMC(v: ArrayList<Any>): ArrayList<Var<*>>{
+            val re = ArrayList<Var<*>>()
+            for (i in v){
+                re.add(javaToMC(i))
             }
             return re
         }

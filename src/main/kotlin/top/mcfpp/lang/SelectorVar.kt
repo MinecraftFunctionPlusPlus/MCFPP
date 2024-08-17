@@ -71,21 +71,18 @@ open class SelectorVar : NBTBasedData<StringTag> {
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun onAssign(b: Var<*>): SelectorVar {
-        var v = b.implicitCast(this.type)
-        if(v.isError){
-            v = b
-        }
-        hasAssigned = true
-        when(v){
+    override fun doAssign(b: Var<*>): SelectorVar {
+        when (b) {
             is SelectorVarConcrete -> {
-                replacedBy(SelectorVarConcrete(this, v.value))
+                replacedBy(SelectorVarConcrete(this, b.value))
             }
+
             is SelectorVar -> {
-                assignCommand(v)
+                assignCommand(b)
             }
+
             else -> {
-                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
             }
         }
         return this
@@ -182,7 +179,7 @@ class SelectorVarConcrete : MCFPPValue<EntitySelector>, SelectorVar{
         this.value = value
     }
 
-    override fun onAssign(b: Var<*>): SelectorVarConcrete {
+    override fun doAssign(b: Var<*>): SelectorVarConcrete {
         when (b) {
             is SelectorVarConcrete -> {
                 this.value = b.value

@@ -2,7 +2,6 @@ package top.mcfpp.lang
 
 import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.StringTag
-import net.querz.nbt.tag.Tag
 import top.mcfpp.Project
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
@@ -84,15 +83,10 @@ open class MCString : NBTBasedData<StringTag> {
 
     @Override
     @Throws(VariableConverseException::class)
-    override fun onAssign(b: Var<*>): MCString {
-        var v = b.implicitCast(this.type)
-        if(!v.isError){
-            v = b
-        }
-        hasAssigned = true
-        when(v){
-            is MCString -> return assignCommand(v) as MCString
-            else -> LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+    override fun doAssign(b: Var<*>): MCString {
+        when (b) {
+            is MCString -> return assignCommand(b) as MCString
+            else -> LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
         }
         return this
     }

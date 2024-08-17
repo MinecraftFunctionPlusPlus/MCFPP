@@ -17,6 +17,8 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 
 /**
@@ -51,45 +53,40 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     }
 
 
-    override fun onAssign(b: Var<*>): DataTemplateObject {
-        var v = b.implicitCast(this.type)
-        if(!v.isError){
-            v = b
-        }
-        hasAssigned = true
-        when(v){
+    override fun doAssign(b: Var<*>): DataTemplateObject {
+        when (b) {
             is NBTBasedDataConcrete<*> -> {
-                if(v.value !is CompoundTag){
-                    throw VariableConverseException()
-                }
-                if(templateType.checkCompoundStruct(v.value as CompoundTag)){
-                    this.assignMembers(v.value as CompoundTag)
+                if (b.value !is CompoundTag) {
+                    LogProcessor.error("Not a compound tag: ${b.value}")
                     return this
-                }else{
-                    throw VariableConverseException()
+                }
+                if (templateType.checkCompoundStruct(b.value as CompoundTag)) {
+                    this.assignMembers(b.value as CompoundTag)
+                    return this
+                } else {
+                    LogProcessor.error("Error compound struct: ${b.value}")
+                    return this
                 }
             }
 
             is DataTemplateObjectConcrete -> {
-                if(templateType.checkCompoundStruct(v.value)){
-                    this.assignMembers(v.value)
+                if (templateType.checkCompoundStruct(b.value)) {
+                    this.assignMembers(b.value)
                     return this
-                }else{
-                    throw VariableConverseException()
+                } else {
+                    LogProcessor.error("Error compound struct: ${b.value}")
+                    return this
                 }
             }
 
             is DataTemplateObject -> {
-                if (!v.templateType.canCastTo(templateType)) {
-                    throw VariableConverseException()
-                }else{
-                    assignCommand(v)
-                    return this
-                }
+                assignCommand(b)
+                return this
             }
 
             else -> {
-                throw VariableConverseException()
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, this.type.typeName))
+                return this
             }
         }
     }

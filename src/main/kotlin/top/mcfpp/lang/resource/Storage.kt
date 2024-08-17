@@ -46,7 +46,7 @@ open class Storage: ResourceID {
      */
     constructor(b: Storage) : super(b)
 
-    override fun onAssign(b: Var<*>): Storage {
+    override fun doAssign(b: Var<*>): Storage {
         return super.assign(b) as Storage
     }
 

@@ -46,7 +46,7 @@ open class BlockEntity: ResourceID {
      */
     constructor(b: BlockEntity) : super(b)
 
-    override fun onAssign(b: Var<*>): BlockEntity {
+    override fun doAssign(b: Var<*>): BlockEntity {
         return super.assign(b) as BlockEntity
     }
 

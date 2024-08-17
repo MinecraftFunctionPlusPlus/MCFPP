@@ -46,7 +46,7 @@ open class PotionEffect: ResourceID {
      */
     constructor(b: PotionEffect) : super(b)
 
-    override fun onAssign(b: Var<*>): PotionEffect {
+    override fun doAssign(b: Var<*>): PotionEffect {
         return super.assign(b) as PotionEffect
     }
 

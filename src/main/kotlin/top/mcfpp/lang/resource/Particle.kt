@@ -46,7 +46,7 @@ open class Particle: ResourceID {
      */
     constructor(b: Particle) : super(b)
 
-    override fun onAssign(b: Var<*>): Particle {
+    override fun doAssign(b: Var<*>): Particle {
         return super.assign(b) as Particle
     }
 

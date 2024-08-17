@@ -46,7 +46,7 @@ open class Enchant: ResourceID {
      */
     constructor(b: Enchant) : super(b)
 
-    override fun onAssign(b: Var<*>): Enchant {
+    override fun doAssign(b: Var<*>): Enchant {
         return super.assign(b) as Enchant
     }
 

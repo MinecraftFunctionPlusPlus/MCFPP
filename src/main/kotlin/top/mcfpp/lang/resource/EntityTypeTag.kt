@@ -46,7 +46,7 @@ open class EntityTypeTag: ResourceID {
      */
     constructor(b: EntityTypeTag) : super(b)
 
-    override fun onAssign(b: Var<*>): EntityTypeTag {
+    override fun doAssign(b: Var<*>): EntityTypeTag {
         return super.assign(b) as EntityTypeTag
     }
 

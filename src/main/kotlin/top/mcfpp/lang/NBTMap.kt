@@ -65,7 +65,7 @@ open class NBTMap : NBTDictionary{
         this.genericType = b.genericType
     }
 
-    override fun onAssign(b: Var<*>): NBTMap {
+    override fun doAssign(b: Var<*>): NBTMap {
         return super.assign(b) as NBTMap
     }
 

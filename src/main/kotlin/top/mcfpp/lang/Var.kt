@@ -158,7 +158,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
             v = b
         }
         hasAssigned = true
-        val re = onAssign(v)
+        val re = doAssign(v)
         parent?.onMemberChanged(re)
         return re
     }
@@ -168,7 +168,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
      * @param b 变量的对象
      */
     @Throws(VariableConverseException::class)
-    protected abstract fun onAssign(b: Var<*>) : Self
+    protected abstract fun doAssign(b: Var<*>) : Self
 
     /**
      * 将这个变量强制转换为一个类型

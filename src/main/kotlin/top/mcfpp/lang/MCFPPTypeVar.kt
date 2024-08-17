@@ -18,7 +18,7 @@ open class MCFPPTypeVar : Var<MCFPPTypeVar>, MCFPPValue<MCFPPType> {
         this.value = type
     }
 
-    override fun onAssign(b: Var<*>) : MCFPPTypeVar {
+    override fun doAssign(b: Var<*>) : MCFPPTypeVar {
         if(b is MCFPPTypeVar){
             this.value = b.value
             hasAssigned = true

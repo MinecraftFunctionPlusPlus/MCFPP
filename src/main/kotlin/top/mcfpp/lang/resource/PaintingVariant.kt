@@ -46,7 +46,7 @@ open class PaintingVariant: ResourceID {
      */
     constructor(b: PaintingVariant) : super(b)
 
-    override fun onAssign(b: Var<*>): PaintingVariant {
+    override fun doAssign(b: Var<*>): PaintingVariant {
         return super.assign(b) as PaintingVariant
     }
 

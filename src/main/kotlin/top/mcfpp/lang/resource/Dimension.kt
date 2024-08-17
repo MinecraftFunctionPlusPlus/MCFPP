@@ -46,7 +46,7 @@ open class Dimension: ResourceID {
      */
     constructor(b: Dimension) : super(b)
 
-    override fun onAssign(b: Var<*>): Dimension {
+    override fun doAssign(b: Var<*>): Dimension {
         return super.assign(b) as Dimension
     }
 

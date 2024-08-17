@@ -64,31 +64,27 @@ open class NBTList : NBTBasedData<ListTag<*>> {
         this.genericType = (type as MCFPPListType).generic
     }
 
-    override fun onAssign(b: Var<*>): NBTList {
-        var v = b.implicitCast(this.type)
-        if(!v.isError){
-            v = b
-        }
-        hasAssigned = true
-        return when(v){
-            is NBTList -> assignCommand(v)
+    override fun doAssign(b: Var<*>): NBTList {
+        return when (b) {
+            is NBTList -> assignCommand(b)
             is NBTBasedDataConcrete<*> -> {
-                if(v.nbtType == this.nbtType){
-                    assignCommand(v as NBTBasedDataConcrete<ListTag<*>>)
-                }else{
+                if (b.nbtType == this.nbtType) {
+                    assignCommand(b as NBTBasedDataConcrete<ListTag<*>>)
+                } else {
                     throw VariableConverseException()
                 }
             }
+
             is NBTBasedData<*> -> {
-                if(v.nbtType == this.nbtType){
-                    assignCommand(v as NBTBasedData<ListTag<*>>)
-                }else{
+                if (b.nbtType == this.nbtType) {
+                    assignCommand(b as NBTBasedData<ListTag<*>>)
+                } else {
                     throw VariableConverseException()
                 }
             }
 
             else -> {
-                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
                 this
             }
         }

@@ -22,7 +22,7 @@ class ReturnedMCBool(val parentFunction: Function) : MCBool() {
         this.isImport = false
     }
 
-    override fun onAssign(b: Var<*>): MCBool {
+    override fun doAssign(b: Var<*>): MCBool {
         LogProcessor.error("The bool type returned by the function is read-only")
         throw Exception()
     }

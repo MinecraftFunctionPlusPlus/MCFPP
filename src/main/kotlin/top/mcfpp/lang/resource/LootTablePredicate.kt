@@ -46,7 +46,7 @@ open class LootTablePredicate: ResourceID {
      */
     constructor(b: LootTablePredicate) : super(b)
 
-    override fun onAssign(b: Var<*>): LootTablePredicate {
+    override fun doAssign(b: Var<*>): LootTablePredicate {
         return super.assign(b) as LootTablePredicate
     }
 

@@ -69,18 +69,13 @@ open class EntityVar : NBTBasedData<IntArrayTag>{
         return SelectorVar.data.getFunction(key, readOnlyParams, normalParams) to true
     }
 
-    override fun onAssign(b: Var<*>): EntityVar {
-        var v = b.implicitCast(this.type)
-        if(!v.isError){
-            v = b
-        }
-        hasAssigned = true
-        when (v) {
+    override fun doAssign(b: Var<*>): EntityVar {
+        when (b) {
             is EntityVar -> {
-                assignCommand(v)
+                assignCommand(b)
             }
             else -> {
-                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(v.type.typeName, type.typeName))
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
             }
         }
         return this
