@@ -792,7 +792,6 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val `var` = Var.build(ctx.Identifier().text, MCFPPType.parseFromContext(ctx.type(), typeScope))
         //是否是静态的
         `var`.isStatic = isStatic
-        //只有可能是结构体成员
         if (DataTemplate.currTemplate!!.field.containVar(ctx.Identifier().text)
         ) {
             LogProcessor.error("Duplicate defined variable name:" + ctx.Identifier().text)

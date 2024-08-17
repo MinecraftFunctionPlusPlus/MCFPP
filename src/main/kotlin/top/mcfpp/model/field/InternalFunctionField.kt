@@ -51,7 +51,7 @@ class InternalFunctionField: FunctionField {
         return super.putVar(key, `var`, forced)
     }
 
-    override fun forEachVar(action: (Var<*>) -> Any?) {
+    override fun forEachVar(action: (Var<*>) -> Unit) {
         for (key in fieldVarSet){
             action(getVar(key)!!)
         }

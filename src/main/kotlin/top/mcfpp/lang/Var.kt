@@ -80,7 +80,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
     /**
      * 访问修饰符
      */
-    override var accessModifier: Member.AccessModifier = Member.AccessModifier.PRIVATE
+    override var accessModifier: Member.AccessModifier = Member.AccessModifier.PUBLIC
 
     /**
      * 变量的类型
@@ -159,7 +159,6 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
         }
         hasAssigned = true
         val re = doAssign(v)
-        parent?.onMemberChanged(re)
         return re
     }
 
@@ -438,6 +437,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
         if(other !is Var<*>) return false
         if(this.parent != other.parent) return false
         if(this.name != other.name) return false
+        if(this is MCFPPValue<*> != other is MCFPPValue<*>) return false
         return true
     }
 
@@ -455,16 +455,14 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
     fun replacedBy(v : Var<*>){
         if(v == this) return
         if(parent == null){
-            Function.currFunction.field.putVar(v.identifier, v, true)
+            Function.currFunction.field.putVar(identifier, v, true)
         }else{
             v.parent = this.parent
-            //TODO
             when (val parent = parent){
                 is ClassPointer -> {
-                    parent.clazz.field.putVar(v.identifier, v, true)
+                    //TODO 类暂不支持替换
                 }
                 is MCFPPTypeVar -> {
-                    TODO()
                     when(val type = parent.type){
                         is MCFPPClassType ->{
                             type.cls.field.putVar(v.identifier, v, true)
@@ -476,10 +474,11 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
                     }
                 }
                 is DataTemplateObject -> {
-                    parent.instanceField.putVar(v.identifier, v, true)
+                    parent.instanceField.putVar(identifier, v, true)
                 }
                 else -> {}
             }
+            parent?.onMemberChanged(v)
         }
     }
 

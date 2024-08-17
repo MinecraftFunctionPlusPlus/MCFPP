@@ -450,6 +450,13 @@ class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData<T>, MCFPPValue<T> {
     }
 
     override fun implicitCast(type: MCFPPType): Var<*> {
+        if(type is MCFPPDataTemplateType && value is CompoundTag){
+            return if(type.template.checkCompoundStruct(value as CompoundTag)){
+                DataTemplateObjectConcrete(type.template, value as CompoundTag)
+            }else{
+                buildCastErrorVar(type)
+            }
+        }
         val t = JavaVar.javaToMC(value.toJava())
         if(t.type == type) return t
         return buildCastErrorVar(type)

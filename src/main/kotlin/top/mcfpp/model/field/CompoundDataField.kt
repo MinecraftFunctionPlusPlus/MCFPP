@@ -8,7 +8,6 @@ import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.Generic
-import top.mcfpp.util.LazyWrapper
 import java.util.HashMap
 
 /**
@@ -20,7 +19,7 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
     /**
      * 字段
      */
-    private val vars: HashMap<String, LazyWrapper<Var<*>>> = HashMap()
+    private val vars: HashMap<String, Var<*>> = HashMap()
 
     /**
      * 类型
@@ -33,10 +32,9 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
      * @param action 要对字段执行的操作
      * @receiver
      */
-    override fun forEachVar(action: (Var<*>) -> Any?){
+    override fun forEachVar(action: (Var<*>) -> Unit){
         for (`var` in vars.values){
-            //TODO 未检查获取变量的情况
-            action(`var`.get()!!)
+            action(`var`)
         }
     }
 
@@ -87,8 +85,8 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
         parent = field.parent
         //变量复制
         for (key in field.vars.keys) {
-            val `var`: LazyWrapper<Var<*>>? = field.vars[key]
-            vars[key] = `var`!!.clone()
+            val `var`: Var<*> = field.vars[key]!!
+            vars[key] = `var`.clone()
         }
         //函数
         functions.addAll(field.functions)
@@ -99,19 +97,19 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
     //region Var<*>
     override fun putVar(key: String, `var`: Var<*>, forced: Boolean): Boolean {
         if(forced){
-            vars[key] = LazyWrapper(`var`)
+            vars[key] = `var`
             return true
         }
         return if (vars.containsKey(key)) {
             false
         } else {
-            vars[key] = LazyWrapper(`var`)
+            vars[key] = `var`
             true
         }
     }
 
     override fun getVar(key: String): Var<*>? {
-        return vars.getOrDefault(key, null)?.get()
+        return vars.getOrDefault(key, null)
     }
 
 
@@ -119,7 +117,7 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
         get() {
             val vs = ArrayList<Var<*>>()
             for (lv in vars.values){
-                vs.add(lv.get()!!)
+                vs.add(lv)
             }
             return vs
         }
@@ -129,7 +127,7 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
     }
 
     override fun removeVar(id : String): Var<*>?{
-        return vars.remove(id)?.get()
+        return vars.remove(id)
     }
 
 //endregion

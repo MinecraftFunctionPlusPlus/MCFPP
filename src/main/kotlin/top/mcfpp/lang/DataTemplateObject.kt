@@ -4,7 +4,6 @@ import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.MCFPPDataTemplateType
 import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPNBTType
@@ -52,7 +51,6 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         instanceField = templateObject.instanceField
     }
 
-
     override fun doAssign(b: Var<*>): DataTemplateObject {
         when (b) {
             is NBTBasedDataConcrete<*> -> {
@@ -70,7 +68,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
             }
 
             is DataTemplateObjectConcrete -> {
-                if (templateType.checkCompoundStruct(b.value)) {
+                if (b.type.compoundData.canCastTo(this.templateType)) {
                     this.assignMembers(b.value)
                     return this
                 } else {
@@ -207,17 +205,15 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         if(this is DataTemplateObjectConcrete) return true
         var re = true
         instanceField.forEachVar {
-            run@{
-                if(it is DataTemplateObject){
-                    if(!it.isConcrete()) {
-                        re = false
-                        return@run
-                    }
-                }else{
-                    if (it !is MCFPPValue<*>) {
-                        re = false
-                        return@run
-                    }
+            if(it is DataTemplateObject){
+                if(!it.isConcrete()) {
+                    re = false
+                    return@forEachVar
+                }
+            }else{
+                if (it !is MCFPPValue<*>) {
+                    re = false
+                    return@forEachVar
                 }
             }
         }
@@ -236,13 +232,6 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         }
         return DataTemplateObjectConcrete(this, compoundTag)
     }
-
-    companion object{
-
-
-
-    }
-
 }
 
 class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag>{

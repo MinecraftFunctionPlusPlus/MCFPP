@@ -164,6 +164,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 if (Function.field.containVar(c.Identifier().text)) {
                     LogProcessor.error("Duplicate defined variable name:" + c.Identifier().text)
                 }
+                Function.field.putVar(`var`.identifier, `var`, true)
                 Function.addComment("field: " + ctx.type().text + " " + c.Identifier().text + if (c.expression() != null) " = " + c.expression().text else "")
                 //变量初始化
                 if (c.expression() != null) {
@@ -175,7 +176,6 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                         throw VariableConverseException(e)
                     }
                 }
-                Function.field.putVar(`var`.identifier, `var`, true)
                 when(fieldModifier){
                     "const" -> {
                         if(!`var`.hasAssigned){

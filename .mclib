@@ -1,0 +1,72 @@
+{
+	"namespaces":[
+		{
+			"id":"default",
+			"functions":[
+				
+			],
+			"classes":[
+				
+			],
+			"template":[
+				
+			],
+			"enum":[
+				
+			]
+		},
+		{
+			"id":"test",
+			"functions":[
+				{
+					"id":"main",
+					"normalParams":[
+						
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				}
+			],
+			"classes":[
+				
+			],
+			"template":[
+				{
+					"id":"Test",
+					"parents":[
+						"mcfpp.lang:DataObject"
+					],
+					"field":{
+						"vars":[
+							{
+								"id":"a",
+								"type":"int"
+							},
+							{
+								"id":"b",
+								"type":"int"
+							},
+							{
+								"id":"c",
+								"type":"int"
+							},
+							{
+								"id":"d",
+								"type":"int"
+							}
+						],
+						"functions":[
+							
+						]
+					}
+				}
+			],
+			"enum":[
+				
+			]
+		}
+	]
+}

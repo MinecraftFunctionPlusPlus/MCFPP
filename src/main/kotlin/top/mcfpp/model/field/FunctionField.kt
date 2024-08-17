@@ -113,7 +113,7 @@ open class FunctionField : IFieldWithVar, IFieldWithType {
         return vars.remove(id)
     }
 
-    override fun forEachVar(action: (Var<*>) -> Any?) {
+    override fun forEachVar(action: (Var<*>) -> Unit) {
         for (v in vars.values){
             action(v)
         }
