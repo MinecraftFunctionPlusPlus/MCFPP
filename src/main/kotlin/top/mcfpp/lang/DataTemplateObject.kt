@@ -4,8 +4,8 @@ import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.lang.type.MCFPPDataTemplateType
 import top.mcfpp.lang.type.MCFPPClassType
+import top.mcfpp.lang.type.MCFPPDataTemplateType
 import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
@@ -195,7 +195,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         }
     }
 
-    override fun onMemberChanged(member: Member) {
+    override fun onMemberVarChanged(member: Var<*>) {
         if(member is MCFPPValue<*> && isConcrete()){
             this.replacedBy(this.toConcrete())
         }
@@ -264,6 +264,10 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag>{
         return DataTemplateObject(this)
     }
 
+    override fun getTempVar(): DataTemplateObjectConcrete {
+        return DataTemplateObjectConcrete(super.getTempVar(), this.value.clone())
+    }
+
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = this.parent
 
@@ -292,15 +296,18 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag>{
         return re
     }
 
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        val re = super.getMemberVar(key, accessModifier)
-        var qwq = re.first
-        if(re.first != null) {
-            //re是已知的
-            val data = value.get(key)
-             qwq = (re.first as Var<*>).assign(NBTBasedDataConcrete(data))
+    override fun toString(): String {
+        return "[$type,value=${SNBTUtil.toSNBT(value)}]"
+    }
+
+    override fun onMemberVarChanged(member: Var<*>) {
+        if(member !is MCFPPValue<*>){
+            toDynamic(true)
+        }else{
+            val key = member.identifier
+            val data = NBTUtil.toNBT(member)
+            value.put(key, data)
         }
-        return qwq to re.second
     }
 
 }

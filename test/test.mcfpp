@@ -9,5 +9,7 @@ data Test{
 
 func main(){
     Test t = {a:1, b:2, c:3, d:4};
+    t = t[a = 100];
+    var a = @a[tag="qwq", distance=1..2]
     print(t.toText());
 }

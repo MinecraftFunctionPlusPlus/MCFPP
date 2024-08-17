@@ -9,9 +9,12 @@ import top.mcfpp.lang.type.MCFPPEnumType
 import top.mcfpp.lang.type.MCFPPGenericClassType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
-import top.mcfpp.model.*
-import top.mcfpp.model.function.Function
+import top.mcfpp.model.CanSelectMember
+import top.mcfpp.model.Class
+import top.mcfpp.model.CompoundDataCompanion
+import top.mcfpp.model.Namespace
 import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.function.UnknownFunction
@@ -20,11 +23,7 @@ import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import top.mcfpp.util.Utils
-import java.lang.StringBuilder
 import java.util.*
-import kotlin.IllegalArgumentException
-import kotlin.collections.ArrayList
-import kotlin.collections.HashMap
 import kotlin.system.exitProcess
 
 /**
@@ -535,19 +534,32 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             if (ctx.identifierSuffix() == null || ctx.identifierSuffix().size == 0) {
                 return re
             } else {
-                if(re is Indexable<*>){
-                    for (value in ctx.identifierSuffix()) {
-                        if(value.conditionalExpression() != null){
-                            //索引
-                            val index = visit(value.conditionalExpression())!!
-                            re = (re as Indexable<*>).getByIndex(index)
-                        }else{
-                            //初始化
-                            TODO()
+                for (value in ctx.identifierSuffix()) {
+                    if(value.conditionalExpression() != null){
+                        if(re !is Indexable<*>){
+                            LogProcessor.error("Cannot index ${re.type}")
+                            return UnknownVar("${re.identifier}_index_" + UUID.randomUUID())
+                        }
+                        //索引
+                        val index = visit(value.conditionalExpression())!!
+                        re = (re as Indexable<*>).getByIndex(index)
+                    }else{
+                        if(!re.isTemp) re = re.getTempVar()
+                        //初始化
+                        for (initializer in value.objectInitializer()){
+                            val id = initializer.Identifier().text
+                            val v = visit(initializer.expression())
+                            val (m, b) = re.getMemberVar(id, re.getAccess(Function.currFunction))
+                            if(!b){
+                                LogProcessor.error("Cannot access member $id")
+                            }
+                            if(m == null) {
+                                LogProcessor.error("Member $id not found")
+                                continue
+                            }
+                            m.replacedBy(m.assign(v))
                         }
                     }
-                }else{
-                    throw IllegalArgumentException("Cannot index ${re.type}")
                 }
                 return re
             }

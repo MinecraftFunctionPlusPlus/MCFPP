@@ -367,7 +367,11 @@ var
 
 identifierSuffix
     :   '[' conditionalExpression ']'
-    |   '[' Identifier '=' expression  (',' basicExpression '=' expression)* ']'
+    |   '[' objectInitializer  (',' objectInitializer)* ']'
+    ;
+
+objectInitializer
+    :   Identifier '=' expression
     ;
 
 selector

@@ -438,6 +438,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
         if(this.parent != other.parent) return false
         if(this.name != other.name) return false
         if(this is MCFPPValue<*> != other is MCFPPValue<*>) return false
+        if(this is MCFPPValue<*> && other is MCFPPValue<*> && this.value != other.value) return false
         return true
     }
 
@@ -455,7 +456,9 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
     fun replacedBy(v : Var<*>){
         if(v == this) return
         if(parent == null){
-            Function.currFunction.field.putVar(identifier, v, true)
+            if(Function.currFunction.field.containVar(identifier)){
+                Function.currFunction.field.putVar(identifier, v, true)
+            }
         }else{
             v.parent = this.parent
             when (val parent = parent){
@@ -478,7 +481,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
                 }
                 else -> {}
             }
-            parent?.onMemberChanged(v)
+            parent?.onMemberVarChanged(v)
         }
     }
 
