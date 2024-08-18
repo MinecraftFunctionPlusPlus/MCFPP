@@ -407,6 +407,15 @@ statement
     |   controlStatement ';'
     |   orgCommand
     |   returnStatement ';'
+    |   executeStatement
+    ;
+
+executeStatement
+    :   EXECUTE '(' executeContext (',' executeContext)* ')' block
+    ;
+
+executeContext
+    :   varWithSelector '=' expression
     ;
 
 orgCommand
@@ -526,6 +535,7 @@ functionReturnType
 value
     :   intValue
     |   floatValue
+    |   RelativeValue
     |   LineString
     |   boolValue
     |   multiLineStringLiteral

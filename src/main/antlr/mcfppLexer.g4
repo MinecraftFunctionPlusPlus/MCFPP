@@ -74,6 +74,7 @@ TRY:'try';
 STORE:'store';
 AS:'as';
 FROM:'from';
+EXECUTE:'execute';
 
 BREAK:'break';
 CONTINUE:'continue';
@@ -189,6 +190,11 @@ IntegerConstant: IntConstant;
 FloatConstant
     : DigitSequence NBTFloatSuffix
     | FractionalConstant ExponentPart? NBTFloatSuffix?
+    ;
+
+RelativeValue
+    :   '~' IntegerConstant
+    |   '~' FloatConstant
     ;
 
 BooleanConstant
