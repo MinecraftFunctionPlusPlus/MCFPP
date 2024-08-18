@@ -455,8 +455,8 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
 
     fun replacedBy(v : Var<*>){
         if(v == this) return
-        if(v is MCInt && v.holder != null){
-            when(val holder = v.holder){
+        if(v is MCInt && this is MCInt && holder != null){
+            when(val holder = holder){
                 is VectorVar -> {
                     holder.components.forEachIndexed { index, varr ->
                         if(varr == this){
@@ -542,6 +542,9 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
                 }
                 is MCFPPEnumType -> {
                     `var` = EnumVar(type.enum, container, identifier)
+                }
+                is MCFPPVectorType -> {
+                    `var` = VectorVar(type.dimension, container, identifier)
                 }
                 //还有模板什么的
                 else -> {

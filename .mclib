@@ -34,35 +34,7 @@
 				
 			],
 			"template":[
-				{
-					"id":"Test",
-					"parents":[
-						"mcfpp.lang:DataObject"
-					],
-					"field":{
-						"vars":[
-							{
-								"id":"a",
-								"type":"int"
-							},
-							{
-								"id":"b",
-								"type":"int"
-							},
-							{
-								"id":"c",
-								"type":"int"
-							},
-							{
-								"id":"d",
-								"type":"int"
-							}
-						],
-						"functions":[
-							
-						]
-					}
-				}
+				
 			],
 			"enum":[
 				

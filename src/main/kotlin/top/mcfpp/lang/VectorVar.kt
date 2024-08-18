@@ -60,12 +60,12 @@ open class VectorVar: Var<VectorVar>, Indexable<MCInt>, ScoreHolder {
                     LogProcessor.error("Cannot assign vector '$identifier' with different dimension '${b.identifier}'")
                 }
                 for (i in 0 until dimension){
-                    components[i].assign(b.components[i])
+                    components[i].replacedBy(components[i].assign(b.components[i]))
                 }
             }
             is MCInt -> {
                 for (i in 0 until dimension){
-                    components[i].assign(b)
+                    components[i].replacedBy(components[i].assign(b))
                 }
             }
             else -> {
