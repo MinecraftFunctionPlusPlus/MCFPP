@@ -400,6 +400,10 @@ class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData<T>, MCFPPValue<T> {
 
     override var value : T
 
+    override fun defaultValue(): T {
+        return value
+    }
+
     /**
      * 创建一个固定的int
      *

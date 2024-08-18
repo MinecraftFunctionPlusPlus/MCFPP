@@ -451,6 +451,10 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
             setJavaValue(value)
         }
 
+    override fun defaultValue(): Float {
+        return 0.0f
+    }
+
     /**
      * 创建一个固定的float
      *

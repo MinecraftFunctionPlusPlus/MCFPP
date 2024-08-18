@@ -1,7 +1,7 @@
 package top.mcfpp.lang
 
-import net.querz.nbt.tag.ByteTag
-import net.querz.nbt.tag.Tag
+import net.querz.nbt.io.SNBTUtil
+import net.querz.nbt.tag.*
 import top.mcfpp.Project
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
@@ -11,6 +11,7 @@ import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.lib.*
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
+import top.mcfpp.util.AnyTag
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
@@ -498,6 +499,34 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
 
     companion object {
 
+        fun getDefaultValue(type: MCFPPType): Tag<*> {
+            return when(type){
+                MCFPPBaseType.Int -> IntTag(0)
+                MCFPPBaseType.Bool -> ByteTag(0)
+                MCFPPBaseType.Selector -> StringTag(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES).toCommandPart().toString())
+                MCFPPBaseType.BaseEntity -> IntArrayTag(intArrayOf(0,0,0,0))
+                MCFPPBaseType.String -> StringTag("")
+                MCFPPBaseType.Float -> FloatTag(0.0f)
+                is MCFPPListType -> ListTag(AnyTag::class.java)
+                MCFPPNBTType.Dict -> CompoundTag()
+                MCFPPNBTType.Map -> CompoundTag()
+                MCFPPNBTType.NBT -> IntTag(0)
+                MCFPPBaseType.JavaVar -> IntTag(0)
+                MCFPPBaseType.Any -> IntTag(0)
+                MCFPPBaseType.Type -> StringTag("any")
+                MCFPPBaseType.JsonText -> SNBTUtil.fromSNBT("{text:\"\"}")
+                is MCFPPGenericClassType -> IntArrayTag(intArrayOf(0,0,0,0))
+                is MCFPPClassType -> IntArrayTag(intArrayOf(0,0,0,0))
+                is MCFPPDataTemplateType -> type.template.getDefaultValue()
+                is MCFPPEnumType -> IntTag(0)
+                is MCFPPVectorType -> IntArrayTag(Array(type.dimension){0}.toIntArray())
+                else -> {
+                    LogProcessor.error("Unknown type: $type")
+                    IntTag(0)
+                }
+            }
+        }
+
         fun buildCastErrorVar(type: MCFPPType): Var<*>{
             val qwq = build("error_cast_" + UUID.randomUUID().toString(), type, Function.currFunction)
             qwq.isError = true
@@ -514,20 +543,20 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
         fun build(identifier: String, type: MCFPPType, container: FieldContainer): Var<*>{
             val `var`: Var<*>
             when (type) {
-                MCFPPBaseType.Int -> `var` = MCInt(container,identifier)
-                MCFPPBaseType.Bool -> `var` = MCBool(container, identifier)
+                MCFPPBaseType.Int -> `var` = MCIntConcrete(container, 0, identifier)
+                MCFPPBaseType.Bool -> `var` = MCBoolConcrete(container, false, identifier)
                 MCFPPBaseType.Selector -> TODO()
                 MCFPPBaseType.BaseEntity -> TODO()
-                MCFPPBaseType.String -> `var` = MCString(container, identifier)
+                MCFPPBaseType.String -> `var` = MCStringConcrete(container, StringTag(""), identifier)
                 MCFPPBaseType.Float -> TODO()
-                is MCFPPListType -> `var` = NBTList(container, identifier, type.generic)
+                is MCFPPListType -> `var` = NBTListConcrete<Any>(container, ListTag(AnyTag::class.java), identifier, type.generic)
                 MCFPPNBTType.Dict -> TODO()
                 MCFPPNBTType.Map -> TODO()
-                MCFPPNBTType.NBT -> `var` = NBTBasedData<Tag<*>>(container, identifier)
+                MCFPPNBTType.NBT -> `var` = NBTBasedDataConcrete<Tag<*>>(container, IntTag(0), identifier)
                 MCFPPBaseType.JavaVar -> `var` = JavaVar(null,identifier)
                 MCFPPBaseType.Any -> `var` = MCAny(container, identifier)
                 MCFPPBaseType.Type -> `var` = MCFPPTypeVar(identifier = identifier)
-                MCFPPBaseType.JsonText -> `var` = JsonText(container, identifier)
+                MCFPPBaseType.JsonText -> `var` = JsonTextConcrete(container, PlainChatComponent(""), identifier)
                 is MCFPPGenericClassType -> {
                     `var` = ClassPointer(type.cls, identifier)
                 }
@@ -563,45 +592,43 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
          * @return
          */
         fun build(identifier: String, type: MCFPPType): Var<*>{
-            val `var`: Var<*>
-            when (type) {
-                MCFPPBaseType.Int -> `var` = MCInt(identifier)
-                MCFPPBaseType.Bool -> `var` = MCBool(identifier)
-                MCFPPBaseType.Selector -> TODO()
-                MCFPPBaseType.BaseEntity -> TODO()
-                MCFPPBaseType.String -> `var` = MCString(identifier)
-                MCFPPBaseType.Float -> TODO()
-                is MCFPPListType -> `var` = NBTList(identifier, type.generic)
-                MCFPPNBTType.Dict -> TODO()
-                MCFPPNBTType.Map -> TODO()
-                MCFPPNBTType.NBT -> `var` = NBTBasedData<Tag<*>>(identifier)
-                MCFPPBaseType.JavaVar -> `var` = JavaVar(null,identifier)
-                MCFPPBaseType.Any -> `var` = MCAny(identifier)
-                MCFPPBaseType.Type -> `var` = MCFPPTypeVar(identifier = identifier)
-                MCFPPBaseType.JsonText -> `var` = JsonText(identifier)
+            return when (type) {
+                MCFPPBaseType.Int -> MCIntConcrete(0, identifier)
+                MCFPPBaseType.Bool -> MCBoolConcrete(false, identifier)
+                MCFPPBaseType.Selector -> SelectorVarConcrete(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES), identifier)
+                MCFPPBaseType.BaseEntity -> EntityVarConcrete(IntArrayTag(intArrayOf(0,0,0,0)))
+                MCFPPBaseType.String -> MCStringConcrete(StringTag(""), identifier)
+                MCFPPBaseType.Float -> MCFloatConcrete(0.0f, identifier)
+                is MCFPPListType -> NBTListConcrete<Any>(ListTag(AnyTag::class.java), identifier, type.generic)
+                MCFPPNBTType.Dict -> NBTDictionaryConcrete(CompoundTag(), identifier)
+                is MCFPPMapType -> NBTMapConcrete(CompoundTag(), identifier, type.generic)
+                MCFPPNBTType.NBT -> NBTBasedDataConcrete<Tag<*>>(IntTag(0), identifier)
+                MCFPPBaseType.JavaVar -> JavaVar(null,identifier)
+                MCFPPBaseType.Any -> MCAnyConcrete(MCIntConcrete(0), identifier)
+                MCFPPBaseType.Type -> MCFPPTypeVar(identifier = identifier)
+                MCFPPBaseType.JsonText -> JsonTextConcrete(PlainChatComponent(""), identifier)
                 is MCFPPGenericClassType -> {
-                    `var` = ClassPointer(type.cls, identifier)
+                    ClassPointer(type.cls, identifier)
                 }
                 is MCFPPClassType ->{
-                    `var` = ClassPointer(type.cls, identifier)
+                    ClassPointer(type.cls, identifier)
                 }
                 is MCFPPDataTemplateType -> {
                     //数据模板
-                    `var` = DataTemplateObject(type.template, identifier)
+                    DataTemplateObjectConcrete(type.template, type.template.getDefaultValue(), identifier)
                 }
                 is MCFPPEnumType -> {
-                    `var` = EnumVar(type.enum, identifier)
+                    EnumVar(type.enum, identifier)
                 }
                 is MCFPPVectorType -> {
-                    `var` = VectorVar(type.dimension, identifier)
+                    VectorVar(type.dimension, identifier)
                 }
                 //还有模板什么的
                 else -> {
                     LogProcessor.error("Unknown type: $type")
-                    `var` = UnknownVar(identifier)
+                    UnknownVar(identifier)
                 }
             }
-            return `var`
         }
 
         /**

@@ -202,6 +202,10 @@ class VectorVarConcrete : VectorVar, MCFPPValue<Array<Int>>{
 
     override var value: Array<Int>
 
+    override fun defaultValue(): Array<Int> {
+        return Array(dimension) { 0 }
+    }
+
     /**
      * 创建一个固定的目标选择器
      *

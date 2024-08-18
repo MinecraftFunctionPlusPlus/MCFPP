@@ -1,6 +1,23 @@
 namespace test;
 
+data Test{
+    int a;
+    int b;
+    int c;
+    int d;
+}
+
+func rayCast(Action operation){
+    if(Context.isSolidBlock()){
+        operation();
+    }
+    execute(pos.Y = ~0.1) {
+        rayCast(operation);
+    }
+}
+
 func main(){
-    vec3 a = [0,1,2];
-    print(a[0]);
+    Test t = {a:1, b:2, c:3, d:4};
+    t = t[a = 100];
+    print(t.toText());
 }

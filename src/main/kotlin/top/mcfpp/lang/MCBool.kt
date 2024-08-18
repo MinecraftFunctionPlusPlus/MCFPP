@@ -240,6 +240,10 @@ class MCBoolConcrete : MCBool, MCFPPValue<Boolean>{
 
     override var value: Boolean
 
+    override fun defaultValue(): Boolean {
+        return false
+    }
+
     /**
      * 创建一个固定的bool
      *

@@ -151,6 +151,10 @@ class SelectorVarConcrete : MCFPPValue<EntitySelector>, SelectorVar{
 
     override var value: EntitySelector
 
+    override fun defaultValue(): EntitySelector {
+        return EntitySelector(SelectorType.ALL_ENTITIES)
+    }
+
     /**
      * 创建一个固定的目标选择器
      *

@@ -424,6 +424,10 @@ class MCIntConcrete : MCInt, MCFPPValue<Int>{
 
     override var value: Int
 
+    override fun defaultValue(): Int {
+        return 0
+    }
+
     /**
      * 创建一个固定的int
      *

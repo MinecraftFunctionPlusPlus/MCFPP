@@ -141,6 +141,10 @@ class RangeVarConcrete: MCFPPValue<Pair<Float?, Float?>>, RangeVar{
 
     override var value: Pair<Float?, Float?>
 
+    override fun defaultValue(): Pair<Float?, Float?> {
+        return Pair(0f, null)
+    }
+
     /**
      * 创建一个固定的range
      *

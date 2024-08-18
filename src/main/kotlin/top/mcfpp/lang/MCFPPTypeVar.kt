@@ -14,6 +14,10 @@ open class MCFPPTypeVar : Var<MCFPPTypeVar>, MCFPPValue<MCFPPType> {
 
     override var type: MCFPPType = MCFPPBaseType.Type
 
+    override fun defaultValue(): MCFPPType {
+        return MCFPPBaseType.Any
+    }
+
     constructor(type: MCFPPType = MCFPPBaseType.Any, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
         this.value = type
     }

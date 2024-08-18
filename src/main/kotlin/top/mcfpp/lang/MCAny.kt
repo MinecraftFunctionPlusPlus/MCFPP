@@ -200,6 +200,10 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>>{
 
     override var value: Var<*>
 
+    override fun defaultValue(): Var<*> {
+        return MCIntConcrete(0, "any_default")
+    }
+
     /**
      * 创建一个固定的int
      *

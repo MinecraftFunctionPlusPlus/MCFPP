@@ -36,6 +36,10 @@ class JavaVar : Var<JavaVar>, MCFPPValue<Any?>{
 
     override var type: MCFPPType = MCFPPBaseType.JavaVar
 
+    override fun defaultValue(): Any? {
+        return null
+    }
+
     /**
      * 创建一个固定的JavaVar
      *

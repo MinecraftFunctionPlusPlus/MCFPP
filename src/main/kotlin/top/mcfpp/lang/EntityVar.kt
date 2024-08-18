@@ -85,11 +85,16 @@ class EntityVarConcrete: EntityVar, MCFPPValue<IntArrayTag>{
 
     override var value: IntArrayTag
 
-    constructor(curr: FieldContainer, value: IntArrayTag) : super(curr){
+    override fun defaultValue(): IntArrayTag {
+        return IntArrayTag(intArrayOf(0,0,0,0))
+    }
+
+    constructor(curr: FieldContainer, value: IntArrayTag, identifier: String = UUID.randomUUID().toString()) : super(curr, identifier){
         this.value = value
     }
 
-    constructor(value: IntArrayTag) : super(){
+
+    constructor(value: IntArrayTag, identifier: String = UUID.randomUUID().toString()) : super(identifier){
         this.value = value
     }
 

@@ -2,13 +2,18 @@ package top.mcfpp.model
 
 import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.Project
+import top.mcfpp.lang.DataTemplateObject
 import top.mcfpp.lang.MCAny
+import top.mcfpp.lang.UnknownVar
+import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPDataTemplateType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.mni.DataObjectData
 import top.mcfpp.mni.MCAnyData
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.Constructor
+import top.mcfpp.model.function.Function
+import top.mcfpp.util.LogProcessor
 
 /**
  * 结构体是一种和类的语法极为相似的数据结构。在结构体中，只能有int类型的数据，或者说记分板的数据作为结构体的成员。
@@ -24,6 +29,8 @@ import top.mcfpp.model.function.Constructor
  * 除此之外，结构体是一种值类型的变量，而不是引用类型。因此在赋值的时候会把整个结构体进行一次赋值。
  */
 open class DataTemplate : FieldContainer, CompoundData {
+
+    private val reference: ArrayList<DataTemplate> = ArrayList()
 
     /**
      * 获取这个容器中变量应该拥有的前缀
@@ -63,6 +70,38 @@ open class DataTemplate : FieldContainer, CompoundData {
     override fun isSub(compoundData: CompoundData): Boolean {
         if(compoundData == baseDataTemplate) return true
         return super.isSub(compoundData)
+    }
+
+    fun getDefaultValue(): CompoundTag{
+        val tag = CompoundTag()
+        for (member in field.allVars){
+            tag.put(member.identifier, Var.getDefaultValue(member.type))
+        }
+        return tag
+    }
+
+    /**
+     * 向这个类中添加一个成员
+     * @param member 要添加的成员
+     */
+    override fun addMember(member: Member): Boolean {
+        return if (member is Function) {
+            field.addFunction(member, false)
+        } else if (member is Var<*>) {
+            if(member is DataTemplateObject){
+                if(ifInfinitiveReference(member.templateType)) {
+                    LogProcessor.error("Infinitive reference: ${member.templateType.identifier} -> ${this.identifier}")
+                    return field.putVar(member.identifier, UnknownVar(member.identifier))
+                }
+            }
+            field.putVar(member.identifier, member)
+        } else {
+            TODO()
+        }
+    }
+
+    fun ifInfinitiveReference(template: DataTemplate): Boolean{
+        return template == this && reference.any { it == template || it.ifInfinitiveReference(template) }
     }
 
     companion object{

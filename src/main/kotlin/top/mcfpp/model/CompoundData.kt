@@ -99,7 +99,7 @@ open class CompoundData : FieldContainer, Serializable {
      * 向这个类中添加一个成员
      * @param member 要添加的成员
      */
-    fun addMember(member: Member): Boolean {
+    open fun addMember(member: Member): Boolean {
         return if (member is Function) {
             field.addFunction(member, false)
         } else if (member is Var<*>) {

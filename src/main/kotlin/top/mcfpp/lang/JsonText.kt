@@ -7,6 +7,7 @@ import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.lib.ChatComponent
+import top.mcfpp.lib.PlainChatComponent
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
@@ -115,6 +116,10 @@ open class JsonText : NBTBasedData<CompoundTag> {
 class JsonTextConcrete : MCFPPValue<ChatComponent>, JsonText {
 
     override var value: ChatComponent
+
+    override fun defaultValue(): ChatComponent {
+        return PlainChatComponent("")
+    }
 
     /**
      * 创建一个固定的int

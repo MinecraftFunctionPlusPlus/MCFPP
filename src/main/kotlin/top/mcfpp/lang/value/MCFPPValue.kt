@@ -14,4 +14,6 @@ interface MCFPPValue<T> {
      * 的是未被跟踪的变量
      */
     fun toDynamic(replace : Boolean): Var<*>
+
+    fun defaultValue(): T
 }

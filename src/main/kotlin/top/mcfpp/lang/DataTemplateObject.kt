@@ -241,6 +241,10 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag>{
 
     override var value: CompoundTag
 
+    override fun defaultValue(): CompoundTag {
+        return templateType.getDefaultValue()
+    }
+
     /**
      * 创建一个固定的DataTemplate
      *

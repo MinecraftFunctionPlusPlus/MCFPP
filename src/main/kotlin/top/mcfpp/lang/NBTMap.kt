@@ -86,6 +86,9 @@ class NBTMapConcrete : NBTMap, MCFPPValue<CompoundTag>{
 
     override var type: MCFPPType = MCFPPNBTType.Map
 
+    override fun defaultValue(): CompoundTag {
+        return CompoundTag()
+    }
 
     //TODO 构造函数未检查value的类型是否符合泛型要求
     /**

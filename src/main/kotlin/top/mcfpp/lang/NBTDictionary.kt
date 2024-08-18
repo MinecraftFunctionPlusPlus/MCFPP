@@ -98,6 +98,10 @@ open class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<CompoundTag>{
 
     override var value: CompoundTag
 
+    override fun defaultValue(): CompoundTag {
+        return CompoundTag()
+    }
+
     /**
      * 创建一个固定的dict
      *
