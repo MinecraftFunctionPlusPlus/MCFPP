@@ -25,10 +25,13 @@ import java.util.*
  */
 open class DataTemplateObject : Var<DataTemplateObject> {
 
-    val templateType
-        get() = (type as MCFPPDataTemplateType).template
+    val templateType: DataTemplate
 
     var instanceField: CompoundDataField
+
+    override var type: MCFPPType
+        get() = templateType.getType()
+        set(value) {}
 
     /**
      * 创建一个模板对象
@@ -36,7 +39,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
      * @param identifier 标识符
      */
     constructor(template: DataTemplate, identifier: String = UUID.randomUUID().toString()) {
-        this.type = template.getType()
+        this.templateType = template
         this.name = identifier
         this.identifier = identifier
         instanceField = template.field.createInstance(this)
@@ -47,7 +50,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
      * @param templateObject 被复制的模板对象
      */
     constructor(templateObject: DataTemplateObject) : super(templateObject) {
-        type = templateObject.type
+        templateType = templateObject.templateType
         instanceField = templateObject.instanceField
     }
 

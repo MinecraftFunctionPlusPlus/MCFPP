@@ -670,7 +670,19 @@ open class Function : Member, FieldContainer, Serializable {
     @Override
     override fun equals(other: Any?): Boolean {
         if (other is Function) {
-            return isSelf(other.identifier, other.normalParams.map { it.type })
+            if (this.identifier == other.identifier && this.normalParams.size == other.normalParams.size) {
+                if (this.normalParams.size == 0) {
+                    return true
+                }
+                //参数比对
+                for (i in normalParams.indices) {
+                    if (other.normalParams[i].type.typeName != this.normalParams[i].type.typeName) {
+                        return false
+                    }
+                }
+            }else{
+                return false
+            }
         }
         return false
     }

@@ -1016,7 +1016,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-    fun enterClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext) {
+    private fun enterClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext) {
         Project.ctx = ctx
         //解析参数
         val types = FunctionParam.parseReadonlyAndNormalParamTypes(ctx.functionParams())
@@ -1031,7 +1031,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         annoInCompound.clear()
     }
 
-    fun exitClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext) {
+    private fun exitClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext) {
         Project.ctx = ctx
         Function.currFunction = Class.currClass!!.classPreInit
     }
@@ -1044,7 +1044,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-    fun enterConstructorDeclaration(ctx: mcfppParser.ConstructorDeclarationContext) {
+    private fun enterConstructorDeclaration(ctx: mcfppParser.ConstructorDeclarationContext) {
         Project.ctx = ctx
         val types = FunctionParam.parseNormalParamTypes(ctx.normalParams())
         val c = Class.currClass!!.getConstructorByString(types.typeToStringList())!!
@@ -1056,13 +1056,13 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         annoInCompound.clear()
     }
 
-    fun exitConstructorDeclaration(ctx: mcfppParser.ConstructorDeclarationContext) {
+    private fun exitConstructorDeclaration(ctx: mcfppParser.ConstructorDeclarationContext) {
         Project.ctx = ctx
         Function.currFunction = Class.currClass!!.classPreInit
     }
     //endregion
 
-    //region struct
+    //region template
 
     /**
      * 进入类体。
@@ -1076,22 +1076,34 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         return null
     }
     
-     fun enterTemplateBody(ctx: mcfppParser.TemplateBodyContext) {
+    private fun enterTemplateBody(ctx: mcfppParser.TemplateBodyContext) {
         Project.ctx = ctx
         //获取类的对象
-        val parent = ctx.parent as mcfppParser.TemplateDeclarationContext
-        val identifier: String = parent.classWithoutNamespace().text
+        val parent = ctx.parent
+        if(parent is mcfppParser.TemplateDeclarationContext){
+            val identifier = parent.classWithoutNamespace().text
+            DataTemplate.currTemplate = GlobalField.getTemplate(Project.currNamespace, identifier)
+        }else if(parent is mcfppParser.ObjectTemplateDeclarationContext){
+            val identifier = parent.classWithoutNamespace().text
+            DataTemplate.currTemplate = GlobalField.getObject(Project.currNamespace, identifier) as ObjectDataTemplate
+        }else{
+            throw Exception("Unknown parent")
+        }
         //设置作用域
-        DataTemplate.currTemplate = GlobalField.getTemplate(Project.currNamespace, identifier)
     }
 
     /**
      * 离开类体。将缓存重新指向全局
      * @param ctx the parse tree
      */
-    fun exitTemplateBody(ctx: mcfppParser.TemplateBodyContext) {
+    private fun exitTemplateBody(ctx: mcfppParser.TemplateBodyContext) {
         Project.ctx = ctx
         DataTemplate.currTemplate = null
+    }
+
+    override fun visitObjectTemplateDeclaration(ctx: mcfppParser.ObjectTemplateDeclarationContext?): Any? {
+
+        return super.visitObjectTemplateDeclaration(ctx)
     }
 
     override fun visitTemplateFunctionDeclaration(ctx: mcfppParser.TemplateFunctionDeclarationContext): Any? {
@@ -1101,7 +1113,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-    fun enterTemplateFunctionDeclaration(ctx: mcfppParser.TemplateFunctionDeclarationContext) {
+    private fun enterTemplateFunctionDeclaration(ctx: mcfppParser.TemplateFunctionDeclarationContext) {
         Project.ctx = ctx
         //解析参数
         val types = FunctionParam.parseReadonlyAndNormalParamTypes(ctx.functionParams())

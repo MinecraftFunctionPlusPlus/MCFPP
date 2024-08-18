@@ -11,12 +11,12 @@ object data Area{
 
     func build(vec3 start, vec3 end) -> Area{
         var area = Area();
-        area.startX = start.x;
-        area.startY = start.y;
-        area.startZ = start.z;
-        area.endX = end.x;
-        area.endY = end.y;
-        area.endZ = end.z;
+        area.startX = start[0];
+        area.startY = start[1];
+        area.startZ = start[2];
+        area.endX = end[0];
+        area.endY = end[1];
+        area.endZ = end[2];
     }
 
     func build(int sx, int sy, int sz, int ex, int ey, int ez) -> Area{

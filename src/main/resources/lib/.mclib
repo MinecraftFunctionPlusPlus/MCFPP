@@ -9,7 +9,116 @@
 				
 			],
 			"template":[
-				
+				{
+					"id":"Area",
+					"parents":[
+						"mcfpp.lang:DataObject"
+					],
+					"field":{
+						"vars":[
+							{
+								"id":"endZ",
+								"type":"int"
+							},
+							{
+								"id":"endY",
+								"type":"int"
+							},
+							{
+								"id":"endX",
+								"type":"int"
+							},
+							{
+								"id":"startZ",
+								"type":"int"
+							},
+							{
+								"id":"startY",
+								"type":"int"
+							},
+							{
+								"id":"startX",
+								"type":"int"
+							}
+						],
+						"functions":[
+							
+						]
+					}
+				},
+				{
+					"id":"Area$",
+					"parents":[
+						"mcfpp.lang:DataObject"
+					],
+					"field":{
+						"vars":[
+							
+						],
+						"functions":[
+							{
+								"id":"build",
+								"normalParams":[
+									{
+										"id":"start",
+										"type":"vec3",
+										"isStatic":false
+									},
+									{
+										"id":"end",
+										"type":"vec3",
+										"isStatic":false
+									}
+								],
+								"returnType":"template(mcfpp.minecraft:Area)",
+								"isAbstract":false,
+								"tags":[
+									
+								]
+							},
+							{
+								"id":"build",
+								"normalParams":[
+									{
+										"id":"sx",
+										"type":"int",
+										"isStatic":false
+									},
+									{
+										"id":"sy",
+										"type":"int",
+										"isStatic":false
+									},
+									{
+										"id":"sz",
+										"type":"int",
+										"isStatic":false
+									},
+									{
+										"id":"ex",
+										"type":"int",
+										"isStatic":false
+									},
+									{
+										"id":"ey",
+										"type":"int",
+										"isStatic":false
+									},
+									{
+										"id":"ez",
+										"type":"int",
+										"isStatic":false
+									}
+								],
+								"returnType":"template(mcfpp.minecraft:Area)",
+								"isAbstract":false,
+								"tags":[
+									
+								]
+							}
+						]
+					}
+				}
 			],
 			"enum":[
 				
@@ -73,6 +182,38 @@
 						{
 							"id":"n",
 							"type":"template(mcfpp.lang:DataObject)",
+							"isStatic":false
+						}
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				},
+				{
+					"id":"print",
+					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.lang.NBTBasedData)",
+					"normalParams":[
+						{
+							"id":"n",
+							"type":"nbt",
+							"isStatic":false
+						}
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				},
+				{
+					"id":"print",
+					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.lang.Var)",
+					"normalParams":[
+						{
+							"id":"a",
+							"type":"any",
 							"isStatic":false
 						}
 					],

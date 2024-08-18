@@ -43,7 +43,7 @@ fun main(args: Array<String>) {
             try{
                 DatapackCreator.createDatapack(Project.config.targetPath) //生成数据包
             }catch (e: Exception){
-                LogProcessor.error("Cannot create datapack in path: ${Project.config.targetPath}")
+                LogProcessor.error("Cannot create datapack in path: ${Project.config.targetPath}", e)
             }
         }
         LogProcessor.info("Finished in " + (System.currentTimeMillis() - start) + "ms")

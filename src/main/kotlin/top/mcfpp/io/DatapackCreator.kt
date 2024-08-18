@@ -175,9 +175,9 @@ object DatapackCreator {
                                 }
                                 LogProcessor.debug("Writing File: $currPath\\functions\\" + f.nameWithNamespace + ".mcfunction")
                                 //TODO 可能无法正确创建文件夹
-                                Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(obj.identifier)))
+                                Files.createDirectories(Paths.get("$currPath\\functions\\" + StringHelper.toLowerCase(obj.identifier) + "\\static"))
                                 if (f is ExtensionFunction){
-                                    Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(obj.identifier) + "/ex"))
+                                    Files.createDirectories(Paths.get("$currPath\\functions\\" + StringHelper.toLowerCase(obj.identifier) + "\\static\\ex"))
                                 }
                                 Files.write(
                                     Paths.get("$currPath/functions/"  + f.nameWithNamespace + ".mcfunction"),

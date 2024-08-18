@@ -11,6 +11,7 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Class
+import top.mcfpp.model.DataTemplate
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
@@ -585,10 +586,19 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 }
                 //可能是构造函数
                 if (cls == null) {
-                    LogProcessor.error("Function ${func.identifier}<${readOnlyArgs.joinToString(",") { it.type.typeName }}>(${normalArgs.map { it.type.typeName }.joinToString(",")}) not defined")
-                    Function.addComment("[Failed to Compile]${ctx.text}")
-                    func.invoke(normalArgs,currSelector)
-                    return func.returnVar
+                    val template: DataTemplate? = GlobalField.getTemplate(p.first, p.second)
+                    if(template == null){
+                        LogProcessor.error("Function ${func.identifier}<${readOnlyArgs.joinToString(",") { it.type.typeName }}>(${normalArgs.map { it.type.typeName }.joinToString(",")}) not defined")
+                        Function.addComment("[Failed to Compile]${ctx.text}")
+                        func.invoke(normalArgs,currSelector)
+                        return func.returnVar
+                    }
+                    //模板默认构造函数
+                    if(readOnlyArgs.isNotEmpty() || normalArgs.isNotEmpty()){
+                        LogProcessor.error("Template constructor ${template.identifier} cannot have arguments")
+                        return UnknownVar("${template.identifier}_type_" + UUID.randomUUID())
+                    }
+                    return DataTemplateObject(template)
                 }
                 if(cls is GenericClass){
                     if(defaultGenericClassType != null){

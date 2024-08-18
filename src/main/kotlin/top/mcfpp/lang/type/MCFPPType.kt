@@ -312,6 +312,11 @@ open class MCFPPType(
                     return MCFPPBaseType.Any
                 }
             }
+            val vecResult = MCFPPVectorType.regex.find(identifier)
+            if(vecResult != null){
+                val dimension = identifier.substring(3).toInt()
+                return MCFPPVectorType(dimension)
+            }
             //普通匹配
             val nspID = StringHelper.splitNamespaceID(identifier)
             val clazz = GlobalField.getClass(nspID.first, nspID.second)

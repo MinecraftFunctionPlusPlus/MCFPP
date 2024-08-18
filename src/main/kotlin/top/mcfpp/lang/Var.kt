@@ -592,6 +592,9 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
                 is MCFPPEnumType -> {
                     `var` = EnumVar(type.enum, identifier)
                 }
+                is MCFPPVectorType -> {
+                    `var` = VectorVar(type.dimension, identifier)
+                }
                 //还有模板什么的
                 else -> {
                     LogProcessor.error("Unknown type: $type")
@@ -636,6 +639,9 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
                 }
                 is MCFPPEnumType -> {
                     `var` = EnumVar(type.enum, identifier)
+                }
+                is MCFPPVectorType -> {
+                    `var` = VectorVar(type.dimension, identifier)
                 }
                 //还有模板什么的
                 else -> {

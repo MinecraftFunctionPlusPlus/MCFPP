@@ -6,7 +6,7 @@
     "description": "",
     "namespace": "mcfpp",
     "targetPath": "src/main/resources/lib",
-    "noDatapack": true,
+    "noDatapack": false,
     "ignoreStdLib": true,
     "isLib": true
 }

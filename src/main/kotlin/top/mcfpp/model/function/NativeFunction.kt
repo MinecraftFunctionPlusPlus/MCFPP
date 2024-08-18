@@ -127,6 +127,31 @@ class NativeFunction : Function, Native {
         }
     }
 
+    override fun equals(other: Any?): Boolean {
+        if (other is NativeFunction) {
+            if (this.identifier == other.identifier && this.normalParams.size == other.normalParams.size && this.readOnlyParams.size == other.normalParams.size) {
+                if (this.normalParams.size == 0) {
+                    return true
+                }
+                //参数比对
+                for (i in normalParams.indices) {
+                    if (other.normalParams[i].type.typeName != this.normalParams[i].type.typeName) {
+                        return false
+                    }
+                }
+                //参数比对
+                for (i in readOnlyParams.indices) {
+                    if (other.readOnlyParams[i].type.typeName != this.readOnlyParams[i].type.typeName) {
+                        return false
+                    }
+                }
+            }else{
+                return false
+            }
+        }
+        return false
+    }
+
     override fun addParamsFromContext(ctx: mcfppParser.FunctionParamsContext) {
         val r = ctx.readOnlyParams()?.parameterList()
         val n = ctx.normalParams().parameterList()
