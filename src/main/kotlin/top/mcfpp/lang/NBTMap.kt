@@ -6,13 +6,9 @@ import net.querz.nbt.tag.StringTag
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.type.*
 import top.mcfpp.lang.value.MCFPPValue
-import top.mcfpp.mni.NBTListData
 import top.mcfpp.mni.NBTMapData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.util.LogProcessor
-import top.mcfpp.util.TextTranslator
-import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 
 open class NBTMap : NBTDictionary{
@@ -85,10 +81,6 @@ class NBTMapConcrete : NBTMap, MCFPPValue<CompoundTag>{
     override lateinit var value: CompoundTag
 
     override var type: MCFPPType = MCFPPNBTType.Map
-
-    override fun defaultValue(): CompoundTag {
-        return CompoundTag()
-    }
 
     //TODO 构造函数未检查value的类型是否符合泛型要求
     /**

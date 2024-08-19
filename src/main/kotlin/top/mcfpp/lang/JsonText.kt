@@ -7,7 +7,6 @@ import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.lib.ChatComponent
-import top.mcfpp.lib.PlainChatComponent
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
@@ -117,10 +116,6 @@ class JsonTextConcrete : MCFPPValue<ChatComponent>, JsonText {
 
     override var value: ChatComponent
 
-    override fun defaultValue(): ChatComponent {
-        return PlainChatComponent("")
-    }
-
     /**
      * 创建一个固定的int
      *
@@ -170,7 +165,11 @@ class JsonTextConcrete : MCFPPValue<ChatComponent>, JsonText {
         }
         val re = NBTBasedData(this)
         if(replace){
-            Function.currFunction.field.putVar(identifier, re, true)
+            if(parentTemplate() != null){
+                (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
+            }else{
+                Function.currFunction.field.putVar(identifier, re, true)
+            }
         }
         return re
     }

@@ -200,10 +200,6 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>>{
 
     override var value: Var<*>
 
-    override fun defaultValue(): Var<*> {
-        return MCIntConcrete(0, "any_default")
-    }
-
     /**
      * 创建一个固定的int
      *
@@ -276,7 +272,11 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>>{
     override fun toDynamic(replace: Boolean): Var<*> {
         val re = MCAny(this)
         if(replace){
-            Function.currFunction.field.putVar(identifier, re, true)
+            if(parentTemplate() != null){
+                parentTemplate()!!.field.putVar(identifier, re, true)
+            }else{
+                Function.currFunction.field.putVar(identifier, re, true)
+            }
         }
         return re
     }

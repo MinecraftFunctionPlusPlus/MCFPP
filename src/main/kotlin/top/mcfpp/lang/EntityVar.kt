@@ -85,10 +85,6 @@ class EntityVarConcrete: EntityVar, MCFPPValue<IntArrayTag>{
 
     override var value: IntArrayTag
 
-    override fun defaultValue(): IntArrayTag {
-        return IntArrayTag(intArrayOf(0,0,0,0))
-    }
-
     constructor(curr: FieldContainer, value: IntArrayTag, identifier: String = UUID.randomUUID().toString()) : super(curr, identifier){
         this.value = value
     }
@@ -123,7 +119,11 @@ class EntityVarConcrete: EntityVar, MCFPPValue<IntArrayTag>{
         }
         val re = EntityVar(this)
         if(replace){
-            Function.currFunction.field.putVar(identifier, re, true)
+            if(parentTemplate() != null){
+                (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
+            }else{
+                Function.currFunction.field.putVar(identifier, re, true)
+            }
         }
         return re
     }

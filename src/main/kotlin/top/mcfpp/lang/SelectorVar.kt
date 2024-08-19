@@ -151,10 +151,6 @@ class SelectorVarConcrete : MCFPPValue<EntitySelector>, SelectorVar{
 
     override var value: EntitySelector
 
-    override fun defaultValue(): EntitySelector {
-        return EntitySelector(SelectorType.ALL_ENTITIES)
-    }
-
     /**
      * 创建一个固定的目标选择器
      *
@@ -218,6 +214,7 @@ class SelectorVarConcrete : MCFPPValue<EntitySelector>, SelectorVar{
     }
 
     override fun toDynamic(replace: Boolean): Var<*> {
+        //生成命令用的
         NBTBasedDataConcrete(StringTag(this.value.toString()), this.identifier).toDynamic(false)
         val v = SelectorVar(this)
         if(replace){

@@ -14,6 +14,8 @@ import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.Constructor
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
+import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  * 结构体是一种和类的语法极为相似的数据结构。在结构体中，只能有int类型的数据，或者说记分板的数据作为结构体的成员。

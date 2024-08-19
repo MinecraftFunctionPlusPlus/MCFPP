@@ -237,8 +237,8 @@ object CompoundDataFieldReader: ILibJsonReader<CompoundDataField> {
         val field = CompoundDataField(ArrayList(), ClassReader.currClass?:TemplateReader.currTemplate)
         jsonObject.getJSONArray("vars").forEach {
             run {
-                val type = UnresolvedType(jsonObject.getString("type"))
-                val identifier = jsonObject.getString("id")
+                val type = UnresolvedType((it as JSONObject) .getString("type"))
+                val identifier = it.getString("id")
                 val v = UnresolvedVar(identifier, type, field)
                 field.putVar(v.identifier, v, false)
             }

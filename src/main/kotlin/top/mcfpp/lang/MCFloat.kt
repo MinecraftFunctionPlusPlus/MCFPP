@@ -451,10 +451,6 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
             setJavaValue(value)
         }
 
-    override fun defaultValue(): Float {
-        return 0.0f
-    }
-
     /**
      * 创建一个固定的float
      *
@@ -494,7 +490,11 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
         (int1 as MCIntConcrete).toDynamic(false)
         (exp as MCIntConcrete).toDynamic(false)
         if(replace){
-            Function.currFunction.field.putVar(identifier, qwq, true)
+            if(parentTemplate() != null){
+                (parent as DataTemplateObject).instanceField.putVar(identifier, qwq, true)
+            }else{
+                Function.currFunction.field.putVar(identifier, qwq, true)
+            }
         }
         return qwq
     }

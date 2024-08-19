@@ -11,6 +11,7 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
+import javax.xml.crypto.Data
 
 /**
  * 布尔型变量是mcfpp的基本类型之一，它表示一个只有0，1两种取值可能性的值。
@@ -240,10 +241,6 @@ class MCBoolConcrete : MCBool, MCFPPValue<Boolean>{
 
     override var value: Boolean
 
-    override fun defaultValue(): Boolean {
-        return false
-    }
-
     /**
      * 创建一个固定的bool
      *
@@ -333,7 +330,11 @@ class MCBoolConcrete : MCBool, MCFPPValue<Boolean>{
     override fun toDynamic(replace: Boolean): Var<*> {
         val re = MCBool(this)
         if(replace){
-            Function.currFunction.field.putVar(identifier, re, true)
+            if(parentTemplate() != null){
+                (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
+            }else{
+                Function.currFunction.field.putVar(identifier, re, true)
+            }
         }
         return re
     }

@@ -1,7 +1,6 @@
 package top.mcfpp.lang
 
 import net.querz.nbt.tag.CompoundTag
-import net.querz.nbt.tag.ListTag
 import net.querz.nbt.tag.StringTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.exception.OperationNotImplementException
@@ -35,10 +34,6 @@ class JavaVar : Var<JavaVar>, MCFPPValue<Any?>{
     override var value : Any? = null
 
     override var type: MCFPPType = MCFPPBaseType.JavaVar
-
-    override fun defaultValue(): Any? {
-        return null
-    }
 
     /**
      * 创建一个固定的JavaVar

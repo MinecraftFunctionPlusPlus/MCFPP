@@ -103,15 +103,15 @@ open class DataTemplateObject : Var<DataTemplateObject> {
             //是成员
             //TODO 选择两个实体的代价和复制整个模板数据的代价谁更大？
             val b = if(obj.parentClass() != null) obj.getTempVar() else obj
-            val c = Commands.selectRun(parent!!, Command("data modify $nbtPath set from ${b.nbtPath}"))
+            val c = Commands.selectRun(parent!!, Commands.dataSetFrom(nbtPath, b.nbtPath))
             Function.addCommands(c)
-        }else{
-            if(obj.parentClass() != null){
+        }else {
+            if (obj.parentClass() != null) {
                 //obj是成员
-                val c = Commands.selectRun(obj.parent!!, Command("data modify ${obj.nbtPath} set from $nbtPath"))
+                val c = Commands.selectRun(obj.parent!!, Commands.dataSetFrom(obj.nbtPath, nbtPath))
                 Function.addCommands(c)
-            }else{
-                Function.addCommand("data modify $nbtPath set from ${obj.nbtPath}")
+            } else {
+                Function.addCommand(Commands.dataSetFrom(nbtPath, obj.nbtPath))
             }
         }
     }
@@ -235,15 +235,22 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         }
         return DataTemplateObjectConcrete(this, compoundTag)
     }
+
+    fun toFunctionParam(){
+        Function.extraFunction.runInFunction {
+            for (field in this.instanceField.allVars){
+                if(field is MCFPPValue<*>){
+                    field.toDynamic(true)
+                }
+            }
+        }
+    }
+
 }
 
 class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag>{
 
     override var value: CompoundTag
-
-    override fun defaultValue(): CompoundTag {
-        return templateType.getDefaultValue()
-    }
 
     /**
      * 创建一个固定的DataTemplate
@@ -292,13 +299,17 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag>{
             if(cmd.size == 2){
                 Function.addCommand(cmd[0])
             }
-            Function.addCommand(cmd.last().build("data modify $nbtPath set ${SNBTUtil.toSNBT(value)}"))
+            Function.addCommand(cmd.last().build(Commands.dataSetValue(nbtPath, value)))
         }else {
-            Function.addCommand("data modify $nbtPath set ${SNBTUtil.toSNBT(value)}")
+            Function.addCommand(Commands.dataSetValue(nbtPath, value))
         }
         val re = DataTemplateObject(this)
         if(replace){
-            Function.currFunction.field.putVar(identifier, re, true)
+            if(parentTemplate() != null) {
+                (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
+            }else{
+                Function.currFunction.field.putVar(identifier, re, true)
+            }
         }
         return re
     }

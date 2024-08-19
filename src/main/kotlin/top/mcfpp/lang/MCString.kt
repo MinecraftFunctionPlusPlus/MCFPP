@@ -100,10 +100,6 @@ class MCStringConcrete: MCString, MCFPPValue<StringTag>{
 
     override var value: StringTag
 
-    override fun defaultValue(): StringTag {
-        return StringTag("")
-    }
-
     /**
      * 创建一个固定的string
      *

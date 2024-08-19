@@ -1,8 +1,5 @@
 package top.mcfpp.lang
 
-import net.querz.nbt.tag.CompoundTag
-import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.lang.type.MCFPPNBTType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.type.MCFPPVectorType
 import top.mcfpp.lang.value.MCFPPValue
@@ -12,7 +9,6 @@ import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
-import top.mcfpp.util.NBTUtil
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 import java.util.*
@@ -201,10 +197,6 @@ open class VectorVar: Var<VectorVar>, Indexable<MCInt>, ScoreHolder {
 class VectorVarConcrete : VectorVar, MCFPPValue<Array<Int>>{
 
     override var value: Array<Int>
-
-    override fun defaultValue(): Array<Int> {
-        return Array(dimension) { 0 }
-    }
 
     /**
      * 创建一个固定的目标选择器

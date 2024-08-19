@@ -2,6 +2,7 @@ package top.mcfpp.model.function
 
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.command.Command
+import top.mcfpp.lang.DataTemplateObject
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPGenericType
@@ -43,7 +44,11 @@ class FunctionParam(
     var defaultCommand = ArrayList<Command>()
 
     fun buildVar(): Var<*>{
-        return Var.build(identifier, type, function)
+        val qwq = Var.buildUnConcrete(identifier, type, function)
+        if(qwq is DataTemplateObject){
+            qwq.toFunctionParam()
+        }
+        return qwq
     }
 
     companion object {

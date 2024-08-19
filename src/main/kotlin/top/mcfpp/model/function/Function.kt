@@ -454,7 +454,7 @@ open class Function : Member, FieldContainer, Serializable {
      */
     fun buildReturnVar(returnType: MCFPPType): Var<*>{
         return if(returnType == MCFPPBaseType.Void) Void()
-        else Var.build("return",returnType,this)
+        else Var.buildUnConcrete("return",returnType,this)
     }
 
     /**
@@ -559,7 +559,7 @@ open class Function : Member, FieldContainer, Serializable {
             if(i >= normalArgs.size){
                 addCommands(normalParams[i].defaultCommand.toTypedArray())
             }else{
-                val tg = normalArgs[i].explicitCast(this.normalParams[i].type)
+                val tg = normalArgs[i].implicitCast(this.normalParams[i].type)
                 //参数传递和子函数的参数进栈
                 var p = field.getVar(this.normalParams[i].identifier)!!
                 p = p.assign(tg)
@@ -651,7 +651,7 @@ open class Function : Member, FieldContainer, Serializable {
     @InsertCommand
     open fun assignReturnVar(v: Var<*>){
         if(returnType == MCFPPBaseType.Void){
-            LogProcessor.error("Function $identifier has no return value")
+            LogProcessor.error("Function $identifier has no return value but tried to return a ${v.type}")
             return
         }
         try {
@@ -782,8 +782,19 @@ open class Function : Member, FieldContainer, Serializable {
         }
     }
 
+    fun <T> runInFunction(block: () -> T){
+        val old = currFunction
+        currFunction = this
+        block()
+        currFunction = old
+    }
 
     companion object {
+        /**
+         * 用于处理多余的命令的函数
+         */
+        var extraFunction  = Function("extraFunction")
+
         /**
          * 一个空的函数，通常用于作为占位符
          */

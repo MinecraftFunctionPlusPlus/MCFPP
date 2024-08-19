@@ -5,7 +5,6 @@ import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import java.util.UUID
-import javax.xml.crypto.Data
 
 class Accessor(override var value: Var<*>, identifier: String = UUID.randomUUID().toString()) : Var<Accessor>(identifier), MCFPPValue<Var<*>> {
 

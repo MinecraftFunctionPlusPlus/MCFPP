@@ -15,5 +15,4 @@ interface MCFPPValue<T> {
      */
     fun toDynamic(replace : Boolean): Var<*>
 
-    fun defaultValue(): T
 }

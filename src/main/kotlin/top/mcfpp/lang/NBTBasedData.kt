@@ -400,10 +400,6 @@ class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData<T>, MCFPPValue<T> {
 
     override var value : T
 
-    override fun defaultValue(): T {
-        return value
-    }
-
     /**
      * 创建一个固定的int
      *
@@ -491,7 +487,11 @@ class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData<T>, MCFPPValue<T> {
         }
         val re = NBTBasedData(this)
         if(replace){
-            Function.currFunction.field.putVar(identifier, re, true)
+            if(parentTemplate() != null){
+                (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
+            }else {
+                Function.currFunction.field.putVar(identifier, re, true)
+            }
         }
         return re
     }

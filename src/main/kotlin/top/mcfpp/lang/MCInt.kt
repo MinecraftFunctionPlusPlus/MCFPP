@@ -424,10 +424,6 @@ class MCIntConcrete : MCInt, MCFPPValue<Int>{
 
     override var value: Int
 
-    override fun defaultValue(): Int {
-        return 0
-    }
-
     /**
      * 创建一个固定的int
      *
@@ -488,7 +484,11 @@ class MCIntConcrete : MCInt, MCFPPValue<Int>{
         }
         val re = MCInt(this)
         if(replace){
-            Function.currFunction.field.putVar(identifier, re, true)
+            if(parentTemplate() != null){
+                (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
+            }else{
+                Function.currFunction.field.putVar(identifier, re, true)
+            }
         }
         return re
     }

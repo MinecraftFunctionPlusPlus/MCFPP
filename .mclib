@@ -19,6 +19,21 @@
 			"id":"test",
 			"functions":[
 				{
+					"id":"test",
+					"normalParams":[
+						{
+							"id":"t",
+							"type":"template(test:Test)",
+							"isStatic":false
+						}
+					],
+					"returnType":"template(test:Test)",
+					"isAbstract":false,
+					"tags":[
+						
+					]
+				},
+				{
 					"id":"main",
 					"normalParams":[
 						
@@ -34,7 +49,35 @@
 				
 			],
 			"template":[
-				
+				{
+					"id":"Test",
+					"parents":[
+						"mcfpp.lang:DataObject"
+					],
+					"field":{
+						"vars":[
+							{
+								"id":"a",
+								"type":"int"
+							},
+							{
+								"id":"b",
+								"type":"int"
+							},
+							{
+								"id":"c",
+								"type":"int"
+							},
+							{
+								"id":"d",
+								"type":"int"
+							}
+						],
+						"functions":[
+							
+						]
+					}
+				}
 			],
 			"enum":[
 				

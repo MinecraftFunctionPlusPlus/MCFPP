@@ -17,6 +17,7 @@ import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 import java.io.Serializable
 import java.util.*
+import javax.xml.crypto.Data
 
 /**
  * mcfpp所有类型的基类。在mcfpp中，一个变量可以是固定的，也就是mcfpp编译
@@ -148,7 +149,9 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
      * @return
      */
     override fun parentTemplate(): DataTemplate? {
-        return when (parent) {
+        return when (val parent = parent) {
+            is DataTemplateObject -> parent.templateType
+            is MCFPPDataTemplateType -> parent.template
             else -> null
         }
     }
@@ -639,6 +642,155 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
          * @return 这个变量
          */
         fun build(identifier: String, type: MCFPPType, clazz: Class): Var<*> {
+            val `var`: Var<*>
+            //普通类型
+            when (type) {
+                MCFPPBaseType.Int -> {
+                    `var` = MCInt("@s").setObj(SbObject(clazz.prefix + "_int_" + identifier))
+                    `var`.identifier = identifier
+                }
+
+                MCFPPBaseType.Bool -> {
+                    `var` =
+                        MCBool("@s").setObj(SbObject(clazz.prefix + "_bool_" + identifier))
+                    `var`.identifier = identifier
+                }
+                MCFPPBaseType.Selector -> TODO()
+                MCFPPBaseType.BaseEntity -> TODO()
+                MCFPPBaseType.String -> TODO()
+                MCFPPNBTType.NBT -> TODO()
+                MCFPPBaseType.Float -> TODO()
+                MCFPPBaseType.Any -> TODO()
+                is MCFPPDataTemplateType -> TODO()
+                is MCFPPClassType ->{
+                    val classPointer = ClassPointer(type.cls,identifier)
+                    classPointer.name = identifier
+                    `var` = classPointer
+                }
+                is MCFPPEnumType -> {
+                    `var` = EnumVar(type.enum, identifier)
+                }
+                is MCFPPVectorType -> {
+                    `var` = VectorVar(type.dimension, identifier)
+                }
+                //还有模板什么的
+                else -> {
+                    LogProcessor.error("Unknown type: $type")
+                    `var` = UnknownVar(identifier)
+                }
+            }
+            return `var`
+        }
+
+
+        /**
+         * 根据所给的类型、标识符和域构造一个变量
+         * @param identifier 标识符
+         * @param type 变量的类型
+         * @param container 变量所在的域
+         * @return
+         */
+        fun buildUnConcrete(identifier: String, type: MCFPPType, container: FieldContainer): Var<*>{
+            val `var`: Var<*>
+            when (type) {
+                MCFPPBaseType.Int -> `var` = MCInt(container,identifier)
+                MCFPPBaseType.Bool -> `var` = MCBool(container, identifier)
+                MCFPPBaseType.Selector -> TODO()
+                MCFPPBaseType.BaseEntity -> TODO()
+                MCFPPBaseType.String -> `var` = MCString(container, identifier)
+                MCFPPBaseType.Float -> TODO()
+                is MCFPPListType -> `var` = NBTList(container, identifier, type.generic)
+                MCFPPNBTType.Dict -> TODO()
+                MCFPPNBTType.Map -> TODO()
+                MCFPPNBTType.NBT -> `var` = NBTBasedData<Tag<*>>(container, identifier)
+                MCFPPBaseType.JavaVar -> `var` = JavaVar(null,identifier)
+                MCFPPBaseType.Any -> `var` = MCAny(container, identifier)
+                MCFPPBaseType.Type -> `var` = MCFPPTypeVar(identifier = identifier)
+                MCFPPBaseType.JsonText -> `var` = JsonText(container, identifier)
+                is MCFPPGenericClassType -> {
+                    `var` = ClassPointer(type.cls, identifier)
+                }
+                is MCFPPClassType ->{
+                    //TODO: 这里不一定拿得到type.cls!!!可能得从GlobalField拿！
+                    //什么意思捏？ - Alumopper 2024.4.14
+                    `var` = ClassPointer(type.cls, identifier)
+                }
+                is MCFPPDataTemplateType -> {
+                    //数据模板
+                    `var` = DataTemplateObject(type.template, identifier)
+                }
+                is MCFPPEnumType -> {
+                    `var` = EnumVar(type.enum, container, identifier)
+                }
+                is MCFPPVectorType -> {
+                    `var` = VectorVar(type.dimension, container, identifier)
+                }
+                //还有模板什么的
+                else -> {
+                    LogProcessor.error("Unknown type: $type")
+                    `var` = UnknownVar(identifier)
+                }
+            }
+            return `var`
+        }
+
+        /**
+         * 根据所给的类型、标识符和域构造一个变量
+         * @param identifier 标识符
+         * @param type 变量的类型
+         * @param container 变量所在的域
+         * @return
+         */
+        fun buildUnConcrete(identifier: String, type: MCFPPType): Var<*>{
+            val `var`: Var<*>
+            when (type) {
+                MCFPPBaseType.Int -> `var` = MCInt(identifier)
+                MCFPPBaseType.Bool -> `var` = MCBool(identifier)
+                MCFPPBaseType.Selector -> TODO()
+                MCFPPBaseType.BaseEntity -> TODO()
+                MCFPPBaseType.String -> `var` = MCString(identifier)
+                MCFPPBaseType.Float -> TODO()
+                is MCFPPListType -> `var` = NBTList(identifier, type.generic)
+                MCFPPNBTType.Dict -> TODO()
+                MCFPPNBTType.Map -> TODO()
+                MCFPPNBTType.NBT -> `var` = NBTBasedData<Tag<*>>(identifier)
+                MCFPPBaseType.JavaVar -> `var` = JavaVar(null,identifier)
+                MCFPPBaseType.Any -> `var` = MCAny(identifier)
+                MCFPPBaseType.Type -> `var` = MCFPPTypeVar(identifier = identifier)
+                MCFPPBaseType.JsonText -> `var` = JsonText(identifier)
+                is MCFPPGenericClassType -> {
+                    `var` = ClassPointer(type.cls, identifier)
+                }
+                is MCFPPClassType ->{
+                    `var` = ClassPointer(type.cls, identifier)
+                }
+                is MCFPPDataTemplateType -> {
+                    //数据模板
+                    `var` = DataTemplateObject(type.template, identifier)
+                }
+                is MCFPPEnumType -> {
+                    `var` = EnumVar(type.enum, identifier)
+                }
+                is MCFPPVectorType -> {
+                    `var` = VectorVar(type.dimension, identifier)
+                }
+                //还有模板什么的
+                else -> {
+                    LogProcessor.error("Unknown type: $type")
+                    `var` = UnknownVar(identifier)
+                }
+            }
+            return `var`
+        }
+
+        /**
+         * 解析变量声明上下文，构造上下文声明的变量，作为成员
+         * @param identifier 变量标识符
+         * @param type 变量类型
+         * @param clazz 成员所在的复合类型
+         * @return 这个变量
+         */
+        fun buildUnConcrete(identifier: String, type: MCFPPType, clazz: Class): Var<*> {
             val `var`: Var<*>
             //普通类型
             when (type) {

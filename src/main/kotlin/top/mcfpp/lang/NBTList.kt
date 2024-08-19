@@ -218,11 +218,6 @@ class NBTListConcrete<E>: NBTList, MCFPPValue<ListTag<*>> {
 
     override var value: ListTag<*>
 
-    //TODO 默认值的泛型类型问题
-    override fun defaultValue(): ListTag<*> {
-        return ListTag.createUnchecked(IntTag::class.java)
-    }
-
     /**
      * 创建一个固定的list
      *
@@ -273,7 +268,11 @@ class NBTListConcrete<E>: NBTList, MCFPPValue<ListTag<*>> {
         }
         val re = NBTList(this)
         if(replace){
-            Function.currFunction.field.putVar(identifier, re, true)
+            if(parentTemplate() != null) {
+                (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
+            }else{
+                Function.currFunction.field.putVar(identifier, re, true)
+            }
         }
         return re
     }
