@@ -101,7 +101,7 @@ class KeybindChatComponent(val key: String) : ChatComponent() {
 
 class NBTChatComponent(val nbt: NBTBasedData<*>, val interpret: Boolean = false, val separator: ChatComponent? = null) : ChatComponent() {
     override fun toCommandPart(): Command {
-        return Command("{\"type\":\"nbt\",\"nbt\":\"").build(nbt.nbtPath.toCommandPart()).build("\",\"interpret\":$interpret, ${styleToString()}")
+        return Command("{\"type\":\"nbt\",\"nbt\":\"").build(nbt.nbtPath.toCommandPart(), false).build("\",\"interpret\":$interpret, ${styleToString()}}", false)
     }
 }
 

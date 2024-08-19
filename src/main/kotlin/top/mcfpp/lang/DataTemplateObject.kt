@@ -2,7 +2,6 @@ package top.mcfpp.lang
 
 import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.CompoundTag
-import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.lang.type.MCFPPDataTemplateType
 import top.mcfpp.lang.type.MCFPPNBTType
@@ -10,7 +9,6 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.DataTemplate
 import top.mcfpp.model.Member
-import top.mcfpp.model.ObjectClass
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
@@ -42,7 +40,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         this.templateType = template
         this.name = identifier
         this.identifier = identifier
-        instanceField = template.field.createInstance(this)
+        instanceField = template.field.createDataTemplateInstance(this)
     }
 
     /**
@@ -81,6 +79,9 @@ open class DataTemplateObject : Var<DataTemplateObject> {
             }
 
             is DataTemplateObject -> {
+                if(this is DataTemplateObjectConcrete){
+                    this.toDynamic(true)
+                }
                 assignCommand(b)
                 return this
             }

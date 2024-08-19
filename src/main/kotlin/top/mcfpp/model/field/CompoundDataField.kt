@@ -1,6 +1,7 @@
 package top.mcfpp.model.field
 
 import org.jetbrains.annotations.Nullable
+import top.mcfpp.lang.DataTemplateObject
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPType
@@ -215,9 +216,14 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
     }
     //endregion
 
-    fun createInstance(selector: CanSelectMember): CompoundDataField{
+    fun createDataTemplateInstance(selector: DataTemplateObject): CompoundDataField{
         val re = CompoundDataField(this)
-        re.allVars.forEach { it.parent = selector }
+        re.allVars.forEach {
+            it.parent = selector
+            it.name = selector.identifier + "_" + it.identifier
+            it.nbtPath.pathList.removeLast()
+            it.nbtPath.memberIndex(it.identifier)
+        }
         return re
     }
 }
