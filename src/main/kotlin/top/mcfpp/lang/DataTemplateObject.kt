@@ -38,7 +38,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
      * @param template 模板的类型
      * @param identifier 标识符
      */
-    constructor(template: DataTemplate, identifier: String = UUID.randomUUID().toString()) {
+    constructor(template: DataTemplate, identifier: String = UUID.randomUUID().toString()): super(identifier) {
         this.templateType = template
         this.name = identifier
         this.identifier = identifier
@@ -286,20 +286,7 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag>{
         val parent = this.parent
 
         if(parent != null){
-            val cmd = when(parent){
-                is ClassPointer -> {
-                    Commands.selectRun(parent)
-                }
-                is ObjectClass -> {
-                    arrayOf(Command.build("execute as ${parent.uuid} run "))
-                }
-                else -> TODO()
-
-            }
-            if(cmd.size == 2){
-                Function.addCommand(cmd[0])
-            }
-            Function.addCommand(cmd.last().build(Commands.dataSetValue(nbtPath, value)))
+            Function.addCommands(Commands.selectRun(parent, Commands.dataSetValue(nbtPath, value)))
         }else {
             Function.addCommand(Commands.dataSetValue(nbtPath, value))
         }

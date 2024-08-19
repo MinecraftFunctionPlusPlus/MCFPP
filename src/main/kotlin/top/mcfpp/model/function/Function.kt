@@ -453,8 +453,12 @@ open class Function : Member, FieldContainer, Serializable {
      * @param returnType
      */
     fun buildReturnVar(returnType: MCFPPType): Var<*>{
-        return if(returnType == MCFPPBaseType.Void) Void()
-        else Var.buildUnConcrete("return",returnType,this)
+        return if(returnType == MCFPPBaseType.Void) {
+            Void()
+        }
+        else {
+            Var.buildUnConcrete("return", returnType, this)
+        }
     }
 
     /**
@@ -654,12 +658,7 @@ open class Function : Member, FieldContainer, Serializable {
             LogProcessor.error("Function $identifier has no return value but tried to return a ${v.type}")
             return
         }
-        try {
-            returnVar.assign(v)
-        } catch (e: VariableConverseException) {
-            LogProcessor.error("Cannot convert " + v.javaClass + " to " + currBaseFunction.returnVar.javaClass)
-            throw VariableConverseException()
-        }
+        returnVar.assign(v)
     }
 
     /**
