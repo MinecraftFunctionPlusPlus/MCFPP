@@ -17,7 +17,6 @@ import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 import java.io.Serializable
 import java.util.*
-import javax.xml.crypto.Data
 
 /**
  * mcfpp所有类型的基类。在mcfpp中，一个变量可以是固定的，也就是mcfpp编译
@@ -31,9 +30,9 @@ import javax.xml.crypto.Data
  * 除此之外，变量还有临时变量的区别，对于匿名的变量，编译器一般会默认它为临时
  * 的变量，从而在各种处理上进行优化。当然，匿名变量的声明往往在编译过程中声明。
  * mcfpp本身的语法并不支持匿名变量。
- *
  */
 abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serializable{
+
     /**
      * 在Minecraft中的标识符
      */
@@ -71,11 +70,6 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
      * 是否是临时变量
      */
     var isTemp = false
-
-    /**
-     * 这个变量是否已经被初始化
-     */
-    var hasInit = false
 
     open var parent : CanSelectMember? = null
 
@@ -117,7 +111,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
         isTemp = `var`.isTemp
         stackIndex = `var`.stackIndex
         isConst = `var`.isConst
-        nbtPath = `var`.nbtPath
+        nbtPath = `var`.nbtPath.clone()
     }
 
     /**
@@ -376,7 +370,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun isGreaterOrEqual(a: Var<*>): MCBool {
+    open fun isBiggerOrEqual(a: Var<*>): MCBool {
         LogProcessor.error("type ${type.typeName} not support operation '>='")
         return MCBool("")
     }
@@ -427,6 +421,10 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
 
     override fun getAccess(function: Function): Member.AccessModifier {
         return Member.AccessModifier.PUBLIC
+    }
+
+    fun assignMemberVar(member: String, b: Var<*>) {
+        getMemberVar(member, Member.AccessModifier.PUBLIC).first?.assign(b)
     }
 
     override fun toString(): String {

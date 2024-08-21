@@ -231,14 +231,14 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             if (re is MCInt && b is MCInt) {
                 when (ctx.relationalOp().text) {
                     ">" -> re = re.isBigger(b)
-                    ">=" -> re = re.isGreaterOrEqual(b)
+                    ">=" -> re = re.isBiggerOrEqual(b)
                     "<" -> re = re.isSmaller(b)
                     "<=" -> re = re.isSmallerOrEqual(b)
                 }
             } else if(re is MCFloat && b is MCFloat){
                 when (ctx.relationalOp().text) {
                     ">" -> re = re.isBigger(b)
-                    ">=" -> re = re.isGreaterOrEqual(b)
+                    ">=" -> re = re.isBiggerOrEqual(b)
                     "<" -> re = re.isSmaller(b)
                     "<=" -> re = re.isSmallerOrEqual(b)
                 }
@@ -410,7 +410,6 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     @Override
     override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var<*> {
         Project.ctx = ctx
-        val namespaceID : Pair<String?, String>
         if(ctx.primary() != null){
             currSelector = visit(ctx.primary())
         }
@@ -598,7 +597,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                         LogProcessor.error("Template constructor ${template.identifier} cannot have arguments")
                         return UnknownVar("${template.identifier}_type_" + UUID.randomUUID())
                     }
-                    return DataTemplateObject(template)
+                    return DataTemplateObjectConcrete(template, template.getDefaultValue())
                 }
                 if(cls is GenericClass){
                     if(defaultGenericClassType != null){

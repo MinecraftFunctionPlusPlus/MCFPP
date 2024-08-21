@@ -12,6 +12,7 @@ import java.io.FileInputStream
  * 编译器的启动入口
  */
 fun main(args: Array<String>) {
+    //获取log4j2.xml配置文件
     val source:ConfigurationSource
     try {
         source = ConfigurationSource(FileInputStream("log4j2.xml"))

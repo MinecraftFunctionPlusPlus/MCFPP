@@ -111,7 +111,7 @@ abstract class MCNumber<T> : Var<MCNumber<T>>, OnScoreboard {
      * @param a 右侧值
      * @return 计算结果
      */
-    abstract override fun isGreaterOrEqual(a: Var<*>): MCBool
+    abstract override fun isBiggerOrEqual(a: Var<*>): MCBool
 
     /**
      * 这个数是否等于a

@@ -222,6 +222,7 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
             it.parent = selector
             it.name = selector.identifier + "_" + it.identifier
             it.nbtPath.pathList.removeLast()
+            it.nbtPath.memberIndex(selector.identifier)
             it.nbtPath.memberIndex(it.identifier)
         }
         return re

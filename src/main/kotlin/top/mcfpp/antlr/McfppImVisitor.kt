@@ -214,6 +214,9 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
             val type = left.type
             val right: Var<*> = McfppExprVisitor(if(type is MCFPPGenericClassType) type else null, if(type is MCFPPEnumType) type else null).visit(ctx.expression())!!
             try {
+                if(right !is MCFPPValue<*> && left.parent is DataTemplateObjectConcrete){
+                    left.parent = (left.parent as DataTemplateObjectConcrete).toDynamic(true)
+                }
                 left.replacedBy(left.assign(right))
             } catch (e: VariableConverseException) {
                 LogProcessor.error("Cannot convert " + right.javaClass + " to " + left.javaClass)

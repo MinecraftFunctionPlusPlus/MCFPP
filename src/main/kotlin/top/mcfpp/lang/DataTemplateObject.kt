@@ -50,6 +50,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     constructor(templateObject: DataTemplateObject) : super(templateObject) {
         templateType = templateObject.templateType
         instanceField = templateObject.instanceField
+
     }
 
     override fun doAssign(b: Var<*>): DataTemplateObject {
@@ -246,6 +247,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
             }
         }
     }
+
 
 }
 

@@ -281,7 +281,7 @@ open class MCInt : MCNumber<Int> {
     }
 
     @InsertCommand
-    override fun isGreaterOrEqual(a: Var<*>): MCBool {
+    override fun isBiggerOrEqual(a: Var<*>): MCBool {
         //re = t <= a
         val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         val re: MCBool
@@ -602,13 +602,13 @@ class MCIntConcrete : MCInt, MCFPPValue<Int>{
         return if (qwq is MCIntConcrete) {
             MCBoolConcrete(value <= qwq.value)
         } else {
-            qwq.isGreaterOrEqual(this)
+            qwq.isBiggerOrEqual(this)
         }
     }
 
     @Override
     @InsertCommand
-    override fun isGreaterOrEqual(a: Var<*>): MCBool {
+    override fun isBiggerOrEqual(a: Var<*>): MCBool {
         //re = t <= a
         val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         return if (qwq is MCIntConcrete) {

@@ -29,7 +29,7 @@ interface Member {
     fun parentClass(): Class?
 
     /**
-     * 获取这个成员的父结构体，可能不存在
+     * 获取这个成员的父数据模板，可能不存在
      *
      * @return
      */

@@ -298,9 +298,9 @@ open class MCFloat : MCNumber<Float> {
      * @return 计算结果
      */
     @InsertCommand
-    override fun isGreaterOrEqual(a: Var<*>): MCBool {
+    override fun isBiggerOrEqual(a: Var<*>): MCBool {
         //re = t >= a
-        if(!isTemp) return getTempVar().isGreaterOrEqual(a)
+        if(!isTemp) return getTempVar().isBiggerOrEqual(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         val re = MCBool()
         if(qwq != tempFloat) qwq.toTempEntity()
@@ -749,7 +749,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
      * @return 计算结果
      */
     @InsertCommand
-    override fun isGreaterOrEqual(a: Var<*>): MCBool {
+    override fun isBiggerOrEqual(a: Var<*>): MCBool {
         //re = t >= a
         if(!isTemp) return (getTempVar() as MCFloat).isSmallerOrEqual(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a

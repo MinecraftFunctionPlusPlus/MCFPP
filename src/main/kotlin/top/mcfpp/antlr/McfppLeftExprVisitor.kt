@@ -3,6 +3,8 @@ package top.mcfpp.antlr
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.lang.*
+import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.field.GlobalField
@@ -41,33 +43,12 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
     @Override
     override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var<*> {
         Project.ctx = ctx
-        val namespaceID : Pair<String?, String>
         if(ctx.primary() != null){
             currSelector = visit(ctx.primary())
         }
         if(currSelector is UnknownVar){
-            if(ctx.primary() != null || ctx.type().className() != null){
-                namespaceID = if(ctx.primary() != null){
-                    null to ctx.primary().text
-                } else{
-                    StringHelper.splitNamespaceID(ctx.type().text)
-                }
-                val o = GlobalField.getObject(namespaceID.first, namespaceID.second)
-                if(o != null) {
-                    currSelector = o.getType()
-                } else{
-                    LogProcessor.error("Undefined type: ${namespaceID.second}")
-                    currSelector = UnknownVar("${ctx.type().className().text}_type_" + UUID.randomUUID())
-                }
-            }else{
-                currSelector = CompoundDataCompanion(
-                    //基本类型
-                    when(ctx.type().text){
-                        "int" -> MCInt.data
-                        else -> TODO()
-                    }
-                )
-            }
+            val type = MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field)
+            currSelector = type
         }
         for (selector in ctx.selector()){
             visit(selector)
@@ -77,8 +58,9 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
 
     @Override
     override fun visitSelector(ctx: mcfppParser.SelectorContext?): Var<*> {
-        currSelector = visit(ctx!!.`var`())!!.getTempVar()
-        return (currSelector as Var<*>)
+        //进入visitVar，currSelector作为成员选择的上下文
+        currSelector = visit(ctx!!.`var`())
+        return currSelector as Var<*>
     }
 
     /**
@@ -95,6 +77,31 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
         } else if (ctx.value() != null) {
             //数字
             return visit(ctx.value())
+        } else if (ctx.range() != null){
+            //是范围
+            val left = ctx.range().num1?.let { visit(it) }
+            val right = ctx.range().num2?.let { visit(it) }
+            if(left is MCNumber<*>? && right is MCNumber<*>?){
+                if(left is MCFPPValue<*>? && right is MCFPPValue<*>?){
+                    val leftValue = left?.value.toString().toFloatOrNull()
+                    val rightValue = right?.value.toString().toFloatOrNull()
+                    return RangeVarConcrete(leftValue to rightValue)
+                }else{
+                    val range = RangeVar()
+                    if(left is MCInt){
+                        range.left = MCFloat(range.identifier + "_left")
+                    }
+                    if(right is MCInt){
+                        range.right = MCFloat(range.identifier + "_right")
+                    }
+                    left?.let { range.left.assign(it) }
+                    right?.let { range.right.assign(it) }
+                    return range
+                }
+            }else{
+                LogProcessor.error("Range sides should be a number: ${left?.type} and ${right?.type}")
+                return UnknownVar("range_" + UUID.randomUUID())
+            }
         } else {
             //this或者super
             val s = if(ctx.SUPER() != null){
@@ -120,7 +127,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
     @InsertCommand
     override fun visitVar(ctx: mcfppParser.VarContext): Var<*> {
         Project.ctx = ctx
-        return if (ctx.Identifier() != null && ctx.arguments() == null) {
+        if (ctx.Identifier() != null && ctx.arguments() == null) {
             //变量
             //没有数组选取
             val qwq: String = ctx.Identifier().text
@@ -142,19 +149,38 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
             if (ctx.identifierSuffix() == null || ctx.identifierSuffix().size == 0) {
                 return re
             } else {
-                if(re is Indexable<*>){
-                    for (value in ctx.identifierSuffix()) {
+                for (value in ctx.identifierSuffix()) {
+                    if(value.conditionalExpression() != null){
+                        if(re !is Indexable<*>){
+                            LogProcessor.error("Cannot index ${re.type}")
+                            return UnknownVar("${re.identifier}_index_" + UUID.randomUUID())
+                        }
+                        //索引
                         val index = visit(value.conditionalExpression())!!
                         re = (re as Indexable<*>).getByIndex(index)
+                    }else{
+                        if(!re.isTemp) re = re.getTempVar()
+                        //初始化
+                        for (initializer in value.objectInitializer()){
+                            val id = initializer.Identifier().text
+                            val v = visit(initializer.expression())
+                            val (m, b) = re.getMemberVar(id, re.getAccess(Function.currFunction))
+                            if(!b){
+                                LogProcessor.error("Cannot access member $id")
+                            }
+                            if(m == null) {
+                                LogProcessor.error("Member $id not found")
+                                continue
+                            }
+                            m.replacedBy(m.assign(v))
+                        }
                     }
-                }else{
-                    throw IllegalArgumentException("Cannot index ${re.type}")
                 }
                 return re
             }
         } else if (ctx.expression() != null) {
             // '(' expression ')'
-            visit(ctx.expression())
+            return McfppLeftExprVisitor().visit(ctx.expression())
         } else {
             //函数的调用
             Function.addComment(ctx.text)
@@ -184,15 +210,28 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
             }
             //调用函数
             return if (func is UnknownFunction) {
-                //可能是构造函数
-                var cls: Class? = GlobalField.getClass(p.first, p.second)
-                if (cls == null) {
-                    LogProcessor.error("Function " + ctx.text + " not defined")
-                    Function.addComment("[Failed to Compile]${ctx.text}")
-                    func.invoke(normalArgs,currSelector)
-                    return func.returnVar
-                }
-                if(cls is GenericClass){
+                var cls: Class? = if(ctx.arguments().readOnlyArgs() != null){
+                    GlobalField.getClass(p.first, p.second ,readOnlyArgs.map { it.type })
+                 }else{
+                     GlobalField.getClass(p.first, p.second)
+                 }
+                 //可能是构造函数
+                 if (cls == null) {
+                     val template: DataTemplate? = GlobalField.getTemplate(p.first, p.second)
+                     if(template == null){
+                         LogProcessor.error("Function ${func.identifier}<${readOnlyArgs.joinToString(",") { it.type.typeName }}>(${normalArgs.map { it.type.typeName }.joinToString(",")}) not defined")
+                         Function.addComment("[Failed to Compile]${ctx.text}")
+                         func.invoke(normalArgs,currSelector)
+                         return func.returnVar
+                     }
+                     //模板默认构造函数
+                     if(readOnlyArgs.isNotEmpty() || normalArgs.isNotEmpty()){
+                         LogProcessor.error("Template constructor ${template.identifier} cannot have arguments")
+                         return UnknownVar("${template.identifier}_type_" + UUID.randomUUID())
+                     }
+                     return DataTemplateObject(template)
+                 }
+                 if(cls is GenericClass){
                     //实例化泛型函数
                     cls = cls.compile(readOnlyArgs)
                 }

@@ -79,6 +79,12 @@ class NBTPath(var source: NBTSource): Serializable {
         return cmd
     }
 
+    fun clone(): NBTPath{
+        val re = NBTPath(source)
+        re.pathList.addAll(pathList.map { it.clone() })
+        return re
+    }
+
     companion object{
         val STORAGE = "storage"
         val ENTITY = "entity"
@@ -86,12 +92,33 @@ class NBTPath(var source: NBTSource): Serializable {
 
 }
 
-interface Path: Serializable
+interface Path: Serializable, Cloneable{
+    public override fun clone(): Path
+}
 
-data class IntPath(val value : MCInt) : Path
+data class IntPath(val value : MCInt) : Path {
+    override fun clone(): Path {
+        return IntPath(value)
+    }
 
-data class NBTPredicatePath(val value : NBTBasedData<Tag<*>>) : Path
+}
 
-data class MemberPath(val value : String, val isMacro: Boolean = false): Path
+data class NBTPredicatePath(val value : NBTBasedData<Tag<*>>) : Path {
+    override fun clone(): Path {
+        return NBTPredicatePath(value)
+    }
 
-class IteratorPath: Path
+
+}
+
+data class MemberPath(val value : String, val isMacro: Boolean = false): Path {
+    override fun clone(): Path {
+        return MemberPath(value, isMacro)
+    }
+}
+
+class IteratorPath: Path {
+    override fun clone(): Path {
+        return IteratorPath()
+    }
+}
