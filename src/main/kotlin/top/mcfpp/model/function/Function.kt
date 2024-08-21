@@ -137,11 +137,6 @@ open class Function : Member, FieldContainer, Serializable {
     var normalParams: ArrayList<FunctionParam>
 
     /**
-     * 只读参数列表
-     */
-    //var readOnlyParams: ArrayList<FunctionParam>
-
-    /**
      * 函数编译时的缓存
      */
     var field: FunctionField

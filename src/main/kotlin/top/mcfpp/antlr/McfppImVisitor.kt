@@ -442,6 +442,41 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
             //if()，需要进行条件计算
             parent as mcfppParser.IfStatementContext
             val exp = McfppExprVisitor().visit(parent.expression())
+            when(exp){
+                is MCBoolConcrete -> {
+                    if (exp.value) {
+                        //函数调用的命令
+                        //给子函数开栈
+                        Function.addCommand("function " + f.namespaceID)
+                        LogProcessor.warn("The condition is always true. ")
+                    } else {
+                        Function.addComment("function " + f.namespaceID)
+                        LogProcessor.warn("The condition is always false. ")
+                    }
+                }
+
+                is ReturnedMCBool -> {
+                    //给子函数开栈
+                    Function.addCommand(
+                        "execute " +
+                                "if function " + exp.parentFunction.namespaceID +
+                                "run return run function " + f.namespaceID
+                    )
+                }
+
+                is MCBool -> {
+                    Function.addCommand(
+                        "execute " +
+                                "if score " + exp.name + " " + SbObject.MCFPP_boolean + " matches 1 " +
+                                "run return run function " + f.namespaceID
+                    )
+                }
+
+                is CommandReturn -> {
+
+                }
+
+            }
             if(exp !is MCBool){
                 throw TypeCastException()
             }
