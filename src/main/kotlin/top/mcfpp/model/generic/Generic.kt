@@ -15,8 +15,6 @@ interface Generic<T> where T : Function{
 
     val readOnlyParams: ArrayList<FunctionParam>
 
-    val compiledFunctions: HashMap<ArrayList<Var<*>>, T>
-
     fun invoke(readOnlyArgs: ArrayList<Var<*>>, normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?)
 
     fun compile(readOnlyArgs: ArrayList<Var<*>>) : T

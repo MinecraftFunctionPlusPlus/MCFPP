@@ -25,40 +25,32 @@ class GenericFunction : Function, Generic<Function> {
 
     override val readOnlyParams: ArrayList<FunctionParam> = ArrayList()
 
-    override val compiledFunctions: HashMap<ArrayList<Var<*>>, Function> = HashMap()
+    override val compiledFunctions: HashMap<List<Any?>, Function> = HashMap()
 
     /**
      * 创建一个全局函数，它有指定的命名空间
      * @param identifier 函数的标识符
      * @param namespace 函数的命名空间
      */
-    constructor(identifier: String, namespace: String = Project.currNamespace, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(identifier, namespace, returnType){
-        this.ctx = ctx
-    }
+    constructor(identifier: String, namespace: String = Project.currNamespace, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(identifier, namespace, returnType, ctx)
 
     /**
      * 创建一个函数，并指定它所属的类。
      * @param identifier 函数的标识符
      */
-    constructor(identifier: String, cls: Class, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(identifier, cls, isStatic, returnType) {
-        this.ctx = ctx
-    }
+    constructor(identifier: String, cls: Class, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(identifier, cls, isStatic, returnType, ctx)
 
     /**
      * 创建一个函数，并指定它所属的接口。接口的函数总是抽象并且公开的
      * @param identifier 函数的标识符
      */
-    constructor(identifier: String, itf: Interface, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(identifier, itf, returnType) {
-        this.ctx = ctx
-    }
+    constructor(identifier: String, itf: Interface, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(identifier, itf, returnType, ctx)
 
     /**
      * 创建一个函数，并指定它所属的结构体。
      * @param name 函数的标识符
      */
-    constructor(name: String, template: DataTemplate, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(name, template, isStatic, returnType){
-        this.ctx = ctx
-    }
+    constructor(name: String, template: DataTemplate, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(name, template, isStatic, returnType, ctx)
 
     override fun invoke(readOnlyArgs: ArrayList<Var<*>>, normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?) {
         val f = compile(readOnlyArgs)
@@ -88,24 +80,24 @@ class GenericFunction : Function, Generic<Function> {
     }
 
     override fun compile(readOnlyArgs: ArrayList<Var<*>>): Function {
-        if(compiledFunctions.containsKey(readOnlyArgs)){
-            return compiledFunctions[readOnlyArgs]!!
+        if(compiledFunctions.containsKey(readOnlyArgs.map { (it as MCFPPValue<*>).value })){
+            return compiledFunctions[readOnlyArgs.map { (it as MCFPPValue<*>).value }]!!
         }
         //创建新的函数
         val compiledFunction = when(ownerType){
             Companion.OwnerType.NONE -> {
-                Function("${identifier}_${index}", namespace, returnType)
+                Function("${identifier}_${index}", namespace, returnType, ctx)
             }
             //interface是和Class一起处理的
             Companion.OwnerType.CLASS -> {
                 if(owner is Class){
-                    Function("${identifier}_${index}", owner as Class, isStatic, returnType)
+                    Function("${identifier}_${index}", owner as Class, isStatic, returnType, ctx)
                 }else{
-                    Function("${identifier}_${index}", owner as Interface, returnType)
+                    Function("${identifier}_${index}", owner as Interface, returnType, ctx)
                 }
             }
             Companion.OwnerType.TEMPLATE -> {
-                Function("${identifier}_${index}", owner as DataTemplate, isStatic, returnType)
+                Function("${identifier}_${index}", owner as DataTemplate, isStatic, returnType, ctx)
             }
             Companion.OwnerType.BASIC -> {
                 //拓展函数的编译在ExtensionGenericFunction中进行

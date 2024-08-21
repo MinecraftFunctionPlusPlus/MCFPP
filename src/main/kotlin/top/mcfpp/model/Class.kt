@@ -85,7 +85,7 @@ open class Class : CompoundData {
     constructor(identifier: String, namespace: String = Project.currNamespace) {
         this.identifier = identifier
         this.namespace = namespace
-        classPreInit = Function("_class_preinit_$identifier", this, false)
+        classPreInit = Function("_class_preinit_$identifier", this, false, context = null)
         field.addFunction(classPreInit,true)
     }
 

@@ -29,7 +29,7 @@ class MCFPPFile(path : String) : File(path) {
     val namespace: String
 
     //TODO 同名文件的顶级函数之间的命名冲突
-    val topFunction = Function(StringHelper.toLegalIdentifier(this.name))
+    val topFunction = Function(StringHelper.toLegalIdentifier(this.name), context = null)
 
     init {
         val n = Project.config.sourcePath.toAbsolutePath().relativize(this.toPath().toAbsolutePath().parent).toString()
@@ -96,7 +96,8 @@ class MCFPPFile(path : String) : File(path) {
         //创建默认函数
         val func = Function(
             StringHelper.toLowerCase(nameWithoutExtension + "_default"), Project.currNamespace,
-            MCFPPBaseType.Void
+            MCFPPBaseType.Void,
+            context = null
         )
         Function.currFunction = func
         McfppImVisitor().visit(tree())

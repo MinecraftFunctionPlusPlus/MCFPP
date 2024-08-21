@@ -50,7 +50,7 @@ class NativeFunction : Function, Native {
      * @param returnType 返回值的类型
      * @param namespace 命名空间
      */
-    constructor(name: String, returnType: MCFPPType, namespace: String = Project.currNamespace, javaMethod: Method = Companion::defaultNativeFunction.javaMethod!!) : super(name, namespace, returnType) {
+    constructor(name: String, returnType: MCFPPType, namespace: String = Project.currNamespace, javaMethod: Method = Companion::defaultNativeFunction.javaMethod!!) : super(name, namespace, returnType, context = null) {
         this.javaMethod = javaMethod
         this.javaClassName = null
         this.javaMethodName = name

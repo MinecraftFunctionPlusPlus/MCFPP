@@ -19,7 +19,6 @@ class ReturnedMCBool(val parentFunction: Function) : MCBool() {
         this.isStatic = false
         this.isTemp = false
         this.isConst = false
-        this.isImport = false
     }
 
     override fun doAssign(b: Var<*>): MCBool {

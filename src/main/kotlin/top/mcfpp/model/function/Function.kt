@@ -4,7 +4,9 @@ import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.antlr.McfppExprVisitor
+import top.mcfpp.antlr.McfppImVisitor
 import top.mcfpp.antlr.mcfppParser
+import top.mcfpp.antlr.mcfppParser.FunctionBodyContext
 import top.mcfpp.command.*
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.*
@@ -117,7 +119,7 @@ open class Function : Member, FieldContainer, Serializable {
     /**
      * 函数的名字
      */
-    val identifier: String
+    var identifier: String
 
     /**
      * 函数的标签
@@ -284,31 +286,20 @@ open class Function : Member, FieldContainer, Serializable {
             return re
         }
 
-    /*
-    /**
-     * 这个函数的形参类型
-     */
-    val readOnlyParamTypeList: ArrayList<MCFPPType>
-        get() {
-            val re = ArrayList<MCFPPType>()
-            for (p in readOnlyParams) {
-                re.add(p.type)
-            }
-            return re
-        }
+    var context: FunctionBodyContext? = null
 
-    */
+
+    open val compiledFunctions: HashMap<List<Any?>, Function> = HashMap()
 
     /**
      * 创建一个全局函数，它有指定的命名空间
      * @param identifier 函数的标识符
      * @param namespace 函数的命名空间
      */
-    constructor(identifier: String, namespace: String = Project.currNamespace, returnType: MCFPPType = MCFPPBaseType.Void){
+    constructor(identifier: String, namespace: String = Project.currNamespace, returnType: MCFPPType = MCFPPBaseType.Void, context: FunctionBodyContext?){
         this.identifier = identifier
         commands = CommandList()
         normalParams = ArrayList()
-        //readOnlyParams = ArrayList()
         field = FunctionField(null, this)
         isStatic = false
         ownerType = OwnerType.NONE
@@ -319,17 +310,17 @@ open class Function : Member, FieldContainer, Serializable {
         }else{
             this.returnVar = buildReturnVar(returnType)
         }
+        this.context = context
     }
 
     /**
      * 创建一个函数，并指定它所属的类。
      * @param identifier 函数的标识符
      */
-    constructor(identifier: String, cls: Class, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void) {
+    constructor(identifier: String, cls: Class, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void, context: FunctionBodyContext?) {
         this.identifier = identifier
         commands = CommandList()
         normalParams = ArrayList()
-        //readOnlyParams = ArrayList()
         namespace = cls.namespace
         ownerType = OwnerType.CLASS
         owner = cls
@@ -337,13 +328,14 @@ open class Function : Member, FieldContainer, Serializable {
         field = FunctionField(cls.field, this)
         this.returnType = returnType
         this.returnVar = buildReturnVar(returnType)
+        this.context = context
     }
 
     /**
      * 创建一个函数，并指定它所属的接口。接口的函数总是抽象并且公开的
      * @param identifier 函数的标识符
      */
-    constructor(identifier: String, itf: Interface, returnType: MCFPPType = MCFPPBaseType.Void) {
+    constructor(identifier: String, itf: Interface, returnType: MCFPPType = MCFPPBaseType.Void, context: FunctionBodyContext?) {
         this.identifier = identifier
         commands = CommandList()
         normalParams = ArrayList()
@@ -357,17 +349,17 @@ open class Function : Member, FieldContainer, Serializable {
         this.returnVar = buildReturnVar(returnType)
         this.isAbstract = true
         this.accessModifier = Member.AccessModifier.PUBLIC
+        this.context = context
     }
 
     /**
      * 创建一个函数，并指定它所属的结构体。
      * @param name 函数的标识符
      */
-    constructor(name: String, template: DataTemplate, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void) {
+    constructor(name: String, template: DataTemplate, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void, context: FunctionBodyContext?) {
         this.identifier = name
         commands = CommandList()
         normalParams = ArrayList()
-        //readOnlyParams = ArrayList()
         namespace = template.namespace
         ownerType = OwnerType.TEMPLATE
         owner = template
@@ -375,6 +367,23 @@ open class Function : Member, FieldContainer, Serializable {
         field = FunctionField(template.field, this)
         this.returnType = returnType
         this.returnVar = buildReturnVar(returnType)
+        this.context = context
+    }
+
+    constructor(function: Function){
+        this.identifier = function.identifier
+        this.commands = function.commands.clone() as CommandList
+        this.normalParams = function.normalParams.clone() as ArrayList<FunctionParam>
+        this.namespace = function.namespace
+        this.owner = function.owner
+        this.ownerType = function.ownerType
+        this.isStatic = function.isStatic
+        this.field = function.field.clone()
+        this.returnType = function.returnType
+        this.returnVar = function.returnVar.clone()
+        this.isAbstract = function.isAbstract
+        this.accessModifier = function.accessModifier
+        this.context = function.context
     }
 
     /**
@@ -411,13 +420,8 @@ open class Function : Member, FieldContainer, Serializable {
     open fun addParamsFromContext(ctx: mcfppParser.FunctionParamsContext) {
         val n = ctx.normalParams().parameterList()?:return
         for (param in n.parameter()) {
-            var (p,v) = parseParam(param)
+            val (p,v) = parseParam(param)
             normalParams.add(p)
-            if(v is MCFPPValue<*>) {
-                p.defaultCommand.addAll(Commands.fakeFunction(this){
-                    v = (v as MCFPPValue<*>).toDynamic(false)
-                })
-            }
             field.putVar(p.identifier, v)
         }
     }
@@ -429,21 +433,18 @@ open class Function : Member, FieldContainer, Serializable {
             param.Identifier().text,
             this,
             param.STATIC() != null,
-            param.expression() != null
+            param.value() != null
         )
         //检查缺省参数是否合法
-        if(param.expression() == null && hasDefaultValue){
+        if(param.value() == null && hasDefaultValue){
             LogProcessor.error("Default value must be at the end of the parameter list")
             throw Exception("Default value must be at the end of the parameter list")
         }
-        var v = param1.buildVar()
-        if(param.expression() != null){
+        val v = param1.buildVar()
+        if(param.value() != null){
             hasDefaultValue = true
             //编译缺省值表达式，用于赋值参数
-            param1.defaultCommand.addAll(Commands.fakeFunction(this){
-                val default = McfppExprVisitor().visit(param.expression()) as Var<*>
-                v = v.assign(default)
-            })
+            param1.defaultVar = McfppExprVisitor().visit(param.value()!!).explicitCast(param1.type)
         }
         return param1 to v
     }
@@ -467,11 +468,33 @@ open class Function : Member, FieldContainer, Serializable {
      * @param caller 函数的调用者
      */
     open fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?){
+        if(context != null){
+            val values = normalArgs.map { if(it is MCFPPValue<*>) it.value else null }
+            if(values.any { it != null }){
+                if(compiledFunctions.containsKey(values)){
+                    compiledFunctions[values]!!.invoke(normalArgs, caller)
+                    return
+                }
+                val cf = Function(this)
+                for (i in values.indices) {
+                    if(values[i] != null){
+                        cf.field.putVar(normalParams[i].identifier, normalArgs[i], true)
+                    }
+                }
+                cf.identifier = this.identifier + "_" + compiledFunctions.size
+                cf.context = null
+                cf.runInFunction {
+                    McfppImVisitor().visitFunctionBody(context!!)
+                }
+                compiledFunctions[values] = cf
+                cf.invoke(normalArgs, caller)
+                return
+            }
+        }
         when(caller){
             is CompoundDataCompanion -> invoke(normalArgs, callerClassP = null)
             null -> invoke(normalArgs, callerClassP = null)
             is ClassPointer -> invoke(normalArgs, callerClassP = caller)
-            //is IntTemplateBase -> invoke(normalArgs, caller = caller)
             is Var<*> -> invoke(normalArgs, caller = caller)
         }
     }
@@ -482,7 +505,7 @@ open class Function : Member, FieldContainer, Serializable {
      * @param normalArgs
      * @param caller
      */
-    open fun invoke(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, caller: Var<*>){
+    open fun invoke(normalArgs: ArrayList<Var<*>>, caller: Var<*>){
         //基本类型
         addComment("[Function ${this.namespaceID}] Function Pushing and argument passing")
         //给函数开栈
@@ -490,7 +513,7 @@ open class Function : Member, FieldContainer, Serializable {
         //传入this参数
         field.putVar("this",caller,true)
         //参数传递
-        argPass(/*readOnlyArgs, */normalArgs)
+        argPass(normalArgs)
         addCommand("function " + this.namespaceID)
         //static参数传回
         staticArgRef(normalArgs)
@@ -509,7 +532,7 @@ open class Function : Member, FieldContainer, Serializable {
     /**
      * 调用这个函数。
      *
-     * @param args 函数的参数
+     * @param normalArgs 函数的参数
      * @param callerClassP 调用函数的实例
      * @see top.mcfpp.antlr.McfppExprVisitor.visitVar
      */
@@ -518,7 +541,7 @@ open class Function : Member, FieldContainer, Serializable {
         //给函数开栈
         addCommand("data modify storage mcfpp:system ${Project.config.rootNamespace}.stack_frame prepend value {}")
         //参数传递
-        argPass(/*readOnlyArgs, */normalArgs)
+        argPass(normalArgs)
         //函数调用的命令
         when(callerClassP){
             is ClassPointer -> {
@@ -562,27 +585,14 @@ open class Function : Member, FieldContainer, Serializable {
     open fun argPass(normalArgs: ArrayList<Var<*>>){
         for (i in this.normalParams.indices) {
             if(i >= normalArgs.size){
-                addCommands(normalParams[i].defaultCommand.toTypedArray())
-            }else{
-                val tg = normalArgs[i].implicitCast(this.normalParams[i].type)
-                //参数传递和子函数的参数进栈
-                var p = field.getVar(this.normalParams[i].identifier)!!
-                p = p.assign(tg)
-                if(p is MCFPPValue<*>) p.toDynamic(true)
+                //参数缺省值
+                normalArgs.add(this.normalParams[i].defaultVar!!)
             }
-        }
-
-        /*
-        for (i in readOnlyParams.indices){
-            if(!readOnlyArgs[i].isConcrete){
-                LogProcessor.error("Cannot pass a non-concrete value to a readonly parameter")
-                throw IllegalArgumentException()
-            }
+            val tg = normalArgs[i].implicitCast(this.normalParams[i].type)
             //参数传递和子函数的参数进栈
-            val p = field.getVar(this.readOnlyParams[i].identifier)!!
-            p.assign(readOnlyArgs[i])
+            val p = field.getVar(this.normalParams[i].identifier)!!
+            field.putVar(p.identifier, p.assign(tg), true)
         }
-         */
     }
 
     /**
@@ -793,12 +803,12 @@ open class Function : Member, FieldContainer, Serializable {
         /**
          * 用于处理多余的命令的函数
          */
-        var extraFunction  = Function("extraFunction")
+        var extraFunction  = Function("extraFunction", context = null)
 
         /**
          * 一个空的函数，通常用于作为占位符
          */
-        var nullFunction = Function("null")
+        var nullFunction = Function("null", context = null)
 
         /**
          * 目前编译器处在的函数。允许编译器在全局获取并访问当前正在编译的函数对象。默认为全局初始化函数

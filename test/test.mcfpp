@@ -1,19 +1,15 @@
 namespace test;
 
-data Test{
-    int a;
-    int b;
-    int c;
-    int d;
-}
-
 func main(){
-    Test t = {a:1, b:2, c:3, d:4};
-    t = test(t);
-    print(t.toText());
+    import int a,b;
+    test(1,2);
+    test(2,4);
+    test(a,2);
+    test(2,b);
+    test(a,b);
 }
 
-func test(Test t) -> Test{
-    print(t.a);
-    return t[a = 100];
+func test(int a, int b){
+    print(a);
+    print(b);
 }

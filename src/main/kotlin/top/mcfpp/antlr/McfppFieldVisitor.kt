@@ -107,7 +107,8 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val f = Function(
             ctx.Identifier().text,
             Interface.currInterface!!,
-            MCFPPType.parseFromIdentifier(if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text, typeScope)
+            MCFPPType.parseFromIdentifier(if(ctx.functionReturnType() == null) "void" else ctx.functionReturnType().text, typeScope),
+            null
         )
         //解析参数
         f.addParamsFromContext(ctx.functionParams())
@@ -296,7 +297,8 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 ctx.Identifier().text,
                 Class.currClass!!,
                 Class.currClass!! is ObjectClass,
-                type
+                type,
+                ctx.functionBody()
             )
         }
         if(!isStatic){
@@ -330,7 +332,8 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             ctx.Identifier().text,
             Class.currClass!!,
             false,
-            type
+            type,
+            null
         )
         f.isAbstract = true
         if(f.isStatic){
@@ -466,7 +469,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val f = if(ctx.functionParams()?.readOnlyParams() != null && ctx.functionParams().readOnlyParams().parameterList().parameter().size != 0){
             GenericFunction(identifier, Project.currNamespace, type, ctx.functionBody())
         }else {
-            Function(identifier, Project.currNamespace,type)
+            Function(identifier, Project.currNamespace,type, ctx.functionBody())
         }
         //解析参数
         ctx.functionParams()?.let { f.addParamsFromContext(it) }
@@ -499,7 +502,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val f: Function
         //是否是内联函数
         val identifier : String = ctx.Identifier().text
-        f = InlineFunction(identifier, Project.currNamespace, ctx)
+        f = InlineFunction(identifier, Project.currNamespace, ctx.functionBody())
         //解析参数
         f.addParamsFromContext(ctx.functionParams())
         //TODO 解析函数的注解
@@ -592,7 +595,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val f = if(ctx.functionParams().readOnlyParams() != null && ctx.functionParams().readOnlyParams().parameterList().parameter().size != 0){
             GenericExtensionFunction(ctx.Identifier().text, data, Project.currNamespace, MCFPPType.parseFromIdentifier(ctx.functionReturnType().text, typeScope), ctx.functionBody())
         }else{
-            ExtensionFunction(ctx.Identifier().text, data, Project.currNamespace, MCFPPType.parseFromIdentifier(ctx.functionReturnType().text, typeScope))
+            ExtensionFunction(ctx.Identifier().text, data, Project.currNamespace, MCFPPType.parseFromIdentifier(ctx.functionReturnType().text, typeScope), ctx.functionBody())
         }
         //解析参数
         f.accessModifier = AccessModifier.PUBLIC
@@ -769,7 +772,8 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 ctx.Identifier().text,
                 DataTemplate.currTemplate!!,
                 DataTemplate.currTemplate is ObjectDataTemplate,
-                type
+                type,
+                ctx.functionBody()
             )
         }
         if(!isStatic){

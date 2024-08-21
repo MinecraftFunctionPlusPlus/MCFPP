@@ -12,23 +12,14 @@ import top.mcfpp.lang.type.MCFPPBaseType
  */
 class InlineFunction : Function {
 
-    var context: mcfppParser.InlineFunctionDeclarationContext
+    constructor(name: String, context: mcfppParser.FunctionBodyContext) : super(name, context = context)
 
-    constructor(name: String, context: mcfppParser.InlineFunctionDeclarationContext) : super(name) {
-        this.context = context
-    }
-
-    constructor(name: String, namespace: String, context: mcfppParser.InlineFunctionDeclarationContext) : super(name, namespace,
-        MCFPPBaseType.Void
-    ) {
-        this.context = context
-    }
+    constructor(name: String, namespace: String, context: mcfppParser.FunctionBodyContext) : super(name, namespace, MCFPPBaseType.Void, context = context)
 
     override fun argPass(normalArgs: ArrayList<Var<*>>) {
         for (i in this.normalParams.indices) {
             if(i >= normalArgs.size){
-                addCommands(normalParams[i].defaultCommand.toTypedArray())
-                field.putVar(this.normalParams[i].identifier, field.getVar(this.normalParams[i].identifier)!!, true)
+                field.putVar(this.normalParams[i].identifier, this.normalParams[i].defaultVar!!, true)
             }else{
                 field.putVar(this.normalParams[i].identifier, normalArgs[i], true)
             }

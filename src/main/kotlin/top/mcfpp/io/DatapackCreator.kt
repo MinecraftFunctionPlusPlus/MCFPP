@@ -106,6 +106,17 @@ object DatapackCreator {
                             Paths.get("$currPath/functions/${f.nameWithNamespace}.mcfunction"),
                             f.cmdStr.toByteArray()
                         )
+                        if(f.compiledFunctions.isNotEmpty()){
+                            for (cf in f.compiledFunctions.values){
+                                LogProcessor.debug("Writing File: $currPath\\functions\\${cf.nameWithNamespace}.mcfunction")
+                                Files.createDirectories(Paths.get("$currPath/functions"))
+                                Files.write(
+                                    Paths.get("$currPath/functions/${cf.nameWithNamespace}.mcfunction"),
+                                    cf.cmdStr.toByteArray()
+                                )
+                            }
+
+                        }
                     }
                 }
                 namespace.value.field.forEachClass { cls ->
@@ -126,6 +137,14 @@ object DatapackCreator {
                                     Paths.get("$currPath/functions/"  + f.nameWithNamespace + ".mcfunction"),
                                     f.cmdStr.toByteArray()
                                 )
+                                if(f.compiledFunctions.isNotEmpty()){
+                                    for (cf in f.compiledFunctions.values) {
+                                        LogProcessor.debug("Writing File: $currPath\\functions\\" + cf.nameWithNamespace + ".mcfunction")
+                                        //TODO 可能无法正确创建文件夹
+                                        Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(cls.identifier)))
+                                        Files.write(Paths.get("$currPath/functions/" + cf.nameWithNamespace + ".mcfunction"), cf.cmdStr.toByteArray())
+                                    }
+                                }
                             }
                         }
                         //构造函数
@@ -138,6 +157,14 @@ object DatapackCreator {
                                     Paths.get("$currPath/functions/" + c.nameWithNamespace + ".mcfunction"),
                                     c.cmdStr.toByteArray()
                                 )
+                                if(c.compiledFunctions.isNotEmpty()){
+                                    for (cf in c.compiledFunctions.values) {
+                                        LogProcessor.debug("Writing File: $currPath\\functions\\" + cf.nameWithNamespace + ".mcfunction")
+                                        //TODO 可能无法正确创建文件夹
+                                        Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(cls.identifier)))
+                                        Files.write(Paths.get("$currPath/functions/" + cf.nameWithNamespace + ".mcfunction"), cf.cmdStr.toByteArray())
+                                    }
+                                }
                             }
                         }
                     }
@@ -161,6 +188,14 @@ object DatapackCreator {
                                     Paths.get("$currPath/functions/"  + f.nameWithNamespace + ".mcfunction"),
                                     f.cmdStr.toByteArray()
                                 )
+                                if(f.compiledFunctions.isNotEmpty()){
+                                    for (cf in f.compiledFunctions.values) {
+                                        LogProcessor.debug("Writing File: $currPath\\functions\\" + cf.nameWithNamespace + ".mcfunction")
+                                        //TODO 可能无法正确创建文件夹
+                                        Files.createDirectories(Paths.get("$currPath/functions/" + StringHelper.toLowerCase(t.identifier)))
+                                        Files.write(Paths.get("$currPath/functions/" + cf.nameWithNamespace + ".mcfunction"), cf.cmdStr.toByteArray())
+                                    }
+                                }
                             }
                         }
                     }
@@ -183,6 +218,14 @@ object DatapackCreator {
                                     Paths.get("$currPath/functions/"  + f.nameWithNamespace + ".mcfunction"),
                                     f.cmdStr.toByteArray()
                                 )
+                                if(f.compiledFunctions.isNotEmpty()){
+                                    for (cf in f.compiledFunctions.values) {
+                                        LogProcessor.debug("Writing File: $currPath\\functions\\" + cf.nameWithNamespace + ".mcfunction")
+                                        //TODO 可能无法正确创建文件夹
+                                        Files.createDirectories(Paths.get("$currPath\\functions/" + StringHelper.toLowerCase(obj.identifier)))
+                                        Files.write(Paths.get("$currPath/functions/" + cf.nameWithNamespace + ".mcfunction"), cf.cmdStr.toByteArray())
+                                    }
+                                }
                             }
                         }
                     }

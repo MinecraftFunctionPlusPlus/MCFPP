@@ -125,7 +125,13 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         if(ctx.VAR() != null){
             //自动判断类型
             val init: Var<*> = McfppExprVisitor().visit(ctx.expression())!!
-            val `var` = Var.build(ctx.Identifier().text, init.type, Function.currFunction)
+            val `var` = if(fieldModifier == "import"){
+                val qwq = Var.buildUnConcrete(ctx.Identifier().text, init.type, Function.currFunction)
+                qwq.hasAssigned = true
+                qwq
+            }else{
+                Var.build(ctx.Identifier().text, init.type, Function.currFunction)
+            }
             //变量注册
             //一定是函数变量
             if (!Function.field.putVar(ctx.Identifier().text, `var`, true)) {
@@ -149,22 +155,24 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                         `var`.toDynamic(true)
                     }
                 }
-                "import" -> {
-                    `var`.isImport = true
-                }
             }
         }else{
             //获取类型
             val type = MCFPPType.parseFromContext(ctx.type(), Function.currFunction.field)
             for (c in ctx.fieldDeclarationExpression()){
                 //函数变量，生成
-                var `var` = Var.build(c.Identifier().text, type, Function.currFunction)
+                var `var` = if(fieldModifier == "import"){
+                    val qwq = Var.buildUnConcrete(c.Identifier().text, type, Function.currFunction)
+                    qwq.hasAssigned = true
+                    qwq
+                }else{
+                    Var.build(c.Identifier().text, type, Function.currFunction)
+                }
                 //变量注册
                 //一定是函数变量
                 if (Function.field.containVar(c.Identifier().text)) {
                     LogProcessor.error("Duplicate defined variable name:" + c.Identifier().text)
                 }
-                Function.field.putVar(`var`.identifier, `var`, true)
                 Function.addComment("field: " + ctx.type().text + " " + c.Identifier().text + if (c.expression() != null) " = " + c.expression().text else "")
                 //变量初始化
                 if (c.expression() != null) {
@@ -184,14 +192,12 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                         `var`.isConst = true
                     }
                     "dynamic" -> {
-                        if(`var` is MCFPPValue<*>){
+                        if(`var` is MCFPPValue<*> && `var`.hasAssigned){
                             `var`.toDynamic(true)
                         }
                     }
-                    "import" -> {
-                        `var`.isImport = true
-                    }
                 }
+                Function.field.putVar(`var`.identifier, `var`, true)
             }
         }
         return null

@@ -80,9 +80,9 @@ object GlobalField : FieldContainer, IField {
         stdNamespaces["mcfpp.lang"] = Namespace("mcfpp.lang")
         stdNamespaces["mcfpp.minecraft"] = Namespace("mcfpp.minecraft")
 
-        Project.mcfppTick = Function("tick","mcfpp", MCFPPBaseType.Void)
-        Project.mcfppLoad = Function("load","mcfpp", MCFPPBaseType.Void)
-        Project.mcfppInit = Function("init", "mcfpp", MCFPPBaseType.Void)
+        Project.mcfppTick = Function("tick","mcfpp", MCFPPBaseType.Void, context = null)
+        Project.mcfppLoad = Function("load","mcfpp", MCFPPBaseType.Void, context = null)
+        Project.mcfppInit = Function("init", "mcfpp", MCFPPBaseType.Void, context = null)
         stdNamespaces["mcfpp"]!!.field.addFunction(Project.mcfppLoad,true)
         stdNamespaces["mcfpp"]!!.field.addFunction(Project.mcfppTick,true)
         stdNamespaces["mcfpp"]!!.field.addFunction(Project.mcfppInit, true)
@@ -358,6 +358,15 @@ object GlobalField : FieldContainer, IField {
                         for (c in s.commands) {
                             println("\t" + c)
                         }
+                        if(s.compiledFunctions.isNotEmpty()){
+                            for (f in s.compiledFunctions.values){
+                                println("$n ${f.namespaceID}")
+                                for (c in f.commands) {
+                                    println("\t" + c)
+                                }
+                            }
+
+                        }
                     }
                 }
             }
@@ -377,6 +386,14 @@ object GlobalField : FieldContainer, IField {
                             for (d in c.commands) {
                                 println("\t\t\t" + d)
                             }
+                            if(c.compiledFunctions.isNotEmpty()){
+                                for (f in c.compiledFunctions.values){
+                                    println("\t\t" + f.namespaceID)
+                                    for (d in f.commands) {
+                                        println("\t\t\t" + d)
+                                    }
+                                }
+                            }
                         }
                     }
                     println("\tfunctions:")
@@ -394,6 +411,14 @@ object GlobalField : FieldContainer, IField {
                                 )
                                 for (d in f.commands) {
                                     println("\t\t\t" + d)
+                                }
+                                if(f.compiledFunctions.isNotEmpty()){
+                                    for (f1 in f.compiledFunctions.values){
+                                        println("\t\t" + f1.namespaceID)
+                                        for (d in f1.commands) {
+                                            println("\t\t\t" + d)
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -420,6 +445,14 @@ object GlobalField : FieldContainer, IField {
                             for (d in f.commands) {
                                 println("\t\t\t" + d)
                             }
+                            if(f.compiledFunctions.isNotEmpty()){
+                                for (f1 in f.compiledFunctions.values){
+                                    println("\t\t" + f1.namespaceID)
+                                    for (d in f1.commands) {
+                                        println("\t\t\t" + d)
+                                    }
+                                }
+                            }
                         }
                     }
                     println("\tattributes:")
@@ -429,7 +462,6 @@ object GlobalField : FieldContainer, IField {
                                 .lowercase(Locale.getDefault()) + " " + v.type + " " + v.identifier
                         )
                     }
-                    println("\tstatic functions:")
                 }
             }
             namespace.field.forEachInterface { i ->

@@ -17,7 +17,7 @@ open class UnknownFunction: Function {
      * @param identifier 函数的标识符
      * @param namespace 函数的命名空间
      */
-    constructor(identifier: String, namespace: String = Project.currNamespace):super(identifier,namespace){
+    constructor(identifier: String, namespace: String = Project.currNamespace):super(identifier,namespace, context = null){
         returnVar = UnknownVar("return")
     }
 

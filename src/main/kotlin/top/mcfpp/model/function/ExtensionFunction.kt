@@ -1,6 +1,7 @@
 package top.mcfpp.model.function
 
 import top.mcfpp.Project
+import top.mcfpp.antlr.mcfppParser.FunctionBodyContext
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.CompoundData
@@ -12,7 +13,7 @@ open class ExtensionFunction: Function {
      * 创建一个函数
      * @param name 函数的标识符
      */
-    constructor(name: String, owner: CompoundData, namespace: String = Project.currNamespace, returnType: MCFPPType = MCFPPBaseType.Void):super(name, namespace, returnType){
+    constructor(name: String, owner: CompoundData, namespace: String = Project.currNamespace, returnType: MCFPPType = MCFPPBaseType.Void, context: FunctionBodyContext):super(name, namespace, returnType, context){
         this.owner = owner
     }
 

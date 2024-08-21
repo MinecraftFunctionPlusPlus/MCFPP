@@ -267,7 +267,7 @@ parameterList
 
 //参数
 parameter
-    :   STATIC? type Identifier ('=' expression)?
+    :   STATIC? type Identifier ('=' value)?
     ;
 
 //表达式

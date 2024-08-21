@@ -12,6 +12,7 @@ import top.mcfpp.model.Class
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.ExtensionFunction
+import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.util.LogProcessor
 
@@ -23,16 +24,13 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
 
     override val readOnlyParams: ArrayList<FunctionParam> = ArrayList()
 
-    override val compiledFunctions: HashMap<ArrayList<Var<*>>, ExtensionFunction> = HashMap()
+    override val compiledFunctions: HashMap<List<Any?>, Function> = HashMap()
 
     /**
      * 创建一个函数
      * @param name 函数的标识符
      */
-    constructor(name: String, owner: CompoundData, namespace: String = Project.currNamespace, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext):super(name, owner, namespace, returnType){
-        this.ctx = ctx
-    }
-
+    constructor(name: String, owner: CompoundData, namespace: String = Project.currNamespace, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext):super(name, owner, namespace, returnType, ctx)
     override fun invoke(readOnlyArgs: ArrayList<Var<*>>, normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?) {
         val f = compile(readOnlyArgs)
         f.invoke(normalArgs, caller)
@@ -62,19 +60,19 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
 
     override fun compile(readOnlyArgs: ArrayList<Var<*>>): ExtensionFunction {
         if(compiledFunctions.containsKey(readOnlyArgs)){
-            return compiledFunctions[readOnlyArgs]!!
+            return (compiledFunctions[readOnlyArgs.map { (it as MCFPPValue<*>).value }] as ExtensionFunction?)!!
         }
         //创建新的函数
         val compiledFunction : ExtensionFunction = when(ownerType){
             Companion.OwnerType.CLASS -> {
-                ExtensionFunction("${identifier}_${index}", owner as Class, namespace, returnType)
+                ExtensionFunction("${identifier}_${index}", owner as Class, namespace, returnType, ctx)
             }
             //TODO Template的拓展方法好像还没做欸
             Companion.OwnerType.TEMPLATE -> {
                 TODO()
             }
             Companion.OwnerType.BASIC -> {
-                ExtensionFunction("${identifier}_${index}", owner as CompoundData, namespace, returnType)
+                ExtensionFunction("${identifier}_${index}", owner as CompoundData, namespace, returnType, ctx)
             }
             else -> {
                 //拓展函数必定有成员

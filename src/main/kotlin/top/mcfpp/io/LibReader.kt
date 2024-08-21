@@ -140,7 +140,7 @@ object FunctionReader: ILibJsonReader<Function> {
             val ctx = Utils.fromByteArrayString<mcfppParser.FunctionBodyContext>(jsonObject["context"].toString())
             GenericFunction(identifier, namespace, returnType, ctx)
         }else{
-            Function(identifier, namespace, returnType)
+            Function(identifier, namespace, returnType, null)
         }
         currFunction = function
         //参数获取

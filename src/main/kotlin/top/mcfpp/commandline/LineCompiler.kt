@@ -16,7 +16,7 @@ class LineCompiler {
     val OUTPUT_COLOR = "\u001B[38;5;15m"
     val RESET_COLOR = "\u001B[0m"
 
-    val default = Function("default","mcfpp")
+    val default = Function("default","mcfpp", context =  null)
     val defaultFile = MCFPPFile("default")
 
     var unmatchedBraces : String = ""

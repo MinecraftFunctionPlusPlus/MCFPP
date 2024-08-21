@@ -41,7 +41,7 @@ class FunctionParam(
 
     var typeIdentifier: String = type.typeName
 
-    var defaultCommand = ArrayList<Command>()
+    var defaultVar: Var<*>? = null
 
     fun buildVar(): Var<*>{
         val qwq = Var.buildUnConcrete(identifier, type, function)

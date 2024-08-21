@@ -21,7 +21,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
      * 此构造函数对应的类。
      */
     var target: Class
-) : Function("_init_" + target.identifier.lowercase(Locale.getDefault()) + "_" + target.constructors.size, target, false) {
+) : Function("_init_" + target.identifier.lowercase(Locale.getDefault()) + "_" + target.constructors.size, target, false, context = null) {
 
     private val leadFunction: Function
     init {
@@ -29,7 +29,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
         val thisObj = ClassPointer(target,"this")
         thisObj.identifier = "this"
         field.putVar("this",thisObj)
-        leadFunction = Function(this.identifier + "_lead",this.namespace, MCFPPBaseType.Void)
+        leadFunction = Function(this.identifier + "_lead",this.namespace, MCFPPBaseType.Void, context = null)
         target.field.addFunction(leadFunction,false)
     }
 

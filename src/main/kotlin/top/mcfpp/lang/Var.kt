@@ -62,11 +62,6 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
     var hasAssigned = false
 
     /**
-     * 这个变量是否是引入的。对应import关键字
-     */
-    var isImport = false
-
-    /**
      * 是否是临时变量
      */
     var isTemp = false

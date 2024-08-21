@@ -29,7 +29,7 @@ import java.util.UUID
  * @param parent 这个函数的调用者，即父函数
  *
  */
-class InternalFunction(prefix: String, parent: Function) : Function(prefix + UUID.randomUUID()) {
+class InternalFunction(prefix: String, parent: Function) : Function(prefix + UUID.randomUUID(), context = null) {
 
     init {
         field = InternalFunctionField(parent.field.clone(),this)

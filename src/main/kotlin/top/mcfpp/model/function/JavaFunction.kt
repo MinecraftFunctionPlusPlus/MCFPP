@@ -11,15 +11,14 @@ class JavaFunction: Function {
 
     val caller: JavaVar
 
-    constructor(method: Method, caller: JavaVar):super(method.name){
+    constructor(method: Method, caller: JavaVar):super(method.name, context = null){
         this.method = method
         this.caller = caller
     }
 
-    override fun invoke(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?) {
+    override fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?) {
         //将变量转换为Java变量
-        /*val readOnlyJavaVars = JavaVar.mcToJava(readOnlyArgs)*/
         val normalJavaVars = JavaVar.mcToJava(normalArgs)
-        returnVar = JavaVar(method.invoke(this.caller.value,/* *readOnlyJavaVars.toArray(), */*normalJavaVars.toArray()))
+        returnVar = JavaVar(method.invoke(this.caller.value, *normalJavaVars.toArray()))
     }
 }
