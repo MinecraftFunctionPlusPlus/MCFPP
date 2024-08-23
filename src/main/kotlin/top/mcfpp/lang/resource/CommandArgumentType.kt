@@ -9,8 +9,10 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.function.Function
 import java.util.*
+import top.mcfpp.model.function.Function
+import top.mcfpp.mni.resource.CommandArgumentTypeData
+import top.mcfpp.mni.resource.CommandArgumentTypeConcreteData
 
 open class CommandArgumentType: ResourceID {
 
@@ -52,6 +54,7 @@ open class CommandArgumentType: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
+            data.getNativeFunctionFromClass(CommandArgumentTypeData::class.java)
         }
     }
 }
@@ -109,4 +112,15 @@ class CommandArgumentTypeConcrete: MCFPPValue<String>, CommandArgumentType{
     override fun toString(): String {
         return "[$type,value=$value]"
     }
+    
+    companion object {
+        val data = CompoundData("CommandArgumentType","mcfpp.lang.resource")
+
+        init {
+            data.initialize()
+            data.extends(ResourceID.data)
+            data.getNativeFunctionFromClass(CommandArgumentTypeConcreteData::class.java)
+        }
+    }
+    
 }        

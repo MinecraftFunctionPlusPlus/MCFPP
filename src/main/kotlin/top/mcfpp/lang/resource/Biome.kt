@@ -9,8 +9,10 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.function.Function
 import java.util.*
+import top.mcfpp.model.function.Function
+import top.mcfpp.mni.resource.BiomeData
+import top.mcfpp.mni.resource.BiomeConcreteData
 
 open class Biome: ResourceID {
 
@@ -52,6 +54,7 @@ open class Biome: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
+            data.getNativeFunctionFromClass(BiomeData::class.java)
         }
     }
 }
@@ -109,4 +112,15 @@ class BiomeConcrete: MCFPPValue<String>, Biome{
     override fun toString(): String {
         return "[$type,value=$value]"
     }
+    
+    companion object {
+        val data = CompoundData("Biome","mcfpp.lang.resource")
+
+        init {
+            data.initialize()
+            data.extends(ResourceID.data)
+            data.getNativeFunctionFromClass(BiomeConcreteData::class.java)
+        }
+    }
+    
 }        

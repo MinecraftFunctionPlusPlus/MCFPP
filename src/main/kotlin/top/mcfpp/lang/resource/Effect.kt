@@ -9,8 +9,10 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.function.Function
 import java.util.*
+import top.mcfpp.model.function.Function
+import top.mcfpp.mni.resource.EffectData
+import top.mcfpp.mni.resource.EffectConcreteData
 
 open class Effect: ResourceID {
 
@@ -52,6 +54,7 @@ open class Effect: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
+            data.getNativeFunctionFromClass(EffectData::class.java)
         }
     }
 }
@@ -109,4 +112,15 @@ class EffectConcrete: MCFPPValue<String>, Effect{
     override fun toString(): String {
         return "[$type,value=$value]"
     }
+    
+    companion object {
+        val data = CompoundData("Effect","mcfpp.lang.resource")
+
+        init {
+            data.initialize()
+            data.extends(ResourceID.data)
+            data.getNativeFunctionFromClass(EffectConcreteData::class.java)
+        }
+    }
+    
 }        

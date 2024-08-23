@@ -9,8 +9,10 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.function.Function
 import java.util.*
+import top.mcfpp.model.function.Function
+import top.mcfpp.mni.resource.LootTableTypeData
+import top.mcfpp.mni.resource.LootTableTypeConcreteData
 
 open class LootTableType: ResourceID {
 
@@ -52,6 +54,7 @@ open class LootTableType: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
+            data.getNativeFunctionFromClass(LootTableTypeData::class.java)
         }
     }
 }
@@ -109,4 +112,15 @@ class LootTableTypeConcrete: MCFPPValue<String>, LootTableType{
     override fun toString(): String {
         return "[$type,value=$value]"
     }
+    
+    companion object {
+        val data = CompoundData("LootTableType","mcfpp.lang.resource")
+
+        init {
+            data.initialize()
+            data.extends(ResourceID.data)
+            data.getNativeFunctionFromClass(LootTableTypeConcreteData::class.java)
+        }
+    }
+    
 }        

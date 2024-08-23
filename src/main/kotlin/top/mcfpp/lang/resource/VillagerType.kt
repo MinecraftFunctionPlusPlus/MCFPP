@@ -3,18 +3,16 @@ package top.mcfpp.lang.resource
             
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.lang.ClassPointer
-import top.mcfpp.lang.UnknownVar
 import top.mcfpp.lang.Var
-import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPResourceType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.util.LogProcessor
 import java.util.*
 import top.mcfpp.model.function.Function
+import top.mcfpp.mni.resource.VillagerTypeData
+import top.mcfpp.mni.resource.VillagerTypeConcreteData
 
 open class VillagerType: ResourceID {
 
@@ -56,6 +54,7 @@ open class VillagerType: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
+            data.getNativeFunctionFromClass(VillagerTypeData::class.java)
         }
     }
 }
@@ -113,4 +112,15 @@ class VillagerTypeConcrete: MCFPPValue<String>, VillagerType{
     override fun toString(): String {
         return "[$type,value=$value]"
     }
+    
+    companion object {
+        val data = CompoundData("VillagerType","mcfpp.lang.resource")
+
+        init {
+            data.initialize()
+            data.extends(ResourceID.data)
+            data.getNativeFunctionFromClass(VillagerTypeConcreteData::class.java)
+        }
+    }
+    
 }        

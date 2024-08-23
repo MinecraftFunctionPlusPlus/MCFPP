@@ -9,8 +9,10 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.function.Function
 import java.util.*
+import top.mcfpp.model.function.Function
+import top.mcfpp.mni.resource.BossBarData
+import top.mcfpp.mni.resource.BossBarConcreteData
 
 open class BossBar: ResourceID {
 
@@ -52,6 +54,7 @@ open class BossBar: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
+            data.getNativeFunctionFromClass(BossBarData::class.java)
         }
     }
 }
@@ -109,4 +112,15 @@ class BossBarConcrete: MCFPPValue<String>, BossBar{
     override fun toString(): String {
         return "[$type,value=$value]"
     }
+    
+    companion object {
+        val data = CompoundData("BossBar","mcfpp.lang.resource")
+
+        init {
+            data.initialize()
+            data.extends(ResourceID.data)
+            data.getNativeFunctionFromClass(BossBarConcreteData::class.java)
+        }
+    }
+    
 }        

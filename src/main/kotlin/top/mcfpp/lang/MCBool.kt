@@ -1,6 +1,8 @@
 package top.mcfpp.lang
 
 import top.mcfpp.annotations.InsertCommand
+import top.mcfpp.command.Command
+import top.mcfpp.command.Commands
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
@@ -53,11 +55,26 @@ open class MCBool : Var<MCBool>, OnScoreboard {
 
     @Override
     override fun doAssign(b: Var<*>) : MCBool {
-        if (b is MCBool) {
-            return assignCommand(b)
-        } else {
-            LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
-            return this
+        when(b){
+            is MCBool -> return assignCommand(b)
+
+            is CommandReturn -> {
+                if(parentClass() != null){
+                    Function.addCommands(
+                        Commands.selectRun(parent!!, Command("store result score @s $boolObject run").build(b.command), false)
+                    )
+                }else{
+                    Function.addCommand(
+                        Command.build("execute store result score $name $boolObject run").build(b.command)
+                    )
+                }
+                return MCBool(this)
+            }
+
+            else -> {
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
+                return this
+            }
         }
     }
 

@@ -45,18 +45,16 @@ package top.mcfpp.lang.resource
             
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.lang.ClassPointer
-import top.mcfpp.lang.UnknownVar
 import top.mcfpp.lang.Var
-import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lang.type.MCFPPResourceType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.util.LogProcessor
 import java.util.*
 import top.mcfpp.model.function.Function
+import top.mcfpp.mni.resource.${id}Data
+import top.mcfpp.mni.resource.${id}ConcreteData
 
 open class $id: ResourceID {
 
@@ -98,6 +96,7 @@ open class $id: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
+            data.getNativeFunctionFromClass(${id}Data::class.java)
         }
     }
 }
@@ -155,6 +154,17 @@ class ${id}Concrete: MCFPPValue<String>, ${id}{
     override fun toString(): String {
         return "[${'$'}type,value=${'$'}value]"
     }
+    
+    companion object {
+        val data = CompoundData("$id","mcfpp.lang.resource")
+
+        init {
+            data.initialize()
+            data.extends(ResourceID.data)
+            data.getNativeFunctionFromClass(${id}ConcreteData::class.java)
+        }
+    }
+    
 }        
 """
     //覆盖写入文件

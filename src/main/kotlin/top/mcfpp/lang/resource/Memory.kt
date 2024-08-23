@@ -9,8 +9,10 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.function.Function
 import java.util.*
+import top.mcfpp.model.function.Function
+import top.mcfpp.mni.resource.MemoryData
+import top.mcfpp.mni.resource.MemoryConcreteData
 
 open class Memory: ResourceID {
 
@@ -52,6 +54,7 @@ open class Memory: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
+            data.getNativeFunctionFromClass(MemoryData::class.java)
         }
     }
 }
@@ -109,4 +112,15 @@ class MemoryConcrete: MCFPPValue<String>, Memory{
     override fun toString(): String {
         return "[$type,value=$value]"
     }
+    
+    companion object {
+        val data = CompoundData("Memory","mcfpp.lang.resource")
+
+        init {
+            data.initialize()
+            data.extends(ResourceID.data)
+            data.getNativeFunctionFromClass(MemoryConcreteData::class.java)
+        }
+    }
+    
 }        

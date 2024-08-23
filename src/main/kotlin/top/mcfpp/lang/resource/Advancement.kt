@@ -9,8 +9,10 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.function.Function
 import java.util.*
+import top.mcfpp.model.function.Function
+import top.mcfpp.mni.resource.AdvancementData
+import top.mcfpp.mni.resource.AdvancementConcreteData
 
 open class Advancement: ResourceID {
 
@@ -52,6 +54,7 @@ open class Advancement: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
+            data.getNativeFunctionFromClass(AdvancementData::class.java)
         }
     }
 }
@@ -109,4 +112,15 @@ class AdvancementConcrete: MCFPPValue<String>, Advancement{
     override fun toString(): String {
         return "[$type,value=$value]"
     }
+    
+    companion object {
+        val data = CompoundData("Advancement","mcfpp.lang.resource")
+
+        init {
+            data.initialize()
+            data.extends(ResourceID.data)
+            data.getNativeFunctionFromClass(AdvancementConcreteData::class.java)
+        }
+    }
+    
 }        

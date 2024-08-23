@@ -5,6 +5,7 @@ import net.querz.nbt.tag.Tag
 import top.mcfpp.Project
 import top.mcfpp.lang.ClassPointer
 import top.mcfpp.lang.MCInt
+import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.ObjectClass
@@ -104,40 +105,58 @@ object Commands {
             .build(b.toCommandPart())
     }
 
-    fun selectRun(a : CanSelectMember, command: Command) : Array<Command>{
+    fun selectRun(a : CanSelectMember, command: Command, hasExecuteRun: Boolean = true) : Array<Command>{
         val final = when(a){
             is ClassPointer -> {
-                arrayOf(
+                val qwq = arrayOf(
                     Command.build("data modify storage entity ${ClassPointer.tempItemEntityUUID} Thrower set from storage mcfpp:system ${Project.config.rootNamespace}.stack_frame[${a.stackIndex}].${a.identifier}"),
-                    Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin").build("run","run").build(command)
+                    Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin")
                 )
+                if(hasExecuteRun) {
+                    qwq.last().build("run","run").build(command)
+                }else{
+                    qwq.last().build(command)
+                }
+                qwq
             }
-            is ObjectClass -> {
-                arrayOf(Command.build("execute as ${a.uuid} run").build(command))
+            is MCFPPClassType -> {
+                if(hasExecuteRun){
+                    arrayOf(Command.build("execute as ${(a.cls as ObjectClass).uuid} run").build(command))
+                }else{
+                    arrayOf(Command.build("execute as ${(a.cls as ObjectClass).uuid}").build(command))
+                }
             }
             else -> TODO()
         }
         return final
     }
 
-    fun selectRun(a : CanSelectMember) : Array<Command>{
+    fun selectRun(a : CanSelectMember, hasExecuteRun: Boolean = true) : Array<Command>{
         val final = when(a){
             is ClassPointer -> {
-                arrayOf(
+                val qwq = arrayOf(
                     Command.build("data modify storage entity ${ClassPointer.tempItemEntityUUID} Thrower set from storage mcfpp:system ${Project.config.rootNamespace}.stack_frame[${a.stackIndex}].${a.identifier}"),
-                    Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin").build("run","run")
+                    Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin")
                 )
+                if(hasExecuteRun) {
+                    qwq.last().build("run","run")
+                }
+                qwq
             }
-            is ObjectClass -> {
-                arrayOf(Command.build("execute as ${a.uuid}").build("run","run"))
+            is MCFPPClassType -> {
+                if(hasExecuteRun){
+                    arrayOf(Command.build("execute as ${(a.cls as ObjectClass).uuid} run"))
+                }else{
+                    arrayOf(Command.build("execute as ${(a.cls as ObjectClass).uuid}"))
+                }
             }
             else -> TODO()
         }
         return final
     }
 
-    fun selectRun(a : CanSelectMember, command: String) : Array<Command>{
-        return selectRun(a, Command.build(command))
+    fun selectRun(a : CanSelectMember, command: String, hasExecuteRun: Boolean = true) : Array<Command>{
+        return selectRun(a, Command.build(command), hasExecuteRun)
     }
 
     /**

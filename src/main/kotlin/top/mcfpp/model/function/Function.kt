@@ -870,7 +870,6 @@ open class Function : Member, FieldContainer, Serializable {
          * @param command 要添加的命令。
          */
         fun addCommand(command: Command): Int {
-
             if(CompileSettings.isDebug){
                 //检查当前方法是否有InsertCommand注解
                 val stackTrace = Thread.currentThread().stackTrace
@@ -904,7 +903,7 @@ open class Function : Member, FieldContainer, Serializable {
             if (!currFunction.isReturned) {
                 currFunction.commands.add(command)
             }
-            return currFunction.commands.size
+            return currFunction.commands.size - 1
         }
 
         /**

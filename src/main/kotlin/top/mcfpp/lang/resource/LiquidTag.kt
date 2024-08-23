@@ -9,8 +9,10 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.function.Function
 import java.util.*
+import top.mcfpp.model.function.Function
+import top.mcfpp.mni.resource.LiquidTagData
+import top.mcfpp.mni.resource.LiquidTagConcreteData
 
 open class LiquidTag: ResourceID {
 
@@ -52,6 +54,7 @@ open class LiquidTag: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
+            data.getNativeFunctionFromClass(LiquidTagData::class.java)
         }
     }
 }
@@ -109,4 +112,15 @@ class LiquidTagConcrete: MCFPPValue<String>, LiquidTag{
     override fun toString(): String {
         return "[$type,value=$value]"
     }
+    
+    companion object {
+        val data = CompoundData("LiquidTag","mcfpp.lang.resource")
+
+        init {
+            data.initialize()
+            data.extends(ResourceID.data)
+            data.getNativeFunctionFromClass(LiquidTagConcreteData::class.java)
+        }
+    }
+    
 }        

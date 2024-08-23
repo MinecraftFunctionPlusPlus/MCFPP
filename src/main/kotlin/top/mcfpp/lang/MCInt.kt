@@ -55,6 +55,19 @@ open class MCInt : MCNumber<Int> {
                 assignCommand(b)
             }
 
+            is CommandReturn -> {
+                if(parentClass() != null){
+                    Function.addCommands(
+                        Commands.selectRun(parent!!, Command("store result score @s $sbObject run").build(b.command), false)
+                    )
+                }else{
+                    Function.addCommand(
+                        Command.build("execute store result score $name $sbObject run").build(b.command)
+                    )
+                }
+                MCInt(this)
+            }
+
             else -> {
                 LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
                 this
@@ -100,7 +113,7 @@ open class MCInt : MCNumber<Int> {
                 if(final.size == 2){
                     Function.addCommand(final[0])
                 }
-                final.last().build(Commands.sbPlayerSet(this, (b as MCIntConcrete).value))
+                Function.addCommand(final.last().build(Commands.sbPlayerSet(this, (b as MCIntConcrete).value)))
                 this
             },
             ifThisIsClassMemberAndAIsNotConcrete = { b, final ->

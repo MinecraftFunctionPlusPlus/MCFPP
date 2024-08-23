@@ -104,6 +104,16 @@ class MCFPPBaseType {
         override val typeName: kotlin.String
             get() = "range"
     }
+
+    object CommandReturn: MCFPPType(parentType = listOf(Any)){
+
+        override val objectData: CompoundData
+            get() = top.mcfpp.lang.CommandReturn.data
+
+        override val typeName: kotlin.String
+            get() = "CommandReturn"
+    }
+
 }
 
 class LimitedSelectorType(val limit: Int): MCFPPType(parentType = listOf(MCFPPBaseType.BaseEntity)){

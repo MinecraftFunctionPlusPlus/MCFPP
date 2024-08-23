@@ -9,8 +9,10 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.function.Function
 import java.util.*
+import top.mcfpp.model.function.Function
+import top.mcfpp.mni.resource.EntityTypeTagData
+import top.mcfpp.mni.resource.EntityTypeTagConcreteData
 
 open class EntityTypeTag: ResourceID {
 
@@ -52,6 +54,7 @@ open class EntityTypeTag: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
+            data.getNativeFunctionFromClass(EntityTypeTagData::class.java)
         }
     }
 }
@@ -109,4 +112,15 @@ class EntityTypeTagConcrete: MCFPPValue<String>, EntityTypeTag{
     override fun toString(): String {
         return "[$type,value=$value]"
     }
+    
+    companion object {
+        val data = CompoundData("EntityTypeTag","mcfpp.lang.resource")
+
+        init {
+            data.initialize()
+            data.extends(ResourceID.data)
+            data.getNativeFunctionFromClass(EntityTypeTagConcreteData::class.java)
+        }
+    }
+    
 }        

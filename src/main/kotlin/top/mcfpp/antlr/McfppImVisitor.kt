@@ -441,7 +441,10 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         if (parent is mcfppParser.IfStatementContext || parent is mcfppParser.ElseIfStatementContext) {
             //if()，需要进行条件计算
             parent as mcfppParser.IfStatementContext
-            val exp = McfppExprVisitor().visit(parent.expression())
+            var exp = McfppExprVisitor().visit(parent.expression())
+            if(exp is ReturnedMCBool){
+                exp = MCBool().assign(exp)
+            }
             when(exp){
                 is MCBoolConcrete -> {
                     if (exp.value) {
@@ -471,11 +474,6 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                                 "run return run function " + f.namespaceID
                     )
                 }
-
-                is CommandReturn -> {
-
-                }
-
             }
             if(exp !is MCBool){
                 throw TypeCastException()
