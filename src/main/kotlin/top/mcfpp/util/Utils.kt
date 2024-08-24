@@ -99,6 +99,14 @@ object Utils {
         return IntArrayTag(uuidArray)
     }
 
+    fun fromNBTArrayUUID(tag: IntArrayTag): UUID{
+        val uuidArray = tag.value
+        return UUID(
+            (uuidArray[0].toLong() and 0xFFFFFFFFL) or (uuidArray[1].toLong() shl 32),
+            (uuidArray[2].toLong() and 0xFFFFFFFFL) or (uuidArray[3].toLong() shl 32)
+        )
+    }
+
     fun<T> toByteArrayString(obj: T): String where T : Serializable{
         // 创建一个 ObjectOutputStream，将数据序列化为字节数组
         val byteArrayOutputStream = ByteArrayOutputStream()

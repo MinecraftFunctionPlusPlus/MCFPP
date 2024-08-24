@@ -4,6 +4,8 @@ import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.Tag
 import top.mcfpp.Project
 import top.mcfpp.lang.ClassPointer
+import top.mcfpp.lang.EntityVar
+import top.mcfpp.lang.EntityVarConcrete
 import top.mcfpp.lang.MCInt
 import top.mcfpp.lang.type.MCFPPClassType
 import top.mcfpp.lib.NBTPath
@@ -11,6 +13,8 @@ import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.ObjectClass
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NoStackFunction
+import top.mcfpp.util.NBTUtil
+import top.mcfpp.util.Utils
 import java.util.*
 
 /**
@@ -177,5 +181,16 @@ object Commands {
         operation()
         Function.currFunction = l
         return f.commands.toTypedArray()
+    }
+
+    fun runAsEntity(entityVar: EntityVar, command: Command): Array<Command>{
+        return if(entityVar is EntityVarConcrete){
+            arrayOf(Command("execute ${Utils.fromNBTArrayUUID(entityVar.value)} run").build(command))
+        }else{
+            arrayOf(
+                Command("data modify storage entity ${ClassPointer.tempItemEntityUUID} Thrower set from").build(entityVar.nbtPath.toCommandPart()),
+                Command("execute as ${ClassPointer.tempItemEntityUUID} on origin run").build(command)
+            )
+        }
     }
 }
