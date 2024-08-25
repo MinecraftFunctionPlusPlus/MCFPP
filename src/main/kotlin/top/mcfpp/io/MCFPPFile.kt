@@ -55,7 +55,7 @@ class MCFPPFile(path : String) : File(path) {
     fun indexType(){
         currFile = this
         Project.currNamespace = namespace
-        McfppTypeVisitor().visit(tree())
+        MCFPPTypeVisitor().visit(tree())
         //类是否有空继承
         GlobalField.localNamespaces.forEach { _, u ->
             u.field.forEachClass { c ->
@@ -82,7 +82,15 @@ class MCFPPFile(path : String) : File(path) {
     fun resolveField() {
         currFile = this
         Project.currNamespace = namespace
-        McfppFieldVisitor().visit(tree())
+        MCFPPFieldVisitor().visit(tree())
+        Project.currNamespace = Project.config.rootNamespace
+        currFile = null
+    }
+
+    fun runAnnotation(){
+        currFile = this
+        Project.currNamespace = namespace
+        MCFPPAnnotationVisitor().visit(tree())
         Project.currNamespace = Project.config.rootNamespace
         currFile = null
     }
@@ -100,7 +108,7 @@ class MCFPPFile(path : String) : File(path) {
             context = null
         )
         Function.currFunction = func
-        McfppImVisitor().visit(tree())
+        MCFPPImVisitor().visit(tree())
         Project.currNamespace = Project.config.rootNamespace
         currFile = null
     }

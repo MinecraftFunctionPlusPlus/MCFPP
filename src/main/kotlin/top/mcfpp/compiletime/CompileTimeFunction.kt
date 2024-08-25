@@ -32,7 +32,7 @@ class CompileTimeFunction : Function {
     override fun invoke(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, callerClassP: ClassPointer?) {
         val field = makeField()
         argPass(field, /*readOnlyArgs, */normalArgs)
-        val visitor = McfppCompileTimeVisitor(field)
+        val visitor = MCFPPCompileTimeVisitor(field)
         visitor.visit(this.context)
     }
 }

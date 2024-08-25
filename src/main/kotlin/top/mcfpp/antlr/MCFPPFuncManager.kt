@@ -7,12 +7,11 @@ import top.mcfpp.model.CompoundDataCompanion
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
 import top.mcfpp.util.LogProcessor
-import kotlin.reflect.KFunction
 
 /**
  * 获取函数用的visitor
  */
-class McfppFuncManager{
+class MCFPPFuncManager{
 
     /**
      * 获取成员函数

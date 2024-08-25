@@ -7,7 +7,6 @@ import top.mcfpp.util.LogProcessor
 
 class Enum(identifier: String, namespace: String) : CompoundData(identifier, namespace){
 
-
     val sbObject : SbObject = SbObject(namespaceID)
 
     var members: HashMap<String, EnumMember> = HashMap()

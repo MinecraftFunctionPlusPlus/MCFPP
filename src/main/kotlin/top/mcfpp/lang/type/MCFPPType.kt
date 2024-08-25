@@ -4,7 +4,7 @@ import net.querz.nbt.tag.*
 import org.antlr.v4.runtime.CharStream
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
-import top.mcfpp.antlr.McfppExprVisitor
+import top.mcfpp.antlr.MCFPPExprVisitor
 import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.lang.Var
@@ -356,7 +356,7 @@ open class MCFPPType(
                             LogProcessor.error("Generic class ${clazz.identifier} requires ${clazz.readOnlyParams.size} type arguments, but ${ctx.readOnlyArgs().expressionList().expression().size} were provided")
                             return MCFPPBaseType.Any
                         }
-                        val expr = McfppExprVisitor()
+                        val expr = MCFPPExprVisitor()
                         val readOnlyArgs = ctx.type().readOnlyArgs()?.expressionList()?.expression()?.map { expr.visit(it)!! } ?: listOf()
                         return clazz.compile(readOnlyArgs).getType()
                     }else{

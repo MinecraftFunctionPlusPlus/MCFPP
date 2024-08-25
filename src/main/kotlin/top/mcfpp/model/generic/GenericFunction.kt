@@ -1,7 +1,7 @@
 package top.mcfpp.model.generic
 
 import top.mcfpp.Project
-import top.mcfpp.antlr.McfppImVisitor
+import top.mcfpp.antlr.MCFPPImVisitor
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.model.Class
@@ -122,7 +122,7 @@ class GenericFunction : Function, Generic<Function> {
         }
         index ++
         //编译这个函数
-        McfppImVisitor().visitFunctionBody(ctx, compiledFunction)
+        MCFPPImVisitor().visitFunctionBody(ctx, compiledFunction)
         if(compiledFunction.returnType !=  MCFPPBaseType.Void && !compiledFunction.hasReturnStatement){
             LogProcessor.error("A 'return' expression required in function: " + compiledFunction.namespaceID)
         }

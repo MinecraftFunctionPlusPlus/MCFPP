@@ -40,7 +40,7 @@ class InlineFunction : Function {
         //参数传递
         argPass(/*readOnlyArgs, */normalArgs)
         //重新遍历这个函数
-        val visitor = McfppImVisitor()
+        val visitor = MCFPPImVisitor()
         visitor.visit(context)
 
 //        val charStream: CharStream = CharStreams.fromString(context.text)
@@ -56,7 +56,7 @@ class InlineFunction : Function {
      *
      * @param args 函数的参数
      * @param callerClassP 调用函数的实例
-     * @see top.mcfpp.antlr.McfppExprVisitor.visitVar
+     * @see top.mcfpp.antlr.MCFPPExprVisitor.visitVar
      */
     @InsertCommand
     override fun invoke(/*readOnlyArgs:ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, callerClassP: ClassPointer?) {
@@ -67,7 +67,7 @@ class InlineFunction : Function {
         //重新遍历这个函数
 
         //这边其实直接用visitor会更好，因为visitor不用加parser，直接visitor.visit(context)
-        val visitor = McfppInlineFunctionVisitor()
+        val visitor = MCFPPInlineFunctionVisitor()
         visitor.visit(context)
 //        val charStream: CharStream = CharStreams.fromString(AntlrUtil.getReadableText(context.functionBody()))
 //        val lexer = mcfppLexer(charStream)

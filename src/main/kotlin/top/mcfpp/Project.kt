@@ -267,6 +267,22 @@ object Project {
         }
     }
 
+    fun runAnnotation(){
+        compileStage++
+        logger.debug("Run Annotation...")
+        //解析文件
+        for (file in config.files) {
+            try {
+                file.runAnnotation()
+            } catch (e: IOException) {
+                logger.error("Error while run annotation in file \"$file\"")
+                errorCount++
+                e.printStackTrace()
+            }
+            GlobalField.importedLibNamespaces.clear()
+        }
+    }
+
     /**
      * 编译工程
      */

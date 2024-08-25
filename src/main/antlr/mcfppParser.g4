@@ -86,11 +86,11 @@ globalDeclaration
 
 //类声明
 classDeclaration
-    :   classAnnotation? STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? classBody
+    :   annotation? STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? classBody
     ;
 
 objectClassDeclaration
-    :   classAnnotation? OBJECT CLASS classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? classBody
+    :   annotation? OBJECT CLASS classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? classBody
     ;
 
 compileTimeClassDeclaration
@@ -119,15 +119,15 @@ classMember
     ;
 
 classFunctionDeclaration
-    :   funcAnnoation? OVERRIDE? FUNCTION Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
+    :   annotation? OVERRIDE? FUNCTION Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
     ;
 
 abstractClassFunctionDeclaration
-    :   funcAnnoation? OVERRIDE? FUNCTION Identifier functionParams (ARROW functionReturnType)? ';'
+    :   annotation? OVERRIDE? FUNCTION Identifier functionParams (ARROW functionReturnType)? ';'
     ;
 
 nativeClassFunctionDeclaration
-    :   funcAnnoation? OVERRIDE? FUNCTION Identifier functionParams (ARROW functionReturnType)? '=' javaRefer ';'
+    :   annotation? OVERRIDE? FUNCTION Identifier functionParams (ARROW functionReturnType)? '=' javaRefer ';'
     ;
 
 classFieldDeclaration
@@ -135,7 +135,7 @@ classFieldDeclaration
     ;
 
 genericClassImplement
-    :   IMPL classAnnotation? STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace readOnlyArgs (COLON className (',' className)*)? classBody
+    :   IMPL annotation? STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace readOnlyArgs (COLON className (',' className)*)? classBody
     ;
 
 //数据模板
@@ -171,7 +171,7 @@ templateFieldDeclaration
 
 //接口声明
 interfaceDeclaration
-    :   classAnnotation? INTERFACE classWithoutNamespace (ARROW className (',' className)*)? interfaceBody
+    :   annotation? INTERFACE classWithoutNamespace (ARROW className (',' className)*)? interfaceBody
     ;
 
 interfaceBody
@@ -179,7 +179,7 @@ interfaceBody
     ;
 
 interfaceFunctionDeclaration
-    :   funcAnnoation? FUNCTION Identifier functionParams (ARROW functionReturnType)? ';'
+    :   annotation? FUNCTION Identifier functionParams (ARROW functionReturnType)? ';'
     ;
 
 compileTimeFuncDeclaration
@@ -187,16 +187,16 @@ compileTimeFuncDeclaration
     ;
 
 inlineFunctionDeclaration
-    :   funcAnnoation? INLINE FUNCTION Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
+    :   annotation? INLINE FUNCTION Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
     ;
 
 //函数声明
 functionDeclaration
-    :   funcAnnoation? FUNCTION Identifier functionParams? (ARROW functionReturnType)? '{' functionBody '}'
+    :   annotation? FUNCTION Identifier functionParams? (ARROW functionReturnType)? '{' functionBody '}'
     ;
 
 extensionFunctionDeclaration
-    :   funcAnnoation? STATIC? FUNCTION (type '.')? Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
+    :   annotation? STATIC? FUNCTION (type '.')? Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
     ;
 
 //枚举
@@ -218,7 +218,7 @@ namespaceID
     ;
 
 nativeFuncDeclaration
-    :   funcAnnoation? FUNCTION Identifier functionParams (ARROW functionReturnType)? '=' javaRefer ';'
+    :   annotation? FUNCTION Identifier functionParams (ARROW functionReturnType)? '=' javaRefer ';'
     ;
 
 javaRefer
@@ -233,7 +233,7 @@ accessModifier
 
 //构造函数声明
 constructorDeclaration
-    :   funcAnnoation? accessModifier? CONSTRUCTOR normalParams '{' functionBody '}'
+    :   annotation? accessModifier? CONSTRUCTOR normalParams '{' functionBody '}'
     ;
 
 //变量声明
@@ -568,12 +568,12 @@ classWithoutNamespace
     :   Identifier
     ;
 
-funcAnnoation
-    :   '@' id=Identifier arguments?
+annotation
+    :   '@' id=Identifier annotationArgs?
     ;
 
-classAnnotation
-    :   '@' id=Identifier arguments?
+annotationArgs
+    :   '<' value* '>'
     ;
 
 range

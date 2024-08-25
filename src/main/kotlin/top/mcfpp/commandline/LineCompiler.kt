@@ -3,8 +3,8 @@ package top.mcfpp.commandline
 import org.antlr.v4.runtime.CharStream
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
-import top.mcfpp.antlr.McfppFieldVisitor
-import top.mcfpp.antlr.McfppImVisitor
+import top.mcfpp.antlr.MCFPPFieldVisitor
+import top.mcfpp.antlr.MCFPPImVisitor
 import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.io.MCFPPFile
@@ -48,9 +48,9 @@ class LineCompiler {
         val tokens = CommonTokenStream(mcfppLexer(charStream))
         val unit = mcfppParser(tokens).compilationUnit()
         if(unit.topStatement().statement().size != 0){
-            McfppImVisitor().visit(unit)
+            MCFPPImVisitor().visit(unit)
         }else{
-            McfppFieldVisitor().visit(unit)
+            MCFPPFieldVisitor().visit(unit)
         }
         for (i in MCFPPFile.currFile!!.topFunction.commands){
             printOutput(i.toString())

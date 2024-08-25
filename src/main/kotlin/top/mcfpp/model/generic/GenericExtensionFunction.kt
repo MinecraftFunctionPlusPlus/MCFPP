@@ -1,7 +1,7 @@
 package top.mcfpp.model.generic
 
 import top.mcfpp.Project
-import top.mcfpp.antlr.McfppImVisitor
+import top.mcfpp.antlr.MCFPPImVisitor
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.lang.Var
@@ -92,7 +92,7 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
         index ++
         //编译这个函数
         currFunction = compiledFunction
-        val visitor = McfppImVisitor()
+        val visitor = MCFPPImVisitor()
         visitor.visit(ctx)
         currFunction = nullFunction
         //注册这个函数

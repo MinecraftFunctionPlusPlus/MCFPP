@@ -2,11 +2,9 @@ package top.mcfpp.antlr
 
 import top.mcfpp.Project
 import top.mcfpp.model.Class
-import top.mcfpp.model.CompiledGenericClass
-import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
 
-class McfppGenericClassImVisitor : McfppImVisitor() {
+class MCFPPGenericClassImVisitor : MCFPPImVisitor() {
 
     override fun visitClassBody(ctx: mcfppParser.ClassBodyContext): Any? {
         enterClassBody(ctx)

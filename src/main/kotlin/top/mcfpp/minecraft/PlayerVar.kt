@@ -5,6 +5,7 @@ import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.lib.EntitySelector
+import top.mcfpp.mni.minecraft.PlayerEntityData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
@@ -80,7 +81,7 @@ open class PlayerVar : Var<PlayerVar> {
     override fun getFromStack() {}
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        TODO("Not yet implemented")
+        return data.getVar(key) to true
     }
 
     override fun getMemberFunction(
@@ -89,7 +90,7 @@ open class PlayerVar : Var<PlayerVar> {
         normalParams: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        TODO("Not yet implemented")
+        return data.getFunction(key, readOnlyParams, normalParams) to true
     }
 
     companion object {
@@ -97,7 +98,6 @@ open class PlayerVar : Var<PlayerVar> {
 
         init {
             data.extends(EntityVar.data)
-            data.getNativeFunctionFromClass(PlayerVar::class.java)
         }
     }
 
@@ -119,6 +119,15 @@ open class PlayerVar : Var<PlayerVar> {
 
         constructor(b: PlayerEntityVar) : super(b){
             this.entity = b.entity.clone() as EntityVar
+        }
+
+        companion object {
+            val data = CompoundData("Player", "mcfpp")
+
+            init {
+                data.extends(EntityVar.data)
+                data.getNativeFunctionFromClass(PlayerEntityData::class.java)
+            }
         }
     }
 
@@ -182,6 +191,15 @@ open class PlayerVar : Var<PlayerVar> {
 
         constructor(b: PlayerSelectorVar) : super(b){
             this.selector = b.selector.clone()
+        }
+
+
+        companion object {
+            val data = CompoundData("Player", "mcfpp")
+
+            init {
+                data.extends(EntityVar.data)
+            }
         }
     }
 

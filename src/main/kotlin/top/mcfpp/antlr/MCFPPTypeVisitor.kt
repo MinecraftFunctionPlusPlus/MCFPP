@@ -17,7 +17,7 @@ import top.mcfpp.util.StringHelper
 /**
  * 解析当前项目的类型
  */
-class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
+class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
 
     /**
      * 遍历整个文件。一个文件包含了命名空间的声明，函数的声明，类的声明以及全局变量的声明。全局变量是可以跨文件调用的。
@@ -261,7 +261,7 @@ class McfppTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         val id = ctx.classWithoutNamespace().text
 
         val readOnlyArgs: ArrayList<Var<*>> = ArrayList()
-        val exprVisitor = McfppExprVisitor()
+        val exprVisitor = MCFPPExprVisitor()
         for (expr in ctx.readOnlyArgs().expressionList().expression()) {
             val arg = exprVisitor.visit(expr)!!
             if(arg !is MCFPPValue<*>){

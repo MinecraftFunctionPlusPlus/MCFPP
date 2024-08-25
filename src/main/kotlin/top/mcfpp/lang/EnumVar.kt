@@ -67,6 +67,15 @@ open class EnumVar : Var<EnumVar> {
                 if(i is MCIntConcrete) EnumVarConcrete(i, enum)
                 else EnumVar(i, enum)
             }
+            is MCStringConcrete -> {
+                val value = b.value.value
+                val member = enum.members[value]
+                if(member == null){
+                    LogProcessor.error("Enum member not found: $value")
+                    return this
+                }
+                EnumVarConcrete(enum, member.value)
+            }
             else -> {
                 LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
                 this

@@ -6,6 +6,7 @@ import top.mcfpp.annotations.MNIRegister;
 import top.mcfpp.lang.DataTemplateObject;
 import top.mcfpp.lang.DataTemplateObjectConcrete;
 import top.mcfpp.lang.JsonTextConcrete;
+import top.mcfpp.lang.MCStringConcrete;
 import top.mcfpp.lib.ListChatComponent;
 import top.mcfpp.lib.NBTChatComponent;
 import top.mcfpp.lib.PlainChatComponent;
@@ -16,7 +17,7 @@ import java.io.IOException;
 public class DataObjectData {
 
     @MNIRegister(caller = "DataObject", returnType = "text", override = true)
-    public static void toText(@NotNull DataTemplateObject caller, ValueWrapper<JsonTextConcrete> returnValue) throws IOException {
+    public static void toText(DataTemplateObject caller, ValueWrapper<JsonTextConcrete> returnValue) throws IOException {
         var l = new ListChatComponent();
         if(caller instanceof DataTemplateObjectConcrete callerC){
             l.getComponents().add(new PlainChatComponent(SNBTUtil.toSNBT(callerC.getValue())));
@@ -25,5 +26,4 @@ public class DataObjectData {
         }
         returnValue.setValue(new JsonTextConcrete(l, "re"));
     }
-
 }

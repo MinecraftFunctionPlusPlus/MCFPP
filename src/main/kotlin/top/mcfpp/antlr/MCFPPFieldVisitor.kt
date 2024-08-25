@@ -28,7 +28,7 @@ import kotlin.collections.ArrayList
  * 在编译工程之前，应当首先将所有文件中的资源全部遍历一次并写入缓存。
  * TODO 存在优化空间，因为部分代码和McfppTypeVisitor有高度重合和相关性
  */
-open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
+open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 
     protected var isStatic = false
 
@@ -437,7 +437,7 @@ open class McfppFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             Function.currFunction = Class.currClass!!.classPreInit
             //是类的成员
             Function.addComment(ctx.text)
-            val init: Var<*> = McfppExprVisitor().visit(c.expression())!!
+            val init: Var<*> = MCFPPExprVisitor().visit(c.expression())!!
             try {
                 `var`.assign(init)
             } catch (e: VariableConverseException) {

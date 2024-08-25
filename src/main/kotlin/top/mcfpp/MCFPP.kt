@@ -35,6 +35,7 @@ fun main(args: Array<String>) {
         Project.readLib() //读取引用的库的索引
         Project.indexType() //编制类型索引
         Project.resolveField() //编制函数索引
+        Project.runAnnotation() //执行注解
         Project.compile() //编译
         Project.optimization() //优化
         Project.genIndex() //生成索引

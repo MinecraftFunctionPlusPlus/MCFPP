@@ -1,17 +1,16 @@
 package top.mcfpp.compiletime
 
-import top.mcfpp.antlr.McfppExprVisitor
-import top.mcfpp.antlr.McfppImVisitor
+import top.mcfpp.antlr.MCFPPExprVisitor
+import top.mcfpp.antlr.MCFPPImVisitor
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.lang.MCBool
 import top.mcfpp.lang.MCBoolConcrete
 import top.mcfpp.lang.Var
 import top.mcfpp.model.function.Function
 
-class McfppCompileTimeVisitor(
+class MCFPPCompileTimeVisitor(
     var field:CompileTimeFunctionField,
-): McfppImVisitor() {
-    val exprVisitor = McfppExprVisitor()
+): MCFPPImVisitor() {
+    val exprVisitor = MCFPPExprVisitor()
 
     var curBreak = false;
     var curContinue = false;

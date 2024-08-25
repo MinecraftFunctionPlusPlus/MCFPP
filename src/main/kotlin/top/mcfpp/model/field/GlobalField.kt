@@ -5,8 +5,9 @@ import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lib.SbObject
 import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.mni.MinecraftData
+import top.mcfpp.mni.annotation.From
 import top.mcfpp.model.*
-import top.mcfpp.model.Annotation
+import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.Enum
 import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function
@@ -95,6 +96,8 @@ object GlobalField : FieldContainer, IField {
         stdNamespaces["mcfpp.lang"]!!.field.addClass("Object", Class.baseClass)
 
         stdNamespaces["mcfpp.minecraft"]!!.getNativeFunctionFromClass(MinecraftData::class.java)
+
+        annotations["From"] = From::class.java
 
         return this
     }

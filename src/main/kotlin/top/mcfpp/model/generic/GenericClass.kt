@@ -2,8 +2,8 @@ package top.mcfpp.model.generic
 
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.Project
-import top.mcfpp.antlr.McfppGenericClassFieldVisitor
-import top.mcfpp.antlr.McfppGenericClassImVisitor
+import top.mcfpp.antlr.MCFPPGenericClassFieldVisitor
+import top.mcfpp.antlr.MCFPPGenericClassImVisitor
 import top.mcfpp.lang.MCFPPTypeVar
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPClassType
@@ -78,9 +78,9 @@ class GenericClass : Class {
         val namespace = GlobalField.localNamespaces[namespace]!!
         namespace.field.addClass(cls.identifier, cls)
         Class.currClass = cls
-        McfppGenericClassFieldVisitor(cls).visitClassDeclaration(ctx.parent as mcfppParser.ClassDeclarationContext)
+        MCFPPGenericClassFieldVisitor(cls).visitClassDeclaration(ctx.parent as mcfppParser.ClassDeclarationContext)
         Class.currClass = cls
-        McfppGenericClassImVisitor().visitClassBody(ctx)
+        MCFPPGenericClassImVisitor().visitClassBody(ctx)
         index ++
 
         cls.getType = {MCFPPClassType(cls, this.getType().parentType)}

@@ -3,12 +3,11 @@ package top.mcfpp.model.function
 import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
-import top.mcfpp.antlr.McfppExprVisitor
-import top.mcfpp.antlr.McfppImVisitor
+import top.mcfpp.antlr.MCFPPExprVisitor
+import top.mcfpp.antlr.MCFPPImVisitor
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.antlr.mcfppParser.FunctionBodyContext
 import top.mcfpp.command.*
-import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lang.*
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
@@ -97,7 +96,7 @@ open class Function : Member, FieldContainer, Serializable {
      * xxx（命令略去）
      * ```
      *
-     * 你可以在[top.mcfpp.antlr.McfppExprVisitor.visitVar]方法中看到mcfpp是如何实现的。
+     * 你可以在[top.mcfpp.antlr.MCFPPExprVisitor.visitVar]方法中看到mcfpp是如何实现的。
      *
      * @see InternalFunction
      */
@@ -439,7 +438,7 @@ open class Function : Member, FieldContainer, Serializable {
         if(param.value() != null){
             hasDefaultValue = true
             //编译缺省值表达式，用于赋值参数
-            param1.defaultVar = McfppExprVisitor().visit(param.value()!!).explicitCast(param1.type)
+            param1.defaultVar = MCFPPExprVisitor().visit(param.value()!!).explicitCast(param1.type)
         }
         return param1 to v
     }
@@ -479,7 +478,7 @@ open class Function : Member, FieldContainer, Serializable {
                 cf.identifier = this.identifier + "_" + compiledFunctions.size
                 cf.context = null
                 cf.runInFunction {
-                    McfppImVisitor().visitFunctionBody(context!!)
+                    MCFPPImVisitor().visitFunctionBody(context!!)
                 }
                 compiledFunctions[values] = cf
                 cf.invoke(normalArgs, caller)
@@ -529,7 +528,7 @@ open class Function : Member, FieldContainer, Serializable {
      *
      * @param normalArgs 函数的参数
      * @param callerClassP 调用函数的实例
-     * @see top.mcfpp.antlr.McfppExprVisitor.visitVar
+     * @see top.mcfpp.antlr.MCFPPExprVisitor.visitVar
      */
     @InsertCommand
     open fun invoke(normalArgs: ArrayList<Var<*>>, callerClassP: ClassPointer?) {

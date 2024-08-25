@@ -5,6 +5,7 @@ import top.mcfpp.annotations.MNIRegister
 import top.mcfpp.lang.Var
 import top.mcfpp.lang.type.MCFPPBaseType
 import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
@@ -45,6 +46,11 @@ open class CompoundData : FieldContainer, Serializable {
      */
     override val prefix: String
         get() = namespace + "_data_" + identifier
+
+    /**
+     * 注解
+     */
+    val annotations = ArrayList<Annotation>()
 
     constructor(identifier: String, namespace: String = Project.currNamespace){
         this.identifier = identifier

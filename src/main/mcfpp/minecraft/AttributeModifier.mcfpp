@@ -1,0 +1,10 @@
+data AttributeModifier {
+    AttributeModifierType type;
+    string id;
+}
+
+enum AttributeModifierType {
+    add_value,
+    add_multiplied_total,
+    add_multiplied_base
+}

@@ -7,7 +7,7 @@ import top.mcfpp.model.function.Constructor
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
 
-class McfppGenericClassFieldVisitor(val clazz: Class) : McfppFieldVisitor() {
+class MCFPPGenericClassFieldVisitor(val clazz: Class) : MCFPPFieldVisitor() {
     override fun visitClassDeclaration(ctx: mcfppParser.ClassDeclarationContext): Any? {
         Project.ctx = ctx
 

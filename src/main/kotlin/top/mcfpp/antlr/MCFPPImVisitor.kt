@@ -17,7 +17,6 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.*
-import top.mcfpp.model.Annotation
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function
@@ -27,7 +26,7 @@ import top.mcfpp.util.LogProcessor
 import java.util.*
 import kotlin.collections.ArrayList
 
-open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
+open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
     override fun visitTopStatement(ctx: mcfppParser.TopStatementContext): Any? {
         if(ctx.statement().size == 0) return null
@@ -55,11 +54,6 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         //获取缓存中的对象
         f = GlobalField.getFunction(Project.currNamespace, ctx.Identifier().text, types?.first?:ArrayList(), types?.second?:ArrayList())
         Function.currFunction = f
-        //对函数进行注解处理
-        for (a in annoInCompound){
-            a.forFunction(f)
-        }
-        annoInCompound.clear()
     }
 
     private fun exitFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext){
@@ -124,7 +118,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         }
         if(ctx.VAR() != null){
             //自动判断类型
-            val init: Var<*> = McfppExprVisitor().visit(ctx.expression())!!
+            val init: Var<*> = MCFPPExprVisitor().visit(ctx.expression())!!
             val `var` = if(fieldModifier == "import"){
                 val qwq = Var.buildUnConcrete(ctx.Identifier().text, init.type, Function.currFunction)
                 qwq.hasAssigned = true
@@ -176,7 +170,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 Function.addComment("field: " + ctx.type().text + " " + c.Identifier().text + if (c.expression() != null) " = " + c.expression().text else "")
                 //变量初始化
                 if (c.expression() != null) {
-                    val init: Var<*> = McfppExprVisitor(if(type is MCFPPGenericClassType) type else null, if(type is MCFPPEnumType) type else null).visit(c.expression())!!
+                    val init: Var<*> = MCFPPExprVisitor(if(type is MCFPPGenericClassType) type else null, if(type is MCFPPEnumType) type else null).visit(c.expression())!!
                     try {
                         `var` = `var`.assign(init)
                     } catch (e: VariableConverseException) {
@@ -218,7 +212,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 return null
             }
             val type = left.type
-            val right: Var<*> = McfppExprVisitor(if(type is MCFPPGenericClassType) type else null, if(type is MCFPPEnumType) type else null).visit(ctx.expression())!!
+            val right: Var<*> = MCFPPExprVisitor(if(type is MCFPPGenericClassType) type else null, if(type is MCFPPEnumType) type else null).visit(ctx.expression())!!
             try {
                 if(right !is MCFPPValue<*> && left.parent is DataTemplateObjectConcrete){
                     left.parent = (left.parent as DataTemplateObjectConcrete).toDynamic(true)
@@ -229,14 +223,11 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                 throw e
             }
         }else{
-            McfppExprVisitor().visit(ctx.expression())!!
+            MCFPPExprVisitor().visit(ctx.expression())!!
         }
         Function.addComment("expression end: " + ctx.text)
         return null
     }
-
-    val annoInGlobal = ArrayList<Annotation>()
-    val annoInCompound = ArrayList<Annotation>()
 
     /**
      * 自加或自减语句
@@ -323,11 +314,6 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         f = field.getFunction(ctx.Identifier().text, types.first, types.second)
 
         Function.currFunction = f
-
-        for (a in annoInGlobal) {
-            a.forFunction(f)
-        }
-        annoInGlobal.clear()
     }
 
     fun exitExtensionFunctionDeclaration(ctx: mcfppParser.ExtensionFunctionDeclarationContext) {
@@ -346,7 +332,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         Project.ctx = ctx
         Function.addComment(ctx.text)
         if (ctx.expression() != null) {
-            val ret: Var<*> = McfppExprVisitor().visit(ctx.expression())!!
+            val ret: Var<*> = MCFPPExprVisitor().visit(ctx.expression())!!
             Function.currBaseFunction.assignReturnVar(ret)
         }
         if(Function.currFunction !is InternalFunction)
@@ -441,7 +427,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         if (parent is mcfppParser.IfStatementContext || parent is mcfppParser.ElseIfStatementContext) {
             //if()，需要进行条件计算
             parent as mcfppParser.IfStatementContext
-            var exp = McfppExprVisitor().visit(parent.expression())
+            var exp = MCFPPExprVisitor().visit(parent.expression())
             if(exp is ReturnedMCBool){
                 exp = MCBool().assign(exp)
             }
@@ -569,7 +555,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
         Function.addComment("while start")
         val parent: mcfppParser.WhileStatementContext = ctx.parent as mcfppParser.WhileStatementContext
-        val exp: MCBool = McfppExprVisitor().visit(parent.expression()) as MCBool
+        val exp: MCBool = MCFPPExprVisitor().visit(parent.expression()) as MCBool
         //匿名函数的定义
         val f: Function = InternalFunction("_while_block_", Function.currFunction)
         f.child.add(f)
@@ -695,7 +681,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
                     "run return 1"
         )
         val parent = ctx.parent as mcfppParser.DoWhileStatementContext
-        val exp: MCBool = McfppExprVisitor().visit(parent.expression()) as MCBool
+        val exp: MCBool = MCFPPExprVisitor().visit(parent.expression()) as MCBool
         Function.addCommand("data remove storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame[0]")
         //递归调用
         if (exp is MCBoolConcrete && exp.value) {
@@ -819,7 +805,7 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         Project.ctx = ctx
         //currFunction 是 forLoop
         val parent: mcfppParser.ForStatementContext = ctx.parent as mcfppParser.ForStatementContext
-        val exp: MCBool = McfppExprVisitor().visit(parent.forControl().expression()) as MCBool
+        val exp: MCBool = MCFPPExprVisitor().visit(parent.forControl().expression()) as MCBool
         //匿名函数的定义。这里才是正式的for函数哦喵
         val f: Function = InternalFunction("_forblock_", Function.currFunction)
         f.child.add(f)
@@ -964,43 +950,6 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     //region class
-
-    /**
-     * 注解
-     *
-     * @param ctx
-     */
-    //TODO: Func
-    override fun visitClassAnnotation(ctx: mcfppParser.ClassAnnotationContext): Any? {
-        Project.ctx = ctx
-        val anno = GlobalField.annotations[ctx.id.text]
-        if(anno == null){
-            LogProcessor.error("Annotation ${ctx.id.text} not found")
-            return null
-        }
-        //参数获取
-        val normalArgs: ArrayList<Var<*>> = ArrayList()
-        val readOnlyParams: ArrayList<Var<*>> = ArrayList()
-        val exprVisitor = McfppExprVisitor()
-        ctx.arguments().readOnlyArgs()?.let {
-            for (expr in it.expressionList().expression()) {
-                val arg = exprVisitor.visit(expr)!!
-                readOnlyParams.add(arg)
-            }
-        }
-        for (expr in ctx.arguments().normalArgs().expressionList().expression()) {
-            val arg = exprVisitor.visit(expr)!!
-            normalArgs.add(arg)
-        }
-        if(Class.currClass == null && DataTemplate.currTemplate == null){
-            //在全局
-            annoInGlobal.add(Annotation.newInstance(anno,normalArgs))
-        }else{
-            annoInCompound.add(Annotation.newInstance(anno,normalArgs))
-        }
-        return null
-    }
-
     override fun visitClassDeclaration(ctx: mcfppParser.ClassDeclarationContext): Any? {
         if(ctx.readOnlyParams() == null){
             super.visitClassDeclaration(ctx)
@@ -1032,11 +981,6 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         //设置作用域
         Class.currClass = GlobalField.getClass(Project.currNamespace, identifier)
         Function.currFunction = Class.currClass!!.classPreInit
-        //注解
-        for (a in annoInGlobal){
-            a.forClass(Class.currClass!!)
-        }
-        annoInGlobal.clear()
     }
 
     /**
@@ -1065,12 +1009,6 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         //获取缓存中的对象
         val f = Class.currClass!!.field.getFunction(ctx.Identifier().text, types.first, types.second)
         Function.currFunction = f
-
-        //对函数进行注解处理
-        for (a in annoInCompound){
-            a.forFunction(f)
-        }
-        annoInCompound.clear()
     }
 
     private fun exitClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext) {
@@ -1091,11 +1029,6 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         val types = FunctionParam.parseNormalParamTypes(ctx.normalParams())
         val c = Class.currClass!!.getConstructorByString(types.typeToStringList())!!
         Function.currFunction = c
-        //注解
-        for (a in annoInCompound){
-            a.forFunction(c)
-        }
-        annoInCompound.clear()
     }
 
     private fun exitConstructorDeclaration(ctx: mcfppParser.ConstructorDeclarationContext) {
@@ -1162,12 +1095,6 @@ open class McfppImVisitor: mcfppParserBaseVisitor<Any?>() {
         //获取缓存中的对象
         val f = DataTemplate.currTemplate!!.field.getFunction(ctx.Identifier().text, types.first, types.second)
         Function.currFunction = f
-
-        //对函数进行注解处理
-        for (a in annoInCompound){
-            a.forFunction(f)
-        }
-        annoInCompound.clear()
     }
 
     fun exitTemplateFunctionDeclaration(ctx: mcfppParser.TemplateFunctionDeclarationContext) {

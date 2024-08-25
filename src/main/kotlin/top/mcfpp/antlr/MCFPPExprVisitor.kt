@@ -22,14 +22,12 @@ import top.mcfpp.model.generic.Generic
 import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
-import top.mcfpp.util.Utils
 import java.util.*
-import kotlin.system.exitProcess
 
 /**
  * 获取表达式结果用的visitor。解析并计算一个形如a+b*c的表达式。
  */
-class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassType? = null, private var enumType: MCFPPEnumType? = null): mcfppParserBaseVisitor<Var<*>>() {
+class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassType? = null, private var enumType: MCFPPEnumType? = null): mcfppParserBaseVisitor<Var<*>>() {
 
     private val tempVarCommandCache = HashMap<Var<*>, String>()
 
@@ -71,22 +69,12 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         }
     }
 
-    /*TODO 三目表达式。可能会实现，但是泠雪是懒狐，不想做。
-     *@Override
-     *public Var visitConditionalExpression(mcfppParser.ConditionalExpressionContext ctx){
-     *    if(ctx.expression().size() == 0){
-     *        return visit(ctx.conditionalOrExpression());
-     *    }else {
-     *        return null;
-     *    }
-     *}
-    */
-
     /**
      * 计算一个或表达式。例如 a || b。
      * @param ctx the parse tree
      * @return 表达式的值
      */
+    //TODO 这里一定有问题吧，And和Or都有问题
     @Override
     override fun visitConditionalOrExpression(ctx: mcfppParser.ConditionalOrExpressionContext): Var<*> {
         Project.ctx = ctx
@@ -464,7 +452,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             }
         } else if (ctx.expression() != null) {
             // '(' expression ')'
-            return McfppExprVisitor().visit(ctx.expression())
+            return MCFPPExprVisitor().visit(ctx.expression())
         } else {
             //是函数调用，将已经计算好的中间量存储到栈中
             for (v in processVarCache){
@@ -475,7 +463,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             //参数获取
             val normalArgs: ArrayList<Var<*>> = ArrayList()
             val readOnlyArgs: ArrayList<Var<*>> = ArrayList()
-            val exprVisitor = McfppExprVisitor()
+            val exprVisitor = MCFPPExprVisitor()
             for (expr in ctx.arguments().readOnlyArgs()?.expressionList()?.expression()?: emptyList()) {
                 val arg = exprVisitor.visit(expr)!!
                 readOnlyArgs.add(arg)
@@ -492,7 +480,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 if(p.first != null){
                     LogProcessor.warn("Invalid namespace usage ${p.first} in function call ")
                 }
-                McfppFuncManager().getFunction(currSelector!!,p.second,
+                MCFPPFuncManager().getFunction(currSelector!!,p.second,
                     FunctionParam.getArgTypes(readOnlyArgs),
                     FunctionParam.getArgTypes(normalArgs))
             }

@@ -187,7 +187,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
             //参数获取
             val normalArgs: ArrayList<Var<*>> = ArrayList()
             val readOnlyArgs: ArrayList<Var<*>> = ArrayList()
-            val exprVisitor = McfppExprVisitor()
+            val exprVisitor = MCFPPExprVisitor()
             for (expr in ctx.arguments().readOnlyArgs()?.expressionList()?.expression()?: emptyList()) {
                 val arg = exprVisitor.visit(expr)!!
                 readOnlyArgs.add(arg)
@@ -204,7 +204,7 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
                 if(p.first != null){
                     LogProcessor.warn("Invalid namespace usage ${p.first} in function call ")
                 }
-                McfppFuncManager().getFunction(currSelector!!,p.second,
+                MCFPPFuncManager().getFunction(currSelector!!,p.second,
                     FunctionParam.getArgTypes(readOnlyArgs),
                     FunctionParam.getArgTypes(normalArgs))
             }

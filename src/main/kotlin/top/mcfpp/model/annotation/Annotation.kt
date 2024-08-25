@@ -1,6 +1,7 @@
-package top.mcfpp.model
+package top.mcfpp.model.annotation
 
-import top.mcfpp.lang.Var
+import top.mcfpp.model.Class
+import top.mcfpp.model.DataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
 import java.io.Serializable
@@ -38,7 +39,7 @@ abstract class Annotation : Serializable {
      */
     val params = ArrayList<String>()
 
-    constructor(identifier: String, namespace: String, param: ArrayList<String> = ArrayList()) {
+    internal constructor(identifier: String, namespace: String, param: ArrayList<String> = ArrayList()) {
         this.identifier = identifier
         this.namespace = namespace
         this.params.addAll(param)
@@ -48,15 +49,17 @@ abstract class Annotation : Serializable {
 
     abstract fun forFunction(function: Function)
 
+    abstract fun forDataObject(data: DataTemplate)
+
     companion object {
-        fun newInstance(clazz: java.lang.Class<out Annotation>, param: ArrayList<Var<*>>): Annotation {
+        fun newInstance(clazz: java.lang.Class<out Annotation>, args: ArrayList<Any>): Annotation {
             //比对参数
             try {
-                val varType = Array(param.size) { i -> param[i]::class.java }
+                val varType = Array(args.size) { i -> args[i]::class.java }
                 val constructor = clazz.getConstructor(*varType)
-                return constructor.newInstance(*param.toArray())
+                return constructor.newInstance(*args.toArray())
             }catch (e: NoSuchMethodException){
-                LogProcessor.error("Cannot find constructor for annotation ${clazz.name} with param ${param.joinToString(",")}")
+                LogProcessor.error("Cannot find constructor for annotation ${clazz.name} with param ${args.joinToString(",")}")
                 throw e
             }catch (e: Exception){
                 LogProcessor.error("Cannot create instance for annotation ${clazz.name}")
@@ -66,14 +69,3 @@ abstract class Annotation : Serializable {
     }
 }
 
-abstract class FunctionAnnotation(identifier: String, namespace: String) : Annotation(identifier,namespace) {
-    override fun forClass(clazz: Class) {
-        throw Exception("Cannot use function annotation on class")
-    }
-}
-
-abstract class ClassAnnotation(identifier: String, namespace: String) : Annotation(identifier,namespace) {
-    override fun forFunction(function: Function) {
-        throw Exception("Cannot use class annotation on function")
-    }
-}
