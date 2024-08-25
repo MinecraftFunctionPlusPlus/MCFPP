@@ -6,8 +6,8 @@ package top.mcfpp.lang
  *
  * @param T 通过索引访问所获得的类型
  */
-interface Indexable<out T : Var<*>> {
+interface Indexable {
 
-    fun getByIndex(index: Var<*>): T
+    fun getByIndex(index: Var<*>): Accessor
 
 }

@@ -244,7 +244,7 @@ open class MCFloat : MCNumber<Float> {
      * @return 计算结果
      */
     @InsertCommand
-    override fun isBigger(a: Var<*>): MCBool {
+    override fun isBigger(a: Var<*>): Var<*> {
         //re = t > a
         if(!isTemp) return getTempVar().isBigger(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
@@ -262,7 +262,7 @@ open class MCFloat : MCNumber<Float> {
      * @return 计算结果
      */
     @InsertCommand
-    override fun isSmaller(a: Var<*>): MCBool {
+    override fun isSmaller(a: Var<*>): Var<*> {
         //re = t < a
         if(!isTemp) return getTempVar().isSmaller(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
@@ -280,7 +280,7 @@ open class MCFloat : MCNumber<Float> {
      * @return 计算结果
      */
     @InsertCommand
-    override fun isSmallerOrEqual(a: Var<*>): MCBool {
+    override fun isSmallerOrEqual(a: Var<*>): Var<*> {
         //re = t <= a
         if(!isTemp) return getTempVar().isSmallerOrEqual(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
@@ -298,7 +298,7 @@ open class MCFloat : MCNumber<Float> {
      * @return 计算结果
      */
     @InsertCommand
-    override fun isBiggerOrEqual(a: Var<*>): MCBool {
+    override fun isBiggerOrEqual(a: Var<*>): Var<*> {
         //re = t >= a
         if(!isTemp) return getTempVar().isBiggerOrEqual(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
@@ -316,7 +316,7 @@ open class MCFloat : MCNumber<Float> {
      * @return 计算结果
      */
     @InsertCommand
-    override fun isEqual(a: Var<*>): MCBool {
+    override fun isEqual(a: Var<*>): Var<*> {
         //re = t == a
         if(!isTemp) return getTempVar().isEqual(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
@@ -334,7 +334,7 @@ open class MCFloat : MCNumber<Float> {
      * @return 计算结果
      */
     @InsertCommand
-    override fun isNotEqual(a: Var<*>): MCBool {
+    override fun isNotEqual(a: Var<*>): Var<*> {
         //re = t != a
         if(!isTemp) return getTempVar().isNotEqual(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
@@ -671,7 +671,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
      * @return 计算结果
      */
     @InsertCommand
-    override fun isBigger(a: Var<*>): MCBool {
+    override fun isBigger(a: Var<*>): Var<*> {
         //re = t > a
         if(!isTemp) return (getTempVar() as MCFloat).isBigger(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
@@ -697,7 +697,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
      * @return 计算结果
      */
     @InsertCommand
-    override fun isSmaller(a: Var<*>): MCBool {
+    override fun isSmaller(a: Var<*>): Var<*> {
         //re = t < a
         if(!isTemp) return (getTempVar() as MCFloat).isSmaller(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
@@ -723,7 +723,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
      * @return 计算结果
      */
     @InsertCommand
-    override fun isSmallerOrEqual(a: Var<*>): MCBool {
+    override fun isSmallerOrEqual(a: Var<*>): Var<*> {
         //re = t <= a
         if(!isTemp) return (getTempVar() as MCFloat).isSmallerOrEqual(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
@@ -749,7 +749,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
      * @return 计算结果
      */
     @InsertCommand
-    override fun isBiggerOrEqual(a: Var<*>): MCBool {
+    override fun isBiggerOrEqual(a: Var<*>): Var<*> {
         //re = t >= a
         if(!isTemp) return (getTempVar() as MCFloat).isSmallerOrEqual(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
@@ -775,7 +775,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
      * @return 计算结果
      */
     @InsertCommand
-    override fun isEqual(a: Var<*>): MCBool {
+    override fun isEqual(a: Var<*>): Var<*> {
         //re = t == a
         if(!isTemp) return (getTempVar() as MCFloat).isEqual(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
@@ -801,7 +801,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float>{
      * @return 计算结果
      */
     @InsertCommand
-    override fun isNotEqual(a: Var<*>): MCBool {
+    override fun isNotEqual(a: Var<*>): Var<*> {
         //re = t != a
         if(!isTemp) return (getTempVar() as MCFloat).isNotEqual(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a

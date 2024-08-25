@@ -23,7 +23,7 @@ import java.util.*
  *
  * @constructor Create empty Nbt
  */
-open class NBTBasedData<T : Tag<*>> : Var<NBTBasedData<T>>, Indexable<NBTBasedData<*>>{
+open class NBTBasedData<T : Tag<*>> : Var<NBTBasedData<T>>, Indexable{
 
     open var nbtType: NBTTypeWithTag = NBTTypeWithTag.ANY
 
@@ -192,13 +192,13 @@ open class NBTBasedData<T : Tag<*>> : Var<NBTBasedData<T>>, Indexable<NBTBasedDa
         return data.getFunction(key, readOnlyParams, normalParams) to true
     }
 
-    override fun getByIndex(index: Var<*>): NBTBasedData<*> {
-        return when(index){
+    override fun getByIndex(index: Var<*>): Accessor {
+        return Accessor(when(index){
             is MCInt -> getByIntIndex(index)
             is MCString -> getByStringIndex(index)
             is NBTBasedData<*> -> getByNBTIndex(index as NBTBasedData<Tag<*>>)
             else -> throw IllegalArgumentException("Invalid index type ${index.type}")
-        }
+        })
     }
 
     protected fun getByNBTIndex(index: NBTBasedData<Tag<*>>): NBTBasedData<*>{

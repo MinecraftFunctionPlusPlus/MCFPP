@@ -190,29 +190,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             if(!re.isTemp){
                 re = re.getTempVar()
             }
-            if (ctx.op.text.equals("==")) {
-                re = if (re is MCInt && b is MCInt) {
-                    re.isEqual(b)
-                } else if (re is MCBool && b is MCBool) {
-                    re.equalCommand(b)
-                } else if (re is MCFloat && b is MCFloat){
-                    re.isEqual(b)
-                } else{
-                    LogProcessor.error("The operator \"${ctx.op.text}\" cannot be used between ${re.type} and ${b.type}")
-                    UnknownVar("${re.identifier}${ctx.op.text}${b.identifier}")
-                }
-            } else {
-                re = if (re is MCInt && b is MCInt) {
-                    re.isNotEqual(b)
-                } else if (re is MCBool && b is MCBool) {
-                    re.notEqualCommand(b)
-                } else if (re is MCFloat && b is MCFloat){
-                    re.isNotEqual(b)
-                }else{
-                    LogProcessor.error("The operator \"${ctx.op.text}\" cannot be used between ${re.type} and ${b.type}")
-                    UnknownVar("${re.identifier}${ctx.op.text}${b.identifier}")
-                }
-            }
+            re = re.binaryComputation(b, ctx.op.text)
         }
         return re
     }
@@ -228,24 +206,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         var re: Var<*> = visit(ctx.additiveExpression(0))
         if (ctx.additiveExpression().size != 1) {
             val b: Var<*> = visit(ctx.additiveExpression(1))
-            if (re is MCInt && b is MCInt) {
-                when (ctx.relationalOp().text) {
-                    ">" -> re = re.isBigger(b)
-                    ">=" -> re = re.isBiggerOrEqual(b)
-                    "<" -> re = re.isSmaller(b)
-                    "<=" -> re = re.isSmallerOrEqual(b)
-                }
-            } else if(re is MCFloat && b is MCFloat){
-                when (ctx.relationalOp().text) {
-                    ">" -> re = re.isBigger(b)
-                    ">=" -> re = re.isBiggerOrEqual(b)
-                    "<" -> re = re.isSmaller(b)
-                    "<=" -> re = re.isSmallerOrEqual(b)
-                }
-            }else {
-                LogProcessor.error("The operator \"${ctx.relationalOp()}\" cannot be used between ${re.type} and ${b.type}")
-                throw IllegalArgumentException("")
-            }
+            re = re.binaryComputation(b, ctx.relationalOp().text)
         }
         return re
     }
@@ -269,22 +230,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                     visitAdditiveExpressionRe = visitAdditiveExpressionRe!!.getTempVar()
                 }
             }
-            visitAdditiveExpressionRe = when (ctx.op.text ){
-                "+" -> {
-                    visitAdditiveExpressionRe!!.plus(b!!)
-                }
-                "-" -> {
-                    visitAdditiveExpressionRe!!.minus(b!!)
-                }
-                else -> {
-                    null
-                }
-            }
-            if(visitAdditiveExpressionRe == null){
-                LogProcessor.error("The operator \"${ctx.op.text}\" cannot be used between ${visitAdditiveExpressionRe!!.type} and ${b!!.type}.")
-                Utils.stopCompile(IllegalArgumentException(""))
-                exitProcess(1)
-            }
+            visitAdditiveExpressionRe = visitAdditiveExpressionRe!!.binaryComputation(b!!, ctx.op.text)
             processVarCache[processVarCache.size - 1] = visitAdditiveExpressionRe!!
         }
         processVarCache.remove(visitAdditiveExpressionRe!!)
@@ -310,23 +256,7 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             if(visitMultiplicativeExpressionRe != MCFloat.ssObj){
                 visitMultiplicativeExpressionRe = visitMultiplicativeExpressionRe!!.getTempVar()
             }
-            visitMultiplicativeExpressionRe = when(ctx.op.text){
-                "*" -> {
-                    visitAdditiveExpressionRe!!.multiple(b!!)
-                }
-                "/" -> {
-                    visitAdditiveExpressionRe!!.divide(b!!)
-                }
-                "%" -> {
-                    visitAdditiveExpressionRe!!.modular(b!!)
-                }
-                else -> null
-            }
-            if(visitMultiplicativeExpressionRe == null){
-                LogProcessor.error("The operator \"${ctx.op.text}\" cannot be used between ${visitMultiplicativeExpressionRe!!.type} and ${b!!.type}.")
-                Utils.stopCompile(IllegalArgumentException(""))
-                exitProcess(1)
-            }
+            visitAdditiveExpressionRe = visitAdditiveExpressionRe!!.binaryComputation(b!!, ctx.op.text)
             processVarCache[processVarCache.size - 1] = visitMultiplicativeExpressionRe!!
         }
         processVarCache.remove(visitMultiplicativeExpressionRe!!)
@@ -344,17 +274,8 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         return if (ctx.rightVarExpression() != null) {
             visit(ctx.rightVarExpression())
         } else if (ctx.unaryExpression() != null) {
-            var a: Var<*>? = visit(ctx.unaryExpression())
-            if (a is MCBool) {
-                if(!a.isTemp){
-                    a = a.getTempVar()
-                }
-                a.negation()
-            } else {
-                LogProcessor.error("The operator \"!\" cannot be used with ${a!!.type}")
-                Utils.stopCompile(IllegalArgumentException(""))
-                exitProcess(1)
-            }
+            val a: Var<*> = visit(ctx.unaryExpression())
+            a.unaryComputation("!")
         } else {
             //类型强制转换
             visit(ctx.castExpression())
@@ -370,8 +291,8 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     @Override
     override fun visitCastExpression(ctx: mcfppParser.CastExpressionContext): Var<*> {
         Project.ctx = ctx
-        val a: Var<*>? = visit(ctx.unaryExpression())
-        return a!!.explicitCast(MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field))
+        val a: Var<*> = visit(ctx.unaryExpression())
+        return a.explicitCast(MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field))
     }
 
     /**
@@ -381,9 +302,8 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
      * @return
      */
     @Override
-    override fun visitRightVarExpression(ctx: mcfppParser.RightVarExpressionContext?): Var<*> {
-        return visit(ctx!!.basicExpression())!!
-        //return visit(ctx!!.basicExpression())!!.getTempVar(tempVarCommandCache)
+    override fun visitRightVarExpression(ctx: mcfppParser.RightVarExpressionContext): Var<*> {
+        return visit(ctx.basicExpression())
     }
 
     /**
@@ -515,13 +435,13 @@ class McfppExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             } else {
                 for (value in ctx.identifierSuffix()) {
                     if(value.conditionalExpression() != null){
-                        if(re !is Indexable<*>){
+                        if(re !is Indexable){
                             LogProcessor.error("Cannot index ${re.type}")
                             return UnknownVar("${re.identifier}_index_" + UUID.randomUUID())
                         }
                         //索引
                         val index = visit(value.conditionalExpression())!!
-                        re = (re as Indexable<*>).getByIndex(index)
+                        re = (re as Indexable).getByIndex(index)
                     }else{
                         if(!re.isTemp) re = re.getTempVar()
                         //初始化

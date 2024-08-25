@@ -3,6 +3,7 @@ package top.mcfpp.lang
 import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.*
 import top.mcfpp.Project
+import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
@@ -51,9 +52,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
     /**
      * 是否是静态的成员
      */
-    @get:Override
-    @set:Override
-    override var isStatic = false
+    final override var isStatic = false
 
     /**
      * 这个变量是否是常量。对应const关键字
@@ -71,7 +70,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
     /**
      * 访问修饰符
      */
-    override var accessModifier: Member.AccessModifier = Member.AccessModifier.PUBLIC
+    final override var accessModifier: Member.AccessModifier = Member.AccessModifier.PUBLIC
 
     /**
      * 变量的类型
@@ -95,9 +94,11 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
         .memberIndex(Project.currNamespace)
         .memberIndex("stack_frame[$stackIndex]")
 
+
     /**
      * 复制一个变量
      */
+    @Suppress("LeakingThis")
     constructor(`var` : Var<*>)  {
         name = `var`.name
         identifier = `var`.identifier
@@ -114,6 +115,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
      *
      * @param identifier 变量的标识符。默认为随机的uuid
      */
+    @Suppress("LeakingThis")
     constructor(identifier: String = UUID.randomUUID().toString()){
         this.name = identifier
         this.identifier = identifier
@@ -278,55 +280,89 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
         }
     }
 
+    fun binaryComputation(a: Var<*>, operation: String): Var<*>{
+        var qwq = a.implicitCast(this.type)
+        if(qwq.isError){
+            qwq = a
+        }
+        val re = when(operation){
+            "+" -> plus(qwq)
+            "-" -> minus(qwq)
+            "*" -> multiple(qwq)
+            "/" -> divide(qwq)
+            "%" -> modular(qwq)
+            ">" -> isBigger(qwq)
+            "<" -> isSmaller(qwq)
+            ">=" -> isBiggerOrEqual(qwq)
+            "<=" -> isSmallerOrEqual(qwq)
+            "==" -> isEqual(qwq)
+            "!=" -> isNotEqual(qwq)
+            "!" -> negation()
+            "||" -> or(qwq)
+            "&&" -> and(qwq)
+            else -> {
+                LogProcessor.error("Unknown operation: $operation")
+                UnknownVar("error_operation_" + UUID.randomUUID().toString())
+            }
+        }
+        if(re == null){
+            LogProcessor.error("Unsupported operation '$operation' between ${type.typeName} and ${a.type.typeName}")
+            return UnknownVar("${type.typeName}_$operation{a.type.typeName}" + UUID.randomUUID())
+        }else{
+            return re
+        }
+    }
+
+    fun unaryComputation(operation: String): Var<*>{
+        val re = when(operation){
+            "!" -> negation()
+            else -> {
+                LogProcessor.error("Unknown operation: $operation")
+                return UnknownVar("error_operation_" + UUID.randomUUID().toString())
+            }
+        }
+        if(re == null){
+            LogProcessor.error("Unsupported operation '$operation' for ${type.typeName}")
+            return UnknownVar("${type.typeName}_$operation" + UUID.randomUUID())
+        }else{
+            return re
+        }
+    }
+
     /**
      * 加法
      * @param a 加数
      * @return 计算的结果
      */
-    open fun plus(a: Var<*>): Var<*> {
-        LogProcessor.error("type ${type.typeName} not support operation '+'")
-        return UnknownVar("")
-    }
+    open fun plus(a: Var<*>): Var<*>? = null
 
     /**
      * 减法
      * @param a 减数
      * @return 计算的结果
      */
-    open fun minus(a: Var<*>): Var<*> {
-        LogProcessor.error("type ${type.typeName} not support operation '-'")
-        return UnknownVar("")
-    }
+    open fun minus(a: Var<*>): Var<*>? = null
 
     /**
      * 乘法
      * @param a 乘数
      * @return 计算的结果
      */
-    open fun multiple(a: Var<*>): Var<*> {
-        LogProcessor.error("type ${type.typeName} not support operation '*'")
-        return UnknownVar("")
-    }
+    open fun multiple(a: Var<*>): Var<*>? = null
 
     /**
      * 除法
      * @param a 除数
      * @return 计算的结果
      */
-    open fun divide(a: Var<*>): Var<*> {
-        LogProcessor.error("type ${type.typeName} not support operation '/'")
-        return UnknownVar("")
-    }
+    open fun divide(a: Var<*>): Var<*>? = null
 
     /**
      * 取余
      * @param a 除数
      * @return 计算的结果
      */
-    open fun modular(a: Var<*>): Var<*> {
-        LogProcessor.error("type ${type.typeName} not support operation '%'")
-        return UnknownVar("")
-    }
+    open fun modular(a: Var<*>): Var<*>? = null
 
 
     /**
@@ -334,10 +370,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun isBigger(a: Var<*>): MCBool {
-        LogProcessor.error("type ${type.typeName} not support operation '>'")
-        return MCBool("")
-    }
+    open fun isBigger(a: Var<*>): Var<*>? = null
 
 
     /**
@@ -345,50 +378,46 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun isSmaller(a: Var<*>): MCBool {
-        LogProcessor.error("type ${type.typeName} not support operation '<'")
-        return MCBool("")
-    }
+    open fun isSmaller(a: Var<*>): Var<*>? = null
 
     /**
      * 这个数是否小于等于a
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun isSmallerOrEqual(a: Var<*>): MCBool {
-        LogProcessor.error("type ${type.typeName} not support operation '<='")
-        return MCBool("")
-    }
+    open fun isSmallerOrEqual(a: Var<*>): Var<*>? = null
 
     /**
      * 这个数是否大于等于a
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun isBiggerOrEqual(a: Var<*>): MCBool {
-        LogProcessor.error("type ${type.typeName} not support operation '>='")
-        return MCBool("")
-    }
+    open fun isBiggerOrEqual(a: Var<*>): Var<*>? = null
 
     /**
      * 这个数是否等于a
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun isEqual(a: Var<*>): MCBool {
-        LogProcessor.error("type ${type.typeName} not support operation '=='")
-        return MCBool("")
-    }
+    open fun isEqual(a: Var<*>): Var<*>? = null
 
     /**
      * 这个数是否不等于a
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun isNotEqual(a: Var<*>): MCBool {
-        LogProcessor.error("type ${type.typeName} not support operation '!='")
-        return MCBool("")
-    }
+    open fun isNotEqual(a: Var<*>): Var<*>? = null
+
+
+    @InsertCommand
+    open fun negation(): Var<*>? = null
+
+    @InsertCommand
+    open fun or(a: Var<*>): Var<*>? = null
+
+    @InsertCommand
+    open fun and(a: Var<*>): Var<*>? = null
+
 
     open fun toNBTVar(): NBTBasedData<*> {
         val n = NBTBasedData<ByteTag>()
@@ -529,6 +558,12 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
             return qwq
         }
 
+        fun buildOpErrorVar(identifier: String): Var<*>{
+            val qwq = UnknownVar(identifier + UUID.randomUUID().toString())
+            qwq.isError = true
+            return qwq
+        }
+
         /**
          * 根据所给的类型、标识符和域构造一个变量
          * @param identifier 标识符
@@ -584,7 +619,6 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
          * 根据所给的类型、标识符和域构造一个变量
          * @param identifier 标识符
          * @param type 变量的类型
-         * @param container 变量所在的域
          * @return
          */
         fun build(identifier: String, type: MCFPPType): Var<*>{

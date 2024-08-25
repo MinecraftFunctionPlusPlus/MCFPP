@@ -4,9 +4,10 @@ import top.mcfpp.lang.type.MCFPPType
 import top.mcfpp.lang.value.MCFPPValue
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
+import top.mcfpp.util.LogProcessor
 import java.util.UUID
 
-class Accessor(override var value: Var<*>, identifier: String = UUID.randomUUID().toString()) : Var<Accessor>(identifier), MCFPPValue<Var<*>> {
+class Accessor(override var value: Var<*>, identifier: String = value.identifier, val isReadOnly: Boolean = false) : Var<Accessor>(identifier), MCFPPValue<Var<*>> {
 
     override fun implicitCast(type: MCFPPType): Var<*> {
         return value.implicitCast(type)
@@ -46,7 +47,11 @@ class Accessor(override var value: Var<*>, identifier: String = UUID.randomUUID(
     }
 
     override fun doAssign(b: Var<*>): Accessor {
-        TODO()
+        if(isReadOnly){
+            LogProcessor.error("$identifier is read only")
+            return this
+        }
+        return Accessor(value.assign(b), this.identifier, isReadOnly)
     }
 
     override fun toDynamic(replace: Boolean): Var<*> {

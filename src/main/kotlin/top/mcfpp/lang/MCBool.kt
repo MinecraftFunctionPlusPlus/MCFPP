@@ -13,7 +13,6 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
-import javax.xml.crypto.Data
 
 /**
  * 布尔型变量是mcfpp的基本类型之一，它表示一个只有0，1两种取值可能性的值。
@@ -78,51 +77,57 @@ open class MCBool : Var<MCBool>, OnScoreboard {
         }
     }
 
-    @InsertCommand
-    open fun equalCommand(a: MCBool): MCBool {
+    override fun isEqual(a: Var<*>): Var<*>? {
         //re = t == a
-        val re: MCBool
-        if (a is MCBoolConcrete) {
-            //execute store success score qwq qwq if score qwq qwq = owo owo
-            re = MCBool()
-            Function.addCommand(
-                "execute store success score " + re.name + " " + re.boolObject
-                        + " if score " + name + " " + boolObject + " matches " + if (a.value) 1 else 0
-            )
-        } else {
-            re = MCBool()
-            Function.addCommand(
-                "execute store success score " + re.name + " " + re.boolObject
-                        + " if score " + name + " " + boolObject + " = " + a.name + " " + a.boolObject
-            )
+        val re = MCBool()
+        when(a){
+            is MCBoolConcrete -> {
+                //execute store success score qwq qwq if score qwq qwq = owo owo
+                Function.addCommand(
+                    "execute store success score " + re.name + " " + re.boolObject
+                            + " if score " + name + " " + boolObject + " matches " + if (a.value) 1 else 0
+                )
+            }
+
+            is MCBool -> {
+                Function.addCommand(
+                    "execute store success score " + re.name + " " + re.boolObject
+                            + " if score " + name + " " + boolObject + " = " + a.name + " " + a.boolObject
+                )
+            }
+
+            else -> return null
         }
         return re
     }
 
     @InsertCommand
-    open fun notEqualCommand(a: MCBool): MCBool {
+    override fun isNotEqual(a: Var<*>): Var<*>? {
         //re = t != a
-        val re: MCBool
-        if (a is MCBoolConcrete) {
-            //execute store success score qwq qwq if score qwq qwq = owo owo
-            re = MCBool()
+        val re: MCBool = MCBool()
+        when(a){
+            is MCBoolConcrete -> {
+                //execute store success score qwq qwq if score qwq qwq = owo owo
+                Function.addCommand(
+                    "execute store success score " + re.name + " " + re.boolObject
+                            + " unless score " + name + " " + boolObject + " matches " + if (a.value) 1 else 0
+                )
+            }
 
-            Function.addCommand(
-                "execute store success score " + re.name + " " + re.boolObject
-                        + " unless score " + name + " " + boolObject + " matches " + if (a.value) 1 else 0
-            )
-        } else {
-            re = MCBool()
-            Function.addCommand(
-                "execute store success score " + re.name + " " + re.boolObject
-                        + " unless score " + name + " " + boolObject + " = " + a.name + " " + a.boolObject
-            )
+            is MCBool -> {
+                Function.addCommand(
+                    "execute store success score " + re.name + " " + re.boolObject
+                            + " unless score " + name + " " + boolObject + " = " + a.name + " " + a.boolObject
+                )
+            }
+
+            else -> return null
         }
         return re
     }
 
     @InsertCommand
-    open fun negation(): MCBool {
+    override fun negation(): Var<*> {
         Function.addCommand(
             "execute store success score " + name + " " + boolObject
                     + " if score " + name + " " + boolObject + " matches " + 0
@@ -131,59 +136,73 @@ open class MCBool : Var<MCBool>, OnScoreboard {
     }
 
     @InsertCommand
-    open fun or(a: MCBool): MCBool {
+    override fun or(a: Var<*>): Var<*>? {
         val re: MCBool
-        if (a is MCBoolConcrete) {
-            if (a.value) {
-                re = MCBoolConcrete(true)
-            } else {
+        when(a){
+            is MCBoolConcrete -> {
+                if(a.value){
+                    return MCBoolConcrete(true)
+                } else {
+                    re = MCBool()
+                    Function.addCommand(
+                        "execute store success score " + re.name + " " + re.boolObject
+                                + " if score " + name + " " + boolObject + " matches " + 1
+                    )
+                    return re
+                }
+            }
+
+            is MCBool -> {
                 re = MCBool()
                 Function.addCommand(
                     "execute store success score " + re.name + " " + re.boolObject
                             + " if score " + name + " " + boolObject + " matches " + 1
                 )
+                Function.addCommand(
+                    "execute" +
+                            " if score " + re.name + " " + re.boolObject + " matches " + 0 +
+                            " store success score " + re.name + " " + re.boolObject +
+                            " if score " + a.name + " " + a.boolObject + " matches " + 1
+                )
             }
-        } else {
-            re = MCBool()
-            Function.addCommand(
-                "execute store success score " + re.name + " " + re.boolObject
-                        + " if score " + name + " " + boolObject + " matches " + 1
-            )
-            Function.addCommand(
-                "execute" +
-                        " if score " + re.name + " " + re.boolObject + " matches " + 0 +
-                        " store success score " + re.name + " " + re.boolObject +
-                        " if score " + a.name + " " + a.boolObject + " matches " + 1
-            )
+
+            else -> return null
         }
         return re
     }
 
     @InsertCommand
-    open fun and(a: MCBool): MCBool {
+    override fun and(a: Var<*>): Var<*>? {
         val re: MCBool
-        if (a is MCBoolConcrete) {
-            if (!a.value) {
-                re = MCBoolConcrete(false)
-            } else {
+        when(a){
+            is MCBoolConcrete -> {
+                if(!a.value){
+                    return MCBoolConcrete(false)
+                } else {
+                    re = MCBool()
+                    Function.addCommand(
+                        "execute store success score " + re.name + " " + re.boolObject
+                                + " if score " + name + " " + boolObject + " matches " + 1
+                    )
+                    return re
+                }
+            }
+
+            is MCBool -> {
                 re = MCBool()
                 Function.addCommand(
                     "execute store success score " + re.name + " " + re.boolObject
                             + " if score " + name + " " + boolObject + " matches " + 1
                 )
+                Function.addCommand(
+                    "execute" +
+                            " if score " + re.name + " " + re.boolObject + " matches " + 1 +
+                            " store success score " + re.name + " " + re.boolObject +
+                            " if score " + a.name + " " + a.boolObject + " matches " + 1
+                )
             }
-        } else {
-            re = MCBool()
-            Function.addCommand(
-                "execute store success score " + re.name + " " + re.boolObject
-                        + " if score " + name + " " + boolObject + " matches " + 1
-            )
-            Function.addCommand(
-                "execute" +
-                        " if score " + re.name + " " + re.boolObject + " matches " + 1 +
-                        " store success score " + re.name + " " + re.boolObject +
-                        " if score " + a.name + " " + a.boolObject + " matches " + 1
-            )
+
+            else -> return null
         }
         return re
     }
@@ -291,50 +310,82 @@ class MCBoolConcrete : MCBool, MCFPPValue<Boolean>{
     }
 
     @InsertCommand
-    override fun equalCommand(a: MCBool): MCBool {
-        //re = t == a
-        return if (a is MCBoolConcrete) {
-            MCBoolConcrete(value == a.value)
-        } else {
-            a.equalCommand(this)
+    override fun isEqual(a: Var<*>): Var<*>? {
+        when(a){
+            is MCBoolConcrete -> {
+                return MCBoolConcrete(value == a.value)
+            }
+
+            is MCBool -> {
+                return a.isEqual(this)
+            }
+
+            else -> {
+                LogProcessor.error("Unsupported operation between ${type.typeName} and ${a.type.typeName}")
+                return UnknownVar("${type.typeName}_isEqual_${a.type.typeName}" + UUID.randomUUID())
+            }
         }
     }
 
     @InsertCommand
-    override fun notEqualCommand(a: MCBool): MCBool {
-        //re = t != a
-        return if (a is MCBoolConcrete) {
-            MCBoolConcrete(value != a.value)
-        } else{
-            a.notEqualCommand(this)
+    override fun isNotEqual(a: Var<*>): Var<*>? {
+        when(a){
+            is MCBoolConcrete -> {
+                return MCBoolConcrete(value != a.value)
+            }
+
+            is MCBool -> {
+                return a.isNotEqual(this)
+            }
+
+            else -> {
+                LogProcessor.error("Unsupported operation between ${type.typeName} and ${a.type.typeName}")
+                return UnknownVar("${type.typeName}_isNotEqual_${a.type.typeName}" + UUID.randomUUID())
+            }
         }
     }
 
     //取反
     @InsertCommand
-    override fun negation(): MCBool {
+    override fun negation(): Var<*> {
         value = !value
         return this
     }
 
     @InsertCommand
-    override fun or(a: MCBool): MCBool {
-        //re = this || a
-        return if (a is MCBoolConcrete) {
-            MCBoolConcrete(value || a.value)
-        } else {
-            a.or(this)
+    override fun or(a: Var<*>): Var<*>? {
+        when(a){
+            is MCBoolConcrete -> {
+                return MCBoolConcrete(value || a.value)
+            }
+
+            is MCBool -> {
+                return a.or(this)
+            }
+
+            else -> {
+                LogProcessor.error("Unsupported operation between ${type.typeName} and ${a.type.typeName}")
+                return UnknownVar("${type.typeName}_or_${a.type.typeName}" + UUID.randomUUID())
+            }
         }
     }
 
 
     @InsertCommand
-    override fun and(a: MCBool): MCBool {
-        //re = this && a
-        return if (a is MCBoolConcrete) {
-            MCBoolConcrete(value && a.value)
-        } else {
-            a.or(this)
+    override fun and(a: Var<*>): Var<*>? {
+        when(a){
+            is MCBoolConcrete -> {
+                return MCBoolConcrete(value && a.value)
+            }
+
+            is MCBool -> {
+                return a.and(this)
+            }
+
+            else -> {
+                LogProcessor.error("Unsupported operation between ${type.typeName} and ${a.type.typeName}")
+                return UnknownVar("${type.typeName}_and_${a.type.typeName}" + UUID.randomUUID())
+            }
         }
     }
 

@@ -181,7 +181,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
             Pair(null, true)
         }else{
             member.parent = this
-            Pair(member, accessModifier >= member.accessModifier)
+            Pair(Accessor(member), accessModifier >= member.accessModifier)
         }
     }
 

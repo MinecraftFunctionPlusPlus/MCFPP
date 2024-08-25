@@ -176,7 +176,7 @@ class ClassPointer : Var<ClassPointer>{
         return if(member == null){
             Pair(null, true)
         }else{
-            Pair(member, accessModifier >= member.accessModifier)
+            Pair(Accessor(member), accessModifier >= member.accessModifier)
         }
     }
 
