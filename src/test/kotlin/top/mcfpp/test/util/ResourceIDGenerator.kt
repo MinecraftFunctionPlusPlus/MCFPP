@@ -4,6 +4,12 @@ import java.io.File
 import java.lang.StringBuilder
 
 
+/**
+ * Use
+ * ```powershell
+ * kotlinc src/test/kotlin/top/mcfpp/test/util/ResourceIDGenerator.kt -include-runtime -d ResourceIDGenerator.jar;java -jar ResourceIDGenerator.jar
+ * ```
+ */
 fun main(){
     //读取type.txt
     val file = File("src/main/resources/type.txt")
@@ -16,8 +22,12 @@ fun main(){
     }
     //生成MCFPPResourceType.kt
     val text = StringBuilder("")
-    text.append("package top.mcfpp.types.lang.type\n\n")
-    text.append("import top.mcfpp.types.lang.resource.*\n\n")
+    text.append("package top.mcfpp.type\n\n")
+    text.append("\n" +
+            "import top.mcfpp.model.FieldContainer\n" +
+            "import top.mcfpp.`var`.lang.Var\n" +
+            "import top.mcfpp.`var`.lang.resource.*\n" +
+            "import top.mcfpp.model.Class\n\n")
     text.append("class MCFPPResourceType {\n\n")
     text.append("object ResourceID: MCFPPType(parentType = listOf(MCFPPNBTType.NBT)){\n")
     text.append("    override val typeName: String\n")
@@ -27,18 +37,18 @@ fun main(){
         if(line != ""){
             text.append("    object $line: MCFPPType(parentType = listOf(ResourceID)){\n")
             text.append("        override val typeName: String\n")
-            text.append("            get() = \"$line\"\n")
+            text.append("            get() = \"$line\"\n\n")
+            text.append("        override fun build(identifier: String, container: FieldContainer): Var<*> = ${line}Concrete(container, \"\", identifier)\n")
+            text.append("        override fun build(identifier: String): Var<*> = ${line}Concrete(\"\", identifier)\n")
+            text.append("        override fun build(identifier: String, clazz: Class): Var<*> = ${line}Concrete(clazz, \"\", identifier)\n")
+            text.append("        override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = $line(container, identifier)\n")
+            text.append("        override fun buildUnConcrete(identifier: String): Var<*> = $line(identifier)\n")
+            text.append("        override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = $line(clazz, identifier)\n")
             text.append("    }\n")
-            text.append("    override fun build(identifier: String, container: FieldContainer): Var<*> = ${line}Concrete(container, StringTag(\"\"), identifier)\n")
-            text.append("    override fun build(identifier: String): Var<*> = ${line}Concrete(StringTag(\"\"), identifier)\n")
-            text.append("    override fun build(identifier: String, clazz: Class): Var<*> = ${line}Concrete(clazz, StringTag(\"\"), identifier)\n")
-            text.append("    override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = $line(container, identifier)\n")
-            text.append("    override fun buildUnConcrete(identifier: String): Var<*> = $line(identifier)\n")
-            text.append("    override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = $line(clazz, identifier)\n")
         }
     }
     text.append("}\n")
-    val typeFile = File("src/main/kotlin/top/mcfpp/lang/type/MCFPPResourceType.kt")
+    val typeFile = File("src/main/kotlin/top/mcfpp/type/MCFPPResourceType.kt")
     typeFile.writeText(text.toString())
     println("MCFPPResourceType.kt generated.")
 }
@@ -47,14 +57,14 @@ fun ResourceIDWriter(id: String){
 
     val template: String =
         """
-package top.mcfpp.types.lang.resource
+package top.mcfpp.`var`.lang.resource
             
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.types.lang.Var
-import top.mcfpp.types.lang.type.MCFPPResourceType
-import top.mcfpp.types.lang.type.MCFPPType
-import top.mcfpp.types.lang.value.MCFPPValue
+import top.mcfpp.`var`.lang.Var
+import top.mcfpp.type.MCFPPResourceType
+import top.mcfpp.type.MCFPPType
+import top.mcfpp.`var`.lang.MCFPPValue
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import java.util.*
@@ -174,7 +184,7 @@ class ${id}Concrete: MCFPPValue<String>, ${id}{
 }        
 """
     //覆盖写入文件
-    val file = File("src/main/kotlin/top/mcfpp/lang/resource/$id.kt")
+    val file = File("src/main/kotlin/top/mcfpp/var/lang/resource/$id.kt")
     file.writeText(template)
 
     //生成java文件

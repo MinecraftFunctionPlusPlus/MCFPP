@@ -4,13 +4,13 @@ import net.querz.nbt.tag.StringTag
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.`var`.lang.*
-import top.mcfpp.type.MCFPPResourceType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.`var`.lang.MCFPPValue
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.type.MCFPPResourceType
 import java.util.*
 
 open class ResourceID : NBTBasedData<StringTag> {
