@@ -1,6 +1,6 @@
 package top.mcfpp.model.field
 
-import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.function.Function
 
 interface IFieldWithFunction: IField {

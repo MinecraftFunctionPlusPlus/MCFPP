@@ -9,12 +9,12 @@ import top.mcfpp.command.CommandList
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.*
 import top.mcfpp.io.MCFPPFile
-import top.mcfpp.lang.*
-import top.mcfpp.lang.type.MCFPPBaseType
-import top.mcfpp.lang.type.MCFPPEnumType
-import top.mcfpp.lang.type.MCFPPGenericClassType
-import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.`var`.lang.*
+import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPEnumType
+import top.mcfpp.type.MCFPPGenericClassType
+import top.mcfpp.type.MCFPPType
+import top.mcfpp.`var`.lang.MCFPPValue
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.*
 import top.mcfpp.model.field.GlobalField
@@ -120,11 +120,11 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             //自动判断类型
             val init: Var<*> = MCFPPExprVisitor().visit(ctx.expression())!!
             val `var` = if(fieldModifier == "import"){
-                val qwq = Var.buildUnConcrete(ctx.Identifier().text, init.type, Function.currFunction)
+                val qwq = init.type.buildUnConcrete(ctx.Identifier().text, Function.currFunction)
                 qwq.hasAssigned = true
                 qwq
             }else{
-                Var.build(ctx.Identifier().text, init.type, Function.currFunction)
+                init.type.build(ctx.Identifier().text, Function.currFunction)
             }
             //变量注册
             //一定是函数变量
@@ -156,11 +156,11 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             for (c in ctx.fieldDeclarationExpression()){
                 //函数变量，生成
                 var `var` = if(fieldModifier == "import"){
-                    val qwq = Var.buildUnConcrete(c.Identifier().text, type, Function.currFunction)
+                    val qwq = type.buildUnConcrete(c.Identifier().text, Function.currFunction)
                     qwq.hasAssigned = true
                     qwq
                 }else{
-                    Var.build(c.Identifier().text, type, Function.currFunction)
+                    type.build(c.Identifier().text, Function.currFunction)
                 }
                 //变量注册
                 //一定是函数变量

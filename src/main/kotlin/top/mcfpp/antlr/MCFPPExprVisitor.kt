@@ -4,11 +4,11 @@ import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.StringTag
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
-import top.mcfpp.lang.*
-import top.mcfpp.lang.type.MCFPPEnumType
-import top.mcfpp.lang.type.MCFPPGenericClassType
-import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.`var`.lang.*
+import top.mcfpp.type.MCFPPEnumType
+import top.mcfpp.type.MCFPPGenericClassType
+import top.mcfpp.type.MCFPPType
+import top.mcfpp.`var`.lang.MCFPPValue
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Class
 import top.mcfpp.model.DataTemplate

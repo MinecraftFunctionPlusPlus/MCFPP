@@ -1,12 +1,12 @@
 package top.mcfpp.lib
 
-import top.mcfpp.lang.resource.StorageConcrete
+import top.mcfpp.`var`.lang.resource.StorageConcrete
 import java.io.Serializable
 
 /**
  * 一个储存对象
  *
- * @constructor Create empty top.mcfpp.lang.resource.Storage
+ * @constructor Create empty top.mcfpp.types.lang.resource.Storage
  */
 class Storage: Serializable {
 
@@ -31,7 +31,7 @@ class Storage: Serializable {
         return toString().hashCode()
     }
 
-    fun getResourceID() : top.mcfpp.lang.resource.Storage{
+    fun getResourceID() : top.mcfpp.`var`.lang.resource.Storage{
         return StorageConcrete("$namespace:$identifier")
     }
 

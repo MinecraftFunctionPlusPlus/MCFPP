@@ -1,6 +1,6 @@
 package top.mcfpp.model.field
 
-import top.mcfpp.lang.Var
+import top.mcfpp.`var`.lang.Var
 import top.mcfpp.model.FieldContainer
 
 class NoStackFunctionField(parent: FunctionField, cacheContainer: FieldContainer?) : FunctionField(parent, cacheContainer) {

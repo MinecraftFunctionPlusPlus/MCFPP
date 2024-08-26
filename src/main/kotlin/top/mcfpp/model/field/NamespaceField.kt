@@ -2,8 +2,8 @@ package top.mcfpp.model.field
 
 import com.google.common.collect.ArrayListMultimap
 import org.jetbrains.annotations.Nullable
-import top.mcfpp.lang.*
-import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.`var`.lang.*
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction

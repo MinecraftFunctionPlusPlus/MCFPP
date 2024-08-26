@@ -1,9 +1,9 @@
 package top.mcfpp.model
 
 import top.mcfpp.Project
-import top.mcfpp.lang.ClassPointer
-import top.mcfpp.lang.type.MCFPPClassType
-import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.`var`.lang.ClassPointer
+import top.mcfpp.type.MCFPPClassType
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Constructor
 import top.mcfpp.model.function.Function

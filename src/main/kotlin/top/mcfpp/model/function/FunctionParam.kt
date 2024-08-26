@@ -1,12 +1,11 @@
 package top.mcfpp.model.function
 
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.command.Command
-import top.mcfpp.lang.DataTemplateObject
-import top.mcfpp.lang.Var
-import top.mcfpp.lang.type.MCFPPBaseType
-import top.mcfpp.lang.type.MCFPPGenericType
-import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.`var`.lang.DataTemplateObject
+import top.mcfpp.`var`.lang.Var
+import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPGenericType
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.field.SimpleFieldWithType
 
 /**
@@ -44,7 +43,7 @@ class FunctionParam(
     var defaultVar: Var<*>? = null
 
     fun buildVar(): Var<*>{
-        val qwq = Var.buildUnConcrete(identifier, type, function)
+        val qwq = type.buildUnConcrete(identifier, function)
         if(qwq is DataTemplateObject){
             qwq.toFunctionParam()
         }
@@ -61,7 +60,7 @@ class FunctionParam(
          * @return
          */
 
-        fun isSubOf(subType: MCFPPType ,parentType: MCFPPType): Boolean{
+        fun isSubOf(subType: MCFPPType, parentType: MCFPPType): Boolean{
             return subType.isSubOf(parentType)
         }
 

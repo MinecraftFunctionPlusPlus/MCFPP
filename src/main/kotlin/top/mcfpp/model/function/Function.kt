@@ -8,11 +8,11 @@ import top.mcfpp.antlr.MCFPPImVisitor
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.antlr.mcfppParser.FunctionBodyContext
 import top.mcfpp.command.*
-import top.mcfpp.lang.*
-import top.mcfpp.lang.type.MCFPPBaseType
-import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lang.type.UnresolvedType
-import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.`var`.lang.*
+import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPType
+import top.mcfpp.type.UnresolvedType
+import top.mcfpp.`var`.lang.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.field.FunctionField
 import top.mcfpp.util.LogProcessor
@@ -449,12 +449,7 @@ open class Function : Member, FieldContainer, Serializable {
      * @param returnType
      */
     fun buildReturnVar(returnType: MCFPPType): Var<*>{
-        return if(returnType == MCFPPBaseType.Void) {
-            Void()
-        }
-        else {
-            Var.buildUnConcrete("return", returnType, this)
-        }
+        return returnType.buildUnConcrete("return", this)
     }
 
     /**

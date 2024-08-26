@@ -2,8 +2,8 @@ package top.mcfpp.util
 
 import net.querz.nbt.tag.*
 import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.lang.*
-import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.`var`.lang.*
+import top.mcfpp.`var`.lang.MCFPPValue
 
 object NBTUtil {
 

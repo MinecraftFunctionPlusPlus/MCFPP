@@ -3,7 +3,7 @@ package top.mcfpp.commandline
 import org.apache.logging.log4j.core.config.ConfigurationSource
 import org.apache.logging.log4j.core.config.Configurator
 import top.mcfpp.MCFPP
-import top.mcfpp.lang.UnresolvedVar
+import top.mcfpp.`var`.lang.UnresolvedVar
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.util.UwU
 import java.io.FileInputStream

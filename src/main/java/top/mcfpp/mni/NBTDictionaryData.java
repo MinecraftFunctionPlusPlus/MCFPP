@@ -1,9 +1,8 @@
 package top.mcfpp.mni;
 
-import net.querz.nbt.tag.CompoundTag;
 import top.mcfpp.annotations.MNIRegister;
 import top.mcfpp.command.Command;
-import top.mcfpp.lang.*;
+import top.mcfpp.var.lang.*;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.util.ValueWrapper;
 

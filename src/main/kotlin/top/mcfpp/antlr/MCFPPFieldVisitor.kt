@@ -6,10 +6,10 @@ import top.mcfpp.antlr.mcfppParser.TemplateDeclarationContext
 import top.mcfpp.compiletime.CompileTimeFunction
 import top.mcfpp.exception.*
 import top.mcfpp.io.MCFPPFile
-import top.mcfpp.lang.*
-import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.`var`.lang.*
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.annotations.MNIRegister
-import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.model.*
 import top.mcfpp.model.Class
 import top.mcfpp.model.Member.AccessModifier
@@ -302,7 +302,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             )
         }
         if(!isStatic){
-            val thisObj = Var.build("this", MCFPPType.parseFromIdentifier(Class.currClass!!.identifier, typeScope), f)
+            val thisObj = MCFPPType.parseFromIdentifier(Class.currClass!!.identifier, typeScope).build("this", f)
             f.field.putVar("this",thisObj)
         }
         //解析参数
@@ -419,7 +419,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val c = ctx.fieldDeclarationExpression()
         //字段的解析在Analyse阶段结束后，Compile阶段开始的时候进行
         val type = MCFPPType.parseFromIdentifier(ctx.type().text, typeScope)
-        val `var` = Var.build(c.Identifier().text, type, Class.currClass!!)
+        val `var` = type.build(c.Identifier().text, Class.currClass!!)
         //是否是静态的
         if(isStatic){
             `var`.isStatic = true
@@ -619,7 +619,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     
     override fun visitNativeFuncDeclaration(ctx: mcfppParser.NativeFuncDeclarationContext): Any? {
         Project.ctx = ctx
-        val nf = NativeFunction(ctx.Identifier().text, ctx.functionReturnType()?.let { MCFPPType.parseFromContext(it.type(), typeScope) }?:MCFPPBaseType.Void, Project.currNamespace)
+        val nf = NativeFunction(ctx.Identifier().text, ctx.functionReturnType()?.let { MCFPPType.parseFromContext(it.type(), typeScope) }?: MCFPPBaseType.Void, Project.currNamespace)
         nf.addParamsFromContext(ctx.functionParams())
         try {
             //根据JavaRefer找到类
@@ -778,7 +778,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
         if(!isStatic){
             val varType = DataTemplate.currTemplate!!.getType()
-            val thisObj = Var.build("this",varType , f)
+            val thisObj = varType.build("this", f)
             f.field.putVar("this",thisObj)
         }
         //解析参数
@@ -793,7 +793,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 
     override fun visitTemplateFieldDeclaration(ctx: mcfppParser.TemplateFieldDeclarationContext): Var<*>? {
         Project.ctx = ctx
-        val `var` = Var.build(ctx.Identifier().text, MCFPPType.parseFromContext(ctx.type(), typeScope))
+        val `var` = MCFPPType.parseFromContext(ctx.type(), typeScope).build(ctx.Identifier().text)
         //是否是静态的
         `var`.isStatic = isStatic
         if (DataTemplate.currTemplate!!.field.containVar(ctx.Identifier().text)

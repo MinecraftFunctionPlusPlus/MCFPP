@@ -2,8 +2,8 @@ package top.mcfpp.model.function
 
 import top.mcfpp.Project
 import top.mcfpp.antlr.mcfppParser.FunctionBodyContext
-import top.mcfpp.lang.type.MCFPPBaseType
-import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.CompoundData
 import top.mcfpp.util.StringHelper
 

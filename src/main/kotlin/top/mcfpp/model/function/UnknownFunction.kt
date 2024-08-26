@@ -2,8 +2,8 @@ package top.mcfpp.model.function
 
 import top.mcfpp.Project
 import top.mcfpp.model.CanSelectMember
-import top.mcfpp.lang.UnknownVar
-import top.mcfpp.lang.Var
+import top.mcfpp.`var`.lang.UnknownVar
+import top.mcfpp.`var`.lang.Var
 
 open class UnknownFunction: Function {
 

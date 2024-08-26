@@ -1,6 +1,6 @@
 package top.mcfpp.compiletime
 
-import top.mcfpp.lang.Var
+import top.mcfpp.`var`.lang.Var
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.field.FunctionField
 import top.mcfpp.model.field.IField

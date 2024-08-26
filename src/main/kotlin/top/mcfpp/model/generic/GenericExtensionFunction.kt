@@ -4,10 +4,10 @@ import top.mcfpp.Project
 import top.mcfpp.antlr.MCFPPImVisitor
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.model.CanSelectMember
-import top.mcfpp.lang.Var
-import top.mcfpp.lang.type.MCFPPBaseType
-import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.`var`.lang.Var
+import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPType
+import top.mcfpp.`var`.lang.MCFPPValue
 import top.mcfpp.model.Class
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.field.GlobalField

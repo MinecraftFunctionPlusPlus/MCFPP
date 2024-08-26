@@ -1,8 +1,8 @@
 package top.mcfpp.lib
 
 import top.mcfpp.command.Command
-import top.mcfpp.lang.*
-import top.mcfpp.lang.resource.*
+import top.mcfpp.`var`.lang.*
+import top.mcfpp.`var`.lang.resource.*
 
 interface EntitySelectorPredicate {
     fun toCommandPart(): Command

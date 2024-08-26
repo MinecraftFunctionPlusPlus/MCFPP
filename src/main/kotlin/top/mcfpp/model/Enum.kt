@@ -1,7 +1,7 @@
 package top.mcfpp.model
 
 import top.mcfpp.lib.SbObject
-import top.mcfpp.lang.type.MCFPPEnumType
+import top.mcfpp.type.MCFPPEnumType
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.util.LogProcessor
 

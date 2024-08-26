@@ -1,8 +1,7 @@
 package top.mcfpp.model
 
 import top.mcfpp.Project
-import top.mcfpp.lang.type.MCFPPDataTemplateType
-import top.mcfpp.lang.type.MCFPPObjectDataTemplateType
+import top.mcfpp.type.MCFPPObjectDataTemplateType
 
 class ObjectDataTemplate(identifier: String, namespace: String = Project.currNamespace) : DataTemplate(identifier, namespace) {
 

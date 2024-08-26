@@ -3,7 +3,7 @@ package top.mcfpp.io
 import com.alibaba.fastjson2.JSONArray
 import com.alibaba.fastjson2.JSONObject
 import com.alibaba.fastjson2.JSONWriter
-import top.mcfpp.lang.Var
+import top.mcfpp.`var`.lang.Var
 import top.mcfpp.model.*
 import top.mcfpp.model.Enum
 import top.mcfpp.model.field.CompoundDataField

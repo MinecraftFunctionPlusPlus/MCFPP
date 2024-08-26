@@ -2,7 +2,7 @@ package top.mcfpp.antlr
 
 import top.mcfpp.Project
 import top.mcfpp.exception.UndefinedException
-import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.`var`.lang.MCFPPValue
 import top.mcfpp.model.ObjectClass
 import top.mcfpp.model.ObjectDataTemplate
 import top.mcfpp.model.annotation.Annotation

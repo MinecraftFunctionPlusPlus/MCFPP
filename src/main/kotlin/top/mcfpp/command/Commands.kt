@@ -3,17 +3,16 @@ package top.mcfpp.command
 import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.Tag
 import top.mcfpp.Project
-import top.mcfpp.lang.ClassPointer
-import top.mcfpp.lang.EntityVar
-import top.mcfpp.lang.EntityVarConcrete
-import top.mcfpp.lang.MCInt
-import top.mcfpp.lang.type.MCFPPClassType
+import top.mcfpp.`var`.lang.ClassPointer
+import top.mcfpp.`var`.lang.EntityVar
+import top.mcfpp.`var`.lang.EntityVarConcrete
+import top.mcfpp.`var`.lang.MCInt
+import top.mcfpp.type.MCFPPClassType
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.ObjectClass
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NoStackFunction
-import top.mcfpp.util.NBTUtil
 import top.mcfpp.util.Utils
 import java.util.*
 

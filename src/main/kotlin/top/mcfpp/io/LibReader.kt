@@ -2,10 +2,9 @@ package top.mcfpp.io
 
 import com.alibaba.fastjson2.JSONArray
 import com.alibaba.fastjson2.JSONObject
-import top.mcfpp.Project
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.lang.UnresolvedVar
-import top.mcfpp.lang.type.UnresolvedType
+import top.mcfpp.`var`.lang.UnresolvedVar
+import top.mcfpp.type.UnresolvedType
 import top.mcfpp.model.*
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.field.GlobalField

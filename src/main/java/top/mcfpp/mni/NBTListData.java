@@ -1,18 +1,14 @@
 package top.mcfpp.mni;
 
-import kotlin.NotImplementedError;
 import net.querz.nbt.io.SNBTUtil;
-import net.querz.nbt.tag.IntTag;
-import net.querz.nbt.tag.ListTag;
 import net.querz.nbt.tag.Tag;
 import org.jetbrains.annotations.NotNull;
 import top.mcfpp.Project;
 import top.mcfpp.annotations.MNIRegister;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
-import top.mcfpp.lang.*;
-import top.mcfpp.lang.type.MCFPPBaseType;
-import top.mcfpp.lang.value.MCFPPValue;
+import top.mcfpp.var.lang.*;
+import top.mcfpp.var.lang.MCFPPValue;
 import top.mcfpp.lib.NBTPath;
 import top.mcfpp.lib.SbObject;
 import top.mcfpp.lib.Storage;

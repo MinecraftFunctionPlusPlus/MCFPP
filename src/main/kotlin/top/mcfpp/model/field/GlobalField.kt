@@ -1,9 +1,9 @@
 package top.mcfpp.model.field
 
 import top.mcfpp.Project
-import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.lib.SbObject
-import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.mni.MinecraftData
 import top.mcfpp.mni.annotation.From
 import top.mcfpp.model.*

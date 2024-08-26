@@ -2,19 +2,15 @@ package top.mcfpp.model
 
 import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.Project
-import top.mcfpp.lang.DataTemplateObject
-import top.mcfpp.lang.MCAny
-import top.mcfpp.lang.UnknownVar
-import top.mcfpp.lang.Var
-import top.mcfpp.lang.type.MCFPPDataTemplateType
-import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.`var`.lang.DataTemplateObject
+import top.mcfpp.`var`.lang.MCAny
+import top.mcfpp.`var`.lang.UnknownVar
+import top.mcfpp.`var`.lang.Var
+import top.mcfpp.type.MCFPPDataTemplateType
 import top.mcfpp.mni.DataObjectData
-import top.mcfpp.mni.MCAnyData
 import top.mcfpp.model.field.CompoundDataField
-import top.mcfpp.model.function.Constructor
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
-import java.util.*
 import kotlin.collections.ArrayList
 
 /**

@@ -4,10 +4,10 @@ import top.mcfpp.Project
 import top.mcfpp.antlr.MCFPPGenericClassImVisitor
 import top.mcfpp.antlr.MCFPPGenericObjectClassFieldVisitor
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.lang.MCFPPTypeVar
-import top.mcfpp.lang.Var
-import top.mcfpp.lang.type.MCFPPClassType
-import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.`var`.lang.MCFPPTypeVar
+import top.mcfpp.`var`.lang.Var
+import top.mcfpp.type.MCFPPClassType
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.Class
 import top.mcfpp.model.CompiledGenericObjectClass
 import top.mcfpp.model.ObjectClass

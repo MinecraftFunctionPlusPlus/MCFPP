@@ -1,15 +1,12 @@
 package top.mcfpp.mni;
 
-import kotlin.Pair;
 import top.mcfpp.annotations.MNIRegister;
-import top.mcfpp.lang.*;
-import top.mcfpp.lang.resource.Advancement;
-import top.mcfpp.lang.resource.EntityType;
-import top.mcfpp.lang.resource.LootTablePredicate;
+import top.mcfpp.var.lang.*;
+import top.mcfpp.var.lang.resource.Advancement;
+import top.mcfpp.var.lang.resource.EntityType;
+import top.mcfpp.var.lang.resource.LootTablePredicate;
 import top.mcfpp.lib.*;
 import top.mcfpp.util.ValueWrapper;
-
-import java.util.UUID;
 
 public class SelectorData {
 

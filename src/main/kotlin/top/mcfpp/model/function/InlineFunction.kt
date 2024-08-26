@@ -2,8 +2,8 @@ package top.mcfpp.model.function
 
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.antlr.*
-import top.mcfpp.lang.*
-import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.`var`.lang.*
+import top.mcfpp.type.MCFPPBaseType
 
 /**
  * 内联函数。

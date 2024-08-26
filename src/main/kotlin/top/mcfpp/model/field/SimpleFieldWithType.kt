@@ -1,6 +1,6 @@
 package top.mcfpp.model.field
 
-import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.type.MCFPPType
 
 open class SimpleFieldWithType : IFieldWithType {
 

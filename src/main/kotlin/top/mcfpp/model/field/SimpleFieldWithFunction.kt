@@ -1,7 +1,7 @@
 package top.mcfpp.model.field
 
 import org.jetbrains.annotations.Nullable
-import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.Generic

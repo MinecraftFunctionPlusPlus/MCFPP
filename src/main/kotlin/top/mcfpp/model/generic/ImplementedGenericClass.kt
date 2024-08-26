@@ -1,8 +1,8 @@
 package top.mcfpp.model.generic
 
 import top.mcfpp.Project
-import top.mcfpp.lang.Var
-import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.`var`.lang.Var
+import top.mcfpp.`var`.lang.MCFPPValue
 import top.mcfpp.model.Class
 import top.mcfpp.util.LogProcessor
 

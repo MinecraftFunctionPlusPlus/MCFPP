@@ -2,9 +2,9 @@ package top.mcfpp.antlr
 
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
-import top.mcfpp.lang.*
-import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.`var`.lang.*
+import top.mcfpp.type.MCFPPType
+import top.mcfpp.`var`.lang.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.field.GlobalField
@@ -151,13 +151,13 @@ class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
             } else {
                 for (value in ctx.identifierSuffix()) {
                     if(value.conditionalExpression() != null){
-                        if(re !is Indexable<*>){
+                        if(re !is Indexable){
                             LogProcessor.error("Cannot index ${re.type}")
                             return UnknownVar("${re.identifier}_index_" + UUID.randomUUID())
                         }
                         //索引
                         val index = visit(value.conditionalExpression())!!
-                        re = (re as Indexable<*>).getByIndex(index)
+                        re = (re as Indexable).getByIndex(index)
                     }else{
                         if(!re.isTemp) re = re.getTempVar()
                         //初始化

@@ -3,8 +3,8 @@ package top.mcfpp.compiletime
 import top.mcfpp.antlr.MCFPPExprVisitor
 import top.mcfpp.antlr.MCFPPImVisitor
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.lang.MCBoolConcrete
-import top.mcfpp.lang.Var
+import top.mcfpp.`var`.lang.MCBoolConcrete
+import top.mcfpp.`var`.lang.Var
 import top.mcfpp.model.function.Function
 
 class MCFPPCompileTimeVisitor(

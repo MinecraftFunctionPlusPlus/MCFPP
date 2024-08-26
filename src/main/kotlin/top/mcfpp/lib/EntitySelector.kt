@@ -1,9 +1,13 @@
 package top.mcfpp.lib
 
+import net.querz.nbt.tag.CompoundTag
+import net.querz.nbt.tag.StringTag
 import top.mcfpp.command.Command
-import top.mcfpp.lang.*
-import top.mcfpp.lang.resource.EntityTypeConcrete
+import top.mcfpp.`var`.lang.*
+import top.mcfpp.`var`.lang.resource.EntityTypeConcrete
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.`var`.lang.resource.Advancement
+import top.mcfpp.`var`.lang.resource.LootTablePredicate
 import java.io.Serializable
 
 class EntitySelector(var selectorType: SelectorType): Serializable {
@@ -25,41 +29,39 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
     private var hasLimitPredicate: Boolean = false
     private var hasSortPredicate: Boolean = false
 
-    private val predicates: ArrayList<EntitySelectorPredicate> = ArrayList()
-
-    val limit: Int
-        get() {
-            if(hasLimitPredicate){
-                for (predicate in predicates) {
-                    if(predicate is LimitPredicate){
-                        if(predicate.limit is MCIntConcrete){
-                            return (predicate.limit).value
-                        }
-                        break
-                    }
-                }
-            }
-            return Int.MAX_VALUE
-        }
-
-    val type: Pair<EntityTypeConcrete, Boolean>?
-        get() {
-            if(hasTypePredicate){
-                for (predicate in predicates) {
-                    if(predicate is TypePredicate){
-                        if(predicate.type is EntityTypeConcrete){
-                            return predicate.type to predicate.reverse
-                        }
-                        break
-                    }
-                }
-            }
-            return null
-        }
+    val predicates: ArrayList<EntitySelectorPredicate> = ArrayList()
 
     constructor(char: Char):this(fromSelectorTypeString(char))
 
-    fun addPredicate(predicate: EntitySelectorPredicate){
+    fun getLimit(): Int{
+        if(hasLimitPredicate){
+            for (predicate in predicates) {
+                if(predicate is LimitPredicate){
+                    if(predicate.limit is MCIntConcrete){
+                        return (predicate.limit).value
+                    }
+                    break
+                }
+            }
+        }
+        return Int.MAX_VALUE
+    }
+
+    fun getType(): Pair<EntityTypeConcrete, Boolean>?{
+        if(hasTypePredicate){
+            for (predicate in predicates) {
+                if(predicate is TypePredicate){
+                    if(predicate.type is EntityTypeConcrete){
+                        return predicate.type to predicate.reverse
+                    }
+                    break
+                }
+            }
+        }
+        return null
+    }
+
+    fun addPredicate(predicate: EntitySelectorPredicate): EntitySelector{
         when(predicate){
             is XPredicate -> {
                 if(hasXPredicate){
@@ -193,6 +195,7 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
                 predicates.add(predicate)
             }
         }
+        return this
     }
 
     fun onlyIncludingPlayers() : Boolean {
@@ -254,6 +257,48 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
         }
         return re
     }
+
+    fun x(value: MCInt) = addPredicate(XPredicate(value))
+    fun x(value: Int) = addPredicate(XPredicate(MCIntConcrete(value)))
+    fun y(value: MCInt) = addPredicate(YPredicate(value))
+    fun y(value: Int) = addPredicate(YPredicate(MCIntConcrete(value)))
+    fun z(value: MCInt) = addPredicate(ZPredicate(value))
+    fun z(value: Int) = addPredicate(ZPredicate(MCIntConcrete(value)))
+    fun distance(value: RangeVar) = addPredicate(DistancePredicate(value))
+    fun distance(value: Pair<Float?, Float?>) = addPredicate(DistancePredicate(RangeVarConcrete(value)))
+    fun dx(value: MCInt) = addPredicate(DXPredicate(value))
+    fun dx(value: Int) = addPredicate(DXPredicate(MCIntConcrete(value)))
+    fun dy(value: MCInt) = addPredicate(DYPredicate(value))
+    fun dy(value: Int) = addPredicate(DYPredicate(MCIntConcrete(value)))
+    fun dz(value: MCInt) = addPredicate(DZPredicate(value))
+    fun dz(value: Int) = addPredicate(DZPredicate(MCIntConcrete(value)))
+    fun scores(value: Map<String, RangeVar>) = addPredicate(ScoresPredicate(value))
+    fun tag(value: MCString, reverse: Boolean) = addPredicate(TagPredicate(value, reverse))
+    fun tag(value: String, reverse: Boolean) = addPredicate(TagPredicate(MCStringConcrete(StringTag(value)), reverse))
+    fun team(value: MCString, reverse: Boolean) = addPredicate(TeamPredicate(value, reverse))
+    fun teams(value: String, reverse: Boolean) = addPredicate(TeamPredicate(MCStringConcrete(StringTag(value)), reverse))
+    fun name(value: MCString, reverse: Boolean) = addPredicate(NamePredicate(value, reverse))
+    fun name(value: String, reverse: Boolean) = addPredicate(NamePredicate(MCStringConcrete(StringTag(value)), reverse))
+    fun type(value: EntityTypeConcrete, reverse: Boolean) = addPredicate(TypePredicate(value, reverse))
+    fun type(value: String, reverse: Boolean) = addPredicate(TypePredicate(EntityTypeConcrete(value), reverse))
+    fun predicate(value: LootTablePredicate, reverse: Boolean) = addPredicate(PredicatePredicate(value, reverse))
+    fun predicate(value: String, reverse: Boolean) = addPredicate(PredicatePredicate(LootTablePredicate(value), reverse))
+    fun xRotation(value: RangeVar) = addPredicate(XRotationPredicate(value))
+    fun xRotation(value: Pair<Float?, Float?>) = addPredicate(XRotationPredicate(RangeVarConcrete(value)))
+    fun yRotation(value: RangeVar) = addPredicate(YRotationPredicate(value))
+    fun yRotation(value: Pair<Float?, Float?>) = addPredicate(YRotationPredicate(RangeVarConcrete(value)))
+    fun nbt(value: NBTBasedData<*>) = addPredicate(NBTPredicate(value))
+    fun nbt(value: CompoundTag) = addPredicate(NBTPredicate(NBTBasedDataConcrete(value)))
+    fun level(value: RangeVar) = addPredicate(LevelPredicate(value))
+    fun level(value: Pair<Float?, Float?>) = addPredicate(LevelPredicate(RangeVarConcrete(value)))
+    fun gamemode(value: MCString, reverse: Boolean) = addPredicate(GamemodePredicate(value, reverse))
+    fun gamemode(value: String, reverse: Boolean) = addPredicate(GamemodePredicate(MCStringConcrete(StringTag(value)), reverse))
+    fun advancement(value: Advancement, reverse: Boolean) = addPredicate(AdvancementsPredicate(value, reverse))
+    fun advancement(value: String, reverse: Boolean) = addPredicate(AdvancementsPredicate(Advancement(value), reverse))
+    fun limit(value: MCInt) = addPredicate(LimitPredicate(value))
+    fun limit(value: Int) = addPredicate(LimitPredicate(MCIntConcrete(value)))
+    fun sort(value: MCString) = addPredicate(SortPredicate(value))
+    fun sort(value: String) = addPredicate(SortPredicate(MCStringConcrete(StringTag(value))))
 
     companion object{
 

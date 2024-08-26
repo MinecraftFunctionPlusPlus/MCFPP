@@ -10,9 +10,9 @@ import top.mcfpp.command.CommentType
 import top.mcfpp.io.LibReader
 import top.mcfpp.io.LibWriter
 import top.mcfpp.io.MCFPPFile
-import top.mcfpp.lang.MCFloat
-import top.mcfpp.lang.UnresolvedVar
-import top.mcfpp.lang.Var
+import top.mcfpp.`var`.lang.MCFloat
+import top.mcfpp.`var`.lang.UnresolvedVar
+import top.mcfpp.`var`.lang.Var
 import top.mcfpp.model.*
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
@@ -21,7 +21,6 @@ import java.io.*
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util.*
-import java.util.jar.JarEntry
 import java.util.jar.JarFile
 import kotlin.io.path.name
 

@@ -2,10 +2,10 @@ package top.mcfpp.model.function
 
 import top.mcfpp.Project
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.lang.*
-import top.mcfpp.lang.type.MCFPPBaseType
-import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.`var`.lang.*
+import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPType
+import top.mcfpp.`var`.lang.MCFPPValue
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Native
 import top.mcfpp.util.LogProcessor

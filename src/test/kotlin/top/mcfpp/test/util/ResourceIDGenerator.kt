@@ -16,8 +16,8 @@ fun main(){
     }
     //生成MCFPPResourceType.kt
     val text = StringBuilder("")
-    text.append("package top.mcfpp.lang.type\n\n")
-    text.append("import top.mcfpp.lang.resource.*\n\n")
+    text.append("package top.mcfpp.types.lang.type\n\n")
+    text.append("import top.mcfpp.types.lang.resource.*\n\n")
     text.append("class MCFPPResourceType {\n\n")
     text.append("object ResourceID: MCFPPType(parentType = listOf(MCFPPNBTType.NBT)){\n")
     text.append("    override val typeName: String\n")
@@ -29,6 +29,12 @@ fun main(){
             text.append("        override val typeName: String\n")
             text.append("            get() = \"$line\"\n")
             text.append("    }\n")
+            text.append("    override fun build(identifier: String, container: FieldContainer): Var<*> = ${line}Concrete(container, StringTag(\"\"), identifier)\n")
+            text.append("    override fun build(identifier: String): Var<*> = ${line}Concrete(StringTag(\"\"), identifier)\n")
+            text.append("    override fun build(identifier: String, clazz: Class): Var<*> = ${line}Concrete(clazz, StringTag(\"\"), identifier)\n")
+            text.append("    override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = $line(container, identifier)\n")
+            text.append("    override fun buildUnConcrete(identifier: String): Var<*> = $line(identifier)\n")
+            text.append("    override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = $line(clazz, identifier)\n")
         }
     }
     text.append("}\n")
@@ -41,14 +47,14 @@ fun ResourceIDWriter(id: String){
 
     val template: String =
         """
-package top.mcfpp.lang.resource
+package top.mcfpp.types.lang.resource
             
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.lang.Var
-import top.mcfpp.lang.type.MCFPPResourceType
-import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.types.lang.Var
+import top.mcfpp.types.lang.type.MCFPPResourceType
+import top.mcfpp.types.lang.type.MCFPPType
+import top.mcfpp.types.lang.value.MCFPPValue
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import java.util.*

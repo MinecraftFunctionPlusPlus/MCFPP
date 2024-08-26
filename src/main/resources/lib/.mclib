@@ -129,7 +129,7 @@
 			"functions":[
 				{
 					"id":"print",
-					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.lang.JsonText)",
+					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.var.lang.JsonText)",
 					"normalParams":[
 						{
 							"id":"t",
@@ -145,7 +145,7 @@
 				},
 				{
 					"id":"print",
-					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.lang.MCInt)",
+					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.var.lang.MCInt)",
 					"normalParams":[
 						{
 							"id":"i",
@@ -161,7 +161,7 @@
 				},
 				{
 					"id":"print",
-					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.lang.MCString)",
+					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.var.lang.MCString)",
 					"normalParams":[
 						{
 							"id":"s",
@@ -177,7 +177,7 @@
 				},
 				{
 					"id":"print",
-					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.lang.DataTemplateObject)",
+					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.var.lang.DataTemplateObject)",
 					"normalParams":[
 						{
 							"id":"n",
@@ -193,7 +193,7 @@
 				},
 				{
 					"id":"print",
-					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.lang.NBTBasedData)",
+					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.var.lang.NBTBasedData)",
 					"normalParams":[
 						{
 							"id":"n",
@@ -209,7 +209,7 @@
 				},
 				{
 					"id":"print",
-					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.lang.Var)",
+					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.var.lang.Var)",
 					"normalParams":[
 						{
 							"id":"a",

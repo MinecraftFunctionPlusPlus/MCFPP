@@ -6,7 +6,7 @@ import org.antlr.v4.runtime.CommonTokenStream
 import org.antlr.v4.runtime.tree.ParseTree
 import top.mcfpp.Project
 import top.mcfpp.antlr.*
-import top.mcfpp.lang.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.model.Class
 import top.mcfpp.model.field.FileField
 import top.mcfpp.model.field.GlobalField

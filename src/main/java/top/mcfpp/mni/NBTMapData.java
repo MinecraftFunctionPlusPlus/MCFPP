@@ -1,14 +1,9 @@
 package top.mcfpp.mni;
 
-import kotlin.jvm.functions.Function4;
 import net.querz.nbt.tag.StringTag;
-import org.jetbrains.annotations.NotNull;
 import top.mcfpp.annotations.MNIRegister;
-import top.mcfpp.lang.*;
-import top.mcfpp.model.function.MNIMethodContainer;
+import top.mcfpp.var.lang.*;
 import top.mcfpp.util.ValueWrapper;
-
-import java.util.HashMap;
 
 public class NBTMapData {
 

@@ -1,8 +1,8 @@
 package top.mcfpp.test
 
-import top.mcfpp.lang.ClassPointer
-import top.mcfpp.lang.INativeClass
-import top.mcfpp.lang.Var
+import top.mcfpp.`var`.lang.ClassPointer
+import top.mcfpp.`var`.lang.INativeClass
+import top.mcfpp.`var`.lang.Var
 
 class NativeTest1(vars: Array<Var<*>?>?, cls: ClassPointer?) : INativeClass(vars, cls) {
     init {

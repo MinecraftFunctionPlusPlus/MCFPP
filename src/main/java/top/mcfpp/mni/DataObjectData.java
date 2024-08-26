@@ -1,12 +1,10 @@
 package top.mcfpp.mni;
 
 import net.querz.nbt.io.SNBTUtil;
-import org.jetbrains.annotations.NotNull;
 import top.mcfpp.annotations.MNIRegister;
-import top.mcfpp.lang.DataTemplateObject;
-import top.mcfpp.lang.DataTemplateObjectConcrete;
-import top.mcfpp.lang.JsonTextConcrete;
-import top.mcfpp.lang.MCStringConcrete;
+import top.mcfpp.var.lang.DataTemplateObject;
+import top.mcfpp.var.lang.DataTemplateObjectConcrete;
+import top.mcfpp.var.lang.JsonTextConcrete;
 import top.mcfpp.lib.ListChatComponent;
 import top.mcfpp.lib.NBTChatComponent;
 import top.mcfpp.lib.PlainChatComponent;

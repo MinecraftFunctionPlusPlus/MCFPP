@@ -1,9 +1,9 @@
 package top.mcfpp.antlr
 
 import top.mcfpp.Project
-import top.mcfpp.lang.MCAny
-import top.mcfpp.lang.Var
-import top.mcfpp.lang.value.MCFPPValue
+import top.mcfpp.`var`.lang.MCAny
+import top.mcfpp.`var`.lang.Var
+import top.mcfpp.`var`.lang.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.Enum
 import top.mcfpp.model.field.GlobalField

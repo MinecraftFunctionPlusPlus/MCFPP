@@ -2,15 +2,12 @@ package top.mcfpp.model
 
 import net.querz.nbt.tag.IntArrayTag
 import top.mcfpp.Project
-import top.mcfpp.lang.ClassPointer
-import top.mcfpp.lang.type.MCFPPClassType
-import top.mcfpp.lang.type.MCFPPObjectClassType
-import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.`var`.lang.ClassPointer
+import top.mcfpp.type.MCFPPObjectClassType
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.field.GlobalField
-import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.model.generic.GenericObjectClass
 import top.mcfpp.util.LogProcessor
-import top.mcfpp.util.NBTUtil
 import top.mcfpp.util.Utils
 import java.util.*
 

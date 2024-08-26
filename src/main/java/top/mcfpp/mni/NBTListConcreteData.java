@@ -1,17 +1,14 @@
 package top.mcfpp.mni;
 
 import net.querz.nbt.io.SNBTUtil;
-import net.querz.nbt.tag.ListTag;
 import net.querz.nbt.tag.Tag;
 import top.mcfpp.Project;
 import top.mcfpp.annotations.InsertCommand;
 import top.mcfpp.annotations.MNIRegister;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
-import top.mcfpp.lang.*;
-import top.mcfpp.lang.type.MCFPPNBTType;
-import top.mcfpp.lang.value.MCFPPValue;
-import top.mcfpp.lib.SbObject;
+import top.mcfpp.var.lang.*;
+import top.mcfpp.var.lang.MCFPPValue;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.util.NBTUtil;
 import top.mcfpp.util.ValueWrapper;
@@ -43,7 +40,7 @@ public class NBTListConcreteData {
                         "data." + caller.getIdentifier() + " " +
                         "append from " +
                         "storage mcfpp:system " +
-                        Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + e.getIdentifier() + " "));
+                        Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + e.getIdentifier() + " "), true);
             }else {
                 command = new Command[]{ new Command("data modify " +
                         "storage mcfpp:system " +
@@ -78,7 +75,7 @@ public class NBTListConcreteData {
                         "data." + caller.getIdentifier() + " " +
                         "append from " +
                         "storage mcfpp:system " +
-                        Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + l.getIdentifier() + "[]");
+                        Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + l.getIdentifier() + "[]", true);
             }else {
                 command = new Command[]{ new Command("data modify " +
                         "storage mcfpp:system " +
@@ -110,7 +107,7 @@ public class NBTListConcreteData {
                         "data." + caller.getIdentifier() + " " +
                         "insert " + i + " from " +
                         "storage mcfpp:system " +
-                        Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + e.getIdentifier());
+                        Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + e.getIdentifier(), true);
             }else {
                 command = new Command[] {new Command("data modify " +
                         "storage mcfpp:system " +
@@ -130,7 +127,7 @@ public class NBTListConcreteData {
                             new Command("data modify " +
                                     "entity @s " +
                                     "data." + caller.getIdentifier() + " " +
-                                    "insert").build("", "$" + index.getIdentifier(), true).build ("value " + SNBTUtil.toSNBT(tag), true)
+                                    "insert").build("", "$" + index.getIdentifier(), true).build ("value " + SNBTUtil.toSNBT(tag), true), true
                     );
                     Function.Companion.addCommand(command[0]);
                     var f = Commands.INSTANCE.buildMacroCommand(command[1]).build("with storage mcfpp:system " +
@@ -159,7 +156,7 @@ public class NBTListConcreteData {
                         "data." + caller.getIdentifier() + " " +
                         "insert").build("", "$" + index.getIdentifier(), true).build ("from " +
                         "storage mcfpp:system " +
-                        Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + e.getIdentifier(), true));
+                        Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + e.getIdentifier(), true), true);
             } else {
                 command = new Command[] {new Command("data modify " +
                         "storage mcfpp:system " +

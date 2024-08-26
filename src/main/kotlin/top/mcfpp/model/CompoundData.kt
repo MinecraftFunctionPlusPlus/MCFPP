@@ -2,9 +2,9 @@ package top.mcfpp.model
 
 import top.mcfpp.Project
 import top.mcfpp.annotations.MNIRegister
-import top.mcfpp.lang.Var
-import top.mcfpp.lang.type.MCFPPBaseType
-import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.`var`.lang.Var
+import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.Function

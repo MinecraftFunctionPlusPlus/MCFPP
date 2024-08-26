@@ -1,9 +1,9 @@
 package top.mcfpp.compiletime
 
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.lang.ClassPointer
-import top.mcfpp.lang.Var
-import top.mcfpp.lang.type.MCFPPType
+import top.mcfpp.`var`.lang.ClassPointer
+import top.mcfpp.`var`.lang.Var
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.field.IField
 import kotlin.collections.ArrayList

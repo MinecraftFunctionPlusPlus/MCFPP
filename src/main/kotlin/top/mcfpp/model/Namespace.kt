@@ -2,9 +2,9 @@ package top.mcfpp.model
 
 import top.mcfpp.Project
 import top.mcfpp.annotations.MNIRegister
-import top.mcfpp.lang.UnresolvedVar
-import top.mcfpp.lang.type.MCFPPType
-import top.mcfpp.lang.type.UnresolvedType
+import top.mcfpp.`var`.lang.UnresolvedVar
+import top.mcfpp.type.MCFPPType
+import top.mcfpp.type.UnresolvedType
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.field.NamespaceField
 import top.mcfpp.model.function.Function
