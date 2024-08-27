@@ -1,13 +1,10 @@
 namespace test;
 
-@ConcreteOnly
-data Test {
-    int qwq;
-}
-
 func main(){
-    Test a = {qwq: 1};
-    print(a.qwq);
-    import int b;
-    a.qwq = b;
+    int a = 0;
+    while(a < 6){
+        a = a + 1;
+        print(a);
+    }
+    print(a);
 }

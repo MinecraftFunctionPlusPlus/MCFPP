@@ -32,7 +32,7 @@ import java.util.UUID
 class InternalFunction(prefix: String, parent: Function) : Function(prefix + UUID.randomUUID(), context = null) {
 
     init {
-        field = InternalFunctionField(parent.field.clone(),this)
+        field = InternalFunctionField(parent.field,this)
         setParentFunction(parent)
         ownerType = Companion.OwnerType.NONE
     }

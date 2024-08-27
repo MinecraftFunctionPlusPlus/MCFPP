@@ -338,7 +338,7 @@ open class Function : Member, FieldContainer, Serializable {
         ownerType = OwnerType.CLASS
         owner = itf
         this.isStatic = false
-        field = FunctionField(null,null)
+        field = FunctionField(null,this)
         this.returnType = returnType
         this.returnVar = buildReturnVar(returnType)
         this.isAbstract = true
@@ -373,6 +373,7 @@ open class Function : Member, FieldContainer, Serializable {
         this.ownerType = function.ownerType
         this.isStatic = function.isStatic
         this.field = function.field.clone()
+        this.field.container = this
         this.returnType = function.returnType
         this.returnVar = function.returnVar.clone()
         this.isAbstract = function.isAbstract

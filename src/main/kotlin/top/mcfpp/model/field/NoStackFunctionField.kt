@@ -19,4 +19,8 @@ class NoStackFunctionField(parent: FunctionField, cacheContainer: FieldContainer
         super.getVar(key)?.let { return it }
         return (parent as FunctionField).getVar(key)
     }
+
+    override fun putVar(key: String, `var`: Var<*>, forced: Boolean): Boolean {
+        return (parent as FunctionField).putVar(key, `var`, forced)
+    }
 }

@@ -404,7 +404,17 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 currSelector = enumType
             }
             var re = if(currSelector == null) {
-                Function.currFunction.field.getVar(qwq) ?: UnknownVar(qwq)
+                val pwp = Function.currFunction.field.getVar(qwq)
+                if(pwp != null) {
+                    if(MCFPPImVisitor.inLoopStatement(ctx) && pwp is MCFPPValue<*>){
+                        pwp.toDynamic(true)
+                    }else{
+                        pwp
+                    }
+                }else{
+                    LogProcessor.error("Variable $qwq not found")
+                    UnknownVar(qwq)
+                }
             }else{
                 //获取成员
                 val re  = currSelector!!.getMemberVar(qwq, currSelector!!.getAccess(Function.currFunction))

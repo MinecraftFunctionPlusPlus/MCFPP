@@ -1110,7 +1110,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
          * @param ctx 需要判断的语句
          * @return 是否在嵌套中
          */
-        private fun inLoopStatement(ctx: RuleContext): Boolean {
+        public fun inLoopStatement(ctx: RuleContext): Boolean {
             if (ctx is mcfppParser.ForStatementContext) {
                 return true
             }

@@ -72,6 +72,15 @@ open class FunctionField : IFieldWithVar, IFieldWithType {
         }
     }
 
+    fun replaceVar(key: String, `var`: Var<*>): Boolean {
+        return if (vars.containsKey(key)) {
+            vars[key] = `var`
+            true
+        } else {
+            false
+        }
+    }
+
     /**
      * 从缓存中取出一个变量。如果此缓存中没有，则从父缓存中寻找。
      * TODO 这里真的有从父缓存找吗，我是说比如这个函数的类什么的，InternalFunction那边是对的

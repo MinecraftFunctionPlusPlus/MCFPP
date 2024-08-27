@@ -473,7 +473,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
         curr: FieldContainer,
         value: Int,
         identifier: String = UUID.randomUUID().toString()
-    ) : super(curr.prefix + identifier) {
+    ) : super(curr, identifier) {
         this.value = value
     }
 
