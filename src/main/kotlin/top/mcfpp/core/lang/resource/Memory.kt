@@ -54,7 +54,7 @@ open class Memory: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(MemoryData::class.java)
+            data.getNativeFromClass(MemoryData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class MemoryConcrete: MCFPPValue<String>, Memory{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(MemoryConcreteData::class.java)
+            data.getNativeFromClass(MemoryConcreteData::class.java)
         }
     }
     

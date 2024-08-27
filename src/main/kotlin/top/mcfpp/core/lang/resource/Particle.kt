@@ -54,7 +54,7 @@ open class Particle: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(ParticleData::class.java)
+            data.getNativeFromClass(ParticleData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class ParticleConcrete: MCFPPValue<String>, Particle{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(ParticleConcreteData::class.java)
+            data.getNativeFromClass(ParticleConcreteData::class.java)
         }
     }
     

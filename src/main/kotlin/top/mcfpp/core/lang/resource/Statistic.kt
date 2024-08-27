@@ -54,7 +54,7 @@ open class Statistic: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(StatisticData::class.java)
+            data.getNativeFromClass(StatisticData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class StatisticConcrete: MCFPPValue<String>, Statistic{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(StatisticConcreteData::class.java)
+            data.getNativeFromClass(StatisticConcreteData::class.java)
         }
     }
     

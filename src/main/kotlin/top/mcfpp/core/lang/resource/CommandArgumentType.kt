@@ -54,7 +54,7 @@ open class CommandArgumentType: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(CommandArgumentTypeData::class.java)
+            data.getNativeFromClass(CommandArgumentTypeData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class CommandArgumentTypeConcrete: MCFPPValue<String>, CommandArgumentType{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(CommandArgumentTypeConcreteData::class.java)
+            data.getNativeFromClass(CommandArgumentTypeConcreteData::class.java)
         }
     }
     

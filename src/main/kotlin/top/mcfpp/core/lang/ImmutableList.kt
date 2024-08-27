@@ -56,7 +56,7 @@ open class ImmutableList : NBTList{
 
         init {
             data.extends(NBTBasedData.data)
-            data.getNativeFunctionFromClass(NBTListData::class.java)
+            data.getNativeFromClass(NBTListData::class.java)
         }
 
     }

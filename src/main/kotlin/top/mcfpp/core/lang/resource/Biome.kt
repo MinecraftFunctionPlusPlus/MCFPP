@@ -54,7 +54,7 @@ open class Biome: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(BiomeData::class.java)
+            data.getNativeFromClass(BiomeData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class BiomeConcrete: MCFPPValue<String>, Biome{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(BiomeConcreteData::class.java)
+            data.getNativeFromClass(BiomeConcreteData::class.java)
         }
     }
     

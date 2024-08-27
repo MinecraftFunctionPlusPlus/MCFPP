@@ -110,7 +110,7 @@ open class DataTemplate : FieldContainer, CompoundData {
 
         init {
             baseDataTemplate.extends(MCAny.data)
-            baseDataTemplate.getNativeFunctionFromClass(DataObjectData::class.java)
+            baseDataTemplate.getNativeFromClass(DataObjectData::class.java)
         }
 
     }

@@ -54,7 +54,7 @@ open class Sound: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(SoundData::class.java)
+            data.getNativeFromClass(SoundData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class SoundConcrete: MCFPPValue<String>, Sound{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(SoundConcreteData::class.java)
+            data.getNativeFromClass(SoundConcreteData::class.java)
         }
     }
     

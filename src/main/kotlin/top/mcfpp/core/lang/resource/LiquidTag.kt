@@ -54,7 +54,7 @@ open class LiquidTag: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(LiquidTagData::class.java)
+            data.getNativeFromClass(LiquidTagData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class LiquidTagConcrete: MCFPPValue<String>, LiquidTag{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(LiquidTagConcreteData::class.java)
+            data.getNativeFromClass(LiquidTagConcreteData::class.java)
         }
     }
     

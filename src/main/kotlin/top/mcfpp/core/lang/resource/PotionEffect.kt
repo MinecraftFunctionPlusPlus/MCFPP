@@ -54,7 +54,7 @@ open class PotionEffect: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(PotionEffectData::class.java)
+            data.getNativeFromClass(PotionEffectData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class PotionEffectConcrete: MCFPPValue<String>, PotionEffect{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(PotionEffectConcreteData::class.java)
+            data.getNativeFromClass(PotionEffectConcreteData::class.java)
         }
     }
     

@@ -54,7 +54,7 @@ open class Structure: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(StructureData::class.java)
+            data.getNativeFromClass(StructureData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class StructureConcrete: MCFPPValue<String>, Structure{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(StructureConcreteData::class.java)
+            data.getNativeFromClass(StructureConcreteData::class.java)
         }
     }
     

@@ -88,7 +88,7 @@ open class NBTDictionary : NBTBasedData<CompoundTag> {
 
         init {
             data.initialize()
-            data.getNativeFunctionFromClass(NBTDictionaryData::class.java)
+            data.getNativeFromClass(NBTDictionaryData::class.java)
         }
     }
 }

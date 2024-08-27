@@ -227,7 +227,7 @@ class SelectorVarConcrete : MCFPPValue<EntitySelector>, SelectorVar{
 
         init {
             data.extends(MCAny.data)
-            data.getNativeFunctionFromClass(SelectorData::class.java)
+            data.getNativeFromClass(SelectorData::class.java)
         }
 
     }

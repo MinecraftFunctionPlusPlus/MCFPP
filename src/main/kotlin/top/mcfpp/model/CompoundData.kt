@@ -193,7 +193,7 @@ open class CompoundData : FieldContainer, Serializable {
         return parent.map(operation)
     }
 
-    fun getNativeFunctionFromClass(cls: Class<*>){
+    fun getNativeFromClass(cls: Class<*>){
         val l = Project.currNamespace
         Project.currNamespace = this.namespace
         //获取所有带有注解MNIMethod的Java方法
@@ -253,6 +253,20 @@ open class CompoundData : FieldContainer, Serializable {
                 }
             }
         }
+        //尝试获取static ArrayList<Var<?>> getMembers()方法
+        try {
+            val method = cls.getMethod("getMembers")
+            if(Modifier.isStatic(method.modifiers) && method.returnType == ArrayList::class.java){
+                val list = method.invoke(null) as ArrayList<*>
+                for (item in list){
+                    if(item is Member){
+                        this.addMember(item)
+                    }
+                }
+            }else{
+                LogProcessor.error("Method getMembers in class ${cls.name} should be static and return ArrayList<Var<?>>")
+            }
+        }catch (_: NoSuchMethodException){ }
         Project.currNamespace = l
     }
 

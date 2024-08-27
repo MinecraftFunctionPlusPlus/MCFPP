@@ -54,7 +54,7 @@ open class LootTableCondition: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(LootTableConditionData::class.java)
+            data.getNativeFromClass(LootTableConditionData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class LootTableConditionConcrete: MCFPPValue<String>, LootTableCondition{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(LootTableConditionConcreteData::class.java)
+            data.getNativeFromClass(LootTableConditionConcreteData::class.java)
         }
     }
     

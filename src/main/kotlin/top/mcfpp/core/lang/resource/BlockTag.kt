@@ -54,7 +54,7 @@ open class BlockTag: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(BlockTagData::class.java)
+            data.getNativeFromClass(BlockTagData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class BlockTagConcrete: MCFPPValue<String>, BlockTag{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(BlockTagConcreteData::class.java)
+            data.getNativeFromClass(BlockTagConcreteData::class.java)
         }
     }
     

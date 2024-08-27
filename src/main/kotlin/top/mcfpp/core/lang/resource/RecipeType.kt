@@ -54,7 +54,7 @@ open class RecipeType: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(RecipeTypeData::class.java)
+            data.getNativeFromClass(RecipeTypeData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class RecipeTypeConcrete: MCFPPValue<String>, RecipeType{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(RecipeTypeConcreteData::class.java)
+            data.getNativeFromClass(RecipeTypeConcreteData::class.java)
         }
     }
     

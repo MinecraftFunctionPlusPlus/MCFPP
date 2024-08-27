@@ -54,7 +54,7 @@ open class Advancement: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(AdvancementData::class.java)
+            data.getNativeFromClass(AdvancementData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class AdvancementConcrete: MCFPPValue<String>, Advancement{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(AdvancementConcreteData::class.java)
+            data.getNativeFromClass(AdvancementConcreteData::class.java)
         }
     }
     

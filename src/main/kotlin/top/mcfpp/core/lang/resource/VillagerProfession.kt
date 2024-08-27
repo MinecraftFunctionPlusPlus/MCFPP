@@ -54,7 +54,7 @@ open class VillagerProfession: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(VillagerProfessionData::class.java)
+            data.getNativeFromClass(VillagerProfessionData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class VillagerProfessionConcrete: MCFPPValue<String>, VillagerProfession{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(VillagerProfessionConcreteData::class.java)
+            data.getNativeFromClass(VillagerProfessionConcreteData::class.java)
         }
     }
     

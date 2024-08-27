@@ -4,7 +4,10 @@ import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.model.*
 import top.mcfpp.core.lang.DataTemplateObject
 import top.mcfpp.core.lang.DataTemplateObjectConcrete
+import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
+import top.mcfpp.mni.annotation.NoInstance
+import top.mcfpp.util.LogProcessor
 
 /**
  * 模板类型
@@ -28,12 +31,56 @@ open class MCFPPDataTemplateType(
         //}
     }
 
-    override fun build(identifier: String, container: FieldContainer): Var<*> = DataTemplateObjectConcrete(template, CompoundTag(), identifier)
-    override fun build(identifier: String): Var<*> = DataTemplateObjectConcrete(template, CompoundTag(), identifier)
-    override fun build(identifier: String, clazz: Class): Var<*> = DataTemplateObjectConcrete(template, CompoundTag(), identifier)
-    override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = DataTemplateObject(template, identifier)
-    override fun buildUnConcrete(identifier: String): Var<*> = DataTemplateObject(template, identifier)
-    override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = DataTemplateObject(template, identifier)
+    override fun build(identifier: String, container: FieldContainer): Var<*> {
+        if (template.annotations.any { it is NoInstance }){
+            LogProcessor.error("Template ${template.namespaceID} is not allowed to be instantiated.")
+            return UnknownVar(identifier)
+        }else{
+            return DataTemplateObjectConcrete(template, CompoundTag(), identifier)
+        }
+    }
+
+    override fun build(identifier: String): Var<*> {
+        if (template.annotations.any { it is NoInstance }){
+            LogProcessor.error("Template ${template.namespaceID} is not allowed to be instantiated.")
+            return UnknownVar(identifier)
+        }else{
+            return DataTemplateObjectConcrete(template, CompoundTag(), identifier)
+        }
+    }
+
+    override fun build(identifier: String, clazz: Class): Var<*> {
+        if (template.annotations.any { it is NoInstance }){
+            LogProcessor.error("Template ${template.namespaceID} is not allowed to be instantiated.")
+            return UnknownVar(identifier)
+        }else{
+            return DataTemplateObjectConcrete(template, CompoundTag(), identifier)
+        }
+    }
+    override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> {
+        if (template.annotations.any { it is NoInstance }){
+            LogProcessor.error("Template ${template.namespaceID} is not allowed to be instantiated.")
+            return UnknownVar(identifier)
+        }else{
+            return DataTemplateObject(template, identifier)
+        }
+    }
+    override fun buildUnConcrete(identifier: String): Var<*> {
+        if (template.annotations.any { it is NoInstance }){
+            LogProcessor.error("Template ${template.namespaceID} is not allowed to be instantiated.")
+            return UnknownVar(identifier)
+        }else{
+            return DataTemplateObject(template, identifier)
+        }
+    }
+    override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> {
+        if (template.annotations.any { it is NoInstance }){
+            LogProcessor.error("Template ${template.namespaceID} is not allowed to be instantiated.")
+            return UnknownVar(identifier)
+        }else{
+            return DataTemplateObject(template, identifier)
+        }
+    }
 
     companion object{
         val regex = Regex("^template\\((.+):(.+)\\)$")

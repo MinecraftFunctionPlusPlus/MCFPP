@@ -54,7 +54,7 @@ open class Effect: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(EffectData::class.java)
+            data.getNativeFromClass(EffectData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class EffectConcrete: MCFPPValue<String>, Effect{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(EffectConcreteData::class.java)
+            data.getNativeFromClass(EffectConcreteData::class.java)
         }
     }
     

@@ -54,7 +54,7 @@ open class ItemTag: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(ItemTagData::class.java)
+            data.getNativeFromClass(ItemTagData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class ItemTagConcrete: MCFPPValue<String>, ItemTag{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(ItemTagConcreteData::class.java)
+            data.getNativeFromClass(ItemTagConcreteData::class.java)
         }
     }
     

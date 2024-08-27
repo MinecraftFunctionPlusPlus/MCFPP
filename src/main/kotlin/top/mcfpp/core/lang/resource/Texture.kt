@@ -54,7 +54,7 @@ open class Texture: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(TextureData::class.java)
+            data.getNativeFromClass(TextureData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class TextureConcrete: MCFPPValue<String>, Texture{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(TextureConcreteData::class.java)
+            data.getNativeFromClass(TextureConcreteData::class.java)
         }
     }
     

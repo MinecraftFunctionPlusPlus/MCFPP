@@ -54,7 +54,7 @@ open class RecipeSerializer: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(RecipeSerializerData::class.java)
+            data.getNativeFromClass(RecipeSerializerData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class RecipeSerializerConcrete: MCFPPValue<String>, RecipeSerializer{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(RecipeSerializerConcreteData::class.java)
+            data.getNativeFromClass(RecipeSerializerConcreteData::class.java)
         }
     }
     

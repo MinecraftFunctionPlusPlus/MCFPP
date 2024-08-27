@@ -204,7 +204,7 @@ open class NBTList : NBTBasedData<ListTag<*>> {
 
         init {
             data.extends(NBTBasedData.data)
-            data.getNativeFunctionFromClass(NBTListData::class.java)
+            data.getNativeFromClass(NBTListData::class.java)
         }
 
     }
@@ -342,7 +342,7 @@ class NBTListConcrete<E>: NBTList, MCFPPValue<ListTag<*>> {
 
         init {
             data.extends(MCAny.data)
-            data.getNativeFunctionFromClass(NBTListConcreteData::class.java)
+            data.getNativeFromClass(NBTListConcreteData::class.java)
         }
 
         val empty = NBTListConcrete<Any>(ListTag.createUnchecked(IntTag::class.java), "empty", MCFPPBaseType.Any)

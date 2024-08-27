@@ -1,3 +1,7 @@
+@From("top.mcfpp.mni.minecraft.AttributeData")
+@NoInstance
+data Attribute{}
+
 data AttributeModifier {
     AttributeModifierType type;
     string id;

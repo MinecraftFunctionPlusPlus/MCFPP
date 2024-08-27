@@ -54,7 +54,7 @@ open class FunctionTag: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(FunctionTagData::class.java)
+            data.getNativeFromClass(FunctionTagData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class FunctionTagConcrete: MCFPPValue<String>, FunctionTag{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(FunctionTagConcreteData::class.java)
+            data.getNativeFromClass(FunctionTagConcreteData::class.java)
         }
     }
     

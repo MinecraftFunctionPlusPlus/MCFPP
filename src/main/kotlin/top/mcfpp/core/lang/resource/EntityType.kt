@@ -54,7 +54,7 @@ open class EntityType: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(EntityTypeData::class.java)
+            data.getNativeFromClass(EntityTypeData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class EntityTypeConcrete: MCFPPValue<String>, EntityType{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(EntityTypeConcreteData::class.java)
+            data.getNativeFromClass(EntityTypeConcreteData::class.java)
         }
     }
     

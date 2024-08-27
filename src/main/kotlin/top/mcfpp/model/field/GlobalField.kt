@@ -7,6 +7,8 @@ import top.mcfpp.type.MCFPPType
 import top.mcfpp.mni.MinecraftData
 import top.mcfpp.mni.annotation.ConcreteOnly
 import top.mcfpp.mni.annotation.From
+import top.mcfpp.mni.annotation.NoInstance
+import top.mcfpp.mni.annotation.To
 import top.mcfpp.model.*
 import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.Enum
@@ -95,6 +97,8 @@ object GlobalField : FieldContainer, IField {
 
         stdNamespaces["mcfpp.annotation"]!!.field.addAnnotation("From", From::class.java)
         stdNamespaces["mcfpp.annotation"]!!.field.addAnnotation("ConcreteOnly", ConcreteOnly::class.java)
+        stdNamespaces["mcfpp.annotation"]!!.field.addAnnotation("NoInstance", NoInstance::class.java)
+        stdNamespaces["mcfpp.annotation"]!!.field.addAnnotation("To", To::class.java)
 
         return this
     }

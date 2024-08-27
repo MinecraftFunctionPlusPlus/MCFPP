@@ -126,7 +126,7 @@ open class PlayerVar : Var<PlayerVar> {
 
             init {
                 data.extends(EntityVar.data)
-                data.getNativeFunctionFromClass(PlayerEntityData::class.java)
+                data.getNativeFromClass(PlayerEntityData::class.java)
             }
         }
     }

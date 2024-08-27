@@ -54,7 +54,7 @@ open class VillagerType: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(VillagerTypeData::class.java)
+            data.getNativeFromClass(VillagerTypeData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class VillagerTypeConcrete: MCFPPValue<String>, VillagerType{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(VillagerTypeConcreteData::class.java)
+            data.getNativeFromClass(VillagerTypeConcreteData::class.java)
         }
     }
     

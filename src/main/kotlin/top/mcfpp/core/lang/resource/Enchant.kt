@@ -54,7 +54,7 @@ open class Enchant: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(EnchantData::class.java)
+            data.getNativeFromClass(EnchantData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class EnchantConcrete: MCFPPValue<String>, Enchant{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(EnchantConcreteData::class.java)
+            data.getNativeFromClass(EnchantConcreteData::class.java)
         }
     }
     

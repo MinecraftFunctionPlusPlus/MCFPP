@@ -54,7 +54,7 @@ open class DamageType: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(DamageTypeData::class.java)
+            data.getNativeFromClass(DamageTypeData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class DamageTypeConcrete: MCFPPValue<String>, DamageType{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(DamageTypeConcreteData::class.java)
+            data.getNativeFromClass(DamageTypeConcreteData::class.java)
         }
     }
     

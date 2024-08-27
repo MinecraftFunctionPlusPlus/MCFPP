@@ -54,7 +54,7 @@ open class Liquid: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(LiquidData::class.java)
+            data.getNativeFromClass(LiquidData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class LiquidConcrete: MCFPPValue<String>, Liquid{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(LiquidConcreteData::class.java)
+            data.getNativeFromClass(LiquidConcreteData::class.java)
         }
     }
     

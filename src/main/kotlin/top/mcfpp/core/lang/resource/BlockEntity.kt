@@ -54,7 +54,7 @@ open class BlockEntity: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(BlockEntityData::class.java)
+            data.getNativeFromClass(BlockEntityData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class BlockEntityConcrete: MCFPPValue<String>, BlockEntity{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(BlockEntityConcreteData::class.java)
+            data.getNativeFromClass(BlockEntityConcreteData::class.java)
         }
     }
     

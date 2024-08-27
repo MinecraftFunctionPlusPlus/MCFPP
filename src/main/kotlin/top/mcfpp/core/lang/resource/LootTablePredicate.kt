@@ -54,7 +54,7 @@ open class LootTablePredicate: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(LootTablePredicateData::class.java)
+            data.getNativeFromClass(LootTablePredicateData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class LootTablePredicateConcrete: MCFPPValue<String>, LootTablePredicate{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(LootTablePredicateConcreteData::class.java)
+            data.getNativeFromClass(LootTablePredicateConcreteData::class.java)
         }
     }
     

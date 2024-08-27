@@ -173,7 +173,7 @@ open class MCAny : Var<MCAny> {
         val data = CompoundData("any","mcfpp.lang")
 
         init {
-            data.getNativeFunctionFromClass(MCAnyData::class.java)
+            data.getNativeFromClass(MCAnyData::class.java)
         }
     }
 }
@@ -285,7 +285,7 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>> {
         val data = CompoundData("any","mcfpp.lang")
 
         init {
-            data.getNativeFunctionFromClass(MCAnyConcreteData::class.java)
+            data.getNativeFromClass(MCAnyConcreteData::class.java)
         }
     }
 

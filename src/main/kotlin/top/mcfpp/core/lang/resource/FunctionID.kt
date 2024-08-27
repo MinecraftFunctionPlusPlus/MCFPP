@@ -54,7 +54,7 @@ open class FunctionID: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(FunctionIDData::class.java)
+            data.getNativeFromClass(FunctionIDData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class FunctionIDConcrete: MCFPPValue<String>, FunctionID{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(FunctionIDConcreteData::class.java)
+            data.getNativeFromClass(FunctionIDConcreteData::class.java)
         }
     }
     

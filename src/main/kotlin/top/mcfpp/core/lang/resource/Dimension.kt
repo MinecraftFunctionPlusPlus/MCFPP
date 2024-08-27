@@ -54,7 +54,7 @@ open class Dimension: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(DimensionData::class.java)
+            data.getNativeFromClass(DimensionData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class DimensionConcrete: MCFPPValue<String>, Dimension{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(DimensionConcreteData::class.java)
+            data.getNativeFromClass(DimensionConcreteData::class.java)
         }
     }
     

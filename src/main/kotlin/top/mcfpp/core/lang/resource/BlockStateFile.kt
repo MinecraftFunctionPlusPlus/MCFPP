@@ -54,7 +54,7 @@ open class BlockStateFile: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(BlockStateFileData::class.java)
+            data.getNativeFromClass(BlockStateFileData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class BlockStateFileConcrete: MCFPPValue<String>, BlockStateFile{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(BlockStateFileConcreteData::class.java)
+            data.getNativeFromClass(BlockStateFileConcreteData::class.java)
         }
     }
     

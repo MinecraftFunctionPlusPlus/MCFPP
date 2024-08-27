@@ -330,7 +330,7 @@ open class NBTBasedData<T : Tag<*>> : Var<NBTBasedData<T>>, Indexable{
 
         init {
             data.extends(MCAny.data)
-            data.getNativeFunctionFromClass(NBTBasedDataData::class.java)
+            data.getNativeFromClass(NBTBasedDataData::class.java)
         }
 
         enum class NBTTypeWithTag(val type: NBTType){
@@ -506,7 +506,7 @@ class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData<T>, MCFPPValue<T> {
 
         init {
             data.extends(MCAnyConcrete.data)
-            data.getNativeFunctionFromClass(NBTBasedDataData::class.java)
+            data.getNativeFromClass(NBTBasedDataData::class.java)
         }
     }
 }

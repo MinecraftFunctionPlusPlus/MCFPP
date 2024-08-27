@@ -54,7 +54,7 @@ open class BossBar: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(BossBarData::class.java)
+            data.getNativeFromClass(BossBarData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class BossBarConcrete: MCFPPValue<String>, BossBar{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(BossBarConcreteData::class.java)
+            data.getNativeFromClass(BossBarConcreteData::class.java)
         }
     }
     

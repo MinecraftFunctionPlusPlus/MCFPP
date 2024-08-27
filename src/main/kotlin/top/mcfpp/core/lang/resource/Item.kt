@@ -54,7 +54,7 @@ open class Item: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(ItemData::class.java)
+            data.getNativeFromClass(ItemData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class ItemConcrete: MCFPPValue<String>, Item{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(ItemConcreteData::class.java)
+            data.getNativeFromClass(ItemConcreteData::class.java)
         }
     }
     

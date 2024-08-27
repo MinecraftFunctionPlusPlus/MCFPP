@@ -54,7 +54,7 @@ open class PaintingVariant: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(PaintingVariantData::class.java)
+            data.getNativeFromClass(PaintingVariantData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class PaintingVariantConcrete: MCFPPValue<String>, PaintingVariant{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(PaintingVariantConcreteData::class.java)
+            data.getNativeFromClass(PaintingVariantConcreteData::class.java)
         }
     }
     

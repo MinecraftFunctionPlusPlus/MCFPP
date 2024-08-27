@@ -54,7 +54,7 @@ open class Storage: ResourceID {
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(StorageData::class.java)
+            data.getNativeFromClass(StorageData::class.java)
         }
     }
 }
@@ -119,7 +119,7 @@ class StorageConcrete: MCFPPValue<String>, Storage{
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFunctionFromClass(StorageConcreteData::class.java)
+            data.getNativeFromClass(StorageConcreteData::class.java)
         }
     }
     
