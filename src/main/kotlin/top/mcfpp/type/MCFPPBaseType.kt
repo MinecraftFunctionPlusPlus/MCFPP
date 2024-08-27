@@ -1,6 +1,5 @@
 package top.mcfpp.type
 
-import net.querz.nbt.tag.IntArrayTag
 import net.querz.nbt.tag.StringTag
 import top.mcfpp.lib.EntitySelector
 import top.mcfpp.lib.PlainChatComponent
@@ -124,28 +123,7 @@ class MCFPPBaseType {
         override fun buildUnConcrete(identifier: kotlin.String): Var<*> = top.mcfpp.core.lang.Void
         override fun buildUnConcrete(identifier: kotlin.String, clazz: Class): Var<*> = top.mcfpp.core.lang.Void
     }
-    object Selector: MCFPPType(parentType = listOf(BaseEntity)){
 
-        override val objectData: CompoundData
-            get() = SelectorVar.data
-
-        override val typeName: kotlin.String
-            get() = "selector"
-
-        override fun build(identifier: kotlin.String, container: FieldContainer): Var<*>
-            = SelectorVarConcrete(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES), container, identifier)
-        override fun build(identifier: kotlin.String): Var<*>
-            = SelectorVarConcrete(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES), identifier)
-        override fun build(identifier: kotlin.String, clazz: Class): Var<*>
-            = SelectorVarConcrete(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES), clazz, identifier)
-        override fun buildUnConcrete(identifier: kotlin.String, container: FieldContainer): Var<*>
-            = SelectorVar(EntitySelector.Companion.SelectorType.ALL_ENTITIES, container, identifier)
-        override fun buildUnConcrete(identifier: kotlin.String): Var<*>
-            = SelectorVar(EntitySelector.Companion.SelectorType.ALL_ENTITIES, identifier)
-        override fun buildUnConcrete(identifier: kotlin.String, clazz: Class): Var<*>
-            = SelectorVar(EntitySelector.Companion.SelectorType.ALL_ENTITIES, clazz, identifier)
-
-    }
     object JavaVar: MCFPPType(parentType = listOf(Any)){
 
         override val objectData: CompoundData
@@ -160,21 +138,7 @@ class MCFPPBaseType {
         override fun buildUnConcrete(identifier: kotlin.String): Var<*> = JavaVar(null, identifier)
         override fun buildUnConcrete(identifier: kotlin.String, clazz: Class): Var<*> = JavaVar(clazz, null, identifier)
     }
-    object BaseEntity: MCFPPType(parentType = listOf(Any)){
 
-        override val objectData: CompoundData
-            get() = EntityVar.data
-
-        override val typeName: kotlin.String
-            get() = "entity"
-
-        override fun build(identifier: kotlin.String, container: FieldContainer): Var<*> = EntityVarConcrete(container, IntArrayTag(intArrayOf(0,0,0,0)), identifier)
-        override fun build(identifier: kotlin.String): Var<*> = EntityVarConcrete(IntArrayTag(intArrayOf(0,0,0,0)), identifier)
-        override fun build(identifier: kotlin.String, clazz: Class): Var<*> = EntityVarConcrete(clazz, IntArrayTag(intArrayOf(0,0,0,0)), identifier)
-        override fun buildUnConcrete(identifier: kotlin.String, container: FieldContainer): Var<*> = EntityVar(container, identifier)
-        override fun buildUnConcrete(identifier: kotlin.String): Var<*> = EntityVar(identifier)
-        override fun buildUnConcrete(identifier: kotlin.String, clazz: Class): Var<*> = EntityVar(clazz, identifier)
-    }
     object JsonText: MCFPPType(parentType = listOf(MCFPPNBTType.NBT)){
 
         override val objectData: CompoundData
@@ -243,7 +207,7 @@ class MCFPPBaseType {
 
 }
 
-class LimitedSelectorType(val limit: Int): MCFPPType(parentType = listOf(MCFPPBaseType.BaseEntity)){
+class LimitedSelectorType(val limit: Int): MCFPPType(parentType = listOf(MCFPPEntityType.Entity)){
 
     override val objectData: CompoundData
         get() = SelectorVar.data

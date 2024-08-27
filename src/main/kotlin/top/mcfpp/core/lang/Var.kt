@@ -530,8 +530,8 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
             return when(type){
                 MCFPPBaseType.Int -> IntTag(0)
                 MCFPPBaseType.Bool -> ByteTag(0)
-                MCFPPBaseType.Selector -> StringTag(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES).toCommandPart().toString())
-                MCFPPBaseType.BaseEntity -> IntArrayTag(intArrayOf(0,0,0,0))
+                MCFPPEntityType.Selector -> StringTag(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES).toCommandPart().toString())
+                MCFPPEntityType.Entity -> IntArrayTag(intArrayOf(0,0,0,0))
                 MCFPPBaseType.String -> StringTag("")
                 MCFPPBaseType.Float -> FloatTag(0.0f)
                 is MCFPPListType -> ListTag(AnyTag::class.java)

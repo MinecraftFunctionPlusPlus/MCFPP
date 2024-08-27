@@ -4,7 +4,7 @@ import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.IntArrayTag
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.type.MCFPPBaseType.BaseEntity
+import top.mcfpp.type.MCFPPEntityType.Entity
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
@@ -22,7 +22,7 @@ import java.util.*
  */
 open class EntityVar : NBTBasedData<IntArrayTag>{
 
-    override var type: MCFPPType = BaseEntity
+    override var type: MCFPPType = Entity
 
     /**
      * 创建一个entity类型的变量。它的mc名和变量所在的域容器有关。

@@ -10,7 +10,7 @@ import top.mcfpp.core.minecraft.PlayerVar;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.util.ValueWrapper;
 
-public class PlayerEntityData {
+public class PlayerEntityData extends BaseEntityData {
 
     @MNIRegister(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void grant(Advancement advancement, PlayerVar.PlayerEntityVar caller, ValueWrapper<CommandReturn> returnValue) {

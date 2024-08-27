@@ -95,10 +95,6 @@ open class PlayerVar : Var<PlayerVar> {
 
     companion object {
         val data = CompoundData("Player", "mcfpp")
-
-        init {
-            data.extends(EntityVar.data)
-        }
     }
 
     open class PlayerEntityVar: PlayerVar {
@@ -122,12 +118,7 @@ open class PlayerVar : Var<PlayerVar> {
         }
 
         companion object {
-            val data = CompoundData("Player", "mcfpp")
-
-            init {
-                data.extends(EntityVar.data)
-                data.getNativeFromClass(PlayerEntityData::class.java)
-            }
+            val data = CompoundData("PlayerEntity", "mcfpp")
         }
     }
 
@@ -195,11 +186,7 @@ open class PlayerVar : Var<PlayerVar> {
 
 
         companion object {
-            val data = CompoundData("Player", "mcfpp")
-
-            init {
-                data.extends(EntityVar.data)
-            }
+            val data = CompoundData("PlayerSelector", "mcfpp")
         }
     }
 

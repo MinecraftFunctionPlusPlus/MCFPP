@@ -222,14 +222,14 @@ open class MCFPPType(
 
         private val typeCache:MutableMap<String, MCFPPType> by lazy { mutableMapOf(
             MCFPPBaseType.Void.typeName to MCFPPBaseType.Void,
-            MCFPPBaseType.BaseEntity.typeName to MCFPPBaseType.BaseEntity,
+            MCFPPEntityType.Entity.typeName to MCFPPEntityType.Entity,
             MCFPPBaseType.Type.typeName to MCFPPBaseType.Type,
             MCFPPBaseType.Int.typeName to MCFPPBaseType.Int,
             MCFPPBaseType.Bool.typeName to MCFPPBaseType.Bool,
             MCFPPBaseType.String.typeName to MCFPPBaseType.String,
             MCFPPBaseType.Float.typeName to MCFPPBaseType.Float,
             MCFPPBaseType.Any.typeName to MCFPPBaseType.Any,
-            MCFPPBaseType.Selector.typeName to MCFPPBaseType.Selector,
+            MCFPPEntityType.Selector.typeName to MCFPPEntityType.Selector,
             MCFPPBaseType.JavaVar.typeName to MCFPPBaseType.JavaVar,
             MCFPPBaseType.JsonText.typeName to MCFPPBaseType.JsonText,
             MCFPPNBTType.NBT.typeName to MCFPPNBTType.NBT,
@@ -248,14 +248,14 @@ open class MCFPPType(
 
         val baseType:Set<MCFPPType> = setOf(
             MCFPPBaseType.Void,
-            MCFPPBaseType.BaseEntity,
+            MCFPPEntityType.Entity,
             MCFPPBaseType.Type,
             MCFPPBaseType.Int,
             MCFPPBaseType.Bool,
             MCFPPBaseType.String,
             MCFPPBaseType.Float,
             MCFPPBaseType.Any,
-            MCFPPBaseType.Selector,
+            MCFPPEntityType.Selector,
             MCFPPBaseType.JavaVar,
             MCFPPBaseType.JsonText,
             MCFPPNBTType.NBT

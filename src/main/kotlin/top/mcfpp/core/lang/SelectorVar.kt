@@ -1,7 +1,6 @@
 package top.mcfpp.core.lang
 
 import net.querz.nbt.tag.StringTag
-import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPNBTType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.lib.EntitySelector
@@ -11,6 +10,7 @@ import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
+import top.mcfpp.type.MCFPPEntityType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
@@ -31,7 +31,7 @@ import java.util.*
  */
 open class SelectorVar : NBTBasedData<StringTag> {
 
-    override var type: MCFPPType = MCFPPBaseType.Selector
+    override var type: MCFPPType = MCFPPEntityType.Selector
 
     open var value: EntitySelector
 

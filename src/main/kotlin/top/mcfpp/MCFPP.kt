@@ -30,6 +30,7 @@ fun main(args: Array<String>) {
         val start: Long = System.currentTimeMillis()
         LogProcessor.info("Tips: " + UwU.tip) //生成tips
         val path = args[0]
+        Project.stageProcessor[Project.compileStage].forEach { it() }
         Project.init() //初始化
         Project.readProject(path) //读取配置文件
         Project.readLib() //读取引用的库的索引
@@ -47,6 +48,7 @@ fun main(args: Array<String>) {
             }catch (e: Exception){
                 LogProcessor.error("Cannot create datapack in path: ${Project.config.targetPath}", e)
             }
+            Project.stageProcessor[Project.compileStage].forEach { it() }
         }
         LogProcessor.info("Finished in " + (System.currentTimeMillis() - start) + "ms")
         GlobalField.printAll()

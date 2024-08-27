@@ -22,6 +22,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import java.util.*
 import java.util.jar.JarFile
+import kotlin.collections.ArrayList
 import kotlin.io.path.name
 
 
@@ -85,12 +86,18 @@ object Project {
     val GEN_DATAPACK = 9
 
     /**
+     * 编译阶段处理器。每个阶段的处理器都会在对应的阶段被调用。
+     */
+    val stageProcessor = Array(10) { ArrayList<()->Unit>() }
+
+    /**
      * 初始化
      */
     fun init() {
         compileStage++
         //全局缓存初始化
         GlobalField.init()
+        stageProcessor[compileStage].forEach { it() }
     }
 
     /**
@@ -153,6 +160,7 @@ object Project {
             LogProcessor.error("Error while reading project from file \"$path\"")
             e.printStackTrace()
         }
+        stageProcessor[compileStage].forEach { it() }
     }
 
     /**
@@ -226,6 +234,7 @@ object Project {
         }
         //函数参数解析
         GlobalField.importedLibNamespaces.clear()
+        stageProcessor[compileStage].forEach { it() }
     }
 
     /**
@@ -245,6 +254,7 @@ object Project {
             }
             GlobalField.importedLibNamespaces.clear()
         }
+        stageProcessor[compileStage].forEach { it() }
     }
 
     /**
@@ -264,6 +274,7 @@ object Project {
             }
             GlobalField.importedLibNamespaces.clear()
         }
+        stageProcessor[compileStage].forEach { it() }
     }
 
     fun runAnnotation(){
@@ -280,6 +291,7 @@ object Project {
             }
             GlobalField.importedLibNamespaces.clear()
         }
+        stageProcessor[compileStage].forEach { it() }
     }
 
     /**
@@ -299,6 +311,7 @@ object Project {
                 e.printStackTrace()
             }
         }
+        stageProcessor[compileStage].forEach { it() }
     }
 
     /**
@@ -351,6 +364,7 @@ object Project {
             warningCount++
         }
         logger.info("Complete compiling project " + config.root.name + " with [$errorCount] error and [$warningCount] warning")
+        stageProcessor[compileStage].forEach { it() }
     }
 
     /**
@@ -360,6 +374,7 @@ object Project {
     fun genIndex() {
         compileStage++
         LibWriter.write(config.targetPath)
+        stageProcessor[compileStage].forEach { it() }
     }
 }
 

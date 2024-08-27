@@ -256,6 +256,7 @@ open class CompoundData : FieldContainer, Serializable {
         //尝试获取static ArrayList<Var<?>> getMembers()方法
         try {
             val method = cls.getMethod("getMembers")
+            method.isAccessible = true
             if(Modifier.isStatic(method.modifiers) && method.returnType == ArrayList::class.java){
                 val list = method.invoke(null) as ArrayList<*>
                 for (item in list){
