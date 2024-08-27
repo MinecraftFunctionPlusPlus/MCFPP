@@ -9,9 +9,9 @@ import top.mcfpp.model.Interface
 import top.mcfpp.model.DataTemplate
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.model.CanSelectMember
-import top.mcfpp.`var`.lang.MCFPPTypeVar
-import top.mcfpp.`var`.lang.Var
-import top.mcfpp.`var`.lang.MCFPPValue
+import top.mcfpp.core.lang.MCFPPTypeVar
+import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam

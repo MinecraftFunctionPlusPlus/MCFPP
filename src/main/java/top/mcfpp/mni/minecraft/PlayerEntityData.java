@@ -3,10 +3,10 @@ package top.mcfpp.mni.minecraft;
 import top.mcfpp.annotations.MNIRegister;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
-import top.mcfpp.var.lang.*;
-import top.mcfpp.var.lang.resource.Advancement;
-import top.mcfpp.var.lang.resource.AdvancementConcrete;
-import top.mcfpp.var.minecraft.PlayerVar;
+import top.mcfpp.core.lang.*;
+import top.mcfpp.core.lang.resource.Advancement;
+import top.mcfpp.core.lang.resource.AdvancementConcrete;
+import top.mcfpp.core.minecraft.PlayerVar;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.util.ValueWrapper;
 

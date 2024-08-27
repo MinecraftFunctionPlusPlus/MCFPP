@@ -1,8 +1,8 @@
 package top.mcfpp.lib
 
 import top.mcfpp.command.Command
-import top.mcfpp.`var`.lang.SelectorVar
-import top.mcfpp.`var`.lang.arg.Pos
+import top.mcfpp.core.lang.SelectorVar
+import top.mcfpp.core.lang.arg.Pos
 import java.io.Serializable
 
 interface NBTSource: Serializable {

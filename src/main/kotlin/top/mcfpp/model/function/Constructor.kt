@@ -4,7 +4,7 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.command.Commands
-import top.mcfpp.`var`.lang.*
+import top.mcfpp.core.lang.*
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.Class

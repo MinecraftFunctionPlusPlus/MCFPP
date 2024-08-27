@@ -8,11 +8,11 @@ import top.mcfpp.antlr.MCFPPImVisitor
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.antlr.mcfppParser.FunctionBodyContext
 import top.mcfpp.command.*
-import top.mcfpp.`var`.lang.*
+import top.mcfpp.core.lang.*
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.UnresolvedType
-import top.mcfpp.`var`.lang.MCFPPValue
+import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.field.FunctionField
 import top.mcfpp.util.LogProcessor

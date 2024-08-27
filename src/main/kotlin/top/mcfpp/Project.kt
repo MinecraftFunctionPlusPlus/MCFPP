@@ -10,9 +10,9 @@ import top.mcfpp.command.CommentType
 import top.mcfpp.io.LibReader
 import top.mcfpp.io.LibWriter
 import top.mcfpp.io.MCFPPFile
-import top.mcfpp.`var`.lang.MCFloat
-import top.mcfpp.`var`.lang.UnresolvedVar
-import top.mcfpp.`var`.lang.Var
+import top.mcfpp.core.lang.MCFloat
+import top.mcfpp.core.lang.UnresolvedVar
+import top.mcfpp.core.lang.Var
 import top.mcfpp.model.*
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function

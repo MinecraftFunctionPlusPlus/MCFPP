@@ -3,7 +3,7 @@ package top.mcfpp.lib
 import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.Tag
 import top.mcfpp.command.Command
-import top.mcfpp.`var`.lang.*
+import top.mcfpp.core.lang.*
 import top.mcfpp.util.LogProcessor
 import java.io.Serializable
 

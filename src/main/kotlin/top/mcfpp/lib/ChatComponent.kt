@@ -2,10 +2,10 @@ package top.mcfpp.lib
 
 import net.querz.nbt.tag.IntArrayTag
 import top.mcfpp.command.Command
-import top.mcfpp.`var`.lang.MCInt
-import top.mcfpp.`var`.lang.NBTBasedData
-import top.mcfpp.`var`.lang.NBTBasedDataConcrete
-import top.mcfpp.`var`.lang.resource.EntityTypeConcrete
+import top.mcfpp.core.lang.MCInt
+import top.mcfpp.core.lang.NBTBasedData
+import top.mcfpp.core.lang.NBTBasedDataConcrete
+import top.mcfpp.core.lang.resource.EntityTypeConcrete
 import top.mcfpp.util.LogProcessor
 
 abstract class ChatComponent {

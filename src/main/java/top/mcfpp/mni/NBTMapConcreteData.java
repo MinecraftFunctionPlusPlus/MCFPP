@@ -2,7 +2,7 @@ package top.mcfpp.mni;
 
 import net.querz.nbt.tag.StringTag;
 import top.mcfpp.annotations.MNIRegister;
-import top.mcfpp.var.lang.*;
+import top.mcfpp.core.lang.*;
 import top.mcfpp.util.ValueWrapper;
 
 public class NBTMapConcreteData {

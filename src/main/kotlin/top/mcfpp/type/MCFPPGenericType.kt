@@ -1,7 +1,7 @@
 package top.mcfpp.type
 
-import top.mcfpp.`var`.lang.MCAny
-import top.mcfpp.`var`.lang.value.MCTypeValue
+import top.mcfpp.core.lang.MCAny
+import top.mcfpp.core.lang.value.MCTypeValue
 
 /**
  * 泛型类型

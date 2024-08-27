@@ -2,7 +2,7 @@ package top.mcfpp.model
 
 import net.querz.nbt.tag.IntArrayTag
 import top.mcfpp.Project
-import top.mcfpp.`var`.lang.ClassPointer
+import top.mcfpp.core.lang.ClassPointer
 import top.mcfpp.type.MCFPPObjectClassType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.field.GlobalField

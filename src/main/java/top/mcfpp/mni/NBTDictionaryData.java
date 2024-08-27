@@ -2,7 +2,7 @@ package top.mcfpp.mni;
 
 import top.mcfpp.annotations.MNIRegister;
 import top.mcfpp.command.Command;
-import top.mcfpp.var.lang.*;
+import top.mcfpp.core.lang.*;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.util.ValueWrapper;
 

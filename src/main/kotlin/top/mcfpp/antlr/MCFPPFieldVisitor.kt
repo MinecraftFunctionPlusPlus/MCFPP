@@ -6,7 +6,7 @@ import top.mcfpp.antlr.mcfppParser.TemplateDeclarationContext
 import top.mcfpp.compiletime.CompileTimeFunction
 import top.mcfpp.exception.*
 import top.mcfpp.io.MCFPPFile
-import top.mcfpp.`var`.lang.*
+import top.mcfpp.core.lang.*
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.annotations.MNIRegister
 import top.mcfpp.type.MCFPPBaseType

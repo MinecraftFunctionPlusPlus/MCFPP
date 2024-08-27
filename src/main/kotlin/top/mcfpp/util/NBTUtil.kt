@@ -2,8 +2,8 @@ package top.mcfpp.util
 
 import net.querz.nbt.tag.*
 import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.`var`.lang.*
-import top.mcfpp.`var`.lang.MCFPPValue
+import top.mcfpp.core.lang.*
+import top.mcfpp.core.lang.MCFPPValue
 
 object NBTUtil {
 
@@ -23,6 +23,7 @@ object NBTUtil {
             is MCStringConcrete -> return v.value
             is NBTBasedDataConcrete<*> -> return v.value
             //is NBTAny<*> -> return v.value
+            is Accessor -> return toNBT(v.value)
             else -> TODO()
         }
     }

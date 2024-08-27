@@ -1,6 +1,6 @@
 package top.mcfpp.model
 
-import top.mcfpp.`var`.lang.Var
+import top.mcfpp.core.lang.Var
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.Function

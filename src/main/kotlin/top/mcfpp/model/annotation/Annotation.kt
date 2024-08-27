@@ -56,7 +56,8 @@ abstract class Annotation : Serializable {
             //比对参数
             try {
                 val varType = Array(args.size) { i -> args[i]::class.java }
-                val constructor = clazz.getConstructor(*varType)
+                val constructor = clazz.getDeclaredConstructor(*varType)
+                constructor.isAccessible = true
                 return constructor.newInstance(*args.toArray())
             }catch (e: NoSuchMethodException){
                 LogProcessor.error("Cannot find constructor for annotation ${clazz.name} with param ${args.joinToString(",")}")

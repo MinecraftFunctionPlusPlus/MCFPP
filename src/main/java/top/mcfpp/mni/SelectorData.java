@@ -1,10 +1,10 @@
 package top.mcfpp.mni;
 
 import top.mcfpp.annotations.MNIRegister;
-import top.mcfpp.var.lang.*;
-import top.mcfpp.var.lang.resource.Advancement;
-import top.mcfpp.var.lang.resource.EntityType;
-import top.mcfpp.var.lang.resource.LootTablePredicate;
+import top.mcfpp.core.lang.*;
+import top.mcfpp.core.lang.resource.Advancement;
+import top.mcfpp.core.lang.resource.EntityType;
+import top.mcfpp.core.lang.resource.LootTablePredicate;
 import top.mcfpp.lib.*;
 import top.mcfpp.util.ValueWrapper;
 

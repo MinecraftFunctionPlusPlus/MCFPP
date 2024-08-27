@@ -7,7 +7,7 @@ import net.querz.nbt.tag.Tag
 import top.mcfpp.model.Class
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.`var`.lang.*
+import top.mcfpp.core.lang.*
 
 /**
  * 以NBT为底层的类型，包括普通的NBT类型，以及由nbt实现的map，list和dict

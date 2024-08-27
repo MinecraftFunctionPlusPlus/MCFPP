@@ -2,7 +2,7 @@ package top.mcfpp.type
 
 import top.mcfpp.model.Class
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.`var`.lang.*
+import top.mcfpp.core.lang.*
 
 class MCFPPVectorType(val dimension: Int): MCFPPType(parentType = listOf(MCFPPBaseType.Any)) {
     override val typeName: String

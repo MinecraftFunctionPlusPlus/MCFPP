@@ -9,12 +9,12 @@ import top.mcfpp.command.CommandList
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.*
 import top.mcfpp.io.MCFPPFile
-import top.mcfpp.`var`.lang.*
+import top.mcfpp.core.lang.*
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPEnumType
 import top.mcfpp.type.MCFPPGenericClassType
 import top.mcfpp.type.MCFPPType
-import top.mcfpp.`var`.lang.MCFPPValue
+import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.*
 import top.mcfpp.model.field.GlobalField

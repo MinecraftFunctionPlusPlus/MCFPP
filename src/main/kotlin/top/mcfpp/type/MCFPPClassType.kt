@@ -1,13 +1,13 @@
 package top.mcfpp.type
 
-import top.mcfpp.`var`.lang.Var
+import top.mcfpp.core.lang.Var
 import top.mcfpp.model.Class
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.Function
-import top.mcfpp.`var`.lang.ClassPointer
+import top.mcfpp.core.lang.ClassPointer
 
 /**
  * 用于标识由mcfpp class定义出来的类

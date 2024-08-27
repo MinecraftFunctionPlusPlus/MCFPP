@@ -3,11 +3,11 @@ package top.mcfpp.lib
 import net.querz.nbt.tag.CompoundTag
 import net.querz.nbt.tag.StringTag
 import top.mcfpp.command.Command
-import top.mcfpp.`var`.lang.*
-import top.mcfpp.`var`.lang.resource.EntityTypeConcrete
+import top.mcfpp.core.lang.*
+import top.mcfpp.core.lang.resource.EntityTypeConcrete
 import top.mcfpp.util.LogProcessor
-import top.mcfpp.`var`.lang.resource.Advancement
-import top.mcfpp.`var`.lang.resource.LootTablePredicate
+import top.mcfpp.core.lang.resource.Advancement
+import top.mcfpp.core.lang.resource.LootTablePredicate
 import java.io.Serializable
 
 class EntitySelector(var selectorType: SelectorType): Serializable {

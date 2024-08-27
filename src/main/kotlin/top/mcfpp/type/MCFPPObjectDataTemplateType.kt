@@ -5,8 +5,8 @@ import top.mcfpp.model.DataTemplate
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.ObjectDataTemplate
 import top.mcfpp.util.LogProcessor
-import top.mcfpp.`var`.lang.UnknownVar
-import top.mcfpp.`var`.lang.Var
+import top.mcfpp.core.lang.UnknownVar
+import top.mcfpp.core.lang.Var
 
 
 /**

@@ -77,6 +77,7 @@ declarations
     |   interfaceDeclaration
     |   globalDeclaration
     |   enumDeclaration
+    |   annotation
     ;
 
 //全局声明
@@ -86,11 +87,11 @@ globalDeclaration
 
 //类声明
 classDeclaration
-    :   annotation? STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? classBody
+    :   STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? classBody
     ;
 
 objectClassDeclaration
-    :   annotation? OBJECT CLASS classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? classBody
+    :   OBJECT CLASS classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? classBody
     ;
 
 compileTimeClassDeclaration
@@ -116,18 +117,19 @@ classMember
     |   constructorDeclaration
     |   nativeClassFunctionDeclaration
     |   abstractClassFunctionDeclaration
+    |   annotation
     ;
 
 classFunctionDeclaration
-    :   annotation? OVERRIDE? FUNCTION Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
+    :   OVERRIDE? FUNCTION Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
     ;
 
 abstractClassFunctionDeclaration
-    :   annotation? OVERRIDE? FUNCTION Identifier functionParams (ARROW functionReturnType)? ';'
+    :   OVERRIDE? FUNCTION Identifier functionParams (ARROW functionReturnType)? ';'
     ;
 
 nativeClassFunctionDeclaration
-    :   annotation? OVERRIDE? FUNCTION Identifier functionParams (ARROW functionReturnType)? '=' javaRefer ';'
+    :   OVERRIDE? FUNCTION Identifier functionParams (ARROW functionReturnType)? '=' javaRefer ';'
     ;
 
 classFieldDeclaration
@@ -135,7 +137,7 @@ classFieldDeclaration
     ;
 
 genericClassImplement
-    :   IMPL annotation? STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace readOnlyArgs (COLON className (',' className)*)? classBody
+    :   IMPL STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace readOnlyArgs (COLON className (',' className)*)? classBody
     ;
 
 //数据模板
@@ -159,6 +161,7 @@ templateMemberDeclaration
 templateMember
     :   templateFunctionDeclaration
     |   templateFieldDeclaration
+    |   annotation
     ;
 
 templateFunctionDeclaration
@@ -171,15 +174,15 @@ templateFieldDeclaration
 
 //接口声明
 interfaceDeclaration
-    :   annotation? INTERFACE classWithoutNamespace (ARROW className (',' className)*)? interfaceBody
+    :   INTERFACE classWithoutNamespace (ARROW className (',' className)*)? interfaceBody
     ;
 
 interfaceBody
-    :   '{'( doc_comment? interfaceFunctionDeclaration )* '}'
+    :   '{'( doc_comment? annotation? interfaceFunctionDeclaration )* '}'
     ;
 
 interfaceFunctionDeclaration
-    :   annotation? FUNCTION Identifier functionParams (ARROW functionReturnType)? ';'
+    :   FUNCTION Identifier functionParams (ARROW functionReturnType)? ';'
     ;
 
 compileTimeFuncDeclaration
@@ -187,16 +190,16 @@ compileTimeFuncDeclaration
     ;
 
 inlineFunctionDeclaration
-    :   annotation? INLINE FUNCTION Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
+    :   INLINE FUNCTION Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
     ;
 
 //函数声明
 functionDeclaration
-    :   annotation? FUNCTION Identifier functionParams? (ARROW functionReturnType)? '{' functionBody '}'
+    :   FUNCTION Identifier functionParams? (ARROW functionReturnType)? '{' functionBody '}'
     ;
 
 extensionFunctionDeclaration
-    :   annotation? STATIC? FUNCTION (type '.')? Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
+    :   STATIC? FUNCTION (type '.')? Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
     ;
 
 //枚举
@@ -218,7 +221,7 @@ namespaceID
     ;
 
 nativeFuncDeclaration
-    :   annotation? FUNCTION Identifier functionParams (ARROW functionReturnType)? '=' javaRefer ';'
+    :   FUNCTION Identifier functionParams (ARROW functionReturnType)? '=' javaRefer ';'
     ;
 
 javaRefer
@@ -233,7 +236,7 @@ accessModifier
 
 //构造函数声明
 constructorDeclaration
-    :   annotation? accessModifier? CONSTRUCTOR normalParams '{' functionBody '}'
+    :   accessModifier? CONSTRUCTOR normalParams '{' functionBody '}'
     ;
 
 //变量声明

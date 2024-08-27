@@ -7,7 +7,7 @@ import org.antlr.v4.runtime.CommonTokenStream
 import top.mcfpp.antlr.MCFPPExprVisitor
 import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.`var`.lang.Var
+import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Class
 import top.mcfpp.model.CompoundData
@@ -19,7 +19,7 @@ import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.GenericClass
-import top.mcfpp.`var`.lang.UnknownVar
+import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 

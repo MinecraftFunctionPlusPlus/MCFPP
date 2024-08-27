@@ -1,15 +1,13 @@
 namespace test;
 
-func main(){
-    import int a,b;
-    test(1,2);
-    test(2,4);
-    test(a,2);
-    test(2,b);
-    test(a,b);
+@ConcreteOnly
+data Test {
+    int qwq;
 }
 
-func test(int a, int b){
-    print(a);
-    print(b);
+func main(){
+    Test a = {qwq: 1};
+    print(a.qwq);
+    import int b;
+    a.qwq = b;
 }

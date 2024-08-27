@@ -1,13 +1,12 @@
 package top.mcfpp.type
 
 import top.mcfpp.model.Class
-import top.mcfpp.`var`.lang.EnumVarConcrete
-import top.mcfpp.`var`.lang.Var
+import top.mcfpp.core.lang.EnumVarConcrete
+import top.mcfpp.core.lang.Var
 import top.mcfpp.model.Enum
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
-import top.mcfpp.`var`.lang.ClassPointer
-import top.mcfpp.`var`.lang.EnumVar
+import top.mcfpp.core.lang.EnumVar
 
 open class MCFPPEnumType(
     var enum: Enum

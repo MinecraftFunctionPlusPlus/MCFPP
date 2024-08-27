@@ -2,9 +2,9 @@ package top.mcfpp.mni;
 
 import org.jetbrains.annotations.NotNull;
 import top.mcfpp.annotations.MNIRegister;
-import top.mcfpp.var.lang.JavaVar;
-import top.mcfpp.var.lang.JsonTextConcrete;
-import top.mcfpp.var.lang.Var;
+import top.mcfpp.core.lang.JavaVar;
+import top.mcfpp.core.lang.JsonTextConcrete;
+import top.mcfpp.core.lang.Var;
 import top.mcfpp.lib.ListChatComponent;
 import top.mcfpp.lib.PlainChatComponent;
 import top.mcfpp.util.ValueWrapper;

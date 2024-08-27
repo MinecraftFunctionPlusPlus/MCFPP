@@ -5,6 +5,7 @@ import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.lib.SbObject
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.mni.MinecraftData
+import top.mcfpp.mni.annotation.ConcreteOnly
 import top.mcfpp.mni.annotation.From
 import top.mcfpp.model.*
 import top.mcfpp.model.annotation.Annotation
@@ -55,12 +56,6 @@ object GlobalField : FieldContainer, IField {
      */
     var scoreboards: HashMap<String , SbObject> = HashMap()
 
-    /**
-     * 注解
-     *
-     */
-    var annotations = HashMap<String, java.lang.Class<out Annotation>>()
-
     fun init(): GlobalField {
 
         functionTags["minecraft:tick"] = FunctionTag.TICK
@@ -80,6 +75,7 @@ object GlobalField : FieldContainer, IField {
         stdNamespaces["mcfpp.sys"] = Namespace("mcfpp.sys")
         stdNamespaces["mcfpp.lang"] = Namespace("mcfpp.lang")
         stdNamespaces["mcfpp.minecraft"] = Namespace("mcfpp.minecraft")
+        stdNamespaces["mcfpp.annotation"] = Namespace("mcfpp.annotation")
 
         Project.mcfppTick = Function("tick","mcfpp", MCFPPBaseType.Void, context = null)
         Project.mcfppLoad = Function("load","mcfpp", MCFPPBaseType.Void, context = null)
@@ -97,7 +93,8 @@ object GlobalField : FieldContainer, IField {
 
         stdNamespaces["mcfpp.minecraft"]!!.getNativeFunctionFromClass(MinecraftData::class.java)
 
-        annotations["From"] = From::class.java
+        stdNamespaces["mcfpp.annotation"]!!.field.addAnnotation("From", From::class.java)
+        stdNamespaces["mcfpp.annotation"]!!.field.addAnnotation("ConcreteOnly", ConcreteOnly::class.java)
 
         return this
     }
@@ -336,6 +333,33 @@ object GlobalField : FieldContainer, IField {
             np = stdNamespaces[namespace]
         }
         return np?.field?.getObject(identifier)
+    }
+
+    fun getAnnotation(namespace: String?, identifier: String): java.lang.Class<out Annotation>? {
+        if(namespace == null){
+            var annotation: java.lang.Class<out Annotation>?
+            //命名空间为空，从全局寻找
+            annotation = localNamespaces[Project.currNamespace]!!.field.getAnnotation(identifier)
+            if(annotation != null) return annotation
+            for (nsp in importedLibNamespaces.values){
+                annotation = nsp.field.getAnnotation(identifier)
+                if(annotation != null) return annotation
+            }
+            for (nsp in stdNamespaces.values){
+                annotation = nsp.field.getAnnotation(identifier)
+                if(annotation != null) return annotation
+            }
+            return null
+        }
+        //按照指定的命名空间寻找
+        var np = localNamespaces[namespace]
+        if(np == null){
+            np = importedLibNamespaces[namespace]
+        }
+        if(np == null){
+            np = stdNamespaces[namespace]
+        }
+        return np?.field?.getAnnotation(identifier)
     }
 
     @get:Override

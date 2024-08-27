@@ -3,10 +3,10 @@ package top.mcfpp.command
 import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.Tag
 import top.mcfpp.Project
-import top.mcfpp.`var`.lang.ClassPointer
-import top.mcfpp.`var`.lang.EntityVar
-import top.mcfpp.`var`.lang.EntityVarConcrete
-import top.mcfpp.`var`.lang.MCInt
+import top.mcfpp.core.lang.ClassPointer
+import top.mcfpp.core.lang.EntityVar
+import top.mcfpp.core.lang.EntityVarConcrete
+import top.mcfpp.core.lang.MCInt
 import top.mcfpp.type.MCFPPClassType
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.CanSelectMember

@@ -1,8 +1,8 @@
 package top.mcfpp.model.function
 
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.`var`.lang.DataTemplateObject
-import top.mcfpp.`var`.lang.Var
+import top.mcfpp.core.lang.DataTemplateObject
+import top.mcfpp.core.lang.Var
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPGenericType
 import top.mcfpp.type.MCFPPType

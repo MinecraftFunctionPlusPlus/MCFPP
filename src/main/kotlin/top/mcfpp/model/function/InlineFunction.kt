@@ -2,7 +2,7 @@ package top.mcfpp.model.function
 
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.antlr.*
-import top.mcfpp.`var`.lang.*
+import top.mcfpp.core.lang.*
 import top.mcfpp.type.MCFPPBaseType
 
 /**

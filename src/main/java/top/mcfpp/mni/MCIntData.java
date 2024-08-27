@@ -1,8 +1,8 @@
 package top.mcfpp.mni;
 
 import top.mcfpp.annotations.MNIRegister;
-import top.mcfpp.var.lang.JsonTextConcrete;
-import top.mcfpp.var.lang.MCInt;
+import top.mcfpp.core.lang.JsonTextConcrete;
+import top.mcfpp.core.lang.MCInt;
 import top.mcfpp.lib.ListChatComponent;
 import top.mcfpp.lib.ScoreChatComponent;
 import top.mcfpp.util.ValueWrapper;

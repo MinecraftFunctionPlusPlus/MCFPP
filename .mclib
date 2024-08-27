@@ -28,33 +28,29 @@
 					"tags":[
 						
 					]
-				},
-				{
-					"id":"test",
-					"normalParams":[
-						{
-							"id":"a",
-							"type":"int",
-							"isStatic":false
-						},
-						{
-							"id":"b",
-							"type":"int",
-							"isStatic":false
-						}
-					],
-					"returnType":"void",
-					"isAbstract":false,
-					"tags":[
-						
-					]
 				}
 			],
 			"classes":[
 				
 			],
 			"template":[
-				
+				{
+					"id":"Test",
+					"parents":[
+						"mcfpp.lang:DataObject"
+					],
+					"field":{
+						"vars":[
+							{
+								"id":"qwq",
+								"type":"int"
+							}
+						],
+						"functions":[
+							
+						]
+					}
+				}
 			],
 			"enum":[
 				

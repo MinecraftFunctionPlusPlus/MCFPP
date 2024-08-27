@@ -2,8 +2,8 @@ package top.mcfpp.type
 
 
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.`var`.lang.Var
-import top.mcfpp.`var`.lang.resource.*
+import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.resource.*
 import top.mcfpp.model.Class
 
 class MCFPPResourceType {

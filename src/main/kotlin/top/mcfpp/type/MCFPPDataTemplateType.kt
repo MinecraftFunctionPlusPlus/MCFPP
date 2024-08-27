@@ -2,10 +2,9 @@ package top.mcfpp.type
 
 import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.model.*
-import top.mcfpp.`var`.lang.ClassPointer
-import top.mcfpp.`var`.lang.DataTemplateObject
-import top.mcfpp.`var`.lang.DataTemplateObjectConcrete
-import top.mcfpp.`var`.lang.Var
+import top.mcfpp.core.lang.DataTemplateObject
+import top.mcfpp.core.lang.DataTemplateObjectConcrete
+import top.mcfpp.core.lang.Var
 
 /**
  * 模板类型

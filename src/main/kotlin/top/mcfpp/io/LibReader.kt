@@ -3,7 +3,7 @@ package top.mcfpp.io
 import com.alibaba.fastjson2.JSONArray
 import com.alibaba.fastjson2.JSONObject
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.`var`.lang.UnresolvedVar
+import top.mcfpp.core.lang.UnresolvedVar
 import top.mcfpp.type.UnresolvedType
 import top.mcfpp.model.*
 import top.mcfpp.model.field.CompoundDataField

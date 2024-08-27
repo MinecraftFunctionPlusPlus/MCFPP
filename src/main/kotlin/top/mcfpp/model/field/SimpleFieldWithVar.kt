@@ -1,6 +1,6 @@
 package top.mcfpp.model.field
 
-import top.mcfpp.`var`.lang.Var
+import top.mcfpp.core.lang.Var
 
 class SimpleFieldWithVar : IFieldWithVar {
 

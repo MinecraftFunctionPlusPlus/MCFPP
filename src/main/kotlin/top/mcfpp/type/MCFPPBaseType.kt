@@ -1,17 +1,14 @@
 package top.mcfpp.type
 
-import com.github.javaparser.utils.Log
 import net.querz.nbt.tag.IntArrayTag
 import net.querz.nbt.tag.StringTag
 import top.mcfpp.lib.EntitySelector
-import top.mcfpp.lib.LimitPredicate
 import top.mcfpp.lib.PlainChatComponent
 import top.mcfpp.model.Class
-import top.mcfpp.`var`.lang.*
+import top.mcfpp.core.lang.*
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.util.LogProcessor
-import top.mcfpp.`var`.lang.Void
 
 /**
  * 类型单例
@@ -115,17 +112,17 @@ class MCFPPBaseType {
     object Void: MCFPPType(parentType = listOf()){
 
         override val objectData: CompoundData
-            get() = top.mcfpp.`var`.lang.Void.data
+            get() = top.mcfpp.core.lang.Void.data
 
         override val typeName: kotlin.String
             get() = "void"
 
-        override fun build(identifier: kotlin.String, container: FieldContainer): Var<*> = top.mcfpp.`var`.lang.Void
-        override fun build(identifier: kotlin.String): Var<*> = top.mcfpp.`var`.lang.Void
-        override fun build(identifier: kotlin.String, clazz: Class): Var<*> = top.mcfpp.`var`.lang.Void
-        override fun buildUnConcrete(identifier: kotlin.String, container: FieldContainer): Var<*> = top.mcfpp.`var`.lang.Void
-        override fun buildUnConcrete(identifier: kotlin.String): Var<*> = top.mcfpp.`var`.lang.Void
-        override fun buildUnConcrete(identifier: kotlin.String, clazz: Class): Var<*> = top.mcfpp.`var`.lang.Void
+        override fun build(identifier: kotlin.String, container: FieldContainer): Var<*> = top.mcfpp.core.lang.Void
+        override fun build(identifier: kotlin.String): Var<*> = top.mcfpp.core.lang.Void
+        override fun build(identifier: kotlin.String, clazz: Class): Var<*> = top.mcfpp.core.lang.Void
+        override fun buildUnConcrete(identifier: kotlin.String, container: FieldContainer): Var<*> = top.mcfpp.core.lang.Void
+        override fun buildUnConcrete(identifier: kotlin.String): Var<*> = top.mcfpp.core.lang.Void
+        override fun buildUnConcrete(identifier: kotlin.String, clazz: Class): Var<*> = top.mcfpp.core.lang.Void
     }
     object Selector: MCFPPType(parentType = listOf(BaseEntity)){
 
@@ -152,7 +149,7 @@ class MCFPPBaseType {
     object JavaVar: MCFPPType(parentType = listOf(Any)){
 
         override val objectData: CompoundData
-            get() = top.mcfpp.`var`.lang.JavaVar.data
+            get() = top.mcfpp.core.lang.JavaVar.data
         override val typeName: kotlin.String
             get() = "JavaVar"
 
@@ -181,7 +178,7 @@ class MCFPPBaseType {
     object JsonText: MCFPPType(parentType = listOf(MCFPPNBTType.NBT)){
 
         override val objectData: CompoundData
-            get() = top.mcfpp.`var`.lang.JsonText.data
+            get() = top.mcfpp.core.lang.JsonText.data
 
         override val typeName: kotlin.String
             get() = "text"
@@ -213,7 +210,7 @@ class MCFPPBaseType {
     object CommandReturn: MCFPPType(parentType = listOf(Any)){
 
         override val objectData: CompoundData
-            get() = top.mcfpp.`var`.lang.CommandReturn.data
+            get() = top.mcfpp.core.lang.CommandReturn.data
 
         override val typeName: kotlin.String
             get() = "CommandReturn"

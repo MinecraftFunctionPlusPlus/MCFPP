@@ -1,6 +1,6 @@
 package top.mcfpp.antlr
 
-import top.mcfpp.`var`.lang.*
+import top.mcfpp.core.lang.*
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.CompoundDataCompanion

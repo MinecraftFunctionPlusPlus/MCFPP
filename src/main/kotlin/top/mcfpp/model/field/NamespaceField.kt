@@ -2,7 +2,7 @@ package top.mcfpp.model.field
 
 import com.google.common.collect.ArrayListMultimap
 import org.jetbrains.annotations.Nullable
-import top.mcfpp.`var`.lang.*
+import top.mcfpp.core.lang.*
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
@@ -34,12 +34,14 @@ import kotlin.collections.HashMap
 open class NamespaceField(
     private val simpleFieldWithType: SimpleFieldWithType = SimpleFieldWithType(),
     private val simpleFieldWithEnum: SimpleFieldWithEnum = SimpleFieldWithEnum(),
-    private val simpleFieldWithObject: SimpleFieldWithObject = SimpleFieldWithObject()
+    private val simpleFieldWithObject: SimpleFieldWithObject = SimpleFieldWithObject(),
+    private val simpleFieldWithAnnotation: SimpleFieldWithAnnotation = SimpleFieldWithAnnotation()
     )
     : IFieldWithClass, IFieldWithFunction, IFieldWithTemplate, IFieldWithInterface,
     IFieldWithType by simpleFieldWithType,
     IFieldWithEnum by simpleFieldWithEnum,
-    IFieldWithObject by simpleFieldWithObject
+    IFieldWithObject by simpleFieldWithObject,
+    IFieldWithAnnotation by simpleFieldWithAnnotation
 {
     /**
      * 变量
