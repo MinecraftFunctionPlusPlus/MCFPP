@@ -6,6 +6,7 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
+import top.mcfpp.command.Commands.buildMacroCommand
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.mni.NBTListConcreteData
 import top.mcfpp.mni.NBTListData
@@ -25,7 +26,7 @@ import java.util.*
 /**
  * 表示一个列表类型。基于NBTBasedData实现。
  */
-open class NBTList : NBTBasedData<ListTag<*>> {
+open class NBTList : NBTBasedData {
 
     final override var type: MCFPPType
 
@@ -78,9 +79,9 @@ open class NBTList : NBTBasedData<ListTag<*>> {
                 }
             }
 
-            is NBTBasedData<*> -> {
+            is NBTBasedData -> {
                 if (b.nbtType == this.nbtType) {
-                    assignCommand(b as NBTBasedData<ListTag<*>>)
+                    assignCommand(b)
                 } else {
                     throw VariableConverseException()
                 }
@@ -94,7 +95,7 @@ open class NBTList : NBTBasedData<ListTag<*>> {
     }
 
     @InsertCommand
-    override fun assignCommand(a: NBTBasedData<ListTag<*>>) : NBTList{
+    override fun assignCommand(a: NBTBasedData) : NBTList{
         nbtType = a.nbtType
         if (parentClass() != null){
             val b = if(a.parentClass() != null){
@@ -106,9 +107,9 @@ open class NBTList : NBTBasedData<ListTag<*>> {
                 if(final.size == 2){
                     Function.addCommand(final[0])
                 }
-                final.last().build(Commands.dataSetValue(nbtPath, b.value as Tag<*>))
+                final.last().build(Commands.dataSetValue(nbtPath, b.value))
                 if(final.last().isMacro){
-                    Function.addCommand(Commands.buildMacroCommand(final.last()))
+                    Function.addCommand(final.last().buildMacroCommand())
                 }else{
                     Function.addCommand(final.last())
                 }
@@ -119,7 +120,7 @@ open class NBTList : NBTBasedData<ListTag<*>> {
                 }
                 final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
                 if(final.last().isMacro){
-                    Function.addCommand(Commands.buildMacroCommand(final.last()))
+                    Function.addCommand(final.last().buildMacroCommand())
                 }else{
                     Function.addCommand(final.last())
                 }
@@ -134,7 +135,7 @@ open class NBTList : NBTBasedData<ListTag<*>> {
                 }
                 final.last().build(Commands.dataSetFrom(nbtPath, a.nbtPath))
                 if(final.last().isMacro){
-                    Function.addCommand(Commands.buildMacroCommand(final.last()))
+                    Function.addCommand(final.last().buildMacroCommand())
                 }else{
                     Function.addCommand(final.last())
                 }
@@ -219,7 +220,7 @@ open class NBTList : NBTBasedData<ListTag<*>> {
  */
 class NBTListConcrete<E>: NBTList, MCFPPValue<ListTag<*>> {
 
-    override var value: ListTag<*>
+    override lateinit var value: ListTag<*>
 
     /**
      * 创建一个固定的list

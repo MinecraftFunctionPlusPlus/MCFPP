@@ -123,7 +123,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         if(!r.isError) return r
         when(type){
             MCFPPNBTType.NBT -> {
-                val re = NBTBasedData<CompoundTag>(this.identifier)
+                val re = NBTBasedData(this.identifier)
                 re.nbtPath = nbtPath
                 return re
             }

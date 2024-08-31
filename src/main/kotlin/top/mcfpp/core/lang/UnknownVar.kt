@@ -6,9 +6,7 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.UnknownFunction
 
-class UnknownVar : Var<UnknownVar> {
-
-    constructor(identifier: String):super(identifier)
+class UnknownVar(identifier: String) : Var<UnknownVar>(identifier) {
 
     override fun doAssign(b: Var<*>) : UnknownVar {
         hasAssigned = true
@@ -40,7 +38,7 @@ class UnknownVar : Var<UnknownVar> {
         return UnknownFunction("unknown") to true
     }
 
-    override fun toNBTVar(): NBTBasedData<*> {
+    override fun toNBTVar(): NBTBasedData {
         return NBTBasedDataConcrete(StringTag("unknown"),"unknown")
     }
 

@@ -242,8 +242,9 @@ open class MCFPPType(
          */
         private val genericTypeCache = mutableMapOf(
             "list" to {generic: Array<MCFPPType> -> MCFPPListType(generic[0]) },
-            "dict" to {generic: Array<MCFPPType> -> TODO()},
-            "map" to {generic: Array<MCFPPType> -> TODO()}
+            "dict" to {generic: Array<MCFPPType> -> MCFPPDictType(generic[0])},
+            "map" to {generic: Array<MCFPPType> -> MCFPPMapType(generic[0])},
+            "ImmutableList" to {generic: Array<MCFPPType> -> MCFPPImmutableListType(generic[0])},
         )
 
         val baseType:Set<MCFPPType> = setOf(

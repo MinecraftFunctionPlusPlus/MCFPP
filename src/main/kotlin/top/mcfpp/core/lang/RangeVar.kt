@@ -95,8 +95,8 @@ open class RangeVar: Var<RangeVar> {
         TODO("Not yet implemented")
     }
 
-    override fun toNBTVar(): NBTBasedData<*> {
-        val n = NBTBasedData<CompoundTag>()
+    override fun toNBTVar(): NBTBasedData {
+        val n = NBTBasedData()
         n.name = name
         n.identifier = identifier
         n.isStatic = isStatic

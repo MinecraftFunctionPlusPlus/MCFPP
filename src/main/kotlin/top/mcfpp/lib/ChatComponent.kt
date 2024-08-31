@@ -99,7 +99,7 @@ class KeybindChatComponent(val key: String) : ChatComponent() {
     }
 }
 
-class NBTChatComponent(val nbt: NBTBasedData<*>, val interpret: Boolean = false, val separator: ChatComponent? = null) : ChatComponent() {
+class NBTChatComponent(val nbt: NBTBasedData, val interpret: Boolean = false, val separator: ChatComponent? = null) : ChatComponent() {
     override fun toCommandPart(): Command {
         return Command("{\"type\":\"nbt\",\"nbt\":\"").build(nbt.nbtPath.toCommandPart(), false).build("\",\"interpret\":$interpret, ${styleToString()}}", false)
     }
@@ -196,7 +196,7 @@ class HoverEventShowTextStyle(val content: ChatComponent): ChatComponentStyle{
 //    }
 //}
 
-class HoverEventShowEntityStyle(val name: ChatComponent?, val type: EntityTypeConcrete, val uuid: NBTBasedData<*>): ChatComponentStyle{
+class HoverEventShowEntityStyle(val name: ChatComponent?, val type: EntityTypeConcrete, val uuid: NBTBasedData): ChatComponentStyle{
     override fun toCommandPart(): Command {
         val c = Command("\"hoverEvent\":{\"action\": \"show_entity\", \"contents\": {")
         if(name != null){

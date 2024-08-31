@@ -19,7 +19,7 @@ import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 
-open class NBTDictionary : NBTBasedData<CompoundTag> {
+open class NBTDictionary : NBTBasedData {
 
     override var type: MCFPPType = MCFPPDictType(MCFPPBaseType.Any)
 
@@ -95,7 +95,7 @@ open class NBTDictionary : NBTBasedData<CompoundTag> {
 
 open class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<CompoundTag> {
 
-    override var value: CompoundTag
+    override lateinit var value: CompoundTag
 
     /**
      * 创建一个固定的dict

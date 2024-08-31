@@ -20,7 +20,7 @@ import java.util.*
  * 代表了一个实体。一个实体类型的变量通常是一个UUID数组，可以通过Thrower法来选择实体，从而实现对实体的操作。
  *
  */
-open class EntityVar : NBTBasedData<IntArrayTag>{
+open class EntityVar : NBTBasedData{
 
     override var type: MCFPPType = Entity
 

@@ -83,7 +83,7 @@ class UnresolvedVar : Var<UnresolvedVar> {
         throw VariableNotResolvedException()
     }
 
-    override fun toNBTVar(): NBTBasedData<*> {
+    override fun toNBTVar(): NBTBasedData {
         LogProcessor.error("UnresolvedVar.toNBTVar() is called")
         throw VariableNotResolvedException()
     }

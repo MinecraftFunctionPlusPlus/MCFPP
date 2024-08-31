@@ -13,7 +13,7 @@ import top.mcfpp.util.LogProcessor
 import top.mcfpp.type.MCFPPResourceType
 import java.util.*
 
-open class ResourceID : NBTBasedData<StringTag> {
+open class ResourceID : NBTBasedData {
 
     override var type: MCFPPType = MCFPPResourceType.ResourceID
 
@@ -65,7 +65,7 @@ open class ResourceID : NBTBasedData<StringTag> {
 
 open class ResourceIDConcrete: MCFPPValue<String>, ResourceID{
 
-    override var value: String
+    override lateinit var value: String
 
     constructor(
         curr: FieldContainer,

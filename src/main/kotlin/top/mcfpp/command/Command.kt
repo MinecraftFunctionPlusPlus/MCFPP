@@ -22,7 +22,7 @@ open class Command {
     var isCompleted = false
 
     val isMacro: Boolean
-        get() = commandStringList.any { it.startsWith("$") }
+        get() = commandStringList.any { it.startsWith("$") } || replacePoint.keys.any { it.startsWith("$")}
 
     constructor(command: String){
         commandStringList.add(command)
@@ -170,6 +170,11 @@ open class Command {
         return this
     }
 
+    /**
+     * 在这条命令的末尾构建一个宏参数。得到的命令需要使用[Commands.buildMacroCommand]方法进行转换才能使用。
+     *
+     * 插入的命令片段的值为空字符串，替换位点的id为宏参数
+     */
     fun buildMacro(id: String, withBlank: Boolean = true) = build("", "$$id", withBlank)
 
     override fun toString(): String{

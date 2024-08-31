@@ -287,7 +287,7 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
     fun xRotation(value: Pair<Float?, Float?>) = addPredicate(XRotationPredicate(RangeVarConcrete(value)))
     fun yRotation(value: RangeVar) = addPredicate(YRotationPredicate(value))
     fun yRotation(value: Pair<Float?, Float?>) = addPredicate(YRotationPredicate(RangeVarConcrete(value)))
-    fun nbt(value: NBTBasedData<*>) = addPredicate(NBTPredicate(value))
+    fun nbt(value: NBTBasedData) = addPredicate(NBTPredicate(value))
     fun nbt(value: CompoundTag) = addPredicate(NBTPredicate(NBTBasedDataConcrete(value)))
     fun level(value: RangeVar) = addPredicate(LevelPredicate(value))
     fun level(value: Pair<Float?, Float?>) = addPredicate(LevelPredicate(RangeVarConcrete(value)))

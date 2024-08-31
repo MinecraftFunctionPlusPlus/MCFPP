@@ -1,15 +1,14 @@
 package top.mcfpp.core.lang
 
-import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.type.MCFPPBaseType
-import top.mcfpp.type.MCFPPType
 import top.mcfpp.lib.ChatComponent
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
+import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
@@ -25,7 +24,7 @@ import java.util.*
  * 访问所得的依然是一个text。
  *
  */
-open class JsonText : NBTBasedData<CompoundTag> {
+open class JsonText : NBTBasedData {
 
     var isElement = false
 
@@ -50,7 +49,7 @@ open class JsonText : NBTBasedData<CompoundTag> {
      */
     constructor(b: JsonText) : super(b)
 
-    override fun doAssign(b: Var<*>): NBTBasedData<CompoundTag> {
+    override fun doAssign(b: Var<*>): NBTBasedData {
         when (b) {
             is JsonText -> assignCommand(b)
             else -> LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
@@ -58,7 +57,7 @@ open class JsonText : NBTBasedData<CompoundTag> {
         return this
     }
 
-    override fun clone(): NBTBasedData<CompoundTag> {
+    override fun clone(): NBTBasedData {
         return JsonText(this)
     }
 
@@ -78,7 +77,7 @@ open class JsonText : NBTBasedData<CompoundTag> {
         })
     }
 
-    override fun getByIntIndex(index: MCInt): NBTBasedData<*> {
+    override fun getByIntIndex(index: MCInt): NBTBasedData {
         val re = JsonText(this)
         re.nbtPath.intIndex(index)
         re.isElement = true
@@ -113,7 +112,7 @@ open class JsonText : NBTBasedData<CompoundTag> {
 
 class JsonTextConcrete : MCFPPValue<ChatComponent>, JsonText {
 
-    override var value: ChatComponent
+    override lateinit var value: ChatComponent
 
     /**
      * 创建一个固定的int

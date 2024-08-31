@@ -16,7 +16,7 @@ class NBTPath(var source: NBTSource): Serializable {
         return this
     }
 
-    fun nbtIndex(index: NBTBasedData<Tag<*>>): NBTPath{
+    fun nbtIndex(index: NBTBasedData): NBTPath{
         pathList.add(NBTPredicatePath(index))
         return this
     }
@@ -64,7 +64,7 @@ class NBTPath(var source: NBTSource): Serializable {
 
                 is NBTPredicatePath -> {
                     val value = (path.value as NBTPredicatePath).value
-                    if(value is NBTBasedDataConcrete){
+                    if(value is NBTBasedDataConcrete<*>){
                         cmd.build("[${SNBTUtil.toSNBT(value.value)}]", false)
                     }else{
                         cmd.build("[", false).buildMacro(value.identifier, false).build("]", false)
@@ -88,6 +88,7 @@ class NBTPath(var source: NBTSource): Serializable {
     companion object{
         val STORAGE = "storage"
         val ENTITY = "entity"
+        val BLOCK = "block"
     }
 
 }
@@ -103,7 +104,7 @@ data class IntPath(val value : MCInt) : Path {
 
 }
 
-data class NBTPredicatePath(val value : NBTBasedData<Tag<*>>) : Path {
+data class NBTPredicatePath(val value : NBTBasedData) : Path {
     override fun clone(): Path {
         return NBTPredicatePath(value)
     }

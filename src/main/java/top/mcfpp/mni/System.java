@@ -54,7 +54,7 @@ public class System {
 
     @InsertCommand
     @MNIRegister(normalParams = {"nbt n"})
-    public static void print(@NotNull NBTBasedData<?> var){
+    public static void print(@NotNull NBTBasedData var){
         if(var instanceof NBTBasedDataConcrete<?> varC){
             Function.Companion.addCommand("tellraw @a " + NBTUtil.INSTANCE.toJava(varC.getValue()));
         }else {

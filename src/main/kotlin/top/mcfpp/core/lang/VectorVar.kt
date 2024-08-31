@@ -180,7 +180,7 @@ open class VectorVar: Var<VectorVar>, Indexable, ScoreHolder {
         }
     }
 
-    override fun toNBTVar(): NBTBasedData<*> {
+    override fun toNBTVar(): NBTBasedData {
         TODO("Not yet implemented")
     }
 

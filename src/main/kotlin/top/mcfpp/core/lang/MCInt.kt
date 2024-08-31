@@ -4,6 +4,7 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.mni.MCIntData
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.CompoundData
@@ -454,13 +455,14 @@ open class MCInt : MCNumber<Int> {
         init {
             data.initialize()
             data.extends(MCAny.data)
+            data.getNativeFromClass(MCIntData::class.java)
         }
     }
 }
 
 class MCIntConcrete : MCInt, MCFPPValue<Int> {
 
-    override var value: Int
+    override var value: Int = 0
 
     /**
      * 创建一个固定的int

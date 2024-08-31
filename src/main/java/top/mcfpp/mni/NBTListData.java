@@ -22,8 +22,8 @@ import java.io.IOException;
 
 public class NBTListData {
 
-    static NBTBasedData<AnyTag<Object>> list = new NBTBasedData("list.list");
-    static NBTBasedData<AnyTag<Object>> element = new NBTBasedData("list.element");
+    static NBTBasedData list = new NBTBasedData("list.list");
+    static NBTBasedData element = new NBTBasedData("list.element");
     static MCInt index = new MCInt("list.index");
     static MCBool contains = new MCBool("list.contains");
 
@@ -83,9 +83,9 @@ public class NBTListData {
     @MNIRegister(normalParams = {"list<E> list"}, caller = "list<E>")
     public static void addAll(@NotNull NBTList list, NBTList caller){
         String command;
-        NBTBasedData<?> l;
+        NBTBasedData l;
         if(list.parentClass() != null) {
-            l = (NBTList) list.getTempVar();
+            l = list.getTempVar();
         }else if((NBTList)list instanceof NBTListConcrete<?> eC){
             l = list;
             eC.toDynamic(false);

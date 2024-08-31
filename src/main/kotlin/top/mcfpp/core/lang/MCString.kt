@@ -33,7 +33,7 @@ import java.util.*
  *态的字符串和原始JSON文本功能。
  *
  */
-open class MCString : NBTBasedData<StringTag> {
+open class MCString : NBTBasedData {
 
     override var type: MCFPPType = MCFPPBaseType.String
 

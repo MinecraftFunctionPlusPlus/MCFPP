@@ -60,7 +60,7 @@ object Void: Var<Void>("void") {
         return UnknownFunction(key) to true
     }
 
-    override fun toNBTVar(): NBTBasedData<*> {
+    override fun toNBTVar(): NBTBasedData {
         LogProcessor.error("Cannot convert void type variable to NBT")
         return NBTBasedDataConcrete(StringTag("void"),"unknown")
     }

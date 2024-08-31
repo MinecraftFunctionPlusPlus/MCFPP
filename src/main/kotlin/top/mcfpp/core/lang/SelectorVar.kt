@@ -29,7 +29,7 @@ import java.util.*
  *
  * @see EntityVar
  */
-open class SelectorVar : NBTBasedData<StringTag> {
+open class SelectorVar : NBTBasedData {
 
     override var type: MCFPPType = MCFPPEntityType.Selector
 
@@ -148,7 +148,7 @@ open class SelectorVar : NBTBasedData<StringTag> {
 
 class SelectorVarConcrete : MCFPPValue<EntitySelector>, SelectorVar{
 
-    override var value: EntitySelector
+    override lateinit var value: EntitySelector
 
     /**
      * 创建一个固定的目标选择器

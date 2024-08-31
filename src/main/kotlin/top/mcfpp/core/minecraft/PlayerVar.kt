@@ -1,6 +1,7 @@
 package top.mcfpp.core.minecraft
 
 import net.querz.nbt.tag.IntArrayTag
+import top.mcfpp.Project
 import top.mcfpp.core.lang.*
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.core.lang.MCFPPValue
@@ -119,6 +120,12 @@ open class PlayerVar : Var<PlayerVar> {
 
         companion object {
             val data = CompoundData("PlayerEntity", "mcfpp")
+
+            init {
+                Project.stageProcessor[Project.RESOVLE_FIELD].add {
+                    data.getNativeFromClass(PlayerEntityData::class.java)
+                }
+            }
         }
     }
 
@@ -131,7 +138,7 @@ open class PlayerVar : Var<PlayerVar> {
             entity: EntityVar,
             value: IntArrayTag,
             identifier: String = UUID.randomUUID().toString()
-        ) : super(entity, curr, identifier) {
+        ) : super(EntityVarConcrete(entity, value), curr, identifier) {
             this.value = value
         }
 
@@ -139,7 +146,7 @@ open class PlayerVar : Var<PlayerVar> {
             entity: EntityVar,
             value: IntArrayTag,
             identifier: String = UUID.randomUUID().toString()
-        ) : super(entity, identifier) {
+        ) : super(EntityVarConcrete(entity, value), identifier) {
             this.value = value
         }
 
@@ -199,7 +206,7 @@ open class PlayerVar : Var<PlayerVar> {
             selector: SelectorVar,
             value: EntitySelector,
             identifier: String = UUID.randomUUID().toString()
-        ) : super(selector, curr, identifier) {
+        ) : super(SelectorVarConcrete(selector, value), curr, identifier) {
             this.value = value
         }
 
@@ -207,7 +214,7 @@ open class PlayerVar : Var<PlayerVar> {
             selector: SelectorVar,
             value: EntitySelector,
             identifier: String = UUID.randomUUID().toString()
-        ) : super(selector, identifier) {
+        ) : super(SelectorVarConcrete(selector, value), identifier) {
             this.value = value
         }
 

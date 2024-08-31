@@ -29,10 +29,10 @@ class MCFPPNBTType {
             NBTBasedDataConcrete(clazz, IntTag(0), identifier)
 
         override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> =
-            NBTBasedData<Tag<*>>(container, identifier)
+            NBTBasedData(container, identifier)
 
-        override fun buildUnConcrete(identifier: String): Var<*> = NBTBasedData<Tag<*>>(identifier)
-        override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = NBTBasedData<Tag<*>>(clazz, identifier)
+        override fun buildUnConcrete(identifier: String): Var<*> = NBTBasedData(identifier)
+        override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = NBTBasedData(clazz, identifier)
 
     }
 }

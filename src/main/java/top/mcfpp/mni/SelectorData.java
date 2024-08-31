@@ -12,43 +12,43 @@ public class SelectorData {
 
     @MNIRegister(normalParams = {"int x"}, returnType = "selector")
     public static void x(MCInt x, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new XPredicate((MCInt) x.getTempVar()));
+        caller.getValue().addPredicate(new XPredicate(x.getTempVar()));
         re.setValue(caller);
     }
 
     @MNIRegister(normalParams = {"int y"}, returnType = "selector")
     public static void y(MCInt y, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new YPredicate((MCInt) y.getTempVar()));
+        caller.getValue().addPredicate(new YPredicate(y.getTempVar()));
         re.setValue(caller);
     }
 
     @MNIRegister(normalParams = {"int z"}, returnType = "selector")
     public static void z(MCInt z, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new ZPredicate((MCInt) z.getTempVar()));
+        caller.getValue().addPredicate(new ZPredicate(z.getTempVar()));
         re.setValue(caller);
     }
 
     @MNIRegister(normalParams = {"range distance"}, returnType = "selector")
     public static void distance(RangeVar distance, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new DistancePredicate((RangeVar) distance.getTempVar()));
+        caller.getValue().addPredicate(new DistancePredicate(distance.getTempVar()));
         re.setValue(caller);
     }
 
     @MNIRegister(normalParams = {"int dx"}, returnType = "selector")
     public static void dx(MCInt dx, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new DXPredicate((MCInt) dx.getTempVar()));
+        caller.getValue().addPredicate(new DXPredicate(dx.getTempVar()));
         re.setValue(caller);
     }
 
     @MNIRegister(normalParams = {"int dy"}, returnType = "selector")
     public static void dy(MCInt dy, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new DYPredicate((MCInt) dy.getTempVar()));
+        caller.getValue().addPredicate(new DYPredicate(dy.getTempVar()));
         re.setValue(caller);
     }
 
     @MNIRegister(normalParams = {"int dz"}, returnType = "selector")
     public static void dz(MCInt dz, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new DZPredicate((MCInt) dz.getTempVar()));
+        caller.getValue().addPredicate(new DZPredicate(dz.getTempVar()));
         re.setValue(caller);
     }
 
@@ -116,25 +116,25 @@ public class SelectorData {
 
     @MNIRegister(normalParams = {"range xRotation"}, returnType = "selector")
     public static void xRotation(RangeVar xRotation, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new XRotationPredicate((RangeVar) xRotation.getTempVar()));
+        caller.getValue().addPredicate(new XRotationPredicate(xRotation.getTempVar()));
         re.setValue(caller);
     }
 
     @MNIRegister(normalParams = {"range yRotation"}, returnType = "selector")
     public static void yRotation(RangeVar yRotation, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new YRotationPredicate((RangeVar) yRotation.getTempVar()));
+        caller.getValue().addPredicate(new YRotationPredicate(yRotation.getTempVar()));
         re.setValue(caller);
     }
 
     @MNIRegister(normalParams = {"nbt n"}, returnType = "selector")
-    public static void nbt(NBTBasedData<?> n, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new NBTPredicate((NBTBasedData<?>) n.getTempVar()));
+    public static void nbt(NBTBasedData n, SelectorVar caller, ValueWrapper<SelectorVar> re){
+        caller.getValue().addPredicate(new NBTPredicate(n.getTempVar()));
         re.setValue(caller);
     }
 
     @MNIRegister(normalParams = {"range level"}, returnType = "selector")
     public static void level(RangeVar level, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new LevelPredicate((RangeVar) level.getTempVar()));
+        caller.getValue().addPredicate(new LevelPredicate(level.getTempVar()));
         re.setValue(caller);
     }
 
@@ -164,7 +164,7 @@ public class SelectorData {
 
     @MNIRegister(normalParams = {"int limit"}, returnType = "selector")
     public static void limit(MCInt limit, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new LimitPredicate((MCInt) limit.getTempVar()));
+        caller.getValue().addPredicate(new LimitPredicate(limit.getTempVar()));
         re.setValue(caller);
     }
 

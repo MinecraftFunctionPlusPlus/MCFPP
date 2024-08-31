@@ -1,3 +1,4 @@
+@From<top.mcfpp.mni.minecraft.AreaData>
 data Area{
     int startX;
     int startY;

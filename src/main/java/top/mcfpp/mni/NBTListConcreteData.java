@@ -63,9 +63,9 @@ public class NBTListConcreteData {
         }else {
             caller.toDynamic(true);
             Command[] command;
-            NBTBasedData<?> l;
+            NBTBasedData l;
             if(list.parentClass() != null) {
-                l = (NBTBasedData<?>) list.getTempVar();
+                l = list.getTempVar();
             }else{
                 l = list;
             }

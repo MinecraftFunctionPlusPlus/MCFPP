@@ -56,7 +56,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
     /**
      * 这个变量是否是常量。对应const关键字
      */
-    var isConst = false
+    open var isConst = false
     var hasAssigned = false
 
     /**
@@ -418,8 +418,8 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
     open fun and(a: Var<*>): Var<*>? = null
 
 
-    open fun toNBTVar(): NBTBasedData<*> {
-        val n = NBTBasedData<ByteTag>()
+    open fun toNBTVar(): NBTBasedData {
+        val n = NBTBasedData()
         n.name = name
         n.identifier = identifier
         n.isStatic = isStatic
