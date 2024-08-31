@@ -1,6 +1,7 @@
 package top.mcfpp.mni;
 
 import net.querz.nbt.io.SNBTUtil;
+import net.querz.nbt.tag.ListTag;
 import net.querz.nbt.tag.Tag;
 import top.mcfpp.Project;
 import top.mcfpp.annotations.InsertCommand;
@@ -26,7 +27,7 @@ public class NBTListConcreteData {
         if(e instanceof MCFPPValue<?>){
             //都是确定的
             //直接添加值
-            caller.getValue().add(NBTUtil.INSTANCE.toNBT(e));
+            ((ListTag)caller.getValue()).add(NBTUtil.INSTANCE.toNBT(e));
         }else {
             //e不是确定的，但是list可能是确定的可能不是确定的
             caller.toDynamic(true);
@@ -55,7 +56,7 @@ public class NBTListConcreteData {
 
     @InsertCommand
     @MNIRegister(normalParams = {"list<E> list"}, caller = "list<E>")
-    public static void addAll(NBTList list, NBTListConcrete<Tag<?>> caller){
+    public static void addAll(NBTList list, NBTListConcrete caller){
         if(list instanceof MCFPPValue<?> ec){
             //都是确定的
             //直接添加值
@@ -94,7 +95,7 @@ public class NBTListConcreteData {
         if(e instanceof MCFPPValue<?> && index instanceof MCIntConcrete indexC){
             //都是确定的
             //直接添加值
-            caller.getValue().add(Objects.requireNonNull(indexC.getValue()), NBTUtil.INSTANCE.toNBT(e));
+            ((ListTag) caller.getValue()).add(indexC.getValue(), NBTUtil.INSTANCE.toNBT(e));
         }else if(index instanceof MCIntConcrete indexC){
             //e不是确定的，index是确定的，所以可以直接调用命令而不需要宏
             int i = indexC.getValue();
@@ -195,7 +196,7 @@ public class NBTListConcreteData {
     public static void indexOf(Var<?> e, NBTListConcrete caller, ValueWrapper<MCInt> returnVar){
         if(e instanceof MCFPPValue<?>){
             //确定的
-            var i = caller.getValue().indexOf(NBTUtil.INSTANCE.toNBT(e));
+            var i = ((ListTag) caller.getValue()).indexOf(NBTUtil.INSTANCE.toNBT(e));
             returnVar.setValue(new MCIntConcrete(i, UUID.randomUUID().toString()));
         }else {
             NBTListData.indexOf(e, (NBTList) caller.toDynamic(true), returnVar);
@@ -223,7 +224,7 @@ public class NBTListConcreteData {
     public static void contains(Var<?> e, NBTListConcrete caller, ValueWrapper<MCBool> returnVar){
         var n = e.toNBTVar();
         if(n instanceof NBTBasedDataConcrete<?> nC){
-            var contains = caller.getValue().contains(nC.getValue());
+            var contains = ((ListTag) caller.getValue()).contains(nC.getValue());
             returnVar.setValue(new MCBoolConcrete(contains, UUID.randomUUID().toString()));
         }else {
             caller.toDynamic(false);
@@ -232,7 +233,7 @@ public class NBTListConcreteData {
     }
 
     @MNIRegister(caller = "list<E>")
-    public static void clear(NBTListConcrete<?> caller){
+    public static void clear(NBTListConcrete caller){
         caller.getValue().clear();
     }
 }

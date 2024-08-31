@@ -100,8 +100,8 @@ class NBTMapConcrete : NBTMap, MCFPPValue<CompoundTag> {
     ) : super(curr, identifier, genericType){
         this.value = value
         val (k, v) = parseValue(value)
-        keyList = NBTListConcrete<Any>(curr, k, identifier + "_key", MCFPPBaseType.String)
-        valueList = NBTListConcrete<Any>(curr, v, identifier + "_value", genericType)
+        keyList = NBTListConcrete(curr, k, identifier + "_key", MCFPPBaseType.String)
+        valueList = NBTListConcrete(curr, v, identifier + "_value", genericType)
         keyValueSet = NBTDictionaryConcrete(curr, value, identifier + "_keyValueSet")
     }
 
@@ -113,8 +113,8 @@ class NBTMapConcrete : NBTMap, MCFPPValue<CompoundTag> {
     constructor(value: CompoundTag, identifier: String = UUID.randomUUID().toString(), genericType: MCFPPType) : super(identifier, genericType){
         this.value = value
         val (k, v) = parseValue(value)
-        keyList = NBTListConcrete<Any>(k, identifier + "_key", MCFPPBaseType.String)
-        valueList = NBTListConcrete<Any>(v, identifier + "_value", genericType)
+        keyList = NBTListConcrete(k, identifier + "_key", MCFPPBaseType.String)
+        valueList = NBTListConcrete(v, identifier + "_value", genericType)
         keyValueSet = NBTDictionaryConcrete(value, identifier + "_keyValueSet")
     }
 
@@ -125,15 +125,15 @@ class NBTMapConcrete : NBTMap, MCFPPValue<CompoundTag> {
     constructor(b: NBTMap, value: CompoundTag) : super(b){
         this.value = value
         val (k, v) = parseValue(value)
-        keyList = NBTListConcrete<StringTag>(k, identifier + "_key", MCFPPBaseType.String)
-        valueList = NBTListConcrete<Any>(v, identifier + "_value", genericType)
+        keyList = NBTListConcrete(k, identifier + "_key", MCFPPBaseType.String)
+        valueList = NBTListConcrete(v, identifier + "_value", genericType)
         keyValueSet = NBTDictionaryConcrete(value, identifier + "_keyValueSet")
     }
 
     constructor(v: NBTMapConcrete) : super(v){
         this.value = v.value
-        keyList = v.keyList.clone() as NBTListConcrete<*>
-        valueList = v.valueList.clone() as NBTListConcrete<*>
+        keyList = v.keyList.clone() as NBTListConcrete
+        valueList = v.valueList.clone() as NBTListConcrete
         keyValueSet = v.keyValueSet.clone() as NBTDictionaryConcrete
     }
 

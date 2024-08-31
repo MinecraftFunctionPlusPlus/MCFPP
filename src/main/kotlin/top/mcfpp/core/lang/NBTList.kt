@@ -217,7 +217,7 @@ open class NBTList : NBTBasedData {
  * 2024.7.12：我试过了，是真的，会坏
  *
  */
-class NBTListConcrete<E>: NBTList, MCFPPValue<ListTag<*>> {
+class NBTListConcrete: NBTList, MCFPPValue<ListTag<*>> {
 
     override lateinit var value: ListTag<*>
 
@@ -245,11 +245,11 @@ class NBTListConcrete<E>: NBTList, MCFPPValue<ListTag<*>> {
     }
 
 
-    constructor(v: NBTListConcrete<E>) : super(v){
+    constructor(v: NBTListConcrete) : super(v){
         this.value = v.value
     }
 
-    override fun clone(): NBTListConcrete<E> {
+    override fun clone(): NBTListConcrete {
         return NBTListConcrete(this)
     }
 
@@ -345,7 +345,7 @@ class NBTListConcrete<E>: NBTList, MCFPPValue<ListTag<*>> {
             data.getNativeFromClass(NBTListConcreteData::class.java)
         }
 
-        val empty = NBTListConcrete<Any>(ListTag.createUnchecked(IntTag::class.java), "empty", MCFPPBaseType.Any)
+        val empty = NBTListConcrete(ListTag.createUnchecked(IntTag::class.java), "empty", MCFPPBaseType.Any)
 
     }
 }

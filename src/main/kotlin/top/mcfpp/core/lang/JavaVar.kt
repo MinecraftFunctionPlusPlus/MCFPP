@@ -196,7 +196,7 @@ class JavaVar : Var<JavaVar>, MCFPPValue<Any?> {
                 is MCFloatConcrete -> v.value
                 is MCBoolConcrete -> v.value
                 is MCStringConcrete -> v.value.valueToString()
-                is NBTListConcrete<*> -> v.value.toJava()
+                is NBTListConcrete -> v.value.toJava()
                 is NBTMapConcrete -> (v.value["data"] as CompoundTag).toJava()
                 is NBTDictionaryConcrete -> v.value.toJava()
                 is NBTBasedDataConcrete<*> -> v.value

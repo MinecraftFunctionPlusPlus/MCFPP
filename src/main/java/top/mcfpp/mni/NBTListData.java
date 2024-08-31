@@ -86,7 +86,7 @@ public class NBTListData {
         NBTBasedData l;
         if(list.parentClass() != null) {
             l = list.getTempVar();
-        }else if((NBTList)list instanceof NBTListConcrete<?> eC){
+        }else if((NBTList)list instanceof NBTListConcrete eC){
             l = list;
             eC.toDynamic(false);
         }else{
