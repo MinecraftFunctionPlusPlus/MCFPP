@@ -6,7 +6,6 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.command.Commands.buildMacroCommand
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.mni.NBTListConcreteData
 import top.mcfpp.mni.NBTListData

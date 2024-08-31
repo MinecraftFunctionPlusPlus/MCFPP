@@ -164,7 +164,7 @@ public class NBTListData {
                             "data." + caller.getIdentifier() + " " +
                             "insert ").buildMacro(index.getIdentifier(), true).build ("value " + SNBTUtil.toSNBT(tag), true), true);
                     Function.Companion.addCommand(command[0]);
-                    var f = Commands.INSTANCE.buildMacroCommand(command[1]).build("with storage mcfpp:system " +
+                    var f = command[1].buildMacroCommand().build("with storage mcfpp:system " +
                             Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]", true);
                     Function.Companion.addCommand(f);
                 } else {
@@ -172,7 +172,7 @@ public class NBTListData {
                             "storage mcfpp:system " +
                             Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + caller.getIdentifier() + " " +
                             "insert ").buildMacro(index.getIdentifier(), true).build("value " + SNBTUtil.toSNBT(tag), true);
-                    var f = Commands.INSTANCE.buildMacroCommand(command).build("with storage mcfpp:system " +
+                    var f = command.buildMacroCommand().build("with storage mcfpp:system " +
                             Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]", true);
                     Function.Companion.addCommand(f);
                 }
@@ -190,7 +190,7 @@ public class NBTListData {
                         .build (" from storage mcfpp:system " +
                         Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + e.getIdentifier(), true), true);
                 Function.Companion.addCommand(command[0]);
-                var f = Commands.INSTANCE.buildMacroCommand(command[1]).build("with storage mcfpp:system " +
+                var f = command[1].buildMacroCommand().build("with storage mcfpp:system " +
                         Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]", true);
                 Function.Companion.addCommand(f);
             } else {
@@ -200,7 +200,7 @@ public class NBTListData {
                         "insert ").buildMacro(index.getIdentifier(), true)
                         .build("from storage mcfpp:system " +
                         Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + e.getIdentifier(), true);
-                var f = Commands.INSTANCE.buildMacroCommand(command).build("with storage mcfpp:system " +
+                var f = command.buildMacroCommand().build("with storage mcfpp:system " +
                         Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]", true);
                 Function.Companion.addCommand(f);
             }
@@ -234,14 +234,14 @@ public class NBTListData {
                         "data remove entity @s " +
                         "data." + caller.getIdentifier() + "[").buildMacro(index.getIdentifier(), true).build("]", true), true);
                 Function.Companion.addCommand(command[0]);
-                var f = Commands.INSTANCE.buildMacroCommand(command[1]).build("with storage mcfpp:system " +
+                var f = command[1].buildMacroCommand().build("with storage mcfpp:system " +
                         Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]", true);
                 Function.Companion.addCommand(f);
             }else {
                 var command = new Command(
                         "data remove storage mcfpp:system " +
                         Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + caller.getIdentifier() + "[").buildMacro(index.getIdentifier(), true).build("]", true);
-                var f = Commands.INSTANCE.buildMacroCommand(command).build("with storage mcfpp:system " +
+                var f = command.buildMacroCommand().build("with storage mcfpp:system " +
                         Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]", true);
                 Function.Companion.addCommand(f);
             }

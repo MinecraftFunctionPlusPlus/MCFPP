@@ -162,29 +162,6 @@ object Commands {
         return selectRun(a, Command.build(command), hasExecuteRun)
     }
 
-    /**
-     * 将此命令以宏命令的方式调用。宏命令的转换方式参考[Command.toMacro]
-     *
-     * @return 用来调用 *执行宏参数的函数* 的function命令。***需要自行补全`with`参数***
-     */
-    fun Command.buildMacroCommand() : Command{
-        val f = UUID.randomUUID().toString()
-        Project.macroFunction[f] = this.toMacro()
-        return Command.build("function mcfpp:dynamic/$f")
-    }
-
-    /**
-     * 将此命令以宏命令的方式调用。宏命令的转换方式参考[Command.toMacro]
-     *
-     * @param nbtPath 用于替换宏参数的nbt路径
-     * @return 用来调用 *执行宏参数的函数* 的function命令。无需自行补全with参数
-     */
-    fun Command.buildMacroCommand(nbtPath: NBTPath): Command{
-        val f = UUID.randomUUID().toString()
-        Project.macroFunction[f] = this.toMacro()
-        return Command.build("function mcfpp:dynamic/$f").build(nbtPath.toCommandPart())
-    }
-
     fun fakeFunction(parent: Function , operation: () -> Unit) : Array<Command>{
         val l = Function.currFunction
         val f = NoStackFunction("", parent)

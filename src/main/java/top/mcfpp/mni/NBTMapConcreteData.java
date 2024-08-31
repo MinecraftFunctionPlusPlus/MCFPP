@@ -57,7 +57,6 @@ public class NBTMapConcreteData {
     @MNIRegister(normalParams = {"dict source"}, caller = "dict")
     public static void merge(NBTMap source, NBTMapConcrete caller){
         if(source instanceof NBTMapConcrete sourceC){
-
             NBTListConcreteData.addAll(sourceC.getKeyList(),(NBTListConcrete)caller.getKeyList());
             NBTListConcreteData.addAll(sourceC.getValueList(),(NBTListConcrete) caller.getValueList());
         }else {

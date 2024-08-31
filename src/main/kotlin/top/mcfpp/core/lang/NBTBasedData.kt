@@ -5,7 +5,6 @@ import net.querz.nbt.tag.*
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.command.Commands.buildMacroCommand
 import top.mcfpp.mni.NBTBasedDataData
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
