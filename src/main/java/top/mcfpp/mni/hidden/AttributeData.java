@@ -66,4 +66,104 @@ public class AttributeData {
         }
     }
 
+    @MNIRegister(normalParams = {"float scale"}, caller = "attribute", returnType = "CommandReturn")
+    public static void getBase(MCFloat scale , NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
+        Var<?> entity = (Var<?>) ((NormalCompoundDataObject) caller.getParent()).getParent();
+        if(entity instanceof PlayerVar.PlayerEntityVar entityVar){
+            EntityVarData.getAttributeBase(caller.getIdentifier(), entityVar.getEntity(), scale, re);
+        }else if(entity instanceof PlayerVar.PlayerSelectorVar selectorVar){
+
+        }else if(entity instanceof EntityVarConcrete entityVarConcrete){
+
+        }else if(entity instanceof EntityVar entityVar){
+            EntityVarData.getAttributeBase(caller.getIdentifier(), entityVar, scale, re);
+        }else if(entity instanceof SelectorVarConcrete selectorVarConcrete){
+
+        }else if(entity instanceof SelectorVar selectorVar){
+
+        }else {
+            LogProcessor.INSTANCE.error("Unknown entity type: " + entity.getType().getTypeName());
+        }
+    }
+
+    @MNIRegister(normalParams = {"float scale"}, caller = "attribute", returnType = "CommandReturn")
+    public static void get(MCFloat scale, NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
+        Var<?> entity = (Var<?>) ((NormalCompoundDataObject) caller.getParent()).getParent();
+        if(entity instanceof PlayerVar.PlayerEntityVar entityVar){
+            EntityVarData.getAttribute(caller.getIdentifier(), entityVar.getEntity(), scale, re);
+        }else if(entity instanceof PlayerVar.PlayerSelectorVar selectorVar){
+
+        }else if(entity instanceof EntityVarConcrete entityVarConcrete){
+
+        }else if(entity instanceof EntityVar entityVar){
+            EntityVarData.getAttribute(caller.getIdentifier(), entityVar, scale, re);
+        }else if(entity instanceof SelectorVarConcrete selectorVarConcrete){
+
+        }else if(entity instanceof SelectorVar selectorVar){
+
+        }else {
+            LogProcessor.INSTANCE.error("Unknown entity type: " + entity.getType().getTypeName());
+        }
+    }
+
+    @MNIRegister(normalParams = {"AttributeModifier modifier"}, caller = "attribute", returnType = "CommandReturn")
+    public static void addModifier(DataTemplateObject modifier, NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
+        Var<?> entity = (Var<?>) ((NormalCompoundDataObject) caller.getParent()).getParent();
+        if(entity instanceof PlayerVar.PlayerEntityVar entityVar){
+            EntityVarData.addAttributeModifier(caller.getIdentifier(), entityVar.getEntity(), modifier, re);
+        }else if(entity instanceof PlayerVar.PlayerSelectorVar selectorVar){
+
+        }else if(entity instanceof EntityVarConcrete entityVarConcrete){
+
+        }else if(entity instanceof EntityVar entityVar){
+            EntityVarData.addAttributeModifier(caller.getIdentifier(), entityVar, modifier, re);
+        }else if(entity instanceof SelectorVarConcrete selectorVarConcrete){
+
+        }else if(entity instanceof SelectorVar selectorVar){
+
+        }else {
+            LogProcessor.INSTANCE.error("Unknown entity type: " + entity.getType().getTypeName());
+        }
+    }
+
+    @MNIRegister(normalParams = {"AttributeModifier modifier"}, caller = "attribute", returnType = "CommandReturn")
+    public static void removeModifier(DataTemplateObject modifier, NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
+        Var<?> entity = (Var<?>) ((NormalCompoundDataObject) caller.getParent()).getParent();
+        if(entity instanceof PlayerVar.PlayerEntityVar entityVar){
+            EntityVarData.removeAttributeModifier(caller.getIdentifier(), entityVar.getEntity(), modifier, re);
+        }else if(entity instanceof PlayerVar.PlayerSelectorVar selectorVar){
+
+        }else if(entity instanceof EntityVarConcrete entityVarConcrete){
+
+        }else if(entity instanceof EntityVar entityVar){
+            EntityVarData.removeAttributeModifier(caller.getIdentifier(), entityVar, modifier, re);
+        }else if(entity instanceof SelectorVarConcrete selectorVarConcrete){
+
+        }else if(entity instanceof SelectorVar selectorVar){
+
+        }else {
+            LogProcessor.INSTANCE.error("Unknown entity type: " + entity.getType().getTypeName());
+        }
+    }
+
+    @MNIRegister(normalParams = {"AttributeModifier modifier","float scale"}, caller = "attribute", returnType = "CommandReturn")
+    public static void getModifier(DataTemplateObject modifier, MCFloat scale, NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
+        Var<?> entity = (Var<?>) ((NormalCompoundDataObject) caller.getParent()).getParent();
+        if(entity instanceof PlayerVar.PlayerEntityVar entityVar){
+            EntityVarData.getAttributeModifier(caller.getIdentifier(), entityVar.getEntity(), modifier, scale, re);
+        }else if(entity instanceof PlayerVar.PlayerSelectorVar selectorVar){
+
+        }else if(entity instanceof EntityVarConcrete entityVarConcrete){
+
+        }else if(entity instanceof EntityVar entityVar){
+            EntityVarData.getAttributeModifier(caller.getIdentifier(), entityVar, modifier, scale, re);
+        }else if(entity instanceof SelectorVarConcrete selectorVarConcrete){
+
+        }else if(entity instanceof SelectorVar selectorVar){
+
+        }else {
+            LogProcessor.INSTANCE.error("Unknown entity type: " + entity.getType().getTypeName());
+        }
+    }
+
 }

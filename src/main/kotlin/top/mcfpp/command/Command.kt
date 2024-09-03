@@ -126,20 +126,22 @@ open class Command {
         return commandStringList[point]
     }
 
-    fun prepend(command: String){
+    fun prepend(command: String, withBlank: Boolean = true){
         if(isCompleted){
             throw CommandException("Try to prepend argument to a completed command")
         }
+        if(withBlank) commandStringList.add(0," ")
         commandStringList.add(0,command)
     }
 
-    fun prepend(command: Command){
+    fun prepend(command: Command, withBlank: Boolean = true){
         if(isCompleted){
             throw CommandException("Try to prepend argument to a completed command")
         }
         for (c in command.commandStringList){
             commandStringList.add(0,c)
         }
+        if(withBlank) commandStringList.add(0," ")
         replacePoint.putAll(command.replacePoint)
     }
 
@@ -205,7 +207,7 @@ open class Command {
     fun buildMacroCommandWith(nbtPath: NBTPath): Command{
         val f = UUID.randomUUID().toString()
         Project.macroFunction[f] = this.toMacro()
-        return Command.build("function mcfpp:dynamic/$f").build(nbtPath.toCommandPart())
+        return Command.build("function mcfpp:dynamic/$f with").build(nbtPath.toCommandPart())
     }
 
     override fun toString(): String{
