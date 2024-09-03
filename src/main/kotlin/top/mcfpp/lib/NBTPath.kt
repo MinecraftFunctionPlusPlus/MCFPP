@@ -2,6 +2,7 @@ package top.mcfpp.lib
 
 import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.Tag
+import top.mcfpp.Project
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.*
 import top.mcfpp.util.LogProcessor
@@ -22,7 +23,7 @@ class NBTPath(var source: NBTSource): Serializable {
     }
 
     fun memberIndex(index: MCString): NBTPath{
-        pathList.add(MemberPath(index.identifier, false))
+        pathList.add(MemberPath(index.identifier, index !is MCStringConcrete))
         return this
     }
 
@@ -31,9 +32,33 @@ class NBTPath(var source: NBTSource): Serializable {
         return this
     }
 
+    /**
+     * 添加一个迭代器路径
+     */
     fun iteratorIndex(): NBTPath{
         pathList.add(IteratorPath())
         return this
+    }
+
+    /**
+     * 移除最后一个路径
+     */
+    fun removeLast(): Path{
+        return pathList.removeLast()
+    }
+
+    /**
+     * 获取父路径
+     *
+     * @return 父路径。如果不存在则返回null
+     */
+    fun parent(): NBTPath?{
+        if(pathList.isEmpty()){
+            return null
+        }
+        val re = clone()
+        re.pathList.removeLast()
+        return re
     }
 
     fun toCommandPart(): Command{
@@ -86,6 +111,9 @@ class NBTPath(var source: NBTSource): Serializable {
     }
 
     companion object{
+
+        val FRAME = NBTPath(StorageSource("mcfpp:system")).memberIndex(Project.config.rootNamespace + ".stack_frame[0]")
+
         val STORAGE = "storage"
         val ENTITY = "entity"
         val BLOCK = "block"
@@ -112,7 +140,7 @@ data class NBTPredicatePath(val value : NBTBasedData) : Path {
 
 }
 
-data class MemberPath(val value : String, val isMacro: Boolean = false): Path {
+data class MemberPath(var value : String, var isMacro: Boolean = false): Path {
     override fun clone(): Path {
         return MemberPath(value, isMacro)
     }

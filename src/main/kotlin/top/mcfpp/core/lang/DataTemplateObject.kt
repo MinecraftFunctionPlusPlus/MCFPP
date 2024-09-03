@@ -29,7 +29,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
 
     override var type: MCFPPType
         get() = templateType.getType()
-        set(value) {}
+        set(_) {}
 
     /**
      * 创建一个模板对象
@@ -253,7 +253,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
 
 class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag> {
 
-    override var value: CompoundTag
+    override lateinit var value: CompoundTag
 
     /**
      * 创建一个固定的DataTemplate

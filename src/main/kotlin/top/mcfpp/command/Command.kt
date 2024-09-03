@@ -3,6 +3,9 @@ package top.mcfpp.command
 import top.mcfpp.Project
 import top.mcfpp.exception.CommandException
 import top.mcfpp.lib.NBTPath
+import top.mcfpp.lib.NBTSource
+import top.mcfpp.lib.StorageSource
+import top.mcfpp.type.MCFPPNBTType
 import java.lang.StringBuilder
 import java.util.*
 import kotlin.collections.ArrayList
@@ -199,7 +202,7 @@ open class Command {
      * @param nbtPath 用于替换宏参数的nbt路径
      * @return 用来调用 *执行宏参数的函数* 的function命令。无需自行补全with参数
      */
-    fun buildMacroCommand(nbtPath: NBTPath): Command{
+    fun buildMacroCommandWith(nbtPath: NBTPath): Command{
         val f = UUID.randomUUID().toString()
         Project.macroFunction[f] = this.toMacro()
         return Command.build("function mcfpp:dynamic/$f").build(nbtPath.toCommandPart())

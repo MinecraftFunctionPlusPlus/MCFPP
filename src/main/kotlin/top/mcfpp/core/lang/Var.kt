@@ -11,9 +11,7 @@ import top.mcfpp.lib.*
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.*
-import top.mcfpp.util.AnyTag
-import top.mcfpp.util.LogProcessor
-import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.*
 import top.mcfpp.util.TextTranslator.translate
 import java.io.Serializable
 import java.util.*
@@ -33,20 +31,43 @@ import java.util.*
  */
 abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serializable{
 
+    class NBTPathGetDelegate(initializer: (NBTPath) -> NBTPath): Delegate1<NBTPath, NBTPath>(){
+        init {
+            addHandler(initializer)
+        }
+
+        constructor(): this({it})
+
+        override operator fun plus(handler: (NBTPath) -> NBTPath): NBTPathGetDelegate {
+            return NBTPathGetDelegate().apply { handlers.addAll(this.handlers);handlers.add(handler) }
+        }
+
+        operator fun invoke(): NBTPath = invoke(NBTPath(StorageSource("system")))
+    }
+
     /**
      * 在Minecraft中的标识符
      */
-    var name: String
+    lateinit var name: String
 
     /**
      * 在mcfpp中的标识符，在域中的键名
      */
-    var identifier: String
+    lateinit var identifier: String
 
+    private val stackFrameRegex = Regex("^stack_frame\\[\\d+]\$\n");
     /**
      * 变量在栈里面的位置
      */
     var stackIndex: Int = 0
+        set(value) {
+            field = value
+            for (p in nbtPath.pathList){
+                if(p is MemberPath && stackFrameRegex.matches(p.value)){
+                    p.value = "stack_frame[$stackIndex]"
+                }
+            }
+        }
 
     /**
      * 是否是静态的成员
@@ -89,10 +110,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
     /**
      *
      */
-    open var nbtPath = NBTPath(StorageSource("system"))
-        .memberIndex(Project.currNamespace)
-        .memberIndex("stack_frame[$stackIndex]")
-
+    open lateinit var nbtPath: NBTPath
 
     /**
      * 复制一个变量
@@ -106,7 +124,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
         isTemp = `var`.isTemp
         stackIndex = `var`.stackIndex
         isConst = `var`.isConst
-        nbtPath = `var`.nbtPath.clone()
+        nbtPath = `var`.nbtPath
     }
 
     /**
@@ -118,7 +136,10 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
     constructor(identifier: String = UUID.randomUUID().toString()){
         this.name = identifier
         this.identifier = identifier
-        nbtPath.memberIndex(identifier)
+        nbtPath = NBTPath(StorageSource("system"))
+            .memberIndex(Project.currNamespace)
+            .memberIndex("stack_frame[$stackIndex]")
+            .memberIndex(identifier)
     }
 
     /**
@@ -206,7 +227,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
         }
         `var`.nbtPath = NBTPath(EntitySource(SelectorVarConcrete(EntitySelector('s'))))
             .memberIndex("data")
-            .memberIndex( identifier)
+            .memberIndex(identifier)
         return `var`
     }
 

@@ -132,7 +132,7 @@ public class NBTListConcreteData {
                     );
                     Function.Companion.addCommand(command[0]);
                     var f = command[1].buildMacroCommand().build("with storage mcfpp:system " +
-                            Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]", true);
+                            Project.INSTANCE.getConfig().getRootNamespace() + ".stack_frame[" + caller.getStackIndex() + "]", true);
                     Function.Companion.addCommand(f);
                 } else {
                     var command = new Command("data modify " +
@@ -140,7 +140,7 @@ public class NBTListConcreteData {
                             Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + caller.getIdentifier() + " " +
                             "insert").build("", "$" + index.getIdentifier(), true).build("value " + SNBTUtil.toSNBT(tag), true);
                     var f = command.buildMacroCommand().build("with storage mcfpp:system " +
-                            Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]", true);
+                            Project.INSTANCE.getConfig().getRootNamespace() + ".stack_frame[" + caller.getStackIndex() + "]", true);
                     Function.Companion.addCommand(f);
                 }
             } catch (IOException ex) {

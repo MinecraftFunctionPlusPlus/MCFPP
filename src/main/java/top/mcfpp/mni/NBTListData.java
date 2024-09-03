@@ -19,6 +19,7 @@ import top.mcfpp.util.NBTUtil;
 import top.mcfpp.util.ValueWrapper;
 
 import java.io.IOException;
+import java.util.Objects;
 
 public class NBTListData {
 
@@ -139,7 +140,7 @@ public class NBTListData {
             Command[] command;
             if(e.parentClass() != null) e = e.getTempVar();
             if(caller.parentClass() != null){
-                command = Commands.INSTANCE.selectRun(caller.getParent(),"data modify " +
+                command = Commands.INSTANCE.selectRun(Objects.requireNonNull(caller.getParent()),"data modify " +
                         "entity @s " +
                         "data." + caller.getIdentifier() + " " +
                         "insert " + i + " from " +
