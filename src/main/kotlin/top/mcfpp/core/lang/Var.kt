@@ -31,31 +31,17 @@ import java.util.*
  */
 abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serializable{
 
-    class NBTPathGetDelegate(initializer: (NBTPath) -> NBTPath): Delegate1<NBTPath, NBTPath>(){
-        init {
-            addHandler(initializer)
-        }
-
-        constructor(): this({it})
-
-        override operator fun plus(handler: (NBTPath) -> NBTPath): NBTPathGetDelegate {
-            return NBTPathGetDelegate().apply { handlers.addAll(this.handlers);handlers.add(handler) }
-        }
-
-        operator fun invoke(): NBTPath = invoke(NBTPath(StorageSource("system")))
-    }
-
     /**
      * 在Minecraft中的标识符
      */
-    lateinit var name: String
+    var name: String
 
     /**
      * 在mcfpp中的标识符，在域中的键名
      */
-    lateinit var identifier: String
+    var identifier: String
 
-    private val stackFrameRegex = Regex("^stack_frame\\[\\d+]\$\n");
+    private val stackFrameRegex = Regex("^stack_frame\\[\\d+]\$\n")
     /**
      * 变量在栈里面的位置
      */
@@ -98,17 +84,12 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
     open var type: MCFPPType = MCFPPBaseType.Any
 
     /**
-     * 变量是存在列表里面还是复合标签里面的
-     */
-    var inList = false
-
-    /**
      * 这个变量是否是编译器编译错误的时候生成的用于保证编译器正常运行的变量
      */
     var isError = false
 
     /**
-     *
+     * 在mc中的路径
      */
     open lateinit var nbtPath: NBTPath
 
@@ -136,8 +117,8 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
     constructor(identifier: String = UUID.randomUUID().toString()){
         this.name = identifier
         this.identifier = identifier
-        nbtPath = NBTPath(StorageSource("system"))
-            .memberIndex(Project.currNamespace)
+        nbtPath = NBTPath(StorageSource("mcfpp:system"))
+            .memberIndex(Project.config.rootNamespace)
             .memberIndex("stack_frame[$stackIndex]")
             .memberIndex(identifier)
     }
@@ -322,12 +303,12 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
             "&&" -> and(qwq)
             else -> {
                 LogProcessor.error("Unknown operation: $operation")
-                UnknownVar("error_operation_" + UUID.randomUUID().toString())
+                UnknownVar("error_operation_" + UUID.randomUUID().toString()).apply { isError = true }
             }
         }
         if(re == null){
             LogProcessor.error("Unsupported operation '$operation' between ${type.typeName} and ${a.type.typeName}")
-            return UnknownVar("${type.typeName}_$operation{a.type.typeName}" + UUID.randomUUID())
+            return UnknownVar("${type.typeName}_$operation{a.type.typeName}" + UUID.randomUUID()).apply { isError = true }
         }else{
             return re
         }
@@ -384,14 +365,12 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
      */
     open fun modular(a: Var<*>): Var<*>? = null
 
-
     /**
      * 这个数是否大于a
      * @param a 右侧值
      * @return 计算结果
      */
     open fun isBigger(a: Var<*>): Var<*>? = null
-
 
     /**
      * 这个数是否小于a
@@ -438,7 +417,6 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
     @InsertCommand
     open fun and(a: Var<*>): Var<*>? = null
 
-
     open fun toNBTVar(): NBTBasedData {
         val n = NBTBasedData()
         n.name = name
@@ -448,7 +426,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
         n.isTemp = isTemp
         n.stackIndex = stackIndex
         n.isConst = isConst
-        n.nbtPath = nbtPath
+        n.nbtPath = nbtPath.clone()
         return n
     }
 
@@ -465,10 +443,6 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
 
     override fun getAccess(function: Function): Member.AccessModifier {
         return Member.AccessModifier.PUBLIC
-    }
-
-    fun assignMemberVar(member: String, b: Var<*>) {
-        getMemberVar(member, Member.AccessModifier.PUBLIC).first?.assign(b)
     }
 
     override fun toString(): String {
@@ -574,17 +548,11 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
                 }
             }
         }
-
         fun buildCastErrorVar(type: MCFPPType): Var<*>{
             val qwq = type.build("error_cast_" + UUID.randomUUID().toString(), Function.currFunction)
             qwq.isError = true
             return qwq
         }
 
-        fun buildOpErrorVar(identifier: String): Var<*>{
-            val qwq = UnknownVar(identifier + UUID.randomUUID().toString())
-            qwq.isError = true
-            return qwq
-        }
     }
 }

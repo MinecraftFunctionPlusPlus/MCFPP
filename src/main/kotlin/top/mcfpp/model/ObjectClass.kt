@@ -11,7 +11,7 @@ import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.Utils
 import java.util.*
 
-open class ObjectClass(identifier: String, namespace: String = Project.currNamespace) : Class(identifier, namespace) {
+open class ObjectClass(identifier: String, namespace: String = Project.currNamespace) : Class(identifier, namespace), ObjectCompoundData {
 
     var uuid: UUID = UUID.nameUUIDFromBytes("$namespace:$identifier".toByteArray())
     var uuidNBT : IntArrayTag = Utils.toNBTArrayUUID(uuid)

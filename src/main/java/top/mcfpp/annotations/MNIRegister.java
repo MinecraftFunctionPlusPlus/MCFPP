@@ -34,4 +34,9 @@ public @interface MNIRegister {
      */
     boolean override() default false;
 
+    /**
+     * 是否是单例对象
+     */
+    boolean isObject() default false;
+
 }

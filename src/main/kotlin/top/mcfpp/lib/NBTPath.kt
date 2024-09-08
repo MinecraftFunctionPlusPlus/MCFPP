@@ -12,21 +12,28 @@ class NBTPath(var source: NBTSource): Serializable {
 
     val pathList = ArrayList<Path>()
 
+    //qwq[1]
     fun intIndex(index: MCInt): NBTPath{
         pathList.add(IntPath(index))
         return this
     }
 
+    //qwq[{"text":"1"}]
     fun nbtIndex(index: NBTBasedData): NBTPath{
         pathList.add(NBTPredicatePath(index))
         return this
     }
 
     fun memberIndex(index: MCString): NBTPath{
-        pathList.add(MemberPath(index.identifier, index !is MCStringConcrete))
+        if(index is MCStringConcrete) {
+            pathList.add(MemberPath(index.value.value))
+        }else{
+            pathList.add(MemberPath(index.identifier, true))
+        }
         return this
     }
 
+    //qwq.index
     fun memberIndex(index: String): NBTPath{
         pathList.add(MemberPath(index))
         return this
@@ -48,7 +55,7 @@ class NBTPath(var source: NBTSource): Serializable {
     }
 
     /**
-     * 获取父路径
+     * 获取上一层路径
      *
      * @return 父路径。如果不存在则返回null
      */

@@ -1,0 +1,8 @@
+@From<"top.mcfpp.mni.minecraft.BossBarData">
+data BossBar{
+    string id;
+}
+
+@From<"top.mcfpp.mni.minecraft.BossBarData">
+object data BossBar{
+}

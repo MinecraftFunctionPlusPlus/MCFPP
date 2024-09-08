@@ -3,7 +3,7 @@ package top.mcfpp.model
 import top.mcfpp.Project
 import top.mcfpp.type.MCFPPObjectDataTemplateType
 
-class ObjectDataTemplate(identifier: String, namespace: String = Project.currNamespace) : DataTemplate(identifier, namespace) {
+class ObjectDataTemplate(identifier: String, namespace: String = Project.currNamespace) : DataTemplate(identifier, namespace), ObjectCompoundData {
 
     /**
      * 获取这个容器中变量应该拥有的前缀

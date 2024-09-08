@@ -73,7 +73,7 @@ open class DataTemplate : FieldContainer, CompoundData {
     fun getDefaultValue(): CompoundTag{
         val tag = CompoundTag()
         for (member in field.allVars){
-            tag.put(member.identifier, Var.getDefaultValue(member.type))
+            tag.put(member.identifier, member.type.defaultValue())
         }
         return tag
     }

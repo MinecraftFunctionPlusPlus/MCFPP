@@ -103,11 +103,10 @@ open class MCInt : MCNumber<Int> {
         }
     }
 
-
+    //this = a
     @InsertCommand
     override fun assignCommand(a: MCNumber<Int>) : MCInt {
-        return assignCommandLambda(
-            a,
+        return assignCommandLambda(a,
             ifThisIsClassMemberAndAIsConcrete =  { b, final ->
                 //对类中的成员的值进行修改
                 if(final.size == 2){
@@ -392,9 +391,6 @@ open class MCInt : MCNumber<Int> {
         return MCInt(this)
     }
 
-
-    //private var index: Int = -1
-
     /**
      * 获取临时变量
      *
@@ -430,7 +426,7 @@ open class MCInt : MCNumber<Int> {
      * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
      */
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        TODO("Not yet implemented")
+        return data.getVar(key) to true
     }
 
     /**

@@ -205,14 +205,17 @@ open class CompoundData : FieldContainer, Serializable {
                     LogProcessor.error("MNIMethod ${method.name} in class ${cls.name} must be static")
                     continue
                 }
+                if(this is ObjectCompoundData && !mniRegister.isObject) continue
                 //解析MNIMethod注解成员
                 val readOnlyType = mniRegister.readOnlyParams.map {
-                    val qwq = it.split(" ", limit = 2)
-                    qwq[1] to MCFPPType.parseFromIdentifier(qwq[0], Namespace.currNamespaceField)
+                    var qwq = it.split(" ", limit = 3)
+                    if(qwq.size == 3) qwq = qwq.subList(1, 3)
+                    qwq[1] to MCFPPType.parseFromIdentifier(qwq[0], Namespace.currNamespaceField) to it.startsWith("static")
                 }
                 val normalType = mniRegister.normalParams.map {
-                    val qwq = it.split(" ", limit = 2)
-                    qwq[1] to MCFPPType.parseFromIdentifier(qwq[0], Namespace.currNamespaceField)
+                    var qwq = it.split(" ", limit = 3)
+                    if(qwq.size == 3) qwq = qwq.subList(1, 3)
+                    qwq[1] to MCFPPType.parseFromIdentifier(qwq[0], Namespace.currNamespaceField) to it.startsWith("static")
                 }
                 val returnType = MCFPPType.parseFromIdentifier(mniRegister.returnType, Namespace.currNamespaceField)
                 var exceptedParamCount = readOnlyType.size + normalType.size
@@ -230,10 +233,10 @@ open class CompoundData : FieldContainer, Serializable {
                 val nf = NativeFunction(method.name, returnType, javaMethod = method)
                 nf.caller = mniRegister.caller
                 for(rt in readOnlyType){
-                    nf.appendReadOnlyParam(rt.second, rt.first)
+                    nf.appendReadOnlyParam(rt.first.second, rt.first.first, rt.second)
                 }
                 for(nt in normalType){
-                    nf.appendNormalParam(nt.second, nt.first)
+                    nf.appendNormalParam(nt.first.second, nt.first.first, nt.second)
                 }
                 //有继承
                 if(mniRegister.override){
