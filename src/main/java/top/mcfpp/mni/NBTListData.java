@@ -4,7 +4,7 @@ import net.querz.nbt.io.SNBTUtil;
 import net.querz.nbt.tag.Tag;
 import org.jetbrains.annotations.NotNull;
 import top.mcfpp.Project;
-import top.mcfpp.annotations.MNIRegister;
+import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.*;
@@ -14,7 +14,6 @@ import top.mcfpp.lib.SbObject;
 import top.mcfpp.lib.Storage;
 import top.mcfpp.lib.StorageSource;
 import top.mcfpp.model.function.Function;
-import top.mcfpp.util.AnyTag;
 import top.mcfpp.util.NBTUtil;
 import top.mcfpp.util.ValueWrapper;
 
@@ -36,7 +35,7 @@ public class NBTListData {
     }
 
 
-    @MNIRegister(normalParams = {"E e"}, caller = "list<E>")
+    @MNIFunction(normalParams = {"E e"}, caller = "list<E>")
     public static void add(Var<?> e, NBTList caller){
         if(e instanceof MCFPPValue<?>){
             //e是确定的
@@ -81,7 +80,7 @@ public class NBTListData {
         }
     }
 
-    @MNIRegister(normalParams = {"list<E> list"}, caller = "list<E>")
+    @MNIFunction(normalParams = {"list<E> list"}, caller = "list<E>")
     public static void addAll(@NotNull NBTList list, NBTList caller){
         String command;
         NBTBasedData l;
@@ -111,7 +110,7 @@ public class NBTListData {
         Function.Companion.addCommand(command);
     }
 
-    @MNIRegister(normalParams = {"int index, E e"}, caller = "list<E>")
+    @MNIFunction(normalParams = {"int index, E e"}, caller = "list<E>")
     public static void insert(MCInt index, Var<?> e, NBTList caller){
         if(e instanceof MCFPPValue<?> && (MCInt)index instanceof MCIntConcrete indexC){
             //都是确定的
@@ -214,7 +213,7 @@ public class NBTListData {
     //    throw new NotImplementedError();
     //}
 
-    @MNIRegister(normalParams = {"int index"}, caller = "list<E>")
+    @MNIFunction(normalParams = {"int index"}, caller = "list<E>")
     public static void removeAt(MCInt index, NBTList caller){
         if(index instanceof MCIntConcrete){
             int i = ((MCIntConcrete) index).getValue();
@@ -249,7 +248,7 @@ public class NBTListData {
         }
     }
 
-    @MNIRegister(normalParams = {"E e"}, caller = "list<E>", returnType = "int")
+    @MNIFunction(normalParams = {"E e"}, caller = "list<E>", returnType = "int")
     public static void indexOf(@NotNull Var<?> e, NBTList caller, ValueWrapper<MCInt> returnVar){
         var n = e.toNBTVar();
         element.assign(n);
@@ -260,7 +259,7 @@ public class NBTListData {
         returnVar.setValue(index);
     }
 
-    @MNIRegister(normalParams = {"E e"}, caller = "list<E>", returnType = "int")
+    @MNIFunction(normalParams = {"E e"}, caller = "list<E>", returnType = "int")
     public static void lastIndexOf(Var<?> e, NBTList caller, ValueWrapper<MCInt> returnVar){
         var n = e.toNBTVar();
         element.assign(n);
@@ -271,7 +270,7 @@ public class NBTListData {
         returnVar.setValue(index);
     }
 
-    @MNIRegister(normalParams = {"E e"}, caller = "list<E>", returnType = "bool")
+    @MNIFunction(normalParams = {"E e"}, caller = "list<E>", returnType = "bool")
     public static void contains(Var<?> e, NBTList caller, ValueWrapper<MCBool> returnVar){
         var n = e.toNBTVar();
         element.assign(n);
@@ -282,7 +281,7 @@ public class NBTListData {
         returnVar.setValue(contains);
     }
 
-    @MNIRegister(caller = "list<E>")
+    @MNIFunction(caller = "list<E>")
     public static void clear(NBTList caller){
         caller.assign(NBTListConcrete.Companion.getEmpty());
     }

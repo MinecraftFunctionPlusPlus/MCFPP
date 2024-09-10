@@ -1,7 +1,7 @@
 package top.mcfpp.mni;
 
 import net.querz.nbt.io.SNBTUtil;
-import top.mcfpp.annotations.MNIRegister;
+import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.core.lang.DataTemplateObject;
 import top.mcfpp.core.lang.DataTemplateObjectConcrete;
 import top.mcfpp.core.lang.JsonTextConcrete;
@@ -14,7 +14,7 @@ import java.io.IOException;
 
 public class DataObjectData {
 
-    @MNIRegister(caller = "DataObject", returnType = "text", override = true)
+    @MNIFunction(caller = "DataObject", returnType = "text", override = true)
     public static void toText(DataTemplateObject caller, ValueWrapper<JsonTextConcrete> returnValue) throws IOException {
         var l = new ListChatComponent();
         if(caller instanceof DataTemplateObjectConcrete callerC){

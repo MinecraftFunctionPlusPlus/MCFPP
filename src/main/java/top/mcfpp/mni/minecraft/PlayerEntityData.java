@@ -1,7 +1,7 @@
 package top.mcfpp.mni.minecraft;
 
 import org.jetbrains.annotations.NotNull;
-import top.mcfpp.annotations.MNIRegister;
+import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.*;
@@ -57,7 +57,7 @@ public class PlayerEntityData extends EntityVarData {
         return new ArrayList<>(List.of(attributes));
     }
 
-    @MNIRegister(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void grant(Advancement advancement, PlayerVar.PlayerEntityVar caller, ValueWrapper<CommandReturn> returnValue) {
         Command[] commands;
         if(advancement instanceof AdvancementConcrete){
@@ -73,7 +73,7 @@ public class PlayerEntityData extends EntityVarData {
         Function.Companion.addCommands(commands);
     }
 
-    @MNIRegister(caller = "Player", returnType = "CommandReturn")
+    @MNIFunction(caller = "Player", returnType = "CommandReturn")
     public static void grantAll(PlayerVar.PlayerEntityVar caller, ValueWrapper<CommandReturn> returnValue) {
         var commands = Commands.INSTANCE.runAsEntity(caller.getEntity(),
                 new Command("advancement grant @s everything")
@@ -82,7 +82,7 @@ public class PlayerEntityData extends EntityVarData {
         Function.Companion.addCommands(commands);
     }
 
-    @MNIRegister(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void grantFrom(Advancement advancement, PlayerVar.PlayerEntityVar caller, ValueWrapper<CommandReturn> returnValue) {
         Command[] commands;
         if(advancement instanceof AdvancementConcrete){
@@ -98,7 +98,7 @@ public class PlayerEntityData extends EntityVarData {
         Function.Companion.addCommands(commands);
     }
 
-    @MNIRegister(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void grantThrough(Advancement advancement, PlayerVar.PlayerEntityVar caller, ValueWrapper<CommandReturn> returnValue) {
         Command[] commands;
         if(advancement instanceof AdvancementConcrete){
@@ -114,7 +114,7 @@ public class PlayerEntityData extends EntityVarData {
         Function.Companion.addCommands(commands);
     }
 
-    @MNIRegister(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void grantUntil(Advancement advancement, PlayerVar.PlayerEntityVar caller, ValueWrapper<CommandReturn> returnValue) {
         Command[] commands;
         if(advancement instanceof AdvancementConcrete){
@@ -130,7 +130,7 @@ public class PlayerEntityData extends EntityVarData {
         Function.Companion.addCommands(commands);
     }
 
-    @MNIRegister(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void revoke(Advancement advancement, PlayerVar.PlayerEntityVar caller, ValueWrapper<CommandReturn> returnValue) {
         Command[] commands;
         if(advancement instanceof AdvancementConcrete){
@@ -146,7 +146,7 @@ public class PlayerEntityData extends EntityVarData {
         Function.Companion.addCommands(commands);
     }
 
-    @MNIRegister(caller = "Player", returnType = "CommandReturn")
+    @MNIFunction(caller = "Player", returnType = "CommandReturn")
     public static void revokeAll(PlayerVar.PlayerEntityVar caller, ValueWrapper<CommandReturn> returnValue) {
         var commands = Commands.INSTANCE.runAsEntity(caller.getEntity(),
                 new Command("advancement revoke @s everything")
@@ -155,7 +155,7 @@ public class PlayerEntityData extends EntityVarData {
         Function.Companion.addCommands(commands);
     }
 
-    @MNIRegister(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void revokeFrom(Advancement advancement, PlayerVar.PlayerEntityVar caller, ValueWrapper<CommandReturn> returnValue) {
         Command[] commands;
         if(advancement instanceof AdvancementConcrete){
@@ -171,7 +171,7 @@ public class PlayerEntityData extends EntityVarData {
         Function.Companion.addCommands(commands);
     }
 
-    @MNIRegister(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void revokeThrough(Advancement advancement, PlayerVar.PlayerEntityVar caller, ValueWrapper<CommandReturn> returnValue) {
         Command[] commands;
         if(advancement instanceof AdvancementConcrete){
@@ -187,7 +187,7 @@ public class PlayerEntityData extends EntityVarData {
         Function.Companion.addCommands(commands);
     }
 
-    @MNIRegister(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void revokeUntil(Advancement advancement, PlayerVar.PlayerEntityVar caller, ValueWrapper<CommandReturn> returnValue) {
         Command[] commands;
         if(advancement instanceof AdvancementConcrete){
@@ -203,7 +203,7 @@ public class PlayerEntityData extends EntityVarData {
         Function.Companion.addCommands(commands);
     }
 
-    @MNIRegister(normalParams = {"string key, float scale"}, caller = "Player", returnType = "int")
+    @MNIFunction(normalParams = {"string key, float scale"}, caller = "Player", returnType = "int")
     public static void getAttribute(MCString id, MCFloat scale, PlayerVar.PlayerEntityVar caller, ValueWrapper<CommandReturn> returnValue){
         Command[] commands;
         if(id instanceof MCStringConcrete idC){

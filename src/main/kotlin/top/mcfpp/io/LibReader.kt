@@ -258,9 +258,9 @@ object ClassParamReader: ILibJsonReader<ClassParam> {
     }
 }
 
-object ConstructorReader: ILibJsonReader<Constructor> {
-    override fun fromJson(jsonObject: JSONObject): Constructor {
-        val constructor = Constructor(ClassReader.currClass!!)
+object ConstructorReader: ILibJsonReader<ClassConstructor> {
+    override fun fromJson(jsonObject: JSONObject): ClassConstructor {
+        val constructor = ClassConstructor(ClassReader.currClass!!)
         jsonObject.getJSONArray("normalParams").forEach {
             run {
                 constructor.normalParams.add(FunctionParamReader.fromJson(it as JSONObject))

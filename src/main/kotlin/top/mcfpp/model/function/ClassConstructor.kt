@@ -15,7 +15,7 @@ import kotlin.collections.ArrayList
 /**
  * 一个构造函数。它是一个特殊的成员方法，将会在类的初始化阶段之后调用。
  */
-open class Constructor    //检查此类中是否已经重复定义一个相同的构造函数
+open class ClassConstructor    //检查此类中是否已经重复定义一个相同的构造函数
     (
     /**
      * 此构造函数对应的类。
@@ -40,7 +40,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
      */
     @Override
     @InsertCommand
-    override fun invoke(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, callerClassP: ClassPointer?) {
+    override fun invoke(normalArgs: ArrayList<Var<*>>, callerClassP: ClassPointer?) {
         callerClassP as ClassPointer
         addCommand("execute in minecraft:overworld positioned 0 1 0 summon marker run function " + leadFunction.namespaceID)
         val qwq = currFunction
@@ -69,7 +69,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
         //给函数开栈，调用构造函数
         addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
         //参数传递
-        argPass(/*readOnlyArgs, */normalArgs)
+        argPass(normalArgs)
         //调用构造函数
         addCommand("function " + this.namespaceID)
         //销毁指针，释放堆内存
@@ -100,7 +100,7 @@ open class Constructor    //检查此类中是否已经重复定义一个相同�
 
     @Override
     override fun equals(other: Any?): Boolean {
-        if (other is Constructor) {
+        if (other is ClassConstructor) {
             if (other.target == target) {
                 if (other.normalParams.size == normalParams.size) {
                     for (i in 0 until other.normalParams.size) {

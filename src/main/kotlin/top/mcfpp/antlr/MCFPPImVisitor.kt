@@ -609,6 +609,12 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addCommand("return 1")
         Function.currFunction = Function.currFunction.parent[0]
         Function.addComment("while loop end")
+        Function.currFunction.field.forEachVar {
+            if(it.trackLost){
+                it.trackLost = false
+                if(it is MCFPPValue<*>) it.toDynamic(true)
+            }
+        }
     }
 
     override fun visitDoWhileStatement(ctx: mcfppParser.DoWhileStatementContext): Any? {
@@ -720,6 +726,12 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addCommand("return 1")
         Function.currFunction = Function.currFunction.parent[0]
         Function.addComment("do while end")
+        Function.currFunction.field.forEachVar {
+            if(it.trackLost){
+                it.trackLost = false
+                if(it is MCFPPValue<*>) it.toDynamic(true)
+            }
+        }
     }
 
 
@@ -861,6 +873,12 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addCommand("data remove storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame[0]")
         Function.addCommand("return 1")
         Function.currFunction = Function.currFunction.parent[0]
+        Function.currFunction.field.forEachVar {
+            if(it.trackLost){
+                it.trackLost = false
+                if(it is MCFPPValue<*>) it.toDynamic(true)
+            }
+        }
     }
 
     /**

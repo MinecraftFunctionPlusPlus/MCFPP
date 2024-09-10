@@ -161,6 +161,7 @@ templateMemberDeclaration
 templateMember
     :   templateFunctionDeclaration
     |   templateFieldDeclaration
+    |   constructorDeclaration
     |   annotation
     ;
 

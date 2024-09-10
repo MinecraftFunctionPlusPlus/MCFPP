@@ -8,7 +8,7 @@ import top.mcfpp.model.*
 import top.mcfpp.model.Enum
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.field.GlobalField
-import top.mcfpp.model.function.Constructor
+import top.mcfpp.model.function.ClassConstructor
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.model.function.NativeFunction
@@ -173,8 +173,8 @@ object EnumMemberWriter: ILibJsonWriter<EnumMember>{
     }
 }
 
-object ConstructorWriter: ILibJsonWriter<Constructor> {
-    override fun toJson(t: Constructor): JSONObject {
+object ConstructorWriter: ILibJsonWriter<ClassConstructor> {
+    override fun toJson(t: ClassConstructor): JSONObject {
         val json = JSONObject()
         val normalParams = JSONArray()
         t.normalParams.forEach { normalParams.add(FunctionParamWriter.toJson(it))}

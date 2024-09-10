@@ -459,6 +459,7 @@ open class Function : Member, FieldContainer, Serializable {
      */
     open fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?){
         if(context != null){
+            //函数参数已知条件下的编译
             val values = normalArgs.map { if(it is MCFPPValue<*>) it.value else null }
             if(values.any { it != null }){
                 if(compiledFunctions.containsKey(values)){
@@ -482,10 +483,9 @@ open class Function : Member, FieldContainer, Serializable {
             }
         }
         when(caller){
-            is CompoundDataCompanion -> invoke(normalArgs, callerClassP = null)
-            null -> invoke(normalArgs, callerClassP = null)
-            is ClassPointer -> invoke(normalArgs, callerClassP = caller)
-            is Var<*> -> invoke(normalArgs, caller = caller)
+            is MCFPPType, is DataTemplateObject, null -> invoke(normalArgs)
+            is ClassPointer -> invoke(normalArgs, caller)
+            is Var<*> -> invoke(normalArgs, caller)
         }
     }
 
@@ -501,11 +501,32 @@ open class Function : Member, FieldContainer, Serializable {
         //给函数开栈
         addCommand("data modify storage mcfpp:system ${Project.config.rootNamespace}.stack_frame prepend value {}")
         //传入this参数
-        field.putVar("this",caller,true)
+        field.putVar("this", caller, true)
         //参数传递
         argPass(normalArgs)
         addCommand("function " + this.namespaceID)
         //static参数传回
+        staticArgRef(normalArgs)
+        //销毁指针，释放堆内存
+        for (p in field.allVars){
+            if (p is ClassPointer){
+                p.dispose()
+            }
+        }
+        //调用完毕，将子函数的栈销毁
+        addCommand("data remove storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame[0]")
+        //取出栈内的值
+        fieldRestore()
+    }
+
+    open fun invoke(normalArgs: ArrayList<Var<*>>){
+        //给函数开栈
+        addCommand("data modify storage mcfpp:system ${Project.config.rootNamespace}.stack_frame prepend value {}")
+        //参数传递
+        argPass(normalArgs)
+        //函数调用的命令
+        addCommand("function $namespaceID")
+        //static关键字，将值传回
         staticArgRef(normalArgs)
         //销毁指针，释放堆内存
         for (p in field.allVars){
@@ -527,20 +548,16 @@ open class Function : Member, FieldContainer, Serializable {
      * @see top.mcfpp.antlr.MCFPPExprVisitor.visitVar
      */
     @InsertCommand
-    open fun invoke(normalArgs: ArrayList<Var<*>>, callerClassP: ClassPointer?) {
+    open fun invoke(normalArgs: ArrayList<Var<*>>, callerClassP: ClassPointer) {
         //给函数开栈
         addCommand("data modify storage mcfpp:system ${Project.config.rootNamespace}.stack_frame prepend value {}")
         //参数传递
         argPass(normalArgs)
         //函数调用的命令
-        when(callerClassP){
-            is ClassPointer -> {
-                addCommands(Commands.selectRun(callerClassP,Command.build("function mcfpp.dynamic:function with entity @s data.functions.$identifier")))
-            }
-            null -> {
-                addCommand("function $namespaceID")
-            }
-            else -> TODO()
+        if(callerClassP is ClassPointerConcrete){
+            addCommands(Commands.selectRun(callerClassP,Command.build("function $namespaceID")))
+        }else{
+            addCommands(Commands.selectRun(callerClassP,Command.build("function mcfpp.dynamic:function with entity @s data.functions.$identifier")))
         }
         //static关键字，将值传回
         staticArgRef(normalArgs)
@@ -557,14 +574,14 @@ open class Function : Member, FieldContainer, Serializable {
     }
 
     /**
-     * 调用这个函数。这个函数是结构体的成员方法
+     * 调用这个函数。这个函数是数据模板的成员方法
      *
-     * @param args
-     * @param struct
+     * @param normalArgs 传入的参数
+     * @param data 数据模板的实例
      */
-    //open fun invoke(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, struct: IntTemplateBase){
-    //    TODO()
-    //}
+    open fun invoke(normalArgs: ArrayList<Var<*>>, data: DataTemplateObject){
+        TODO()
+    }
 
     /**
      * 在创建函数栈，调用函数之前，将参数传递到函数栈中
@@ -600,22 +617,7 @@ open class Function : Member, FieldContainer, Serializable {
                     hasAddComment = true
                 }
                 //如果是static参数
-                if (args[i] is MCInt) {
-                    when(normalParams[i].typeIdentifier){
-                        MCFPPBaseType.Int.typeName -> {
-                            //如果是int取出到记分板
-                            addCommand(
-                                "execute " +
-                                        "store result score ${(args[i] as MCInt).name} ${(args[i] as MCInt).sbObject} " +
-                                        "run data get storage mcfpp:system ${Project.config.rootNamespace}.stack_frame[0].${normalParams[i].identifier} int 1 "
-                            )
-                        }
-                        else -> {
-                            //TODO 其他参数类型
-                            //引用类型，不用还原
-                        }
-                    }
-                }
+                args[i].assign(field.getVar(normalParams[i].identifier)!!)
             }
         }
     }

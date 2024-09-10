@@ -8,7 +8,7 @@ import top.mcfpp.exception.*
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.core.lang.*
 import top.mcfpp.type.MCFPPType
-import top.mcfpp.annotations.MNIRegister
+import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.model.*
 import top.mcfpp.model.Class
@@ -171,7 +171,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
         //如果没有构造函数，自动添加默认的空构造函数
         if (Class.currClass!!.constructors.size == 0) {
-            Class.currClass!!.addConstructor(Constructor(Class.currClass!!))
+            Class.currClass!!.addConstructor(ClassConstructor(Class.currClass!!))
         }
         //是否为抽象类
         if(!Class.currClass!!.isAbstract){
@@ -243,7 +243,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         if(m is Member){
             //访问修饰符
             m.accessModifier = AccessModifier.valueOf(ctx.accessModifier()?.text?:"public".uppercase(Locale.getDefault()))
-            if (m !is Constructor) {
+            if (m !is ClassConstructor) {
                 Class.currClass!!.addMember(m)
             }
         }else if(m is ArrayList<*>){
@@ -251,7 +251,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             for (c in m){
                 //访问修饰符
                 (c as Member).accessModifier = AccessModifier.valueOf(ctx.accessModifier()?.text?:"public".uppercase(Locale.getDefault()))
-                if (c !is Constructor) {
+                if (c !is ClassConstructor) {
                     Class.currClass!!.addMember(c)
                 }
             }
@@ -364,7 +364,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             val methods = clazz.methods
             var hasFind = false
             for(method in methods){
-                val mniRegister = method.getAnnotation(MNIRegister::class.java) ?: continue
+                val mniRegister = method.getAnnotation(MNIFunction::class.java) ?: continue
                 //解析MNIMethod注解成员
                 val readOnlyType = mniRegister.readOnlyParams.map {
                     MCFPPType.parseFromIdentifier(it.split(" ", limit = 2)[0], Namespace.currNamespaceField)
@@ -398,7 +398,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         Project.ctx = ctx
         //类构造函数
         //创建构造函数对象，注册函数
-        val f = Constructor(Class.currClass!!)
+        val f = ClassConstructor(Class.currClass!!)
         f.addParamsFromContext(ctx.normalParams())
         if(!Class.currClass!!.addConstructor(f)){
             LogProcessor.error("Already defined constructor:  constructor(" + ctx.normalParams().text + ") in class " + Class.currClass)
@@ -629,7 +629,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             val methods = clazz.methods
             var hasFind = false
             for(method in methods){
-                val mniRegister = method.getAnnotation(MNIRegister::class.java) ?: continue
+                val mniRegister = method.getAnnotation(MNIFunction::class.java) ?: continue
                 //解析MNIMethod注解成员
                 val readOnlyType = mniRegister.readOnlyParams.map {
                     MCFPPType.parseFromIdentifier(it.split(" ", limit = 2)[0], Namespace.currNamespaceField)

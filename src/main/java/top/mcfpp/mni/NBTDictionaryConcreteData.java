@@ -1,18 +1,18 @@
 package top.mcfpp.mni;
 
 import net.querz.nbt.tag.CompoundTag;
-import top.mcfpp.annotations.MNIRegister;
+import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.core.lang.*;
 import top.mcfpp.util.ValueWrapper;
 
 public class NBTDictionaryConcreteData {
 
-    @MNIRegister(caller = "dict")
+    @MNIFunction(caller = "dict")
     public static void clear(NBTDictionaryConcrete caller){
         caller.getValue().clear();
     }
 
-    @MNIRegister(normalParams = {"string key"}, caller = "dict", returnType = "bool")
+    @MNIFunction(normalParams = {"string key"}, caller = "dict", returnType = "bool")
     public static void containsKey(MCString key, NBTDictionaryConcrete caller, ValueWrapper<MCBool> re){
         if(key instanceof MCStringConcrete keyC){
             String value = keyC.getValue().getValue();
@@ -24,7 +24,7 @@ public class NBTDictionaryConcreteData {
         }
     }
 
-    @MNIRegister(normalParams = {"dict source"}, caller = "dict")
+    @MNIFunction(normalParams = {"dict source"}, caller = "dict")
     public static void merge(NBTDictionary source, NBTDictionaryConcrete caller){
         if(source instanceof NBTDictionaryConcrete dictC){
             CompoundTag sourceNBT = dictC.getValue();
@@ -38,7 +38,7 @@ public class NBTDictionaryConcreteData {
         }
     }
 
-    @MNIRegister(normalParams = {"string key"}, caller = "dict")
+    @MNIFunction(normalParams = {"string key"}, caller = "dict")
     public static void remove(MCString key, NBTDictionaryConcrete caller){
         if(key instanceof MCStringConcrete keyC){
             String value = keyC.getValue().getValue();

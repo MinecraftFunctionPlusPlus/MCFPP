@@ -410,7 +410,7 @@ object GlobalField : FieldContainer, IField {
                     println("class " + s.identifier)
                     println("\tconstructors:")
                     for (c in s.constructors) {
-                        if (c is NativeConstructor) {
+                        if (c is NativeClassConstructor) {
                             println("\t\tnative " + c.namespaceID)
                         } else {
                             println("\t\t" + c.namespaceID)

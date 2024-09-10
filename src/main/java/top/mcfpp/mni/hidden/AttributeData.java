@@ -1,6 +1,6 @@
 package top.mcfpp.mni.hidden;
 
-import top.mcfpp.annotations.MNIRegister;
+import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.core.lang.*;
 import top.mcfpp.core.minecraft.PlayerVar;
 import top.mcfpp.mni.minecraft.EntityVarData;
@@ -46,7 +46,7 @@ public class AttributeData {
     );
 
 
-    @MNIRegister(normalParams = {"float value"}, caller = "attribute", returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"float value"}, caller = "attribute", returnType = "CommandReturn")
     public static void setBase(MCFloat value, NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
         Var<?> entity = (Var<?>) ((NormalCompoundDataObject) caller.getParent()).getParent();
         if(entity instanceof PlayerVar.PlayerEntityVar entityVar){
@@ -66,7 +66,7 @@ public class AttributeData {
         }
     }
 
-    @MNIRegister(normalParams = {"float scale"}, caller = "attribute", returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"float scale"}, caller = "attribute", returnType = "CommandReturn")
     public static void getBase(MCFloat scale , NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
         Var<?> entity = (Var<?>) ((NormalCompoundDataObject) caller.getParent()).getParent();
         if(entity instanceof PlayerVar.PlayerEntityVar entityVar){
@@ -86,7 +86,7 @@ public class AttributeData {
         }
     }
 
-    @MNIRegister(normalParams = {"float scale"}, caller = "attribute", returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"float scale"}, caller = "attribute", returnType = "CommandReturn")
     public static void get(MCFloat scale, NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
         Var<?> entity = (Var<?>) ((NormalCompoundDataObject) caller.getParent()).getParent();
         if(entity instanceof PlayerVar.PlayerEntityVar entityVar){
@@ -106,7 +106,7 @@ public class AttributeData {
         }
     }
 
-    @MNIRegister(normalParams = {"AttributeModifier modifier"}, caller = "attribute", returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"AttributeModifier modifier"}, caller = "attribute", returnType = "CommandReturn")
     public static void addModifier(DataTemplateObject modifier, NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
         Var<?> entity = (Var<?>) ((NormalCompoundDataObject) caller.getParent()).getParent();
         if(entity instanceof PlayerVar.PlayerEntityVar entityVar){
@@ -126,7 +126,7 @@ public class AttributeData {
         }
     }
 
-    @MNIRegister(normalParams = {"AttributeModifier modifier"}, caller = "attribute", returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"AttributeModifier modifier"}, caller = "attribute", returnType = "CommandReturn")
     public static void removeModifier(DataTemplateObject modifier, NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
         Var<?> entity = (Var<?>) ((NormalCompoundDataObject) caller.getParent()).getParent();
         if(entity instanceof PlayerVar.PlayerEntityVar entityVar){
@@ -146,7 +146,7 @@ public class AttributeData {
         }
     }
 
-    @MNIRegister(normalParams = {"AttributeModifier modifier","float scale"}, caller = "attribute", returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"AttributeModifier modifier","float scale"}, caller = "attribute", returnType = "CommandReturn")
     public static void getModifier(DataTemplateObject modifier, MCFloat scale, NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
         Var<?> entity = (Var<?>) ((NormalCompoundDataObject) caller.getParent()).getParent();
         if(entity instanceof PlayerVar.PlayerEntityVar entityVar){

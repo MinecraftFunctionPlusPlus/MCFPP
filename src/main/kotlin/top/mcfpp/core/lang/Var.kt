@@ -94,6 +94,11 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
     open lateinit var nbtPath: NBTPath
 
     /**
+     * 在离开作用域后是否会丢失跟踪
+     */
+    var trackLost = false
+
+    /**
      * 复制一个变量
      */
     @Suppress("LeakingThis")
@@ -155,6 +160,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
         }
         hasAssigned = true
         val re = doAssign(v)
+        if(stackIndex != 0) trackLost = true
         return re
     }
 

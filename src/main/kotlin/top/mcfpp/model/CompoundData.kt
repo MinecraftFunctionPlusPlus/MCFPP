@@ -1,7 +1,7 @@
 package top.mcfpp.model
 
 import top.mcfpp.Project
-import top.mcfpp.annotations.MNIRegister
+import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.core.lang.Var
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType
@@ -199,7 +199,7 @@ open class CompoundData : FieldContainer, Serializable {
         //获取所有带有注解MNIMethod的Java方法
         val methods = cls.methods
         for(method in methods){
-            val mniRegister = method.getAnnotation(MNIRegister::class.java)
+            val mniRegister = method.getAnnotation(MNIFunction::class.java)
             if(mniRegister != null){
                 if(!Modifier.isStatic(method.modifiers)) {
                     LogProcessor.error("MNIMethod ${method.name} in class ${cls.name} must be static")

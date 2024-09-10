@@ -3,9 +3,9 @@ package top.mcfpp.antlr
 import top.mcfpp.core.lang.*
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.CanSelectMember
-import top.mcfpp.model.CompoundDataCompanion
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
+import top.mcfpp.type.MCFPPClassType
 import top.mcfpp.util.LogProcessor
 
 /**
@@ -67,21 +67,21 @@ class MCFPPFuncManager{
      * @return
      */
     fun getFunction(
-        type: CompoundDataCompanion,
+        type: MCFPPClassType,
         identifier : String,
         readOnlyParams: List<MCFPPType>,
         normalParams: ArrayList<MCFPPType>
     ): Function {
         //是类的成员方法
         val accessModifier = if(Function.currFunction.ownerType == Function.Companion.OwnerType.CLASS){
-            Function.currFunction.parentClass()!!.getAccess(type.dataType)
+            Function.currFunction.parentClass()!!.getAccess(type.cls)
         }else{
             Member.AccessModifier.PUBLIC
         }
         //开始选择函数
         val func = type.getMemberFunction(identifier, readOnlyParams, normalParams, accessModifier)
         if (!func.second){
-            LogProcessor.error("Cannot access member $identifier in class ${type.dataType.identifier}")
+            LogProcessor.error("Cannot access member $identifier in class ${type.cls.identifier}")
         }
         return func.first
     }
@@ -93,7 +93,7 @@ class MCFPPFuncManager{
         normalParams: ArrayList<MCFPPType>
     ): Function {
         return when(selector){
-            is CompoundDataCompanion -> getFunction(selector, identifier, readOnlyParams, normalParams)
+            is MCFPPClassType -> getFunction(selector, identifier, readOnlyParams, normalParams)
             is Var<*> -> getFunction(selector, identifier, readOnlyParams, normalParams)
             else -> throw Exception()
         }

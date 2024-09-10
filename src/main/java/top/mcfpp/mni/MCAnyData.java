@@ -1,7 +1,7 @@
 package top.mcfpp.mni;
 
 import org.jetbrains.annotations.NotNull;
-import top.mcfpp.annotations.MNIRegister;
+import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.core.lang.JavaVar;
 import top.mcfpp.core.lang.JsonTextConcrete;
 import top.mcfpp.core.lang.Var;
@@ -12,13 +12,13 @@ import top.mcfpp.util.ValueWrapper;
 import java.util.UUID;
 
 public class MCAnyData {
-    @MNIRegister(caller = "any", returnType = "JavaVar")
+    @MNIFunction(caller = "any", returnType = "JavaVar")
     public static void getJavaVar(@NotNull Var<?> caller, ValueWrapper<Var<?>> returnValue){
         var re = new JavaVar(caller, UUID.randomUUID().toString());
         returnValue.setValue(re);
     }
 
-    @MNIRegister(caller = "any", returnType = "text")
+    @MNIFunction(caller = "any", returnType = "text")
     public static void toText(@NotNull Var<?> caller, ValueWrapper<JsonTextConcrete> returnValue){
         var l = new ListChatComponent();
         l.getComponents().add(new PlainChatComponent(caller.toString()));

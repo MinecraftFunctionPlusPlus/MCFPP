@@ -5,7 +5,7 @@ import top.mcfpp.core.lang.ClassPointer
 import top.mcfpp.type.MCFPPClassType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.field.GlobalField
-import top.mcfpp.model.function.Constructor
+import top.mcfpp.model.function.ClassConstructor
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.util.LogProcessor
@@ -45,7 +45,7 @@ open class Class : CompoundData {
     /**
      * 构造函数
      */
-    var constructors: ArrayList<Constructor> = ArrayList()
+    var constructors: ArrayList<ClassConstructor> = ArrayList()
 
     /**
      * 是否是静态类。静态类将不会被垃圾处理器处理
@@ -104,7 +104,7 @@ open class Class : CompoundData {
     open val tag: String
         get() = namespace + "_class_" + identifier + "_pointer"
 
-    fun getConstructorByString(normalParams: List<String>): Constructor?{
+    fun getConstructorByString(normalParams: List<String>): ClassConstructor?{
         return getConstructorByType(
             ArrayList(normalParams.map { MCFPPType.parseFromIdentifier(it, field) })
         )
@@ -114,7 +114,7 @@ open class Class : CompoundData {
      * 根据参数列表获取一个类的构造函数
      * @return 返回这个类的参数
      */
-    fun getConstructorByType(normalParams: List<MCFPPType>): Constructor? {
+    fun getConstructorByType(normalParams: List<MCFPPType>): ClassConstructor? {
         for (f in constructors) {
             if(f.isSelf(this, normalParams)){
                 return f
@@ -127,7 +127,7 @@ open class Class : CompoundData {
      * 向这个类中添加一个构造函数
      * @param constructor 构造函数
      */
-    fun addConstructor(constructor: Constructor) : Boolean {
+    fun addConstructor(constructor: ClassConstructor) : Boolean {
         if (constructors.contains(constructor)) {
             return false
         } else {

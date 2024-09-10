@@ -9,6 +9,8 @@ import top.mcfpp.core.lang.Var
 import top.mcfpp.type.MCFPPDataTemplateType
 import top.mcfpp.mni.DataObjectData
 import top.mcfpp.model.field.CompoundDataField
+import top.mcfpp.model.function.ClassConstructor
+import top.mcfpp.model.function.DataConstructor
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
 import kotlin.collections.ArrayList
@@ -27,6 +29,11 @@ import kotlin.collections.ArrayList
  * 除此之外，结构体是一种值类型的变量，而不是引用类型。因此在赋值的时候会把整个结构体进行一次赋值。
  */
 open class DataTemplate : FieldContainer, CompoundData {
+
+    /**
+     * 构造函数
+     */
+    var constructors: ArrayList<DataConstructor> = ArrayList()
 
     private val reference: ArrayList<DataTemplate> = ArrayList()
 
