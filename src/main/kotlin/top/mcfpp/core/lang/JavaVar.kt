@@ -3,6 +3,7 @@ package top.mcfpp.core.lang
 import net.querz.nbt.tag.CompoundTag
 import net.querz.nbt.tag.StringTag
 import net.querz.nbt.tag.Tag
+import top.mcfpp.core.lang.bool.MCBoolConcrete
 import top.mcfpp.exception.OperationNotImplementException
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function

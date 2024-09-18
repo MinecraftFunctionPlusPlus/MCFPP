@@ -1,5 +1,6 @@
 package top.mcfpp.core.lang
 
+import top.mcfpp.core.lang.bool.MCBool
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor

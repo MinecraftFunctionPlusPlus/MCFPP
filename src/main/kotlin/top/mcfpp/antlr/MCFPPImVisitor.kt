@@ -15,6 +15,8 @@ import top.mcfpp.type.MCFPPEnumType
 import top.mcfpp.type.MCFPPGenericClassType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.core.lang.MCFPPValue
+import top.mcfpp.core.lang.bool.MCBool
+import top.mcfpp.core.lang.bool.MCBoolConcrete
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.*
 import top.mcfpp.model.field.GlobalField

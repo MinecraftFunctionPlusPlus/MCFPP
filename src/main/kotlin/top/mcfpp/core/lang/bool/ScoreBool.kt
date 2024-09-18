@@ -1,8 +1,9 @@
-package top.mcfpp.core.lang
+package top.mcfpp.core.lang.bool
 
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
+import top.mcfpp.core.lang.*
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.lib.SbObject
@@ -22,6 +23,7 @@ import top.mcfpp.util.TextTranslator.translate
  * bool型变量实现了多种计算方法，比如与，或，非等基本的逻辑运算。
  */
 open class MCBool : Var<MCBool>, OnScoreboard {
+    
     /**
      * 此bool变量依托的记分板
      */

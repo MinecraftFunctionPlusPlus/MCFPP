@@ -3,7 +3,7 @@ package top.mcfpp.compiletime
 import top.mcfpp.antlr.MCFPPExprVisitor
 import top.mcfpp.antlr.MCFPPImVisitor
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.core.lang.MCBoolConcrete
+import top.mcfpp.core.lang.bool.MCBoolConcrete
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.function.Function
 

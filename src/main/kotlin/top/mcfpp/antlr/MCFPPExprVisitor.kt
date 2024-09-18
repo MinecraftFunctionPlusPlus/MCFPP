@@ -9,6 +9,8 @@ import top.mcfpp.type.MCFPPEnumType
 import top.mcfpp.type.MCFPPGenericClassType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.core.lang.MCFPPValue
+import top.mcfpp.core.lang.bool.MCBool
+import top.mcfpp.core.lang.bool.MCBoolConcrete
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Class
 import top.mcfpp.model.DataTemplate
@@ -396,168 +398,186 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     @InsertCommand
     override fun visitVar(ctx: mcfppParser.VarContext): Var<*> {
         Project.ctx = ctx
-        if (ctx.Identifier() != null && ctx.arguments() == null) {
-            //变量
-            //没有数组选取
-            val qwq: String = ctx.Identifier().text
-            if(enumType != null && currSelector == null){
-                currSelector = enumType
-            }
-            var re = if(currSelector == null) {
-                val pwp = Function.currFunction.field.getVar(qwq)
-                if(pwp != null) {
-                    if(MCFPPImVisitor.inLoopStatement(ctx) && pwp is MCFPPValue<*>){
-                        pwp.toDynamic(true)
-                    }else{
-                        pwp
-                    }
-                }else{
-                    LogProcessor.error("Variable $qwq not found")
-                    UnknownVar(qwq)
-                }
-            }else{
-                //获取成员
-                val re  = currSelector!!.getMemberVar(qwq, currSelector!!.getAccess(Function.currFunction))
-                if (re.first == null) {
-                    UnknownVar(qwq)
-                }else if (!re.second){
-                    LogProcessor.error("Cannot access member $qwq")
-                    UnknownVar(qwq)
-                }else{
-                    re.first!!
-                }
-            }
-            // Identifier identifierSuffix*
-            if (ctx.identifierSuffix() == null || ctx.identifierSuffix().size == 0) {
-                return re
-            } else {
-                for (value in ctx.identifierSuffix()) {
-                    if(value.conditionalExpression() != null){
-                        if(re !is Indexable){
-                            LogProcessor.error("Cannot index ${re.type}")
-                            return UnknownVar("${re.identifier}_index_" + UUID.randomUUID())
-                        }
-                        //索引
-                        val index = visit(value.conditionalExpression())!!
-                        re = (re as Indexable).getByIndex(index)
-                    }else{
-                        if(!re.isTemp) re = re.getTempVar()
-                        //初始化
-                        for (initializer in value.objectInitializer()){
-                            val id = initializer.Identifier().text
-                            val v = visit(initializer.expression())
-                            val (m, b) = re.getMemberVar(id, re.getAccess(Function.currFunction))
-                            if(!b){
-                                LogProcessor.error("Cannot access member $id")
-                            }
-                            if(m == null) {
-                                LogProcessor.error("Member $id not found")
-                                continue
-                            }
-                            m.replacedBy(m.assign(v))
-                        }
-                    }
-                }
-                return re
-            }
-        } else if (ctx.expression() != null) {
+        return if (ctx.varWithSuffix() != null) {
+            visit(ctx.varWithSuffix())
+        } else if (ctx.bucketExpression() != null) {
             // '(' expression ')'
-            return MCFPPExprVisitor().visit(ctx.expression())
+            visit(ctx.bucketExpression())
         } else {
-            //是函数调用，将已经计算好的中间量存储到栈中
-            for (v in processVarCache){
-                v.storeToStack()
+            //函数调用
+            visit(ctx.functionCall())
+        }
+    }
+
+    override fun visitBucketExpression(ctx: mcfppParser.BucketExpressionContext): Var<*> {
+        return MCFPPExprVisitor().visit(ctx.expression())
+    }
+
+    override fun visitFunctionCall(ctx: mcfppParser.FunctionCallContext): Var<*> {
+        //是函数调用，将已经计算好的中间量存储到栈中
+        for (v in processVarCache){
+            v.storeToStack()
+        }
+        //函数的调用
+        Function.addComment(ctx.text)
+        //参数获取
+        val normalArgs: ArrayList<Var<*>> = ArrayList()
+        val readOnlyArgs: ArrayList<Var<*>> = ArrayList()
+        val exprVisitor = MCFPPExprVisitor()
+        for (expr in ctx.arguments().readOnlyArgs()?.expressionList()?.expression()?: emptyList()) {
+            val arg = exprVisitor.visit(expr)!!
+            readOnlyArgs.add(arg)
+        }
+        for (expr in ctx.arguments().normalArgs().expressionList()?.expression()?: emptyList()) {
+            val arg = exprVisitor.visit(expr)!!
+            normalArgs.add(arg)
+        }
+        //获取函数
+        val p = StringHelper.splitNamespaceID(ctx.namespaceID().text)
+        val func = if(currSelector == null){
+            GlobalField.getFunction(p.first, p.second, FunctionParam.getArgTypes(readOnlyArgs), FunctionParam.getArgTypes(normalArgs))
+        }else{
+            if(p.first != null){
+                LogProcessor.warn("Invalid namespace usage ${p.first} in function call ")
             }
-            //函数的调用
-            Function.addComment(ctx.text)
-            //参数获取
-            val normalArgs: ArrayList<Var<*>> = ArrayList()
-            val readOnlyArgs: ArrayList<Var<*>> = ArrayList()
-            val exprVisitor = MCFPPExprVisitor()
-            for (expr in ctx.arguments().readOnlyArgs()?.expressionList()?.expression()?: emptyList()) {
-                val arg = exprVisitor.visit(expr)!!
-                readOnlyArgs.add(arg)
-            }
-            for (expr in ctx.arguments().normalArgs().expressionList()?.expression()?: emptyList()) {
-                val arg = exprVisitor.visit(expr)!!
-                normalArgs.add(arg)
-            }
-            //获取函数
-            val p = StringHelper.splitNamespaceID(ctx.namespaceID().text)
-            val func = if(currSelector == null){
-                GlobalField.getFunction(p.first, p.second, FunctionParam.getArgTypes(readOnlyArgs), FunctionParam.getArgTypes(normalArgs))
+            MCFPPFuncManager().getFunction(currSelector!!,p.second,
+                FunctionParam.getArgTypes(readOnlyArgs),
+                FunctionParam.getArgTypes(normalArgs))
+        }
+        //调用函数
+        return if (func is UnknownFunction) {
+            //可能是类的构造函数
+            var cls: Class? = if(ctx.arguments().readOnlyArgs() != null){
+                GlobalField.getClass(p.first, p.second ,readOnlyArgs.map { it.type })
             }else{
-                if(p.first != null){
-                    LogProcessor.warn("Invalid namespace usage ${p.first} in function call ")
-                }
-                MCFPPFuncManager().getFunction(currSelector!!,p.second,
-                    FunctionParam.getArgTypes(readOnlyArgs),
-                    FunctionParam.getArgTypes(normalArgs))
+                GlobalField.getClass(p.first, p.second)
             }
-            //调用函数
-            return if (func is UnknownFunction) {
-                var cls: Class? = if(ctx.arguments().readOnlyArgs() != null){
-                   GlobalField.getClass(p.first, p.second ,readOnlyArgs.map { it.type })
-                }else{
-                    GlobalField.getClass(p.first, p.second)
+            if (cls == null) {
+                //可能是模板的构造函数
+                val template: DataTemplate? = GlobalField.getTemplate(p.first, p.second)
+                if(template == null){
+                    LogProcessor.error("Function ${func.identifier}<${readOnlyArgs.joinToString(",") { it.type.typeName }}>(${normalArgs.map { it.type.typeName }.joinToString(",")}) not defined")
+                    Function.addComment("[Failed to Compile]${ctx.text}")
+                    func.invoke(normalArgs,currSelector)
+                    return func.returnVar
                 }
-                //可能是构造函数
-                if (cls == null) {
-                    val template: DataTemplate? = GlobalField.getTemplate(p.first, p.second)
-                    if(template == null){
-                        LogProcessor.error("Function ${func.identifier}<${readOnlyArgs.joinToString(",") { it.type.typeName }}>(${normalArgs.map { it.type.typeName }.joinToString(",")}) not defined")
-                        Function.addComment("[Failed to Compile]${ctx.text}")
-                        func.invoke(normalArgs,currSelector)
-                        return func.returnVar
-                    }
-                    //模板默认构造函数
-                    if(readOnlyArgs.isNotEmpty() || normalArgs.isNotEmpty()){
-                        LogProcessor.error("Template constructor ${template.identifier} cannot have arguments")
-                        return UnknownVar("${template.identifier}_type_" + UUID.randomUUID())
-                    }
-                    return DataTemplateObjectConcrete(template, template.getDefaultValue())
-                }
-                if(cls is GenericClass){
-                    if(defaultGenericClassType != null){
-                        //比对实例化参数
-                        //参数不一致
-                        if(defaultGenericClassType!!.genericVar.size != readOnlyArgs.size){
-                            LogProcessor.error("Generic class ${cls.identifier} requires ${cls.readOnlyParams.size} type arguments, but ${readOnlyArgs.size} were provided")
-                            return UnknownVar("${cls.identifier}_type_" + UUID.randomUUID())
-                        }
-                        //参数缺省
-                        if(readOnlyArgs.isEmpty()){
-                            readOnlyArgs.addAll(defaultGenericClassType!!.genericVar)
-                        }
-                    }
-                    //实例化泛型函数
-                    cls = cls.compile(readOnlyArgs)
-                }
-                //获取对象
-                val ptr = cls.newInstance()
-                //调用构造函数
-                val constructor = cls.getConstructorByString(FunctionParam.getArgTypeNames(normalArgs))
+                val init = DataTemplateObjectConcrete(template, template.getDefaultValue())
+                val constructor = template.getConstructorByString(FunctionParam.getArgTypeNames(normalArgs))
                 if (constructor == null) {
                     LogProcessor.error("No constructor like: " + FunctionParam.getArgTypeNames(normalArgs) + " defined in class " + ctx.namespaceID().text)
                     Function.addComment("[Failed to compile]${ctx.text}")
                 }else{
-                    constructor.invoke(normalArgs, callerClassP = ptr)
+                    constructor.invoke(normalArgs, init)
                 }
-                return ptr
-            }else{
-                if(func is Generic<*>){
-                    func.invoke(readOnlyArgs, normalArgs, currSelector)
-                }else{
-                    func.invoke(normalArgs,currSelector)
-                }
-                for (v in processVarCache){
-                    v.getFromStack()
-                }
-                //函数树
-                Function.currFunction.child.add(func)
-                func.parent.add(Function.currFunction)
-                func.returnVar
+                //可能会对init进行替换
+                return Function.currFunction.field.getVar(init.identifier)?:init
             }
+            if(cls is GenericClass){
+                if(defaultGenericClassType != null){
+                    //比对实例化参数
+                    //参数不一致
+                    if(defaultGenericClassType!!.genericVar.size != readOnlyArgs.size){
+                        LogProcessor.error("Generic class ${cls.identifier} requires ${cls.readOnlyParams.size} type arguments, but ${readOnlyArgs.size} were provided")
+                        return UnknownVar("${cls.identifier}_type_" + UUID.randomUUID())
+                    }
+                    //参数缺省
+                    if(readOnlyArgs.isEmpty()){
+                        readOnlyArgs.addAll(defaultGenericClassType!!.genericVar)
+                    }
+                }
+                //实例化泛型函数
+                cls = cls.compile(readOnlyArgs)
+            }
+            //获取对象
+            val ptr = cls.newInstance()
+            //调用构造函数
+            val constructor = cls.getConstructorByString(FunctionParam.getArgTypeNames(normalArgs))
+            if (constructor == null) {
+                LogProcessor.error("No constructor like: " + FunctionParam.getArgTypeNames(normalArgs) + " defined in class " + ctx.namespaceID().text)
+                Function.addComment("[Failed to compile]${ctx.text}")
+            }else{
+                constructor.invoke(normalArgs, callerClassP = ptr)
+            }
+            return ptr
+        }else{
+            if(func is Generic<*>){
+                func.invoke(readOnlyArgs, normalArgs, currSelector)
+            }else{
+                func.invoke(normalArgs,currSelector)
+            }
+            for (v in processVarCache){
+                v.getFromStack()
+            }
+            //函数树
+            Function.currFunction.child.add(func)
+            func.parent.add(Function.currFunction)
+            func.returnVar
+        }
+    }
+
+    override fun visitVarWithSuffix(ctx: mcfppParser.VarWithSuffixContext): Var<*> {
+        //变量
+        //没有数组选取
+        val qwq: String = ctx.Identifier().text
+        if(enumType != null && currSelector == null){
+            currSelector = enumType
+        }
+        var re = if(currSelector == null) {
+            val pwp = Function.currFunction.field.getVar(qwq)
+            if(pwp != null) {
+                if(MCFPPImVisitor.inLoopStatement(ctx) && pwp is MCFPPValue<*>){
+                    pwp.toDynamic(true)
+                }else{
+                    pwp
+                }
+            }else{
+                LogProcessor.error("Variable $qwq not found")
+                UnknownVar(qwq)
+            }
+        }else{
+            //获取成员
+            val re  = currSelector!!.getMemberVar(qwq, currSelector!!.getAccess(Function.currFunction))
+            if (re.first == null) {
+                UnknownVar(qwq)
+            }else if (!re.second){
+                LogProcessor.error("Cannot access member $qwq")
+                UnknownVar(qwq)
+            }else{
+                re.first!!
+            }
+        }
+        // Identifier identifierSuffix*
+        if (ctx.identifierSuffix() == null || ctx.identifierSuffix().size == 0) {
+            return re
+        } else {
+            for (value in ctx.identifierSuffix()) {
+                if(value.conditionalExpression() != null){
+                    if(re !is Indexable){
+                        LogProcessor.error("Cannot index ${re.type}")
+                        return UnknownVar("${re.identifier}_index_" + UUID.randomUUID())
+                    }
+                    //索引
+                    val index = visit(value.conditionalExpression())!!
+                    re = (re as Indexable).getByIndex(index)
+                }else{
+                    if(!re.isTemp) re = re.getTempVar()
+                    //初始化
+                    for (initializer in value.objectInitializer()){
+                        val id = initializer.Identifier().text
+                        val v = visit(initializer.expression())
+                        val (m, b) = re.getMemberVar(id, re.getAccess(Function.currFunction))
+                        if(!b){
+                            LogProcessor.error("Cannot access member $id")
+                        }
+                        if(m == null) {
+                            LogProcessor.error("Member $id not found")
+                            continue
+                        }
+                        m.replacedBy(m.assign(v))
+                    }
+                }
+            }
+            return re
         }
     }
 

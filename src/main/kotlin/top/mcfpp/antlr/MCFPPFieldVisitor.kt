@@ -267,8 +267,8 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             visit(ctx.classFunctionDeclaration())
         } else if (ctx.classFieldDeclaration() != null) {
             visit(ctx.classFieldDeclaration())
-        } else if (ctx.constructorDeclaration() != null) {
-            visit(ctx.constructorDeclaration())
+        } else if (ctx.classConstructorDeclaration() != null) {
+            visit(ctx.classConstructorDeclaration())
         }else{
             return null
         }
@@ -394,7 +394,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
      * @param ctx the parse tree
      * @return 这个构造函数的对象
      */
-    override fun visitConstructorDeclaration(ctx: mcfppParser.ConstructorDeclarationContext): Any {
+    override fun visitClassConstructorDeclaration(ctx: mcfppParser.ClassConstructorDeclarationContext): Any {
         Project.ctx = ctx
         //类构造函数
         //创建构造函数对象，注册函数
@@ -682,7 +682,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //解析成员
         //先解析函数和构造函数
         for (c in ctx.templateBody().templateMemberDeclaration()) {
-            if (c!!.templateMember().templateFunctionDeclaration() != null) {
+            if (c!!.templateMember().templateFunctionDeclaration() != null || c.templateMember().templateConstructorDeclaration() != null) {
                 visit(c)
             }
         }
@@ -709,7 +709,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         DataTemplate.currTemplate = objectTemplate
         typeScope = objectTemplate.field
         //解析成员
-        //先解析函数和构造函数
+        //先解析函数
         for (c in ctx.templateBody().templateMemberDeclaration()) {
             if (c!!.templateMember().templateFunctionDeclaration() != null) {
                 visit(c)
@@ -750,6 +750,8 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             visit(ctx.templateFunctionDeclaration())
         } else if (ctx.templateFieldDeclaration() != null) {
             visit(ctx.templateFieldDeclaration())
+        } else if(ctx.templateConstructorDeclaration() != null) {
+            visit(ctx.templateConstructorDeclaration())
         } else{
             return null
         }
@@ -802,6 +804,15 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             return null
         }
         return `var`
+    }
+
+    override fun visitTemplateConstructorDeclaration(ctx: mcfppParser.TemplateConstructorDeclarationContext): Any {
+        Project.ctx = ctx
+        //类构造函数
+        //创建构造函数对象，注册函数
+        val f = DataTemplateConstructor(DataTemplate.currTemplate!!)
+        f.addParamsFromContext(ctx.normalParams())
+        return f
     }
 
     //endregion

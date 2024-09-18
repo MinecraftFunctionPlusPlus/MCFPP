@@ -114,7 +114,7 @@ classBody
 classMember
     :   classFunctionDeclaration
     |   classFieldDeclaration ';'
-    |   constructorDeclaration
+    |   classConstructorDeclaration
     |   nativeClassFunctionDeclaration
     |   abstractClassFunctionDeclaration
     |   annotation
@@ -161,7 +161,7 @@ templateMemberDeclaration
 templateMember
     :   templateFunctionDeclaration
     |   templateFieldDeclaration
-    |   constructorDeclaration
+    |   templateConstructorDeclaration
     |   annotation
     ;
 
@@ -236,7 +236,12 @@ accessModifier
     ;
 
 //构造函数声明
-constructorDeclaration
+classConstructorDeclaration
+    :   accessModifier? CONSTRUCTOR normalParams '{' functionBody '}'
+    ;
+
+//构造函数声明
+templateConstructorDeclaration
     :   accessModifier? CONSTRUCTOR normalParams '{' functionBody '}'
     ;
 
@@ -364,9 +369,21 @@ varWithSelector
     ;
 
 var
+    :   bucketExpression
+    |   varWithSuffix
+    |   functionCall
+    ;
+
+bucketExpression
     :   '(' expression ')'
-    |   Identifier identifierSuffix*
-    |   namespaceID arguments
+    ;
+
+varWithSuffix
+    :   Identifier identifierSuffix*
+    ;
+
+functionCall
+    :   namespaceID arguments
     ;
 
 identifierSuffix

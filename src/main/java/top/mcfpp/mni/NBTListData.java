@@ -9,6 +9,7 @@ import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.*;
 import top.mcfpp.core.lang.MCFPPValue;
+import top.mcfpp.core.lang.bool.MCBool;
 import top.mcfpp.lib.NBTPath;
 import top.mcfpp.lib.SbObject;
 import top.mcfpp.lib.Storage;

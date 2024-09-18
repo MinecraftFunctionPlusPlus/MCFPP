@@ -2,6 +2,7 @@ package top.mcfpp.core.lang
 
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
+import top.mcfpp.core.lang.bool.MCBool
 import top.mcfpp.lib.ChatComponent
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer

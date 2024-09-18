@@ -3,6 +3,8 @@ package top.mcfpp.core.lang
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
+import top.mcfpp.core.lang.bool.MCBool
+import top.mcfpp.core.lang.bool.MCBoolConcrete
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.mni.MCIntData
 import top.mcfpp.type.MCFPPBaseType

@@ -4,6 +4,7 @@ import net.querz.nbt.tag.*
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.MCFPPValue
+import top.mcfpp.core.lang.bool.MCBoolConcrete
 
 object NBTUtil {
 

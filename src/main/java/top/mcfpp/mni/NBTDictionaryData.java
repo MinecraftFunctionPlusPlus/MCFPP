@@ -3,6 +3,7 @@ package top.mcfpp.mni;
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.command.Command;
 import top.mcfpp.core.lang.*;
+import top.mcfpp.core.lang.bool.MCBool;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.util.ValueWrapper;
 

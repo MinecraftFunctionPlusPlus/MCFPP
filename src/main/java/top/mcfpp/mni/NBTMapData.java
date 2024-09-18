@@ -4,6 +4,8 @@ import net.querz.nbt.tag.ListTag;
 import net.querz.nbt.tag.StringTag;
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.core.lang.*;
+import top.mcfpp.core.lang.bool.MCBool;
+import top.mcfpp.core.lang.bool.MCBoolConcrete;
 import top.mcfpp.util.ValueWrapper;
 
 public class NBTMapData {

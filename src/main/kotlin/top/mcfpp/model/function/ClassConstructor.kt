@@ -40,8 +40,7 @@ open class ClassConstructor    //检查此类中是否已经重复定义一个�
      */
     @Override
     @InsertCommand
-    override fun invoke(normalArgs: ArrayList<Var<*>>, callerClassP: ClassPointer?) {
-        callerClassP as ClassPointer
+    override fun invoke(normalArgs: ArrayList<Var<*>>, callerClassP: ClassPointer) {
         addCommand("execute in minecraft:overworld positioned 0 1 0 summon marker run function " + leadFunction.namespaceID)
         val qwq = currFunction
         currFunction = leadFunction
