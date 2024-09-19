@@ -36,7 +36,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     var processVarCache : ArrayList<Var<*>> = ArrayList()
     fun clearCache(){ processVarCache.clear() }
 
-    private var currSelector : CanSelectMember? = null
+    private var currSelector : Var<*>? = null
 
 
 
@@ -325,19 +325,19 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         }
         if(currSelector is UnknownVar){
             val type = MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field)
-            currSelector = type
+            currSelector = ObjectVar(type)
         }
         for (selector in ctx.selector()){
             visit(selector)
         }
-        return currSelector as Var<*>
+        return currSelector!!
     }
 
     @Override
     override fun visitSelector(ctx: mcfppParser.SelectorContext?): Var<*> {
         //进入visitVar，currSelector作为成员选择的上下文
         currSelector = visit(ctx!!.`var`())
-        return currSelector as Var<*>
+        return currSelector!!
     }
 
     /**
@@ -496,7 +496,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 LogProcessor.error("No constructor like: " + FunctionParam.getArgTypeNames(normalArgs) + " defined in class " + ctx.namespaceID().text)
                 Function.addComment("[Failed to compile]${ctx.text}")
             }else{
-                constructor.invoke(normalArgs, callerClassP = ptr)
+                constructor.invoke(normalArgs, ptr)
             }
             return ptr
         }else{
@@ -520,7 +520,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         //没有数组选取
         val qwq: String = ctx.Identifier().text
         if(enumType != null && currSelector == null){
-            currSelector = enumType
+            currSelector = ObjectVar(enumType!!)
         }
         var re = if(currSelector == null) {
             val pwp = Function.currFunction.field.getVar(qwq)
