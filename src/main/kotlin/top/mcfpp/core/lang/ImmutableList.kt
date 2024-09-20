@@ -51,12 +51,11 @@ open class ImmutableList : NBTList{
     }
 
     companion object {
-        val data = CompoundData("ImmutableList", "mcfpp.lang")
-        //注册函数
-
-        init {
-            data.extends(NBTBasedData.data)
-            data.getNativeFromClass(NBTListData::class.java)
+        val data by lazy {
+            CompoundData("ImmutableList", "mcfpp.lang").apply {
+                extends(NBTBasedData.data)
+                getNativeFromClass(NBTListData::class.java)
+            }
         }
 
     }

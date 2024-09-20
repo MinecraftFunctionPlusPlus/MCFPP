@@ -186,7 +186,9 @@ class JavaVar : Var<JavaVar>, MCFPPValue<Any?> {
 
     companion object{
 
-        val data = CompoundData("JavaVar","mcfpp")
+        val data by lazy {
+            CompoundData("JavaVar","mcfpp")
+        }
 
         fun mcToJava(v : Var<*>) : Any{
             if(v !is MCFPPValue<*>){

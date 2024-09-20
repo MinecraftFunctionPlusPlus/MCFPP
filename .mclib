@@ -30,31 +30,13 @@
 					]
 				},
 				{
-					"id":"_while_541db0c9-b056-42ff-9bd7-c64bb30862fc",
+					"id":"test",
 					"normalParams":[
-						
-					],
-					"returnType":"void",
-					"isAbstract":false,
-					"tags":[
-						
-					]
-				},
-				{
-					"id":"expression_08c17f72-1037-4b8f-8099-8c99646255cc",
-					"normalParams":[
-						
-					],
-					"returnType":"void",
-					"isAbstract":false,
-					"tags":[
-						
-					]
-				},
-				{
-					"id":"_while_block_a6a466a7-6697-4283-8766-5e8cfcf4bbb3",
-					"normalParams":[
-						
+						{
+							"id":"a",
+							"type":"int",
+							"isStatic":true
+						}
 					],
 					"returnType":"void",
 					"isAbstract":false,

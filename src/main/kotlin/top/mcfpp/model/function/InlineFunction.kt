@@ -59,7 +59,7 @@ class InlineFunction : Function {
      * @see top.mcfpp.antlr.MCFPPExprVisitor.visitVar
      */
     @InsertCommand
-    override fun invoke(/*readOnlyArgs:ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, callerClassP: ClassPointer?) {
+    override fun invoke(normalArgs: ArrayList<Var<*>>, callerClassP: ClassPointer) {
         //基本类型
         addComment("[Inline Function ${this.namespaceID}]")
         //参数传递

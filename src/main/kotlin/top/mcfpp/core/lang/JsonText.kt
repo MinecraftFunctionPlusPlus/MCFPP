@@ -93,20 +93,18 @@ open class JsonText : NBTBasedData {
     }
 
     companion object {
-        val data = CompoundData("JsonText","mcfpp.lang")
+        val data by lazy {
+            CompoundData("JsonText","mcfpp.lang").apply {
+                extends(NBTBasedData.data)
 
-        init {
-            data.initialize()
-            data.extends(NBTBasedData.data)
-
-            data.addMember(MCInt("color"))
-            data.addMember(MCBool("bold"))
-            data.addMember(MCBool("italic"))
-            data.addMember(MCBool("underlined"))
-            data.addMember(MCBool("strikethrough"))
-            data.addMember(MCBool("obfuscated"))
-            data.addMember(MCString("insertion"))
-
+                addMember(MCInt("color"))
+                addMember(MCBool("bold"))
+                addMember(MCBool("italic"))
+                addMember(MCBool("underlined"))
+                addMember(MCBool("strikethrough"))
+                addMember(MCBool("obfuscated"))
+                addMember(MCString("insertion"))
+            }
         }
     }
 }

@@ -448,12 +448,11 @@ open class MCInt : MCNumber<Int> {
     }
 
     companion object {
-        val data = CompoundData("int","mcfpp")
-
-        init {
-            data.initialize()
-            data.extends(MCAny.data)
-            data.getNativeFromClass(MCIntData::class.java)
+        val data by lazy {
+            val qwq = CompoundData("int","mcfpp")
+            qwq.extends(MCAny.data)
+            qwq.getNativeFromClass(MCIntData::class.java)
+            return@lazy qwq
         }
     }
 }

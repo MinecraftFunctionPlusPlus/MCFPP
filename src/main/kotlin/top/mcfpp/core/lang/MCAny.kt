@@ -170,10 +170,10 @@ open class MCAny : Var<MCAny> {
     }
 
     companion object{
-        val data = CompoundData("any","mcfpp.lang")
-
-        init {
-            data.getNativeFromClass(MCAnyData::class.java)
+        val data by lazy {
+            CompoundData("any","mcfpp.lang").apply {
+                getNativeFromClass(MCAnyData::class.java)
+            }
         }
     }
 }

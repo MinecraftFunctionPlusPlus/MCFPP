@@ -75,7 +75,9 @@ open class EntityVar : NBTBasedData{
     }
 
     companion object {
-        val data = CompoundData("entity","mcfpp")
+        val data by lazy {
+            CompoundData("entity","mcfpp")
+        }
     }
 
 }

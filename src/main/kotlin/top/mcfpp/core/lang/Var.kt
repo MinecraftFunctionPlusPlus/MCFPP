@@ -108,9 +108,9 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
         isStatic = `var`.isStatic
         accessModifier = `var`.accessModifier
         isTemp = `var`.isTemp
+        nbtPath = `var`.nbtPath
         stackIndex = `var`.stackIndex
         isConst = `var`.isConst
-        nbtPath = `var`.nbtPath
     }
 
     /**

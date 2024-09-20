@@ -1,10 +1,11 @@
 namespace test;
 
 func main(){
-    int a = 0;
-    while(a < 6){
-        a = a + 1;
-        print(a);
-    }
+    dynamic int a = 0;
+    test(a);
     print(a);
+}
+
+func test(static int a){
+    a = 1;
 }

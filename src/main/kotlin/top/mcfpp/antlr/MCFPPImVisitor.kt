@@ -1036,22 +1036,22 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.currFunction = Class.currClass!!.classPreInit
     }
 
-    override fun visitConstructorDeclaration(ctx: mcfppParser.ConstructorDeclarationContext): Any? {
+    override fun visitClassConstructorDeclaration(ctx: mcfppParser.ClassConstructorDeclarationContext): Any? {
         //是构造函数
-        enterConstructorDeclaration(ctx)
-        super.visitConstructorDeclaration(ctx)
-        exitConstructorDeclaration(ctx)
+        enterClassConstructorDeclaration(ctx)
+        super.visitClassConstructorDeclaration(ctx)
+        exitClassConstructorDeclaration(ctx)
         return null
     }
 
-    private fun enterConstructorDeclaration(ctx: mcfppParser.ConstructorDeclarationContext) {
+    private fun enterClassConstructorDeclaration(ctx: mcfppParser.ClassConstructorDeclarationContext) {
         Project.ctx = ctx
         val types = FunctionParam.parseNormalParamTypes(ctx.normalParams())
         val c = Class.currClass!!.getConstructorByString(types.typeToStringList())!!
         Function.currFunction = c
     }
 
-    private fun exitConstructorDeclaration(ctx: mcfppParser.ConstructorDeclarationContext) {
+    private fun exitClassConstructorDeclaration(ctx: mcfppParser.ClassConstructorDeclarationContext) {
         Project.ctx = ctx
         Function.currFunction = Class.currClass!!.classPreInit
     }

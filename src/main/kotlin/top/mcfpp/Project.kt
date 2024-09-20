@@ -335,7 +335,7 @@ object Project {
             n.field.forEachObject { c->
                 run {
                     if(c is ObjectClass){
-                        c.classPreInit.invoke(ArrayList(), callerClassP =  null)
+                        c.classPreInit.invoke(ArrayList(), null)
                     }
                 }
             }

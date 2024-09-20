@@ -285,6 +285,8 @@ open class Function : Member, FieldContainer, Serializable {
 
     open val compiledFunctions: HashMap<List<Any?>, Function> = HashMap()
 
+    val staticRefValue: HashMap<String, Var<*>> = HashMap()
+
     /**
      * 创建一个全局函数，它有指定的命名空间
      * @param identifier 函数的标识符
@@ -620,7 +622,10 @@ open class Function : Member, FieldContainer, Serializable {
             val tg = normalArgs[i].implicitCast(this.normalParams[i].type)
             //参数传递和子函数的参数进栈
             val p = field.getVar(this.normalParams[i].identifier)!!
-            field.putVar(p.identifier, p.assign(tg), true)
+            p.isConst = false
+            val pp = p.assign(tg)
+            if(!this.normalParams[i].isStatic) pp.isConst = true
+            field.putVar(p.identifier, pp, true)
         }
     }
 
