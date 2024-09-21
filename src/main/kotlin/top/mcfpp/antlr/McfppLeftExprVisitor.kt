@@ -17,7 +17,7 @@ import top.mcfpp.util.StringHelper
 import java.util.*
 import kotlin.collections.ArrayList
 
-class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
+open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
     private var currSelector : CanSelectMember? = null
     /**
      * 计算一个基本的表达式。可能是一个变量，也可能是一个数值

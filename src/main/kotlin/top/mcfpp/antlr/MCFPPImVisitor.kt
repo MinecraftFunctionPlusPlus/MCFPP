@@ -18,6 +18,7 @@ import top.mcfpp.type.MCFPPType
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.bool.MCBool
 import top.mcfpp.core.lang.bool.MCBoolConcrete
+import top.mcfpp.lib.Execute
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.*
 import top.mcfpp.model.field.GlobalField
@@ -972,10 +973,31 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
     //进入execute语句
     override fun visitExecuteStatement(ctx: mcfppParser.ExecuteStatementContext): Any? {
-        val executeCommand = Command("execute")
+        val exec = Execute()
         for (context in ctx.executeContext()){
-
+            var arg: Execute.WriteOnlyVar? = null
+            for (exp in context.executeExpression().`var`()){
+                if(arg == null){
+                    val qwq = exec.data.field.getVar(exp.text) as Execute.WriteOnlyVar?
+                    if(qwq == null){
+                        LogProcessor.error("Cannot find argument: ${exp.text}")
+                        continue
+                    }
+                    arg = qwq
+                }else{
+                    arg = arg.getData().field.getVar(exp.text) as Execute.WriteOnlyVar
+                }
+            }
+            val value = MCFPPExprVisitor().visit(context.expression())
+            arg?.assign(value)
         }
+        val execFunction = NoStackFunction("execute_" + UUID.randomUUID().toString(), Function.currFunction)
+        val l = Function.currFunction
+        Function.currFunction = execFunction
+        super.visitExecuteStatement(ctx)
+        Function.currFunction = l
+        Function.addCommand(Commands.function(execFunction))
+        return null
     }
 
     //region class

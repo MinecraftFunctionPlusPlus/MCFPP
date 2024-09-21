@@ -1,11 +1,6 @@
 namespace test;
 
 func main(){
-    dynamic int a = 0;
-    test(a);
-    print(a);
-}
-
-func test(static int a){
-    a = 1;
+    execute(pos = ~ ~ ~){
+    }
 }

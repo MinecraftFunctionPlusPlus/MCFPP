@@ -1,12 +1,15 @@
 package top.mcfpp.lib
 
 import top.mcfpp.command.Command
+import top.mcfpp.core.lang.Coordinate3Var
+import top.mcfpp.core.lang.CoordinateDimension
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPType
+import top.mcfpp.util.LogProcessor
 
 class Execute {
 
@@ -22,8 +25,38 @@ class Execute {
                         }
 
                         override fun doAssign(b: Var<*>): WriteOnlyVar {
-                            if(b is MCInt){
+                            if(b is CoordinateDimension){
+                                command.build("positioned").build(b.toCommandPart()).build("~ ~")
+                            }else{
+                                LogProcessor.error("execute.pos.x can only be assigned with CoordinateDimension")
+                            }
+                            return this
+                        }
+                    })
+                    field.putVar("y", object : WriteOnlyVar(){
+                        override fun getData(): CompoundData {
+                            return CompoundData("execute.pos.y", "mcfpp.shadow")
+                        }
 
+                        override fun doAssign(b: Var<*>): WriteOnlyVar {
+                            if(b is CoordinateDimension){
+                                command.build("positioned ~").build(b.toCommandPart()).build("~")
+                            }else{
+                                LogProcessor.error("execute.pos.y can only be assigned with CoordinateDimension")
+                            }
+                            return this
+                        }
+                    })
+                    field.putVar("z", object : WriteOnlyVar(){
+                        override fun getData(): CompoundData {
+                            return CompoundData("execute.pos.z", "mcfpp.shadow")
+                        }
+
+                        override fun doAssign(b: Var<*>): WriteOnlyVar {
+                            if(b is CoordinateDimension){
+                                command.build("positioned ~ ~").build(b.toCommandPart())
+                            }else{
+                                LogProcessor.error("execute.pos.z can only be assigned with CoordinateDimension")
                             }
                             return this
                         }
@@ -32,12 +65,17 @@ class Execute {
             }
 
             override fun doAssign(b: Var<*>): WriteOnlyVar {
-                TODO("Not yet implemented")
+                if(b is Coordinate3Var){
+                    command.build("positioned").build(b.toCommandPart())
+                }else{
+                    LogProcessor.error("execute.pos can only be assigned with Coordinate3Var")
+                }
+                return this
             }
         })
     }
 
-    private abstract class WriteOnlyVar: Var<WriteOnlyVar>(){
+    abstract class WriteOnlyVar: Var<WriteOnlyVar>(){
 
         abstract fun getData(): CompoundData
 

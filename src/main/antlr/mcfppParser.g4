@@ -436,7 +436,11 @@ executeStatement
     ;
 
 executeContext
-    :   basicExpression '=' expression
+    :   executeExpression '=' expression
+    ;
+
+executeExpression
+    :   var ('.' var)*
     ;
 
 orgCommand
