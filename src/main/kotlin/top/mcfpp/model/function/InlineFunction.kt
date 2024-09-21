@@ -41,7 +41,7 @@ class InlineFunction : Function {
         argPass(/*readOnlyArgs, */normalArgs)
         //重新遍历这个函数
         val visitor = MCFPPImVisitor()
-        visitor.visit(context)
+        visitor.visit(ast)
 
 //        val charStream: CharStream = CharStreams.fromString(context.text)
 //        val lexer = mcfppLexer(charStream)
@@ -68,7 +68,7 @@ class InlineFunction : Function {
 
         //这边其实直接用visitor会更好，因为visitor不用加parser，直接visitor.visit(context)
         val visitor = MCFPPInlineFunctionVisitor()
-        visitor.visit(context)
+        visitor.visit(ast)
 //        val charStream: CharStream = CharStreams.fromString(AntlrUtil.getReadableText(context.functionBody()))
 //        val lexer = mcfppLexer(charStream)
 //        val tokens = CommonTokenStream(lexer)

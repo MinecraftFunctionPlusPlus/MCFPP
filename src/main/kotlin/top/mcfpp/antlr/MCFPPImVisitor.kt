@@ -5,6 +5,7 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.antlr.RuleContextExtension.children
 import top.mcfpp.antlr.mcfppParser.CompileTimeFuncDeclarationContext
+import top.mcfpp.command.Command
 import top.mcfpp.command.CommandList
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.*
@@ -967,6 +968,14 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         }
         Function.currFunction.isReturned = true
         return null
+    }
+
+    //进入execute语句
+    override fun visitExecuteStatement(ctx: mcfppParser.ExecuteStatementContext): Any? {
+        val executeCommand = Command("execute")
+        for (context in ctx.executeContext()){
+
+        }
     }
 
     //region class

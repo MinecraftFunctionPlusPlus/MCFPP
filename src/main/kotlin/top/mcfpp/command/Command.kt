@@ -3,9 +3,6 @@ package top.mcfpp.command
 import top.mcfpp.Project
 import top.mcfpp.exception.CommandException
 import top.mcfpp.lib.NBTPath
-import top.mcfpp.lib.NBTSource
-import top.mcfpp.lib.StorageSource
-import top.mcfpp.type.MCFPPNBTType
 import java.lang.StringBuilder
 import java.util.*
 import kotlin.collections.ArrayList
@@ -181,14 +178,14 @@ open class Command {
     }
 
     /**
-     * 在这条命令的末尾构建一个宏参数。得到的命令需要使用[Commands.buildMacroCommand]方法进行转换才能使用。
+     * 在这条命令的末尾构建一个宏参数。得到的命令需要使用[buildMacroCommand]方法进行转换才能使用。
      *
      * 插入的命令片段的值为空字符串，替换位点的id为宏参数
      */
     fun buildMacro(id: String, withBlank: Boolean = true) = build("", "$$id", withBlank)
 
     /**
-     * 将此命令以宏命令的方式调用。宏命令的转换方式参考[Command.toMacro]
+     * 将此命令以宏命令的方式调用。宏命令的转换方式参考[Command.toMacro]。使用[buildMacro]构筑宏命令
      *
      * @return 用来调用 *执行宏参数的函数* 的function命令。***需要自行补全`with`参数***
      */
@@ -204,7 +201,7 @@ open class Command {
      * @param nbtPath 用于替换宏参数的nbt路径
      * @return 用来调用 *执行宏参数的函数* 的function命令。无需自行补全with参数
      */
-    fun buildMacroCommandWith(nbtPath: NBTPath): Command{
+    fun buildMacroCommand(nbtPath: NBTPath): Command{
         val f = UUID.randomUUID().toString()
         Project.macroFunction[f] = this.toMacro()
         return Command.build("function mcfpp:dynamic/$f with").build(nbtPath.toCommandPart())

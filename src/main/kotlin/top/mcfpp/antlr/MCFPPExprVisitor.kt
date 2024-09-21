@@ -624,8 +624,36 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             return MCFPPTypeVar(MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field))
         } else if (ctx.TargetSelector() != null){
             TODO()
+        } else if(ctx.coordinate() != null){
+            val dimensions = ctx.coordinate().coordinateDimension().map { visit(it) }
         }
         throw IllegalArgumentException("value_" + ctx.text)
+    }
+
+    override fun visitCoordinateDimension(ctx: mcfppParser.CoordinateDimensionContext): Var<*> {
+        if(ctx.intValue() != null){
+            return CoordinateDimensionConcrete("", ctx.intValue().text.toInt())
+        }else if(ctx.floatValue() != null){
+            return CoordinateDimensionConcrete("", ctx.floatValue().text.toFloat())
+        }else{
+            //RelativeValue
+            val str = ctx.RelativeValue().text
+            if(str.length == 1){
+                return CoordinateDimensionConcrete(str, 0)
+            }
+            val expr = str.substring(1)
+            //尝试转换为数字
+            var num: Number? = expr.toIntOrNull()
+            if(num != null){
+                return CoordinateDimensionConcrete(str[0].toString(), num)
+            }
+            num = expr.toFloatOrNull()
+            if(num != null){
+                return CoordinateDimensionConcrete(str[0].toString(), num)
+            }
+            LogProcessor.error("Invalid relative value: $expr")
+            return CoordinateDimensionConcrete(str[0].toString(), 0)
+        }
     }
 
 }

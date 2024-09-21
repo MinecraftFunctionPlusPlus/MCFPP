@@ -436,7 +436,7 @@ executeStatement
     ;
 
 executeContext
-    :   varWithSelector '=' expression
+    :   basicExpression '=' expression
     ;
 
 orgCommand
@@ -515,6 +515,7 @@ returnStatement
 
 block
     :   '{' statement* '}'
+    |   statement
     ;
 
 selfAddOrMinusExpression
@@ -556,13 +557,21 @@ functionReturnType
 value
     :   intValue
     |   floatValue
-    |   RelativeValue
+    |   coordinate
     |   LineString
     |   boolValue
     |   multiLineStringLiteral
     |   nbtValue
     |   type
     |   TargetSelector
+    ;
+
+coordinate
+    :   coordinateDimension coordinateDimension coordinateDimension?
+    ;
+
+coordinateDimension
+    :   (RelativeValue | intValue | floatValue)
     ;
 
 intValue

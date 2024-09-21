@@ -3,7 +3,6 @@ lexer grammar mcfppLexer;
 import unicodeClass;
 
 //Base Character Set
-WAVE:'~';
 RESERVED: '...' ;
 DOT: '.' ;
 COMMA: ',' ;
@@ -193,8 +192,12 @@ FloatConstant
     ;
 
 RelativeValue
-    :   '~' IntegerConstant
-    |   '~' FloatConstant
+    :   '~'
+    |   '^'
+    |   '~' IntegerConstant?
+    |   '~' FloatConstant?
+    |   '^' IntegerConstant?
+    |   '^' FloatConstant?
     ;
 
 BooleanConstant

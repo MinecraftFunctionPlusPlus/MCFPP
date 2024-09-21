@@ -15,7 +15,7 @@ import kotlin.collections.ArrayList
 /**
  * 一个构造函数。它是一个特殊的成员方法，将会在类的初始化阶段之后调用。
  */
-open class ClassConstructor    //检查此类中是否已经重复定义一个相同的构造函数
+open class ClassConstructor
     (
     /**
      * 此构造函数对应的类。

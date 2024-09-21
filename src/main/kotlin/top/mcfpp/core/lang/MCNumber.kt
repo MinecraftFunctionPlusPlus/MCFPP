@@ -47,7 +47,7 @@ abstract class MCNumber<T> : Var<MCNumber<T>>, OnScoreboard {
      * 赋值
      * @param a 值来源
      */
-    abstract fun assignCommand(a: MCNumber<T>) : MCNumber<T>
+    abstract fun assignCommand(a: MCNumber<*>) : MCNumber<T>
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         TODO("Not yet implemented")

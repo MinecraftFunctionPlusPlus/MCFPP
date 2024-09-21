@@ -15,6 +15,7 @@ import top.mcfpp.type.UnresolvedType
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.field.FunctionField
+import top.mcfpp.type.MCFPPClassType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import java.io.Serializable
@@ -280,8 +281,9 @@ open class Function : Member, FieldContainer, Serializable {
             return re
         }
 
-    var context: FunctionBodyContext? = null
+    var ast: FunctionBodyContext? = null
 
+    var context: FunctionContext = FunctionContext()
 
     open val compiledFunctions: HashMap<List<Any?>, Function> = HashMap()
 
@@ -306,7 +308,7 @@ open class Function : Member, FieldContainer, Serializable {
         }else{
             this.returnVar = buildReturnVar(returnType)
         }
-        this.context = context
+        this.ast = context
     }
 
     /**
@@ -324,7 +326,7 @@ open class Function : Member, FieldContainer, Serializable {
         field = FunctionField(cls.field, this)
         this.returnType = returnType
         this.returnVar = buildReturnVar(returnType)
-        this.context = context
+        this.ast = context
     }
 
     /**
@@ -345,7 +347,7 @@ open class Function : Member, FieldContainer, Serializable {
         this.returnVar = buildReturnVar(returnType)
         this.isAbstract = true
         this.accessModifier = Member.AccessModifier.PUBLIC
-        this.context = context
+        this.ast = context
     }
 
     /**
@@ -363,7 +365,7 @@ open class Function : Member, FieldContainer, Serializable {
         field = FunctionField(template.field, this)
         this.returnType = returnType
         this.returnVar = buildReturnVar(returnType)
-        this.context = context
+        this.ast = context
     }
 
     constructor(function: Function){
@@ -380,7 +382,7 @@ open class Function : Member, FieldContainer, Serializable {
         this.returnVar = function.returnVar.clone()
         this.isAbstract = function.isAbstract
         this.accessModifier = function.accessModifier
-        this.context = function.context
+        this.ast = function.ast
     }
 
     /**
@@ -460,12 +462,7 @@ open class Function : Member, FieldContainer, Serializable {
      * @param caller 函数的调用者
      */
     open fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?){
-        when(caller){
-            is MCFPPType, is DataTemplateObject, null -> invoke(normalArgs)
-            is ClassPointer -> invoke(normalArgs, caller)
-            is Var<*> -> invoke(normalArgs, caller)
-        }
-        if(context != null){
+        if(ast != null){
             //函数参数已知条件下的编译
             val values = normalArgs.map { if(it is MCFPPValue<*>) it.value else null }
             if(values.any { it != null }){
@@ -480,9 +477,9 @@ open class Function : Member, FieldContainer, Serializable {
                     }
                 }
                 cf.identifier = this.identifier + "_" + compiledFunctions.size
-                cf.context = null
+                cf.ast = null
                 cf.runInFunction {
-                    MCFPPImVisitor().visitFunctionBody(context!!)
+                    MCFPPImVisitor().visitFunctionBody(ast!!)
                 }
                 compiledFunctions[values] = cf
                 cf.invoke(normalArgs, caller)
@@ -969,4 +966,11 @@ open class Function : Member, FieldContainer, Serializable {
 
         val cache = ArrayList<String>()
     }
+}
+
+/**
+ * 描述一个函数执行的上下文。函数执行的上下文包括函数的执行者，执行坐标等。
+ */
+class FunctionContext{
+    var caller: CanSelectMember? = null
 }

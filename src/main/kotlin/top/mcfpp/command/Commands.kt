@@ -111,6 +111,9 @@ object Commands {
     fun selectRun(a : CanSelectMember, command: Command, hasExecuteRun: Boolean = true) : Array<Command>{
         val final = when(a){
             is ClassPointer -> {
+                if(a.identifier == "this"){
+                    return arrayOf(command)
+                }
                 val qwq = arrayOf(
                     Command.build("data modify storage entity ${ClassPointer.tempItemEntityUUID} Thrower set from storage mcfpp:system ${Project.config.rootNamespace}.stack_frame[${a.stackIndex}].${a.identifier}"),
                     Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin")
@@ -137,6 +140,9 @@ object Commands {
     fun selectRun(a : CanSelectMember, hasExecuteRun: Boolean = true) : Array<Command>{
         val final = when(a){
             is ClassPointer -> {
+                if(a.identifier == "this"){
+                    return arrayOf(Command.build(""))
+                }
                 val qwq = arrayOf(
                     Command.build("data modify storage entity ${ClassPointer.tempItemEntityUUID} Thrower set from storage mcfpp:system ${Project.config.rootNamespace}.stack_frame[${a.stackIndex}].${a.identifier}"),
                     Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin")

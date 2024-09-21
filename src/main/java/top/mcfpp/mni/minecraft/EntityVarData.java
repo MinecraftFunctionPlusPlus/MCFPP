@@ -74,7 +74,7 @@ public class EntityVarData {
             buildingCommand = buildingCommand.buildMacro("scale", true);
         }
         commands = Commands.INSTANCE.runAsEntity(caller, buildingCommand);
-        commands[commands.length - 1] = commands[commands.length - 1].buildMacroCommandWith(scale.nbtPath.parent());
+        commands[commands.length - 1] = commands[commands.length - 1].buildMacroCommand(scale.nbtPath.parent());
         returnValue.setValue(new CommandReturn(commands[commands.length - 1], "return"));
         Function.Companion.addCommands(commands);
     }
@@ -88,7 +88,7 @@ public class EntityVarData {
             buildingCommand = buildingCommand.buildMacro("scale", true);
         }
         commands = Commands.INSTANCE.runAsEntity(caller, buildingCommand);
-        commands[commands.length - 1] = commands[commands.length - 1].buildMacroCommandWith(scale.nbtPath.parent());
+        commands[commands.length - 1] = commands[commands.length - 1].buildMacroCommand(scale.nbtPath.parent());
         returnValue.setValue(new CommandReturn(commands[commands.length - 1], "return"));
         Function.Companion.addCommands(commands);
     }
@@ -130,7 +130,7 @@ public class EntityVarData {
                 buildingCommand = buildingCommand.buildMacro("mode", true);
             }
             commands = Commands.INSTANCE.runAsEntity(caller, buildingCommand);
-            commands[commands.length - 1] = commands[commands.length - 1].buildMacroCommandWith(modifier.nbtPath);
+            commands[commands.length - 1] = commands[commands.length - 1].buildMacroCommand(modifier.nbtPath);
         }
         returnValue.setValue(new CommandReturn(commands[commands.length - 1], "return"));
         Function.Companion.addCommands(commands);
@@ -152,7 +152,7 @@ public class EntityVarData {
                 buildingCommand = buildingCommand.buildMacro("id", true);
             }
             commands = Commands.INSTANCE.runAsEntity(caller, buildingCommand);
-            commands[commands.length - 1] = commands[commands.length - 1].buildMacroCommandWith(modifier.nbtPath);
+            commands[commands.length - 1] = commands[commands.length - 1].buildMacroCommand(modifier.nbtPath);
         }
         returnValue.setValue(new CommandReturn(commands[commands.length - 1], "return"));
         Function.Companion.addCommands(commands);

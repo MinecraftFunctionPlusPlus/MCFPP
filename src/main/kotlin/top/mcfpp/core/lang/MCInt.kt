@@ -107,7 +107,7 @@ open class MCInt : MCNumber<Int> {
 
     //this = a
     @InsertCommand
-    override fun assignCommand(a: MCNumber<Int>) : MCInt {
+    override fun assignCommand(a: MCNumber<*>) : MCInt {
         return assignCommandLambda(a,
             ifThisIsClassMemberAndAIsConcrete =  { b, final ->
                 //对类中的成员的值进行修改

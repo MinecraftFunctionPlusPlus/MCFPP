@@ -112,7 +112,7 @@ open class MCFloat : MCNumber<Float> {
      * @param a 值来源
      */
     @InsertCommand
-    override fun assignCommand(a: MCNumber<Float>) : MCFloat {
+    override fun assignCommand(a: MCNumber<*>) : MCFloat {
         val parent = parent
         if(a.parent != null) TODO()
         if(parent != null){

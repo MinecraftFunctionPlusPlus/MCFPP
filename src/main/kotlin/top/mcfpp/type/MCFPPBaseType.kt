@@ -207,6 +207,38 @@ class MCFPPBaseType {
         }
     }
 
+    object Coordinate3: MCFPPType(parentType = listOf(Any)){
+
+        override val objectData: CompoundData
+            get() = Coordinate3Var.data
+
+        override val typeName: kotlin.String
+            get() = "coord3"
+
+        override fun build(identifier: kotlin.String, container: FieldContainer): Var<*> = Coordinate3Var(container, identifier)
+        override fun build(identifier: kotlin.String): Var<*> = Coordinate3Var(identifier)
+        override fun build(identifier: kotlin.String, clazz: Class): Var<*> = Coordinate3Var(clazz, identifier)
+        override fun buildUnConcrete(identifier: kotlin.String, container: FieldContainer): Var<*> = Coordinate3Var(container, identifier)
+        override fun buildUnConcrete(identifier: kotlin.String): Var<*> = Coordinate3Var(identifier)
+        override fun buildUnConcrete(identifier: kotlin.String, clazz: Class): Var<*> = Coordinate3Var(clazz, identifier)
+    }
+
+    object Coordinate2: MCFPPType(parentType = listOf(Any)){
+
+        override val objectData: CompoundData
+            get() = Coordinate2Var.data
+
+        override val typeName: kotlin.String
+            get() = "coord2"
+
+        override fun build(identifier: kotlin.String, container: FieldContainer): Var<*> = Coordinate2Var(container, identifier)
+        override fun build(identifier: kotlin.String): Var<*> = Coordinate2Var(identifier)
+        override fun build(identifier: kotlin.String, clazz: Class): Var<*> = Coordinate2Var(clazz, identifier)
+        override fun buildUnConcrete(identifier: kotlin.String, container: FieldContainer): Var<*> = Coordinate2Var(container, identifier)
+        override fun buildUnConcrete(identifier: kotlin.String): Var<*> = Coordinate2Var(identifier)
+        override fun buildUnConcrete(identifier: kotlin.String, clazz: Class): Var<*> = Coordinate2Var(clazz, identifier)
+    }
+
 }
 
 class LimitedSelectorType(val limit: Int): MCFPPType(parentType = listOf(MCFPPEntityType.Entity)){

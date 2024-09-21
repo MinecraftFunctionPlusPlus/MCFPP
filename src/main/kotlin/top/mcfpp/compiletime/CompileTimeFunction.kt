@@ -33,6 +33,6 @@ class CompileTimeFunction : Function {
         val field = makeField()
         argPass(field, normalArgs)
         val visitor = MCFPPCompileTimeVisitor(field)
-        visitor.visit(this.context)
+        visitor.visit(this.ast)
     }
 }
