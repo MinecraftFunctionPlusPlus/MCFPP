@@ -97,7 +97,7 @@ class Coordinate3Var: Var<Coordinate3Var> {
     }
     fun toCommandPart(): Command{
         val c = Command("")
-        c.build(x.toCommandPart())
+        c.build(x.toCommandPart(), false)
         c.build(y.toCommandPart())
         c.build(z.toCommandPart())
         return c
@@ -244,7 +244,7 @@ open class CoordinateDimension: MCNumber<Number> {
     }
 
     override fun assignCommand(a: MCNumber<*>): MCNumber<Number> {
-        this.prefix.assign((a as CoordinateDimension).prefix)
+        this.prefix = this.prefix.assign((a as CoordinateDimension).prefix) as MCString
         val aNum = a.number
         if(number == null && aNum == null) {
             //Do nothing

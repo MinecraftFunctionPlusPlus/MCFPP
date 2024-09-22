@@ -626,6 +626,17 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             TODO()
         } else if(ctx.coordinate() != null){
             val dimensions = ctx.coordinate().coordinateDimension().map { visit(it) }
+            if(dimensions.size == 3){
+                return Coordinate3Var().apply {
+                    x.assign(dimensions[0])
+                    y.assign(dimensions[1])
+                    z.assign(dimensions[2])
+                }
+            }
+            return Coordinate2Var().apply {
+                x.assign(dimensions[0])
+                z.assign(dimensions[1])
+            }
         }
         throw IllegalArgumentException("value_" + ctx.text)
     }

@@ -992,11 +992,12 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             arg?.assign(value)
         }
         val execFunction = NoStackFunction("execute_" + UUID.randomUUID().toString(), Function.currFunction)
+        GlobalField.localNamespaces[execFunction.namespace]!!.field.addFunction(execFunction, false)
         val l = Function.currFunction
         Function.currFunction = execFunction
         super.visitExecuteStatement(ctx)
         Function.currFunction = l
-        Function.addCommand(Commands.function(execFunction))
+        Function.addCommand(exec.run(execFunction))
         return null
     }
 

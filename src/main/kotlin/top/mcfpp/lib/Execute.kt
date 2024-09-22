@@ -1,6 +1,7 @@
 package top.mcfpp.lib
 
 import top.mcfpp.command.Command
+import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.Coordinate3Var
 import top.mcfpp.core.lang.CoordinateDimension
 import top.mcfpp.core.lang.MCInt
@@ -73,6 +74,10 @@ class Execute {
                 return this
             }
         })
+    }
+
+    fun run(function: Function): Command{
+        return command.build("run").build(Commands.function(function))
     }
 
     abstract class WriteOnlyVar: Var<WriteOnlyVar>(){

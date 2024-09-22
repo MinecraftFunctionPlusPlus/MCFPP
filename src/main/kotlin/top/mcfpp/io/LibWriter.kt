@@ -23,6 +23,7 @@ import java.io.FileWriter
 object LibWriter {
     fun write(path: String) : JSONObject{
         val json = GlobalWriter.toJson(GlobalField)
+        if(path == "null") return json
         val writer = FileWriter("$path\\.mclib")
         writer.write(json.toJSONString(JSONWriter.Feature.PrettyFormat))
         writer.flush()
