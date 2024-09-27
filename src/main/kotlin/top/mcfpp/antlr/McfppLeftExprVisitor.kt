@@ -19,12 +19,7 @@ import kotlin.collections.ArrayList
 
 open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
     private var currSelector : CanSelectMember? = null
-    /**
-     * 计算一个基本的表达式。可能是一个变量，也可能是一个数值
-     * @param ctx the parse tree
-     * @return 表达式的值
-     */
-    @Override
+
     override fun visitBasicExpression(ctx: mcfppParser.BasicExpressionContext): Var<*> {
         Project.ctx = ctx
         return if (ctx.primary() != null) {
@@ -34,13 +29,6 @@ open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
         }
     }
 
-    /**
-     * 从类中选择一个成员。返回的成员包含了它所在的对象的信息
-     *
-     * @param ctx
-     * @return
-     */
-    @Override
     override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var<*> {
         Project.ctx = ctx
         if(ctx.primary() != null){
@@ -56,19 +44,12 @@ open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
         return currSelector as Var<*>
     }
 
-    @Override
     override fun visitSelector(ctx: mcfppParser.SelectorContext?): Var<*> {
         //进入visitVar，currSelector作为成员选择的上下文
         currSelector = visit(ctx!!.`var`())
         return currSelector as Var<*>
     }
 
-    /**
-     * 一个初级表达式，可能是一个变量，也可能是一个数值
-     * @param ctx the parse tree
-     * @return 表达式的值
-     */
-    @Override
     override fun visitPrimary(ctx: mcfppParser.PrimaryContext): Var<*> {
         Project.ctx = ctx
         if (ctx.`var`() != null) {
@@ -118,14 +99,6 @@ open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
         }
     }
 
-
-    /**
-     * 变量
-     * @param ctx the parse tree
-     * @return 变量
-     */
-    @Override
-    @InsertCommand
     override fun visitVar(ctx: mcfppParser.VarContext): Var<*> {
         Project.ctx = ctx
         return if (ctx.varWithSuffix() != null) {

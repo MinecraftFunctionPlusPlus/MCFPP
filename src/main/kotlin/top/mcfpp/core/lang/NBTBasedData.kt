@@ -5,8 +5,10 @@ import net.querz.nbt.tag.*
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
+import top.mcfpp.model.accessor.SimpleAccessor
 import top.mcfpp.mni.NBTBasedDataData
 import top.mcfpp.model.*
+import top.mcfpp.model.accessor.Property
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
@@ -191,14 +193,16 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable{
         return data.getFunction(key, readOnlyParams, normalParams) to true
     }
 
-    override fun getByIndex(index: Var<*>): Accessor {
-        return Accessor(
-            when (index) {
-                is MCInt -> getByIntIndex(index)
-                is MCString -> getByStringIndex(index)
-                is NBTBasedData -> getByNBTIndex(index)
-                else -> throw IllegalArgumentException("Invalid index type ${index.type}")
-            }
+    override fun getByIndex(index: Var<*>): PropertyVar {
+        return PropertyVar(
+            Property.buildSimpleProperty (
+                when (index) {
+                    is MCInt -> getByIntIndex(index)
+                    is MCString -> getByStringIndex(index)
+                    is NBTBasedData -> getByNBTIndex(index)
+                    else -> throw IllegalArgumentException("Invalid index type ${index.type}")
+                }
+            ),this
         )
     }
 

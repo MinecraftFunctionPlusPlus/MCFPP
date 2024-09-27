@@ -6,6 +6,7 @@ import top.mcfpp.core.lang.*
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.core.lang.MCFPPValue
+import top.mcfpp.model.accessor.SimpleAccessor
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Native
 import top.mcfpp.util.LogProcessor
@@ -65,8 +66,8 @@ class NativeFunction : Function, Native {
         val valueWrapper = ValueWrapper(returnVar)
         //一定是静态的
         javaMethod.invoke(null,
-            *readOnlyArgs.map { if(it is Accessor) it.value else it }.toTypedArray(),
-            *normalArgs.map { if(it is Accessor) it.value else it }.toTypedArray(),
+            *readOnlyArgs.toTypedArray(),
+            *normalArgs.toTypedArray(),
             *if(this.caller != "void") arrayOf(caller) else emptyArray(),
             *if(this.returnType != MCFPPBaseType.Void) arrayOf(valueWrapper) else emptyArray()
         )

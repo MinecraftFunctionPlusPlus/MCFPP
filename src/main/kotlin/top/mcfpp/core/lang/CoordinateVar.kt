@@ -2,6 +2,7 @@ package top.mcfpp.core.lang
 
 import net.querz.nbt.tag.StringTag
 import top.mcfpp.command.Command
+import top.mcfpp.model.accessor.SimpleAccessor
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
@@ -80,9 +81,9 @@ class Coordinate3Var: Var<Coordinate3Var> {
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         return when(key){
-            "x" -> Accessor(x) to true
-            "y" -> Accessor(y) to true
-            "z" -> Accessor(z) to true
+            "x" -> x to true
+            "y" -> y to true
+            "z" -> z to true
             else -> null to true
         }
     }
@@ -168,8 +169,8 @@ class Coordinate2Var: Var<Coordinate2Var> {
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         return when(key) {
-            "x" -> Accessor(x) to true
-            "z" -> Accessor(z) to true
+            "x" -> x to true
+            "z" -> z to true
             else -> null to true
         }
     }

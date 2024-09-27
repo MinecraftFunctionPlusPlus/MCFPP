@@ -6,6 +6,7 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
+import top.mcfpp.model.accessor.SimpleAccessor
 import top.mcfpp.exception.OperationNotImplementException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.type.MCFPPBaseType
@@ -74,10 +75,6 @@ open class MCString : NBTBasedData {
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         TODO("Not yet implemented")
-    }
-
-    override fun getByIndex(index: Var<*>): Accessor {
-        throw OperationNotImplementException()
     }
 
     @Override

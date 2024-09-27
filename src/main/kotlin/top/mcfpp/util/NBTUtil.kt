@@ -4,6 +4,7 @@ import net.querz.nbt.tag.*
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.MCFPPValue
+import top.mcfpp.model.accessor.SimpleAccessor
 import top.mcfpp.core.lang.bool.MCBoolConcrete
 
 object NBTUtil {
@@ -24,7 +25,7 @@ object NBTUtil {
             is MCStringConcrete -> return v.value
             is NBTBasedDataConcrete<*> -> return v.value
             //is NBTAny<*> -> return v.value
-            is Accessor -> return toNBT(v.value)
+            is SimpleAccessor -> return toNBT(v.field)
             else -> TODO()
         }
     }

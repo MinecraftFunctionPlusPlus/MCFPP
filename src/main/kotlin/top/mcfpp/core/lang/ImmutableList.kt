@@ -6,11 +6,13 @@ import net.querz.nbt.tag.ListTag
 import top.mcfpp.Project
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
+import top.mcfpp.model.accessor.SimpleAccessor
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.mni.NBTListData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
+import top.mcfpp.model.accessor.Property
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
@@ -46,8 +48,9 @@ open class ImmutableList : NBTList{
      */
     constructor(b: ImmutableList) : super(b)
 
-    override fun getByIndex(index: Var<*>): Accessor {
-        return super.getByIndex(index).apply { isReadOnly = true }
+    override fun getByIndex(index: Var<*>): PropertyVar {
+        val p = super.getByIndex(index)
+        return PropertyVar(Property(p, SimpleAccessor(p), null), this)
     }
 
     companion object {
@@ -137,21 +140,26 @@ class ImmutableListConcrete: ImmutableList, MCFPPValue<ListTag<*>>{
         }
     }
 
-    override fun getByIndex(index: Var<*>): Accessor {
-        return Accessor(if(index is MCInt){
-            if(index is MCIntConcrete){
-                if(index.value >= value.size()){
-                    throw IndexOutOfBoundsException("Index out of bounds")
-                }else{
-                    NBTBasedDataConcrete(value[index.value]!!)
+    override fun getByIndex(index: Var<*>): PropertyVar {
+        return PropertyVar(
+            Property.buildSimpleProperty(
+                if(index is MCInt){
+                    if(index is MCIntConcrete){
+                        if(index.value >= value.size()){
+                            throw IndexOutOfBoundsException("Index out of bounds")
+                        }else{
+                            NBTBasedDataConcrete(value[index.value]!!)
+                        }
+                    }else {
+                    //index未知
+                    super.getByIntIndex(index)
                 }
-            }else {
-                //index未知
-                super.getByIntIndex(index)
-            }
-        }else{
-            throw IllegalArgumentException("Index must be a int")
-        })
+                }else{
+                    throw IllegalArgumentException("Index must be a int")
+                }
+            ),
+            this
+        )
     }
 
     override fun toString(): String {

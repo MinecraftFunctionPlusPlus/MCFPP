@@ -168,11 +168,11 @@ object Commands {
         return selectRun(a, Command.build(command), hasExecuteRun)
     }
 
-    fun fakeFunction(parent: Function , operation: () -> Unit) : Array<Command>{
+    fun fakeFunction(parent: Function , operation: (fakeFunction: Function) -> Unit) : Array<Command>{
         val l = Function.currFunction
         val f = NoStackFunction("", parent)
         Function.currFunction = f
-        operation()
+        operation(f)
         Function.currFunction = l
         return f.commands.toTypedArray()
     }

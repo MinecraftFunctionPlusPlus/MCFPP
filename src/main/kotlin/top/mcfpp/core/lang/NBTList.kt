@@ -6,10 +6,12 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
+import top.mcfpp.model.accessor.SimpleAccessor
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.mni.NBTListConcreteData
 import top.mcfpp.mni.NBTListData
 import top.mcfpp.model.*
+import top.mcfpp.model.accessor.Property
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
@@ -190,12 +192,13 @@ open class NBTList : NBTBasedData {
         return re to true
     }
 
-    override fun getByIndex(index: Var<*>): Accessor {
-        return Accessor(if(index is MCInt){
+    override fun getByIndex(index: Var<*>): PropertyVar {
+        return PropertyVar(
+            Property.buildSimpleProperty(if(index is MCInt){
             super.getByIntIndex(index)
         }else{
             throw IllegalArgumentException("Index must be a int")
-        })
+        }), this)
     }
 
     companion object {
@@ -293,8 +296,9 @@ class NBTListConcrete: NBTList, MCFPPValue<ListTag<*>> {
         }
     }
 
-    override fun getByIndex(index: Var<*>): Accessor {
-        return Accessor(if(index is MCInt){
+    override fun getByIndex(index: Var<*>): PropertyVar {
+        return PropertyVar(
+            Property.buildSimpleProperty (if(index is MCInt){
             if(index is MCIntConcrete){
                 if(index.value >= value.size()){
                     throw IndexOutOfBoundsException("Index out of bounds")
@@ -307,7 +311,7 @@ class NBTListConcrete: NBTList, MCFPPValue<ListTag<*>> {
             }
         }else{
             throw IllegalArgumentException("Index must be a int")
-        })
+        }), this)
     }
 
     override fun toString(): String {

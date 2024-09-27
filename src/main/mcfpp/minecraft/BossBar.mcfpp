@@ -1,8 +1,19 @@
 @From<"top.mcfpp.mni.minecraft.BossBarData">
 data BossBar{
     string id;
+    text name;
 
-    constructor
+    constructor(string id){
+        this.id = id;
+        this.name = (text)id;
+    }
+
+    constructor(string id, string name){
+        this.id = id;
+        this.name = name;
+    }
+
+    func add() -> CommandReturn = top.mcfpp.mni.minecraft.BossBarData.add;
 }
 
 @From<"top.mcfpp.mni.minecraft.BossBarData">

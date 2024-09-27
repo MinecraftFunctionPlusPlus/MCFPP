@@ -3,6 +3,7 @@ package top.mcfpp.core.lang
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
+import top.mcfpp.model.accessor.SimpleAccessor
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.type.MCFPPClassType
 import top.mcfpp.type.MCFPPType
@@ -183,11 +184,11 @@ open class ClassPointer : Var<ClassPointer>{
      */
     @Override
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        val member = instanceField.getVar(key)
+        val member = instanceField.getProperty(key)
         return if(member == null){
             Pair(null, true)
         }else{
-            Pair(Accessor(member), accessModifier >= member.accessModifier)
+            Pair(PropertyVar(member, this), accessModifier >= member.accessModifier)
         }
     }
 

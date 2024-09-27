@@ -1,11 +1,13 @@
 package top.mcfpp.core.lang
 
+import top.mcfpp.model.accessor.SimpleAccessor
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.MCFPPVectorType
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
+import top.mcfpp.model.accessor.Property
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TextTranslator
@@ -153,15 +155,15 @@ open class VectorVar: Var<VectorVar>, Indexable, ScoreHolder {
         return data.getFunction(key, readOnlyParams, normalParams) to true
     }
 
-    override fun getByIndex(index: Var<*>): Accessor {
+    override fun getByIndex(index: Var<*>): PropertyVar {
         when(index){
             is MCInt -> {
-                return Accessor(getByIntIndex(index))
+                return PropertyVar(Property.buildSimpleProperty(getByIntIndex(index)),this)
             }
 
             else -> {
                 LogProcessor.error("Invalid index type ${index.type}")
-                return Accessor(UnknownVar("error_${identifier}_index_${index.identifier}"))
+                return PropertyVar(Property.buildSimpleProperty(UnknownVar("error_${identifier}_index_${index.identifier}")),this)
             }
         }
     }

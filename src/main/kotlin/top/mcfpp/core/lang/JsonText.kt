@@ -2,11 +2,14 @@ package top.mcfpp.core.lang
 
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
+import top.mcfpp.model.accessor.SimpleAccessor
 import top.mcfpp.core.lang.bool.MCBool
 import top.mcfpp.lib.ChatComponent
+import top.mcfpp.lib.NBTChatComponent
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
+import top.mcfpp.model.accessor.Property
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType
@@ -68,14 +71,14 @@ open class JsonText : NBTBasedData {
         return temp.assignCommand(this) as JsonText
     }
 
-    override fun getByIndex(index: Var<*>): Accessor {
+    override fun getByIndex(index: Var<*>): PropertyVar {
         if(isElement){
             throw IllegalArgumentException("Cannot get index of text element")
         }
-        return Accessor(when(index){
-            is MCInt -> getByIntIndex(index)
+        return when(index){
+            is MCInt -> PropertyVar(Property.buildSimpleProperty(getByIntIndex(index)), this)
             else -> throw IllegalArgumentException("Invalid index type ${index.type}")
-        })
+        }
     }
 
     override fun getByIntIndex(index: MCInt): NBTBasedData {
@@ -90,6 +93,10 @@ open class JsonText : NBTBasedData {
         if(!isElement) v?.nbtPath?.iteratorIndex()
         v?.nbtPath?.memberIndex(key)
         return v to true
+    }
+
+    open fun toCommandPart(): Command{
+        return NBTChatComponent(this, true).toCommandPart()
     }
 
     companion object {
@@ -169,6 +176,10 @@ class JsonTextConcrete : MCFPPValue<ChatComponent>, JsonText {
             }
         }
         return re
+    }
+
+    override fun toCommandPart(): Command {
+        return value.toCommandPart()
     }
 
     companion object {

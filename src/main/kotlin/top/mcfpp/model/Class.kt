@@ -70,7 +70,7 @@ open class Class : CompoundData {
     /**
      * 是否已经继承了一个类
      */
-    protected var hasParentClass = false
+    private var hasParentClass = false
 
     /**
      * 这个类的伴随对象

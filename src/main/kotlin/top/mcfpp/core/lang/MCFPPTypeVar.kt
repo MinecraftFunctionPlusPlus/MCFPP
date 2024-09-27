@@ -9,7 +9,7 @@ import java.util.UUID
 
 open class MCFPPTypeVar : Var<MCFPPTypeVar>, MCFPPValue<MCFPPType> {
 
-    override var value: MCFPPType
+    override lateinit var value: MCFPPType
 
     override var type: MCFPPType = MCFPPBaseType.Type
 
@@ -21,7 +21,7 @@ open class MCFPPTypeVar : Var<MCFPPTypeVar>, MCFPPValue<MCFPPType> {
         if(b is MCFPPTypeVar){
             this.value = b.value
             hasAssigned = true
-        }else{
+        } else {
             throw Exception("Cannot assign a ${b.type} to a MCFPPTypeVar")
         }
         return this

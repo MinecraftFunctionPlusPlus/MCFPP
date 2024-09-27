@@ -13,6 +13,7 @@ import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.model.*
 import top.mcfpp.model.Class
 import top.mcfpp.model.Member.AccessModifier
+import top.mcfpp.model.accessor.*
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.field.IFieldWithType
 import top.mcfpp.model.function.*
@@ -406,6 +407,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return f
     }
 
+    private lateinit var currVar: Var<*>
     /**
      * 类字段的声明
      * @param ctx the parse tree
@@ -448,8 +450,51 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             Function.currFunction = Function.nullFunction
             `var`.hasAssigned = true
         }
-        reList.add(`var`)
+        //属性访问器
+        val properties = visit(ctx.accessor()) as Property
+        reList.add(properties)
         return reList
+    }
+
+    override fun visitAccessor(ctx: mcfppParser.AccessorContext): Any? {
+        Project.ctx = ctx
+        val getter = if(ctx.getter() != null){
+            visit(ctx.getter()) as AbstractAccessor
+        }else{
+            null
+        }
+        val setter = if(ctx.setter() != null){
+            visit(ctx.setter()) as AbstractMutator
+        }else{
+            null
+        }
+        return Property(currVar, getter, setter)
+    }
+
+    override fun visitGetter(ctx: mcfppParser.GetterContext): Any? {
+        Project.ctx = ctx
+        return if(ctx.functionBody() != null){
+            FunctionAccessor(currVar, Class.currClass!!)
+        }else if(ctx.javaRefer() != null){
+            NativeAccessor(ctx.javaRefer().text, Class.currClass!!, currVar)
+        }else if(ctx.expression() != null){
+            ExpressionAccessor(ctx.expression(), currVar)
+        }else{
+            SimpleAccessor(currVar)
+        }
+    }
+
+    override fun visitSetter(ctx: mcfppParser.SetterContext): Any? {
+        Project.ctx = ctx
+        return if(ctx.functionBody() != null){
+            FunctionMutator(currVar, Class.currClass!!)
+        }else if(ctx.javaRefer() != null){
+            NativeMutator(ctx.javaRefer().text, Class.currClass!!, currVar)
+        }else if(ctx.expression() != null){
+            ExpressionMutator(ctx.expression(), currVar)
+        }else{
+            SimpleMutator(currVar)
+        }
     }
 
 //endregion

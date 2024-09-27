@@ -38,8 +38,6 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
 
     private var currSelector : Var<*>? = null
 
-
-
     /**
      * 计算一个复杂表达式
      * @param ctx the parse tree
@@ -293,7 +291,12 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
      */
     @Override
     override fun visitRightVarExpression(ctx: mcfppParser.RightVarExpressionContext): Var<*> {
-        return visit(ctx.basicExpression())
+        val qwq = visit(ctx.basicExpression())
+        return if(qwq is PropertyVar){
+            qwq.property.getter(qwq.caller)
+        }else{
+            qwq
+        }
     }
 
     /**

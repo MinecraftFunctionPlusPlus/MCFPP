@@ -3,20 +3,22 @@ package top.mcfpp.core.lang
 import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.command.Commands
+import top.mcfpp.model.accessor.SimpleAccessor
 import top.mcfpp.mni.annotation.ConcreteOnly
-import top.mcfpp.type.MCFPPDataTemplateType
-import top.mcfpp.type.MCFPPNBTType
-import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.DataTemplate
 import top.mcfpp.model.Member
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
+import top.mcfpp.type.MCFPPDataTemplateType
+import top.mcfpp.type.MCFPPNBTType
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 import java.util.*
+
 
 /**
  * 一个数据模板对象
@@ -50,7 +52,6 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     constructor(templateObject: DataTemplateObject) : super(templateObject) {
         templateType = templateObject.templateType
         instanceField = templateObject.instanceField
-
     }
 
     override fun doAssign(b: Var<*>): DataTemplateObject {
@@ -176,12 +177,21 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     override fun getFromStack() {}
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        val member = instanceField.getVar(key)
+        val member = instanceField.getProperty(key)
         return if(member == null){
             Pair(null, true)
         }else{
+            Pair(PropertyVar(member, this), accessModifier >= member.accessModifier)
+        }
+    }
+
+    fun <T: Var<*>> getMemberVarWithT(key: String, clazz: Class<T>): T? {
+        val member = instanceField.getVar(key)
+        return if(member == null){
+            null
+        }else{
             member.parent = this
-            Pair(Accessor(member), accessModifier >= member.accessModifier)
+            return if (clazz.isAssignableFrom(member.javaClass)) clazz.cast(member) else null
         }
     }
 

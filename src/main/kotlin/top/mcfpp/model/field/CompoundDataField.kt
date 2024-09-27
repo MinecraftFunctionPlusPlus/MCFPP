@@ -5,6 +5,7 @@ import top.mcfpp.core.lang.DataTemplateObject
 import top.mcfpp.core.lang.Var
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.*
+import top.mcfpp.model.accessor.Property
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.Generic
@@ -14,7 +15,7 @@ import java.util.HashMap
  * 一个域，储存了字段和方法。
  *
  */
-class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
+class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType, IFieldWithProperty {
 
     /**
      * 字段
@@ -25,6 +26,11 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
      * 类型
      */
     private val types : HashMap<String, MCFPPType> = HashMap()
+
+    /**
+     *
+     */
+    private val property: HashMap<String, Property> = HashMap()
 
     /**
      * 遍历每一个字段
@@ -130,8 +136,9 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
         return vars.remove(id)
     }
 
-//endregion
+    //endregion
 
+    //region type
     override fun putType(key: String, type: MCFPPType, forced: Boolean): Boolean {
         if(forced){
             types[key] = type
@@ -164,6 +171,7 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
     override val allTypes: Collection<MCFPPType>
         get() = types.values
 
+    //endregion
 
     //region Function
     @Nullable
@@ -213,6 +221,48 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType {
             qwq
         }
     }
+    //endregion
+
+    //region property
+    override fun putProperty(key: String, property: Property, forced: Boolean): Boolean {
+        if(forced){
+            this.property[key] = property
+            return true
+        }
+        return if (this.property.containsKey(key)) {
+            false
+        } else {
+            this.property[key] = property
+            true
+        }
+    }
+
+    override fun getProperty(key: String): Property? {
+        return property.getOrDefault(key, null)
+    }
+
+    override fun containProperty(id: String): Boolean {
+        return property.containsKey(id)
+    }
+
+    override fun removeProperty(id: String): Property? {
+        return property.remove(id)
+    }
+
+    override fun forEachProperty(action: (Property) -> Unit) {
+        for (p in property.values){
+            action(p)
+        }
+    }
+
+    override val allProperties: Collection<Property>
+        get() {
+            val ps = ArrayList<Property>()
+            for (lv in property.values){
+                ps.add(lv)
+            }
+            return ps
+        }
     //endregion
 
     fun createDataTemplateInstance(selector: DataTemplateObject): CompoundDataField{

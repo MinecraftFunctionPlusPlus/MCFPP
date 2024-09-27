@@ -189,7 +189,15 @@ open class Function : Member, FieldContainer, Serializable {
     /**
      * 在什么东西里面
      */
-    var ownerType : OwnerType = OwnerType.NONE
+    var ownerType : OwnerType
+        get() {
+            return when(owner){
+                is Class -> OwnerType.CLASS
+                is DataTemplate -> OwnerType.TEMPLATE
+                null -> OwnerType.NONE
+                else -> OwnerType.BASIC
+            }
+        }
 
     /**
      * 含有缺省参数

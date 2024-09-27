@@ -111,6 +111,9 @@ CONSTRUCTOR:'constructor';
 GLOBAL:'global';
 VAR:'var';
 
+GET:'get';
+SET:'set';
+
 NAMESPACE:  'namespace';
 VEC:        'vec';
 INT:        'int';

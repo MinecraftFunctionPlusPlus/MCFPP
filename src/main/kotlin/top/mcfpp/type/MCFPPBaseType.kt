@@ -31,6 +31,7 @@ class MCFPPBaseType {
         override fun buildUnConcrete(identifier: kotlin.String, clazz: Class): Var<*> = MCAny(clazz, identifier)
 
     }
+
     object Int: MCFPPType(parentType = listOf(Any)){
 
         override val objectData: CompoundData

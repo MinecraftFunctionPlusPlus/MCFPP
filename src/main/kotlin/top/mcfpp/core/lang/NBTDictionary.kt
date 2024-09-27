@@ -5,6 +5,7 @@ import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.Project
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
+import top.mcfpp.model.accessor.SimpleAccessor
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPNBTType
 import top.mcfpp.type.MCFPPType
@@ -12,6 +13,7 @@ import top.mcfpp.mni.NBTDictionaryData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
+import top.mcfpp.model.accessor.Property
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPDictType
 import top.mcfpp.util.LogProcessor
@@ -75,12 +77,12 @@ open class NBTDictionary : NBTBasedData {
         return data.field.getFunction(key,readOnlyParams , normalParams) to true
     }
 
-    override fun getByIndex(index: Var<*>): Accessor {
-        return Accessor(if(index is MCString){
-            super.getByStringIndex(index)
+    override fun getByIndex(index: Var<*>): PropertyVar {
+        return if(index is MCString){
+            PropertyVar(Property.buildSimpleProperty(super.getByStringIndex(index)), this)
         }else{
             throw IllegalArgumentException("Index must be a string")
-        })
+        }
     }
 
     companion object{
@@ -169,20 +171,20 @@ open class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<CompoundTag> {
     }
 
 
-    override fun getByIndex(index: Var<*>): Accessor {
-        return Accessor(if(index is MCString){
+    override fun getByIndex(index: Var<*>): PropertyVar {
+        return if(index is MCString){
             if(index is MCStringConcrete){
                 if(value.containsKey(index.value.valueToString())){
                     throw IndexOutOfBoundsException("Index out of bounds")
                 }else{
-                    NBTBasedDataConcrete(value[index.value.valueToString()])
+                    PropertyVar(Property.buildSimpleProperty(NBTBasedDataConcrete(value[index.value.valueToString()])), this)
                 }
             }else {
-                super.getByStringIndex(index)
+                PropertyVar(Property.buildSimpleProperty(super.getByStringIndex(index)), this)
             }
         }else{
             throw IllegalArgumentException("Index must be a string")
-        })
+        }
     }
 
 

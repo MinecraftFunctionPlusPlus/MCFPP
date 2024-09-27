@@ -3,6 +3,7 @@ package top.mcfpp.model
 import top.mcfpp.Project
 import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.core.lang.Var
+import top.mcfpp.model.accessor.Property
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.annotation.Annotation
@@ -106,12 +107,11 @@ open class CompoundData : FieldContainer, Serializable {
      * @param member 要添加的成员
      */
     open fun addMember(member: Member): Boolean {
-        return if (member is Function) {
-            field.addFunction(member, false)
-        } else if (member is Var<*>) {
-            field.putVar(member.identifier, member)
-        } else {
-            TODO()
+        return when (member) {
+            is Function -> field.addFunction(member, false)
+            is Var<*> -> field.putVar(member.identifier, member)
+            is Property -> field.putProperty(member.identifier, member)
+            else -> TODO()
         }
     }
 
@@ -278,6 +278,10 @@ open class CompoundData : FieldContainer, Serializable {
     fun forMember(operation: (Member) -> Any?){
         field.forEachFunction { operation(it) }
         field.forEachVar { operation(it) }
+    }
+
+    companion object {
+        val emptyData = CompoundData("empty", "mcfpp")
     }
 
 }

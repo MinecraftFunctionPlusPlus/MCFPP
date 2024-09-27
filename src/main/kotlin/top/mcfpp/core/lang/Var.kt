@@ -6,6 +6,7 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
+import top.mcfpp.model.accessor.SimpleAccessor
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.*
 import top.mcfpp.model.*
@@ -480,9 +481,6 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
     }
 
     fun replacedBy(v : Var<*>){
-        if(v is Accessor){
-            return replacedBy(v.value)
-        }
         if(v == this) return
         if(v is MCInt && this is MCInt && holder != null){
             when(val holder = holder){

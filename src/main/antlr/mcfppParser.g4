@@ -133,7 +133,25 @@ nativeClassFunctionDeclaration
     ;
 
 classFieldDeclaration
-    :   accessModifier? type fieldDeclarationExpression
+    :   accessModifier? type fieldDeclarationExpression accessor?
+    ;
+
+accessor
+    :   '{' getter? setter? '}'
+    ;
+
+getter
+    :   GET '{' functionBody '}'
+    |   GET '=' javaRefer ';'
+    |   GET '=' expression ';'
+    |   GET ';'
+    ;
+
+setter
+    :   SET '{' functionBody '}'
+    |   SET '=' javaRefer ';'
+    |   SET '=' expression ';'
+    |   SET ';'
     ;
 
 genericClassImplement
