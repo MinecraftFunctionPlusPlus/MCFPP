@@ -303,7 +303,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             )
         }
         if(!isStatic){
-            val thisObj = MCFPPType.parseFromIdentifier(Class.currClass!!.identifier, typeScope).build("this", f)
+            val thisObj = MCFPPType.parseFromIdentifier(Class.currClass!!.identifier, typeScope).buildUnConcrete("this", f)
             f.field.putVar("this",thisObj)
         }
         //解析参数
@@ -421,7 +421,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val c = ctx.fieldDeclarationExpression()
         //字段的解析在Analyse阶段结束后，Compile阶段开始的时候进行
         val type = MCFPPType.parseFromIdentifier(ctx.type().text, typeScope)
-        val `var` = type.build(c.Identifier().text, Class.currClass!!)
+        val `var` = type.buildUnConcrete(c.Identifier().text, Class.currClass!!)
         //是否是静态的
         if(isStatic){
             `var`.isStatic = true
@@ -451,6 +451,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             `var`.hasAssigned = true
         }
         //属性访问器
+        currVar = `var`
         val properties = visit(ctx.accessor()) as Property
         reList.add(properties)
         return reList

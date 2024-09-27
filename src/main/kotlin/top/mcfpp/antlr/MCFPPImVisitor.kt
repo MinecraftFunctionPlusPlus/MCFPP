@@ -21,6 +21,9 @@ import top.mcfpp.core.lang.bool.MCBoolConcrete
 import top.mcfpp.lib.Execute
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.*
+import top.mcfpp.model.accessor.FunctionAccessor
+import top.mcfpp.model.accessor.FunctionMutator
+import top.mcfpp.model.accessor.Property
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function
@@ -232,40 +235,6 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addComment("expression end: " + ctx.text)
         return null
     }
-
-    /**
-     * 自加或自减语句
-     * TODO
-     * @param ctx the parse tree
-     */
-    /*
-    * override fun exitSelfAddOrMinusStatement(ctx: mcfppParser.SelfAddOrMinusStatementContext) {
-    *    Project.ctx = ctx
-    *    Function.addCommand("#" + ctx.text)
-    *    val re: Var? = Function.field.getVar(ctx.selfAddOrMinusExpression().Identifier().text)
-    *    if (re == null) {
-    *        LogProcessor.error("Undefined variable:" + ctx.selfAddOrMinusExpression().Identifier().text)
-    *        throw VariableNotDefineException()
-    *    }
-    *    if (ctx.selfAddOrMinusExpression().op.text.equals("++")) {
-    *        if (re is MCInt) {
-    *            if (re.isConcrete) {
-    *                re.value = re.value!! + 1
-    *            } else {
-    *                Function.addCommand(Commands.SbPlayerAdd(re, 1))
-    *            }
-    *        }
-    *    } else {
-    *        if (re is MCInt) {
-    *            if (re.isConcrete) {
-    *                re.value = re.value!! - 1
-    *            } else {
-    *                Function.addCommand(Commands.SbPlayerRemove(re, 1))
-    *            }
-    *        }
-    *    }
-    * }
-    */
 
     override fun visitExtensionFunctionDeclaration(ctx: mcfppParser.ExtensionFunctionDeclarationContext): Any? {
         //是扩展函数
@@ -1086,6 +1055,27 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     private fun exitClassConstructorDeclaration(ctx: mcfppParser.ClassConstructorDeclarationContext) {
         Project.ctx = ctx
         Function.currFunction = Class.currClass!!.classPreInit
+    }
+
+    private lateinit var currProperty: Property
+    override fun visitClassFieldDeclaration(ctx: mcfppParser.ClassFieldDeclarationContext): Any? {
+        val id = ctx.fieldDeclarationExpression().Identifier().text
+        currProperty = Class.currClass!!.field.getProperty(id)!!
+        return super.visitClassFieldDeclaration(ctx)
+    }
+
+    override fun visitGetter(ctx: mcfppParser.GetterContext): Any? {
+        if(ctx.functionBody() != null){
+            Function.currFunction = (currProperty.accessor as FunctionAccessor).function
+        }
+        return super.visitGetter(ctx)
+    }
+
+    override fun visitSetter(ctx: mcfppParser.SetterContext?): Any? {
+        if(ctx!!.functionBody() != null){
+            Function.currFunction = (currProperty.mutator as FunctionMutator).function
+        }
+        return super.visitSetter(ctx)
     }
     //endregion
 

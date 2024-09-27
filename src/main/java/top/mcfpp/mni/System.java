@@ -7,6 +7,7 @@ import top.mcfpp.command.Command;
 import top.mcfpp.core.lang.*;
 import top.mcfpp.lib.ScoreChatComponent;
 import top.mcfpp.model.function.Function;
+import top.mcfpp.util.LogProcessor;
 import top.mcfpp.util.NBTUtil;
 import top.mcfpp.util.ValueWrapper;
 
@@ -87,5 +88,32 @@ public class System {
     public static void debug(){
         //噢，在这里断点，这样就可以断点编译了
         int i = 0;
+    }
+
+    @MNIFunction(normalParams = {"string s"})
+    public static void info(@NotNull MCString var){
+        if(var instanceof MCStringConcrete varC){
+            LogProcessor.INSTANCE.info(varC.getValue().getValue());
+        }else{
+            LogProcessor.INSTANCE.info(var.toString());
+        }
+    }
+
+    @MNIFunction(normalParams = {"string s"})
+    public static void warn(@NotNull MCString var){
+        if(var instanceof MCStringConcrete varC){
+            LogProcessor.INSTANCE.warn(varC.getValue().getValue());
+        }else{
+            LogProcessor.INSTANCE.warn(var.toString());
+        }
+    }
+
+    @MNIFunction(normalParams = {"string s"})
+    public static void error(@NotNull MCString var){
+        if(var instanceof MCStringConcrete varC){
+            LogProcessor.INSTANCE.error(varC.getValue().getValue());
+        }else{
+            LogProcessor.INSTANCE.error(var.toString());
+        }
     }
 }

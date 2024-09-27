@@ -12,6 +12,7 @@ import top.mcfpp.mni.annotation.To
 import top.mcfpp.model.*
 import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.Enum
+import top.mcfpp.model.accessor.*
 import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.generic.GenericClass
@@ -454,12 +455,46 @@ object GlobalField : FieldContainer, IField {
                             }
                         }
                     }
-                    println("\tattributes:")
-                    for (v in s.field.allVars.toList()) {
+                    println("\tproperties:")
+                    for (v in s.field.allProperties.toList()) {
                         println(
                             "\t\t" + v.accessModifier.name
-                                .lowercase(Locale.getDefault()) + " " + v.type + " " + v.identifier
+                                .lowercase(Locale.getDefault()) + " " + v.field.type + " " + v.field.identifier
                         )
+                        println(
+                            "\t\tgetter: "
+                        )
+                        if(v.accessor == null) {
+                            println("\t\t\t" + "null")
+                        }else{
+                            when(v.accessor){
+                                is SimpleAccessor -> println("\t\t\tsimple")
+                                is ExpressionAccessor -> println("\t\t\t" + v.accessor.ctx.text)
+                                is FunctionAccessor -> {
+                                    for (d in v.accessor.function.commands) {
+                                        println("\t\t\t" + d)
+                                    }
+                                }
+                                is NativeAccessor -> println("\t\t\t" + v.accessor.function.javaMethod.name)
+                            }
+                        }
+                        println(
+                            "\t\tsetter: "
+                        )
+                        if(v.mutator == null) {
+                            println("\t\t\t" + "null")
+                        }else{
+                            when(v.mutator){
+                                is SimpleMutator -> println("\t\t\tsimple")
+                                is ExpressionMutator -> println("\t\t\t" + v.mutator.ctx.text)
+                                is FunctionMutator -> {
+                                    for (d in v.mutator.function.commands) {
+                                        println("\t\t\t" + d)
+                                    }
+                                }
+                                is NativeMutator -> println("\t\t\t" + v.mutator.function.javaMethod.name)
+                            }
+                        }
                     }
                 }
             }

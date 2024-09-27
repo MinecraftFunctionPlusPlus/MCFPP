@@ -4,7 +4,9 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import top.mcfpp.CompileSettings
 import top.mcfpp.Project
+import top.mcfpp.command.CommentType
 import top.mcfpp.io.MCFPPFile
+import top.mcfpp.model.function.Function
 import kotlin.math.min
 
 object LogProcessor {
@@ -31,6 +33,7 @@ object LogProcessor {
         logger.warn(
             msg + if(Project.ctx !=null) {"\n    at " + MCFPPFile.currFile!!.absolutePath + ":" + Project.ctx!!.getStart().line}else{""}
         )
+        Function.addComment(msg, CommentType.WARN)
         Project.warningCount++
         if(CompileSettings.isDebug){
             val stackTrace = Thread.currentThread().stackTrace
@@ -47,6 +50,7 @@ object LogProcessor {
 
     inline fun warn(msg: String, e: Exception){
         logger.warn(msg, e)
+        Function.addComment(msg, CommentType.WARN)
         Project.warningCount++
         if(CompileSettings.isDebug){
             val stackTrace = Thread.currentThread().stackTrace
@@ -65,6 +69,7 @@ object LogProcessor {
         logger.error(
             msg + if(Project.ctx !=null) {"\n    at " + MCFPPFile.currFile!!.absolutePath + ":" + Project.ctx!!.getStart().line}else{""}
         )
+        Function.addComment(msg, CommentType.ERROR)
         Project.errorCount++
         if(CompileSettings.isDebug){
             val stackTrace = Thread.currentThread().stackTrace
@@ -81,6 +86,7 @@ object LogProcessor {
 
     inline fun error(msg: String, e: Exception){
         logger.error(msg, e)
+        Function.addComment(msg, CommentType.ERROR)
         Project.errorCount++
         if(CompileSettings.isDebug){
             val stackTrace = Thread.currentThread().stackTrace

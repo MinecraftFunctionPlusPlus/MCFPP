@@ -25,7 +25,7 @@ object NBTUtil {
             is MCStringConcrete -> return v.value
             is NBTBasedDataConcrete<*> -> return v.value
             //is NBTAny<*> -> return v.value
-            is SimpleAccessor -> return toNBT(v.field)
+            is PropertyVar -> return toNBT(v.property.getter(v.caller))
             else -> TODO()
         }
     }

@@ -22,7 +22,7 @@ class LogicStatementTest {
                     print("end");
                 }
             """.trimIndent()
-        MCFPPStringTest.readFromString(test, "D:\\.minecraft\\saves\\MCFPP Studio\\datapacks")
+        MCFPPStringTest.readFromString(test, targetPath = "D:\\.minecraft\\saves\\MCFPP Studio\\datapacks")
     }
 
     @Test
@@ -37,7 +37,7 @@ class LogicStatementTest {
                     }
             }
             """.trimIndent()
-        MCFPPStringTest.readFromString(test, "D:\\.minecraft\\saves\\MCFPP Studio\\datapacks")
+        MCFPPStringTest.readFromString(test, targetPath = "D:\\.minecraft\\saves\\MCFPP Studio\\datapacks")
     }
 
     @Test
@@ -52,7 +52,7 @@ class LogicStatementTest {
                 } while(i < 10);
             }
         """.trimIndent()
-        MCFPPStringTest.readFromString(test, "D:\\.minecraft\\saves\\MCFPP Studio\\datapacks")
+        MCFPPStringTest.readFromString(test, targetPath = "D:\\.minecraft\\saves\\MCFPP Studio\\datapacks")
     }
 
     @Test
@@ -65,6 +65,6 @@ class LogicStatementTest {
                 }
             }
         """.trimIndent()
-        MCFPPStringTest.readFromString(test, "D:\\.minecraft\\saves\\MCFPP Studio\\datapacks")
+        MCFPPStringTest.readFromString(test, targetPath = "D:\\.minecraft\\saves\\MCFPP Studio\\datapacks")
     }
 }

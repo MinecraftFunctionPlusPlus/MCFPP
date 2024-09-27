@@ -98,6 +98,8 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType, IFi
         functions.addAll(field.functions)
         //类型
         types.putAll(field.types)
+        //属性
+        property.putAll(field.property)
     }
 
     //region Var<*>

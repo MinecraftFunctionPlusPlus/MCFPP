@@ -29,4 +29,49 @@ class ClassTest {
         MCFPPStringTest.readFromString(test)
     }
 
+    @Test
+    fun propertyTest(){
+        val test =
+            """
+                class Test{
+                    int i {
+                        get {
+                            print("get i");
+                            return this.i;
+                        }
+                        
+                        set {
+                            print("set i");
+                            this.i = value;
+                        }
+                    };
+                    
+                    int j {
+                        get {
+                            print("get j");
+                            return 0;
+                        }
+                    };
+                    
+                    int k {
+                        set {
+                            print("set k");
+                            this.k = value;
+                        }
+                    };
+                }
+                
+                func main{
+                    Test test = Test();
+                    print(test.i);
+                    print(test.j);
+                    print(test.k);
+                    test.i = 4;
+                    test.j = 5;
+                    test.k = 7;
+                }
+            """.trimIndent()
+        MCFPPStringTest.readFromString(test, arrayOf())
+    }
+
 }

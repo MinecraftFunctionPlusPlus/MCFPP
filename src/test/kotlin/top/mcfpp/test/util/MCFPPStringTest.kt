@@ -17,10 +17,16 @@ import java.io.FileInputStream
 import java.nio.file.Path
 
 object MCFPPStringTest {
-    fun readFromString(str: String, targetPath: String = "null"){
-        val source: ConfigurationSource
-        source = ConfigurationSource(FileInputStream("log4j2.xml"))
+    fun readFromString(str: String, args: Array<String> = arrayOf(), targetPath: String = "null"){
+        val source = ConfigurationSource(FileInputStream("log4j2.xml"))
         Configurator.initialize(null,source)
+        //编译参数
+        if(args.isNotEmpty()){
+            if(args.contains("debug")){
+                CompileSettings.isDebug = true
+                LogProcessor.warn("Compiling in debug mode.")
+            }
+        }
         //读取json
         LogProcessor.debug("Generate debug project for a string")
         Project.config.root = Path.of("./")

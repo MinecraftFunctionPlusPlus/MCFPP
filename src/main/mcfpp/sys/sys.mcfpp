@@ -7,3 +7,7 @@ func print(any a) = top.mcfpp.mni.System.print;
 
 #func insert(string i) = top.mcfpp.mni.System.insert;
 func debug() = top.mcfpp.mni.System.debug;
+
+func info(string s) = top.mcfpp.mni.System.info;
+func warn(string s) = top.mcfpp.mni.System.warn;
+func error(string s) = top.mcfpp.mni.System.error;

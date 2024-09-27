@@ -10,7 +10,7 @@ import top.mcfpp.type.MCFPPType
 
 class PropertyVar(val property: Property, val caller: CanSelectMember): Var<PropertyVar>(property.field.identifier) {
 
-    override var type: MCFPPType = MCFPPPrivateType.Property
+    override var type: MCFPPType = property.field.type
 
     override fun doAssign(b: Var<*>): PropertyVar {
         return PropertyVar(Property.buildSimpleProperty(property.setter(caller, b)), caller)
