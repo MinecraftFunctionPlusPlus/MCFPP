@@ -66,7 +66,7 @@ public class PlayerEntityData extends EntityVarData {
             );
         }else {
             commands = Commands.INSTANCE.runAsEntity(caller.getEntity(),
-                    new Command("return run advancement grant @s only").buildMacro(advancement.getIdentifier(), true).buildMacroCommand()
+                    new Command("return run advancement grant @s only").buildMacro(advancement.getIdentifier(), true).buildMacroFunction()
             );
         }
         returnValue.setValue(new CommandReturn(commands[commands.length - 1], "return"));

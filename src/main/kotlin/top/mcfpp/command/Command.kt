@@ -178,7 +178,7 @@ open class Command {
     }
 
     /**
-     * 在这条命令的末尾构建一个宏参数。得到的命令需要使用[buildMacroCommand]方法进行转换才能使用。
+     * 在这条命令的末尾构建一个宏参数。得到的命令需要使用[buildMacroFunction]方法进行转换才能使用。
      *
      * 插入的命令片段的值为空字符串，替换位点的id为宏参数
      */
@@ -189,7 +189,7 @@ open class Command {
      *
      * @return 用来调用 *执行宏参数的函数* 的function命令。***需要自行补全`with`参数***
      */
-    fun buildMacroCommand() : Command{
+    fun buildMacroFunction() : Command{
         val f = UUID.randomUUID().toString()
         Project.macroFunction[f] = this.toMacro()
         return Command.build("function mcfpp:dynamic/$f")
@@ -201,7 +201,7 @@ open class Command {
      * @param nbtPath 用于替换宏参数的nbt路径
      * @return 用来调用 *执行宏参数的函数* 的function命令。无需自行补全with参数
      */
-    fun buildMacroCommand(nbtPath: NBTPath): Command{
+    fun buildMacroFunction(nbtPath: NBTPath): Command{
         val f = UUID.randomUUID().toString()
         Project.macroFunction[f] = this.toMacro()
         return Command.build("function mcfpp:dynamic/$f with").build(nbtPath.toCommandPart())

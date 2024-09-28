@@ -2,7 +2,6 @@ package top.mcfpp.core.lang
 
 import net.querz.nbt.tag.StringTag
 import top.mcfpp.command.Command
-import top.mcfpp.model.accessor.SimpleAccessor
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
@@ -298,7 +297,7 @@ open class CoordinateDimension: MCNumber<Number> {
     }
 
     /**
-     * 返回此坐标维度作为命令部分的表示。可能为宏函数，需要[Command.buildMacroCommand]转换
+     * 返回此坐标维度作为命令部分的表示。可能为宏函数，需要[Command.buildMacroFunction]转换
      */
     open fun toCommandPart(): Command{
         val c = if(prefix is MCStringConcrete){

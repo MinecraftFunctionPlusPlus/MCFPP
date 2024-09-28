@@ -11,10 +11,12 @@ import top.mcfpp.type.MCFPPClassType
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.ObjectClass
+import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.util.Utils
 import java.util.*
+import kotlin.math.truncate
 
 /**
  * 命令总类，提供了大量用于生成命令的方法。默认提供了一些可替换的位点
@@ -175,6 +177,16 @@ object Commands {
         operation(f)
         Function.currFunction = l
         return f.commands.toTypedArray()
+    }
+
+    fun tempFunction(parent: Function, operation: (tempFunction: Function) -> Unit) : Pair<Command, Function>{
+        val l = Function.currFunction
+        val f = NoStackFunction(parent.identifier + "_temp_" + UUID.randomUUID().toString(), parent)
+        GlobalField.localNamespaces[Project.currNamespace]!!.field.addFunction(f, false)
+        Function.currFunction = f
+        operation(f)
+        Function.currFunction = l
+        return function(f) to f
     }
 
     fun runAsEntity(entityVar: EntityVar, command: Command): Array<Command>{

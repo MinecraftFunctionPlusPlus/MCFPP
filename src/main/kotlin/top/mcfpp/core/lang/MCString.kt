@@ -6,8 +6,6 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.model.accessor.SimpleAccessor
-import top.mcfpp.exception.OperationNotImplementException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPNBTType
@@ -100,7 +98,7 @@ open class MCString : NBTBasedData {
                 }
                 final.last().build(Commands.dataSetValue(nbtPath, b.value))
                 if(final.last().isMacro){
-                    Function.addCommand(final.last().buildMacroCommand())
+                    Function.addCommand(final.last().buildMacroFunction())
                 }else{
                     Function.addCommand(final.last())
                 }
@@ -113,7 +111,7 @@ open class MCString : NBTBasedData {
                 }
                 final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
                 if(final.last().isMacro){
-                    Function.addCommand(final.last().buildMacroCommand())
+                    Function.addCommand(final.last().buildMacroFunction())
                 }else{
                     Function.addCommand(final.last())
                 }
@@ -128,7 +126,7 @@ open class MCString : NBTBasedData {
                 }
                 final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
                 if(final.last().isMacro){
-                    Function.addCommand(final.last().buildMacroCommand())
+                    Function.addCommand(final.last().buildMacroFunction())
                 }else{
                     Function.addCommand(final.last())
                 }

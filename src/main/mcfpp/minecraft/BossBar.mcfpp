@@ -1,7 +1,11 @@
 @From<"top.mcfpp.mni.minecraft.BossBarData">
 data BossBar{
+
     string id;
-    text name;
+
+    int max { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; };
+    int value { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; };
+    bool visible { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; };
 
     constructor(string id){
         this.id = id;
@@ -12,10 +16,26 @@ data BossBar{
         this.id = id;
         this.name = name;
     }
-
-    func add() -> CommandReturn = top.mcfpp.mni.minecraft.BossBarData.add;
 }
 
 @From<"top.mcfpp.mni.minecraft.BossBarData">
 object data BossBar{
+}
+
+enum BossBarStyle{
+    PROGRESS,
+    NOTCHED_6,
+    NOTCHED_10,
+    NOTCHED_12,
+    NOTCHED_20
+}
+
+enum BossBarColor{
+    PINK,
+    BLUE,
+    RED,
+    GREEN,
+    YELLOW,
+    PURPLE,
+    WHITE
 }
