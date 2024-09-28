@@ -11,6 +11,7 @@ import top.mcfpp.model.Enum
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
@@ -62,10 +63,26 @@ open class EnumVar : Var<EnumVar> {
     override fun doAssign(b: Var<*>): EnumVar {
         return when(b){
             is EnumVar -> {
-                val i = this.getIntVar().assign(b.getIntVar()) as MCInt
-                if(i is MCIntConcrete) EnumVarConcrete(i, enum)
-                else EnumVar(i, enum)
+                if(b.enum != enum){
+                    LogProcessor.error("Enum type not match: ${b.enum.identifier}(${b.enum.namespaceID}) and ${enum.identifier}(${enum.namespaceID})")
+                    return this
+                }
+                val i = this.asIntVar().assign(b.asIntVar()) as MCInt
+                if(i is MCIntConcrete) {
+                    val member = enum.getMember(i.value)
+                    if(member == null){
+                        LogProcessor.error("Enum member not found: ${i.value}")
+                        return this
+                    }
+                    asNBTVar().assign(NBTBasedDataConcrete(member.data))    //nbt赋值
+                    EnumVarConcrete(this, i.value)
+                }
+                else {
+                    asNBTVar().assign(b.asNBTVar())    //nbt赋值
+                    this
+                }
             }
+
             is MCStringConcrete -> {
                 val value = b.value.value
                 val member = enum.members[value]
@@ -94,24 +111,20 @@ open class EnumVar : Var<EnumVar> {
     }
 
     override fun storeToStack() {
-        if(parent != null) return
-        Function.addCommand(
-            Command("execute store result")
-                .build(nbtPath.toCommandPart())
-                .build("int 1 run scoreboard players get $name ${SbObject.MCFPP_default}")
-        )
+        //什么都不用做哦
     }
 
     override fun getFromStack() {
-        if(parent != null) return
-        Function.addCommand(
-            Command("execute store result score $name ${SbObject.MCFPP_default} run data get")
-                .build(nbtPath.toCommandPart())
-        )
+        //什么都不用做哦
     }
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        TODO("Not yet implemented")
+        return when(key){
+            "identifier" -> MCString("identifier").apply { nbtPath = this@EnumVar.nbtPath.memberIndex("identifier") } to true
+            "value" -> MCInt("value").apply { nbtPath = this@EnumVar.nbtPath.memberIndex("value")} to true
+            "data" -> NBTBasedData("data").apply { nbtPath = this@EnumVar.nbtPath.memberIndex("data")} to true
+            else -> null to true
+        }
     }
 
     override fun getMemberFunction(
@@ -120,11 +133,15 @@ open class EnumVar : Var<EnumVar> {
         normalParams: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        TODO("Not yet implemented")
+        return UnknownFunction(key) to true
     }
 
-    open fun getIntVar(): MCInt{
+    open fun asIntVar(): MCInt{
         return MCInt(this)
+    }
+
+    open fun asNBTVar(): NBTBasedData{
+        return NBTBasedData(this)
     }
 }
 
@@ -165,10 +182,6 @@ class EnumVarConcrete : EnumVar, MCFPPValue<Int> {
         this.value = enum.value
     }
 
-    constructor(b: MCIntConcrete, enum : Enum): super(b, enum){
-        value = b.value
-    }
-
     override fun clone(): EnumVarConcrete {
         return EnumVarConcrete(this)
     }
@@ -192,6 +205,7 @@ class EnumVarConcrete : EnumVar, MCFPPValue<Int> {
             Function.addCommand(cmd.build("scoreboard players set $name ${SbObject.MCFPP_default} $value", false))
         }
         val re = EnumVar(this)
+        NBTBasedDataConcrete(enum.getMember(value)!!.data).toDynamic(false)
         if(replace){
             if(parentTemplate() != null){
                 (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
@@ -227,7 +241,7 @@ class EnumVarConcrete : EnumVar, MCFPPValue<Int> {
         return EnumVarConcrete(enum ,value)
     }
 
-    override fun getIntVar(): MCInt {
+    override fun asIntVar(): MCInt {
         return MCIntConcrete(this)
     }
 }

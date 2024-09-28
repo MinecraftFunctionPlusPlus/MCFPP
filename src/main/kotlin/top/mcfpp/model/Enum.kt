@@ -1,5 +1,9 @@
 package top.mcfpp.model
 
+import net.querz.nbt.tag.CompoundTag
+import net.querz.nbt.tag.IntTag
+import net.querz.nbt.tag.StringTag
+import net.querz.nbt.tag.Tag
 import top.mcfpp.lib.SbObject
 import top.mcfpp.type.MCFPPEnumType
 import top.mcfpp.model.field.GlobalField
@@ -11,7 +15,14 @@ class Enum(identifier: String, namespace: String) : CompoundData(identifier, nam
 
     var members: HashMap<String, EnumMember> = HashMap()
 
-    val values get() = members.map { it.value.value }
+    private val values get() = members.map { it.value.value }
+
+    /**
+     * 获取这个枚举对应的enumType
+     */
+    override val getType: () -> MCFPPEnumType = {
+        MCFPPEnumType(this)
+    }
 
     init {
         GlobalField.scoreboards[namespaceID] = sbObject
@@ -38,20 +49,21 @@ class Enum(identifier: String, namespace: String) : CompoundData(identifier, nam
         return i
     }
 
-    /**
-     * 获取这个类对于的classType
-     */
-    override val getType: () -> MCFPPEnumType = {
-        MCFPPEnumType(this)
+    fun getNBTCompoundTag(): CompoundTag{
+        val tag = CompoundTag()
+        members.forEach {
+            val memberTag = CompoundTag()
+            memberTag.put("identifier", StringTag(it.value.identifier))
+            memberTag.put("value", IntTag(it.value.value))
+            memberTag.put("data", it.value.data)
+            tag.put(it.key, memberTag)
+        }
+        return tag
+    }
+
+    fun getMember(value: Int): EnumMember?{
+        return members.values.find { it.value == value }
     }
 }
 
-class EnumMember{
-    var identifier: String
-    var value: Int
-
-    constructor(identifier: String, value: Int) {
-        this.identifier = identifier
-        this.value = value
-    }
-}
+data class EnumMember(var identifier: String, var value: Int, var data: Tag<*> = IntTag())

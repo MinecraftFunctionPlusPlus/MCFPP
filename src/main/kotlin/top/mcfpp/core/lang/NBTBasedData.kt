@@ -55,13 +55,15 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable{
      */
     constructor(b: NBTBasedData) : super(b)
 
+    constructor(b: EnumVar): super(b)
+
     /**
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
     override fun doAssign(b: Var<*>) : NBTBasedData {
         return when (b) {
-            is NBTBasedData -> assignCommand(b as NBTBasedData)
+            is NBTBasedData -> assignCommand(b)
             is MCFPPValue<*> -> assignCommand(NBTBasedDataConcrete(NBTUtil.toNBT(b)!!) as NBTBasedData)
             else -> {
                 LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
@@ -164,12 +166,10 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable{
 
     override fun storeToStack() {
         //什么都不用做哦
-        return
     }
 
     override fun getFromStack() {
         //什么都不用做哦
-        return
     }
 
     /**

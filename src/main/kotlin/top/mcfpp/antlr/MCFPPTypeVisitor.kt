@@ -1,5 +1,7 @@
 package top.mcfpp.antlr
 
+import net.querz.nbt.io.SNBTUtil
+import net.querz.nbt.tag.IntTag
 import top.mcfpp.Project
 import top.mcfpp.core.lang.MCAny
 import top.mcfpp.core.lang.Var
@@ -381,13 +383,9 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         nsp.field.addEnum(id, enum)
         //添加成员
         for (m in ctx.enumBody().enumMember()) {
-            val value = if(m.intValue() != null){
-                //获取enum的int值
-                m.intValue().text.toInt()
-            }else{
-                enum.getNextMemberValue()
-            }
-            val member = EnumMember(m.Identifier().text, value)
+            val value = enum.getNextMemberValue()
+            val data = m.nbtValue()?.let {SNBTUtil.fromSNBT(it.text)}
+            val member = EnumMember(m.Identifier().text, value, data?:IntTag(0))
             enum.addMember(member)
         }
     }

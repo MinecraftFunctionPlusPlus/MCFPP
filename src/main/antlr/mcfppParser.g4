@@ -231,7 +231,7 @@ enumBody
     ;
 
 enumMember
-    :   Identifier ('=' intValue)?
+    :   Identifier ('=' nbtValue)?
     ;
 
 
