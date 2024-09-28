@@ -79,7 +79,7 @@ open class MCString : NBTBasedData {
     @Throws(VariableConverseException::class)
     override fun doAssign(b: Var<*>): MCString {
         when (b) {
-            is MCString -> return assignCommand(b) as MCString
+            is MCString -> return assignCommand(b)
             else -> LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
         }
         return this

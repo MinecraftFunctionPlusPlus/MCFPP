@@ -203,7 +203,7 @@ class HoverEventShowEntityStyle(val name: ChatComponent?, val type: EntityTypeCo
             c.build("\"name\": \"$name\", ", false)
         }
         c.build("\"type\": \"${type.value}\"", false)
-        if(uuid is NBTBasedDataConcrete<*>){
+        if(uuid is NBTBasedDataConcrete){
             if(uuid.value is IntArrayTag && (uuid.value as IntArrayTag).value.size == 4){
                 c.build("\"id\": \"${uuid.value}\"", false)
             }else{

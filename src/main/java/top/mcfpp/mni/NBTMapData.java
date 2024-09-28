@@ -8,6 +8,7 @@ import top.mcfpp.core.lang.bool.MCBool;
 import top.mcfpp.core.lang.bool.MCBoolConcrete;
 import top.mcfpp.util.ValueWrapper;
 
+@SuppressWarnings({"unchecked"})
 public class NBTMapData {
 
     @MNIFunction(caller = "dict")

@@ -71,9 +71,9 @@ open class NBTList : NBTBasedData {
     override fun doAssign(b: Var<*>): NBTList {
         return when (b) {
             is NBTList -> assignCommand(b)
-            is NBTBasedDataConcrete<*> -> {
+            is NBTBasedDataConcrete -> {
                 if (b.nbtType == this.nbtType) {
-                    assignCommand(b as NBTBasedDataConcrete<ListTag<*>>)
+                    assignCommand(b)
                 } else {
                     throw VariableConverseException()
                 }
@@ -102,7 +102,7 @@ open class NBTList : NBTBasedData {
                 a.getTempVar()
             }else a
             val final = Commands.selectRun(parent!!)
-            if (b is NBTBasedDataConcrete<*>) {
+            if (b is NBTBasedDataConcrete) {
                 //对类中的成员的值进行修改
                 if(final.size == 2){
                     Function.addCommand(final[0])
@@ -213,8 +213,6 @@ open class NBTList : NBTBasedData {
 }
 
 /**
- *
- * @param E 没有用，但是不要随便删这个类型形参，会把NBTListConcreteData类弄坏，我也不知道为什么qwq
  *
  * 2024.7.12：我试过了，是真的，会坏
  *

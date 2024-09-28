@@ -23,7 +23,7 @@ object NBTUtil {
             is MCFPPTypeVar -> TODO()
             is MCIntConcrete -> return IntTag(v.value)
             is MCStringConcrete -> return v.value
-            is NBTBasedDataConcrete<*> -> return v.value
+            is NBTBasedDataConcrete -> return v.value
             //is NBTAny<*> -> return v.value
             is PropertyVar -> return toNBT(v.property.getter(v.caller))
             else -> TODO()

@@ -96,7 +96,7 @@ class NBTPath(var source: NBTSource): Serializable {
 
                 is NBTPredicatePath -> {
                     val value = (path.value as NBTPredicatePath).value
-                    if(value is NBTBasedDataConcrete<*>){
+                    if(value is NBTBasedDataConcrete){
                         cmd.build("[${SNBTUtil.toSNBT(value.value)}]", false)
                     }else{
                         cmd.build("[", false).buildMacro(value.identifier, false).build("]", false)

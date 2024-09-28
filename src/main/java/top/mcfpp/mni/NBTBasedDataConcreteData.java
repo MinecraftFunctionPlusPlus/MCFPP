@@ -11,7 +11,7 @@ import top.mcfpp.util.ValueWrapper;
 public class NBTBasedDataConcreteData {
 
     @MNIFunction(caller = "nbt", returnType = "text")
-    public static void toText(@NotNull NBTBasedDataConcrete<?> caller, ValueWrapper<JsonTextConcrete> returnValue){
+    public static void toText(@NotNull NBTBasedDataConcrete caller, ValueWrapper<JsonTextConcrete> returnValue){
         var l = new ListChatComponent();
         l.getComponents().add(new PlainChatComponent(caller.getValue().valueToString()));
         returnValue.setValue(new JsonTextConcrete(l, "re"));

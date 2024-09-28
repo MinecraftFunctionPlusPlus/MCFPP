@@ -20,6 +20,7 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.UUID;
 
+@SuppressWarnings({"unchecked","rawtypes"})
 public class NBTListConcreteData {
 
     @InsertCommand
@@ -119,7 +120,7 @@ public class NBTListConcreteData {
                         Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + e.getIdentifier())};
             }
             Function.Companion.addCommands(command);
-        }else if(e instanceof MCFPPValue<?> eC){
+        }else if(e instanceof MCFPPValue<?>){
             //e是确定的，index不是确定的，需要使用宏
             caller.toDynamic(true);
             Tag<?> tag = NBTUtil.INSTANCE.toNBT(e);
@@ -224,7 +225,7 @@ public class NBTListConcreteData {
     @MNIFunction(normalParams = {"E e"}, caller = "list<E>", returnType = "bool")
     public static void contains(Var<?> e, NBTListConcrete caller, ValueWrapper<MCBool> returnVar){
         var n = e.toNBTVar();
-        if(n instanceof NBTBasedDataConcrete<?> nC){
+        if(n instanceof NBTBasedDataConcrete nC){
             var contains = ((ListTag) caller.getValue()).contains(nC.getValue());
             returnVar.setValue(new MCBoolConcrete(contains, UUID.randomUUID().toString()));
         }else {

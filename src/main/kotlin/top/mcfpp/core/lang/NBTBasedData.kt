@@ -77,7 +77,7 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable{
         nbtType = a.nbtType
         return assignCommandLambda(a,
             ifThisIsClassMemberAndAIsConcrete = {b, final ->
-                b as NBTBasedDataConcrete<*>
+                b as NBTBasedDataConcrete
                 //对类中的成员的值进行修改
                 if(final.size == 2){
                     Function.addCommand(final[0])
@@ -104,7 +104,7 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable{
                 NBTBasedData(this)
             },
             ifThisIsNormalVarAndAIsConcrete = {b, _ ->
-                NBTBasedDataConcrete(this, (b as NBTBasedDataConcrete<*>).value)
+                NBTBasedDataConcrete(this, (b as NBTBasedDataConcrete).value)
             },
             ifThisIsNormalVarAndAIsClassMember = {b, final ->
                 if(final.size == 2){
@@ -400,13 +400,13 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable{
     }
 }
 
-class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData, MCFPPValue<T> {
+class NBTBasedDataConcrete : NBTBasedData, MCFPPValue<Tag<*>> {
 
-    override lateinit var value : T
+    override lateinit var value : Tag<*>
 
     constructor(
         curr: FieldContainer,
-        value: T,
+        value: Tag<*>,
         identifier: String = UUID.randomUUID().toString()
     ) : super(curr.prefix + identifier) {
         this.value = value
@@ -414,17 +414,17 @@ class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData, MCFPPValue<T> {
         nbtType = NBTBasedData.Companion.NBTTypeWithTag.getTagType(value)
     }
 
-    constructor(value: T, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
+    constructor(value: Tag<*>, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
         this.value = value
         //记录nbt字面量类型
         nbtType = NBTBasedData.Companion.NBTTypeWithTag.getTagType(value)
     }
 
-    constructor(data: NBTBasedData, value: T) : super(data) {
+    constructor(data: NBTBasedData, value: Tag<*>) : super(data) {
         this.value = value
     }
 
-    constructor(v: NBTBasedDataConcrete<T>) : super(v){
+    constructor(v: NBTBasedDataConcrete) : super(v){
         this.value = v.value
     }
 
@@ -453,11 +453,11 @@ class NBTBasedDataConcrete<T: Tag<*>> : NBTBasedData, MCFPPValue<T> {
         return buildCastErrorVar(type)
     }
 
-    override fun clone(): NBTBasedDataConcrete<T> {
+    override fun clone(): NBTBasedDataConcrete {
         return NBTBasedDataConcrete(this)
     }
 
-    override fun getTempVar(): NBTBasedDataConcrete<T> {
+    override fun getTempVar(): NBTBasedDataConcrete {
         return NBTBasedDataConcrete(this.value)
     }
 

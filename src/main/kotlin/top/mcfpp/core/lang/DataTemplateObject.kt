@@ -56,7 +56,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
 
     override fun doAssign(b: Var<*>): DataTemplateObject {
         when (b) {
-            is NBTBasedDataConcrete<*> -> {
+            is NBTBasedDataConcrete -> {
                 if (b.value !is CompoundTag) {
                     LogProcessor.error("Not a compound tag: ${b.value}")
                     return this
