@@ -14,6 +14,7 @@ import top.mcfpp.model.function.Function;
 import top.mcfpp.util.ValueWrapper;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -65,9 +66,11 @@ public class PlayerEntityData extends EntityVarData {
                     new Command("advancement grant @s only " + ((AdvancementConcrete) advancement).getValue())
             );
         }else {
-            commands = Commands.INSTANCE.runAsEntity(caller.getEntity(),
-                    new Command("return run advancement grant @s only").buildMacro(advancement.getIdentifier(), true).buildMacroFunction()
-            );
+            var c = new Command("advancement grant @s only").buildMacro(advancement, true).buildMacroFunction();
+            commands = Commands.INSTANCE.runAsEntity(caller.getEntity(), c[c.length - 1]);
+            var l = Arrays.asList(c).subList(0, c.length - 1);
+            l.addAll(Arrays.asList(commands));
+            commands = l.toArray(new Command[0]);
         }
         returnValue.setValue(new CommandReturn(commands[commands.length - 1], "return"));
         Function.Companion.addCommands(commands);
@@ -90,9 +93,11 @@ public class PlayerEntityData extends EntityVarData {
                     new Command("advancement grant @s from " + ((AdvancementConcrete) advancement).getValue())
             );
         }else {
-            commands = Commands.INSTANCE.runAsEntity(caller.getEntity(),
-                    new Command("return advancement grant @s from").buildMacro(advancement.getIdentifier(), true)
-            );
+            var c = new Command("return run advancement grant @s from").buildMacro(advancement, true).buildMacroFunction();
+            commands = Commands.INSTANCE.runAsEntity(caller.getEntity(), c[c.length - 1]);
+            var l = Arrays.asList(c).subList(0, c.length - 1);
+            l.addAll(Arrays.asList(commands));
+            commands = l.toArray(new Command[0]);
         }
         returnValue.setValue(new CommandReturn(commands[commands.length - 1], "return"));
         Function.Companion.addCommands(commands);
@@ -106,9 +111,11 @@ public class PlayerEntityData extends EntityVarData {
                     new Command("advancement grant @s through " + ((AdvancementConcrete) advancement).getValue())
             );
         }else {
-            commands = Commands.INSTANCE.runAsEntity(caller.getEntity(),
-                    new Command("advancement grant @s through").buildMacro(advancement.getIdentifier(), true)
-            );
+            var c = new Command("return run advancement grant @s through").buildMacro(advancement, true).buildMacroFunction();
+            commands = Commands.INSTANCE.runAsEntity(caller.getEntity(), c[c.length - 1]);
+            var l = Arrays.asList(c).subList(0, c.length - 1);
+            l.addAll(Arrays.asList(commands));
+            commands = l.toArray(new Command[0]);
         }
         returnValue.setValue(new CommandReturn(commands[commands.length - 1], "return"));
         Function.Companion.addCommands(commands);
@@ -122,9 +129,11 @@ public class PlayerEntityData extends EntityVarData {
                     new Command("advancement grant @s until " + ((AdvancementConcrete) advancement).getValue())
             );
         }else {
-            commands = Commands.INSTANCE.runAsEntity(caller.getEntity(),
-                    new Command("advancement grant @s until").buildMacro(advancement.getIdentifier(), true)
-            );
+            var c = new Command("return run advancement grant @s until").buildMacro(advancement, true).buildMacroFunction();
+            commands = Commands.INSTANCE.runAsEntity(caller.getEntity(), c[c.length - 1]);
+            var l = Arrays.asList(c).subList(0, c.length - 1);
+            l.addAll(Arrays.asList(commands));
+            commands = l.toArray(new Command[0]);
         }
         returnValue.setValue(new CommandReturn(commands[commands.length - 1], "return"));
         Function.Companion.addCommands(commands);
@@ -138,9 +147,11 @@ public class PlayerEntityData extends EntityVarData {
                     new Command("advancement revoke @s only " + ((AdvancementConcrete) advancement).getValue())
             );
         }else {
-            commands = Commands.INSTANCE.runAsEntity(caller.getEntity(),
-                    new Command("advancement revoke @s only").buildMacro(advancement.getIdentifier(), true)
-            );
+            var c = new Command("advancement revoke @s only").buildMacro(advancement, true).buildMacroFunction();
+            commands = Commands.INSTANCE.runAsEntity(caller.getEntity(), c[c.length - 1]);
+            var l = Arrays.asList(c).subList(0, c.length - 1);
+            l.addAll(Arrays.asList(commands));
+            commands = l.toArray(new Command[0]);
         }
         returnValue.setValue(new CommandReturn(commands[commands.length - 1], "return"));
         Function.Companion.addCommands(commands);
@@ -163,9 +174,11 @@ public class PlayerEntityData extends EntityVarData {
                     new Command("advancement revoke @s from " + ((AdvancementConcrete) advancement).getValue())
             );
         }else {
-            commands = Commands.INSTANCE.runAsEntity(caller.getEntity(),
-                    new Command("advancement revoke @s from").buildMacro(advancement.getIdentifier(), true)
-            );
+            var c = new Command("advancement revoke @s from").buildMacro(advancement, true).buildMacroFunction();
+            commands = Commands.INSTANCE.runAsEntity(caller.getEntity(), c[c.length - 1]);
+            var l = Arrays.asList(c).subList(0, c.length - 1);
+            l.addAll(Arrays.asList(commands));
+            commands = l.toArray(new Command[0]);
         }
         returnValue.setValue(new CommandReturn(commands[commands.length - 1], "return"));
         Function.Companion.addCommands(commands);
@@ -179,9 +192,11 @@ public class PlayerEntityData extends EntityVarData {
                     new Command("advancement revoke @s through " + ((AdvancementConcrete) advancement).getValue())
             );
         }else {
-            commands = Commands.INSTANCE.runAsEntity(caller.getEntity(),
-                    new Command("advancement revoke @s through").buildMacro(advancement.getIdentifier(), true)
-            );
+            var c = new Command("advancement revoke @s through").buildMacro(advancement, true).buildMacroFunction();
+            commands = Commands.INSTANCE.runAsEntity(caller.getEntity(), c[c.length - 1]);
+            var l = Arrays.asList(c).subList(0, c.length - 1);
+            l.addAll(Arrays.asList(commands));
+            commands = l.toArray(new Command[0]);
         }
         returnValue.setValue(new CommandReturn(commands[commands.length - 1], "return"));
         Function.Companion.addCommands(commands);
@@ -195,9 +210,11 @@ public class PlayerEntityData extends EntityVarData {
                     new Command("advancement revoke @s until " + ((AdvancementConcrete) advancement).getValue())
             );
         }else {
-            commands = Commands.INSTANCE.runAsEntity(caller.getEntity(),
-                    new Command("advancement revoke @s until").buildMacro(advancement.getIdentifier(), true)
-            );
+            var c = new Command("advancement revoke @s until").buildMacro(advancement, true).buildMacroFunction();
+            commands = Commands.INSTANCE.runAsEntity(caller.getEntity(), c[c.length - 1]);
+            var l = Arrays.asList(c).subList(0, c.length - 1);
+            l.addAll(Arrays.asList(commands));
+            commands = l.toArray(new Command[0]);
         }
         returnValue.setValue(new CommandReturn(commands[commands.length - 1], "return"));
         Function.Companion.addCommands(commands);
@@ -206,19 +223,25 @@ public class PlayerEntityData extends EntityVarData {
     @MNIFunction(normalParams = {"string key, float scale"}, caller = "Player", returnType = "int")
     public static void getAttribute(MCString id, MCFloat scale, PlayerVar.PlayerEntityVar caller, ValueWrapper<CommandReturn> returnValue){
         Command[] commands;
+        Command command;
         if(id instanceof MCStringConcrete idC){
-            commands = Commands.INSTANCE.runAsEntity(caller.getEntity(),
-                    new Command("attribute @s " + idC.getValue().getValue() + " get")
-            );
+            command = new Command("attribute @s " + idC.getValue().getValue() + " get");
         }else {
-            commands = Commands.INSTANCE.runAsEntity(caller.getEntity(),
-                    new Command("attribute @s").buildMacro(id.getIdentifier(), true).build("get", false)
-            );
+            command = new Command("attribute @s").buildMacro(id, true).build("get", false);
         }
         if(scale instanceof MCFloatConcrete scaleC){
-            commands[commands.length - 1] = commands[commands.length - 1].build(scaleC.getValue().toString(), true);
+             command.build(scaleC.getValue().toString(), true);
         }else {
-            commands[commands.length - 1] = commands[commands.length - 1].buildMacro(scale.getIdentifier(), true);
+            command.buildMacro(scale, true);
+        }
+        if(command.isMacro()){
+            var mcs = command.buildMacroFunction();
+            commands = Commands.INSTANCE.runAsEntity(caller.getEntity(), mcs[mcs.length - 1]);
+            var l = Arrays.asList(mcs).subList(0, mcs.length - 1);
+            l.addAll(Arrays.asList(commands));
+            commands = l.toArray(new Command[0]);
+        }else {
+            commands = Commands.INSTANCE.runAsEntity(caller.getEntity(), command);
         }
         returnValue.setValue(new CommandReturn(commands[commands.length - 1], "return"));
         Function.Companion.addCommands(commands);

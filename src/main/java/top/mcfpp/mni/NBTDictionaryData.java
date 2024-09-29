@@ -28,7 +28,7 @@ public class NBTDictionaryData {
             Function.Companion.addCommand(new Command("execute " +
                 "store result score" + re.getValue().getIdentifier() + " " + re.getValue().getBoolObject() + " " +
                 "if data")
-                .build(caller.getNbtPath().toCommandPart(), true).build(".", false).buildMacro(key.getIdentifier(), false)
+                .build(caller.getNbtPath().toCommandPart(), true).build(".", false).buildMacro(key, false)
             );
         }
     }
@@ -61,7 +61,7 @@ public class NBTDictionaryData {
             Function.Companion.addCommand(new Command("data remove")
                 .build(caller.getNbtPath().toCommandPart(), true)
                 .build(".", false)
-                .buildMacro(key.getIdentifier(), false)
+                .buildMacro(key, false)
             );
         }
     }

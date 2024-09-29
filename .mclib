@@ -30,13 +30,9 @@
 					]
 				},
 				{
-					"id":"test",
+					"id":"execute_d6cc3275-9d8f-4a89-b688-31b600987893",
 					"normalParams":[
-						{
-							"id":"a",
-							"type":"int",
-							"isStatic":true
-						}
+						
 					],
 					"returnType":"void",
 					"isAbstract":false,

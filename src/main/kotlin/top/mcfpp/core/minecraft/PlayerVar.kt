@@ -2,6 +2,7 @@ package top.mcfpp.core.minecraft
 
 import net.querz.nbt.tag.IntArrayTag
 import top.mcfpp.Project
+import top.mcfpp.command.Command
 import top.mcfpp.core.lang.*
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.core.lang.MCFPPValue

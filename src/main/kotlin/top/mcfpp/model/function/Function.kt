@@ -187,6 +187,11 @@ open class Function : Member, FieldContainer, Serializable {
     var owner : CompoundData? = null
 
     /**
+     * 函数的内部函数
+     */
+    val innerFunction: ArrayList<Function> = ArrayList()
+
+    /**
      * 在什么东西里面
      */
     var ownerType : OwnerType

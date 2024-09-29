@@ -8,6 +8,7 @@ import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.Enum
+import top.mcfpp.model.EnumMember
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
@@ -145,9 +146,9 @@ open class EnumVar : Var<EnumVar> {
     }
 }
 
-class EnumVarConcrete : EnumVar, MCFPPValue<Int> {
+class EnumVarConcrete : EnumVar, MCFPPValue<EnumMember> {
 
-    override var value: Int
+    override lateinit var value: EnumMember
 
     /**
      * 创建一个固定的int
@@ -162,7 +163,7 @@ class EnumVarConcrete : EnumVar, MCFPPValue<Int> {
         value: Int,
         identifier: String = UUID.randomUUID().toString()
     ) : super(enum, curr.prefix + identifier) {
-        this.value = value
+        this.value = enum.getMember(value)!!
     }
 
     /**
@@ -171,11 +172,11 @@ class EnumVarConcrete : EnumVar, MCFPPValue<Int> {
      * @param value 值
      */
     constructor(enum: Enum, value: Int, identifier: String = UUID.randomUUID().toString()) : super(enum ,identifier) {
-        this.value = value
+        this.value = enum.getMember(value)!!
     }
 
     constructor(enum: EnumVar, value: Int) : super(enum){
-        this.value = value
+        this.value = enum.enum.getMember(value)!!
     }
 
     constructor(enum: EnumVarConcrete) : super(enum){
@@ -205,7 +206,7 @@ class EnumVarConcrete : EnumVar, MCFPPValue<Int> {
             Function.addCommand(cmd.build("scoreboard players set $name ${SbObject.MCFPP_default} $value", false))
         }
         val re = EnumVar(this)
-        NBTBasedDataConcrete(enum.getMember(value)!!.data).toDynamic(false)
+        NBTBasedDataConcrete(enum.getMember(value.value)!!.data).toDynamic(false)
         if(replace){
             if(parentTemplate() != null){
                 (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
@@ -238,7 +239,7 @@ class EnumVarConcrete : EnumVar, MCFPPValue<Int> {
     @InsertCommand
     override fun getTempVar(): EnumVar {
         if (isTemp) return this
-        return EnumVarConcrete(enum ,value)
+        return EnumVarConcrete(enum, value.value)
     }
 
     override fun asIntVar(): MCInt {

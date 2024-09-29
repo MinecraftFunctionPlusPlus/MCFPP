@@ -66,4 +66,14 @@ class Enum(identifier: String, namespace: String) : CompoundData(identifier, nam
     }
 }
 
-data class EnumMember(var identifier: String, var value: Int, var data: Tag<*> = IntTag())
+data class EnumMember(var identifier: String, var value: Int, var data: Tag<*> = IntTag()){
+
+    fun dataAsString(): String?{
+        return if (data is StringTag) (data as StringTag).value else null
+    }
+
+    fun dataAsInt(): Int?{
+        return if (data is IntTag) (data as IntTag).asInt() else null
+    }
+
+}

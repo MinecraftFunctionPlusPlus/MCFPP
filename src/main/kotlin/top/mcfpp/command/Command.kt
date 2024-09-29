@@ -1,8 +1,11 @@
 package top.mcfpp.command
 
 import top.mcfpp.Project
+import top.mcfpp.core.lang.Var
 import top.mcfpp.exception.CommandException
+import top.mcfpp.lib.MemberPath
 import top.mcfpp.lib.NBTPath
+import top.mcfpp.model.function.Function
 import java.lang.StringBuilder
 import java.util.*
 import kotlin.collections.ArrayList
@@ -15,7 +18,7 @@ import kotlin.collections.HashMap
  */
 open class Command {
 
-    protected val commandStringList = ArrayList<String>()
+    protected val commandParts = ArrayList<ICommandPart>()
 
     private val tags = ArrayList<String>()
 
@@ -27,15 +30,15 @@ open class Command {
     var isCompleted = false
 
     val isMacro: Boolean
-        get() = commandStringList.any { it.startsWith("$") } || replacePoint.keys.any { it.startsWith("$")}
+        get() = commandParts.any { it is MacroPart }
 
     constructor(command: String){
-        commandStringList.add(command)
+        commandParts.add(CommandPart(command))
     }
 
     constructor(command: String, pointID: String){
-        replacePoint[pointID] = commandStringList.size
-        commandStringList.add(command)
+        replacePoint[pointID] = commandParts.size
+        commandParts.add(CommandPart(command))
     }
 
     /**
@@ -55,27 +58,12 @@ open class Command {
      */
     open fun analyze(): String{
         val sb = StringBuilder()
-        for (c in commandStringList){
+        for (c in commandParts){
             sb.append(c)
         }
-        commandStringList.clear()
-        commandStringList.add(sb.toString())
+        commandParts.clear()
+        commandParts.add(CommandPart(sb.toString()))
         replacePoint.clear()
-        return sb.toString()
-    }
-
-    /**
-     * 转为宏命令。将会把所有可以替换的，且id以$开头的位点设置为宏参数。宏参数的名字和替换位点id相同
-     */
-    fun toMacro() : String{
-        val sb = StringBuilder("$")
-        for (c in commandStringList.indices){
-            if(replacePoint.containsValue(c)){
-                sb.append("$(${replacePoint.filter { it.value == c && it.key.startsWith("$") }.keys.first().substring(1)}) ")
-            }else{
-                sb.append(commandStringList[c]).append(" ")
-            }
-        }
         return sb.toString()
     }
 
@@ -89,7 +77,7 @@ open class Command {
      */
     private fun replace(pointID: String, target: String): Boolean{
         val point = replacePoint[pointID] ?: return false
-        commandStringList[point] = target
+        commandParts[point] = CommandPart(target)
         return true
     }
 
@@ -103,9 +91,9 @@ open class Command {
      */
     private fun replace(pointID: String, target: Command): Boolean{
         val point = replacePoint[pointID] ?: return false
-        commandStringList.removeAt(point)
-        for (c in target.commandStringList.withIndex()){
-            commandStringList.add(point + c.index, c.value)
+        commandParts.removeAt(point)
+        for (c in target.commandParts.withIndex()){
+            commandParts.add(point + c.index, c.value)
         }
         return true
     }
@@ -120,25 +108,25 @@ open class Command {
 
     fun get(pointID: String): String?{
         val point = replacePoint[pointID] ?: return null
-        return commandStringList[point]
+        return commandParts[point].toString()
     }
 
     fun prepend(command: String, withBlank: Boolean = true){
         if(isCompleted){
             throw CommandException("Try to prepend argument to a completed command")
         }
-        if(withBlank) commandStringList.add(0," ")
-        commandStringList.add(0,command)
+        if(withBlank) commandParts.add(0,CommandPart(" "))
+        commandParts.add(0, CommandPart(command))
     }
 
     fun prepend(command: Command, withBlank: Boolean = true){
         if(isCompleted){
             throw CommandException("Try to prepend argument to a completed command")
         }
-        for (c in command.commandStringList){
-            commandStringList.add(0,c)
+        for (c in command.commandParts){
+            commandParts.add(0,c)
         }
-        if(withBlank) commandStringList.add(0," ")
+        if(withBlank) commandParts.add(0,CommandPart(" "))
         replacePoint.putAll(command.replacePoint)
     }
 
@@ -149,17 +137,17 @@ open class Command {
      * @return
      */
     fun build(command: String, withBlank: Boolean = true) : Command{
-        if(withBlank) commandStringList.add(" ")
-        commandStringList.add(command)
+        if(withBlank) commandParts.add(CommandPart(" "))
+        commandParts.add(CommandPart(command))
         return this
     }
 
     fun build(command: Command, withBlank: Boolean = true): Command{
-        if(withBlank) commandStringList.add(" ")
+        if(withBlank) commandParts.add(CommandPart(" "))
         for (kv in command.replacePoint){
-            replacePoint[kv.key] = kv.value + commandStringList.size
+            replacePoint[kv.key] = kv.value + commandParts.size
         }
-        commandStringList.addAll(command.commandStringList)
+        commandParts.addAll(command.commandParts)
         return this
     }
 
@@ -171,9 +159,9 @@ open class Command {
      * @return
      */
     fun build(command: String, pointID: String, withBlank: Boolean = true) : Command{
-        if(withBlank) commandStringList.add(" ")
-        replacePoint[pointID] = commandStringList.size
-        commandStringList.add(command)
+        if(withBlank) commandParts.add(CommandPart(" "))
+        replacePoint[pointID] = commandParts.size
+        commandParts.add(CommandPart(command))
         return this
     }
 
@@ -182,37 +170,58 @@ open class Command {
      *
      * 插入的命令片段的值为空字符串，替换位点的id为宏参数
      */
-    fun buildMacro(id: String, withBlank: Boolean = true) = build("", "$$id", withBlank)
+    fun buildMacro(id: Var<*>, withBlank: Boolean = true) = build("", "$$id", withBlank)
 
     /**
-     * 将此命令以宏命令的方式调用。宏命令的转换方式参考[Command.toMacro]。使用[buildMacro]构筑宏命令
+     * 将此命令以宏命令的方式调用。自动确定宏参数的路径。
      *
-     * @return 用来调用 *执行宏参数的函数* 的function命令。***需要自行补全`with`参数***
+     * @return 用来调用 *执行宏参数的函数* 的function命令，以及传入宏参数使用的值
      */
-    fun buildMacroFunction() : Command{
+    fun buildMacroFunction() : Array<Command>{
         val f = UUID.randomUUID().toString()
-        Project.macroFunction[f] = this.toMacro()
-        return Command.build("function mcfpp:dynamic/$f")
+        val sharedPath = NBTPath.getMaxImmediateSharedPath(*commandParts.filterIsInstance<MacroPart>().map { it.v.nbtPath }.toTypedArray())?: NBTPath.macroTemp
+        Project.macroFunction[f] = this.toString()
+        val argPass = ArrayList<Command>()
+        for (v in commandParts.filterIsInstance<MacroPart>().map { it.v }){
+            if(v.nbtPath.pathList.last() !is MemberPath || !sharedPath.isImmediateParentOf(v.nbtPath)){
+                //变量需要传递
+                argPass.addAll(
+                    Commands.fakeFunction(Function.nullFunction) {
+                        v.clone().apply { sharedPath.memberIndex(v.identifier) }.assign(v)
+                    }
+                )
+            }
+        }
+        argPass.add(Command.build("function mcfpp:dynamic/$f with").build(sharedPath.toCommandPart()))
+        return argPass.toTypedArray()
     }
 
     /**
-     * 将此命令以宏命令的方式调用。宏命令的转换方式参考[Command.toMacro]
+     * 将此命令以宏命令的方式调用。手动指定宏参数的路径
      *
      * @param nbtPath 用于替换宏参数的nbt路径
      * @return 用来调用 *执行宏参数的函数* 的function命令。无需自行补全with参数
      */
     fun buildMacroFunction(nbtPath: NBTPath): Command{
         val f = UUID.randomUUID().toString()
-        Project.macroFunction[f] = this.toMacro()
+        Project.macroFunction[f] = this.toString()
         return Command.build("function mcfpp:dynamic/$f with").build(nbtPath.toCommandPart())
     }
 
     override fun toString(): String{
         val sb = StringBuilder()
-        for (c in commandStringList){
+        for (c in commandParts){
             sb.append(c)
         }
         return sb.toString()
+    }
+
+    fun clone(): Command{
+        val c = Command("")
+        c.commandParts.clear()
+        c.commandParts.addAll(commandParts)
+        c.replacePoint.putAll(replacePoint)
+        return c
     }
 
     companion object{
@@ -236,6 +245,18 @@ open class Command {
          */
         fun build(command: String, pointID: String) : Command{
             return Command(command, pointID)
+        }
+    }
+
+    protected interface ICommandPart
+    private data class CommandPart(var command: String): ICommandPart{
+        override fun toString(): String {
+            return command
+        }
+    }
+    private data class MacroPart(var v: Var<*>): ICommandPart{
+        override fun toString(): String {
+            return v.identifier
         }
     }
 }

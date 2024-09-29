@@ -163,19 +163,17 @@ public class NBTListData {
                     var command = Commands.INSTANCE.selectRun(caller.getParent(), new Command("data modify " +
                             "entity @s " +
                             "data." + caller.getIdentifier() + " " +
-                            "insert ").buildMacro(index.getIdentifier(), true).build ("value " + SNBTUtil.toSNBT(tag), true), true);
+                            "insert ").buildMacro(index, true).build ("value " + SNBTUtil.toSNBT(tag), true), true);
                     Function.Companion.addCommand(command[0]);
-                    var f = command[1].buildMacroFunction().build("with storage mcfpp:system " +
-                            Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]", true);
-                    Function.Companion.addCommand(f);
+                    var f = command[1].buildMacroFunction();
+                    Function.Companion.addCommands(f);
                 } else {
                     var command = new Command("data modify " +
                             "storage mcfpp:system " +
                             Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + caller.getIdentifier() + " " +
-                            "insert ").buildMacro(index.getIdentifier(), true).build("value " + SNBTUtil.toSNBT(tag), true);
-                    var f = command.buildMacroFunction().build("with storage mcfpp:system " +
-                            Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]", true);
-                    Function.Companion.addCommand(f);
+                            "insert ").buildMacro(index, true).build("value " + SNBTUtil.toSNBT(tag), true);
+                    var f = command.buildMacroFunction();
+                    Function.Companion.addCommands(f);
                 }
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
@@ -187,23 +185,21 @@ public class NBTListData {
                 var command = Commands.INSTANCE.selectRun(caller.getParent(), new Command("data modify " +
                         "entity @s " +
                         "data." + caller.getIdentifier() + " " +
-                        "insert ").buildMacro(index.getIdentifier(), true)
+                        "insert ").buildMacro(index, true)
                         .build (" from storage mcfpp:system " +
                         Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + e.getIdentifier(), true), true);
                 Function.Companion.addCommand(command[0]);
-                var f = command[1].buildMacroFunction().build("with storage mcfpp:system " +
-                        Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]", true);
-                Function.Companion.addCommand(f);
+                var f = command[1].buildMacroFunction();
+                Function.Companion.addCommands(f);
             } else {
                 var command = new Command("data modify " +
                         "storage mcfpp:system " +
                         Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + caller.getIdentifier() + " " +
-                        "insert ").buildMacro(index.getIdentifier(), true)
+                        "insert ").buildMacro(index, true)
                         .build("from storage mcfpp:system " +
                         Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + e.getIdentifier(), true);
-                var f = command.buildMacroFunction().build("with storage mcfpp:system " +
-                        Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]", true);
-                Function.Companion.addCommand(f);
+                var f = command.buildMacroFunction();
+                Function.Companion.addCommands(f);
             }
         }
     }
@@ -233,18 +229,16 @@ public class NBTListData {
             if(caller.getParent() != null){
                 var command = Commands.INSTANCE.selectRun(caller.getParent(), new Command(
                         "data remove entity @s " +
-                        "data." + caller.getIdentifier() + "[").buildMacro(index.getIdentifier(), true).build("]", true), true);
+                        "data." + caller.getIdentifier() + "[").buildMacro(index, true).build("]", true), true);
                 Function.Companion.addCommand(command[0]);
-                var f = command[1].buildMacroFunction().build("with storage mcfpp:system " +
-                        Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]", true);
-                Function.Companion.addCommand(f);
+                var f = command[1].buildMacroFunction();
+                Function.Companion.addCommands(f);
             }else {
                 var command = new Command(
                         "data remove storage mcfpp:system " +
-                        Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + caller.getIdentifier() + "[").buildMacro(index.getIdentifier(), true).build("]", true);
-                var f = command.buildMacroFunction().build("with storage mcfpp:system " +
-                        Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]", true);
-                Function.Companion.addCommand(f);
+                        Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + caller.getIdentifier() + "[").buildMacro(index, true).build("]", true);
+                var f = command.buildMacroFunction();
+                Function.Companion.addCommands(f);
             }
         }
     }

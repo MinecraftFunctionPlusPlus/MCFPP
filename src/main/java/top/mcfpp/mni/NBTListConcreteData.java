@@ -133,17 +133,15 @@ public class NBTListConcreteData {
                                     "insert").build("", "$" + index.getIdentifier(), true).build ("value " + SNBTUtil.toSNBT(tag), true), true
                     );
                     Function.Companion.addCommand(command[0]);
-                    var f = command[1].buildMacroFunction().build("with storage mcfpp:system " +
-                            Project.INSTANCE.getConfig().getRootNamespace() + ".stack_frame[" + caller.getStackIndex() + "]", true);
-                    Function.Companion.addCommand(f);
+                    var f = command[1].buildMacroFunction();
+                    Function.Companion.addCommands(f);
                 } else {
                     var command = new Command("data modify " +
                             "storage mcfpp:system " +
                             Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + caller.getIdentifier() + " " +
                             "insert").build("", "$" + index.getIdentifier(), true).build("value " + SNBTUtil.toSNBT(tag), true);
-                    var f = command.buildMacroFunction().build("with storage mcfpp:system " +
-                            Project.INSTANCE.getConfig().getRootNamespace() + ".stack_frame[" + caller.getStackIndex() + "]", true);
-                    Function.Companion.addCommand(f);
+                    var f = command.buildMacroFunction();
+                    Function.Companion.addCommands(f);
                 }
             } catch (IOException ex) {
                 throw new RuntimeException(ex);
@@ -169,9 +167,8 @@ public class NBTListConcreteData {
                         Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]." + e.getIdentifier(), true)};
             }
             if(command.length == 2) Function.Companion.addCommand(command[0]);
-            var f = command[command.length - 1].buildMacroFunction().build("with storage mcfpp:system " +
-                    Project.INSTANCE.getCurrNamespace() + ".stack_frame[" + caller.getStackIndex() + "]", true);
-            Function.Companion.addCommand(f);
+            var f = command[command.length - 1].buildMacroFunction();
+            Function.Companion.addCommands(f);
         }
     }
 

@@ -10,11 +10,11 @@ class Comment : Command {
     }
 
     override fun analyze(): String {
-        return this.commandStringList[0]
+        return this.commandParts[0].toString()
     }
 
     override fun toString(): String {
-        return this.commandStringList[0]
+        return this.commandParts[0].toString()
     }
 
 }

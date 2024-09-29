@@ -23,19 +23,19 @@ object data BossBar{
 }
 
 enum BossBarStyle{
-    PROGRESS,
-    NOTCHED_6,
-    NOTCHED_10,
-    NOTCHED_12,
-    NOTCHED_20
+    PROGRESS = "progress",
+    NOTCHED_6 = "notched_6",
+    NOTCHED_10 = "notched_10",
+    NOTCHED_12 = "notched_12",
+    NOTCHED_20 = "notched_20"
 }
 
 enum BossBarColor{
-    PINK,
-    BLUE,
-    RED,
-    GREEN,
-    YELLOW,
-    PURPLE,
-    WHITE
+    PINK = "pink",
+    BLUE = "blue",
+    RED = "red",
+    GREEN = "green",
+    YELLOW = "yellow",
+    PURPLE = "purple",
+    WHITE = "white"
 }
