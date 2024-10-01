@@ -25,7 +25,9 @@ import top.mcfpp.util.TextTranslator.translate
  * 在被其他变量赋值的时候，联合变量将会尝试寻找一个类型相同的变量进行赋值，如果找不到，将会尝试寻找一个能隐式转换为目标变量的变量进行赋值。如果依然
  *找不到，则会寻找一个能赋值给目标变量的变量进行赋值。寻找的顺序和联合类型的声明顺序一致。
  */
-class UnionTypeVar(identifier: String, vararg val vars: Var<*>): Var<UnionTypeVar>(identifier) {
+open class UnionTypeVar(identifier: String, vararg vars: Var<*>): Var<UnionTypeVar>(identifier) {
+
+    val vars: ArrayList<Var<*>> = ArrayList(vars.toList())
 
     override var type: MCFPPType = MCFPPUnionType(*vars.map { it.type }.toTypedArray())
 
@@ -89,7 +91,10 @@ class UnionTypeVar(identifier: String, vararg val vars: Var<*>): Var<UnionTypeVa
                 continue
             }
             val qwe = v.assignedBy(b)
-            if(qwe is MCFPPValue<*>) qwe.toDynamic(false)
+            if(qwe is MCFPPValue<*>) {
+                vars[vars.indexOf(v)] = qwe
+                return UnionTypeVarConcrete(this, qwe.value)
+            }
             return this
         }
         for (v in vars) {
@@ -142,6 +147,23 @@ class UnionTypeVar(identifier: String, vararg val vars: Var<*>): Var<UnionTypeVa
         }
         return Pair(UnknownFunction(key), false)
     }
+}
 
+class UnionTypeVarConcrete(identifier: String, override var value: Any?, vararg vars: Var<*>): UnionTypeVar(identifier, *vars), MCFPPValue<Any?> {
+
+    constructor(unionTypeVar: UnionTypeVar, value: Any?): this(unionTypeVar.identifier, value, *unionTypeVar.vars.toTypedArray())
+
+    override fun toDynamic(replace: Boolean): Var<*> {
+        for (v in vars) {
+            if (v is MCFPPValue<*> && v.value == value) {
+                return v.toDynamic(false)
+            }
+        }
+        val re = UnionTypeVar(identifier, *vars.toTypedArray())
+        if(replace){
+            replacedBy(re)
+        }
+        return re
+    }
 
 }
