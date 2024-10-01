@@ -44,8 +44,8 @@ open class CommandArgumentType: ResourceID {
      */
     constructor(b: CommandArgumentType) : super(b)
 
-    override fun doAssign(b: Var<*>): CommandArgumentType {
-        return super.assign(b) as CommandArgumentType
+    override fun doAssignedBy(b: Var<*>): CommandArgumentType {
+        return super.assignedBy(b) as CommandArgumentType
     }
 
     companion object {

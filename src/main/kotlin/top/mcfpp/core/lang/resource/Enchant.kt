@@ -44,8 +44,8 @@ open class Enchant: ResourceID {
      */
     constructor(b: Enchant) : super(b)
 
-    override fun doAssign(b: Var<*>): Enchant {
-        return super.assign(b) as Enchant
+    override fun doAssignedBy(b: Var<*>): Enchant {
+        return super.assignedBy(b) as Enchant
     }
 
     companion object {

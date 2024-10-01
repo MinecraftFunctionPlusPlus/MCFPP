@@ -3,7 +3,6 @@ package top.mcfpp.core.lang
 import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.command.Commands
-import top.mcfpp.model.accessor.SimpleAccessor
 import top.mcfpp.mni.annotation.ConcreteOnly
 import top.mcfpp.model.DataTemplate
 import top.mcfpp.model.Member
@@ -54,7 +53,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         instanceField = templateObject.instanceField
     }
 
-    override fun doAssign(b: Var<*>): DataTemplateObject {
+    override fun doAssignedBy(b: Var<*>): DataTemplateObject {
         when (b) {
             is NBTBasedDataConcrete -> {
                 if (b.value !is CompoundTag) {
@@ -95,9 +94,28 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         }
     }
 
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        if(!b.implicitCast(type).isError) return true
+        return when(b){
+            is NBTBasedDataConcrete -> {
+                b.value is CompoundTag && templateType.checkCompoundStruct(b.value as CompoundTag)
+            }
+
+            is DataTemplateObjectConcrete -> {
+                b.type.objectData.canCastTo(this.templateType)
+            }
+
+            is DataTemplateObject -> {
+                true
+            }
+
+            else -> false
+        }
+    }
+
     private fun assignMembers(tag: CompoundTag){
         instanceField.forEachVar {
-            it.replacedBy(it.assign(NBTBasedDataConcrete(tag.get(it.identifier))))
+            it.replacedBy(it.assignedBy(NBTBasedDataConcrete(tag.get(it.identifier))))
         }
     }
 
@@ -169,7 +187,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         if(isTemp) return this
         val re = DataTemplateObject(templateType)
         re.isTemp = true
-        return re.assign(this)
+        return re.assignedBy(this)
     }
 
     override fun storeToStack() {}

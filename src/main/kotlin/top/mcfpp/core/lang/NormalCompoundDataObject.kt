@@ -26,10 +26,12 @@ class NormalCompoundDataObject(identifier: String = UUID.randomUUID().toString()
         return this
     }
 
-    override fun doAssign(b: Var<*>): NormalCompoundDataObject {
+    override fun doAssignedBy(b: Var<*>): NormalCompoundDataObject {
         LogProcessor.error("Cannot assign to a normal compound data object.")
         return this
     }
+
+    override fun canAssignedBy(b: Var<*>) = false
 
     override fun clone(): NormalCompoundDataObject = this
 

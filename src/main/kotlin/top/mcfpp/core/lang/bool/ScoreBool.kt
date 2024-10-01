@@ -54,7 +54,7 @@ open class MCBool : Var<MCBool>, OnScoreboard {
     override var type: MCFPPType = MCFPPBaseType.Bool
 
     @Override
-    override fun doAssign(b: Var<*>) : MCBool {
+    override fun doAssignedBy(b: Var<*>) : MCBool {
         when(b){
             is MCBool -> return assignCommand(b)
 
@@ -75,6 +75,15 @@ open class MCBool : Var<MCBool>, OnScoreboard {
                 LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
                 return this
             }
+        }
+    }
+
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        if(!b.implicitCast(type).isError) return true
+        return when(b){
+            is MCBool -> true
+            is CommandReturn -> true
+            else -> false
         }
     }
 
@@ -244,7 +253,7 @@ open class MCBool : Var<MCBool>, OnScoreboard {
     override fun getTempVar(): MCBool {
         if (isTemp) return this
         val re = MCBool()
-        re.assign(this)
+        re.assignedBy(this)
         return re
     }
 

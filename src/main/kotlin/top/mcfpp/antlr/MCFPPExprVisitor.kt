@@ -11,7 +11,7 @@ import top.mcfpp.type.MCFPPType
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.bool.MCBool
 import top.mcfpp.core.lang.bool.MCBoolConcrete
-import top.mcfpp.model.CanSelectMember
+import top.mcfpp.core.lang.bool.ReturnedMCBool
 import top.mcfpp.model.Class
 import top.mcfpp.model.DataTemplate
 import top.mcfpp.model.Namespace
@@ -373,8 +373,8 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                     if(right is MCInt){
                         range.right = MCFloat(range.identifier + "_right")
                     }
-                    left?.let { range.left.assign(it) }
-                    right?.let { range.right.assign(it) }
+                    left?.let { range.left.assignedBy(it) }
+                    right?.let { range.right.assignedBy(it) }
                     return range
                 }
             }else{
@@ -576,7 +576,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                             LogProcessor.error("Member $id not found")
                             continue
                         }
-                        m.replacedBy(m.assign(v))
+                        m.replacedBy(m.assignedBy(v))
                     }
                 }
             }
@@ -631,14 +631,14 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             val dimensions = ctx.coordinate().coordinateDimension().map { visit(it) }
             if(dimensions.size == 3){
                 return Coordinate3Var().apply {
-                    x.assign(dimensions[0])
-                    y.assign(dimensions[1])
-                    z.assign(dimensions[2])
+                    x.assignedBy(dimensions[0])
+                    y.assignedBy(dimensions[1])
+                    z.assignedBy(dimensions[2])
                 }
             }
             return Coordinate2Var().apply {
-                x.assign(dimensions[0])
-                z.assign(dimensions[1])
+                x.assignedBy(dimensions[0])
+                z.assignedBy(dimensions[1])
             }
         }
         throw IllegalArgumentException("value_" + ctx.text)

@@ -15,7 +15,6 @@ import top.mcfpp.type.UnresolvedType
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.field.FunctionField
-import top.mcfpp.type.MCFPPClassType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import java.io.Serializable
@@ -633,7 +632,7 @@ open class Function : Member, FieldContainer, Serializable {
             //参数传递和子函数的参数进栈
             val p = field.getVar(this.normalParams[i].identifier)!!
             p.isConst = false
-            val pp = p.assign(tg)
+            val pp = p.assignedBy(tg)
             if(!this.normalParams[i].isStatic) pp.isConst = true
             field.putVar(p.identifier, pp, true)
         }
@@ -654,7 +653,7 @@ open class Function : Member, FieldContainer, Serializable {
                     hasAddComment = true
                 }
                 //如果是static参数
-                args[i].assign(field.getVar(normalParams[i].identifier)!!)
+                args[i].assignedBy(field.getVar(normalParams[i].identifier)!!)
             }
         }
     }
@@ -698,7 +697,7 @@ open class Function : Member, FieldContainer, Serializable {
             LogProcessor.error("Function $identifier has no return value but tried to return a ${v.type}")
             return
         }
-        returnVar.assign(v)
+        returnVar.assignedBy(v)
     }
 
     /**

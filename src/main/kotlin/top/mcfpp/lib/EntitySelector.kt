@@ -10,6 +10,7 @@ import top.mcfpp.core.lang.resource.Advancement
 import top.mcfpp.core.lang.resource.LootTablePredicate
 import java.io.Serializable
 
+@Suppress("MemberVisibilityCanBePrivate", "unused")
 class EntitySelector(var selectorType: SelectorType): Serializable {
 
     private var hasXPredicate: Boolean = false
@@ -304,7 +305,6 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
 
         val sortValues = arrayOf("nearest","furthest","random","arbitrary")
         val gamemodeValues = arrayOf("survival","creative","adventure","spectator")
-
 
         fun toSelectorTypeString(type: SelectorType): Char{
             return when(type){

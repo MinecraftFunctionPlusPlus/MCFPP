@@ -44,8 +44,8 @@ open class Effect: ResourceID {
      */
     constructor(b: Effect) : super(b)
 
-    override fun doAssign(b: Var<*>): Effect {
-        return super.assign(b) as Effect
+    override fun doAssignedBy(b: Var<*>): Effect {
+        return super.assignedBy(b) as Effect
     }
 
     companion object {

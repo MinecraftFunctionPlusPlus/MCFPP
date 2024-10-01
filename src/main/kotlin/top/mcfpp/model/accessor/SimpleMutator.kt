@@ -7,7 +7,7 @@ class SimpleMutator(field: Var<*>): AbstractMutator(field) {
 
     override fun setter(caller: CanSelectMember, b: Var<*>): Var<*> {
         field.parent = caller
-        return field.assign(b)
+        return field.assignedBy(b)
     }
 
 }

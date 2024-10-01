@@ -87,7 +87,7 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
         //传递只读参数
         for (i in readOnlyArgs.indices) {
             val r = field.getVar(readOnlyParams[i].identifier)
-            compiledFunction.field.putVar(readOnlyParams[i].identifier, r!!.assign(readOnlyArgs[i]), false)
+            compiledFunction.field.putVar(readOnlyParams[i].identifier, r!!.assignedBy(readOnlyArgs[i]), false)
         }
         index ++
         //编译这个函数

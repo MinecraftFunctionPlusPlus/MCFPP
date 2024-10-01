@@ -7,9 +7,20 @@ import top.mcfpp.lib.EntitySelector
 import top.mcfpp.model.Class
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
+import top.mcfpp.util.LogProcessor
 
 class MCFPPEntityType {
-    object Entity: MCFPPType(parentType = listOf(MCFPPBaseType.Any)){
+
+    object EntityBase: MCFPPType(parentType = listOf(MCFPPBaseType.Any)){
+
+            override val objectData: CompoundData
+                get() = EntityVar.data
+
+            override val typeName: String
+                get() = "entitybase"
+    }
+
+    object Entity: MCFPPType(parentType = listOf(EntityBase)){
 
         override val objectData: CompoundData
             get() = EntityVar.data
@@ -29,7 +40,7 @@ class MCFPPEntityType {
         override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = EntityVar(clazz, identifier)
     }
 
-    object Selector: MCFPPType(parentType = listOf(Entity)){
+    object Selector: MCFPPConcreteType(parentType = listOf(EntityBase)){
 
         override val objectData: CompoundData
             get() = SelectorVar.data
@@ -38,43 +49,29 @@ class MCFPPEntityType {
             get() = "selector"
 
         override fun build(identifier: String, container: FieldContainer): Var<*>
-            = SelectorVarConcrete(
-            EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES),
-            container,
-            identifier
-        )
+            = SelectorVar(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES), identifier)
+
         override fun build(identifier: String): Var<*>
-            = SelectorVarConcrete(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES), identifier)
+            = SelectorVar(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES), identifier)
+
         override fun build(identifier: String, clazz: Class): Var<*>
-            = SelectorVarConcrete(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES), clazz, identifier)
-        override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*>
-            = SelectorVar(EntitySelector.Companion.SelectorType.ALL_ENTITIES, container, identifier)
-        override fun buildUnConcrete(identifier: String): Var<*>
-            = SelectorVar(EntitySelector.Companion.SelectorType.ALL_ENTITIES, identifier)
-        override fun buildUnConcrete(identifier: String, clazz: Class): Var<*>
-            = SelectorVar(EntitySelector.Companion.SelectorType.ALL_ENTITIES, clazz, identifier)
+            = SelectorVar(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES), identifier)
 
     }
 
-    object PlayerEntity: MCFPPType(parentType = listOf(Entity)){
+    class LimitedSelectorType(val limit: Int): MCFPPConcreteType(parentType = listOf(MCFPPEntityType.Entity)){
 
         override val objectData: CompoundData
-            get() = PlayerVar.PlayerEntityVar.data
+            get() = SelectorVar.data
 
         override val typeName: String
-            get() = "player_entity"
+            get() = "selector[$limit]"
 
         override fun build(identifier: String, container: FieldContainer): Var<*>
-            = PlayerVar.PlayerEntityVarConcrete(container, Entity.buildUnConcrete(identifier, container) as EntityVar, IntArrayTag(intArrayOf(0, 0, 0, 0)), identifier)
+            = SelectorVar(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES).limit(limit), identifier)
         override fun build(identifier: String): Var<*>
-            = PlayerVar.PlayerEntityVarConcrete(Entity.buildUnConcrete(identifier) as EntityVar, IntArrayTag(intArrayOf(0, 0, 0, 0)), identifier)
+            = SelectorVar(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES).limit(limit), identifier)
         override fun build(identifier: String, clazz: Class): Var<*>
-            = PlayerVar.PlayerEntityVarConcrete(clazz, Entity.buildUnConcrete(identifier, clazz) as EntityVar, IntArrayTag(intArrayOf(0, 0, 0, 0)), identifier)
-        override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*>
-            = PlayerVar.PlayerEntityVar(Entity.buildUnConcrete(identifier, container) as EntityVar, container, identifier)
-        override fun buildUnConcrete(identifier: String): Var<*>
-            = PlayerVar.PlayerEntityVar(Entity.buildUnConcrete(identifier) as EntityVar, identifier)
-        override fun buildUnConcrete(identifier: String, clazz: Class): Var<*>
-            = PlayerVar.PlayerEntityVar(Entity.buildUnConcrete(identifier, clazz) as EntityVar, clazz, identifier)
+            = SelectorVar(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES).limit(limit), identifier)
     }
 }

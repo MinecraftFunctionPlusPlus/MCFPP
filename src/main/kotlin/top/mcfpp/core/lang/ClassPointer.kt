@@ -98,7 +98,7 @@ open class ClassPointer : Var<ClassPointer>{
     @Override
     @InsertCommand
     @Throws(VariableConverseException::class)
-    override fun doAssign(b: Var<*>): ClassPointer {
+    override fun doAssignedBy(b: Var<*>): ClassPointer {
         //TODO 不支持指针作为类成员的时候
         when (b) {
             is ClassPointer -> {
@@ -135,6 +135,14 @@ open class ClassPointer : Var<ClassPointer>{
                 LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
                 return this
             }
+        }
+    }
+
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        if(!b.implicitCast(type).isError) return true
+        return when (b) {
+            is ClassPointer -> true
+            else -> false
         }
     }
 

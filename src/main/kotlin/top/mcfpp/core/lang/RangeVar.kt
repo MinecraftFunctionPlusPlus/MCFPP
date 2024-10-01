@@ -1,6 +1,5 @@
 package top.mcfpp.core.lang
 
-import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.command.Command
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.CompoundData
@@ -55,12 +54,12 @@ open class RangeVar: Var<RangeVar> {
         point = b.point
     }
 
-    override fun doAssign(b: Var<*>): RangeVar {
+    override fun doAssignedBy(b: Var<*>): RangeVar {
         when (b) {
             is RangeVar -> {
                 this.point = b.point
-                if (point and 2 != 0.toByte()) left.assign(b.left)
-                if (point and 1 != 0.toByte()) right.assign(b.right)
+                if (point and 2 != 0.toByte()) left.assignedBy(b.left)
+                if (point and 1 != 0.toByte()) right.assignedBy(b.right)
             }
 
             else -> {
@@ -68,6 +67,10 @@ open class RangeVar: Var<RangeVar> {
             }
         }
         return this
+    }
+
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        return !b.implicitCast(type).isError
     }
 
     override fun clone(): RangeVar {
@@ -78,7 +81,7 @@ open class RangeVar: Var<RangeVar> {
         if (isTemp) return this
         val re = RangeVar()
         re.isTemp = true
-        return re.assign(this)
+        return re.assignedBy(this)
     }
 
     override fun storeToStack() {
@@ -119,9 +122,9 @@ open class RangeVar: Var<RangeVar> {
 
     open fun toCommandPart() : Command{
         val command = Command("")
-        if(point and 2 != 0.toByte()) command.buildMacro(left.identifier, false)
+        if(point and 2 != 0.toByte()) command.buildMacro(left, false)
         command.build("..")
-        if(point and 1 != 0.toByte()) command.buildMacro(right.identifier, false)
+        if(point and 1 != 0.toByte()) command.buildMacro(right, false)
         return command
     }
 
@@ -159,8 +162,8 @@ class RangeVarConcrete: MCFPPValue<Pair<Float?, Float?>>, RangeVar{
         if(value.first != null && value.second != null && value.second!! < value.first!!){
             LogProcessor.error("Left value should be smaller than right value")
         }
-        value.first?.let { left.assign(MCFloatConcrete(it, identifier + "_left")) }
-        value.second?.let { right.assign(MCFloatConcrete(it, identifier + "_right")) }
+        value.first?.let { left.assignedBy(MCFloatConcrete(it, identifier + "_left")) }
+        value.second?.let { right.assignedBy(MCFloatConcrete(it, identifier + "_right")) }
     }
 
     /**
@@ -176,8 +179,8 @@ class RangeVarConcrete: MCFPPValue<Pair<Float?, Float?>>, RangeVar{
         if(value.first != null && value.second != null && value.second!! < value.first!!){
             LogProcessor.error("Left value should be smaller than right value")
         }
-        value.first?.let { left.assign(MCFloatConcrete(it, identifier + "_left")) }
-        value.second?.let { right.assign(MCFloatConcrete(it, identifier + "_right")) }
+        value.first?.let { left.assignedBy(MCFloatConcrete(it, identifier + "_left")) }
+        value.second?.let { right.assignedBy(MCFloatConcrete(it, identifier + "_right")) }
     }
 
     constructor(range: RangeVar, value: Pair<Float?, Float?>) : super(range){
@@ -188,14 +191,14 @@ class RangeVarConcrete: MCFPPValue<Pair<Float?, Float?>>, RangeVar{
         if(value.first != null && value.second != null && value.second!! < value.first!!){
             LogProcessor.error("Left value should be smaller than right value")
         }
-        value.first?.let { left.assign(MCFloatConcrete(it, identifier + "_left")) }
-        value.second?.let { right.assign(MCFloatConcrete(it, identifier + "_right")) }
+        value.first?.let { left.assignedBy(MCFloatConcrete(it, identifier + "_left")) }
+        value.second?.let { right.assignedBy(MCFloatConcrete(it, identifier + "_right")) }
     }
 
     constructor(range: RangeVarConcrete) : super(range){
         this.value = range.value
-        value.first?.let { left.assign(MCFloatConcrete(it, identifier + "_left")) }
-        value.second?.let { right.assign(MCFloatConcrete(it, identifier + "_right")) }
+        value.first?.let { left.assignedBy(MCFloatConcrete(it, identifier + "_left")) }
+        value.second?.let { right.assignedBy(MCFloatConcrete(it, identifier + "_right")) }
     }
 
     override fun toDynamic(replace: Boolean): Var<*> {
@@ -217,7 +220,7 @@ class RangeVarConcrete: MCFPPValue<Pair<Float?, Float?>>, RangeVar{
         val command = Command("")
         if(value.first != null) command.build(value.first!!.toString(), false)
         command.build("..")
-        if(value.second != null) command.buildMacro(value.second!!.toString(), false)
+        if(value.second != null) command.build(value.second!!.toString(), false)
         return command
     }
 

@@ -44,8 +44,8 @@ open class Biome: ResourceID {
      */
     constructor(b: Biome) : super(b)
 
-    override fun doAssign(b: Var<*>): Biome {
-        return super.assign(b) as Biome
+    override fun doAssignedBy(b: Var<*>): Biome {
+        return super.assignedBy(b) as Biome
     }
 
     companion object {

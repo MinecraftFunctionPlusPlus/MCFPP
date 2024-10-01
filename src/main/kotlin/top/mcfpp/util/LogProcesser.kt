@@ -105,3 +105,7 @@ object LogProcessor {
         error("Cannot cast [$type1] to [$type2]")
     }
 }
+
+enum class LogLevel {
+    DEBUG, INFO, WARN, ERROR, NONE
+}

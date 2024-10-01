@@ -77,7 +77,7 @@ open class MCString : NBTBasedData {
 
     @Override
     @Throws(VariableConverseException::class)
-    override fun doAssign(b: Var<*>): MCString {
+    override fun doAssignedBy(b: Var<*>): MCString {
         when (b) {
             is MCString -> return assignCommand(b)
             else -> LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
@@ -85,6 +85,9 @@ open class MCString : NBTBasedData {
         return this
     }
 
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        return !b.implicitCast(type).isError
+    }
 
     @InsertCommand
     override fun assignCommand(a: NBTBasedData) : MCString{
@@ -98,7 +101,7 @@ open class MCString : NBTBasedData {
                 }
                 final.last().build(Commands.dataSetValue(nbtPath, b.value))
                 if(final.last().isMacro){
-                    Function.addCommand(final.last().buildMacroFunction())
+                    Function.addCommands(final.last().buildMacroFunction())
                 }else{
                     Function.addCommand(final.last())
                 }
@@ -111,7 +114,7 @@ open class MCString : NBTBasedData {
                 }
                 final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
                 if(final.last().isMacro){
-                    Function.addCommand(final.last().buildMacroFunction())
+                    Function.addCommands(final.last().buildMacroFunction())
                 }else{
                     Function.addCommand(final.last())
                 }
@@ -126,7 +129,7 @@ open class MCString : NBTBasedData {
                 }
                 final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
                 if(final.last().isMacro){
-                    Function.addCommand(final.last().buildMacroFunction())
+                    Function.addCommands(final.last().buildMacroFunction())
                 }else{
                     Function.addCommand(final.last())
                 }

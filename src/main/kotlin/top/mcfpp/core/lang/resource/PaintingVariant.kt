@@ -44,8 +44,8 @@ open class PaintingVariant: ResourceID {
      */
     constructor(b: PaintingVariant) : super(b)
 
-    override fun doAssign(b: Var<*>): PaintingVariant {
-        return super.assign(b) as PaintingVariant
+    override fun doAssignedBy(b: Var<*>): PaintingVariant {
+        return super.assignedBy(b) as PaintingVariant
     }
 
     companion object {

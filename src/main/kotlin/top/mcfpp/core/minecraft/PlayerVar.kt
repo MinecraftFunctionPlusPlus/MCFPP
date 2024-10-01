@@ -1,8 +1,7 @@
 package top.mcfpp.core.minecraft
 
-import net.querz.nbt.tag.IntArrayTag
+import net.querz.nbt.tag.StringTag
 import top.mcfpp.Project
-import top.mcfpp.command.Command
 import top.mcfpp.core.lang.*
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.core.lang.MCFPPValue
@@ -17,7 +16,7 @@ import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 
-open class PlayerVar : Var<PlayerVar> {
+open class PlayerVar : Var<PlayerVar>, EntityBase {
 
     constructor(
         curr: FieldContainer,
@@ -30,7 +29,9 @@ open class PlayerVar : Var<PlayerVar> {
 
     constructor(b: PlayerVar) : super(b)
 
-    override fun doAssign(b: Var<*>): PlayerVar {
+    override fun isPlayer() = true
+
+    override fun doAssignedBy(b: Var<*>): PlayerVar {
         when(b){
             is EntityVar -> {
                 return PlayerEntityVar(b, this.identifier)
@@ -49,17 +50,13 @@ open class PlayerVar : Var<PlayerVar> {
 
             is PlayerEntityVar -> {
                 val entity = EntityVar(this.identifier)
-                entity.assign(b.entity)
+                entity.assignedBy(b.entity)
                 return PlayerEntityVar(entity, this.identifier)
             }
 
-            is PlayerSelectorVarConcrete -> {
-                return PlayerSelectorVarConcrete(b.selector, b.value, identifier)
-            }
-
             is PlayerSelectorVar -> {
-                val selector = SelectorVar(EntitySelector.Companion.SelectorType.ALL_PLAYERS, this.identifier)
-                selector.assign(b.selector)
+                val selector = SelectorVar(EntitySelector(EntitySelector.Companion.SelectorType.ALL_PLAYERS), this.identifier)
+                selector.assignedBy(b.selector)
                 return PlayerSelectorVar(selector, this.identifier)
             }
 
@@ -75,7 +72,7 @@ open class PlayerVar : Var<PlayerVar> {
     }
 
     override fun getTempVar(): PlayerVar {
-        return PlayerVar().assign(this)
+        return PlayerVar().assignedBy(this)
     }
 
     override fun storeToStack() {}
@@ -83,7 +80,15 @@ open class PlayerVar : Var<PlayerVar> {
     override fun getFromStack() {}
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        return data.getVar(key) to true
+        return when(key){
+            "Inventory" -> {
+                PlayerInventory(this) to true
+            }
+
+            else -> {
+                data.getVar(key) to true
+            }
+        }
     }
 
     override fun getMemberFunction(
@@ -130,14 +135,14 @@ open class PlayerVar : Var<PlayerVar> {
         }
     }
 
-    class PlayerEntityVarConcrete: PlayerEntityVar, MCFPPValue<IntArrayTag> {
+    class PlayerEntityVarConcrete: PlayerEntityVar, MCFPPValue<StringTag> {
 
-        override lateinit var value: IntArrayTag
+        override lateinit var value: StringTag
 
         constructor(
             curr: FieldContainer,
             entity: EntityVar,
-            value: IntArrayTag,
+            value: StringTag,
             identifier: String = UUID.randomUUID().toString()
         ) : super(EntityVarConcrete(entity, value), curr, identifier) {
             this.value = value
@@ -145,7 +150,7 @@ open class PlayerVar : Var<PlayerVar> {
 
         constructor(
             entity: EntityVar,
-            value: IntArrayTag,
+            value: StringTag,
             identifier: String = UUID.randomUUID().toString()
         ) : super(EntityVarConcrete(entity, value), identifier) {
             this.value = value
@@ -196,48 +201,7 @@ open class PlayerVar : Var<PlayerVar> {
         companion object {
             val data = CompoundData("PlayerSelector", "mcfpp")
         }
-    }
 
-    class PlayerSelectorVarConcrete: PlayerSelectorVar, MCFPPValue<EntitySelector> {
-
-        override lateinit var value: EntitySelector
-
-        constructor(
-            curr: FieldContainer,
-            selector: SelectorVar,
-            value: EntitySelector,
-            identifier: String = UUID.randomUUID().toString()
-        ) : super(SelectorVarConcrete(selector, value), curr, identifier) {
-            this.value = value
-        }
-
-        constructor(
-            selector: SelectorVar,
-            value: EntitySelector,
-            identifier: String = UUID.randomUUID().toString()
-        ) : super(SelectorVarConcrete(selector, value), identifier) {
-            this.value = value
-        }
-
-        constructor(b: PlayerSelectorVarConcrete) : super(b) {
-            this.value = b.value
-        }
-
-        override fun clone(): PlayerSelectorVarConcrete {
-            return PlayerSelectorVarConcrete(this)
-        }
-
-        override fun getTempVar(): PlayerSelectorVarConcrete {
-            return PlayerSelectorVarConcrete(this)
-        }
-
-        override fun storeToStack() {
-
-        }
-
-        override fun toDynamic(replace: Boolean): Var<*> {
-            return PlayerSelectorVar(SelectorVarConcrete(value, this.identifier).toDynamic(false) as SelectorVar, this.identifier)
-        }
     }
 }
 

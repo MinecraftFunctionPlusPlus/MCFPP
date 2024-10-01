@@ -41,6 +41,4 @@ open class MCFPPPrivateType(
         LogProcessor.error("Cannot build var for type: $typeName")
         return UnknownVar(identifier)
     }
-
-    object Property : MCFPPPrivateType()
 }

@@ -61,7 +61,11 @@ class CommandReturn : Var<CommandReturn> {
         }
     }
 
-    override fun doAssign(b: Var<*>): CommandReturn = this
+    override fun doAssignedBy(b: Var<*>): CommandReturn = this
+
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        return !b.implicitCast(type).isError
+    }
 
     override fun clone(): CommandReturn = CommandReturn(this)
 
@@ -103,7 +107,11 @@ class CommandSuccess(val re: CommandReturn) : Var<CommandSuccess>("success") {
         }
         set(value) {}
 
-    override fun doAssign(b: Var<*>): CommandSuccess = this
+    override fun doAssignedBy(b: Var<*>): CommandSuccess = this
+
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        return !b.implicitCast(type).isError
+    }
 
     override fun clone(): CommandSuccess = this
 
@@ -132,7 +140,11 @@ class CommandResult(val re: CommandReturn): Var<CommandResult>("result"){
         }
         set(value) {}
 
-    override fun doAssign(b: Var<*>): CommandResult = this
+    override fun doAssignedBy(b: Var<*>): CommandResult = this
+
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        return !b.implicitCast(type).isError
+    }
 
     override fun clone(): CommandResult = this
 

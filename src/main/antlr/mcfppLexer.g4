@@ -59,6 +59,7 @@ SINGLE_QUOTE: '\'' ;
 //BIT_AND_ASSIGN:                   '&=';
 //BIT_XOR_ASSIGN:                   '^=';
 //BIT_OR_ASSIGN:                    '|=';
+PIPE: '|';
 TRIPLE_QUOTE_OPEN: '"""' -> pushMode(MultiLineString) ;
 
 //KeyWords

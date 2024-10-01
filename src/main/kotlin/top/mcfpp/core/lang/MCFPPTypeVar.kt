@@ -5,6 +5,7 @@ import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
+import top.mcfpp.util.LogProcessor
 import java.util.UUID
 
 open class MCFPPTypeVar : Var<MCFPPTypeVar>, MCFPPValue<MCFPPType> {
@@ -17,15 +18,20 @@ open class MCFPPTypeVar : Var<MCFPPTypeVar>, MCFPPValue<MCFPPType> {
         this.value = type
     }
 
-    override fun doAssign(b: Var<*>) : MCFPPTypeVar {
+    override fun doAssignedBy(b: Var<*>) : MCFPPTypeVar {
         if(b is MCFPPTypeVar){
             this.value = b.value
             hasAssigned = true
         } else {
-            throw Exception("Cannot assign a ${b.type} to a MCFPPTypeVar")
+            LogProcessor.error("Cannot assign a ${b.type} to a MCFPPTypeVar")
         }
         return this
     }
+
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        return !b.implicitCast(type).isError
+    }
+
 
     override fun clone(): MCFPPTypeVar {
         return this

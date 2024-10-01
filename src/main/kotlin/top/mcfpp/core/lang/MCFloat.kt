@@ -94,7 +94,7 @@ open class MCFloat : MCNumber<Float> {
      */
     @Override
     @Throws(VariableConverseException::class)
-    override fun doAssign(b: Var<*>) : MCFloat {
+    override fun doAssignedBy(b: Var<*>) : MCFloat {
         return when (b) {
             is MCFloat -> {
                 assignCommand(b)
@@ -105,6 +105,10 @@ open class MCFloat : MCNumber<Float> {
                 this
             }
         }
+    }
+
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        return !b.implicitCast(type).isError
     }
 
     /**
@@ -357,11 +361,11 @@ open class MCFloat : MCNumber<Float> {
         if(!r.isError) return r
         return when(type){
             MCFPPBaseType.Int -> {
-                ssObj.assign(this)
+                ssObj.assignedBy(this)
                 Function.addCommand("function math:hpo/float/_toscore")
                 val temp = MCInt("res")
                 val re = MCInt()
-                re.assign(temp)
+                re.assignedBy(temp)
                 re
             }
             else -> r
@@ -440,7 +444,7 @@ open class MCFloat : MCNumber<Float> {
         fun ssObjToVar(identifier: String = UUID.randomUUID().toString()) : MCFloat{
             val re = MCFloat(identifier)
             re.isTemp = true
-            re.assign(ssObj)
+            re.assignedBy(ssObj)
             return re
         }
     }

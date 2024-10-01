@@ -3,6 +3,7 @@ package top.mcfpp.mni.minecraft;
 import net.querz.nbt.tag.DoubleTag;
 import net.querz.nbt.tag.StringTag;
 import org.jetbrains.annotations.NotNull;
+import top.mcfpp.annotations.MNIMember;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.*;
@@ -19,6 +20,7 @@ import java.util.Map;
 
 public class EntityVarData {
 
+    @MNIMember
     public static ArrayList<Var<?>> getMembers() {
         NormalCompoundDataObject attributes = new NormalCompoundDataObject("attributes", Map.of());
         CompoundData attributeData = new CompoundData("attribute", "mcfpp.hidden");

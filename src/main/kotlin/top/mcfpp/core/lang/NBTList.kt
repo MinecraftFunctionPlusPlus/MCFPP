@@ -68,14 +68,15 @@ open class NBTList : NBTBasedData {
         this.genericType = (type as MCFPPListType).generic
     }
 
-    override fun doAssign(b: Var<*>): NBTList {
+    override fun doAssignedBy(b: Var<*>): NBTList {
         return when (b) {
             is NBTList -> assignCommand(b)
             is NBTBasedDataConcrete -> {
                 if (b.nbtType == this.nbtType) {
                     assignCommand(b)
                 } else {
-                    throw VariableConverseException()
+                    LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
+                    return this
                 }
             }
 
@@ -83,7 +84,8 @@ open class NBTList : NBTBasedData {
                 if (b.nbtType == this.nbtType) {
                     assignCommand(b)
                 } else {
-                    throw VariableConverseException()
+                    LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
+                    return this
                 }
             }
 
@@ -93,6 +95,15 @@ open class NBTList : NBTBasedData {
             }
         }
     }
+
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        if(!b.implicitCast(type).isError) return true
+        if(b is NBTBasedData){
+            return b.nbtType == this.nbtType
+        }
+        return false
+    }
+
 
     @InsertCommand
     override fun assignCommand(a: NBTBasedData) : NBTList{
@@ -109,7 +120,7 @@ open class NBTList : NBTBasedData {
                 }
                 final.last().build(Commands.dataSetValue(nbtPath, b.value))
                 if(final.last().isMacro){
-                    Function.addCommand(final.last().buildMacroFunction())
+                    Function.addCommands(final.last().buildMacroFunction())
                 }else{
                     Function.addCommand(final.last())
                 }
@@ -120,7 +131,7 @@ open class NBTList : NBTBasedData {
                 }
                 final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
                 if(final.last().isMacro){
-                    Function.addCommand(final.last().buildMacroFunction())
+                    Function.addCommands(final.last().buildMacroFunction())
                 }else{
                     Function.addCommand(final.last())
                 }
@@ -135,7 +146,7 @@ open class NBTList : NBTBasedData {
                 }
                 final.last().build(Commands.dataSetFrom(nbtPath, a.nbtPath))
                 if(final.last().isMacro){
-                    Function.addCommand(final.last().buildMacroFunction())
+                    Function.addCommands(final.last().buildMacroFunction())
                 }else{
                     Function.addCommand(final.last())
                 }

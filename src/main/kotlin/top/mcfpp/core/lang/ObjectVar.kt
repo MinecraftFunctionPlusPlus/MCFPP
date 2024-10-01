@@ -13,10 +13,13 @@ class ObjectVar(override var value: CanSelectMember, identifier: String = UUID.r
         return this
     }
 
-    override fun doAssign(b: Var<*>): ObjectVar {
+    override fun doAssignedBy(b: Var<*>): ObjectVar {
         LogProcessor.error("Cannot assign value to object type variable")
         return this
     }
+
+
+    override fun canAssignedBy(b: Var<*>) = false
 
     override fun clone(): ObjectVar = this
 

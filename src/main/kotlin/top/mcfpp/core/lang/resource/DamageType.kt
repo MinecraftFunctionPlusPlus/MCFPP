@@ -44,8 +44,8 @@ open class DamageType: ResourceID {
      */
     constructor(b: DamageType) : super(b)
 
-    override fun doAssign(b: Var<*>): DamageType {
-        return super.assign(b) as DamageType
+    override fun doAssignedBy(b: Var<*>): DamageType {
+        return super.assignedBy(b) as DamageType
     }
 
     companion object {

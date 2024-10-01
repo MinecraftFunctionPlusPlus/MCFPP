@@ -6,8 +6,6 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.model.accessor.SimpleAccessor
-import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.*
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
@@ -50,8 +48,8 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
         set(value) {
             field = value
             for (p in nbtPath.pathList){
-                if(p is MemberPath && stackFrameRegex.matches(p.value)){
-                    p.value = "stack_frame[$stackIndex]"
+                if(p is MemberPath && p.value is MCStringConcrete && stackFrameRegex.matches((p.value as MCStringConcrete).value.value)){
+                    p.value = MCStringConcrete(StringTag("stack_frame[$stackIndex]"))
                 }
             }
         }
@@ -98,6 +96,11 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
      * 在离开作用域后是否会丢失跟踪
      */
     var trackLost = false
+
+    /**
+     * 此变量是否可以为空值。仅用于数据模板的成员变量
+     */
+    val nullable = false
 
     /**
      * 复制一个变量
@@ -154,13 +157,20 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
         }
     }
 
-    fun assign(b: Var<*>): Self {
+    /**
+     * 将b中的值赋值给此变量。如果b的类型和这个变量的类型不一致，会尝试进行隐式转换。赋值的实际执行过程在[doAssignedBy]中完成
+     *
+     * 此方法不会修改此变量的值。需要在其后调用[replacedBy]将原来的值覆盖
+     *
+     * @param b 变量的对象
+     */
+    fun assignedBy(b: Var<*>): Self {
         var v = b.implicitCast(this.type)
         if(v.isError){
             v = b
         }
         hasAssigned = true
-        val re = doAssign(v)
+        val re = doAssignedBy(v)
         if(stackIndex != 0) trackLost = true
         return re
     }
@@ -169,8 +179,12 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    @Throws(VariableConverseException::class)
-    protected abstract fun doAssign(b: Var<*>) : Self
+    protected abstract fun doAssignedBy(b: Var<*>) : Self
+
+    /**
+     * 判断b变量是否可以赋值给此变量
+     */
+    abstract fun canAssignedBy(b: Var<*>): Boolean
 
     /**
      * 将这个变量强制转换为一个类型
@@ -213,7 +227,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
             //不是this指针才需要额外指定引用者
             `var`.parent = pointer
         }
-        `var`.nbtPath = NBTPath(EntitySource(SelectorVarConcrete(EntitySelector('s'))))
+        `var`.nbtPath = NBTPath(EntitySource(SelectorVar(EntitySelector('s'))))
             .memberIndex("data")
             .memberIndex(identifier)
         return `var`

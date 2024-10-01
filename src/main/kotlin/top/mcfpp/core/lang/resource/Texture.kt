@@ -44,8 +44,8 @@ open class Texture: ResourceID {
      */
     constructor(b: Texture) : super(b)
 
-    override fun doAssign(b: Var<*>): Texture {
-        return super.assign(b) as Texture
+    override fun doAssignedBy(b: Var<*>): Texture {
+        return super.assignedBy(b) as Texture
     }
 
     companion object {

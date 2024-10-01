@@ -44,8 +44,8 @@ open class PotionEffect: ResourceID {
      */
     constructor(b: PotionEffect) : super(b)
 
-    override fun doAssign(b: Var<*>): PotionEffect {
-        return super.assign(b) as PotionEffect
+    override fun doAssignedBy(b: Var<*>): PotionEffect {
+        return super.assignedBy(b) as PotionEffect
     }
 
     companion object {

@@ -61,25 +61,25 @@ open class EnumVar : Var<EnumVar> {
         type = enum.getType()
     }
 
-    override fun doAssign(b: Var<*>): EnumVar {
+    override fun doAssignedBy(b: Var<*>): EnumVar {
         return when(b){
             is EnumVar -> {
                 if(b.enum != enum){
                     LogProcessor.error("Enum type not match: ${b.enum.identifier}(${b.enum.namespaceID}) and ${enum.identifier}(${enum.namespaceID})")
                     return this
                 }
-                val i = this.asIntVar().assign(b.asIntVar()) as MCInt
+                val i = this.asIntVar().assignedBy(b.asIntVar()) as MCInt
                 if(i is MCIntConcrete) {
                     val member = enum.getMember(i.value)
                     if(member == null){
                         LogProcessor.error("Enum member not found: ${i.value}")
                         return this
                     }
-                    asNBTVar().assign(NBTBasedDataConcrete(member.data))    //nbt赋值
+                    asNBTVar().assignedBy(NBTBasedDataConcrete(member.data))    //nbt赋值
                     EnumVarConcrete(this, i.value)
                 }
                 else {
-                    asNBTVar().assign(b.asNBTVar())    //nbt赋值
+                    asNBTVar().assignedBy(b.asNBTVar())    //nbt赋值
                     this
                 }
             }
@@ -100,6 +100,13 @@ open class EnumVar : Var<EnumVar> {
         }
     }
 
+
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        if(!b.implicitCast(type).isError) return true
+        if(b is MCStringConcrete) return true
+        return false
+    }
+
     override fun clone(): EnumVar {
         return EnumVar(this)
     }
@@ -108,7 +115,7 @@ open class EnumVar : Var<EnumVar> {
         if (isTemp) return this
         val re = EnumVar(enum)
         re.isTemp = true
-        return re.assign(this)
+        return re.assignedBy(this)
     }
 
     override fun storeToStack() {

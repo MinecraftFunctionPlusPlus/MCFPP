@@ -44,8 +44,8 @@ open class RecipeSerializer: ResourceID {
      */
     constructor(b: RecipeSerializer) : super(b)
 
-    override fun doAssign(b: Var<*>): RecipeSerializer {
-        return super.assign(b) as RecipeSerializer
+    override fun doAssignedBy(b: Var<*>): RecipeSerializer {
+        return super.assignedBy(b) as RecipeSerializer
     }
 
     companion object {

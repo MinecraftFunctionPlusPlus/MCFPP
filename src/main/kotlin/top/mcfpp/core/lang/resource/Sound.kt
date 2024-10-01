@@ -44,8 +44,8 @@ open class Sound: ResourceID {
      */
     constructor(b: Sound) : super(b)
 
-    override fun doAssign(b: Var<*>): Sound {
-        return super.assign(b) as Sound
+    override fun doAssignedBy(b: Var<*>): Sound {
+        return super.assignedBy(b) as Sound
     }
 
     companion object {

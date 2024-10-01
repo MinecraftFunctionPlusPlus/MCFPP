@@ -246,8 +246,8 @@ public class NBTListData {
     @MNIFunction(normalParams = {"E e"}, caller = "list<E>", returnType = "int")
     public static void indexOf(@NotNull Var<?> e, NBTList caller, ValueWrapper<MCInt> returnVar){
         var n = e.toNBTVar();
-        element.assign(n);
-        element.assign(caller);
+        element.assignedBy(n);
+        element.assignedBy(caller);
         Function.Companion.addCommand("scoreboard players set list.index " + SbObject.Companion.getMCFPP_TEMP() + " 0");
         Function.Companion.addCommand("execute store result score list.size mcfpp_temp run data get storage mcfpp:system list.list");
         Function.Companion.addCommand("function mcfpp.lang:list/index_of");
@@ -257,8 +257,8 @@ public class NBTListData {
     @MNIFunction(normalParams = {"E e"}, caller = "list<E>", returnType = "int")
     public static void lastIndexOf(Var<?> e, NBTList caller, ValueWrapper<MCInt> returnVar){
         var n = e.toNBTVar();
-        element.assign(n);
-        element.assign(caller);
+        element.assignedBy(n);
+        element.assignedBy(caller);
         Function.Companion.addCommand("scoreboard players set list.index " + SbObject.Companion.getMCFPP_TEMP() + " 0");
         Function.Companion.addCommand("execute store result score list.size mcfpp_temp run data get storage mcfpp:system list.list");
         Function.Companion.addCommand("function mcfpp.lang:list/last_index_of");
@@ -268,8 +268,8 @@ public class NBTListData {
     @MNIFunction(normalParams = {"E e"}, caller = "list<E>", returnType = "bool")
     public static void contains(Var<?> e, NBTList caller, ValueWrapper<MCBool> returnVar){
         var n = e.toNBTVar();
-        element.assign(n);
-        element.assign(caller);
+        element.assignedBy(n);
+        element.assignedBy(caller);
         Function.Companion.addCommand("scoreboard players set list.index " + SbObject.Companion.getMCFPP_TEMP() + " 0");
         Function.Companion.addCommand("execute store result score list.size mcfpp_temp run data get storage mcfpp:system list.list");
         Function.Companion.addCommand("function mcfpp.lang:list/contains");
@@ -278,6 +278,6 @@ public class NBTListData {
 
     @MNIFunction(caller = "list<E>")
     public static void clear(NBTList caller){
-        caller.assign(NBTListConcrete.Companion.getEmpty());
+        caller.assignedBy(NBTListConcrete.Companion.getEmpty());
     }
 }

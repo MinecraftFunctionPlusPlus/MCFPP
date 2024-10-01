@@ -40,9 +40,11 @@ class UnresolvedVar : Var<UnresolvedVar> {
         return (type as UnresolvedType).resolve(typeScope).build(identifier, fieldContainer)
     }
 
-    override fun doAssign(b: Var<*>): UnresolvedVar {
+    override fun doAssignedBy(b: Var<*>): UnresolvedVar {
         throw VariableNotResolvedException()
     }
+
+    override fun canAssignedBy(b: Var<*>): Boolean = false
 
     override fun explicitCast(type: MCFPPType): Var<*> {
         throw VariableNotResolvedException()

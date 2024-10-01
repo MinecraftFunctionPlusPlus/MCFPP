@@ -44,8 +44,8 @@ open class BossBar: ResourceID {
      */
     constructor(b: BossBar) : super(b)
 
-    override fun doAssign(b: Var<*>): BossBar {
-        return super.assign(b) as BossBar
+    override fun doAssignedBy(b: Var<*>): BossBar {
+        return super.assignedBy(b) as BossBar
     }
 
     companion object {

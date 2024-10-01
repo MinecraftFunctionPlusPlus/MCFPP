@@ -44,8 +44,8 @@ open class Structure: ResourceID {
      */
     constructor(b: Structure) : super(b)
 
-    override fun doAssign(b: Var<*>): Structure {
-        return super.assign(b) as Structure
+    override fun doAssignedBy(b: Var<*>): Structure {
+        return super.assignedBy(b) as Structure
     }
 
     companion object {

@@ -44,8 +44,8 @@ open class Recipe: ResourceID {
      */
     constructor(b: Recipe) : super(b)
 
-    override fun doAssign(b: Var<*>): Recipe {
-        return super.assign(b) as Recipe
+    override fun doAssignedBy(b: Var<*>): Recipe {
+        return super.assignedBy(b) as Recipe
     }
 
     companion object {

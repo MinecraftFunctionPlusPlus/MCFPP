@@ -4,7 +4,6 @@ import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.DataTemplateObject
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
-import top.mcfpp.model.CompoundData
 import top.mcfpp.model.DataTemplate
 import top.mcfpp.type.MCFPPType
 import java.util.*
@@ -48,7 +47,7 @@ class DataTemplateConstructor(val data: DataTemplate): Function("_init_" + data.
     }
 
     override fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?) {
-        field.getVar("this")!!.assign(caller as DataTemplateObject)
+        field.getVar("this")!!.assignedBy(caller as DataTemplateObject)
         normalArgs.add(0, field.getVar("this")!!)
         super.invoke(normalArgs, caller)
     }

@@ -5,6 +5,7 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.bool.MCBool
 import top.mcfpp.core.lang.bool.MCBoolConcrete
+import top.mcfpp.core.lang.bool.ReturnedMCBool
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.mni.MCIntData
 import top.mcfpp.type.MCFPPBaseType
@@ -51,7 +52,7 @@ open class MCInt : MCNumber<Int> {
 
     override var type: MCFPPType = MCFPPBaseType.Int
 
-    override fun doAssign(b: Var<*>) : MCInt {
+    override fun doAssignedBy(b: Var<*>) : MCInt {
         return when (b) {
             is MCInt -> {
                 assignCommand(b)
@@ -77,15 +78,23 @@ open class MCInt : MCNumber<Int> {
         }
     }
 
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        if(!b.implicitCast(type).isError) return true
+        return when(b){
+            is CommandReturn -> true
+            else -> false
+        }
+    }
+
     override fun explicitCast(type: MCFPPType): Var<*> {
         val re = super.explicitCast(type)
         if(!re.isError) return re
         //TODO 类支持
         return when (type) {
             MCFPPBaseType.Float -> {
-                MCInt("inp").assign(this)
+                MCInt("inp").assignedBy(this)
                 Function.addCommand("function math:hpo/float/_scoreto")
-                return MCFloat().assign(MCFloat.ssObj)
+                return MCFloat().assignedBy(MCFloat.ssObj)
             }
             else -> re
         }
@@ -97,9 +106,9 @@ open class MCInt : MCNumber<Int> {
         //TODO 类支持
         return when (type) {
             MCFPPBaseType.Float -> {
-                MCInt("inp").assign(this)
+                MCInt("inp").assignedBy(this)
                 Function.addCommand("function math:hpo/float/_scoreto")
-                return MCFloat().assign(MCFloat.ssObj)
+                return MCFloat().assignedBy(MCFloat.ssObj)
             }
             else -> re
         }
@@ -403,7 +412,7 @@ open class MCInt : MCNumber<Int> {
         if (isTemp) return this
         val re = MCInt()
         re.isTemp = true
-        return re.assign(this) as MCInt
+        return re.assignedBy(this) as MCInt
     }
 
     override fun storeToStack() {
@@ -494,7 +503,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
     }
 
     constructor(enum: EnumVarConcrete) : super(enum){
-        this.value = enum.value
+        this.value = enum.value.value
     }
 
     override fun clone(): MCIntConcrete {

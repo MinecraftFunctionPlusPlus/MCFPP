@@ -44,8 +44,8 @@ open class LootTable: ResourceID {
      */
     constructor(b: LootTable) : super(b)
 
-    override fun doAssign(b: Var<*>): LootTable {
-        return super.assign(b) as LootTable
+    override fun doAssignedBy(b: Var<*>): LootTable {
+        return super.assignedBy(b) as LootTable
     }
 
     companion object {

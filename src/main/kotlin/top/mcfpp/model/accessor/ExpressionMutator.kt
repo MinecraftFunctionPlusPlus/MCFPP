@@ -32,7 +32,7 @@ class ExpressionMutator(val ctx: mcfppParser.ExpressionContext, field: Var<*>): 
         val cs = Commands.fakeFunction(Function.currFunction){
             it.field.putVar("field", field)
             it.field.putVar("value", b)
-            field.assign(MCFPPExprVisitor().visit(ctx))
+            field.assignedBy(MCFPPExprVisitor().visit(ctx))
         }
         Function.addCommands(cs)
         return field

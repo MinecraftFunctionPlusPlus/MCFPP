@@ -44,8 +44,8 @@ open class Particle: ResourceID {
      */
     constructor(b: Particle) : super(b)
 
-    override fun doAssign(b: Var<*>): Particle {
-        return super.assign(b) as Particle
+    override fun doAssignedBy(b: Var<*>): Particle {
+        return super.assignedBy(b) as Particle
     }
 
     companion object {

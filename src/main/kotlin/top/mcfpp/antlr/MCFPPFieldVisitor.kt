@@ -441,7 +441,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             Function.addComment(ctx.text)
             val init: Var<*> = MCFPPExprVisitor().visit(c.expression())!!
             try {
-                `var`.assign(init)
+                `var`.assignedBy(init)
             } catch (e: VariableConverseException) {
                 LogProcessor.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
                 Function.currFunction = Function.nullFunction

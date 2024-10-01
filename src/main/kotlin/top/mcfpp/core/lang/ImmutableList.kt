@@ -34,6 +34,7 @@ open class ImmutableList : NBTList{
         identifier: String = UUID.randomUUID().toString(),
         genericType : MCFPPType
     ) : super(curr, identifier, genericType)
+
     /**
      * 创建一个list值。它的标识符和mc名相同。
      * @param identifier identifier

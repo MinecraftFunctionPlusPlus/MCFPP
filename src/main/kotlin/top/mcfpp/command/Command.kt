@@ -178,6 +178,7 @@ open class Command {
      * @return 用来调用 *执行宏参数的函数* 的function命令，以及传入宏参数使用的值
      */
     fun buildMacroFunction() : Array<Command>{
+        if(!isMacro) return arrayOf(this)
         val f = UUID.randomUUID().toString()
         val sharedPath = NBTPath.getMaxImmediateSharedPath(*commandParts.filterIsInstance<MacroPart>().map { it.v.nbtPath }.toTypedArray())?: NBTPath.macroTemp
         Project.macroFunction[f] = this.toString()
@@ -187,7 +188,7 @@ open class Command {
                 //变量需要传递
                 argPass.addAll(
                     Commands.fakeFunction(Function.nullFunction) {
-                        v.clone().apply { sharedPath.memberIndex(v.identifier) }.assign(v)
+                        v.clone().apply { sharedPath.memberIndex(v.identifier) }.assignedBy(v)
                     }
                 )
             }
@@ -203,6 +204,7 @@ open class Command {
      * @return 用来调用 *执行宏参数的函数* 的function命令。无需自行补全with参数
      */
     fun buildMacroFunction(nbtPath: NBTPath): Command{
+        if(!isMacro) return this
         val f = UUID.randomUUID().toString()
         Project.macroFunction[f] = this.toString()
         return Command.build("function mcfpp:dynamic/$f with").build(nbtPath.toCommandPart())

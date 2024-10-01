@@ -12,8 +12,12 @@ class PropertyVar(val property: Property, val caller: CanSelectMember): Var<Prop
 
     override var type: MCFPPType = property.field.type
 
-    override fun doAssign(b: Var<*>): PropertyVar {
+    override fun doAssignedBy(b: Var<*>): PropertyVar {
         return PropertyVar(Property.buildSimpleProperty(property.setter(caller, b)), caller)
+    }
+
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        return property.field.canAssignedBy(b)
     }
 
     override fun clone(): PropertyVar = this

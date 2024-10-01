@@ -44,8 +44,8 @@ open class Statistic: ResourceID {
      */
     constructor(b: Statistic) : super(b)
 
-    override fun doAssign(b: Var<*>): Statistic {
-        return super.assign(b) as Statistic
+    override fun doAssignedBy(b: Var<*>): Statistic {
+        return super.assignedBy(b) as Statistic
     }
 
     companion object {

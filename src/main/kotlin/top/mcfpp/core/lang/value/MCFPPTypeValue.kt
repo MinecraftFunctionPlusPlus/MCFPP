@@ -23,7 +23,7 @@ class MCTypeValue(
      */
     override var type: MCFPPType = MCFPPBaseType.Type
     
-    override fun doAssign(b: Var<*>): MCTypeValue {
+    override fun doAssignedBy(b: Var<*>): MCTypeValue {
         TODO("Not yet implemented")
     }
 

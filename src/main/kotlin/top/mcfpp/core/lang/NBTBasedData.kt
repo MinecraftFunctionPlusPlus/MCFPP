@@ -61,7 +61,7 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable{
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun doAssign(b: Var<*>) : NBTBasedData {
+    override fun doAssignedBy(b: Var<*>) : NBTBasedData {
         return when (b) {
             is NBTBasedData -> assignCommand(b)
             is MCFPPValue<*> -> assignCommand(NBTBasedDataConcrete(NBTUtil.toNBT(b)!!) as NBTBasedData)
@@ -84,7 +84,7 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable{
                 }
                 final.last().build(Commands.dataSetValue(nbtPath, b.value))
                 if(final.last().isMacro){
-                    Function.addCommand(final.last().buildMacroFunction())
+                    Function.addCommands(final.last().buildMacroFunction())
                 }else{
                     Function.addCommand(final.last())
                 }
@@ -97,7 +97,7 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable{
                 }
                 final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
                 if(final.last().isMacro){
-                    Function.addCommand(final.last().buildMacroFunction())
+                    Function.addCommands(final.last().buildMacroFunction())
                 }else{
                     Function.addCommand(final.last())
                 }
@@ -112,7 +112,7 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable{
                 }
                 final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
                 if(final.last().isMacro){
-                    Function.addCommand(final.last().buildMacroFunction())
+                    Function.addCommands(final.last().buildMacroFunction())
                 }else{
                     Function.addCommand(final.last())
                 }
@@ -121,8 +121,9 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable{
             ifThisIsNormalVarAndAIsNotConcrete = {b, _ ->
                 Function.addCommand(Commands.dataSetFrom(nbtPath, b.nbtPath))
                 NBTBasedData(this)
-            }) as NBTBasedData
-        }
+            }
+        ) as NBTBasedData
+    }
 
     /**
      * 将这个变量强制转换为一个类型

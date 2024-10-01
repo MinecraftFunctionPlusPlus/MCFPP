@@ -35,8 +35,12 @@ class Pos : Var<Pos> {
         coordinate.putAll(b.coordinate)
     }
 
-    override fun doAssign(b: Var<*>): Pos {
+    override fun doAssignedBy(b: Var<*>): Pos {
         TODO("Not yet implemented")
+    }
+
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        return !b.implicitCast(type).isError
     }
 
     override fun clone(): Pos {
@@ -79,7 +83,7 @@ class Pos : Var<Pos> {
         if(values[0] is MCIntConcrete){
             c.build((values[0] as MCIntConcrete).value.toString(), false)
         }else{
-            c.buildMacro(values[0].identifier)
+            c.buildMacro(values[0])
         }
         if(relative[1]){
             c.build("~")
@@ -89,7 +93,7 @@ class Pos : Var<Pos> {
         if(values[1] is MCIntConcrete){
             c.build((values[1] as MCIntConcrete).value.toString(), false)
         }else{
-            c.buildMacro(values[1].identifier)
+            c.buildMacro(values[1])
         }
         if(relative[2]){
             c.build("~")
@@ -99,7 +103,7 @@ class Pos : Var<Pos> {
         if(values[2] is MCIntConcrete){
             c.build((values[2] as MCIntConcrete).value.toString(), false)
         }else{
-            c.buildMacro(values[2].identifier)
+            c.buildMacro(values[2])
         }
         return c
     }

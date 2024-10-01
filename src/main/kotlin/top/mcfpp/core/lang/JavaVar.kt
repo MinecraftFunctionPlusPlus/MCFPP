@@ -69,7 +69,7 @@ class JavaVar : Var<JavaVar>, MCFPPValue<Any?> {
      * 将b中的值赋值给此变量
      * @param b 变量的对象
      */
-    override fun doAssign(b: Var<*>): JavaVar {
+    override fun doAssignedBy(b: Var<*>): JavaVar {
         when (b) {
             is JavaVar -> {
                 this.value = b.value
@@ -80,6 +80,10 @@ class JavaVar : Var<JavaVar>, MCFPPValue<Any?> {
             }
         }
         return this
+    }
+
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        return !b.implicitCast(type).isError
     }
 
     override fun clone(): JavaVar {

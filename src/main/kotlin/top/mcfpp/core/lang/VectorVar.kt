@@ -1,6 +1,5 @@
 package top.mcfpp.core.lang
 
-import top.mcfpp.model.accessor.SimpleAccessor
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.MCFPPVectorType
 import top.mcfpp.model.CanSelectMember
@@ -50,19 +49,19 @@ open class VectorVar: Var<VectorVar>, Indexable, ScoreHolder {
         type = MCFPPVectorType(dimension)
     }
 
-    override fun doAssign(b: Var<*>): VectorVar {
+    override fun doAssignedBy(b: Var<*>): VectorVar {
         when(b){
             is VectorVar -> {
                 if(b.dimension != dimension){
                     LogProcessor.error("Cannot assign vector '$identifier' with different dimension '${b.identifier}'")
                 }
                 for (i in 0 until dimension){
-                    components[i].replacedBy(components[i].assign(b.components[i]))
+                    components[i].replacedBy(components[i].assignedBy(b.components[i]))
                 }
             }
             is MCInt -> {
                 for (i in 0 until dimension){
-                    components[i].replacedBy(components[i].assign(b))
+                    components[i].replacedBy(components[i].assignedBy(b))
                 }
             }
             else -> {
@@ -70,6 +69,15 @@ open class VectorVar: Var<VectorVar>, Indexable, ScoreHolder {
             }
         }
         return this
+    }
+
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        if(!b.implicitCast(type).isError) return true
+        return when(b){
+            is VectorVar -> b.dimension == dimension
+            is MCInt -> true
+            else -> false
+        }
     }
 
     override fun explicitCast(type: MCFPPType): Var<*> {
@@ -131,7 +139,7 @@ open class VectorVar: Var<VectorVar>, Indexable, ScoreHolder {
         if (isTemp) return this
         val re = VectorVar(dimension)
         re.isTemp = true
-        return re.assign(this)
+        return re.assignedBy(this)
     }
 
     override fun storeToStack() {

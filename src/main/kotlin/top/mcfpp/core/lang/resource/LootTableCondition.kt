@@ -44,8 +44,8 @@ open class LootTableCondition: ResourceID {
      */
     constructor(b: LootTableCondition) : super(b)
 
-    override fun doAssign(b: Var<*>): LootTableCondition {
-        return super.assign(b) as LootTableCondition
+    override fun doAssignedBy(b: Var<*>): LootTableCondition {
+        return super.assignedBy(b) as LootTableCondition
     }
 
     companion object {

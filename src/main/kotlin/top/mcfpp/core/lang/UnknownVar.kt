@@ -8,7 +8,7 @@ import top.mcfpp.model.function.UnknownFunction
 
 class UnknownVar(identifier: String) : Var<UnknownVar>(identifier) {
 
-    override fun doAssign(b: Var<*>) : UnknownVar {
+    override fun doAssignedBy(b: Var<*>) : UnknownVar {
         hasAssigned = true
         return this
     }
@@ -16,6 +16,8 @@ class UnknownVar(identifier: String) : Var<UnknownVar>(identifier) {
     override fun explicitCast(type: MCFPPType): Var<*> = type.build(identifier, Function.currFunction)
 
     override fun implicitCast(type: MCFPPType): Var<*> = type.build(identifier, Function.currFunction)
+
+    override fun canAssignedBy(b: Var<*>): Boolean = true
 
     override fun clone(): UnknownVar = this
 

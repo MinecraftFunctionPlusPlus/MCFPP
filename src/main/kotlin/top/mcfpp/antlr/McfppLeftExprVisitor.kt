@@ -1,7 +1,6 @@
 package top.mcfpp.antlr
 
 import top.mcfpp.Project
-import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.core.lang.*
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.core.lang.MCFPPValue
@@ -15,7 +14,6 @@ import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import java.util.*
-import kotlin.collections.ArrayList
 
 open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
     private var currSelector : CanSelectMember? = null
@@ -75,8 +73,8 @@ open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
                     if(right is MCInt){
                         range.right = MCFloat(range.identifier + "_right")
                     }
-                    left?.let { range.left.assign(it) }
-                    right?.let { range.right.assign(it) }
+                    left?.let { range.left.assignedBy(it) }
+                    right?.let { range.right.assignedBy(it) }
                     return range
                 }
             }else{
@@ -254,7 +252,7 @@ open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
                             LogProcessor.error("Member $id not found")
                             continue
                         }
-                        m.replacedBy(m.assign(v))
+                        m.replacedBy(m.assignedBy(v))
                     }
                 }
             }

@@ -44,8 +44,8 @@ open class Memory: ResourceID {
      */
     constructor(b: Memory) : super(b)
 
-    override fun doAssign(b: Var<*>): Memory {
-        return super.assign(b) as Memory
+    override fun doAssignedBy(b: Var<*>): Memory {
+        return super.assignedBy(b) as Memory
     }
 
     companion object {

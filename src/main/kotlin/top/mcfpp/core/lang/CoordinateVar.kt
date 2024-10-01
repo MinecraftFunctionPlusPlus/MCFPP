@@ -17,66 +17,70 @@ import java.util.*
 
 class Coordinate3Var: Var<Coordinate3Var> {
 
-        var x: CoordinateDimension
-        var y: CoordinateDimension
-        var z: CoordinateDimension
+    var x: CoordinateDimension
+    var y: CoordinateDimension
+    var z: CoordinateDimension
 
-        constructor(
-            curr: FieldContainer,
-            identifier: String = UUID.randomUUID().toString(),
-        ) : super(identifier){
-            this.x = CoordinateDimension("", curr, identifier)
-            this.y = CoordinateDimension("", curr, identifier)
-            this.z = CoordinateDimension("", curr, identifier)
-        }
+    constructor(
+        curr: FieldContainer,
+        identifier: String = UUID.randomUUID().toString(),
+    ) : super(identifier){
+        this.x = CoordinateDimension("", curr, identifier)
+        this.y = CoordinateDimension("", curr, identifier)
+        this.z = CoordinateDimension("", curr, identifier)
+    }
 
-        constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier){
-            x = CoordinateDimension("", identifier)
-            y = CoordinateDimension("", identifier)
-            z = CoordinateDimension("", identifier)
-        }
+    constructor(identifier: String = UUID.randomUUID().toString()) : super(identifier){
+        x = CoordinateDimension("", identifier)
+        y = CoordinateDimension("", identifier)
+        z = CoordinateDimension("", identifier)
+    }
 
-        constructor(b: Coordinate3Var) : super(b){
-            x = CoordinateDimension(b.x)
-            y = CoordinateDimension(b.y)
-            z = CoordinateDimension(b.z)
-        }
+    constructor(b: Coordinate3Var) : super(b){
+        x = CoordinateDimension(b.x)
+        y = CoordinateDimension(b.y)
+        z = CoordinateDimension(b.z)
+    }
 
-        override fun clone(): Coordinate3Var {
-            return Coordinate3Var(this)
-        }
+    override fun clone(): Coordinate3Var {
+        return Coordinate3Var(this)
+    }
 
-        override fun doAssign(b: Var<*>): Coordinate3Var {
-            return when (b) {
-                is Coordinate3Var -> {
-                    x.assign(b.x)
-                    y.assign(b.y)
-                    z.assign(b.z)
-                    this
-                }
+    override fun doAssignedBy(b: Var<*>): Coordinate3Var {
+        return when (b) {
+            is Coordinate3Var -> {
+                x.assignedBy(b.x)
+                y.assignedBy(b.y)
+                z.assignedBy(b.z)
+                this
+            }
 
-                else -> {
-                    LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
-                    this
-                }
+            else -> {
+                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
+                this
             }
         }
+    }
 
-        override fun getTempVar(): Coordinate3Var {
-            return Coordinate3Var().assign(this)
-        }
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        return !b.implicitCast(type).isError
+    }
 
-        override fun storeToStack() {
-            x.storeToStack()
-            y.storeToStack()
-            z.storeToStack()
-        }
+    override fun getTempVar(): Coordinate3Var {
+        return Coordinate3Var().assignedBy(this)
+    }
 
-        override fun getFromStack() {
-            x.getFromStack()
-            y.getFromStack()
-            z.getFromStack()
-        }
+    override fun storeToStack() {
+        x.storeToStack()
+        y.storeToStack()
+        z.storeToStack()
+    }
+
+    override fun getFromStack() {
+        x.getFromStack()
+        y.getFromStack()
+        z.getFromStack()
+    }
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         return when(key){
@@ -137,11 +141,11 @@ class Coordinate2Var: Var<Coordinate2Var> {
         return Coordinate2Var(this)
     }
 
-    override fun doAssign(b: Var<*>): Coordinate2Var {
+    override fun doAssignedBy(b: Var<*>): Coordinate2Var {
         return when (b) {
             is Coordinate2Var -> {
-                x.assign(b.x)
-                z.assign(b.z)
+                x.assignedBy(b.x)
+                z.assignedBy(b.z)
                 this
             }
 
@@ -152,8 +156,12 @@ class Coordinate2Var: Var<Coordinate2Var> {
         }
     }
 
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        return !b.implicitCast(type).isError
+    }
+
     override fun getTempVar(): Coordinate2Var {
-        return Coordinate2Var().assign(this)
+        return Coordinate2Var().assignedBy(this)
     }
 
     override fun storeToStack() {
@@ -185,8 +193,8 @@ class Coordinate2Var: Var<Coordinate2Var> {
 
     fun toCommandPart(): Command{
         val c = Command("")
-        c.buildMacro(x.identifier, false)
-        c.buildMacro(z.identifier, false)
+        c.buildMacro(x, false)
+        c.buildMacro(z, false)
         return c
     }
 
@@ -244,7 +252,7 @@ open class CoordinateDimension: MCNumber<Number> {
     }
 
     override fun assignCommand(a: MCNumber<*>): MCNumber<Number> {
-        this.prefix = this.prefix.assign((a as CoordinateDimension).prefix) as MCString
+        this.prefix = this.prefix.assignedBy((a as CoordinateDimension).prefix) as MCString
         val aNum = a.number
         if(number == null && aNum == null) {
             //Do nothing
@@ -261,7 +269,7 @@ open class CoordinateDimension: MCNumber<Number> {
         return this
     }
 
-    override fun doAssign(b: Var<*>): MCNumber<Number> {
+    override fun doAssignedBy(b: Var<*>): MCNumber<Number> {
         return when (b) {
             is CoordinateDimension -> {
                 assignCommand(b)
@@ -272,6 +280,10 @@ open class CoordinateDimension: MCNumber<Number> {
                 this
             }
         }
+    }
+
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        return !b.implicitCast(type).isError
     }
 
     override fun clone(): MCNumber<Number> {
@@ -303,10 +315,10 @@ open class CoordinateDimension: MCNumber<Number> {
         val c = if(prefix is MCStringConcrete){
             Command((prefix as MCStringConcrete).value.value)
         }else{
-            Command("").buildMacro(prefix.identifier, false)
+            Command("").buildMacro(prefix, false)
         }
         if(number != null){
-            c.buildMacro(number!!.identifier, false)
+            c.buildMacro(number!!, false)
         }
         return c
     }

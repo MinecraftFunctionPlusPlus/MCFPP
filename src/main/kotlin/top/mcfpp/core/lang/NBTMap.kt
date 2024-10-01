@@ -20,8 +20,6 @@ open class NBTMap : NBTDictionary{
 
     val genericType: MCFPPType
 
-    override var type: MCFPPType
-
     /**
      * 创建一个map类型的变量。它的mc名和变量所在的域容器有关。
      *
@@ -65,8 +63,8 @@ open class NBTMap : NBTDictionary{
         type = MCFPPMapType(genericType)
     }
 
-    override fun doAssign(b: Var<*>): NBTMap {
-        return super.assign(b) as NBTMap
+    override fun doAssignedBy(b: Var<*>): NBTMap {
+        return super.assignedBy(b) as NBTMap
     }
 
     companion object{

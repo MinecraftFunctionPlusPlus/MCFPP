@@ -44,8 +44,8 @@ open class Liquid: ResourceID {
      */
     constructor(b: Liquid) : super(b)
 
-    override fun doAssign(b: Var<*>): Liquid {
-        return super.assign(b) as Liquid
+    override fun doAssignedBy(b: Var<*>): Liquid {
+        return super.assignedBy(b) as Liquid
     }
 
     companion object {

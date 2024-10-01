@@ -262,6 +262,8 @@ open class MCFPPType(
             MCFPPNBTType.NBT
         )
 
+        val privateType: HashMap<String,MCFPPType> = HashMap()
+
         val baseResourceType: Set<MCFPPResourceType> = setOf()
 
         val nbtType:Set<MCFPPType> = setOf(

@@ -44,8 +44,8 @@ open class EntityType: ResourceID {
      */
     constructor(b: EntityType) : super(b)
 
-    override fun doAssign(b: Var<*>): EntityType {
-        return super.assign(b) as EntityType
+    override fun doAssignedBy(b: Var<*>): EntityType {
+        return super.assignedBy(b) as EntityType
     }
 
     companion object {

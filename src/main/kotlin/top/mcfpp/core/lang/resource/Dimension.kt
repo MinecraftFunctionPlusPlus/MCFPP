@@ -44,8 +44,8 @@ open class Dimension: ResourceID {
      */
     constructor(b: Dimension) : super(b)
 
-    override fun doAssign(b: Var<*>): Dimension {
-        return super.assign(b) as Dimension
+    override fun doAssignedBy(b: Var<*>): Dimension {
+        return super.assignedBy(b) as Dimension
     }
 
     companion object {

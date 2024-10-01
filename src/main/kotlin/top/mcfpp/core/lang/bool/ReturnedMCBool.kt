@@ -1,6 +1,6 @@
-package top.mcfpp.core.lang
+package top.mcfpp.core.lang.bool
 
-import top.mcfpp.core.lang.bool.MCBool
+import top.mcfpp.core.lang.Var
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
@@ -22,7 +22,7 @@ class ReturnedMCBool(val parentFunction: Function) : MCBool() {
         this.isConst = false
     }
 
-    override fun doAssign(b: Var<*>): MCBool {
+    override fun doAssignedBy(b: Var<*>): MCBool {
         LogProcessor.error("The bool type returned by the function is read-only")
         throw Exception()
     }
@@ -43,7 +43,9 @@ class ReturnedMCBool(val parentFunction: Function) : MCBool() {
 
     override fun getTempVar(): MCBool {
         val re = MCBool()
-        re.assign(this)
+        re.assignedBy(this)
         return re
     }
+
+    override fun canAssignedBy(b: Var<*>) = false
 }

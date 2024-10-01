@@ -114,7 +114,7 @@ class GenericFunction : Function, Generic<Function> {
         }
         for (i in readOnlyParams.indices) {
             var r = field.getVar(readOnlyParams[i].identifier)!!
-            r = r.assign(readOnlyArgs[i])
+            r = r.assignedBy(readOnlyArgs[i])
             if(r is MCFPPTypeVar){
                 compiledFunction.field.putType(readOnlyParams[i].identifier, r.value)
             }

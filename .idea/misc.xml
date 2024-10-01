@@ -22,11 +22,12 @@
     </option>
   </component>
   <component name="EntryPointsManager">
-    <list size="4">
+    <list size="5">
       <item index="0" class="java.lang.String" itemvalue="top.mcfpp.annotations.MCFPNative" />
       <item index="1" class="java.lang.String" itemvalue="top.mcfpp.annotations.MNIAccessor" />
       <item index="2" class="java.lang.String" itemvalue="top.mcfpp.annotations.MNIFunction" />
-      <item index="3" class="java.lang.String" itemvalue="top.mcfpp.annotations.MNIMutator" />
+      <item index="3" class="java.lang.String" itemvalue="top.mcfpp.annotations.MNIMember" />
+      <item index="4" class="java.lang.String" itemvalue="top.mcfpp.annotations.MNIMutator" />
     </list>
   </component>
   <component name="ExternalStorageConfigurationManager" enabled="true" />

@@ -90,11 +90,11 @@ open class MCAny : Var<MCAny> {
      *
      * @return 重新获取跟踪的此变量
      */
-    override fun doAssign(b: Var<*>): MCAnyConcrete {
+    override fun doAssignedBy(b: Var<*>): MCAnyConcrete {
         when (b) {
             is MCAnyConcrete -> {
                 val q = MCAnyConcrete(this, b.value)
-                q.assign(b)
+                q.assignedBy(b)
                 return q
             }
 
@@ -105,10 +105,14 @@ open class MCAny : Var<MCAny> {
 
             else -> {
                 val q = MCAnyConcrete(this, b)
-                q.assign(b)
+                q.assignedBy(b)
                 return q
             }
         }
+    }
+
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        return !b.implicitCast(type).isError
     }
 
     /**
@@ -242,7 +246,7 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>> {
         return MCAnyConcrete(this)
     }
 
-    override fun doAssign(b: Var<*>): MCAnyConcrete {
+    override fun doAssignedBy(b: Var<*>): MCAnyConcrete {
         when (b) {
             is MCAnyConcrete -> {
                 if(b.value.type != this.value.type){
@@ -251,7 +255,7 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>> {
                 //构造假设变量
                 val t = b.value.type.build(this.identifier, parentClass()?:parentTemplate()?:Function.currFunction)
                 val v = b.value.type.build(b.identifier, b.parentClass()?:b.parentTemplate()?:Function.currFunction)
-                t.assign(v)
+                t.assignedBy(v)
                 this.value = b.value
                 return this
             }
@@ -262,7 +266,7 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>> {
             else -> {
                 this.value = b
                 val t = b.type.build(this.identifier, parentClass()?:parentTemplate()?:Function.currFunction)
-                t.assign(b)
+                t.assignedBy(b)
                 return this
             }
         }

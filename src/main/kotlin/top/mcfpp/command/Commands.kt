@@ -1,12 +1,11 @@
 package top.mcfpp.command
 
 import net.querz.nbt.io.SNBTUtil
+import net.querz.nbt.tag.IntArrayTag
+import net.querz.nbt.tag.StringTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.Project
-import top.mcfpp.core.lang.ClassPointer
-import top.mcfpp.core.lang.EntityVar
-import top.mcfpp.core.lang.EntityVarConcrete
-import top.mcfpp.core.lang.MCInt
+import top.mcfpp.core.lang.*
 import top.mcfpp.type.MCFPPClassType
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.CanSelectMember
@@ -191,12 +190,29 @@ object Commands {
 
     fun runAsEntity(entityVar: EntityVar, command: Command): Array<Command>{
         return if(entityVar is EntityVarConcrete){
-            arrayOf(Command("execute ${Utils.fromNBTArrayUUID(entityVar.value)} run").build(command))
+            if(!entityVar.isName){
+                arrayOf(Command("execute as ${Utils.fromNBTArrayUUID(entityVar.value as IntArrayTag)} run").build(command))
+            }else{
+                arrayOf(Command("execute as ${(entityVar.value as StringTag).value} run").build(command))
+            }
         }else{
-            arrayOf(
-                Command("data modify storage entity ${ClassPointer.tempItemEntityUUID} Thrower set from").build(entityVar.nbtPath.toCommandPart()),
-                Command("execute as ${ClassPointer.tempItemEntityUUID} on origin run").build(command)
-            )
+            if(!entityVar.isName){
+                arrayOf(
+                    Command("data modify storage entity ${ClassPointer.tempItemEntityUUID} Thrower set from").build(entityVar.nbtPath.toCommandPart()),
+                    Command("execute as ${ClassPointer.tempItemEntityUUID} on origin run").build(command)
+                )
+            }else{
+                Command("execute as").buildMacro(entityVar).build("run").build(command).buildMacroFunction()
+            }
+        }
+    }
+
+    fun runAsEntity(selector: SelectorVar, command: Command): Array<Command>{
+        val c = Command("execute as").build(selector.value.toCommandPart()).build("run").build(command)
+        return if(c.isMacro){
+            c.buildMacroFunction()
+        }else{
+            arrayOf(c)
         }
     }
 }

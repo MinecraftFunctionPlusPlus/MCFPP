@@ -53,6 +53,14 @@ open class ResourceID : NBTBasedData {
         }
     }
 
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        if (!b.implicitCast(type).isError) return true
+        if(b is ResourceID){
+            return true
+        }
+        return false
+    }
+
     companion object {
         val data = CompoundData("ResourceID","mcfpp.lang.resource")
 

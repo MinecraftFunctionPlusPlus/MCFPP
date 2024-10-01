@@ -5,7 +5,6 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.antlr.RuleContextExtension.children
 import top.mcfpp.antlr.mcfppParser.CompileTimeFuncDeclarationContext
-import top.mcfpp.command.Command
 import top.mcfpp.command.CommandList
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.*
@@ -18,6 +17,7 @@ import top.mcfpp.type.MCFPPType
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.bool.MCBool
 import top.mcfpp.core.lang.bool.MCBoolConcrete
+import top.mcfpp.core.lang.bool.ReturnedMCBool
 import top.mcfpp.lib.Execute
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.*
@@ -139,7 +139,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 LogProcessor.error("Duplicate defined variable name:" + ctx.Identifier().text)
             }
             try {
-                `var`.assign(init)
+                `var`.assignedBy(init)
             } catch (e: VariableConverseException) {
                 LogProcessor.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
                 throw VariableConverseException()
@@ -179,7 +179,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 if (c.expression() != null) {
                     val init: Var<*> = MCFPPExprVisitor(if(type is MCFPPGenericClassType) type else null, if(type is MCFPPEnumType) type else null).visit(c.expression())!!
                     try {
-                        `var` = `var`.assign(init)
+                        `var` = `var`.assignedBy(init)
                     } catch (e: VariableConverseException) {
                         LogProcessor.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
                         throw VariableConverseException(e)
@@ -224,7 +224,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 if(right !is MCFPPValue<*> && left.parent is DataTemplateObjectConcrete){
                     left.parent = (left.parent as DataTemplateObjectConcrete).toDynamic(true)
                 }
-                left.replacedBy(left.assign(right))
+                left.replacedBy(left.assignedBy(right))
             } catch (e: VariableConverseException) {
                 LogProcessor.error("Cannot convert " + right.javaClass + " to " + left.javaClass)
                 throw e
@@ -402,7 +402,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             parent as mcfppParser.IfStatementContext
             var exp = MCFPPExprVisitor().visit(parent.expression())
             if(exp is ReturnedMCBool){
-                exp = MCBool().assign(exp)
+                exp = MCBool().assignedBy(exp)
             }
             when(exp){
                 is MCBoolConcrete -> {
@@ -448,7 +448,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             } else {
                 exp as ReturnedMCBool
                 val exp1 = MCBool()
-                exp1.assign(exp)
+                exp1.assignedBy(exp)
                 //给子函数开栈
                 Function.addCommand(
                     "execute " +
@@ -958,7 +958,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 }
             }
             val value = MCFPPExprVisitor().visit(context.expression())
-            arg?.assign(value)
+            arg?.assignedBy(value)
         }
         val execFunction = NoStackFunction("execute_" + UUID.randomUUID().toString(), Function.currFunction)
         GlobalField.localNamespaces[execFunction.namespace]!!.field.addFunction(execFunction, false)

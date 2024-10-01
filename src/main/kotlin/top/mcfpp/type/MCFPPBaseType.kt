@@ -242,22 +242,6 @@ class MCFPPBaseType {
 
 }
 
-class LimitedSelectorType(val limit: Int): MCFPPType(parentType = listOf(MCFPPEntityType.Entity)){
-
-    override val objectData: CompoundData
-        get() = SelectorVar.data
-
-    override val typeName: String
-        get() = "selector[$limit]"
-
-    override fun build(identifier: String, container: FieldContainer): Var<*> = SelectorVarConcrete(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES).limit(limit), container, identifier)
-    override fun build(identifier: String): Var<*> = SelectorVarConcrete(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES).limit(limit), identifier)
-    override fun build(identifier: String, clazz: Class): Var<*> = SelectorVarConcrete(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES).limit(limit), clazz, identifier)
-    override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = SelectorVar(EntitySelector.Companion.SelectorType.ALL_ENTITIES, container, identifier)
-    override fun buildUnConcrete(identifier: String): Var<*> = SelectorVar(EntitySelector.Companion.SelectorType.ALL_ENTITIES, identifier)
-    override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = SelectorVar(EntitySelector.Companion.SelectorType.ALL_ENTITIES, clazz, identifier)
-
-}
 
 //class MCFPPEntityType(
 //    val resourceLocation: ResourceLocation

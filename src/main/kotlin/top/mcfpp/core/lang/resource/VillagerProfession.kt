@@ -44,8 +44,8 @@ open class VillagerProfession: ResourceID {
      */
     constructor(b: VillagerProfession) : super(b)
 
-    override fun doAssign(b: Var<*>): VillagerProfession {
-        return super.assign(b) as VillagerProfession
+    override fun doAssignedBy(b: Var<*>): VillagerProfession {
+        return super.assignedBy(b) as VillagerProfession
     }
 
     companion object {

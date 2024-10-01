@@ -25,7 +25,7 @@ class Execute {
                             return CompoundData("execute.pos.x", "mcfpp.shadow")
                         }
 
-                        override fun doAssign(b: Var<*>): WriteOnlyVar {
+                        override fun doAssignedBy(b: Var<*>): WriteOnlyVar {
                             if(b is CoordinateDimension){
                                 command.build("positioned").build(b.toCommandPart()).build("~ ~")
                             }else{
@@ -39,7 +39,7 @@ class Execute {
                             return CompoundData("execute.pos.y", "mcfpp.shadow")
                         }
 
-                        override fun doAssign(b: Var<*>): WriteOnlyVar {
+                        override fun doAssignedBy(b: Var<*>): WriteOnlyVar {
                             if(b is CoordinateDimension){
                                 command.build("positioned ~").build(b.toCommandPart()).build("~")
                             }else{
@@ -53,7 +53,7 @@ class Execute {
                             return CompoundData("execute.pos.z", "mcfpp.shadow")
                         }
 
-                        override fun doAssign(b: Var<*>): WriteOnlyVar {
+                        override fun doAssignedBy(b: Var<*>): WriteOnlyVar {
                             if(b is CoordinateDimension){
                                 command.build("positioned ~ ~").build(b.toCommandPart())
                             }else{
@@ -65,7 +65,7 @@ class Execute {
                 }
             }
 
-            override fun doAssign(b: Var<*>): WriteOnlyVar {
+            override fun doAssignedBy(b: Var<*>): WriteOnlyVar {
                 if(b is Coordinate3Var){
                     command.build("positioned").build(b.toCommandPart())
                 }else{

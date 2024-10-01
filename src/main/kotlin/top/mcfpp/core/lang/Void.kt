@@ -18,10 +18,12 @@ object Void: Var<Void>("void") {
 
     override var type: MCFPPType = MCFPPBaseType.Void
 
-    override fun doAssign(b: Var<*>) : Void {
+    override fun doAssignedBy(b: Var<*>) : Void {
         LogProcessor.error("Cannot assign value to void type variable")
         return this
     }
+
+    override fun canAssignedBy(b: Var<*>) = false
 
     override fun explicitCast(type: MCFPPType): Var<*> {
         LogProcessor.error(TextTranslator.VOID_CAST_ERROR.translate())

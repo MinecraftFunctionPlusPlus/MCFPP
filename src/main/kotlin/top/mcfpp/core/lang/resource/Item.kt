@@ -44,8 +44,8 @@ open class Item: ResourceID {
      */
     constructor(b: Item) : super(b)
 
-    override fun doAssign(b: Var<*>): Item {
-        return super.assign(b) as Item
+    override fun doAssignedBy(b: Var<*>): Item {
+        return super.assignedBy(b) as Item
     }
 
     companion object {
