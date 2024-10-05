@@ -195,11 +195,12 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     override fun getFromStack() {}
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
+        val v = instanceField.getVar(key)!!.clone(this)
         val member = instanceField.getProperty(key)
         return if(member == null){
             Pair(null, true)
         }else{
-            Pair(PropertyVar(member, this), accessModifier >= member.accessModifier)
+            Pair(PropertyVar(member, v, this), accessModifier >= member.accessModifier)
         }
     }
 
@@ -260,7 +261,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
             if(it is DataTemplateObject){
                 compoundTag.put(it.identifier, it.toConcrete().value)
             }else{
-                compoundTag.put(it.identifier, NBTUtil.toNBT(it))
+                compoundTag.put(it.identifier, NBTUtil.varToNBT(it))
             }
         }
         return DataTemplateObjectConcrete(this, compoundTag)
@@ -347,7 +348,7 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag> {
             toDynamic(true)
         }else{
             val key = member.identifier
-            val data = NBTUtil.toNBT(member)
+            val data = NBTUtil.varToNBT(member)
             value.put(key, data)
         }
     }

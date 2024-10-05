@@ -51,7 +51,7 @@ open class ImmutableList : NBTList{
 
     override fun getByIndex(index: Var<*>): PropertyVar {
         val p = super.getByIndex(index)
-        return PropertyVar(Property(p, SimpleAccessor(p), null), this)
+        return PropertyVar(Property(p.identifier, SimpleAccessor(p), null), p, this)
     }
 
     companion object {
@@ -142,25 +142,21 @@ class ImmutableListConcrete: ImmutableList, MCFPPValue<ListTag<*>>{
     }
 
     override fun getByIndex(index: Var<*>): PropertyVar {
-        return PropertyVar(
-            Property.buildSimpleProperty(
-                if(index is MCInt){
-                    if(index is MCIntConcrete){
-                        if(index.value >= value.size()){
-                            throw IndexOutOfBoundsException("Index out of bounds")
-                        }else{
-                            NBTBasedDataConcrete(value[index.value]!!)
-                        }
-                    }else {
-                    //index未知
-                    super.getByIntIndex(index)
-                }
+        val v = if(index is MCInt){
+            if(index is MCIntConcrete){
+                if(index.value >= value.size()){
+                    throw IndexOutOfBoundsException("Index out of bounds")
                 }else{
-                    throw IllegalArgumentException("Index must be a int")
+                    NBTBasedDataConcrete(value[index.value]!!)
                 }
-            ),
-            this
-        )
+            }else {
+                //index未知
+                super.getByIntIndex(index)
+            }
+        }else{
+            throw IllegalArgumentException("Index must be a int")
+        }
+        return PropertyVar(Property.buildSimpleProperty(v), v,this)
     }
 
     override fun toString(): String {

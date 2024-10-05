@@ -203,12 +203,12 @@ open class NBTList : NBTBasedData {
     }
 
     override fun getByIndex(index: Var<*>): PropertyVar {
-        return PropertyVar(
-            Property.buildSimpleProperty(if(index is MCInt){
+        val v = if(index is MCInt){
             super.getByIntIndex(index)
         }else{
             throw IllegalArgumentException("Index must be a int")
-        }), this)
+        }
+        return PropertyVar(Property.buildSimpleProperty(v), v,this)
     }
 
     companion object {
@@ -305,8 +305,7 @@ class NBTListConcrete: NBTList, MCFPPValue<ListTag<*>> {
     }
 
     override fun getByIndex(index: Var<*>): PropertyVar {
-        return PropertyVar(
-            Property.buildSimpleProperty (if(index is MCInt){
+        val v = if(index is MCInt){
             if(index is MCIntConcrete){
                 if(index.value >= value.size()){
                     throw IndexOutOfBoundsException("Index out of bounds")
@@ -319,7 +318,8 @@ class NBTListConcrete: NBTList, MCFPPValue<ListTag<*>> {
             }
         }else{
             throw IllegalArgumentException("Index must be a int")
-        }), this)
+        }
+        return PropertyVar(Property.buildSimpleProperty(v), v, this)
     }
 
     override fun toString(): String {

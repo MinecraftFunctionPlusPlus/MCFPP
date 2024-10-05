@@ -493,7 +493,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
         return result
     }
 
-    fun replacedBy(v : Var<*>){
+    open fun replacedBy(v : Var<*>){
         if(v == this) return
         if(v is MCInt && this is MCInt && holder != null){
             when(val holder = holder){

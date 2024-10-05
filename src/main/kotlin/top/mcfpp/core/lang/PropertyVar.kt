@@ -4,20 +4,23 @@ import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Member
 import top.mcfpp.model.accessor.Property
 import top.mcfpp.model.function.Function
-import top.mcfpp.model.function.UnknownFunction
-import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
 
-class PropertyVar(val property: Property, val caller: CanSelectMember): Var<PropertyVar>(property.field.identifier) {
+class PropertyVar(val property: Property, val field: Var<*>, val caller: Var<*>): Var<PropertyVar>(field.identifier) {
 
-    override var type: MCFPPType = property.field.type
+    init {
+        property.parent = caller
+    }
+
+    override var type: MCFPPType = field.type
 
     override fun doAssignedBy(b: Var<*>): PropertyVar {
-        return PropertyVar(Property.buildSimpleProperty(property.setter(caller, b)), caller)
+        val qwq = property.setter(caller, field, b)
+        return PropertyVar(Property.buildSimpleProperty(qwq), qwq, field)
     }
 
     override fun canAssignedBy(b: Var<*>): Boolean {
-        return property.field.canAssignedBy(b)
+        return field.canAssignedBy(b)
     }
 
     override fun clone(): PropertyVar = this
@@ -29,7 +32,15 @@ class PropertyVar(val property: Property, val caller: CanSelectMember): Var<Prop
     override fun getFromStack() {}
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        return property.field.getMemberVar(key, accessModifier)
+        return field.getMemberVar(key, accessModifier)
+    }
+
+    fun getter(caller: CanSelectMember): Var<*> {
+        return property.getter(caller, field)
+    }
+
+    fun setter(caller: CanSelectMember, b: Var<*>){
+        property.setter(caller, field, b)
     }
 
     override fun getMemberFunction(
@@ -38,8 +49,11 @@ class PropertyVar(val property: Property, val caller: CanSelectMember): Var<Prop
         normalParams: List<MCFPPType>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        return property.field.getMemberFunction(key, readOnlyParams, normalParams, accessModifier)
+        return field.getMemberFunction(key, readOnlyParams, normalParams, accessModifier)
     }
 
+    override fun replacedBy(v: Var<*>) {
+        field.replacedBy((v as PropertyVar).field)
+    }
 
 }

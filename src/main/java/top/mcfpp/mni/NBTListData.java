@@ -40,7 +40,7 @@ public class NBTListData {
     public static void add(Var<?> e, NBTList caller){
         if(e instanceof MCFPPValue<?>){
             //e是确定的
-            Tag<?> tag = NBTUtil.INSTANCE.toNBT(e);
+            Tag<?> tag = NBTUtil.INSTANCE.varToNBT(e);
             String command;
             try{
                 if(caller.parentClass() != null){
@@ -115,7 +115,7 @@ public class NBTListData {
     public static void insert(MCInt index, Var<?> e, NBTList caller){
         if(e instanceof MCFPPValue<?> && (MCInt)index instanceof MCIntConcrete indexC){
             //都是确定的
-            Tag<?> tag = NBTUtil.INSTANCE.toNBT(e);
+            Tag<?> tag = NBTUtil.INSTANCE.varToNBT(e);
             int i = indexC.getValue();
             String command;
             try {
@@ -157,7 +157,7 @@ public class NBTListData {
             Function.Companion.addCommands(command);
         }else if(e instanceof MCFPPValue<?>){
             //e是确定的，index不是确定的，需要使用宏
-            Tag<?> tag = NBTUtil.INSTANCE.toNBT(e);
+            Tag<?> tag = NBTUtil.INSTANCE.varToNBT(e);
             try {
                 if(caller.getParent() != null){
                     var command = Commands.INSTANCE.selectRun(caller.getParent(), new Command("data modify " +

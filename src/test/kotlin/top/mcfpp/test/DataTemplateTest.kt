@@ -42,8 +42,10 @@ class DataTemplateTest {
                     print(t);
                     t.qwq = 6;
                     print((int)t.qwq);
+                    print(t);
                     t.qwq = "test";
                     print((string)t.qwq);
+                    print(t);
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test, arrayOf("debug"))

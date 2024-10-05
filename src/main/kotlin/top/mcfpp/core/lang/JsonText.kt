@@ -80,7 +80,7 @@ open class JsonText : NBTBasedData {
             throw IllegalArgumentException("Cannot get index of text element")
         }
         return when(index){
-            is MCInt -> PropertyVar(Property.buildSimpleProperty(getByIntIndex(index)), this)
+            is MCInt -> PropertyVar(Property.buildSimpleProperty(getByIntIndex(index)),getByIntIndex(index), this)
             else -> throw IllegalArgumentException("Invalid index type ${index.type}")
         }
     }

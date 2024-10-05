@@ -110,7 +110,7 @@ open class CompoundData : FieldContainer, Serializable {
         return when (member) {
             is Function -> field.addFunction(member, false)
             is Var<*> -> field.putVar(member.identifier, member)
-            is Property -> field.putProperty(member.field.identifier, member)
+            is Property -> field.putProperty(member.identifier, member)
             else -> TODO()
         }
     }

@@ -84,7 +84,7 @@ open class NBTDictionary : NBTBasedData {
 
     override fun getByIndex(index: Var<*>): PropertyVar {
         return if(index is MCString){
-            PropertyVar(Property.buildSimpleProperty(super.getByStringIndex(index)), this)
+            PropertyVar(Property.buildSimpleProperty(super.getByStringIndex(index)), super.getByStringIndex(index), this)
         }else{
             throw IllegalArgumentException("Index must be a string")
         }
@@ -182,10 +182,10 @@ open class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<CompoundTag> {
                 if(value.containsKey(index.value.valueToString())){
                     throw IndexOutOfBoundsException("Index out of bounds")
                 }else{
-                    PropertyVar(Property.buildSimpleProperty(NBTBasedDataConcrete(value[index.value.valueToString()])), this)
+                    PropertyVar(Property.buildSimpleProperty(NBTBasedDataConcrete(value[index.value.valueToString()])),NBTBasedDataConcrete(value[index.value.valueToString()]) , this)
                 }
             }else {
-                PropertyVar(Property.buildSimpleProperty(super.getByStringIndex(index)), this)
+                PropertyVar(Property.buildSimpleProperty(super.getByStringIndex(index)), super.getByStringIndex(index),this)
             }
         }else{
             throw IllegalArgumentException("Index must be a string")

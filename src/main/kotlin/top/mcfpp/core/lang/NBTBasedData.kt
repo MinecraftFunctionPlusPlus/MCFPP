@@ -64,7 +64,7 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable{
     override fun doAssignedBy(b: Var<*>) : NBTBasedData {
         return when (b) {
             is NBTBasedData -> assignCommand(b)
-            is MCFPPValue<*> -> assignCommand(NBTBasedDataConcrete(NBTUtil.toNBT(b)!!) as NBTBasedData)
+            is MCFPPValue<*> -> assignCommand(NBTBasedDataConcrete(NBTUtil.varToNBT(b)!!) as NBTBasedData)
             else -> {
                 LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
                 this
@@ -200,16 +200,13 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable{
     }
 
     override fun getByIndex(index: Var<*>): PropertyVar {
-        return PropertyVar(
-            Property.buildSimpleProperty (
-                when (index) {
-                    is MCInt -> getByIntIndex(index)
-                    is MCString -> getByStringIndex(index)
-                    is NBTBasedData -> getByNBTIndex(index)
-                    else -> throw IllegalArgumentException("Invalid index type ${index.type}")
-                }
-            ),this
-        )
+        val v = when (index) {
+            is MCInt -> getByIntIndex(index)
+            is MCString -> getByStringIndex(index)
+            is NBTBasedData -> getByNBTIndex(index)
+            else -> throw IllegalArgumentException("Invalid index type ${index.type}")
+        }
+        return PropertyVar(Property.buildSimpleProperty(v), v,this)
     }
 
     protected fun getByNBTIndex(index: NBTBasedData): NBTBasedData{
@@ -233,7 +230,7 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable{
         return re
     }
 
-    open protected fun getByIntIndex(index: MCInt): NBTBasedData {
+    protected open fun getByIntIndex(index: MCInt): NBTBasedData {
         if(nbtType != NBTTypeWithTag.LIST && nbtType != NBTTypeWithTag.ANY){
             LogProcessor.error("Invalid nbt type")
         }

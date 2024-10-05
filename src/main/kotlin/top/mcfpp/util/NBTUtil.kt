@@ -4,12 +4,11 @@ import net.querz.nbt.tag.*
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.MCFPPValue
-import top.mcfpp.model.accessor.SimpleAccessor
 import top.mcfpp.core.lang.bool.MCBoolConcrete
 
 object NBTUtil {
 
-    fun toNBT(v : Var<*>): Tag<*>?{
+    fun varToNBT(v : Var<*>): Tag<*>?{
         if(v !is MCFPPValue<*>) return null
         when(v){
             //is ClassPointer -> TODO()
@@ -24,50 +23,46 @@ object NBTUtil {
             is MCIntConcrete -> return IntTag(v.value)
             is MCStringConcrete -> return v.value
             is NBTBasedDataConcrete -> return v.value
+            is UnionTypeVarConcrete -> return valueToNBT(v.value)
             //is NBTAny<*> -> return v.value
-            is PropertyVar -> return toNBT(v.property.getter(v.caller))
             else -> return IntTag(0)
         }
     }
 
-    fun toNBT(int: Int): Tag<Int>{
-        return IntTag(int)
-    }
-
-    fun toNBT(double: Double): Tag<Double>{
-        return DoubleTag(double)
-    }
-
-    fun toNBT(string: String): Tag<String>{
-        return StringTag(string)
-    }
-
-    fun toNBT(long: Long): Tag<Long>{
-        return LongTag(long)
-    }
-
-    fun toNBT(byte: Byte): Tag<Byte>{
-        return ByteTag(byte)
-    }
-
-    fun toNBT(short: Short): Tag<Short>{
-        return ShortTag(short)
-    }
-
-    fun toNBT(float: Float): Tag<Float>{
-        return FloatTag(float)
-    }
-
-    fun toNBT(byteArray: ByteArray): Tag<ByteArray>{
-        return ByteArrayTag(byteArray)
-    }
-
-    fun toNBT(longArray: LongArray): Tag<LongArray>{
-        return LongArrayTag(longArray)
-    }
-
-    fun toNBT(int: IntArray): Tag<IntArray>{
-        return IntArrayTag(int)
+    fun valueToNBT(any: Any?): Tag<*>{
+        return when(any){
+            null -> IntTag(0)
+            is Tag<*> -> any
+            is Byte -> ByteTag(any)
+            is Short -> ShortTag(any)
+            is Int -> IntTag(any)
+            is Long -> LongTag(any)
+            is Float -> FloatTag(any)
+            is Double -> DoubleTag(any)
+            is String -> StringTag(any)
+            is List<*> -> {
+                if(any.isEmpty()) return ListTag(IntTag::class.java)
+                val clazz: Class<out Tag<*>> = valueToNBT(any[0]!!)::class.java
+                val list = ListTag(clazz) as ListTag<Tag<*>>
+                for(value in any){
+                    list.add(valueToNBT(value!!))
+                }
+                list
+            }
+            is ByteArray -> ByteArrayTag(any)
+            is IntArray -> IntArrayTag(any)
+            is LongArray -> LongArrayTag(any)
+            is HashMap<*, *> -> {
+                val map = CompoundTag()
+                for(key in any.keys){
+                    map.put(key.toString(), valueToNBT(any[key]!!))
+                }
+                map
+            }
+            else -> {
+                throw VariableConverseException()
+            }
+        }
     }
 
     fun<T : Tag<*>?> ListTag<T>.toArrayList(): List<*>{

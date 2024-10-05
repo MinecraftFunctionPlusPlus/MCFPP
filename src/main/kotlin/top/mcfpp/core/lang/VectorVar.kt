@@ -166,12 +166,12 @@ open class VectorVar: Var<VectorVar>, Indexable, ScoreHolder {
     override fun getByIndex(index: Var<*>): PropertyVar {
         when(index){
             is MCInt -> {
-                return PropertyVar(Property.buildSimpleProperty(getByIntIndex(index)),this)
+                return PropertyVar(Property.buildSimpleProperty(getByIntIndex(index)), getByIntIndex(index), this)
             }
 
             else -> {
                 LogProcessor.error("Invalid index type ${index.type}")
-                return PropertyVar(Property.buildSimpleProperty(UnknownVar("error_${identifier}_index_${index.identifier}")),this)
+                return PropertyVar(Property.buildSimpleProperty(UnknownVar("error_${identifier}_index_${index.identifier}")),UnknownVar("error_${identifier}_index_${index.identifier}"),this)
             }
         }
     }

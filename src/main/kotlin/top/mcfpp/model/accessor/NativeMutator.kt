@@ -39,7 +39,7 @@ class NativeMutator(javaRefer: String, d: CompoundData, field: Var<*>): Abstract
         }
     }
 
-    override fun setter(caller: CanSelectMember, b: Var<*>): Var<*> {
+    override fun setter(caller: CanSelectMember, b: Var<*>): Var<*>{
         function.invoke(arrayListOf(b), caller)
         return function.returnVar
     }

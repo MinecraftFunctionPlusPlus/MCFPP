@@ -192,11 +192,12 @@ open class ClassPointer : Var<ClassPointer>{
      */
     @Override
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
+        val v = instanceField.getVar(key)
         val member = instanceField.getProperty(key)
         return if(member == null){
             Pair(null, true)
         }else{
-            Pair(PropertyVar(member, this), accessModifier >= member.accessModifier)
+            Pair(PropertyVar(member, v!!, this), accessModifier >= member.accessModifier)
         }
     }
 

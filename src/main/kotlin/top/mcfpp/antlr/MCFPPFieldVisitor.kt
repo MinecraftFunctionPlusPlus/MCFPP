@@ -255,15 +255,15 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             if (m !is ClassConstructor) {
                 Class.currClass!!.addMember(m)
             }
-        }else if(m is ArrayList<*>){
-            //变量列表
-            for (c in m){
-                //访问修饰符
-                (c as Member).accessModifier = AccessModifier.valueOf(ctx.accessModifier()?.text?:"public".uppercase(Locale.getDefault()))
-                if (c !is ClassConstructor) {
-                    Class.currClass!!.addMember(c)
-                }
-            }
+        }else if(m is Pair<*,*>){//Pair<Var, Property>
+            val v = m.first as Var<*>?
+            val p = m.second as Property?
+            if(v == null || p == null) return null
+            //访问修饰符
+            v.accessModifier = AccessModifier.valueOf(ctx.accessModifier()?.text?:"public".uppercase(Locale.getDefault()))
+            p.accessModifier = v.accessModifier
+            Class.currClass!!.addMember(v)
+            Class.currClass!!.addMember(p)
         }
         return null
     }
@@ -422,10 +422,9 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
      * @return null
      */
     @InsertCommand
-    override fun visitClassFieldDeclaration(ctx: mcfppParser.ClassFieldDeclarationContext): Any {
+    override fun visitClassFieldDeclaration(ctx: mcfppParser.ClassFieldDeclarationContext): Pair<Var<*>?, Property?> {
         Project.ctx = ctx
         //只有类字段构建
-        val reList = ArrayList<Member>()
         val c = ctx.fieldDeclarationExpression()
         //字段的解析在Analyse阶段结束后，Compile阶段开始的时候进行
         val type = MCFPPType.parseFromIdentifier(ctx.type().text, typeScope)
@@ -440,7 +439,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         if (Class.currClass!!.field.containVar(c.Identifier().text)
         ) {
             LogProcessor.error("Duplicate defined variable name:" + c.Identifier().text)
-            return reList
+            return null to null
         }
         //变量的初始化
         if (c.expression() != null) {
@@ -461,8 +460,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //属性访问器
         currVar = `var`
         val properties = (ctx.accessor()?.let{visit(ctx.accessor())}?: Property.buildSimpleProperty(`var`)) as Property
-        reList.add(properties)
-        return reList
+        return `var` to properties
     }
 
     override fun visitAccessor(ctx: mcfppParser.AccessorContext): Any? {
@@ -477,7 +475,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }else{
             null
         }
-        return Property(currVar, getter, setter)
+        return Property(currVar.identifier, getter, setter)
     }
 
     override fun visitGetter(ctx: mcfppParser.GetterContext): Any? {
@@ -796,11 +794,15 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         if(m is Member){
             m.accessModifier = accessModifier
             DataTemplate.currTemplate!!.addMember(m)
-        }else if(m is ArrayList<*>){
-            for(v in m){
-                (v as Member).accessModifier = accessModifier
-                DataTemplate.currTemplate!!.addMember(v)
-            }
+        }else if(m is Pair<*,*>){//Pair<Var, Property>
+            val v = m.first as Var<*>?
+            val p = m.second as Property?
+            if(v == null || p == null) return null
+            //访问修饰符
+            v.accessModifier = AccessModifier.valueOf(ctx.accessModifier()?.text?:"public".uppercase(Locale.getDefault()))
+            p.accessModifier = v.accessModifier
+            DataTemplate.currTemplate!!.addMember(v)
+            DataTemplate.currTemplate!!.addMember(p)
         }
         return null
     }
@@ -855,9 +857,8 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return f
     }
 
-    override fun visitTemplateFieldDeclaration(ctx: mcfppParser.TemplateFieldDeclarationContext): Any? {
+    override fun visitTemplateFieldDeclaration(ctx: mcfppParser.TemplateFieldDeclarationContext): Pair<Var<*>?, Property?> {
         Project.ctx = ctx
-        val reList = ArrayList<Member>()
         val `var` = if(ctx.singleTemplateFieldType() != null){
             MCFPPType.parseFromContext(ctx.singleTemplateFieldType().type(), typeScope).build(ctx.Identifier().text).apply {
                 nullable = ctx.singleTemplateFieldType().QUEST() != null
@@ -878,13 +879,12 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         if (DataTemplate.currTemplate!!.field.containVar(ctx.Identifier().text)
         ) {
             LogProcessor.error("Duplicate defined variable name:" + ctx.Identifier().text)
-            return null
+            return null to null
         }
         //属性访问器
         currVar = `var`
         val properties = (ctx.accessor()?.let {visit(ctx.accessor())}?: Property.buildSimpleProperty(`var`)) as Property
-        reList.add(properties)
-        return reList
+        return `var` to properties
     }
 
     override fun visitTemplateConstructorDeclaration(ctx: mcfppParser.TemplateConstructorDeclarationContext): Any {

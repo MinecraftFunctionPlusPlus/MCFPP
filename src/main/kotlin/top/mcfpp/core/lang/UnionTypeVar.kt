@@ -104,7 +104,10 @@ open class UnionTypeVar(identifier: String, vararg vars: Var<*>): Var<UnionTypeV
         for (v in vars) {
             if (v.canAssignedBy(b)) {
                 val qwq = v.assignedBy(b)
-                if(qwq is MCFPPValue<*>) qwq.toDynamic(false)
+                if(qwq is MCFPPValue<*>) {
+                    vars[vars.indexOf(v)] = qwq
+                    return UnionTypeVarConcrete(this, qwq.value)
+                }
                 return this
             }
         }

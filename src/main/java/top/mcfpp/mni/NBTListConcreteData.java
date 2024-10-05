@@ -29,7 +29,7 @@ public class NBTListConcreteData {
         if(e instanceof MCFPPValue<?>){
             //都是确定的
             //直接添加值
-            ((ListTag)caller.getValue()).add(NBTUtil.INSTANCE.toNBT(e));
+            ((ListTag)caller.getValue()).add(NBTUtil.INSTANCE.varToNBT(e));
         }else {
             //e不是确定的，但是list可能是确定的可能不是确定的
             caller.toDynamic(true);
@@ -97,7 +97,7 @@ public class NBTListConcreteData {
         if(e instanceof MCFPPValue<?> && index instanceof MCIntConcrete indexC){
             //都是确定的
             //直接添加值
-            ((ListTag) caller.getValue()).add(indexC.getValue(), NBTUtil.INSTANCE.toNBT(e));
+            ((ListTag) caller.getValue()).add(indexC.getValue(), NBTUtil.INSTANCE.varToNBT(e));
         }else if(index instanceof MCIntConcrete indexC){
             //e不是确定的，index是确定的，所以可以直接调用命令而不需要宏
             int i = indexC.getValue();
@@ -123,7 +123,7 @@ public class NBTListConcreteData {
         }else if(e instanceof MCFPPValue<?>){
             //e是确定的，index不是确定的，需要使用宏
             caller.toDynamic(true);
-            Tag<?> tag = NBTUtil.INSTANCE.toNBT(e);
+            Tag<?> tag = NBTUtil.INSTANCE.varToNBT(e);
             try {
                 if(caller.getParent() != null){
                     var command = Commands.INSTANCE.selectRun(caller.getParent(),
@@ -195,7 +195,7 @@ public class NBTListConcreteData {
     public static void indexOf(Var<?> e, NBTListConcrete caller, ValueWrapper<MCInt> returnVar){
         if(e instanceof MCFPPValue<?>){
             //确定的
-            var i = ((ListTag) caller.getValue()).indexOf(NBTUtil.INSTANCE.toNBT(e));
+            var i = ((ListTag) caller.getValue()).indexOf(NBTUtil.INSTANCE.varToNBT(e));
             returnVar.setValue(new MCIntConcrete(i, UUID.randomUUID().toString()));
         }else {
             NBTListData.indexOf(e, (NBTList) caller.toDynamic(true), returnVar);
@@ -208,7 +208,7 @@ public class NBTListConcreteData {
         if(e instanceof MCFPPValue<?>){
             //确定的
             for (int i = caller.getValue().size() - 1; i >= 0; i--) {
-                if(caller.getValue().get(i).equals(NBTUtil.INSTANCE.toNBT(e))){
+                if(caller.getValue().get(i).equals(NBTUtil.INSTANCE.varToNBT(e))){
                     returnVar.setValue(new MCIntConcrete(i, UUID.randomUUID().toString()));
                     return;
                 }

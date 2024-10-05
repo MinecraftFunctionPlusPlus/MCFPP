@@ -293,7 +293,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     override fun visitRightVarExpression(ctx: mcfppParser.RightVarExpressionContext): Var<*> {
         val qwq = visit(ctx.basicExpression())
         return if(qwq is PropertyVar){
-            qwq.property.getter(qwq.caller)
+            qwq.getter(qwq.caller)
         }else{
             qwq
         }

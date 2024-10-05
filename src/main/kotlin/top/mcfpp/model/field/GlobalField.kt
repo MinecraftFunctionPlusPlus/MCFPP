@@ -459,7 +459,7 @@ object GlobalField : FieldContainer, IField {
                     for (v in s.field.allProperties.toList()) {
                         println(
                             "\t\t" + v.accessModifier.name
-                                .lowercase(Locale.getDefault()) + " " + v.field.type + " " + v.field.identifier
+                                .lowercase(Locale.getDefault()) + " " + v.identifier
                         )
                         println(
                             "\t\tgetter: "
