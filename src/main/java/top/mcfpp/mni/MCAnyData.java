@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.core.lang.JavaVar;
 import top.mcfpp.core.lang.JsonTextConcrete;
+import top.mcfpp.core.lang.NBTBasedDataConcrete;
 import top.mcfpp.core.lang.Var;
 import top.mcfpp.lib.ListChatComponent;
 import top.mcfpp.lib.PlainChatComponent;
@@ -23,5 +24,11 @@ public class MCAnyData {
         var l = new ListChatComponent();
         l.getComponents().add(new PlainChatComponent(caller.toString()));
         returnValue.setValue(new JsonTextConcrete(l, "re"));
+    }
+
+    @MNIFunction(caller = "any", returnType = "nbt", isObject = true)
+    public static void getDefault(@NotNull Var<?> caller, ValueWrapper<NBTBasedDataConcrete> returnValue){
+        var value = caller.getType().defaultValue();
+        returnValue.setValue((NBTBasedDataConcrete) returnValue.getValue().assignedBy(new NBTBasedDataConcrete(value, "")));
     }
 }

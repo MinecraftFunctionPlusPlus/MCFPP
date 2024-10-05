@@ -63,11 +63,6 @@ open class Class : CompoundData {
     var classPreInit: Function
 
     /**
-     * 临时指针。所有的类都共用一个临时指针。临时指针只能在创建对象的期间使用。
-     */
-    lateinit var initPointer : ClassPointer
-
-    /**
      * 是否已经继承了一个类
      */
     private var hasParentClass = false
@@ -87,11 +82,6 @@ open class Class : CompoundData {
         this.namespace = namespace
         classPreInit = Function("_class_preinit_$identifier", this, false, context = null)
         field.addFunction(classPreInit,true)
-    }
-
-    override fun initialize(){
-        super.initialize()
-        initPointer =  ClassPointer(this, "INIT")
     }
 
     @get:Override
@@ -137,8 +127,8 @@ open class Class : CompoundData {
     }
 
     /**
-     * 创建这个类的一个实例
-     * @return 创建的实例
+     * 创建这个类的一个指针
+     * @return 创建的指针
      */
     open fun newInstance(): ClassPointer {
         if (isAbstract) {

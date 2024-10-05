@@ -19,7 +19,7 @@ class XPredicate(val x: MCInt): EntitySelectorPredicate {
         return if(x is MCIntConcrete){
             Command.build("x=${x.value}")
         }else{
-            Command.build("x=").buildMacro(x.identifier, false)
+            Command.build("x=").buildMacro(x, false)
         }
     }
 
@@ -31,7 +31,7 @@ class YPredicate(val y: MCInt): EntitySelectorPredicate {
         return if(y is MCIntConcrete){
             Command.build("y=${y.value}")
         }else{
-            Command.build("y=").buildMacro(y.identifier, false)
+            Command.build("y=").buildMacro(y, false)
         }
     }
 
@@ -43,7 +43,7 @@ class ZPredicate(val z: MCInt): EntitySelectorPredicate {
         return if(z is MCIntConcrete){
             Command.build("z=${z.value}")
         }else{
-            Command.build("z=").buildMacro(z.identifier, false)
+            Command.build("z=").buildMacro(z, false)
         }
     }
 
@@ -63,7 +63,7 @@ class DXPredicate(val dx: MCInt): EntitySelectorPredicate {
         return if(dx is MCIntConcrete){
             Command.build("dx=${dx.value}")
         }else{
-            Command.build("dx=").buildMacro(dx.identifier, false)
+            Command.build("dx=").buildMacro(dx, false)
         }
     }
 
@@ -75,7 +75,7 @@ class DYPredicate(val dy: MCInt): EntitySelectorPredicate {
         return if(dy is MCIntConcrete){
             Command.build("dy=${dy.value}")
         }else{
-            Command.build("dy=").buildMacro(dy.identifier, false)
+            Command.build("dy=").buildMacro(dy, false)
         }
     }
 
@@ -87,7 +87,7 @@ class DZPredicate(val dz: MCInt): EntitySelectorPredicate {
         return if(dz is MCIntConcrete){
             Command.build("dz=${dz.value}")
         }else{
-            Command.build("dz=").buildMacro(dz.identifier, false)
+            Command.build("dz=").buildMacro(dz, false)
         }
     }
 
@@ -116,7 +116,7 @@ class TagPredicate(val tag: MCString,val reverse: Boolean): EntitySelectorPredic
         return if(tag is MCStringConcrete){
             re.build(tag.value.valueToString(), false)
         }else{
-            re.buildMacro(tag.identifier, false)
+            re.buildMacro(tag, false)
         }
     }
 
@@ -130,7 +130,7 @@ class TeamPredicate(val team: MCString,val reverse: Boolean): EntitySelectorPred
         return if(team is MCStringConcrete){
             re.build(team.value.valueToString(), false)
         }else{
-            re.buildMacro(team.identifier, false)
+            re.buildMacro(team, false)
         }
     }
 
@@ -144,7 +144,7 @@ class NamePredicate(val name: MCString,val reverse: Boolean): EntitySelectorPred
         return if(name is MCStringConcrete){
             re.build(name.value.valueToString(), false)
         }else{
-            re.buildMacro(name.identifier, false)
+            re.buildMacro(name, false)
         }
     }
 
@@ -158,7 +158,7 @@ class TypePredicate(val type: EntityType, val reverse: Boolean): EntitySelectorP
         return if(type is EntityTypeConcrete){
             re.build(type.value, false)
         }else{
-            re.buildMacro(type.identifier, false)
+            re.buildMacro(type, false)
         }
     }
 
@@ -172,7 +172,7 @@ class PredicatePredicate(val predicate: LootTablePredicate, val reverse: Boolean
         return if(predicate is LootTablePredicateConcrete){
             re.build(predicate.value, false)
         }else{
-            re.buildMacro(predicate.identifier, false)
+            re.buildMacro(predicate, false)
         }
     }
 
@@ -200,7 +200,7 @@ class NBTPredicate(val nbt: NBTBasedData): EntitySelectorPredicate {
         return if(nbt is NBTBasedDataConcrete){
             Command.build("nbt=").build(nbt.value.valueToString())
         }else{
-            Command.build("nbt=").buildMacro(nbt.identifier)
+            Command.build("nbt=").buildMacro(nbt)
         }
     }
 
@@ -224,7 +224,7 @@ class GamemodePredicate(val gamemode: MCString, val reverse: Boolean): EntitySel
         return if(gamemode is MCStringConcrete){
             c.build(gamemode.value.valueToString())
         }else{
-            c.buildMacro(gamemode.identifier)
+            c.buildMacro(gamemode)
         }
     }
 
@@ -238,7 +238,7 @@ class AdvancementsPredicate(val advancements: Advancement, val reverse: Boolean)
         return if(advancements is AdvancementConcrete){
             re.build(advancements.value, false)
         }else{
-            re.buildMacro(advancements.identifier, false)
+            re.buildMacro(advancements, false)
         }
     }
 
@@ -250,7 +250,7 @@ class LimitPredicate(val limit: MCInt): EntitySelectorPredicate {
         return if(limit is MCIntConcrete){
             Command.build("limit=${limit.value}")
         }else{
-            Command.build("limit=").buildMacro(limit.identifier, false)
+            Command.build("limit=").buildMacro(limit, false)
         }
     }
 
@@ -262,7 +262,7 @@ class SortPredicate(val sort: MCString): EntitySelectorPredicate {
         return if(sort is MCStringConcrete){
             Command.build("sort=").build(sort.value.valueToString())
         }else{
-            Command.build("sort=").buildMacro(sort.identifier)
+            Command.build("sort=").buildMacro(sort)
         }
     }
 

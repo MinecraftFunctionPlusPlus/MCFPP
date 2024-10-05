@@ -272,6 +272,7 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType, IFi
         re.allVars.forEach {
             it.parent = selector
             it.name = selector.identifier + "_" + it.identifier
+            if(it.nbtPath.pathList.isEmpty()) return@forEach
             it.nbtPath.pathList.removeLast()
             it.nbtPath.memberIndex(selector.identifier)
             it.nbtPath.memberIndex(it.identifier)

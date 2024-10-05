@@ -26,7 +26,7 @@ object NBTUtil {
             is NBTBasedDataConcrete -> return v.value
             //is NBTAny<*> -> return v.value
             is PropertyVar -> return toNBT(v.property.getter(v.caller))
-            else -> TODO()
+            else -> return IntTag(0)
         }
     }
 

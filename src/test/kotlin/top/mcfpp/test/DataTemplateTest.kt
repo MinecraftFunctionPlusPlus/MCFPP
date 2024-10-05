@@ -25,4 +25,28 @@ class DataTemplateTest {
         MCFPPStringTest.readFromString(test)
     }
 
+    @Test
+    fun unionTest(){
+        val test =
+            """
+                data Test{
+               
+                    (int|string) qwq;
+                    
+                }
+                
+                func main(){
+                    Test t = Test();
+                    print((int)t.qwq);
+                    print((string)t.qwq);
+                    print(t);
+                    t.qwq = 6;
+                    print((int)t.qwq);
+                    t.qwq = "test";
+                    print((string)t.qwq);
+                }
+            """.trimIndent()
+        MCFPPStringTest.readFromString(test, arrayOf("debug"))
+    }
+
 }

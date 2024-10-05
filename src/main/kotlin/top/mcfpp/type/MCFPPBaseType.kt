@@ -1,7 +1,6 @@
 package top.mcfpp.type
 
 import net.querz.nbt.tag.StringTag
-import top.mcfpp.lib.EntitySelector
 import top.mcfpp.lib.PlainChatComponent
 import top.mcfpp.model.Class
 import top.mcfpp.core.lang.*

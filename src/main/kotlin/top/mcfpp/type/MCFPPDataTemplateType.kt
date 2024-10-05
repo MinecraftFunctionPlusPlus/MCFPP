@@ -1,6 +1,7 @@
 package top.mcfpp.type
 
 import net.querz.nbt.tag.CompoundTag
+import net.querz.nbt.tag.Tag
 import top.mcfpp.model.*
 import top.mcfpp.core.lang.DataTemplateObject
 import top.mcfpp.core.lang.DataTemplateObjectConcrete
@@ -20,6 +21,15 @@ open class MCFPPDataTemplateType(
 
     override val typeName: String
         get() = "template(${template.namespace}:${template.identifier})"
+
+    override fun defaultValue(): CompoundTag {
+        val tag = CompoundTag()
+        for (member in template.field.allVars){
+            if(member.nullable) continue
+            tag.put(member.identifier, member.type.defaultValue())
+        }
+        return tag
+    }
 
     init {
         //registerType({it.contains(regex)}){

@@ -195,6 +195,14 @@ class NBTPath(var source: NBTSource): Serializable {
             }
             return path1.parent()?.let { getSharedPath(it, path2) }
         }
+
+        //storage mcfpp:system test.stack_frame[0].qwq
+        fun getNormalStackPath(v: Var<*>): NBTPath{
+            return NBTPath(StorageSource("mcfpp:system"))
+                .memberIndex(Project.config.rootNamespace)
+                .memberIndex("stack_frame[${v.stackIndex}]")
+                .memberIndex(v.identifier)
+        }
     }
 
 }

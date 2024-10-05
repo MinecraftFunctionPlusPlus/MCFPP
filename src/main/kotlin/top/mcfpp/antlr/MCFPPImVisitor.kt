@@ -19,6 +19,7 @@ import top.mcfpp.core.lang.bool.MCBool
 import top.mcfpp.core.lang.bool.MCBoolConcrete
 import top.mcfpp.core.lang.bool.ReturnedMCBool
 import top.mcfpp.lib.Execute
+import top.mcfpp.lib.NBTPath
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.*
 import top.mcfpp.model.accessor.FunctionAccessor
@@ -138,12 +139,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             if (!Function.field.putVar(ctx.Identifier().text, `var`, true)) {
                 LogProcessor.error("Duplicate defined variable name:" + ctx.Identifier().text)
             }
-            try {
-                `var`.assignedBy(init)
-            } catch (e: VariableConverseException) {
-                LogProcessor.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
-                throw VariableConverseException()
-            }
+            `var`.assignedBy(init)
             when(fieldModifier){
                 "const" -> {
                     if(!`var`.hasAssigned){
@@ -157,6 +153,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                     }
                 }
             }
+            `var`.nbtPath = NBTPath.getNormalStackPath(`var`)
         }else{
             //获取类型
             val type = MCFPPType.parseFromContext(ctx.type(), Function.currFunction.field)
@@ -178,12 +175,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 //变量初始化
                 if (c.expression() != null) {
                     val init: Var<*> = MCFPPExprVisitor(if(type is MCFPPGenericClassType) type else null, if(type is MCFPPEnumType) type else null).visit(c.expression())!!
-                    try {
-                        `var` = `var`.assignedBy(init)
-                    } catch (e: VariableConverseException) {
-                        LogProcessor.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
-                        throw VariableConverseException(e)
-                    }
+                    `var` = `var`.assignedBy(init)
                 }
                 when(fieldModifier){
                     "const" -> {
@@ -199,6 +191,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                     }
                 }
                 Function.field.putVar(`var`.identifier, `var`, true)
+                `var`.nbtPath = NBTPath.getNormalStackPath(`var`)
             }
         }
         return null

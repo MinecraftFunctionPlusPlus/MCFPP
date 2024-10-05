@@ -2,12 +2,10 @@ package top.mcfpp.type
 
 import net.querz.nbt.tag.IntArrayTag
 import top.mcfpp.core.lang.*
-import top.mcfpp.core.minecraft.PlayerVar
 import top.mcfpp.lib.EntitySelector
 import top.mcfpp.model.Class
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.util.LogProcessor
 
 class MCFPPEntityType {
 

@@ -72,6 +72,12 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable{
         }
     }
 
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        if(!b.implicitCast(type).isError) return true
+        if(b is MCFPPValue<*>) return true
+        return false
+    }
+
     @InsertCommand
     protected open fun assignCommand(a: NBTBasedData) : NBTBasedData{
         nbtType = a.nbtType
@@ -330,12 +336,10 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable{
             return MCFPPCompoundType(t.getMCFPPType())
         }
 
-        val data = CompoundData("nbt","mcfpp")
-
-        init {
-            data.extends(MCAny.data)
-            data.getNativeFromClass(NBTBasedDataData::class.java)
-        }
+        val data by lazy { CompoundData("nbt","mcfpp").apply {
+            extends(top.mcfpp.core.lang.MCAny.data)
+            getNativeFromClass(NBTBasedDataData::class.java)
+        } }
 
         enum class NBTTypeWithTag(val type: NBTType){
             BYTE(NBTType.VALUE),

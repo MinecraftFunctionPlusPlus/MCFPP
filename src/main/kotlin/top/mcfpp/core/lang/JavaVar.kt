@@ -28,7 +28,7 @@ import kotlin.reflect.full.memberProperties
  *
  * @constructor Create empty Java var
  */
-
+@Suppress("unchecked_cast")
 class JavaVar : Var<JavaVar>, MCFPPValue<Any?> {
 
     override var value : Any? = null

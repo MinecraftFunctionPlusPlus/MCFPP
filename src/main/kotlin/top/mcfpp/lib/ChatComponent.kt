@@ -211,9 +211,9 @@ class HoverEventShowEntityStyle(val name: ChatComponent?, val type: EntityTypeCo
             }
         }else{
             if(uuid.nbtType == NBTBasedData.Companion.NBTTypeWithTag.INT_ARRAY){
-                c.build("\"id\": ", false).buildMacro(uuid.toJson().identifier, false)
+                c.build("\"id\": ", false).buildMacro(uuid.toJson(), false)
             }
-            c.build("\"id\": ").buildMacro(uuid.identifier, false)
+            c.build("\"id\": ").buildMacro(uuid, false)
         }
         c.build("}}")
         return c

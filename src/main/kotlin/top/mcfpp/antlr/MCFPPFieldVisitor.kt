@@ -35,6 +35,8 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 
     protected lateinit var typeScope : IFieldWithType
 
+    private var currClassOrTemplate: CompoundData? = null
+
     /**
      * 遍历整个文件。一个文件包含了命名空间的声明，函数的声明，类的声明以及全局变量的声明。全局变量是可以跨文件调用的。
      * @param ctx the parse tree
@@ -93,11 +95,13 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             throw UndefinedException("Interface Should have been defined: $id")
         }
         typeScope = Interface.currInterface!!.field
+        currClassOrTemplate = Interface.currInterface
         //接口成员
         for (m in ctx.interfaceBody().interfaceFunctionDeclaration()){
             visit(m)
         }
         typeScope = MCFPPFile.currFile!!.field
+        currClassOrTemplate = null
         return null
     }
 
@@ -155,6 +159,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             throw UndefinedException("Class Should have been defined: $id")
         }
         Class.currClass = clazz
+        currClassOrTemplate = clazz
         typeScope = Class.currClass!!.field
         //解析类中的成员
         //先解析函数和构造函数
@@ -190,6 +195,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             }
         }
         Class.currClass = null
+        currClassOrTemplate = null
         typeScope = MCFPPFile.currFile!!.field
         return null
     }
@@ -207,6 +213,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             throw UndefinedException("Class should have been defined: $id")
         }
         Class.currClass = clazz
+        currClassOrTemplate = clazz
         typeScope = Class.currClass!!.field
         //解析类中的成员
         //先解析函数和构造函数
@@ -223,6 +230,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             }
         }
         Class.currClass = null
+        currClassOrTemplate = null
         typeScope = MCFPPFile.currFile!!.field
         return null
     }
@@ -452,7 +460,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
         //属性访问器
         currVar = `var`
-        val properties = visit(ctx.accessor()) as Property
+        val properties = (ctx.accessor()?.let{visit(ctx.accessor())}?: Property.buildSimpleProperty(`var`)) as Property
         reList.add(properties)
         return reList
     }
@@ -475,9 +483,9 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     override fun visitGetter(ctx: mcfppParser.GetterContext): Any? {
         Project.ctx = ctx
         return if(ctx.functionBody() != null){
-            FunctionAccessor(currVar, Class.currClass!!)
+            FunctionAccessor(currVar, currClassOrTemplate!!)
         }else if(ctx.javaRefer() != null){
-            NativeAccessor(ctx.javaRefer().text, Class.currClass!!, currVar)
+            NativeAccessor(ctx.javaRefer().text, currClassOrTemplate!!, currVar)
         }else if(ctx.expression() != null){
             ExpressionAccessor(ctx.expression(), currVar)
         }else{
@@ -488,9 +496,9 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     override fun visitSetter(ctx: mcfppParser.SetterContext): Any? {
         Project.ctx = ctx
         return if(ctx.functionBody() != null){
-            FunctionMutator(currVar, Class.currClass!!)
+            FunctionMutator(currVar, currClassOrTemplate!!)
         }else if(ctx.javaRefer() != null){
-            NativeMutator(ctx.javaRefer().text, Class.currClass!!, currVar)
+            NativeMutator(ctx.javaRefer().text, currClassOrTemplate!!, currVar)
         }else if(ctx.expression() != null){
             ExpressionMutator(ctx.expression(), currVar)
         }else{
@@ -724,6 +732,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             throw UndefinedException("Template should have been defined: $id")
         }
         DataTemplate.currTemplate = template
+        currClassOrTemplate = template
         typeScope = template.field
         //解析成员
         //先解析函数和构造函数
@@ -732,6 +741,10 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 visit(c)
             }
         }
+        //如果没有构造函数，生成默认的构造函数
+        if(template.constructors.isEmpty()){
+            template.addMember(DataTemplateConstructor(DataTemplate.currTemplate!!))
+        }
         //再解析变量
         for (c in ctx.templateBody().templateMemberDeclaration()) {
             if (c!!.templateMember().templateFieldDeclaration() != null) {
@@ -739,6 +752,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             }
         }
         DataTemplate.currTemplate = null
+        currClassOrTemplate = null
         typeScope = MCFPPFile.currFile!!.field
         return null
     }
@@ -753,6 +767,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             throw UndefinedException("Template should have been defined: $id")
         }
         DataTemplate.currTemplate = objectTemplate
+        currClassOrTemplate = objectTemplate
         typeScope = objectTemplate.field
         //解析成员
         //先解析函数
@@ -768,6 +783,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             }
         }
         DataTemplate.currTemplate = null
+        currClassOrTemplate = null
         typeScope = MCFPPFile.currFile!!.field
         return null
     }
@@ -782,7 +798,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             DataTemplate.currTemplate!!.addMember(m)
         }else if(m is ArrayList<*>){
             for(v in m){
-                (v as Var<*>).accessModifier = accessModifier
+                (v as Member).accessModifier = accessModifier
                 DataTemplate.currTemplate!!.addMember(v)
             }
         }
@@ -839,9 +855,24 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return f
     }
 
-    override fun visitTemplateFieldDeclaration(ctx: mcfppParser.TemplateFieldDeclarationContext): Var<*>? {
+    override fun visitTemplateFieldDeclaration(ctx: mcfppParser.TemplateFieldDeclarationContext): Any? {
         Project.ctx = ctx
-        val `var` = MCFPPType.parseFromContext(ctx.type(), typeScope).build(ctx.Identifier().text)
+        val reList = ArrayList<Member>()
+        val `var` = if(ctx.singleTemplateFieldType() != null){
+            MCFPPType.parseFromContext(ctx.singleTemplateFieldType().type(), typeScope).build(ctx.Identifier().text).apply {
+                nullable = ctx.singleTemplateFieldType().QUEST() != null
+            }
+        }else{
+            val vars = ArrayList<Var<*>>()
+            for (type in ctx.unionTemplateFieldType().type()){
+                vars.add(
+                    MCFPPType.parseFromContext(type, typeScope).build(ctx.Identifier().text)
+                )
+            }
+            UnionTypeVarConcrete(ctx.Identifier().text, (vars[0] as MCFPPValue<*>).value, *vars.toTypedArray()).apply {
+                nullable = ctx.unionTemplateFieldType().QUEST() != null
+            }
+        }
         //是否是静态的
         `var`.isStatic = isStatic
         if (DataTemplate.currTemplate!!.field.containVar(ctx.Identifier().text)
@@ -849,7 +880,11 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             LogProcessor.error("Duplicate defined variable name:" + ctx.Identifier().text)
             return null
         }
-        return `var`
+        //属性访问器
+        currVar = `var`
+        val properties = (ctx.accessor()?.let {visit(ctx.accessor())}?: Property.buildSimpleProperty(`var`)) as Property
+        reList.add(properties)
+        return reList
     }
 
     override fun visitTemplateConstructorDeclaration(ctx: mcfppParser.TemplateConstructorDeclarationContext): Any {

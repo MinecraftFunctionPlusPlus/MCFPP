@@ -67,6 +67,10 @@ open class PlayerVar : Var<PlayerVar>, EntityBase {
         }
     }
 
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        return !b.implicitCast(type).isError
+    }
+
     override fun clone(): PlayerVar {
         return PlayerVar(this)
     }

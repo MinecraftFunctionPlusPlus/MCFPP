@@ -1,6 +1,7 @@
 package top.mcfpp.command
 
 import top.mcfpp.Project
+import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.Var
 import top.mcfpp.exception.CommandException
 import top.mcfpp.lib.MemberPath

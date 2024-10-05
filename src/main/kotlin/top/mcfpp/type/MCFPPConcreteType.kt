@@ -7,7 +7,10 @@ import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.util.LogProcessor
 
-open class MCFPPConcreteType(objectData: CompoundData = CompoundData("unknown", "mcfpp"), parentType: List<MCFPPType> = listOf()): MCFPPType(objectData, parentType) {
+open class MCFPPConcreteType(objectData: CompoundData = CompoundData("unknown", "mcfpp"), parentType: List<MCFPPType> = listOf()): MCFPPType(
+    objectData,
+    parentType
+) {
 
     final override fun buildUnConcrete(identifier: String): Var<*> {
         LogProcessor.error("Cannot build $typeName that compiler cannot track.")

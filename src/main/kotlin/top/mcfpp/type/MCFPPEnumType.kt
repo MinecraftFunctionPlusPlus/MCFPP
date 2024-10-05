@@ -10,7 +10,7 @@ import top.mcfpp.core.lang.EnumVar
 
 open class MCFPPEnumType(
     var enum: Enum
-): MCFPPType(enum , listOf(MCFPPBaseType.Any)) {
+): MCFPPType(enum, listOf(MCFPPBaseType.Any)) {
     override val typeName: String
         get() = "enum(${enum.namespace}:${enum.identifier})"
 

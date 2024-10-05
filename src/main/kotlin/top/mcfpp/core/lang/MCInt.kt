@@ -146,9 +146,7 @@ open class MCInt : MCNumber<Int> {
             },
             ifThisIsNormalVarAndAIsNotConcrete = { c, _ ->
                 //变量进栈
-                Function.addCommand(
-                    (if(isTemp) Command("") else Command("execute store result storage mcfpp:system").build(nbtPath.toCommandPart()).build("int 1 run "))
-                        .build(Commands.sbPlayerOperation(this, "=", c as MCInt), false))
+                Function.addCommand(Commands.sbPlayerOperation(this, "=", c as MCInt))
                 MCInt(this)
             }
         ) as MCInt
@@ -416,10 +414,11 @@ open class MCInt : MCNumber<Int> {
     }
 
     override fun storeToStack() {
-        if(parent != null) return
+        if(parentClass() != null || hasStoredInStack) return
         Function.addCommand("execute " +
                 "store result $nbtPath int 1 " +
                 "run scoreboard players get $name $sbObject")
+        hasStoredInStack = true
     }
 
     override fun getFromStack() {
@@ -458,10 +457,10 @@ open class MCInt : MCNumber<Int> {
 
     companion object {
         val data by lazy {
-            val qwq = CompoundData("int","mcfpp")
-            qwq.extends(MCAny.data)
-            qwq.getNativeFromClass(MCIntData::class.java)
-            return@lazy qwq
+            CompoundData("int","mcfpp").apply {
+                extends(MCAny.data)
+                getNativeFromClass(MCIntData::class.java)
+            }
         }
     }
 }

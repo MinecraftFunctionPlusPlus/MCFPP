@@ -1,8 +1,6 @@
 package top.mcfpp.core.lang
 
-import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.*
-import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
@@ -41,13 +39,15 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
     var identifier: String
 
     private val stackFrameRegex = Regex("^stack_frame\\[\\d+]\$\n")
+
     /**
      * 变量在栈里面的位置
      */
     var stackIndex: Int = 0
         set(value) {
             field = value
-            for (p in nbtPath.pathList){
+            if(nbtPath == null) return
+            for (p in nbtPath!!.pathList){
                 if(p is MemberPath && p.value is MCStringConcrete && stackFrameRegex.matches((p.value as MCStringConcrete).value.value)){
                     p.value = MCStringConcrete(StringTag("stack_frame[$stackIndex]"))
                 }
@@ -100,7 +100,9 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
     /**
      * 此变量是否可以为空值。仅用于数据模板的成员变量
      */
-    val nullable = false
+    var nullable = false
+
+    var hasStoredInStack = false
 
     /**
      * 复制一个变量
@@ -112,7 +114,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
         isStatic = `var`.isStatic
         accessModifier = `var`.accessModifier
         isTemp = `var`.isTemp
-        nbtPath = `var`.nbtPath
+        nbtPath = `var`.nbtPath.clone()
         stackIndex = `var`.stackIndex
         isConst = `var`.isConst
     }
@@ -122,14 +124,10 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
      *
      * @param identifier 变量的标识符。默认为随机的uuid
      */
-    @Suppress("LeakingThis")
     constructor(identifier: String = UUID.randomUUID().toString()){
         this.name = identifier
         this.identifier = identifier
-        nbtPath = NBTPath(StorageSource("mcfpp:system"))
-            .memberIndex(Project.config.rootNamespace)
-            .memberIndex("stack_frame[$stackIndex]")
-            .memberIndex(identifier)
+        this.nbtPath = NBTPath(StorageSource("mcfpp:temp"))
     }
 
     /**
@@ -163,6 +161,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
      * 此方法不会修改此变量的值。需要在其后调用[replacedBy]将原来的值覆盖
      *
      * @param b 变量的对象
+     * 
      */
     fun assignedBy(b: Var<*>): Self {
         var v = b.implicitCast(this.type)
@@ -539,33 +538,6 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
 
     companion object {
 
-        fun getDefaultValue(type: MCFPPType): Tag<*> {
-            return when(type){
-                MCFPPBaseType.Int -> IntTag(0)
-                MCFPPBaseType.Bool -> ByteTag(0)
-                MCFPPEntityType.Selector -> StringTag(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES).toCommandPart().toString())
-                MCFPPEntityType.Entity -> IntArrayTag(intArrayOf(0,0,0,0))
-                MCFPPBaseType.String -> StringTag("")
-                MCFPPBaseType.Float -> FloatTag(0.0f)
-                is MCFPPListType -> ListTag(AnyTag::class.java)
-                is MCFPPDictType -> CompoundTag()
-                is MCFPPMapType -> CompoundTag()
-                MCFPPNBTType.NBT -> IntTag(0)
-                MCFPPBaseType.JavaVar -> IntTag(0)
-                MCFPPBaseType.Any -> IntTag(0)
-                MCFPPBaseType.Type -> StringTag("any")
-                MCFPPBaseType.JsonText -> SNBTUtil.fromSNBT("{text:\"\"}")
-                is MCFPPGenericClassType -> IntArrayTag(intArrayOf(0,0,0,0))
-                is MCFPPClassType -> IntArrayTag(intArrayOf(0,0,0,0))
-                is MCFPPDataTemplateType -> type.template.getDefaultValue()
-                is MCFPPEnumType -> IntTag(0)
-                is MCFPPVectorType -> IntArrayTag(Array(type.dimension){0}.toIntArray())
-                else -> {
-                    LogProcessor.error("Unknown type: $type")
-                    IntTag(0)
-                }
-            }
-        }
         fun buildCastErrorVar(type: MCFPPType): Var<*>{
             val qwq = type.build("error_cast_" + UUID.randomUUID().toString(), Function.currFunction)
             qwq.isError = true

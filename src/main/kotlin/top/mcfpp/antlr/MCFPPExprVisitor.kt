@@ -464,7 +464,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                     func.invoke(normalArgs,currSelector)
                     return func.returnVar
                 }
-                val init = DataTemplateObjectConcrete(template, template.getDefaultValue())
+                val init = DataTemplateObjectConcrete(template, template.getType().defaultValue())
                 val constructor = template.getConstructorByString(FunctionParam.getArgTypeNames(normalArgs))
                 if (constructor == null) {
                     LogProcessor.error("No constructor like: " + FunctionParam.getArgTypeNames(normalArgs) + " defined in class " + ctx.namespaceID().text)

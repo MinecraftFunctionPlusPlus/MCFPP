@@ -57,8 +57,6 @@ public class AttributeData {
 
         }else if(entity instanceof EntityVar entityVar){
             EntityVarData.setAttributeBase(value, caller.getIdentifier(), entityVar, re);
-        }else if(entity instanceof SelectorVarConcrete selectorVarConcrete){
-
         }else if(entity instanceof SelectorVar selectorVar){
 
         }else {
@@ -77,8 +75,6 @@ public class AttributeData {
 
         }else if(entity instanceof EntityVar entityVar){
             EntityVarData.getAttributeBase(caller.getIdentifier(), entityVar, scale, re);
-        }else if(entity instanceof SelectorVarConcrete selectorVarConcrete){
-
         }else if(entity instanceof SelectorVar selectorVar){
 
         }else {
@@ -97,8 +93,6 @@ public class AttributeData {
 
         }else if(entity instanceof EntityVar entityVar){
             EntityVarData.getAttribute(caller.getIdentifier(), entityVar, scale, re);
-        }else if(entity instanceof SelectorVarConcrete selectorVarConcrete){
-
         }else if(entity instanceof SelectorVar selectorVar){
 
         }else {
@@ -117,8 +111,6 @@ public class AttributeData {
 
         }else if(entity instanceof EntityVar entityVar){
             EntityVarData.addAttributeModifier(caller.getIdentifier(), entityVar, modifier, re);
-        }else if(entity instanceof SelectorVarConcrete selectorVarConcrete){
-
         }else if(entity instanceof SelectorVar selectorVar){
 
         }else {
@@ -137,8 +129,6 @@ public class AttributeData {
 
         }else if(entity instanceof EntityVar entityVar){
             EntityVarData.removeAttributeModifier(caller.getIdentifier(), entityVar, modifier, re);
-        }else if(entity instanceof SelectorVarConcrete selectorVarConcrete){
-
         }else if(entity instanceof SelectorVar selectorVar){
 
         }else {
@@ -157,8 +147,6 @@ public class AttributeData {
 
         }else if(entity instanceof EntityVar entityVar){
             EntityVarData.getAttributeModifier(caller.getIdentifier(), entityVar, modifier, scale, re);
-        }else if(entity instanceof SelectorVarConcrete selectorVarConcrete){
-
         }else if(entity instanceof SelectorVar selectorVar){
 
         }else {

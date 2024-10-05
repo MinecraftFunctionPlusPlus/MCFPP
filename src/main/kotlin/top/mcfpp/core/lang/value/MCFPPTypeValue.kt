@@ -27,6 +27,10 @@ class MCTypeValue(
         TODO("Not yet implemented")
     }
 
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        TODO("Not yet implemented")
+    }
+
     fun toType(): MCFPPGenericType {
         return MCFPPGenericType(identifier,parentType)
     }

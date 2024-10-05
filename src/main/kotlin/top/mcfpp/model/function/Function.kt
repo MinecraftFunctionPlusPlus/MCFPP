@@ -831,7 +831,7 @@ open class Function : Member, FieldContainer, Serializable {
         /**
          * 用于处理多余的命令的函数
          */
-        var extraFunction  = Function("extraFunction", context = null)
+        var extraFunction = Function("extraFunction", context = null)
 
         /**
          * 一个空的函数，通常用于作为占位符

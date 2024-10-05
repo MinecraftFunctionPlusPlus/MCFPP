@@ -188,16 +188,15 @@ templateFunctionDeclaration
     ;
 
 templateFieldDeclaration
-    :   CONST? (singleTemplateFieldType | unionTemplateFieldType) Identifier ('=' expression)? ';'
+    :   CONST? (singleTemplateFieldType | unionTemplateFieldType) Identifier ('=' expression)? ';' accessor?
     ;
 
 singleTemplateFieldType
-    :   type
-    |   type '?'
+    :   type QUEST?
     ;
 
 unionTemplateFieldType
-    :   singleTemplateFieldType (PIPE singleTemplateFieldType)*
+    :   '(' type (PIPE type)* ')' QUEST?
     ;
 
 //接口声明

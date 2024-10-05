@@ -3,7 +3,6 @@ package top.mcfpp.type
 import net.querz.nbt.tag.CompoundTag
 import net.querz.nbt.tag.IntTag
 import net.querz.nbt.tag.ListTag
-import net.querz.nbt.tag.Tag
 import top.mcfpp.model.Class
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
@@ -39,7 +38,7 @@ class MCFPPNBTType {
 
 class MCFPPListType(
     val generic: MCFPPType = MCFPPBaseType.Any
-): MCFPPType(NBTList.data, listOf(MCFPPNBTType.NBT), false){
+): MCFPPType(NBTList.data, listOf(MCFPPNBTType.NBT)){
 
     override val objectData: CompoundData
         get() = NBTList.data
@@ -61,7 +60,7 @@ class MCFPPListType(
 
 class MCFPPImmutableListType(
     val generic: MCFPPType = MCFPPBaseType.Any
-): MCFPPType(NBTList.data, listOf(MCFPPNBTType.NBT), false){
+): MCFPPType(NBTList.data, listOf(MCFPPNBTType.NBT)){
 
     override val objectData: CompoundData
         get() = NBTList.data
@@ -80,7 +79,7 @@ class MCFPPImmutableListType(
 
 open class MCFPPCompoundType(
     val generic: MCFPPType
-): MCFPPType(NBTDictionary.data, listOf(MCFPPNBTType.NBT), false){
+): MCFPPType(NBTDictionary.data, listOf(MCFPPNBTType.NBT)){
 
     override val typeName: String
         get() = "compound[${generic.typeName}]"

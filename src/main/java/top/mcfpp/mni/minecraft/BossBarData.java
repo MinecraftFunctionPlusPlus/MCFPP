@@ -295,7 +295,7 @@ public class BossBarData {
         }
         command.build("players", true);
         if (players instanceof PlayerVar.PlayerEntityVarConcrete playerEntityVarConcrete) {
-            command.build(Utils.INSTANCE.fromNBTArrayUUID(playerEntityVarConcrete.getValue()).toString(), true);
+            command.build((playerEntityVarConcrete.getValue()).toString(), true);
             returnValue.setValue(new CommandReturn(command, "bossbar_set_visible_players"));
             Function.Companion.addCommand(command);
         } else if (players instanceof PlayerVar.PlayerEntityVar playerEntityVar) {
@@ -303,10 +303,6 @@ public class BossBarData {
             var cs = Commands.INSTANCE.runAsEntity(playerEntityVar.getEntity(), command);
             returnValue.setValue(new CommandReturn(cs[cs.length - 1], "bossbar_set_visible_players"));
             Function.Companion.addCommands(cs);
-        } else if (players instanceof PlayerVar.PlayerSelectorVarConcrete playerSelectorVarConcrete) {
-            command.build(playerSelectorVarConcrete.getValue().toCommandPart(), true);
-            returnValue.setValue(new CommandReturn(command, "bossbar_set_visible_players"));
-            Function.Companion.addCommand(command);
         } else if (players instanceof PlayerVar.PlayerSelectorVar playerSelectorVar) {
             command.build(playerSelectorVar.getSelector().getValue().toCommandPart(), true);
             returnValue.setValue(new CommandReturn(command, "bossbar_set_visible_players"));

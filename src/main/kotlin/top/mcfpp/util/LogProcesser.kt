@@ -11,6 +11,18 @@ import kotlin.math.min
 
 object LogProcessor {
 
+    fun getCtxText(): String{
+        if(Project.ctx != null){
+            val text = Project.ctx!!.text
+            if(text.length > 20){
+                return text.substring(0, 20) + "..."
+            }else{
+                return text
+            }
+        }
+        return ""
+    }
+
     var logger: Logger = LogManager.getLogger("mcfpp")
 
     inline fun debug(msg: String){
@@ -31,7 +43,7 @@ object LogProcessor {
 
     inline fun warn(msg: String){
         logger.warn(
-            msg + if(Project.ctx !=null) {"\n    at " + MCFPPFile.currFile!!.absolutePath + ":" + Project.ctx!!.getStart().line}else{""}
+            msg + if(Project.ctx !=null) {"\n    >${getCtxText()} at " + MCFPPFile.currFile!!.absolutePath + ":" + Project.ctx!!.getStart().line}else{""}
         )
         Function.addComment(msg, CommentType.WARN)
         Project.warningCount++
@@ -67,7 +79,7 @@ object LogProcessor {
 
     inline fun error(msg: String){
         logger.error(
-            msg + if(Project.ctx !=null) {"\n    at " + MCFPPFile.currFile!!.absolutePath + ":" + Project.ctx!!.getStart().line}else{""}
+            msg + if(Project.ctx !=null) {"\n    >${getCtxText()}  at " + MCFPPFile.currFile!!.absolutePath + ":" + Project.ctx!!.getStart().line}else{""}
         )
         Function.addComment(msg, CommentType.ERROR)
         Project.errorCount++

@@ -19,11 +19,12 @@ import top.mcfpp.util.TextTranslator.translate
  *     int|float a;
  *     Data1|Data2 data;
  * }
+ * ```
  *
  * 在赋值给其他变量的时候，联合变量将会尝试隐式转换为目标变量，根据联合类型的声明顺序来尝试进行隐式转换
  *
  * 在被其他变量赋值的时候，联合变量将会尝试寻找一个类型相同的变量进行赋值，如果找不到，将会尝试寻找一个能隐式转换为目标变量的变量进行赋值。如果依然
- *找不到，则会寻找一个能赋值给目标变量的变量进行赋值。寻找的顺序和联合类型的声明顺序一致。
+ * 找不到，则会寻找一个能赋值给目标变量的变量进行赋值。寻找的顺序和联合类型的声明顺序一致。
  */
 open class UnionTypeVar(identifier: String, vararg vars: Var<*>): Var<UnionTypeVar>(identifier) {
 
@@ -81,12 +82,15 @@ open class UnionTypeVar(identifier: String, vararg vars: Var<*>): Var<UnionTypeV
         for (v in vars) {
             if (v.type == b.type) {
                 val qwq = v.assignedBy(b)
-                if(qwq is MCFPPValue<*>) qwq.toDynamic(false)
+                if(qwq is MCFPPValue<*>) {
+                    vars[vars.indexOf(v)] = qwq
+                    return UnionTypeVarConcrete(this, qwq.value)
+                }
                 return this
             }
         }
         for (v in vars){
-            val qwq = v.implicitCast(b.type)
+            val qwq = b.implicitCast(v.type)
             if(qwq.isError){
                 continue
             }
@@ -156,7 +160,8 @@ class UnionTypeVarConcrete(identifier: String, override var value: Any?, vararg 
     override fun toDynamic(replace: Boolean): Var<*> {
         for (v in vars) {
             if (v is MCFPPValue<*> && v.value == value) {
-                return v.toDynamic(false)
+                vars[vars.indexOf(v)] = v.toDynamic(false)
+                break
             }
         }
         val re = UnionTypeVar(identifier, *vars.toTypedArray())

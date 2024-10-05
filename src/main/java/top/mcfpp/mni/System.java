@@ -1,5 +1,6 @@
 package top.mcfpp.mni;
 
+import net.querz.nbt.io.SNBTUtil;
 import org.jetbrains.annotations.NotNull;
 import top.mcfpp.annotations.InsertCommand;
 import top.mcfpp.annotations.MNIFunction;
@@ -11,6 +12,7 @@ import top.mcfpp.util.LogProcessor;
 import top.mcfpp.util.NBTUtil;
 import top.mcfpp.util.ValueWrapper;
 
+import java.io.IOException;
 import java.util.UUID;
 
 public class System {
@@ -75,9 +77,9 @@ public class System {
 
     @InsertCommand
     @MNIFunction(normalParams = {"DataObject o"})
-    public static void print(@NotNull DataTemplateObject object){
+    public static void print(@NotNull DataTemplateObject object) throws IOException {
         if(object instanceof DataTemplateObjectConcrete objectConcrete){
-            Function.Companion.addCommand("tellraw @a \"" + objectConcrete.getValue().valueToString());
+            Function.Companion.addCommand("tellraw @a \"" + SNBTUtil.toSNBT(objectConcrete.getValue()) + "\"");
         }else {
             //TODO
             Function.Companion.addCommand("TODO: tellraw templateData");

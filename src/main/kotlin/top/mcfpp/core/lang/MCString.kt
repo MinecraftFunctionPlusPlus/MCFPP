@@ -80,13 +80,24 @@ open class MCString : NBTBasedData {
     override fun doAssignedBy(b: Var<*>): MCString {
         when (b) {
             is MCString -> return assignCommand(b)
+            is NBTBasedDataConcrete -> {
+                if(b.nbtType == NBTBasedData.Companion.NBTTypeWithTag.STRING){
+                    return assignCommand(b)
+                }else{
+                    LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
+                }
+            }
             else -> LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
         }
         return this
     }
 
     override fun canAssignedBy(b: Var<*>): Boolean {
-        return !b.implicitCast(type).isError
+        if(!b.implicitCast(type).isError) return true
+        if(b is NBTBasedDataConcrete){
+            return b.nbtType == NBTBasedData.Companion.NBTTypeWithTag.STRING
+        }
+        return false
     }
 
     @InsertCommand

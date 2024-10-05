@@ -33,9 +33,7 @@ open class MCFPPType(
     /**
      * 父类型，一个列表
      */
-    open var parentType: List<MCFPPType> = listOf(),
-
-    ifRegister: Boolean = true
+    open var parentType: List<MCFPPType> = listOf()
 
 ) : CanSelectMember {
 

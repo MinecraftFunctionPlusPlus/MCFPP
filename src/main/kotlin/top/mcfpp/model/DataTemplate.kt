@@ -8,6 +8,7 @@ import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.type.MCFPPDataTemplateType
 import top.mcfpp.mni.DataObjectData
+import top.mcfpp.model.accessor.Property
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.ClassConstructor
 import top.mcfpp.model.function.DataTemplateConstructor
@@ -78,14 +79,6 @@ open class DataTemplate : FieldContainer, CompoundData {
         return super.isSub(compoundData)
     }
 
-    fun getDefaultValue(): CompoundTag{
-        val tag = CompoundTag()
-        for (member in field.allVars){
-            tag.put(member.identifier, member.type.defaultValue())
-        }
-        return tag
-    }
-
     /**
      * 向这个类中添加一个成员
      * @param member 要添加的成员
@@ -112,6 +105,7 @@ open class DataTemplate : FieldContainer, CompoundData {
                 }
                 field.putVar(member.identifier, member)
             }
+            is Property -> field.putProperty(member.field.identifier, member)
             else -> TODO()
         }
     }

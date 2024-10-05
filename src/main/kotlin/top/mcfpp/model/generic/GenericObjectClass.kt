@@ -13,7 +13,6 @@ import top.mcfpp.model.CompiledGenericObjectClass
 import top.mcfpp.model.ObjectClass
 import top.mcfpp.model.field.GlobalField
 
-
 class GenericObjectClass : ObjectClass {
 
     val ctx : mcfppParser.ClassBodyContext
