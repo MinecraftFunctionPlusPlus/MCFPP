@@ -34,10 +34,16 @@ interface CanSelectMember{
     fun getAccess(function: Function): Member.AccessModifier
 
     /**
+     * 替换成员变量
+     *
+     * @param v 新的成员变量
+     */
+    fun replaceMemberVar(v: Var<*>)
+
+    /**
      * @param member 更改之后的成员变量
      *
      * 当成员变量发生变化时，会调用此方法
      */
     fun onMemberVarChanged(member: Var<*>) {}
-
 }

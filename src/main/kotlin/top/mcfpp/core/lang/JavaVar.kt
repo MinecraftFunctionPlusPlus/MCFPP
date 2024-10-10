@@ -33,7 +33,7 @@ class JavaVar : Var<JavaVar>, MCFPPValue<Any?> {
 
     override var value : Any? = null
 
-    override var type: MCFPPType = MCFPPBaseType.JavaVar
+    override var type: MCFPPType = MCFPPConcreteType.JavaVar
 
     /**
      * 创建一个固定的JavaVar

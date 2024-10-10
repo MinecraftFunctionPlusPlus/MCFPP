@@ -7,10 +7,13 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.lib.NBTPath
+import top.mcfpp.lib.StorageSource
 import top.mcfpp.mni.NBTListConcreteData
 import top.mcfpp.mni.NBTListData
 import top.mcfpp.model.*
 import top.mcfpp.model.accessor.Property
+import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
@@ -19,9 +22,12 @@ import top.mcfpp.type.MCFPPListType
 import top.mcfpp.type.MCFPPNBTType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.NBTUtil
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 import java.util.*
+import kotlin.collections.ArrayList
+import kotlin.collections.HashMap
 
 /**
  * 表示一个列表类型。基于NBTBasedData实现。
@@ -203,34 +209,32 @@ open class NBTList : NBTBasedData {
     }
 
     override fun getByIndex(index: Var<*>): PropertyVar {
-        val v = if(index is MCInt){
-            super.getByIntIndex(index)
+        if(index is MCInt){
+            val v = genericType.build(UUID.randomUUID().toString())
+            v.nbtPath = nbtPath.intIndex(index)
+            v.parent = this
+            return PropertyVar(Property.buildSimpleProperty(v), v,this)
         }else{
-            throw IllegalArgumentException("Index must be a int")
+            LogProcessor.error("Index must be a int")
+            val re = UnknownVar("error_${identifier}_index_${index.identifier}")
+            return PropertyVar(Property.buildSimpleProperty(re), re, this)
         }
-        return PropertyVar(Property.buildSimpleProperty(v), v,this)
     }
 
     companion object {
-        val data = CompoundData("list", "mcfpp.lang")
-        //注册函数
-
-        init {
-            data.extends(NBTBasedData.data)
-            data.getNativeFromClass(NBTListData::class.java)
+        val data by lazy {
+            CompoundData("list", "mcfpp.lang").apply {
+                extends(NBTBasedData.data)
+                getNativeFromClass(NBTListData::class.java)
+            }
         }
 
     }
 }
 
-/**
- *
- * 2024.7.12：我试过了，是真的，会坏
- *
- */
-class NBTListConcrete: NBTList, MCFPPValue<ListTag<*>> {
+class NBTListConcrete: NBTList, MCFPPValue<ArrayList<Var<*>>> {
 
-    override lateinit var value: ListTag<*>
+    override lateinit var value: ArrayList<Var<*>>
 
     /**
      * 创建一个固定的list
@@ -241,17 +245,17 @@ class NBTListConcrete: NBTList, MCFPPValue<ListTag<*>> {
      */
     constructor(
         curr: FieldContainer,
-        value: ListTag<*>,
+        value: ArrayList<Var<*>>,
         identifier: String = UUID.randomUUID().toString(),
         genericType : MCFPPType
     ) : this(value, curr.prefix + identifier, genericType)
 
-    constructor(value: ListTag<*>, identifier: String, genericType: MCFPPType) : super(identifier, genericType){
+    constructor(value: ArrayList<Var<*>>, identifier: String, genericType: MCFPPType) : super(identifier, genericType){
         type = MCFPPListType(genericType)
         this.value = value
     }
 
-    constructor(list : NBTList, value: ListTag<*>):super(list){
+    constructor(list : NBTList, value: ArrayList<Var<*>>):super(list){
         this.value = value
     }
 
@@ -264,21 +268,36 @@ class NBTListConcrete: NBTList, MCFPPValue<ListTag<*>> {
         return NBTListConcrete(this)
     }
 
+    @Suppress("UNCHECKED_CAST")
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
+        if(value.isEmpty()) return NBTList(this)
+        val cmds = Commands.tempFunction(Function.currFunction){
+            Commands.dataSetValue(nbtPath, ListTag(IntTag::class.java))
+            val first = value.first().type.nbtType
+            val list = ListTag.createUnchecked(first) as ListTag<Tag<*>>
+            for (v in value){
+                if(v is MCFPPValue<*>){
+                    list.add(NBTUtil.valueToNBT(v.value))
+                }else{
+                    if(list.size() != 0){
+                        Function.addCommand(Commands.dataSetValue(NBTPath.temp, list))
+                        Function.addCommand(Command("data modify").build(nbtPath.toCommandPart()).build("append from").build(NBTPath.temp.clone().iteratorIndex().toCommandPart()))
+                        list.clear()
+                    }
+                    Function.addCommand(Command("data modify").build(nbtPath.toCommandPart()).build("append from").build(v.nbtPath.toCommandPart()))
+                }
+            }
+        }
         if (parent != null) {
             val cmd = Commands.selectRun(parent)
             if(cmd.size == 2){
                 Function.addCommand(cmd[0])
             }
-            Function.addCommand(cmd.last().build(
-                "data modify entity @s data.${identifier} set value ${SNBTUtil.toSNBT(value)}")
-            )
+            Function.addCommand(cmd.last().build(cmds.first))
+            GlobalField.localNamespaces[Project.currNamespace]!!.field.addFunction(cmds.second, false)
         } else {
-            val cmd = Command.build(
-                "data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set value ${SNBTUtil.toSNBT(value)}"
-            )
-            Function.addCommand(cmd)
+            Function.addCommands(cmds.second.commands.toTypedArray())
         }
         val re = NBTList(this)
         if(replace){
@@ -307,23 +326,30 @@ class NBTListConcrete: NBTList, MCFPPValue<ListTag<*>> {
     override fun getByIndex(index: Var<*>): PropertyVar {
         val v = if(index is MCInt){
             if(index is MCIntConcrete){
-                if(index.value >= value.size()){
-                    throw IndexOutOfBoundsException("Index out of bounds")
+                if(index.value >= value.size){
+                    LogProcessor.error("Index out of bounds")
+                    val re = UnknownVar("error_${identifier}_index_${index.identifier}")
+                    return PropertyVar(Property.buildSimpleProperty(re), re, this)
                 }else{
-                    NBTBasedDataConcrete(value[index.value]!!)
+                    value[index.value]
                 }
             }else {
                 //index未知
+                toDynamic(true)
                 super.getByIntIndex(index)
             }
         }else{
-            throw IllegalArgumentException("Index must be a int")
+            LogProcessor.error("Index must be a int")
+            val re = UnknownVar("error_${identifier}_index_${index.identifier}")
+            return PropertyVar(Property.buildSimpleProperty(re), re, this)
         }
+        v.nbtPath = getTempPath(v)
+        v.parent = this
         return PropertyVar(Property.buildSimpleProperty(v), v, this)
     }
 
     override fun toString(): String {
-        return "[$type,value=${SNBTUtil.toSNBT(value)}]"
+        return "[$type,value=$value]"
     }
 
     override fun getMemberFunction(
@@ -348,16 +374,38 @@ class NBTListConcrete: NBTList, MCFPPValue<ListTag<*>> {
         return re to true
     }
 
-    companion object {
-        val data = CompoundData("list", "mcfpp.lang")
-        //注册函数
+    override fun replaceMemberVar(v: Var<*>) {
+        value[value.indexOfFirst { it.identifier == v.identifier }] = v
+    }
 
-        init {
-            data.extends(MCAny.data)
-            data.getNativeFromClass(NBTListConcreteData::class.java)
+    override fun onMemberVarChanged(member: Var<*>) {
+        if(member !is MCFPPValue<*>) toDynamic(true)
+    }
+
+    companion object {
+        val data by lazy {
+            CompoundData("list", "mcfpp.lang").apply {
+                extends(NBTBasedData.data)
+                getNativeFromClass(NBTListConcreteData::class.java)
+            }
         }
 
-        val empty = NBTListConcrete(ListTag.createUnchecked(IntTag::class.java), "empty", MCFPPBaseType.Any)
+        val empty = NBTListConcrete(ArrayList(), "empty", MCFPPBaseType.Any)
+
+        val listTempNBTPath = NBTPath(StorageSource("mcfpp:system")).memberIndex("temp_list")
+
+        val listIndexHashMap: HashMap<Var<*>, Int> = HashMap()
+
+        fun getTempPath(v: Var<*>): NBTPath {
+            val index = if (listIndexHashMap.containsKey(v)) {
+                listIndexHashMap[v]!!
+            } else {
+                val re = listIndexHashMap.size
+                listIndexHashMap[v] = re
+                re
+            }
+            return listTempNBTPath.clone().memberIndex(index.toString())
+        }
 
     }
 }

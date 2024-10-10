@@ -1,7 +1,6 @@
 package top.mcfpp.core.lang
 
 import top.mcfpp.command.Command
-import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.CompoundData
@@ -9,6 +8,7 @@ import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
+import top.mcfpp.type.MCFPPPrivateType
 import java.util.*
 
 class CommandReturn : Var<CommandReturn> {
@@ -19,7 +19,7 @@ class CommandReturn : Var<CommandReturn> {
 
     val command: Command
 
-    override var type: MCFPPType = MCFPPBaseType.CommandReturn
+    override var type: MCFPPType = MCFPPPrivateType.CommandReturn
 
     /**
      * 创建一个string类型的变量。它的mc名和变量所在的域容器有关。
@@ -56,7 +56,7 @@ class CommandReturn : Var<CommandReturn> {
 
     override fun implicitCast(type: MCFPPType): Var<*> {
         return when(type){
-            MCFPPBaseType.CommandReturn -> this
+            MCFPPPrivateType.CommandReturn -> this
             else -> buildCastErrorVar(type)
         }
     }

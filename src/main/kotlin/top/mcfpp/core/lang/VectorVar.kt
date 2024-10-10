@@ -194,6 +194,14 @@ open class VectorVar: Var<VectorVar>, Indexable, ScoreHolder {
         TODO("Not yet implemented")
     }
 
+    override fun replaceScore(score: MCInt) {
+        components.forEachIndexed { index, v ->
+            if(v == this){
+                components[index] = score
+            }
+        }
+    }
+
     companion object {
         val data = CompoundData("vector", "mcfpp")
 

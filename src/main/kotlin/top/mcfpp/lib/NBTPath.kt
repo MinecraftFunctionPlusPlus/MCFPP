@@ -15,40 +15,38 @@ class NBTPath(var source: NBTSource): Serializable {
 
     //qwq[1]
     fun intIndex(index: MCInt): NBTPath{
-        pathList.add(IntPath(index))
-        return this
+        return this.clone().apply {
+            pathList.add(IntPath(index))
+        }
     }
 
     //qwq[{"text":"1"}]
     fun nbtIndex(index: NBTBasedData): NBTPath{
-        pathList.add(NBTPredicatePath(index))
-        return this
+        return this.clone().apply {
+            pathList.add(NBTPredicatePath(index))
+        }
     }
 
     fun memberIndex(index: MCString): NBTPath{
-        pathList.add(MemberPath(index))
-        return this
+        return this.clone().apply {
+            pathList.add(MemberPath(index))
+        }
     }
 
     //qwq.index
     fun memberIndex(index: String): NBTPath{
-        pathList.add(MemberPath(MCStringConcrete(StringTag(index))))
-        return this
+        return this.clone().apply {
+            pathList.add(MemberPath(MCStringConcrete(StringTag(index))))
+        }
     }
 
     /**
      * 添加一个迭代器路径
      */
     fun iteratorIndex(): NBTPath{
-        pathList.add(IteratorPath())
-        return this
-    }
-
-    /**
-     * 移除最后一个路径
-     */
-    fun removeLast(): Path{
-        return pathList.removeLast()
+        return this.clone().apply {
+            pathList.add(IteratorPath())
+        }
     }
 
     /**
@@ -147,6 +145,8 @@ class NBTPath(var source: NBTSource): Serializable {
         val FRAME = NBTPath(StorageSource("mcfpp:system")).memberIndex(Project.config.rootNamespace + ".stack_frame[0]")
 
         val macroTemp = NBTPath(StorageSource("mcfpp:system")).memberIndex("macro_temp")
+
+        val temp = NBTPath(StorageSource("mcfpp:system")).memberIndex("temp")
 
         val STORAGE = "storage"
         val ENTITY = "entity"

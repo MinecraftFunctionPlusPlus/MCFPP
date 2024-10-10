@@ -493,46 +493,21 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
         return result
     }
 
+    override fun replaceMemberVar(v: Var<*>){}
+
     open fun replacedBy(v : Var<*>){
         if(v == this) return
         if(v is MCInt && this is MCInt && holder != null){
-            when(val holder = holder){
-                is VectorVar -> {
-                    holder.components.forEachIndexed { index, varr ->
-                        if(varr == this){
-                            holder.components[index] = v
-                        }
-                    }
-                    holder.onScoreChange(v)
-                }
-            }
+            holder!!.replaceScore(v)
+            holder!!.onScoreChange(v)
         }else if(parent == null){
             if(Function.currFunction.field.containVar(identifier)){
                 Function.currFunction.field.putVar(identifier, v, true)
             }
         }else{
             v.parent = this.parent
-            when (val parent = parent){
-                is ClassPointer -> {
-                    //TODO 类暂不支持替换
-                }
-                is MCFPPTypeVar -> {
-                    when(val type = parent.type){
-                        is MCFPPClassType ->{
-                            type.cls.field.putVar(v.identifier, v, true)
-                        }
-                        is MCFPPCompoundType -> {
-                            type.objectData.field.putVar(v.identifier, v, true)
-                        }
-                        else -> TODO()
-                    }
-                }
-                is DataTemplateObject -> {
-                    parent.instanceField.putVar(identifier, v, true)
-                }
-                else -> {}
-            }
-            parent?.onMemberVarChanged(v)
+            parent!!.replaceMemberVar(v)
+            parent!!.onMemberVarChanged(v)
         }
     }
 

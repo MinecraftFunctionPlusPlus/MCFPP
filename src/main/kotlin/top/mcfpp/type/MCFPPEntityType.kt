@@ -1,6 +1,7 @@
 package top.mcfpp.type
 
 import net.querz.nbt.tag.IntArrayTag
+import net.querz.nbt.tag.Tag
 import top.mcfpp.core.lang.*
 import top.mcfpp.lib.EntitySelector
 import top.mcfpp.model.Class
@@ -25,6 +26,9 @@ class MCFPPEntityType {
 
         override val typeName: String
             get() = "entity"
+
+        override val nbtType: java.lang.Class<out Tag<*>>
+            get() = IntArrayTag::class.java
 
         override fun build(identifier: String, container: FieldContainer): Var<*> =
             EntityVarConcrete(container, IntArrayTag(intArrayOf(0, 0, 0, 0)), identifier)

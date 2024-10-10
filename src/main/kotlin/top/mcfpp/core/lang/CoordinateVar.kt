@@ -8,7 +8,7 @@ import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
-import top.mcfpp.type.MCFPPStdPrivateType
+import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TextTranslator
@@ -211,7 +211,7 @@ open class CoordinateDimension: MCNumber<Number> {
 
     var number: MCNumber<*>? = null
 
-    override var type: MCFPPType = MCFPPStdPrivateType.MCFPPCoordinateDimension
+    override var type: MCFPPType = MCFPPPrivateType.MCFPPCoordinateDimension
 
     override var parent: CanSelectMember? = null
         get() = super.parent

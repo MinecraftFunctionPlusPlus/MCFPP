@@ -1,11 +1,11 @@
 package top.mcfpp.core.lang.value
 
 import top.mcfpp.core.lang.Var
-import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPGenericType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
+import top.mcfpp.type.MCFPPConcreteType
 
 /**
  * type T;
@@ -21,7 +21,7 @@ class MCTypeValue(
     /**
      * **只读，不可更改**。此值的类型，为MCFPPBaseType.Type
      */
-    override var type: MCFPPType = MCFPPBaseType.Type
+    override var type: MCFPPType = MCFPPConcreteType.Type
     
     override fun doAssignedBy(b: Var<*>): MCTypeValue {
         TODO("Not yet implemented")

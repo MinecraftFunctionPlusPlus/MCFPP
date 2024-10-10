@@ -235,6 +235,10 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         }
     }
 
+    override fun replaceMemberVar(v: Var<*>) {
+        instanceField.putVar(identifier, v, true)
+    }
+
     fun isConcrete(): Boolean{
         if(this is DataTemplateObjectConcrete) return true
         var re = true

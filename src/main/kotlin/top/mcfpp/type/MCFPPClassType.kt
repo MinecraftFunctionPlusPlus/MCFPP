@@ -1,5 +1,7 @@
 package top.mcfpp.type
 
+import net.querz.nbt.tag.IntArrayTag
+import net.querz.nbt.tag.Tag
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.Class
 import top.mcfpp.model.CompoundData
@@ -16,6 +18,9 @@ open class MCFPPClassType(
     var cls:Class,
     override var parentType: List<MCFPPType>
 ): MCFPPType(cls, parentType) {
+
+    override val nbtType: java.lang.Class<out Tag<*>>
+        get() = IntArrayTag::class.java
 
     override val objectData: CompoundData
         get() = cls.objectClass?: CompoundData(cls.identifier)

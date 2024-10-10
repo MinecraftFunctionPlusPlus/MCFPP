@@ -15,6 +15,7 @@ import top.mcfpp.util.NBTUtil
 import top.mcfpp.util.NBTUtil.toJava
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
+import java.lang.Class
 import java.util.*
 
 
@@ -235,7 +236,7 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable{
             LogProcessor.error("Invalid nbt type")
         }
         val re = NBTBasedData(this)
-        re.nbtPath.intIndex(index)
+        re.nbtPath = nbtPath.intIndex(index)
         return re
     }
 
@@ -369,9 +370,28 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable{
                     LONG_ARRAY -> MCFPPBaseType.Any
                     COMPOUND -> MCFPPNBTType.NBT
                     LIST -> {
-                        throw Exception("不应该运行到这个地方吧")
+                        TODO()
                     }
                     ANY -> MCFPPBaseType.Any
+                }
+            }
+
+            fun toTagType(): Class<out Tag<*>>{
+                return when(this){
+                    BYTE -> ByteTag::class.java
+                    BOOL -> ByteTag::class.java
+                    SHORT -> ShortTag::class.java
+                    INT -> IntTag::class.java
+                    LONG -> LongTag::class.java
+                    FLOAT -> FloatTag::class.java
+                    DOUBLE -> DoubleTag::class.java
+                    STRING -> StringTag::class.java
+                    BYTE_ARRAY -> ByteArrayTag::class.java
+                    INT_ARRAY -> IntArrayTag::class.java
+                    LONG_ARRAY -> LongArrayTag::class.java
+                    COMPOUND -> CompoundTag::class.java
+                    LIST -> ListTag::class.java
+                    ANY -> TODO()
                 }
             }
 

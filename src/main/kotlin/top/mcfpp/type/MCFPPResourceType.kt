@@ -1,6 +1,8 @@
 package top.mcfpp.type
 
 
+import net.querz.nbt.tag.StringTag
+import net.querz.nbt.tag.Tag
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.resource.*
@@ -11,6 +13,9 @@ class MCFPPResourceType {
 object ResourceID: MCFPPType(parentType = listOf(MCFPPNBTType.NBT)){
     override val typeName: String
         get() = "ResourceID"
+
+    override val nbtType: java.lang.Class<out Tag<*>>
+        get() = StringTag::class.java
 }
     object Block: MCFPPType(parentType = listOf(ResourceID)){
         override val typeName: String

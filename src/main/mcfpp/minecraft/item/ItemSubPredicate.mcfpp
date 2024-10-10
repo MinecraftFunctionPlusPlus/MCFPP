@@ -1,0 +1,153 @@
+import mcfpp.math;
+
+data AttributeModifierPredicate {
+    AttributeModifiers modifiers;
+}
+
+data AttributeModifiers {
+    list<AttributePredicate>? contains;
+    (int | IntRange)? size;
+    list<AttributeCountPredicate>? count;
+}
+
+data AttributeCountPredicate {
+    AttributePredicate test;
+    (int | IntRange) count;
+}
+
+data AttributePredicate {
+    (string | list<string>?) attribute;
+    list<string>? id;
+    (float | DecimalRange?) amount;
+    AttributeOperation? operation;
+    AttributeSlot? slot;
+}
+
+enum AttributeOperation {
+    ADD_VALUE = "add_value",
+    ADD_MULTIPLIED_BASE = "add_multiplied_base"
+    ADD_MULTIPLIED_TOTAL = "add_multiplied_total"
+}
+
+enum AttributeSlot {
+    ANY = "any",
+    MAINHAND = "mainhand",
+    OFFHAND = "offhand",
+    HAND = "hand",
+    HEAD = "head",
+    CHEST = "chest",
+    LEGS = "legs",
+    FEET = "feet",
+    ARMOR = "armor"
+}
+
+data Test {
+
+    var a : {int b, int c};
+
+}
+
+data BundleContentsPredicate {
+    ItemStackCompoundPredicate items;
+}
+
+data ContainerPredicate {
+    ItemStackCompoundPredicate items;
+}
+
+data ItemStackCompoundPredicate {
+    list<ItemStackPredicate> contains;
+    (int | IntRange)? size;
+    list<ItemStackCountPredicate>? count;
+}
+
+data ItemStackPredicate {
+    dict<string, ItemComponent>? components;
+    (int | IntRange)? count;
+    (string | list<string>?) items;
+    dict<string, nbt>? predicates;
+}
+
+data ItemStackCountPredicate {
+    ItemStackPredicate test;
+    (int | IntRange) count;
+}
+
+data CustomDataPredicate {}
+
+data DamagePredicate: ItemSubPredicate {
+    (int | IntRange)? damage;
+    (int | IntRange)? durability;
+}
+
+data EnchantmentPredicate {
+    (string | list<string>) enchantments;
+    (int | IntRange) levels;
+}
+
+data FireworkExplosionPredicate {
+    FireworkShape? shape;
+    bool? hasTrail;
+    bool? hasTwinkle;
+}
+
+enum FireworkShape {
+    SMALL_BALL = "small_ball",
+    LARGE_BALL = "large_ball",
+    STAR = "star",
+    CREEPER = "creeper",
+    BURST = "burst"
+}
+
+data FireworksPredicate {
+    FireworkExplosions explosions;
+    (int | IntRange)? flightDuration;
+}
+
+data FireworkExplosions {
+    list<FireworkExplosionPredicate> contains;
+    (int | IntRange)? size;
+    list<FireworkExplosionCountPredicate>? count;
+}
+
+data FireworkExplosionCountPredicate {
+    FireworkExplosionPredicate test;
+    (int | IntRange) count;
+}
+
+data JukeboxPlayablePredicate {
+    (string | list<string>) songs;
+}
+
+data StoredEnchantments {
+    (string | list<string>) enchantments;
+    (int | IntRange) levels;
+}
+
+data TrimPredicate {
+    (string | list<string>) material;
+    (string | list<string>) pattern;
+}
+
+data WriteableBookContentPredicate {
+    PagePredicate pages;
+}
+
+data WrittenBookContentPredicate {
+    PagePredicate pages;
+    string author;
+    string title;
+    (int | IntRange) generation;
+    bool resolved;
+}
+
+data PagePredicate {
+    list<text>? contains;
+    (int | IntRange)? size;
+    list<PageCountPredicate>? count;
+}
+
+data PageCountPredicate {
+    text test;
+    (int | IntRange) count;
+}

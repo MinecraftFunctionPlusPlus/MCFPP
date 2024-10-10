@@ -3,6 +3,7 @@ package top.mcfpp.type
 import net.querz.nbt.tag.CompoundTag
 import net.querz.nbt.tag.IntTag
 import net.querz.nbt.tag.ListTag
+import net.querz.nbt.tag.Tag
 import top.mcfpp.model.Class
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
@@ -46,13 +47,16 @@ class MCFPPListType(
     override val typeName: String
         get() = "list[${generic.typeName}]"
 
+    override val nbtType: java.lang.Class<out Tag<*>>
+        get() = ListTag::class.java
+
     companion object{
         val regex = Regex("^list\\(.+\\)$") //TODO：这个不一定能匹配得到嵌套的内容！
     }
 
-    override fun build(identifier: String, container: FieldContainer): Var<*> = NBTListConcrete(container, ListTag(IntTag::class.java), identifier, generic)
-    override fun build(identifier: String): Var<*> = NBTListConcrete(ListTag(IntTag::class.java), identifier, generic)
-    override fun build(identifier: String, clazz: Class): Var<*> = NBTListConcrete(clazz, ListTag(IntTag::class.java), identifier, generic)
+    override fun build(identifier: String, container: FieldContainer): Var<*> = NBTListConcrete(container, ArrayList(), identifier, generic)
+    override fun build(identifier: String): Var<*> = NBTListConcrete(ArrayList(), identifier, generic)
+    override fun build(identifier: String, clazz: Class): Var<*> = NBTListConcrete(clazz, ArrayList(), identifier, generic)
     override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = NBTList(container, identifier, generic)
     override fun buildUnConcrete(identifier: String): Var<*> = NBTList(identifier, generic)
     override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = NBTList(clazz, identifier, generic)
@@ -67,6 +71,9 @@ class MCFPPImmutableListType(
 
     override val typeName: String
         get() = "list[${generic.typeName}]"
+
+    override val nbtType: java.lang.Class<out Tag<*>>
+        get() = ListTag::class.java
 
     override fun build(identifier: String, container: FieldContainer): Var<*> = ImmutableListConcrete(container, ListTag(IntTag::class.java), identifier, generic)
     override fun build(identifier: String): Var<*> = ImmutableListConcrete(ListTag(IntTag::class.java), identifier, generic)

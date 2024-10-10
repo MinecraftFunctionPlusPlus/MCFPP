@@ -23,20 +23,20 @@ import kotlin.math.truncate
 object Commands {
 
     /**
-     * function <function.namespaceID>
+     * `function <function.namespaceID>`
      *
-     * @param function
-     * @return
+     * @param function 函数对象
+     * @return 生成的命令
      */
     fun function(function: Function): Command {
         return Command.build("function").build(function.namespaceID,function.namespaceID)
     }
 
     /**
-     * scoreboard players get <target.name> <target.object>
+     * `scoreboard players get <target.name> <target.object>`
      *
-     * @param target
-     * @return
+     * @param target 被获取计分板分数的目标
+     * @return 生成的命令
      */
     fun sbPlayerGet(target: MCInt): Command{
         return Command.build("scoreboard players get")
@@ -45,11 +45,11 @@ object Commands {
     }
 
     /**
-     * scoreboard players add <target.name> <target.object.toString()> value
+     * `scoreboard players add <target.name> <target.object.toString()> value`
      *
-     * @param target
-     * @param value
-     * @return
+     * @param target 被操作的对象
+     * @param value 增加的值
+     * @return 生成的命令
      */
     fun sbPlayerAdd(target: MCInt, value: Int): Command {
         return Command.build("scoreboard players add")
@@ -59,12 +59,12 @@ object Commands {
     }
 
     /**
-     * scoreboard players operation <a.name> <a.object.toString()> <operation> <b.name> <b.object.toString()>
+     * `scoreboard players operation <a.name> <a.object.toString()> <operation> <b.name> <b.object.toString()>`
      *
      * @param a
-     * @param operation
+     * @param operation 操作的字符串，必须为`=`,`<>`, `+=`, `-=`, `*=`, `/=`, `%=`之一。
      * @param b
-     * @return
+     * @return 生成的命令
      */
     fun sbPlayerOperation(a: MCInt, operation: String, b: MCInt): Command {
         return Command.build("scoreboard players operation")
@@ -76,11 +76,11 @@ object Commands {
     }
 
     /**
-     * scoreboard players remove <target.name> <target.object.toString()> value
+     * `scoreboard players remove <target.name> <target.object.toString()> value`
      *
-     * @param target
-     * @param value
-     * @return
+     * @param target 被操作的对象
+     * @param value 减少的值
+     * @return 生成的命令
      */
     fun sbPlayerRemove(target: MCInt, value: Int): Command {
         return Command.build("scoreboard players remove ")
@@ -89,6 +89,14 @@ object Commands {
             .build(value.toString())
     }
 
+    /**
+     * `scoreboard players set <a.name> <a.object.toString()> value`
+     *
+     * @param a 被设置的对象
+     * @param value 设置的值
+     *
+     * @return 生成的命令
+     */
     fun sbPlayerSet(a: MCInt, value: Int): Command {
         return Command.build("scoreboard players set ")
             .build(a.name,a.name)
@@ -96,12 +104,28 @@ object Commands {
             .build(value.toString())
     }
 
+    /**
+     * `data modify <a> set value <value>`
+     *
+     * @param a 被设置的nbt的路径
+     * @param value 设置的值
+     *
+     * @return 生成的命令
+     */
     fun dataSetValue(a: NBTPath, value: Tag<*>): Command{
         return Command.build("data modify")
             .build(a.toCommandPart())
             .build("set value ${SNBTUtil.toSNBT(value)}")
     }
 
+    /**
+     * `data modify <a> set from <b>`
+     *
+     * @param a 被设置的nbt的路径
+     * @param b 从哪里获取值
+     *
+     * @return 生成的命令
+     */
     fun dataSetFrom(a: NBTPath, b: NBTPath): Command{
         return Command.build("data modify")
             .build(a.toCommandPart())
@@ -109,6 +133,15 @@ object Commands {
             .build(b.toCommandPart())
     }
 
+    /**
+     * 以一个类的对象为执行者，执行一个命令。
+     *
+     * @param a 执行者
+     * @param command 要执行的命令
+     * @param hasExecuteRun 是否在execute命令串和要执行的命令之间插入run
+     *
+     * @return 生成的命令。数组的最后一个命令为`execute`命令
+     */
     fun selectRun(a : CanSelectMember, command: Command, hasExecuteRun: Boolean = true) : Array<Command>{
         val final = when(a){
             is ClassPointer -> {
@@ -138,6 +171,14 @@ object Commands {
         return final
     }
 
+    /**
+     * 以一个类的对象为执行者，构建一个`execute`命令串，可以继续向后构建命令
+     *
+     * @param a 执行者
+     * @param hasExecuteRun 是否在execute命令串之后添加run
+     *
+     * @return 生成的命令。数组的最后一个命令为`execute`命令
+     */
     fun selectRun(a : CanSelectMember, hasExecuteRun: Boolean = true) : Array<Command>{
         val final = when(a){
             is ClassPointer -> {
@@ -165,10 +206,27 @@ object Commands {
         return final
     }
 
+    /**
+     * [selectRun]的简化版本，直接传入一个字符串
+     *
+     * @param a 执行者
+     * @param command 要执行的命令
+     * @param hasExecuteRun 是否在execute命令串和要执行的命令之间插入run
+     *
+     * @return 生成的命令。数组的最后一个命令为`execute`命令
+     */
     fun selectRun(a : CanSelectMember, command: String, hasExecuteRun: Boolean = true) : Array<Command>{
         return selectRun(a, Command.build(command), hasExecuteRun)
     }
 
+    /**
+     * 提供一个沙箱函数环境，在此函数中执行一些操作并捕获生成在此函数的命令并将其返回。
+     *
+     * @param parent 沙箱函数的父函数，用于控制作用域
+     * @param operation 在此沙箱函数中执行的操作。lambda表达式的参数为此沙箱函数
+     *
+     * @return 捕获的命令
+     */
     fun fakeFunction(parent: Function , operation: (fakeFunction: Function) -> Unit) : Array<Command>{
         val l = Function.currFunction
         val f = NoStackFunction("", parent)
@@ -178,6 +236,14 @@ object Commands {
         return f.commands.toTypedArray()
     }
 
+    /**
+     * 创建一个临时函数，可以在此函数中执行一些操作，命令将会生成在此临时函数中。
+     *
+     * @param parent 临时函数的父函数，用于控制作用域
+     * @param operation 在此临时函数中执行的操作。lambda表达式的参数为此临时函数
+     *
+     * @return 生成的调用临时函数的命令和这个临时函数
+     */
     fun tempFunction(parent: Function, operation: (tempFunction: Function) -> Unit) : Pair<Command, Function>{
         val l = Function.currFunction
         val f = NoStackFunction(parent.identifier + "_temp_" + UUID.randomUUID().toString(), parent)
@@ -188,6 +254,14 @@ object Commands {
         return function(f) to f
     }
 
+    /**
+     * 以一个实体为执行者，执行一个命令
+     *
+     * @param entityVar 实体
+     * @param command 要执行的命令
+     *
+     * @return 生成的命令。数组的最后一个命令为`execute`命令
+     */
     fun runAsEntity(entityVar: EntityVar, command: Command): Array<Command>{
         return if(entityVar is EntityVarConcrete){
             if(!entityVar.isName){
@@ -207,6 +281,14 @@ object Commands {
         }
     }
 
+    /**
+     * 以一个选择器为执行者，执行一个命令
+     *
+     * @param selector 选择器
+     * @param command 要执行的命令
+     *
+     * @return 生成的命令。数组的最后一个命令为`execute`命令
+     */
     fun runAsEntity(selector: SelectorVar, command: Command): Array<Command>{
         val c = Command("execute as").build(selector.value.toCommandPart()).build("run").build(command)
         return if(c.isMacro){

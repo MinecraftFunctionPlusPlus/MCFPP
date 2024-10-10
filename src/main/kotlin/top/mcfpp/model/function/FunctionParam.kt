@@ -7,6 +7,7 @@ import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPGenericType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.field.SimpleFieldWithType
+import top.mcfpp.type.MCFPPConcreteType
 
 /**
  * 函数的参数。用于函数声明的时候。
@@ -94,7 +95,7 @@ class FunctionParam(
                 for (param in it.parameterList()?.parameter()?: emptyList()) {
                     val type = MCFPPType.parseFromIdentifier(param.type().text, typeScope)
                     r.add(type)
-                    if(type == MCFPPBaseType.Type){
+                    if(type == MCFPPConcreteType.Type){
                         typeScope.putType(param.Identifier().text, MCFPPGenericType(param.Identifier().text, listOf(MCFPPBaseType.Any)))
                     }
                 }

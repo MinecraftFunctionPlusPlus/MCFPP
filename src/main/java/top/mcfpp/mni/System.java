@@ -17,7 +17,7 @@ import java.util.UUID;
 
 public class System {
 
-    @MNIFunction(normalParams = {"any a"})
+    @MNIFunction(normalParams = {"any a"}, returnType = "type")
     public static void typeOf(@NotNull Var<?> value, ValueWrapper<MCFPPTypeVar> returnValue){
         var re = new MCFPPTypeVar(value.getType(), UUID.randomUUID().toString());
         returnValue.setValue(re);
@@ -29,7 +29,7 @@ public class System {
         if(text instanceof JsonTextConcrete textC){
             Function.Companion.addCommand(new Command("tellraw @a").build(textC.getValue().toCommandPart(), true));
         }else {
-            //TODO
+            Function.Companion.addCommand(new Command("tellraw @a").build(text.toCommandPart(), true));
         }
     }
 

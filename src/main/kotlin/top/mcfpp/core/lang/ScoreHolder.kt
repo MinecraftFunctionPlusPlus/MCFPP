@@ -9,4 +9,6 @@ interface ScoreHolder {
      */
     fun onScoreChange(score: MCInt)
 
+    fun replaceScore(score: MCInt)
+
 }

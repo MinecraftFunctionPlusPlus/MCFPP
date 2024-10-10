@@ -37,17 +37,14 @@ open class MCFPPType(
 
 ) : CanSelectMember {
 
-//    init {
-//        if(ifRegister){
-//            registerType()
-//        }
-//    }
-
     /**
      * 类型名
      */
     open val typeName
         get() = "unknown"
+
+    open val nbtType: java.lang.Class<out Tag<*>>
+        get() = CompoundTag::class.java
 
 
     /**
@@ -214,6 +211,8 @@ open class MCFPPType(
         }
     }
 
+    override fun replaceMemberVar(v: Var<*>) {}
+
     companion object{
 
         val data = CompoundData("type","mcfpp")
@@ -221,14 +220,14 @@ open class MCFPPType(
         private val typeCache:MutableMap<String, MCFPPType> by lazy { mutableMapOf(
             MCFPPBaseType.Void.typeName to MCFPPBaseType.Void,
             MCFPPEntityType.Entity.typeName to MCFPPEntityType.Entity,
-            MCFPPBaseType.Type.typeName to MCFPPBaseType.Type,
+            MCFPPConcreteType.Type.typeName to MCFPPConcreteType.Type,
             MCFPPBaseType.Int.typeName to MCFPPBaseType.Int,
             MCFPPBaseType.Bool.typeName to MCFPPBaseType.Bool,
             MCFPPBaseType.String.typeName to MCFPPBaseType.String,
             MCFPPBaseType.Float.typeName to MCFPPBaseType.Float,
             MCFPPBaseType.Any.typeName to MCFPPBaseType.Any,
             MCFPPEntityType.Selector.typeName to MCFPPEntityType.Selector,
-            MCFPPBaseType.JavaVar.typeName to MCFPPBaseType.JavaVar,
+            MCFPPConcreteType.JavaVar.typeName to MCFPPConcreteType.JavaVar,
             MCFPPBaseType.JsonText.typeName to MCFPPBaseType.JsonText,
             MCFPPNBTType.NBT.typeName to MCFPPNBTType.NBT,
             MCFPPBaseType.Coordinate2.typeName to MCFPPBaseType.Coordinate2,
@@ -248,14 +247,14 @@ open class MCFPPType(
         val baseType:Set<MCFPPType> = setOf(
             MCFPPBaseType.Void,
             MCFPPEntityType.Entity,
-            MCFPPBaseType.Type,
+            MCFPPConcreteType.Type,
             MCFPPBaseType.Int,
             MCFPPBaseType.Bool,
             MCFPPBaseType.String,
             MCFPPBaseType.Float,
             MCFPPBaseType.Any,
             MCFPPEntityType.Selector,
-            MCFPPBaseType.JavaVar,
+            MCFPPConcreteType.JavaVar,
             MCFPPBaseType.JsonText,
             MCFPPNBTType.NBT
         )
@@ -288,22 +287,6 @@ open class MCFPPType(
         fun MCFPPType.registerType(){
             typeCache[this.typeName] = this
         }
-
-        ///**
-        // * 从类型字符串中获取一个类型。此类型将会进行正则条件匹配
-        // */
-        //fun parseFromTypeName(typeName: String) : MCFPPType{
-        //    if(typeCache.contains(typeName)) return typeCache[typeName]!!
-        //    for(typeAction in typeActionCache){
-        //        //判断字符串是否满足条件
-        //        if(typeAction.first(typeName)){
-        //            return typeAction.second(typeName)
-        //        }
-        //    }
-        //    //TODO 是不是不应该在这里输出日志呢
-        //    LogProcessor.warn("Unknown type: $typeName")
-        //    return MCFPPBaseType.Any
-        //}
 
         /**
          * 根据类型标识符中获取一个类型

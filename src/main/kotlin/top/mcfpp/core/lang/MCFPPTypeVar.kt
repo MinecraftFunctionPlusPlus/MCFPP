@@ -1,10 +1,9 @@
 package top.mcfpp.core.lang
 
-import top.mcfpp.type.MCFPPBaseType
-import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
+import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
 import java.util.UUID
 
@@ -12,7 +11,7 @@ open class MCFPPTypeVar : Var<MCFPPTypeVar>, MCFPPValue<MCFPPType> {
 
     override lateinit var value: MCFPPType
 
-    override var type: MCFPPType = MCFPPBaseType.Type
+    override var type: MCFPPType = MCFPPConcreteType.Type
 
     constructor(type: MCFPPType = MCFPPBaseType.Any, identifier: String = UUID.randomUUID().toString()) : super(identifier) {
         this.value = type
@@ -60,6 +59,18 @@ open class MCFPPTypeVar : Var<MCFPPTypeVar>, MCFPPValue<MCFPPType> {
 
     override fun toDynamic(replace: Boolean): Var<*> {
         TODO("Not yet implemented")
+    }
+
+    override fun replaceMemberVar(v: Var<*>) {
+        when(val type = type){
+            is MCFPPClassType ->{
+                type.cls.field.putVar(v.identifier, v, true)
+            }
+            is MCFPPCompoundType -> {
+                type.objectData.field.putVar(v.identifier, v, true)
+            }
+            else -> TODO()
+        }
     }
 
     companion object {
