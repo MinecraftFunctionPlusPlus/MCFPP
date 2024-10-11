@@ -36,7 +36,7 @@ open class NBTList : NBTBasedData {
 
     final override var type: MCFPPType
 
-    val genericType: MCFPPType
+    var genericType: MCFPPType
 
     override var nbtType = NBTBasedData.Companion.NBTTypeWithTag.LIST
 

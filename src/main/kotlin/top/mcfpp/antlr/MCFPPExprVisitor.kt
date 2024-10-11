@@ -26,6 +26,7 @@ import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import java.util.*
+import kotlin.collections.HashMap
 
 /**
  * 获取表达式结果用的visitor。解析并计算一个形如a+b*c的表达式。
@@ -687,13 +688,25 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         }else if(ctx.nbtDouble() != null) {
             return NBTBasedDataConcrete(DoubleTag(ctx.nbtDouble().text.toDouble()))
         }else if(ctx.nbtCompound() != null){
-            val compound = NBTDictionaryConcrete(CompoundTag())
+            val compound = NBTDictionaryConcrete(HashMap())
             for (kv in ctx.nbtCompound().nbtKeyValuePair()){
                 val key = kv.Identifier().text
                 val value = visit(kv.expression())
+                val v = value.type.buildUnConcrete(key)
+                compound.value[key] = v.assignedBy(value)
             }
+            return compound
         }else if(ctx.nbtList() != null){
-            TODO()
+            val valueList = ArrayList<Var<*>>()
+            for (expr in ctx.nbtList().expression()){
+                valueList.add(visit(expr))
+            }
+            val re = NBTListConcrete(valueList, "", valueList.first().type)
+            return if(re.value.all { it is MCFPPValue<*> }){
+                re
+            }else{
+                re.toDynamic(false)
+            }
         }else if(ctx.nbtByteArray() != null){
             return NBTBasedDataConcrete(SNBTUtil.fromSNBT(ctx.nbtByteArray().text))
         }else if(ctx.nbtIntArray() != null) {
