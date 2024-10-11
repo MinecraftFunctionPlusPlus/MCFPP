@@ -121,6 +121,7 @@ INT:        'int';
 ENTITY:     'entity';
 BOOL:       'bool';
 FLOAT:      'float';
+DOUBLE:     'double';
 SELECTOR:   'selector';
 STRING:     'string';
 JTEXT:      'text';
@@ -132,7 +133,7 @@ LIST:       'list';
 MAP:        'map';
 DICT:       'dict';
 
-VecType: VEC DecimalConstant;
+VecType: VEC DigitSequence;
 
 //Identifiers
 TargetSelector
@@ -152,8 +153,6 @@ fragment ExponentPart
     :   [e|E] (ADD|SUB)? DigitSequence;
 
 fragment IntConstant : DecimalConstant|HexadecimalConstant|OctalConstant;
-
-
 
 Identifier
     : (Letter | '_') (Letter | '_' | UnicodeDigit)*
@@ -183,12 +182,10 @@ fragment NBTDoubleSuffix: [dD];
 
 NBTByte: IntConstant NBTByteSuffix;
 NBTShort: IntConstant NBTShortSuffix;
-//NBTInt: IntConstant;
+NBTInt: IntConstant;
 NBTLong: IntConstant NBTLongSuffix;
-//NBTFloat: FractionalConstant ExponentPart?;
+NBTFloat: FractionalConstant ExponentPart?;
 NBTDouble: (DigitSequence|FractionalConstant) ExponentPart? NBTDoubleSuffix;
-
-IntegerConstant: IntConstant;
 
 FloatConstant
     : DigitSequence NBTFloatSuffix
@@ -198,9 +195,9 @@ FloatConstant
 RelativeValue
     :   '~'
     |   '^'
-    |   '~' IntegerConstant?
+    |   '~' IntConstant?
     |   '~' FloatConstant?
-    |   '^' IntegerConstant?
+    |   '^' IntConstant?
     |   '^' FloatConstant?
     ;
 

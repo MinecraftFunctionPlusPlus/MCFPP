@@ -569,6 +569,7 @@ normalType
     |   ENTITY
     |   BOOL
     |   FLOAT
+    |   DOUBLE
     |   SELECTOR
     |   STRING
     |   JTEXT
@@ -585,9 +586,7 @@ functionReturnType
     ;
 
 value
-    :   intValue
-    |   floatValue
-    |   coordinate
+    :   coordinate
     |   LineString
     |   boolValue
     |   multiLineStringLiteral
@@ -601,15 +600,7 @@ coordinate
     ;
 
 coordinateDimension
-    :   (RelativeValue | intValue | floatValue)
-    ;
-
-intValue
-    :   IntegerConstant
-    ;
-
-floatValue
-    :   FloatConstant
+    :   (RelativeValue | nbtInt | nbtFloat | nbtDouble)
     ;
 
 boolValue
@@ -664,17 +655,17 @@ nbtValue
 
 nbtByte: NBTByte;
 nbtShort:  NBTShort;
-nbtInt:  IntegerConstant;
+nbtInt:  NBTInt;
 nbtLong: NBTLong;
-nbtFloat: FloatConstant;
+nbtFloat: NBTFloat;
 nbtDouble: NBTDouble;
 
 nbtByteArray: NBT_BYTE_ARRAY_BEGIN nbtByte (',' nbtByte)* ']';
 nbtIntArray: NBT_INT_ARRAY_BEGIN nbtInt (',' nbtInt)* ']';
 nbtLongArray: NBT_LONG_ARRAY_BEGIN nbtLong (',' nbtLong)* ']';
 
-nbtList: '[' (nbtValue (',' nbtValue)* )* ']';
-nbtKeyValuePair: key=Identifier ':' nbtValue;
+nbtList: '[' (expression (',' expression)* )* ']';
+nbtKeyValuePair: key=Identifier ':' expression;
 nbtCompound: '{'( nbtKeyValuePair (',' nbtKeyValuePair)* )*'}';
 
 multiLineStringLiteral

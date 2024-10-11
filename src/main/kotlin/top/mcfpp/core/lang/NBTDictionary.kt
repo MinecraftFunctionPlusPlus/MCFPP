@@ -1,11 +1,10 @@
 package top.mcfpp.core.lang
 
-import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.Project
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.model.accessor.SimpleAccessor
+import top.mcfpp.lib.NBTPath
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPNBTType
 import top.mcfpp.type.MCFPPType
@@ -14,12 +13,15 @@ import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.accessor.Property
+import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPDictType
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.NBTUtil
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 import java.util.*
+import kotlin.collections.HashMap
 
 open class NBTDictionary : NBTBasedData {
 
@@ -28,7 +30,7 @@ open class NBTDictionary : NBTBasedData {
     /**
      * 创建一个dict类型的变量。它的mc名和变量所在的域容器有关。
      *
-     * @param identifier 标识符。默认为
+     * @param identifier 标识符。默认为随机UUID
      */
     constructor(
         curr: FieldContainer,
@@ -100,9 +102,12 @@ open class NBTDictionary : NBTBasedData {
     }
 }
 
-open class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<CompoundTag> {
+/**
+ * 被编译器跟踪的字典。本质是一个HashMap。和[DataTemplateObjectConcrete]不同的是，[DataTemplateObjectConcrete]的本质就是一个NBT复合标签。被编译器跟踪的字典其实是被跟踪了它的键部分。编译器应当知道这个字典全部的键，即使不知道这些键对应什么值。
+ */
+class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<HashMap<String, Var<*>>> {
 
-    override lateinit var value: CompoundTag
+    override lateinit var value: HashMap<String, Var<*>>
 
     /**
      * 创建一个固定的dict
@@ -113,7 +118,7 @@ open class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<CompoundTag> {
      */
     constructor(
         curr: FieldContainer,
-        value: CompoundTag,
+        value: HashMap<String, Var<*>>,
         identifier: String = UUID.randomUUID().toString()
     ) : super(curr, identifier){
         this.value = value
@@ -124,10 +129,9 @@ open class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<CompoundTag> {
      * @param identifier 标识符。如不指定，则为随机uuid
      * @param value 值
      */
-    constructor(value: CompoundTag, identifier: String = UUID.randomUUID().toString()) : super(identifier){
+    constructor(value: HashMap<String, Var<*>>, identifier: String = UUID.randomUUID().toString()) : super(identifier){
         this.value = value
     }
-
 
     constructor(v: NBTDictionaryConcrete) : super(v){
         this.value = v.value
@@ -140,18 +144,23 @@ open class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<CompoundTag> {
 
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
-        if (parentClass() != null) {
-            val cmd = Commands.selectRun(parent!!, "data modify entity @s data.${identifier} set value ${SNBTUtil.toSNBT(value)}")
-            Function.addCommands(cmd)
+        if(value.isEmpty()) return NBTDictionary(this)
+        if (parent != null) {
+            val cmd = Commands.selectRun(parent)
+            if(cmd.size == 2){
+                Function.addCommand(cmd[0])
+            }
+            Function.addCommand(cmd.last().build(Commands.dataMergeValue(nbtPath, getConcretePart())))
         } else {
-            val cmd = Command.build(
-                "data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[$stackIndex].$identifier set value ${SNBTUtil.toSNBT(value)}"
-            )
-            Function.addCommand(cmd)
+            Function.addCommand(Commands.dataMergeValue(nbtPath, getConcretePart()))
         }
         val re = NBTDictionary(this)
         if(replace){
-            Function.currFunction.field.putVar(identifier, re, true)
+            if(parentTemplate() != null) {
+                (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
+            }else{
+                Function.currFunction.field.putVar(identifier, re, true)
+            }
         }
         return re
     }
@@ -169,28 +178,59 @@ open class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<CompoundTag> {
                     buildCastErrorVar(type)
                 }
             }
-            MCFPPNBTType.NBT -> NBTBasedDataConcrete(value)
+            MCFPPNBTType.NBT -> {
+                if(isAllConcrete()){
+                    NBTBasedDataConcrete(this, NBTUtil.valueToNBT(value))
+                }else{
+                    NBTBasedData(this)
+                }
+            }
             MCFPPBaseType.Any -> this
             else -> buildCastErrorVar(type)
         }
     }
 
-
     override fun getByIndex(index: Var<*>): PropertyVar {
         return if(index is MCString){
             if(index is MCStringConcrete){
-                if(value.containsKey(index.value.valueToString())){
-                    throw IndexOutOfBoundsException("Index out of bounds")
+                if(value.containsKey(index.value.value)){
+                    LogProcessor.error("No such key: ${index.value.value} in dict: $identifier")
+                    val re = UnknownVar("error_key_${index.value.value}")
+                    PropertyVar(Property.buildSimpleProperty(re), re, this)
                 }else{
-                    PropertyVar(Property.buildSimpleProperty(NBTBasedDataConcrete(value[index.value.valueToString()])),NBTBasedDataConcrete(value[index.value.valueToString()]) , this)
+                    val re = value[index.value.value]!!
+                    re.identifier = index.value.value
+                    re.parent = this
+                    re.nbtPath = nbtPath.memberIndex(index.value.value)
+                    PropertyVar(Property.buildSimpleProperty(re), re, this)
                 }
             }else {
+                toDynamic(true)
                 PropertyVar(Property.buildSimpleProperty(super.getByStringIndex(index)), super.getByStringIndex(index),this)
             }
         }else{
-            throw IllegalArgumentException("Index must be a string")
+            LogProcessor.error("Index must be a string")
+            val re = UnknownVar("error_index_${index.identifier}")
+            PropertyVar(Property.buildSimpleProperty(re), re, this)
         }
     }
 
+    override fun replaceMemberVar(v: Var<*>) {
+        value[v.identifier] = v
+    }
+
+    fun isAllConcrete(): Boolean {
+        return value.all { it is MCFPPValue<*> }
+    }
+
+    fun getConcretePart(): CompoundTag {
+        val compound = CompoundTag()
+        for (v in value){
+            if(v.value is MCFPPValue<*>){
+                compound.put(v.key, NBTUtil.valueToNBT((v.value as MCFPPValue<*>).value))
+            }
+        }
+        return compound
+    }
 
 }

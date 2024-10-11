@@ -2,6 +2,7 @@ package top.mcfpp.mni;
 
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.command.Command;
+import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.*;
 import top.mcfpp.core.lang.bool.MCBool;
 import top.mcfpp.model.function.Function;
@@ -36,11 +37,8 @@ public class NBTDictionaryData {
     @MNIFunction(normalParams = {"dict source"}, caller = "dict")
     public static void merge(NBTDictionary source, NBTDictionary caller){
         if(source instanceof NBTDictionaryConcrete dictC){
-            Function.Companion.addCommand(new Command("data modify")
-                .build(caller.getNbtPath().toCommandPart(), true)
-                .build("merge value", true)
-                .build(dictC.getValue().valueToString(), true)
-            );
+            Function.Companion.addCommand(Commands.INSTANCE.dataMergeValue(caller.getNbtPath(), dictC.getConcretePart()));
+            Function.Companion.addCommand(Commands.INSTANCE.dataMergeFrom(caller.getNbtPath(), dictC.getNbtPath()));
         }else {
             Function.Companion.addCommand(new Command("data modify")
                 .build(caller.getNbtPath().toCommandPart(), true)

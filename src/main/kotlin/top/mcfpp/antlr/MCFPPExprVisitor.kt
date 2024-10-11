@@ -1,7 +1,7 @@
 package top.mcfpp.antlr
 
 import net.querz.nbt.io.SNBTUtil
-import net.querz.nbt.tag.StringTag
+import net.querz.nbt.tag.*
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.core.lang.*
@@ -12,6 +12,7 @@ import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.bool.MCBool
 import top.mcfpp.core.lang.bool.MCBoolConcrete
 import top.mcfpp.core.lang.bool.ReturnedMCBool
+import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.Class
 import top.mcfpp.model.DataTemplate
 import top.mcfpp.model.Namespace
@@ -586,9 +587,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
 
     override fun visitValue(ctx: mcfppParser.ValueContext): Var<*> {
         //常量
-        if (ctx.intValue() != null) {
-            return MCIntConcrete(Integer.parseInt(ctx.intValue().text))
-        } else if (ctx.LineString() != null) {
+        if (ctx.LineString() != null) {
             val r: String = ctx.LineString().text
             return MCStringConcrete(StringTag(r.substring(1, r.length - 1)))
         } else if (ctx.multiLineStringLiteral()!=null){
@@ -617,12 +616,10 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 stringArray.add(tailQuote.substring(3,tailQuote.length))
             }
             return MCStringConcrete(StringTag(stringArray.joinToString("")) ) //没有解析值就变不了MCString了
-        } else if (ctx.floatValue() != null){
-            return MCFloatConcrete(value = ctx.floatValue()!!.text.toFloat())
         } else if (ctx.boolValue() != null){
             return MCBoolConcrete(ctx.boolValue()!!.text.toBoolean())
         } else if (ctx.nbtValue() != null){
-            return NBTBasedDataConcrete(SNBTUtil.fromSNBT(ctx.nbtValue().text))
+            return visit(ctx.nbtValue())
         } else if (ctx.type() != null){
             return MCFPPTypeVar(MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field))
         } else if (ctx.TargetSelector() != null){
@@ -645,10 +642,12 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     }
 
     override fun visitCoordinateDimension(ctx: mcfppParser.CoordinateDimensionContext): Var<*> {
-        if(ctx.intValue() != null){
-            return CoordinateDimensionConcrete("", ctx.intValue().text.toInt())
-        }else if(ctx.floatValue() != null){
-            return CoordinateDimensionConcrete("", ctx.floatValue().text.toFloat())
+        if(ctx.nbtInt() != null){
+            return CoordinateDimensionConcrete("", ctx.nbtInt().text.toInt())
+        }else if(ctx.nbtFloat() != null) {
+            return CoordinateDimensionConcrete("", ctx.nbtFloat().text.toFloat())
+        }else if(ctx.nbtDouble() != null){
+            return CoordinateDimensionConcrete("", ctx.nbtDouble().text.toDouble())
         }else{
             //RelativeValue
             val str = ctx.RelativeValue().text
@@ -667,6 +666,43 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             }
             LogProcessor.error("Invalid relative value: $expr")
             return CoordinateDimensionConcrete(str[0].toString(), 0)
+        }
+    }
+
+    private lateinit var path : NBTPath
+
+    override fun visitNbtValue(ctx: mcfppParser.NbtValueContext): Var<*> {
+        if(ctx.LineString() != null){
+            return NBTBasedDataConcrete(StringTag(ctx.LineString().text))
+        }else if(ctx.nbtByte() != null){
+            return NBTBasedDataConcrete(ByteTag(ctx.nbtByte().text.toByte()))
+        }else if(ctx.nbtShort() != null){
+            return NBTBasedDataConcrete(ShortTag(ctx.nbtShort().text.toShort()))
+        }else if(ctx.nbtInt() != null) {
+            return NBTBasedDataConcrete(IntTag(ctx.nbtInt().text.toInt()))
+        }else if(ctx.nbtLong() != null){
+            return NBTBasedDataConcrete(LongTag(ctx.nbtLong().text.toLong()))
+        }else if(ctx.nbtFloat() != null){
+            return NBTBasedDataConcrete(FloatTag(ctx.nbtFloat().text.toFloat()))
+        }else if(ctx.nbtDouble() != null) {
+            return NBTBasedDataConcrete(DoubleTag(ctx.nbtDouble().text.toDouble()))
+        }else if(ctx.nbtCompound() != null){
+            val compound = NBTDictionaryConcrete(CompoundTag())
+            for (kv in ctx.nbtCompound().nbtKeyValuePair()){
+                val key = kv.Identifier().text
+                val value = visit(kv.expression())
+            }
+        }else if(ctx.nbtList() != null){
+            TODO()
+        }else if(ctx.nbtByteArray() != null){
+            return NBTBasedDataConcrete(SNBTUtil.fromSNBT(ctx.nbtByteArray().text))
+        }else if(ctx.nbtIntArray() != null) {
+            return NBTBasedDataConcrete(SNBTUtil.fromSNBT(ctx.nbtIntArray().text))
+        }else if(ctx.nbtLongArray() != null){
+            return NBTBasedDataConcrete(SNBTUtil.fromSNBT(ctx.nbtLongArray().text))
+        }else {
+            LogProcessor.error("Invalid NBT value")
+            throw IllegalArgumentException("nbt:" + ctx.text)
         }
     }
 

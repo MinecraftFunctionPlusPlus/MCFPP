@@ -134,6 +134,27 @@ object Commands {
     }
 
     /**
+     * `data modify <a> merge value <value>`
+     *
+     * @param a 被设置的nbt的路径
+     * @param value 设置的值
+     *
+     * @return 生成的命令
+     */
+    fun dataMergeValue(a: NBTPath, value: Tag<*>): Command{
+        return Command.build("data modify")
+            .build(a.toCommandPart())
+            .build("merge value ${SNBTUtil.toSNBT(value)}")
+    }
+
+    fun dataMergeFrom(a: NBTPath, b: NBTPath): Command{
+        return Command.build("data modify")
+            .build(a.toCommandPart())
+            .build("merge from")
+            .build(b.toCommandPart())
+    }
+
+    /**
      * 以一个类的对象为执行者，执行一个命令。
      *
      * @param a 执行者

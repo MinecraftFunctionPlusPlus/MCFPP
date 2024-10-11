@@ -18,7 +18,7 @@ public class NBTDictionaryConcreteData {
     public static void containsKey(MCString key, NBTDictionaryConcrete caller, ValueWrapper<MCBool> re){
         if(key instanceof MCStringConcrete keyC){
             String value = keyC.getValue().getValue();
-            CompoundTag nbt = caller.getValue();
+            var nbt = caller.getValue();
             re.setValue(new MCBoolConcrete(value != null && nbt.containsKey(value), "return"));
         }else {
             caller.toDynamic(false);
@@ -29,8 +29,8 @@ public class NBTDictionaryConcreteData {
     @MNIFunction(normalParams = {"dict source"}, caller = "dict")
     public static void merge(NBTDictionary source, NBTDictionaryConcrete caller){
         if(source instanceof NBTDictionaryConcrete dictC){
-            CompoundTag sourceNBT = dictC.getValue();
-            CompoundTag callerNBT = caller.getValue();
+            var sourceNBT = dictC.getValue();
+            var callerNBT = caller.getValue();
             for(String key : sourceNBT.keySet()){
                 callerNBT.put(key, sourceNBT.get(key));
             }
@@ -44,7 +44,7 @@ public class NBTDictionaryConcreteData {
     public static void remove(MCString key, NBTDictionaryConcrete caller){
         if(key instanceof MCStringConcrete keyC){
             String value = keyC.getValue().getValue();
-            CompoundTag nbt = caller.getValue();
+            var nbt = caller.getValue();
             nbt.remove(value);
         }else {
             caller.toDynamic(false);
