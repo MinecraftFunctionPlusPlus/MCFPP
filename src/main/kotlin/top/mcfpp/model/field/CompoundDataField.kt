@@ -177,26 +177,26 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType, IFi
 
     //region Function
     @Nullable
-    override fun getFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>): Function {
+    override fun getFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): Function {
         for (f in functions) {
-            if(f is Generic<*> && f.isSelf(key, readOnlyParams, normalParams)){
+            if(f is Generic<*> && f.isSelf(key, readOnlyArgs, normalArgs)){
                 return f
             }
-            if(f.isSelf(key, normalParams)){
+            if(f.isSelf(key, normalArgs)){
                 return f
             }
         }
         for (f in functions) {
-            if(f is Generic<*> && f.isSelfWithDefaultValue(key, readOnlyParams, normalParams)){
+            if(f is Generic<*> && f.isSelfWithDefaultValue(key, readOnlyArgs, normalArgs)){
                 return f
             }
-            if(f.isSelfWithDefaultValue(key, normalParams)){
+            if(f.isSelfWithDefaultValue(key, normalArgs)){
                 return f
             }
         }
         parent.forEach {
             if(it is IFieldWithFunction){
-                val re = it.getFunction(key, readOnlyParams, normalParams)
+                val re = it.getFunction(key, readOnlyArgs, normalArgs)
                 if(re !is UnknownFunction) return re
             }
         }

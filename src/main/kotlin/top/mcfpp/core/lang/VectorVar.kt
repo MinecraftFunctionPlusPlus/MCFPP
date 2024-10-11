@@ -156,11 +156,11 @@ open class VectorVar: Var<VectorVar>, Indexable, ScoreHolder {
 
     override fun getMemberFunction(
         key: String,
-        readOnlyParams: List<MCFPPType>,
-        normalParams: List<MCFPPType>,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        return data.getFunction(key, readOnlyParams, normalParams) to true
+        return data.getFunction(key, readOnlyArgs, normalArgs) to true
     }
 
     override fun getByIndex(index: Var<*>): PropertyVar {

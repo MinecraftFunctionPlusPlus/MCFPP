@@ -4,7 +4,6 @@ import top.mcfpp.command.Command
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.MCIntConcrete
 import top.mcfpp.core.lang.Var
-import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
@@ -65,8 +64,8 @@ class Pos : Var<Pos> {
 
     override fun getMemberFunction(
         key: String,
-        readOnlyParams: List<MCFPPType>,
-        normalParams: List<MCFPPType>,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         TODO("Not yet implemented")

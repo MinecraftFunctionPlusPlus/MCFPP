@@ -1,7 +1,6 @@
 package top.mcfpp.antlr
 
 import top.mcfpp.core.lang.*
-import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
@@ -18,15 +17,15 @@ class MCFPPFuncManager{
      *
      * @param curr 一个变量，用于从中选择函数
      * @param identifier 函数的名字
-     * @param readOnlyParams 函数的只读参数
-     * @param normalParams 函数的普通参数
+     * @param readOnlyArgs 函数的只读参数
+     * @param normalArgs 函数的普通参数
      * @return
      */
-    fun getFunction(
+    private fun getFunction(
         curr: Var<*>,
         identifier: String,
-        readOnlyParams: List<MCFPPType>,
-        normalParams: ArrayList<MCFPPType>
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: ArrayList<Var<*>>
     ): Function {
         //是类的成员方法或扩展方法
         val accessModifier : Member.AccessModifier = if(curr is ClassPointer){
@@ -49,7 +48,7 @@ class MCFPPFuncManager{
             Member.AccessModifier.PUBLIC
         }
         //开始选择函数
-        val func = curr.getMemberFunction(identifier, readOnlyParams, normalParams, accessModifier)
+        val func = curr.getMemberFunction(identifier, readOnlyArgs, normalArgs, accessModifier)
         if (!func.second){
             LogProcessor.error("Cannot access member $identifier")
         }
@@ -62,15 +61,15 @@ class MCFPPFuncManager{
      *
      * @param type
      * @param identifier
-     * @param readOnlyParams
-     * @param normalParams
+     * @param readOnlyArgs
+     * @param normalArgs
      * @return
      */
-    fun getFunction(
+    private fun getFunction(
         type: MCFPPClassType,
         identifier : String,
-        readOnlyParams: List<MCFPPType>,
-        normalParams: ArrayList<MCFPPType>
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: ArrayList<Var<*>>
     ): Function {
         //是类的成员方法
         val accessModifier = if(Function.currFunction.ownerType == Function.Companion.OwnerType.CLASS){
@@ -79,7 +78,7 @@ class MCFPPFuncManager{
             Member.AccessModifier.PUBLIC
         }
         //开始选择函数
-        val func = type.getMemberFunction(identifier, readOnlyParams, normalParams, accessModifier)
+        val func = type.getMemberFunction(identifier, readOnlyArgs, normalArgs, accessModifier)
         if (!func.second){
             LogProcessor.error("Cannot access member $identifier in class ${type.cls.identifier}")
         }
@@ -89,12 +88,12 @@ class MCFPPFuncManager{
     fun getFunction(
         selector: CanSelectMember,
         identifier: String,
-        readOnlyParams: List<MCFPPType>,
-        normalParams: ArrayList<MCFPPType>
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: ArrayList<Var<*>>
     ): Function {
         return when(selector){
-            is MCFPPClassType -> getFunction(selector, identifier, readOnlyParams, normalParams)
-            is Var<*> -> getFunction(selector, identifier, readOnlyParams, normalParams)
+            is MCFPPClassType -> getFunction(selector, identifier, readOnlyArgs, normalArgs)
+            is Var<*> -> getFunction(selector, identifier, readOnlyArgs, normalArgs)
             else -> throw Exception()
         }
     }

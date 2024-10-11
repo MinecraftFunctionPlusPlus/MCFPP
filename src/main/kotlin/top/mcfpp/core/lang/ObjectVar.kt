@@ -3,7 +3,6 @@ package top.mcfpp.core.lang
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
-import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import java.util.UUID
 
@@ -35,11 +34,11 @@ class ObjectVar(override var value: CanSelectMember, identifier: String = UUID.r
 
     override fun getMemberFunction(
         key: String,
-        readOnlyParams: List<MCFPPType>,
-        normalParams: List<MCFPPType>,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        return value.getMemberFunction(key, readOnlyParams, normalParams, accessModifier)
+        return value.getMemberFunction(key, readOnlyArgs, normalArgs, accessModifier)
     }
 
 }

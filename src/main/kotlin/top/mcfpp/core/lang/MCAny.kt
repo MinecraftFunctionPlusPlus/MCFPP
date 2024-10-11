@@ -100,7 +100,7 @@ open class MCAny : Var<MCAny> {
 
             is MCAny -> {
                 LogProcessor.error("Cannot assign any to any")
-                throw VariableConverseException()
+                return MCAnyConcrete(this, b)
             }
 
             else -> {
@@ -161,16 +161,16 @@ open class MCAny : Var<MCAny> {
      * 根据方法标识符和方法的参数列表获取一个方法。如果没有这个方法，则返回null
      *
      * @param key 成员方法的标识符
-     * @param normalParams 成员方法的参数
+     * @param normalArgs 成员方法的参数
      * @return
      */
     override fun getMemberFunction(
         key: String,
-        readOnlyParams: List<MCFPPType>,
-        normalParams: List<MCFPPType>,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        return data.field.getFunction(key, readOnlyParams, normalParams) to true
+        return data.field.getFunction(key, readOnlyArgs, normalArgs) to true
     }
 
     companion object{

@@ -4,12 +4,9 @@ import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
-import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.MCFPPUnionType
 import top.mcfpp.util.LogProcessor
-import top.mcfpp.util.TextTranslator
-import top.mcfpp.util.TextTranslator.translate
 
 /**
  * 联合类型变量。仅能用于数据模板中。声明语法如下：
@@ -142,12 +139,12 @@ open class UnionTypeVar(identifier: String, vararg vars: Var<*>): Var<UnionTypeV
 
     override fun getMemberFunction(
         key: String,
-        readOnlyParams: List<MCFPPType>,
-        normalParams: List<MCFPPType>,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         for (v in vars) {
-            val qwq = v.getMemberFunction(key, readOnlyParams, normalParams, accessModifier)
+            val qwq = v.getMemberFunction(key, readOnlyArgs, normalArgs, accessModifier)
             if(qwq.first !is UnknownFunction){
                 return qwq
             }

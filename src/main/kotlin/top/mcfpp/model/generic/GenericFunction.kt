@@ -32,29 +32,38 @@ class GenericFunction : Function, Generic<Function> {
      * @param identifier 函数的标识符
      * @param namespace 函数的命名空间
      */
-    constructor(identifier: String, namespace: String = Project.currNamespace, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(identifier, namespace, returnType, ctx)
+    constructor(identifier: String, namespace: String = Project.currNamespace, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(identifier, namespace, returnType, ctx){
+        this.ctx = ctx
+    }
 
     /**
      * 创建一个函数，并指定它所属的类。
      * @param identifier 函数的标识符
      */
-    constructor(identifier: String, cls: Class, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(identifier, cls, isStatic, returnType, ctx)
+    constructor(identifier: String, cls: Class, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(identifier, cls, isStatic, returnType, ctx){
+        this.ctx = ctx
+    }
 
     /**
      * 创建一个函数，并指定它所属的接口。接口的函数总是抽象并且公开的
      * @param identifier 函数的标识符
      */
-    constructor(identifier: String, itf: Interface, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(identifier, itf, returnType, ctx)
+    constructor(identifier: String, itf: Interface, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(identifier, itf, returnType, ctx){
+        this.ctx = ctx
+    }
 
     /**
      * 创建一个函数，并指定它所属的结构体。
      * @param name 函数的标识符
      */
-    constructor(name: String, template: DataTemplate, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(name, template, isStatic, returnType, ctx)
+    constructor(name: String, template: DataTemplate, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(name, template, isStatic, returnType, ctx){
+        this.ctx = ctx
+    }
 
-    override fun invoke(readOnlyArgs: ArrayList<Var<*>>, normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?) {
+    override fun invoke(readOnlyArgs: ArrayList<Var<*>>, normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?): Var<*> {
         val f = compile(readOnlyArgs)
-        f.invoke(normalArgs, caller)
+        f.parent.add(currFunction)
+        return f.invoke(normalArgs, caller)
     }
 
     override fun addParamsFromContext(ctx: mcfppParser.FunctionParamsContext) {
@@ -71,7 +80,7 @@ class GenericFunction : Function, Generic<Function> {
             field.putVar(p.identifier, v)
         }
         hasDefaultValue = false
-        for (param in n.parameter()) {
+        for (param in n?.parameter()?: emptyList()) {
             var (p,v) = parseParam(param)
             normalParams.add(p)
             if(v is MCFPPValue<*>) v = v.toDynamic(false)
@@ -115,6 +124,7 @@ class GenericFunction : Function, Generic<Function> {
         for (i in readOnlyParams.indices) {
             var r = field.getVar(readOnlyParams[i].identifier)!!
             r = r.assignedBy(readOnlyArgs[i])
+            r.isConst = true
             if(r is MCFPPTypeVar){
                 compiledFunction.field.putType(readOnlyParams[i].identifier, r.value)
             }
@@ -133,22 +143,22 @@ class GenericFunction : Function, Generic<Function> {
         return compiledFunction
     }
 
-    override fun isSelf(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>): Boolean {
-        if (this.identifier == key && this.normalParams.size == normalParams.size && this.readOnlyParams.size == readOnlyParams.size) {
+    override fun isSelf(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): Boolean {
+        if (this.identifier == key && this.normalParams.size == normalArgs.size && this.readOnlyParams.size == readOnlyArgs.size) {
             if (this.normalParams.size == 0 && this.readOnlyParams.size == 0) {
                 return true
             }
             var hasFoundFunc = true
             //参数比对
-            for (i in normalParams.indices) {
-                if (!FunctionParam.isSubOf(normalParams[i],this.normalParams[i].type)) {
+            for (i in normalArgs.indices) {
+                if (this.field.getVar(this.normalParams[i].identifier)!!.canAssignedBy(normalArgs[i])) {
                     hasFoundFunc = false
                     break
                 }
             }
             if(hasFoundFunc){
-                for (i in readOnlyParams.indices) {
-                    if (!FunctionParam.isSubOf(readOnlyParams[i],this.readOnlyParams[i].type)) {
+                for (i in readOnlyArgs.indices) {
+                    if (this.field.getVar(this.readOnlyParams[i].identifier)!!.canAssignedBy(readOnlyArgs[i])) {
                         hasFoundFunc = false
                         break
                     }
@@ -160,16 +170,16 @@ class GenericFunction : Function, Generic<Function> {
         }
     }
 
-    override fun isSelfWithDefaultValue(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>): Boolean {
-        if(key != this.identifier || normalParams.size > this.normalParams.size || readOnlyParams.size > this.normalParams.size) return false
+    override fun isSelfWithDefaultValue(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): Boolean {
+        if(key != this.identifier || normalArgs.size > this.normalParams.size || readOnlyArgs.size > this.normalParams.size) return false
         if (this.normalParams.size == 0 && this.readOnlyParams.size == 0) {
             return true
         }
         var hasFoundFunc = true
         //参数比对
         var index = 0
-        while (index < normalParams.size) {
-            if (!FunctionParam.isSubOf(normalParams[index],this.normalParams[index].type)) {
+        while (index < normalArgs.size) {
+            if (field.getVar(this.normalParams[index].identifier)!!.canAssignedBy(normalArgs[index])) {
                 hasFoundFunc = false
                 break
             }
@@ -178,8 +188,8 @@ class GenericFunction : Function, Generic<Function> {
         hasFoundFunc = hasFoundFunc && this.normalParams[index].hasDefault
         if(!hasFoundFunc) return false
         index = 0
-        while (index < readOnlyParams.size) {
-            if (!FunctionParam.isSubOf(readOnlyParams[index],this.readOnlyParams[index].type)) {
+        while (index < readOnlyArgs.size) {
+            if (field.getVar(this.readOnlyParams[index].identifier)!!.canAssignedBy(readOnlyArgs[index])) {
                 hasFoundFunc = false
                 break
             }

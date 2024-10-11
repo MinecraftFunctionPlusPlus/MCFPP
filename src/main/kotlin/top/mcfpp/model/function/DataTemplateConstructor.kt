@@ -46,10 +46,11 @@ class DataTemplateConstructor(val data: DataTemplate): Function("_init_" + data.
         }
     }
 
-    override fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?) {
+    override fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?): Var<*> {
         field.getVar("this")!!.assignedBy(caller as DataTemplateObject)
         normalArgs.add(0, field.getVar("this")!!)
         super.invoke(normalArgs, caller)
+        return field.getVar("this")!!
     }
 }
 

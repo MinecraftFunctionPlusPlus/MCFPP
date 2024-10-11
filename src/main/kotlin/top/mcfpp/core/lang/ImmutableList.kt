@@ -165,8 +165,8 @@ class ImmutableListConcrete: ImmutableList, MCFPPValue<ListTag<*>>{
 
     override fun getMemberFunction(
         key: String,
-        readOnlyParams: List<MCFPPType>,
-        normalParams: List<MCFPPType>,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         var re: Function = UnknownFunction(key)
@@ -174,13 +174,13 @@ class ImmutableListConcrete: ImmutableList, MCFPPValue<ListTag<*>>{
             //TODO 我们约定it为NativeFunction，但是没有考虑拓展函数
             assert(it is NativeFunction)
             val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to genericType))
-            if(nf.isSelf(key, normalParams)){
+            if(nf.isSelf(key, normalArgs)){
                 re = nf
             }
         }
         val iterator = data.parent.iterator()
         while (re is UnknownFunction && iterator.hasNext()){
-            re = iterator.next().getFunction(key,readOnlyParams , normalParams ,isStatic)
+            re = iterator.next().getFunction(key, readOnlyArgs, normalArgs,isStatic)
         }
         return re to true
     }

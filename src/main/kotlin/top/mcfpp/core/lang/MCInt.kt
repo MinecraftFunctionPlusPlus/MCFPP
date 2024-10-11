@@ -443,16 +443,16 @@ open class MCInt : MCNumber<Int> {
      * 根据方法标识符和方法的参数列表获取一个方法。如果没有这个方法，则返回null
      *
      * @param key 成员方法的标识符
-     * @param normalParams 成员方法的参数
+     * @param normalArgs 成员方法的参数
      * @return 返回一个值对。第一个值是成员变量或null（如果成员方法不存在），第二个值是访问者是否能够访问此变量。
      */
     override fun getMemberFunction(
         key: String,
-        readOnlyParams:List<MCFPPType>,
-        normalParams: List<MCFPPType>,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        return data.getFunction(key, readOnlyParams, normalParams) to true
+        return data.getFunction(key, readOnlyArgs, normalArgs) to true
     }
 
     companion object {

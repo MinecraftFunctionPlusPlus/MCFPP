@@ -7,7 +7,7 @@ import top.mcfpp.model.Native
 
 class NativeClassConstructor(cls: Class) : ClassConstructor(cls), Native {
     @Override
-    override fun invoke(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?) {
+    override fun invoke(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?): Var<*> {
         TODO()
     }
 }

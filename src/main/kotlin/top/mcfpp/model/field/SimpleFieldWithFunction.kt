@@ -1,6 +1,7 @@
 package top.mcfpp.model.field
 
 import org.jetbrains.annotations.Nullable
+import top.mcfpp.core.lang.Var
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
@@ -31,12 +32,12 @@ class SimpleFieldWithFunction : IFieldWithFunction {
 
 
     @Nullable
-    override fun getFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>): Function {
+    override fun getFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): Function {
         for (f in functions) {
-            if(f is Generic<*> && f.isSelf(key, readOnlyParams, normalParams)){
+            if(f is Generic<*> && f.isSelf(key, readOnlyArgs, normalArgs)){
                 return f
             }
-            if(f.isSelf(key, normalParams)){
+            if(f.isSelf(key, normalArgs)){
                 return f
             }
         }

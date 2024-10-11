@@ -1,6 +1,7 @@
 package top.mcfpp.model.field
 
 import top.mcfpp.Project
+import top.mcfpp.core.lang.Var
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.lib.SbObject
 import top.mcfpp.type.MCFPPType
@@ -114,7 +115,7 @@ object GlobalField : FieldContainer, IField {
      *
      * @return 获取的函数。如果有多个相同函数（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
      */
-    fun getFunction(namespace:String?, identifier: String, readOnlyParams: List<MCFPPType>, normalParams : List<MCFPPType>): Function {
+    fun getFunction(namespace:String?, identifier: String, readOnlyParams: List<Var<*>>, normalParams : List<Var<*>>): Function {
         if(namespace == null){
             val f = localNamespaces[Project.currNamespace]!!.field.getFunction(identifier, readOnlyParams, normalParams)
             if(f !is UnknownFunction) return f

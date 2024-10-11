@@ -10,7 +10,6 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.JavaFunction
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
-import top.mcfpp.util.NBTUtil.toJava
 import java.lang.Class
 import java.util.*
 import kotlin.collections.ArrayList
@@ -125,13 +124,13 @@ class JavaVar : Var<JavaVar>, MCFPPValue<Any?> {
      * 根据方法标识符和方法的参数列表获取一个方法。如果没有这个方法，则返回null
      *
      * @param key 成员方法的标识符
-     * @param normalParams 成员方法的参数
+     * @param normalArgs 成员方法的参数
      * @return
      */
     override fun getMemberFunction(
         key: String,
-        readOnlyParams: List<MCFPPType>,
-        normalParams: List<MCFPPType>,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         //获取value中的一个成员方法
@@ -140,7 +139,7 @@ class JavaVar : Var<JavaVar>, MCFPPValue<Any?> {
             throw NullPointerException()
         }
         try{
-            val member = value!!::class.java.getDeclaredMethod(key, *getTypeArray(normalParams))
+            val member = value!!::class.java.getDeclaredMethod(key, *getTypeArray(normalArgs.map { it.type }))
             return Pair(JavaFunction(member, this), member.canAccess(Any()))
         }catch (e: NoSuchMethodException){
             LogProcessor.error("No method '$key' in $identifier}")
@@ -203,9 +202,9 @@ class JavaVar : Var<JavaVar>, MCFPPValue<Any?> {
                 is MCFloatConcrete -> v.value
                 is MCBoolConcrete -> v.value
                 is MCStringConcrete -> v.value.valueToString()
-                is NBTListConcrete -> v.value.toJava()
-                is NBTMapConcrete -> (v.value["data"] as CompoundTag).toJava()
-                is NBTDictionaryConcrete -> v.value.toJava()
+                is NBTListConcrete -> v.value
+                is NBTMapConcrete -> (v.keyValueSet as NBTDictionaryConcrete).value
+                is NBTDictionaryConcrete -> v.value
                 is NBTBasedDataConcrete -> v.value
                 else -> v
             }!!

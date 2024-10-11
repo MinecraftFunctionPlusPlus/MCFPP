@@ -216,12 +216,12 @@ open class DataTemplateObject : Var<DataTemplateObject> {
 
     override fun getMemberFunction(
         key: String,
-        readOnlyParams: List<MCFPPType>,
-        normalParams: List<MCFPPType>,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         //获取函数
-        val member = templateType.field.getFunction(key, readOnlyParams, normalParams)
+        val member = templateType.field.getFunction(key, readOnlyArgs, normalArgs)
         return if(member is UnknownFunction){
             Pair(UnknownFunction(key), true)
         }else{

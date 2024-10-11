@@ -1,7 +1,6 @@
 package top.mcfpp.core.lang
 
 import top.mcfpp.command.Command
-import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
@@ -113,8 +112,8 @@ open class RangeVar: Var<RangeVar> {
 
     override fun getMemberFunction(
         key: String,
-        readOnlyParams: List<MCFPPType>,
-        normalParams: List<MCFPPType>,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         TODO("Not yet implemented")

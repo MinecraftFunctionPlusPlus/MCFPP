@@ -466,36 +466,52 @@ open class Function : Member, FieldContainer, Serializable {
      * @param returnType
      */
     fun buildReturnVar(returnType: MCFPPType): Var<*>{
-        return returnType.buildUnConcrete("return", this)
+        return returnType.build("return", this)
     }
 
     /**
      * @param normalArgs 函数的参数列表
      * @param caller 函数的调用者
      */
-    open fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?){
+    open fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?): Var<*>{
         if(ast != null){
             //函数参数已知条件下的编译
             val values = normalArgs.map { if(it is MCFPPValue<*>) it.value else null }
             if(values.any { it != null }){
                 if(compiledFunctions.containsKey(values)){
-                    compiledFunctions[values]!!.invoke(normalArgs, caller)
-                    return
+                    return compiledFunctions[values]!!.invoke(normalArgs, caller)
                 }
                 val cf = Function(this)
+                for (v in ArrayList(cf.field.allVars).subList(cf.normalParams.size, cf.field.allVars.size)){
+                    cf.field.removeVar(v.identifier)
+                }
                 for (i in values.indices) {
                     if(values[i] != null){
-                        cf.field.putVar(normalParams[i].identifier, normalArgs[i], true)
+                        cf.field.putVar(
+                            normalParams[i].identifier,
+                            cf.field.getVar(normalParams[i].identifier)!!.assignedBy(normalArgs[i]),
+                            true
+                        )
                     }
                 }
+                //去除确定的参数
+                val args = ArrayList<Var<*>>()
+                val params = ArrayList<FunctionParam>()
+                for (i in normalArgs.indices){
+                    if(normalArgs[i] !is MCFPPValue<*>){
+                        params.add(normalParams[i])
+                        args.add(normalArgs[i])
+                    }
+                }
+                cf.normalParams = params
+                cf.commands.clear()
                 cf.identifier = this.identifier + "_" + compiledFunctions.size
                 cf.ast = null
                 cf.runInFunction {
                     MCFPPImVisitor().visitFunctionBody(ast!!)
                 }
                 compiledFunctions[values] = cf
-                cf.invoke(normalArgs, caller)
-                return
+                return cf.invoke(args, caller)
             }
         }
         when(caller){
@@ -503,6 +519,7 @@ open class Function : Member, FieldContainer, Serializable {
             is ClassPointer -> invoke(normalArgs, caller)
             is Var<*> -> invoke(normalArgs, caller)
         }
+        return returnVar
     }
 
     protected open fun invoke(normalArgs: ArrayList<Var<*>>){
@@ -628,11 +645,10 @@ open class Function : Member, FieldContainer, Serializable {
                 //参数缺省值
                 normalArgs.add(this.normalParams[i].defaultVar!!)
             }
-            val tg = normalArgs[i].implicitCast(this.normalParams[i].type)
             //参数传递和子函数的参数进栈
             val p = field.getVar(this.normalParams[i].identifier)!!
             p.isConst = false
-            val pp = p.assignedBy(tg)
+            val pp = p.assignedBy(normalArgs[i])
             if(!this.normalParams[i].isStatic) pp.isConst = true
             field.putVar(p.identifier, pp, true)
         }
@@ -697,7 +713,7 @@ open class Function : Member, FieldContainer, Serializable {
             LogProcessor.error("Function $identifier has no return value but tried to return a ${v.type}")
             return
         }
-        returnVar.assignedBy(v)
+        returnVar = returnVar.assignedBy(v)
     }
 
     /**
@@ -779,15 +795,15 @@ open class Function : Member, FieldContainer, Serializable {
         return namespaceID.hashCode()
     }
 
-    fun isSelf(key: String, normalParams: List<MCFPPType>) : Boolean{
-        if (this.identifier == key && this.normalParams.size == normalParams.size) {
+    fun isSelf(key: String, normalArgs: List<Var<*>>) : Boolean{
+        if (this.identifier == key && this.normalParams.size == normalArgs.size) {
             if (this.normalParams.size == 0) {
                 return true
             }
             var hasFoundFunc = true
             //参数比对
-            for (i in normalParams.indices) {
-                if (!FunctionParam.isSubOf(normalParams[i],this.normalParams[i].type)) {
+            for (i in normalArgs.indices) {
+                if (!field.getVar(this.normalParams[i].identifier)!!.canAssignedBy(normalArgs[i])) {
                     hasFoundFunc = false
                     break
                 }
@@ -798,16 +814,16 @@ open class Function : Member, FieldContainer, Serializable {
         }
     }
 
-    fun isSelfWithDefaultValue(key: String, normalParams: List<MCFPPType>) : Boolean{
-        if(key != this.identifier || normalParams.size > this.normalParams.size) return false
+    fun isSelfWithDefaultValue(key: String, normalArgs: List<Var<*>>) : Boolean{
+        if(key != this.identifier || normalArgs.size > this.normalParams.size) return false
         if (this.normalParams.size == 0) {
             return true
         }
         var hasFoundFunc = true
         //参数比对
         var index = 0
-        while (index < normalParams.size) {
-            if (!FunctionParam.isSubOf(normalParams[index],this.normalParams[index].type)) {
+        while (index < normalArgs.size) {
+            if (!field.getVar(this.normalParams[index].identifier)!!.canAssignedBy(normalArgs[index])) {
                 hasFoundFunc = false
                 break
             }

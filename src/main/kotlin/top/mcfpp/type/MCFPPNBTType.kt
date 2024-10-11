@@ -97,9 +97,9 @@ class MCFPPDictType(generic: MCFPPType): MCFPPCompoundType(generic){
     override val typeName: String
         get() = "dict[${generic.typeName}]"
 
-    override fun build(identifier: String, container: FieldContainer): Var<*> = NBTDictionaryConcrete(container, CompoundTag(), identifier)
-    override fun build(identifier: String): Var<*> = NBTDictionaryConcrete(CompoundTag(), identifier)
-    override fun build(identifier: String, clazz: Class): Var<*> = NBTDictionaryConcrete(clazz, CompoundTag(), identifier)
+    override fun build(identifier: String, container: FieldContainer): Var<*> = NBTDictionaryConcrete(container, HashMap(), identifier)
+    override fun build(identifier: String): Var<*> = NBTDictionaryConcrete(HashMap(), identifier)
+    override fun build(identifier: String, clazz: Class): Var<*> = NBTDictionaryConcrete(clazz, HashMap(), identifier)
     override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = NBTDictionary(container, identifier)
     override fun buildUnConcrete(identifier: String): Var<*> = NBTDictionary(identifier)
     override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = NBTDictionary(clazz, identifier)
@@ -110,9 +110,9 @@ class MCFPPMapType(generic: MCFPPType): MCFPPCompoundType(generic){
         get() = "map[${generic.typeName}]"
 
 
-    override fun build(identifier: String, container: FieldContainer): Var<*> = NBTMapConcrete(container, CompoundTag(), identifier, generic)
-    override fun build(identifier: String): Var<*> = NBTMapConcrete(CompoundTag(), identifier, generic)
-    override fun build(identifier: String, clazz: Class): Var<*> = NBTMapConcrete(clazz, CompoundTag(), identifier, generic)
+    override fun build(identifier: String, container: FieldContainer): Var<*> = NBTMapConcrete(container, HashMap(), identifier, generic)
+    override fun build(identifier: String): Var<*> = NBTMapConcrete(HashMap(), identifier, generic)
+    override fun build(identifier: String, clazz: Class): Var<*> = NBTMapConcrete(clazz, HashMap(), identifier, generic)
     override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = NBTMap(container, identifier, generic)
     override fun buildUnConcrete(identifier: String): Var<*> = NBTMap(identifier, generic)
     override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = NBTMap(clazz, identifier, generic)

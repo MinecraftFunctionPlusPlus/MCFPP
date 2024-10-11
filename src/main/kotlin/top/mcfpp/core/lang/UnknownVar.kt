@@ -33,8 +33,8 @@ class UnknownVar(identifier: String) : Var<UnknownVar>(identifier) {
 
     override fun getMemberFunction(
         key: String,
-        readOnlyParams: List<MCFPPType>,
-        normalParams: List<MCFPPType>,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         return UnknownFunction("unknown") to true

@@ -1,21 +1,14 @@
 package top.mcfpp.core.lang
 
 import net.querz.nbt.tag.CompoundTag
-import top.mcfpp.Project
-import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.lib.NBTPath
-import top.mcfpp.type.MCFPPBaseType
-import top.mcfpp.type.MCFPPNBTType
-import top.mcfpp.type.MCFPPType
 import top.mcfpp.mni.NBTDictionaryData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.accessor.Property
-import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
-import top.mcfpp.type.MCFPPDictType
+import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil
 import top.mcfpp.util.TextTranslator
@@ -77,11 +70,11 @@ open class NBTDictionary : NBTBasedData {
 
     override fun getMemberFunction(
         key: String,
-        readOnlyParams: List<MCFPPType>,
-        normalParams: List<MCFPPType>,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        return data.field.getFunction(key,readOnlyParams , normalParams) to true
+        return data.field.getFunction(key, readOnlyArgs, normalArgs) to true
     }
 
     override fun getByIndex(index: Var<*>): PropertyVar {
@@ -165,6 +158,29 @@ class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<HashMap<String, Var<*>>>
         return re
     }
 
+    override fun implicitCast(type: MCFPPType): Var<*> {
+        return when(type) {
+            is MCFPPDictType -> {
+                if (type.generic == (this.type as MCFPPDictType).generic) {
+                    this
+                } else {
+                    buildCastErrorVar(type)
+                }
+            }
+
+            MCFPPNBTType.NBT -> {
+                if (isAllConcrete()) {
+                    NBTBasedDataConcrete(this, NBTUtil.valueToNBT(value))
+                } else {
+                    NBTBasedData(this)
+                }
+            }
+
+            MCFPPBaseType.Any -> this
+            else -> buildCastErrorVar(type)
+        }
+    }
+
     /**
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型
@@ -178,6 +194,17 @@ class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<HashMap<String, Var<*>>>
                     buildCastErrorVar(type)
                 }
             }
+            is MCFPPDataTemplateType -> {
+                return if(type.template.checkDictionaryStruct(value)){
+                    if(isAllConcrete()){
+                        DataTemplateObjectConcrete(type.template, NBTUtil.valueToNBT(value) as CompoundTag, identifier)
+                    }else {
+                        DataTemplateObject(type.template, identifier)
+                    }
+                }else{
+                    buildCastErrorVar(type)
+                }
+            }
             MCFPPNBTType.NBT -> {
                 if(isAllConcrete()){
                     NBTBasedDataConcrete(this, NBTUtil.valueToNBT(value))
@@ -186,7 +213,10 @@ class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<HashMap<String, Var<*>>>
                 }
             }
             MCFPPBaseType.Any -> this
-            else -> buildCastErrorVar(type)
+            else -> {
+                LogProcessor.error(TextTranslator.CAST_ERROR.translate(this.type.typeName, type.typeName))
+                buildCastErrorVar(type)
+            }
         }
     }
 

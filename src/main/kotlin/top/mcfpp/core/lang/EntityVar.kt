@@ -1,7 +1,6 @@
 package top.mcfpp.core.lang
 
 import net.querz.nbt.io.SNBTUtil
-import net.querz.nbt.tag.IntArrayTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
@@ -64,11 +63,11 @@ open class EntityVar : NBTBasedData, EntityBase{
 
     override fun getMemberFunction(
         key: String,
-        readOnlyParams: List<MCFPPType>,
-        normalParams: List<MCFPPType>,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        return data.getFunction(key, readOnlyParams, normalParams) to true
+        return data.getFunction(key, readOnlyArgs, normalArgs) to true
     }
 
     override fun doAssignedBy(b: Var<*>): EntityVar {

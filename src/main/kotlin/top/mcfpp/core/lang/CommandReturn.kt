@@ -82,11 +82,11 @@ class CommandReturn : Var<CommandReturn> {
 
     override fun getMemberFunction(
         key: String,
-        readOnlyParams: List<MCFPPType>,
-        normalParams: List<MCFPPType>,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        return data.getFunction(key, readOnlyParams, normalParams) to true
+        return data.getFunction(key, readOnlyArgs, normalArgs) to true
     }
 
     companion object {
@@ -125,8 +125,8 @@ class CommandSuccess(val re: CommandReturn) : Var<CommandSuccess>("success") {
 
     override fun getMemberFunction(
         key: String,
-        readOnlyParams: List<MCFPPType>,
-        normalParams: List<MCFPPType>,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> = Pair(UnknownFunction(key), true)
 
@@ -160,8 +160,8 @@ class CommandResult(val re: CommandReturn): Var<CommandResult>("result"){
 
     override fun getMemberFunction(
         key: String,
-        readOnlyParams: List<MCFPPType>,
-        normalParams: List<MCFPPType>,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         return Pair(UnknownFunction(key), true)

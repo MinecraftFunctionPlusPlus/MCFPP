@@ -3,7 +3,7 @@ package top.mcfpp.test
 import kotlin.test.Test
 import top.mcfpp.test.util.MCFPPStringTest
 
-class CompileTest {
+class BaseTest {
 
     @Test
     fun baseTest(){
@@ -11,11 +11,11 @@ class CompileTest {
             """
                 func base(){
                     int i = 0;
-                    dynamic int p;
+                    import int p;
                     i = i + p;
                 }
             """.trimIndent()
-        MCFPPStringTest.readFromString(test)
+        MCFPPStringTest.readFromString(test, arrayOf("debug"))
     }
 
     @Test
@@ -39,11 +39,11 @@ class CompileTest {
                 }
                 
                 func test(int qwq){
-                    qwq = qwq + 1;
-                    print(qwq);
+                    var a = qwq + 1;
+                    print(a);
                 }
             """.trimIndent()
-        MCFPPStringTest.readFromString(test)
+        MCFPPStringTest.readFromString(test, arrayOf("debug"))
     }
 
     @Test
@@ -51,8 +51,8 @@ class CompileTest {
         val test =
             """
                 func test<int i>()->int{
-                     i = i + 1;
-                     return i;
+                     var p = i + 1;
+                     return p;
                 }
 
                 func main(){
@@ -69,16 +69,19 @@ class CompileTest {
         val test =
             """
                 func test(int i = 1) -> int{
-                     i = i + 1;
-                     return i;
+                     var p = i + 1;
+                     return p;
                 }
 
                 func main(){
                     var a = test(10);
+                    print(a);
                     var b = test();
+                    print(a);
+                    print(b);
                 }
             """.trimIndent()
-        MCFPPStringTest.readFromString(test)
+        MCFPPStringTest.readFromString(test, arrayOf("debug"))
     }
 
     @Test

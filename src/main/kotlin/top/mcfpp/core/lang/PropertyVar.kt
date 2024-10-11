@@ -45,11 +45,11 @@ class PropertyVar(val property: Property, val field: Var<*>, val caller: Var<*>)
 
     override fun getMemberFunction(
         key: String,
-        readOnlyParams: List<MCFPPType>,
-        normalParams: List<MCFPPType>,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        return field.getMemberFunction(key, readOnlyParams, normalParams, accessModifier)
+        return field.getMemberFunction(key, readOnlyArgs, normalArgs, accessModifier)
     }
 
     override fun replacedBy(v: Var<*>) {

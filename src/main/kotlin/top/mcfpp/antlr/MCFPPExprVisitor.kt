@@ -440,14 +440,12 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         //获取函数
         val p = StringHelper.splitNamespaceID(ctx.namespaceID().text)
         val func = if(currSelector == null){
-            GlobalField.getFunction(p.first, p.second, FunctionParam.getArgTypes(readOnlyArgs), FunctionParam.getArgTypes(normalArgs))
+            GlobalField.getFunction(p.first, p.second, readOnlyArgs, normalArgs)
         }else{
             if(p.first != null){
                 LogProcessor.warn("Invalid namespace usage ${p.first} in function call ")
             }
-            MCFPPFuncManager().getFunction(currSelector!!,p.second,
-                FunctionParam.getArgTypes(readOnlyArgs),
-                FunctionParam.getArgTypes(normalArgs))
+            MCFPPFuncManager().getFunction(currSelector!!,p.second, readOnlyArgs, normalArgs)
         }
         //调用函数
         return if (func is UnknownFunction) {
@@ -505,7 +503,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             }
             return ptr
         }else{
-            if(func is Generic<*>){
+            val re = if(func is Generic<*>){
                 func.invoke(readOnlyArgs, normalArgs, currSelector)
             }else{
                 func.invoke(normalArgs,currSelector)
@@ -516,7 +514,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             //函数树
             Function.currFunction.child.add(func)
             func.parent.add(Function.currFunction)
-            func.returnVar
+            re
         }
     }
 
@@ -603,11 +601,10 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                     //TODO: 这边只是简单写了一下有解析值的情况
                     val res = visit(expressionContext) //没有解析值的话，应该变成text
                     if(res!=null && res !is MCFPPValue<*>){ isConcrete = false } //这个条件就是说，整个模版中出现没有解析值的情况了
-                    if(res is MCIntConcrete){
-                        r = res.value.toString()
-                    }
-                    else{
-                        r=res.toString()
+                    r = if(res is MCIntConcrete){
+                        res.value.toString()
+                    } else{
+                        res.toString()
                     }
                 }
                 stringArray.add(r)

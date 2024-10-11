@@ -1,6 +1,6 @@
 package top.mcfpp.model.field
 
-import top.mcfpp.type.MCFPPType
+import top.mcfpp.core.lang.Var
 import top.mcfpp.model.function.Function
 
 interface IFieldWithFunction: IField {
@@ -8,10 +8,10 @@ interface IFieldWithFunction: IField {
     /**
      * 根据所给的函数名和参数获取一个函数
      * @param key 函数名
-     * @param normalParams 参数类型
-     * @return 如果此缓存中存在这个函数，则返回这个函数的对象，否则返回[top.mcfpp.model.UnknownFunction]
+     * @param normalArgs 参数类型
+     * @return 如果此缓存中存在这个函数，则返回这个函数的对象，否则返回[top.mcfpp.model.function.UnknownFunction]
      */
-    fun getFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>): Function
+    fun getFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): Function
 
     /**
      * 添加一个函数

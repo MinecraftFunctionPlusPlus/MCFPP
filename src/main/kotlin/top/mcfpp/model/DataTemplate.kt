@@ -10,7 +10,6 @@ import top.mcfpp.type.MCFPPDataTemplateType
 import top.mcfpp.mni.DataObjectData
 import top.mcfpp.model.accessor.Property
 import top.mcfpp.model.field.CompoundDataField
-import top.mcfpp.model.function.ClassConstructor
 import top.mcfpp.model.function.DataTemplateConstructor
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPType
@@ -70,6 +69,14 @@ open class DataTemplate : FieldContainer, CompoundData {
         for (member in field.allVars){
             if(!compoundTag.containsKey(member.identifier)) return false
             if(!member.type.checkNBTType(compoundTag[member.identifier]!!)) return false
+        }
+        return true
+    }
+
+    fun checkDictionaryStruct(dict: Map<String, Var<*>>) : Boolean {
+        for (member in field.allVars){
+            if(!dict.containsKey(member.identifier)) return false
+            if(!dict[member.identifier]!!.type.isSubOf(member.type)) return false
         }
         return true
     }

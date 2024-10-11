@@ -1,6 +1,5 @@
 package top.mcfpp.core.lang
 
-import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.*
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
@@ -182,14 +181,14 @@ open class NBTList : NBTBasedData {
      * 根据方法标识符和方法的参数列表获取一个方法。如果没有这个方法，则返回null
      *
      * @param key 成员方法的标识符
-     * @param readOnlyParams 只读参数
-     * @param normalParams 普通参数
+     * @param readOnlyArgs 只读参数
+     * @param normalArgs 普通参数
      * @return
      */
     override fun getMemberFunction(
         key: String,
-        readOnlyParams: List<MCFPPType>,
-        normalParams: List<MCFPPType>,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         var re: Function = UnknownFunction(key)
@@ -197,13 +196,13 @@ open class NBTList : NBTBasedData {
             //TODO 我们约定it为NativeFunction，但是没有考虑拓展函数
             assert(it is NativeFunction)
             val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to genericType))
-            if(nf.isSelf(key, normalParams)){
+            if(nf.isSelf(key, normalArgs)){
                 re = nf
             }
         }
         val iterator = data.parent.iterator()
         while (re is UnknownFunction && iterator.hasNext()){
-            re = iterator.next().getFunction(key,readOnlyParams , normalParams ,isStatic)
+            re = iterator.next().getFunction(key, readOnlyArgs, normalArgs,isStatic)
         }
         return re to true
     }
@@ -354,8 +353,8 @@ class NBTListConcrete: NBTList, MCFPPValue<ArrayList<Var<*>>> {
 
     override fun getMemberFunction(
         key: String,
-        readOnlyParams: List<MCFPPType>,
-        normalParams: List<MCFPPType>,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         var re: Function = UnknownFunction(key)
@@ -363,13 +362,13 @@ class NBTListConcrete: NBTList, MCFPPValue<ArrayList<Var<*>>> {
             //TODO 我们约定it为NativeFunction，但是没有考虑拓展函数
             assert(it is NativeFunction)
             val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to genericType))
-            if(nf.isSelf(key, normalParams)){
+            if(nf.isSelf(key, normalArgs)){
                 re = nf
             }
         }
         val iterator = data.parent.iterator()
         while (re is UnknownFunction && iterator.hasNext()){
-            re = iterator.next().getFunction(key,readOnlyParams , normalParams ,isStatic)
+            re = iterator.next().getFunction(key, readOnlyArgs, normalArgs,isStatic)
         }
         return re to true
     }

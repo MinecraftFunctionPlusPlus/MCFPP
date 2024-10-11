@@ -21,7 +21,7 @@ open class FunctionField : IFieldWithVar, IFieldWithType {
     /**
      * 变量
      */
-    protected val vars: HashMap<String, Var<*>> = HashMap()
+    protected val vars: LinkedHashMap<String, Var<*>> = LinkedHashMap()
 
     /**
      * 类型
@@ -31,8 +31,7 @@ open class FunctionField : IFieldWithVar, IFieldWithType {
     /**
      * 父级域。函数的父级域可能是全局，也可能是类
      */
-    @Nullable
-    open var parent : IField?
+    var parent : IField?
 
     /**
      * 这个缓存在哪一个容器中
@@ -119,6 +118,7 @@ open class FunctionField : IFieldWithVar, IFieldWithType {
      * @return 若变量存在，则返回被移除的变量，否则返回空
      */
     override fun removeVar(id : String): Var<*>?{
+        fieldVarSet.remove(id)
         return vars.remove(id)
     }
 

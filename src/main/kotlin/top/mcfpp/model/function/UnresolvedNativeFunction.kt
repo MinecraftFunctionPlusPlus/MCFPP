@@ -11,7 +11,7 @@ class UnresolvedNativeFunction(identifier: String, namespace: String = Project.c
 
     val readOnlyParams = ArrayList<FunctionParam>()
 
-    override fun invoke(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?) {
+    override fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?): Var<*> {
         throw UnsupportedOperationException()
     }
 }

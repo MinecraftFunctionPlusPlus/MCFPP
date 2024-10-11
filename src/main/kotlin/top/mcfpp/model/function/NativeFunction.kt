@@ -57,8 +57,9 @@ class NativeFunction : Function, Native {
         this.javaMethodName = name
     }
 
-    override fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?) {
+    override fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?): Var<*> {
         invoke(ArrayList(), normalArgs, caller)
+        return returnVar
     }
 
     @Override

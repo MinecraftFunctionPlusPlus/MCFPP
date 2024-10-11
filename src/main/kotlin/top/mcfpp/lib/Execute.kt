@@ -4,12 +4,10 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.Coordinate3Var
 import top.mcfpp.core.lang.CoordinateDimension
-import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
-import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 
 class Execute {
@@ -114,11 +112,11 @@ class Execute {
 
         override fun getMemberFunction(
             key: String,
-            readOnlyParams: List<MCFPPType>,
-            normalParams: List<MCFPPType>,
+            readOnlyArgs: List<Var<*>>,
+            normalArgs: List<Var<*>>,
             accessModifier: Member.AccessModifier
         ): Pair<Function, Boolean> {
-            return getData().getFunction(key, readOnlyParams, normalParams) to true
+            return getData().getFunction(key, readOnlyArgs, normalArgs) to true
         }
 
     }

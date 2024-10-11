@@ -1,19 +1,11 @@
 package top.mcfpp.core.lang
 
-import net.querz.nbt.tag.StringTag
-import top.mcfpp.type.MCFPPNBTType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.lib.EntitySelector
-import top.mcfpp.lib.EntitySelector.Companion.SelectorType
-import top.mcfpp.mni.SelectorData
 import top.mcfpp.model.CompoundData
-import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPEntityType
-import top.mcfpp.util.LogProcessor
-import top.mcfpp.util.TextTranslator
-import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 
 
@@ -60,11 +52,11 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector>, EntityBase {
 
     override fun getMemberFunction(
         key: String,
-        readOnlyParams: List<MCFPPType>,
-        normalParams: List<MCFPPType>,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        return data.getFunction(key, readOnlyParams, normalParams) to true
+        return data.getFunction(key, readOnlyArgs, normalArgs) to true
     }
 
     override fun clone(): SelectorVar {

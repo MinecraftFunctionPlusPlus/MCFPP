@@ -31,9 +31,9 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
      * @param name 函数的标识符
      */
     constructor(name: String, owner: CompoundData, namespace: String = Project.currNamespace, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext):super(name, owner, namespace, returnType, ctx)
-    override fun invoke(readOnlyArgs: ArrayList<Var<*>>, normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?) {
+    override fun invoke(readOnlyArgs: ArrayList<Var<*>>, normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?): Var<*> {
         val f = compile(readOnlyArgs)
-        f.invoke(normalArgs, caller)
+        return f.invoke(normalArgs, caller)
     }
 
     override fun addParamsFromContext(ctx: mcfppParser.FunctionParamsContext) {
@@ -100,22 +100,22 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
         return compiledFunction
     }
 
-    override fun isSelf(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>): Boolean {
-        if (this.identifier == key && this.normalParams.size == normalParams.size && this.readOnlyParams.size == readOnlyParams.size) {
+    override fun isSelf(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): Boolean {
+        if (this.identifier == key && this.normalParams.size == normalArgs.size && this.readOnlyParams.size == readOnlyArgs.size) {
             if (this.normalParams.size == 0 && this.readOnlyParams.size == 0) {
                 return true
             }
             var hasFoundFunc = true
             //参数比对
-            for (i in normalParams.indices) {
-                if (!FunctionParam.isSubOf(normalParams[i],this.normalParams[i].type)) {
+            for (i in normalArgs.indices) {
+                if (!field.getVar(normalParams[i].identifier)!!.canAssignedBy(normalArgs[i])) {
                     hasFoundFunc = false
                     break
                 }
             }
             if(hasFoundFunc){
-                for (i in readOnlyParams.indices) {
-                    if (!FunctionParam.isSubOf(readOnlyParams[i],this.readOnlyParams[i].type)) {
+                for (i in readOnlyArgs.indices) {
+                    if (!field.getVar(readOnlyParams[i].identifier)!!.canAssignedBy(readOnlyArgs[i])) {
                         hasFoundFunc = false
                         break
                     }
@@ -128,16 +128,16 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
     }
 
 
-    override fun isSelfWithDefaultValue(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>): Boolean {
-        if(key != this.identifier || normalParams.size > this.normalParams.size || readOnlyParams.size > this.normalParams.size) return false
+    override fun isSelfWithDefaultValue(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): Boolean {
+        if(key != this.identifier || normalArgs.size > this.normalParams.size || readOnlyArgs.size > this.normalParams.size) return false
         if (this.normalParams.size == 0 && this.readOnlyParams.size == 0) {
             return true
         }
         var hasFoundFunc = true
         //参数比对
         var index = 0
-        while (index < normalParams.size) {
-            if (!FunctionParam.isSubOf(normalParams[index],this.normalParams[index].type)) {
+        while (index < normalArgs.size) {
+            if (!field.getVar(normalParams[index].identifier)!!.canAssignedBy(normalArgs[index])) {
                 hasFoundFunc = false
                 break
             }
@@ -146,8 +146,8 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
         hasFoundFunc = hasFoundFunc && this.normalParams[index].hasDefault
         if(!hasFoundFunc) return false
         index = 0
-        while (index < readOnlyParams.size) {
-            if (!FunctionParam.isSubOf(readOnlyParams[index],this.readOnlyParams[index].type)) {
+        while (index < readOnlyArgs.size) {
+            if (!field.getVar(readOnlyParams[index].identifier)!!.canAssignedBy(readOnlyArgs[index])) {
                 hasFoundFunc = false
                 break
             }

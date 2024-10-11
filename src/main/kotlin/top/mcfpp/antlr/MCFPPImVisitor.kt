@@ -60,7 +60,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         //获取函数对象
         val types = ctx.functionParams()?.let { FunctionParam.parseReadonlyAndNormalParamTypes(it) }
         //获取缓存中的对象
-        f = GlobalField.getFunction(Project.currNamespace, ctx.Identifier().text, types?.first?:ArrayList(), types?.second?:ArrayList())
+        f = GlobalField.getFunction(Project.currNamespace, ctx.Identifier().text, types?.first?.map { it.build("") }?:ArrayList(), types?.second?.map { it.build("") }?:ArrayList())
         Function.currFunction = f
     }
 
@@ -127,7 +127,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         if(ctx.VAR() != null){
             //自动判断类型
             val init: Var<*> = MCFPPExprVisitor().visit(ctx.expression())!!
-            val `var` = if(fieldModifier == "import"){
+            var `var` = if(fieldModifier == "import"){
                 val qwq = init.type.buildUnConcrete(ctx.Identifier().text, Function.currFunction)
                 qwq.hasAssigned = true
                 qwq
@@ -135,11 +135,11 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 init.type.build(ctx.Identifier().text, Function.currFunction)
             }
             //变量注册
+            `var` = `var`.assignedBy(init)
             //一定是函数变量
-            if (!Function.field.putVar(ctx.Identifier().text, `var`, true)) {
+            if (!Function.field.putVar(ctx.Identifier().text, `var`, false)) {
                 LogProcessor.error("Duplicate defined variable name:" + ctx.Identifier().text)
             }
-            `var`.assignedBy(init)
             when(fieldModifier){
                 "const" -> {
                     if(!`var`.hasAssigned){
@@ -187,6 +187,8 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                     "dynamic" -> {
                         if(`var` is MCFPPValue<*> && `var`.hasAssigned){
                             `var`.toDynamic(true)
+                        }else if(`var` is MCFPPValue<*>){
+                            `var` = type.buildUnConcrete(c.Identifier().text, Function.currFunction)
                         }
                     }
                 }
@@ -277,7 +279,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         val types = FunctionParam.parseReadonlyAndNormalParamTypes(ctx.functionParams())
         val field = data.field
         //获取缓存中的对象
-        f = field.getFunction(ctx.Identifier().text, types.first, types.second)
+        f = field.getFunction(ctx.Identifier().text, types.first.map { it.build("") }, types.second.map { it.build("") })
 
         Function.currFunction = f
     }
@@ -322,6 +324,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
      */
     
     @InsertCommand
+    @Suppress("UNCHECKED_CAST")
     fun enterIfStatement(ctx: mcfppParser.IfStatementContext) {
         //进入if函数
         Project.ctx = ctx
@@ -1021,7 +1024,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         //解析参数
         val types = FunctionParam.parseReadonlyAndNormalParamTypes(ctx.functionParams())
         //获取缓存中的对象
-        val f = Class.currClass!!.field.getFunction(ctx.Identifier().text, types.first, types.second)
+        val f = Class.currClass!!.field.getFunction(ctx.Identifier().text, types.first.map { it.build("") }, types.second.map { it.build("") })
         Function.currFunction = f
     }
 
@@ -1128,7 +1131,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         //解析参数
         val types = FunctionParam.parseReadonlyAndNormalParamTypes(ctx.functionParams())
         //获取缓存中的对象
-        val f = DataTemplate.currTemplate!!.field.getFunction(ctx.Identifier().text, types.first, types.second)
+        val f = DataTemplate.currTemplate!!.field.getFunction(ctx.Identifier().text, types.first.map { it.build("") }, types.second.map { it.build("") })
         Function.currFunction = f
     }
 

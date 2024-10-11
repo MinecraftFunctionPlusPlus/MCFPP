@@ -88,16 +88,16 @@ open class CompoundData : FieldContainer, Serializable {
      * 返回一个成员函数。如果没有，则从父类中寻找
      *
      * @param key 函数名
-     * @param normalParams 函数参数
+     * @param normalArgs 函数参数
      * @param isStatic 是否是静态成员
      *
      * @return 如果函数存在，则返回此函数，否则返回null
      */
-    fun getFunction(key: String, readOnlyParams: List<MCFPPType>, normalParams: List<MCFPPType>, isStatic: Boolean = false): Function {
-        var re = field.getFunction(key, readOnlyParams, normalParams)
+    fun getFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>, isStatic: Boolean = false): Function {
+        var re = field.getFunction(key, readOnlyArgs, normalArgs)
         val iterator = parent.iterator()
         while (re is UnknownFunction && iterator.hasNext()){
-            re = iterator.next().getFunction(key,readOnlyParams , normalParams ,isStatic)
+            re = iterator.next().getFunction(key,readOnlyArgs , normalArgs ,isStatic)
         }
         return re
     }

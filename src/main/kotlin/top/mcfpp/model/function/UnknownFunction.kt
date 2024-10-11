@@ -21,8 +21,9 @@ open class UnknownFunction: Function {
         returnVar = UnknownVar("return")
     }
 
-    override fun invoke(/*readOnlyArgs: ArrayList<Var<*>>, */normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?) {
+    override fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?): Var<*> {
         addComment("[Failed to compile]invoke unknown function $namespaceID")
+        return returnVar
     }
 
     override fun toString(): String {
