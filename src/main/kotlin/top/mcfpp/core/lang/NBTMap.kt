@@ -11,6 +11,7 @@ import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPMapType
 import top.mcfpp.type.MCFPPType
 import java.util.*
+import kotlin.collections.ArrayList
 
 open class NBTMap : NBTDictionary{
 
@@ -78,9 +79,9 @@ open class NBTMap : NBTDictionary{
     }
 }
 
-class NBTMapConcrete : NBTMap, MCFPPValue<CompoundTag> {
+class NBTMapConcrete : NBTMap, MCFPPValue<HashMap<String, Var<*>>> {
 
-    override lateinit var value: CompoundTag
+    override lateinit var value: HashMap<String, Var<*>>
 
     //TODO 构造函数未检查value的类型是否符合泛型要求
     /**
@@ -92,14 +93,13 @@ class NBTMapConcrete : NBTMap, MCFPPValue<CompoundTag> {
      */
     constructor(
         curr: FieldContainer,
-        value: CompoundTag,
+        value: HashMap<String, Var<*>>,
         identifier: String = UUID.randomUUID().toString(),
         genericType: MCFPPType
     ) : super(curr, identifier, genericType){
         this.value = value
-        val (k, v) = parseValue(value)
-        keyList = NBTListConcrete(curr, k, identifier + "_key", MCFPPBaseType.String)
-        valueList = NBTListConcrete(curr, v, identifier + "_value", genericType)
+        keyList = NBTListConcrete(curr, ArrayList(value.keys.map { MCStringConcrete(StringTag((it))) }), identifier + "_key", MCFPPBaseType.String)
+        valueList = NBTListConcrete(curr, ArrayList(value.values), identifier + "_value", genericType)
         keyValueSet = NBTDictionaryConcrete(curr, value, identifier + "_keyValueSet")
     }
 
@@ -108,11 +108,10 @@ class NBTMapConcrete : NBTMap, MCFPPValue<CompoundTag> {
      * @param identifier 标识符。如不指定，则为随机uuid
      * @param value 值
      */
-    constructor(value: CompoundTag, identifier: String = UUID.randomUUID().toString(), genericType: MCFPPType) : super(identifier, genericType){
+    constructor(value: HashMap<String, Var<*>>, identifier: String = UUID.randomUUID().toString(), genericType: MCFPPType) : super(identifier, genericType){
         this.value = value
-        val (k, v) = parseValue(value)
-        keyList = NBTListConcrete(k, identifier + "_key", MCFPPBaseType.String)
-        valueList = NBTListConcrete(v, identifier + "_value", genericType)
+        keyList = NBTListConcrete(ArrayList(value.keys.map { MCStringConcrete(StringTag((it))) }), identifier + "_key", MCFPPBaseType.String)
+        valueList = NBTListConcrete(ArrayList(value.values), identifier + "_value", genericType)
         keyValueSet = NBTDictionaryConcrete(value, identifier + "_keyValueSet")
     }
 
@@ -120,11 +119,10 @@ class NBTMapConcrete : NBTMap, MCFPPValue<CompoundTag> {
      * 复制一个map
      * @param b 被复制的map值
      */
-    constructor(b: NBTMap, value: CompoundTag) : super(b){
+    constructor(b: NBTMap, value: HashMap<String, Var<*>>) : super(b){
         this.value = value
-        val (k, v) = parseValue(value)
-        keyList = NBTListConcrete(k, identifier + "_key", MCFPPBaseType.String)
-        valueList = NBTListConcrete(v, identifier + "_value", genericType)
+        keyList = NBTListConcrete(ArrayList(value.keys.map { MCStringConcrete(StringTag((it))) }), identifier + "_key", MCFPPBaseType.String)
+        valueList = NBTListConcrete(ArrayList(value.values), identifier + "_value", genericType)
         keyValueSet = NBTDictionaryConcrete(value, identifier + "_keyValueSet")
     }
 
@@ -135,29 +133,15 @@ class NBTMapConcrete : NBTMap, MCFPPValue<CompoundTag> {
         keyValueSet = v.keyValueSet.clone() as NBTDictionaryConcrete
     }
 
-    private fun parseValue(tag: CompoundTag): Pair<ListTag<StringTag>, ListTag<*>>{
-        val keys = tag.keySet()
-        val values = tag.values()
-        //检查列表中的元素类型是否一致
-        val type = values.first().javaClass
-        if(values.any { it.javaClass != type }) throw VariableConverseException()
-        val keyTags = ListTag(StringTag::class.java)
-        val valueTags = ListTag(type)
-        keyTags.addAll(keys.map { StringTag(it) })
-        valueTags.addAll(values)
-        value = CompoundTag().apply {
-            put("key", keyTags)
-            put("value", valueTags)
-            put("keyValueSet", tag)
-        }
-        return keyTags to valueTags
-    }
-
     override fun clone(): NBTMapConcrete {
         return NBTMapConcrete(this)
     }
 
     override fun toDynamic(replace: Boolean): Var<*> {
         TODO("Not yet implemented")
+    }
+
+    fun indexOf(key: String): Int{
+        return (keyList as NBTListConcrete).value.indexOfFirst { (it as MCStringConcrete).value.value == key }
     }
 }

@@ -1,3 +1,12 @@
 package top.mcfpp.util
 
-class ValueWrapper<T>(var value: T)
+import top.mcfpp.core.lang.Var
+
+class ValueWrapper<T: Var<*>>(var value: T){
+
+    fun assign(v: T){
+        value.assignedBy(v)
+        value = v
+    }
+
+}

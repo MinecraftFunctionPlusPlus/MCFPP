@@ -8,7 +8,6 @@ import top.mcfpp.core.lang.bool.MCBool;
 import top.mcfpp.core.lang.bool.MCBoolConcrete;
 import top.mcfpp.util.ValueWrapper;
 
-@SuppressWarnings({"unchecked"})
 public class NBTMapConcreteData {
 
     @MNIFunction(caller = "dict")
@@ -31,7 +30,7 @@ public class NBTMapConcreteData {
 
     @MNIFunction(caller = "dict", returnType = "bool")
     public static void isEmpty(NBTMapConcrete caller, ValueWrapper<MCBool> re){
-        re.setValue(new MCBoolConcrete(((NBTListConcrete)(caller.getKeyList())).getValue().size() == 0, "return"));
+        re.setValue(new MCBoolConcrete(((NBTListConcrete) (caller.getKeyList())).getValue().isEmpty(), "return"));
     }
 
     @MNIFunction(caller = "dict", returnType = "list")
@@ -50,7 +49,7 @@ public class NBTMapConcreteData {
             StringTag keyTag = keyC.getValue();
             String keyStr = keyTag.getValue();
             caller.getValue().remove(keyStr);
-            int index = ((ListTag<StringTag>)((NBTListConcrete)(caller.getKeyList())).getValue()).indexOf(keyTag);
+            int index = caller.indexOf(keyStr);
             ((NBTListConcrete)(caller.getKeyList())).getValue().remove(index);
             ((NBTListConcrete)(caller.getValueList())).getValue().remove(index);
         }else {
