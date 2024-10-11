@@ -18,6 +18,7 @@ import java.nio.file.Path
 
 object MCFPPStringTest {
     fun readFromString(str: String, args: Array<String> = arrayOf(), targetPath: String = "null"){
+        Project.compileStage = 0
         val source = ConfigurationSource(FileInputStream("log4j2.xml"))
         Configurator.initialize(null,source)
         //编译参数
