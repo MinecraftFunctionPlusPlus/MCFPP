@@ -47,6 +47,7 @@ object TextTranslator {
     const val CAST_ERROR = "error.mcfpp.castError"
     const val VOID_CAST_ERROR = "error.mcfpp.voidCastError"
     const val ASSIGN_ERROR = "error.mcfpp.assignError"
+    const val INVALID_TYPE_ERROR = "error.mcfpp.invalidType"
 
     const val REDUNDANT_CAST_WARN = "warn.mcfpp.redundantCast"
 }

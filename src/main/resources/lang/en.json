@@ -2,5 +2,6 @@
     "error.mcfpp.castError": "Cannot cast type %s to type %s",
     "error.mcfpp.voidCastError": "Failed to cast type void",
     "warn.mcfpp.redundantCast": "Redundant cast from %s to %s",
-    "error.mcfpp.assignError": "Cannot assign type %s to type %s"
+    "error.mcfpp.assignError": "Cannot assign type %s to type %s",
+    "error.mcfpp.invalidType": "Invalid type %s"
 }

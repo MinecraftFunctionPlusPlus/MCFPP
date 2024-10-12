@@ -12,6 +12,7 @@ import top.mcfpp.model.accessor.Property
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.DataTemplateConstructor
 import top.mcfpp.model.function.Function
+import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import kotlin.collections.ArrayList
@@ -125,7 +126,7 @@ open class DataTemplate : FieldContainer, CompoundData {
 
     fun getConstructorByString(normalParams: List<String>): DataTemplateConstructor?{
         return getConstructorByType(
-            ArrayList(normalParams.map { MCFPPType.parseFromIdentifier(it, field) })
+            ArrayList(normalParams.map { MCFPPType.parseFromIdentifier(it, field)?: MCFPPBaseType.Any })
         )
     }
 

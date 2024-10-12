@@ -180,7 +180,7 @@ class ImmutableListConcrete: ImmutableList, MCFPPValue<ListTag<*>>{
         }
         val iterator = data.parent.iterator()
         while (re is UnknownFunction && iterator.hasNext()){
-            re = iterator.next().getFunction(key, readOnlyArgs, normalArgs,isStatic)
+            re = iterator.next().getFunction(key, readOnlyArgs, normalArgs, isStatic)
         }
         return re to true
     }

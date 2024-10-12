@@ -3,6 +3,7 @@ package top.mcfpp.model.function
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.antlr.mcfppParser
+import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
 import top.mcfpp.type.MCFPPBaseType
@@ -42,46 +43,45 @@ open class ClassConstructor
     @InsertCommand
     override fun invoke(normalArgs: ArrayList<Var<*>>, callerClassP: ClassPointer) {
         addCommand("execute in minecraft:overworld positioned 0 1 0 summon marker run function " + leadFunction.namespaceID)
-        val qwq = currFunction
-        currFunction = leadFunction
-        //获取所有函数
-        val funcs = StringBuilder("functions:{")
-        target.field.forEachFunction { f ->
-            run {
-                funcs.append("${f.identifier}:\"${f.namespaceID}\",")
+        leadFunction.runInFunction {
+            //获取所有函数
+            val funcs = StringBuilder("functions:{")
+            target.field.forEachFunction { f ->
+                run {
+                    funcs.append("${f.identifier}:\"${f.namespaceID}\",")
+                }
             }
-        }
-        funcs.append("}")
-        //对象实体创建
-        addCommand("data merge entity @s {Tags:[${callerClassP.tag}],data:{$funcs}}")
-        //初始指针
-        addCommand("data modify storage mcfpp:system ${Project.currNamespace}.stack_frame[${callerClassP.stackIndex}].${callerClassP.identifier} set from entity @s UUID")
-        //初始化
-        if(target.classPreInit.commands.size > 0){
-            //给函数开栈
+            funcs.append("}")
+            //对象实体创建
+            addCommand("data merge entity @s {Tags:[${callerClassP.tag}],data:{$funcs}}")
+            //初始指针
+            addCommand(Command("data modify").build(callerClassP.nbtPath.toCommandPart()).build("set from entity @s UUID"))
+            //初始化
+            if(target.classPreInit.commands.size > 0){
+                //给函数开栈
+                addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
+                //不应当立即调用它自己的函数，应当先调用init，再调用constructor
+                addCommand(Commands.function(target.classPreInit))
+                //调用完毕，将子函数的栈销毁
+                addCommand("data remove storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame[0]")
+            }
+            //给函数开栈，调用构造函数
             addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
-            //不应当立即调用它自己的函数，应当先调用init，再调用constructor
-            addCommand(Commands.function(target.classPreInit))
+            //参数传递
+            argPass(normalArgs)
+            //调用构造函数
+            addCommand("function " + this.namespaceID)
+            //销毁指针，释放堆内存
+            for (p in field.allVars){
+                if (p is ClassPointer){
+                    p.dispose()
+                }
+            }
             //调用完毕，将子函数的栈销毁
             addCommand("data remove storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame[0]")
+            //取出栈内的值到记分板
+            fieldRestore()
         }
-        //给函数开栈，调用构造函数
-        addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
-        //参数传递
-        argPass(normalArgs)
-        //调用构造函数
-        addCommand("function " + this.namespaceID)
-        //销毁指针，释放堆内存
-        for (p in field.allVars){
-            if (p is ClassPointer){
-                p.dispose()
-            }
-        }
-        //调用完毕，将子函数的栈销毁
-        addCommand("data remove storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame[0]")
-        //取出栈内的值到记分板
-        fieldRestore()
-        currFunction = qwq
     }
 
     fun addParamsFromContext(ctx: mcfppParser.NormalParamsContext) {

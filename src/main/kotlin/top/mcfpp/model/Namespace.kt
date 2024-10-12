@@ -10,7 +10,10 @@ import top.mcfpp.model.field.NamespaceField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.generic.GenericFunction
+import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 import java.io.Serializable
 import java.lang.Class
 import java.lang.reflect.Modifier
@@ -118,14 +121,27 @@ class Namespace(val identifier: String): Serializable {
                 }
                 //解析MNIMethod注解成员
                 val readOnlyType = mniRegister.readOnlyParams.map {
-                    val qwq = it.split(" ", limit = 2)
-                    qwq[1] to MCFPPType.parseFromIdentifier(qwq[0], Namespace.currNamespaceField)
+                    var qwq = it.split(" ", limit = 3)
+                    if(qwq.size == 3) qwq = qwq.subList(1, 3)
+                    val type = MCFPPType.parseFromIdentifier(qwq[0], Namespace.currNamespaceField)?: run {
+                        LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(qwq[0]))
+                        MCFPPBaseType.Any
+                    }
+                    qwq[1] to type to it.startsWith("static")
                 }
                 val normalType = mniRegister.normalParams.map {
-                    val qwq = it.split(" ", limit = 2)
-                    qwq[1] to MCFPPType.parseFromIdentifier(qwq[0], Namespace.currNamespaceField)
+                    var qwq = it.split(" ", limit = 3)
+                    if(qwq.size == 3) qwq = qwq.subList(1, 3)
+                    val type = MCFPPType.parseFromIdentifier(qwq[0], Namespace.currNamespaceField)?: run {
+                        LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(qwq[0]))
+                        MCFPPBaseType.Any
+                    }
+                    qwq[1] to type to it.startsWith("static")
                 }
-                val returnType = MCFPPType.parseFromIdentifier(mniRegister.returnType, Namespace.currNamespaceField)
+                val returnType = MCFPPType.parseFromIdentifier(mniRegister.returnType, Namespace.currNamespaceField)?: run {
+                    LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniRegister.returnType))
+                    MCFPPBaseType.Any
+                }
                 //检查method的参数s
                 if(method.parameterCount != readOnlyType.size + normalType.size + 1){
                     LogProcessor.error("Method ${method.name} in class ${cls.name} has wrong parameter count")
@@ -134,10 +150,10 @@ class Namespace(val identifier: String): Serializable {
                 val nf = NativeFunction(method.name, returnType, javaMethod = method)
                 nf.caller = mniRegister.caller
                 for(rt in readOnlyType){
-                    nf.appendReadOnlyParam(rt.second, rt.first)
+                    nf.appendReadOnlyParam(rt.first.second, rt.first.first, rt.second)
                 }
                 for(nt in normalType){
-                    nf.appendNormalParam(nt.second, nt.first)
+                    nf.appendNormalParam(nt.first.second, nt.first.first, nt.second)
                 }
                 //有继承
                 if(mniRegister.override){

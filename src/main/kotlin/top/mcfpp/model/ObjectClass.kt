@@ -33,7 +33,7 @@ open class ObjectClass(identifier: String, namespace: String = Project.currNames
         )
     }
 
-    override fun newInstance(): ClassPointer {
+    override fun newPointer(): ClassPointer {
         LogProcessor.error("Cannot instantiate an object class")
         return ClassPointer(this, "error_object_instance")
     }

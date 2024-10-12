@@ -23,8 +23,11 @@ import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.Generic
 import top.mcfpp.model.generic.GenericClass
+import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 import kotlin.collections.HashMap
 
@@ -282,7 +285,10 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     override fun visitCastExpression(ctx: mcfppParser.CastExpressionContext): Var<*> {
         Project.ctx = ctx
         val a: Var<*> = visit(ctx.unaryExpression())
-        return a.explicitCast(MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field))
+        return a.explicitCast(MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field)?: run {
+            LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
+            MCFPPBaseType.Any
+        })
     }
 
     /**
@@ -329,8 +335,14 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             currSelector = visit(ctx.primary())
         }
         if(currSelector is UnknownVar){
-            val type = MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field)
-            currSelector = ObjectVar(type)
+            val typeStr = ctx.primary()?.text?:ctx.type().text
+            val type = MCFPPType.parseFromIdentifier(typeStr, Function.currFunction.field)
+            if(type == null){
+                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(typeStr))
+                currSelector = UnknownVar("unknown_" + UUID.randomUUID())
+            }else{
+                currSelector = ObjectVar(type)
+            }
         }
         for (selector in ctx.selector()){
             visit(selector)
@@ -448,74 +460,59 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             MCFPPFuncManager().getFunction(currSelector!!,p.second, readOnlyArgs, normalArgs)
         }
         //调用函数
-        return if (func is UnknownFunction) {
-            //可能是类的构造函数
-            var cls: Class? = if(ctx.arguments().readOnlyArgs() != null){
-                GlobalField.getClass(p.first, p.second ,readOnlyArgs.map { it.type })
+        if (func !is UnknownFunction) {
+            if(func is Generic<*>){
+                func.invoke(readOnlyArgs, normalArgs, currSelector)
             }else{
-                GlobalField.getClass(p.first, p.second)
+                func.invoke(normalArgs,currSelector)
             }
-            if (cls == null) {
-                //可能是模板的构造函数
-                val template: DataTemplate? = GlobalField.getTemplate(p.first, p.second)
-                if(template == null){
-                    LogProcessor.error("Function ${func.identifier}<${readOnlyArgs.joinToString(",") { it.type.typeName }}>(${normalArgs.map { it.type.typeName }.joinToString(",")}) not defined")
-                    Function.addComment("[Failed to Compile]${ctx.text}")
-                    func.invoke(normalArgs,currSelector)
-                    return func.returnVar
-                }
-                val init = DataTemplateObjectConcrete(template, template.getType().defaultValue())
-                val constructor = template.getConstructorByString(FunctionParam.getArgTypeNames(normalArgs))
-                if (constructor == null) {
-                    LogProcessor.error("No constructor like: " + FunctionParam.getArgTypeNames(normalArgs) + " defined in class " + ctx.namespaceID().text)
-                    Function.addComment("[Failed to compile]${ctx.text}")
-                }else{
-                    constructor.invoke(normalArgs, init)
-                }
-                //可能会对init进行替换
-                return Function.currFunction.field.getVar(init.identifier)?:init
-            }
-            if(cls is GenericClass){
-                if(defaultGenericClassType != null){
-                    //比对实例化参数
-                    //参数不一致
-                    if(defaultGenericClassType!!.genericVar.size != readOnlyArgs.size){
-                        LogProcessor.error("Generic class ${cls.identifier} requires ${cls.readOnlyParams.size} type arguments, but ${readOnlyArgs.size} were provided")
-                        return UnknownVar("${cls.identifier}_type_" + UUID.randomUUID())
-                    }
-                    //参数缺省
-                    if(readOnlyArgs.isEmpty()){
-                        readOnlyArgs.addAll(defaultGenericClassType!!.genericVar)
-                    }
-                }
+            //函数树
+            Function.currFunction.child.add(func)
+            func.parent.add(Function.currFunction)
+            return func.returnVar
+        }
+        //可能是类的构造函数
+        var cls: Class? = if(ctx.arguments().readOnlyArgs() != null){
+            GlobalField.getClass(p.first, p.second ,readOnlyArgs.map { it.type })
+        }else{
+            GlobalField.getClass(p.first, p.second)
+        }
+        if (cls != null) {
+            if (cls is GenericClass) {
                 //实例化泛型函数
                 cls = cls.compile(readOnlyArgs)
             }
             //获取对象
-            val ptr = cls.newInstance()
+            val ptr = cls.newPointer()
             //调用构造函数
             val constructor = cls.getConstructorByString(FunctionParam.getArgTypeNames(normalArgs))
             if (constructor == null) {
                 LogProcessor.error("No constructor like: " + FunctionParam.getArgTypeNames(normalArgs) + " defined in class " + ctx.namespaceID().text)
                 Function.addComment("[Failed to compile]${ctx.text}")
-            }else{
+            } else {
                 constructor.invoke(normalArgs, ptr)
             }
             return ptr
-        }else{
-            val re = if(func is Generic<*>){
-                func.invoke(readOnlyArgs, normalArgs, currSelector)
-            }else{
-                func.invoke(normalArgs,currSelector)
-            }
-            for (v in processVarCache){
-                v.getFromStack()
-            }
-            //函数树
-            Function.currFunction.child.add(func)
-            func.parent.add(Function.currFunction)
-            re
         }
+        //可能是模板的构造函数
+        val template: DataTemplate? = GlobalField.getTemplate(p.first, p.second)
+        if(template != null) {
+            val init = DataTemplateObjectConcrete(template, template.getType().defaultValue())
+            val constructor = template.getConstructorByString(FunctionParam.getArgTypeNames(normalArgs))
+            if (constructor == null) {
+                LogProcessor.error("No constructor like: " + FunctionParam.getArgTypeNames(normalArgs) + " defined in class " + ctx.namespaceID().text)
+                Function.addComment("[Failed to compile]${ctx.text}")
+            } else {
+                constructor.invoke(normalArgs, init)
+            }
+            //可能会对init进行替换
+            return Function.currFunction.field.getVar(init.identifier) ?: init
+        }
+        //没有找到函数
+        LogProcessor.error("Function ${func.identifier}<${readOnlyArgs.joinToString(",") { it.type.typeName }}>(${normalArgs.map { it.type.typeName }.joinToString(",")}) not defined")
+        Function.addComment("[Failed to Compile]${ctx.text}")
+        func.invoke(normalArgs,currSelector)
+        return func.returnVar
     }
 
     override fun visitVarWithSuffix(ctx: mcfppParser.VarWithSuffixContext): Var<*> {
@@ -534,13 +531,13 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                     pwp
                 }
             }else{
-                LogProcessor.error("Variable $qwq not found")
                 UnknownVar(qwq)
             }
         }else{
             //获取成员
             val re  = currSelector!!.getMemberVar(qwq, currSelector!!.getAccess(Function.currFunction))
             if (re.first == null) {
+                LogProcessor.error("Cannot get member $qwq")
                 UnknownVar(qwq)
             }else if (!re.second){
                 LogProcessor.error("Cannot access member $qwq")
@@ -619,7 +616,10 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         } else if (ctx.nbtValue() != null){
             return visit(ctx.nbtValue())
         } else if (ctx.type() != null){
-            return MCFPPTypeVar(MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field))
+            return MCFPPTypeVar(MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field)?: run {
+                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
+                MCFPPBaseType.Any
+            })
         } else if (ctx.TargetSelector() != null){
             TODO()
         } else if(ctx.coordinate() != null){

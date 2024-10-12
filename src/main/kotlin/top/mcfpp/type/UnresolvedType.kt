@@ -1,6 +1,9 @@
 package top.mcfpp.type
 
 import top.mcfpp.model.field.IFieldWithType
+import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 
 class UnresolvedType(type: String) : MCFPPType() {
 
@@ -14,6 +17,9 @@ class UnresolvedType(type: String) : MCFPPType() {
     }
 
     fun resolve(typeScope: IFieldWithType): MCFPPType {
-        return parseFromIdentifier(originalTypeString, typeScope)
+        return parseFromIdentifier(originalTypeString, typeScope)?: run {
+            LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(originalTypeString))
+            MCFPPBaseType.Any
+        }
     }
 }

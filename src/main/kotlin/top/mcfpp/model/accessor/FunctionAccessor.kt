@@ -15,7 +15,7 @@ class FunctionAccessor(field: Var<*>, d: CompoundData): AbstractAccessor(field) 
     init {
         function = Function("get_${field.identifier}", d.namespace, field.type, null)
         function.field.putVar("field", field)
-        val thisObj = MCFPPType.parseFromIdentifier(Class.currClass!!.identifier, Class.currClass!!.field).build("this", function)
+        val thisObj = Class.currClass!!.getType().build("this", function)
         function.field.putVar("this",thisObj)
         function.owner = d
     }

@@ -12,6 +12,8 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 import java.io.Serializable
 import java.lang.Class
 import java.lang.reflect.Modifier
@@ -210,14 +212,25 @@ open class CompoundData : FieldContainer, Serializable {
                 val readOnlyType = mniRegister.readOnlyParams.map {
                     var qwq = it.split(" ", limit = 3)
                     if(qwq.size == 3) qwq = qwq.subList(1, 3)
-                    qwq[1] to MCFPPType.parseFromIdentifier(qwq[0], Namespace.currNamespaceField) to it.startsWith("static")
+                    val type = MCFPPType.parseFromIdentifier(qwq[0], Namespace.currNamespaceField)?: run {
+                        LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(qwq[0]))
+                        MCFPPBaseType.Any
+                    }
+                    qwq[1] to type to it.startsWith("static")
                 }
                 val normalType = mniRegister.normalParams.map {
                     var qwq = it.split(" ", limit = 3)
                     if(qwq.size == 3) qwq = qwq.subList(1, 3)
-                    qwq[1] to MCFPPType.parseFromIdentifier(qwq[0], Namespace.currNamespaceField) to it.startsWith("static")
+                    val type = MCFPPType.parseFromIdentifier(qwq[0], Namespace.currNamespaceField)?: run {
+                        LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(qwq[0]))
+                        MCFPPBaseType.Any
+                    }
+                    qwq[1] to type to it.startsWith("static")
                 }
-                val returnType = MCFPPType.parseFromIdentifier(mniRegister.returnType, Namespace.currNamespaceField)
+                val returnType = MCFPPType.parseFromIdentifier(mniRegister.returnType, Namespace.currNamespaceField)?: run {
+                    LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniRegister.returnType))
+                    MCFPPBaseType.Any
+                }
                 var exceptedParamCount = readOnlyType.size + normalType.size
                 if(returnType != MCFPPBaseType.Void){
                     exceptedParamCount++

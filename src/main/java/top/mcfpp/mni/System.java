@@ -5,6 +5,7 @@ import org.jetbrains.annotations.NotNull;
 import top.mcfpp.annotations.InsertCommand;
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.command.Command;
+import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.*;
 import top.mcfpp.lib.ScoreChatComponent;
 import top.mcfpp.model.function.Function;
@@ -46,7 +47,11 @@ public class System {
             //是确定的，直接输出数值
             Function.Companion.addCommand("tellraw @a " + varC.getValue());
         }else {
-            Function.Companion.addCommand("tellraw @a " + new ScoreChatComponent(var).toCommandPart());
+            if(var.getParent() != null){
+                Function.Companion.addCommands(Commands.INSTANCE.selectRun(var.getParent(), "tellraw @a " + new ScoreChatComponent(var).toCommandPart(), true));
+            }else {
+                Function.Companion.addCommand("tellraw @a " + new ScoreChatComponent(var).toCommandPart());
+            }
         }
     }
 

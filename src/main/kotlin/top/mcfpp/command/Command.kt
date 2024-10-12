@@ -54,6 +54,8 @@ open class Command {
     val isMacro: Boolean
         get() = commandParts.any { it is MacroPart }
 
+    constructor()
+
     /**
      * 创建一个新的命令，拥有一个固定的命令片段
      *
@@ -162,7 +164,7 @@ open class Command {
         if(isCompleted){
             throw CommandException("Try to prepend argument to a completed command")
         }
-        if(withBlank) commandParts.add(0,CommandPart(" "))
+        if(withBlank && commandParts.isNotEmpty()) commandParts.add(0,CommandPart(" "))
         commandParts.add(0, CommandPart(command))
     }
 
@@ -179,7 +181,7 @@ open class Command {
         for (c in command.commandParts){
             commandParts.add(0,c)
         }
-        if(withBlank) commandParts.add(0,CommandPart(" "))
+        if(withBlank && commandParts.isNotEmpty()) commandParts.add(0,CommandPart(" "))
         replacePoint.putAll(command.replacePoint)
     }
 
@@ -192,7 +194,7 @@ open class Command {
      * @return 构建后的命令
      */
     fun build(command: String, withBlank: Boolean = true) : Command{
-        if(withBlank) commandParts.add(CommandPart(" "))
+        if(withBlank && commandParts.isNotEmpty()) commandParts.add(CommandPart(" "))
         commandParts.add(CommandPart(command))
         return this
     }
@@ -204,7 +206,7 @@ open class Command {
      * @return 构建后的命令
      */
     fun build(command: Command, withBlank: Boolean = true): Command{
-        if(withBlank) commandParts.add(CommandPart(" "))
+        if(withBlank && commandParts.isNotEmpty()) commandParts.add(CommandPart(" "))
         for (kv in command.replacePoint){
             replacePoint[kv.key] = kv.value + commandParts.size
         }
@@ -220,7 +222,7 @@ open class Command {
      * @return 构建后的命令
      */
     fun build(command: String, pointID: String, withBlank: Boolean = true) : Command{
-        if(withBlank) commandParts.add(CommandPart(" "))
+        if(withBlank && commandParts.isNotEmpty()) commandParts.add(CommandPart(" "))
         replacePoint[pointID] = commandParts.size
         commandParts.add(CommandPart(command))
         return this

@@ -31,6 +31,8 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam.Companion.typeToStringList
 import top.mcfpp.model.generic.Generic
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 import kotlin.collections.ArrayList
 
@@ -134,7 +136,8 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             }else{
                 init.type.build(ctx.Identifier().text, Function.currFunction)
             }
-            //变量注册
+            `var`.nbtPath = NBTPath.getNormalStackPath(`var`)
+            //变量赋值
             `var` = `var`.assignedBy(init)
             //一定是函数变量
             if (!Function.field.putVar(ctx.Identifier().text, `var`, false)) {
@@ -153,10 +156,12 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                     }
                 }
             }
-            `var`.nbtPath = NBTPath.getNormalStackPath(`var`)
         }else{
             //获取类型
-            val type = MCFPPType.parseFromContext(ctx.type(), Function.currFunction.field)
+            val type = MCFPPType.parseFromContext(ctx.type(), Function.currFunction.field)?: run {
+                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
+                MCFPPBaseType.Any
+            }
             for (c in ctx.fieldDeclarationExpression()){
                 //函数变量，生成
                 var `var` = if(fieldModifier == "import"){
@@ -172,6 +177,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                     LogProcessor.error("Duplicate defined variable name:" + c.Identifier().text)
                 }
                 Function.addComment("field: " + ctx.type().text + " " + c.Identifier().text + if (c.expression() != null) " = " + c.expression().text else "")
+                `var`.nbtPath = NBTPath.getNormalStackPath(`var`)
                 //变量初始化
                 if (c.expression() != null) {
                     val init: Var<*> = MCFPPExprVisitor(if(type is MCFPPGenericClassType) type else null, if(type is MCFPPEnumType) type else null).visit(c.expression())!!
@@ -193,7 +199,6 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                     }
                 }
                 Function.field.putVar(`var`.identifier, `var`, true)
-                `var`.nbtPath = NBTPath.getNormalStackPath(`var`)
             }
         }
         return null
@@ -989,14 +994,15 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Project.ctx = ctx
         //获取类的对象
         val parent = ctx.parent
-        val identifier = if(parent is mcfppParser.ClassDeclarationContext){
-             parent.classWithoutNamespace().text
+        if(parent is mcfppParser.ClassDeclarationContext){
+            val identifier = parent.classWithoutNamespace().text
+            Class.currClass = GlobalField.getClass(Project.currNamespace, identifier)
         }else{
             parent as mcfppParser.ObjectClassDeclarationContext
-            parent.classWithoutNamespace().text
+            val identifier = parent.classWithoutNamespace().text
+            Class.currClass = GlobalField.getObject(Project.currNamespace, identifier) as ObjectClass
         }
         //设置作用域
-        Class.currClass = GlobalField.getClass(Project.currNamespace, identifier)
         Function.currFunction = Class.currClass!!.classPreInit
     }
 

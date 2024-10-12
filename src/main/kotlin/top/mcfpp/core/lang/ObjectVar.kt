@@ -29,7 +29,9 @@ class ObjectVar(override var value: CanSelectMember, identifier: String = UUID.r
     override fun getFromStack() {}
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        return value.getMemberVar(key, accessModifier)
+        return value.getMemberVar(key, accessModifier).apply {
+            parent = value
+        }
     }
 
     override fun getMemberFunction(

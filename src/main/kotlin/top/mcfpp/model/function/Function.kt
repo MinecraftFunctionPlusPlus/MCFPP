@@ -17,6 +17,8 @@ import top.mcfpp.model.*
 import top.mcfpp.model.field.FunctionField
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 import java.io.Serializable
 import java.lang.NullPointerException
 import java.lang.reflect.Method
@@ -440,7 +442,10 @@ open class Function : Member, FieldContainer, Serializable {
     protected fun parseParam(param: mcfppParser.ParameterContext) : Pair<FunctionParam,Var<*>>{
         //参数构建
         val param1 = FunctionParam(
-            MCFPPType.parseFromContext(param.type(), this.field),
+            MCFPPType.parseFromContext(param.type(), this.field)?: run {
+                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(param.type().text))
+                MCFPPBaseType.Any
+            },
             param.Identifier().text,
             this,
             param.STATIC() != null,
@@ -763,6 +768,10 @@ open class Function : Member, FieldContainer, Serializable {
         return if (ownerType == OwnerType.TEMPLATE) {
             owner as DataTemplate
         } else null
+    }
+
+    override fun toString(): String {
+        return toString(true, true)
     }
 
     /**

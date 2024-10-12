@@ -8,10 +8,10 @@ class ClassTest {
     fun defineTest(){
         val test =
             """
-                class Test{
+                class Test {
                     int i = 0;
                     
-                    constructor(){
+                    constructor() {
                         Test.id = Test.id + 1;
                         this.i = Test.id;
                     }
@@ -26,7 +26,7 @@ class ClassTest {
                     print(test.i);
                 }
             """.trimIndent()
-        MCFPPStringTest.readFromString(test)
+        MCFPPStringTest.readFromString(test, arrayOf("debug"))
     }
 
     @Test

@@ -99,12 +99,20 @@ class NBTPath(var source: NBTSource): Serializable {
                 cmd.build(" ", false)
             }
             when(path.value){
-                is MemberPath ->{
+                is MemberPath -> {
                     val value = path.value as MemberPath
-                    if(value.value is MCStringConcrete){
-                        cmd.build(".${(value.value as MCStringConcrete).value.value}", false)
+                    if(path.index == 0){
+                        if(value.value is MCStringConcrete){
+                            cmd.build((value.value as MCStringConcrete).value.value, true)
+                        }else{
+                            cmd.buildMacro(value.value, true)
+                        }
                     }else{
-                        cmd.build(".", false).buildMacro(value.value, false)
+                        if(value.value is MCStringConcrete){
+                            cmd.build(".${(value.value as MCStringConcrete).value.value}", false)
+                        }else{
+                            cmd.build(".", false).buildMacro(value.value, false)
+                        }
                     }
                 }
 

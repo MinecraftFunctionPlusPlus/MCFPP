@@ -8,6 +8,9 @@ import top.mcfpp.type.MCFPPGenericType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.field.SimpleFieldWithType
 import top.mcfpp.type.MCFPPConcreteType
+import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 
 /**
  * 函数的参数。用于函数声明的时候。
@@ -93,7 +96,10 @@ class FunctionParam(
             //解析只读参数
             params.readOnlyParams()?.let {
                 for (param in it.parameterList()?.parameter()?: emptyList()) {
-                    val type = MCFPPType.parseFromIdentifier(param.type().text, typeScope)
+                    val type = MCFPPType.parseFromIdentifier(param.type().text, typeScope)?: run {
+                        LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(param.type().text))
+                        MCFPPBaseType.Any
+                    }
                     r.add(type)
                     if(type == MCFPPConcreteType.Type){
                         typeScope.putType(param.Identifier().text, MCFPPGenericType(param.Identifier().text, listOf(MCFPPBaseType.Any)))
@@ -101,7 +107,10 @@ class FunctionParam(
                 }
             }
             for (param in (params.normalParams().parameterList()?.parameter()?: emptyList())) {
-                n.add(MCFPPType.parseFromIdentifier(param.type().text, typeScope))
+                n.add(MCFPPType.parseFromIdentifier(param.type().text, typeScope)?: run {
+                    LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(param.type().text))
+                    MCFPPBaseType.Any
+                })
             }
             return r to n
         }
@@ -110,7 +119,10 @@ class FunctionParam(
             val n = ArrayList<MCFPPType>()
             val typeScope = SimpleFieldWithType()
             for (param in (params.parameterList()?.parameter()?: emptyList())) {
-                n.add(MCFPPType.parseFromIdentifier(param.type().text, typeScope))
+                n.add(MCFPPType.parseFromIdentifier(param.type().text, typeScope)?: run {
+                    LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(param.type().text))
+                    MCFPPBaseType.Any
+                })
             }
             return n
         }

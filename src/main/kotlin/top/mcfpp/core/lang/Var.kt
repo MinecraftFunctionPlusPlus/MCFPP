@@ -46,8 +46,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
     var stackIndex: Int = 0
         set(value) {
             field = value
-            if(nbtPath == null) return
-            for (p in nbtPath!!.pathList){
+            for (p in nbtPath.pathList){
                 if(p is MemberPath && p.value is MCStringConcrete && stackFrameRegex.matches((p.value as MCStringConcrete).value.value)){
                     p.value = MCStringConcrete(StringTag("stack_frame[$stackIndex]"))
                 }
@@ -86,6 +85,11 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
      * 这个变量是否是编译器编译错误的时候生成的用于保证编译器正常运行的变量
      */
     var isError = false
+
+    /**
+     * 这个变量是否是运行时动态的
+     */
+    var isDynamic = false
 
     /**
      * 在mc中的路径
@@ -163,6 +167,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
      * @param b 变量的对象
      * 
      */
+    @Suppress("UNCHECKED_CAST")
     fun assignedBy(b: Var<*>): Self {
         var v = b.implicitCast(this.type)
         if(v.isError){
@@ -170,8 +175,13 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
         }
         hasAssigned = true
         val re = doAssignedBy(v)
+        re.isDynamic = isDynamic
         if(stackIndex != 0) trackLost = true
-        return re
+        return if(re is MCFPPValue<*> && re.isDynamic){
+            re.toDynamic(false) as Self
+        }else {
+            re
+        }
     }
 
     /**
@@ -263,15 +273,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
             }else a
             //是成员
             //类的成员是运行时动态的
-            val final = when(val parent = parent){
-                is ClassPointer -> {
-                    Commands.selectRun(parent)
-                }
-                is ObjectClass -> {
-                    arrayOf(Command.build("execute as ${parent.uuid} run "))
-                }
-                else -> TODO()
-            }
+            val final = Commands.selectRun(parent!!)
             return if (b is MCFPPValue<*>) {
                 ifThisIsClassMemberAndAIsConcrete(b, final)
             } else {
@@ -284,15 +286,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
             } else {
                 if(a.parentClass() != null){
                     //是成员
-                    val final = when(val parent = a.parent){
-                        is ClassPointer -> {
-                            Commands.selectRun(parent)
-                        }
-                        is ObjectClass -> {
-                            arrayOf(Command.build("execute as ${parent.uuid}").build("run","run"))
-                        }
-                        else -> TODO()
-                    }
+                    val final = Commands.selectRun(a.parent!!)
                     return ifThisIsNormalVarAndAIsClassMember(a, final)
                 }else{
                     return ifThisIsNormalVarAndAIsNotConcrete(a, emptyArray())

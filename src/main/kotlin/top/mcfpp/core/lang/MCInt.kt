@@ -61,12 +61,10 @@ open class MCInt : MCNumber<Int> {
             is CommandReturn -> {
                 if(parentClass() != null){
                     Function.addCommands(
-                        Commands.selectRun(parent!!, Command("store result score @s $sbObject run").build(b.command), false)
+                        Commands.selectRun(parent!!, b.command, false)
                     )
                 }else{
-                    Function.addCommand(
-                        Command.build("execute store result score $name $sbObject run").build(b.command)
-                    )
+                    Function.addCommand(b.command)
                 }
                 MCInt(this)
             }

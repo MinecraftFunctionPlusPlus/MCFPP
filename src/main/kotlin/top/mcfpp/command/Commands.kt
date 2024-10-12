@@ -98,7 +98,7 @@ object Commands {
      * @return 生成的命令
      */
     fun sbPlayerSet(a: MCInt, value: Int): Command {
-        return Command.build("scoreboard players set ")
+        return Command.build("scoreboard players set")
             .build(a.name,a.name)
             .build(a.sbObject.toString(),a.sbObject.toString())
             .build(value.toString())
@@ -180,6 +180,7 @@ object Commands {
                 }
                 qwq
             }
+            is ObjectVar -> selectRun(a.value, command, hasExecuteRun)
             is MCFPPClassType -> {
                 if(hasExecuteRun){
                     arrayOf(Command.build("execute as ${(a.cls as ObjectClass).uuid} run").build(command))
@@ -204,7 +205,7 @@ object Commands {
         val final = when(a){
             is ClassPointer -> {
                 if(a.identifier == "this"){
-                    return arrayOf(Command.build(""))
+                    return arrayOf(Command())
                 }
                 val qwq = arrayOf(
                     Command.build("data modify storage entity ${ClassPointer.tempItemEntityUUID} Thrower set from storage mcfpp:system ${Project.config.rootNamespace}.stack_frame[${a.stackIndex}].${a.identifier}"),
@@ -215,9 +216,10 @@ object Commands {
                 }
                 qwq
             }
+            is ObjectVar -> selectRun(a.value, hasExecuteRun)
             is MCFPPClassType -> {
                 if(hasExecuteRun){
-                    arrayOf(Command.build("execute as ${(a.cls as ObjectClass).uuid} run"))
+                    arrayOf(Command.build("execute as ${(a.cls as ObjectClass).uuid}").build("run", "run"))
                 }else{
                     arrayOf(Command.build("execute as ${(a.cls as ObjectClass).uuid}"))
                 }

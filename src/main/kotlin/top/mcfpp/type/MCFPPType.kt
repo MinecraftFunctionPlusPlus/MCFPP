@@ -20,8 +20,11 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.core.lang.UnknownVar
+import top.mcfpp.lib.TranslatableChatComponent
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 
 /**
  * 所有类型的接口
@@ -291,7 +294,7 @@ open class MCFPPType(
         /**
          * 根据类型标识符中获取一个类型
          */
-        fun parseFromIdentifier(identifier: String, typeScope: IFieldWithType): MCFPPType {
+        fun parseFromIdentifier(identifier: String, typeScope: IFieldWithType): MCFPPType? {
             if(identifier.contains("<")){
                 val charStream: CharStream = CharStreams.fromString("int")
                 val tokens = CommonTokenStream(mcfppLexer(charStream))
@@ -303,7 +306,10 @@ open class MCFPPType(
             }
             if(genericTypeCache.contains(identifier)){
                 val genericParams = identifier.substring(identifier.indexOfFirst { it == '<' }+1,identifier.indexOfLast { it == '>' }).split(',')
-                return genericTypeCache[identifier]!!(genericParams.map { parseFromIdentifier(it, typeScope) }.toTypedArray())
+                return genericTypeCache[identifier]!!(genericParams.map { parseFromIdentifier(it, typeScope)?: run {
+                    LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(it))
+                    MCFPPBaseType.Any
+                } }.toTypedArray())
             }
             //类和模板
             //正则匹配
@@ -346,11 +352,10 @@ open class MCFPPType(
             if(typeScope.containType(identifier)){
                 return typeScope.getType(identifier)!!
             }
-            LogProcessor.warn("Unknown type: $identifier")
-            return MCFPPBaseType.Any
+            return null
         }
 
-        fun parseFromContext(ctx: mcfppParser.TypeContext, typeScope: IFieldWithType): MCFPPType {
+        fun parseFromContext(ctx: mcfppParser.TypeContext, typeScope: IFieldWithType): MCFPPType? {
             if(ctx.normalType() != null){
                 return typeCache[ctx.text]!!
             }
@@ -360,7 +365,10 @@ open class MCFPPType(
             }
             //list类型
             if(ctx.LIST() != null){
-                return MCFPPListType(parseFromContext(ctx.type(), typeScope))
+                return MCFPPListType(parseFromContext(ctx.type(), typeScope)?: run {
+                    LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
+                    MCFPPBaseType.Any
+                })
             }
             //自定义类型
             if(ctx.className() != null){
@@ -391,8 +399,7 @@ open class MCFPPType(
             if(typeScope.containType(ctx.text)){
                 return typeScope.getType(ctx.text)!!
             }
-            LogProcessor.warn("Unknown type: ${ctx.text}")
-            return MCFPPBaseType.Any
+            return null
         }
 
     }

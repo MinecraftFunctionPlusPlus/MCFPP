@@ -16,7 +16,7 @@ class FunctionMutator(field: Var<*>, d: CompoundData): AbstractMutator(field) {
         function.field.putVar("field", field)
         function.appendNormalParam(field.type, "value")
         function.field.putVar("value", field.type.build("value"))
-        val thisObj = MCFPPType.parseFromIdentifier(Class.currClass!!.identifier, Class.currClass!!.field).build("this", function)
+        val thisObj = Class.currClass!!.getType().build("this", function)
         function.field.putVar("this",thisObj)
         function.owner = d
     }

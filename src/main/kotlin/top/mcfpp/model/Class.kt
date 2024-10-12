@@ -2,12 +2,14 @@ package top.mcfpp.model
 
 import top.mcfpp.Project
 import top.mcfpp.core.lang.ClassPointer
+import top.mcfpp.lib.NBTPath
 import top.mcfpp.type.MCFPPClassType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.ClassConstructor
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.generic.GenericClass
+import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.util.LogProcessor
 
 /**
@@ -96,7 +98,7 @@ open class Class : CompoundData {
 
     fun getConstructorByString(normalParams: List<String>): ClassConstructor?{
         return getConstructorByType(
-            ArrayList(normalParams.map { MCFPPType.parseFromIdentifier(it, field) })
+            ArrayList(normalParams.map { MCFPPType.parseFromIdentifier(it, field)?: MCFPPBaseType.Any })
         )
     }
 
@@ -130,12 +132,14 @@ open class Class : CompoundData {
      * 创建这个类的一个指针
      * @return 创建的指针
      */
-    open fun newInstance(): ClassPointer {
+    open fun newPointer(): ClassPointer {
         if (isAbstract) {
             LogProcessor.error("Abstract classes cannot be instantiated: $identifier")
         }
         //创建实例
-        return ClassPointer(this, "init")
+        return ClassPointer(this, "init").apply {
+            nbtPath = NBTPath.temp.memberIndex("init")
+        }
     }
 
     /**
