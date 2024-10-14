@@ -58,21 +58,44 @@ class NativeFunction : Function, Native {
     }
 
     override fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?): Var<*> {
-        invoke(ArrayList(), normalArgs, caller)
+        return invoke(ArrayList(), normalArgs, caller)
+    }
+
+    fun invoke(readOnlyArgs: ArrayList<Var<*>>, normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?): Var<*> {
+        val valueWrapper = ValueWrapper(returnVar)
+        val list = argPass(readOnlyArgs, normalArgs)
+        //一定是静态的
+        try {
+            javaMethod.invoke(null,
+                *list.toTypedArray(),
+                *if(this.caller != "void") arrayOf(caller) else emptyArray(),
+                *if(this.returnType != MCFPPBaseType.Void) arrayOf(valueWrapper) else emptyArray()
+            )
+        }catch (e: Exception){
+            LogProcessor.error("Error when invoking native function: ${this.identifier}")
+            e.printStackTrace()
+        }
+        returnVar = valueWrapper.value
         return returnVar
     }
 
-    @Override
-    fun invoke(readOnlyArgs: ArrayList<Var<*>>, normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?) {
-        val valueWrapper = ValueWrapper(returnVar)
-        //一定是静态的
-        javaMethod.invoke(null,
-            *readOnlyArgs.toTypedArray(),
-            *normalArgs.toTypedArray(),
-            *if(this.caller != "void") arrayOf(caller) else emptyArray(),
-            *if(this.returnType != MCFPPBaseType.Void) arrayOf(valueWrapper) else emptyArray()
-        )
-        returnVar = valueWrapper.value
+    private fun argPass(readOnlyArgs: ArrayList<Var<*>>, normalArgs: ArrayList<Var<*>>): ArrayList<Var<*>>{
+        val list = ArrayList<Var<*>>()
+        for (index in readOnlyParams.indices){
+            if(index < readOnlyArgs.size){
+                list.add(readOnlyArgs[index].implicitCast(readOnlyParams[index].type))
+            }else{
+                list.add(readOnlyParams[index].defaultVar!!.clone())
+            }
+        }
+        for (index in normalParams.indices){
+            if(index < normalArgs.size){
+                list.add(normalArgs[index].implicitCast(normalParams[index].type))
+            }else{
+                list.add(normalParams[index].defaultVar!!.clone())
+            }
+        }
+        return list
     }
 
     fun appendReadOnlyParam(type: MCFPPType, identifier: String, isStatic: Boolean = false) : NativeFunction {

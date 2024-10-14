@@ -37,12 +37,12 @@ class ClassTest {
                     int i {
                         get {
                             print("get i");
-                            return this.i;
+                            return field;
                         }
                         
                         set {
                             print("set i");
-                            this.i = value;
+                            field = value;
                         }
                     };
                     
@@ -56,7 +56,7 @@ class ClassTest {
                     int k {
                         set {
                             print("set k");
-                            this.k = value;
+                            field = value;
                         }
                     };
                 }
