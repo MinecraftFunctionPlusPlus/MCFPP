@@ -45,14 +45,10 @@ class MCFPPListType(
         get() = NBTList.data
 
     override val typeName: String
-        get() = "list[${generic.typeName}]"
+        get() = "list<${generic.typeName}>"
 
     override val nbtType: java.lang.Class<out Tag<*>>
         get() = ListTag::class.java
-
-    companion object{
-        val regex = Regex("^list\\(.+\\)$") //TODO：这个不一定能匹配得到嵌套的内容！
-    }
 
     override fun build(identifier: String, container: FieldContainer): Var<*> = NBTListConcrete(container, ArrayList(), identifier, generic)
     override fun build(identifier: String): Var<*> = NBTListConcrete(ArrayList(), identifier, generic)

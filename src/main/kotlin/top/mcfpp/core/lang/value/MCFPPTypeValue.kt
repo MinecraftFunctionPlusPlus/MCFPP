@@ -1,7 +1,7 @@
 package top.mcfpp.core.lang.value
 
 import top.mcfpp.core.lang.Var
-import top.mcfpp.type.MCFPPGenericType
+import top.mcfpp.type.MCFPPGenericParamType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
@@ -31,8 +31,8 @@ class MCTypeValue(
         TODO("Not yet implemented")
     }
 
-    fun toType(): MCFPPGenericType {
-        return MCFPPGenericType(identifier,parentType)
+    fun toType(): MCFPPGenericParamType {
+        return MCFPPGenericParamType(identifier,parentType)
     }
 
     override fun clone(): MCTypeValue {

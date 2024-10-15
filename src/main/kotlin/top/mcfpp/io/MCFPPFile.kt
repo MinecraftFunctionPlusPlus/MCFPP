@@ -104,7 +104,6 @@ class MCFPPFile(path : String) : File(path) {
         //创建默认函数
         val func = Function(
             StringHelper.toLowerCase(nameWithoutExtension + "_default"), Project.currNamespace,
-            MCFPPBaseType.Void,
             context = null
         )
         Function.currFunction = func

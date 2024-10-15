@@ -12,7 +12,8 @@ class FunctionMutator(field: Var<*>, d: CompoundData): AbstractMutator(field) {
     val function: Function
 
     init {
-        function = Function("set_${field.identifier}", d.namespace, field.type, null)
+        function = Function("set_${field.identifier}", d.namespace, null)
+        function.returnType = field.type
         function.field.putVar("field", field)
         function.appendNormalParam(field.type, "value")
         function.field.putVar("value", field.type.build("value"))

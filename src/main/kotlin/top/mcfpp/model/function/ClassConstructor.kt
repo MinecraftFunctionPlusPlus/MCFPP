@@ -30,7 +30,7 @@ open class ClassConstructor
         val thisObj = ClassPointer(target,"this")
         thisObj.identifier = "this"
         field.putVar("this",thisObj)
-        leadFunction = Function(this.identifier + "_lead",this.namespace, MCFPPBaseType.Void, context = null)
+        leadFunction = Function(this.identifier + "_lead",this.namespace, context = null)
         target.field.addFunction(leadFunction,false)
     }
 

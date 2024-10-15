@@ -4,6 +4,7 @@ import top.mcfpp.Project
 import top.mcfpp.core.lang.Var
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.lib.SbObject
+import top.mcfpp.mni.DataObjectData
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.mni.MinecraftData
 import top.mcfpp.mni.annotation.ConcreteOnly
@@ -81,9 +82,9 @@ object GlobalField : FieldContainer, IField {
         stdNamespaces["mcfpp.minecraft"] = Namespace("mcfpp.minecraft")
         stdNamespaces["mcfpp.annotation"] = Namespace("mcfpp.annotation")
 
-        Project.mcfppTick = Function("tick","mcfpp", MCFPPBaseType.Void, context = null)
-        Project.mcfppLoad = Function("load","mcfpp", MCFPPBaseType.Void, context = null)
-        Project.mcfppInit = Function("init", "mcfpp", MCFPPBaseType.Void, context = null)
+        Project.mcfppTick = Function("tick","mcfpp", context = null)
+        Project.mcfppLoad = Function("load","mcfpp", context = null)
+        Project.mcfppInit = Function("init", "mcfpp", context = null)
         stdNamespaces["mcfpp"]!!.field.addFunction(Project.mcfppLoad,true)
         stdNamespaces["mcfpp"]!!.field.addFunction(Project.mcfppTick,true)
         stdNamespaces["mcfpp"]!!.field.addFunction(Project.mcfppInit, true)
@@ -93,6 +94,7 @@ object GlobalField : FieldContainer, IField {
         functionTags["minecraft:load"]!!.functions.add(Project.mcfppInit)
 
         stdNamespaces["mcfpp.lang"]!!.field.addTemplate("DataObject", DataTemplate.baseDataTemplate)
+        DataTemplate.baseDataTemplate.getNativeFromClass(DataObjectData::class.java)
         stdNamespaces["mcfpp.lang"]!!.field.addClass("Object", Class.baseClass)
 
         stdNamespaces["mcfpp.minecraft"]!!.getNativeFunctionFromClass(MinecraftData::class.java)
@@ -256,7 +258,7 @@ object GlobalField : FieldContainer, IField {
         if(namespace == null){
             var template: DataTemplate?
             //命名空间为空，从全局寻找
-            template = localNamespaces[Project.currNamespace]!!.field.getTemplate(identifier)
+            template = localNamespaces[Project.currNamespace]?.field?.getTemplate(identifier)
             if(template != null) return template
             for (nsp in importedLibNamespaces.values){
                 template = nsp.field.getTemplate(identifier)

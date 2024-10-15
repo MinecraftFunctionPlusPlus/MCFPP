@@ -4,7 +4,7 @@ import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.DataTemplateObject
 import top.mcfpp.core.lang.Var
 import top.mcfpp.type.MCFPPBaseType
-import top.mcfpp.type.MCFPPGenericType
+import top.mcfpp.type.MCFPPGenericParamType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.field.SimpleFieldWithType
 import top.mcfpp.type.MCFPPConcreteType
@@ -102,7 +102,7 @@ class FunctionParam(
                     }
                     r.add(type)
                     if(type == MCFPPConcreteType.Type){
-                        typeScope.putType(param.Identifier().text, MCFPPGenericType(param.Identifier().text, listOf(MCFPPBaseType.Any)))
+                        typeScope.putType(param.Identifier().text, MCFPPGenericParamType(param.Identifier().text, listOf(MCFPPBaseType.Any)))
                     }
                 }
             }

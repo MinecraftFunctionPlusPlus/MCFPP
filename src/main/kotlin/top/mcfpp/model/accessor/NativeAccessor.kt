@@ -15,7 +15,8 @@ class NativeAccessor(javaRefer: String, d: CompoundData, field: Var<*>): Abstrac
     val function: NativeFunction
 
     init {
-        function = NativeFunction("get_${field.identifier}", field.type, d.namespace)
+        function = NativeFunction("get_${field.identifier}", d.namespace)
+        function.returnType = field.type
         function.field.putVar("field", field)
         function.owner = d
         try {

@@ -30,7 +30,7 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
      * 创建一个函数
      * @param name 函数的标识符
      */
-    constructor(name: String, owner: CompoundData, namespace: String = Project.currNamespace, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext):super(name, owner, namespace, returnType, ctx)
+    constructor(name: String, owner: CompoundData, namespace: String = Project.currNamespace, ctx: mcfppParser.FunctionBodyContext):super(name, owner, namespace, ctx)
     override fun invoke(readOnlyArgs: ArrayList<Var<*>>, normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?): Var<*> {
         val f = compile(readOnlyArgs)
         return f.invoke(normalArgs, caller)
@@ -65,20 +65,21 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
         //创建新的函数
         val compiledFunction : ExtensionFunction = when(ownerType){
             Companion.OwnerType.CLASS -> {
-                ExtensionFunction("${identifier}_${index}", owner as Class, namespace, returnType, ctx)
+                ExtensionFunction("${identifier}_${index}", owner as Class, namespace, ctx)
             }
             //TODO Template的拓展方法好像还没做欸
             Companion.OwnerType.TEMPLATE -> {
                 TODO()
             }
             Companion.OwnerType.BASIC -> {
-                ExtensionFunction("${identifier}_${index}", owner as CompoundData, namespace, returnType, ctx)
+                ExtensionFunction("${identifier}_${index}", owner as CompoundData, namespace, ctx)
             }
             else -> {
                 //拓展函数必定有成员
                 throw Exception()
             }
         }
+        compiledFunction.returnType = returnType
         //传递普通参数
         for (i in normalParams.indices) {
             val r = field.getVar(normalParams[i].identifier)!!

@@ -9,6 +9,7 @@ import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.model.accessor.SimpleAccessor
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Native
+import top.mcfpp.type.MCFPPNotCompiledGenericType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.ValueWrapper
 import java.lang.Void
@@ -41,7 +42,7 @@ class NativeFunction : Function, Native {
 
     val readOnlyParams: ArrayList<FunctionParam> = ArrayList()
 
-    var caller: String = "void"
+    var caller: MCFPPType = MCFPPBaseType.Void
 
     /**
      * 通过一个java方法来构造一个NativeFunction，同时手动指定mcfpp方法的名字
@@ -51,7 +52,7 @@ class NativeFunction : Function, Native {
      * @param returnType 返回值的类型
      * @param namespace 命名空间
      */
-    constructor(name: String, returnType: MCFPPType, namespace: String = Project.currNamespace, javaMethod: Method = Companion::defaultNativeFunction.javaMethod!!) : super(name, namespace, returnType, context = null) {
+    constructor(name: String, namespace: String = Project.currNamespace, javaMethod: Method = Companion::defaultNativeFunction.javaMethod!!) : super(name, namespace, context = null) {
         this.javaMethod = javaMethod
         this.javaClassName = null
         this.javaMethodName = name
@@ -68,7 +69,7 @@ class NativeFunction : Function, Native {
         try {
             javaMethod.invoke(null,
                 *list.toTypedArray(),
-                *if(this.caller != "void") arrayOf(caller) else emptyArray(),
+                *if(this.caller != MCFPPBaseType.Void) arrayOf(caller) else emptyArray(),
                 *if(this.returnType != MCFPPBaseType.Void) arrayOf(valueWrapper) else emptyArray()
             )
         }catch (e: Exception){
@@ -82,6 +83,10 @@ class NativeFunction : Function, Native {
     private fun argPass(readOnlyArgs: ArrayList<Var<*>>, normalArgs: ArrayList<Var<*>>): ArrayList<Var<*>>{
         val list = ArrayList<Var<*>>()
         for (index in readOnlyParams.indices){
+            if(readOnlyParams[index].type is MCFPPNotCompiledGenericType){
+                list.add(readOnlyArgs[index])
+                continue
+            }
             if(index < readOnlyArgs.size){
                 list.add(readOnlyArgs[index].implicitCast(readOnlyParams[index].type))
             }else{
@@ -89,6 +94,10 @@ class NativeFunction : Function, Native {
             }
         }
         for (index in normalParams.indices){
+            if(normalParams[index].type is MCFPPNotCompiledGenericType){
+                list.add(normalArgs[index])
+                continue
+            }
             if(index < normalArgs.size){
                 list.add(normalArgs[index].implicitCast(normalParams[index].type))
             }else{
@@ -104,7 +113,8 @@ class NativeFunction : Function, Native {
     }
 
     fun replaceGenericParams(genericParams: Map<String, MCFPPType>) : NativeFunction{
-        val n = NativeFunction(this.identifier, this.returnType, this.namespace, this.javaMethod)
+        val n = NativeFunction(this.identifier, this.namespace, this.javaMethod)
+        n.returnType = this.returnType
         for(np in normalParams){
             if(genericParams[np.typeIdentifier] != null){
                 n.appendNormalParam(genericParams[np.typeIdentifier]!!, np.identifier, np.isStatic)

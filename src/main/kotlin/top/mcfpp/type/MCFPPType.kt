@@ -247,6 +247,13 @@ open class MCFPPType(
             "ImmutableList" to {generic: Array<MCFPPType> -> MCFPPImmutableListType(generic[0])},
         )
 
+        private val genericTypeClassCache = mutableMapOf(
+            "list" to MCFPPListType::class,
+            "dict" to MCFPPDictType::class,
+            "map" to MCFPPMapType::class,
+            "ImmutableList" to MCFPPImmutableListType::class,
+        )
+
         val baseType:Set<MCFPPType> = setOf(
             MCFPPBaseType.Void,
             MCFPPEntityType.Entity,
@@ -296,7 +303,7 @@ open class MCFPPType(
          */
         fun parseFromIdentifier(identifier: String, typeScope: IFieldWithType): MCFPPType? {
             if(identifier.contains("<")){
-                val charStream: CharStream = CharStreams.fromString("int")
+                val charStream: CharStream = CharStreams.fromString(identifier)
                 val tokens = CommonTokenStream(mcfppLexer(charStream))
                 val parser = mcfppParser(tokens)
                 return parseFromContext(parser.type(), typeScope)
@@ -305,11 +312,8 @@ open class MCFPPType(
                 return typeCache[identifier]!!
             }
             if(genericTypeCache.contains(identifier)){
-                val genericParams = identifier.substring(identifier.indexOfFirst { it == '<' }+1,identifier.indexOfLast { it == '>' }).split(',')
-                return genericTypeCache[identifier]!!(genericParams.map { parseFromIdentifier(it, typeScope)?: run {
-                    LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(it))
-                    MCFPPBaseType.Any
-                } }.toTypedArray())
+                //未被解析的泛型
+                return MCFPPNotCompiledGenericType(genericTypeClassCache[identifier]!!)
             }
             //类和模板
             //正则匹配

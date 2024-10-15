@@ -62,10 +62,10 @@ data ItemStackCompoundPredicate {
 }
 
 data ItemStackPredicate {
-    dict<string, ItemComponent>? components;
+    dict<ItemComponent>? components;
     (int | IntRange)? count;
     (string | list<string>?) items;
-    dict<string, nbt>? predicates;
+    dict<nbt>? predicates;
 }
 
 data ItemStackCountPredicate {

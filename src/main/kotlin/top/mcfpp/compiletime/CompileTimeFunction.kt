@@ -9,7 +9,7 @@ import top.mcfpp.model.field.IField
 import kotlin.collections.ArrayList
 
 class CompileTimeFunction : Function {
-    constructor(name:String, namespace:String, returnType: MCFPPType, context:mcfppParser.FunctionBodyContext):super(name,namespace,returnType, context)
+    constructor(name:String, namespace:String, context:mcfppParser.FunctionBodyContext):super(name,namespace, context)
 
     fun setField(parent: IField){
         this.field = CompileTimeFunctionField(parent,this)

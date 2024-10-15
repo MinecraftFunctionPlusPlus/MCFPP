@@ -13,7 +13,7 @@ open class ExtensionFunction: Function {
      * 创建一个函数
      * @param name 函数的标识符
      */
-    constructor(name: String, owner: CompoundData, namespace: String = Project.currNamespace, returnType: MCFPPType = MCFPPBaseType.Void, context: FunctionBodyContext):super(name, namespace, returnType, context){
+    constructor(name: String, owner: CompoundData, namespace: String = Project.currNamespace, context: FunctionBodyContext):super(name, namespace, context){
         this.owner = owner
     }
 

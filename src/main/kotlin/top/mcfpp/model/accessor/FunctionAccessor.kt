@@ -13,7 +13,8 @@ class FunctionAccessor(field: Var<*>, d: CompoundData): AbstractAccessor(field) 
     var function: Function
 
     init {
-        function = Function("get_${field.identifier}", d.namespace, field.type, null)
+        function = Function("get_${field.identifier}", d.namespace, null)
+        function.returnType = field.type
         function.field.putVar("field", field)
         val thisObj = Class.currClass!!.getType().build("this", function)
         function.field.putVar("this",thisObj)

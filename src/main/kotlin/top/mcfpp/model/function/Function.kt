@@ -103,14 +103,22 @@ open class Function : Member, FieldContainer, Serializable {
      * @see InternalFunction
      */
     /**
-     * 函数的返回变量
-     */
-    var returnVar: Var<*>
-
-    /**
      * 函数的返回类型
      */
-    var returnType : MCFPPType
+    var returnType : MCFPPType = MCFPPBaseType.Void
+        set(value) {
+            field = value
+            if(field is UnresolvedType){
+                returnVar = UnknownVar("return")
+            }else{
+                returnVar = buildReturnVar(field)
+            }
+        }
+
+    /**
+     * 函数的返回变量
+     */
+    var returnVar: Var<*> = buildReturnVar(returnType)
 
     /**
      * 包含所有命令的列表
@@ -308,7 +316,7 @@ open class Function : Member, FieldContainer, Serializable {
      * @param identifier 函数的标识符
      * @param namespace 函数的命名空间
      */
-    constructor(identifier: String, namespace: String = Project.currNamespace, returnType: MCFPPType = MCFPPBaseType.Void, context: FunctionBodyContext?){
+    constructor(identifier: String, namespace: String = Project.currNamespace, context: FunctionBodyContext?){
         this.identifier = identifier
         commands = CommandList()
         normalParams = ArrayList()
@@ -316,12 +324,6 @@ open class Function : Member, FieldContainer, Serializable {
         isStatic = false
         ownerType = OwnerType.NONE
         this.namespace = namespace
-        this.returnType = returnType
-        if(returnType is UnresolvedType){
-            this.returnVar = UnknownVar("return")
-        }else{
-            this.returnVar = buildReturnVar(returnType)
-        }
         this.ast = context
     }
 
@@ -329,7 +331,7 @@ open class Function : Member, FieldContainer, Serializable {
      * 创建一个函数，并指定它所属的类。
      * @param identifier 函数的标识符
      */
-    constructor(identifier: String, cls: Class, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void, context: FunctionBodyContext?) {
+    constructor(identifier: String, cls: Class, isStatic: Boolean, context: FunctionBodyContext?) {
         this.identifier = identifier
         commands = CommandList()
         normalParams = ArrayList()
@@ -338,8 +340,6 @@ open class Function : Member, FieldContainer, Serializable {
         owner = cls
         this.isStatic = isStatic
         field = FunctionField(cls.field, this)
-        this.returnType = returnType
-        this.returnVar = buildReturnVar(returnType)
         this.ast = context
     }
 
@@ -347,7 +347,7 @@ open class Function : Member, FieldContainer, Serializable {
      * 创建一个函数，并指定它所属的接口。接口的函数总是抽象并且公开的
      * @param identifier 函数的标识符
      */
-    constructor(identifier: String, itf: Interface, returnType: MCFPPType = MCFPPBaseType.Void, context: FunctionBodyContext?) {
+    constructor(identifier: String, itf: Interface, context: FunctionBodyContext?) {
         this.identifier = identifier
         commands = CommandList()
         normalParams = ArrayList()
@@ -357,8 +357,6 @@ open class Function : Member, FieldContainer, Serializable {
         owner = itf
         this.isStatic = false
         field = FunctionField(null,this)
-        this.returnType = returnType
-        this.returnVar = buildReturnVar(returnType)
         this.isAbstract = true
         this.accessModifier = Member.AccessModifier.PUBLIC
         this.ast = context
@@ -368,7 +366,7 @@ open class Function : Member, FieldContainer, Serializable {
      * 创建一个函数，并指定它所属的结构体。
      * @param name 函数的标识符
      */
-    constructor(name: String, template: DataTemplate, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void, context: FunctionBodyContext?) {
+    constructor(name: String, template: DataTemplate, isStatic: Boolean, context: FunctionBodyContext?) {
         this.identifier = name
         commands = CommandList()
         normalParams = ArrayList()
@@ -382,6 +380,7 @@ open class Function : Member, FieldContainer, Serializable {
         this.ast = context
     }
 
+    @Suppress("UNCHECKED_CAST")
     constructor(function: Function){
         this.identifier = function.identifier
         this.commands = function.commands.clone() as CommandList

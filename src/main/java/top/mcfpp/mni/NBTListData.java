@@ -36,7 +36,7 @@ public class NBTListData {
     }
 
 
-    @MNIFunction(normalParams = {"E e"}, caller = "list<E>")
+    @MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E")
     public static void add(Var<?> e, NBTList caller){
         if(e instanceof MCFPPValue<?>){
             //e是确定的
@@ -81,7 +81,7 @@ public class NBTListData {
         }
     }
 
-    @MNIFunction(normalParams = {"list<E> list"}, caller = "list<E>")
+    @MNIFunction(normalParams = {"list<E> list"}, caller = "list", genericType = "E")
     public static void addAll(@NotNull NBTList list, NBTList caller){
         String command;
         NBTBasedData l;
@@ -111,7 +111,7 @@ public class NBTListData {
         Function.Companion.addCommand(command);
     }
 
-    @MNIFunction(normalParams = {"int index, E e"}, caller = "list<E>")
+    @MNIFunction(normalParams = {"int index, E e"}, caller = "list", genericType = "E")
     public static void insert(MCInt index, Var<?> e, NBTList caller){
         if(e instanceof MCFPPValue<?> && (MCInt)index instanceof MCIntConcrete indexC){
             //都是确定的
@@ -210,7 +210,7 @@ public class NBTListData {
     //    throw new NotImplementedError();
     //}
 
-    @MNIFunction(normalParams = {"int index"}, caller = "list<E>")
+    @MNIFunction(normalParams = {"int index"}, caller = "list", genericType = "E")
     public static void removeAt(MCInt index, NBTList caller){
         if(index instanceof MCIntConcrete){
             int i = ((MCIntConcrete) index).getValue();
@@ -243,7 +243,7 @@ public class NBTListData {
         }
     }
 
-    @MNIFunction(normalParams = {"E e"}, caller = "list<E>", returnType = "int")
+    @MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E", returnType = "int")
     public static void indexOf(@NotNull Var<?> e, NBTList caller, ValueWrapper<MCInt> returnVar){
         var n = e.toNBTVar();
         element.assignedBy(n);
@@ -265,7 +265,7 @@ public class NBTListData {
         returnVar.setValue(index);
     }
 
-    @MNIFunction(normalParams = {"E e"}, caller = "list<E>", returnType = "bool")
+    @MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E", returnType = "bool")
     public static void contains(Var<?> e, NBTList caller, ValueWrapper<MCBool> returnVar){
         var n = e.toNBTVar();
         element.assignedBy(n);
@@ -276,7 +276,7 @@ public class NBTListData {
         returnVar.setValue(contains);
     }
 
-    @MNIFunction(caller = "list<E>")
+    @MNIFunction(caller = "list", genericType = "E")
     public static void clear(NBTList caller){
         caller.assignedBy(NBTListConcrete.Companion.getEmpty());
     }

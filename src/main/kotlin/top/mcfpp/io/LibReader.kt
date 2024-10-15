@@ -117,7 +117,9 @@ object FunctionReader: ILibJsonReader<Function> {
         if(jsonObject.containsKey("javaMethod")){
             //Native函数
             val data = NativeFunction.stringToMethod(jsonObject.getString("javaMethod"))
-            val r = NativeFunction(identifier, returnType, namespace, data)
+            val r = NativeFunction(identifier, namespace, data).apply {
+                this.returnType = returnType
+            }
             currFunction = r
             //参数获取
             val normalParams = jsonObject.getJSONArray("normalParams").map {
@@ -137,10 +139,11 @@ object FunctionReader: ILibJsonReader<Function> {
         }
         val function = if(jsonObject.containsKey("readonlyParam")){
             val ctx = Utils.fromByteArrayString<mcfppParser.FunctionBodyContext>(jsonObject["context"].toString())
-            GenericFunction(identifier, namespace, returnType, ctx)
+            GenericFunction(identifier, namespace, ctx)
         }else{
-            Function(identifier, namespace, returnType, null)
+            Function(identifier, namespace, null)
         }
+        function.returnType = returnType
         currFunction = function
         //参数获取
         jsonObject.getJSONArray("normalParams").forEach {

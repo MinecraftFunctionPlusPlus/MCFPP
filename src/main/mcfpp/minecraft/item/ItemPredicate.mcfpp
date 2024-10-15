@@ -2,11 +2,11 @@ data ItemPredicate {
 
     # 精确匹配一个物品堆叠组件
     @ConcreteOnly
-    dict<string, nbt>? itemSubPredicateMatch;
+    dict<nbt>? itemSubPredicateMatch;
 
     # 检测物品子谓词
     @ConcreteOnly
-    dict<string, nbt>? itemSubPredicateCheck;
+    dict<nbt>? itemSubPredicateCheck;
 
     # 匹配一个物品堆叠组件，查看是否存在
     @ConcreteOnly

@@ -94,8 +94,6 @@ open class MCFPPDataTemplateType(
 
     companion object{
         val regex = Regex("^template\\((.+):(.+)\\)$")
-
-        val DataObject = MCFPPDataTemplateType(DataTemplate.baseDataTemplate, listOf(MCFPPNBTType.NBT))
     }
 
 }

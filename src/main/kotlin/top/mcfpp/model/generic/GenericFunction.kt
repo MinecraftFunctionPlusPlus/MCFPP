@@ -32,7 +32,7 @@ class GenericFunction : Function, Generic<Function> {
      * @param identifier 函数的标识符
      * @param namespace 函数的命名空间
      */
-    constructor(identifier: String, namespace: String = Project.currNamespace, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(identifier, namespace, returnType, ctx){
+    constructor(identifier: String, namespace: String = Project.currNamespace, ctx: mcfppParser.FunctionBodyContext) : super(identifier, namespace, ctx){
         this.ctx = ctx
     }
 
@@ -40,7 +40,7 @@ class GenericFunction : Function, Generic<Function> {
      * 创建一个函数，并指定它所属的类。
      * @param identifier 函数的标识符
      */
-    constructor(identifier: String, cls: Class, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(identifier, cls, isStatic, returnType, ctx){
+    constructor(identifier: String, cls: Class, isStatic: Boolean, ctx: mcfppParser.FunctionBodyContext) : super(identifier, cls, isStatic, ctx){
         this.ctx = ctx
     }
 
@@ -48,7 +48,7 @@ class GenericFunction : Function, Generic<Function> {
      * 创建一个函数，并指定它所属的接口。接口的函数总是抽象并且公开的
      * @param identifier 函数的标识符
      */
-    constructor(identifier: String, itf: Interface, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(identifier, itf, returnType, ctx){
+    constructor(identifier: String, itf: Interface, ctx: mcfppParser.FunctionBodyContext) : super(identifier, itf, ctx){
         this.ctx = ctx
     }
 
@@ -56,7 +56,7 @@ class GenericFunction : Function, Generic<Function> {
      * 创建一个函数，并指定它所属的结构体。
      * @param name 函数的标识符
      */
-    constructor(name: String, template: DataTemplate, isStatic: Boolean, returnType: MCFPPType = MCFPPBaseType.Void, ctx: mcfppParser.FunctionBodyContext) : super(name, template, isStatic, returnType, ctx){
+    constructor(name: String, template: DataTemplate, isStatic: Boolean, ctx: mcfppParser.FunctionBodyContext) : super(name, template, isStatic, ctx){
         this.ctx = ctx
     }
 
@@ -95,24 +95,25 @@ class GenericFunction : Function, Generic<Function> {
         //创建新的函数
         val compiledFunction = when(ownerType){
             Companion.OwnerType.NONE -> {
-                Function("${identifier}_${index}", namespace, returnType, ctx)
+                Function("${identifier}_${index}", namespace, ctx)
             }
             //interface是和Class一起处理的
             Companion.OwnerType.CLASS -> {
                 if(owner is Class){
-                    Function("${identifier}_${index}", owner as Class, isStatic, returnType, ctx)
+                    Function("${identifier}_${index}", owner as Class, isStatic, ctx)
                 }else{
-                    Function("${identifier}_${index}", owner as Interface, returnType, ctx)
+                    Function("${identifier}_${index}", owner as Interface, ctx)
                 }
             }
             Companion.OwnerType.TEMPLATE -> {
-                Function("${identifier}_${index}", owner as DataTemplate, isStatic, returnType, ctx)
+                Function("${identifier}_${index}", owner as DataTemplate, isStatic, ctx)
             }
             Companion.OwnerType.BASIC -> {
                 //拓展函数的编译在ExtensionGenericFunction中进行
                 nullFunction
             }
         }
+        compiledFunction.returnType = returnType
         //传递参数信息
         compiledFunction.normalParamTypeList.addAll(normalParamTypeList)
         compiledFunction.normalParams.addAll(normalParams)

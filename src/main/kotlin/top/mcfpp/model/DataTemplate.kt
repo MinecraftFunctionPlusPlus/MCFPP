@@ -147,11 +147,10 @@ open class DataTemplate : FieldContainer, CompoundData {
 
         var currTemplate: DataTemplate? = null
 
-        val baseDataTemplate = DataTemplate("DataObject","mcfpp.lang")
-
-        init {
-            baseDataTemplate.extends(MCAny.data)
-            baseDataTemplate.getNativeFromClass(DataObjectData::class.java)
+        val baseDataTemplate by lazy {
+            DataTemplate("DataObject","mcfpp.lang").apply {
+                extends(MCAny.data)
+            }
         }
 
     }

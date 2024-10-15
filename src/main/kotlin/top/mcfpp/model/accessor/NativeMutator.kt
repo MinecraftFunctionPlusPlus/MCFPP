@@ -10,9 +10,10 @@ import top.mcfpp.util.LogProcessor
 
 class NativeMutator(javaRefer: String, d: CompoundData, field: Var<*>): AbstractMutator(field) {
 
-    val function: NativeFunction = NativeFunction("set_${field.identifier}", field.type, d.namespace)
+    val function: NativeFunction = NativeFunction("set_${field.identifier}", d.namespace)
 
     init {
+        function.returnType = field.type
         function.field.putVar("field", field)
         function.appendNormalParam(field.type, "value")
         function.field.putVar("value", field.type.build("value"))

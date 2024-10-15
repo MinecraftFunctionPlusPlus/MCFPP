@@ -114,14 +114,14 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val f = Function(
             ctx.Identifier().text,
             Interface.currInterface!!,
-            ctx.functionReturnType()?.type()?.let {
-                MCFPPType.parseFromContext(it.type(), typeScope)?:  run {
-                    LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(it.text))
-                    MCFPPBaseType.Any
-                }
-            }?: MCFPPBaseType.Void,
             null
         )
+        f.returnType = ctx.functionReturnType()?.type()?.let {
+            MCFPPType.parseFromContext(it.type(), typeScope)?:  run {
+                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(it.text))
+                MCFPPBaseType.Any
+            }
+        }?: MCFPPBaseType.Void
         //解析参数
         f.addParamsFromContext(ctx.functionParams())
         //注册函数
@@ -308,21 +308,12 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     
     override fun visitClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext): Any {
         Project.ctx = ctx
-        val type = if(ctx.functionReturnType()?.type() != null){
-            MCFPPType.parseFromContext(ctx.functionReturnType().type(), typeScope)?: run {
-                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.functionReturnType().text))
-                MCFPPBaseType.Any
-            }
-        }else{
-            MCFPPBaseType.Void
-        }
         //创建函数对象
         val f = if(ctx.functionParams().readOnlyParams() != null && ctx.functionParams().readOnlyParams().parameterList().parameter().size != 0){
             GenericFunction(
                 ctx.Identifier().text,
                 Class.currClass!!,
                 Class.currClass!! is ObjectClass,
-                type,
                 ctx.functionBody()
             )
         }else{
@@ -330,9 +321,16 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 ctx.Identifier().text,
                 Class.currClass!!,
                 Class.currClass!! is ObjectClass,
-                type,
                 ctx.functionBody()
             )
+        }
+        f.returnType = if(ctx.functionReturnType()?.type() != null){
+            MCFPPType.parseFromContext(ctx.functionReturnType().type(), typeScope)?: run {
+                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.functionReturnType().text))
+                MCFPPBaseType.Any
+            }
+        }else{
+            MCFPPBaseType.Void
         }
         if(!isStatic){
             val thisObj = Class.currClass!!.getType().buildUnConcrete("this", f)
@@ -358,7 +356,15 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     
     override fun visitAbstractClassFunctionDeclaration(ctx: mcfppParser.AbstractClassFunctionDeclarationContext): Any {
         Project.ctx = ctx
-        val type = if(ctx.functionReturnType()?.type() != null){
+        //抽象函数没有函数体，不能作为GenericFunction
+        //创建函数对象
+        val f = Function(
+            ctx.Identifier().text,
+            Class.currClass!!,
+            false,
+            null
+        )
+        f.returnType = if(ctx.functionReturnType()?.type() != null){
             MCFPPType.parseFromContext(ctx.functionReturnType().type(), typeScope)?: run {
                 LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.functionReturnType().text))
                 MCFPPBaseType.Any
@@ -366,15 +372,6 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }else{
             MCFPPBaseType.Void
         }
-        //抽象函数没有函数体，不能作为GenericFunction
-        //创建函数对象
-        val f = Function(
-            ctx.Identifier().text,
-            Class.currClass!!,
-            false,
-            type,
-            null
-        )
         f.isAbstract = true
         if(f.isStatic){
             LogProcessor.error("Static Function cannot be abstract: ${ctx.Identifier().text} in class ${Class.currClass!!.identifier}" )
@@ -392,7 +389,8 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 
     override fun visitNativeClassFunctionDeclaration(ctx: mcfppParser.NativeClassFunctionDeclarationContext): Any? {
         Project.ctx = ctx
-        val type = if(ctx.functionReturnType()?.type() != null){
+        val nf = NativeFunction(ctx.Identifier().text, Project.currNamespace)
+        nf.returnType = if(ctx.functionReturnType()?.type() != null){
             MCFPPType.parseFromContext(ctx.functionReturnType().type(), typeScope)?: run {
                 LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.functionReturnType().text))
                 MCFPPBaseType.Any
@@ -400,7 +398,6 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }else{
             MCFPPBaseType.Void
         }
-        val nf = NativeFunction(ctx.Identifier().text, type, Project.currNamespace)
         nf.addParamsFromContext(ctx.functionParams())
         //是类成员
         nf.ownerType = Function.Companion.OwnerType.CLASS
@@ -559,18 +556,18 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         Project.ctx = ctx
         //创建函数对象
         val identifier : String = ctx.Identifier().text
-        val type = if(ctx.functionReturnType()?.type() != null){
+        val f = if(ctx.functionParams()?.readOnlyParams() != null && ctx.functionParams().readOnlyParams().parameterList().parameter().size != 0){
+            GenericFunction(identifier, Project.currNamespace, ctx.functionBody())
+        }else {
+            Function(identifier, Project.currNamespace, ctx.functionBody())
+        }
+        f.returnType = if(ctx.functionReturnType()?.type() != null){
             MCFPPType.parseFromContext(ctx.functionReturnType().type(), typeScope)?: run {
                 LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.functionReturnType().text))
                 MCFPPBaseType.Any
             }
         }else{
             MCFPPBaseType.Void
-        }
-        val f = if(ctx.functionParams()?.readOnlyParams() != null && ctx.functionParams().readOnlyParams().parameterList().parameter().size != 0){
-            GenericFunction(identifier, Project.currNamespace, type, ctx.functionBody())
-        }else {
-            Function(identifier, Project.currNamespace,type, ctx.functionBody())
         }
         //解析参数
         ctx.functionParams()?.let { f.addParamsFromContext(it) }
@@ -632,7 +629,11 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val f: Function
         //是否是编译时函数
         val identifier : String = ctx.Identifier().text
-        val type = if(ctx.functionReturnType()?.type() != null){
+        f = CompileTimeFunction(
+            identifier,Project.currNamespace,
+            ctx.functionBody()
+        )
+        f.returnType = if(ctx.functionReturnType()?.type() != null){
             MCFPPType.parseFromContext(ctx.functionReturnType().type(), typeScope)?: run {
                 LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.functionReturnType().text))
                 MCFPPBaseType.Any
@@ -640,11 +641,6 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }else{
             MCFPPBaseType.Void
         }
-        f = CompileTimeFunction(
-            identifier,Project.currNamespace,
-            type,
-            ctx.functionBody()
-        )
         //解析参数
         f.addParamsFromContext(ctx.functionParams())
         //TODO 解析函数的注解
@@ -700,7 +696,15 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 qwq
             }
         }
-        val type = if(ctx.functionReturnType()?.type() != null){
+        //创建函数对象
+        val f = if(ctx.functionParams().readOnlyParams() != null && ctx.functionParams().readOnlyParams().parameterList().parameter().size != 0){
+            GenericExtensionFunction(ctx.Identifier().text, data, Project.currNamespace, ctx.functionBody())
+        }else{
+            ExtensionFunction(ctx.Identifier().text, data, Project.currNamespace, ctx.functionBody())
+        }
+        //解析参数
+        f.accessModifier = AccessModifier.PUBLIC
+        f.returnType = if(ctx.functionReturnType()?.type() != null){
             MCFPPType.parseFromContext(ctx.functionReturnType().type(), typeScope)?: run {
                 LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.functionReturnType().text))
                 MCFPPBaseType.Any
@@ -708,14 +712,6 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }else{
             MCFPPBaseType.Void
         }
-        //创建函数对象
-        val f = if(ctx.functionParams().readOnlyParams() != null && ctx.functionParams().readOnlyParams().parameterList().parameter().size != 0){
-            GenericExtensionFunction(ctx.Identifier().text, data, Project.currNamespace, type, ctx.functionBody())
-        }else{
-            ExtensionFunction(ctx.Identifier().text, data, Project.currNamespace, type, ctx.functionBody())
-        }
-        //解析参数
-        f.accessModifier = AccessModifier.PUBLIC
         f.ownerType = ownerType
         f.isStatic = ctx.STATIC() != null
         f.addParamsFromContext(ctx.functionParams())
@@ -736,7 +732,15 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     
     override fun visitNativeFuncDeclaration(ctx: mcfppParser.NativeFuncDeclarationContext): Any? {
         Project.ctx = ctx
-        val nf = NativeFunction(ctx.Identifier().text, ctx.functionReturnType()?.let { MCFPPType.parseFromContext(it.type(), typeScope) }?: MCFPPBaseType.Void, Project.currNamespace)
+        val nf = NativeFunction(ctx.Identifier().text, Project.currNamespace)
+        nf.returnType = if(ctx.functionReturnType()?.type() != null){
+            MCFPPType.parseFromContext(ctx.functionReturnType().type(), typeScope)?: run {
+                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.functionReturnType().text))
+                MCFPPBaseType.Any
+            }
+        }else{
+            MCFPPBaseType.Void
+        }
         nf.addParamsFromContext(ctx.functionParams())
         try {
             //根据JavaRefer找到类
@@ -888,20 +892,12 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 
     override fun visitTemplateFunctionDeclaration(ctx: mcfppParser.TemplateFunctionDeclarationContext): Any {
         Project.ctx = ctx
-        val type = if(ctx.functionReturnType()?.type() != null){
-            MCFPPType.parseFromContext(ctx.functionReturnType().type(), typeScope)?: run {
-                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.functionReturnType().text))
-                MCFPPBaseType.Any
-            }
-        }else{
-            MCFPPBaseType.Void
-        }//创建函数对象
+        //创建函数对象
         val f = if(ctx.functionParams().readOnlyParams() != null && ctx.functionParams().readOnlyParams().parameterList().parameter().size != 0){
             GenericFunction(
                 ctx.Identifier().text,
                 DataTemplate.currTemplate!!,
                 DataTemplate.currTemplate is ObjectDataTemplate,
-                type,
                 ctx.functionBody()
             )
         }else {
@@ -909,9 +905,16 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 ctx.Identifier().text,
                 DataTemplate.currTemplate!!,
                 DataTemplate.currTemplate is ObjectDataTemplate,
-                type,
                 ctx.functionBody()
             )
+        }
+        f.returnType = if(ctx.functionReturnType()?.type() != null){
+            MCFPPType.parseFromContext(ctx.functionReturnType().type(), typeScope)?: run {
+                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.functionReturnType().text))
+                MCFPPBaseType.Any
+            }
+        }else{
+            MCFPPBaseType.Void
         }
         if(!isStatic){
             val varType = DataTemplate.currTemplate!!.getType()

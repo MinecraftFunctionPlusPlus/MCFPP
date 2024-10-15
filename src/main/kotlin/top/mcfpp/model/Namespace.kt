@@ -11,6 +11,7 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.generic.GenericFunction
 import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPGenericParamType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
@@ -119,6 +120,16 @@ class Namespace(val identifier: String): Serializable {
                     LogProcessor.error("MNIMethod ${method.name} in class ${cls.name} must be static")
                     continue
                 }
+                val nf = NativeFunction(method.name, javaMethod = method)
+                //解析MNIMethod注解成员
+                val callerType = MCFPPType.parseFromIdentifier(mniRegister.caller, Function.field)
+                nf.caller = callerType?: run {
+                    LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniRegister.caller))
+                    MCFPPBaseType.Void
+                }
+                mniRegister.genericType.map {
+                    nf.field.putType(it, MCFPPGenericParamType(it, listOf()))
+                }
                 //解析MNIMethod注解成员
                 val readOnlyType = mniRegister.readOnlyParams.map {
                     var qwq = it.split(" ", limit = 3)
@@ -142,13 +153,12 @@ class Namespace(val identifier: String): Serializable {
                     LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniRegister.returnType))
                     MCFPPBaseType.Any
                 }
+                nf.returnType = returnType
                 //检查method的参数s
                 if(method.parameterCount != readOnlyType.size + normalType.size + 1){
                     LogProcessor.error("Method ${method.name} in class ${cls.name} has wrong parameter count")
                     continue
                 }
-                val nf = NativeFunction(method.name, returnType, javaMethod = method)
-                nf.caller = mniRegister.caller
                 for(rt in readOnlyType){
                     nf.appendReadOnlyParam(rt.first.second, rt.first.first, rt.second)
                 }

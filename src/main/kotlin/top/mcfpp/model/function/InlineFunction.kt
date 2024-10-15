@@ -14,7 +14,7 @@ class InlineFunction : Function {
 
     constructor(name: String, context: mcfppParser.FunctionBodyContext) : super(name, context = context)
 
-    constructor(name: String, namespace: String, context: mcfppParser.FunctionBodyContext) : super(name, namespace, MCFPPBaseType.Void, context = context)
+    constructor(name: String, namespace: String, context: mcfppParser.FunctionBodyContext) : super(name, namespace, context = context)
 
     override fun argPass(normalArgs: ArrayList<Var<*>>) {
         for (i in this.normalParams.indices) {

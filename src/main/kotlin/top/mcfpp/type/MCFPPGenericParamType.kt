@@ -20,7 +20,7 @@ import top.mcfpp.core.lang.value.MCTypeValue
  * @param identifier 泛型的标识符。即T t中的T
  * @param parentType 泛型的父类型。如果有T:A t，那么A就是父类型
  */
-class MCFPPGenericType(
+class MCFPPGenericParamType(
     var identifier:String,
     override var parentType: List<MCFPPType>
 ) : MCFPPType(MCAny.data, parentType) {   //TODO: 泛型的CompoundData

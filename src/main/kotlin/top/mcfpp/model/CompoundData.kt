@@ -11,6 +11,7 @@ import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
+import top.mcfpp.type.MCFPPGenericParamType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
@@ -208,11 +209,20 @@ open class CompoundData : FieldContainer, Serializable {
                     continue
                 }
                 if(this is ObjectCompoundData && !mniRegister.isObject) continue
+                val nf = NativeFunction(method.name, javaMethod = method)
                 //解析MNIMethod注解成员
+                val callerType = MCFPPType.parseFromIdentifier(mniRegister.caller, Function.field)
+                nf.caller = callerType?: run {
+                    LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniRegister.caller))
+                    MCFPPBaseType.Void
+                }
+                mniRegister.genericType.map {
+                    nf.field.putType(it, MCFPPGenericParamType(it, listOf()))
+                }
                 val readOnlyType = mniRegister.readOnlyParams.map {
                     var qwq = it.split(" ", limit = 3)
                     if(qwq.size == 3) qwq = qwq.subList(1, 3)
-                    val type = MCFPPType.parseFromIdentifier(qwq[0], Namespace.currNamespaceField)?: run {
+                    val type = MCFPPType.parseFromIdentifier(qwq[0], nf.field)?: run {
                         LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(qwq[0]))
                         MCFPPBaseType.Any
                     }
@@ -221,16 +231,17 @@ open class CompoundData : FieldContainer, Serializable {
                 val normalType = mniRegister.normalParams.map {
                     var qwq = it.split(" ", limit = 3)
                     if(qwq.size == 3) qwq = qwq.subList(1, 3)
-                    val type = MCFPPType.parseFromIdentifier(qwq[0], Namespace.currNamespaceField)?: run {
+                    val type = MCFPPType.parseFromIdentifier(qwq[0], nf.field)?: run {
                         LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(qwq[0]))
                         MCFPPBaseType.Any
                     }
                     qwq[1] to type to it.startsWith("static")
                 }
-                val returnType = MCFPPType.parseFromIdentifier(mniRegister.returnType, Namespace.currNamespaceField)?: run {
+                val returnType = MCFPPType.parseFromIdentifier(mniRegister.returnType, nf.field)?: run {
                     LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniRegister.returnType))
                     MCFPPBaseType.Any
                 }
+                nf.returnType = returnType
                 var exceptedParamCount = readOnlyType.size + normalType.size
                 if(returnType != MCFPPBaseType.Void){
                     exceptedParamCount++
@@ -243,8 +254,6 @@ open class CompoundData : FieldContainer, Serializable {
                     LogProcessor.error("Method ${method.name} in class ${cls.name} has wrong parameter count")
                     continue
                 }
-                val nf = NativeFunction(method.name, returnType, javaMethod = method)
-                nf.caller = mniRegister.caller
                 for(rt in readOnlyType){
                     nf.appendReadOnlyParam(rt.first.second, rt.first.first, rt.second)
                 }
