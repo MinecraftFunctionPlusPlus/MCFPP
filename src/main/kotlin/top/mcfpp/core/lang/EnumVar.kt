@@ -151,6 +151,10 @@ open class EnumVar : Var<EnumVar> {
     open fun asNBTVar(): NBTBasedData{
         return NBTBasedData(this)
     }
+
+    override fun toNBTVar(): NBTBasedData {
+        return asNBTVar()
+    }
 }
 
 class EnumVarConcrete : EnumVar, MCFPPValue<EnumMember> {
@@ -169,7 +173,7 @@ class EnumVarConcrete : EnumVar, MCFPPValue<EnumMember> {
         curr: FieldContainer,
         value: Int,
         identifier: String = UUID.randomUUID().toString()
-    ) : super(enum, curr.prefix + identifier) {
+    ) : super(enum,curr, identifier) {
         this.value = enum.getMember(value)!!
     }
 
@@ -224,19 +228,6 @@ class EnumVarConcrete : EnumVar, MCFPPValue<EnumMember> {
         return re
     }
 
-    @Override
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        //TODO 类支持
-        return when (type) {
-            this.type -> this
-            MCFPPBaseType.Any -> this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                throw VariableConverseException()
-            }
-        }
-    }
-
     /**
      * 获取临时变量
      *
@@ -251,5 +242,9 @@ class EnumVarConcrete : EnumVar, MCFPPValue<EnumMember> {
 
     override fun asIntVar(): MCInt {
         return MCIntConcrete(this)
+    }
+
+    override fun asNBTVar(): NBTBasedData {
+        return NBTBasedDataConcrete(super.asNBTVar(), this.value.data)
     }
 }

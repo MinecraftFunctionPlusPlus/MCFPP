@@ -83,15 +83,10 @@ class NativeFunction : Function, Native {
     private fun argPass(readOnlyArgs: ArrayList<Var<*>>, normalArgs: ArrayList<Var<*>>): ArrayList<Var<*>>{
         val list = ArrayList<Var<*>>()
         for (index in readOnlyParams.indices){
-            if(readOnlyParams[index].type is MCFPPNotCompiledGenericType){
-                list.add(readOnlyArgs[index])
-                continue
-            }
-            if(index < readOnlyArgs.size){
-                list.add(readOnlyArgs[index].implicitCast(readOnlyParams[index].type))
-            }else{
-                list.add(readOnlyParams[index].defaultVar!!.clone())
-            }
+            val param = readOnlyParams[index]
+            val arg = if (index < readOnlyArgs.size) readOnlyArgs[index] else param.defaultVar!!.clone()
+            list.add(if (param.type is MCFPPNotCompiledGenericType) arg else arg.implicitCast(param.type))
+
         }
         for (index in normalParams.indices){
             if(normalParams[index].type is MCFPPNotCompiledGenericType){

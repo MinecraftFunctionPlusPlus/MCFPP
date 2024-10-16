@@ -944,7 +944,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }else{
             val vars = ArrayList<Var<*>>()
             for (type in ctx.unionTemplateFieldType().type()){
-                val t = MCFPPType.parseFromContext(ctx.singleTemplateFieldType().type(), typeScope)?: run {
+                val t = MCFPPType.parseFromContext(type, typeScope)?: run {
                     LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.singleTemplateFieldType().type().text))
                     MCFPPBaseType.Any
                 }

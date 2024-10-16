@@ -46,11 +46,13 @@ object LogProcessor {
     }
 
     inline fun warn(msg: String){
-        logger.warn(
-            "Warning while compiling \n" +
-            MCFPPFile.currFile!!.absolutePath + ":" + Project.ctx!!.getStart().line + ">>" + msg
-                    + Project.ctx?.let { "\n" + getLineInfo(it) }
-        )
+        if(Project.ctx != null){
+            logger.warn(
+                "Warning while compiling \n" +
+                        MCFPPFile.currFile!!.absolutePath + ":" + Project.ctx!!.getStart().line + ">>" + msg
+                        + Project.ctx?.let { "\n" + getLineInfo(it) }
+            )
+        }
         Function.addComment(msg, CommentType.WARN)
         Project.warningCount++
         if(CompileSettings.isDebug){
@@ -84,11 +86,13 @@ object LogProcessor {
     }
 
     inline fun error(msg: String){
-        logger.error(
-            "Error while compiling \n" +
-            MCFPPFile.currFile!!.absolutePath + ":" + Project.ctx!!.getStart().line + ">>" + msg
-                    + Project.ctx?.let { "\n" + getLineInfo(it) }
-        )
+        if(Project.ctx != null){
+            logger.error(
+                "Error while compiling \n" +
+                        MCFPPFile.currFile!!.absolutePath + ":" + Project.ctx!!.getStart().line + ">>" + msg
+                        + Project.ctx?.let { "\n" + getLineInfo(it) }
+            )
+        }
         Function.addComment(msg, CommentType.ERROR)
         Project.errorCount++
         if(CompileSettings.isDebug){

@@ -73,11 +73,7 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable{
         }
     }
 
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        if(!b.implicitCast(type).isError) return true
-        if(b is MCFPPValue<*>) return true
-        return false
-    }
+    override fun canAssignedBy(b: Var<*>): Boolean = true
 
     @InsertCommand
     protected open fun assignCommand(a: NBTBasedData) : NBTBasedData{

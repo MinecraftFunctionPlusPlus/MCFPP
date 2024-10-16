@@ -443,10 +443,16 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         val exprVisitor = MCFPPExprVisitor()
         for (expr in ctx.arguments().readOnlyArgs()?.expressionList()?.expression()?: emptyList()) {
             val arg = exprVisitor.visit(expr)!!
+            if(arg is UnknownVar){
+                LogProcessor.error(TextTranslator.VARIABLE_NOT_DEFINED.translate(arg.identifier))
+            }
             readOnlyArgs.add(arg)
         }
         for (expr in ctx.arguments().normalArgs().expressionList()?.expression()?: emptyList()) {
             val arg = exprVisitor.visit(expr)!!
+            if(arg is UnknownVar){
+                LogProcessor.error(TextTranslator.VARIABLE_NOT_DEFINED.translate(arg.identifier))
+            }
             normalArgs.add(arg)
         }
         //获取函数

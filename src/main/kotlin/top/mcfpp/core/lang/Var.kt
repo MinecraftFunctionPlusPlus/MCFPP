@@ -221,6 +221,13 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
         }
         return when(type){
             MCFPPBaseType.Any -> MCAnyConcrete(this)
+            MCFPPNBTType.NBT -> {
+                if(this is MCFPPValue<*>){
+                    NBTBasedDataConcrete(this.toNBTVar(), NBTUtil.varToNBT(this)!!)
+                }else{
+                    this.toNBTVar()
+                }
+            }
             else -> {
                 buildCastErrorVar(type)
             }

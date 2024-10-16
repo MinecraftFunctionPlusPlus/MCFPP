@@ -24,8 +24,11 @@ object NBTUtil {
             is MCStringConcrete -> return v.value
             is NBTBasedDataConcrete -> return v.value
             is UnionTypeVarConcrete -> return valueToNBT(v.value)
-            //is NBTAny<*> -> return v.value
-            else -> return IntTag(0)
+            is EnumVarConcrete -> return v.value.data
+            else -> {
+                LogProcessor.error("Cannot cast mcfpp var $v to nbt value", VariableConverseException())
+                return IntTag(0)
+            }
         }
     }
 
@@ -62,7 +65,8 @@ object NBTUtil {
                 map
             }
             else -> {
-                throw VariableConverseException()
+                LogProcessor.error("Cannot cast value $any to nbt value", VariableConverseException())
+                return IntTag(0)
             }
         }
     }
