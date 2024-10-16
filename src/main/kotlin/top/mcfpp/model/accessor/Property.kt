@@ -55,7 +55,7 @@ data class Property(val identifier: String, val accessor: AbstractAccessor?, val
      */
     fun getter(caller: CanSelectMember, field: Var<*>): Var<*> {
         if(accessor != null){
-            return accessor.getter(caller)
+            return accessor.getter(caller, field)
         }
         LogProcessor.error("Property ${field.identifier} does not have a getter")
         return UnknownVar(field.identifier)
@@ -84,7 +84,7 @@ data class Property(val identifier: String, val accessor: AbstractAccessor?, val
 
     companion object {
         fun buildSimpleProperty(field: Var<*>): Property {
-            return Property(field.identifier, SimpleAccessor(field), SimpleMutator(field))
+            return Property(field.identifier, SimpleAccessor(), SimpleMutator(field))
         }
     }
 }

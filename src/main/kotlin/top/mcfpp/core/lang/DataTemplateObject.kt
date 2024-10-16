@@ -55,6 +55,18 @@ open class DataTemplateObject : Var<DataTemplateObject> {
 
     override fun doAssignedBy(b: Var<*>): DataTemplateObject {
         when (b) {
+
+            is NBTDictionaryConcrete -> {
+                val value = NBTUtil.valueToNBT(b.value) as CompoundTag
+                if (templateType.checkCompoundStruct(value)) {
+                    this.assignMembers(value)
+                    return this
+                } else {
+                    LogProcessor.error("Error compound struct: ${b.value}")
+                    return this
+                }
+            }
+
             is NBTBasedDataConcrete -> {
                 if (b.value !is CompoundTag) {
                     LogProcessor.error("Not a compound tag: ${b.value}")
@@ -148,8 +160,12 @@ open class DataTemplateObject : Var<DataTemplateObject> {
             }
 
             is MCFPPDataTemplateType -> {
-                if(type.template.canCastTo(templateType)){
-                    val re = DataTemplateObject(type.template, this.identifier)
+                if(templateType.canCastTo(type.template)){
+                    val re = if(this is DataTemplateObjectConcrete){
+                        DataTemplateObjectConcrete(type.template, this.value, this.identifier)
+                    }else{
+                        DataTemplateObject(type.template, this.identifier)
+                    }
                     re.nbtPath = nbtPath
                     return re
                 }else{
@@ -166,8 +182,12 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         if(!r.isError) return r
         when(type){
             is MCFPPDataTemplateType -> {
-                if(type.template.canCastTo(templateType)){
-                    val re = DataTemplateObject(type.template, this.identifier)
+                if(this.templateType.canCastTo(type.template)){
+                    val re = if(this is DataTemplateObjectConcrete){
+                        DataTemplateObjectConcrete(type.template, this.value, this.identifier)
+                    }else{
+                        DataTemplateObject(type.template, this.identifier)
+                    }
                     re.nbtPath = nbtPath
                     return re
                 }else{
@@ -196,11 +216,11 @@ open class DataTemplateObject : Var<DataTemplateObject> {
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         val v = instanceField.getVar(key)!!.clone(this)
-        val member = instanceField.getProperty(key)
-        return if(member == null){
+        val property = instanceField.getProperty(key)
+        return if(property == null){
             Pair(null, true)
         }else{
-            Pair(PropertyVar(member, v, this), accessModifier >= member.accessModifier)
+            Pair(PropertyVar(property, v, this), accessModifier >= property.accessModifier)
         }
     }
 
@@ -236,7 +256,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     }
 
     override fun replaceMemberVar(v: Var<*>) {
-        instanceField.putVar(identifier, v, true)
+        instanceField.putVar(v.identifier, v, true)
     }
 
     fun isConcrete(): Boolean{

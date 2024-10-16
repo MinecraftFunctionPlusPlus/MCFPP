@@ -526,7 +526,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }else if(ctx.expression() != null){
             ExpressionAccessor(ctx.expression(), currVar)
         }else{
-            SimpleAccessor(currVar)
+            SimpleAccessor()
         }
     }
 

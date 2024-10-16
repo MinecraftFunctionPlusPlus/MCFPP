@@ -8,7 +8,7 @@ import top.mcfpp.model.CompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPType
 
-class FunctionAccessor(field: Var<*>, d: CompoundData): AbstractAccessor(field) {
+class FunctionAccessor(field: Var<*>, d: CompoundData): AbstractAccessor() {
 
     var function: Function
 
@@ -16,13 +16,12 @@ class FunctionAccessor(field: Var<*>, d: CompoundData): AbstractAccessor(field) 
         function = Function("get_${field.identifier}", d.namespace, null)
         function.returnType = field.type
         function.field.putVar("field", field)
-        val thisObj = Class.currClass!!.getType().build("this", function)
-        function.field.putVar("this",thisObj)
+        function.appendNormalParam(field.type, "field")
         function.owner = d
     }
 
-    override fun getter(caller: CanSelectMember): Var<*> {
-        function.invoke(ArrayList(), caller)
+    override fun getter(caller: CanSelectMember, field: Var<*>): Var<*> {
+        function.invoke(arrayListOf(field), caller)
         return function.returnVar
     }
 }

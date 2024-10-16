@@ -51,7 +51,7 @@ open class ImmutableList : NBTList{
 
     override fun getByIndex(index: Var<*>): PropertyVar {
         val p = super.getByIndex(index)
-        return PropertyVar(Property(p.identifier, SimpleAccessor(p), null), p, this)
+        return PropertyVar(Property(p.identifier, SimpleAccessor(), null), p, this)
     }
 
     companion object {

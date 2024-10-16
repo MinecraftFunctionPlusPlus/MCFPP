@@ -10,14 +10,13 @@ import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 
-class NativeAccessor(javaRefer: String, d: CompoundData, field: Var<*>): AbstractAccessor(field) {
+class NativeAccessor(javaRefer: String, d: CompoundData, field: Var<*>): AbstractAccessor() {
 
     val function: NativeFunction
 
     init {
         function = NativeFunction("get_${field.identifier}", d.namespace)
         function.returnType = field.type
-        function.field.putVar("field", field)
         function.owner = d
         try {
             //根据JavaRefer找到类
@@ -41,7 +40,7 @@ class NativeAccessor(javaRefer: String, d: CompoundData, field: Var<*>): Abstrac
         }
     }
 
-    override fun getter(caller: CanSelectMember): Var<*> {
+    override fun getter(caller: CanSelectMember, field: Var<*>): Var<*> {
         function.invoke(ArrayList(), caller)
         return function.returnVar
     }

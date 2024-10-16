@@ -8,7 +8,7 @@ import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
 
-class ExpressionAccessor(val ctx: mcfppParser.ExpressionContext, field: Var<*>): AbstractAccessor(field) {
+class ExpressionAccessor(val ctx: mcfppParser.ExpressionContext, field: Var<*>): AbstractAccessor() {
 
     var error: Boolean
 
@@ -26,7 +26,7 @@ class ExpressionAccessor(val ctx: mcfppParser.ExpressionContext, field: Var<*>):
         error = false
     }
 
-    override fun getter(caller: CanSelectMember): Var<*> {
+    override fun getter(caller: CanSelectMember, field: Var<*>): Var<*> {
         if(error) return field
         var v : Var<*>? = null
         val cs = Commands.fakeFunction(Function.currFunction){

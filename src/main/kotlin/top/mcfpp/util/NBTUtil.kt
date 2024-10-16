@@ -29,9 +29,11 @@ object NBTUtil {
         }
     }
 
+    @Suppress("UNCHECKED_CAST")
     fun valueToNBT(any: Any?): Tag<*>{
         return when(any){
             null -> IntTag(0)
+            is NBTBasedDataConcrete -> any.value
             is Tag<*> -> any
             is Byte -> ByteTag(any)
             is Short -> ShortTag(any)

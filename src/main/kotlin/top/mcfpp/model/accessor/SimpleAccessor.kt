@@ -12,9 +12,9 @@ import top.mcfpp.model.CanSelectMember
  *
  * 原则上，访问器不应该直接被创建，而是通过[Var.getMemberVar]等方法获得
  */
-class SimpleAccessor(field: Var<*>): AbstractAccessor(field) {
+class SimpleAccessor: AbstractAccessor() {
 
-    override fun getter(caller: CanSelectMember): Var<*> {
+    override fun getter(caller: CanSelectMember, field: Var<*>): Var<*> {
         field.parent = caller
         return field
     }
