@@ -181,8 +181,8 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             Class(id, Project.currNamespace)
         }
         //如果没有声明过这个类
-        if(nsp.field.hasDeclaredType(id)){
-            LogProcessor.error("Type has been defined: $id in namespace ${Project.currNamespace}")
+        if(nsp.field.hasDeclaredType(cls)){
+            LogProcessor.error("Type has been defined: $cls in namespace ${Project.currNamespace}")
             return
         }
         cls.initialize()

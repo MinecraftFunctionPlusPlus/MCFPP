@@ -140,7 +140,7 @@ object LogProcessor {
 
         // 获取该行的所有文本
         val lineStartIndex = tokenStream.lastIndexOf("\n", startToken.startIndex) + 1
-        val lineStopIndex = tokenStream.indexOf("\n", stopToken.stopIndex)
+        val lineStopIndex = tokenStream.indexOf("\n", startToken.startIndex)
         val lineText = tokenStream.getText(Interval.of(lineStartIndex, lineStopIndex))
 
         // 构建上下文位置指示

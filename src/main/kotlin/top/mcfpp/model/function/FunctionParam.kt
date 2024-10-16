@@ -39,7 +39,12 @@ class FunctionParam(
     /**
      * 是否有缺省值
      */
-    var hasDefault: Boolean = false
+    var hasDefault: Boolean = false,
+
+    /**
+     *
+     */
+    var isReadOnly: Boolean = false
 ) {
 
     var typeIdentifier: String = type.typeName
@@ -47,7 +52,11 @@ class FunctionParam(
     var defaultVar: Var<*>? = null
 
     fun buildVar(): Var<*>{
-        val qwq = type.buildUnConcrete(identifier, function)
+        val qwq = if(isReadOnly){
+            type.build(identifier, function)
+        }else{
+            type.buildUnConcrete(identifier, function)
+        }
         if(qwq is DataTemplateObject){
             qwq.toFunctionParam()
         }

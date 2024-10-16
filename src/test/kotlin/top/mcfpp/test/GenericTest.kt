@@ -35,7 +35,7 @@ class GenericTest {
                     print(i);
                 }
             """.trimIndent()
-        MCFPPStringTest.readFromString(test)
+        MCFPPStringTest.readFromString(test, arrayOf("debug"))
     }
 
     @Test
@@ -52,7 +52,7 @@ class GenericTest {
                     print(test.i);
                 }
             """.trimIndent()
-        MCFPPStringTest.readFromString(test)
+        MCFPPStringTest.readFromString(test, arrayOf("debug"))
     }
 
     @Test

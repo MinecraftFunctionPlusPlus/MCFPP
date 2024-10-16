@@ -158,7 +158,15 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val id = ctx.classWithoutNamespace().text
         val namespace = GlobalField.localNamespaces[Project.currNamespace]!!
         if(ctx.readOnlyParams() != null){
-            //如果是泛型类，暂时不编译
+            //如果是泛型类，将类型实例化，但暂时不编译
+            val types = ctx.readOnlyParams().parameterList().parameter().map { MCFPPType.parseFromContext(it.type(), namespace.field)?: run {
+                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(it.text))
+                MCFPPBaseType.Any
+            } }
+            val clazz = namespace.field.getClass(id, types)!!
+            for (p in clazz.readOnlyParams) {
+                p.type = MCFPPType.parseFromIdentifier(p.typeIdentifier, namespace.field)
+            }
             return null
         }
         val clazz = if (namespace.field.hasClass(id)) {
@@ -277,7 +285,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             val p = m.second as Property?
             if(v == null || p == null) return null
             //访问修饰符
-            v.accessModifier = AccessModifier.valueOf(ctx.accessModifier()?.text?:"public".uppercase(Locale.getDefault()))
+            v.accessModifier = AccessModifier.valueOf((ctx.accessModifier()?.text?:"public").uppercase(Locale.getDefault()))
             p.accessModifier = v.accessModifier
             Class.currClass!!.addMember(v)
             Class.currClass!!.addMember(p)

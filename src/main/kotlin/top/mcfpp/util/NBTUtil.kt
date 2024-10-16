@@ -10,24 +10,24 @@ object NBTUtil {
 
     fun varToNBT(v : Var<*>): Tag<*>?{
         if(v !is MCFPPValue<*>) return null
-        when(v){
+        return when(v){
             //is ClassPointer -> TODO()
             //is Entity -> TODO()
-            //is IntTemplatePointer -> TODO()
-            is JavaVar -> return AnyTag(v)
+            is JavaVar -> valueToNBT(v.value)
             //is JsonString -> TODO()
-            is MCAnyConcrete -> TODO()
-            is MCBoolConcrete -> return ByteTag(v.value)
-            is MCFloatConcrete -> return FloatTag(v.value)
+            is MCAnyConcrete -> varToNBT(v.value)
+            is MCBoolConcrete -> ByteTag(v.value)
+            is MCFloatConcrete -> FloatTag(v.value)
             is MCFPPTypeVar -> TODO()
-            is MCIntConcrete -> return IntTag(v.value)
-            is MCStringConcrete -> return v.value
-            is NBTBasedDataConcrete -> return v.value
-            is UnionTypeVarConcrete -> return valueToNBT(v.value)
-            is EnumVarConcrete -> return v.value.data
+            is MCIntConcrete -> IntTag(v.value)
+            is MCStringConcrete -> v.value
+            is NBTBasedDataConcrete -> v.value
+            is UnionTypeVarConcrete -> valueToNBT(v.value)
+            is EnumVarConcrete -> v.value.data
+            is DataTemplateObjectConcrete -> v.value
             else -> {
                 LogProcessor.error("Cannot cast mcfpp var $v to nbt value", VariableConverseException())
-                return IntTag(0)
+                IntTag(0)
             }
         }
     }
@@ -66,7 +66,7 @@ object NBTUtil {
             }
             else -> {
                 LogProcessor.error("Cannot cast value $any to nbt value", VariableConverseException())
-                return IntTag(0)
+                return StringTag(any.toString())
             }
         }
     }

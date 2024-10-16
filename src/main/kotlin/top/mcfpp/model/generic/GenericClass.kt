@@ -10,6 +10,7 @@ import top.mcfpp.type.MCFPPClassType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.Class
 import top.mcfpp.model.CompiledGenericClass
+import top.mcfpp.model.accessor.Property
 import top.mcfpp.model.field.GlobalField
 
 /**
@@ -66,12 +67,13 @@ class GenericClass : Class {
 
         //只读属性
         for (i in readOnlyParams.indices) {
-            val r = readOnlyArgs[i].clone()
+            val r = readOnlyArgs[i].implicitCast(readOnlyParams[i].type!!)
             r.isConst = true
             if(r is MCFPPTypeVar){
                 cls.field.putType(readOnlyParams[i].identifier, r.value)
             }
             cls.field.putVar(readOnlyParams[i].identifier, r, false)
+            cls.field.putProperty(readOnlyParams[i].identifier, Property.buildSimpleProperty(r))
         }
 
         //注册
@@ -90,13 +92,34 @@ class GenericClass : Class {
         return cls
     }
 
-    fun isSelf(identifier: String, readOnlyParam: List<MCFPPType>): Boolean {
+    fun isSelfByType(identifier: String, readOnlyParam: List<MCFPPType>): Boolean {
         if (this.identifier == identifier) {
             if (readOnlyParam.size != readOnlyParams.size) {
                 return false
             }
             for (i in readOnlyParam.indices) {
-                if (readOnlyParam[i].typeName != readOnlyParams[i].typeIdentifier) {
+                if(readOnlyParams[i].type != null){
+                    if (!readOnlyParams[i].type!!.build("").canAssignedBy(readOnlyParam[i].build(""))) {
+                        return false
+                    }
+                }else{
+                    if(readOnlyParam[i].typeName != readOnlyParam[i].typeName){
+                        return false
+                    }
+                }
+            }
+            return true
+        }
+        return false
+    }
+
+    fun isSelfByString(identifier: String, readOnlyParam: List<String>): Boolean{
+        if (this.identifier == identifier) {
+            if (readOnlyParam.size != readOnlyParams.size) {
+                return false
+            }
+            for (i in readOnlyParam.indices) {
+                if (readOnlyParam[i] != readOnlyParams[i].typeIdentifier) {
                     return false
                 }
             }
@@ -113,7 +136,7 @@ class GenericClass : Class {
 class ClassParam(
 
     /**
-     * 参数类型
+     * 参数类型标识符
      */
     var typeIdentifier: String,
 
@@ -121,4 +144,9 @@ class ClassParam(
      * 参数的名字
      */
     var identifier: String,
+
+    /**
+     * 参数的类型。只有在[Project.INDEX_TYPE]阶段结束后才有值
+     */
+    var type: MCFPPType? = null
 )

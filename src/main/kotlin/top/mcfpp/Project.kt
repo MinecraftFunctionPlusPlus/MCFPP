@@ -75,15 +75,16 @@ object Project {
     val macroFunction : LinkedHashMap<String, String> = LinkedHashMap()
 
     var compileStage = 0
-    val READ_PROJECT = 1
-    val READ_LIB = 2
-    val INIT = 3
-    val INDEX_TYPE = 4
-    val RESOVLE_FIELD = 5
-    val COMPILE = 6
-    val OPTIMIZATION = 7
-    val GEN_INDEX = 8
-    val GEN_DATAPACK = 9
+
+    const val READ_PROJECT = 1
+    const val READ_LIB = 2
+    const val INIT = 3
+    const val INDEX_TYPE = 4
+    const val RESOLVE_FIELD = 5
+    const val COMPILE = 6
+    const val OPTIMIZATION = 7
+    const val GEN_INDEX = 8
+    const val GEN_DATAPACK = 9
 
     /**
      * 编译阶段处理器。每个阶段的处理器都会在对应的阶段被调用。
@@ -254,11 +255,12 @@ object Project {
             }
             GlobalField.importedLibNamespaces.clear()
         }
+        //解析所有泛型类的泛型参数类型
         stageProcessor[compileStage].forEach { it() }
     }
 
     /**
-     * 编制函数索引
+     * 编制函数索引，解析类/模板成员
      */
     fun resolveField() {
         compileStage++

@@ -15,6 +15,7 @@ import top.mcfpp.type.UnresolvedType
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.model.*
 import top.mcfpp.model.field.FunctionField
+import top.mcfpp.model.generic.Generic
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import top.mcfpp.util.TextTranslator
@@ -438,7 +439,7 @@ open class Function : Member, FieldContainer, Serializable {
         }
     }
 
-    protected fun parseParam(param: mcfppParser.ParameterContext) : Pair<FunctionParam,Var<*>>{
+    protected open fun parseParam(param: mcfppParser.ParameterContext) : Pair<FunctionParam,Var<*>>{
         //参数构建
         val param1 = FunctionParam(
             MCFPPType.parseFromContext(param.type(), this.field)?: run {
@@ -448,7 +449,8 @@ open class Function : Member, FieldContainer, Serializable {
             param.Identifier().text,
             this,
             param.STATIC() != null,
-            param.value() != null
+            param.value() != null,
+            this is Generic<*>
         )
         //检查缺省参数是否合法
         if(param.value() == null && hasDefaultValue){

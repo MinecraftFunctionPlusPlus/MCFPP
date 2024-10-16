@@ -10,7 +10,10 @@ import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.model.Class
 import top.mcfpp.model.field.FileField
 import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.field.NamespaceField
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.generic.GenericClass
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import java.io.File
@@ -30,6 +33,11 @@ class MCFPPFile(path : String) : File(path) {
 
     //TODO 同名文件的顶级函数之间的命名冲突
     val topFunction = Function(StringHelper.toLegalIdentifier(this.name), context = null)
+
+    /**
+     * 此文件引用了的命名空间
+     */
+    val importedNamespace = ArrayList<NamespaceField>()
 
     init {
         val n = Project.config.sourcePath.toAbsolutePath().relativize(this.toPath().toAbsolutePath().parent).toString()
@@ -56,7 +64,10 @@ class MCFPPFile(path : String) : File(path) {
         currFile = this
         Project.currNamespace = namespace
         MCFPPTypeVisitor().visit(tree())
-        //类是否有空继承
+        for (a in GlobalField.importedLibNamespaces.values){
+            importedNamespace.add(a.field)
+        }
+        //类是否有空继承，以及实例化每个泛型类的类型
         GlobalField.localNamespaces.forEach { _, u ->
             u.field.forEachClass { c ->
                 for (p in c.parent){

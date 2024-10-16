@@ -131,7 +131,7 @@ open class PlayerVar : Var<PlayerVar>, EntityBase {
             val data = CompoundData("PlayerEntity", "mcfpp")
 
             init {
-                Project.stageProcessor[Project.RESOVLE_FIELD].add {
+                Project.stageProcessor[Project.RESOLVE_FIELD].add {
                     data.getNativeFromClass(PlayerEntityData::class.java)
                 }
             }

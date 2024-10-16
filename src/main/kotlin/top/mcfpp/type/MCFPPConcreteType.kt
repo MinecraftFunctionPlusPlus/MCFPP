@@ -16,17 +16,17 @@ open class MCFPPConcreteType(objectData: CompoundData = CompoundData("unknown", 
     parentType
 ) {
     final override fun buildUnConcrete(identifier: String): Var<*> {
-        LogProcessor.error("Cannot build $typeName that compiler cannot track.")
+        LogProcessor.error("Cannot build variable '$typeName' as the compiler cannot track its type.")
         return UnknownVar(identifier)
     }
 
     final override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> {
-        LogProcessor.error("Cannot build $typeName that compiler cannot track.")
+        LogProcessor.error("Cannot build variable '$typeName' as the compiler cannot track its type.")
         return UnknownVar(identifier)
     }
 
     final override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> {
-        LogProcessor.error("Cannot build $typeName that compiler cannot track.")
+        LogProcessor.error("Cannot build variable '$typeName' as the compiler cannot track its type.")
         return UnknownVar(identifier)
     }
 
