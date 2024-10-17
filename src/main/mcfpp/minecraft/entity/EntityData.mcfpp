@@ -1,0 +1,58 @@
+data EntityData {
+    @Name<"Air">
+    short air;
+
+    @Name<"CustomName">
+    string customName;
+
+    @Name<"CustomNameVisible">
+    bool customNameVisible;
+
+    @Name<"FallDistance">
+    float fallDistance;
+
+    @Name<"Fire">
+    short fire;
+
+    @Name<"Glowing">
+    bool glowing;
+
+    @Name<"HasVisualFire">
+    bool hasVisualFire;
+
+    @Name<"Invulnerable">
+    bool invulnerable;
+
+    @Name<"Motion">
+    list<double> motion;
+
+    @Name<"NoGravity">
+    bool noGravity;
+
+    @Name<"onGround">
+    bool onGround;
+
+    @Name<"Passengers">
+    list<EntityData> passengers;
+
+    @Name<"PortalCooldown">
+    int portalCooldown;
+
+    @Name<"Pos">
+    list<double> pos;
+
+    @Name<"Rotation">
+    list<float> rotation;
+
+    @Name<"Silent">
+    bool silent;
+
+    @Name<"Tags">
+    list<string> tags;
+
+    @Name<"TicksFrozen">
+    int ticksFrozen;
+
+    @Name<"UUID">
+    intarray uuid;
+}
