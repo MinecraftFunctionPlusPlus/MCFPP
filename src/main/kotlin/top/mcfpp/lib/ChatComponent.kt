@@ -78,6 +78,7 @@ class TranslatableChatComponent(val key: String, val fallback: String? = null, v
 }
 
 class ScoreChatComponent(val value: MCInt) : ChatComponent() {
+
     override fun toCommandPart(): Command {
         return Command("{\"type\":\"score\",\"score\":{\"name\":\"${value.name}\",\"objective\":\"${value.sbObject.name}\"}, ${styleToString()}}")
     }

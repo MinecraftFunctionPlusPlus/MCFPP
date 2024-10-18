@@ -4,6 +4,8 @@ import net.querz.nbt.tag.*
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
+import top.mcfpp.core.lang.bool.BaseBool
+import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.lib.*
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
@@ -173,9 +175,9 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
         if(v.isError){
             v = b
         }
-        hasAssigned = true
         val re = doAssignedBy(v)
         re.isDynamic = isDynamic
+        re.hasAssigned = true
         if(stackIndex != 0) trackLost = true
         return if(re is MCFPPValue<*> && re.isDynamic){
             re.toDynamic(false) as Self
@@ -222,7 +224,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember, Serial
         return when(type){
             MCFPPBaseType.Any -> MCAnyConcrete(this)
             MCFPPNBTType.NBT -> {
-                if(this is MCFPPValue<*>){
+                if(this is MCFPPValue<*> && (this is ScoreBoolConcrete || this !is BaseBool)){
                     NBTBasedDataConcrete(this.toNBTVar(), NBTUtil.varToNBT(this)!!)
                 }else{
                     this.toNBTVar()

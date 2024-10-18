@@ -387,6 +387,7 @@ primary
     |   var
     |   THIS
     |   SUPER
+    |   type
     ;
 
 varWithSelector
@@ -590,7 +591,6 @@ value
     |   LineString
     |   multiLineStringLiteral
     |   nbtValue
-    |   type
     |   TargetSelector
     ;
 

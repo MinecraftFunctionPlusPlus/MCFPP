@@ -4,6 +4,7 @@ import net.querz.nbt.tag.*
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.MCFPPValue
+import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 
 object NBTUtil {
@@ -112,6 +113,7 @@ object NBTUtil {
 
     fun<T> Tag<T>.toJava(): Any{
         return when(this){
+            is BoolTag -> value
             is ByteTag -> asByte()
             is ShortTag -> asShort()
             is IntTag -> asInt()

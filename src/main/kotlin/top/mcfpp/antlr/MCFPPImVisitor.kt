@@ -194,7 +194,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                     }
                     "dynamic" -> {
                         if(`var` is MCFPPValue<*> && `var`.hasAssigned){
-                            `var`.toDynamic(true)
+                            `var` = `var`.toDynamic(false)
                         }else if(`var` is MCFPPValue<*>){
                             `var` = type.buildUnConcrete(c.Identifier().text, Function.currFunction)
                         }

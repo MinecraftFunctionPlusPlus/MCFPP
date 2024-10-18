@@ -4,6 +4,7 @@ func print(string s) = top.mcfpp.mni.System.print;
 func print(DataObject n) = top.mcfpp.mni.System.print;
 func print(nbt n) = top.mcfpp.mni.System.print;
 func print(any a) = top.mcfpp.mni.System.print;
+func print(bool b) = top.mcfpp.mni.System.print;
 
 #func insert(string i) = top.mcfpp.mni.System.insert;
 func debug() = top.mcfpp.mni.System.debug;

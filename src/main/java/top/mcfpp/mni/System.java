@@ -7,6 +7,9 @@ import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.*;
+import top.mcfpp.core.lang.bool.BaseBool;
+import top.mcfpp.core.lang.bool.ScoreBool;
+import top.mcfpp.core.lang.bool.ScoreBoolConcrete;
 import top.mcfpp.lib.ScoreChatComponent;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.util.LogProcessor;
@@ -88,6 +91,26 @@ public class System {
         }else {
             //TODO
             Function.Companion.addCommand("TODO: tellraw templateData");
+        }
+    }
+
+    @InsertCommand
+    @MNIFunction(normalParams = {"bool b"})
+    public static void print(BaseBool bool){
+        ScoreBool b;
+        if(bool instanceof ScoreBool){
+            b = (ScoreBool) bool;
+        }else {
+            b = bool.toScoreBool();
+        }
+        if(b instanceof ScoreBoolConcrete bC){
+            Function.Companion.addCommand("tellraw @a " + bC.getValue());
+        }else {
+            if(b.getParent() != null){
+                Function.Companion.addCommands(Commands.INSTANCE.selectRun(b.getParent(), "tellraw @a " + new ScoreChatComponent(b.asIntVar()).toCommandPart(), true));
+            }else {
+                Function.Companion.addCommand("tellraw @a " + new ScoreChatComponent(b.asIntVar()).toCommandPart());
+            }
         }
     }
 

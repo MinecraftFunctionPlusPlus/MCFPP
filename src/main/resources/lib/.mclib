@@ -193,6 +193,22 @@
 				},
 				{
 					"id":"print",
+					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.core.lang.bool.BaseBool)",
+					"normalParams":[
+						{
+							"id":"a",
+							"type":"bool",
+							"isStatic":false
+						}
+					],
+					"returnType":"void",
+					"isAbstract":false,
+					"tags":[
+
+					]
+				},
+				{
+					"id":"print",
 					"javaMethod":"top.mcfpp.mni.System#print(top.mcfpp.core.lang.NBTBasedData)",
 					"normalParams":[
 						{

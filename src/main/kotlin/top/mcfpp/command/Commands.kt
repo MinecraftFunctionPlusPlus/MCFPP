@@ -85,6 +85,24 @@ object Commands {
             .build(b.sbObject.toString(),b.sbObject.toString())
     }
 
+    fun sbPlayerOperation(a: MCInt, operation: String, b: ScoreBool): Command {
+        return Command.build("scoreboard players operation")
+            .build(a.name,a.name)
+            .build(a.sbObject.toString(),a.sbObject.toString())
+            .build(operation,"operation")
+            .build(b.identifier,b.identifier)
+            .build(b.boolObject.toString(),b.boolObject.toString())
+    }
+
+    fun sbPlayerOperation(a: ScoreBool, operation: String, b: ScoreBool): Command {
+        return Command.build("scoreboard players operation")
+            .build(a.identifier,a.identifier)
+            .build(a.boolObject.toString(),a.boolObject.toString())
+            .build(operation,"operation")
+            .build(b.identifier,b.identifier)
+            .build(b.boolObject.toString(),b.boolObject.toString())
+    }
+
     /**
      * `scoreboard players remove <target.name> <target.object.toString()> value`
      *

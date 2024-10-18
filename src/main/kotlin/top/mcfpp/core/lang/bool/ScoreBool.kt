@@ -177,13 +177,25 @@ open class ScoreBool : BaseBool, OnScoreboard {
 
     @InsertCommand
     override fun or(a: Var<*>): Var<*>? {
-        if(a is ScoreBoolConcrete && a.value) return ScoreBoolConcrete(this, true)
+        if(a is ScoreBoolConcrete){
+            return if(a.value){
+                ScoreBoolConcrete(this, true)
+            }else{
+                this
+            }
+        }
         return ExecuteBool(this).or(a)
     }
 
     @InsertCommand
     override fun and(a: Var<*>): Var<*>? {
-        if(a is ScoreBoolConcrete && !a.value) return ScoreBoolConcrete(this, false)
+        if(a is ScoreBoolConcrete ){
+            return if(!a.value){
+                ScoreBoolConcrete(this, false)
+            }else{
+                this
+            }
+        }
         return ExecuteBool(this).and(a)
     }
 
@@ -203,7 +215,7 @@ open class ScoreBool : BaseBool, OnScoreboard {
                 if(final.size == 2){
                     Function.addCommand(final[0])
                 }
-                Function.addCommand(final.last().build(Commands.sbPlayerOperation(this,"=",b as MCInt)))
+                Function.addCommand(final.last().build(Commands.sbPlayerOperation(this,"=",b as ScoreBool)))
                 this
             },
             ifThisIsNormalVarAndAIsConcrete = { b, _ ->
@@ -213,12 +225,12 @@ open class ScoreBool : BaseBool, OnScoreboard {
                 if(cmd.size == 2){
                     Function.addCommand(cmd[0])
                 }
-                Function.addCommand(cmd.last().build(Commands.sbPlayerOperation(this, "=", c as MCInt)))
+                Function.addCommand(cmd.last().build(Commands.sbPlayerOperation(this, "=", c as ScoreBool)))
                 ScoreBool(this)
             },
             ifThisIsNormalVarAndAIsNotConcrete = { c, _ ->
                 //变量进栈
-                Function.addCommand(Commands.sbPlayerOperation(this, "=", c as MCInt))
+                Function.addCommand(Commands.sbPlayerOperation(this, "=", c as ScoreBool))
                 ScoreBool(this)
             }
         ) as ScoreBool
@@ -262,6 +274,33 @@ open class ScoreBool : BaseBool, OnScoreboard {
 
     override fun toScoreBool(): ScoreBool = this
 
+    override fun toNBTVar(): NBTBasedData {
+        val n = NBTBasedData()
+        n.name = name
+        n.identifier = identifier
+        n.isStatic = isStatic
+        n.accessModifier = accessModifier
+        n.isTemp = isTemp
+        n.stackIndex = stackIndex
+        n.isConst = isConst
+        n.nbtPath = nbtPath.clone()
+        return n
+    }
+
+    open fun asIntVar(): MCInt{
+        val n = MCInt()
+        n.name = name
+        n.identifier = identifier
+        n.isStatic = isStatic
+        n.accessModifier = accessModifier
+        n.isTemp = isTemp
+        n.stackIndex = stackIndex
+        n.isConst = isConst
+        n.nbtPath = nbtPath.clone()
+        n.setObj(boolObject)
+        return n
+    }
+
     companion object{
         val data = CompoundData("bool","mcfpp")
     }
@@ -278,7 +317,7 @@ class ScoreBoolConcrete : ScoreBool, MCFPPValue<Boolean> {
      * @param curr 域容器
      * @param value 值
      */
-    constructor(curr: FieldContainer, value: Boolean, identifier: String = UUID.randomUUID().toString()) : super(curr.prefix + identifier) {
+    constructor(curr: FieldContainer, value: Boolean, identifier: String = UUID.randomUUID().toString()) : super(curr, identifier) {
         this.value = value
     }
 
@@ -398,16 +437,17 @@ class ScoreBoolConcrete : ScoreBool, MCFPPValue<Boolean> {
             val cmd = Commands.selectRun(parent!!, "scoreboard players set @s $boolObject $value")
             Function.addCommands(cmd)
         } else {
-            val cmd = if (!isTemp)
-                Command("execute store result").build(nbtPath.toCommandPart()).build("int 1 run ")
-            else
-                Command("")
-            Function.addCommand(cmd.build("scoreboard players set $name $boolObject $value", false))
+            Function.addCommand("scoreboard players set $name $boolObject $value")
         }
         val re = ScoreBool(this)
         if(replace){
             replacedBy(re)
         }
         return re
+    }
+
+    override fun asIntVar(): MCInt {
+        val n = MCIntConcrete(super.asIntVar() , if(value) 1 else 0)
+        return n
     }
 }

@@ -25,6 +25,7 @@ import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.Generic
 import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.util.BoolTag
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import top.mcfpp.util.TextTranslator
@@ -57,9 +58,6 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         Function.currFunction = f
         return if(ctx.primary() != null){
             val q = visit(ctx.primary())
-            if(q is UnknownVar){
-                LogProcessor.error(TextTranslator.VARIABLE_NOT_DEFINED.translate(q.identifier))
-            }
             Function.currFunction = l
             l.commands.addAll(f.commands)
             q
@@ -109,11 +107,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         visitConditionalAndExpressionRe = visit(ctx.equalityExpression(0))
         processVarCache.add(visitConditionalAndExpressionRe!!)
         for (i in 1 until ctx.equalityExpression().size) {
-            var b: Var<*>? = visit(ctx.equalityExpression(i))
-            if(b is MCFloat) b = b.toTempEntity()
-            if(visitConditionalAndExpressionRe!! != MCFloat.ssObj){
-                visitConditionalAndExpressionRe = visitConditionalAndExpressionRe!!.getTempVar()
-            }
+            val b: Var<*>? = visit(ctx.equalityExpression(i))
             visitConditionalAndExpressionRe = visitConditionalAndExpressionRe!!.binaryComputation(b!!, "&&")
             processVarCache[processVarCache.size - 1] = visitConditionalAndExpressionRe!!
         }
@@ -322,7 +316,11 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         Project.ctx = ctx
         if (ctx.`var`() != null) {
             //变量
-            return visit(ctx.`var`())
+            val qwq = visit(ctx.`var`())
+            if(qwq is UnknownVar){
+                LogProcessor.error(TextTranslator.VARIABLE_NOT_DEFINED.translate(qwq.identifier))
+            }
+            return qwq
         } else if (ctx.value() != null) {
             return visit(ctx.value())
         } else if (ctx.range() != null){
@@ -350,6 +348,11 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 LogProcessor.error("Range sides should be a number: ${left?.type} and ${right?.type}")
                 return UnknownVar("range_" + UUID.randomUUID())
             }
+        } else if (ctx.type() != null){
+            return MCFPPTypeVar(MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field)?: run {
+                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
+                MCFPPBaseType.Any
+            })
         } else {
             //this或者super
             val re: Var<*>? = Function.field.getVar(ctx.text)
@@ -576,15 +579,8 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 stringArray.add(tailQuote.substring(3,tailQuote.length))
             }
             return MCStringConcrete(StringTag(stringArray.joinToString("")) ) //没有解析值就变不了MCString了
-        } else if (ctx.boolValue() != null){
-            return ScoreBoolConcrete(ctx.boolValue()!!.text.toBoolean())
         } else if (ctx.nbtValue() != null){
             return visit(ctx.nbtValue())
-        } else if (ctx.type() != null){
-            return MCFPPTypeVar(MCFPPType.parseFromIdentifier(ctx.type().text, Function.currFunction.field)?: run {
-                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
-                MCFPPBaseType.Any
-            })
         } else if (ctx.TargetSelector() != null){
             TODO()
         } else if(ctx.coordinate() != null){
@@ -635,8 +631,10 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     private lateinit var path : NBTPath
 
     override fun visitNbtValue(ctx: mcfppParser.NbtValueContext): Var<*> {
-        if(ctx.LineString() != null){
+        if(ctx.LineString() != null) {
             return NBTBasedDataConcrete(StringTag(ctx.LineString().text))
+        }else if(ctx.nbtBool() != null){
+            return NBTBasedDataConcrete(BoolTag(ctx.nbtBool().text == "true"))
         }else if(ctx.nbtByte() != null){
             return NBTBasedDataConcrete(ByteTag(ctx.nbtByte().text.toByte()))
         }else if(ctx.nbtShort() != null){
@@ -673,7 +671,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             return NBTBasedDataConcrete(SNBTUtil.fromSNBT(ctx.nbtByteArray().text))
         }else if(ctx.nbtIntArray() != null) {
             return NBTBasedDataConcrete(SNBTUtil.fromSNBT(ctx.nbtIntArray().text))
-        }else if(ctx.nbtLongArray() != null){
+        }else if(ctx.nbtLongArray() != null) {
             return NBTBasedDataConcrete(SNBTUtil.fromSNBT(ctx.nbtLongArray().text))
         }else {
             LogProcessor.error("Invalid NBT value")
