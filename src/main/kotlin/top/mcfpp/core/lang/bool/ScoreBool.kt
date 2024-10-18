@@ -22,7 +22,7 @@ import top.mcfpp.util.TextTranslator.translate
  *
  * bool型变量实现了多种计算方法，比如与，或，非等基本的逻辑运算。
  */
-open class MCBool : Var<MCBool>, OnScoreboard {
+open class ScoreBool : BaseBool, OnScoreboard {
     
     /**
      * 此bool变量依托的记分板
@@ -49,14 +49,40 @@ open class MCBool : Var<MCBool>, OnScoreboard {
      * 复制一个bool
      * @param b 被复制的int值
      */
-    constructor(b: MCBool) : super(b)
+    constructor(b: ScoreBool) : super(b)
 
     override var type: MCFPPType = MCFPPBaseType.Bool
 
     @Override
-    override fun doAssignedBy(b: Var<*>) : MCBool {
+    override fun doAssignedBy(b: Var<*>) : ScoreBool {
         when(b){
-            is MCBool -> return assignCommand(b)
+            is ScoreBool -> return assignCommand(b)
+
+            is ExecuteBool -> {
+                if(parentClass() != null){
+                    Function.addCommands(
+                        Commands.selectRun(parent!!, Command("store result score @s $boolObject").build(b.toCommandPart()), false)
+                    )
+                }else{
+                    Function.addCommand(
+                        Command.build("execute store result score $name $boolObject").build(b.toCommandPart())
+                    )
+                }
+                return this
+            }
+
+            is BaseBool -> {
+                if(parentClass() != null){
+                    Function.addCommands(
+                        Commands.selectRun(parent!!, Command("store result score @s $boolObject if").build(b.toCommandPart()), false)
+                    )
+                }else{
+                    Function.addCommand(
+                        Command.build("execute store result score $name $boolObject if").build(b.toCommandPart())
+                    )
+                }
+                return this
+            }
 
             is CommandReturn -> {
                 if(parentClass() != null){
@@ -68,7 +94,7 @@ open class MCBool : Var<MCBool>, OnScoreboard {
                         Command.build("execute store result score $name $boolObject run").build(b.command)
                     )
                 }
-                return MCBool(this)
+                return this
             }
 
             else -> {
@@ -81,7 +107,7 @@ open class MCBool : Var<MCBool>, OnScoreboard {
     override fun canAssignedBy(b: Var<*>): Boolean {
         if(!b.implicitCast(type).isError) return true
         return when(b){
-            is MCBool -> true
+            is ScoreBool -> true
             is CommandReturn -> true
             else -> false
         }
@@ -89,9 +115,9 @@ open class MCBool : Var<MCBool>, OnScoreboard {
 
     override fun isEqual(a: Var<*>): Var<*>? {
         //re = t == a
-        val re = MCBool()
+        val re = ScoreBool()
         when(a){
-            is MCBoolConcrete -> {
+            is ScoreBoolConcrete -> {
                 //execute store success score qwq qwq if score qwq qwq = owo owo
                 Function.addCommand(
                     "execute store success score " + re.name + " " + re.boolObject
@@ -99,11 +125,15 @@ open class MCBool : Var<MCBool>, OnScoreboard {
                 )
             }
 
-            is MCBool -> {
+            is ScoreBool -> {
                 Function.addCommand(
                     "execute store success score " + re.name + " " + re.boolObject
                             + " if score " + name + " " + boolObject + " = " + a.name + " " + a.boolObject
                 )
+            }
+
+            is BaseBool -> {
+                return isEqual(a.toScoreBool())
             }
 
             else -> return null
@@ -114,9 +144,9 @@ open class MCBool : Var<MCBool>, OnScoreboard {
     @InsertCommand
     override fun isNotEqual(a: Var<*>): Var<*>? {
         //re = t != a
-        val re: MCBool = MCBool()
+        val re = ScoreBool()
         when(a){
-            is MCBoolConcrete -> {
+            is ScoreBoolConcrete -> {
                 //execute store success score qwq qwq if score qwq qwq = owo owo
                 Function.addCommand(
                     "execute store success score " + re.name + " " + re.boolObject
@@ -124,11 +154,15 @@ open class MCBool : Var<MCBool>, OnScoreboard {
                 )
             }
 
-            is MCBool -> {
+            is ScoreBool -> {
                 Function.addCommand(
                     "execute store success score " + re.name + " " + re.boolObject
                             + " unless score " + name + " " + boolObject + " = " + a.name + " " + a.boolObject
                 )
+            }
+
+            is BaseBool -> {
+                return isNotEqual(a.toScoreBool())
             }
 
             else -> return null
@@ -138,152 +172,102 @@ open class MCBool : Var<MCBool>, OnScoreboard {
 
     @InsertCommand
     override fun negation(): Var<*> {
-        Function.addCommand(
-            "execute store success score " + name + " " + boolObject
-                    + " if score " + name + " " + boolObject + " matches " + 0
-        )
-        return this
+        return ExecuteBool(this, true)
     }
 
     @InsertCommand
     override fun or(a: Var<*>): Var<*>? {
-        val re: MCBool
-        when(a){
-            is MCBoolConcrete -> {
-                if(a.value){
-                    return MCBoolConcrete(true)
-                } else {
-                    re = MCBool()
-                    Function.addCommand(
-                        "execute store success score " + re.name + " " + re.boolObject
-                                + " if score " + name + " " + boolObject + " matches " + 1
-                    )
-                    return re
-                }
-            }
-
-            is MCBool -> {
-                re = MCBool()
-                Function.addCommand(
-                    "execute store success score " + re.name + " " + re.boolObject
-                            + " if score " + name + " " + boolObject + " matches " + 1
-                )
-                Function.addCommand(
-                    "execute" +
-                            " if score " + re.name + " " + re.boolObject + " matches " + 0 +
-                            " store success score " + re.name + " " + re.boolObject +
-                            " if score " + a.name + " " + a.boolObject + " matches " + 1
-                )
-            }
-
-            else -> return null
-        }
-        return re
+        if(a is ScoreBoolConcrete && a.value) return ScoreBoolConcrete(this, true)
+        return ExecuteBool(this).or(a)
     }
 
     @InsertCommand
     override fun and(a: Var<*>): Var<*>? {
-        val re: MCBool
-        when(a){
-            is MCBoolConcrete -> {
-                if(!a.value){
-                    return MCBoolConcrete(false)
-                } else {
-                    re = MCBool()
-                    Function.addCommand(
-                        "execute store success score " + re.name + " " + re.boolObject
-                                + " if score " + name + " " + boolObject + " matches " + 1
-                    )
-                    return re
-                }
-            }
-
-            is MCBool -> {
-                re = MCBool()
-                Function.addCommand(
-                    "execute store success score " + re.name + " " + re.boolObject
-                            + " if score " + name + " " + boolObject + " matches " + 1
-                )
-                Function.addCommand(
-                    "execute" +
-                            " if score " + re.name + " " + re.boolObject + " matches " + 1 +
-                            " store success score " + re.name + " " + re.boolObject +
-                            " if score " + a.name + " " + a.boolObject + " matches " + 1
-                )
-            }
-
-            else -> return null
-        }
-        return re
+        if(a is ScoreBoolConcrete && !a.value) return ScoreBoolConcrete(this, false)
+        return ExecuteBool(this).and(a)
     }
 
     @InsertCommand
-    private fun assignCommand(a: MCBool) : MCBool {
-        if(a is ReturnedMCBool){
-            Function.addCommand(
-                "execute" +
-                        " store result storage mcfpp:system " + top.mcfpp.Project.config.rootNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1" +
-                        " store result score $name $boolObject" +
-                        " run function ${a.parentFunction.namespaceID}"
-            )
-            return this
-        }else if(a is MCBoolConcrete){
-            return MCBoolConcrete(this,a.value)
-        }else{
-            //变量进栈
-            Function.addCommand(
-                "execute" +
-                        " store result storage mcfpp:system " + top.mcfpp.Project.config.rootNamespace + ".stack_frame[" + stackIndex + "]." + identifier + " int 1" +
-                        " run scoreboard players operation " + name + " " + boolObject + " = " + a.name + " " + a.boolObject
-            )
-            return this
-        }
+    private fun assignCommand(a: ScoreBool) : ScoreBool {
+        return assignCommandLambda(a,
+            ifThisIsClassMemberAndAIsConcrete =  { b, final ->
+                //对类中的成员的值进行修改
+                if(final.size == 2){
+                    Function.addCommand(final[0])
+                }
+                Function.addCommand(final.last().build(Commands.sbPlayerSet(this, (b as ScoreBoolConcrete).value)))
+                this
+            },
+            ifThisIsClassMemberAndAIsNotConcrete = { b, final ->
+                //对类中的成员的值进行修改
+                if(final.size == 2){
+                    Function.addCommand(final[0])
+                }
+                Function.addCommand(final.last().build(Commands.sbPlayerOperation(this,"=",b as MCInt)))
+                this
+            },
+            ifThisIsNormalVarAndAIsConcrete = { b, _ ->
+                ScoreBoolConcrete(this, (b as ScoreBoolConcrete).value)
+            },
+            ifThisIsNormalVarAndAIsClassMember = { c, cmd ->
+                if(cmd.size == 2){
+                    Function.addCommand(cmd[0])
+                }
+                Function.addCommand(cmd.last().build(Commands.sbPlayerOperation(this, "=", c as MCInt)))
+                ScoreBool(this)
+            },
+            ifThisIsNormalVarAndAIsNotConcrete = { c, _ ->
+                //变量进栈
+                Function.addCommand(Commands.sbPlayerOperation(this, "=", c as MCInt))
+                ScoreBool(this)
+            }
+        ) as ScoreBool
     }
 
-    override fun clone(): MCBool {
-        return MCBool(this)
+    override fun clone(): ScoreBool {
+        return ScoreBool(this)
     }
 
-    override fun setObj(sbObject: SbObject): MCBool {
+    override fun setObj(sbObject: SbObject): ScoreBool {
         boolObject = sbObject
         return this
     }
 
     @InsertCommand
-    override fun getTempVar(): MCBool {
+    override fun getTempVar(): ScoreBool {
         if (isTemp) return this
-        val re = MCBool()
+        val re = ScoreBool()
         re.assignedBy(this)
         return re
     }
 
     override fun storeToStack() {
-        TODO("Not yet implemented")
+        if(parentClass() != null || hasStoredInStack) return
+        Function.addCommand("execute " +
+                "store result $nbtPath int 1 " +
+                "run scoreboard players get $name $boolObject")
+        hasStoredInStack = true
     }
 
     override fun getFromStack() {
-        TODO("Not yet implemented")
+        if(parent != null) return
+        Function.addCommand("execute " +
+                "store result score $name $boolObject " +
+                "run data get $nbtPath")
     }
 
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        TODO("Not yet implemented")
+    override fun toCommandPart(): Command {
+        return Command("score $name $boolObject matches 1")
     }
 
-    override fun getMemberFunction(
-        key: String,
-        readOnlyArgs: List<Var<*>>,
-        normalArgs: List<Var<*>>,
-        accessModifier: Member.AccessModifier
-    ): Pair<Function, Boolean> {
-        TODO("Not yet implemented")
-    }
+    override fun toScoreBool(): ScoreBool = this
 
     companion object{
         val data = CompoundData("bool","mcfpp")
     }
 }
 
-class MCBoolConcrete : MCBool, MCFPPValue<Boolean> {
+class ScoreBoolConcrete : ScoreBool, MCFPPValue<Boolean> {
 
     override var value: Boolean
 
@@ -307,26 +291,26 @@ class MCBoolConcrete : MCBool, MCFPPValue<Boolean> {
         this.value = value
     }
 
-    constructor(bool: MCBool, value: Boolean) : super(bool){
+    constructor(bool: ScoreBool, value: Boolean) : super(bool){
         this.value = value
     }
 
-    constructor(v: MCBoolConcrete) : super(v){
+    constructor(v: ScoreBoolConcrete) : super(v){
         this.value = v.value
     }
 
-    override fun clone(): MCBoolConcrete {
-        return MCBoolConcrete(this)
+    override fun clone(): ScoreBoolConcrete {
+        return ScoreBoolConcrete(this)
     }
 
     @InsertCommand
     override fun isEqual(a: Var<*>): Var<*>? {
         when(a){
-            is MCBoolConcrete -> {
-                return MCBoolConcrete(value == a.value)
+            is ScoreBoolConcrete -> {
+                return ScoreBoolConcrete(value == a.value)
             }
 
-            is MCBool -> {
+            is BaseBool -> {
                 return a.isEqual(this)
             }
 
@@ -340,11 +324,11 @@ class MCBoolConcrete : MCBool, MCFPPValue<Boolean> {
     @InsertCommand
     override fun isNotEqual(a: Var<*>): Var<*>? {
         when(a){
-            is MCBoolConcrete -> {
-                return MCBoolConcrete(value != a.value)
+            is ScoreBoolConcrete -> {
+                return ScoreBoolConcrete(value != a.value)
             }
 
-            is MCBool -> {
+            is BaseBool -> {
                 return a.isNotEqual(this)
             }
 
@@ -365,11 +349,12 @@ class MCBoolConcrete : MCBool, MCFPPValue<Boolean> {
     @InsertCommand
     override fun or(a: Var<*>): Var<*>? {
         when(a){
-            is MCBoolConcrete -> {
-                return MCBoolConcrete(value || a.value)
+            is ScoreBoolConcrete -> {
+                return ScoreBoolConcrete(value || a.value)
             }
 
-            is MCBool -> {
+            is BaseBool -> {
+                if(value) return ScoreBoolConcrete(this,true)
                 return a.or(this)
             }
 
@@ -384,11 +369,12 @@ class MCBoolConcrete : MCBool, MCFPPValue<Boolean> {
     @InsertCommand
     override fun and(a: Var<*>): Var<*>? {
         when(a){
-            is MCBoolConcrete -> {
-                return MCBoolConcrete(value && a.value)
+            is ScoreBoolConcrete -> {
+                return ScoreBoolConcrete(value && a.value)
             }
 
-            is MCBool -> {
+            is BaseBool -> {
+                if(!value) return ScoreBoolConcrete(this,false)
                 return a.and(this)
             }
 
@@ -400,19 +386,27 @@ class MCBoolConcrete : MCBool, MCFPPValue<Boolean> {
     }
 
     @InsertCommand
-    override fun getTempVar(): MCBoolConcrete {
+    override fun getTempVar(): ScoreBoolConcrete {
         if (isTemp) return this
-        return MCBoolConcrete(value)
+        return ScoreBoolConcrete(value)
     }
 
     override fun toDynamic(replace: Boolean): Var<*> {
-        val re = MCBool(this)
+        val parent = parent
+
+        if (parentClass() != null) {
+            val cmd = Commands.selectRun(parent!!, "scoreboard players set @s $boolObject $value")
+            Function.addCommands(cmd)
+        } else {
+            val cmd = if (!isTemp)
+                Command("execute store result").build(nbtPath.toCommandPart()).build("int 1 run ")
+            else
+                Command("")
+            Function.addCommand(cmd.build("scoreboard players set $name $boolObject $value", false))
+        }
+        val re = ScoreBool(this)
         if(replace){
-            if(parentTemplate() != null){
-                (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
-            }else{
-                Function.currFunction.field.putVar(identifier, re, true)
-            }
+            replacedBy(re)
         }
         return re
     }

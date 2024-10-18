@@ -2,8 +2,7 @@ package top.mcfpp.core.lang
 
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.model.accessor.SimpleAccessor
-import top.mcfpp.core.lang.bool.MCBool
+import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.lib.ChatComponent
 import top.mcfpp.lib.NBTChatComponent
 import top.mcfpp.model.CompoundData
@@ -109,11 +108,11 @@ open class JsonText : NBTBasedData {
                 extends(NBTBasedData.data)
 
                 addMember(MCInt("color"))
-                addMember(MCBool("bold"))
-                addMember(MCBool("italic"))
-                addMember(MCBool("underlined"))
-                addMember(MCBool("strikethrough"))
-                addMember(MCBool("obfuscated"))
+                addMember(ScoreBool("bold"))
+                addMember(ScoreBool("italic"))
+                addMember(ScoreBool("underlined"))
+                addMember(ScoreBool("strikethrough"))
+                addMember(ScoreBool("obfuscated"))
                 addMember(MCString("insertion"))
             }
         }

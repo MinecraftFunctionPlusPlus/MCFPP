@@ -5,6 +5,7 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.antlr.RuleContextExtension.children
 import top.mcfpp.antlr.mcfppParser.CompileTimeFuncDeclarationContext
+import top.mcfpp.command.Command
 import top.mcfpp.command.CommandList
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.*
@@ -15,9 +16,10 @@ import top.mcfpp.type.MCFPPEnumType
 import top.mcfpp.type.MCFPPGenericClassType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.core.lang.MCFPPValue
-import top.mcfpp.core.lang.bool.MCBool
-import top.mcfpp.core.lang.bool.MCBoolConcrete
-import top.mcfpp.core.lang.bool.ReturnedMCBool
+import top.mcfpp.core.lang.bool.BaseBool
+import top.mcfpp.core.lang.bool.ExecuteBool
+import top.mcfpp.core.lang.bool.ScoreBool
+import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.lib.Execute
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.lib.SbObject
@@ -401,12 +403,8 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         if (parent is mcfppParser.IfStatementContext || parent is mcfppParser.ElseIfStatementContext) {
             //if()，需要进行条件计算
             parent as mcfppParser.IfStatementContext
-            var exp = MCFPPExprVisitor().visit(parent.expression())
-            if(exp is ReturnedMCBool){
-                exp = MCBool().assignedBy(exp)
-            }
-            when(exp){
-                is MCBoolConcrete -> {
+            when(val exp = MCFPPExprVisitor().visit(parent.expression())){
+                is ScoreBoolConcrete -> {
                     if (exp.value) {
                         //函数调用的命令
                         //给子函数开栈
@@ -418,44 +416,23 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                     }
                 }
 
-                is ReturnedMCBool -> {
+                is ExecuteBool -> {
                     //给子函数开栈
                     Function.addCommand(
-                        "execute " +
-                                "if function " + exp.parentFunction.namespaceID +
-                                "run return run function " + f.namespaceID
+                        Command("execute").build(exp.toCommandPart()).build("run return run").build(Commands.function(f))
                     )
                 }
 
-                is MCBool -> {
+                is BaseBool -> {
                     Function.addCommand(
-                        "execute " +
-                                "if score " + exp.name + " " + SbObject.MCFPP_boolean + " matches 1 " +
-                                "run return run function " + f.namespaceID
+                        Command("execute if").build(exp.toCommandPart()).build("run return run").build(Commands.function(f))
                     )
                 }
-            }
-            if(exp !is MCBool){
-                throw TypeCastException()
-            }
-            if (exp is MCBoolConcrete && exp.value) {
-                //函数调用的命令
-                //给子函数开栈
-                Function.addCommand("function " + f.namespaceID)
-                LogProcessor.warn("The condition is always true. ")
-            } else if (exp is MCBoolConcrete) {
-                Function.addComment("function " + f.namespaceID)
-                LogProcessor.warn("The condition is always false. ")
-            } else {
-                exp as ReturnedMCBool
-                val exp1 = MCBool()
-                exp1.assignedBy(exp)
-                //给子函数开栈
-                Function.addCommand(
-                    "execute " +
-                            "if score " + exp1.name + " " + SbObject.MCFPP_boolean + " matches 1 " +
-                            "run return run function " + f.namespaceID
-                )
+
+                else -> {
+                    LogProcessor.error("The condition must be a boolean expression.")
+                    Function.addComment("[error/The condition must be a boolean expression]function " + f.namespaceID)
+                }
             }
         }
         else {
@@ -529,7 +506,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
         Function.addComment("while start")
         val parent: mcfppParser.WhileStatementContext = ctx.parent as mcfppParser.WhileStatementContext
-        val exp: MCBool = MCFPPExprVisitor().visit(parent.expression()) as MCBool
+        val exp = MCFPPExprVisitor().visit(parent.expression())
         //匿名函数的定义
         val f: Function = InternalFunction("_while_block_", Function.currFunction)
         f.child.add(f)
@@ -538,30 +515,42 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             GlobalField.localNamespaces[f.namespace] = Namespace(f.namespace)
         GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f,false)
         //条件判断
-        if (exp is MCBoolConcrete && exp.value) {
-            //给子函数开栈
-            Function.addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
-            Function.addCommand(
-                "execute " +
-                        "if function " + f.namespaceID + " " +
-                        "run function " + Function.currFunction.namespaceID
-            )
-            LogProcessor.warn("The condition is always true. ")
-        } else if (exp is MCBoolConcrete) {
-            //给子函数开栈
-            Function.addComment("function " + f.namespaceID)
-            LogProcessor.warn("The condition is always false. ")
-        } else {
-            exp as ReturnedMCBool
-            //给子函数开栈
-            Function.addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
-            //函数返回1才会继续执行(continue或者正常循环完毕)，返回0则不继续循环(break)
-            Function.addCommand(
-                "execute " +
-                        "if function " + exp.parentFunction.namespaceID + " " +
-                        "if function " + f.namespaceID + " " +
-                        "run function " + Function.currFunction.namespaceID
-            )
+        when(exp){
+            is ScoreBoolConcrete -> {
+                if(exp.value){
+                    //给子函数开栈
+                    Function.addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
+                    Function.addCommand("execute " +
+                            "if function " + f.namespaceID + " " +
+                            "run function " + Function.currFunction.namespaceID)
+                }else{
+                    Function.addComment("function " + f.namespaceID)
+                }
+            }
+
+            is ExecuteBool -> {
+                //给子函数开栈
+                Function.addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
+                Function.addCommand(Command("execute")
+                    .build(exp.toCommandPart())
+                    .build("if function " + f.namespaceID)
+                    .build("run function " + Function.currFunction.namespaceID))
+            }
+
+            is BaseBool -> {
+                //给子函数开栈
+                Function.addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
+                Function.addCommand(Command("execute")
+                    .build("if").build(exp.toCommandPart())
+                    .build("if function " + f.namespaceID)
+                    .build("run function " + Function.currFunction.namespaceID)
+                )
+            }
+
+            else -> {
+                LogProcessor.error("The condition must be a boolean expression.")
+                Function.addComment("[error/The condition must be a boolean expression]function " + f.namespaceID)
+            }
         }
         Function.currFunction = f //后续块中的命令解析到递归的函数中
 
@@ -661,31 +650,47 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                     "run return 1"
         )
         val parent = ctx.parent as mcfppParser.DoWhileStatementContext
-        val exp: MCBool = MCFPPExprVisitor().visit(parent.expression()) as MCBool
+        MCFPPExprVisitor().visit(parent.expression()) as ScoreBool
         Function.addCommand("data remove storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame[0]")
         //递归调用
-        if (exp is MCBoolConcrete && exp.value) {
-            //给子函数开栈
-            Function.addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
-            Function.addCommand(
-                "execute " +
-                        "if function " + f.namespaceID + " " +
-                        "run function " + Function.currFunction.namespaceID
-            )
-            LogProcessor.warn("The condition is always true. ")
-        } else if (exp is MCBoolConcrete) {
-            //给子函数开栈
-            Function.addComment(Commands.function(Function.currFunction).toString())
-            LogProcessor.warn("The condition is always false. ")
-        } else {
-            exp as ReturnedMCBool
-            //给子函数开栈
-            Function.addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
-            Function.addCommand(
-                "execute " +
-                        "if function ${exp.parentFunction.namespaceID} " +
-                        "run " + Commands.function(Function.currFunction)
-            )
+        when(val exp = MCFPPExprVisitor().visit(parent.expression())){
+            is ScoreBoolConcrete -> {
+                if(exp.value){
+                    //给子函数开栈
+                    Function.addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
+                    Function.addCommand("execute " +
+                            "if function " + f.namespaceID + " " +
+                            "run function " + Function.currFunction.namespaceID)
+                    LogProcessor.warn("The condition is always true. ")
+                }else{
+                    Function.addComment("function " + f.namespaceID)
+                    LogProcessor.warn("The condition is always false. ")
+                }
+            }
+
+            is ExecuteBool -> {
+                //给子函数开栈
+                Function.addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
+                Function.addCommand(Command("execute")
+                    .build(exp.toCommandPart())
+                    .build("if function " + f.namespaceID)
+                    .build("run function " + Function.currFunction.namespaceID))
+            }
+
+            is BaseBool -> {
+                //给子函数开栈
+                Function.addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
+                Function.addCommand(Command("execute")
+                    .build("if").build(exp.toCommandPart())
+                    .build("if function " + f.namespaceID)
+                    .build("run function " + Function.currFunction.namespaceID)
+                )
+            }
+
+            else -> {
+                LogProcessor.error("The condition must be a boolean expression.")
+                Function.addComment("[error/The condition must be a boolean expression]function " + f.namespaceID)
+            }
         }
         Function.currFunction = f //后续块中的命令解析到递归的函数中
     }
@@ -791,7 +796,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Project.ctx = ctx
         //currFunction 是 forLoop
         val parent: mcfppParser.ForStatementContext = ctx.parent as mcfppParser.ForStatementContext
-        val exp: MCBool = MCFPPExprVisitor().visit(parent.forControl().expression()) as MCBool
+        val exp = MCFPPExprVisitor().visit(parent.forControl().expression())
         //匿名函数的定义。这里才是正式的for函数哦喵
         val f: Function = InternalFunction("_forblock_", Function.currFunction)
         f.child.add(f)
@@ -800,30 +805,47 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             GlobalField.localNamespaces[f.namespace] = Namespace(f.namespace)
         GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f,false)
         //条件循环判断
-        if (exp is MCBoolConcrete && exp.value) {
-            //给子函数开栈
-            Function.addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
-            Function.addCommand(
-                "execute " +
-                        "if function " + f.namespaceID + " " +
-                        "run function " + Function.currFunction.namespaceID
-            )
-            LogProcessor.warn("The condition is always true. ")
-        } else if (exp is MCBoolConcrete) {
-            //给子函数开栈
-            Function.addComment("function " + f.namespaceID)
-            LogProcessor.warn("The condition is always false. ")
-        } else {
-            exp as ReturnedMCBool
-            //给子函数开栈
-            Function.addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
-            //函数返回1才会继续执行(continue或者正常循环完毕)，返回0则不继续循环(break)
-            Function.addCommand(
-                "execute " +
-                        "if function ${exp.parentFunction.namespaceID} " +
-                        "if function " + f.namespaceID + " " +
-                        "run function " + Function.currFunction.namespaceID
-            )
+        when(exp){
+            is ScoreBoolConcrete -> {
+                if(exp.value){
+                    //给子函数开栈
+                    Function.addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
+                    Function.addCommand("execute " +
+                            "if function " + f.namespaceID + " " +
+                            "run function " + Function.currFunction.namespaceID)
+                    LogProcessor.warn("The condition is always true. ")
+                }else{
+                    Function.addComment("function " + f.namespaceID)
+                    LogProcessor.warn("The condition is always false. ")
+                }
+            }
+
+            is ExecuteBool -> {
+                //给子函数开栈
+                Function.addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
+                Function.addCommand(
+                    Command("execute")
+                        .build(exp.toCommandPart())
+                        .build("if function " + f.namespaceID)
+                        .build("run function " + Function.currFunction.namespaceID)
+                )
+            }
+
+            is BaseBool -> {
+                //给子函数开栈
+                Function.addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
+                Function.addCommand(
+                    Command("execute")
+                        .build("if").build(exp.toCommandPart())
+                        .build("if function " + f.namespaceID)
+                        .build("run function " + Function.currFunction.namespaceID)
+                )
+            }
+
+            else -> {
+                LogProcessor.error("The condition must be a boolean expression.")
+                Function.addComment("[error/The condition must be a boolean expression]function " + f.namespaceID)
+            }
         }
         //调用完毕，将子函数的栈销毁。这条命令仍然是在for函数中的。
         Function.addCommand("data remove storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame[0]")
@@ -919,7 +941,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-    private var temp: MCBool? = null
+    private var temp: ScoreBool? = null
     
     @InsertCommand
     override fun visitControlStatement(ctx: mcfppParser.ControlStatementContext):Any? {

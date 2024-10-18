@@ -3,8 +3,8 @@ package top.mcfpp.core.lang
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Commands
-import top.mcfpp.core.lang.bool.MCBool
-import top.mcfpp.core.lang.bool.MCBoolConcrete
+import top.mcfpp.core.lang.bool.ScoreBool
+import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType
@@ -253,7 +253,7 @@ open class MCFloat : MCNumber<Float> {
         //re = t > a
         if(!isTemp) return getTempVar().isBigger(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
-        val re = MCBool()
+        val re = ScoreBool()
         if(qwq != tempFloat) qwq.toTempEntity()
         Function.addCommand(
             "execute store result score ${re.name} ${re.boolObject} as $tempFloatEntityUUID " +
@@ -271,7 +271,7 @@ open class MCFloat : MCNumber<Float> {
         //re = t < a
         if(!isTemp) return getTempVar().isSmaller(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
-        val re = MCBool()
+        val re = ScoreBool()
         if(qwq != tempFloat) qwq.toTempEntity()
         Function.addCommand(
             "execute store result score ${re.name} ${re.boolObject} as $tempFloatEntityUUID " +
@@ -289,7 +289,7 @@ open class MCFloat : MCNumber<Float> {
         //re = t <= a
         if(!isTemp) return getTempVar().isSmallerOrEqual(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
-        val re = MCBool()
+        val re = ScoreBool()
         if(qwq != tempFloat) qwq.toTempEntity()
         Function.addCommand(
             "execute store result score ${re.name} ${re.boolObject} as $tempFloatEntityUUID " +
@@ -307,7 +307,7 @@ open class MCFloat : MCNumber<Float> {
         //re = t >= a
         if(!isTemp) return getTempVar().isBiggerOrEqual(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
-        val re = MCBool()
+        val re = ScoreBool()
         if(qwq != tempFloat) qwq.toTempEntity()
         Function.addCommand(
             "execute store result score ${re.name} ${re.boolObject} as $tempFloatEntityUUID " +
@@ -325,7 +325,7 @@ open class MCFloat : MCNumber<Float> {
         //re = t == a
         if(!isTemp) return getTempVar().isEqual(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
-        val re = MCBool()
+        val re = ScoreBool()
         if(qwq != tempFloat) qwq.toTempEntity()
         Function.addCommand(
             "execute store result score ${re.name} ${re.boolObject} as $tempFloatEntityUUID " +
@@ -343,7 +343,7 @@ open class MCFloat : MCNumber<Float> {
         //re = t != a
         if(!isTemp) return getTempVar().isNotEqual(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
-        val re = MCBool()
+        val re = ScoreBool()
         if(qwq != tempFloat) qwq.toTempEntity()
         Function.addCommand(
             "execute store result score ${re.name} ${re.boolObject} as $tempFloatEntityUUID " +
@@ -682,13 +682,13 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
         //re = t > a
         if(!isTemp) return (getTempVar() as MCFloat).isBigger(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
-        val re : MCBool
+        val re : ScoreBool
         if (qwq is MCFloatConcrete) {
-            re = MCBoolConcrete(value > qwq.value)
+            re = ScoreBoolConcrete(value > qwq.value)
         } else {
             toDynamic(true)
             if(qwq != tempFloat) qwq.toTempEntity()
-            re = MCBool()
+            re = ScoreBool()
             Function.addCommand(
                 "execute " +
                         "store result score ${re.name} ${re.boolObject} " +
@@ -708,13 +708,13 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
         //re = t < a
         if(!isTemp) return (getTempVar() as MCFloat).isSmaller(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
-        val re : MCBool
+        val re : ScoreBool
         if (qwq is MCFloatConcrete) {
-            re = MCBoolConcrete(value < qwq.value)
+            re = ScoreBoolConcrete(value < qwq.value)
         } else {
             toDynamic(true)
             if(qwq != tempFloat) qwq.toTempEntity()
-            re = MCBool()
+            re = ScoreBool()
             Function.addCommand(
                 "execute " +
                         "store result score ${re.name} ${re.boolObject} " +
@@ -734,13 +734,13 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
         //re = t <= a
         if(!isTemp) return (getTempVar() as MCFloat).isSmallerOrEqual(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
-        val re : MCBool
+        val re : ScoreBool
         if (qwq is MCFloatConcrete) {
-            re = MCBoolConcrete(value <= qwq.value)
+            re = ScoreBoolConcrete(value <= qwq.value)
         } else {
             toDynamic(true)
             if(qwq != tempFloat) qwq.toTempEntity()
-            re = MCBool()
+            re = ScoreBool()
             Function.addCommand(
                 "execute " +
                         "store result score ${re.name} ${re.boolObject} " +
@@ -760,13 +760,13 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
         //re = t >= a
         if(!isTemp) return (getTempVar() as MCFloat).isSmallerOrEqual(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
-        val re : MCBool
+        val re : ScoreBool
         if (qwq is MCFloatConcrete) {
-            re = MCBoolConcrete(value >= qwq.value)
+            re = ScoreBoolConcrete(value >= qwq.value)
         } else {
             toDynamic(true)
             if(qwq != tempFloat) qwq.toTempEntity()
-            re = MCBool()
+            re = ScoreBool()
             Function.addCommand(
                 "execute " +
                         "store result score ${re.name} ${re.boolObject} " +
@@ -786,13 +786,13 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
         //re = t == a
         if(!isTemp) return (getTempVar() as MCFloat).isEqual(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
-        val re : MCBool
+        val re : ScoreBool
         if (qwq is MCFloatConcrete) {
-            re = MCBoolConcrete(value >= qwq.value)
+            re = ScoreBoolConcrete(value >= qwq.value)
         } else {
             toDynamic(true)
             if(qwq != tempFloat) qwq.toTempEntity()
-            re = MCBool()
+            re = ScoreBool()
             Function.addCommand(
                 "execute " +
                         "store result score ${re.name} ${re.boolObject} " +
@@ -812,13 +812,13 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
         //re = t != a
         if(!isTemp) return (getTempVar() as MCFloat).isNotEqual(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
-        val re : MCBool
+        val re : ScoreBool
         if (qwq is MCFloatConcrete) {
-            re = MCBoolConcrete(value >= qwq.value)
+            re = ScoreBoolConcrete(value >= qwq.value)
         } else {
             toDynamic(true)
             if(qwq != tempFloat) qwq.toTempEntity()
-            re = MCBool()
+            re = ScoreBool()
             Function.addCommand(
                 "execute " +
                         "store result score ${re.name} ${re.boolObject} " +

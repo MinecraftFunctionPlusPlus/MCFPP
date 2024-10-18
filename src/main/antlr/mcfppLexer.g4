@@ -133,6 +133,10 @@ LIST:       'list';
 MAP:        'map';
 DICT:       'dict';
 
+
+TRUE:   'true';
+FALSE:  'false';
+
 VecType: VEC DigitSequence;
 
 //Identifiers
@@ -186,6 +190,7 @@ NBTInt: IntConstant;
 NBTLong: IntConstant NBTLongSuffix;
 NBTFloat: FractionalConstant ExponentPart?;
 NBTDouble: (DigitSequence|FractionalConstant) ExponentPart? NBTDoubleSuffix;
+NBTBool: BooleanConstant;
 
 FloatConstant
     : DigitSequence NBTFloatSuffix
@@ -202,8 +207,8 @@ RelativeValue
     ;
 
 BooleanConstant
-    :   'true'
-    |   'false'
+    :   TRUE
+    |   FALSE
     ;
 
 LineString: ('"' .*? '"' )|( '\'' .*? '\'' );

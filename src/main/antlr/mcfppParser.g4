@@ -382,9 +382,9 @@ basicExpression
     ;
 //初级表达式
 primary
-    :   var
-    |   range
+    :   range
     |   value
+    |   var
     |   THIS
     |   SUPER
     ;
@@ -588,7 +588,6 @@ functionReturnType
 value
     :   coordinate
     |   LineString
-    |   boolValue
     |   multiLineStringLiteral
     |   nbtValue
     |   type
@@ -601,10 +600,6 @@ coordinate
 
 coordinateDimension
     :   (RelativeValue | nbtInt | nbtFloat | nbtDouble)
-    ;
-
-boolValue
-    :   BooleanConstant
     ;
 
 className
@@ -640,6 +635,7 @@ namespacePath
 
 nbtValue
     :   LineString
+    |   nbtBool
     |   nbtByte
     |   nbtShort
     |   nbtInt
@@ -659,6 +655,7 @@ nbtInt:  NBTInt;
 nbtLong: NBTLong;
 nbtFloat: NBTFloat;
 nbtDouble: NBTDouble;
+nbtBool: TRUE | FALSE;
 
 nbtByteArray: NBT_BYTE_ARRAY_BEGIN nbtByte (',' nbtByte)* ']';
 nbtIntArray: NBT_INT_ARRAY_BEGIN nbtInt (',' nbtInt)* ']';

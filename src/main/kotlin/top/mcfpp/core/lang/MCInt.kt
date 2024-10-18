@@ -3,9 +3,7 @@ package top.mcfpp.core.lang
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.core.lang.bool.MCBool
-import top.mcfpp.core.lang.bool.MCBoolConcrete
-import top.mcfpp.core.lang.bool.ReturnedMCBool
+import top.mcfpp.core.lang.bool.*
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.mni.MCIntData
 import top.mcfpp.type.MCFPPBaseType
@@ -260,20 +258,12 @@ open class MCInt : MCNumber<Int> {
     override fun isBigger(a: Var<*>): Var<*> {
         //re = t > a
         val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
-        val re: MCBool
+        val re = ExecuteBool()
         if (qwq is MCIntConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
-            re = ReturnedMCBool(Function.currFunction)
-            Function.addCommand(
-                "execute if score " + name + " " + sbObject + " matches " + (qwq.value + 1) + ".. run return 1"
-            )
-            Function.addCommand("return 0")
+            re.value.add(CommandBoolPart(false, Command("if score $name $sbObject matches ${qwq.value + 1}..")))
         } else {
-            re = ReturnedMCBool(Function.currFunction)
-            Function.addCommand(
-                "execute if score " + name + " " + sbObject + " > " + qwq.name + " " + qwq.sbObject + " run return 1"
-            )
-            Function.addCommand("return 0")
+            re.value.add(CommandBoolPart(false, Command("if score $name $sbObject > ${qwq.name} ${qwq.sbObject}")))
         }
         re.isTemp = true
         return re
@@ -283,20 +273,12 @@ open class MCInt : MCNumber<Int> {
     override fun isSmaller(a: Var<*>): Var<*> {
         //re = t < a
         val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
-        val re: MCBool
+        val re = ExecuteBool()
         if (qwq is MCIntConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
-            re = ReturnedMCBool(Function.currFunction)
-            Function.addCommand(
-                "execute if score " + name + " " + sbObject + " matches " + ".." + (qwq.value - 1) + " run return 1"
-            )
-            Function.addCommand("return 0")
+            re.value.add(CommandBoolPart(false, Command("if score $name $sbObject matches ..${qwq.value - 1}")))
         } else {
-            re = ReturnedMCBool(Function.currFunction)
-            Function.addCommand(
-                "execute if score " + name + " " + sbObject + " < " + qwq.name + " " + qwq.sbObject + " run return 1"
-            )
-            Function.addCommand("return 0")
+            re.value.add(CommandBoolPart(false, Command("if score $name $sbObject < ${qwq.name} ${qwq.sbObject}")))
         }
         re.isTemp = true
         return re
@@ -306,20 +288,12 @@ open class MCInt : MCNumber<Int> {
     override fun isSmallerOrEqual(a: Var<*>): Var<*> {
         //re = t <= a
         val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
-        val re: MCBool
+        val re = ExecuteBool()
         if (qwq is MCIntConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
-            re = ReturnedMCBool(Function.currFunction)
-            Function.addCommand(
-                "execute if score " + name + " " + sbObject + " matches " + ".." + qwq.value + " run return 1"
-            )
-            Function.addCommand("return 0")
+            re.value.add(CommandBoolPart(false, Command("if score $name $sbObject matches ..${qwq.value}")))
         } else {
-            re = ReturnedMCBool(Function.currFunction)
-            Function.addCommand(
-                "execute if score " + name + " " + sbObject + " <= " + qwq.name + " " + qwq.sbObject + " run return 1"
-            )
-            Function.addCommand("return 0")
+            re.value.add(CommandBoolPart(false, Command("if score $name $sbObject <= ${qwq.name} ${qwq.sbObject}")))
         }
         re.isTemp = true
         return re
@@ -329,20 +303,12 @@ open class MCInt : MCNumber<Int> {
     override fun isBiggerOrEqual(a: Var<*>): Var<*> {
         //re = t <= a
         val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
-        val re: MCBool
+        val re = ExecuteBool()
         if (qwq is MCIntConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
-            re = ReturnedMCBool(Function.currFunction)
-            Function.addCommand(
-                "execute if score " + name + " " + sbObject + " matches " + qwq.value + ".. run return 1"
-            )
-            Function.addCommand("return 0")
+            re.value.add(CommandBoolPart(false, Command("if score $name $sbObject matches ${qwq.value}..")))
         } else {
-            re = ReturnedMCBool(Function.currFunction)
-            Function.addCommand(
-                "execute if score " + name + " " + sbObject + " >= " + qwq.name + " " + qwq.sbObject + " run return 1"
-            )
-            Function.addCommand("return 0")
+            re.value.add(CommandBoolPart(false, Command("if score $name $sbObject >= ${qwq.name} ${qwq.sbObject}")))
         }
         re.isTemp = true
         return re
@@ -352,20 +318,12 @@ open class MCInt : MCNumber<Int> {
     override fun isEqual(a: Var<*>): Var<*> {
         //re = t == a
         val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
-        val re: MCBool
+        val re = ExecuteBool()
         if (qwq is MCIntConcrete) {
             //execute store success score qwq qwq if score qwq qwq = owo owo
-            re = ReturnedMCBool(Function.currFunction)
-            Function.addCommand(
-                "execute if score " + name + " " + sbObject + " matches " + qwq.value + " run return 1"
-            )
-            Function.addCommand("return 0")
+            re.value.add(CommandBoolPart(false, Command("if score $name $sbObject matches ${qwq.value}")))
         } else {
-            re = ReturnedMCBool(Function.currFunction)
-            Function.addCommand(
-                "execute if score " + name + " " + sbObject + " = " + qwq.name + " " + qwq.sbObject + " run return 1"
-            )
-            Function.addCommand("return 0")
+            re.value.add(CommandBoolPart(false, Command("if score $name $sbObject = ${qwq.name} ${qwq.sbObject}")))
         }
         re.isTemp = true
         return re
@@ -375,20 +333,12 @@ open class MCInt : MCNumber<Int> {
     override fun isNotEqual(a: Var<*>): Var<*> {
         //re = t != a
         val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
-        val re: MCBool
-        if (qwq is MCIntConcrete) {
-            //execute store success score qwq qwq if score qwq qwq = owo owo
-            re = ReturnedMCBool(Function.currFunction)
-            Function.addCommand(
-                "execute unless score " + name + " " + sbObject + " matches " + qwq.value + " run return 1"
-            )
-            Function.addCommand("return 0")
-        } else {
-            re = ReturnedMCBool(Function.currFunction)
-            Function.addCommand(
-                "execute unless score " + name + " " + sbObject + " = " + qwq.name + " " + qwq.sbObject + " run return 1"
-            )
-            Function.addCommand("return 0")
+        val re = ExecuteBool()
+        if(qwq is MCIntConcrete){
+            //execute store success score qwq qwq if score qwq qwq matches owo owo
+            re.value.add(CommandBoolPart(false, Command("unless score $name $sbObject matches ${qwq.value}")))
+        }else{
+            re.value.add(CommandBoolPart(false, Command("unless score $name $sbObject = ${qwq.name} ${qwq.sbObject}")))
         }
         re.isTemp = true
         return re
@@ -635,7 +585,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
         //re = t > a
         val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         return if (qwq is MCIntConcrete) {
-            MCBoolConcrete(value > qwq.value)
+            ScoreBoolConcrete(value > qwq.value)
         } else {
             //注意大小于换符号！
             qwq.isSmaller(this)
@@ -648,7 +598,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
         //re = t < a
         val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         return if (qwq is MCIntConcrete) {
-            MCBoolConcrete(value < qwq.value)
+            ScoreBoolConcrete(value < qwq.value)
         } else {
             qwq.isBigger(this)
         }
@@ -660,7 +610,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
         //re = t <= a
         val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         return if (qwq is MCIntConcrete) {
-            MCBoolConcrete(value <= qwq.value)
+            ScoreBoolConcrete(value <= qwq.value)
         } else {
             qwq.isBiggerOrEqual(this)
         }
@@ -672,7 +622,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
         //re = t <= a
         val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         return if (qwq is MCIntConcrete) {
-            MCBoolConcrete(value >= qwq.value)
+            ScoreBoolConcrete(value >= qwq.value)
         } else {
             qwq.isSmallerOrEqual(this)
         }
@@ -684,7 +634,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
         //re = t == a
         val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         return if (qwq is MCIntConcrete) {
-            MCBoolConcrete(value == qwq.value)
+            ScoreBoolConcrete(value == qwq.value)
         } else {
             qwq.isEqual(this)
         }
@@ -696,7 +646,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
         //re = t != a
         val qwq: MCInt = if (a !is MCInt) a.explicitCast(MCFPPBaseType.Int) as MCInt else a
         return if (qwq is MCIntConcrete) {
-            MCBoolConcrete(value != qwq.value)
+            ScoreBoolConcrete(value != qwq.value)
         } else {
             qwq.isNotEqual(this)
         }

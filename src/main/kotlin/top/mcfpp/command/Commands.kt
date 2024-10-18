@@ -6,6 +6,7 @@ import net.querz.nbt.tag.StringTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.Project
 import top.mcfpp.core.lang.*
+import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.type.MCFPPClassType
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.CanSelectMember
@@ -75,6 +76,15 @@ object Commands {
             .build(b.sbObject.toString(),b.sbObject.toString())
     }
 
+    fun sbPlayerOperation(a: ScoreBool, operation: String, b: MCInt): Command {
+        return Command.build("scoreboard players operation")
+            .build(a.identifier,a.identifier)
+            .build(a.boolObject.toString(),a.boolObject.toString())
+            .build(operation,"operation")
+            .build(b.name,b.name)
+            .build(b.sbObject.toString(),b.sbObject.toString())
+    }
+
     /**
      * `scoreboard players remove <target.name> <target.object.toString()> value`
      *
@@ -102,6 +112,13 @@ object Commands {
             .build(a.name,a.name)
             .build(a.sbObject.toString(),a.sbObject.toString())
             .build(value.toString())
+    }
+
+    fun sbPlayerSet(a: ScoreBool, value: Boolean): Command {
+        return Command.build("scoreboard players set")
+            .build(a.identifier,a.identifier)
+            .build(a.boolObject.toString(),a.boolObject.toString())
+            .build((if(value) 1 else 0).toString())
     }
 
     /**

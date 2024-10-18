@@ -3,7 +3,7 @@ package top.mcfpp.core.lang
 import net.querz.nbt.tag.CompoundTag
 import net.querz.nbt.tag.StringTag
 import net.querz.nbt.tag.Tag
-import top.mcfpp.core.lang.bool.MCBoolConcrete
+import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.exception.OperationNotImplementException
 import top.mcfpp.model.*
 import top.mcfpp.model.function.Function
@@ -200,7 +200,7 @@ class JavaVar : Var<JavaVar>, MCFPPValue<Any?> {
             return when(v){
                 is MCIntConcrete -> v.value
                 is MCFloatConcrete -> v.value
-                is MCBoolConcrete -> v.value
+                is ScoreBoolConcrete -> v.value
                 is MCStringConcrete -> v.value.valueToString()
                 is NBTListConcrete -> v.value
                 is NBTMapConcrete -> (v.keyValueSet as NBTDictionaryConcrete).value
@@ -222,7 +222,7 @@ class JavaVar : Var<JavaVar>, MCFPPValue<Any?> {
             return when(v){
                 is Int -> MCIntConcrete(v)
                 is Float -> MCFloatConcrete(v)
-                is Boolean -> MCBoolConcrete(v)
+                is Boolean -> ScoreBoolConcrete(v)
                 is String -> MCStringConcrete(StringTag(v))
                 is CompoundTag -> NBTBasedDataConcrete(v)
                 //is ArrayList<*> -> NBTListConcrete()

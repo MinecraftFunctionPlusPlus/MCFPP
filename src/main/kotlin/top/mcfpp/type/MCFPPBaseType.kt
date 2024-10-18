@@ -4,8 +4,8 @@ import net.querz.nbt.tag.*
 import top.mcfpp.lib.PlainChatComponent
 import top.mcfpp.model.Class
 import top.mcfpp.core.lang.*
-import top.mcfpp.core.lang.bool.MCBool
-import top.mcfpp.core.lang.bool.MCBoolConcrete
+import top.mcfpp.core.lang.bool.ScoreBool
+import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 
@@ -114,7 +114,7 @@ class MCFPPBaseType {
     object Bool: MCFPPType(parentType = listOf(Any)){
 
         override val objectData: CompoundData
-            get() = MCBool.data
+            get() = ScoreBool.data
 
         override val typeName: kotlin.String
             get() = "bool"
@@ -122,12 +122,12 @@ class MCFPPBaseType {
         override val nbtType: java.lang.Class<out Tag<*>>
             get() = ByteTag::class.java
 
-        override fun build(identifier: kotlin.String, container: FieldContainer): Var<*> = MCBoolConcrete(container, false, identifier)
-        override fun build(identifier: kotlin.String): Var<*> = MCBoolConcrete(false, identifier)
-        override fun build(identifier: kotlin.String, clazz: Class): Var<*> = MCBoolConcrete(clazz, false, identifier)
-        override fun buildUnConcrete(identifier: kotlin.String, container: FieldContainer): Var<*> = MCBool(container, identifier)
-        override fun buildUnConcrete(identifier: kotlin.String): Var<*> = MCBool(identifier)
-        override fun buildUnConcrete(identifier: kotlin.String, clazz: Class): Var<*> = MCBool(clazz, identifier)
+        override fun build(identifier: kotlin.String, container: FieldContainer): Var<*> = ScoreBoolConcrete(container, false, identifier)
+        override fun build(identifier: kotlin.String): Var<*> = ScoreBoolConcrete(false, identifier)
+        override fun build(identifier: kotlin.String, clazz: Class): Var<*> = ScoreBoolConcrete(clazz, false, identifier)
+        override fun buildUnConcrete(identifier: kotlin.String, container: FieldContainer): Var<*> = ScoreBool(container, identifier)
+        override fun buildUnConcrete(identifier: kotlin.String): Var<*> = ScoreBool(identifier)
+        override fun buildUnConcrete(identifier: kotlin.String, clazz: Class): Var<*> = ScoreBool(clazz, identifier)
     }
 
     object Void: MCFPPType(parentType = listOf()){

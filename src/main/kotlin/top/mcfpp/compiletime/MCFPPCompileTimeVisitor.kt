@@ -3,7 +3,7 @@ package top.mcfpp.compiletime
 import top.mcfpp.antlr.MCFPPExprVisitor
 import top.mcfpp.antlr.MCFPPImVisitor
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.core.lang.bool.MCBoolConcrete
+import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.function.Function
 
@@ -37,14 +37,14 @@ class MCFPPCompileTimeVisitor(
 
     override fun visitIfStatement(ctx: mcfppParser.IfStatementContext): Any? {
         val condtion= exprVisitor.visit(ctx.expression())
-        if(condtion is MCBoolConcrete && condtion.value){
+        if(condtion is ScoreBoolConcrete && condtion.value){
             visit(ctx.ifBlock())
         }
         else{
             var elseIfBool = false
             for(elseIfStatementContext in ctx.elseIfStatement()){
                 val elseIfCondition = exprVisitor.visit(elseIfStatementContext.expression())
-                if(elseIfCondition is MCBoolConcrete && elseIfCondition.value){
+                if(elseIfCondition is ScoreBoolConcrete && elseIfCondition.value){
                     visit(elseIfStatementContext.ifBlock())
                     elseIfBool = true
                     break
@@ -66,7 +66,7 @@ class MCFPPCompileTimeVisitor(
         visit(forControlContext.forInit())
         while(true){
             val condition = exprVisitor.visit(forControlContext.expression())
-            if(condition is MCBoolConcrete && condition.value){
+            if(condition is ScoreBoolConcrete && condition.value){
                 visit(ctx.forBlock())
                 if(curBreak||curReturn){
                     curBreak = false
@@ -112,7 +112,7 @@ class MCFPPCompileTimeVisitor(
     override fun visitWhileStatement(ctx: mcfppParser.WhileStatementContext): Any? {
         while(true){
             val condition = exprVisitor.visit(ctx.expression())
-            if(condition is MCBoolConcrete && condition.value){
+            if(condition is ScoreBoolConcrete && condition.value){
                 visit(ctx.whileBlock())
                 if(curBreak||curReturn){
                     curBreak = false
@@ -137,7 +137,7 @@ class MCFPPCompileTimeVisitor(
         if(!curBreak||!curReturn||!curContinue){
             while(true){
                 val condition = exprVisitor.visit(ctx.expression())
-                if(condition is MCBoolConcrete && condition.value){
+                if(condition is ScoreBoolConcrete && condition.value){
                     visit(ctx.doWhileBlock())
                     if(curBreak||curReturn){
                         curBreak = false

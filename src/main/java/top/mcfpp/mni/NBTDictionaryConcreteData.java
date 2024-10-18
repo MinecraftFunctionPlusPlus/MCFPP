@@ -1,10 +1,9 @@
 package top.mcfpp.mni;
 
-import net.querz.nbt.tag.CompoundTag;
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.core.lang.*;
-import top.mcfpp.core.lang.bool.MCBool;
-import top.mcfpp.core.lang.bool.MCBoolConcrete;
+import top.mcfpp.core.lang.bool.ScoreBool;
+import top.mcfpp.core.lang.bool.ScoreBoolConcrete;
 import top.mcfpp.util.ValueWrapper;
 
 public class NBTDictionaryConcreteData {
@@ -15,11 +14,11 @@ public class NBTDictionaryConcreteData {
     }
 
     @MNIFunction(normalParams = {"string key"}, caller = "dict", returnType = "bool")
-    public static void containsKey(MCString key, NBTDictionaryConcrete caller, ValueWrapper<MCBool> re){
+    public static void containsKey(MCString key, NBTDictionaryConcrete caller, ValueWrapper<ScoreBool> re){
         if(key instanceof MCStringConcrete keyC){
             String value = keyC.getValue().getValue();
             var nbt = caller.getValue();
-            re.setValue(new MCBoolConcrete(value != null && nbt.containsKey(value), "return"));
+            re.setValue(new ScoreBoolConcrete(value != null && nbt.containsKey(value), "return"));
         }else {
             caller.toDynamic(false);
             NBTDictionaryData.containsKey(key, caller, re);

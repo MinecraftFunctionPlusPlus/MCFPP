@@ -1,13 +1,11 @@
 package top.mcfpp.mni;
 
 import kotlin.NotImplementedError;
-import net.querz.nbt.tag.ListTag;
-import net.querz.nbt.tag.StringTag;
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.command.Command;
 import top.mcfpp.core.lang.*;
-import top.mcfpp.core.lang.bool.MCBool;
-import top.mcfpp.core.lang.bool.MCBoolConcrete;
+import top.mcfpp.core.lang.bool.ScoreBool;
+import top.mcfpp.core.lang.bool.ScoreBoolConcrete;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.util.ValueWrapper;
 
@@ -21,18 +19,18 @@ public class NBTMapData {
     }
 
     @MNIFunction(normalParams = {"string key"}, caller = "dict", returnType = "bool")
-    public static void containsKey(MCString key, NBTMapConcrete caller, ValueWrapper<MCBool> re){
+    public static void containsKey(MCString key, NBTMapConcrete caller, ValueWrapper<ScoreBool> re){
         NBTListData.contains(key, caller.getKeyList(), re);
     }
 
     @MNIFunction(normalParams = {""}, caller = "dict")
-    public static void containsValue(Var<?> element, NBTMapConcrete caller, ValueWrapper<MCBool> re){
+    public static void containsValue(Var<?> element, NBTMapConcrete caller, ValueWrapper<ScoreBool> re){
         NBTListData.contains(element.toNBTVar(), caller.getValueList(), re);
     }
 
     @MNIFunction(caller = "dict", returnType = "bool")
-    public static void isEmpty(NBTMapConcrete caller, ValueWrapper<MCBool> re){
-        re.setValue(new MCBoolConcrete(((NBTListConcrete) (caller.getKeyList())).getValue().isEmpty(), "return"));
+    public static void isEmpty(NBTMapConcrete caller, ValueWrapper<ScoreBool> re){
+        re.setValue(new ScoreBoolConcrete(((NBTListConcrete) (caller.getKeyList())).getValue().isEmpty(), "return"));
     }
 
     @MNIFunction(caller = "dict", returnType = "list")

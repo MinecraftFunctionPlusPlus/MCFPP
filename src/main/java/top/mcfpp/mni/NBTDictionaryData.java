@@ -4,7 +4,7 @@ import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.*;
-import top.mcfpp.core.lang.bool.MCBool;
+import top.mcfpp.core.lang.bool.ScoreBool;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.util.ValueWrapper;
 
@@ -18,7 +18,7 @@ public class NBTDictionaryData {
     }
 
     @MNIFunction(normalParams = {"string key"}, caller = "dict", returnType = "bool")
-    public static void containsKey(MCString key, NBTDictionary caller, ValueWrapper<MCBool> re){
+    public static void containsKey(MCString key, NBTDictionary caller, ValueWrapper<ScoreBool> re){
         if(key instanceof MCStringConcrete keyC){
             Function.Companion.addCommand(new Command("execute " +
                     "store result score" + re.getValue().getIdentifier() + " " + re.getValue().getBoolObject() + " " +

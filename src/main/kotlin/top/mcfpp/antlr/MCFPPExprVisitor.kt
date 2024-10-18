@@ -9,9 +9,10 @@ import top.mcfpp.type.MCFPPEnumType
 import top.mcfpp.type.MCFPPGenericClassType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.core.lang.MCFPPValue
-import top.mcfpp.core.lang.bool.MCBool
-import top.mcfpp.core.lang.bool.MCBoolConcrete
-import top.mcfpp.core.lang.bool.ReturnedMCBool
+import top.mcfpp.core.lang.bool.BaseBool
+import top.mcfpp.core.lang.bool.FunctionBool
+import top.mcfpp.core.lang.bool.ScoreBool
+import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.Class
 import top.mcfpp.model.DataTemplate
@@ -56,24 +57,21 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         Function.currFunction = f
         return if(ctx.primary() != null){
             val q = visit(ctx.primary())
+            if(q is UnknownVar){
+                LogProcessor.error(TextTranslator.VARIABLE_NOT_DEFINED.translate(q.identifier))
+            }
             Function.currFunction = l
             l.commands.addAll(f.commands)
             q
         }else{
             val q = visit(ctx.conditionalOrExpression())
             Function.currFunction = l
-            if(q !is ReturnedMCBool){
-                l.commands.addAll(f.commands)
-            }else{
-                //注册函数
-                if(!GlobalField.localNamespaces.containsKey(f.namespace))
-                    GlobalField.localNamespaces[f.namespace] = Namespace(f.namespace)
-                GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f,false)
-            }
+            l.commands.addAll(f.commands)
             q
         }
     }
 
+    private var visitConditionalOrExpressionRe : Var<*>? = null
     /**
      * 计算一个或表达式。例如 a || b。
      * @param ctx the parse tree
@@ -83,43 +81,22 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     @Override
     override fun visitConditionalOrExpression(ctx: mcfppParser.ConditionalOrExpressionContext): Var<*> {
         Project.ctx = ctx
-        if(ctx.conditionalAndExpression().size != 1){
-            val list = ArrayList<ReturnedMCBool>()
-            val l = Function.currFunction
-            var isConcrete = true
-            var result = false
-            for (i in 0 until ctx.conditionalAndExpression().size) {
-                val temp = NoStackFunction("bool_${UUID.randomUUID()}",Function.currFunction)
-                //注册函数
-                if(!GlobalField.localNamespaces.containsKey(temp.namespace))
-                    GlobalField.localNamespaces[temp.namespace] = Namespace(temp.namespace)
-                GlobalField.localNamespaces[temp.namespace]!!.field.addFunction(temp,false)
-                Function.currFunction = temp
-                val b: Var<*>? = visit(ctx.conditionalAndExpression(i))
-                Function.currFunction = l
-                if (b !is MCBool) {
-                    LogProcessor.error("The operator \"&&\" cannot be used with ${b!!.type}")
-                    throw IllegalArgumentException("")
-                }
-                if(b is MCFPPValue<*> && isConcrete){
-                    result = result || b.value == true
-                }else{
-                    isConcrete = false
-                }
+        visitConditionalOrExpressionRe = visit(ctx.conditionalAndExpression(0))
+        processVarCache.add(visitConditionalOrExpressionRe!!)
+        for (i in 1 until ctx.conditionalAndExpression().size) {
+            var b: Var<*>? = visit(ctx.conditionalAndExpression(i))
+            if(b is MCFloat) b = b.toTempEntity()
+            if(visitConditionalOrExpressionRe!! != MCFloat.ssObj){
+                visitConditionalOrExpressionRe = visitConditionalOrExpressionRe!!.getTempVar()
             }
-            if(isConcrete){
-                return MCBoolConcrete(result)
-            }
-            for (v in list){
-                Function.addCommand("execute if function ${v.parentFunction.namespaceID} run return 1")
-            }
-            Function.addCommand("return 0")
-            return ReturnedMCBool(Function.currFunction)
-        }else{
-            return visit(ctx.conditionalAndExpression(0))
+            visitConditionalOrExpressionRe = visitConditionalOrExpressionRe!!.binaryComputation(b!!, "||")
+            processVarCache[processVarCache.size - 1] = visitConditionalOrExpressionRe!!
         }
+        processVarCache.remove(visitConditionalOrExpressionRe!!)
+        return visitConditionalOrExpressionRe!!
     }
 
+    private var visitConditionalAndExpressionRe : Var<*>? = null
     /**
      * 计算一个与表达式。例如a && b
      * @param ctx the parse tree
@@ -129,44 +106,19 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     @Override
     override fun visitConditionalAndExpression(ctx: mcfppParser.ConditionalAndExpressionContext): Var<*> {
         Project.ctx = ctx
-        if(ctx.equalityExpression().size != 1){
-            val list = ArrayList<ReturnedMCBool>()
-            val l = Function.currFunction
-            var isConcrete = true
-            var result = true
-            for (i in 0 until ctx.equalityExpression().size) {
-                val temp = NoStackFunction("bool_${UUID.randomUUID()}",Function.currFunction)
-                //注册函数
-                if(!GlobalField.localNamespaces.containsKey(temp.namespace))
-                    GlobalField.localNamespaces[temp.namespace] = Namespace(temp.namespace)
-                GlobalField.localNamespaces[temp.namespace]!!.field.addFunction(temp,false)
-                Function.currFunction = temp
-                val b: Var<*>? = visit(ctx.equalityExpression(i))
-                Function.currFunction = l
-                if (b !is MCBool) {
-                    LogProcessor.error("The operator \"&&\" cannot be used with ${b!!.type}")
-                    throw IllegalArgumentException("")
-                }
-                if(b is MCFPPValue<*> && isConcrete){
-                    result = result && b.value == true
-                }else{
-                    isConcrete = false
-                }
+        visitConditionalAndExpressionRe = visit(ctx.equalityExpression(0))
+        processVarCache.add(visitConditionalAndExpressionRe!!)
+        for (i in 1 until ctx.equalityExpression().size) {
+            var b: Var<*>? = visit(ctx.equalityExpression(i))
+            if(b is MCFloat) b = b.toTempEntity()
+            if(visitConditionalAndExpressionRe!! != MCFloat.ssObj){
+                visitConditionalAndExpressionRe = visitConditionalAndExpressionRe!!.getTempVar()
             }
-            if(isConcrete){
-                return MCBoolConcrete(result)
-            }
-            val sb = StringBuilder("execute ")
-            for (v in list){
-                sb.append("if function ${v.parentFunction.namespaceID} ")
-            }
-            sb.append("run return 1")
-            Function.addCommand(sb.toString())
-            Function.addCommand("return 0")
-            return ReturnedMCBool(Function.currFunction)
-        }else{
-            return visit(ctx.equalityExpression(0))
+            visitConditionalAndExpressionRe = visitConditionalAndExpressionRe!!.binaryComputation(b!!, "&&")
+            processVarCache[processVarCache.size - 1] = visitConditionalAndExpressionRe!!
         }
+        processVarCache.remove(visitConditionalAndExpressionRe!!)
+        return visitConditionalAndExpressionRe!!
     }
 
     /**
@@ -231,7 +183,6 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     }
 
     private var visitMultiplicativeExpressionRe : Var<*>? = null
-
     /**
      * 计算一个乘除法表达式，例如a * b
      * @param ctx the parse tree
@@ -338,8 +289,12 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             val typeStr = ctx.primary()?.text?:ctx.type().text
             val type = MCFPPType.parseFromIdentifier(typeStr, Function.currFunction.field)
             if(type == null){
-                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(typeStr))
-                currSelector = UnknownVar("unknown_" + UUID.randomUUID())
+                if(ctx.selector().size == 0){
+                    LogProcessor.error(TextTranslator.VARIABLE_NOT_DEFINED.translate(currSelector!!.identifier))
+                }else{
+                    LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(typeStr))
+                    currSelector = UnknownVar("unknown_" + UUID.randomUUID())
+                }
             }else{
                 currSelector = ObjectVar(type)
             }
@@ -556,6 +511,10 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         if (ctx.identifierSuffix() == null || ctx.identifierSuffix().size == 0) {
             return re
         } else {
+            if(re is UnknownVar){
+                LogProcessor.error("${re.identifier} is not defined")
+                return UnknownVar("${re.identifier}_member_" + UUID.randomUUID())
+            }
             for (value in ctx.identifierSuffix()) {
                 if(value.conditionalExpression() != null){
                     if(re !is Indexable){
@@ -618,7 +577,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             }
             return MCStringConcrete(StringTag(stringArray.joinToString("")) ) //没有解析值就变不了MCString了
         } else if (ctx.boolValue() != null){
-            return MCBoolConcrete(ctx.boolValue()!!.text.toBoolean())
+            return ScoreBoolConcrete(ctx.boolValue()!!.text.toBoolean())
         } else if (ctx.nbtValue() != null){
             return visit(ctx.nbtValue())
         } else if (ctx.type() != null){

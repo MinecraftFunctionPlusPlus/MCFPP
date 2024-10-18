@@ -1,19 +1,16 @@
 package top.mcfpp.mni.minecraft;
 
-import net.querz.nbt.io.SNBTUtil;
 import top.mcfpp.annotations.MNIAccessor;
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.annotations.MNIMutator;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.*;
-import top.mcfpp.core.lang.bool.MCBool;
-import top.mcfpp.core.lang.bool.MCBoolConcrete;
+import top.mcfpp.core.lang.bool.ScoreBool;
+import top.mcfpp.core.lang.bool.ScoreBoolConcrete;
 import top.mcfpp.core.minecraft.PlayerVar;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.util.FunctionUtil;
-import top.mcfpp.util.NBTUtil;
-import top.mcfpp.util.Utils;
 import top.mcfpp.util.ValueWrapper;
 
 import java.util.Objects;
@@ -170,7 +167,7 @@ public class BossBarData {
     }
 
     @MNIAccessor(name = "visible")
-    public static void getVisible(DataTemplateObject bossbar, ValueWrapper<MCBool> returnValue){
+    public static void getVisible(DataTemplateObject bossbar, ValueWrapper<ScoreBool> returnValue){
         var id = Objects.requireNonNull(bossbar.getMemberVarWithT("id", MCString.class));
         var command = new Command("execute store result score")
                 .build(returnValue.getValue().nbtPath.toCommandPart(), true)
@@ -190,10 +187,10 @@ public class BossBarData {
     }
 
     @MNIMutator(name = "visible")
-    public static void setVisible(DataTemplateObject bossbar, MCBool value){
+    public static void setVisible(DataTemplateObject bossbar, ScoreBool value){
         var id = Objects.requireNonNull(bossbar.getMemberVarWithT("id", MCString.class));
         Command command;
-        if(value instanceof MCBoolConcrete valueC){
+        if(value instanceof ScoreBoolConcrete valueC){
             command = new Command("bossbar set");
             if(id instanceof MCStringConcrete idC){
                 command.build(idC.getValue().getValue(), true);

@@ -9,7 +9,7 @@ import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.*;
 import top.mcfpp.core.lang.MCFPPValue;
-import top.mcfpp.core.lang.bool.MCBool;
+import top.mcfpp.core.lang.bool.ScoreBool;
 import top.mcfpp.lib.NBTPath;
 import top.mcfpp.lib.SbObject;
 import top.mcfpp.lib.Storage;
@@ -26,7 +26,7 @@ public class NBTListData {
     static NBTBasedData list = new NBTBasedData("list.list");
     static NBTBasedData element = new NBTBasedData("list.element");
     static MCInt index = new MCInt("list.index");
-    static MCBool contains = new MCBool("list.contains");
+    static ScoreBool contains = new ScoreBool("list.contains");
 
     static {
         list.setNbtPath(new NBTPath(new StorageSource(Storage.Companion.getMCFPP_SYSTEM().toString())).memberIndex("list.list"));
@@ -266,7 +266,7 @@ public class NBTListData {
     }
 
     @MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E", returnType = "bool")
-    public static void contains(Var<?> e, NBTList caller, ValueWrapper<MCBool> returnVar){
+    public static void contains(Var<?> e, NBTList caller, ValueWrapper<ScoreBool> returnVar){
         var n = e.toNBTVar();
         element.assignedBy(n);
         element.assignedBy(caller);

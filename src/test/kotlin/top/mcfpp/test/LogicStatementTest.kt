@@ -6,6 +6,28 @@ import kotlin.test.Test
 class LogicStatementTest {
 
     @Test
+    fun boolTest(){
+        val test =
+            """
+                func main(){
+                    bool a = true;
+                    dynamic bool b = false;
+                    bool c = a && b;
+                    bool d = a || b;
+                    bool e = !a;
+                    bool f = !b;
+                    print(c);
+                    print(d);
+                    print(e);
+                    print(f);
+                    dynamic bool x;
+                    print(a && b || x && b);
+                }
+            """.trimIndent()
+        MCFPPStringTest.readFromString(test, arrayOf("debug"))
+    }
+
+    @Test
     fun ifTest(){
         val test =
             """
