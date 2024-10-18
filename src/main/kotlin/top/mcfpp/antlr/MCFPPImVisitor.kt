@@ -587,15 +587,13 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
+    private lateinit var doWhileFunction: InternalFunction
     @InsertCommand
     fun enterDoWhileStatement(ctx: mcfppParser.DoWhileStatementContext) {
         //进入do-while函数
         Project.ctx = ctx
         Function.addComment("do-while start")
-        val doWhileFunction = InternalFunction("_dowhile_", Function.currFunction)
-        Function.addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
-        Function.addCommand("function " + doWhileFunction.namespaceID)
-        Function.addCommand("data remove storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame[0]")
+        doWhileFunction = InternalFunction("_dowhile_", Function.currFunction)
         Function.currFunction = doWhileFunction
         if(!GlobalField.localNamespaces.containsKey(doWhileFunction.namespace))
             GlobalField.localNamespaces[doWhileFunction.namespace] = Namespace(doWhileFunction.namespace)
@@ -643,16 +641,18 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         }
         GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f,false)
         //给子函数开栈
-        Function.addCommand("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
-        Function.addCommand(
+        Function.currFunction.parent[0].commands.add("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
+        Function.currFunction.parent[0].commands.add(
             "execute " +
                     "unless function " + f.namespaceID + " " +
                     "run return 1"
         )
-        val parent = ctx.parent as mcfppParser.DoWhileStatementContext
-        MCFPPExprVisitor().visit(parent.expression()) as ScoreBool
-        Function.addCommand("data remove storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame[0]")
+        Function.currFunction.parent[0].commands.add("data remove storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame[0]")
+        Function.currFunction.parent[0].commands.add("data modify storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame prepend value {}")
+        Function.currFunction.parent[0].commands.add("function " + doWhileFunction.namespaceID)
+        Function.currFunction.parent[0].commands.add("data remove storage mcfpp:system " + Project.config.rootNamespace + ".stack_frame[0]")
         //递归调用
+        val parent = ctx.parent as mcfppParser.DoWhileStatementContext
         when(val exp = MCFPPExprVisitor().visit(parent.expression())){
             is ScoreBoolConcrete -> {
                 if(exp.value){

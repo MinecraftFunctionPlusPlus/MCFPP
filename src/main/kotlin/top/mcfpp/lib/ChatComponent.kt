@@ -20,7 +20,7 @@ abstract class ChatComponent {
     abstract fun toCommandPart(): Command
 
     fun styleToString(): Command{
-        val str = Command("")
+        val str = Command()
         for (style in styles){
             str.build(style.toCommandPart(), false)
             if(style != styles.last()) str.build(", ", false)
@@ -53,7 +53,11 @@ class ListChatComponent: ChatComponent() {
 
 class PlainChatComponent(val value: String) : ChatComponent() {
     override fun toCommandPart(): Command {
-        return Command("""{"type": "text", "text": "$value", ${styleToString()}""")
+        val c = Command("""{""type"": "text", "text": "$value"}""")
+        if(styles.isNotEmpty()){
+            c.build(",").build(styleToString())
+        }
+        return c
     }
 
 }
@@ -80,29 +84,49 @@ class TranslatableChatComponent(val key: String, val fallback: String? = null, v
 class ScoreChatComponent(val value: MCInt) : ChatComponent() {
 
     override fun toCommandPart(): Command {
-        return Command("{\"type\":\"score\",\"score\":{\"name\":\"${value.name}\",\"objective\":\"${value.sbObject.name}\"}, ${styleToString()}}")
+        val c = Command("{\"type\":\"score\",\"score\":{\"name\":\"${value.name}\",\"objective\":\"${value.sbObject.name}\"}}")
+        if(styles.isNotEmpty()){
+            c.build(",").build(styleToString())
+        }
+        return c
     }
 }
 
 class SelectorChatComponent(val selector: String, val separator: ChatComponent? = null) : ChatComponent() {
     override fun toCommandPart(): Command {
-        return Command(if(separator != null){
-            "{\"type\":\"selector\",\"selector\":\"$selector\",\"separator\":${separator.toCommandPart()}, ${styleToString()}"
+        val c = if(separator != null){
+            Command("{\"type\":\"selector\",\"selector\":\"$selector\",\"separator\":${separator.toCommandPart()}")
         }else{
-            "{\"type\":\"selector\",\"selector\":\"$selector\", ${styleToString()}"
-        })
+            Command("{\"type\":\"selector\",\"selector\":\"$selector\"")
+        }
+        if(styles.isNotEmpty()){
+            c.build(",").build(styleToString())
+        }
+        return c
     }
 }
 
 class KeybindChatComponent(val key: String) : ChatComponent() {
     override fun toCommandPart(): Command {
-        return Command("{\"type\":\"keybind\",\"keybind\":\"$key\", ${styleToString()}")
+        val c = Command("{\"type\":\"keybind\",\"keybind\":\"$key\"")
+        if(styles.isNotEmpty()){
+            c.build(",").build(styleToString())
+        }
+        return c
     }
 }
 
 class NBTChatComponent(val nbt: NBTBasedData, val interpret: Boolean = false, val separator: ChatComponent? = null) : ChatComponent() {
     override fun toCommandPart(): Command {
-        return Command("{\"type\":\"nbt\",\"nbt\":\"").build(nbt.nbtPath.toCommandPart(), false).build("\",\"interpret\":$interpret, ${styleToString()}}", false)
+        val c = if(separator != null){
+            Command("{\"type\":\"nbt\",\"nbt\":\"").build(nbt.nbtPath.toCommandPart(), false).build("\",\"interpret\":$interpret,\"separator\":${separator.toCommandPart()}}", false)
+        }else{
+            Command("{\"type\":\"nbt\",\"nbt\":\"").build(nbt.nbtPath.toCommandPart(), false).build("\",\"interpret\":$interpret}", false)
+        }
+        if(styles.isNotEmpty()){
+            c.build(",").build(styleToString())
+        }
+        return c
     }
 }
 
