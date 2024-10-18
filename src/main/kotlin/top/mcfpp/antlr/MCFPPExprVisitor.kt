@@ -317,7 +317,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         if (ctx.`var`() != null) {
             //变量
             val qwq = visit(ctx.`var`())
-            if(qwq is UnknownVar){
+            if(qwq is UnknownVar && ctx.parent !is mcfppParser.VarWithSelectorContext){
                 LogProcessor.error(TextTranslator.VARIABLE_NOT_DEFINED.translate(qwq.identifier))
             }
             return qwq
