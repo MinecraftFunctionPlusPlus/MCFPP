@@ -8,11 +8,6 @@ import top.mcfpp.antlr.MCFPPExprVisitor
 import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.CanSelectMember
-import top.mcfpp.model.Class
-import top.mcfpp.model.CompoundData
-import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.Member
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.field.IFieldWithType
 import top.mcfpp.model.function.ExtensionFunction
@@ -21,6 +16,7 @@ import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.lib.TranslatableChatComponent
+import top.mcfpp.model.*
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper
 import top.mcfpp.util.TextTranslator
@@ -398,6 +394,22 @@ open class MCFPPType(
                 //枚举
                 val enum = GlobalField.getEnum(nspID.first, nspID.second)
                 if(enum != null) return enum.getType()
+            }
+            //联合数据模板类型
+            if(ctx.unionTemplateType() != null){
+                val types = ArrayList<MCFPPDataTemplateType>()
+                for (type in ctx.unionTemplateType().type()){
+                    val t = parseFromContext(type, typeScope)?: run {
+                        LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(type.text))
+                        MCFPPBaseType.Any
+                    }
+                    if(t !is MCFPPDataTemplateType){
+                        LogProcessor.error("Union type can only be used with data template type")
+                    }else{
+                        types.add(t)
+                    }
+                }
+                return MCFPPDataTemplateType(UnionDataTemplate(types.map { it.template }), types)
             }
             //泛型类型
             if(typeScope.containType(ctx.text)){

@@ -809,6 +809,25 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         DataTemplate.currTemplate = template
         currClassOrTemplate = template
         typeScope = template.field
+        for (c in ctx.className()){
+            //是否存在继承
+            val (namespace, identifier) = StringHelper.splitNamespaceID(c.text)
+            val s = GlobalField.getTemplate(namespace, identifier)
+            if(s == null){
+                val o = GlobalField.getObject(namespace, identifier)
+                if(o is ObjectDataTemplate) {
+                    template.extends(o)
+                }else{
+                    LogProcessor.error("Undefined template: " + c.text)
+                }
+            }else{
+                if(s == template){
+                    LogProcessor.error("Infinitive reference: $id -> $identifier")
+                }else{
+                    template.extends(s)
+                }
+            }
+        }
         //解析成员
         //先解析函数和构造函数
         for (c in ctx.templateBody().templateMemberDeclaration()) {
@@ -844,6 +863,25 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         DataTemplate.currTemplate = objectTemplate
         currClassOrTemplate = objectTemplate
         typeScope = objectTemplate.field
+        for (c in ctx.className()){
+            //是否存在继承
+            val (namespace, identifier) = StringHelper.splitNamespaceID(c.text)
+            val s = GlobalField.getTemplate(namespace, identifier)
+            if(s == null){
+                val o = GlobalField.getObject(namespace, identifier)
+                if(o is ObjectDataTemplate) {
+                    if(o == objectTemplate){
+                        LogProcessor.error("Infinitive reference: $id -> $identifier")
+                    }else{
+                        objectTemplate.extends(o)
+                    }
+                }else{
+                    LogProcessor.error("Undefined template: " + c.text)
+                }
+            }else{
+                objectTemplate.extends(s)
+            }
+        }
         //解析成员
         //先解析函数
         for (c in ctx.templateBody().templateMemberDeclaration()) {

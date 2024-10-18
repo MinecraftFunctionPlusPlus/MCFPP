@@ -50,7 +50,7 @@ SINGLE_QUOTE: '\'' ;
 //RIGHT_SHIFT_ARITHMETIC:           '>>';
 //LEFT_SHIFT_ARITHMETIC:            '<<';
 //RIGHT_SHIFT_LOGICAL:              '>>>';
-//BIT_AND:                         '&';
+UNION:                         '&';
 //BIT_X_OR:                         '^';
 //BIT_OR:                          '|';
 //LEFT_SHIFT_ARITHMETIC_ASSIGN:      '<<=';

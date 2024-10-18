@@ -120,6 +120,26 @@ open class DataTemplate : FieldContainer, CompoundData {
         }
     }
 
+    override fun extends(compoundData: CompoundData): CompoundData {
+        super.extends(compoundData)
+        //把所有成员都塞进去
+        compoundData.field.forEachVar {
+            val b = field.getVar(it.identifier) != null
+            if(b){
+                LogProcessor.warn("Duplicate var ${it.identifier} in template ${compoundData.identifier}. Overriding it.")
+            }
+            field.putVar(it.identifier, it, true)
+        }
+        compoundData.field.forEachProperty {
+            val b = field.getProperty(it.identifier) != null
+            if(b){
+                LogProcessor.warn("Duplicate property ${it.identifier} in template ${compoundData.identifier}. Overriding it.")
+            }
+            field.putProperty(it.identifier, it, true)
+        }
+        return this
+    }
+
     fun ifInfinitiveReference(template: DataTemplate): Boolean{
         return template == this && reference.any { it == template || it.ifInfinitiveReference(template) }
     }

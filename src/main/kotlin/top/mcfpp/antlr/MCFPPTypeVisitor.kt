@@ -312,27 +312,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             DataTemplate.currTemplate = nsp.field.getTemplate(id)
         }
         val template = DataTemplate(id,Project.currNamespace)
-        if (ctx.className() != null) {
-            //存在继承
-            val qwq = ctx.className().text.split(":")
-            val identifier: String
-            val namespace : String?
-            if(qwq.size == 1){
-                identifier = qwq[0]
-                namespace = null
-            }else{
-                namespace = qwq[0]
-                identifier = qwq[1]
-            }
-            val s = GlobalField.getTemplate(namespace, identifier)
-            if(s == null){
-                LogProcessor.error("Undefined template: " + ctx.className().text)
-            }else{
-                template.extends(s)
-            }
-        }else{
-            template.extends(DataTemplate.baseDataTemplate)
-        }
+        template.extends(DataTemplate.baseDataTemplate)
         nsp.field.addTemplate(id, template)
     }
 
@@ -350,23 +330,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             return
         }
         val template = ObjectDataTemplate(id,Project.currNamespace)
-        if (ctx.className() != null) {
-            //是否存在继承
-            val (namespace, identifier) = StringHelper.splitNamespaceID(ctx.className().text)
-            val s = GlobalField.getTemplate(namespace, identifier)
-            if(s == null){
-                val o = GlobalField.getObject(namespace, identifier)
-                if(o is ObjectDataTemplate) {
-                    template.extends(o)
-                }else{
-                    LogProcessor.error("Undefined template: " + ctx.className().text)
-                }
-            }else{
-                template.extends(s)
-            }
-        }else{
-            template.extends(DataTemplate.baseDataTemplate)
-        }
+        template.extends(DataTemplate.baseDataTemplate)
         nsp.field.addObject(id, template)
     }
 

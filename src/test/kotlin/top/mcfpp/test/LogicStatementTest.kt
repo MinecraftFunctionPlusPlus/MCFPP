@@ -57,7 +57,7 @@ class LogicStatementTest {
                         print(i);
                         i = i + 1;
                     }
-            }
+                }
             """.trimIndent()
         MCFPPStringTest.readFromString(test, targetPath = "D:\\.minecraft\\saves\\MCFPP Studio\\datapacks")
     }

@@ -160,12 +160,12 @@ genericClassImplement
 
 //数据模板
 templateDeclaration
-    :   FINAL? DATA classWithoutNamespace (COLON className)? templateBody
+    :   FINAL? DATA classWithoutNamespace (COLON className (',' className)*)? templateBody
     ;
 
 //数据模板
 objectTemplateDeclaration
-    :   FINAL? OBJECT DATA classWithoutNamespace (COLON className)? templateBody
+    :   FINAL? OBJECT DATA classWithoutNamespace (COLON className (',' className)*)? templateBody
     ;
 
 templateBody
@@ -563,6 +563,11 @@ type
     |   LIST '<' type '>'
     |   className readOnlyArgs?
     |   Identifier
+    |   unionTemplateType
+    ;
+
+unionTemplateType
+    :   '(' type (UNION type)* ')'
     ;
 
 normalType

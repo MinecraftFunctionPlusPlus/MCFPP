@@ -11,6 +11,7 @@ import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
+import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.type.MCFPPGenericParamType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TextTranslator
@@ -300,6 +301,7 @@ open class CompoundData : FieldContainer, Serializable {
     fun forMember(operation: (Member) -> Any?){
         field.forEachFunction { operation(it) }
         field.forEachVar { operation(it) }
+        field.forEachProperty { operation(it) }
     }
 
     companion object {
