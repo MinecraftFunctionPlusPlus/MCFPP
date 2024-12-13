@@ -46,14 +46,14 @@ gradlePlugin {
 }
 
 publishing {
-    publications {
-        create<MavenPublication>("mavenJava") {
-            from(components["java"])
-            groupId = GROUP
-            artifactId = "mcfpp-gradle"
-            version = VERSION
-        }
-    }
+//    publications {
+//        create<MavenPublication>("mavenJava") {
+//            from(components["java"])
+//            groupId = GROUP
+//            artifactId = "mcfpp-gradle"
+//            version = VERSION
+//        }
+//    }
 
     repositories {
         mavenLocal()
