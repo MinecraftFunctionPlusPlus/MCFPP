@@ -60,5 +60,5 @@ java {
 mcfpp {
     version = "1.21"
     description = "qwq"
-    targetPath = Path("./build/datapack")
+    targetPath = Path("./run/saves/MCFPP_TEST/datapacks")
 }
