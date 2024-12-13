@@ -13,7 +13,7 @@ mcfpp {
     version = "1.21"
     description = "qwq"
 //    targetPath = Path("./run/saves/${project.properties["save_name"]}/datapacks")
-    targetPath = Path("./build/resources/")
+    targetPath = Path("./build/datapacks/")
 
 }
 
@@ -72,7 +72,7 @@ base {
 }
 
 tasks.register<Copy>("copy"){
-    from("./build/resources/${mcfpp.name}")
+    from(mcfpp.targetPath?.resolve(mcfpp.name))
     into("./build/resources/main")
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
