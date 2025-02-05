@@ -551,5 +551,17 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             return qwq
         }
 
+        fun checkMember(member: Pair<Var<*>?, Boolean>, identifier: String): Var<*>{
+            return if (member.first == null) {
+                LogProcessor.error("Cannot get member $identifier")
+                UnknownVar(identifier)
+            }else if (!member.second){
+                LogProcessor.error("Cannot access member $identifier")
+                UnknownVar(identifier)
+            }else{
+                member.first!!
+            }
+        }
+
     }
 }

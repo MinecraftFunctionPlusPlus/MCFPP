@@ -1,12 +1,12 @@
 package top.mcfpp
 
+import com.ibm.icu.impl.data.ResourceReader
 import org.apache.logging.log4j.core.config.ConfigurationSource
 import org.apache.logging.log4j.core.config.Configurator
 import top.mcfpp.io.DatapackCreator
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.UwU
-import java.io.FileInputStream
 import java.nio.file.Files
 import kotlin.io.path.Path
 import kotlin.io.path.absolutePathString
@@ -18,7 +18,7 @@ fun main(args: Array<String>) {
     //获取log4j2.xml配置文件
     val source:ConfigurationSource
     try {
-        source = ConfigurationSource(FileInputStream("log4j2.xml"))
+        source = ConfigurationSource(ResourceReader::class.java.classLoader.getResourceAsStream("log4j2.xml"))
         Configurator.initialize(null,source)
     }catch (e:Exception){
         println("Failed to load log4j2.xml")

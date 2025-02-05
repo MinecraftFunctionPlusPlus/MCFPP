@@ -298,7 +298,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     }
 
     override fun visitJvmAccessExpression(ctx: mcfppParser.JvmAccessExpressionContext): Var<*> {
-        val re = visitPrimary(ctx.primary())
+        val re = visitFieldOperator(ctx.fieldOperator())
         return if(ctx.Identifier() != null){
             re.getJVM(ctx.Identifier().text)
         }else{
@@ -306,7 +306,18 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         }
     }
 
-    @Override
+    override fun visitFieldOperator(ctx: mcfppParser.FieldOperatorContext): Var<*> {
+        val re = visitPrimary(ctx.primary())
+        for (operator in ctx.fieldOperatorExpression()){
+            val identifier = operator.Identifier().text
+            val value = visitExpression(operator.expression())
+            val member = re.getMemberVar(identifier, re.getAccess(Function.currFunction))
+            val field = Var.checkMember(member, identifier)
+            field.replacedBy(field.assignedBy(value))
+        }
+        return re
+    }
+
     override fun visitSelector(ctx: mcfppParser.SelectorContext?): Var<*> {
         //进入visitVar，currSelector作为成员选择的上下文
         currSelector = visitVar(ctx!!.`var`())

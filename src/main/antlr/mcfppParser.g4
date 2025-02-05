@@ -386,7 +386,16 @@ varWithSelector
     ;
 
 jvmAccessExpression
-    :   primary (COLONCOLON Identifier)?
+    :   fieldOperator (COLONCOLON Identifier)?
+    ;
+
+//字段操作器
+fieldOperator
+    :   primary ('[' fieldOperatorExpression (',' fieldOperatorExpression)* ']')?
+    ;
+
+fieldOperatorExpression
+    :   Identifier '=' expression
     ;
 
 //初级表达式
