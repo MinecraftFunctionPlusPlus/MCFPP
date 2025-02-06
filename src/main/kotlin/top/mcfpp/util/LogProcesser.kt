@@ -113,7 +113,7 @@ object LogProcessor {
     }
 
     inline fun error(msg: String, e: Exception){
-        logger.error("msg\n${e.javaClass}: ${e.message}")
+        logger.error("$msg\n${e.javaClass}: ${e.message}")
         Function.addComment(msg, CommentLevel.ERROR)
         Project.errorCount++
         if(CompileSettings.isDebug){

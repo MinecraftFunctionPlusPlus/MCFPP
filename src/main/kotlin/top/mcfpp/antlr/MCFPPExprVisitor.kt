@@ -8,6 +8,7 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.nbt.*
+import top.mcfpp.lib.EntitySelector
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.Class
 import top.mcfpp.model.DataTemplate
@@ -298,7 +299,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     }
 
     override fun visitJvmAccessExpression(ctx: mcfppParser.JvmAccessExpressionContext): Var<*> {
-        val re = visitFieldOperator(ctx.fieldOperator())
+        val re = visitPropertyOperator(ctx.propertyOperator())
         return if(ctx.Identifier() != null){
             re.getJVM(ctx.Identifier().text)
         }else{
@@ -306,9 +307,9 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         }
     }
 
-    override fun visitFieldOperator(ctx: mcfppParser.FieldOperatorContext): Var<*> {
+    override fun visitPropertyOperator(ctx: mcfppParser.PropertyOperatorContext): Var<*> {
         val re = visitPrimary(ctx.primary())
-        for (operator in ctx.fieldOperatorExpression()){
+        for (operator in ctx.propertyOperatorExpression()){
             val identifier = operator.Identifier().text
             val value = visitExpression(operator.expression())
             val member = re.getMemberVar(identifier, re.getAccess(Function.currFunction))
@@ -602,7 +603,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         } else if (ctx.nbtValue() != null){
             return visit(ctx.nbtValue())
         } else if (ctx.TargetSelector() != null){
-            TODO()
+            return SelectorVar(EntitySelector(ctx.TargetSelector()!!.text[1]))
         } else if(ctx.coordinate() != null){
             val dimensions = ctx.coordinate().coordinateDimension().map { visit(it) }
             if(dimensions.size == 3){

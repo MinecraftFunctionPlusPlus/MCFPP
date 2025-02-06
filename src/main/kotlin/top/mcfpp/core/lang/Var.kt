@@ -216,6 +216,13 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         }
         return when(type){
             MCFPPBaseType.Any -> MCAnyConcrete(this)
+            MCFPPNBTType.NBT -> {
+                if(this is MCFPPValue<*> && (this is ScoreBoolConcrete || this !is BaseBool)){
+                    NBTBasedDataConcrete(this.toNBTVar(), NBTUtil.varToNBT(this)!!)
+                } else {
+                    this.toNBTVar()
+                }
+            }
             else -> {
                 buildCastErrorVar(type)
             }
@@ -231,13 +238,6 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         }
         return when(type){
             MCFPPBaseType.Any -> MCAnyConcrete(this)
-            MCFPPNBTType.NBT -> {
-                if(this is MCFPPValue<*> && (this is ScoreBoolConcrete || this !is BaseBool)){
-                    NBTBasedDataConcrete(this.toNBTVar(), NBTUtil.varToNBT(this)!!)
-                } else {
-                    this.toNBTVar()
-                }
-            }
             else -> {
                 buildCastErrorVar(type)
             }
@@ -482,9 +482,9 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
 
     override fun toString(): String {
         return if(this is MCFPPValue<*>){
-            "Var($type#$identifier=$value)"
+            "Var([$type]$identifier=$value)"
         }else{
-            "Var($type#$identifier)"
+            "Var([$type]$identifier)"
         }
     }
 

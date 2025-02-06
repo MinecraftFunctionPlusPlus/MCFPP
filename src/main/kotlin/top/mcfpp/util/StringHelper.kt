@@ -31,4 +31,12 @@ object StringHelper {
         }
         return Pair(s[0], s[1])
     }
+
+    fun Pair<Float?, Float?>.toRangeStr(): String{
+        return buildString {
+            if(first != null) append(first)
+            append("..")
+            if(second != null) append(second)
+        }
+    }
 }

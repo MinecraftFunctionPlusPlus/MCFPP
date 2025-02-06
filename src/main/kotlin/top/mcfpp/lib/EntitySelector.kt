@@ -3,15 +3,18 @@ package top.mcfpp.lib
 import net.querz.nbt.tag.CompoundTag
 import net.querz.nbt.tag.StringTag
 import top.mcfpp.command.Command
-import top.mcfpp.core.lang.*
+import top.mcfpp.core.lang.MCInt
+import top.mcfpp.core.lang.MCIntConcrete
+import top.mcfpp.core.lang.RangeVar
+import top.mcfpp.core.lang.RangeVarConcrete
 import top.mcfpp.core.lang.nbt.MCString
 import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
-import top.mcfpp.core.lang.resource.EntityTypeConcrete
-import top.mcfpp.util.LogProcessor
 import top.mcfpp.core.lang.resource.Advancement
+import top.mcfpp.core.lang.resource.EntityTypeConcrete
 import top.mcfpp.core.lang.resource.LootTablePredicate
+import top.mcfpp.util.LogProcessor
 import java.io.Serializable
 
 @Suppress("MemberVisibilityCanBePrivate", "unused")
@@ -261,6 +264,20 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
             re.build("]", false)
         }
         return re
+    }
+
+    override fun toString(): String{
+        return buildString {
+            append("@").append(toSelectorTypeString(selectorType))
+            if(predicates.isEmpty()) return@buildString
+            append('[')
+            append(predicates[0])
+            for (p in predicates.drop(1)){
+                append(',')
+                append(p)
+            }
+            append(']')
+        }
     }
 
     fun x(value: MCInt) = addPredicate(XPredicate(value))

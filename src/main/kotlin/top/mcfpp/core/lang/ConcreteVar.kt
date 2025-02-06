@@ -1,10 +1,16 @@
 package top.mcfpp.core.lang
 
 import top.mcfpp.util.LogProcessor
-import java.io.Serializable
+
+/**
+ * 表示一个编译器绝对能跟踪的变量。
+ *
+ * @param T 自己
+ * @param V 自己所代表的值的类型
+ */
 
 @Suppress("UNCHECKED_CAST")
-abstract class ConcreteVar<T: ConcreteVar<T, V>, V: Serializable>: Var<T>, MCFPPValue<V>{
+abstract class ConcreteVar<T: ConcreteVar<T, V>, V>: Var<T>, MCFPPValue<V>{
 
     final override var value: V
     constructor(identifier: String, value: V): super(identifier) {

@@ -1,12 +1,19 @@
 package top.mcfpp.core.lang
 
+import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.lib.EntitySelector
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.Member
+import top.mcfpp.model.accessor.AnonymousNativeMutator
+import top.mcfpp.model.accessor.Property
 import top.mcfpp.model.function.Function
+import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPEntityType
 import top.mcfpp.type.MCFPPType
+import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
 
 
 /**
@@ -47,7 +54,8 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector>, EntityBase {
     }
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        return data.getVar(key) to false
+        val p = data.field.getProperty(key) ?: return null to true
+        return PropertyVar(p, Void, this) to true
     }
 
     override fun getMemberFunction(
@@ -69,7 +77,24 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector>, EntityBase {
 
     companion object {
 
-        val data = CompoundData("selector","mcfpp")
+        val data by lazy {
+            CompoundData("selector","mcfpp").apply {
+                addMember(Property("type", null, AnonymousNativeMutator { caller, v ->
+                    val selector = (caller as SelectorVar).value
+                    val value = v.implicitCast(MCFPPBaseType.String)
+                    if(value.isError){
+                        LogProcessor.error(TextTranslator.CAST_ERROR.translate(value.type.typeName, MCFPPBaseType.String.typeName))
+                        return@AnonymousNativeMutator Void
+                    }
+                    if(value !is MCStringConcrete){
+                        LogProcessor.error("Must be concrete")
+                        return@AnonymousNativeMutator Void
+                    }
+                    selector.type(value.value.value, false)
+                    return@AnonymousNativeMutator Void
+                }))
+            }
+        }
 
     }
 }

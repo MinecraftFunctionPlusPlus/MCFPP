@@ -30,7 +30,7 @@ object NBTUtil {
             is EnumVarConcrete -> v.value.data
             is DataTemplateObjectConcrete -> v.value
             else -> {
-                LogProcessor.error("Cannot cast mcfpp var $v to nbt value", VariableConverseException())
+                LogProcessor.error("Cannot cast mcfpp var $v to nbt value")
                 IntTag(0)
             }
         }
@@ -71,7 +71,7 @@ object NBTUtil {
                 map
             }
             else -> {
-                LogProcessor.error("Cannot cast value $any to nbt value", VariableConverseException())
+                LogProcessor.error("Cannot cast value $any to nbt value")
                 return StringTag(any.toString())
             }
         }

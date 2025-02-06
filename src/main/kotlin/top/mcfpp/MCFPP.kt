@@ -65,6 +65,7 @@ fun compile(config: ProjectConfig){
     }
 
     LogProcessor.info("Finished in " + (System.currentTimeMillis() - start) + "ms")
+    GlobalField.printAll()
 }
 
 object MCFPP {

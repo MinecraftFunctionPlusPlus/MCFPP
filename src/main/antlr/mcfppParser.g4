@@ -386,15 +386,15 @@ varWithSelector
     ;
 
 jvmAccessExpression
-    :   fieldOperator (COLONCOLON Identifier)?
+    :   propertyOperator (COLONCOLON Identifier)?
     ;
 
 //字段操作器
-fieldOperator
-    :   primary ('[' fieldOperatorExpression (',' fieldOperatorExpression)* ']')?
+propertyOperator
+    :   primary ('[' propertyOperatorExpression (',' propertyOperatorExpression)* ']')?
     ;
 
-fieldOperatorExpression
+propertyOperatorExpression
     :   Identifier '=' expression
     ;
 

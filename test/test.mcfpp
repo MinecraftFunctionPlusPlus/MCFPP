@@ -1,5 +1,6 @@
 namespace test;
 
 func test(){
-    var s = @e[type="creeper", limit=1];
+    var s = @e[type="creeper"];
+    print(s);
 }

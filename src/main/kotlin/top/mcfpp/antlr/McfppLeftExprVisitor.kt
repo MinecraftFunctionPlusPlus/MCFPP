@@ -55,13 +55,24 @@ open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
     }
 
     override fun visitJvmAccessExpression(ctx: mcfppParser.JvmAccessExpressionContext): Var<*> {
-        Project.ctx = ctx
-        val re = visit(ctx.primary())
+        val re = visitPropertyOperator(ctx.propertyOperator())
         return if(ctx.Identifier() != null){
             re.getJVM(ctx.Identifier().text)
         }else{
             re
         }
+    }
+
+    override fun visitPropertyOperator(ctx: mcfppParser.PropertyOperatorContext): Var<*> {
+        val re = visitPrimary(ctx.primary())
+        for (operator in ctx.propertyOperatorExpression()){
+            val identifier = operator.Identifier().text
+            val value = visitExpression(operator.expression())
+            val member = re.getMemberVar(identifier, re.getAccess(Function.currFunction))
+            val field = Var.checkMember(member, identifier)
+            field.replacedBy(field.assignedBy(value))
+        }
+        return re
     }
 
     override fun visitSelector(ctx: mcfppParser.SelectorContext?): Var<*> {

@@ -3,6 +3,7 @@ package top.mcfpp.model.accessor
 import top.mcfpp.Project
 import top.mcfpp.annotations.MNIMutator
 import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.Void
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.function.NativeFunction
@@ -43,4 +44,11 @@ class NativeMutator(javaRefer: String, d: CompoundData, field: Var<*>): Abstract
         function.invoke(arrayListOf(b), caller)
         return function.returnVar
     }
+}
+
+class AnonymousNativeMutator(val native: (CanSelectMember ,Var<*>)->Var<*>): AbstractMutator(Void){
+    override fun setter(caller: CanSelectMember, b: Var<*>): Var<*> {
+        return native(caller, b)
+    }
+
 }
