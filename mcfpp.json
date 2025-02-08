@@ -3,8 +3,9 @@
     "description": "MCFPP Standard Library",
     "namespace": "mcfpp",
     "targetPath": "src/main/resources/lib",
-    "compileArgs": [
+    "args": [
         "-ignoreStdLib",
-        "-isLib"
+        "-isLib",
+        "-level=info"
     ]
 }

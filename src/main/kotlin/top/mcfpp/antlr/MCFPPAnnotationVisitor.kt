@@ -4,6 +4,8 @@ import net.querz.nbt.tag.Tag
 import top.mcfpp.Project
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.exception.UndefinedException
+import top.mcfpp.model.Class
+import top.mcfpp.model.DataTemplate
 import top.mcfpp.model.ObjectClass
 import top.mcfpp.model.ObjectDataTemplate
 import top.mcfpp.model.annotation.Annotation
@@ -11,7 +13,6 @@ import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil.toJava
-import top.mcfpp.util.StringHelper
 import top.mcfpp.util.StringHelper.splitNamespaceID
 
 class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
@@ -52,10 +53,13 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
             throw UndefinedException("Template should have been defined: $id")
         }
         annotationCache.forEach {
-            it.forDataTemplate(template)
+            it.on(template)
         }
         template.annotations.addAll(annotationCache)
         annotationCache.clear()
+        DataTemplate.currTemplate = template
+        visitTemplateBody(ctx.templateBody())
+        DataTemplate.currTemplate = null
     }
 
     override fun visitObjectTemplateDeclaration(ctx: mcfppParser.ObjectTemplateDeclarationContext) {
@@ -68,10 +72,13 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
             throw UndefinedException("Template should have been defined: $id")
         }
         annotationCache.forEach {
-            it.forDataTemplate(objectTemplate)
+            it.on(objectTemplate)
         }
         objectTemplate.annotations.addAll(annotationCache)
         annotationCache.clear()
+        DataTemplate.currTemplate = objectTemplate
+        visitTemplateBody(ctx.templateBody())
+        DataTemplate.currTemplate = null
     }
 
     override fun visitObjectClassDeclaration(ctx: mcfppParser.ObjectClassDeclarationContext) {
@@ -86,7 +93,7 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
             throw UndefinedException("Class should have been defined: $id")
         }
         annotationCache.forEach {
-            it.forClass(clazz)
+            it.on(clazz)
         }
         clazz.annotations.addAll(annotationCache)
         annotationCache.clear()
@@ -105,10 +112,13 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
             throw UndefinedException("Class Should have been defined: $id")
         }
         annotationCache.forEach {
-            it.forClass(clazz)
+            it.on(clazz)
         }
         clazz.annotations.addAll(annotationCache)
         annotationCache.clear()
+        Class.currClass = clazz
+        visitClassBody(ctx.classBody())
+        Class.currClass = null
     }
 
     override fun visitFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext) {
@@ -123,9 +133,31 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
             types?.second?.map { it.build("") }?:ArrayList()
         )
         annotationCache.forEach {
-            it.forFunction(f)
+            it.on(f)
         }
         f.annotations.addAll(annotationCache)
+        annotationCache.clear()
+    }
+
+    override fun visitClassFieldDeclaration(ctx: mcfppParser.ClassFieldDeclarationContext?) {
+        Project.ctx = ctx
+        //获取字段对象
+        val field = Class.currClass!!.field.getVar(ctx!!.fieldDeclarationExpression().Identifier().text)!!
+        annotationCache.forEach {
+            it.on(field)
+        }
+        field.annotations.addAll(annotationCache)
+        annotationCache.clear()
+    }
+
+    override fun visitTemplateFieldDeclaration(ctx: mcfppParser.TemplateFieldDeclarationContext?) {
+        Project.ctx = ctx
+        //获取字段对象
+        val field = DataTemplate.currTemplate!!.field.getVar(ctx!!.Identifier().text)!!
+        annotationCache.forEach {
+            it.on(field)
+        }
+        field.annotations.addAll(annotationCache)
         annotationCache.clear()
     }
 }

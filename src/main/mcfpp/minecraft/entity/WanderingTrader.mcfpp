@@ -1,3 +1,4 @@
+@MCFPPEntity
 data WanderingTrader: EntityData, CreatureData, AIMobData, GrowableData {
 
     @Name<"DespawnDelay">
@@ -14,4 +15,5 @@ data WanderingTrader: EntityData, CreatureData, AIMobData, GrowableData {
 
     @Name<"wander_target">
     IntArray wanderTarget;
+
 }

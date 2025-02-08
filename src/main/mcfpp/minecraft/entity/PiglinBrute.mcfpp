@@ -1,3 +1,4 @@
+@MCFPPEntity
 data PiglinBrute: EntityData, CreatureData, AIMobData {
     @Name<"IsImmuneToZombification">
     bool isImmuneToZombification;

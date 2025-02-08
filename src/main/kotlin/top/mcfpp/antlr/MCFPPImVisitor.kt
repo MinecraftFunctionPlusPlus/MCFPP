@@ -23,9 +23,9 @@ import top.mcfpp.model.Class
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.ObjectClass
-import top.mcfpp.model.accessor.FunctionAccessor
-import top.mcfpp.model.accessor.FunctionMutator
-import top.mcfpp.model.accessor.Property
+import top.mcfpp.model.property.FunctionAccessor
+import top.mcfpp.model.property.FunctionMutator
+import top.mcfpp.model.property.Property
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function

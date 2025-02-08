@@ -8,7 +8,7 @@ import top.mcfpp.model.function.FunctionTag;
 public class Load extends FunctionAnnotation {
 
     public Load(){
-        super("load","mcfpp");
+        super("Load","mcfpp.annotation");
     }
 
     @Override

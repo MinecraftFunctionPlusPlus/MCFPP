@@ -220,10 +220,10 @@ object Project {
             }
 
             //编译参数
-            if(jsonObject.containsKey("compileArgs")){
-                val compileArgsJson = jsonObject.getJSONArray("compileArgs")
+            if(jsonObject.containsKey("args")){
+                val compileArgsJson = jsonObject.getJSONArray("args")
                 parseArgs(compileArgsJson.toList(String::class.java))
-                jsonObject.remove("compileArgs")
+                jsonObject.remove("args")
             }
 
             for (key in jsonObject.keys) {

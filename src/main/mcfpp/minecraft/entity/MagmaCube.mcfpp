@@ -1,3 +1,4 @@
+@MCFPPEntity
 data MagmaCube: EntityData, CreatureData, AIMobData {
     @Name<"Size">
     int size;

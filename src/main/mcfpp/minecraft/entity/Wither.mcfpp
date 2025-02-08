@@ -1,3 +1,4 @@
+@MCFPPEntity
 data Wither: EntityData, CreatureData, AIMobData {
 
     @Name<"Invul">

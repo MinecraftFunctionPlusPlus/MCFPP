@@ -1,19 +1,25 @@
-package top.mcfpp.model.accessor
+package top.mcfpp.model.property
 
 import top.mcfpp.antlr.MCFPPExprVisitor
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.command.Commands
-import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
 
-class ExpressionMutator(val ctx: mcfppParser.ExpressionContext, field: Var<*>): AbstractMutator(field) {
+class ExpressionMutator: AbstractMutator {
+
+    val ctx: mcfppParser.ExpressionContext
 
     var error: Boolean
 
-    init {
+    constructor(ctx: mcfppParser.ExpressionContext){
+        this.ctx = ctx
+        error = false
+    }
+
+    constructor(ctx: mcfppParser.ExpressionContext, field: Var<*>) {
         Commands.fakeFunction(Function.currFunction){
             it.field.putVar("field", field)
             it.field.putVar("value", field.type.build("value"))
@@ -25,10 +31,11 @@ class ExpressionMutator(val ctx: mcfppParser.ExpressionContext, field: Var<*>): 
                 error = false
             }
         }
+        this.ctx = ctx
         error = false
     }
 
-    override fun setter(caller: CanSelectMember, b: Var<*>): Var<*> {
+    override fun setter(caller: CanSelectMember, field: Var<*>, b: Var<*>): Var<*> {
         var qwq = field
         if(error) return qwq
         val cs = Commands.fakeFunction(Function.currFunction){

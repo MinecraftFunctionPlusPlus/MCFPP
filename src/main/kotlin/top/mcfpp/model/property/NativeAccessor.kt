@@ -1,4 +1,4 @@
-package top.mcfpp.model.accessor
+package top.mcfpp.model.property
 
 import top.mcfpp.Project
 import top.mcfpp.annotations.MNIAccessor
@@ -8,11 +8,15 @@ import top.mcfpp.model.CompoundData
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.util.LogProcessor
 
-class NativeAccessor(javaRefer: String, d: CompoundData, field: Var<*>): AbstractAccessor() {
+class NativeAccessor: AbstractAccessor {
 
     val function: NativeFunction
 
-    init {
+    constructor(function: NativeFunction){
+        this.function = function
+    }
+
+    constructor(javaRefer: String, d: CompoundData, field: Var<*>) {
         function = NativeFunction("get_${field.identifier}", d.namespace)
         function.returnType = field.type
         function.owner = d

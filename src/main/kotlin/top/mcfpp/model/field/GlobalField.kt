@@ -12,11 +12,11 @@ import top.mcfpp.mni.MinecraftData
 import top.mcfpp.mni.annotation.*
 import top.mcfpp.model.*
 import top.mcfpp.model.Enum
-import top.mcfpp.model.accessor.*
 import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.generic.GenericClass
+import top.mcfpp.model.property.*
 import top.mcfpp.type.MCFPPType
 import java.util.*
 
@@ -90,33 +90,41 @@ object GlobalField : FieldContainer, IField {
         stdNamespaces["mcfpp.sys"] = Namespace("mcfpp.sys")
         stdNamespaces["mcfpp.lang"] = Namespace("mcfpp.lang")
         stdNamespaces["mcfpp.minecraft"] = Namespace("mcfpp.minecraft")
+        stdNamespaces["mcfpp.minecraft.entity"] = Namespace("mcfpp.minecraft.entity")
         stdNamespaces["mcfpp.annotation"] = Namespace("mcfpp.annotation")
 
         Project.mcfppTick = Function("tick","mcfpp", context = null)
         Project.mcfppLoad = Function("load","mcfpp", context = null)
         Project.mcfppInit = Function("init", "mcfpp", context = null)
-        stdNamespaces["mcfpp"]?.field?.addFunction(Project.mcfppLoad,true)
-        stdNamespaces["mcfpp"]?.field?.addFunction(Project.mcfppTick,true)
-        stdNamespaces["mcfpp"]?.field?.addFunction(Project.mcfppInit, true)
-        stdNamespaces["mcfpp"]?.field?.addFunction(Project.mcfppSystemTick, true)
+        stdNamespaces["mcfpp"]!!.field.addFunction(Project.mcfppLoad,true)
+        stdNamespaces["mcfpp"]!!.field.addFunction(Project.mcfppTick,true)
+        stdNamespaces["mcfpp"]!!.field.addFunction(Project.mcfppInit, true)
+        stdNamespaces["mcfpp"]!!.field.addFunction(Project.mcfppSystemTick, true)
 
         FunctionTag.TICK.functions.add(Project.mcfppTick)
         FunctionTag.TICK.functions.add(Project.mcfppSystemTick)
         FunctionTag.LOAD.functions.add(Project.mcfppLoad)
         FunctionTag.LOAD.functions.add(Project.mcfppInit)
 
-        stdNamespaces["mcfpp.lang"]?.field?.addTemplate("DataObject", DataTemplate.baseDataTemplate)
+        stdNamespaces["mcfpp.lang"]!!.field.addTemplate("DataObject", DataTemplate.baseDataTemplate)
         DataTemplate.baseDataTemplate.getNativeFromClass(DataObjectData::class.java)
-        stdNamespaces["mcfpp.lang"]?.field?.addClass("Object", Class.baseClass)
+        stdNamespaces["mcfpp.lang"]!!.field.addClass("Object", Class.baseClass)
 
         stdNamespaces["mcfpp.minecraft"]!!.getNativeFunctionFromClass(MinecraftData::class.java)
 
-        stdNamespaces["mcfpp.annotation"]?.field?.addAnnotation("From", From::class.java)
-        stdNamespaces["mcfpp.annotation"]?.field?.addAnnotation("ConcreteOnly", ConcreteOnly::class.java)
-        stdNamespaces["mcfpp.annotation"]?.field?.addAnnotation("NoInstance", NoInstance::class.java)
-        stdNamespaces["mcfpp.annotation"]?.field?.addAnnotation("To", To::class.java)
-        stdNamespaces["mcfpp.annotation"]?.field?.addAnnotation("Base", Base::class.java)
-        stdNamespaces["mcfpp.annotation"]?.field?.addAnnotation("Dynamic", Dynamic::class.java)
+        listOf(
+            "From" to From::class.java,
+            "ConcreteOnly" to ConcreteOnly::class.java,
+            "NoInstance" to NoInstance::class.java,
+            "To" to To::class.java,
+            "Base" to Base::class.java,
+            "Dynamic" to Dynamic::class.java,
+            "MCFPPEntity" to MCFPPEntity::class.java,
+            "Name" to Name::class.java,
+            "DataOnly" to DataOnly::class.java
+        ).forEach {
+            stdNamespaces["mcfpp.annotation"]!!.field.addAnnotation(it.first, it.second)
+        }
 
         return this
     }
@@ -277,6 +285,26 @@ object GlobalField : FieldContainer, IField {
             np = stdNamespaces[namespace]
         }
         return np?.field?.getTemplate(identifier)
+    }
+
+    fun getDataTemplate(filter: (DataTemplate) -> Boolean): List<DataTemplate>{
+        val list = ArrayList<DataTemplate>()
+        for (nsp in localNamespaces.values){
+            nsp.field.forEachTemplate {
+                if(filter(it)) list.add(it)
+            }
+        }
+        for (nsp in importedLibNamespaces.values){
+            nsp.field.forEachTemplate {
+                if(filter(it)) list.add(it)
+            }
+        }
+        for (nsp in stdNamespaces.values){
+            nsp.field.forEachTemplate {
+                if(filter(it)) list.add(it)
+            }
+        }
+        return list
     }
 
     fun getEnum(namespace: String?, identifier: String): Enum? {

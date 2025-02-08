@@ -1,3 +1,4 @@
+@MCFPPEntity
 data Chicken: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"EggLayTime">
     int eggLayTime;

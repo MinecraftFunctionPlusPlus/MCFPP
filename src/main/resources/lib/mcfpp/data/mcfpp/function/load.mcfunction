@@ -13,6 +13,7 @@ scoreboard objectives add mcfpp.minecraft.entity.armadillostate dummy
 scoreboard objectives add mcfpp.minecraft.item.attributeslot dummy
 scoreboard objectives add mcfpp.minecraft.entity.frogvariant dummy
 scoreboard objectives add mcfpp_temp dummy
+scoreboard objectives add mcfpp_pointer_counter dummy
 scoreboard objectives add mcfpp_boolean dummy
 scoreboard objectives add mcfpp.minecraft.item.fireworkshape dummy
 scoreboard objectives add mcfpp.minecraft.bossbarstyle dummy

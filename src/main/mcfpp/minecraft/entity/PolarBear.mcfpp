@@ -1,3 +1,4 @@
+@MCFPPEntity
 data PolarBear: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, NeutralData{
     
 }

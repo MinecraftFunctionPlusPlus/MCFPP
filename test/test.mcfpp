@@ -2,5 +2,5 @@ namespace test;
 
 func test(){
     var s = @e[type="creeper"];
-    print(s);
+    s.dat.powered = false;
 }

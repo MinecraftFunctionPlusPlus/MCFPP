@@ -1,12 +1,6 @@
 {
 	"values":[
-		{
-			"identifier":"tick/tick",
-			"namespace":"mcfpp"
-		},
-		{
-			"identifier":"sys.tick/sys.tick",
-			"namespace":"mcfpp"
-		}
+		"mcfpp:tick",
+		"mcfpp:sys.tick"
 	]
 }

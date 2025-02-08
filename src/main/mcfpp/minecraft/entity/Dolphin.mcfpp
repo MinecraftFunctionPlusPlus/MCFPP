@@ -1,3 +1,4 @@
+@MCFPPEntity
 data Dolphin: EntityData, CreatureData, AIMobData, GrowableData {
     @Name<"Moistness">
     int moistness;

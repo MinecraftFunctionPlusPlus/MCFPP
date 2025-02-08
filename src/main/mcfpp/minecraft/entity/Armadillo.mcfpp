@@ -1,3 +1,4 @@
+@MCFPPEntity
 data Armadillo: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"Scute_Time">
     int scuteTime;

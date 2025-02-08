@@ -1,3 +1,4 @@
+@MCFPPEntity
 data Goat: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"HasLeftHorn">
     bool hasLeftHorn;

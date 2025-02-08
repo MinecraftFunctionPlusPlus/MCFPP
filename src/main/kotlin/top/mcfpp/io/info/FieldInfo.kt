@@ -5,7 +5,8 @@ import top.mcfpp.model.field.CompoundDataField
 
 data class FieldInfo(
     var vars: ArrayList<Var<*>>,
-    var functions: ArrayList<AbstractFunctionInfo<*>>
+    var functions: ArrayList<AbstractFunctionInfo<*>>,
+    var properties: ArrayList<PropertyInfo>
 ): ModelInfo<CompoundDataField> {
     override fun get(): CompoundDataField {
         val field = CompoundDataField(ArrayList())
@@ -14,6 +15,9 @@ data class FieldInfo(
         }
         functions.forEach {
             field.addFunction(it.get(), true)
+        }
+        properties.forEach {
+            field.putProperty(it.identifier, it.get(), true)
         }
         return field
     }
@@ -24,9 +28,14 @@ data class FieldInfo(
             field.forEachFunction {
                 functions.add(AbstractFunctionInfo.from(it))
             }
+            val properties = ArrayList<PropertyInfo>()
+            field.forEachProperty {
+                properties.add(PropertyInfo.from(it))
+            }
             return FieldInfo(
                 ArrayList(field.allVars),
-                ArrayList(functions)
+                ArrayList(functions),
+                ArrayList(properties)
             )
         }
     }

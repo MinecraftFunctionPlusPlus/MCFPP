@@ -4,7 +4,7 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.core.lang.Var
 import top.mcfpp.doc.Document
-import top.mcfpp.model.accessor.Property
+import top.mcfpp.model.property.Property
 import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.Function

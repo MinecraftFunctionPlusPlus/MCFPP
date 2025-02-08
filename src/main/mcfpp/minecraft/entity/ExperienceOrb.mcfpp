@@ -1,4 +1,5 @@
-data Experience_Orb {
+@MCFPPEntity
+data ExperienceOrb {
     @Name<"Age">
     short age;
 

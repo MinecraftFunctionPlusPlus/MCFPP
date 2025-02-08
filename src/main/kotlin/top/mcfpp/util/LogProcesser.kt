@@ -2,7 +2,10 @@
 
 package top.mcfpp.util
 
-import org.antlr.v4.runtime.*
+import org.antlr.v4.runtime.CharStream
+import org.antlr.v4.runtime.CommonTokenStream
+import org.antlr.v4.runtime.ParserRuleContext
+import org.antlr.v4.runtime.Recognizer
 import org.antlr.v4.runtime.misc.Interval
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
@@ -14,6 +17,8 @@ import top.mcfpp.model.function.Function
 import kotlin.math.min
 
 object LogProcessor {
+
+    var level: LogLevel = LogLevel.DEBUG
 
     fun getCtxText(): String{
         if(Project.ctx != null){
@@ -30,22 +35,28 @@ object LogProcessor {
     var logger: Logger = LogManager.getLogger("mcfpp")
 
     inline fun debug(msg: String){
+        if(level > LogLevel.DEBUG) return
         logger.debug(msg)
     }
 
     inline fun debug(msg: String, e: Exception){
+        if(level > LogLevel.DEBUG) return
         logger.debug(msg, e)
     }
 
     inline fun info(msg: String){
+        if(level > LogLevel.INFO) return
         logger.info(msg)
     }
 
     inline fun info(msg: String, e: Exception){
+        if(level > LogLevel.INFO) return
         logger.info(msg, e)
     }
 
     inline fun warn(msg: String){
+        if(level > LogLevel.WARN) return
+        logger.warn(msg)
         if(Project.ctx != null){
             logger.warn(
                 "Warning while compiling \n" +
@@ -71,6 +82,7 @@ object LogProcessor {
     }
 
     inline fun warn(msg: String, e: Exception){
+        if(level > LogLevel.WARN) return
         logger.warn(msg, e)
         Function.addComment(msg, CommentLevel.WARN)
         Project.warningCount++
@@ -88,6 +100,7 @@ object LogProcessor {
     }
 
     inline fun error(msg: String){
+        if(level > LogLevel.ERROR) return
         if(Project.ctx != null){
             logger.error(
                 "Error while compiling " +
@@ -113,6 +126,7 @@ object LogProcessor {
     }
 
     inline fun error(msg: String, e: Exception){
+        if(level > LogLevel.ERROR) return
         logger.error("$msg\n${e.javaClass}: ${e.message}")
         Function.addComment(msg, CommentLevel.ERROR)
         Project.errorCount++
@@ -136,7 +150,6 @@ object LogProcessor {
     fun syntaxError(
         recognizer: Recognizer<*, *>,
         msg: String,
-        offendingSymbol: Token,
         line: Int,
         charPositionInLine: Int
     ){

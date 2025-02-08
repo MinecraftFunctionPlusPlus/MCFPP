@@ -5,6 +5,7 @@ import org.apache.logging.log4j.core.config.ConfigurationSource
 import org.apache.logging.log4j.core.config.Configurator
 import top.mcfpp.io.DatapackCreator
 import top.mcfpp.model.field.GlobalField
+import top.mcfpp.util.LogLevel
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.UwU
 import java.nio.file.Files
@@ -33,8 +34,6 @@ fun main(args: Array<String>) {
             LogProcessor.error("Cannot find file: $path")
         }
         compile(Project.readConfig(path)) //读取配置文件
-
-        if(CompileSettings.printAll) GlobalField.printAll()
     }
 }
 
@@ -65,7 +64,7 @@ fun compile(config: ProjectConfig){
     }
 
     LogProcessor.info("Finished in " + (System.currentTimeMillis() - start) + "ms")
-    GlobalField.printAll()
+    if(CompileSettings.printAll) GlobalField.printAll()
 }
 
 object MCFPP {
@@ -87,6 +86,12 @@ fun parseArgs(args: List<String>){
 
             if (arg.startsWith("-maxWhileInline=")) arg else "$$arg"
             -> CompileSettings.maxWhileInline = arg.split("=")[1].toInt()
+
+            "-printAll"
+            -> CompileSettings.printAll = true
+
+            if(arg.startsWith("-level=")) arg else "$$arg"
+            -> LogProcessor.level = LogLevel.valueOf(arg.uppercase().split("=")[1])
 
             else -> {
                 LogProcessor.warn("Invalid argument: $arg")

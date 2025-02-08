@@ -1,3 +1,4 @@
+@MCFPPEntity
 data Ravager: EntityData, CreatureData, AIMobData, RaiderData {
     @Name<"AttackTick">
     int attackTick;

@@ -1,5 +1,6 @@
 package top.mcfpp.core.lang.bool
 
+import net.querz.nbt.tag.ByteTag
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
@@ -26,6 +27,8 @@ import java.util.*
  * bool型变量实现了多种计算方法，比如与，或，非等基本的逻辑运算。
  */
 open class ScoreBool : BaseBool, OnScoreboard {
+
+    final override var isDataOnly: Boolean = false
 
     final override var name: String
 
@@ -60,6 +63,7 @@ open class ScoreBool : BaseBool, OnScoreboard {
      */
     constructor(b: ScoreBool) : super(b){
         this.name = b.name
+        this.isDataOnly = b.isDataOnly
     }
 
     @Override
@@ -216,7 +220,11 @@ open class ScoreBool : BaseBool, OnScoreboard {
                 if(final.size == 2){
                     Function.addCommand(final[0])
                 }
-                Function.addCommand(final.last().build(Commands.sbPlayerSet(this, (b as ScoreBoolConcrete).value)))
+                if(isDataOnly){
+                    Function.addCommand(final.last().build(Commands.dataSetValue(nbtPath, ByteTag((b as ScoreBoolConcrete).value))))
+                }else{
+                    Function.addCommand(final.last().build(Commands.sbPlayerSet(this, (b as ScoreBoolConcrete).value)))
+                }
                 this
             },
             ifThisIsClassMemberAndAIsNotConcrete = { b, final ->
@@ -224,22 +232,48 @@ open class ScoreBool : BaseBool, OnScoreboard {
                 if(final.size == 2){
                     Function.addCommand(final[0])
                 }
-                Function.addCommand(final.last().build(Commands.sbPlayerOperation(this,"=",b as ScoreBool)))
+                if(isDataOnly){
+                    Function.addCommand(final.last().build(
+                        Command("execute store result").build(nbtPath.toCommandPart()).build("byte 1").build("run")
+                            .build("scoreboard players get ${(b as ScoreBool).name} ${b.boolObject}")
+                    ))
+                }else{
+                    Function.addCommand(final.last().build(Commands.sbPlayerOperation(this,"=",b as ScoreBool)))
+                }
                 this
             },
             ifThisIsNormalVarAndAIsConcrete = { b, _ ->
-                ScoreBoolConcrete(this, (b as ScoreBoolConcrete).value)
+                if(isDataOnly){
+                    Function.addCommand(Commands.dataSetValue(nbtPath, ByteTag((b as ScoreBoolConcrete).value)))
+                    this
+                }else{
+                    ScoreBoolConcrete(this, (b as ScoreBoolConcrete).value)
+                }
             },
             ifThisIsNormalVarAndAIsClassMember = { c, cmd ->
                 if(cmd.size == 2){
                     Function.addCommand(cmd[0])
                 }
-                Function.addCommand(cmd.last().build(Commands.sbPlayerOperation(this, "=", c as ScoreBool)))
+                if(isDataOnly){
+                    Function.addCommand(cmd.last().build(
+                        Command("execute store result").build(nbtPath.toCommandPart()).build("byte 1").build("run")
+                            .build("scoreboard players get ${(c as ScoreBool).name} ${c.boolObject}")
+                    ))
+                }else{
+                    Function.addCommand(cmd.last().build(Commands.sbPlayerOperation(this, "=", c as ScoreBool)))
+                }
                 ScoreBool(this)
             },
             ifThisIsNormalVarAndAIsNotConcrete = { c, _ ->
                 //变量进栈
-                Function.addCommand(Commands.sbPlayerOperation(this, "=", c as ScoreBool))
+                if(isDataOnly){
+                    Function.addCommand(
+                        Command("execute store result").build(nbtPath.toCommandPart()).build("byte 1").build("run")
+                            .build("scoreboard players get ${(c as ScoreBool).name} ${c.boolObject}")
+                    )
+                }else{
+                    Function.addCommand(Commands.sbPlayerOperation(this, "=", c as ScoreBool))
+                }
                 ScoreBool(this)
             }
         ) as ScoreBool
@@ -440,12 +474,12 @@ class ScoreBoolConcrete : ScoreBool, MCFPPValue<Boolean> {
 
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
-
+        if(isDataOnly) return this
         if (parentClass() != null) {
-            val cmd = Commands.selectRun(parent!!, "scoreboard players set @s $boolObject $value")
+            val cmd = Commands.selectRun(parent!!, "scoreboard players set @s $boolObject ${if(value) 1 else 0}")
             Function.addCommands(cmd)
         } else {
-            Function.addCommand("scoreboard players set $name $boolObject $value")
+            Function.addCommand("scoreboard players set $name $boolObject ${if(value) 1 else 0}")
         }
         val re = ScoreBool(this)
         if(replace){

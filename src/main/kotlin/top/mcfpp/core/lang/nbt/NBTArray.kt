@@ -4,7 +4,7 @@ import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.PropertyVar
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.accessor.Property
+import top.mcfpp.model.property.Property
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool

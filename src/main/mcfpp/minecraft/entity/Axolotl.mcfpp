@@ -1,3 +1,4 @@
+@MCFPPEntity
 data Axolotl: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"FromBucket">
     bool fromBucket;

@@ -1,3 +1,4 @@
+@MCFPPEntity
 data ZombieVillager: EntityData, CreatureData, AIMobData, ZombieData{
     @Name<"ConversionTime">
     int conversionTime;

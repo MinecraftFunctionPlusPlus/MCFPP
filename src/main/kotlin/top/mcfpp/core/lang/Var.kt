@@ -14,6 +14,7 @@ import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Class
 import top.mcfpp.model.DataTemplate
 import top.mcfpp.model.Member
+import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
@@ -115,6 +116,8 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     var hasStoredInStack = false
 
     override var isFinal: Boolean = false
+
+    var annotations: ArrayList<Annotation> = ArrayList()
 
     /**
      * 复制一个变量

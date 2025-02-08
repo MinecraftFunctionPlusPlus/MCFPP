@@ -30,6 +30,7 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
     private var hasScoresPredicate: Boolean = false
     private var hasNamePredicate: Boolean = false
     private var hasTypePredicate: Boolean = false
+    private var canAddTypePredicate: Boolean = true
     private var hasXRotationPredicate: Boolean = false
     private var hasYRotationPredicate: Boolean = false
     private var hasLevelPredicate: Boolean = false
@@ -55,18 +56,19 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
         return Int.MAX_VALUE
     }
 
-    fun getType(): Pair<EntityTypeConcrete, Boolean>?{
+    fun getType(): HashMap<EntityTypeConcrete, Boolean>{
+        val map = HashMap<EntityTypeConcrete, Boolean>()
         if(hasTypePredicate){
             for (predicate in predicates) {
                 if(predicate is TypePredicate){
                     if(predicate.type is EntityTypeConcrete){
-                        return predicate.type to predicate.reverse
+                        map[predicate.type] = predicate.reverse
                     }
                     break
                 }
             }
         }
-        return null
+        return map
     }
 
     fun addPredicate(predicate: EntitySelectorPredicate): EntitySelector{
@@ -144,10 +146,11 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
                 }
             }
             is TypePredicate -> {
-                if(hasTypePredicate){
+                if(!canAddTypePredicate){
                     LogProcessor.error("Duplicate type predicate")
                 }else{
                     hasTypePredicate = true
+                    canAddTypePredicate = predicate.reverse
                     predicates.add(predicate)
                 }
             }
@@ -298,7 +301,7 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
     fun tag(value: MCString, reverse: Boolean) = addPredicate(TagPredicate(value, reverse))
     fun tag(value: String, reverse: Boolean) = addPredicate(TagPredicate(MCStringConcrete(StringTag(value)), reverse))
     fun team(value: MCString, reverse: Boolean) = addPredicate(TeamPredicate(value, reverse))
-    fun teams(value: String, reverse: Boolean) = addPredicate(TeamPredicate(MCStringConcrete(StringTag(value)), reverse))
+    fun team(value: String, reverse: Boolean) = addPredicate(TeamPredicate(MCStringConcrete(StringTag(value)), reverse))
     fun name(value: MCString, reverse: Boolean) = addPredicate(NamePredicate(value, reverse))
     fun name(value: String, reverse: Boolean) = addPredicate(NamePredicate(MCStringConcrete(StringTag(value)), reverse))
     fun type(value: EntityTypeConcrete, reverse: Boolean) = addPredicate(TypePredicate(value, reverse))

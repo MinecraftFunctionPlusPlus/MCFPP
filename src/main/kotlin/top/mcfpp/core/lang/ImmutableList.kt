@@ -12,8 +12,8 @@ import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.mni.NBTListData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.Member
-import top.mcfpp.model.accessor.Property
-import top.mcfpp.model.accessor.SimpleAccessor
+import top.mcfpp.model.property.Property
+import top.mcfpp.model.property.SimpleAccessor
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction

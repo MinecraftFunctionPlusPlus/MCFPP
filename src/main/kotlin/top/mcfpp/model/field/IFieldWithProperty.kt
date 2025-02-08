@@ -1,6 +1,6 @@
 package top.mcfpp.model.field
 
-import top.mcfpp.model.accessor.Property
+import top.mcfpp.model.property.Property
 
 interface IFieldWithProperty: IField {
 

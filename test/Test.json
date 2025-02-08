@@ -2,5 +2,6 @@
   "description": "",
   "namespace": "mcfpp",
   "targetPath": "D:\\.minecraft\\saves\\MCFPP Studio\\datapacks",
-  "noComment": true
+  "noComment": true,
+  "args": ["-printAll"]
 }

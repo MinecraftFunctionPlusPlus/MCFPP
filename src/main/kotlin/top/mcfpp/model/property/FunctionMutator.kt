@@ -1,17 +1,20 @@
-package top.mcfpp.model.accessor
+package top.mcfpp.model.property
 
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Class
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.function.Function
-import top.mcfpp.type.MCFPPType
 
-class FunctionMutator(field: Var<*>, d: CompoundData): AbstractMutator(field) {
+class FunctionMutator: AbstractMutator {
 
     val function: Function
 
-    init {
+    constructor(function: Function){
+        this.function = function
+    }
+
+    constructor(field: Var<*>, d: CompoundData) {
         function = Function("set_${field.identifier}", d.namespace, null)
         function.returnType = field.type
         function.field.putVar("field", field)
@@ -22,7 +25,7 @@ class FunctionMutator(field: Var<*>, d: CompoundData): AbstractMutator(field) {
         function.owner = d
     }
 
-    override fun setter(caller: CanSelectMember, b: Var<*>): Var<*> {
+    override fun setter(caller: CanSelectMember, field: Var<*>, b: Var<*>): Var<*> {
         function.invoke(arrayListOf(b), caller)
         return function.returnVar
     }

@@ -10,7 +10,7 @@ import top.mcfpp.mni.NBTBasedDataData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
-import top.mcfpp.model.accessor.Property
+import top.mcfpp.model.property.Property
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor

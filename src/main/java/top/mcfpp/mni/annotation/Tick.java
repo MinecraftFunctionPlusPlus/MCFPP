@@ -8,7 +8,7 @@ import top.mcfpp.model.function.FunctionTag;
 public class Tick extends FunctionAnnotation {
 
     public Tick(){
-        super("Tick", "mcfpp");
+        super("Tick", "mcfpp.annotation");
     }
 
     @Override

@@ -981,19 +981,19 @@ open class Function : Member, FieldContainer, WithDocument {
          * @param command 要添加的命令。
          */
         fun addCommand(command: Command): Int {
-            if(CompileSettings.isDebug){
-                //检查当前方法是否有InsertCommand注解
-                val stackTrace = Thread.currentThread().stackTrace
-                //调用此方法的类名
-                val className = stackTrace[2].className
-                //调用此方法的方法名
-                val methodName = stackTrace[2].methodName
-                //调用此方法的代码行数
-                val lineNumber = stackTrace[2].lineNumber
-                if(command.toString().startsWith("#")){
-                    LogProcessor.warn("(JVM)Should use addComment() to add a Comment instead of addCommand(). at $className.$methodName:$lineNumber\"")
-                }
-            }
+//            if(CompileSettings.isDebug){
+//                //检查当前方法是否有InsertCommand注解
+//                val stackTrace = Thread.currentThread().stackTrace
+//                //调用此方法的类名
+//                val className = stackTrace[2].className
+//                //调用此方法的方法名
+//                val methodName = stackTrace[2].methodName
+//                //调用此方法的代码行数
+//                val lineNumber = stackTrace[2].lineNumber
+//                if(command.toString().startsWith("#")){
+//                    LogProcessor.warn("(JVM)Should use addComment() to add a Comment instead of addCommand(). at $className.$methodName:$lineNumber\"")
+//                }
+//            }
             if(this.equals(nullFunction)){
                 LogProcessor.error("Unexpected command added to NullFunction")
                 throw NullPointerException()

@@ -12,13 +12,13 @@ import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.*
 import top.mcfpp.model.Member.AccessModifier
-import top.mcfpp.model.accessor.*
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.field.IFieldWithType
 import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.generic.GenericExtensionFunction
 import top.mcfpp.model.generic.GenericFunction
+import top.mcfpp.model.property.*
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPEnumType
 import top.mcfpp.type.MCFPPGenericClassType
@@ -610,7 +610,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }else if(ctx.expression() != null){
             ExpressionMutator(ctx.expression(), currVar)
         }else{
-            SimpleMutator(currVar)
+            SimpleMutator()
         }
     }
 

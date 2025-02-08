@@ -1,6 +1,6 @@
 package top.mcfpp.model.annotation
 
-import top.mcfpp.model.Class
+import top.mcfpp.core.lang.Var
 import top.mcfpp.model.DataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
@@ -11,6 +11,10 @@ abstract class ClassAnnotation(identifier: String, namespace: String) : Annotati
     }
 
     final override fun forDataTemplate(data: DataTemplate) {
-        throw Exception("Cannot use function annotation on class")
+        throw Exception("Cannot use class annotation on template")
+    }
+
+    final override fun forField(field: Var<*>) {
+        LogProcessor.error("Cannot use class annotation on field")
     }
 }

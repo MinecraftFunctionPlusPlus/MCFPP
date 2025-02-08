@@ -1,19 +1,23 @@
-package top.mcfpp.model.accessor
+package top.mcfpp.model.property
 
 import top.mcfpp.Project
 import top.mcfpp.annotations.MNIMutator
 import top.mcfpp.core.lang.Var
-import top.mcfpp.core.lang.Void
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.util.LogProcessor
 
-class NativeMutator(javaRefer: String, d: CompoundData, field: Var<*>): AbstractMutator(field) {
+class NativeMutator: AbstractMutator {
 
-    val function: NativeFunction = NativeFunction("set_${field.identifier}", d.namespace)
+    var function: NativeFunction
 
-    init {
+    constructor(function: NativeFunction){
+        this.function = function
+    }
+
+    constructor(javaRefer: String, d: CompoundData, field: Var<*>) {
+        function = NativeFunction("set_${field.identifier}", d.namespace)
         function.returnType = field.type
         function.field.putVar("field", field)
         function.appendNormalParam(field.type, "value")
@@ -40,14 +44,14 @@ class NativeMutator(javaRefer: String, d: CompoundData, field: Var<*>): Abstract
         }
     }
 
-    override fun setter(caller: CanSelectMember, b: Var<*>): Var<*>{
+    override fun setter(caller: CanSelectMember, field: Var<*>, b: Var<*>): Var<*>{
         function.invoke(arrayListOf(b), caller)
         return function.returnVar
     }
 }
 
-class AnonymousNativeMutator(val native: (CanSelectMember ,Var<*>)->Var<*>): AbstractMutator(Void){
-    override fun setter(caller: CanSelectMember, b: Var<*>): Var<*> {
+class AnonymousNativeMutator(val native: (CanSelectMember ,Var<*>)->Var<*>): AbstractMutator(){
+    override fun setter(caller: CanSelectMember, field: Var<*>, b: Var<*>): Var<*> {
         return native(caller, b)
     }
 

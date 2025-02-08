@@ -1,5 +1,6 @@
 import mcfpp.minecraft.other:*;
 
+@MCFPPEntity
 data Player: EntityData, CreatureData {
 
     @Name<"DataVersion">

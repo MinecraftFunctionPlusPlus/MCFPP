@@ -1,5 +1,6 @@
 package top.mcfpp.model.annotation
 
+import top.mcfpp.core.lang.Var
 import top.mcfpp.model.Class
 import top.mcfpp.model.DataTemplate
 import top.mcfpp.model.function.Function
@@ -43,6 +44,8 @@ abstract class Annotation : Serializable {
      */
     val params = ArrayList<String>()
 
+    val parents = ArrayList<Annotation>()
+
     @Suppress("ConvertSecondaryConstructorToPrimary")
     internal constructor(identifier: String, namespace: String, param: ArrayList<String> = ArrayList()) {
         this.identifier = identifier
@@ -50,11 +53,38 @@ abstract class Annotation : Serializable {
         this.params.addAll(param)
     }
 
+    internal fun on(clazz: Class){
+        forClass(clazz)
+        parents.forEach { it.on(clazz) }
+    }
+
     abstract fun forClass(clazz: Class)
+
+    internal fun on(function: Function){
+        forFunction(function)
+        parents.forEach { it.on(function) }
+    }
 
     abstract fun forFunction(function: Function)
 
+    internal fun on(data: DataTemplate){
+        forDataTemplate(data)
+        parents.forEach { it.on(data) }
+    }
+
     abstract fun forDataTemplate(data: DataTemplate)
+
+    internal fun on(field: Var<*>){
+        forField(field)
+        parents.forEach { it.on(field) }
+    }
+
+    abstract fun forField(field: Var<*>)
+
+    @JvmName("extends_")
+    fun extends(annotation: Annotation){
+        parents.add(annotation)
+    }
 
     companion object {
         fun newInstance(clazz: java.lang.Class<out Annotation>, args: ArrayList<Any>): Annotation? {

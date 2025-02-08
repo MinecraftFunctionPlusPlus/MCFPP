@@ -1,3 +1,4 @@
+@MCFPPEntity
 data Turtle: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"HasEgg">
     bool hasEgg;

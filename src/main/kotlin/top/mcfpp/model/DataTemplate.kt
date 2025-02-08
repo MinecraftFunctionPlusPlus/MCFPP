@@ -6,7 +6,7 @@ import top.mcfpp.core.lang.DataTemplateObject
 import top.mcfpp.core.lang.MCAny
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.accessor.Property
+import top.mcfpp.model.property.Property
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.DataTemplateConstructor
 import top.mcfpp.model.function.Function
@@ -36,6 +36,8 @@ open class DataTemplate : FieldContainer, CompoundData {
     var constructors: ArrayList<DataTemplateConstructor> = ArrayList()
 
     private val reference: ArrayList<DataTemplate> = ArrayList()
+
+    var alwaysDynamic: Boolean = false
 
     /**
      * 获取这个容器中变量应该拥有的前缀

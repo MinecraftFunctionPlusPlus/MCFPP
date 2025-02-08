@@ -1,18 +1,19 @@
-package top.mcfpp.model.accessor
+package top.mcfpp.model.property
 
-import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
-import top.mcfpp.model.Class
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.function.Function
-import top.mcfpp.type.MCFPPType
 
-class FunctionAccessor(field: Var<*>, d: CompoundData): AbstractAccessor() {
+class FunctionAccessor: AbstractAccessor {
 
     var function: Function
 
-    init {
+    constructor(function: Function): super() {
+        this.function = function
+    }
+
+    constructor(field: Var<*>, d: CompoundData): super() {
         function = Function("get_${field.identifier}", d.namespace, null)
         function.returnType = field.type
         function.field.putVar("field", field)

@@ -2,7 +2,7 @@ package top.mcfpp.core.lang.nbt
 
 import net.querz.nbt.tag.IntArrayTag
 import top.mcfpp.core.lang.*
-import top.mcfpp.model.accessor.Property
+import top.mcfpp.model.property.Property
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPNBTType
 import top.mcfpp.type.MCFPPType

@@ -1,1 +1,2 @@
+@MCFPPEntity
 data Blaze: EntityData, CreatureData, AIMobData {}

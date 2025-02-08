@@ -7,6 +7,8 @@ import net.querz.nbt.tag.Tag
 import top.mcfpp.Project
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.ScoreBool
+import top.mcfpp.lib.EntitySelector
+import top.mcfpp.lib.EntitySource
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Class
@@ -15,6 +17,7 @@ import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.type.MCFPPClassType
+import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 import top.mcfpp.util.Utils
 
@@ -157,6 +160,15 @@ object Commands {
      * @return 生成的命令
      */
     fun dataSetValue(a: NBTPath, value: Tag<*>): Command{
+        if(a.source is EntitySource){
+            val selector = (a.source as EntitySource).entity.value
+            if(!selector.selectingSingleEntity()){
+                val new = a.clone()
+                new.source = EntitySource(SelectorVar(EntitySelector('s')))
+                return Command.build("execute as").build(selector.toCommandPart()).build("run")
+                    .build("data modify").build(new.toCommandPart()).build("set value ${SNBTUtil.toSNBT(value)}")
+            }
+        }
         return Command.build("data modify")
             .build(a.toCommandPart())
             .build("set value ${SNBTUtil.toSNBT(value)}")
@@ -171,6 +183,18 @@ object Commands {
      * @return 生成的命令
      */
     fun dataSetFrom(a: NBTPath, b: NBTPath): Command{
+        if(b.source is EntitySource && !(b.source as EntitySource).entity.value.selectingSingleEntity()){
+            LogProcessor.error("Can only select single Entity")
+        }
+        if(a.source is EntitySource){
+            val selector = (a.source as EntitySource).entity.value
+            if(!selector.selectingSingleEntity()){
+                val new = a.clone()
+                new.source = EntitySource(SelectorVar(EntitySelector('s')))
+                return Command.build("execute as").build(selector.toCommandPart()).build("run")
+                    .build("data modify").build(new.toCommandPart()).build("set from ${b.toCommandPart()}")
+            }
+        }
         return Command.build("data modify")
             .build(a.toCommandPart())
             .build("set from")

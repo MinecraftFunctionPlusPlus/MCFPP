@@ -1,5 +1,6 @@
 package top.mcfpp.core.lang
 
+import net.querz.nbt.tag.IntTag
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
@@ -111,7 +112,11 @@ open class MCInt : MCNumber<Int> {
                 if(final.size == 2){
                     Function.addCommand(final[0])
                 }
-                Function.addCommand(final.last().build(Commands.sbPlayerSet(this, (b as MCIntConcrete).value)))
+                if(isDataOnly){
+                    Function.addCommand(final.last().build(Commands.dataSetValue(nbtPath, IntTag((b as MCIntConcrete).value))))
+                }else{
+                    Function.addCommand(final.last().build(Commands.sbPlayerSet(this, (b as MCIntConcrete).value)))
+                }
                 this
             },
             ifThisIsClassMemberAndAIsNotConcrete = { b, final ->
@@ -119,22 +124,47 @@ open class MCInt : MCNumber<Int> {
                 if(final.size == 2){
                     Function.addCommand(final[0])
                 }
-                Function.addCommand(final.last().build(Commands.sbPlayerOperation(this,"=",b as MCInt)))
+                if(isDataOnly){
+                    Function.addCommand(final.last().build(
+                        Command("execute store result").build(nbtPath.toCommandPart()).build("int 1").build("run")
+                            .build("scoreboard players get ${(b as MCInt).name} ${b.sbObject}")
+                    ))
+                }else{
+                    Function.addCommand(final.last().build(Commands.sbPlayerOperation(this,"=",b as MCInt)))
+                }
                 this
             },
             ifThisIsNormalVarAndAIsConcrete = { b, _ ->
-                MCIntConcrete(this, (b as MCIntConcrete).value)
+                if(isDataOnly){
+                    Function.addCommand(Commands.dataSetValue(nbtPath, IntTag((b as MCIntConcrete).value)))
+                    this
+                }else{
+                    MCIntConcrete(this, (b as MCIntConcrete).value)
+                }
             },
             ifThisIsNormalVarAndAIsClassMember = { c, cmd ->
                 if(cmd.size == 2){
                     Function.addCommand(cmd[0])
                 }
-                Function.addCommand(cmd.last().build(Commands.sbPlayerOperation(this, "=", c as MCInt)))
+                if(isDataOnly){
+                    Function.addCommand(cmd.last().build(
+                        Command("execute store result").build(nbtPath.toCommandPart()).build("int 1").build("run")
+                            .build("scoreboard players get ${(c as MCInt).name} ${c.sbObject}")
+                    ))
+                }else{
+                    Function.addCommand(cmd.last().build(Commands.sbPlayerOperation(this, "=", c as MCInt)))
+                }
                 MCInt(this)
             },
             ifThisIsNormalVarAndAIsNotConcrete = { c, _ ->
-                //变量进栈
-                Function.addCommand(Commands.sbPlayerOperation(this, "=", c as MCInt))
+                if(isDataOnly){
+                    Function.addCommand(
+                        Command("execute store result").build(nbtPath.toCommandPart()).build("int 1").build("run")
+                            .build("scoreboard players get ${(c as MCInt).name} ${c.sbObject}")
+                    )
+                }else{
+                    Function.addCommand(Commands.sbPlayerOperation(this, "=", c as MCInt))
+                }
                 MCInt(this)
             }
         ) as MCInt
@@ -250,6 +280,7 @@ open class MCInt : MCNumber<Int> {
     override fun isBigger(a: Var<*>): Var<*>? {
         //re = t > a
         if (a !is MCInt) return null
+        if(isDataOnly) getFromStack()
         val re = ExecuteBool()
         if (a is MCIntConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
@@ -265,6 +296,7 @@ open class MCInt : MCNumber<Int> {
     override fun isSmaller(a: Var<*>): Var<*>? {
         //re = t < a
         if (a !is MCInt) return null
+        if(isDataOnly) getFromStack()
         val re = ExecuteBool()
         if (a is MCIntConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
@@ -280,6 +312,7 @@ open class MCInt : MCNumber<Int> {
     override fun isSmallerOrEqual(a: Var<*>): Var<*>? {
         //re = t <= a
         if (a !is MCInt) return null
+        if(isDataOnly) getFromStack()
         val re = ExecuteBool()
         if (a is MCIntConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
@@ -295,6 +328,7 @@ open class MCInt : MCNumber<Int> {
     override fun isBiggerOrEqual(a: Var<*>): Var<*>? {
         //re = t <= a
         if (a !is MCInt) return null
+        if(isDataOnly) getFromStack()
         val re = ExecuteBool()
         if (a is MCIntConcrete) {
             //execute store success score qwq qwq if score qwq qwq matches a+1..
@@ -310,6 +344,7 @@ open class MCInt : MCNumber<Int> {
     override fun isEqual(a: Var<*>): Var<*>? {
         //re = t == a
         if (a !is MCInt) return null
+        if(isDataOnly) getFromStack()
         val re = ExecuteBool()
         if (a is MCIntConcrete) {
             //execute store success score qwq qwq if score qwq qwq = owo owo
@@ -325,6 +360,7 @@ open class MCInt : MCNumber<Int> {
     override fun isNotEqual(a: Var<*>): Var<*>? {
         //re = t != a
         if (a !is MCInt) return null
+        if(isDataOnly) getFromStack()
         val re = ExecuteBool()
         if(a is MCIntConcrete){
             //execute store success score qwq qwq if score qwq qwq matches owo owo
@@ -350,6 +386,7 @@ open class MCInt : MCNumber<Int> {
         if (isTemp) return this
         val re = MCInt()
         re.isTemp = true
+        if(isDataOnly) getFromStack()
         return re.assignedBy(this) as MCInt
     }
 

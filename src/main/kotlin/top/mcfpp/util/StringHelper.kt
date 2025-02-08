@@ -6,19 +6,31 @@ object StringHelper {
         return isLowerCase() || isDigit() || arrayOf('_','-','/','.').contains(this)
     }
 
+    fun String.toCamelCase(capitalizeFirstLetter: Boolean = false): String {
+        return split('_', '-', '.').mapIndexed { index, part ->
+            when {
+                index == 0 && !capitalizeFirstLetter -> part
+                else -> part.replaceFirstChar { it.uppercase() }
+            }
+        }.joinToString("")
+    }
+
+
     fun String.toSnakeCase(): String {
-        val s = StringBuilder("")
-        for (c in this.withIndex()) {
-            if(c.value.isLowerCase() || c.value.isDigit() || c.value == '_' || c.value == '-' || c.value == '.'){
-                s.append(c.value)
-            }else if (c.value.isUpperCase()){
-                s.append("_").append(c.value.lowercase())
-            }else{
-                s.append("u").append(c.value.code.toString(16))
+        return buildString(length + 4) {
+            for ((index, char) in this@toSnakeCase.withIndex()) {
+                when {
+                    char.isLowerCase() || char.isDigit() || char in "_-." -> append(char)
+                    char.isUpperCase() -> {
+                        if (index > 0) append('_')
+                        append(char.lowercase())
+                    }
+                    else -> append("u${char.code.toString(16)}")
+                }
             }
         }
-        return s.toString()
     }
+
 
     fun String.pathToNamespace(): String{
         return this.replace("\\", ".").replace("/", ".")

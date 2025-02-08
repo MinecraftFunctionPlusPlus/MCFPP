@@ -21,5 +21,8 @@ object CompileSettings {
      */
     var maxWhileInline = 32
 
+    /**
+     * 是否输出全部编译结果
+     */
     var printAll = false
 }

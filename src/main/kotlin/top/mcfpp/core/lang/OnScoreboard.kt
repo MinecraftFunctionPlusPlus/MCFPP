@@ -7,6 +7,9 @@ import top.mcfpp.lib.SbObject
  */
 interface OnScoreboard {
 
+
+    var isDataOnly: Boolean
+
     /**
      * 在Minecraft中的标识符
      */

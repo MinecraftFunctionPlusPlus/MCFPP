@@ -222,7 +222,9 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         return if(property == null){
             Pair(null, true)
         }else{
-            Pair(PropertyVar(property, v!!, this), accessModifier >= property.accessModifier)
+            v!!.isDynamic = templateType.alwaysDynamic
+            v.nbtPath = this.nbtPath.clone().memberIndex(v.identifier)
+            Pair(PropertyVar(property, v, this), accessModifier >= property.accessModifier)
         }
     }
 

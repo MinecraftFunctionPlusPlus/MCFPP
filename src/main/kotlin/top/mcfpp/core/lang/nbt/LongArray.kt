@@ -2,7 +2,7 @@ package top.mcfpp.core.lang.nbt
 
 import net.querz.nbt.tag.LongArrayTag
 import top.mcfpp.core.lang.*
-import top.mcfpp.model.accessor.Property
+import top.mcfpp.model.property.Property
 import top.mcfpp.type.MCFPPNBTType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor

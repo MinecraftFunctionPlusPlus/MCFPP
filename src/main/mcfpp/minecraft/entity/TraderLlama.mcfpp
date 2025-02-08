@@ -1,4 +1,5 @@
-data Trader_Llama {
+@MCFPPEntity
+data TraderLlama {
     @Name<"Bred">
     byte bred;
 

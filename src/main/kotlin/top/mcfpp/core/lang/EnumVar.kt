@@ -10,7 +10,6 @@ import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.Enum
 import top.mcfpp.model.EnumMember
-import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
@@ -18,10 +17,11 @@ import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
-import java.util.*
 
 @Suppress("LeakingThis")
 open class EnumVar : Var<EnumVar>, OnScoreboard {
+
+    override var isDataOnly: Boolean = false
 
     var sbObject: SbObject = SbObject.MCFPP_default
 
@@ -53,6 +53,7 @@ open class EnumVar : Var<EnumVar>, OnScoreboard {
         name = b.name
         enum = b.enum
         type = enum.getType()
+        isDataOnly = b.isDataOnly
     }
 
     constructor(b: MCInt, enum : Enum): super(b){
@@ -60,6 +61,7 @@ open class EnumVar : Var<EnumVar>, OnScoreboard {
         name = b.name
         this.enum = enum
         type = enum.getType()
+        isDataOnly = b.isDataOnly
     }
 
     override fun doAssignedBy(b: Var<*>): EnumVar {

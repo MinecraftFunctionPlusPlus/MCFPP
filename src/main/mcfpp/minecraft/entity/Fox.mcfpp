@@ -1,3 +1,4 @@
+@MCFPPEntity
 data Fox: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"Crouching">
     bool crouching;

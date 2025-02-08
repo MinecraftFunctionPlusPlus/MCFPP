@@ -45,7 +45,7 @@ abstract class EntitySelectorPredicate {
 
 abstract class CanReverseEntitySelectorPredicate(val reverse: Boolean): EntitySelectorPredicate(){
     override fun toCommandPart(): Command {
-        val re = Command.build("tag=")
+        val re = Command.build("${identifier}=")
         if(reverse) re.build("!", false)
         return if(v is MCFPPValue<*>){
             re.build(valueString(), false)
@@ -56,7 +56,7 @@ abstract class CanReverseEntitySelectorPredicate(val reverse: Boolean): EntitySe
 
     override fun toString(): String {
         return buildString {
-            append("tag=")
+            append("${identifier}=")
             if(reverse) append("!")
             if(v is MCFPPValue<*>){
                 append(valueString())

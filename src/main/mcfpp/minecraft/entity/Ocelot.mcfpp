@@ -1,3 +1,4 @@
+@MCFPPEntity
 data Ocelot: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"Trusting">
     bool trusting;

@@ -1,2 +1,3 @@
+@MCFPPEntity
 data Drowned: EntityData, CreatureData, AIMobData, ZombieData {
 }

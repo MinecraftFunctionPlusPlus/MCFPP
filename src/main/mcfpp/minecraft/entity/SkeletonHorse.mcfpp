@@ -1,3 +1,4 @@
+@MCFPPEntity
 data SkeletonHorse: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, HorseData{
     @Name<"SkeletonTrap">
     bool skeletonTrap;

@@ -1,4 +1,4 @@
-package top.mcfpp.model.accessor
+package top.mcfpp.model.property
 
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember

@@ -1,18 +1,20 @@
-package top.mcfpp.model.accessor
+package top.mcfpp.model.property
 
 import top.mcfpp.antlr.MCFPPExprVisitor
-import top.mcfpp.antlr.mcfppParser
+import top.mcfpp.antlr.mcfppParser.ExpressionContext
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
 
-class ExpressionAccessor(val ctx: mcfppParser.ExpressionContext, field: Var<*>): AbstractAccessor() {
+class ExpressionAccessor: AbstractAccessor{
 
     var error: Boolean
 
-    init {
+    val ctx: ExpressionContext
+
+    constructor(ctx: ExpressionContext, field: Var<*>) {
         Commands.fakeFunction(Function.currFunction){
             it.field.putVar("field", field)
             val test: Var<*> = MCFPPExprVisitor().visit(ctx)
@@ -23,6 +25,12 @@ class ExpressionAccessor(val ctx: mcfppParser.ExpressionContext, field: Var<*>):
                 error = false
             }
         }
+        error = false
+        this.ctx = ctx
+    }
+
+    constructor(ctx: ExpressionContext){
+        this.ctx = ctx
         error = false
     }
 

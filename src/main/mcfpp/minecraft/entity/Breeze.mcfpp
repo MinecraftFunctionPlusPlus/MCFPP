@@ -1,3 +1,4 @@
+@MCFPPEntity
 data Breeze: EntityData, CreatureData, AIMobData {
     
 }

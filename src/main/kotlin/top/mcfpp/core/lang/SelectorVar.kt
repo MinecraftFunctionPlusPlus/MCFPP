@@ -1,16 +1,24 @@
 package top.mcfpp.core.lang
 
 import top.mcfpp.core.lang.nbt.MCStringConcrete
+import top.mcfpp.core.lang.nbt.NBTBasedData
+import top.mcfpp.core.lang.nbt.NBTDictionary
+import top.mcfpp.core.lang.resource.LootTablePredicate
 import top.mcfpp.lib.EntitySelector
+import top.mcfpp.lib.EntitySource
+import top.mcfpp.lib.NBTPath
+import top.mcfpp.mni.annotation.MCFPPEntity
+import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.CompoundData
+import top.mcfpp.model.DataTemplate
 import top.mcfpp.model.Member
-import top.mcfpp.model.accessor.AnonymousNativeMutator
-import top.mcfpp.model.accessor.Property
+import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
-import top.mcfpp.type.MCFPPBaseType
-import top.mcfpp.type.MCFPPEntityType
-import top.mcfpp.type.MCFPPType
+import top.mcfpp.model.property.AnonymousNativeMutator
+import top.mcfpp.model.property.Property
+import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.StringHelper.toCamelCase
 import top.mcfpp.util.TempPool
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
@@ -54,8 +62,19 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector>, EntityBase {
     }
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        val p = data.field.getProperty(key) ?: return null to true
-        return PropertyVar(p, Void, this) to true
+        if(key == "dat"){
+            val data = DataTemplateObject(getData(), "dat")
+            data.nbtPath = NBTPath(EntitySource(this))
+            return data to true
+        }
+        val p = data.field.getProperty(key)
+        if(p != null) return PropertyVar(p, Void, this) to true
+        val v = data.field.getVar(key)
+        if(v is SelectorParamMap) {
+            v.selector = this
+            return v to true
+        }
+        return null to true
     }
 
     override fun getMemberFunction(
@@ -67,6 +86,25 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector>, EntityBase {
         return data.getFunction(key, readOnlyArgs, normalArgs) to true
     }
 
+    private fun getData(): DataTemplate{
+        val types = value.getType()
+        val excluded = ArrayList<String>()
+        for ((type, reverse) in types){
+            if(!reverse){
+                val d = GlobalField.getTemplate("mcfpp.minecraft.entity", type.value.toCamelCase(true))
+                if(d == null){
+                    LogProcessor.error("Undefined entity: ${type.value} (${type.value.toCamelCase(true)})")
+                }else{
+                    d.alwaysDynamic = true
+                    return d
+                }
+            }else{
+                excluded.add(type.value.toCamelCase(true))
+            }
+        }
+        return AllEntityDataTemplate(excluded)
+    }
+
     override fun clone(): SelectorVar {
         return SelectorVar(this)
     }
@@ -75,24 +113,244 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector>, EntityBase {
         return SelectorVar(value.clone())
     }
 
+    private interface SelectorParamMap: Indexable {
+         var selector: SelectorVar
+    }
+
+
     companion object {
 
+        private val cache = HashMap<List<String>, AllEntityDataTemplate>()
+
+        private class AllEntityDataTemplate(excluded: List<String>): DataTemplate("AnyEntity","mcfpp"){
+            init {
+                GlobalField.getDataTemplate { data ->
+                    data.annotations.any { it is MCFPPEntity } && data.identifier !in excluded
+                }.forEach {
+                    extends(it)
+                }
+                alwaysDynamic = true
+            }
+
+            override fun extends(compoundData: CompoundData): CompoundData {
+                if(parent.contains(compoundData)){
+                    LogProcessor.warn("Already extends template '${compoundData.identifier}'")
+                    return this
+                }
+                parent.add(compoundData)
+                compoundData.children.add(this)
+                field.parent.add(compoundData.field)
+                //把所有成员都塞进去
+                compoundData.field.forEachVar {
+                    field.putVar(it.identifier, it, true)
+                }
+                compoundData.field.forEachProperty {
+                    field.putProperty(it.identifier, it, true)
+                }
+                return this
+            }
+
+        }
+
+
         val data by lazy {
+
+            fun checkParamType(v: Var<*>, type: MCFPPType): Var<*>?{
+                val value = v.implicitCast(type)
+                if(value.isError){
+                    LogProcessor.error(TextTranslator.CAST_ERROR.translate(value.type.typeName, type.typeName))
+                    return null
+                }
+                return value
+            }
+
+            fun stringParam(op: (EntitySelector, MCStringConcrete) -> Unit): (CanSelectMember, Var<*>) -> Var<*> = { caller, v ->
+                val selector = (caller as SelectorVar).value
+                val value = checkParamType(v, MCFPPBaseType.String)
+                if(value != null && value !is MCStringConcrete){
+                    LogProcessor.error("Must be concrete")
+                    Void
+                }else if(value == null){
+                    Void
+                }
+                op(selector, value as MCStringConcrete)
+                Void
+            }
+
             CompoundData("selector","mcfpp").apply {
-                addMember(Property("type", null, AnonymousNativeMutator { caller, v ->
+                addMember(Property("x", null, AnonymousNativeMutator { caller, v ->
                     val selector = (caller as SelectorVar).value
-                    val value = v.implicitCast(MCFPPBaseType.String)
-                    if(value.isError){
-                        LogProcessor.error(TextTranslator.CAST_ERROR.translate(value.type.typeName, MCFPPBaseType.String.typeName))
-                        return@AnonymousNativeMutator Void
+                    val value = checkParamType(v, MCFPPBaseType.Int)
+                    if(value is MCInt){
+                        selector.x(value)
                     }
-                    if(value !is MCStringConcrete){
-                        LogProcessor.error("Must be concrete")
-                        return@AnonymousNativeMutator Void
-                    }
-                    selector.type(value.value.value, false)
                     return@AnonymousNativeMutator Void
                 }))
+                addMember(Property("y", null, AnonymousNativeMutator { caller, v ->
+                    val selector = (caller as SelectorVar).value
+                    val value = checkParamType(v, MCFPPBaseType.Int)
+                    if(value is MCInt){
+                        selector.y(value)
+                    }
+                    return@AnonymousNativeMutator Void
+                }))
+                addMember(Property("z", null, AnonymousNativeMutator { caller, v ->
+                    val selector = (caller as SelectorVar).value
+                    val value = checkParamType(v, MCFPPBaseType.Int)
+                    if(value is MCInt){
+                        selector.z(value)
+                    }
+                    return@AnonymousNativeMutator Void
+                }))
+                addMember(Property("distance", null, AnonymousNativeMutator { caller, v ->
+                    val selector = (caller as SelectorVar).value
+                    val value = checkParamType(v, MCFPPBaseType.Range)
+                    if(value is RangeVar){
+                        selector.distance(value)
+                    }
+                    return@AnonymousNativeMutator Void
+                }))
+                addMember(Property("dx", null, AnonymousNativeMutator { caller, v ->
+                    val selector = (caller as SelectorVar).value
+                    val value = checkParamType(v, MCFPPBaseType.Int)
+                    if(value is MCInt){
+                        selector.dx(value)
+                    }
+                    return@AnonymousNativeMutator Void
+                }))
+                addMember(Property("dy", null, AnonymousNativeMutator { caller, v ->
+                    val selector = (caller as SelectorVar).value
+                    val value = checkParamType(v, MCFPPBaseType.Int)
+                    if (value is MCInt) {
+                        selector.dy(value)
+                    }
+                    return@AnonymousNativeMutator Void
+                }))
+                addMember(Property("dz", null, AnonymousNativeMutator { caller, v ->
+                    val selector = (caller as SelectorVar).value
+                    val value = checkParamType(v, MCFPPBaseType.Int)
+                    if (value is MCInt) {
+                        selector.dz(value)
+                    }
+                    return@AnonymousNativeMutator Void
+                }))
+                addMember(object : NBTDictionary("scores"), SelectorParamMap {
+
+                    override lateinit var selector: SelectorVar
+
+                    override var type: MCFPPType = object :MCFPPPrivateType(){
+                        override val typeName: String = "ScoreDictionary"
+                        override fun buildReturnVar(): Var<*> {
+                            LogProcessor.error("Cannot build var for type: $typeName")
+                            return UnknownVar(identifier)
+                        }
+                    }
+
+                    override fun getByIndex(index: Var<*>): PropertyVar {
+                        if(index !is MCStringConcrete){
+                            LogProcessor.error("Index must be concrete string")
+                            return PropertyVar(Property.buildSimpleProperty(UnknownVar("error")), Void, this)
+                        }
+                        val str = index.value.value
+                        return PropertyVar(Property("type", null, AnonymousNativeMutator { caller, v ->
+                            val selector = (caller as SelectorVar).value
+                            val value = checkParamType(v, MCFPPBaseType.Range)
+                            if(value is RangeVar){
+                                selector.scores(mapOf(str to value))
+                            }
+                            return@AnonymousNativeMutator Void
+                        }), Void, selector)
+                    }
+                })
+                addMember(Property("tag", null, AnonymousNativeMutator(stringParam { selector, str->
+                    selector.tag(str.value.value, false)
+                })))
+                addMember(Property("tagN", null, AnonymousNativeMutator(stringParam { entitySelector, mcStringConcrete ->
+                    entitySelector.tag(mcStringConcrete.value.value, true)
+                })))
+                addMember(Property("team", null, AnonymousNativeMutator(stringParam { entitySelector, mcStringConcrete ->
+                    entitySelector.team(mcStringConcrete.value.value, false)
+                })))
+                addMember(Property("teamN", null, AnonymousNativeMutator(stringParam { entitySelector, mcStringConcrete ->
+                    entitySelector.team(mcStringConcrete.value.value, true)
+                })))
+                addMember(Property("name", null, AnonymousNativeMutator(stringParam { entitySelector, mcStringConcrete ->
+                    entitySelector.name(mcStringConcrete.value.value, false)
+                })))
+                addMember(Property("nameN", null, AnonymousNativeMutator(stringParam { entitySelector, mcStringConcrete ->
+                    entitySelector.name(mcStringConcrete.value.value, true)
+                })))
+                addMember(Property("type", null, AnonymousNativeMutator(stringParam { entitySelector, mcStringConcrete ->
+                    entitySelector.type(mcStringConcrete.value.value, false)
+                })))
+                addMember(Property("typeN", null, AnonymousNativeMutator(stringParam { entitySelector, mcStringConcrete ->
+                    entitySelector.type(mcStringConcrete.value.value, true)
+                })))
+                addMember(Property("predicate", null, AnonymousNativeMutator { caller, v ->
+                    val selector = (caller as SelectorVar).value
+                    val value = checkParamType(v, MCFPPResourceType.LootTablePredicate)
+                    if(value is LootTablePredicate){
+                        selector.predicate(value, false)
+                    }
+                    return@AnonymousNativeMutator Void
+                }))
+                addMember(Property("predicateN", null, AnonymousNativeMutator { caller, v ->
+                    val selector = (caller as SelectorVar).value
+                    val value = checkParamType(v, MCFPPResourceType.LootTablePredicate)
+                    if(value is LootTablePredicate){
+                        selector.predicate(value, true)
+                    }
+                    return@AnonymousNativeMutator Void
+                }))
+                addMember(Property("xRotation", null, AnonymousNativeMutator{ caller, v ->
+                    val selector = (caller as SelectorVar).value
+                    val value = checkParamType(v, MCFPPBaseType.Range)
+                    if(value is RangeVar){
+                        selector.xRotation(value)
+                    }
+                    return@AnonymousNativeMutator Void
+                }))
+                addMember(Property("yRotation", null, AnonymousNativeMutator{ caller, v ->
+                    val selector = (caller as SelectorVar).value
+                    val value = checkParamType(v, MCFPPBaseType.Range)
+                    if(value is RangeVar){
+                        selector.yRotation(value)
+                    }
+                    return@AnonymousNativeMutator Void
+                }))
+                addMember(Property("nbt", null, AnonymousNativeMutator { caller, v ->
+                    val selector = (caller as SelectorVar).value
+                    val value = checkParamType(v, MCFPPNBTType.NBT)
+                    if(value is NBTBasedData){
+                        selector.nbt(value)
+                    }
+                    return@AnonymousNativeMutator Void
+                }))
+                addMember(Property("level", null, AnonymousNativeMutator{ caller, v ->
+                    val selector = (caller as SelectorVar).value
+                    val value = checkParamType(v, MCFPPBaseType.Range)
+                    if(value is RangeVar){
+                        selector.level(value)
+                    }
+                    return@AnonymousNativeMutator Void
+                }))
+                addMember(Property("gamemode", null, AnonymousNativeMutator(stringParam { entitySelector, mcStringConcrete ->
+                    entitySelector.gamemode(mcStringConcrete.value.value, false)
+                })))
+                addMember(Property("gamemodeN", null, AnonymousNativeMutator(stringParam { entitySelector, mcStringConcrete ->
+                    entitySelector.gamemode(mcStringConcrete.value.value, true)
+                })))
+                addMember(Property("limit", null, AnonymousNativeMutator { caller, v ->
+                    val selector = (caller as SelectorVar).value
+                    val value = checkParamType(v, MCFPPBaseType.Int)
+                    if(value is MCInt){
+                        selector.limit(value)
+                    }
+                    return@AnonymousNativeMutator Void
+                }))
+                addMember(Property("sort", null, AnonymousNativeMutator(stringParam { entitySelector, mcStringConcrete ->
+                    entitySelector.sort(mcStringConcrete.value.value)
+                })))
             }
         }
 

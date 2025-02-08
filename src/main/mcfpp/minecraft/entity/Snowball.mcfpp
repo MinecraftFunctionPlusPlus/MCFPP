@@ -1,2 +1,3 @@
+@MCFPPEntity
 data Snowball: EntityData, ProjectileData, MissileData{
 }

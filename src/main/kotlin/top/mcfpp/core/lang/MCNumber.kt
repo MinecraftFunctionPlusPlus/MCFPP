@@ -13,6 +13,8 @@ import top.mcfpp.util.TempPool
  */
 abstract class MCNumber<T> : Var<MCNumber<T>>, OnScoreboard {
 
+    override var isDataOnly: Boolean = false
+
     final override var name: String
 
     var holder: ScoreHolder? = null
@@ -45,14 +47,18 @@ abstract class MCNumber<T> : Var<MCNumber<T>>, OnScoreboard {
     /**
      * 复制一个数字类型变量
      */
+    @Suppress("LeakingThis")
     constructor(b: MCNumber<T>) : super(b) {
         name = b.name
         sbObject = b.sbObject
+        isDataOnly = b.isDataOnly
     }
 
+    @Suppress("LeakingThis")
     constructor(b: EnumVar) : super(b){
         name = b.name
         sbObject = b.sbObject
+        isDataOnly = b.isDataOnly
     }
 
     @Override

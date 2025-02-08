@@ -1,4 +1,4 @@
-package top.mcfpp.model.accessor
+package top.mcfpp.model.property
 
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
@@ -73,7 +73,7 @@ data class Property(val identifier: String, val accessor: AbstractAccessor?, val
      */
     fun setter(caller: CanSelectMember, field: Var<*>, b: Var<*>): Var<*> {
         if(mutator != null){
-            return mutator.setter(caller, b)
+            return mutator.setter(caller, field, b)
         }else{
             LogProcessor.error("Property ${field.identifier} does not have a setter")
             return UnknownVar(field.identifier)
@@ -86,7 +86,7 @@ data class Property(val identifier: String, val accessor: AbstractAccessor?, val
 
     companion object {
         fun buildSimpleProperty(field: Var<*>): Property {
-            return Property(field.identifier, SimpleAccessor(), SimpleMutator(field))
+            return Property(field.identifier, SimpleAccessor(), SimpleMutator())
         }
     }
 }

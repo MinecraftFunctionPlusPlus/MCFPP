@@ -1,6 +1,7 @@
-data Firework_Rocket {
+@MCFPPEntity
+data FireworkRocket {
     @Name<"FireworksItem">
-    list<Firework_Rocket> fireworksItem;
+    list<FireworkRocket> fireworksItem;
 
     @Name<"Life">
     int life;
