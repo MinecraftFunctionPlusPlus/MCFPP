@@ -109,7 +109,7 @@ object LogProcessor {
             )
             Function.addComment(msg, CommentLevel.ERROR)
         }else{
-            logger.warn(msg)
+            logger.error(msg)
         }
         Project.errorCount++
         if(CompileSettings.isDebug){

@@ -1,6 +1,0 @@
-namespace test;
-
-func test(){
-    var s = @e[type="creeper"];
-    s.dat.powered = false;
-}

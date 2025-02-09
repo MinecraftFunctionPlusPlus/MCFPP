@@ -32,6 +32,7 @@ options {
     tokenVocab = mcfppLexer;
 }
 
+
 //一个mcfpp文件
 compilationUnit
     :   namespaceDeclaration?

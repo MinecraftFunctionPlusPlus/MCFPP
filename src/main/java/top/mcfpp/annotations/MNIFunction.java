@@ -1,5 +1,7 @@
 package top.mcfpp.annotations;
 
+import top.mcfpp.type.MCFPPType;
+
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;

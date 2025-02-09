@@ -13,5 +13,5 @@ execute unless score #if_success mcfpp_temp matches 1 run return 1
 #否则，检查第二个元素
 data remove storage mcfpp:system list.list[0]
 scoreboard players add list.index mcfpp_temp 1
-function mcfpp.lang:list/index_of
+function mcfpp.lang:list/contains
 return 0

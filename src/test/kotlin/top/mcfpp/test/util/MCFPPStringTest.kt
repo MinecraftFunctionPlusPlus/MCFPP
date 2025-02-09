@@ -1,5 +1,6 @@
 package top.mcfpp.test.util
 
+import com.ibm.icu.impl.data.ResourceReader
 import org.antlr.v4.runtime.CharStream
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
@@ -21,7 +22,7 @@ import kotlin.io.path.absolutePathString
 
 object MCFPPStringTest {
     fun readFromString(str: String, args: Array<String> = arrayOf(), targetPath: String? = null){
-        val source = ConfigurationSource(FileInputStream("log4j2.xml"))
+        val source = ConfigurationSource(ResourceReader::class.java.classLoader.getResourceAsStream("log4j2.xml"))
         Configurator.initialize(null,source)
         //编译参数
         parseArgs(args.asList())

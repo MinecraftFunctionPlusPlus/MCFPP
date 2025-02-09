@@ -119,12 +119,6 @@ public class NBTListData {
         }
     }
 
-    // TODO
-    // @MNIRegister(normalParams = {"E e"}, caller = "list<E>")
-    //public static void remove(Var<?> e, NBTList caller){
-    //    throw new NotImplementedError();
-    //}
-
     @MNIFunction(normalParams = {"int index"}, caller = "list", genericType = "E")
     public static void removeAt(MCInt index, NBTList caller){
         var command = Commands.INSTANCE.method2(caller, new Command("data remove")
@@ -137,7 +131,7 @@ public class NBTListData {
     public static void indexOf(@NotNull Var<?> e, NBTList caller, ValueWrapper<MCInt> returnVar){
         var n = e.toNBTVar();
         element.assignedBy(n);
-        element.assignedBy(caller);
+        list.assignedBy(caller);
         Function.Companion.addCommand("scoreboard players set list.index " + SbObject.Companion.getMCFPP_TEMP() + " 0");
         Function.Companion.addCommand("execute store result score list.size mcfpp_temp run data get storage mcfpp:system list.list");
         Function.Companion.addCommand("function mcfpp.lang:list/index_of");
@@ -148,7 +142,7 @@ public class NBTListData {
     public static void lastIndexOf(Var<?> e, NBTList caller, ValueWrapper<MCInt> returnVar){
         var n = e.toNBTVar();
         element.assignedBy(n);
-        element.assignedBy(caller);
+        list.assignedBy(caller);
         Function.Companion.addCommand("scoreboard players set list.index " + SbObject.Companion.getMCFPP_TEMP() + " 0");
         Function.Companion.addCommand("execute store result score list.size mcfpp_temp run data get storage mcfpp:system list.list");
         Function.Companion.addCommand("function mcfpp.lang:list/last_index_of");
@@ -159,7 +153,7 @@ public class NBTListData {
     public static void contains(Var<?> e, NBTList caller, ValueWrapper<ScoreBool> returnVar){
         var n = e.toNBTVar();
         element.assignedBy(n);
-        element.assignedBy(caller);
+        list.assignedBy(caller);
         Function.Companion.addCommand("scoreboard players set list.index " + SbObject.Companion.getMCFPP_TEMP() + " 0");
         Function.Companion.addCommand("execute store result score list.size mcfpp_temp run data get storage mcfpp:system list.list");
         Function.Companion.addCommand("function mcfpp.lang:list/contains");

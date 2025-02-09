@@ -1,5 +1,6 @@
 package top.mcfpp.model.function
 
+import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.*
@@ -75,7 +76,9 @@ class NativeFunction : Function, Native {
             )
         }catch (e: Exception){
             LogProcessor.error("Error when invoking native function: ${this.identifier}")
-            e.printStackTrace()
+            if(!CompileSettings.isDebug){
+                e.printStackTrace()
+            }
         }
         returnVar = valueWrapper.value
         return returnVar

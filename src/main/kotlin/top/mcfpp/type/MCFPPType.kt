@@ -1,8 +1,13 @@
 package top.mcfpp.type
 
 import net.querz.nbt.tag.*
+import org.antlr.v4.runtime.CharStream
+import org.antlr.v4.runtime.CharStreams
+import org.antlr.v4.runtime.CommonTokenStream
 import top.mcfpp.antlr.MCFPPExprVisitor
 import top.mcfpp.antlr.MCFPPFieldVisitor
+import top.mcfpp.antlr.mcfppLexer
+import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.antlr.mcfppParser.TypeContext
 import top.mcfpp.antlr.mcfppParser.TypeWithoutExclContext
 import top.mcfpp.core.lang.UnknownVar
@@ -327,16 +332,14 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                 val qwq = parseFromString(typeStr.substring(0, typeStr.length - 1), typeScope)
                 return qwq?.let { MCFPPDeclaredConcreteType(qwq) }
             }
-            if(typeCache.contains(typeStr)) {
-                return typeCache[typeStr]!!
-            }
-            if(genericTypeCache.contains(typeStr)){
-                //未被解析的泛型
-                return MCFPPNotCompiledGenericType(genericTypeClassCache[typeStr]!!)
-            }
-            //类和模板
-            if(typeStr.contains('[')){
-                //return parseGenericTypeString(typeStr.substring(0, typeStr.lastIndexOfAny(charArrayOf(')', ']'))), typeScope)
+            typeCache[typeStr]?.let { return it }
+            genericTypeCache[typeStr]?.let { return MCFPPNotCompiledGenericType(genericTypeClassCache[typeStr]!!) }
+            //使用泛型
+            if(typeStr.contains("<")){
+                val charStream: CharStream = CharStreams.fromString(typeStr)
+                val tokens = CommonTokenStream(mcfppLexer(charStream))
+                val parser = mcfppParser(tokens)
+                return parseFromContext(parser.type(), typeScope)
             }
             //正则匹配
             val clsResult = MCFPPClassType.regex.find(typeStr)
