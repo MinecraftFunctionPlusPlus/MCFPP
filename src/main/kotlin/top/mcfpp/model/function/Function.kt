@@ -934,6 +934,15 @@ open class Function : Member, FieldContainer, WithDocument {
                 return ret
             }
 
+        val currStackFunction: Function
+            get() {
+                var ret = currFunction
+                while (ret is NoStackFunction || ret is MCFunction){
+                    ret = ret.parent[0]
+                }
+                return ret
+            }
+
 
         @Suppress("unused")
         fun replaceCommand(command: String, index: Int){
@@ -1018,6 +1027,22 @@ open class Function : Member, FieldContainer, WithDocument {
             if (!currFunction.isReturned) {
                 currFunction.commands.add(Comment("#$str", type))
             }
+        }
+
+        fun getFieldWithVar(v: Var<*>): Function?{
+            var ret = currFunction
+            do{
+                if(ret is NoStackFunction){
+                    ret = ret.parent[0]
+                    continue
+                }
+                val f = ret.field.getVar(v.identifier)
+                if(f != null){
+                    return ret
+                }
+                if(ret.parent.isEmpty()) return null
+                ret = ret.parent[0]
+            } while (true)
         }
 
         enum class OwnerType{

@@ -205,9 +205,9 @@ open class Class : CompoundData {
         )
     }
 
-    override fun isSub(compoundData: CompoundData): Boolean {
+    override fun isSubOf(compoundData: CompoundData): Boolean {
         if(compoundData == baseClass) return true
-        return super.isSub(compoundData)
+        return super.isSubOf(compoundData)
     }
 
     fun getFieldPath(identifier: String): NBTPath {

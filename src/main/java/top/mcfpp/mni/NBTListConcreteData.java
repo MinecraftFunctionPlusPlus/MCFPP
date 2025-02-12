@@ -8,6 +8,7 @@ import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.*;
+import top.mcfpp.core.lang.bool.BaseBool;
 import top.mcfpp.core.lang.bool.ScoreBool;
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete;
 import top.mcfpp.core.lang.nbt.NBTBasedData;
@@ -104,10 +105,10 @@ public class NBTListConcreteData {
 
     @SuppressWarnings("SuspiciousMethodCalls")
     @MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E", returnType = "bool")
-    public static void contains(Var<?> e, NBTListConcrete caller, ValueWrapper<ScoreBool> returnVar){
+    public static void contains(Var<?> e, NBTListConcrete caller, ValueWrapper<BaseBool> returnVar){
         if(e instanceof MCFPPValue eC){
             var contains = caller.getValue().contains(eC.getValue());
-            returnVar.setValue(returnVar.getValue().assignedBy(new ScoreBoolConcrete(contains, TempPool.INSTANCE.getVarIdentify())).toScoreBool());
+            returnVar.setValue(returnVar.getValue().assignedBy(new ScoreBoolConcrete(contains, TempPool.INSTANCE.getVarIdentify())));
         }else {
             caller.toDynamic(false);
             NBTListData.contains(e, caller, returnVar);

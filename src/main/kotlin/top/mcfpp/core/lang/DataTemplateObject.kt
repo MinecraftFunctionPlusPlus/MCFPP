@@ -84,7 +84,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
             }
 
             is DataTemplateObjectConcrete -> {
-                if (b.type.objectData.canCastTo(this.templateType)) {
+                if (b.type.objectData.isSubOf(this.templateType)) {
                     this.assignMembers(b.value)
                     return this
                 } else {
@@ -116,7 +116,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
             }
 
             is DataTemplateObjectConcrete -> {
-                b.type.objectData.canCastTo(this.templateType)
+                b.type.objectData.isSubOf(this.templateType)
             }
 
             is DataTemplateObject -> {
@@ -162,7 +162,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
             }
 
             is MCFPPDataTemplateType -> {
-                if(templateType.canCastTo(type.template)){
+                if(templateType.isParentOf(type.template) || templateType.isSubOf(type.template)){
                     val re = if(this is DataTemplateObjectConcrete){
                         DataTemplateObjectConcrete(type.template, this.value, this.identifier)
                     }else{
@@ -184,7 +184,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         if(!r.isError) return r
         when(type){
             is MCFPPDataTemplateType -> {
-                if(this.templateType.canCastTo(type.template)){
+                if(this.templateType.isSubOf(type.template)){
                     val re = if(this is DataTemplateObjectConcrete){
                         DataTemplateObjectConcrete(type.template, this.value, this.identifier)
                     }else{

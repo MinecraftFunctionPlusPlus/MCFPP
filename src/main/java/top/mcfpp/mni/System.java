@@ -1,6 +1,7 @@
 package top.mcfpp.mni;
 
 import net.querz.nbt.io.SNBTUtil;
+import net.querz.nbt.tag.Tag;
 import org.jetbrains.annotations.NotNull;
 import top.mcfpp.annotations.InsertCommand;
 import top.mcfpp.annotations.MNIFunction;
@@ -14,6 +15,7 @@ import top.mcfpp.core.lang.nbt.MCString;
 import top.mcfpp.core.lang.nbt.MCStringConcrete;
 import top.mcfpp.core.lang.nbt.NBTBasedData;
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete;
+import top.mcfpp.lib.NBTChatComponent;
 import top.mcfpp.lib.ScoreChatComponent;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.util.LogProcessor;
@@ -33,7 +35,6 @@ public class System {
     }
 
     @InsertCommand
-    @MNIFunction(normalParams = {"text t"})
     public static void print(@NotNull JsonText text){
         if(text instanceof JsonTextConcrete textC){
             Function.Companion.addCommand(new Command("tellraw @a").build(textC.getValue().toCommandPart(), true));
@@ -44,12 +45,21 @@ public class System {
 
     @InsertCommand
     @MNIFunction(normalParams = {"any a"})
-    public static void print(@NotNull Var<?> value){
-        Function.Companion.addCommand("tellraw @a " + "\"" + value + "\"");
+    public static void print(@NotNull MCAny value){
+        if(value instanceof MCAnyConcrete valueC){
+            switch (valueC.getValue()) {
+                case MCInt mcInt -> print(mcInt);
+                case NBTBasedData nbtBasedData -> print(nbtBasedData);
+                case BaseBool bool -> print(bool);
+                case DataTemplateObject object -> print(object);
+                default -> Function.Companion.addCommand("tellraw @a " + "\"" + valueC.getValue() + "\"");
+            }
+        }else {
+            Function.Companion.addCommand("tellraw @a " + "\"" + value + "\"");
+        }
     }
 
     @InsertCommand
-    @MNIFunction(normalParams = {"int i"})
     public static void print(@NotNull MCInt var) {
         if (var instanceof MCIntConcrete varC) {
             //是确定的，直接输出数值
@@ -69,32 +79,26 @@ public class System {
     //}
 
     @InsertCommand
-    @MNIFunction(normalParams = {"nbt n"})
     public static void print(@NotNull NBTBasedData var){
-        var = var.getTempVar();
-        if(var instanceof NBTBasedDataConcrete varC){
-            Function.Companion.addCommand("tellraw @a \"" + NBTUtil.INSTANCE.toJava(varC.getValue()) + "\"");
+        if(var instanceof MCFPPValue<?> varC){
+            try {
+                Function.Companion.addCommand("tellraw @a \"" + SNBTUtil.toSNBT(NBTUtil.INSTANCE.valueToNBT(varC.getValue())) + "\"");
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }else {
-            //TODO
+            Function.Companion.addCommands(Commands.INSTANCE.method2(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart(), true)));
         }
     }
 
     @InsertCommand
-    @MNIFunction(normalParams = {"string s"})
-    public static void print(@NotNull MCString var) {
-        var = var.getTempVar();
-        if(var instanceof MCStringConcrete varC){
-            Function.Companion.addCommand("tellraw @a \"" + varC.getValue().getValue() + "\"");
-        }else{
-            //TODO
-        }
-    }
-
-    @InsertCommand
-    @MNIFunction(normalParams = {"DataObject o"})
-    public static void print(@NotNull DataTemplateObject object) throws IOException {
+    public static void print(@NotNull DataTemplateObject object) {
         if(object instanceof DataTemplateObjectConcrete objectConcrete){
-            Function.Companion.addCommand("tellraw @a \"" + SNBTUtil.toSNBT(objectConcrete.getValue()) + "\"");
+            try {
+                Function.Companion.addCommand("tellraw @a \"" + SNBTUtil.toSNBT(objectConcrete.getValue()) + "\"");
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
         }else {
             //TODO
             Function.Companion.addCommand("TODO: tellraw templateData");
@@ -102,13 +106,12 @@ public class System {
     }
 
     @InsertCommand
-    @MNIFunction(normalParams = {"bool b"})
     public static void print(BaseBool bool){
         ScoreBool b;
         if(bool instanceof ScoreBool){
             b = (ScoreBool) bool;
         }else {
-            b = bool.toScoreBool();
+            b = bool.toScoreBool(false);
         }
         if(b instanceof ScoreBoolConcrete bC){
             Function.Companion.addCommand("tellraw @a " + bC.getValue());

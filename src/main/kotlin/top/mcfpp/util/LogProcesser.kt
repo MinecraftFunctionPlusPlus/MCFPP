@@ -127,7 +127,7 @@ object LogProcessor {
 
     inline fun error(msg: String, e: Exception){
         if(level > LogLevel.ERROR) return
-        logger.error("$msg\n${e.javaClass}: ${e.message}")
+        logger.error("$msg\n${e.stackTraceToString()}")
         Function.addComment(msg, CommentLevel.ERROR)
         Project.errorCount++
         if(CompileSettings.isDebug){

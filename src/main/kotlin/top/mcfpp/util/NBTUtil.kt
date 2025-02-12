@@ -77,20 +77,20 @@ object NBTUtil {
         }
     }
 
-    fun<T : Tag<*>?> ListTag<T>.toArrayList(): List<*>{
+    fun<T : Tag<*>?> ListTag<T>.toArrayList(): ArrayList<*>{
         return when(typeClass){
-            ByteTag::class.java -> map { (it as ByteTag).asByte()}
-            ShortTag::class.java -> map { (it as ShortTag).asShort()}
-            IntTag::class.java -> map { (it as IntTag).asInt()}
-            LongTag::class.java -> map { (it as LongTag).asLong()}
-            FloatTag::class.java -> map { (it as FloatTag).asFloat()}
-            DoubleTag::class.java -> map { (it as DoubleTag).asDouble()}
-            StringTag::class.java -> map { (it as StringTag).valueToString()}
-            ListTag::class.java -> map { (it as ListTag<*>).toArrayList() }
-            ByteArrayTag::class.java -> map { (it as ByteArrayTag).value }
-            IntArrayTag::class.java -> map { (it as IntArrayTag).value}
-            LongArrayTag::class.java -> map { (it as LongArrayTag).value}
-            CompoundTag::class.java -> map { (it as CompoundTag).toMap() }
+            ByteTag::class.java -> ArrayList(map { (it as ByteTag).asByte()})
+            ShortTag::class.java -> ArrayList(map { (it as ShortTag).asShort()})
+            IntTag::class.java -> ArrayList(map { (it as IntTag).asInt()})
+            LongTag::class.java -> ArrayList(map { (it as LongTag).asLong()})
+            FloatTag::class.java -> ArrayList(map { (it as FloatTag).asFloat()})
+            DoubleTag::class.java -> ArrayList(map { (it as DoubleTag).asDouble()})
+            StringTag::class.java -> ArrayList(map { (it as StringTag).valueToString()})
+            ListTag::class.java -> ArrayList(map { (it as ListTag<*>).toArrayList() })
+            ByteArrayTag::class.java -> ArrayList(map { (it as ByteArrayTag).value })
+            IntArrayTag::class.java -> ArrayList(map { (it as IntArrayTag).value})
+            LongArrayTag::class.java -> ArrayList(map { (it as LongArrayTag).value})
+            CompoundTag::class.java -> ArrayList(map { (it as CompoundTag).toMap() })
             else -> throw VariableConverseException()
         }
     }
@@ -173,5 +173,33 @@ object NBTUtil {
         }else{
             toDouble()
         }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun<T: Tag<*>> ListTag<T>.addUnchecked(index: Int, tag: Tag<*>){
+        require(!(typeClass != EndTag::class.java && typeClass != tag.javaClass)) {
+            String.format(
+                "cannot add %s to ListTag<%s>",
+                tag.javaClass.simpleName, typeClass.simpleName
+            )
+        }
+        add(size(), tag as T)
+    }
+
+
+    @Suppress("UNCHECKED_CAST")
+    fun<T: Tag<*>> ListTag<T>.indexOfUnchecked(tag: Tag<*>): Int{
+        require(!(typeClass != EndTag::class.java && typeClass != tag.javaClass)) {
+            return -1
+        }
+        return indexOf(tag as T)
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun<T: Tag<*>> ListTag<T>.containsUnchecked(tag: Tag<*>): Boolean{
+        require(!(typeClass != EndTag::class.java && typeClass != tag.javaClass)) {
+            return false
+        }
+        return contains(tag as T)
     }
 }

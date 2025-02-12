@@ -4,12 +4,12 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.core.lang.Var
 import top.mcfpp.doc.Document
-import top.mcfpp.model.property.Property
 import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
+import top.mcfpp.model.property.Property
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPGenericParamType
 import top.mcfpp.type.MCFPPType
@@ -143,7 +143,7 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
             Member.AccessModifier.PRIVATE
         }else{
             //是否是子类
-            if(this.isSub(compoundData)){
+            if(this.isSubOf(compoundData)){
                 Member.AccessModifier.PROTECTED
             }else{
                 Member.AccessModifier.PUBLIC
@@ -152,40 +152,24 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
     }
 
     /**
-     * 这个复合类型是否可以被强制转换为目标类型。
-     *
-     * TODO
-     *
-     * @param compoundData 目标类型
-     * @return 如果可以,返回true,反之返回false
-     */
-    fun canCastTo(compoundData: CompoundData): Boolean {
-        if (namespaceID == compoundData.namespaceID) {
-            return true
-        }
-        if (parent.size != 0) {
-            for(p in parent){
-                if(p.canCastTo(compoundData)) return true
-            }
-        }
-        return false
-    }
-
-    /**
      * 这个复合类型是否是指定类型的子类
      *
      * @param compoundData 指定类型
      * @return 是否是指定类型的子类型
      */
-    open fun isSub(compoundData: CompoundData): Boolean{
+    open fun isSubOf(compoundData: CompoundData): Boolean{
         if(parent.size != 0){
             for (p in parent){
-                if(p.namespaceID == compoundData.namespaceID || p.isSub(compoundData)){
+                if(p.namespaceID == compoundData.namespaceID || p.isSubOf(compoundData)){
                     return true
                 }
             }
         }
         return false
+    }
+
+    open fun isParentOf(compoundData: CompoundData): Boolean {
+        return compoundData.isSubOf(this)
     }
 
     open fun extends(compoundData: CompoundData): CompoundData{

@@ -3,9 +3,7 @@ package top.mcfpp.core.lang.bool
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
-import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
@@ -15,8 +13,7 @@ class FunctionBool(identifier: String , function: Function): BaseBool(identifier
     override var value: Function = function
     override fun toDynamic(replace: Boolean): Var<*> {
         val re = ScoreBool(this.identifier)
-        val cmd = Command.build("execute")
-            .build("store score ${re.identifier} ${re.boolObject}")
+        val cmd = Command.build("execute store result score ${re.identifier} ${re.boolObject} run")
             .build(toCommandPart())
         Function.addCommand(cmd)
         if(replace){
@@ -25,8 +22,8 @@ class FunctionBool(identifier: String , function: Function): BaseBool(identifier
         return re
     }
 
-    override fun toScoreBool(): ScoreBool {
-        return toDynamic(true) as ScoreBool
+    override fun toScoreBool(replace: Boolean): ScoreBool {
+        return toDynamic(replace) as ScoreBool
     }
 
     override fun negation(): Var<*> {

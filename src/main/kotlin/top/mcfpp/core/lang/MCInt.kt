@@ -8,6 +8,8 @@ import top.mcfpp.core.lang.bool.CommandBoolPart
 import top.mcfpp.core.lang.bool.ExecuteBool
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.nbt.MCLong
+import top.mcfpp.core.lang.nbt.NBTBasedData
+import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.mni.MCIntData
 import top.mcfpp.model.CompoundData
@@ -697,5 +699,9 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
     override fun getTempVar(): MCIntConcrete {
         if (isTemp) return this
         return MCIntConcrete(value).apply { isTemp = true }
+    }
+
+    override fun toNBTVar(): NBTBasedData {
+        return NBTBasedDataConcrete(super.toNBTVar(), IntTag(value))
     }
 }

@@ -222,6 +222,12 @@ object Commands {
             .build(b.toCommandPart())
     }
 
+    fun dataAppendValue(a: NBTPath, value: Tag<*>): Command{
+        return Command.build("data modify")
+            .build(a.toCommandPart())
+            .build("append value ${SNBTUtil.toSNBT(value)}")
+    }
+
     fun dataAppendFrom(a: NBTPath, b: NBTPath): Command{
         return Command.build("data modify")
            .build(a.toCommandPart())

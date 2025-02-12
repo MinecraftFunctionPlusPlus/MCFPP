@@ -1,6 +1,6 @@
 package top.mcfpp.core.lang.nbt
 
-import net.querz.nbt.tag.IntTag
+import net.querz.nbt.tag.EndTag
 import net.querz.nbt.tag.ListTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.annotations.InsertCommand
@@ -13,10 +13,11 @@ import top.mcfpp.mni.NBTListConcreteData
 import top.mcfpp.mni.NBTListData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.Member
-import top.mcfpp.model.property.Property
+import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
+import top.mcfpp.model.property.Property
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil
@@ -231,6 +232,20 @@ open class NBTList : NBTBasedData {
     }
 }
 
+/**
+ * 一个值已知的列表。
+ *
+ * 当一个列表部分未知的时候，仍然被作为已知列表对待。例如
+ *
+ * ```
+ * var l = [1,2,3];
+ * dynamic i = 4;
+ * l[1] = 4;
+ * print(l[0]);
+ * ```
+ *
+ * 此时仍然会直接编译为`tellraw @a "1"`，而不是输出为计分板的值或者NBT的值。
+ */
 class NBTListConcrete: NBTList, MCFPPValue<ArrayList<Var<*>>> {
 
     var isEmptyTemp: Boolean = false
@@ -259,24 +274,36 @@ class NBTListConcrete: NBTList, MCFPPValue<ArrayList<Var<*>>> {
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
         if(value.isEmpty()) return NBTList(this)
+        var isSet = true
+        var list: ListTag<Tag<*>> = ListTag.createUnchecked(EndTag::class.java) as ListTag<Tag<*>>
         val commands = Commands.tempFunction(Function.currFunction){
-            Commands.dataSetValue(nbtPath, ListTag(IntTag::class.java))
             val first = value.first().type.nbtType
-            val list = ListTag.createUnchecked(first) as ListTag<Tag<*>>
+            list = ListTag.createUnchecked(first) as ListTag<Tag<*>>
             for (v in value){
                 if(v is MCFPPValue<*>){
-                    list.add(NBTUtil.valueToNBT(v.value))
+                    if(isSet){
+                        list.add(NBTUtil.valueToNBT(v.value))
+                    }else{
+                        Function.addCommand(Commands.dataAppendValue(NBTPath.temp, NBTUtil.valueToNBT(v.value)))
+                    }
                 }else{
-                    if(list.size() != 0){
+                    if(list.size() != 0 && isSet){
+                        isSet = false
                         Function.addCommand(Commands.dataSetValue(NBTPath.temp, list))
                         list.clear()
                     }
-                    Function.addCommand(Commands.dataSetFrom(NBTPath.temp, v.nbtPath))
+                    Function.addCommand(Commands.dataAppendFrom(NBTPath.temp, v.nbtPath))
                 }
             }
             Function.addCommand(Commands.dataAppendFrom(nbtPath, NBTPath.temp.clone().iteratorIndex()))
         }
-        Function.addCommands(Commands.method2(this, commands.first))
+        if(isSet){
+            //循环内一直没更改过isSet的值，说明列表所有变量都可被追踪
+            Function.addCommands(Commands.method2(this, Commands.dataSetValue(nbtPath, list)))
+            GlobalField.localNamespaces[commands.second.namespace]!!.field.removeFunction(commands.second)
+        }else{
+            Function.addCommands(Commands.method2(this, commands.first))
+        }
         val re = NBTList(this)
         if(replace){
             if(parentTemplate() != null) {

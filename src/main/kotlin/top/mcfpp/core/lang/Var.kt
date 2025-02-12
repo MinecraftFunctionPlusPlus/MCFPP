@@ -138,6 +138,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
      *
      * @param identifier 变量的标识符。默认为随机的uuid
      */
+    @Suppress("LeakingThis")
     constructor(identifier: String = TempPool.getVarIdentify()){
         this.identifier = identifier
         this.nbtPath = NBTPath(StorageSource("mcfpp:system"))
@@ -521,9 +522,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             holder!!.replaceScore(v)
             holder!!.onScoreChange(v)
         }else if(parent == null){
-            if(Function.currFunction.field.containVar(identifier)){
-                Function.currFunction.field.putVar(identifier, v, true)
-            }
+            Function.getFieldWithVar(this)!!.field.putVar(identifier, v , true)
         }else{
             v.parent = this.parent
             parent!!.replaceMemberVar(v)

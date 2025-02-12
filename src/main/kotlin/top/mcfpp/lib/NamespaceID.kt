@@ -2,7 +2,7 @@ package top.mcfpp.lib
 
 import top.mcfpp.util.StringHelper.toSnakeCase
 
-class NamespaceID(namespace: String?, identifier: String) {
+class NamespaceID {
 
     var namespace: String
         private set
@@ -10,9 +10,14 @@ class NamespaceID(namespace: String?, identifier: String) {
     var identifier: String
         private set
 
-    init {
+    constructor(namespace: String?, identifier: String) {
         this.namespace = namespace?.toSnakeCase() ?:"minecraft"
         this.identifier = identifier.toSnakeCase()
+    }
+
+    constructor(namespace: String?, path: String, identifier: String){
+        this.namespace = namespace?.toSnakeCase()?:"minecraft"
+        this.identifier = path.split("/").joinToString("/") { it.toSnakeCase() } + "/" + identifier
     }
 
     override fun toString(): String {

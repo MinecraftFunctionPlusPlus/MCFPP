@@ -5,9 +5,9 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.SbObject
-import top.mcfpp.model.*
+import top.mcfpp.model.Class
+import top.mcfpp.model.Member
 import top.mcfpp.model.field.CompoundDataField
-import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NoStackFunction
@@ -15,10 +15,8 @@ import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.type.MCFPPClassType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
-import top.mcfpp.util.StringHelper.splitNamespaceID
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
-import java.util.*
 
 /**
  * 一个类的指针。类的地址储存在storage的uuid中中，因此一个类的指针实际上包含了两个信息，一个是指针代表的是[哪一个类][clazz]，一个是指针指向的这个类的对象
@@ -82,14 +80,12 @@ open class ClassPointer : Var<ClassPointer>{
      * @param b 变量的对象
      * @throws VariableConverseException 如果隐式转换失败
      */
-    @Override
     @InsertCommand
-    @Throws(VariableConverseException::class)
     override fun doAssignedBy(b: Var<*>): ClassPointer {
         //TODO 不支持指针作为类成员的时候
         when (b) {
             is ClassPointer -> {
-                if (!b.clazz.canCastTo(clazz)) {
+                if (!b.clazz.isSubOf(clazz)) {
                     LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
                     return this
                 }
@@ -147,26 +143,32 @@ open class ClassPointer : Var<ClassPointer>{
         isNull = true
     }
 
-    @Override
     override fun explicitCast(type: MCFPPType): Var<*> {
-        if(MCFPPType.baseType.contains(type)){
-            buildCastErrorVar(type)
+        if(type !is MCFPPClassType){
+            return buildCastErrorVar(type)
         }
-        //TODO: 这里有问题，class类型的问题
-        val namespace = type.typeName.splitNamespaceID()
-        val c = GlobalField.getClass(namespace.first, namespace.second)
-        if(c == null){
-            LogProcessor.error("Undefined class: $type")
-            return UnknownVar("${type}_ptr" + UUID.randomUUID())
+        val c = type.cls
+        if (!this.clazz.isSubOf(c) && !this.clazz.isParentOf(c)) {
+            return buildCastErrorVar(type)
         }
-        if (!this.clazz.canCastTo(c)) {
-            buildCastErrorVar(type)
+        val re = ClassPointer(this)
+        re.type = type
+        return re
+    }
+
+    override fun implicitCast(type: MCFPPType): Var<*> {
+        if(type !is MCFPPClassType){
+            return buildCastErrorVar(type)
+        }
+        val c = type.cls
+        if (!this.clazz.isSubOf(c)) {
+            return buildCastErrorVar(type)
         }
         val re = ClassPointer(this)
         return re
     }
 
-    @Override
+
     override fun clone(): ClassPointer {
         return ClassPointer(this)
     }
@@ -178,7 +180,6 @@ open class ClassPointer : Var<ClassPointer>{
      * @param accessModifier 访问者的访问权限
      * @return 第一个值是对象中获取到的字段，若不存在此字段则为null；第二个值是是否有足够的访问权限访问此字段。如果第一个值是null，那么第二个值总是为true
      */
-    @Override
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         val v = instanceField.getVar(key)
         val member = instanceField.getProperty(key)
@@ -199,7 +200,6 @@ open class ClassPointer : Var<ClassPointer>{
      * @param accessModifier 访问者的访问权限
      * @return 第一个值是对象中获取到的方法，若不存在此方法则为null；第二个值是是否有足够的访问权限访问此方法。如果第一个值是null，那么第二个值总是为true
      */
-    @Override
     override fun getMemberFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>, accessModifier: Member.AccessModifier): Pair<Function, Boolean> {
         //获取函数
         val member = clazz.field.getFunction(key, readOnlyArgs, normalArgs)
@@ -215,7 +215,6 @@ open class ClassPointer : Var<ClassPointer>{
      *
      * @return 一个此变量生成的临时变量
      */
-    @Override
     override fun getTempVar(): ClassPointer {
         return this
     }

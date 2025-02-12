@@ -150,6 +150,10 @@ open class NamespaceField(
     override fun hasFunction(function: Function, considerParent: Boolean): Boolean{
         return functions.contains(function)
     }
+
+    fun removeFunction(function: Function){
+        functions.remove(function)
+    }
     //endregion
 
     //region class

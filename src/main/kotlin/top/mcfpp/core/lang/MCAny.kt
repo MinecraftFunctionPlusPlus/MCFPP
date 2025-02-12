@@ -1,6 +1,5 @@
 package top.mcfpp.core.lang
 
-import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.mni.MCAnyConcreteData
 import top.mcfpp.mni.MCAnyData
 import top.mcfpp.model.CompoundData
@@ -24,7 +23,7 @@ import top.mcfpp.util.TempPool
  *
  * ```java
  * any i = 5;
- * i = i + 1; // 错误
+ * i = i + 1; // 警告
  * i = (int) i + 1; // 正确
  * i = "string";    // 正确，可以被赋值为任意类型
  * ```
@@ -86,7 +85,7 @@ open class MCAny : Var<MCAny> {
             }
 
             is MCAny -> {
-                LogProcessor.error("Cannot assign any to any")
+                LogProcessor.warn("Try to assign any to any")
                 return MCAnyConcrete(this, b)
             }
 
@@ -107,11 +106,10 @@ open class MCAny : Var<MCAny> {
      * @param type 要转换到的目标类型
      */
     override fun explicitCast(type: MCFPPType): Var<*> {
-        when(type){
-            MCFPPBaseType.Any -> return this
+        return when(type){
+            MCFPPBaseType.Any -> this
             else -> {
-                LogProcessor.warn("Try to cast any to ${type.typeName}")
-                return type.build(this.identifier, parentClass()?:parentTemplate()?:Function.currFunction)
+                type.build(this.identifier, parentClass()?:parentTemplate()?:Function.currFunction)
             }
         }
     }
@@ -202,11 +200,8 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>> {
     /**
      * 创建一个MCAny类型的变量。它是v的跟踪版本
      */
-    constructor(v : MCAny, value: Var<*>){
+    constructor(v : MCAny, value: Var<*>): super(v){
         this.value = value
-        this.identifier = v.identifier
-        this.parent = v.parent
-        this.stackIndex = v.stackIndex
     }
 
     constructor(v: MCAnyConcrete) : super(v){
@@ -225,19 +220,19 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>> {
                 }
                 //构造假设变量
                 val t = b.value.type.build(this.identifier, parentClass()?:parentTemplate()?:Function.currFunction)
+                t.parent = parent
                 val v = b.value.type.build(b.identifier, b.parentClass()?:b.parentTemplate()?:Function.currFunction)
-                t.assignedBy(v)
-                this.value = b.value
+                v.parent = b.parent
+                this.value = t.assignedBy(v)
                 return this
             }
             is MCAny -> {
-                LogProcessor.error("Cannot assign any to any")
-                throw VariableConverseException()
+                LogProcessor.warn("Try to assign any to any")
+                return this
             }
             else -> {
-                this.value = b
                 val t = b.type.build(this.identifier, parentClass()?:parentTemplate()?:Function.currFunction)
-                t.assignedBy(b)
+                this.value = t.assignedBy(b)
                 return this
             }
         }

@@ -1,0 +1,17 @@
+namespace test;
+
+func main(){
+    dynamic list<int> l = [1,2,3,4];
+    dynamic list<int> l1 = [5,6,7];
+    print(l);
+    l.addAll(l1);
+    print(l);
+    l.insert(0,114514);
+    l.removeAt(1);
+    print(l);
+    print(l.indexOf(2));
+    print(l.contains(8));
+    print(l.contains(2));
+    l.clear();
+    print(l);
+}

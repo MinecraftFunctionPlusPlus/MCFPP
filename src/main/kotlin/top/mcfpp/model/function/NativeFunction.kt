@@ -1,6 +1,5 @@
 package top.mcfpp.model.function
 
-import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.*
@@ -75,10 +74,7 @@ class NativeFunction : Function, Native {
                 *if(this.returnType != MCFPPBaseType.Void) arrayOf(valueWrapper) else emptyArray()
             )
         }catch (e: Exception){
-            LogProcessor.error("Error when invoking native function: ${this.identifier}")
-            if(!CompileSettings.isDebug){
-                e.printStackTrace()
-            }
+            LogProcessor.error("Error when invoking native function: ${this.identifier}", e)
         }
         returnVar = valueWrapper.value
         return returnVar

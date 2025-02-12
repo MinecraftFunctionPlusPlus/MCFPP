@@ -38,8 +38,8 @@ class ExecuteBool(): BaseBool(), MCFPPValue<ArrayList<AbstractBoolPart>> {
         return re
     }
 
-    override fun toScoreBool(): ScoreBool {
-        return toDynamic(true) as ScoreBool
+    override fun toScoreBool(replace: Boolean): ScoreBool {
+        return toDynamic(replace) as ScoreBool
     }
 
     override fun negation(): Var<*> {

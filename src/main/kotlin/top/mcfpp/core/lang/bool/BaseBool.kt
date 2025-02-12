@@ -29,7 +29,7 @@ abstract class BaseBool : Var<BaseBool> {
     abstract fun toCommandPart(): Command
 
     override fun toNBTVar(): NBTBasedData {
-        return toScoreBool().toNBTVar()
+        return toScoreBool(false).toNBTVar()
     }
 
     /**
@@ -38,7 +38,7 @@ abstract class BaseBool : Var<BaseBool> {
      */
     constructor(b: ScoreBool) : super(b)
 
-    abstract fun toScoreBool(): ScoreBool
+    abstract fun toScoreBool(replace: Boolean): ScoreBool
 
     override fun canAssignedBy(b: Var<*>): Boolean {
         return b is BaseBool

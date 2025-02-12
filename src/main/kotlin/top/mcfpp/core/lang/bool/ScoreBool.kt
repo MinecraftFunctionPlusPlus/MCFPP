@@ -146,7 +146,7 @@ open class ScoreBool : BaseBool, OnScoreboard {
             }
 
             is BaseBool -> {
-                return isEqual(a.toScoreBool())
+                return isEqual(a.toScoreBool(false))
             }
 
             else -> return null
@@ -175,7 +175,7 @@ open class ScoreBool : BaseBool, OnScoreboard {
             }
 
             is BaseBool -> {
-                return isNotEqual(a.toScoreBool())
+                return isNotEqual(a.toScoreBool(false))
             }
 
             else -> return null
@@ -315,7 +315,7 @@ open class ScoreBool : BaseBool, OnScoreboard {
         return Command("score $name $boolObject matches 1")
     }
 
-    override fun toScoreBool(): ScoreBool = this
+    override fun toScoreBool(replace: Boolean): ScoreBool = this
 
     override fun toNBTVar(): NBTBasedData {
         val n = NBTBasedData()

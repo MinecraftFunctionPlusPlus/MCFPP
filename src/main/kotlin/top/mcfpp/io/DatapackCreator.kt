@@ -2,6 +2,7 @@ package top.mcfpp.io
 
 import com.alibaba.fastjson2.JSON
 import com.alibaba.fastjson2.JSONObject
+import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.model.*
 import top.mcfpp.model.field.GlobalField
@@ -11,8 +12,11 @@ import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper.toSnakeCase
 import top.mcfpp.util.Utils
 import java.io.*
-import java.nio.file.*
-import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.Files
+import java.nio.file.Paths
+import java.nio.file.StandardCopyOption
+import java.util.jar.JarEntry
+import java.util.jar.JarFile
 import java.util.stream.Collectors
 import kotlin.io.path.absolutePathString
 import kotlin.io.path.name
@@ -51,6 +55,14 @@ object DatapackCreator {
         //清空原输出文件夹
         delAllFile(File("$path/${Project.config.name}"))
         LogProcessor.debug("Copy libs...")
+        if(!CompileSettings.ignoreStdLib){
+            //标准库
+            delAllFile(File("$path/MCFPP"))
+            extractFolder("data","$path/MCFPP/data")
+            extractFile("pack.mcmeta", "$path/MCFPP/pack.mcmeta")
+            //标准库2
+            extractFolder("lib/mcfpp", "$path/MCFPP")
+        }
         //复制库
         for (lib in Project.config.includes){
             val filePath = if(!lib.endsWith("/bin.mclib")) {
@@ -64,9 +76,9 @@ object DatapackCreator {
             fileReader.close()
             //解析json
             val json = JSONObject.parse(jsonString) as JSONObject
-            val scr = json.getString("src")
-            if(scr != null){
-                val scrPath = filePath.substring(0,filePath.lastIndexOf(".")) + scr
+            val src = json.getString("src")
+            if(src != null){
+                val scrPath = filePath.substring(0,filePath.lastIndexOf(".")) + src
                 val qwq = Paths.get(scrPath)
                 // 获取所有子文件夹
                 val subdirectories = Files.walk(qwq, 1)
@@ -220,29 +232,69 @@ object DatapackCreator {
         }
     }
 
-    @Throws(IOException::class)
-    fun copyAllFiles(src: String, dst: String) {
-        val srcFolder = Paths.get(src)
-        val dstFolder = Paths.get(dst)
-        Files.walkFileTree(srcFolder, object : SimpleFileVisitor<Path>() {
-            @Throws(IOException::class)
-            override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult {
-                val targetPath = dstFolder.resolve(srcFolder.relativize(dir))
-                try {
-                    Files.copy(dir, targetPath, StandardCopyOption.REPLACE_EXISTING)
-                } catch (e: FileAlreadyExistsException) {
-                    if (!Files.isDirectory(targetPath)) throw e
+    fun copyAllFiles(sourcePath: String, targetPath: String) {
+        val source = File(sourcePath)
+        val target = File(targetPath)
+        if (!source.exists() || !source.isDirectory) return
+        if (!target.exists()) target.mkdirs()
+        source.listFiles()?.forEach { file ->
+            val targetFile = File(target, file.name)
+            if (file.isDirectory) {
+                copyAllFiles(file.absolutePath, targetFile.absolutePath)
+            } else {
+                file.copyTo(targetFile, overwrite = true)
+            }
+        }
+    }
+
+
+    fun extractFolder(folderInJar: String, outputDir: String) {
+        val f = File(DatapackCreator::class.java.getProtectionDomain().codeSource.location.toURI())
+        if(!f.isFile){
+            copyAllFiles("src/main/resources/$folderInJar", outputDir)
+            return
+        }
+        JarFile(f).use { jarFile ->
+            jarFile.stream()
+                .filter { entry: JarEntry ->
+                    entry.name.startsWith(folderInJar) && !entry.isDirectory
                 }
-                return FileVisitResult.CONTINUE
+                .forEach { entry: JarEntry ->
+                    try {
+                        jarFile.getInputStream(entry).use { `is` ->
+                            val outputPath =
+                                Paths.get(outputDir, entry.name.substring(folderInJar.length))
+                            Files.createDirectories(outputPath)
+                            Files.copy(`is`, outputPath, StandardCopyOption.REPLACE_EXISTING)
+                        }
+                    } catch (e: IOException) {
+                        e.printStackTrace()
+                    }
+                }
+        }
+    }
+
+    fun extractFile(fileInJar: String, outputFile: String) {
+        // 尝试从 ClassLoader 获取资源
+        val inputStream: InputStream? = DatapackCreator::class.java.classLoader.getResourceAsStream(fileInJar)
+            ?: run {
+                // 如果资源不存在，尝试从文件系统加载
+                val file = File(fileInJar)
+                if (file.exists()) file.inputStream() else null
             }
 
-            @Throws(IOException::class)
-            override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
-                Files.copy(file, dstFolder.resolve(srcFolder.relativize(file)), StandardCopyOption.REPLACE_EXISTING)
-                return FileVisitResult.CONTINUE
-            }
-        })
+        // 如果资源仍未找到，抛出异常
+        inputStream ?: throw FileNotFoundException("File $fileInJar not found in JAR or file system.")
+
+        // 确保目标目录存在，并将文件写入目标路径
+        inputStream.use { input ->
+            val outputPath = Paths.get(outputFile)
+            Files.createDirectories(outputPath.parent) // 确保目标目录存在
+            Files.copy(input, outputPath, StandardCopyOption.REPLACE_EXISTING)
+        }
     }
+
+
     /**
      * 数据包的元数据。用于创建pack.mcmeta文件。
      *

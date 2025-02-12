@@ -3,6 +3,7 @@ package top.mcfpp.mni;
 import net.querz.nbt.tag.StringTag;
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.core.lang.*;
+import top.mcfpp.core.lang.bool.BaseBool;
 import top.mcfpp.core.lang.bool.ScoreBool;
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete;
 import top.mcfpp.core.lang.nbt.*;
@@ -19,12 +20,12 @@ public class NBTMapConcreteData {
     }
 
     @MNIFunction(normalParams = {"string key"}, caller = "dict", returnType = "bool")
-    public static void containsKey(MCString key, NBTMapConcrete caller, ValueWrapper<ScoreBool> re){
+    public static void containsKey(MCString key, NBTMapConcrete caller, ValueWrapper<BaseBool> re){
         NBTListConcreteData.contains(key, (NBTListConcrete) caller.getKeyList(), re);
     }
 
     @MNIFunction(normalParams = {""}, caller = "dict")
-    public static void containsValue(Var<?> element, NBTMapConcrete caller, ValueWrapper<ScoreBool> re){
+    public static void containsValue(Var<?> element, NBTMapConcrete caller, ValueWrapper<BaseBool> re){
         NBTListConcreteData.contains(element.toNBTVar(), (NBTListConcrete) caller.getValueList(), re);
     }
 

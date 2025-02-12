@@ -8,6 +8,8 @@ import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.*;
 import top.mcfpp.core.lang.MCFPPValue;
+import top.mcfpp.core.lang.bool.BaseBool;
+import top.mcfpp.core.lang.bool.FunctionBool;
 import top.mcfpp.core.lang.bool.ScoreBool;
 import top.mcfpp.core.lang.nbt.NBTBasedData;
 import top.mcfpp.core.lang.nbt.NBTList;
@@ -17,6 +19,7 @@ import top.mcfpp.lib.SbObject;
 import top.mcfpp.lib.Storage;
 import top.mcfpp.lib.StorageSource;
 import top.mcfpp.model.function.Function;
+import top.mcfpp.model.function.MCFunction;
 import top.mcfpp.util.NBTUtil;
 import top.mcfpp.util.ValueWrapper;
 
@@ -27,13 +30,14 @@ public class NBTListData {
     static NBTBasedData list = new NBTBasedData("list.list");
     static NBTBasedData element = new NBTBasedData("list.element");
     static MCInt index = new MCInt("list.index");
-    static ScoreBool contains = new ScoreBool("list.contains");
+    static FunctionBool contains = new FunctionBool("list.contains", new MCFunction("mcfpp.lang","list","contains"));
 
     static {
         list.setNbtPath(new NBTPath(new StorageSource(Storage.Companion.getMCFPP_SYSTEM().toString())).memberIndex("list.list"));
+        list.setDynamic(true);
         element.setNbtPath(new NBTPath(new StorageSource(Storage.Companion.getMCFPP_SYSTEM().toString())).memberIndex("list.element"));
+        element.setDynamic(true);
         index.setObj(SbObject.Companion.getMCFPP_TEMP());
-        contains.setObj(SbObject.Companion.getMCFPP_TEMP());
     }
 
 
@@ -150,7 +154,7 @@ public class NBTListData {
     }
 
     @MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E", returnType = "bool")
-    public static void contains(Var<?> e, NBTList caller, ValueWrapper<ScoreBool> returnVar){
+    public static void contains(Var<?> e, NBTList caller, ValueWrapper<BaseBool> returnVar){
         var n = e.toNBTVar();
         element.assignedBy(n);
         list.assignedBy(caller);
@@ -162,6 +166,6 @@ public class NBTListData {
 
     @MNIFunction(caller = "list", genericType = "E")
     public static void clear(NBTList caller){
-        caller.assignedBy(NBTListConcrete.Companion.getEmpty());
+        caller.replacedBy(caller.assignedBy(NBTListConcrete.Companion.getEmpty()));
     }
 }

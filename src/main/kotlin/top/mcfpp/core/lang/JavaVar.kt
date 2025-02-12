@@ -5,7 +5,6 @@ import net.querz.nbt.tag.StringTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.nbt.*
-import top.mcfpp.exception.OperationNotImplementException
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
@@ -15,7 +14,6 @@ import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
-import java.util.*
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KVisibility
 import kotlin.reflect.full.memberProperties
@@ -30,9 +28,7 @@ import kotlin.reflect.full.memberProperties
  * @constructor Create empty Java var
  */
 @Suppress("unchecked_cast")
-class JavaVar : Var<JavaVar>, MCFPPValue<Any?> {
-
-    override var value : Any? = null
+class JavaVar : ConcreteVar<JavaVar, Any?> {
 
     override var type: MCFPPType = MCFPPConcreteType.JavaVar
 
@@ -157,11 +153,6 @@ class JavaVar : Var<JavaVar>, MCFPPValue<Any?> {
             LogProcessor.error("No method '$key' in $identifier}")
             throw e
         }
-    }
-
-    override fun toDynamic(replace: Boolean): Var<*> {
-        LogProcessor.error("Lost tracking of JavaVar type variable values")
-        throw OperationNotImplementException("Lost tracking of JavaVar type variable values")
     }
 
     private fun getTypeArray(params: List<MCFPPType>): Array<Class<*>>{
