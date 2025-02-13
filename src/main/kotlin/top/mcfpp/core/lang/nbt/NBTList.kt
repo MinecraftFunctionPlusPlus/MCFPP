@@ -162,11 +162,6 @@ open class NBTList : NBTBasedData {
         return NBTList(this)
     }
 
-    /*
-    override fun createTempVar(): Var<*> = TODO()
-    override fun createTempVar(value: Tag<*>): Var<*> = NBTList<E>(value as ListTag<*>)
-    */
-
     /**
      * 根据标识符获取一个成员。
      *
@@ -385,6 +380,10 @@ class NBTListConcrete: NBTList, MCFPPValue<ArrayList<Var<*>>> {
 
     override fun onMemberVarChanged(member: Var<*>) {
         if(member !is MCFPPValue<*>) toDynamic(true)
+    }
+
+    fun isAllConcrete(): Boolean {
+        return value.all { it is MCFPPValue<*> }
     }
 
     companion object {

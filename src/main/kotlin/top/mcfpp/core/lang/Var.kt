@@ -43,7 +43,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     /**
      * 在mcfpp中的标识符，在域中的键名
      */
-    var identifier: String
+    lateinit var identifier: String
 
     private val stackFrameRegex get() = Regex("^stack_frame\\[\\d+]\$\n")
 
@@ -122,15 +122,8 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     /**
      * 复制一个变量
      */
-    @Suppress("LeakingThis")
     constructor(`var` : Var<*>)  {
-        identifier = `var`.identifier
-        isStatic = `var`.isStatic
-        accessModifier = `var`.accessModifier
-        isTemp = `var`.isTemp
-        nbtPath = `var`.nbtPath.clone()
-        stackIndex = `var`.stackIndex
-        isConst = `var`.isConst
+        setAs(`var`)
     }
 
     /**
@@ -142,6 +135,16 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     constructor(identifier: String = TempPool.getVarIdentify()){
         this.identifier = identifier
         this.nbtPath = NBTPath(StorageSource("mcfpp:system"))
+    }
+
+    fun setAs(v: Var<*>){
+        this.identifier = v.identifier
+        this.isStatic = v.isStatic
+        this.accessModifier = v.accessModifier
+        this.isTemp = v.isTemp
+        this.nbtPath = v.nbtPath.clone()
+        this.stackIndex = v.stackIndex
+        this.isConst = v.isConst
     }
 
     /**

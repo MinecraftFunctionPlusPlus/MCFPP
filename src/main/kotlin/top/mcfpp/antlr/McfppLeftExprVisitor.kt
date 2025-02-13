@@ -1,7 +1,13 @@
 package top.mcfpp.antlr
 
+import net.querz.nbt.io.SNBTUtil
+import net.querz.nbt.tag.DoubleTag
+import net.querz.nbt.tag.LongTag
+import net.querz.nbt.tag.StringTag
 import top.mcfpp.Project
 import top.mcfpp.core.lang.*
+import top.mcfpp.core.lang.nbt.*
+import top.mcfpp.lib.EntitySelector
 import top.mcfpp.model.Class
 import top.mcfpp.model.DataTemplate
 import top.mcfpp.model.field.GlobalField
@@ -12,7 +18,13 @@ import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.Generic
 import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.type.MCFPPType
+import top.mcfpp.util.BoolTag
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.NBTUtil.toNBTByte
+import top.mcfpp.util.NBTUtil.toNBTDouble
+import top.mcfpp.util.NBTUtil.toNBTFloat
+import top.mcfpp.util.NBTUtil.toNBTLong
+import top.mcfpp.util.NBTUtil.toNBTShort
 import top.mcfpp.util.StringHelper.splitNamespaceID
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
@@ -85,10 +97,10 @@ open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
         Project.ctx = ctx
         if (ctx.`var`() != null) {
             //变量
-            return visit(ctx.`var`())
+            return visitVar(ctx.`var`())
         } else if (ctx.value() != null) {
             //数字
-            return visit(ctx.value())
+            return visitValue(ctx.value())
         } else if (ctx.range() != null){
             //是范围
             val left = ctx.range().num1?.let { visit(it) }
@@ -287,6 +299,139 @@ open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
                 }
             }
             return re
+        }
+    }
+
+    @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE", "UNUSED_VALUE")
+    override fun visitValue(ctx: mcfppParser.ValueContext): Var<*> {
+        //常量
+        if (ctx.LineString() != null) {
+            val r: String = ctx.LineString().text
+            return MCStringConcrete(StringTag(r.substring(1, r.length - 1)))
+        } else if (ctx.multiLineStringLiteral()!=null){
+            val stringArray = mutableListOf<String>()
+            var isConcrete = true
+            for(stringContext in ctx.multiLineStringLiteral().multiLineStringContent()){
+                var r:String
+                if(stringContext.MultiLineStrText()!=null) r= stringContext.MultiLineStrText().text
+                else if(stringContext.MultiLineStringQuote()!=null) r= stringContext.MultiLineStringQuote().text
+                else {
+                    val expressionContext = stringContext.multiLineStringExpression().expression()
+                    //TODO: 这边只是简单写了一下有解析值的情况
+                    val res = visit(expressionContext) //没有解析值的话，应该变成text
+                    if(res!=null && res !is MCFPPValue<*>){ isConcrete = false } //这个条件就是说，整个模版中出现没有解析值的情况了
+                    r = if(res is MCIntConcrete){
+                        res.value.toString()
+                    } else{
+                        res.toString()
+                    }
+                }
+                stringArray.add(r)
+            }
+            val tailQuote = ctx.multiLineStringLiteral().TRIPLE_QUOTE_CLOSE().text
+            if(tailQuote.length>3) {
+                stringArray.add(tailQuote.substring(3,tailQuote.length))
+            }
+            return MCStringConcrete(StringTag(stringArray.joinToString("")) ) //没有解析值就变不了MCString了
+        } else if (ctx.nbtValue() != null){
+            return visit(ctx.nbtValue())
+        } else if (ctx.TargetSelector() != null){
+            return SelectorVar(EntitySelector(ctx.TargetSelector()!!.text[1]))
+        } else if(ctx.coordinate() != null){
+            val dimensions = ctx.coordinate().coordinateDimension().map { visit(it) }
+            if(dimensions.size == 3){
+                return Coordinate3Var().apply {
+                    x.assignedBy(dimensions[0])
+                    y.assignedBy(dimensions[1])
+                    z.assignedBy(dimensions[2])
+                }
+            }
+            return Coordinate2Var().apply {
+                x.assignedBy(dimensions[0])
+                z.assignedBy(dimensions[1])
+            }
+        }
+        throw IllegalArgumentException("value_" + ctx.text)
+    }
+
+    override fun visitCoordinateDimension(ctx: mcfppParser.CoordinateDimensionContext): Var<*> {
+        if(ctx.nbtInt() != null){
+            return CoordinateDimensionConcrete("", ctx.nbtInt().text.toInt())
+        }else if(ctx.nbtFloat() != null) {
+            return CoordinateDimensionConcrete("", ctx.nbtFloat().text.toFloat())
+        }else if(ctx.nbtDouble() != null){
+            return CoordinateDimensionConcrete("", ctx.nbtDouble().text.toDouble())
+        }else{
+            //RelativeValue
+            val str = ctx.RelativeValue().text
+            if(str.length == 1){
+                return CoordinateDimensionConcrete(str, 0)
+            }
+            val expr = str.substring(1)
+            //尝试转换为数字
+            var num: Number? = expr.toIntOrNull()
+            if(num != null){
+                return CoordinateDimensionConcrete(str[0].toString(), num)
+            }
+            num = expr.toFloatOrNull()
+            if(num != null){
+                return CoordinateDimensionConcrete(str[0].toString(), num)
+            }
+            LogProcessor.error("Invalid relative value: $expr")
+            return CoordinateDimensionConcrete(str[0].toString(), 0)
+        }
+    }
+
+    override fun visitNbtValue(ctx: mcfppParser.NbtValueContext): Var<*> {
+        if(ctx.LineString() != null) {
+            return MCStringConcrete(StringTag(ctx.LineString().text))
+        }else if(ctx.nbtBool() != null){
+            return NBTBasedDataConcrete(BoolTag(ctx.nbtBool().text == "true"))
+        }else if(ctx.nbtByte() != null){
+            return MCByteConcrete(ctx.nbtByte().text.toNBTByte())
+        }else if(ctx.nbtShort() != null){
+            return MCShortConcrete(ctx.nbtShort().text.toNBTShort())
+        }else if(ctx.nbtInt() != null) {
+            return MCIntConcrete(ctx.nbtInt().text.toInt())
+        }else if(ctx.nbtLong() != null){
+            return MCLongConcrete(LongTag(ctx.nbtLong().text.toNBTLong()))
+        }else if(ctx.nbtFloat() != null){
+            return MCFloatConcrete(ctx.nbtFloat().text.toNBTFloat())
+        }else if(ctx.nbtDouble() != null) {
+            return MCDoubleConcrete(DoubleTag(ctx.nbtDouble().text.toNBTDouble()))
+        }else if(ctx.nbtCompound() != null){
+            val compound = NBTDictionaryConcrete(HashMap())
+            for (kv in ctx.nbtCompound().nbtKeyValuePair()){
+                val key = kv.Identifier().text
+                val value = visit(kv.expression())
+                val v = value.type.buildUnConcrete(key)
+                compound.value[key] = v.assignedBy(value)
+            }
+            return compound
+        }else if(ctx.nbtList() != null){
+            val valueList = ArrayList<Var<*>>()
+            for (expr in ctx.nbtList().expression()){
+                valueList.add(visit(expr))
+            }
+            val re = if(valueList.isEmpty()){
+                NBTListConcrete.getEmpty()
+            }else{
+                NBTListConcrete(valueList, "", valueList.first().type)
+            }
+            return if(re.value.all { it is MCFPPValue<*> }){
+                re
+            }else{
+                re.toDynamic(false)
+            }
+        }else if(ctx.nbtByteArray() != null){
+            return NBTBasedDataConcrete(SNBTUtil.fromSNBT(ctx.nbtByteArray().text))
+        }else if(ctx.nbtIntArray() != null) {
+            return NBTBasedDataConcrete(SNBTUtil.fromSNBT(ctx.nbtIntArray().text))
+        }else if(ctx.nbtLongArray() != null) {
+            return NBTBasedDataConcrete(SNBTUtil.fromSNBT(ctx.nbtLongArray().text))
+        }else {
+            LogProcessor.error("Invalid NBT value")
+            throw IllegalArgumentException("nbt:" + ctx.text)
         }
     }
 }

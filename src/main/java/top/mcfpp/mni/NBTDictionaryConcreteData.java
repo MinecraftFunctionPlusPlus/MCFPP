@@ -16,7 +16,7 @@ public class NBTDictionaryConcreteData {
         caller.getValue().clear();
     }
 
-    @MNIFunction(normalParams = {"string key"}, caller = "dict", returnType = "bool")
+    @MNIFunction(normalParams = {"string key"}, caller = "dict", returnType = "bool", genericType = "E")
     public static void containsKey(MCString key, NBTDictionaryConcrete caller, ValueWrapper<ScoreBool> re){
         if(key instanceof MCStringConcrete keyC){
             String value = keyC.getValue().getValue();
@@ -28,7 +28,7 @@ public class NBTDictionaryConcreteData {
         }
     }
 
-    @MNIFunction(normalParams = {"dict source"}, caller = "dict")
+    @MNIFunction(normalParams = {"dict<E> source"}, caller = "dict", genericType = "E")
     public static void merge(NBTDictionary source, NBTDictionaryConcrete caller){
         if(source instanceof NBTDictionaryConcrete dictC){
             var sourceNBT = dictC.getValue();
@@ -42,7 +42,7 @@ public class NBTDictionaryConcreteData {
         }
     }
 
-    @MNIFunction(normalParams = {"string key"}, caller = "dict")
+    @MNIFunction(normalParams = {"string key"}, caller = "dict", genericType = "E")
     public static void remove(MCString key, NBTDictionaryConcrete caller){
         if(key instanceof MCStringConcrete keyC){
             String value = keyC.getValue().getValue();

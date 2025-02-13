@@ -11,10 +11,7 @@ import top.mcfpp.core.lang.*;
 import top.mcfpp.core.lang.bool.BaseBool;
 import top.mcfpp.core.lang.bool.ScoreBool;
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete;
-import top.mcfpp.core.lang.nbt.MCString;
-import top.mcfpp.core.lang.nbt.MCStringConcrete;
-import top.mcfpp.core.lang.nbt.NBTBasedData;
-import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete;
+import top.mcfpp.core.lang.nbt.*;
 import top.mcfpp.lib.NBTChatComponent;
 import top.mcfpp.lib.ScoreChatComponent;
 import top.mcfpp.model.function.Function;
@@ -49,6 +46,8 @@ public class System {
         if(value instanceof MCAnyConcrete valueC){
             switch (valueC.getValue()) {
                 case MCInt mcInt -> print(mcInt);
+                case NBTList list -> print(list);
+                case NBTDictionary dictionary -> print(dictionary);
                 case NBTBasedData nbtBasedData -> print(nbtBasedData);
                 case BaseBool bool -> print(bool);
                 case DataTemplateObject object -> print(object);
@@ -73,10 +72,41 @@ public class System {
         }
     }
 
-    //@InsertCommand
-    //public static void print(JsonString var){
-    //    Function.Companion.addCommand("tellraw @a " + var.getJsonText().toJson());
-    //}
+    @InsertCommand
+    public static void print(@NotNull NBTList var){
+        if(var instanceof NBTListConcrete varC){
+            if(varC.isAllConcrete()){
+                try {
+                    Function.Companion.addCommand("tellraw @a \"" + SNBTUtil.toSNBT(NBTUtil.INSTANCE.valueToNBT(varC.getValue())) + "\"");
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }else {
+                varC.toDynamic(true);
+                Function.Companion.addCommands(Commands.INSTANCE.method2(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart(), true)));
+            }
+        }else {
+            Function.Companion.addCommands(Commands.INSTANCE.method2(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart(), true)));
+        }
+    }
+
+    @InsertCommand
+    public static void print(@NotNull NBTDictionary var){
+        if(var instanceof NBTDictionaryConcrete varC){
+            if(varC.isAllConcrete()){
+                try {
+                    Function.Companion.addCommand("tellraw @a \"" + SNBTUtil.toSNBT(NBTUtil.INSTANCE.valueToNBT(varC.getValue())) + "\"");
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }else {
+                varC.toDynamic(true);
+                Function.Companion.addCommands(Commands.INSTANCE.method2(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart(), true)));
+            }
+        }else {
+            Function.Companion.addCommands(Commands.INSTANCE.method2(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart(), true)));
+        }
+    }
 
     @InsertCommand
     public static void print(@NotNull NBTBasedData var){
@@ -114,7 +144,7 @@ public class System {
             b = bool.toScoreBool(false);
         }
         if(b instanceof ScoreBoolConcrete bC){
-            Function.Companion.addCommand("tellraw @a " + bC.getValue());
+            Function.Companion.addCommand("tellraw @a \"" + (bC.getValue()?1:0) + "\"");
         }else {
             if(b.getParent() != null){
                 Function.Companion.addCommands(Commands.INSTANCE.selectRun(b.getParent(), "tellraw @a " + new ScoreChatComponent(b.asIntVar()).toCommandPart(), true));
@@ -127,6 +157,7 @@ public class System {
     @MNIFunction
     public static void debug(){
         //噢，在这里断点，这样就可以断点编译了
+        //noinspection unused
         int i = 0;
     }
 

@@ -88,5 +88,13 @@ data class Property(val identifier: String, val accessor: AbstractAccessor?, val
         fun buildSimpleProperty(field: Var<*>): Property {
             return Property(field.identifier, SimpleAccessor(), SimpleMutator())
         }
+
+        fun buildSimpleSetter(identifier: String): Property {
+            return Property(identifier, null, SimpleMutator())
+        }
+
+        fun buildSimpleGetter(identifier: String): Property {
+            return Property(identifier, SimpleAccessor(), null)
+        }
     }
 }

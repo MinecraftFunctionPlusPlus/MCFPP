@@ -194,18 +194,21 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>> {
      * @param value 值
      */
     constructor(value: Var<*>, identifier: String = TempPool.getVarIdentify()) : super(identifier) {
-        this.value = value
+        this.value = value.clone()
+        this.value.setAs(value)
     }
 
     /**
      * 创建一个MCAny类型的变量。它是v的跟踪版本
      */
     constructor(v : MCAny, value: Var<*>): super(v){
-        this.value = value
+        this.value = value.clone()
+        this.value.setAs(v)
     }
 
     constructor(v: MCAnyConcrete) : super(v){
-        this.value = v.value
+        this.value = v.value.clone()
+        this.value.setAs(v)
     }
 
     override fun clone(): MCAnyConcrete {
@@ -219,11 +222,7 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>> {
                     LogProcessor.warn("Try to assign ${b.value.type.typeName} to ${this.value.type.typeName}")
                 }
                 //构造假设变量
-                val t = b.value.type.build(this.identifier, parentClass()?:parentTemplate()?:Function.currFunction)
-                t.parent = parent
-                val v = b.value.type.build(b.identifier, b.parentClass()?:b.parentTemplate()?:Function.currFunction)
-                v.parent = b.parent
-                this.value = t.assignedBy(v)
+                this.value = this.value.assignedBy(b.value)
                 return this
             }
             is MCAny -> {
@@ -231,8 +230,7 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>> {
                 return this
             }
             else -> {
-                val t = b.type.build(this.identifier, parentClass()?:parentTemplate()?:Function.currFunction)
-                this.value = t.assignedBy(b)
+                this.value = this.value.assignedBy(b)
                 return this
             }
         }

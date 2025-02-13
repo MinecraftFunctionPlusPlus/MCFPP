@@ -1,13 +1,17 @@
 package top.mcfpp.core.lang.nbt
 
 import net.querz.nbt.tag.CompoundTag
+import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
+import top.mcfpp.mni.NBTDictionaryConcreteData
 import top.mcfpp.mni.NBTDictionaryData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.Member
-import top.mcfpp.model.property.Property
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.NativeFunction
+import top.mcfpp.model.function.UnknownFunction
+import top.mcfpp.model.property.Property
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil
@@ -48,6 +52,80 @@ open class NBTDictionary : NBTBasedData {
         }
     }
 
+    @InsertCommand
+    override fun assignCommand(a: NBTBasedData): NBTBasedData {
+        nbtType = a.nbtType
+        return assignCommandLambda(a,
+            ifThisIsClassMemberAndAIsConcrete = {b, final ->
+                if(b is NBTDictionaryConcrete){
+                    if(!b.isAllConcrete()){
+                        b.toDynamic(true)
+                    }
+                    //对类中的成员的值进行修改
+                    if(final.size == 2){
+                        Function.addCommand(final[0])
+                    }
+                    if(b.isAllConcrete()){
+                        final.last().build(Commands.dataSetValue(nbtPath, b.getConcretePart()))
+                    }else{
+                        final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
+                    }
+                    if(final.last().isMacro){
+                        Function.addCommands(final.last().buildMacroFunction())
+                    }else{
+                        Function.addCommand(final.last())
+                    }
+                    NBTDictionary(this)
+                }else{
+                    b as NBTBasedDataConcrete
+                    //对类中的成员的值进行修改
+                    if(final.size == 2){
+                        Function.addCommand(final[0])
+                    }
+                    final.last().build(Commands.dataSetValue(nbtPath, b.value))
+                    if(final.last().isMacro){
+                        Function.addCommands(final.last().buildMacroFunction())
+                    }else{
+                        Function.addCommand(final.last())
+                    }
+                    NBTDictionary(this)
+                }
+            },
+            ifThisIsClassMemberAndAIsNotConcrete = {b, final ->
+                //对类中的成员的值进行修改
+                if(final.size == 2){
+                    Function.addCommand(final[0])
+                }
+                final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
+                if(final.last().isMacro){
+                    Function.addCommands(final.last().buildMacroFunction())
+                }else{
+                    Function.addCommand(final.last())
+                }
+                NBTDictionary(this)
+            },
+            ifThisIsNormalVarAndAIsConcrete = {b, _ ->
+                NBTDictionaryConcrete(this, (b as NBTDictionaryConcrete).value)
+            },
+            ifThisIsNormalVarAndAIsClassMember = {b, final ->
+                if(final.size == 2){
+                    Function.addCommand(final[0])
+                }
+                final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
+                if(final.last().isMacro){
+                    Function.addCommands(final.last().buildMacroFunction())
+                }else{
+                    Function.addCommand(final.last())
+                }
+                NBTDictionary(this)
+            },
+            ifThisIsNormalVarAndAIsNotConcrete = {b, _ ->
+                Function.addCommand(Commands.dataSetFrom(nbtPath, b.nbtPath))
+                NBTDictionary(this)
+            }
+        ) as NBTDictionary
+    }
+
     override fun canAssignedBy(b: Var<*>): Boolean {
         return !b.implicitCast(type).isError
     }
@@ -63,7 +141,20 @@ open class NBTDictionary : NBTBasedData {
         normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        return data.field.getFunction(key, readOnlyArgs, normalArgs) to true
+        var re: Function = UnknownFunction(key)
+        data.field.forEachFunction {
+            //TODO 我们约定it为NativeFunction，但是没有考虑拓展函数
+            assert(it is NativeFunction)
+            val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to (type as MCFPPDictType).generic))
+            if(nf.isSelf(key, normalArgs)){
+                re = nf
+            }
+        }
+        val iterator = data.parent.iterator()
+        while (re is UnknownFunction && iterator.hasNext()){
+            re = iterator.next().getFunction(key, readOnlyArgs, normalArgs,isStatic)
+        }
+        return re to true
     }
 
     override fun getByIndex(index: Var<*>): PropertyVar {
@@ -75,11 +166,11 @@ open class NBTDictionary : NBTBasedData {
     }
 
     companion object{
-        val data = CompoundData("dict", "mcfpp.lang")
-
-        init {
-            data.initialize()
-            data.getNativeFromClass(NBTDictionaryData::class.java)
+        val data by lazy {
+            CompoundData("dict", "mcfpp.lang").apply {
+                initialize()
+                getNativeFromClass(NBTDictionaryData::class.java)
+            }
         }
     }
 }
@@ -100,6 +191,10 @@ class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<HashMap<String, Var<*>>>
         this.value = value
     }
 
+    constructor(dict: NBTDictionary, value: HashMap<String, Var<*>>): super(dict){
+        this.value = HashMap(value.mapValues { it.value.clone() })
+    }
+
     constructor(v: NBTDictionaryConcrete) : super(v){
         this.value = v.value
     }
@@ -108,6 +203,27 @@ class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<HashMap<String, Var<*>>>
         return NBTDictionaryConcrete(this)
     }
 
+    override fun getMemberFunction(
+        key: String,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
+        accessModifier: Member.AccessModifier
+    ): Pair<Function, Boolean> {
+        var re: Function = UnknownFunction(key)
+        data.field.forEachFunction {
+            //TODO 我们约定it为NativeFunction，但是没有考虑拓展函数
+            assert(it is NativeFunction)
+            val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to (type as MCFPPDictType).generic))
+            if(nf.isSelf(key, normalArgs)){
+                re = nf
+            }
+        }
+        val iterator = data.parent.iterator()
+        while (re is UnknownFunction && iterator.hasNext()){
+            re = iterator.next().getFunction(key, readOnlyArgs, normalArgs,isStatic)
+        }
+        return re to true
+    }
 
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
@@ -142,7 +258,7 @@ class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<HashMap<String, Var<*>>>
                 }
             }
 
-            MCFPPBaseType.Any -> this
+            MCFPPBaseType.Any -> MCAnyConcrete(this)
             else -> buildCastErrorVar(type)
         }
     }
@@ -189,15 +305,16 @@ class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<HashMap<String, Var<*>>>
     override fun getByIndex(index: Var<*>): PropertyVar {
         return if(index is MCString){
             if(index is MCStringConcrete){
-                if(value.containsKey(index.value.value)){
-                    LogProcessor.error("No such key: ${index.value.value} in dict: $identifier")
-                    val re = UnknownVar("error_key_${index.value.value}")
-                    PropertyVar(Property.buildSimpleProperty(re), re, this)
+                if(!value.containsKey(index.value.value)){
+                    val re = (type as MCFPPDictType).generic.build(index.value.value)
+                    re.parent = this
+                    re.nbtPath = nbtPath.clone().memberIndex(index.value.value)
+                    PropertyVar(Property.buildSimpleSetter(index.value.value), re, this)
                 }else{
                     val re = value[index.value.value]!!
                     re.identifier = index.value.value
                     re.parent = this
-                    re.nbtPath = nbtPath.memberIndex(index.value.value)
+                    re.nbtPath = nbtPath.clone().memberIndex(index.value.value)
                     PropertyVar(Property.buildSimpleProperty(re), re, this)
                 }
             }else {
@@ -216,7 +333,7 @@ class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<HashMap<String, Var<*>>>
     }
 
     fun isAllConcrete(): Boolean {
-        return value.all { it is MCFPPValue<*> }
+        return value.values.all { it is MCFPPValue<*> }
     }
 
     fun getConcretePart(): CompoundTag {
@@ -227,6 +344,15 @@ class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<HashMap<String, Var<*>>>
             }
         }
         return compound
+    }
+
+    companion object {
+        val data by lazy {
+            CompoundData("dict", "mcfpp.lang").apply {
+                initialize()
+                getNativeFromClass(NBTDictionaryConcreteData::class.java)
+            }
+        }
     }
 
 }

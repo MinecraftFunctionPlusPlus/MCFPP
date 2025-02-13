@@ -29,6 +29,8 @@ object NBTUtil {
             is UnionTypeVarConcrete -> valueToNBT(v.value)
             is EnumVarConcrete -> v.value.data
             is DataTemplateObjectConcrete -> v.value
+            is NBTListConcrete -> valueToNBT(v.value)
+            is NBTDictionary -> valueToNBT(v.value)
             else -> {
                 LogProcessor.error("Cannot cast mcfpp var $v to nbt value")
                 IntTag(0)
