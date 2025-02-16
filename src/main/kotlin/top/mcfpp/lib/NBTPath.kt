@@ -1,6 +1,7 @@
 package top.mcfpp.lib
 
 import net.querz.nbt.io.SNBTUtil
+import net.querz.nbt.tag.CompoundTag
 import net.querz.nbt.tag.StringTag
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.MCInt
@@ -34,6 +35,12 @@ class NBTPath(var source: NBTSource): Serializable {
     fun nbtIndex(index: NBTBasedData): NBTPath{
         return this.clone().apply {
             pathList.add(NBTPredicatePath(index))
+        }
+    }
+
+    fun nbtIndex(tag: CompoundTag): NBTPath {
+        return this.clone().apply {
+            pathList.add(NBTPredicatePath(NBTBasedDataConcrete(tag)))
         }
     }
 
@@ -167,6 +174,18 @@ class NBTPath(var source: NBTSource): Serializable {
         return re
     }
 
+    override fun equals(other: Any?): Boolean {
+        if(other == this) return true
+        if(other !is NBTPath) return false
+        if(source != other.source) return false
+        for (i in pathList.withIndex()){
+            if(i.value != other.pathList[i.index]){
+                return false
+            }
+        }
+        return true
+    }
+
     companion object{
 
         val macroTemp = NBTPath(StorageSource("mcfpp:system")).memberIndex("macro_temp")
@@ -188,19 +207,15 @@ class NBTPath(var source: NBTSource): Serializable {
             if(path.isEmpty()){
                 return null
             }
+            //保证源一致
+            if(path.any { it.source != path[0].source }) return null
             val map = HashMap<NBTPath?, Int>()
             for (i in path){
                 val parent = i.parent()
-                map[parent] = 1
-                for (j in path){
-                    if(j.pathList.last() !is MemberPath) continue
-                    if(parent == j.parent()){
-                        map[parent] = (map[parent]?:0) + 1
-                    }
-                }
+                map[parent] = (map[parent]?:0) + 1
             }
             val re = map.maxByOrNull { it.value }?.key
-            if(map[re] == 1){
+            if(map[re] == 1 && map.size != 1){
                 return null
             }
             return re

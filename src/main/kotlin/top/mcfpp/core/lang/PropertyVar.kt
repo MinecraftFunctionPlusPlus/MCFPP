@@ -1,9 +1,9 @@
 package top.mcfpp.core.lang
 
-import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Member
-import top.mcfpp.model.property.Property
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.property.Property
+import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType
 
 class PropertyVar(val property: Property, val field: Var<*>, val caller: Var<*>): Var<PropertyVar>(field.identifier) {
@@ -13,6 +13,22 @@ class PropertyVar(val property: Property, val field: Var<*>, val caller: Var<*>)
     }
 
     override var type: MCFPPType = field.type
+
+    override fun explicitCast(type: MCFPPType): Var<*> {
+        return if(type == MCFPPBaseType.Any){
+            MCAnyConcrete(this)
+        }else{
+            super.explicitCast(type)
+        }
+    }
+
+    override fun implicitCast(type: MCFPPType): Var<*> {
+        return if(type == MCFPPBaseType.Any){
+            MCAnyConcrete(this)
+        }else{
+            super.implicitCast(type)
+        }
+    }
 
     override fun doAssignedBy(b: Var<*>): PropertyVar {
         val qwq = property.setter(caller, field, b)
@@ -35,11 +51,11 @@ class PropertyVar(val property: Property, val field: Var<*>, val caller: Var<*>)
         return field.getMemberVar(key, accessModifier)
     }
 
-    fun getter(caller: CanSelectMember): Var<*> {
+    fun getter(): Var<*> {
         return property.getter(caller, field)
     }
 
-    fun setter(caller: CanSelectMember, b: Var<*>){
+    fun setter(b: Var<*>){
         property.setter(caller, field, b)
     }
 

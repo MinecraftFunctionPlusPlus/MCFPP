@@ -15,7 +15,7 @@ object NBTUtil {
             //is Entity -> TODO()
             is JavaVar -> if(v.value is Var<*>) varToNBT(v.value as Var<*>) else valueToNBT(v.value)
             //is JsonString -> TODO()
-            is MCAnyConcrete -> varToNBT(v.value)
+            is MCAnyConcrete -> valueToNBT(v.value)
             is ScoreBoolConcrete -> ByteTag(v.value)
             is MCByteConcrete -> ByteTag(v.value)
             is MCShortConcrete -> ShortTag(v.value)
@@ -71,6 +71,15 @@ object NBTUtil {
                     map.put(key.toString(), valueToNBT(any[key]!!))
                 }
                 map
+            }
+            is Set<*> -> {
+                if(any.isEmpty()) return ListTag(IntTag::class.java)
+                val clazz: Class<out Tag<*>> = valueToNBT(any.first()!!)::class.java
+                val list = ListTag(clazz) as ListTag<Tag<*>>
+                for (value in any){
+                    list.add(valueToNBT(value!!))
+                }
+                list
             }
             else -> {
                 LogProcessor.error("Cannot cast value $any to nbt value")

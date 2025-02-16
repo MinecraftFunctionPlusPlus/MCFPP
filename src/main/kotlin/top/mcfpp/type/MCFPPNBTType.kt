@@ -11,6 +11,7 @@ import top.mcfpp.core.lang.nbt.LongArray
 import top.mcfpp.model.Class
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
+import top.mcfpp.util.TempPool
 
 /**
  * 以NBT为底层的类型，包括普通的NBT类型，以及由nbt实现的map，list和dict
@@ -31,6 +32,7 @@ class MCFPPNBTType {
         override fun build(identifier: String, clazz: Class): Var<*> =
             NBTBasedDataConcrete(clazz, IntTag(0), identifier)
 
+        override fun build(value: Any): Var<*> = NBTBasedDataConcrete(value as Tag<*>)
         override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> =
             NBTBasedData(identifier)
 
@@ -53,7 +55,7 @@ class MCFPPNBTType {
         override fun build(identifier: String): Var<*> = MCByteConcrete(0, identifier)
         override fun build(identifier: String, clazz: Class): Var<*> =
             MCByteConcrete(clazz, 0, identifier)
-
+        override fun build(value: Any): Var<*> = MCByteConcrete(value as kotlin.Byte)
         override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> =
             MCByte(container, identifier)
 
@@ -76,6 +78,7 @@ class MCFPPNBTType {
         override fun build(identifier: String, clazz: Class): Var<*> =
             MCShortConcrete(clazz, 0, identifier)
 
+        override fun build(value: Any): Var<*> = MCShortConcrete(value as kotlin.Short)
         override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> =
             MCShort(container, identifier)
 
@@ -98,6 +101,7 @@ class MCFPPNBTType {
         override fun build(identifier: String, clazz: Class): Var<*> =
             MCLongConcrete(LongTag(0), identifier)
 
+        override fun build(value: Any): Var<*> = MCLongConcrete(value as LongTag)
         override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> =
             MCLong(identifier)
 
@@ -120,6 +124,7 @@ class MCFPPNBTType {
         override fun build(identifier: String, clazz: Class): Var<*> =
             MCDoubleConcrete(clazz, DoubleTag(0.0), identifier)
 
+        override fun build(value: Any): Var<*> = MCDoubleConcrete(value as DoubleTag)
         override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> =
             MCDouble(identifier)
 
@@ -142,6 +147,7 @@ class MCFPPNBTType {
         override fun build(identifier: String, clazz: Class): Var<*> =
             ByteArrayConcrete(ByteArrayTag(), identifier)
 
+        override fun build(value: Any): Var<*> = ByteArrayConcrete(value as ByteArrayTag)
         override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> =
             ByteArray(identifier)
 
@@ -164,6 +170,7 @@ class MCFPPNBTType {
         override fun build(identifier: String, clazz: Class): Var<*> =
             IntArrayConcrete(IntArrayTag(), identifier)
 
+        override fun build(value: Any): Var<*> = IntArrayConcrete(value as IntArrayTag)
         override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> =
             IntArray(identifier)
 
@@ -186,6 +193,7 @@ class MCFPPNBTType {
         override fun build(identifier: String, clazz: Class): Var<*> =
             LongArrayConcrete(LongArrayTag(), identifier)
 
+        override fun build(value: Any): Var<*> = LongArrayConcrete(value as LongArrayTag)
         override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> =
             LongArray(identifier)
 
@@ -196,8 +204,8 @@ class MCFPPNBTType {
 }
 
 class MCFPPListType(
-    val generic: MCFPPType = MCFPPBaseType.Any
-): MCFPPType(arrayListOf(MCFPPNBTType.NBT)){
+val generic: MCFPPType = MCFPPBaseType.Any
+): MCFPPType(arrayListOf(MCFPPNBTType.NBT)), MCFPPTypeWithGeneric{
 
     override val objectData: CompoundData
         get() = NBTList.data
@@ -211,6 +219,8 @@ class MCFPPListType(
     override fun build(identifier: String, container: FieldContainer): Var<*> = NBTListConcrete(ArrayList(), identifier, generic)
     override fun build(identifier: String): Var<*> = NBTListConcrete(ArrayList(), identifier, generic)
     override fun build(identifier: String, clazz: Class): Var<*> = NBTListConcrete(ArrayList(), identifier, generic)
+    @Suppress("UNCHECKED_CAST")
+    override fun build(value: Any): Var<*> = NBTListConcrete(value as ArrayList<Var<*>>, TempPool.getVarIdentify(), generic)
     override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = NBTList(identifier, generic)
     override fun buildUnConcrete(identifier: String): Var<*> = NBTList(identifier, generic)
     override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = NBTList(identifier, generic)
@@ -218,11 +228,25 @@ class MCFPPListType(
     override fun toString(): String {
         return "list[${generic.typeName}]"
     }
+
+    override fun replaceGenericParam(type: Map<String, MCFPPType>): MCFPPListType {
+        if(type.size != 1) throw IllegalArgumentException("Need 1 generic param but get ${type.size}")
+        if (generic is MCFPPGenericParamType) {
+            if(type.containsKey(generic.identifier)){
+                return MCFPPListType(type[generic.identifier]!!)
+            }else{
+                throw IllegalArgumentException("No generic param ${generic.identifier}")
+            }
+        }else if(generic is MCFPPTypeWithGeneric){
+            return MCFPPListType(generic.replaceGenericParam(type))
+        }
+        return this
+    }
 }
 
 class MCFPPImmutableListType(
     val generic: MCFPPType = MCFPPBaseType.Any
-): MCFPPType(arrayListOf(MCFPPNBTType.NBT)){
+): MCFPPType(arrayListOf(MCFPPNBTType.NBT)), MCFPPTypeWithGeneric{
 
     override val objectData: CompoundData
         get() = NBTList.data
@@ -236,6 +260,7 @@ class MCFPPImmutableListType(
     override fun build(identifier: String, container: FieldContainer): Var<*> = ImmutableListConcrete(ListTag(IntTag::class.java), identifier, generic)
     override fun build(identifier: String): Var<*> = ImmutableListConcrete(ListTag(IntTag::class.java), identifier, generic)
     override fun build(identifier: String, clazz: Class): Var<*> = ImmutableListConcrete(ListTag(IntTag::class.java), identifier, generic)
+    override fun build(value: Any): Var<*> = ImmutableListConcrete(value as ListTag<*>, TempPool.getVarIdentify(), generic)
     override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = ImmutableList(identifier, generic)
     override fun buildUnConcrete(identifier: String): Var<*> = ImmutableList(identifier, generic)
     override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = ImmutableList(identifier, generic)
@@ -244,11 +269,24 @@ class MCFPPImmutableListType(
         return "ImmutableList[${generic.typeName}]"
     }
 
+    override fun replaceGenericParam(type: Map<String, MCFPPType>): MCFPPImmutableListType {
+        if(type.size != 1) throw IllegalArgumentException("Need 1 generic param but get ${type.size}")
+        if (generic is MCFPPGenericParamType) {
+            if(type.containsKey(generic.identifier)){
+                return MCFPPImmutableListType(type[generic.identifier]!!)
+            }else{
+                throw IllegalArgumentException("No generic param ${generic.identifier}")
+            }
+        }else if(generic is MCFPPTypeWithGeneric){
+            return MCFPPImmutableListType(generic.replaceGenericParam(type))
+        }
+        return this
+    }
 }
 
 open class MCFPPCompoundType(
     val generic: MCFPPType
-): MCFPPType(arrayListOf(MCFPPNBTType.NBT)){
+): MCFPPType(arrayListOf(MCFPPNBTType.NBT)), MCFPPTypeWithGeneric{
 
     override val typeName: String
         get() = "compound"
@@ -257,6 +295,19 @@ open class MCFPPCompoundType(
         return "compound[${generic.typeName}]"
     }
 
+    override fun replaceGenericParam(type: Map<String, MCFPPType>): MCFPPCompoundType {
+        if(type.size != 1) throw IllegalArgumentException("Need 1 generic param but get ${type.size}")
+        if (generic is MCFPPGenericParamType) {
+            if(type.containsKey(generic.identifier)){
+                return MCFPPCompoundType(type[generic.identifier]!!)
+            }else{
+                throw IllegalArgumentException("No generic param ${generic.identifier}")
+            }
+        }else if(generic is MCFPPTypeWithGeneric){
+            return MCFPPCompoundType(generic.replaceGenericParam(type))
+        }
+        return this
+    }
 }
 
 class MCFPPDictType(generic: MCFPPType): MCFPPCompoundType(generic){
@@ -270,9 +321,25 @@ class MCFPPDictType(generic: MCFPPType): MCFPPCompoundType(generic){
     override fun build(identifier: String, container: FieldContainer): Var<*> = NBTDictionaryConcrete(HashMap(), identifier)
     override fun build(identifier: String): Var<*> = NBTDictionaryConcrete(HashMap(), identifier)
     override fun build(identifier: String, clazz: Class): Var<*> = NBTDictionaryConcrete(HashMap(), identifier)
+    @Suppress("UNCHECKED_CAST")
+    override fun build(value: Any): Var<*> = NBTDictionaryConcrete(value as HashMap<String, Var<*>>, TempPool.getVarIdentify())
     override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = NBTDictionary(identifier)
     override fun buildUnConcrete(identifier: String): Var<*> = NBTDictionary(identifier)
     override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = NBTDictionary(identifier)
+
+    override fun replaceGenericParam(type: Map<String, MCFPPType>): MCFPPDictType {
+        if(type.size != 1) throw IllegalArgumentException("Need 1 generic param but get ${type.size}")
+        if (generic is MCFPPGenericParamType) {
+            if(type.containsKey(generic.identifier)){
+                return MCFPPDictType(type[generic.identifier]!!)
+            }else{
+                throw IllegalArgumentException("No generic param ${generic.identifier}")
+            }
+        }else if(generic is MCFPPTypeWithGeneric){
+            return MCFPPDictType(generic.replaceGenericParam(type))
+        }
+        return this
+    }
 }
 
 class MCFPPMapType(generic: MCFPPType): MCFPPCompoundType(generic){
@@ -286,7 +353,23 @@ class MCFPPMapType(generic: MCFPPType): MCFPPCompoundType(generic){
     override fun build(identifier: String, container: FieldContainer): Var<*> = NBTMapConcrete(HashMap(), identifier, generic)
     override fun build(identifier: String): Var<*> = NBTMapConcrete(HashMap(), identifier, generic)
     override fun build(identifier: String, clazz: Class): Var<*> = NBTMapConcrete(HashMap(), identifier, generic)
+    @Suppress("UNCHECKED_CAST")
+    override fun build(value: Any): Var<*> = NBTMapConcrete(value as HashMap<String, Var<*>>, TempPool.getVarIdentify(), generic)
     override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = NBTMap(identifier, generic)
     override fun buildUnConcrete(identifier: String): Var<*> = NBTMap(identifier, generic)
     override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = NBTMap(identifier, generic)
+
+    override fun replaceGenericParam(type: Map<String, MCFPPType>): MCFPPMapType {
+        if(type.size != 1) throw IllegalArgumentException("Need 1 generic param but get ${type.size}")
+        if (generic is MCFPPGenericParamType) {
+            if(type.containsKey(generic.identifier)){
+                return MCFPPMapType(type[generic.identifier]!!)
+            }else{
+                throw IllegalArgumentException("No generic param ${generic.identifier}")
+            }
+        }else if(generic is MCFPPTypeWithGeneric){
+            return MCFPPMapType(generic.replaceGenericParam(type))
+        }
+        return this
+    }
 }

@@ -24,6 +24,7 @@ import top.mcfpp.util.StringHelper.splitNamespaceID
 import top.mcfpp.util.TempPool
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
+import kotlin.reflect.KClass
 
 /**
  * 所有类型的接口
@@ -251,14 +252,14 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
         /**
          * 类型注册缓存。键值对的第一个元素判断字符串是否满足条件，而第二个元素则是用于从一个字符串中解析出一个类型
          */
-        private val genericTypeCache = mutableMapOf(
+        private val genericTypeCache: MutableMap<String, (MCFPPType) -> MCFPPType> = mutableMapOf(
             "list" to {generic: MCFPPType -> MCFPPListType(generic) },
             "dict" to {generic: MCFPPType -> MCFPPDictType(generic)},
             "map" to {generic: MCFPPType -> MCFPPMapType(generic)},
             "ImmutableList" to {generic: MCFPPType -> MCFPPImmutableListType(generic)},
         )
 
-        private val genericTypeClassCache = mutableMapOf(
+        private val genericTypeClassCache: MutableMap<String, KClass<out MCFPPType>> = mutableMapOf(
             "list" to MCFPPListType::class,
             "dict" to MCFPPDictType::class,
             "map" to MCFPPMapType::class,

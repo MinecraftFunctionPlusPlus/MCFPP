@@ -73,7 +73,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             }else{
                 init.type.build(ctx.Identifier().text, namespace)
             }
-            `var`.nbtPath = NBTPath.global.clone().memberIndex(`var`.identifier)
+            `var`.nbtPath = NBTPath.global.memberIndex(`var`.identifier)
             //变量赋值
             `var` = `var`.assignedBy(init)
             //一定是函数变量
@@ -111,7 +111,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 if (namespace.field.containVar(c.Identifier().text)) {
                     LogProcessor.error("Duplicate defined variable name:" + c.Identifier().text)
                 }
-                `var`.nbtPath = NBTPath.global.clone().memberIndex(`var`.identifier)
+                `var`.nbtPath = NBTPath.global.memberIndex(`var`.identifier)
                 //变量初始化
                 if (c.value() != null) {
                     val init: Var<*> = MCFPPExprVisitor(if(type is MCFPPGenericClassType) type else null, if(type is MCFPPEnumType) type else null).visitValue(c.value())

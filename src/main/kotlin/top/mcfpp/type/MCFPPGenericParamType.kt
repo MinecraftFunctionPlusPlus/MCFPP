@@ -24,7 +24,7 @@ import top.mcfpp.model.CompoundData
 class MCFPPGenericParamType(
     var identifier:String,
     parentType: ArrayList<out MCFPPType>
-) : MCFPPType(parentType) {   //TODO: 泛型的CompoundData
+) : MCFPPType(parentType), MCFPPTypeWithGeneric {   //TODO: 泛型的CompoundData
 
     override val objectData: CompoundData
         get() = MCAny.data
@@ -34,5 +34,14 @@ class MCFPPGenericParamType(
 
     fun toValue():MCTypeValue{
         return MCTypeValue(identifier,parentType)
+    }
+
+    override fun replaceGenericParam(type: Map<String, MCFPPType>): MCFPPType {
+        if(type.size != 1) throw IllegalArgumentException("Need 1 generic param but get ${type.size}")
+        if(type.containsKey(identifier)){
+            return MCFPPDictType(type[identifier]!!)
+        }else{
+            throw IllegalArgumentException("No generic param $identifier")
+        }
     }
 }

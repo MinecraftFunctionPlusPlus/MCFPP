@@ -1,5 +1,6 @@
 package top.mcfpp.core.lang
 
+import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.mni.MCAnyConcreteData
 import top.mcfpp.mni.MCAnyData
 import top.mcfpp.model.CompoundData
@@ -57,6 +58,10 @@ open class MCAny : Var<MCAny> {
 
     override var type: MCFPPType = MCFPPBaseType.Any
 
+    var inferredType: MCFPPType? = null
+
+    var name: String? = null
+
     /**
      * 创建一个int值。它的标识符和mc名相同。
      * @param identifier identifier
@@ -67,7 +72,9 @@ open class MCAny : Var<MCAny> {
      * 复制一个int
      * @param b 被复制的int值
      */
-    constructor(b: MCAny) : super(b)
+    constructor(b: MCAny) : super(b){
+        inferredType = b.inferredType
+    }
 
     /**
      * 将b中的值赋值给此变量。
@@ -76,23 +83,41 @@ open class MCAny : Var<MCAny> {
      *
      * @return 重新获取跟踪的此变量
      */
-    override fun doAssignedBy(b: Var<*>): MCAnyConcrete {
+    override fun doAssignedBy(b: Var<*>): MCAny {
         when (b) {
             is MCAnyConcrete -> {
                 val q = MCAnyConcrete(this, b.value)
-                q.assignedBy(b)
+                q.inferredType = b.inferredType
                 return q
             }
 
             is MCAny -> {
-                LogProcessor.warn("Try to assign any to any")
-                return MCAnyConcrete(this, b)
+                if (b.inferredType == null && this.inferredType == null){
+                    LogProcessor.warn("Try to assign any to any")
+                    NBTBasedData().setAs(this).assignedBy(NBTBasedData().setAs(b))
+                    return this
+                }
+                if(b.inferredType != null){
+                    inferredType = b.inferredType
+                }
+                val temp = inferredType!!.buildUnConcrete(this.identifier, parentClass()?:parentTemplate()?:Function.currFunction).setAs(this)
+                val tempb = inferredType!!.buildUnConcrete(b.identifier, parentClass()?:parentTemplate()?:Function.currFunction).setAs(b)
+                temp.assignedBy(tempb)
+                return this
+            }
+
+            is MCFPPValue<*> -> {
+                inferredType = (b as Var<*>).type
+                name = if(b is OnScoreboard) b.name else null
+                return MCAnyConcrete(this, b.value)
             }
 
             else -> {
-                val q = MCAnyConcrete(this, b)
-                q.assignedBy(b)
-                return q
+                inferredType = b.type
+
+                val temp = inferredType!!.buildUnConcrete(this.identifier, parentClass()?:parentTemplate()?:Function.currFunction).setAs(this)
+                temp.assignedBy(b)
+                return this
             }
         }
     }
@@ -101,15 +126,20 @@ open class MCAny : Var<MCAny> {
         return !b.implicitCast(type).isError
     }
 
-    /**
-     * 将这个变量强制转换为一个类型
-     * @param type 要转换到的目标类型
-     */
     override fun explicitCast(type: MCFPPType): Var<*> {
         return when(type){
             MCFPPBaseType.Any -> this
             else -> {
-                type.build(this.identifier, parentClass()?:parentTemplate()?:Function.currFunction)
+                type.buildUnConcrete(this.identifier, parentClass()?:parentTemplate()?:Function.currFunction).setAs(this)
+            }
+        }
+    }
+
+    override fun implicitCast(type: MCFPPType): Var<*> {
+        return when(type){
+            MCFPPBaseType.Any -> this
+            else -> {
+                type.buildUnConcrete(this.identifier, parentClass()?:parentTemplate()?:Function.currFunction).setAs(this)
             }
         }
     }
@@ -158,6 +188,10 @@ open class MCAny : Var<MCAny> {
         return data.field.getFunction(key, readOnlyArgs, normalArgs) to true
     }
 
+    open fun buildInferredVar(): Var<*>?{
+        return inferredType?.buildUnConcrete(this.identifier)?.setAs(this)
+    }
+
     companion object{
         val data by lazy {
             CompoundData("any","mcfpp.lang").apply {
@@ -184,59 +218,41 @@ open class MCAny : Var<MCAny> {
  *
  * 这会警告表示两个的类型不一致，但是不会报错。允许这种赋值的存在，此后i的类型也被跟踪为`string`类型。
  */
-class MCAnyConcrete : MCAny, MCFPPValue<Var<*>> {
+class MCAnyConcrete : MCAny, MCFPPValue<Any?> {
 
-    override var value: Var<*>
+    override var value: Any?
 
     /**
      * 创建一个固定的any。它的标识符和mc名一致
      * @param identifier 标识符。如不指定，则为随机uuid
      * @param value 值
      */
-    constructor(value: Var<*>, identifier: String = TempPool.getVarIdentify()) : super(identifier) {
-        this.value = value.clone()
-        this.value.setAs(value)
+    constructor(value: Any?, identifier: String = TempPool.getVarIdentify()) : super(identifier) {
+        this.value = value
     }
 
     /**
      * 创建一个MCAny类型的变量。它是v的跟踪版本
      */
-    constructor(v : MCAny, value: Var<*>): super(v){
-        this.value = value.clone()
-        this.value.setAs(v)
+    constructor(v : MCAny, value: Any?): super(v){
+        this.value = value
     }
 
     constructor(v: MCAnyConcrete) : super(v){
-        this.value = v.value.clone()
-        this.value.setAs(v)
+        this.value = v.value
     }
 
     override fun clone(): MCAnyConcrete {
         return MCAnyConcrete(this)
     }
 
-    override fun doAssignedBy(b: Var<*>): MCAnyConcrete {
-        when (b) {
-            is MCAnyConcrete -> {
-                if(b.value.type != this.value.type){
-                    LogProcessor.warn("Try to assign ${b.value.type.typeName} to ${this.value.type.typeName}")
-                }
-                //构造假设变量
-                this.value = this.value.assignedBy(b.value)
-                return this
-            }
-            is MCAny -> {
-                LogProcessor.warn("Try to assign any to any")
-                return this
-            }
-            else -> {
-                this.value = this.value.assignedBy(b)
-                return this
-            }
-        }
-    }
-
     override fun toDynamic(replace: Boolean): Var<*> {
+        if(inferredType == null){
+            LogProcessor.warn("Unable to infer the type of any")
+        }else{
+            val temp = inferredType!!.build(value!!).setAs(this)
+            (temp as MCFPPValue<*>).toDynamic(false)
+        }
         val re = MCAny(this)
         if(replace){
             if(parentTemplate() != null){
@@ -246,6 +262,10 @@ class MCAnyConcrete : MCAny, MCFPPValue<Var<*>> {
             }
         }
         return re
+    }
+
+    override fun buildInferredVar(): Var<*>? {
+        return inferredType?.build(value!!)?.setAs(this)
     }
 
     companion object {

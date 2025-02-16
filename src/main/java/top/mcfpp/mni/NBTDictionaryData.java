@@ -24,13 +24,13 @@ public class NBTDictionaryData {
     public static void containsKey(MCString key, NBTDictionary caller, ValueWrapper<ScoreBool> re){
         if(key instanceof MCStringConcrete keyC){
             Function.Companion.addCommand(new Command("execute " +
-                    "store result score " + re.getValue().getIdentifier() + " " + re.getValue().getBoolObject() + " " +
+                    "store result score " + re.getValue().getName() + " " + re.getValue().getBoolObject() + " " +
                     "if data")
                     .build(caller.getNbtPath().toCommandPart(), true).build("." + keyC.getValue().getValue(), false)
             );
         }else {
             Function.Companion.addCommand(new Command("execute " +
-                "store result score " + re.getValue().getIdentifier() + " " + re.getValue().getBoolObject() + " " +
+                "store result score " + re.getValue().getName() + " " + re.getValue().getBoolObject() + " " +
                 "if data")
                 .build(caller.getNbtPath().toCommandPart(), true).build(".", false).buildMacro(key, false)
             );

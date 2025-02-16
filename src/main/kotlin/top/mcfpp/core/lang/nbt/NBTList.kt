@@ -1,6 +1,7 @@
 package top.mcfpp.core.lang.nbt
 
 import net.querz.nbt.tag.EndTag
+import net.querz.nbt.tag.IntTag
 import net.querz.nbt.tag.ListTag
 import net.querz.nbt.tag.Tag
 import top.mcfpp.annotations.InsertCommand
@@ -17,7 +18,9 @@ import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
+import top.mcfpp.model.property.AnonymousNativeMutator
 import top.mcfpp.model.property.Property
+import top.mcfpp.model.property.SimpleAccessor
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil
@@ -215,6 +218,10 @@ open class NBTList : NBTBasedData {
         }
     }
 
+    override fun clone(): NBTList {
+        return NBTList(this)
+    }
+
     companion object {
         val data by lazy {
             CompoundData("list", "mcfpp.lang").apply {
@@ -266,9 +273,12 @@ class NBTListConcrete: NBTList, MCFPPValue<ArrayList<Var<*>>> {
     }
 
     @Suppress("UNCHECKED_CAST")
-    override fun toDynamic(replace: Boolean): Var<*> {
-        val parent = parent
-        if(value.isEmpty()) return NBTList(this)
+    fun synchronous(){
+        hasStoredInStack = true
+        if(value.isEmpty()) {
+            Function.addCommands(Commands.method2(this, Commands.dataSetValue(nbtPath, ListTag.createUnchecked(IntTag::class.java))))
+            return
+        }
         var isSet = true
         var list: ListTag<Tag<*>> = ListTag.createUnchecked(EndTag::class.java) as ListTag<Tag<*>>
         val commands = Commands.tempFunction(Function.currFunction){
@@ -290,7 +300,7 @@ class NBTListConcrete: NBTList, MCFPPValue<ArrayList<Var<*>>> {
                     Function.addCommand(Commands.dataAppendFrom(NBTPath.temp, v.nbtPath))
                 }
             }
-            Function.addCommand(Commands.dataAppendFrom(nbtPath, NBTPath.temp.clone().iteratorIndex()))
+            Function.addCommand(Commands.dataAppendFrom(nbtPath, NBTPath.temp.iteratorIndex()))
         }
         if(isSet){
             //循环内一直没更改过isSet的值，说明列表所有变量都可被追踪
@@ -299,6 +309,9 @@ class NBTListConcrete: NBTList, MCFPPValue<ArrayList<Var<*>>> {
         }else{
             Function.addCommands(Commands.method2(this, commands.first))
         }
+    }
+
+    override fun toDynamic(replace: Boolean): Var<*> {
         val re = NBTList(this)
         if(replace){
             if(parentTemplate() != null) {
@@ -324,7 +337,7 @@ class NBTListConcrete: NBTList, MCFPPValue<ArrayList<Var<*>>> {
     }
 
     override fun getByIndex(index: Var<*>): PropertyVar {
-        val v = if(index is MCInt){
+        val re = if(index is MCInt){
             if(index is MCIntConcrete){
                 if(index.value >= value.size){
                     LogProcessor.error("Index out of bounds")
@@ -335,17 +348,25 @@ class NBTListConcrete: NBTList, MCFPPValue<ArrayList<Var<*>>> {
                 }
             }else {
                 //index未知
+                if(!hasStoredInStack) synchronous()
                 toDynamic(true)
-                super.getByIntIndex(index)
+                return super.getByIndex(index)
             }
         }else{
             LogProcessor.error("Index must be a int")
             val re = UnknownVar("error_${identifier}_index_${index.identifier}")
             return PropertyVar(Property.buildSimpleProperty(re), re, this)
         }
-        v.nbtPath = getTempPath(v)
-        v.parent = this
-        return PropertyVar(Property.buildSimpleProperty(v), v, this)
+        re.nbtPath = getTempPath(re)
+        re.parent = this
+        re.isDynamic = true
+        val property = Property(re.identifier, SimpleAccessor(), AnonymousNativeMutator { _, v ->
+            if(v !is MCFPPValue<*> && !hasStoredInStack){
+                synchronous()
+            }
+            re.assignedBy(v)
+        })
+        return PropertyVar(property, re, this)
     }
 
     override fun toString(): String {
@@ -378,12 +399,8 @@ class NBTListConcrete: NBTList, MCFPPValue<ArrayList<Var<*>>> {
         value[value.indexOfFirst { it.identifier == v.identifier }] = v
     }
 
-    override fun onMemberVarChanged(member: Var<*>) {
-        if(member !is MCFPPValue<*>) toDynamic(true)
-    }
-
     fun isAllConcrete(): Boolean {
-        return value.all { it is MCFPPValue<*> }
+        return value.all { it is MCFPPValue<*> && (it !is NBTListConcrete || it.isAllConcrete()) }
     }
 
     companion object {
@@ -408,7 +425,7 @@ class NBTListConcrete: NBTList, MCFPPValue<ArrayList<Var<*>>> {
                 listIndexHashMap[v] = re
                 re
             }
-            return listTempNBTPath.clone().memberIndex(index.toString())
+            return listTempNBTPath.memberIndex(index.toString())
         }
 
     }

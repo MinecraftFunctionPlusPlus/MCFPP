@@ -8,6 +8,7 @@ import top.mcfpp.exception.CommandException
 import top.mcfpp.lib.MemberPath
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.function.Function
+import top.mcfpp.util.TempPool
 import java.io.Serializable
 import java.util.*
 
@@ -235,7 +236,11 @@ open class Command: Serializable {
      *
      * 插入的命令片段的值为空字符串，替换位点的id为宏参数
      */
-    fun buildMacro(id: Var<*>, withBlank: Boolean = true) = build("", "$$id", withBlank)
+    fun buildMacro(v: Var<*>, withBlank: Boolean = true): Command {
+        if(withBlank && commandParts.isNotEmpty()) commandParts.add(CommandPart(" "))
+        commandParts.add(MacroPart(v))
+        return this
+    }
 
     /**
      * 将此命令以宏命令的方式调用。自动确定宏参数的路径。
@@ -244,22 +249,22 @@ open class Command: Serializable {
      */
     fun buildMacroFunction() : Array<Command>{
         if(!isMacro) return arrayOf(this)
-        val f = UUID.randomUUID().toString()
+        val f = TempPool.getFunctionIdentify("macro")
         val sharedPath = NBTPath.getMaxImmediateSharedPath(*commandParts.filterIsInstance<MacroPart>().map { it.v.nbtPath }.toTypedArray())?: NBTPath.macroTemp
-        Project.macroFunction[f] = this.toString()
-        val argPass = ArrayList<Command>()
+        Project.macroFunction[f] = "$$this"
+        val re = ArrayList<Command>()
         for (v in commandParts.filterIsInstance<MacroPart>().map { it.v }){
             if(v.nbtPath.pathList.last() !is MemberPath || !sharedPath.isImmediateParentOf(v.nbtPath)){
                 //变量需要传递
-                argPass.addAll(
+                re.addAll(
                     Commands.fakeFunction(Function.nullFunction) {
                         v.clone().apply { sharedPath.memberIndex(v.identifier) }.assignedBy(v)
                     }
                 )
             }
         }
-        argPass.add(Command.build("function mcfpp:dynamic/$f with").build(sharedPath.toCommandPart()))
-        return argPass.toTypedArray()
+        re.add(Command.build("function mcfpp:dynamic/$f with").build(sharedPath.toCommandPart()))
+        return re.toTypedArray()
     }
 
     /**
@@ -348,7 +353,7 @@ open class Command: Serializable {
      */
     private data class MacroPart(var v: Var<*>): ICommandPart{
         override fun toString(): String {
-            return v.identifier
+            return "$(${v.identifier})"
         }
     }
 }

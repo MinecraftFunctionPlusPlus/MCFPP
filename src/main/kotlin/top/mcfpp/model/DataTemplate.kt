@@ -6,10 +6,10 @@ import top.mcfpp.core.lang.DataTemplateObject
 import top.mcfpp.core.lang.MCAny
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.property.Property
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.DataTemplateConstructor
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.property.Property
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPDataTemplateType
 import top.mcfpp.type.MCFPPType
@@ -46,6 +46,7 @@ open class DataTemplate : FieldContainer, CompoundData {
     override val prefix: String
         get() = namespace + "_template_" + identifier + "_"
 
+    @Suppress("ConvertSecondaryConstructorToPrimary")
     constructor(identifier: String, namespace: String = Project.currNamespace){
         this.identifier = identifier
         field = CompoundDataField(ArrayList())

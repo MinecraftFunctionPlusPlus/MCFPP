@@ -22,4 +22,6 @@ class MCFPPDeclaredConcreteType(val type: MCFPPType): MCFPPConcreteType(arrayLis
 
     override fun build(identifier: String, clazz: top.mcfpp.model.Class): Var<*> = type.build(identifier, clazz).apply { type = this@MCFPPDeclaredConcreteType }
 
+    override fun build(value: Any): Var<*> = type.build(value).apply { type = this@MCFPPDeclaredConcreteType }
+
 }

@@ -142,6 +142,22 @@ object Commands {
             .build((if(value) 1 else 0).toString())
     }
 
+    fun ifScoreMatches(a: MCInt, value: Int): Command {
+        return Command.build("execute if score ${a.name} ${a.sbObject} matches $value run")
+    }
+
+    fun unlessScoreMatches(a: MCInt, value: Int): Command {
+        return Command.build("execute unless score ${a.name} ${a.sbObject} matches $value run")
+    }
+
+    fun ifBoolMatches(a: ScoreBool, value: Boolean): Command {
+        return Command.build("execute if score ${a.name} ${a.boolObject} matches ${if(value) 1 else 0} run")
+    }
+
+    fun unlessBoolMatches(a: ScoreBool, value: Boolean): Command {
+        return Command.build("execute unless score ${a.name} ${a.boolObject} matches ${if(value) 1 else 0} run")
+    }
+
     /**
      * `data get <a>`
      */
@@ -257,7 +273,6 @@ object Commands {
         return cs.dropLast(1).toTypedArray() + qwq
     }
 
-
     /**
      * 以一个类的对象为执行者，执行一个命令。
      *
@@ -356,7 +371,26 @@ object Commands {
      */
     fun tempFunction(parent: Function, operation: (tempFunction: Function) -> Unit) : Pair<Command, Function>{
         val l = Function.currFunction
-        val f = NoStackFunction(TempPool.getFunctionIdentify(parent.identifier + "_temp"), parent)
+        val f = NoStackFunction(TempPool.getFunctionIdentify("temp"), parent)
+        GlobalField.localNamespaces[Project.currNamespace]!!.field.addFunction(f, false)
+        Function.currFunction = f
+        operation(f)
+        Function.currFunction = l
+        return function(f) to f
+    }
+
+    /**
+     * 创建一个临时函数，可以在此函数中执行一些操作，命令将会生成在此临时函数中。
+     *
+     * @param prefix 生成的临时函数的额外前缀
+     * @param parent 临时函数的父函数，用于控制作用域
+     * @param operation 在此临时函数中执行的操作。lambda表达式的参数为此临时函数
+     *
+     * @return 生成的调用临时函数的命令和这个临时函数
+     */
+    fun tempFunction(prefix: String, parent: Function, operation: (tempFunction: Function) -> Unit) : Pair<Command, Function>{
+        val l = Function.currFunction
+        val f = NoStackFunction(TempPool.getFunctionIdentify("${prefix}_temp"), parent)
         GlobalField.localNamespaces[Project.currNamespace]!!.field.addFunction(f, false)
         Function.currFunction = f
         operation(f)

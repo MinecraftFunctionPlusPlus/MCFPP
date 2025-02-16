@@ -7,6 +7,7 @@ import top.mcfpp.core.lang.Var
 import top.mcfpp.model.*
 import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.Function
+import top.mcfpp.util.TempPool
 
 /**
  * 用于标识由mcfpp class定义出来的类
@@ -49,6 +50,7 @@ open class MCFPPClassType(
     override fun build(identifier: String, container: FieldContainer): Var<*> = ClassPointer(cls, identifier)
     override fun build(identifier: String): Var<*> = ClassPointer(cls, identifier)
     override fun build(identifier: String, clazz: Class): Var<*> = ClassPointer(cls, identifier)
+    override fun build(value: Any): Var<*> = ClassPointer(cls, TempPool.getVarIdentify())
     override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = ClassPointer(cls, identifier)
     override fun buildUnConcrete(identifier: String): Var<*> = ClassPointer(cls, identifier)
     override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = ClassPointer(cls, identifier)

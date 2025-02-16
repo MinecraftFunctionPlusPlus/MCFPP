@@ -21,6 +21,7 @@ import top.mcfpp.util.TempPool;
 import top.mcfpp.util.ValueWrapper;
 
 import java.io.IOException;
+import java.util.Objects;
 import java.util.UUID;
 
 public class System {
@@ -43,29 +44,36 @@ public class System {
     @InsertCommand
     @MNIFunction(normalParams = {"any a"})
     public static void print(@NotNull MCAny value){
-        if(value instanceof MCAnyConcrete valueC){
-            switch (valueC.getValue()) {
-                case MCInt mcInt -> print(mcInt);
-                case NBTList list -> print(list);
-                case NBTDictionary dictionary -> print(dictionary);
-                case NBTBasedData nbtBasedData -> print(nbtBasedData);
-                case BaseBool bool -> print(bool);
-                case DataTemplateObject object -> print(object);
-                default -> Function.Companion.addCommand("tellraw @a " + "\"" + valueC.getValue() + "\"");
-            }
+        var qwq = value.buildInferredVar();
+        if(qwq != null){
+            printVar(qwq);
         }else {
             Function.Companion.addCommand("tellraw @a " + "\"" + value + "\"");
         }
     }
 
+    public static void printVar(@NotNull Var<?> var){
+        switch (var) {
+            case MCInt mcInt -> print(mcInt);
+            case NBTList list -> print(list);
+            case NBTDictionary dictionary -> print(dictionary);
+            case NBTBasedData nbtBasedData -> print(nbtBasedData);
+            case BaseBool bool -> print(bool);
+            case DataTemplateObject object -> print(object);
+            case PropertyVar property -> printVar(property.getter());
+            default -> Function.Companion.addCommand("tellraw @a " + "\"" + var + "\"");
+        }
+    }
+
     @InsertCommand
+    @MNIFunction(normalParams = {"int i"})
     public static void print(@NotNull MCInt var) {
         if (var instanceof MCIntConcrete varC) {
             //是确定的，直接输出数值
-            Function.Companion.addCommand("tellraw @a " + varC.getValue());
+            Function.Companion.addCommand("tellraw @a \"" + varC.getValue() + "\"");
         }else {
-            if(var.getParent() != null){
-                Function.Companion.addCommands(Commands.INSTANCE.selectRun(var.getParent(), "tellraw @a " + new ScoreChatComponent(var).toCommandPart(), true));
+            if(var.parentClass() != null){
+                Function.Companion.addCommands(Commands.INSTANCE.selectRun(Objects.requireNonNull(var.getParent()), "tellraw @a " + new ScoreChatComponent(var).toCommandPart(), true));
             }else {
                 Function.Companion.addCommand("tellraw @a " + new ScoreChatComponent(var).toCommandPart());
             }
@@ -136,6 +144,7 @@ public class System {
     }
 
     @InsertCommand
+    @MNIFunction(normalParams = {"bool b"})
     public static void print(BaseBool bool){
         ScoreBool b;
         if(bool instanceof ScoreBool){

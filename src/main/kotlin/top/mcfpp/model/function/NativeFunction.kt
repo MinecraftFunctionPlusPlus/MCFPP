@@ -5,9 +5,7 @@ import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.*
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Native
-import top.mcfpp.type.MCFPPBaseType
-import top.mcfpp.type.MCFPPNotCompiledGenericType
-import top.mcfpp.type.MCFPPType
+import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.ValueWrapper
 import java.lang.Void
@@ -112,8 +110,8 @@ class NativeFunction : Function, Native {
         n.caller = this.caller
         n.returnType = this.returnType
         for(np in normalParams){
-            if(genericParams[np.typeName] != null){
-                val p = FunctionParam(genericParams[np.typeName]!!, np.identifier, this, np.isStatic)
+            if(np.type is MCFPPTypeWithGeneric){
+                val p = FunctionParam((np.type as MCFPPTypeWithGeneric).replaceGenericParam(genericParams), np.identifier, this, np.isStatic)
                 n.appendNormalParam(p)
                 n.field.putVar(p.identifier, p.buildVar())
             }else{

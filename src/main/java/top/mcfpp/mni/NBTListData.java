@@ -1,5 +1,6 @@
 package top.mcfpp.mni;
 
+import kotlin.Unit;
 import net.querz.nbt.io.SNBTUtil;
 import net.querz.nbt.tag.Tag;
 import org.jetbrains.annotations.NotNull;
@@ -20,26 +21,35 @@ import top.mcfpp.lib.Storage;
 import top.mcfpp.lib.StorageSource;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.model.function.MCFunction;
+import top.mcfpp.type.MCFPPType;
 import top.mcfpp.util.NBTUtil;
 import top.mcfpp.util.ValueWrapper;
 
 import java.io.IOException;
 
 public class NBTListData {
-
-    static NBTBasedData list = new NBTBasedData("list.list");
-    static NBTBasedData element = new NBTBasedData("list.element");
-    static MCInt index = new MCInt("list.index");
-    static FunctionBool contains = new FunctionBool("list.contains", new MCFunction("mcfpp.lang","list","contains"));
+    static MCInt index = new MCInt("list_index");
+    static FunctionBool contains = new FunctionBool("list_contains", new MCFunction("mcfpp.lang","list","contains"));
 
     static {
-        list.setNbtPath(new NBTPath(new StorageSource(Storage.Companion.getMCFPP_SYSTEM().toString())).memberIndex("list.list"));
-        list.setDynamic(true);
-        element.setNbtPath(new NBTPath(new StorageSource(Storage.Companion.getMCFPP_SYSTEM().toString())).memberIndex("list.element"));
-        element.setDynamic(true);
         index.setObj(SbObject.Companion.getMCFPP_TEMP());
     }
 
+    private NBTListData() {}
+
+    private static NBTList getList(MCFPPType genericType){
+        var list = new NBTList("list_list", genericType);
+        list.setNbtPath(new NBTPath(new StorageSource(Storage.Companion.getMCFPP_SYSTEM().toString())).memberIndex("list.list"));
+        list.setDynamic(true);
+        return list;
+    }
+
+    private static Var<?> getElement(MCFPPType genericType){
+        var element = genericType.build("list_element");
+        element.setNbtPath(new NBTPath(new StorageSource(Storage.Companion.getMCFPP_SYSTEM().toString())).memberIndex("list.element"));
+        element.setDynamic(true);
+        return element;
+    }
 
     @MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E")
     public static void add(Var<?> e, NBTList caller) throws IOException {
@@ -70,7 +80,7 @@ public class NBTListData {
             l = list.getTempVar();
         }else if((NBTList)list instanceof NBTListConcrete eC){
             l = list;
-            eC.toDynamic(false);
+            eC.synchronous();
         }else{
             l = list;
         }
@@ -125,17 +135,42 @@ public class NBTListData {
 
     @MNIFunction(normalParams = {"int index"}, caller = "list", genericType = "E")
     public static void removeAt(MCInt index, NBTList caller){
-        var command = Commands.INSTANCE.method2(caller, new Command("data remove")
-                .build(caller.nbtPath.intIndex(index).toCommandPart(), true)
-        );
-        Function.Companion.addCommands(command);
+        if(index instanceof MCIntConcrete){
+            var command = Commands.INSTANCE.method2(caller, new Command("data remove")
+                    .build(caller.nbtPath.intIndex(index).toCommandPart(), true)
+            );
+            Function.Companion.addCommands(command);
+        }else {
+            index.nbtPath = NBTPath.Companion.getNormalStackPath(index);
+            index.storeToStack();
+            var command = Commands.INSTANCE.method2(caller, new Command("data remove")
+                    .build(caller.nbtPath.intIndex(index).toCommandPart(), true)
+            );
+            Function.Companion.addCommands(command);
+        }
+    }
+
+    @MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E")
+    public static void remove(@NotNull Var<?> e, NBTList caller){
+        ValueWrapper<MCInt> re = new ValueWrapper<>(index);
+        indexOf(e, caller, re);
+        var qwq = Commands.INSTANCE.tempFunction("remove", Function.Companion.getCurrFunction(), (function) -> {
+            index.nbtPath = NBTPath.Companion.getNormalStackPath(index);
+            index.storeToStack();
+            var command = Commands.INSTANCE.method2(caller, new Command("data remove")
+                    .build(caller.nbtPath.intIndex(index).toCommandPart(), true)
+            );
+            Function.Companion.addCommands(command);
+            return Unit.INSTANCE;
+        });
+        Function.Companion.addCommand(Commands.INSTANCE.unlessScoreMatches(index, -1).build(qwq.getFirst(), true));
     }
 
     @MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E", returnType = "int")
     public static void indexOf(@NotNull Var<?> e, NBTList caller, ValueWrapper<MCInt> returnVar){
         var n = e.toNBTVar();
-        element.assignedBy(n);
-        list.assignedBy(caller);
+        getElement(caller.getGenericType()).assignedBy(n);
+        getList(caller.getGenericType()).assignedBy(caller);
         Function.Companion.addCommand("scoreboard players set list.index " + SbObject.Companion.getMCFPP_TEMP() + " 0");
         Function.Companion.addCommand("execute store result score list.size mcfpp_temp run data get storage mcfpp:system list.list");
         Function.Companion.addCommand("function mcfpp.lang:list/index_of");
@@ -145,8 +180,8 @@ public class NBTListData {
     @MNIFunction(normalParams = {"E e"}, caller = "list<E>", genericType = "E", returnType = "int")
     public static void lastIndexOf(Var<?> e, NBTList caller, ValueWrapper<MCInt> returnVar){
         var n = e.toNBTVar();
-        element.assignedBy(n);
-        list.assignedBy(caller);
+        getElement(caller.getGenericType()).assignedBy(n);
+        getList(caller.getGenericType()).assignedBy(caller);
         Function.Companion.addCommand("scoreboard players set list.index " + SbObject.Companion.getMCFPP_TEMP() + " 0");
         Function.Companion.addCommand("execute store result score list.size mcfpp_temp run data get storage mcfpp:system list.list");
         Function.Companion.addCommand("function mcfpp.lang:list/last_index_of");
@@ -156,8 +191,8 @@ public class NBTListData {
     @MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E", returnType = "bool")
     public static void contains(Var<?> e, NBTList caller, ValueWrapper<BaseBool> returnVar){
         var n = e.toNBTVar();
-        element.assignedBy(n);
-        list.assignedBy(caller);
+        getElement(caller.getGenericType()).assignedBy(n);
+        getList(caller.getGenericType()).assignedBy(caller);
         Function.Companion.addCommand("scoreboard players set list.index " + SbObject.Companion.getMCFPP_TEMP() + " 0");
         Function.Companion.addCommand("execute store result score list.size mcfpp_temp run data get storage mcfpp:system list.list");
         Function.Companion.addCommand("function mcfpp.lang:list/contains");

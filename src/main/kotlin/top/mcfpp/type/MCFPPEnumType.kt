@@ -30,6 +30,7 @@ open class MCFPPEnumType(
     override fun build(identifier: String, container: FieldContainer): Var<*> = EnumVarConcrete(enum, 0, identifier)
     override fun build(identifier: String): Var<*> = EnumVarConcrete(enum,0, identifier)
     override fun build(identifier: String, clazz: Class): Var<*> = EnumVarConcrete(enum, 0, identifier)
+    override fun build(value: Any): Var<*> = EnumVarConcrete(enum, value as Int)
     override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = EnumVar(enum, identifier)
     override fun buildUnConcrete(identifier: String): Var<*> = EnumVar(enum, identifier)
     override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = EnumVar(this.enum, identifier)

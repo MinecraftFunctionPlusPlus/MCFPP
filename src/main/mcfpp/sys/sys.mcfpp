@@ -1,3 +1,5 @@
+func print(int i) = top.mcfpp.mni.System.print;
+func print(bool b) = top.mcfpp.mni.System.print;
 func print(any a) = top.mcfpp.mni.System.print;
 
 #func insert(string i) = top.mcfpp.mni.System.insert;

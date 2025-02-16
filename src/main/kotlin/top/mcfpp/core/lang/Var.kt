@@ -113,6 +113,9 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
      */
     var nullable = false
 
+    /**
+     * 目前这个变量是否在栈里面。用于表示编译器内部临时缓存的变量值和实际变量的值是否保持一致
+     */
     var hasStoredInStack = false
 
     override var isFinal: Boolean = false
@@ -137,7 +140,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         this.nbtPath = NBTPath(StorageSource("mcfpp:system"))
     }
 
-    fun setAs(v: Var<*>){
+    fun setAs(v: Var<*>): Var<*>{
         this.identifier = v.identifier
         this.isStatic = v.isStatic
         this.accessModifier = v.accessModifier
@@ -145,6 +148,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         this.nbtPath = v.nbtPath.clone()
         this.stackIndex = v.stackIndex
         this.isConst = v.isConst
+        return this
     }
 
     /**
@@ -222,7 +226,13 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             return this
         }
         return when(type){
-            MCFPPBaseType.Any -> MCAnyConcrete(this)
+            MCFPPBaseType.Any -> {
+                if(this is MCFPPValue<*>){
+                    (MCAnyConcrete(value).setAs(this) as MCAnyConcrete).apply { inferredType = this@Var.type }
+                }else{
+                    (MCAny().setAs(this) as MCAny).apply { inferredType = this@Var.type }
+                }
+            }
             MCFPPNBTType.NBT -> {
                 if(this is MCFPPValue<*> && (this is ScoreBoolConcrete || this !is BaseBool)){
                     NBTBasedDataConcrete(this.toNBTVar(), NBTUtil.varToNBT(this)!!)
@@ -244,7 +254,13 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             return this
         }
         return when(type){
-            MCFPPBaseType.Any -> MCAnyConcrete(this)
+            MCFPPBaseType.Any -> {
+                if(this is MCFPPValue<*>){
+                    (MCAnyConcrete(value).setAs(this) as MCAnyConcrete).apply { inferredType = this@Var.type }
+                }else{
+                    (MCAny().setAs(this) as MCAny).apply { inferredType = this@Var.type }
+                }
+            }
             else -> {
                 buildCastErrorVar(type)
             }

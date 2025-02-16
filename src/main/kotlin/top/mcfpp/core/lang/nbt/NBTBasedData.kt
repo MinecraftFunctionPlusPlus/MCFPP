@@ -10,8 +10,8 @@ import top.mcfpp.mni.NBTBasedDataData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
-import top.mcfpp.model.property.Property
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.property.Property
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil
@@ -205,7 +205,9 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
             LogProcessor.error("Invalid nbt type")
         }
         val re = NBTBasedData(this)
-        re.nbtPath.nbtIndex(index)
+        re.parent = this
+        re.nbtPath = re.nbtPath.nbtIndex(index)
+        re.isDynamic = this !is MCFPPValue<*>
         return re
     }
 
@@ -214,7 +216,9 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
             LogProcessor.error("Invalid nbt type")
         }
         val re = NBTBasedData(this)
-        re.nbtPath.memberIndex(index)
+        re.parent = this
+        re.nbtPath = re.nbtPath.memberIndex(index)
+        re.isDynamic = this !is MCFPPValue<*>
         return re
     }
 
@@ -223,7 +227,9 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
             LogProcessor.error("Invalid nbt type")
         }
         val re = NBTBasedData(this)
+        re.parent = this
         re.nbtPath = nbtPath.intIndex(index)
+        re.isDynamic = this !is MCFPPValue<*>
         return re
     }
 
@@ -456,6 +462,9 @@ class NBTBasedDataConcrete : NBTBasedData, MCFPPValue<Tag<*>> {
             }else{
                 return buildCastErrorVar(type)
             }
+        }
+        if(type == MCFPPBaseType.Any){
+            return MCAnyConcrete(this)
         }
         val t = JavaVar.javaToMC(value.toJava())
         if(t.type == type) return t

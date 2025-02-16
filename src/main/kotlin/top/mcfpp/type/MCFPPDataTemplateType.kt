@@ -8,6 +8,7 @@ import top.mcfpp.core.lang.Var
 import top.mcfpp.mni.annotation.NoInstance
 import top.mcfpp.model.*
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TempPool
 
 /**
  * 模板类型
@@ -73,6 +74,14 @@ open class MCFPPDataTemplateType(
             return UnknownVar(identifier)
         }else{
             return DataTemplateObjectConcrete(template, CompoundTag(), identifier)
+        }
+    }
+    override fun build(value: Any): Var<*> {
+        if (template.annotations.any { it is NoInstance }){
+            LogProcessor.error("Template ${template.namespaceID} is not allowed to be instantiated.")
+            return UnknownVar(TempPool.getVarIdentify())
+        }else{
+            return DataTemplateObjectConcrete(template, value as CompoundTag, TempPool.getVarIdentify())
         }
     }
     override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> {

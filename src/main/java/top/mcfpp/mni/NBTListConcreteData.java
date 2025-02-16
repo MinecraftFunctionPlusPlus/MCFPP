@@ -2,6 +2,7 @@ package top.mcfpp.mni;
 
 import net.querz.nbt.io.SNBTUtil;
 import net.querz.nbt.tag.Tag;
+import org.jetbrains.annotations.NotNull;
 import top.mcfpp.Project;
 import top.mcfpp.annotations.InsertCommand;
 import top.mcfpp.annotations.MNIFunction;
@@ -47,20 +48,36 @@ public class NBTListConcreteData {
     }
 
     @InsertCommand
+    @MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E")
+    public static void prepend(Var<?> e, NBTListConcrete caller) throws IOException {
+        if(e instanceof MCFPPValue<?>){
+            caller.getValue().addFirst(e);
+        }else {
+            NBTListData.add(e, (NBTList) caller.toDynamic(true));
+        }
+    }
+
+    @InsertCommand
+    @MNIFunction(normalParams = {"list<E> list"}, caller = "list", genericType = "E")
+    public static void prependAll(NBTList list, NBTListConcrete caller){
+        if(list instanceof NBTListConcrete ec){
+            for (var e : ec.getValue()){
+                caller.getValue().addFirst(e);
+            }
+        }else {
+            NBTListData.addAll(list, (NBTList) caller.toDynamic(true));
+        }
+    }
+
+    @InsertCommand
     @MNIFunction(normalParams = {"int index", "E e"}, caller = "list", genericType = "E")
     public static void insert(MCInt index, Var<?> e, NBTListConcrete caller) throws IOException {
         if(e instanceof MCFPPValue<?> && index instanceof MCIntConcrete indexC){
             caller.getValue().add(indexC.getValue(), e);
-        }else if(index instanceof MCIntConcrete indexC) {
+        }else if(index instanceof MCIntConcrete) {
             NBTListData.insert(index, e, (NBTList) caller.toDynamic(true));
         }
     }
-
-    //@InsertCommand
-    //@MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E")
-    //public static void remove(Var<?> e, NBTListConcrete caller){
-    //    //TODO NBT的api本来就没有remove(E e)这个方法，只有remove(int index)
-    //}
 
     @InsertCommand
     @MNIFunction(normalParams = {"int index"}, caller = "list", genericType = "E")
@@ -71,6 +88,26 @@ public class NBTListConcreteData {
         }else {
             //不确定的
             NBTListData.removeAt(index, (NBTList) caller.toDynamic(true));
+        }
+    }
+
+    @MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E")
+    public static void remove(@NotNull Var<?> var, NBTListConcrete caller){
+        if(var instanceof MCFPPValue<?> vC){
+            for (var e : caller.getValue()){
+                if(e instanceof MCFPPValue<?> eC && ((Var<?>)eC).getType().equals(vC) && eC.getValue().equals(vC.getValue())){
+                    caller.getValue().remove(e);
+                    return;
+                }
+            }
+            //没有找到,同时又是部分未知的
+            if(!caller.isAllConcrete()){
+                caller.toDynamic(true);
+                NBTListData.remove(var, caller);
+            }
+        }else {
+            caller.toDynamic(true);
+            NBTListData.remove(var, caller);
         }
     }
 
@@ -103,12 +140,26 @@ public class NBTListConcreteData {
         }
     }
 
-    @SuppressWarnings("SuspiciousMethodCalls")
     @MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E", returnType = "bool")
     public static void contains(Var<?> e, NBTListConcrete caller, ValueWrapper<BaseBool> returnVar){
         if(e instanceof MCFPPValue eC){
-            var contains = caller.getValue().contains(eC.getValue());
-            returnVar.setValue(returnVar.getValue().assignedBy(new ScoreBoolConcrete(contains, TempPool.INSTANCE.getVarIdentify())));
+            boolean contains = false;
+            boolean toDynamic = false;
+            for (var v : caller.getValue()){
+                if(v instanceof MCFPPValue<?> vC && vC.getValue().equals(eC.getValue())){
+                    contains = true;
+                    break;
+                }
+                if(!toDynamic && !(v instanceof MCFPPValue<?>)){
+                    toDynamic = true;
+                }
+            }
+            if(!contains && toDynamic){
+                caller.toDynamic(false);
+                NBTListData.contains(e, caller, returnVar);
+            }else {
+                returnVar.setValue(returnVar.getValue().assignedBy(new ScoreBoolConcrete(contains, TempPool.INSTANCE.getVarIdentify())));
+            }
         }else {
             caller.toDynamic(false);
             NBTListData.contains(e, caller, returnVar);

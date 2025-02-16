@@ -106,11 +106,19 @@ object DatapackCreator {
             Files.createDirectories(Paths.get("$path/${Project.config.name}/data"))
             //创建pack.mcmeta
             Files.write(Paths.get("$path/${Project.config.name}/pack.mcmeta"), datapackMcMetaJson.toByteArray())
+            //写入函数文件
             for(namespace in GlobalField.localNamespaces){
                 genNamespace(path, namespace)
             }
             for (namespace in GlobalField.stdNamespaces){
                 genNamespace(path, namespace)
+            }
+            //写入宏函数
+            for ((function, command) in Project.macroFunction){
+                val currPath = "$path/${Project.config.name}/data/mcfpp/function/dynamic/${function}.mcfunction"
+                LogProcessor.debug("Writing File: $currPath")
+                Files.createDirectories(Paths.get(currPath).parent)
+                Files.write(Paths.get(currPath), command.toByteArray())
             }
             //写入标签json文件
             for (tag in GlobalField.functionTags.values) {

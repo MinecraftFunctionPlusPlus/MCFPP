@@ -223,7 +223,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
             Pair(null, true)
         }else{
             v!!.isDynamic = templateType.alwaysDynamic
-            v.nbtPath = this.nbtPath.clone().memberIndex(v.identifier)
+            v.nbtPath = this.nbtPath.memberIndex(v.identifier)
             Pair(PropertyVar(property, v, this), accessModifier >= property.accessModifier)
         }
     }
@@ -343,12 +343,12 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag> {
     }
 
     override fun toDynamic(replace: Boolean): Var<*> {
-
         if(templateType.annotations.any{it is ConcreteOnly}){
-            LogProcessor.error("Cannot convert to dynamic because of ${templateType.namespaceID} is @ConcreteOnly")
+            LogProcessor.error(
+                "Cannot convert to dynamic because of ${templateType.namespaceID} is modified by @ConcreteOnly"
+            )
             return this
         }
-
         val parent = this.parent
 
         if(parent != null){

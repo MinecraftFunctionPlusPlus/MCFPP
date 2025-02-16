@@ -50,7 +50,7 @@ class NativeMutator: AbstractMutator {
     }
 }
 
-class AnonymousNativeMutator(val native: (CanSelectMember ,Var<*>)->Var<*>): AbstractMutator(){
+class AnonymousNativeMutator(val native: (CanSelectMember, Var<*>)->Var<*>): AbstractMutator(){
     override fun setter(caller: CanSelectMember, field: Var<*>, b: Var<*>): Var<*> {
         return native(caller, b)
     }

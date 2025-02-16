@@ -39,6 +39,7 @@ class MCFPPEntityType {
             EntityVarConcrete(IntArrayTag(intArrayOf(0, 0, 0, 0)), identifier)
         override fun build(identifier: String, clazz: Class): Var<*> =
             EntityVarConcrete(IntArrayTag(intArrayOf(0, 0, 0, 0)), identifier)
+        override fun build(value: Any): Var<*> = EntityVarConcrete(value as IntArrayTag)
         override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> =
             EntityVar(identifier)
         override fun buildUnConcrete(identifier: String): Var<*> = EntityVar(identifier)

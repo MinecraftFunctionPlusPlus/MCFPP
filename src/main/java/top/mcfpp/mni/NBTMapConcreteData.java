@@ -11,64 +11,50 @@ import top.mcfpp.util.ValueWrapper;
 
 public class NBTMapConcreteData {
 
-    @MNIFunction(caller = "dict")
+    @MNIFunction(caller = "map", genericType = "E")
     public static void clear(NBTMapConcrete caller){
         NBTDictionaryConcreteData.clear((NBTDictionaryConcrete) caller.getKeyValueSet());
         NBTListConcreteData.clear((NBTListConcrete) caller.getKeyList());
-        NBTListConcreteData.clear((NBTListConcrete) caller.getValueList());
         caller.getValue().clear();
     }
 
-    @MNIFunction(normalParams = {"string key"}, caller = "dict", returnType = "bool")
+    @MNIFunction(normalParams = {"string key"}, caller = "map", returnType = "bool", genericType = "E")
     public static void containsKey(MCString key, NBTMapConcrete caller, ValueWrapper<BaseBool> re){
         NBTListConcreteData.contains(key, (NBTListConcrete) caller.getKeyList(), re);
     }
 
-    @MNIFunction(normalParams = {""}, caller = "dict")
-    public static void containsValue(Var<?> element, NBTMapConcrete caller, ValueWrapper<BaseBool> re){
-        NBTListConcreteData.contains(element.toNBTVar(), (NBTListConcrete) caller.getValueList(), re);
-    }
-
-    @MNIFunction(caller = "dict", returnType = "bool")
+    @MNIFunction(caller = "map", returnType = "bool", genericType = "E")
     public static void isEmpty(NBTMapConcrete caller, ValueWrapper<ScoreBool> re){
         re.setValue(new ScoreBoolConcrete(((NBTListConcrete) (caller.getKeyList())).getValue().isEmpty(), "return"));
     }
 
-    @MNIFunction(caller = "dict", returnType = "list")
-    public static void getKeys(NBTMapConcrete caller, ValueWrapper<NBTListConcrete> re){
-        re.setValue((NBTListConcrete) caller.getKeyList());
-    }
-
-    @MNIFunction(caller = "dict", returnType = "list")
-    public static void getValues(NBTMapConcrete caller, ValueWrapper<NBTListConcrete> re){
-        re.setValue((NBTListConcrete) caller.getValueList());
-    }
-
-    @MNIFunction(normalParams = {"string key"}, caller = "dict")
+    @MNIFunction(normalParams = {"string key"}, caller = "map", genericType = "E")
     public static void remove(MCString key, NBTMapConcrete caller){
         if(key instanceof MCStringConcrete keyC) {
             StringTag keyTag = keyC.getValue();
             String keyStr = keyTag.getValue();
-            caller.getValue().remove(keyStr);
             int index = caller.indexOf(keyStr);
+            if(index == -1) return;
             ((NBTListConcrete)(caller.getKeyList())).getValue().remove(index);
-            ((NBTListConcrete)(caller.getValueList())).getValue().remove(index);
+            caller.getValue().remove(keyStr);
         }else {
+            caller.toDynamic(true);
             NBTMapData.remove(key, caller);
         }
     }
 
-    @MNIFunction(normalParams = {"dict source"}, caller = "dict")
+    @MNIFunction(normalParams = {"map<E> source"}, caller = "map", genericType = "E")
     public static void merge(NBTMap source, NBTMapConcrete caller){
         if(source instanceof NBTMapConcrete sourceC){
             NBTListConcreteData.addAll(sourceC.getKeyList(),(NBTListConcrete)caller.getKeyList());
-            NBTListConcreteData.addAll(sourceC.getValueList(),(NBTListConcrete) caller.getValueList());
+            NBTDictionaryConcreteData.merge(sourceC.getKeyValueSet(), (NBTDictionaryConcrete) caller.getKeyValueSet());
         }else {
+            caller.toDynamic(true);
             NBTMapData.merge(source, caller);
         }
     }
 
-    @MNIFunction(caller = "dict", returnType = "int")
+    @MNIFunction(caller = "map", returnType = "int", genericType = "E")
     public static void size(NBTMapConcrete caller, ValueWrapper<MCInt> re){
         re.setValue(new MCIntConcrete(((NBTListConcrete)(caller.getKeyList())).getValue().size(), "return"));
     }

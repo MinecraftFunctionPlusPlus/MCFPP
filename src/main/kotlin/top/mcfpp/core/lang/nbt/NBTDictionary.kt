@@ -228,7 +228,7 @@ class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<HashMap<String, Var<*>>>
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
         if(value.isEmpty()) return NBTDictionary(this)
-        Function.addCommands(Commands.method2(this, Commands.dataMergeValue(nbtPath, getConcretePart())))
+        Function.addCommands(Commands.method2(this, Commands.dataSetValue(nbtPath, getConcretePart())))
         val re = NBTDictionary(this)
         if(replace){
             if(parentTemplate() != null) {
@@ -245,7 +245,15 @@ class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<HashMap<String, Var<*>>>
             is MCFPPDictType -> {
                 if (type.generic == (this.type as MCFPPDictType).generic) {
                     this
-                } else {
+                }else {
+                    buildCastErrorVar(type)
+                }
+            }
+
+            is MCFPPMapType -> {
+                if(type.generic == (this.type as MCFPPDictType).generic){
+                    NBTMapConcrete(value, genericType = type.generic).setAs(this)
+                }else{
                     buildCastErrorVar(type)
                 }
             }
@@ -258,7 +266,7 @@ class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<HashMap<String, Var<*>>>
                 }
             }
 
-            MCFPPBaseType.Any -> MCAnyConcrete(this)
+            MCFPPBaseType.Any -> (MCAnyConcrete(value).setAs(this) as MCAnyConcrete).apply { inferredType = this@NBTDictionaryConcrete.type }
             else -> buildCastErrorVar(type)
         }
     }
@@ -308,13 +316,13 @@ class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<HashMap<String, Var<*>>>
                 if(!value.containsKey(index.value.value)){
                     val re = (type as MCFPPDictType).generic.build(index.value.value)
                     re.parent = this
-                    re.nbtPath = nbtPath.clone().memberIndex(index.value.value)
+                    re.nbtPath = nbtPath.memberIndex(index.value.value)
                     PropertyVar(Property.buildSimpleSetter(index.value.value), re, this)
                 }else{
                     val re = value[index.value.value]!!
                     re.identifier = index.value.value
                     re.parent = this
-                    re.nbtPath = nbtPath.clone().memberIndex(index.value.value)
+                    re.nbtPath = nbtPath.memberIndex(index.value.value)
                     PropertyVar(Property.buildSimpleProperty(re), re, this)
                 }
             }else {
@@ -334,6 +342,10 @@ class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<HashMap<String, Var<*>>>
 
     fun isAllConcrete(): Boolean {
         return value.values.all { it is MCFPPValue<*> }
+    }
+
+    fun getNotConcretePart(): Map<String, Var<*>> {
+        return value.filter { it.value !is MCFPPValue<*> || it.value is NBTListConcrete && !(it.value as NBTListConcrete).isAllConcrete() }
     }
 
     fun getConcretePart(): CompoundTag {

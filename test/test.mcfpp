@@ -1,18 +1,18 @@
 namespace test;
 
 func main(){
-    dict<any> qwq = {
+    dynamic map<any> qwq = {
         a:1,
         b:"test",
         c:[1,2,3]
     };
     print(qwq);
-    print(qwq["a"]);
+    print((nbt)qwq["a"]);
     qwq["d"] = {a:"b"};
     print(qwq);
     print(qwq.containsKey("a"));
     print(qwq.containsKey("x"));
-    dict<any> pwp = {
+    map<any> pwp = {
         e: 1,
         f: 2,
         g: 3
