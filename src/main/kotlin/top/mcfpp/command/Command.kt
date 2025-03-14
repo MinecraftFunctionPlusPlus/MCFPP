@@ -196,11 +196,12 @@ open class Command: Serializable {
      *
      * @return 构建后的命令
      */
-    fun build(command: String, withBlank: Boolean = true) : Command{
+    fun build(command: String, withBlank: Boolean) : Command{
         if(withBlank && commandParts.isNotEmpty()) commandParts.add(CommandPart(" "))
         commandParts.add(CommandPart(command))
         return this
     }
+    fun build(command: String): Command = build(command,true)
 
     /**
      * 在这条命令的末尾继续构建命令
@@ -208,7 +209,7 @@ open class Command: Serializable {
      * @param command 可被替换的命令字符串
      * @return 构建后的命令
      */
-    fun build(command: Command, withBlank: Boolean = true): Command{
+    fun build(command: Command, withBlank: Boolean): Command{
         if(withBlank && commandParts.isNotEmpty()) commandParts.add(CommandPart(" "))
         for (kv in command.replacePoint){
             replacePoint[kv.key] = kv.value + commandParts.size
@@ -216,6 +217,7 @@ open class Command: Serializable {
         commandParts.addAll(command.commandParts)
         return this
     }
+    fun build(command: Command): Command = build(command,true)
 
     /**
      * 在这条命令的末尾继续构建命令
@@ -224,23 +226,25 @@ open class Command: Serializable {
      * @param pointID 命令字符串的位点ID
      * @return 构建后的命令
      */
-    fun build(command: String, pointID: String, withBlank: Boolean = true) : Command{
+    fun build(command: String, pointID: String, withBlank: Boolean) : Command{
         if(withBlank && commandParts.isNotEmpty()) commandParts.add(CommandPart(" "))
         replacePoint[pointID] = commandParts.size
         commandParts.add(CommandPart(command))
         return this
     }
+    fun build(command: String, pointID: String): Command = build(command,pointID,true)
 
     /**
      * 在这条命令的末尾构建一个宏参数。得到的命令需要使用[buildMacroFunction]方法进行转换才能使用。
      *
      * 插入的命令片段的值为空字符串，替换位点的id为宏参数
      */
-    fun buildMacro(v: Var<*>, withBlank: Boolean = true): Command {
+    fun buildMacro(v: Var<*>, withBlank: Boolean): Command {
         if(withBlank && commandParts.isNotEmpty()) commandParts.add(CommandPart(" "))
         commandParts.add(MacroPart(v))
         return this
     }
+    fun buildMacro(v: Var<*>) : Command = buildMacro(v,true)
 
     /**
      * 将此命令以宏命令的方式调用。自动确定宏参数的路径。

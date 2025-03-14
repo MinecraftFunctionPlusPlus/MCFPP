@@ -46,4 +46,9 @@ public @interface MNIFunction {
      */
     String[] genericType() default {};
 
+    /**
+     * 额外的标记信息
+     */
+    String[] tag() default {};
+
 }

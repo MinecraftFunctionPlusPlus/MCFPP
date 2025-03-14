@@ -1,45 +1,47 @@
-package top.mcfpp.core.lang
+package top.mcfpp.core.lang.entity
 
-import net.querz.nbt.io.SNBTUtil
-import net.querz.nbt.tag.Tag
+import net.querz.nbt.tag.StringTag
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
+import top.mcfpp.core.lang.DataTemplateObject
+import top.mcfpp.core.lang.MCFPPValue
+import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
-import top.mcfpp.mni.minecraft.EntityVarData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
-import top.mcfpp.type.MCFPPEntityType.Entity
+import top.mcfpp.type.MCFPPEntityType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 
+open class SpecifiedEntityVar: NBTBasedData, AbstractEntity {
 
-/**
- * 代表了一个实体。一个实体类型的变量通常是一个UUID数组，可以通过Thrower法来选择实体，从而实现对实体的操作。
- *
- */
-open class EntityVar : NBTBasedData, EntityBase{
+    var isName: Boolean = false
 
-    override var type: MCFPPType = Entity
+    override var type: MCFPPType = MCFPPEntityType.SpecifiedEntity
 
-    var isName = false
-
+    /**
+     * 创建一个string值。它的标识符和mc名相同。
+     * @param identifier identifier
+     */
     constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier)
 
-    constructor(b: EntityVar) : super(b)
-
-    override fun isPlayer(): Boolean {
-        return isName
+    /**
+     * 复制一个string
+     * @param b 被复制的string值
+     */
+    constructor(b: SpecifiedEntityVar) : super(b){
+        isName = b.isName
     }
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        return Pair(data.getVar(key), false)
+        TODO("Not yet implemented")
     }
 
     override fun getMemberFunction(
@@ -48,40 +50,31 @@ open class EntityVar : NBTBasedData, EntityBase{
         normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        return data.getFunction(key, readOnlyArgs, normalArgs) to true
+        TODO("Not yet implemented")
     }
 
-    override fun doAssignedBy(b: Var<*>): EntityVar {
+    override fun doAssignedBy(b: Var<*>): SpecifiedEntityVar {
         when (b) {
-            is EntityVar -> {
-                assignCommand(b)
-                isName = b.isName
-            }
-
-            is MCStringConcrete -> {
-                assignCommand(b)
-                isName = true
-            }
-
-            else -> {
-                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
-            }
+            is SpecifiedEntityVar -> return assignCommand(b)
+            else -> LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
         }
         return this
     }
 
     override fun canAssignedBy(b: Var<*>): Boolean {
         if(!b.implicitCast(type).isError) return true
-        if(b is MCStringConcrete) return true
+        if(b is NBTBasedDataConcrete){
+            return b.nbtType == NBTBasedData.Companion.NBTTypeWithTag.STRING
+        }
         return false
     }
 
     @InsertCommand
-    override fun assignCommand(a: NBTBasedData) : EntityVar{
+    override fun assignCommand(a: NBTBasedData) : SpecifiedEntityVar {
         nbtType = a.nbtType
         return assignCommandLambda(a,
             ifThisIsClassMemberAndAIsConcrete = {b, final ->
-                b as NBTBasedDataConcrete
+                b as SpecifiedEntityConcreteVar
                 //对类中的成员的值进行修改
                 if(final.size == 2){
                     Function.addCommand(final[0])
@@ -92,7 +85,7 @@ open class EntityVar : NBTBasedData, EntityBase{
                 }else{
                     Function.addCommand(final.last())
                 }
-                EntityVar(this)
+                SpecifiedEntityVar(this)
             },
             ifThisIsClassMemberAndAIsNotConcrete = {b, final ->
                 //对类中的成员的值进行修改
@@ -105,10 +98,10 @@ open class EntityVar : NBTBasedData, EntityBase{
                 }else{
                     Function.addCommand(final.last())
                 }
-                EntityVar(this)
+                SpecifiedEntityVar(this)
             },
             ifThisIsNormalVarAndAIsConcrete = {b, _ ->
-                EntityVarConcrete(this, (b as NBTBasedDataConcrete).value)
+                SpecifiedEntityConcreteVar(this, (b as MCStringConcrete).value)
             },
             ifThisIsNormalVarAndAIsClassMember = {b, final ->
                 if(final.size == 2){
@@ -120,68 +113,77 @@ open class EntityVar : NBTBasedData, EntityBase{
                 }else{
                     Function.addCommand(final.last())
                 }
-                EntityVar(this)
+                SpecifiedEntityVar(this)
             },
             ifThisIsNormalVarAndAIsNotConcrete = {b, _ ->
                 Function.addCommand(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                EntityVar(this)
-            }
-        ) as EntityVar
+                NBTBasedData(this)
+            }) as SpecifiedEntityVar
+    }
+
+    override fun getTempVar(): SpecifiedEntityVar {
+        val temp = SpecifiedEntityVar()
+        temp.isTemp = true
+        return temp.assignCommand(this)
+    }
+
+    override fun toCommandPart(): Command {
+        return Command().buildMacro(this)
     }
 
     companion object {
-        val data by lazy {
-            CompoundData("entity","mcfpp").apply {
-                getNativeFromClass(EntityVarData::class.java)
-            }
-        }
-    }
+        val data = CompoundData("entity","mcfpp")
 
+        val uuidRegex = Regex("^[a-fA-F0-9]{8}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{4}-[a-fA-F0-9]{12}\$")
+
+    }
 }
 
-class EntityVarConcrete: EntityVar, MCFPPValue<Tag<*>> {
+class SpecifiedEntityConcreteVar: SpecifiedEntityVar, MCFPPValue<StringTag> {
 
-    override var value: Tag<*>
+    override var value: StringTag
 
-    constructor(value: Tag<*>, identifier: String = TempPool.getVarIdentify()) : super(identifier){
+    /**
+     * 创建一个固定的string。它的标识符和mc名一致/
+     * @param identifier 标识符。如不指定，则为随机uuid
+     * @param value 值
+     */
+    constructor(value: StringTag, identifier: String = TempPool.getVarIdentify()) : super(identifier) {
         this.value = value
     }
 
-    constructor(b: EntityVar, value: Tag<*>) : super(b){
+    constructor(v: SpecifiedEntityVar, value: StringTag): super(v){
         this.value = value
     }
 
-    constructor(b: EntityVarConcrete): super(b){
-        this.value = b.value
+    constructor(v: SpecifiedEntityConcreteVar) : super(v){
+        this.value = v.value
     }
 
-    override fun clone(): EntityVar {
-        return EntityVarConcrete(this)
+    override fun clone(): SpecifiedEntityConcreteVar {
+        return SpecifiedEntityConcreteVar(this)
     }
 
     override fun toDynamic(replace: Boolean): Var<*> {
-        val parent = parent
-        if (parentClass() != null) {
-            val cmd = Commands.selectRun(parent!!, "data modify entity @s data.${identifier} set value ${SNBTUtil.toSNBT(value)}")
-            Function.addCommands(cmd)
-        } else {
-            val cmd = Command.build("data modify")
-                .build(nbtPath.toCommandPart())
-                .build("set value ${SNBTUtil.toSNBT(value)}")
-            Function.addCommand(cmd)
-        }
-        val re = EntityVar(this)
+        NBTBasedDataConcrete(this, value)
+        val re = SpecifiedEntityVar(this)
         if(replace){
             if(parentTemplate() != null){
                 (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
-            }else{
+            }else {
                 Function.currFunction.field.putVar(identifier, re, true)
             }
         }
         return re
     }
 
-    override fun toString(): String {
-        return "[$type,value=${SNBTUtil.toSNBT(value)}]"
+    override fun getTempVar(): SpecifiedEntityVar {
+        return SpecifiedEntityConcreteVar(value).apply {
+            isTemp = true
+        }
+    }
+
+    override fun toCommandPart(): Command {
+        return Command(value.value)
     }
 }

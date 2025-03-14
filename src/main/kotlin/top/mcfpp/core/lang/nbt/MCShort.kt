@@ -170,7 +170,7 @@ class MCShortConcrete: MCShort, MCFPPValue<Short> {
         }
     }
 
-    override fun multiple(a: Var<*>): Var<*>? {
+    override fun times(a: Var<*>): Var<*>? {
         //t = t * a
         when(a){
             is MCShortConcrete -> {
@@ -178,13 +178,13 @@ class MCShortConcrete: MCShort, MCFPPValue<Short> {
                 return this
             }
             is MCShort -> {
-                return a.multiple(this)
+                return a.times(this)
             }
             else -> return this
         }
     }
 
-    override fun divide(a: Var<*>): Var<*>? {
+    override fun div(a: Var<*>): Var<*>? {
         //t = t / a
         when(a){
             is MCShortConcrete -> {
@@ -192,13 +192,13 @@ class MCShortConcrete: MCShort, MCFPPValue<Short> {
                 return this
             }
             is MCShort -> {
-                return a.divide(this)
+                return a.div(this)
             }
             else -> return this
         }
     }
 
-    override fun modular(a: Var<*>): Var<*>? {
+    override fun rem(a: Var<*>): Var<*>? {
         //t = t % a
         when(a){
             is MCShortConcrete -> {
@@ -206,7 +206,7 @@ class MCShortConcrete: MCShort, MCFPPValue<Short> {
                 return this
             }
             is MCShort -> {
-                return a.modular(this)
+                return a.rem(this)
             }
             else -> return this
         }

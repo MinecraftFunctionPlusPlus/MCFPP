@@ -10,53 +10,40 @@ import top.mcfpp.core.lang.bool.ScoreBool;
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete;
 import top.mcfpp.core.lang.nbt.MCString;
 import top.mcfpp.core.lang.nbt.MCStringConcrete;
-import top.mcfpp.core.minecraft.PlayerVar;
+import top.mcfpp.core.lang.entity.PlayerVar;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.util.FunctionUtil;
 import top.mcfpp.util.ValueWrapper;
 
 import java.util.Objects;
 
+@SuppressWarnings("DataFlowIssue")
 public class BossBarData {
 
     @MNIFunction(caller = "BossBar", returnType = "CommandReturn")
     public static void add(DataTemplateObject bossbar, ValueWrapper<CommandReturn> returnValue){
-        var id = Objects.requireNonNull(bossbar.getMemberVarWithT("id", MCString.class));
-        var name = Objects.requireNonNull(bossbar.getMemberVarWithT("name", JsonText.class));
         var command = new Command("bossbar add");
+        var id = bossbar.getMemberVarWithT("id", MCString.class);
         if(id instanceof MCStringConcrete idC){
             command.build(idC.getValue().getValue(), true);
         }else {
             command.buildMacro(id, true);
         }
+        var name = bossbar.getMemberVarWithT("name", JsonText.class);
         command.build(name.toCommandPart(), true);
-        if(command.isMacro()){
-            var marcoCall = command.buildMacroFunction();
-            returnValue.setValue(new CommandReturn(marcoCall[marcoCall.length - 1],"bossbar_add"));
-            Function.Companion.addCommands(marcoCall);
-        }else {
-            returnValue.setValue(new CommandReturn(command,"bossbar_add"));
-            Function.Companion.addCommand(command);
-        }
+        Commands.INSTANCE.method3(returnValue, command);
     }
 
     @MNIFunction(caller = "BossBar", returnType = "CommandReturn")
     public static void remove(DataTemplateObject bossbar, ValueWrapper<CommandReturn> returnValue){
-        var id = Objects.requireNonNull(bossbar.getMemberVarWithT("id", MCString.class));
         var command = new Command("bossbar remove");
+        var id = bossbar.getMemberVarWithT("id", MCString.class);
         if(id instanceof MCStringConcrete idC){
             command.build(idC.getValue().getValue(), true);
         }else {
             command.buildMacro(id, true);
         }
-        if(command.isMacro()){
-            var marcoCall = command.buildMacroFunction();
-            returnValue.setValue(new CommandReturn(marcoCall[marcoCall.length - 1],"bossbar_remove"));
-            Function.Companion.addCommands(marcoCall);
-        }else {
-            returnValue.setValue(new CommandReturn(command,"bossbar_remove"));
-            Function.Companion.addCommand(command);
-        }
+        Commands.INSTANCE.method3(returnValue, command);
     }
 
     @MNIFunction(caller = "BossBar", isObject = true, returnType = "CommandReturn")
@@ -68,7 +55,7 @@ public class BossBarData {
 
     @MNIAccessor(name = "max")
     public static void getMax(DataTemplateObject bossbar, ValueWrapper<MCInt> returnValue){
-        var id = Objects.requireNonNull(bossbar.getMemberVarWithT("id", MCString.class));
+        var id = bossbar.getMemberVarWithT("id", MCString.class);
         var command = new Command("execute store result score")
                 .build(returnValue.getValue().nbtPath.toCommandPart(), true)
                 .build("run bossbar get", true);
@@ -119,7 +106,7 @@ public class BossBarData {
 
     @MNIAccessor(name = "value")
     public static void getValue(DataTemplateObject bossbar, ValueWrapper<MCInt> returnValue){
-        var id = Objects.requireNonNull(bossbar.getMemberVarWithT("id", MCString.class));
+        var id = bossbar.getMemberVarWithT("id", MCString.class);
         var command = new Command("execute store result score")
                 .build(returnValue.getValue().nbtPath.toCommandPart(), true)
                 .build("run bossbar get", true);
@@ -139,7 +126,7 @@ public class BossBarData {
 
     @MNIMutator(name = "value")
     public static void setValue(DataTemplateObject bossbar, MCInt value){
-        var id = Objects.requireNonNull(bossbar.getMemberVarWithT("id", MCString.class));
+        var id = bossbar.getMemberVarWithT("id", MCString.class);
         Command command;
         if(value instanceof MCIntConcrete valueC){
             command = new Command("bossbar set");
@@ -170,7 +157,7 @@ public class BossBarData {
 
     @MNIAccessor(name = "visible")
     public static void getVisible(DataTemplateObject bossbar, ValueWrapper<ScoreBool> returnValue){
-        var id = Objects.requireNonNull(bossbar.getMemberVarWithT("id", MCString.class));
+        var id = bossbar.getMemberVarWithT("id", MCString.class);
         var command = new Command("execute store result score")
                 .build(returnValue.getValue().nbtPath.toCommandPart(), true)
                 .build("run bossbar get", true);
@@ -190,7 +177,7 @@ public class BossBarData {
 
     @MNIMutator(name = "visible")
     public static void setVisible(DataTemplateObject bossbar, ScoreBool value){
-        var id = Objects.requireNonNull(bossbar.getMemberVarWithT("id", MCString.class));
+        var id = bossbar.getMemberVarWithT("id", MCString.class);
         Command command;
         if(value instanceof ScoreBoolConcrete valueC){
             command = new Command("bossbar set");
@@ -238,8 +225,8 @@ public class BossBarData {
 
     @MNIFunction(normalParams = "BossBarColor color", caller = "BossBar", returnType = "CommandReturn")
     public static void setColor(EnumVar color, DataTemplateObject caller, ValueWrapper<CommandReturn> re){
-        var id = Objects.requireNonNull(caller.getMemberVarWithT("id", MCString.class));
-        Command command = new Command("bossbar set");;
+        var id = caller.getMemberVarWithT("id", MCString.class);
+        Command command = new Command("bossbar set");
         if(id instanceof MCStringConcrete idC){
             command.build(idC.getValue().getValue(), true);
         }else {
@@ -264,7 +251,7 @@ public class BossBarData {
 
     @MNIFunction(normalParams = "text name", caller = "BossBar", returnType = "CommandReturn")
     public static void setName(JsonText name, DataTemplateObject caller, ValueWrapper<CommandReturn> re){
-        var id = Objects.requireNonNull(caller.getMemberVarWithT("id", MCString.class));
+        var id = caller.getMemberVarWithT("id", MCString.class);
         Command command = new Command("bossbar set");
         if(id instanceof MCStringConcrete idC){
             command.build(idC.getValue().getValue(), true);
@@ -285,33 +272,21 @@ public class BossBarData {
 
     @MNIFunction(normalParams = "Player players", caller = "BossBar", returnType = "CommandReturn")
     public static void setVisiblePlayers(PlayerVar players, DataTemplateObject bossbar, ValueWrapper<CommandReturn> returnValue) {
-        var id = Objects.requireNonNull(bossbar.getMemberVarWithT("id", MCString.class));
+        var id = bossbar.getMemberVarWithT("id", MCString.class);
         Command command = new Command("bossbar set");
         if (id instanceof MCStringConcrete idC) {
-            command.build(idC.getValue().getValue(), true);
+            command.build(idC.getValue().getValue());
         } else {
-            command.buildMacro(id, true);
+            command.buildMacro(id);
         }
-        command.build("players", true);
-        if (players instanceof PlayerVar.PlayerEntityVarConcrete playerEntityVarConcrete) {
-            command.build((playerEntityVarConcrete.getValue()).toString(), true);
-            returnValue.setValue(new CommandReturn(command, "bossbar_set_visible_players"));
-            Function.Companion.addCommand(command);
-        } else if (players instanceof PlayerVar.PlayerEntityVar playerEntityVar) {
-            command.build("@s", true);
-            var cs = Commands.INSTANCE.runAsEntity(playerEntityVar.getEntity(), command);
-            returnValue.setValue(new CommandReturn(cs[cs.length - 1], "bossbar_set_visible_players"));
-            Function.Companion.addCommands(cs);
-        } else if (players instanceof PlayerVar.PlayerSelectorVar playerSelectorVar) {
-            command.build(playerSelectorVar.getSelector().getValue().toCommandPart(), true);
-            returnValue.setValue(new CommandReturn(command, "bossbar_set_visible_players"));
-            Function.Companion.addCommand(command);
-        }
+        command.build("players");
+        command.build(players.toCommandPart());
+        Commands.INSTANCE.method3(returnValue, command);
     }
 
     @MNIFunction(normalParams = "BossBarStyle style", caller = "BossBar", returnType = "CommandReturn")
     public static void setStyle(EnumVar style, DataTemplateObject caller, ValueWrapper<CommandReturn> re){
-        var id = Objects.requireNonNull(caller.getMemberVarWithT("id", MCString.class));
+        var id = caller.getMemberVarWithT("id", MCString.class);
         Command command = new Command("bossbar set");
         if(id instanceof MCStringConcrete idC){
             command.build(idC.getValue().getValue(), true);

@@ -6,6 +6,7 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.bool.BaseBool
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
+import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
@@ -225,6 +226,9 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             LogProcessor.warn(TextTranslator.REDUNDANT_CAST_WARN.translate(this.type.typeName, type.typeName))
             return this
         }
+        if(this.type.isSubOf(type)){
+            return this
+        }
         return when(type){
             MCFPPBaseType.Any -> {
                 if(this is MCFPPValue<*>){
@@ -251,6 +255,9 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
      */
     open fun implicitCast(type: MCFPPType): Var<*> {
         if(type == this.type){
+            return this
+        }
+        if(this.type.isSubOf(type)){
             return this
         }
         return when(type){
@@ -348,9 +355,9 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         val re = when(operation){
             "+" -> plus(qwq)
             "-" -> minus(qwq)
-            "*" -> multiple(qwq)
-            "/" -> divide(qwq)
-            "%" -> modular(qwq)
+            "*" -> times(qwq)
+            "/" -> div(qwq)
+            "%" -> rem(qwq)
             ">" -> isBigger(qwq)
             "<" -> isSmaller(qwq)
             ">=" -> isBiggerOrEqual(qwq)
@@ -408,21 +415,21 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
      * @param a 乘数
      * @return 计算的结果
      */
-    open fun multiple(a: Var<*>): Var<*>? = null
+    open fun times(a: Var<*>): Var<*>? = null
 
     /**
      * 除法
      * @param a 除数
      * @return 计算的结果
      */
-    open fun divide(a: Var<*>): Var<*>? = null
+    open fun div(a: Var<*>): Var<*>? = null
 
     /**
      * 取余
      * @param a 除数
      * @return 计算的结果
      */
-    open fun modular(a: Var<*>): Var<*>? = null
+    open fun rem(a: Var<*>): Var<*>? = null
 
     /**
      * 这个数是否大于a
@@ -561,6 +568,14 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         }.apply {
             isConst = true
             hasAssigned = true
+        }
+    }
+
+    open fun toCommandPart(): Command{
+        return if(this is MCFPPValue<*>){
+            Command(value.toString())
+        }else{
+            Command().buildMacro(this)
         }
     }
 

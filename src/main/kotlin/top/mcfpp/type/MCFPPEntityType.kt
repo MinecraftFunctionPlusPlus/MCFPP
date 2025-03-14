@@ -1,11 +1,10 @@
 package top.mcfpp.type
 
-import net.querz.nbt.tag.IntArrayTag
-import net.querz.nbt.tag.Tag
-import top.mcfpp.core.lang.EntityVar
-import top.mcfpp.core.lang.EntityVarConcrete
-import top.mcfpp.core.lang.SelectorVar
+import net.querz.nbt.tag.StringTag
 import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.entity.SelectorVar
+import top.mcfpp.core.lang.entity.SpecifiedEntityConcreteVar
+import top.mcfpp.core.lang.entity.SpecifiedEntityVar
 import top.mcfpp.lib.EntitySelector
 import top.mcfpp.model.Class
 import top.mcfpp.model.CompoundData
@@ -15,69 +14,92 @@ class MCFPPEntityType {
 
     object EntityBase: MCFPPType(arrayListOf(MCFPPBaseType.Any)){
 
-            override val objectData: CompoundData
-                get() = EntityVar.data
+        override val objectData: CompoundData
+            get() = TODO()
 
-            override val typeName: String
-                get() = "entitybase"
+        override val typeName: String
+            get() = "entity"
     }
 
-    object Entity: MCFPPType(arrayListOf(EntityBase)){
-
+    object SpecifiedEntity: MCFPPType(arrayListOf(EntityBase)) {
         override val objectData: CompoundData
-            get() = EntityVar.data
+            get() = SpecifiedEntityVar.data
 
         override val typeName: String
             get() = "entity"
 
-        override val nbtType: java.lang.Class<out Tag<*>>
-            get() = IntArrayTag::class.java
-
-        override fun build(identifier: String, container: FieldContainer): Var<*> =
-            EntityVarConcrete(IntArrayTag(intArrayOf(0, 0, 0, 0)), identifier)
-        override fun build(identifier: String): Var<*> =
-            EntityVarConcrete(IntArrayTag(intArrayOf(0, 0, 0, 0)), identifier)
-        override fun build(identifier: String, clazz: Class): Var<*> =
-            EntityVarConcrete(IntArrayTag(intArrayOf(0, 0, 0, 0)), identifier)
-        override fun build(value: Any): Var<*> = EntityVarConcrete(value as IntArrayTag)
-        override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> =
-            EntityVar(identifier)
-        override fun buildUnConcrete(identifier: String): Var<*> = EntityVar(identifier)
-        override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = EntityVar(identifier)
+        override fun build(value: Any): Var<*> = SpecifiedEntityConcreteVar(value as StringTag)
+        override fun build(identifier: String, container: FieldContainer): Var<*> = SpecifiedEntityConcreteVar(StringTag(), identifier)
+        override fun build(identifier: String): Var<*> = SpecifiedEntityConcreteVar(StringTag(), identifier)
+        override fun build(identifier: String, clazz: Class): Var<*> = SpecifiedEntityConcreteVar(StringTag(), identifier)
+        override fun buildUnConcrete(identifier: String): Var<*> = SpecifiedEntityVar(identifier)
+        override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = SpecifiedEntityVar(identifier)
+        override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = SpecifiedEntityVar(identifier)
     }
 
-    object Selector: MCFPPConcreteType(arrayListOf(EntityBase)){
+    class Selector(val limit: Int? = null, val types: List<String>? = null) : MCFPPConcreteType(arrayListOf(EntityBase)) {
 
         override val objectData: CompoundData
             get() = SelectorVar.data
 
         override val typeName: String
-            get() = "selector"
+            get() {
+                if(limit == null && types == null) return "entity"
+                if(limit == null) return "entity[${types!!.joinToString(",")}]"
+                if(types == null) return "entity[$limit]"
+                return "entity[${limit},${types.joinToString(",")}]"
+            }
 
-        override fun build(identifier: String, container: FieldContainer): Var<*>
-            = SelectorVar(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES), identifier)
+        override fun build(identifier: String, container: FieldContainer): Var<*> {
+            return build(identifier)
+        }
 
-        override fun build(identifier: String): Var<*>
-            = SelectorVar(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES), identifier)
+        override fun build(identifier: String): Var<*> {
+            val qwq = EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES)
+            if(limit != null) qwq.limit(limit)
+            if(types != null){
+                for (type in types)
+                    if(type.startsWith('!')){
+                        qwq.type(type.substring(1), true)
+                    }else{
+                        qwq.type(type, false)
+                    }
+            }
+            return SelectorVar(qwq, identifier)
+        }
 
-        override fun build(identifier: String, clazz: Class): Var<*>
-            = SelectorVar(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES), identifier)
+        override fun build(identifier: String, clazz: Class): Var<*> {
+            return build(identifier)
+        }
 
-    }
+        override fun equals(other: Any?): Boolean {
+            if(other == this) return true
+            if(other !is Selector) return false
+            if(limit != other.limit) return false
+            if(types == null && other.types == null) return true
+            if(types == null) return false
+            if(other.types == null) return false
+            return types.size == other.types.size && types.zip(other.types).all { it.first == it.second }
+        }
 
-    class LimitedSelectorType(val limit: Int): MCFPPConcreteType(arrayListOf(Entity)){
+        override fun hashCode(): Int {
+            var result = super.hashCode()
+            result = 31 * result + (limit ?: 0)
+            result = 31 * result + (types?.hashCode() ?: 0)
+            return result
+        }
 
-        override val objectData: CompoundData
-            get() = SelectorVar.data
+        fun canCastTo(other: Selector): Boolean {
+            if(this == other) return true
+            if(this.limit != null && other.limit == null) return true
+            if(this.types != null && other.types == null) return true
+            if(this.types != null && other.types != null && this.types.containsAll(other.types)) return true
+            return false
+        }
 
-        override val typeName: String
-            get() = "selector[$limit]"
+        companion object {
+            val NormalSelector = Selector()
+        }
 
-        override fun build(identifier: String, container: FieldContainer): Var<*>
-            = SelectorVar(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES).limit(limit), identifier)
-        override fun build(identifier: String): Var<*>
-            = SelectorVar(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES).limit(limit), identifier)
-        override fun build(identifier: String, clazz: Class): Var<*>
-            = SelectorVar(EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES).limit(limit), identifier)
     }
 }

@@ -23,14 +23,14 @@ import top.mcfpp.model.Class
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.ObjectClass
-import top.mcfpp.model.property.FunctionAccessor
-import top.mcfpp.model.property.FunctionMutator
-import top.mcfpp.model.property.Property
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam.Companion.typeToStringList
 import top.mcfpp.model.generic.Generic
+import top.mcfpp.model.property.FunctionAccessor
+import top.mcfpp.model.property.FunctionMutator
+import top.mcfpp.model.property.Property
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPEnumType
 import top.mcfpp.type.MCFPPGenericClassType
@@ -122,9 +122,6 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Project.ctx = ctx
         //变量生成
         val fieldModifier = ctx.fieldModifier()?.text
-        if (ctx.parent is mcfppParser.ClassMemberContext) {
-            return null
-        }
         if(ctx.VAR() != null){
             //自动判断类型
             val init: Var<*> = MCFPPExprVisitor().visitExpression(ctx.expression())

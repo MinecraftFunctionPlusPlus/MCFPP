@@ -2,13 +2,16 @@ package top.mcfpp.model.function
 
 import top.mcfpp.Project
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.core.lang.*
+import top.mcfpp.core.lang.MCFPPValue
+import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Native
-import top.mcfpp.type.*
+import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPNotCompiledGenericType
+import top.mcfpp.type.MCFPPType
+import top.mcfpp.type.MCFPPTypeWithGeneric
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.ValueWrapper
-import java.lang.Void
 import java.lang.reflect.Method
 import java.util.stream.Collectors
 import java.util.stream.Stream
@@ -242,7 +245,6 @@ class NativeFunction : Function, Native {
             return method.declaringClass.name + "#" + method.name + "(" + params + ")"
         }
 
-        @Throws(Exception::class)
         fun stringToMethod(methodString: String): Method {
             val parts = methodString.split("#".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()
             val className = parts[0]
@@ -264,6 +266,7 @@ class NativeFunction : Function, Native {
 
             return clazz.getMethod(methodName, *paramTypes)
         }
+
     }
 
 }

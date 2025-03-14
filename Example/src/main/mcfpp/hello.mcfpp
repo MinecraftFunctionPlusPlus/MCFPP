@@ -1,5 +1,0 @@
-func test(){
-
-    print("qwq");
-    int i = 0;
-}

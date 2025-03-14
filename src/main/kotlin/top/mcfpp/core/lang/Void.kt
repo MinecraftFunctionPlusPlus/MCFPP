@@ -1,14 +1,15 @@
 package top.mcfpp.core.lang
 
 import net.querz.nbt.tag.StringTag
+import top.mcfpp.command.Command
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
+import top.mcfpp.model.CompoundData
+import top.mcfpp.model.Member
+import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType
-import top.mcfpp.model.CompoundData
-import top.mcfpp.model.function.Function
-import top.mcfpp.model.Member
-import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
@@ -67,5 +68,9 @@ object Void: Var<Void>("void") {
     override fun toNBTVar(): NBTBasedData {
         LogProcessor.error("Cannot convert void type variable to NBT")
         return NBTBasedDataConcrete(StringTag("void"),"unknown")
+    }
+
+    override fun toCommandPart(): Command {
+        return Command("top.mcfpp.lang.Void")
     }
 }

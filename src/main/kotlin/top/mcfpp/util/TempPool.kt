@@ -7,27 +7,38 @@ object TempPool {
     var functionCount = 0
 
     var anonymousTemplateCount = 0
-    fun getVarId(): Int {
+
+    var namespaceCount = 0
+
+    private fun nextVarId(): Int {
         return varCount++
     }
 
     fun getVarIdentify(): String {
-        return "temp_${getVarId()}"
+        return "temp_${nextVarId()}"
     }
 
-    fun getFunctionId(): Int {
+    private fun nextFunctionId(): Int {
         return functionCount++
     }
 
     fun getFunctionIdentify(prefix: String): String {
-        return "${prefix}_${getFunctionId()}"
+        return "${prefix}_${nextFunctionId()}"
     }
 
-    fun getAnonymousTemplateID(): Int {
+    private fun nextAnonymousTemplateID(): Int {
         return anonymousTemplateCount++
     }
 
     fun getAnonymousTemplateIdentify(): String {
-        return "data_${getAnonymousTemplateID()}"
+        return "data_${nextAnonymousTemplateID()}"
+    }
+
+    private fun nextNamespaceID(): Int {
+        return namespaceCount++
+    }
+
+    fun getNamespaceIdentify(): String {
+        return "namespace_${nextNamespaceID()}"
     }
 }

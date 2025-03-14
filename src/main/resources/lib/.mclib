@@ -155,7 +155,7 @@
 							},
 							{
 								"id":"setVisiblePlayers",
-								"javaMethod":"top.mcfpp.mni.minecraft.BossBarData#setVisiblePlayers(top.mcfpp.core.minecraft.PlayerVar,top.mcfpp.core.lang.DataTemplateObject,top.mcfpp.util.ValueWrapper)",
+								"javaMethod":"top.mcfpp.mni.minecraft.BossBarData#setVisiblePlayers(top.mcfpp.core.lang.entity.PlayerVar,top.mcfpp.core.lang.DataTemplateObject,top.mcfpp.util.ValueWrapper)",
 								"normalParams":[
 									{
 										"id":"players",

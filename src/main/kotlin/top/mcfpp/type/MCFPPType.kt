@@ -242,8 +242,8 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             MCFPPConcreteType.Type,
             MCFPPConcreteType.JavaVar,
 
-            MCFPPEntityType.Entity,
             MCFPPEntityType.Selector,
+            MCFPPEntityType.Selector.NormalSelector,
 
             MCFPPPrivateType.MCFPPObjectVarType,
             MCFPPPrivateType.CommandReturn
@@ -268,14 +268,14 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
 
         val baseType:Set<MCFPPType> = setOf(
             MCFPPBaseType.Void,
-            MCFPPEntityType.Entity,
+            MCFPPEntityType.Selector,
             MCFPPConcreteType.Type,
             MCFPPBaseType.Int,
             MCFPPBaseType.Bool,
             MCFPPBaseType.String,
             MCFPPBaseType.Float,
             MCFPPBaseType.Any,
-            MCFPPEntityType.Selector,
+            MCFPPEntityType.Selector.NormalSelector,
             MCFPPConcreteType.JavaVar,
             MCFPPBaseType.JsonText,
             MCFPPNBTType.NBT
@@ -300,29 +300,6 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
          */
         fun MCFPPType.registerType(){
             typeCache[this.typeName] = this
-        }
-
-        private fun parseGenericTypeString(typeStr: String, typeScope: IFieldWithType): MCFPPType? {
-            //去掉了尾括号)和]
-            val a = typeStr.split("[")
-            var type = MCFPPType()
-            for (aa in a.asReversed()){
-                //内置泛型
-                if(genericTypeCache.contains(aa)){
-                    type = genericTypeCache[aa]!!(type)
-                    continue
-                }
-                //类泛型
-                val clazz = GlobalField.getClass(null, aa)
-                if(clazz != null){
-                    if(clazz !is GenericClass){
-                        LogProcessor.error("Class $clazz is not a generic class")
-                        return null
-                    }
-                    return clazz.getType()
-                }
-            }
-            return null
         }
 
         /**
@@ -422,6 +399,16 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                     LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
                     MCFPPBaseType.Any
                 })
+            }
+            //selector类型
+            if(ctx.SELECTOR() != null){
+                val limit = ctx.nbtInt()?.text?.toInt()
+                val types = if(ctx.LineString().size == 0) {
+                    null
+                } else{
+                    ctx.LineString().map { it.text }
+                }
+                return MCFPPEntityType.Selector(limit, types)
             }
             //自定义类型
             if(ctx.className() != null){

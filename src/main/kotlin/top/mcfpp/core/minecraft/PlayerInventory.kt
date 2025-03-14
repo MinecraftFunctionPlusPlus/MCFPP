@@ -2,6 +2,7 @@ package top.mcfpp.core.minecraft
 
 import top.mcfpp.core.lang.PrivateVar
 import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.entity.PlayerVar
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function

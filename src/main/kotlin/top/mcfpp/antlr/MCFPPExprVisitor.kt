@@ -7,6 +7,7 @@ import net.querz.nbt.tag.StringTag
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.core.lang.*
+import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.nbt.*
 import top.mcfpp.lib.EntitySelector
 import top.mcfpp.lib.NBTPath

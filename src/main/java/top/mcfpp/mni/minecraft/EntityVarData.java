@@ -1,12 +1,11 @@
 package top.mcfpp.mni.minecraft;
 
-import net.querz.nbt.tag.DoubleTag;
-import net.querz.nbt.tag.StringTag;
 import org.jetbrains.annotations.NotNull;
 import top.mcfpp.annotations.MNIMember;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.*;
+import top.mcfpp.core.lang.entity.EntityVar;
 import top.mcfpp.core.lang.nbt.MCStringConcrete;
 import top.mcfpp.mni.hidden.AttributeData;
 import top.mcfpp.model.CompoundData;
@@ -15,7 +14,6 @@ import top.mcfpp.model.function.Function;
 import top.mcfpp.util.ValueWrapper;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -55,167 +53,129 @@ public class EntityVarData {
     }
 
     public static void setAttributeBase(MCFloat value, String attribute, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
-        Command[] commands;
+        Command command;
+        if(caller.isMulti()){
+            command = new Command("execute as").build(caller.toCommandPart()).build("run attribute @s " + AttributeData.attributeMap.get(attribute) + " base set");
+        }else {
+            command = new Command("attribute").build(caller.toCommandPart()).build(AttributeData.attributeMap.get(attribute) + " base set");
+        }
         if(value instanceof MCFloatConcrete valueC){
-            commands = Commands.INSTANCE.runAsEntity(caller,
-                    new Command("attribute @s " + AttributeData.attributeMap.get(attribute) + " base set " + valueC.getValue())
-            );
+            command.build(valueC.getValue().toString());
         }else {
-            commands = Commands.INSTANCE.runAsEntity(caller,
-                    new Command("attribute @s " + AttributeData.attributeMap.get(attribute) + " base set").buildMacro(value, true)
-            );
+            command.buildMacro(value);
         }
-        ArrayList<Command> commandList = new ArrayList<>(Arrays.asList(commands));
-        var last = commandList.getLast();
-        if(last.isMacro()){
-            commandList.removeLast();
-            commandList.addAll(Arrays.asList(last.buildMacroFunction()));
-            returnValue.setValue(new CommandReturn(commandList.getLast(), "return"));
-        }else {
-            returnValue.setValue(new CommandReturn(last, "return"));
-        }
-        Function.Companion.addCommands(commandList.toArray(new Command[0]));
+        Commands.INSTANCE.method3(returnValue, command);
     }
 
     public static void getAttributeBase(String attribute, EntityVar caller, MCFloat scale, @NotNull ValueWrapper<CommandReturn> returnValue){
-        var buildingCommand = new Command("attribute @s " + AttributeData.attributeMap.get(attribute) + " base get");
-        if(scale instanceof MCFloatConcrete scaleC){
-            buildingCommand = buildingCommand.build(scaleC.getValue().toString(), true);
+        Command command;
+        if(caller.isMulti()){
+            command = new Command("execute as").build(caller.toCommandPart()).build("run attribute @s " + AttributeData.attributeMap.get(attribute) + " base get");
         }else {
-            buildingCommand = buildingCommand.buildMacro(scale, true);
+            command = new Command("attribute").build(caller.toCommandPart()).build(AttributeData.attributeMap.get(attribute) + " base get");
         }
-        ArrayList<Command> commands = new ArrayList<>(Arrays.stream(Commands.INSTANCE.runAsEntity(caller, buildingCommand)).toList());
-        var last = commands.getLast();
-        if(last.isMacro()){
-            commands.removeLast();
-            commands.addAll(Arrays.stream(last.buildMacroFunction()).toList());
-            returnValue.setValue(new CommandReturn(commands.getLast(), "return"));
+        if(scale instanceof MCFloatConcrete valueC){
+            command.build(valueC.getValue().toString());
         }else {
-            returnValue.setValue(new CommandReturn(last, "return"));
+            command.buildMacro(scale);
         }
-        Function.Companion.addCommands(commands.toArray(new Command[0]));
+        Commands.INSTANCE.method3(returnValue, command);
     }
 
     public static void getAttribute(String attribute, EntityVar caller, MCFloat scale, @NotNull ValueWrapper<CommandReturn> returnValue){
-        var buildingCommand = new Command("attribute @s " + AttributeData.attributeMap.get(attribute) + " get");
-        if(scale instanceof MCFloatConcrete scaleC){
-            buildingCommand = buildingCommand.build(scaleC.getValue().toString(), true);
+        Command command;
+        if(caller.isMulti()){
+            command = new Command("execute as").build(caller.toCommandPart()).build("run attribute @s " + AttributeData.attributeMap.get(attribute) + " get");
         }else {
-            buildingCommand = buildingCommand.buildMacro(scale, true);
+            command = new Command("attribute").build(caller.toCommandPart()).build(AttributeData.attributeMap.get(attribute) + " get");
         }
-        ArrayList<Command> commands = new ArrayList<>(Arrays.stream(Commands.INSTANCE.runAsEntity(caller, buildingCommand)).toList());
-        var last = commands.getLast();
-        if(last.isMacro()){
-            commands.removeLast();
-            commands.addAll(Arrays.stream(last.buildMacroFunction()).toList());
-            returnValue.setValue(new CommandReturn(commands.getLast(), "return"));
+        if(scale instanceof MCFloatConcrete valueC){
+            command.build(valueC.getValue().toString());
         }else {
-            returnValue.setValue(new CommandReturn(last, "return"));
+            command.buildMacro(scale);
         }
-        Function.Companion.addCommands(commands.toArray(new Command[0]));
+        Commands.INSTANCE.method3(returnValue, command);
     }
 
     public static void addAttributeModifier(String attribute, EntityVar caller, DataTemplateObject modifier, ValueWrapper<CommandReturn> returnValue){
-        Command[] commands;
+        Command command;
+        if(caller.isMulti()){
+            command = new Command("execute as").build(caller.toCommandPart()).build("attribute @s");
+        }else {
+            command = new Command("attribute").build(caller.toCommandPart());
+        }
         if(modifier instanceof DataTemplateObjectConcrete modifierC) {
-            commands = Commands.INSTANCE.runAsEntity(caller,
-                    new Command("return run attribute @s " + AttributeData.attributeMap.get(attribute) + " modifier add "
-                            + modifierC.getValue().get("id", StringTag.class).getValue() + " "
-                            + modifierC.getValue().get("amount", DoubleTag.class).asDouble() + " "
-                            + modifierC.getValue().get("operation", StringTag.class).getValue())
+            command.build(AttributeData.attributeMap.get(attribute) + " modifier add "
+                    + modifierC.getTagStr("id") + " "
+                    + modifierC.getTagStr("amount") + " "
+                    + modifierC.getTagStr("operation")
             );
         } else {
-            var buildingCommand = new Command("return run attribute @s " + AttributeData.attributeMap.get(attribute) + " modifier add");
+            command.build(AttributeData.attributeMap.get(attribute) + " modifier add");
             var id = modifier.getMemberVar("id", Member.AccessModifier.PUBLIC).getFirst();
             if(id instanceof MCStringConcrete idC){
-                buildingCommand = buildingCommand.build(idC.getValue().getValue(), true);
+                command = command.build(idC.getValue().getValue());
             }else {
-                buildingCommand = buildingCommand.buildMacro(id, true);
+                command = command.buildMacro(id);
             }
             var value = modifier.getMemberVar("amount", Member.AccessModifier.PUBLIC).getFirst();
             if(value instanceof MCFloatConcrete valueC){
-                buildingCommand = buildingCommand.build(valueC.getValue().toString(), true);
+                command = command.build(valueC.getValue().toString());
             }else {
-                buildingCommand = buildingCommand.buildMacro(value, true);
+                command = command.buildMacro(value);
             }
             var operation = modifier.getMemberVar("operation", Member.AccessModifier.PUBLIC).getFirst();
             if(operation instanceof MCStringConcrete operationC){
-                buildingCommand = buildingCommand.build(operationC.getValue().getValue(), true);
+                command = command.build(operationC.getValue().getValue());
             }else {
-                buildingCommand = buildingCommand.buildMacro(operation, true);
+                command = command.buildMacro(operation);
             }
-            ArrayList<Command> commandArrayList = new ArrayList<>(Arrays.stream(Commands.INSTANCE.runAsEntity(caller, buildingCommand)).toList());
-            var last = commandArrayList.getLast();
-            if(last.isMacro()){
-                commandArrayList.removeLast();
-                commandArrayList.addAll(Arrays.stream(last.buildMacroFunction()).toList());
-                returnValue.setValue(new CommandReturn(commandArrayList.getLast(), "return"));
-            }else {
-                returnValue.setValue(new CommandReturn(last, "return"));
-            }
-            commands = commandArrayList.toArray(new Command[0]);
         }
-        returnValue.setValue(new CommandReturn(commands[commands.length - 1], "return"));
-        Function.Companion.addCommands(commands);
+        Commands.INSTANCE.method3(returnValue, command);
     }
 
     public static void removeAttributeModifier(String attribute, EntityVar caller, DataTemplateObject modifier, ValueWrapper<CommandReturn> returnValue){
-        Command[] commands;
+        Command command;
+        if(caller.isMulti()){
+            command = new Command("execute as").build(caller.toCommandPart()).build("attribute @s " + AttributeData.attributeMap.get(attribute) + " modifier remove");
+        }else {
+            command = new Command("attribute").build(caller.toCommandPart()).build(AttributeData.attributeMap.get(attribute) + " modifier remove");
+        }
         if(modifier instanceof DataTemplateObjectConcrete modifierC) {
-            commands = Commands.INSTANCE.runAsEntity(caller,
-                    new Command("attribute @s " + AttributeData.attributeMap.get(attribute) + " modifier remove "
-                            + modifierC.getValue().get("id", StringTag.class).getValue())
-            );
+            command.build(modifierC.getTagStr("id"));
         } else {
-            var buildingCommand = new Command("return run attribute @s " + AttributeData.attributeMap.get(attribute) + " modifier remove");
             var id = modifier.getMemberVar("id", Member.AccessModifier.PUBLIC).getFirst();
             if(id instanceof MCStringConcrete idC){
-                buildingCommand = buildingCommand.build(idC.getValue().getValue(), true);
+                command = command.build(idC.getValue().getValue());
             }else {
-                buildingCommand = buildingCommand.buildMacro(id, true);
+                command = command.buildMacro(id);
             }
-            ArrayList<Command> commandArrayList = new ArrayList<>(Arrays.stream(Commands.INSTANCE.runAsEntity(caller, buildingCommand)).toList());
-            var last = commandArrayList.getLast();
-            if(last.isMacro()){
-                commandArrayList.removeLast();
-                commandArrayList.addAll(Arrays.stream(last.buildMacroFunction()).toList());
-                returnValue.setValue(new CommandReturn(commandArrayList.getLast(), "return"));
-            }else {
-                returnValue.setValue(new CommandReturn(last, "return"));
-            }
-            commands = commandArrayList.toArray(new Command[0]);
         }
-        returnValue.setValue(new CommandReturn(commands[commands.length - 1], "return"));
-        Function.Companion.addCommands(commands);
+        Commands.INSTANCE.method3(returnValue, command);
     }
 
     public static void getAttributeModifier(String attribute, EntityVar caller, DataTemplateObject modifier, MCFloat scale, ValueWrapper<CommandReturn> returnValue){
-        var buildingCommand = new Command("attribute @s " + AttributeData.attributeMap.get(attribute) + " modifier value get");
-        var id = modifier.getMemberVar("id", Member.AccessModifier.PUBLIC).getFirst();
-
-        if(id instanceof MCStringConcrete idC){
-            buildingCommand = buildingCommand.build(idC.getValue().getValue(), true);
+        Command command;
+        if(caller.isMulti()){
+            command = new Command("execute as").build(caller.toCommandPart()).build("attribute @s " + AttributeData.attributeMap.get(attribute) + " modifier value get");
         }else {
-            buildingCommand = buildingCommand.buildMacro(id, true);
+            command = new Command("attribute").build(caller.toCommandPart()).build(AttributeData.attributeMap.get(attribute) + " modifier value get");
+        }
+
+        var id = modifier.getMemberVar("id", Member.AccessModifier.PUBLIC).getFirst();
+        if(id instanceof MCStringConcrete idC){
+            command = command.build(idC.getValue().getValue(), true);
+        }else {
+            command = command.buildMacro(id, true);
         }
 
         if(scale instanceof MCFloatConcrete scaleC){
-            buildingCommand = buildingCommand.build(scaleC.getValue().toString(), true);
+            command = command.build(scaleC.getValue().toString(), true);
         }else {
-            buildingCommand = buildingCommand.buildMacro(scale, true);
+            command = command.buildMacro(scale, true);
             Function.Companion.addCommand(new Command("data modify").build(modifier.nbtPath.memberIndex("scale").toCommandPart(), true).build("set from", true).build(scale.nbtPath.toCommandPart(), true));
         }
 
-        if(buildingCommand.isMacro()){
-            buildingCommand.prepend("return run", true);
-        }
-        var commandArrayList = new ArrayList<>(Arrays.asList(Commands.INSTANCE.runAsEntity(caller, buildingCommand)));
-        var last = commandArrayList.getLast();
-        if(last.isMacro()){
-            commandArrayList.removeLast();
-            commandArrayList.addAll(Arrays.stream(last.buildMacroFunction()).toList());
-        }
-        returnValue.setValue(new CommandReturn(commandArrayList.getLast(), "return"));
-        Function.Companion.addCommands(commandArrayList.toArray(new Command[0]));
+        Commands.INSTANCE.method3(returnValue, command);
     }
 }

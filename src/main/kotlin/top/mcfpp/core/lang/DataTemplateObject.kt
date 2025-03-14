@@ -2,6 +2,7 @@ package top.mcfpp.core.lang
 
 import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.CompoundTag
+import net.querz.nbt.tag.Tag
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
@@ -379,6 +380,34 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag> {
             val data = NBTUtil.varToNBT(member)
             value.put(key, data)
         }
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    fun <T: Tag<*>> getTag(identifier: String, clazz: Class<T>): T{
+        if(identifier.contains(".")){
+            val ids = identifier.split('.')
+            var tag: Tag<*> = value
+            for (id in ids){
+                tag = (tag as CompoundTag)[id]
+            }
+            return tag as T
+        }else{
+            return value.get("id", clazz)
+        }
+    }
+
+    fun getTagStr(identifier: String): String{
+        val t = if(identifier.contains(".")){
+            val ids = identifier.split('.')
+            var tag: Tag<*> = value
+            for (id in ids){
+                tag = (tag as CompoundTag)[id]
+            }
+            tag
+        }else{
+            value["id"]
+        }
+        return SNBTUtil.toSNBT(t)
     }
 
 }

@@ -569,6 +569,9 @@ typeWithoutExcl
     |   LIST '<' type '>'
     |   MAP '<' type '>'
     |   DICT '<' type '>'
+    |   SELECTOR '<' nbtInt '>'
+    |   SELECTOR '<' LineString (',' LineString)* '>'
+    |   SELECTOR '<' nbtInt ',' LineString (',' LineString)* '>'
     |   className readOnlyArgs?
     |   Identifier
     |   unionTemplateType

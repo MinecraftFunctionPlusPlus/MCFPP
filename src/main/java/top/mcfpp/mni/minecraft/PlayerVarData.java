@@ -3,10 +3,14 @@ package top.mcfpp.mni.minecraft;
 import org.jetbrains.annotations.NotNull;
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.annotations.MNIMember;
-import top.mcfpp.core.lang.*;
-import top.mcfpp.core.lang.nbt.MCString;
+import top.mcfpp.command.Command;
+import top.mcfpp.command.Commands;
+import top.mcfpp.core.lang.CommandReturn;
+import top.mcfpp.core.lang.NormalCompoundDataObject;
+import top.mcfpp.core.lang.Var;
+import top.mcfpp.core.lang.entity.PlayerVar;
 import top.mcfpp.core.lang.resource.Advancement;
-import top.mcfpp.core.minecraft.PlayerVar;
+import top.mcfpp.core.lang.resource.AdvancementConcrete;
 import top.mcfpp.mni.hidden.AttributeData;
 import top.mcfpp.model.CompoundData;
 import top.mcfpp.util.ValueWrapper;
@@ -57,122 +61,105 @@ public class PlayerVarData {
 
     @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void grant(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        if(caller instanceof PlayerVar.PlayerEntityVarConcrete) {
-            PlayerEntityConcreteData.grant(advancement, (PlayerVar.PlayerEntityVarConcrete) caller, returnValue);
-        }else if(caller instanceof PlayerVar.PlayerSelectorVar) {
-            PlayerSelectorData.grant(advancement, (PlayerVar.PlayerSelectorVar) caller, returnValue);
-        }else if(caller instanceof PlayerVar.PlayerEntityVar) {
-            PlayerEntityData.grant(advancement, ((PlayerVar.PlayerEntityVar) caller), returnValue);
+        Command command = new Command("advancement grant").build(caller.toCommandPart()).build("only");
+        if(advancement instanceof AdvancementConcrete advancementC){
+            command.build(advancementC.getValue());
+        }else {
+            command.buildMacro(advancement);
         }
+        Commands.INSTANCE.method3(returnValue, command);
     }
 
     @MNIFunction(caller = "Player", returnType = "CommandReturn")
     public static void grantAll(PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        if(caller instanceof PlayerVar.PlayerEntityVarConcrete) {
-            PlayerEntityConcreteData.grantAll((PlayerVar.PlayerEntityVarConcrete) caller, returnValue);
-        }else if(caller instanceof PlayerVar.PlayerSelectorVar) {
-            PlayerSelectorData.grantAll((PlayerVar.PlayerSelectorVar) caller, returnValue);
-        }else if(caller instanceof PlayerVar.PlayerEntityVar) {
-            PlayerEntityData.grantAll(((PlayerVar.PlayerEntityVar) caller), returnValue);
-        }
+        Command command = new Command("advancement grant").build(caller.toCommandPart()).build("everything");
+        Commands.INSTANCE.method3(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void grantFrom(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        if(caller instanceof PlayerVar.PlayerEntityVarConcrete) {
-            PlayerEntityConcreteData.grantFrom(advancement, (PlayerVar.PlayerEntityVarConcrete) caller, returnValue);
-        }else if(caller instanceof PlayerVar.PlayerSelectorVar) {
-            PlayerSelectorData.grantFrom(advancement, (PlayerVar.PlayerSelectorVar) caller, returnValue);
-        }else if(caller instanceof PlayerVar.PlayerEntityVar) {
-            PlayerEntityData.grantFrom(advancement, ((PlayerVar.PlayerEntityVar) caller), returnValue);
+        Command command = new Command("advancement grant").build(caller.toCommandPart()).build("from");
+        if(advancement instanceof AdvancementConcrete advancementC){
+            command.build(advancementC.getValue());
+        }else {
+            command.buildMacro(advancement);
         }
+        Commands.INSTANCE.method3(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void grantThrough(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        if(caller instanceof PlayerVar.PlayerEntityVarConcrete) {
-            PlayerEntityConcreteData.grantThrough(advancement, (PlayerVar.PlayerEntityVarConcrete) caller, returnValue);
-        }else if(caller instanceof PlayerVar.PlayerSelectorVar) {
-            PlayerSelectorData.grantThrough(advancement, (PlayerVar.PlayerSelectorVar) caller, returnValue);
-        }else if(caller instanceof PlayerVar.PlayerEntityVar) {
-            PlayerEntityData.grantThrough(advancement, ((PlayerVar.PlayerEntityVar) caller), returnValue);
+        Command command = new Command("advancement grant").build(caller.toCommandPart()).build("through");
+        if(advancement instanceof AdvancementConcrete advancementC){
+            command.build(advancementC.getValue());
+        }else {
+            command.buildMacro(advancement);
         }
+        Commands.INSTANCE.method3(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void grantUntil(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        if(caller instanceof PlayerVar.PlayerEntityVarConcrete) {
-            PlayerEntityConcreteData.grantUntil(advancement, (PlayerVar.PlayerEntityVarConcrete) caller, returnValue);
-        }else if(caller instanceof PlayerVar.PlayerSelectorVar) {
-            PlayerSelectorData.grantUntil(advancement, (PlayerVar.PlayerSelectorVar) caller, returnValue);
-        }else if(caller instanceof PlayerVar.PlayerEntityVar) {
-            PlayerEntityData.grantUntil(advancement, ((PlayerVar.PlayerEntityVar) caller), returnValue);
+        Command command = new Command("advancement grant").build(caller.toCommandPart()).build("until");
+        if(advancement instanceof AdvancementConcrete advancementC){
+            command.build(advancementC.getValue());
+        }else {
+            command.buildMacro(advancement);
         }
+        Commands.INSTANCE.method3(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void revoke(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        if(caller instanceof PlayerVar.PlayerEntityVarConcrete) {
-            PlayerEntityConcreteData.revoke(advancement, (PlayerVar.PlayerEntityVarConcrete) caller, returnValue);
-        }else if(caller instanceof PlayerVar.PlayerSelectorVar) {
-            PlayerSelectorData.revoke(advancement, (PlayerVar.PlayerSelectorVar) caller, returnValue);
-        }else if(caller instanceof PlayerVar.PlayerEntityVar) {
-            PlayerEntityData.revoke(advancement, ((PlayerVar.PlayerEntityVar) caller), returnValue);
+        Command command = new Command("advancement revoke").build(caller.toCommandPart()).build("only");
+        if(advancement instanceof AdvancementConcrete advancementC){
+            command.build(advancementC.getValue());
+        }else {
+            command.buildMacro(advancement);
         }
+        Commands.INSTANCE.method3(returnValue, command);
     }
-
     @MNIFunction(caller = "Player", returnType = "CommandReturn")
     public static void revokeAll(PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        if(caller instanceof PlayerVar.PlayerEntityVarConcrete) {
-            PlayerEntityConcreteData.revokeAll((PlayerVar.PlayerEntityVarConcrete) caller, returnValue);
-        }else if(caller instanceof PlayerVar.PlayerSelectorVar) {
-            PlayerSelectorData.revokeAll((PlayerVar.PlayerSelectorVar) caller, returnValue);
-        }else if(caller instanceof PlayerVar.PlayerEntityVar) {
-            PlayerEntityData.revokeAll(((PlayerVar.PlayerEntityVar) caller), returnValue);
-        }
+        Command command = new Command("advancement revoke").build(caller.toCommandPart()).build("everything");
+        Commands.INSTANCE.method3(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void revokeFrom(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        if(caller instanceof PlayerVar.PlayerEntityVarConcrete) {
-            PlayerEntityConcreteData.revokeFrom(advancement, (PlayerVar.PlayerEntityVarConcrete) caller, returnValue);
-        }else if(caller instanceof PlayerVar.PlayerSelectorVar) {
-            PlayerSelectorData.revokeFrom(advancement, (PlayerVar.PlayerSelectorVar) caller, returnValue);
-        }else if(caller instanceof PlayerVar.PlayerEntityVar) {
-            PlayerEntityData.revokeFrom(advancement, ((PlayerVar.PlayerEntityVar) caller), returnValue);
+        Command command = new Command("advancement revoke").build(caller.toCommandPart()).build("from");
+        if(advancement instanceof AdvancementConcrete advancementC){
+            command.build(advancementC.getValue());
+        }else {
+            command.buildMacro(advancement);
         }
+        Commands.INSTANCE.method3(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void revokeThrough(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        if(caller instanceof PlayerVar.PlayerEntityVarConcrete) {
-            PlayerEntityConcreteData.revokeThrough(advancement, (PlayerVar.PlayerEntityVarConcrete) caller, returnValue);
-        }else if(caller instanceof PlayerVar.PlayerSelectorVar) {
-            PlayerSelectorData.revokeThrough(advancement, (PlayerVar.PlayerSelectorVar) caller, returnValue);
-        }else if(caller instanceof PlayerVar.PlayerEntityVar) {
-            PlayerEntityData.revokeThrough(advancement, ((PlayerVar.PlayerEntityVar) caller), returnValue);
+        Command command = new Command("advancement revoke").build(caller.toCommandPart()).build("through");
+        if(advancement instanceof AdvancementConcrete advancementC){
+            command.build(advancementC.getValue());
+        }else {
+            command.buildMacro(advancement);
         }
+        Commands.INSTANCE.method3(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void revokeUntil(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        if(caller instanceof PlayerVar.PlayerEntityVarConcrete) {
-            PlayerEntityConcreteData.revokeUntil(advancement, (PlayerVar.PlayerEntityVarConcrete) caller, returnValue);
-        }else if(caller instanceof PlayerVar.PlayerSelectorVar) {
-            PlayerSelectorData.revokeUntil(advancement, (PlayerVar.PlayerSelectorVar) caller, returnValue);
-        }else if(caller instanceof PlayerVar.PlayerEntityVar) {
-            PlayerEntityData.revokeUntil(advancement, ((PlayerVar.PlayerEntityVar) caller), returnValue);
+        Command command = new Command("advancement revoke").build(caller.toCommandPart()).build("until");
+        if(advancement instanceof AdvancementConcrete advancementC){
+            command.build(advancementC.getValue());
+        }else {
+            command.buildMacro(advancement);
         }
+        Commands.INSTANCE.method3(returnValue, command);
     }
 
-    @MNIFunction(normalParams = {"string key, float scale"}, caller = "Player", returnType = "int")
-    public static void getAttribute(MCString id, MCFloat scale, PlayerVar caller, ValueWrapper<CommandReturn> returnValue){
-        if(caller instanceof PlayerVar.PlayerEntityVarConcrete) {
-            PlayerEntityConcreteData.getAttribute(id, scale, (PlayerVar.PlayerEntityVarConcrete) caller, returnValue);
-        }else if(caller instanceof PlayerVar.PlayerSelectorVar) {
-            PlayerSelectorData.getAttribute(id, scale, (PlayerVar.PlayerSelectorVar) caller, returnValue);
-        }else if(caller instanceof PlayerVar.PlayerEntityVar) {
-            PlayerEntityData.getAttribute(id, scale, ((PlayerVar.PlayerEntityVar) caller), returnValue);
-        }
+    public static void clear(PlayerVar caller, ValueWrapper<CommandReturn> returnValue){
+        Command command = new Command("clear").build(caller.toCommandPart());
+        Commands.INSTANCE.method3(returnValue, command);
     }
 }

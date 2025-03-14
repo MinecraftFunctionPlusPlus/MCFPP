@@ -7,6 +7,9 @@ import net.querz.nbt.tag.Tag
 import top.mcfpp.Project
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.ScoreBool
+import top.mcfpp.core.lang.entity.SelectorVar
+import top.mcfpp.core.lang.nbt.EntityUUIDVar
+import top.mcfpp.core.lang.nbt.EntityUUIDVarConcrete
 import top.mcfpp.lib.EntitySelector
 import top.mcfpp.lib.EntitySource
 import top.mcfpp.lib.NBTPath
@@ -15,11 +18,13 @@ import top.mcfpp.model.Class
 import top.mcfpp.model.ObjectClass
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.Function.Companion.addCommand
 import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.type.MCFPPClassType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 import top.mcfpp.util.Utils
+import top.mcfpp.util.ValueWrapper
 
 /**
  * 命令总类，提供了大量用于生成命令的方法。默认提供了一些可替换的位点
@@ -274,6 +279,22 @@ object Commands {
     }
 
     /**
+     * 判断一条命令是否为宏函数，并让这个命令作为返回值
+     */
+    fun method3(returnVar: ValueWrapper<CommandReturn>, command: Command){
+        if (command.isMacro) {
+            command.prepend("return run")
+            val commandArray = command.buildMacroFunction()
+            returnVar.value = CommandReturn(commandArray[commandArray.size - 1], "return")
+            for (i in 0..<commandArray.size - 1) {
+                addCommand(commandArray[i])
+            }
+        } else {
+            returnVar.value = CommandReturn(command, "return")
+        }
+    }
+
+    /**
      * 以一个类的对象为执行者，执行一个命令。
      *
      * @param a 执行者
@@ -406,8 +427,8 @@ object Commands {
      *
      * @return 生成的命令。数组的最后一个命令为`execute`命令
      */
-    fun runAsEntity(entityVar: EntityVar, command: Command): Array<Command>{
-        return if(entityVar is EntityVarConcrete){
+    fun runAsEntity(entityVar: EntityUUIDVar, command: Command): Array<Command>{
+        return if(entityVar is EntityUUIDVarConcrete){
             if(!entityVar.isName){
                 arrayOf(Command("execute as ${Utils.fromNBTArrayUUID(entityVar.value as IntArrayTag)} run").build(command))
             }else{

@@ -1,24 +1,4 @@
 namespace test;
 
 func main(){
-    dynamic map<any> qwq = {
-        a:1,
-        b:"test",
-        c:[1,2,3]
-    };
-    print(qwq);
-    print((nbt)qwq["a"]);
-    qwq["d"] = {a:"b"};
-    print(qwq);
-    print(qwq.containsKey("a"));
-    print(qwq.containsKey("x"));
-    map<any> pwp = {
-        e: 1,
-        f: 2,
-        g: 3
-    };
-    qwq.merge(pwp);
-    print(qwq);
-    qwq.remove("a");
-    print(qwq);
 }

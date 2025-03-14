@@ -2,13 +2,17 @@ package top.mcfpp.mni.hidden;
 
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.core.lang.*;
-import top.mcfpp.core.minecraft.PlayerVar;
+import top.mcfpp.core.lang.entity.SelectorVar;
+import top.mcfpp.core.lang.nbt.EntityUUIDVar;
+import top.mcfpp.core.lang.nbt.EntityUUIDVarConcrete;
+import top.mcfpp.core.lang.entity.PlayerVar;
 import top.mcfpp.mni.minecraft.EntityVarData;
 import top.mcfpp.util.LogProcessor;
 import top.mcfpp.util.ValueWrapper;
 
 import java.util.Map;
 
+@SuppressWarnings("DataFlowIssue")
 public class AttributeData {
 
     public static Map<String, String> attributeMap = Map.ofEntries(
@@ -45,113 +49,40 @@ public class AttributeData {
             Map.entry("spawn_reinforcements",           "spawn_reinforcements")
     );
 
+    public static PlayerVar getPlayer(NormalCompoundDataObject caller){
+        return (PlayerVar) ((NormalCompoundDataObject) caller.getParent()).getParent();
+    }
+
 
     @MNIFunction(normalParams = {"float value"}, caller = "attribute", returnType = "CommandReturn")
     public static void setBase(MCFloat value, NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
-        Var<?> entity = (Var<?>) ((NormalCompoundDataObject) caller.getParent()).getParent();
-        if(entity instanceof PlayerVar.PlayerEntityVar entityVar){
-            EntityVarData.setAttributeBase(value, caller.getIdentifier(), entityVar.getEntity(), re);
-        }else if(entity instanceof PlayerVar.PlayerSelectorVar selectorVar){
-
-        }else if(entity instanceof EntityVarConcrete entityVarConcrete){
-
-        }else if(entity instanceof EntityVar entityVar){
-            EntityVarData.setAttributeBase(value, caller.getIdentifier(), entityVar, re);
-        }else if(entity instanceof SelectorVar selectorVar){
-
-        }else {
-            LogProcessor.INSTANCE.error("Unknown entity type: " + entity.getType().getTypeName());
-        }
+        EntityVarData.setAttributeBase(value, caller.getIdentifier(), getPlayer(caller).getEntityVar(), re);
     }
 
     @MNIFunction(normalParams = {"float scale"}, caller = "attribute", returnType = "CommandReturn")
     public static void getBase(MCFloat scale , NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
-        Var<?> entity = (Var<?>) ((NormalCompoundDataObject) caller.getParent()).getParent();
-        if(entity instanceof PlayerVar.PlayerEntityVar entityVar){
-            EntityVarData.getAttributeBase(caller.getIdentifier(), entityVar.getEntity(), scale, re);
-        }else if(entity instanceof PlayerVar.PlayerSelectorVar selectorVar){
-
-        }else if(entity instanceof EntityVarConcrete entityVarConcrete){
-
-        }else if(entity instanceof EntityVar entityVar){
-            EntityVarData.getAttributeBase(caller.getIdentifier(), entityVar, scale, re);
-        }else if(entity instanceof SelectorVar selectorVar){
-
-        }else {
-            LogProcessor.INSTANCE.error("Unknown entity type: " + entity.getType().getTypeName());
-        }
+        EntityVarData.getAttributeBase(caller.getIdentifier(), getPlayer(caller).getEntityVar(), scale, re);
     }
 
     @MNIFunction(normalParams = {"float scale"}, caller = "attribute", returnType = "CommandReturn")
     public static void get(MCFloat scale, NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
-        Var<?> entity = (Var<?>) ((NormalCompoundDataObject) caller.getParent()).getParent();
-        if(entity instanceof PlayerVar.PlayerEntityVar entityVar){
-            EntityVarData.getAttribute(caller.getIdentifier(), entityVar.getEntity(), scale, re);
-        }else if(entity instanceof PlayerVar.PlayerSelectorVar selectorVar){
-
-        }else if(entity instanceof EntityVarConcrete entityVarConcrete){
-
-        }else if(entity instanceof EntityVar entityVar){
-            EntityVarData.getAttribute(caller.getIdentifier(), entityVar, scale, re);
-        }else if(entity instanceof SelectorVar selectorVar){
-
-        }else {
-            LogProcessor.INSTANCE.error("Unknown entity type: " + entity.getType().getTypeName());
-        }
+        EntityVarData.getAttribute(caller.getIdentifier(), getPlayer(caller).getEntityVar(), scale, re);
     }
 
     @MNIFunction(normalParams = {"AttributeModifier modifier"}, caller = "attribute", returnType = "CommandReturn")
     public static void addModifier(DataTemplateObject modifier, NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
-        Var<?> entity = (Var<?>) ((NormalCompoundDataObject) caller.getParent()).getParent();
-        if(entity instanceof PlayerVar.PlayerEntityVar entityVar){
-            EntityVarData.addAttributeModifier(caller.getIdentifier(), entityVar.getEntity(), modifier, re);
-        }else if(entity instanceof PlayerVar.PlayerSelectorVar selectorVar){
-
-        }else if(entity instanceof EntityVarConcrete entityVarConcrete){
-
-        }else if(entity instanceof EntityVar entityVar){
-            EntityVarData.addAttributeModifier(caller.getIdentifier(), entityVar, modifier, re);
-        }else if(entity instanceof SelectorVar selectorVar){
-
-        }else {
-            LogProcessor.INSTANCE.error("Unknown entity type: " + entity.getType().getTypeName());
-        }
+        EntityVarData.addAttributeModifier(caller.getIdentifier(), getPlayer(caller).getEntityVar(), modifier, re);
     }
 
     @MNIFunction(normalParams = {"AttributeModifier modifier"}, caller = "attribute", returnType = "CommandReturn")
     public static void removeModifier(DataTemplateObject modifier, NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
-        Var<?> entity = (Var<?>) ((NormalCompoundDataObject) caller.getParent()).getParent();
-        if(entity instanceof PlayerVar.PlayerEntityVar entityVar){
-            EntityVarData.removeAttributeModifier(caller.getIdentifier(), entityVar.getEntity(), modifier, re);
-        }else if(entity instanceof PlayerVar.PlayerSelectorVar selectorVar){
-
-        }else if(entity instanceof EntityVarConcrete entityVarConcrete){
-
-        }else if(entity instanceof EntityVar entityVar){
-            EntityVarData.removeAttributeModifier(caller.getIdentifier(), entityVar, modifier, re);
-        }else if(entity instanceof SelectorVar selectorVar){
-
-        }else {
-            LogProcessor.INSTANCE.error("Unknown entity type: " + entity.getType().getTypeName());
-        }
+        EntityVarData.removeAttributeModifier(caller.getIdentifier(), getPlayer(caller).getEntityVar(), modifier, re);
     }
+
 
     @MNIFunction(normalParams = {"AttributeModifier modifier","float scale"}, caller = "attribute", returnType = "CommandReturn")
     public static void getModifier(DataTemplateObject modifier, MCFloat scale, NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
-        Var<?> entity = (Var<?>) ((NormalCompoundDataObject) caller.getParent()).getParent();
-        if(entity instanceof PlayerVar.PlayerEntityVar entityVar){
-            EntityVarData.getAttributeModifier(caller.getIdentifier(), entityVar.getEntity(), modifier, scale, re);
-        }else if(entity instanceof PlayerVar.PlayerSelectorVar selectorVar){
-
-        }else if(entity instanceof EntityVarConcrete entityVarConcrete){
-
-        }else if(entity instanceof EntityVar entityVar){
-            EntityVarData.getAttributeModifier(caller.getIdentifier(), entityVar, modifier, scale, re);
-        }else if(entity instanceof SelectorVar selectorVar){
-
-        }else {
-            LogProcessor.INSTANCE.error("Unknown entity type: " + entity.getType().getTypeName());
-        }
+        EntityVarData.getAttributeModifier(caller.getIdentifier(), getPlayer(caller).getEntityVar(), modifier, scale, re);
     }
 
 }

@@ -178,7 +178,7 @@ class MCByteConcrete: MCByte, MCFPPValue<Byte> {
         }
     }
 
-    override fun multiple(a: Var<*>): Var<*>? {
+    override fun times(a: Var<*>): Var<*>? {
         //t = t * a
         when(a){
             is MCByteConcrete -> {
@@ -186,13 +186,13 @@ class MCByteConcrete: MCByte, MCFPPValue<Byte> {
                 return this
             }
             is MCByte -> {
-                return a.multiple(this)
+                return a.times(this)
             }
             else -> return this
         }
     }
 
-    override fun divide(a: Var<*>): Var<*>? {
+    override fun div(a: Var<*>): Var<*>? {
         //t = t / a
         when(a){
             is MCByteConcrete -> {
@@ -200,13 +200,13 @@ class MCByteConcrete: MCByte, MCFPPValue<Byte> {
                 return this
             }
             is MCByte -> {
-                return a.divide(this)
+                return a.div(this)
             }
             else -> return this
         }
     }
 
-    override fun modular(a: Var<*>): Var<*>? {
+    override fun rem(a: Var<*>): Var<*>? {
         //t = t % a
         when(a){
             is MCByteConcrete -> {
@@ -214,7 +214,7 @@ class MCByteConcrete: MCByte, MCFPPValue<Byte> {
                 return this
             }
             is MCByte -> {
-                return a.modular(this)
+                return a.rem(this)
             }
             else -> return this
         }

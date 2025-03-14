@@ -1,5 +1,6 @@
-package top.mcfpp.core.lang
+package top.mcfpp.core.lang.entity
 
+import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTDictionary
@@ -7,6 +8,7 @@ import top.mcfpp.core.lang.resource.LootTablePredicate
 import top.mcfpp.lib.EntitySelector
 import top.mcfpp.lib.EntitySource
 import top.mcfpp.lib.NBTPath
+import top.mcfpp.mni.SelectorData
 import top.mcfpp.mni.annotation.MCFPPEntity
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.CompoundData
@@ -34,18 +36,30 @@ import top.mcfpp.util.TextTranslator.translate
  *
  * 在构造一个目标选择器示例的时候，目标选择器的类型是必然确定的，因此只有用于构造确定变量的构造函数
  *
- * @see EntityVar
+ * @see top.mcfpp.core.lang.nbt.EntityUUIDVar
  */
-open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector>, EntityBase {
+open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
 
-    override var type: MCFPPType = MCFPPEntityType.Selector
+    @Suppress("SuspiciousVarProperty")
+    override var type: MCFPPType = MCFPPEntityType.Selector()
+        get() {
+            if(value.getLimit() == Int.MAX_VALUE && value.getType().isEmpty()){
+                return MCFPPEntityType.Selector()
+            }
+            if(value.getLimit() != Int.MAX_VALUE && value.getType().isEmpty()){
+                return MCFPPEntityType.Selector(value.getLimit())
+            }
+            if(value.getLimit() == Int.MAX_VALUE){
+                return MCFPPEntityType.Selector(null, value.getType().map { if(it.value) "!${it.key.value}" else it.key.value })
+            }
+            return MCFPPEntityType.Selector(value.getLimit(), value.getType().map { if(it.value) "!${it.key.value}" else it.key.value })
+        }
 
     /**
      * 创建一个目标选择器。它的标识符和mc名相同。
      * @param identifier identifier
      */
-    constructor(selector: EntitySelector, identifier: String = TempPool.getVarIdentify())
-            : super(identifier, selector)
+    constructor(selector: EntitySelector, identifier: String = TempPool.getVarIdentify()) : super(identifier, selector)
 
     /**
      * 复制一个目标选择器
@@ -53,12 +67,40 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector>, EntityBase {
      */
     constructor(b: SelectorVar) : super(b)
 
-    override fun isPlayer(): Boolean {
+    fun isPlayer(): Boolean {
         return value.onlyIncludingPlayers()
     }
 
     override fun canAssignedBy(b: Var<*>): Boolean {
         return !b.implicitCast(type).isError
+    }
+
+    override fun explicitCast(type: MCFPPType): Var<*> {
+        val qwq = super.explicitCast(type)
+        if(!qwq.isError) return qwq
+        return when(type){
+            is MCFPPEntityType.Selector -> {
+                if((this.type as MCFPPEntityType.Selector).canCastTo(type)){
+                    this.type.build("").setAs(this)
+                }else qwq
+            }
+
+            else -> qwq
+        }
+    }
+
+    override fun implicitCast(type: MCFPPType): Var<*> {
+        val qwq = super.implicitCast(type)
+        if(!qwq.isError) return qwq
+        return when(type){
+            is MCFPPEntityType.Selector -> {
+                if((this.type as MCFPPEntityType.Selector).canCastTo(type)){
+                    this.type.build("").setAs(this)
+                }else qwq
+            }
+
+            else -> qwq
+        }
     }
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
@@ -67,9 +109,9 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector>, EntityBase {
             data.nbtPath = NBTPath(EntitySource(this))
             return data to true
         }
-        val p = data.field.getProperty(key)
+        val p = getData().field.getProperty(key)
         if(p != null) return PropertyVar(p, Void, this) to true
-        val v = data.field.getVar(key)
+        val v = getData().field.getVar(key)
         if(v is SelectorParamMap) {
             v.selector = this
             return v to true
@@ -83,7 +125,7 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector>, EntityBase {
         normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        return data.getFunction(key, readOnlyArgs, normalArgs) to true
+        return getData().getFunction(key, readOnlyArgs, normalArgs) to true
     }
 
     private fun getData(): DataTemplate{
@@ -102,7 +144,9 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector>, EntityBase {
                 excluded.add(type.value.toCamelCase(true))
             }
         }
-        return AllEntityDataTemplate(excluded)
+        val data = AllEntityDataTemplate(excluded)
+        data.extends(Companion.data)
+        return data
     }
 
     override fun clone(): SelectorVar {
@@ -117,19 +161,20 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector>, EntityBase {
          var selector: SelectorVar
     }
 
-
     companion object {
 
         private val cache = HashMap<List<String>, AllEntityDataTemplate>()
 
-        private class AllEntityDataTemplate(excluded: List<String>): DataTemplate("AnyEntity","mcfpp"){
+        private class AllEntityDataTemplate(excluded: List<String>): DataTemplate("AllEntity","mcfpp"){
             init {
                 GlobalField.getDataTemplate { data ->
                     data.annotations.any { it is MCFPPEntity } && data.identifier !in excluded
                 }.forEach {
                     extends(it)
                 }
+                getNativeFromClass(SelectorData::class.java)
                 alwaysDynamic = true
+                //单实体的方法
             }
 
             override fun extends(compoundData: CompoundData): CompoundData {
@@ -153,7 +198,7 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector>, EntityBase {
         }
 
 
-        val data by lazy {
+        val data: CompoundData get() {
 
             fun checkParamType(v: Var<*>, type: MCFPPType): Var<*>?{
                 val value = v.implicitCast(type)
@@ -177,7 +222,7 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector>, EntityBase {
                 Void
             }
 
-            CompoundData("selector","mcfpp").apply {
+            return CompoundData("selector","mcfpp").apply {
                 addMember(Property("x", null, AnonymousNativeMutator { caller, v ->
                     val selector = (caller as SelectorVar).value
                     val value = checkParamType(v, MCFPPBaseType.Int)

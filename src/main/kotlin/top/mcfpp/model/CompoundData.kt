@@ -18,6 +18,7 @@ import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 import java.io.Serializable
 import java.lang.Class
+import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 
 open class CompoundData : FieldContainer, Serializable, WithDocument {
@@ -201,84 +202,7 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
         for(method in methods){
             val mniRegister = method.getAnnotation(MNIFunction::class.java)
             if(mniRegister != null){
-                if(!Modifier.isStatic(method.modifiers)) {
-                    LogProcessor.error("MNIMethod ${method.name} in class ${cls.name} must be static")
-                    continue
-                }
-                if(this is ObjectCompoundData && !mniRegister.isObject) continue
-                val nf = NativeFunction(method.name, javaMethod = method)
-                //解析MNIMethod注解成员
-                mniRegister.genericType.map {
-                    nf.field.putType(it, MCFPPGenericParamType(it, arrayListOf()))
-                }
-                val callerType = MCFPPType.parseFromString(mniRegister.caller, nf.field)
-                nf.caller = callerType?: run {
-                    LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniRegister.caller))
-                    MCFPPBaseType.Void
-                }
-                val readOnlyType = mniRegister.readOnlyParams.map {
-                    var qwq = it.split(" ", limit = 3)
-                    if(qwq.size < 2){
-                        LogProcessor.error("Missing type or identifier in native function parameter definition: '$it'")
-                    }
-                    if(qwq.size == 3) qwq = qwq.subList(1, 3)
-                    val type = MCFPPType.parseFromString(qwq[0], nf.field)?: run {
-                        LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(qwq[0]))
-                        MCFPPBaseType.Any
-                    }
-                    qwq[1] to type to it.startsWith("static")
-                }
-                val normalType = mniRegister.normalParams.map {
-                    var qwq = it.split(" ", limit = 3)
-                    if(qwq.size < 2) {
-                        LogProcessor.error("Missing type or identifier in native function parameter definition: '$it'")
-                    }
-                    if(qwq.size == 3) qwq = qwq.subList(1, 3)
-                    val type = MCFPPType.parseFromString(qwq[0], nf.field)?: run {
-                        LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(qwq[0]))
-                        MCFPPBaseType.Any
-                    }
-                    qwq[1] to type to it.startsWith("static")
-                }
-                val returnType = MCFPPType.parseFromString(mniRegister.returnType, nf.field)?: run {
-                    LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniRegister.returnType))
-                    MCFPPBaseType.Any
-                }
-                nf.returnType = returnType
-                var exceptedParamCount = readOnlyType.size + normalType.size
-                if(returnType != MCFPPBaseType.Void){
-                    exceptedParamCount++
-                }
-                if(mniRegister.caller != "void"){
-                    exceptedParamCount++
-                }
-                //检查method的参数
-                if(method.parameterCount != exceptedParamCount){
-                    LogProcessor.error("Method ${method.name} in class ${cls.name} has wrong parameter count")
-                    continue
-                }
-                for(rt in readOnlyType){
-                    nf.appendReadOnlyParam(rt.first.second, rt.first.first, rt.second)
-                }
-                for(nt in normalType){
-                    nf.appendNormalParam(nt.first.second, nt.first.first, nt.second)
-                }
-                //有继承
-                if(mniRegister.override){
-                    val result = field.hasFunction(nf, true)
-                    if(!result){
-                        LogProcessor.error("Method ${nf.identifier} in class ${cls.name} overrides nothing")
-                        continue
-                    }else{
-                        this.field.addFunction(nf, true)
-                    }
-                }else {
-                    val result = this.field.addFunction(nf, false)
-                    if(!result){
-                        LogProcessor.warn("Duplicate method ${nf.identifier} in class ${cls.name}. If you want to override it, please add @MNIRegister(override = true) to the method")
-                        this.field.addFunction(nf, true)
-                    }
-                }
+                addMNIMethod(method)
             }
         }
         //尝试获取static ArrayList<Var<?>> getMembers()方法
@@ -297,6 +221,97 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
             }
         }catch (_: NoSuchMethodException){ }
         Project.currNamespace = l
+    }
+
+
+    fun addMNIMethod(method: Method, tag: Array<String>? = null){
+        if(!Modifier.isStatic(method.modifiers)) {
+            LogProcessor.error("MNIMethod ${method.name} in class ${method.declaringClass.name} must be static")
+            return
+        }
+        val mniRegister = method.getAnnotation(MNIFunction::class.java)
+        if(mniRegister == null){
+            LogProcessor.error("No MNIFunction annotation found in method ${method.name} in class ${method.declaringClass.name}")
+            return
+        }
+        if(tag != null && !tag.contentEquals(mniRegister.tag)){
+            LogProcessor.error("Tag not match in method ${method.name} in class ${method.declaringClass.name}")
+            return
+        }
+        if(this is ObjectCompoundData && !mniRegister.isObject) return
+        val nf = NativeFunction(method.name, javaMethod = method)
+        //解析MNIMethod注解成员
+        mniRegister.genericType.map {
+            nf.field.putType(it, MCFPPGenericParamType(it, arrayListOf()))
+        }
+        val callerType = MCFPPType.parseFromString(mniRegister.caller, nf.field)
+        nf.caller = callerType?: run {
+            LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniRegister.caller))
+            MCFPPBaseType.Void
+        }
+        val readOnlyType = mniRegister.readOnlyParams.map {
+            var qwq = it.split(" ", limit = 3)
+            if(qwq.size < 2){
+                LogProcessor.error("Missing type or identifier in native function parameter definition: '$it'")
+            }
+            if(qwq.size == 3) qwq = qwq.subList(1, 3)
+            val type = MCFPPType.parseFromString(qwq[0], nf.field)?: run {
+                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(qwq[0]))
+                MCFPPBaseType.Any
+            }
+            qwq[1] to type to it.startsWith("static")
+        }
+        val normalType = mniRegister.normalParams.map {
+            var qwq = it.split(" ", limit = 3)
+            if(qwq.size < 2) {
+                LogProcessor.error("Missing type or identifier in native function parameter definition: '$it'")
+            }
+            if(qwq.size == 3) qwq = qwq.subList(1, 3)
+            val type = MCFPPType.parseFromString(qwq[0], nf.field)?: run {
+                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(qwq[0]))
+                MCFPPBaseType.Any
+            }
+            qwq[1] to type to it.startsWith("static")
+        }
+        val returnType = MCFPPType.parseFromString(mniRegister.returnType, nf.field)?: run {
+            LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniRegister.returnType))
+            MCFPPBaseType.Any
+        }
+        nf.returnType = returnType
+        var exceptedParamCount = readOnlyType.size + normalType.size
+        if(returnType != MCFPPBaseType.Void){
+            exceptedParamCount++
+        }
+        if(mniRegister.caller != "void"){
+            exceptedParamCount++
+        }
+        //检查method的参数
+        if(method.parameterCount != exceptedParamCount){
+            LogProcessor.error("Method ${method.name} in class ${method.declaringClass.name} has wrong parameter count")
+            return
+        }
+        for(rt in readOnlyType){
+            nf.appendReadOnlyParam(rt.first.second, rt.first.first, rt.second)
+        }
+        for(nt in normalType){
+            nf.appendNormalParam(nt.first.second, nt.first.first, nt.second)
+        }
+        //有继承
+        if(mniRegister.override){
+            val result = field.hasFunction(nf, true)
+            if(!result){
+                LogProcessor.error("Method ${nf.identifier} in class ${method.declaringClass.name} overrides nothing")
+                return
+            }else{
+                this.field.addFunction(nf, true)
+            }
+        }else {
+            val result = this.field.addFunction(nf, false)
+            if(!result){
+                LogProcessor.warn("Duplicate method ${nf.identifier} in class ${method.declaringClass.name}. If you want to override it, please add @MNIRegister(override = true) to the method")
+                this.field.addFunction(nf, true)
+            }
+        }
     }
 
 

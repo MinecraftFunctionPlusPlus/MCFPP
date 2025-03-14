@@ -209,7 +209,7 @@ open class MCFloat : MCNumber<Float> {
      * @return 计算的结果
      */
     @InsertCommand
-    override fun multiple(a: Var<*>): Var<*> {
+    override fun times(a: Var<*>): Var<*> {
         //t = t * a
         if(!isTemp) return getTempVar().minus(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
@@ -224,9 +224,9 @@ open class MCFloat : MCNumber<Float> {
      * @return 计算的结果
      */
     @InsertCommand
-    override fun divide(a: Var<*>): Var<*> {
+    override fun div(a: Var<*>): Var<*> {
         //t = t - a
-        if(!isTemp) return getTempVar().divide(a)
+        if(!isTemp) return getTempVar().div(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         if(qwq != tempFloat) qwq.toTempEntity()
         Function.addCommand("execute as $tempFloatEntityUUID run function math:hpo/float/_div")
@@ -239,7 +239,7 @@ open class MCFloat : MCNumber<Float> {
      * @return 计算的结果
      */
     @InsertCommand
-    override fun modular(a: Var<*>): Var<*> {
+    override fun rem(a: Var<*>): Var<*> {
         LogProcessor.error("Cannot get the remainder of a float number")
         throw IllegalArgumentException("")
     }
@@ -628,9 +628,9 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
      * @return 计算的结果
      */
     @InsertCommand
-    override fun multiple(a: Var<*>): Var<*> {
+    override fun times(a: Var<*>): Var<*> {
         //t = t * a
-        if(!isTemp) return (getTempVar() as MCFloat).multiple(a)
+        if(!isTemp) return (getTempVar() as MCFloat).times(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         if (qwq is MCFloatConcrete) {
             this.value *= qwq.value
@@ -649,9 +649,9 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
      * @return 计算的结果
      */
     @InsertCommand
-    override fun divide(a: Var<*>): Var<*> {
+    override fun div(a: Var<*>): Var<*> {
         //t = t - a
-        if(!isTemp) return (getTempVar() as MCFloat).divide(a)
+        if(!isTemp) return (getTempVar() as MCFloat).div(a)
         val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
         if (qwq is MCFloatConcrete) {
             this.value /= qwq.value
@@ -670,7 +670,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
      * @return 计算的结果
      */
     @InsertCommand
-    override fun modular(a: Var<*>): Var<*> {
+    override fun rem(a: Var<*>): Var<*> {
         throw IllegalArgumentException("")
     }
 
