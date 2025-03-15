@@ -61,105 +61,65 @@ public class PlayerVarData {
 
     @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void grant(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        Command command = new Command("advancement grant").build(caller.toCommandPart()).build("only");
-        if(advancement instanceof AdvancementConcrete advancementC){
-            command.build(advancementC.getValue());
-        }else {
-            command.buildMacro(advancement);
-        }
+        Command command = Command.Companion.buildAll("advancement grant", caller, "only", advancement);
         Commands.INSTANCE.method3(returnValue, command);
     }
 
     @MNIFunction(caller = "Player", returnType = "CommandReturn")
     public static void grantAll(PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        Command command = new Command("advancement grant").build(caller.toCommandPart()).build("everything");
+        Command command = Command.Companion.buildAll("advancement grant", caller, "everything");
         Commands.INSTANCE.method3(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void grantFrom(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        Command command = new Command("advancement grant").build(caller.toCommandPart()).build("from");
-        if(advancement instanceof AdvancementConcrete advancementC){
-            command.build(advancementC.getValue());
-        }else {
-            command.buildMacro(advancement);
-        }
+        Command command = Command.Companion.buildAll("advancement grant", caller, "from", advancement);
         Commands.INSTANCE.method3(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void grantThrough(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        Command command = new Command("advancement grant").build(caller.toCommandPart()).build("through");
-        if(advancement instanceof AdvancementConcrete advancementC){
-            command.build(advancementC.getValue());
-        }else {
-            command.buildMacro(advancement);
-        }
+        Command command = Command.Companion.buildAll("advancement grant", caller, "through", advancement);
         Commands.INSTANCE.method3(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void grantUntil(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        Command command = new Command("advancement grant").build(caller.toCommandPart()).build("until");
-        if(advancement instanceof AdvancementConcrete advancementC){
-            command.build(advancementC.getValue());
-        }else {
-            command.buildMacro(advancement);
-        }
+        Command command = Command.Companion.buildAll("advancement grant", caller, "until", advancement);
         Commands.INSTANCE.method3(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void revoke(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        Command command = new Command("advancement revoke").build(caller.toCommandPart()).build("only");
-        if(advancement instanceof AdvancementConcrete advancementC){
-            command.build(advancementC.getValue());
-        }else {
-            command.buildMacro(advancement);
-        }
+        Command command = Command.Companion.buildAll("advancement revoke", caller, "only", advancement);
         Commands.INSTANCE.method3(returnValue, command);
     }
     @MNIFunction(caller = "Player", returnType = "CommandReturn")
     public static void revokeAll(PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        Command command = new Command("advancement revoke").build(caller.toCommandPart()).build("everything");
+        Command command = Command.Companion.buildAll("advancement revoke", caller, "everything");
         Commands.INSTANCE.method3(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void revokeFrom(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        Command command = new Command("advancement revoke").build(caller.toCommandPart()).build("from");
-        if(advancement instanceof AdvancementConcrete advancementC){
-            command.build(advancementC.getValue());
-        }else {
-            command.buildMacro(advancement);
-        }
+        Command command = Command.Companion.buildAll("advancement revoke", caller, "from", advancement);
         Commands.INSTANCE.method3(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void revokeThrough(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        Command command = new Command("advancement revoke").build(caller.toCommandPart()).build("through");
-        if(advancement instanceof AdvancementConcrete advancementC){
-            command.build(advancementC.getValue());
-        }else {
-            command.buildMacro(advancement);
-        }
+        Command command = Command.Companion.buildAll("advancement revoke", caller, "through", advancement);
         Commands.INSTANCE.method3(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Advancement advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void revokeUntil(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        Command command = new Command("advancement revoke").build(caller.toCommandPart()).build("until");
-        if(advancement instanceof AdvancementConcrete advancementC){
-            command.build(advancementC.getValue());
-        }else {
-            command.buildMacro(advancement);
-        }
+        Command command = Command.Companion.buildAll("advancement revoke", caller, "until", advancement);
         Commands.INSTANCE.method3(returnValue, command);
     }
 
     public static void clear(PlayerVar caller, ValueWrapper<CommandReturn> returnValue){
-        Command command = new Command("clear").build(caller.toCommandPart());
+        Command command = Command.Companion.buildAll("clear", caller);
         Commands.INSTANCE.method3(returnValue, command);
     }
 }

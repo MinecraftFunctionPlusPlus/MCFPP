@@ -350,6 +350,25 @@ open class Command: Serializable {
         fun build(command: String, pointID: String) : Command{
             return Command(command, pointID)
         }
+
+        fun buildAll(vararg parts: Any?): Command {
+            val c = Command()
+            for (part in parts){
+                if(part == null){
+                    c.build("null")
+                    continue
+                }
+                if(part is Var<*>){
+                    c.build(part.toCommandPart())
+                    continue
+                }
+                if(part is Command){
+                    c.build(part)
+                }
+                c.build(parts.toString())
+            }
+            return c
+        }
     }
 
     /**
