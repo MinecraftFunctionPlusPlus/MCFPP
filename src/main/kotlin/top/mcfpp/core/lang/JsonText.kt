@@ -10,8 +10,8 @@ import top.mcfpp.lib.ListChatComponent
 import top.mcfpp.lib.NBTChatComponent
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.Member
-import top.mcfpp.model.property.Property
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.property.Property
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
@@ -94,7 +94,7 @@ open class JsonText : NBTBasedData {
         return v to true
     }
 
-    open fun toCommandPart(): Command{
+    override fun toCommandPart(): Command{
         return NBTChatComponent(this, true).toCommandPart()
     }
 

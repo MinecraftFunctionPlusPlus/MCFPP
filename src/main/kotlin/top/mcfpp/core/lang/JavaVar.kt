@@ -12,8 +12,6 @@ import top.mcfpp.model.function.JavaFunction
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
-import top.mcfpp.util.TextTranslator
-import top.mcfpp.util.TextTranslator.translate
 import kotlin.reflect.KProperty1
 import kotlin.reflect.KVisibility
 import kotlin.reflect.full.memberProperties
@@ -46,31 +44,6 @@ class JavaVar : ConcreteVar<JavaVar, Any?> {
      * @param b 被复制的JavaVar值
      */
     constructor(b: JavaVar) : super(b)
-
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        if(type == this.type){
-            LogProcessor.warn(TextTranslator.REDUNDANT_CAST_WARN.translate(this.type.typeName, type.typeName))
-            return this
-        }
-        return when(type){
-            MCFPPBaseType.Any -> MCAnyConcrete(this)
-            else -> {
-                buildCastErrorVar(type)
-            }
-        }
-    }
-
-    override fun implicitCast(type: MCFPPType): Var<*> {
-        if(type == this.type){
-            return this
-        }
-        return when(type){
-            MCFPPBaseType.Any -> MCAnyConcrete(this)
-            else -> {
-                buildCastErrorVar(type)
-            }
-        }
-    }
 
     /**
      * 将b中的值赋值给此变量

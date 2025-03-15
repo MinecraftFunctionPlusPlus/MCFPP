@@ -87,7 +87,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         Project.ctx = ctx
         visitConditionalOrExpressionRe = visitConditionalAndExpression(ctx.conditionalAndExpression(0))
         processVarCache.add(visitConditionalOrExpressionRe!!)
-        for (i in 1 until ctx.conditionalAndExpression().size) {
+        for (i in 1..<ctx.conditionalAndExpression().size) {
             var b: Var<*>? = visitConditionalAndExpression(ctx.conditionalAndExpression(i))
             if(b is MCFloat) b = b.toTempEntity()
             if(visitConditionalOrExpressionRe!! != MCFloat.ssObj){
@@ -112,9 +112,9 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         Project.ctx = ctx
         visitConditionalAndExpressionRe = visitEqualityExpression(ctx.equalityExpression(0))
         processVarCache.add(visitConditionalAndExpressionRe!!)
-        for (i in 1 until ctx.equalityExpression().size) {
-            val b: Var<*>? = visitEqualityExpression(ctx.equalityExpression(i))
-            visitConditionalAndExpressionRe = visitConditionalAndExpressionRe!!.binaryComputation(b!!, "&&")
+        for (i in 1..<ctx.equalityExpression().size) {
+            val b: Var<*> = visitEqualityExpression(ctx.equalityExpression(i))
+            visitConditionalAndExpressionRe = visitConditionalAndExpressionRe!!.binaryComputation(b, "&&")
             processVarCache[processVarCache.size - 1] = visitConditionalAndExpressionRe!!
         }
         processVarCache.remove(visitConditionalAndExpressionRe!!)
@@ -167,7 +167,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         Project.ctx = ctx
         visitAdditiveExpressionRe = visitMultiplicativeExpression(ctx.multiplicativeExpression(0))
         processVarCache.add(visitAdditiveExpressionRe!!)
-        for (i in 1 until ctx.multiplicativeExpression().size) {
+        for (i in 1..<ctx.multiplicativeExpression().size) {
             var b: Var<*>? = visitMultiplicativeExpression(ctx.multiplicativeExpression(i))
             if(b is MCFloat) {
                 b = b.toTempEntity()
@@ -194,7 +194,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         Project.ctx = ctx
         visitMultiplicativeExpressionRe = visitUnaryExpression(ctx.unaryExpression(0))
         processVarCache.add(visitMultiplicativeExpressionRe!!)
-        for (i in 1 until ctx.unaryExpression().size) {
+        for (i in 1..<ctx.unaryExpression().size) {
             var b: Var<*>? = visitUnaryExpression(ctx.unaryExpression(i))
             if(b is MCFloat) b = b.toTempEntity()
             if(visitMultiplicativeExpressionRe != MCFloat.ssObj){

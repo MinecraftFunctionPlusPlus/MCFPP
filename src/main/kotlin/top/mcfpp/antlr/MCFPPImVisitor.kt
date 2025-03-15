@@ -797,20 +797,16 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     @InsertCommand
     override fun visitOrgCommand(ctx: mcfppParser.OrgCommandContext):Any? {
         Project.ctx = ctx
-        val sb = StringBuilder()
+        val command = Command()
         for (content in ctx.orgCommandContent()){
             if(content.OrgCommandText() != null){
-                sb.append(content.OrgCommandText().text)
+                command.build(content.OrgCommandText().text)
             }else{
                 val exp = MCFPPExprVisitor().visitExpression(content.orgCommandExpression().expression())
-                if(exp is MCFPPValue<*>){
-                    sb.append(exp.value)
-                }else{
-                    sb.append(exp)
-                }
+                command.build(exp.toCommandPart())
             }
         }
-        Function.addCommand(sb.toString())
+        Function.addCommand(command)
         return null
     }
 

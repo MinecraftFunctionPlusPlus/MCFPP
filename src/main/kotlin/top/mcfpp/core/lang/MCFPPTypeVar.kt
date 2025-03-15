@@ -7,14 +7,12 @@ import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 
-class MCFPPTypeVar : Var<MCFPPTypeVar>, MCFPPValue<MCFPPType> {
-
-    override var value: MCFPPType
+class MCFPPTypeVar : ConcreteVar<MCFPPTypeVar, MCFPPType>{
 
     override var type: MCFPPType = MCFPPConcreteType.Type
 
     @Suppress("ConvertSecondaryConstructorToPrimary")
-    constructor(type: MCFPPType = MCFPPBaseType.Any, identifier: String = TempPool.getVarIdentify()) : super(identifier) {
+    constructor(type: MCFPPType = MCFPPBaseType.Any, identifier: String = TempPool.getVarIdentify()) : super(identifier, type) {
         this.value = type
     }
 

@@ -20,7 +20,7 @@ import top.mcfpp.util.TempPool
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 
-open class SpecifiedEntityVar: NBTBasedData, AbstractEntity {
+open class SpecifiedEntityVar: NBTBasedData {
 
     var isName: Boolean = false
 

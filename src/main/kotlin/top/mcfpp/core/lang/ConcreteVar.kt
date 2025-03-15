@@ -1,5 +1,6 @@
 package top.mcfpp.core.lang
 
+import top.mcfpp.command.Command
 import top.mcfpp.util.LogProcessor
 
 /**
@@ -45,6 +46,10 @@ abstract class ConcreteVar<T: ConcreteVar<T, V>, V>: Var<T>, MCFPPValue<V>{
     override fun toDynamic(replace: Boolean): Var<*> {
         LogProcessor.error("Cannot lose track of $type")
         return this
+    }
+
+    override fun toCommandPart(): Command {
+        return Command(value.toString())
     }
 
 }

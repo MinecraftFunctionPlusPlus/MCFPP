@@ -11,7 +11,7 @@ import top.mcfpp.util.TempPool
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 
-open class PlayerVar : Var<PlayerVar>, AbstractEntity {
+open class PlayerVar : Var<PlayerVar> {
 
     var entityVar: EntityVar
 

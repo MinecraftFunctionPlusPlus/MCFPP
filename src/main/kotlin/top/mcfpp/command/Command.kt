@@ -284,6 +284,24 @@ open class Command: Serializable {
         return Command.build("function mcfpp:dynamic/$f with").build(nbtPath.toCommandPart())
     }
 
+    fun buildAll(vararg parts: Any?): Command {
+        for (part in parts){
+            if(part == null){
+                build("null")
+                continue
+            }
+            if(part is Var<*>){
+                build(part.toCommandPart())
+                continue
+            }
+            if(part is Command){
+                build(part)
+            }
+            build(parts.toString())
+        }
+        return this
+    }
+
     /**
      * 将此命令解析为一个字符串
      *

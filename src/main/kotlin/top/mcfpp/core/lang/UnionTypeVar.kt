@@ -53,7 +53,6 @@ open class UnionTypeVar(identifier: String, vararg vars: Var<*>): Var<UnionTypeV
         return super.implicitCast(type)
     }
 
-
     /**
      * 将这个变量强制转换为一个类型
      * @param type 要转换到的目标类型

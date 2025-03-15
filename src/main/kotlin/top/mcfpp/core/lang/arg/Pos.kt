@@ -70,7 +70,7 @@ class Pos : Var<Pos> {
         TODO("Not yet implemented")
     }
 
-    fun toCommandPart(): Command{
+    override fun toCommandPart(): Command{
         val relative = coordinate.values.toTypedArray()
         val values = coordinate.keys.toTypedArray()
         val c = if(relative[0]){

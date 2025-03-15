@@ -130,7 +130,7 @@ open class RangeVar: Var<RangeVar> {
         TODO("Not yet implemented")
     }
 
-    open fun toCommandPart() : Command{
+    override fun toCommandPart() : Command{
         val command = Command("")
         if(point and 2 != 0.toByte()) command.buildMacro(left, false)
         command.build("..")

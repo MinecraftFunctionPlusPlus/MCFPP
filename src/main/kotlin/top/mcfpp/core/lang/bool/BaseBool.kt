@@ -26,7 +26,7 @@ abstract class BaseBool : Var<BaseBool> {
 
     abstract override fun or(a: Var<*>): Var<*>?
 
-    abstract fun toCommandPart(): Command
+    abstract override fun toCommandPart(): Command
 
     override fun toNBTVar(): NBTBasedData {
         return toScoreBool(false).toNBTVar()
