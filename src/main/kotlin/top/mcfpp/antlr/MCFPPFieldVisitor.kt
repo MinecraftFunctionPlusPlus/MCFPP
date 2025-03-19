@@ -417,9 +417,14 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                     LogProcessor.error("Cannot override static method ${ctx.Identifier()}")
                     throw Exception()
                 }
+                f.isOverriding = true
             }else{
                 LogProcessor.error("Already defined function:" + ctx.Identifier().text + "in class " + Class.currClass!!.identifier)
                 Function.currFunction = Function.nullFunction
+            }
+        }else {
+            if(ctx.OVERRIDE()!= null){
+                LogProcessor.error("Method ${f.identifier} in class ${Class.currClass!!.namespaceID} overrides nothing")
             }
         }
         f.ast = null
@@ -988,7 +993,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //解析成员
         //先解析函数
         for (c in ctx.templateMemberDeclaration()) {
-            if (c!!.templateMember().templateFunctionDeclaration() != null) {
+            if (c!!.templateMember().templateFunctionDeclaration() != null || c!!.templateMember().templateConstructorDeclaration() != null) {
                 visit(c)
             }
         }

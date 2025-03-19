@@ -3,6 +3,7 @@ package top.mcfpp.core.lang
 import net.querz.nbt.io.SNBTUtil
 import net.querz.nbt.tag.CompoundTag
 import net.querz.nbt.tag.Tag
+import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
@@ -306,6 +307,16 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         }
     }
 
+    override fun toCommandPart(): Command {
+        val f = getMemberFunction("toCommandPart", arrayListOf(), arrayListOf(), Member.AccessModifier.PUBLIC).first
+        if(f is UnknownFunction) throw IllegalArgumentException("Cannot find toCommandPart function")
+        if(f.isOverriding){
+            val command = (f.invoke(arrayListOf(), this) as JavaVar).value as Command
+            return command
+        }else{
+            return super.toCommandPart()
+        }
+    }
 
 }
 

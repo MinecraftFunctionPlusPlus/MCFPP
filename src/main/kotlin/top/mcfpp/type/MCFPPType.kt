@@ -227,8 +227,8 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             MCFPPBaseType.String,
             MCFPPBaseType.Any,
             MCFPPBaseType.JsonText,
-            MCFPPBaseType.Coordinate2,
-            MCFPPBaseType.Coordinate3,
+            MCFPPBaseType.Pos2,
+            MCFPPBaseType.Pos3,
 
             MCFPPNBTType.NBT,
             MCFPPNBTType.Byte,
@@ -242,8 +242,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             MCFPPConcreteType.Type,
             MCFPPConcreteType.JavaVar,
 
-            MCFPPEntityType.Selector,
-            MCFPPEntityType.Selector.NormalSelector,
+            MCFPPEntityType.EntityBase,
 
             MCFPPPrivateType.MCFPPObjectVarType,
             MCFPPPrivateType.CommandReturn
@@ -268,14 +267,13 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
 
         val baseType:Set<MCFPPType> = setOf(
             MCFPPBaseType.Void,
-            MCFPPEntityType.Selector,
             MCFPPConcreteType.Type,
             MCFPPBaseType.Int,
             MCFPPBaseType.Bool,
             MCFPPBaseType.String,
             MCFPPBaseType.Float,
             MCFPPBaseType.Any,
-            MCFPPEntityType.Selector.NormalSelector,
+            MCFPPEntityType.EntityBase,
             MCFPPConcreteType.JavaVar,
             MCFPPBaseType.JsonText,
             MCFPPNBTType.NBT
@@ -372,9 +370,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
         }
 
         private fun parseFromContext(ctx: TypeWithoutExclContext, typeScope: IFieldWithType): MCFPPType? {
-            if(ctx.normalType() != null){
-                return typeCache[ctx.text]!!
-            }
+            typeCache[ctx.text]?.let { return it }
             //向量
             if(ctx.VecType() != null){
                 return MCFPPVectorType(ctx.VecType().text.substring(3).toInt())

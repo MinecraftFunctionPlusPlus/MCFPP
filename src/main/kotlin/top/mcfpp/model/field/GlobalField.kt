@@ -8,8 +8,9 @@ import top.mcfpp.io.info.GlobalFieldInfo
 import top.mcfpp.io.info.NamespaceInfo
 import top.mcfpp.lib.SbObject
 import top.mcfpp.mni.DataObjectData
-import top.mcfpp.mni.MinecraftData
+import top.mcfpp.mni.ObjectData
 import top.mcfpp.mni.annotation.*
+import top.mcfpp.mni.minecraft.MinecraftData
 import top.mcfpp.model.*
 import top.mcfpp.model.Enum
 import top.mcfpp.model.annotation.Annotation
@@ -109,6 +110,7 @@ object GlobalField : FieldContainer, IField {
         stdNamespaces["mcfpp.lang"]!!.field.addTemplate("DataObject", DataTemplate.baseDataTemplate)
         DataTemplate.baseDataTemplate.getNativeFromClass(DataObjectData::class.java)
         stdNamespaces["mcfpp.lang"]!!.field.addClass("Object", Class.baseClass)
+        Class.baseClass.getNativeFromClass(ObjectData::class.java)
 
         stdNamespaces["mcfpp.minecraft"]!!.getNativeFunctionFromClass(MinecraftData::class.java)
 

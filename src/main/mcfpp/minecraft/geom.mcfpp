@@ -1,32 +1,10 @@
 @From<"top.mcfpp.mni.minecraft.AreaData">
 data Area{
-    int startX;
-    int startY;
-    int startZ;
-    int endX;
-    int endY;
-    int endZ;
-}
+    pos3 start;
+    pos3 end;
 
-object data Area{
-
-    func build(vec3 start, vec3 end) -> Area{
-        var area = Area();
-        area.startX = start[0];
-        area.startY = start[1];
-        area.startZ = start[2];
-        area.endX = end[0];
-        area.endY = end[1];
-        area.endZ = end[2];
-    }
-
-    func build(int sx, int sy, int sz, int ex, int ey, int ez) -> Area{
-        var area = Area();
-        area.startX = sx;
-        area.startY = sy;
-        area.startZ = sz;
-        area.endX = ex;
-        area.endY = ey;
-        area.endZ = ez;
+    constructor(pos3 start, pos3 end){
+        this.start = start;
+        this.end = end;
     }
 }

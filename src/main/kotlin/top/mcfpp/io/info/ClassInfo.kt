@@ -18,7 +18,7 @@ class ClassInfo(
     var identifier: String,
     var parents: List<AbstractClassInfo<*>>,
     var field: FieldInfo,
-    var constructor: List<ConstructorInfo>
+    var constructor: List<ClassConstructorInfo>
 ): AbstractClassInfo<Class> {
     override fun get(): Class {
         infoCache[this]?.let { return it }
@@ -68,7 +68,7 @@ class ClassInfo(
                 cls.identifier,
                 if(cls != Class.baseClass) cls.parent.map { from(it as Class) } else emptyList(),
                 FieldInfo.from(cls.field),
-                cls.constructors.map { ConstructorInfo.from(it) }
+                cls.constructors.map { ClassConstructorInfo.from(it) }
             )
             classCache[cls] = v
             return v
@@ -83,7 +83,7 @@ class GenericClassInfo(
     var generic: List<ClassParamInfo>,
     var context: SerializableClassBodyContext,
     var field: FieldInfo,
-    var constructor: List<ConstructorInfo>
+    var constructor: List<ClassConstructorInfo>
 ): AbstractClassInfo<Class> {
 
     override fun get(): GenericClass {
@@ -136,7 +136,7 @@ class GenericClassInfo(
                 cls.readOnlyParams.map { ClassParamInfo.from(it) },
                 SerializableClassBodyContext(cls.ctx),
                 FieldInfo.from(cls.field),
-                cls.constructors.map { ConstructorInfo.from(it) }
+                cls.constructors.map { ClassConstructorInfo.from(it) }
             )
             classCache[cls] = v
             return v

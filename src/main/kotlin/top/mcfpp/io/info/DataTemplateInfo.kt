@@ -7,7 +7,8 @@ data class DataTemplateInfo(
     var namespace: String,
     var identifier: String,
     var parents: List<DataTemplateInfo>,
-    var field: FieldInfo
+    var field: FieldInfo,
+    var constructor: List<TemplateConstructorInfo>
 ): ModelInfo<DataTemplate> {
 
     override fun get(): DataTemplate {
@@ -21,11 +22,15 @@ data class DataTemplateInfo(
         currTemplate = template
         parents.forEach {
             template.extends(it.get())
+            currTemplate = template
         }
         if(!template.ifExtends(DataTemplate.baseDataTemplate)){
             template.extends(DataTemplate.baseDataTemplate)
         }
         template.field = field.get()
+        constructor.forEach {
+            template.constructors.add(it.get())
+        }
         currTemplate = null
         infoCache[this] = template
         return template
@@ -47,7 +52,8 @@ data class DataTemplateInfo(
                 template.namespace,
                 template.identifier,
                 if(template != DataTemplate.baseDataTemplate) template.parent.map { from(it as DataTemplate) } else emptyList(),
-                FieldInfo.from(template.field)
+                FieldInfo.from(template.field),
+                template.constructors.map { TemplateConstructorInfo.from(it) }
             )
             templateCache[template] = d
             return d

@@ -2,6 +2,7 @@ scoreboard objectives add mcfpp.minecraft.bossbarstyle dummy
 scoreboard objectives add mcfpp.minecraft.entity.llamavariant dummy
 scoreboard objectives add mcfpp_default dummy
 scoreboard objectives add mcfpp.minecraft.other.attributemodifiertype dummy
+scoreboard objectives add mcfpp.minecraft.other.cloneoperation dummy
 scoreboard objectives add mcfpp.minecraft.entity.pandagene dummy
 scoreboard objectives add mcfpp.minecraft.entity.gossiptype dummy
 scoreboard objectives add mcfpp.minecraft.entity.frogvariant dummy
@@ -10,13 +11,16 @@ scoreboard objectives add mcfpp.minecraft.entity.salmontype dummy
 scoreboard objectives add mcfpp.minecraft.item.attributeslot dummy
 scoreboard objectives add mcfpp.minecraft.other.attributemodifiertype dummy
 scoreboard objectives add mcfpp.minecraft.entity.armadillostate dummy
+scoreboard objectives add mcfpp.minecraft.other.cloneoperation dummy
 scoreboard objectives add mcfpp.minecraft.item.attributeslot dummy
 scoreboard objectives add mcfpp.minecraft.entity.frogvariant dummy
+scoreboard objectives add mcfpp.minecraft.other.clonemaskmode dummy
 scoreboard objectives add mcfpp_temp dummy
 scoreboard objectives add mcfpp_pointer_counter dummy
 scoreboard objectives add mcfpp_boolean dummy
 scoreboard objectives add mcfpp.minecraft.item.fireworkshape dummy
 scoreboard objectives add mcfpp.minecraft.bossbarstyle dummy
+scoreboard objectives add mcfpp.minecraft.other.clonemaskmode dummy
 scoreboard objectives add mcfpp.minecraft.entity.salmontype dummy
 scoreboard objectives add mcfpp_init dummy
 scoreboard objectives add mcfpp.minecraft.entity.foxtype dummy

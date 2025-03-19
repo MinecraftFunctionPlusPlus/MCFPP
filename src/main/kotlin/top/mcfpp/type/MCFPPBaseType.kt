@@ -186,36 +186,36 @@ class MCFPPBaseType {
         override fun buildUnConcrete(identifier: kotlin.String, clazz: Class): Var<*> = RangeVar(clazz, identifier)
     }
 
-    object Coordinate3: MCFPPType(arrayListOf(Any)){
+    object Pos3: MCFPPType(arrayListOf(Any)){
 
         override val objectData: CompoundData
-            get() = Coordinate3Var.data
+            get() = Pos3Var.data
 
         override val typeName: kotlin.String
-            get() = "coord3"
+            get() = "pos3"
 
-        override fun build(identifier: kotlin.String, container: FieldContainer): Var<*> = Coordinate3Var(container, identifier)
-        override fun build(identifier: kotlin.String): Var<*> = Coordinate3Var(identifier)
-        override fun build(identifier: kotlin.String, clazz: Class): Var<*> = Coordinate3Var(clazz, identifier)
-        override fun buildUnConcrete(identifier: kotlin.String, container: FieldContainer): Var<*> = Coordinate3Var(container, identifier)
-        override fun buildUnConcrete(identifier: kotlin.String): Var<*> = Coordinate3Var(identifier)
-        override fun buildUnConcrete(identifier: kotlin.String, clazz: Class): Var<*> = Coordinate3Var(clazz, identifier)
+        override fun build(identifier: kotlin.String, container: FieldContainer): Var<*> = Pos3Var(container, identifier)
+        override fun build(identifier: kotlin.String): Var<*> = Pos3Var(identifier)
+        override fun build(identifier: kotlin.String, clazz: Class): Var<*> = Pos3Var(clazz, identifier)
+        override fun buildUnConcrete(identifier: kotlin.String, container: FieldContainer): Var<*> = Pos3Var(container, identifier)
+        override fun buildUnConcrete(identifier: kotlin.String): Var<*> = Pos3Var(identifier)
+        override fun buildUnConcrete(identifier: kotlin.String, clazz: Class): Var<*> = Pos3Var(clazz, identifier)
     }
 
-    object Coordinate2: MCFPPType(arrayListOf(Any)){
+    object Pos2: MCFPPType(arrayListOf(Any)){
 
         override val objectData: CompoundData
-            get() = Coordinate2Var.data
+            get() = Pos2Var.data
 
         override val typeName: kotlin.String
-            get() = "coord2"
+            get() = "pos2"
 
-        override fun build(identifier: kotlin.String, container: FieldContainer): Var<*> = Coordinate2Var(container, identifier)
-        override fun build(identifier: kotlin.String): Var<*> = Coordinate2Var(identifier)
-        override fun build(identifier: kotlin.String, clazz: Class): Var<*> = Coordinate2Var(clazz, identifier)
-        override fun buildUnConcrete(identifier: kotlin.String, container: FieldContainer): Var<*> = Coordinate2Var(container, identifier)
-        override fun buildUnConcrete(identifier: kotlin.String): Var<*> = Coordinate2Var(identifier)
-        override fun buildUnConcrete(identifier: kotlin.String, clazz: Class): Var<*> = Coordinate2Var(clazz, identifier)
+        override fun build(identifier: kotlin.String, container: FieldContainer): Var<*> = Pos2Var(container, identifier)
+        override fun build(identifier: kotlin.String): Var<*> = Pos2Var(identifier)
+        override fun build(identifier: kotlin.String, clazz: Class): Var<*> = Pos2Var(clazz, identifier)
+        override fun buildUnConcrete(identifier: kotlin.String, container: FieldContainer): Var<*> = Pos2Var(container, identifier)
+        override fun buildUnConcrete(identifier: kotlin.String): Var<*> = Pos2Var(identifier)
+        override fun buildUnConcrete(identifier: kotlin.String, clazz: Class): Var<*> = Pos2Var(clazz, identifier)
     }
 
 }

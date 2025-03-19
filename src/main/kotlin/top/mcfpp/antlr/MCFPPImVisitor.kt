@@ -803,7 +803,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 command.build(content.OrgCommandText().text)
             }else{
                 val exp = MCFPPExprVisitor().visitExpression(content.orgCommandExpression().expression())
-                command.build(exp.toCommandPart())
+                command.build(exp.toCommandPart(), false)
             }
         }
         Function.addCommand(command)

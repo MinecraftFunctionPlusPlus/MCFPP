@@ -11,7 +11,7 @@ import top.mcfpp.util.TempPool
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 
-class EntityVar: Var<EntityVar>, AbstractEntity {
+class EntityVar: Var<EntityVar> {
 
     override var type: MCFPPType = MCFPPEntityType.EntityBase
 

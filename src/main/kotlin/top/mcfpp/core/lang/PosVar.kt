@@ -10,6 +10,7 @@ import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
+import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
@@ -17,40 +18,42 @@ import top.mcfpp.util.TempPool
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 
-class Coordinate3Var: Var<Coordinate3Var> {
+class Pos3Var: Var<Pos3Var> {
 
-    var x: CoordinateDimension
-    var y: CoordinateDimension
-    var z: CoordinateDimension
+    var x: PosDimension
+    var y: PosDimension
+    var z: PosDimension
+
+    override var type: MCFPPType = MCFPPBaseType.Pos3
 
     constructor(
         curr: FieldContainer,
         identifier: String = TempPool.getVarIdentify(),
     ) : super(identifier){
-        this.x = CoordinateDimension("", curr, identifier)
-        this.y = CoordinateDimension("", curr, identifier)
-        this.z = CoordinateDimension("", curr, identifier)
+        this.x = PosDimension("", curr, identifier)
+        this.y = PosDimension("", curr, identifier)
+        this.z = PosDimension("", curr, identifier)
     }
 
     constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier){
-        x = CoordinateDimension("", identifier)
-        y = CoordinateDimension("", identifier)
-        z = CoordinateDimension("", identifier)
+        x = PosDimension("", identifier)
+        y = PosDimension("", identifier)
+        z = PosDimension("", identifier)
     }
 
-    constructor(b: Coordinate3Var) : super(b){
-        x = CoordinateDimension(b.x)
-        y = CoordinateDimension(b.y)
-        z = CoordinateDimension(b.z)
+    constructor(b: Pos3Var) : super(b){
+        x = PosDimension(b.x)
+        y = PosDimension(b.y)
+        z = PosDimension(b.z)
     }
 
-    override fun clone(): Coordinate3Var {
-        return Coordinate3Var(this)
+    override fun clone(): Pos3Var {
+        return Pos3Var(this)
     }
 
-    override fun doAssignedBy(b: Var<*>): Coordinate3Var {
+    override fun doAssignedBy(b: Var<*>): Pos3Var {
         return when (b) {
-            is Coordinate3Var -> {
+            is Pos3Var -> {
                 x.assignedBy(b.x)
                 y.assignedBy(b.y)
                 z.assignedBy(b.z)
@@ -68,8 +71,8 @@ class Coordinate3Var: Var<Coordinate3Var> {
         return !b.implicitCast(type).isError
     }
 
-    override fun getTempVar(): Coordinate3Var {
-        return Coordinate3Var().assignedBy(this)
+    override fun getTempVar(): Pos3Var {
+        return Pos3Var().assignedBy(this)
     }
 
     override fun storeToStack() {
@@ -90,7 +93,7 @@ class Coordinate3Var: Var<Coordinate3Var> {
             "y" -> y to true
             "z" -> z to true
             else -> null to true
-        }
+        }.apply { first?.parent = this@Pos3Var }
     }
 
     override fun getMemberFunction(
@@ -101,7 +104,7 @@ class Coordinate3Var: Var<Coordinate3Var> {
     ): Pair<Function, Boolean> {
         return UnknownFunction(key) to true
     }
-    fun toCommandPart(): Command{
+    override fun toCommandPart(): Command{
         val c = Command("")
         c.build(x.toCommandPart(), false)
         c.build(y.toCommandPart())
@@ -109,43 +112,54 @@ class Coordinate3Var: Var<Coordinate3Var> {
         return c
     }
 
+    override fun replaceMemberVar(v: Var<*>) {
+        v as PosDimension
+        when(v.identifier){
+            "x" -> x = v
+            "y" -> y = v
+            "z" -> z = v
+        }
+    }
+
     companion object {
-        val data = CompoundData("coordinate3", "mcfpp").apply {
+        val data = CompoundData("pos3", "mcfpp").apply {
             extends(MCAny.data)
         }
     }
 }
 
-class Coordinate2Var: Var<Coordinate2Var> {
+class Pos2Var: Var<Pos2Var> {
 
-    var x: CoordinateDimension
-    var z: CoordinateDimension
+    override var type: MCFPPType = MCFPPBaseType.Pos2
+
+    var x: PosDimension
+    var z: PosDimension
 
     constructor(
         curr: FieldContainer,
         identifier: String = TempPool.getVarIdentify()
     ) : super(identifier){
-        x = CoordinateDimension("", curr, identifier)
-        z = CoordinateDimension("", curr, identifier)
+        x = PosDimension("", curr, identifier)
+        z = PosDimension("", curr, identifier)
     }
 
     constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier){
-        x = CoordinateDimension("", identifier)
-        z = CoordinateDimension("", identifier)
+        x = PosDimension("", identifier)
+        z = PosDimension("", identifier)
     }
 
-    constructor(b: Coordinate2Var) : super(b){
-        x = CoordinateDimension(b.x)
-        z = CoordinateDimension(b.z)
+    constructor(b: Pos2Var) : super(b){
+        x = PosDimension(b.x)
+        z = PosDimension(b.z)
     }
 
-    override fun clone(): Coordinate2Var {
-        return Coordinate2Var(this)
+    override fun clone(): Pos2Var {
+        return Pos2Var(this)
     }
 
-    override fun doAssignedBy(b: Var<*>): Coordinate2Var {
+    override fun doAssignedBy(b: Var<*>): Pos2Var {
         return when (b) {
-            is Coordinate2Var -> {
+            is Pos2Var -> {
                 x.assignedBy(b.x)
                 z.assignedBy(b.z)
                 this
@@ -162,8 +176,8 @@ class Coordinate2Var: Var<Coordinate2Var> {
         return !b.implicitCast(type).isError
     }
 
-    override fun getTempVar(): Coordinate2Var {
-        return Coordinate2Var().assignedBy(this)
+    override fun getTempVar(): Pos2Var {
+        return Pos2Var().assignedBy(this)
     }
 
     override fun storeToStack() {
@@ -181,7 +195,7 @@ class Coordinate2Var: Var<Coordinate2Var> {
             "x" -> x to true
             "z" -> z to true
             else -> null to true
-        }
+        }.apply { first?.parent = this@Pos2Var }
     }
 
     override fun getMemberFunction(
@@ -193,21 +207,29 @@ class Coordinate2Var: Var<Coordinate2Var> {
         return UnknownFunction(key) to true
     }
 
-    fun toCommandPart(): Command{
+    override fun toCommandPart(): Command{
         val c = Command("")
         c.buildMacro(x, false)
         c.buildMacro(z, false)
         return c
     }
 
+    override fun replaceMemberVar(v: Var<*>) {
+        v as PosDimension
+        when(v.identifier){
+            "x" -> x = v
+            "z" -> z = v
+        }
+    }
+
     companion object {
-        val data = CompoundData("coordinate2", "mcfpp").apply {
+        val data = CompoundData("pos2", "mcfpp").apply {
             extends(MCAny.data)
         }
     }
 }
 
-open class CoordinateDimension: MCNumber<Number> {
+open class PosDimension: MCNumber<Number> {
 
     var prefix: MCString
 
@@ -248,13 +270,13 @@ open class CoordinateDimension: MCNumber<Number> {
      * 复制一个int
      * @param b 被复制的int值
      */
-    constructor(b: CoordinateDimension) : super(b){
+    constructor(b: PosDimension) : super(b){
         this.prefix = b.prefix.clone() as MCString
         this.number = b.number?.clone()
     }
 
     override fun assignCommand(a: MCNumber<*>): MCNumber<Number> {
-        this.prefix = this.prefix.assignedBy((a as CoordinateDimension).prefix) as MCString
+        this.prefix = this.prefix.assignedBy((a as PosDimension).prefix) as MCString
         val aNum = a.number
         if(number == null && aNum == null) {
             //Do nothing
@@ -273,7 +295,7 @@ open class CoordinateDimension: MCNumber<Number> {
 
     override fun doAssignedBy(b: Var<*>): MCNumber<Number> {
         return when (b) {
-            is CoordinateDimension -> {
+            is PosDimension -> {
                 assignCommand(b)
             }
 
@@ -289,11 +311,11 @@ open class CoordinateDimension: MCNumber<Number> {
     }
 
     override fun clone(): MCNumber<Number> {
-        return CoordinateDimension(this)
+        return PosDimension(this)
     }
 
     override fun getTempVar(): MCNumber<Number> {
-        return CoordinateDimension(TempPool.getVarIdentify())
+        return PosDimension(TempPool.getVarIdentify())
     }
 
     override fun storeToStack() {
@@ -313,21 +335,21 @@ open class CoordinateDimension: MCNumber<Number> {
     /**
      * 返回此坐标维度作为命令部分的表示。可能为宏函数，需要[Command.buildMacroFunction]转换
      */
-    open fun toCommandPart(): Command{
+    override fun toCommandPart(): Command{
         val c = if(prefix is MCStringConcrete){
             Command((prefix as MCStringConcrete).value.value)
         }else{
             Command("").buildMacro(prefix, false)
         }
-        if(number != null){
-            c.buildMacro(number!!, false)
+        if(number != null && !(number is MCIntConcrete && (number as MCIntConcrete).value == 0)){
+            c.build(number!!.toCommandPart())
         }
         return c
     }
 
 }
 
-class CoordinateDimensionConcrete: CoordinateDimension, MCFPPValue<Number>{
+class CoordinateDimensionConcrete: PosDimension, MCFPPValue<Number>{
 
     override var value: Number = Double.NaN
 
@@ -354,7 +376,7 @@ class CoordinateDimensionConcrete: CoordinateDimension, MCFPPValue<Number>{
         }
     }
 
-    constructor(coo: CoordinateDimension, value: Number) : super(coo){
+    constructor(coo: PosDimension, value: Number) : super(coo){
         this.value = value
         number = if(coo.number is MCInt) {
             MCIntConcrete(coo.number as MCInt, value.toInt())
@@ -377,7 +399,7 @@ class CoordinateDimensionConcrete: CoordinateDimension, MCFPPValue<Number>{
         }else{
             (number as MCFloatConcrete).toDynamic(false)
         }
-        val qwq = CoordinateDimension(this)
+        val qwq = PosDimension(this)
         if(replace) replacedBy(qwq)
         return qwq
     }

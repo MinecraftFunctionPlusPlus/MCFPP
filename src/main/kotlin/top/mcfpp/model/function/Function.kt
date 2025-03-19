@@ -224,6 +224,8 @@ open class Function : Member, FieldContainer, WithDocument {
 
     val annotations: ArrayList<Annotation> = ArrayList()
 
+    var isOverriding : Boolean = false
+
     /**
      * 在什么东西里面
      */
@@ -761,9 +763,9 @@ open class Function : Member, FieldContainer, WithDocument {
             return
         }
         returnVar = returnVar.assignedBy(v)
-        if(returnVar is MCFPPValue<*> && returnVar.type is MCFPPDeclaredConcreteType){
-            returnVar = (returnVar as MCFPPValue<*>).toDynamic(false)
-        }
+        //if(returnVar is MCFPPValue<*> && returnVar.type !is MCFPPConcreteType){
+        //    returnVar = (returnVar as MCFPPValue<*>).toDynamic(false)
+        //}
     }
 
     /**

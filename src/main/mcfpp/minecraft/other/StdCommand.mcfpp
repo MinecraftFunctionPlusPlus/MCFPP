@@ -1,0 +1,10 @@
+enum CloneMaskMode{
+    masked,
+    replace
+}
+
+enum CloneOperation{
+    force,
+    move,
+    normal
+}

@@ -2,8 +2,8 @@ package top.mcfpp.lib
 
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.core.lang.Coordinate3Var
-import top.mcfpp.core.lang.CoordinateDimension
+import top.mcfpp.core.lang.Pos3Var
+import top.mcfpp.core.lang.PosDimension
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.Member
@@ -24,7 +24,7 @@ class Execute {
                         }
 
                         override fun doAssignedBy(b: Var<*>): WriteOnlyVar {
-                            if(b is CoordinateDimension){
+                            if(b is PosDimension){
                                 command.build("positioned").build(b.toCommandPart()).build("~ ~")
                             }else{
                                 LogProcessor.error("execute.pos.x can only be assigned with CoordinateDimension")
@@ -33,7 +33,7 @@ class Execute {
                         }
 
                         override fun canAssignedBy(b: Var<*>): Boolean {
-                            return b is CoordinateDimension
+                            return b is PosDimension
                         }
                     })
                     field.putVar("y", object : WriteOnlyVar(){
@@ -42,7 +42,7 @@ class Execute {
                         }
 
                         override fun doAssignedBy(b: Var<*>): WriteOnlyVar {
-                            if(b is CoordinateDimension){
+                            if(b is PosDimension){
                                 command.build("positioned ~").build(b.toCommandPart()).build("~")
                             }else{
                                 LogProcessor.error("execute.pos.y can only be assigned with CoordinateDimension")
@@ -51,7 +51,7 @@ class Execute {
                         }
 
                         override fun canAssignedBy(b: Var<*>): Boolean {
-                            return b is CoordinateDimension
+                            return b is PosDimension
                         }
                     })
                     field.putVar("z", object : WriteOnlyVar(){
@@ -60,7 +60,7 @@ class Execute {
                         }
 
                         override fun doAssignedBy(b: Var<*>): WriteOnlyVar {
-                            if(b is CoordinateDimension){
+                            if(b is PosDimension){
                                 command.build("positioned ~ ~").build(b.toCommandPart())
                             }else{
                                 LogProcessor.error("execute.pos.z can only be assigned with CoordinateDimension")
@@ -69,14 +69,14 @@ class Execute {
                         }
 
                         override fun canAssignedBy(b: Var<*>): Boolean {
-                            return b is CoordinateDimension
+                            return b is PosDimension
                         }
                     })
                 }
             }
 
             override fun doAssignedBy(b: Var<*>): WriteOnlyVar {
-                if(b is Coordinate3Var){
+                if(b is Pos3Var){
                     command.build("positioned").build(b.toCommandPart())
                 }else{
                     LogProcessor.error("execute.pos can only be assigned with Coordinate3Var")
@@ -85,7 +85,7 @@ class Execute {
             }
 
             override fun canAssignedBy(b: Var<*>): Boolean {
-                return b is CoordinateDimension
+                return b is PosDimension
             }
         })
     }

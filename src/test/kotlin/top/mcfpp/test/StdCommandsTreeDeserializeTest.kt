@@ -6,7 +6,7 @@ import top.mcfpp.command.tree.CommandTreeNode
 import top.mcfpp.command.tree.DownloadHelper
 import java.nio.file.Path
 import kotlin.test.Test
-class CommandTreeDeserializeTest {
+class StdCommandsTreeDeserializeTest {
     @Test
     fun testDeserialize(){
         val code = """

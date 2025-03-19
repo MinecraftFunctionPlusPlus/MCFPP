@@ -1,10 +1,9 @@
 package top.mcfpp.mni;
 
 import net.querz.nbt.io.SNBTUtil;
+import org.jetbrains.annotations.NotNull;
 import top.mcfpp.annotations.MNIFunction;
-import top.mcfpp.core.lang.DataTemplateObject;
-import top.mcfpp.core.lang.DataTemplateObjectConcrete;
-import top.mcfpp.core.lang.JsonTextConcrete;
+import top.mcfpp.core.lang.*;
 import top.mcfpp.lib.ListChatComponent;
 import top.mcfpp.lib.NBTChatComponent;
 import top.mcfpp.lib.PlainChatComponent;
@@ -23,5 +22,10 @@ public class DataObjectData {
             l.getComponents().add(new NBTChatComponent(caller.toNBTVar(), false, null));
         }
         returnValue.setValue(new JsonTextConcrete(l, "re"));
+    }
+
+    @MNIFunction(caller = "DataObject", returnType = "JavaVar")
+    public static void toCommandPart(@NotNull Var<?> caller, ValueWrapper<JavaVar> returnValue){
+        returnValue.setValue(new JavaVar(caller.toCommandPart(), "command"));
     }
 }

@@ -225,9 +225,8 @@ open class Class : CompoundData {
     companion object {
 
         val baseClass = Class("Object","mcfpp.lang").apply {
-            addMember(Function("tick", this, context = null))
-            addMember(Function("load", this, context = null))
             extends(MCAny.data)
+            //在GlobalField中注册和获取函数
         }
 
         val tempPtr = NBTPath(StorageSource("mcfpp:system")).memberIndex("temp.init")

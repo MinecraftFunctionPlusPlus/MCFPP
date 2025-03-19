@@ -341,13 +341,13 @@ open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
         } else if(ctx.coordinate() != null){
             val dimensions = ctx.coordinate().coordinateDimension().map { visit(it) }
             if(dimensions.size == 3){
-                return Coordinate3Var().apply {
+                return Pos3Var().apply {
                     x.assignedBy(dimensions[0])
                     y.assignedBy(dimensions[1])
                     z.assignedBy(dimensions[2])
                 }
             }
-            return Coordinate2Var().apply {
+            return Pos2Var().apply {
                 x.assignedBy(dimensions[0])
                 z.assignedBy(dimensions[1])
             }

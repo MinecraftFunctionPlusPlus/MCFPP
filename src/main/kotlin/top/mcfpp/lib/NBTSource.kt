@@ -1,8 +1,8 @@
 package top.mcfpp.lib
 
 import top.mcfpp.command.Command
+import top.mcfpp.core.lang.Pos3Var
 import top.mcfpp.core.lang.entity.SelectorVar
-import top.mcfpp.core.lang.arg.Pos
 import java.io.Serializable
 
 interface NBTSource: Serializable {
@@ -53,7 +53,7 @@ class EntitySource(val entity: SelectorVar): NBTSource{
     }
 }
 
-class BlockSource(val pos: Pos): NBTSource{
+class BlockSource(val pos: Pos3Var): NBTSource{
     override fun toCommand(): Command {
         return Command.build("block").build(pos.toCommandPart())
     }

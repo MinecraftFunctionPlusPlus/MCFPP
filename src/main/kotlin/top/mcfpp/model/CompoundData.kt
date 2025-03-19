@@ -159,6 +159,7 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
      * @return 是否是指定类型的子类型
      */
     open fun isSubOf(compoundData: CompoundData): Boolean{
+        if(this == compoundData) return true
         if(parent.size != 0){
             for (p in parent){
                 if(p.namespaceID == compoundData.namespaceID || p.isSubOf(compoundData)){
@@ -303,6 +304,7 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
                 LogProcessor.error("Method ${nf.identifier} in class ${method.declaringClass.name} overrides nothing")
                 return
             }else{
+                nf.isOverriding = true
                 this.field.addFunction(nf, true)
             }
         }else {

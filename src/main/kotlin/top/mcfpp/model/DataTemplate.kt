@@ -177,6 +177,7 @@ open class DataTemplate : FieldContainer, CompoundData {
         val baseDataTemplate by lazy {
             DataTemplate("DataObject","mcfpp.lang").apply {
                 extends(MCAny.data)
+                //在GlobalField中注册和获取函数
             }
         }
 

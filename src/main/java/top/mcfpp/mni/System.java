@@ -97,7 +97,7 @@ public class System {
             Function.Companion.addCommands(Commands.INSTANCE.method2(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart(), true)));
         }
     }
-
+ 
     @InsertCommand
     public static void print(@NotNull NBTDictionary var){
         if(var instanceof NBTDictionaryConcrete varC){
