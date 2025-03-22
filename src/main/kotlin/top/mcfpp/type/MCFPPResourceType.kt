@@ -1,6 +1,8 @@
 package top.mcfpp.type
 
 
+import top.mcfpp.core.lang.FunctionID
+import top.mcfpp.core.lang.FunctionIDConcrete
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.resource.*
 import top.mcfpp.model.Class

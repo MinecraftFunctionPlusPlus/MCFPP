@@ -1,6 +1,7 @@
 package top.mcfpp.mni.minecraft;
 
 import org.jetbrains.annotations.NotNull;
+import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.annotations.MNIMember;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
@@ -8,6 +9,7 @@ import top.mcfpp.core.lang.*;
 import top.mcfpp.core.lang.entity.EntityVar;
 import top.mcfpp.core.lang.nbt.MCString;
 import top.mcfpp.core.lang.nbt.MCStringConcrete;
+import top.mcfpp.core.lang.resource.Effect;
 import top.mcfpp.mni.hidden.AttributeData;
 import top.mcfpp.model.CompoundData;
 import top.mcfpp.model.Member;
@@ -53,6 +55,7 @@ public class EntityVarData {
         return new ArrayList<>(List.of(attributes));
     }
 
+    @MNIFunction(normalParams = {"float value", "MCString attribute"}, caller = "entity", returnType = "CommandReturn")
     public static void setAttributeBase(MCFloat value, String attribute, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
         Command command;
         if(caller.isMulti()){
@@ -63,6 +66,7 @@ public class EntityVarData {
         Commands.INSTANCE.method3(returnValue, command);
     }
 
+    @MNIFunction(normalParams = {"MCString attribute", "MCFloat scale"}, caller = "entity", returnType = "CommandReturn")
     public static void getAttributeBase(String attribute, EntityVar caller, MCFloat scale, @NotNull ValueWrapper<CommandReturn> returnValue){
         Command command;
         if(caller.isMulti()){
@@ -73,6 +77,7 @@ public class EntityVarData {
         Commands.INSTANCE.method3(returnValue, command);
     }
 
+    @MNIFunction(normalParams = {"MCString attribute", "MCFloat scale"}, caller = "entity", returnType = "CommandReturn")
     public static void getAttribute(String attribute, EntityVar caller, MCFloat scale, @NotNull ValueWrapper<CommandReturn> returnValue){
         Command command;
         if(caller.isMulti()){
@@ -83,6 +88,7 @@ public class EntityVarData {
         Commands.INSTANCE.method3(returnValue, command);
     }
 
+    @MNIFunction(normalParams = {"MCString attribute", "MCFloat scale"}, caller = "entity", returnType = "CommandReturn")
     public static void addAttributeModifier(String attribute, EntityVar caller, DataTemplateObject modifier, ValueWrapper<CommandReturn> returnValue){
         Command command;
         if(caller.isMulti()){
@@ -107,6 +113,7 @@ public class EntityVarData {
         Commands.INSTANCE.method3(returnValue, command);
     }
 
+    @MNIFunction(normalParams = {"MCString attribute", "MCFloat scale"}, caller = "entity", returnType = "CommandReturn")
     public static void removeAttributeModifier(String attribute, EntityVar caller, DataTemplateObject modifier, ValueWrapper<CommandReturn> returnValue){
         Command command;
         if(caller.isMulti()){
@@ -122,6 +129,7 @@ public class EntityVarData {
         Commands.INSTANCE.method3(returnValue, command);
     }
 
+    @MNIFunction(normalParams = {"MCString attribute", "MCFloat scale"}, caller = "entity", returnType = "CommandReturn")
     public static void getAttributeModifier(String attribute, EntityVar caller, DataTemplateObject modifier, MCFloat scale, ValueWrapper<CommandReturn> returnValue){
         Command command;
         var id = modifier.getMemberVarWithT("id", MCString.class);
@@ -132,4 +140,29 @@ public class EntityVarData {
         }
         Commands.INSTANCE.method3(returnValue, command);
     }
+
+    @MNIFunction(normalParams = {"Effect effect", "int time = 30", "int amplifier = 0", "bool hideParticles = false"}, caller = "entity", returnType = "CommandReturn")
+    public static void effect(Effect effect, int time, int amplifier, boolean hideParticles, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
+        var command = Command.Companion.buildAll("effect give", caller, effect, time, amplifier, hideParticles);
+        Commands.INSTANCE.method3(returnValue, command);
+    }
+
+    @MNIFunction(normalParams = {"Effect effect", "int amplifier = 0", "bool hideParticles = false"}, caller = "entity", returnType = "CommandReturn")
+    public static void effectInfinite(Effect effect, int amplifier, boolean hideParticles, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
+        var command = Command.Companion.buildAll("effect give", caller, effect, "infinite", amplifier, hideParticles);
+        Commands.INSTANCE.method3(returnValue, command);
+    }
+
+    @MNIFunction(caller = "entity", returnType = "CommandReturn")
+    public static void clearAllEffects(EntityVar caller, ValueWrapper<CommandReturn> returnValue){
+        var command = Command.Companion.buildAll("effect clear", caller);
+        Commands.INSTANCE.method3(returnValue, command);
+    }
+
+    @MNIFunction(normalParams = "Effect effect", caller = "entity", returnType = "CommandReturn")
+    public static void clearEffect(Effect effect, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
+        var command = Command.Companion.buildAll("effect clear", caller, effect);
+        Commands.INSTANCE.method3(returnValue, command);
+    }
+
 }

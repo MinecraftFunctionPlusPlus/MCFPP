@@ -1,14 +1,15 @@
 package top.mcfpp.util
 
 import net.querz.nbt.tag.Tag
+import top.mcfpp.core.lang.Var
 
 /**
  * 存放任意变量的NBT标签。不会被使用在游戏中。在被转换为snbt的时候，将会调用其储存值的toString方法作为值。
  *
  * 不适用于MC中，只存在于编译过程中
  */
-class AnyTag<T>(value: T) : Tag<T>(value) {
-    override fun clone(): Tag<T> {
+class AnyTag(value: Var<*>) : Tag<Var<*>>(value) {
+    override fun clone(): Tag<Var<*>> {
         return AnyTag(value)
     }
 

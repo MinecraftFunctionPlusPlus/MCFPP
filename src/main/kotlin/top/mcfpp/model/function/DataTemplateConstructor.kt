@@ -4,6 +4,7 @@ import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.antlr.mcfppParser.FunctionBodyContext
 import top.mcfpp.core.lang.DataTemplateObject
 import top.mcfpp.core.lang.Var
+import top.mcfpp.io.MCFPPFile
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.DataTemplate
 import top.mcfpp.type.MCFPPType
@@ -14,6 +15,8 @@ class DataTemplateConstructor(val data: DataTemplate, ctx: FunctionBodyContext?)
     data,
     ctx
 ) {
+
+    lateinit var file: MCFPPFile
 
     fun addParamsFromContext(ctx: mcfppParser.NormalParamsContext) {
         val n = ctx.parameterList()?:return
@@ -45,10 +48,15 @@ class DataTemplateConstructor(val data: DataTemplate, ctx: FunctionBodyContext?)
 
     override fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?): Var<*> {
         if(ast == null) return caller as DataTemplateObject
-        field.putVar("this", caller as DataTemplateObject)
-        normalArgs.add(0, field.getVar("this")!!)
+        field.putVar("this", caller as DataTemplateObject, true)
+        normalArgs.add(0, caller)
         super.invoke(normalArgs, caller as CanSelectMember?)
         return caller
+    }
+
+    override fun compile(args: List<Var<*>>): Function {
+        //第一个参数是this，需要去除
+        return super.compile(args.subList(1, args.size))
     }
 }
 

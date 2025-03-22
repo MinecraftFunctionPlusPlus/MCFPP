@@ -82,8 +82,7 @@ object NBTUtil {
                 list
             }
             else -> {
-                LogProcessor.error("Cannot cast value $any to nbt value")
-                return StringTag(any.toString())
+                throw IllegalArgumentException("Cannot cast $any to nbt value")
             }
         }
     }

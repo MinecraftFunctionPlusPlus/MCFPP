@@ -175,23 +175,35 @@ object LogProcessor {
     fun getLineInfo(ctx: ParserRuleContext): String {
         val startToken = ctx.start
         val stopToken = ctx.stop
-        val tokenStream = startToken.tokenSource.inputStream
+        if(startToken.tokenSource != null){
+            val tokenStream = startToken.tokenSource.inputStream
 
-        val lineNumber = startToken.line
-        val startColumn = startToken.charPositionInLine
-        val stopColumn = stopToken.charPositionInLine + (stopToken.text?.length ?: 0)
+            val lineNumber = startToken.line
+            val startColumn = startToken.charPositionInLine
+            val stopColumn = stopToken.charPositionInLine + (stopToken.text?.length ?: 0)
 
-        // 获取该行的所有文本
-        val lineStartIndex = tokenStream.lastIndexOf("\n", startToken.startIndex) + 1
-        val lineStopIndex = tokenStream.indexOf("\n", startToken.startIndex)
-        val lineText = tokenStream.getText(Interval.of(lineStartIndex, lineStopIndex))
+            // 获取该行的所有文本
+            val lineStartIndex = tokenStream.lastIndexOf("\n", startToken.startIndex) + 1
+            val lineStopIndex = tokenStream.indexOf("\n", startToken.startIndex)
+            val lineText = tokenStream.getText(Interval.of(lineStartIndex, lineStopIndex))
 
-        // 构建上下文位置指示
-        val indicator = " ".repeat(startColumn) + "^" + "~".repeat(stopColumn - startColumn - 1)
-        return if(lineText.endsWith("\n")){
-            "$lineNumber | $lineText${" ".repeat(lineNumber.toString().length)} | $indicator"
+            // 构建上下文位置指示
+            val indicator = " ".repeat(startColumn) + "^" + "~".repeat(stopColumn - startColumn - 1)
+            return if(lineText.endsWith("\n")){
+                "$lineNumber | $lineText${" ".repeat(lineNumber.toString().length)} | $indicator"
+            }else{
+                "$lineNumber | $lineText\n${" ".repeat(lineNumber.toString().length)} | $indicator"
+            }
         }else{
-            "$lineNumber | $lineText\n${" ".repeat(lineNumber.toString().length)} | $indicator"
+            val lineNumber = startToken.line
+            // 获取该行的所有文本
+            val lineText = ctx.text
+            // 构建上下文位置指示
+            return if(lineText.endsWith("\n")){
+                "$lineNumber | $lineText${" ".repeat(lineNumber.toString().length)}"
+            }else{
+                "$lineNumber | $lineText\n${" ".repeat(lineNumber.toString().length)}"
+            }
         }
     }
 

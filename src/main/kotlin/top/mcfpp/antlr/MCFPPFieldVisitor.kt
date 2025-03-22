@@ -417,7 +417,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                     LogProcessor.error("Cannot override static method ${ctx.Identifier()}")
                     throw Exception()
                 }
-                f.isOverriding = true
+                f.isOverride = true
             }else{
                 LogProcessor.error("Already defined function:" + ctx.Identifier().text + "in class " + Class.currClass!!.identifier)
                 Function.currFunction = Function.nullFunction
@@ -1119,6 +1119,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //类构造函数
         //创建构造函数对象，注册函数
         val f = DataTemplateConstructor(DataTemplate.currTemplate!!, ctx.functionBody())
+        f.file = MCFPPFile.currFile!!
         f.addParamsFromContext(ctx.normalParams())
         return f
     }

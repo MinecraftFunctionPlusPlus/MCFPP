@@ -3,11 +3,9 @@ package top.mcfpp.mni.minecraft;
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
-import top.mcfpp.core.lang.CommandReturn;
-import top.mcfpp.core.lang.DataTemplateObject;
-import top.mcfpp.core.lang.EnumVar;
-import top.mcfpp.core.lang.Pos3Var;
+import top.mcfpp.core.lang.*;
 import top.mcfpp.core.lang.entity.EntityVar;
+import top.mcfpp.core.lang.resource.Biome;
 import top.mcfpp.util.ValueWrapper;
 
 public class StdCommands {
@@ -83,5 +81,85 @@ public class StdCommands {
         Commands.INSTANCE.method3(re, command);
     }
     //endregion
+
+    //region enchant
+    //TODO 更高等级的附魔支持
+    @MNIFunction(normalParams = {"entity target", "Enchantment enchantment", "int level = 1", "Slot slot = Slot.weapon_mainhand"})
+    public static void enchant(EntityVar target, DataTemplateObject enchantment, MCInt level, EnumVar slot, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("enchant", target, enchantment, level, slot);
+        Commands.INSTANCE.method3(re, command);
+    }
+    //endregion
+
+    //region fill
+    @MNIFunction(normalParams = {"Area area", "BlockState block"}, returnType = "CommandReturn")
+    public static void fillKeep(DataTemplateObject area, DataTemplateObject block, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("fill", area, block, "keep");
+        Commands.INSTANCE.method3(re, command);
+    }
+
+    @MNIFunction(normalParams = {"Area area", "BlockState block"}, returnType = "CommandReturn")
+    public static void fillReplace(DataTemplateObject area, DataTemplateObject block, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("fill", area, block);
+        Commands.INSTANCE.method3(re, command);
+    }
+
+    @MNIFunction(normalParams = {"Area area", "BlockState block", "BlockPredicate filter"}, returnType = "CommandReturn")
+    public static void fillReplace(DataTemplateObject area, DataTemplateObject block, DataTemplateObject filter, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("fill", area, block, "replace", filter);
+        Commands.INSTANCE.method3(re, command);
+    }
+
+    @MNIFunction(normalParams = {"Area area", "BlockState block", "BlockPredicate filter", "FillMode mode"}, returnType = "CommandReturn")
+    public static void fillReplace(DataTemplateObject area, DataTemplateObject block, DataTemplateObject filter, EnumVar mode, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("fill", area, block, "replace", filter, mode);
+        Commands.INSTANCE.method3(re, command);
+    }
+    //endregion
+
+    //region fillBiome
+    @MNIFunction(normalParams = {"Area area", "Biome biome"}, returnType = "CommandReturn")
+    public static void fillBiome(DataTemplateObject area, Biome biome, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("fillbiome", area, biome);
+        Commands.INSTANCE.method3(re, command);
+    }
+
+    @MNIFunction(normalParams = {"Area area", "Biome biome", "Biome replaceBiome"}, returnType = "CommandReturn")
+    public static void fillBiome(DataTemplateObject area, Biome biome, Biome replaceBiome, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("fillbiome", area, biome, "replace", replaceBiome);
+        Commands.INSTANCE.method3(re, command);
+    }
+    //endregion
+
+    //region forceload
+    @MNIFunction(normalParams = {"pos2 from", "pos2 to"}, returnType = "CommandReturn")
+    public static void forceload(Pos2Var from, Pos2Var to, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("forceload", "add", from, to);
+        Commands.INSTANCE.method3(re, command);
+    }
+
+    @MNIFunction(normalParams = {"pos2 from", "pos2 to"}, returnType = "CommandReturn")
+    public static void forceloadRemove(Pos2Var from, Pos2Var to, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("forceload", "remove", from, to);
+        Commands.INSTANCE.method3(re, command);
+    }
+
+    @MNIFunction(returnType = "CommandReturn")
+    public static void forceloadRemoveAll(ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("forceload remove all");
+        Commands.INSTANCE.method3(re, command);
+    }
+
+    @MNIFunction(normalParams = {"pos2 from", "pos2 to"}, returnType = "CommandReturn")
+    public static void forceloadQuery(Pos2Var from, Pos2Var to, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("forceload query", from, to);
+        Commands.INSTANCE.method3(re, command);
+    }
+
+    @MNIFunction(returnType = "CommandReturn")
+    public static void forceloadQueryAll(ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("forceload query");
+        Commands.INSTANCE.method3(re, command);
+    }
 
 }

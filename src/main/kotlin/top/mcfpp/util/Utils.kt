@@ -157,11 +157,12 @@ object Utils {
     }
 }
 
-class SerializableFunctionBodyContext(ctx: mcfppParser.FunctionBodyContext) : mcfppParser.FunctionBodyContext(
-    ctx.getParent(),
-    ctx.invokingState
-), Serializable{
-    init {
+class SerializableFunctionBodyContext : mcfppParser.FunctionBodyContext, Serializable{
+
+    @Suppress("unused")
+    constructor():super(null, -1)
+
+    constructor(ctx: mcfppParser.FunctionBodyContext):super(ctx.getParent(), ctx.invokingState) {
         this.children = ctx.children
         this.start = ctx.start
         this.stop = ctx.stop

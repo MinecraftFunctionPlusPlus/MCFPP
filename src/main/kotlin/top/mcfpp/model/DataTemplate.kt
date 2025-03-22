@@ -2,10 +2,7 @@ package top.mcfpp.model
 
 import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.Project
-import top.mcfpp.core.lang.DataTemplateObject
-import top.mcfpp.core.lang.MCAny
-import top.mcfpp.core.lang.UnknownVar
-import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.*
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.DataTemplateConstructor
 import top.mcfpp.model.function.Function
@@ -67,7 +64,7 @@ open class DataTemplate : FieldContainer, CompoundData {
      * @return 返回值
      */
     fun checkCompoundStruct(compoundTag: CompoundTag) : Boolean {
-        for (member in field.allVars){
+        for (member in field.allVars.filter { it !is ConcreteVar<*,*> }){
             if(!compoundTag.containsKey(member.identifier)) return false
             if(!member.type.checkNBTType(compoundTag[member.identifier]!!)) return false
         }
@@ -75,7 +72,7 @@ open class DataTemplate : FieldContainer, CompoundData {
     }
 
     fun checkDictionaryStruct(dict: Map<String, Var<*>>) : Boolean {
-        for (member in field.allVars){
+        for (member in field.allVars.filter { it !is ConcreteVar<*,*> }){
             if(!dict.containsKey(member.identifier)) return false
             if(!dict[member.identifier]!!.type.isSubOf(member.type)) return false
         }

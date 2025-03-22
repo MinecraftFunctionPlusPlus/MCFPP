@@ -543,7 +543,6 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             LogProcessor.error("Cannot assign a non-value variable to a declared-concrete variable.")
             return
         }
-        if(v == this) return
         if(v is MCInt && this is MCInt && holder != null){
             holder!!.replaceScore(v)
             holder!!.onScoreChange(v)

@@ -20,7 +20,6 @@ import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.generic.Generic
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
-import top.mcfpp.util.SerializableFunctionBodyContext
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 import java.io.Serializable
@@ -209,7 +208,7 @@ open class Function : Member, FieldContainer, WithDocument {
     /**
      * 函数的语法树。当语法树为空的时候，函数会被直接编译而不做编译期常量优化
      */
-    var ast: SerializableFunctionBodyContext? = null
+    var ast: FunctionBodyContext? = null
 
     var context: FunctionContext = FunctionContext()
 
@@ -224,7 +223,7 @@ open class Function : Member, FieldContainer, WithDocument {
 
     val annotations: ArrayList<Annotation> = ArrayList()
 
-    var isOverriding : Boolean = false
+    var isOverride : Boolean = false
 
     /**
      * 在什么东西里面
@@ -329,7 +328,7 @@ open class Function : Member, FieldContainer, WithDocument {
         field = FunctionField(null)
         ownerType = OwnerType.NONE
         this.namespace = namespace
-        this.ast = context?.let { SerializableFunctionBodyContext(it) }
+        this.ast = context
     }
 
     /**
@@ -344,7 +343,7 @@ open class Function : Member, FieldContainer, WithDocument {
         ownerType = OwnerType.CLASS
         owner = cls
         field = FunctionField(cls.field)
-        this.ast = context?.let { SerializableFunctionBodyContext(it) }
+        this.ast = context
     }
 
     /**
@@ -362,7 +361,7 @@ open class Function : Member, FieldContainer, WithDocument {
         field = FunctionField(null)
         this.isAbstract = true
         this.accessModifier = Member.AccessModifier.PUBLIC
-        this.ast = context?.let { SerializableFunctionBodyContext(it) }
+        this.ast = context
     }
 
     /**
@@ -378,7 +377,7 @@ open class Function : Member, FieldContainer, WithDocument {
         field = FunctionField(template.field)
         this.returnType = returnType
         this.returnVar = buildReturnVar(returnType)
-        this.ast = context?.let { SerializableFunctionBodyContext(it) }
+        this.ast = context
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -432,18 +431,33 @@ open class Function : Member, FieldContainer, WithDocument {
         return this
     }
 
+    /**
+     * 向参数列表中添加一个参数
+     */
     fun appendNormalParam(param: FunctionParam): Function {
         normalParams.add(param)
         return this
     }
 
+    /**
+     * 向参数列表中添加一个参数
+     */
     open fun appendNormalParam(type: MCFPPType, identifier: String, isStatic: Boolean = false): Function {
         normalParams.add(FunctionParam(type ,identifier, this, isStatic))
         return this
     }
 
     /**
-     * 写入这个函数的形参信息，同时为这个函数准备好包含形参的缓存
+     * 根据参数列表构造形参缓存
+     */
+    open fun buildParamVar(){
+        for (p in normalParams) {
+            field.putVar(p.identifier, p.buildVar())
+        }
+    }
+
+    /**
+     * 从语法树写入这个函数的形参信息，同时为这个函数准备好包含形参的缓存
      *
      * @param ctx
      */

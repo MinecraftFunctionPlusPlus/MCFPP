@@ -1,10 +1,7 @@
 package top.mcfpp.type
 
 import net.querz.nbt.tag.CompoundTag
-import top.mcfpp.core.lang.DataTemplateObject
-import top.mcfpp.core.lang.DataTemplateObjectConcrete
-import top.mcfpp.core.lang.UnknownVar
-import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.*
 import top.mcfpp.mni.annotation.NoInstance
 import top.mcfpp.model.*
 import top.mcfpp.util.LogProcessor
@@ -34,7 +31,7 @@ open class MCFPPDataTemplateType(
     override fun defaultValue(): CompoundTag {
         val tag = CompoundTag()
         for (member in template.field.allVars){
-            if(member.nullable) continue
+            if(member.nullable || member is ConcreteVar<*,*>) continue
             tag.put(member.identifier, member.type.defaultValue())
         }
         return tag

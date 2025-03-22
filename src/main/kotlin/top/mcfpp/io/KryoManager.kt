@@ -4,6 +4,7 @@ import com.esotericsoftware.kryo.Kryo
 import com.esotericsoftware.kryo.Serializer
 import com.esotericsoftware.kryo.io.Input
 import com.esotericsoftware.kryo.io.Output
+import org.antlr.v4.runtime.CommonToken
 import org.objenesis.strategy.StdInstantiatorStrategy
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.io.info.ClassInfo
@@ -146,5 +147,89 @@ object KryoManager {
                 return MCFPPObjectDataTemplateType(UnsolvedObjectTemplate(data), parentType)
             }
         })
+
+        register(CommonToken::class.java, object : Serializer<CommonToken>(){
+            override fun write(kryo: Kryo, output: Output, `object`: CommonToken) {
+                output.writeInt(`object`.type)
+                output.writeInt(`object`.line)
+                output.writeInt(`object`.charPositionInLine)
+                output.writeInt(`object`.channel)
+                output.writeString(`object`.text)
+                output.writeInt(`object`.tokenIndex)
+                output.writeInt(`object`.startIndex)
+                output.writeInt(`object`.stopIndex)
+            }
+
+            override fun read(kryo: Kryo, input: Input, type: java.lang.Class<out CommonToken>): CommonToken {
+                val t = input.readInt()
+                val token = CommonToken(t)
+                token.line = input.readInt()
+                token.charPositionInLine = input.readInt()
+                token.channel = input.readInt()
+                token.text = input.readString()
+                token.tokenIndex = input.readInt()
+                token.startIndex = input.readInt()
+                token.stopIndex = input.readInt()
+                return token
+            }
+        })
+//
+//        register(OrderedATNConfigSet::class.java, object : Serializer<OrderedATNConfigSet>() {
+//
+//            // 通过反射访问 protected/private 字段
+//            private val readonlyField: Field = ATNConfigSet::class.java.getDeclaredField("readonly").apply { isAccessible = true }
+//            private val conflictingAltsField: Field = ATNConfigSet::class.java.getDeclaredField("conflictingAlts").apply { isAccessible = true }
+//
+//            override fun write(kryo: Kryo, output: Output, obj: OrderedATNConfigSet) {
+//                // 写入基本类型字段（包括 protected）
+//                output.writeBoolean(readonlyField.getBoolean(obj)) // protected readonly
+//                output.writeInt(obj.uniqueAlt)
+//                output.writeBoolean(obj.hasSemanticContext)
+//                output.writeBoolean(obj.dipsIntoOuterContext)
+//
+//                // 写入 BitSet (protected conflictingAlts)
+//                val conflictingAlts = conflictingAltsField.get(obj) as BitSet?
+//                output.writeBoolean(conflictingAlts != null)
+//                if (conflictingAlts != null) {
+//                    kryo.writeObject(output, conflictingAlts)
+//                }
+//                // 写入 configs
+//                kryo.writeObject(output, obj.configs)
+//
+//                // 写入 configLookup（仅当非 readonly 时）
+//                if (!readonlyField.getBoolean(obj)) {
+//                    kryo.writeObject(output, obj.configLookup)
+//                }
+//            }
+//
+//            override fun read(kryo: Kryo, input: Input, type: java.lang.Class<out OrderedATNConfigSet>): OrderedATNConfigSet {
+//                // 1. 读取 fullCtx 并调用构造函数初始化 final 字段
+//                val instance = OrderedATNConfigSet()
+//
+//                // 2. 设置 protected 字段：readonly
+//                readonlyField.setBoolean(instance, input.readBoolean())
+//
+//                // 3. 设置 public 字段
+//                instance.uniqueAlt = input.readInt()
+//                instance.hasSemanticContext = input.readBoolean()
+//                instance.dipsIntoOuterContext = input.readBoolean()
+//
+//                // 4. 设置 protected 字段：conflictingAlts
+//                val hasConflictingAlts = input.readBoolean()
+//                if (hasConflictingAlts){
+//                    conflictingAltsField.set(instance, kryo.readObject(input, BitSet::class.java))
+//                }
+//
+//                // 5. 读取 configs
+//                instance.configs.addAll(kryo.readObject(input, ArrayList::class.java) as ArrayList<ATNConfig>)
+//
+//                // 6. 读取 configLookup（条件性）
+//                if (!readonlyField.getBoolean(instance)) { // 使用反射 getter 检查
+//                    instance.configLookup = kryo.readObject(input, ATNConfigSet.AbstractConfigHashSet::class.java)
+//                }
+//
+//                return instance
+//            }
+//        })
     }
 }

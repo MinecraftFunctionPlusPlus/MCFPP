@@ -3,6 +3,7 @@ package top.mcfpp
 import com.alibaba.fastjson2.JSONArray
 import com.alibaba.fastjson2.JSONObject
 import com.ibm.icu.impl.data.ResourceReader
+import org.antlr.v4.runtime.CommonTokenStream
 import org.antlr.v4.runtime.ParserRuleContext
 import org.antlr.v4.runtime.tree.ParseTree
 import org.apache.logging.log4j.LogManager
@@ -52,6 +53,7 @@ object Project {
      * 当前解析文件的语法树
      */
     var trees:MutableMap<MCFPPFile,ParseTree> = mutableMapOf()
+    var tokens:MutableMap<MCFPPFile,CommonTokenStream> = mutableMapOf()
 
     /**
      * 当前的命名空间
@@ -274,6 +276,7 @@ object Project {
         }
         //默认的
         if(!CompileSettings.ignoreStdLib){
+            LogProcessor.info("Reading lib file at: lib/bin.mclib")
             val inputStream = ResourceReader::class.java.classLoader.getResourceAsStream("lib/bin.mclib")
 
             if (inputStream == null) {
@@ -284,6 +287,7 @@ object Project {
         }
         //写入缓存
         for (include in config.includes) {
+            LogProcessor.info("Reading lib file at: $include")
             val filePath = if(!include.endsWith(".jar")) include else "$include.jar"
             val file = File(filePath)
             if(file.exists()){

@@ -12,7 +12,6 @@ import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
-import java.io.Serializable
 
 /**
  * 函数的参数。用于函数声明的时候。
@@ -47,7 +46,7 @@ class FunctionParam(
      *
      */
     var isReadOnly: Boolean = false
-): Serializable {
+) {
 
     var typeName: String = type.typeName
 

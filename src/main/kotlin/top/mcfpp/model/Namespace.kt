@@ -232,6 +232,7 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
                         LogProcessor.error("Method ${nf.identifier} in class ${cls.name} overrides nothing")
                         continue
                     }else{
+                        nf.isOverride = true
                         this.field.addFunction(nf, true)
                     }
                 }else {

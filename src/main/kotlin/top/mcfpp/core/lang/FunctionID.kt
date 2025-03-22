@@ -1,9 +1,8 @@
-package top.mcfpp.core.lang.resource
+package top.mcfpp.core.lang
             
 import net.querz.nbt.tag.StringTag
-import top.mcfpp.core.lang.MCFPPValue
-import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
+import top.mcfpp.core.lang.resource.ResourceID
 import top.mcfpp.mni.resource.FunctionIDConcreteData
 import top.mcfpp.mni.resource.FunctionIDData
 import top.mcfpp.model.CompoundData
@@ -53,7 +52,7 @@ open class FunctionID: ResourceID {
     }
 }
 
-class FunctionIDConcrete: MCFPPValue<String>, FunctionID{
+class FunctionIDConcrete: MCFPPValue<String>, FunctionID {
 
     override var value: String
 

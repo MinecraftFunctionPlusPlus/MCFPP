@@ -624,29 +624,29 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
 
     override fun visitCoordinateDimension(ctx: mcfppParser.CoordinateDimensionContext): Var<*> {
         if(ctx.nbtInt() != null){
-            return CoordinateDimensionConcrete("", ctx.nbtInt().text.toInt())
+            return PosDimension("", ctx.nbtInt().text.toInt())
         }else if(ctx.nbtFloat() != null) {
-            return CoordinateDimensionConcrete("", ctx.nbtFloat().text.toFloat())
+            return PosDimension("", ctx.nbtFloat().text.toFloat())
         }else if(ctx.nbtDouble() != null){
-            return CoordinateDimensionConcrete("", ctx.nbtDouble().text.toDouble())
+            return PosDimension("", ctx.nbtDouble().text.toDouble())
         }else{
             //RelativeValue
             val str = ctx.RelativeValue().text
             if(str.length == 1){
-                return CoordinateDimensionConcrete(str, 0)
+                return PosDimension(str, 0)
             }
             val expr = str.substring(1)
             //尝试转换为数字
             var num: Number? = expr.toIntOrNull()
             if(num != null){
-                return CoordinateDimensionConcrete(str[0].toString(), num)
+                return PosDimension(str[0].toString(), num)
             }
             num = expr.toFloatOrNull()
             if(num != null){
-                return CoordinateDimensionConcrete(str[0].toString(), num)
+                return PosDimension(str[0].toString(), num)
             }
             LogProcessor.error("Invalid relative value: $expr")
-            return CoordinateDimensionConcrete(str[0].toString(), 0)
+            return PosDimension(str[0].toString(), 0)
         }
     }
 

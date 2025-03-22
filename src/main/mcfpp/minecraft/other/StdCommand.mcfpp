@@ -8,3 +8,21 @@ enum CloneOperation{
     move,
     normal
 }
+
+enum Difficulty {
+    peaceful,easy,normal,hard
+}
+
+enum FillMode{
+    destroy,
+    hollow,
+    replace,
+    strict
+}
+
+enum GameMode{
+    creative,
+    spectator,
+    survival,
+    adventure
+}

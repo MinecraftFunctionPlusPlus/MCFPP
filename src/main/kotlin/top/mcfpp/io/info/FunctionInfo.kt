@@ -31,7 +31,9 @@ data class FunctionInfo(
     var normalParams: List<FunctionParamInfo>,
     var returnType: MCFPPType,
     var isAbstract: Boolean,
-    var tags: List<FunctionTagInfo>
+    var tags: List<FunctionTagInfo>,
+    var isOverride: Boolean,
+    var context: FunctionBodyContext?
 ): AbstractFunctionInfo<Function> {
     override fun get(): Function {
         val f = Function(identifier, namespace, null)
@@ -43,6 +45,9 @@ data class FunctionInfo(
         for (tag in tags){
             f.addTag(tag.get())
         }
+        f.isOverride = isOverride
+        f.ast = context
+        f.buildParamVar()
         currFunction = null
         return f
     }
@@ -55,7 +60,9 @@ data class FunctionInfo(
                 function.normalParams.map { FunctionParamInfo.from(it) },
                 function.returnType,
                 function.isAbstract,
-                function.tags.map { FunctionTagInfo.from(it) }
+                function.tags.map { FunctionTagInfo.from(it) },
+                function.isOverride,
+                function.ast
             )
         }
     }
@@ -69,7 +76,8 @@ data class GenericFunctionInfo(
     var context: FunctionBodyContext,
     var returnType: MCFPPType,
     var isAbstract: Boolean,
-    var tags: List<FunctionTagInfo>
+    var tags: List<FunctionTagInfo>,
+    var isOverride: Boolean
 ): AbstractFunctionInfo<GenericFunction> {
     override fun get(): GenericFunction {
         val f = GenericFunction(identifier, namespace, context)
@@ -84,6 +92,8 @@ data class GenericFunctionInfo(
         for (tag in tags){
             f.addTag(tag.get())
         }
+        f.isOverride = isOverride
+        f.buildParamVar()
         currFunction = null
         return f
     }
@@ -98,7 +108,8 @@ data class GenericFunctionInfo(
                 genericFunction.ast!!,
                 genericFunction.returnType,
                 genericFunction.isAbstract,
-                genericFunction.tags.map { FunctionTagInfo.from(it) }
+                genericFunction.tags.map { FunctionTagInfo.from(it) },
+                genericFunction.isOverride
             )
         }
     }
@@ -112,7 +123,9 @@ data class NativeFunctionInfo(
     var methodString: String,
     var returnType: MCFPPType,
     var isAbstract: Boolean,
-    var tags: List<FunctionTagInfo>
+    var tags: List<FunctionTagInfo>,
+    var isOverride: Boolean,
+    var caller: MCFPPType
 ): AbstractFunctionInfo<NativeFunction> {
     override fun get(): NativeFunction {
         val data = NativeFunction.stringToMethod(methodString)
@@ -128,6 +141,9 @@ data class NativeFunctionInfo(
         for (tag in tags){
             f.addTag(tag.get())
         }
+        f.isOverride = isOverride
+        f.caller = caller
+        f.buildParamVar()
         currFunction = null
         return f
     }
@@ -142,7 +158,9 @@ data class NativeFunctionInfo(
                 NativeFunction.methodToString(function.javaMethod),
                 function.returnType,
                 function.isAbstract,
-                function.tags.map { FunctionTagInfo.from(it) }
+                function.tags.map { FunctionTagInfo.from(it) },
+                function.isOverride,
+                function.caller
             )
         }
     }

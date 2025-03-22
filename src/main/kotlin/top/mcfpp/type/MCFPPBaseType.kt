@@ -194,12 +194,12 @@ class MCFPPBaseType {
         override val typeName: kotlin.String
             get() = "pos3"
 
-        override fun build(identifier: kotlin.String, container: FieldContainer): Var<*> = Pos3Var(container, identifier)
+        override fun build(identifier: kotlin.String, container: FieldContainer): Var<*> = Pos3Var(identifier)
         override fun build(identifier: kotlin.String): Var<*> = Pos3Var(identifier)
-        override fun build(identifier: kotlin.String, clazz: Class): Var<*> = Pos3Var(clazz, identifier)
-        override fun buildUnConcrete(identifier: kotlin.String, container: FieldContainer): Var<*> = Pos3Var(container, identifier)
+        override fun build(identifier: kotlin.String, clazz: Class): Var<*> = Pos3Var(identifier)
+        override fun buildUnConcrete(identifier: kotlin.String, container: FieldContainer): Var<*> = Pos3Var(identifier)
         override fun buildUnConcrete(identifier: kotlin.String): Var<*> = Pos3Var(identifier)
-        override fun buildUnConcrete(identifier: kotlin.String, clazz: Class): Var<*> = Pos3Var(clazz, identifier)
+        override fun buildUnConcrete(identifier: kotlin.String, clazz: Class): Var<*> = Pos3Var(identifier)
     }
 
     object Pos2: MCFPPType(arrayListOf(Any)){
@@ -210,12 +210,12 @@ class MCFPPBaseType {
         override val typeName: kotlin.String
             get() = "pos2"
 
-        override fun build(identifier: kotlin.String, container: FieldContainer): Var<*> = Pos2Var(container, identifier)
+        override fun build(identifier: kotlin.String, container: FieldContainer): Var<*> = Pos2Var(identifier)
         override fun build(identifier: kotlin.String): Var<*> = Pos2Var(identifier)
-        override fun build(identifier: kotlin.String, clazz: Class): Var<*> = Pos2Var(clazz, identifier)
-        override fun buildUnConcrete(identifier: kotlin.String, container: FieldContainer): Var<*> = Pos2Var(container, identifier)
+        override fun build(identifier: kotlin.String, clazz: Class): Var<*> = Pos2Var(identifier)
+        override fun buildUnConcrete(identifier: kotlin.String, container: FieldContainer): Var<*> = Pos2Var(identifier)
         override fun buildUnConcrete(identifier: kotlin.String): Var<*> = Pos2Var(identifier)
-        override fun buildUnConcrete(identifier: kotlin.String, clazz: Class): Var<*> = Pos2Var(clazz, identifier)
+        override fun buildUnConcrete(identifier: kotlin.String, clazz: Class): Var<*> = Pos2Var(identifier)
     }
 
 }

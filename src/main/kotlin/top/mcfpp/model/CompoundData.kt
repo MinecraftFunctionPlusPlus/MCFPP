@@ -304,7 +304,7 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
                 LogProcessor.error("Method ${nf.identifier} in class ${method.declaringClass.name} overrides nothing")
                 return
             }else{
-                nf.isOverriding = true
+                nf.isOverride = true
                 this.field.addFunction(nf, true)
             }
         }else {

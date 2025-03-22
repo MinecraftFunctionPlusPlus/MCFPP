@@ -1,11 +1,11 @@
 package top.mcfpp.io.info
 
+import top.mcfpp.antlr.mcfppParser.ClassBodyContext
 import top.mcfpp.io.info.AbstractClassInfo.Companion.currClass
 import top.mcfpp.model.Class
 import top.mcfpp.model.ObjectClass
 import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.model.generic.GenericObjectClass
-import top.mcfpp.util.SerializableClassBodyContext
 
 interface AbstractClassInfo<T: Class>: ModelInfo<T>{
     companion object {
@@ -81,7 +81,7 @@ class GenericClassInfo(
     var identifier: String,
     var parents: List<AbstractClassInfo<*>>,
     var generic: List<ClassParamInfo>,
-    var context: SerializableClassBodyContext,
+    var context: ClassBodyContext,
     var field: FieldInfo,
     var constructor: List<ClassConstructorInfo>
 ): AbstractClassInfo<Class> {
@@ -134,7 +134,7 @@ class GenericClassInfo(
                     else ClassInfo.from(it as Class)
                 },
                 cls.readOnlyParams.map { ClassParamInfo.from(it) },
-                SerializableClassBodyContext(cls.ctx),
+                cls.ctx,
                 FieldInfo.from(cls.field),
                 cls.constructors.map { ClassConstructorInfo.from(it) }
             )

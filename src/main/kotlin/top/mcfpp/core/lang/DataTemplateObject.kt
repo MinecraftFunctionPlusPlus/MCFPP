@@ -61,9 +61,9 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         when (b) {
 
             is NBTDictionaryConcrete -> {
-                val value = NBTUtil.valueToNBT(b.value) as CompoundTag
+                val value = NBTUtil.valueToNBT(b.value.filter { it.value !is ConcreteVar<*,*> }) as CompoundTag
                 if (templateType.checkCompoundStruct(value)) {
-                    this.assignMembers(value)
+                    this.assignMembers(b.value)
                     return this
                 } else {
                     LogProcessor.error("Error compound struct: ${b.value}")
@@ -87,7 +87,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
 
             is DataTemplateObjectConcrete -> {
                 if (b.type.objectData.isSubOf(this.templateType)) {
-                    this.assignMembers(b.value)
+                    this.assignMembers(b)
                     return this
                 } else {
                     LogProcessor.error("Error compound struct: ${b.value}")
@@ -129,9 +129,29 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         }
     }
 
+    private fun assignMembers(map: HashMap<String, Var<*>>){
+        instanceField.forEachVar {
+            if(it !is ConcreteVar<*,*>){
+                it.replacedBy(it.assignedBy(map[it.identifier]!!))
+            }
+        }
+    }
+
     private fun assignMembers(tag: CompoundTag){
         instanceField.forEachVar {
-            it.replacedBy(it.assignedBy(NBTBasedDataConcrete(tag.get(it.identifier))))
+            if(it !is ConcreteVar<*,*>){
+                it.replacedBy(it.assignedBy(NBTBasedDataConcrete(tag[it.identifier]!!)))
+            }
+        }
+    }
+
+    private fun assignMembers(template: DataTemplateObjectConcrete){
+        instanceField.forEachVar {
+            if(it !is ConcreteVar<*,*>){
+                it.replacedBy(it.assignedBy(NBTBasedDataConcrete(template.value[it.identifier]!!)))
+            }else{
+                it.replacedBy(it.assignedBy(template.instanceField.getVar(it.identifier)!!))
+            }
         }
     }
 
@@ -220,6 +240,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         val v = instanceField.getVar(key)?.clone(this)
+        v?.parent = this
         val property = instanceField.getProperty(key)
         return if(property == null){
             Pair(null, true)
@@ -290,7 +311,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         instanceField.forEachVar {
             if(it is DataTemplateObject){
                 compoundTag.put(it.identifier, it.toConcrete().value)
-            }else{
+            }else if(it !is ConcreteVar<*, *>){
                 compoundTag.put(it.identifier, NBTUtil.varToNBT(it))
             }
         }
@@ -310,7 +331,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     override fun toCommandPart(): Command {
         val f = getMemberFunction("toCommandPart", arrayListOf(), arrayListOf(), Member.AccessModifier.PUBLIC).first
         if(f is UnknownFunction) throw IllegalArgumentException("Cannot find toCommandPart function")
-        if(f.isOverriding){
+        if(f.isOverride){
             val command = (f.invoke(arrayListOf(), this) as JavaVar).value as Command
             return command
         }else{
@@ -346,8 +367,8 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag> {
         this.value = obj.value
     }
 
-    override fun clone(): DataTemplateObject {
-        return DataTemplateObject(this)
+    override fun clone(): DataTemplateObjectConcrete {
+        return DataTemplateObjectConcrete(this)
     }
 
     override fun getTempVar(): DataTemplateObjectConcrete {
@@ -386,7 +407,7 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag> {
     override fun onMemberVarChanged(member: Var<*>) {
         if(member !is MCFPPValue<*>){
             toDynamic(true)
-        }else{
+        }else if(member !is ConcreteVar<*,*>){
             val key = member.identifier
             val data = NBTUtil.varToNBT(member)
             value.put(key, data)

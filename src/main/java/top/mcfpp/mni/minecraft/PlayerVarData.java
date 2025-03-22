@@ -5,10 +5,9 @@ import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.annotations.MNIMember;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
-import top.mcfpp.core.lang.CommandReturn;
-import top.mcfpp.core.lang.NormalCompoundDataObject;
-import top.mcfpp.core.lang.Var;
+import top.mcfpp.core.lang.*;
 import top.mcfpp.core.lang.entity.PlayerVar;
+import top.mcfpp.core.lang.nbt.MCString;
 import top.mcfpp.core.lang.resource.Advancement;
 import top.mcfpp.core.lang.resource.AdvancementConcrete;
 import top.mcfpp.mni.hidden.AttributeData;
@@ -118,8 +117,69 @@ public class PlayerVarData {
         Commands.INSTANCE.method3(returnValue, command);
     }
 
+    //region clear
+    @MNIFunction(caller = "Player", returnType = "CommandReturn")
     public static void clear(PlayerVar caller, ValueWrapper<CommandReturn> returnValue){
         Command command = Command.Companion.buildAll("clear", caller);
         Commands.INSTANCE.method3(returnValue, command);
     }
+
+    @MNIFunction(normalParams = {"string id", "ItemPredicate predicate"}, caller = "Player", returnType = "CommandReturn")
+    public static void clear(MCString id, DataTemplateObject predicate, PlayerVar caller, ValueWrapper<CommandReturn> returnValue){
+        Command command = Command.Companion.buildAll("clear", caller, id, predicate);
+        Commands.INSTANCE.method3(returnValue, command);
+    }
+    @MNIFunction(normalParams = {"string id", "int count = 1"}, caller = "Player", returnType = "CommandReturn")
+    public static void clear(MCString id, MCInt count, PlayerVar caller, ValueWrapper<CommandReturn> returnValue){
+        Command command = Command.Companion.buildAll("clear", caller, id, count);
+        Commands.INSTANCE.method3(returnValue, command);
+    }
+    //TODO check(Item item)->bool
+    //endregion
+
+    //region xp
+    @MNIFunction(normalParams = {"int points"}, caller = "Player", returnType = "CommandReturn")
+    public static void addXpPoints(MCInt points, PlayerVar player, ValueWrapper<CommandReturn> returnValue){
+        Command command = Command.Companion.buildAll("xp add", player, points, "points");
+        Commands.INSTANCE.method3(returnValue, command);
+    }
+
+    @MNIFunction(normalParams = {"int levels"}, caller = "Player", returnType = "CommandReturn")
+    public static void addXpLevels(MCInt levels, PlayerVar player, ValueWrapper<CommandReturn> returnValue){
+        Command command = Command.Companion.buildAll("xp add", player, levels, "levels");
+        Commands.INSTANCE.method3(returnValue, command);
+    }
+
+    @MNIFunction(normalParams = {"int points"}, caller = "Player", returnType = "CommandReturn")
+    public static void setXpPoints(MCInt points, PlayerVar player, ValueWrapper<CommandReturn> returnValue){
+        Command command = Command.Companion.buildAll("xp set", player, points, "points");
+        Commands.INSTANCE.method3(returnValue, command);
+    }
+
+    @MNIFunction(normalParams = {"int levels"}, caller = "Player", returnType = "CommandReturn")
+    public static void setXpLevels(MCInt levels, PlayerVar player, ValueWrapper<CommandReturn> returnValue){
+        Command command = Command.Companion.buildAll("xp set", player, levels, "levels");
+        Commands.INSTANCE.method3(returnValue, command);
+    }
+
+    @MNIFunction(caller = "Player", returnType = "CommandReturn")
+    public static void queryXpPoints(PlayerVar player, ValueWrapper<CommandReturn> returnValue){
+        Command command = Command.Companion.buildAll("xp query", player, "points");
+        Commands.INSTANCE.method3(returnValue, command);
+    }
+
+    @MNIFunction(caller = "Player", returnType = "CommandReturn")
+    public static void queryXpLevels(PlayerVar player, ValueWrapper<CommandReturn> returnValue){
+        Command command = Command.Companion.buildAll("xp query", player, "levels");
+        Commands.INSTANCE.method3(returnValue, command);
+    }
+    //endregion
+
+    //region gameMode
+    @MNIFunction(normalParams = {"Gamemode mode"}, caller = "Player", returnType = "CommandReturn")
+    public static void setGamemode(EnumVar mode, PlayerVar player, ValueWrapper<CommandReturn> returnValue){
+        Command command = Command.Companion.buildAll("gamemode", mode, player);
+        Commands.INSTANCE.method3(returnValue, command);
+    }
+    //endregion
 }

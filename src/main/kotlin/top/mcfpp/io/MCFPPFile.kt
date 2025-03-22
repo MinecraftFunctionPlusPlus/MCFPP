@@ -51,11 +51,18 @@ class MCFPPFile : File {
         namespace = Project.config.rootNamespace + ".test"
     }
 
-    @Throws(IOException::class)
-    fun tree(): ParseTree {
-        if(!Project.trees.contains(this)){
+    fun token(): CommonTokenStream {
+        if(!Project.tokens.contains(this)){
             val charStream: CharStream = CharStreams.fromStream(inputStream)
             val tokens = CommonTokenStream(mcfppLexer(charStream))
+            Project.tokens[this] = tokens
+        }
+        return Project.tokens[this]!!
+    }
+
+    fun tree(): ParseTree {
+        if(!Project.trees.contains(this)){
+            val tokens = token()
             val parser = mcfppParser(tokens)
             parser.removeErrorListeners()
             parser.addErrorListener(MCFPPErrorListener())

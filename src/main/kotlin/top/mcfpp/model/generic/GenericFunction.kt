@@ -76,6 +76,17 @@ class GenericFunction : Function, Generic<Function> {
         }
     }
 
+    override fun buildParamVar() {
+        for (param in readOnlyParams){
+            field.putVar(param.identifier, param.buildVar())
+        }
+        for (param in normalParams){
+            if(param.hasDefault){
+                field.putVar(param.identifier, param.buildVar())
+            }
+        }
+    }
+
     override fun compile(args: List<Var<*>>): Function{
         //函数参数已知条件下的编译
         val readOnlyArgs = args.subList(0, readOnlyParams.size)
