@@ -46,6 +46,7 @@ EXCL_EQ: '!=' ;
 //EXCL_EQEQ: '!==' ;
 EQEQ: '==' ;
 //EQEQEQ: '===' ;
+WVEQ: '~=';
 SINGLE_QUOTE: '\'' ;
 //RIGHT_SHIFT_ARITHMETIC:           '>>';
 //LEFT_SHIFT_ARITHMETIC:            '<<';

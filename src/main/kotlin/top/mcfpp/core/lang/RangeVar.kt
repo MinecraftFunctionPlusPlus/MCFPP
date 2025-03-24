@@ -138,6 +138,10 @@ open class RangeVar: Var<RangeVar> {
         return command
     }
 
+    fun isIntRange(): Boolean{
+        return left is MCInt && right is MCInt
+    }
+
     companion object {
         val data = CompoundData("range","mcfpp")
 

@@ -4,6 +4,7 @@ import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.CommandReturn;
+import top.mcfpp.core.lang.FunctionVar;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.util.ValueWrapper;
 
@@ -21,7 +22,7 @@ public class DebugData {
 
     //TODO函数类型
     @MNIFunction(normalParams = "Function", returnType = "CommandReturn")
-    public static void function(Function function, ValueWrapper<CommandReturn> re){
+    public static void function(FunctionVar function, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("debug function", function);
         Commands.INSTANCE.method3(re, command);
     }

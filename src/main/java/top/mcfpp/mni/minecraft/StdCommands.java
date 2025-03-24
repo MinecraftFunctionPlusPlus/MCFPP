@@ -5,6 +5,7 @@ import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.*;
 import top.mcfpp.core.lang.entity.EntityVar;
+import top.mcfpp.core.lang.nbt.MCString;
 import top.mcfpp.core.lang.resource.Biome;
 import top.mcfpp.util.ValueWrapper;
 
@@ -161,5 +162,35 @@ public class StdCommands {
         var command = Command.Companion.buildAll("forceload query");
         Commands.INSTANCE.method3(re, command);
     }
+    //endregion
+
+    //region help
+    @MNIFunction(returnType = "CommandReturn")
+    public static void help(ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("help");
+        Commands.INSTANCE.method3(re, command);
+    }
+
+    @MNIFunction(normalParams = {"string command"}, returnType = "CommandReturn")
+    public static void help(MCString command, ValueWrapper<CommandReturn> re){
+        var command1 = Command.Companion.buildAll("help", command);
+        Commands.INSTANCE.method3(re, command1);
+    }
+    //endregion
+
+    //region jfr
+    @MNIFunction(returnType = "CommandReturn")
+    public static void jfrStart(ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("jfr start");
+        Commands.INSTANCE.method3(re, command);
+    }
+
+    @MNIFunction(returnType = "CommandReturn")
+    public static void jfrStop(ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("jfr stop");
+        Commands.INSTANCE.method3(re, command);
+    }
+    //endregion
+
 
 }

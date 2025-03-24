@@ -1,7 +1,6 @@
 package top.mcfpp.core.lang
 
 import net.querz.nbt.tag.StringTag
-import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.bool.BaseBool
@@ -364,7 +363,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             "<=" -> isSmallerOrEqual(qwq)
             "==" -> isEqual(qwq)
             "!=" -> isNotEqual(qwq)
-            "!" -> negation()
+            "~=" -> inRange(qwq)
             "||" -> or(qwq)
             "&&" -> and(qwq)
             else -> {
@@ -473,15 +472,13 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
      */
     open fun isNotEqual(a: Var<*>): Var<*>? = null
 
-
-    @InsertCommand
     open fun negation(): Var<*>? = null
 
-    @InsertCommand
     open fun or(a: Var<*>): Var<*>? = null
 
-    @InsertCommand
     open fun and(a: Var<*>): Var<*>? = null
+
+    open fun inRange(a: Var<*>): Var<*>? = null
 
     open fun toNBTVar(): NBTBasedData {
         val n = NBTBasedData()

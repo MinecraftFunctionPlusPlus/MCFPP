@@ -338,7 +338,7 @@ conditionalAndExpression
 
 //等同
 equalityExpression
-    :   relationalExpression ( op=('==' | '!=') relationalExpression )?
+    :   relationalExpression ( op=('==' | '!=' | WVEQ) relationalExpression )?
     ;
 
 //比较关系

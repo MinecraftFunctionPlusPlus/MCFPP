@@ -23,6 +23,8 @@ import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
+import kotlin.math.nextDown
+import kotlin.math.nextUp
 
 /**
  * 代表了mc中的一个整数。实质上是记分板中的一个记分项。你可以对它进行加减乘除等基本运算操作，以及大小比较等逻辑运算。
@@ -374,6 +376,26 @@ open class MCInt : MCNumber<Int> {
         return re
     }
 
+    override fun inRange(a: Var<*>): Var<*>? {
+        if(a !is RangeVar) return null
+        if(a is RangeVarConcrete){
+            val left = a.value.first
+            val right = a.value.second
+            val range = if(a.isIntRange()) a else RangeVarConcrete(left?.nextUp() to right?.nextDown())
+            val re = ExecuteBool()
+            re.value.add(
+                CommandBoolPart(
+                    false,
+                    Command("if score $name $sbObject matches").build(range.toCommandPart())
+                )
+            )
+        }
+        if(a.isIntRange()){
+            return a.left.isSmallerOrEqual(this)!!.and(a.right.isBiggerOrEqual(this)!!)
+        }
+        TODO()
+    }
+
     override fun clone(): MCInt {
         return MCInt(this)
     }
@@ -686,6 +708,22 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
             ScoreBoolConcrete(value != a.value)
         } else {
             a.isNotEqual(this)
+        }
+    }
+
+    override fun inRange(a: Var<*>): Var<*>? {
+        if(a !is RangeVar) return null
+        if(a is RangeVarConcrete){
+            val left = a.value.first
+            val right = a.value.second
+            if(left != null && value < left) return ScoreBoolConcrete(false)
+            if(right!= null && value > right) return ScoreBoolConcrete(false)
+            return ScoreBoolConcrete(true)
+        }
+        if(!a.isIntRange()){
+            return toDynamic(false).inRange(a)
+        }else{
+            TODO()
         }
     }
 

@@ -1,7 +1,7 @@
 package top.mcfpp.type
 
 
-import top.mcfpp.core.lang.FunctionID
+import top.mcfpp.core.lang.FunctionVar
 import top.mcfpp.core.lang.FunctionIDConcrete
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.resource.*
@@ -346,9 +346,9 @@ object ResourceID: MCFPPType(parentType = arrayListOf(MCFPPNBTType.NBT)){
         override fun build(identifier: String, container: FieldContainer): Var<*> = FunctionIDConcrete(container, "", identifier)
         override fun build(identifier: String): Var<*> = FunctionIDConcrete("", identifier)
         override fun build(identifier: String, clazz: Class): Var<*> = FunctionIDConcrete(clazz, "", identifier)
-        override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = FunctionID(container, identifier)
-        override fun buildUnConcrete(identifier: String): Var<*> = FunctionID(identifier)
-        override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = FunctionID(clazz, identifier)
+        override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = FunctionVar(container, identifier)
+        override fun buildUnConcrete(identifier: String): Var<*> = FunctionVar(identifier)
+        override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = FunctionVar(clazz, identifier)
     }
     object Structure: MCFPPType(parentType = arrayListOf(ResourceID)){
         override val typeName: String

@@ -1,31 +1,20 @@
 package top.mcfpp.core.lang
             
 import net.querz.nbt.tag.StringTag
+import top.mcfpp.command.Command
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.core.lang.resource.ResourceID
 import top.mcfpp.mni.resource.FunctionIDConcreteData
 import top.mcfpp.mni.resource.FunctionIDData
 import top.mcfpp.model.CompoundData
-import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPResourceType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.TempPool
 
-open class FunctionID: ResourceID {
+open class FunctionVar: ResourceID {
 
     override var type: MCFPPType = MCFPPResourceType.FunctionID
-
-    /**
-     * 创建一个FunctionID类型的变量。它的mc名和变量所在的域容器有关。
-     *
-     * @param identifier 标识符。默认为
-     */
-    constructor(
-        curr: FieldContainer,
-        identifier: String = TempPool.getVarIdentify()
-    ) : super(curr, identifier) {
-        this.identifier = identifier
-    }
 
     /**
      * 创建一个FunctionID值。它的标识符和mc名相同。
@@ -39,7 +28,7 @@ open class FunctionID: ResourceID {
      * 复制一个FunctionID
      * @param b 被复制的FunctionID值
      */
-    constructor(b: FunctionID) : super(b)
+    constructor(b: FunctionVar) : super(b)
 
     companion object {
         val data = CompoundData("FunctionID","mcfpp.lang.resource")
@@ -52,23 +41,15 @@ open class FunctionID: ResourceID {
     }
 }
 
-class FunctionIDConcrete: MCFPPValue<String>, FunctionID {
+class FunctionIDConcrete: MCFPPValue<Function>, FunctionVar {
 
-    override var value: String
+    override var value: Function
 
-    constructor(
-        curr: FieldContainer,
-        value: String,
-        identifier: String = TempPool.getVarIdentify()
-    ) : super(curr, identifier) {
+    constructor(value: Function, identifier: String = TempPool.getVarIdentify()) : super(identifier) {
         this.value = value
     }
 
-    constructor(value: String, identifier: String = TempPool.getVarIdentify()) : super(identifier) {
-        this.value = value
-    }
-
-    constructor(id: FunctionID, value: String) : super(id){
+    constructor(id: FunctionVar, value: Function) : super(id){
         this.value = value
     }
 
@@ -85,12 +66,16 @@ class FunctionIDConcrete: MCFPPValue<String>, FunctionID {
     }
 
     override fun toDynamic(replace: Boolean): Var<*> {
-        NBTBasedDataConcrete(this, StringTag(value)).toDynamic(replace)
-        return FunctionID(this)
+        NBTBasedDataConcrete(this, StringTag(value.namespaceID.toString())).toDynamic(replace)
+        return FunctionVar(this)
     }
 
     override fun toString(): String {
         return "[$type,value=$value]"
+    }
+
+    override fun toCommandPart(): Command {
+        return Command(value.namespaceID.toString())
     }
     
     companion object {
