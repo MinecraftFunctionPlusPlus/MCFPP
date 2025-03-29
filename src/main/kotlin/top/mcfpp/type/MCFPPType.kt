@@ -33,6 +33,8 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
 
     open val objectData: CompoundData = CompoundData("unknown", "mcfpp")
 
+    open val instanceData: CompoundData get() = CompoundData("unknown", "mcfpp")
+
     /**
      * 类型名
      */

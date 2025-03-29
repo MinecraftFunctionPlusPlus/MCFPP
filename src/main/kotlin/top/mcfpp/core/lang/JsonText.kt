@@ -98,7 +98,7 @@ open class JsonText : NBTBasedData {
         return NBTChatComponent(this, true).toCommandPart()
     }
 
-    override fun plus(a: Var<*>): Var<*>? {
+    override fun plus(a: Var<*>): Var<*> {
         return when(a){
             is JsonTextConcrete -> {
                 if(parentClass()!= null){
@@ -139,7 +139,7 @@ open class JsonText : NBTBasedData {
                 }
                 this
             }
-            else -> null
+            else -> errorOp()
         }
     }
 
@@ -212,7 +212,7 @@ class JsonTextConcrete : MCFPPValue<ChatComponent>, JsonText {
         return value.toCommandPart()
     }
 
-    override fun plus(a: Var<*>): Var<*>? {
+    override fun plus(a: Var<*>): Var<*> {
         when(a){
             is JsonTextConcrete -> {
                 val v = value as? ListChatComponent ?: value.toListComponent()
@@ -228,7 +228,7 @@ class JsonTextConcrete : MCFPPValue<ChatComponent>, JsonText {
                 v.append(NBTChatComponent(a, true))
                 value = v
             }
-            else -> return null
+            else -> errorOp()
         }
         return this
     }

@@ -351,37 +351,20 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
                 qwq = a
             }
         }
-        val re = when(operation){
-            "+" -> plus(qwq)
-            "-" -> minus(qwq)
-            "*" -> times(qwq)
-            "/" -> div(qwq)
-            "%" -> rem(qwq)
-            ">" -> isBigger(qwq)
-            "<" -> isSmaller(qwq)
-            ">=" -> isBiggerOrEqual(qwq)
-            "<=" -> isSmallerOrEqual(qwq)
-            "==" -> isEqual(qwq)
-            "!=" -> isNotEqual(qwq)
-            "~=" -> inRange(qwq)
-            "||" -> or(qwq)
-            "&&" -> and(qwq)
-            else -> {
-                LogProcessor.error("Unknown operation: $operation")
-                UnknownVar("error_operation_" + UUID.randomUUID().toString()).apply { isError = true }
-            }
-        }
-        if(re == null){
+        val operator = type.instanceData.field.getOperator(operation, a.type)
+        val re = if(operator != null) {
+            operator.invoke(arrayListOf(qwq), this)
+        } else {
             LogProcessor.error("Unsupported operation '$operation' between ${type.typeName} and ${a.type.typeName}")
-            return UnknownVar("${type.typeName}_$operation{a.type.typeName}" + UUID.randomUUID()).apply { isError = true }
-        }else{
-            return re
+            UnknownVar("${type.typeName}_$operation{a.type.typeName}_" + TempPool.getVarIdentify()).apply { isError = true }
         }
+        return re
     }
 
     fun unaryComputation(operation: String): Var<*>{
         val re = when(operation){
             "!" -> negation()
+            "&" -> ref()
             else -> {
                 LogProcessor.error("Unknown operation: $operation")
                 return UnknownVar("error_operation_" + UUID.randomUUID().toString())
@@ -395,90 +378,95 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         }
     }
 
+    protected fun errorOp(): Nothing = throw IllegalArgumentException()
+
     /**
      * 加法
      * @param a 加数
      * @return 计算的结果
      */
-    open fun plus(a: Var<*>): Var<*>? = null
+    open fun plus(a: Var<*>): Var<*> = errorOp()
 
     /**
      * 减法
      * @param a 减数
      * @return 计算的结果
      */
-    open fun minus(a: Var<*>): Var<*>? = null
+    open fun minus(a: Var<*>): Var<*> = errorOp()
 
     /**
      * 乘法
      * @param a 乘数
      * @return 计算的结果
      */
-    open fun times(a: Var<*>): Var<*>? = null
+    open fun times(a: Var<*>): Var<*> = errorOp()
 
     /**
      * 除法
      * @param a 除数
      * @return 计算的结果
      */
-    open fun div(a: Var<*>): Var<*>? = null
+    open fun div(a: Var<*>): Var<*> = errorOp()
 
     /**
      * 取余
      * @param a 除数
      * @return 计算的结果
      */
-    open fun rem(a: Var<*>): Var<*>? = null
+    open fun rem(a: Var<*>): Var<*> = errorOp()
 
     /**
      * 这个数是否大于a
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun isBigger(a: Var<*>): Var<*>? = null
-
+    open fun isBigger(a: Var<*>): Var<*> = errorOp()
     /**
      * 这个数是否小于a
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun isSmaller(a: Var<*>): Var<*>? = null
+    open fun isSmaller(a: Var<*>): Var<*> = errorOp()
 
     /**
      * 这个数是否小于等于a
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun isSmallerOrEqual(a: Var<*>): Var<*>? = null
+    open fun isSmallerOrEqual(a: Var<*>): Var<*> = errorOp()
 
     /**
      * 这个数是否大于等于a
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun isBiggerOrEqual(a: Var<*>): Var<*>? = null
+    open fun isBiggerOrEqual(a: Var<*>): Var<*> = errorOp()
 
     /**
      * 这个数是否等于a
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun isEqual(a: Var<*>): Var<*>? = null
+    open fun isEqual(a: Var<*>): Var<*> = errorOp()
 
     /**
      * 这个数是否不等于a
      * @param a 右侧值
      * @return 计算结果
      */
-    open fun isNotEqual(a: Var<*>): Var<*>? = null
+    open fun isNotEqual(a: Var<*>): Var<*> = errorOp()
+
+    open fun or(a: Var<*>): Var<*> = errorOp()
+
+    open fun and(a: Var<*>): Var<*> = errorOp()
+
+    open fun inRange(a: Var<*>): Var<*> = errorOp()
+
+    open fun pipe(a: Var<*>): Var<*> = errorOp()
 
     open fun negation(): Var<*>? = null
 
-    open fun or(a: Var<*>): Var<*>? = null
-
-    open fun and(a: Var<*>): Var<*>? = null
-
-    open fun inRange(a: Var<*>): Var<*>? = null
+    open fun ref(): Var<*>? = null
 
     open fun toNBTVar(): NBTBasedData {
         val n = NBTBasedData()

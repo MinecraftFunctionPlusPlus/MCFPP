@@ -1,16 +1,70 @@
-data ItemPredicate {
+data ItemPredicatePart;
 
-    # 精确匹配一个物品堆叠组件
-    @ConcreteOnly
-    dict<nbt>? itemSubPredicateMatch;
+data ContainItemPredicatePart: ItemPredicatePart {
+    string predicate;
 
-    # 检测物品子谓词
-    @ConcreteOnly
-    dict<nbt>? itemSubPredicateCheck;
+    constructor(string predicate) {
+        this.predicate = predicate;
+    }
+}
 
-    # 匹配一个物品堆叠组件，查看是否存在
-    @ConcreteOnly
-    list<string> itemSubPredicateExist;
+data MatchItemPredicatePart: ItemPredicatePart {
+    string predicate;
+    any value;
+    constructor(string predicate, any value) {
+        this.predicate = predicate;
+        this.value = value;
+    }
+}
 
-    
+data RangedItemPredicatePart: ItemPredicatePart {
+    string predicate;
+    any value;
+    constructor(string predicate, any value) {
+        this.predicate = predicate;
+        this.value = value;
+    }
+}
+
+data SingleItemPredicatePart: ItemPredicate {
+
+}
+
+#========================物品谓词=====================
+#{
+对应于`minecraft:item_predicate`，用于指定某个物品需要满足的特征。
+}#
+
+data ItemPredicate;
+
+#{
+最简单的物品谓词，表示了一系列物品测试项
+}#
+data SimpleItemPredicate: ItemPredicate {
+    list<ItemPredicatePart>! parts;
+}
+
+#{
+由一个`|`隔开的两个测试项组成的测试项，两个测试项的关系为或
+}#
+data OrItemPredicate: ItemPredicate {
+    ItemPredicate predicate1;
+    ItemPredicate predicate2;
+
+    constructor(ItemPredicate predicate1,ItemPredicate predicate2) {
+        this.predicate1 = predicate1;
+        this.predicate2 = predicate2;
+        this.andOr = andOr;
+    }
+}
+
+#{
+被`!`取反的测试项
+}#
+data NotItemPredicate: ItemPredicate {
+    ItemPredicate predicate;
+
+    constructor(ItemPredicate predicate) {
+        this.predicate = predicate;
+    }
 }

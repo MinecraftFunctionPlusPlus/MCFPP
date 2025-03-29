@@ -175,7 +175,7 @@ open class MCInt : MCNumber<Int> {
     }
 
     @InsertCommand
-    override fun plus(a: Var<*>): Var<*>? {
+    override fun plus(a: Var<*>): Var<*> {
         if(!isTemp && a.isTemp){
             return a.plus(this)
         }else if(!isTemp){
@@ -190,12 +190,12 @@ open class MCInt : MCNumber<Int> {
                 Function.addCommand(Commands.sbPlayerOperation(this, "+=", a))
                 return this
             }
-            else -> return null
+            else -> errorOp()
         }
     }
 
     @InsertCommand
-    override fun minus(a: Var<*>): Var<*>? {
+    override fun minus(a: Var<*>): Var<*> {
         if(!isTemp && a.isTemp){
             return a.minus(this)
         }else if(!isTemp){
@@ -210,12 +210,12 @@ open class MCInt : MCNumber<Int> {
                 Function.addCommand(Commands.sbPlayerOperation(this, "-=", a))
                 return this
             }
-            else -> return null
+            else -> errorOp()
         }
     }
 
     @InsertCommand
-    override fun times(a: Var<*>): Var<*>? {
+    override fun times(a: Var<*>): Var<*> {
         //t *= a
         if(!isTemp && a.isTemp){
             return a.times(this)
@@ -232,12 +232,12 @@ open class MCInt : MCNumber<Int> {
                 Function.addCommand(Commands.sbPlayerOperation(this, "*=", a))
                 return this
             }
-            else -> return null
+            else -> errorOp()
         }
     }
 
     @InsertCommand
-    override fun div(a: Var<*>): Var<*>? {
+    override fun div(a: Var<*>): Var<*> {
         //t /= a
         if(!isTemp && a.isTemp){
             return a.div(this)
@@ -254,12 +254,12 @@ open class MCInt : MCNumber<Int> {
                 Function.addCommand(Commands.sbPlayerOperation(this, "/=", a))
                 return this
             }
-            else -> return null
+            else -> errorOp()
         }
     }
 
     @InsertCommand
-    override fun rem(a: Var<*>): Var<*>? {
+    override fun rem(a: Var<*>): Var<*> {
         //t %= a
         if(!isTemp && a.isTemp){
             return a.rem(this)
@@ -276,14 +276,14 @@ open class MCInt : MCNumber<Int> {
                 Function.addCommand(Commands.sbPlayerOperation(this, "%=", a))
                 return this
             }
-            else -> return null
+            else -> errorOp()
         }
     }
 
     @InsertCommand
-    override fun isBigger(a: Var<*>): Var<*>? {
+    override fun isBigger(a: Var<*>): Var<*> {
         //re = t > a
-        if (a !is MCInt) return null
+        if (a !is MCInt) errorOp()
         if(isDataOnly) getFromStack()
         val re = ExecuteBool()
         if (a is MCIntConcrete) {
@@ -297,9 +297,9 @@ open class MCInt : MCNumber<Int> {
     }
 
     @InsertCommand
-    override fun isSmaller(a: Var<*>): Var<*>? {
+    override fun isSmaller(a: Var<*>): Var<*> {
         //re = t < a
-        if (a !is MCInt) return null
+        if (a !is MCInt) errorOp()
         if(isDataOnly) getFromStack()
         val re = ExecuteBool()
         if (a is MCIntConcrete) {
@@ -313,9 +313,9 @@ open class MCInt : MCNumber<Int> {
     }
 
     @InsertCommand
-    override fun isSmallerOrEqual(a: Var<*>): Var<*>? {
+    override fun isSmallerOrEqual(a: Var<*>): Var<*> {
         //re = t <= a
-        if (a !is MCInt) return null
+        if (a !is MCInt) errorOp()
         if(isDataOnly) getFromStack()
         val re = ExecuteBool()
         if (a is MCIntConcrete) {
@@ -329,9 +329,9 @@ open class MCInt : MCNumber<Int> {
     }
 
     @InsertCommand
-    override fun isBiggerOrEqual(a: Var<*>): Var<*>? {
+    override fun isBiggerOrEqual(a: Var<*>): Var<*> {
         //re = t <= a
-        if (a !is MCInt) return null
+        if (a !is MCInt) errorOp()
         if(isDataOnly) getFromStack()
         val re = ExecuteBool()
         if (a is MCIntConcrete) {
@@ -345,9 +345,9 @@ open class MCInt : MCNumber<Int> {
     }
 
     @InsertCommand
-    override fun isEqual(a: Var<*>): Var<*>? {
+    override fun isEqual(a: Var<*>): Var<*> {
         //re = t == a
-        if (a !is MCInt) return null
+        if (a !is MCInt) errorOp()
         if(isDataOnly) getFromStack()
         val re = ExecuteBool()
         if (a is MCIntConcrete) {
@@ -361,9 +361,9 @@ open class MCInt : MCNumber<Int> {
     }
 
     @InsertCommand
-    override fun isNotEqual(a: Var<*>): Var<*>? {
+    override fun isNotEqual(a: Var<*>): Var<*> {
         //re = t != a
-        if (a !is MCInt) return null
+        if (a !is MCInt) errorOp()
         if(isDataOnly) getFromStack()
         val re = ExecuteBool()
         if(a is MCIntConcrete){
@@ -376,8 +376,8 @@ open class MCInt : MCNumber<Int> {
         return re
     }
 
-    override fun inRange(a: Var<*>): Var<*>? {
-        if(a !is RangeVar) return null
+    override fun inRange(a: Var<*>): Var<*> {
+        if(a !is RangeVar) errorOp()
         if(a is RangeVarConcrete){
             val left = a.value.first
             val right = a.value.second
@@ -460,6 +460,7 @@ open class MCInt : MCNumber<Int> {
     companion object {
         val data by lazy {
             CompoundData("int","mcfpp").apply {
+                this.commonType = MCFPPBaseType.Int
                 extends(MCAny.data)
                 getNativeFromClass(MCIntData::class.java)
             }
@@ -555,7 +556,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
     }
 
     @InsertCommand
-    override fun plus(a: Var<*>): Var<*>? {
+    override fun plus(a: Var<*>): Var<*> {
         //t = t + a
         if(!isTemp) return getTempVar().plus(a)
         when(a){
@@ -566,12 +567,12 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
             is MCInt -> {
                 return a.plus(this)
             }
-            else -> return null
+            else -> errorOp()
         }
     }
 
     @InsertCommand
-    override fun minus(a: Var<*>): Var<*>? {
+    override fun minus(a: Var<*>): Var<*> {
         //t = t + a
         if(!isTemp) return getTempVar().minus(a)
         when(a){
@@ -582,14 +583,14 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
             is MCInt -> {
                 return a.minus(this)
             }
-            else -> return this
+            else -> errorOp()
         }
     }
 
 
     @Override
     @InsertCommand
-    override fun times(a: Var<*>): Var<*>? {
+    override fun times(a: Var<*>): Var<*> {
         //t = t * a
         if(!isTemp) return getTempVar().times(a)
         when(a){
@@ -600,13 +601,13 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
             is MCInt -> {
                 return a.times(this)
             }
-            else -> return this
+            else -> errorOp()
         }
     }
 
     @Override
     @InsertCommand
-    override fun div(a: Var<*>): Var<*>? {
+    override fun div(a: Var<*>): Var<*> {
         //t = t / a
         if(!isTemp) return getTempVar().div(a)
         when(a){
@@ -617,13 +618,13 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
             is MCInt -> {
                 return a.div(this)
             }
-            else -> return this
+            else -> errorOp()
         }
     }
 
     @Override
     @InsertCommand
-    override fun rem(a: Var<*>): Var<*>? {
+    override fun rem(a: Var<*>): Var<*> {
         //t = t % a
         if(!isTemp) return getTempVar().rem(a)
         when(a){
@@ -634,15 +635,15 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
             is MCInt -> {
                 return a.rem(this)
             }
-            else -> return this
+            else -> errorOp()
         }
     }
 
     @Override
     @InsertCommand
-    override fun isBigger(a: Var<*>): Var<*>? {
+    override fun isBigger(a: Var<*>): Var<*> {
         //re = t > a
-        if (a !is MCInt) return null
+        if (a !is MCInt) errorOp()
         return if (a is MCIntConcrete) {
             ScoreBoolConcrete(value > a.value)
         } else {
@@ -653,9 +654,9 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
 
     @Override
     @InsertCommand
-    override fun isSmaller(a: Var<*>): Var<*>? {
+    override fun isSmaller(a: Var<*>): Var<*> {
         //re = t < a
-        if (a !is MCInt) return null
+        if (a !is MCInt) errorOp()
         return if (a is MCIntConcrete) {
             ScoreBoolConcrete(value < a.value)
         } else {
@@ -665,9 +666,9 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
 
     @Override
     @InsertCommand
-    override fun isSmallerOrEqual(a: Var<*>): Var<*>? {
+    override fun isSmallerOrEqual(a: Var<*>): Var<*> {
         //re = t <= a
-        if (a !is MCInt) return null
+        if (a !is MCInt) errorOp()
         return if (a is MCIntConcrete) {
             ScoreBoolConcrete(value <= a.value)
         } else {
@@ -677,9 +678,9 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
 
     @Override
     @InsertCommand
-    override fun isBiggerOrEqual(a: Var<*>): Var<*>? {
+    override fun isBiggerOrEqual(a: Var<*>): Var<*> {
         //re = t <= a
-        if (a !is MCInt) return null
+        if (a !is MCInt) errorOp()
         return if (a is MCIntConcrete) {
             ScoreBoolConcrete(value >= a.value)
         } else {
@@ -689,9 +690,9 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
 
     @Override
     @InsertCommand
-    override fun isEqual(a: Var<*>): Var<*>? {
+    override fun isEqual(a: Var<*>): Var<*> {
         //re = t == a
-        if (a !is MCInt) return null
+        if (a !is MCInt) errorOp()
         return if (a is MCIntConcrete) {
             ScoreBoolConcrete(value == a.value)
         } else {
@@ -701,9 +702,9 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
 
     @Override
     @InsertCommand
-    override fun isNotEqual(a: Var<*>): Var<*>? {
+    override fun isNotEqual(a: Var<*>): Var<*> {
         //re = t != a
-        if (a !is MCInt) return null
+        if (a !is MCInt) errorOp()
         return if (a is MCIntConcrete) {
             ScoreBoolConcrete(value != a.value)
         } else {
@@ -711,8 +712,8 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
         }
     }
 
-    override fun inRange(a: Var<*>): Var<*>? {
-        if(a !is RangeVar) return null
+    override fun inRange(a: Var<*>): Var<*> {
+        if(a !is RangeVar) errorOp()
         if(a is RangeVarConcrete){
             val left = a.value.first
             val right = a.value.second

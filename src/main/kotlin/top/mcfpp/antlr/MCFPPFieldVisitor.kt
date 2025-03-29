@@ -2,7 +2,9 @@ package top.mcfpp.antlr
 
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
+import top.mcfpp.annotations.MNIBinaryOperator
 import top.mcfpp.annotations.MNIFunction
+import top.mcfpp.antlr.mcfppParser.ClassDeclarationContext
 import top.mcfpp.antlr.mcfppParser.TemplateDeclarationContext
 import top.mcfpp.compiletime.CompileTimeFunction
 import top.mcfpp.core.lang.*
@@ -205,7 +207,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
      * @return null
      */
 
-    override fun visitClassDeclaration(ctx: mcfppParser.ClassDeclarationContext): Any? {
+    override fun visitClassDeclaration(ctx: ClassDeclarationContext): Any? {
         Project.ctx = ctx
         //注册类
         val id = ctx.classWithoutNamespace().text
@@ -325,15 +327,9 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 
     /**
      * 类成员的声明。由于函数声明可以后置，因此需要先查明函数声明情况再进行变量的注册以及初始化。
-     * <pre>
-     * `classMemberDeclaration
-     * :   accessModifier? (STATIC)? classMember
-     * ;
-    `</pre> *
      * @param ctx the parse tree
      * @return null
      */
-    
     override fun visitClassMemberDeclaration(ctx: mcfppParser.ClassMemberDeclarationContext): Any? {
         Project.ctx = ctx
         val m = visit(ctx.classMember())
@@ -619,6 +615,194 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
     }
 
+    override fun visitOperationOverrideDeclaration(ctx: mcfppParser.OperationOverrideDeclarationContext): Any? {
+        return if(ctx.parent is ClassDeclarationContext){
+            visitClassOperationOverrideDeclaration(ctx)
+        }else{
+            visitTemplateOperationOverrideDeclaration(ctx)
+        }
+    }
+
+    private fun visitClassOperationOverrideDeclaration(ctx: mcfppParser.OperationOverrideDeclarationContext): Any? {
+        Project.ctx = ctx
+        val op = ctx.supportOperator().text
+        //创建函数对象
+        val f = Function(
+            ctx.supportOperator().text,
+            Class.currClass!!,
+            ctx.functionBody()
+        )
+        f.returnType = if(ctx.functionReturnType()?.type() != null){
+            MCFPPType.parseFromContext(ctx.functionReturnType().type(), typeScope)?: run {
+                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.functionReturnType().text))
+                MCFPPBaseType.Any
+            }
+        }else{
+            MCFPPBaseType.Void
+        }
+        val thisObj = Class.currClass!!.getType().buildUnConcrete("this")
+        f.field.putVar("this",thisObj)
+        //解析参数
+        f.addParamsFromContext(ctx.functionParams())
+        //参数数量检查
+        if(f.normalParams.size != 1){
+            LogProcessor.error("Operator $op must have only one parameter: ${ctx.text}")
+            return null
+        }
+        //注册函数
+        if (Class.currClass!!.field.hasOperator(op, f.normalParams[0].type)) {
+            LogProcessor.error("Already defined operator: $op(${f.normalParams[0].type}) in class " + Class.currClass!!.identifier)
+        } else {
+            Class.currClass!!.field.addOperator(op, f)
+        }
+        f.ast = null
+        return f
+    }
+
+    private fun visitTemplateOperationOverrideDeclaration(ctx: mcfppParser.OperationOverrideDeclarationContext): Any? {
+        Project.ctx = ctx
+        val op = ctx.supportOperator().text
+        //创建函数对象
+        val f = Function(
+            ctx.supportOperator().text,
+            DataTemplate.currTemplate!!,
+            ctx.functionBody()
+        )
+        f.returnType = if(ctx.functionReturnType()?.type() != null){
+            MCFPPType.parseFromContext(ctx.functionReturnType().type(), typeScope)?: run {
+                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.functionReturnType().text))
+                MCFPPBaseType.Any
+            }
+        }else{
+            MCFPPBaseType.Void
+        }
+        val thisObj = DataTemplate.currTemplate!!.getType().buildUnConcrete("this")
+        f.field.putVar("this",thisObj)
+        //解析参数
+        f.addParamsFromContext(ctx.functionParams())
+        //参数数量检查
+        if(f.normalParams.size != 1){
+            LogProcessor.error("Operator $op must have only one parameter: ${ctx.text}")
+            return null
+        }
+        //注册函数
+        if (DataTemplate.currTemplate!!.field.hasOperator(op, f.normalParams[0].type)) {
+            LogProcessor.error("Already defined operator: $op(${f.normalParams[0].type}) in class " + DataTemplate.currTemplate!!.identifier)
+        } else {
+            DataTemplate.currTemplate!!.field.addOperator(op, f)
+        }
+        f.ast = null
+        return f
+    }
+
+    override fun visitNativeOperationOverrideDeclaration(ctx: mcfppParser.NativeOperationOverrideDeclarationContext): Any? {
+        return if(ctx.parent is ClassDeclarationContext){
+            visitClassNativeOperationOverrideDeclaration(ctx)
+        }else{
+            visitTemplateNativeOperationOverrideDeclaration(ctx)
+        }
+    }
+
+    private fun visitClassNativeOperationOverrideDeclaration(ctx: mcfppParser.NativeOperationOverrideDeclarationContext): Any? {
+        Project.ctx = ctx
+        val op = ctx.supportOperator().text
+        val nf = NativeFunction(op, Project.currNamespace)
+        nf.returnType = if(ctx.functionReturnType()?.type() != null){
+            MCFPPType.parseFromContext(ctx.functionReturnType().type(), typeScope)?: run {
+                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.functionReturnType().text))
+                MCFPPBaseType.Any
+            }
+        }else{
+            MCFPPBaseType.Void
+        }
+        nf.addParamsFromContext(ctx.functionParams())
+        //参数数量检查
+        if(nf.normalParams.size != 1){
+            LogProcessor.error("Operator $op must have only one parameter: ${ctx.text}")
+            return null
+        }
+        try {
+            //根据JavaRefer找到类
+            val refer = ctx.javaRefer().text
+            val clsName = refer.substring(0,refer.lastIndexOf('.'))
+            val clazz = Project.classLoader.loadClass(clsName)
+            val methods = clazz.methods
+            var hasFind = false
+            for(method in methods){
+                val mniRegister = method.getAnnotation(MNIBinaryOperator::class.java) ?: continue
+                //比对
+                if(nf.normalParams[0].type.typeName == mniRegister.paramType){
+                    hasFind = true
+                    nf.javaMethod = method
+                    break
+                }
+            }
+            if(!hasFind){
+                throw NoSuchMethodException("Cannot find operator $op(${nf.normalParams[0].type}) in jvm class $clsName")
+            }
+        } catch (e: ClassNotFoundException) {
+            LogProcessor.error("Cannot find java class: " + e.message)
+            return null
+        }
+        //注册函数
+        if (Class.currClass!!.field.hasOperator(op, nf.normalParams[0].type)) {
+            LogProcessor.error("Already defined operator: $op(${nf.normalParams[0].type}) in template " + Class.currClass!!.identifier)
+        } else {
+            Class.currClass!!.field.addOperator(op, nf)
+        }
+        return nf
+    }
+
+    private fun visitTemplateNativeOperationOverrideDeclaration(ctx: mcfppParser.NativeOperationOverrideDeclarationContext): Any? {
+        Project.ctx = ctx
+        val op = ctx.supportOperator().text
+        val nf = NativeFunction(op, Project.currNamespace)
+        nf.returnType = if(ctx.functionReturnType()?.type() != null){
+            MCFPPType.parseFromContext(ctx.functionReturnType().type(), typeScope)?: run {
+                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.functionReturnType().text))
+                MCFPPBaseType.Any
+            }
+        }else{
+            MCFPPBaseType.Void
+        }
+        nf.addParamsFromContext(ctx.functionParams())
+        //参数数量检查
+        if(nf.normalParams.size != 1){
+            LogProcessor.error("Operator $op must have only one parameter: ${ctx.text}")
+            return null
+        }
+        try {
+            //根据JavaRefer找到类
+            val refer = ctx.javaRefer().text
+            val clsName = refer.substring(0,refer.lastIndexOf('.'))
+            val clazz = Project.classLoader.loadClass(clsName)
+            val methods = clazz.methods
+            var hasFind = false
+            for(method in methods){
+                val mniRegister = method.getAnnotation(MNIBinaryOperator::class.java) ?: continue
+                //比对
+                if(nf.normalParams[0].type.typeName == mniRegister.paramType){
+                    hasFind = true
+                    nf.javaMethod = method
+                    break
+                }
+            }
+            if(!hasFind){
+                throw NoSuchMethodException("Cannot find operator $op(${nf.normalParams[0].type}) in jvm class $clsName")
+            }
+        } catch (e: ClassNotFoundException) {
+            LogProcessor.error("Cannot find java class: " + e.message)
+            return null
+        }
+        //注册函数
+        if (DataTemplate.currTemplate!!.field.hasOperator(op, nf.normalParams[0].type)) {
+            LogProcessor.error("Already defined operator: $op(${nf.normalParams[0].type}) in template " + DataTemplate.currTemplate!!.identifier)
+        } else {
+            DataTemplate.currTemplate!!.field.addOperator(op, nf)
+        }
+        return nf
+    }
+
 //endregion
 
 //region function
@@ -647,7 +831,6 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
         //解析参数
         ctx.functionParams()?.let { f.addParamsFromContext(it) }
-        //TODO 解析函数的注解
         //不是类的成员
         f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
@@ -679,7 +862,6 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         f = InlineFunction(identifier, Project.currNamespace, ctx.functionBody())
         //解析参数
         f.addParamsFromContext(ctx.functionParams())
-        //TODO 解析函数的注解
         //不是类的成员
         f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
@@ -719,7 +901,6 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
         //解析参数
         f.addParamsFromContext(ctx.functionParams())
-        //TODO 解析函数的注解
         //不是类的成员
         f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
@@ -993,7 +1174,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //解析成员
         //先解析函数
         for (c in ctx.templateMemberDeclaration()) {
-            if (c!!.templateMember().templateFunctionDeclaration() != null || c!!.templateMember().templateConstructorDeclaration() != null) {
+            if (c!!.templateMember().templateFunctionDeclaration() != null || c.templateMember().templateConstructorDeclaration() != null) {
                 visit(c)
             }
         }

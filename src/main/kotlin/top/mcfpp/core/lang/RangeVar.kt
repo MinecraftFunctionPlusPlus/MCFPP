@@ -6,6 +6,8 @@ import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
+import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 import top.mcfpp.util.TextTranslator
@@ -15,6 +17,8 @@ import kotlin.experimental.and
 open class RangeVar: Var<RangeVar> {
 
     var prefix: FieldContainer? = null
+
+    override var type: MCFPPType = MCFPPBaseType.Range
 
     //01 10 11 00(不合法)
     //1表示有，0表示没有

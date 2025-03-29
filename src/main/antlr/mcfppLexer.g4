@@ -107,6 +107,7 @@ INTERFACE:'interface';
 DATA:'data';
 FUNCTION:'func';
 ENUM:'enum';
+OPERATOR:'operator';
 
 CONSTRUCTOR:'constructor';
 

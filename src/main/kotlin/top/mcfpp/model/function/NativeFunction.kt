@@ -270,12 +270,3 @@ class NativeFunction : Function, Native {
     }
 
 }
-
-//TODO 改成java用interface实现的lambda？
-typealias MNIMethod = (Array<Var<*>?>, Array<Var<*>?>, CanSelectMember?, ValueWrapper<Var<*>>) -> Void
-
-abstract class MNIMethodContainer{
-
-    abstract fun getMNIMethod(name: String): MNIMethod
-
-}

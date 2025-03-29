@@ -150,7 +150,7 @@ class MCByteConcrete: MCByte, MCFPPValue<Byte> {
         return MCByte(this)
     }
 
-    override fun plus(a: Var<*>): Var<*>? {
+    override fun plus(a: Var<*>): Var<*> {
         //t = t + a
         when(a){
             is MCByteConcrete -> {
@@ -160,11 +160,11 @@ class MCByteConcrete: MCByte, MCFPPValue<Byte> {
             is MCByte -> {
                 return a.plus(this)
             }
-            else -> return null
+            else -> errorOp()
         }
     }
 
-    override fun minus(a: Var<*>): Var<*>? {
+    override fun minus(a: Var<*>): Var<*> {
         //t = t + a
         when(a){
             is MCByteConcrete -> {
@@ -174,11 +174,11 @@ class MCByteConcrete: MCByte, MCFPPValue<Byte> {
             is MCByte -> {
                 return a.minus(this)
             }
-            else -> return this
+            else -> errorOp()
         }
     }
 
-    override fun times(a: Var<*>): Var<*>? {
+    override fun times(a: Var<*>): Var<*> {
         //t = t * a
         when(a){
             is MCByteConcrete -> {
@@ -188,11 +188,11 @@ class MCByteConcrete: MCByte, MCFPPValue<Byte> {
             is MCByte -> {
                 return a.times(this)
             }
-            else -> return this
+            else -> errorOp()
         }
     }
 
-    override fun div(a: Var<*>): Var<*>? {
+    override fun div(a: Var<*>): Var<*> {
         //t = t / a
         when(a){
             is MCByteConcrete -> {
@@ -202,11 +202,11 @@ class MCByteConcrete: MCByte, MCFPPValue<Byte> {
             is MCByte -> {
                 return a.div(this)
             }
-            else -> return this
+            else -> errorOp()
         }
     }
 
-    override fun rem(a: Var<*>): Var<*>? {
+    override fun rem(a: Var<*>): Var<*> {
         //t = t % a
         when(a){
             is MCByteConcrete -> {
@@ -216,13 +216,13 @@ class MCByteConcrete: MCByte, MCFPPValue<Byte> {
             is MCByte -> {
                 return a.rem(this)
             }
-            else -> return this
+            else -> errorOp()
         }
     }
 
-    override fun isBigger(a: Var<*>): Var<*>? {
+    override fun isBigger(a: Var<*>): Var<*> {
         //re = t > a
-        if (a !is MCByte) return null
+        if (a !is MCByte) errorOp()
         return if (a is MCByteConcrete) {
             ScoreBoolConcrete(value > a.value)
         } else {
@@ -231,9 +231,9 @@ class MCByteConcrete: MCByte, MCFPPValue<Byte> {
         }
     }
 
-    override fun isSmaller(a: Var<*>): Var<*>? {
+    override fun isSmaller(a: Var<*>): Var<*> {
         //re = t < a
-        if (a !is MCByte) return null
+        if (a !is MCByte) errorOp()
         return if (a is MCByteConcrete) {
             ScoreBoolConcrete(value < a.value)
         } else {
@@ -241,9 +241,9 @@ class MCByteConcrete: MCByte, MCFPPValue<Byte> {
         }
     }
 
-    override fun isSmallerOrEqual(a: Var<*>): Var<*>? {
+    override fun isSmallerOrEqual(a: Var<*>): Var<*> {
         //re = t <= a
-        if (a !is MCByte) return null
+        if (a !is MCByte) errorOp()
         return if (a is MCByteConcrete) {
             ScoreBoolConcrete(value <= a.value)
         } else {
@@ -251,9 +251,9 @@ class MCByteConcrete: MCByte, MCFPPValue<Byte> {
         }
     }
 
-    override fun isBiggerOrEqual(a: Var<*>): Var<*>? {
+    override fun isBiggerOrEqual(a: Var<*>): Var<*> {
         //re = t <= a
-        if (a !is MCByte) return null
+        if (a !is MCByte) errorOp()
         return if (a is MCByteConcrete) {
             ScoreBoolConcrete(value >= a.value)
         } else {
@@ -261,9 +261,9 @@ class MCByteConcrete: MCByte, MCFPPValue<Byte> {
         }
     }
 
-    override fun isEqual(a: Var<*>): Var<*>? {
+    override fun isEqual(a: Var<*>): Var<*> {
         //re = t == a
-        if (a !is MCByte) return null
+        if (a !is MCByte) errorOp()
         return if (a is MCByteConcrete) {
             ScoreBoolConcrete(value == a.value)
         } else {
@@ -271,9 +271,9 @@ class MCByteConcrete: MCByte, MCFPPValue<Byte> {
         }
     }
 
-    override fun isNotEqual(a: Var<*>): Var<*>? {
+    override fun isNotEqual(a: Var<*>): Var<*> {
         //re = t != a
-        if (a !is MCByte) return null
+        if (a !is MCByte) errorOp()
         return if (a is MCByteConcrete) {
             ScoreBoolConcrete(value != a.value)
         } else {

@@ -123,6 +123,8 @@ classMember
     |   nativeClassFunctionDeclaration
     |   abstractClassFunctionDeclaration
     |   annotation
+    |   operationOverrideDeclaration
+    |   nativeOperationOverrideDeclaration
     ;
 
 classFunctionDeclaration
@@ -135,6 +137,33 @@ abstractClassFunctionDeclaration
 
 nativeClassFunctionDeclaration
     :   OVERRIDE? FUNCTION Identifier functionParams (ARROW functionReturnType)? '=' javaRefer ';'
+    ;
+
+operationOverrideDeclaration
+    :   OPERATOR supportOperator functionParams (ARROW functionReturnType)? '{' functionBody '}'
+    ;
+
+nativeOperationOverrideDeclaration
+    :   OPERATOR supportOperator functionParams (ARROW functionReturnType)? '=' javaRefer ';'
+    ;
+
+supportOperator
+    :   '+'
+    |   '-'
+    |   '*'
+    |   '/'
+    |   '%'
+    |   '>'
+    |   '<'
+    |   '>='
+    |   '<='
+    |   '=='
+    |   '!='
+    |   WVEQ
+    |   '||'
+    |   '&&'
+    |   '|'
+    |   Identifier
     ;
 
 classFieldDeclaration
@@ -165,12 +194,12 @@ genericClassImplement
 
 //数据模板
 templateDeclaration
-    :   FINAL? DATA classWithoutNamespace readOnlyArgs? (COLON className (',' className)*)? templateBody
+    :   FINAL? DATA classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? templateBody?
     ;
 
 //数据模板
 objectTemplateDeclaration
-    :   FINAL? OBJECT DATA classWithoutNamespace readOnlyArgs? (COLON className (',' className)*)? templateBody
+    :   FINAL? OBJECT DATA classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? templateBody?
     ;
 
 templateBody
@@ -185,6 +214,8 @@ templateMember
     :   templateFunctionDeclaration
     |   templateFieldDeclaration
     |   templateConstructorDeclaration
+    |   operationOverrideDeclaration
+    |   nativeOperationOverrideDeclaration
     |   annotation
     ;
 
@@ -313,7 +344,7 @@ parameter
 //表达式
 expression
     :   primary
-    |   conditionalOrExpression
+    |   commonBinaryOperatorExpression
     ;
 
 //能作为语句的表达式
@@ -323,8 +354,15 @@ statementExpression
 
 //条件表达式
 conditionalExpression
-    :   conditionalOrExpression ( '?' expression ':' expression )?
+    :   commonBinaryOperatorExpression ( '?' expression ':' expression )?
     ;
+
+//其他运算符
+commonBinaryOperatorExpression
+    :   conditionalOrExpression (commonBinaryOperator conditionalOrExpression)*
+    ;
+
+commonBinaryOperator: '|' | Identifier;
 
 //或
 conditionalOrExpression

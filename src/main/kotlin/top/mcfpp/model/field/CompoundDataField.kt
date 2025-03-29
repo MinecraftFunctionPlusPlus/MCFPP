@@ -4,17 +4,19 @@ import org.jetbrains.annotations.Nullable
 import top.mcfpp.core.lang.DataTemplateObject
 import top.mcfpp.core.lang.OnScoreboard
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.property.Property
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.Generic
+import top.mcfpp.model.property.Property
 import top.mcfpp.type.MCFPPType
 
 /**
  * 一个域，储存了字段和方法。
  *
  */
-class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType, IFieldWithProperty {
+class CompoundDataField(parent: ArrayList<IField?>) :
+    IFieldWithFunction, IFieldWithVar, IFieldWithType, IFieldWithProperty,
+    IFieldWithOperator by SimpleFieldWithOperator(){
 
     /**
      * 字段
@@ -46,7 +48,7 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType, IFi
      * 创建一个域，并指定它的父级
      * @param parent 父级域。若没有则设置为null
      */
-    constructor(parent: ArrayList<IField?>) {
+    init {
         this.parent = parent
     }
 
@@ -54,8 +56,7 @@ class CompoundDataField : IFieldWithFunction, IFieldWithVar, IFieldWithType, IFi
      * 复制一个域。
      * @param field 原来的缓存
      */
-    constructor(field: CompoundDataField) {
-        parent = field.parent
+    constructor(field: CompoundDataField): this(field.parent) {
         //变量复制
         for (key in field.vars.keys) {
             val `var`: Var<*> = field.vars[key]!!

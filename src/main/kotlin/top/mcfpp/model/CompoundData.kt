@@ -1,6 +1,7 @@
 package top.mcfpp.model
 
 import top.mcfpp.Project
+import top.mcfpp.annotations.MNIBinaryOperator
 import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.core.lang.Var
 import top.mcfpp.doc.Document
@@ -64,11 +65,15 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
     override val prefix: String
         get() = namespace + "_data_" + identifier
 
-    open fun getType(): MCFPPType =
-        object :MCFPPType(ArrayList(parent.map { it.getType() }.toList())){
+    var commonType: MCFPPType? = null
+
+    open fun getType(): MCFPPType {
+        if(commonType!= null) return commonType!!
+        return object :MCFPPType(ArrayList(parent.map { it.getType() }.toList())){
             override val objectData: CompoundData
                 get() = this@CompoundData
         }
+    }
 
     @Transient
     override var document: Document = Document()
@@ -201,9 +206,15 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
         //获取所有带有注解MNIMethod的Java方法
         val methods = cls.methods
         for(method in methods){
-            val mniRegister = method.getAnnotation(MNIFunction::class.java)
-            if(mniRegister != null){
-                addMNIMethod(method)
+            val mniFunction = method.getAnnotation(MNIFunction::class.java)
+            if(mniFunction != null){
+                addMNIMethod(method, mniFunction)
+                continue
+            }
+            val mniOperator = method.getAnnotation(MNIBinaryOperator::class.java)
+            if(mniOperator!= null){
+                addMNIOperator(method, mniOperator)
+                continue
             }
         }
         //尝试获取static ArrayList<Var<?>> getMembers()方法
@@ -224,15 +235,45 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
         Project.currNamespace = l
     }
 
-
-    fun addMNIMethod(method: Method, tag: Array<String>? = null){
+    private fun addMNIOperator(method: Method, mniBinaryOperator: MNIBinaryOperator, tag: Array<String>? = null){
         if(!Modifier.isStatic(method.modifiers)) {
             LogProcessor.error("MNIMethod ${method.name} in class ${method.declaringClass.name} must be static")
             return
         }
-        val mniRegister = method.getAnnotation(MNIFunction::class.java)
-        if(mniRegister == null){
-            LogProcessor.error("No MNIFunction annotation found in method ${method.name} in class ${method.declaringClass.name}")
+        if(tag!= null &&!tag.contentEquals(mniBinaryOperator.tag)){
+            LogProcessor.error("Tag not match in method ${method.name} in class ${method.declaringClass.name}")
+            return
+        }
+        if(this is ObjectCompoundData){
+            LogProcessor.error("Operator definition ${method.name} in class ${method.declaringClass.name} is not allowed in ObjectCompoundData")
+        }
+        val nf = NativeFunction(method.name, javaMethod = method)
+        //解析MNIMethod注解成员
+        val paramType = MCFPPType.parseFromString(mniBinaryOperator.paramType, nf.field)?: run {
+            LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniBinaryOperator.paramType))
+            MCFPPBaseType.Any
+        }
+        nf.appendNormalParam(paramType, "b")
+        nf.returnType = MCFPPType.parseFromString(mniBinaryOperator.returnType, nf.field)?: run {
+            LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniBinaryOperator.returnType))
+            MCFPPBaseType.Any
+        }
+        if(nf.returnType == MCFPPBaseType.Void){
+            LogProcessor.error("Operator definition ${method.name} in class ${method.declaringClass.name} must return a value")
+            return
+        }
+        //检查method的参数
+        if(method.parameterCount != 3){
+            LogProcessor.error("Method ${method.name} in class ${method.declaringClass.name} has wrong parameter count")
+            return
+        }
+        nf.caller = getType()
+        field.addOperator(mniBinaryOperator.operator, nf, false)
+    }
+
+    private fun addMNIMethod(method: Method, mniRegister: MNIFunction, tag: Array<String>? = null){
+        if(!Modifier.isStatic(method.modifiers)) {
+            LogProcessor.error("MNIMethod ${method.name} in class ${method.declaringClass.name} must be static")
             return
         }
         if(tag != null && !tag.contentEquals(mniRegister.tag)){

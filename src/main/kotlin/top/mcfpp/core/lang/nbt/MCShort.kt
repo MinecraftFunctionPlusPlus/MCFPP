@@ -142,7 +142,7 @@ class MCShortConcrete: MCShort, MCFPPValue<Short> {
         return MCShort(this)
     }
 
-    override fun plus(a: Var<*>): Var<*>? {
+    override fun plus(a: Var<*>): Var<*> {
         //t = t + a
         when(a){
             is MCShortConcrete -> {
@@ -152,11 +152,11 @@ class MCShortConcrete: MCShort, MCFPPValue<Short> {
             is MCShort -> {
                 return a.plus(this)
             }
-            else -> return null
+            else -> errorOp()
         }
     }
 
-    override fun minus(a: Var<*>): Var<*>? {
+    override fun minus(a: Var<*>): Var<*> {
         //t = t + a
         when(a){
             is MCShortConcrete -> {
@@ -166,11 +166,11 @@ class MCShortConcrete: MCShort, MCFPPValue<Short> {
             is MCShort -> {
                 return a.minus(this)
             }
-            else -> return this
+            else -> errorOp()
         }
     }
 
-    override fun times(a: Var<*>): Var<*>? {
+    override fun times(a: Var<*>): Var<*> {
         //t = t * a
         when(a){
             is MCShortConcrete -> {
@@ -180,11 +180,11 @@ class MCShortConcrete: MCShort, MCFPPValue<Short> {
             is MCShort -> {
                 return a.times(this)
             }
-            else -> return this
+            else -> errorOp()
         }
     }
 
-    override fun div(a: Var<*>): Var<*>? {
+    override fun div(a: Var<*>): Var<*> {
         //t = t / a
         when(a){
             is MCShortConcrete -> {
@@ -194,11 +194,11 @@ class MCShortConcrete: MCShort, MCFPPValue<Short> {
             is MCShort -> {
                 return a.div(this)
             }
-            else -> return this
+            else -> errorOp()
         }
     }
 
-    override fun rem(a: Var<*>): Var<*>? {
+    override fun rem(a: Var<*>): Var<*> {
         //t = t % a
         when(a){
             is MCShortConcrete -> {
@@ -208,13 +208,13 @@ class MCShortConcrete: MCShort, MCFPPValue<Short> {
             is MCShort -> {
                 return a.rem(this)
             }
-            else -> return this
+            else -> errorOp()
         }
     }
 
-    override fun isBigger(a: Var<*>): Var<*>? {
+    override fun isBigger(a: Var<*>): Var<*> {
         //re = t > a
-        if (a !is MCShort) return null
+        if (a !is MCShort) errorOp()
         return if (a is MCShortConcrete) {
             ScoreBoolConcrete(value > a.value)
         } else {
@@ -223,9 +223,9 @@ class MCShortConcrete: MCShort, MCFPPValue<Short> {
         }
     }
 
-    override fun isSmaller(a: Var<*>): Var<*>? {
+    override fun isSmaller(a: Var<*>): Var<*> {
         //re = t < a
-        if (a !is MCShort) return null
+        if (a !is MCShort) errorOp()
         return if (a is MCShortConcrete) {
             ScoreBoolConcrete(value < a.value)
         } else {
@@ -233,9 +233,9 @@ class MCShortConcrete: MCShort, MCFPPValue<Short> {
         }
     }
 
-    override fun isSmallerOrEqual(a: Var<*>): Var<*>? {
+    override fun isSmallerOrEqual(a: Var<*>): Var<*> {
         //re = t <= a
-        if (a !is MCShort) return null
+        if (a !is MCShort) errorOp()
         return if (a is MCShortConcrete) {
             ScoreBoolConcrete(value <= a.value)
         } else {
@@ -243,9 +243,9 @@ class MCShortConcrete: MCShort, MCFPPValue<Short> {
         }
     }
 
-    override fun isBiggerOrEqual(a: Var<*>): Var<*>? {
+    override fun isBiggerOrEqual(a: Var<*>): Var<*> {
         //re = t <= a
-        if (a !is MCShort) return null
+        if (a !is MCShort) errorOp()
         return if (a is MCShortConcrete) {
             ScoreBoolConcrete(value >= a.value)
         } else {
@@ -253,9 +253,9 @@ class MCShortConcrete: MCShort, MCFPPValue<Short> {
         }
     }
 
-    override fun isEqual(a: Var<*>): Var<*>? {
+    override fun isEqual(a: Var<*>): Var<*> {
         //re = t == a
-        if (a !is MCShort) return null
+        if (a !is MCShort) errorOp()
         return if (a is MCShortConcrete) {
             ScoreBoolConcrete(value == a.value)
         } else {
@@ -263,9 +263,9 @@ class MCShortConcrete: MCShort, MCFPPValue<Short> {
         }
     }
 
-    override fun isNotEqual(a: Var<*>): Var<*>? {
+    override fun isNotEqual(a: Var<*>): Var<*> {
         //re = t != a
-        if (a !is MCShort) return null
+        if (a !is MCShort) errorOp()
         return if (a is MCShortConcrete) {
             ScoreBoolConcrete(value != a.value)
         } else {

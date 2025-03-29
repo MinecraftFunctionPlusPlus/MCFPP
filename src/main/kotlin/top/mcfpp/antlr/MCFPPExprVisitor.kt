@@ -68,11 +68,34 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             l.commands.addAll(f.commands)
             q
         }else{
-            val q = visitConditionalOrExpression(ctx.conditionalOrExpression())
+            val q = visitCommonBinaryOperatorExpression(ctx.commonBinaryOperatorExpression())
             Function.currFunction = l
             l.commands.addAll(f.commands)
             q
         }
+    }
+
+    private var visitCommonBinaryOperatorExpressionRe : Var<*>? = null
+    /**
+     * 计算其他运算符，例如 a | b
+     * @param ctx the parse tree
+     * @return 表达式的值
+     */
+    override fun visitCommonBinaryOperatorExpression(ctx: mcfppParser.CommonBinaryOperatorExpressionContext): Var<*> {
+        Project.ctx = ctx
+        visitConditionalOrExpressionRe = visitConditionalOrExpression(ctx.conditionalOrExpression(0))
+        processVarCache.add(visitConditionalOrExpressionRe!!)
+        for (i in 1..<ctx.conditionalOrExpression().size) {
+            var b: Var<*>? = visitConditionalOrExpression(ctx.conditionalOrExpression(i))
+            if(b is MCFloat) b = b.toTempEntity()
+            if(visitConditionalOrExpressionRe!! != MCFloat.ssObj){
+                visitConditionalOrExpressionRe = visitConditionalOrExpressionRe!!.getTempVar()
+            }
+            visitConditionalOrExpressionRe = visitConditionalOrExpressionRe!!.binaryComputation(b!!, ctx.commonBinaryOperator(i - 1).text)
+            processVarCache[processVarCache.size - 1] = visitConditionalOrExpressionRe!!
+        }
+        processVarCache.remove(visitCommonBinaryOperatorExpressionRe!!)
+        return visitConditionalOrExpressionRe!!
     }
 
     private var visitConditionalOrExpressionRe : Var<*>? = null
@@ -81,8 +104,6 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
      * @param ctx the parse tree
      * @return 表达式的值
      */
-    //TODO 这里一定有问题吧，And和Or都有问题
-    @Override
     override fun visitConditionalOrExpression(ctx: mcfppParser.ConditionalOrExpressionContext): Var<*> {
         Project.ctx = ctx
         visitConditionalOrExpressionRe = visitConditionalAndExpression(ctx.conditionalAndExpression(0))
