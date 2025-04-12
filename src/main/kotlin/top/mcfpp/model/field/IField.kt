@@ -23,6 +23,4 @@ import java.io.Serializable
  * 函数储存在一个列表中
  *
  */
-interface IField: Serializable {
-
-}
+interface IField: Serializable

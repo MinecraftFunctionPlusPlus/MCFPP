@@ -1,6 +1,5 @@
 package top.mcfpp.antlr
 
-import net.querz.nbt.tag.Tag
 import top.mcfpp.Project
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.exception.UndefinedException
@@ -11,6 +10,7 @@ import top.mcfpp.model.ObjectDataTemplate
 import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.FunctionParam
+import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil.toJava
 import top.mcfpp.util.StringHelper.splitNamespaceID

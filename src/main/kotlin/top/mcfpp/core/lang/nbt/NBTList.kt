@@ -1,9 +1,5 @@
 package top.mcfpp.core.lang.nbt
 
-import net.querz.nbt.tag.EndTag
-import net.querz.nbt.tag.IntTag
-import net.querz.nbt.tag.ListTag
-import net.querz.nbt.tag.Tag
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
@@ -21,6 +17,7 @@ import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.property.AnonymousNativeMutator
 import top.mcfpp.model.property.Property
 import top.mcfpp.model.property.SimpleAccessor
+import top.mcfpp.nbt.tags.collection.ListTag
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil
@@ -153,7 +150,7 @@ open class NBTList : NBTBasedData {
                 if(a is NBTListConcrete){
                     return NBTListConcrete(this, a.value)
                 }else if(a is NBTBasedDataConcrete){
-                    return NBTListConcrete(this, ArrayList((a.value as ListTag<*>).map {
+                    return NBTListConcrete(this, ArrayList((a.value as ListTag).map {
                         NBTBasedDataConcrete(it)
                     }))
                 }else{
@@ -248,7 +245,7 @@ open class NBTList : NBTBasedData {
  *
  * 此时仍然会直接编译为`tellraw @a "1"`，而不是输出为计分板的值或者NBT的值。
  */
-class NBTListConcrete: NBTList, MCFPPValue<ArrayList<Var<*>>> {
+class NBTListConcrete: NBTList, PartialConcreteValue<ListTag, ArrayList<Var<*>>> {
 
     var isEmptyTemp: Boolean = false
 
@@ -272,18 +269,15 @@ class NBTListConcrete: NBTList, MCFPPValue<ArrayList<Var<*>>> {
         return NBTListConcrete(this)
     }
 
-    @Suppress("UNCHECKED_CAST")
     fun synchronous(){
         hasStoredInStack = true
         if(value.isEmpty()) {
-            Function.addCommands(Commands.method2(this, Commands.dataSetValue(nbtPath, ListTag.createUnchecked(IntTag::class.java))))
+            Function.addCommands(Commands.method2(this, Commands.dataSetValue(nbtPath, ListTag())))
             return
         }
         var isSet = true
-        var list: ListTag<Tag<*>> = ListTag.createUnchecked(EndTag::class.java) as ListTag<Tag<*>>
+        val list = ListTag()
         val commands = Commands.tempFunction(Function.currFunction){
-            val first = value.first().type.nbtType
-            list = ListTag.createUnchecked(first) as ListTag<Tag<*>>
             for (v in value){
                 if(v is MCFPPValue<*>){
                     if(isSet){
@@ -292,7 +286,7 @@ class NBTListConcrete: NBTList, MCFPPValue<ArrayList<Var<*>>> {
                         Function.addCommand(Commands.dataAppendValue(NBTPath.temp, NBTUtil.valueToNBT(v.value)))
                     }
                 }else{
-                    if(list.size() != 0 && isSet){
+                    if(list.size != 0 && isSet){
                         isSet = false
                         Function.addCommand(Commands.dataSetValue(NBTPath.temp, list))
                         list.clear()
@@ -399,8 +393,12 @@ class NBTListConcrete: NBTList, MCFPPValue<ArrayList<Var<*>>> {
         value[value.indexOfFirst { it.identifier == v.identifier }] = v
     }
 
-    fun isAllConcrete(): Boolean {
+    override fun isAllConcrete(): Boolean {
         return value.all { it is MCFPPValue<*> && (it !is NBTListConcrete || it.isAllConcrete()) }
+    }
+
+    override fun getConcretePart(): ListTag {
+        return ListTag(value.map { NBTUtil.valueToNBT((it as MCFPPValue<*>).value) })
     }
 
     companion object {

@@ -1,7 +1,5 @@
 package top.mcfpp.core.lang.nbt
 
-import net.querz.nbt.io.SNBTUtil
-import net.querz.nbt.tag.Tag
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
@@ -12,6 +10,7 @@ import top.mcfpp.mni.minecraft.EntityVarData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
+import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.type.MCFPPNBTType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
@@ -159,12 +158,12 @@ class EntityUUIDVarConcrete: EntityUUIDVar, MCFPPValue<Tag<*>> {
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
         if (parentClass() != null) {
-            val cmd = Commands.selectRun(parent!!, "data modify entity @s data.${identifier} set value ${SNBTUtil.toSNBT(value)}")
+            val cmd = Commands.selectRun(parent!!, "data modify entity @s data.${identifier} set value ${Tag.toSNBT(value)}")
             Function.addCommands(cmd)
         } else {
             val cmd = Command.build("data modify")
                 .build(nbtPath.toCommandPart())
-                .build("set value ${SNBTUtil.toSNBT(value)}")
+                .build("set value ${Tag.toSNBT(value)}")
             Function.addCommand(cmd)
         }
         val re = EntityUUIDVar(this)
@@ -179,6 +178,6 @@ class EntityUUIDVarConcrete: EntityUUIDVar, MCFPPValue<Tag<*>> {
     }
 
     override fun toString(): String {
-        return "[$type,value=${SNBTUtil.toSNBT(value)}]"
+        return "[$type,value=${Tag.toSNBT(value)}]"
     }
 }

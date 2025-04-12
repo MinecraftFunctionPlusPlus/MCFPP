@@ -1,4 +1,3 @@
 package top.mcfpp.core.minecraft
 
-object BossBar {
-}
+object BossBar

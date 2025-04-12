@@ -1,6 +1,3 @@
 package top.mcfpp.lib
 
-class ConstantPool() {
-
-
-}
+class ConstantPool

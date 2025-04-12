@@ -9,4 +9,10 @@ class ValueWrapper<T: Var<*>>(var value: T){
         value = v
     }
 
+    fun set(v: T){
+        value = v
+    }
+
+    fun get() = value
+
 }

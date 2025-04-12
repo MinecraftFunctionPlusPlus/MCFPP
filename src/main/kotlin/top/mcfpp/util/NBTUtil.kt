@@ -1,10 +1,16 @@
 package top.mcfpp.util
 
-import net.querz.nbt.tag.*
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.nbt.*
 import top.mcfpp.exception.VariableConverseException
+import top.mcfpp.nbt.tags.CompoundTag
+import top.mcfpp.nbt.tags.Tag
+import top.mcfpp.nbt.tags.collection.ByteArrayTag
+import top.mcfpp.nbt.tags.collection.IntArrayTag
+import top.mcfpp.nbt.tags.collection.ListTag
+import top.mcfpp.nbt.tags.collection.LongArrayTag
+import top.mcfpp.nbt.tags.primitive.*
 
 object NBTUtil {
 
@@ -54,9 +60,8 @@ object NBTUtil {
             is Double -> DoubleTag(any)
             is String -> StringTag(any)
             is List<*> -> {
-                if(any.isEmpty()) return ListTag(IntTag::class.java)
-                val clazz: Class<out Tag<*>> = valueToNBT(any[0]!!)::class.java
-                val list = ListTag(clazz) as ListTag<Tag<*>>
+                if(any.isEmpty()) return ListTag()
+                val list = ListTag()
                 for(value in any){
                     list.add(valueToNBT(value!!))
                 }
@@ -73,9 +78,8 @@ object NBTUtil {
                 map
             }
             is Set<*> -> {
-                if(any.isEmpty()) return ListTag(IntTag::class.java)
-                val clazz: Class<out Tag<*>> = valueToNBT(any.first()!!)::class.java
-                val list = ListTag(clazz) as ListTag<Tag<*>>
+                if(any.isEmpty()) return ListTag()
+                val list = ListTag()
                 for (value in any){
                     list.add(valueToNBT(value!!))
                 }
@@ -87,22 +91,8 @@ object NBTUtil {
         }
     }
 
-    fun<T : Tag<*>?> ListTag<T>.toArrayList(): ArrayList<*>{
-        return when(typeClass){
-            ByteTag::class.java -> ArrayList(map { (it as ByteTag).asByte()})
-            ShortTag::class.java -> ArrayList(map { (it as ShortTag).asShort()})
-            IntTag::class.java -> ArrayList(map { (it as IntTag).asInt()})
-            LongTag::class.java -> ArrayList(map { (it as LongTag).asLong()})
-            FloatTag::class.java -> ArrayList(map { (it as FloatTag).asFloat()})
-            DoubleTag::class.java -> ArrayList(map { (it as DoubleTag).asDouble()})
-            StringTag::class.java -> ArrayList(map { (it as StringTag).valueToString()})
-            ListTag::class.java -> ArrayList(map { (it as ListTag<*>).toArrayList() })
-            ByteArrayTag::class.java -> ArrayList(map { (it as ByteArrayTag).value })
-            IntArrayTag::class.java -> ArrayList(map { (it as IntArrayTag).value})
-            LongArrayTag::class.java -> ArrayList(map { (it as LongArrayTag).value})
-            CompoundTag::class.java -> ArrayList(map { (it as CompoundTag).toMap() })
-            else -> throw VariableConverseException()
-        }
+    fun ListTag.toArrayList(): ArrayList<*>{
+        return ArrayList(map { it.toJava() })
     }
 
     fun CompoundTag.toMap(): HashMap<String, Any>{
@@ -116,7 +106,7 @@ object NBTUtil {
                 is FloatTag -> map[key] = value.asFloat()
                 is DoubleTag -> map[key] = value.asDouble()
                 is StringTag -> map[key] = value.value
-                is ListTag<*> -> map[key] = value.toArrayList()
+                is ListTag -> map[key] = value.toArrayList()
                 is ByteArrayTag -> map[key] = value.value
                 is IntArrayTag -> map[key] = value.value
                 is LongArrayTag -> map[key] = value.value
@@ -128,7 +118,6 @@ object NBTUtil {
 
     fun<T> Tag<T>.toJava(): Any{
         return when(this){
-            is BoolTag -> value
             is ByteTag -> asByte()
             is ShortTag -> asShort()
             is IntTag -> asInt()
@@ -136,7 +125,7 @@ object NBTUtil {
             is FloatTag -> asFloat()
             is DoubleTag -> asDouble()
             is StringTag -> value
-            is ListTag<*> -> toArrayList()
+            is ListTag -> toArrayList()
             is ByteArrayTag -> value
             is IntArrayTag -> value
             is LongArrayTag -> value
@@ -183,33 +172,5 @@ object NBTUtil {
         }else{
             toDouble()
         }
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    fun<T: Tag<*>> ListTag<T>.addUnchecked(index: Int, tag: Tag<*>){
-        require(!(typeClass != EndTag::class.java && typeClass != tag.javaClass)) {
-            String.format(
-                "cannot add %s to ListTag<%s>",
-                tag.javaClass.simpleName, typeClass.simpleName
-            )
-        }
-        add(size(), tag as T)
-    }
-
-
-    @Suppress("UNCHECKED_CAST")
-    fun<T: Tag<*>> ListTag<T>.indexOfUnchecked(tag: Tag<*>): Int{
-        require(!(typeClass != EndTag::class.java && typeClass != tag.javaClass)) {
-            return -1
-        }
-        return indexOf(tag as T)
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    fun<T: Tag<*>> ListTag<T>.containsUnchecked(tag: Tag<*>): Boolean{
-        require(!(typeClass != EndTag::class.java && typeClass != tag.javaClass)) {
-            return false
-        }
-        return contains(tag as T)
     }
 }

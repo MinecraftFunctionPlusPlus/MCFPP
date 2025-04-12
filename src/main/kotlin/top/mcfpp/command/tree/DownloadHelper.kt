@@ -127,11 +127,11 @@ class DownloadHelper {
 }
 
 
-class Downloader(){
+class Downloader {
     class ExternalDownloaderOptions(
         val headers: MutableMap<String,String>?,
         val timeout: Int?
-    ){}
+    )
 
 
     class DownloadJob<R>(
@@ -144,13 +144,14 @@ class Downloader(){
     ){
         constructor(job: DownloadJob<R>,id:String) : this(
             id,job.uri,job.cache,job.transformer,job.options,job.ttl
-        ) {}
+        )
     }
 
     class MemoryCache(
         var buffer: ByteArray,
         var time:Long
-    ){}
+    )
+
     class DownloadCache(
         val checksumJob: DownloadJob<String>,
         val checksumExtension: String, //".${extension}"
@@ -190,7 +191,8 @@ class Downloader(){
     class DownloadOut(
         var cacheUri: Path?,
         var checksum: String?
-    ) {}
+    )
+
     companion object{
         val DownloaderTtl = 15_000
         val GitHubApiDownloadOptions = ExternalDownloaderOptions(
@@ -204,11 +206,11 @@ class Downloader(){
             val response = JSON.parse(buffer)
             if(response is JSONArray){
                 val gitHubRefResponse = JSON.to(DownloadCache.GitHubRefResponse::class.java,response[0])
-                return gitHubRefResponse.`object`.sha;
+                return gitHubRefResponse.`object`.sha
             }
             val gitHubRefResponse = JSON.to(DownloadCache.GitHubRefResponse::class.java,response)
             if(gitHubRefResponse.message==null){
-                return gitHubRefResponse.`object`.sha;
+                return gitHubRefResponse.`object`.sha
             }
             else{
                 throw Error(gitHubRefResponse.message)

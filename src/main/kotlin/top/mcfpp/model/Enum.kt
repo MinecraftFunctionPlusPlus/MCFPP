@@ -1,11 +1,11 @@
 package top.mcfpp.model
 
-import net.querz.nbt.tag.CompoundTag
-import net.querz.nbt.tag.IntTag
-import net.querz.nbt.tag.StringTag
-import net.querz.nbt.tag.Tag
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.field.GlobalField
+import top.mcfpp.nbt.tags.CompoundTag
+import top.mcfpp.nbt.tags.Tag
+import top.mcfpp.nbt.tags.primitive.IntTag
+import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.type.MCFPPEnumType
 import top.mcfpp.util.LogProcessor
 

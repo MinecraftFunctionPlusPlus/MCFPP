@@ -1,6 +1,5 @@
 package top.mcfpp.core.lang.nbt
 
-import net.querz.nbt.tag.DoubleTag
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.MCAnyConcrete
@@ -10,6 +9,7 @@ import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.function.Function
+import top.mcfpp.nbt.tags.primitive.DoubleTag
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPNBTType
 import top.mcfpp.type.MCFPPType

@@ -1,9 +1,5 @@
 package top.mcfpp.antlr
 
-import net.querz.nbt.io.SNBTUtil
-import net.querz.nbt.tag.DoubleTag
-import net.querz.nbt.tag.LongTag
-import net.querz.nbt.tag.StringTag
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.core.lang.*
@@ -21,11 +17,15 @@ import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.Generic
 import top.mcfpp.model.generic.GenericClass
+import top.mcfpp.nbt.tags.Tag
+import top.mcfpp.nbt.tags.primitive.ByteTag
+import top.mcfpp.nbt.tags.primitive.DoubleTag
+import top.mcfpp.nbt.tags.primitive.LongTag
+import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPEnumType
 import top.mcfpp.type.MCFPPGenericClassType
 import top.mcfpp.type.MCFPPType
-import top.mcfpp.util.BoolTag
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil.toNBTByte
 import top.mcfpp.util.NBTUtil.toNBTDouble
@@ -678,7 +678,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         if(ctx.LineString() != null) {
             return MCStringConcrete(StringTag(ctx.LineString().text))
         }else if(ctx.nbtBool() != null){
-            return NBTBasedDataConcrete(BoolTag(ctx.nbtBool().text == "true"))
+            return NBTBasedDataConcrete(ByteTag(ctx.nbtBool().text == "true"))
         }else if(ctx.nbtByte() != null){
             return MCByteConcrete(ctx.nbtByte().text.toNBTByte())
         }else if(ctx.nbtShort() != null){
@@ -716,11 +716,11 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 re.toDynamic(false)
             }
         }else if(ctx.nbtByteArray() != null){
-            return NBTBasedDataConcrete(SNBTUtil.fromSNBT(ctx.nbtByteArray().text))
+            return NBTBasedDataConcrete(Tag.toNBT(ctx.nbtByteArray().text))
         }else if(ctx.nbtIntArray() != null) {
-            return NBTBasedDataConcrete(SNBTUtil.fromSNBT(ctx.nbtIntArray().text))
+            return NBTBasedDataConcrete(Tag.toNBT(ctx.nbtIntArray().text))
         }else if(ctx.nbtLongArray() != null) {
-            return NBTBasedDataConcrete(SNBTUtil.fromSNBT(ctx.nbtLongArray().text))
+            return NBTBasedDataConcrete(Tag.toNBT(ctx.nbtLongArray().text))
         }else {
             LogProcessor.error("Invalid NBT value")
             throw IllegalArgumentException("nbt:" + ctx.text)

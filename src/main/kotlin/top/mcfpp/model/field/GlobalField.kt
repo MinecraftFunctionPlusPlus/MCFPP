@@ -131,6 +131,7 @@ object GlobalField : FieldContainer, IField {
         return this
     }
 
+    @JvmStatic
     fun getNamespace(namespace: String): Namespace?{
         return localNamespaces[namespace]?: importedLibNamespaces[namespace]?: stdNamespaces[namespace]
     }
@@ -145,6 +146,7 @@ object GlobalField : FieldContainer, IField {
      *
      * @return 获取的函数。如果有多个相同函数（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
      */
+    @JvmStatic
     fun getFunction(namespace:String?, identifier: String, readOnlyParams: List<Var<*>>, normalParams : List<Var<*>>): Function {
         if(namespace == null){
             val f = MCFPPFile.currFile?.field?.getFunction(identifier, readOnlyParams, normalParams)
@@ -173,6 +175,7 @@ object GlobalField : FieldContainer, IField {
      * @param identifier 类的标识符
      * @return 获取的类。如果有多个相同标识符的类（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
      */
+    @JvmStatic
     fun getClass(namespace: String? = null, identifier: String, readOnlyParams: List<MCFPPType>): Class?{
         if(namespace == null){
             var cls: Class?
@@ -204,6 +207,7 @@ object GlobalField : FieldContainer, IField {
      * @param identifier 类的标识符
      * @return 获取的类。如果有多个相同标识符的类（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
      */
+    @JvmStatic
     fun getClass(namespace: String? = null, identifier: String): Class?{
         if(namespace == null){
             var cls: Class?
@@ -235,6 +239,7 @@ object GlobalField : FieldContainer, IField {
      * @param identifier 接口的标识符
      * @return 获取的接口。如果有多个相同标识符的接口（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
      */
+    @JvmStatic
     fun getInterface(namespace: String? = null, identifier: String): Interface?{
         if(namespace == null){
             var itf: Interface?
@@ -266,6 +271,7 @@ object GlobalField : FieldContainer, IField {
      * @param identifier 结构体的标识符
      * @return 获取的结构体。如果有多个相同标识符的结构体（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
      */
+    @JvmStatic
     fun getTemplate(namespace: String?, identifier: String): DataTemplate? {
         if(namespace == null){
             var template: DataTemplate?
@@ -289,6 +295,7 @@ object GlobalField : FieldContainer, IField {
         return np?.field?.getTemplate(identifier)
     }
 
+    @JvmStatic
     fun getDataTemplate(filter: (DataTemplate) -> Boolean): List<DataTemplate>{
         val list = ArrayList<DataTemplate>()
         for (nsp in localNamespaces.values){
@@ -309,6 +316,7 @@ object GlobalField : FieldContainer, IField {
         return list
     }
 
+    @JvmStatic
     fun getEnum(namespace: String?, identifier: String): Enum? {
         if(namespace == null){
             var enum: Enum?
@@ -340,6 +348,7 @@ object GlobalField : FieldContainer, IField {
      * @param identifier 结构体的标识符
      * @return 获取的结构体。如果有多个相同标识符的结构体（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
      */
+    @JvmStatic
     fun getObject(namespace: String?, identifier: String): CompoundData? {
         if(namespace == null){
             var obj: CompoundData?
@@ -363,6 +372,7 @@ object GlobalField : FieldContainer, IField {
         return np?.field?.getObject(identifier)
     }
 
+    @JvmStatic
     fun getAnnotation(namespace: String?, identifier: String): java.lang.Class<out Annotation>? {
         if(namespace == null){
             var annotation: java.lang.Class<out Annotation>?
@@ -386,6 +396,7 @@ object GlobalField : FieldContainer, IField {
         return np?.field?.getAnnotation(identifier)
     }
 
+    @JvmStatic
     fun getInfo(): GlobalFieldInfo {
         return GlobalFieldInfo(
             localNamespaces.mapValues { NamespaceInfo.from(it.value) },
@@ -394,6 +405,7 @@ object GlobalField : FieldContainer, IField {
         )
     }
 
+    @JvmStatic
     fun mergeInfo(info: GlobalFieldInfo){
         for((id, namespace) in info.localNamespaces){
             if(stdNamespaces.containsKey(id)) {

@@ -1,16 +1,18 @@
 package top.mcfpp.model
 
-import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.Project
 import top.mcfpp.core.lang.*
 import top.mcfpp.model.field.CompoundDataField
+import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.DataTemplateConstructor
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.property.Property
+import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPDataTemplateType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TempPool
 
 /**
  * 结构体是一种和类的语法极为相似的数据结构。在结构体中，只能有int类型的数据，或者说记分板的数据作为结构体的成员。
@@ -176,6 +178,26 @@ open class DataTemplate : FieldContainer, CompoundData {
                 extends(MCAny.data)
                 //在GlobalField中注册和获取函数
             }
+        }
+
+        @JvmStatic
+        fun newInstance(namespace: String?, templateID: String, varID: String): DataTemplateObjectConcrete{
+            return GlobalField.getTemplate(namespace, templateID)!!.getType().build(varID) as DataTemplateObjectConcrete
+        }
+
+        @JvmStatic
+        fun newInstance(namespace: String?, templateID: String) = newInstance(namespace, templateID, TempPool.getVarIdentify())
+
+        @Suppress("UNCHECKED_CAST")
+        @JvmStatic
+        fun <T: Var<*>> getField(obj: DataTemplateObject, identifier: String): T?{
+            return obj.getMemberVar(identifier, Member.AccessModifier.PUBLIC).first as T?
+        }
+
+        @JvmStatic
+        fun assignField(obj: DataTemplateObject, identifier: String, v: Var<*>){
+            val member = getField(obj, identifier)!!
+            member.replacedBy(member.assignedBy(v))
         }
 
     }

@@ -20,7 +20,7 @@ public class From extends DataTemplateAnnotation {
         try {
             data.getNativeFromClass(Class.forName(className));
         } catch (ClassNotFoundException e) {
-            LogProcessor.INSTANCE.error("Class not found: " + className, e);
+            LogProcessor.error("Class not found: " + className, e);
         }
     }
 }

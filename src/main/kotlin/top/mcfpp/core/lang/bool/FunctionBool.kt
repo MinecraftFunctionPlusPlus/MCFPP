@@ -30,11 +30,11 @@ class FunctionBool(identifier: String , function: Function): BaseBool(identifier
         return ExecuteBool(this, true)
     }
 
-    override fun and(a: Var<*>): Var<*>? {
+    override fun and(a: Var<*>): Var<*> {
         return ExecuteBool(this).and(a)
     }
 
-    override fun or(a: Var<*>): Var<*>? {
+    override fun or(a: Var<*>): Var<*> {
         return ExecuteBool(this).or(a)
     }
 

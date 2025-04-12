@@ -1,16 +1,14 @@
 package top.mcfpp.mni;
 
-import kotlin.NotImplementedError;
-import net.querz.nbt.tag.CompoundTag;
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.command.Command;
-import top.mcfpp.command.Commands;
-import top.mcfpp.core.lang.*;
+import top.mcfpp.core.lang.MCInt;
 import top.mcfpp.core.lang.bool.ScoreBool;
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete;
-import top.mcfpp.core.lang.nbt.*;
+import top.mcfpp.core.lang.nbt.MCString;
+import top.mcfpp.core.lang.nbt.NBTListConcrete;
+import top.mcfpp.core.lang.nbt.NBTMap;
 import top.mcfpp.model.function.Function;
-import top.mcfpp.util.NBTUtil;
 import top.mcfpp.util.ValueWrapper;
 
 public class NBTMapData {

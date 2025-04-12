@@ -1,6 +1,5 @@
 package top.mcfpp.core.lang.entity
 
-import net.querz.nbt.tag.StringTag
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
@@ -13,6 +12,7 @@ import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
+import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.type.MCFPPEntityType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor

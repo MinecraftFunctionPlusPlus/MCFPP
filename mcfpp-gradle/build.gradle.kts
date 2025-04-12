@@ -1,5 +1,3 @@
-import java.nio.file.Paths
-
 plugins {
     kotlin("jvm")
     id("java-gradle-plugin")
@@ -17,6 +15,7 @@ repositories {
     maven("https://jitpack.io")
     maven("https://maven.aliyun.com/nexus/content/groups/public/")
     maven("https://libraries.minecraft.net")
+    mavenLocal()
 }
 
 dependencies {

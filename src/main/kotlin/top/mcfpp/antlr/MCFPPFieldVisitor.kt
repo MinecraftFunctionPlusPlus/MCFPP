@@ -382,7 +382,6 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             GenericFunction(
                 ctx.Identifier().text,
                 Class.currClass!!,
-                Class.currClass!! is ObjectClass,
                 ctx.functionBody()
             )
         }else{
@@ -1229,7 +1228,6 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             GenericFunction(
                 ctx.Identifier().text,
                 DataTemplate.currTemplate!!,
-                DataTemplate.currTemplate is ObjectDataTemplate,
                 ctx.functionBody()
             )
         }else {

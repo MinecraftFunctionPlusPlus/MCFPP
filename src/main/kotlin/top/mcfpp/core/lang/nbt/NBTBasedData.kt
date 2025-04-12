@@ -1,7 +1,5 @@
 package top.mcfpp.core.lang.nbt
 
-import net.querz.nbt.io.SNBTUtil
-import net.querz.nbt.tag.*
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
@@ -12,6 +10,13 @@ import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.property.Property
+import top.mcfpp.nbt.tags.CompoundTag
+import top.mcfpp.nbt.tags.Tag
+import top.mcfpp.nbt.tags.collection.ByteArrayTag
+import top.mcfpp.nbt.tags.collection.IntArrayTag
+import top.mcfpp.nbt.tags.collection.ListTag
+import top.mcfpp.nbt.tags.collection.LongArrayTag
+import top.mcfpp.nbt.tags.primitive.*
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil
@@ -186,7 +191,6 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
     ): Pair<Function, Boolean> {
         return data.getFunction(key, readOnlyArgs, normalArgs) to true
     }
-
     override fun getByIndex(index: Var<*>): PropertyVar {
         val v = when (index) {
             is MCInt -> getByIntIndex(index)
@@ -247,19 +251,26 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
         return this
     }
 
+    fun simpleIndex(index: String): NBTBasedData{
+        val re = NBTBasedData(this)
+        re.parent = this
+        re.nbtPath = re.nbtPath.memberIndex(index)
+        return re
+    }
+
     //TODO 逻辑待优化。这里的处理不是很优雅
     companion object {
 
         /**
          * 获取一个NBT列表的MCFPP类型
          */
-        fun ListTag<*>.getListType(): MCFPPListType {
-            if(this.size() != 0){
+        fun ListTag.getListType(): MCFPPListType {
+            if(this.size != 0){
                 val t = NBTTypeWithTag.getTagType(this[0])
                 if(t == NBTTypeWithTag.LIST) {
-                    val elementType = (this[0] as ListTag<*>).getListType()
+                    val elementType = (this[0] as ListTag).getListType()
                     for (i in this.drop(1)) {
-                        if (elementType != (i as ListTag<*>).getListType()) {
+                        if (elementType != (i as ListTag).getListType()) {
                             return MCFPPListType(MCFPPNBTType.NBT)
                         }
                     }
@@ -294,13 +305,13 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
             val t = NBTTypeWithTag.getTagType(values.first())
             //如果是列表
             if(t == NBTTypeWithTag.LIST){
-                val listType = (values.first() as ListTag<*>).getListType()
+                val listType = (values.first() as ListTag).getListType()
                 for (value in values.drop(1)){
                     //并不全是列表
                     if(NBTTypeWithTag.getTagType(value) != NBTTypeWithTag.LIST){
                         return MCFPPCompoundType(MCFPPNBTType.NBT)
                     }
-                    if((value as ListTag<*>).getListType() != listType){
+                    if((value as ListTag).getListType() != listType){
                         return MCFPPCompoundType(MCFPPListType(MCFPPNBTType.NBT))
                     }
                 }
@@ -402,7 +413,7 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
                         is IntArrayTag -> INT_ARRAY
                         is LongArrayTag -> LONG_ARRAY
                         is CompoundTag -> COMPOUND
-                        is ListTag<*> -> LIST
+                        is ListTag -> LIST
                         else -> ANY
                     }
                 }
@@ -452,13 +463,13 @@ class NBTBasedDataConcrete : NBTBasedData, MCFPPValue<Tag<*>> {
             }
         }
         if((type is MCFPPVectorType)){
-            if((value is ListTag<*>) && (type.dimension == (value as ListTag<*>).size())){
+            if((value is ListTag) && (type.dimension == (value as ListTag).size)){
                 //转换为向量
-                val first = (value as ListTag<*>)[0]
+                val first = (value as ListTag)[0]
                 if(first !is IntTag){
                     return buildCastErrorVar(type)
                 }
-                return VectorVarConcrete((value as ListTag<*>).map { (it as IntTag).asInt() }.toTypedArray())
+                return VectorVarConcrete((value as ListTag).map { (it as IntTag).asInt() }.toTypedArray())
             }else{
                 return buildCastErrorVar(type)
             }
@@ -484,7 +495,7 @@ class NBTBasedDataConcrete : NBTBasedData, MCFPPValue<Tag<*>> {
         Function.addCommands(
             Commands.method2(this, Command("data modify")
                 .build(nbtPath.toCommandPart()
-                    .build("set value ${SNBTUtil.toSNBT(value)}"))
+                    .build("set value ${Tag.toSNBT(value)}"))
             )
         )
         val re = NBTBasedData(this)
@@ -499,7 +510,7 @@ class NBTBasedDataConcrete : NBTBasedData, MCFPPValue<Tag<*>> {
     }
 
     override fun toString(): String {
-        return "[$type,value=${SNBTUtil.toSNBT(value)}]"
+        return "[$type,value=${Tag.toSNBT(value)}]"
     }
 
     companion object {

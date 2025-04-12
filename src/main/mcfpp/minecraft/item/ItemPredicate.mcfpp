@@ -1,70 +1,50 @@
+@From<"top.mcfpp.mni.minecraft.ItemPredicatePartData">
 data ItemPredicatePart;
 
-data ContainItemPredicatePart: ItemPredicatePart {
+data ContainPart: ItemPredicatePart {
     string predicate;
-
-    constructor(string predicate) {
-        this.predicate = predicate;
-    }
 }
 
-data MatchItemPredicatePart: ItemPredicatePart {
+data MatchPart: ItemPredicatePart {
     string predicate;
-    any value;
-    constructor(string predicate, any value) {
-        this.predicate = predicate;
-        this.value = value;
-    }
+    nbt value;
 }
 
-data RangedItemPredicatePart: ItemPredicatePart {
+data SubPredicatePart: ItemPredicatePart {
     string predicate;
-    any value;
-    constructor(string predicate, any value) {
-        this.predicate = predicate;
-        this.value = value;
-    }
+    nbt value;
 }
 
-data SingleItemPredicatePart: ItemPredicate {
+data CountPart: ItemPredicatePart;
 
+data CountMatchPart: ItemPredicatePart{
+    int count;
+}
+
+data CountRangePart: ItemPredicatePart{
+    range count;
+}
+
+data NotItemPredicate: ItemPredicatePart {
+    ItemPredicate predicate;
+}
+
+#{
+由一个`|`隔开的两个测试项组成的测试项，两个测试项的关系为或
+}#
+data OrItemPredicatePart: ItemPredicatePart {
+    ItemPredicate predicate1;
+    ItemPredicate predicate2;
 }
 
 #========================物品谓词=====================
 #{
 对应于`minecraft:item_predicate`，用于指定某个物品需要满足的特征。
 }#
-
-data ItemPredicate;
-
-#{
-最简单的物品谓词，表示了一系列物品测试项
-}#
-data SimpleItemPredicate: ItemPredicate {
-    list<ItemPredicatePart>! parts;
+@From<"top.mcfpp.mni.minecraft.ItemPredicateData">
+data ItemPredicate {
+    list<ItemPredicatePart>! parts = [];
 }
 
-#{
-由一个`|`隔开的两个测试项组成的测试项，两个测试项的关系为或
-}#
-data OrItemPredicate: ItemPredicate {
-    ItemPredicate predicate1;
-    ItemPredicate predicate2;
-
-    constructor(ItemPredicate predicate1,ItemPredicate predicate2) {
-        this.predicate1 = predicate1;
-        this.predicate2 = predicate2;
-        this.andOr = andOr;
-    }
-}
-
-#{
-被`!`取反的测试项
-}#
-data NotItemPredicate: ItemPredicate {
-    ItemPredicate predicate;
-
-    constructor(ItemPredicate predicate) {
-        this.predicate = predicate;
-    }
-}
+@From<"top.mcfpp.mni.minecraft.ItemPredicateObjectData">
+object data ItemPredicate;

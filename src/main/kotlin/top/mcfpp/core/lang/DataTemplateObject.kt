@@ -1,8 +1,6 @@
 package top.mcfpp.core.lang
 
-import net.querz.nbt.io.SNBTUtil
-import net.querz.nbt.tag.CompoundTag
-import net.querz.nbt.tag.Tag
+
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.nbt.NBTBasedData
@@ -14,6 +12,8 @@ import top.mcfpp.model.Member
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
+import top.mcfpp.nbt.tags.CompoundTag
+import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.type.MCFPPDataTemplateType
 import top.mcfpp.type.MCFPPNBTType
 import top.mcfpp.type.MCFPPType
@@ -312,7 +312,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
             if(it is DataTemplateObject){
                 compoundTag.put(it.identifier, it.toConcrete().value)
             }else if(it !is ConcreteVar<*, *>){
-                compoundTag.put(it.identifier, NBTUtil.varToNBT(it))
+                compoundTag.put(it.identifier, NBTUtil.varToNBT(it)!!)
             }
         }
         return DataTemplateObjectConcrete(this, compoundTag)
@@ -372,7 +372,7 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag> {
     }
 
     override fun getTempVar(): DataTemplateObjectConcrete {
-        return DataTemplateObjectConcrete(super.getTempVar(), this.value.clone())
+        return DataTemplateObjectConcrete(super.getTempVar(), this.value.copy())
     }
 
     override fun toDynamic(replace: Boolean): Var<*> {
@@ -401,30 +401,30 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag> {
     }
 
     override fun toString(): String {
-        return "[$type,value=${SNBTUtil.toSNBT(value)}]"
+        return "[$type,value=${Tag.toSNBT(value)}]"
     }
 
     override fun onMemberVarChanged(member: Var<*>) {
-        if(member !is MCFPPValue<*>){
+        if(member !is MCFPPValue<*>) {
             toDynamic(true)
         }else if(member !is ConcreteVar<*,*>){
             val key = member.identifier
             val data = NBTUtil.varToNBT(member)
-            value.put(key, data)
+            value.put(key, data!!)
         }
     }
 
     @Suppress("UNCHECKED_CAST")
-    fun <T: Tag<*>> getTag(identifier: String, clazz: Class<T>): T{
+    fun <T: Tag<*>> getTag(identifier: String): T{
         if(identifier.contains(".")){
             val ids = identifier.split('.')
             var tag: Tag<*> = value
             for (id in ids){
-                tag = (tag as CompoundTag)[id]
+                tag = (tag as CompoundTag)[id]!!
             }
             return tag as T
         }else{
-            return value.get("id", clazz)
+            return value["id"] as T
         }
     }
 
@@ -433,13 +433,13 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag> {
             val ids = identifier.split('.')
             var tag: Tag<*> = value
             for (id in ids){
-                tag = (tag as CompoundTag)[id]
+                tag = (tag as CompoundTag)[id]!!
             }
             tag
         }else{
-            value["id"]
+            value["id"]!!
         }
-        return SNBTUtil.toSNBT(t)
+        return Tag.toSNBT(t)
     }
 
 }

@@ -11,6 +11,6 @@ public class WorldData {
     @MNIFunction(normalParams = "Difficulty difficulty", returnType = "CommandReturn")
     public static void setDifficulty(EnumVar difficulty, ValueWrapper<CommandReturn> re) {
         var command = Command.Companion.buildAll("difficulty", difficulty);
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
 }

@@ -1,6 +1,5 @@
 package top.mcfpp.core.lang.bool
 
-import net.querz.nbt.tag.ByteTag
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
@@ -10,6 +9,7 @@ import top.mcfpp.lib.SbObject
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.function.Function
+import top.mcfpp.nbt.tags.primitive.ByteTag
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
@@ -126,7 +126,7 @@ open class ScoreBool : BaseBool, OnScoreboard {
         }
     }
 
-    override fun isEqual(a: Var<*>): Var<*>? {
+    override fun isEqual(a: Var<*>): Var<*> {
         //re = t == a
         val re = ScoreBool()
         when(a){
@@ -149,13 +149,13 @@ open class ScoreBool : BaseBool, OnScoreboard {
                 return isEqual(a.toScoreBool(false))
             }
 
-            else -> return null
+            else -> errorOp()
         }
         return re
     }
 
     @InsertCommand
-    override fun isNotEqual(a: Var<*>): Var<*>? {
+    override fun isNotEqual(a: Var<*>): Var<*> {
         //re = t != a
         val re = ScoreBool()
         when(a){
@@ -178,7 +178,7 @@ open class ScoreBool : BaseBool, OnScoreboard {
                 return isNotEqual(a.toScoreBool(false))
             }
 
-            else -> return null
+            else -> errorOp()
         }
         return re
     }
@@ -189,7 +189,7 @@ open class ScoreBool : BaseBool, OnScoreboard {
     }
 
     @InsertCommand
-    override fun or(a: Var<*>): Var<*>? {
+    override fun or(a: Var<*>): Var<*> {
         if(a is ScoreBoolConcrete){
             return if(a.value){
                 ScoreBoolConcrete(this, true)
@@ -201,7 +201,7 @@ open class ScoreBool : BaseBool, OnScoreboard {
     }
 
     @InsertCommand
-    override fun and(a: Var<*>): Var<*>? {
+    override fun and(a: Var<*>): Var<*> {
         if(a is ScoreBoolConcrete ){
             return if(!a.value){
                 ScoreBoolConcrete(this, false)
@@ -385,7 +385,7 @@ class ScoreBoolConcrete : ScoreBool, MCFPPValue<Boolean> {
     }
 
     @InsertCommand
-    override fun isEqual(a: Var<*>): Var<*>? {
+    override fun isEqual(a: Var<*>): Var<*> {
         when(a){
             is ScoreBoolConcrete -> {
                 return ScoreBoolConcrete(value == a.value)
@@ -395,15 +395,12 @@ class ScoreBoolConcrete : ScoreBool, MCFPPValue<Boolean> {
                 return a.isEqual(this)
             }
 
-            else -> {
-                LogProcessor.error("Unsupported operation between ${type.typeName} and ${a.type.typeName}")
-                return UnknownVar("${type.typeName}_isEqual_${a.type.typeName}" + UUID.randomUUID())
-            }
+            else -> errorOp()
         }
     }
 
     @InsertCommand
-    override fun isNotEqual(a: Var<*>): Var<*>? {
+    override fun isNotEqual(a: Var<*>): Var<*> {
         when(a){
             is ScoreBoolConcrete -> {
                 return ScoreBoolConcrete(value != a.value)
@@ -428,7 +425,7 @@ class ScoreBoolConcrete : ScoreBool, MCFPPValue<Boolean> {
     }
 
     @InsertCommand
-    override fun or(a: Var<*>): Var<*>? {
+    override fun or(a: Var<*>): Var<*> {
         when(a){
             is ScoreBoolConcrete -> {
                 return ScoreBoolConcrete(value || a.value)
@@ -448,7 +445,7 @@ class ScoreBoolConcrete : ScoreBool, MCFPPValue<Boolean> {
 
 
     @InsertCommand
-    override fun and(a: Var<*>): Var<*>? {
+    override fun and(a: Var<*>): Var<*> {
         when(a){
             is ScoreBoolConcrete -> {
                 return ScoreBoolConcrete(value && a.value)
@@ -459,10 +456,7 @@ class ScoreBoolConcrete : ScoreBool, MCFPPValue<Boolean> {
                 return a.and(this)
             }
 
-            else -> {
-                LogProcessor.error("Unsupported operation between ${type.typeName} and ${a.type.typeName}")
-                return UnknownVar("${type.typeName}_and_${a.type.typeName}" + UUID.randomUUID())
-            }
+            else -> errorOp()
         }
     }
 

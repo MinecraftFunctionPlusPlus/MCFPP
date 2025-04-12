@@ -2,7 +2,6 @@
 
 package top.mcfpp.lib
 
-import net.querz.nbt.io.SNBTUtil
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.nbt.MCString
@@ -12,6 +11,7 @@ import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.core.lang.resource.Advancement
 import top.mcfpp.core.lang.resource.EntityType
 import top.mcfpp.core.lang.resource.LootTablePredicate
+import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.util.StringHelper.toRangeStr
 
 abstract class EntitySelectorPredicate {
@@ -179,7 +179,7 @@ class YRotationPredicate(val yRotation: RangeVar): EntitySelectorPredicate() {
 class NBTPredicate(val nbt: NBTBasedData): EntitySelectorPredicate() {
     override val identifier: String = "nbt"
     override val v: Var<*> = nbt
-    override fun valueString(): String = SNBTUtil.toSNBT((nbt as NBTBasedDataConcrete).value)
+    override fun valueString(): String = Tag.toSNBT((nbt as NBTBasedDataConcrete).value)
 }
 
 class LevelPredicate(val level: RangeVar): EntitySelectorPredicate() {

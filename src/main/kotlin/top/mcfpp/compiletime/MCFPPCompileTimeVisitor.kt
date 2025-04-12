@@ -12,10 +12,10 @@ class MCFPPCompileTimeVisitor(
 ): MCFPPImVisitor() {
     val exprVisitor = MCFPPExprVisitor()
 
-    var curBreak = false;
-    var curContinue = false;
-    var curReturn = false;
-    var returnValue:Var<*>? = null;
+    var curBreak = false
+    var curContinue = false
+    var curReturn = false
+    var returnValue:Var<*>? = null
 
     override fun visitFunctionBody(ctx: mcfppParser.FunctionBodyContext): Any? {
         Function.forcedField = field
@@ -26,13 +26,6 @@ class MCFPPCompileTimeVisitor(
         }
         Function.forcedField = null
         return null
-    }
-    override fun visitFieldDeclaration(ctx: mcfppParser.FieldDeclarationContext): Any? {
-        return super.visitFieldDeclaration(ctx)
-    }
-
-    override fun visitStatementExpression(ctx: mcfppParser.StatementExpressionContext): Any? {
-        return super.visitStatementExpression(ctx)
     }
 
     override fun visitIfStatement(ctx: mcfppParser.IfStatementContext): Any? {
@@ -130,10 +123,6 @@ class MCFPPCompileTimeVisitor(
             return null
         }
         return null
-    }
-
-    override fun visitOrgCommand(ctx: mcfppParser.OrgCommandContext): Any? {
-        return super.visitOrgCommand(ctx)
     }
 
     override fun visitSelfAddOrMinusStatement(ctx: mcfppParser.SelfAddOrMinusStatementContext): Any? {

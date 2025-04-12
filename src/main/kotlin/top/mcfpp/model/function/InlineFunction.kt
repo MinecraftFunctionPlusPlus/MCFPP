@@ -37,7 +37,7 @@ class InlineFunction : Function {
         //传入this参数
         field.putVar("this",caller,true)
         //参数传递
-        argPass(/*readOnlyArgs, */normalArgs)
+        argPass(normalArgs)
         //重新遍历这个函数
         val visitor = MCFPPImVisitor()
         visitor.visit(ast)

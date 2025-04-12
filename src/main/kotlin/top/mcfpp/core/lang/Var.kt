@@ -1,6 +1,6 @@
 package top.mcfpp.core.lang
 
-import net.querz.nbt.tag.StringTag
+import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.bool.BaseBool

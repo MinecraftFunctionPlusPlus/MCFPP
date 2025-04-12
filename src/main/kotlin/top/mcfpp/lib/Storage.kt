@@ -13,6 +13,7 @@ class Storage: Serializable {
     var namespace : String
     var identifier : String
 
+    @Suppress("ConvertSecondaryConstructorToPrimary")
     constructor(namespace: String, identifier: String){
         this.namespace = namespace
         this.identifier = identifier

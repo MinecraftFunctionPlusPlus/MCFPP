@@ -49,7 +49,7 @@ class ExecuteBool(): BaseBool(), MCFPPValue<ArrayList<AbstractBoolPart>> {
         return this
     }
 
-    override fun and(a: Var<*>): Var<*>? {
+    override fun and(a: Var<*>): Var<*> {
         return when(a){
             is ExecuteBool -> {
                 value.addAll(a.value)
@@ -61,13 +61,12 @@ class ExecuteBool(): BaseBool(), MCFPPValue<ArrayList<AbstractBoolPart>> {
                 this
             }
 
-            else -> null
+            else -> errorOp()
         }
     }
 
-    override fun or(a: Var<*>): Var<*>? {
-        val qwq = and(a)?.negation() as BaseBool?
-        qwq?:return null
+    override fun or(a: Var<*>): Var<*> {
+        val qwq = and(a).negation() as BaseBool? ?: errorOp()
         val (_, function) = Commands.tempFunction(Function.currFunction){
             val command = Command.build("execute")
                 .build(qwq.toCommandPart())

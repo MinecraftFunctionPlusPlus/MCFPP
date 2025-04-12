@@ -41,7 +41,7 @@ public class NBTDictionaryData {
     public static void merge(NBTDictionary source, NBTDictionary caller){
         if(source instanceof NBTDictionaryConcrete dictC){
             if(((NBTDictionaryConcrete) source).isAllConcrete()){
-                Function.Companion.addCommand(Commands.INSTANCE.dataMergeValue(caller.getNbtPath(), dictC.getConcretePart()));
+                Function.Companion.addCommand(Commands.dataMergeValue(caller.getNbtPath(), dictC.getConcretePart()));
             }else {
                 ((NBTDictionaryConcrete) source).toDynamic(true);
                 Function.Companion.addCommand(new Command("data modify")

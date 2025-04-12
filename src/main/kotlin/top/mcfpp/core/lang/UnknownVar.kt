@@ -1,6 +1,6 @@
 package top.mcfpp.core.lang
 
-import net.querz.nbt.tag.StringTag
+import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.type.MCFPPType

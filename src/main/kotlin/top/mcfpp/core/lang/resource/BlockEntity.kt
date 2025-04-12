@@ -1,6 +1,5 @@
 package top.mcfpp.core.lang.resource
             
-import net.querz.nbt.tag.StringTag
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
@@ -8,6 +7,7 @@ import top.mcfpp.mni.resource.BlockEntityConcreteData
 import top.mcfpp.mni.resource.BlockEntityData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
+import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.type.MCFPPResourceType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.TempPool

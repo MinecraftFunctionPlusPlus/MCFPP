@@ -1,7 +1,7 @@
 package top.mcfpp.lib
 
-import net.querz.nbt.tag.CompoundTag
-import net.querz.nbt.tag.StringTag
+import top.mcfpp.nbt.tags.CompoundTag
+import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.MCIntConcrete

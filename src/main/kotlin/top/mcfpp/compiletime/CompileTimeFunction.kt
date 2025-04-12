@@ -3,12 +3,11 @@ package top.mcfpp.compiletime
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.ClassPointer
 import top.mcfpp.core.lang.Var
-import top.mcfpp.type.MCFPPType
-import top.mcfpp.model.function.Function
 import top.mcfpp.model.field.IField
-import kotlin.collections.ArrayList
+import top.mcfpp.model.function.Function
 
 class CompileTimeFunction : Function {
+    @Suppress("ConvertSecondaryConstructorToPrimary")
     constructor(name:String, namespace:String, context:mcfppParser.FunctionBodyContext):super(name,namespace, context)
 
     fun setField(parent: IField){

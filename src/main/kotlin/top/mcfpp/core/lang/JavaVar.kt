@@ -1,8 +1,8 @@
 package top.mcfpp.core.lang
 
-import net.querz.nbt.tag.CompoundTag
-import net.querz.nbt.tag.StringTag
-import net.querz.nbt.tag.Tag
+import top.mcfpp.nbt.tags.CompoundTag
+import top.mcfpp.nbt.tags.primitive.StringTag
+import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.nbt.*
 import top.mcfpp.model.CompoundData
@@ -177,13 +177,13 @@ class JavaVar : ConcreteVar<JavaVar, Any?> {
                 is MCIntConcrete -> v.value
                 is MCFloatConcrete -> v.value
                 is ScoreBoolConcrete -> v.value
-                is MCStringConcrete -> v.value.valueToString()
+                is MCStringConcrete -> v.value
                 is NBTListConcrete -> v.value
                 is NBTMapConcrete -> (v.keyValueSet as NBTDictionaryConcrete).value
                 is NBTDictionaryConcrete -> v.value
                 is NBTBasedDataConcrete -> v.value
                 else -> v
-            }!!
+            }
         }
 
         fun mcToJava(v: ArrayList<Var<*>>): ArrayList<Any>{

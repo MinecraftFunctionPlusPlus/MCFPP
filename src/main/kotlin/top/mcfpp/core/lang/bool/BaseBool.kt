@@ -22,9 +22,9 @@ abstract class BaseBool : Var<BaseBool> {
 
     abstract override fun negation(): Var<*>?
 
-    abstract override fun and(a: Var<*>): Var<*>?
+    abstract override fun and(a: Var<*>): Var<*>
 
-    abstract override fun or(a: Var<*>): Var<*>?
+    abstract override fun or(a: Var<*>): Var<*>
 
     abstract override fun toCommandPart(): Command
 

@@ -194,7 +194,7 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
                 val readOnlyType = mniRegister.readOnlyParams.map {
                     var qwq = it.split(" ", limit = 3)
                     if(qwq.size == 3) qwq = qwq.subList(1, 3)
-                    val type = MCFPPType.parseFromString(qwq[0], Namespace.currNamespaceField)?: run {
+                    val type = MCFPPType.parseFromString(qwq[0], currNamespaceField)?: run {
                         LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(qwq[0]))
                         MCFPPBaseType.Any
                     }
@@ -203,13 +203,13 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
                 val normalType = mniRegister.normalParams.map {
                     var qwq = it.split(" ", limit = 3)
                     if(qwq.size == 3) qwq = qwq.subList(1, 3)
-                    val type = MCFPPType.parseFromString(qwq[0], Namespace.currNamespaceField)?: run {
+                    val type = MCFPPType.parseFromString(qwq[0], currNamespaceField)?: run {
                         LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(qwq[0]))
                         MCFPPBaseType.Any
                     }
                     qwq[1] to type to it.startsWith("static")
                 }
-                val returnType = MCFPPType.parseFromString(mniRegister.returnType, Namespace.currNamespaceField)?: run {
+                val returnType = MCFPPType.parseFromString(mniRegister.returnType, currNamespaceField)?: run {
                     LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniRegister.returnType))
                     MCFPPBaseType.Any
                 }

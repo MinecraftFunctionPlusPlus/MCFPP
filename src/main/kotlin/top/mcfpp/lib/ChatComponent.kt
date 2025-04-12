@@ -1,6 +1,6 @@
 package top.mcfpp.lib
 
-import net.querz.nbt.tag.IntArrayTag
+import top.mcfpp.nbt.tags.collection.IntArrayTag
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.nbt.NBTBasedData

@@ -22,7 +22,7 @@ public @interface MNIFunction {
     String[] normalParams() default {};
 
     /**
-     * 调用者类型。默认为void
+     * 调用者类型。默认为void。仅用于标记，不决定函数的调用者类型
      */
     String caller() default "void";
 
@@ -50,5 +50,10 @@ public @interface MNIFunction {
      * 额外的标记信息
      */
     String[] tag() default {};
+
+    /**
+     * 函数的唯一标识。若为空字符串，则和jvm函数名相同
+     */
+    String identifier() default "";
 
 }

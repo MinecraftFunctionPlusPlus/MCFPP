@@ -1,6 +1,5 @@
 package top.mcfpp.core.lang.nbt
 
-import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
@@ -12,6 +11,7 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.property.Property
+import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil
@@ -178,7 +178,7 @@ open class NBTDictionary : NBTBasedData {
 /**
  * 被编译器跟踪的字典。本质是一个HashMap。和[DataTemplateObjectConcrete]不同的是，[DataTemplateObjectConcrete]的本质就是一个NBT复合标签。被编译器跟踪的字典其实是被跟踪了它的键部分。编译器应当知道这个字典全部的键，即使不知道这些键对应什么值。
  */
-class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<HashMap<String, Var<*>>> {
+class NBTDictionaryConcrete : NBTDictionary, PartialConcreteValue<CompoundTag, HashMap<String, Var<*>>> {
 
     override var value: HashMap<String, Var<*>>
 
@@ -340,15 +340,15 @@ class NBTDictionaryConcrete : NBTDictionary, MCFPPValue<HashMap<String, Var<*>>>
         value[v.identifier] = v
     }
 
-    fun isAllConcrete(): Boolean {
+    override fun isAllConcrete(): Boolean {
         return value.values.all { it is MCFPPValue<*> }
     }
 
-    fun getNotConcretePart(): Map<String, Var<*>> {
-        return value.filter { it.value !is MCFPPValue<*> || it.value is NBTListConcrete && !(it.value as NBTListConcrete).isAllConcrete() }
+    override fun getNotConcretePart(): HashMap<String, Var<*>> {
+        return HashMap(value.filter { it.value !is MCFPPValue<*> || it.value is NBTListConcrete && !(it.value as NBTListConcrete).isAllConcrete() })
     }
 
-    fun getConcretePart(): CompoundTag {
+    override fun getConcretePart(): CompoundTag {
         val compound = CompoundTag()
         for (v in value){
             if(v.value is MCFPPValue<*>){

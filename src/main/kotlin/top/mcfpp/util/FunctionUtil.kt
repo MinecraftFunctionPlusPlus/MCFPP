@@ -1,12 +1,12 @@
 package top.mcfpp.util
 
-import net.querz.nbt.io.SNBTUtil
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.EnumVar
 import top.mcfpp.model.EnumMember
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NoStackFunction
+import top.mcfpp.nbt.tags.Tag
 import kotlin.math.ceil
 import kotlin.math.log
 import kotlin.math.pow
@@ -63,7 +63,7 @@ object FunctionUtil {
         val member = enum.enum.members
         for (m in member){
             val newCommand = command.clone()
-            newCommand.replace(replacePoint to SNBTUtil.toSNBT(m.value.data))
+            newCommand.replace(replacePoint to Tag.toSNBT(m.value.data))
             function.commands.add("execute if score " + enum.asIntVar().identifier + " " + enum.asIntVar().sbObject
                     + " matches " + m.value.value + " run return run run " + newCommand)
         }

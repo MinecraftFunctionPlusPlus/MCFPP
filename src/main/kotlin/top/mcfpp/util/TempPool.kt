@@ -14,6 +14,7 @@ object TempPool {
         return varCount++
     }
 
+    @JvmStatic
     fun getVarIdentify(): String {
         return "temp_${nextVarId()}"
     }
@@ -22,6 +23,7 @@ object TempPool {
         return functionCount++
     }
 
+    @JvmStatic
     fun getFunctionIdentify(prefix: String): String {
         return "${prefix}_${nextFunctionId()}"
     }
@@ -30,6 +32,7 @@ object TempPool {
         return anonymousTemplateCount++
     }
 
+    @JvmStatic
     fun getAnonymousTemplateIdentify(): String {
         return "data_${nextAnonymousTemplateID()}"
     }
@@ -38,6 +41,7 @@ object TempPool {
         return namespaceCount++
     }
 
+    @JvmStatic
     fun getNamespaceIdentify(): String {
         return "namespace_${nextNamespaceID()}"
     }

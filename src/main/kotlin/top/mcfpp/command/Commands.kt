@@ -1,9 +1,5 @@
 package top.mcfpp.command
 
-import net.querz.nbt.io.SNBTUtil
-import net.querz.nbt.tag.IntArrayTag
-import net.querz.nbt.tag.StringTag
-import net.querz.nbt.tag.Tag
 import top.mcfpp.Project
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.ScoreBool
@@ -20,6 +16,9 @@ import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.Function.Companion.addCommand
 import top.mcfpp.model.function.NoStackFunction
+import top.mcfpp.nbt.tags.Tag
+import top.mcfpp.nbt.tags.collection.IntArrayTag
+import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.type.MCFPPClassType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
@@ -37,6 +36,7 @@ object Commands {
      * @param function 函数对象
      * @return 生成的命令
      */
+    @JvmStatic
     fun function(function: Function): Command {
         return Command.build("function").build(function.namespaceID.toString(),function.namespaceID.toString())
     }
@@ -47,6 +47,7 @@ object Commands {
      * @param target 被获取计分板分数的目标
      * @return 生成的命令
      */
+    @JvmStatic
     fun sbPlayerGet(target: MCInt): Command{
         return Command.build("scoreboard players get")
             .build(target.name,target.name)
@@ -60,6 +61,7 @@ object Commands {
      * @param value 增加的值
      * @return 生成的命令
      */
+    @JvmStatic
     fun sbPlayerAdd(target: MCInt, value: Int): Command {
         return Command.build("scoreboard players add")
             .build(target.name, target.name)
@@ -75,6 +77,7 @@ object Commands {
      * @param b
      * @return 生成的命令
      */
+    @JvmStatic
     fun sbPlayerOperation(a: MCInt, operation: String, b: MCInt): Command {
         return Command.build("scoreboard players operation")
             .build(a.name,a.name)
@@ -84,6 +87,7 @@ object Commands {
             .build(b.sbObject.toString(),b.sbObject.toString())
     }
 
+    @JvmStatic
     fun sbPlayerOperation(a: ScoreBool, operation: String, b: MCInt): Command {
         return Command.build("scoreboard players operation")
             .build(a.identifier,a.identifier)
@@ -93,6 +97,7 @@ object Commands {
             .build(b.sbObject.toString(),b.sbObject.toString())
     }
 
+    @JvmStatic
     fun sbPlayerOperation(a: MCInt, operation: String, b: ScoreBool): Command {
         return Command.build("scoreboard players operation")
             .build(a.name,a.name)
@@ -102,6 +107,7 @@ object Commands {
             .build(b.boolObject.toString(),b.boolObject.toString())
     }
 
+    @JvmStatic
     fun sbPlayerOperation(a: ScoreBool, operation: String, b: ScoreBool): Command {
         return Command.build("scoreboard players operation")
             .build(a.identifier,a.identifier)
@@ -118,6 +124,7 @@ object Commands {
      * @param value 减少的值
      * @return 生成的命令
      */
+    @JvmStatic
     fun sbPlayerRemove(target: MCInt, value: Int): Command {
         return Command.build("scoreboard players remove")
             .build(target.name, target.name)
@@ -133,6 +140,7 @@ object Commands {
      *
      * @return 生成的命令
      */
+    @JvmStatic
     fun sbPlayerSet(a: MCInt, value: Int): Command {
         return Command.build("scoreboard players set")
             .build(a.name,a.name)
@@ -140,6 +148,7 @@ object Commands {
             .build(value.toString())
     }
 
+    @JvmStatic
     fun sbPlayerSet(a: ScoreBool, value: Boolean): Command {
         return Command.build("scoreboard players set")
             .build(a.identifier,a.identifier)
@@ -147,18 +156,22 @@ object Commands {
             .build((if(value) 1 else 0).toString())
     }
 
+    @JvmStatic
     fun ifScoreMatches(a: MCInt, value: Int): Command {
         return Command.build("execute if score ${a.name} ${a.sbObject} matches $value run")
     }
 
+    @JvmStatic
     fun unlessScoreMatches(a: MCInt, value: Int): Command {
         return Command.build("execute unless score ${a.name} ${a.sbObject} matches $value run")
     }
 
+    @JvmStatic
     fun ifBoolMatches(a: ScoreBool, value: Boolean): Command {
         return Command.build("execute if score ${a.name} ${a.boolObject} matches ${if(value) 1 else 0} run")
     }
 
+    @JvmStatic
     fun unlessBoolMatches(a: ScoreBool, value: Boolean): Command {
         return Command.build("execute unless score ${a.name} ${a.boolObject} matches ${if(value) 1 else 0} run")
     }
@@ -166,6 +179,7 @@ object Commands {
     /**
      * `data get <a>`
      */
+    @JvmStatic
     fun dataGet(a: NBTPath, double: Double = 1.0): Command{
         return Command("data get")
             .build(a.toCommandPart())
@@ -180,6 +194,7 @@ object Commands {
      *
      * @return 生成的命令
      */
+    @JvmStatic
     fun dataSetValue(a: NBTPath, value: Tag<*>): Command{
         if(a.source is EntitySource){
             val selector = (a.source as EntitySource).entity.value
@@ -187,12 +202,12 @@ object Commands {
                 val new = a.clone()
                 new.source = EntitySource(SelectorVar(EntitySelector('s')))
                 return Command.build("execute as").build(selector.toCommandPart()).build("run")
-                    .build("data modify").build(new.toCommandPart()).build("set value ${SNBTUtil.toSNBT(value)}")
+                    .build("data modify").build(new.toCommandPart()).build("set value ${Tag.toSNBT(value)}")
             }
         }
         return Command.build("data modify")
             .build(a.toCommandPart())
-            .build("set value ${SNBTUtil.toSNBT(value)}")
+            .build("set value ${Tag.toSNBT(value)}")
     }
 
     /**
@@ -203,6 +218,7 @@ object Commands {
      *
      * @return 生成的命令
      */
+    @JvmStatic
     fun dataSetFrom(a: NBTPath, b: NBTPath): Command{
         if(b.source is EntitySource && !(b.source as EntitySource).entity.value.selectingSingleEntity()){
             LogProcessor.error("Can only select single Entity")
@@ -230,12 +246,14 @@ object Commands {
      *
      * @return 生成的命令
      */
+    @JvmStatic
     fun dataMergeValue(a: NBTPath, value: Tag<*>): Command{
         return Command.build("data modify")
             .build(a.toCommandPart())
-            .build("merge value ${SNBTUtil.toSNBT(value)}")
+            .build("merge value ${Tag.toSNBT(value)}")
     }
 
+    @JvmStatic
     fun dataMergeFrom(a: NBTPath, b: NBTPath): Command{
         return Command.build("data modify")
             .build(a.toCommandPart())
@@ -243,12 +261,14 @@ object Commands {
             .build(b.toCommandPart())
     }
 
+    @JvmStatic
     fun dataAppendValue(a: NBTPath, value: Tag<*>): Command{
         return Command.build("data modify")
             .build(a.toCommandPart())
-            .build("append value ${SNBTUtil.toSNBT(value)}")
+            .build("append value ${Tag.toSNBT(value)}")
     }
 
+    @JvmStatic
     fun dataAppendFrom(a: NBTPath, b: NBTPath): Command{
         return Command.build("data modify")
            .build(a.toCommandPart())
@@ -259,6 +279,7 @@ object Commands {
     /**
      * 输入一个变量，判断这个变量是否是类的成员从而选择正确的nbt路径
      */
+    @JvmStatic
     private fun method1(v: Var<*>, command: Command): Array<Command>{
         return if(v.parentClass() != null){
             selectRun(v.parent!!, command)
@@ -271,6 +292,7 @@ object Commands {
      * 输入一个变量，判断这个变量是否是类的成员从而选择正确的nbt路径。同时构建输入命令的宏函数（若为宏命令）并把调用宏函数的
      * 命令作为selectRun的输入命令
      */
+    @JvmStatic
     fun method2(v: Var<*>, command: Command): Array<Command>{
         val cs = command.buildMacroFunction()
         val last = cs.last()
@@ -281,6 +303,7 @@ object Commands {
     /**
      * 判断一条命令是否为宏函数，并让这个命令作为返回值
      */
+    @JvmStatic
     fun method3(returnVar: ValueWrapper<CommandReturn>, command: Command){
         if (command.isMacro) {
             command.prepend("return run")
@@ -303,6 +326,7 @@ object Commands {
      *
      * @return 生成的命令。数组的最后一个命令为`execute`命令
      */
+    @JvmStatic
     fun selectRun(a : CanSelectMember, command: Command, hasExecuteRun: Boolean = true) : Array<Command>{
         val qwq = selectRun(a, hasExecuteRun)
         qwq.last().build(command)
@@ -317,6 +341,7 @@ object Commands {
      *
      * @return 生成的命令。数组的最后一个命令为`execute`命令
      */
+    @JvmStatic
     fun selectRun(a : CanSelectMember, hasExecuteRun: Boolean = true) : Array<Command>{
         val final = when(a){
             is ClassPointer -> {
@@ -361,6 +386,7 @@ object Commands {
      *
      * @return 生成的命令。数组的最后一个命令为`execute`命令
      */
+    @JvmStatic
     fun selectRun(a : CanSelectMember, command: String, hasExecuteRun: Boolean = true) : Array<Command>{
         return selectRun(a, Command.build(command), hasExecuteRun)
     }
@@ -373,6 +399,7 @@ object Commands {
      *
      * @return 捕获的命令
      */
+    @JvmStatic
     fun fakeFunction(parent: Function , operation: (fakeFunction: Function) -> Unit) : Array<Command>{
         val l = Function.currFunction
         val f = NoStackFunction("", parent)
@@ -390,6 +417,7 @@ object Commands {
      *
      * @return 生成的调用临时函数的命令和这个临时函数
      */
+    @JvmStatic
     fun tempFunction(parent: Function, operation: (tempFunction: Function) -> Unit) : Pair<Command, Function>{
         val l = Function.currFunction
         val f = NoStackFunction(TempPool.getFunctionIdentify("temp"), parent)
@@ -409,6 +437,7 @@ object Commands {
      *
      * @return 生成的调用临时函数的命令和这个临时函数
      */
+    @JvmStatic
     fun tempFunction(prefix: String, parent: Function, operation: (tempFunction: Function) -> Unit) : Pair<Command, Function>{
         val l = Function.currFunction
         val f = NoStackFunction(TempPool.getFunctionIdentify("${prefix}_temp"), parent)
@@ -427,6 +456,7 @@ object Commands {
      *
      * @return 生成的命令。数组的最后一个命令为`execute`命令
      */
+    @JvmStatic
     fun runAsEntity(entityVar: EntityUUIDVar, command: Command): Array<Command>{
         return if(entityVar is EntityUUIDVarConcrete){
             if(!entityVar.isName){
@@ -454,6 +484,7 @@ object Commands {
      *
      * @return 生成的命令。数组的最后一个命令为`execute`命令
      */
+    @JvmStatic
     fun runAsEntity(selector: SelectorVar, command: Command): Array<Command>{
         val c = Command("execute as").build(selector.value.toCommandPart()).build("run").build(command)
         return if(c.isMacro){
@@ -463,10 +494,12 @@ object Commands {
         }
     }
 
+    @JvmStatic
     fun stackIn(): Command{
         return Command("data modify storage mcfpp:system stack_frame prepend value {}")
     }
 
+    @JvmStatic
     fun stackOut(): Command {
         return Command("data remove storage mcfpp:system stack_frame[0]")
     }

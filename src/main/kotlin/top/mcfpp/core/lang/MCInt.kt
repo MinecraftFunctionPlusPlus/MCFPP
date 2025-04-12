@@ -1,6 +1,6 @@
 package top.mcfpp.core.lang
 
-import net.querz.nbt.tag.IntTag
+import top.mcfpp.nbt.tags.primitive.IntTag
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
@@ -391,7 +391,7 @@ open class MCInt : MCNumber<Int> {
             )
         }
         if(a.isIntRange()){
-            return a.left.isSmallerOrEqual(this)!!.and(a.right.isBiggerOrEqual(this)!!)
+            return a.left.isSmallerOrEqual(this).and(a.right.isBiggerOrEqual(this))
         }
         TODO()
     }

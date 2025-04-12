@@ -1,4 +1,3 @@
 package top.mcfpp.model
 
-class DataTemplateCompanion {
-}
+class DataTemplateCompanion

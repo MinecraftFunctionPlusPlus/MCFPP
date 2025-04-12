@@ -1,12 +1,12 @@
 package top.mcfpp.type
 
-import net.querz.nbt.tag.IntArrayTag
-import net.querz.nbt.tag.Tag
 import top.mcfpp.core.lang.ClassPointer
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.*
 import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.Function
+import top.mcfpp.nbt.tags.Tag
+import top.mcfpp.nbt.tags.collection.IntArrayTag
 import top.mcfpp.util.TempPool
 
 /**

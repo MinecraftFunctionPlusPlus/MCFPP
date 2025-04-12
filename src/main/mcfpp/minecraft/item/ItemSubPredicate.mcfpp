@@ -1,6 +1,8 @@
 import mcfpp.math:*;
 
-data AttributeModifierPredicate {
+data ItemSubPredicate {}
+
+data AttributeModifierPredicate: ItemSubPredicate {
     AttributeModifiers modifiers;
 }
 
@@ -41,11 +43,11 @@ enum AttributeSlot {
     ARMOR = "armor"
 }
 
-data BundleContentsPredicate {
+data BundleContentsPredicate: ItemSubPredicate {
     ItemStackCompoundPredicate items;
 }
 
-data ContainerPredicate {
+data ContainerPredicate: ItemSubPredicate {
     ItemStackCompoundPredicate items;
 }
 
@@ -69,17 +71,17 @@ data ItemStackCountPredicate {
 
 data CustomDataPredicate {}
 
-data DamagePredicate {
+data DamagePredicate: ItemSubPredicate {
     (int | IntRange)? damage;
     (int | IntRange)? durability;
 }
 
-data EnchantmentPredicate {
+data EnchantmentPredicate: ItemSubPredicate {
     (string | list<string>) enchantments;
     (int | IntRange) levels;
 }
 
-data FireworkExplosionPredicate {
+data FireworkExplosionPredicate: ItemSubPredicate {
     FireworkShape? shape;
     bool? hasTrail;
     bool? hasTwinkle;
@@ -109,25 +111,25 @@ data FireworkExplosionCountPredicate {
     (int | IntRange) count;
 }
 
-data JukeboxPlayablePredicate {
+data JukeboxPlayablePredicate: ItemSubPredicate {
     (string | list<string>) songs;
 }
 
-data StoredEnchantments {
+data StoredEnchantments: ItemSubPredicate {
     (string | list<string>) enchantments;
     (int | IntRange) levels;
 }
 
-data TrimPredicate {
+data TrimPredicate: ItemSubPredicate {
     (string | list<string>) material;
     (string | list<string>) pattern;
 }
 
-data WriteableBookContentPredicate {
+data WriteableBookContentPredicate: ItemSubPredicate {
     PagePredicate pages;
 }
 
-data WrittenBookContentPredicate {
+data WrittenBookContentPredicate: ItemSubPredicate {
     PagePredicate pages;
     string author;
     string title;

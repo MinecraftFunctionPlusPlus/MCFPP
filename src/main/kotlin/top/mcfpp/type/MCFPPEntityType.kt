@@ -1,6 +1,6 @@
 package top.mcfpp.type
 
-import net.querz.nbt.tag.StringTag
+import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.entity.SpecifiedEntityConcreteVar

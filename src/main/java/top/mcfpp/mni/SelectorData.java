@@ -1,20 +1,15 @@
 package top.mcfpp.mni;
 
 import top.mcfpp.annotations.MNIFunction;
-import top.mcfpp.command.Command;
-import top.mcfpp.core.lang.*;
+import top.mcfpp.core.lang.MCInt;
+import top.mcfpp.core.lang.RangeVar;
 import top.mcfpp.core.lang.entity.SelectorVar;
-import top.mcfpp.core.lang.nbt.EntityUUIDVar;
 import top.mcfpp.core.lang.nbt.MCString;
 import top.mcfpp.core.lang.nbt.NBTBasedData;
-import top.mcfpp.core.lang.nbt.NBTList;
 import top.mcfpp.core.lang.resource.Advancement;
 import top.mcfpp.core.lang.resource.EntityType;
 import top.mcfpp.core.lang.resource.LootTablePredicate;
 import top.mcfpp.lib.*;
-import top.mcfpp.model.function.Function;
-import top.mcfpp.type.MCFPPEntityType;
-import top.mcfpp.util.TempPool;
 import top.mcfpp.util.ValueWrapper;
 
 public class SelectorData {

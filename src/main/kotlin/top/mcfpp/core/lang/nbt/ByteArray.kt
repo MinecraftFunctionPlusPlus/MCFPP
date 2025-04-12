@@ -1,8 +1,8 @@
 package top.mcfpp.core.lang.nbt
 
-import net.querz.nbt.tag.ByteArrayTag
 import top.mcfpp.core.lang.*
 import top.mcfpp.model.property.Property
+import top.mcfpp.nbt.tags.collection.ByteArrayTag
 import top.mcfpp.type.MCFPPNBTType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor

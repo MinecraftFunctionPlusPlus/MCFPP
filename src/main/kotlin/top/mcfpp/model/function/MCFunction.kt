@@ -18,7 +18,7 @@ class MCFunction(namespace: String, val path: String?, identifier: String): Func
         }
 
     override fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?): Var<*> {
-        Function.addCommand(Commands.function(this))
+        addCommand(Commands.function(this))
         return Void
     }
 

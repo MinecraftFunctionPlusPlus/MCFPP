@@ -1,28 +1,21 @@
 package top.mcfpp.mni;
 
-import net.querz.nbt.io.SNBTUtil;
-import net.querz.nbt.tag.Tag;
 import org.jetbrains.annotations.NotNull;
-import top.mcfpp.Project;
 import top.mcfpp.annotations.InsertCommand;
 import top.mcfpp.annotations.MNIFunction;
-import top.mcfpp.command.Command;
-import top.mcfpp.command.Commands;
-import top.mcfpp.core.lang.*;
+import top.mcfpp.core.lang.MCFPPValue;
+import top.mcfpp.core.lang.MCInt;
+import top.mcfpp.core.lang.MCIntConcrete;
+import top.mcfpp.core.lang.Var;
 import top.mcfpp.core.lang.bool.BaseBool;
-import top.mcfpp.core.lang.bool.ScoreBool;
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete;
-import top.mcfpp.core.lang.nbt.NBTBasedData;
 import top.mcfpp.core.lang.nbt.NBTList;
 import top.mcfpp.core.lang.nbt.NBTListConcrete;
-import top.mcfpp.model.function.Function;
-import top.mcfpp.util.NBTUtil;
 import top.mcfpp.util.TempPool;
 import top.mcfpp.util.ValueWrapper;
 
 import java.io.IOException;
 import java.util.Collection;
-import java.util.UUID;
 
 @SuppressWarnings({"unchecked","rawtypes"})
 public class NBTListConcreteData {
@@ -117,7 +110,7 @@ public class NBTListConcreteData {
         if(e instanceof MCFPPValue<?>){
             //确定的
             var i = caller.getValue().indexOf(e);
-            returnVar.setValue(new MCIntConcrete(i, TempPool.INSTANCE.getVarIdentify()));
+            returnVar.setValue(new MCIntConcrete(i, TempPool.getVarIdentify()));
         }else {
             NBTListData.indexOf(e, (NBTList) caller.toDynamic(true), returnVar);
         }
@@ -130,11 +123,11 @@ public class NBTListConcreteData {
             //确定的
             for (int i = caller.getValue().size() - 1; i >= 0; i--) {
                 if(caller.getValue().get(i).equals(e)){
-                    returnVar.setValue(new MCIntConcrete(i, TempPool.INSTANCE.getVarIdentify()));
+                    returnVar.setValue(new MCIntConcrete(i, TempPool.getVarIdentify()));
                     return;
                 }
             }
-            returnVar.setValue((MCInt) returnVar.getValue().assignedBy(new MCIntConcrete(-1, TempPool.INSTANCE.getVarIdentify())));
+            returnVar.setValue((MCInt) returnVar.getValue().assignedBy(new MCIntConcrete(-1, TempPool.getVarIdentify())));
         }else {
             NBTListData.lastIndexOf(e, (NBTList) caller.toDynamic(true), returnVar);
         }
@@ -158,7 +151,7 @@ public class NBTListConcreteData {
                 caller.toDynamic(false);
                 NBTListData.contains(e, caller, returnVar);
             }else {
-                returnVar.setValue(returnVar.getValue().assignedBy(new ScoreBoolConcrete(contains, TempPool.INSTANCE.getVarIdentify())));
+                returnVar.setValue(returnVar.getValue().assignedBy(new ScoreBoolConcrete(contains, TempPool.getVarIdentify())));
             }
         }else {
             caller.toDynamic(false);

@@ -25,7 +25,7 @@ public class DataOnly extends Annotation {
         if(field instanceof OnScoreboard scoreboard){
             scoreboard.setDataOnly(true);
         }else {
-            LogProcessor.INSTANCE.warn("@DataOnly can only be used on int");
+            LogProcessor.warn("@DataOnly can only be used on int");
         }
     }
 
@@ -41,11 +41,11 @@ public class DataOnly extends Annotation {
 
     @Override
     public void forClass(@NotNull Class clazz) {
-        LogProcessor.INSTANCE.error("@" + getIdentifier() + "cannot be used on class");
+        LogProcessor.error("@" + getIdentifier() + "cannot be used on class");
     }
 
     @Override
     public void forFunction(@NotNull Function function) {
-        LogProcessor.INSTANCE.error("@" + getIdentifier() + "cannot be used on function");
+        LogProcessor.error("@" + getIdentifier() + "cannot be used on function");
     }
 }

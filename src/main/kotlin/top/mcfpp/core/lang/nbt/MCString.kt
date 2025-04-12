@@ -1,6 +1,5 @@
 package top.mcfpp.core.lang.nbt
 
-import net.querz.nbt.tag.StringTag
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.JsonTextConcrete
@@ -13,6 +12,7 @@ import top.mcfpp.lib.PlainChatComponent
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
+import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPEntityType
 import top.mcfpp.type.MCFPPType

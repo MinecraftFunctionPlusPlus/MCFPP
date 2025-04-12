@@ -1,12 +1,12 @@
 package top.mcfpp.type
 
-import net.querz.nbt.tag.CompoundTag
-import net.querz.nbt.tag.Tag
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.Class
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
+import top.mcfpp.nbt.tags.CompoundTag
+import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.util.LogProcessor
 
 abstract class MCFPPPrivateType(parentType: ArrayList<MCFPPType> = arrayListOf()) : MCFPPType(parentType) {

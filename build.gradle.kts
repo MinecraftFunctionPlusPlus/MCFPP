@@ -24,29 +24,45 @@ repositories {
     maven("https://jitpack.io")
     maven("https://maven.aliyun.com/nexus/content/groups/public/")
     maven("https://libraries.minecraft.net")
+    mavenLocal()
 }
 
 dependencies {
+    // Kotlin
+    implementation(kotlin("reflect"))
     testImplementation(kotlin("test"))
+    testImplementation(kotlin("script-runtime"))
+
+    // Apache
     implementation("org.apache.groovy:groovy-all:4.0.11")
-    implementation("com.alibaba.fastjson2:fastjson2:2.0.28")
     implementation("org.apache.logging.log4j:log4j-api:2.20.0")
     implementation("org.apache.logging.log4j:log4j-core:2.20.0")
     implementation("org.apache.logging.log4j:log4j-slf4j-impl:2.20.0")
-    implementation("org.openjdk.nashorn:nashorn-core:15.4")
-    implementation("com.github.Querz:NBT:6.1")
+    implementation("org.apache.commons:commons-lang3:3.17.0")
+
+    // Google
+    implementation("com.google.guava:guava:33.2.0-jre")
+    implementation("com.google.guava:guava:33.4.5-jre") // 注意版本冲突
+
+    // Mojang
     implementation("com.mojang:brigadier:1.0.18")
+    implementation("com.mojang:brigadier:1.3.10") // 注意版本冲突
+    implementation("com.mojang:datafixerupper:8.0.16")
+
+    // CommonMark
     implementation("org.commonmark:commonmark:0.24.0")
     implementation("org.commonmark:commonmark-ext-heading-anchor:0.21.0")
     implementation("org.commonmark:commonmark-ext-gfm-tables:0.20.0")
     implementation("org.commonmark:commonmark-ext-task-list-items:0.21.0")
     implementation("fr.brouillard.oss:commonmark-ext-notifications:1.1.0")
+
+    // Others
+    implementation("org.openjdk.nashorn:nashorn-core:15.4")
     implementation("info.debatty:java-string-similarity:2.0.0")
-    antlr("org.antlr:antlr4:4.13.1")
-    implementation(kotlin("reflect"))
-    testImplementation(kotlin("script-runtime"))
-    implementation("com.google.guava:guava:33.2.0-jre")
+    implementation("com.alibaba.fastjson2:fastjson2:2.0.28")
     implementation("com.esotericsoftware:kryo:5.6.2")
+    implementation("top.mcfpp:nbt:1.0")
+    antlr("org.antlr:antlr4:4.13.1")
 }
 
 tasks.shadowJar {

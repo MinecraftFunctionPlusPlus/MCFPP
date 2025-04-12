@@ -1,5 +1,6 @@
 package top.mcfpp.util
 
+//这是什么
 open class Delegate0<V> {
 
     protected val handlers = mutableListOf<() -> V>()

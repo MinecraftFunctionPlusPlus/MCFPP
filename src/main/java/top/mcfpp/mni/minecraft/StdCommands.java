@@ -15,25 +15,25 @@ public class StdCommands {
     @MNIFunction(normalParams = {"Area source", "Pos destination", "CloneMaskMode mode = replace", "CloneOperation op = normal"})
     public static void clone(DataTemplateObject source, Pos3Var destination, EnumVar mode, EnumVar op, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("clone", source, destination, mode, op);
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
 
     @MNIFunction(normalParams = {"Area source", "Pos destination", "CloneMaskMode mode = replace", "CloneOperation op = normal"})
     public static void cloneStrict(DataTemplateObject source, Pos3Var destination, EnumVar mode, EnumVar op, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("clone", source, destination, "strict", mode, op);
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
 
     @MNIFunction(normalParams = {"Area source", "Pos destination", "BlockPredicate filter", "CloneOperation op = normal"})
     public static void clone(DataTemplateObject source, Pos3Var destination, DataTemplateObject filter, EnumVar op, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("clone", source, destination, "filtered", filter, op);
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
 
     @MNIFunction(normalParams = {"Area source", "Pos destination", "BlockPredicate filter", "CloneOperation op = normal"})
     public static void cloneStrict(DataTemplateObject source, Pos3Var destination, DataTemplateObject filter, EnumVar op, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("clone", source, destination, "strict filtered", filter, op);
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
     //endregion
 
@@ -46,7 +46,7 @@ public class StdCommands {
         }else {
             command = Command.Companion.buildAll("damage", target, amount, type);
         }
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
 
     @MNIFunction(normalParams = {"entity target", "float amount", "Pos location", "DamageType type = DamageType.GENERIC"})
@@ -57,7 +57,7 @@ public class StdCommands {
         }else {
             command = Command.Companion.buildAll("damage", target, amount, type, "at", location);
         }
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
 
     @MNIFunction(normalParams = {"entity target", "float amount", "entity<1> by" , "DamageType type = DamageType.GENERIC"})
@@ -68,7 +68,7 @@ public class StdCommands {
         }else {
             command = Command.Companion.buildAll("damage", target, amount, type, "by", by);
         }
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
 
     @MNIFunction(normalParams = {"entity target", "float amount", "entity<1> by", "entity<1> source" , "DamageType type = DamageType.GENERIC"})
@@ -79,7 +79,7 @@ public class StdCommands {
         }else {
             command = Command.Companion.buildAll("damage", target, amount, type, "by", by, "from", source);
         }
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
     //endregion
 
@@ -88,7 +88,7 @@ public class StdCommands {
     @MNIFunction(normalParams = {"entity target", "Enchantment enchantment", "int level = 1", "Slot slot = Slot.weapon_mainhand"})
     public static void enchant(EntityVar target, DataTemplateObject enchantment, MCInt level, EnumVar slot, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("enchant", target, enchantment, level, slot);
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
     //endregion
 
@@ -96,25 +96,25 @@ public class StdCommands {
     @MNIFunction(normalParams = {"Area area", "BlockState block"}, returnType = "CommandReturn")
     public static void fillKeep(DataTemplateObject area, DataTemplateObject block, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("fill", area, block, "keep");
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
 
     @MNIFunction(normalParams = {"Area area", "BlockState block"}, returnType = "CommandReturn")
     public static void fillReplace(DataTemplateObject area, DataTemplateObject block, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("fill", area, block);
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
 
     @MNIFunction(normalParams = {"Area area", "BlockState block", "BlockPredicate filter"}, returnType = "CommandReturn")
     public static void fillReplace(DataTemplateObject area, DataTemplateObject block, DataTemplateObject filter, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("fill", area, block, "replace", filter);
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
 
     @MNIFunction(normalParams = {"Area area", "BlockState block", "BlockPredicate filter", "FillMode mode"}, returnType = "CommandReturn")
     public static void fillReplace(DataTemplateObject area, DataTemplateObject block, DataTemplateObject filter, EnumVar mode, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("fill", area, block, "replace", filter, mode);
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
     //endregion
 
@@ -122,13 +122,13 @@ public class StdCommands {
     @MNIFunction(normalParams = {"Area area", "Biome biome"}, returnType = "CommandReturn")
     public static void fillBiome(DataTemplateObject area, Biome biome, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("fillbiome", area, biome);
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
 
     @MNIFunction(normalParams = {"Area area", "Biome biome", "Biome replaceBiome"}, returnType = "CommandReturn")
     public static void fillBiome(DataTemplateObject area, Biome biome, Biome replaceBiome, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("fillbiome", area, biome, "replace", replaceBiome);
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
     //endregion
 
@@ -136,31 +136,31 @@ public class StdCommands {
     @MNIFunction(normalParams = {"pos2 from", "pos2 to"}, returnType = "CommandReturn")
     public static void forceload(Pos2Var from, Pos2Var to, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("forceload", "add", from, to);
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
 
     @MNIFunction(normalParams = {"pos2 from", "pos2 to"}, returnType = "CommandReturn")
     public static void forceloadRemove(Pos2Var from, Pos2Var to, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("forceload", "remove", from, to);
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
 
     @MNIFunction(returnType = "CommandReturn")
     public static void forceloadRemoveAll(ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("forceload remove all");
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
 
     @MNIFunction(normalParams = {"pos2 from", "pos2 to"}, returnType = "CommandReturn")
     public static void forceloadQuery(Pos2Var from, Pos2Var to, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("forceload query", from, to);
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
 
     @MNIFunction(returnType = "CommandReturn")
     public static void forceloadQueryAll(ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("forceload query");
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
     //endregion
 
@@ -168,13 +168,13 @@ public class StdCommands {
     @MNIFunction(returnType = "CommandReturn")
     public static void help(ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("help");
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
 
     @MNIFunction(normalParams = {"string command"}, returnType = "CommandReturn")
     public static void help(MCString command, ValueWrapper<CommandReturn> re){
         var command1 = Command.Companion.buildAll("help", command);
-        Commands.INSTANCE.method3(re, command1);
+        Commands.method3(re, command1);
     }
     //endregion
 
@@ -182,13 +182,13 @@ public class StdCommands {
     @MNIFunction(returnType = "CommandReturn")
     public static void jfrStart(ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("jfr start");
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
 
     @MNIFunction(returnType = "CommandReturn")
     public static void jfrStop(ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("jfr stop");
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
     //endregion
 

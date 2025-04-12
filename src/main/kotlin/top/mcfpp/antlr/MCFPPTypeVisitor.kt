@@ -1,7 +1,5 @@
 package top.mcfpp.antlr
 
-import net.querz.nbt.io.SNBTUtil
-import net.querz.nbt.tag.IntTag
 import top.mcfpp.Project
 import top.mcfpp.core.lang.MCAny
 import top.mcfpp.core.lang.MCFPPValue
@@ -14,6 +12,8 @@ import top.mcfpp.model.generic.ClassParam
 import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.model.generic.GenericObjectClass
 import top.mcfpp.model.generic.ImplementedGenericClass
+import top.mcfpp.nbt.tags.Tag
+import top.mcfpp.nbt.tags.primitive.IntTag
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper.splitNamespaceID
 
@@ -280,8 +280,8 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         //添加成员
         for (m in ctx.enumBody().enumMember()) {
             val value = enum.getNextMemberValue()
-            val data = m.nbtValue()?.let {SNBTUtil.fromSNBT(it.text)}
-            val member = EnumMember(m.Identifier().text, value, data?:IntTag(0))
+            val data = m.nbtValue()?.let { Tag.toNBT(it.text)}
+            val member = EnumMember(m.Identifier().text, value, data?: IntTag(0))
             enum.addMember(member)
         }
     }

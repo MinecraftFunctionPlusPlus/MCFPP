@@ -1,5 +1,3 @@
 package top.mcfpp.type
 
-class MCFPPOtherType {
-
-}
+class MCFPPOtherType

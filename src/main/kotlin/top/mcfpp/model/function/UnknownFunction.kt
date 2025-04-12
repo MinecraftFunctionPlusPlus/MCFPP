@@ -1,9 +1,9 @@
 package top.mcfpp.model.function
 
 import top.mcfpp.Project
-import top.mcfpp.model.CanSelectMember
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
+import top.mcfpp.model.CanSelectMember
 
 open class UnknownFunction: Function {
 
@@ -17,6 +17,7 @@ open class UnknownFunction: Function {
      * @param identifier 函数的标识符
      * @param namespace 函数的命名空间
      */
+    @Suppress("ConvertSecondaryConstructorToPrimary")
     constructor(identifier: String, namespace: String = Project.currNamespace):super(identifier,namespace, context = null){
         returnVar = UnknownVar("return")
     }

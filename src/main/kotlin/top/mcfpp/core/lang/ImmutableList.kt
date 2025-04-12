@@ -1,8 +1,5 @@
 package top.mcfpp.core.lang
 
-import net.querz.nbt.io.SNBTUtil
-import net.querz.nbt.tag.IntTag
-import net.querz.nbt.tag.ListTag
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.nbt.NBTBasedData
@@ -17,6 +14,8 @@ import top.mcfpp.model.property.SimpleAccessor
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
+import top.mcfpp.nbt.tags.Tag
+import top.mcfpp.nbt.tags.collection.ListTag
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPListType
 import top.mcfpp.type.MCFPPNBTType
@@ -55,16 +54,16 @@ open class ImmutableList : NBTList {
     }
 }
 
-class ImmutableListConcrete: ImmutableList, MCFPPValue<ListTag<*>>{
+class ImmutableListConcrete: ImmutableList, MCFPPValue<ListTag>{
 
-    override var value: ListTag<*>
+    override var value: ListTag
 
-    constructor(value: ListTag<*>, identifier: String, genericType: MCFPPType) : super(identifier, genericType){
+    constructor(value: ListTag, identifier: String, genericType: MCFPPType) : super(identifier, genericType){
         type = MCFPPListType(genericType)
         this.value = value
     }
 
-    constructor(list : ImmutableList, value: ListTag<*>):super(list){
+    constructor(list : ImmutableList, value: ListTag):super(list){
         this.value = value
     }
 
@@ -81,7 +80,7 @@ class ImmutableListConcrete: ImmutableList, MCFPPValue<ListTag<*>>{
         val parent = parent
         Function.addCommands(Commands.method2(this, Command("data modify")
             .build(nbtPath.toCommandPart())
-            .build("set value ${SNBTUtil.toSNBT(value)}")))
+            .build("set value ${Tag.toSNBT(value)}")))
         val re = NBTList(this)
         if(replace){
             if(parentTemplate() != null) {
@@ -109,10 +108,10 @@ class ImmutableListConcrete: ImmutableList, MCFPPValue<ListTag<*>>{
     override fun getByIndex(index: Var<*>): PropertyVar {
         val v = if(index is MCInt){
             if(index is MCIntConcrete){
-                if(index.value >= value.size()){
+                if(index.value >= value.size){
                     throw IndexOutOfBoundsException("Index out of bounds")
                 }else{
-                    NBTBasedDataConcrete(value[index.value]!!)
+                    NBTBasedDataConcrete(value[index.value])
                 }
             }else {
                 //index未知
@@ -125,7 +124,7 @@ class ImmutableListConcrete: ImmutableList, MCFPPValue<ListTag<*>>{
     }
 
     override fun toString(): String {
-        return "[$type,value=${SNBTUtil.toSNBT(value)}]"
+        return "[$type,value=${Tag.toSNBT(value)}]"
     }
 
     override fun getMemberFunction(
@@ -159,7 +158,7 @@ class ImmutableListConcrete: ImmutableList, MCFPPValue<ListTag<*>>{
             //data.getNativeFunctionFromClass(NBTListConcreteData::class.java)
         }
 
-        val empty = ImmutableListConcrete(ListTag.createUnchecked(IntTag::class.java), "empty", MCFPPBaseType.Any)
+        val empty = ImmutableListConcrete(ListTag(), "empty", MCFPPBaseType.Any)
 
     }
 }

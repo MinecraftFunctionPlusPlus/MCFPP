@@ -280,7 +280,6 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
             LogProcessor.error("Tag not match in method ${method.name} in class ${method.declaringClass.name}")
             return
         }
-        if(this is ObjectCompoundData && !mniRegister.isObject) return
         val nf = NativeFunction(method.name, javaMethod = method)
         //解析MNIMethod注解成员
         mniRegister.genericType.map {

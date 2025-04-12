@@ -1,9 +1,9 @@
 package top.mcfpp.type
 
-import net.querz.nbt.tag.CompoundTag
 import top.mcfpp.core.lang.*
 import top.mcfpp.mni.annotation.NoInstance
 import top.mcfpp.model.*
+import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 

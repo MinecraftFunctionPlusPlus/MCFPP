@@ -240,9 +240,6 @@ open class PosDimension: ConcreteVar<PosDimension, Pair<String, Number>> {
 
     override var parent: CanSelectMember? = null
         get() = super.parent
-        set(value) {
-            field = value
-        }
 
     /**
      * 创建一个int类型的变量。它的mc名和变量所在的域容器有关。

@@ -1,9 +1,9 @@
 package top.mcfpp.type
 
-import net.querz.nbt.tag.Tag
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
+import top.mcfpp.nbt.tags.Tag
 
 class MCFPPDeclaredConcreteType(val type: MCFPPType): MCFPPConcreteType(arrayListOf(type)) {
 

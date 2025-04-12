@@ -1,8 +1,5 @@
 package top.mcfpp.lib
 
-import net.querz.nbt.io.SNBTUtil
-import net.querz.nbt.tag.CompoundTag
-import net.querz.nbt.tag.StringTag
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.MCIntConcrete
@@ -11,6 +8,9 @@ import top.mcfpp.core.lang.nbt.MCString
 import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
+import top.mcfpp.nbt.tags.CompoundTag
+import top.mcfpp.nbt.tags.Tag
+import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.util.LogProcessor
 import java.io.Serializable
 
@@ -145,7 +145,7 @@ class NBTPath(var source: NBTSource): Serializable {
                 is NBTPredicatePath -> {
                     val value = (path.value as NBTPredicatePath).value
                     if(value is NBTBasedDataConcrete){
-                        cmd.build("[${SNBTUtil.toSNBT(value.value)}]", false)
+                        cmd.build("[${Tag.toSNBT(value.value)}]", false)
                     }else{
                         cmd.build("[", false).buildMacro(value, false).build("]", false)
                     }

@@ -8,11 +8,10 @@ import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.*;
 import top.mcfpp.core.lang.bool.ScoreBool;
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete;
+import top.mcfpp.core.lang.entity.PlayerVar;
 import top.mcfpp.core.lang.nbt.MCString;
 import top.mcfpp.core.lang.nbt.MCStringConcrete;
-import top.mcfpp.core.lang.entity.PlayerVar;
 import top.mcfpp.model.function.Function;
-import top.mcfpp.util.FunctionUtil;
 import top.mcfpp.util.ValueWrapper;
 
 import java.util.Objects;
@@ -27,7 +26,7 @@ public class BossBarData {
                 bossbar.getMemberVarWithT("id", MCString.class),
                 bossbar.getMemberVarWithT("name", JsonText.class)
         );
-        Commands.INSTANCE.method3(returnValue, command);
+        Commands.method3(returnValue, command);
     }
 
     @MNIFunction(caller = "BossBar", returnType = "CommandReturn")
@@ -36,10 +35,10 @@ public class BossBarData {
                 "bossbar remove",
                 bossbar.getMemberVarWithT("id", MCString.class)
         );
-        Commands.INSTANCE.method3(returnValue, command);
+        Commands.method3(returnValue, command);
     }
 
-    @MNIFunction(caller = "BossBar", isObject = true, returnType = "CommandReturn")
+    @MNIFunction(caller = "BossBar", returnType = "CommandReturn")
     public static void list(DataTemplateObject bossbar, ValueWrapper<CommandReturn> returnValue){
         var command = new Command("bossbar list");
         returnValue.setValue(new CommandReturn(command,"bossbar_list"));
@@ -70,7 +69,7 @@ public class BossBarData {
         }else {
             command = Command.Companion.buildAll(
                     "execute store result bossbar", id, attrID, "run",
-                    Commands.INSTANCE.sbPlayerGet(value)
+                    Commands.sbPlayerGet(value)
             );
         }
         if(command.isMacro()){
@@ -133,7 +132,7 @@ public class BossBarData {
 
         }else {
             if(id instanceof MCStringConcrete idC){
-                command = Commands.INSTANCE.tempFunction(Function.Companion.getCurrFunction(), (f) -> {
+                command = Commands.tempFunction(Function.Companion.getCurrFunction(), (f) -> {
                     var command1 = new Command("execute if score " + value.getIdentifier() + " " + value.getBoolObject().getName() + " matches 1 run return run")
                             .build("bossbar set " + idC.getValue().getValue() + " visible true", true);
                     Function.Companion.addCommand(command1);
@@ -142,7 +141,7 @@ public class BossBarData {
                     return null;
                 }).getFirst();
             }else {
-                command = Commands.INSTANCE.tempFunction(Function.Companion.getCurrFunction(), (f) -> {
+                command = Commands.tempFunction(Function.Companion.getCurrFunction(), (f) -> {
                     var command1 = new Command("execute if score " + value.getIdentifier() + " " + value.getBoolObject().getName() + " matches 1 run return run")
                             .build("bossbar set ", true)
                             .buildMacro(id, true)
@@ -174,21 +173,21 @@ public class BossBarData {
         }else {
             command.build("","color", true);
         }
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
 
     @MNIFunction(normalParams = "text name", caller = "BossBar", returnType = "CommandReturn")
     public static void setName(JsonText name, DataTemplateObject caller, ValueWrapper<CommandReturn> re){
         var id = caller.getMemberVarWithT("id", MCString.class);
         Command command = Command.Companion.buildAll("bossbar set", id, "name", name);
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
 
     @MNIFunction(normalParams = "Player players", caller = "BossBar", returnType = "CommandReturn")
     public static void setVisiblePlayers(PlayerVar players, DataTemplateObject bossbar, ValueWrapper<CommandReturn> returnValue) {
         var id = bossbar.getMemberVarWithT("id", MCString.class);
         Command command = Command.Companion.buildAll("bossbar set", id, "players", players);
-        Commands.INSTANCE.method3(returnValue, command);
+        Commands.method3(returnValue, command);
     }
 
     @MNIFunction(normalParams = "BossBarStyle style", caller = "BossBar", returnType = "CommandReturn")
@@ -200,6 +199,6 @@ public class BossBarData {
         }else {
             command.build("","style", true);
         }
-        Commands.INSTANCE.method3(re, command);
+        Commands.method3(re, command);
     }
 }

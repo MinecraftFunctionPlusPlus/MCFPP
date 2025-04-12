@@ -34,26 +34,31 @@ object LogProcessor {
 
     var logger: Logger = LogManager.getLogger("mcfpp")
 
+    @JvmStatic
     inline fun debug(msg: String){
         if(level > LogLevel.DEBUG) return
         logger.debug(msg)
     }
 
+    @JvmStatic
     inline fun debug(msg: String, e: Exception){
         if(level > LogLevel.DEBUG) return
         logger.debug(msg, e)
     }
 
+    @JvmStatic
     inline fun info(msg: String){
         if(level > LogLevel.INFO) return
         logger.info(msg)
     }
 
+    @JvmStatic
     inline fun info(msg: String, e: Exception){
         if(level > LogLevel.INFO) return
         logger.info(msg, e)
     }
 
+    @JvmStatic
     inline fun warn(msg: String){
         if(level > LogLevel.WARN) return
         logger.warn(msg)
@@ -81,6 +86,7 @@ object LogProcessor {
         }
     }
 
+    @JvmStatic
     inline fun warn(msg: String, e: Exception){
         if(level > LogLevel.WARN) return
         logger.warn(msg, e)
@@ -99,6 +105,7 @@ object LogProcessor {
         }
     }
 
+    @JvmStatic
     inline fun error(msg: String){
         if(level > LogLevel.ERROR) return
         if(Project.ctx != null){
@@ -125,6 +132,7 @@ object LogProcessor {
         }
     }
 
+    @JvmStatic
     inline fun error(msg: String, e: Exception){
         if(level > LogLevel.ERROR) return
         logger.error("$msg\n${e.stackTraceToString()}")
@@ -143,10 +151,12 @@ object LogProcessor {
         }
     }
 
+    @JvmStatic
     inline fun castError(type1: String, type2: String){
         error("Cannot cast [$type1] to [$type2]")
     }
 
+    @JvmStatic
     fun syntaxError(
         recognizer: Recognizer<*, *>,
         msg: String,

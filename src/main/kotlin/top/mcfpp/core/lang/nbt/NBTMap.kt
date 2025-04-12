@@ -2,10 +2,6 @@
 
 package top.mcfpp.core.lang.nbt
 
-import net.querz.nbt.tag.CompoundTag
-import net.querz.nbt.tag.ListTag
-import net.querz.nbt.tag.StringTag
-import net.querz.nbt.tag.Tag
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
@@ -20,6 +16,9 @@ import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.property.AnonymousNativeMutator
 import top.mcfpp.model.property.Property
 import top.mcfpp.model.property.SimpleAccessor
+import top.mcfpp.nbt.tags.CompoundTag
+import top.mcfpp.nbt.tags.collection.ListTag
+import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPMapType
 import top.mcfpp.type.MCFPPType
@@ -83,11 +82,10 @@ open class NBTMap : NBTBasedData {
         }
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun convertDictValueToMap(tag: CompoundTag): CompoundTag{
         val mapTag = CompoundTag()
         mapTag.put("keyValueSet", tag)
-        val list = ListTag.createUnchecked(CompoundTag::class.java) as ListTag<Tag<*>>
+        val list = ListTag()
         for ((key, value) in tag){
             val kv = CompoundTag()
             kv.put("key", StringTag(key))

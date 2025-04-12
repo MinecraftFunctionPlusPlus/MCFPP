@@ -10,13 +10,11 @@ import top.mcfpp.lib.PlainChatComponent;
 import top.mcfpp.util.TempPool;
 import top.mcfpp.util.ValueWrapper;
 
-import java.util.UUID;
-
 public class MCAnyConcreteData {
 
     @MNIFunction(normalParams = {"any a"}, returnType = "JavaVar")
     public static void getJavaVar(@NotNull Var<?> value, ValueWrapper<Var<?>> returnValue){
-        var re = new JavaVar(value, TempPool.INSTANCE.getVarIdentify());
+        var re = new JavaVar(value, TempPool.getVarIdentify());
         returnValue.setValue(re);
     }
 

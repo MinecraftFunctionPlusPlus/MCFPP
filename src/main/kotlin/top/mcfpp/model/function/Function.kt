@@ -1,4 +1,4 @@
-@file:Suppress("LeakingThis", "MUST_BE_INITIALIZED_OR_FINAL_OR_ABSTRACT_WARNING")
+@file:Suppress("LeakingThis")
 
 package top.mcfpp.model.function
 

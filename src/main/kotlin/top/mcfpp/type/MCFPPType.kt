@@ -1,6 +1,5 @@
 package top.mcfpp.type
 
-import net.querz.nbt.tag.*
 import org.antlr.v4.runtime.CharStream
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
@@ -19,6 +18,13 @@ import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.GenericClass
+import top.mcfpp.nbt.tags.CompoundTag
+import top.mcfpp.nbt.tags.Tag
+import top.mcfpp.nbt.tags.collection.ListTag
+import top.mcfpp.nbt.tags.primitive.ByteTag
+import top.mcfpp.nbt.tags.primitive.FloatTag
+import top.mcfpp.nbt.tags.primitive.IntTag
+import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper.splitNamespaceID
 import top.mcfpp.util.TempPool
@@ -183,8 +189,8 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             }
 
             is MCFPPListType -> {
-                if (tag !is ListTag<*>) return false
-                if (tag.size() == 0) return true
+                if (tag !is ListTag) return false
+                if (tag.size == 0) return true
                 //检查List中的元素是否符合泛型
                 return generic.checkNBTType(tag[0])
             }

@@ -1,8 +1,8 @@
 package top.mcfpp.model.function
 
-import top.mcfpp.model.CanSelectMember
 import top.mcfpp.core.lang.JavaVar
 import top.mcfpp.core.lang.Var
+import top.mcfpp.model.CanSelectMember
 import java.lang.reflect.Method
 
 class JavaFunction: Function {
@@ -11,6 +11,7 @@ class JavaFunction: Function {
 
     val caller: JavaVar
 
+    @Suppress("ConvertSecondaryConstructorToPrimary")
     constructor(method: Method, caller: JavaVar):super(method.name, context = null){
         this.method = method
         this.caller = caller

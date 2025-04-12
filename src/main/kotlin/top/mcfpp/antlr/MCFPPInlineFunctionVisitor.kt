@@ -1,5 +1,3 @@
 package top.mcfpp.antlr
 
-class MCFPPInlineFunctionVisitor:MCFPPImVisitor(){
-
-}
+class MCFPPInlineFunctionVisitor:MCFPPImVisitor()

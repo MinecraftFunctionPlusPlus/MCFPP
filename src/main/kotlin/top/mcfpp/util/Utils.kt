@@ -1,7 +1,7 @@
 package top.mcfpp.util
 
-import net.querz.nbt.tag.IntArrayTag
 import top.mcfpp.antlr.mcfppParser
+import top.mcfpp.nbt.tags.collection.IntArrayTag
 import java.io.*
 import java.util.*
 import kotlin.system.exitProcess
@@ -107,7 +107,7 @@ object Utils {
         }
     }
 
-    fun toNBTArrayUUID(uuid: UUID): IntArrayTag{
+    fun toNBTArrayUUID(uuid: UUID): IntArrayTag {
         val uuidArray = IntArray(4)
         uuidArray[0] = uuid.leastSignificantBits.toInt()
         uuidArray[1] = (uuid.leastSignificantBits shr 32).toInt()

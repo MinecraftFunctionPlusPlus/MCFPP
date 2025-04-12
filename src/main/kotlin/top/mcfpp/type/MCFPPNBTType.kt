@@ -1,6 +1,5 @@
 package top.mcfpp.type
 
-import net.querz.nbt.tag.*
 import top.mcfpp.core.lang.ImmutableList
 import top.mcfpp.core.lang.ImmutableListConcrete
 import top.mcfpp.core.lang.Var
@@ -11,6 +10,14 @@ import top.mcfpp.core.lang.nbt.LongArray
 import top.mcfpp.model.Class
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
+import top.mcfpp.nbt.tags.Tag
+import top.mcfpp.nbt.tags.collection.ByteArrayTag
+import top.mcfpp.nbt.tags.collection.IntArrayTag
+import top.mcfpp.nbt.tags.collection.ListTag
+import top.mcfpp.nbt.tags.collection.LongArrayTag
+import top.mcfpp.nbt.tags.primitive.DoubleTag
+import top.mcfpp.nbt.tags.primitive.IntTag
+import top.mcfpp.nbt.tags.primitive.LongTag
 import top.mcfpp.util.TempPool
 
 /**
@@ -257,10 +264,10 @@ class MCFPPImmutableListType(
     override val nbtType: java.lang.Class<out Tag<*>>
         get() = ListTag::class.java
 
-    override fun build(identifier: String, container: FieldContainer): Var<*> = ImmutableListConcrete(ListTag(IntTag::class.java), identifier, generic)
-    override fun build(identifier: String): Var<*> = ImmutableListConcrete(ListTag(IntTag::class.java), identifier, generic)
-    override fun build(identifier: String, clazz: Class): Var<*> = ImmutableListConcrete(ListTag(IntTag::class.java), identifier, generic)
-    override fun build(value: Any): Var<*> = ImmutableListConcrete(value as ListTag<*>, TempPool.getVarIdentify(), generic)
+    override fun build(identifier: String, container: FieldContainer): Var<*> = ImmutableListConcrete(ListTag(), identifier, generic)
+    override fun build(identifier: String): Var<*> = ImmutableListConcrete(ListTag(), identifier, generic)
+    override fun build(identifier: String, clazz: Class): Var<*> = ImmutableListConcrete(ListTag(), identifier, generic)
+    override fun build(value: Any): Var<*> = ImmutableListConcrete(value as ListTag, TempPool.getVarIdentify(), generic)
     override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = ImmutableList(identifier, generic)
     override fun buildUnConcrete(identifier: String): Var<*> = ImmutableList(identifier, generic)
     override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = ImmutableList(identifier, generic)

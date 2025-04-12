@@ -28,7 +28,7 @@ class GenericFunction : Function, Generic<Function> {
      * 创建一个函数，并指定它所属的类。
      * @param identifier 函数的标识符
      */
-    constructor(identifier: String, cls: Class, isStatic: Boolean, ctx: mcfppParser.FunctionBodyContext) : super(
+    constructor(identifier: String, cls: Class, ctx: mcfppParser.FunctionBodyContext) : super(
         identifier,
         cls,
         ctx
@@ -44,7 +44,7 @@ class GenericFunction : Function, Generic<Function> {
      * 创建一个函数，并指定它所属的结构体。
      * @param name 函数的标识符
      */
-    constructor(name: String, template: DataTemplate, isStatic: Boolean, ctx: mcfppParser.FunctionBodyContext) : super(
+    constructor(name: String, template: DataTemplate, ctx: mcfppParser.FunctionBodyContext) : super(
         name,
         template,
         ctx

@@ -1,13 +1,13 @@
 package top.mcfpp.type
 
-import net.querz.nbt.tag.ListTag
-import net.querz.nbt.tag.Tag
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.VectorVar
 import top.mcfpp.core.lang.VectorVarConcrete
 import top.mcfpp.model.Class
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
+import top.mcfpp.nbt.tags.Tag
+import top.mcfpp.nbt.tags.collection.ListTag
 
 class MCFPPVectorType(val dimension: Int): MCFPPType(arrayListOf(MCFPPBaseType.Any)) {
 

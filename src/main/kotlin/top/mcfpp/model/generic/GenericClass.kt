@@ -90,9 +90,9 @@ open class GenericClass : Class {
         }
 
         //注册
-        Class.currClass = cls
+        currClass = cls
         MCFPPGenericClassFieldVisitor(cls).visitClassDeclaration(ctx.parent as mcfppParser.ClassDeclarationContext)
-        Class.currClass = cls
+        currClass = cls
         MCFPPGenericClassImVisitor().visitClassBody(ctx)
         index ++
 

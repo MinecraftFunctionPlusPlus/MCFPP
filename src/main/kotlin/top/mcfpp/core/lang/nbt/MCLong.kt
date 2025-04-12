@@ -1,6 +1,5 @@
 package top.mcfpp.core.lang.nbt
 
-import net.querz.nbt.tag.LongTag
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
@@ -10,6 +9,7 @@ import top.mcfpp.core.lang.Var
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
+import top.mcfpp.nbt.tags.primitive.LongTag
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPNBTType
 import top.mcfpp.type.MCFPPType
