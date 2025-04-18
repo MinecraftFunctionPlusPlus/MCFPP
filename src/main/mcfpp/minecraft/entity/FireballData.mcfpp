@@ -1,5 +1,5 @@
 @MCFPPEntity
 data FireballData {
     @Name<"acceleration_power">
-    double accelerationPower;
+    accelerationPower as double;
 }

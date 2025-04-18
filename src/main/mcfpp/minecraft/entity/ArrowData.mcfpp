@@ -1,27 +1,27 @@
 import mcfpp.minecraft.other:*;
 
 data ArrowData{
-    bool crit;
+    crit as bool;
 
-    double damage;
+    damage as double;
 
-    BlockState inBlockState;
+    inBlockState as BlockState;
 
-    bool inGround;
+    inGround as bool;
 
-    Item item;
+    item as Item;
 
-    short life;
+    life as short;
 
-    byte pickup;
+    pickup as byte;
 
     @Name<"PierceLevel">
-    byte pierceLevel;
+    pierceLevel as byte;
 
-    byte shake;
+    shake as byte;
 
     @Name<"SoundEvent">
-    string soundEvent; 
+    soundEvent as string;
 
-    Item weapon;
+    weapon as Item;
 }

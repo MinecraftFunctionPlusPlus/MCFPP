@@ -105,6 +105,16 @@ tasks.jar{
 val jniSourceDir = file("src/main/java/top/mcfpp/jni")
 val cppSourceDir = file("src/main/cpp")
 
+tasks.withType<JavaCompile> {
+    // 关键点：通过 forkOptions 设置 JVM 参数
+    options.forkOptions.jvmArgs = listOf(
+        "-Duser.language=en",
+        "-Duser.country=US"
+    )
+    // 确保启用 fork 模式
+    options.isFork = true
+}
+
 tasks.register<JavaCompile>("generateJni") {
     group = "build"
     destinationDirectory.set(file("$buildDir/generated/jni"))

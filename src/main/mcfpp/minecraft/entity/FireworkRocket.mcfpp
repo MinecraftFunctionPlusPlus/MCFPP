@@ -1,14 +1,14 @@
 @MCFPPEntity
 data FireworkRocket {
     @Name<"FireworksItem">
-    list<FireworkRocket> fireworksItem;
+    fireworksItem as list<FireworkRocket>;
 
     @Name<"Life">
-    int life;
+    life as int;
 
     @Name<"LifeTime">
-    int lifeTime;
+    lifeTime as int;
 
     @Name<"ShotAtAngle">
-    byte shotAtAngle;
+    shotAtAngle as byte;
 }

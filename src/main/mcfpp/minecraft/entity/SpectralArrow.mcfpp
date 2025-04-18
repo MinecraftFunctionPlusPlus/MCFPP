@@ -1,5 +1,4 @@
 @MCFPPEntity
 data SpectralArrow: EntityData, ProjectileData, ArrowData {
-    @Name<"Duration">
-    int duration;
+    @Name<"Duration"> duration as int;
 }

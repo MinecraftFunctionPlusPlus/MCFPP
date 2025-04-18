@@ -76,6 +76,10 @@ class GenericFunction : Function, Generic<Function> {
         }
     }
 
+    override fun paramCount(): Int {
+        return normalParams.size + readOnlyParams.size
+    }
+
     override fun buildParamVar() {
         for (param in readOnlyParams){
             field.putVar(param.identifier, param.buildVar())

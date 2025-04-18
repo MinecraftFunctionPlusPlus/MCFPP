@@ -1,28 +1,28 @@
 import mcfpp.math:*;
 
-data ItemSubPredicate {}
+data ItemSubPredicate;
 
 data AttributeModifierPredicate: ItemSubPredicate {
-    AttributeModifiers modifiers;
+    modifiers as AttributeModifiers;
 }
 
 data AttributeModifiers {
-    list<AttributePredicate>? contains;
-    (int | IntRange)? size;
-    list<AttributeCountPredicate>? count;
+    contains as list<AttributePredicate>?;
+    size as (int | IntRange)?;
+    count as list<AttributeCountPredicate>?;
 }
 
 data AttributeCountPredicate {
-    AttributePredicate test;
-    (int | IntRange) count;
+    test as AttributePredicate;
+    count as (int | IntRange);
 }
 
 data AttributePredicate {
-    (string | list<string>)? attribute;
-    list<string>? id;
-    (float | DecimalRange)? amount;
-    AttributeOperation? operation;
-    AttributeSlot? slot;
+    attribute as (string | list<string>)?;
+    id as list<string>?;
+    amount as (float | DecimalRange)?;
+    operation as AttributeOperation?;
+    slot as AttributeSlot?;
 }
 
 enum AttributeOperation {
@@ -44,47 +44,47 @@ enum AttributeSlot {
 }
 
 data BundleContentsPredicate: ItemSubPredicate {
-    ItemStackCompoundPredicate items;
+    items as ItemStackCompoundPredicate;
 }
 
 data ContainerPredicate: ItemSubPredicate {
-    ItemStackCompoundPredicate items;
+    items as ItemStackCompoundPredicate;
 }
 
 data ItemStackCompoundPredicate {
-    list<ItemStackPredicate> contains;
-    (int | IntRange)? size;
-    list<ItemStackCountPredicate>? count;
+    contains as list<ItemStackPredicate>;
+    size as (int | IntRange)?;
+    count as list<ItemStackCountPredicate>?;
 }
 
 data ItemStackPredicate {
-    dict<ItemComponent>? components;
-    (int | IntRange)? count;
-    (string | list<string>)? items;
-    dict<nbt>? predicates;
+    components as dict<ItemComponent>?;
+    count as (int | IntRange)?;
+    items as (string | list<string>)?;
+    predicates as dict<nbt>?;
 }
 
 data ItemStackCountPredicate {
-    ItemStackPredicate test;
-    (int | IntRange) count;
+    test as ItemStackPredicate;
+    count as (int | IntRange);
 }
 
 data CustomDataPredicate {}
 
 data DamagePredicate: ItemSubPredicate {
-    (int | IntRange)? damage;
-    (int | IntRange)? durability;
+    damage as (int | IntRange)?;
+    durability as (int | IntRange)?;
 }
 
 data EnchantmentPredicate: ItemSubPredicate {
-    (string | list<string>) enchantments;
-    (int | IntRange) levels;
+    enchantments as (string | list<string>);
+    levels as (int | IntRange);
 }
 
 data FireworkExplosionPredicate: ItemSubPredicate {
-    FireworkShape? shape;
-    bool? hasTrail;
-    bool? hasTwinkle;
+    shape as FireworkShape?;
+    hasTrail as bool?;
+    hasTwinkle as bool?;
 }
 
 enum FireworkShape {
@@ -96,54 +96,54 @@ enum FireworkShape {
 }
 
 data FireworksPredicate {
-    FireworkExplosions explosions;
-    (int | IntRange)? flightDuration;
+    explosions as FireworkExplosions;
+    flightDuration as (int | IntRange)?;
 }
 
 data FireworkExplosions {
-    list<FireworkExplosionPredicate> contains;
-    (int | IntRange)? size;
-    list<FireworkExplosionCountPredicate>? count;
+    contains as list<FireworkExplosionPredicate>;
+    size as (int | IntRange)?;
+    count as list<FireworkExplosionCountPredicate>?;
 }
 
 data FireworkExplosionCountPredicate {
-    FireworkExplosionPredicate test;
-    (int | IntRange) count;
+    test as FireworkExplosionPredicate;
+    count as (int | IntRange);
 }
 
 data JukeboxPlayablePredicate: ItemSubPredicate {
-    (string | list<string>) songs;
+    songs as (string | list<string>);
 }
 
 data StoredEnchantments: ItemSubPredicate {
-    (string | list<string>) enchantments;
-    (int | IntRange) levels;
+    enchantments as (string | list<string>);
+    levels as (int | IntRange);
 }
 
 data TrimPredicate: ItemSubPredicate {
-    (string | list<string>) material;
-    (string | list<string>) pattern;
+    material as (string | list<string>);
+    pattern as (string | list<string>);
 }
 
 data WriteableBookContentPredicate: ItemSubPredicate {
-    PagePredicate pages;
+    pages as PagePredicate;
 }
 
 data WrittenBookContentPredicate: ItemSubPredicate {
-    PagePredicate pages;
-    string author;
-    string title;
-    (int | IntRange) generation;
-    bool resolved;
+    pages as PagePredicate;
+    author as string;
+    title as string;
+    generation as (int | IntRange);
+    resolved as bool;
 }
 
 data PagePredicate {
-    list<text>? contains;
-    (int | IntRange)? size;
-    list<PageCountPredicate>? count;
+    contains as list<text>?;
+    size as (int | IntRange)?;
+    count as list<PageCountPredicate>?;
 }
 
 data PageCountPredicate {
-    text test;
-    (int | IntRange) count;
+    test as text;
+    count as (int | IntRange);
 }

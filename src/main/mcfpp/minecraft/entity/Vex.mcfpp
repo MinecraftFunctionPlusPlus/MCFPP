@@ -1,14 +1,7 @@
 @MCFPPEntity
 data Vex: EntityData, CreatureData, AIMobData {
-    @Name<"BoundX">
-    int boundX;
-
-    @Name<"BoundY">
-    int boundY;
-
-    @Name<"BoundZ">
-    int boundZ;
-
-    @Name<"LifeTicks">
-    int lifeTicks;
+    @Name<"BoundX"> boundX as int;
+    @Name<"BoundY"> boundY as int;
+    @Name<"BoundZ"> boundZ as int;
+    @Name<"LifeTicks"> lifeTicks as int;
 }

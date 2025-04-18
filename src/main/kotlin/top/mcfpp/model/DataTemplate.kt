@@ -1,6 +1,7 @@
 package top.mcfpp.model
 
 import top.mcfpp.Project
+import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.*
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.field.GlobalField
@@ -37,6 +38,13 @@ open class DataTemplate : FieldContainer, CompoundData {
     private val reference: ArrayList<DataTemplate> = ArrayList()
 
     var alwaysDynamic: Boolean = false
+
+    /**
+     * 调用构造函数之前对成员进行初始化的部分
+     */
+    val preInit = HashMap<String, mcfppParser.ExpressionContext>()
+    val preInit2 = HashMap<String, Var<*>>()    //HashMap<String, MCFPPValue<*>>
+
 
     /**
      * 获取这个容器中变量应该拥有的前缀

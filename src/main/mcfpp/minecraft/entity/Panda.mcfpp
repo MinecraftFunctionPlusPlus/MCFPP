@@ -1,11 +1,12 @@
 @MCFPPEntity
 data Panda: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"HiddenGene">
-    PandaGene hiddenGene;
+    hiddenGene as PandaGene;
 
     @Name<"MainGene">
-    PandaGene mainGene;
+    mainGene as PandaGene;
 }
+
 
 enum PandaGene{
     normal, aggressive, lazy, worried, playful, weak, brown

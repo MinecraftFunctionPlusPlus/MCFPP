@@ -29,6 +29,10 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
         return compile(readOnlyArgs).invoke(normalArgs, caller)
     }
 
+    override fun paramCount(): Int {
+        return normalParams.size + readOnlyParams.size
+    }
+    
     override fun addParamsFromContext(ctx: mcfppParser.FunctionParamsContext) {
         val r = ctx.readOnlyParams().parameterList()
         val n = ctx.normalParams().parameterList()

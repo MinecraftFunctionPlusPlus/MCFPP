@@ -31,7 +31,7 @@ public class ItemPredicateData {
     }
 
 
-    @MNIFunction(caller = "ItemPredicate", normalParams = {"DamagePredicate value"}, returnType = "ItemPredicate")
+    @MNIFunction(caller = "ItemPredicate", normalParams = {"string id","ItemSubPredicate value"}, returnType = "ItemPredicate")
     public static void subPredicate(MCString id, DataTemplateObject value , DataTemplateObject caller, ValueWrapper<DataTemplateObject> re){
         NBTListConcrete list = DataTemplate.getField(caller, "parts");
         var obj = DataTemplate.newInstance("mcfpp.minecraft.item", "SubPredicatePart");

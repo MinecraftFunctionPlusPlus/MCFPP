@@ -1,17 +1,17 @@
 @MCFPPEntity
 data Dolphin: EntityData, CreatureData, AIMobData, GrowableData {
     @Name<"Moistness">
-    int moistness;
+    moistness as int;
 
     @Name<"GotFish">
-    byte gotFish;
+    gotFish as byte;
 
     @Name<"TreasurePosX">
-    int treasurePosX;
+    treasurePosX as int;
 
     @Name<"TreasurePosY">
-    int treasurePosY;
+    treasurePosY as int;
 
     @Name<"TreasurePosZ">
-    int treasurePosZ;
+    treasurePosZ as int;
 }

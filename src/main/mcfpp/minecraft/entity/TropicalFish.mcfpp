@@ -1,8 +1,5 @@
 @MCFPPEntity
 data TropicalFish: EntityData, CreatureData, AIMobData {
-    @Name<"FromBucket">
-    bool fromBucket;
-
-    @Name<"Variant">
-    int variant;
+    @Name<"FromBucket"> fromBucket as bool;
+    @Name<"Variant"> variant as int;
 }

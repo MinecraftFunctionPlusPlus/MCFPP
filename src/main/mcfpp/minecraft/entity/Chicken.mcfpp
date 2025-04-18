@@ -1,8 +1,8 @@
 @MCFPPEntity
 data Chicken: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"EggLayTime">
-    int eggLayTime;
+    eggLayTime as int;
 
     @Name<"IsChickenJockey">
-    bool isChickenJockey;
+    isChickenJockey as bool;
 }

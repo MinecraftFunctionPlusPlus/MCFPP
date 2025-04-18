@@ -1,19 +1,19 @@
 @MCFPPEntity
-data Fox: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
+data Fox : EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"Crouching">
-    bool crouching;
+    crouching as bool;
 
     @Name<"Sitting">
-    bool sitting;
+    sitting as bool;
 
     @Name<"Sleeping">
-    bool sleeping;
+    sleeping as bool;
 
     @Name<"Trusted">
-    list<IntArray> trusted;
+    trusted as list<IntArray>;
 
     @Name<"Type">
-    FoxType type;
+    type as FoxType;
 }
 
 enum FoxType {

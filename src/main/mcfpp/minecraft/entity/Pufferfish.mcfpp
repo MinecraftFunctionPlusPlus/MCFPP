@@ -1,8 +1,5 @@
 @MCFPPEntity
 data Pufferfish: EntityData, CreatureData, AIMobData {
-    @Name<"FromBucket">
-    bool fromBucket;
-
-    @Name<"PuffState">
-    int puffState;
+    @Name<"FromBucket"> fromBucket as bool;
+    @Name<"PuffState"> puffState as int;
 }

@@ -237,6 +237,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             MCFPPBaseType.JsonText,
             MCFPPBaseType.Pos2,
             MCFPPBaseType.Pos3,
+            MCFPPBaseType.Range,
 
             MCFPPNBTType.NBT,
             MCFPPNBTType.Byte,
@@ -272,34 +273,6 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             "map" to MCFPPMapType::class,
             "ImmutableList" to MCFPPImmutableListType::class,
         )
-
-        val baseType:Set<MCFPPType> = setOf(
-            MCFPPBaseType.Void,
-            MCFPPConcreteType.Type,
-            MCFPPBaseType.Int,
-            MCFPPBaseType.Bool,
-            MCFPPBaseType.String,
-            MCFPPBaseType.Float,
-            MCFPPBaseType.Any,
-            MCFPPEntityType.EntityBase,
-            MCFPPConcreteType.JavaVar,
-            MCFPPBaseType.JsonText,
-            MCFPPNBTType.NBT
-        )
-
-        ///**
-        // * 注册一个类型
-        // *
-        // * @param predicate 判断字符串是否满足条件
-        // * @param typeParser 从字符串中解析类型
-        // *
-        // */
-        //fun registerType(
-        //    predicate:(String)->Boolean,
-        //    typeParser:(String)->MCFPPType
-        //){
-        //    genericTypeCache.add(predicate to typeParser)
-        //}
 
         /**
          * 将这个类型注册入缓存

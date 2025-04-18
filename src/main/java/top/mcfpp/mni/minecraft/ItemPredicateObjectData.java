@@ -24,7 +24,7 @@ public class ItemPredicateObjectData {
     }
 
 
-    @MNIFunction(caller = "ItemPredicate", normalParams = {"DamagePredicate value"}, returnType = "ItemPredicatePart")
+    @MNIFunction(caller = "ItemPredicate", normalParams = {"string id","ItemSubPredicate value"}, returnType = "ItemPredicate")
     public static void subPredicate(MCString id, DataTemplateObject value , DataTemplateObject caller, ValueWrapper<DataTemplateObject> re){
         re.set(DataTemplate.newInstance("mcfpp.minecraft.item", "SubPredicatePart"));
     }

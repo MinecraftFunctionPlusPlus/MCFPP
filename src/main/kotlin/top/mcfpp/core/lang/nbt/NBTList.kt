@@ -31,6 +31,7 @@ import top.mcfpp.util.TextTranslator.translate
 open class NBTList : NBTBasedData {
 
     final override var type: MCFPPType
+        get() = (field as? MCFPPDeclaredConcreteType)?.type ?: field
 
     var genericType: MCFPPType
 
@@ -399,6 +400,10 @@ class NBTListConcrete: NBTList, PartialConcreteValue<ListTag, ArrayList<Var<*>>>
 
     override fun getConcretePart(): ListTag {
         return ListTag(value.map { NBTUtil.valueToNBT((it as MCFPPValue<*>).value) })
+    }
+
+    override fun getNotConcretePart(): ArrayList<Var<*>> {
+        return ArrayList(value.filter { it !is MCFPPValue<*> })
     }
 
     companion object {

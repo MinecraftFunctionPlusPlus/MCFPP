@@ -18,7 +18,6 @@ import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lib.Execute
-import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.Class
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.Namespace
@@ -122,81 +121,53 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Project.ctx = ctx
         //变量生成
         val fieldModifier = ctx.fieldModifier()?.text
-        if(ctx.VAR() != null){
-            //自动判断类型
-            val init: Var<*> = MCFPPExprVisitor().visitExpression(ctx.expression())
-            var `var` = if(fieldModifier == "import"){
-                val qwq = init.type.buildUnConcrete(ctx.Identifier().text, Function.currFunction)
-                qwq.hasAssigned = true
-                qwq
-            }else{
-                init.type.build(ctx.Identifier().text, Function.currFunction)
-            }
-            `var`.nbtPath = NBTPath.getNormalStackPath(`var`)
-            //变量赋值
-            `var` = `var`.assignedBy(init)
-            //一定是函数变量
-            if (!Function.currField.putVar(ctx.Identifier().text, `var`, false)) {
-                LogProcessor.error("Duplicate defined variable name:" + ctx.Identifier().text)
-            }
-            when(fieldModifier){
-                "const" -> {
-                    if(!`var`.hasAssigned){
-                        LogProcessor.error("The const field ${`var`.identifier} must be initialized.")
-                    }
-                    `var`.isConst = true
-                }
-                "dynamic" -> {
-                    if(`var` is MCFPPValue<*>){
-                        `var`.toDynamic(true)
-                    }
-                }
-            }
-        }else{
-            //获取类型
-            val type = MCFPPType.parseFromContext(ctx.type(), Function.currFunction.field)?: run {
-                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
+        //只有类字段构建
+        var type = ctx.type()?.let { MCFPPType.parseFromContext(it, Function.currFunction.field)?: run {
+                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(it.text))
                 MCFPPBaseType.Any
             }
-            for (c in ctx.fieldDeclarationExpression()){
-                //函数变量，生成
-                var `var` = if(fieldModifier == "import"){
-                    val qwq = type.buildUnConcrete(c.Identifier().text, Function.currFunction)
-                    qwq.hasAssigned = true
-                    qwq
-                }else{
-                    type.build(c.Identifier().text, Function.currFunction)
+        }
+        var init: Var<*>? = null
+        if (ctx.expression() != null) {
+            Function.addComment(ctx.text)
+            init = MCFPPExprVisitor().visit(ctx.expression())!!
+        }
+        //类型推断
+        if(type == null && init == null){
+            LogProcessor.error("Variable ${ctx.Identifier().text} must have a type or an initializer")
+            return null to null
+        }else if(type == null){
+            type = init!!.type
+        }
+        var `var` = if(fieldModifier == "import"){
+            val qwq = type.buildUnConcrete(ctx.Identifier().text, Function.currFunction)
+            qwq.hasAssigned = true
+            qwq
+        }else{
+            type.build(ctx.Identifier().text, Function.currFunction)
+        }
+        if(init != null){
+            //变量赋值
+            `var` = `var`.assignedBy(init)
+        }
+        //一定是函数变量
+        if (!Function.currField.containVar(ctx.Identifier().text)) {
+            LogProcessor.error("Duplicate defined variable name:" + ctx.Identifier().text)
+        }
+        when(fieldModifier){
+            "const" -> {
+                if(!`var`.hasAssigned){
+                    LogProcessor.error("The const field ${`var`.identifier} must be initialized.")
                 }
-                //变量注册
-                //一定是函数变量
-                if (Function.currField.containVar(c.Identifier().text)) {
-                    LogProcessor.error("Duplicate defined variable name:" + c.Identifier().text)
+                `var`.isConst = true
+            }
+            "dynamic" -> {
+                if(`var` is MCFPPValue<*>){
+                    `var`.toDynamic(true)
                 }
-                Function.addComment("field: " + ctx.type().text + " " + c.Identifier().text + if (c.expression() != null) " = " + c.expression().text else "")
-                `var`.nbtPath = NBTPath.getNormalStackPath(`var`)
-                //变量初始化
-                if (c.expression() != null) {
-                    val init: Var<*> = MCFPPExprVisitor(if(type is MCFPPGenericClassType) type else null, if(type is MCFPPEnumType) type else null).visitExpression(c.expression())
-                    `var` = `var`.assignedBy(init)
-                }
-                when(fieldModifier){
-                    "const" -> {
-                        if(!`var`.hasAssigned){
-                            LogProcessor.error("The const field ${`var`.identifier} must be initialized.")
-                        }
-                        `var`.isConst = true
-                    }
-                    "dynamic" -> {
-                        if(`var` is MCFPPValue<*> && `var`.hasAssigned){
-                            `var` = `var`.toDynamic(false)
-                        }else if(`var` is MCFPPValue<*>){
-                            `var` = type.buildUnConcrete(c.Identifier().text, Function.currFunction)
-                        }
-                    }
-                }
-                Function.currField.putVar(`var`.identifier, `var`, true)
             }
         }
+        Function.currField.putVar(`var`.identifier, `var`, true)
         return null
     }
 
@@ -971,7 +942,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
     private lateinit var currProperty: Property
     override fun visitClassFieldDeclaration(ctx: mcfppParser.ClassFieldDeclarationContext): Any? {
-        val id = ctx.fieldDeclarationExpression().Identifier().text
+        val id = ctx.Identifier().text
         currProperty = Class.currClass!!.field.getProperty(id)!!
         return super.visitClassFieldDeclaration(ctx)
     }

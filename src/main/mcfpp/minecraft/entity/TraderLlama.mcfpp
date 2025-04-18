@@ -1,32 +1,4 @@
 @MCFPPEntity
-data TraderLlama {
-    @Name<"Bred">
-    byte bred;
-
-    @Name<"ChestedHorse">
-    byte chestedHorse;
-
-    @Name<"DespawnDelay">
-    int despawnDelay;
-
-    @Name<"EatingHaystack">
-    byte eatingHaystack;
-
-    @Name<"Items">
-    list<Item> items;
-
-    @Name<"Owner">
-    IntArray owner;
-
-    @Name<"Strength">
-    int Strength;
-
-    @Name<"Tame">
-    byte tame;
-
-    @Name<"Temper">
-    int temper;
-
-    @Name<"Variant">
-    int variant;
+data TraderLlama: Llama {
+    @Name<"DespawnDelay"> despawnDelay as int;
 }

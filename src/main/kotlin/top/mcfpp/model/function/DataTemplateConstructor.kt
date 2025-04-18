@@ -1,5 +1,6 @@
 package top.mcfpp.model.function
 
+import top.mcfpp.antlr.MCFPPExprVisitor
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.antlr.mcfppParser.FunctionBodyContext
 import top.mcfpp.core.lang.DataTemplateObject
@@ -50,6 +51,12 @@ class DataTemplateConstructor(val data: DataTemplate, ctx: FunctionBodyContext?)
         if(ast == null) return caller as DataTemplateObject
         field.putVar("this", caller as DataTemplateObject, true)
         normalArgs.add(0, caller)
+        //初始化
+        for ((k, v) in data.preInit) {
+            val init = MCFPPExprVisitor().visitExpression(v)
+            val field = DataTemplate.getField(caller, k)!!
+            field.replacedBy(field.assignedBy(init))
+        }
         super.invoke(normalArgs, caller as CanSelectMember?)
         return caller
     }

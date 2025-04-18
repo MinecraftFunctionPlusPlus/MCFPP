@@ -1,5 +1,5 @@
 data Item {
-    string id;
-    int count;
-    dict<ItemComponent> components;   
+    id as string;
+    count as int;
+    components as dict<ItemComponent>;
 }

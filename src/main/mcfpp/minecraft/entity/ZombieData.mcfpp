@@ -1,13 +1,6 @@
 data ZombieData {
-    @Name<"CanBreakDoors">
-    bool canBreakDoors;
-
-    @Name<"DrownedConversionTime">
-    int drownedConversionTime;
-
-    @Name<"InWaterTime">
-    int inWaterTime;
-
-    @Name<"IsBaby">
-    bool isBaby;
+    @Name<"CanBreakDoors"> canBreakDoors as bool;
+    @Name<"DrownedConversionTime"> drownedConversionTime as int;
+    @Name<"InWaterTime"> inWaterTime as int;
+    @Name<"IsBaby"> isBaby as bool;
 }

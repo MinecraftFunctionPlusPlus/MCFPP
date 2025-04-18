@@ -6,6 +6,8 @@ object TempPool {
 
     var functionCount = 0
 
+    var functionParam = 0
+
     var anonymousTemplateCount = 0
 
     var namespaceCount = 0
@@ -44,5 +46,14 @@ object TempPool {
     @JvmStatic
     fun getNamespaceIdentify(): String {
         return "namespace_${nextNamespaceID()}"
+    }
+
+    private fun nextFunctionParamID(): Int {
+        return functionParam++
+    }
+
+    @JvmStatic
+    fun getFunctionParamIdentify(): String {
+        return "p${nextFunctionParamID()}"
     }
 }

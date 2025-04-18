@@ -1,8 +1,8 @@
 @MCFPPEntity
 data MagmaCube: EntityData, CreatureData, AIMobData {
     @Name<"Size">
-    int size;
+    size as int;
 
     @Name<"WasOnGround">
-    bool wasOnGround;
+    wasOnGround as bool;
 }

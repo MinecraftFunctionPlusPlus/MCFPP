@@ -1,9 +1,9 @@
 data DecimalRange {
-    float? min;
-    float? max;
+    min as float?;
+    max as float?;
 }
 
 data IntRange {
-    int? min;
-    int? max;
+    min as int?;
+    max as int?;
 }

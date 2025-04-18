@@ -209,6 +209,10 @@ class NativeFunction : Function, Native {
         }
     }
 
+    override fun paramCount(): Int {
+        return normalParams.size + readOnlyParams.size
+    }
+
     override fun hashCode(): Int {
         var result = super.hashCode()
         result = 31 * result + javaMethod.hashCode()

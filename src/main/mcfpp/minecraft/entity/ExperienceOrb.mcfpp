@@ -1,14 +1,14 @@
 @MCFPPEntity
 data ExperienceOrb {
     @Name<"Age">
-    short age;
+    age as short;
 
     @Name<"Count">
-    int count;
+    count as int;
 
     @Name<"Health">
-    short health;
+    health as short;
 
     @Name<"Value">
-    short value;
+    value as short;
 }

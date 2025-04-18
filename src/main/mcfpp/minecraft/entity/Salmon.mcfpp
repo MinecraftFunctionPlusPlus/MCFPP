@@ -1,10 +1,7 @@
 @MCFPPEntity
-data Salmon: EntityData, CreatureData, AIMobData{
-    @Name<"FromBucket">
-    bool fromBucket;
-
-    @Name<"Type">
-    SalmonType type;
+data Salmon: EntityData, CreatureData, AIMobData {
+    @Name<"FromBucket"> fromBucket as bool;
+    @Name<"Type"> type as SalmonType;
 }
 
 enum SalmonType {

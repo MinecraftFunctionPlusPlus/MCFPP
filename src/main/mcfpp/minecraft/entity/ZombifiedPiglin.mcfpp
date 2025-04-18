@@ -1,4 +1,4 @@
 @MCFPPEntity
 data ZombifiedPiglin: EntityData, CreatureData, AIMobData {
-    bool isBaby;
+    isBaby as bool;
 }

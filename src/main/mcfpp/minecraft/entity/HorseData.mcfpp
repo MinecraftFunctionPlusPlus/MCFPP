@@ -1,19 +1,20 @@
+@MCFPPEntity
 data HorseData {
     @Name<"Bred">
-    bool bred;
+    bred as bool;
 
     @Name<"EatingHaystack">
-    bool eatingHaystack;
+    eatingHaystack as bool;
 
     @Name<"Owner">
-    IntArray owner;
+    owner as IntArray;
 
     @Name<"SaddleItem">
-    Item saddleItem;
+    saddleItem as Item;
 
     @Name<"Tame">
-    bool tame;
+    tame as bool;
 
     @Name<"Temper">
-    int temper;    
+    temper as int;
 }

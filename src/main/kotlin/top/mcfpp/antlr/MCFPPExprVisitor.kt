@@ -256,7 +256,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     @Override
     override fun visitCastExpression(ctx: mcfppParser.CastExpressionContext): Var<*> {
         Project.ctx = ctx
-        val a: Var<*> = visitUnaryExpression(ctx.unaryExpression())
+        val a: Var<*> = visitRightVarExpression(ctx.rightVarExpression())
         return a.explicitCast(MCFPPType.parseFromString(ctx.type().text, Function.currFunction.field)?: run {
             LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
             MCFPPBaseType.Any

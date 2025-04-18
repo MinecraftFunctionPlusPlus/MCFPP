@@ -2,155 +2,63 @@ import mcfpp.minecraft.other:*;
 
 @MCFPPEntity
 data Player: EntityData, CreatureData {
-
-    @Name<"DataVersion">
-    int dataVersion;
-
-    @Name<"Abilities">
-    data {
-        @Name<"Flying">
-        bool flying;
-
-        @Name<"FlySpeed">
-        float flySpeed;
-
-        @Name<"Instabuild">
-        bool instabuild;
-
-        @Name<"Invulnerable">
-        bool invulnerable;
-
-        @Name<"MayBuild">
-        bool mayBuild;
-
-        @Name<"MayFly">
-        bool mayFly;
-
-        @Name<"WalkSpeed">
-        float walkSpeed;
-    } abilities;
-
-    @Name<"current_explosion_impact_pos">
-    list<double> currentExplosionImpactPos;
-
-    @Name<"current_impulse_context_reset_grace_time">
-    int currentImpulseContextResetGraceTime;
-
-    @Name<"Dimension">
-    string dimension;
-
-    @Name<"ender_pearls">
-    list<data: EnderPearl {
-        @Name<"ender_pearl_dimension">
-        string enderPearlDimension;
-    }> enderPearls;
-
-    @Name<"EnderItems">
-    list<Item> enderItems;
-
-    list<double> enteredNetherPosition;
-
-    float foodExhaustionLevel;
-
-    int foodLevel;
-
-    float foodSaturationLevel;
-
-    int foodTickTimer;
-
-    @Name<"ignore_fall_damage_from_current_explosion">
-    bool ignoreFallDamageFromCurrentExplosion;
-
-    @Name<"Inventory">
-    list<Item> inventory;
-
-    @Name<"LastDeathLocation">
-    data {
-        string dimension;
-        IntArray pos;
-    } lastDeathLocation;
-
-    int playerGameType;
-
-    int previousplayerGameType;
-
-    @Name<"raid_omen_position">
-    IntArray raidOmenPosition;
-
-    @Name<"RecipeBook">
-    list<RecipeBook> recipeBook;
-
-    @Name<"RootVehicle">
-    data {
-        @Name<"Attach">
-        IntArray attach;
-
-        @Name<"Entity">
-        EntityData _entity;
-    } rootVehicle;
-
-    @Name<"Score">
-    int score;
-
-    byte seenCredits;
-
-    @Name<"SelectedItem">
-    Item selectedItem;
-
-    @Name<"SelectedItemSlot">
-    int selectedItemSlot;
-
-    @Name<"ShoulderEntityLeft">
-    EntityData shoulderEntityLeft;
-
-    @Name<"ShoulderEntityRight">
-    EntityData shoulderEntityRight;
-
-    @Name<"SleepTimer">
-    short sleepTimer;
-
-    @Name<"spawn_extra_particles_on_fall">
-    bool spawnExtraParticlesOnFall;
-
-    @Name<"SpawnAngle">
-    float spawnAngle;
-
-    @Name<"SpawnDimension">
-    string spawnDimension;
-
-    @Name<"SpawnForced">
-    bool spawnForced;
-
-    @Name<"SpawnX">
-    int spawnX;
-
-    @Name<"SpawnY">
-    int spawnY;
-
-    @Name<"SpawnZ">
-    int spawnZ;
-
-    @Name<"warden_spawn_tracker">
-    data {
-        @Name<"cooldown_ticks">
-        int cooldownTicks;
-
-        @Name<"ticks_since_last_warning">
-        int ticksSinceLastWarning;
-
-        @Name<"warning_level">
-        int warningLevel;
-    } wardenSpawnTracker;
-
-    @Name<"XpLevel">
-    int xpLevel;
-
-    @Name<"XpP">
-    float xpP;
-
-    @Name<"XpSeed">
-    int xpSeed;
-
-    @Name<"XpTotal">
-    int xpTotal;
+    @Name<"DataVersion"> dataVersion as int;
+    @Name<"Abilities"> abilities as data {
+        @Name<"Flying"> flying as bool;
+        @Name<"FlySpeed"> flySpeed as float;
+        @Name<"Instabuild"> instabuild as bool;
+        @Name<"Invulnerable"> invulnerable as bool;
+        @Name<"MayBuild"> mayBuild as bool;
+        @Name<"MayFly"> mayFly as bool;
+        @Name<"WalkSpeed"> walkSpeed as float;
+    };
+    @Name<"current_explosion_impact_pos"> currentExplosionImpactPos as list<double>;
+    @Name<"current_impulse_context_reset_grace_time"> currentImpulseContextResetGraceTime as int;
+    @Name<"Dimension"> dimension as string;
+    @Name<"ender_pearls"> enderPearls as list<data: EnderPearl {
+        @Name<"ender_pearl_dimension"> enderPearlDimension as string;
+    }>;
+    @Name<"EnderItems"> enderItems as list<Item>;
+    enteredNetherPosition as list<double>;
+    foodExhaustionLevel as float;
+    foodLevel as int;
+    foodSaturationLevel as float;
+    foodTickTimer as int;
+    @Name<"ignore_fall_damage_from_current_explosion"> ignoreFallDamageFromCurrentExplosion as bool;
+    @Name<"Inventory"> inventory as list<Item>;
+    @Name<"LastDeathLocation"> lastDeathLocation as data {
+        dimension as string;
+        pos as IntArray;
+    };
+    playerGameType as int;
+    previousplayerGameType as int;
+    @Name<"raid_omen_position"> raidOmenPosition as IntArray;
+    @Name<"RecipeBook"> recipeBook as list<RecipeBook>;
+    @Name<"RootVehicle"> rootVehicle as data {
+        @Name<"Attach"> attach as IntArray;
+        @Name<"Entity"> _entity as EntityData;
+    };
+    @Name<"Score"> score as int;
+    seenCredits as byte;
+    @Name<"SelectedItem"> selectedItem as Item;
+    @Name<"SelectedItemSlot"> selectedItemSlot as int;
+    @Name<"ShoulderEntityLeft"> shoulderEntityLeft as EntityData;
+    @Name<"ShoulderEntityRight"> shoulderEntityRight as EntityData;
+    @Name<"SleepTimer"> sleepTimer as short;
+    @Name<"spawn_extra_particles_on_fall"> spawnExtraParticlesOnFall as bool;
+    @Name<"SpawnAngle"> spawnAngle as float;
+    @Name<"SpawnDimension"> spawnDimension as string;
+    @Name<"SpawnForced"> spawnForced as bool;
+    @Name<"SpawnX"> spawnX as int;
+    @Name<"SpawnY"> spawnY as int;
+    @Name<"SpawnZ"> spawnZ as int;
+    @Name<"warden_spawn_tracker"> wardenSpawnTracker as data {
+        @Name<"cooldown_ticks"> cooldownTicks as int;
+        @Name<"ticks_since_last_warning"> ticksSinceLastWarning as int;
+        @Name<"warning_level"> warningLevel as int;
+    };
+    @Name<"XpLevel"> xpLevel as int;
+    @Name<"XpP"> xpP as float;
+    @Name<"XpSeed"> xpSeed as int;
+    @Name<"XpTotal"> xpTotal as int;
 }

@@ -2,12 +2,9 @@ package top.mcfpp.mni;
 
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.core.lang.JsonTextConcrete;
-import top.mcfpp.core.lang.MCInt;
-import top.mcfpp.core.lang.nbt.MCString;
 import top.mcfpp.core.lang.nbt.MCStringConcrete;
 import top.mcfpp.lib.ListChatComponent;
 import top.mcfpp.lib.PlainChatComponent;
-import top.mcfpp.lib.ScoreChatComponent;
 import top.mcfpp.util.ValueWrapper;
 
 public class MCStringConcreteData {

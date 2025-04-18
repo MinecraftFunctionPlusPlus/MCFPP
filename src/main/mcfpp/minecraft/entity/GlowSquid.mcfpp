@@ -1,5 +1,5 @@
 @MCFPPEntity
 data GlowSquid: EntityData, CreatureData, AIMobData, GrowableData {
     @Name<"DarkTicksRemaining">
-    int darkTicksRemaining;
+    darkTicksRemaining as int;
 }

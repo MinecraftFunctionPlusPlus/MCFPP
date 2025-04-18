@@ -1,10 +1,10 @@
-func print(int i) = top.mcfpp.mni.System.print;
-func print(bool b) = top.mcfpp.mni.System.print;
-func print(any a) = top.mcfpp.mni.System.print;
+func print(int) = top.mcfpp.mni.System.print;
+func print(bool) = top.mcfpp.mni.System.print;
+func print(any) = top.mcfpp.mni.System.print;
 
-#func insert(string i) = top.mcfpp.mni.System.insert;
+#func insert(string) = top.mcfpp.mni.System.insert;
 func debug() = top.mcfpp.mni.System.debug;
 
-func info(string s) = top.mcfpp.mni.System.info;
-func warn(string s) = top.mcfpp.mni.System.warn;
-func error(string s) = top.mcfpp.mni.System.error;
+func info(string) = top.mcfpp.mni.System.info;
+func warn(string) = top.mcfpp.mni.System.warn;
+func error(string) = top.mcfpp.mni.System.error;

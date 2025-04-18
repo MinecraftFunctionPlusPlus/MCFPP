@@ -17,7 +17,7 @@ import top.mcfpp.util.StringHelper.splitNamespaceID
 
 class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
 
-    val annotationCache = ArrayList<Annotation>()
+    private val annotationCache = ArrayList<Annotation>()
 
     override fun visitAnnotation(ctx: mcfppParser.AnnotationContext?) {
         Project.ctx = ctx
@@ -58,7 +58,7 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
         template.annotations.addAll(annotationCache)
         annotationCache.clear()
         DataTemplate.currTemplate = template
-        visitTemplateBody(ctx.templateBody())
+        ctx.templateBody()?.let { visitTemplateBody(it) }
         DataTemplate.currTemplate = null
     }
 
@@ -77,7 +77,7 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
         objectTemplate.annotations.addAll(annotationCache)
         annotationCache.clear()
         DataTemplate.currTemplate = objectTemplate
-        visitTemplateBody(ctx.templateBody())
+        ctx.templateBody()?.let { visitTemplateBody(it) }
         DataTemplate.currTemplate = null
     }
 
@@ -142,7 +142,7 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
     override fun visitClassFieldDeclaration(ctx: mcfppParser.ClassFieldDeclarationContext?) {
         Project.ctx = ctx
         //获取字段对象
-        val field = Class.currClass!!.field.getVar(ctx!!.fieldDeclarationExpression().Identifier().text)!!
+        val field = Class.currClass!!.field.getVar(ctx!!.Identifier().text)!!
         annotationCache.forEach {
             it.on(field)
         }

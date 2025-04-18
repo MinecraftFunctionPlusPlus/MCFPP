@@ -1,20 +1,20 @@
 @MCFPPEntity
 data Item {
     @Name<"Age">
-    short age;
+    age as short;
 
     @Name<"Health">
-    short health;
+    health as short;
 
     @Name<"Item">
-    list<Item> item;
+    item as list<Item>;
 
     @Name<"Owner">
-    IntArray owner;
+    owner as IntArray;
 
     @Name<"PickupDelay">
-    short pickupDelay;
+    pickupDelay as short;
 
     @Name<"Thrower">
-    IntArray thrower;
+    thrower as IntArray;
 }

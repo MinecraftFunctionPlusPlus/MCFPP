@@ -2,47 +2,47 @@
 data ArmorStand: EntityData, CreatureData {
 
     @Name<"ArmorItems">
-    list<Item> armorItems;
+    armorItems as list<Item>;
 
     @Name<"DisabledSlots">
-    int disabledslots;
+    disabledslots as int;
 
     @Name<"HandItems">
-    list<Item> handItems;
+    handItems as list<Item>;
 
     @Name<"Invisible">
-    bool invisible;
+    invisible as bool;
 
     @Name<"Marker">
-    bool marker;
+    marker as bool;
 
     @Name<"NoBasePlate">
-    bool noBasePlate;
+    noBasePlate as bool;
 
     @Name<"Pose">
-    data {
+    pose as data {
         @Name<"Body">
-        list<float> body;
+        body as list<float>;
 
         @Name<"Head">
-        list<float> head;
+        head as list<float>;
 
         @Name<"LeftArm">
-        list<float> leftArm;
+        leftArm as list<float>;
 
         @Name<"LeftLeg">
-        list<float> leftLeg;
+        leftLeg as list<float>;
 
         @Name<"RightArm">
-        list<float> rightArm;
+        rightArm as list<float>;
 
         @Name<"RightLeg">
-        list<float> rightLeg;
-    } pose;
+        rightLeg as list<float>;
+    };
 
     @Name<"ShowArms">
-    bool showArms;
+    showArms as bool;
 
     @Name<"Small">
-    bool small;
+    small as bool;
 }

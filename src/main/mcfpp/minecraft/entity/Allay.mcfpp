@@ -1,43 +1,43 @@
 @MCFPPEntity
 data Allay: EntityData, AIMobData, CreatureData {
     @Name<"CanDuplicate">
-    byte canDuplicate;
+    canDuplicate as byte;
 
     @Name<"DuplicationCooldown">
-    long duplicationCooldown;
+    duplicationCooldown as long;
 
     @Name<"Inventory">
-    list<Item> inventory;
+    inventory as list<Item>;
 
     @Name<"Listener">
-    Listener listener;
+    listener as Listener;
 }
 
 data Listener {
-    data {
-        float distance;
+    event as data {
+        distance as float;
         @Name<"game_event">
-        string gameEvent;
+        gameEvent as string;
         
-        list<double> pos;
+        pos as list<double>;
         
         @Name<"projectile_owner">
-        IntArray projectileOwner;
-        IntArray source;
-    } event;
+        projectileOwner as IntArray;
+        source as IntArray;
+    };
     @Name<"event_delay">
-    int eventDelay;
+    eventDelay as int;
     @Name<"selector">
-    data {
-        long tick;
-        data {
-            float distance;
+    _selector as data {
+        tick as long;
+        event as data {
+            distance as float;
             @Name<"game_event">
-            string gameEvent;
-            list<double> pos;
+            gameEvent as string;
+            pos as list<double>;
             @Name<"projectile_owner">
-            IntArray projectileOwner;
-            IntArray source;
-        } event;
-    } _selector;
+            projectileOwner as IntArray;
+            source as IntArray;
+        };
+    };
 }

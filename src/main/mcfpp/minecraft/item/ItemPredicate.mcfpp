@@ -2,39 +2,39 @@
 data ItemPredicatePart;
 
 data ContainPart: ItemPredicatePart {
-    string predicate;
+    predicate as string;
 }
 
 data MatchPart: ItemPredicatePart {
-    string predicate;
-    nbt value;
+    predicate as string;
+    value as nbt;
 }
 
 data SubPredicatePart: ItemPredicatePart {
-    string predicate;
-    nbt value;
+    predicate as string;
+    value as nbt;
 }
 
 data CountPart: ItemPredicatePart;
 
-data CountMatchPart: ItemPredicatePart{
-    int count;
+data CountMatchPart: ItemPredicatePart {
+    count as int;
 }
 
-data CountRangePart: ItemPredicatePart{
-    range count;
+data CountRangePart: ItemPredicatePart {
+    count as range;
 }
 
 data NotItemPredicate: ItemPredicatePart {
-    ItemPredicate predicate;
+    predicate as ItemPredicate;
 }
 
 #{
 由一个`|`隔开的两个测试项组成的测试项，两个测试项的关系为或
 }#
 data OrItemPredicatePart: ItemPredicatePart {
-    ItemPredicate predicate1;
-    ItemPredicate predicate2;
+    predicate1 as ItemPredicate;
+    predicate2 as ItemPredicate;
 }
 
 #========================物品谓词=====================
@@ -43,7 +43,7 @@ data OrItemPredicatePart: ItemPredicatePart {
 }#
 @From<"top.mcfpp.mni.minecraft.ItemPredicateData">
 data ItemPredicate {
-    list<ItemPredicatePart>! parts = [];
+    parts as list<ItemPredicatePart>! = [];
 }
 
 @From<"top.mcfpp.mni.minecraft.ItemPredicateObjectData">

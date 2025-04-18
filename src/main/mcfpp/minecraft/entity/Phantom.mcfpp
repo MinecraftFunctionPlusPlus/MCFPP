@@ -1,14 +1,14 @@
 @MCFPPEntity
 data Phantom: EntityData, CreatureData, AIMobData {
     @Name<"AX">
-    int ax;
+    ax as int;
 
     @Name<"AY">
-    int ay;
+    ay as int;
 
     @Name<"AZ">
-    int az;
+    az as int;
 
     @Name<"Size">
-    int size;
+    size as int;
 }

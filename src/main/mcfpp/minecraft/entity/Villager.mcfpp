@@ -1,45 +1,25 @@
 @MCFPPEntity
 data Villager: EntityData, CreatureData, AIMobData, GrowableData {
+    @Name<"AssignProfessionWhenSpawned"> assignProfessionWhenSpawned as bool;
+    @Name<"FoodLevel"> foodLevel as byte;
+    @Name<"Inventory"> inventory as list<Item>;
+    @Name<"Gossips"> gossips as list<VillagerGossip>;
+    @Name<"LastRestock"> lastRestock as long;
+    @Name<"LastGossipDecay"> lastGossipDecay as long;
 
-    @Name<"AssignProfessionWhenSpawned">
-    bool assignProfessionWhenSpawned;
+    @Name<"Offers"> offers as data {
+        @Name<"Recipes"> recipes as list<VillagerRecipe>;
+    };
 
-    @Name<"FoodLevel">
-    byte foodLevel;
+    @Name<"RestocksToday"> restocksToday as int;
 
-    @Name<"Inventory">
-    list<Item> inventory;
+    @Name<"VillagerData"> villagerData as data {
+        level as int;
+        profession as string;
+        type as string;
+    };
 
-    @Name<"Gossips">
-    list<VillagerGossip> gossips;
-
-    @Name<"LastRestock">
-    long lastRestock;
-
-    @Name<"LastGossipDecay">
-    long lastGossipDecay;
-
-    @Name<"Offers">
-    data {
-        @Name<"Recipes">
-        list<VillagerRecipe> recipes;
-    } offers;
-
-    @Name<"RestocksToday">
-    int restocksToday;
-
-    @Name<"VillagerData">
-    data {
-        int level;
-
-        string profession;
-
-        string type;
-    } villagerData;
-
-    @Name<"Xp">
-    int xp;
-
+    @Name<"Xp"> xp as int;
 }
 
 enum GossipType {
@@ -51,26 +31,26 @@ enum GossipType {
 }
 
 data VillagerGossip {
-    IntArray target;
-    GossipType type;
-    int value;
+    target as IntArray;
+    type as GossipType;
+    value as int;
 }
 
 data VillagerRecipe {
-    data {
-        string id;
-        nbt components;
-    } buy;
-    data {
-        string id;
-        nbt components;
-    } buyB;
-    int demand;
-    int maxUses;
-    float priceMultiplier;
-    bool rewardExp;
-    Item sell;
-    int specialPrice;
-    int uses;
-    int xp;
+    buy as data {
+        id as string;
+        components as nbt;
+    };
+    buyB as data {
+        id as string;
+        components as nbt;
+    };
+    demand as int;
+    maxUses as int;
+    priceMultiplier as float;
+    rewardExp as bool;
+    sell as Item;
+    specialPrice as int;
+    uses as int;
+    xp as int;
 }

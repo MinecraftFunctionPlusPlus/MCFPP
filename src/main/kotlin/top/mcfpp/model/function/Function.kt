@@ -470,6 +470,10 @@ open class Function : Member, FieldContainer, WithDocument {
         }
     }
 
+    open fun paramCount(): Int {
+        return normalParams.size
+    }
+
     protected open fun parseParam(param: mcfppParser.ParameterContext) : Pair<FunctionParam,Var<*>>{
         //参数构建
         val param1 = FunctionParam(
@@ -477,7 +481,7 @@ open class Function : Member, FieldContainer, WithDocument {
                 LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(param.type().text))
                 MCFPPBaseType.Any
             },
-            param.Identifier().text,
+            param.Identifier()?.text?: "p${paramCount()}",
             this,
             param.STATIC() != null,
             param.value() != null,
@@ -906,8 +910,13 @@ open class Function : Member, FieldContainer, WithDocument {
     fun <T> runInFunction(block: () -> T){
         val old = currFunction
         currFunction = this
-        block()
-        currFunction = old
+        try{
+            block()
+        }catch (e: Exception){
+            throw e
+        }finally {
+            currFunction = old
+        }
     }
 
     fun disposeClassPtr(){

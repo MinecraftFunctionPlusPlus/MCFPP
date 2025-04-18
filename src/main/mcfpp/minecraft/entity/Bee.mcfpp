@@ -1,23 +1,23 @@
 @MCFPPEntity
 data Bee: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, NeutralData {
     @Name<"CannotEnterHiveTicks">
-    int cannotEnterHiveTicks;
+    cannotEnterHiveTicks as int;
 
     @Name<"CropsGrownSincePollination">
-    int cropsGrownSincePollination;
+    cropsGrownSincePollination as int;
 
     @Name<"flower_pos">
-    IntArray flowerPos;
+    flowerPos as IntArray;
 
     @Name<"HasNectar">
-    byte hasNectar;
+    hasNectar as byte;
 
     @Name<"HasStung">
-    byte hasStung;
+    hasStung as byte;
 
     @Name<"hive_pos">
-    IntArray hivePos;
+    hivePos as IntArray;
 
     @Name<"TicksSincePollination">
-    int ticksSincePollination;
+    ticksSincePollination as int;
 }

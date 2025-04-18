@@ -123,18 +123,18 @@ public class BossBarData {
         if(value instanceof ScoreBoolConcrete valueC){
             command = new Command("bossbar set");
             if(id instanceof MCStringConcrete idC){
-                command.build(idC.getValue().getValue(), true);
+                command.build(idC.getValue().getValue());
             }else {
-                command.buildMacro(id, true);
+                command.buildMacro(id);
             }
-            command.build("visible", true);
-            command.build(valueC.getValue().toString(), true);
+            command.build("visible");
+            command.build(valueC.getValue().toString());
 
         }else {
             if(id instanceof MCStringConcrete idC){
                 command = Commands.tempFunction(Function.Companion.getCurrFunction(), (f) -> {
                     var command1 = new Command("execute if score " + value.getIdentifier() + " " + value.getBoolObject().getName() + " matches 1 run return run")
-                            .build("bossbar set " + idC.getValue().getValue() + " visible true", true);
+                            .build("bossbar set " + idC.getValue().getValue() + " visible true");
                     Function.Companion.addCommand(command1);
                     var command2 = new Command("bossbar set " + idC.getValue().getValue() + " visible false");
                     Function.Companion.addCommand(command2);
@@ -143,13 +143,11 @@ public class BossBarData {
             }else {
                 command = Commands.tempFunction(Function.Companion.getCurrFunction(), (f) -> {
                     var command1 = new Command("execute if score " + value.getIdentifier() + " " + value.getBoolObject().getName() + " matches 1 run return run")
-                            .build("bossbar set ", true)
-                            .buildMacro(id, true)
-                            .build("visible true", true);
+                            .build("bossbar set ").buildMacro(id).build("visible true");
                     Function.Companion.addCommand(command1);
                     var command2 = new Command("bossbar set ")
-                            .buildMacro(id, true)
-                            .build("visible false", true);
+                            .buildMacro(id)
+                            .build("visible false");
                     Function.Companion.addCommand(command2);
                     return null;
                 }).getFirst();

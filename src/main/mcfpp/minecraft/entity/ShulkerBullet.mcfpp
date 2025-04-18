@@ -1,21 +1,9 @@
 @MCFPPEntity
 data ShulkerBullet: EntityData, ProjectileData {
-
-    @Name<"Dir">
-    int dir;
-
-    @Name<"Steps">
-    int steps;
-
-    @Name<"Target">
-    IntArray target;
-
-    @Name<"TXD">
-    double TXD;
-
-    @Name<"TYD">
-    double TYD;
-
-    @Name<"TZD">
-    double TZD;
+    @Name<"Dir"> dir as int;
+    @Name<"Steps"> steps as int;
+    @Name<"Target"> target as IntArray;
+    @Name<"TXD"> TXD as double;
+    @Name<"TYD"> TYD as double;
+    @Name<"TZD"> TZD as double;
 }

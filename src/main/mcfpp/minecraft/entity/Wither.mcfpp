@@ -2,5 +2,5 @@
 data Wither: EntityData, CreatureData, AIMobData {
 
     @Name<"Invul">
-    int invul;
+    invul as int;
 }

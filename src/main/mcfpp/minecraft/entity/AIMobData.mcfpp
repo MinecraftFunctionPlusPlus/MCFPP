@@ -1,40 +1,40 @@
 data AIMobData {
     @Name<"ArmorDropChances">
-    list<float> armorDropChances;
+    armorDropChances as list<float>;
 
     @Name<"ArmorItems">
-    list<Item> armorItems;
+    armorItems as list<Item>;
 
     @Name<"body_armor_drop_chance">
-    float bodyArmorDropChance;
+    bodyArmorDropChance as float;
 
     @Name<"body_armor_item">
-    list<Item> bodyArmorItem;
+    bodyArmorItem as list<Item>;
 
     @Name<"CanPickUpLoot">
-    bool canPickUpLoot;
+    canPickUpLoot as bool;
 
     @Name<"DeathLootTable">
-    list<AIMobData> deathLootTable;
+    deathLootTable as list<AIMobData>;
 
     @Name<"DeathLootTableSeed">
-    long deathLootTableSeed;
+    deathLootTableSeed as long;
 
     @Name<"HandDropChances">
-    list<float> handDropChances;
+    handDropChances as list<float>;
 
     @Name<"HandItems">
-    list<Item> handItems;
+    handItems as list<Item>;
 
     @Name<"leash">
-    (IntArray|nbt) leash;
+    leash as (IntArray|nbt);
 
     @Name<"LeftHanded">
-    bool leftHanded;
+    leftHanded as bool;
 
     @Name<"NoAI">
-    bool noAI;
+    noAI as bool;
 
     @Name<"PersistenceRequired">
-    bool persistenceRequired;
+    persistenceRequired as bool;
 }

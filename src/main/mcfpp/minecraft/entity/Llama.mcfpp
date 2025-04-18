@@ -1,18 +1,11 @@
 @MCFPPEntity
 data Llama: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, HorseData {
-
-    @Name<"ChestedHorse">
-    bool chestedHorse;
-
-    @Name<"DespawnDelay">
-    int despawnDelay;
-
-    @Name<"Items">
-    list<Item> items;
-
-    @Name<"Variant">
-    LlamaVariant variant;
+    @Name<"ChestedHorse"> chestedHorse as bool;
+    @Name<"Items"> items as list<Item>;
+    @Name<"Strength"> strength as int;
+    @Name<"Variant"> variant as LlamaVariant;
 }
+
 
 enum LlamaVariant {
     creamy = 0,

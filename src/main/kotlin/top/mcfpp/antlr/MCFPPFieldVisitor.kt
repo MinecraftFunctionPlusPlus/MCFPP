@@ -533,12 +533,28 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     override fun visitClassFieldDeclaration(ctx: mcfppParser.ClassFieldDeclarationContext): Pair<Var<*>?, Property?> {
         Project.ctx = ctx
         //只有类字段构建
-        val c = ctx.fieldDeclarationExpression()
-        val type = MCFPPType.parseFromContext(ctx.type(), typeScope)?: run {
-            LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
-            MCFPPBaseType.Any
+        var type = ctx.type()?.let { MCFPPType.parseFromContext(it, typeScope)?: run {
+                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(it.text))
+                MCFPPBaseType.Any
+            }
         }
-        val `var` = type.buildUnConcrete(c.Identifier().text, Class.currClass!!)
+        var init: Var<*>? = null
+        //变量的初始化
+        if (ctx.expression() != null) {
+            Class.currClass!!.classPreInit.runInFunction {
+                //是类的成员
+                Function.addComment(ctx.text)
+                init = MCFPPExprVisitor().visit(ctx.expression())!!
+            }
+        }
+        //类型推断
+        if(type == null && init == null){
+            LogProcessor.error("Class field ${ctx.Identifier().text} must have a type or an initializer")
+            return null to null
+        }else if(type == null){
+            type = init!!.type
+        }
+        val `var` = type.buildUnConcrete(ctx.Identifier().text, Class.currClass!!)
         if(Class.currClass is ObjectClass && `var` is OnScoreboard){
             `var`.name = (Class.currClass as ObjectClass).mcuuid.uuid.toString()
         }else if(`var` is OnScoreboard){
@@ -546,25 +562,20 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
         `var`.isDynamic = true
         `var`.parent = ClassPointer(Class.currClass!!, "this")
-        if (Class.currClass!!.field.containVar(c.Identifier().text)) {
-            LogProcessor.error("Duplicate defined variable name:" + c.Identifier().text)
+        if (Class.currClass!!.field.containVar(ctx.Identifier().text)) {
+            LogProcessor.error("Duplicate defined variable name:" + ctx.Identifier().text)
             return null to null
         }
-        //变量的初始化
-        if (c.expression() != null) {
-            Function.currFunction = Class.currClass!!.classPreInit
-            //是类的成员
-            Function.addComment(ctx.text)
-            val init: Var<*> = MCFPPExprVisitor().visit(c.expression())!!
-            try {
-                `var`.assignedBy(init)
-            } catch (e: VariableConverseException) {
-                LogProcessor.error("Cannot convert " + init.javaClass + " to " + `var`.javaClass)
-                Function.currFunction = Function.nullFunction
-                throw VariableConverseException()
+        if(init != null) {
+            Class.currClass!!.classPreInit.runInFunction {
+                try {
+                    `var`.assignedBy(init!!)
+                } catch (e: VariableConverseException) {
+                    LogProcessor.error("Cannot convert " + init!!.javaClass + " to " + `var`.javaClass)
+                    throw VariableConverseException()
+                }
+                `var`.hasAssigned = true
             }
-            Function.currFunction = Function.nullFunction
-            `var`.hasAssigned = true
         }
         //属性访问器
         `var`.parent = null
@@ -1076,7 +1087,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             }
         }
         isStatic = false
-        visitTemplateBody(ctx.templateBody())
+        ctx.templateBody()?.let { visitTemplateBody(it) }
         Project.ctx = ctx
         //如果没有构造函数，生成默认的构造函数
         if(template.constructors.isEmpty()){
@@ -1119,7 +1130,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 objectTemplate.extends(s)
             }
         }
-        visitTemplateBody(ctx.templateBody())
+        ctx.templateBody()?.let { visitTemplateBody(it) }
         Project.ctx = ctx
         isStatic = true
         DataTemplate.currTemplate = null
@@ -1257,39 +1268,69 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 
     override fun visitTemplateFieldDeclaration(ctx: mcfppParser.TemplateFieldDeclarationContext): Pair<Var<*>?, Property?> {
         Project.ctx = ctx
-        val `var` = if(ctx.singleTemplateFieldType() != null){
-            val type = MCFPPType.parseFromContext(ctx.singleTemplateFieldType().type(), typeScope)?: run {
-                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.singleTemplateFieldType().type().text))
-                MCFPPBaseType.Any
-            }
-            type.build(ctx.Identifier().text).apply {
-                nullable = ctx.singleTemplateFieldType().QUEST() != null
-            }
-        }else{
-            val vars = ArrayList<Var<*>>()
-            for (type in ctx.unionTemplateFieldType().type()){
-                val t = MCFPPType.parseFromContext(type, typeScope)?: run {
-                    LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.singleTemplateFieldType().type().text))
+        var `var` = ctx.templateType()?.let {
+            if (it.singleTemplateFieldType() != null) {
+                val type = MCFPPType.parseFromContext(it.singleTemplateFieldType().type(), typeScope) ?: run {
+                    LogProcessor.error(
+                        TextTranslator.INVALID_TYPE_ERROR.translate(
+                            it.singleTemplateFieldType().type().text
+                        )
+                    )
                     MCFPPBaseType.Any
                 }
-                vars.add(
-                    t.build(ctx.Identifier().text)
-                )
+                type.build(ctx.Identifier().text).apply {
+                    nullable = it.singleTemplateFieldType().QUEST() != null
+                }
+            } else {
+                val vars = ArrayList<Var<*>>()
+                for (type in it.unionTemplateFieldType().type()) {
+                    val t = MCFPPType.parseFromContext(type, typeScope) ?: run {
+                        LogProcessor.error(
+                            TextTranslator.INVALID_TYPE_ERROR.translate(
+                                it.singleTemplateFieldType().type().text
+                            )
+                        )
+                        MCFPPBaseType.Any
+                    }
+                    vars.add(
+                        t.build(ctx.Identifier().text)
+                    )
+                }
+                UnionTypeVarConcrete(
+                    ctx.Identifier().text,
+                    (vars[0] as MCFPPValue<*>).value,
+                    *vars.toTypedArray()
+                ).apply {
+                    nullable = it.unionTemplateFieldType().QUEST() != null
+                }
             }
-            UnionTypeVarConcrete(ctx.Identifier().text, (vars[0] as MCFPPValue<*>).value, *vars.toTypedArray()).apply {
-                nullable = ctx.unionTemplateFieldType().QUEST() != null
+        }
+        var init: Var<*>? = null
+        if(`var` == null && ctx.expression() == null){
+            LogProcessor.error("Template field ${ctx.Identifier().text} must have a type or an initializer")
+            return null to null
+        }else if(`var` == null){
+            Function.extraFunction.runInFunction {
+                init = MCFPPExprVisitor().visit(ctx.expression())!!
+                val type = init!!.type
+                `var` = type.buildUnConcrete(ctx.Identifier().text, DataTemplate.currTemplate!!)
+                if(init is MCFPPValue<*>){
+                    DataTemplate.currTemplate!!.preInit2[`var`!!.identifier] = init!!
+                }else{
+                    DataTemplate.currTemplate!!.preInit[`var`!!.identifier] = ctx.expression()
+                }
             }
         }
         //是否是静态的
-        `var`.isStatic = isStatic
+        `var`!!.isStatic = isStatic
         if (DataTemplate.currTemplate!!.field.containVar(ctx.Identifier().text)
         ) {
             LogProcessor.error("Duplicate defined variable name:" + ctx.Identifier().text)
             return null to null
         }
         //属性访问器
-        currVar = `var`
-        val properties = (ctx.accessor()?.let {visit(ctx.accessor())}?: Property.buildSimpleProperty(`var`)) as Property
+        currVar = `var`!!
+        val properties = (ctx.accessor()?.let {visit(ctx.accessor())}?: Property.buildSimpleProperty(`var`!!)) as Property
         return `var` to properties
     }
 

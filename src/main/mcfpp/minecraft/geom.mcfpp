@@ -1,9 +1,9 @@
 @From<"top.mcfpp.mni.minecraft.AreaData">
 data Area{
-    pos3 start;
-    pos3 end;
+    start as pos3;
+    end as pos3;
 
-    constructor(pos3 start, pos3 end){
+    constructor(start as pos3, end as pos3){
         this.start = start;
         this.end = end;
     }

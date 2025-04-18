@@ -92,7 +92,7 @@ namespaceFieldDeclarationExpression
 
 //类声明
 classDeclaration
-    :   STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? classBody
+    :   STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? (classBody | ';')
     ;
 
 objectClassDeclaration
@@ -167,7 +167,7 @@ supportOperator
     ;
 
 classFieldDeclaration
-    :   accessModifier? type fieldDeclarationExpression accessor? ';'
+    :   accessModifier? Identifier (AS type)? ('=' expression)? accessor? ';'
     ;
 
 accessor
@@ -189,17 +189,17 @@ setter
     ;
 
 genericClassImplement
-    :   IMPL STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace readOnlyArgs (COLON className (',' className)*)? classBody
+    :   IMPL STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace readOnlyArgs (COLON className (',' className)*)? (classBody | ';')
     ;
 
 //数据模板
 templateDeclaration
-    :   FINAL? DATA classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? templateBody?
+    :   FINAL? DATA classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? (templateBody | ';')
     ;
 
 //数据模板
 objectTemplateDeclaration
-    :   FINAL? OBJECT DATA classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? templateBody?
+    :   FINAL? OBJECT DATA classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? ? (templateBody | ';')
     ;
 
 templateBody
@@ -224,7 +224,11 @@ templateFunctionDeclaration
     ;
 
 templateFieldDeclaration
-    :   CONST? (singleTemplateFieldType | unionTemplateFieldType) Identifier ('=' expression)? accessor? ';'
+    :   CONST? Identifier (AS templateType)? ('=' expression)? accessor? ';'
+    ;
+
+templateType
+    :   singleTemplateFieldType | unionTemplateFieldType
     ;
 
 singleTemplateFieldType
@@ -237,7 +241,7 @@ unionTemplateFieldType
 
 //接口声明
 interfaceDeclaration
-    :   INTERFACE classWithoutNamespace (ARROW className (',' className)*)? interfaceBody
+    :   INTERFACE classWithoutNamespace (ARROW className (',' className)*)? (interfaceBody | ';')
     ;
 
 interfaceBody
@@ -309,8 +313,7 @@ templateConstructorDeclaration
 
 //变量声明
 fieldDeclaration
-    :   fieldModifier? type fieldDeclarationExpression (',' fieldDeclarationExpression)*
-    |   fieldModifier? VAR Identifier '=' expression
+    :   fieldModifier? VAR Identifier (AS type)? ('=' expression)?
     ;
 
 fieldDeclarationExpression
@@ -338,7 +341,7 @@ parameterList
 
 //参数
 parameter
-    :   STATIC? type Identifier ('=' value)?
+    :   STATIC? (Identifier AS)? type ('=' value)?
     ;
 
 //表达式
@@ -416,7 +419,7 @@ rightVarExpression
 
 //强制类型转换表达式
 castExpression
-    :  '(' type ')' unaryExpression
+    :  rightVarExpression AS type
     ;
 
 varWithSelector

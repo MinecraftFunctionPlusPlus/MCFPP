@@ -1,12 +1,12 @@
-data RecipeBook{
-    bool isBlastingFurnaceFilteringCraftable;
-    bool isBlastingFurnaceGuiOpen;
-    bool isFilteringCraftable;
-    bool isFurnaceFilteringCraftable;
-    bool isFurnaceGuiOpen;
-    bool isGuiOpen;
-    bool isSmokerFilteringCraftable;
-    bool isSmokerGuiOpen;
-    list<string> recipes;
-    list<string> toBeDisplayed;
+data RecipeBook {
+    isBlastingFurnaceFilteringCraftable as bool;
+    isBlastingFurnaceGuiOpen as bool;
+    isFilteringCraftable as bool;
+    isFurnaceFilteringCraftable as bool;
+    isFurnaceGuiOpen as bool;
+    isGuiOpen as bool;
+    isSmokerFilteringCraftable as bool;
+    isSmokerGuiOpen as bool;
+    recipes as list<string>;
+    toBeDisplayed as list<string>;
 }

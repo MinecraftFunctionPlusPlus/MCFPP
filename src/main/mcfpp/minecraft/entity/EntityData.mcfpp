@@ -1,59 +1,59 @@
 data EntityData {
     @Name<"Air">
-    short air;
+    air as short;
 
     @Name<"CustomName">
-    string customName;
+    customName as string;
 
     @Name<"CustomNameVisible">
-    bool customNameVisible;
+    customNameVisible as bool;
 
     @Name<"FallDistance", "1.21.5">
     @Name<"fall_distance">
-    float fallDistance;
+    fallDistance as float;
 
     @Name<"Fire">
-    short fire;
+    fire as short;
 
     @Name<"Glowing">
-    bool glowing;
+    glowing as bool;
 
     @Name<"HasVisualFire">
-    bool hasVisualFire;
+    hasVisualFire as bool;
 
     @Name<"Invulnerable">
-    bool invulnerable;
+    invulnerable as bool;
 
     @Name<"Motion">
-    list<double> motion;
+    motion as list<double>;
 
     @Name<"NoGravity">
-    bool noGravity;
+    noGravity as bool;
 
     @Name<"onGround">
-    bool onGround;
+    onGround as bool;
 
     @Name<"Passengers">
-    list<EntityData> passengers;
+    passengers as list<EntityData>;
 
     @Name<"PortalCooldown">
-    int portalCooldown;
+    portalCooldown as int;
 
     @Name<"Pos">
-    list<double> pos;
+    pos as list<double>;
 
     @Name<"Rotation">
-    list<float> rotation;
+    rotation as list<float>;
 
     @Name<"Silent">
-    bool silent;
+    silent as bool;
 
     @Name<"Tags">
-    list<string> tags;
+    tags as list<string>;
 
     @Name<"TicksFrozen">
-    int ticksFrozen;
+    ticksFrozen as int;
 
     @Name<"UUID">
-    IntArray uuid;
+    uuid as IntArray;
 }

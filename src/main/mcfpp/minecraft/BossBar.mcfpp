@@ -1,26 +1,25 @@
 @From<"top.mcfpp.mni.minecraft.BossBarData">
 data BossBar{
 
-    string id;
+    id as string;
 
-    int max { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; };
-    int value { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; };
-    bool visible { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; };
+    max as int { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; };
+    value as int { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; };
+    visible as bool { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; };
 
-    constructor(string id){
+    constructor(id as string){
         this.id = id;
-        this.name = (text)id;
+        this.name = id as text;
     }
 
-    constructor(string id, string name){
+    constructor(id as string, name as string){
         this.id = id;
         this.name = name;
     }
 }
 
 @From<"top.mcfpp.mni.minecraft.BossBarData">
-object data BossBar{
-}
+object data BossBar;
 
 enum BossBarStyle{
     PROGRESS = "progress",
