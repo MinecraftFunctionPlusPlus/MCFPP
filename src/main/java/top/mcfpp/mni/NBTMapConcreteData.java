@@ -18,7 +18,7 @@ public class NBTMapConcreteData {
         caller.getValue().clear();
     }
 
-    @MNIFunction(normalParams = {"string key"}, caller = "map", returnType = "bool", genericType = "E")
+    @MNIFunction(normalParams = {"string"}, caller = "map", returnType = "bool", genericType = "E")
     public static void containsKey(MCString key, NBTMapConcrete caller, ValueWrapper<BaseBool> re){
         NBTListConcreteData.contains(key, (NBTListConcrete) caller.getKeyList(), re);
     }
@@ -28,7 +28,7 @@ public class NBTMapConcreteData {
         re.setValue(new ScoreBoolConcrete(((NBTListConcrete) (caller.getKeyList())).getValue().isEmpty(), "return"));
     }
 
-    @MNIFunction(normalParams = {"string key"}, caller = "map", genericType = "E")
+    @MNIFunction(normalParams = {"string"}, caller = "map", genericType = "E")
     public static void remove(MCString key, NBTMapConcrete caller){
         if(key instanceof MCStringConcrete keyC) {
             StringTag keyTag = keyC.getValue();
@@ -43,7 +43,7 @@ public class NBTMapConcreteData {
         }
     }
 
-    @MNIFunction(normalParams = {"map<E> source"}, caller = "map", genericType = "E")
+    @MNIFunction(normalParams = {"map<E>"}, caller = "map", genericType = "E")
     public static void merge(NBTMap source, NBTMapConcrete caller){
         if(source instanceof NBTMapConcrete sourceC){
             NBTListConcreteData.addAll(sourceC.getKeyList(),(NBTListConcrete)caller.getKeyList());

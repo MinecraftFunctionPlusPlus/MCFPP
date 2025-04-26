@@ -969,11 +969,13 @@ open class Function : Member, FieldContainer, WithDocument {
             }
 
 
+        @JvmStatic
         @Suppress("unused")
         fun replaceCommand(command: String, index: Int){
             replaceCommand(Command(command),index)
         }
 
+        @JvmStatic
         @Suppress("MemberVisibilityCanBePrivate")
         fun replaceCommand(command: Command, index: Int){
             if(CompileSettings.isDebug){
@@ -1002,10 +1004,12 @@ open class Function : Member, FieldContainer, WithDocument {
             currFunction.commands[index] = command
         }
 
+        @JvmStatic
         fun addCommands(command: Array<Command>){
             command.forEach { addCommand(it) }
         }
 
+        @JvmStatic
         fun addCommand(command: String): Int{
             return addCommand(Command.build(command))
         }
@@ -1014,6 +1018,7 @@ open class Function : Member, FieldContainer, WithDocument {
          * 向此函数的末尾添加一条命令。
          * @param command 要添加的命令。
          */
+        @JvmStatic
         fun addCommand(command: Command): Int {
 //            if(CompileSettings.isDebug){
 //                //检查当前方法是否有InsertCommand注解
@@ -1043,6 +1048,7 @@ open class Function : Member, FieldContainer, WithDocument {
          *
          * @param str
          */
+        @JvmStatic
         fun addComment(str: String, type: CommentLevel = CommentLevel.INFO){
             if(type < Project.config.commentLevel) return
             if(this.equals(nullFunction)){

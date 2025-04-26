@@ -35,8 +35,6 @@ public class NBTListData {
         index.setObj(SbObject.Companion.getMCFPP_TEMP());
     }
 
-    private NBTListData() {}
-
     private static NBTList getList(MCFPPType genericType){
         var list = new NBTList("list_list", genericType);
         list.setNbtPath(new NBTPath(new StorageSource(Storage.Companion.getMCFPP_SYSTEM().toString())).memberIndex("list.list"));
@@ -51,7 +49,7 @@ public class NBTListData {
         return element;
     }
 
-    @MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E")
+    @MNIFunction(normalParams = {"E"}, caller = "list", genericType = "E")
     public static void add(Var<?> e, NBTList caller) throws IOException {
         if(e instanceof MCFPPValue<?>){
             //e是确定的
@@ -74,7 +72,7 @@ public class NBTListData {
         }
     }
 
-    @MNIFunction(normalParams = {"list<E> list"}, caller = "list", genericType = "E")
+    @MNIFunction(normalParams = {"list<E>"}, caller = "list", genericType = "E")
     public static void addAll(@NotNull NBTList list, NBTList caller){
         NBTBasedData l;
         if(list.parentClass() != null) {
@@ -92,7 +90,7 @@ public class NBTListData {
         Function.Companion.addCommands(command);
     }
 
-    @MNIFunction(normalParams = {"int index", "E e"}, caller = "list", genericType = "E")
+    @MNIFunction(normalParams = {"int", "E"}, caller = "list", genericType = "E")
     public static void insert(MCInt index, Var<?> e, NBTList caller) {
         if(e instanceof MCFPPValue<?> && index instanceof MCIntConcrete indexC){
             //都是确定的
@@ -136,7 +134,7 @@ public class NBTListData {
         }
     }
 
-    @MNIFunction(normalParams = {"int index"}, caller = "list", genericType = "E")
+    @MNIFunction(normalParams = {"int"}, caller = "list", genericType = "E")
     public static void removeAt(MCInt index, NBTList caller){
         if(index instanceof MCIntConcrete){
             var command = Commands.method2(caller, new Command("data remove")
@@ -153,7 +151,7 @@ public class NBTListData {
         }
     }
 
-    @MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E")
+    @MNIFunction(normalParams = {"E"}, caller = "list", genericType = "E")
     public static void remove(@NotNull Var<?> e, NBTList caller){
         ValueWrapper<MCInt> re = new ValueWrapper<>(index);
         indexOf(e, caller, re);
@@ -169,7 +167,7 @@ public class NBTListData {
         Function.Companion.addCommand(Commands.unlessScoreMatches(index, -1).build(qwq.getFirst(), true));
     }
 
-    @MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E", returnType = "int")
+    @MNIFunction(normalParams = {"E"}, caller = "list", genericType = "E", returnType = "int")
     public static void indexOf(@NotNull Var<?> e, NBTList caller, ValueWrapper<MCInt> returnVar){
         var n = e.toNBTVar();
         getElement(caller.getGenericType()).assignedBy(n);
@@ -180,7 +178,7 @@ public class NBTListData {
         returnVar.setValue(index);
     }
 
-    @MNIFunction(normalParams = {"E e"}, caller = "list<E>", genericType = "E", returnType = "int")
+    @MNIFunction(normalParams = {"E"}, caller = "list<E>", genericType = "E", returnType = "int")
     public static void lastIndexOf(Var<?> e, NBTList caller, ValueWrapper<MCInt> returnVar){
         var n = e.toNBTVar();
         getElement(caller.getGenericType()).assignedBy(n);
@@ -191,7 +189,7 @@ public class NBTListData {
         returnVar.setValue(index);
     }
 
-    @MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E", returnType = "bool")
+    @MNIFunction(normalParams = {"E"}, caller = "list", genericType = "E", returnType = "bool")
     public static void contains(Var<?> e, NBTList caller, ValueWrapper<BaseBool> returnVar){
         var n = e.toNBTVar();
         getElement(caller.getGenericType()).assignedBy(n);

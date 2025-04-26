@@ -13,7 +13,7 @@ import top.mcfpp.util.ValueWrapper;
 @SuppressWarnings("DataFlowIssue")
 public class ItemPredicateData {
 
-    @MNIFunction(caller = "ItemPredicate", normalParams = {"string id"}, returnType = "ItemPredicate")
+    @MNIFunction(caller = "ItemPredicate", normalParams = {"string"}, returnType = "ItemPredicate")
     public static void hasComponent(MCString id, DataTemplateObject caller, ValueWrapper<DataTemplateObject> re){
         NBTListConcrete list = DataTemplate.getField(caller, "parts");
         var obj = DataTemplate.newInstance("mcfpp.minecraft.item", "ContainPart");
@@ -21,7 +21,7 @@ public class ItemPredicateData {
         list.getValue().add(obj);
     }
 
-    @MNIFunction(caller = "ItemPredicate", normalParams = {"string id", "nbt value"}, returnType = "ItemPredicate")
+    @MNIFunction(caller = "ItemPredicate", normalParams = {"string", "nbt"}, returnType = "ItemPredicate")
     public static void componentMatches(MCString id, NBTBasedData value, DataTemplateObject caller, ValueWrapper<DataTemplateObject> re){
         NBTListConcrete list = DataTemplate.getField(caller, "parts");
         var obj = DataTemplate.newInstance("mcfpp.minecraft.item", "MatchPart");
@@ -31,7 +31,7 @@ public class ItemPredicateData {
     }
 
 
-    @MNIFunction(caller = "ItemPredicate", normalParams = {"string id","ItemSubPredicate value"}, returnType = "ItemPredicate")
+    @MNIFunction(caller = "ItemPredicate", normalParams = {"string","ItemSubPredicate"}, returnType = "ItemPredicate")
     public static void subPredicate(MCString id, DataTemplateObject value , DataTemplateObject caller, ValueWrapper<DataTemplateObject> re){
         NBTListConcrete list = DataTemplate.getField(caller, "parts");
         var obj = DataTemplate.newInstance("mcfpp.minecraft.item", "SubPredicatePart");
@@ -47,7 +47,7 @@ public class ItemPredicateData {
         list.getValue().add(obj);
     }
 
-    @MNIFunction(caller = "ItemPredicate", normalParams = {"int value"}, returnType = "ItemPredicate")
+    @MNIFunction(caller = "ItemPredicate", normalParams = {"int"}, returnType = "ItemPredicate")
     public static void count(MCInt value, DataTemplateObject caller, ValueWrapper<DataTemplateObject> re){
         NBTListConcrete list = DataTemplate.getField(caller, "parts");
         var obj = DataTemplate.newInstance("mcfpp.minecraft.item", "CountMatchPart");
@@ -55,7 +55,7 @@ public class ItemPredicateData {
         list.getValue().add(obj);
     }
 
-    @MNIFunction(caller = "ItemPredicate", normalParams = {"range count"}, returnType = "ItemPredicate")
+    @MNIFunction(caller = "ItemPredicate", normalParams = {"range"}, returnType = "ItemPredicate")
     public static void count(RangeVar count, DataTemplateObject caller, ValueWrapper<DataTemplateObject> re){
         NBTListConcrete list = DataTemplate.getField(caller, "parts");
         var obj = DataTemplate.newInstance("mcfpp.minecraft.item", "CountRangePart");

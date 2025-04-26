@@ -8,7 +8,7 @@ import top.mcfpp.core.lang.EnumVar;
 import top.mcfpp.util.ValueWrapper;
 
 public class WorldData {
-    @MNIFunction(normalParams = "Difficulty difficulty", returnType = "CommandReturn")
+    @MNIFunction(normalParams = "Difficulty", returnType = "CommandReturn")
     public static void setDifficulty(EnumVar difficulty, ValueWrapper<CommandReturn> re) {
         var command = Command.Companion.buildAll("difficulty", difficulty);
         Commands.method3(re, command);

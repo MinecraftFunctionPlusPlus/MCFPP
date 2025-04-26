@@ -19,7 +19,7 @@ public class NBTMapData {
         NBTDictionaryData.clear(caller.getKeyValueSet());
     }
 
-    @MNIFunction(normalParams = {"string key"}, caller = "map", returnType = "bool", genericType = "E")
+    @MNIFunction(normalParams = {"string"}, caller = "map", returnType = "bool", genericType = "E")
     public static void containsKey(MCString key, NBTMap caller, ValueWrapper<ScoreBool> re){
         NBTDictionaryData.containsKey(key, caller.getKeyValueSet(), re);
     }
@@ -29,13 +29,13 @@ public class NBTMapData {
         re.setValue(new ScoreBoolConcrete(((NBTListConcrete) (caller.getKeyList())).getValue().isEmpty(), "return"));
     }
 
-    @MNIFunction(normalParams = {"string key"}, caller = "map", genericType = "E")
+    @MNIFunction(normalParams = "string", caller = "map", genericType = "E")
     public static void remove(MCString key, NBTMap caller) {
         NBTDictionaryData.remove(key, caller.getKeyValueSet());
         NBTListData.remove(key, caller.getKeyList());
     }
 
-    @MNIFunction(normalParams = {"map<E> source"}, caller = "map", genericType = "E")
+    @MNIFunction(normalParams = "map<E>", caller = "map", genericType = "E")
     public static void merge(NBTMap source, NBTMap caller){
         NBTListData.addAll(source.getKeyList(), caller.getKeyList());
         NBTDictionaryData.merge(source.getKeyValueSet(), caller.getKeyValueSet());

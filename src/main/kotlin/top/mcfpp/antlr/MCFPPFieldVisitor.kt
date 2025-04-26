@@ -484,10 +484,10 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 val mniRegister = method.getAnnotation(MNIFunction::class.java) ?: continue
                 //解析MNIMethod注解成员
                 val readOnlyType = mniRegister.readOnlyParams.map {
-                    MCFPPType.parseFromString(it.split(" ", limit = 2)[0], Namespace.currNamespaceField)
+                    MCFPPType.parseFromString(it.split(" ").last(), Namespace.currNamespaceField)
                 }
                 val normalType = mniRegister.normalParams.map {
-                    MCFPPType.parseFromString(it.split(" ", limit = 2)[0], Namespace.currNamespaceField)
+                    MCFPPType.parseFromString(it.split(" ").last(), Namespace.currNamespaceField)
                 }
                 //比对
                 if(nf.readOnlyParams.map { it.type } == readOnlyType && nf.normalParams.map { it.type } == normalType){
@@ -1019,10 +1019,10 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 val mniRegister = method.getAnnotation(MNIFunction::class.java) ?: continue
                 //解析MNIMethod注解成员
                 val readOnlyType = mniRegister.readOnlyParams.map {
-                    MCFPPType.parseFromString(it.split(" ", limit = 2)[0], Namespace.currNamespaceField)
+                    MCFPPType.parseFromString(it.split(" ").last(), Namespace.currNamespaceField)
                 }
                 val normalType = mniRegister.normalParams.map {
-                    MCFPPType.parseFromString(it.split(" ", limit = 2)[0], Namespace.currNamespaceField)
+                    MCFPPType.parseFromString(it.split(" ").last(), Namespace.currNamespaceField)
                 }
                 //比对
                 if(nf.readOnlyParams.map { it.type } == readOnlyType && nf.normalParams.map { it.type } == normalType){

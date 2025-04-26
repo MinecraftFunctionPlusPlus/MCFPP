@@ -16,19 +16,19 @@ public class NBTDictionaryConcreteData {
         caller.getValue().clear();
     }
 
-    @MNIFunction(normalParams = {"string key"}, caller = "dict", returnType = "bool", genericType = "E")
+    @MNIFunction(normalParams = "string", caller = "dict", returnType = "bool", genericType = "E")
     public static void containsKey(MCString key, NBTDictionaryConcrete caller, ValueWrapper<ScoreBool> re){
         if(key instanceof MCStringConcrete keyC){
             String value = keyC.getValue().getValue();
             var nbt = caller.getValue();
-            re.setValue(new ScoreBoolConcrete(value != null && nbt.containsKey(value), "return"));
+            re.setValue(new ScoreBoolConcrete(nbt.containsKey(value), "return"));
         }else {
             caller.toDynamic(false);
             NBTDictionaryData.containsKey(key, caller, re);
         }
     }
 
-    @MNIFunction(normalParams = {"dict<E> source"}, caller = "dict", genericType = "E")
+    @MNIFunction(normalParams = "dict<E>", caller = "dict", genericType = "E")
     public static void merge(NBTDictionary source, NBTDictionaryConcrete caller){
         if(source instanceof NBTDictionaryConcrete dictC){
             var sourceNBT = dictC.getValue();
@@ -42,7 +42,7 @@ public class NBTDictionaryConcreteData {
         }
     }
 
-    @MNIFunction(normalParams = {"string key"}, caller = "dict", genericType = "E")
+    @MNIFunction(normalParams = "string", caller = "dict", genericType = "E")
     public static void remove(MCString key, NBTDictionaryConcrete caller){
         if(key instanceof MCStringConcrete keyC){
             String value = keyC.getValue().getValue();

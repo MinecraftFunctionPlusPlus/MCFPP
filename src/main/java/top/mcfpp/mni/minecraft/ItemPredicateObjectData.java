@@ -13,18 +13,18 @@ import top.mcfpp.util.ValueWrapper;
 
 public class ItemPredicateObjectData {
 
-    @MNIFunction(caller = "ItemPredicate", normalParams = {"string id"}, returnType = "ItemPredicatePart")
+    @MNIFunction(caller = "ItemPredicate", normalParams = {"string"}, returnType = "ItemPredicatePart")
     public static void hasComponent(MCString id, ObjectVar caller, ValueWrapper<DataTemplateObject> re){
         re.set(DataTemplate.newInstance("mcfpp.minecraft.item", "ContainPart"));
     }
 
-    @MNIFunction(caller = "ItemPredicate", normalParams = {"string id", "nbt value"}, returnType = "ItemPredicatePart")
+    @MNIFunction(caller = "ItemPredicate", normalParams = {"string", "nbt"}, returnType = "ItemPredicatePart")
     public static void componentMatches(MCString id, NBTBasedData value, DataTemplateObject caller, ValueWrapper<DataTemplateObject> re){
         re.set(DataTemplate.newInstance("mcfpp.minecraft.item", "MatchPart"));
     }
 
 
-    @MNIFunction(caller = "ItemPredicate", normalParams = {"string id","ItemSubPredicate value"}, returnType = "ItemPredicate")
+    @MNIFunction(caller = "ItemPredicate", normalParams = {"string","ItemSubPredicate"}, returnType = "ItemPredicate")
     public static void subPredicate(MCString id, DataTemplateObject value , DataTemplateObject caller, ValueWrapper<DataTemplateObject> re){
         re.set(DataTemplate.newInstance("mcfpp.minecraft.item", "SubPredicatePart"));
     }
@@ -34,12 +34,12 @@ public class ItemPredicateObjectData {
         re.set(DataTemplate.newInstance("mcfpp.minecraft.item", "CountPart"));
     }
 
-    @MNIFunction(caller = "ItemPredicate", normalParams = {"int value"}, returnType = "ItemPredicatePart")
+    @MNIFunction(caller = "ItemPredicate", normalParams = {"int"}, returnType = "ItemPredicatePart")
     public static void count(MCInt value, DataTemplateObject caller, ValueWrapper<DataTemplateObject> re){
         re.set(DataTemplate.newInstance("mcfpp.minecraft.item", "CountMatchPart"));
     }
 
-    @MNIFunction(caller = "ItemPredicate", normalParams = {"range count"}, returnType = "ItemPredicate")
+    @MNIFunction(caller = "ItemPredicate", normalParams = {"range"}, returnType = "ItemPredicate")
     public static void count(RangeVar count, DataTemplateObject caller, ValueWrapper<DataTemplateObject> re){
         re.set(DataTemplate.newInstance("mcfpp.minecraft.item", "CountRangePart"));
     }

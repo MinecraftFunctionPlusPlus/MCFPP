@@ -192,22 +192,20 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
                 }
                 //解析MNIMethod注解成员
                 val readOnlyType = mniRegister.readOnlyParams.map {
-                    var qwq = it.split(" ", limit = 3)
-                    if(qwq.size == 3) qwq = qwq.subList(1, 3)
-                    val type = MCFPPType.parseFromString(qwq[0], currNamespaceField)?: run {
+                    val qwq = it.split(" ", limit = 2)
+                    val type = MCFPPType.parseFromString(qwq.last(), nf.field)?: run {
                         LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(qwq[0]))
                         MCFPPBaseType.Any
                     }
-                    qwq[1] to type to it.startsWith("static")
+                    type to it.startsWith("static")
                 }
                 val normalType = mniRegister.normalParams.map {
-                    var qwq = it.split(" ", limit = 3)
-                    if(qwq.size == 3) qwq = qwq.subList(1, 3)
-                    val type = MCFPPType.parseFromString(qwq[0], currNamespaceField)?: run {
+                    val qwq = it.split(" ", limit = 2)
+                    val type = MCFPPType.parseFromString(qwq.last(), nf.field)?: run {
                         LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(qwq[0]))
                         MCFPPBaseType.Any
                     }
-                    qwq[1] to type to it.startsWith("static")
+                    type to it.startsWith("static")
                 }
                 val returnType = MCFPPType.parseFromString(mniRegister.returnType, currNamespaceField)?: run {
                     LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniRegister.returnType))
@@ -220,10 +218,10 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
                     continue
                 }
                 for(rt in readOnlyType){
-                    nf.appendReadOnlyParam(rt.first.second, rt.first.first, rt.second)
+                    nf.appendReadOnlyParam(rt.first, "p${nf.paramCount()}", rt.second)
                 }
                 for(nt in normalType){
-                    nf.appendNormalParam(nt.first.second, nt.first.first, nt.second)
+                    nf.appendNormalParam(nt.first, "p${nf.paramCount()}", nt.second)
                 }
                 //有继承
                 if(mniRegister.override){

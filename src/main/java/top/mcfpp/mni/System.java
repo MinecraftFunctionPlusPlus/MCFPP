@@ -23,7 +23,7 @@ import java.util.Objects;
 
 public class System {
 
-    @MNIFunction(normalParams = {"any a"}, returnType = "type")
+    @MNIFunction(normalParams = {"any"}, returnType = "type")
     public static void typeOf(@NotNull Var<?> value, ValueWrapper<MCFPPTypeVar> returnValue){
         var re = new MCFPPTypeVar(value.getType(), TempPool.getVarIdentify());
         returnValue.setValue(re);
@@ -39,7 +39,7 @@ public class System {
     }
 
     @InsertCommand
-    @MNIFunction(normalParams = {"any a"})
+    @MNIFunction(normalParams = {"any"})
     public static void print(@NotNull MCAny value){
         var qwq = value.buildInferredVar();
         if(qwq != null){
@@ -63,7 +63,7 @@ public class System {
     }
 
     @InsertCommand
-    @MNIFunction(normalParams = {"int i"})
+    @MNIFunction(normalParams = {"int"})
     public static void print(@NotNull MCInt var) {
         if (var instanceof MCIntConcrete varC) {
             //是确定的，直接输出数值
@@ -125,7 +125,7 @@ public class System {
     }
 
     @InsertCommand
-    @MNIFunction(normalParams = {"bool b"})
+    @MNIFunction(normalParams = {"bool"})
     public static void print(BaseBool bool){
         ScoreBool b;
         if(bool instanceof ScoreBool){
@@ -151,7 +151,7 @@ public class System {
         int i = 0;
     }
 
-    @MNIFunction(normalParams = {"string s"})
+    @MNIFunction(normalParams = {"string"})
     public static void info(@NotNull MCString var){
         if(var instanceof MCStringConcrete varC){
             LogProcessor.info(varC.getValue().getValue());
@@ -160,7 +160,7 @@ public class System {
         }
     }
 
-    @MNIFunction(normalParams = {"string s"})
+    @MNIFunction(normalParams = {"string"})
     public static void warn(@NotNull MCString var){
         if(var instanceof MCStringConcrete varC){
             LogProcessor.warn(varC.getValue().getValue());
@@ -169,7 +169,7 @@ public class System {
         }
     }
 
-    @MNIFunction(normalParams = {"string s"})
+    @MNIFunction(normalParams = {"string"})
     public static void error(@NotNull MCString var){
         if(var instanceof MCStringConcrete varC){
             LogProcessor.error(varC.getValue().getValue());

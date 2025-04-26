@@ -53,33 +53,33 @@ public class AttributeData {
     }
 
 
-    @MNIFunction(normalParams = {"float value"}, caller = "attribute", returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"float"}, caller = "attribute", returnType = "CommandReturn")
     public static void setBase(MCFloat value, NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
         EntityVarData.setAttributeBase(value, caller.getIdentifier(), getPlayer(caller).getEntityVar(), re);
     }
 
-    @MNIFunction(normalParams = {"float scale"}, caller = "attribute", returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"float"}, caller = "attribute", returnType = "CommandReturn")
     public static void getBase(MCFloat scale , NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
         EntityVarData.getAttributeBase(caller.getIdentifier(), getPlayer(caller).getEntityVar(), scale, re);
     }
 
-    @MNIFunction(normalParams = {"float scale"}, caller = "attribute", returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"float"}, caller = "attribute", returnType = "CommandReturn")
     public static void get(MCFloat scale, NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
         EntityVarData.getAttribute(caller.getIdentifier(), getPlayer(caller).getEntityVar(), scale, re);
     }
 
-    @MNIFunction(normalParams = {"AttributeModifier modifier"}, caller = "attribute", returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"AttributeModifier"}, caller = "attribute", returnType = "CommandReturn")
     public static void addModifier(DataTemplateObject modifier, NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
         EntityVarData.addAttributeModifier(caller.getIdentifier(), getPlayer(caller).getEntityVar(), modifier, re);
     }
 
-    @MNIFunction(normalParams = {"AttributeModifier modifier"}, caller = "attribute", returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"AttributeModifier"}, caller = "attribute", returnType = "CommandReturn")
     public static void removeModifier(DataTemplateObject modifier, NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
         EntityVarData.removeAttributeModifier(caller.getIdentifier(), getPlayer(caller).getEntityVar(), modifier, re);
     }
 
 
-    @MNIFunction(normalParams = {"AttributeModifier modifier","float scale"}, caller = "attribute", returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"AttributeModifier","float"}, caller = "attribute", returnType = "CommandReturn")
     public static void getModifier(DataTemplateObject modifier, MCFloat scale, NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
         EntityVarData.getAttributeModifier(caller.getIdentifier(), getPlayer(caller).getEntityVar(), modifier, scale, re);
     }

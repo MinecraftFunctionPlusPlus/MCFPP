@@ -21,7 +21,7 @@ import java.util.Collection;
 public class NBTListConcreteData {
 
     @InsertCommand
-    @MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E")
+    @MNIFunction(normalParams = {"E"}, caller = "list", genericType = "E")
     public static void add(Var<?> e, NBTListConcrete caller) throws IOException {
         if(e instanceof MCFPPValue<?>){
             caller.getValue().add(e);
@@ -31,7 +31,7 @@ public class NBTListConcreteData {
     }
 
     @InsertCommand
-    @MNIFunction(normalParams = {"list<E> list"}, caller = "list", genericType = "E")
+    @MNIFunction(normalParams = {"list<E>"}, caller = "list", genericType = "E")
     public static void addAll(NBTList list, NBTListConcrete caller){
         if(list instanceof MCFPPValue<?> ec){
             caller.getValue().addAll((Collection) ec.getValue());
@@ -41,7 +41,7 @@ public class NBTListConcreteData {
     }
 
     @InsertCommand
-    @MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E")
+    @MNIFunction(normalParams = {"E"}, caller = "list", genericType = "E")
     public static void prepend(Var<?> e, NBTListConcrete caller) throws IOException {
         if(e instanceof MCFPPValue<?>){
             caller.getValue().addFirst(e);

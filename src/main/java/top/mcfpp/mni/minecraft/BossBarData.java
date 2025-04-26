@@ -162,7 +162,7 @@ public class BossBarData {
         }
     }
 
-    @MNIFunction(normalParams = "BossBarColor color", caller = "BossBar", returnType = "CommandReturn")
+    @MNIFunction(normalParams = "BossBarColor", caller = "BossBar", returnType = "CommandReturn")
     public static void setColor(EnumVar color, DataTemplateObject caller, ValueWrapper<CommandReturn> re){
         var id = caller.getMemberVarWithT("id", MCString.class);
         Command command = Command.Companion.buildAll("bossbar set", id, "color");
@@ -174,21 +174,21 @@ public class BossBarData {
         Commands.method3(re, command);
     }
 
-    @MNIFunction(normalParams = "text name", caller = "BossBar", returnType = "CommandReturn")
+    @MNIFunction(normalParams = "text", caller = "BossBar", returnType = "CommandReturn")
     public static void setName(JsonText name, DataTemplateObject caller, ValueWrapper<CommandReturn> re){
         var id = caller.getMemberVarWithT("id", MCString.class);
         Command command = Command.Companion.buildAll("bossbar set", id, "name", name);
         Commands.method3(re, command);
     }
 
-    @MNIFunction(normalParams = "Player players", caller = "BossBar", returnType = "CommandReturn")
+    @MNIFunction(normalParams = "Player", caller = "BossBar", returnType = "CommandReturn")
     public static void setVisiblePlayers(PlayerVar players, DataTemplateObject bossbar, ValueWrapper<CommandReturn> returnValue) {
         var id = bossbar.getMemberVarWithT("id", MCString.class);
         Command command = Command.Companion.buildAll("bossbar set", id, "players", players);
         Commands.method3(returnValue, command);
     }
 
-    @MNIFunction(normalParams = "BossBarStyle style", caller = "BossBar", returnType = "CommandReturn")
+    @MNIFunction(normalParams = "BossBarStyle", caller = "BossBar", returnType = "CommandReturn")
     public static void setStyle(EnumVar style, DataTemplateObject caller, ValueWrapper<CommandReturn> re){
         var id = caller.getMemberVarWithT("id", MCString.class);
         Command command = Command.Companion.buildAll("bossbar set", id, "style");

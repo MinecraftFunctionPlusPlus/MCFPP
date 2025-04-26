@@ -12,7 +12,7 @@ import top.mcfpp.util.ValueWrapper;
 
 public class MCAnyConcreteData {
 
-    @MNIFunction(normalParams = {"any a"}, returnType = "JavaVar")
+    @MNIFunction(caller = "any", returnType = "JavaVar")
     public static void getJavaVar(@NotNull Var<?> value, ValueWrapper<Var<?>> returnValue){
         var re = new JavaVar(value, TempPool.getVarIdentify());
         returnValue.setValue(re);
