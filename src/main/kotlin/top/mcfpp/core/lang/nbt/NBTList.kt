@@ -273,7 +273,7 @@ class NBTListConcrete: NBTList, PartialConcreteValue<ListTag, ArrayList<Var<*>>>
     fun synchronous(){
         hasStoredInStack = true
         if(value.isEmpty()) {
-            Function.addCommands(Commands.method2(this, Commands.dataSetValue(nbtPath, ListTag())))
+            Function.addCommands(Commands.buildMacroAdjustedCommands(this, Commands.dataSetValue(nbtPath, ListTag())))
             return
         }
         var isSet = true
@@ -299,10 +299,10 @@ class NBTListConcrete: NBTList, PartialConcreteValue<ListTag, ArrayList<Var<*>>>
         }
         if(isSet){
             //循环内一直没更改过isSet的值，说明列表所有变量都可被追踪
-            Function.addCommands(Commands.method2(this, Commands.dataSetValue(nbtPath, list)))
+            Function.addCommands(Commands.buildMacroAdjustedCommands(this, Commands.dataSetValue(nbtPath, list)))
             GlobalField.localNamespaces[commands.second.namespace]!!.field.removeFunction(commands.second)
         }else{
-            Function.addCommands(Commands.method2(this, commands.first))
+            Function.addCommands(Commands.buildMacroAdjustedCommands(this, commands.first))
         }
     }
 

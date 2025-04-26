@@ -32,9 +32,7 @@ open class Biome: ResourceID {
      * 创建一个Biome值。它的标识符和mc名相同。
      * @param identifier identifier
      */
-    constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier){
-        isTemp = true
-    }
+    constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier)
 
     /**
      * 复制一个Biome

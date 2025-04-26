@@ -1,5 +1,6 @@
 package top.mcfpp.core.lang.resource
             
+import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
@@ -7,7 +8,6 @@ import top.mcfpp.mni.resource.BlockEntityConcreteData
 import top.mcfpp.mni.resource.BlockEntityData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.type.MCFPPResourceType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.TempPool
@@ -32,9 +32,7 @@ open class BlockEntity: ResourceID {
      * 创建一个BlockEntity值。它的标识符和mc名相同。
      * @param identifier identifier
      */
-    constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier){
-        isTemp = true
-    }
+    constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier)
 
     /**
      * 复制一个BlockEntity

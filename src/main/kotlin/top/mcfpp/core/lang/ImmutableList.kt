@@ -78,7 +78,7 @@ class ImmutableListConcrete: ImmutableList, MCFPPValue<ListTag>{
 
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
-        Function.addCommands(Commands.method2(this, Command("data modify")
+        Function.addCommands(Commands.buildMacroAdjustedCommands(this, Command("data modify")
             .build(nbtPath.toCommandPart())
             .build("set value ${Tag.toSNBT(value)}")))
         val re = NBTList(this)

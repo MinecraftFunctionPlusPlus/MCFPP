@@ -26,7 +26,7 @@ public class BossBarData {
                 bossbar.getMemberVarWithT("id", MCString.class),
                 bossbar.getMemberVarWithT("name", JsonText.class)
         );
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(caller = "BossBar", returnType = "CommandReturn")
@@ -35,7 +35,7 @@ public class BossBarData {
                 "bossbar remove",
                 bossbar.getMemberVarWithT("id", MCString.class)
         );
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(caller = "BossBar", returnType = "CommandReturn")
@@ -171,21 +171,21 @@ public class BossBarData {
         }else {
             command.build("","color", true);
         }
-        Commands.method3(re, command);
+        Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = "text", caller = "BossBar", returnType = "CommandReturn")
     public static void setName(JsonText name, DataTemplateObject caller, ValueWrapper<CommandReturn> re){
         var id = caller.getMemberVarWithT("id", MCString.class);
         Command command = Command.Companion.buildAll("bossbar set", id, "name", name);
-        Commands.method3(re, command);
+        Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = "Player", caller = "BossBar", returnType = "CommandReturn")
     public static void setVisiblePlayers(PlayerVar players, DataTemplateObject bossbar, ValueWrapper<CommandReturn> returnValue) {
         var id = bossbar.getMemberVarWithT("id", MCString.class);
         Command command = Command.Companion.buildAll("bossbar set", id, "players", players);
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(normalParams = "BossBarStyle", caller = "BossBar", returnType = "CommandReturn")
@@ -197,6 +197,6 @@ public class BossBarData {
         }else {
             command.build("","style", true);
         }
-        Commands.method3(re, command);
+        Commands.processMacroCommandReturn(re, command);
     }
 }

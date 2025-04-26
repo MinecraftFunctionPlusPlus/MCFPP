@@ -78,7 +78,6 @@ public class AttributeData {
         EntityVarData.removeAttributeModifier(caller.getIdentifier(), getPlayer(caller).getEntityVar(), modifier, re);
     }
 
-
     @MNIFunction(normalParams = {"AttributeModifier","float"}, caller = "attribute", returnType = "CommandReturn")
     public static void getModifier(DataTemplateObject modifier, MCFloat scale, NormalCompoundDataObject caller, ValueWrapper<CommandReturn> re){
         EntityVarData.getAttributeModifier(caller.getIdentifier(), getPlayer(caller).getEntityVar(), modifier, scale, re);

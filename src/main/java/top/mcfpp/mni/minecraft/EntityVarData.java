@@ -8,12 +8,9 @@ import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.*;
 import top.mcfpp.core.lang.entity.EntityVar;
 import top.mcfpp.core.lang.nbt.MCString;
-import top.mcfpp.core.lang.nbt.MCStringConcrete;
 import top.mcfpp.core.lang.resource.Effect;
 import top.mcfpp.mni.hidden.AttributeData;
 import top.mcfpp.model.CompoundData;
-import top.mcfpp.model.Member;
-import top.mcfpp.model.function.Function;
 import top.mcfpp.util.ValueWrapper;
 
 import java.util.ArrayList;
@@ -63,7 +60,7 @@ public class EntityVarData {
         }else {
             command = Command.Companion.buildAll("attribute", caller, AttributeData.attributeMap.get(attribute), "base set", value);
         }
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"string", "float"}, caller = "entity", returnType = "CommandReturn")
@@ -74,7 +71,7 @@ public class EntityVarData {
         }else {
             command = Command.Companion.buildAll("attribute", caller, AttributeData.attributeMap.get(attribute), "base get", scale);
         }
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"string", "float"}, caller = "entity", returnType = "CommandReturn")
@@ -85,7 +82,7 @@ public class EntityVarData {
         }else {
             command = Command.Companion.buildAll("attribute", caller, AttributeData.attributeMap.get(attribute), "get", scale);
         }
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"string", "float"}, caller = "entity", returnType = "CommandReturn")
@@ -110,7 +107,7 @@ public class EntityVarData {
                     modifier.getMemberVarWithT("operation", MCString.class)
             );
         }
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"string", "float"}, caller = "entity", returnType = "CommandReturn")
@@ -126,7 +123,7 @@ public class EntityVarData {
         } else {
             command.buildAll(modifier.getMemberVarWithT("id", MCString.class));
         }
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"string", "float"}, caller = "entity", returnType = "CommandReturn")
@@ -138,31 +135,31 @@ public class EntityVarData {
         }else {
             command = Command.Companion.buildAll("attribute", caller, AttributeData.attributeMap.get(attribute), "modifier value get", id, scale);
         }
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Effect", "int = 30", "int = 0", "bool hideParticles = false"}, caller = "entity", returnType = "CommandReturn")
     public static void effect(Effect effect, int time, int amplifier, boolean hideParticles, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
         var command = Command.Companion.buildAll("effect give", caller, effect, time, amplifier, hideParticles);
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Effect", "int = 0", "bool = false"}, caller = "entity", returnType = "CommandReturn")
     public static void effectInfinite(Effect effect, int amplifier, boolean hideParticles, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
         var command = Command.Companion.buildAll("effect give", caller, effect, "infinite", amplifier, hideParticles);
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(caller = "entity", returnType = "CommandReturn")
     public static void clearAllEffects(EntityVar caller, ValueWrapper<CommandReturn> returnValue){
         var command = Command.Companion.buildAll("effect clear", caller);
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(normalParams = "Effect", caller = "entity", returnType = "CommandReturn")
     public static void clearEffect(Effect effect, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
         var command = Command.Companion.buildAll("effect clear", caller, effect);
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
 }

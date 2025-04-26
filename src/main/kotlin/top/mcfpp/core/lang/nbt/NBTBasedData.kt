@@ -493,7 +493,7 @@ class NBTBasedDataConcrete : NBTBasedData, MCFPPValue<Tag<*>> {
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
         Function.addCommands(
-            Commands.method2(this, Command("data modify")
+            Commands.buildMacroAdjustedCommands(this, Command("data modify")
                 .build(nbtPath.toCommandPart()
                     .build("set value ${Tag.toSNBT(value)}"))
             )

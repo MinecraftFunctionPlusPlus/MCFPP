@@ -4,20 +4,20 @@ import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
-import top.mcfpp.mni.resource.AdvancementConcreteData
-import top.mcfpp.mni.resource.AdvancementData
+import top.mcfpp.mni.resource.ConfiguredFeatureConcreteData
+import top.mcfpp.mni.resource.ConfiguredFeatureData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.type.MCFPPResourceType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.TempPool
 
-open class Advancement: ResourceID {
+open class ConfiguredFeature: ResourceID {
 
-    override var type: MCFPPType = MCFPPResourceType.Advancement
+    override var type: MCFPPType = MCFPPResourceType.ConfiguredFeature
 
     /**
-     * 创建一个Advancement类型的变量。它的mc名和变量所在的域容器有关。
+     * 创建一个ConfiguredFeature类型的变量。它的mc名和变量所在的域容器有关。
      *
      * @param identifier 标识符。默认为
      */
@@ -29,29 +29,29 @@ open class Advancement: ResourceID {
     }
 
     /**
-     * 创建一个Advancement值。它的标识符和mc名相同。
+     * 创建一个ConfiguredFeature值。它的标识符和mc名相同。
      * @param identifier identifier
      */
     constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier)
 
     /**
-     * 复制一个Advancement
-     * @param b 被复制的Advancement值
+     * 复制一个ConfiguredFeature
+     * @param b 被复制的ConfiguredFeature值
      */
-    constructor(b: Advancement) : super(b)
+    constructor(b: ConfiguredFeature) : super(b)
 
     companion object {
-        val data = CompoundData("Advancement","mcfpp.lang.resource")
+        val data = CompoundData("ConfiguredFeature","mcfpp.lang.resource")
 
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFromClass(AdvancementData::class.java)
+            data.getNativeFromClass(ConfiguredFeatureData::class.java)
         }
     }
 }
 
-class AdvancementConcrete: MCFPPValue<String>, Advancement{
+class ConfiguredFeatureConcrete: MCFPPValue<String>, ConfiguredFeature{
 
     override var value: String
 
@@ -67,25 +67,25 @@ class AdvancementConcrete: MCFPPValue<String>, Advancement{
         this.value = value
     }
 
-    constructor(id: Advancement, value: String) : super(id){
+    constructor(id: ConfiguredFeature, value: String) : super(id){
         this.value = value
     }
 
-    constructor(id: AdvancementConcrete) : super(id){
+    constructor(id: ConfiguredFeatureConcrete) : super(id){
         this.value = id.value
     }
 
-    override fun clone(): AdvancementConcrete {
-        return AdvancementConcrete(this)
+    override fun clone(): ConfiguredFeatureConcrete {
+        return ConfiguredFeatureConcrete(this)
     }
 
-    override fun getTempVar(): AdvancementConcrete {
-        return AdvancementConcrete(this.value)
+    override fun getTempVar(): ConfiguredFeatureConcrete {
+        return ConfiguredFeatureConcrete(this.value)
     }
 
     override fun toDynamic(replace: Boolean): Var<*> {
         NBTBasedDataConcrete(this, StringTag(value)).toDynamic(replace)
-        return Advancement(this)
+        return ConfiguredFeature(this)
     }
 
     override fun toString(): String {
@@ -93,12 +93,12 @@ class AdvancementConcrete: MCFPPValue<String>, Advancement{
     }
     
     companion object {
-        val data = CompoundData("Advancement","mcfpp.lang.resource")
+        val data = CompoundData("ConfiguredFeature","mcfpp.lang.resource")
 
         init {
             data.initialize()
             data.extends(ResourceID.data)
-            data.getNativeFromClass(AdvancementConcreteData::class.java)
+            data.getNativeFromClass(ConfiguredFeatureConcreteData::class.java)
         }
     }
     

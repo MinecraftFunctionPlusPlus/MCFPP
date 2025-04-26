@@ -9,7 +9,6 @@ import top.mcfpp.core.lang.*;
 import top.mcfpp.core.lang.entity.PlayerVar;
 import top.mcfpp.core.lang.nbt.MCString;
 import top.mcfpp.core.lang.resource.Advancement;
-import top.mcfpp.core.lang.resource.AdvancementConcrete;
 import top.mcfpp.mni.hidden.AttributeData;
 import top.mcfpp.model.CompoundData;
 import top.mcfpp.util.ValueWrapper;
@@ -61,78 +60,78 @@ public class PlayerVarData {
     @MNIFunction(normalParams = {"Advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void grant(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
         Command command = Command.Companion.buildAll("advancement grant", caller, "only", advancement);
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(caller = "Player", returnType = "CommandReturn")
     public static void grantAll(PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
         Command command = Command.Companion.buildAll("advancement grant", caller, "everything");
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void grantFrom(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
         Command command = Command.Companion.buildAll("advancement grant", caller, "from", advancement);
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void grantThrough(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
         Command command = Command.Companion.buildAll("advancement grant", caller, "through", advancement);
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void grantUntil(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
         Command command = Command.Companion.buildAll("advancement grant", caller, "until", advancement);
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void revoke(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
         Command command = Command.Companion.buildAll("advancement revoke", caller, "only", advancement);
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
     @MNIFunction(caller = "Player", returnType = "CommandReturn")
     public static void revokeAll(PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
         Command command = Command.Companion.buildAll("advancement revoke", caller, "everything");
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void revokeFrom(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
         Command command = Command.Companion.buildAll("advancement revoke", caller, "from", advancement);
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void revokeThrough(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
         Command command = Command.Companion.buildAll("advancement revoke", caller, "through", advancement);
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Advancement"}, caller = "Player", returnType = "CommandReturn")
     public static void revokeUntil(Advancement advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
         Command command = Command.Companion.buildAll("advancement revoke", caller, "until", advancement);
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     //region clear
     @MNIFunction(caller = "Player", returnType = "CommandReturn")
     public static void clear(PlayerVar caller, ValueWrapper<CommandReturn> returnValue){
         Command command = Command.Companion.buildAll("clear", caller);
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"string", "ItemPredicate"}, caller = "Player", returnType = "CommandReturn")
     public static void clear(MCString id, DataTemplateObject predicate, PlayerVar caller, ValueWrapper<CommandReturn> returnValue){
         Command command = Command.Companion.buildAll("clear", caller, id, predicate);
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
     @MNIFunction(normalParams = {"string", "int = 1"}, caller = "Player", returnType = "CommandReturn")
     public static void clear(MCString id, MCInt count, PlayerVar caller, ValueWrapper<CommandReturn> returnValue){
         Command command = Command.Companion.buildAll("clear", caller, id, count);
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
     //TODO check(Item item)->bool
     //endregion
@@ -141,37 +140,37 @@ public class PlayerVarData {
     @MNIFunction(normalParams = {"int"}, caller = "Player", returnType = "CommandReturn")
     public static void addXpPoints(MCInt points, PlayerVar player, ValueWrapper<CommandReturn> returnValue){
         Command command = Command.Companion.buildAll("xp add", player, points, "points");
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"int"}, caller = "Player", returnType = "CommandReturn")
     public static void addXpLevels(MCInt levels, PlayerVar player, ValueWrapper<CommandReturn> returnValue){
         Command command = Command.Companion.buildAll("xp add", player, levels, "levels");
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"int"}, caller = "Player", returnType = "CommandReturn")
     public static void setXpPoints(MCInt points, PlayerVar player, ValueWrapper<CommandReturn> returnValue){
         Command command = Command.Companion.buildAll("xp set", player, points, "points");
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"int"}, caller = "Player", returnType = "CommandReturn")
     public static void setXpLevels(MCInt levels, PlayerVar player, ValueWrapper<CommandReturn> returnValue){
         Command command = Command.Companion.buildAll("xp set", player, levels, "levels");
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(caller = "Player", returnType = "CommandReturn")
     public static void queryXpPoints(PlayerVar player, ValueWrapper<CommandReturn> returnValue){
         Command command = Command.Companion.buildAll("xp query", player, "points");
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(caller = "Player", returnType = "CommandReturn")
     public static void queryXpLevels(PlayerVar player, ValueWrapper<CommandReturn> returnValue){
         Command command = Command.Companion.buildAll("xp query", player, "levels");
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
     //endregion
 
@@ -179,7 +178,7 @@ public class PlayerVarData {
     @MNIFunction(normalParams = {"Gamemode"}, caller = "Player", returnType = "CommandReturn")
     public static void setGamemode(EnumVar mode, PlayerVar player, ValueWrapper<CommandReturn> returnValue){
         Command command = Command.Companion.buildAll("gamemode", mode, player);
-        Commands.method3(returnValue, command);
+        Commands.processMacroCommandReturn(returnValue, command);
     }
     //endregion
 }

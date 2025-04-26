@@ -228,7 +228,7 @@ class NBTDictionaryConcrete : NBTDictionary, PartialConcreteValue<CompoundTag, H
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
         if(value.isEmpty()) return NBTDictionary(this)
-        Function.addCommands(Commands.method2(this, Commands.dataSetValue(nbtPath, getConcretePart())))
+        Function.addCommands(Commands.buildMacroAdjustedCommands(this, Commands.dataSetValue(nbtPath, getConcretePart())))
         val re = NBTDictionary(this)
         if(replace){
             if(parentTemplate() != null) {

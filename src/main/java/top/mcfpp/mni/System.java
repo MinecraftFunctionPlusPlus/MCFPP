@@ -84,10 +84,10 @@ public class System {
                 Function.Companion.addCommand("tellraw @a \"" + Tag.toSNBT(NBTUtil.INSTANCE.valueToNBT(varC.getValue())) + "\"");
             }else {
                 varC.toDynamic(true);
-                Function.Companion.addCommands(Commands.method2(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart(), true)));
+                Function.Companion.addCommands(Commands.buildMacroAdjustedCommands(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart(), true)));
             }
         }else {
-            Function.Companion.addCommands(Commands.method2(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart(), true)));
+            Function.Companion.addCommands(Commands.buildMacroAdjustedCommands(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart(), true)));
         }
     }
  
@@ -98,10 +98,10 @@ public class System {
                 Function.Companion.addCommand("tellraw @a \"" + Tag.toSNBT(NBTUtil.INSTANCE.valueToNBT(varC.getValue())) + "\"");
             }else {
                 varC.toDynamic(true);
-                Function.Companion.addCommands(Commands.method2(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart(), true)));
+                Function.Companion.addCommands(Commands.buildMacroAdjustedCommands(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart(), true)));
             }
         }else {
-            Function.Companion.addCommands(Commands.method2(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart(), true)));
+            Function.Companion.addCommands(Commands.buildMacroAdjustedCommands(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart(), true)));
         }
     }
 
@@ -110,7 +110,7 @@ public class System {
         if(var instanceof MCFPPValue<?> varC){
             Function.Companion.addCommand("tellraw @a \"" + Tag.toSNBT(NBTUtil.INSTANCE.valueToNBT(varC.getValue())) + "\"");
         }else {
-            Function.Companion.addCommands(Commands.method2(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart(), true)));
+            Function.Companion.addCommands(Commands.buildMacroAdjustedCommands(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart(), true)));
         }
     }
 

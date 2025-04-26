@@ -206,12 +206,12 @@ open class NBTMap : NBTBasedData {
             val property = Property("", SimpleAccessor(), AnonymousNativeMutator { _, v ->
                 re.assignedBy(v)
                 if(index is MCStringConcrete){
-                    Function.addCommands(Commands.method2(this, Commands.dataAppendValue(keyList.nbtPath, index.value)))
+                    Function.addCommands(Commands.buildMacroAdjustedCommands(this, Commands.dataAppendValue(keyList.nbtPath, index.value)))
                 }else {
                     if(index.parentClass() != null){
-                        Function.addCommands(Commands.method2(this, Commands.dataAppendFrom(keyList.nbtPath, index.getTempVar().nbtPath)))
+                        Function.addCommands(Commands.buildMacroAdjustedCommands(this, Commands.dataAppendFrom(keyList.nbtPath, index.getTempVar().nbtPath)))
                     }else{
-                        Function.addCommands(Commands.method2(this, Commands.dataAppendFrom(keyList.nbtPath, index.nbtPath)))
+                        Function.addCommands(Commands.buildMacroAdjustedCommands(this, Commands.dataAppendFrom(keyList.nbtPath, index.nbtPath)))
                     }
                 }
                 return@AnonymousNativeMutator re

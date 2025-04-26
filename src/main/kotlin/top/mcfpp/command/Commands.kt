@@ -280,7 +280,7 @@ object Commands {
      * 输入一个变量，判断这个变量是否是类的成员从而选择正确的nbt路径
      */
     @JvmStatic
-    private fun method1(v: Var<*>, command: Command): Array<Command>{
+    private fun adjustCommandForParent(v: Var<*>, command: Command): Array<Command>{
         return if(v.parentClass() != null){
             selectRun(v.parent!!, command)
         }else{
@@ -293,10 +293,10 @@ object Commands {
      * 命令作为selectRun的输入命令
      */
     @JvmStatic
-    fun method2(v: Var<*>, command: Command): Array<Command>{
+    fun buildMacroAdjustedCommands(v: Var<*>, command: Command): Array<Command>{
         val cs = command.buildMacroFunction()
         val last = cs.last()
-        val qwq = method1(v, last)
+        val qwq = adjustCommandForParent(v, last)
         return cs.dropLast(1).toTypedArray() + qwq
     }
 
@@ -304,7 +304,7 @@ object Commands {
      * 判断一条命令是否为宏函数，并让这个命令作为返回值
      */
     @JvmStatic
-    fun method3(returnVar: ValueWrapper<CommandReturn>, command: Command){
+    fun processMacroCommandReturn(returnVar: ValueWrapper<CommandReturn>, command: Command){
         if (command.isMacro) {
             command.prepend("return run")
             val commandArray = command.buildMacroFunction()

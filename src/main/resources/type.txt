@@ -23,12 +23,14 @@ Advancement
 LootTable
 LootTablePredicate
 Structure
+ConfiguredFeature
 Recipe
 BlockTag
 LiquidTag
 ItemTag
 EntityTypeTag
 FunctionTag
+TemplatePool
 
 BlockStateFile
 Model

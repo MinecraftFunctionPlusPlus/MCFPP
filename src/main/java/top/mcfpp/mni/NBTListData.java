@@ -55,7 +55,7 @@ public class NBTListData {
             //e是确定的
             Tag<?> tag = NBTUtil.INSTANCE.varToNBT(e);
             assert tag != null;
-            var command = Commands.method2(caller, new Command("data modify")
+            var command = Commands.buildMacroAdjustedCommands(caller, new Command("data modify")
                     .build(caller.nbtPath.toCommandPart(), true)
                     .build("append value " + Tag.toSNBT(tag), true)
             );
@@ -64,7 +64,7 @@ public class NBTListData {
             //e不是确定的
             if (e.parentClass() != null) e = e.getTempVar();
             Var<?> finalE = e;
-            var command = Commands.method2(caller, new Command("data modify")
+            var command = Commands.buildMacroAdjustedCommands(caller, new Command("data modify")
                     .build(caller.nbtPath.toCommandPart(), true)
                     .build("append from", true)
                     .build(finalE.getNbtPath().toCommandPart(), true));
@@ -83,7 +83,7 @@ public class NBTListData {
         }else{
             l = list;
         }
-        var command = Commands.method2(caller, new Command("data modify")
+        var command = Commands.buildMacroAdjustedCommands(caller, new Command("data modify")
                 .build(caller.nbtPath.toCommandPart(), true)
                 .build("append from", true)
                 .build(l.nbtPath.iteratorIndex().toCommandPart(), true));
@@ -97,7 +97,7 @@ public class NBTListData {
             Tag<?> tag = NBTUtil.INSTANCE.varToNBT(e);
             assert tag != null;
             int i = indexC.getValue();
-            var command = Commands.method2(caller, new Command("data modify")
+            var command = Commands.buildMacroAdjustedCommands(caller, new Command("data modify")
                     .build(caller.nbtPath.toCommandPart(), true)
                     .build("insert " + i + " value " + Tag.toSNBT(tag), true));
             Function.Companion.addCommands(command);
@@ -106,7 +106,7 @@ public class NBTListData {
             int i = indexC.getValue();
             if(e.parentClass() != null) e = e.getTempVar();
             Var<?> finalE = e;
-            var command = Commands.method2(caller, new Command("data modify")
+            var command = Commands.buildMacroAdjustedCommands(caller, new Command("data modify")
                    .build(caller.nbtPath.toCommandPart(), true)
                    .build("insert " + i + " from", true)
                    .build(finalE.getNbtPath().toCommandPart(), true));
@@ -115,7 +115,7 @@ public class NBTListData {
             //e是确定的，index不是确定的，需要使用宏
             Tag<?> tag = NBTUtil.INSTANCE.varToNBT(e);
             assert tag != null;
-            var command = Commands.method2(caller,  new Command("data modify")
+            var command = Commands.buildMacroAdjustedCommands(caller,  new Command("data modify")
                     .build(caller.nbtPath.toCommandPart(), true)
                     .build("insert", true)
                     .buildMacro(index, true)
@@ -124,7 +124,7 @@ public class NBTListData {
         } else{
             //e是不确定的，index也不是确定的
             if(e.parentClass() != null) e = e.getTempVar();
-            var command = Commands.method2(caller, new Command("data modify")
+            var command = Commands.buildMacroAdjustedCommands(caller, new Command("data modify")
                     .build(caller.nbtPath.toCommandPart(), true)
                     .build("insert", true)
                     .buildMacro(index, true)
@@ -137,14 +137,14 @@ public class NBTListData {
     @MNIFunction(normalParams = {"int"}, caller = "list", genericType = "E")
     public static void removeAt(MCInt index, NBTList caller){
         if(index instanceof MCIntConcrete){
-            var command = Commands.method2(caller, new Command("data remove")
+            var command = Commands.buildMacroAdjustedCommands(caller, new Command("data remove")
                     .build(caller.nbtPath.intIndex(index).toCommandPart(), true)
             );
             Function.Companion.addCommands(command);
         }else {
             index.nbtPath = NBTPath.Companion.getNormalStackPath(index);
             index.storeToStack();
-            var command = Commands.method2(caller, new Command("data remove")
+            var command = Commands.buildMacroAdjustedCommands(caller, new Command("data remove")
                     .build(caller.nbtPath.intIndex(index).toCommandPart(), true)
             );
             Function.Companion.addCommands(command);
@@ -158,7 +158,7 @@ public class NBTListData {
         var qwq = Commands.tempFunction("remove", Function.Companion.getCurrFunction(), (function) -> {
             index.nbtPath = NBTPath.Companion.getNormalStackPath(index);
             index.storeToStack();
-            var command = Commands.method2(caller, new Command("data remove")
+            var command = Commands.buildMacroAdjustedCommands(caller, new Command("data remove")
                     .build(caller.nbtPath.intIndex(index).toCommandPart(), true)
             );
             Function.Companion.addCommands(command);

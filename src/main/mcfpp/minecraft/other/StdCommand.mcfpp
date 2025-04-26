@@ -26,3 +26,15 @@ enum GameMode{
     survival,
     adventure
 }
+
+enum PlaceRotation {
+    none, clockwise_90, 180, counterclockwise_90
+}
+
+enum PlaceMirror {
+    none, left_right, front_back
+}
+
+enum SoundType {
+    master, music, record, weather, block, hostile, neutral, player, ambient, voice
+}
