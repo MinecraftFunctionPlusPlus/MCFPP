@@ -1200,7 +1200,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     override fun visitTemplateMemberDeclaration(ctx: mcfppParser.TemplateMemberDeclarationContext): Any? {
         Project.ctx = ctx
         val m = visitTemplateMember(ctx.templateMember())
-        val accessModifier = AccessModifier.valueOf(ctx.accessModifier()?.text?:"public".uppercase(Locale.getDefault()))
+        val accessModifier = AccessModifier.valueOf((ctx.accessModifier()?.text?:"public").uppercase(Locale.getDefault()))
         //访问修饰符
         if(m is Member){
             m.accessModifier = accessModifier
@@ -1210,7 +1210,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             val p = m.second as Property?
             if(v == null || p == null) return null
             //访问修饰符
-            v.accessModifier = AccessModifier.valueOf(ctx.accessModifier()?.text?:"public".uppercase(Locale.getDefault()))
+            v.accessModifier = AccessModifier.valueOf((ctx.accessModifier()?.text?:"public").uppercase(Locale.getDefault()))
             p.accessModifier = v.accessModifier
             DataTemplate.currTemplate!!.addMember(v)
             DataTemplate.currTemplate!!.addMember(p)

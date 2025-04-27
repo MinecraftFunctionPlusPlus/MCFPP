@@ -6,12 +6,16 @@ import top.mcfpp.core.minecraft.PlayerInventory
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
+import top.mcfpp.type.MCFPPEntityType
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 
 open class PlayerVar : Var<PlayerVar> {
+
+    override var type: MCFPPType = MCFPPEntityType.Player
 
     var entityVar: EntityVar
 

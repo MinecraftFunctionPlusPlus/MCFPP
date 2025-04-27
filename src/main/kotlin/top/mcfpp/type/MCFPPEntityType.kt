@@ -1,7 +1,7 @@
 package top.mcfpp.type
 
-import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.entity.PlayerVar
 import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.entity.SpecifiedEntityConcreteVar
 import top.mcfpp.core.lang.entity.SpecifiedEntityVar
@@ -9,6 +9,7 @@ import top.mcfpp.lib.EntitySelector
 import top.mcfpp.model.Class
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
+import top.mcfpp.nbt.tags.primitive.StringTag
 
 class MCFPPEntityType {
 
@@ -36,6 +37,17 @@ class MCFPPEntityType {
         override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = SpecifiedEntityVar(identifier)
         override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = SpecifiedEntityVar(identifier)
     }
+
+    object Player : MCFPPConcreteType(arrayListOf(EntityBase)) {
+        override val objectData: CompoundData
+            get() = PlayerVar.data
+
+        override val typeName: String
+            get() = "Player"
+        override fun build(identifier: String, container: FieldContainer): Var<*> = PlayerVar(identifier)
+        override fun build(identifier: String): Var<*> = PlayerVar(identifier)
+        override fun build(identifier: String, clazz: Class): Var<*> = PlayerVar(identifier)
+   }
 
     class Selector(val limit: Int? = null, val types: List<String>? = null) : MCFPPConcreteType(arrayListOf(EntityBase)) {
 

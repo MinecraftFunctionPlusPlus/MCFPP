@@ -1,0 +1,5 @@
+@From<"top.mcfpp.mni.resource.FunctionTagData">
+data FunctionTag: ResourceID;
+
+@From<"top.mcfpp.mni.resource.FunctionTagObjectData">
+object data FunctionTag: ResourceID;

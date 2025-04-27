@@ -1,16 +1,14 @@
 package top.mcfpp.core.lang
             
 import top.mcfpp.command.Command
+import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
-import top.mcfpp.core.lang.resource.ResourceID
-import top.mcfpp.mni.resource.FunctionIDConcreteData
-import top.mcfpp.mni.resource.FunctionIDData
 import top.mcfpp.model.CompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.util.TempPool
 
-open class FunctionVar: ResourceID {
+open class FunctionVar: NBTBasedData {
 
     /**
      * 创建一个FunctionID值。它的标识符和mc名相同。
@@ -31,8 +29,6 @@ open class FunctionVar: ResourceID {
 
         init {
             data.initialize()
-            data.extends(ResourceID.data)
-            data.getNativeFromClass(FunctionIDData::class.java)
         }
     }
 }
@@ -79,8 +75,6 @@ class FunctionIDConcrete: MCFPPValue<Function>, FunctionVar {
 
         init {
             data.initialize()
-            data.extends(ResourceID.data)
-            data.getNativeFromClass(FunctionIDConcreteData::class.java)
         }
     }
     

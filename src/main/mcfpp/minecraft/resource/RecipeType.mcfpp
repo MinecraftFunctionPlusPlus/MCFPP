@@ -1,0 +1,5 @@
+@From<"top.mcfpp.mni.resource.RecipeTypeData">
+data RecipeType: ResourceID;
+
+@From<"top.mcfpp.mni.resource.RecipeTypeObjectData">
+object data RecipeType: ResourceID;

@@ -8,9 +8,6 @@ import top.mcfpp.core.lang.nbt.MCString
 import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
-import top.mcfpp.core.lang.resource.Advancement
-import top.mcfpp.core.lang.resource.EntityType
-import top.mcfpp.core.lang.resource.LootTablePredicate
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.util.StringHelper.toRangeStr
 
@@ -154,12 +151,12 @@ class NamePredicate(val name: MCString, reverse: Boolean): CanReverseEntitySelec
     override val v: Var<*> = name
     override fun valueString(): String = (name as MCStringConcrete).value.value
 }
-class TypePredicate(val type: EntityType, reverse: Boolean): CanReverseEntitySelectorPredicate(reverse) {
+class TypePredicate(val type: DataTemplateObject, reverse: Boolean): CanReverseEntitySelectorPredicate(reverse) {
     override val identifier: String = "type"
     override val v: Var<*> = type
 }
 
-class PredicatePredicate(val predicate: LootTablePredicate, reverse: Boolean): CanReverseEntitySelectorPredicate(reverse) {
+class PredicatePredicate(val predicate: DataTemplateObject, reverse: Boolean): CanReverseEntitySelectorPredicate(reverse) {
     override val identifier: String = "predicate"
     override val v: Var<*> = predicate
 }
@@ -194,7 +191,7 @@ class GamemodePredicate(val gamemode: MCString, reverse: Boolean): CanReverseEnt
     override fun valueString(): String = (gamemode as MCStringConcrete).value.value
 }
 
-class AdvancementsPredicate(val advancements: Advancement, reverse: Boolean): CanReverseEntitySelectorPredicate(reverse) {
+class AdvancementsPredicate(val advancements: DataTemplateObject, reverse: Boolean): CanReverseEntitySelectorPredicate(reverse) {
     override val identifier: String = "advancements"
     override val v: Var<*> = advancements
 }

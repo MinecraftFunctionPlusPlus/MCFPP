@@ -1,20 +1,16 @@
 package top.mcfpp.lib
 
-import top.mcfpp.nbt.tags.CompoundTag
-import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.command.Command
-import top.mcfpp.core.lang.MCInt
-import top.mcfpp.core.lang.MCIntConcrete
-import top.mcfpp.core.lang.RangeVar
-import top.mcfpp.core.lang.RangeVarConcrete
+import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.nbt.MCString
 import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
-import top.mcfpp.core.lang.resource.Advancement
-import top.mcfpp.core.lang.resource.EntityTypeConcrete
-import top.mcfpp.core.lang.resource.LootTablePredicate
+import top.mcfpp.model.DataTemplate
+import top.mcfpp.nbt.tags.CompoundTag
+import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.StringHelper.toNamespaceID
 import java.io.Serializable
 
 @Suppress("MemberVisibilityCanBePrivate", "unused")
@@ -56,13 +52,13 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
         return Int.MAX_VALUE
     }
 
-    fun getType(): HashMap<EntityTypeConcrete, Boolean>{
-        val map = HashMap<EntityTypeConcrete, Boolean>()
+    fun getType(): HashMap<NamespaceID, Boolean>{
+        val map = HashMap<NamespaceID, Boolean>()
         if(hasTypePredicate){
             for (predicate in predicates) {
                 if(predicate is TypePredicate){
-                    if(predicate.type is EntityTypeConcrete){
-                        map[predicate.type] = predicate.reverse
+                    if(predicate.type is DataTemplateObjectConcrete){
+                        map[predicate.type.getTagStr("value").toNamespaceID()] = predicate.reverse
                     }
                     break
                 }
@@ -210,13 +206,13 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
     }
 
     fun onlyIncludingPlayers() : Boolean {
-        if(selectorType == SelectorType.RANDOM_PLAYER || selectorType == SelectorType.NEAREST_PLAYER || selectorType == SelectorType.ALL_PLAYERS){
+        if(selectorType == SelectorType.RANDOM_PLAYER || selectorType == SelectorType.NEAREST_PLAYER || selectorType == SelectorType.ALL_PLAYERS || selectorType == SelectorType.SELF){
             return true
         }
         if(hasTypePredicate){
             for (predicate in predicates) {
                 if(predicate is TypePredicate){
-                    if(predicate.type is EntityTypeConcrete && predicate.type.value == "minecraft:player"){
+                    if(predicate.type is DataTemplateObjectConcrete && predicate.type.getTagStr("value") == "minecraft:player"){
                         return true
                     }
                     break
@@ -304,10 +300,10 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
     fun team(value: String, reverse: Boolean) = addPredicate(TeamPredicate(MCStringConcrete(StringTag(value)), reverse))
     fun name(value: MCString, reverse: Boolean) = addPredicate(NamePredicate(value, reverse))
     fun name(value: String, reverse: Boolean) = addPredicate(NamePredicate(MCStringConcrete(StringTag(value)), reverse))
-    fun type(value: EntityTypeConcrete, reverse: Boolean) = addPredicate(TypePredicate(value, reverse))
-    fun type(value: String, reverse: Boolean) = addPredicate(TypePredicate(EntityTypeConcrete(value), reverse))
-    fun predicate(value: LootTablePredicate, reverse: Boolean) = addPredicate(PredicatePredicate(value, reverse))
-    fun predicate(value: String, reverse: Boolean) = addPredicate(PredicatePredicate(LootTablePredicate(value), reverse))
+    fun type(value: DataTemplateObject, reverse: Boolean) = addPredicate(TypePredicate(value, reverse))
+    fun type(value: String, reverse: Boolean) = addPredicate(TypePredicate(DataTemplate.newInstance("mcfpp.minecraft.resource", "EntityType", CompoundTag("value" to value)), reverse))
+    fun predicate(value: DataTemplateObject, reverse: Boolean) = addPredicate(PredicatePredicate(value, reverse))
+    fun predicate(value: String, reverse: Boolean) = addPredicate(PredicatePredicate(DataTemplate.newInstance("mcfpp.minecraft.resource", "LootTablePredicate", CompoundTag("value" to value)),reverse))
     fun xRotation(value: RangeVar) = addPredicate(XRotationPredicate(value))
     fun xRotation(value: Pair<Float?, Float?>) = addPredicate(XRotationPredicate(RangeVarConcrete(value)))
     fun yRotation(value: RangeVar) = addPredicate(YRotationPredicate(value))
@@ -318,8 +314,8 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
     fun level(value: Pair<Float?, Float?>) = addPredicate(LevelPredicate(RangeVarConcrete(value)))
     fun gamemode(value: MCString, reverse: Boolean) = addPredicate(GamemodePredicate(value, reverse))
     fun gamemode(value: String, reverse: Boolean) = addPredicate(GamemodePredicate(MCStringConcrete(StringTag(value)), reverse))
-    fun advancement(value: Advancement, reverse: Boolean) = addPredicate(AdvancementsPredicate(value, reverse))
-    fun advancement(value: String, reverse: Boolean) = addPredicate(AdvancementsPredicate(Advancement(value), reverse))
+    fun advancement(value: DataTemplateObject, reverse: Boolean) = addPredicate(AdvancementsPredicate(value, reverse))
+    fun advancement(value: String, reverse: Boolean) = addPredicate(AdvancementsPredicate(DataTemplate.newInstance("mcfpp.minecraft.resource", "Advancement", CompoundTag("value" to value)), reverse))
     fun limit(value: MCInt) = addPredicate(LimitPredicate(value))
     fun limit(value: Int) = addPredicate(LimitPredicate(MCIntConcrete(value)))
     fun sort(value: MCString) = addPredicate(SortPredicate(value))

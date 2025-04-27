@@ -1,0 +1,5 @@
+@From<"top.mcfpp.mni.resource.VillagerProfessionData">
+data VillagerProfession: ResourceID;
+
+@From<"top.mcfpp.mni.resource.VillagerProfessionObjectData">
+object data VillagerProfession: ResourceID;

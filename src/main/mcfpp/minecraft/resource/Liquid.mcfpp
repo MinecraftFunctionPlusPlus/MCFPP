@@ -1,0 +1,5 @@
+@From<"top.mcfpp.mni.resource.LiquidData">
+data Liquid: ResourceID;
+
+@From<"top.mcfpp.mni.resource.LiquidObjectData">
+object data Liquid: ResourceID;

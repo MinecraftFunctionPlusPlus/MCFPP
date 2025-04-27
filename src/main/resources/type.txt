@@ -24,7 +24,7 @@ LootTable
 LootTablePredicate
 Structure
 ConfiguredFeature
-Recipe
+#Recipe
 BlockTag
 LiquidTag
 ItemTag

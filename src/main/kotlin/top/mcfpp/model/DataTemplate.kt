@@ -9,6 +9,7 @@ import top.mcfpp.model.function.DataTemplateConstructor
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.property.Property
 import top.mcfpp.nbt.tags.CompoundTag
+import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPDataTemplateType
 import top.mcfpp.type.MCFPPType
@@ -195,6 +196,11 @@ open class DataTemplate : FieldContainer, CompoundData {
 
         @JvmStatic
         fun newInstance(namespace: String?, templateID: String) = newInstance(namespace, templateID, TempPool.getVarIdentify())
+
+        @JvmStatic
+        fun newInstance(namespace: String?, templateID: String, tag: Tag<*>): DataTemplateObjectConcrete{
+            return GlobalField.getTemplate(namespace, templateID)!!.getType().build(tag) as DataTemplateObjectConcrete
+        }
 
         @Suppress("UNCHECKED_CAST")
         @JvmStatic

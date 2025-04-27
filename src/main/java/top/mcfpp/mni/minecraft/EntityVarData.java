@@ -8,7 +8,6 @@ import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.*;
 import top.mcfpp.core.lang.entity.EntityVar;
 import top.mcfpp.core.lang.nbt.MCString;
-import top.mcfpp.core.lang.resource.Effect;
 import top.mcfpp.mni.hidden.AttributeData;
 import top.mcfpp.model.CompoundData;
 import top.mcfpp.util.ValueWrapper;
@@ -139,13 +138,13 @@ public class EntityVarData {
     }
 
     @MNIFunction(normalParams = {"Effect", "int = 30", "int = 0", "bool hideParticles = false"}, caller = "entity", returnType = "CommandReturn")
-    public static void effect(Effect effect, int time, int amplifier, boolean hideParticles, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
+    public static void effect(DataTemplateObject effect, int time, int amplifier, boolean hideParticles, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
         var command = Command.Companion.buildAll("effect give", caller, effect, time, amplifier, hideParticles);
         Commands.processMacroCommandReturn(returnValue, command);
     }
 
     @MNIFunction(normalParams = {"Effect", "int = 0", "bool = false"}, caller = "entity", returnType = "CommandReturn")
-    public static void effectInfinite(Effect effect, int amplifier, boolean hideParticles, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
+    public static void effectInfinite(DataTemplateObject effect, int amplifier, boolean hideParticles, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
         var command = Command.Companion.buildAll("effect give", caller, effect, "infinite", amplifier, hideParticles);
         Commands.processMacroCommandReturn(returnValue, command);
     }
@@ -157,7 +156,7 @@ public class EntityVarData {
     }
 
     @MNIFunction(normalParams = "Effect", caller = "entity", returnType = "CommandReturn")
-    public static void clearEffect(Effect effect, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
+    public static void clearEffect(DataTemplateObject effect, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
         var command = Command.Companion.buildAll("effect clear", caller, effect);
         Commands.processMacroCommandReturn(returnValue, command);
     }

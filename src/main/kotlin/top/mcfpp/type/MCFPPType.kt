@@ -252,6 +252,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             MCFPPConcreteType.JavaVar,
 
             MCFPPEntityType.EntityBase,
+            MCFPPEntityType.Player,
 
             MCFPPPrivateType.MCFPPObjectVarType,
             MCFPPPrivateType.CommandReturn

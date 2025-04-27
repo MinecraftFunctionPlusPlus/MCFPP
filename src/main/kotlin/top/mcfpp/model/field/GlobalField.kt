@@ -296,7 +296,7 @@ object GlobalField : FieldContainer, IField {
     }
 
     @JvmStatic
-    fun getDataTemplate(filter: (DataTemplate) -> Boolean): List<DataTemplate>{
+    fun getTemplate(filter: (DataTemplate) -> Boolean): List<DataTemplate>{
         val list = ArrayList<DataTemplate>()
         for (nsp in localNamespaces.values){
             nsp.field.forEachTemplate {

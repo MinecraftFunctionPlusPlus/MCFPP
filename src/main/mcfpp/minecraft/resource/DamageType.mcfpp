@@ -1,0 +1,5 @@
+@From<"top.mcfpp.mni.resource.DamageTypeData">
+data DamageType: ResourceID;
+
+@From<"top.mcfpp.mni.resource.DamageTypeObjectData">
+object data DamageType: ResourceID;

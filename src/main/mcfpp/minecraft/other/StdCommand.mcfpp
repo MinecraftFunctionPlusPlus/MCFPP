@@ -28,7 +28,7 @@ enum GameMode{
 }
 
 enum PlaceRotation {
-    none, clockwise_90, 180, counterclockwise_90
+    none, clockwise_90, _180, counterclockwise_90
 }
 
 enum PlaceMirror {

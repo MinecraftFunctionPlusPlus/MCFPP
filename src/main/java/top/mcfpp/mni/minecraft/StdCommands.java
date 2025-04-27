@@ -8,7 +8,6 @@ import top.mcfpp.core.lang.bool.BaseBool;
 import top.mcfpp.core.lang.entity.EntityVar;
 import top.mcfpp.core.lang.entity.PlayerVar;
 import top.mcfpp.core.lang.nbt.MCString;
-import top.mcfpp.core.lang.resource.*;
 import top.mcfpp.util.ValueWrapper;
 
 public class StdCommands {
@@ -122,13 +121,13 @@ public class StdCommands {
 
     //region fillBiome
     @MNIFunction(normalParams = {"Area", "Biome"}, returnType = "CommandReturn")
-    public static void fillBiome(DataTemplateObject area, Biome biome, ValueWrapper<CommandReturn> re){
+    public static void fillBiome(DataTemplateObject area, DataTemplateObject biome, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("fillbiome", area, biome);
         Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"Area", "Biome", "Biome"}, returnType = "CommandReturn")
-    public static void fillBiome(DataTemplateObject area, Biome biome, Biome replaceBiome, ValueWrapper<CommandReturn> re){
+    public static void fillBiome(DataTemplateObject area, DataTemplateObject biome, DataTemplateObject replaceBiome, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("fillbiome", area, biome, "replace", replaceBiome);
         Commands.processMacroCommandReturn(re, command);
     }
@@ -239,20 +238,20 @@ public class StdCommands {
     //endregion
 
     //region locate
-    @MNIFunction(normalParams = "Structure", returnType = "CommandReturn")
-    public static void locate(Structure structure, ValueWrapper<CommandReturn> re){
+    @MNIFunction(identifier = "locate", normalParams = "Structure", returnType = "CommandReturn")
+    public static void locateStructure(DataTemplateObject structure, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("locate", structure);
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = "Biome", returnType = "CommandReturn")
-    public static void locate(Biome biome, ValueWrapper<CommandReturn> re){
+    @MNIFunction(identifier = "locate", normalParams = "Biome", returnType = "CommandReturn")
+    public static void locateBiome(DataTemplateObject biome, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("locate", biome);
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = "Poi", returnType = "CommandReturn")
-    public static void locate(DataTemplateObject poi, ValueWrapper<CommandReturn> re){
+    @MNIFunction(identifier = "locate", normalParams = "Poi", returnType = "CommandReturn")
+    public static void locatePoi(DataTemplateObject poi, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("locate", poi);
         Commands.processMacroCommandReturn(re, command);
     }
@@ -260,138 +259,138 @@ public class StdCommands {
 
     //region
     @MNIFunction(normalParams = {"Player", "LootTable"}, returnType = "CommandReturn")
-    public static void lootGive(PlayerVar player, LootTable lootSource, ValueWrapper<CommandReturn> re){
+    public static void lootGive(PlayerVar player, DataTemplateObject lootSource, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot give", player, "loot", lootSource);
         Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"pos3", "LootTable"}, returnType = "CommandReturn")
-    public static void lootInsert(Pos3Var pos, LootTable lootSource, ValueWrapper<CommandReturn> re){
+    public static void lootInsert(Pos3Var pos, DataTemplateObject lootSource, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot insert", pos, "loot", lootSource);
         Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"pos3", "LootTable"}, returnType = "CommandReturn")
-    public static void lootSpawn(Pos3Var pos, LootTable lootSource, ValueWrapper<CommandReturn> re){
+    public static void lootSpawn(Pos3Var pos, DataTemplateObject lootSource, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot spawn", pos, "loot", lootSource);
         Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"pos3", "Slot", "LootTable"}, returnType = "CommandReturn")
-    public static void lootReplace(Pos3Var pos, EnumVar slot, LootTable lootSource, ValueWrapper<CommandReturn> re){
+    public static void lootReplace(Pos3Var pos, EnumVar slot, DataTemplateObject lootSource, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot replace block", pos, slot, "loot", lootSource);
         Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"entity", "Slot", "LootTable"}, returnType = "CommandReturn")
-    public static void lootReplace(EntityVar entity, EnumVar slot, LootTable lootSource, ValueWrapper<CommandReturn> re){
+    public static void lootReplace(EntityVar entity, EnumVar slot, DataTemplateObject lootSource, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot replace entity", entity, slot, "loot", lootSource);
         Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"pos3", "Slot", "LootTable", "int"}, returnType = "CommandReturn")
-    public static void lootReplace(Pos3Var pos, EnumVar slot, LootTable lootSource, MCInt count, ValueWrapper<CommandReturn> re){
+    public static void lootReplace(Pos3Var pos, EnumVar slot, DataTemplateObject lootSource, MCInt count, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot replace block", pos, slot, lootSource, "loot", count);
         Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"entity", "Slot", "LootTable", "int"}, returnType = "CommandReturn")
-    public static void lootReplace(EntityVar entity, EnumVar slot, LootTable lootSource, MCInt count, ValueWrapper<CommandReturn> re){
+    public static void lootReplace(EntityVar entity, EnumVar slot, DataTemplateObject lootSource, MCInt count, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot replace entity", entity, slot, lootSource, "loot", count);
         Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"Player", "LootTable", "pos3"}, returnType = "CommandReturn")
-    public static void lootGiveFish(PlayerVar player, LootTable lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
+    public static void lootGiveFish(PlayerVar player, DataTemplateObject lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot give", player, "fish", lootSource, pos);
         Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"entity", "LootTable", "pos3", "Item"}, returnType = "CommandReturn")
-    public static void lootGiveFishUsing(EntityVar entity, LootTable lootSource, Pos3Var pos, DataTemplateObject item, ValueWrapper<CommandReturn> re){
+    public static void lootGiveFishUsing(EntityVar entity, DataTemplateObject lootSource, Pos3Var pos, DataTemplateObject item, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot give", entity, "fish", lootSource, pos, item);
         Commands.processMacroCommandReturn(re, command);
     }
     @MNIFunction(normalParams = {"entity", "LootTable", "pos3"}, returnType = "CommandReturn")
-    public static void lootGiveFishUsingMainHand(EntityVar entity, LootTable lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
+    public static void lootGiveFishUsingMainHand(EntityVar entity, DataTemplateObject lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot give", entity, "fish", lootSource, pos, "mainhand");
         Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"entity", "LootTable", "pos3"}, returnType = "CommandReturn")
-    public static void lootGiveFishUsingOffHand(EntityVar entity, LootTable lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
+    public static void lootGiveFishUsingOffHand(EntityVar entity, DataTemplateObject lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot give", entity, "fish", lootSource, pos, "offhand");
         Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"pos3", "LootTable", "pos3"}, returnType = "CommandReturn")
-    public static void lootInsertFish(Pos3Var targetPos, LootTable lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
+    public static void lootInsertFish(Pos3Var targetPos, DataTemplateObject lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot insert", targetPos, "fish", lootSource, pos);
         Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"pos3", "LootTable", "pos3", "Item"}, returnType = "CommandReturn")
-    public static void lootInsertFishUsing(Pos3Var targetPos, LootTable lootSource, Pos3Var pos, DataTemplateObject item, ValueWrapper<CommandReturn> re){
+    public static void lootInsertFishUsing(Pos3Var targetPos, DataTemplateObject lootSource, Pos3Var pos, DataTemplateObject item, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot insert", targetPos, "fish", lootSource, pos, item);
         Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"pos3", "LootTable", "pos3"}, returnType = "CommandReturn")
-    public static void lootInsertFishUsingMainHand(Pos3Var targetPos, LootTable lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
+    public static void lootInsertFishUsingMainHand(Pos3Var targetPos, DataTemplateObject lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot insert", targetPos, "fish", lootSource, pos, "mainhand");
         Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"pos3", "LootTable", "pos3"}, returnType = "CommandReturn")
-    public static void lootInsertFishUsingOffHand(Pos3Var targetPos, LootTable lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
+    public static void lootInsertFishUsingOffHand(Pos3Var targetPos, DataTemplateObject lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot insert", targetPos, "fish", lootSource, pos, "offhand");
         Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"pos3", "LootTable", "pos3"}, returnType = "CommandReturn")
-    public static void lootSpawnFish(Pos3Var targetPos, LootTable lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
+    public static void lootSpawnFish(Pos3Var targetPos, DataTemplateObject lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot spawn", targetPos, "fish", lootSource, pos);
         Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"pos3", "LootTable", "pos3", "Item"}, returnType = "CommandReturn")
-    public static void lootSpawnFishUsing(Pos3Var targetPos, LootTable lootSource, Pos3Var pos, DataTemplateObject item, ValueWrapper<CommandReturn> re){
+    public static void lootSpawnFishUsing(Pos3Var targetPos, DataTemplateObject lootSource, Pos3Var pos, DataTemplateObject item, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot spawn", targetPos, "fish", lootSource, pos, item);
         Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"pos3", "LootTable", "pos3"}, returnType = "CommandReturn")
-    public static void lootSpawnFishUsingMainHand(Pos3Var targetPos, LootTable lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
+    public static void lootSpawnFishUsingMainHand(Pos3Var targetPos, DataTemplateObject lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot spawn", targetPos, "fish", lootSource, pos, "mainhand");
         Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"pos3", "LootTable", "pos3"}, returnType = "CommandReturn")
-    public static void lootSpawnFishUsingOffHand(Pos3Var targetPos, LootTable lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
+    public static void lootSpawnFishUsingOffHand(Pos3Var targetPos, DataTemplateObject lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot spawn", targetPos, "fish", lootSource, pos, "offhand");
         Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"pos3", "Slot", "LootTable", "pos3"}, returnType = "CommandReturn")
-    public static void lootReplaceFish(Pos3Var targetPos, EnumVar slot, LootTable lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
+    public static void lootReplaceFish(Pos3Var targetPos, EnumVar slot, DataTemplateObject lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot replace block", targetPos, slot, "fish", lootSource, pos);
         Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"entity", "Slot", "LootTable", "pos3"}, returnType = "CommandReturn")
-    public static void lootReplaceFish(EntityVar entity, EnumVar slot, LootTable lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
+    public static void lootReplaceFish(EntityVar entity, EnumVar slot, DataTemplateObject lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot replace entity", entity, slot, "fish", lootSource, pos);
         Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"pos3", "Slot", "int", "LootTable", "pos3"}, returnType = "CommandReturn")
-    public static void lootReplaceFish(Pos3Var targetPos, EnumVar slot, MCInt count, LootTable lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
+    public static void lootReplaceFish(Pos3Var targetPos, EnumVar slot, MCInt count, DataTemplateObject lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot replace block", targetPos, slot, count, "fish", lootSource, pos, "loot");
         Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"entity", "Slot", "int", "LootTable", "pos3"}, returnType = "CommandReturn")
-    public static void lootReplaceFish(EntityVar entity, EnumVar slot, MCInt count, LootTable lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
+    public static void lootReplaceFish(EntityVar entity, EnumVar slot, MCInt count, DataTemplateObject lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot replace entity", entity, slot, count, "fish", lootSource, pos, "loot");
         Commands.processMacroCommandReturn(re, command);
     }
@@ -621,50 +620,50 @@ public class StdCommands {
     //endregion
 
     //region place
-    @MNIFunction(normalParams = {"Feature"})
-    public static void place(ConfiguredFeature feature, ValueWrapper<CommandReturn> re){
+    @MNIFunction(identifier = "place",normalParams = {"Feature"})
+    public static void placeFeature(DataTemplateObject feature, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("place feature", feature);
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = {"Feature", "pos3"})
-    public static void place(ConfiguredFeature feature, Pos3Var pos, ValueWrapper<CommandReturn> re){
+    @MNIFunction(identifier = "place",normalParams = {"Feature", "pos3"})
+    public static void placeFeature(DataTemplateObject feature, Pos3Var pos, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("place feature", feature, pos);
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = {"TemplatePool", "string", "int"})
-    public static void place(TemplatePool pool, MCString target, MCInt maxDepth, ValueWrapper<CommandReturn> re){
+    @MNIFunction(identifier = "place",normalParams = {"TemplatePool", "string", "int"})
+    public static void placeJigsaw(DataTemplateObject pool, MCString target, MCInt maxDepth, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("place jigsaw", pool, target, maxDepth);
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = {"TemplatePool", "string", "int", "pos3"})
-    public static void place(TemplatePool pool, MCString target, MCInt maxDepth, Pos3Var pos, ValueWrapper<CommandReturn> re){
+    @MNIFunction(identifier = "place",normalParams = {"TemplatePool", "string", "int", "pos3"})
+    public static void placeJigsaw(DataTemplateObject pool, MCString target, MCInt maxDepth, Pos3Var pos, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("place jigsaw", pool, target, maxDepth, pos);
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = {"Structure"})
-    public static void place(Structure structure, ValueWrapper<CommandReturn> re){
+    @MNIFunction(identifier = "place",normalParams = {"Structure"})
+    public static void placeStructure(DataTemplateObject structure, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("place structure", structure);
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = {"Structure", "pos3"})
-    public static void place(Structure structure, Pos3Var pos, ValueWrapper<CommandReturn> re){
+    @MNIFunction(identifier = "place",normalParams = {"Structure", "pos3"})
+    public static void placeStructure(DataTemplateObject structure, Pos3Var pos, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("place structure", structure, pos);
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = {"string", "pos3 = pos3.RELATIVE", "PlaceRotation = none", "PlaceMirror = none", "float = 1.0", "int = System.randInt()"})
-    public static void place(MCString name, Pos3Var pos, EnumVar rotation, EnumVar mirror, MCFloat integrity, MCInt seed, ValueWrapper<CommandReturn> re){
+    @MNIFunction(identifier = "place", normalParams = {"string", "pos3 = pos3.RELATIVE", "PlaceRotation = none", "PlaceMirror = none", "float = 1.0", "int = System.randInt()"})
+    public static void placeTemplate(MCString name, Pos3Var pos, EnumVar rotation, EnumVar mirror, MCFloat integrity, MCInt seed, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("place", name, pos, rotation, mirror, integrity, seed);
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = {"string", "pos3 = pos3.HERE", "PlaceRotation = none", "PlaceMirror = none", "float = 1.0", "int = System.randInt()"})
-    public static void placeStrict(MCString name, Pos3Var pos, EnumVar rotation, EnumVar mirror, MCFloat integrity, MCInt seed, ValueWrapper<CommandReturn> re){
+    @MNIFunction(identifier = "placeStrict" ,normalParams = {"string", "pos3 = pos3.HERE", "PlaceRotation = none", "PlaceMirror = none", "float = 1.0", "int = System.randInt()"})
+    public static void placeTemplateStrict(MCString name, Pos3Var pos, EnumVar rotation, EnumVar mirror, MCFloat integrity, MCInt seed, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("place", name, pos, rotation, mirror, integrity, seed, "strict");
         Commands.processMacroCommandReturn(re, command);
     }
@@ -672,7 +671,7 @@ public class StdCommands {
 
     //region playsound
     @MNIFunction(normalParams = {"Sound", "SoundType", "Player = @s", "pos3 = pos3.HERE", "float = 1.0", "float = 1.0", "float = 0.0"})
-    public static void playsound(Sound sound, EnumVar type, PlayerVar player, Pos3Var pos, MCFloat volume, MCFloat pitch, MCFloat distance, ValueWrapper<CommandReturn> re){
+    public static void playsound(DataTemplateObject sound, EnumVar type, PlayerVar player, Pos3Var pos, MCFloat volume, MCFloat pitch, MCFloat distance, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("playsound", sound, type, player, pos, volume, pitch, distance);
         Commands.processMacroCommandReturn(re, command);
     }
@@ -685,7 +684,5 @@ public class StdCommands {
         Commands.processMacroCommandReturn(re, command);
     }
     //endregion
-
-
 
 }

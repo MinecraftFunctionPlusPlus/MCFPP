@@ -1,11 +1,10 @@
 package top.mcfpp.lib
 
-import top.mcfpp.nbt.tags.collection.IntArrayTag
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
-import top.mcfpp.core.lang.resource.EntityTypeConcrete
+import top.mcfpp.nbt.tags.collection.IntArrayTag
 import top.mcfpp.util.LogProcessor
 
 abstract class ChatComponent {
@@ -243,13 +242,13 @@ class HoverEventShowTextStyle(val content: ChatComponent): ChatComponentStyle{
 //    }
 //}
 
-class HoverEventShowEntityStyle(val name: ChatComponent?, val type: EntityTypeConcrete, val uuid: NBTBasedData): ChatComponentStyle{
+class HoverEventShowEntityStyle(val name: ChatComponent?, val type: String, val uuid: NBTBasedData): ChatComponentStyle{
     override fun toCommandPart(): Command {
         val c = Command("\"hoverEvent\":{\"action\": \"show_entity\", \"contents\": {")
         if(name != null){
             c.build("\"name\": \"$name\", ", false)
         }
-        c.build("\"type\": \"${type.value}\"", false)
+        c.build("\"type\": \"${type}\"", false)
         if(uuid is NBTBasedDataConcrete){
             if(uuid.value is IntArrayTag && (uuid.value as IntArrayTag).value.size == 4){
                 c.build("\"id\": \"${uuid.value}\"", false)

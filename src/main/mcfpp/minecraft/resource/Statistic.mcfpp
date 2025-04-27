@@ -1,0 +1,5 @@
+@From<"top.mcfpp.mni.resource.StatisticData">
+data Statistic: ResourceID;
+
+@From<"top.mcfpp.mni.resource.StatisticObjectData">
+object data Statistic: ResourceID;

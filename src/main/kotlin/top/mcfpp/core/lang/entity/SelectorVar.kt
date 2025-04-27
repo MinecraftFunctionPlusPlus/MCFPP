@@ -4,7 +4,6 @@ import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTDictionary
-import top.mcfpp.core.lang.resource.LootTablePredicate
 import top.mcfpp.lib.EntitySelector
 import top.mcfpp.lib.EntitySource
 import top.mcfpp.lib.NBTPath
@@ -50,9 +49,9 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
                 return MCFPPEntityType.Selector(value.getLimit())
             }
             if(value.getLimit() == Int.MAX_VALUE){
-                return MCFPPEntityType.Selector(null, value.getType().map { if(it.value) "!${it.key.value}" else it.key.value })
+                return MCFPPEntityType.Selector(null, value.getType().map { if(it.value) "!${it.key}" else it.key.toString() })
             }
-            return MCFPPEntityType.Selector(value.getLimit(), value.getType().map { if(it.value) "!${it.key.value}" else it.key.value })
+            return MCFPPEntityType.Selector(value.getLimit(), value.getType().map { if(it.value) "!${it.key}" else it.key.toString() })
         }
 
     /**
@@ -133,15 +132,15 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
         val excluded = ArrayList<String>()
         for ((type, reverse) in types){
             if(!reverse){
-                val d = GlobalField.getTemplate("mcfpp.minecraft.entity", type.value.toCamelCase(true))
+                val d = GlobalField.getTemplate("mcfpp.minecraft.entity", type.toString().toCamelCase(true))
                 if(d == null){
-                    LogProcessor.error("Undefined entity: ${type.value} (${type.value.toCamelCase(true)})")
+                    LogProcessor.error("Undefined entity: $type (${type.toString().toCamelCase(true)})")
                 }else{
                     d.alwaysDynamic = true
                     return d
                 }
             }else{
-                excluded.add(type.value.toCamelCase(true))
+                excluded.add(type.toString().toCamelCase(true))
             }
         }
         val data = AllEntityDataTemplate(excluded)
@@ -167,7 +166,7 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
 
         private class AllEntityDataTemplate(excluded: List<String>): DataTemplate("AllEntity","mcfpp"){
             init {
-                GlobalField.getDataTemplate { data ->
+                GlobalField.getTemplate { data ->
                     data.annotations.any { it is MCFPPEntity } && data.identifier !in excluded
                 }.forEach {
                     extends(it)
@@ -333,16 +332,16 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
                 })))
                 addMember(Property("predicate", null, AnonymousNativeMutator { caller, v ->
                     val selector = (caller as SelectorVar).value
-                    val value = checkParamType(v, MCFPPResourceType.LootTablePredicate)
-                    if(value is LootTablePredicate){
+                    val value = checkParamType(v, GlobalField.getTemplate("mcfpp.minecraft.resource", "LootTablePredicate")!!.getType())
+                    if(value is DataTemplateObject){
                         selector.predicate(value, false)
                     }
                     return@AnonymousNativeMutator Void
                 }))
                 addMember(Property("predicateN", null, AnonymousNativeMutator { caller, v ->
                     val selector = (caller as SelectorVar).value
-                    val value = checkParamType(v, MCFPPResourceType.LootTablePredicate)
-                    if(value is LootTablePredicate){
+                    val value = checkParamType(v, GlobalField.getTemplate("mcfpp.minecraft.resource", "LootTablePredicate")!!.getType())
+                    if(value is DataTemplateObject){
                         selector.predicate(value, true)
                     }
                     return@AnonymousNativeMutator Void

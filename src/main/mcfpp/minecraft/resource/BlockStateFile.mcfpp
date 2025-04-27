@@ -1,0 +1,5 @@
+@From<"top.mcfpp.mni.resource.BlockStateFileData">
+data BlockStateFile: ResourceID;
+
+@From<"top.mcfpp.mni.resource.BlockStateFileObjectData">
+object data BlockStateFile: ResourceID;

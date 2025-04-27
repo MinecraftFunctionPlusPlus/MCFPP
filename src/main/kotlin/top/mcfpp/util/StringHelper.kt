@@ -1,5 +1,7 @@
 package top.mcfpp.util
 
+import top.mcfpp.lib.NamespaceID
+
 object StringHelper {
 
     fun Char.isLegal(): Boolean {
@@ -42,6 +44,11 @@ object StringHelper {
             return Pair(null, s[0])
         }
         return Pair(s[0], s[1])
+    }
+
+    fun String.toNamespaceID(): NamespaceID{
+        val qwq = splitNamespaceID()
+        return NamespaceID(qwq.first, qwq.second)
     }
 
     fun Pair<Float?, Float?>.toRangeStr(): String{

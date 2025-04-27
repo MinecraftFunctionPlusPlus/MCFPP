@@ -1,0 +1,5 @@
+@From<"top.mcfpp.mni.resource.ConfiguredFeatureData">
+data ConfiguredFeature: ResourceID;
+
+@From<"top.mcfpp.mni.resource.ConfiguredFeatureObjectData">
+object data ConfiguredFeature: ResourceID;

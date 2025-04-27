@@ -1,0 +1,5 @@
+@From<"top.mcfpp.mni.resource.LootTableFunctionData">
+data LootTableFunction: ResourceID;
+
+@From<"top.mcfpp.mni.resource.LootTableFunctionObjectData">
+object data LootTableFunction: ResourceID;

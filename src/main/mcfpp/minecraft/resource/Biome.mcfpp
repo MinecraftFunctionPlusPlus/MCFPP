@@ -1,0 +1,5 @@
+@From<"top.mcfpp.mni.resource.BiomeData">
+data Biome: ResourceID;
+
+@From<"top.mcfpp.mni.resource.BiomeObjectData">
+object data Biome: ResourceID;

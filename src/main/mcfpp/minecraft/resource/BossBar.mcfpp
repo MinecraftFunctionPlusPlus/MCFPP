@@ -1,0 +1,5 @@
+@From<"top.mcfpp.mni.resource.BossBarData">
+data BossBar: ResourceID;
+
+@From<"top.mcfpp.mni.resource.BossBarObjectData">
+object data BossBar: ResourceID;

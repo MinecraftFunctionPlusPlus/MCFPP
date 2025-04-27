@@ -1,14 +1,12 @@
 package top.mcfpp.mni;
 
 import top.mcfpp.annotations.MNIFunction;
+import top.mcfpp.core.lang.DataTemplateObject;
 import top.mcfpp.core.lang.MCInt;
 import top.mcfpp.core.lang.RangeVar;
 import top.mcfpp.core.lang.entity.SelectorVar;
 import top.mcfpp.core.lang.nbt.MCString;
 import top.mcfpp.core.lang.nbt.NBTBasedData;
-import top.mcfpp.core.lang.resource.Advancement;
-import top.mcfpp.core.lang.resource.EntityType;
-import top.mcfpp.core.lang.resource.LootTablePredicate;
 import top.mcfpp.lib.*;
 import top.mcfpp.util.ValueWrapper;
 
@@ -95,26 +93,26 @@ public class SelectorData {
     }
 
     @MNIFunction(normalParams = {"EntityType"}, returnType = "selector")
-    public static void type(EntityType type, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new TypePredicate((EntityType) type.clone(), false));
+    public static void type(DataTemplateObject type, SelectorVar caller, ValueWrapper<SelectorVar> re){
+        caller.getValue().addPredicate(new TypePredicate(type.clone(), false));
         re.setValue(caller);
     }
 
     @MNIFunction(normalParams = {"EntityType"}, returnType = "selector")
-    public static void typeNot(EntityType type, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new TypePredicate((EntityType) type.clone(), true));
+    public static void typeNot(DataTemplateObject type, SelectorVar caller, ValueWrapper<SelectorVar> re){
+        caller.getValue().addPredicate(new TypePredicate(type.clone(), true));
         re.setValue(caller);
     }
 
     @MNIFunction(normalParams = {"Predicate"}, returnType = "selector")
-    public static void predicate(LootTablePredicate predicate, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new PredicatePredicate((LootTablePredicate) predicate.clone(), false));
+    public static void predicate(DataTemplateObject predicate, SelectorVar caller, ValueWrapper<SelectorVar> re){
+        caller.getValue().addPredicate(new PredicatePredicate(predicate.clone(), false));
         re.setValue(caller);
     }
 
     @MNIFunction(normalParams = {"Predicate"}, returnType = "selector")
-    public static void predicateNot(MCString predicate, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new PredicatePredicate((LootTablePredicate) predicate.clone(), true));
+    public static void predicateNot(DataTemplateObject predicate, SelectorVar caller, ValueWrapper<SelectorVar> re){
+        caller.getValue().addPredicate(new PredicatePredicate(predicate.clone(), true));
         re.setValue(caller);
     }
 
@@ -155,14 +153,14 @@ public class SelectorData {
     }
 
     @MNIFunction(normalParams = {"Advancement"}, returnType = "selector")
-    public static void advancements(Advancement advancements, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new AdvancementsPredicate((Advancement) advancements.clone(), false));
+    public static void advancements(DataTemplateObject advancements, SelectorVar caller, ValueWrapper<SelectorVar> re){
+        caller.getValue().addPredicate(new AdvancementsPredicate(advancements.clone(), false));
         re.setValue(caller);
     }
 
     @MNIFunction(normalParams = {"Advancement"}, returnType = "selector")
-    public static void advancementsNot(Advancement advancements, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new AdvancementsPredicate((Advancement) advancements.clone(), true));
+    public static void advancementsNot(DataTemplateObject advancements, SelectorVar caller, ValueWrapper<SelectorVar> re){
+        caller.getValue().addPredicate(new AdvancementsPredicate(advancements.clone(), true));
         re.setValue(caller);
     }
 

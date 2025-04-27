@@ -1,0 +1,5 @@
+@From<"top.mcfpp.mni.resource.TextureData">
+data Texture: ResourceID;
+
+@From<"top.mcfpp.mni.resource.TextureObjectData">
+object data Texture: ResourceID;

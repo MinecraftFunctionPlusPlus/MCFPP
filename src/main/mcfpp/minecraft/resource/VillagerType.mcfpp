@@ -1,0 +1,5 @@
+@From<"top.mcfpp.mni.resource.VillagerTypeData">
+data VillagerType: ResourceID;
+
+@From<"top.mcfpp.mni.resource.VillagerTypeObjectData">
+object data VillagerType: ResourceID;

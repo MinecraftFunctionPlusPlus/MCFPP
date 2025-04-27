@@ -1,0 +1,5 @@
+@From<"top.mcfpp.mni.resource.EffectData">
+data Effect: ResourceID;
+
+@From<"top.mcfpp.mni.resource.EffectObjectData">
+object data Effect: ResourceID;

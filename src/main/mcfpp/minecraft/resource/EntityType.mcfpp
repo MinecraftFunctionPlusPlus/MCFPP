@@ -1,0 +1,5 @@
+@From<"top.mcfpp.mni.resource.EntityTypeData">
+data EntityType: ResourceID;
+
+@From<"top.mcfpp.mni.resource.EntityTypeObjectData">
+object data EntityType: ResourceID;

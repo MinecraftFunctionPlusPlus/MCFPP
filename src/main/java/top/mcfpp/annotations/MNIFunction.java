@@ -37,11 +37,6 @@ public @interface MNIFunction {
     boolean override() default false;
 
     /**
-     * 是否是单例对象
-     */
-    boolean isObject() default false;
-
-    /**
      * 当caller是泛型类型的时候，caller需要的泛型参数标记
      */
     String[] genericType() default {};

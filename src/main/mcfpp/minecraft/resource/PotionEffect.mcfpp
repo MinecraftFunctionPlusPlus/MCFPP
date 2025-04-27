@@ -1,0 +1,5 @@
+@From<"top.mcfpp.mni.resource.PotionEffectData">
+data PotionEffect: ResourceID;
+
+@From<"top.mcfpp.mni.resource.PotionEffectObjectData">
+object data PotionEffect: ResourceID;

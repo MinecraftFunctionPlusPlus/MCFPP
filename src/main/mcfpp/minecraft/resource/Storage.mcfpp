@@ -1,0 +1,5 @@
+@From<"top.mcfpp.mni.resource.StorageData">
+data Storage: ResourceID;
+
+@From<"top.mcfpp.mni.resource.StorageObjectData">
+object data Storage: ResourceID;

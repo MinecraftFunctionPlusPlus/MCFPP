@@ -1,6 +1,5 @@
 package top.mcfpp.lib
 
-import top.mcfpp.core.lang.resource.StorageConcrete
 import java.io.Serializable
 
 /**
@@ -30,10 +29,6 @@ class Storage: Serializable {
 
     override fun hashCode(): Int {
         return toString().hashCode()
-    }
-
-    fun getResourceID() : top.mcfpp.core.lang.resource.Storage{
-        return StorageConcrete("$namespace:$identifier")
     }
 
     companion object {
