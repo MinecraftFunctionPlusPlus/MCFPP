@@ -1,0 +1,4 @@
+data BlockState{
+    id as string;
+    properties as map<string, nbt>;
+}

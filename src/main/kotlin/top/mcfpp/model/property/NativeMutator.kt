@@ -30,7 +30,7 @@ class NativeMutator: AbstractMutator {
             var hasFind = false
             for(method in methods){
                 val mniMutator = method.getAnnotation(MNIMutator::class.java) ?: continue
-                if(mniMutator.name == field.identifier){
+                if(mniMutator.value == field.identifier){
                     hasFind = true
                     function.javaMethod = method
                     break

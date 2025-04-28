@@ -8,6 +8,7 @@ import top.mcfpp.core.lang.bool.BaseBool;
 import top.mcfpp.core.lang.entity.EntityVar;
 import top.mcfpp.core.lang.entity.PlayerVar;
 import top.mcfpp.core.lang.nbt.MCString;
+import top.mcfpp.core.lang.nbt.NBTBasedData;
 import top.mcfpp.util.ValueWrapper;
 
 public class StdCommands {
@@ -543,14 +544,6 @@ public class StdCommands {
     }
     //endregion
 
-    //region msg
-    @MNIFunction(normalParams = {"Player", "string"}, returnType = "CommandReturn")
-    public static void msg(PlayerVar player, MCString s, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("msg", player, s);
-        Commands.processMacroCommandReturn(re, command);
-    }
-    //endregion
-
     //region pardon
     @MNIFunction(normalParams = "string", returnType = "CommandReturn")
     public static void pardon(MCString s, ValueWrapper<CommandReturn> re){
@@ -684,5 +677,152 @@ public class StdCommands {
         Commands.processMacroCommandReturn(re, command);
     }
     //endregion
+
+    //region reload
+    @MNIFunction(returnType = "CommandReturn")
+    public static void reload(ValueWrapper<CommandReturn> re){
+        var command = new Command("reload");
+        Commands.processMacroCommandReturn(re, command);
+    }
+    //endregion
+
+    //region save save-all save-off save-on
+    @MNIFunction(returnType = "CommandReturn")
+    public static void save(ValueWrapper<CommandReturn> re){
+        var command = new Command("save");
+        Commands.processMacroCommandReturn(re, command);
+    }
+
+    @MNIFunction(returnType = "CommandReturn")
+    public static void saveAll(ValueWrapper<CommandReturn> re){
+        var command = new Command("save-all");
+        Commands.processMacroCommandReturn(re, command);
+    }
+
+    @MNIFunction(returnType = "CommandReturn")
+    public static void saveOff(ValueWrapper<CommandReturn> re){
+        var command = new Command("save-off");
+        Commands.processMacroCommandReturn(re, command);
+    }
+
+    @MNIFunction(returnType = "CommandReturn")
+    public static void saveOn(ValueWrapper<CommandReturn> re){
+        var command = new Command("save-on");
+        Commands.processMacroCommandReturn(re, command);
+    }
+    //endregion
+
+    //region say
+    @MNIFunction(normalParams = "string", returnType = "CommandReturn")
+    public static void say(MCString s, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("say", s);
+        Commands.processMacroCommandReturn(re, command);
+    }
+    //endregion
+
+    //TODO schedule
+
+    //region seed
+    @MNIFunction(returnType = "CommandReturn")
+    public static void seed(ValueWrapper<CommandReturn> re){
+        var command = new Command("seed");
+        Commands.processMacroCommandReturn(re, command);
+    }
+    //endregion
+
+    //region setblock
+    @MNIFunction(normalParams = {"pos3", "BlockState", "SetBlockMode = replace"}, returnType = "CommandReturn")
+    public static void setblock(Pos3Var pos, DataTemplateObject block, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("setblock", pos, block);
+        Commands.processMacroCommandReturn(re, command);
+    }
+    //endregion
+
+    //region setidletimeout
+    @MNIFunction(normalParams = "int", returnType = "CommandReturn")
+    public static void setidletimeout(MCInt timeout, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("setidletimeout", timeout);
+        Commands.processMacroCommandReturn(re, command);
+    }
+    //endregion
+
+    //region setworldspawn
+    @MNIFunction(normalParams = {"pos3 = pos3.RELATIVE", "pos2.RELATIVE"}, returnType = "CommandReturn")
+    public static void setworldspawn(Pos3Var pos, Pos2Var rotation, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("setworldspawn", pos, rotation);
+        Commands.processMacroCommandReturn(re, command);
+    }
+    //endregion
+
+    //region spreadplayers
+    @MNIFunction(normalParams = {"pos2", "float", "float", "bool", "entity"}, returnType = "CommandReturn")
+    public static void spreadplayers(Pos2Var pos, MCFloat xz, MCFloat y, BaseBool force, EntityVar entity, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("spreadplayers", pos, xz, y, force, entity);
+        Commands.processMacroCommandReturn(re, command);
+    }
+
+    @MNIFunction(normalParams = {"pos2", "float", "float", "int", "bool", "entity"}, returnType = "CommandReturn")
+    public static void spreadplayers(Pos2Var pos, MCFloat xz, MCFloat y, MCInt count, BaseBool force, EntityVar entity, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("spreadplayers", pos, xz, "under", y, count, force, entity);
+        Commands.processMacroCommandReturn(re, command);
+    }
+    //endregion
+
+    //region stop
+    @MNIFunction(returnType = "CommandReturn")
+    public static void stop(ValueWrapper<CommandReturn> re){
+        var command = new Command("stop");
+        Commands.processMacroCommandReturn(re, command);
+    }
+    //endregion
+
+    //region stopsound
+    @MNIFunction(normalParams = {"entity"}, returnType = "CommandReturn")
+    public static void stopAllSound(EntityVar entity, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("stopsound", entity);
+        Commands.processMacroCommandReturn(re, command);
+    }
+
+    @MNIFunction(normalParams = {"entity", "SoundType"}, returnType = "CommandReturn")
+    public static void stopSound(EntityVar entity, EnumVar type, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("stopsound", entity, type);
+        Commands.processMacroCommandReturn(re, command);
+    }
+
+    @MNIFunction(normalParams = {"entity", "Sound"}, returnType = "CommandReturn")
+    public static void stopSound(EntityVar entity, DataTemplateObject sound, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("stopsound", entity, "*", sound);
+        Commands.processMacroCommandReturn(re, command);
+    }
+
+    @MNIFunction(normalParams = {"entity", "SoundType", "Sound"}, returnType = "CommandReturn")
+    public static void stopSound(EntityVar entity, EnumVar type, DataTemplateObject sound, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("stopsound", entity, type, sound);
+        Commands.processMacroCommandReturn(re, command);
+    }
+    //endregion
+
+    //region summon
+    @MNIFunction(normalParams = {"EntityType", "pos3"}, returnType = "CommandReturn")
+    public static void summon(DataTemplateObject entity, Pos3Var pos, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("summon", entity, pos);
+        Commands.processMacroCommandReturn(re, command);
+    }
+
+    @MNIFunction(normalParams = {"EntityType", "pos3", "nbt"}, returnType = "CommandReturn")
+    public static void summon(DataTemplateObject entity, Pos3Var pos, NBTBasedData nbt, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("summon", entity, pos, nbt);
+        Commands.processMacroCommandReturn(re, command);
+    }
+    //endregion
+
+    //region teammsg
+    @MNIFunction(normalParams = "string", returnType = "CommandReturn")
+    public static void teammsg(MCString s, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("teammsg", s);
+        Commands.processMacroCommandReturn(re, command);
+    }
+    //endregion
+
 
 }

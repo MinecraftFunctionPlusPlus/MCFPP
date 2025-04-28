@@ -161,4 +161,82 @@ public class EntityVarData {
         Commands.processMacroCommandReturn(returnValue, command);
     }
 
+    //region ride
+    @MNIFunction(normalParams = "entity<1>", caller = "entity", returnType = "CommandReturn")
+    public static void ride(EntityVar entity, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
+        var command = Command.Companion.buildAll("ride", caller, "mount", entity);
+        Commands.processMacroCommandReturn(returnValue, command);
+    }
+
+    @MNIFunction(caller = "entity", returnType = "CommandReturn")
+    public static void stopRide(EntityVar caller, ValueWrapper<CommandReturn> returnValue){
+        var command = Command.Companion.buildAll("ride", caller, "dismount");
+        Commands.processMacroCommandReturn(returnValue, command);
+    }
+    //endregion
+
+    //region tag
+    @MNIFunction(normalParams = "string" ,caller = "entity", returnType = "CommandReturn")
+    public static void addTag(MCString tag, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
+        var command = Command.Companion.buildAll("tag", caller, "add", tag);
+        Commands.processMacroCommandReturn(returnValue, command);
+    }
+    @MNIFunction(normalParams = "string",caller = "entity", returnType = "CommandReturn")
+    public static void removeTag(MCString tag, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
+        var command = Command.Companion.buildAll("tag", caller, "remove", tag);
+        Commands.processMacroCommandReturn(returnValue, command);
+    }
+    @MNIFunction(caller = "entity", returnType = "CommandReturn")
+    public static void listTag(EntityVar caller, ValueWrapper<CommandReturn> returnValue){
+        var command = Command.Companion.buildAll("tag", caller, "list");
+        Commands.processMacroCommandReturn(returnValue, command);
+    }
+    //endregion
+
+    //region team
+    @MNIFunction(normalParams = "Team",caller = "entity", returnType = "CommandReturn")
+    public static void joinTeam(DataTemplateObject team, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
+        var command = Command.Companion.buildAll("team join", caller, team);
+        Commands.processMacroCommandReturn(returnValue, command);
+    }
+
+    @MNIFunction(normalParams = "Team",caller = "entity", returnType = "CommandReturn")
+    public static void leaveTeam(DataTemplateObject team, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
+        var command = Command.Companion.buildAll("team leave", caller, team);
+        Commands.processMacroCommandReturn(returnValue, command);
+    }
+    //endregion
+
+    //region tp
+    @MNIFunction(normalParams = "pos3", returnType = "CommandReturn")
+    public static void tp(Pos3Var pos, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
+        var command = Command.Companion.buildAll("tp", caller, pos);
+        Commands.processMacroCommandReturn(returnValue, command);
+    }
+
+    @MNIFunction(normalParams = "entity<1>", returnType = "CommandReturn")
+    public static void tp(EntityVar entity, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
+        var command = Command.Companion.buildAll("tp", caller, entity);
+        Commands.processMacroCommandReturn(returnValue, command);
+    }
+
+    @MNIFunction(normalParams = {"pos3", "pos2"}, returnType = "CommandReturn")
+    public static void tp(Pos3Var pos, Pos2Var rotation, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
+        var command = Command.Companion.buildAll("tp", caller, pos, rotation);
+        Commands.processMacroCommandReturn(returnValue, command);
+    }
+
+    @MNIFunction(normalParams = {"pos3", "pos3"}, returnType = "CommandReturn")
+    public static void tp(Pos3Var pos, Pos3Var faceLocation, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
+        var command = Command.Companion.buildAll("tp", caller, pos, "facing", faceLocation);
+        Commands.processMacroCommandReturn(returnValue, command);
+    }
+
+    @MNIFunction(normalParams = {"pos3", "entity<1>", "Anchor = eyes"}, returnType = "CommandReturn")
+    public static void tp(Pos3Var pos, EntityVar entity, EnumVar anchor, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
+        var command = Command.Companion.buildAll("tp", caller, pos, "facing entity", entity, anchor);
+        Commands.processMacroCommandReturn(returnValue, command);
+    }
+
+
 }

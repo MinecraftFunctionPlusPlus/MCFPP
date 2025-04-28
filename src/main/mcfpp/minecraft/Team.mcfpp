@@ -1,0 +1,36 @@
+@From<"top.mcfpp.mni.minecraft.TeamData">
+data Team {
+    id as string;
+    displayName as text;
+
+    constructor(string){
+        this.id = p0;
+        this.displayName = p0;
+    }
+
+    constructor(string, text){
+        this.id = p0;
+        this.displayName = p1;
+    }
+}
+
+enum NametagVisibility {
+    never,
+    hideForOtherTeams,
+    hideForOwnTeam,
+    always
+}
+
+enum DeathMessageVisibility {
+    never,
+    hideForOtherTeams,
+    hideForOwnTeam,
+    always
+}
+
+enum CollisionRule {
+    pushOtherTeams,
+    pushOwnTeam,
+    always,
+    never
+}

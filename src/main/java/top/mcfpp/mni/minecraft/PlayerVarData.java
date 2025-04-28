@@ -10,6 +10,7 @@ import top.mcfpp.core.lang.entity.PlayerVar;
 import top.mcfpp.core.lang.nbt.MCString;
 import top.mcfpp.mni.hidden.AttributeData;
 import top.mcfpp.model.CompoundData;
+import top.mcfpp.model.function.Function;
 import top.mcfpp.util.ValueWrapper;
 
 import java.util.ArrayList;
@@ -178,6 +179,22 @@ public class PlayerVarData {
     public static void setGamemode(EnumVar mode, PlayerVar player, ValueWrapper<CommandReturn> returnValue){
         Command command = Command.Companion.buildAll("gamemode", mode, player);
         Commands.processMacroCommandReturn(returnValue, command);
+    }
+    //endregion
+
+    //region spawnpoint
+    @MNIFunction(normalParams = {"pos3 = pos3.RELATIVE", "pos2 = pos2.RELATIVE"} ,caller = "Player", returnType = "CommandReturn")
+    public static void setSpawnpoint(Pos3Var pos3, Pos2Var pos2, PlayerVar player, ValueWrapper<CommandReturn> returnValue){
+        Command command = Command.Companion.buildAll("spawnpoint", player, pos3, pos2);
+        Commands.processMacroCommandReturn(returnValue, command);
+    }
+    //endregion
+
+    //region tell
+    @MNIFunction(normalParams = {"Player" , "string"}, caller = "Player", returnType = "CommandReturn")
+    public static void tell(PlayerVar player, MCString message, ValueWrapper<CommandReturn> returnValue){
+        Command command = Command.Companion.buildAll("tell", player, message);
+        Function.addCommands(Commands.runAsEntity(player.getEntityVar(), command));
     }
     //endregion
 }

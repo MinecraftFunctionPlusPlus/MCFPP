@@ -84,7 +84,7 @@ public class BossBarData {
         getIntAttr("max", bossbar, returnValue);
     }
 
-    @MNIMutator(name = "max")
+    @MNIMutator(value = "max")
     public static void setMax(DataTemplateObject bossbar, MCInt value){
         setIntAttr("max", bossbar, value);
     }
@@ -94,7 +94,7 @@ public class BossBarData {
         getIntAttr("value", bossbar, returnValue);
     }
 
-    @MNIMutator(name = "value")
+    @MNIMutator(value = "value")
     public static void setValue(DataTemplateObject bossbar, MCInt value){
         setIntAttr("value", bossbar, value);
     }
@@ -116,7 +116,7 @@ public class BossBarData {
         }
     }
 
-    @MNIMutator(name = "visible")
+    @MNIMutator(value = "visible")
     public static void setVisible(DataTemplateObject bossbar, ScoreBool value){
         var id = bossbar.getMemberVarWithT("id", MCString.class);
         Command command;

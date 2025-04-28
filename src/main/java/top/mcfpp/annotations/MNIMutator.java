@@ -8,5 +8,9 @@ import java.lang.annotation.Target;
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface MNIMutator {
-    String name();
+
+    /**
+     * 访问器的名字
+     */
+    String value();
 }

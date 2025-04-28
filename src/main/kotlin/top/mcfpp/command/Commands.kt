@@ -3,6 +3,7 @@ package top.mcfpp.command
 import top.mcfpp.Project
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.ScoreBool
+import top.mcfpp.core.lang.entity.EntityVar
 import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.nbt.EntityUUIDVar
 import top.mcfpp.core.lang.nbt.EntityUUIDVarConcrete
@@ -317,6 +318,19 @@ object Commands {
         }
     }
 
+    @JvmStatic
+    fun processMacroCommand(command: Command){
+        if (command.isMacro) {
+            command.prepend("return run")
+            val commandArray = command.buildMacroFunction()
+            for (i in 0..<commandArray.size - 1) {
+                addCommand(commandArray[i])
+            }
+        } else {
+            addCommand(command)
+        }
+    }
+
     /**
      * 以一个类的对象为执行者，执行一个命令。
      *
@@ -485,8 +499,8 @@ object Commands {
      * @return 生成的命令。数组的最后一个命令为`execute`命令
      */
     @JvmStatic
-    fun runAsEntity(selector: SelectorVar, command: Command): Array<Command>{
-        val c = Command("execute as").build(selector.value.toCommandPart()).build("run").build(command)
+    fun runAsEntity(selector: EntityVar, command: Command): Array<Command>{
+        val c = Command("execute as").build(selector.toCommandPart()).build("run").build(command)
         return if(c.isMacro){
             c.buildMacroFunction()
         }else{
