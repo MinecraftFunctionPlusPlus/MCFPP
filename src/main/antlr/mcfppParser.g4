@@ -194,7 +194,7 @@ genericClassImplement
 
 //数据模板
 templateDeclaration
-    :   FINAL? DATA classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? (templateBody | ';')
+    :   FINAL? DATA classWithoutNamespace readOnlyParams? ((COLON className (',' className)*) | AS type)? (templateBody | ';')
     ;
 
 //数据模板

@@ -1,6 +1,6 @@
 package top.mcfpp.model.field
 
-import top.mcfpp.model.Enum
+import top.mcfpp.model.compound.Enum
 
 interface IFieldWithEnum: IField {
     /**

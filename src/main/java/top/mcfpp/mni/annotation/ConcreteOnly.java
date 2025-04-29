@@ -2,10 +2,9 @@ package top.mcfpp.mni.annotation;
 
 import org.jetbrains.annotations.NotNull;
 import top.mcfpp.core.lang.Var;
-import top.mcfpp.model.Class;
-import top.mcfpp.model.DataTemplate;
 import top.mcfpp.model.annotation.Annotation;
-import top.mcfpp.model.annotation.DataTemplateAnnotation;
+import top.mcfpp.model.compound.Class;
+import top.mcfpp.model.compound.DataTemplate;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.util.LogProcessor;
 

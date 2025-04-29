@@ -5,8 +5,9 @@ import top.mcfpp.core.lang.MCAny
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
 import top.mcfpp.io.MCFPPFile
-import top.mcfpp.model.*
-import top.mcfpp.model.Enum
+import top.mcfpp.model.Namespace
+import top.mcfpp.model.compound.*
+import top.mcfpp.model.compound.Enum
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.generic.ClassParam
 import top.mcfpp.model.generic.GenericClass
@@ -281,7 +282,8 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         for (m in ctx.enumBody().enumMember()) {
             val value = enum.getNextMemberValue()
             val data = m.nbtValue()?.let { Tag.toNBT(it.text)}
-            val member = EnumMember(m.Identifier().text, value, data?: IntTag(0))
+            val member =
+                EnumMember(m.Identifier().text, value, data ?: IntTag(0))
             enum.addMember(member)
         }
     }

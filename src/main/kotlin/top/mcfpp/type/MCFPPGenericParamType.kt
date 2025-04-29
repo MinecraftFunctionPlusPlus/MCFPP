@@ -2,7 +2,7 @@ package top.mcfpp.type
 
 import top.mcfpp.core.lang.MCAny
 import top.mcfpp.core.lang.value.MCTypeValue
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.CompoundData
 
 /**
  * 泛型类型

@@ -9,7 +9,7 @@ import top.mcfpp.core.lang.entity.SpecifiedEntityConcreteVar
 import top.mcfpp.core.lang.entity.SpecifiedEntityVar
 import top.mcfpp.lib.NBTChatComponent
 import top.mcfpp.lib.PlainChatComponent
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.nbt.tags.primitive.StringTag

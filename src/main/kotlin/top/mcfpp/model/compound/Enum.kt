@@ -1,4 +1,4 @@
-package top.mcfpp.model
+package top.mcfpp.model.compound
 
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.field.GlobalField

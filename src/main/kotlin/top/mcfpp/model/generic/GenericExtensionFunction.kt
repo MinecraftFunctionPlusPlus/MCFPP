@@ -6,7 +6,7 @@ import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam

@@ -18,10 +18,10 @@ import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lib.Execute
-import top.mcfpp.model.Class
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.Class
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.Namespace
-import top.mcfpp.model.ObjectClass
+import top.mcfpp.model.compound.ObjectClass
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function

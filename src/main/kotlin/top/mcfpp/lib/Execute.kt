@@ -5,7 +5,7 @@ import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.Pos3Var
 import top.mcfpp.core.lang.PosDimension
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor

@@ -7,7 +7,7 @@ import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.core.lang.nbt.NBTDictionaryConcrete
 import top.mcfpp.mni.annotation.ConcreteOnly
-import top.mcfpp.model.DataTemplate
+import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.Member
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.Function

@@ -11,7 +11,7 @@ import top.mcfpp.io.info.ClassInfo
 import top.mcfpp.io.info.DataTemplateInfo
 import top.mcfpp.io.info.FunctionTagInfo
 import top.mcfpp.io.info.GenericClassInfo
-import top.mcfpp.model.*
+import top.mcfpp.model.compound.*
 import top.mcfpp.model.function.FunctionTag
 import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.type.*

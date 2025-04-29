@@ -6,7 +6,7 @@ import top.mcfpp.core.lang.MCAnyConcrete
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
 import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.function.Function
 import top.mcfpp.nbt.tags.primitive.DoubleTag

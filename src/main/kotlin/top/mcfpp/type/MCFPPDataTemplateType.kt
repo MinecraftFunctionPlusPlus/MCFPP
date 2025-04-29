@@ -3,6 +3,10 @@ package top.mcfpp.type
 import top.mcfpp.core.lang.*
 import top.mcfpp.mni.annotation.NoInstance
 import top.mcfpp.model.*
+import top.mcfpp.model.compound.CompoundData
+import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.UnsolvedTemplate
+import top.mcfpp.model.compound.Class
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool

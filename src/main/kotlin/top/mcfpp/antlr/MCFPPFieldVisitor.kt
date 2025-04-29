@@ -14,6 +14,7 @@ import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.*
 import top.mcfpp.model.Member.AccessModifier
+import top.mcfpp.model.compound.*
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.field.IFieldWithType
 import top.mcfpp.model.function.*

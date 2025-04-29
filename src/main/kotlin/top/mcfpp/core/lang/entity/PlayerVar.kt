@@ -3,7 +3,7 @@ package top.mcfpp.core.lang.entity
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.minecraft.PlayerInventory
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPEntityType

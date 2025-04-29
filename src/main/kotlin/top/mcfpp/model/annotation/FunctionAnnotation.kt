@@ -1,8 +1,8 @@
 package top.mcfpp.model.annotation
 
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.Class
-import top.mcfpp.model.DataTemplate
+import top.mcfpp.model.compound.Class
+import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.util.LogProcessor
 
 abstract class FunctionAnnotation(identifier: String, namespace: String) : Annotation(identifier,namespace) {

@@ -12,7 +12,7 @@ import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.mni.MCIntData
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function

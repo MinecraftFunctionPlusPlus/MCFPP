@@ -1,6 +1,6 @@
 @file:Suppress("ConvertSecondaryConstructorToPrimary", "LeakingThis")
 
-package top.mcfpp.model
+package top.mcfpp.model.compound
 
 import top.mcfpp.Project
 import top.mcfpp.core.lang.ClassPointer
@@ -11,6 +11,7 @@ import top.mcfpp.lib.EntitySelector
 import top.mcfpp.lib.EntitySource
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.lib.StorageSource
+import top.mcfpp.model.Member
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.ClassConstructor
 import top.mcfpp.model.function.Function
@@ -184,7 +185,7 @@ open class Class : CompoundData {
      *
      * @param compoundData
      */
-    override fun extends(compoundData: CompoundData) : CompoundData{
+    override fun extends(compoundData: CompoundData) : CompoundData {
         if(compoundData is Class){
             if(hasParentClass){
                 LogProcessor.error("A class can only inherit one class")

@@ -2,7 +2,7 @@ package top.mcfpp.model.function
 
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.Class
+import top.mcfpp.model.compound.Class
 import top.mcfpp.model.Native
 
 class NativeClassConstructor(cls: Class) : ClassConstructor(cls), Native {

@@ -1,7 +1,7 @@
 package top.mcfpp.mni.annotation;
 
 import org.jetbrains.annotations.NotNull;
-import top.mcfpp.model.Class;
+import top.mcfpp.model.compound.Class;
 import top.mcfpp.model.annotation.ClassAnnotation;
 
 public class Base extends ClassAnnotation {

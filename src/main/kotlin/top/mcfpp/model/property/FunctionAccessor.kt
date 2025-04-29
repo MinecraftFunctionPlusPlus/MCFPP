@@ -2,7 +2,7 @@ package top.mcfpp.model.property
 
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.Function
 
 class FunctionAccessor: AbstractAccessor {

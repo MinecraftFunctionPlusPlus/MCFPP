@@ -6,8 +6,8 @@ import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.entity.SpecifiedEntityConcreteVar
 import top.mcfpp.core.lang.entity.SpecifiedEntityVar
 import top.mcfpp.lib.EntitySelector
-import top.mcfpp.model.Class
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.Class
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.nbt.tags.primitive.StringTag
 

@@ -5,6 +5,9 @@ import com.alibaba.fastjson2.JSONObject
 import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.model.*
+import top.mcfpp.model.compound.CompoundData
+import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.Class
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.Function

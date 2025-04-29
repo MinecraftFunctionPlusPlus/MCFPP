@@ -3,10 +3,7 @@ package top.mcfpp.antlr
 import top.mcfpp.Project
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.exception.UndefinedException
-import top.mcfpp.model.Class
-import top.mcfpp.model.DataTemplate
-import top.mcfpp.model.ObjectClass
-import top.mcfpp.model.ObjectDataTemplate
+import top.mcfpp.model.compound.*
 import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.FunctionParam

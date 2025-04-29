@@ -7,8 +7,8 @@ import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.ClassPointer
 import top.mcfpp.core.lang.Var
 import top.mcfpp.lib.NBTPath
-import top.mcfpp.model.Class
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.Class
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.type.MCFPPType
 import java.util.*
 

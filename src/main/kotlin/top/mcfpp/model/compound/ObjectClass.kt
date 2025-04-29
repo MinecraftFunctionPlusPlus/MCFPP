@@ -1,4 +1,4 @@
-package top.mcfpp.model
+package top.mcfpp.model.compound
 
 import top.mcfpp.Project
 import top.mcfpp.core.lang.ClassPointer
@@ -8,7 +8,8 @@ import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.MCUUID
 
-open class ObjectClass(identifier: String, namespace: String = Project.currNamespace) : Class(identifier, namespace), ObjectCompoundData {
+open class ObjectClass(identifier: String, namespace: String = Project.currNamespace) : Class(identifier, namespace),
+    ObjectCompoundData {
 
     var mcuuid: MCUUID = MCUUID.genFromString("$namespace:$identifier")
 

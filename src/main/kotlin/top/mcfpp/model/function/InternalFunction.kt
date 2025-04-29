@@ -1,7 +1,7 @@
 package top.mcfpp.model.function
 
-import top.mcfpp.model.Class
-import top.mcfpp.model.DataTemplate
+import top.mcfpp.model.compound.Class
+import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.field.InternalFunctionField
 import top.mcfpp.util.TempPool
 

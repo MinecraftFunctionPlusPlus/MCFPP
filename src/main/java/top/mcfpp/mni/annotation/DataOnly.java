@@ -1,15 +1,12 @@
 package top.mcfpp.mni.annotation;
 
 import kotlin.Unit;
-import kotlin.jvm.internal.Intrinsics;
 import org.jetbrains.annotations.NotNull;
-import top.mcfpp.core.lang.MCInt;
 import top.mcfpp.core.lang.OnScoreboard;
 import top.mcfpp.core.lang.Var;
-import top.mcfpp.model.Class;
-import top.mcfpp.model.DataTemplate;
 import top.mcfpp.model.annotation.Annotation;
-import top.mcfpp.model.annotation.FieldAnnotation;
+import top.mcfpp.model.compound.Class;
+import top.mcfpp.model.compound.DataTemplate;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.util.LogProcessor;
 

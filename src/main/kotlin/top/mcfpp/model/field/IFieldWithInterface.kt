@@ -1,6 +1,6 @@
 package top.mcfpp.model.field
 
-import top.mcfpp.model.Interface
+import top.mcfpp.model.compound.Interface
 
 interface IFieldWithInterface {
 

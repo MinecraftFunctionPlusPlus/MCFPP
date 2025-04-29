@@ -3,8 +3,8 @@ package top.mcfpp.model.property
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
-import top.mcfpp.model.Class
-import top.mcfpp.model.DataTemplate
+import top.mcfpp.model.compound.Class
+import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.Member
 import top.mcfpp.type.MCFPPClassType
 import top.mcfpp.type.MCFPPDataTemplateType

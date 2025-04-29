@@ -1,6 +1,10 @@
 package top.mcfpp.model
 
 import top.mcfpp.model.Member.AccessModifier
+import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.ObjectClass
+import top.mcfpp.model.compound.ObjectDataTemplate
+import top.mcfpp.model.compound.Class
 import java.io.Serializable
 
 /**

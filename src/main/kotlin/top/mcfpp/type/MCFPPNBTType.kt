@@ -7,8 +7,8 @@ import top.mcfpp.core.lang.nbt.*
 import top.mcfpp.core.lang.nbt.ByteArray
 import top.mcfpp.core.lang.nbt.IntArray
 import top.mcfpp.core.lang.nbt.LongArray
-import top.mcfpp.model.Class
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.Class
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.collection.ByteArrayTag

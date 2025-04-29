@@ -21,7 +21,7 @@ import top.mcfpp.io.LibBinWriter
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.Native
-import top.mcfpp.model.ObjectClass
+import top.mcfpp.model.compound.ObjectClass
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction

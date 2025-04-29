@@ -1,7 +1,7 @@
 package top.mcfpp.io.info
 
-import top.mcfpp.model.DataTemplate
-import top.mcfpp.model.ObjectDataTemplate
+import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.ObjectDataTemplate
 
 data class DataTemplateInfo(
     var namespace: String,

@@ -1,7 +1,7 @@
 package top.mcfpp.model.field
 
 import top.mcfpp.type.MCFPPType
-import top.mcfpp.model.Class
+import top.mcfpp.model.compound.Class
 import top.mcfpp.model.generic.GenericClass
 
 /**

@@ -1,7 +1,7 @@
 package top.mcfpp.antlr
 
 import top.mcfpp.Project
-import top.mcfpp.model.Class
+import top.mcfpp.model.compound.Class
 import top.mcfpp.model.function.Function
 
 class MCFPPGenericClassImVisitor : MCFPPImVisitor() {

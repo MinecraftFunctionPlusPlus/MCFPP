@@ -7,7 +7,7 @@ import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.core.lang.nbt.NBTList
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.mni.NBTListData
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.Member
 import top.mcfpp.model.property.Property
 import top.mcfpp.model.property.SimpleAccessor

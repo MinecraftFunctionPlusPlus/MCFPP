@@ -6,7 +6,7 @@ import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.lib.SbObject
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.function.Function
 import top.mcfpp.nbt.tags.primitive.ByteTag

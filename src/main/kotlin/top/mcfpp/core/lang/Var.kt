@@ -11,8 +11,8 @@ import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.lib.*
 import top.mcfpp.model.CanSelectMember
-import top.mcfpp.model.Class
-import top.mcfpp.model.DataTemplate
+import top.mcfpp.model.compound.Class
+import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.Member
 import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.function.Function

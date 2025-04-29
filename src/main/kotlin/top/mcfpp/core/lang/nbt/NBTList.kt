@@ -8,7 +8,7 @@ import top.mcfpp.lib.NBTPath
 import top.mcfpp.lib.StorageSource
 import top.mcfpp.mni.NBTListConcreteData
 import top.mcfpp.mni.NBTListData
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.Member
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function

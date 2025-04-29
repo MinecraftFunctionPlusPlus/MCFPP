@@ -4,7 +4,9 @@ import top.mcfpp.core.lang.EnumVar
 import top.mcfpp.core.lang.EnumVarConcrete
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.*
-import top.mcfpp.model.Enum
+import top.mcfpp.model.compound.Enum
+import top.mcfpp.model.compound.CompoundData
+import top.mcfpp.model.compound.Class
 
 open class MCFPPEnumType(
     var enum: Enum

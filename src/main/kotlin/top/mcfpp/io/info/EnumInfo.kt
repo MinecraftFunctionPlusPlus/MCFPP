@@ -1,6 +1,6 @@
 package top.mcfpp.io.info
 
-import top.mcfpp.model.Enum
+import top.mcfpp.model.compound.Enum
 
 data class EnumInfo (
     var namespace: String,

@@ -7,8 +7,8 @@ import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.MCFPPTypeVar
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.Class
-import top.mcfpp.model.CompiledGenericClass
+import top.mcfpp.model.compound.Class
+import top.mcfpp.model.compound.CompiledGenericClass
 import top.mcfpp.model.property.Property
 import top.mcfpp.type.MCFPPType
 

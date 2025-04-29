@@ -1,4 +1,4 @@
-package top.mcfpp.model
+package top.mcfpp.model.compound
 
 import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand

@@ -7,7 +7,7 @@ import top.mcfpp.core.lang.RangeVar;
 import top.mcfpp.core.lang.nbt.MCString;
 import top.mcfpp.core.lang.nbt.NBTBasedData;
 import top.mcfpp.core.lang.nbt.NBTListConcrete;
-import top.mcfpp.model.DataTemplate;
+import top.mcfpp.model.compound.DataTemplate;
 import top.mcfpp.util.ValueWrapper;
 
 @SuppressWarnings("DataFlowIssue")

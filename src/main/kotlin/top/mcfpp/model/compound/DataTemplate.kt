@@ -1,8 +1,10 @@
-package top.mcfpp.model
+package top.mcfpp.model.compound
 
 import top.mcfpp.Project
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.*
+import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.Member
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.DataTemplateConstructor

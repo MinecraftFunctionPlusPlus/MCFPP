@@ -1,7 +1,7 @@
 package top.mcfpp.model.field
 
 import org.jetbrains.annotations.Nullable
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.CompoundData
 
 class SimpleFieldWithObject : IFieldWithObject {
     /**

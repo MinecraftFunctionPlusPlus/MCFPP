@@ -11,7 +11,13 @@ import top.mcfpp.antlr.mcfppParser.TypeContext
 import top.mcfpp.antlr.mcfppParser.TypeWithoutExclContext
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.*
+import top.mcfpp.model.CanSelectMember
+import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.Member
+import top.mcfpp.model.compound.Class
+import top.mcfpp.model.compound.CompoundData
+import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.UnionDataTemplate
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.field.IFieldWithType
 import top.mcfpp.model.function.ExtensionFunction

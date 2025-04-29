@@ -4,7 +4,7 @@ import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction

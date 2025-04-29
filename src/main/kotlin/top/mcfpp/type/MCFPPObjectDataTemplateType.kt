@@ -3,6 +3,9 @@ package top.mcfpp.type
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.*
+import top.mcfpp.model.compound.ObjectDataTemplate
+import top.mcfpp.model.compound.UnsolvedObjectTemplate
+import top.mcfpp.model.compound.Class
 import top.mcfpp.util.LogProcessor
 
 

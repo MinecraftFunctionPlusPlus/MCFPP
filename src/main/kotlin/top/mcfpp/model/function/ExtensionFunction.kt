@@ -3,8 +3,8 @@ package top.mcfpp.model.function
 import top.mcfpp.Project
 import top.mcfpp.antlr.mcfppParser.FunctionBodyContext
 import top.mcfpp.lib.NamespaceID
-import top.mcfpp.model.CompoundData
-import top.mcfpp.model.ObjectClass
+import top.mcfpp.model.compound.CompoundData
+import top.mcfpp.model.compound.ObjectClass
 
 open class ExtensionFunction: Function {
 

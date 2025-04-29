@@ -1,9 +1,10 @@
-package top.mcfpp.model
+package top.mcfpp.model.compound
 
 import top.mcfpp.Project
 import top.mcfpp.type.MCFPPObjectDataTemplateType
 
-open class ObjectDataTemplate(identifier: String, namespace: String = Project.currNamespace) : DataTemplate(identifier, namespace), ObjectCompoundData {
+open class ObjectDataTemplate(identifier: String, namespace: String = Project.currNamespace) : DataTemplate(identifier, namespace),
+    ObjectCompoundData {
 
     /**
      * 获取这个容器中变量应该拥有的前缀

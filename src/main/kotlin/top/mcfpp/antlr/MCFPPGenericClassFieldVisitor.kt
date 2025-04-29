@@ -2,7 +2,7 @@ package top.mcfpp.antlr
 
 import top.mcfpp.Project
 import top.mcfpp.io.MCFPPFile
-import top.mcfpp.model.Class
+import top.mcfpp.model.compound.Class
 import top.mcfpp.model.function.ClassConstructor
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor

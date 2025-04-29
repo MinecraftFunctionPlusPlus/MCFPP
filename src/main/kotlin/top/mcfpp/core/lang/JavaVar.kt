@@ -5,7 +5,7 @@ import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.nbt.*
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.JavaFunction

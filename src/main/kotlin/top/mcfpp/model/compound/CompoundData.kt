@@ -1,10 +1,13 @@
-package top.mcfpp.model
+package top.mcfpp.model.compound
 
 import top.mcfpp.Project
 import top.mcfpp.annotations.MNIBinaryOperator
 import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.core.lang.Var
 import top.mcfpp.doc.Document
+import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.Member
+import top.mcfpp.model.WithDocument
 import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.Function
@@ -143,7 +146,7 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
      * @param compoundData
      * @return 返回指定类相对此类的访问权限
      */
-    open fun getAccess(compoundData: CompoundData): Member.AccessModifier{
+    open fun getAccess(compoundData: CompoundData): Member.AccessModifier {
         //是否是本类
         return if(compoundData.namespaceID == namespaceID){
             Member.AccessModifier.PRIVATE
@@ -179,7 +182,7 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
         return compoundData.isSubOf(this)
     }
 
-    open fun extends(compoundData: CompoundData): CompoundData{
+    open fun extends(compoundData: CompoundData): CompoundData {
         parent.add(compoundData)
         compoundData.children.add(this)
         field.parent.add(compoundData.field)
@@ -190,7 +193,7 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
         return parent.contains(compoundData)
     }
 
-    fun unExtends(compoundData: CompoundData): CompoundData{
+    fun unExtends(compoundData: CompoundData): CompoundData {
         parent.remove(compoundData)
         field.parent.remove(compoundData.field)
         return this

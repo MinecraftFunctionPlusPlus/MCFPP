@@ -1,8 +1,8 @@
 package top.mcfpp.io.info
 
 import top.mcfpp.model.Namespace
-import top.mcfpp.model.ObjectClass
-import top.mcfpp.model.ObjectDataTemplate
+import top.mcfpp.model.compound.ObjectClass
+import top.mcfpp.model.compound.ObjectDataTemplate
 
 data class NamespaceInfo (
     var identifier: String,

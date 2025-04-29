@@ -5,7 +5,7 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
 import top.mcfpp.mni.NBTBasedDataData
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function

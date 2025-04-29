@@ -9,7 +9,7 @@ import top.mcfpp.core.lang.DataTemplateObject;
 import top.mcfpp.core.lang.EnumVar;
 import top.mcfpp.core.lang.JsonText;
 import top.mcfpp.core.lang.bool.BaseBool;
-import top.mcfpp.model.DataTemplate;
+import top.mcfpp.model.compound.DataTemplate;
 import top.mcfpp.util.ValueWrapper;
 
 public class TeamData {

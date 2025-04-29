@@ -1,9 +1,12 @@
 package top.mcfpp.model.field
 
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.*
-import top.mcfpp.model.Enum
 import top.mcfpp.model.annotation.Annotation
+import top.mcfpp.model.compound.Class
+import top.mcfpp.model.compound.CompoundData
+import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.Interface
+import top.mcfpp.model.compound.Enum
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.GenericClass

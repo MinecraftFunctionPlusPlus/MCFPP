@@ -1,7 +1,7 @@
 package top.mcfpp.mni.annotation;
 
 import org.jetbrains.annotations.NotNull;
-import top.mcfpp.model.DataTemplate;
+import top.mcfpp.model.compound.DataTemplate;
 import top.mcfpp.model.annotation.DataTemplateAnnotation;
 
 public class NoInstance extends DataTemplateAnnotation {

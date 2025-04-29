@@ -1,8 +1,8 @@
 package top.mcfpp.type
 
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.CompoundData
 import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.nbt.tags.Tag
 
 class MCFPPDeclaredConcreteType(val type: MCFPPType): MCFPPConcreteType(arrayListOf(type)) {
@@ -20,7 +20,7 @@ class MCFPPDeclaredConcreteType(val type: MCFPPType): MCFPPConcreteType(arrayLis
 
     override fun build(identifier: String, container: FieldContainer): Var<*> = type.build(identifier, container).apply { type = this@MCFPPDeclaredConcreteType }
 
-    override fun build(identifier: String, clazz: top.mcfpp.model.Class): Var<*> = type.build(identifier, clazz).apply { type = this@MCFPPDeclaredConcreteType }
+    override fun build(identifier: String, clazz: top.mcfpp.model.compound.Class): Var<*> = type.build(identifier, clazz).apply { type = this@MCFPPDeclaredConcreteType }
 
     override fun build(value: Any): Var<*> = type.build(value).apply { type = this@MCFPPDeclaredConcreteType }
 

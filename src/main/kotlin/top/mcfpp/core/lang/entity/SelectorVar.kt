@@ -10,8 +10,8 @@ import top.mcfpp.lib.NBTPath
 import top.mcfpp.mni.SelectorData
 import top.mcfpp.mni.annotation.MCFPPEntity
 import top.mcfpp.model.CanSelectMember
-import top.mcfpp.model.CompoundData
-import top.mcfpp.model.DataTemplate
+import top.mcfpp.model.compound.CompoundData
+import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.Member
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
@@ -127,7 +127,7 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
         return getData().getFunction(key, readOnlyArgs, normalArgs) to true
     }
 
-    private fun getData(): DataTemplate{
+    private fun getData(): DataTemplate {
         val types = value.getType()
         val excluded = ArrayList<String>()
         for ((type, reverse) in types){
@@ -197,7 +197,8 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
         }
 
 
-        val data: CompoundData get() {
+        val data: CompoundData
+            get() {
 
             fun checkParamType(v: Var<*>, type: MCFPPType): Var<*>?{
                 val value = v.implicitCast(type)

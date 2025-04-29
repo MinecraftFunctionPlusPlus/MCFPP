@@ -8,8 +8,8 @@ import top.mcfpp.core.lang.nbt.MCDoubleConcrete
 import top.mcfpp.core.lang.nbt.MCString
 import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.lib.PlainChatComponent
-import top.mcfpp.model.Class
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.Class
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag

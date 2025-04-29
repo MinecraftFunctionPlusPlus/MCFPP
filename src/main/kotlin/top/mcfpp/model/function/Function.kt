@@ -15,6 +15,7 @@ import top.mcfpp.doc.Document
 import top.mcfpp.lib.NamespaceID
 import top.mcfpp.model.*
 import top.mcfpp.model.annotation.Annotation
+import top.mcfpp.model.compound.*
 import top.mcfpp.model.field.FunctionField
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.generic.Generic

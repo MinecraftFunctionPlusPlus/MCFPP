@@ -2,8 +2,8 @@ package top.mcfpp.io.info
 
 import top.mcfpp.antlr.mcfppParser.ClassBodyContext
 import top.mcfpp.io.info.AbstractClassInfo.Companion.currClass
-import top.mcfpp.model.Class
-import top.mcfpp.model.ObjectClass
+import top.mcfpp.model.compound.Class
+import top.mcfpp.model.compound.ObjectClass
 import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.model.generic.GenericObjectClass
 

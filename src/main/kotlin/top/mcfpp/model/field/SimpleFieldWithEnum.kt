@@ -1,7 +1,7 @@
 package top.mcfpp.model.field
 
 import org.jetbrains.annotations.Nullable
-import top.mcfpp.model.Enum
+import top.mcfpp.model.compound.Enum
 
 class SimpleFieldWithEnum : IFieldWithEnum {
 

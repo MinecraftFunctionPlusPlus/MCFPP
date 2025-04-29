@@ -824,5 +824,16 @@ public class StdCommands {
     }
     //endregion
 
+    //region tellraw
+    @MNIFunction(normalParams = {"Player", "text"}, returnType = "CommandReturn")
+    public static void tellraw(PlayerVar player, JsonText text, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("tellraw", player, text);
+        Commands.processMacroCommandReturn(re, command);
+    }
+    //endregion
+
+    // tick 不能调用
+
+
 
 }

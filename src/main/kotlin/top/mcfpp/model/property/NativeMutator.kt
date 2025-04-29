@@ -4,7 +4,7 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.MNIMutator
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.util.LogProcessor
 

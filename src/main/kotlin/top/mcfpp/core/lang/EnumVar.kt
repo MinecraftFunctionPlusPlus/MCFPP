@@ -8,9 +8,9 @@ import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.lib.SbObject
-import top.mcfpp.model.Enum
-import top.mcfpp.model.EnumMember
 import top.mcfpp.model.Member
+import top.mcfpp.model.compound.Enum
+import top.mcfpp.model.compound.EnumMember
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.util.LogProcessor

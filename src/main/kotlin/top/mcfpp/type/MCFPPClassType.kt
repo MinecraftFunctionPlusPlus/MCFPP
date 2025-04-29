@@ -3,6 +3,9 @@ package top.mcfpp.type
 import top.mcfpp.core.lang.ClassPointer
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.*
+import top.mcfpp.model.compound.CompoundData
+import top.mcfpp.model.compound.UnsolvedClass
+import top.mcfpp.model.compound.Class
 import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.Function
 import top.mcfpp.nbt.tags.Tag

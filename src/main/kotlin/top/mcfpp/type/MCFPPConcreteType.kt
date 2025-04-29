@@ -4,8 +4,8 @@ import top.mcfpp.core.lang.JavaVar
 import top.mcfpp.core.lang.MCFPPTypeVar
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.Class
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.Class
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.util.LogProcessor
 

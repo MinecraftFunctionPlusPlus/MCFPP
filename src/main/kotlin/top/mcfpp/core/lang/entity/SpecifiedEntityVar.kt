@@ -9,7 +9,7 @@ import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.nbt.tags.primitive.StringTag

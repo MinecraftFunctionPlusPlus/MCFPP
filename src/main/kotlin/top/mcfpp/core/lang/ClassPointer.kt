@@ -5,7 +5,7 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.SbObject
-import top.mcfpp.model.Class
+import top.mcfpp.model.compound.Class
 import top.mcfpp.model.Member
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.ExtensionFunction

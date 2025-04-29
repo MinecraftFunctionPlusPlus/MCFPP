@@ -1,4 +1,4 @@
-package top.mcfpp.model
+package top.mcfpp.model.compound
 
 import top.mcfpp.io.info.DataTemplateInfo
 

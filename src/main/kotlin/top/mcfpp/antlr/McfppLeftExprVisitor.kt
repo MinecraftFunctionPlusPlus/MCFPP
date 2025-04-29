@@ -6,8 +6,8 @@ import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.nbt.*
 import top.mcfpp.lib.EntitySelector
-import top.mcfpp.model.Class
-import top.mcfpp.model.DataTemplate
+import top.mcfpp.model.compound.Class
+import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.field.MCFPPFuncGetter
 import top.mcfpp.model.function.Function

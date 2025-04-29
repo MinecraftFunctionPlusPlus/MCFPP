@@ -2,7 +2,7 @@ package top.mcfpp.type
 
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.Class
+import top.mcfpp.model.compound.Class
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.util.LogProcessor
 import kotlin.reflect.KClass

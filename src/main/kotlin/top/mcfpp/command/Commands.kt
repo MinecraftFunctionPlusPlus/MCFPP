@@ -11,8 +11,8 @@ import top.mcfpp.lib.EntitySelector
 import top.mcfpp.lib.EntitySource
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.CanSelectMember
-import top.mcfpp.model.Class
-import top.mcfpp.model.ObjectClass
+import top.mcfpp.model.compound.Class
+import top.mcfpp.model.compound.ObjectClass
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.Function.Companion.addCommand

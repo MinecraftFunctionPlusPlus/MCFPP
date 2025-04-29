@@ -2,7 +2,7 @@ package top.mcfpp.core.lang
 
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.nbt.NBTBasedData
-import top.mcfpp.model.CompoundData
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function

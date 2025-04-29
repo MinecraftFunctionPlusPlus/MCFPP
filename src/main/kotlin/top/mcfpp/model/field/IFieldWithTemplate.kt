@@ -1,7 +1,7 @@
 package top.mcfpp.model.field
 
 import org.jetbrains.annotations.Nullable
-import top.mcfpp.model.DataTemplate
+import top.mcfpp.model.compound.DataTemplate
 
 interface IFieldWithTemplate: IField {
     /**

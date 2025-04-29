@@ -8,6 +8,7 @@ import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.*
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType

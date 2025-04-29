@@ -1,8 +1,8 @@
 package top.mcfpp.model.annotation
 
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.Class
-import top.mcfpp.model.DataTemplate
+import top.mcfpp.model.compound.Class
+import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
 import java.io.Serializable

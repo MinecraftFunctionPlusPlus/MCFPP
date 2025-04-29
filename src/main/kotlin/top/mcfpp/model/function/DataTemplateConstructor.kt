@@ -7,7 +7,7 @@ import top.mcfpp.core.lang.DataTemplateObject
 import top.mcfpp.core.lang.Var
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.model.CanSelectMember
-import top.mcfpp.model.DataTemplate
+import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.type.MCFPPType
 import java.util.*
 

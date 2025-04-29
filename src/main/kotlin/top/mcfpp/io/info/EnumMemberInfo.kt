@@ -1,6 +1,6 @@
 package top.mcfpp.io.info
 
-import top.mcfpp.model.EnumMember
+import top.mcfpp.model.compound.EnumMember
 
 data class EnumMemberInfo(
     val identifier: String,

@@ -3,9 +3,9 @@ package top.mcfpp.type
 import top.mcfpp.core.lang.ClassPointer
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.Class
+import top.mcfpp.model.compound.Class
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.UnsolvedGenericClass
+import top.mcfpp.model.compound.UnsolvedGenericClass
 import top.mcfpp.util.TempPool
 
 class MCFPPGenericClassType (
