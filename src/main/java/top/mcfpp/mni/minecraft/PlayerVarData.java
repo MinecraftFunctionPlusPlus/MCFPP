@@ -199,4 +199,12 @@ public class PlayerVarData {
         Function.addCommands(Commands.runAsEntity(player.getEntityVar(), command));
     }
     //endregion
+
+    //region w
+    @MNIFunction(normalParams = {"Player" , "string"}, caller = "Player", returnType = "CommandReturn")
+    public static void w(PlayerVar player, MCString message, ValueWrapper<CommandReturn> returnValue){
+        Command command = Command.Companion.buildAll("w", player, message);
+        Function.addCommands(Commands.runAsEntity(player.getEntityVar(), command));
+    }
+    //endregion
 }

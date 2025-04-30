@@ -82,7 +82,7 @@ public class BossBarData {
             Function.Companion.addCommand(command);
         }
     }
-    @MNIAccessor(name = "max")
+    @MNIAccessor(value = "max")
     public static void getMax(DataTemplateObject bossbar, ValueWrapper<MCInt> returnValue){
         getIntAttr("max", bossbar, returnValue);
     }
@@ -92,7 +92,7 @@ public class BossBarData {
         setIntAttr("max", bossbar, value);
     }
 
-    @MNIAccessor(name = "value")
+    @MNIAccessor(value = "value")
     public static void getValue(DataTemplateObject bossbar, ValueWrapper<MCInt> returnValue){
         getIntAttr("value", bossbar, returnValue);
     }
@@ -102,7 +102,7 @@ public class BossBarData {
         setIntAttr("value", bossbar, value);
     }
 
-    @MNIAccessor(name = "visible")
+    @MNIAccessor(value = "visible")
     public static void getVisible(DataTemplateObject bossbar, ValueWrapper<ScoreBool> returnValue){
         var command = Command.Companion.buildAll(
                 "execute store result score",

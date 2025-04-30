@@ -35,7 +35,7 @@ class TypeDataTemplateObject: Var<TypeDataTemplateObject> {
      */
     constructor(templateObject: TypeDataTemplateObject) : super(templateObject) {
         templateType = templateObject.templateType
-        delegateVar = templateObject.delegateVar
+        delegateVar = templateObject.delegateVar.clone()
         delegateVar.parent = this
     }
 

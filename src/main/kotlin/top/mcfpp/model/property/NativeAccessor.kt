@@ -27,7 +27,7 @@ class NativeAccessor: AbstractAccessor {
             var hasFind = false
             for(method in methods){
                 val mniAccessor = method.getAnnotation(MNIAccessor::class.java) ?: continue
-                if(mniAccessor.name == field.identifier){
+                if(mniAccessor.value == field.identifier){
                     hasFind = true
                     function.javaMethod = method
                     break

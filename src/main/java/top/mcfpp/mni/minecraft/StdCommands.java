@@ -11,6 +11,7 @@ import top.mcfpp.core.lang.nbt.MCString;
 import top.mcfpp.core.lang.nbt.NBTBasedData;
 import top.mcfpp.core.lang.obj.DataTemplateObject;
 import top.mcfpp.core.lang.obj.EnumVar;
+import top.mcfpp.core.lang.obj.TypeDataTemplateObject;
 import top.mcfpp.util.ValueWrapper;
 
 public class StdCommands {
@@ -836,6 +837,47 @@ public class StdCommands {
 
     // tick 不能调用
 
+    //region titile
+    @MNIFunction(normalParams = "Player", returnType = "CommandReturn")
+    public static void titleClear(PlayerVar player, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("title", player, "clear");
+        Commands.processMacroCommandReturn(re, command);
+    }
+
+    @MNIFunction(normalParams = "Player", returnType = "CommandReturn")
+    public static void titleReset(PlayerVar player, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("title", player, "reset");
+        Commands.processMacroCommandReturn(re, command);
+    }
+
+    @MNIFunction(normalParams = {"Player", "text", "TitlePos"})
+    public static void titleTitle(PlayerVar player, JsonText text, EnumVar pos, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("title", player, pos, text);
+        Commands.processMacroCommandReturn(re, command);
+    }
+
+    @MNIFunction(normalParams = {"Player", "Time", "Time", "Time"})
+    public static void titleSet(PlayerVar player, TypeDataTemplateObject fadeIn, TypeDataTemplateObject stay, TypeDataTemplateObject fadeOut, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("title", player, "times", fadeIn, stay, fadeOut);
+        Commands.processMacroCommandReturn(re, command);
+    }
+    //endregion
+
+    //region tm
+    @MNIFunction(normalParams = "string", returnType = "CommandReturn")
+    public static void tm(MCString s, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("tm", s);
+        Commands.processMacroCommandReturn(re, command);
+    }
+    //endregion
+
+    //region transfer
+    @MNIFunction(normalParams = {"string", "int = 25565", "Player = @s"}, returnType = "CommandReturn")
+    public static void transfer(MCString hostname, MCInt port, PlayerVar target, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("transfer", hostname, port, target);
+        Commands.processMacroCommandReturn(re, command);
+    }
+    //endregion
 
 
 }

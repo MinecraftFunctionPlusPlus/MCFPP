@@ -53,3 +53,11 @@ enum NormalColor {
 enum Anchor {
     eyes, feet
 }
+
+enum TitlePos {
+    title, subtitle, actionbar
+}
+
+enum Weather {
+    clear, rain, thunder
+}

@@ -1,0 +1,7 @@
+data Trigger {
+    id as string;
+
+    func enable(Player){
+        /scoreboard players enable ${p0} ${id}
+    }
+}
