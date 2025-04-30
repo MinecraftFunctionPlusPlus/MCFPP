@@ -1,7 +1,7 @@
 package top.mcfpp.mni.minecraft;
 
 import top.mcfpp.annotations.MNIFunction;
-import top.mcfpp.core.lang.DataTemplateObject;
+import top.mcfpp.core.lang.obj.DataTemplateObject;
 import top.mcfpp.core.lang.MCInt;
 import top.mcfpp.core.lang.RangeVar;
 import top.mcfpp.core.lang.nbt.MCString;

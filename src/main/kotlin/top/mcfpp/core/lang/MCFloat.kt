@@ -5,6 +5,7 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
+import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.*

@@ -1,8 +1,12 @@
-package top.mcfpp.core.lang
+package top.mcfpp.core.lang.obj
 
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
+import top.mcfpp.core.lang.MCFPPValue
+import top.mcfpp.core.lang.MCInt
+import top.mcfpp.core.lang.PropertyVar
+import top.mcfpp.core.lang.Var
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.compound.Class
@@ -28,7 +32,7 @@ import top.mcfpp.util.TextTranslator.translate
  * @see Class 类的核心实现
  * @see top.mcfpp.type.MCFPPClassType 表示类的类型，同时也是类的静态成员的指针
  */
-open class ClassPointer : Var<ClassPointer>{
+open class ClassPointer : Var<ClassPointer> {
 
     var isNull : Boolean = true
 
@@ -244,7 +248,7 @@ open class ClassPointer : Var<ClassPointer>{
 }
 
 //TODO 已知类的类指针，不用考虑多态
-class ClassPointerConcrete: ClassPointer, MCFPPValue<Class>{
+class ClassPointerConcrete: ClassPointer, MCFPPValue<Class> {
 
     override lateinit var value: Class
 

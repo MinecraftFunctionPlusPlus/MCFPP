@@ -238,7 +238,7 @@ class NativeFunction : Function, Native {
         }
 
         @Suppress("UNUSED_PARAMETER")
-        private fun defaultNativeFunction(vararg args: Any?){
+        internal fun defaultNativeFunction(vararg args: Any?){
             LogProcessor.error("A nativeFunction hadn't linked to a java method.")
         }
 

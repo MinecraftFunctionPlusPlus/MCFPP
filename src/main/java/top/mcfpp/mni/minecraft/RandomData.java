@@ -4,13 +4,10 @@ import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.CommandReturn;
-import top.mcfpp.core.lang.DataTemplateObject;
+import top.mcfpp.core.lang.obj.DataTemplateObject;
 import top.mcfpp.core.lang.MCFPPValue;
 import top.mcfpp.core.lang.MCInt;
-import top.mcfpp.core.lang.bool.BaseBool;
 import top.mcfpp.util.ValueWrapper;
-
-import javax.management.MBeanConstructorInfo;
 
 public class RandomData {
 

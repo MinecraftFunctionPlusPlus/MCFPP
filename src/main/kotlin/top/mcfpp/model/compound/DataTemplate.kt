@@ -3,6 +3,8 @@ package top.mcfpp.model.compound
 import top.mcfpp.Project
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.*
+import top.mcfpp.core.lang.obj.DataTemplateObject
+import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.field.CompoundDataField
@@ -192,7 +194,7 @@ open class DataTemplate : FieldContainer, CompoundData {
         }
 
         @JvmStatic
-        fun newInstance(namespace: String?, templateID: String, varID: String): DataTemplateObjectConcrete{
+        fun newInstance(namespace: String?, templateID: String, varID: String): DataTemplateObjectConcrete {
             return GlobalField.getTemplate(namespace, templateID)!!.getType().build(varID) as DataTemplateObjectConcrete
         }
 
@@ -200,7 +202,7 @@ open class DataTemplate : FieldContainer, CompoundData {
         fun newInstance(namespace: String?, templateID: String) = newInstance(namespace, templateID, TempPool.getVarIdentify())
 
         @JvmStatic
-        fun newInstance(namespace: String?, templateID: String, tag: Tag<*>): DataTemplateObjectConcrete{
+        fun newInstance(namespace: String?, templateID: String, tag: Tag<*>): DataTemplateObjectConcrete {
             return GlobalField.getTemplate(namespace, templateID)!!.getType().build(tag) as DataTemplateObjectConcrete
         }
 

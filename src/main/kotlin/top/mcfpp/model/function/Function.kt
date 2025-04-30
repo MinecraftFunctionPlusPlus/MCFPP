@@ -11,6 +11,9 @@ import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.antlr.mcfppParser.FunctionBodyContext
 import top.mcfpp.command.*
 import top.mcfpp.core.lang.*
+import top.mcfpp.core.lang.obj.ClassPointer
+import top.mcfpp.core.lang.obj.ClassPointerConcrete
+import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.doc.Document
 import top.mcfpp.lib.NamespaceID
 import top.mcfpp.model.*

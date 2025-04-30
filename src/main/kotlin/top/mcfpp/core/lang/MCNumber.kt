@@ -1,5 +1,6 @@
 package top.mcfpp.core.lang
 
+import top.mcfpp.core.lang.obj.EnumVar
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member

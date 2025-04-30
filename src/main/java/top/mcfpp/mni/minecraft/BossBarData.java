@@ -11,6 +11,9 @@ import top.mcfpp.core.lang.bool.ScoreBoolConcrete;
 import top.mcfpp.core.lang.entity.PlayerVar;
 import top.mcfpp.core.lang.nbt.MCString;
 import top.mcfpp.core.lang.nbt.MCStringConcrete;
+import top.mcfpp.core.lang.obj.DataTemplateObject;
+import top.mcfpp.core.lang.obj.EnumVar;
+import top.mcfpp.core.lang.obj.EnumVarConcrete;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.util.ValueWrapper;
 

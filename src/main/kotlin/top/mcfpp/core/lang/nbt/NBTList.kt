@@ -3,6 +3,7 @@ package top.mcfpp.core.lang.nbt
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
+import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.lib.StorageSource

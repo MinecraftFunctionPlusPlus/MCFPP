@@ -1,13 +1,18 @@
 package top.mcfpp.type
 
-import top.mcfpp.core.lang.*
+import top.mcfpp.core.lang.ConcreteVar
+import top.mcfpp.core.lang.UnknownVar
+import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.obj.DataTemplateObject
+import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.mni.annotation.NoInstance
-import top.mcfpp.model.*
+import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.UnsolvedTemplate
-import top.mcfpp.model.compound.Class
 import top.mcfpp.nbt.tags.CompoundTag
+import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 
@@ -32,23 +37,13 @@ open class MCFPPDataTemplateType(
         }
     }
 
-    override fun defaultValue(): CompoundTag {
+    override fun defaultValue(): Tag<*> {
         val tag = CompoundTag()
         for (member in template.field.allVars){
             if(member.nullable || member is ConcreteVar<*,*>) continue
             tag.put(member.identifier, member.type.defaultValue())
         }
         return tag
-    }
-
-    init {
-        //registerType({it.contains(regex)}){
-        //    val matcher = regex.find(it)!!.groupValues
-        //    MCFPPTemplateType(
-        //        Template(matcher[2], LazyWrapper(MCFPPBaseType.Int),matcher[1]), //TODO: 这里肯定有问题
-        //        parentType
-        //    )
-        //}
     }
 
     override fun build(identifier: String, container: FieldContainer): Var<*> {
@@ -115,3 +110,4 @@ open class MCFPPDataTemplateType(
     }
 
 }
+

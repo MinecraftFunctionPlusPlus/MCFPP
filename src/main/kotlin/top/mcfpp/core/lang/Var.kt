@@ -9,6 +9,8 @@ import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
+import top.mcfpp.core.lang.obj.ClassPointer
+import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.lib.*
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.compound.Class

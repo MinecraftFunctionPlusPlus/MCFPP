@@ -3,6 +3,7 @@ package top.mcfpp.model.function
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.antlr.*
 import top.mcfpp.core.lang.*
+import top.mcfpp.core.lang.obj.ClassPointer
 
 /**
  * 内联函数。

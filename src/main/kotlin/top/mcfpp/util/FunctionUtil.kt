@@ -2,7 +2,7 @@ package top.mcfpp.util
 
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.core.lang.EnumVar
+import top.mcfpp.core.lang.obj.EnumVar
 import top.mcfpp.model.compound.EnumMember
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NoStackFunction

@@ -4,6 +4,9 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
+import top.mcfpp.core.lang.obj.DataTemplateObject
+import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
+import top.mcfpp.core.lang.obj.EnumVar
 import top.mcfpp.mni.NBTBasedDataData
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.FieldContainer

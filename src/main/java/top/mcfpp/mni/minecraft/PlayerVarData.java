@@ -8,6 +8,8 @@ import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.*;
 import top.mcfpp.core.lang.entity.PlayerVar;
 import top.mcfpp.core.lang.nbt.MCString;
+import top.mcfpp.core.lang.obj.DataTemplateObject;
+import top.mcfpp.core.lang.obj.EnumVar;
 import top.mcfpp.mni.hidden.AttributeData;
 import top.mcfpp.model.compound.CompoundData;
 import top.mcfpp.model.function.Function;

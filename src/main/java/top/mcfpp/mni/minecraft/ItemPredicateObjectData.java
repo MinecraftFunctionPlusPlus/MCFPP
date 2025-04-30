@@ -1,13 +1,12 @@
 package top.mcfpp.mni.minecraft;
 
 import top.mcfpp.annotations.MNIFunction;
-import top.mcfpp.core.lang.DataTemplateObject;
+import top.mcfpp.core.lang.obj.DataTemplateObject;
 import top.mcfpp.core.lang.MCInt;
-import top.mcfpp.core.lang.ObjectVar;
+import top.mcfpp.core.lang.obj.ObjectVar;
 import top.mcfpp.core.lang.RangeVar;
 import top.mcfpp.core.lang.nbt.MCString;
 import top.mcfpp.core.lang.nbt.NBTBasedData;
-import top.mcfpp.core.lang.nbt.NBTListConcrete;
 import top.mcfpp.model.compound.DataTemplate;
 import top.mcfpp.util.ValueWrapper;
 

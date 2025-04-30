@@ -3,7 +3,7 @@
 package top.mcfpp.model.compound
 
 import top.mcfpp.Project
-import top.mcfpp.core.lang.ClassPointer
+import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.core.lang.MCAny
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.entity.SelectorVar

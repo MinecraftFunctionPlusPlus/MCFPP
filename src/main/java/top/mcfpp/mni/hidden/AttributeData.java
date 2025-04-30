@@ -2,7 +2,7 @@ package top.mcfpp.mni.hidden;
 
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.core.lang.CommandReturn;
-import top.mcfpp.core.lang.DataTemplateObject;
+import top.mcfpp.core.lang.obj.DataTemplateObject;
 import top.mcfpp.core.lang.MCFloat;
 import top.mcfpp.core.lang.NormalCompoundDataObject;
 import top.mcfpp.core.lang.entity.PlayerVar;

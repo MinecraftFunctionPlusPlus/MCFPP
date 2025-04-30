@@ -4,7 +4,7 @@ import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.CommandReturn;
-import top.mcfpp.core.lang.DataTemplateObject;
+import top.mcfpp.core.lang.obj.DataTemplateObject;
 import top.mcfpp.core.lang.entity.PlayerVar;
 import top.mcfpp.util.ValueWrapper;
 

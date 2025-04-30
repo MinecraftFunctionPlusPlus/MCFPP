@@ -1,7 +1,7 @@
 package top.mcfpp.type
 
-import top.mcfpp.core.lang.EnumVar
-import top.mcfpp.core.lang.EnumVarConcrete
+import top.mcfpp.core.lang.obj.EnumVar
+import top.mcfpp.core.lang.obj.EnumVarConcrete
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.*
 import top.mcfpp.model.compound.Enum

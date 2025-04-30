@@ -2,7 +2,7 @@ package top.mcfpp.mni.minecraft;
 
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.command.Command;
-import top.mcfpp.core.lang.DataTemplateObject;
+import top.mcfpp.core.lang.obj.DataTemplateObject;
 import top.mcfpp.core.lang.JavaVar;
 import top.mcfpp.core.lang.Pos3Var;
 import top.mcfpp.util.ValueWrapper;

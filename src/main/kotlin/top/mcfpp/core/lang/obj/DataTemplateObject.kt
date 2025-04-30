@@ -1,14 +1,15 @@
-package top.mcfpp.core.lang
+package top.mcfpp.core.lang.obj
 
 
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
+import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.core.lang.nbt.NBTDictionaryConcrete
 import top.mcfpp.mni.annotation.ConcreteOnly
-import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.Member
+import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.field.CompoundDataField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
@@ -61,7 +62,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         when (b) {
 
             is NBTDictionaryConcrete -> {
-                val value = NBTUtil.valueToNBT(b.value.filter { it.value !is ConcreteVar<*,*> }) as CompoundTag
+                val value = NBTUtil.valueToNBT(b.value.filter { it.value !is ConcreteVar<*, *> }) as CompoundTag
                 if (templateType.checkCompoundStruct(value)) {
                     this.assignMembers(b.value)
                     return this
@@ -131,7 +132,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
 
     private fun assignMembers(map: HashMap<String, Var<*>>){
         instanceField.forEachVar {
-            if(it !is ConcreteVar<*,*>){
+            if(it !is ConcreteVar<*, *>){
                 it.replacedBy(it.assignedBy(map[it.identifier]!!))
             }
         }
@@ -139,7 +140,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
 
     private fun assignMembers(tag: CompoundTag){
         instanceField.forEachVar {
-            if(it !is ConcreteVar<*,*>){
+            if(it !is ConcreteVar<*, *>){
                 it.replacedBy(it.assignedBy(NBTBasedDataConcrete(tag[it.identifier]!!)))
             }
         }
@@ -147,7 +148,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
 
     private fun assignMembers(template: DataTemplateObjectConcrete){
         instanceField.forEachVar {
-            if(it !is ConcreteVar<*,*>){
+            if(it !is ConcreteVar<*, *>){
                 it.replacedBy(it.assignedBy(NBTBasedDataConcrete(template.value[it.identifier]!!)))
             }else{
                 it.replacedBy(it.assignedBy(template.instanceField.getVar(it.identifier)!!))
@@ -407,7 +408,7 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag> {
     override fun onMemberVarChanged(member: Var<*>) {
         if(member !is MCFPPValue<*>) {
             toDynamic(true)
-        }else if(member !is ConcreteVar<*,*>){
+        }else if(member !is ConcreteVar<*, *>){
             val key = member.identifier
             val data = NBTUtil.varToNBT(member)
             value.put(key, data!!)

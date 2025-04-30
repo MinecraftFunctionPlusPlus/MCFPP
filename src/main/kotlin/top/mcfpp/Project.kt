@@ -12,7 +12,7 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.command.CommentLevel
-import top.mcfpp.core.lang.ClassPointer
+import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.core.lang.MCFloat
 import top.mcfpp.core.lang.UnresolvedVar
 import top.mcfpp.core.lang.Var

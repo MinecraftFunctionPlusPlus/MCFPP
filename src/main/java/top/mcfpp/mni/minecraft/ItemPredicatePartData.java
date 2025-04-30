@@ -1,7 +1,7 @@
 package top.mcfpp.mni.minecraft;
 
 import top.mcfpp.annotations.MNIBinaryOperator;
-import top.mcfpp.core.lang.DataTemplateObject;
+import top.mcfpp.core.lang.obj.DataTemplateObject;
 import top.mcfpp.model.Member;
 import top.mcfpp.model.field.GlobalField;
 import top.mcfpp.util.TempPool;

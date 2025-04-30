@@ -15,6 +15,7 @@ import top.mcfpp.model.generic.GenericObjectClass
 import top.mcfpp.model.generic.ImplementedGenericClass
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.primitive.IntTag
+import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper.splitNamespaceID
 
@@ -244,9 +245,14 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             LogProcessor.error("Type has been defined: $id in namespace ${Project.currNamespace}")
             DataTemplate.currTemplate = nsp.field.getTemplate(id)
         }
-        val template = DataTemplate(id,Project.currNamespace)
-        template.extends(DataTemplate.baseDataTemplate)
-        nsp.field.addTemplate(id, template)
+        if(ctx.AS() != null){
+            val template = TypeDataTemplate(MCFPPBaseType.Void, id, Project.currNamespace)
+            nsp.field.addTemplate(id, template)
+        }else{
+            val template = DataTemplate(id,Project.currNamespace)
+            template.extends(DataTemplate.baseDataTemplate)
+            nsp.field.addTemplate(id, template)
+        }
     }
 
     /**

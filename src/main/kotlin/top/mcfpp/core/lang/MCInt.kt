@@ -10,6 +10,9 @@ import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.nbt.MCLong
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
+import top.mcfpp.core.lang.obj.DataTemplateObject
+import top.mcfpp.core.lang.obj.EnumVar
+import top.mcfpp.core.lang.obj.EnumVarConcrete
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.mni.MCIntData
 import top.mcfpp.model.compound.CompoundData

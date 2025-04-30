@@ -1,8 +1,9 @@
-package top.mcfpp.core.lang
+package top.mcfpp.core.lang.obj
 
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
+import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.nbt.MCString
 import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
@@ -148,7 +149,7 @@ open class EnumVar : Var<EnumVar>, OnScoreboard {
         return UnknownFunction(key) to true
     }
 
-    open fun asIntVar(): MCInt{
+    open fun asIntVar(): MCInt {
         return MCInt(this)
     }
 

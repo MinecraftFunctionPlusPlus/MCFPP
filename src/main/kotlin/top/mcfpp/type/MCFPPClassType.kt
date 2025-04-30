@@ -1,6 +1,6 @@
 package top.mcfpp.type
 
-import top.mcfpp.core.lang.ClassPointer
+import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.*
 import top.mcfpp.model.compound.CompoundData

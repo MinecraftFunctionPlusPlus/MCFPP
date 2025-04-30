@@ -9,6 +9,8 @@ import top.mcfpp.core.lang.entity.EntityVar;
 import top.mcfpp.core.lang.entity.PlayerVar;
 import top.mcfpp.core.lang.nbt.MCString;
 import top.mcfpp.core.lang.nbt.NBTBasedData;
+import top.mcfpp.core.lang.obj.DataTemplateObject;
+import top.mcfpp.core.lang.obj.EnumVar;
 import top.mcfpp.util.ValueWrapper;
 
 public class StdCommands {

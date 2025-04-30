@@ -4,7 +4,7 @@ import top.mcfpp.Project
 import top.mcfpp.antlr.MCFPPGenericClassImVisitor
 import top.mcfpp.antlr.MCFPPGenericObjectClassFieldVisitor
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.core.lang.ClassPointer
+import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.core.lang.MCFPPTypeVar
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var

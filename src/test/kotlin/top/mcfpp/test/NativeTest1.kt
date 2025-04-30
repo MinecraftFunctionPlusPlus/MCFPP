@@ -1,6 +1,6 @@
 package top.mcfpp.test
 
-import top.mcfpp.core.lang.ClassPointer
+import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.core.lang.INativeClass
 import top.mcfpp.core.lang.Var
 

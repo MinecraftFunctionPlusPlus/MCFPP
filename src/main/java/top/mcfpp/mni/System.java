@@ -10,6 +10,8 @@ import top.mcfpp.core.lang.bool.BaseBool;
 import top.mcfpp.core.lang.bool.ScoreBool;
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete;
 import top.mcfpp.core.lang.nbt.*;
+import top.mcfpp.core.lang.obj.DataTemplateObject;
+import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete;
 import top.mcfpp.lib.NBTChatComponent;
 import top.mcfpp.lib.ScoreChatComponent;
 import top.mcfpp.model.function.Function;

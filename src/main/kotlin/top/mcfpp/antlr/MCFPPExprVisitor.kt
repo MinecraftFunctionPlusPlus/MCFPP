@@ -5,6 +5,8 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.nbt.*
+import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
+import top.mcfpp.core.lang.obj.ObjectVar
 import top.mcfpp.lib.EntitySelector
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.compound.Class
@@ -17,6 +19,7 @@ import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.Generic
 import top.mcfpp.model.generic.GenericClass
+import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.primitive.ByteTag
 import top.mcfpp.nbt.tags.primitive.DoubleTag
@@ -503,7 +506,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         //可能是模板的构造函数
         val template: DataTemplate? = GlobalField.getTemplate(p.first, p.second)
         if(template != null) {
-            val init = DataTemplateObjectConcrete(template, template.getType().defaultValue())
+            val init = DataTemplateObjectConcrete(template, template.getType().defaultValue() as CompoundTag)
             val constructor = template.getConstructorByString(FunctionParam.getArgTypeNames(normalArgs))
             if (constructor == null) {
                 LogProcessor.error("No constructor like: " + FunctionParam.getArgTypeNames(normalArgs) + " defined in class " + ctx.namespaceID().text)

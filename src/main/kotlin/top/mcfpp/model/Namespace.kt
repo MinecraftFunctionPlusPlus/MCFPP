@@ -2,8 +2,8 @@ package top.mcfpp.model
 
 import top.mcfpp.Project
 import top.mcfpp.annotations.MNIFunction
-import top.mcfpp.core.lang.ClassPointer
-import top.mcfpp.core.lang.DataTemplateObject
+import top.mcfpp.core.lang.obj.ClassPointer
+import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.compound.UnsolvedClass
 import top.mcfpp.model.compound.UnsolvedTemplate

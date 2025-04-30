@@ -7,7 +7,7 @@ import top.mcfpp.antlr.RuleContextExtension.children
 import top.mcfpp.antlr.mcfppParser.CompileTimeFuncDeclarationContext
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.core.lang.DataTemplateObjectConcrete
+import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.Var

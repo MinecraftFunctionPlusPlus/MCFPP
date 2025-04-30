@@ -5,6 +5,7 @@ import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.core.lang.nbt.NBTList
+import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.mni.NBTListData
 import top.mcfpp.model.compound.CompoundData

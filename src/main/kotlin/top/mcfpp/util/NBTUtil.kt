@@ -3,6 +3,8 @@ package top.mcfpp.util
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.nbt.*
+import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
+import top.mcfpp.core.lang.obj.EnumVarConcrete
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag

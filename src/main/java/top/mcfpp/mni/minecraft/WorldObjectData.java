@@ -5,7 +5,7 @@ import top.mcfpp.annotations.MNIMutator;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.CommandReturn;
-import top.mcfpp.core.lang.EnumVar;
+import top.mcfpp.core.lang.obj.EnumVar;
 import top.mcfpp.util.ValueWrapper;
 
 public class WorldObjectData {

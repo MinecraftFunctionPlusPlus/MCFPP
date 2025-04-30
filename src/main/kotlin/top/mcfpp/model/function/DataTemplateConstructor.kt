@@ -3,15 +3,15 @@ package top.mcfpp.model.function
 import top.mcfpp.antlr.MCFPPExprVisitor
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.antlr.mcfppParser.FunctionBodyContext
-import top.mcfpp.core.lang.DataTemplateObject
 import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.type.MCFPPType
 import java.util.*
 
-class DataTemplateConstructor(val data: DataTemplate, ctx: FunctionBodyContext?): Function(
+open class DataTemplateConstructor(val data: DataTemplate, ctx: FunctionBodyContext?): Function(
     "_init_" + data.identifier.lowercase(Locale.getDefault()) + "_" + data.constructors.size,
     data,
     ctx

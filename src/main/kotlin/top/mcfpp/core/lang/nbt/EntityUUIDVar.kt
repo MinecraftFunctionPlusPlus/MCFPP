@@ -3,7 +3,7 @@ package top.mcfpp.core.lang.nbt
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.core.lang.DataTemplateObject
+import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
 import top.mcfpp.mni.minecraft.EntityVarData

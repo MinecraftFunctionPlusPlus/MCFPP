@@ -8,12 +8,14 @@ import top.mcfpp.antlr.mcfppParser.ClassDeclarationContext
 import top.mcfpp.antlr.mcfppParser.TemplateDeclarationContext
 import top.mcfpp.compiletime.CompileTimeFunction
 import top.mcfpp.core.lang.*
+import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.exception.UndefinedException
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lib.NBTPath
-import top.mcfpp.model.*
+import top.mcfpp.model.Member
 import top.mcfpp.model.Member.AccessModifier
+import top.mcfpp.model.Namespace
 import top.mcfpp.model.compound.*
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.field.IFieldWithType
@@ -32,6 +34,7 @@ import top.mcfpp.util.TempPool
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 import java.util.*
+import kotlin.reflect.jvm.javaMethod
 
 /**
  * 在编译工程之前，应当首先将所有文件中的资源全部遍历一次并写入缓存。
@@ -1057,7 +1060,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 //region template
     override fun visitTemplateDeclaration(ctx: TemplateDeclarationContext?): Any? {
         Project.ctx = ctx!!
-        //注册模板
+        //获取注册的模板
         val id = ctx.classWithoutNamespace().text
         val namespace1 = GlobalField.localNamespaces[Project.currNamespace]!!
         val template = if(namespace1.field.hasTemplate(id)){
@@ -1087,13 +1090,29 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 }
             }
         }
+        if(ctx.AS() != null){
+            template as TypeDataTemplate
+            template.typeAs = MCFPPType.parseFromContext(ctx.type(), typeScope)?: run {
+                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.text))
+                MCFPPBaseType.Void
+            }
+        }
         isStatic = false
         ctx.templateBody()?.let { visitTemplateBody(it) }
         Project.ctx = ctx
-        //如果没有构造函数，生成默认的构造函数
-        if(template.constructors.isEmpty()){
+
+        //默认构造函数和默认字段
+        if(template is TypeDataTemplate){
+            template.addMember(
+                NativeDataTemplateConstructor(
+                    DataTemplate.currTemplate!!,
+                    TypeDataTemplate.Companion::defaultConstructor.javaMethod!!
+                )
+            )
+        }else if(template.constructors.isEmpty()){
             template.addMember(DataTemplateConstructor(DataTemplate.currTemplate!!, null))
         }
+
         DataTemplate.currTemplate = null
         currClassOrTemplate = null
         typeScope = MCFPPFile.currFile!!.field.namespaceField
@@ -1269,6 +1288,10 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 
     override fun visitTemplateFieldDeclaration(ctx: mcfppParser.TemplateFieldDeclarationContext): Pair<Var<*>?, Property?> {
         Project.ctx = ctx
+        if(DataTemplate.currTemplate is TypeDataTemplate){
+            LogProcessor.error("TypeDataTemplate cannot have field: " + ctx.Identifier().text)
+            return null to null
+        }
         var `var` = ctx.templateType()?.let {
             if (it.singleTemplateFieldType() != null) {
                 val type = MCFPPType.parseFromContext(it.singleTemplateFieldType().type(), typeScope) ?: run {
@@ -1306,7 +1329,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 }
             }
         }
-        var init: Var<*>? = null
+        var init: Var<*>?
         if(`var` == null && ctx.expression() == null){
             LogProcessor.error("Template field ${ctx.Identifier().text} must have a type or an initializer")
             return null to null
@@ -1337,6 +1360,10 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 
     override fun visitTemplateConstructorDeclaration(ctx: mcfppParser.TemplateConstructorDeclarationContext): Any {
         Project.ctx = ctx
+        if(DataTemplate.currTemplate is TypeDataTemplate){
+            LogProcessor.error("TypeDataTemplate cannot have constructor")
+            return null to null
+        }
         //类构造函数
         //创建构造函数对象，注册函数
         val f = DataTemplateConstructor(DataTemplate.currTemplate!!, ctx.functionBody())

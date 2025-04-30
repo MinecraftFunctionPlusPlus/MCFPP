@@ -5,6 +5,7 @@ package top.mcfpp.core.lang.nbt
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
+import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.mni.NBTMapConcreteData
 import top.mcfpp.mni.NBTMapData
 import top.mcfpp.model.CanSelectMember

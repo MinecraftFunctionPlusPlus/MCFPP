@@ -4,7 +4,7 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.core.lang.ClassPointer
+import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.core.lang.Var
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.compound.Class

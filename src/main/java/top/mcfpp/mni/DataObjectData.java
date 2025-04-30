@@ -3,6 +3,8 @@ package top.mcfpp.mni;
 import org.jetbrains.annotations.NotNull;
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.core.lang.*;
+import top.mcfpp.core.lang.obj.DataTemplateObject;
+import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete;
 import top.mcfpp.lib.ListChatComponent;
 import top.mcfpp.lib.NBTChatComponent;
 import top.mcfpp.lib.PlainChatComponent;

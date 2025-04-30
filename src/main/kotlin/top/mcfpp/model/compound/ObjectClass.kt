@@ -1,7 +1,7 @@
 package top.mcfpp.model.compound
 
 import top.mcfpp.Project
-import top.mcfpp.core.lang.ClassPointer
+import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.type.MCFPPObjectClassType
 import top.mcfpp.type.MCFPPType

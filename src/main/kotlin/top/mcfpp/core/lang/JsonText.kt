@@ -5,6 +5,7 @@ import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.nbt.MCString
 import top.mcfpp.core.lang.nbt.NBTBasedData
+import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.lib.ChatComponent
 import top.mcfpp.lib.ListChatComponent
 import top.mcfpp.lib.NBTChatComponent

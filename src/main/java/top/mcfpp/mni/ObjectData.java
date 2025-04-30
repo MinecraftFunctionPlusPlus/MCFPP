@@ -1,7 +1,7 @@
 package top.mcfpp.mni;
 
 import top.mcfpp.annotations.MNIFunction;
-import top.mcfpp.core.lang.ClassPointer;
+import top.mcfpp.core.lang.obj.ClassPointer;
 
 public class ObjectData {
 

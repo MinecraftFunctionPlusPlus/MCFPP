@@ -1,5 +1,7 @@
-package top.mcfpp.core.lang
+package top.mcfpp.core.lang.obj
 
+import top.mcfpp.core.lang.MCFPPValue
+import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
@@ -8,7 +10,8 @@ import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 
-class ObjectVar(override var value: CanSelectMember, identifier: String = TempPool.getVarIdentify()): Var<ObjectVar>(identifier), MCFPPValue<CanSelectMember> {
+class ObjectVar(override var value: CanSelectMember, identifier: String = TempPool.getVarIdentify()): Var<ObjectVar>(identifier),
+    MCFPPValue<CanSelectMember> {
 
     override var type: MCFPPType = MCFPPPrivateType.MCFPPObjectVarType
 

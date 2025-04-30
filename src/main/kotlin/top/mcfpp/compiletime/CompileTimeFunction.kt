@@ -1,7 +1,7 @@
 package top.mcfpp.compiletime
 
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.core.lang.ClassPointer
+import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.field.IField
 import top.mcfpp.model.function.Function

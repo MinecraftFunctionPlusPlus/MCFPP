@@ -1,5 +1,6 @@
 package top.mcfpp.core.lang
 
+import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.model.Native
 
 /**
