@@ -328,6 +328,11 @@ open class Command: Serializable {
         return c
     }
 
+    fun removeLast(): Command {
+        commandParts.removeLast()
+        return this
+    }
+
     companion object{
 
         /**

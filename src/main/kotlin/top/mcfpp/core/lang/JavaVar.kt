@@ -1,14 +1,15 @@
 package top.mcfpp.core.lang
 
-import top.mcfpp.nbt.tags.CompoundTag
-import top.mcfpp.nbt.tags.primitive.StringTag
-import top.mcfpp.nbt.tags.Tag
+import top.mcfpp.command.Command
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.nbt.*
-import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.Member
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.JavaFunction
+import top.mcfpp.nbt.tags.CompoundTag
+import top.mcfpp.nbt.tags.Tag
+import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
@@ -38,6 +39,7 @@ class JavaVar : ConcreteVar<JavaVar, Any?> {
     constructor(value: Any?, identifier: String = TempPool.getVarIdentify()) : super(identifier) {
         this.value = value
     }
+
 
     /**
      * 复制一个JavaVar
@@ -161,6 +163,15 @@ class JavaVar : ConcreteVar<JavaVar, Any?> {
 
     override fun toString(): String {
         return "JavaVar[$value]"
+    }
+
+    override fun toCommandPart(): Command {
+        return when(value){
+            null -> Command("null")
+            is Var<*> -> (value as Var<*>).toCommandPart()
+            is Command -> value as Command
+            else -> Command(value.toString())
+        }
     }
 
     companion object{

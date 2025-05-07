@@ -12,6 +12,10 @@ data Team {
         this.id = p0;
         this.displayName = p1;
     }
+
+    override func toCommandPart() -> JavaVar {
+        return id.toCommandPart();
+    }
 }
 
 enum NametagVisibility {

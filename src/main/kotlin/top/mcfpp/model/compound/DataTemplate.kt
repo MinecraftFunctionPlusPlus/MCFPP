@@ -2,7 +2,10 @@ package top.mcfpp.model.compound
 
 import top.mcfpp.Project
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.core.lang.*
+import top.mcfpp.core.lang.ConcreteVar
+import top.mcfpp.core.lang.MCAny
+import top.mcfpp.core.lang.UnknownVar
+import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.model.FieldContainer
@@ -216,6 +219,16 @@ open class DataTemplate : FieldContainer, CompoundData {
         fun assignField(obj: DataTemplateObject, identifier: String, v: Var<*>){
             val member = getField(obj, identifier)!!
             member.replacedBy(member.assignedBy(v))
+        }
+
+        @JvmStatic
+        fun isInstance(obj: DataTemplateObject, template: DataTemplate): Boolean{
+            return obj.templateType.isSubOf(template)
+        }
+
+        @JvmStatic
+        fun isInstance(obj: DataTemplateObject, namespace: String?, templateID: String): Boolean{
+            return isInstance(obj, GlobalField.getTemplate(namespace, templateID)!!)
         }
 
     }

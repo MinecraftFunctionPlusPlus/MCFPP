@@ -24,7 +24,7 @@ repositories {
     maven("https://jitpack.io")
     maven("https://maven.aliyun.com/nexus/content/groups/public/")
     maven("https://libraries.minecraft.net")
-    mavenLocal()
+    maven("https://nexus.mcfpp.top/repository/maven-releases/")
 }
 
 dependencies {
@@ -41,12 +41,10 @@ dependencies {
     implementation("org.apache.commons:commons-lang3:3.17.0")
 
     // Google
-    implementation("com.google.guava:guava:33.2.0-jre")
-    implementation("com.google.guava:guava:33.4.5-jre") // 注意版本冲突
+    implementation("com.google.guava:guava:33.4.5-jre")
 
     // Mojang
-    implementation("com.mojang:brigadier:1.0.18")
-    implementation("com.mojang:brigadier:1.3.10") // 注意版本冲突
+    implementation("com.mojang:brigadier:1.3.10")
     implementation("com.mojang:datafixerupper:8.0.16")
 
     // CommonMark
