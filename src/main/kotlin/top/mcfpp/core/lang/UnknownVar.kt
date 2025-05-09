@@ -1,14 +1,17 @@
 package top.mcfpp.core.lang
 
-import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
-import top.mcfpp.type.MCFPPType
-import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
+import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
+import top.mcfpp.nbt.tags.primitive.StringTag
+import top.mcfpp.type.MCFPPType
+import top.mcfpp.util.TempPool
 
 class UnknownVar(identifier: String) : Var<UnknownVar>(identifier) {
+
+    constructor(): this(TempPool.getVarIdentify())
 
     override fun doAssignedBy(b: Var<*>) : UnknownVar {
         hasAssigned = true

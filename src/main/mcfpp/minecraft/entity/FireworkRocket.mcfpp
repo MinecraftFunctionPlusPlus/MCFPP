@@ -1,7 +1,9 @@
+import mcfpp.minecraft.item:ItemStackData;
+
 @MCFPPEntity
-data FireworkRocket {
+data FireworkRocketData {
     @Name<"FireworksItem">
-    fireworksItem as list<FireworkRocket>;
+    fireworksItem as list<ItemStackData>;
 
     @Name<"Life">
     life as int;

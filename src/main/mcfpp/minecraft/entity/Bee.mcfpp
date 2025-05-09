@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Bee: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, NeutralData {
+data BeeData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, NeutralData {
     @Name<"CannotEnterHiveTicks">
     cannotEnterHiveTicks as int;
 

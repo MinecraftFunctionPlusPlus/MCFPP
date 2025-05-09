@@ -150,7 +150,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     private fun assignMembers(template: DataTemplateObjectConcrete){
         instanceField.forEachVar {
             if(it !is ConcreteVar<*, *>){
-                it.replacedBy(it.assignedBy(NBTBasedDataConcrete(template.value[it.identifier]!!)))
+                it.replacedBy(it.assignedBy(template.value[it.identifier]!!))
             }else{
                 it.replacedBy(it.assignedBy(template.instanceField.getVar(it.identifier)!!))
             }
@@ -309,15 +309,11 @@ open class DataTemplateObject : Var<DataTemplateObject> {
 
     fun toConcrete(): DataTemplateObjectConcrete {
         if (this is DataTemplateObjectConcrete) return this
-        val compoundTag = CompoundTag()
+        val map = HashMap<String, Var<*>>()
         instanceField.forEachVar {
-            if(it is DataTemplateObject){
-                compoundTag.put(it.identifier, it.toConcrete().value)
-            }else if(it !is ConcreteVar<*, *>){
-                compoundTag.put(it.identifier, NBTUtil.varToNBT(it)!!)
-            }
+            map[it.identifier] = it
         }
-        return DataTemplateObjectConcrete(this, compoundTag)
+        return DataTemplateObjectConcrete(this, map)
     }
 
     fun toFunctionParam(){
@@ -350,9 +346,18 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     }
 }
 
-class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag> {
+class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<HashMap<String, Var<*>>> {
 
-    override var value: CompoundTag
+    override var value: HashMap<String, Var<*>>
+
+    var tagCache: CompoundTag? = null
+        get() {
+            if(field == null) {
+                field = NBTUtil.varToNBT(this) as CompoundTag
+            }
+            return field
+        }
+        private set
 
     /**
      * 创建一个固定的DataTemplate
@@ -362,18 +367,42 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag> {
      */
     constructor(
         template: DataTemplate,
-        value: CompoundTag,
+        value: HashMap<String, Var<*>>,
         identifier: String = TempPool.getVarIdentify()
     ) : super(template, identifier) {
-        this.value = value
+        if(template.checkDictionaryStruct(value)){
+            this.value = value
+            for (v in value.values) {
+                instanceField.putVar(v.identifier, v, true)
+            }
+        }else{
+            this.value = HashMap()
+            LogProcessor.error("Error data struct: $value")
+        }
     }
 
-    constructor(obj: DataTemplateObject, value: CompoundTag) : super(obj){
-        this.value = value
+    constructor(obj: DataTemplateObject, value: HashMap<String, Var<*>>) : super(obj){
+        if(templateType.checkDictionaryStruct(value)){
+            this.value = value
+            for (v in value.values) {
+                instanceField.putVar(v.identifier, v, true)
+            }
+        }else{
+            this.value = HashMap()
+            LogProcessor.error("Error data struct: $value")
+        }
     }
 
     constructor(obj: DataTemplateObjectConcrete) : super(obj){
-        this.value = obj.value
+        if(templateType.checkDictionaryStruct(obj.value)){
+            this.value = obj.value
+            for (v in value.values) {
+                instanceField.putVar(v.identifier, v, true)
+            }
+        }else{
+            this.value = HashMap()
+            LogProcessor.error("Error data struct: ${obj.value}")
+        }
     }
 
     override fun clone(): DataTemplateObjectConcrete {
@@ -381,7 +410,7 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag> {
     }
 
     override fun getTempVar(): DataTemplateObjectConcrete {
-        return DataTemplateObjectConcrete(super.getTempVar(), this.value.copy())
+        return DataTemplateObjectConcrete(super.getTempVar(), HashMap(this.value.map { it.key to it.value.clone()}.toMap()))
     }
 
     override fun toDynamic(replace: Boolean): Var<*> {
@@ -392,11 +421,11 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag> {
             return this
         }
         val parent = this.parent
-
+        val nbt = tagCache!!
         if(parent != null){
-            Function.addCommands(Commands.selectRun(parent, Commands.dataSetValue(nbtPath, value)))
+            Function.addCommands(Commands.selectRun(parent, Commands.dataSetValue(nbtPath, nbt)))
         }else {
-            Function.addCommand(Commands.dataSetValue(nbtPath, value))
+            Function.addCommand(Commands.dataSetValue(nbtPath, nbt))
         }
         val re = DataTemplateObject(this)
         if(replace){
@@ -410,16 +439,15 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag> {
     }
 
     override fun toString(): String {
-        return "[$type,value=${Tag.toSNBT(value)}]"
+        return "[$type,value=${Tag.toSNBT(tagCache!!)}]"
     }
 
     override fun onMemberVarChanged(member: Var<*>) {
         if(member !is MCFPPValue<*>) {
             toDynamic(true)
         }else if(member !is ConcreteVar<*, *>){
-            val key = member.identifier
-            val data = NBTUtil.varToNBT(member)
-            value.put(key, data!!)
+            value[member.identifier] = member
+            tagCache = null
         }
     }
 
@@ -427,7 +455,7 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag> {
     fun <T: Tag<*>> getTag(identifier: String): T{
         if(identifier.contains(".")){
             val ids = identifier.split('.')
-            var tag: Tag<*> = value
+            var tag: Tag<*> = tagCache!!
             for (id in ids){
                 tag = (tag as CompoundTag)[id]!!
             }
@@ -440,13 +468,13 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<CompoundTag> {
     fun getTagStr(identifier: String): String{
         val t = if(identifier.contains(".")){
             val ids = identifier.split('.')
-            var tag: Tag<*> = value
+            var tag: Tag<*> = tagCache!!
             for (id in ids){
                 tag = (tag as CompoundTag)[id]!!
             }
             tag
         }else{
-            value["id"]!!
+            tagCache!!["id"]!!
         }
         return Tag.toSNBT(t)
     }

@@ -90,7 +90,7 @@ open class DataTemplate : FieldContainer, CompoundData {
     }
 
     fun checkDictionaryStruct(dict: Map<String, Var<*>>) : Boolean {
-        for (member in field.allVars.filter { it !is ConcreteVar<*,*> }){
+        for (member in field.allVars.filter { it !is ConcreteVar<*,*> && !it.nullable }){
             if(!dict.containsKey(member.identifier)) return false
             if(!dict[member.identifier]!!.type.isSubOf(member.type)) return false
         }

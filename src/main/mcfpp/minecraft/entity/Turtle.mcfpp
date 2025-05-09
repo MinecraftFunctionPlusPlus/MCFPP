@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Turtle: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
+data TurtleData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"HasEgg"> hasEgg as bool;
     @Name<"HomePosX"> homePosx as int;
     @Name<"HomePosY"> homePosy as int;

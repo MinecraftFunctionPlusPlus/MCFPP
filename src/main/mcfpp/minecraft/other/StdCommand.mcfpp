@@ -20,7 +20,7 @@ enum FillMode{
     strict
 }
 
-enum GameMode{
+enum Gamemode{
     creative,
     spectator,
     survival,

@@ -1,6 +1,5 @@
 package top.mcfpp.antlr
 
-import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.Project
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.entity.SelectorVar
@@ -17,11 +16,11 @@ import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.Generic
 import top.mcfpp.model.generic.GenericClass
-import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.primitive.ByteTag
 import top.mcfpp.nbt.tags.primitive.DoubleTag
 import top.mcfpp.nbt.tags.primitive.LongTag
+import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil.toNBTByte
@@ -39,27 +38,12 @@ open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
 
     override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var<*> {
         Project.ctx = ctx
-        if(ctx.jvmAccessExpression() != null){
-            currSelector = visitJvmAccessExpression(ctx.jvmAccessExpression())
-            if(currSelector is UnknownVar){
-                val typeStr = ctx.jvmAccessExpression().text
-                val type = MCFPPType.parseFromString(typeStr, Function.currFunction.field)
-                if(type == null){
-                    LogProcessor.error(TextTranslator.VARIABLE_NOT_DEFINED.translate(currSelector!!.identifier))
-                }else{
-                    currSelector = ObjectVar(type)
-                }
-            }
-        }else{
-            val typeStr = ctx.type().text
+        currSelector = visitJvmAccessExpression(ctx.jvmAccessExpression())
+        if(currSelector is UnknownVar){
+            val typeStr = ctx.jvmAccessExpression().text
             val type = MCFPPType.parseFromString(typeStr, Function.currFunction.field)
             if(type == null){
-                if(ctx.selector().size == 0){
-                    LogProcessor.error(TextTranslator.VARIABLE_NOT_DEFINED.translate(currSelector!!.identifier))
-                }else{
-                    LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(typeStr))
-                    currSelector = UnknownVar("unknown_" + UUID.randomUUID())
-                }
+                LogProcessor.error(TextTranslator.SYMBOL_NOT_DEFINED.translate(currSelector!!.identifier))
             }else{
                 currSelector = ObjectVar(type)
             }
@@ -226,7 +210,7 @@ open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
         //可能是模板的构造函数
         val template: DataTemplate? = GlobalField.getTemplate(p.first, p.second)
         if(template != null) {
-            val init = DataTemplateObjectConcrete(template, template.getType().defaultValue() as CompoundTag)
+            val init = DataTemplateObjectConcrete(template.getType().defaultValue() as DataTemplateObjectConcrete)
             val constructor = template.getConstructorByString(FunctionParam.getArgTypeNames(normalArgs))
             if (constructor == null) {
                 LogProcessor.error("No constructor like: " + FunctionParam.getArgTypeNames(normalArgs) + " defined in class " + ctx.namespaceID().text)
@@ -269,6 +253,16 @@ open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
                 UnknownVar(qwq)
             }else{
                 re.first!!
+            }
+        }
+        if(re is UnknownVar){
+            //从类型获取
+            val typeStr = ctx.Identifier().text
+            val type = MCFPPType.parseFromString(typeStr, Function.currFunction.field)
+            if(type == null){
+                LogProcessor.error(TextTranslator.SYMBOL_NOT_DEFINED.translate(currSelector!!.identifier))
+            }else{
+                re = ObjectVar(type)
             }
         }
         // Identifier identifierSuffix*

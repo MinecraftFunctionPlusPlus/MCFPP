@@ -8,7 +8,7 @@ public class NoInstance extends DataTemplateAnnotation {
 
     @SuppressWarnings("unused")
     private NoInstance() {
-        super("NoInstance","mcfpp.annotation");
+        super("NoInstance","mcfpp.lang");
     }
 
     @Override

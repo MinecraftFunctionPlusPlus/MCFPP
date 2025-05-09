@@ -1,0 +1,72 @@
+@From<"top.mcfpp.mni.minecraft.SlotData">
+data Slot{
+    index as int?;
+    type as SlotType;
+
+    constructor(index as int, type as SlotType){
+        this.index = index;
+        this.type = type;
+    }
+
+    constructor(type as SlotType){
+        this.type = type;
+    }
+}
+
+# 使用了通配符的槽位
+@From<"top.mcfpp.mni.minecraft.SlotWithWildcardData">
+data SlotWithWildcard{
+    type as SlotType;
+    private constructor(type as SlotType){
+        this.type = type;
+    }
+}
+
+object data Slot {
+    contents = Slot(SlotType.contents);
+    weapon = Slot(SlotType.weapon);
+    weapon_mainhand = Slot(SlotType.weapon_mainhand);
+    weapon_offhand = Slot(SlotType.weapon_offhand);
+    armor = Slot(SlotType.armor);
+    armor_head = Slot(SlotType.armor_head);
+    armor_chest = Slot(SlotType.armor_chest);
+    armor_legs = Slot(SlotType.armor_legs);
+    armor_feet = Slot(SlotType.armor_feet);
+    armor_body = Slot(SlotType.armor_body);
+    saddle = Slot(SlotType.saddle);
+    horse_chest = Slot(SlotType.horse_chest);
+    player_cursor = Slot(SlotType.player_cursor);
+}
+
+object data SlotWildcard {
+    container = SlotWithWildcard(SlotType.container);
+    hotbar = SlotWithWildcard(SlotType.hotbar);
+    inventory = SlotWithWildcard(SlotType.inventory);
+    enderchest = SlotWithWildcard(SlotType.enderchest);
+    villager = SlotWithWildcard(SlotType.villager);
+    horse = SlotWithWildcard(SlotType.horse);
+    crafting = SlotWithWildcard(SlotType.player_crafting);
+}
+
+enum SlotType{
+    contents,
+    container,
+    hotbar,
+    inventory,
+    enderchest,
+    villager,
+    horse,
+    weapon,
+    weapon_mainhand,
+    weapon_offhand,
+    armor,
+    armor_head,
+    armor_chest,
+    armor_legs,
+    armor_feet,
+    armor_body,
+    saddle,
+    horse_chest,
+    player_cursor,
+    player_crafting
+}

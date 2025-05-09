@@ -25,7 +25,7 @@ public class EntityVarData {
     public static ArrayList<Var<?>> getMembers() {
         NormalCompoundDataObject attributes = new NormalCompoundDataObject("attributes", Map.of());
         CompoundData attributeData = new CompoundData("attribute", "mcfpp.hidden");
-        attributeData.getNativeFromClass(AttributeData.class);
+        attributeData.injectedBy(AttributeData.class);
         attributes.getData().addMember(new NormalCompoundDataObject(attributeData, "armor", Map.of()));
         attributes.getData().addMember(new NormalCompoundDataObject(attributeData, "armor_toughness", Map.of()));
         attributes.getData().addMember(new NormalCompoundDataObject(attributeData, "attack_damage", Map.of()));

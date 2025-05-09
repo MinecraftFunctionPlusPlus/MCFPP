@@ -1,4 +1,2 @@
 @MCFPPEntity
-data Spider: EntityData, CreatureData, AIMobData{
-    
-}
+data SpiderData: EntityData, CreatureData, AIMobData;

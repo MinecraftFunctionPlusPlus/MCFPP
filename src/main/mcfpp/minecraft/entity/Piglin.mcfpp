@@ -1,10 +1,10 @@
 @MCFPPEntity
-data Piglin: EntityData, CreatureData, AIMobData, AnimalData {
+data PiglinData: EntityData, CreatureData, AIMobData, AnimalData {
     @Name<"CannotHunt">
     cannotHunt as bool;
 
     @Name<"Inventory">
-    inventory as list<Item>;
+    inventory as list<ItemData>;
 
     @Name<"IsBaby">
     isBaby as bool;

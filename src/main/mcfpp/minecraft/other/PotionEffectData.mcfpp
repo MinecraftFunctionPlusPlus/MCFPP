@@ -1,4 +1,4 @@
-data PotionEffect {
+data PotionEffectData {
     ambient as bool?;
     amplifier as bool?;
     duration as bool?;

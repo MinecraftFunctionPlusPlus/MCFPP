@@ -128,7 +128,7 @@ open class EntityUUIDVar : NBTBasedData{
     companion object {
         val data by lazy {
             CompoundData("uuid","mcfpp").apply {
-                getNativeFromClass(EntityVarData::class.java)
+                injectedBy(EntityVarData::class.java)
             }
         }
     }

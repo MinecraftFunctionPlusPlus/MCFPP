@@ -4,7 +4,7 @@ data CreatureData{
     absorptionAmount as float;
 
     @Name<"active_effects">
-    activeEffects as list<PotionEffect>;
+    activeEffects as list<PotionEffectData>;
 
     attributes as list<Attribute>;
 

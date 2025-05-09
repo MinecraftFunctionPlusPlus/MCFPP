@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Vex: EntityData, CreatureData, AIMobData {
+data VexData: EntityData, CreatureData, AIMobData {
     @Name<"BoundX"> boundX as int;
     @Name<"BoundY"> boundY as int;
     @Name<"BoundZ"> boundZ as int;

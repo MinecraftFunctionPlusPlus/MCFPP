@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Phantom: EntityData, CreatureData, AIMobData {
+data PhantomData: EntityData, CreatureData, AIMobData {
     @Name<"AX">
     ax as int;
 

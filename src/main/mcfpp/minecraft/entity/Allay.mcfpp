@@ -1,5 +1,7 @@
+import mcfpp.minecraft.item:ItemStackData;
+
 @MCFPPEntity
-data Allay: EntityData, AIMobData, CreatureData {
+data AllayData: EntityData, AIMobData, CreatureData {
     @Name<"CanDuplicate">
     canDuplicate as byte;
 
@@ -7,7 +9,7 @@ data Allay: EntityData, AIMobData, CreatureData {
     duplicationCooldown as long;
 
     @Name<"Inventory">
-    inventory as list<Item>;
+    inventory as list<ItemStackData>;
 
     @Name<"Listener">
     listener as Listener;

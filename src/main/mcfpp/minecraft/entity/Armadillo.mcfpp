@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Armadillo: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
+data ArmadilloData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"Scute_Time">
     scuteTime as int;
 

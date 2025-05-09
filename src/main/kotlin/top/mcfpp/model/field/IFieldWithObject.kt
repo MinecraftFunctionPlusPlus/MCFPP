@@ -20,7 +20,7 @@ interface IFieldWithObject: IField {
      * @param identifier 这个单例的标识符
      * @return 是否移除成功。如果不存在此单例，则返回false
      */
-    fun removeObject(identifier: String):Boolean
+    fun removeObject(identifier: String): CompoundData?
 
     /**
      * 获取一个单例。可能不存在

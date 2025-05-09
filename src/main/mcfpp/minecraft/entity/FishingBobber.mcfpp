@@ -1,2 +1,2 @@
 @MCFPPEntity
-data FishingBobber: EntityData{}
+data FishingBobberData: EntityData;

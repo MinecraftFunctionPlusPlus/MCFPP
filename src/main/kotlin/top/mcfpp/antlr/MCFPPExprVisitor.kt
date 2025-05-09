@@ -19,7 +19,6 @@ import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.Generic
 import top.mcfpp.model.generic.GenericClass
-import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.primitive.ByteTag
 import top.mcfpp.nbt.tags.primitive.DoubleTag
@@ -71,6 +70,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             l.commands.addAll(f.commands)
             q
         }else{
+            currSelector = null
             val q = visitCommonBinaryOperatorExpression(ctx.commonBinaryOperatorExpression())
             Function.currFunction = l
             l.commands.addAll(f.commands)
@@ -86,19 +86,19 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
      */
     override fun visitCommonBinaryOperatorExpression(ctx: mcfppParser.CommonBinaryOperatorExpressionContext): Var<*> {
         Project.ctx = ctx
-        visitConditionalOrExpressionRe = visitConditionalOrExpression(ctx.conditionalOrExpression(0))
-        processVarCache.add(visitConditionalOrExpressionRe!!)
+        visitCommonBinaryOperatorExpressionRe = visitConditionalOrExpression(ctx.conditionalOrExpression(0))
+        processVarCache.add(visitCommonBinaryOperatorExpressionRe!!)
         for (i in 1..<ctx.conditionalOrExpression().size) {
             var b: Var<*>? = visitConditionalOrExpression(ctx.conditionalOrExpression(i))
             if(b is MCFloat) b = b.toTempEntity()
-            if(visitConditionalOrExpressionRe!! != MCFloat.ssObj){
-                visitConditionalOrExpressionRe = visitConditionalOrExpressionRe!!.getTempVar()
+            if(visitCommonBinaryOperatorExpressionRe!! != MCFloat.ssObj){
+                visitCommonBinaryOperatorExpressionRe = visitCommonBinaryOperatorExpressionRe!!.getTempVar()
             }
-            visitConditionalOrExpressionRe = visitConditionalOrExpressionRe!!.binaryComputation(b!!, ctx.commonBinaryOperator(i - 1).text)
-            processVarCache[processVarCache.size - 1] = visitConditionalOrExpressionRe!!
+            visitCommonBinaryOperatorExpressionRe = visitCommonBinaryOperatorExpressionRe!!.binaryComputation(b!!, ctx.commonBinaryOperator(i - 1).text)
+            processVarCache[processVarCache.size - 1] = visitCommonBinaryOperatorExpressionRe!!
         }
         processVarCache.remove(visitCommonBinaryOperatorExpressionRe!!)
-        return visitConditionalOrExpressionRe!!
+        return visitCommonBinaryOperatorExpressionRe!!
     }
 
     private var visitConditionalOrExpressionRe : Var<*>? = null
@@ -292,27 +292,12 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var<*> {
         Project.ctx = ctx
         currSelector = null
-        if(ctx.jvmAccessExpression() != null){
-            currSelector = visitJvmAccessExpression(ctx.jvmAccessExpression())
-            if(currSelector is UnknownVar){
-                val typeStr = ctx.jvmAccessExpression().text
-                val type = MCFPPType.parseFromString(typeStr, Function.currFunction.field)
-                if(type == null){
-                    LogProcessor.error(TextTranslator.VARIABLE_NOT_DEFINED.translate(currSelector!!.identifier))
-                }else{
-                    currSelector = ObjectVar(type)
-                }
-            }
-        }else{
-            val typeStr = ctx.type().text
+        currSelector = visitJvmAccessExpression(ctx.jvmAccessExpression())
+        if(currSelector is UnknownVar){
+            val typeStr = ctx.jvmAccessExpression().text
             val type = MCFPPType.parseFromString(typeStr, Function.currFunction.field)
             if(type == null){
-                if(ctx.selector().size == 0){
-                    LogProcessor.error(TextTranslator.VARIABLE_NOT_DEFINED.translate(currSelector!!.identifier))
-                }else{
-                    LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(typeStr))
-                    currSelector = UnknownVar(TempPool.getFunctionIdentify("unknown"))
-                }
+                LogProcessor.error(TextTranslator.SYMBOL_NOT_DEFINED.translate(currSelector!!.identifier))
             }else{
                 currSelector = ObjectVar(type)
             }
@@ -362,7 +347,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             //变量
             val qwq = visitVar(ctx.`var`())
             if(qwq is UnknownVar && ctx.parent.parent !is mcfppParser.VarWithSelectorContext){
-                LogProcessor.error(TextTranslator.VARIABLE_NOT_DEFINED.translate(qwq.identifier))
+                LogProcessor.error(TextTranslator.SYMBOL_NOT_DEFINED.translate(qwq.identifier))
             }
             return qwq
         } else if (ctx.value() != null) {
@@ -446,14 +431,14 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         for (expr in ctx.arguments().readOnlyArgs()?.expressionList()?.expression()?: emptyList()) {
             val arg = exprVisitor.visit(expr)!!
             if(arg is UnknownVar){
-                LogProcessor.error(TextTranslator.VARIABLE_NOT_DEFINED.translate(arg.identifier))
+                LogProcessor.error(TextTranslator.SYMBOL_NOT_DEFINED.translate(arg.identifier))
             }
             readOnlyArgs.add(arg)
         }
         for (expr in ctx.arguments().normalArgs().expressionList()?.expression()?: emptyList()) {
             val arg = exprVisitor.visit(expr)!!
             if(arg is UnknownVar){
-                LogProcessor.error(TextTranslator.VARIABLE_NOT_DEFINED.translate(arg.identifier))
+                LogProcessor.error(TextTranslator.SYMBOL_NOT_DEFINED.translate(arg.identifier))
             }
             normalArgs.add(arg)
         }
@@ -506,7 +491,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         //可能是模板的构造函数
         val template: DataTemplate? = GlobalField.getTemplate(p.first, p.second)
         if(template != null) {
-            val init = DataTemplateObjectConcrete(template, template.getType().defaultValue() as CompoundTag)
+            val init = DataTemplateObjectConcrete(template.getType().defaultValue() as DataTemplateObjectConcrete)
             val constructor = template.getConstructorByString(FunctionParam.getArgTypeNames(normalArgs))
             if (constructor == null) {
                 LogProcessor.error("No constructor like: " + FunctionParam.getArgTypeNames(normalArgs) + " defined in class " + ctx.namespaceID().text)
@@ -528,9 +513,6 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         //变量
         //没有数组选取
         val qwq: String = ctx.Identifier().text
-        if(enumType != null && currSelector == null){
-            currSelector = ObjectVar(enumType!!)
-        }
         var re = if(currSelector == null) {
             val pwp = Function.currFunction.field.getVar(qwq)
             if(pwp != null) {
@@ -553,6 +535,28 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 UnknownVar(qwq)
             }else{
                 re.first!!
+            }
+        }
+        if(re is UnknownVar){
+            //从类型获取
+            val typeStr = ctx.Identifier().text
+            val type = MCFPPType.parseFromString(typeStr, Function.currFunction.field)
+            if(type == null){
+                LogProcessor.error(TextTranslator.SYMBOL_NOT_DEFINED.translate(currSelector!!.identifier))
+            }else{
+                re = ObjectVar(type)
+            }
+        }
+        if(re is UnknownVar && enumType != null && currSelector == null){
+            //从枚举获取
+            currSelector = ObjectVar(enumType!!)
+            val re2  = currSelector!!.getMemberVar(qwq, currSelector!!.getAccess(Function.currFunction))
+            if (re2.first == null) {
+                LogProcessor.error("Cannot get member ${enumType!!.simpleName}.$qwq")
+            }else if (!re2.second){
+                LogProcessor.error("Cannot access member ${enumType!!.simpleName}.$qwq")
+            }else{
+                re = re2.first!!
             }
         }
         // Identifier identifierSuffix*
@@ -642,6 +646,8 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
                 x.assignedBy(dimensions[0])
                 z.assignedBy(dimensions[1])
             }
+        } else if(ctx.NULL() != null){
+            return Null
         }
         throw IllegalArgumentException("value_" + ctx.text)
     }

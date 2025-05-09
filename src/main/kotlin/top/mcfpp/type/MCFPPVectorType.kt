@@ -3,9 +3,9 @@ package top.mcfpp.type
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.VectorVar
 import top.mcfpp.core.lang.VectorVarConcrete
+import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
-import top.mcfpp.model.FieldContainer
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.collection.ListTag
 
@@ -19,6 +19,10 @@ class MCFPPVectorType(val dimension: Int): MCFPPType(arrayListOf(MCFPPBaseType.A
 
     override val nbtType: java.lang.Class<out Tag<*>>
         get() = ListTag::class.java
+
+    override fun defaultValue(): Var<*> {
+        return VectorVarConcrete(Array(dimension){0})
+    }
 
     companion object {
         val regex = Regex("^vec\\d+$")

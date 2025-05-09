@@ -1,5 +1,5 @@
 @MCFPPEntity
-data HorseData {
+data GeneralHorseData {
     @Name<"Bred">
     bred as bool;
 
@@ -10,7 +10,7 @@ data HorseData {
     owner as IntArray;
 
     @Name<"SaddleItem">
-    saddleItem as Item;
+    saddleItem as ItemData;
 
     @Name<"Tame">
     tame as bool;

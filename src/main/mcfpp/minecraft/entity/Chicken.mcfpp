@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Chicken: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
+data ChickenData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"EggLayTime">
     eggLayTime as int;
 

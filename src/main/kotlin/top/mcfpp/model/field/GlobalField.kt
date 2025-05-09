@@ -11,12 +11,11 @@ import top.mcfpp.mni.DataObjectData
 import top.mcfpp.mni.ObjectData
 import top.mcfpp.mni.annotation.*
 import top.mcfpp.mni.minecraft.MinecraftData
-import top.mcfpp.model.*
+import top.mcfpp.mni.minecraft.StdCommands
+import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.Namespace
 import top.mcfpp.model.annotation.Annotation
-import top.mcfpp.model.compound.Class
-import top.mcfpp.model.compound.CompoundData
-import top.mcfpp.model.compound.DataTemplate
-import top.mcfpp.model.compound.Interface
+import top.mcfpp.model.compound.*
 import top.mcfpp.model.compound.Enum
 import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function
@@ -92,11 +91,7 @@ object GlobalField : FieldContainer, IField {
         //初始化mcfpp的tick和load函数
         //添加命名空间
         stdNamespaces["mcfpp"] = Namespace("mcfpp")
-        stdNamespaces["mcfpp.sys"] = Namespace("mcfpp.sys")
         stdNamespaces["mcfpp.lang"] = Namespace("mcfpp.lang")
-        stdNamespaces["mcfpp.minecraft"] = Namespace("mcfpp.minecraft")
-        stdNamespaces["mcfpp.minecraft.entity"] = Namespace("mcfpp.minecraft.entity")
-        stdNamespaces["mcfpp.annotation"] = Namespace("mcfpp.annotation")
 
         Project.mcfppTick = Function("tick","mcfpp", context = null)
         Project.mcfppLoad = Function("load","mcfpp", context = null)
@@ -112,11 +107,14 @@ object GlobalField : FieldContainer, IField {
         FunctionTag.LOAD.functions.add(Project.mcfppInit)
 
         stdNamespaces["mcfpp.lang"]!!.field.addTemplate("DataObject", DataTemplate.baseDataTemplate)
-        DataTemplate.baseDataTemplate.getNativeFromClass(DataObjectData::class.java)
+        DataTemplate.baseDataTemplate.injectedBy(DataObjectData::class.java)
         stdNamespaces["mcfpp.lang"]!!.field.addClass("Object", Class.baseClass)
-        Class.baseClass.getNativeFromClass(ObjectData::class.java)
+        Class.baseClass.injectedBy(ObjectData::class.java)
 
-        stdNamespaces["mcfpp.minecraft"]!!.getNativeFunctionFromClass(MinecraftData::class.java)
+        Project.stageProcessor[Project.INDEX_TYPE].add {
+            getOrCreateNamespace("mcfpp.minecraft").injectedBy(MinecraftData::class.java)
+            getOrCreateNamespace("mcfpp.minecraft.std").injectedBy(StdCommands::class.java)
+        }
 
         listOf(
             "From" to From::class.java,
@@ -129,7 +127,7 @@ object GlobalField : FieldContainer, IField {
             "Name" to Name::class.java,
             "DataOnly" to DataOnly::class.java
         ).forEach {
-            stdNamespaces["mcfpp.annotation"]!!.field.addAnnotation(it.first, it.second)
+            stdNamespaces["mcfpp.lang"]!!.field.addAnnotation(it.first, it.second)
         }
 
         return this
@@ -138,6 +136,15 @@ object GlobalField : FieldContainer, IField {
     @JvmStatic
     fun getNamespace(namespace: String): Namespace?{
         return localNamespaces[namespace]?: importedLibNamespaces[namespace]?: stdNamespaces[namespace]
+    }
+
+    @JvmStatic
+    fun getOrCreateNamespace(namespace: String): Namespace{
+        val np = getNamespace(namespace)
+        if(np != null) return np
+        val re = Namespace(namespace)
+        localNamespaces[namespace] = re
+        return re
     }
 
     /**

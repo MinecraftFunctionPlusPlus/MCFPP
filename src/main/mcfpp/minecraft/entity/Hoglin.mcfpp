@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Hoglin : EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
+data HoglinData : EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"CannotBeHunted">
     cannotBehunted as bool;
 

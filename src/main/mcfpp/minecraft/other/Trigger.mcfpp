@@ -1,7 +1,7 @@
 data Trigger {
     id as string;
 
-    func enable(Player){
-        /scoreboard players enable ${p0} ${id}
+    func enable<player as Player>(){
+        /scoreboard players enable ${player} ${this.id}
     }
 }

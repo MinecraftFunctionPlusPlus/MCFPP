@@ -45,14 +45,13 @@ class SimpleFieldWithEnum : IFieldWithEnum {
         return true
     }
 
-    override fun removeEnum(identifier: String): Boolean {
+    override fun removeEnum(identifier: String): Enum? {
         for (e in enums) {
             if(e.identifier == identifier){
                 enums.remove(e)
-                return true
             }
         }
-        return false
+        return null
     }
 
     override fun hasEnum(enum: Enum): Boolean{

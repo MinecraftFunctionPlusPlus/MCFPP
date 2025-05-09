@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Evoker: EntityData, CreatureData, AIMobData, RaiderData {
+data EvokerData: EntityData, CreatureData, AIMobData, RaiderData {
     @Name<"SpellTicks">
     spellTicks as int;
 }

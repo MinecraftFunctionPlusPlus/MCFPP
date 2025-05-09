@@ -1,3 +1,2 @@
 @MCFPPEntity
-data ElderGuardian: EntityData, CreatureData, AIMobData {
-}
+data ElderGuardianData: EntityData, CreatureData, AIMobData;

@@ -1,11 +1,12 @@
 package top.mcfpp.type
 
-import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.*
+import top.mcfpp.core.lang.obj.ClassPointer
+import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.Member
+import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.UnsolvedClass
-import top.mcfpp.model.compound.Class
 import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.Function
 import top.mcfpp.nbt.tags.Tag
@@ -28,6 +29,13 @@ open class MCFPPClassType(
 
     override val typeName: String
         get() = "class(${cls.namespace}:${cls.identifier})"
+
+    override val simpleName: String
+        get() = cls.identifier
+
+    override fun defaultValue(): Var<*> {
+        return ClassPointer(cls, "default")
+    }
 
     open fun getGenericClassType(compiledClass: Class) : MCFPPClassType {
         val t = MCFPPClassType(compiledClass, parentType)

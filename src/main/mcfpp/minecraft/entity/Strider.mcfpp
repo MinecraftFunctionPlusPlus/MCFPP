@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Strider: EntityData, CreatureData, AIMobData, GrowableData, AnimalData{
+data StriderData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData{
     @Name<"Saddle">
     saddle as bool;
 }

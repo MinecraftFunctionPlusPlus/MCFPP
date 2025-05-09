@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Ocelot: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
+data OcelotData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"Trusting">
     rusting as bool;
 }

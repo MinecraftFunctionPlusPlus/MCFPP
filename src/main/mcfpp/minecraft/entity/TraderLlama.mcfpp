@@ -1,4 +1,4 @@
 @MCFPPEntity
-data TraderLlama: Llama {
+data TraderLlamaData: LlamaData {
     @Name<"DespawnDelay"> despawnDelay as int;
 }

@@ -11,16 +11,16 @@ public class From extends DataTemplateAnnotation {
 
     @SuppressWarnings("unused")
     public From(String className) {
-        super("From", "mcfpp.annotation");
+        super("From", "mcfpp.lang");
         this.className = className;
     }
 
     @Override
     public void forDataTemplate(@NotNull DataTemplate data) {
         try {
-            data.getNativeFromClass(Class.forName(className));
+            data.injectedBy(Class.forName(className));
         } catch (ClassNotFoundException e) {
-            LogProcessor.error("Class not found: " + className, e);
+            LogProcessor.error("Class not found: " + className);
         }
     }
 }

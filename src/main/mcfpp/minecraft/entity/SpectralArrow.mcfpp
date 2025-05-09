@@ -1,4 +1,4 @@
 @MCFPPEntity
-data SpectralArrow: EntityData, ProjectileData, ArrowData {
+data SpectralArrowData: EntityData, ProjectileData, GeneralArrowData {
     @Name<"Duration"> duration as int;
 }

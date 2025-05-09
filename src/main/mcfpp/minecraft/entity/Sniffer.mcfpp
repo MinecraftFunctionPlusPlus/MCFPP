@@ -1,4 +1,2 @@
 @MCFPPEntity
-data Sniffer: EntityData, CreatureData, AIMobData, GrowableData, AnimalData{
-    
-}
+data SnifferData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData;

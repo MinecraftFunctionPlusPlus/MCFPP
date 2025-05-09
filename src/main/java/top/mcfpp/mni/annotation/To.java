@@ -10,7 +10,7 @@ public class To extends DataTemplateAnnotation {
 
     @SuppressWarnings("unused")
     public To(String className) {
-        super("To", "mcfpp.annotation");
+        super("To", "mcfpp.lang");
         this.className = className;
     }
 

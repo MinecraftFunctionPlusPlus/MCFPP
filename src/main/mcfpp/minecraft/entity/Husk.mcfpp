@@ -1,4 +1,2 @@
 @MCFPPEntity
-data Husk: EntityData, CreatureData, AIMobData, ZombieData {
-    
-}
+data HuskData: EntityData, CreatureData, AIMobData, GeneralZombieData;

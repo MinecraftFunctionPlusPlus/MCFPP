@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Shulker: EntityData, CreatureData, AIMobData {
+data ShulkerData: EntityData, CreatureData, AIMobData {
     @Name<"AttachFace"> attachFace as byte;
     @Name<"Color"> color as byte;
     @Name<"Peek"> peek as byte;

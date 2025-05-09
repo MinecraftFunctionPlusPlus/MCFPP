@@ -1,4 +1,4 @@
-data ZombieData {
+data GeneralZombieData {
     @Name<"CanBreakDoors"> canBreakDoors as bool;
     @Name<"DrownedConversionTime"> drownedConversionTime as int;
     @Name<"InWaterTime"> inWaterTime as int;

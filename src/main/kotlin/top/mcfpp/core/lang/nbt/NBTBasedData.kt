@@ -5,12 +5,11 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.obj.DataTemplateObject
-import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.core.lang.obj.EnumVar
 import top.mcfpp.mni.NBTBasedDataData
-import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.property.Property
 import top.mcfpp.nbt.tags.CompoundTag
@@ -343,7 +342,7 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
 
         val data by lazy { CompoundData("nbt","mcfpp").apply {
             extends(MCAny.data)
-            getNativeFromClass(NBTBasedDataData::class.java)
+            injectedBy(NBTBasedDataData::class.java)
         } }
 
         enum class NBTTypeWithTag(val type: NBTType){
@@ -458,13 +457,13 @@ class NBTBasedDataConcrete : NBTBasedData, MCFPPValue<Tag<*>> {
     }
 
     override fun implicitCast(type: MCFPPType): Var<*> {
-        if(type is MCFPPDataTemplateType && value is CompoundTag){
-            return if(type.template.checkCompoundStruct(value as CompoundTag)){
-                DataTemplateObjectConcrete(type.template, value as CompoundTag)
-            }else{
-                buildCastErrorVar(type)
-            }
-        }
+//        if(type is MCFPPDataTemplateType && value is CompoundTag){
+//            return if(type.template.checkCompoundStruct(value as CompoundTag)){
+//                DataTemplateObjectConcrete(type.template, value as CompoundTag)
+//            }else{
+//                buildCastErrorVar(type)
+//            }
+//        }
         if((type is MCFPPVectorType)){
             if((value is ListTag) && (type.dimension == (value as ListTag).size)){
                 //转换为向量
@@ -521,7 +520,7 @@ class NBTBasedDataConcrete : NBTBasedData, MCFPPValue<Tag<*>> {
 
         init {
             data.extends(MCAnyConcrete.data)
-            data.getNativeFromClass(NBTBasedDataData::class.java)
+            data.injectedBy(NBTBasedDataData::class.java)
         }
     }
 }

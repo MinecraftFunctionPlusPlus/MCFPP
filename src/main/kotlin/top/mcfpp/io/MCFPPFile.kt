@@ -6,6 +6,7 @@ import org.antlr.v4.runtime.CommonTokenStream
 import org.antlr.v4.runtime.tree.ParseTree
 import top.mcfpp.Project
 import top.mcfpp.antlr.*
+import top.mcfpp.model.Namespace
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.field.FileField
 import top.mcfpp.model.field.GlobalField
@@ -33,7 +34,7 @@ class MCFPPFile : File {
     /**
      * 此文件对应的命名空间，默认为文件的父目录和源代码目录的相对路径
      */
-    var namespace: String
+    var namespace: Namespace
 
     //TODO 同名文件的顶级函数之间的命名冲突
     val topFunction: Function = Function(this.name.toSnakeCase(), context = null)
@@ -42,13 +43,15 @@ class MCFPPFile : File {
 
     constructor(path: String) : super(path) {
         val n = Project.config.sourcePath!!.toAbsolutePath().relativize(this.toPath().toAbsolutePath().parent).toString()
-        namespace = Project.config.rootNamespace + "." + n.pathToNamespace().toSnakeCase()
+        val str = Project.config.rootNamespace + "." + n.pathToNamespace().toSnakeCase()
+        namespace = GlobalField.getOrCreateNamespace(str)
     }
 
     constructor(file: File) : this(file.absolutePath)
 
     internal constructor(): super("."){
-        namespace = Project.config.rootNamespace + ".test"
+        val str = Project.config.rootNamespace + ".test"
+        namespace = GlobalField.getOrCreateNamespace(str)
     }
 
     fun token(): CommonTokenStream {
@@ -76,11 +79,12 @@ class MCFPPFile : File {
      */
     fun indexType(){
         currFile = this
-        Project.currNamespace = namespace
+        Project.currNamespace = namespace.identifier
         MCFPPTypeVisitor().visit(tree())
-        field.namespaceField = GlobalField.localNamespaces[namespace]!!.field
+        field.namespaceField = namespace.field
         Project.currNamespace = Project.config.rootNamespace
         currFile = null
+        Project.ctx = null
     }
 
     /**
@@ -89,7 +93,7 @@ class MCFPPFile : File {
     fun resolveField() {
         if(syntaxError) return
         currFile = this
-        Project.currNamespace = namespace
+        Project.currNamespace = namespace.identifier
         //引用
         for (n in unsolvedImports){
             val qwq = GlobalField.getNamespace(n.key)
@@ -130,15 +134,17 @@ class MCFPPFile : File {
         MCFPPFieldVisitor().visit(tree())
         Project.currNamespace = Project.config.rootNamespace
         currFile = null
+        Project.ctx = null
     }
 
     fun runAnnotation(){
         if(syntaxError) return
         currFile = this
-        Project.currNamespace = namespace
+        Project.currNamespace = namespace.identifier
         MCFPPAnnotationVisitor().visit(tree())
         Project.currNamespace = Project.config.rootNamespace
         currFile = null
+        Project.ctx = null
     }
 
     /**
@@ -147,7 +153,7 @@ class MCFPPFile : File {
     fun compile() {
         if(syntaxError) return
         currFile = this
-        Project.currNamespace = namespace
+        Project.currNamespace = namespace.identifier
         //创建默认函数
         val func = Function(
             (nameWithoutExtension + "_default").toSnakeCase(), Project.currNamespace,
@@ -157,6 +163,7 @@ class MCFPPFile : File {
         MCFPPImVisitor().visit(tree())
         Project.currNamespace = Project.config.rootNamespace
         currFile = null
+        Project.ctx = null
     }
 
     companion object{

@@ -1,3 +1,2 @@
 @MCFPPEntity
-data CaveSpider: EntityData, CreatureData, AIMobData {
-}
+data CaveSpiderData: EntityData, CreatureData, AIMobData;

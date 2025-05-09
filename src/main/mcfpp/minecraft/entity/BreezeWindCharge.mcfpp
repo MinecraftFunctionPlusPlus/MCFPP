@@ -1,3 +1,2 @@
 @MCFPPEntity
-data BreezeWindCharge {
-}
+data BreezeWindChargeData: EntityData, ProjectileData, FireballData;

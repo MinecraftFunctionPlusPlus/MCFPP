@@ -12,10 +12,10 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.command.CommentLevel
-import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.core.lang.MCFloat
 import top.mcfpp.core.lang.UnresolvedVar
 import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.io.LibBinReader
 import top.mcfpp.io.LibBinWriter
 import top.mcfpp.io.MCFPPFile
@@ -368,7 +368,7 @@ object Project {
         for (file in files) {
             try {
                 file.indexType()
-            } catch (e: IOException) {
+            } catch (e: Exception) {
                 logger.error("Error while generate type index in file \"$file\"")
                 errorCount++
                 e.printStackTrace()

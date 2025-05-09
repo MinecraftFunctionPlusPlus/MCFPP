@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Pillager: EntityData, CreatureData, AIMobData, RaiderData {
+data PillagerData: EntityData, CreatureData, AIMobData, RaiderData {
     @Name<"Inventory">
-    inventory as list<Item>;
+    inventory as list<ItemData>;
 }

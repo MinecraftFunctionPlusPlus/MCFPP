@@ -1,4 +1,2 @@
 @MCFPPEntity
-data Breeze: EntityData, CreatureData, AIMobData {
-    
-}
+data Breeze: EntityData, CreatureData, AIMobData;

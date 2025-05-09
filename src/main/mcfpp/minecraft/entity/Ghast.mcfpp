@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Ghast: EntityData, CreatureData, AIMobData {
+data GhastData: EntityData, CreatureData, AIMobData {
     @Name<"ExplosionPower">
     explosionPower as bool;
 }

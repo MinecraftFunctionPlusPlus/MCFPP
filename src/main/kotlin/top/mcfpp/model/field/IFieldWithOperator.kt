@@ -7,7 +7,7 @@ interface IFieldWithOperator {
 
     fun addOperator(identifier: String, operator: Function, force: Boolean = false): Boolean
 
-    fun removeOperator(identifier: String):Boolean
+    fun removeOperator(identifier: String): List<Function>?
 
     fun getOperator(identifier: String, type: MCFPPType): Function?
 

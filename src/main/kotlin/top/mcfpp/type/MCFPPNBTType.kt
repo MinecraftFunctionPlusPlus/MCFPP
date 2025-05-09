@@ -7,9 +7,10 @@ import top.mcfpp.core.lang.nbt.*
 import top.mcfpp.core.lang.nbt.ByteArray
 import top.mcfpp.core.lang.nbt.IntArray
 import top.mcfpp.core.lang.nbt.LongArray
+import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
-import top.mcfpp.model.FieldContainer
+import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.collection.ByteArrayTag
 import top.mcfpp.nbt.tags.collection.IntArrayTag
@@ -31,6 +32,10 @@ class MCFPPNBTType {
 
         override val typeName: String
             get() = "nbt"
+
+        override fun defaultValue(): Var<*> {
+            return NBTBasedDataConcrete(IntTag(0), "default")
+        }
 
         override fun build(identifier: String, container: FieldContainer): Var<*> =
             NBTBasedDataConcrete(container, IntTag(0), identifier)
@@ -56,6 +61,10 @@ class MCFPPNBTType {
         override val typeName: String
             get() = "byte"
 
+        override fun defaultValue(): Var<*> {
+            return MCByteConcrete(0, "default")
+        }
+
         override fun build(identifier: String, container: FieldContainer): Var<*> =
             MCByteConcrete(container, 0, identifier)
 
@@ -77,6 +86,10 @@ class MCFPPNBTType {
 
         override val typeName: String
             get() = "short"
+
+        override fun defaultValue(): Var<*> {
+            return MCShortConcrete(0, "default")
+        }
 
         override fun build(identifier: String, container: FieldContainer): Var<*> =
             MCShortConcrete(container, 0, identifier)
@@ -101,6 +114,10 @@ class MCFPPNBTType {
         override val typeName: String
             get() = "long"
 
+        override fun defaultValue(): Var<*> {
+            return MCLongConcrete(LongTag(0), "default")
+        }
+
         override fun build(identifier: String, container: FieldContainer): Var<*> =
             MCLongConcrete(LongTag(0), identifier)
 
@@ -123,6 +140,10 @@ class MCFPPNBTType {
 
         override val typeName: String
             get() = "double"
+
+        override fun defaultValue(): Var<*> {
+            return MCDoubleConcrete(DoubleTag(0.0), "default")
+        }
 
         override fun build(identifier: String, container: FieldContainer): Var<*> =
             MCDoubleConcrete(container, DoubleTag(0.0), identifier)
@@ -147,6 +168,10 @@ class MCFPPNBTType {
         override val typeName: String
             get() = "ByteArray"
 
+        override fun defaultValue(): Var<*> {
+            return ByteArrayConcrete(ByteArrayTag(), "default")
+        }
+
         override fun build(identifier: String, container: FieldContainer): Var<*> =
             ByteArrayConcrete(ByteArrayTag(), identifier)
 
@@ -169,6 +194,10 @@ class MCFPPNBTType {
 
         override val typeName: String
             get() = "IntArray"
+
+        override fun defaultValue(): Var<*> {
+            return IntArrayConcrete(IntArrayTag(), "default")
+        }
 
         override fun build(identifier: String, container: FieldContainer): Var<*> =
             IntArrayConcrete(IntArrayTag(), identifier)
@@ -193,6 +222,10 @@ class MCFPPNBTType {
         override val typeName: String
             get() = "LongArray"
 
+        override fun defaultValue(): Var<*> {
+            return LongArrayConcrete(LongArrayTag(), "default")
+        }
+
         override fun build(identifier: String, container: FieldContainer): Var<*> =
             LongArrayConcrete(LongArrayTag(), identifier)
 
@@ -211,7 +244,7 @@ class MCFPPNBTType {
 }
 
 class MCFPPListType(
-val generic: MCFPPType = MCFPPBaseType.Any
+    val generic: MCFPPType = MCFPPBaseType.Any
 ): MCFPPType(arrayListOf(MCFPPNBTType.NBT)), MCFPPTypeWithGeneric{
 
     override val objectData: CompoundData
@@ -222,6 +255,10 @@ val generic: MCFPPType = MCFPPBaseType.Any
 
     override val nbtType: java.lang.Class<out Tag<*>>
         get() = ListTag::class.java
+
+    override fun defaultValue(): Var<*> {
+        return NBTListConcrete(ArrayList(), "default", generic)
+    }
 
     override fun build(identifier: String, container: FieldContainer): Var<*> = NBTListConcrete(ArrayList(), identifier, generic)
     override fun build(identifier: String): Var<*> = NBTListConcrete(ArrayList(), identifier, generic)
@@ -263,6 +300,10 @@ class MCFPPImmutableListType(
 
     override val nbtType: java.lang.Class<out Tag<*>>
         get() = ListTag::class.java
+
+    override fun defaultValue(): Var<*> {
+        return ImmutableListConcrete(ListTag(), "default", generic)
+    }
 
     override fun build(identifier: String, container: FieldContainer): Var<*> = ImmutableListConcrete(ListTag(), identifier, generic)
     override fun build(identifier: String): Var<*> = ImmutableListConcrete(ListTag(), identifier, generic)
@@ -325,6 +366,16 @@ class MCFPPDictType(generic: MCFPPType): MCFPPCompoundType(generic){
         return "dict[${generic.typeName}]"
     }
 
+    override val objectData: CompoundData
+        get() = NBTDictionary.data
+
+    override val nbtType: java.lang.Class<out Tag<*>>
+        get() = CompoundTag::class.java
+
+    override fun defaultValue(): Var<*> {
+        return NBTDictionaryConcrete(HashMap(), "default")
+    }
+
     override fun build(identifier: String, container: FieldContainer): Var<*> = NBTDictionaryConcrete(HashMap(), identifier)
     override fun build(identifier: String): Var<*> = NBTDictionaryConcrete(HashMap(), identifier)
     override fun build(identifier: String, clazz: Class): Var<*> = NBTDictionaryConcrete(HashMap(), identifier)
@@ -355,6 +406,16 @@ class MCFPPMapType(generic: MCFPPType): MCFPPCompoundType(generic){
 
     override fun toString(): String {
         return "map[${generic.typeName}]"
+    }
+
+    override val objectData: CompoundData
+        get() = NBTMap.data
+
+    override val nbtType: java.lang.Class<out Tag<*>>
+        get() = CompoundTag::class.java
+
+    override fun defaultValue(): Var<*> {
+        return NBTMapConcrete(HashMap(), "default", generic)
     }
 
     override fun build(identifier: String, container: FieldContainer): Var<*> = NBTMapConcrete(HashMap(), identifier, generic)

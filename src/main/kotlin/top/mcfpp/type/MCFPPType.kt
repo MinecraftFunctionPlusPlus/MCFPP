@@ -11,6 +11,7 @@ import top.mcfpp.antlr.mcfppParser.TypeContext
 import top.mcfpp.antlr.mcfppParser.TypeWithoutExclContext
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.Void
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
@@ -52,6 +53,9 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
      */
     open val typeName
         get() = "unknown"
+
+    open val simpleName
+        get() = typeName
 
     open val nbtType: java.lang.Class<out Tag<*>>
         get() = CompoundTag::class.java
@@ -132,7 +136,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
         return typeName.hashCode()
     }
 
-    open fun defaultValue(): Tag<*> = IntTag(0)
+    open fun defaultValue(): Var<*> = Void
 
     open fun build(identifier: String, container: FieldContainer): Var<*>{
         LogProcessor.error("Unknown type: $typeName")
@@ -234,7 +238,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
         val data = CompoundData("Type","mcfpp")
 
         private val typeCache:MutableMap<String, MCFPPType> by lazy { arrayListOf(
-            MCFPPBaseType.Void,
+            MCFPPPrivateType.Void,
             MCFPPBaseType.Int,
             MCFPPBaseType.Float,
             MCFPPBaseType.Bool,
@@ -333,7 +337,11 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                 val dimension = typeStr.substring(3).toInt()
                 return MCFPPVectorType(dimension)
             }
-            //普通匹配
+            //局域匹配
+            if(typeScope.containType(typeStr)){
+                return typeScope.getType(typeStr)!!
+            }
+            //全局匹配
             val nspID = typeStr.splitNamespaceID()
             val clazz = GlobalField.getClass(nspID.first, nspID.second)
             if(clazz != null) return clazz.getType()
@@ -341,10 +349,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             if(template !=null) return template.getType()
             val enum = GlobalField.getEnum(nspID.first, nspID.second)
             if(enum != null) return enum.getType()
-            //泛型
-            if(typeScope.containType(typeStr)){
-                return typeScope.getType(typeStr)!!
-            }
+
             return null
         }
 
@@ -385,7 +390,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                 })
             }
             //selector类型
-            if(ctx.SELECTOR() != null){
+            if(ctx.ENTITY() != null){
                 val limit = ctx.nbtInt()?.text?.toInt()
                 val types = if(ctx.LineString().size == 0) {
                     null

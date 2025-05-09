@@ -38,7 +38,7 @@ class PlayerInventory(val player: PlayerVar): PrivateVar<PlayerInventory>() {
     companion object {
         val data by lazy {
             CompoundData("PlayerInventory", "mcfpp.minecraft").apply {
-                getNativeFromClass(PlayerInventory::class.java)
+                injectedBy(PlayerInventory::class.java)
             }
         }
     }

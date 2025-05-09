@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Warden: EntityData, CreatureData, AIMobData {
+data WardenData: EntityData, CreatureData, AIMobData {
     @Name<"Anger"> anger as data {
         offers as list<data {
             anger as int;

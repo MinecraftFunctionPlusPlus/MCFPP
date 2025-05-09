@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Frog : EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
+data FrogData : EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"Variant">
     variant as FrogVariant;
 }

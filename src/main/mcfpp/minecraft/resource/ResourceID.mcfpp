@@ -1,9 +1,9 @@
 @From<"top.mcfpp.mni.resource.ResourceIDData">
 data ResourceID {
-    value as string;
+    id as string;
 
     override func toCommandPart() -> JavaVar {
-        return value.toCommandPart();
+        return id.toCommandPart();
     }
 }
 

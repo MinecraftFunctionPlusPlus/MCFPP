@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Cat: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, TameableData {
+data CatData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, TameableData {
     @Name<"CollarColor">
     collarColor as byte;
 

@@ -1,6 +1,5 @@
 package top.mcfpp.type
 
-import top.mcfpp.core.lang.ConcreteVar
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
@@ -11,8 +10,6 @@ import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.UnsolvedTemplate
-import top.mcfpp.nbt.tags.CompoundTag
-import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 
@@ -31,19 +28,23 @@ open class MCFPPDataTemplateType(
     override val typeName: String
         get() = "template(${template.namespace}:${template.identifier})"
 
+    override val simpleName: String
+        get() = template.identifier
+
     override fun tryResolve() {
         if(template is UnsolvedTemplate){
             template = (template as UnsolvedTemplate).resolve()
         }
     }
 
-    override fun defaultValue(): Tag<*> {
-        val tag = CompoundTag()
-        for (member in template.field.allVars){
-            if(member.nullable || member is ConcreteVar<*,*>) continue
-            tag.put(member.identifier, member.type.defaultValue())
+    override fun defaultValue(): Var<*> {
+        val map = HashMap<String, Var<*>>()
+        template.field.allVars.map {
+            if(!it.nullable){
+                map[it.identifier] = it.type.defaultValue()
+            }
         }
-        return tag
+        return DataTemplateObjectConcrete(template, map, "default")
     }
 
     override fun build(identifier: String, container: FieldContainer): Var<*> {
@@ -51,7 +52,7 @@ open class MCFPPDataTemplateType(
             LogProcessor.error("Template ${template.namespaceID} is not allowed to be instantiated.")
             return UnknownVar(identifier)
         }else{
-            return DataTemplateObjectConcrete(template, CompoundTag(), identifier)
+            return DataTemplateObjectConcrete(template, (defaultValue() as DataTemplateObjectConcrete).value, identifier)
         }
     }
 
@@ -60,7 +61,7 @@ open class MCFPPDataTemplateType(
             LogProcessor.error("Template ${template.namespaceID} is not allowed to be instantiated.")
             return UnknownVar(identifier)
         }else{
-            return DataTemplateObjectConcrete(template, CompoundTag(), identifier)
+            return DataTemplateObjectConcrete(template, (defaultValue() as DataTemplateObjectConcrete).value, identifier)
         }
     }
 
@@ -69,15 +70,16 @@ open class MCFPPDataTemplateType(
             LogProcessor.error("Template ${template.namespaceID} is not allowed to be instantiated.")
             return UnknownVar(identifier)
         }else{
-            return DataTemplateObjectConcrete(template, CompoundTag(), identifier)
+            return DataTemplateObjectConcrete(template, (defaultValue() as DataTemplateObjectConcrete).value, identifier)
         }
     }
+    @Suppress("UNCHECKED_CAST")
     override fun build(value: Any): Var<*> {
         if (template.annotations.any { it is NoInstance }){
             LogProcessor.error("Template ${template.namespaceID} is not allowed to be instantiated.")
             return UnknownVar(TempPool.getVarIdentify())
         }else{
-            return DataTemplateObjectConcrete(template, value as CompoundTag, TempPool.getVarIdentify())
+            return DataTemplateObjectConcrete(template, value as HashMap<String, Var<*>>, TempPool.getVarIdentify())
         }
     }
     override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> {

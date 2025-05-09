@@ -1,6 +1,5 @@
 package top.mcfpp.core.lang
 
-import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.bool.BaseBool
@@ -13,11 +12,12 @@ import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.lib.*
 import top.mcfpp.model.CanSelectMember
-import top.mcfpp.model.compound.Class
-import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.Member
 import top.mcfpp.model.annotation.Annotation
+import top.mcfpp.model.compound.Class
+import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.Function
+import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil
@@ -188,6 +188,16 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
      */
     @Suppress("UNCHECKED_CAST")
     fun assignedBy(b: Var<*>): Self {
+        //null特判
+        if(b == Null){
+            if(this.nullable){
+                hasAssigned = false
+            }else{
+                LogProcessor.error("Cannot assign null value to a non-nullable variable.")
+            }
+            return this as Self
+        }
+
         var v = b.implicitCast(this.type)
         if(v.isError){
             v = b

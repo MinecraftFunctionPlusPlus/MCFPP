@@ -119,7 +119,7 @@ public class System {
     @InsertCommand
     public static void print(@NotNull DataTemplateObject object) {
         if(object instanceof DataTemplateObjectConcrete objectConcrete){
-            Function.Companion.addCommand("tellraw @a \"" + Tag.toSNBT(objectConcrete.getValue()) + "\"");
+            Function.Companion.addCommand("tellraw @a \"" + Tag.toSNBT(Objects.requireNonNull(objectConcrete.getTagCache())) + "\"");
         }else {
             //TODO
             Function.Companion.addCommand("TODO: tellraw templateData");

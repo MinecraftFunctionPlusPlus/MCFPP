@@ -1,9 +1,9 @@
 @MCFPPEntity
-data WanderingTrader: EntityData, CreatureData, AIMobData, GrowableData {
+data WanderingTraderData: EntityData, CreatureData, AIMobData, GrowableData {
     @Name<"DespawnDelay"> despawnDelay as int;
     @Name<"Offers"> offers as data {
         @Name<"Recipes"> recipes as list<VillagerRecipe>;
     };
-    @Name<"Inventory"> inventory as list<Item>;
+    @Name<"Inventory"> inventory as list<ItemData>;
     @Name<"wander_target"> wanderTarget as IntArray;
 }

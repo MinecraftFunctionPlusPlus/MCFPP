@@ -19,7 +19,6 @@ object NBTUtil {
     fun varToNBT(v : Var<*>): Tag<*>?{
         if(v !is MCFPPValue<*>) return null
         return when(v){
-            //is ClassPointer -> TODO()
             //is Entity -> TODO()
             is JavaVar -> if(v.value is Var<*>) varToNBT(v.value as Var<*>) else valueToNBT(v.value)
             //is JsonString -> TODO()
@@ -36,7 +35,14 @@ object NBTUtil {
             is NBTBasedDataConcrete -> v.value
             is UnionTypeVarConcrete -> valueToNBT(v.value)
             is EnumVarConcrete -> v.value.data
-            is DataTemplateObjectConcrete -> v.value
+            is DataTemplateObjectConcrete -> CompoundTag().apply {
+                for ((key, value) in v.value){
+                    if(value.hasAssigned){
+                        continue
+                    }
+                    put(key, varToNBT(value)!!)
+                }
+            }
             is NBTListConcrete -> valueToNBT(v.value)
             is NBTDictionary -> valueToNBT(v.value)
             else -> {

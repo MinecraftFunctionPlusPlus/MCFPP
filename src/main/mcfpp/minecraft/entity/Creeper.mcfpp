@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Creeper: EntityData, CreatureData, AIMobData {
+data CreeperData: EntityData, CreatureData, AIMobData {
     @Name<"ExplosionRadius">
     explosionRadius as byte;
 

@@ -226,7 +226,7 @@ open class NBTList : NBTBasedData {
             CompoundData("list", "mcfpp.lang").apply {
                 field.putType("E", MCFPPGenericParamType("E", arrayListOf(MCFPPBaseType.Any)))
                 extends(NBTBasedData.data)
-                getNativeFromClass(NBTListData::class.java)
+                injectedBy(NBTListData::class.java)
             }
         }
 
@@ -411,7 +411,7 @@ class NBTListConcrete: NBTList, PartialConcreteValue<ListTag, ArrayList<Var<*>>>
         val data by lazy {
             CompoundData("list", "mcfpp.lang").apply {
                 extends(NBTBasedData.data)
-                getNativeFromClass(NBTListConcreteData::class.java)
+                injectedBy(NBTListConcreteData::class.java)
             }
         }
 

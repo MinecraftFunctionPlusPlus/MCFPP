@@ -1,0 +1,5 @@
+@From<"top.mcfpp.mni.resource.PoiData">
+data Poi: ResourceID;
+
+@From<"top.mcfpp.mni.resource.PoiObjectData">
+object data Poi: ResourceID;

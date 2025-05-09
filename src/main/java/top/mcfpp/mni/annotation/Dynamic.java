@@ -7,7 +7,7 @@ import top.mcfpp.model.function.Function;
 public class Dynamic extends FunctionAnnotation {
 
     public Dynamic() {
-        super("Dynamic", "mcfpp.annotation");
+        super("Dynamic", "mcfpp.lang");
     }
 
     @Override

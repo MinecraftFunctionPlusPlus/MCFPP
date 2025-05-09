@@ -7,7 +7,7 @@ import top.mcfpp.model.annotation.DataTemplateAnnotation;
 public class MCFPPEntity extends DataTemplateAnnotation {
 
     public MCFPPEntity(){
-        super("MCFPPEntity", "mcfpp.annotation");
+        super("MCFPPEntity", "mcfpp.lang");
         extends_(new DataOnly());
     }
 

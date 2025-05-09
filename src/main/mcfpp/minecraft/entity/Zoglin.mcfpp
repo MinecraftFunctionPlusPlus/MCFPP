@@ -1,4 +1,2 @@
 @MCFPPEntity
-data Zoglin: EntityData, CreatureData, AIMobData, ZombieData, NeutralData {
-    
-}
+data ZoglinData: EntityData, CreatureData, AIMobData, GeneralZombieData, NeutralData;

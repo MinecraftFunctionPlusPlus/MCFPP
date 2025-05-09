@@ -7,7 +7,6 @@ import top.mcfpp.antlr.RuleContextExtension.children
 import top.mcfpp.antlr.mcfppParser.CompileTimeFuncDeclarationContext
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.Var
@@ -15,12 +14,13 @@ import top.mcfpp.core.lang.bool.BaseBool
 import top.mcfpp.core.lang.bool.ExecuteBool
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
+import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lib.Execute
+import top.mcfpp.model.Namespace
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
-import top.mcfpp.model.Namespace
 import top.mcfpp.model.compound.ObjectClass
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.*
@@ -30,10 +30,7 @@ import top.mcfpp.model.generic.Generic
 import top.mcfpp.model.property.FunctionAccessor
 import top.mcfpp.model.property.FunctionMutator
 import top.mcfpp.model.property.Property
-import top.mcfpp.type.MCFPPBaseType
-import top.mcfpp.type.MCFPPEnumType
-import top.mcfpp.type.MCFPPGenericClassType
-import top.mcfpp.type.MCFPPType
+import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 import top.mcfpp.util.TextTranslator
@@ -72,7 +69,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     private fun exitFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext){
         Project.ctx = ctx
         //函数是否有返回值
-        if(Function.currFunction !is Generic<*> && Function.currFunction.returnType !=  MCFPPBaseType.Void && !Function.currFunction.hasReturnStatement){
+        if(Function.currFunction !is Generic<*> && Function.currFunction.returnType !=  MCFPPPrivateType.Void && !Function.currFunction.hasReturnStatement){
             LogProcessor.error("Function should return a value: " + Function.currFunction.namespaceID)
         }
         //释放指针
@@ -259,7 +256,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     fun exitExtensionFunctionDeclaration(ctx: mcfppParser.ExtensionFunctionDeclarationContext) {
         Project.ctx = ctx
         //函数是否有返回值
-        if (Function.currFunction.returnType != MCFPPBaseType.Void && !Function.currFunction.hasReturnStatement) {
+        if (Function.currFunction.returnType != MCFPPPrivateType.Void && !Function.currFunction.hasReturnStatement) {
             LogProcessor.error("A 'return' expression required in function: " + Function.currFunction.namespaceID)
         }
         //释放指针

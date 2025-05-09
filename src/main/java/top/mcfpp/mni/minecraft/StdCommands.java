@@ -16,6 +16,19 @@ import top.mcfpp.util.ValueWrapper;
 
 public class StdCommands {
 
+    @SuppressWarnings("unused")
+    public static String[] importToMNI(){
+        return new String[]{
+                "mcfpp.minecraft:*",
+                "mcfpp.minecraft.entity:*",
+                "mcfpp.minecraft.item:*",
+                "mcfpp.minecraft.other:*",
+                "mcfpp.minecraft.predicates:*",
+                "mcfpp.minecraft.resource:*",
+                "mcfpp.math:*"
+        };
+    }
+
     //region clone
     @MNIFunction(normalParams = {"Area", "pos3", "CloneMaskMode = replace", "CloneOperation = normal"})
     public static void clone(DataTemplateObject source, Pos3Var destination, EnumVar mode, EnumVar op, ValueWrapper<CommandReturn> re){
@@ -54,7 +67,7 @@ public class StdCommands {
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = {"entity", "float", "pos3 location", "DamageType = GENERIC"})
+    @MNIFunction(normalParams = {"entity", "float", "pos3", "DamageType = GENERIC"})
     public static void damageAt(EntityVar target, float amount, Pos3Var location, EnumVar type, ValueWrapper<CommandReturn> re){
         Command command;
         if(target.isMulti()){
@@ -76,7 +89,7 @@ public class StdCommands {
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = {"entity", "float", "entity<1>", "entity<1> source" , "DamageType = GENERIC"})
+    @MNIFunction(normalParams = {"entity", "float", "entity<1>", "entity<1>" , "DamageType = GENERIC"})
     public static void damage(EntityVar target, float amount, EntityVar by, EntityVar source, EnumVar type, ValueWrapper<CommandReturn> re){
         Command command;
         if(target.isMulti()){
@@ -90,7 +103,7 @@ public class StdCommands {
 
     //region enchant
     //TODO 更高等级的附魔支持
-    @MNIFunction(normalParams = {"entity", "Enchantment", "int level = 1", "Slot = weapon_mainhand"})
+    @MNIFunction(normalParams = {"entity", "Enchant", "int = 1", "Slot = weapon_mainhand"})
     public static void enchant(EntityVar target, DataTemplateObject enchantment, MCInt level, EnumVar slot, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("enchant", target, enchantment, level, slot);
         Commands.processMacroCommandReturn(re, command);
@@ -170,13 +183,13 @@ public class StdCommands {
     //endregion
 
     //region give
-    @MNIFunction(normalParams = {"player", "Item"}, returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Player", "Item"}, returnType = "CommandReturn")
     public static void give(PlayerVar player, DataTemplateObject item, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("give", player, item);
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = {"player", "Item", "int"}, returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Player", "Item", "int"}, returnType = "CommandReturn")
     public static void give(PlayerVar player, DataTemplateObject item, MCInt count, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("give", player, item, count);
         Commands.processMacroCommandReturn(re, command);
@@ -616,13 +629,13 @@ public class StdCommands {
     //endregion
 
     //region place
-    @MNIFunction(identifier = "place",normalParams = {"Feature"})
+    @MNIFunction(identifier = "place",normalParams = {"ConfiguredFeature"})
     public static void placeFeature(DataTemplateObject feature, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("place feature", feature);
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(identifier = "place",normalParams = {"Feature", "pos3"})
+    @MNIFunction(identifier = "place",normalParams = {"ConfiguredFeature", "pos3"})
     public static void placeFeature(DataTemplateObject feature, Pos3Var pos, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("place feature", feature, pos);
         Commands.processMacroCommandReturn(re, command);
@@ -735,8 +748,8 @@ public class StdCommands {
 
     //region setblock
     @MNIFunction(normalParams = {"pos3", "BlockState", "SetBlockMode = replace"}, returnType = "CommandReturn")
-    public static void setblock(Pos3Var pos, DataTemplateObject block, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("setblock", pos, block);
+    public static void setblock(Pos3Var pos, DataTemplateObject block, EnumVar mode, ValueWrapper<CommandReturn> re){
+        var command = Command.Companion.buildAll("setblock", pos, block, mode);
         Commands.processMacroCommandReturn(re, command);
     }
     //endregion
@@ -750,7 +763,7 @@ public class StdCommands {
     //endregion
 
     //region setworldspawn
-    @MNIFunction(normalParams = {"pos3 = pos3.RELATIVE", "pos2.RELATIVE"}, returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"pos3 = pos3.RELATIVE", "pos2 = pos2.RELATIVE"}, returnType = "CommandReturn")
     public static void setworldspawn(Pos3Var pos, Pos2Var rotation, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("setworldspawn", pos, rotation);
         Commands.processMacroCommandReturn(re, command);

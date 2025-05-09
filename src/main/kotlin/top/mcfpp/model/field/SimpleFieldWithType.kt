@@ -45,3 +45,22 @@ open class SimpleFieldWithType : IFieldWithType {
         get() = types.values
 
 }
+
+class SimpleFieldWithTypeWithParent(val parent: IFieldWithType) : SimpleFieldWithType() {
+    override fun getType(key: String): MCFPPType? {
+        return types.getOrDefault(key, null) ?: parent.getType(key)
+    }
+    override fun containType(id: String): Boolean {
+        return types.containsKey(id) || parent.containType(id)
+    }
+
+    override fun forEachType(action: (MCFPPType) -> Any?) {
+        for (t in types.values){
+            action(t)
+        }
+        parent.forEachType(action)
+    }
+
+    override val allTypes: Collection<MCFPPType>
+        get() = types.values + parent.allTypes
+}

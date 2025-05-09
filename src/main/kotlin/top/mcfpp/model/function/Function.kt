@@ -111,7 +111,7 @@ open class Function : Member, FieldContainer, WithDocument {
     /**
      * 函数的返回类型
      */
-    var returnType : MCFPPType = MCFPPBaseType.Void
+    var returnType : MCFPPType = MCFPPPrivateType.Void
         set(value) {
             field = value
             if(field is UnresolvedType){
@@ -776,7 +776,7 @@ open class Function : Member, FieldContainer, WithDocument {
      */
     @InsertCommand
     open fun assignReturnVar(v: Var<*>){
-        if(returnType == MCFPPBaseType.Void){
+        if(returnType == MCFPPPrivateType.Void){
             LogProcessor.error("Function $identifier has no return value but tried to return a ${v.type}")
             return
         }

@@ -1,7 +1,8 @@
 import mcfpp.minecraft.other:*;
+import mcfpp.minecraft.item:ItemStackData;
 
 @MCFPPEntity
-data Player: EntityData, CreatureData {
+data PlayerData: EntityData, CreatureData {
     @Name<"DataVersion"> dataVersion as int;
     @Name<"Abilities"> abilities as data {
         @Name<"Flying"> flying as bool;
@@ -15,17 +16,17 @@ data Player: EntityData, CreatureData {
     @Name<"current_explosion_impact_pos"> currentExplosionImpactPos as list<double>;
     @Name<"current_impulse_context_reset_grace_time"> currentImpulseContextResetGraceTime as int;
     @Name<"Dimension"> dimension as string;
-    @Name<"ender_pearls"> enderPearls as list<data: EnderPearl {
+    @Name<"ender_pearls"> enderPearls as list<data: EnderPearlData {
         @Name<"ender_pearl_dimension"> enderPearlDimension as string;
     }>;
-    @Name<"EnderItems"> enderItems as list<Item>;
+    @Name<"EnderItems"> enderItems as list<ItemData>;
     enteredNetherPosition as list<double>;
     foodExhaustionLevel as float;
     foodLevel as int;
     foodSaturationLevel as float;
     foodTickTimer as int;
     @Name<"ignore_fall_damage_from_current_explosion"> ignoreFallDamageFromCurrentExplosion as bool;
-    @Name<"Inventory"> inventory as list<Item>;
+    @Name<"Inventory"> inventory as list<ItemData>;
     @Name<"LastDeathLocation"> lastDeathLocation as data {
         dimension as string;
         pos as IntArray;
@@ -40,7 +41,7 @@ data Player: EntityData, CreatureData {
     };
     @Name<"Score"> score as int;
     seenCredits as byte;
-    @Name<"SelectedItem"> selectedItem as Item;
+    @Name<"SelectedItem"> selectedItem as ItemStackData;
     @Name<"SelectedItemSlot"> selectedItemSlot as int;
     @Name<"ShoulderEntityLeft"> shoulderEntityLeft as EntityData;
     @Name<"ShoulderEntityRight"> shoulderEntityRight as EntityData;

@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Goat : EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
+data GoatData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"HasLeftHorn">
     hasLeftHorn as bool;
 

@@ -52,7 +52,11 @@ namespaceDeclaration
     ;
 
 importDeclaration
-    :   IMPORT Identifier (DOT Identifier)* ':' cls = (Identifier|'*') (AS Identifier)? (FROM Identifier)? ';'
+    :   IMPORT importType (AS Identifier)? (FROM Identifier)? ';'
+    ;
+
+importType
+    :   Identifier (DOT Identifier)* ':' (Identifier|'*')
     ;
 
 //类或函数声明
@@ -96,7 +100,7 @@ classDeclaration
     ;
 
 objectClassDeclaration
-    :   OBJECT CLASS classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? classBody
+    :   FINAL? OBJECT classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? (classBody ';')
     ;
 
 compileTimeClassDeclaration
@@ -220,11 +224,11 @@ templateMember
     ;
 
 templateFunctionDeclaration
-    :  FUNCTION Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
+    :  OVERRIDE? FUNCTION Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
     ;
 
 templateFieldDeclaration
-    :   CONST? Identifier (AS templateType)? ('=' expression)? accessor? ';'
+    :   accessModifier? CONST? Identifier (AS templateType)? ('=' expression)? accessor? ';'
     ;
 
 templateType
@@ -424,7 +428,6 @@ castExpression
 
 varWithSelector
     : jvmAccessExpression selector*
-    | type selector+
     ;
 
 jvmAccessExpression
@@ -610,9 +613,9 @@ typeWithoutExcl
     |   LIST '<' type '>'
     |   MAP '<' type '>'
     |   DICT '<' type '>'
-    |   SELECTOR '<' nbtInt '>'
-    |   SELECTOR '<' LineString (',' LineString)* '>'
-    |   SELECTOR '<' nbtInt ',' LineString (',' LineString)* '>'
+    |   ENTITY '<' nbtInt '>'
+    |   ENTITY '<' LineString (',' LineString)* '>'
+    |   ENTITY '<' nbtInt ',' LineString (',' LineString)* '>'
     |   className readOnlyArgs?
     |   Identifier
     |   unionTemplateType
@@ -658,6 +661,7 @@ value
     |   multiLineStringLiteral
     |   nbtValue
     |   TargetSelector
+    |   NULL
     ;
 
 coordinate

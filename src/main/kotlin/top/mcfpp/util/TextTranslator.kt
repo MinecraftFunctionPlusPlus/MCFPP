@@ -3,7 +3,7 @@ package top.mcfpp.util
 import com.alibaba.fastjson2.JSONObject
 import com.ibm.icu.impl.data.ResourceReader
 import java.nio.charset.StandardCharsets
-import java.util.Locale
+import java.util.*
 
 object TextTranslator {
 
@@ -48,7 +48,7 @@ object TextTranslator {
     const val VOID_CAST_ERROR = "error.mcfpp.voidCastError"
     const val ASSIGN_ERROR = "error.mcfpp.assignError"
     const val INVALID_TYPE_ERROR = "error.mcfpp.invalidType"
-    const val VARIABLE_NOT_DEFINED = "error.mcfpp.variableNotDefined"
+    const val SYMBOL_NOT_DEFINED = "error.mcfpp.symbolNotDefined"
 
     const val REDUNDANT_CAST_WARN = "warn.mcfpp.redundantCast"
 }

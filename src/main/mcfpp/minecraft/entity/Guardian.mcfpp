@@ -1,3 +1,2 @@
 @MCFPPEntity
-data Guardian: EntityData, CreatureData, AIMobData {
-}
+data GuardianData: EntityData, CreatureData, AIMobData;

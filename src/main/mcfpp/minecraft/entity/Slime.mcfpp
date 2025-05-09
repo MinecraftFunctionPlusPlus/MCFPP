@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Slime: EntityData, CreatureData, AIMobData {
+data SlimeData: EntityData, CreatureData, AIMobData {
     @Name<"Size"> size as int;
     @Name<"WasOnGround"> wasOnGround as bool;
 }

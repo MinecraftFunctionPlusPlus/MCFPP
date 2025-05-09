@@ -1,8 +1,8 @@
 package top.mcfpp.model.function
 
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.field.SimpleFieldWithType
 import top.mcfpp.type.MCFPPBaseType
@@ -87,7 +87,7 @@ class FunctionParam(
         fun getArgTypeNames(args: ArrayList<Var<*>>): ArrayList<String> {
             val qwq: ArrayList<String> = ArrayList()
             for (arg in args) {
-                qwq.add(arg.type.toString())
+                qwq.add(arg.type.simpleName)
             }
             return qwq
         }

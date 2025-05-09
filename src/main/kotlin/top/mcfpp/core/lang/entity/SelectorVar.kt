@@ -172,7 +172,7 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
                 }.forEach {
                     extends(it)
                 }
-                getNativeFromClass(SelectorData::class.java)
+                injectedBy(SelectorData::class.java)
                 alwaysDynamic = true
                 //单实体的方法
             }

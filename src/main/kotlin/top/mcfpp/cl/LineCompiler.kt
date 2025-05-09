@@ -1,4 +1,4 @@
-package top.mcfpp.commandline
+package top.mcfpp.cl
 
 import org.antlr.v4.runtime.CharStream
 import org.antlr.v4.runtime.CharStreams

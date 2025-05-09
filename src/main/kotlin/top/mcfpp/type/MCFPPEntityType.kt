@@ -6,9 +6,9 @@ import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.entity.SpecifiedEntityConcreteVar
 import top.mcfpp.core.lang.entity.SpecifiedEntityVar
 import top.mcfpp.lib.EntitySelector
+import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
-import top.mcfpp.model.FieldContainer
 import top.mcfpp.nbt.tags.primitive.StringTag
 
 class MCFPPEntityType {
@@ -29,6 +29,10 @@ class MCFPPEntityType {
         override val typeName: String
             get() = "entity"
 
+        override fun defaultValue(): Var<*> {
+            return SpecifiedEntityConcreteVar(StringTag("0-0-0-0-0"), "default")
+        }
+
         override fun build(value: Any): Var<*> = SpecifiedEntityConcreteVar(value as StringTag)
         override fun build(identifier: String, container: FieldContainer): Var<*> = SpecifiedEntityConcreteVar(StringTag(), identifier)
         override fun build(identifier: String): Var<*> = SpecifiedEntityConcreteVar(StringTag(), identifier)
@@ -44,6 +48,11 @@ class MCFPPEntityType {
 
         override val typeName: String
             get() = "Player"
+
+        override fun defaultValue(): Var<*> {
+            return PlayerVar("default")
+        }
+
         override fun build(identifier: String, container: FieldContainer): Var<*> = PlayerVar(identifier)
         override fun build(identifier: String): Var<*> = PlayerVar(identifier)
         override fun build(identifier: String, clazz: Class): Var<*> = PlayerVar(identifier)
@@ -61,6 +70,10 @@ class MCFPPEntityType {
                 if(types == null) return "entity[$limit]"
                 return "entity[${limit},${types.joinToString(",")}]"
             }
+
+        override fun defaultValue(): Var<*> {
+            return SelectorVar(EntitySelector(EntitySelector.Companion.SelectorType.SELF), "default")
+        }
 
         override fun build(identifier: String, container: FieldContainer): Var<*> {
             return build(identifier)

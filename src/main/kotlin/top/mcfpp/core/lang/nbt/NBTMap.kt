@@ -230,7 +230,7 @@ open class NBTMap : NBTBasedData {
             CompoundData("map","mcfpp.lang").apply {
                 initialize()
                 extends(MCAny.data)
-                getNativeFromClass(NBTMapData::class.java)
+                injectedBy(NBTMapData::class.java)
             }
         }
     }
@@ -372,7 +372,7 @@ class NBTMapConcrete : NBTMap, MCFPPValue<HashMap<String, Var<*>>> {
             CompoundData("map","mcfpp.lang").apply {
                 initialize()
                 extends(MCAny.data)
-                getNativeFromClass(NBTMapConcreteData::class.java)
+                injectedBy(NBTMapConcreteData::class.java)
             }
         }
     }

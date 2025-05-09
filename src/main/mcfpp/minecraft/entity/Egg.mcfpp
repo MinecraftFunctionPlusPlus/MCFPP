@@ -1,3 +1,2 @@
 @MCFPPEntity
-data Egg: EntityData, ProjectileData, MissileData {
-}
+data EggData: EntityData, ProjectileData, MissileData;

@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Mooshroom: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
+data MooshroomData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"Stew_Effects">
     stew_effects as list<data {
         duration as int;

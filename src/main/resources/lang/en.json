@@ -4,5 +4,5 @@
     "warn.mcfpp.redundantCast": "Redundant cast from %s to %s",
     "error.mcfpp.assignError": "Cannot assign type %s to type %s",
     "error.mcfpp.invalidType": "Invalid type %s",
-    "error.mcfpp.variableNotDefined": "Not defined variable %s"
+    "error.mcfpp.symbolNotDefined": "Not defined symbol %s"
 }

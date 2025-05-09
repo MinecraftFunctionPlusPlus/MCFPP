@@ -1,4 +1,2 @@
 @MCFPPEntity
-data PolarBear: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, NeutralData{
-    
-}
+data PolarBearData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, NeutralData;

@@ -1,12 +1,13 @@
 package top.mcfpp.type
 
+import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.EnumVar
 import top.mcfpp.core.lang.obj.EnumVarConcrete
-import top.mcfpp.core.lang.Var
-import top.mcfpp.model.*
-import top.mcfpp.model.compound.Enum
-import top.mcfpp.model.compound.CompoundData
+import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.Member
 import top.mcfpp.model.compound.Class
+import top.mcfpp.model.compound.CompoundData
+import top.mcfpp.model.compound.Enum
 
 open class MCFPPEnumType(
     var enum: Enum
@@ -17,6 +18,9 @@ open class MCFPPEnumType(
 
     override val typeName: String
         get() = "enum(${enum.namespace}:${enum.identifier})"
+
+    override val simpleName: String
+        get() = enum.identifier
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         if(!enum.members.containsKey(key)){
@@ -29,6 +33,11 @@ open class MCFPPEnumType(
         re.hasAssigned = true
         return re to true
     }
+
+    override fun defaultValue(): Var<*> {
+        return EnumVarConcrete(enum, 0, "default")
+    }
+
     override fun build(identifier: String, container: FieldContainer): Var<*> = EnumVarConcrete(enum, 0, identifier)
     override fun build(identifier: String): Var<*> = EnumVarConcrete(enum,0, identifier)
     override fun build(identifier: String, clazz: Class): Var<*> = EnumVarConcrete(enum, 0, identifier)

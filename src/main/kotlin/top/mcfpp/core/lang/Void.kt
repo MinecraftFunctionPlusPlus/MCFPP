@@ -1,14 +1,14 @@
 package top.mcfpp.core.lang
 
-import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
-import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.Member
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
-import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.nbt.tags.primitive.StringTag
+import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TextTranslator
@@ -19,7 +19,7 @@ object Void: Var<Void>("void") {
     val data = CompoundData("void","mcfpp")
     private fun readResolve(): Any = Void
 
-    override var type: MCFPPType = MCFPPBaseType.Void
+    override var type: MCFPPType = MCFPPPrivateType.Void
 
     override fun doAssignedBy(b: Var<*>) : Void {
         LogProcessor.error("Cannot assign value to void type variable")

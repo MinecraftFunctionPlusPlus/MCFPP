@@ -1,5 +1,5 @@
 @MCFPPEntity
-data IronGolem: EntityData, CreatureData, AIMobData, NeutralData {
+data IronGolemData: EntityData, CreatureData, AIMobData, NeutralData {
     @Name<"PlayerCreated">
     playerCreated as bool;
 }

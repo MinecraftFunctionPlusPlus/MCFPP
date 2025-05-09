@@ -14,7 +14,7 @@ public class ConcreteOnly extends Annotation {
 
     @SuppressWarnings("unused")
     private ConcreteOnly() {
-        super("ConcreteOnly","mcfpp.annotation",new ArrayList<>());
+        super("ConcreteOnly","mcfpp.lang",new ArrayList<>());
     }
 
     @Override

@@ -44,14 +44,13 @@ class SimpleFieldWithObject : IFieldWithObject {
         return true
     }
 
-    override fun removeObject(identifier: String): Boolean {
+    override fun removeObject(identifier: String): CompoundData? {
         for (e in objects) {
             if(e.identifier == identifier){
                 objects.remove(e)
-                return true
             }
         }
-        return false
+        return null
     }
 
     override fun hasObject(obj: CompoundData): Boolean{

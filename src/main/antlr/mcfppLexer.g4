@@ -141,9 +141,9 @@ BYTEARRAY:  'ByteArray';
 INTARRAY:   'IntArray';
 LONGARRAY:  'LongArray';
 
-
 TRUE:   'true';
 FALSE:  'false';
+NULL:   'null';
 
 VecType: VEC DigitSequence;
 

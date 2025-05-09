@@ -70,8 +70,8 @@ class SimpleFieldWithOperator: IFieldWithOperator {
         return false
     }
 
-    override fun removeOperator(identifier: String): Boolean {
-        return operators.remove(identifier) != null
+    override fun removeOperator(identifier: String): List<Function>? {
+        return operators.remove(identifier)
     }
 
 }

@@ -1,4 +1,2 @@
 @MCFPPEntity
-data Stray: EntityData, CreatureData, AIMobData{
-    
-}
+data StrayData: EntityData, CreatureData, AIMobData;

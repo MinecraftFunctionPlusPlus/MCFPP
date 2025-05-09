@@ -15,7 +15,7 @@ import top.mcfpp.model.generic.GenericObjectClass
 import top.mcfpp.model.generic.ImplementedGenericClass
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.primitive.IntTag
-import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper.splitNamespaceID
 
@@ -36,7 +36,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             //获取命名空间
             val namespaceStr = ctx.namespaceDeclaration().Identifier().joinToString(".") { it.text }
             Project.currNamespace = namespaceStr
-            MCFPPFile.currFile!!.namespace = namespaceStr
+            MCFPPFile.currFile!!.namespace = GlobalField.getOrCreateNamespace(namespaceStr)
         }
         if(!GlobalField.localNamespaces.containsKey(Project.currNamespace)){
             GlobalField.localNamespaces[Project.currNamespace] = Namespace(Project.currNamespace)
@@ -60,9 +60,13 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
     override fun visitImportDeclaration(ctx: mcfppParser.ImportDeclarationContext) {
         Project.ctx = ctx
         //获取命名空间和导入类型
-        val nsp = ctx.Identifier().joinToString(".") { it.text }
-        val type = ctx.cls.text
-        MCFPPFile.currFile!!.unsolvedImports[nsp] = type
+        val nsp = importType(ctx.importType())
+        MCFPPFile.currFile!!.unsolvedImports[nsp.first!!] = nsp.second
+    }
+
+    fun importType(ctx: mcfppParser.ImportTypeContext): Pair<String?, String>  {
+        Project.ctx = ctx
+        return ctx.text.splitNamespaceID()
     }
 
     override fun visitInterfaceDeclaration(ctx: mcfppParser.InterfaceDeclarationContext){
@@ -246,7 +250,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             DataTemplate.currTemplate = nsp.field.getTemplate(id)
         }
         if(ctx.AS() != null){
-            val template = TypeDataTemplate(MCFPPBaseType.Void, id, Project.currNamespace)
+            val template = TypeDataTemplate(MCFPPPrivateType.Void, id, Project.currNamespace)
             nsp.field.addTemplate(id, template)
         }else{
             val template = DataTemplate(id,Project.currNamespace)

@@ -1,5 +1,44 @@
-@From<"top.mcfpp.mni.resource.BossBarData">
-data BossBar: ResourceID;
+@From<"top.mcfpp.mni.minecraft.BossBarData">
+data BossBar: ResourceID{
 
-@From<"top.mcfpp.mni.resource.BossBarObjectData">
-object data BossBar: ResourceID;
+    id as string;
+
+    max as int { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; };
+    value as int { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; };
+    visible as bool { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; };
+
+    constructor(id as string){
+        this.id = id;
+        this.name = id as text;
+    }
+
+    constructor(id as string, name as string){
+        this.id = id;
+        this.name = name;
+    }
+
+    override func toCommandPart() -> JavaVar {
+        return id.toCommandPart();
+    }
+}
+
+@From<"top.mcfpp.mni.minecraft.BossBarData">
+object data BossBar;
+
+enum BossBarStyle{
+    PROGRESS = "progress",
+    NOTCHED_6 = "notched_6",
+    NOTCHED_10 = "notched_10",
+    NOTCHED_12 = "notched_12",
+    NOTCHED_20 = "notched_20"
+}
+
+enum BossBarColor{
+    PINK = "pink",
+    BLUE = "blue",
+    RED = "red",
+    GREEN = "green",
+    YELLOW = "yellow",
+    PURPLE = "purple",
+    WHITE = "white"
+}

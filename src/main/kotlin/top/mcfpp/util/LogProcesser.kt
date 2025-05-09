@@ -14,6 +14,7 @@ import top.mcfpp.Project
 import top.mcfpp.command.CommentLevel
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.model.function.Function
+import kotlin.math.max
 import kotlin.math.min
 
 object LogProcessor {
@@ -198,7 +199,7 @@ object LogProcessor {
             val lineText = tokenStream.getText(Interval.of(lineStartIndex, lineStopIndex))
 
             // 构建上下文位置指示
-            val indicator = " ".repeat(startColumn) + "^" + "~".repeat(stopColumn - startColumn - 1)
+            val indicator = " ".repeat(max(0, startColumn)) + "^" + "~".repeat(max(stopColumn - startColumn - 1, 0))
             return if(lineText.endsWith("\n")){
                 "$lineNumber | $lineText${" ".repeat(lineNumber.toString().length)} | $indicator"
             }else{

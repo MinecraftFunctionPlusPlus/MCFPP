@@ -3,17 +3,14 @@ package top.mcfpp.model.field
 import com.google.common.collect.ArrayListMultimap
 import org.jetbrains.annotations.Nullable
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.*
-import top.mcfpp.model.compound.Class
-import top.mcfpp.model.compound.CompoundData
-import top.mcfpp.model.compound.DataTemplate
-import top.mcfpp.model.compound.Interface
+import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.compound.*
 import top.mcfpp.model.compound.Enum
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.Generic
 import top.mcfpp.model.generic.GenericClass
-import top.mcfpp.type.MCFPPType
+import top.mcfpp.type.*
 
 /**
  * 一个域。在编译过程中，编译器读取到的变量，函数等会以键值对的方式储存在其中。键为函数的id或者变量的
@@ -35,14 +32,12 @@ import top.mcfpp.type.MCFPPType
  * 函数储存在一个列表中
  */
 open class NamespaceField(
-    private val simpleFieldWithType: SimpleFieldWithType = SimpleFieldWithType(),
     private val simpleFieldWithEnum: SimpleFieldWithEnum = SimpleFieldWithEnum(),
     private val simpleFieldWithObject: SimpleFieldWithObject = SimpleFieldWithObject(),
     private val simpleFieldWithAnnotation: SimpleFieldWithAnnotation = SimpleFieldWithAnnotation(),
     private val simpleFieldWithVar: SimpleFieldWithVar = SimpleFieldWithVar()
     )
-    : IFieldWithClass, IFieldWithFunction, IFieldWithTemplate, IFieldWithInterface,
-    IFieldWithType by simpleFieldWithType,
+    : IFieldWithClass, IFieldWithFunction, IFieldWithTemplate, IFieldWithInterface, IFieldWithType,
     IFieldWithEnum by simpleFieldWithEnum,
     IFieldWithObject by simpleFieldWithObject,
     IFieldWithAnnotation by simpleFieldWithAnnotation,
@@ -89,7 +84,7 @@ open class NamespaceField(
      * 复制一个缓存。
      * @param cache 原来的缓存
      */
-    constructor(cache: NamespaceField) : this(cache.simpleFieldWithType, cache.simpleFieldWithEnum) {
+    constructor(cache: NamespaceField) : this(cache.simpleFieldWithEnum) {
         parent = cache.parent
         //变量复制
         for (key in cache.vars.keys) {
@@ -234,12 +229,11 @@ open class NamespaceField(
         }
     }
 
-    override fun removeClass(identifier: String): Boolean {
+    override fun removeClass(identifier: String): List<Class> {
         return if(classes.containsKey(identifier)) {
             classes.removeAll(identifier)
-            true
         }else{
-            false
+            emptyList()
         }
     }
     //endregion
@@ -280,12 +274,11 @@ open class NamespaceField(
      * @param identifier 这个模板的标识符
      * @return 是否移除成功。如果不存在此模板，则返回false
      */
-    override fun removeTemplate(identifier: String): Boolean {
+    override fun removeTemplate(identifier: String): DataTemplate? {
         return if(template.containsKey(identifier)) {
             template.remove(identifier)
-            true
         }else{
-            false
+            null
         }
     }
 
@@ -357,12 +350,11 @@ open class NamespaceField(
      * @param identifier 这个接口的标识符
      * @return 是否移除成功。如果不存在此接口，则返回false
      */
-    override fun removeInterface(identifier: String): Boolean {
+    override fun removeInterface(identifier: String): Interface? {
         return if(interfaces.containsKey(identifier)) {
             interfaces.remove(identifier)
-            true
         }else{
-            false
+            null
         }
     }
 
@@ -415,16 +407,67 @@ open class NamespaceField(
     }
 
     fun addDeclaredType(type: CompoundData): Boolean {
-         return when (type) {
-             is Enum -> addEnum(type.identifier, type)
+        val qwq = when (type) {
+            is Enum -> addEnum(type.identifier, type)
 
-             is DataTemplate -> addTemplate(type.identifier, type)
+            is DataTemplate -> addTemplate(type.identifier, type)
 
-             is Interface -> addInterface(type.identifier, type)
+            is Interface -> addInterface(type.identifier, type)
 
-             is Class -> addClass(type.identifier, type)
+            is Class -> addClass(type.identifier, type)
 
-             else -> throw IllegalArgumentException("Unknown type: $type")
-         }
+            else -> throw IllegalArgumentException("Unknown type: $type")
+        }
+        putType(type.identifier, type.getType())
+        return qwq
     }
+
+    override fun putType(key: String, type: MCFPPType, forced: Boolean): Boolean {
+        return when (type) {
+            is MCFPPEnumType -> addEnum(type.enum.identifier,  type.enum, forced)
+
+            is MCFPPDataTemplateType -> addTemplate(type.template.identifier, type.template, forced)
+
+            is MCFPPInterfaceType -> addInterface(type.i.identifier, type.i, forced)
+
+            is MCFPPClassType -> addClass(type.cls.identifier, type.cls, forced)
+
+            else -> throw IllegalArgumentException("Unknown type: $type")
+        }
+    }
+
+    override fun getType(key: String): MCFPPType? {
+        return (getEnum(key) ?: getTemplate(key) ?: getInterface(key) ?: getClass(key))?.getType()
+    }
+
+    override fun containType(id: String): Boolean {
+        return hasEnum(id) || hasTemplate(id) || hasInterface(id) || hasClass(id)
+    }
+
+    override fun removeType(id: String): MCFPPType? {
+        return when {
+            hasEnum(id) -> removeEnum(id)
+            hasTemplate(id) -> removeTemplate(id)
+            hasInterface(id) -> removeInterface(id)
+            hasClass(id) -> removeClass(id)[0]
+            else -> null
+        }?.getType()
+    }
+
+    override fun forEachType(action: (MCFPPType) -> Any?) {
+        forEachEnum { action(it.getType()) }
+        forEachTemplate { action(it.getType()) }
+        forEachInterface { action(it.getType()) }
+        forEachClass { action(it.getType()) }
+    }
+
+    override val allTypes: Collection<MCFPPType>
+        get() {
+            val list = mutableListOf<MCFPPType>()
+            forEachEnum { list.add(it.getType()) }
+            forEachTemplate { list.add(it.getType()) }
+            forEachInterface { list.add(it.getType()) }
+            forEachClass { list.add(it.getType()) }
+            return list
+        }
 }

@@ -6,8 +6,8 @@ import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Native
-import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPNotCompiledGenericType
+import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.MCFPPTypeWithGeneric
 import top.mcfpp.util.LogProcessor
@@ -37,7 +37,7 @@ class NativeFunction : Function, Native {
 
     val readOnlyParams: ArrayList<FunctionParam> = ArrayList()
 
-    var caller: MCFPPType = MCFPPBaseType.Void
+    var caller: MCFPPType = MCFPPPrivateType.Void
 
     /**
      * 通过一个java方法来构造一个NativeFunction，同时手动指定mcfpp方法的名字
@@ -71,8 +71,8 @@ class NativeFunction : Function, Native {
         try {
             javaMethod.invoke(null,
                 *list.toTypedArray(),
-                *if(this.caller != MCFPPBaseType.Void) arrayOf(caller) else emptyArray(),
-                *if(this.returnType != MCFPPBaseType.Void) arrayOf(valueWrapper) else emptyArray()
+                *if(this.caller != MCFPPPrivateType.Void) arrayOf(caller) else emptyArray(),
+                *if(this.returnType != MCFPPPrivateType.Void) arrayOf(valueWrapper) else emptyArray()
             )
         }catch (e: Exception){
             LogProcessor.error("Error when invoking native function: ${this.identifier}", e)

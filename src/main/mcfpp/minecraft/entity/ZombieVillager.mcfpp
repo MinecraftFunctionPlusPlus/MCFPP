@@ -1,5 +1,5 @@
 @MCFPPEntity
-data ZombieVillager: EntityData, CreatureData, AIMobData, ZombieData {
+data ZombieVillagerData: EntityData, CreatureData, AIMobData, GeneralZombieData {
     @Name<"ConversionTime"> conversionTime as int;
     @Name<"ConversionPlayer"> conversionPlayer as IntArray;
 

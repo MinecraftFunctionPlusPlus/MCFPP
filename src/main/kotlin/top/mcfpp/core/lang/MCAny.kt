@@ -195,7 +195,7 @@ open class MCAny : Var<MCAny> {
     companion object{
         val data by lazy {
             CompoundData("any","mcfpp.lang").apply {
-                getNativeFromClass(MCAnyData::class.java)
+                injectedBy(MCAnyData::class.java)
             }
         }
     }
@@ -273,7 +273,7 @@ class MCAnyConcrete : MCAny, MCFPPValue<Any?> {
         val data = CompoundData("any","mcfpp.lang")
 
         init {
-            data.getNativeFromClass(MCAnyConcreteData::class.java)
+            data.injectedBy(MCAnyConcreteData::class.java)
         }
     }
 

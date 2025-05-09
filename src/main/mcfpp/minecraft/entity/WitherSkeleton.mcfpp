@@ -1,4 +1,2 @@
 @MCFPPEntity
-data WitherSkeleton: EntityData, CreatureData, AIMobData {
-    
-}
+data WitherSkeletonData: EntityData, CreatureData, AIMobData;

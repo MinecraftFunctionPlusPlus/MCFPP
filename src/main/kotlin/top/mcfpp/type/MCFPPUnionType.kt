@@ -4,16 +4,15 @@ import top.mcfpp.core.lang.UnionTypeVar
 import top.mcfpp.core.lang.UnionTypeVarConcrete
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.compound.Class
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.nbt.tags.Tag
+import top.mcfpp.model.compound.Class
 import top.mcfpp.util.LogProcessor
 
 class MCFPPUnionType(vararg val types: MCFPPType): MCFPPType() {
     override val typeName: String
         get() = "UnionType(${types.joinToString(", ")})"
 
-    override fun defaultValue(): Tag<*> {
+    override fun defaultValue(): Var<*> {
         return types[0].defaultValue()
     }
 

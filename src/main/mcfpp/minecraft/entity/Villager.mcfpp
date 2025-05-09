@@ -1,8 +1,8 @@
 @MCFPPEntity
-data Villager: EntityData, CreatureData, AIMobData, GrowableData {
+data VillagerData: EntityData, CreatureData, AIMobData, GrowableData {
     @Name<"AssignProfessionWhenSpawned"> assignProfessionWhenSpawned as bool;
     @Name<"FoodLevel"> foodLevel as byte;
-    @Name<"Inventory"> inventory as list<Item>;
+    @Name<"Inventory"> inventory as list<ItemData>;
     @Name<"Gossips"> gossips as list<VillagerGossip>;
     @Name<"LastRestock"> lastRestock as long;
     @Name<"LastGossipDecay"> lastGossipDecay as long;
@@ -49,7 +49,7 @@ data VillagerRecipe {
     maxUses as int;
     priceMultiplier as float;
     rewardExp as bool;
-    sell as Item;
+    sell as ItemData;
     specialPrice as int;
     uses as int;
     xp as int;

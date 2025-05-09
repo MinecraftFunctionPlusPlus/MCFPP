@@ -6,6 +6,7 @@
     "args": [
         "-ignoreStdLib",
         "-isLib",
-        "-level=info"
+        "-level=info",
+        "-debug"
     ]
 }

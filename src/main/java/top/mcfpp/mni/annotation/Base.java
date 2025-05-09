@@ -10,7 +10,7 @@ public class Base extends ClassAnnotation {
 
     @SuppressWarnings("unused")
     private Base(String baseEntity) {
-        super("Base","mcfpp.annotation");
+        super("Base","mcfpp.lang");
         this.baseEntity = baseEntity;
     }
 

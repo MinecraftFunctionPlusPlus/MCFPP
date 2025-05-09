@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Tadpole: EntityData, CreatureData, AIMobData {
+data TadpoleData: EntityData, CreatureData, AIMobData {
     @Name<"Age"> age as int;
     @Name<"FromBucket"> fromBucket as bool;
 }

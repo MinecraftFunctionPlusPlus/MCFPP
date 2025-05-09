@@ -1,5 +1,5 @@
 @MCFPPEntity
-data PiglinBrute: EntityData, CreatureData, AIMobData {
+data PiglinBruteData: EntityData, CreatureData, AIMobData {
     @Name<"IsImmuneToZombification">
     isImmuneToZombification as bool;
 

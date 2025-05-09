@@ -1,3 +1,2 @@
 @MCFPPEntity
-data EnderPearl: EntityData, ProjectileData, MissileData {
-}
+data EnderPearlData: EntityData, ProjectileData, MissileData;

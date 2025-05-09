@@ -1,4 +1,4 @@
-package top.mcfpp.commandline
+package top.mcfpp.cl
 
 import org.apache.logging.log4j.core.config.ConfigurationSource
 import org.apache.logging.log4j.core.config.Configurator

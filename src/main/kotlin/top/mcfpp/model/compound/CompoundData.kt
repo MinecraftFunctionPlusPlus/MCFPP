@@ -16,8 +16,10 @@ import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.property.Property
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPGenericParamType
+import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.StringHelper.splitMNIParam
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 import java.io.Serializable
@@ -203,7 +205,7 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
         return parent.map(operation)
     }
 
-    fun getNativeFromClass(cls: Class<*>){
+    fun injectedBy(cls: Class<*>){
         val l = Project.currNamespace
         Project.currNamespace = this.namespace
         //获取所有带有注解MNIMethod的Java方法
@@ -253,15 +255,15 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
         val nf = NativeFunction(method.name, javaMethod = method)
         //解析MNIMethod注解成员
         val paramType = MCFPPType.parseFromString(mniBinaryOperator.paramType, nf.field)?: run {
-            LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniBinaryOperator.paramType))
+            LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniBinaryOperator.paramType) + " in method ${method.name} in class ${method.declaringClass.name}")
             MCFPPBaseType.Any
         }
         nf.appendNormalParam(paramType, "b")
         nf.returnType = MCFPPType.parseFromString(mniBinaryOperator.returnType, nf.field)?: run {
-            LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniBinaryOperator.returnType))
+            LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniBinaryOperator.returnType) + " in method ${method.name} in class ${method.declaringClass.name}")
             MCFPPBaseType.Any
         }
-        if(nf.returnType == MCFPPBaseType.Void){
+        if(nf.returnType == MCFPPPrivateType.Void){
             LogProcessor.error("Operator definition ${method.name} in class ${method.declaringClass.name} must return a value")
             return
         }
@@ -290,32 +292,32 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
         }
         val callerType = MCFPPType.parseFromString(mniRegister.caller, nf.field)
         nf.caller = callerType?: run {
-            LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniRegister.caller))
-            MCFPPBaseType.Void
+            LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniRegister.caller) + " in method ${method.name} in class ${method.declaringClass.name}")
+            MCFPPPrivateType.Void
         }
         val readOnlyType = mniRegister.readOnlyParams.map {
-            val qwq = it.split(" ", limit = 2)
+            val qwq = it.splitMNIParam().first.split(" ", limit = 2)
             val type = MCFPPType.parseFromString(qwq.last(), nf.field)?: run {
-                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(qwq[0]))
+                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(qwq[0]) + " in method ${method.name} in class ${method.declaringClass.name}")
                 MCFPPBaseType.Any
             }
             type to it.startsWith("static")
         }
         val normalType = mniRegister.normalParams.map {
-            val qwq = it.split(" ", limit = 2)
+            val qwq = it.splitMNIParam().first.split(" ", limit = 2)
             val type = MCFPPType.parseFromString(qwq.last(), nf.field)?: run {
-                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(qwq[0]))
+                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(qwq[0]) + " in method ${method.name} in class ${method.declaringClass.name}")
                 MCFPPBaseType.Any
             }
             type to it.startsWith("static")
         }
         val returnType = MCFPPType.parseFromString(mniRegister.returnType, nf.field)?: run {
-            LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniRegister.returnType))
+            LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniRegister.returnType) + " in method ${method.name} in class ${method.declaringClass.name}")
             MCFPPBaseType.Any
         }
         nf.returnType = returnType
         var exceptedParamCount = readOnlyType.size + normalType.size
-        if(returnType != MCFPPBaseType.Void){
+        if(returnType != MCFPPPrivateType.Void){
             exceptedParamCount++
         }
         if(mniRegister.caller != "void"){

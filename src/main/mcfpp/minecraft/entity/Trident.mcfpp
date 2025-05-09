@@ -1,4 +1,4 @@
 @MCFPPEntity
-data Trident: EntityData, ProjectileData, ArrowData {
+data TridentData: EntityData, ProjectileData, GeneralArrowData {
     @Name<"DealtDamage"> dealtDamage as bool;
 }

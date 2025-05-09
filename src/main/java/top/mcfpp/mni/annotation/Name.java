@@ -11,7 +11,7 @@ public class Name extends FieldAnnotation {
     String version = null;
 
     public Name(String name) {
-        super("name", "mcfpp.annotation");
+        super("name", "mcfpp.lang");
         this.name = name;
     }
 

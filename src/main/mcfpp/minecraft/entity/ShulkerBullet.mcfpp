@@ -1,5 +1,5 @@
 @MCFPPEntity
-data ShulkerBullet: EntityData, ProjectileData {
+data ShulkerBulletData: EntityData, ProjectileData {
     @Name<"Dir"> dir as int;
     @Name<"Steps"> steps as int;
     @Name<"Target"> target as IntArray;

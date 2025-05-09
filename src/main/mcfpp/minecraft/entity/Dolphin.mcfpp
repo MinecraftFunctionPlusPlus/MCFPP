@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Dolphin: EntityData, CreatureData, AIMobData, GrowableData {
+data DolphinData: EntityData, CreatureData, AIMobData, GrowableData {
     @Name<"Moistness">
     moistness as int;
 

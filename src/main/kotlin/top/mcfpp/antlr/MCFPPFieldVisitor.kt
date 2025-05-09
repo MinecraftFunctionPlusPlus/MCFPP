@@ -24,10 +24,7 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.generic.GenericExtensionFunction
 import top.mcfpp.model.generic.GenericFunction
 import top.mcfpp.model.property.*
-import top.mcfpp.type.MCFPPBaseType
-import top.mcfpp.type.MCFPPEnumType
-import top.mcfpp.type.MCFPPGenericClassType
-import top.mcfpp.type.MCFPPType
+import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper.splitNamespaceID
 import top.mcfpp.util.TempPool
@@ -180,7 +177,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(it.text))
                 MCFPPBaseType.Any
             }
-        }?: MCFPPBaseType.Void
+        }?: MCFPPPrivateType.Void
         //解析参数
         f.addParamsFromContext(ctx.functionParams())
         //注册函数
@@ -401,7 +398,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 MCFPPBaseType.Any
             }
         }else{
-            MCFPPBaseType.Void
+            MCFPPPrivateType.Void
         }
         if(!isStatic){
             val thisObj = Class.currClass!!.getType().buildUnConcrete("this")
@@ -446,7 +443,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 MCFPPBaseType.Any
             }
         }else{
-            MCFPPBaseType.Void
+            MCFPPPrivateType.Void
         }
         f.isAbstract = true
         if(f.isStatic){
@@ -472,7 +469,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 MCFPPBaseType.Any
             }
         }else{
-            MCFPPBaseType.Void
+            MCFPPPrivateType.Void
         }
         nf.addParamsFromContext(ctx.functionParams())
         //是类成员
@@ -652,7 +649,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 MCFPPBaseType.Any
             }
         }else{
-            MCFPPBaseType.Void
+            MCFPPPrivateType.Void
         }
         val thisObj = Class.currClass!!.getType().buildUnConcrete("this")
         f.field.putVar("this",thisObj)
@@ -688,7 +685,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 MCFPPBaseType.Any
             }
         }else{
-            MCFPPBaseType.Void
+            MCFPPPrivateType.Void
         }
         val thisObj = DataTemplate.currTemplate!!.getType().buildUnConcrete("this")
         f.field.putVar("this",thisObj)
@@ -727,7 +724,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 MCFPPBaseType.Any
             }
         }else{
-            MCFPPBaseType.Void
+            MCFPPPrivateType.Void
         }
         nf.addParamsFromContext(ctx.functionParams())
         //参数数量检查
@@ -777,7 +774,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 MCFPPBaseType.Any
             }
         }else{
-            MCFPPBaseType.Void
+            MCFPPPrivateType.Void
         }
         nf.addParamsFromContext(ctx.functionParams())
         //参数数量检查
@@ -841,7 +838,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 MCFPPBaseType.Any
             }
         }else{
-            MCFPPBaseType.Void
+            MCFPPPrivateType.Void
         }
         //解析参数
         ctx.functionParams()?.let { f.addParamsFromContext(it) }
@@ -911,7 +908,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 MCFPPBaseType.Any
             }
         }else{
-            MCFPPBaseType.Void
+            MCFPPPrivateType.Void
         }
         //解析参数
         f.addParamsFromContext(ctx.functionParams())
@@ -981,7 +978,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 MCFPPBaseType.Any
             }
         }else{
-            MCFPPBaseType.Void
+            MCFPPPrivateType.Void
         }
         f.ownerType = ownerType
         f.addParamsFromContext(ctx.functionParams())
@@ -1009,7 +1006,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 MCFPPBaseType.Any
             }
         }else{
-            MCFPPBaseType.Void
+            MCFPPPrivateType.Void
         }
         nf.addParamsFromContext(ctx.functionParams())
         try {
@@ -1094,7 +1091,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             template as TypeDataTemplate
             template.typeAs = MCFPPType.parseFromContext(ctx.type(), typeScope)?: run {
                 LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.text))
-                MCFPPBaseType.Void
+                MCFPPPrivateType.Void
             }
         }
         isStatic = false
@@ -1274,14 +1271,27 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 MCFPPBaseType.Any
             }
         }else{
-            MCFPPBaseType.Void
+            MCFPPPrivateType.Void
         }
         //解析参数
         f.addParamsFromContext(ctx.functionParams())
         //注册函数
+        //注册函数
         if (DataTemplate.currTemplate!!.field.hasFunction(f, true)) {
-            LogProcessor.error("Already defined function:" + ctx.Identifier().text + "in struct " + DataTemplate.currTemplate!!.identifier)
-            Function.currFunction = Function.nullFunction
+            if(ctx.OVERRIDE() != null){
+                if(isStatic){
+                    LogProcessor.error("Cannot override static method ${ctx.Identifier()}")
+                    throw Exception()
+                }
+                f.isOverride = true
+            }else{
+                LogProcessor.error("Already defined function:" + ctx.Identifier().text + "in template " + DataTemplate.currTemplate!!.identifier)
+                Function.currFunction = Function.nullFunction
+            }
+        }else {
+            if(ctx.OVERRIDE()!= null){
+                LogProcessor.error("Method ${f.identifier} in template ${DataTemplate.currTemplate!!.namespaceID} overrides nothing")
+            }
         }
         return f
     }

@@ -1,10 +1,10 @@
 package top.mcfpp.type
 
-import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.compound.Class
+import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.UnsolvedGenericClass
 import top.mcfpp.util.TempPool
 
@@ -23,6 +23,10 @@ class MCFPPGenericClassType (
         if(cls is UnsolvedGenericClass){
             cls = (cls as UnsolvedGenericClass).resolve()
         }
+    }
+
+    override fun defaultValue(): Var<*> {
+        return ClassPointer(cls, "default")
     }
 
     override fun build(identifier: String, container: FieldContainer): Var<*> = ClassPointer(cls, identifier)

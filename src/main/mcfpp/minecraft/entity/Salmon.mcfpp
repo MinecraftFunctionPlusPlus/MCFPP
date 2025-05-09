@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Salmon: EntityData, CreatureData, AIMobData {
+data SalmonData: EntityData, CreatureData, AIMobData {
     @Name<"FromBucket"> fromBucket as bool;
     @Name<"Type"> type as SalmonType;
 }

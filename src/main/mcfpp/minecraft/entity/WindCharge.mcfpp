@@ -1,4 +1,0 @@
-@MCFPPEntity
-data WindCharge: EntityData, ProjectileData, FireballData{
-    
-}

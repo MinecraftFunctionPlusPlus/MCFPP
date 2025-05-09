@@ -1,14 +1,16 @@
+import mcfpp.minecraft.item:ItemStackData;
+
 @MCFPPEntity
-data ArmorStand: EntityData, CreatureData {
+data ArmorStandData: EntityData, CreatureData {
 
     @Name<"ArmorItems">
-    armorItems as list<Item>;
+    armorItems as list<ItemData>;
 
     @Name<"DisabledSlots">
     disabledslots as int;
 
     @Name<"HandItems">
-    handItems as list<Item>;
+    handItems as list<ItemData>;
 
     @Name<"Invisible">
     invisible as bool;

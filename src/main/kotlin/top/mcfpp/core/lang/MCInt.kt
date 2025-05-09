@@ -465,7 +465,7 @@ open class MCInt : MCNumber<Int> {
             CompoundData("int","mcfpp").apply {
                 this.commonType = MCFPPBaseType.Int
                 extends(MCAny.data)
-                getNativeFromClass(MCIntData::class.java)
+                injectedBy(MCIntData::class.java)
             }
         }
     }

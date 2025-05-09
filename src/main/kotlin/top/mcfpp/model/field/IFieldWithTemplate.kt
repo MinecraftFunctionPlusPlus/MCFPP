@@ -20,7 +20,7 @@ interface IFieldWithTemplate: IField {
      * @param identifier 这个模板的标识符
      * @return 是否移除成功。如果不存在此模板，则返回false
      */
-    fun removeTemplate(identifier: String):Boolean
+    fun removeTemplate(identifier: String): DataTemplate?
 
     /**
      * 获取一个模板。可能不存在

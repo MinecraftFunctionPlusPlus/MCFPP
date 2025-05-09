@@ -1,4 +1,0 @@
-data AttributePredicate {
-    attribute as list<string>?;
-    id as list<string>?;
-}

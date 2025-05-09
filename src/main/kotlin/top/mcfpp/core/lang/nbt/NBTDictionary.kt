@@ -7,8 +7,8 @@ import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.mni.NBTDictionaryConcreteData
 import top.mcfpp.mni.NBTDictionaryData
-import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.Member
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
@@ -171,7 +171,7 @@ open class NBTDictionary : NBTBasedData {
         val data by lazy {
             CompoundData("dict", "mcfpp.lang").apply {
                 initialize()
-                getNativeFromClass(NBTDictionaryData::class.java)
+                injectedBy(NBTDictionaryData::class.java)
             }
         }
     }
@@ -289,7 +289,7 @@ class NBTDictionaryConcrete : NBTDictionary, PartialConcreteValue<CompoundTag, H
             is MCFPPDataTemplateType -> {
                 return if(type.template.checkDictionaryStruct(value)){
                     if(isAllConcrete()){
-                        DataTemplateObjectConcrete(type.template, NBTUtil.valueToNBT(value) as CompoundTag, identifier)
+                        DataTemplateObjectConcrete(type.template, value, identifier)
                     }else {
                         DataTemplateObject(type.template, identifier)
                     }
@@ -364,7 +364,7 @@ class NBTDictionaryConcrete : NBTDictionary, PartialConcreteValue<CompoundTag, H
         val data by lazy {
             CompoundData("dict", "mcfpp.lang").apply {
                 initialize()
-                getNativeFromClass(NBTDictionaryConcreteData::class.java)
+                injectedBy(NBTDictionaryConcreteData::class.java)
             }
         }
     }

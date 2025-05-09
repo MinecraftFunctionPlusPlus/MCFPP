@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Axolotl: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
+data AxolotlData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData {
     @Name<"FromBucket">
     fromBucket as bool;
 

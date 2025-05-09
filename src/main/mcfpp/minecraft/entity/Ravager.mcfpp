@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Ravager: EntityData, CreatureData, AIMobData, RaiderData {
+data RavagerData: EntityData, CreatureData, AIMobData, RaiderData {
     @Name<"AttackTick"> attackTick as int;
     @Name<"RoarTick"> roarTick as int;
     @Name<"StunTick"> stunTick as int;

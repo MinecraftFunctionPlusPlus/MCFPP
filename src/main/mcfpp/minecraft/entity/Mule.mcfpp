@@ -1,8 +1,8 @@
 @MCFPPEntity
-data Mule: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, HorseData {
+data MuleData: EntityData, CreatureData, AIMobData, GrowableData, AnimalData, GeneralHorseData {
     @Name<"ChestedHorse">
     chestedHorse as bool;
 
     @Name<"Items">
-    items as list<Item>;
+    items as list<ItemData>;
 }

@@ -4,9 +4,9 @@ import top.mcfpp.core.lang.JavaVar
 import top.mcfpp.core.lang.MCFPPTypeVar
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
+import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
-import top.mcfpp.model.FieldContainer
 import top.mcfpp.util.LogProcessor
 
 open class MCFPPConcreteType(parentType: ArrayList<MCFPPType> = arrayListOf()): MCFPPType(parentType) {
@@ -33,6 +33,10 @@ open class MCFPPConcreteType(parentType: ArrayList<MCFPPType> = arrayListOf()): 
         override val typeName: String
             get() = "type"
 
+        override fun defaultValue(): Var<*> {
+            return MCFPPTypeVar(MCFPPBaseType.Any ,"default")
+        }
+
         override fun build(identifier: String, container: FieldContainer): Var<*> =
             MCFPPTypeVar(identifier = identifier)
         override fun build(identifier: String): Var<*> = MCFPPTypeVar(identifier = identifier)
@@ -43,8 +47,13 @@ open class MCFPPConcreteType(parentType: ArrayList<MCFPPType> = arrayListOf()): 
 
         override val objectData: CompoundData
             get() = top.mcfpp.core.lang.JavaVar.data
+
         override val typeName: String
             get() = "JavaVar"
+
+        override fun defaultValue(): Var<*> {
+            return JavaVar(null, "default")
+        }
 
         override fun build(identifier: String, container: FieldContainer): Var<*> =
             JavaVar(null, identifier)

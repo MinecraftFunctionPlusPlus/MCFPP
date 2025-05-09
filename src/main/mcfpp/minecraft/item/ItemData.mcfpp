@@ -1,4 +1,4 @@
-data Item {
+data ItemStackData {
     id as string;
     count as int;
     components as dict<ItemComponent>;

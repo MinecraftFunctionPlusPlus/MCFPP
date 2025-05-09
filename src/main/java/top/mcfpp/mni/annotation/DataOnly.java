@@ -14,7 +14,7 @@ import java.util.ArrayList;
 
 public class DataOnly extends Annotation {
     public DataOnly(){
-        super("DataOnly", "mcfpp.annotation", new ArrayList<>());
+        super("DataOnly", "mcfpp.lang", new ArrayList<>());
     }
 
     @Override

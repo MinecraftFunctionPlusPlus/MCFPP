@@ -19,7 +19,7 @@ interface IFieldWithEnum: IField {
      * @param identifier 这个枚举的标识符
      * @return 是否移除成功。如果不存在此枚举，则返回false
      */
-    fun removeEnum(identifier: String):Boolean
+    fun removeEnum(identifier: String): Enum?
 
     /**
      * 获取一个非泛型枚举。可能不存在

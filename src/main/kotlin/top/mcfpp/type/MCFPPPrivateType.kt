@@ -2,9 +2,9 @@ package top.mcfpp.type
 
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
+import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
-import top.mcfpp.model.FieldContainer
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.util.LogProcessor
@@ -76,4 +76,32 @@ abstract class MCFPPPrivateType(parentType: ArrayList<MCFPPType> = arrayListOf()
             TODO("Not yet implemented")
         }
     }
+
+
+    object Void: MCFPPPrivateType(arrayListOf()){
+        override fun buildReturnVar(): Var<*> {
+            return top.mcfpp.core.lang.Void
+        }
+
+        override val objectData: CompoundData
+            get() = top.mcfpp.core.lang.Void.data
+
+        override val typeName: String
+            get() = "void"
+
+    }
+
+    object Null: MCFPPPrivateType(arrayListOf()){
+        override fun buildReturnVar(): Var<*> {
+            return top.mcfpp.core.lang.Null
+        }
+
+        override val objectData: CompoundData
+            get() = top.mcfpp.core.lang.Null.data
+
+        override val typeName: String
+            get() = "null"
+
+    }
+
 }

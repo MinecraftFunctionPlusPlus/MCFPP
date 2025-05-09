@@ -1,4 +1,4 @@
 @MCFPPEntity
-data WitherSkull: EntityData, ProjectileData, FireballData {
+data WitherSkullData: EntityData, ProjectileData, FireballData {
     dangerous as bool;
 }

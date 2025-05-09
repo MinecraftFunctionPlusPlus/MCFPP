@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Item {
+data ItemData: EntityData {
     @Name<"Age">
     age as short;
 
@@ -7,7 +7,7 @@ data Item {
     health as short;
 
     @Name<"Item">
-    item as list<Item>;
+    item as list<ItemData>;
 
     @Name<"Owner">
     owner as IntArray;

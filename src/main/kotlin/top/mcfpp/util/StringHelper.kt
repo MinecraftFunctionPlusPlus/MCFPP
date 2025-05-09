@@ -58,4 +58,12 @@ object StringHelper {
             if(second != null) append(second)
         }
     }
+
+    fun String.splitMNIParam(): Pair<String, String?>{
+        val s = this.split("=", limit = 2).map { it.trim() }
+        if(s.size == 1){
+            return Pair(s[0], "")
+        }
+        return Pair(s[0], s[1])
+    }
 }

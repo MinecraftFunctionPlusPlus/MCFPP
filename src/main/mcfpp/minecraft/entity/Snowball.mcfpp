@@ -1,3 +1,2 @@
 @MCFPPEntity
-data Snowball: EntityData, ProjectileData, MissileData{
-}
+data SnowballData: EntityData, ProjectileData, MissileData;

@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Cod: EntityData, CreatureData, AIMobData {
+data CodData: EntityData, CreatureData, AIMobData {
     @Name<"FromBucket">
     fromBucket as bool;
 }

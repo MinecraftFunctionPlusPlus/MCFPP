@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Endermite: EntityData, CreatureData, AIMobData {
+data EndermiteData: EntityData, CreatureData, AIMobData {
     @Name<"Lifetime">
     lifetime as int;
 }

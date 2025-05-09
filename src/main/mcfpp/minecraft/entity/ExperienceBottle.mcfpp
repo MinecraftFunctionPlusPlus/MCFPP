@@ -1,3 +1,2 @@
 @MCFPPEntity
-data ExperienceBottle: EntityData, ProjectileData, MissileData {
-}
+data ExperienceBottleData: EntityData, ProjectileData, MissileData;

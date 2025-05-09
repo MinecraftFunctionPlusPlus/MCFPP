@@ -48,7 +48,7 @@ open class ImmutableList : NBTList {
         val data by lazy {
             CompoundData("ImmutableList", "mcfpp.lang").apply {
                 extends(NBTBasedData.data)
-                getNativeFromClass(NBTListData::class.java)
+                injectedBy(NBTListData::class.java)
             }
         }
 

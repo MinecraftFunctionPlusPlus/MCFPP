@@ -1,15 +1,17 @@
+import mcfpp.minecraft.item:ItemStackData;
+
 data AIMobData {
     @Name<"ArmorDropChances">
     armorDropChances as list<float>;
 
     @Name<"ArmorItems">
-    armorItems as list<Item>;
+    armorItems as list<ItemData>;
 
     @Name<"body_armor_drop_chance">
     bodyArmorDropChance as float;
 
     @Name<"body_armor_item">
-    bodyArmorItem as list<Item>;
+    bodyArmorItem as list<ItemData>;
 
     @Name<"CanPickUpLoot">
     canPickUpLoot as bool;
@@ -24,7 +26,7 @@ data AIMobData {
     handDropChances as list<float>;
 
     @Name<"HandItems">
-    handItems as list<Item>;
+    handItems as list<ItemData>;
 
     @Name<"leash">
     leash as (IntArray|nbt);

@@ -1,5 +1,5 @@
 @MCFPPEntity
-data Wither: EntityData, CreatureData, AIMobData {
+data WitherData: EntityData, CreatureData, AIMobData {
 
     @Name<"Invul">
     invul as int;

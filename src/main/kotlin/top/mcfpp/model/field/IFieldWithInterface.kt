@@ -20,7 +20,7 @@ interface IFieldWithInterface {
      * @param identifier 这个类的标识符
      * @return 是否移除成功。如果不存在此类，则返回false
      */
-    fun removeInterface(identifier: String):Boolean
+    fun removeInterface(identifier: String): Interface?
 
     /**
      * 获取一个类。可能不存在

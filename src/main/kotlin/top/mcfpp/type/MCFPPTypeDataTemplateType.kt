@@ -5,13 +5,12 @@ import top.mcfpp.core.lang.obj.TypeDataTemplateObject
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.TypeDataTemplate
-import top.mcfpp.nbt.tags.Tag
 
 class MCFPPTypeDataTemplateType(
     template: TypeDataTemplate
 ): MCFPPDataTemplateType(template, arrayListOf(MCFPPBaseType.Any)){
 
-    override fun defaultValue(): Tag<*> {
+    override fun defaultValue(): Var<*> {
         return (template as TypeDataTemplate).typeAs.defaultValue()
     }
 
