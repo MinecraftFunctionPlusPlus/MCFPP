@@ -1,12 +1,12 @@
 package top.mcfpp.antlr
 
-import top.mcfpp.Project
+import top.mcfpp.Project.withCompilationContext
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.function.Function
 
 class MCFPPGenericClassImVisitor : MCFPPImVisitor() {
 
-    override fun visitClassBody(ctx: mcfppParser.ClassBodyContext): Any? {
+    override fun visitClassBody(ctx: mcfppParser.ClassBodyContext): Any? = withCompilationContext(ctx) {
         enterClassBody(ctx)
         visitChildren(ctx)
         exitClassBody(ctx)
@@ -18,7 +18,6 @@ class MCFPPGenericClassImVisitor : MCFPPImVisitor() {
      * @param ctx the parse tree
      */
     private fun enterClassBody(ctx: mcfppParser.ClassBodyContext) {
-        Project.ctx = ctx
         //TODO 注解
     }
 
@@ -28,7 +27,6 @@ class MCFPPGenericClassImVisitor : MCFPPImVisitor() {
      */
 
     private fun exitClassBody(ctx: mcfppParser.ClassBodyContext) {
-        Project.ctx = ctx
         Class.currClass = null
         Function.currFunction = Function.nullFunction
     }

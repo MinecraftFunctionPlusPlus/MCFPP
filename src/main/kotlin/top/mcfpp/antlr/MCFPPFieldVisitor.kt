@@ -1,6 +1,7 @@
 package top.mcfpp.antlr
 
 import top.mcfpp.Project
+import top.mcfpp.Project.withCompilationContext
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.annotations.MNIBinaryOperator
 import top.mcfpp.annotations.MNIFunction
@@ -50,8 +51,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
      * @param ctx the parse tree
      * @return null
      */
-    override fun visitCompilationUnit(ctx: mcfppParser.CompilationUnitContext): Any? {
-        Project.ctx = ctx
+    override fun visitCompilationUnit(ctx: mcfppParser.CompilationUnitContext): Any? = withCompilationContext(ctx) {
         typeScope = GlobalField.localNamespaces[Project.currNamespace]!!.field
         //文件结构，类和函数
         for (t in ctx.typeDeclaration()) {
@@ -60,8 +60,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-    override fun visitNamespaceFieldDeclaration(ctx: mcfppParser.NamespaceFieldDeclarationContext): Any? {
-        Project.ctx = ctx
+    override fun visitNamespaceFieldDeclaration(ctx: mcfppParser.NamespaceFieldDeclarationContext): Any? = withCompilationContext(ctx) {
         Function.currFunction = NoStackFunction("", Function.nullFunction)
         //变量生成
         val fieldModifier = ctx.fieldModifier()?.text
@@ -140,8 +139,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 
 //region interface
 
-    override fun visitInterfaceDeclaration(ctx: mcfppParser.InterfaceDeclarationContext): Any? {
-        Project.ctx = ctx
+    override fun visitInterfaceDeclaration(ctx: mcfppParser.InterfaceDeclarationContext): Any? = withCompilationContext(ctx) {
         //注册类
         val id = ctx.classWithoutNamespace().text
         val namespace = GlobalField.localNamespaces[Project.currNamespace]!!
@@ -164,8 +162,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     }
 
 
-    override fun visitInterfaceFunctionDeclaration(ctx: mcfppParser.InterfaceFunctionDeclarationContext): Any? {
-        Project.ctx = ctx
+    override fun visitInterfaceFunctionDeclaration(ctx: mcfppParser.InterfaceFunctionDeclarationContext): Any? = withCompilationContext(ctx) {
         //创建函数对象
         val f = Function(
             ctx.Identifier().text,
@@ -189,18 +186,6 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     }
 //endregion
 
-//region native class
-    /**
-     * TODO native类的声明
-     * @param ctx the parse tree
-     * @return null
-     */
-    override fun visitNativeClassDeclaration(ctx: mcfppParser.NativeClassDeclarationContext): Any? {
-        //NativeClassVisitor().visit(ctx)
-        return null
-    }
-//endregion
-
 //region class
     /**
      * 类的声明
@@ -208,8 +193,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
      * @return null
      */
 
-    override fun visitClassDeclaration(ctx: ClassDeclarationContext): Any? {
-        Project.ctx = ctx
+    override fun visitClassDeclaration(ctx: ClassDeclarationContext): Any? = withCompilationContext(ctx) {
         //注册类
         val id = ctx.classWithoutNamespace().text
         val namespace = GlobalField.localNamespaces[Project.currNamespace]!!
@@ -277,8 +261,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-    override fun visitObjectClassDeclaration(ctx: mcfppParser.ObjectClassDeclarationContext): Any? {
-        Project.ctx = ctx
+    override fun visitObjectClassDeclaration(ctx: mcfppParser.ObjectClassDeclarationContext): Any? = withCompilationContext(ctx) {
         //注册类
         val id = ctx.classWithoutNamespace().text
         val namespace = GlobalField.localNamespaces[Project.currNamespace]!!
@@ -331,8 +314,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
      * @param ctx the parse tree
      * @return null
      */
-    override fun visitClassMemberDeclaration(ctx: mcfppParser.ClassMemberDeclarationContext): Any? {
-        Project.ctx = ctx
+    override fun visitClassMemberDeclaration(ctx: mcfppParser.ClassMemberDeclarationContext): Any? = withCompilationContext(ctx) {
         val m = visit(ctx.classMember())
         if(m is Member){
             //访问修饰符
@@ -355,8 +337,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-    override fun visitClassMember(ctx: mcfppParser.ClassMemberContext): Any? {
-        Project.ctx = ctx
+    override fun visitClassMember(ctx: mcfppParser.ClassMemberContext): Any? = withCompilationContext(ctx) {
         return if (ctx.nativeClassFunctionDeclaration() != null) {
             visitNativeClassFunctionDeclaration(ctx.nativeClassFunctionDeclaration())
         } else if (ctx.classFunctionDeclaration() != null) {
@@ -376,8 +357,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
      * @return 这个类方法的对象
      */
     
-    override fun visitClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext): Any {
-        Project.ctx = ctx
+    override fun visitClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext): Any = withCompilationContext(ctx) {
         //创建函数对象
         val f = if(ctx.functionParams().readOnlyParams() != null && ctx.functionParams().readOnlyParams().parameterList().parameter().size != 0){
             GenericFunction(
@@ -428,8 +408,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     }
 
     
-    override fun visitAbstractClassFunctionDeclaration(ctx: mcfppParser.AbstractClassFunctionDeclarationContext): Any {
-        Project.ctx = ctx
+    override fun visitAbstractClassFunctionDeclaration(ctx: mcfppParser.AbstractClassFunctionDeclarationContext): Any = withCompilationContext(ctx) {
         //抽象函数没有函数体，不能作为GenericFunction
         //创建函数对象
         val f = Function(
@@ -460,8 +439,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return f
     }
 
-    override fun visitNativeClassFunctionDeclaration(ctx: mcfppParser.NativeClassFunctionDeclarationContext): Any? {
-        Project.ctx = ctx
+    override fun visitNativeClassFunctionDeclaration(ctx: mcfppParser.NativeClassFunctionDeclarationContext): Any? = withCompilationContext(ctx) {
         val nf = NativeFunction(ctx.Identifier().text, Project.currNamespace)
         nf.returnType = if(ctx.functionReturnType()?.type() != null){
             MCFPPType.parseFromContext(ctx.functionReturnType().type(), typeScope)?: run {
@@ -512,8 +490,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
      * @param ctx the parse tree
      * @return 这个构造函数的对象
      */
-    override fun visitClassConstructorDeclaration(ctx: mcfppParser.ClassConstructorDeclarationContext): Any {
-        Project.ctx = ctx
+    override fun visitClassConstructorDeclaration(ctx: mcfppParser.ClassConstructorDeclarationContext): Any = withCompilationContext(ctx) {
         //类构造函数
         //创建构造函数对象，注册函数
         val f = ClassConstructor(Class.currClass!!)
@@ -531,8 +508,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
      * @return null
      */
     @InsertCommand
-    override fun visitClassFieldDeclaration(ctx: mcfppParser.ClassFieldDeclarationContext): Pair<Var<*>?, Property?> {
-        Project.ctx = ctx
+    override fun visitClassFieldDeclaration(ctx: mcfppParser.ClassFieldDeclarationContext): Pair<Var<*>?, Property?> = withCompilationContext(ctx) {
         //只有类字段构建
         var type = ctx.type()?.let { MCFPPType.parseFromContext(it, typeScope)?: run {
                 LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(it.text))
@@ -585,8 +561,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return `var` to properties
     }
 
-    override fun visitAccessor(ctx: mcfppParser.AccessorContext): Any? {
-        Project.ctx = ctx
+    override fun visitAccessor(ctx: mcfppParser.AccessorContext): Any? = withCompilationContext(ctx) {
         val getter = if(ctx.getter() != null){
             visit(ctx.getter()) as AbstractAccessor
         }else{
@@ -600,8 +575,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return Property(currVar.identifier, getter, setter)
     }
 
-    override fun visitGetter(ctx: mcfppParser.GetterContext): Any? {
-        Project.ctx = ctx
+    override fun visitGetter(ctx: mcfppParser.GetterContext): Any? = withCompilationContext(ctx) {
         return if(ctx.functionBody() != null){
             FunctionAccessor(currVar, currClassOrTemplate!!)
         }else if(ctx.javaRefer() != null){
@@ -613,8 +587,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
     }
 
-    override fun visitSetter(ctx: mcfppParser.SetterContext): Any? {
-        Project.ctx = ctx
+    override fun visitSetter(ctx: mcfppParser.SetterContext): Any? = withCompilationContext(ctx) {
         return if(ctx.functionBody() != null){
             FunctionMutator(currVar, currClassOrTemplate!!)
         }else if(ctx.javaRefer() != null){
@@ -626,7 +599,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
     }
 
-    override fun visitOperationOverrideDeclaration(ctx: mcfppParser.OperationOverrideDeclarationContext): Any? {
+    override fun visitOperationOverrideDeclaration(ctx: mcfppParser.OperationOverrideDeclarationContext): Any? = withCompilationContext(ctx) {
         return if(ctx.parent is ClassDeclarationContext){
             visitClassOperationOverrideDeclaration(ctx)
         }else{
@@ -634,8 +607,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
     }
 
-    private fun visitClassOperationOverrideDeclaration(ctx: mcfppParser.OperationOverrideDeclarationContext): Any? {
-        Project.ctx = ctx
+    private fun visitClassOperationOverrideDeclaration(ctx: mcfppParser.OperationOverrideDeclarationContext): Any? = withCompilationContext(ctx) {
         val op = ctx.supportOperator().text
         //创建函数对象
         val f = Function(
@@ -670,8 +642,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return f
     }
 
-    private fun visitTemplateOperationOverrideDeclaration(ctx: mcfppParser.OperationOverrideDeclarationContext): Any? {
-        Project.ctx = ctx
+    private fun visitTemplateOperationOverrideDeclaration(ctx: mcfppParser.OperationOverrideDeclarationContext): Any? = withCompilationContext(ctx) {
         val op = ctx.supportOperator().text
         //创建函数对象
         val f = Function(
@@ -706,7 +677,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return f
     }
 
-    override fun visitNativeOperationOverrideDeclaration(ctx: mcfppParser.NativeOperationOverrideDeclarationContext): Any? {
+    override fun visitNativeOperationOverrideDeclaration(ctx: mcfppParser.NativeOperationOverrideDeclarationContext): Any? = withCompilationContext(ctx) {
         return if(ctx.parent is ClassDeclarationContext){
             visitClassNativeOperationOverrideDeclaration(ctx)
         }else{
@@ -714,8 +685,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
     }
 
-    private fun visitClassNativeOperationOverrideDeclaration(ctx: mcfppParser.NativeOperationOverrideDeclarationContext): Any? {
-        Project.ctx = ctx
+    private fun visitClassNativeOperationOverrideDeclaration(ctx: mcfppParser.NativeOperationOverrideDeclarationContext): Any? = withCompilationContext(ctx) {
         val op = ctx.supportOperator().text
         val nf = NativeFunction(op, Project.currNamespace)
         nf.returnType = if(ctx.functionReturnType()?.type() != null){
@@ -764,8 +734,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return nf
     }
 
-    private fun visitTemplateNativeOperationOverrideDeclaration(ctx: mcfppParser.NativeOperationOverrideDeclarationContext): Any? {
-        Project.ctx = ctx
+    private fun visitTemplateNativeOperationOverrideDeclaration(ctx: mcfppParser.NativeOperationOverrideDeclarationContext): Any? = withCompilationContext(ctx) {
         val op = ctx.supportOperator().text
         val nf = NativeFunction(op, Project.currNamespace)
         nf.returnType = if(ctx.functionReturnType()?.type() != null){
@@ -823,8 +792,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
      * @return null
      */
     
-    override fun visitFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext): Any? {
-        Project.ctx = ctx
+    override fun visitFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext): Any? = withCompilationContext(ctx) {
         //创建函数对象
         val identifier = ctx.Identifier().text
         val f = if(ctx.functionParams()?.readOnlyParams() != null && ctx.functionParams().readOnlyParams().parameterList().parameter().size != 0){
@@ -864,8 +832,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-    override fun visitInlineFunctionDeclaration(ctx: mcfppParser.InlineFunctionDeclarationContext): Any? {
-        Project.ctx = ctx
+    override fun visitInlineFunctionDeclaration(ctx: mcfppParser.InlineFunctionDeclarationContext): Any? = withCompilationContext(ctx) {
         //创建函数对象
         val f: Function
         //是否是内联函数
@@ -892,8 +859,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-    override fun visitCompileTimeFuncDeclaration(ctx: mcfppParser.CompileTimeFuncDeclarationContext): Any? {
-        Project.ctx = ctx
+    override fun visitCompileTimeFuncDeclaration(ctx: mcfppParser.CompileTimeFuncDeclarationContext): Any? = withCompilationContext(ctx) {
         //创建函数对象
         val f: Function
         //是否是编译时函数
@@ -934,8 +900,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 
 
     //TODO 单例的拓展函数
-    override fun visitExtensionFunctionDeclaration(ctx: mcfppParser.ExtensionFunctionDeclarationContext?): Any? {
-        Project.ctx = ctx!!
+    override fun visitExtensionFunctionDeclaration(ctx: mcfppParser.ExtensionFunctionDeclarationContext): Any? = withCompilationContext(ctx)  {
         val ownerType : Function.Companion.OwnerType
         //获取被拓展的类
         val data : CompoundData = if(ctx.type().typeWithoutExcl().className() == null){
@@ -997,8 +962,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
      * @return 如果是全局，返回null，否则返回这个函数对象
      */
     
-    override fun visitNativeFuncDeclaration(ctx: mcfppParser.NativeFuncDeclarationContext): Any? {
-        Project.ctx = ctx
+    override fun visitNativeFuncDeclaration(ctx: mcfppParser.NativeFuncDeclarationContext): Any? = withCompilationContext(ctx) {
         val nf = NativeFunction(ctx.Identifier().text, Project.currNamespace)
         nf.returnType = if(ctx.functionReturnType()?.type() != null){
             MCFPPType.parseFromContext(ctx.functionReturnType().type(), typeScope)?: run {
@@ -1055,8 +1019,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 //endregion
 
 //region template
-    override fun visitTemplateDeclaration(ctx: TemplateDeclarationContext?): Any? {
-        Project.ctx = ctx!!
+    override fun visitTemplateDeclaration(ctx: TemplateDeclarationContext): Any? = withCompilationContext(ctx) {
         //获取注册的模板
         val id = ctx.classWithoutNamespace().text
         val namespace1 = GlobalField.localNamespaces[Project.currNamespace]!!
@@ -1096,7 +1059,6 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
         isStatic = false
         ctx.templateBody()?.let { visitTemplateBody(it) }
-        Project.ctx = ctx
 
         //默认构造函数和默认字段
         if(template is TypeDataTemplate){
@@ -1116,8 +1078,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-    override fun visitObjectTemplateDeclaration(ctx: mcfppParser.ObjectTemplateDeclarationContext): Any? {
-        Project.ctx = ctx
+    override fun visitObjectTemplateDeclaration(ctx: mcfppParser.ObjectTemplateDeclarationContext): Any? = withCompilationContext(ctx) {
         //注册模板
         val id = ctx.classWithoutNamespace().text
         val namespace1 = GlobalField.localNamespaces[Project.currNamespace]!!
@@ -1148,7 +1109,6 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             }
         }
         ctx.templateBody()?.let { visitTemplateBody(it) }
-        Project.ctx = ctx
         isStatic = true
         DataTemplate.currTemplate = null
         currClassOrTemplate = null
@@ -1156,8 +1116,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-    override fun visitAnonymousTemplateType(ctx: mcfppParser.AnonymousTemplateTypeContext?): Any {
-        Project.ctx = ctx!!
+    override fun visitAnonymousTemplateType(ctx: mcfppParser.AnonymousTemplateTypeContext): Any = withCompilationContext(ctx) {
         //注册模板
         val template = DataTemplate(TempPool.getAnonymousTemplateIdentify())
         val qwq = DataTemplate.currTemplate
@@ -1185,7 +1144,6 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
         isStatic = false
         visitTemplateBody(ctx.templateBody())
-        Project.ctx = ctx
         //如果没有构造函数，生成默认的构造函数
         if(template.constructors.isEmpty()){
             template.addMember(DataTemplateConstructor(DataTemplate.currTemplate!!, null))
@@ -1196,8 +1154,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return template
     }
 
-    override fun visitTemplateBody(ctx: mcfppParser.TemplateBodyContext): Any? {
-        Project.ctx = ctx
+    override fun visitTemplateBody(ctx: mcfppParser.TemplateBodyContext): Any? = withCompilationContext(ctx) {
         //解析成员
         //先解析函数
         for (c in ctx.templateMemberDeclaration()) {
@@ -1214,8 +1171,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-    override fun visitTemplateMemberDeclaration(ctx: mcfppParser.TemplateMemberDeclarationContext): Any? {
-        Project.ctx = ctx
+    override fun visitTemplateMemberDeclaration(ctx: mcfppParser.TemplateMemberDeclarationContext): Any? = withCompilationContext(ctx) {
         val m = visitTemplateMember(ctx.templateMember())
         val accessModifier = AccessModifier.valueOf((ctx.accessModifier()?.text?:"public").uppercase(Locale.getDefault()))
         //访问修饰符
@@ -1236,8 +1192,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     }
 
     
-    override fun visitTemplateMember(ctx: mcfppParser.TemplateMemberContext): Any? {
-        Project.ctx = ctx
+    override fun visitTemplateMember(ctx: mcfppParser.TemplateMemberContext): Any? = withCompilationContext(ctx) {
         return if (ctx.templateFunctionDeclaration() != null) {
             visitTemplateFunctionDeclaration(ctx.templateFunctionDeclaration())
         } else if (ctx.templateFieldDeclaration() != null) {
@@ -1249,8 +1204,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
     }
 
-    override fun visitTemplateFunctionDeclaration(ctx: mcfppParser.TemplateFunctionDeclarationContext): Any {
-        Project.ctx = ctx
+    override fun visitTemplateFunctionDeclaration(ctx: mcfppParser.TemplateFunctionDeclarationContext): Any = withCompilationContext(ctx) {
         //创建函数对象
         val f = if(ctx.functionParams().readOnlyParams() != null && ctx.functionParams().readOnlyParams().parameterList().parameter().size != 0){
             GenericFunction(
@@ -1296,8 +1250,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return f
     }
 
-    override fun visitTemplateFieldDeclaration(ctx: mcfppParser.TemplateFieldDeclarationContext): Pair<Var<*>?, Property?> {
-        Project.ctx = ctx
+    override fun visitTemplateFieldDeclaration(ctx: mcfppParser.TemplateFieldDeclarationContext): Pair<Var<*>?, Property?> = withCompilationContext(ctx) {
         if(DataTemplate.currTemplate is TypeDataTemplate){
             LogProcessor.error("TypeDataTemplate cannot have field: " + ctx.Identifier().text)
             return null to null
@@ -1368,8 +1321,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return `var` to properties
     }
 
-    override fun visitTemplateConstructorDeclaration(ctx: mcfppParser.TemplateConstructorDeclarationContext): Any {
-        Project.ctx = ctx
+    override fun visitTemplateConstructorDeclaration(ctx: mcfppParser.TemplateConstructorDeclarationContext): Any = withCompilationContext(ctx) {
         if(DataTemplate.currTemplate is TypeDataTemplate){
             LogProcessor.error("TypeDataTemplate cannot have constructor")
             return null to null

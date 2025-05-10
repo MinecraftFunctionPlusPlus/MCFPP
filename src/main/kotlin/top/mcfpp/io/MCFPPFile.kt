@@ -84,7 +84,6 @@ class MCFPPFile : File {
         field.namespaceField = namespace.field
         Project.currNamespace = Project.config.rootNamespace
         currFile = null
-        Project.ctx = null
     }
 
     /**
@@ -134,7 +133,6 @@ class MCFPPFile : File {
         MCFPPFieldVisitor().visit(tree())
         Project.currNamespace = Project.config.rootNamespace
         currFile = null
-        Project.ctx = null
     }
 
     fun runAnnotation(){
@@ -144,7 +142,6 @@ class MCFPPFile : File {
         MCFPPAnnotationVisitor().visit(tree())
         Project.currNamespace = Project.config.rootNamespace
         currFile = null
-        Project.ctx = null
     }
 
     /**
@@ -163,7 +160,6 @@ class MCFPPFile : File {
         MCFPPImVisitor().visit(tree())
         Project.currNamespace = Project.config.rootNamespace
         currFile = null
-        Project.ctx = null
     }
 
     companion object{

@@ -1,6 +1,7 @@
 package top.mcfpp.antlr
 
 import top.mcfpp.Project
+import top.mcfpp.Project.withCompilationContext
 import top.mcfpp.core.lang.MCAny
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
@@ -29,8 +30,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
      * @param ctx the parse tree
      * @return null
      */
-    override fun visitCompilationUnit(ctx: mcfppParser.CompilationUnitContext) {
-        Project.ctx = ctx
+    override fun visitCompilationUnit(ctx: mcfppParser.CompilationUnitContext): Unit = withCompilationContext(ctx) {
         //命名空间
         if (ctx.namespaceDeclaration() != null) {
             //获取命名空间
@@ -57,20 +57,17 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
      *
      * @param ctx
      */
-    override fun visitImportDeclaration(ctx: mcfppParser.ImportDeclarationContext) {
-        Project.ctx = ctx
+    override fun visitImportDeclaration(ctx: mcfppParser.ImportDeclarationContext): Unit = withCompilationContext(ctx) {
         //获取命名空间和导入类型
         val nsp = importType(ctx.importType())
         MCFPPFile.currFile!!.unsolvedImports[nsp.first!!] = nsp.second
     }
 
     fun importType(ctx: mcfppParser.ImportTypeContext): Pair<String?, String>  {
-        Project.ctx = ctx
         return ctx.text.splitNamespaceID()
     }
 
-    override fun visitInterfaceDeclaration(ctx: mcfppParser.InterfaceDeclarationContext){
-        Project.ctx = ctx
+    override fun visitInterfaceDeclaration(ctx: mcfppParser.InterfaceDeclarationContext): Unit = withCompilationContext(ctx){
         //注册类
         val id = ctx.classWithoutNamespace().text
         val nsp = GlobalField.localNamespaces[Project.currNamespace]!!
@@ -102,8 +99,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
      * @param ctx the parse tree
      * @return null
      */
-    override fun visitClassDeclaration(ctx: mcfppParser.ClassDeclarationContext){
-        Project.ctx = ctx
+    override fun visitClassDeclaration(ctx: mcfppParser.ClassDeclarationContext): Unit = withCompilationContext(ctx){
         //注册类
         val id = ctx.classWithoutNamespace().text
         val nsp = GlobalField.localNamespaces[Project.currNamespace]!!
@@ -148,8 +144,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         nsp.field.addClass(cls.identifier, cls)
     }
 
-    override fun visitObjectClassDeclaration(ctx: mcfppParser.ObjectClassDeclarationContext) {
-        Project.ctx = ctx
+    override fun visitObjectClassDeclaration(ctx: mcfppParser.ObjectClassDeclarationContext): Unit = withCompilationContext(ctx) {
         //注册类
         val id = ctx.classWithoutNamespace().text
         val nsp = GlobalField.localNamespaces[Project.currNamespace]!!
@@ -195,8 +190,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         nsp.field.addObject(objectClass.identifier, objectClass)
     }
 
-    override fun visitGenericClassImplement(ctx: mcfppParser.GenericClassImplementContext) {
-        Project.ctx = ctx
+    override fun visitGenericClassImplement(ctx: mcfppParser.GenericClassImplementContext): Unit = withCompilationContext(ctx) {
         //注册类
         val id = ctx.classWithoutNamespace().text
 
@@ -239,8 +233,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         cls.isAbstract = ctx.ABSTRACT() != null
     }
 
-    override fun visitTemplateDeclaration(ctx: mcfppParser.TemplateDeclarationContext) {
-        Project.ctx = ctx
+    override fun visitTemplateDeclaration(ctx: mcfppParser.TemplateDeclarationContext): Unit = withCompilationContext(ctx) {
         //注册模板
         val id = ctx.classWithoutNamespace().text
         val nsp = GlobalField.localNamespaces[Project.currNamespace]!!
@@ -262,8 +255,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
     /**
      *
      */
-    override fun visitObjectTemplateDeclaration(ctx: mcfppParser.ObjectTemplateDeclarationContext){
-        Project.ctx = ctx
+    override fun visitObjectTemplateDeclaration(ctx: mcfppParser.ObjectTemplateDeclarationContext): Unit = withCompilationContext(ctx){
         //注册模板
         val id = ctx.classWithoutNamespace().text
         val nsp = GlobalField.localNamespaces[Project.currNamespace]!!
@@ -277,8 +269,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         nsp.field.addObject(id, template)
     }
 
-    override fun visitEnumDeclaration(ctx: mcfppParser.EnumDeclarationContext) {
-        Project.ctx = ctx
+    override fun visitEnumDeclaration(ctx: mcfppParser.EnumDeclarationContext): Unit = withCompilationContext(ctx) {
         //注册枚举
         val id = ctx.Identifier().text
         val nsp = GlobalField.localNamespaces[Project.currNamespace]!!

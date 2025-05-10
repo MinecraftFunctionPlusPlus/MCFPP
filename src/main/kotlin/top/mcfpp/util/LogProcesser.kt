@@ -22,8 +22,8 @@ object LogProcessor {
     var level: LogLevel = LogLevel.DEBUG
 
     fun getCtxText(): String{
-        if(Project.ctx != null){
-            val text = Project.ctx!!.text
+        if(Project.ctx.isNotEmpty()){
+            val text = Project.ctx.first().text
             if(text.length > 20){
                 return text.substring(0, 20) + "..."
             }else{
@@ -63,11 +63,11 @@ object LogProcessor {
     inline fun warn(msg: String){
         if(level > LogLevel.WARN) return
         logger.warn(msg)
-        if(Project.ctx != null){
+        if(Project.ctx.isNotEmpty()){
             logger.warn(
                 "Warning while compiling \n" +
                         MCFPPFile.currFile!!.absolutePath + ">>" + msg
-                        + Project.ctx?.let { "\n" + getLineInfo(it) }
+                        + Project.ctx.first().let { "\n" + getLineInfo(it) }
             )
             Function.addComment(msg, CommentLevel.WARN)
         }else{
@@ -77,7 +77,7 @@ object LogProcessor {
         if(CompileSettings.isDebug){
             val stackTrace = Thread.currentThread().stackTrace
             val sb = StringBuilder("Compiler Stack trace:")
-            for (i in 1 until  min(stackTrace.size, 8)) {
+            for (i in 1..<min(stackTrace.size, 8)) {
                 sb.append("\n    at " + stackTrace[i].toString())
             }
             if(stackTrace.size > 6){
@@ -96,7 +96,7 @@ object LogProcessor {
         if(CompileSettings.isDebug){
             val stackTrace = Thread.currentThread().stackTrace
             val sb = StringBuilder("Compiler Stack trace:")
-            for (i in 1 until  min(stackTrace.size, 8)) {
+            for (i in 1..<min(stackTrace.size, 8)) {
                 sb.append("\n    at " + stackTrace[i].toString())
             }
             if(stackTrace.size > 6){
@@ -109,11 +109,11 @@ object LogProcessor {
     @JvmStatic
     inline fun error(msg: String){
         if(level > LogLevel.ERROR) return
-        if(Project.ctx != null){
+        if(Project.ctx.isNotEmpty()){
             logger.error(
                 "Error while compiling " +
                         MCFPPFile.currFile!!.absolutePath + ">>\n" + msg
-                        + Project.ctx?.let { "\n" + getLineInfo(it) }
+                        + Project.ctx.first().let { "\n" + getLineInfo(it) }
             )
             Function.addComment(msg, CommentLevel.ERROR)
         }else{

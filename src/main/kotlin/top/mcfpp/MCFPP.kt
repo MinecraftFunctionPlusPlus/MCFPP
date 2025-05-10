@@ -52,7 +52,7 @@ fun compile(config: ProjectConfig){
     Project.compile() //编译
     Project.optimization() //优化
     Project.genIndex() //生成索引
-    Project.ctx = null
+    Project.ctx.clear()
     if(!Project.config.noDatapack){
         Project.compileStage++
         try{

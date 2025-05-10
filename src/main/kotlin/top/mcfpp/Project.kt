@@ -47,7 +47,17 @@ object Project {
 
     var config = ProjectConfig()
 
-    var ctx: ParserRuleContext? = null
+    val ctx: ArrayDeque<ParserRuleContext> = ArrayDeque()
+
+    inline fun <T> withCompilationContext(ctx: ParserRuleContext, block: () -> T): T {
+        Project.ctx.addFirst(ctx)
+        try {
+            return block()
+        } finally {
+            Project.ctx.removeFirst()
+        }
+    }
+
 
     /**
      * 当前解析文件的语法树
@@ -137,7 +147,7 @@ object Project {
         compileStage++
         //全局缓存初始化
         GlobalField.init()
-        ctx = null
+        ctx.clear()
         trees.clear()
         currNamespace = config.rootNamespace
         errorCount = 0

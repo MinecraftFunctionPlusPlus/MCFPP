@@ -1,6 +1,7 @@
 package top.mcfpp.util
 
-import top.mcfpp.antlr.mcfppParser
+import org.antlr.v4.runtime.ParserRuleContext
+import top.mcfpp.Project
 import top.mcfpp.nbt.tags.collection.IntArrayTag
 import java.io.*
 import java.util.*
@@ -154,28 +155,5 @@ object Utils {
         byteArrayInputStream.close()
 
         return obj
-    }
-}
-
-class SerializableFunctionBodyContext : mcfppParser.FunctionBodyContext, Serializable{
-
-    @Suppress("unused")
-    constructor():super(null, -1)
-
-    constructor(ctx: mcfppParser.FunctionBodyContext):super(ctx.getParent(), ctx.invokingState) {
-        this.children = ctx.children
-        this.start = ctx.start
-        this.stop = ctx.stop
-    }
-}
-
-class SerializableClassBodyContext(ctx: mcfppParser.ClassBodyContext): mcfppParser.ClassBodyContext(
-    ctx.getParent(),
-    ctx.invokingState
-), Serializable{
-    init {
-        this.children = ctx.children
-        this.start = ctx.start
-        this.stop = ctx.stop
     }
 }

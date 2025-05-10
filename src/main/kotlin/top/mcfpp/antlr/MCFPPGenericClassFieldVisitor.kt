@@ -1,6 +1,6 @@
 package top.mcfpp.antlr
 
-import top.mcfpp.Project
+import top.mcfpp.Project.withCompilationContext
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.function.ClassConstructor
@@ -8,8 +8,7 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
 
 class MCFPPGenericClassFieldVisitor(val clazz: Class) : MCFPPFieldVisitor() {
-    override fun visitClassDeclaration(ctx: mcfppParser.ClassDeclarationContext): Any? {
-        Project.ctx = ctx
+    override fun visitClassDeclaration(ctx: mcfppParser.ClassDeclarationContext): Any? = withCompilationContext(ctx) {
 
         Class.currClass = clazz
 

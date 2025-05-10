@@ -2,6 +2,7 @@ package top.mcfpp.antlr
 
 import org.antlr.v4.runtime.RuleContext
 import top.mcfpp.Project
+import top.mcfpp.Project.withCompilationContext
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.antlr.RuleContextExtension.children
 import top.mcfpp.antlr.mcfppParser.CompileTimeFuncDeclarationContext
@@ -38,7 +39,7 @@ import top.mcfpp.util.TextTranslator.translate
 
 open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
-    override fun visitTopStatement(ctx: mcfppParser.TopStatementContext): Any? {
+    override fun visitTopStatement(ctx: mcfppParser.TopStatementContext): Any? = withCompilationContext(ctx) {
         if(ctx.statement().size == 0) return null
         Function.currFunction = MCFPPFile.currFile!!.topFunction
         //注册函数
@@ -48,7 +49,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-    override fun visitFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext): Any? {
+    override fun visitFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext): Any? = withCompilationContext(ctx) {
         if(ctx.parent is CompileTimeFuncDeclarationContext) return null
         enterFunctionDeclaration(ctx)
         super.visitFunctionDeclaration(ctx)
@@ -56,8 +57,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-    private fun enterFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext){
-        Project.ctx = ctx
+    private fun enterFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext) {
         val f: Function
         //获取函数对象
         val types = ctx.functionParams()?.let { FunctionParam.parseReadonlyAndNormalParamTypes(it) }
@@ -67,7 +67,6 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     private fun exitFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext){
-        Project.ctx = ctx
         //函数是否有返回值
         if(Function.currFunction !is Generic<*> && Function.currFunction.returnType !=  MCFPPPrivateType.Void && !Function.currFunction.hasReturnStatement){
             LogProcessor.error("Function should return a value: " + Function.currFunction.namespaceID)
@@ -83,7 +82,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         }
     }
 
-    override fun visitFunctionBody(ctx: mcfppParser.FunctionBodyContext): Any? {
+    override fun visitFunctionBody(ctx: mcfppParser.FunctionBodyContext): Any? = withCompilationContext(ctx) {
         if(ctx.parent is CompileTimeFuncDeclarationContext) return null
         if(Function.currFunction !is Generic<*>){
             ctx.statement().forEach {
@@ -114,8 +113,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
      * @param ctx the parse tree
      */
     @InsertCommand
-    override fun visitFieldDeclaration(ctx: mcfppParser.FieldDeclarationContext):Any? {
-        Project.ctx = ctx
+    override fun visitFieldDeclaration(ctx: mcfppParser.FieldDeclarationContext):Any? = withCompilationContext(ctx) {
         //变量生成
         val fieldModifier = ctx.fieldModifier()?.text
         //只有类字段构建
@@ -173,8 +171,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
      * @param ctx the parse tree
      */
     @InsertCommand
-    override fun visitStatementExpression(ctx: mcfppParser.StatementExpressionContext):Any? {
-        Project.ctx = ctx
+    override fun visitStatementExpression(ctx: mcfppParser.StatementExpressionContext):Any? = withCompilationContext(ctx) {
         Function.addComment("expression: " + ctx.text)
         if(ctx.varWithSelector() != null){
             val left: Var<*> = McfppLeftExprVisitor().visitVarWithSelector(ctx.varWithSelector())
@@ -200,7 +197,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-    override fun visitExtensionFunctionDeclaration(ctx: mcfppParser.ExtensionFunctionDeclarationContext): Any? {
+    override fun visitExtensionFunctionDeclaration(ctx: mcfppParser.ExtensionFunctionDeclarationContext): Any? = withCompilationContext(ctx) {
         //是扩展函数
         enterExtensionFunctionDeclaration(ctx)
         super.visitExtensionFunctionDeclaration(ctx)
@@ -254,7 +251,6 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     fun exitExtensionFunctionDeclaration(ctx: mcfppParser.ExtensionFunctionDeclarationContext) {
-        Project.ctx = ctx
         //函数是否有返回值
         if (Function.currFunction.returnType != MCFPPPrivateType.Void && !Function.currFunction.hasReturnStatement) {
             LogProcessor.error("A 'return' expression required in function: " + Function.currFunction.namespaceID)
@@ -267,8 +263,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 //region 逻辑语句
     
     @InsertCommand
-    override fun visitReturnStatement(ctx: mcfppParser.ReturnStatementContext):Any? {
-        Project.ctx = ctx
+    override fun visitReturnStatement(ctx: mcfppParser.ReturnStatementContext):Any? = withCompilationContext(ctx) {
         Function.addComment(ctx.text)
         if (ctx.expression() != null) {
             val ret: Var<*> = MCFPPExprVisitor().visitExpression(ctx.expression())
@@ -279,8 +274,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-    override fun visitBlock(ctx: mcfppParser.BlockContext): Any? {
-        Project.ctx = ctx
+    override fun visitBlock(ctx: mcfppParser.BlockContext): Any? = withCompilationContext(ctx) {
         ctx.statement().forEach {
             if(Function.currFunction.hasReturnStatement){
                 return@forEach
@@ -309,9 +303,8 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
     private var breakIf = ConditionType.NORMAL
     @Suppress("UNCHECKED_CAST")
-    override fun visitIfStatement(ctx: mcfppParser.IfStatementContext): Any? {
+    override fun visitIfStatement(ctx: mcfppParser.IfStatementContext): Any? = withCompilationContext(ctx) {
         //进入if函数
-        Project.ctx = ctx
         breakIf = ConditionType.NORMAL
         Function.addComment("if start")
         //获取if语句以后的所有语句
@@ -357,7 +350,6 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                         Function.currFunction = f2
                     }
                     visitBlock(it.block())
-                    Project.ctx = ctx
                     //由于原来的调用if的函数已经被return命令返回，需要if_branch函数帮助清理它的栈
                     if(breakIf != ConditionType.ALWAYS_TRUE) {  //这里同理
                         Function.addCommand(Commands.stackOut())
@@ -509,7 +501,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         return true to f
     }
 
-    override fun visitWhileStatement(ctx: mcfppParser.WhileStatementContext): Any? {
+    override fun visitWhileStatement(ctx: mcfppParser.WhileStatementContext): Any? = withCompilationContext(ctx) {
         enterWhileStatement(ctx)
         super.visitWhileStatement(ctx)
         exitWhileStatement(ctx)
@@ -519,7 +511,6 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     @InsertCommand
     fun enterWhileStatement(ctx: mcfppParser.WhileStatementContext) {
         //进入if函数
-        Project.ctx = ctx
         Function.addComment("while start")
         //外while函数。这个函数中包含了while循环的逻辑
         val whileFunction = InternalFunction("_while_", Function.currFunction)
@@ -535,14 +526,13 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     
     @InsertCommand
     fun exitWhileStatement(ctx: mcfppParser.WhileStatementContext) {
-        Project.ctx = ctx
         Function.currFunction = Function.currFunction.parent[0]
         //调用完毕，将子函数的栈销毁
         Function.addComment("while end")
     }
 
 
-    override fun visitWhileBlock(ctx: mcfppParser.WhileBlockContext): Any? {
+    override fun visitWhileBlock(ctx: mcfppParser.WhileBlockContext): Any? = withCompilationContext(ctx) {
         enterWhileBlock(ctx)
         super.visitWhileBlock(ctx)
         exitWhileBlock(ctx)
@@ -556,7 +546,6 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     
     @InsertCommand
     fun enterWhileBlock(ctx: mcfppParser.WhileBlockContext) {
-        Project.ctx = ctx
         //入栈
         Function.addCommand(Commands.stackIn())
         Function.addComment("while start")
@@ -612,7 +601,6 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     
     @InsertCommand
     fun exitWhileBlock(ctx: mcfppParser.WhileBlockContext) {
-        Project.ctx = ctx
         Function.currFunction.disposeClassPtr()
         Function.addCommand("return 1")
         Function.currFunction = Function.currFunction.parent[0]
@@ -625,7 +613,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         }
     }
 
-    override fun visitDoWhileStatement(ctx: mcfppParser.DoWhileStatementContext): Any? {
+    override fun visitDoWhileStatement(ctx: mcfppParser.DoWhileStatementContext): Any? = withCompilationContext(ctx) {
         enterDoWhileStatement(ctx)
         super.visitDoWhileStatement(ctx)
         exitDoWhileStatement(ctx)
@@ -636,7 +624,6 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     @InsertCommand
     fun enterDoWhileStatement(ctx: mcfppParser.DoWhileStatementContext) {
         //进入do-while函数
-        Project.ctx = ctx
         Function.addComment("do-while start")
         doWhileFunction = InternalFunction("_dowhile_", Function.currFunction)
         //这里不能急着调用循环函数，因为循环体必定会执行一次。参见enterDoWhileBlock的代码
@@ -658,14 +645,13 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     
     @InsertCommand
     fun exitDoWhileStatement(ctx: mcfppParser.DoWhileStatementContext) {
-        Project.ctx = ctx
         Function.currFunction = Function.currFunction.parent[0]
         //调用完毕，将子函数的栈销毁
         Function.addComment("do-while end")
     }
 
 
-    override fun visitDoWhileBlock(ctx: mcfppParser.DoWhileBlockContext): Any? {
+    override fun visitDoWhileBlock(ctx: mcfppParser.DoWhileBlockContext): Any? = withCompilationContext(ctx) {
         enterDoWhileBlock(ctx)
         super.visitDoWhileBlock(ctx)
         exitDoWhileBlock(ctx)
@@ -679,7 +665,6 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     
     @InsertCommand
     fun enterDoWhileBlock(ctx: mcfppParser.DoWhileBlockContext) {
-        Project.ctx = ctx
         Function.addComment("do while start")
         //匿名函数的定义
         val f: Function = InternalFunction("_dowhile_", Function.currFunction)
@@ -743,7 +728,6 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     
     @InsertCommand
     fun exitDoWhileBlock(ctx: mcfppParser.DoWhileBlockContext) {
-        Project.ctx = ctx
         Function.currFunction.disposeClassPtr()
         //返回1
         Function.addCommand("return 1")
@@ -763,8 +747,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
      * 使用原版命令
      */
     @InsertCommand
-    override fun visitOrgCommand(ctx: mcfppParser.OrgCommandContext):Any? {
-        Project.ctx = ctx
+    override fun visitOrgCommand(ctx: mcfppParser.OrgCommandContext):Any? = withCompilationContext(ctx) {
         val command = Command()
         for (content in ctx.orgCommandContent()){
             if(content.OrgCommandText() != null){
@@ -784,8 +767,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
      */
 
     @InsertCommand
-    override fun visitStatement(ctx: mcfppParser.StatementContext): Any? {
-        Project.ctx = ctx
+    override fun visitStatement(ctx: mcfppParser.StatementContext): Any? = withCompilationContext(ctx) {
         if(Function.currFunction.isEnded){
             return null
         }
@@ -800,8 +782,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     private var temp: ScoreBool? = null
     
     @InsertCommand
-    override fun visitControlStatement(ctx: mcfppParser.ControlStatementContext):Any? {
-        Project.ctx = ctx
+    override fun visitControlStatement(ctx: mcfppParser.ControlStatementContext):Any? = withCompilationContext(ctx) {
         if (!inLoopStatement(ctx)) {
             LogProcessor.error("'continue' or 'break' can only be used in loop statements.")
             return null
@@ -820,7 +801,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     //进入execute语句
-    override fun visitExecuteStatement(ctx: mcfppParser.ExecuteStatementContext): Any? {
+    override fun visitExecuteStatement(ctx: mcfppParser.ExecuteStatementContext): Any? = withCompilationContext(ctx) {
         val exec = Execute()
         for (context in ctx.executeContext()){
             var arg: Execute.WriteOnlyVar? = null
@@ -850,14 +831,14 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     //region class
-    override fun visitClassDeclaration(ctx: mcfppParser.ClassDeclarationContext): Any? {
+    override fun visitClassDeclaration(ctx: mcfppParser.ClassDeclarationContext): Any? = withCompilationContext(ctx) {
         if(ctx.readOnlyParams() == null){
             super.visitClassDeclaration(ctx)
         }
         return null
     }
 
-    override fun visitClassBody(ctx: mcfppParser.ClassBodyContext): Any? {
+    override fun visitClassBody(ctx: mcfppParser.ClassBodyContext): Any? = withCompilationContext(ctx) {
         enterClassBody(ctx)
         super.visitClassBody(ctx)
         exitClassBody(ctx)
@@ -869,7 +850,6 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
      * @param ctx the parse tree
      */
     private fun enterClassBody(ctx: mcfppParser.ClassBodyContext) {
-        Project.ctx = ctx
         //获取类的对象
         val parent = ctx.parent
         if(parent is mcfppParser.ClassDeclarationContext){
@@ -890,12 +870,11 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
      */
 
     private fun exitClassBody(ctx: mcfppParser.ClassBodyContext) {
-        Project.ctx = ctx
         Class.currClass = null
         Function.currFunction = Function.nullFunction
     }
 
-    override fun visitClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext): Any? {
+    override fun visitClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext): Any? = withCompilationContext(ctx) {
         //是类的成员函数
         enterClassFunctionDeclaration(ctx)
         super.visitClassFunctionDeclaration(ctx)
@@ -904,7 +883,6 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     private fun enterClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext) {
-        Project.ctx = ctx
         //解析参数
         val types = FunctionParam.parseReadonlyAndNormalParamTypes(ctx.functionParams())
         //获取缓存中的对象
@@ -913,11 +891,10 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     private fun exitClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext) {
-        Project.ctx = ctx
         Function.currFunction = Class.currClass!!.classPreInit
     }
 
-    override fun visitClassConstructorDeclaration(ctx: mcfppParser.ClassConstructorDeclarationContext): Any? {
+    override fun visitClassConstructorDeclaration(ctx: mcfppParser.ClassConstructorDeclarationContext): Any? = withCompilationContext(ctx) {
         //是构造函数
         enterClassConstructorDeclaration(ctx)
         super.visitClassConstructorDeclaration(ctx)
@@ -926,33 +903,31 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     private fun enterClassConstructorDeclaration(ctx: mcfppParser.ClassConstructorDeclarationContext) {
-        Project.ctx = ctx
         val types = FunctionParam.parseNormalParamTypes(ctx.normalParams())
         val c = Class.currClass!!.getConstructorByString(types.typeToStringList())!!
         Function.currFunction = c
     }
 
     private fun exitClassConstructorDeclaration(ctx: mcfppParser.ClassConstructorDeclarationContext) {
-        Project.ctx = ctx
         Function.currFunction = Class.currClass!!.classPreInit
     }
 
     private lateinit var currProperty: Property
-    override fun visitClassFieldDeclaration(ctx: mcfppParser.ClassFieldDeclarationContext): Any? {
+    override fun visitClassFieldDeclaration(ctx: mcfppParser.ClassFieldDeclarationContext): Any? = withCompilationContext(ctx) {
         val id = ctx.Identifier().text
         currProperty = Class.currClass!!.field.getProperty(id)!!
         return super.visitClassFieldDeclaration(ctx)
     }
 
-    override fun visitGetter(ctx: mcfppParser.GetterContext): Any? {
+    override fun visitGetter(ctx: mcfppParser.GetterContext): Any? = withCompilationContext(ctx) {
         if(ctx.functionBody() != null){
             Function.currFunction = (currProperty.accessor as FunctionAccessor).function
         }
         return super.visitGetter(ctx)
     }
 
-    override fun visitSetter(ctx: mcfppParser.SetterContext?): Any? {
-        if(ctx!!.functionBody() != null){
+    override fun visitSetter(ctx: mcfppParser.SetterContext): Any? = withCompilationContext(ctx) {
+        if(ctx.functionBody() != null){
             Function.currFunction = (currProperty.mutator as FunctionMutator).function
         }
         return super.visitSetter(ctx)
@@ -966,12 +941,12 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
      * @param ctx the parse tree
      */
 
-    override fun visitTemplateBody(ctx: mcfppParser.TemplateBodyContext): Any? {
+    override fun visitTemplateBody(ctx: mcfppParser.TemplateBodyContext): Any? = withCompilationContext(ctx) {
         //什么都不做哦
         return null
     }
 
-    override fun visitObjectTemplateDeclaration(ctx: mcfppParser.ObjectTemplateDeclarationContext?): Any? {
+    override fun visitObjectTemplateDeclaration(ctx: mcfppParser.ObjectTemplateDeclarationContext): Any? = withCompilationContext(ctx) {
         //什么都不做哦
         return null
     }

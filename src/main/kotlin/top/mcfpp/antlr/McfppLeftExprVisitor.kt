@@ -1,6 +1,6 @@
 package top.mcfpp.antlr
 
-import top.mcfpp.Project
+import top.mcfpp.Project.withCompilationContext
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.nbt.*
@@ -36,8 +36,7 @@ import java.util.*
 open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
     private var currSelector : Var<*>? = null
 
-    override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var<*> {
-        Project.ctx = ctx
+    override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var<*> = withCompilationContext(ctx)  {
         currSelector = visitJvmAccessExpression(ctx.jvmAccessExpression())
         if(currSelector is UnknownVar){
             val typeStr = ctx.jvmAccessExpression().text
@@ -54,7 +53,7 @@ open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
         return currSelector as Var<*>
     }
 
-    override fun visitJvmAccessExpression(ctx: mcfppParser.JvmAccessExpressionContext): Var<*> {
+    override fun visitJvmAccessExpression(ctx: mcfppParser.JvmAccessExpressionContext): Var<*> = withCompilationContext(ctx) {
         val re = visitPropertyOperator(ctx.propertyOperator())
         return if(ctx.Identifier() != null){
             re.getJVM(ctx.Identifier().text)
@@ -63,7 +62,7 @@ open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
         }
     }
 
-    override fun visitPropertyOperator(ctx: mcfppParser.PropertyOperatorContext): Var<*> {
+    override fun visitPropertyOperator(ctx: mcfppParser.PropertyOperatorContext): Var<*> = withCompilationContext(ctx) {
         val re = visitPrimary(ctx.primary())
         for (operator in ctx.propertyOperatorExpression()){
             val identifier = operator.Identifier().text
@@ -75,14 +74,13 @@ open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
         return re
     }
 
-    override fun visitSelector(ctx: mcfppParser.SelectorContext?): Var<*> {
+    override fun visitSelector(ctx: mcfppParser.SelectorContext): Var<*> = withCompilationContext(ctx) {
         //进入visitVar，currSelector作为成员选择的上下文
         currSelector = visitVar(ctx!!.`var`())
         return currSelector as Var<*>
     }
 
-    override fun visitPrimary(ctx: mcfppParser.PrimaryContext): Var<*> {
-        Project.ctx = ctx
+    override fun visitPrimary(ctx: mcfppParser.PrimaryContext): Var<*> = withCompilationContext(ctx) {
         if (ctx.`var`() != null) {
             //变量
             return visitVar(ctx.`var`())
@@ -130,8 +128,7 @@ open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
         }
     }
 
-    override fun visitVar(ctx: mcfppParser.VarContext): Var<*> {
-        Project.ctx = ctx
+    override fun visitVar(ctx: mcfppParser.VarContext): Var<*> = withCompilationContext(ctx) {
         return if (ctx.varWithSuffix() != null) {
             visitVarWithSuffix(ctx.varWithSuffix())
         } else if (ctx.bucketExpression() != null) {
@@ -143,11 +140,11 @@ open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
         }
     }
 
-    override fun visitBucketExpression(ctx: mcfppParser.BucketExpressionContext): Var<*> {
+    override fun visitBucketExpression(ctx: mcfppParser.BucketExpressionContext): Var<*> = withCompilationContext(ctx) {
         return MCFPPExprVisitor().visit(ctx.expression())
     }
 
-    override fun visitFunctionCall(ctx: mcfppParser.FunctionCallContext): Var<*> {
+    override fun visitFunctionCall(ctx: mcfppParser.FunctionCallContext): Var<*> = withCompilationContext(ctx) {
         //函数的调用
         Function.addComment(ctx.text)
         //参数获取
@@ -228,7 +225,7 @@ open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
         return func.returnVar
     }
 
-    override fun visitVarWithSuffix(ctx: mcfppParser.VarWithSuffixContext): Var<*> {
+    override fun visitVarWithSuffix(ctx: mcfppParser.VarWithSuffixContext): Var<*> = withCompilationContext(ctx) {
         //变量
         //没有数组选取
         val qwq: String = ctx.Identifier().text
@@ -301,7 +298,7 @@ open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
     }
 
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE", "UNUSED_VALUE")
-    override fun visitValue(ctx: mcfppParser.ValueContext): Var<*> {
+    override fun visitValue(ctx: mcfppParser.ValueContext): Var<*> = withCompilationContext(ctx) {
         //常量
         if (ctx.LineString() != null) {
             val r: String = ctx.LineString().text
@@ -352,7 +349,7 @@ open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
         throw IllegalArgumentException("value_" + ctx.text)
     }
 
-    override fun visitCoordinateDimension(ctx: mcfppParser.CoordinateDimensionContext): Var<*> {
+    override fun visitCoordinateDimension(ctx: mcfppParser.CoordinateDimensionContext): Var<*> = withCompilationContext(ctx) {
         if(ctx.nbtInt() != null){
             return PosDimension("", ctx.nbtInt().text.toInt())
         }else if(ctx.nbtFloat() != null) {
@@ -380,7 +377,7 @@ open class McfppLeftExprVisitor : mcfppParserBaseVisitor<Var<*>>(){
         }
     }
 
-    override fun visitNbtValue(ctx: mcfppParser.NbtValueContext): Var<*> {
+    override fun visitNbtValue(ctx: mcfppParser.NbtValueContext): Var<*> = withCompilationContext(ctx) {
         if(ctx.LineString() != null) {
             return MCStringConcrete(StringTag(ctx.LineString().text))
         }else if(ctx.nbtBool() != null){
