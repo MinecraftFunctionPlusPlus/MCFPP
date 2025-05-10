@@ -116,7 +116,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 `var`.nbtPath = NBTPath.global.memberIndex(`var`.identifier)
                 //变量初始化
                 if (c.value() != null) {
-                    val init: Var<*> = MCFPPExprVisitor(if(type is MCFPPGenericClassType) type else null, if(type is MCFPPEnumType) type else null).visitValue(c.value())
+                    val init: Var<*> = MCFPPExprVisitor(if(type is MCFPPEnumType) type else null).visitValue(c.value())
                     `var` = `var`.assignedBy(init)
                 }
                 when(fieldModifier){

@@ -8,7 +8,6 @@ import top.mcfpp.core.lang.nbt.*
 import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.core.lang.obj.ObjectVar
 import top.mcfpp.lib.EntitySelector
-import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.field.GlobalField
@@ -40,15 +39,11 @@ import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 
-/**
- * 获取表达式结果用的visitor。解析并计算一个形如a+b*c的表达式。
- */
-class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassType? = null, private var enumType: MCFPPEnumType? = null): mcfppParserBaseVisitor<Var<*>>() {
-
-    private val tempVarCommandCache = HashMap<Var<*>, String>()
-
+class MCFPPExprVisitor(
+    private var defaultGenericClassType: MCFPPGenericClassType? = null,
+    private var enumType: MCFPPEnumType? = null
+): mcfppParserBaseVisitor<Var<*>>() {
     var processVarCache : ArrayList<Var<*>> = ArrayList()
-    fun clearCache(){ processVarCache.clear() }
 
     private var currSelector : Var<*>? = null
 
@@ -400,7 +395,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         }
     }
 
-    override fun visitBucketExpression(ctx: mcfppParser.BucketExpressionContext): Var<*> = withCompilationContext(ctx)  {
+    override fun visitBucketExpression(ctx: mcfppParser.BucketExpressionContext): Var<*> = withCompilationContext(ctx) {
         return MCFPPExprVisitor().visit(ctx.expression())
     }
 
@@ -586,7 +581,7 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
     }
 
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE", "UNUSED_VALUE")
-    override fun visitValue(ctx: mcfppParser.ValueContext): Var<*> = withCompilationContext(ctx)  {
+    override fun visitValue(ctx: mcfppParser.ValueContext): Var<*> = withCompilationContext(ctx) {
         //常量
         if (ctx.LineString() != null) {
             val r: String = ctx.LineString().text
@@ -667,9 +662,6 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
         }
     }
 
-    private lateinit var path : NBTPath
-
-
     override fun visitNbtValue(ctx: mcfppParser.NbtValueContext): Var<*> = withCompilationContext(ctx) {
         if(ctx.LineString() != null) {
             return MCStringConcrete(StringTag(ctx.LineString().text))
@@ -722,5 +714,4 @@ class MCFPPExprVisitor(private var defaultGenericClassType : MCFPPGenericClassTy
             throw IllegalArgumentException("nbt:" + ctx.text)
         }
     }
-
 }
