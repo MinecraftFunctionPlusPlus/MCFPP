@@ -3,13 +3,10 @@ package top.mcfpp.type
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.Member
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.Interface
 import top.mcfpp.model.compound.UnsolvedInterface
-import top.mcfpp.model.function.ExtensionFunction
-import top.mcfpp.model.function.Function
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.collection.IntArrayTag
 import top.mcfpp.util.LogProcessor
@@ -38,16 +35,6 @@ open class MCFPPInterfaceType(
     override fun tryResolve() {
         if(i is UnsolvedInterface){
             i = (i as UnsolvedInterface).resolve()
-        }
-    }
-
-    override fun getAccess(function: Function): Member.AccessModifier {
-        return if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.CLASS){
-            function.parentClass()!!.getAccess(i)
-        }else if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.TEMPLATE){
-            function.parentTemplate()!!.getAccess(i)
-        }else{
-            Member.AccessModifier.PUBLIC
         }
     }
 

@@ -184,7 +184,7 @@ public class BossBarData {
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = "Player", caller = "BossBar", returnType = "CommandReturn")
+    @MNIFunction(normalParams = "Player!", caller = "BossBar", returnType = "CommandReturn")
     public static void setVisiblePlayers(PlayerVar players, DataTemplateObject bossbar, ValueWrapper<CommandReturn> returnValue) {
         var id = bossbar.getMemberVarWithT("id", MCString.class);
         Command command = Command.Companion.buildAll("bossbar set", id, "players", players);

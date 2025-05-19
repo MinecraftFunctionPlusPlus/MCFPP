@@ -191,7 +191,7 @@ object GlobalField : FieldContainer, IField {
         if(namespace == null){
             var cls: Class?
             //命名空间为空，从全局寻找
-            cls = MCFPPFile.currFile?.field?.getClass(identifier, readOnlyParams)
+            cls = MCFPPFile.currFile?.field?.getAccessibleClass(identifier, readOnlyParams)
             if(cls != null) return cls
             for (nsp in stdNamespaces.values){
                 cls = nsp.field.getClass(identifier, readOnlyParams)
@@ -223,7 +223,7 @@ object GlobalField : FieldContainer, IField {
         if(namespace == null){
             var cls: Class?
             //命名空间为空，从全局寻找
-            cls = MCFPPFile.currFile?.field?.getClass(identifier)
+            cls = MCFPPFile.currFile?.field?.getAccessibleClass(identifier)
             if(cls != null) return cls
             for (nsp in stdNamespaces.values){
                 cls = nsp.field.getClass(identifier)
@@ -255,7 +255,7 @@ object GlobalField : FieldContainer, IField {
         if(namespace == null){
             var itf: Interface?
             //命名空间为空，从全局寻找
-            itf = MCFPPFile.currFile?.field?.getInterface(identifier)
+            itf = MCFPPFile.currFile?.field?.getAccessibleInterface(identifier)
             if(itf != null) return itf
             for (nsp in stdNamespaces.values){
                 itf = nsp.field.getInterface(identifier)
@@ -287,7 +287,7 @@ object GlobalField : FieldContainer, IField {
         if(namespace == null){
             var template: DataTemplate?
             //命名空间为空，从全局寻找
-            template = MCFPPFile.currFile?.field?.getTemplate(identifier)
+            template = MCFPPFile.currFile?.field?.getAccessibleTemplate(identifier)
             if(template != null) return template
             for (nsp in stdNamespaces.values){
                 template = nsp.field.getTemplate(identifier)
@@ -332,7 +332,7 @@ object GlobalField : FieldContainer, IField {
         if(namespace == null){
             var enum: Enum?
             //命名空间为空，从全局寻找
-            enum = MCFPPFile.currFile?.field?.getEnum(identifier)
+            enum = MCFPPFile.currFile?.field?.getAccessibleEnum(identifier)
             if(enum != null) return enum
             for (nsp in stdNamespaces.values){
                 enum = nsp.field.getEnum(identifier)
@@ -364,7 +364,7 @@ object GlobalField : FieldContainer, IField {
         if(namespace == null){
             var obj: CompoundData?
             //命名空间为空，从全局寻找
-            obj = MCFPPFile.currFile?.field?.getObject(identifier)
+            obj = MCFPPFile.currFile?.field?.getAccessibleObject(identifier)
             if(obj != null) return obj
             for (nsp in stdNamespaces.values){
                 obj = nsp.field.getObject(identifier)
@@ -388,7 +388,7 @@ object GlobalField : FieldContainer, IField {
         if(namespace == null){
             var annotation: java.lang.Class<out Annotation>?
             //命名空间为空，从全局寻找
-            annotation = MCFPPFile.currFile?.field?.getAnnotation(identifier)
+            annotation = MCFPPFile.currFile?.field?.getAccessibleAnnotation(identifier)
             if(annotation != null) return annotation
             for (nsp in stdNamespaces.values){
                 annotation = nsp.field.getAnnotation(identifier)

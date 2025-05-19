@@ -37,6 +37,7 @@ options {
 compilationUnit
     :   namespaceDeclaration?
         importDeclaration*
+        typealiasDeclaration*
         //TODO topStatement
         typeDeclaration*
         EOF
@@ -57,6 +58,10 @@ importDeclaration
 
 importType
     :   Identifier (DOT Identifier)* ':' (Identifier|'*')
+    ;
+
+typealiasDeclaration
+    :   TYPEALIAS Identifier AS type ';'
     ;
 
 //类或函数声明

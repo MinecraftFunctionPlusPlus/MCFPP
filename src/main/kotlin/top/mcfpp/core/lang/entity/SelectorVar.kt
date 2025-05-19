@@ -11,9 +11,9 @@ import top.mcfpp.lib.NBTPath
 import top.mcfpp.mni.SelectorData
 import top.mcfpp.mni.annotation.MCFPPEntity
 import top.mcfpp.model.CanSelectMember
+import top.mcfpp.model.Member
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
-import top.mcfpp.model.Member
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.property.AnonymousNativeMutator
@@ -41,18 +41,18 @@ import top.mcfpp.util.TextTranslator.translate
 open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
 
     @Suppress("SuspiciousVarProperty")
-    override var type: MCFPPType = MCFPPEntityType.Selector()
+    override var type: MCFPPType = MCFPPEntityType()
         get() {
             if(value.getLimit() == Int.MAX_VALUE && value.getType().isEmpty()){
-                return MCFPPEntityType.Selector()
+                return MCFPPEntityType()
             }
             if(value.getLimit() != Int.MAX_VALUE && value.getType().isEmpty()){
-                return MCFPPEntityType.Selector(value.getLimit())
+                return MCFPPEntityType(value.getLimit())
             }
             if(value.getLimit() == Int.MAX_VALUE){
-                return MCFPPEntityType.Selector(null, value.getType().map { if(it.value) "!${it.key}" else it.key.toString() })
+                return MCFPPEntityType(null, value.getType().map { if(it.value) "!${it.key}" else it.key.toString() })
             }
-            return MCFPPEntityType.Selector(value.getLimit(), value.getType().map { if(it.value) "!${it.key}" else it.key.toString() })
+            return MCFPPEntityType(value.getLimit(), value.getType().map { if(it.value) "!${it.key}" else it.key.toString() })
         }
 
     /**
@@ -79,8 +79,8 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
         val qwq = super.explicitCast(type)
         if(!qwq.isError) return qwq
         return when(type){
-            is MCFPPEntityType.Selector -> {
-                if((this.type as MCFPPEntityType.Selector).canCastTo(type)){
+            is MCFPPEntityType -> {
+                if((this.type as MCFPPEntityType).canCastTo(type)){
                     this.type.build("").setAs(this)
                 }else qwq
             }
@@ -93,8 +93,8 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
         val qwq = super.implicitCast(type)
         if(!qwq.isError) return qwq
         return when(type){
-            is MCFPPEntityType.Selector -> {
-                if((this.type as MCFPPEntityType.Selector).canCastTo(type)){
+            is MCFPPEntityType -> {
+                if((this.type as MCFPPEntityType).canCastTo(type)){
                     this.type.build("").setAs(this)
                 }else qwq
             }

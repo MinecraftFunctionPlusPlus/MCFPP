@@ -3,7 +3,6 @@ package top.mcfpp.command
 import top.mcfpp.Project
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.ScoreBool
-import top.mcfpp.core.lang.entity.EntityVar
 import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.nbt.EntityUUIDVar
 import top.mcfpp.core.lang.nbt.EntityUUIDVarConcrete

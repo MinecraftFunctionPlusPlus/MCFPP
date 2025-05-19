@@ -12,18 +12,13 @@ import top.mcfpp.antlr.mcfppParser.TypeWithoutExclContext
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.Void
-import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.Member
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.UnionDataTemplate
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.field.IFieldWithType
-import top.mcfpp.model.function.ExtensionFunction
-import top.mcfpp.model.function.Function
-import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
@@ -42,11 +37,11 @@ import kotlin.reflect.KClass
 /**
  * 所有类型的接口
  */
-open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()) : CanSelectMember {
+open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()) {
 
     open val objectData: CompoundData = CompoundData("unknown", "mcfpp")
 
-    open val instanceData: CompoundData get() = CompoundData("unknown", "mcfpp")
+    open val instanceData: CompoundData get() = CompoundData(typeName, "mcfpp")
 
     /**
      * 类型名
@@ -77,52 +72,6 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
 
     override fun toString(): String {
         return typeName
-    }
-
-    /**
-     * 获取这个类中的一个静态成员字段。
-     *
-     * @param key 字段的标识符
-     * @param accessModifier 访问者的访问权限
-     * @return 第一个值是对象中获取到的字段，若不存在此字段则为null；第二个值是是否有足够的访问权限访问此字段。如果第一个值是null，那么第二个值总是为true
-     */
-    @Override
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        val member = objectData.getVar(key,true)
-        return if(member == null){
-            Pair(null, true)
-        }else{
-            Pair(member, accessModifier >= member.accessModifier)
-        }
-    }
-
-    /**
-     * 获取这个类中的一个静态成员方法。
-     *
-     * @param key 方法的标识符
-     * @param normalArgs 方法的参数
-     * @param accessModifier 访问者的访问权限
-     * @return 第一个值是对象中获取到的方法，若不存在此方法则为null；第二个值是是否有足够的访问权限访问此方法。如果第一个值是null，那么第二个值总是为true
-     */
-    @Override
-    override fun getMemberFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>, accessModifier: Member.AccessModifier): Pair<Function, Boolean> {
-        //获取函数
-        val member = objectData.field.getFunction(key, readOnlyArgs, normalArgs)
-        return if(member is UnknownFunction){
-            Pair(UnknownFunction(key), true)
-        }else{
-            Pair(member, accessModifier >= member.accessModifier)
-        }
-    }
-
-    override fun getAccess(function: Function): Member.AccessModifier {
-        return if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.CLASS){
-            function.parentClass()!!.getAccess(objectData)
-        }else if(function !is ExtensionFunction && function.ownerType == Function.Companion.OwnerType.TEMPLATE){
-            function.parentTemplate()!!.getAccess(objectData)
-        }else{
-            Member.AccessModifier.PUBLIC
-        }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -231,8 +180,6 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
         }
     }
 
-    override fun replaceMemberVar(v: Var<*>) {}
-
     companion object{
 
         val data = CompoundData("Type","mcfpp")
@@ -261,8 +208,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             MCFPPConcreteType.Type,
             MCFPPConcreteType.JavaVar,
 
-            MCFPPEntityType.EntityBase,
-            MCFPPEntityType.Player,
+            MCFPPEntityType.NormalSelector,
 
             MCFPPPrivateType.MCFPPObjectVarType,
             MCFPPPrivateType.CommandReturn
@@ -397,7 +343,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                 } else{
                     ctx.LineString().map { it.text }
                 }
-                return MCFPPEntityType.Selector(limit, types)
+                return MCFPPEntityType(limit, types)
             }
             //自定义类型
             if(ctx.className() != null){

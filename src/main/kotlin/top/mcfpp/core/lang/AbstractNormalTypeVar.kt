@@ -1,0 +1,75 @@
+package top.mcfpp.core.lang
+
+import top.mcfpp.model.Member
+import top.mcfpp.model.function.Function
+import top.mcfpp.type.MCFPPType
+import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TextTranslator
+import top.mcfpp.util.TextTranslator.translate
+
+class AbstractNormalTypeVar: Var<AbstractNormalTypeVar>, MCFPPValue<Var<*>?> {
+
+    override var value: Var<*>? = null
+
+    constructor(identifier: String, type: MCFPPType): super(identifier){
+        this.type = type
+    }
+
+    constructor(type: MCFPPType): super(){
+        this.type = type
+    }
+
+    override fun doAssignedBy(b: Var<*>): AbstractNormalTypeVar {
+        if (b.type.isSubOf(type)){
+            value = b.type.build(identifier).assignedBy(b)
+        }else{
+            LogProcessor.error(TextTranslator.CAST_ERROR.translate(b.type.typeName, type.typeName))
+        }
+        return this
+    }
+
+    override fun canAssignedBy(b: Var<*>): Boolean {
+        return b.type.isSubOf(type)
+    }
+
+    override fun clone(): AbstractNormalTypeVar {
+        return AbstractNormalTypeVar(identifier, type).apply {
+            this.value = value?.clone()
+        }
+    }
+
+    override fun getTempVar(): AbstractNormalTypeVar {
+        return AbstractNormalTypeVar(type).apply {
+            this.value = value?.getTempVar()
+            this.value?.identifier = identifier
+            isTemp = true
+        }
+    }
+
+    override fun storeToStack() {
+        value?.storeToStack()
+    }
+
+    override fun getFromStack() {
+        value?.getFromStack()
+    }
+
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
+        return type.instanceData.getVar(key)
+    }
+
+    override fun getMemberFunction(
+        key: String,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
+        accessModifier: Member.AccessModifier,
+    ): Pair<Function, Boolean> {
+        return type.getMemberFunction(key, readOnlyArgs, normalArgs, accessModifier)
+    }
+
+    override fun toDynamic(replace: Boolean): Var<*> {
+        value = null
+        return this
+    }
+
+}

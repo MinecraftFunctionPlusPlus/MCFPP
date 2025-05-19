@@ -17,6 +17,7 @@ import top.mcfpp.model.generic.ImplementedGenericClass
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.primitive.IntTag
 import top.mcfpp.type.MCFPPPrivateType
+import top.mcfpp.type.MCFPPTypeAliasType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper.splitNamespaceID
 
@@ -61,6 +62,12 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         //获取命名空间和导入类型
         val nsp = importType(ctx.importType())
         MCFPPFile.currFile!!.unsolvedImports[nsp.first!!] = nsp.second
+    }
+
+    override fun visitTypealiasDeclaration(ctx: mcfppParser.TypealiasDeclarationContext) {
+        //类型别名引用
+        val id = ctx.Identifier().text
+        Namespace.currNamespaceField.putType(id, MCFPPTypeAliasType(ctx.type()))
     }
 
     fun importType(ctx: mcfppParser.ImportTypeContext): Pair<String?, String>  {
@@ -114,7 +121,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         } else {
             Class(id, Project.currNamespace)
         }
-        //如果没有声明过这个类
+        //如果声明过这个类
         if(nsp.field.hasDeclaredType(cls)){
             LogProcessor.error("Type has been defined: $cls in namespace ${Project.currNamespace}")
             return

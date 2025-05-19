@@ -7,7 +7,6 @@ import org.antlr.v4.runtime.tree.ParseTree
 import top.mcfpp.Project
 import top.mcfpp.antlr.*
 import top.mcfpp.model.Namespace
-import top.mcfpp.model.compound.Class
 import top.mcfpp.model.field.FileField
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
@@ -115,20 +114,8 @@ class MCFPPFile : File {
                 }
             }
         }
-        //类是否有空继承，以及实例化每个泛型类的类型
-        field.namespaceField.forEachClass { c ->
-            for (p in c.parent){
-                if(p is Class.Companion.UndefinedClassOrInterface){
-                    val r = p.getDefinedClassOrInterface()
-                    if(r == null){
-                        LogProcessor.error("Undefined class or interface: ${p.namespaceID}")
-                        continue
-                    }
-                    c.unExtends(p)
-                    c.extends(r)
-                }
-            }
-        }
+        //检查索引
+        field.checkIndex()
         //编译
         MCFPPFieldVisitor().visit(tree())
         Project.currNamespace = Project.config.rootNamespace

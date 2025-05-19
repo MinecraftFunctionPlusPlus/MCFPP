@@ -108,6 +108,7 @@ DATA:'data';
 FUNCTION:'func';
 ENUM:'enum';
 OPERATOR:'operator';
+TYPEALIAS: 'typealias';
 
 CONSTRUCTOR:'constructor';
 

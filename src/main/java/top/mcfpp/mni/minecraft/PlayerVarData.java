@@ -193,7 +193,7 @@ public class PlayerVarData {
     //endregion
 
     //region tell
-    @MNIFunction(normalParams = {"Player" , "string"}, caller = "Player", returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Player!" , "string"}, caller = "Player", returnType = "CommandReturn")
     public static void tell(PlayerVar player, MCString message, ValueWrapper<CommandReturn> returnValue){
         Command command = Command.Companion.buildAll("tell", player, message);
         Function.addCommands(Commands.runAsEntity(player.getEntityVar(), command));
@@ -201,7 +201,7 @@ public class PlayerVarData {
     //endregion
 
     //region w
-    @MNIFunction(normalParams = {"Player" , "string"}, caller = "Player", returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Player!" , "string"}, caller = "Player", returnType = "CommandReturn")
     public static void w(PlayerVar player, MCString message, ValueWrapper<CommandReturn> returnValue){
         Command command = Command.Companion.buildAll("w", player, message);
         Function.addCommands(Commands.runAsEntity(player.getEntityVar(), command));

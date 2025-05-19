@@ -17,6 +17,7 @@ import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
@@ -502,6 +503,25 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     abstract fun storeToStack()
 
     abstract fun getFromStack()
+
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
+        return null to true
+    }
+
+    override fun getMemberFunction(
+        key: String,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
+        accessModifier: Member.AccessModifier
+    ): Pair<Function, Boolean> {
+        //获取函数
+        val member = type.instanceData.getFunction(key, readOnlyArgs, normalArgs)
+        return if(member is UnknownFunction){
+            Pair(UnknownFunction(key), true)
+        }else{
+            Pair(member, accessModifier >= member.accessModifier)
+        }
+    }
 
     override fun getAccess(function: Function): Member.AccessModifier {
         return Member.AccessModifier.PUBLIC

@@ -39,6 +39,7 @@ object MCFPPStringTest {
         Project.config.rootNamespace = "default"
         //输出目录
         Project.config.targetPath = targetPath?.let { Path(it) }
+        CompileSettings.isDebug = true
         Project.init() //初始化
         Project.readProject() //读取引用的库的索引
         //解析文件
@@ -48,7 +49,7 @@ object MCFPPStringTest {
         val context = parser.compilationUnit()
         MCFPPFile.currFile = MCFPPFile()
         LogProcessor.debug("Generate Type Index...")
-        Project.currNamespace = MCFPPFile.currFile!!.namespace
+        Project.currNamespace = MCFPPFile.currFile!!.namespace.identifier
         MCFPPTypeVisitor().visitCompilationUnit(context)
         MCFPPFile.currFile!!.field.namespaceField = GlobalField.localNamespaces[Project.currNamespace]!!.field
         LogProcessor.debug("Generate Function Index...")
@@ -59,7 +60,7 @@ object MCFPPStringTest {
         visitor.visit(context)
         Project.optimization() //优化
         if(targetPath != null) Project.genIndex() //生成索引
-        Project.ctx = null
+        Project.ctx.clear()
         if(Project.config.targetPath != null){
             try{
                 DatapackCreator.createDatapack(Project.config.targetPath!!.absolutePathString()) //生成数据包
@@ -67,7 +68,7 @@ object MCFPPStringTest {
                 LogProcessor.error("Cannot create datapack in path: ${Project.config.targetPath}")
             }
         }
-        Project.ctx = null
+        Project.ctx.clear()
         GlobalField.printAll()
     }
 
@@ -102,8 +103,8 @@ object MCFPPStringTest {
             if(!CompileSettings.ignoreStdLib){
                 GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]!!
             }
-            var charStream: CharStream = CharStreams.fromString(code)
-            var tokens = CommonTokenStream(mcfppLexer(charStream))
+            val charStream: CharStream = CharStreams.fromString(code)
+            val tokens = CommonTokenStream(mcfppLexer(charStream))
             val parser = mcfppParser(tokens)
             val context = parser.compilationUnit()
             MCFPPFieldVisitor().visit(context)
@@ -116,7 +117,7 @@ object MCFPPStringTest {
             visitor.visit(context)
             Project.optimization() //优化
             Project.genIndex() //生成索引
-            Project.ctx = null
+            Project.ctx.clear()
             GlobalField.printAll()
         } catch (e: Exception) {
             LogProcessor.error("Error while reading project from file \"$path\"")

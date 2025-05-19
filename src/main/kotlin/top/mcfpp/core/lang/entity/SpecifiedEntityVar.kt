@@ -3,14 +3,14 @@ package top.mcfpp.core.lang.entity
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
-import top.mcfpp.model.compound.CompoundData
+import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.model.Member
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.type.MCFPPEntityType

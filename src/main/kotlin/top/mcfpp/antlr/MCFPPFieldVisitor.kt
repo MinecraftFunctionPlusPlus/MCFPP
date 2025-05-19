@@ -25,7 +25,10 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.generic.GenericExtensionFunction
 import top.mcfpp.model.generic.GenericFunction
 import top.mcfpp.model.property.*
-import top.mcfpp.type.*
+import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPEnumType
+import top.mcfpp.type.MCFPPPrivateType
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper.splitNamespaceID
 import top.mcfpp.util.TempPool
@@ -116,7 +119,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 `var`.nbtPath = NBTPath.global.memberIndex(`var`.identifier)
                 //变量初始化
                 if (c.value() != null) {
-                    val init: Var<*> = MCFPPExprVisitor(if(type is MCFPPEnumType) type else null).visitValue(c.value())
+                    val init: Var<*> = MCFPPExprVisitor(enumType = if(type is MCFPPEnumType) type else null).visitValue(c.value())
                     `var` = `var`.assignedBy(init)
                 }
                 when(fieldModifier){
