@@ -49,8 +49,11 @@ abstract class MCFPPPrivateType(parentType: ArrayList<MCFPPType> = arrayListOf()
             return top.mcfpp.core.lang.CommandReturn.empty
         }
 
-        override val objectData: CompoundData
-            get() = top.mcfpp.core.lang.CommandReturn.data
+        override val instanceData by lazy {
+            CompoundData("CommandReturn","mcfpp").apply {
+                extends(MCFPPBaseType.Any.instanceData)
+            }
+        }
 
         override val typeName: String
             get() = "CommandReturn"

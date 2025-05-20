@@ -41,7 +41,7 @@ fun compile(config: ProjectConfig){
     val start: Long = System.currentTimeMillis()
 
     Project.config = config
-    Project.compileStage = 0
+    Project.compileStage = Project.CompileStage.PRE_INIT
     Project.stageProcessor[0].forEach { it() }
     Project.init() //初始化
     if(!Project.checkConfig()) return   //检查配置文件
@@ -54,13 +54,13 @@ fun compile(config: ProjectConfig){
     Project.genIndex() //生成索引
     Project.ctx.clear()
     if(!Project.config.noDatapack){
-        Project.compileStage++
+        Project.compileStage = Project.CompileStage.GEN_DATAPACK
         try{
             DatapackCreator.createDatapack(Project.config.targetPath!!.absolutePathString()) //生成数据包
         }catch (e: Exception){
             LogProcessor.error("Cannot create datapack in path: ${Project.config.targetPath}", e)
         }
-        Project.stageProcessor[Project.compileStage].forEach { it() }
+        Project.stageProcessor[Project.compileStage.ordinal].forEach { it() }
     }
 
     LogProcessor.info("Finished in " + (System.currentTimeMillis() - start) + "ms")

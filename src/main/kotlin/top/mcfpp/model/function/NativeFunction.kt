@@ -265,7 +265,7 @@ class NativeFunction : Function, Native {
             val clazz = Project.classLoader.loadClass(className)
             val paramTypes: Array<Class<*>?> = arrayOfNulls(paramTypeNames.size)
             for (i in paramTypeNames.indices) {
-                paramTypes[i] = primitiveTypes.getOrDefault(paramTypeNames[i], Class.forName(paramTypeNames[i]))
+                paramTypes[i] = primitiveTypes[paramTypeNames[i]]?: Class.forName(paramTypeNames[i])
             }
 
             return clazz.getMethod(methodName, *paramTypes)

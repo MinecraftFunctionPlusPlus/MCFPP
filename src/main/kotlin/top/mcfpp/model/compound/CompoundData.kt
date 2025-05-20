@@ -30,7 +30,7 @@ import java.lang.reflect.Modifier
 open class CompoundData : FieldContainer, Serializable, WithDocument {
 
     /**
-     * 父结构
+     * 父结构C
      */
     var parent = ArrayList<CompoundData>()
 
@@ -255,8 +255,12 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
         val nf = NativeFunction(method.name, javaMethod = method)
         //解析MNIMethod注解成员
         val paramType = MCFPPType.parseFromString(mniBinaryOperator.paramType, nf.field)?: run {
-            LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniBinaryOperator.paramType) + " in method ${method.name} in class ${method.declaringClass.name}")
-            MCFPPBaseType.Any
+            if(mniBinaryOperator.paramType == "null"){
+                MCFPPPrivateType.Null
+            }else{
+                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniBinaryOperator.paramType) + " in method ${method.name} in class ${method.declaringClass.name}")
+                MCFPPBaseType.Any
+            }
         }
         nf.appendNormalParam(paramType, "b")
         nf.returnType = MCFPPType.parseFromString(mniBinaryOperator.returnType, nf.field)?: run {

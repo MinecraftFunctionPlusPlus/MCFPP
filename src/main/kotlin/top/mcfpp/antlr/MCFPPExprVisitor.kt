@@ -301,12 +301,13 @@ class MCFPPExprVisitor(
         }
     }
 
+    //字段操作器
     override fun visitPropertyOperator(ctx: mcfppParser.PropertyOperatorContext): Var<*> = withCompilationContext(ctx) {
         val re = visitPrimary(ctx.primary())
         for (operator in ctx.propertyOperatorExpression()){
-            val identifier = operator.Identifier().text
+            val identifier = operator.Identifier().text //要操作的字段名
             val value = visitExpression(operator.expression())
-            val member = re.getMemberVar(identifier, re.getAccess(Function.currFunction))
+            val member = re.getMemberVar(identifier, re.getAccess(Function.currFunction))   //获取字段
             val field = Var.checkMember(member, identifier)
             field.replacedBy(field.assignedBy(value))
         }

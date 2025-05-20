@@ -2,7 +2,6 @@ package top.mcfpp.antlr
 
 import top.mcfpp.Project
 import top.mcfpp.Project.withCompilationContext
-import top.mcfpp.core.lang.MCAny
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
 import top.mcfpp.io.MCFPPFile
@@ -16,6 +15,7 @@ import top.mcfpp.model.generic.GenericObjectClass
 import top.mcfpp.model.generic.ImplementedGenericClass
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.primitive.IntTag
+import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPTypeAliasType
 import top.mcfpp.util.LogProcessor
@@ -234,7 +234,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             }
         }else{
             //继承Any类
-            cls.extends(MCAny.data)
+            cls.extends(MCFPPBaseType.Any.instanceData)
         }
         cls.isStaticClass = ctx.STATIC() != null
         cls.isAbstract = ctx.ABSTRACT() != null

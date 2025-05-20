@@ -1,6 +1,5 @@
 package top.mcfpp.core.lang
 
-import top.mcfpp.nbt.tags.primitive.IntTag
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
@@ -14,11 +13,9 @@ import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.obj.EnumVar
 import top.mcfpp.core.lang.obj.EnumVarConcrete
 import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.mni.MCIntData
-import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
+import top.mcfpp.nbt.tags.primitive.IntTag
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPNBTType
 import top.mcfpp.type.MCFPPType
@@ -179,7 +176,7 @@ open class MCInt : MCNumber<Int> {
 
     @InsertCommand
     override fun plus(a: Var<*>): Var<*> {
-        if(!isTemp && a.isTemp){
+        if(!isTemp && a.isTemp && a !is MCIntConcrete){
             return a.plus(this)
         }else if(!isTemp){
             return getTempVar().plus(a)
@@ -199,7 +196,7 @@ open class MCInt : MCNumber<Int> {
 
     @InsertCommand
     override fun minus(a: Var<*>): Var<*> {
-        if(!isTemp && a.isTemp){
+        if(!isTemp && a.isTemp && a !is MCIntConcrete){
             return a.minus(this)
         }else if(!isTemp){
             return getTempVar().minus(a)
@@ -220,7 +217,7 @@ open class MCInt : MCNumber<Int> {
     @InsertCommand
     override fun times(a: Var<*>): Var<*> {
         //t *= a
-        if(!isTemp && a.isTemp){
+        if(!isTemp && a.isTemp && a !is MCIntConcrete){
             return a.times(this)
         }else if(!isTemp){
             return getTempVar().times(a)
@@ -242,7 +239,7 @@ open class MCInt : MCNumber<Int> {
     @InsertCommand
     override fun div(a: Var<*>): Var<*> {
         //t /= a
-        if(!isTemp && a.isTemp){
+        if(!isTemp && a.isTemp && a !is MCIntConcrete){
             return a.div(this)
         }else if(!isTemp){
             return getTempVar().div(a)
@@ -264,7 +261,7 @@ open class MCInt : MCNumber<Int> {
     @InsertCommand
     override fun rem(a: Var<*>): Var<*> {
         //t %= a
-        if(!isTemp && a.isTemp){
+        if(!isTemp && a.isTemp && a !is MCIntConcrete){
             return a.rem(this)
         }else if(!isTemp){
             return getTempVar().rem(a)
@@ -431,43 +428,6 @@ open class MCInt : MCNumber<Int> {
             Command("execute store result score $name $sbObject run data get")
                 .build(nbtPath.toCommandPart())
         )
-    }
-
-    /**
-     * 根据标识符获取一个成员。
-     *
-     * @param key 成员的mcfpp标识符
-     * @param accessModifier 访问者的访问权限
-     * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
-     */
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        return data.getVar(key) to true
-    }
-
-    /**
-     * 根据方法标识符和方法的参数列表获取一个方法。如果没有这个方法，则返回null
-     *
-     * @param key 成员方法的标识符
-     * @param normalArgs 成员方法的参数
-     * @return 返回一个值对。第一个值是成员变量或null（如果成员方法不存在），第二个值是访问者是否能够访问此变量。
-     */
-    override fun getMemberFunction(
-        key: String,
-        readOnlyArgs: List<Var<*>>,
-        normalArgs: List<Var<*>>,
-        accessModifier: Member.AccessModifier
-    ): Pair<Function, Boolean> {
-        return data.getFunction(key, readOnlyArgs, normalArgs) to true
-    }
-
-    companion object {
-        val data by lazy {
-            CompoundData("int","mcfpp").apply {
-                this.commonType = MCFPPBaseType.Int
-                extends(MCAny.data)
-                injectedBy(MCIntData::class.java)
-            }
-        }
     }
 }
 

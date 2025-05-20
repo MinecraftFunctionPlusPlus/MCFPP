@@ -9,16 +9,20 @@ import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.antlr.mcfppParser.TypeContext
 import top.mcfpp.antlr.mcfppParser.TypeWithoutExclContext
+import top.mcfpp.core.lang.Null
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
-import top.mcfpp.core.lang.Void
+import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.Member
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.UnionDataTemplate
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.field.IFieldWithType
+import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
@@ -37,11 +41,13 @@ import kotlin.reflect.KClass
 /**
  * 所有类型的接口
  */
-open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()) {
+open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()): CanSelectMember {
 
     open val objectData: CompoundData = CompoundData("unknown", "mcfpp")
 
     open val instanceData: CompoundData get() = CompoundData(typeName, "mcfpp")
+
+    open val concreteInstanceData: CompoundData get() = instanceData
 
     /**
      * 类型名
@@ -74,6 +80,37 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
         return typeName
     }
 
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
+        val re = objectData.getVar(key)
+        return if(re == null){
+            Pair(null, true)
+        }else{
+            Pair(re, accessModifier >= re.accessModifier)
+        }
+    }
+
+    override fun getMemberFunction(
+        key: String,
+        readOnlyArgs: List<Var<*>>,
+        normalArgs: List<Var<*>>,
+        accessModifier: Member.AccessModifier,
+    ): Pair<Function, Boolean> {
+        val member = objectData.field.getFunction(key, readOnlyArgs, normalArgs)
+        return if(member is UnknownFunction){
+            Pair(UnknownFunction(key), true)
+        }else{
+            Pair(member, accessModifier >= member.accessModifier)
+        }
+    }
+
+    override fun getAccess(function: Function): Member.AccessModifier {
+        return Member.AccessModifier.PUBLIC
+    }
+
+    override fun replaceMemberVar(v: Var<*>) {
+        LogProcessor.error("Cannot replace member var in $typeName")
+    }
+
     override fun equals(other: Any?): Boolean {
         if(other !is MCFPPType){
             return false
@@ -85,7 +122,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
         return typeName.hashCode()
     }
 
-    open fun defaultValue(): Var<*> = Void
+    open fun defaultValue(): Var<*> = Null
 
     open fun build(identifier: String, container: FieldContainer): Var<*>{
         LogProcessor.error("Unknown type: $typeName")
@@ -209,10 +246,11 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             MCFPPConcreteType.JavaVar,
 
             MCFPPEntityType.NormalSelector,
+            MCFPPEntityType.Player,
 
             MCFPPPrivateType.MCFPPObjectVarType,
             MCFPPPrivateType.CommandReturn
-        ).associateBy { it.typeName }.toMutableMap()}
+        ).associateBy { it.simpleName }.toMutableMap()}
 
         /**
          * 类型注册缓存。键值对的第一个元素判断字符串是否满足条件，而第二个元素则是用于从一个字符串中解析出一个类型
@@ -235,7 +273,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
          * 将这个类型注册入缓存
          */
         fun MCFPPType.registerType(){
-            typeCache[this.typeName] = this
+            typeCache[this.simpleName] = this
         }
 
         /**
@@ -297,6 +335,13 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             if(enum != null) return enum.getType()
 
             return null
+        }
+
+        fun parseFromContextNotNull(ctx: TypeContext, typeScope: IFieldWithType): MCFPPType {
+            return parseFromContext(ctx, typeScope)?: run {
+                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.text))
+                MCFPPBaseType.Any
+            }
         }
 
         fun parseFromContext(ctx: TypeContext, typeScope: IFieldWithType): MCFPPType?{

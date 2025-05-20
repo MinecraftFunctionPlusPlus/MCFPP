@@ -9,8 +9,8 @@ import top.mcfpp.lib.NBTPath
 import top.mcfpp.lib.StorageSource
 import top.mcfpp.mni.NBTListConcreteData
 import top.mcfpp.mni.NBTListData
-import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.Member
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
@@ -31,7 +31,8 @@ import top.mcfpp.util.TextTranslator.translate
  */
 open class NBTList : NBTBasedData {
 
-    final override var type: MCFPPType
+    @Suppress("MUST_BE_INITIALIZED_OR_BE_FINAL_WARNING")
+    override var type: MCFPPType
         get() = (field as? MCFPPDeclaredConcreteType)?.type ?: field
 
     var genericType: MCFPPType
@@ -225,7 +226,7 @@ open class NBTList : NBTBasedData {
         val data by lazy {
             CompoundData("list", "mcfpp.lang").apply {
                 field.putType("E", MCFPPGenericParamType("E", arrayListOf(MCFPPBaseType.Any)))
-                extends(NBTBasedData.data)
+                extends(MCFPPNBTType.NBT.instanceData)
                 injectedBy(NBTListData::class.java)
             }
         }
@@ -410,7 +411,7 @@ class NBTListConcrete: NBTList, PartialConcreteValue<ListTag, ArrayList<Var<*>>>
     companion object {
         val data by lazy {
             CompoundData("list", "mcfpp.lang").apply {
-                extends(NBTBasedData.data)
+                extends(MCFPPNBTType.NBT.instanceData)
                 injectedBy(NBTListConcreteData::class.java)
             }
         }

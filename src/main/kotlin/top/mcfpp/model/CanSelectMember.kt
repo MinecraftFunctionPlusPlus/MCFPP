@@ -1,7 +1,6 @@
 package top.mcfpp.model
 
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.property.Property
 import top.mcfpp.model.function.Function
 
 /**
@@ -31,6 +30,11 @@ interface CanSelectMember{
      */
     fun getMemberFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>, accessModifier: Member.AccessModifier): Pair<Function, Boolean>
 
+    /**
+     * 某函数能对此变量/域的访问权限
+     * @param function 访问者函数
+     * @return 访问者的访问权限
+     */
     fun getAccess(function: Function): Member.AccessModifier
 
     /**

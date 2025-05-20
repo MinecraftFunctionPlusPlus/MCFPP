@@ -190,7 +190,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     @Suppress("UNCHECKED_CAST")
     fun assignedBy(b: Var<*>): Self {
         //null特判
-        if(b == Null){
+        if(b is Null){
             if(this.nullable){
                 hasAssigned = false
             }else{
@@ -364,7 +364,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
                 qwq = a
             }
         }
-        val operator = type.instanceData.field.getOperator(operation, a.type)
+        val operator = (if(this is MCFPPValue<*>) type.concreteInstanceData else type.instanceData).field.getOperator(operation, a.type)
         val re = if(operator != null) {
             operator.invoke(arrayListOf(qwq), this)
         } else {
@@ -515,7 +515,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         //获取函数
-        val member = type.instanceData.getFunction(key, readOnlyArgs, normalArgs)
+        val member = (if(this is MCFPPValue<*>) type.concreteInstanceData else type.instanceData).getFunction(key, readOnlyArgs, normalArgs)
         return if(member is UnknownFunction){
             Pair(UnknownFunction(key), true)
         }else{

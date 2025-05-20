@@ -3,8 +3,9 @@ package top.mcfpp.core.lang.entity
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.minecraft.PlayerInventory
-import top.mcfpp.model.compound.CompoundData
+import top.mcfpp.lib.EntitySelector
 import top.mcfpp.model.Member
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPEntityType
 import top.mcfpp.type.MCFPPType
@@ -20,7 +21,9 @@ open class PlayerVar : Var<PlayerVar> {
     var entityVar: EntityVar
 
     constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier){
-        entityVar = EntityVar(identifier)
+        entityVar = EntityVar(identifier).apply {
+            value = SelectorVar(EntitySelector(EntitySelector.Companion.SelectorType.NEAREST_PLAYER), identifier)
+        }
     }
 
     constructor(b: PlayerVar) : super(b){

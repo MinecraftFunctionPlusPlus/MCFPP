@@ -8,6 +8,10 @@ import top.mcfpp.core.lang.nbt.MCDoubleConcrete
 import top.mcfpp.core.lang.nbt.MCString
 import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.lib.PlainChatComponent
+import top.mcfpp.mni.MCAnyConcreteData
+import top.mcfpp.mni.MCAnyData
+import top.mcfpp.mni.MCIntConcreteData
+import top.mcfpp.mni.MCIntData
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
@@ -22,8 +26,17 @@ import top.mcfpp.util.TempPool
 class MCFPPBaseType {
     object Any: MCFPPType(arrayListOf()){
 
-        override val objectData: CompoundData
-            get() = MCAny.data
+        override val instanceData by lazy {
+            CompoundData("any","mcfpp.lang").apply {
+                injectedBy(MCAnyData::class.java)
+            }
+        }
+
+        override val concreteInstanceData: CompoundData by lazy {
+            CompoundData("any","mcfpp.lang").apply {
+                injectedBy(MCAnyConcreteData::class.java)
+            }
+        }
 
         override val typeName: kotlin.String
             get() = "any"
@@ -47,8 +60,21 @@ class MCFPPBaseType {
 
     object Int: MCFPPType(arrayListOf(Any)){
 
-        override val objectData: CompoundData
-            get() = MCInt.data
+        override val instanceData by lazy {
+                CompoundData("int","mcfpp").apply {
+                    this.commonType = Int
+                    extends(Any.instanceData)
+                    injectedBy(MCIntData::class.java)
+                }
+            }
+
+        override val concreteInstanceData by lazy {
+            CompoundData("int","mcfpp").apply {
+                this.commonType = Int
+                extends(Any.concreteInstanceData)
+                injectedBy(MCIntConcreteData::class.java)
+            }
+        }
 
         override val typeName: kotlin.String
             get() = "int"
@@ -96,8 +122,9 @@ class MCFPPBaseType {
 
     object Float: MCFPPType(arrayListOf(Any)){
 
-        override val objectData: CompoundData
-            get() = MCFloat.data
+        override val instanceData by lazy {
+            CompoundData("float","mcfpp")
+        }
 
         override val typeName: kotlin.String
             get() = "float"
@@ -143,8 +170,11 @@ class MCFPPBaseType {
 
     object Bool: MCFPPType(arrayListOf(Any)){
 
-        override val objectData: CompoundData
-            get() = ScoreBool.data
+        override val instanceData by lazy {
+            CompoundData("bool","mcfpp.lang").apply {
+                extends(Any.instanceData)
+            }
+        }
 
         override val typeName: kotlin.String
             get() = "bool"
@@ -166,8 +196,25 @@ class MCFPPBaseType {
 
     object JsonText: MCFPPType(arrayListOf(MCFPPNBTType.NBT)){
 
-        override val objectData: CompoundData
-            get() = top.mcfpp.core.lang.JsonText.data
+        override val instanceData by lazy {
+            CompoundData("JsonText","mcfpp.lang").apply {
+                extends(MCFPPNBTType.NBT.instanceData)
+
+                addMember(MCInt("color"))
+                addMember(ScoreBool("bold"))
+                addMember(ScoreBool("italic"))
+                addMember(ScoreBool("underlined"))
+                addMember(ScoreBool("strikethrough"))
+                addMember(ScoreBool("obfuscated"))
+                addMember(MCString("insertion"))
+            }
+        }
+
+        override val concreteInstanceData: CompoundData by lazy {
+            CompoundData("JsonTextConcrete","mcfpp.lang").apply {
+                extends(instanceData)
+            }
+        }
 
         override val typeName: kotlin.String
             get() = "text"
@@ -189,8 +236,11 @@ class MCFPPBaseType {
 
     object Range: MCFPPType(arrayListOf(Any)){
 
-        override val objectData: CompoundData
-            get() = RangeVar.data
+        override val instanceData by lazy {
+            CompoundData("range","mcfpp.lang").apply {
+                extends(Any.instanceData)
+            }
+        }
 
         override val typeName: kotlin.String
             get() = "range"
@@ -209,8 +259,11 @@ class MCFPPBaseType {
 
     object Pos3: MCFPPType(arrayListOf(Any)){
 
-        override val objectData: CompoundData
-            get() = Pos3Var.data
+        override val instanceData by lazy {
+            CompoundData("pos3", "mcfpp").apply {
+                extends(Any.instanceData)
+            }
+        }
 
         override val typeName: kotlin.String
             get() = "pos3"
@@ -229,8 +282,11 @@ class MCFPPBaseType {
 
     object Pos2: MCFPPType(arrayListOf(Any)){
 
-        override val objectData: CompoundData
-            get() = Pos2Var.data
+        override val instanceData by lazy {
+            CompoundData("pos2", "mcfpp").apply {
+                extends(Any.instanceData)
+            }
+        }
 
         override val typeName: kotlin.String
             get() = "pos2"

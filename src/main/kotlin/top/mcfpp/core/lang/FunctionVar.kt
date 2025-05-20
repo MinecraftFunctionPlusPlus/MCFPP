@@ -25,10 +25,8 @@ open class FunctionVar: NBTBasedData {
     constructor(b: FunctionVar) : super(b)
 
     companion object {
-        val data = CompoundData("FunctionID","mcfpp.lang.resource")
-
-        init {
-            data.initialize()
+        val data by lazy {
+            CompoundData("FunctionID", "mcfpp.lang.resource")
         }
     }
 }

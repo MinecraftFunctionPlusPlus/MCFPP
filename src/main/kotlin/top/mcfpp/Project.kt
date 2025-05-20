@@ -24,7 +24,6 @@ import top.mcfpp.model.Native
 import top.mcfpp.model.compound.ObjectClass
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
-import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.Utils
 import java.io.File
@@ -96,33 +95,24 @@ object Project {
      */
     val macroFunction : LinkedHashMap<String, String> = LinkedHashMap()
 
-    var compileStage = 0
-
-    @Suppress("MemberVisibilityCanBePrivate")
-    const val PRE_INIT = 0
-    @Suppress("MemberVisibilityCanBePrivate")
-    const val INIT = PRE_INIT + 1
-    @Suppress("MemberVisibilityCanBePrivate")
-    const val READ_LIB = INIT + 1
-    @Suppress("MemberVisibilityCanBePrivate")
-    const val INDEX_TYPE = READ_LIB + 1
-    @Suppress("MemberVisibilityCanBePrivate")
-    const val RESOLVE_FIELD = INDEX_TYPE + 1
-    @Suppress("MemberVisibilityCanBePrivate")
-    const val RUN_ANNOTATION = RESOLVE_FIELD + 1
-    @Suppress("MemberVisibilityCanBePrivate")
-    const val COMPILE = RUN_ANNOTATION + 1
-    @Suppress("MemberVisibilityCanBePrivate")
-    const val OPTIMIZATION = COMPILE + 1
-    @Suppress("MemberVisibilityCanBePrivate")
-    const val GEN_INDEX = OPTIMIZATION + 1
-    @Suppress("MemberVisibilityCanBePrivate")
-    const val GEN_DATAPACK = GEN_INDEX + 1
+    var compileStage = CompileStage.PRE_INIT
+    enum class CompileStage {
+        PRE_INIT,
+        INIT,
+        READ_LIB,
+        INDEX_TYPE,
+        RESOLVE_FIELD,
+        RUN_ANNOTATION,
+        COMPILE,
+        OPTIMIZATION,
+        GEN_INDEX,
+        GEN_DATAPACK
+    }
 
     /**
      * 编译阶段处理器。每个阶段的处理器都会在对应的阶段被调用。
      */
-    val stageProcessor = Array(GEN_DATAPACK + 1) { ArrayList<()->Unit>() }
+    val stageProcessor = Array(CompileStage.entries.size) { ArrayList<()->Unit>() }
 
     var classLoader: ClassLoader = Thread.currentThread().contextClassLoader
 
@@ -144,7 +134,7 @@ object Project {
      * 初始化
      */
     fun init() {
-        compileStage++
+        compileStage = CompileStage.INIT
         //全局缓存初始化
         GlobalField.init()
         ctx.clear()
@@ -156,7 +146,7 @@ object Project {
         macroFunction.clear()
         classLoader = Thread.currentThread().contextClassLoader
         files.clear()
-        stageProcessor[compileStage].forEach { it() }
+        stageProcessor[compileStage.ordinal].forEach { it() }
     }
 
     fun readConfig(path: String): ProjectConfig{
@@ -274,7 +264,7 @@ object Project {
      * 读取库文件，并将库写入缓存
      */
     fun readProject(){
-        compileStage++
+        compileStage = CompileStage.READ_LIB
         //读取所有jar
         for (jar in config.jars){
             if(Paths.get(jar).notExists()){
@@ -330,17 +320,6 @@ object Project {
                     }
                 }
             }
-            namespace.field.forEachFunction { f ->
-                run {
-                    if(f is NativeFunction){
-                        //找到方法
-                        val clazz = f.javaMethodName.substringBeforeLast(".")
-                        val methodName = f.javaMethodName.substringAfterLast(".")
-                        val clazzObject = Class.forName(clazz)
-                        f.javaMethod = clazzObject.getMethod(methodName)
-                    }
-                }
-            }
         }
         //实例化所有类中的成员字段
         for(namespace in GlobalField.stdNamespaces.values){
@@ -365,14 +344,14 @@ object Project {
         if(files.isEmpty()){
             LogProcessor.error("Cannot find any mcfpp file in path: ${config.sourcePath}")
         }
-        stageProcessor[compileStage].forEach { it() }
+        stageProcessor[compileStage.ordinal].forEach { it() }
     }
 
     /**
      * 编制类型索引
      */
     fun indexType(){
-        compileStage++
+        compileStage = CompileStage.INDEX_TYPE
         logger.debug("Generate Type Index...")
         //解析文件
         for (file in files) {
@@ -385,15 +364,26 @@ object Project {
             }
             GlobalField.importedLibNamespaces.clear()
         }
+        //运行命令
+        for (file in files) {
+            try {
+                file.runCommand()
+            } catch (e: Exception) {
+                logger.error("Error while generate run command in file \"$file\"")
+                errorCount++
+                e.printStackTrace()
+            }
+            GlobalField.importedLibNamespaces.clear()
+        }
         //解析所有泛型类的泛型参数类型
-        stageProcessor[compileStage].forEach { it() }
+        stageProcessor[compileStage.ordinal].forEach { it() }
     }
 
     /**
      * 编制函数索引，解析类/模板成员
      */
     fun resolveField() {
-        compileStage++
+        compileStage = CompileStage.RESOLVE_FIELD
         logger.debug("Generate Function Index...")
         //解析文件
         for (file in files) {
@@ -406,11 +396,11 @@ object Project {
             }
             GlobalField.importedLibNamespaces.clear()
         }
-        stageProcessor[compileStage].forEach { it() }
+        stageProcessor[compileStage.ordinal].forEach { it() }
     }
 
     fun runAnnotation(){
-        compileStage++
+        compileStage = CompileStage.RUN_ANNOTATION
         logger.debug("Run Annotation...")
         //解析文件
         for (file in files) {
@@ -423,14 +413,14 @@ object Project {
             }
             GlobalField.importedLibNamespaces.clear()
         }
-        stageProcessor[compileStage].forEach { it() }
+        stageProcessor[compileStage.ordinal].forEach { it() }
     }
 
     /**
      * 编译工程
      */
     fun compile() {
-        compileStage++
+        compileStage = CompileStage.COMPILE
         //工程文件编译
         //解析文件
         for (file in files) {
@@ -443,7 +433,7 @@ object Project {
                 e.printStackTrace()
             }
         }
-        stageProcessor[compileStage].forEach { it() }
+        stageProcessor[compileStage.ordinal].forEach { it() }
     }
 
     /**
@@ -451,7 +441,7 @@ object Project {
      */
     @InsertCommand
     fun optimization() {
-        compileStage++
+        compileStage = CompileStage.OPTIMIZATION
         logger.debug("Optimizing...")
         logger.debug("Adding scoreboards declare in mcfpp:load function")
 
@@ -541,7 +531,7 @@ object Project {
             warningCount++
         }
         logger.info("Complete compiling project " + config.root.name + " with [$errorCount] error and [$warningCount] warning")
-        stageProcessor[compileStage].forEach { it() }
+        stageProcessor[compileStage.ordinal].forEach { it() }
     }
 
     /**
@@ -549,9 +539,9 @@ object Project {
      * 在和工程信息json文件的同一个目录下生成一个.mclib文件
      */
     fun genIndex() {
-        compileStage++
+        compileStage = CompileStage.GEN_INDEX
         LibBinWriter.write(config.targetPath!!.absolutePathString())
-        stageProcessor[compileStage].forEach { it() }
+        stageProcessor[compileStage.ordinal].forEach { it() }
     }
 }
 

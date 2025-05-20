@@ -6,10 +6,7 @@ import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.obj.EnumVar
-import top.mcfpp.mni.NBTBasedDataData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.Member
-import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.property.Property
 import top.mcfpp.nbt.tags.CompoundTag
@@ -174,25 +171,6 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
         //什么都不用做哦
     }
 
-    /**
-     * 根据标识符获取一个成员。
-     *
-     * @param key 成员的mcfpp标识符
-     * @param accessModifier 访问者的访问权限
-     * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
-     */
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        return data.getVar(key) to true
-    }
-
-    override fun getMemberFunction(
-        key: String,
-        readOnlyArgs: List<Var<*>>,
-        normalArgs: List<Var<*>>,
-        accessModifier: Member.AccessModifier
-    ): Pair<Function, Boolean> {
-        return data.getFunction(key, readOnlyArgs, normalArgs) to true
-    }
     override fun getByIndex(index: Var<*>): PropertyVar {
         val v = when (index) {
             is MCInt -> getByIntIndex(index)
@@ -339,11 +317,6 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
             }
             return MCFPPCompoundType(t.getMCFPPType())
         }
-
-        val data by lazy { CompoundData("nbt","mcfpp").apply {
-            extends(MCAny.data)
-            injectedBy(NBTBasedDataData::class.java)
-        } }
 
         enum class NBTTypeWithTag(val type: NBTType){
             BYTE(NBTType.VALUE),
@@ -513,14 +486,5 @@ class NBTBasedDataConcrete : NBTBasedData, MCFPPValue<Tag<*>> {
 
     override fun toString(): String {
         return "[$type,value=${Tag.toSNBT(value)}]"
-    }
-
-    companion object {
-        val data = CompoundData("nbt","mcfpp")
-
-        init {
-            data.extends(MCAnyConcrete.data)
-            data.injectedBy(NBTBasedDataData::class.java)
-        }
     }
 }

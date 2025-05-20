@@ -58,7 +58,7 @@ public class MCIntConcreteData {
     }
 
     // 范围检查方法
-    @MNIBinaryOperator(operator = "~=", paramType = "Range", returnType = "bool")
+    @MNIBinaryOperator(operator = "~=", paramType = "range", returnType = "bool")
     public static void inRange(MCInt a, RangeVar b, ValueWrapper<BaseBool> returnValue) {
         returnValue.setValue((BaseBool) b.inRange(a));
     }

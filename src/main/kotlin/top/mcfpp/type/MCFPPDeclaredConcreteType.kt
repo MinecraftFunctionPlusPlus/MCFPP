@@ -2,14 +2,9 @@ package top.mcfpp.type
 
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.nbt.tags.Tag
 
 class MCFPPDeclaredConcreteType(val type: MCFPPType): MCFPPConcreteType(arrayListOf(type)) {
-
-    override val objectData: CompoundData
-        get() = type.objectData
-
     override val typeName: String
         get() = type.typeName
 

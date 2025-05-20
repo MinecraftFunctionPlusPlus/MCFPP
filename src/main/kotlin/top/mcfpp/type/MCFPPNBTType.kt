@@ -7,6 +7,7 @@ import top.mcfpp.core.lang.nbt.*
 import top.mcfpp.core.lang.nbt.ByteArray
 import top.mcfpp.core.lang.nbt.IntArray
 import top.mcfpp.core.lang.nbt.LongArray
+import top.mcfpp.mni.*
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
@@ -27,8 +28,19 @@ import top.mcfpp.util.TempPool
 class MCFPPNBTType {
     object NBT : MCFPPType(arrayListOf(MCFPPBaseType.Any)) {
 
-        override val objectData: CompoundData
-            get() = NBTBasedData.data
+        override val objectData by lazy {
+            CompoundData("nbt","mcfpp").apply {
+                extends(MCFPPBaseType.Any.instanceData)
+                injectedBy(NBTBasedDataData::class.java)
+            }
+        }
+
+        override val concreteInstanceData by lazy {
+            CompoundData("nbt","mcfpp").apply {
+                extends(MCFPPBaseType.Any.instanceData)
+                injectedBy(NBTBasedDataConcreteData::class.java)
+            }
+        }
 
         override val typeName: String
             get() = "nbt"
@@ -55,8 +67,19 @@ class MCFPPNBTType {
 
     object Byte: MCFPPType(arrayListOf(MCFPPBaseType.Int)){
 
-        override val objectData: CompoundData
-            get() = NBTBasedData.data
+        override val instanceData by lazy {
+            CompoundData("byte","mcfpp").apply {
+                extends(NBT.instanceData)
+                injectedBy(MCByteData::class.java)
+            }
+        }
+
+        override val concreteInstanceData by lazy {
+            CompoundData("byte","mcfpp").apply {
+                extends(NBT.instanceData)
+                injectedBy(MCByteConcreteData::class.java)
+            }
+        }
 
         override val typeName: String
             get() = "byte"
@@ -81,8 +104,19 @@ class MCFPPNBTType {
 
     object Short: MCFPPType(arrayListOf(MCFPPBaseType.Int)){
 
-        override val objectData: CompoundData
-            get() = NBTBasedData.data
+        override val instanceData by lazy {
+            CompoundData("short","mcfpp").apply {
+                extends(NBT.instanceData)
+                injectedBy(MCShortData::class.java)
+            }
+        }
+
+        override val concreteInstanceData by lazy {
+            CompoundData("short","mcfpp").apply {
+                extends(NBT.instanceData)
+                injectedBy(MCShortConcreteData::class.java)
+            }
+        }
 
         override val typeName: String
             get() = "short"
@@ -108,8 +142,18 @@ class MCFPPNBTType {
 
     object Long: MCFPPType(arrayListOf(NBT)){
 
-        override val objectData: CompoundData
-            get() = NBTBasedData.data
+        override val instanceData by lazy {
+            CompoundData("long","mcfpp").apply {
+                extends(NBT.instanceData)
+            }
+        }
+
+        override val concreteInstanceData by lazy {
+            CompoundData("long","mcfpp").apply {
+                extends(NBT.instanceData)
+            }
+        }
+
 
         override val typeName: String
             get() = "long"
@@ -135,8 +179,19 @@ class MCFPPNBTType {
 
     object Double: MCFPPType(arrayListOf(NBT)){
 
-        override val objectData: CompoundData
-            get() = NBTBasedData.data
+        override val instanceData by lazy {
+            CompoundData("double","mcfpp").apply {
+                extends(NBT.instanceData)
+                injectedBy(MCByteData::class.java)
+            }
+        }
+
+        override val concreteInstanceData by lazy {
+            CompoundData("double","mcfpp").apply {
+                extends(NBT.instanceData)
+                injectedBy(MCByteConcreteData::class.java)
+            }
+        }
 
         override val typeName: String
             get() = "double"
@@ -162,8 +217,18 @@ class MCFPPNBTType {
 
     object ByteArray: MCFPPType(arrayListOf(NBT)){
 
-        override val objectData: CompoundData
-            get() = NBTBasedData.data
+        override val instanceData by lazy {
+            CompoundData("ByteArray","mcfpp").apply {
+                extends(NBT.instanceData)
+            }
+        }
+
+        override val concreteInstanceData by lazy {
+            CompoundData("ByteArray","mcfpp").apply {
+                extends(NBT.instanceData)
+            }
+        }
+
 
         override val typeName: String
             get() = "ByteArray"
@@ -189,8 +254,18 @@ class MCFPPNBTType {
 
     object IntArray: MCFPPType(arrayListOf(NBT)){
 
-        override val objectData: CompoundData
-            get() = NBTBasedData.data
+        override val instanceData by lazy {
+            CompoundData("IntArray","mcfpp").apply {
+                extends(NBT.instanceData)
+            }
+        }
+
+        override val concreteInstanceData by lazy {
+            CompoundData("IntArray","mcfpp").apply {
+                extends(NBT.instanceData)
+            }
+        }
+
 
         override val typeName: String
             get() = "IntArray"
@@ -216,8 +291,20 @@ class MCFPPNBTType {
 
     object LongArray: MCFPPType(arrayListOf(NBT)){
 
-        override val objectData: CompoundData
-            get() = NBTBasedData.data
+        override val instanceData by lazy {
+            CompoundData("LongArray","mcfpp").apply {
+                extends(NBT.instanceData)
+                injectedBy(MCByteData::class.java)
+            }
+        }
+
+        override val concreteInstanceData by lazy {
+            CompoundData("LongArray","mcfpp").apply {
+                extends(NBT.instanceData)
+                injectedBy(MCByteConcreteData::class.java)
+            }
+        }
+
 
         override val typeName: String
             get() = "LongArray"
@@ -292,8 +379,19 @@ class MCFPPImmutableListType(
     val generic: MCFPPType = MCFPPBaseType.Any
 ): MCFPPType(arrayListOf(MCFPPNBTType.NBT)), MCFPPTypeWithGeneric{
 
-    override val objectData: CompoundData
-        get() = NBTList.data
+    override val instanceData by lazy {
+        CompoundData("ImmutableList", "mcfpp.lang").apply {
+            extends(MCFPPNBTType.NBT.instanceData)
+            injectedBy(NBTListData::class.java)
+        }
+    }
+
+    override val concreteInstanceData by lazy {
+        CompoundData("ImmutableList", "mcfpp.lang").apply {
+            extends(MCFPPNBTType.NBT.concreteInstanceData)
+            injectedBy(NBTListConcreteData::class.java)
+        }
+    }
 
     override val typeName: String
         get() = "ImmutableList"

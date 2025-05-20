@@ -9,7 +9,6 @@ import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.*
-import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType
@@ -408,10 +407,6 @@ open class MCFloat : MCNumber<Float> {
     }
 
     companion object{
-
-        val data by lazy {
-            CompoundData("float","mcfpp")
-        }
 
         const val tempFloatEntityUUID = "53aa19cc-a067-402b-8ba1-9328cc5fb6c1"
         const val tempFloatEntityUUIDNBT = "[I;1403656652,-1603846101,-1952345304,-866142527]"

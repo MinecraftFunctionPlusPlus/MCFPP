@@ -1,6 +1,5 @@
 package top.mcfpp.core.lang
 
-import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.*
@@ -70,9 +69,5 @@ class MCFPPTypeVar : ConcreteVar<MCFPPTypeVar, MCFPPType>{
             }
             else -> TODO()
         }
-    }
-
-    companion object {
-        val data = CompoundData("type","mcfpp")
     }
 }

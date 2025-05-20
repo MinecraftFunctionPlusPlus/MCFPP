@@ -4,13 +4,16 @@ package top.mcfpp.core.lang.nbt
 
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Commands
-import top.mcfpp.core.lang.*
+import top.mcfpp.core.lang.MCFPPValue
+import top.mcfpp.core.lang.PropertyVar
+import top.mcfpp.core.lang.UnknownVar
+import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.mni.NBTMapConcreteData
 import top.mcfpp.mni.NBTMapData
 import top.mcfpp.model.CanSelectMember
-import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.Member
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
@@ -229,7 +232,7 @@ open class NBTMap : NBTBasedData {
         val data by lazy {
             CompoundData("map","mcfpp.lang").apply {
                 initialize()
-                extends(MCAny.data)
+                extends(MCFPPBaseType.Any.instanceData)
                 injectedBy(NBTMapData::class.java)
             }
         }
@@ -371,7 +374,7 @@ class NBTMapConcrete : NBTMap, MCFPPValue<HashMap<String, Var<*>>> {
         val data by lazy {
             CompoundData("map","mcfpp.lang").apply {
                 initialize()
-                extends(MCAny.data)
+                extends(MCFPPBaseType.Any.instanceData)
                 injectedBy(NBTMapConcreteData::class.java)
             }
         }

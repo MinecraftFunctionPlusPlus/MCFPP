@@ -2,7 +2,6 @@ package top.mcfpp.core.lang
 
 import top.mcfpp.command.Command
 import top.mcfpp.lib.NBTPath
-import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
@@ -64,24 +63,7 @@ class CommandReturn : Var<CommandReturn> {
 
     override fun getFromStack() {}
 
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> = Pair(null, true)
-
-    override fun getMemberFunction(
-        key: String,
-        readOnlyArgs: List<Var<*>>,
-        normalArgs: List<Var<*>>,
-        accessModifier: Member.AccessModifier
-    ): Pair<Function, Boolean> {
-        return data.getFunction(key, readOnlyArgs, normalArgs) to true
-    }
-
     companion object {
-        val data = CompoundData("CommandReturn","mcfpp")
-
-        init {
-            data.extends(MCAny.data)
-        }
-
         val empty = CommandReturn(Command(), "empty")
     }
 

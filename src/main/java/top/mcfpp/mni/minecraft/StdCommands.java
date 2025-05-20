@@ -183,13 +183,13 @@ public class StdCommands {
     //endregion
 
     //region give
-    @MNIFunction(normalParams = {"Player!", "Item"}, returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Player", "Item"}, returnType = "CommandReturn")
     public static void give(PlayerVar player, DataTemplateObject item, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("give", player, item);
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = {"Player!", "Item", "int"}, returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Player", "Item", "int"}, returnType = "CommandReturn")
     public static void give(PlayerVar player, DataTemplateObject item, MCInt count, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("give", player, item, count);
         Commands.processMacroCommandReturn(re, command);
@@ -225,7 +225,7 @@ public class StdCommands {
     //endregion
 
     //region kick
-    @MNIFunction(normalParams = {"Player!", "string = \"\""}, returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Player", "string = \"\""}, returnType = "CommandReturn")
     public static void kick(PlayerVar player, MCString reason, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("kick", player, reason);
         Commands.processMacroCommandReturn(re, command);
@@ -275,7 +275,7 @@ public class StdCommands {
     //endregion
 
     //region
-    @MNIFunction(normalParams = {"Player!", "LootTable"}, returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Player", "LootTable"}, returnType = "CommandReturn")
     public static void lootGive(PlayerVar player, DataTemplateObject lootSource, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot give", player, "loot", lootSource);
         Commands.processMacroCommandReturn(re, command);
@@ -317,7 +317,7 @@ public class StdCommands {
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = {"Player!", "LootTable", "pos3"}, returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Player", "LootTable", "pos3"}, returnType = "CommandReturn")
     public static void lootGiveFish(PlayerVar player, DataTemplateObject lootSource, Pos3Var pos, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot give", player, "fish", lootSource, pos);
         Commands.processMacroCommandReturn(re, command);
@@ -412,7 +412,7 @@ public class StdCommands {
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = {"Player!", "entity<1>"}, returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Player", "entity<1>"}, returnType = "CommandReturn")
     public static void lootGiveKill(PlayerVar player, EntityVar entityVar, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot give", player, "kill", entityVar);
         Commands.processMacroCommandReturn(re, command);
@@ -454,25 +454,25 @@ public class StdCommands {
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = {"Player!", "pos3"}, returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Player", "pos3"}, returnType = "CommandReturn")
     public static void lootGiveMine(PlayerVar player, Pos3Var pos, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot give", player, "mine", pos);
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = {"Player!", "pos3", "Item"}, returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Player", "pos3", "Item"}, returnType = "CommandReturn")
     public static void lootGiveMineUsing(PlayerVar player, Pos3Var pos, DataTemplateObject item, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot give", player, "mine", pos, item);
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = {"Player!", "pos3"}, returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Player", "pos3"}, returnType = "CommandReturn")
     public static void lootGiveMineUsingMainHand(PlayerVar player, Pos3Var pos, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot give", player, "mine", pos, "mainhand");
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = {"Player!", "pos3"}, returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Player", "pos3"}, returnType = "CommandReturn")
     public static void lootGiveMineUsingOffHand(PlayerVar player, Pos3Var pos, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("loot give", player, "mine", pos, "offhand");
         Commands.processMacroCommandReturn(re, command);
@@ -601,13 +601,13 @@ public class StdCommands {
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = {"Particle", "pos3", "pos3", "float", "int", "Player!"}, returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Particle", "pos3", "pos3", "float", "int", "Player"}, returnType = "CommandReturn")
     public static void particle(EnumVar particle, Pos3Var pos, Pos3Var delta, MCFloat speed, MCInt count, PlayerVar player, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("particle", particle, pos, delta, speed, count, "normal", player);
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = {"Particle", "pos3", "pos3", "float", "int", "Player!"}, returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Particle", "pos3", "pos3", "float", "int", "Player"}, returnType = "CommandReturn")
     public static void particleForce(EnumVar particle, Pos3Var pos, Pos3Var delta, MCFloat speed, MCInt count, PlayerVar player, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("particle", particle, pos, delta, speed, count, "force", player);
         Commands.processMacroCommandReturn(re, command);
@@ -679,7 +679,7 @@ public class StdCommands {
     //endregion
 
     //region playsound
-    @MNIFunction(normalParams = {"Sound", "SoundType", "Player! = @s", "pos3 = pos3.HERE", "float = 1.0", "float = 1.0", "float = 0.0"})
+    @MNIFunction(normalParams = {"Sound", "SoundType", "Player = @s", "pos3 = pos3.HERE", "float = 1.0", "float = 1.0", "float = 0.0"})
     public static void playsound(DataTemplateObject sound, EnumVar type, PlayerVar player, Pos3Var pos, MCFloat volume, MCFloat pitch, MCFloat distance, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("playsound", sound, type, player, pos, volume, pitch, distance);
         Commands.processMacroCommandReturn(re, command);
@@ -841,7 +841,7 @@ public class StdCommands {
     //endregion
 
     //region tellraw
-    @MNIFunction(normalParams = {"Player!", "text"}, returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"Player", "text"}, returnType = "CommandReturn")
     public static void tellraw(PlayerVar player, JsonText text, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("tellraw", player, text);
         Commands.processMacroCommandReturn(re, command);
@@ -851,25 +851,25 @@ public class StdCommands {
     // tick 不能调用
 
     //region titile
-    @MNIFunction(normalParams = "Player!", returnType = "CommandReturn")
+    @MNIFunction(normalParams = "Player", returnType = "CommandReturn")
     public static void titleClear(PlayerVar player, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("title", player, "clear");
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = "Player!", returnType = "CommandReturn")
+    @MNIFunction(normalParams = "Player", returnType = "CommandReturn")
     public static void titleReset(PlayerVar player, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("title", player, "reset");
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = {"Player!", "text", "TitlePos"})
+    @MNIFunction(normalParams = {"Player", "text", "TitlePos"})
     public static void titleTitle(PlayerVar player, JsonText text, EnumVar pos, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("title", player, pos, text);
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = {"Player!", "Time", "Time", "Time"})
+    @MNIFunction(normalParams = {"Player", "Time", "Time", "Time"})
     public static void titleSet(PlayerVar player, TypeDataTemplateObject fadeIn, TypeDataTemplateObject stay, TypeDataTemplateObject fadeOut, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("title", player, "times", fadeIn, stay, fadeOut);
         Commands.processMacroCommandReturn(re, command);
@@ -885,7 +885,7 @@ public class StdCommands {
     //endregion
 
     //region transfer
-    @MNIFunction(normalParams = {"string", "int = 25565", "Player! = @s"}, returnType = "CommandReturn")
+    @MNIFunction(normalParams = {"string", "int = 25565", "Player = @s"}, returnType = "CommandReturn")
     public static void transfer(MCString hostname, MCInt port, PlayerVar target, ValueWrapper<CommandReturn> re){
         var command = Command.Companion.buildAll("transfer", hostname, port, target);
         Commands.processMacroCommandReturn(re, command);

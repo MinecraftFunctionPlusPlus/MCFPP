@@ -5,12 +5,11 @@ import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.JsonTextConcrete
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
-import top.mcfpp.core.lang.entity.SpecifiedEntityConcreteVar
 import top.mcfpp.core.lang.entity.SpecifiedEntityVar
 import top.mcfpp.lib.NBTChatComponent
 import top.mcfpp.lib.PlainChatComponent
-import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.Member
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.type.MCFPPBaseType
@@ -109,10 +108,10 @@ open class MCString : NBTBasedData {
                     JsonTextConcrete(NBTChatComponent(this, false))
                 }
             }
-            MCFPPEntityType.EntityBase -> {
+            is MCFPPEntityType -> {
                 if(this is MCStringConcrete){
                     val str = this.value.value
-                    val entityVar = SpecifiedEntityConcreteVar(value, identifier)
+                    val entityVar = SpecifiedEntityVar(identifier).apply {value = this@MCString.value.value}
                     entityVar.isName = !SpecifiedEntityVar.uuidRegex.matches(str)
                     entityVar
                 }else{

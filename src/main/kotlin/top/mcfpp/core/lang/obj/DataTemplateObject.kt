@@ -319,7 +319,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     fun toFunctionParam(){
         Function.extraFunction.runInFunction {
             for (field in this.instanceField.allVars){
-                if(field is MCFPPValue<*>){
+                if(field is MCFPPValue<*> && field !is ConcreteVar<*, *>){
                     field.toDynamic(true)
                 }
             }

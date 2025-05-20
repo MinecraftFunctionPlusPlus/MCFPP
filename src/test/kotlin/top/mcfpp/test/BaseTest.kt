@@ -1,7 +1,7 @@
 package top.mcfpp.test
 
-import kotlin.test.Test
 import top.mcfpp.test.util.MCFPPStringTest
+import kotlin.test.Test
 
 class BaseTest {
 
@@ -10,8 +10,8 @@ class BaseTest {
         val test =
             """
                 func base(){
-                    int i = 0;
-                    import int p;
+                    var i = 0;
+                    import var p as int;
                     i = i + p;
                 }
             """.trimIndent()

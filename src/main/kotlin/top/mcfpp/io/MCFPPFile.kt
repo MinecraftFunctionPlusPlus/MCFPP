@@ -1,5 +1,10 @@
 package top.mcfpp.io
 
+import com.mojang.brigadier.CommandDispatcher
+import com.mojang.brigadier.arguments.StringArgumentType.getString
+import com.mojang.brigadier.arguments.StringArgumentType.string
+import com.mojang.brigadier.builder.LiteralArgumentBuilder.literal
+import com.mojang.brigadier.builder.RequiredArgumentBuilder.argument
 import org.antlr.v4.runtime.CharStream
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
@@ -85,6 +90,28 @@ class MCFPPFile : File {
         currFile = null
     }
 
+    fun runCommand(){
+        if(nameWithoutExtension.isEmpty()){
+            useLines {
+                for (i in it){
+                    if(i.startsWith("#>")){
+                        val n = i.substring(2).trim()
+                        val parse = dispatcher.parse(n, this)
+                        if(parse.exceptions.isNotEmpty()){
+                            for ((_, value) in parse.exceptions){
+                                LogProcessor.error("Syntax error in $n: $value")
+                            }
+                        }else{
+                            dispatcher.execute(parse)
+                        }
+                    }else{
+                        return@useLines
+                    }
+                }
+            }
+        }
+    }
+
     /**
      * 编制函数索引
      */
@@ -152,6 +179,25 @@ class MCFPPFile : File {
     companion object{
 
         var currFile : MCFPPFile? = null
+
+        private val dispatcher = CommandDispatcher<MCFPPFile>().apply {
+            register(
+                literal<MCFPPFile>("injectedBy")
+                    .then(
+                        argument<MCFPPFile, String>("className", string())
+                            .executes {
+                                try {
+                                    val clazz = Class.forName(getString(it, "className"))
+                                    it.source.namespace.injectedBy(clazz)
+                                    return@executes 1
+                                }catch (e: ClassNotFoundException){
+                                    LogProcessor.error("Class not found: ${getString(it, "className")}")
+                                    return@executes 0
+                                }
+                            }
+                    )
+            )
+        }
 
         /**
          * 获得targetPath相对于sourcePath的相对路径

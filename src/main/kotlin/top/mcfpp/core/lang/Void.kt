@@ -71,6 +71,6 @@ object Void: Var<Void>("void") {
     }
 
     override fun toCommandPart(): Command {
-        return Command("top.mcfpp.lang.Void")
+        return Command("Void")
     }
 }

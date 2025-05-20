@@ -2,11 +2,8 @@ package top.mcfpp.core.lang
 
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.model.CanSelectMember
-import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.Member
 import top.mcfpp.model.property.Property
-import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.MCFPPVectorType
 import top.mcfpp.util.LogProcessor
@@ -23,6 +20,7 @@ open class VectorVar: Var<VectorVar>, Indexable, ScoreHolder {
     override var parent : CanSelectMember? = null
 
     final override var type: MCFPPType
+        get() = MCFPPVectorType(dimension)
 
     constructor(
         dimension: Int,
@@ -152,19 +150,6 @@ open class VectorVar: Var<VectorVar>, Indexable, ScoreHolder {
         components.forEach { it.getFromStack() }
     }
 
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        return data.getVar(key) to true
-    }
-
-    override fun getMemberFunction(
-        key: String,
-        readOnlyArgs: List<Var<*>>,
-        normalArgs: List<Var<*>>,
-        accessModifier: Member.AccessModifier
-    ): Pair<Function, Boolean> {
-        return data.getFunction(key, readOnlyArgs, normalArgs) to true
-    }
-
     override fun getByIndex(index: Var<*>): PropertyVar {
         when(index){
             is MCInt -> {
@@ -201,14 +186,6 @@ open class VectorVar: Var<VectorVar>, Indexable, ScoreHolder {
             if(v == this){
                 components[index] = score
             }
-        }
-    }
-
-    companion object {
-        val data = CompoundData("vector", "mcfpp")
-
-        init {
-            data.initialize()
         }
     }
 }

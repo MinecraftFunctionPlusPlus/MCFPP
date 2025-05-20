@@ -3,7 +3,6 @@ package top.mcfpp.core.lang
 import top.mcfpp.command.Command
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Member
-import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.type.MCFPPBaseType
@@ -119,12 +118,6 @@ class Pos3Var: ConcreteVar<Pos3Var, ArrayList<PosDimension>> {
         if(!super.equals(other)) return false
         return x == (other as Pos3Var).x && y == other.y && z == other.z
     }
-
-    companion object {
-        val data = CompoundData("pos3", "mcfpp").apply {
-            extends(MCAny.data)
-        }
-    }
 }
 
 class Pos2Var: ConcreteVar<Pos2Var, ArrayList<PosDimension>> {
@@ -222,12 +215,6 @@ class Pos2Var: ConcreteVar<Pos2Var, ArrayList<PosDimension>> {
         if(!super.equals(other)) return false
         return x == (other as Pos2Var).x && z == other.z
     }
-
-    companion object {
-        val data = CompoundData("pos2", "mcfpp").apply {
-            extends(MCAny.data)
-        }
-    }
 }
 
 open class PosDimension: ConcreteVar<PosDimension, Pair<String, Number>> {
@@ -238,6 +225,7 @@ open class PosDimension: ConcreteVar<PosDimension, Pair<String, Number>> {
 
     override var type: MCFPPType = MCFPPPrivateType.MCFPPCoordinateDimension
 
+    @Suppress("SuspiciousVarProperty")
     override var parent: CanSelectMember? = null
         get() = super.parent
 
@@ -286,19 +274,6 @@ open class PosDimension: ConcreteVar<PosDimension, Pair<String, Number>> {
 
     override fun getTempVar(): PosDimension {
         return PosDimension(value.first, value.second, TempPool.getVarIdentify())
-    }
-
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        TODO("Not yet implemented")
-    }
-
-    override fun getMemberFunction(
-        key: String,
-        readOnlyArgs: List<Var<*>>,
-        normalArgs: List<Var<*>>,
-        accessModifier: Member.AccessModifier
-    ): Pair<Function, Boolean> {
-        TODO("Not yet implemented")
     }
 
     /**

@@ -32,6 +32,7 @@ open class RangeVar: Var<RangeVar> {
      *
      * @param identifier 标识符。默认为
      */
+    @Suppress("LeakingThis")
     constructor(
         curr: FieldContainer,
         identifier: String = TempPool.getVarIdentify()
@@ -47,6 +48,7 @@ open class RangeVar: Var<RangeVar> {
      * 创建一个range值。它的标识符和mc名相同。
      * @param identifier identifier
      */
+    @Suppress("LeakingThis")
     constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier){
         left = MCFloat(identifier + "_left")
         left.nbtPath = this.nbtPath.memberIndex("left")
@@ -109,10 +111,6 @@ open class RangeVar: Var<RangeVar> {
         if(point and 1 != 0.toByte()) right.getFromStack()
     }
 
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        TODO("Not yet implemented")
-    }
-
     override fun toNBTVar(): NBTBasedData {
         val n = NBTBasedData()
         n.identifier = identifier
@@ -125,15 +123,6 @@ open class RangeVar: Var<RangeVar> {
         return n
     }
 
-    override fun getMemberFunction(
-        key: String,
-        readOnlyArgs: List<Var<*>>,
-        normalArgs: List<Var<*>>,
-        accessModifier: Member.AccessModifier
-    ): Pair<Function, Boolean> {
-        TODO("Not yet implemented")
-    }
-
     override fun toCommandPart() : Command{
         val command = Command("")
         if(point and 2 != 0.toByte()) command.buildMacro(left, false)
@@ -144,15 +133,6 @@ open class RangeVar: Var<RangeVar> {
 
     fun isIntRange(): Boolean{
         return left is MCInt && right is MCInt
-    }
-
-    companion object {
-        val data = CompoundData("range","mcfpp")
-
-        init {
-            data.extends(MCAny.data)
-        }
-
     }
 
 }

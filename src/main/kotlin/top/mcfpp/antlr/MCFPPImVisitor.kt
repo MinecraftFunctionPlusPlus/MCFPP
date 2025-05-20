@@ -9,7 +9,6 @@ import top.mcfpp.antlr.mcfppParser.CompileTimeFuncDeclarationContext
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.MCFPPValue
-import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.bool.BaseBool
 import top.mcfpp.core.lang.bool.ExecuteBool
@@ -21,21 +20,23 @@ import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lib.Execute
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.compound.Class
-import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.ObjectClass
 import top.mcfpp.model.field.GlobalField
-import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.model.function.FunctionParam.Companion.typeToStringList
+import top.mcfpp.model.function.InternalFunction
+import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.generic.Generic
 import top.mcfpp.model.property.FunctionAccessor
 import top.mcfpp.model.property.FunctionMutator
 import top.mcfpp.model.property.Property
-import top.mcfpp.type.*
+import top.mcfpp.type.MCFPPEnumType
+import top.mcfpp.type.MCFPPGenericClassType
+import top.mcfpp.type.MCFPPPrivateType
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
-import top.mcfpp.util.TextTranslator
-import top.mcfpp.util.TextTranslator.translate
 
 open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
@@ -117,10 +118,8 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         //变量生成
         val fieldModifier = ctx.fieldModifier()?.text
         //只有类字段构建
-        var type = ctx.type()?.let { MCFPPType.parseFromContext(it, Function.currFunction.field)?: run {
-                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(it.text))
-                MCFPPBaseType.Any
-            }
+        var type = ctx.type()?.let {
+            MCFPPType.parseFromContextNotNull(it, Function.currFunction.field)
         }
         var init: Var<*>? = null
         if (ctx.expression() != null) {
@@ -146,7 +145,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             `var` = `var`.assignedBy(init)
         }
         //一定是函数变量
-        if (!Function.currField.containVar(ctx.Identifier().text)) {
+        if (Function.currField.containVar(ctx.Identifier().text)) {
             LogProcessor.error("Duplicate defined variable name:" + ctx.Identifier().text)
         }
         when(fieldModifier){
@@ -208,39 +207,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
     fun enterExtensionFunctionDeclaration(ctx: mcfppParser.ExtensionFunctionDeclarationContext) {
         val f: Function
-        val data: CompoundData = if (ctx.type().typeWithoutExcl().className() == null) {
-            when (ctx.type().text) {
-                "int" -> MCInt.data
-                else -> {
-                    throw Exception("Cannot add extension function to ${ctx.type().text}")
-                }
-            }
-        } else {
-            val clsStr = ctx.type().typeWithoutExcl().className().text.split(":")
-            val id: String
-            val nsp: String?
-            if (clsStr.size == 1) {
-                id = clsStr[0]
-                nsp = null
-            } else {
-                id = clsStr[1]
-                nsp = clsStr[0]
-            }
-            val owo: Class? = GlobalField.getClass(nsp, id)
-            if (owo == null) {
-                val pwp = GlobalField.getTemplate(nsp, id)
-                if (pwp == null) {
-                    LogProcessor.error("Undefined class or struct:" + ctx.type().typeWithoutExcl().className().text)
-                    f = UnknownFunction(ctx.Identifier().text)
-                    Function.currFunction = f
-                    return
-                } else {
-                    pwp
-                }
-            } else {
-                owo
-            }
-        }
+        val data = MCFPPType.parseFromContext(ctx.type(), MCFPPFile.currFile!!.field)?.instanceData?: return
         //解析参数
         val types = FunctionParam.parseReadonlyAndNormalParamTypes(ctx.functionParams())
         val field = data.field

@@ -36,7 +36,7 @@ public class MCAnyData {
     }
 
     @MNIBinaryOperator(operator = "==", paramType = "null", returnType = "bool")
-    public static void equalNull(@NotNull Var<?> caller, ValueWrapper<Var<?>> returnValue){
+    public static void equalNull(@NotNull Var<?> caller, Null nu, ValueWrapper<Var<?>> returnValue){
         returnValue.setValue(new ScoreBoolConcrete(caller == Null.INSTANCE || !caller.getHasAssigned(), "re"));
     }
 }

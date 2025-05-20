@@ -26,7 +26,7 @@ object MCFPPStringTest {
         Configurator.initialize(null,source)
         //编译参数
         parseArgs(args.asList())
-        Project.compileStage = 0
+        Project.compileStage = Project.CompileStage.PRE_INIT
         //读取json
         LogProcessor.debug("Generate debug project for a string")
         Project.config.root = Path.of("./")

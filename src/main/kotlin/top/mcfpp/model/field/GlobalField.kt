@@ -10,8 +10,6 @@ import top.mcfpp.lib.SbObject
 import top.mcfpp.mni.DataObjectData
 import top.mcfpp.mni.ObjectData
 import top.mcfpp.mni.annotation.*
-import top.mcfpp.mni.minecraft.MinecraftData
-import top.mcfpp.mni.minecraft.StdCommands
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.annotation.Annotation
@@ -110,11 +108,6 @@ object GlobalField : FieldContainer, IField {
         DataTemplate.baseDataTemplate.injectedBy(DataObjectData::class.java)
         stdNamespaces["mcfpp.lang"]!!.field.addClass("Object", Class.baseClass)
         Class.baseClass.injectedBy(ObjectData::class.java)
-
-        Project.stageProcessor[Project.INDEX_TYPE].add {
-            getOrCreateNamespace("mcfpp.minecraft").injectedBy(MinecraftData::class.java)
-            getOrCreateNamespace("mcfpp.minecraft.std").injectedBy(StdCommands::class.java)
-        }
 
         listOf(
             "From" to From::class.java,

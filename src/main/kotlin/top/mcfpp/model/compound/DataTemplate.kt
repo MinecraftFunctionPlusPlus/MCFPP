@@ -3,7 +3,6 @@ package top.mcfpp.model.compound
 import top.mcfpp.Project
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.ConcreteVar
-import top.mcfpp.core.lang.MCAny
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
@@ -191,7 +190,7 @@ open class DataTemplate : FieldContainer, CompoundData {
 
         val baseDataTemplate by lazy {
             DataTemplate("DataObject","mcfpp.lang").apply {
-                extends(MCAny.data)
+                extends(MCFPPBaseType.Any.instanceData)
                 //在GlobalField中注册和获取函数
             }
         }

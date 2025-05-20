@@ -10,6 +10,12 @@ import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.util.LogProcessor
 
 open class MCFPPConcreteType(parentType: ArrayList<MCFPPType> = arrayListOf()): MCFPPType(parentType) {
+
+    final override val objectData: CompoundData
+        get() = concreteInstanceData
+
+    override val concreteInstanceData: CompoundData = CompoundData("unknown", "mcfpp")
+
     final override fun buildUnConcrete(identifier: String): Var<*> {
         LogProcessor.error("Cannot build variable '$typeName' as the compiler cannot track its type.")
         return UnknownVar(identifier)
@@ -27,7 +33,7 @@ open class MCFPPConcreteType(parentType: ArrayList<MCFPPType> = arrayListOf()): 
 
     object Type: MCFPPConcreteType(arrayListOf()){
 
-        override val objectData: CompoundData
+        override val concreteInstanceData: CompoundData
             get() = data
 
         override val typeName: String
@@ -45,8 +51,9 @@ open class MCFPPConcreteType(parentType: ArrayList<MCFPPType> = arrayListOf()): 
 
     object JavaVar: MCFPPConcreteType(arrayListOf(MCFPPBaseType.Any)){
 
-        override val objectData: CompoundData
-            get() = top.mcfpp.core.lang.JavaVar.data
+        override val concreteInstanceData: CompoundData by lazy {
+            CompoundData("JavaVar","mcfpp")
+        }
 
         override val typeName: String
             get() = "JavaVar"

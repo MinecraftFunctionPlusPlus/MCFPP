@@ -4,7 +4,6 @@ import top.mcfpp.command.Command
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.nbt.*
 import top.mcfpp.model.Member
-import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.JavaFunction
 import top.mcfpp.nbt.tags.CompoundTag
@@ -145,21 +144,6 @@ class JavaVar : ConcreteVar<JavaVar, Any?> {
             }
         }.toTypedArray()
     }
-//    private fun getTypeArray(params: List<String>): Array<Class<*>>{
-//        return params.map {
-//            when(it){
-//                "int" -> Int::class.java
-//                "float" -> Float::class.java
-//                "bool" -> Long::class.java
-//                "string" -> String::class.java
-//                "list" -> ArrayList::class.java
-//                "dict" -> HashMap::class.java
-//                "map" -> HashMap::class.java
-//                "nbt" -> Tag::class.java
-//                else -> Var::class.java
-//            }
-//        }.toTypedArray()
-//    }
 
     override fun toString(): String {
         return "JavaVar[$value]"
@@ -175,10 +159,6 @@ class JavaVar : ConcreteVar<JavaVar, Any?> {
     }
 
     companion object{
-
-        val data by lazy {
-            CompoundData("JavaVar","mcfpp")
-        }
 
         fun mcToJava(v : Var<*>) : Any{
             if(v !is MCFPPValue<*>){

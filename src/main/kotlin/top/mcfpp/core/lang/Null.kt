@@ -43,15 +43,15 @@ object Null: Var<Null>("") {
     override fun getTempVar(): Null = Null
 
     override fun storeToStack() {
-        LogProcessor.error("Cannot store void type variable to stack")
+        LogProcessor.error("$identifier is null")
     }
 
     override fun getFromStack() {
-        LogProcessor.error("Cannot get void type variable from stack")
+        LogProcessor.error("$identifier is null")
     }
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        LogProcessor.error("Cannot get member from void type variable")
+        LogProcessor.error("$identifier is null")
         return UnknownVar(key) to true
     }
 
@@ -61,12 +61,12 @@ object Null: Var<Null>("") {
         normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        LogProcessor.error("Cannot get member function from void type variable")
+        LogProcessor.error("$identifier is null")
         return UnknownFunction(key) to true
     }
 
     override fun toNBTVar(): NBTBasedData {
-        LogProcessor.error("Cannot convert void type variable to NBT")
+        LogProcessor.error("$identifier is null")
         return NBTBasedDataConcrete(StringTag("void"),"unknown")
     }
 

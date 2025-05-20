@@ -11,8 +11,9 @@ import top.mcfpp.nbt.tags.collection.ListTag
 
 class MCFPPVectorType(val dimension: Int): MCFPPType(arrayListOf(MCFPPBaseType.Any)) {
 
-    override val objectData: CompoundData
-        get() = VectorVar.data
+    override val instanceData by lazy {
+        CompoundData("vector", "mcfpp")
+    }
 
     override val typeName: String
         get() = "vec$dimension"

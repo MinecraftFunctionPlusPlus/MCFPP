@@ -3,8 +3,6 @@ package top.mcfpp.core.lang
 import top.mcfpp.core.lang.obj.EnumVar
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.Member
-import top.mcfpp.model.function.Function
 import top.mcfpp.util.TempPool
 
 /**
@@ -73,17 +71,4 @@ abstract class MCNumber<T> : Var<MCNumber<T>>, OnScoreboard {
      * @param a 值来源
      */
     abstract fun assignCommand(a: MCNumber<*>) : MCNumber<T>
-
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        TODO("Not yet implemented")
-    }
-
-    override fun getMemberFunction(
-        key: String,
-        readOnlyArgs: List<Var<*>>,
-        normalArgs: List<Var<*>>,
-        accessModifier: Member.AccessModifier
-    ): Pair<Function, Boolean> {
-        TODO("Not yet implemented")
-    }
 }

@@ -49,5 +49,4 @@ class UnknownVar(identifier: String) : Var<UnknownVar>(identifier) {
         return NBTBasedDataConcrete(StringTag("unknown"),"unknown")
     }
 
-
 }

@@ -2,14 +2,11 @@ package top.mcfpp.core.lang
 
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.core.lang.bool.ScoreBool
-import top.mcfpp.core.lang.nbt.MCString
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.lib.ChatComponent
 import top.mcfpp.lib.ListChatComponent
 import top.mcfpp.lib.NBTChatComponent
-import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.property.Property
@@ -89,7 +86,7 @@ open class JsonText : NBTBasedData {
     }
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        val v = data.getVar(key)
+        val v = MCFPPBaseType.JsonText.instanceData.getVar(key)
         if(!isElement) v?.nbtPath?.iteratorIndex()
         v?.nbtPath?.memberIndex(key)
         return v to true
@@ -141,22 +138,6 @@ open class JsonText : NBTBasedData {
                 this
             }
             else -> errorOp()
-        }
-    }
-
-    companion object {
-        val data by lazy {
-            CompoundData("JsonText","mcfpp.lang").apply {
-                extends(NBTBasedData.data)
-
-                addMember(MCInt("color"))
-                addMember(ScoreBool("bold"))
-                addMember(ScoreBool("italic"))
-                addMember(ScoreBool("underlined"))
-                addMember(ScoreBool("strikethrough"))
-                addMember(ScoreBool("obfuscated"))
-                addMember(MCString("insertion"))
-            }
         }
     }
 }
@@ -233,14 +214,4 @@ class JsonTextConcrete : MCFPPValue<ChatComponent>, JsonText {
         }
         return this
     }
-
-    companion object {
-        val data = CompoundData("JsonTextConcrete","mcfpp.lang")
-
-        init {
-            data.initialize()
-            data.extends(JsonText.data)
-        }
-    }
-
 }

@@ -1,6 +1,5 @@
 package top.mcfpp.type
 
-import top.mcfpp.core.lang.MCAny
 import top.mcfpp.core.lang.value.MCTypeValue
 import top.mcfpp.model.compound.CompoundData
 
@@ -27,7 +26,7 @@ class MCFPPGenericParamType(
 ) : MCFPPType(parentType), MCFPPTypeWithGeneric {   //TODO: 泛型的CompoundData
 
     override val objectData: CompoundData
-        get() = MCAny.data
+        get() = MCFPPBaseType.Any.instanceData
 
     override val typeName: String
         get() = identifier
