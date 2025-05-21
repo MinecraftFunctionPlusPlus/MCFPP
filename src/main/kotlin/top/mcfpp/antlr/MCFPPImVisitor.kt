@@ -157,7 +157,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             }
             "dynamic" -> {
                 if(`var` is MCFPPValue<*>){
-                    `var`.toDynamic(true)
+                    `var` = `var`.toDynamic(false)
                 }
             }
         }

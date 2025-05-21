@@ -97,12 +97,10 @@ class MCFPPFile : File {
                     if(i.startsWith("#>")){
                         val n = i.substring(2).trim()
                         val parse = dispatcher.parse(n, this)
-                        if(parse.exceptions.isNotEmpty()){
-                            for ((_, value) in parse.exceptions){
-                                LogProcessor.error("Syntax error in $n: $value")
-                            }
-                        }else{
+                        try {
                             dispatcher.execute(parse)
+                        }catch (e: Exception){
+                            LogProcessor.error("Failed to execute command: $n", e)
                         }
                     }else{
                         return@useLines

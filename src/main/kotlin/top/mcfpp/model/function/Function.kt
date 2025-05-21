@@ -10,13 +10,18 @@ import top.mcfpp.antlr.MCFPPImVisitor
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.antlr.mcfppParser.FunctionBodyContext
 import top.mcfpp.command.*
-import top.mcfpp.core.lang.*
+import top.mcfpp.core.lang.MCFPPValue
+import top.mcfpp.core.lang.UnknownVar
+import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.core.lang.obj.ClassPointerConcrete
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.doc.Document
 import top.mcfpp.lib.NamespaceID
-import top.mcfpp.model.*
+import top.mcfpp.model.CanSelectMember
+import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.Member
+import top.mcfpp.model.WithDocument
 import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.compound.*
 import top.mcfpp.model.field.FunctionField
@@ -554,12 +559,12 @@ open class Function : Member, FieldContainer, WithDocument {
         compiledFunctions[values] = cf
         cf.ast = null
         cf.runInFunction {
-            val qwq = buildString {
-                for ((index, np) in normalParams.withIndex()) {
-                    append("${np.typeName} ${np.identifier} = ${values[index]}, ")
-                }
-            }
-            addComment(qwq)
+//            val qwq = buildString {
+//                for ((index, np) in normalParams.withIndex()) {
+//                    append("${np.typeName} ${np.identifier} = ${values[index]}, ")
+//                }
+//            }
+//            addComment(qwq)
             MCFPPImVisitor().visitFunctionBody(ast!!)
         }
         return cf

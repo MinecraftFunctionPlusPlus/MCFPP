@@ -269,7 +269,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         if(type == this.type){
             return this
         }
-        if(this.type.isSubOf(type)){
+        if((this.type is MCFPPClassType || this.type is MCFPPDataTemplateType) && this.type.isSubOf(type)){
             return this
         }
         return when(type){

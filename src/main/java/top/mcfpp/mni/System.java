@@ -110,7 +110,7 @@ public class System {
     @InsertCommand
     public static void print(@NotNull NBTBasedData var){
         if(var instanceof MCFPPValue<?> varC){
-            Function.Companion.addCommand("tellraw @a \"" + Tag.toSNBT(NBTUtil.INSTANCE.valueToNBT(varC.getValue())) + "\"");
+            Function.Companion.addCommand("tellraw @a " + Tag.toSNBT(NBTUtil.INSTANCE.valueToNBT(varC.getValue())));
         }else {
             Function.Companion.addCommands(Commands.buildMacroAdjustedCommands(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart(), true)));
         }

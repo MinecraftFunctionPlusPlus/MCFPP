@@ -153,7 +153,7 @@ object GlobalField : FieldContainer, IField {
     @JvmStatic
     fun getFunction(namespace:String?, identifier: String, readOnlyParams: List<Var<*>>, normalParams : List<Var<*>>): Function {
         if(namespace == null){
-            val f = MCFPPFile.currFile?.field?.getFunction(identifier, readOnlyParams, normalParams)
+            val f = MCFPPFile.currFile?.field?.getAccessibleFunction(identifier, readOnlyParams, normalParams)
             if(f != null && f !is UnknownFunction) return f
             for (n in stdNamespaces.values){
                 val f1 = n.field.getFunction(identifier, readOnlyParams, normalParams)

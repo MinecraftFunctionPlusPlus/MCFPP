@@ -437,7 +437,7 @@ class MCFPPExprVisitor(
         }
         //调用函数
         if (func !is UnknownFunction) {
-            if(func is Generic<*>){
+            val returnVar = if(func is Generic<*>){
                 func.invoke(readOnlyArgs, normalArgs, currSelector)
             }else{
                 func.invoke(normalArgs,currSelector)
@@ -445,7 +445,7 @@ class MCFPPExprVisitor(
             //函数树
             Function.currFunction.child.add(func)
             func.parent.add(Function.currFunction)
-            return func.returnVar
+            return returnVar
         }
         //可能是类的构造函数
         var cls: Class? = if(ctx.arguments().readOnlyArgs() != null){

@@ -34,11 +34,11 @@ class BaseTest {
         val test =
             """
                 func main(){
-                    dynamic int qwq;
+                    dynamic var qwq as int;
                     test(qwq);
                 }
                 
-                func test(int qwq){
+                func test(qwq as int){
                     var a = qwq + 1;
                     print(a);
                 }
@@ -50,7 +50,7 @@ class BaseTest {
     fun functionReturnTest(){
         val test =
             """
-                func test<int i>()->int{
+                func test<i as int>()->int{
                      var p = i + 1;
                      return p;
                 }
@@ -68,7 +68,7 @@ class BaseTest {
     fun funcDefaultValueTest(){
         val test =
             """
-                func test(int i = 1) -> int{
+                func test(i as int = 1) -> int{
                      var p = i + 1;
                      return p;
                 }
@@ -101,7 +101,7 @@ class BaseTest {
         val test =
             """
                 func test() -> int!{
-                    dynamic int a = 1;
+                    dynamic var a = 1;
                     return a;
                 }
             """.trimIndent()

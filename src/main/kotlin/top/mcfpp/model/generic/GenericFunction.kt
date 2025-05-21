@@ -100,10 +100,6 @@ class GenericFunction : Function, Generic<Function> {
         val values = readOnlyValues + normalValues
         compiledFunctions[values]?.let { return it }
         val cf = Function(this)
-        //去除原来的function在编译的时候添加的变量
-        for (v in ArrayList(cf.field.allVars).subList(cf.normalParams.size, cf.field.allVars.size)) {
-            cf.field.removeVar(v.identifier)
-        }
         //替换变量
         for (i in readOnlyValues.indices){
             cf.field.putVar(
