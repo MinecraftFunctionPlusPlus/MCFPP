@@ -17,7 +17,7 @@ class MCFunction(namespace: String, val path: String?, identifier: String): Func
             }
         }
 
-    override fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?): Var<*> {
+    override fun invoke(normalArgs: LinkedHashMap<String, Var<*>>, caller: CanSelectMember?): Var<*> {
         addCommand(Commands.function(this))
         return Void
     }

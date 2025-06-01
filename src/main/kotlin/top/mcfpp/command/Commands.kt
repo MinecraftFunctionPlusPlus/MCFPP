@@ -384,10 +384,24 @@ object Commands {
             }
             is ObjectVar -> selectRun(a.value, hasExecuteRun)
             is MCFPPClassType -> {
-                if(hasExecuteRun){
-                    arrayOf(Command.build("execute as ${(a.cls as ObjectClass).mcuuid.uuid}").build("run", "run"))
-                }else{
-                    arrayOf(Command.build("execute as ${(a.cls as ObjectClass).mcuuid.uuid}"))
+                if(a.cls is ObjectClass){
+                    if(hasExecuteRun){
+                        arrayOf(Command.build("execute as ${(a.cls as ObjectClass).mcuuid.uuid}").build("run", "run"))
+                    }else{
+                        arrayOf(Command.build("execute as ${(a.cls as ObjectClass).mcuuid.uuid}"))
+                    }
+                }else if(a.cls.objectClass != null){
+                    if(hasExecuteRun){
+                        arrayOf(Command.build("execute as ${a.cls.objectClass!!.mcuuid.uuid}").build("run", "run"))
+                    }else{
+                        arrayOf(Command.build("execute as ${a.cls.objectClass!!.mcuuid.uuid}"))
+                    }
+                } else {
+                    if(hasExecuteRun){
+                        arrayOf(Command.build("#execute as [Error: No object class ${a.cls.namespaceID}]").build("run", "run"))
+                    }else{
+                        arrayOf(Command.build("#execute as [Error: No object class ${a.cls.namespaceID}]}"))
+                    }
                 }
             }
             else -> TODO()

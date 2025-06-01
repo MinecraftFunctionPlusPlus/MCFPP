@@ -4,7 +4,7 @@ import top.mcfpp.antlr.mcfppParser.FunctionBodyContext
 import top.mcfpp.io.info.AbstractFunctionInfo.Companion.currFunction
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
-import top.mcfpp.model.generic.GenericFunction
+import top.mcfpp.model.function.GenericFunction
 import top.mcfpp.type.MCFPPType
 
 interface AbstractFunctionInfo<T: Function>: ModelInfo<T> {

@@ -4,7 +4,7 @@ import top.mcfpp.Project.withCompilationContext
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.function.Function
-import top.mcfpp.model.generic.CompiledGenericObjectClass
+import top.mcfpp.model.compound.CompiledGenericObjectClass
 import top.mcfpp.util.LogProcessor
 
 class MCFPPGenericObjectClassFieldVisitor(val clazz: CompiledGenericObjectClass) : MCFPPFieldVisitor() {

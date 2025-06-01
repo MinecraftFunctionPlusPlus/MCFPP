@@ -28,7 +28,7 @@ class NativeDataTemplateConstructor(data: DataTemplate, javaMethod: Method = Nat
         javaMethodName = javaMethod.name
     }
 
-    override fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?): Var<*> {
+    override fun invoke(normalArgs: LinkedHashMap<String, Var<*>>, caller: CanSelectMember?): Var<*> {
         caller as DataTemplateObject
         //初始化
         for ((k, v) in data.preInit) {
@@ -36,7 +36,7 @@ class NativeDataTemplateConstructor(data: DataTemplate, javaMethod: Method = Nat
             val field = DataTemplate.getField(caller, k)!!
             field.replacedBy(field.assignedBy(init))
         }
-        javaMethod.invoke(null, *normalArgs.toArray(), caller)
+        javaMethod.invoke(null, *normalArgs.values.toTypedArray(), caller)
         return caller
     }
 

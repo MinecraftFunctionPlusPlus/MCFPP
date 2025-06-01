@@ -9,10 +9,10 @@ import top.mcfpp.model.Namespace
 import top.mcfpp.model.compound.*
 import top.mcfpp.model.compound.Enum
 import top.mcfpp.model.field.GlobalField
-import top.mcfpp.model.generic.ClassParam
-import top.mcfpp.model.generic.GenericClass
-import top.mcfpp.model.generic.GenericObjectClass
-import top.mcfpp.model.generic.ImplementedGenericClass
+import top.mcfpp.model.compound.ClassParam
+import top.mcfpp.model.compound.GenericClass
+import top.mcfpp.model.compound.GenericObjectClass
+import top.mcfpp.model.compound.ImplementedGenericClass
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.primitive.IntTag
 import top.mcfpp.type.MCFPPBaseType

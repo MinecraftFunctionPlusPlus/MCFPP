@@ -20,10 +20,13 @@ import top.mcfpp.io.LibBinReader
 import top.mcfpp.io.LibBinWriter
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lib.SbObject
+import top.mcfpp.model.Namespace
 import top.mcfpp.model.Native
 import top.mcfpp.model.compound.ObjectClass
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.FunctionTag
+import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.Utils
 import java.io.File
@@ -79,11 +82,11 @@ object Project {
      */
     var warningCount = 0
 
-    lateinit var mcfppTick : Function
+    lateinit var projectTick : Function
 
-    lateinit var mcfppLoad : Function
+    lateinit var projectLoad : Function
 
-    lateinit var mcfppInit : Function
+    lateinit var projectInit : Function
 
     /**
      * 常量池
@@ -265,6 +268,21 @@ object Project {
      */
     fun readProject(){
         compileStage = CompileStage.READ_LIB
+        //生成默认命名空间
+        GlobalField.localNamespaces[config.rootNamespace] = Namespace(config.rootNamespace)
+
+        //生成tick/load/init函数
+        projectTick = Function("tick", config.rootNamespace, null)
+        projectLoad = Function("load", config.rootNamespace, null)
+        projectInit = Function("init", config.rootNamespace, null)
+        GlobalField.localNamespaces[config.rootNamespace]!!.field.addFunction(projectTick, true)
+        GlobalField.localNamespaces[config.rootNamespace]!!.field.addFunction(projectLoad, true)
+        GlobalField.localNamespaces[config.rootNamespace]!!.field.addFunction(projectInit, true)
+        FunctionTag.TICK.functions.add(projectTick)
+        FunctionTag.LOAD.functions.add(projectLoad)
+        FunctionTag.LOAD.functions.add(projectInit)
+
+
         //读取所有jar
         for (jar in config.jars){
             if(Paths.get(jar).notExists()){
@@ -341,7 +359,7 @@ object Project {
                 files.add(MCFPPFile(it.toFile()))
             }
         }
-        if(files.isEmpty()){
+        if(files.isEmpty() && config.sourcePath != null){
             LogProcessor.error("Cannot find any mcfpp file in path: ${config.sourcePath}")
         }
         stageProcessor[compileStage.ordinal].forEach { it() }
@@ -446,71 +464,89 @@ object Project {
         logger.debug("Adding scoreboards declare in mcfpp:load function")
 
         //向load函数中添加记分板初始化命令
-        Function.currFunction = GlobalField.stdNamespaces["mcfpp"]!!.field.getFunction("load", ArrayList(), ArrayList())
-        for (scoreboard in GlobalField.scoreboards.values){
-            Function.addCommand("scoreboard objectives add ${scoreboard.name} ${scoreboard.criterion}")
-        }
-        //向load函数中添加库初始化命令
-        Function.addCommand("execute unless score math mcfpp_init matches 1 run function math:_init")
-        //向load函数中添加实体初始化命令
-        Function.addCommand("summon item 0 0 0 {" +
-                "Tags:[\"mcfpp_ptr_marker\"]," +
-                "UUID:${ClassPointer.tempItemEntityUUIDNBT}, " +
-                "Age:-32768, " +
-                "NoGravity: true, " +
-                "Item:{id:\"stone\"}, " +
-                "Invulnerable: true" +
-                "}"
-        )
-        //向load中添加类初始化命令
-        for (n in GlobalField.localNamespaces.values){
-            n.field.forEachObject { c->
-                run {
+        projectLoad.runInFunction {
+            for (scoreboard in GlobalField.scoreboards.values){
+                Function.addCommand("scoreboard objectives add ${scoreboard.name} ${scoreboard.criterion}")
+            }
+
+            Function.addComment("math:_init", CommentLevel.INFO)
+
+            //向load函数中添加库初始化命令
+            Function.addCommand("execute unless score math mcfpp_init matches 1 run function math:_init")
+            //向load函数中添加实体初始化命令
+            Function.addCommand("summon item 0 0 0 {" +
+                    "Tags:[\"mcfpp_ptr_marker\"]," +
+                    "UUID:${ClassPointer.tempItemEntityUUIDNBT}, " +
+                    "Age:-32768, " +
+                    "NoGravity: true, " +
+                    "Item:{id:\"stone\"}, " +
+                    "Invulnerable: true" +
+                    "}"
+            )
+
+            Function.addComment("class init", CommentLevel.INFO)
+            //向load中添加类初始化命令
+            for (n in GlobalField.localNamespaces.values){
+                n.field.forEachObject { c->
                     if(c is ObjectClass){
                         //单例实体
                         Function.addCommand("summon marker 0 0 0 {" +
                                 "Tags:[${c.tag}]," +
                                 "UUID:${c.mcuuid.uuidSNBT}}"
                         )
-                        c.classPreInit.invoke(ArrayList(), null)
+                        c.classPreInit.invoke(LinkedHashMap(), null)
                     }
                 }
             }
-        }
-        //向load中添加类的load函数
-        for (n in GlobalField.localNamespaces.values){
-            n.field.forEachClass { c -> mcfppLoad.runInFunction {
-                val qwq = c.field.getFunction("load",ArrayList(), ArrayList())
-                Function.addCommand("execute as @e[tag=${c.tag}] at @s run function ${qwq.namespaceID}")
-            }  }
-            n.field.forEachObject { o -> mcfppLoad.runInFunction {
-                if(o !is ObjectClass) return@runInFunction
-                val qwq = o.field.getFunction("load",ArrayList(), ArrayList())
-                Function.addCommand("execute as ${o.mcuuid.uuid} at @s run function ${qwq.namespaceID}")
-            } }
+            //向load中添加类的load函数
+            for (n in GlobalField.localNamespaces.values){
+                n.field.forEachClass { c ->
+                    val qwq = c.field.getFunction("load", ArrayList(), ArrayList())
+                    if(qwq is NativeFunction){
+                        qwq.invoke(emptyList(), null)
+                    }else{
+                        Function.addCommand("execute as @e[tag=${c.tag}] at @s run function ${qwq.namespaceID}")
+                    }
+                }
+                n.field.forEachObject { o ->
+                    if(o !is ObjectClass) return@forEachObject
+                    val qwq = o.field.getFunction("load", ArrayList(), ArrayList())
+                    if(qwq is NativeFunction){
+                        qwq.invoke(emptyList(), null)
+                    }else{
+                        Function.addCommand("execute as ${o.mcuuid.uuid} at @s run function ${qwq.namespaceID}")
+                    }
+                }
+            }
+
+            //浮点数临时marker实体
+            Function.addCommand("summon marker 0 0 0 {" +
+                    "Tags:[\"mcfpp_float_marker\"]," +
+                    "UUID:${MCFloat.tempFloatEntityUUIDNBT}}"
+            )
         }
 
         //向tick中添加类的tick函数
         for (n in GlobalField.localNamespaces.values){
-            n.field.forEachClass { c -> mcfppTick.runInFunction {
+            n.field.forEachClass { c -> projectTick.runInFunction {
                 val qwq = c.field.getFunction("tick",ArrayList(), ArrayList())
-                Function.addCommand("execute as @e[tag=${c.tag}] at @s run function ${qwq.namespaceID}")
+                if(qwq is NativeFunction){
+                    qwq.invoke(emptyList(), null)
+                }else{
+                    Function.addCommand("execute as @e[tag=${c.tag}] at @s run function ${qwq.namespaceID}")
+                }
             }  }
-            n.field.forEachObject { o -> mcfppTick.runInFunction {
+            n.field.forEachObject { o -> projectTick.runInFunction {
                 if(o !is ObjectClass) return@runInFunction
                 val qwq = o.field.getFunction("tick",ArrayList(), ArrayList())
-                Function.addCommand("execute as ${o.mcuuid.uuid} at @s run function ${qwq.namespaceID}")
+                if(qwq is NativeFunction){
+                    qwq.invoke(emptyList(), null)
+                }else{
+                    Function.addCommand("execute as ${o.mcuuid.uuid} at @s run function ${qwq.namespaceID}")
+                }
             } }
         }
 
-        //浮点数临时marker实体
-        Function.addCommand("summon marker 0 0 0 {" +
-                "Tags:[\"mcfpp_float_marker\"]," +
-                "UUID:${MCFloat.tempFloatEntityUUIDNBT}}"
-        )
-
-
-        //浮点数的
         //寻找入口函数
         var hasEntrance = false
         for(field in GlobalField.localNamespaces.values){

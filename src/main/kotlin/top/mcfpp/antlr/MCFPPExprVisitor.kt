@@ -8,16 +8,16 @@ import top.mcfpp.core.lang.nbt.*
 import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.core.lang.obj.ObjectVar
 import top.mcfpp.lib.EntitySelector
+import top.mcfpp.model.Generic
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.GenericClass
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.field.MCFPPFuncGetter
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.function.UnknownFunction
-import top.mcfpp.model.generic.Generic
-import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.primitive.ByteTag
 import top.mcfpp.nbt.tags.primitive.DoubleTag
@@ -440,7 +440,7 @@ class MCFPPExprVisitor(
             val returnVar = if(func is Generic<*>){
                 func.invoke(readOnlyArgs, normalArgs, currSelector)
             }else{
-                func.invoke(normalArgs,currSelector)
+                func.invoke(normalArgs, currSelector)
             }
             //函数树
             Function.currFunction.child.add(func)

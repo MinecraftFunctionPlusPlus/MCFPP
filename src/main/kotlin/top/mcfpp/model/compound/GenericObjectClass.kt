@@ -1,4 +1,4 @@
-package top.mcfpp.model.generic
+package top.mcfpp.model.compound
 
 import top.mcfpp.Project
 import top.mcfpp.antlr.MCFPPGenericClassImVisitor
@@ -8,8 +8,6 @@ import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.core.lang.MCFPPTypeVar
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.compound.Class
-import top.mcfpp.model.compound.CompiledGenericClass
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.MCUUID

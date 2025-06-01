@@ -330,7 +330,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         val f = getMemberFunction("toCommandPart", arrayListOf(), arrayListOf(), Member.AccessModifier.PUBLIC).first
         if(f is UnknownFunction) throw IllegalArgumentException("Cannot find toCommandPart function")
         if(f.isOverride){
-            val command = (f.invoke(arrayListOf(), this) as JavaVar).value as Command
+            val command = (f.invoke(linkedMapOf(), this) as JavaVar).value as Command
             return command
         }else{
             return super.toCommandPart()

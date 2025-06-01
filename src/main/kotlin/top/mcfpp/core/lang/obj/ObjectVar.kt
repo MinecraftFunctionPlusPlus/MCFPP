@@ -37,7 +37,7 @@ class ObjectVar(type: CanSelectMember, identifier: String = TempPool.getVarIdent
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         return value.getMemberVar(key, accessModifier).apply {
-            parent = value
+            first?.parent = value
         }
     }
 

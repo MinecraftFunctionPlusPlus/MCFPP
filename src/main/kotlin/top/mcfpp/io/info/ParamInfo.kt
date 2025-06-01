@@ -2,7 +2,7 @@ package top.mcfpp.io.info
 
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.function.FunctionParam
-import top.mcfpp.model.generic.ClassParam
+import top.mcfpp.model.compound.ClassParam
 import top.mcfpp.type.MCFPPType
 
 data class FunctionParamInfo(

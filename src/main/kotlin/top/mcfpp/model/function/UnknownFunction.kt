@@ -22,7 +22,7 @@ open class UnknownFunction: Function {
         returnVar = UnknownVar("return")
     }
 
-    override fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?): Var<*> {
+    override fun invoke(normalArgs: LinkedHashMap<String, Var<*>>, caller: CanSelectMember?): Var<*> {
         addComment("[Failed to compile]invoke unknown function $namespaceID")
         return returnVar
     }

@@ -1,7 +1,5 @@
 package top.mcfpp.util
 
-import org.antlr.v4.runtime.ParserRuleContext
-import top.mcfpp.Project
 import top.mcfpp.nbt.tags.collection.IntArrayTag
 import java.io.*
 import java.util.*
@@ -156,4 +154,26 @@ object Utils {
 
         return obj
     }
+    fun <K, V> LinkedHashMap<K, V>.subMap(fromIndex: Int, toIndex: Int): LinkedHashMap<K, V> {
+        require(fromIndex >= 0 && toIndex <= size && fromIndex <= toIndex) {
+            "Invalid range: fromIndex=$fromIndex, toIndex=$toIndex, size=$size"
+        }
+        return LinkedHashMap<K, V>().apply {
+            // 通过 entries 按顺序截取并重新插入
+            this@subMap.entries.toList()
+                .subList(fromIndex, toIndex)
+                .forEach { put(it.key, it.value) }
+        }
+    }
+    fun <K, V> LinkedHashMap<K, V>.addFirst(key: K, value: V): LinkedHashMap<K, V> {
+        return LinkedHashMap<K, V>().apply {
+            // 1. 先插入新键值对
+            put(key, value)
+            // 2. 再插入原 map 的所有键值对
+            putAll(this@addFirst)
+        }
+    }
+
+
+
 }

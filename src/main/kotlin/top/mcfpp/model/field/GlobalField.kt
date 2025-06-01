@@ -17,7 +17,6 @@ import top.mcfpp.model.compound.*
 import top.mcfpp.model.compound.Enum
 import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function
-import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.model.property.*
 import top.mcfpp.type.MCFPPType
 import java.util.*
@@ -91,18 +90,9 @@ object GlobalField : FieldContainer, IField {
         stdNamespaces["mcfpp"] = Namespace("mcfpp")
         stdNamespaces["mcfpp.lang"] = Namespace("mcfpp.lang")
 
-        Project.mcfppTick = Function("tick","mcfpp", context = null)
-        Project.mcfppLoad = Function("load","mcfpp", context = null)
-        Project.mcfppInit = Function("init", "mcfpp", context = null)
-        stdNamespaces["mcfpp"]!!.field.addFunction(Project.mcfppLoad,true)
-        stdNamespaces["mcfpp"]!!.field.addFunction(Project.mcfppTick,true)
-        stdNamespaces["mcfpp"]!!.field.addFunction(Project.mcfppInit, true)
         stdNamespaces["mcfpp"]!!.field.addFunction(Project.mcfppSystemTick, true)
 
-        FunctionTag.TICK.functions.add(Project.mcfppTick)
         FunctionTag.TICK.functions.add(Project.mcfppSystemTick)
-        FunctionTag.LOAD.functions.add(Project.mcfppLoad)
-        FunctionTag.LOAD.functions.add(Project.mcfppInit)
 
         stdNamespaces["mcfpp.lang"]!!.field.addTemplate("DataObject", DataTemplate.baseDataTemplate)
         DataTemplate.baseDataTemplate.injectedBy(DataObjectData::class.java)

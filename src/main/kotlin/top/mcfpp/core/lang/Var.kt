@@ -366,7 +366,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         }
         val operator = (if(this is MCFPPValue<*>) type.concreteInstanceData else type.instanceData).field.getOperator(operation, a.type)
         val re = if(operator != null) {
-            operator.invoke(arrayListOf(qwq), this)
+            operator.invoke(operator.mapNormalArgs(arrayListOf(qwq)), this)
         } else {
             LogProcessor.error("Unsupported operation '$operation' between ${type.typeName} and ${a.type.typeName}")
             UnknownVar("${type.typeName}_$operation{a.type.typeName}_" + TempPool.getVarIdentify()).apply { isError = true }

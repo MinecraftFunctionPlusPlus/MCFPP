@@ -1,4 +1,4 @@
-package top.mcfpp.model.generic
+package top.mcfpp.model.function
 
 import top.mcfpp.Project
 import top.mcfpp.antlr.MCFPPImVisitor
@@ -6,10 +6,8 @@ import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
+import top.mcfpp.model.Generic
 import top.mcfpp.model.compound.CompoundData
-import top.mcfpp.model.function.ExtensionFunction
-import top.mcfpp.model.function.Function
-import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.util.LogProcessor
 
 class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
@@ -25,8 +23,25 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
     @Suppress("ConvertSecondaryConstructorToPrimary")
     constructor(name: String, owner: CompoundData, namespace: String = Project.currNamespace, ctx: mcfppParser.FunctionBodyContext):super(name, owner, namespace, ctx)
 
-    override fun invoke(readOnlyArgs: ArrayList<Var<*>>, normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?): Var<*> {
-        return compile(readOnlyArgs).invoke(normalArgs, caller)
+    override fun invoke(readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>, caller: CanSelectMember?): Var<*> {
+        return invoke(mapReadonlyArgs(readOnlyArgs), mapNormalArgs(normalArgs), caller)
+    }
+    override fun invoke(readOnlyArgs: LinkedHashMap<String, Var<*>>, normalArgs: LinkedHashMap<String, Var<*>>, caller: CanSelectMember?): Var<*> {
+        return compile(completeDefaultValue((readOnlyArgs + normalArgs) as LinkedHashMap)).let {(k, v) -> k.invoke(v, caller)}
+    }
+
+    /**
+     * 补全缺省参数
+     */
+    override fun completeDefaultValue(args: LinkedHashMap<String, Var<*>>): LinkedHashMap<String, Var<*>>{
+        val completedArgs = LinkedHashMap<String, Var<*>>()
+        for (p in readOnlyParams){
+            completedArgs[p.identifier] = args[p.identifier]?:p.defaultVar!!
+        }
+        for (p in normalParams){
+            completedArgs[p.identifier] = args[p.identifier]?:p.defaultVar!!
+        }
+        return completedArgs
     }
 
     override fun paramCount(): Int {
@@ -55,21 +70,17 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
         }
     }
 
-    override fun compile(args: List<Var<*>>): Function{
+    override fun compile(args: LinkedHashMap<String, Var<*>>): Pair<Function, LinkedHashMap<String, Var<*>>> {
         //函数参数已知条件下的编译
-        val readOnlyArgs = args.subList(0, readOnlyParams.size)
-        val readOnlyValues = readOnlyArgs.map { (it as MCFPPValue<*>).value }
-        val normalArgs = args.subList(readOnlyArgs.size, args.size)
+        val argList = args.values.toList()
+        val readOnlyArgs = argList.subList(0, readOnlyParams.size)  //一定是MCFPPValue<*>
+        val normalArgs = argList.subList(readOnlyArgs.size, args.size)
         val normalValues = normalArgs.map { if (it is MCFPPValue<*>) it.value else null }
-        val values = readOnlyValues + normalValues
-        compiledFunctions[values]?.let { return it }
+        val values = readOnlyArgs + normalValues
+        compiledFunctions[values]?.let { return it to args.filter { e -> e.value !is MCFPPValue<*> } as LinkedHashMap  }
         val cf = Function(this)
-        //去除原来的function在编译的时候添加的变量
-        for (v in ArrayList(cf.field.allVars).subList(cf.normalParams.size, cf.field.allVars.size)) {
-            cf.field.removeVar(v.identifier)
-        }
         //替换变量
-        for (i in readOnlyValues.indices){
+        for (i in readOnlyArgs.indices){
             cf.field.putVar(
                 readOnlyParams[i].identifier,
                 cf.field.getVar(readOnlyParams[i].identifier)!!.assignedBy(readOnlyArgs[i]),
@@ -90,8 +101,6 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
         for (i in normalArgs.indices) {
             if (normalArgs[i] !is MCFPPValue<*>) {
                 params.add(normalParams[i])
-            }else{
-                cf.excludedArgIndex.add(i.toByte())
             }
         }
         cf.normalParams = params
@@ -108,7 +117,7 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
             addComment(qwq)
             MCFPPImVisitor().visitFunctionBody(ast!!)
         }
-        return cf
+        return cf to args.filter { e -> e.value !is MCFPPValue<*> } as LinkedHashMap
     }
 
     override fun isSelf(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): Boolean {

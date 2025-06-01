@@ -9,7 +9,7 @@ class ClassTest {
         val test =
             """
                 class Test {
-                    int i = 0;
+                    i as int = 0;
                     
                     constructor() {
                         Test.id = Test.id + 1;
@@ -18,11 +18,11 @@ class ClassTest {
                 }
                 
                 object class Test{
-                    int id = 0;
+                    id as int = 0;
                 }
                 
-                func main{
-                    Test test = Test();
+                func main(){
+                    var test = Test();
                     print(test.i);
                 }
             """.trimIndent()

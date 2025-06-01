@@ -1,6 +1,7 @@
 package top.mcfpp.lib
 
 import top.mcfpp.model.field.GlobalField
+import top.mcfpp.util.StringHelper.toSnakeCase
 import java.io.Serializable
 import java.util.*
 
@@ -32,7 +33,7 @@ class SbObject(name: String, rule: String, var display: ListChatComponent?): Ser
     constructor(name: String) : this(name, "dummy", null)
 
     init {
-        this.name = name.lowercase(Locale.getDefault())
+        this.name = name.toSnakeCase()
         this.criterion = rule.lowercase(Locale.getDefault())
         if(!GlobalField.scoreboards.containsKey(this.name)){
             GlobalField.scoreboards[this.name] = this

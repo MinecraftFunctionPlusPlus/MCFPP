@@ -18,19 +18,13 @@ import top.mcfpp.core.lang.obj.ClassPointerConcrete
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.doc.Document
 import top.mcfpp.lib.NamespaceID
-import top.mcfpp.model.CanSelectMember
-import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.Member
-import top.mcfpp.model.WithDocument
+import top.mcfpp.model.*
 import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.compound.*
 import top.mcfpp.model.field.FunctionField
 import top.mcfpp.model.field.GlobalField
-import top.mcfpp.model.generic.Generic
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
-import top.mcfpp.util.TextTranslator
-import top.mcfpp.util.TextTranslator.translate
 import java.io.Serializable
 import java.lang.reflect.Method
 
@@ -486,26 +480,30 @@ open class Function : Member, FieldContainer, WithDocument {
     protected open fun parseParam(param: mcfppParser.ParameterContext) : Pair<FunctionParam,Var<*>>{
         //参数构建
         val param1 = FunctionParam(
-            MCFPPType.parseFromContext(param.type(), this.field)?: run {
-                LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(param.type().text))
-                MCFPPBaseType.Any
-            },
+            MCFPPType.parseFromContextNotNull(param.type(), this.field),
             param.Identifier()?.text?: "p${paramCount()}",
             this,
             param.STATIC() != null,
             param.value() != null,
             this is Generic<*>
         )
+        val v = param1.buildVar()
         //检查缺省参数是否合法
         if(param.value() == null && hasDefaultValue){
             LogProcessor.error("Default value must be at the end of the parameter list")
-            throw Exception("Default value must be at the end of the parameter list")
-        }
-        val v = param1.buildVar()
-        if(param.value() != null){
-            hasDefaultValue = true
-            //编译缺省值表达式，用于赋值参数
-            param1.defaultVar = MCFPPExprVisitor().visit(param.value()!!).explicitCast(param1.type)
+            hasDefaultValue = false
+            for (p in normalParams){
+                if(p.hasDefault){
+                    p.defaultVar = null
+                    p.hasDefault = false
+                }
+            }
+        }else{
+            if(param.value() != null){
+                hasDefaultValue = true
+                //编译缺省值表达式，用于赋值参数
+                param1.defaultVar = MCFPPExprVisitor().visit(param.value()!!).explicitCast(param1.type)
+            }
         }
         return param1 to v
     }
@@ -525,65 +523,22 @@ open class Function : Member, FieldContainer, WithDocument {
         }
     }
 
-    open fun compile(args: List<Var<*>>): Function{
-        //函数参数已知条件下的编译
-        val values = args.map { if (it is MCFPPValue<*>) it.value else null }
-        compiledFunctions[values]?.let { return it }
-        val cf = Function(this)
-        //去除原来的function在编译的时候添加的变量
-        for (v in ArrayList(cf.field.allVars).subList(cf.normalParams.size, cf.field.allVars.size)) {
-            cf.field.removeVar(v.identifier)
-        }
-        //替换变量
-        for (i in values.indices) {
-            if (values[i] != null) {
-                cf.field.putVar(
-                    normalParams[i].identifier,
-                    cf.field.getVar(normalParams[i].identifier)!!.assignedBy(args[i]),
-                    true
-                )
-            }
-        }
-        //去除确定的参数
-        val params = ArrayList<FunctionParam>()
-        for (i in args.indices) {
-            if (args[i] !is MCFPPValue<*>) {
-                params.add(normalParams[i])
-            }else{
-                cf.excludedArgIndex.add(i.toByte())
-            }
-        }
-        cf.normalParams = params
-        cf.commands.clear()
-        cf.identifier = this.identifier + "_" + compiledFunctions.size
-        compiledFunctions[values] = cf
-        cf.ast = null
-        cf.runInFunction {
-//            val qwq = buildString {
-//                for ((index, np) in normalParams.withIndex()) {
-//                    append("${np.typeName} ${np.identifier} = ${values[index]}, ")
-//                }
-//            }
-//            addComment(qwq)
-            MCFPPImVisitor().visitFunctionBody(ast!!)
-        }
-        return cf
+    fun invoke(normalArgs: List<Var<*>>, caller: CanSelectMember?): Var<*> {
+        return invoke(mapNormalArgs(normalArgs), caller)
     }
 
     /**
-     * @param normalArgs 函数的参数列表
+     * @param normalArgs 函数的参数列表，包含了参数名和参数值
      * @param caller 函数的调用者
      */
-    open fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?): Var<*>{
+    open fun invoke(normalArgs: LinkedHashMap<String, Var<*>>, caller: CanSelectMember?): Var<*>{
         if(ast != null){
-            return compile(normalArgs).invoke(normalArgs, caller)
+            return compile(completeDefaultValue(normalArgs)).let {(k, v) -> k.invoke(v, caller)}
         }
-        //参数排除
-        val args = normalArgs.filterIndexed { index, _ -> index.toByte() !in excludedArgIndex }
         when(caller){
-            is MCFPPType, is DataTemplateObject, null -> invoke(args)
-            is ClassPointer -> invoke(args, caller)
-            is Var<*> -> invoke(args, caller)
+            is MCFPPType, is DataTemplateObject, null -> invoke(normalArgs.values.toList())
+            is ClassPointer -> invoke(normalArgs.values.toList(), caller)
+            is Var<*> -> invoke(normalArgs.values.toList(), caller)
         }
         return returnVar
     }
@@ -710,6 +665,51 @@ open class Function : Member, FieldContainer, WithDocument {
     }
 
     /**
+     * 补全缺省参数
+     */
+    open fun completeDefaultValue(args: LinkedHashMap<String, Var<*>>): LinkedHashMap<String, Var<*>>{
+        val completedArgs = LinkedHashMap<String, Var<*>>()
+        for (p in normalParams){
+            completedArgs[p.identifier] = args[p.identifier]?:p.defaultVar!!
+        }
+        return completedArgs
+    }
+
+    open fun compile(args: LinkedHashMap<String, Var<*>>): Pair<Function, LinkedHashMap<String, Var<*>>>{
+        //函数参数已知条件下的编译
+        val values = args.values.map { if (it is MCFPPValue<*>) it.value else null }
+        val argList = args.values.toList()
+        compiledFunctions[values]?.let { return it to args.filter { e -> e.value !is MCFPPValue<*> } as LinkedHashMap }
+        val cf = Function(this)
+        //替换变量
+        for (i in values.indices) {
+            if (values[i] != null) {
+                cf.field.putVar(
+                    normalParams[i].identifier,
+                    cf.field.getVar(normalParams[i].identifier)!!.assignedBy(argList[i]),
+                    true
+                )
+            }
+        }
+        //去除确定的参数
+        val params = ArrayList<FunctionParam>(normalParams)
+        for (i in argList.indices) {
+            if (argList[i] is MCFPPValue<*>) {
+                params.remove(normalParams[i])
+            }
+        }
+        cf.normalParams = params
+        cf.commands.clear()
+        cf.identifier = this.identifier + "_" + compiledFunctions.size
+        compiledFunctions[values] = cf
+        cf.ast = null
+        cf.runInFunction {
+            MCFPPImVisitor().visitFunctionBody(ast!!)
+        }
+        return cf to args.filter { it !is MCFPPValue<*> } as LinkedHashMap
+    }
+
+    /**
      * 在创建函数栈，调用函数之前，将参数传递到函数栈中
      *
      * @param normalArgs
@@ -725,8 +725,7 @@ open class Function : Member, FieldContainer, WithDocument {
             //参数传递和子函数的参数进栈
             val p = field.getVar(this.normalParams[i].identifier)!!
             p.isConst = false
-            var pp = p.assignedBy(tempArgs[i])
-            if(pp is MCFPPValue<*>) pp = pp.toDynamic(false)
+            val pp = p.assignedBy(tempArgs[i])
             if(!this.normalParams[i].isStatic) pp.isConst = true
             field.putVar(p.identifier, pp, true)
         }
@@ -793,6 +792,14 @@ open class Function : Member, FieldContainer, WithDocument {
         //if(returnVar is MCFPPValue<*> && returnVar.type !is MCFPPConcreteType){
         //    returnVar = (returnVar as MCFPPValue<*>).toDynamic(false)
         //}
+    }
+
+    fun mapNormalArgs(normalArgs: List<Var<*>>): LinkedHashMap<String, Var<*>>{
+        val map = LinkedHashMap<String, Var<*>>()
+        for (i in normalArgs.indices){
+            map[normalParams[i].identifier] = normalArgs[i]
+        }
+        return map
     }
 
     /**

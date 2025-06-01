@@ -77,7 +77,6 @@ class BaseTest {
                     var a = test(10);
                     print(a);
                     var b = test();
-                    print(a);
                     print(b);
                 }
             """.trimIndent()

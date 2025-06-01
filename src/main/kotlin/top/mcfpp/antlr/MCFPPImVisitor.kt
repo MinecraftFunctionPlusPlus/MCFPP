@@ -18,6 +18,8 @@ import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lib.Execute
+import top.mcfpp.lib.NBTPath
+import top.mcfpp.model.Generic
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.ObjectClass
@@ -27,7 +29,6 @@ import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.model.function.FunctionParam.Companion.typeToStringList
 import top.mcfpp.model.function.InternalFunction
 import top.mcfpp.model.function.NoStackFunction
-import top.mcfpp.model.generic.Generic
 import top.mcfpp.model.property.FunctionAccessor
 import top.mcfpp.model.property.FunctionMutator
 import top.mcfpp.model.property.Property
@@ -140,6 +141,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         }else{
             type.build(ctx.Identifier().text, Function.currFunction)
         }
+        `var`.nbtPath = NBTPath.getNormalStackPath(`var`)
         if(init != null){
             //变量赋值
             `var` = `var`.assignedBy(init)

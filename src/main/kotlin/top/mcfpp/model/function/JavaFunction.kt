@@ -17,9 +17,9 @@ class JavaFunction: Function {
         this.caller = caller
     }
 
-    override fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?): Var<*> {
+    override fun invoke(normalArgs: LinkedHashMap<String, Var<*>>, caller: CanSelectMember?): Var<*> {
         //将变量转换为Java变量
-        val normalJavaVars = JavaVar.mcToJava(normalArgs)
+        val normalJavaVars = JavaVar.mcToJava(normalArgs.values.toList())
         returnVar = JavaVar(method.invoke(this.caller.value, *normalJavaVars.toArray()))
         return returnVar
     }

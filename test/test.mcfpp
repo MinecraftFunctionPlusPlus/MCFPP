@@ -1,6 +1,19 @@
 namespace test;
 
+class Test {
+    i as int = 0;
+
+    constructor() {
+        Test.id = Test.id + 1;
+        this.i = Test.id;
+    }
+}
+
+object class Test{
+    id as int = 0;
+}
+
 func main(){
-    Area a = Area(~ ~ ~, ~1 ~2 ~4);
-    /tp @a ${a}
+    var test = Test();
+    print(test.i);
 }

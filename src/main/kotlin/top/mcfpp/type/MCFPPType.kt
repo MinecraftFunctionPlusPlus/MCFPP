@@ -23,7 +23,7 @@ import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.field.IFieldWithType
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
-import top.mcfpp.model.generic.GenericClass
+import top.mcfpp.model.compound.GenericClass
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.collection.ListTag

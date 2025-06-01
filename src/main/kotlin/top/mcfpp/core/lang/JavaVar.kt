@@ -177,7 +177,7 @@ class JavaVar : ConcreteVar<JavaVar, Any?> {
             }
         }
 
-        fun mcToJava(v: ArrayList<Var<*>>): ArrayList<Any>{
+        fun mcToJava(v: List<Var<*>>): ArrayList<Any>{
             val re = ArrayList<Any>()
             for (i in v){
                 re.add(mcToJava(i))

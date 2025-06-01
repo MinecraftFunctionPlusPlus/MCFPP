@@ -60,11 +60,11 @@ class NativeFunction : Function, Native {
         this.javaMethodName = name
     }
 
-    override fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?): Var<*> {
-        return invoke(ArrayList(), normalArgs, caller)
+    override fun invoke(normalArgs: LinkedHashMap<String, Var<*>>, caller: CanSelectMember?): Var<*> {
+        return invoke(ArrayList(), normalArgs.values.toList(), caller)
     }
 
-    fun invoke(readOnlyArgs: ArrayList<Var<*>>, normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?): Var<*> {
+    fun invoke(readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>, caller: CanSelectMember?): Var<*> {
         val valueWrapper = ValueWrapper(returnVar)
         val list = argPass(readOnlyArgs, normalArgs)
         //一定是静态的
@@ -81,7 +81,7 @@ class NativeFunction : Function, Native {
         return returnVar
     }
 
-    private fun argPass(readOnlyArgs: ArrayList<Var<*>>, normalArgs: ArrayList<Var<*>>): ArrayList<Var<*>>{
+    private fun argPass(readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): ArrayList<Var<*>>{
         val list = ArrayList<Var<*>>()
         for (index in readOnlyParams.indices){
             val param = readOnlyParams[index]

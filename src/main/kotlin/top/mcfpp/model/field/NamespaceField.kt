@@ -8,7 +8,7 @@ import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.Interface
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
-import top.mcfpp.model.generic.GenericClass
+import top.mcfpp.model.compound.GenericClass
 import top.mcfpp.type.MCFPPType
 
 /**

@@ -12,7 +12,7 @@ import top.mcfpp.model.field.NamespaceField
 import top.mcfpp.model.field.SimpleFieldWithTypeWithParent
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
-import top.mcfpp.model.generic.GenericFunction
+import top.mcfpp.model.function.GenericFunction
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPGenericParamType
 import top.mcfpp.type.MCFPPPrivateType

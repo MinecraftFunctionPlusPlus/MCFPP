@@ -2,10 +2,9 @@ package top.mcfpp.model.field
 
 import org.jetbrains.annotations.Nullable
 import top.mcfpp.core.lang.Var
-import top.mcfpp.type.MCFPPType
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
-import top.mcfpp.model.generic.Generic
+import top.mcfpp.model.Generic
 
 /**
  * 对[IFieldWithFunction]接口的简单实现。

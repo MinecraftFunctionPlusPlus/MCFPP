@@ -53,6 +53,8 @@ open class MCFPPClassType(
     override fun buildUnConcrete(identifier: String): Var<*> = ClassPointer(cls, identifier)
     override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = ClassPointer(cls, identifier)
 
+    override fun replaceMemberVar(v: Var<*>) {}
+
     override fun toString(): String {
         return typeName
     }

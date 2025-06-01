@@ -105,7 +105,7 @@ classDeclaration
     ;
 
 objectClassDeclaration
-    :   FINAL? OBJECT classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? (classBody ';')
+    :   FINAL? OBJECT CLASS classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? (classBody | ';')
     ;
 
 compileTimeClassDeclaration
@@ -176,7 +176,7 @@ supportOperator
     ;
 
 classFieldDeclaration
-    :   accessModifier? Identifier (AS type)? ('=' expression)? accessor? ';'
+    :   accessModifier? VAR? Identifier (AS type)? ('=' expression)? accessor? ';'
     ;
 
 accessor
@@ -233,7 +233,7 @@ templateFunctionDeclaration
     ;
 
 templateFieldDeclaration
-    :   accessModifier? CONST? Identifier (AS templateType)? ('=' expression)? accessor? ';'
+    :   accessModifier? CONST? VAR? Identifier (AS templateType)? ('=' expression)? accessor? ';'
     ;
 
 templateType

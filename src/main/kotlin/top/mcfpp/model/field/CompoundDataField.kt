@@ -6,7 +6,7 @@ import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
-import top.mcfpp.model.generic.Generic
+import top.mcfpp.model.Generic
 import top.mcfpp.model.property.Property
 import top.mcfpp.type.MCFPPType
 

@@ -2,8 +2,6 @@ package top.mcfpp.model.compound
 
 import top.mcfpp.io.info.ClassInfo
 import top.mcfpp.io.info.GenericClassInfo
-import top.mcfpp.model.generic.GenericClass
-import top.mcfpp.model.generic.GenericObjectClass
 
 open class UnsolvedClass(val info: ClassInfo): Class("unsolved_${info.identifier}") {
 

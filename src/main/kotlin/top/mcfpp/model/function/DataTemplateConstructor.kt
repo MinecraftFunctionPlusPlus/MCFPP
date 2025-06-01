@@ -9,6 +9,8 @@ import top.mcfpp.io.MCFPPFile
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.type.MCFPPType
+import top.mcfpp.util.Utils.addFirst
+import top.mcfpp.util.Utils.subMap
 import java.util.*
 
 open class DataTemplateConstructor(val data: DataTemplate, ctx: FunctionBodyContext?): Function(
@@ -47,10 +49,10 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: FunctionBodyCont
         }
     }
 
-    override fun invoke(normalArgs: ArrayList<Var<*>>, caller: CanSelectMember?): Var<*> {
+    override fun invoke(normalArgs: LinkedHashMap<String, Var<*>>, caller: CanSelectMember?): Var<*> {
         if(ast == null) return caller as DataTemplateObject
         field.putVar("this", caller as DataTemplateObject, true)
-        normalArgs.add(0, caller)
+        normalArgs.addFirst("this", caller)
         //初始化
         for ((k, v) in data.preInit) {
             val init = MCFPPExprVisitor().visitExpression(v)
@@ -61,9 +63,9 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: FunctionBodyCont
         return caller
     }
 
-    override fun compile(args: List<Var<*>>): Function {
+    override fun compile(args: LinkedHashMap<String, Var<*>>): Pair<Function, LinkedHashMap<String, Var<*>>> {
         //第一个参数是this，需要去除
-        return super.compile(args.subList(1, args.size))
+        return super.compile(args.subMap(1, args.size))
     }
 }
 

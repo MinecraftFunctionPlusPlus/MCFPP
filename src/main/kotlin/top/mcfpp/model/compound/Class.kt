@@ -6,15 +6,11 @@ import top.mcfpp.Project
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.obj.ClassPointer
-import top.mcfpp.lib.EntitySelector
-import top.mcfpp.lib.EntitySource
-import top.mcfpp.lib.NBTPath
-import top.mcfpp.lib.StorageSource
+import top.mcfpp.lib.*
 import top.mcfpp.model.Member
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.ClassConstructor
 import top.mcfpp.model.function.Function
-import top.mcfpp.model.generic.GenericClass
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPClassType
 import top.mcfpp.type.MCFPPGenericClassType
@@ -100,6 +96,8 @@ open class Class : CompoundData {
 
     private val invalidBaseEntity = listOf("player", "leash_knot", "lightning_bolt", "fishing_bobber", "creaking_transient")
     private val silentBaseEntity = listOf("marker", "item_display", "block_display", "text_display")
+
+    private val sbObjCache = HashMap<String, SbObject>()
 
     /**
      * 生成一个类，它拥有指定的标识符和命名空间
@@ -220,6 +218,10 @@ open class Class : CompoundData {
                 .memberIndex("data")
                 .memberIndex(identifier)
         }
+    }
+
+    fun getIntSbObject(identifier: String): SbObject {
+        return sbObjCache[identifier]?: SbObject("$namespace.${this.identifier}.$identifier")
     }
 
     companion object {

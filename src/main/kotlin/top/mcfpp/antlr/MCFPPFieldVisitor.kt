@@ -25,8 +25,6 @@ import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.field.IFieldWithType
 import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function
-import top.mcfpp.model.generic.GenericExtensionFunction
-import top.mcfpp.model.generic.GenericFunction
 import top.mcfpp.model.property.*
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
@@ -68,7 +66,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //变量生成
         val fieldModifier = ctx.fieldModifier()?.text
         val namespace = GlobalField.localNamespaces[Project.currNamespace]!!
-        if(ctx.VAR() != null){
+        if(ctx.type() == null){
             //自动判断类型
             val init: Var<*> = MCFPPExprVisitor().visitValue(ctx.value())
             var `var` = if(fieldModifier == "import"){
@@ -517,8 +515,10 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val `var` = type.buildUnConcrete(ctx.Identifier().text, Class.currClass!!)
         if(Class.currClass is ObjectClass && `var` is OnScoreboard){
             `var`.name = (Class.currClass as ObjectClass).mcuuid.uuid.toString()
+            `var`.setObj(Class.currClass!!.getIntSbObject(`var`.identifier))
         }else if(`var` is OnScoreboard){
             `var`.name = "@s"
+            `var`.setObj(Class.currClass!!.getIntSbObject(`var`.identifier))
         }
         `var`.isDynamic = true
         `var`.parent = ClassPointer(Class.currClass!!, "this")
