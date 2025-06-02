@@ -19,9 +19,10 @@ class FunctionMutator: AbstractMutator {
         function.returnType = field.type
         function.field.putVar("field", field)
         function.appendNormalParam(field.type, "value")
-        function.field.putVar("value", field.type.build("value"))
+        function.field.putVar("value", field.type.buildUnConcrete("value"))
         val thisObj = Class.currClass!!.getType().build("this", function)
         function.field.putVar("this",thisObj)
+        field.parent = thisObj
         function.owner = d
     }
 

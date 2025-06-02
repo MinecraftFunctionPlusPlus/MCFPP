@@ -34,7 +34,7 @@ class ClassTest {
         val test =
             """
                 class Test{
-                    int i {
+                    i as int {
                         get {
                             print("get i");
                             return field;
@@ -46,14 +46,14 @@ class ClassTest {
                         }
                     };
                     
-                    int j {
+                    j as int {
                         get {
                             print("get j");
                             return 0;
                         }
                     };
                     
-                    int k {
+                    k as int {
                         set {
                             print("set k");
                             field = value;
@@ -62,7 +62,7 @@ class ClassTest {
                 }
                 
                 func main{
-                    Test test = Test();
+                    var test = Test();
                     print(test.i);
                     print(test.j);
                     print(test.k);

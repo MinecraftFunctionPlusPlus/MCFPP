@@ -191,7 +191,9 @@ open class ClassPointer : Var<ClassPointer> {
         }else{
             v!!.parent = this
             v.nbtPath = clazz.getFieldPath(v.identifier)
-            Pair(PropertyVar(member, v, this), accessModifier >= member.accessModifier)
+            val p = PropertyVar(member, v, this)
+            p.parent = this
+            Pair(p, accessModifier >= member.accessModifier)
         }
     }
 

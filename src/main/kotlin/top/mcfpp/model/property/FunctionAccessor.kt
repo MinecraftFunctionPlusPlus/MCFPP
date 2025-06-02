@@ -2,6 +2,7 @@ package top.mcfpp.model.property
 
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
+import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.Function
 
@@ -18,6 +19,9 @@ class FunctionAccessor: AbstractAccessor {
         function.returnType = field.type
         function.field.putVar("field", field)
         function.appendNormalParam(field.type, "field")
+        val thisObj = Class.currClass!!.getType().build("this", function)
+        function.field.putVar("this",thisObj)
+        field.parent = thisObj
         function.owner = d
     }
 

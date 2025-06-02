@@ -352,26 +352,18 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     override fun visitClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext): Any = withCompilationContext(ctx) {
         //创建函数对象
         val f = if(ctx.functionParams().readOnlyParams() != null && ctx.functionParams().readOnlyParams().parameterList().parameter().size != 0){
-            GenericFunction(
-                ctx.Identifier().text,
-                Class.currClass!!,
-                ctx.functionBody()
-            )
+            GenericFunction(ctx.Identifier().text, Class.currClass!!, ctx.functionBody())
         }else{
-            Function(
-                ctx.Identifier().text,
-                Class.currClass!!,
-                ctx.functionBody()
-            )
+            Function(ctx.Identifier().text, Class.currClass!!, ctx.functionBody())
         }
-        f.returnType = if(ctx.functionReturnType()?.type() != null){
+        f.returnType =  if(ctx.functionReturnType()?.type() != null){
             MCFPPType.parseFromContextNotNull(ctx.functionReturnType().type(), typeScope)
         }else{
             MCFPPPrivateType.Void
         }
         if(!isStatic){
             val thisObj = Class.currClass!!.getType().buildUnConcrete("this")
-            f.field.putVar("this",thisObj)
+            f.field.putVar("this", thisObj)
         }
         //解析参数
         f.addParamsFromContext(ctx.functionParams())
