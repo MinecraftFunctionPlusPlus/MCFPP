@@ -7,15 +7,16 @@ import top.mcfpp.core.lang.bool.CommandBoolPart
 import top.mcfpp.core.lang.bool.ExecuteBool
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.nbt.MCLong
+import top.mcfpp.core.lang.nbt.MCLongConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.obj.EnumVar
 import top.mcfpp.core.lang.obj.EnumVarConcrete
-import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.function.Function
 import top.mcfpp.nbt.tags.primitive.IntTag
+import top.mcfpp.nbt.tags.primitive.LongTag
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPNBTType
 import top.mcfpp.type.MCFPPType
@@ -93,6 +94,10 @@ open class MCInt : MCNumber<Int> {
         }
     }
 
+    override fun canExplicitCast(type: MCFPPType): Boolean {
+        return super.canExplicitCast(type) || type == MCFPPNBTType.Long || type == MCFPPBaseType.Float
+    }
+
     override fun implicitCast(type: MCFPPType): Var<*> {
         val re = super.implicitCast(type)
         if(!re.isError) return re
@@ -105,6 +110,10 @@ open class MCInt : MCNumber<Int> {
             }
             else -> re
         }
+    }
+
+    override fun canImplicitCast(type: MCFPPType): Boolean {
+        return super.canImplicitCast(type) || type == MCFPPBaseType.Float
     }
 
     //this = a
@@ -138,7 +147,7 @@ open class MCInt : MCNumber<Int> {
                 }
                 this
             },
-            ifThisIsNormalVarAndAIsConcrete = { b, _ ->
+            ifThisIsNormalVarAndAIsConcrete = { b ->
                 if(isDataOnly){
                     Function.addCommand(Commands.dataSetValue(nbtPath, IntTag((b as MCIntConcrete).value)))
                     this
@@ -160,7 +169,7 @@ open class MCInt : MCNumber<Int> {
                 }
                 MCInt(this)
             },
-            ifThisIsNormalVarAndAIsNotConcrete = { c, _ ->
+            ifThisIsNormalVarAndAIsNotConcrete = { c ->
                 if(isDataOnly){
                     Function.addCommand(
                         Command("execute store result").build(nbtPath.toCommandPart()).build("int 1").build("run")
@@ -506,15 +515,16 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
 
     @Override
     override fun explicitCast(type: MCFPPType): Var<*> {
+        val re = super.explicitCast(type)
+        if(!re.isError) return re
         //TODO 类支持
         return when (type) {
-            this.type -> this
-            MCFPPBaseType.Float -> MCFloatConcrete(value = value.toFloat())
-            MCFPPBaseType.Any -> this
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                throw VariableConverseException()
+            MCFPPBaseType.Float -> MCFloatConcrete(value.toFloat(), this.identifier)
+            MCFPPNBTType.Long -> {
+                storeToStack()
+                return MCLongConcrete(LongTag(value.toLong()), this.identifier)
             }
+            else -> re
         }
     }
 

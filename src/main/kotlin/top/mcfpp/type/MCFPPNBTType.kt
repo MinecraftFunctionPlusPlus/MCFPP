@@ -4,12 +4,7 @@ import top.mcfpp.core.lang.ImmutableList
 import top.mcfpp.core.lang.ImmutableListConcrete
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.nbt.*
-import top.mcfpp.core.lang.nbt.ByteArray
-import top.mcfpp.core.lang.nbt.IntArray
-import top.mcfpp.core.lang.nbt.LongArray
 import top.mcfpp.mni.*
-import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
@@ -20,7 +15,6 @@ import top.mcfpp.nbt.tags.collection.LongArrayTag
 import top.mcfpp.nbt.tags.primitive.DoubleTag
 import top.mcfpp.nbt.tags.primitive.IntTag
 import top.mcfpp.nbt.tags.primitive.LongTag
-import top.mcfpp.util.TempPool
 
 /**
  * 以NBT为底层的类型，包括普通的NBT类型，以及由nbt实现的map，list和dict
@@ -45,23 +39,10 @@ class MCFPPNBTType {
         override val typeName: String
             get() = "nbt"
 
-        override fun defaultValue(): Var<*> {
-            return NBTBasedDataConcrete(IntTag(0), "default")
-        }
+        override fun defaultValue() = IntTag(0)
 
-        override fun build(identifier: String, container: FieldContainer): Var<*> =
-            NBTBasedDataConcrete(container, IntTag(0), identifier)
-
-        override fun build(identifier: String): Var<*> = NBTBasedDataConcrete(IntTag(0), identifier)
-        override fun build(identifier: String, clazz: Class): Var<*> =
-            NBTBasedDataConcrete(clazz, IntTag(0), identifier)
-
-        override fun build(value: Any): Var<*> = NBTBasedDataConcrete(value as Tag<*>)
-        override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> =
-            NBTBasedData(identifier)
-
+        override fun build(identifier: String, value: Any?): Var<*> = NBTBasedDataConcrete(value as Tag<*>, identifier)
         override fun buildUnConcrete(identifier: String): Var<*> = NBTBasedData(identifier)
-        override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = NBTBasedData(identifier)
 
     }
 
@@ -84,22 +65,10 @@ class MCFPPNBTType {
         override val typeName: String
             get() = "byte"
 
-        override fun defaultValue(): Var<*> {
-            return MCByteConcrete(0, "default")
-        }
+        override fun defaultValue() = 0
 
-        override fun build(identifier: String, container: FieldContainer): Var<*> =
-            MCByteConcrete(container, 0, identifier)
-
-        override fun build(identifier: String): Var<*> = MCByteConcrete(0, identifier)
-        override fun build(identifier: String, clazz: Class): Var<*> =
-            MCByteConcrete(clazz, 0, identifier)
-        override fun build(value: Any): Var<*> = MCByteConcrete(value as kotlin.Byte)
-        override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> =
-            MCByte(container, identifier)
-
+        override fun build(identifier: String, value: Any?): Var<*> = MCByteConcrete(0, identifier)
         override fun buildUnConcrete(identifier: String): Var<*> = MCByte(identifier)
-        override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = MCByte(clazz, identifier)
     }
 
     object Short: MCFPPType(arrayListOf(MCFPPBaseType.Int)){
@@ -121,23 +90,11 @@ class MCFPPNBTType {
         override val typeName: String
             get() = "short"
 
-        override fun defaultValue(): Var<*> {
-            return MCShortConcrete(0, "default")
-        }
+        override fun defaultValue() = 0.toShort()
 
-        override fun build(identifier: String, container: FieldContainer): Var<*> =
-            MCShortConcrete(container, 0, identifier)
-
-        override fun build(identifier: String): Var<*> = MCShortConcrete(0, identifier)
-        override fun build(identifier: String, clazz: Class): Var<*> =
-            MCShortConcrete(clazz, 0, identifier)
-
-        override fun build(value: Any): Var<*> = MCShortConcrete(value as kotlin.Short)
-        override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> =
-            MCShort(container, identifier)
+        override fun build(identifier: String, value: Any?): Var<*> = MCShortConcrete(value as kotlin.Short, identifier)
 
         override fun buildUnConcrete(identifier: String): Var<*> = MCShort(identifier)
-        override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = MCShort(clazz, identifier)
     }
 
     object Long: MCFPPType(arrayListOf(NBT)){
@@ -158,23 +115,10 @@ class MCFPPNBTType {
         override val typeName: String
             get() = "long"
 
-        override fun defaultValue(): Var<*> {
-            return MCLongConcrete(LongTag(0), "default")
-        }
+        override fun defaultValue() = LongTag(0)
 
-        override fun build(identifier: String, container: FieldContainer): Var<*> =
-            MCLongConcrete(LongTag(0), identifier)
-
-        override fun build(identifier: String): Var<*> = MCLongConcrete(LongTag(0), identifier)
-        override fun build(identifier: String, clazz: Class): Var<*> =
-            MCLongConcrete(LongTag(0), identifier)
-
-        override fun build(value: Any): Var<*> = MCLongConcrete(value as LongTag)
-        override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> =
-            MCLong(identifier)
-
+        override fun build(identifier: String, value: Any?): Var<*> = MCLongConcrete(value as LongTag, identifier)
         override fun buildUnConcrete(identifier: String): Var<*> = MCLong(identifier)
-        override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = MCLong(identifier)
     }
 
     object Double: MCFPPType(arrayListOf(NBT)){
@@ -196,23 +140,11 @@ class MCFPPNBTType {
         override val typeName: String
             get() = "double"
 
-        override fun defaultValue(): Var<*> {
-            return MCDoubleConcrete(DoubleTag(0.0), "default")
-        }
+        override fun defaultValue() = DoubleTag(0.0)
 
-        override fun build(identifier: String, container: FieldContainer): Var<*> =
-            MCDoubleConcrete(container, DoubleTag(0.0), identifier)
+        override fun build(identifier: String, value: Any?): Var<*> = MCDoubleConcrete(value as DoubleTag, identifier)
 
-        override fun build(identifier: String): Var<*> = MCDoubleConcrete(DoubleTag(0.0), identifier)
-        override fun build(identifier: String, clazz: Class): Var<*> =
-            MCDoubleConcrete(clazz, DoubleTag(0.0), identifier)
-
-        override fun build(value: Any): Var<*> = MCDoubleConcrete(value as DoubleTag)
-        override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> =
-            MCDouble(identifier)
-
-        override fun buildUnConcrete(identifier: String): Var<*> = MCLong(identifier)
-        override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = MCLong(identifier)
+        override fun buildUnConcrete(identifier: String): Var<*> = MCDouble(identifier)
     }
 
     object ByteArray: MCFPPType(arrayListOf(NBT)){
@@ -233,23 +165,11 @@ class MCFPPNBTType {
         override val typeName: String
             get() = "ByteArray"
 
-        override fun defaultValue(): Var<*> {
-            return ByteArrayConcrete(ByteArrayTag(), "default")
-        }
+        override fun defaultValue() = ByteArrayTag()
 
-        override fun build(identifier: String, container: FieldContainer): Var<*> =
-            ByteArrayConcrete(ByteArrayTag(), identifier)
+        override fun build(identifier: String, value: Any?): Var<*> = NBTByteArrayConcrete(value as ByteArrayTag, identifier)
 
-        override fun build(identifier: String): Var<*> = ByteArrayConcrete(ByteArrayTag(), identifier)
-        override fun build(identifier: String, clazz: Class): Var<*> =
-            ByteArrayConcrete(ByteArrayTag(), identifier)
-
-        override fun build(value: Any): Var<*> = ByteArrayConcrete(value as ByteArrayTag)
-        override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> =
-            ByteArray(identifier)
-
-        override fun buildUnConcrete(identifier: String): Var<*> = ByteArray(identifier)
-        override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = ByteArray(identifier)
+        override fun buildUnConcrete(identifier: String): Var<*> = NBTByteArray(identifier)
     }
 
     object IntArray: MCFPPType(arrayListOf(NBT)){
@@ -270,23 +190,11 @@ class MCFPPNBTType {
         override val typeName: String
             get() = "IntArray"
 
-        override fun defaultValue(): Var<*> {
-            return IntArrayConcrete(IntArrayTag(), "default")
-        }
+        override fun defaultValue() = IntArrayTag()
 
-        override fun build(identifier: String, container: FieldContainer): Var<*> =
-            IntArrayConcrete(IntArrayTag(), identifier)
+        override fun build(identifier: String, value: Any?): Var<*> = NBTIntArrayConcrete(value as IntArrayTag, identifier)
+        override fun buildUnConcrete(identifier: String): Var<*> = NBTIntArray(identifier)
 
-        override fun build(identifier: String): Var<*> = IntArrayConcrete(IntArrayTag(), identifier)
-        override fun build(identifier: String, clazz: Class): Var<*> =
-            IntArrayConcrete(IntArrayTag(), identifier)
-
-        override fun build(value: Any): Var<*> = IntArrayConcrete(value as IntArrayTag)
-        override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> =
-            IntArray(identifier)
-
-        override fun buildUnConcrete(identifier: String): Var<*> = IntArray(identifier)
-        override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = IntArray(identifier)
     }
 
     object LongArray: MCFPPType(arrayListOf(NBT)){
@@ -309,23 +217,10 @@ class MCFPPNBTType {
         override val typeName: String
             get() = "LongArray"
 
-        override fun defaultValue(): Var<*> {
-            return LongArrayConcrete(LongArrayTag(), "default")
-        }
+        override fun defaultValue() = LongArrayTag()
+        override fun build(identifier: String, value: Any?): Var<*> = NBTLongArrayConcrete(value as LongArrayTag, identifier)
 
-        override fun build(identifier: String, container: FieldContainer): Var<*> =
-            LongArrayConcrete(LongArrayTag(), identifier)
-
-        override fun build(identifier: String): Var<*> = LongArrayConcrete(LongArrayTag(), identifier)
-        override fun build(identifier: String, clazz: Class): Var<*> =
-            LongArrayConcrete(LongArrayTag(), identifier)
-
-        override fun build(value: Any): Var<*> = LongArrayConcrete(value as LongArrayTag)
-        override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> =
-            LongArray(identifier)
-
-        override fun buildUnConcrete(identifier: String): Var<*> = LongArray(identifier)
-        override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = LongArray(identifier)
+        override fun buildUnConcrete(identifier: String): Var<*> = NBTLongArray(identifier)
     }
 
 }
@@ -343,18 +238,10 @@ class MCFPPListType(
     override val nbtType: java.lang.Class<out Tag<*>>
         get() = ListTag::class.java
 
-    override fun defaultValue(): Var<*> {
-        return NBTListConcrete(ArrayList(), "default", generic)
-    }
-
-    override fun build(identifier: String, container: FieldContainer): Var<*> = NBTListConcrete(ArrayList(), identifier, generic)
-    override fun build(identifier: String): Var<*> = NBTListConcrete(ArrayList(), identifier, generic)
-    override fun build(identifier: String, clazz: Class): Var<*> = NBTListConcrete(ArrayList(), identifier, generic)
+    override fun defaultValue() = ArrayList<Var<*>>()
     @Suppress("UNCHECKED_CAST")
-    override fun build(value: Any): Var<*> = NBTListConcrete(value as ArrayList<Var<*>>, TempPool.getVarIdentify(), generic)
-    override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = NBTList(identifier, generic)
+    override fun build(identifier: String, value: Any?): Var<*> = NBTListConcrete(value as ArrayList<Var<*>>, identifier, generic)
     override fun buildUnConcrete(identifier: String): Var<*> = NBTList(identifier, generic)
-    override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = NBTList(identifier, generic)
 
     override fun toString(): String {
         return "list[${generic.typeName}]"
@@ -399,17 +286,9 @@ class MCFPPImmutableListType(
     override val nbtType: java.lang.Class<out Tag<*>>
         get() = ListTag::class.java
 
-    override fun defaultValue(): Var<*> {
-        return ImmutableListConcrete(ListTag(), "default", generic)
-    }
-
-    override fun build(identifier: String, container: FieldContainer): Var<*> = ImmutableListConcrete(ListTag(), identifier, generic)
-    override fun build(identifier: String): Var<*> = ImmutableListConcrete(ListTag(), identifier, generic)
-    override fun build(identifier: String, clazz: Class): Var<*> = ImmutableListConcrete(ListTag(), identifier, generic)
-    override fun build(value: Any): Var<*> = ImmutableListConcrete(value as ListTag, TempPool.getVarIdentify(), generic)
-    override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = ImmutableList(identifier, generic)
+    override fun defaultValue() = ListTag()
+    override fun build(identifier: String, value: Any?): Var<*> = ImmutableListConcrete(value as ListTag, identifier, generic)
     override fun buildUnConcrete(identifier: String): Var<*> = ImmutableList(identifier, generic)
-    override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = ImmutableList(identifier, generic)
 
     override fun toString(): String {
         return "ImmutableList[${generic.typeName}]"
@@ -470,18 +349,10 @@ class MCFPPDictType(generic: MCFPPType): MCFPPCompoundType(generic){
     override val nbtType: java.lang.Class<out Tag<*>>
         get() = CompoundTag::class.java
 
-    override fun defaultValue(): Var<*> {
-        return NBTDictionaryConcrete(HashMap(), "default")
-    }
-
-    override fun build(identifier: String, container: FieldContainer): Var<*> = NBTDictionaryConcrete(HashMap(), identifier)
-    override fun build(identifier: String): Var<*> = NBTDictionaryConcrete(HashMap(), identifier)
-    override fun build(identifier: String, clazz: Class): Var<*> = NBTDictionaryConcrete(HashMap(), identifier)
+    override fun defaultValue() = HashMap<String, Var<*>>()
     @Suppress("UNCHECKED_CAST")
-    override fun build(value: Any): Var<*> = NBTDictionaryConcrete(value as HashMap<String, Var<*>>, TempPool.getVarIdentify())
-    override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = NBTDictionary(identifier)
+    override fun build(identifier: String, value: Any?): Var<*> = NBTDictionaryConcrete(value as HashMap<String, Var<*>>, identifier)
     override fun buildUnConcrete(identifier: String): Var<*> = NBTDictionary(identifier)
-    override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = NBTDictionary(identifier)
 
     override fun replaceGenericParam(type: Map<String, MCFPPType>): MCFPPDictType {
         if(type.size != 1) throw IllegalArgumentException("Need 1 generic param but get ${type.size}")
@@ -512,18 +383,10 @@ class MCFPPMapType(generic: MCFPPType): MCFPPCompoundType(generic){
     override val nbtType: java.lang.Class<out Tag<*>>
         get() = CompoundTag::class.java
 
-    override fun defaultValue(): Var<*> {
-        return NBTMapConcrete(HashMap(), "default", generic)
-    }
-
-    override fun build(identifier: String, container: FieldContainer): Var<*> = NBTMapConcrete(HashMap(), identifier, generic)
-    override fun build(identifier: String): Var<*> = NBTMapConcrete(HashMap(), identifier, generic)
-    override fun build(identifier: String, clazz: Class): Var<*> = NBTMapConcrete(HashMap(), identifier, generic)
+    override fun defaultValue() = HashMap<String, Var<*>>()
     @Suppress("UNCHECKED_CAST")
-    override fun build(value: Any): Var<*> = NBTMapConcrete(value as HashMap<String, Var<*>>, TempPool.getVarIdentify(), generic)
-    override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = NBTMap(identifier, generic)
+    override fun build(identifier: String, value: Any?): Var<*> = NBTMapConcrete(value as HashMap<String, Var<*>>, identifier, generic)
     override fun buildUnConcrete(identifier: String): Var<*> = NBTMap(identifier, generic)
-    override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = NBTMap(identifier, generic)
 
     override fun replaceGenericParam(type: Map<String, MCFPPType>): MCFPPMapType {
         if(type.size != 1) throw IllegalArgumentException("Need 1 generic param but get ${type.size}")

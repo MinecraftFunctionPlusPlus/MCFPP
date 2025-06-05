@@ -20,7 +20,11 @@ class UnknownVar(identifier: String) : Var<UnknownVar>(identifier) {
 
     override fun explicitCast(type: MCFPPType): Var<*> = type.build(identifier, Function.currFunction)
 
+    override fun canExplicitCast(type: MCFPPType) = true
+
     override fun implicitCast(type: MCFPPType): Var<*> = type.build(identifier, Function.currFunction)
+
+    override fun canImplicitCast(type: MCFPPType) = true
 
     override fun canAssignedBy(b: Var<*>): Boolean = true
 

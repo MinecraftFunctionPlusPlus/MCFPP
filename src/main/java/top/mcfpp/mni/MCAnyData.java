@@ -7,7 +7,6 @@ import top.mcfpp.core.lang.JavaVar;
 import top.mcfpp.core.lang.JsonTextConcrete;
 import top.mcfpp.core.lang.Null;
 import top.mcfpp.core.lang.Var;
-import top.mcfpp.core.lang.bool.ScoreBool;
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete;
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete;
 import top.mcfpp.lib.ListChatComponent;
@@ -31,7 +30,7 @@ public class MCAnyData {
 
     @MNIFunction(caller = "any", returnType = "nbt")
     public static void getDefault(@NotNull Var<?> caller, ValueWrapper<NBTBasedDataConcrete> returnValue){
-        var value = caller.getType().defaultValue();
+        var value = caller.getType().defaultValueVar();
         returnValue.setValue((NBTBasedDataConcrete) value);
     }
 

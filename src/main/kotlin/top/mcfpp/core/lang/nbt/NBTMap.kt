@@ -140,7 +140,7 @@ open class NBTMap : NBTBasedData {
                 }
                 NBTMap(this)
             },
-            ifThisIsNormalVarAndAIsConcrete = {b, _ ->
+            ifThisIsNormalVarAndAIsConcrete = {b ->
                 b as NBTMapConcrete
                 if(!b.isAllConcrete()){
                     Function.addCommand(Commands.dataSetFrom(keyValueSet.nbtPath, b.keyValueSet.nbtPath))
@@ -159,7 +159,7 @@ open class NBTMap : NBTBasedData {
                 }
                 NBTMap(this)
             },
-            ifThisIsNormalVarAndAIsNotConcrete = {b, _ ->
+            ifThisIsNormalVarAndAIsNotConcrete = {b ->
                 Function.addCommand(Commands.dataSetFrom(nbtPath, b.nbtPath))
                 NBTMap(this)
             }

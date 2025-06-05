@@ -166,6 +166,13 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         }
     }
 
+    fun parentClassPointer(): CanSelectMember? {
+        if(parentClass() != null){
+            return parent
+        }
+        return null
+    }
+
     /**
      * 获取这个成员的父结构体，可能不存在
      *
@@ -198,7 +205,6 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             }
             return this as Self
         }
-
         var v = b.implicitCast(this.type)
         if(v.isError){
             v = b
@@ -244,9 +250,9 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         return when(type){
             MCFPPBaseType.Any -> {
                 if(this is MCFPPValue<*>){
-                    (MCAnyConcrete(value).setAs(this) as MCAnyConcrete).apply { inferredType = this@Var.type }
+                    (MCAnyConcrete(value).setAs(this) as MCAnyConcrete).apply { lastVar = this@Var }
                 }else{
-                    (MCAny().setAs(this) as MCAny).apply { inferredType = this@Var.type }
+                    (MCAny().setAs(this) as MCAny).apply { lastVar = this@Var }
                 }
             }
             MCFPPNBTType.NBT -> {
@@ -256,10 +262,21 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
                     this.toNBTVar()
                 }
             }
+            is MCFPPUnionType -> {
+                if(type.types.contains(this.type)){
+                    this
+                }else{
+                    buildCastErrorVar(type)
+                }
+            }
             else -> {
                 buildCastErrorVar(type)
             }
         }
+    }
+
+    open fun canExplicitCast(type: MCFPPType): Boolean{
+        return this.type.isSubOf(type) || type == MCFPPNBTType.NBT || type == MCFPPBaseType.Any || type is MCFPPUnionType && type.types.contains(this.type)
     }
 
     /**
@@ -269,21 +286,29 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         if(type == this.type){
             return this
         }
-        if((this.type is MCFPPClassType || this.type is MCFPPDataTemplateType) && this.type.isSubOf(type)){
-            return this
-        }
         return when(type){
             MCFPPBaseType.Any -> {
                 if(this is MCFPPValue<*>){
-                    (MCAnyConcrete(value).setAs(this) as MCAnyConcrete).apply { inferredType = this@Var.type }
+                    (MCAnyConcrete(value).setAs(this) as MCAnyConcrete).apply { lastVar = this@Var }
                 }else{
-                    (MCAny().setAs(this) as MCAny).apply { inferredType = this@Var.type }
+                    (MCAny().setAs(this) as MCAny).apply { lastVar = this@Var }
+                }
+            }
+            is MCFPPUnionType -> {
+                if(type.types.contains(this.type)){
+                    this
+                }else{
+                    buildCastErrorVar(type)
                 }
             }
             else -> {
                 buildCastErrorVar(type)
             }
         }
+    }
+
+    open fun canImplicitCast(type: MCFPPType): Boolean{
+        return this.type == type || type == MCFPPBaseType.Any || type is MCFPPUnionType && type.types.contains(this.type)
     }
 
     @Override
@@ -314,17 +339,17 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
      * @param a 源变量
      * @param ifThisIsClassMemberAndAIsConcrete 如果此变量是类成员，且a是已知的。cmd参数是[Commands.selectRun]生成的访问类成员的命令，需要被续写
      * @param ifThisIsClassMemberAndAIsNotConcrete 如果此变量是成员，且a不是已知的。cmd参数是[Commands.selectRun]生成的访问类成员的命令，需要被续写
-     * @param ifThisIsNormalVarAndAIsConcrete 如果此变量不是成员且a是已知的。cmd为空
+     * @param ifThisIsNormalVarAndAIsConcrete 如果此变量不是成员且a是已知的
      * @param ifThisIsNormalVarAndAIsClassMember 如果此变量不是成员且a是成员。cmd参数是[Commands.selectRun]生成的访问类成员的命令，需要被续写
-     * @param ifThisIsNormalVarAndAIsNotConcrete 如果此变量不是成员且a也不是。cmd为空
+     * @param ifThisIsNormalVarAndAIsNotConcrete 如果此变量不是成员且a也不是
      */
     fun assignCommandLambda(
         a: Var<*>,
         ifThisIsClassMemberAndAIsConcrete: (Var<*>, Array<Command>) -> Var<*>,
         ifThisIsClassMemberAndAIsNotConcrete: (Var<*>, Array<Command>) -> Var<*>,
-        ifThisIsNormalVarAndAIsConcrete: (Var<*>, Array<Command>) -> Var<*>,
+        ifThisIsNormalVarAndAIsConcrete: (Var<*>) -> Var<*>,
         ifThisIsNormalVarAndAIsClassMember: (Var<*>, Array<Command>) -> Var<*>,
-        ifThisIsNormalVarAndAIsNotConcrete: (Var<*>, Array<Command>) -> Var<*>
+        ifThisIsNormalVarAndAIsNotConcrete: (Var<*>) -> Var<*>
     ): Var<*> {
         if (parentClass() != null) {
             val b = if(a.parent != null){
@@ -341,14 +366,14 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         } else {
             //t = a
             if (a is MCFPPValue<*>) {
-                return ifThisIsNormalVarAndAIsConcrete(a, emptyArray())
+                return ifThisIsNormalVarAndAIsConcrete(a)
             } else {
                 if(a.parentClass() != null){
                     //是成员
                     val final = Commands.selectRun(a.parent!!)
                     return ifThisIsNormalVarAndAIsClassMember(a, final)
                 }else{
-                    return ifThisIsNormalVarAndAIsNotConcrete(a, emptyArray())
+                    return ifThisIsNormalVarAndAIsNotConcrete(a)
                 }
             }
         }

@@ -33,10 +33,14 @@ object Void: Var<Void>("void") {
         return buildCastErrorVar(type)
     }
 
+    override fun canExplicitCast(type: MCFPPType): Boolean = false
+
     override fun implicitCast(type: MCFPPType): Var<*> {
         LogProcessor.error(TextTranslator.VOID_CAST_ERROR.translate())
         return buildCastErrorVar(type)
     }
+
+    override fun canImplicitCast(type: MCFPPType): Boolean = false
 
     override fun clone(): Void = Void
 

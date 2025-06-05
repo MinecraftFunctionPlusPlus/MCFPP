@@ -15,7 +15,6 @@ import top.mcfpp.core.lang.bool.ExecuteBool
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
-import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lib.Execute
 import top.mcfpp.lib.NBTPath
@@ -142,13 +141,14 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             type.build(ctx.Identifier().text, Function.currFunction)
         }
         `var`.nbtPath = NBTPath.getNormalStackPath(`var`)
+        //一定是函数变量
+        if (Function.currField.containVar(ctx.Identifier().text)) {
+            LogProcessor.error("Duplicate defined variable:" + ctx.Identifier().text)
+        }
+        Function.currField.putVar(`var`.identifier, `var`, true)
         if(init != null){
             //变量赋值
             `var` = `var`.assignedBy(init)
-        }
-        //一定是函数变量
-        if (Function.currField.containVar(ctx.Identifier().text)) {
-            LogProcessor.error("Duplicate defined variable name:" + ctx.Identifier().text)
         }
         when(fieldModifier){
             "const" -> {
@@ -159,11 +159,10 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             }
             "dynamic" -> {
                 if(`var` is MCFPPValue<*>){
-                    `var` = `var`.toDynamic(false)
+                    `var`.toDynamic(true)
                 }
             }
         }
-        Function.currField.putVar(`var`.identifier, `var`, true)
         return null
     }
 
@@ -182,15 +181,10 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             }
             val type = left.type
             val right: Var<*> = MCFPPExprVisitor(if(type is MCFPPGenericClassType) type else null, if(type is MCFPPEnumType) type else null).visitExpression(ctx.expression())
-            try {
-                if(right !is MCFPPValue<*> && left.parent is DataTemplateObjectConcrete){
-                    left.parent = (left.parent as DataTemplateObjectConcrete).toDynamic(true)
-                }
-                left.replacedBy(left.assignedBy(right))
-            } catch (e: VariableConverseException) {
-                LogProcessor.error("Cannot convert " + right.javaClass + " to " + left.javaClass)
-                throw e
+            if(right !is MCFPPValue<*> && left.parent is DataTemplateObjectConcrete){
+                left.parent = (left.parent as DataTemplateObjectConcrete).toDynamic(true)
             }
+            left.replacedBy(left.assignedBy(right))
         }else{
             MCFPPExprVisitor().visitExpression(ctx.expression())
         }

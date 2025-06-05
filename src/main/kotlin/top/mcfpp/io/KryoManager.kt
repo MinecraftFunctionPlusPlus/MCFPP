@@ -12,8 +12,8 @@ import top.mcfpp.io.info.DataTemplateInfo
 import top.mcfpp.io.info.FunctionTagInfo
 import top.mcfpp.io.info.GenericClassInfo
 import top.mcfpp.model.compound.*
-import top.mcfpp.model.function.FunctionTag
 import top.mcfpp.model.compound.GenericClass
+import top.mcfpp.model.function.FunctionTag
 import top.mcfpp.type.*
 
 object KryoManager {
@@ -173,63 +173,5 @@ object KryoManager {
                 return token
             }
         })
-//
-//        register(OrderedATNConfigSet::class.java, object : Serializer<OrderedATNConfigSet>() {
-//
-//            // 通过反射访问 protected/private 字段
-//            private val readonlyField: Field = ATNConfigSet::class.java.getDeclaredField("readonly").apply { isAccessible = true }
-//            private val conflictingAltsField: Field = ATNConfigSet::class.java.getDeclaredField("conflictingAlts").apply { isAccessible = true }
-//
-//            override fun write(kryo: Kryo, output: Output, obj: OrderedATNConfigSet) {
-//                // 写入基本类型字段（包括 protected）
-//                output.writeBoolean(readonlyField.getBoolean(obj)) // protected readonly
-//                output.writeInt(obj.uniqueAlt)
-//                output.writeBoolean(obj.hasSemanticContext)
-//                output.writeBoolean(obj.dipsIntoOuterContext)
-//
-//                // 写入 BitSet (protected conflictingAlts)
-//                val conflictingAlts = conflictingAltsField.get(obj) as BitSet?
-//                output.writeBoolean(conflictingAlts != null)
-//                if (conflictingAlts != null) {
-//                    kryo.writeObject(output, conflictingAlts)
-//                }
-//                // 写入 configs
-//                kryo.writeObject(output, obj.configs)
-//
-//                // 写入 configLookup（仅当非 readonly 时）
-//                if (!readonlyField.getBoolean(obj)) {
-//                    kryo.writeObject(output, obj.configLookup)
-//                }
-//            }
-//
-//            override fun read(kryo: Kryo, input: Input, type: java.lang.Class<out OrderedATNConfigSet>): OrderedATNConfigSet {
-//                // 1. 读取 fullCtx 并调用构造函数初始化 final 字段
-//                val instance = OrderedATNConfigSet()
-//
-//                // 2. 设置 protected 字段：readonly
-//                readonlyField.setBoolean(instance, input.readBoolean())
-//
-//                // 3. 设置 public 字段
-//                instance.uniqueAlt = input.readInt()
-//                instance.hasSemanticContext = input.readBoolean()
-//                instance.dipsIntoOuterContext = input.readBoolean()
-//
-//                // 4. 设置 protected 字段：conflictingAlts
-//                val hasConflictingAlts = input.readBoolean()
-//                if (hasConflictingAlts){
-//                    conflictingAltsField.set(instance, kryo.readObject(input, BitSet::class.java))
-//                }
-//
-//                // 5. 读取 configs
-//                instance.configs.addAll(kryo.readObject(input, ArrayList::class.java) as ArrayList<ATNConfig>)
-//
-//                // 6. 读取 configLookup（条件性）
-//                if (!readonlyField.getBoolean(instance)) { // 使用反射 getter 检查
-//                    instance.configLookup = kryo.readObject(input, ATNConfigSet.AbstractConfigHashSet::class.java)
-//                }
-//
-//                return instance
-//            }
-//        })
     }
 }

@@ -4,7 +4,6 @@ package top.mcfpp.core.lang.obj
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
-import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.core.lang.nbt.NBTDictionaryConcrete
 import top.mcfpp.mni.annotation.ConcreteOnly
@@ -17,7 +16,6 @@ import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.type.MCFPPDataTemplateType
-import top.mcfpp.type.MCFPPNBTType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil
@@ -35,9 +33,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
 
     var instanceField: CompoundDataField
 
-    override var type: MCFPPType
-        get() = templateType.getType()
-        set(_) {}
+    final override var type: MCFPPType
 
     /**
      * 创建一个模板对象
@@ -48,6 +44,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         this.templateType = template
         this.identifier = identifier
         instanceField = template.field.createDataTemplateInstance(this)
+        type = templateType.getType()
     }
 
     /**
@@ -57,6 +54,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     constructor(templateObject: DataTemplateObject) : super(templateObject) {
         templateType = templateObject.templateType
         instanceField = templateObject.instanceField
+        type = templateType.getType()
     }
 
     override fun doAssignedBy(b: Var<*>): DataTemplateObject {
@@ -179,12 +177,6 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         val r = super.explicitCast(type)
         if(!r.isError) return r
         when(type){
-            MCFPPNBTType.NBT -> {
-                val re = NBTBasedData(this.identifier)
-                re.nbtPath = nbtPath
-                return re
-            }
-
             is MCFPPDataTemplateType -> {
                 if(templateType.isParentOf(type.template) || templateType.isSubOf(type.template)){
                     val re = if(this is DataTemplateObjectConcrete){
@@ -203,6 +195,10 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         }
     }
 
+    override fun canExplicitCast(type: MCFPPType): Boolean {
+        return super.canExplicitCast(type) || (type is MCFPPDataTemplateType && templateType.isSubOf(type.template))
+    }
+
     override fun implicitCast(type: MCFPPType): Var<*> {
         val r = super.implicitCast(type)
         if(!r.isError) return r
@@ -217,12 +213,16 @@ open class DataTemplateObject : Var<DataTemplateObject> {
                     re.nbtPath = nbtPath
                     return re
                 }else{
-                    return buildCastErrorVar(type)
+                    return r
                 }
             }
 
             else -> return r
         }
+    }
+
+    override fun canImplicitCast(type: MCFPPType): Boolean {
+        return super.canImplicitCast(type) || (type is MCFPPDataTemplateType && templateType.isSubOf(type.template))
     }
 
     override fun clone(): DataTemplateObject {
@@ -370,22 +370,27 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<HashMap<String,
         value: HashMap<String, Var<*>>,
         identifier: String = TempPool.getVarIdentify()
     ) : super(template, identifier) {
+        this.value = HashMap()
         if(template.checkDictionaryStruct(value)){
-            this.value = value
-            for (v in value.values) {
-                instanceField.putVar(v.identifier, v, true)
+            for ((k,v) in value) {
+                val thisV = instanceField.getVar(k)!!.assignedBy(v)
+                thisV.parent = this
+                instanceField.putVar(k, thisV, true)
+                this.value[k] = thisV
             }
         }else{
-            this.value = HashMap()
             LogProcessor.error("Error data struct: $value")
         }
     }
 
     constructor(obj: DataTemplateObject, value: HashMap<String, Var<*>>) : super(obj){
+        this.value = HashMap()
         if(templateType.checkDictionaryStruct(value)){
-            this.value = value
-            for (v in value.values) {
-                instanceField.putVar(v.identifier, v, true)
+            for ((k,v) in value) {
+                val thisV = instanceField.getVar(k)!!.assignedBy(v)
+                thisV.parent = this
+                instanceField.putVar(k, thisV, true)
+                this.value[k] = thisV
             }
         }else{
             this.value = HashMap()
@@ -394,10 +399,13 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<HashMap<String,
     }
 
     constructor(obj: DataTemplateObjectConcrete) : super(obj){
+        this.value = HashMap()
         if(templateType.checkDictionaryStruct(obj.value)){
-            this.value = obj.value
-            for (v in value.values) {
-                instanceField.putVar(v.identifier, v, true)
+            for ((k,v) in obj.value) {
+                val thisV = instanceField.getVar(k)!!.assignedBy(v)
+                thisV.parent = this
+                instanceField.putVar(k, thisV, true)
+                this.value[k] = thisV
             }
         }else{
             this.value = HashMap()

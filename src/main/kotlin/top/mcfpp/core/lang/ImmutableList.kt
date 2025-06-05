@@ -5,7 +5,6 @@ import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.core.lang.nbt.NBTList
 import top.mcfpp.core.lang.obj.DataTemplateObject
-import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
@@ -14,7 +13,10 @@ import top.mcfpp.model.property.Property
 import top.mcfpp.model.property.SimpleAccessor
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.collection.ListTag
-import top.mcfpp.type.*
+import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPImmutableListType
+import top.mcfpp.type.MCFPPListType
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.TempPool
 
 open class ImmutableList : NBTList {
@@ -77,19 +79,6 @@ class ImmutableListConcrete: ImmutableList, MCFPPValue<ListTag>{
             }
         }
         return re
-    }
-
-    /**
-     * 将这个变量强制转换为一个类型
-     * @param type 要转换到的目标类型
-     */
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        return when(type){
-            this.type -> this
-            MCFPPNBTType.NBT -> this
-            MCFPPBaseType.Any -> this
-            else -> throw VariableConverseException()
-        }
     }
 
     override fun getByIndex(index: Var<*>): PropertyVar {

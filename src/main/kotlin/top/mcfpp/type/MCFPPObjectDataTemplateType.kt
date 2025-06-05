@@ -5,7 +5,6 @@ import top.mcfpp.core.lang.Var
 import top.mcfpp.model.*
 import top.mcfpp.model.compound.ObjectDataTemplate
 import top.mcfpp.model.compound.UnsolvedObjectTemplate
-import top.mcfpp.model.compound.Class
 import top.mcfpp.util.LogProcessor
 
 
@@ -27,28 +26,12 @@ class MCFPPObjectDataTemplateType(
         }
     }
 
-    override fun build(identifier: String, container: FieldContainer): Var<*> {
-        LogProcessor.error("Cannot build var from object: $typeName}")
-        return UnknownVar(identifier)
-    }
-    override fun build(identifier: String): Var<*> {
-        LogProcessor.error("Cannot build var from object: $typeName")
-        return UnknownVar(identifier)
-    }
-    override fun build(identifier: String, clazz: Class): Var<*> {
-        LogProcessor.error("Cannot build var from object: $typeName")
-        return UnknownVar(identifier)
-    }
-    override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> {
+    override fun build(identifier: String, value: Any?): Var<*> {
         LogProcessor.error("Cannot build var from object: $typeName")
         return UnknownVar(identifier)
     }
     override fun buildUnConcrete(identifier: String): Var<*> {
         LogProcessor.error("Cannot build var from object: $typeName")
-        return UnknownVar(identifier)
-    }
-    override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> {
-        LogProcessor.error("Cannot build var from type: $typeName")
         return UnknownVar(identifier)
     }
 }

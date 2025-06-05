@@ -2,7 +2,6 @@ package top.mcfpp.type
 
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.Interface
@@ -38,31 +37,11 @@ open class MCFPPInterfaceType(
         }
     }
 
-    override fun build(identifier: String, container: FieldContainer): Var<*> {
-        LogProcessor.error("Cannot instantiate interface: $typeName")
-        return UnknownVar(identifier)
-    }
-    override fun build(identifier: String): Var<*> {
-        LogProcessor.error("Cannot instantiate interface: $typeName")
-        return UnknownVar(identifier)
-    }
-    override fun build(identifier: String, clazz: Class): Var<*> {
-        LogProcessor.error("Cannot instantiate interface: $typeName")
-        return UnknownVar(identifier)
-    }
-    override fun build(value: Any): Var<*> {
-        LogProcessor.error("Cannot instantiate interface: $typeName")
-        return UnknownVar()
-    }
-    override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> {
+    override fun build(identifier: String, value: Any?): Var<*> {
         LogProcessor.error("Cannot instantiate interface: $typeName")
         return UnknownVar(identifier)
     }
     override fun buildUnConcrete(identifier: String): Var<*> {
-        LogProcessor.error("Cannot instantiate interface: $typeName")
-        return UnknownVar(identifier)
-    }
-    override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> {
         LogProcessor.error("Cannot instantiate interface: $typeName")
         return UnknownVar(identifier)
     }

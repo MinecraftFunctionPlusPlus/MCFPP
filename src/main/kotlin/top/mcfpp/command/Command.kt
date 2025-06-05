@@ -286,18 +286,13 @@ open class Command: Serializable {
 
     fun buildAll(vararg parts: Any?): Command {
         for (part in parts){
-            if(part == null){
-                build("null")
-                continue
+            when (part) {
+                null -> build("null")
+                is Var<*> -> build(part.toCommandPart())
+                is Command -> build(part)
+                is NBTPath -> build(part.toCommandPart())
+                else -> build(parts.toString())
             }
-            if(part is Var<*>){
-                build(part.toCommandPart())
-                continue
-            }
-            if(part is Command){
-                build(part)
-            }
-            build(parts.toString())
         }
         return this
     }
@@ -359,18 +354,13 @@ open class Command: Serializable {
         fun buildAll(vararg parts: Any?): Command {
             val c = Command()
             for (part in parts){
-                if(part == null){
-                    c.build("null")
-                    continue
+                when (part) {
+                    null -> c.build("null")
+                    is Var<*> -> c.build(part.toCommandPart())
+                    is Command -> c.build(part)
+                    is NBTPath -> c.build(part.toCommandPart())
+                    else -> c.build(parts.toString())
                 }
-                if(part is Var<*>){
-                    c.build(part.toCommandPart())
-                    continue
-                }
-                if(part is Command){
-                    c.build(part)
-                }
-                c.build(parts.toString())
             }
             return c
         }

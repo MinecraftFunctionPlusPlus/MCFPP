@@ -245,10 +245,7 @@ class MCFPPExprVisitor(
     @Override
     override fun visitCastExpression(ctx: mcfppParser.CastExpressionContext): Var<*> = withCompilationContext(ctx) {
         val a: Var<*> = visitRightVarExpression(ctx.rightVarExpression())
-        return a.explicitCast(MCFPPType.parseFromString(ctx.type().text, Function.currFunction.field)?: run {
-            LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
-            MCFPPBaseType.Any
-        })
+        return a.explicitCast(MCFPPType.parseFromContextNotNull(ctx.type(), Function.currFunction.field))
     }
 
     /**
@@ -474,7 +471,7 @@ class MCFPPExprVisitor(
         //可能是模板的构造函数
         val template: DataTemplate? = GlobalField.getTemplate(p.first, p.second)
         if(template != null) {
-            val init = DataTemplateObjectConcrete(template.getType().defaultValue() as DataTemplateObjectConcrete)
+            val init = DataTemplateObjectConcrete(template.getType().defaultValueVar() as DataTemplateObjectConcrete)
             val constructor = template.getConstructorByString(FunctionParam.getArgTypeNames(normalArgs))
             if (constructor == null) {
                 LogProcessor.error("No constructor like: " + FunctionParam.getArgTypeNames(normalArgs) + " defined in class " + ctx.namespaceID().text)

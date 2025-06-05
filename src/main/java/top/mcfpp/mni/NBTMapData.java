@@ -44,7 +44,7 @@ public class NBTMapData {
     @MNIFunction(caller = "map", returnType = "int", genericType = "E")
     public static void size(NBTMap caller, ValueWrapper<MCInt> re){
         var r = re.getValue();
-        Function.Companion.addCommand(
+        Function.addCommand(
                 new Command("execute store score").build(r.getIdentifier(),true).build(r.getSbObject().toString(), true)
                         .build("run data get", true).build(caller.getKeyValueSet().nbtPath.toCommandPart(), true)
         );

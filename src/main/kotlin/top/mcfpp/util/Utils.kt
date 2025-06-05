@@ -154,6 +154,7 @@ object Utils {
 
         return obj
     }
+
     fun <K, V> LinkedHashMap<K, V>.subMap(fromIndex: Int, toIndex: Int): LinkedHashMap<K, V> {
         require(fromIndex >= 0 && toIndex <= size && fromIndex <= toIndex) {
             "Invalid range: fromIndex=$fromIndex, toIndex=$toIndex, size=$size"
@@ -165,15 +166,13 @@ object Utils {
                 .forEach { put(it.key, it.value) }
         }
     }
-    fun <K, V> LinkedHashMap<K, V>.addFirst(key: K, value: V): LinkedHashMap<K, V> {
-        return LinkedHashMap<K, V>().apply {
-            // 1. 先插入新键值对
-            put(key, value)
-            // 2. 再插入原 map 的所有键值对
-            putAll(this@addFirst)
-        }
+
+    fun <K, V> LinkedHashMap<K, V>.addFirst(key: K, value: V) {
+        val newMap = LinkedHashMap<K, V>()
+        newMap[key] = value
+        newMap.putAll(this)
+        this.clear()
+        this.putAll(newMap)
     }
-
-
 
 }

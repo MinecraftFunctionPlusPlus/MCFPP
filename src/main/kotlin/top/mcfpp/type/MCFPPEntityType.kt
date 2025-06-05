@@ -9,8 +9,6 @@ import top.mcfpp.core.lang.nbt.NBTDictionary
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.lib.EntitySelector
 import top.mcfpp.model.CanSelectMember
-import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.property.AnonymousNativeMutator
@@ -37,15 +35,11 @@ class MCFPPEntityType(val limit: Int? = null, val types: List<String>? = null, v
     override val simpleName: String
         get() = "entity"
 
-    override fun defaultValue(): Var<*> {
+    override fun defaultValueVar(): Var<*> {
         return SelectorVar(EntitySelector(EntitySelector.Companion.SelectorType.SELF), "default")
     }
 
-    override fun build(identifier: String, container: FieldContainer): Var<*> {
-        return build(identifier)
-    }
-
-    override fun build(identifier: String): Var<*> {
+    override fun build(identifier: String, value: Any?): Var<*> {
         val qwq = EntitySelector(EntitySelector.Companion.SelectorType.ALL_ENTITIES)
         if (limit != null) qwq.limit(limit)
         if (types != null) {
@@ -57,10 +51,6 @@ class MCFPPEntityType(val limit: Int? = null, val types: List<String>? = null, v
                 }
         }
         return SelectorVar(qwq, identifier)
-    }
-
-    override fun build(identifier: String, clazz: Class): Var<*> {
-        return build(identifier)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -297,23 +287,11 @@ class MCFPPEntityType(val limit: Int? = null, val types: List<String>? = null, v
         override val typeName: String
             get() = "Player"
 
-        override fun defaultValue(): Var<*> {
+        override fun defaultValueVar(): Var<*> {
             return SelectorVar(EntitySelector(EntitySelector.Companion.SelectorType.NEAREST_PLAYER), "default")
         }
 
-        override fun build(value: Any): Var<*> {
-            return PlayerVar()
-        }
-
-        override fun build(identifier: String): Var<*> {
-            return PlayerVar(identifier)
-        }
-
-        override fun build(identifier: String, container: FieldContainer): Var<*> {
-            return PlayerVar(identifier)
-        }
-
-        override fun build(identifier: String, clazz: Class): Var<*> {
+        override fun build(identifier: String, value: Any?): Var<*> {
             return PlayerVar(identifier)
         }
     }

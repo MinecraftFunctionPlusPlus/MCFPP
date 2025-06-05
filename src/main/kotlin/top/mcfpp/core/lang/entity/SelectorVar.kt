@@ -82,6 +82,9 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
         }
     }
 
+    override fun canExplicitCast(type: MCFPPType): Boolean {
+        return type is MCFPPEntityType && (this.type as MCFPPEntityType).canCastTo(type) || super.canExplicitCast(type)
+    }
     override fun implicitCast(type: MCFPPType): Var<*> {
         val qwq = super.implicitCast(type)
         if(!qwq.isError) return qwq
@@ -94,6 +97,10 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
 
             else -> qwq
         }
+    }
+
+    override fun canImplicitCast(type: MCFPPType): Boolean {
+        return type is MCFPPEntityType && (this.type as MCFPPEntityType).canCastTo(type) || super.canImplicitCast(type)
     }
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {

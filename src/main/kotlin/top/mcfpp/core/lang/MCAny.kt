@@ -1,6 +1,8 @@
 package top.mcfpp.core.lang
 
 import top.mcfpp.core.lang.nbt.NBTBasedData
+import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.compound.ObjectClass
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType
@@ -8,8 +10,6 @@ import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 
 /**
- *
- * 这是MCAny的未跟踪类。这个类表示编译器不知道any类对应的类型是什么。
  *
  * any是所有类型的基类。在mcfpp中，any的作用更像是将一个变量包装起来，将不同变量统一为一种类型。如果将一种类型转换为any类，它原则上只能被转换回原
  *变量能转换的类型。如果被转换为其他类型，编译器会发出一个警告。
@@ -54,9 +54,12 @@ open class MCAny : Var<MCAny> {
 
     override var type: MCFPPType = MCFPPBaseType.Any
 
-    var inferredType: MCFPPType? = null
+    var lastVar : Var<*>? = null
 
-    var name: String? = null
+    var container: FieldContainer? = null
+
+    val inferredType: MCFPPType?
+        get() = lastVar?.type
 
     /**
      * 创建一个int值。它的标识符和mc名相同。
@@ -69,7 +72,7 @@ open class MCAny : Var<MCAny> {
      * @param b 被复制的int值
      */
     constructor(b: MCAny) : super(b){
-        inferredType = b.inferredType
+        lastVar = b.lastVar
     }
 
     /**
@@ -83,35 +86,31 @@ open class MCAny : Var<MCAny> {
         when (b) {
             is MCAnyConcrete -> {
                 val q = MCAnyConcrete(this, b.value)
-                q.inferredType = b.inferredType
                 return q
             }
 
             is MCAny -> {
                 if (b.inferredType == null && this.inferredType == null){
-                    LogProcessor.warn("Try to assign any to any")
+                    LogProcessor.warn("Attempt to assign any to any, but cannot infer any type. Default to nbt type.")
                     NBTBasedData().setAs(this).assignedBy(NBTBasedData().setAs(b))
                     return this
                 }
-                if(b.inferredType != null){
-                    inferredType = b.inferredType
+                if(b.lastVar != null){
+                    lastVar = b.lastVar
                 }
-                val temp = inferredType!!.buildUnConcrete(this.identifier, parentClass()?:parentTemplate()?:Function.currFunction).setAs(this)
-                val tempb = inferredType!!.buildUnConcrete(b.identifier, parentClass()?:parentTemplate()?:Function.currFunction).setAs(b)
+                val temp = buildInferredVar(inferredType!!)
+                val tempb = b.buildInferredVar(b.inferredType!!)
                 temp.assignedBy(tempb)
                 return this
             }
 
             is MCFPPValue<*> -> {
-                inferredType = (b as Var<*>).type
-                name = if(b is OnScoreboard) b.name else null
                 return MCAnyConcrete(this, b.value)
             }
 
             else -> {
-                inferredType = b.type
-
-                val temp = inferredType!!.buildUnConcrete(this.identifier, parentClass()?:parentTemplate()?:Function.currFunction).setAs(this)
+                lastVar = b
+                val temp = buildInferredVar(inferredType!!)
                 temp.assignedBy(b)
                 return this
             }
@@ -126,19 +125,23 @@ open class MCAny : Var<MCAny> {
         return when(type){
             MCFPPBaseType.Any -> this
             else -> {
-                type.buildUnConcrete(this.identifier, parentClass()?:parentTemplate()?:Function.currFunction).setAs(this)
+                buildInferredVar(type)
             }
         }
     }
+
+    override fun canExplicitCast(type: MCFPPType) = true
 
     override fun implicitCast(type: MCFPPType): Var<*> {
         return when(type){
             MCFPPBaseType.Any -> this
             else -> {
-                type.buildUnConcrete(this.identifier, parentClass()?:parentTemplate()?:Function.currFunction).setAs(this)
+                buildInferredVar(type)
             }
         }
     }
+
+    override fun canImplicitCast(type: MCFPPType) = true
 
     override fun clone(): MCAny {
         return MCAny(this)
@@ -157,28 +160,23 @@ open class MCAny : Var<MCAny> {
 
     override fun getFromStack() {}
 
-    open fun buildInferredVar(): Var<*>?{
-        return inferredType?.buildUnConcrete(this.identifier)?.setAs(this)
+    open fun buildInferredVar(type: MCFPPType): Var<*>{
+        val re = if(container != null){
+            type.buildUnConcrete(this.identifier, container!!).setAs(this)
+        } else{
+            type.buildUnConcrete(this.identifier).setAs(this)
+        }
+        if(parentClass() is ObjectClass && re is OnScoreboard){
+            re.name = (parentClass() as ObjectClass).mcuuid.uuid.toString()
+            re.setObj(parentClass()!!.getIntSbObject(re.identifier))
+        }else if(parentClass() != null && re is OnScoreboard){
+            re.name = "@s"
+            re.setObj(parentClass()!!.getIntSbObject(re.identifier))
+        }
+        return re
     }
 }
 
-/**
- * 这是MCAny的跟踪变种。这个类表示编译器知道any类对应的类型是什么。
- *
- * 它的javaValue值是一个MCFPP变量，也就是[Var]。在诸如`any i = a`（其中a是一个int值）这样的赋值过程中，将会将a作为javaValue储存到i中，
- *MCAnyConcrete类根据自己javaValue中存放的变量的类型来判断自己是什么类型。然而，在后续的赋值过程中，比如再有`int j = (int)i`，并不是将a赋值
- *给i，而是创建一个和i有一样标识符但是javaValue值（若有）和a一致的新的MCInt变量（这个变量不会进入编译器的作用域缓存中），然后让这个新的变量去进行
- *赋值操作。
- *
- * 由于编译器知道这个any类中代表的类型是什么，因此会进行一些类型检查，但是不会报错。比如
- * ```java
- * any i = 5;
- * any str = "abc";
- * i = str;
- * ```
- *
- * 这会警告表示两个的类型不一致，但是不会报错。允许这种赋值的存在，此后i的类型也被跟踪为`string`类型。
- */
 class MCAnyConcrete : MCAny, MCFPPValue<Any?> {
 
     override var value: Any?
@@ -211,7 +209,7 @@ class MCAnyConcrete : MCAny, MCFPPValue<Any?> {
         if(inferredType == null){
             LogProcessor.warn("Unable to infer the type of any")
         }else{
-            val temp = inferredType!!.build(value!!).setAs(this)
+            val temp = buildInferredVar(inferredType!!)
             (temp as MCFPPValue<*>).toDynamic(false)
         }
         val re = MCAny(this)
@@ -225,8 +223,20 @@ class MCAnyConcrete : MCAny, MCFPPValue<Any?> {
         return re
     }
 
-    override fun buildInferredVar(): Var<*>? {
-        return inferredType?.build(value!!)?.setAs(this)
+    override fun buildInferredVar(type: MCFPPType): Var<*> {
+        val re = if(container != null){
+            type.build(this.identifier, container!!, value).setAs(this)
+        } else{
+            type.build(this.identifier, value).setAs(this)
+        }
+        if(parentClass() is ObjectClass && re is OnScoreboard){
+            re.name = (parentClass() as ObjectClass).mcuuid.uuid.toString()
+            re.setObj(parentClass()!!.getIntSbObject(re.identifier))
+        }else if(parentClass() != null && re is OnScoreboard){
+            re.name = "@s"
+            re.setObj(parentClass()!!.getIntSbObject(re.identifier))
+        }
+        return re
     }
 
 }

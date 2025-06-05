@@ -106,7 +106,7 @@ open class NBTDictionary : NBTBasedData {
                 }
                 NBTDictionary(this)
             },
-            ifThisIsNormalVarAndAIsConcrete = {b, _ ->
+            ifThisIsNormalVarAndAIsConcrete = {b ->
                 NBTDictionaryConcrete(this, (b as NBTDictionaryConcrete).value)
             },
             ifThisIsNormalVarAndAIsClassMember = {b, final ->
@@ -121,7 +121,7 @@ open class NBTDictionary : NBTBasedData {
                 }
                 NBTDictionary(this)
             },
-            ifThisIsNormalVarAndAIsNotConcrete = {b, _ ->
+            ifThisIsNormalVarAndAIsNotConcrete = {b ->
                 Function.addCommand(Commands.dataSetFrom(nbtPath, b.nbtPath))
                 NBTDictionary(this)
             }
@@ -268,8 +268,18 @@ class NBTDictionaryConcrete : NBTDictionary, PartialConcreteValue<CompoundTag, H
                 }
             }
 
-            MCFPPBaseType.Any -> (MCAnyConcrete(value).setAs(this) as MCAnyConcrete).apply { inferredType = this@NBTDictionaryConcrete.type }
+            MCFPPBaseType.Any -> (MCAnyConcrete(value).setAs(this) as MCAnyConcrete).apply { lastVar = this@NBTDictionaryConcrete }
             else -> buildCastErrorVar(type)
+        }
+    }
+
+    override fun canImplicitCast(type: MCFPPType): Boolean {
+        return when(type){
+            is MCFPPDictType -> type.generic == (this.type as MCFPPDictType).generic
+            is MCFPPMapType -> type.generic == (this.type as MCFPPDictType).generic
+            MCFPPNBTType.NBT -> true
+            MCFPPBaseType.Any -> true
+            else -> false
         }
     }
 
@@ -309,6 +319,16 @@ class NBTDictionaryConcrete : NBTDictionary, PartialConcreteValue<CompoundTag, H
                 LogProcessor.error(TextTranslator.CAST_ERROR.translate(this.type.typeName, type.typeName))
                 buildCastErrorVar(type)
             }
+        }
+    }
+
+    override fun canExplicitCast(type: MCFPPType): Boolean {
+        return when(type){
+            is MCFPPDictType -> type.generic == (this.type as MCFPPDictType).generic
+            is MCFPPDataTemplateType -> type.template.checkDictionaryStruct(value)
+            MCFPPNBTType.NBT -> true
+            MCFPPBaseType.Any -> true
+            else -> false
         }
     }
 

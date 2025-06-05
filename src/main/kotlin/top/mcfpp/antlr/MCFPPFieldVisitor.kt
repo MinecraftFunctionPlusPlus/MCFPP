@@ -504,7 +504,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }else if(type == null){
             type = init!!.type
         }
-        val `var` = type.buildUnConcrete(ctx.Identifier().text, Class.currClass!!)
+        val `var` = type.buildUnConcrete(ctx.Identifier().text)
         if(Class.currClass is ObjectClass && `var` is OnScoreboard){
             `var`.name = (Class.currClass as ObjectClass).mcuuid.uuid.toString()
             `var`.setObj(Class.currClass!!.getIntSbObject(`var`.identifier))
@@ -925,6 +925,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             val methods = clazz.methods
             var hasFind = false
             for(method in methods){
+                if(method.name != nf.identifier) continue
                 val mniRegister = method.getAnnotation(MNIFunction::class.java) ?: continue
                 //解析MNIMethod注解成员
                 val readOnlyType = mniRegister.readOnlyParams.map {
@@ -1200,17 +1201,14 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                     nullable = it.singleTemplateFieldType().QUEST() != null
                 }
             } else {
-                val vars = ArrayList<Var<*>>()
+                val unionTypes = ArrayList<MCFPPType>()
                 for (type in it.unionTemplateFieldType().type()) {
-                    val t = MCFPPType.parseFromContextNotNull(type, typeScope)
-                    vars.add(
-                        t.build(ctx.Identifier().text)
-                    )
+                    unionTypes.add(MCFPPType.parseFromContextNotNull(type, typeScope))
                 }
                 UnionTypeVarConcrete(
                     ctx.Identifier().text,
-                    (vars[0] as MCFPPValue<*>).value,
-                    *vars.toTypedArray()
+                    unionTypes[0].defaultValue(),
+                    *unionTypes.toTypedArray()
                 ).apply {
                     nullable = it.unionTemplateFieldType().QUEST() != null
                 }

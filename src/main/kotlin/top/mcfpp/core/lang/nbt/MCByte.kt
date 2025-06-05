@@ -68,7 +68,7 @@ open class MCByte: MCInt {
                 Function.addCommand(final.last().build(Commands.sbPlayerOperation(this,"=",b as MCInt)))
                 this
             },
-            ifThisIsNormalVarAndAIsConcrete = { b, _ ->
+            ifThisIsNormalVarAndAIsConcrete = { b ->
                 MCByteConcrete(this, (b as MCByteConcrete).value)
             },
             ifThisIsNormalVarAndAIsClassMember = { c, cmd ->
@@ -78,7 +78,7 @@ open class MCByte: MCInt {
                 Function.addCommand(cmd.last().build(Commands.sbPlayerOperation(this, "=", c as MCInt)))
                 MCByte(this)
             },
-            ifThisIsNormalVarAndAIsNotConcrete = { c, _ ->
+            ifThisIsNormalVarAndAIsNotConcrete = { c ->
                 //变量进栈
                 Function.addCommand(Commands.sbPlayerOperation(this, "=", c as MCInt))
                 MCByte(this)
@@ -101,6 +101,10 @@ open class MCByte: MCInt {
             MCFPPNBTType.Short -> MCShort(this)
             else -> re
         }
+    }
+
+    override fun canImplicitCast(type: MCFPPType): Boolean {
+        return super.canImplicitCast(type) || type == MCFPPNBTType.Short
     }
 
 }

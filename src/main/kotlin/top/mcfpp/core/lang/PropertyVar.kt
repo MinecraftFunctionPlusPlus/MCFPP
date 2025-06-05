@@ -3,10 +3,9 @@ package top.mcfpp.core.lang
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.property.Property
-import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType
 
-class PropertyVar(val property: Property, val field: Var<*>, val caller: Var<*>): Var<PropertyVar>(field.identifier) {
+class PropertyVar(val property: Property, var field: Var<*>, val caller: Var<*>): Var<PropertyVar>(field.identifier) {
 
     init {
         property.parent = caller
@@ -15,24 +14,26 @@ class PropertyVar(val property: Property, val field: Var<*>, val caller: Var<*>)
     override var type: MCFPPType = field.type
 
     override fun explicitCast(type: MCFPPType): Var<*> {
-        return if(type == MCFPPBaseType.Any){
-            MCAnyConcrete(this)
-        }else{
-            super.explicitCast(type)
-        }
+        throw IllegalStateException("Property cannot be casted")
+    }
+
+    override fun canExplicitCast(type: MCFPPType): Boolean {
+        return field.canExplicitCast(type)
     }
 
     override fun implicitCast(type: MCFPPType): Var<*> {
-        return if(type == MCFPPBaseType.Any){
-            MCAnyConcrete(this)
-        }else{
-            super.implicitCast(type)
-        }
+        throw IllegalStateException("Property cannot be casted")
+    }
+
+    override fun canImplicitCast(type: MCFPPType): Boolean {
+        return field.canImplicitCast(type)
     }
 
     override fun doAssignedBy(b: Var<*>): PropertyVar {
         val qwq = property.setter(caller, field, b)
-        return PropertyVar(Property.buildSimpleProperty(qwq), qwq, field)
+        qwq.parent = caller
+        this.field = qwq
+        return this
     }
 
     override fun canAssignedBy(b: Var<*>): Boolean {

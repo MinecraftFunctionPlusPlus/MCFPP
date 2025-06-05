@@ -166,11 +166,14 @@ class EnumVarConcrete : EnumVar, MCFPPValue<EnumMember> {
 
     override var value: EnumMember
 
-    /**
-     * 创建一个固定的int。它的标识符和mc名一致/
-     * @param identifier 标识符。如不指定，则为随机uuid
-     * @param value 值
-     */
+    constructor(enum: Enum, value: EnumMember, identifier: String = TempPool.getVarIdentify()) : super(enum ,identifier) {
+        this.value = value
+    }
+
+    constructor(enum: EnumVar, value: EnumMember) : super(enum){
+        this.value = value
+    }
+
     constructor(enum: Enum, value: Int, identifier: String = TempPool.getVarIdentify()) : super(enum ,identifier) {
         this.value = enum.getMember(value)!!
     }

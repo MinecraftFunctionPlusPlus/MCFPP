@@ -668,7 +668,7 @@ open class Function : Member, FieldContainer, WithDocument {
      * 补全缺省参数
      */
     open fun completeDefaultValue(args: LinkedHashMap<String, Var<*>>): LinkedHashMap<String, Var<*>>{
-        val completedArgs = LinkedHashMap<String, Var<*>>()
+        val completedArgs = LinkedHashMap<String, Var<*>>(args)
         for (p in normalParams){
             completedArgs[p.identifier] = args[p.identifier]?:p.defaultVar!!
         }
@@ -679,7 +679,7 @@ open class Function : Member, FieldContainer, WithDocument {
         //函数参数已知条件下的编译
         val values = args.values.map { if (it is MCFPPValue<*>) it.value else null }
         val argList = args.values.toList()
-        compiledFunctions[values]?.let { return it to args.filter { e -> e.value !is MCFPPValue<*> } as LinkedHashMap }
+        compiledFunctions[values]?.let { return it to LinkedHashMap(args.filter { e -> e.value !is MCFPPValue<*> }) }
         val cf = Function(this)
         //替换变量
         for (i in values.indices) {

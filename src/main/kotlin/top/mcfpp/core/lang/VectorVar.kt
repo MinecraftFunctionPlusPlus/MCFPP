@@ -97,6 +97,10 @@ open class VectorVar: Var<VectorVar>, Indexable, ScoreHolder {
         }
     }
 
+    override fun canExplicitCast(type: MCFPPType): Boolean {
+        return type is MCFPPVectorType && type.dimension == dimension || type !is MCFPPVectorType && super.canExplicitCast(type)
+    }
+
     override fun implicitCast(type: MCFPPType): Var<*> {
         if(type !is MCFPPVectorType) {
             val re = super.implicitCast(type)
@@ -111,6 +115,10 @@ open class VectorVar: Var<VectorVar>, Indexable, ScoreHolder {
             }
             else -> buildCastErrorVar(type)
         }
+    }
+
+    override fun canImplicitCast(type: MCFPPType): Boolean {
+        return (type !is MCFPPVectorType && super.canImplicitCast(type)) || (type is MCFPPVectorType && type.dimension == dimension)
     }
 
     override fun onScoreChange(score: MCInt) {

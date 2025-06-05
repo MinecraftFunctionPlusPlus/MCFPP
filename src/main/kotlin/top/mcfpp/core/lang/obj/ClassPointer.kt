@@ -160,16 +160,26 @@ open class ClassPointer : Var<ClassPointer> {
         return re
     }
 
+    override fun canExplicitCast(type: MCFPPType): Boolean {
+        return type is MCFPPClassType && (this.clazz.isSubOf(type.cls) || this.clazz.isParentOf(type.cls))
+    }
+
     override fun implicitCast(type: MCFPPType): Var<*> {
+        val r = super.implicitCast(type)
+        if(!r.isError) return r
         if(type !is MCFPPClassType){
-            return buildCastErrorVar(type)
+            return r
         }
         val c = type.cls
         if (!this.clazz.isSubOf(c)) {
-            return buildCastErrorVar(type)
+            return r
         }
         val re = ClassPointer(this)
         return re
+    }
+
+    override fun canImplicitCast(type: MCFPPType): Boolean {
+        return type is MCFPPClassType && this.clazz.isSubOf(type.cls)
     }
 
     override fun clone(): ClassPointer {

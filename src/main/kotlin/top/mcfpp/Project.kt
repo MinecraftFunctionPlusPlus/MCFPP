@@ -37,6 +37,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.jar.JarFile
 import kotlin.io.path.*
+import kotlin.system.exitProcess
 
 
 /**
@@ -55,6 +56,10 @@ object Project {
         Project.ctx.addFirst(ctx)
         try {
             return block()
+        } catch (e: Exception) {
+            LogProcessor.error("Fatal error")
+            LogProcessor.error("Caused by: ", e)
+            exitProcess(1)
         } finally {
             Project.ctx.removeFirst()
         }

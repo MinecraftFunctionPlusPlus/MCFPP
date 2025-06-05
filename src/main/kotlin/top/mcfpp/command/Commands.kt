@@ -404,7 +404,7 @@ object Commands {
                     }
                 }
             }
-            else -> TODO()
+            else -> return arrayOf(Command())
         }
         return final
     }

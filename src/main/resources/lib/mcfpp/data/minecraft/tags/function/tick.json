@@ -1,6 +1,6 @@
 {
 	"values":[
-		"mcfpp:tick",
-		"mcfpp:sys.tick"
+		"mcfpp:sys.tick",
+		"mcfpp:tick"
 	]
 }

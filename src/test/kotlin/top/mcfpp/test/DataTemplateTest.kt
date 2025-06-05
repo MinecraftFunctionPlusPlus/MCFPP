@@ -9,13 +9,13 @@ class DataTemplateTest {
         val test =
             """
                 data Test{
-                    nbt qwq;
+                    qwq as nbt;
                     
                     func test(){}
                 }
                 
                 func main(){
-                    Test t = {qwq:1};
+                    var t as Test = {qwq:1};
                     print(t.qwq);
                     print(t);
                     t.qwq = 6;
@@ -30,21 +30,19 @@ class DataTemplateTest {
         val test =
             """
                 data Test{
-               
-                    (int|string) qwq;
-                    
+                    qwq as (int|string);
                 }
                 
                 func main(){
-                    Test t = Test();
-                    print((int)t.qwq);
-                    print((string)t.qwq);
+                    var t = Test();
+                    print(t.qwq as int);
+                    print(t.qwq as string);
                     print(t);
                     t.qwq = 6;
-                    print((int)t.qwq);
+                    print(t.qwq as int);
                     print(t);
                     t.qwq = "test";
-                    print((string)t.qwq);
+                    print(t.qwq as string);
                     print(t);
                 }
             """.trimIndent()
@@ -56,15 +54,15 @@ class DataTemplateTest {
         val test =
             """
                 data Test{
-                    int qwq;
+                    qwq as int;
                 }
                 
                 data Test2: Test{
-                    string qwq2;
+                    qwq2 as string;
                 }
                 
                 func main(){
-                    Test2 t = {qwq:1,qwq2:"test"};
+                    var t as Test2 = {qwq:1,qwq2:"test"};
                     print(t.qwq);
                     print(t.qwq2);
                     print(t);
@@ -84,15 +82,15 @@ class DataTemplateTest {
         val test =
             """
                 data Test1 {
-                    int qwq;
+                    qwq as int;
                 }
                 
                 data Test2 {
-                    string qwq2;
+                    qwq2 as string;
                 }
                 
                 func main(){
-                    (Test1&Test2) t = {qwq:1, qwq2: "qwq"};
+                    var t as (Test1&Test2) = {qwq:1, qwq2: "qwq"};
                     print(t);
                     print(t.qwq);
                     print(t.qwq2);

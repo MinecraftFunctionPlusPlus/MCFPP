@@ -2,15 +2,12 @@ package top.mcfpp.core.lang.nbt
 
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Commands
-import top.mcfpp.core.lang.MCAnyConcrete
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
-import top.mcfpp.exception.VariableConverseException
-import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.nbt.tags.primitive.DoubleTag
-import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPNBTType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.TempPool
@@ -62,7 +59,7 @@ open class MCDouble: NBTBasedData {
                 }
                 MCDouble(this)
             },
-            ifThisIsNormalVarAndAIsConcrete = {b, _ ->
+            ifThisIsNormalVarAndAIsConcrete = {b ->
                 MCDoubleConcrete(this, (b as MCDoubleConcrete).value)
             },
             ifThisIsNormalVarAndAIsClassMember = {b, final ->
@@ -77,7 +74,7 @@ open class MCDouble: NBTBasedData {
                 }
                 MCDouble(this)
             },
-            ifThisIsNormalVarAndAIsNotConcrete = {b, _ ->
+            ifThisIsNormalVarAndAIsNotConcrete = {b ->
                 Function.addCommand(Commands.dataSetFrom(nbtPath, b.nbtPath))
                 NBTBasedData(this)
             }) as MCDouble
@@ -135,15 +132,5 @@ class MCDoubleConcrete: MCDouble, MCFPPValue<DoubleTag> {
     override fun toDynamic(replace: Boolean): Var<*> {
         NBTBasedDataConcrete(this, value).toDynamic(replace)
         return MCDouble(this)
-    }
-
-    @Override
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        return when(type){
-            MCFPPBaseType.Double -> this
-            MCFPPNBTType.NBT -> NBTBasedDataConcrete(value)
-            MCFPPBaseType.Any -> MCAnyConcrete(this)
-            else -> throw VariableConverseException()
-        }
     }
 }

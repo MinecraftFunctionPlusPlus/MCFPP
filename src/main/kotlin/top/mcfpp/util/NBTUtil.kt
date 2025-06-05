@@ -16,6 +16,7 @@ import top.mcfpp.nbt.tags.primitive.*
 
 object NBTUtil {
 
+    @JvmStatic
     fun varToNBT(v : Var<*>): Tag<*>?{
         if(v !is MCFPPValue<*>) return null
         return when(v){
@@ -37,7 +38,7 @@ object NBTUtil {
             is EnumVarConcrete -> v.value.data
             is DataTemplateObjectConcrete -> CompoundTag().apply {
                 for ((key, value) in v.value){
-                    if(value.hasAssigned){
+                    if(!value.hasAssigned){
                         continue
                     }
                     put(key, varToNBT(value)!!)
@@ -52,7 +53,7 @@ object NBTUtil {
         }
     }
 
-    @Suppress("UNCHECKED_CAST")
+    @JvmStatic
     fun valueToNBT(any: Any?): Tag<*>{
         return when(any){
             null -> IntTag(0)
@@ -99,10 +100,12 @@ object NBTUtil {
         }
     }
 
+    @JvmStatic
     fun ListTag.toArrayList(): ArrayList<*>{
         return ArrayList(map { it.toJava() })
     }
 
+    @JvmStatic
     fun CompoundTag.toMap(): HashMap<String, Any>{
         val map = HashMap<String, Any>()
         for(key in keySet()){
@@ -124,6 +127,7 @@ object NBTUtil {
         return map
     }
 
+    @JvmStatic
     fun<T> Tag<T>.toJava(): Any{
         return when(this){
             is ByteTag -> asByte()
@@ -142,6 +146,7 @@ object NBTUtil {
         }
     }
 
+    @JvmStatic
     fun String.toNBTByte(): Byte{
         return if(endsWith("b") || endsWith("B")){
             substring(0, length - 1).toByte()
@@ -150,6 +155,7 @@ object NBTUtil {
         }
     }
 
+    @JvmStatic
     fun String.toNBTShort(): Short{
         return if(endsWith("s") || endsWith("S")){
             substring(0, length - 1).toShort()
@@ -158,6 +164,7 @@ object NBTUtil {
         }
     }
 
+    @JvmStatic
     fun String.toNBTLong(): Long{
         return if(endsWith("l") || endsWith("L")){
             substring(0, length - 1).toLong()
@@ -166,6 +173,7 @@ object NBTUtil {
         }
     }
 
+    @JvmStatic
     fun String.toNBTFloat(): Float{
         return if(endsWith("f") || endsWith("F")){
             substring(0, length - 1).toFloat()
@@ -174,6 +182,7 @@ object NBTUtil {
         }
     }
 
+    @JvmStatic
     fun String.toNBTDouble(): Double{
         return if(endsWith("d") || endsWith("D")){
             substring(0, length - 1).toDouble()

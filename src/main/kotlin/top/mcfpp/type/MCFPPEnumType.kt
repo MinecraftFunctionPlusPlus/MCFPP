@@ -3,11 +3,10 @@ package top.mcfpp.type
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.EnumVar
 import top.mcfpp.core.lang.obj.EnumVarConcrete
-import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
-import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.Enum
+import top.mcfpp.model.compound.EnumMember
 
 open class MCFPPEnumType(
     var enum: Enum
@@ -34,16 +33,9 @@ open class MCFPPEnumType(
         return re to true
     }
 
-    override fun defaultValue(): Var<*> {
-        return EnumVarConcrete(enum, 0, "default")
-    }
+    override fun defaultValue() = enum.getMember(0)!!
 
-    override fun build(identifier: String, container: FieldContainer): Var<*> = EnumVarConcrete(enum, 0, identifier)
-    override fun build(identifier: String): Var<*> = EnumVarConcrete(enum,0, identifier)
-    override fun build(identifier: String, clazz: Class): Var<*> = EnumVarConcrete(enum, 0, identifier)
-    override fun build(value: Any): Var<*> = EnumVarConcrete(enum, value as Int)
-    override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = EnumVar(enum, identifier)
+    override fun build(identifier: String, value: Any?): Var<*> = EnumVarConcrete(enum, value as EnumMember, identifier)
     override fun buildUnConcrete(identifier: String): Var<*> = EnumVar(enum, identifier)
-    override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = EnumVar(this.enum, identifier)
 
 }

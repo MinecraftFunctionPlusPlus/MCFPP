@@ -97,6 +97,10 @@ open class MCString : NBTBasedData {
         }
     }
 
+    override fun canImplicitCast(type: MCFPPType): Boolean {
+        return super.canImplicitCast(type) || type == MCFPPBaseType.JsonText
+    }
+
     override fun explicitCast(type: MCFPPType): Var<*> {
         val re = super.explicitCast(type)
         if(!re.isError) return re
@@ -120,6 +124,10 @@ open class MCString : NBTBasedData {
             }
             else -> re
         }
+    }
+
+    override fun canExplicitCast(type: MCFPPType): Boolean {
+        return type == MCFPPBaseType.JsonText || type is MCFPPEntityType || super.canExplicitCast(type)
     }
 
     override fun canAssignedBy(b: Var<*>): Boolean {
@@ -161,7 +169,7 @@ open class MCString : NBTBasedData {
                 }
                 MCString(this)
             },
-            ifThisIsNormalVarAndAIsConcrete = {b, _ ->
+            ifThisIsNormalVarAndAIsConcrete = {b ->
                 MCStringConcrete(this, (b as MCStringConcrete).value)
             },
             ifThisIsNormalVarAndAIsClassMember = {b, final ->
@@ -176,7 +184,7 @@ open class MCString : NBTBasedData {
                 }
                 MCString(this)
             },
-            ifThisIsNormalVarAndAIsNotConcrete = {b, _ ->
+            ifThisIsNormalVarAndAIsNotConcrete = {b ->
                 Function.addCommand(Commands.dataSetFrom(nbtPath, b.nbtPath))
                 NBTBasedData(this)
             }) as MCString

@@ -9,21 +9,19 @@ import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.antlr.mcfppParser.TypeContext
 import top.mcfpp.antlr.mcfppParser.TypeWithoutExclContext
-import top.mcfpp.core.lang.Null
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
-import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.GenericClass
 import top.mcfpp.model.compound.UnionDataTemplate
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.field.IFieldWithType
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
-import top.mcfpp.model.compound.GenericClass
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.collection.ListTag
@@ -70,6 +68,11 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
      */
     open fun isSubOf(parentType: MCFPPType):Boolean{
         if(this == parentType) return true
+        if(parentType is MCFPPUnionType){
+            parentType.types.forEach {
+                if(isSubOf(it)) return true
+            }
+        }
         for(parentTypeSingle in this.parentType){
             if(parentTypeSingle.isSubOf(parentType)) return true
         }
@@ -122,43 +125,25 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
         return typeName.hashCode()
     }
 
-    open fun defaultValue(): Var<*> = Null
+    open fun defaultValue(): Any? = null
 
-    open fun build(identifier: String, container: FieldContainer): Var<*>{
+    open fun defaultValueVar(): Var<*> = build("default", defaultValue())
+
+    open fun build(identifier: String, value: Any? = defaultValue()): Var<*>{
         LogProcessor.error("Unknown type: $typeName")
         return UnknownVar(identifier)
     }
 
-    open fun build(identifier: String): Var<*>{
-        LogProcessor.error("Unknown type: $typeName")
-        return UnknownVar(identifier)
-    }
+    open fun build(identifier: String, container: FieldContainer, value: Any? = defaultValue()): Var<*> = build(identifier, value)
 
-    open fun build(identifier: String, clazz: Class): Var<*>{
-        LogProcessor.error("Unknown type: $typeName")
-        return UnknownVar(identifier)
-    }
-
-    open fun build(value: Any): Var<*>{
-        LogProcessor.error("Unknown type: $typeName")
-        return UnknownVar(TempPool.getVarIdentify())
-    }
-
-    open fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*>{
-        LogProcessor.error("Unknown type: $typeName")
-        return UnknownVar(identifier)
-    }
+    open fun build(value: Any? = defaultValue()): Var<*> = build(TempPool.getVarIdentify(), value)
 
     open fun buildUnConcrete(identifier: String): Var<*>{
         LogProcessor.error("Unknown type: $typeName")
         return UnknownVar(identifier)
     }
 
-    open fun buildUnConcrete(identifier: String, clazz: Class): Var<*>{
-        LogProcessor.error("Unknown type: $typeName")
-        return UnknownVar(identifier)
-    }
-
+    open fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = buildUnConcrete(identifier)
     /**
      * 判断所给的标签是否是此类型
      */
@@ -442,7 +427,6 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             }
             return null
         }
-
     }
 
 }

@@ -50,9 +50,13 @@ class UnresolvedVar : Var<UnresolvedVar> {
         throw VariableNotResolvedException()
     }
 
+    override fun canExplicitCast(type: MCFPPType): Boolean = false
+
     override fun implicitCast(type: MCFPPType): Var<*> {
         throw VariableNotResolvedException()
     }
+
+    override fun canImplicitCast(type: MCFPPType): Boolean = false
 
     override fun clone(): UnresolvedVar {
         return UnresolvedVar(identifier, type as UnresolvedType, typeScope)

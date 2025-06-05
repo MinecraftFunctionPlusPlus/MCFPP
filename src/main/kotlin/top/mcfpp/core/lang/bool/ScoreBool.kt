@@ -241,7 +241,7 @@ open class ScoreBool : BaseBool, OnScoreboard {
                 }
                 this
             },
-            ifThisIsNormalVarAndAIsConcrete = { b, _ ->
+            ifThisIsNormalVarAndAIsConcrete = { b ->
                 if(isDataOnly){
                     Function.addCommand(Commands.dataSetValue(nbtPath, ByteTag((b as ScoreBoolConcrete).value)))
                     this
@@ -263,7 +263,7 @@ open class ScoreBool : BaseBool, OnScoreboard {
                 }
                 ScoreBool(this)
             },
-            ifThisIsNormalVarAndAIsNotConcrete = { c, _ ->
+            ifThisIsNormalVarAndAIsNotConcrete = { c ->
                 //变量进栈
                 if(isDataOnly){
                     Function.addCommand(

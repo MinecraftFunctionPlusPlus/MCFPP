@@ -107,6 +107,10 @@ class TypeDataTemplateObject: Var<TypeDataTemplateObject> {
         return qwq
     }
 
+    override fun canExplicitCast(type: MCFPPType): Boolean {
+        return super.canExplicitCast(type) || delegateVar.canExplicitCast(type)
+    }
+
     override fun replaceMemberVar(v: Var<*>) {
         delegateVar = v
     }

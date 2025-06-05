@@ -32,22 +32,33 @@ public class System {
     }
 
     @InsertCommand
+    @MNIFunction(normalParams = {"text"})
     public static void print(@NotNull JsonText text){
         if(text instanceof JsonTextConcrete textC){
-            Function.Companion.addCommand(new Command("tellraw @a").build(textC.getValue().toCommandPart(), true));
+            Function.addCommand(new Command("tellraw @a").build(textC.getValue().toCommandPart()));
         }else {
-            Function.Companion.addCommand(new Command("tellraw @a").build(text.toCommandPart(), true));
+            Function.addCommand(new Command("tellraw @a").build(text.toCommandPart()));
+        }
+    }
+
+    @MNIFunction(normalParams = {"string"})
+    public static void print(@NotNull MCString string){
+        if(string instanceof MCStringConcrete stringC){
+            Function.addCommand(new Command("tellraw @a '").build(stringC.getValue().getValue(), false).build("'", false));
+        }else {
+            Function.addCommand(new Command("tellraw @a").build(string.toCommandPart()));
         }
     }
 
     @InsertCommand
     @MNIFunction(normalParams = {"any"})
     public static void print(@NotNull MCAny value){
-        var qwq = value.buildInferredVar();
-        if(qwq != null){
+        var t = value.getInferredType();
+        if(t != null){
+            var qwq = value.buildInferredVar(t);
             printVar(qwq);
         }else {
-            Function.Companion.addCommand("tellraw @a " + "\"" + value + "\"");
+            Function.addCommand("tellraw @a " + "\"" + value + "\"");
         }
     }
 
@@ -60,7 +71,7 @@ public class System {
             case BaseBool bool -> print(bool);
             case DataTemplateObject object -> print(object);
             case PropertyVar property -> printVar(property.getter());
-            default -> Function.Companion.addCommand("tellraw @a " + "\"" + var + "\"");
+            default -> Function.addCommand("tellraw @a " + "\"" + var + "\"");
         }
     }
 
@@ -69,60 +80,64 @@ public class System {
     public static void print(@NotNull MCInt var) {
         if (var instanceof MCIntConcrete varC) {
             //是确定的，直接输出数值
-            Function.Companion.addCommand("tellraw @a \"" + varC.getValue() + "\"");
+            Function.addCommand("tellraw @a \"" + varC.getValue() + "\"");
         }else {
             if(var.parentClass() != null){
-                Function.Companion.addCommands(Commands.selectRun(Objects.requireNonNull(var.getParent()), "tellraw @a " + new ScoreChatComponent(var).toCommandPart(), true));
+                Function.addCommands(Commands.selectRun(Objects.requireNonNull(var.getParent()), "tellraw @a " + new ScoreChatComponent(var).toCommandPart(), true));
             }else {
-                Function.Companion.addCommand("tellraw @a " + new ScoreChatComponent(var).toCommandPart());
+                Function.addCommand("tellraw @a " + new ScoreChatComponent(var).toCommandPart());
             }
         }
     }
 
     @InsertCommand
+    @MNIFunction(normalParams = {"list"})
     public static void print(@NotNull NBTList var){
         if(var instanceof NBTListConcrete varC){
             if(varC.isAllConcrete()){
-                Function.Companion.addCommand("tellraw @a \"" + Tag.toSNBT(NBTUtil.INSTANCE.valueToNBT(varC.getValue())) + "\"");
+                Function.addCommand("tellraw @a \"" + Tag.toSNBT(NBTUtil.valueToNBT(varC.getValue())) + "\"");
             }else {
                 varC.toDynamic(true);
-                Function.Companion.addCommands(Commands.buildMacroAdjustedCommands(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart(), true)));
+                Function.addCommands(Commands.buildMacroAdjustedCommands(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart())));
             }
         }else {
-            Function.Companion.addCommands(Commands.buildMacroAdjustedCommands(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart(), true)));
+            Function.addCommands(Commands.buildMacroAdjustedCommands(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart())));
         }
     }
  
     @InsertCommand
+    @MNIFunction(normalParams = {"dict"})
     public static void print(@NotNull NBTDictionary var){
         if(var instanceof NBTDictionaryConcrete varC){
             if(varC.isAllConcrete()){
-                Function.Companion.addCommand("tellraw @a \"" + Tag.toSNBT(NBTUtil.INSTANCE.valueToNBT(varC.getValue())) + "\"");
+                Function.addCommand("tellraw @a \"" + Tag.toSNBT(NBTUtil.valueToNBT(varC.getValue())) + "\"");
             }else {
                 varC.toDynamic(true);
-                Function.Companion.addCommands(Commands.buildMacroAdjustedCommands(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart(), true)));
+                Function.addCommands(Commands.buildMacroAdjustedCommands(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart())));
             }
         }else {
-            Function.Companion.addCommands(Commands.buildMacroAdjustedCommands(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart(), true)));
+            Function.addCommands(Commands.buildMacroAdjustedCommands(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart())));
         }
     }
 
     @InsertCommand
+    @MNIFunction(normalParams = {"nbt"})
     public static void print(@NotNull NBTBasedData var){
         if(var instanceof MCFPPValue<?> varC){
-            Function.Companion.addCommand("tellraw @a " + Tag.toSNBT(NBTUtil.INSTANCE.valueToNBT(varC.getValue())));
+            Function.addCommand("tellraw @a " + Tag.toSNBT(NBTUtil.valueToNBT(varC.getValue())));
         }else {
-            Function.Companion.addCommands(Commands.buildMacroAdjustedCommands(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart(), true)));
+            Function.addCommands(Commands.buildMacroAdjustedCommands(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart())));
         }
     }
 
     @InsertCommand
+    @MNIFunction(normalParams = {"DataObject"})
     public static void print(@NotNull DataTemplateObject object) {
         if(object instanceof DataTemplateObjectConcrete objectConcrete){
-            Function.Companion.addCommand("tellraw @a \"" + Tag.toSNBT(Objects.requireNonNull(objectConcrete.getTagCache())) + "\"");
+            Function.addCommand("tellraw @a \"" + Tag.toSNBT(Objects.requireNonNull(objectConcrete.getTagCache())) + "\"");
         }else {
             //TODO
-            Function.Companion.addCommand("TODO: tellraw templateData");
+            Function.addCommand("TODO: tellraw templateData");
         }
     }
 
@@ -136,12 +151,12 @@ public class System {
             b = bool.toScoreBool(false);
         }
         if(b instanceof ScoreBoolConcrete bC){
-            Function.Companion.addCommand("tellraw @a \"" + (bC.getValue()?1:0) + "\"");
+            Function.addCommand("tellraw @a \"" + (bC.getValue()?1:0) + "\"");
         }else {
             if(b.getParent() != null){
-                Function.Companion.addCommands(Commands.selectRun(b.getParent(), "tellraw @a " + new ScoreChatComponent(b.asIntVar()).toCommandPart(), true));
+                Function.addCommands(Commands.selectRun(b.getParent(), "tellraw @a " + new ScoreChatComponent(b.asIntVar()).toCommandPart(), true));
             }else {
-                Function.Companion.addCommand("tellraw @a " + new ScoreChatComponent(b.asIntVar()).toCommandPart());
+                Function.addCommand("tellraw @a " + new ScoreChatComponent(b.asIntVar()).toCommandPart());
             }
         }
     }

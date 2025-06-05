@@ -18,7 +18,6 @@ import top.mcfpp.nbt.tags.collection.LongArrayTag
 import top.mcfpp.nbt.tags.primitive.*
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
-import top.mcfpp.util.NBTUtil
 import top.mcfpp.util.NBTUtil.toJava
 import top.mcfpp.util.TempPool
 import top.mcfpp.util.TextTranslator
@@ -57,7 +56,6 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
     override fun doAssignedBy(b: Var<*>) : NBTBasedData {
         return when (b) {
             is NBTBasedData -> assignCommand(b)
-            is MCFPPValue<*> -> assignCommand(NBTBasedDataConcrete(NBTUtil.varToNBT(b)!!) as NBTBasedData)
             else -> {
                 LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
                 this
@@ -100,7 +98,7 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
                 }
                 NBTBasedData(this)
             },
-            ifThisIsNormalVarAndAIsConcrete = {b, _ ->
+            ifThisIsNormalVarAndAIsConcrete = {b ->
                 NBTBasedDataConcrete(this, (b as NBTBasedDataConcrete).value)
             },
             ifThisIsNormalVarAndAIsClassMember = {b, final ->
@@ -115,7 +113,7 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
                 }
                 NBTBasedData(this)
             },
-            ifThisIsNormalVarAndAIsNotConcrete = {b, _ ->
+            ifThisIsNormalVarAndAIsNotConcrete = {b ->
                 Function.addCommand(Commands.dataSetFrom(nbtPath, b.nbtPath))
                 NBTBasedData(this)
             }
@@ -430,13 +428,6 @@ class NBTBasedDataConcrete : NBTBasedData, MCFPPValue<Tag<*>> {
     }
 
     override fun implicitCast(type: MCFPPType): Var<*> {
-//        if(type is MCFPPDataTemplateType && value is CompoundTag){
-//            return if(type.template.checkCompoundStruct(value as CompoundTag)){
-//                DataTemplateObjectConcrete(type.template, value as CompoundTag)
-//            }else{
-//                buildCastErrorVar(type)
-//            }
-//        }
         if((type is MCFPPVectorType)){
             if((value is ListTag) && (type.dimension == (value as ListTag).size)){
                 //转换为向量
@@ -450,11 +441,15 @@ class NBTBasedDataConcrete : NBTBasedData, MCFPPValue<Tag<*>> {
             }
         }
         if(type == MCFPPBaseType.Any){
-            return MCAnyConcrete(this)
+            return MCAnyConcrete(value)
         }
         val t = JavaVar.javaToMC(value.toJava())
         if(t.type == type) return t
         return buildCastErrorVar(type)
+    }
+
+    override fun canImplicitCast(type: MCFPPType): Boolean{
+        return true
     }
 
     override fun clone(): NBTBasedDataConcrete {

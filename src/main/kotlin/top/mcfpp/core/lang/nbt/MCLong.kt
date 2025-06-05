@@ -56,33 +56,8 @@ open class MCLong: NBTBasedData {
         }
     }
 
-    override fun implicitCast(type: MCFPPType): Var<*> {
-        val re = super.implicitCast(type)
-        if(!re.isError) return re
-        return when(type){
-            MCFPPBaseType.Int -> {
-                val ret = MCInt()
-                Function.addCommand(
-                    Command("execute store result score ${ret.name} ${ret.sbObject} run").build(Commands.dataGet(nbtPath))
-                )
-                ret
-            }
-            MCFPPNBTType.Byte -> {
-                val ret = MCByte()
-                Function.addCommand(
-                    Command("execute store result score ${ret.name} ${ret.sbObject} run").build(Commands.dataGet(nbtPath))
-                )
-                ret
-            }
-            MCFPPNBTType.Short -> {
-                val ret = MCShort()
-                Function.addCommand(
-                    Command("execute store result score ${ret.name} ${ret.sbObject} run").build(Commands.dataGet(nbtPath))
-                )
-                ret
-            }
-            else -> re
-        }
+    override fun canExplicitCast(type: MCFPPType): Boolean {
+        return type == MCFPPBaseType.Int || type == MCFPPNBTType.Byte || type == MCFPPNBTType.Short || super.canExplicitCast(type)
     }
 
     @Override
@@ -141,7 +116,7 @@ open class MCLong: NBTBasedData {
                 }
                 MCLong(this)
             },
-            ifThisIsNormalVarAndAIsConcrete = {b, _ ->
+            ifThisIsNormalVarAndAIsConcrete = {b ->
                 MCLongConcrete(this, (b as MCLongConcrete).value)
             },
             ifThisIsNormalVarAndAIsClassMember = {b, final ->
@@ -156,7 +131,7 @@ open class MCLong: NBTBasedData {
                 }
                 MCLong(this)
             },
-            ifThisIsNormalVarAndAIsNotConcrete = {b, _ ->
+            ifThisIsNormalVarAndAIsNotConcrete = {b ->
                 Function.addCommand(Commands.dataSetFrom(nbtPath, b.nbtPath))
                 MCLong(this)
             }) as MCLong

@@ -119,59 +119,63 @@ open class MCFloat : MCNumber<Float> {
      */
     @InsertCommand
     override fun assignCommand(a: MCNumber<*>) : MCFloat {
-        val parent = parent
-        if(a.parent != null) TODO()
-        if(parent != null){
-            val cmd = Commands.selectRun(parent)
-            //类的成员是运行时动态的
-            //t = a
-            val pwp = a as MCFloat
-            if(cmd.size == 2){
-                Function.addCommand(cmd[0])
-            }
-            if(pwp is MCFloatConcrete){
+        return assignCommandLambda(a,
+            ifThisIsClassMemberAndAIsConcrete = {b, final ->
                 //对类中的成员的值进行修改
-                val qwq = floatToMCFloat(pwp.value)
-                Function.addCommand(cmd.last().build("scoreboard players set @s ${sign.sbObject} ${qwq[0]}"))
-                Function.addCommand(cmd.last().build("scoreboard players set @s ${int0.sbObject} ${qwq[1]}"))
-                Function.addCommand(cmd.last().build("scoreboard players set @s ${int1.sbObject} ${qwq[2]}"))
-                Function.addCommand(cmd.last().build("scoreboard players set @s ${exp.sbObject} ${qwq[3]}"))
-            }else{
+                if(final.size == 2){
+                    Function.addCommand(final[0])
+                }
+                val qwq = floatToMCFloat((b as MCFloatConcrete).value)
+                Function.addCommand(final.last().build("scoreboard players set @s ${sign.sbObject} ${qwq[0]}"))
+                Function.addCommand(final.last().build("scoreboard players set @s ${int0.sbObject} ${qwq[1]}"))
+                Function.addCommand(final.last().build("scoreboard players set @s ${int1.sbObject} ${qwq[2]}"))
+                Function.addCommand(final.last().build("scoreboard players set @s ${exp.sbObject} ${qwq[3]}"))
+                this
+            },
+            ifThisIsClassMemberAndAIsNotConcrete = {b, final ->
                 //对类中的成员的值进行修改
-                Function.addCommand(cmd.last().build("scoreboard players operation @s ${sign.sbObject} = ${pwp.sign.name} ${pwp.sign.sbObject}"))
-                Function.addCommand(cmd.last().build("scoreboard players operation @s ${int0.sbObject} = ${pwp.int0.name} ${pwp.int0.sbObject}"))
-                Function.addCommand(cmd.last().build("scoreboard players operation @s ${int1.sbObject} = ${pwp.int1.name} ${pwp.int1.sbObject}"))
-                Function.addCommand(cmd.last().build("scoreboard players operation @s ${exp.sbObject} = ${pwp.exp.name} ${pwp.exp.sbObject}"))
+                val pwp = b as MCFloat
+                if(final.size == 2){
+                    Function.addCommand(final[0])
+                }
+                Function.addCommand(final.last().build("scoreboard players operation @s ${sign.sbObject} = ${pwp.sign.name} ${pwp.sign.sbObject}"))
+                Function.addCommand(final.last().build("scoreboard players operation @s ${int0.sbObject} = ${pwp.int0.name} ${pwp.int0.sbObject}"))
+                Function.addCommand(final.last().build("scoreboard players operation @s ${int1.sbObject} = ${pwp.int1.name} ${pwp.int1.sbObject}"))
+                Function.addCommand(final.last().build("scoreboard players operation @s ${exp.sbObject} = ${pwp.exp.name} ${pwp.exp.sbObject}"))
                 //Function.addCommand("$cmd run scoreboard players operation @s $`object` = ${a.name} ${a.`object`}")
+                this
+            },
+            ifThisIsNormalVarAndAIsConcrete = {b ->
+                MCFloatConcrete(this, (b as MCFloatConcrete).value)
+            },
+            ifThisIsNormalVarAndAIsClassMember = { b, final ->
+                val pwp = b as MCFloat
+                if(final.size == 2){
+                    Function.addCommand(final[0])
+                }
+                Function.addCommand(final.last().build("scoreboard players operation ${sign.name} ${sign.sbObject} = @s ${pwp.sign.sbObject}"))
+                Function.addCommand(final.last().build("scoreboard players operation ${int0.name} ${int0.sbObject} = @s ${pwp.int0.sbObject}"))
+                Function.addCommand(final.last().build("scoreboard players operation ${int1.name} ${int1.sbObject} = @s ${pwp.int1.sbObject}"))
+                Function.addCommand(final.last().build("scoreboard players operation ${exp.name} ${exp.sbObject} = @s ${pwp.exp.sbObject}"))
+                this
+            },
+            ifThisIsNormalVarAndAIsNotConcrete = { b ->
+                //this = a
+                val pwp = b as MCFloat
+                if(isTemp){
+                    Function.addCommand("scoreboard players operation ${sign.name} ${sign.sbObject} = ${pwp.sign.name} ${pwp.sign.sbObject}")
+                    Function.addCommand("scoreboard players operation ${int0.name} ${int0.sbObject} = ${pwp.int0.name} ${pwp.int0.sbObject}")
+                    Function.addCommand("scoreboard players operation ${int1.name} ${int1.sbObject} = ${pwp.int1.name} ${pwp.int1.sbObject}")
+                    Function.addCommand("scoreboard players operation ${exp.name} ${exp.sbObject} = ${pwp.exp.name} ${pwp.exp.sbObject}")
+                }else{
+                    Function.addCommand(Command.buildAll("execute store result", nbtPath.memberIndex("sign"), "int 1", Commands.sbPlayerOperation(sign, "=", pwp.sign)))
+                    Function.addCommand(Command.buildAll("execute store result", nbtPath.memberIndex("int0"), "int 1", Commands.sbPlayerOperation(int0, "=", pwp.int0)))
+                    Function.addCommand(Command.buildAll("execute store result", nbtPath.memberIndex("int1"), "int 1", Commands.sbPlayerOperation(int1, "=", pwp.int1)))
+                    Function.addCommand(Command.buildAll("execute store result", nbtPath.memberIndex("exp"), "int 1", Commands.sbPlayerOperation(exp, "=", pwp.exp)))
+                }
+                this
             }
-            return this
-        }else{
-            //this = a
-            if(a is MCFloatConcrete){
-                return MCFloatConcrete(this, a.value)
-            }
-            val pwp = a as MCFloat
-            if(isTemp){
-                Function.addCommand("scoreboard players operation ${sign.name} ${sign.sbObject} = ${pwp.sign.name} ${pwp.sign.sbObject}")
-                Function.addCommand("scoreboard players operation ${int0.name} ${int0.sbObject} = ${pwp.int0.name} ${pwp.int0.sbObject}")
-                Function.addCommand("scoreboard players operation ${int1.name} ${int1.sbObject} = ${pwp.int1.name} ${pwp.int1.sbObject}")
-                Function.addCommand("scoreboard players operation ${exp.name} ${exp.sbObject} = ${pwp.exp.name} ${pwp.exp.sbObject}")
-            }else{
-                Function.addCommands(Commands.buildMacroAdjustedCommands(this, Command("execute store result")
-                    .build(nbtPath.memberIndex("sign").toCommandPart()).build("int 1")
-                    .build(Commands.sbPlayerOperation(sign, "=", pwp.sign))))
-                Function.addCommands(Commands.buildMacroAdjustedCommands(this, Command("execute store result")
-                    .build(nbtPath.memberIndex("int0").toCommandPart()).build("int 1")
-                    .build(Commands.sbPlayerOperation(int0, "=", pwp.int0))))
-                Function.addCommands(Commands.buildMacroAdjustedCommands(this, Command("execute store result")
-                    .build(nbtPath.memberIndex("int1").toCommandPart()).build("int 1")
-                    .build(Commands.sbPlayerOperation(int1, "=", pwp.int1))))
-                Function.addCommands(Commands.buildMacroAdjustedCommands(this, Command("execute store result")
-                    .build(nbtPath.memberIndex("exp").toCommandPart()).build("int 1")
-                    .build(Commands.sbPlayerOperation(exp, "=", pwp.exp))))
-            }
-            return this
-        }
+            ) as MCFloat
     }
 
     /**
@@ -183,8 +187,7 @@ open class MCFloat : MCNumber<Float> {
     override fun plus(a: Var<*>): Var<*> {
         //t = t + a
         if(!isTemp) return getTempVar().plus(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
-        if(qwq != tempFloat) qwq.toTempEntity()
+        if(a as MCFloat != tempFloat) a.toTempEntity()
         Function.addCommand("execute as $tempFloatEntityUUID run function math:hpo/float/_add")
         return this
     }
@@ -198,8 +201,7 @@ open class MCFloat : MCNumber<Float> {
     override fun minus(a: Var<*>): Var<*> {
         //t = t - a
         if(!isTemp) return getTempVar().minus(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
-        if(qwq != tempFloat) qwq.toTempEntity()
+        if(a as MCFloat != tempFloat) a.toTempEntity()
         Function.addCommand("execute as $tempFloatEntityUUID run function math:hpo/float/_rmv")
         return this
     }
@@ -213,8 +215,7 @@ open class MCFloat : MCNumber<Float> {
     override fun times(a: Var<*>): Var<*> {
         //t = t * a
         if(!isTemp) return getTempVar().minus(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
-        if(qwq != tempFloat) qwq.toTempEntity()
+        if(a as MCFloat != tempFloat) a.toTempEntity()
         Function.addCommand("execute as $tempFloatEntityUUID run function math:hpo/float/_mult")
         return this
     }
@@ -228,21 +229,9 @@ open class MCFloat : MCNumber<Float> {
     override fun div(a: Var<*>): Var<*> {
         //t = t - a
         if(!isTemp) return getTempVar().div(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
-        if(qwq != tempFloat) qwq.toTempEntity()
+        if(a as MCFloat != tempFloat) a.toTempEntity()
         Function.addCommand("execute as $tempFloatEntityUUID run function math:hpo/float/_div")
         return this
-    }
-
-    /**
-     * 取余。浮点数无法取余
-     * @param a 除数
-     * @return 计算的结果
-     */
-    @InsertCommand
-    override fun rem(a: Var<*>): Var<*> {
-        LogProcessor.error("Cannot get the remainder of a float number")
-        throw IllegalArgumentException("")
     }
 
     /**
@@ -254,9 +243,8 @@ open class MCFloat : MCNumber<Float> {
     override fun isBigger(a: Var<*>): Var<*> {
         //re = t > a
         if(!isTemp) return getTempVar().isBigger(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
+        if(a as MCFloat != tempFloat) a.toTempEntity()
         val re = ScoreBool()
-        if(qwq != tempFloat) qwq.toTempEntity()
         Function.addCommand(
             "execute store result score ${re.name} ${re.boolObject} as $tempFloatEntityUUID " +
                     "run function math:hpo/float/_isbigger")
@@ -272,9 +260,8 @@ open class MCFloat : MCNumber<Float> {
     override fun isSmaller(a: Var<*>): Var<*> {
         //re = t < a
         if(!isTemp) return getTempVar().isSmaller(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
+        if(a as MCFloat != tempFloat) a.toTempEntity()
         val re = ScoreBool()
-        if(qwq != tempFloat) qwq.toTempEntity()
         Function.addCommand(
             "execute store result score ${re.name} ${re.boolObject} as $tempFloatEntityUUID " +
                     "run function math:hpo/float/_issmaller")
@@ -290,9 +277,8 @@ open class MCFloat : MCNumber<Float> {
     override fun isSmallerOrEqual(a: Var<*>): Var<*> {
         //re = t <= a
         if(!isTemp) return getTempVar().isSmallerOrEqual(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
+        if(a as MCFloat != tempFloat) a.toTempEntity()
         val re = ScoreBool()
-        if(qwq != tempFloat) qwq.toTempEntity()
         Function.addCommand(
             "execute store result score ${re.name} ${re.boolObject} as $tempFloatEntityUUID " +
                     "run function math:hpo/float/_issmallerorequal")
@@ -308,9 +294,8 @@ open class MCFloat : MCNumber<Float> {
     override fun isBiggerOrEqual(a: Var<*>): Var<*> {
         //re = t >= a
         if(!isTemp) return getTempVar().isBiggerOrEqual(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
+        if(a as MCFloat != tempFloat) a.toTempEntity()
         val re = ScoreBool()
-        if(qwq != tempFloat) qwq.toTempEntity()
         Function.addCommand(
             "execute store result score ${re.name} ${re.boolObject} as $tempFloatEntityUUID " +
                     "run function math:hpo/float/_isbiggerorequal")
@@ -326,9 +311,8 @@ open class MCFloat : MCNumber<Float> {
     override fun isEqual(a: Var<*>): Var<*> {
         //re = t == a
         if(!isTemp) return getTempVar().isEqual(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
+        if(a as MCFloat != tempFloat) a.toTempEntity()
         val re = ScoreBool()
-        if(qwq != tempFloat) qwq.toTempEntity()
         Function.addCommand(
             "execute store result score ${re.name} ${re.boolObject} as $tempFloatEntityUUID " +
                     "run function math:hpo/float/_equal")
@@ -344,9 +328,8 @@ open class MCFloat : MCNumber<Float> {
     override fun isNotEqual(a: Var<*>): Var<*> {
         //re = t != a
         if(!isTemp) return getTempVar().isNotEqual(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
+        if(a as MCFloat != tempFloat) a.toTempEntity()
         val re = ScoreBool()
-        if(qwq != tempFloat) qwq.toTempEntity()
         Function.addCommand(
             "execute store result score ${re.name} ${re.boolObject} as $tempFloatEntityUUID " +
                     "run function math:hpo/float/_notequal")
@@ -372,6 +355,10 @@ open class MCFloat : MCNumber<Float> {
             }
             else -> r
         }
+    }
+
+    override fun canExplicitCast(type: MCFPPType): Boolean {
+        return super.canExplicitCast(type) || type == MCFPPBaseType.Int
     }
 
     override fun clone(): MCFloat {
@@ -524,14 +511,11 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
      */
     @InsertCommand
     override fun explicitCast(type: MCFPPType): Var<*> {
-        return when(type) {
-            this.type -> this
-            MCFPPBaseType.Int -> MCIntConcrete(value.toInt())
-            MCFPPBaseType.Any -> MCAnyConcrete(this)
-            else -> {
-                LogProcessor.error("Cannot cast [${this.type}] to [$type]")
-                throw VariableConverseException()
-            }
+        val r = super.explicitCast(type)
+        if(!r.isError) return r
+        return when(type){
+            MCFPPBaseType.Int -> MCIntConcrete(value.toInt(), identifier).apply { name = this@MCFloatConcrete.name }
+            else -> r
         }
     }
 
@@ -607,7 +591,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
     override fun minus(a: Var<*>): Var<*> {
         //t = t - a
         if(!isTemp) return (getTempVar() as MCFloat).minus(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq = a as MCFloat
         if (qwq is MCFloatConcrete) {
             this.value -= qwq.value
         } else {
@@ -628,7 +612,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
     override fun times(a: Var<*>): Var<*> {
         //t = t * a
         if(!isTemp) return (getTempVar() as MCFloat).times(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq = a as MCFloat
         if (qwq is MCFloatConcrete) {
             this.value *= qwq.value
         } else {
@@ -649,7 +633,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
     override fun div(a: Var<*>): Var<*> {
         //t = t - a
         if(!isTemp) return (getTempVar() as MCFloat).div(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq = a as MCFloat
         if (qwq is MCFloatConcrete) {
             this.value /= qwq.value
         } else {
@@ -680,7 +664,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
     override fun isBigger(a: Var<*>): Var<*> {
         //re = t > a
         if(!isTemp) return (getTempVar() as MCFloat).isBigger(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq = a as MCFloat
         val re : ScoreBool
         if (qwq is MCFloatConcrete) {
             re = ScoreBoolConcrete(value > qwq.value)
@@ -706,7 +690,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
     override fun isSmaller(a: Var<*>): Var<*> {
         //re = t < a
         if(!isTemp) return (getTempVar() as MCFloat).isSmaller(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq = a as MCFloat
         val re : ScoreBool
         if (qwq is MCFloatConcrete) {
             re = ScoreBoolConcrete(value < qwq.value)
@@ -732,7 +716,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
     override fun isSmallerOrEqual(a: Var<*>): Var<*> {
         //re = t <= a
         if(!isTemp) return (getTempVar() as MCFloat).isSmallerOrEqual(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq = a as MCFloat
         val re : ScoreBool
         if (qwq is MCFloatConcrete) {
             re = ScoreBoolConcrete(value <= qwq.value)
@@ -758,7 +742,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
     override fun isBiggerOrEqual(a: Var<*>): Var<*> {
         //re = t >= a
         if(!isTemp) return (getTempVar() as MCFloat).isSmallerOrEqual(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq = a as MCFloat
         val re : ScoreBool
         if (qwq is MCFloatConcrete) {
             re = ScoreBoolConcrete(value >= qwq.value)
@@ -784,7 +768,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
     override fun isEqual(a: Var<*>): Var<*> {
         //re = t == a
         if(!isTemp) return (getTempVar() as MCFloat).isEqual(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq = a as MCFloat
         val re : ScoreBool
         if (qwq is MCFloatConcrete) {
             re = ScoreBoolConcrete(value >= qwq.value)
@@ -810,7 +794,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
     override fun isNotEqual(a: Var<*>): Var<*> {
         //re = t != a
         if(!isTemp) return (getTempVar() as MCFloat).isNotEqual(a)
-        val qwq: MCFloat = if (a !is MCFloat) a.explicitCast(MCFPPBaseType.Float) as MCFloat else a
+        val qwq = a as MCFloat
         val re : ScoreBool
         if (qwq is MCFloatConcrete) {
             re = ScoreBoolConcrete(value >= qwq.value)

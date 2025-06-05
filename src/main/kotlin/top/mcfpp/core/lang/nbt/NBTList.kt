@@ -4,7 +4,6 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.obj.DataTemplateObject
-import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.lib.StorageSource
 import top.mcfpp.mni.NBTListConcreteData
@@ -318,19 +317,6 @@ class NBTListConcrete: NBTList, PartialConcreteValue<ListTag, ArrayList<Var<*>>>
             }
         }
         return re
-    }
-
-    /**
-     * 将这个变量强制转换为一个类型
-     * @param type 要转换到的目标类型
-     */
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        return when(type){
-            this.type -> this
-            MCFPPNBTType.NBT -> this
-            MCFPPBaseType.Any -> this
-            else -> throw VariableConverseException()
-        }
     }
 
     override fun getByIndex(index: Var<*>): PropertyVar {

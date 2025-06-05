@@ -46,6 +46,10 @@ class CommandReturn : Var<CommandReturn> {
         }
     }
 
+    override fun canImplicitCast(type: MCFPPType): Boolean {
+        return type == MCFPPPrivateType.CommandReturn
+    }
+
     override fun doAssignedBy(b: Var<*>): CommandReturn = this
 
     override fun canAssignedBy(b: Var<*>): Boolean {

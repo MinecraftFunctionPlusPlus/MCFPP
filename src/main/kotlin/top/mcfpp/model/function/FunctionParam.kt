@@ -53,7 +53,7 @@ class FunctionParam(
     var defaultVar: Var<*>? = null
 
     fun buildVar(): Var<*>{
-        val qwq = if(isReadOnly || type is MCFPPConcreteType){
+        val qwq = if(( isReadOnly || type is MCFPPConcreteType ) && type != MCFPPBaseType.Any){
             type.build(identifier, function)
         }else{
             type.buildUnConcrete(identifier, function)

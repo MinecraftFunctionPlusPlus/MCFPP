@@ -70,7 +70,7 @@ open class MCShort: MCInt {
                 Function.addCommand(final.last().build(Commands.sbPlayerOperation(this,"=",b as MCInt)))
                 this
             },
-            ifThisIsNormalVarAndAIsConcrete = { b, _ ->
+            ifThisIsNormalVarAndAIsConcrete = { b ->
                 MCShortConcrete(this, (b as MCShortConcrete).value)
             },
             ifThisIsNormalVarAndAIsClassMember = { c, cmd ->
@@ -80,7 +80,7 @@ open class MCShort: MCInt {
                 Function.addCommand(cmd.last().build(Commands.sbPlayerOperation(this, "=", c as MCInt)))
                 MCByte(this)
             },
-            ifThisIsNormalVarAndAIsNotConcrete = { c, _ ->
+            ifThisIsNormalVarAndAIsNotConcrete = { c ->
                 //变量进栈
                 Function.addCommand(Commands.sbPlayerOperation(this, "=", c as MCInt))
                 MCByte(this)

@@ -5,6 +5,7 @@ import top.mcfpp.model.field.CompoundDataField
 
 data class FieldInfo(
     var vars: ArrayList<Var<*>>,
+//    var vars: ArrayList<Quadruple<String, MCFPPType, Any?, String?>>,
     var functions: ArrayList<AbstractFunctionInfo<*>>,
     var properties: ArrayList<PropertyInfo>
 ): ModelInfo<CompoundDataField> {
@@ -13,6 +14,16 @@ data class FieldInfo(
         vars.forEach {
             field.putVar(it.identifier, it, false)
         }
+//        vars.forEach {(i, t, v, n) ->
+//            val b = if(v == null){
+//                t.buildUnConcrete(i)
+//            }else{
+//                t.build(i, v)
+//            }
+//            if(b is OnScoreboard){
+//                b.name = n!!
+//            }
+//        }
         functions.forEach {
             field.addFunction(it.get(), true)
         }
@@ -34,6 +45,14 @@ data class FieldInfo(
             }
             return FieldInfo(
                 ArrayList(field.allVars),
+//                ArrayList(field.allVars.map {
+//                    Quadruple(
+//                        it.identifier,
+//                        it.type,
+//                        if(it is MCFPPValue<*>) it.value else null,
+//                        if(it is OnScoreboard) it.name else null
+//                    )
+//                }),
                 ArrayList(functions),
                 ArrayList(properties)
             )

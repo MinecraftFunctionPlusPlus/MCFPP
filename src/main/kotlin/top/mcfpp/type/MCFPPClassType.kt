@@ -2,13 +2,11 @@ package top.mcfpp.type
 
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.ClassPointer
-import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.UnsolvedClass
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.collection.IntArrayTag
-import top.mcfpp.util.TempPool
 
 /**
  * 用于标识由mcfpp class定义出来的类
@@ -30,7 +28,7 @@ open class MCFPPClassType(
     override val simpleName: String
         get() = cls.identifier
 
-    override fun defaultValue(): Var<*> {
+    override fun defaultValueVar(): Var<*> {
         return ClassPointer(cls, "default")
     }
 
@@ -45,13 +43,8 @@ open class MCFPPClassType(
         }
     }
 
-    override fun build(identifier: String, container: FieldContainer): Var<*> = ClassPointer(cls, identifier)
-    override fun build(identifier: String): Var<*> = ClassPointer(cls, identifier)
-    override fun build(identifier: String, clazz: Class): Var<*> = ClassPointer(cls, identifier)
-    override fun build(value: Any): Var<*> = ClassPointer(cls, TempPool.getVarIdentify())
-    override fun buildUnConcrete(identifier: String, container: FieldContainer): Var<*> = ClassPointer(cls, identifier)
+    override fun build(identifier: String, value: Any?): Var<*> = ClassPointer(cls, identifier)
     override fun buildUnConcrete(identifier: String): Var<*> = ClassPointer(cls, identifier)
-    override fun buildUnConcrete(identifier: String, clazz: Class): Var<*> = ClassPointer(cls, identifier)
 
     override fun replaceMemberVar(v: Var<*>) {}
 

@@ -45,7 +45,7 @@ public class BossBarData {
     public static void list(DataTemplateObject bossbar, ValueWrapper<CommandReturn> returnValue){
         var command = new Command("bossbar list");
         returnValue.setValue(new CommandReturn(command,"bossbar_list"));
-        Function.Companion.addCommand(command);
+        Function.addCommand(command);
     }
 
     private static void getIntAttr(String attrID, DataTemplateObject bossbar, ValueWrapper<MCInt> returnValue){
@@ -58,9 +58,9 @@ public class BossBarData {
         );
         if(command.isMacro()){
             var marcoCall = command.buildMacroFunction();
-            Function.Companion.addCommands(marcoCall);
+            Function.addCommands(marcoCall);
         }else {
-            Function.Companion.addCommand(command);
+            Function.addCommand(command);
         }
     }
 
@@ -77,9 +77,9 @@ public class BossBarData {
         }
         if(command.isMacro()){
             var marcoCall = command.buildMacroFunction();
-            Function.Companion.addCommands(marcoCall);
+            Function.addCommands(marcoCall);
         }else {
-            Function.Companion.addCommand(command);
+            Function.addCommand(command);
         }
     }
     @MNIAccessor(value = "max")
@@ -113,9 +113,9 @@ public class BossBarData {
         );
         if(command.isMacro()){
             var marcoCall = command.buildMacroFunction();
-            Function.Companion.addCommands(marcoCall);
+            Function.addCommands(marcoCall);
         }else {
-            Function.Companion.addCommand(command);
+            Function.addCommand(command);
         }
     }
 
@@ -138,20 +138,20 @@ public class BossBarData {
                 command = Commands.tempFunction(Function.Companion.getCurrFunction(), (f) -> {
                     var command1 = new Command("execute if score " + value.getIdentifier() + " " + value.getBoolObject().getName() + " matches 1 run return run")
                             .build("bossbar set " + idC.getValue().getValue() + " visible true");
-                    Function.Companion.addCommand(command1);
+                    Function.addCommand(command1);
                     var command2 = new Command("bossbar set " + idC.getValue().getValue() + " visible false");
-                    Function.Companion.addCommand(command2);
+                    Function.addCommand(command2);
                     return null;
                 }).getFirst();
             }else {
                 command = Commands.tempFunction(Function.Companion.getCurrFunction(), (f) -> {
                     var command1 = new Command("execute if score " + value.getIdentifier() + " " + value.getBoolObject().getName() + " matches 1 run return run")
                             .build("bossbar set ").buildMacro(id).build("visible true");
-                    Function.Companion.addCommand(command1);
+                    Function.addCommand(command1);
                     var command2 = new Command("bossbar set ")
                             .buildMacro(id)
                             .build("visible false");
-                    Function.Companion.addCommand(command2);
+                    Function.addCommand(command2);
                     return null;
                 }).getFirst();
                 command.build("with",true).build(bossbar.nbtPath.parent().toCommandPart(), true);
@@ -159,9 +159,9 @@ public class BossBarData {
         }
         if(command.isMacro()){
             var marcoCall = command.buildMacroFunction(Objects.requireNonNull(bossbar.nbtPath.parent()));
-            Function.Companion.addCommand(marcoCall);
+            Function.addCommand(marcoCall);
         }else {
-            Function.Companion.addCommand(command);
+            Function.addCommand(command);
         }
     }
 

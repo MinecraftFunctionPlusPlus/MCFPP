@@ -3,12 +3,12 @@ package top.mcfpp.core.lang.nbt
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.mni.minecraft.EntityVarData
-import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.Member
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.type.MCFPPNBTType
@@ -103,7 +103,7 @@ open class EntityUUIDVar : NBTBasedData{
                 }
                 EntityUUIDVar(this)
             },
-            ifThisIsNormalVarAndAIsConcrete = {b, _ ->
+            ifThisIsNormalVarAndAIsConcrete = {b ->
                 EntityUUIDVarConcrete(this, (b as NBTBasedDataConcrete).value)
             },
             ifThisIsNormalVarAndAIsClassMember = {b, final ->
@@ -118,7 +118,7 @@ open class EntityUUIDVar : NBTBasedData{
                 }
                 EntityUUIDVar(this)
             },
-            ifThisIsNormalVarAndAIsNotConcrete = {b, _ ->
+            ifThisIsNormalVarAndAIsNotConcrete = {b ->
                 Function.addCommand(Commands.dataSetFrom(nbtPath, b.nbtPath))
                 EntityUUIDVar(this)
             }
