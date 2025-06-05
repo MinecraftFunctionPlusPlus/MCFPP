@@ -5,9 +5,11 @@ import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.Pos3Var
 import top.mcfpp.core.lang.PosDimension
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.Member
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.Function
+import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 
 class Execute {
@@ -16,6 +18,9 @@ class Execute {
 
     val data = CompoundData("execute", "mcfpp.shadow").apply {
         field.putVar("pos", object: WriteOnlyVar(){
+
+            override var type: MCFPPType = MCFPPBaseType.Pos3
+
             override fun getData(): CompoundData {
                 return CompoundData("execute.pos", "mcfpp.shadow").apply {
                     field.putVar("x", object : WriteOnlyVar(){
@@ -79,7 +84,7 @@ class Execute {
                 if(b is Pos3Var){
                     command.build("positioned").build(b.toCommandPart())
                 }else{
-                    LogProcessor.error("execute.pos can only be assigned with Coordinate3Var")
+                    LogProcessor.error("execute.pos can only be assigned with Pos3Var")
                 }
                 return this
             }
