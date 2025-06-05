@@ -16,10 +16,7 @@ import top.mcfpp.lib.NBTChatComponent;
 import top.mcfpp.lib.ScoreChatComponent;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.nbt.tags.Tag;
-import top.mcfpp.util.LogProcessor;
-import top.mcfpp.util.NBTUtil;
-import top.mcfpp.util.TempPool;
-import top.mcfpp.util.ValueWrapper;
+import top.mcfpp.util.*;
 
 import java.util.Objects;
 
@@ -44,7 +41,7 @@ public class System {
     @MNIFunction(normalParams = {"string"})
     public static void print(@NotNull MCString string){
         if(string instanceof MCStringConcrete stringC){
-            Function.addCommand(new Command("tellraw @a '").build(stringC.getValue().getValue(), false).build("'", false));
+            Function.addCommand(new Command("tellraw @a \"").build(StringHelper.addEscapes(stringC.getValue().getValue()), false).build("\"", false));
         }else {
             Function.addCommand(new Command("tellraw @a").build(string.toCommandPart()));
         }
@@ -134,7 +131,7 @@ public class System {
     @MNIFunction(normalParams = {"DataObject"})
     public static void print(@NotNull DataTemplateObject object) {
         if(object instanceof DataTemplateObjectConcrete objectConcrete){
-            Function.addCommand("tellraw @a \"" + Tag.toSNBT(Objects.requireNonNull(objectConcrete.getTagCache())) + "\"");
+            Function.addCommand("tellraw @a \"" + StringHelper.addEscapes(Tag.toSNBT(Objects.requireNonNull(objectConcrete.getTagCache()))) + "\"");
         }else {
             //TODO
             Function.addCommand("TODO: tellraw templateData");

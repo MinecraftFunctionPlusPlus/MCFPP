@@ -517,7 +517,7 @@ class MCFPPExprVisitor(
                 re.first!!
             }
         }
-        if(re is UnknownVar){
+        if(re is UnknownVar && currSelector != null){
             //从类型获取
             val typeStr = ctx.Identifier().text
             val type = MCFPPType.parseFromString(typeStr, Function.currFunction.field)

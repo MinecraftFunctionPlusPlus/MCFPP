@@ -124,7 +124,10 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         var init: Var<*>? = null
         if (ctx.expression() != null) {
             Function.addComment(ctx.text)
-            init = MCFPPExprVisitor().visit(ctx.expression())!!
+            init = MCFPPExprVisitor(
+                if(type is MCFPPGenericClassType) type else null,
+                if(type is MCFPPEnumType) type else null
+            ).visitExpression(ctx.expression())
         }
         //类型推断
         if(type == null && init == null){
@@ -180,7 +183,10 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 return null
             }
             val type = left.type
-            val right: Var<*> = MCFPPExprVisitor(if(type is MCFPPGenericClassType) type else null, if(type is MCFPPEnumType) type else null).visitExpression(ctx.expression())
+            val right: Var<*> = MCFPPExprVisitor(
+                if(type is MCFPPGenericClassType) type else null,
+                if(type is MCFPPEnumType) type else null
+            ).visitExpression(ctx.expression())
             if(right !is MCFPPValue<*> && left.parent is DataTemplateObjectConcrete){
                 left.parent = (left.parent as DataTemplateObjectConcrete).toDynamic(true)
             }

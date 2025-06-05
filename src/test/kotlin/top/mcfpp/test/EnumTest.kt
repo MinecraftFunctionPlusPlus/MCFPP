@@ -13,7 +13,7 @@ class EnumTest {
                 } 
                 
                 func main(){
-                    Test qwq = A;
+                    var qwq as Test = A;
                     print(qwq);
                 }
             """.trimIndent()
