@@ -148,10 +148,11 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         if (Function.currField.containVar(ctx.Identifier().text)) {
             LogProcessor.error("Duplicate defined variable:" + ctx.Identifier().text)
         }
-        Function.currField.putVar(`var`.identifier, `var`, true)
         if(init != null){
             //变量赋值
-            `var` = `var`.assignedBy(init)
+            Function.currField.putVar(`var`.identifier, `var`.assignedBy(init), true)
+        }else{
+            Function.currField.putVar(`var`.identifier, `var`, true)
         }
         when(fieldModifier){
             "const" -> {

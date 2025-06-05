@@ -9,29 +9,30 @@ class GenericTest {
     fun genericFunctionTest(){
         val test =
             """
-                func test<int i>(int p){
+                func test<i as int>(p as int){
                      print(i);
                      print(p);
                 }
 
                 func main(){
-                    dynamic int qwq;
+                    dynamic var qwq as int;
                     test<2>(qwq);
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test)
     }
+
     @Test
     fun typeFieldTest(){
         val test =
             """
                 func main(){
-                    type qwq = int;
+                    var qwq = int;
                     test<qwq>();
                 }
                 
-                func test<type T>(){
-                    T i = 5;
+                func test<T as type>(){
+                    var i as T = 5;
                     print(i);
                 }
             """.trimIndent()
@@ -42,8 +43,8 @@ class GenericTest {
     fun classGenericTest(){
         val test =
             """
-                class Test<type T>{
-                    public T i;
+                class Test<T as type>{
+                    public i as T;
                 }
                 
                 func main(){
@@ -59,13 +60,13 @@ class GenericTest {
     fun classOverLoad(){
         val test =
             """
-                class Test<int i>{
+                class Test<i as int>{
                     func print(){
                         print(this.i);
                     }
                 }
                 
-                class Test<int i, int j>{
+                class Test<i as int, j as int>{
                     func print(){
                         print(this.i + this.j);
                     }

@@ -3,6 +3,7 @@ package top.mcfpp.model.function
 import top.mcfpp.Project
 import top.mcfpp.antlr.MCFPPImVisitor
 import top.mcfpp.antlr.mcfppParser
+import top.mcfpp.core.lang.MCFPPTypeVar
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
@@ -124,6 +125,9 @@ class GenericFunction : Function, Generic<Function> {
                 cf.field.getVar(readOnlyParams[i].identifier)!!.assignedBy(readOnlyArgs[i]),
                 true
             )
+            if(readOnlyArgs[i] is MCFPPTypeVar){
+                cf.field.putType(readOnlyParams[i].identifier, (readOnlyArgs[i] as MCFPPTypeVar).value)
+            }
         }
         for (i in normalValues.indices) {
             if (normalValues[i] != null) {
