@@ -7,10 +7,7 @@ import top.mcfpp.core.lang.nbt.MCString
 import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.lib.ChatComponent
 import top.mcfpp.lib.PlainChatComponent
-import top.mcfpp.mni.MCAnyConcreteData
-import top.mcfpp.mni.MCAnyData
-import top.mcfpp.mni.MCIntConcreteData
-import top.mcfpp.mni.MCIntData
+import top.mcfpp.mni.*
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.nbt.tags.CompoundTag
@@ -133,7 +130,17 @@ class MCFPPBaseType {
 
         override val instanceData by lazy {
             CompoundData("bool","mcfpp.lang").apply {
+                this.commonType = Bool
                 extends(Any.instanceData)
+                injectedBy(MCBoolData::class.java)
+            }
+        }
+
+        override val concreteInstanceData by lazy{
+            CompoundData("bool","mcfpp.lang").apply {
+                this.commonType = Bool
+                extends(Any.instanceData)
+                injectedBy(MCBoolConcreteData::class.java)
             }
         }
 

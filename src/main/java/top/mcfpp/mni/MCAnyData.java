@@ -1,7 +1,7 @@
 package top.mcfpp.mni;
 
 import org.jetbrains.annotations.NotNull;
-import top.mcfpp.annotations.MNIBinaryOperator;
+import top.mcfpp.annotations.MNIOperator;
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.core.lang.JavaVar;
 import top.mcfpp.core.lang.JsonTextConcrete;
@@ -34,7 +34,7 @@ public class MCAnyData {
         returnValue.setValue((NBTBasedDataConcrete) value);
     }
 
-    @MNIBinaryOperator(operator = "==", paramType = "null", returnType = "bool")
+    @MNIOperator(operator = "==", paramType = "null", returnType = "bool")
     public static void equalNull(@NotNull Var<?> caller, Null nu, ValueWrapper<Var<?>> returnValue){
         returnValue.setValue(new ScoreBoolConcrete(caller == Null.INSTANCE || !caller.getHasAssigned(), "re"));
     }

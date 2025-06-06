@@ -9,7 +9,7 @@ class SimpleFieldWithOperator: IFieldWithOperator {
     /**
      * 方法
      */
-    private var operators: HashMap<String, ArrayList<Function>> = HashMap()
+    private var operators: HashMap<String, HashMap<MCFPPType?, Function>> = HashMap()
 
     /**
      * 遍历每一个方法
@@ -18,60 +18,61 @@ class SimpleFieldWithOperator: IFieldWithOperator {
      * @receiver
      */
     override fun forEachOperator(operation: (Pair<String, Function>) -> Any?){
-        for (function in operators){
-            for (f in function.value){
-                operation(Pair(function.key, f))
+        for ((i, function) in operators){
+            for (f in function.values){
+                operation(Pair(i, f))
             }
         }
     }
 
 
     @Nullable
-    override fun getOperator(identifier: String, type: MCFPPType): Function? {
+    override fun getOperator(identifier: String, type: MCFPPType?): Function? {
         //注意重载
-        var qwq = false //类型不是完全一致，但是可以用多态选中的
-        var re : Function? = null
         operators[identifier]?.forEach { function ->
-            if(function.normalParams[0].type == type){
-                return function
-            }else if(!qwq && function.normalParams[0].type.isSubOf(type)){
-                qwq = true
-                re = function
+            if(function.key == type){
+                return function.value
             }
         }
-        return re
+        operators[identifier]?.forEach { function ->
+            return if(function.key != null && type != null && function.key!!.isSubOf(type)){
+                function.value
+            }else{
+                null
+            }
+        }
+        return null
     }
 
-    override fun addOperator(identifier: String, operator: Function, force: Boolean): Boolean {
-        if(hasOperator(operator)){
+    override fun addOperator(identifier: String, type: MCFPPType?, operator: Function, force: Boolean): Boolean {
+        if(operators.containsKey(identifier) && operators[identifier]!!.containsKey(type)){
             if(force){
-                if(operators[identifier] == null) operators[identifier] = ArrayList()
-                operators[identifier]!!.add(operator)
+                if(operators[identifier] == null) operators[identifier] = HashMap()
+                operators[identifier]!![type] = operator
                 return true
             }
             return false
         }
-        if(operators[identifier] == null) operators[identifier] = ArrayList()
-        operators[identifier]!!.add(operator)
+        if(operators[identifier] == null) operators[identifier] = HashMap()
+        operators[identifier]!![type] = operator
         return true
     }
 
     override fun hasOperator(itf: Function): Boolean {
-        return operators.values.any { it.contains(itf) }
+        return operators.values.any { it.values.contains(itf) }
     }
 
-    override fun hasOperator(identifier: String, type: MCFPPType): Boolean {
+    override fun hasOperator(identifier: String, type: MCFPPType?): Boolean {
         //注意重载
-        operators[identifier]?.forEach { function ->
-            if(function.normalParams[0].type.isSubOf(type)){
-                return true
-            }
-        }
-        return false
+        return operators.containsKey(identifier) && operators[identifier]!!.containsKey(type)
     }
 
-    override fun removeOperator(identifier: String): List<Function>? {
-        return operators.remove(identifier)
+    override fun removeOperator(identifier: String): MutableCollection<Function>? {
+        return operators.remove(identifier)?.values
+    }
+
+    override fun removeOperator(identifier: String, type: MCFPPType?): Function? {
+        return operators[identifier]?.remove(type)
     }
 
 }

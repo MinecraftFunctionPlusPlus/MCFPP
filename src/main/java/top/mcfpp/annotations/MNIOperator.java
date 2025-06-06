@@ -7,14 +7,14 @@ import java.lang.annotation.Target;
 
 @Target({ElementType.METHOD})
 @Retention(RetentionPolicy.RUNTIME)
-public @interface MNIBinaryOperator {
+public @interface MNIOperator {
 
     String operator();
 
     /**
-     * 普通参数。格式是类型+空格+参数名
+     * 参数类型。如果为空字符串，则表示一个一元运算符
      */
-    String paramType();
+    String paramType() default "";
 
     /**
      * 函数的返回类型。默认为void

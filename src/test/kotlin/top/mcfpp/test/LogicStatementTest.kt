@@ -10,17 +10,17 @@ class LogicStatementTest {
         val test =
             """
                 func main(){
-                    bool a = true;
-                    dynamic bool b = false;
-                    bool c = a && b;
-                    bool d = a || b;
-                    bool e = !a;
-                    bool f = !b;
+                    var a = true;
+                    dynamic var b = false;
+                    var c = a && b;
+                    var d = a || b;
+                    var e = !a;
+                    var f = !b;
                     print(c);
                     print(d);
                     print(e);
                     print(f);
-                    dynamic bool x;
+                    dynamic var x as bool;
                     print(a && b || x && b);
                 }
             """.trimIndent()

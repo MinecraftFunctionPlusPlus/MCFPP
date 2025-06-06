@@ -3,6 +3,7 @@ package top.mcfpp.antlr
 import top.mcfpp.Project.withCompilationContext
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.core.lang.*
+import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.nbt.*
 import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
@@ -19,7 +20,6 @@ import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.nbt.tags.Tag
-import top.mcfpp.nbt.tags.primitive.ByteTag
 import top.mcfpp.nbt.tags.primitive.DoubleTag
 import top.mcfpp.nbt.tags.primitive.LongTag
 import top.mcfpp.nbt.tags.primitive.StringTag
@@ -664,7 +664,7 @@ class MCFPPExprVisitor(
         if(ctx.LineString() != null) {
             return MCStringConcrete(StringTag(ctx.LineString().text))
         }else if(ctx.nbtBool() != null){
-            return NBTBasedDataConcrete(ByteTag(ctx.nbtBool().text == "true"))
+            return ScoreBoolConcrete(ctx.nbtBool().text == "true")
         }else if(ctx.nbtByte() != null){
             return MCByteConcrete(ctx.nbtByte().text.toNBTByte())
         }else if(ctx.nbtShort() != null){

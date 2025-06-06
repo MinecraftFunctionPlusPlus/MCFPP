@@ -400,20 +400,14 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     }
 
     fun unaryComputation(operation: String): Var<*>{
-        val re = when(operation){
-            "!" -> negation()
-            "&" -> ref()
-            else -> {
-                LogProcessor.error("Unknown operation: $operation")
-                return UnknownVar("error_operation_" + UUID.randomUUID().toString())
-            }
-        }
-        if(re == null){
+        val operator = (if(this is MCFPPValue<*>) type.concreteInstanceData else type.instanceData).field.getOperator(operation, null)
+        val re = if(operator != null) {
+            operator.invoke(arrayListOf(), this)
+        } else {
             LogProcessor.error("Unsupported operation '$operation' for ${type.typeName}")
-            return UnknownVar("${type.typeName}_$operation" + UUID.randomUUID())
-        }else{
-            return re
+            UnknownVar("${type.typeName}_${operation}_" + TempPool.getVarIdentify()).apply { isError = true }
         }
+        return re
     }
 
     protected fun errorOp(): Nothing = throw IllegalArgumentException()

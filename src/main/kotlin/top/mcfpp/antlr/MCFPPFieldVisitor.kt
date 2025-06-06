@@ -3,7 +3,7 @@ package top.mcfpp.antlr
 import top.mcfpp.Project
 import top.mcfpp.Project.withCompilationContext
 import top.mcfpp.annotations.InsertCommand
-import top.mcfpp.annotations.MNIBinaryOperator
+import top.mcfpp.annotations.MNIOperator
 import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.antlr.mcfppParser.ClassDeclarationContext
 import top.mcfpp.antlr.mcfppParser.TemplateDeclarationContext
@@ -608,7 +608,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         if (Class.currClass!!.field.hasOperator(op, f.normalParams[0].type)) {
             LogProcessor.error("Already defined operator: $op(${f.normalParams[0].type}) in class " + Class.currClass!!.identifier)
         } else {
-            Class.currClass!!.field.addOperator(op, f)
+            Class.currClass!!.field.addOperator(op, f.normalParams[0].type, f)
         }
         f.ast = null
         return f
@@ -640,7 +640,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         if (DataTemplate.currTemplate!!.field.hasOperator(op, f.normalParams[0].type)) {
             LogProcessor.error("Already defined operator: $op(${f.normalParams[0].type}) in class " + DataTemplate.currTemplate!!.identifier)
         } else {
-            DataTemplate.currTemplate!!.field.addOperator(op, f)
+            DataTemplate.currTemplate!!.field.addOperator(op, f.normalParams[0].type, f)
         }
         f.ast = null
         return f
@@ -676,7 +676,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             val methods = clazz.methods
             var hasFind = false
             for(method in methods){
-                val mniRegister = method.getAnnotation(MNIBinaryOperator::class.java) ?: continue
+                val mniRegister = method.getAnnotation(MNIOperator::class.java) ?: continue
                 //比对
                 if(nf.normalParams[0].type.typeName == mniRegister.paramType){
                     hasFind = true
@@ -695,7 +695,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         if (Class.currClass!!.field.hasOperator(op, nf.normalParams[0].type)) {
             LogProcessor.error("Already defined operator: $op(${nf.normalParams[0].type}) in template " + Class.currClass!!.identifier)
         } else {
-            Class.currClass!!.field.addOperator(op, nf)
+            Class.currClass!!.field.addOperator(op, nf.normalParams[0].type, nf)
         }
         return nf
     }
@@ -722,7 +722,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             val methods = clazz.methods
             var hasFind = false
             for(method in methods){
-                val mniRegister = method.getAnnotation(MNIBinaryOperator::class.java) ?: continue
+                val mniRegister = method.getAnnotation(MNIOperator::class.java) ?: continue
                 //比对
                 if(nf.normalParams[0].type.typeName == mniRegister.paramType){
                     hasFind = true
@@ -741,7 +741,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         if (DataTemplate.currTemplate!!.field.hasOperator(op, nf.normalParams[0].type)) {
             LogProcessor.error("Already defined operator: $op(${nf.normalParams[0].type}) in template " + DataTemplate.currTemplate!!.identifier)
         } else {
-            DataTemplate.currTemplate!!.field.addOperator(op, nf)
+            DataTemplate.currTemplate!!.field.addOperator(op, nf.normalParams[0].type, nf)
         }
         return nf
     }

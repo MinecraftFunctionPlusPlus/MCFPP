@@ -5,13 +5,15 @@ import top.mcfpp.type.MCFPPType
 
 interface IFieldWithOperator {
 
-    fun addOperator(identifier: String, operator: Function, force: Boolean = false): Boolean
+    fun addOperator(identifier: String, type: MCFPPType?, operator: Function, force: Boolean = false): Boolean
 
-    fun removeOperator(identifier: String): List<Function>?
+    fun removeOperator(identifier: String): MutableCollection<Function>?
 
-    fun getOperator(identifier: String, type: MCFPPType): Function?
+    fun removeOperator(identifier: String, type: MCFPPType?): Function?
 
-    fun hasOperator(identifier: String, type: MCFPPType):Boolean
+    fun getOperator(identifier: String, type: MCFPPType?): Function?
+
+    fun hasOperator(identifier: String, type: MCFPPType?):Boolean
 
     fun hasOperator(itf: Function): Boolean
 

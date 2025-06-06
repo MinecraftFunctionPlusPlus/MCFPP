@@ -1,8 +1,8 @@
 package top.mcfpp.model.compound
 
 import top.mcfpp.Project
-import top.mcfpp.annotations.MNIBinaryOperator
 import top.mcfpp.annotations.MNIFunction
+import top.mcfpp.annotations.MNIOperator
 import top.mcfpp.core.lang.Var
 import top.mcfpp.doc.Document
 import top.mcfpp.model.FieldContainer
@@ -216,7 +216,7 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
                 addMNIMethod(method, mniFunction)
                 continue
             }
-            val mniOperator = method.getAnnotation(MNIBinaryOperator::class.java)
+            val mniOperator = method.getAnnotation(MNIOperator::class.java)
             if(mniOperator!= null){
                 addMNIOperator(method, mniOperator)
                 continue
@@ -240,7 +240,7 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
         Project.currNamespace = l
     }
 
-    private fun addMNIOperator(method: Method, mniBinaryOperator: MNIBinaryOperator, tag: Array<String>? = null){
+    private fun addMNIOperator(method: Method, mniBinaryOperator: MNIOperator, tag: Array<String>? = null){
         if(!Modifier.isStatic(method.modifiers)) {
             LogProcessor.error("MNIMethod ${method.name} in class ${method.declaringClass.name} must be static")
             return
@@ -254,7 +254,7 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
         }
         val nf = NativeFunction(method.name, javaMethod = method)
         //解析MNIMethod注解成员
-        val paramType = MCFPPType.parseFromString(mniBinaryOperator.paramType, nf.field)?: run {
+        val paramType = if(mniBinaryOperator.paramType.isEmpty()) null else MCFPPType.parseFromString(mniBinaryOperator.paramType, nf.field)?: run {
             if(mniBinaryOperator.paramType == "null"){
                 MCFPPPrivateType.Null
             }else{
@@ -262,7 +262,7 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
                 MCFPPBaseType.Any
             }
         }
-        nf.appendNormalParam(paramType, "b")
+        paramType?.let { nf.appendNormalParam(paramType, "b")}
         nf.returnType = MCFPPType.parseFromString(mniBinaryOperator.returnType, nf.field)?: run {
             LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniBinaryOperator.returnType) + " in method ${method.name} in class ${method.declaringClass.name}")
             MCFPPBaseType.Any
@@ -277,7 +277,7 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
             return
         }
         nf.caller = getType()
-        field.addOperator(mniBinaryOperator.operator, nf, false)
+        field.addOperator(mniBinaryOperator.operator, paramType, nf, false)
     }
 
     private fun addMNIMethod(method: Method, mniRegister: MNIFunction, tag: Array<String>? = null){

@@ -1,6 +1,6 @@
 package top.mcfpp.mni.minecraft;
 
-import top.mcfpp.annotations.MNIBinaryOperator;
+import top.mcfpp.annotations.MNIOperator;
 import top.mcfpp.core.lang.obj.DataTemplateObject;
 import top.mcfpp.model.Member;
 import top.mcfpp.model.field.GlobalField;
@@ -9,7 +9,7 @@ import top.mcfpp.util.ValueWrapper;
 
 public class ItemPredicatePartData {
 
-    @MNIBinaryOperator(paramType = "ItemPredicatePart", operator = "|", returnType = "ItemPredicatePart")
+    @MNIOperator(paramType = "ItemPredicatePart", operator = "|", returnType = "ItemPredicatePart")
     public static void Or(DataTemplateObject b, DataTemplateObject caller, ValueWrapper<DataTemplateObject> re){
         var r = GlobalField.getTemplate("mcfpp.minecraft.item","OrItemPredicatePart");
         assert r != null;
