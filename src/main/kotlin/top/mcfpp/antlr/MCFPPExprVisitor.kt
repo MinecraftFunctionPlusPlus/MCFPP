@@ -430,7 +430,7 @@ class MCFPPExprVisitor(
             if(p.first != null){
                 LogProcessor.warn("Invalid namespace usage ${p.first} in function call ")
             }
-            MCFPPFuncGetter().getFunction(currSelector!!,p.second, readOnlyArgs, normalArgs)
+            MCFPPFuncGetter.getFunction(currSelector!!,p.second, readOnlyArgs, normalArgs)
         }
         //调用函数
         if (func !is UnknownFunction) {
@@ -517,12 +517,12 @@ class MCFPPExprVisitor(
                 re.first!!
             }
         }
-        if(re is UnknownVar && currSelector != null){
+        if(re is UnknownVar && currSelector == null){
             //从类型获取
             val typeStr = ctx.Identifier().text
             val type = MCFPPType.parseFromString(typeStr, Function.currFunction.field)
             if(type == null){
-                LogProcessor.error(TextTranslator.SYMBOL_NOT_DEFINED.translate(currSelector!!.identifier))
+                LogProcessor.error(TextTranslator.SYMBOL_NOT_DEFINED.translate(ctx.text))
             }else{
                 re = ObjectVar(type)
             }

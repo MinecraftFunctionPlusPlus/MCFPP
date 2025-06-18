@@ -2,13 +2,9 @@ package top.mcfpp.model.field
 
 import org.jetbrains.annotations.Nullable
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.compound.Class
-import top.mcfpp.model.compound.CompoundData
-import top.mcfpp.model.compound.DataTemplate
-import top.mcfpp.model.compound.Interface
+import top.mcfpp.model.compound.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
-import top.mcfpp.model.compound.GenericClass
 import top.mcfpp.type.MCFPPType
 
 /**
@@ -32,15 +28,11 @@ import top.mcfpp.type.MCFPPType
  */
 class NamespaceField: SimpleLibField{
 
-    /**
-     * 父级域。命名空间的父级域应当是全局
-     */
-    @Nullable
-    var parent = GlobalField
+    private var fileFields = ArrayList<FileField>()
 
-    var fileFields = ArrayList<FileField>()
-
-    constructor(): super()
+    constructor(): super(){
+        parent.add(GlobalField)
+    }
 
     /**
      * 复制一个缓存。
@@ -52,13 +44,6 @@ class NamespaceField: SimpleLibField{
     }
 
     //region function
-
-    override fun forEachFunction(operation: (Function) -> Any?){
-        for (function in functions){
-            operation(function)
-            fileFields.forEach { it.forEachFunction(operation) }
-        }
-    }
     /**
      * 根据所给的函数名和参数获取一个函数
      * @param key 函数名
@@ -77,7 +62,7 @@ class NamespaceField: SimpleLibField{
     }
 
     override fun hasFunction(function: Function, considerParent: Boolean): Boolean{
-        return functions.contains(function) || fileFields.any { it.hasFunction(function, considerParent) }
+        return functions.containsKey(function.identifier) && functions[function.identifier]!!.contains(function) || fileFields.any { it.hasFunction(function, considerParent) }
     }
     //endregion
 

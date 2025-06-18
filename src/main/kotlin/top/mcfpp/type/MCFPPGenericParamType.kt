@@ -38,7 +38,7 @@ class MCFPPGenericParamType(
     override fun replaceGenericParam(type: Map<String, MCFPPType>): MCFPPType {
         if(type.size != 1) throw IllegalArgumentException("Need 1 generic param but get ${type.size}")
         if(type.containsKey(identifier)){
-            return MCFPPDictType(type[identifier]!!)
+            return type[identifier]!!
         }else{
             throw IllegalArgumentException("No generic param $identifier")
         }

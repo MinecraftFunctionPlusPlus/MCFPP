@@ -4,12 +4,12 @@ import org.jetbrains.annotations.Nullable
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPType
 
-class SimpleFieldWithOperator: IFieldWithOperator {
+interface SimpleFieldWithOperator: IFieldWithOperator {
 
     /**
      * 方法
      */
-    private var operators: HashMap<String, HashMap<MCFPPType?, Function>> = HashMap()
+    var operators: HashMap<String, HashMap<MCFPPType?, Function>>
 
     /**
      * 遍历每一个方法

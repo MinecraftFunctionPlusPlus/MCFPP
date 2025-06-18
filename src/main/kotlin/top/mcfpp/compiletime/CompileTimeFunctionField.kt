@@ -4,7 +4,12 @@ import top.mcfpp.core.lang.Var
 import top.mcfpp.model.field.FunctionField
 import top.mcfpp.model.field.IField
 
-class CompileTimeFunctionField(parent: IField?): FunctionField(parent)  {
+class CompileTimeFunctionField: FunctionField  {
+
+    constructor(parent: IField?) : super(parent)
+
+    constructor(parents: List<IField?>): super(parents)
+
     override fun clone(): CompileTimeFunctionField {
         return clone(this)
     }

@@ -2,12 +2,12 @@ package top.mcfpp.model.field
 
 import top.mcfpp.core.lang.Var
 
-class SimpleFieldWithVar : IFieldWithVar {
+interface SimpleFieldWithVar : IFieldWithVar {
 
     /**
      * 变量
      */
-    private val vars: HashMap<String, Var<*>> = HashMap()
+    val vars: HashMap<String, Var<*>>
 
     override val allVars: Collection<Var<*>>
         /**

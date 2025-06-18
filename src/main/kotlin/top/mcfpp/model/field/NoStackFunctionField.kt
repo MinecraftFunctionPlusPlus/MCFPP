@@ -7,7 +7,7 @@ class NoStackFunctionField(parent: FunctionField) : FunctionField(parent) {
 
     override fun forEachVar(action: (Var<*>) -> Unit) {
         allVars.forEach { action(it) }
-        (parent as FunctionField).forEachVar(action)
+        (parent[0] as FunctionField).forEachVar(action)
     }
 
     /**
@@ -17,33 +17,33 @@ class NoStackFunctionField(parent: FunctionField) : FunctionField(parent) {
      */
     override fun getVar(key: String): Var<*>? {
         super.getVar(key)?.let { return it }
-        return (parent as FunctionField).getVar(key)
+        return (parent[0] as FunctionField).getVar(key)
     }
 
     override fun putVar(key: String, `var`: Var<*>, forced: Boolean): Boolean {
-        return (parent as FunctionField).putVar(key, `var`, forced)
+        return (parent[0] as FunctionField).putVar(key, `var`, forced)
     }
 
 
     override fun putType(key: String, type: MCFPPType, forced: Boolean): Boolean {
-        return (parent as IFieldWithType).putType(key, type, forced)
+        return (parent[0] as IFieldWithType).putType(key, type, forced)
     }
 
     override fun getType(key: String) : MCFPPType? {
-        return (parent as IFieldWithType).getType(key)
+        return (parent[0] as IFieldWithType).getType(key)
     }
     override fun containType(id: String): Boolean {
-        return (parent as IFieldWithType).containType(id)
+        return (parent[0] as IFieldWithType).containType(id)
     }
 
     override fun removeType(id: String): MCFPPType? {
-        return (parent as IFieldWithType).removeType(id)
+        return (parent[0] as IFieldWithType).removeType(id)
     }
 
     override fun forEachType(action: (MCFPPType) -> Any?) {
-        (parent as IFieldWithType).forEachType(action)
+        (parent[0] as IFieldWithType).forEachType(action)
     }
 
     override val allTypes: Collection<MCFPPType>
-        get() = (parent as IFieldWithType).allTypes
+        get() = (parent[0] as IFieldWithType).allTypes
 }

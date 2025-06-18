@@ -3,8 +3,8 @@ package top.mcfpp.antlr
 import top.mcfpp.Project
 import top.mcfpp.Project.withCompilationContext
 import top.mcfpp.annotations.InsertCommand
-import top.mcfpp.annotations.MNIOperator
 import top.mcfpp.annotations.MNIFunction
+import top.mcfpp.annotations.MNIOperator
 import top.mcfpp.antlr.mcfppParser.ClassDeclarationContext
 import top.mcfpp.antlr.mcfppParser.TemplateDeclarationContext
 import top.mcfpp.compiletime.CompileTimeFunction
@@ -586,7 +586,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val op = ctx.supportOperator().text
         //创建函数对象
         val f = Function(
-            ctx.supportOperator().text,
+            op,
             Class.currClass!!,
             ctx.functionBody()
         )
@@ -600,15 +600,22 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //解析参数
         f.addParamsFromContext(ctx.functionParams())
         //参数数量检查
-        if(f.normalParams.size != 1){
+        if(Var.unaryOp.contains(op) && f.normalParams.size != 0){
+            LogProcessor.error("Unary operator $op must have no parameter: ${ctx.text}")
+            return null
+        }else if(Var.binaryOp.contains(op) && f.normalParams.size!= 1){
+            LogProcessor.error("Binary operator $op must have only one parameter: ${ctx.text}")
+            return null
+        }else if(f.normalParams.size != 1){
             LogProcessor.error("Operator $op must have only one parameter: ${ctx.text}")
             return null
         }
+        val type = f.normalParams.firstOrNull()?.type
         //注册函数
-        if (Class.currClass!!.field.hasOperator(op, f.normalParams[0].type)) {
-            LogProcessor.error("Already defined operator: $op(${f.normalParams[0].type}) in class " + Class.currClass!!.identifier)
+        if (Class.currClass!!.field.hasOperator(op, type)) {
+            LogProcessor.error("Already defined operator: $op($type) in class " + Class.currClass!!.identifier)
         } else {
-            Class.currClass!!.field.addOperator(op, f.normalParams[0].type, f)
+            Class.currClass!!.field.addOperator(op, type, f)
         }
         f.ast = null
         return f
@@ -618,7 +625,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val op = ctx.supportOperator().text
         //创建函数对象
         val f = Function(
-            ctx.supportOperator().text,
+            op,
             DataTemplate.currTemplate!!,
             ctx.functionBody()
         )
@@ -632,15 +639,22 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //解析参数
         f.addParamsFromContext(ctx.functionParams())
         //参数数量检查
-        if(f.normalParams.size != 1){
+        if(Var.unaryOp.contains(op) && f.normalParams.size != 0){
+            LogProcessor.error("Unary operator $op must have no parameter: ${ctx.text}")
+            return null
+        }else if(Var.binaryOp.contains(op) && f.normalParams.size!= 1){
+            LogProcessor.error("Binary operator $op must have only one parameter: ${ctx.text}")
+            return null
+        }else if(f.normalParams.size != 1){
             LogProcessor.error("Operator $op must have only one parameter: ${ctx.text}")
             return null
         }
+        val type = f.normalParams.firstOrNull()?.type
         //注册函数
-        if (DataTemplate.currTemplate!!.field.hasOperator(op, f.normalParams[0].type)) {
-            LogProcessor.error("Already defined operator: $op(${f.normalParams[0].type}) in class " + DataTemplate.currTemplate!!.identifier)
+        if (DataTemplate.currTemplate!!.field.hasOperator(op, type)) {
+            LogProcessor.error("Already defined operator: $op($type) in class " + DataTemplate.currTemplate!!.identifier)
         } else {
-            DataTemplate.currTemplate!!.field.addOperator(op, f.normalParams[0].type, f)
+            DataTemplate.currTemplate!!.field.addOperator(op, type, f)
         }
         f.ast = null
         return f
@@ -664,10 +678,17 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
         nf.addParamsFromContext(ctx.functionParams())
         //参数数量检查
-        if(nf.normalParams.size != 1){
+        if(Var.unaryOp.contains(op) && nf.normalParams.size != 0){
+            LogProcessor.error("Unary operator $op must have no parameter: ${ctx.text}")
+            return null
+        }else if(Var.binaryOp.contains(op) && nf.normalParams.size!= 1){
+            LogProcessor.error("Binary operator $op must have only one parameter: ${ctx.text}")
+            return null
+        }else if(nf.normalParams.size != 1){
             LogProcessor.error("Operator $op must have only one parameter: ${ctx.text}")
             return null
         }
+        val type = nf.normalParams.firstOrNull()?.type
         try {
             //根据JavaRefer找到类
             val refer = ctx.javaRefer().text
@@ -678,24 +699,24 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             for(method in methods){
                 val mniRegister = method.getAnnotation(MNIOperator::class.java) ?: continue
                 //比对
-                if(nf.normalParams[0].type.typeName == mniRegister.paramType){
+                if((type?.typeName ?: "") == mniRegister.paramType){
                     hasFind = true
                     nf.javaMethod = method
                     break
                 }
             }
             if(!hasFind){
-                throw NoSuchMethodException("Cannot find operator $op(${nf.normalParams[0].type}) in jvm class $clsName")
+                throw NoSuchMethodException("Cannot find operator $op($type) in jvm class $clsName")
             }
         } catch (e: ClassNotFoundException) {
             LogProcessor.error("Cannot find java class: " + e.message)
             return null
         }
         //注册函数
-        if (Class.currClass!!.field.hasOperator(op, nf.normalParams[0].type)) {
+        if (Class.currClass!!.field.hasOperator(op, type)) {
             LogProcessor.error("Already defined operator: $op(${nf.normalParams[0].type}) in template " + Class.currClass!!.identifier)
         } else {
-            Class.currClass!!.field.addOperator(op, nf.normalParams[0].type, nf)
+            Class.currClass!!.field.addOperator(op, type, nf)
         }
         return nf
     }
@@ -710,10 +731,17 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
         nf.addParamsFromContext(ctx.functionParams())
         //参数数量检查
-        if(nf.normalParams.size != 1){
+        if(Var.unaryOp.contains(op) && nf.normalParams.size != 0){
+            LogProcessor.error("Unary operator $op must have no parameter: ${ctx.text}")
+            return null
+        }else if(Var.binaryOp.contains(op) && nf.normalParams.size!= 1){
+            LogProcessor.error("Binary operator $op must have only one parameter: ${ctx.text}")
+            return null
+        }else if(nf.normalParams.size != 1){
             LogProcessor.error("Operator $op must have only one parameter: ${ctx.text}")
             return null
         }
+        val type = nf.normalParams.firstOrNull()?.type
         try {
             //根据JavaRefer找到类
             val refer = ctx.javaRefer().text
@@ -724,24 +752,24 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             for(method in methods){
                 val mniRegister = method.getAnnotation(MNIOperator::class.java) ?: continue
                 //比对
-                if(nf.normalParams[0].type.typeName == mniRegister.paramType){
+                if((type?.typeName ?: "") == mniRegister.paramType){
                     hasFind = true
                     nf.javaMethod = method
                     break
                 }
             }
             if(!hasFind){
-                throw NoSuchMethodException("Cannot find operator $op(${nf.normalParams[0].type}) in jvm class $clsName")
+                throw NoSuchMethodException("Cannot find operator $op($type) in jvm class $clsName")
             }
         } catch (e: ClassNotFoundException) {
             LogProcessor.error("Cannot find java class: " + e.message)
             return null
         }
         //注册函数
-        if (DataTemplate.currTemplate!!.field.hasOperator(op, nf.normalParams[0].type)) {
-            LogProcessor.error("Already defined operator: $op(${nf.normalParams[0].type}) in template " + DataTemplate.currTemplate!!.identifier)
+        if (DataTemplate.currTemplate!!.field.hasOperator(op, type)) {
+            LogProcessor.error("Already defined operator: $op($type) in template " + DataTemplate.currTemplate!!.identifier)
         } else {
-            DataTemplate.currTemplate!!.field.addOperator(op, nf.normalParams[0].type, nf)
+            DataTemplate.currTemplate!!.field.addOperator(op, type, nf)
         }
         return nf
     }

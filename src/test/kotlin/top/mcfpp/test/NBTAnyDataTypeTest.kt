@@ -10,10 +10,10 @@ class NBTTypeTest {
         val test =
             """
                 func main(){
-                    list<int> l = [];
+                    var l as list<int> = [];
                     l.add(1);
                     l.add(2);
-                    print(l.getJavaVar());
+                    print(l::jvm);
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test, arrayOf("-debug"))
@@ -24,8 +24,8 @@ class NBTTypeTest {
     fun listAPITest(){
         val test = """
             func main(){
-                list<int> l = [1,2,3,4];
-                list<int> l1 = [5,6,7];
+                var l as list<int> = [1,2,3,4];
+                var l1 as list<int> = [5,6,7];
                 l.addAll(l1);
                 l.insert(0,114514);
                 l.removeAt(1);
@@ -45,8 +45,8 @@ class NBTTypeTest {
     fun listAPITest2(){
         val test = """
             func main(){
-                dynamic list<int> l = [1,2,3,4];
-                dynamic list<int> l1 = [5,6,7];
+                dynamic var l as list<int> = [1,2,3,4];
+                dynamic var l1 as list<int> = [5,6,7];
                 l.addAll(l1);
                 l.insert(0,114514);
                 l.removeAt(1);

@@ -2,20 +2,21 @@ package top.mcfpp.model.field
 
 import org.jetbrains.annotations.Nullable
 import top.mcfpp.core.lang.Var
+import top.mcfpp.model.Generic
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
-import top.mcfpp.model.Generic
 
 /**
  * 对[IFieldWithFunction]接口的简单实现。
  *
  */
-class SimpleFieldWithFunction : IFieldWithFunction {
+interface SimpleFieldWithFunction : IFieldWithFunction {
 
     /**
      * 方法
      */
-    private var functions: ArrayList<Function> = ArrayList()
+    var functions: HashMap<String, ArrayList<Function>>
+
 
     /**
      * 遍历每一个方法
@@ -24,39 +25,70 @@ class SimpleFieldWithFunction : IFieldWithFunction {
      * @receiver
      */
     override fun forEachFunction(operation: (Function) -> Any?){
-        for (function in functions){
-            operation(function)
+        for (function in functions.values){
+            for (f in function){
+                operation(f)
+            }
         }
     }
 
-
     @Nullable
     override fun getFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): Function {
-        for (f in functions) {
-            if(f is Generic<*> && f.isSelf(key, readOnlyArgs, normalArgs)){
-                return f
+        val functions = this.functions[key]
+        if(!functions.isNullOrEmpty()){
+            if(functions.size == 1) return functions[0]
+            for (f in functions) {
+                if(f is Generic<*> && f.isSelf(key, readOnlyArgs, normalArgs)){
+                    return f
+                }
+                if(f.isSelf(key, normalArgs)){
+                    return f
+                }
             }
-            if(f.isSelf(key, normalArgs)){
-                return f
+            for (f in functions) {
+                if(f is Generic<*> && f.isSelfWithDefaultValue(key, readOnlyArgs, normalArgs)){
+                    return f
+                }
+                if(f.isSelfWithDefaultValue(key, normalArgs)){
+                    return f
+                }
+            }
+        }
+        parent.forEach {
+            if(it is IFieldWithFunction){
+                val re = it.getFunction(key, readOnlyArgs, normalArgs)
+                if(re !is UnknownFunction) return re
             }
         }
         return UnknownFunction(key)
     }
 
     override fun addFunction(function: Function, force: Boolean): Boolean{
-        if(hasFunction(function, true)){
+        if(hasFunction(function, false)){
             if(force){
-                functions[functions.indexOf(function)] = function
+                functions[function.identifier]!!.add(function)
                 return true
             }
             return false
         }
-        functions.add(function)
+        if(!functions.containsKey(function.identifier)){
+            functions[function.identifier] = ArrayList()
+        }
+        functions[function.identifier]!!.add(function)
         return true
     }
 
     override fun hasFunction(function: Function, considerParent: Boolean): Boolean{
-        return functions.contains(function)
+        val qwq = functions.containsKey(function.identifier) && functions[function.identifier]!!.contains(function)
+        return if(considerParent && !qwq && parent.isNotEmpty()) {
+            parent.any { it is IFieldWithFunction && it.hasFunction(function, true) }
+        }else{
+            qwq
+        }
+    }
+
+    override fun removeFunction(function: Function) {
+        functions[function.identifier]?.remove(function)
     }
 
 }

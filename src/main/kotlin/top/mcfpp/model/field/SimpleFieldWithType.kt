@@ -2,13 +2,13 @@ package top.mcfpp.model.field
 
 import top.mcfpp.type.MCFPPType
 
-open class SimpleFieldWithType : IFieldWithType {
+interface SimpleFieldWithType : IFieldWithType {
 
-    val fieldTypeSet = HashSet<String>()
+    val fieldTypeSet :HashSet<String>
     /**
      * 类型
      */
-    protected val types : HashMap<String, MCFPPType> = HashMap()
+    val types : HashMap<String, MCFPPType>
 
     override fun putType(key: String, type: MCFPPType, forced: Boolean): Boolean {
         fieldTypeSet.add(key)
@@ -25,10 +25,10 @@ open class SimpleFieldWithType : IFieldWithType {
     }
 
     override fun getType(key: String) : MCFPPType? {
-        return types.getOrDefault(key, null)
+        return types.getOrDefault(key, null)?: parent.filterIsInstance<IFieldWithType>().firstOrNull { it.containType(key) }?.getType(key)
     }
     override fun containType(id: String): Boolean {
-        return types.containsKey(id)
+        return types.containsKey(id)|| parent.filterIsInstance<IFieldWithType>().any { it.containType(id) }
     }
 
     override fun removeType(id: String): MCFPPType? {
@@ -39,28 +39,24 @@ open class SimpleFieldWithType : IFieldWithType {
         for (t in types.values){
             action(t)
         }
-    }
-
-    override val allTypes: Collection<MCFPPType>
-        get() = types.values
-
-}
-
-class SimpleFieldWithTypeWithParent(val parent: IFieldWithType) : SimpleFieldWithType() {
-    override fun getType(key: String): MCFPPType? {
-        return types.getOrDefault(key, null) ?: parent.getType(key)
-    }
-    override fun containType(id: String): Boolean {
-        return types.containsKey(id) || parent.containType(id)
-    }
-
-    override fun forEachType(action: (MCFPPType) -> Any?) {
-        for (t in types.values){
-            action(t)
+        parent.forEach {
+            if(it is IFieldWithType){
+                it.forEachType(action)
+            }
         }
-        parent.forEachType(action)
     }
 
     override val allTypes: Collection<MCFPPType>
-        get() = types.values + parent.allTypes
+        get() = types.values + parent.filterIsInstance<IFieldWithType>().flatMap { it.allTypes }
+
+    companion object{
+        fun getTypeScope(): SimpleFieldWithType{
+            return object :SimpleFieldWithType{
+                override val fieldTypeSet = HashSet<String>()
+                override val types = HashMap<String, MCFPPType>()
+                override var parent = ArrayList<IField?>()
+            }
+        }
+    }
+
 }

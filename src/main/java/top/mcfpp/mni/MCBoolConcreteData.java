@@ -25,4 +25,10 @@ public class MCBoolConcreteData {
     public static void and(BaseBool a, BaseBool caller, ValueWrapper<BaseBool> re){
         re.setValue((BaseBool) caller.and(a));
     }
+
+    @SuppressWarnings("DataFlowIssue")
+    @MNIOperator(operator = "!", returnType = "bool")
+    public static void negation(BaseBool caller, ValueWrapper<BaseBool> re){
+        re.setValue((BaseBool) caller.negation());
+    }
 }

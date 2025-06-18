@@ -8,34 +8,34 @@ import top.mcfpp.type.MCFPPType
  *
  * @constructor Create empty Function field
  */
-open class FunctionField : IFieldWithVar, IFieldWithType {
+open class FunctionField : SimpleFieldWithVar, SimpleFieldWithType {
+
+    override var parent: ArrayList<IField?> = ArrayList()
 
     val fieldVarSet = HashSet<String>()
 
-    val fieldTypeSet = HashSet<String>()
+    override val fieldTypeSet = HashSet<String>()
 
     /**
      * 变量
      */
-    protected val vars: LinkedHashMap<String, Var<*>> = LinkedHashMap()
+    override val vars: LinkedHashMap<String, Var<*>> = LinkedHashMap()
 
     /**
      * 类型
      */
-    protected val types : HashMap<String, MCFPPType> = HashMap()
-
-    /**
-     * 父级域。函数的父级域可能是全局，也可能是类
-     */
-    var parent : IField?
+    override val types : HashMap<String, MCFPPType> = HashMap()
 
     /**
      * 创建一个缓存，并指定它的父级
      * @param parent 父级缓存。若没有则设置为null
      */
-    @Suppress("ConvertSecondaryConstructorToPrimary")
     constructor(parent: IField?) {
-        this.parent = parent
+        this.parent.add(parent)
+    }
+
+    constructor(parents: List<IField?>){
+        this.parent.addAll(parents)
     }
 
 

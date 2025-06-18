@@ -20,6 +20,7 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.property.*
 import top.mcfpp.type.MCFPPType
 import java.util.*
+import kotlin.collections.ArrayList
 
 /**
  * 全局域。
@@ -599,4 +600,6 @@ object GlobalField : FieldContainer, IField {
             }
         }
     }
+
+    override var parent: ArrayList<IField?> = ArrayList()
 }

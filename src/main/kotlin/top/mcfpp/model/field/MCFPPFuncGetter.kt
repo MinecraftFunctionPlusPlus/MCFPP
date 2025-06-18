@@ -1,18 +1,18 @@
 package top.mcfpp.model.field
 
-import top.mcfpp.core.lang.*
+import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.model.CanSelectMember
-import top.mcfpp.model.function.Function
 import top.mcfpp.model.Member
+import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPClassType
 import top.mcfpp.util.LogProcessor
 
 /**
  * 获取函数用的visitor
  */
-class MCFPPFuncGetter{
+object MCFPPFuncGetter{
 
     /**
      * 获取成员函数

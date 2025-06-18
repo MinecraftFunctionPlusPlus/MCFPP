@@ -3,11 +3,11 @@ package top.mcfpp.model.field
 import org.jetbrains.annotations.Nullable
 import top.mcfpp.model.compound.CompoundData
 
-class SimpleFieldWithObject : IFieldWithObject {
+interface SimpleFieldWithObject : IFieldWithObject {
     /**
      * 方法
      */
-    private var objects: ArrayList<CompoundData> = ArrayList()
+    var objects: ArrayList<CompoundData>
 
     /**
      * 遍历每一个方法

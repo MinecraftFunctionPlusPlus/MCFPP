@@ -229,6 +229,10 @@ DOC_COMMENT
     :   '#{' .*? '}#'
     ;
 
+SIMPLE_DOC_COMMENT
+    :   '#>'.*? '\n'
+    ;
+
 BLOCK_COMMENT
     :   '##' .*? '##' -> skip
     ;

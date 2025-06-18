@@ -51,7 +51,7 @@ public class NBTListConcreteData {
     }
 
     @InsertCommand
-    @MNIFunction(normalParams = {"list<E> list"}, caller = "list", genericType = "E")
+    @MNIFunction(normalParams = {"list<E>"}, caller = "list", genericType = "E")
     public static void prependAll(NBTList list, NBTListConcrete caller){
         if(list instanceof NBTListConcrete ec){
             for (var e : ec.getValue()){
@@ -63,7 +63,7 @@ public class NBTListConcreteData {
     }
 
     @InsertCommand
-    @MNIFunction(normalParams = {"int index", "E e"}, caller = "list", genericType = "E")
+    @MNIFunction(normalParams = {"int", "E"}, caller = "list", genericType = "E")
     public static void insert(MCInt index, Var<?> e, NBTListConcrete caller) throws IOException {
         if(e instanceof MCFPPValue<?> && index instanceof MCIntConcrete indexC){
             caller.getValue().add(indexC.getValue(), e);
@@ -73,7 +73,7 @@ public class NBTListConcreteData {
     }
 
     @InsertCommand
-    @MNIFunction(normalParams = {"int index"}, caller = "list", genericType = "E")
+    @MNIFunction(normalParams = {"int"}, caller = "list", genericType = "E")
     public static void removeAt(MCInt index, NBTListConcrete caller){
         if(index instanceof MCIntConcrete indexC){
             //确定的
@@ -84,7 +84,7 @@ public class NBTListConcreteData {
         }
     }
 
-    @MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E")
+    @MNIFunction(normalParams = {"E"}, caller = "list", genericType = "E")
     public static void remove(@NotNull Var<?> var, NBTListConcrete caller){
         if(var instanceof MCFPPValue<?> vC){
             for (var e : caller.getValue()){
@@ -105,7 +105,7 @@ public class NBTListConcreteData {
     }
 
     @InsertCommand
-    @MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E", returnType = "int")
+    @MNIFunction(normalParams = {"E"}, caller = "list", genericType = "E", returnType = "int")
     public static void indexOf(Var<?> e, NBTListConcrete caller, ValueWrapper<MCInt> returnVar){
         if(e instanceof MCFPPValue<?>){
             //确定的
@@ -117,7 +117,7 @@ public class NBTListConcreteData {
     }
 
     @InsertCommand
-    @MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E", returnType = "int")
+    @MNIFunction(normalParams = {"E"}, caller = "list", genericType = "E", returnType = "int")
     public static void lastIndexOf(Var<?> e, NBTListConcrete caller, ValueWrapper<MCInt> returnVar){
         if(e instanceof MCFPPValue<?>){
             //确定的
@@ -133,7 +133,7 @@ public class NBTListConcreteData {
         }
     }
 
-    @MNIFunction(normalParams = {"E e"}, caller = "list", genericType = "E", returnType = "bool")
+    @MNIFunction(normalParams = {"E"}, caller = "list", genericType = "E", returnType = "bool")
     public static void contains(Var<?> e, NBTListConcrete caller, ValueWrapper<BaseBool> returnVar){
         if(e instanceof MCFPPValue eC){
             boolean contains = false;

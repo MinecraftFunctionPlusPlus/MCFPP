@@ -3,12 +3,12 @@ package top.mcfpp.model.field
 import org.jetbrains.annotations.Nullable
 import top.mcfpp.model.annotation.Annotation
 
-class SimpleFieldWithAnnotation: IFieldWithAnnotation {
+interface SimpleFieldWithAnnotation: IFieldWithAnnotation {
 
     /**
      * 方法
      */
-    private var annotations: HashMap<String, Class<out Annotation>> = HashMap()
+    var annotations: HashMap<String, Class<out Annotation>>
 
     /**
      * 遍历每一个方法

@@ -634,5 +634,8 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             }
         }
 
+        val binaryOp = arrayOf("+", "-", "*", "/", "==", "!=", "<", ">", "<=", ">=", "||", "&&", "|")
+        val unaryOp = arrayOf("!", "&")
+
     }
 }

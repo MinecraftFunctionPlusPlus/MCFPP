@@ -220,7 +220,7 @@ object LogProcessor {
 
     // 扩展方法：查找字符串在输入流中的索引
     fun CharStream.indexOf(char: String, fromIndex: Int): Int {
-        for (i in fromIndex until this.size()) {
+        for (i in fromIndex..<this.size()) {
             if (this.getText(Interval.of(i, i)) == char) {
                 return i
             }

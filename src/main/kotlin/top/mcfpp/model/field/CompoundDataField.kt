@@ -4,9 +4,9 @@ import org.jetbrains.annotations.Nullable
 import top.mcfpp.core.lang.OnScoreboard
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
+import top.mcfpp.model.Generic
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
-import top.mcfpp.model.Generic
 import top.mcfpp.model.property.Property
 import top.mcfpp.type.MCFPPType
 
@@ -15,8 +15,8 @@ import top.mcfpp.type.MCFPPType
  *
  */
 class CompoundDataField(parent: ArrayList<IField?>) :
-    IFieldWithFunction, IFieldWithVar, IFieldWithType, IFieldWithProperty,
-    IFieldWithOperator by SimpleFieldWithOperator(){
+    SimpleFieldWithFunction, IFieldWithVar, IFieldWithType, IFieldWithProperty,
+    SimpleFieldWithOperator{
 
     /**
      * 字段
@@ -36,18 +36,16 @@ class CompoundDataField(parent: ArrayList<IField?>) :
     /**
      * 方法
      */
-    private var functions: ArrayList<Function> = ArrayList()
+    override var functions: HashMap<String, ArrayList<Function>> = HashMap()
+
+    override var operators: HashMap<String, HashMap<MCFPPType?, Function>> = HashMap()
 
     /**
      * 父级域。
      */
     @Nullable
-    var parent: ArrayList<IField?>
+    override var parent: ArrayList<IField?>
 
-    /**
-     * 创建一个域，并指定它的父级
-     * @param parent 父级域。若没有则设置为null
-     */
     init {
         this.parent = parent
     }
@@ -63,7 +61,7 @@ class CompoundDataField(parent: ArrayList<IField?>) :
             vars[key] = `var`.clone()
         }
         //函数
-        functions.addAll(field.functions)
+        functions.putAll(field.functions)
         //类型
         types.putAll(field.types)
         //属性
@@ -79,18 +77,6 @@ class CompoundDataField(parent: ArrayList<IField?>) :
     override fun forEachVar(action: (Var<*>) -> Unit){
         for (`var` in vars.values){
             action(`var`)
-        }
-    }
-
-    /**
-     * 遍历每一个方法
-     *
-     * @param operation 要对方法进行的操作
-     * @receiver
-     */
-    override fun forEachFunction(operation: (Function) -> Any?){
-        for (function in functions){
-            operation(function)
         }
     }
 
@@ -179,20 +165,24 @@ class CompoundDataField(parent: ArrayList<IField?>) :
     //region Function
     @Nullable
     override fun getFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): Function {
-        for (f in functions) {
-            if(f is Generic<*> && f.isSelf(key, readOnlyArgs, normalArgs)){
-                return f
+        val functions = this.functions[key]
+        if(!functions.isNullOrEmpty()){
+            if(functions.size == 1) return functions[0]
+            for (f in functions) {
+                if(f is Generic<*> && f.isSelf(key, readOnlyArgs, normalArgs)){
+                    return f
+                }
+                if(f.isSelf(key, normalArgs)){
+                    return f
+                }
             }
-            if(f.isSelf(key, normalArgs)){
-                return f
-            }
-        }
-        for (f in functions) {
-            if(f is Generic<*> && f.isSelfWithDefaultValue(key, readOnlyArgs, normalArgs)){
-                return f
-            }
-            if(f.isSelfWithDefaultValue(key, normalArgs)){
-                return f
+            for (f in functions) {
+                if(f is Generic<*> && f.isSelfWithDefaultValue(key, readOnlyArgs, normalArgs)){
+                    return f
+                }
+                if(f.isSelfWithDefaultValue(key, normalArgs)){
+                    return f
+                }
             }
         }
         parent.forEach {
@@ -207,17 +197,20 @@ class CompoundDataField(parent: ArrayList<IField?>) :
     override fun addFunction(function: Function, force: Boolean): Boolean{
         if(hasFunction(function, false)){
             if(force){
-                functions[functions.indexOf(function)] = function
+                functions[function.identifier]!!.add(function)
                 return true
             }
             return false
         }
-        functions.add(function)
+        if(!functions.containsKey(function.identifier)){
+            functions[function.identifier] = ArrayList()
+        }
+        functions[function.identifier]!!.add(function)
         return true
     }
 
     override fun hasFunction(function: Function, considerParent: Boolean): Boolean{
-        val qwq = functions.contains(function)
+        val qwq = functions.containsKey(function.identifier) && functions[function.identifier]!!.contains(function)
         return if(considerParent && !qwq && parent.isNotEmpty()) {
             parent.any { it is IFieldWithFunction && it.hasFunction(function, true) }
         }else{

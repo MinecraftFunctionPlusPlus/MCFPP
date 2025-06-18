@@ -272,7 +272,7 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
             return
         }
         //检查method的参数
-        if(method.parameterCount != 3){
+        if((paramType != null && method.parameterCount != 3) || (paramType == null && method.parameterCount != 2)){
             LogProcessor.error("Method ${method.name} in class ${method.declaringClass.name} has wrong parameter count")
             return
         }

@@ -103,7 +103,7 @@ class FunctionParam(
         fun parseReadonlyAndNormalParamTypes(params: mcfppParser.FunctionParamsContext): Pair<ArrayList<MCFPPType>,ArrayList<MCFPPType>>{
             val r = ArrayList<MCFPPType>()
             val n = ArrayList<MCFPPType>()
-            val typeScope = SimpleFieldWithType()
+            val typeScope = SimpleFieldWithType.getTypeScope()
             //解析只读参数
             params.readOnlyParams()?.let {
                 for (param in it.parameterList()?.parameter()?: emptyList()) {
@@ -128,7 +128,7 @@ class FunctionParam(
 
         fun parseNormalParamTypes(params: mcfppParser.NormalParamsContext): ArrayList<MCFPPType>{
             val n = ArrayList<MCFPPType>()
-            val typeScope = SimpleFieldWithType()
+            val typeScope = SimpleFieldWithType.getTypeScope()
             for (param in (params.parameterList()?.parameter()?: emptyList())) {
                 n.add(MCFPPType.parseFromString(param.type().text, typeScope)?: run {
                     LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(param.type().text))

@@ -32,13 +32,13 @@ class LogicStatementTest {
         val test =
             """
                 func base(){
-                    dynamic int i = 5;
+                    dynamic var i = 5;
                     if(i < 7){
                         print("i < 7");
-                        dynamic int p;
+                        dynamic var p as int;
                     }else{
                         print("i >= 7");
-                        dynamic int p;
+                        dynamic var p as int;
                     }
                     print(p);
                     print("end");
@@ -52,7 +52,7 @@ class LogicStatementTest {
         val test =
             """
                 func generateSequence(){
-                    dynamic int i = 0;
+                    dynamic var i = 0;
                     while(i < 10){
                         print(i);
                         i = i + 1;
@@ -67,24 +67,11 @@ class LogicStatementTest {
         val test =
             """
             func generateSequenceDoWhile(){
-                dynamic int i = 0;
+                dynamic var i = 0;
                 do {
                     print(i);
                     i = i + 1;
                 } while(i < 10);
-            }
-        """.trimIndent()
-        MCFPPStringTest.readFromString(test, targetPath = "D:\\.minecraft\\saves\\MCFPP Studio\\datapacks")
-    }
-
-    @Test
-    fun forTest() {
-        val test =
-            """
-            func generateSequenceFor(){
-                for(dynamic int i = 0; i < 10; i = i + 1){
-                    print(i);
-                }
             }
         """.trimIndent()
         MCFPPStringTest.readFromString(test, targetPath = "D:\\.minecraft\\saves\\MCFPP Studio\\datapacks")

@@ -8,11 +8,12 @@ import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.model.compound.UnsolvedClass
 import top.mcfpp.model.compound.UnsolvedTemplate
 import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.field.IField
 import top.mcfpp.model.field.NamespaceField
-import top.mcfpp.model.field.SimpleFieldWithTypeWithParent
+import top.mcfpp.model.field.SimpleFieldWithType
 import top.mcfpp.model.function.Function
-import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.GenericFunction
+import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPGenericParamType
 import top.mcfpp.type.MCFPPPrivateType
@@ -104,7 +105,7 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
         Project.currNamespace = this.identifier
         val methods = cls.methods
         //获取import方法
-        val simpleFieldWithType = SimpleFieldWithTypeWithParent(field)
+        val simpleFieldWithType = SimpleFieldWithType.getTypeScope()
         for(method in methods){
             if(method.name == "importToMNI"){
                 if(method.parameterCount != 0){

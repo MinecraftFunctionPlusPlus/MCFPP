@@ -1,37 +1,29 @@
 package top.mcfpp.model.field
 
 import com.google.common.collect.ArrayListMultimap
-import org.jetbrains.annotations.Nullable
 import top.mcfpp.core.lang.Var
+import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.compound.*
 import top.mcfpp.model.compound.Enum
 import top.mcfpp.model.function.Function
-import top.mcfpp.model.function.UnknownFunction
-import top.mcfpp.model.Generic
-import top.mcfpp.model.compound.GenericClass
 import top.mcfpp.type.*
 
-open class SimpleLibField (
-    private val simpleFieldWithEnum: SimpleFieldWithEnum = SimpleFieldWithEnum(),
-    private val simpleFieldWithObject: SimpleFieldWithObject = SimpleFieldWithObject(),
-    private val simpleFieldWithAnnotation: SimpleFieldWithAnnotation = SimpleFieldWithAnnotation(),
-    private val simpleFieldWithVar: SimpleFieldWithVar = SimpleFieldWithVar()
-)
-    : IFieldWithClass, IFieldWithFunction, IFieldWithTemplate, IFieldWithInterface, IFieldWithType,
-    IFieldWithEnum by simpleFieldWithEnum,
-    IFieldWithObject by simpleFieldWithObject,
-    IFieldWithAnnotation by simpleFieldWithAnnotation,
-    IFieldWithVar by simpleFieldWithVar
+open class SimpleLibField
+    : IFieldWithClass, SimpleFieldWithFunction, IFieldWithTemplate, IFieldWithInterface, IFieldWithType,
+    SimpleFieldWithEnum,
+    SimpleFieldWithObject,
+    SimpleFieldWithAnnotation,
+    SimpleFieldWithVar
 {
     /**
      * 变量
      */
-    protected val vars: HashMap<String, Var<*>> = HashMap()
+    final override val vars: HashMap<String, Var<*>> = HashMap()
 
     /**
      * 函数
      */
-    protected var functions: ArrayList<Function> = ArrayList()
+    final override var functions: HashMap<String, ArrayList<Function>> = HashMap()
 
     /**
      * 类
@@ -53,78 +45,28 @@ open class SimpleLibField (
      */
     protected var typeAlias: HashMap<String, MCFPPType> = HashMap()
 
+    final override var enums: ArrayList<Enum> = ArrayList()
+
+    final override var annotations: HashMap<String, java.lang.Class<out Annotation>> = HashMap()
+
+    final override var objects: ArrayList<CompoundData> = ArrayList()
+
+    final override var parent: ArrayList<IField?> = ArrayList()
+
+    constructor()
+
     /**
      * 复制一个
      * @param cache 原来的缓存
      */
-    constructor(cache: SimpleLibField) : this(cache.simpleFieldWithEnum) {
+    constructor(cache: SimpleLibField) {
         //变量复制
         for (key in cache.vars.keys) {
             val `var`: Var<*>? = cache.vars[key]
             vars[key] = `var`!!.clone()
         }
-        functions.addAll(cache.functions)
+        functions.putAll(cache.functions)
     }
-
-    //region function
-
-    override fun forEachFunction(operation: (Function) -> Any?){
-        for (function in functions){
-            operation(function)
-        }
-    }
-    /**
-     * 根据所给的函数名和参数获取一个函数
-     * @param key 函数名
-     * @param normalArgs 参数类型
-     * @return 如果此缓存中存在这个函数，则返回这个函数的对象，否则返回null
-     */
-    @Nullable
-    override fun getFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): Function {
-        for (f in functions) {
-            if(f is Generic<*> && f.isSelf(key, readOnlyArgs, normalArgs)){
-                return f
-            }
-            if(f.isSelf(key, normalArgs)){
-                return f
-            }
-        }
-        for (f in functions) {
-            if(f is Generic<*> && f.isSelfWithDefaultValue(key, readOnlyArgs, normalArgs)){
-                return f
-            }
-            if(f.isSelfWithDefaultValue(key, normalArgs)){
-                return f
-            }
-        }
-        return UnknownFunction(key)
-    }
-
-    /**
-     * 添加一个函数
-     *
-     * @param function
-     */
-    override fun addFunction(function: Function, force: Boolean): Boolean{
-        if(hasFunction(function, true)){
-            if(force){
-                functions[functions.indexOf(function)] = function
-                return true
-            }
-            return false
-        }
-        functions.add(function)
-        return true
-    }
-
-    override fun hasFunction(function: Function, considerParent: Boolean): Boolean{
-        return functions.contains(function)
-    }
-
-    fun removeFunction(function: Function){
-        functions.remove(function)
-    }
-    //endregion
 
     //region class
 

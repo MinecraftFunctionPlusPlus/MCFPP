@@ -29,4 +29,6 @@ interface IFieldWithFunction: IField {
     fun hasFunction(function: Function, considerParent: Boolean = true): Boolean
 
     fun forEachFunction(operation: (Function) -> Any?)
+
+    fun removeFunction(function: Function)
 }

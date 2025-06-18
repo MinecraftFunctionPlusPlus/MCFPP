@@ -3,12 +3,12 @@ package top.mcfpp.model.field
 import org.jetbrains.annotations.Nullable
 import top.mcfpp.model.compound.Enum
 
-class SimpleFieldWithEnum : IFieldWithEnum {
+interface SimpleFieldWithEnum : IFieldWithEnum {
 
     /**
      * 方法
      */
-    private var enums: ArrayList<Enum> = ArrayList()
+    var enums: ArrayList<Enum>
 
     /**
      * 遍历每一个方法
