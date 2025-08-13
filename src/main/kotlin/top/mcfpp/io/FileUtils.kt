@@ -45,7 +45,8 @@ object FileUtils {
     fun copyAllFiles(sourcePath: String, targetPath: String) {
         val source = File(sourcePath)
         val target = File(targetPath)
-        if (!source.exists() || !source.isDirectory) return
+        if (!source.exists()) throw FileNotFoundException("Source file not found: $sourcePath")
+        if (!source.isDirectory) throw IllegalArgumentException("Source path is not a directory: $sourcePath")
         if (!target.exists()) target.mkdirs()
         source.listFiles()?.forEach { file ->
             val targetFile = File(target, file.name)

@@ -9,7 +9,7 @@ open class ProjectConfig(
     /**
      * 工程对应的mc版本
      */
-    var version: String = "1.21.4",
+    var version: String = "1.21.8",
 
     /**
      * 工程的默认命名空间

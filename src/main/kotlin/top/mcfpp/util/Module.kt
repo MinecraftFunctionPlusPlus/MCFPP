@@ -18,7 +18,7 @@ enum class ModuleType {
 
 class Module(var id: String) {
 
-    var base: ArrayList<String> = ArrayList()
+    var base: ArrayList<Package> = ArrayList()
 
     var packages: HashMap<Package, Boolean> = HashMap()
 
@@ -37,12 +37,14 @@ class Module(var id: String) {
     private fun extractFromDir(targetRoot: Path){
         val sourceRoot = resourcePath.resolve(id).resolve("data")
         for (b in base){
-            val source = sourceRoot.resolve(b)
-            val target = targetRoot.resolve(b)
-            if(!source.toFile().exists() || !target.toFile().exists() || !source.toFile().isDirectory){
-                continue
+            val target = targetRoot.resolve(b.id)
+            for (provide in b.provides){
+                val source = sourceRoot.resolve(provide)
+                if(!source.toFile().exists() ||!source.toFile().isDirectory){
+                    continue
+                }
+                copyAllFiles(source.absolutePathString(), target.absolutePathString())
             }
-            copyAllFiles(source.absolutePathString(), target.absolutePathString())
         }
         for (p in packages.filter { it.value }.keys){
             val target = targetRoot.resolve(p.id)
@@ -59,9 +61,11 @@ class Module(var id: String) {
     private fun extractFromJarOrZip(targetRoot: Path){
         ZipFile(resourcePath.toFile()).use {
             for (b in base){
-                val source = "$id/data/$b"
-                val target = targetRoot.resolve(b)
-                it.extractTo(source, target.absolutePathString())
+                val target = targetRoot.resolve(b.id)
+                for (provide in b.provides){
+                    val source = "$id/data/$provide"
+                    it.extractTo(source, target.absolutePathString())
+                }
             }
             for (p in packages.filter { entry -> entry.value }.keys){
                 val target = targetRoot.resolve(p.id)
@@ -75,14 +79,16 @@ class Module(var id: String) {
 
     private fun extractFromInner(targetRoot: Path){
         for (b in base){
-            val source = "datapack/$id/data/$b"
-            val target = targetRoot.resolve(b)
-            extractFolderFromInner(source, target.absolutePathString())
+            val target = targetRoot.resolve(b.id)
+            for (provide in b.provides){
+                val source = "datapack/$id/data/$provide"
+                extractFolderFromInner(source, target.absolutePathString())
+            }
         }
         for (p in packages.filter { entry -> entry.value }.keys){
             val target = targetRoot.resolve(p.id)
             for (provide in p.provides){
-                val source = "$id/data/$provide"
+                val source = "datapack/$id/data/$provide"
                 extractFolderFromInner(source, target.absolutePathString())
             }
         }
@@ -95,19 +101,19 @@ class Module(var id: String) {
             for ((id, mjson) in json) {
                 mjson as JSONObject
                 val module = Module(id)
-                val base = mjson.getJSONArray("base")
-                for (i in 0..<base.size) {
-                    module.base.add(base.getString(i))
+                val base = mjson.getJSONObject("base")
+                for (i in base) {
+                    module.base.add(Package(i.key).apply { provides.addFirst(i.value as String) })
                 }
-                val packages = mjson.getJSONObject("packages")
+                val packages = mjson.getJSONObject("packages")?: continue
                 for ((key, value) in packages) {
                     if(value is String){
                         val qwq = Package(key)
                         qwq.provides = listOf(value)
-                        module.packages[qwq] = true
+                        module.packages[qwq] = false
                     }else if(value is JSONObject){
                         val `package` = Package(key)
-                        module.packages[`package`] = true
+                        module.packages[`package`] = false
                         `package`.depends = value.getJSONArray("depends").map { it as String }
                         `package`.conflict = value.getJSONArray("conflict").map { it as String }
                         `package`.provides = value.getJSONArray("provides").map { it as String }

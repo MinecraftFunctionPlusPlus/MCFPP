@@ -1,5 +1,6 @@
 package top.mcfpp.core.lang
 
+import top.mcfpp.Project
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
@@ -50,6 +51,7 @@ open class MCFloat : MCNumber<Float> {
         int0 = MCInt(name).setObj(SbObject.MCS_float_int0) as MCInt
         int1 = MCInt(name).setObj(SbObject.MCS_float_int1) as MCInt
         exp = MCInt(name).setObj(SbObject.MCS_float_exp) as MCInt
+        Project.enableModulePackage("math.float", "stdlib")
     }
 
     /**
@@ -61,6 +63,7 @@ open class MCFloat : MCNumber<Float> {
         int0 = MCInt(b.int0)
         int1 = MCInt(b.int1)
         exp = MCInt(b.exp)
+        Project.enableModulePackage("math.float", "stdlib")
     }
 
     override var type: MCFPPType = MCFPPBaseType.Float

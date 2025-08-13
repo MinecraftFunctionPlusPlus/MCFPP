@@ -1,7 +1,6 @@
 package top.mcfpp.io
 
 import com.alibaba.fastjson2.JSON
-import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.io.FileUtils.delAllFile
 import top.mcfpp.model.Namespace
@@ -56,10 +55,10 @@ object DatapackCreator {
         delAllFile(File("$path/${Project.config.name}"))
 
         LogProcessor.debug("Copy libs...")
-        if(!CompileSettings.ignoreStdLib){
-            //标准库
-            delAllFile(File("$path/Imports"))
-        }
+        //标准库
+        delAllFile(File("$path/Imports"))
+        //新建文件夹
+        File("$path/Imports/data").mkdirs()
         //复制库
         for(module in Project.modules){
             module.extract(Path("$path/Imports/data"))

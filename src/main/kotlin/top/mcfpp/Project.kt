@@ -57,6 +57,22 @@ object Project {
 
     var modules = ArrayList<Module>()
 
+    fun enableModulePackage(packageName: String, moduleName: String? = null){
+        if(moduleName == null){
+            for (module in modules){
+                for (p in module.packages){
+                    if(p.key.id == packageName) module.packages[p.key] = true
+                }
+            }
+        }else{
+            modules.filter { it.id == moduleName }.forEach {
+                for (p in it.packages){
+                    if(p.key.id == packageName) it.packages[p.key] = true
+                }
+            }
+        }
+    }
+
     inline fun <T> withCompilationContext(ctx: ParserRuleContext, block: () -> T): T {
         Project.ctx.addFirst(ctx)
         try {
@@ -387,9 +403,9 @@ object Project {
             LibBinReader.readFromStream(inputStream)
 
             //模块信息读取
-            val jsonStream = ResourceReader::class.java.classLoader.getResourceAsStream("datapack/stdlib/module.json")
+            val jsonStream = ResourceReader::class.java.classLoader.getResourceAsStream("datapack/module.json")
             if (jsonStream == null) {
-                LogProcessor.error("Cannot find module file at: datapack/stdlib/module.json")
+                LogProcessor.error("Cannot find module file at: datapack/module.json")
                 return
             }
             val json = jsonStream.reader().readText()
