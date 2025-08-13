@@ -1,2 +1,0 @@
-#math:3vec/_print
-tellraw @a [{"text":"(3vec) @s: ["},{"score":{"name":"@s","objective":"3vec_x"}},{"text":","},{"score":{"name":"@s","objective":"3vec_y"}},{"text":","},{"score":{"name":"@s","objective":"3vec_z"}},{"text":"]"}]

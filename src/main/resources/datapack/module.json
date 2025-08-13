@@ -1,0 +1,24 @@
+{
+    "stdlib": {
+        "base": {
+            "math": "math",
+            "minecraft": "minecraft",
+            "mcfpp.dynamic": "mcfpp.dynamic",
+            "mcfpp.dynamic.util": "mcfpp.dynamic.util",
+            "mcfpp.lang": "mcfpp.lang"
+        },
+        "packages": {
+            "math.3vec": "math.3vec",
+            "math.3vec_float": "math.3vec_float",
+            "math.float": "math.float",
+            "math.list": "math.list",
+            "math.set": "math.set"
+        }
+    },
+    "lang": {
+        "base": {
+            "mcfpp": "mcfpp",
+            "mcfpp.lang": "mcfpp.lang"
+        }
+    }
+}

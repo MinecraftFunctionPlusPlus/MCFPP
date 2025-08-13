@@ -8,6 +8,7 @@ import org.antlr.v4.runtime.ParserRuleContext
 import org.antlr.v4.runtime.tree.ParseTree
 import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
+import org.apache.tools.zip.ZipFile
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
@@ -28,6 +29,8 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionTag
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.Module
+import top.mcfpp.util.ModuleType
 import top.mcfpp.util.Utils
 import java.io.File
 import java.io.FileReader
@@ -51,6 +54,8 @@ object Project {
     var config = ProjectConfig()
 
     val ctx: ArrayDeque<ParserRuleContext> = ArrayDeque()
+
+    var modules = ArrayList<Module>()
 
     inline fun <T> withCompilationContext(ctx: ParserRuleContext, block: () -> T): T {
         Project.ctx.addFirst(ctx)
@@ -297,39 +302,114 @@ object Project {
             val url = Paths.get(jar).toUri().toURL()
             classLoader = URLClassLoader(arrayOf(url), classLoader)
         }
+
+
+        fun readFromJar(path: String){
+            val jarFile = JarFile(path)
+            if(!Path(path).exists()){
+                LogProcessor.warn("Cannot find jar at: $path")
+                return
+            }
+            val jarEntry = jarFile.getJarEntry("datapack/bin.mclib")
+            if (jarEntry != null) {
+                jarFile.getInputStream(jarEntry).use {
+                    LibBinReader.readFromStream(it)
+                }
+            }else{
+                LogProcessor.warn("Cannot find lib file at: ${jarFile.name}")
+            }
+            val moduleEntry = jarFile.getJarEntry("datapack/module.json")
+            if (moduleEntry != null) {
+                jarFile.getInputStream(moduleEntry).use {stream ->
+                    val json = stream.reader().readText()
+                    val jsonObject: JSONObject = JSONObject.parse(json) as JSONObject
+                    modules += Module.fromJson(jsonObject).onEach { it.type = ModuleType.JAR }
+                }
+            }else{
+                LogProcessor.warn("Cannot find module.json at: ${jarFile.name}")
+            }
+        }
+
+        fun readFromDirectory(directory: String){
+            val libFile = File(directory, "bin.mclib")
+            if (libFile.exists()) {
+                libFile.inputStream().use {
+                    LibBinReader.readFromStream(it)
+                }
+            }else{
+                LogProcessor.warn("Cannot find lib file at: $directory")
+            }
+            val moduleFile = File(directory, "module.json")
+            if (moduleFile.exists()) {
+                moduleFile.inputStream().use {stream ->
+                    val json = stream.reader().readText()
+                    val jsonObject: JSONObject = JSONObject.parse(json) as JSONObject
+                    modules += Module.fromJson(jsonObject).onEach { it.type = ModuleType.DIR }
+                }
+            }else{
+                LogProcessor.warn("Cannot find module.json at: $directory")
+            }
+        }
+
+        fun readFromZip(path: String){
+            val zipFile = ZipFile(path)
+            if(!Path(path).exists()){
+                LogProcessor.warn("Cannot find zip at: $path")
+                return
+            }
+            val zipEntry = zipFile.getEntry("datapack/bin.mclib")
+            if (zipEntry!= null) {
+                zipFile.getInputStream(zipEntry).use {
+                    LibBinReader.readFromStream(it)
+                }
+            }
+            val moduleEntry = zipFile.getEntry("datapack/module.json")
+            if (moduleEntry != null) {
+                zipFile.getInputStream(moduleEntry).use {stream ->
+                    val json = stream.reader().readText()
+                    val jsonObject: JSONObject = JSONObject.parse(json) as JSONObject
+                    modules += Module.fromJson(jsonObject).onEach { it.type = ModuleType.ZIP }
+                }
+            }else{
+                LogProcessor.warn("Cannot find module.json at: ${zipFile.name}")
+            }
+        }
+
         //默认的
         if(!CompileSettings.ignoreStdLib){
-            LogProcessor.info("Reading lib file at: lib/bin.mclib")
-            val inputStream = ResourceReader::class.java.classLoader.getResourceAsStream("lib/bin.mclib")
+            LogProcessor.info("Reading lib file at: datapack/bin.mclib")
+            val inputStream = ResourceReader::class.java.classLoader.getResourceAsStream("datapack/bin.mclib")
 
             if (inputStream == null) {
-                LogProcessor.error("Cannot find lib file at: lib/bin.mclib")
+                LogProcessor.error("Cannot find lib file at: datapack/bin.mclib")
                 return
             }
             LibBinReader.readFromStream(inputStream)
+
+            //模块信息读取
+            val jsonStream = ResourceReader::class.java.classLoader.getResourceAsStream("datapack/stdlib/module.json")
+            if (jsonStream == null) {
+                LogProcessor.error("Cannot find module file at: datapack/stdlib/module.json")
+                return
+            }
+            val json = jsonStream.reader().readText()
+            val jsonObject: JSONObject = JSONObject.parse(json) as JSONObject
+            modules += Module.fromJson(jsonObject).onEach { it.type = ModuleType.INNER }
+
         }
         //写入缓存
         for (include in config.includes) {
-            LogProcessor.info("Reading lib file at: $include")
-            val filePath = if(!include.endsWith(".jar")) include else "$include.jar"
-            val file = File(filePath)
-            if(file.exists()){
-                try {
-                    JarFile(filePath).use { jarFile ->
-                        val jarEntry = jarFile.getJarEntry("lib/bin.mclib")
-                        if (jarEntry != null) {
-                            jarFile.getInputStream(jarEntry).use {
-                                LibBinReader.readFromStream(it)
-                            }
-                        } else {
-                            LogProcessor.error("Cannot find lib file at: ${file.absolutePath}")
-                        }
-                    }
-                } catch (e: IOException) {
-                    LogProcessor.error("Error while reading lib file at ${file.absolutePath}: $e")
+            LogProcessor.info("Reading lib at: $include")
+            try {
+                if(include.endsWith(".jar")){
+                    readFromJar(include)
+                }else if(include.endsWith(".zip")){
+                    readFromZip(include)
+                }else{
+                    readFromDirectory(include)
                 }
-            }else{
-                LogProcessor.error("Cannot find jar at: ${file.absolutePath}")
+            } catch (e: IOException) {
+                LogProcessor.error("Error while reading lib file at $include: $e")
             }
         }
         //实例化所有类中的成员字段

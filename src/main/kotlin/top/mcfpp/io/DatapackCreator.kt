@@ -1,28 +1,25 @@
 package top.mcfpp.io
 
 import com.alibaba.fastjson2.JSON
-import com.alibaba.fastjson2.JSONObject
 import top.mcfpp.CompileSettings
 import top.mcfpp.Project
-import top.mcfpp.model.*
+import top.mcfpp.io.FileUtils.delAllFile
+import top.mcfpp.model.Namespace
+import top.mcfpp.model.Native
+import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
-import top.mcfpp.model.compound.Class
 import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper.toSnakeCase
 import top.mcfpp.util.Utils
-import java.io.*
+import java.io.File
+import java.io.IOException
 import java.nio.file.Files
 import java.nio.file.Paths
-import java.nio.file.StandardCopyOption
-import java.util.jar.JarEntry
-import java.util.jar.JarFile
-import java.util.stream.Collectors
-import kotlin.io.path.absolutePathString
-import kotlin.io.path.name
+import kotlin.io.path.Path
 
 
 /**
@@ -57,44 +54,25 @@ object DatapackCreator {
         LogProcessor.debug("Clearing output folder...")
         //清空原输出文件夹
         delAllFile(File("$path/${Project.config.name}"))
+
         LogProcessor.debug("Copy libs...")
         if(!CompileSettings.ignoreStdLib){
             //标准库
-            delAllFile(File("$path/MCFPP"))
-            extractFolder("data","$path/MCFPP/data")
-            extractFile("pack.mcmeta", "$path/MCFPP/pack.mcmeta")
-            //标准库2
-            extractFolder("lib/mcfpp", "$path/MCFPP")
+            delAllFile(File("$path/Imports"))
         }
         //复制库
-        for (lib in Project.config.includes){
-            val filePath = if(!lib.endsWith("/bin.mclib")) {
-                "$lib/bin.mclib"
-            }else{
-                lib
-            }
-            //逐行读取
-            val fileReader = FileReader(filePath)
-            val jsonString = fileReader.readText()
-            fileReader.close()
-            //解析json
-            val json = JSONObject.parse(jsonString) as JSONObject
-            val src = json.getString("src")
-            if(src != null){
-                val scrPath = filePath.substring(0,filePath.lastIndexOf(".")) + src
-                val qwq = Paths.get(scrPath)
-                // 获取所有子文件夹
-                val subdirectories = Files.walk(qwq, 1)
-                    .filter(Files::isDirectory)
-                    .skip(1)
-                    .collect(Collectors.toList())
-                for (subdirectory in subdirectories) {
-                    //复制文件夹
-                    delAllFile(File(path + "\\" + subdirectory.name))
-                    copyAllFiles(subdirectory.absolutePathString(),path + "\\" + subdirectory.name)
-                }
-            }
+        for(module in Project.modules){
+            module.extract(Path("$path/Imports/data"))
         }
+        val importMcMeta = DatapackMcMeta(
+            DatapackMcMeta.Pack(
+                Utils.getVersion(Project.config.version),
+                "MCFPP imports"
+            )
+        )
+        val importMcMetaJson: String = JSON.toJSONString(importMcMeta)
+        Files.write(Paths.get("$path/Imports/pack.mcmeta"), importMcMetaJson.toByteArray())
+
         LogProcessor.debug("Creating datapack...")
         //生成
         val datapackMcMeta = DatapackMcMeta(
@@ -212,96 +190,6 @@ object DatapackCreator {
 
         namespace.value.field.forEachObject {
             genObject(currPath, it)
-        }
-    }
-
-    /**
-     * 删除原有的数据包中的全部内容。
-     * @param directory 文件或文件夹
-     */
-    private fun delAllFile(directory: File) {
-        if (!directory.isDirectory) {
-            directory.delete()
-        } else {
-            val files: Array<out File>? = directory.listFiles()
-            // 空文件夹
-            if (files!!.isEmpty()) {
-                directory.delete()
-                return
-            }
-            // 删除子文件夹和子文件
-            for (file in files) {
-                    if (file.isDirectory) {
-                        delAllFile(file)
-                    } else {
-                        file.delete()
-                    }
-                }
-
-            // 删除文件夹本身
-            directory.delete()
-        }
-    }
-
-    fun copyAllFiles(sourcePath: String, targetPath: String) {
-        val source = File(sourcePath)
-        val target = File(targetPath)
-        if (!source.exists() || !source.isDirectory) return
-        if (!target.exists()) target.mkdirs()
-        source.listFiles()?.forEach { file ->
-            val targetFile = File(target, file.name)
-            if (file.isDirectory) {
-                copyAllFiles(file.absolutePath, targetFile.absolutePath)
-            } else {
-                file.copyTo(targetFile, overwrite = true)
-            }
-        }
-    }
-
-
-    fun extractFolder(folderInJar: String, outputDir: String) {
-        val f = File(DatapackCreator::class.java.getProtectionDomain().codeSource.location.toURI())
-        if(!f.isFile){
-            copyAllFiles("src/main/resources/$folderInJar", outputDir)
-            return
-        }
-        JarFile(f).use { jarFile ->
-            jarFile.stream()
-                .filter { entry: JarEntry ->
-                    entry.name.startsWith(folderInJar) && !entry.isDirectory
-                }
-                .forEach { entry: JarEntry ->
-                    try {
-                        jarFile.getInputStream(entry).use { `is` ->
-                            val outputPath =
-                                Paths.get(outputDir, entry.name.substring(folderInJar.length))
-                            Files.createDirectories(outputPath)
-                            Files.copy(`is`, outputPath, StandardCopyOption.REPLACE_EXISTING)
-                        }
-                    } catch (e: IOException) {
-                        e.printStackTrace()
-                    }
-                }
-        }
-    }
-
-    fun extractFile(fileInJar: String, outputFile: String) {
-        // 尝试从 ClassLoader 获取资源
-        val inputStream: InputStream? = DatapackCreator::class.java.classLoader.getResourceAsStream(fileInJar)
-            ?: run {
-                // 如果资源不存在，尝试从文件系统加载
-                val file = File(fileInJar)
-                if (file.exists()) file.inputStream() else null
-            }
-
-        // 如果资源仍未找到，抛出异常
-        inputStream ?: throw FileNotFoundException("File $fileInJar not found in JAR or file system.")
-
-        // 确保目标目录存在，并将文件写入目标路径
-        inputStream.use { input ->
-            val outputPath = Paths.get(outputFile)
-            Files.createDirectories(outputPath.parent) // 确保目标目录存在
-            Files.copy(input, outputPath, StandardCopyOption.REPLACE_EXISTING)
         }
     }
 

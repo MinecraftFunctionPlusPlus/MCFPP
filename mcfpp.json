@@ -2,7 +2,7 @@
     "sourcePath": "src/main/mcfpp",
     "description": "MCFPP Standard Library",
     "namespace": "mcfpp",
-    "targetPath": "src/main/resources/lib",
+    "targetPath": "src/main/resources/lang",
     "args": [
         "-ignoreStdLib",
         "-isLib",

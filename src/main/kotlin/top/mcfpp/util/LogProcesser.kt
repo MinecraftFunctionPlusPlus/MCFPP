@@ -219,7 +219,7 @@ object LogProcessor {
     }
 
     // 扩展方法：查找字符串在输入流中的索引
-    fun CharStream.indexOf(char: String, fromIndex: Int): Int {
+    private fun CharStream.indexOf(char: String, fromIndex: Int): Int {
         for (i in fromIndex..<this.size()) {
             if (this.getText(Interval.of(i, i)) == char) {
                 return i
@@ -228,7 +228,7 @@ object LogProcessor {
         return this.size() // 如果找不到，则返回流的末尾
     }
 
-    fun CharStream.lastIndexOf(char: String, fromIndex: Int): Int {
+    private fun CharStream.lastIndexOf(char: String, fromIndex: Int): Int {
         for (i in fromIndex downTo 0) {
             if (this.getText(Interval.of(i, i)) == char) {
                 return i
