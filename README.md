@@ -1,66 +1,60 @@
 ![](https://user-images.githubusercontent.com/90548686/236462051-b901f99c-bdef-435c-8ca2-0dda37b25285.png)
 [简体中文](./README_CN.md)
 ------------
+# Introduction
 
-# Introduce
+MCFPP is a new object-oriented language that compiles into Minecraft data packs. It aims to simplify data pack creation with syntax similar to C-based languages, incorporating common programming concepts for convenience.
 
-MCFPP is a brand new objected-oriented language that can be compiled into Minecraft Datapack. It aims to write datapacks in a syntax similar to C language, and introduces commonly used concepts in programming, thereby making the writing of datapacks more efficient.
+**Note: This project is in early development. Features may change, and library functions are incomplete.**
 
-**This project is still in the early stage of development and cannot be used for actual use. Some functions have not been implemented, and features may change in future versions. The library is also not complete.**
-
-# QuickStart
+## Quick Start
 
 [MCFPP API](https://www.mcfpp.top)
 
-# Relative Projects
+## [Future Plans](./TODO_CN.md)
 
-## [MCSharp](https://github.com/Voziv/MCSharp)
-
-MCSharp is a CSharp library. Using MCSharp, developers can develop datapacks using CSharp. However, this project has been stopped due to technical issues. MCFPP inherits part of the ideas of MCSharp.
-
-## [justMCF](https://github.com/XiLaiTL/JustMCF)
-
-JustMCF is a project to simplify mcfunction projects. Using JustMCF, you can not only use the original commands, but also use the simplified commands designed by the project, which can make your commands more concise and efficient.
-
-# [Update Plan](./TODO.md)
 * [ ] Code optimization
-* [ ] Garbage collection mechanism
-* [ ] Operator overload
-* [ ] Sandbox
-*    * [ ] Syntactic sugar form of native
-* [ ] Versioned compilation
 * [ ] Basic library
 
+## Related Projects
 
-# Features
+### [MCSharp](https://github.com/Voziv/MCSharp)
 
-## Basic logical statements
+MCSharp is a CSharp library for data pack development, now discontinued due to technical issues. MCFPP inherits some of its ideas.
 
-```
+### [JustMCF](https://github.com/XiLaiTL/JustMCF)
+
+JustMCF simplifies mcfunction projects, allowing both original and streamlined commands for efficiency.
+
+## Features
+
+### Basic Logic Statements
+
+```cpp
 func example(){
-  int i = @s.pos[0];
+  var i = @s.pos[0];
   if(i > 0){
-    execute(as = @s) say("Hello Minecraft!");
+    execute(as = @s) {
+      say("Hello Minecraft!");
+    }
   }
 }
 ```
 
-## Object-oriented programming
+### Object-Oriented Programming
 
-```
+```cpp
 class Example{
-  int i{
+  var i as int {
     get {
       return field * 2;
     }
-    
     set {
       field = value;
     }
   };
   
-  
-  constructor(int i){
+  constructor(i as int){
     this.i = i;
   }
   
@@ -70,9 +64,9 @@ class Example{
 }
 ```
 
-## Libraries
+### Library Calls
 
-```
+```cpp
 import mcfpp.math;
 
 void example{
@@ -83,30 +77,34 @@ void example{
 }
 ```
 
-## Generics
+### Generics
 
-```
-class Example<type T>{
-  T i;
-  public Example(T i){
+```cpp
+class Example<T as type>{
+  var i as T;
+  
+  public Example(i as T){
     this.i = i;
   }
+  
   public func print(){
     print(this.i);
   }
 }
 
-func test<type T>(T i){
+func test<T as Type>(i as T){
     print(i);
 }
 ```
 
-## Original Minecraft Command
+### Direct Use of Minecraft Commands
 
-```
+```cpp
+int qwq = "Minecraft";
+
 func test(){
-  /execute as @a run say Hello Minecraft!
+  /execute as @a run say Hello ${qwq}!
 }
 ```
 
-To see more features, please refer to the [MCFPP API](https://www.mcfpp.top)
+For more syntax information, refer to the [MCFPP API](https://www.mcfpp.top).

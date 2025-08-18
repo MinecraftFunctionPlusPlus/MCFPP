@@ -50,10 +50,25 @@ publishing {
             groupId = GROUP
             artifactId = "mcfpp-gradle"
             version = VERSION
+            pom {
+                name.set("mcfpp-gradle")
+                description.set("Gradle support for MCFPP")
+            }
         }
     }
-
     repositories {
         mavenLocal()
+        maven {
+            val baseUrl = "https://nexus.mcfpp.top"
+            url = if (version.toString().endsWith("SNAPSHOT")) {
+                uri("$baseUrl/repository/maven-snapshots/")
+            }else{
+                uri("$baseUrl/repository/maven-releases/")
+            }
+            credentials {
+                username = project.findProperty("NEXUS_USERNAME") as String
+                password = project.findProperty("NEXUS_PASSWORD") as String
+            }
+        }
     }
 }
