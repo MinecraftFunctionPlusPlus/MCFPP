@@ -100,7 +100,7 @@ func test<T as Type>(i as T){
 ### Direct Use of Minecraft Commands
 
 ```cpp
-int qwq = "Minecraft";
+var qwq = "Minecraft";
 
 func test(){
   /execute as @a run say Hello ${qwq}!
