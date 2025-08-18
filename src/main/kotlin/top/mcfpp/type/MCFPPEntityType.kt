@@ -10,7 +10,7 @@ import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.lib.EntitySelector
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.compound.CompoundData
-import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.property.AnonymousNativeMutator
 import top.mcfpp.model.property.Property
 import top.mcfpp.util.LogProcessor
@@ -216,7 +216,7 @@ class MCFPPEntityType(val limit: Int? = null, val types: List<String>? = null, v
                 })))
                 addMember(Property("predicate", null, AnonymousNativeMutator { caller, v ->
                     val selector = (caller as SelectorVar).value
-                    val value = checkParamType(v, GlobalField.getTemplate("mcfpp.minecraft.resource", "LootTablePredicate")!!.getType())
+                    val value = checkParamType(v, GlobalScope.getTemplate("mcfpp.minecraft.resource", "LootTablePredicate")!!.getType())
                     if(value is DataTemplateObject){
                         selector.predicate(value, false)
                     }
@@ -224,7 +224,7 @@ class MCFPPEntityType(val limit: Int? = null, val types: List<String>? = null, v
                 }))
                 addMember(Property("predicateN", null, AnonymousNativeMutator { caller, v ->
                     val selector = (caller as SelectorVar).value
-                    val value = checkParamType(v, GlobalField.getTemplate("mcfpp.minecraft.resource", "LootTablePredicate")!!.getType())
+                    val value = checkParamType(v, GlobalScope.getTemplate("mcfpp.minecraft.resource", "LootTablePredicate")!!.getType())
                     if(value is DataTemplateObject){
                         selector.predicate(value, true)
                     }

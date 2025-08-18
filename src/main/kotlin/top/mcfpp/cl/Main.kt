@@ -4,7 +4,7 @@ import org.apache.logging.log4j.core.config.ConfigurationSource
 import org.apache.logging.log4j.core.config.Configurator
 import top.mcfpp.MCFPP
 import top.mcfpp.core.lang.UnresolvedVar
-import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.util.UwU
 import java.io.FileInputStream
 import java.time.Instant
@@ -17,7 +17,7 @@ fun main(){
     }catch (e:Exception){
         println("Failed to load log4j2.xml")
     }
-    for(namespace in GlobalField.libNamespaces.values){
+    for(namespace in GlobalScope.libNamespaces.values){
         namespace.field.forEachClass { c ->
             run {
                 for (v in c.field.allVars){
@@ -28,7 +28,7 @@ fun main(){
             }
         }
     }
-    GlobalField.init()
+    GlobalScope.init()
     println("MCFPP ${MCFPP.VERSION} (${Instant.now()})")
     println("Tips: " + UwU.tip) //生成tips
     println("**MCFPP Interpreter is under RECONSTRUCTION**")

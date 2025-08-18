@@ -13,8 +13,8 @@ import top.mcfpp.model.Generic
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.GenericClass
-import top.mcfpp.model.field.GlobalField
-import top.mcfpp.model.field.MCFPPFuncGetter
+import top.mcfpp.model.scope.GlobalScope
+import top.mcfpp.model.scope.MCFPPFuncGetter
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.model.function.NoStackFunction
@@ -425,7 +425,7 @@ class MCFPPExprVisitor(
         //获取函数
         val p = ctx.namespaceID().text.splitNamespaceID()
         val func = if(currSelector == null){
-            GlobalField.getFunction(p.first, p.second, readOnlyArgs, normalArgs)
+            GlobalScope.getFunction(p.first, p.second, readOnlyArgs, normalArgs)
         }else{
             if(p.first != null){
                 LogProcessor.warn("Invalid namespace usage ${p.first} in function call ")
@@ -446,9 +446,9 @@ class MCFPPExprVisitor(
         }
         //可能是类的构造函数
         var cls: Class? = if(ctx.arguments().readOnlyArgs() != null){
-            GlobalField.getClass(p.first, p.second ,readOnlyArgs.map { it.type })
+            GlobalScope.getClass(p.first, p.second ,readOnlyArgs.map { it.type })
         }else{
-            GlobalField.getClass(p.first, p.second)
+            GlobalScope.getClass(p.first, p.second)
         }
         if (cls != null) {
             if (cls is GenericClass) {
@@ -469,7 +469,7 @@ class MCFPPExprVisitor(
             return ptr
         }
         //可能是模板的构造函数
-        val template: DataTemplate? = GlobalField.getTemplate(p.first, p.second)
+        val template: DataTemplate? = GlobalScope.getTemplate(p.first, p.second)
         if(template != null) {
             val init = DataTemplateObjectConcrete(template.getType().defaultValueVar() as DataTemplateObjectConcrete)
             val constructor = template.getConstructorByString(FunctionParam.getArgTypeNames(normalArgs))

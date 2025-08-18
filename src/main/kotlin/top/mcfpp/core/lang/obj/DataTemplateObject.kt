@@ -9,8 +9,8 @@ import top.mcfpp.core.lang.nbt.NBTDictionaryConcrete
 import top.mcfpp.mni.annotation.ConcreteOnly
 import top.mcfpp.model.Member
 import top.mcfpp.model.compound.DataTemplate
-import top.mcfpp.model.field.CompoundDataField
-import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.scope.CompoundDataScope
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.nbt.tags.CompoundTag
@@ -31,7 +31,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
 
     val templateType: DataTemplate
 
-    var instanceField: CompoundDataField
+    var instanceField: top.mcfpp.model.scope.CompoundDataScope
 
     final override var type: MCFPPType
 
@@ -342,7 +342,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     }
 
     fun isInstance(namespace: String?, templateID: String): Boolean{
-        return isInstance(GlobalField.getTemplate(namespace, templateID)!!)
+        return isInstance(GlobalScope.getTemplate(namespace, templateID)!!)
     }
 }
 

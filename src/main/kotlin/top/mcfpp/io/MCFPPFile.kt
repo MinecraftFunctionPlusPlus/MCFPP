@@ -12,9 +12,10 @@ import org.antlr.v4.runtime.tree.ParseTree
 import top.mcfpp.Project
 import top.mcfpp.antlr.*
 import top.mcfpp.model.Namespace
-import top.mcfpp.model.field.FileField
-import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.scope.FileScope
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.FunctionTag
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper.pathToNamespace
 import top.mcfpp.util.StringHelper.toSnakeCase
@@ -29,7 +30,7 @@ import java.nio.file.attribute.BasicFileAttributes
  */
 class MCFPPFile : File {
 
-    val field: FileField = FileField()
+    val field: FileScope = FileScope()
 
     val unsolvedImports = hashMapOf<String, String>()
 
@@ -40,22 +41,23 @@ class MCFPPFile : File {
      */
     var namespace: Namespace
 
-    //TODO 同名文件的顶级函数之间的命名冲突
-    val topFunction: Function = Function(this.name.toSnakeCase(), context = null)
+    val topFunction: Function = Function(this.name.toSnakeCase() + "__top__", context = null).apply {
+        tags.add(FunctionTag.LOAD)
+    }
 
     var syntaxError = false
 
     constructor(path: String) : super(path) {
         val n = Project.config.sourcePath!!.toAbsolutePath().relativize(this.toPath().toAbsolutePath().parent).toString()
         val str = Project.config.rootNamespace + "." + n.pathToNamespace().toSnakeCase()
-        namespace = GlobalField.getOrCreateNamespace(str)
+        namespace = GlobalScope.getOrCreateNamespace(str)
     }
 
     constructor(file: File) : this(file.absolutePath)
 
     internal constructor(): super("."){
         val str = Project.config.rootNamespace + ".test"
-        namespace = GlobalField.getOrCreateNamespace(str)
+        namespace = GlobalScope.getOrCreateNamespace(str)
     }
 
     fun token(): CommonTokenStream {
@@ -119,7 +121,7 @@ class MCFPPFile : File {
         Project.currNamespace = namespace.identifier
         //引用
         for (n in unsolvedImports){
-            val qwq = GlobalField.getNamespace(n.key)
+            val qwq = GlobalScope.getNamespace(n.key)
             if(qwq == null){
                 LogProcessor.error("Namespace '$n' not found")
                 continue

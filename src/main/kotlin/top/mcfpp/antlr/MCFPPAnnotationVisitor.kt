@@ -9,7 +9,7 @@ import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.ObjectClass
 import top.mcfpp.model.compound.ObjectDataTemplate
-import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.util.LogProcessor
@@ -23,7 +23,7 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
     override fun visitAnnotation(ctx: mcfppParser.AnnotationContext): Unit = withCompilationContext(ctx) {
         //获取注解
         val qwq = ctx.Identifier().text.splitNamespaceID()
-        val annotation = GlobalField.getAnnotation(qwq.first, qwq.second)
+        val annotation = GlobalScope.getAnnotation(qwq.first, qwq.second)
         if(annotation == null){
             //注解不存在
             LogProcessor.error("Annotation ${ctx.Identifier().text} not found")
@@ -45,7 +45,7 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
     override fun visitTemplateDeclaration(ctx: mcfppParser.TemplateDeclarationContext): Unit = withCompilationContext(ctx) {
         //注册模板
         val id = ctx.classWithoutNamespace().text
-        val namespace1 = GlobalField.localNamespaces[Project.currNamespace]!!
+        val namespace1 = GlobalScope.localNamespaces[Project.currNamespace]!!
         val template = if(namespace1.field.hasTemplate(id)){
             namespace1.field.getTemplate(id)!!
         }else{
@@ -64,7 +64,7 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
     override fun visitObjectTemplateDeclaration(ctx: mcfppParser.ObjectTemplateDeclarationContext): Unit = withCompilationContext(ctx) {
         //注册模板
         val id = ctx.classWithoutNamespace().text
-        val namespace1 = GlobalField.localNamespaces[Project.currNamespace]!!
+        val namespace1 = GlobalScope.localNamespaces[Project.currNamespace]!!
         val objectTemplate = namespace1.field.getObject(id)
         if(objectTemplate !is ObjectDataTemplate){
             throw UndefinedException("Template should have been defined: $id")
@@ -81,7 +81,7 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
 
     override fun visitObjectClassDeclaration(ctx: mcfppParser.ObjectClassDeclarationContext): Unit = withCompilationContext(ctx) {
         val id = ctx.classWithoutNamespace().text
-        val namespace = GlobalField.localNamespaces[Project.currNamespace]!!
+        val namespace = GlobalScope.localNamespaces[Project.currNamespace]!!
         if(ctx.readOnlyParams() != null){
             return
         }
@@ -98,7 +98,7 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
 
     override fun visitClassDeclaration(ctx: mcfppParser.ClassDeclarationContext): Unit = withCompilationContext(ctx) {
         val id = ctx.classWithoutNamespace().text
-        val namespace = GlobalField.localNamespaces[Project.currNamespace]!!
+        val namespace = GlobalScope.localNamespaces[Project.currNamespace]!!
         if(ctx.readOnlyParams() != null){
             return
         }
@@ -121,7 +121,7 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
         //获取函数对象
         val types = ctx.functionParams()?.let { FunctionParam.parseReadonlyAndNormalParamTypes(it) }
         //获取缓存中的对象
-        val f = GlobalField.getFunction(
+        val f = GlobalScope.getFunction(
             Project.currNamespace,
             ctx.Identifier().text,
             types?.first?.map { it.build("") }?:ArrayList(),

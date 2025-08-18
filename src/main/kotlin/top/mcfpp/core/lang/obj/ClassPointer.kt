@@ -11,7 +11,7 @@ import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.Member
 import top.mcfpp.model.compound.Class
-import top.mcfpp.model.field.CompoundDataField
+import top.mcfpp.model.scope.CompoundDataScope
 import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NoStackFunction
@@ -36,7 +36,7 @@ open class ClassPointer : Var<ClassPointer> {
 
     var isNull : Boolean = true
 
-    var instanceField: CompoundDataField
+    var instanceField: top.mcfpp.model.scope.CompoundDataScope
 
     /**
      * 指针对应的类的标识符

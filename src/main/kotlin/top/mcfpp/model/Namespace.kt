@@ -7,13 +7,12 @@ import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.model.compound.UnsolvedClass
 import top.mcfpp.model.compound.UnsolvedTemplate
-import top.mcfpp.model.field.GlobalField
-import top.mcfpp.model.field.IField
-import top.mcfpp.model.field.NamespaceField
-import top.mcfpp.model.field.SimpleFieldWithType
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.GenericFunction
 import top.mcfpp.model.function.NativeFunction
+import top.mcfpp.model.scope.GlobalScope
+import top.mcfpp.model.scope.NamespaceScope
+import top.mcfpp.model.scope.SimpleScopeWithType
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPGenericParamType
 import top.mcfpp.type.MCFPPPrivateType
@@ -28,7 +27,7 @@ import java.lang.reflect.Modifier
 
 class Namespace(val identifier: String): Serializable, FieldContainer {
 
-    val field : NamespaceField = NamespaceField()
+    val field : NamespaceScope = NamespaceScope()
 
     override val prefix get() =  "namespace_$identifier"
 
@@ -105,7 +104,7 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
         Project.currNamespace = this.identifier
         val methods = cls.methods
         //获取import方法
-        val simpleFieldWithType = SimpleFieldWithType.getTypeScope()
+        val simpleFieldWithType = SimpleScopeWithType.getTypeScope()
         for(method in methods){
             if(method.name == "importToMNI"){
                 if(method.parameterCount != 0){
@@ -116,7 +115,7 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
                     @Suppress("UNCHECKED_CAST") val imports = method.invoke(null) as Array<String>
                     for(import in imports){
                         val nsp = import.splitNamespaceID()
-                        val qwq = nsp.first?.let { GlobalField.getNamespace(nsp.first!!)}
+                        val qwq = nsp.first?.let { GlobalScope.getNamespace(nsp.first!!)}
                         if(qwq == null){
                             LogProcessor.error("Namespace '${nsp.first}' not found")
                             continue
@@ -224,9 +223,9 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
     }
 
     companion object {
-        val currNamespaceField: NamespaceField
-            get() = GlobalField.localNamespaces[Project.currNamespace]?.field?:
-                GlobalField.importedLibNamespaces[Project.currNamespace]?.field?:
-                GlobalField.stdNamespaces[Project.currNamespace]!!.field
+        val currNamespaceField: NamespaceScope
+            get() = GlobalScope.localNamespaces[Project.currNamespace]?.field?:
+                GlobalScope.importedLibNamespaces[Project.currNamespace]?.field?:
+                GlobalScope.stdNamespaces[Project.currNamespace]!!.field
     }
 }

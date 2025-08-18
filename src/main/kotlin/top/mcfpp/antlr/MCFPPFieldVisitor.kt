@@ -21,8 +21,8 @@ import top.mcfpp.model.Member
 import top.mcfpp.model.Member.AccessModifier
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.compound.*
-import top.mcfpp.model.field.GlobalField
-import top.mcfpp.model.field.IFieldWithType
+import top.mcfpp.model.scope.GlobalScope
+import top.mcfpp.model.scope.IScopeWithType
 import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.property.*
@@ -43,7 +43,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 
     protected var isStatic = false
 
-    protected lateinit var typeScope : IFieldWithType
+    protected lateinit var typeScope : IScopeWithType
 
     private var currClassOrTemplate: CompoundData? = null
 
@@ -53,7 +53,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
      * @return null
      */
     override fun visitCompilationUnit(ctx: mcfppParser.CompilationUnitContext): Any? = withCompilationContext(ctx) {
-        typeScope = GlobalField.localNamespaces[Project.currNamespace]!!.field
+        typeScope = GlobalScope.localNamespaces[Project.currNamespace]!!.field
         //文件结构，类和函数
         for (t in ctx.typeDeclaration()) {
             visit(t)
@@ -65,7 +65,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         Function.currFunction = NoStackFunction("", Function.nullFunction)
         //变量生成
         val fieldModifier = ctx.fieldModifier()?.text
-        val namespace = GlobalField.localNamespaces[Project.currNamespace]!!
+        val namespace = GlobalScope.localNamespaces[Project.currNamespace]!!
         if(ctx.type() == null){
             //自动判断类型
             val init: Var<*> = MCFPPExprVisitor().visitValue(ctx.value())
@@ -140,7 +140,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     override fun visitInterfaceDeclaration(ctx: mcfppParser.InterfaceDeclarationContext): Any? = withCompilationContext(ctx) {
         //注册类
         val id = ctx.classWithoutNamespace().text
-        val namespace = GlobalField.localNamespaces[Project.currNamespace]!!
+        val namespace = GlobalScope.localNamespaces[Project.currNamespace]!!
 
         if (namespace.field.hasInterface(id)) {
             //重复声明
@@ -191,7 +191,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     override fun visitClassDeclaration(ctx: ClassDeclarationContext): Any? = withCompilationContext(ctx) {
         //注册类
         val id = ctx.classWithoutNamespace().text
-        val namespace = GlobalField.localNamespaces[Project.currNamespace]!!
+        val namespace = GlobalScope.localNamespaces[Project.currNamespace]!!
         if(ctx.readOnlyParams() != null){
             //如果是泛型类，将类型实例化，但暂时不编译
             val types = ctx.readOnlyParams().parameterList().parameter().map { MCFPPType.parseFromContextNotNull(it.type(), namespace.field) }
@@ -256,7 +256,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     override fun visitObjectClassDeclaration(ctx: mcfppParser.ObjectClassDeclarationContext): Any? = withCompilationContext(ctx) {
         //注册类
         val id = ctx.classWithoutNamespace().text
-        val namespace = GlobalField.localNamespaces[Project.currNamespace]!!
+        val namespace = GlobalScope.localNamespaces[Project.currNamespace]!!
         if(ctx.readOnlyParams() != null){
             return null
         }
@@ -801,7 +801,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //不是类的成员
         f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
-        val namespace = GlobalField.localNamespaces[f.namespace]!!
+        val namespace = GlobalScope.localNamespaces[f.namespace]!!
         if (namespace.field.hasFunction(f, true)) {
             LogProcessor.error("Already defined function: " + f.namespaceID)
             Function.currFunction = Function.nullFunction
@@ -831,7 +831,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //不是类的成员
         f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
-        val namespace = GlobalField.localNamespaces[f.namespace]!!
+        val namespace = GlobalScope.localNamespaces[f.namespace]!!
         if (!namespace.field.hasFunction(f, true)) {
             namespace.field.addFunction(f,false)
         } else {
@@ -866,7 +866,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //不是类的成员
         f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
-        val namespace = GlobalField.localNamespaces[f.namespace]!!
+        val namespace = GlobalScope.localNamespaces[f.namespace]!!
         if (!namespace.field.hasFunction(f, true)) {
             f.setField(namespace.field)
             namespace.field.addFunction(f,false)
@@ -978,7 +978,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             return null
         }
         //写入域
-        val namespace = GlobalField.localNamespaces[nf.namespace]!!
+        val namespace = GlobalScope.localNamespaces[nf.namespace]!!
         //是普通的函数
         nf.ownerType = Function.Companion.OwnerType.NONE
         if (!namespace.field.hasFunction(nf, true)) {
@@ -995,7 +995,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     override fun visitTemplateDeclaration(ctx: TemplateDeclarationContext): Any? = withCompilationContext(ctx) {
         //获取注册的模板
         val id = ctx.classWithoutNamespace().text
-        val namespace1 = GlobalField.localNamespaces[Project.currNamespace]!!
+        val namespace1 = GlobalScope.localNamespaces[Project.currNamespace]!!
         val template = if(namespace1.field.hasTemplate(id)){
             namespace1.field.getTemplate(id)!!
         }else{
@@ -1007,9 +1007,9 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         for (c in ctx.className()){
             //是否存在继承
             val (namespace, identifier) = c.text.splitNamespaceID()
-            val s = GlobalField.getTemplate(namespace, identifier)
+            val s = GlobalScope.getTemplate(namespace, identifier)
             if(s == null){
-                val o = GlobalField.getObject(namespace, identifier)
+                val o = GlobalScope.getObject(namespace, identifier)
                 if(o is ObjectDataTemplate) {
                     template.extends(o)
                 }else{
@@ -1051,7 +1051,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     override fun visitObjectTemplateDeclaration(ctx: mcfppParser.ObjectTemplateDeclarationContext): Any? = withCompilationContext(ctx) {
         //注册模板
         val id = ctx.classWithoutNamespace().text
-        val namespace1 = GlobalField.localNamespaces[Project.currNamespace]!!
+        val namespace1 = GlobalScope.localNamespaces[Project.currNamespace]!!
         val objectTemplate = namespace1.field.getObject(id)
         if(objectTemplate !is ObjectDataTemplate){
             throw UndefinedException("Template should have been defined: $id")
@@ -1062,9 +1062,9 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         for (c in ctx.className()){
             //是否存在继承
             val (namespace, identifier) = c.text.splitNamespaceID()
-            val s = GlobalField.getTemplate(namespace, identifier)
+            val s = GlobalScope.getTemplate(namespace, identifier)
             if(s == null){
-                val o = GlobalField.getObject(namespace, identifier)
+                val o = GlobalScope.getObject(namespace, identifier)
                 if(o is ObjectDataTemplate) {
                     if(o == objectTemplate){
                         LogProcessor.error("Infinitive reference: $id -> $identifier")
@@ -1096,9 +1096,9 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         for (c in ctx.className()){
             //是否存在继承
             val (namespace, identifier) = c.text.splitNamespaceID()
-            val s = GlobalField.getTemplate(namespace, identifier)
+            val s = GlobalScope.getTemplate(namespace, identifier)
             if(s == null){
-                val o = GlobalField.getObject(namespace, identifier)
+                val o = GlobalScope.getObject(namespace, identifier)
                 if(o is ObjectDataTemplate) {
                     template.extends(o)
                 }else{

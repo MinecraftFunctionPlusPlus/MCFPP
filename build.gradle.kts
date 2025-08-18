@@ -64,7 +64,9 @@ dependencies {
 }
 
 tasks.shadowJar {
-    minimize()
+    minimize{
+        exclude(dependency("org.apache.logging.log4j:.*"))
+    }
 }
 
 tasks.test {

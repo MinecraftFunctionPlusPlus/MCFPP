@@ -8,7 +8,7 @@ import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.lib.*
 import top.mcfpp.model.Member
-import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.function.ClassConstructor
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPBaseType
@@ -240,9 +240,9 @@ open class Class : CompoundData {
             : Class(identifier, namespace?:Project.currNamespace) {
 
             fun getDefinedClassOrInterface(): CompoundData?{
-                var re : CompoundData? = GlobalField.getClass(namespace, identifier)
+                var re : CompoundData? = GlobalScope.getClass(namespace, identifier)
                 if(re == null){
-                    re = GlobalField.getInterface(namespace, identifier)
+                    re = GlobalScope.getInterface(namespace, identifier)
                 }
                 return re
             }

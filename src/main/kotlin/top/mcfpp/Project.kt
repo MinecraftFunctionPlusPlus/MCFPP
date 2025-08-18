@@ -24,10 +24,10 @@ import top.mcfpp.lib.SbObject
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.Native
 import top.mcfpp.model.compound.ObjectClass
-import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionTag
 import top.mcfpp.model.function.NativeFunction
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.Module
 import top.mcfpp.util.ModuleType
@@ -165,7 +165,7 @@ object Project {
     fun init() {
         compileStage = CompileStage.INIT
         //全局缓存初始化
-        GlobalField.init()
+        GlobalScope.init()
         ctx.clear()
         trees.clear()
         currNamespace = config.rootNamespace
@@ -250,6 +250,11 @@ object Project {
                 jsonObject.remove("commentLevel")
             }
 
+            if(jsonObject.containsKey("copyImport")){
+                config.copyImport = jsonObject.getBoolean("copyImport")
+                jsonObject.remove("copyImport")
+            }
+
             //编译参数
             if(jsonObject.containsKey("args")){
                 val compileArgsJson = jsonObject.getJSONArray("args")
@@ -295,15 +300,15 @@ object Project {
     fun readProject(){
         compileStage = CompileStage.READ_LIB
         //生成默认命名空间
-        GlobalField.localNamespaces[config.rootNamespace] = Namespace(config.rootNamespace)
+        GlobalScope.localNamespaces[config.rootNamespace] = Namespace(config.rootNamespace)
 
         //生成tick/load/init函数
         projectTick = Function("tick", config.rootNamespace, null)
         projectLoad = Function("load", config.rootNamespace, null)
         projectInit = Function("init", config.rootNamespace, null)
-        GlobalField.localNamespaces[config.rootNamespace]!!.field.addFunction(projectTick, true)
-        GlobalField.localNamespaces[config.rootNamespace]!!.field.addFunction(projectLoad, true)
-        GlobalField.localNamespaces[config.rootNamespace]!!.field.addFunction(projectInit, true)
+        GlobalScope.localNamespaces[config.rootNamespace]!!.field.addFunction(projectTick, true)
+        GlobalScope.localNamespaces[config.rootNamespace]!!.field.addFunction(projectLoad, true)
+        GlobalScope.localNamespaces[config.rootNamespace]!!.field.addFunction(projectInit, true)
         FunctionTag.TICK.functions.add(projectTick)
         FunctionTag.LOAD.functions.add(projectLoad)
         FunctionTag.LOAD.functions.add(projectInit)
@@ -429,7 +434,7 @@ object Project {
             }
         }
         //实例化所有类中的成员字段
-        for(namespace in GlobalField.libNamespaces.values){
+        for(namespace in GlobalScope.libNamespaces.values){
             namespace.field.forEachClass { c ->
                 run {
                     for (v in c.field.allVars){
@@ -441,7 +446,7 @@ object Project {
             }
         }
         //实例化所有类中的成员字段
-        for(namespace in GlobalField.stdNamespaces.values){
+        for(namespace in GlobalScope.stdNamespaces.values){
             namespace.field.forEachClass { c ->
                 run {
                     for (v in c.field.allVars){
@@ -453,7 +458,7 @@ object Project {
             }
         }
         //函数参数解析
-        GlobalField.importedLibNamespaces.clear()
+        GlobalScope.importedLibNamespaces.clear()
         //读取所有文件
         if (config.sourcePath != null) {
             MCFPPFile.findFiles(config.sourcePath!!.absolutePathString()).forEach {
@@ -481,7 +486,7 @@ object Project {
                 errorCount++
                 e.printStackTrace()
             }
-            GlobalField.importedLibNamespaces.clear()
+            GlobalScope.importedLibNamespaces.clear()
         }
         //运行命令
         for (file in files) {
@@ -492,7 +497,7 @@ object Project {
                 errorCount++
                 e.printStackTrace()
             }
-            GlobalField.importedLibNamespaces.clear()
+            GlobalScope.importedLibNamespaces.clear()
         }
         //解析所有泛型类的泛型参数类型
         stageProcessor[compileStage.ordinal].forEach { it() }
@@ -513,7 +518,7 @@ object Project {
                 errorCount++
                 e.printStackTrace()
             }
-            GlobalField.importedLibNamespaces.clear()
+            GlobalScope.importedLibNamespaces.clear()
         }
         stageProcessor[compileStage.ordinal].forEach { it() }
     }
@@ -530,7 +535,7 @@ object Project {
                 errorCount++
                 e.printStackTrace()
             }
-            GlobalField.importedLibNamespaces.clear()
+            GlobalScope.importedLibNamespaces.clear()
         }
         stageProcessor[compileStage.ordinal].forEach { it() }
     }
@@ -566,7 +571,7 @@ object Project {
 
         //向load函数中添加记分板初始化命令
         projectLoad.runInFunction {
-            for (scoreboard in GlobalField.scoreboards.values){
+            for (scoreboard in GlobalScope.scoreboards.values){
                 Function.addCommand("scoreboard objectives add ${scoreboard.name} ${scoreboard.criterion}")
             }
 
@@ -587,7 +592,7 @@ object Project {
 
             Function.addComment("class init", CommentLevel.INFO)
             //向load中添加类初始化命令
-            for (n in GlobalField.localNamespaces.values){
+            for (n in GlobalScope.localNamespaces.values){
                 n.field.forEachObject { c->
                     if(c is ObjectClass){
                         //单例实体
@@ -600,7 +605,7 @@ object Project {
                 }
             }
             //向load中添加类的load函数
-            for (n in GlobalField.localNamespaces.values){
+            for (n in GlobalScope.localNamespaces.values){
                 n.field.forEachClass { c ->
                     val qwq = c.field.getFunction("load", ArrayList(), ArrayList())
                     if(qwq is NativeFunction){
@@ -628,7 +633,7 @@ object Project {
         }
 
         //向tick中添加类的tick函数
-        for (n in GlobalField.localNamespaces.values){
+        for (n in GlobalScope.localNamespaces.values){
             n.field.forEachClass { c -> projectTick.runInFunction {
                 val qwq = c.field.getFunction("tick",ArrayList(), ArrayList())
                 if(qwq is NativeFunction){
@@ -650,7 +655,7 @@ object Project {
 
         //寻找入口函数
         var hasEntrance = false
-        for(field in GlobalField.localNamespaces.values){
+        for(field in GlobalScope.localNamespaces.values){
             field.field.forEachFunction { f->
                 run {
                     if (f.parent.size == 0 && f !is Native) {

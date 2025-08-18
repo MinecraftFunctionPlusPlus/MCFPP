@@ -9,7 +9,7 @@ import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.WithDocument
 import top.mcfpp.model.annotation.Annotation
-import top.mcfpp.model.field.CompoundDataField
+import top.mcfpp.model.scope.CompoundDataScope
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
@@ -53,7 +53,7 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
      * 成员变量和成员函数
      */
     @Transient
-    var field: CompoundDataField
+    var field: top.mcfpp.model.scope.CompoundDataScope
 
     /**
      * 注解
@@ -86,11 +86,11 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
     constructor(identifier: String, namespace: String = Project.currNamespace){
         this.identifier = identifier
         this.namespace = namespace
-        field = CompoundDataField(ArrayList())
+        field = top.mcfpp.model.scope.CompoundDataScope(ArrayList())
     }
 
     protected constructor(){
-        field = CompoundDataField(ArrayList())
+        field = top.mcfpp.model.scope.CompoundDataScope(ArrayList())
     }
 
     open fun initialize(){}

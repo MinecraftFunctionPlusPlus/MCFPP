@@ -70,4 +70,9 @@ open class ProjectConfig(
      * 不生成数据包
      */
     var noDatapack: Boolean = false,
+
+    /**
+     * 工程复制导入的库
+     */
+    var copyImport: Boolean = true,
 )

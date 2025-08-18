@@ -12,7 +12,7 @@ import top.mcfpp.core.lang.obj.ObjectVar;
 import top.mcfpp.core.lang.obj.TypeDataTemplateObject;
 import top.mcfpp.lib.SbObject;
 import top.mcfpp.model.compound.TypeDataTemplate;
-import top.mcfpp.model.field.GlobalField;
+import top.mcfpp.model.scope.GlobalScope;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.util.ValueWrapper;
 
@@ -22,7 +22,7 @@ public class WorldObjectData {
 
     private static TypeDataTemplate getTime(){
         if(Time == null){
-            Time = (TypeDataTemplate) GlobalField.getTemplate("mcfpp.minecraft", "Time");
+            Time = (TypeDataTemplate) GlobalScope.getTemplate("mcfpp.minecraft", "Time");
         }
         return Time;
     }

@@ -8,6 +8,7 @@ import top.mcfpp.core.lang.nbt.MCString
 import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
+import top.mcfpp.io.MCFPPFile
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.primitive.StringTag
@@ -244,6 +245,12 @@ class NBTPath(var source: NBTSource): Serializable {
         fun getNormalStackPath(v: Var<*>): NBTPath{
             return NBTPath(StorageSource("mcfpp:system"))
                 .memberIndex("stack_frame[${v.stackIndex}]")
+                .memberIndex(v.identifier)
+        }
+
+        fun getFileScopePath(v: Var<*>): NBTPath{
+            return NBTPath(StorageSource("mcfpp:system"))
+                .memberIndex("file_${MCFPPFile.currFile!!.topFunction.identifier}")
                 .memberIndex(v.identifier)
         }
     }

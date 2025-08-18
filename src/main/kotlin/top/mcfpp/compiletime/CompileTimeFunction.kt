@@ -3,21 +3,21 @@ package top.mcfpp.compiletime
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.field.IField
+import top.mcfpp.model.scope.IScope
 import top.mcfpp.model.function.Function
 
 class CompileTimeFunction : Function {
     @Suppress("ConvertSecondaryConstructorToPrimary")
     constructor(name:String, namespace:String, context:mcfppParser.FunctionBodyContext):super(name,namespace, context)
 
-    fun setField(parent: IField){
-        this.field = CompileTimeFunctionField(parent)
+    fun setField(parent: IScope){
+        this.field = CompileTimeFunctionScope(parent)
     }
 
-    private fun makeField():CompileTimeFunctionField{
-        return (this.field as CompileTimeFunctionField).clone()
+    private fun makeField():CompileTimeFunctionScope{
+        return (this.field as CompileTimeFunctionScope).clone()
     }
-    private fun argPass(field:CompileTimeFunctionField, normalArgs: List<Var<*>>) {
+    private fun argPass(field:CompileTimeFunctionScope, normalArgs: List<Var<*>>) {
         for (argi in normalArgs.withIndex()){
             field.putVar(normalParams[argi.index].identifier,argi.value,true)
         }

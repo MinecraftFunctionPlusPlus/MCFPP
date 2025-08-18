@@ -10,7 +10,7 @@ import top.mcfpp.mni.annotation.MCFPPEntity
 import top.mcfpp.model.Member
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
-import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPEntityType
 import top.mcfpp.type.MCFPPType
@@ -133,7 +133,7 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
         val excluded = ArrayList<String>()
         for ((type, reverse) in types){
             if(!reverse){
-                val d = GlobalField.getTemplate("mcfpp.minecraft.entity", type.toString().toCamelCase(true))
+                val d = GlobalScope.getTemplate("mcfpp.minecraft.entity", type.toString().toCamelCase(true))
                 if(d == null){
                     LogProcessor.error("Undefined entity: $type (${type.toString().toCamelCase(true)})")
                 }else{
@@ -167,7 +167,7 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
 
         private class AllEntityDataTemplate(excluded: List<String>): DataTemplate("AllEntity","mcfpp"){
             init {
-                GlobalField.getTemplate { data ->
+                GlobalScope.getTemplate { data ->
                     data.annotations.any { it is MCFPPEntity } && data.identifier !in excluded
                 }.forEach {
                     extends(it)

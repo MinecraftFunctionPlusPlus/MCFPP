@@ -5,7 +5,7 @@ import top.mcfpp.core.lang.MCInt;
 import top.mcfpp.core.lang.MCIntConcrete;
 import top.mcfpp.core.lang.obj.TypeDataTemplateObject;
 import top.mcfpp.model.compound.TypeDataTemplate;
-import top.mcfpp.model.field.GlobalField;
+import top.mcfpp.model.scope.GlobalScope;
 import top.mcfpp.util.ValueWrapper;
 
 public class TimeObjectData {
@@ -14,7 +14,7 @@ public class TimeObjectData {
 
     private static TypeDataTemplate getTime(){
         if(Time == null){
-            Time = (TypeDataTemplate) GlobalField.getTemplate("mcfpp.minecraft", "Time");
+            Time = (TypeDataTemplate) GlobalScope.getTemplate("mcfpp.minecraft", "Time");
         }
         return Time;
     }

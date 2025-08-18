@@ -4,7 +4,7 @@ import com.ibm.icu.impl.data.ResourceReader
 import org.apache.logging.log4j.core.config.ConfigurationSource
 import org.apache.logging.log4j.core.config.Configurator
 import top.mcfpp.io.DatapackCreator
-import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.util.LogLevel
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.UwU
@@ -64,7 +64,7 @@ fun compile(config: ProjectConfig){
     }
 
     LogProcessor.info("Finished in " + (System.currentTimeMillis() - start) + "ms")
-    if(CompileSettings.printAll) GlobalField.printAll()
+    if(CompileSettings.printAll) GlobalScope.printAll()
 }
 
 object MCFPP {

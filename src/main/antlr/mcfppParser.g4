@@ -38,7 +38,7 @@ compilationUnit
     :   namespaceDeclaration?
         importDeclaration*
         typealiasDeclaration*
-        //TODO topStatement
+        topStatement
         typeDeclaration*
         EOF
     ;
@@ -61,7 +61,7 @@ importType
     ;
 
 typealiasDeclaration
-    :   TYPEALIAS Identifier AS type ';'
+    :   TYPEALIAS type AS Identifier ';'
     ;
 
 //类或函数声明

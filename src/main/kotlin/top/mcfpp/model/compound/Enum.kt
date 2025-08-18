@@ -1,7 +1,7 @@
 package top.mcfpp.model.compound
 
 import top.mcfpp.lib.SbObject
-import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.primitive.IntTag
@@ -23,7 +23,7 @@ class Enum(identifier: String, namespace: String) : CompoundData(identifier, nam
     override fun getType() = MCFPPEnumType(this)
 
     init {
-        GlobalField.scoreboards[namespaceID] = sbObject
+        GlobalScope.scoreboards[namespaceID] = sbObject
     }
 
     fun addMember(member: EnumMember){

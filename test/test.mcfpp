@@ -1,19 +1,8 @@
 namespace test;
 
-class Test {
-    i as int = 0;
+var qwq = 1;
+var node = "123";
 
-    constructor() {
-        Test.id = Test.id + 1;
-        this.i = Test.id;
-    }
-}
-
-object class Test{
-    id as int = 0;
-}
-
-func main(){
-    var test = Test();
-    print(test.i);
+func test(){
+    print(node);
 }

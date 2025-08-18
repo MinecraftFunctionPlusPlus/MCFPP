@@ -17,12 +17,13 @@ import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.core.lang.obj.ClassPointerConcrete
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.doc.Document
+import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lib.NamespaceID
 import top.mcfpp.model.*
 import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.compound.*
-import top.mcfpp.model.field.FunctionField
-import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.scope.FunctionScope
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
 import java.io.Serializable
@@ -154,7 +155,7 @@ open class Function : Member, FieldContainer, WithDocument {
     /**
      * 函数编译时的缓存
      */
-    var field: FunctionField
+    var field: FunctionScope
 
     /**
      * 这个函数调用的函数
@@ -328,7 +329,7 @@ open class Function : Member, FieldContainer, WithDocument {
         this.identifier = identifier
         commands = CommandList()
         normalParams = ArrayList()
-        field = FunctionField(null)
+        field = FunctionScope(MCFPPFile.currFile?.field)
         ownerType = OwnerType.NONE
         this.namespace = namespace
         this.ast = context
@@ -345,7 +346,7 @@ open class Function : Member, FieldContainer, WithDocument {
         namespace = cls.namespace
         ownerType = OwnerType.CLASS
         owner = cls
-        field = FunctionField(cls.field)
+        field = FunctionScope(cls.field)
         this.ast = context
     }
 
@@ -361,7 +362,7 @@ open class Function : Member, FieldContainer, WithDocument {
         namespace = itf.namespace
         ownerType = OwnerType.CLASS
         owner = itf
-        field = FunctionField(null)
+        field = FunctionScope(null)
         this.isAbstract = true
         this.accessModifier = Member.AccessModifier.PUBLIC
         this.ast = context
@@ -377,7 +378,7 @@ open class Function : Member, FieldContainer, WithDocument {
         namespace = template.namespace
         ownerType = OwnerType.TEMPLATE
         owner = template
-        field = FunctionField(template.field)
+        field = FunctionScope(template.field)
         this.returnType = returnType
         this.returnVar = buildReturnVar(returnType)
         this.ast = context
@@ -409,10 +410,10 @@ open class Function : Member, FieldContainer, WithDocument {
 
     fun addTag(namespace: String, identifier: String): Function{
         val nID = "$namespace:$identifier"
-        if(GlobalField.functionTags[nID] == null){
-            GlobalField.functionTags[nID] = FunctionTag(namespace, identifier)
+        if(GlobalScope.functionTags[nID] == null){
+            GlobalScope.functionTags[nID] = FunctionTag(namespace, identifier)
         }
-        val qwq = GlobalField.functionTags[nID]!!
+        val qwq = GlobalScope.functionTags[nID]!!
         if(qwq.functions.contains(this)){
             LogProcessor.warn("Function $identifier already has tag $nID")
         }else{
@@ -928,8 +929,6 @@ open class Function : Member, FieldContainer, WithDocument {
         currFunction = this
         try{
             block()
-        }catch (e: Exception){
-            throw e
         }finally {
             currFunction = old
         }
@@ -959,8 +958,8 @@ open class Function : Member, FieldContainer, WithDocument {
          */
         var currFunction: Function = nullFunction
 
-        var forcedField: FunctionField? = null
-        val currField: FunctionField
+        var forcedField: FunctionScope? = null
+        val currField: FunctionScope
             get() = forcedField ?: currFunction.field
 
         /**

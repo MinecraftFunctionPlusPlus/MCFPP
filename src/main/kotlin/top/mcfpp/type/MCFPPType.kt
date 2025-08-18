@@ -18,8 +18,8 @@ import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.GenericClass
 import top.mcfpp.model.compound.UnionDataTemplate
-import top.mcfpp.model.field.GlobalField
-import top.mcfpp.model.field.IFieldWithType
+import top.mcfpp.model.scope.GlobalScope
+import top.mcfpp.model.scope.IScopeWithType
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.nbt.tags.CompoundTag
@@ -264,7 +264,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
         /**
          * 根据类型标识符中获取一个类型
          */
-        fun parseFromString(typeStr: String, typeScope: IFieldWithType): MCFPPType? {
+        fun parseFromString(typeStr: String, typeScope: IScopeWithType): MCFPPType? {
             if(typeStr.last() == '!'){
                 val qwq = parseFromString(typeStr.substring(0, typeStr.length - 1), typeScope)
                 return qwq?.let { MCFPPDeclaredConcreteType(qwq) }
@@ -282,7 +282,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             val clsResult = MCFPPClassType.regex.find(typeStr)
             if(clsResult != null){
                 val (first, second) = clsResult.destructured
-                val clazz = GlobalField.getClass(first, second)
+                val clazz = GlobalScope.getClass(first, second)
                 if(clazz != null){
                     return clazz.getType()
                 }else{
@@ -293,7 +293,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             val templateResult = MCFPPDataTemplateType.regex.find(typeStr)
             if(templateResult != null){
                 val (first, second) = templateResult.destructured
-                val template = GlobalField.getTemplate(first, second)
+                val template = GlobalScope.getTemplate(first, second)
                 if(template != null){
                     return template.getType()
                 }else{
@@ -312,24 +312,24 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             }
             //全局匹配
             val nspID = typeStr.splitNamespaceID()
-            val clazz = GlobalField.getClass(nspID.first, nspID.second)
+            val clazz = GlobalScope.getClass(nspID.first, nspID.second)
             if(clazz != null) return clazz.getType()
-            val template = GlobalField.getTemplate(nspID.first, nspID.second)
+            val template = GlobalScope.getTemplate(nspID.first, nspID.second)
             if(template !=null) return template.getType()
-            val enum = GlobalField.getEnum(nspID.first, nspID.second)
+            val enum = GlobalScope.getEnum(nspID.first, nspID.second)
             if(enum != null) return enum.getType()
 
             return null
         }
 
-        fun parseFromContextNotNull(ctx: TypeContext, typeScope: IFieldWithType): MCFPPType {
+        fun parseFromContextNotNull(ctx: TypeContext, typeScope: IScopeWithType): MCFPPType {
             return parseFromContext(ctx, typeScope)?: run {
                 LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.text))
                 MCFPPBaseType.Any
             }
         }
 
-        fun parseFromContext(ctx: TypeContext, typeScope: IFieldWithType): MCFPPType?{
+        fun parseFromContext(ctx: TypeContext, typeScope: IScopeWithType): MCFPPType?{
             val qwq = parseFromContext(ctx.typeWithoutExcl(), typeScope)
             return if(ctx.EXCL() != null){
                  qwq?.let { MCFPPDeclaredConcreteType(it) }
@@ -338,7 +338,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             }
         }
 
-        private fun parseFromContext(ctx: TypeWithoutExclContext, typeScope: IFieldWithType): MCFPPType? {
+        private fun parseFromContext(ctx: TypeWithoutExclContext, typeScope: IScopeWithType): MCFPPType? {
             typeCache[ctx.text]?.let { return it }
             //向量
             if(ctx.VecType() != null){
@@ -379,7 +379,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             if(ctx.className() != null){
                 val nspID = ctx.className().text.splitNamespaceID()
                 //类
-                val clazz = GlobalField.getClass(nspID.first, nspID.second)
+                val clazz = GlobalScope.getClass(nspID.first, nspID.second)
                 if(clazz != null) {
                     if(clazz is GenericClass){
                         if(clazz.readOnlyParams.size != ctx.readOnlyArgs()?.expressionList()?.expression()?.size){
@@ -394,10 +394,10 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                     }
                 }
                 //数据模板
-                val template = GlobalField.getTemplate(nspID.first, nspID.second)
+                val template = GlobalScope.getTemplate(nspID.first, nspID.second)
                 if(template != null) return template.getType()
                 //枚举
-                val enum = GlobalField.getEnum(nspID.first, nspID.second)
+                val enum = GlobalScope.getEnum(nspID.first, nspID.second)
                 if(enum != null) return enum.getType()
             }
             //联合数据模板类型

@@ -2,7 +2,7 @@ package top.mcfpp.model.function
 
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.DataTemplate
-import top.mcfpp.model.field.InternalFunctionField
+import top.mcfpp.model.scope.InternalFunctionScope
 import top.mcfpp.util.TempPool
 
 /**
@@ -32,7 +32,7 @@ import top.mcfpp.util.TempPool
 class InternalFunction(prefix: String, parent: Function) : Function(TempPool.getFunctionIdentify(prefix), context = null) {
 
     init {
-        field = InternalFunctionField(parent.field)
+        field = InternalFunctionScope(parent.field)
         setParentFunction(parent)
         ownerType = Companion.OwnerType.NONE
     }

@@ -22,7 +22,6 @@ import top.mcfpp.model.Generic
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.ObjectClass
-import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.model.function.FunctionParam.Companion.typeToStringList
@@ -31,6 +30,7 @@ import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.property.FunctionAccessor
 import top.mcfpp.model.property.FunctionMutator
 import top.mcfpp.model.property.Property
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.type.MCFPPEnumType
 import top.mcfpp.type.MCFPPGenericClassType
 import top.mcfpp.type.MCFPPPrivateType
@@ -40,13 +40,19 @@ import top.mcfpp.util.TempPool
 
 open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
+    var isInTopStatement = false
+
     override fun visitTopStatement(ctx: mcfppParser.TopStatementContext): Any? = withCompilationContext(ctx) {
         if(ctx.statement().size == 0) return null
-        Function.currFunction = MCFPPFile.currFile!!.topFunction
-        //注册函数
-        GlobalField.localNamespaces[Project.currNamespace]!!.field.addFunction(Function.currFunction, force = false)
-        super.visitTopStatement(ctx)
-        Function.currFunction = Function.nullFunction
+        MCFPPFile.currFile!!.topFunction.runInFunction {
+            //注册函数
+            GlobalScope.localNamespaces[Project.currNamespace]!!.field.addFunction(Function.currFunction, force = false)
+            isInTopStatement = true
+            super.visitTopStatement(ctx)
+            isInTopStatement = false
+            //变量移动到文件作用域
+            MCFPPFile.currFile!!.field.vars.putAll(Function.currFunction.field.vars)
+        }
         return null
     }
 
@@ -63,7 +69,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         //获取函数对象
         val types = ctx.functionParams()?.let { FunctionParam.parseReadonlyAndNormalParamTypes(it) }
         //获取缓存中的对象
-        f = GlobalField.getFunction(Project.currNamespace, ctx.Identifier().text, types?.first?.map { it.build("") }?:ArrayList(), types?.second?.map { it.build("") }?:ArrayList())
+        f = GlobalScope.getFunction(Project.currNamespace, ctx.Identifier().text, types?.first?.map { it.build("") }?:ArrayList(), types?.second?.map { it.build("") }?:ArrayList())
         Function.currFunction = f
     }
 
@@ -136,14 +142,18 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         }else if(type == null){
             type = init!!.type
         }
-        var `var` = if(fieldModifier == "import"){
+        val `var` = if(fieldModifier == "import"){
             val qwq = type.buildUnConcrete(ctx.Identifier().text, Function.currFunction)
             qwq.hasAssigned = true
             qwq
         }else{
             type.build(ctx.Identifier().text, Function.currFunction)
         }
-        `var`.nbtPath = NBTPath.getNormalStackPath(`var`)
+        if(isInTopStatement){
+            `var`.nbtPath = NBTPath.getFileScopePath(`var`)
+        }else{
+            `var`.nbtPath = NBTPath.getNormalStackPath(`var`)
+        }
         //一定是函数变量
         if (Function.currField.containVar(ctx.Identifier().text)) {
             LogProcessor.error("Duplicate defined variable:" + ctx.Identifier().text)
@@ -289,10 +299,10 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 //此分支会被编译，注册函数
                 if(breakIf != ConditionType.ALWAYS_TRUE) {
                     //并不是必然编译的，所以需要注册函数，让分支内的内容在if_branch函数中执行。如果是必然执行的，那么直接内联即可
-                    if (!GlobalField.localNamespaces.containsKey(f.namespace)) {
-                        GlobalField.localNamespaces[f.namespace] = Namespace(f.namespace)
+                    if (!GlobalScope.localNamespaces.containsKey(f.namespace)) {
+                        GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
                     }
-                    GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f, false)
+                    GlobalScope.localNamespaces[f.namespace]!!.field.addFunction(f, false)
                     Function.currFunction = f
                 }
                 visitIfBlock(ctx.ifBlock())
@@ -314,9 +324,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                         //如果这里breakIf是1，只能是这一条分支必然会被执行而上一条分支不可能执行（参见enterElseIfBranch中的逻辑
                         //而不为1的时候，说明它只能是0，因为如果是-1的话c2也会是false而不能执行到这里
                         //所以让我们注册函数
-                        if (!GlobalField.localNamespaces.containsKey(f2.namespace))
-                            GlobalField.localNamespaces[f2.namespace] = Namespace(f2.namespace)
-                        GlobalField.localNamespaces[f2.namespace]!!.field.addFunction(f2, false)
+                        if (!GlobalScope.localNamespaces.containsKey(f2.namespace))
+                            GlobalScope.localNamespaces[f2.namespace] = Namespace(f2.namespace)
+                        GlobalScope.localNamespaces[f2.namespace]!!.field.addFunction(f2, false)
                         Function.currFunction = f2
                     }
                     visitBlock(it.block())
@@ -337,9 +347,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             if(breakIf != ConditionType.ALWAYS_FALSE){
                 //注册函数
                 val f3 = NoStackFunction(TempPool.getFunctionIdentify("else_branch"), Function.currFunction)
-                if (!GlobalField.localNamespaces.containsKey(f3.namespace))
-                    GlobalField.localNamespaces[f3.namespace] = Namespace(f3.namespace)
-                GlobalField.localNamespaces[f3.namespace]!!.field.addFunction(f3, false)
+                if (!GlobalScope.localNamespaces.containsKey(f3.namespace))
+                    GlobalScope.localNamespaces[f3.namespace] = Namespace(f3.namespace)
+                GlobalScope.localNamespaces[f3.namespace]!!.field.addFunction(f3, false)
                 Function.addCommand(Command("return run").build(Commands.function(f3)))
                 Function.currFunction = f3
             }
@@ -386,9 +396,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
             is ExecuteBool -> {
                 //注册函数
-                if(!GlobalField.localNamespaces.containsKey(f.namespace))
-                    GlobalField.localNamespaces[f.namespace] = Namespace(f.namespace)
-                GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f,false)
+                if(!GlobalScope.localNamespaces.containsKey(f.namespace))
+                    GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
+                GlobalScope.localNamespaces[f.namespace]!!.field.addFunction(f,false)
                 //给子函数开栈
                 Function.addCommand(
                     Command("execute").build(exp.toCommandPart()).build("run return run").build(Commands.function(f))
@@ -397,9 +407,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
             is BaseBool -> {
                 //注册函数
-                if(!GlobalField.localNamespaces.containsKey(f.namespace))
-                    GlobalField.localNamespaces[f.namespace] = Namespace(f.namespace)
-                GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f,false)
+                if(!GlobalScope.localNamespaces.containsKey(f.namespace))
+                    GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
+                GlobalScope.localNamespaces[f.namespace]!!.field.addFunction(f,false)
                 Function.addCommand(
                     Command("execute if").build(exp.toCommandPart()).build("run return run").build(Commands.function(f))
                 )
@@ -440,9 +450,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
             is ExecuteBool -> {
                 //注册函数
-                if(!GlobalField.localNamespaces.containsKey(f.namespace))
-                    GlobalField.localNamespaces[f.namespace] = Namespace(f.namespace)
-                GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f,false)
+                if(!GlobalScope.localNamespaces.containsKey(f.namespace))
+                    GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
+                GlobalScope.localNamespaces[f.namespace]!!.field.addFunction(f,false)
                 //给子函数开栈
                 Function.addCommand(
                     Command("execute").build(exp.toCommandPart()).build("run return run").build(Commands.function(f))
@@ -452,9 +462,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
             is BaseBool -> {
                 //注册函数
-                if(!GlobalField.localNamespaces.containsKey(f.namespace))
-                    GlobalField.localNamespaces[f.namespace] = Namespace(f.namespace)
-                GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f,false)
+                if(!GlobalScope.localNamespaces.containsKey(f.namespace))
+                    GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
+                GlobalScope.localNamespaces[f.namespace]!!.field.addFunction(f,false)
                 Function.addCommand(
                     Command("execute if").build(exp.toCommandPart()).build("run return run").build(Commands.function(f))
                 )
@@ -488,9 +498,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addCommand(Commands.function(whileFunction))
         Function.addCommand(Commands.stackOut())
         Function.currFunction = whileFunction
-        if(!GlobalField.localNamespaces.containsKey(whileFunction.namespace))
-            GlobalField.localNamespaces[whileFunction.namespace] = Namespace(whileFunction.namespace)
-        GlobalField.localNamespaces[whileFunction.namespace]!!.field.addFunction(whileFunction,false)
+        if(!GlobalScope.localNamespaces.containsKey(whileFunction.namespace))
+            GlobalScope.localNamespaces[whileFunction.namespace] = Namespace(whileFunction.namespace)
+        GlobalScope.localNamespaces[whileFunction.namespace]!!.field.addFunction(whileFunction,false)
     }
 
     
@@ -524,9 +534,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         val f: Function = InternalFunction("_while_block_", Function.currFunction)
         f.child.add(f)
         f.parent.add(f)
-        if(!GlobalField.localNamespaces.containsKey(f.namespace))
-            GlobalField.localNamespaces[f.namespace] = Namespace(f.namespace)
-        GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f,false)
+        if(!GlobalScope.localNamespaces.containsKey(f.namespace))
+            GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
+        GlobalScope.localNamespaces[f.namespace]!!.field.addFunction(f,false)
         //循环条件判断，此时目标函数是外while函数。条件表达式在外while中计算。
         when(val exp = MCFPPExprVisitor().visitExpression(parent.expression())){
             is ScoreBoolConcrete -> {
@@ -596,9 +606,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         //Function.addCommand(Commands.function(doWhileFunction))
         //Function.addCommand(Commands.stackOut())
         Function.currFunction = doWhileFunction
-        if(!GlobalField.localNamespaces.containsKey(doWhileFunction.namespace))
-            GlobalField.localNamespaces[doWhileFunction.namespace] = Namespace(doWhileFunction.namespace)
-        GlobalField.localNamespaces[doWhileFunction.namespace]!!.field.addFunction(doWhileFunction,false)
+        if(!GlobalScope.localNamespaces.containsKey(doWhileFunction.namespace))
+            GlobalScope.localNamespaces[doWhileFunction.namespace] = Namespace(doWhileFunction.namespace)
+        GlobalScope.localNamespaces[doWhileFunction.namespace]!!.field.addFunction(doWhileFunction,false)
     }
 
     @InsertCommand
@@ -628,10 +638,10 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         val f: Function = InternalFunction("_dowhile_", Function.currFunction)
         f.child.add(f)
         f.parent.add(f)
-        if(!GlobalField.localNamespaces.containsKey(f.namespace)) {
-            GlobalField.localNamespaces[f.namespace] = Namespace(f.namespace)
+        if(!GlobalScope.localNamespaces.containsKey(f.namespace)) {
+            GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
         }
-        GlobalField.localNamespaces[f.namespace]!!.field.addFunction(f,false)
+        GlobalScope.localNamespaces[f.namespace]!!.field.addFunction(f,false)
         //给子函数开栈
         Function.currFunction.parent[0].commands.addAll(
             arrayOf(
@@ -779,7 +789,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             arg?.assignedBy(value)
         }
         val execFunction = NoStackFunction(TempPool.getFunctionIdentify("execute"), Function.currFunction)
-        GlobalField.localNamespaces[execFunction.namespace]!!.field.addFunction(execFunction, false)
+        GlobalScope.localNamespaces[execFunction.namespace]!!.field.addFunction(execFunction, false)
         val l = Function.currFunction
         Function.currFunction = execFunction
         super.visitExecuteStatement(ctx)
@@ -812,11 +822,11 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         val parent = ctx.parent
         if(parent is mcfppParser.ClassDeclarationContext){
             val identifier = parent.classWithoutNamespace().text
-            Class.currClass = GlobalField.getClass(Project.currNamespace, identifier)
+            Class.currClass = GlobalScope.getClass(Project.currNamespace, identifier)
         }else{
             parent as mcfppParser.ObjectClassDeclarationContext
             val identifier = parent.classWithoutNamespace().text
-            Class.currClass = GlobalField.getObject(Project.currNamespace, identifier) as ObjectClass
+            Class.currClass = GlobalScope.getObject(Project.currNamespace, identifier) as ObjectClass
         }
         //设置作用域
         Function.currFunction = Class.currClass!!.classPreInit

@@ -11,7 +11,7 @@ import top.mcfpp.Project
 import top.mcfpp.antlr.*
 import top.mcfpp.io.DatapackCreator
 import top.mcfpp.io.MCFPPFile
-import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.parseArgs
 import top.mcfpp.util.LogProcessor
 import java.io.File
@@ -51,10 +51,10 @@ object MCFPPStringTest {
         LogProcessor.debug("Generate Type Index...")
         Project.currNamespace = MCFPPFile.currFile!!.namespace.identifier
         MCFPPTypeVisitor().visitCompilationUnit(context)
-        MCFPPFile.currFile!!.field.namespaceField = GlobalField.localNamespaces[Project.currNamespace]!!.field
+        MCFPPFile.currFile!!.field.namespaceField = GlobalScope.localNamespaces[Project.currNamespace]!!.field
         LogProcessor.debug("Generate Function Index...")
         MCFPPFieldVisitor().visit(context)
-        GlobalField.importedLibNamespaces.clear()
+        GlobalScope.importedLibNamespaces.clear()
         val visitor = MCFPPImVisitor()
         LogProcessor.debug("Compiling mcfpp code...")
         visitor.visit(context)
@@ -69,7 +69,7 @@ object MCFPPStringTest {
             }
         }
         Project.ctx.clear()
-        GlobalField.printAll()
+        GlobalScope.printAll()
     }
 
     fun readFromSingleFile(path: String){
@@ -101,24 +101,24 @@ object MCFPPStringTest {
             //解析文件
             //添加默认库的域
             if(!CompileSettings.ignoreStdLib){
-                GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]!!
+                GlobalScope.importedLibNamespaces["mcfpp.sys"] = GlobalScope.libNamespaces["mcfpp.sys"]!!
             }
             val charStream: CharStream = CharStreams.fromString(code)
             val tokens = CommonTokenStream(mcfppLexer(charStream))
             val parser = mcfppParser(tokens)
             val context = parser.compilationUnit()
             MCFPPFieldVisitor().visit(context)
-            GlobalField.importedLibNamespaces.clear()
+            GlobalScope.importedLibNamespaces.clear()
             //添加默认库域
             if(!CompileSettings.ignoreStdLib){
-                GlobalField.importedLibNamespaces["mcfpp.sys"] = GlobalField.libNamespaces["mcfpp.sys"]!!
+                GlobalScope.importedLibNamespaces["mcfpp.sys"] = GlobalScope.libNamespaces["mcfpp.sys"]!!
             }
             val visitor = MCFPPImVisitor()
             visitor.visit(context)
             Project.optimization() //优化
             Project.genIndex() //生成索引
             Project.ctx.clear()
-            GlobalField.printAll()
+            GlobalScope.printAll()
         } catch (e: Exception) {
             LogProcessor.error("Error while reading project from file \"$path\"")
             e.printStackTrace()

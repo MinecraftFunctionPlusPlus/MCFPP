@@ -9,8 +9,8 @@ import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
-import top.mcfpp.model.field.CompoundDataField
-import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.scope.CompoundDataScope
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.function.DataTemplateConstructor
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.property.Property
@@ -63,7 +63,7 @@ open class DataTemplate : FieldContainer, CompoundData {
     @Suppress("ConvertSecondaryConstructorToPrimary")
     constructor(identifier: String, namespace: String = Project.currNamespace){
         this.identifier = identifier
-        field = CompoundDataField(ArrayList())
+        field = top.mcfpp.model.scope.CompoundDataScope(ArrayList())
         this.namespace = namespace
     }
 
@@ -197,7 +197,7 @@ open class DataTemplate : FieldContainer, CompoundData {
 
         @JvmStatic
         fun newInstance(namespace: String?, templateID: String, varID: String): DataTemplateObjectConcrete {
-            return GlobalField.getTemplate(namespace, templateID)!!.getType().build(varID) as DataTemplateObjectConcrete
+            return GlobalScope.getTemplate(namespace, templateID)!!.getType().build(varID) as DataTemplateObjectConcrete
         }
 
         @JvmStatic
@@ -205,7 +205,7 @@ open class DataTemplate : FieldContainer, CompoundData {
 
         @JvmStatic
         fun newInstance(namespace: String?, templateID: String, tag: Tag<*>): DataTemplateObjectConcrete {
-            return GlobalField.getTemplate(namespace, templateID)!!.getType().build(tag) as DataTemplateObjectConcrete
+            return GlobalScope.getTemplate(namespace, templateID)!!.getType().build(tag) as DataTemplateObjectConcrete
         }
 
         @Suppress("UNCHECKED_CAST")
@@ -227,7 +227,7 @@ open class DataTemplate : FieldContainer, CompoundData {
 
         @JvmStatic
         fun isInstance(obj: DataTemplateObject, namespace: String?, templateID: String): Boolean{
-            return isInstance(obj, GlobalField.getTemplate(namespace, templateID)!!)
+            return isInstance(obj, GlobalScope.getTemplate(namespace, templateID)!!)
         }
 
     }

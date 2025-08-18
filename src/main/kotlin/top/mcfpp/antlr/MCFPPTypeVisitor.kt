@@ -8,7 +8,7 @@ import top.mcfpp.io.MCFPPFile
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.compound.*
 import top.mcfpp.model.compound.Enum
-import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.compound.ClassParam
 import top.mcfpp.model.compound.GenericClass
 import top.mcfpp.model.compound.GenericObjectClass
@@ -37,10 +37,10 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             //获取命名空间
             val namespaceStr = ctx.namespaceDeclaration().Identifier().joinToString(".") { it.text }
             Project.currNamespace = namespaceStr
-            MCFPPFile.currFile!!.namespace = GlobalField.getOrCreateNamespace(namespaceStr)
+            MCFPPFile.currFile!!.namespace = GlobalScope.getOrCreateNamespace(namespaceStr)
         }
-        if(!GlobalField.localNamespaces.containsKey(Project.currNamespace)){
-            GlobalField.localNamespaces[Project.currNamespace] = Namespace(Project.currNamespace)
+        if(!GlobalScope.localNamespaces.containsKey(Project.currNamespace)){
+            GlobalScope.localNamespaces[Project.currNamespace] = Namespace(Project.currNamespace)
         }
         //导入库
         for (lib in ctx.importDeclaration()){
@@ -77,7 +77,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
     override fun visitInterfaceDeclaration(ctx: mcfppParser.InterfaceDeclarationContext): Unit = withCompilationContext(ctx){
         //注册类
         val id = ctx.classWithoutNamespace().text
-        val nsp = GlobalField.localNamespaces[Project.currNamespace]!!
+        val nsp = GlobalScope.localNamespaces[Project.currNamespace]!!
         if (nsp.field.hasDeclaredType(id)) {
             //重复声明
             LogProcessor.error("Type has been defined: $id in namespace ${Project.currNamespace}")
@@ -90,7 +90,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
                 val nsn = p.text.splitNamespaceID()
                 val namespace  = nsn.first
                 val identifier = nsn.second
-                val pc = GlobalField.getInterface(namespace, identifier)
+                val pc = GlobalScope.getInterface(namespace, identifier)
                 if(pc == null){
                     LogProcessor.error("Undefined Interface: " + p.text)
                 }else{
@@ -109,7 +109,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
     override fun visitClassDeclaration(ctx: mcfppParser.ClassDeclarationContext): Unit = withCompilationContext(ctx){
         //注册类
         val id = ctx.classWithoutNamespace().text
-        val nsp = GlobalField.localNamespaces[Project.currNamespace]!!
+        val nsp = GlobalScope.localNamespaces[Project.currNamespace]!!
 
         val cls = if(ctx.readOnlyParams() != null){
             //泛型类
@@ -133,9 +133,9 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
                 val qwq = p.text.splitNamespaceID()
                 val identifier: String = qwq.second
                 val namespace : String? = qwq.first
-                var pc : CompoundData? = GlobalField.getClass(namespace, identifier)
+                var pc : CompoundData? = GlobalScope.getClass(namespace, identifier)
                 if(pc == null){
-                    pc = GlobalField.getInterface(namespace, identifier)
+                    pc = GlobalScope.getInterface(namespace, identifier)
                     if(pc == null){
                         pc = Class.Companion.UndefinedClassOrInterface(identifier,namespace)
                     }
@@ -154,7 +154,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
     override fun visitObjectClassDeclaration(ctx: mcfppParser.ObjectClassDeclarationContext): Unit = withCompilationContext(ctx) {
         //注册类
         val id = ctx.classWithoutNamespace().text
-        val nsp = GlobalField.localNamespaces[Project.currNamespace]!!
+        val nsp = GlobalScope.localNamespaces[Project.currNamespace]!!
 
         val objectClass = if(ctx.readOnlyParams() != null){
             //泛型类
@@ -177,11 +177,11 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
                 val qwq = p.text.splitNamespaceID()
                 val identifier: String = qwq.second
                 val namespace : String? = qwq.first
-                var pc : CompoundData? = GlobalField.getClass(namespace, identifier)
+                var pc : CompoundData? = GlobalScope.getClass(namespace, identifier)
                 if(pc == null){
-                    pc = GlobalField.getInterface(namespace, identifier)
+                    pc = GlobalScope.getInterface(namespace, identifier)
                     if(pc == null){
-                        pc = GlobalField.getObject(namespace, identifier)
+                        pc = GlobalScope.getObject(namespace, identifier)
                         if(pc !is ObjectClass){
                             LogProcessor.error("Undefined class: " + p.text)
                             pc = Class.Companion.UndefinedClassOrInterface(identifier,namespace)
@@ -212,7 +212,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             readOnlyArgs.add(arg)
         }
 
-        val genericClass = GlobalField.getClass(Project.currNamespace, id)
+        val genericClass = GlobalScope.getClass(Project.currNamespace, id)
         if(genericClass == null){
             LogProcessor.error("Undefined generic class: $id in namespace ${Project.currNamespace}")
             return
@@ -243,7 +243,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
     override fun visitTemplateDeclaration(ctx: mcfppParser.TemplateDeclarationContext): Unit = withCompilationContext(ctx) {
         //注册模板
         val id = ctx.classWithoutNamespace().text
-        val nsp = GlobalField.localNamespaces[Project.currNamespace]!!
+        val nsp = GlobalScope.localNamespaces[Project.currNamespace]!!
         if (nsp.field.hasDeclaredType(id)) {
             //重复声明
             LogProcessor.error("Type has been defined: $id in namespace ${Project.currNamespace}")
@@ -265,7 +265,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
     override fun visitObjectTemplateDeclaration(ctx: mcfppParser.ObjectTemplateDeclarationContext): Unit = withCompilationContext(ctx){
         //注册模板
         val id = ctx.classWithoutNamespace().text
-        val nsp = GlobalField.localNamespaces[Project.currNamespace]!!
+        val nsp = GlobalScope.localNamespaces[Project.currNamespace]!!
         if (nsp.field.hasObject(id)) {
             //重复声明
             LogProcessor.error("Type has been defined: $id in namespace ${Project.currNamespace}")
@@ -279,7 +279,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
     override fun visitEnumDeclaration(ctx: mcfppParser.EnumDeclarationContext): Unit = withCompilationContext(ctx) {
         //注册枚举
         val id = ctx.Identifier().text
-        val nsp = GlobalField.localNamespaces[Project.currNamespace]!!
+        val nsp = GlobalScope.localNamespaces[Project.currNamespace]!!
         if (nsp.field.hasDeclaredType(id)) {
             //重复声明
             LogProcessor.error("Type has been defined: $id in namespace ${Project.currNamespace}")

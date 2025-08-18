@@ -4,7 +4,7 @@ import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.lib.NBTPath
-import top.mcfpp.model.field.SimpleFieldWithType
+import top.mcfpp.model.scope.SimpleScopeWithType
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPConcreteType
 import top.mcfpp.type.MCFPPGenericParamType
@@ -103,7 +103,7 @@ class FunctionParam(
         fun parseReadonlyAndNormalParamTypes(params: mcfppParser.FunctionParamsContext): Pair<ArrayList<MCFPPType>,ArrayList<MCFPPType>>{
             val r = ArrayList<MCFPPType>()
             val n = ArrayList<MCFPPType>()
-            val typeScope = SimpleFieldWithType.getTypeScope()
+            val typeScope = SimpleScopeWithType.getTypeScope()
             //解析只读参数
             params.readOnlyParams()?.let {
                 for (param in it.parameterList()?.parameter()?: emptyList()) {
@@ -128,7 +128,7 @@ class FunctionParam(
 
         fun parseNormalParamTypes(params: mcfppParser.NormalParamsContext): ArrayList<MCFPPType>{
             val n = ArrayList<MCFPPType>()
-            val typeScope = SimpleFieldWithType.getTypeScope()
+            val typeScope = SimpleScopeWithType.getTypeScope()
             for (param in (params.parameterList()?.parameter()?: emptyList())) {
                 n.add(MCFPPType.parseFromString(param.type().text, typeScope)?: run {
                     LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(param.type().text))

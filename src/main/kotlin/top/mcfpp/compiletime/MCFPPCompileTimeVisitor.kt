@@ -8,7 +8,7 @@ import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.model.function.Function
 
 class MCFPPCompileTimeVisitor(
-    var field:CompileTimeFunctionField,
+    var field:CompileTimeFunctionScope,
 ): MCFPPImVisitor() {
     val exprVisitor = MCFPPExprVisitor()
 

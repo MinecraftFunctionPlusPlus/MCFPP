@@ -8,9 +8,9 @@ import top.mcfpp.model.Native
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
-import top.mcfpp.model.field.GlobalField
 import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper.toSnakeCase
 import top.mcfpp.util.Utils
@@ -54,23 +54,26 @@ object DatapackCreator {
         //清空原输出文件夹
         delAllFile(File("$path/${Project.config.name}"))
 
-        LogProcessor.debug("Copy libs...")
-        //标准库
-        delAllFile(File("$path/Imports"))
-        //新建文件夹
-        File("$path/Imports/data").mkdirs()
-        //复制库
-        for(module in Project.modules){
-            module.extract(Path("$path/Imports/data"))
-        }
-        val importMcMeta = DatapackMcMeta(
-            DatapackMcMeta.Pack(
-                Utils.getVersion(Project.config.version),
-                "MCFPP imports"
+        if(Project.config.copyImport){
+            LogProcessor.debug("Copy libs...")
+            //标准库
+            delAllFile(File("$path/Imports"))
+            //新建文件夹
+            File("$path/Imports/data").mkdirs()
+            //复制库
+            for(module in Project.modules){
+                module.extract(Path("$path/Imports/data"))
+            }
+            val importMcMeta = DatapackMcMeta(
+                DatapackMcMeta.Pack(
+                    Utils.getVersion(Project.config.version),
+                    "MCFPP imports"
+                )
             )
-        )
-        val importMcMetaJson: String = JSON.toJSONString(importMcMeta)
-        Files.write(Paths.get("$path/Imports/pack.mcmeta"), importMcMetaJson.toByteArray())
+            val importMcMetaJson: String = JSON.toJSONString(importMcMeta)
+            Files.write(Paths.get("$path/Imports/pack.mcmeta"), importMcMetaJson.toByteArray())
+
+        }
 
         LogProcessor.debug("Creating datapack...")
         //生成
@@ -87,10 +90,10 @@ object DatapackCreator {
             //创建pack.mcmeta
             Files.write(Paths.get("$path/${Project.config.name}/pack.mcmeta"), datapackMcMetaJson.toByteArray())
             //写入函数文件
-            for(namespace in GlobalField.localNamespaces){
+            for(namespace in GlobalScope.localNamespaces){
                 genNamespace(path, namespace)
             }
-            for (namespace in GlobalField.stdNamespaces){
+            for (namespace in GlobalScope.stdNamespaces){
                 genNamespace(path, namespace)
             }
             //写入宏函数
@@ -101,7 +104,7 @@ object DatapackCreator {
                 Files.write(Paths.get(currPath), command.toByteArray())
             }
             //写入标签json文件
-            for (tag in GlobalField.functionTags.values) {
+            for (tag in GlobalScope.functionTags.values) {
                 LogProcessor.debug("Writing File: " + path + "\\${Project.config.name}\\data\\" + tag.namespace + "\\tags\\function\\" + tag.identifier + ".json")
                 Files.createDirectories(Paths.get(path + "/${Project.config.name}/data/" + tag.namespace + "/tags/function"))
                 Files.write(

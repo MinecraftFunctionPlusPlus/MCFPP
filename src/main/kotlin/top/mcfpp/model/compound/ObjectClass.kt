@@ -2,7 +2,7 @@ package top.mcfpp.model.compound
 
 import top.mcfpp.Project
 import top.mcfpp.core.lang.obj.ClassPointer
-import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.type.MCFPPObjectClassType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
@@ -39,9 +39,9 @@ open class ObjectClass(identifier: String, namespace: String = Project.currNames
             : ObjectClass(identifier, namespace?: Project.currNamespace) {
 
             fun getDefinedClassOrInterface(): CompoundData?{
-                var re : CompoundData? = GlobalField.getClass(namespace, identifier)
+                var re : CompoundData? = GlobalScope.getClass(namespace, identifier)
                 if(re == null){
-                    re = GlobalField.getInterface(namespace, identifier)
+                    re = GlobalScope.getInterface(namespace, identifier)
                 }
                 return re
             }

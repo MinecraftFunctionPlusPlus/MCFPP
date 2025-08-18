@@ -1,16 +1,16 @@
 package top.mcfpp.io.info
 
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.field.CompoundDataField
+import top.mcfpp.model.scope.CompoundDataScope
 
 data class FieldInfo(
     var vars: ArrayList<Var<*>>,
 //    var vars: ArrayList<Quadruple<String, MCFPPType, Any?, String?>>,
     var functions: ArrayList<AbstractFunctionInfo<*>>,
     var properties: ArrayList<PropertyInfo>
-): ModelInfo<CompoundDataField> {
-    override fun get(): CompoundDataField {
-        val field = CompoundDataField(ArrayList())
+): ModelInfo<top.mcfpp.model.scope.CompoundDataScope> {
+    override fun get(): top.mcfpp.model.scope.CompoundDataScope {
+        val field = top.mcfpp.model.scope.CompoundDataScope(ArrayList())
         vars.forEach {
             field.putVar(it.identifier, it, false)
         }
@@ -34,7 +34,7 @@ data class FieldInfo(
     }
 
     companion object {
-        fun from(field: CompoundDataField): FieldInfo {
+        fun from(field: top.mcfpp.model.scope.CompoundDataScope): FieldInfo {
             val functions = ArrayList<AbstractFunctionInfo<*>>()
             field.forEachFunction {
                 functions.add(AbstractFunctionInfo.from(it))

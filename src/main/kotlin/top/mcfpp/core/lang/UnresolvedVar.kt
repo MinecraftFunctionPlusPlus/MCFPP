@@ -4,7 +4,7 @@ import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.exception.VariableNotResolvedException
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
-import top.mcfpp.model.field.IFieldWithType
+import top.mcfpp.model.scope.IScopeWithType
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.UnresolvedType
@@ -18,13 +18,13 @@ import top.mcfpp.util.LogProcessor
  */
 class UnresolvedVar : Var<UnresolvedVar> {
 
-    val typeScope : IFieldWithType
+    val typeScope : IScopeWithType
 
     /**
      * 创建一个未被解析的变量，它有指定的标识符和类型
      */
     @Suppress("ConvertSecondaryConstructorToPrimary")
-    constructor(identifier: String, type: UnresolvedType, typeScope: IFieldWithType){
+    constructor(identifier: String, type: UnresolvedType, typeScope: IScopeWithType){
         this.type = type
         this.identifier = identifier
         this.typeScope = typeScope

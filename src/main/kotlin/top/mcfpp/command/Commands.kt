@@ -17,7 +17,7 @@ import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.ObjectClass
-import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.Function.Companion.addCommand
 import top.mcfpp.model.function.NoStackFunction
@@ -453,7 +453,7 @@ object Commands {
     fun tempFunction(parent: Function, operation: (tempFunction: Function) -> Unit) : Pair<Command, Function>{
         val l = Function.currFunction
         val f = NoStackFunction(TempPool.getFunctionIdentify("temp"), parent)
-        GlobalField.localNamespaces[Project.currNamespace]!!.field.addFunction(f, false)
+        GlobalScope.localNamespaces[Project.currNamespace]!!.field.addFunction(f, false)
         Function.currFunction = f
         operation(f)
         Function.currFunction = l
@@ -473,7 +473,7 @@ object Commands {
     fun tempFunction(prefix: String, parent: Function, operation: (tempFunction: Function) -> Unit) : Pair<Command, Function>{
         val l = Function.currFunction
         val f = NoStackFunction(TempPool.getFunctionIdentify("${prefix}_temp"), parent)
-        GlobalField.localNamespaces[Project.currNamespace]!!.field.addFunction(f, false)
+        GlobalScope.localNamespaces[Project.currNamespace]!!.field.addFunction(f, false)
         Function.currFunction = f
         operation(f)
         Function.currFunction = l

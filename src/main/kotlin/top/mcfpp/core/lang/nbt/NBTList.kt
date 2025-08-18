@@ -10,7 +10,7 @@ import top.mcfpp.mni.NBTListConcreteData
 import top.mcfpp.mni.NBTListData
 import top.mcfpp.model.Member
 import top.mcfpp.model.compound.CompoundData
-import top.mcfpp.model.field.GlobalField
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
@@ -301,7 +301,7 @@ class NBTListConcrete: NBTList, PartialConcreteValue<ListTag, ArrayList<Var<*>>>
         if(isSet){
             //循环内一直没更改过isSet的值，说明列表所有变量都可被追踪
             Function.addCommands(Commands.buildMacroAdjustedCommands(this, Commands.dataSetValue(nbtPath, list)))
-            GlobalField.localNamespaces[commands.second.namespace]!!.field.removeFunction(commands.second)
+            GlobalScope.localNamespaces[commands.second.namespace]!!.field.removeFunction(commands.second)
         }else{
             Function.addCommands(Commands.buildMacroAdjustedCommands(this, commands.first))
         }
