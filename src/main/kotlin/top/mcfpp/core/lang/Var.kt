@@ -187,7 +187,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     }
 
     /**
-     * 将b中的值赋值给此变量。如果b的类型和这个变量的类型不一致，会尝试进行隐式转换。赋值的实际执行过程在[doAssignedBy]中完成
+     * 将b中的值赋值给此变量。赋值的实际执行过程在[doAssignedBy]中完成
      *
      * 此方法不会修改此变量的值。需要在其后调用[replacedBy]将原来的值覆盖
      *
@@ -225,15 +225,10 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     }
 
     /**
-     * 将b中的值赋值给此变量
+     * 将b中的值赋值给此变量。类型转换应在[implicitCast]中完成，原则上传入此函数的赋值用变量应该和被赋值变量的类型一致
      * @param b 变量的对象
      */
     protected abstract fun doAssignedBy(b: Var<*>) : Self
-
-    /**
-     * 判断b变量是否可以赋值给此变量
-     */
-    abstract fun canAssignedBy(b: Var<*>): Boolean
 
     /**
      * 将这个变量强制转换为一个类型
@@ -583,7 +578,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             holder!!.replaceScore(v)
             holder!!.onScoreChange(v)
         }else if(parent == null){
-            Function.getFieldWithVar(this)!!.field.putVar(identifier, v , true)
+            Function.getFieldWithVar(this)!!.scope.putVar(identifier, v , true)
         }else{
             v.parent = this.parent
             parent!!.replaceMemberVar(v)

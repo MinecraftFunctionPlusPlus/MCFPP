@@ -1,6 +1,7 @@
 package top.mcfpp.core.lang.nbt
 
 import top.mcfpp.annotations.InsertCommand
+import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
@@ -29,17 +30,6 @@ open class MCByte: MCInt {
         return when (b) {
             is MCByte -> {
                 assignCommand(b)
-            }
-
-            is CommandReturn -> {
-                if(parentClass() != null){
-                    Function.addCommands(
-                        Commands.selectRun(parent!!, b.command, false)
-                    )
-                }else{
-                    Function.addCommand(b.command)
-                }
-                MCByte(this)
             }
 
             else -> {
@@ -87,14 +77,6 @@ open class MCByte: MCInt {
         ) as MCByte
     }
 
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        if(!b.implicitCast(type).isError) return true
-        return when(b){
-            is CommandReturn -> true
-            else -> false
-        }
-    }
-
     override fun implicitCast(type: MCFPPType): Var<*> {
         val re = super.implicitCast(type)
         if(!re.isError) return re
@@ -108,6 +90,15 @@ open class MCByte: MCInt {
     override fun canImplicitCast(type: MCFPPType): Boolean {
         return super.canImplicitCast(type) || type == MCFPPNBTType.Short || type == MCFPPBaseType.Int
     }
+    override fun storeToStack() {
+        if(parentClass() != null || hasStoredInStack) return
+        Function.addCommand(
+            Command("execute store result")
+            .build(nbtPath.toCommandPart())
+            .build("byte 1 run scoreboard players get $name $sbObject"))
+        hasStoredInStack = true
+    }
+
 
 }
 

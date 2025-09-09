@@ -54,22 +54,11 @@ open class EntityUUIDVar : NBTBasedData{
                 isName = b.isName
             }
 
-            is MCStringConcrete -> {
-                assignCommand(b)
-                isName = true
-            }
-
             else -> {
                 LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
             }
         }
         return this
-    }
-
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        if(!b.implicitCast(type).isError) return true
-        if(b is MCStringConcrete) return true
-        return false
     }
 
     @InsertCommand
@@ -171,7 +160,7 @@ class EntityUUIDVarConcrete: EntityUUIDVar, MCFPPValue<Tag<*>> {
             if(parentTemplate() != null){
                 (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
             }else{
-                Function.currFunction.field.putVar(identifier, re, true)
+                Function.currFunction.scope.putVar(identifier, re, true)
             }
         }
         return re

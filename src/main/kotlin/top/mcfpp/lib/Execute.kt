@@ -36,10 +36,6 @@ class Execute {
                             }
                             return this
                         }
-
-                        override fun canAssignedBy(b: Var<*>): Boolean {
-                            return b is PosDimension
-                        }
                     })
                     field.putVar("y", object : WriteOnlyVar(){
                         override fun getData(): CompoundData {
@@ -53,10 +49,6 @@ class Execute {
                                 LogProcessor.error("execute.pos.y can only be assigned with CoordinateDimension")
                             }
                             return this
-                        }
-
-                        override fun canAssignedBy(b: Var<*>): Boolean {
-                            return b is PosDimension
                         }
                     })
                     field.putVar("z", object : WriteOnlyVar(){
@@ -72,10 +64,6 @@ class Execute {
                             }
                             return this
                         }
-
-                        override fun canAssignedBy(b: Var<*>): Boolean {
-                            return b is PosDimension
-                        }
                     })
                 }
             }
@@ -87,10 +75,6 @@ class Execute {
                     LogProcessor.error("execute.pos can only be assigned with Pos3Var")
                 }
                 return this
-            }
-
-            override fun canAssignedBy(b: Var<*>): Boolean {
-                return b is PosDimension
             }
         })
     }

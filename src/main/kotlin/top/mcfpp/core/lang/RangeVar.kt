@@ -86,10 +86,6 @@ open class RangeVar: Var<RangeVar> {
         return this
     }
 
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        return !b.implicitCast(type).isError
-    }
-
     override fun clone(): RangeVar {
         return RangeVar(this)
     }

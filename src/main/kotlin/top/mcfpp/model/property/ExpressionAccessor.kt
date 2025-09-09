@@ -16,7 +16,7 @@ class ExpressionAccessor: AbstractAccessor{
 
     constructor(ctx: ExpressionContext, field: Var<*>) {
         Commands.fakeFunction(Function.currFunction){
-            it.field.putVar("field", field)
+            it.scope.putVar("field", field)
             val test: Var<*> = MCFPPExprVisitor().visit(ctx)
             if(!test.type.isSubOf(field.type)) {
                 LogProcessor.error("Expression type mismatch: ${test.type} and ${field.type}")
@@ -38,7 +38,7 @@ class ExpressionAccessor: AbstractAccessor{
         if(error) return field
         var v : Var<*>? = null
         val cs = Commands.fakeFunction(Function.currFunction){
-            it.field.putVar("field", field)
+            it.scope.putVar("field", field)
             v = MCFPPExprVisitor().visit(ctx)
         }
         Function.addCommands(cs)

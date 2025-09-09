@@ -51,7 +51,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             super.visitTopStatement(ctx)
             isInTopStatement = false
             //变量移动到文件作用域
-            MCFPPFile.currFile!!.field.vars.putAll(Function.currFunction.field.vars)
+            MCFPPFile.currFile!!.field.vars.putAll(Function.currFunction.scope.vars)
         }
         return null
     }
@@ -125,7 +125,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         val fieldModifier = ctx.fieldModifier()?.text
         //只有类字段构建
         var type = ctx.type()?.let {
-            MCFPPType.parseFromContextNotNull(it, Function.currFunction.field)
+            MCFPPType.parseFromContextNotNull(it, Function.currFunction.scope)
         }
         var init: Var<*>? = null
         if (ctx.expression() != null) {
@@ -580,7 +580,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addCommand("return 1")
         Function.currFunction = Function.currFunction.parent[0]
         Function.addComment("while loop end")
-        Function.currFunction.field.forEachVar {
+        Function.currFunction.scope.forEachVar {
             if(!it.trackLost){
                 it.trackLost = true
                 if(it is MCFPPValue<*>) it.toDynamic(true)
@@ -701,7 +701,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addCommand("return 1")
         Function.currFunction = Function.currFunction.parent[0]
         Function.addComment("do while end")
-        Function.currFunction.field.forEachVar {
+        Function.currFunction.scope.forEachVar {
             if(it.trackLost){
                 it.trackLost = false
                 if(it is MCFPPValue<*>) it.toDynamic(true)

@@ -77,14 +77,6 @@ open class MCLong: NBTBasedData {
         return this
     }
 
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        if(!b.implicitCast(type).isError) return true
-        if(b is NBTBasedDataConcrete){
-            return b.nbtType == NBTBasedData.Companion.NBTTypeWithTag.LONG
-        }
-        return false
-    }
-
     @InsertCommand
     override fun assignCommand(a: NBTBasedData) : MCLong {
         nbtType = a.nbtType

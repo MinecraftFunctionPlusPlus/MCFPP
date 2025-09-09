@@ -3,8 +3,6 @@ package top.mcfpp.core.lang.entity
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.ConcreteVar
 import top.mcfpp.core.lang.Var
-import top.mcfpp.core.lang.nbt.NBTBasedData
-import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.type.MCFPPEntityType
 import top.mcfpp.type.MCFPPType
@@ -39,14 +37,6 @@ open class SpecifiedEntityVar: ConcreteVar<SpecifiedEntityVar, String> {
             else -> LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
         }
         return this
-    }
-
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        if(!b.implicitCast(type).isError) return true
-        if(b is NBTBasedDataConcrete){
-            return b.nbtType == NBTBasedData.Companion.NBTTypeWithTag.STRING
-        }
-        return false
     }
 
     override fun clone(): SpecifiedEntityVar {

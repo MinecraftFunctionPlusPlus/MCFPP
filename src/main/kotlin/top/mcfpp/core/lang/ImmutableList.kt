@@ -75,7 +75,7 @@ class ImmutableListConcrete: ImmutableList, MCFPPValue<ListTag>{
             if(parentTemplate() != null) {
                 (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
             }else{
-                Function.currFunction.field.putVar(identifier, re, true)
+                Function.currFunction.scope.putVar(identifier, re, true)
             }
         }
         return re

@@ -19,9 +19,9 @@ class InlineFunction : Function {
     override fun argPass(normalArgs: List<Var<*>>) {
         for (i in this.normalParams.indices) {
             if(i >= normalArgs.size){
-                field.putVar(this.normalParams[i].identifier, this.normalParams[i].defaultVar!!, true)
+                scope.putVar(this.normalParams[i].identifier, this.normalParams[i].defaultVar!!, true)
             }else{
-                field.putVar(this.normalParams[i].identifier, normalArgs[i], true)
+                scope.putVar(this.normalParams[i].identifier, normalArgs[i], true)
             }
         }
     }
@@ -36,7 +36,7 @@ class InlineFunction : Function {
         //基本类型
         addComment("[Inline Function ${this.namespaceID}]")
         //传入this参数
-        field.putVar("this",caller,true)
+        scope.putVar("this",caller,true)
         //参数传递
         argPass(normalArgs)
         //重新遍历这个函数

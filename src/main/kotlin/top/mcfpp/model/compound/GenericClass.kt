@@ -106,7 +106,7 @@ open class GenericClass : Class {
             }
             for (i in readOnlyParam.indices) {
                 if(readOnlyParams[i].type != null){
-                    if (!readOnlyParams[i].type!!.build("").canAssignedBy(readOnlyParam[i].build(""))) {
+                    if (!readOnlyParams[i].type!!.build("").canImplicitCast(readOnlyParam[i])) {
                         return false
                     }
                 }else{

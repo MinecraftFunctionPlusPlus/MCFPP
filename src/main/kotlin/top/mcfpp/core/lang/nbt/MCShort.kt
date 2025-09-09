@@ -27,19 +27,8 @@ open class MCShort: MCInt {
 
     override fun doAssignedBy(b: Var<*>) : MCInt {
         return when (b) {
-            is MCInt -> {
+            is MCShort -> {
                 assignCommand(b)
-            }
-
-            is CommandReturn -> {
-                if(parentClass() != null){
-                    Function.addCommands(
-                        Commands.selectRun(parent!!, b.command, false)
-                    )
-                }else{
-                    Function.addCommand(b.command)
-                }
-                MCInt(this)
             }
 
             else -> {
@@ -86,14 +75,6 @@ open class MCShort: MCInt {
                 MCByte(this)
             }
         ) as MCShort
-    }
-
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        if(!b.implicitCast(type).isError) return true
-        return when(b){
-            is CommandReturn -> true
-            else -> false
-        }
     }
 }
 

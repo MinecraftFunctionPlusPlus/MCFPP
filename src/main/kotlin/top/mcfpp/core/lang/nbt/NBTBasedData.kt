@@ -63,10 +63,6 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
         }
     }
 
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        return !b.implicitCast(type).isError
-    }
-
     @InsertCommand
     protected open fun assignCommand(a: NBTBasedData) : NBTBasedData {
         nbtType = a.nbtType
@@ -428,24 +424,42 @@ class NBTBasedDataConcrete : NBTBasedData, MCFPPValue<Tag<*>> {
     }
 
     override fun implicitCast(type: MCFPPType): Var<*> {
-        if((type is MCFPPVectorType)){
-            if((value is ListTag) && (type.dimension == (value as ListTag).size)){
-                //转换为向量
-                val first = (value as ListTag)[0]
-                if(first !is IntTag){
+        when(type){
+            is MCFPPVectorType -> {
+                if((value is ListTag) && (type.dimension == (value as ListTag).size)){
+                    //转换为向量
+                    val first = (value as ListTag)[0]
+                    if(first !is IntTag){
+                        return buildCastErrorVar(type)
+                    }
+                    return VectorVarConcrete((value as ListTag).map { (it as IntTag).asInt() }.toTypedArray())
+                }else{
                     return buildCastErrorVar(type)
                 }
-                return VectorVarConcrete((value as ListTag).map { (it as IntTag).asInt() }.toTypedArray())
-            }else{
+            }
+            MCFPPBaseType.Any -> {
+                return MCAnyConcrete(value)
+            }
+            is MCFPPDataTemplateType -> {
+                if (value !is CompoundTag) {
+                    LogProcessor.error("Not a compound tag: $value")
+                    return buildCastErrorVar(type)
+                }
+                if (type.template.checkCompoundStruct(value as CompoundTag)) {
+                    val re = type.build() as DataTemplateObject
+                    re.assignMembers(value as CompoundTag)
+                    return re
+                } else {
+                    LogProcessor.error("Error compound struct: $value")
+                    return buildCastErrorVar(type)
+                }
+            }
+            else -> {
+                val t = JavaVar.javaToMC(value.toJava())
+                if(t.type == type) return t
                 return buildCastErrorVar(type)
             }
         }
-        if(type == MCFPPBaseType.Any){
-            return MCAnyConcrete(value)
-        }
-        val t = JavaVar.javaToMC(value.toJava())
-        if(t.type == type) return t
-        return buildCastErrorVar(type)
     }
 
     override fun canImplicitCast(type: MCFPPType): Boolean{
@@ -473,7 +487,7 @@ class NBTBasedDataConcrete : NBTBasedData, MCFPPValue<Tag<*>> {
             if(parentTemplate() != null){
                 (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
             }else {
-                Function.currFunction.field.putVar(identifier, re, true)
+                Function.currFunction.scope.putVar(identifier, re, true)
             }
         }
         return re

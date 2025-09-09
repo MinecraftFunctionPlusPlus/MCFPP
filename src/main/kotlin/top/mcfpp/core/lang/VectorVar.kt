@@ -59,25 +59,11 @@ open class VectorVar: Var<VectorVar>, Indexable, ScoreHolder {
                     components[i].replacedBy(components[i].assignedBy(b.components[i]))
                 }
             }
-            is MCInt -> {
-                for (i in 0 until dimension){
-                    components[i].replacedBy(components[i].assignedBy(b))
-                }
-            }
             else -> {
                 LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
             }
         }
         return this
-    }
-
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        if(!b.implicitCast(type).isError) return true
-        return when(b){
-            is VectorVar -> b.dimension == dimension
-            is MCInt -> true
-            else -> false
-        }
     }
 
     override fun explicitCast(type: MCFPPType): Var<*> {

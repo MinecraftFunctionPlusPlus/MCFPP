@@ -5,7 +5,6 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.nbt.MCString
-import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.lib.SbObject
@@ -88,28 +87,11 @@ open class EnumVar : Var<EnumVar>, OnScoreboard {
                 }
             }
 
-            is MCStringConcrete -> {
-                val value = b.value.value
-                val member = enum.members[value]
-                if(member == null){
-                    LogProcessor.error("Enum member not found: $value")
-                    return this
-                }
-                EnumVarConcrete(enum, member.value)
-            }
-
             else -> {
                 LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
                 this
             }
         }
-    }
-
-
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        if(!b.implicitCast(type).isError) return true
-        if(b is MCStringConcrete) return true
-        return false
     }
 
     override fun clone(): EnumVar {
@@ -214,7 +196,7 @@ class EnumVarConcrete : EnumVar, MCFPPValue<EnumMember> {
             if(parentTemplate() != null){
                 (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
             }else{
-                Function.currFunction.field.putVar(identifier, re, true)
+                Function.currFunction.scope.putVar(identifier, re, true)
             }
         }
         return re

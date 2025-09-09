@@ -41,7 +41,7 @@ fun main(){
         val line = readln()
         if(line.startsWith("get ")){
             val name = line.substring(4)
-            val v = compiler.defaultFile.topFunction.field.getVar(name)
+            val v = compiler.defaultFile.topFunction.scope.getVar(name)
             if(v == null){
                 println("No such variable")
             }else{

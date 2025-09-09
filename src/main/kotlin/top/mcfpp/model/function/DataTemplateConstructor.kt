@@ -26,7 +26,7 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: FunctionBodyCont
         for (param in n.parameter()) {
             val (p,v) = parseParam(param)
             normalParams.add(p)
-            field.putVar(p.identifier, v)
+            scope.putVar(p.identifier, v)
         }
     }
 
@@ -51,7 +51,7 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: FunctionBodyCont
 
     override fun invoke(normalArgs: LinkedHashMap<String, Var<*>>, caller: CanSelectMember?): Var<*> {
         if(ast == null) return caller as DataTemplateObject
-        field.putVar("this", caller as DataTemplateObject, true)
+        scope.putVar("this", caller as DataTemplateObject, true)
         normalArgs.addFirst("this", caller)
         //初始化
         for ((k, v) in data.preInit) {

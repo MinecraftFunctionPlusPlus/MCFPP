@@ -1,10 +1,15 @@
 package top.mcfpp.core.lang
 
 import top.mcfpp.command.Command
+import top.mcfpp.core.lang.bool.ScoreBool
+import top.mcfpp.core.lang.nbt.MCByte
+import top.mcfpp.core.lang.nbt.MCShort
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
+import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPNBTType
 import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.TempPool
@@ -42,6 +47,26 @@ class CommandReturn : Var<CommandReturn> {
     override fun implicitCast(type: MCFPPType): Var<*> {
         return when(type){
             MCFPPPrivateType.CommandReturn -> this
+            MCFPPBaseType.Int -> {
+                val qwq = MCInt()
+                Function.addCommand(Command("execute store result score ${qwq.identifier} ${qwq.sbObject} run").build(command))
+                return qwq
+            }
+            MCFPPNBTType.Byte -> {
+                val qwq = MCByte()
+                Function.addCommand(Command("execute store result score ${qwq.identifier} ${qwq.sbObject} run").build(command))
+                return qwq
+            }
+            MCFPPNBTType.Short -> {
+                val qwq = MCShort()
+                Function.addCommand(Command("execute store result score ${qwq.identifier} ${qwq.sbObject} run").build(command))
+                return qwq
+            }
+            MCFPPBaseType.Bool -> {
+                val qwq = ScoreBool()
+                Function.addCommand(Command.build("execute store result score ${qwq.identifier} ${qwq.boolObject} run").build(command))
+                return qwq
+            }
             else -> buildCastErrorVar(type)
         }
     }
@@ -51,10 +76,6 @@ class CommandReturn : Var<CommandReturn> {
     }
 
     override fun doAssignedBy(b: Var<*>): CommandReturn = this
-
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        return !b.implicitCast(type).isError
-    }
 
     override fun clone(): CommandReturn = CommandReturn(this)
 
@@ -82,10 +103,6 @@ class CommandSuccess(val re: CommandReturn) : Var<CommandSuccess>("success") {
         set(_) {}
 
     override fun doAssignedBy(b: Var<*>): CommandSuccess = this
-
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        return !b.implicitCast(type).isError
-    }
 
     override fun clone(): CommandSuccess = this
 
@@ -115,10 +132,6 @@ class CommandResult(val re: CommandReturn): Var<CommandResult>("result"){
         set(_) {}
 
     override fun doAssignedBy(b: Var<*>): CommandResult = this
-
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        return !b.implicitCast(type).isError
-    }
 
     override fun clone(): CommandResult = this
 

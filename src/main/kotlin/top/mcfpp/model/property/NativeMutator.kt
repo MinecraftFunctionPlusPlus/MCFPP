@@ -19,9 +19,9 @@ class NativeMutator: AbstractMutator {
     constructor(javaRefer: String, d: CompoundData, field: Var<*>) {
         function = NativeFunction("set_${field.identifier}", d.namespace)
         function.returnType = field.type
-        function.field.putVar("field", field)
+        function.scope.putVar("field", field)
         function.appendNormalParam(field.type, "value")
-        function.field.putVar("value", field.type.build("value"))
+        function.scope.putVar("value", field.type.build("value"))
         function.owner = d
         try {
             //根据JavaRefer找到类

@@ -83,14 +83,14 @@ class GenericFunction : Function, Generic<Function> {
                 LogProcessor.error("ReadOnly params must have a concrete value")
                 throw Exception()
             }
-            field.putVar(p.identifier, v)
+            scope.putVar(p.identifier, v)
         }
         hasDefaultValue = false
         for (param in n?.parameter()?: emptyList()) {
             var (p,v) = parseParam(param)
             normalParams.add(p)
             if(v is MCFPPValue<*>) v = v.toDynamic(false)
-            field.putVar(p.identifier, v)
+            scope.putVar(p.identifier, v)
         }
     }
 
@@ -100,11 +100,11 @@ class GenericFunction : Function, Generic<Function> {
 
     override fun buildParamVar() {
         for (param in readOnlyParams){
-            field.putVar(param.identifier, param.buildVar())
+            scope.putVar(param.identifier, param.buildVar())
         }
         for (param in normalParams){
             if(param.hasDefault){
-                field.putVar(param.identifier, param.buildVar())
+                scope.putVar(param.identifier, param.buildVar())
             }
         }
     }
@@ -120,20 +120,20 @@ class GenericFunction : Function, Generic<Function> {
         val cf = Function(this)
         //替换变量
         for (i in readOnlyArgs.indices){
-            cf.field.putVar(
+            cf.scope.putVar(
                 readOnlyParams[i].identifier,
-                cf.field.getVar(readOnlyParams[i].identifier)!!.assignedBy(readOnlyArgs[i]),
+                cf.scope.getVar(readOnlyParams[i].identifier)!!.assignedBy(readOnlyArgs[i]),
                 true
             )
             if(readOnlyArgs[i] is MCFPPTypeVar){
-                cf.field.putType(readOnlyParams[i].identifier, (readOnlyArgs[i] as MCFPPTypeVar).value)
+                cf.scope.putType(readOnlyParams[i].identifier, (readOnlyArgs[i] as MCFPPTypeVar).value)
             }
         }
         for (i in normalValues.indices) {
             if (normalValues[i] != null) {
-                cf.field.putVar(
+                cf.scope.putVar(
                     normalParams[i].identifier,
-                    cf.field.getVar(normalParams[i].identifier)!!.assignedBy(normalArgs[i]),
+                    cf.scope.getVar(normalParams[i].identifier)!!.assignedBy(normalArgs[i]),
                     true
                 )
             }
@@ -170,14 +170,14 @@ class GenericFunction : Function, Generic<Function> {
             var hasFoundFunc = true
             //参数比对
             for (i in normalArgs.indices) {
-                if (this.field.getVar(this.normalParams[i].identifier)!!.canAssignedBy(normalArgs[i])) {
+                if (this.scope.getVar(this.normalParams[i].identifier)!!.canImplicitCast(normalArgs[i].type)) {
                     hasFoundFunc = false
                     break
                 }
             }
             if(hasFoundFunc){
                 for (i in readOnlyArgs.indices) {
-                    if (this.field.getVar(this.readOnlyParams[i].identifier)!!.canAssignedBy(readOnlyArgs[i])) {
+                    if (this.scope.getVar(this.readOnlyParams[i].identifier)!!.canImplicitCast(readOnlyArgs[i].type)) {
                         hasFoundFunc = false
                         break
                     }
@@ -198,7 +198,7 @@ class GenericFunction : Function, Generic<Function> {
         //参数比对
         var index = 0
         while (index < normalArgs.size) {
-            if (field.getVar(this.normalParams[index].identifier)!!.canAssignedBy(normalArgs[index])) {
+            if (scope.getVar(this.normalParams[index].identifier)!!.canImplicitCast(normalArgs[index].type)) {
                 hasFoundFunc = false
                 break
             }
@@ -208,7 +208,7 @@ class GenericFunction : Function, Generic<Function> {
         if(!hasFoundFunc) return false
         index = 0
         while (index < readOnlyArgs.size) {
-            if (field.getVar(this.readOnlyParams[index].identifier)!!.canAssignedBy(readOnlyArgs[index])) {
+            if (scope.getVar(this.readOnlyParams[index].identifier)!!.canImplicitCast(readOnlyArgs[index].type)) {
                 hasFoundFunc = false
                 break
             }

@@ -112,10 +112,6 @@ open class MCFloat : MCNumber<Float> {
         }
     }
 
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        return !b.implicitCast(type).isError
-    }
-
     /**
      * 赋值
      * @param a 值来源
@@ -489,7 +485,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
             if(parentTemplate() != null){
                 (parent as DataTemplateObject).instanceField.putVar(identifier, qwq, true)
             }else{
-                Function.currFunction.field.putVar(identifier, qwq, true)
+                Function.currFunction.scope.putVar(identifier, qwq, true)
             }
         }
         return qwq

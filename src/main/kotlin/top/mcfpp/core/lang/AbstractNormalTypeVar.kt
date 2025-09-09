@@ -26,10 +26,6 @@ class AbstractNormalTypeVar: Var<AbstractNormalTypeVar>, MCFPPValue<Var<*>?> {
         return this
     }
 
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        return b.type.isSubOf(type)
-    }
-
     override fun clone(): AbstractNormalTypeVar {
         return AbstractNormalTypeVar(identifier, type).apply {
             this.value = value?.clone()

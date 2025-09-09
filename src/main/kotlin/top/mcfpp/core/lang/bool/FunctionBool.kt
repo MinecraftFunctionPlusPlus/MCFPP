@@ -66,10 +66,6 @@ class FunctionBool(identifier: String , function: Function): BaseBool(identifier
         }
     }
 
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        return b is BaseBool
-    }
-
     override fun clone(): FunctionBool {
         return FunctionBool(identifier, value)
     }

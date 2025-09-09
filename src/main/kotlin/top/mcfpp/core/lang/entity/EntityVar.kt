@@ -45,15 +45,6 @@ class EntityVar: ConcreteVar<EntityVar, Var<*>?> {
         return this
     }
 
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        return when(b){
-            is EntityVar -> true
-            is SelectorVar -> true
-            is SpecifiedEntityVar -> true
-            else -> false
-        }
-    }
-
     override fun clone(): EntityVar {
         return EntityVar(this)
     }

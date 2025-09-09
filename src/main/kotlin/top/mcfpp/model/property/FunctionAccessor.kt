@@ -17,10 +17,10 @@ class FunctionAccessor: AbstractAccessor {
     constructor(field: Var<*>, d: CompoundData): super() {
         function = Function("get_${field.identifier}", d.namespace, null)
         function.returnType = field.type
-        function.field.putVar("field", field)
+        function.scope.putVar("field", field)
         function.appendNormalParam(field.type, "field")
         val thisObj = Class.currClass!!.getType().build("this", function)
-        function.field.putVar("this",thisObj)
+        function.scope.putVar("this",thisObj)
         field.parent = thisObj
         function.owner = d
     }

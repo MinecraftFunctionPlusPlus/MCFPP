@@ -69,7 +69,7 @@ open class ClassConstructor(var target: Class)
                 addCommand(Commands.function(this))
             }
             //销毁指针，释放堆内存
-            for (p in field.allVars){
+            for (p in scope.allVars){
                 if (p is ClassPointer){
                     p.dispose()
                 }
@@ -82,7 +82,7 @@ open class ClassConstructor(var target: Class)
         //添加this指针
         val thisObj = ClassPointer(target,"this")
         thisObj.nbtPath = NBTPath.getNormalStackPath(thisObj)
-        field.putVar("this",thisObj)
+        scope.putVar("this",thisObj)
     }
 
     /**
@@ -107,7 +107,7 @@ open class ClassConstructor(var target: Class)
         for (param in n.parameter()) {
             val (p,v) = parseParam(param)
             normalParams.add(p)
-            field.putVar(p.identifier, v)
+            scope.putVar(p.identifier, v)
         }
     }
 

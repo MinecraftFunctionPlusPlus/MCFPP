@@ -116,10 +116,10 @@ class NativeFunction : Function, Native {
             if(np.type is MCFPPTypeWithGeneric){
                 val p = FunctionParam((np.type as MCFPPTypeWithGeneric).replaceGenericParam(genericParams), np.identifier, this, np.isStatic)
                 n.appendNormalParam(p)
-                n.field.putVar(p.identifier, p.buildVar())
+                n.scope.putVar(p.identifier, p.buildVar())
             }else{
                 n.appendNormalParam(np)
-                n.field.putVar(np.identifier, np.buildVar())
+                n.scope.putVar(np.identifier, np.buildVar())
             }
         }
         for(rp in readOnlyParams){
@@ -198,14 +198,14 @@ class NativeFunction : Function, Native {
                 LogProcessor.error("ReadOnly params must have a concrete value")
                 throw Exception()
             }
-            field.putVar(p.identifier, v)
+            scope.putVar(p.identifier, v)
         }
         hasDefaultValue = false
         for (param in n.parameter()) {
             var (p,v) = parseParam(param)
             normalParams.add(p)
             if(v is MCFPPValue<*>) v = v.toDynamic(false)
-            field.putVar(p.identifier, v)
+            scope.putVar(p.identifier, v)
         }
     }
 

@@ -4,8 +4,8 @@ import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.exception.VariableNotResolvedException
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
-import top.mcfpp.model.scope.IScopeWithType
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.scope.IScopeWithType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.UnresolvedType
 import top.mcfpp.util.LogProcessor
@@ -43,8 +43,6 @@ class UnresolvedVar : Var<UnresolvedVar> {
     override fun doAssignedBy(b: Var<*>): UnresolvedVar {
         throw VariableNotResolvedException()
     }
-
-    override fun canAssignedBy(b: Var<*>): Boolean = false
 
     override fun explicitCast(type: MCFPPType): Var<*> {
         throw VariableNotResolvedException()

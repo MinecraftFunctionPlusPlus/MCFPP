@@ -1,7 +1,7 @@
 package top.mcfpp.core.lang
 
-import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.Member
+import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
@@ -28,8 +28,6 @@ class NormalCompoundDataObject(identifier: String = TempPool.getVarIdentify(), o
         LogProcessor.error("Cannot assign to a normal compound data object.")
         return this
     }
-
-    override fun canAssignedBy(b: Var<*>) = false
 
     override fun clone(): NormalCompoundDataObject = this
 

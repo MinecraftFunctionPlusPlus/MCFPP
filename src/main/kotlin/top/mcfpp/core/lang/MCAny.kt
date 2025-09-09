@@ -104,10 +104,6 @@ open class MCAny : Var<MCAny> {
                 return this
             }
 
-            is MCFPPValue<*> -> {
-                return MCAnyConcrete(this, b.value)
-            }
-
             else -> {
                 lastVar = b
                 val temp = buildInferredVar(inferredType!!)
@@ -116,11 +112,6 @@ open class MCAny : Var<MCAny> {
             }
         }
     }
-
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        return !b.implicitCast(type).isError
-    }
-
     override fun explicitCast(type: MCFPPType): Var<*> {
         return when(type){
             MCFPPBaseType.Any -> this
@@ -217,7 +208,7 @@ class MCAnyConcrete : MCAny, MCFPPValue<Any?> {
             if(parentTemplate() != null){
                 parentTemplate()!!.field.putVar(identifier, re, true)
             }else{
-                Function.currFunction.field.putVar(identifier, re, true)
+                Function.currFunction.scope.putVar(identifier, re, true)
             }
         }
         return re

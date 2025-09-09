@@ -96,32 +96,10 @@ open class ScoreBool : BaseBool, OnScoreboard {
                 return this
             }
 
-            is CommandReturn -> {
-                if(parentClass() != null){
-                    Function.addCommands(
-                        Commands.selectRun(parent!!, Command("store result score @s $boolObject run").build(b.command), false)
-                    )
-                }else{
-                    Function.addCommand(
-                        Command.build("execute store result score $name $boolObject run").build(b.command)
-                    )
-                }
-                return this
-            }
-
             else -> {
                 LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
                 return this
             }
-        }
-    }
-
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        if(!b.implicitCast(type).isError) return true
-        return when(b){
-            is ScoreBool -> true
-            is CommandReturn -> true
-            else -> false
         }
     }
 

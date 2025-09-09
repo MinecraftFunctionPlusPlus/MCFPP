@@ -40,10 +40,6 @@ abstract class BaseBool : Var<BaseBool> {
 
     abstract fun toScoreBool(replace: Boolean): ScoreBool
 
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        return b is BaseBool
-    }
-
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         return null to true
     }

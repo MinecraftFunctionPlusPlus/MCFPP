@@ -9,8 +9,6 @@ abstract class PrivateVar<T: PrivateVar<T>>: Var<T>() {
         return this as T
     }
 
-    final override fun canAssignedBy(b: Var<*>) = false
-
     final override fun clone(): T = this as T
 
     final override fun getTempVar(): T = this as T

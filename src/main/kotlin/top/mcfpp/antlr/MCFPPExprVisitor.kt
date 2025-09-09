@@ -13,12 +13,12 @@ import top.mcfpp.model.Generic
 import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.GenericClass
-import top.mcfpp.model.scope.GlobalScope
-import top.mcfpp.model.scope.MCFPPFuncGetter
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.function.UnknownFunction
+import top.mcfpp.model.scope.GlobalScope
+import top.mcfpp.model.scope.MCFPPFuncGetter
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.primitive.DoubleTag
 import top.mcfpp.nbt.tags.primitive.LongTag
@@ -203,10 +203,10 @@ class MCFPPExprVisitor(
     //乘法
     @Override
     override fun visitMultiplicativeExpression(ctx: mcfppParser.MultiplicativeExpressionContext): Var<*> = withCompilationContext(ctx) {
-        visitMultiplicativeExpressionRe = visitUnaryExpression(ctx.unaryExpression(0))
+        visitMultiplicativeExpressionRe = visitCastExpression(ctx.castExpression(0))
         processVarCache.add(visitMultiplicativeExpressionRe!!)
-        for (i in 1..<ctx.unaryExpression().size) {
-            var b: Var<*>? = visitUnaryExpression(ctx.unaryExpression(i))
+        for (i in 1..<ctx.castExpression().size) {
+            var b: Var<*>? = visitCastExpression(ctx.castExpression(i))
             if(b is MCFloat) b = b.toTempEntity()
             if(visitMultiplicativeExpressionRe != MCFloat.ssObj){
                 visitMultiplicativeExpressionRe = visitMultiplicativeExpressionRe!!.getTempVar()
@@ -219,6 +219,17 @@ class MCFPPExprVisitor(
     }
 
     /**
+     * 计算一个强制转换表达式。
+     * @param ctx the parse tree
+     * @return 表达式的值
+     */
+    @Override
+    override fun visitCastExpression(ctx: mcfppParser.CastExpressionContext): Var<*> = withCompilationContext(ctx) {
+        val a: Var<*> = visitUnaryExpression(ctx.unaryExpression())
+        return a.explicitCast(MCFPPType.parseFromContextNotNull(ctx.type(), Function.currFunction.scope))
+    }
+
+    /**
      * 计算一个单目表达式。比如!a 或者 (int)a
      * @param ctx the parse tree
      * @return 表达式的值
@@ -227,25 +238,10 @@ class MCFPPExprVisitor(
     override fun visitUnaryExpression(ctx: mcfppParser.UnaryExpressionContext): Var<*> = withCompilationContext(ctx) {
         return if (ctx.rightVarExpression() != null) {
             visitRightVarExpression(ctx.rightVarExpression())
-        } else if (ctx.unaryExpression() != null) {
+        } else {
             val a: Var<*> = visitUnaryExpression(ctx.unaryExpression())
             a.unaryComputation("!")
-        } else {
-            //类型强制转换
-            visitCastExpression(ctx.castExpression())
         }
-    }
-
-
-    /**
-     * 计算一个强制转换表达式。
-     * @param ctx the parse tree
-     * @return 表达式的值
-     */
-    @Override
-    override fun visitCastExpression(ctx: mcfppParser.CastExpressionContext): Var<*> = withCompilationContext(ctx) {
-        val a: Var<*> = visitRightVarExpression(ctx.rightVarExpression())
-        return a.explicitCast(MCFPPType.parseFromContextNotNull(ctx.type(), Function.currFunction.field))
     }
 
     /**
@@ -276,7 +272,7 @@ class MCFPPExprVisitor(
         currSelector = visitJvmAccessExpression(ctx.jvmAccessExpression())
         if(currSelector is UnknownVar){
             val typeStr = ctx.jvmAccessExpression().text
-            val type = MCFPPType.parseFromString(typeStr, Function.currFunction.field)
+            val type = MCFPPType.parseFromString(typeStr, Function.currFunction.scope)
             if(type == null){
                 LogProcessor.error(TextTranslator.SYMBOL_NOT_DEFINED.translate(currSelector!!.identifier))
             }else{
@@ -359,7 +355,7 @@ class MCFPPExprVisitor(
                 return UnknownVar("range_" + UUID.randomUUID())
             }
         } else if (ctx.type() != null){
-            return MCFPPTypeVar(MCFPPType.parseFromString(ctx.type().text, Function.currFunction.field)?: run {
+            return MCFPPTypeVar(MCFPPType.parseFromString(ctx.type().text, Function.currFunction.scope)?: run {
                 LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
                 MCFPPBaseType.Any
             })
@@ -480,7 +476,7 @@ class MCFPPExprVisitor(
                 constructor.invoke(normalArgs, init)
             }
             //可能会对init进行替换
-            return Function.currFunction.field.getVar(init.identifier) ?: init
+            return Function.currFunction.scope.getVar(init.identifier) ?: init
         }
         //没有找到函数
         LogProcessor.error("Function ${func.identifier}<${readOnlyArgs.joinToString(",") { it.type.typeName }}>(${normalArgs.map { it.type.typeName }.joinToString(",")}) not defined")
@@ -494,7 +490,7 @@ class MCFPPExprVisitor(
         //没有数组选取
         val qwq: String = ctx.Identifier().text
         var re = if(currSelector == null) {
-            val pwp = Function.currFunction.field.getVar(qwq)
+            val pwp = Function.currFunction.scope.getVar(qwq)
             if(pwp != null) {
                 if(MCFPPImVisitor.inLoopStatement(ctx) && pwp is MCFPPValue<*>){
                     pwp.toDynamic(true)
@@ -520,7 +516,7 @@ class MCFPPExprVisitor(
         if(re is UnknownVar && currSelector == null){
             //从类型获取
             val typeStr = ctx.Identifier().text
-            val type = MCFPPType.parseFromString(typeStr, Function.currFunction.field)
+            val type = MCFPPType.parseFromString(typeStr, Function.currFunction.scope)
             if(type == null){
                 LogProcessor.error(TextTranslator.SYMBOL_NOT_DEFINED.translate(ctx.text))
             }else{
@@ -548,30 +544,20 @@ class MCFPPExprVisitor(
                 return UnknownVar("${re.identifier}_member_" + UUID.randomUUID())
             }
             for (value in ctx.identifierSuffix()) {
-                if(value.conditionalExpression() != null){
+                if(value.expression() != null){
                     if(re !is Indexable){
                         LogProcessor.error("Cannot index ${re.type}")
                         return UnknownVar("${re.identifier}_index_" + UUID.randomUUID())
                     }
                     //索引
-                    val index = visit(value.conditionalExpression())!!
+                    val index = visit(value.expression())!!
                     re = (re as Indexable).getByIndex(index)
-                }else{
-                    if(!re.isTemp) re = re.getTempVar()
-                    //初始化
-                    for (initializer in value.objectInitializer()){
-                        val id = initializer.Identifier().text
-                        val v = visit(initializer.expression())
-                        val (m, b) = re.getMemberVar(id, re.getAccess(Function.currFunction))
-                        if(!b){
-                            LogProcessor.error("Cannot access member $id")
-                        }
-                        if(m == null) {
-                            LogProcessor.error("Member $id not found")
-                            continue
-                        }
-                        m.replacedBy(m.assignedBy(v))
+                }else {
+                    if(re !is Indexable){
+                        LogProcessor.error("Cannot index ${re.type}")
+                        return UnknownVar("${re.identifier}_index_" + UUID.randomUUID())
                     }
+                    //TODO 遍历索引
                 }
             }
             return re

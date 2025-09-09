@@ -53,11 +53,6 @@ open class JsonText : NBTBasedData {
         }
         return this
     }
-
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        return !b.implicitCast(type).isError
-    }
-
     override fun clone(): NBTBasedData {
         return JsonText(this)
     }
@@ -184,7 +179,7 @@ class JsonTextConcrete : MCFPPValue<ChatComponent>, JsonText {
             if(parentTemplate() != null){
                 (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
             }else{
-                Function.currFunction.field.putVar(identifier, re, true)
+                Function.currFunction.scope.putVar(identifier, re, true)
             }
         }
         return re

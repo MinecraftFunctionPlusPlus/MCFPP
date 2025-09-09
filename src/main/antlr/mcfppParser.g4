@@ -77,8 +77,6 @@ declarations
     |   inlineFunctionDeclaration
     |   nativeFuncDeclaration
     |   compileTimeFuncDeclaration
-    |   compileTimeClassDeclaration
-    |   nativeClassDeclaration
     |   templateDeclaration
     |   objectTemplateDeclaration
     |   extensionFunctionDeclaration
@@ -94,14 +92,6 @@ classDeclaration
 
 objectClassDeclaration
     :   FINAL? OBJECT CLASS classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? (classBody | ';')
-    ;
-
-compileTimeClassDeclaration
-    :   CONST CLASS classWithoutNamespace (COLON className (',' className)*)? classBody
-    ;
-
-nativeClassDeclaration
-    :   CLASS classWithoutNamespace '=' javaRefer ';'
     ;
 
 classMemberDeclaration
@@ -453,7 +443,6 @@ functionCall
 identifierSuffix
     :   '[' expression ']'
     |   '[' ']' //empty bucket
-    |   arguments   //函数调用
     ;
 
 selector

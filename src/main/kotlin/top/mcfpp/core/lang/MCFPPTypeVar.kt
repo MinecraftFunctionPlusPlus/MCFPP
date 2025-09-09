@@ -25,11 +25,6 @@ class MCFPPTypeVar : ConcreteVar<MCFPPTypeVar, MCFPPType>{
         return this
     }
 
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        return !b.implicitCast(type).isError
-    }
-
-
     override fun clone(): MCFPPTypeVar {
         return this
     }

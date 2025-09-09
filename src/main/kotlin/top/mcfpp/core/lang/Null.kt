@@ -26,8 +26,6 @@ object Null: Var<Null>("") {
         return this
     }
 
-    override fun canAssignedBy(b: Var<*>) = false
-
     override fun explicitCast(type: MCFPPType): Var<*> {
         LogProcessor.error(TextTranslator.VOID_CAST_ERROR.translate())
         return buildCastErrorVar(type)

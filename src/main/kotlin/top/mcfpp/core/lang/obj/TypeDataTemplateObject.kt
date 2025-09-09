@@ -67,10 +67,6 @@ class TypeDataTemplateObject: Var<TypeDataTemplateObject> {
         return TypeDataTemplateObject(this)
     }
 
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        return b is TypeDataTemplateObject && b.templateType == templateType
-    }
-
     override fun getTempVar(): TypeDataTemplateObject {
         if(isTemp) return this
         return TypeDataTemplateObject(templateType).assignedBy(this).apply {

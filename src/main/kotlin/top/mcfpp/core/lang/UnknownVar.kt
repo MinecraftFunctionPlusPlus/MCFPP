@@ -26,8 +26,6 @@ class UnknownVar(identifier: String) : Var<UnknownVar>(identifier) {
 
     override fun canImplicitCast(type: MCFPPType) = true
 
-    override fun canAssignedBy(b: Var<*>): Boolean = true
-
     override fun clone(): UnknownVar = this
 
     override fun getTempVar(): UnknownVar = this

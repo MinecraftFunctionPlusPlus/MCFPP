@@ -10,8 +10,8 @@ import top.mcfpp.mni.annotation.MCFPPEntity
 import top.mcfpp.model.Member
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
-import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.type.MCFPPEntityType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
@@ -62,10 +62,6 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
 
     fun isPlayer(): Boolean {
         return value.onlyIncludingPlayers()
-    }
-
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        return !b.implicitCast(type).isError
     }
 
     override fun explicitCast(type: MCFPPType): Var<*> {

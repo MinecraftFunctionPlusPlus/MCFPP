@@ -128,11 +128,6 @@ open class NBTDictionary : NBTBasedData {
         ) as NBTDictionary
     }
 
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        return !b.implicitCast(type).isError
-    }
-
-
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         TODO("Not yet implemented")
     }
@@ -165,6 +160,34 @@ open class NBTDictionary : NBTBasedData {
         }else{
             throw IllegalArgumentException("Index must be a string")
         }
+    }
+
+    override fun implicitCast(type: MCFPPType): Var<*> {
+        val re = super.implicitCast(type)
+        if(!re.isError) return re
+        return when(type){
+            is MCFPPDictType -> this
+            is MCFPPDataTemplateType -> {
+                if(this is NBTDictionaryConcrete){
+                    val qwq = type.build() as DataTemplateObject
+                    val value = NBTUtil.valueToNBT(this.value.filter { it.value !is ConcreteVar<*, *> }) as CompoundTag
+                    if (type.template.checkCompoundStruct(value)) {
+                        qwq.assignMembers(this.value)
+                        return this
+                    } else {
+                        LogProcessor.error("Error compound struct: $value")
+                        return this
+                    }
+                }else {
+                    buildCastErrorVar(type)
+                }
+            }
+            else -> re
+        }
+    }
+
+    override fun canImplicitCast(type: MCFPPType): Boolean {
+        return super.canImplicitCast(type)
     }
 
     companion object{
@@ -236,7 +259,7 @@ class NBTDictionaryConcrete : NBTDictionary, PartialConcreteValue<CompoundTag, H
             if(parentTemplate() != null) {
                 (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
             }else{
-                Function.currFunction.field.putVar(identifier, re, true)
+                Function.currFunction.scope.putVar(identifier, re, true)
             }
         }
         return re

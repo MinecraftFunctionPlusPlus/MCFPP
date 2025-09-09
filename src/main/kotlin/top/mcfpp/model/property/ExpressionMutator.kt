@@ -21,8 +21,8 @@ class ExpressionMutator: AbstractMutator {
 
     constructor(ctx: mcfppParser.ExpressionContext, field: Var<*>) {
         Commands.fakeFunction(Function.currFunction){
-            it.field.putVar("field", field)
-            it.field.putVar("value", field.type.build("value"))
+            it.scope.putVar("field", field)
+            it.scope.putVar("value", field.type.build("value"))
             val test: Var<*> = MCFPPExprVisitor().visit(ctx)
             if(!test.type.isSubOf(field.type)) {
                 LogProcessor.error("Expression type mismatch: ${test.type} and ${field.type}")
@@ -39,8 +39,8 @@ class ExpressionMutator: AbstractMutator {
         var qwq = field
         if(error) return qwq
         val cs = Commands.fakeFunction(Function.currFunction){
-            it.field.putVar("field", field)
-            it.field.putVar("value", b)
+            it.scope.putVar("field", field)
+            it.scope.putVar("value", b)
             qwq = field.assignedBy(MCFPPExprVisitor().visit(ctx))
         }
         Function.addCommands(cs)

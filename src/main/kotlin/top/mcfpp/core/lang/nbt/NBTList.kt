@@ -93,15 +93,6 @@ open class NBTList : NBTBasedData {
         }
     }
 
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        if(!b.implicitCast(type).isError) return true
-        if(b is NBTBasedData){
-            return b.nbtType == this.nbtType
-        }
-        return false
-    }
-
-
     @InsertCommand
     override fun assignCommand(a: NBTBasedData) : NBTList {
         nbtType = a.nbtType
@@ -313,7 +304,7 @@ class NBTListConcrete: NBTList, PartialConcreteValue<ListTag, ArrayList<Var<*>>>
             if(parentTemplate() != null) {
                 (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
             }else{
-                Function.currFunction.field.putVar(identifier, re, true)
+                Function.currFunction.scope.putVar(identifier, re, true)
             }
         }
         return re

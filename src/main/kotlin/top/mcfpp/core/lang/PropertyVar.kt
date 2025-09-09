@@ -36,10 +36,6 @@ class PropertyVar(val property: Property, var field: Var<*>, val caller: Var<*>)
         return this
     }
 
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        return field.canAssignedBy(b)
-    }
-
     override fun clone(): PropertyVar = this
 
     override fun getTempVar(): PropertyVar = this

@@ -63,10 +63,6 @@ class JavaVar : ConcreteVar<JavaVar, Any?> {
         return this
     }
 
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        return !b.implicitCast(type).isError
-    }
-
     override fun clone(): JavaVar {
         return JavaVar(this)
     }

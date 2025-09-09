@@ -11,11 +11,11 @@ class CompileTimeFunction : Function {
     constructor(name:String, namespace:String, context:mcfppParser.FunctionBodyContext):super(name,namespace, context)
 
     fun setField(parent: IScope){
-        this.field = CompileTimeFunctionScope(parent)
+        this.scope = CompileTimeFunctionScope(parent)
     }
 
     private fun makeField():CompileTimeFunctionScope{
-        return (this.field as CompileTimeFunctionScope).clone()
+        return (this.scope as CompileTimeFunctionScope).clone()
     }
     private fun argPass(field:CompileTimeFunctionScope, normalArgs: List<Var<*>>) {
         for (argi in normalArgs.withIndex()){

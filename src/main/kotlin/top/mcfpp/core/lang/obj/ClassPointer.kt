@@ -11,7 +11,6 @@ import top.mcfpp.exception.VariableConverseException
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.Member
 import top.mcfpp.model.compound.Class
-import top.mcfpp.model.scope.CompoundDataScope
 import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NoStackFunction
@@ -122,14 +121,6 @@ open class ClassPointer : Var<ClassPointer> {
                 LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
                 return this
             }
-        }
-    }
-
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        if(!b.implicitCast(type).isError) return true
-        return when (b) {
-            is ClassPointer -> true
-            else -> false
         }
     }
 

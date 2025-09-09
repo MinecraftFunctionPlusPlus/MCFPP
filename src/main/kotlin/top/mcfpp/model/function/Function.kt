@@ -155,7 +155,7 @@ open class Function : Member, FieldContainer, WithDocument {
     /**
      * 函数编译时的缓存
      */
-    var field: FunctionScope
+    var scope: FunctionScope
 
     /**
      * 这个函数调用的函数
@@ -329,7 +329,7 @@ open class Function : Member, FieldContainer, WithDocument {
         this.identifier = identifier
         commands = CommandList()
         normalParams = ArrayList()
-        field = FunctionScope(MCFPPFile.currFile?.field)
+        scope = FunctionScope(MCFPPFile.currFile?.field)
         ownerType = OwnerType.NONE
         this.namespace = namespace
         this.ast = context
@@ -346,7 +346,7 @@ open class Function : Member, FieldContainer, WithDocument {
         namespace = cls.namespace
         ownerType = OwnerType.CLASS
         owner = cls
-        field = FunctionScope(cls.field)
+        scope = FunctionScope(cls.field)
         this.ast = context
     }
 
@@ -362,7 +362,7 @@ open class Function : Member, FieldContainer, WithDocument {
         namespace = itf.namespace
         ownerType = OwnerType.CLASS
         owner = itf
-        field = FunctionScope(null)
+        scope = FunctionScope(null)
         this.isAbstract = true
         this.accessModifier = Member.AccessModifier.PUBLIC
         this.ast = context
@@ -378,7 +378,7 @@ open class Function : Member, FieldContainer, WithDocument {
         namespace = template.namespace
         ownerType = OwnerType.TEMPLATE
         owner = template
-        field = FunctionScope(template.field)
+        scope = FunctionScope(template.field)
         this.returnType = returnType
         this.returnVar = buildReturnVar(returnType)
         this.ast = context
@@ -392,7 +392,7 @@ open class Function : Member, FieldContainer, WithDocument {
         this.namespace = function.namespace
         this.owner = function.owner
         this.ownerType = function.ownerType
-        this.field = function.field.clone()
+        this.scope = function.scope.clone()
         this.returnType = function.returnType
         this.returnVar = function.returnVar.clone()
         this.isAbstract = function.isAbstract
@@ -456,7 +456,7 @@ open class Function : Member, FieldContainer, WithDocument {
      */
     open fun buildParamVar(){
         for (p in normalParams) {
-            field.putVar(p.identifier, p.buildVar())
+            scope.putVar(p.identifier, p.buildVar())
         }
     }
 
@@ -470,7 +470,7 @@ open class Function : Member, FieldContainer, WithDocument {
         for (param in n.parameter()) {
             val (p,v) = parseParam(param)
             normalParams.add(p)
-            field.putVar(p.identifier, v)
+            scope.putVar(p.identifier, v)
         }
     }
 
@@ -481,7 +481,7 @@ open class Function : Member, FieldContainer, WithDocument {
     protected open fun parseParam(param: mcfppParser.ParameterContext) : Pair<FunctionParam,Var<*>>{
         //参数构建
         val param1 = FunctionParam(
-            MCFPPType.parseFromContextNotNull(param.type(), this.field),
+            MCFPPType.parseFromContextNotNull(param.type(), this.scope),
             param.Identifier()?.text?: "p${paramCount()}",
             this,
             param.STATIC() != null,
@@ -556,7 +556,7 @@ open class Function : Member, FieldContainer, WithDocument {
         //static关键字，将值传回
         staticArgRef(normalArgs)
         //销毁指针，释放堆内存
-        for (p in field.allVars){
+        for (p in scope.allVars){
             if (p is ClassPointer){
                 p.dispose()
             }
@@ -581,14 +581,14 @@ open class Function : Member, FieldContainer, WithDocument {
         //给函数开栈
         addCommand(Commands.stackIn())
         //传入this参数
-        field.putVar("this", caller, true)
+        scope.putVar("this", caller, true)
         //参数传递
         argPass(normalArgs)
         addCommand("function " + this.namespaceID)
         //static参数传回
         staticArgRef(normalArgs)
         //销毁指针，释放堆内存
-        for (p in field.allVars){
+        for (p in scope.allVars){
             if (p is ClassPointer){
                 p.dispose()
             }
@@ -624,7 +624,7 @@ open class Function : Member, FieldContainer, WithDocument {
         //static关键字，将值传回
         staticArgRef(normalArgs)
         //销毁指针，释放堆内存
-        for (p in field.allVars){
+        for (p in scope.allVars){
             if (p is ClassPointer){
                 p.dispose()
             }
@@ -654,7 +654,7 @@ open class Function : Member, FieldContainer, WithDocument {
         //static关键字，将值传回
         staticArgRef(normalArgs)
         //销毁指针，释放堆内存
-        for (p in field.allVars){
+        for (p in scope.allVars){
             if (p is ClassPointer){
                 p.dispose()
             }
@@ -685,9 +685,9 @@ open class Function : Member, FieldContainer, WithDocument {
         //替换变量
         for (i in values.indices) {
             if (values[i] != null) {
-                cf.field.putVar(
+                cf.scope.putVar(
                     normalParams[i].identifier,
-                    cf.field.getVar(normalParams[i].identifier)!!.assignedBy(argList[i]),
+                    cf.scope.getVar(normalParams[i].identifier)!!.assignedBy(argList[i]),
                     true
                 )
             }
@@ -724,11 +724,11 @@ open class Function : Member, FieldContainer, WithDocument {
                 tempArgs.add(this.normalParams[i].defaultVar!!)
             }
             //参数传递和子函数的参数进栈
-            val p = field.getVar(this.normalParams[i].identifier)!!
+            val p = scope.getVar(this.normalParams[i].identifier)!!
             p.isConst = false
             val pp = p.assignedBy(tempArgs[i])
             if(!this.normalParams[i].isStatic) pp.isConst = true
-            field.putVar(p.identifier, pp, true)
+            scope.putVar(p.identifier, pp, true)
         }
     }
 
@@ -747,7 +747,7 @@ open class Function : Member, FieldContainer, WithDocument {
                     hasAddComment = true
                 }
                 //如果是static参数
-                args[i].assignedBy(field.getVar(normalParams[i].identifier)!!)
+                args[i].assignedBy(scope.getVar(normalParams[i].identifier)!!)
             }
         }
     }
@@ -891,7 +891,7 @@ open class Function : Member, FieldContainer, WithDocument {
             var hasFoundFunc = true
             //参数比对
             for (i in normalArgs.indices) {
-                if (!field.getVar(this.normalParams[i].identifier)!!.canAssignedBy(normalArgs[i])) {
+                if (!scope.getVar(this.normalParams[i].identifier)!!.canImplicitCast(normalArgs[i].type)) {
                     hasFoundFunc = false
                     break
                 }
@@ -911,7 +911,7 @@ open class Function : Member, FieldContainer, WithDocument {
         //参数比对
         var index = 0
         while (index < normalArgs.size) {
-            if (!field.getVar(this.normalParams[index].identifier)!!.canAssignedBy(normalArgs[index])) {
+            if (!scope.getVar(this.normalParams[index].identifier)!!.canImplicitCast(normalArgs[index].type)) {
                 hasFoundFunc = false
                 break
             }
@@ -935,7 +935,7 @@ open class Function : Member, FieldContainer, WithDocument {
     }
 
     fun disposeClassPtr(){
-        for (p in field.allVars){
+        for (p in scope.allVars){
             if (p is ClassPointer){
                 p.dispose()
             }
@@ -960,7 +960,7 @@ open class Function : Member, FieldContainer, WithDocument {
 
         var forcedField: FunctionScope? = null
         val currField: FunctionScope
-            get() = forcedField ?: currFunction.field
+            get() = forcedField ?: currFunction.scope
 
         /**
          * 编译器目前所处的非匿名函数
@@ -1082,7 +1082,7 @@ open class Function : Member, FieldContainer, WithDocument {
                     ret = ret.parent[0]
                     continue
                 }
-                val f = ret.field.getVar(v.identifier)
+                val f = ret.scope.getVar(v.identifier)
                 if(f != null){
                     return ret
                 }

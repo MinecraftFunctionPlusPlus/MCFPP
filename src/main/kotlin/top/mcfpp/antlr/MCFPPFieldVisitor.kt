@@ -61,80 +61,6 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return null
     }
 
-    override fun visitNamespaceFieldDeclaration(ctx: mcfppParser.NamespaceFieldDeclarationContext): Any? = withCompilationContext(ctx) {
-        Function.currFunction = NoStackFunction("", Function.nullFunction)
-        //变量生成
-        val fieldModifier = ctx.fieldModifier()?.text
-        val namespace = GlobalScope.localNamespaces[Project.currNamespace]!!
-        if(ctx.type() == null){
-            //自动判断类型
-            val init: Var<*> = MCFPPExprVisitor().visitValue(ctx.value())
-            var `var` = if(fieldModifier == "import"){
-                val qwq = init.type.buildUnConcrete(ctx.Identifier().text, namespace)
-                qwq.hasAssigned = true
-                qwq
-            }else{
-                init.type.build(ctx.Identifier().text, namespace)
-            }
-            `var`.nbtPath = NBTPath.global.memberIndex(`var`.identifier)
-            //变量赋值
-            `var` = `var`.assignedBy(init)
-            //一定是函数变量
-            if (!namespace.field.putVar(ctx.Identifier().text, `var`, false)) {
-                LogProcessor.error("Duplicate defined variable name:" + ctx.Identifier().text)
-            }
-            when(fieldModifier){
-                "const" -> {
-                    if(!`var`.hasAssigned){
-                        LogProcessor.error("The const field ${`var`.identifier} must be initialized.")
-                    }
-                    `var`.isConst = true
-                }
-                "dynamic" -> {
-                    LogProcessor.error("Modifier 'dynamic' cannot used in namespace field declaration")
-                }
-            }
-        }else{
-            //获取类型
-            val type = MCFPPType.parseFromContextNotNull(ctx.type(), namespace.field)
-            for (c in ctx.namespaceFieldDeclarationExpression()){
-                //函数变量，生成
-                var `var` = if(fieldModifier == "import"){
-                    val qwq = type.buildUnConcrete(c.Identifier().text, namespace)
-                    qwq.hasAssigned = true
-                    qwq
-                }else{
-                    type.build(c.Identifier().text, namespace)
-                }
-                //变量注册
-                //一定是函数变量
-                if (namespace.field.containVar(c.Identifier().text)) {
-                    LogProcessor.error("Duplicate defined variable name:" + c.Identifier().text)
-                }
-                `var`.nbtPath = NBTPath.global.memberIndex(`var`.identifier)
-                //变量初始化
-                if (c.value() != null) {
-                    val init: Var<*> = MCFPPExprVisitor(enumType = if(type is MCFPPEnumType) type else null).visitValue(c.value())
-                    `var` = `var`.assignedBy(init)
-                }
-                when(fieldModifier){
-                    "const" -> {
-                        if(!`var`.hasAssigned){
-                            LogProcessor.error("The const field ${`var`.identifier} must be initialized.")
-                        }
-                        `var`.isConst = true
-                    }
-                    "dynamic" -> {
-                        LogProcessor.error("Modifier 'dynamic' cannot used in namespace field declaration")
-                    }
-                }
-                namespace.field.putVar(`var`.identifier, `var`, true)
-            }
-        }
-        Function.currFunction = Function.nullFunction
-        return null
-    }
-
 //region interface
 
     override fun visitInterfaceDeclaration(ctx: mcfppParser.InterfaceDeclarationContext): Any? = withCompilationContext(ctx) {
@@ -363,7 +289,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
         if(!isStatic){
             val thisObj = Class.currClass!!.getType().buildUnConcrete("this")
-            f.field.putVar("this", thisObj)
+            f.scope.putVar("this", thisObj)
         }
         //解析参数
         f.addParamsFromContext(ctx.functionParams())
@@ -596,7 +522,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             MCFPPPrivateType.Void
         }
         val thisObj = Class.currClass!!.getType().buildUnConcrete("this")
-        f.field.putVar("this",thisObj)
+        f.scope.putVar("this",thisObj)
         //解析参数
         f.addParamsFromContext(ctx.functionParams())
         //参数数量检查
@@ -635,7 +561,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             MCFPPPrivateType.Void
         }
         val thisObj = DataTemplate.currTemplate!!.getType().buildUnConcrete("this")
-        f.field.putVar("this",thisObj)
+        f.scope.putVar("this",thisObj)
         //解析参数
         f.addParamsFromContext(ctx.functionParams())
         //参数数量检查

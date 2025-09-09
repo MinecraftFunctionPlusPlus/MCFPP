@@ -24,9 +24,6 @@ class ObjectVar(type: CanSelectMember, identifier: String = TempPool.getVarIdent
         return this
     }
 
-
-    override fun canAssignedBy(b: Var<*>) = false
-
     override fun clone(): ObjectVar = this
 
     override fun getTempVar(): ObjectVar = this

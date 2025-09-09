@@ -17,11 +17,11 @@ class FunctionMutator: AbstractMutator {
     constructor(field: Var<*>, d: CompoundData) {
         function = Function("set_${field.identifier}", d.namespace, null)
         function.returnType = field.type
-        function.field.putVar("field", field)
+        function.scope.putVar("field", field)
         function.appendNormalParam(field.type, "value")
-        function.field.putVar("value", field.type.buildUnConcrete("value"))
+        function.scope.putVar("value", field.type.buildUnConcrete("value"))
         val thisObj = Class.currClass!!.getType().build("this", function)
-        function.field.putVar("this",thisObj)
+        function.scope.putVar("this",thisObj)
         field.parent = thisObj
         function.owner = d
     }

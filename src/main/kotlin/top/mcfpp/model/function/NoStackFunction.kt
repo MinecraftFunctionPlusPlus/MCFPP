@@ -6,7 +6,7 @@ class NoStackFunction(identifier: String, parent: Function) : Function(identifie
 
     init {
         this.parent.add(parent)
-        field = NoStackFunctionScope(parent.field)
+        scope = NoStackFunctionScope(parent.scope)
     }
 
 }

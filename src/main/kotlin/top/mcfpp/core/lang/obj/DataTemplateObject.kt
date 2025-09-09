@@ -5,14 +5,12 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
-import top.mcfpp.core.lang.nbt.NBTDictionaryConcrete
 import top.mcfpp.mni.annotation.ConcreteOnly
 import top.mcfpp.model.Member
 import top.mcfpp.model.compound.DataTemplate
-import top.mcfpp.model.scope.CompoundDataScope
-import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.type.MCFPPDataTemplateType
@@ -59,32 +57,6 @@ open class DataTemplateObject : Var<DataTemplateObject> {
 
     override fun doAssignedBy(b: Var<*>): DataTemplateObject {
         when (b) {
-
-            is NBTDictionaryConcrete -> {
-                val value = NBTUtil.valueToNBT(b.value.filter { it.value !is ConcreteVar<*, *> }) as CompoundTag
-                if (templateType.checkCompoundStruct(value)) {
-                    this.assignMembers(b.value)
-                    return this
-                } else {
-                    LogProcessor.error("Error compound struct: ${b.value}")
-                    return this
-                }
-            }
-
-            is NBTBasedDataConcrete -> {
-                if (b.value !is CompoundTag) {
-                    LogProcessor.error("Not a compound tag: ${b.value}")
-                    return this
-                }
-                if (templateType.checkCompoundStruct(b.value as CompoundTag)) {
-                    this.assignMembers(b.value as CompoundTag)
-                    return this
-                } else {
-                    LogProcessor.error("Error compound struct: ${b.value}")
-                    return this
-                }
-            }
-
             is DataTemplateObjectConcrete -> {
                 if (b.type.objectData.isSubOf(this.templateType)) {
                     this.assignMembers(b)
@@ -110,26 +82,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         }
     }
 
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        if(!b.implicitCast(type).isError) return true
-        return when(b){
-            is NBTBasedDataConcrete -> {
-                b.value is CompoundTag && templateType.checkCompoundStruct(b.value as CompoundTag)
-            }
-
-            is DataTemplateObjectConcrete -> {
-                b.type.objectData.isSubOf(this.templateType)
-            }
-
-            is DataTemplateObject -> {
-                true
-            }
-
-            else -> false
-        }
-    }
-
-    private fun assignMembers(map: HashMap<String, Var<*>>){
+    fun assignMembers(map: HashMap<String, Var<*>>){
         instanceField.forEachVar {
             if(it !is ConcreteVar<*, *>){
                 it.replacedBy(it.assignedBy(map[it.identifier]!!))
@@ -137,7 +90,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         }
     }
 
-    private fun assignMembers(tag: CompoundTag){
+    fun assignMembers(tag: CompoundTag){
         instanceField.forEachVar {
             if(it !is ConcreteVar<*, *>){
                 it.replacedBy(it.assignedBy(NBTBasedDataConcrete(tag[it.identifier]!!)))
@@ -440,7 +393,7 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<HashMap<String,
             if(parentTemplate() != null) {
                 (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
             }else{
-                Function.currFunction.field.putVar(identifier, re, true)
+                Function.currFunction.scope.putVar(identifier, re, true)
             }
         }
         return re

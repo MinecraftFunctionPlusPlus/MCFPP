@@ -6,6 +6,7 @@ import top.mcfpp.core.lang.JsonTextConcrete
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.entity.SpecifiedEntityVar
+import top.mcfpp.core.lang.obj.EnumVarConcrete
 import top.mcfpp.lib.NBTChatComponent
 import top.mcfpp.lib.PlainChatComponent
 import top.mcfpp.model.Member
@@ -14,6 +15,7 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPEntityType
+import top.mcfpp.type.MCFPPEnumType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
@@ -66,13 +68,6 @@ open class MCString : NBTBasedData {
     override fun doAssignedBy(b: Var<*>): MCString {
         when (b) {
             is MCString -> return assignCommand(b)
-            is NBTBasedDataConcrete -> {
-                if(b.nbtType == NBTBasedData.Companion.NBTTypeWithTag.STRING){
-                    return assignCommand(b)
-                }else{
-                    LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
-                }
-            }
             else -> LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
         }
         return this
@@ -81,19 +76,33 @@ open class MCString : NBTBasedData {
     override fun implicitCast(type: MCFPPType): Var<*> {
         val re = super.implicitCast(type)
         if(!re.isError) return re
-        return when (type) {
-            MCFPPBaseType.JsonText -> {
-                if(this is MCStringConcrete){
+        return if(this is MCStringConcrete){
+            when(type){
+                MCFPPBaseType.JsonText -> {
                     JsonTextConcrete(PlainChatComponent(this.value.value))
-                }else{
+                }
+                is MCFPPEnumType -> {
+                    val value = this.value.value
+                    val member = type.enum.members[value]
+                    if(member == null){
+                        LogProcessor.error("Enum member not found: $value")
+                        return this
+                    }
+                    EnumVarConcrete(type.enum, member.value)
+                }
+                else -> re
+            }
+        }else {
+            when (type) {
+                MCFPPBaseType.JsonText -> {
                     if(parentClass() != null && (parent as Var<*>).identifier != "this") {
                         JsonTextConcrete(NBTChatComponent(getTempVar(), false))
                     }else{
                         JsonTextConcrete(NBTChatComponent(this, false))
                     }
                 }
+                else -> re
             }
-            else -> re
         }
     }
 
@@ -128,14 +137,6 @@ open class MCString : NBTBasedData {
 
     override fun canExplicitCast(type: MCFPPType): Boolean {
         return type == MCFPPBaseType.JsonText || type is MCFPPEntityType || super.canExplicitCast(type)
-    }
-
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        if(!b.implicitCast(type).isError) return true
-        if(b is NBTBasedDataConcrete){
-            return b.nbtType == NBTBasedData.Companion.NBTTypeWithTag.STRING
-        }
-        return false
     }
 
     @InsertCommand

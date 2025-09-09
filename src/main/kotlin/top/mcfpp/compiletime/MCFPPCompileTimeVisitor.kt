@@ -125,10 +125,6 @@ class MCFPPCompileTimeVisitor(
         return null
     }
 
-    override fun visitSelfAddOrMinusStatement(ctx: mcfppParser.SelfAddOrMinusStatementContext): Any? {
-        return super.visitSelfAddOrMinusStatement(ctx)
-    }
-
     override fun visitTryStoreStatement(ctx: mcfppParser.TryStoreStatementContext): Any? {
         return super.visitTryStoreStatement(ctx)
     }

@@ -113,7 +113,7 @@ open class UnionTypeVar: Var<UnionTypeVar> {
     }
 
     override fun doAssignedBy(b: Var<*>): UnionTypeVar {
-        if(frontVar.canAssignedBy(b)){
+        if(frontVar.canImplicitCast(b.type)){
             frontVar = frontVar.assignedBy(b)
             if(frontVar is MCFPPValue<*>){
                 return UnionTypeVarConcrete(this, (frontVar as MCFPPValue<*>).value)
@@ -123,7 +123,7 @@ open class UnionTypeVar: Var<UnionTypeVar> {
         //寻找能赋值给此变量的变量
         for (t in unionTypes) {
             val temp = t.build(identifier)
-            if(temp.canAssignedBy(b)){
+            if(temp.canImplicitCast(b.type)){
                 frontVar = temp.assignedBy(b)
                 if(frontVar is MCFPPValue<*>){
                     return UnionTypeVarConcrete(this, (frontVar as MCFPPValue<*>).value)
@@ -133,10 +133,6 @@ open class UnionTypeVar: Var<UnionTypeVar> {
         }
         LogProcessor.error("Cannot assign ${b.type} to $type")
         return this
-    }
-
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        return !b.implicitCast(type).isError
     }
 
     override fun clone(): UnionTypeVar {
@@ -200,7 +196,7 @@ class UnionTypeVarConcrete: UnionTypeVar, MCFPPValue<Any?> {
     }
 
     override fun doAssignedBy(b: Var<*>): UnionTypeVar {
-        if(frontVar.canAssignedBy(b)){
+        if(frontVar.canImplicitCast(b.type)){
             frontVar = frontVar.assignedBy(b)
             if(frontVar is MCFPPValue<*>){
                 value = (frontVar as MCFPPValue<*>).value
@@ -212,7 +208,7 @@ class UnionTypeVarConcrete: UnionTypeVar, MCFPPValue<Any?> {
         //寻找能赋值给此变量的变量
         for (t in unionTypes) {
             val temp = t.build(identifier)
-            if(temp.canAssignedBy(b)){
+            if(temp.canImplicitCast(b.type)){
                 frontVar = temp.assignedBy(b)
                 if(frontVar is MCFPPValue<*>){
                     value = (frontVar as MCFPPValue<*>).value

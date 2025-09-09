@@ -71,18 +71,18 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
     private fun resolveFunction(f: Function){
         for (np in f.normalParams){
             np.type.tryResolve()
-            f.field.putVar(np.identifier, np.buildVar())
+            f.scope.putVar(np.identifier, np.buildVar())
         }
         if(f is GenericFunction){
             for (rp in f.readOnlyParams){
                 rp.type.tryResolve()
-                f.field.putVar(rp.identifier, rp.buildVar())
+                f.scope.putVar(rp.identifier, rp.buildVar())
             }
         }
         if(f is NativeFunction){
             for (rp in f.readOnlyParams){
                 rp.type.tryResolve()
-                f.field.putVar(rp.identifier, rp.buildVar())
+                f.scope.putVar(rp.identifier, rp.buildVar())
             }
         }
         f.returnType.tryResolve()
@@ -161,7 +161,7 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
                     MCFPPPrivateType.Void
                 }
                 mniRegister.genericType.map {
-                    nf.field.putType(it, MCFPPGenericParamType(it, arrayListOf()))
+                    nf.scope.putType(it, MCFPPGenericParamType(it, arrayListOf()))
                 }
                 //解析MNIMethod注解成员
                 val readOnlyType = mniRegister.readOnlyParams.map {

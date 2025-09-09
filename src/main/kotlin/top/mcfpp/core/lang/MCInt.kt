@@ -48,29 +48,10 @@ open class MCInt : MCNumber<Int> {
                 assignCommand(b)
             }
 
-            is CommandReturn -> {
-                if(parentClass() != null){
-                    Function.addCommands(
-                        Commands.selectRun(parent!!, b.command, false)
-                    )
-                }else{
-                    Function.addCommand(b.command)
-                }
-                MCInt(this)
-            }
-
             else -> {
                 LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
                 this
             }
-        }
-    }
-
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        if(!b.implicitCast(type).isError) return true
-        return when(b){
-            is CommandReturn -> true
-            else -> false
         }
     }
 
@@ -507,7 +488,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
             if(parentTemplate() != null){
                 (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
             }else{
-                Function.currFunction.field.putVar(identifier, re, true)
+                Function.currFunction.scope.putVar(identifier, re, true)
             }
         }
         return re

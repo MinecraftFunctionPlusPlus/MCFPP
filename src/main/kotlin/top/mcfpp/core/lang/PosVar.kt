@@ -55,10 +55,6 @@ class Pos3Var: ConcreteVar<Pos3Var, ArrayList<PosDimension>> {
         }
     }
 
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        return !b.implicitCast(type).isError
-    }
-
     override fun getTempVar(): Pos3Var {
         return Pos3Var().assignedBy(this)
     }
@@ -156,10 +152,6 @@ class Pos2Var: ConcreteVar<Pos2Var, ArrayList<PosDimension>> {
                 this
             }
         }
-    }
-
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        return !b.implicitCast(type).isError
     }
 
     override fun getTempVar(): Pos2Var {
@@ -262,10 +254,6 @@ open class PosDimension: ConcreteVar<PosDimension, Pair<String, Number>> {
                 this
             }
         }
-    }
-
-    override fun canAssignedBy(b: Var<*>): Boolean {
-        return !b.implicitCast(type).isError
     }
 
     override fun clone(): PosDimension {
