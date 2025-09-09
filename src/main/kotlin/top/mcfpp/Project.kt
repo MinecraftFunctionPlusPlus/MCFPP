@@ -57,6 +57,11 @@ object Project {
 
     var modules = ArrayList<Module>()
 
+    /**
+     * 工程的根目录
+     */
+    lateinit var root: Path
+
     fun enableModulePackage(packageName: String, moduleName: String? = null){
         if(moduleName == null){
             for (module in modules){
@@ -186,12 +191,17 @@ object Project {
             logger.debug("Reading project from file \"$path\"")
             val reader = FileReader(path)
             val qwq = File(path)
-            config.root = Path.of(path).toAbsolutePath().parent
+            root = Path.of(path).toAbsolutePath().parent
             config.name = qwq.name.substring(0, qwq.name.lastIndexOf('.'))
             val json = reader.readText()
-
             //解析json
             val jsonObject: JSONObject = JSONObject.parse(json) as JSONObject
+
+            //根目录
+            if(jsonObject.containsKey("root")){
+                config.root = Path(jsonObject.getString("root"))
+                jsonObject.remove("root")
+            }
 
             //源代码根目录
             if(jsonObject.containsKey("sourcePath")){
@@ -280,12 +290,12 @@ object Project {
             config.version = Utils.version[0]
         }
         if(config.targetPath == null){
-            LogProcessor.warn("Set target path default to \"${config.root.pathString}/build/\"")
-            config.targetPath = Path(config.root.pathString,"build/")
+            LogProcessor.warn("Set target path default to \"${root.pathString}/build/\"")
+            config.targetPath = Path(root.pathString,"build/")
         }
         if(config.sourcePath == null){
-            LogProcessor.warn("Set source path default to \"${config.root.pathString}\"")
-            config.sourcePath = Path(config.root.pathString)
+            LogProcessor.warn("Set source path default to \"${root.pathString}\"")
+            config.sourcePath = Path(root.pathString)
         }
         if(config.sourcePath!!.notExists()){
             LogProcessor.error("Invalid source path: ${config.sourcePath}")
@@ -672,7 +682,7 @@ object Project {
             logger.warn("No valid entrance function in Project ${config.rootNamespace}")
             warningCount++
         }
-        logger.info("Complete compiling project " + config.root.name + " with [$errorCount] error and [$warningCount] warning")
+        logger.info("Complete compiling project " + root.name + " with [$errorCount] error and [$warningCount] warning")
         stageProcessor[compileStage.ordinal].forEach { it() }
     }
 

@@ -21,19 +21,19 @@ object LogProcessor {
 
     var level: LogLevel = LogLevel.DEBUG
 
+    var logger: Logger = LogManager.getLogger("mcfpp")
+
     fun getCtxText(): String{
         if(Project.ctx.isNotEmpty()){
             val text = Project.ctx.first().text
-            if(text.length > 20){
-                return text.substring(0, 20) + "..."
+            return if(text.length > 20){
+                text.substring(0, 20) + "..."
             }else{
-                return text
+                text
             }
         }
         return ""
     }
-
-    var logger: Logger = LogManager.getLogger("mcfpp")
 
     @JvmStatic
     inline fun debug(msg: String){

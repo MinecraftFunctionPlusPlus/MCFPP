@@ -14,7 +14,7 @@ plugins {
 }
 
 val GROUP = "top.mcfpp"
-val VERSION = "1.0-SNAPSHOT"
+val VERSION = "1.0.2-SNAPSHOT"
 
 group = GROUP
 version = VERSION
@@ -63,7 +63,27 @@ dependencies {
     antlr("org.antlr:antlr4:4.13.1")
 }
 
+tasks.named("distZip") {
+    dependsOn("shadowJar")
+}
+
+tasks.named("distTar") {
+    dependsOn("shadowJar")
+}
+
+tasks.named("startScripts") {
+    dependsOn("shadowJar")
+}
+
+tasks.named("startShadowScripts") {
+    dependsOn("jar")
+}
+
 tasks.shadowJar {
+    archiveClassifier.set("") // 生成的jar不带classifier，方便运行
+    manifest {
+        attributes("Main-Class" to "top.mcfpp.MCFPPKt")
+    }
     minimize{
         exclude(dependency("org.apache.logging.log4j:.*"))
     }
@@ -90,7 +110,6 @@ tasks.jar{
         attributes("Main-Class" to "top.mcfpp.MCFPPKt")
     }
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
-    from(configurations.runtimeClasspath.get().filter { it.name.endsWith("jar") }.map { zipTree(it) })
 
     from("build/dll"){
         into("native")
@@ -201,10 +220,26 @@ publishing {
             groupId = GROUP
             artifactId = "mcfpp"
             version = VERSION
+            pom {
+                name.set("mcfpp")
+                description.set("MCFPP is a minecraft function programming language.")
+            }
         }
     }
     repositories {
         mavenLocal()
+        maven {
+            val baseUrl = "https://nexus.mcfpp.top"
+            url = if (version.toString().endsWith("SNAPSHOT")) {
+                uri("$baseUrl/repository/maven-snapshots/")
+            }else{
+                uri("$baseUrl/repository/maven-releases/")
+            }
+            credentials {
+                username = project.findProperty("NEXUS_USERNAME") as String
+                password = project.findProperty("NEXUS_PASSWORD") as String
+            }
+        }
     }
 }
 

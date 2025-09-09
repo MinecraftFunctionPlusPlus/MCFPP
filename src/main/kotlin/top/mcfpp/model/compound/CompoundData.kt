@@ -9,11 +9,11 @@ import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.WithDocument
 import top.mcfpp.model.annotation.Annotation
-import top.mcfpp.model.scope.CompoundDataScope
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.property.Property
+import top.mcfpp.model.scope.CompoundDataScope
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPGenericParamType
 import top.mcfpp.type.MCFPPPrivateType
@@ -53,7 +53,7 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
      * 成员变量和成员函数
      */
     @Transient
-    var field: top.mcfpp.model.scope.CompoundDataScope
+    var field: CompoundDataScope
 
     /**
      * 注解

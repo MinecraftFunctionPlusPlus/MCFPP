@@ -32,7 +32,6 @@ options {
     tokenVocab = mcfppLexer;
 }
 
-
 //一个mcfpp文件
 compilationUnit
     :   namespaceDeclaration?
@@ -84,19 +83,8 @@ declarations
     |   objectTemplateDeclaration
     |   extensionFunctionDeclaration
     |   interfaceDeclaration
-    |   namespaceFieldDeclaration
     |   enumDeclaration
     |   annotation
-    ;
-
-//命名空间变量声明
-namespaceFieldDeclaration
-    :   fieldModifier? type namespaceFieldDeclarationExpression (',' namespaceFieldDeclarationExpression)*
-    |   fieldModifier? VAR Identifier '=' value
-    ;
-
-namespaceFieldDeclarationExpression
-    :   Identifier ( '=' value)?
     ;
 
 //类声明
@@ -208,7 +196,7 @@ templateDeclaration
 
 //数据模板
 objectTemplateDeclaration
-    :   FINAL? OBJECT DATA classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? ? (templateBody | ';')
+    :   FINAL? OBJECT DATA classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? (templateBody | ';')
     ;
 
 templateBody
@@ -350,13 +338,7 @@ parameterList
 
 //参数
 parameter
-    :   STATIC? (Identifier AS)? type ('=' value)?
-    ;
-
-//表达式
-expression
-    :   primary
-    |   commonBinaryOperatorExpression
+    :   STATIC? VAR? (Identifier AS)? type ('=' value)?
     ;
 
 //能作为语句的表达式
@@ -364,9 +346,10 @@ statementExpression
     :   (varWithSelector '=' )? expression
     ;
 
-//条件表达式
-conditionalExpression
-    :   commonBinaryOperatorExpression ( '?' expression ':' expression )?
+//表达式
+expression
+    :   primary
+    |   commonBinaryOperatorExpression
     ;
 
 //其他运算符
@@ -388,20 +371,12 @@ conditionalAndExpression
 
 //等同
 equalityExpression
-    :   relationalExpression ( op=('==' | '!=' | WVEQ) relationalExpression )?
+    :   relationalExpression ( op=('==' | '!=' | WVEQ) relationalExpression )*
     ;
 
 //比较关系
 relationalExpression
-    :   additiveExpression ( relationalOp additiveExpression )?
-    ;
-
-//比较关系运算符
-relationalOp
-    :   '<='
-    |   '>='
-    |   '<'
-    |   '>'
+    :   additiveExpression ( op=('<' | '>' | '<=' | '>=') additiveExpression )*
     ;
 
 //加减
@@ -411,24 +386,23 @@ additiveExpression
 
 //乘除
 multiplicativeExpression
-    :   unaryExpression ( op=( '*' | '/' | '%' ) unaryExpression )*
+    :   castExpression ( op=( '*' | '/' | '%' ) castExpression )*
+    ;
+
+//强制类型转换表达式
+castExpression
+    :  unaryExpression (AS type)?
     ;
 
 //一元表达式
 unaryExpression
     :   '!' unaryExpression
-    |   castExpression
     |   rightVarExpression
     ;
 
 //右侧计算式取出的变量
 rightVarExpression
     :   varWithSelector
-    ;
-
-//强制类型转换表达式
-castExpression
-    :  rightVarExpression AS type
     ;
 
 varWithSelector
@@ -477,13 +451,9 @@ functionCall
     ;
 
 identifierSuffix
-    :   '[' conditionalExpression ']'
-    |   '[' objectInitializer  (',' objectInitializer)* ']'
+    :   '[' expression ']'
     |   '[' ']' //empty bucket
-    ;
-
-objectInitializer
-    :   Identifier '=' expression
+    |   arguments   //函数调用
     ;
 
 selector
@@ -513,7 +483,6 @@ statement
     |   whileStatement
     |   doWhileStatement ';'
     |   ';'
-    |   selfAddOrMinusStatement ';'
     |   tryStoreStatement
     |   controlStatement ';'
     |   orgCommand
@@ -583,10 +552,6 @@ doWhileBlock
     :   block
     ;
 
-selfAddOrMinusStatement
-    :   selfAddOrMinusExpression
-    ;
-
 tryStoreStatement
     :   TRY block  STORE '(' Identifier ')' ';'
     ;
@@ -598,10 +563,6 @@ returnStatement
 block
     :   '{' statement* '}'
     |   statement
-    ;
-
-selfAddOrMinusExpression
-    :   rightVarExpression op = ('++'|'--')
     ;
 
 expressionList
@@ -679,10 +640,6 @@ coordinateDimension
 
 className
     :   (Identifier ('.' Identifier)* ':')? classWithoutNamespace
-    ;
-
-typeList
-    :   '<' typeList? '>'
     ;
 
 classWithoutNamespace

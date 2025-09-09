@@ -164,7 +164,7 @@ class MCFPPExprVisitor(
         var re: Var<*> = visitAdditiveExpression(ctx.additiveExpression(0))
         if (ctx.additiveExpression().size != 1) {
             val b: Var<*> = visitAdditiveExpression(ctx.additiveExpression(1))
-            re = re.binaryComputation(b, ctx.relationalOp().text)
+            re = re.binaryComputation(b, ctx.op.text)
         }
         return re
     }

@@ -1,6 +1,7 @@
 package top.mcfpp.mni;
 
 import org.jetbrains.annotations.NotNull;
+import top.mcfpp.Project;
 import top.mcfpp.annotations.InsertCommand;
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.command.Command;

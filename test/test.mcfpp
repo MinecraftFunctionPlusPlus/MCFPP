@@ -1,8 +1,23 @@
 namespace test;
 
-var qwq = 1;
+import mcfpp.standard:*;
+
+var qwq as float = 1;
 var node = "123";
 
-func test(){
+class MyClass {
+    var myVar as int = 0;
+
+    func myMethod() -> void {
+        print(myVar);
+    }
+}
+
+data MyData {
+    var qwq as (float|text);
+    var pwp as int;
+}
+
+func test(qwq as int) -> void{
     print(node);
 }

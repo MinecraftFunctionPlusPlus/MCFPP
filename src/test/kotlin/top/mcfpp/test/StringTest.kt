@@ -28,4 +28,12 @@ class StringTest{
         println(parser.type().text)
     }
 
+    @Test
+    fun test3(){
+        var ch: Int
+        while ((System.`in`.read().also { ch = it }) != -1) {
+            println("字符: " + ch.toChar() + " ASCII: " + ch)
+        }
+    }
+
 }

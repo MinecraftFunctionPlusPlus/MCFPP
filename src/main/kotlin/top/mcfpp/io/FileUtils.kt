@@ -1,6 +1,7 @@
 package top.mcfpp.io
 
 import org.apache.tools.zip.ZipFile
+import top.mcfpp.util.LogProcessor
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.IOException
@@ -68,17 +69,19 @@ object FileUtils {
         JarFile(f).use { jarFile ->
             jarFile.stream()
                 .filter { entry: JarEntry ->
-                    entry.name.startsWith(folderInJar) && !entry.isDirectory
+                    (entry.name.startsWith("$folderInJar/") || entry.name == folderInJar) && !entry.isDirectory
                 }
                 .forEach { entry: JarEntry ->
                     try {
-                        jarFile.getInputStream(entry).use { `is` ->
+                        //LogProcessor.debug("Extracting $entry.name to $outputDir")
+                        jarFile.getInputStream(entry).use {stream ->
                             val outputPath =
                                 Paths.get(outputDir, entry.name.substring(folderInJar.length))
                             Files.createDirectories(outputPath)
-                            Files.copy(`is`, outputPath, StandardCopyOption.REPLACE_EXISTING)
+                            Files.copy(stream, outputPath, StandardCopyOption.REPLACE_EXISTING)
                         }
                     } catch (e: IOException) {
+                        LogProcessor.error("Error extracting $entry.name to $outputDir")
                         e.printStackTrace()
                     }
                 }
@@ -112,8 +115,9 @@ object FileUtils {
         }
 
         entries.asSequence()
-            .filter { it.name.startsWith(sourceDir) }
+            .filter { it.name.startsWith("$sourceDir/") }
             .forEach { entry ->
+                //LogProcessor.debug("Extracting $entry.name to $targetDir")
                 val outputFile = File(outputDir, entry.name.removePrefix(sourceDir))
                 if (entry.isDirectory) {
                     outputFile.mkdirs()

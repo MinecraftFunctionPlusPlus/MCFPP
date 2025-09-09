@@ -179,7 +179,7 @@ open class ClassPointer : Var<ClassPointer> {
     }
 
     override fun canImplicitCast(type: MCFPPType): Boolean {
-        return type is MCFPPClassType && this.clazz.isSubOf(type.cls)
+        return super.canImplicitCast(type) || type is MCFPPClassType && this.clazz.isSubOf(type.cls)
     }
 
     override fun clone(): ClassPointer {

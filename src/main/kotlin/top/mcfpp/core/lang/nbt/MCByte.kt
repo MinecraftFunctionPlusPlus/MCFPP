@@ -6,6 +6,7 @@ import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.function.Function
+import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPNBTType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
@@ -99,12 +100,13 @@ open class MCByte: MCInt {
         if(!re.isError) return re
         return when (type) {
             MCFPPNBTType.Short -> MCShort(this)
+            MCFPPBaseType.Int -> MCInt(this)
             else -> re
         }
     }
 
     override fun canImplicitCast(type: MCFPPType): Boolean {
-        return super.canImplicitCast(type) || type == MCFPPNBTType.Short
+        return super.canImplicitCast(type) || type == MCFPPNBTType.Short || type == MCFPPBaseType.Int
     }
 
 }

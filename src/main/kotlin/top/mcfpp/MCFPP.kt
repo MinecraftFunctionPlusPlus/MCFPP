@@ -23,6 +23,7 @@ fun main(args: Array<String>) {
         Configurator.initialize(null,source)
     }catch (e:Exception){
         println("Failed to load log4j2.xml")
+        e.printStackTrace()
     }
     if (args.isNotEmpty()) {
         parseArgs(args.asList().subList(1, args.size))
@@ -32,6 +33,7 @@ fun main(args: Array<String>) {
         val path = args[0]
         if(!Files.exists(Path(path))){
             LogProcessor.error("Cannot find file: $path")
+            return
         }
         compile(Project.readConfig(path)) //读取配置文件
     }
@@ -41,6 +43,7 @@ fun compile(config: ProjectConfig){
     val start: Long = System.currentTimeMillis()
 
     Project.config = config
+    if(config.root != null) Project.root = config.root!!
     Project.compileStage = Project.CompileStage.PRE_INIT
     Project.stageProcessor[0].forEach { it() }
     Project.init() //初始化

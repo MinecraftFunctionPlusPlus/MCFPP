@@ -18,10 +18,10 @@ import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.GenericClass
 import top.mcfpp.model.compound.UnionDataTemplate
-import top.mcfpp.model.scope.GlobalScope
-import top.mcfpp.model.scope.IScopeWithType
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
+import top.mcfpp.model.scope.GlobalScope
+import top.mcfpp.model.scope.IScopeWithType
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.collection.ListTag
@@ -56,7 +56,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
     open val simpleName
         get() = typeName
 
-    open val nbtType: java.lang.Class<out Tag<*>>
+    open val nbtType: Class<out Tag<*>>
         get() = CompoundTag::class.java
 
     open fun tryResolve(){}

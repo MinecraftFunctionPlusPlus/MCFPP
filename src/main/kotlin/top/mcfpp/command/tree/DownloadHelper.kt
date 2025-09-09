@@ -250,9 +250,9 @@ class Downloader {
             if(job.cache!=null){
                 val checksumJob = job.cache.checksumJob
                 val checksumExtension = job.cache.checksumExtension
-                cacheUri = Project.config.root.resolve("downloader/${job.id}")
+                cacheUri = Project.root.resolve("downloader/${job.id}")
                 out.cacheUri = cacheUri
-                cacheChecksumUri = Project.config.root.resolve("downloader/${job.id}${checksumExtension}")
+                cacheChecksumUri = Project.root.resolve("downloader/${job.id}${checksumExtension}")
                 try{
                     if(Files.notExists(cacheUri.parent)){
                         Files.createDirectories(cacheUri.parent)
