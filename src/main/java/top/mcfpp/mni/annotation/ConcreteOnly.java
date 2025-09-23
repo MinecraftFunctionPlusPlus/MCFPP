@@ -3,7 +3,6 @@ package top.mcfpp.mni.annotation;
 import org.jetbrains.annotations.NotNull;
 import top.mcfpp.core.lang.Var;
 import top.mcfpp.model.annotation.Annotation;
-import top.mcfpp.model.compound.Class;
 import top.mcfpp.model.compound.DataTemplate;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.util.LogProcessor;
@@ -22,12 +21,6 @@ public class ConcreteOnly extends Annotation {
 
     @Override
     public void forField(@NotNull Var<?> field){}
-
-
-    @Override
-    public void forClass(@NotNull Class clazz) {
-        LogProcessor.error("@" + getIdentifier() + "cannot be used on class");
-    }
 
     @Override
     public void forFunction(@NotNull Function function) {

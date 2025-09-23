@@ -1,11 +1,9 @@
 package top.mcfpp.mni;
 
 import org.jetbrains.annotations.NotNull;
-import top.mcfpp.Project;
 import top.mcfpp.annotations.InsertCommand;
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.command.Command;
-import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.*;
 import top.mcfpp.core.lang.bool.BaseBool;
 import top.mcfpp.core.lang.bool.ScoreBool;
@@ -80,11 +78,7 @@ public class System {
             //是确定的，直接输出数值
             Function.addCommand("tellraw @a \"" + varC.getValue() + "\"");
         }else {
-            if(var.parentClass() != null){
-                Function.addCommands(Commands.selectRun(Objects.requireNonNull(var.getParent()), "tellraw @a " + new ScoreChatComponent(var).toCommandPart(), true));
-            }else {
-                Function.addCommand("tellraw @a " + new ScoreChatComponent(var).toCommandPart());
-            }
+            Function.addCommand("tellraw @a " + new ScoreChatComponent(var).toCommandPart());
         }
     }
 
@@ -96,10 +90,10 @@ public class System {
                 Function.addCommand("tellraw @a \"" + Tag.toSNBT(NBTUtil.valueToNBT(varC.getValue())) + "\"");
             }else {
                 varC.toDynamic(true);
-                Function.addCommands(Commands.buildMacroAdjustedCommands(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart())));
+                Function.addCommand(new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart()));
             }
         }else {
-            Function.addCommands(Commands.buildMacroAdjustedCommands(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart())));
+            Function.addCommand(new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart()));
         }
     }
  
@@ -111,10 +105,10 @@ public class System {
                 Function.addCommand("tellraw @a \"" + Tag.toSNBT(NBTUtil.valueToNBT(varC.getValue())) + "\"");
             }else {
                 varC.toDynamic(true);
-                Function.addCommands(Commands.buildMacroAdjustedCommands(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart())));
+                Function.addCommand(new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart()));
             }
         }else {
-            Function.addCommands(Commands.buildMacroAdjustedCommands(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart())));
+            Function.addCommand(new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart()));
         }
     }
 
@@ -124,7 +118,7 @@ public class System {
         if(var instanceof MCFPPValue<?> varC){
             Function.addCommand("tellraw @a " + Tag.toSNBT(NBTUtil.valueToNBT(varC.getValue())));
         }else {
-            Function.addCommands(Commands.buildMacroAdjustedCommands(var,new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart())));
+            Function.addCommand(new Command("tellraw @a").build(new NBTChatComponent(var, false, null).toCommandPart()));
         }
     }
 
@@ -151,11 +145,7 @@ public class System {
         if(b instanceof ScoreBoolConcrete bC){
             Function.addCommand("tellraw @a \"" + (bC.getValue()?1:0) + "\"");
         }else {
-            if(b.getParent() != null){
-                Function.addCommands(Commands.selectRun(b.getParent(), "tellraw @a " + new ScoreChatComponent(b.asIntVar()).toCommandPart(), true));
-            }else {
-                Function.addCommand("tellraw @a " + new ScoreChatComponent(b.asIntVar()).toCommandPart());
-            }
+            Function.addCommand("tellraw @a " + new ScoreChatComponent(b.asIntVar()).toCommandPart());
         }
     }
 

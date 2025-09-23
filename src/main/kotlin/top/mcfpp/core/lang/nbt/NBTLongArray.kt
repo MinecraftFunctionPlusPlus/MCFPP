@@ -40,54 +40,12 @@ open class NBTLongArray: NBTArray {
     @InsertCommand
     protected open fun assignCommand(a: NBTLongArray) : NBTLongArray {
         nbtType = a.nbtType
-        return assignCommandLambda(a,
-            ifThisIsClassMemberAndAIsConcrete = {b, final ->
-                b as NBTLongArrayConcrete
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetValue(nbtPath, b.value))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-                NBTLongArray(this)
-            },
-            ifThisIsClassMemberAndAIsNotConcrete = {b, final ->
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-                NBTLongArray(this)
-            },
-            ifThisIsNormalVarAndAIsConcrete = {b ->
-                NBTLongArrayConcrete(this, (b as NBTLongArrayConcrete).value)
-            },
-            ifThisIsNormalVarAndAIsClassMember = {b, final ->
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-                NBTLongArray(this)
-            },
-            ifThisIsNormalVarAndAIsNotConcrete = {b ->
-                Function.addCommand(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                NBTLongArray(this)
-            }
-        ) as NBTLongArray
+        return if(a is NBTLongArrayConcrete){
+            NBTLongArrayConcrete(this, a.value)
+        } else {
+            Function.addCommand(Commands.dataSetFrom(nbtPath, a.nbtPath))
+            NBTLongArray(this)
+        }
     }
 
 }

@@ -2,8 +2,10 @@ package top.mcfpp.model.scope
 
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.annotation.Annotation
-import top.mcfpp.model.compound.*
+import top.mcfpp.model.compound.CompoundData
+import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.Enum
+import top.mcfpp.model.compound.Interface
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.type.MCFPPType
@@ -26,20 +28,6 @@ class FileScope: SimpleLibScope(){
      * 此文件引用的命名空间
      */
     val importedNamespaceField = arrayListOf<NamespaceScope>()
-
-    fun getAccessibleClass(identifier: String, readOnlyParam: List<MCFPPType>): GenericClass? {
-        return namespaceField.getClass(identifier, readOnlyParam)
-            ?: importField.getClass(identifier, readOnlyParam)
-            ?: importedNamespaceField.firstOrNull { it.getClass(identifier, readOnlyParam) != null }
-                ?.getClass(identifier, readOnlyParam)
-    }
-
-    fun getAccessibleClass(identifier: String): Class? {
-        return namespaceField.getClass(identifier)
-            ?: importField.getClass(identifier)
-            ?: importedNamespaceField.firstOrNull { it.getClass(identifier)!= null }
-                ?.getClass(identifier)
-    }
 
     fun getAccessibleInterface(identifier: String): Interface? {
         return namespaceField.getInterface(identifier)
@@ -91,19 +79,6 @@ class FileScope: SimpleLibScope(){
     private val hasChecked = false
     fun checkIndex() {
         if(hasChecked) return
-        for (c in classes.values()){
-            for (p in c.parent){
-                if(p is Class.Companion.UndefinedClassOrInterface){
-                    val r = p.getDefinedClassOrInterface()
-                    if(r == null){
-                        LogProcessor.error("Undefined class or interface: ${p.namespaceID}")
-                        continue
-                    }
-                    c.unExtends(p)
-                    c.extends(r)
-                }
-            }
-        }
         for ((k, v) in typeAlias){
             if(v is MCFPPTypeAliasType){
                 val qwq = MCFPPType.parseFromContext(v.t, this)

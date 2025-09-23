@@ -2,7 +2,6 @@ package top.mcfpp.core.lang
 
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.model.FieldContainer
-import top.mcfpp.model.compound.ObjectClass
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType
@@ -157,13 +156,6 @@ open class MCAny : Var<MCAny> {
         } else{
             type.buildUnConcrete(this.identifier).setAs(this)
         }
-        if(parentClass() is ObjectClass && re is OnScoreboard){
-            re.name = (parentClass() as ObjectClass).mcuuid.uuid.toString()
-            re.setObj(parentClass()!!.getIntSbObject(re.identifier))
-        }else if(parentClass() != null && re is OnScoreboard){
-            re.name = "@s"
-            re.setObj(parentClass()!!.getIntSbObject(re.identifier))
-        }
         return re
     }
 }
@@ -219,13 +211,6 @@ class MCAnyConcrete : MCAny, MCFPPValue<Any?> {
             type.build(this.identifier, container!!, value).setAs(this)
         } else{
             type.build(this.identifier, value).setAs(this)
-        }
-        if(parentClass() is ObjectClass && re is OnScoreboard){
-            re.name = (parentClass() as ObjectClass).mcuuid.uuid.toString()
-            re.setObj(parentClass()!!.getIntSbObject(re.identifier))
-        }else if(parentClass() != null && re is OnScoreboard){
-            re.name = "@s"
-            re.setObj(parentClass()!!.getIntSbObject(re.identifier))
         }
         return re
     }

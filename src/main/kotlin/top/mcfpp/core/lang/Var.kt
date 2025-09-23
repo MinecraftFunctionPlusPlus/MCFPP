@@ -1,20 +1,18 @@
 package top.mcfpp.core.lang
 
 import top.mcfpp.command.Command
-import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.bool.BaseBool
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
-import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
-import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.core.lang.obj.DataTemplateObject
-import top.mcfpp.lib.*
+import top.mcfpp.lib.MemberPath
+import top.mcfpp.lib.NBTPath
+import top.mcfpp.lib.StorageSource
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Member
 import top.mcfpp.model.annotation.Annotation
-import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
@@ -155,25 +153,6 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     }
 
     /**
-     * 获取这个成员的父类，可能不存在
-     * @return
-     */
-    override fun parentClass(): Class? {
-        return when (val parent = parent) {
-            is ClassPointer -> parent.clazz
-            is MCFPPClassType -> parent.cls
-            else -> null
-        }
-    }
-
-    fun parentClassPointer(): CanSelectMember? {
-        if(parentClass() != null){
-            return parent
-        }
-        return null
-    }
-
-    /**
      * 获取这个成员的父结构体，可能不存在
      *
      * @return
@@ -309,18 +288,6 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     @Override
     public abstract override fun clone(): Self
 
-    fun clone(pointer: ClassPointer): Self{
-        val `var` = this.clone()
-        if(pointer.identifier != "this"){
-            //不是this指针才需要额外指定引用者
-            `var`.parent = pointer
-        }
-        `var`.nbtPath = NBTPath(EntitySource(SelectorVar(EntitySelector('s'))))
-            .memberIndex("data")
-            .memberIndex(identifier)
-        return `var`
-    }
-
     fun clone(obj: DataTemplateObject): Self{
         val `var` = this.clone()
         if(obj.identifier != "this"){
@@ -328,50 +295,6 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         }
         `var`.nbtPath = obj.nbtPath
         return `var`
-    }
-
-    /**
-     * @param a 源变量
-     * @param ifThisIsClassMemberAndAIsConcrete 如果此变量是类成员，且a是已知的。cmd参数是[Commands.selectRun]生成的访问类成员的命令，需要被续写
-     * @param ifThisIsClassMemberAndAIsNotConcrete 如果此变量是成员，且a不是已知的。cmd参数是[Commands.selectRun]生成的访问类成员的命令，需要被续写
-     * @param ifThisIsNormalVarAndAIsConcrete 如果此变量不是成员且a是已知的
-     * @param ifThisIsNormalVarAndAIsClassMember 如果此变量不是成员且a是成员。cmd参数是[Commands.selectRun]生成的访问类成员的命令，需要被续写
-     * @param ifThisIsNormalVarAndAIsNotConcrete 如果此变量不是成员且a也不是
-     */
-    fun assignCommandLambda(
-        a: Var<*>,
-        ifThisIsClassMemberAndAIsConcrete: (Var<*>, Array<Command>) -> Var<*>,
-        ifThisIsClassMemberAndAIsNotConcrete: (Var<*>, Array<Command>) -> Var<*>,
-        ifThisIsNormalVarAndAIsConcrete: (Var<*>) -> Var<*>,
-        ifThisIsNormalVarAndAIsClassMember: (Var<*>, Array<Command>) -> Var<*>,
-        ifThisIsNormalVarAndAIsNotConcrete: (Var<*>) -> Var<*>
-    ): Var<*> {
-        if (parentClass() != null) {
-            val b = if(a.parent != null){
-                a.getTempVar()
-            }else a
-            //是成员
-            //类的成员是运行时动态的
-            val final = Commands.selectRun(parent!!)
-            return if (b is MCFPPValue<*>) {
-                ifThisIsClassMemberAndAIsConcrete(b, final)
-            } else {
-                ifThisIsClassMemberAndAIsNotConcrete(b, final)
-            }
-        } else {
-            //t = a
-            if (a is MCFPPValue<*>) {
-                return ifThisIsNormalVarAndAIsConcrete(a)
-            } else {
-                if(a.parentClass() != null){
-                    //是成员
-                    val final = Commands.selectRun(a.parent!!)
-                    return ifThisIsNormalVarAndAIsClassMember(a, final)
-                }else{
-                    return ifThisIsNormalVarAndAIsNotConcrete(a)
-                }
-            }
-        }
     }
 
     fun binaryComputation(a: Var<*>, operation: String): Var<*>{

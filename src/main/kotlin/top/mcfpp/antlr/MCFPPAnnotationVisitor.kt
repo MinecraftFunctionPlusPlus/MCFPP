@@ -5,12 +5,10 @@ import top.mcfpp.Project.withCompilationContext
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.exception.UndefinedException
 import top.mcfpp.model.annotation.Annotation
-import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.DataTemplate
-import top.mcfpp.model.compound.ObjectClass
 import top.mcfpp.model.compound.ObjectDataTemplate
-import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.function.FunctionParam
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil.toJava
@@ -79,44 +77,6 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
         DataTemplate.currTemplate = null
     }
 
-    override fun visitObjectClassDeclaration(ctx: mcfppParser.ObjectClassDeclarationContext): Unit = withCompilationContext(ctx) {
-        val id = ctx.classWithoutNamespace().text
-        val namespace = GlobalScope.localNamespaces[Project.currNamespace]!!
-        if(ctx.readOnlyParams() != null){
-            return
-        }
-        val clazz = namespace.field.getObject(id)
-        if(clazz !is ObjectClass){
-            throw UndefinedException("Class should have been defined: $id")
-        }
-        annotationCache.forEach {
-            it.on(clazz)
-        }
-        clazz.annotations.addAll(annotationCache)
-        annotationCache.clear()
-    }
-
-    override fun visitClassDeclaration(ctx: mcfppParser.ClassDeclarationContext): Unit = withCompilationContext(ctx) {
-        val id = ctx.classWithoutNamespace().text
-        val namespace = GlobalScope.localNamespaces[Project.currNamespace]!!
-        if(ctx.readOnlyParams() != null){
-            return
-        }
-        val clazz = if (namespace.field.hasClass(id)) {
-            namespace.field.getClass(id)!!
-        } else {
-            throw UndefinedException("Class Should have been defined: $id")
-        }
-        annotationCache.forEach {
-            it.on(clazz)
-        }
-        clazz.annotations.addAll(annotationCache)
-        annotationCache.clear()
-        Class.currClass = clazz
-        visitClassBody(ctx.classBody())
-        Class.currClass = null
-    }
-
     override fun visitFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext): Unit = withCompilationContext(ctx) {
         //获取函数对象
         val types = ctx.functionParams()?.let { FunctionParam.parseReadonlyAndNormalParamTypes(it) }
@@ -131,16 +91,6 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
             it.on(f)
         }
         f.annotations.addAll(annotationCache)
-        annotationCache.clear()
-    }
-
-    override fun visitClassFieldDeclaration(ctx: mcfppParser.ClassFieldDeclarationContext): Unit = withCompilationContext(ctx)  {
-        //获取字段对象
-        val field = Class.currClass!!.field.getVar(ctx.Identifier().text)!!
-        annotationCache.forEach {
-            it.on(field)
-        }
-        field.annotations.addAll(annotationCache)
         annotationCache.clear()
     }
 

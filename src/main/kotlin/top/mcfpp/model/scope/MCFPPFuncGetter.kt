@@ -1,12 +1,10 @@
 package top.mcfpp.model.scope
 
 import top.mcfpp.core.lang.Var
-import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
-import top.mcfpp.type.MCFPPClassType
 import top.mcfpp.util.LogProcessor
 
 /**
@@ -30,14 +28,7 @@ object MCFPPFuncGetter{
         normalArgs: ArrayList<Var<*>>
     ): Function {
         //是类的成员方法或扩展方法
-        val accessModifier : Member.AccessModifier = if(curr is ClassPointer){
-            //类指针
-            if(Function.currFunction.ownerType == Function.Companion.OwnerType.CLASS){
-                Function.currFunction.parentClass()!!.getAccess(curr.clazz)
-            }else{
-                Member.AccessModifier.PUBLIC
-            }
-        }else if(curr is DataTemplateObject){
+        val accessModifier : Member.AccessModifier = if(curr is DataTemplateObject){
             //类指针
             if(Function.currFunction.ownerType == Function.Companion.OwnerType.CLASS){
                 Function.currFunction.parentTemplate()!!.getAccess(curr.templateType)
@@ -57,36 +48,6 @@ object MCFPPFuncGetter{
         return func.first
     }
 
-
-    /**
-     * 获取一个类的静态函数
-     *
-     * @param type
-     * @param identifier
-     * @param readOnlyArgs
-     * @param normalArgs
-     * @return
-     */
-    private fun getFunction(
-        type: MCFPPClassType,
-        identifier : String,
-        readOnlyArgs: List<Var<*>>,
-        normalArgs: ArrayList<Var<*>>
-    ): Function {
-        //是类的成员方法
-        val accessModifier = if(Function.currFunction.ownerType == Function.Companion.OwnerType.CLASS){
-            Function.currFunction.parentClass()!!.getAccess(type.cls)
-        }else{
-            Member.AccessModifier.PUBLIC
-        }
-        //开始选择函数
-        val func = type.getMemberFunction(identifier, readOnlyArgs, normalArgs, accessModifier)
-        if (!func.second){
-            LogProcessor.error("Cannot access member $identifier in class ${type.cls.identifier}")
-        }
-        return func.first
-    }
-
     fun getFunction(
         selector: CanSelectMember,
         identifier: String,
@@ -94,7 +55,6 @@ object MCFPPFuncGetter{
         normalArgs: ArrayList<Var<*>>
     ): Function {
         return when(selector){
-            is MCFPPClassType -> getFunction(selector, identifier, readOnlyArgs, normalArgs)
             is Var<*> -> getFunction(selector, identifier, readOnlyArgs, normalArgs)
             else -> throw Exception()
         }

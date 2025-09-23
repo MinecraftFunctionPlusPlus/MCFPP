@@ -1,6 +1,5 @@
 package top.mcfpp.model.function
 
-import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.scope.InternalFunctionScope
 import top.mcfpp.util.TempPool
@@ -44,11 +43,6 @@ class InternalFunction(prefix: String, parent: Function) : Function(TempPool.get
     private fun setParentFunction(parent: Function) {
         this.parent.add(parent)
         parent.child.add(this)
-    }
-
-    @Override
-    override fun parentClass(): Class? {
-        return parent[0].parentClass()
     }
 
     @Override

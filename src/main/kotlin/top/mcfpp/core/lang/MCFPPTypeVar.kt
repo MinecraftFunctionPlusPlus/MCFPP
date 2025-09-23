@@ -2,7 +2,10 @@ package top.mcfpp.core.lang
 
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
-import top.mcfpp.type.*
+import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPCompoundType
+import top.mcfpp.type.MCFPPConcreteType
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 
@@ -56,9 +59,6 @@ class MCFPPTypeVar : ConcreteVar<MCFPPTypeVar, MCFPPType>{
 
     override fun replaceMemberVar(v: Var<*>) {
         when(val type = type){
-            is MCFPPClassType ->{
-                type.cls.field.putVar(v.identifier, v, true)
-            }
             is MCFPPCompoundType -> {
                 type.objectData.field.putVar(v.identifier, v, true)
             }

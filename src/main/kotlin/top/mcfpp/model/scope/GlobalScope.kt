@@ -8,19 +8,19 @@ import top.mcfpp.io.info.GlobalFieldInfo
 import top.mcfpp.io.info.NamespaceInfo
 import top.mcfpp.lib.SbObject
 import top.mcfpp.mni.DataObjectData
-import top.mcfpp.mni.ObjectData
 import top.mcfpp.mni.annotation.*
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.annotation.Annotation
-import top.mcfpp.model.compound.*
+import top.mcfpp.model.compound.CompoundData
+import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.Enum
-import top.mcfpp.model.function.*
+import top.mcfpp.model.compound.Interface
 import top.mcfpp.model.function.Function
-import top.mcfpp.model.property.*
-import top.mcfpp.type.MCFPPType
+import top.mcfpp.model.function.FunctionTag
+import top.mcfpp.model.function.NativeFunction
+import top.mcfpp.model.function.UnknownFunction
 import java.util.*
-import kotlin.collections.ArrayList
 
 /**
  * 全局域。
@@ -97,15 +97,12 @@ object GlobalScope : FieldContainer, IScope {
 
         stdNamespaces["mcfpp.lang"]!!.field.addTemplate("DataObject", DataTemplate.baseDataTemplate)
         DataTemplate.baseDataTemplate.injectedBy(DataObjectData::class.java)
-        stdNamespaces["mcfpp.lang"]!!.field.addClass("Object", Class.baseClass)
-        Class.baseClass.injectedBy(ObjectData::class.java)
 
         listOf(
             "From" to From::class.java,
             "ConcreteOnly" to ConcreteOnly::class.java,
             "NoInstance" to NoInstance::class.java,
             "To" to To::class.java,
-            "Base" to Base::class.java,
             "Dynamic" to Dynamic::class.java,
             "MCFPPEntity" to MCFPPEntity::class.java,
             "Name" to Name::class.java,
@@ -160,70 +157,6 @@ object GlobalScope : FieldContainer, IScope {
             np = stdNamespaces[namespace]
         }
         return np?.field?.getFunction(identifier, readOnlyParams, normalParams)?: UnknownFunction(identifier)
-    }
-
-    /**
-     * 从当前的全局域中获取一个泛型类。若不存在，则返回null
-     *
-     * 如果没有提供命名空间，则会从import导入的库和本地命名空间中搜索。否则则在指定的命名空间中搜索。
-     * @param namespace 可选。这个类的命名空间。如果为null，则会从当前所有的命名空间中寻找此类。
-     * @param identifier 类的标识符
-     * @return 获取的类。如果有多个相同标识符的类（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
-     */
-    @JvmStatic
-    fun getClass(namespace: String? = null, identifier: String, readOnlyParams: List<MCFPPType>): Class?{
-        if(namespace == null){
-            var cls: Class?
-            //命名空间为空，从全局寻找
-            cls = MCFPPFile.currFile?.field?.getAccessibleClass(identifier, readOnlyParams)
-            if(cls != null) return cls
-            for (nsp in stdNamespaces.values){
-                cls = nsp.field.getClass(identifier, readOnlyParams)
-                if(cls != null) return cls
-            }
-            return null
-        }
-        //按照指定的命名空间寻找
-        var np = localNamespaces[namespace]
-        if(np == null){
-            np = importedLibNamespaces[namespace]
-        }
-        if(np == null){
-            np = stdNamespaces[namespace]
-        }
-        return np?.field?.getClass(identifier, readOnlyParams)
-    }
-
-    /**
-     * 从当前的全局域中获取一个类。若不存在，则返回null
-     *
-     * 如果没有提供命名空间，则会从import导入的库和本地命名空间中搜索。否则则在指定的命名空间中搜索。
-     * @param namespace 可选。这个类的命名空间。如果为null，则会从当前所有的命名空间中寻找此类。
-     * @param identifier 类的标识符
-     * @return 获取的类。如果有多个相同标识符的类（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
-     */
-    @JvmStatic
-    fun getClass(namespace: String? = null, identifier: String): Class?{
-        if(namespace == null){
-            var cls: Class?
-            //命名空间为空，从全局寻找
-            cls = MCFPPFile.currFile?.field?.getAccessibleClass(identifier)
-            if(cls != null) return cls
-            for (nsp in stdNamespaces.values){
-                cls = nsp.field.getClass(identifier)
-                if(cls != null) return cls
-            }
-            return null
-        }
-        //按照指定的命名空间寻找
-        var np = localNamespaces[namespace]
-        if(np == null){
-            np = importedLibNamespaces[namespace]
-        }
-        if(np == null){
-            np = stdNamespaces[namespace]
-        }
-        return np?.field?.getClass(identifier)
     }
 
     /**
@@ -448,102 +381,6 @@ object GlobalScope : FieldContainer, IScope {
                                 for (c in f.commands) {
                                     println("\t" + c)
                                 }
-                            }
-                        }
-                    }
-                }
-            }
-            namespace.field.forEachClass { s ->
-                run{
-                    if(s is GenericClass){
-                        println("generic class " + s.namespaceID)
-                        return@run
-                    }
-                    println("class " + s.identifier)
-                    println("\tconstructors:")
-                    for (c in s.constructors) {
-                        if (c is NativeClassConstructor) {
-                            println("\t\tnative " + c.namespaceID)
-                        } else {
-                            println("\t\t" + c.namespaceID)
-                            for (d in c.commands) {
-                                println("\t\t\t" + d)
-                            }
-                            if(c.compiledFunctions.isNotEmpty()){
-                                for (f in c.compiledFunctions.values){
-                                    println("\t\t" + f.namespaceID)
-                                    for (d in f.commands) {
-                                        println("\t\t\t" + d)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    println("\tfunctions:")
-                    s.field.forEachFunction {f ->
-                        run {
-                            if (f is NativeFunction) {
-                                println(
-                                    "\t\t" + f.accessModifier.name
-                                        .lowercase(Locale.getDefault()) + " native " + f.namespaceID
-                                )
-                            } else {
-                                println(
-                                    "\t\t" + f.accessModifier.name
-                                        .lowercase(Locale.getDefault()) + " " + f.namespaceID
-                                )
-                                for (d in f.commands) {
-                                    println("\t\t\t" + d)
-                                }
-                                if(f.compiledFunctions.isNotEmpty()){
-                                    for (f1 in f.compiledFunctions.values){
-                                        println("\t\t" + f1.namespaceID)
-                                        for (d in f1.commands) {
-                                            println("\t\t\t" + d)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    println("\tproperties:")
-                    for (v in s.field.allProperties.toList()) {
-                        println(
-                            "\t\t" + v.accessModifier.name
-                                .lowercase(Locale.getDefault()) + " " + v.identifier
-                        )
-                        println(
-                            "\t\tgetter: "
-                        )
-                        if(v.accessor == null) {
-                            println("\t\t\t" + "null")
-                        }else{
-                            when(v.accessor){
-                                is SimpleAccessor -> println("\t\t\tsimple")
-                                is ExpressionAccessor -> println("\t\t\t" + v.accessor.ctx.text)
-                                is FunctionAccessor -> {
-                                    for (d in v.accessor.function.commands) {
-                                        println("\t\t\t" + d)
-                                    }
-                                }
-                                is NativeAccessor -> println("\t\t\t" + v.accessor.function.javaMethod.name)
-                            }
-                        }
-                        println(
-                            "\t\tsetter: "
-                        )
-                        if(v.mutator == null) {
-                            println("\t\t\t" + "null")
-                        }else{
-                            when(v.mutator){
-                                is SimpleMutator -> println("\t\t\tsimple")
-                                is ExpressionMutator -> println("\t\t\t" + v.mutator.ctx.text)
-                                is FunctionMutator -> {
-                                    for (d in v.mutator.function.commands) {
-                                        println("\t\t\t" + d)
-                                    }
-                                }
-                                is NativeMutator -> println("\t\t\t" + v.mutator.function.javaMethod.name)
                             }
                         }
                     }

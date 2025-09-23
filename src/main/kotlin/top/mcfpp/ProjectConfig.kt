@@ -1,7 +1,9 @@
 package top.mcfpp
 
 import top.mcfpp.command.CommentLevel
+import top.mcfpp.util.MCUUID
 import java.nio.file.Path
+import java.util.*
 
 //TODO 标准库引用逻辑优化
 open class ProjectConfig(
@@ -74,4 +76,9 @@ open class ProjectConfig(
      * 工程复制导入的库
      */
     var copyImport: Boolean = true,
+
+    /**
+     * 临时世界实体的UUID
+     */
+    var tempItemEntityUUID: MCUUID = MCUUID(UUID.fromString("810d6071-f121-4972-80d6-60cc19b40cf8"))
 )

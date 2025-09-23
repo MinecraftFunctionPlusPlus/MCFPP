@@ -3,28 +3,21 @@ package top.mcfpp.command
 import top.mcfpp.Project
 import top.mcfpp.core.lang.CommandReturn
 import top.mcfpp.core.lang.MCInt
-import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.entity.EntityVar
 import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.nbt.EntityUUIDVar
 import top.mcfpp.core.lang.nbt.EntityUUIDVarConcrete
-import top.mcfpp.core.lang.obj.ClassPointer
-import top.mcfpp.core.lang.obj.ObjectVar
 import top.mcfpp.lib.EntitySelector
 import top.mcfpp.lib.EntitySource
 import top.mcfpp.lib.NBTPath
-import top.mcfpp.model.CanSelectMember
-import top.mcfpp.model.compound.Class
-import top.mcfpp.model.compound.ObjectClass
-import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.Function.Companion.addCommand
 import top.mcfpp.model.function.NoStackFunction
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.collection.IntArrayTag
 import top.mcfpp.nbt.tags.primitive.StringTag
-import top.mcfpp.type.MCFPPClassType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 import top.mcfpp.util.Utils
@@ -282,30 +275,6 @@ object Commands {
     }
 
     /**
-     * 输入一个变量，判断这个变量是否是类的成员从而选择正确的nbt路径
-     */
-    @JvmStatic
-    private fun adjustCommandForParent(v: Var<*>, command: Command): Array<Command>{
-        return if(v.parentClass() != null){
-            selectRun(v.parent!!, command)
-        }else{
-            arrayOf(command)
-        }
-    }
-
-    /**
-     * 输入一个变量，判断这个变量是否是类的成员从而选择正确的nbt路径。同时构建输入命令的宏函数（若为宏命令）并把调用宏函数的
-     * 命令作为selectRun的输入命令
-     */
-    @JvmStatic
-    fun buildMacroAdjustedCommands(v: Var<*>, command: Command): Array<Command>{
-        val cs = command.buildMacroFunction()
-        val last = cs.last()
-        val qwq = adjustCommandForParent(v, last)
-        return cs.dropLast(1).toTypedArray() + qwq
-    }
-
-    /**
      * 判断一条命令是否为宏函数，并让这个命令作为返回值
      */
     @JvmStatic
@@ -333,94 +302,6 @@ object Commands {
         } else {
             addCommand(command)
         }
-    }
-
-    /**
-     * 以一个类的对象为执行者，执行一个命令。
-     *
-     * @param a 执行者
-     * @param command 要执行的命令
-     * @param hasExecuteRun 是否在execute命令串和要执行的命令之间插入run
-     *
-     * @return 生成的命令。数组的最后一个命令为`execute`命令
-     */
-    @JvmStatic
-    fun selectRun(a : CanSelectMember, command: Command, hasExecuteRun: Boolean = true) : Array<Command>{
-        val qwq = selectRun(a, hasExecuteRun)
-        qwq.last().build(command)
-        return qwq
-    }
-
-    /**
-     * 以一个类的对象为执行者，构建一个`execute`命令串，可以继续向后构建命令
-     *
-     * @param a 执行者
-     * @param hasExecuteRun 是否在execute命令串之后添加run
-     *
-     * @return 生成的命令。数组的最后一个命令为`execute`命令
-     */
-    @JvmStatic
-    fun selectRun(a : CanSelectMember, hasExecuteRun: Boolean = true) : Array<Command>{
-        val final = when(a){
-            is ClassPointer -> {
-                if(a.identifier == "this"){
-                    return arrayOf(Command())
-                }
-                val qwq = if(a.clazz.baseEntity != Class.ENTITY_MARKER && a.clazz.baseEntity != Class.ENTITY_ITEM_DISPLAY){
-                    arrayOf(
-                        Command.build("data modify entity ${ClassPointer.tempItemEntityUUID} Thrower set from storage mcfpp:system stack_frame[${a.stackIndex}].${a.identifier}"),
-                        Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin on passengers as @n[tag=${a.tag}_data]")
-                    )
-                }else{
-                    arrayOf(
-                        Command.build("data modify entity ${ClassPointer.tempItemEntityUUID} Thrower set from storage mcfpp:system stack_frame[${a.stackIndex}].${a.identifier}"),
-                        Command.build("execute as ${ClassPointer.tempItemEntityUUID} on origin")
-                    )
-                }
-                if(hasExecuteRun) {
-                    qwq.last().build("run","run")
-                }
-                qwq
-            }
-            is ObjectVar -> selectRun(a.value, hasExecuteRun)
-            is MCFPPClassType -> {
-                if(a.cls is ObjectClass){
-                    if(hasExecuteRun){
-                        arrayOf(Command.build("execute as ${(a.cls as ObjectClass).mcuuid.uuid}").build("run", "run"))
-                    }else{
-                        arrayOf(Command.build("execute as ${(a.cls as ObjectClass).mcuuid.uuid}"))
-                    }
-                }else if(a.cls.objectClass != null){
-                    if(hasExecuteRun){
-                        arrayOf(Command.build("execute as ${a.cls.objectClass!!.mcuuid.uuid}").build("run", "run"))
-                    }else{
-                        arrayOf(Command.build("execute as ${a.cls.objectClass!!.mcuuid.uuid}"))
-                    }
-                } else {
-                    if(hasExecuteRun){
-                        arrayOf(Command.build("#execute as [Error: No object class ${a.cls.namespaceID}]").build("run", "run"))
-                    }else{
-                        arrayOf(Command.build("#execute as [Error: No object class ${a.cls.namespaceID}]}"))
-                    }
-                }
-            }
-            else -> return arrayOf(Command())
-        }
-        return final
-    }
-
-    /**
-     * [selectRun]的简化版本，直接传入一个字符串
-     *
-     * @param a 执行者
-     * @param command 要执行的命令
-     * @param hasExecuteRun 是否在execute命令串和要执行的命令之间插入run
-     *
-     * @return 生成的命令。数组的最后一个命令为`execute`命令
-     */
-    @JvmStatic
-    fun selectRun(a : CanSelectMember, command: String, hasExecuteRun: Boolean = true) : Array<Command>{
-        return selectRun(a, Command.build(command), hasExecuteRun)
     }
 
     /**
@@ -499,8 +380,8 @@ object Commands {
         }else{
             if(!entityVar.isName){
                 arrayOf(
-                    Command("data modify entity ${ClassPointer.tempItemEntityUUID} Thrower set from").build(entityVar.nbtPath.toCommandPart()),
-                    Command("execute as ${ClassPointer.tempItemEntityUUID} on origin run").build(command)
+                    Command("data modify entity ${Project.config.tempItemEntityUUID} Thrower set from").build(entityVar.nbtPath.toCommandPart()),
+                    Command("execute as ${Project.config.tempItemEntityUUID} on origin run").build(command)
                 )
             }else{
                 Command("execute as").buildMacro(entityVar).build("run").build(command).buildMacroFunction()

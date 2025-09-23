@@ -1,15 +1,16 @@
 package top.mcfpp.model.scope
 
-import com.google.common.collect.ArrayListMultimap
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.annotation.Annotation
-import top.mcfpp.model.compound.*
+import top.mcfpp.model.compound.CompoundData
+import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.Enum
+import top.mcfpp.model.compound.Interface
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.*
 
 open class SimpleLibScope
-    : IScopeWithClass, SimpleScopeWithFunction, IScopeWithTemplate, IScopeWithInterface, IScopeWithType,
+    : SimpleScopeWithFunction, IScopeWithTemplate, IScopeWithInterface, IScopeWithType,
     SimpleScopeWithEnum,
     SimpleScopeWithObject,
     SimpleScopeWithAnnotation,
@@ -24,11 +25,6 @@ open class SimpleLibScope
      * 函数
      */
     final override var functions: HashMap<String, ArrayList<Function>> = HashMap()
-
-    /**
-     * 类
-     */
-    protected var classes: ArrayListMultimap<String, Class> = ArrayListMultimap.create()
 
     /**
      * 模板
@@ -67,89 +63,6 @@ open class SimpleLibScope
         }
         functions.putAll(cache.functions)
     }
-
-    //region class
-
-    override fun forEachClass(operation: (Class) -> Any?){
-        for (`class` in classes.values()){
-            operation(`class`)
-        }
-    }
-
-    /**
-     * 根据所给的id获取一个类
-     *
-     * @param identifier
-     */
-    override fun getClass(identifier: String, readOnlyParam: List<MCFPPType>): GenericClass? {
-        for (`class` in classes[identifier]) {
-            if (`class` is GenericClass && `class`.isSelfByType(identifier, readOnlyParam)) {
-                return `class`
-            }
-        }
-        return null
-    }
-
-    override fun getClass(identifier: String): Class? {
-        for (clazz in classes[identifier]){
-            if(clazz !is GenericClass){
-                return clazz
-            }
-        }
-        return null
-    }
-
-    override fun hasClass(cls: Class): Boolean{
-        return classes.containsValue(cls)
-    }
-
-    open fun hasNotGenericClass(cls: String): Boolean{
-        return classes.values().any { it.identifier == cls && it !is GenericClass }
-    }
-
-    open fun hasNotGenericClass(cls: Class): Boolean{
-        return classes.values().any { it == cls && it !is GenericClass }
-    }
-
-
-    override fun hasClass(identifier: String): Boolean{
-        return classes.containsKey(identifier)
-    }
-
-    override fun addClass(identifier: String, cls: Class, force : Boolean): Boolean{
-        return if (force){
-            if(cls is GenericClass){
-                classes.put(identifier, cls)
-            }else{
-                val c = getClass(identifier)
-                if(c != null){
-                    classes.remove(identifier, c)
-                }
-                classes.put(identifier, cls)
-            }
-            true
-        }else{
-            if(cls is GenericClass){
-                classes.put(identifier, cls)
-            }else{
-                val c = getClass(identifier)
-                if(c != null){
-                    return false
-                }
-                classes.put(identifier, cls)
-            }
-            true
-        }
-    }
-
-    override fun removeClass(identifier: String): List<Class> {
-        return if(classes.containsKey(identifier)) {
-            classes.removeAll(identifier)
-        }else{
-            emptyList()
-        }
-    }
-    //endregion
 
     //region template
 
@@ -303,20 +216,16 @@ open class SimpleLibScope
     //endregion
 
     open fun hasDeclaredType(identifier: String): Boolean{
-        return hasEnum(identifier) || hasTemplate(identifier) || hasInterface(identifier) || hasClass(identifier)
+        return hasEnum(identifier) || hasTemplate(identifier) || hasInterface(identifier)
     }
 
     open fun hasDeclaredType(type: CompoundData): Boolean{
-        if(type !is GenericClass){
-            val identifier = type.identifier
-            return hasEnum(identifier) || hasTemplate(identifier) || hasInterface(identifier) || hasNotGenericClass(identifier)
-        }else{
-            return hasClass(type)
-        }
+        val identifier = type.identifier
+        return hasEnum(identifier) || hasTemplate(identifier) || hasInterface(identifier)
     }
 
     open fun getDeclaredType(identifier: String): CompoundData?{
-        return getEnum(identifier) ?: getTemplate(identifier) ?: getInterface(identifier) ?: getClass(identifier)
+        return getEnum(identifier) ?: getTemplate(identifier) ?: getInterface(identifier)
     }
 
     open fun addDeclaredType(type: CompoundData): Boolean {
@@ -326,8 +235,6 @@ open class SimpleLibScope
             is DataTemplate -> addTemplate(type.identifier, type)
 
             is Interface -> addInterface(type.identifier, type)
-
-            is Class -> addClass(type.identifier, type)
 
             else -> throw IllegalArgumentException("Unknown type: $type")
         }
@@ -342,8 +249,6 @@ open class SimpleLibScope
             is MCFPPDataTemplateType -> addTemplate(type.template.identifier, type.template, forced)
 
             is MCFPPInterfaceType -> addInterface(type.i.identifier, type.i, forced)
-
-            is MCFPPClassType -> addClass(type.cls.identifier, type.cls, forced)
 
             is MCFPPTypeAliasType -> {
                 if (forced) {
@@ -363,11 +268,11 @@ open class SimpleLibScope
     }
 
     override fun getType(key: String): MCFPPType? {
-        return (getEnum(key) ?: getTemplate(key) ?: getInterface(key) ?: getClass(key))?.getType()?: typeAlias[key]
+        return (getEnum(key) ?: getTemplate(key) ?: getInterface(key))?.getType()?: typeAlias[key]
     }
 
     override fun containType(id: String): Boolean {
-        return hasEnum(id) || hasTemplate(id) || hasInterface(id) || hasClass(id) || typeAlias.containsKey(id)
+        return hasEnum(id) || hasTemplate(id) || hasInterface(id) || typeAlias.containsKey(id)
     }
 
     override fun removeType(id: String): MCFPPType? {
@@ -375,7 +280,6 @@ open class SimpleLibScope
             hasEnum(id) -> removeEnum(id)
             hasTemplate(id) -> removeTemplate(id)
             hasInterface(id) -> removeInterface(id)
-            hasClass(id) -> removeClass(id)[0]
             else -> null
         }?.getType()?: typeAlias.remove(id)
     }
@@ -384,7 +288,6 @@ open class SimpleLibScope
         forEachEnum { action(it.getType()) }
         forEachTemplate { action(it.getType()) }
         forEachInterface { action(it.getType()) }
-        forEachClass { action(it.getType()) }
         typeAlias.values.forEach { action(it) }
     }
 
@@ -394,7 +297,6 @@ open class SimpleLibScope
             forEachEnum { list.add(it.getType()) }
             forEachTemplate { list.add(it.getType()) }
             forEachInterface { list.add(it.getType()) }
-            forEachClass { list.add(it.getType()) }
             list.addAll(typeAlias.values)
             return list
         }

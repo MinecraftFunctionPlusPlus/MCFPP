@@ -19,7 +19,6 @@ class InterfaceInfo(
         i.field = field.get()
 
         currInterface = null
-        AbstractClassInfo.currClass = null
         infoCache[this] = i
         return i
     }

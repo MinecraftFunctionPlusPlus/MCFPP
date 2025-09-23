@@ -42,39 +42,13 @@ open class MCByte: MCInt {
     //this = a
     @InsertCommand
     override fun assignCommand(a: MCNumber<*>) : MCByte {
-        return assignCommandLambda(a,
-            ifThisIsClassMemberAndAIsConcrete =  { b, final ->
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                Function.addCommand(final.last().build(Commands.sbPlayerSet(this, (b as MCIntConcrete).value)))
-                this
-            },
-            ifThisIsClassMemberAndAIsNotConcrete = { b, final ->
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                Function.addCommand(final.last().build(Commands.sbPlayerOperation(this,"=",b as MCInt)))
-                this
-            },
-            ifThisIsNormalVarAndAIsConcrete = { b ->
-                MCByteConcrete(this, (b as MCByteConcrete).value)
-            },
-            ifThisIsNormalVarAndAIsClassMember = { c, cmd ->
-                if(cmd.size == 2){
-                    Function.addCommand(cmd[0])
-                }
-                Function.addCommand(cmd.last().build(Commands.sbPlayerOperation(this, "=", c as MCInt)))
-                MCByte(this)
-            },
-            ifThisIsNormalVarAndAIsNotConcrete = { c ->
-                //变量进栈
-                Function.addCommand(Commands.sbPlayerOperation(this, "=", c as MCInt))
-                MCByte(this)
-            }
-        ) as MCByte
+        return if(a is MCFPPValue<*>){
+            MCByteConcrete(this, (a as MCByteConcrete).value)
+        }else {
+            //变量进栈
+            Function.addCommand(Commands.sbPlayerOperation(this, "=", a as MCInt))
+            MCByte(this)
+        }
     }
 
     override fun implicitCast(type: MCFPPType): Var<*> {
@@ -91,7 +65,7 @@ open class MCByte: MCInt {
         return super.canImplicitCast(type) || type == MCFPPNBTType.Short || type == MCFPPBaseType.Int
     }
     override fun storeToStack() {
-        if(parentClass() != null || hasStoredInStack) return
+        if(hasStoredInStack) return
         Function.addCommand(
             Command("execute store result")
             .build(nbtPath.toCommandPart())

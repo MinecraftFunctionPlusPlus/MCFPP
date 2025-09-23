@@ -8,7 +8,6 @@ import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Generic
-import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.Interface
 import top.mcfpp.util.LogProcessor
@@ -23,16 +22,6 @@ class GenericFunction : Function, Generic<Function> {
      * @param namespace 函数的命名空间
      */
     constructor(identifier: String, namespace: String = Project.currNamespace, ctx: mcfppParser.FunctionBodyContext) : super(identifier, namespace, ctx)
-
-    /**
-     * 创建一个函数，并指定它所属的类。
-     * @param identifier 函数的标识符
-     */
-    constructor(identifier: String, cls: Class, ctx: mcfppParser.FunctionBodyContext) : super(
-        identifier,
-        cls,
-        ctx
-    )
 
     /**
      * 创建一个函数，并指定它所属的接口。接口的函数总是抽象并且公开的

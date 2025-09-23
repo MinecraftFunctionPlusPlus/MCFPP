@@ -2,7 +2,6 @@ package top.mcfpp.io.info
 
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.function.FunctionParam
-import top.mcfpp.model.compound.ClassParam
 import top.mcfpp.type.MCFPPType
 
 data class FunctionParamInfo(
@@ -32,22 +31,4 @@ data class FunctionParamInfo(
         }
     }
 
-}
-
-data class ClassParamInfo(
-    var identifier: String,
-    var type: MCFPPType
-): ModelInfo<ClassParam> {
-    override fun get(): ClassParam {
-        return ClassParam(type.typeName ,identifier, type)
-    }
-
-    companion object {
-        fun from(param: ClassParam): ClassParamInfo{
-            return ClassParamInfo(
-                param.identifier,
-                param.type!!
-            )
-        }
-    }
 }

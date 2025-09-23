@@ -100,68 +100,24 @@ open class MCInt : MCNumber<Int> {
     //this = a
     @InsertCommand
     override fun assignCommand(a: MCNumber<*>) : MCInt {
-        return assignCommandLambda(a,
-            ifThisIsClassMemberAndAIsConcrete =  { b, final ->
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                if(isDataOnly){
-                    Function.addCommand(final.last().build(Commands.dataSetValue(nbtPath, IntTag((b as MCIntConcrete).value))))
-                }else{
-                    Function.addCommand(final.last().build(Commands.sbPlayerSet(this, (b as MCIntConcrete).value)))
-                }
+        return if(a is MCIntConcrete){
+            if(isDataOnly){
+                Function.addCommand(Commands.dataSetValue(nbtPath, IntTag(a.value)))
                 this
-            },
-            ifThisIsClassMemberAndAIsNotConcrete = { b, final ->
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                if(isDataOnly){
-                    Function.addCommand(final.last().build(
-                        Command("execute store result").build(nbtPath.toCommandPart()).build("int 1").build("run")
-                            .build("scoreboard players get ${(b as MCInt).name} ${b.sbObject}")
-                    ))
-                }else{
-                    Function.addCommand(final.last().build(Commands.sbPlayerOperation(this,"=",b as MCInt)))
-                }
-                this
-            },
-            ifThisIsNormalVarAndAIsConcrete = { b ->
-                if(isDataOnly){
-                    Function.addCommand(Commands.dataSetValue(nbtPath, IntTag((b as MCIntConcrete).value)))
-                    this
-                }else{
-                    MCIntConcrete(this, (b as MCIntConcrete).value)
-                }
-            },
-            ifThisIsNormalVarAndAIsClassMember = { c, cmd ->
-                if(cmd.size == 2){
-                    Function.addCommand(cmd[0])
-                }
-                if(isDataOnly){
-                    Function.addCommand(cmd.last().build(
-                        Command("execute store result").build(nbtPath.toCommandPart()).build("int 1").build("run")
-                            .build("scoreboard players get ${(c as MCInt).name} ${c.sbObject}")
-                    ))
-                }else{
-                    Function.addCommand(cmd.last().build(Commands.sbPlayerOperation(this, "=", c as MCInt)))
-                }
-                MCInt(this)
-            },
-            ifThisIsNormalVarAndAIsNotConcrete = { c ->
-                if(isDataOnly){
-                    Function.addCommand(
-                        Command("execute store result").build(nbtPath.toCommandPart()).build("int 1").build("run")
-                            .build("scoreboard players get ${(c as MCInt).name} ${c.sbObject}")
-                    )
-                }else{
-                    Function.addCommand(Commands.sbPlayerOperation(this, "=", c as MCInt))
-                }
-                MCInt(this)
+            }else{
+                MCIntConcrete(this, a.value)
             }
-        ) as MCInt
+        }else {
+            if(isDataOnly){
+                Function.addCommand(
+                    Command("execute store result").build(nbtPath.toCommandPart()).build("int 1").build("run")
+                        .build("scoreboard players get ${(a as MCInt).name} ${a.sbObject}")
+                )
+            }else{
+                Function.addCommand(Commands.sbPlayerOperation(this, "=", a as MCInt))
+            }
+            MCInt(this)
+        }
     }
 
     @InsertCommand
@@ -405,7 +361,7 @@ open class MCInt : MCNumber<Int> {
     }
 
     override fun storeToStack() {
-        if(parentClass() != null || hasStoredInStack) return
+        if(hasStoredInStack) return
         Function.addCommand(Command("execute store result")
             .build(nbtPath.toCommandPart())
             .build("int 1 run scoreboard players get $name $sbObject"))
@@ -474,15 +430,7 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
      *
      */
     override fun toDynamic(replace: Boolean): Var<*> {
-        //避免错误 Smart cast to 'ClassPointer' is impossible, because 'parent' is a mutable property that could have been changed by this time
-        val parent = parent
-
-        if (parentClass() != null) {
-            val cmd = Commands.selectRun(parent!!, "scoreboard players set @s $sbObject $value")
-            Function.addCommands(cmd)
-        } else {
-            Function.addCommand("scoreboard players set $name $sbObject $value")
-        }
+        Function.addCommand("scoreboard players set $name $sbObject $value")
         val re = MCInt(this)
         if(replace){
             if(parentTemplate() != null){

@@ -80,53 +80,12 @@ open class MCLong: NBTBasedData {
     @InsertCommand
     override fun assignCommand(a: NBTBasedData) : MCLong {
         nbtType = a.nbtType
-        return assignCommandLambda(a,
-            ifThisIsClassMemberAndAIsConcrete = {b, final ->
-                b as MCLongConcrete
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetValue(nbtPath, b.value))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-                MCLong(this)
-            },
-            ifThisIsClassMemberAndAIsNotConcrete = {b, final ->
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-                MCLong(this)
-            },
-            ifThisIsNormalVarAndAIsConcrete = {b ->
-                MCLongConcrete(this, (b as MCLongConcrete).value)
-            },
-            ifThisIsNormalVarAndAIsClassMember = {b, final ->
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-                MCLong(this)
-            },
-            ifThisIsNormalVarAndAIsNotConcrete = {b ->
-                Function.addCommand(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                MCLong(this)
-            }) as MCLong
+        return if(a is MCLongConcrete){
+            MCLongConcrete(this, a.value)
+        } else {
+            Function.addCommand(Commands.dataSetFrom(nbtPath, a.nbtPath))
+            MCLong(this)
+        }
     }
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {

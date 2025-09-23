@@ -3,9 +3,7 @@ package top.mcfpp.model
 import top.mcfpp.Project
 import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.core.lang.Var
-import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.core.lang.obj.DataTemplateObject
-import top.mcfpp.model.compound.UnsolvedClass
 import top.mcfpp.model.compound.UnsolvedTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.GenericFunction
@@ -36,23 +34,11 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
      */
     fun merge(namespace: Namespace, force: Boolean = false){
         namespace.field.forEachFunction { field.addFunction(it, force) }
-        namespace.field.forEachClass { field.addClass(it.identifier, it, force) }
         namespace.field.forEachInterface { field.addInterface(it.identifier, it, force) }
         namespace.field.forEachTemplate { field.addTemplate(it.identifier, it, force) }
     }
 
     fun resolve(){
-        field.forEachClass { c ->
-            run {
-                c.field.forEachVar { resolveVar(it) }
-                c.constructors.forEach { constructor -> run{
-                    constructor.normalParams.forEach {
-                        it.type.tryResolve()
-                    }
-                } }
-                c.field.forEachFunction { resolveFunction(it) }
-            }
-        }
         field.forEachTemplate { t ->
             run {
                 t.field.forEachVar { resolveVar(it) }
@@ -93,9 +79,6 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
         v.type.tryResolve()
         if(v is DataTemplateObject && v.templateType is UnsolvedTemplate){
             v.templateType.resolve()
-        }
-        if(v is ClassPointer && v.clazz is UnsolvedClass){
-            (v.clazz as UnsolvedClass).resolve()
         }
     }
 

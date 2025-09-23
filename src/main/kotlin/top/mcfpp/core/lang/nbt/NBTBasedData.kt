@@ -66,54 +66,12 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
     @InsertCommand
     protected open fun assignCommand(a: NBTBasedData) : NBTBasedData {
         nbtType = a.nbtType
-        return assignCommandLambda(a,
-            ifThisIsClassMemberAndAIsConcrete = {b, final ->
-                b as NBTBasedDataConcrete
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetValue(nbtPath, b.value))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-                NBTBasedData(this)
-            },
-            ifThisIsClassMemberAndAIsNotConcrete = {b, final ->
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-                NBTBasedData(this)
-            },
-            ifThisIsNormalVarAndAIsConcrete = {b ->
-                NBTBasedDataConcrete(this, (b as NBTBasedDataConcrete).value)
-            },
-            ifThisIsNormalVarAndAIsClassMember = {b, final ->
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-                NBTBasedData(this)
-            },
-            ifThisIsNormalVarAndAIsNotConcrete = {b ->
-                Function.addCommand(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                NBTBasedData(this)
-            }
-        ) as NBTBasedData
+        return if(a is NBTBasedDataConcrete){
+            NBTBasedDataConcrete(this, a.value)
+        } else {
+            Function.addCommand(Commands.dataSetFrom(nbtPath, a.nbtPath))
+            NBTBasedData(this)
+        }
     }
 
     /**
@@ -476,11 +434,10 @@ class NBTBasedDataConcrete : NBTBasedData, MCFPPValue<Tag<*>> {
 
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
-        Function.addCommands(
-            Commands.buildMacroAdjustedCommands(this, Command("data modify")
-                .build(nbtPath.toCommandPart()
-                    .build("set value ${Tag.toSNBT(value)}"))
-            )
+        Function.addCommand(
+            Command("data modify")
+                .build(nbtPath.toCommandPart())
+                .build("set value ${Tag.toSNBT(value)}")
         )
         val re = NBTBasedData(this)
         if(replace){

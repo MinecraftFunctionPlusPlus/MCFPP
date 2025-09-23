@@ -14,19 +14,15 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.command.CommentLevel
 import top.mcfpp.core.lang.MCFloat
-import top.mcfpp.core.lang.UnresolvedVar
 import top.mcfpp.core.lang.Var
-import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.io.LibBinReader
 import top.mcfpp.io.LibBinWriter
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.Native
-import top.mcfpp.model.compound.ObjectClass
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionTag
-import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.Module
@@ -443,30 +439,6 @@ object Project {
                 LogProcessor.error("Error while reading lib file at $include: $e")
             }
         }
-        //实例化所有类中的成员字段
-        for(namespace in GlobalScope.libNamespaces.values){
-            namespace.field.forEachClass { c ->
-                run {
-                    for (v in c.field.allVars){
-                        if(v is UnresolvedVar){
-                            c.field.putVar(c.identifier, v.resolve(c), true)
-                        }
-                    }
-                }
-            }
-        }
-        //实例化所有类中的成员字段
-        for(namespace in GlobalScope.stdNamespaces.values){
-            namespace.field.forEachClass { c ->
-                run {
-                    for (v in c.field.allVars){
-                        if(v is UnresolvedVar){
-                            c.field.putVar(c.identifier, v.resolve(c), true)
-                        }
-                    }
-                }
-            }
-        }
         //函数参数解析
         GlobalScope.importedLibNamespaces.clear()
         //读取所有文件
@@ -589,10 +561,11 @@ object Project {
 
             //向load函数中添加库初始化命令
             Function.addCommand("execute unless score math mcfpp_init matches 1 run function math:_init")
+
             //向load函数中添加实体初始化命令
             Function.addCommand("summon item 0 0 0 {" +
                     "Tags:[\"mcfpp_ptr_marker\"]," +
-                    "UUID:${ClassPointer.tempItemEntityUUIDNBT}, " +
+                    "UUID:${config.tempItemEntityUUID.uuidSNBT}, " +
                     "Age:-32768, " +
                     "NoGravity: true, " +
                     "Item:{id:\"stone\"}, " +
@@ -601,66 +574,12 @@ object Project {
             )
 
             Function.addComment("class init", CommentLevel.INFO)
-            //向load中添加类初始化命令
-            for (n in GlobalScope.localNamespaces.values){
-                n.field.forEachObject { c->
-                    if(c is ObjectClass){
-                        //单例实体
-                        Function.addCommand("summon marker 0 0 0 {" +
-                                "Tags:[${c.tag}]," +
-                                "UUID:${c.mcuuid.uuidSNBT}}"
-                        )
-                        c.classPreInit.invoke(LinkedHashMap(), null)
-                    }
-                }
-            }
-            //向load中添加类的load函数
-            for (n in GlobalScope.localNamespaces.values){
-                n.field.forEachClass { c ->
-                    val qwq = c.field.getFunction("load", ArrayList(), ArrayList())
-                    if(qwq is NativeFunction){
-                        qwq.invoke(emptyList(), null)
-                    }else{
-                        Function.addCommand("execute as @e[tag=${c.tag}] at @s run function ${qwq.namespaceID}")
-                    }
-                }
-                n.field.forEachObject { o ->
-                    if(o !is ObjectClass) return@forEachObject
-                    val qwq = o.field.getFunction("load", ArrayList(), ArrayList())
-                    if(qwq is NativeFunction){
-                        qwq.invoke(emptyList(), null)
-                    }else{
-                        Function.addCommand("execute as ${o.mcuuid.uuid} at @s run function ${qwq.namespaceID}")
-                    }
-                }
-            }
 
             //浮点数临时marker实体
             Function.addCommand("summon marker 0 0 0 {" +
                     "Tags:[\"mcfpp_float_marker\"]," +
                     "UUID:${MCFloat.tempFloatEntityUUIDNBT}}"
             )
-        }
-
-        //向tick中添加类的tick函数
-        for (n in GlobalScope.localNamespaces.values){
-            n.field.forEachClass { c -> projectTick.runInFunction {
-                val qwq = c.field.getFunction("tick",ArrayList(), ArrayList())
-                if(qwq is NativeFunction){
-                    qwq.invoke(emptyList(), null)
-                }else{
-                    Function.addCommand("execute as @e[tag=${c.tag}] at @s run function ${qwq.namespaceID}")
-                }
-            }  }
-            n.field.forEachObject { o -> projectTick.runInFunction {
-                if(o !is ObjectClass) return@runInFunction
-                val qwq = o.field.getFunction("tick",ArrayList(), ArrayList())
-                if(qwq is NativeFunction){
-                    qwq.invoke(emptyList(), null)
-                }else{
-                    Function.addCommand("execute as ${o.mcuuid.uuid} at @s run function ${qwq.namespaceID}")
-                }
-            } }
         }
 
         //寻找入口函数

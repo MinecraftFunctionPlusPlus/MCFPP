@@ -1,7 +1,6 @@
 package top.mcfpp.model.annotation
 
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
@@ -52,13 +51,6 @@ abstract class Annotation : Serializable {
         this.namespace = namespace
         this.params.addAll(param)
     }
-
-    internal fun on(clazz: Class){
-        forClass(clazz)
-        parents.forEach { it.on(clazz) }
-    }
-
-    abstract fun forClass(clazz: Class)
 
     internal fun on(function: Function){
         forFunction(function)

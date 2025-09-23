@@ -57,75 +57,12 @@ open class NBTDictionary : NBTBasedData {
     @InsertCommand
     override fun assignCommand(a: NBTBasedData): NBTBasedData {
         nbtType = a.nbtType
-        return assignCommandLambda(a,
-            ifThisIsClassMemberAndAIsConcrete = {b, final ->
-                if(b is NBTDictionaryConcrete){
-                    if(!b.isAllConcrete()){
-                        b.toDynamic(true)
-                    }
-                    //对类中的成员的值进行修改
-                    if(final.size == 2){
-                        Function.addCommand(final[0])
-                    }
-                    if(b.isAllConcrete()){
-                        final.last().build(Commands.dataSetValue(nbtPath, b.getConcretePart()))
-                    }else{
-                        final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                    }
-                    if(final.last().isMacro){
-                        Function.addCommands(final.last().buildMacroFunction())
-                    }else{
-                        Function.addCommand(final.last())
-                    }
-                    NBTDictionary(this)
-                }else{
-                    b as NBTBasedDataConcrete
-                    //对类中的成员的值进行修改
-                    if(final.size == 2){
-                        Function.addCommand(final[0])
-                    }
-                    final.last().build(Commands.dataSetValue(nbtPath, b.value))
-                    if(final.last().isMacro){
-                        Function.addCommands(final.last().buildMacroFunction())
-                    }else{
-                        Function.addCommand(final.last())
-                    }
-                    NBTDictionary(this)
-                }
-            },
-            ifThisIsClassMemberAndAIsNotConcrete = {b, final ->
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-                NBTDictionary(this)
-            },
-            ifThisIsNormalVarAndAIsConcrete = {b ->
-                NBTDictionaryConcrete(this, (b as NBTDictionaryConcrete).value)
-            },
-            ifThisIsNormalVarAndAIsClassMember = {b, final ->
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-                NBTDictionary(this)
-            },
-            ifThisIsNormalVarAndAIsNotConcrete = {b ->
-                Function.addCommand(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                NBTDictionary(this)
-            }
-        ) as NBTDictionary
+        return if(a is NBTDictionaryConcrete){
+            NBTDictionaryConcrete(this, a.value)
+        }else {
+            Function.addCommand(Commands.dataSetFrom(nbtPath, a.nbtPath))
+            NBTDictionary(this)
+        }
     }
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
@@ -253,7 +190,7 @@ class NBTDictionaryConcrete : NBTDictionary, PartialConcreteValue<CompoundTag, H
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
         if(value.isEmpty()) return NBTDictionary(this)
-        Function.addCommands(Commands.buildMacroAdjustedCommands(this, Commands.dataSetValue(nbtPath, getConcretePart())))
+        Function.addCommand(Commands.dataSetValue(nbtPath, getConcretePart()))
         val re = NBTDictionary(this)
         if(replace){
             if(parentTemplate() != null) {

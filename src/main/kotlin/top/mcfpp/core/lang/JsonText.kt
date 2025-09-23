@@ -1,7 +1,6 @@
 package top.mcfpp.core.lang
 
 import top.mcfpp.command.Command
-import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.lib.ChatComponent
@@ -94,42 +93,20 @@ open class JsonText : NBTBasedData {
     override fun plus(a: Var<*>): Var<*> {
         return when(a){
             is JsonTextConcrete -> {
-                if(parentClass()!= null){
-                    val cmd = Commands.selectRun(parent!!,
-                        Command("data modify").build(nbtPath.toCommandPart()).build("append value")
-                           .build(a.toCommandPart())
-                    )
-                    Function.addCommands(cmd)
-                }else{
-                    val cmd = Command.build("data modify")
-                        .build(nbtPath.toCommandPart())
-                        .build("append value")
-                        .build(a.toCommandPart())
-                    Function.addCommand(cmd)
-                }
+                val cmd = Command.build("data modify")
+                    .build(nbtPath.toCommandPart())
+                    .build("append value")
+                    .build(a.toCommandPart())
+                Function.addCommand(cmd)
                 this
             }
             is JsonText -> {
-                if(parentClass()!= null){
-                    val b = if(a.parentClass() != null) a.getTempVar() else a
-                    val cmd = Commands.selectRun(parent!!,
-                        Command("data modify").build(nbtPath.toCommandPart()).build("append from")
-                          .build(b.nbtPath.toCommandPart())
-                    )
-                    Function.addCommands(cmd)
-                }else{
-                    val cmd = if(a.parentClass()!= null){
-                        Commands.selectRun(a.parent!!,
-                            Command("data modify").build(nbtPath.toCommandPart()).build("append from")
-                                .build(a.nbtPath.toCommandPart()))
-                    } else {
-                        arrayOf(Command.build("data modify")
-                            .build(nbtPath.toCommandPart())
-                            .build("append from")
-                            .build(a.nbtPath.toCommandPart()))
-                    }
-                    Function.addCommands(cmd)
-                }
+                Function.addCommand(
+                    Command.build("data modify")
+                        .build(nbtPath.toCommandPart())
+                        .build("append from")
+                        .build(a.nbtPath.toCommandPart())
+                )
                 this
             }
             else -> errorOp()
@@ -161,19 +138,11 @@ class JsonTextConcrete : MCFPPValue<ChatComponent>, JsonText {
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
         val v = if(value is ListChatComponent) value else value.toListComponent()
-        if (parentClass() != null) {
-            val cmd = Commands.selectRun(parent!!,
-                Command("data modify entity @s data.${identifier} set value ")
-                    .build(v.toCommandPart())
-            )
-            Function.addCommands(cmd)
-        } else {
-            val cmd = Command.build("data modify")
-                .build(nbtPath.toCommandPart())
-                .build("set value ")
-                .build(v.toCommandPart())
-            Function.addCommand(cmd)
-        }
+        val cmd = Command.build("data modify")
+            .build(nbtPath.toCommandPart())
+            .build("set value ")
+            .build(v.toCommandPart())
+        Function.addCommand(cmd)
         val re = NBTBasedData(this)
         if(replace){
             if(parentTemplate() != null){

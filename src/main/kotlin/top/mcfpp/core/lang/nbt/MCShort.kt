@@ -42,42 +42,15 @@ open class MCShort: MCInt {
     //this = a
     @InsertCommand
     override fun assignCommand(a: MCNumber<*>) : MCShort {
-        return assignCommandLambda(a,
-            ifThisIsClassMemberAndAIsConcrete =  { b, final ->
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                Function.addCommand(final.last().build(Commands.sbPlayerSet(this, (b as MCIntConcrete).value)))
-                this
-            },
-            ifThisIsClassMemberAndAIsNotConcrete = { b, final ->
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                Function.addCommand(final.last().build(Commands.sbPlayerOperation(this,"=",b as MCInt)))
-                this
-            },
-            ifThisIsNormalVarAndAIsConcrete = { b ->
-                MCShortConcrete(this, (b as MCShortConcrete).value)
-            },
-            ifThisIsNormalVarAndAIsClassMember = { c, cmd ->
-                if(cmd.size == 2){
-                    Function.addCommand(cmd[0])
-                }
-                Function.addCommand(cmd.last().build(Commands.sbPlayerOperation(this, "=", c as MCInt)))
-                MCByte(this)
-            },
-            ifThisIsNormalVarAndAIsNotConcrete = { c ->
-                //变量进栈
-                Function.addCommand(Commands.sbPlayerOperation(this, "=", c as MCInt))
-                MCByte(this)
-            }
-        ) as MCShort
+        return if(a is MCFPPValue<*>){
+            MCShortConcrete(this, (a as MCShortConcrete).value)
+        } else {
+            //变量进栈
+            Function.addCommand(Commands.sbPlayerOperation(this, "=", a as MCInt))
+            MCShort(this)
+        }
     }
 }
-
 
 class MCShortConcrete: MCShort, MCFPPValue<Short> {
 

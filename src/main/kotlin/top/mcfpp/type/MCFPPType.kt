@@ -3,7 +3,6 @@ package top.mcfpp.type
 import org.antlr.v4.runtime.CharStream
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
-import top.mcfpp.antlr.MCFPPExprVisitor
 import top.mcfpp.antlr.MCFPPFieldVisitor
 import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.antlr.mcfppParser
@@ -16,7 +15,6 @@ import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
-import top.mcfpp.model.compound.GenericClass
 import top.mcfpp.model.compound.UnionDataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
@@ -279,17 +277,6 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                 return parseFromContext(parser.type(), typeScope)
             }
             //正则匹配
-            val clsResult = MCFPPClassType.regex.find(typeStr)
-            if(clsResult != null){
-                val (first, second) = clsResult.destructured
-                val clazz = GlobalScope.getClass(first, second)
-                if(clazz != null){
-                    return clazz.getType()
-                }else{
-                    LogProcessor.warn("Unknown type: $typeStr")
-                    return MCFPPBaseType.Any
-                }
-            }
             val templateResult = MCFPPDataTemplateType.regex.find(typeStr)
             if(templateResult != null){
                 val (first, second) = templateResult.destructured
@@ -312,8 +299,6 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             }
             //全局匹配
             val nspID = typeStr.splitNamespaceID()
-            val clazz = GlobalScope.getClass(nspID.first, nspID.second)
-            if(clazz != null) return clazz.getType()
             val template = GlobalScope.getTemplate(nspID.first, nspID.second)
             if(template !=null) return template.getType()
             val enum = GlobalScope.getEnum(nspID.first, nspID.second)
@@ -378,21 +363,6 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             //自定义类型
             if(ctx.className() != null){
                 val nspID = ctx.className().text.splitNamespaceID()
-                //类
-                val clazz = GlobalScope.getClass(nspID.first, nspID.second)
-                if(clazz != null) {
-                    if(clazz is GenericClass){
-                        if(clazz.readOnlyParams.size != ctx.readOnlyArgs()?.expressionList()?.expression()?.size){
-                            LogProcessor.error("Generic class ${clazz.identifier} requires ${clazz.readOnlyParams.size} type arguments, but ${ctx.readOnlyArgs().expressionList().expression().size} were provided")
-                            return MCFPPBaseType.Any
-                        }
-                        val expr = MCFPPExprVisitor()
-                        val readOnlyArgs = ctx.readOnlyArgs()?.expressionList()?.expression()?.map { expr.visit(it)!! } ?: listOf()
-                        return clazz.compile(readOnlyArgs).getType()
-                    }else{
-                        return clazz.getType()
-                    }
-                }
                 //数据模板
                 val template = GlobalScope.getTemplate(nspID.first, nspID.second)
                 if(template != null) return template.getType()

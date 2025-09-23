@@ -10,9 +10,7 @@ import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.core.lang.obj.ObjectVar
 import top.mcfpp.lib.EntitySelector
 import top.mcfpp.model.Generic
-import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.DataTemplate
-import top.mcfpp.model.compound.GenericClass
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.model.function.NoStackFunction
@@ -25,7 +23,6 @@ import top.mcfpp.nbt.tags.primitive.LongTag
 import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPEnumType
-import top.mcfpp.type.MCFPPGenericClassType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil.toNBTByte
@@ -40,7 +37,6 @@ import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 
 class MCFPPExprVisitor(
-    private var defaultGenericClassType: MCFPPGenericClassType? = null,
     private var enumType: MCFPPEnumType? = null
 ): mcfppParserBaseVisitor<Var<*>>() {
     var processVarCache : ArrayList<Var<*>> = ArrayList()
@@ -136,6 +132,7 @@ class MCFPPExprVisitor(
         return visitConditionalAndExpressionRe!!
     }
 
+    private var visitEqualityExpressionRe : Var<*>? = null
     /**
      * 计算一个等于或不等于表达式，例如a == b和a != b
      * @param ctx the parse tree
@@ -143,17 +140,18 @@ class MCFPPExprVisitor(
      */
     @Override
     override fun visitEqualityExpression(ctx: mcfppParser.EqualityExpressionContext): Var<*> = withCompilationContext(ctx)  {
-        var re: Var<*> = visitRelationalExpression(ctx.relationalExpression(0))
-        if (ctx.relationalExpression().size != 1) {
-            val b: Var<*> = visitRelationalExpression(ctx.relationalExpression(1))
-            if(!re.isTemp){
-                re = re.getTempVar()
-            }
-            re = re.binaryComputation(b, ctx.op.text)
+        visitEqualityExpressionRe = visitRelationalExpression(ctx.relationalExpression(0))
+        processVarCache.add(visitEqualityExpressionRe!!)
+        for (i in 1..<ctx.relationalExpression().size) {
+            val b: Var<*> = visitRelationalExpression(ctx.relationalExpression(i))
+            visitEqualityExpressionRe = visitEqualityExpressionRe!!.binaryComputation(b, "&&")
+            processVarCache[processVarCache.size - 1] = visitEqualityExpressionRe!!
         }
-        return re
+        processVarCache.remove(visitEqualityExpressionRe!!)
+        return visitEqualityExpressionRe!!
     }
 
+    private var visitRelationalExpressionRe : Var<*>? = null
     /**
      * 计算一个比较表达式，例如a > b
      * @param ctx the parse tree
@@ -161,12 +159,15 @@ class MCFPPExprVisitor(
      */
     @Override
     override fun visitRelationalExpression(ctx: mcfppParser.RelationalExpressionContext): Var<*> = withCompilationContext(ctx) {
-        var re: Var<*> = visitAdditiveExpression(ctx.additiveExpression(0))
-        if (ctx.additiveExpression().size != 1) {
-            val b: Var<*> = visitAdditiveExpression(ctx.additiveExpression(1))
-            re = re.binaryComputation(b, ctx.op.text)
+        visitRelationalExpressionRe = visitAdditiveExpression(ctx.additiveExpression(0))
+        processVarCache.add(visitRelationalExpressionRe!!)
+        for (i in 1..<ctx.additiveExpression().size) {
+            val b: Var<*> = visitAdditiveExpression(ctx.additiveExpression(i))
+            visitRelationalExpressionRe = visitRelationalExpressionRe!!.binaryComputation(b, ctx.op.text)
+            processVarCache[processVarCache.size - 1] = visitRelationalExpressionRe!!
         }
-        return re
+        processVarCache.remove(visitRelationalExpressionRe!!)
+        return visitRelationalExpressionRe!!
     }
 
     private var visitAdditiveExpressionRe : Var<*>? = null
@@ -439,30 +440,6 @@ class MCFPPExprVisitor(
             Function.currFunction.child.add(func)
             func.parent.add(Function.currFunction)
             return returnVar
-        }
-        //可能是类的构造函数
-        var cls: Class? = if(ctx.arguments().readOnlyArgs() != null){
-            GlobalScope.getClass(p.first, p.second ,readOnlyArgs.map { it.type })
-        }else{
-            GlobalScope.getClass(p.first, p.second)
-        }
-        if (cls != null) {
-            if (cls is GenericClass) {
-                //实例化泛型函数
-                cls = cls.compile(readOnlyArgs)
-            }
-            //获取对象
-            val ptr = cls.newPointer()
-            //调用构造函数
-            val constructor = cls.getConstructorByString(FunctionParam.getArgTypeNames(normalArgs))
-            if (constructor == null) {
-                LogProcessor.error("No constructor like: " + FunctionParam.getArgTypeNames(normalArgs) + " defined in class " + ctx.namespaceID().text)
-                Function.addComment("[Failed to compile]${ctx.text}")
-            } else {
-                constructor.invoke(normalArgs, ptr)
-            }
-            ptr.isNull = false
-            return ptr
         }
         //可能是模板的构造函数
         val template: DataTemplate? = GlobalScope.getTemplate(p.first, p.second)

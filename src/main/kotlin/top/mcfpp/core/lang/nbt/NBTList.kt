@@ -10,13 +10,13 @@ import top.mcfpp.mni.NBTListConcreteData
 import top.mcfpp.mni.NBTListData
 import top.mcfpp.model.Member
 import top.mcfpp.model.compound.CompoundData
-import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.property.AnonymousNativeMutator
 import top.mcfpp.model.property.Property
 import top.mcfpp.model.property.SimpleAccessor
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.nbt.tags.collection.ListTag
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
@@ -96,59 +96,20 @@ open class NBTList : NBTBasedData {
     @InsertCommand
     override fun assignCommand(a: NBTBasedData) : NBTList {
         nbtType = a.nbtType
-        if (parentClass() != null){
-            val b = if(a.parentClass() != null){
-                a.getTempVar()
-            }else a
-            val final = Commands.selectRun(parent!!)
-            if (b is NBTBasedDataConcrete) {
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetValue(nbtPath, b.value))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-            } else {
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
+        //对类中的成员的值进行修改
+        when (a) {
+            is NBTListConcrete -> {
+                return NBTListConcrete(this, a.value)
             }
-        }else{
-            if(a.parentClass() != null){
-                val final = Commands.selectRun(parent!!)
-                //对类中的成员的值进行修改
-                //a必然是不确定的
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetFrom(nbtPath, a.nbtPath))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-            }else {
-                //对类中的成员的值进行修改
-                if(a is NBTListConcrete){
-                    return NBTListConcrete(this, a.value)
-                }else if(a is NBTBasedDataConcrete){
-                    return NBTListConcrete(this, ArrayList((a.value as ListTag).map {
-                        NBTBasedDataConcrete(it)
-                    }))
-                }else{
-                    Function.addCommand(Commands.dataSetFrom(nbtPath, a.nbtPath))
-                }
+
+            is NBTBasedDataConcrete -> {
+                return NBTListConcrete(this, ArrayList((a.value as ListTag).map {
+                    NBTBasedDataConcrete(it)
+                }))
+            }
+
+            else -> {
+                Function.addCommand(Commands.dataSetFrom(nbtPath, a.nbtPath))
             }
         }
         //返回值
@@ -265,7 +226,7 @@ class NBTListConcrete: NBTList, PartialConcreteValue<ListTag, ArrayList<Var<*>>>
     fun synchronous(){
         hasStoredInStack = true
         if(value.isEmpty()) {
-            Function.addCommands(Commands.buildMacroAdjustedCommands(this, Commands.dataSetValue(nbtPath, ListTag())))
+            Function.addCommand(Commands.dataSetValue(nbtPath, ListTag()))
             return
         }
         var isSet = true
@@ -291,10 +252,10 @@ class NBTListConcrete: NBTList, PartialConcreteValue<ListTag, ArrayList<Var<*>>>
         }
         if(isSet){
             //循环内一直没更改过isSet的值，说明列表所有变量都可被追踪
-            Function.addCommands(Commands.buildMacroAdjustedCommands(this, Commands.dataSetValue(nbtPath, list)))
+            Function.addCommand(Commands.dataSetValue(nbtPath, list))
             GlobalScope.localNamespaces[commands.second.namespace]!!.field.removeFunction(commands.second)
         }else{
-            Function.addCommands(Commands.buildMacroAdjustedCommands(this, commands.first))
+            Function.addCommand(commands.first)
         }
     }
 

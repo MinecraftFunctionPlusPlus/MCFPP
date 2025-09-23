@@ -2,20 +2,13 @@ package top.mcfpp.antlr
 
 import top.mcfpp.Project
 import top.mcfpp.Project.withCompilationContext
-import top.mcfpp.core.lang.MCFPPValue
-import top.mcfpp.core.lang.Var
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.compound.*
 import top.mcfpp.model.compound.Enum
 import top.mcfpp.model.scope.GlobalScope
-import top.mcfpp.model.compound.ClassParam
-import top.mcfpp.model.compound.GenericClass
-import top.mcfpp.model.compound.GenericObjectClass
-import top.mcfpp.model.compound.ImplementedGenericClass
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.primitive.IntTag
-import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPTypeAliasType
 import top.mcfpp.util.LogProcessor
@@ -99,145 +92,6 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             }
             nsp.field.addInterface(id, itf)
         }
-    }
-
-    /**
-     * 类的声明
-     * @param ctx the parse tree
-     * @return null
-     */
-    override fun visitClassDeclaration(ctx: mcfppParser.ClassDeclarationContext): Unit = withCompilationContext(ctx){
-        //注册类
-        val id = ctx.classWithoutNamespace().text
-        val nsp = GlobalScope.localNamespaces[Project.currNamespace]!!
-
-        val cls = if(ctx.readOnlyParams() != null){
-            //泛型类
-            val qwq = GenericClass(id, Project.currNamespace, ctx.classBody())
-            qwq.readOnlyParams.addAll(ctx.readOnlyParams().parameterList().parameter().map {
-                ClassParam(it.type().text, it.Identifier().text)
-            })
-            qwq
-        } else {
-            Class(id, Project.currNamespace)
-        }
-        //如果声明过这个类
-        if(nsp.field.hasDeclaredType(cls)){
-            LogProcessor.error("Type has been defined: $cls in namespace ${Project.currNamespace}")
-            return
-        }
-        cls.initialize()
-        if(ctx.className().size != 0){
-            for (p in ctx.className()){
-                //是否存在继承
-                val qwq = p.text.splitNamespaceID()
-                val identifier: String = qwq.second
-                val namespace : String? = qwq.first
-                var pc : CompoundData? = GlobalScope.getClass(namespace, identifier)
-                if(pc == null){
-                    pc = GlobalScope.getInterface(namespace, identifier)
-                    if(pc == null){
-                        pc = Class.Companion.UndefinedClassOrInterface(identifier,namespace)
-                    }
-                }
-                cls.extends(pc)
-            }
-        }else{
-            //继承Any类
-            cls.extends(Class.baseClass)
-        }
-        cls.isStaticClass = ctx.STATIC() != null
-        cls.isAbstract = ctx.ABSTRACT() != null
-        nsp.field.addClass(cls.identifier, cls)
-    }
-
-    override fun visitObjectClassDeclaration(ctx: mcfppParser.ObjectClassDeclarationContext): Unit = withCompilationContext(ctx) {
-        //注册类
-        val id = ctx.classWithoutNamespace().text
-        val nsp = GlobalScope.localNamespaces[Project.currNamespace]!!
-
-        val objectClass = if(ctx.readOnlyParams() != null){
-            //泛型类
-            val qwq = GenericObjectClass(id, Project.currNamespace, ctx.classBody())
-            qwq.readOnlyParams.addAll(ctx.readOnlyParams().parameterList().parameter().map {
-                ClassParam(it.type().text, it.Identifier().text)
-            })
-            qwq
-        } else {
-            ObjectClass(id, Project.currNamespace)
-        }
-        //如果没有声明过这个类
-        if(nsp.field.hasObject(id)){
-            LogProcessor.error("Type has been defined: $id in namespace ${Project.currNamespace}")
-            return
-        }
-        if(ctx.className().size != 0){
-            for (p in ctx.className()){
-                //是否存在继承
-                val qwq = p.text.splitNamespaceID()
-                val identifier: String = qwq.second
-                val namespace : String? = qwq.first
-                var pc : CompoundData? = GlobalScope.getClass(namespace, identifier)
-                if(pc == null){
-                    pc = GlobalScope.getInterface(namespace, identifier)
-                    if(pc == null){
-                        pc = GlobalScope.getObject(namespace, identifier)
-                        if(pc !is ObjectClass){
-                            LogProcessor.error("Undefined class: " + p.text)
-                            pc = Class.Companion.UndefinedClassOrInterface(identifier,namespace)
-                        }
-                    }
-                }
-                objectClass.extends(pc)
-            }
-        }else{
-            //继承Any类
-            objectClass.extends(Class.baseClass)
-        }
-        nsp.field.addObject(objectClass.identifier, objectClass)
-    }
-
-    override fun visitGenericClassImplement(ctx: mcfppParser.GenericClassImplementContext): Unit = withCompilationContext(ctx) {
-        //注册类
-        val id = ctx.classWithoutNamespace().text
-
-        val readOnlyArgs: ArrayList<Var<*>> = ArrayList()
-        val exprVisitor = MCFPPExprVisitor()
-        for (expr in ctx.readOnlyArgs().expressionList().expression()) {
-            val arg = exprVisitor.visit(expr)!!
-            if(arg !is MCFPPValue<*>){
-                LogProcessor.error("Generic class implement must be a value")
-                return
-            }
-            readOnlyArgs.add(arg)
-        }
-
-        val genericClass = GlobalScope.getClass(Project.currNamespace, id)
-        if(genericClass == null){
-            LogProcessor.error("Undefined generic class: $id in namespace ${Project.currNamespace}")
-            return
-        }
-        if(genericClass !is GenericClass){
-            LogProcessor.error("Class $id is not a generic class")
-            return
-        }
-
-        val cls = ImplementedGenericClass(id, Project.currNamespace, readOnlyArgs, genericClass)
-
-        if(ctx.className().size != 0){
-            for (p in ctx.className()){
-                //是否存在继承
-                val qwq = p.text.splitNamespaceID()
-                val identifier: String = qwq.second
-                val namespace : String? = qwq.first
-                cls.extends(Class.Companion.UndefinedClassOrInterface(identifier,namespace))
-            }
-        }else{
-            //继承Any类
-            cls.extends(MCFPPBaseType.Any.instanceData)
-        }
-        cls.isStaticClass = ctx.STATIC() != null
-        cls.isAbstract = ctx.ABSTRACT() != null
     }
 
     override fun visitTemplateDeclaration(ctx: mcfppParser.TemplateDeclarationContext): Unit = withCompilationContext(ctx) {

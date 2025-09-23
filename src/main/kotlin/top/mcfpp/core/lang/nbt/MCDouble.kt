@@ -31,53 +31,12 @@ open class MCDouble: NBTBasedData {
     @InsertCommand
     override fun assignCommand(a: NBTBasedData) : MCDouble {
         nbtType = a.nbtType
-        return assignCommandLambda(a,
-            ifThisIsClassMemberAndAIsConcrete = {b, final ->
-                b as MCDoubleConcrete
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetValue(nbtPath, b.value))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-                MCDouble(this)
-            },
-            ifThisIsClassMemberAndAIsNotConcrete = {b, final ->
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-                MCDouble(this)
-            },
-            ifThisIsNormalVarAndAIsConcrete = {b ->
-                MCDoubleConcrete(this, (b as MCDoubleConcrete).value)
-            },
-            ifThisIsNormalVarAndAIsClassMember = {b, final ->
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-                MCDouble(this)
-            },
-            ifThisIsNormalVarAndAIsNotConcrete = {b ->
-                Function.addCommand(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                NBTBasedData(this)
-            }) as MCDouble
+        return if(a is MCDoubleConcrete){
+            MCDoubleConcrete(this, a.value)
+        }else {
+            Function.addCommand(Commands.dataSetFrom(nbtPath, a.nbtPath))
+            MCDouble(this)
+        }
     }
 
     companion object {

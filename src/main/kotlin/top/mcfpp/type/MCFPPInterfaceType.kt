@@ -2,7 +2,6 @@ package top.mcfpp.type
 
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.Interface
 import top.mcfpp.model.compound.UnsolvedInterface
@@ -25,11 +24,6 @@ open class MCFPPInterfaceType(
 
     override val simpleName: String
         get() = i.identifier
-
-    open fun getGenericClassType(compiledClass: Class) : MCFPPClassType {
-        val t = MCFPPClassType(compiledClass, parentType)
-        return t
-    }
 
     override fun tryResolve() {
         if(i is UnsolvedInterface){

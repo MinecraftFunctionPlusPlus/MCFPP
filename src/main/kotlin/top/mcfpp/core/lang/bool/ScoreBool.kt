@@ -71,28 +71,16 @@ open class ScoreBool : BaseBool, OnScoreboard {
             is ScoreBool -> return assignCommand(b)
 
             is ExecuteBool -> {
-                if(parentClass() != null){
-                    Function.addCommands(
-                        Commands.selectRun(parent!!, Command("store result score @s $boolObject").build(b.toCommandPart()), false)
-                    )
-                }else{
-                    Function.addCommand(
-                        Command.build("execute store result score $name $boolObject").build(b.toCommandPart())
-                    )
-                }
+                Function.addCommand(
+                    Command.build("execute store result score $name $boolObject").build(b.toCommandPart())
+                )
                 return this
             }
 
             is BaseBool -> {
-                if(parentClass() != null){
-                    Function.addCommands(
-                        Commands.selectRun(parent!!, Command("store result score @s $boolObject if").build(b.toCommandPart()), false)
-                    )
-                }else{
-                    Function.addCommand(
-                        Command.build("execute store result score $name $boolObject if").build(b.toCommandPart())
-                    )
-                }
+                Function.addCommand(
+                    Command.build("execute store result score $name $boolObject if").build(b.toCommandPart())
+                )
                 return this
             }
 
@@ -191,69 +179,25 @@ open class ScoreBool : BaseBool, OnScoreboard {
 
     @InsertCommand
     private fun assignCommand(a: ScoreBool) : ScoreBool {
-        return assignCommandLambda(a,
-            ifThisIsClassMemberAndAIsConcrete =  { b, final ->
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                if(isDataOnly){
-                    Function.addCommand(final.last().build(Commands.dataSetValue(nbtPath, ByteTag((b as ScoreBoolConcrete).value))))
-                }else{
-                    Function.addCommand(final.last().build(Commands.sbPlayerSet(this, (b as ScoreBoolConcrete).value)))
-                }
+        return if(a is MCFPPValue<*>){
+            if(isDataOnly){
+                Function.addCommand(Commands.dataSetValue(nbtPath, ByteTag((a as ScoreBoolConcrete).value)))
                 this
-            },
-            ifThisIsClassMemberAndAIsNotConcrete = { b, final ->
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                if(isDataOnly){
-                    Function.addCommand(final.last().build(
-                        Command("execute store result").build(nbtPath.toCommandPart()).build("byte 1").build("run")
-                            .build("scoreboard players get ${(b as ScoreBool).name} ${b.boolObject}")
-                    ))
-                }else{
-                    Function.addCommand(final.last().build(Commands.sbPlayerOperation(this,"=",b as ScoreBool)))
-                }
-                this
-            },
-            ifThisIsNormalVarAndAIsConcrete = { b ->
-                if(isDataOnly){
-                    Function.addCommand(Commands.dataSetValue(nbtPath, ByteTag((b as ScoreBoolConcrete).value)))
-                    this
-                }else{
-                    ScoreBoolConcrete(this, (b as ScoreBoolConcrete).value)
-                }
-            },
-            ifThisIsNormalVarAndAIsClassMember = { c, cmd ->
-                if(cmd.size == 2){
-                    Function.addCommand(cmd[0])
-                }
-                if(isDataOnly){
-                    Function.addCommand(cmd.last().build(
-                        Command("execute store result").build(nbtPath.toCommandPart()).build("byte 1").build("run")
-                            .build("scoreboard players get ${(c as ScoreBool).name} ${c.boolObject}")
-                    ))
-                }else{
-                    Function.addCommand(cmd.last().build(Commands.sbPlayerOperation(this, "=", c as ScoreBool)))
-                }
-                ScoreBool(this)
-            },
-            ifThisIsNormalVarAndAIsNotConcrete = { c ->
-                //变量进栈
-                if(isDataOnly){
-                    Function.addCommand(
-                        Command("execute store result").build(nbtPath.toCommandPart()).build("byte 1").build("run")
-                            .build("scoreboard players get ${(c as ScoreBool).name} ${c.boolObject}")
-                    )
-                }else{
-                    Function.addCommand(Commands.sbPlayerOperation(this, "=", c as ScoreBool))
-                }
-                ScoreBool(this)
+            }else{
+                ScoreBoolConcrete(this, (a as ScoreBoolConcrete).value)
             }
-        ) as ScoreBool
+        }else {
+            //变量进栈
+            if(isDataOnly){
+                Function.addCommand(
+                    Command("execute store result").build(nbtPath.toCommandPart()).build("byte 1").build("run")
+                        .build("scoreboard players get ${a.name} ${a.boolObject}")
+                )
+            }else{
+                Function.addCommand(Commands.sbPlayerOperation(this, "=", a))
+            }
+            ScoreBool(this)
+        }
     }
 
     override fun clone(): ScoreBool {
@@ -274,7 +218,7 @@ open class ScoreBool : BaseBool, OnScoreboard {
     }
 
     override fun storeToStack() {
-        if(parentClass() != null || hasStoredInStack) return
+        if(hasStoredInStack) return
         Function.addCommand("execute " +
                 "store result $nbtPath int 1 " +
                 "run scoreboard players get $name $boolObject")
@@ -440,14 +384,8 @@ class ScoreBoolConcrete : ScoreBool, MCFPPValue<Boolean> {
     }
 
     override fun toDynamic(replace: Boolean): Var<*> {
-        val parent = parent
         if(isDataOnly) return this
-        if (parentClass() != null) {
-            val cmd = Commands.selectRun(parent!!, "scoreboard players set @s $boolObject ${if(value) 1 else 0}")
-            Function.addCommands(cmd)
-        } else {
-            Function.addCommand("scoreboard players set $name $boolObject ${if(value) 1 else 0}")
-        }
+        Function.addCommand("scoreboard players set $name $boolObject ${if(value) 1 else 0}")
         val re = ScoreBool(this)
         if(replace){
             replacedBy(re)

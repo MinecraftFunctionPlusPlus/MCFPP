@@ -3,20 +3,15 @@ package top.mcfpp.model.property
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
-import top.mcfpp.model.compound.Class
-import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.Member
-import top.mcfpp.type.MCFPPClassType
+import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.type.MCFPPDataTemplateType
 import top.mcfpp.util.LogProcessor
 
 /**
  * 一个属性。包含了一个getter和一个setter，同时包装了属性所对应的字段。
  *
- * @param field 属性对应的字段
- *
  * @param accessor 属性的getter。若为空，则此属性不可读。
- *
  * @param mutator 属性的setter。若为空，则此属性不可写。
  *
  * @see AbstractAccessor
@@ -31,13 +26,6 @@ data class Property(val identifier: String, val accessor: AbstractAccessor?, val
     override var accessModifier: Member.AccessModifier = Member.AccessModifier.PUBLIC
 
     override var isStatic: Boolean = true
-
-    override fun parentClass(): Class? {
-        if(parent?.type is MCFPPClassType){
-            return (parent?.type as MCFPPClassType).cls
-        }
-        return null
-    }
 
     override fun parentTemplate(): DataTemplate? {
         if(parent?.type is MCFPPDataTemplateType){

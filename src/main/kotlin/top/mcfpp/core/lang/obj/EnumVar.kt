@@ -2,7 +2,6 @@ package top.mcfpp.core.lang.obj
 
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
-import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.nbt.MCString
 import top.mcfpp.core.lang.nbt.NBTBasedData
@@ -177,25 +176,17 @@ class EnumVarConcrete : EnumVar, MCFPPValue<EnumMember> {
      *
      */
     override fun toDynamic(replace: Boolean): Var<*> {
-        //避免错误 Smart cast to 'ClassPointer' is impossible, because 'parent' is a mutable property that could have been changed by this time
-        val parent = parent
-
-        if (parentClass() != null) {
-            val cmd = Commands.selectRun(parent!!, "scoreboard players set @s ${SbObject.MCFPP_default} $value")
-            Function.addCommands(cmd)
-        } else {
-            val cmd = if (!isTemp)
-                Command("execute store result").build(nbtPath.toCommandPart()).build("int 1 run ")
-            else
-                Command("")
-            Function.addCommand(cmd.build("scoreboard players set $name ${SbObject.MCFPP_default} $value", false))
-        }
+        val cmd = if (!isTemp)
+            Command("execute store result").build(nbtPath.toCommandPart()).build("int 1 run ")
+        else
+            Command("")
+        Function.addCommand(cmd.build("scoreboard players set $name ${SbObject.MCFPP_default} $value", false))
         val re = EnumVar(this)
         NBTBasedDataConcrete(enum.getMember(value.value)!!.data).toDynamic(false)
         if(replace){
             if(parentTemplate() != null){
                 (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
-            }else{
+            }else {
                 Function.currFunction.scope.putVar(identifier, re, true)
             }
         }

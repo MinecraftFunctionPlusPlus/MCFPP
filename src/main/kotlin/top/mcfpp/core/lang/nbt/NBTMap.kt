@@ -103,67 +103,15 @@ open class NBTMap : NBTBasedData {
     @InsertCommand
     override fun assignCommand(a: NBTBasedData): NBTBasedData {
         nbtType = a.nbtType
-        return assignCommandLambda(a,
-            ifThisIsClassMemberAndAIsConcrete = {b, final ->
-                b as NBTMapConcrete
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                val qwq = Commands.tempFunction(Function.currFunction){
-                    Function.addCommand(Commands.dataSetValue(keyList.nbtPath, NBTUtil.valueToNBT(b.value.keys)))
-                    if(b.isAllConcrete()){
-                        Function.addCommand(Commands.dataSetValue(keyValueSet.nbtPath, b.getConcretePart()))
-                    }else{
-                        Function.addCommand(Commands.dataSetFrom(keyValueSet.nbtPath, b.keyValueSet.nbtPath))
-                        Function.addCommand(Commands.dataMergeValue(keyValueSet.nbtPath, b.getConcretePart()))
-                    }
-                }
-                final.last().build(qwq.first)
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-                NBTMap(this)
-            },
-            ifThisIsClassMemberAndAIsNotConcrete = {b, final ->
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-                NBTMap(this)
-            },
-            ifThisIsNormalVarAndAIsConcrete = {b ->
-                b as NBTMapConcrete
-                if(!b.isAllConcrete()){
-                    Function.addCommand(Commands.dataSetFrom(keyValueSet.nbtPath, b.keyValueSet.nbtPath))
-                }
-                NBTMapConcrete(this, b.value)
-            },
-            ifThisIsNormalVarAndAIsClassMember = {b, final ->
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-                NBTMap(this)
-            },
-            ifThisIsNormalVarAndAIsNotConcrete = {b ->
-                Function.addCommand(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                NBTMap(this)
+        return if(a is NBTMapConcrete){
+            if(!a.isAllConcrete()){
+                Function.addCommand(Commands.dataSetFrom(keyValueSet.nbtPath, a.keyValueSet.nbtPath))
             }
-        ) as NBTMap
+            NBTMapConcrete(this, a.value)
+        }else {
+            Function.addCommand(Commands.dataSetFrom(nbtPath, a.nbtPath))
+            NBTMap(this)
+        }
     }
 
 
@@ -210,13 +158,9 @@ open class NBTMap : NBTBasedData {
             val property = Property("", SimpleAccessor(), AnonymousNativeMutator { _, v ->
                 re.assignedBy(v)
                 if(index is MCStringConcrete){
-                    Function.addCommands(Commands.buildMacroAdjustedCommands(this, Commands.dataAppendValue(keyList.nbtPath, index.value)))
+                    Function.addCommand(Commands.dataAppendValue(keyList.nbtPath, index.value))
                 }else {
-                    if(index.parentClass() != null){
-                        Function.addCommands(Commands.buildMacroAdjustedCommands(this, Commands.dataAppendFrom(keyList.nbtPath, index.getTempVar().nbtPath)))
-                    }else{
-                        Function.addCommands(Commands.buildMacroAdjustedCommands(this, Commands.dataAppendFrom(keyList.nbtPath, index.nbtPath)))
-                    }
+                    Function.addCommand(Commands.dataAppendFrom(keyList.nbtPath, index.nbtPath))
                 }
                 return@AnonymousNativeMutator re
             })

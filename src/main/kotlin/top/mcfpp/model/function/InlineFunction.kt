@@ -1,9 +1,7 @@
 package top.mcfpp.model.function
 
-import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.antlr.*
 import top.mcfpp.core.lang.*
-import top.mcfpp.core.lang.obj.ClassPointer
 
 /**
  * 内联函数。
@@ -49,32 +47,6 @@ class InlineFunction : Function {
 //        val parser = mcfppParser(tokens)
 //        parser.addParseListener(McfppImListener())
 //        parser.functionDeclaration()
-    }
-
-    /**
-     * 调用这个函数。
-     *
-     * @param args 函数的参数
-     * @param callerClassP 调用函数的实例
-     * @see top.mcfpp.antlr.MCFPPExprVisitor.visitVar
-     */
-    @InsertCommand
-    override fun invoke(normalArgs: List<Var<*>>, callerClassP: ClassPointer) {
-        //基本类型
-        addComment("[Inline Function ${this.namespaceID}]")
-        //参数传递
-        argPass(/*readOnlyArgs, */normalArgs)
-        //重新遍历这个函数
-
-        //这边其实直接用visitor会更好，因为visitor不用加parser，直接visitor.visit(context)
-        val visitor = MCFPPInlineFunctionVisitor()
-        visitor.visit(ast)
-//        val charStream: CharStream = CharStreams.fromString(AntlrUtil.getReadableText(context.functionBody()))
-//        val lexer = mcfppLexer(charStream)
-//        val tokens = CommonTokenStream(lexer)
-//        val parser = mcfppParser(tokens)
-//        parser.addParseListener(McfppInlineFunctionListener())
-//        parser.functionBody()
     }
 
     /**

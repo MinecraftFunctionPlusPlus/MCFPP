@@ -4,15 +4,15 @@ import top.mcfpp.Project
 import top.mcfpp.antlr.mcfppParser.FunctionBodyContext
 import top.mcfpp.lib.NamespaceID
 import top.mcfpp.model.compound.CompoundData
-import top.mcfpp.model.compound.ObjectClass
 
-open class ExtensionFunction: Function {
+open class ExtensionFunction(
+    name: String,
+    owner: CompoundData,
+    namespace: String = Project.currNamespace,
+    context: FunctionBodyContext
+) : Function(name, namespace, context) {
 
-    /**
-     * 创建一个函数
-     * @param name 函数的标识符
-     */
-    constructor(name: String, owner: CompoundData, namespace: String = Project.currNamespace, context: FunctionBodyContext):super(name, namespace, context){
+    init {
         this.owner = owner
     }
 
@@ -21,13 +21,7 @@ open class ExtensionFunction: Function {
             val n = if(ownerType == Companion.OwnerType.NONE){
                 NamespaceID(namespace, identifier)
             }else{
-                if(parentClass() is ObjectClass){
-                    NamespaceID(namespace, owner!!.identifier)
-                        .appendIdentifier("ex_static", false)
-                }else{
-                    NamespaceID(namespace, owner!!.identifier)
-                        .appendIdentifier("ex")
-                }
+                NamespaceID(namespace, owner!!.identifier).appendIdentifier("ex")
             }
             val re = StringBuilder(identifier)
             for (p in normalParams) {

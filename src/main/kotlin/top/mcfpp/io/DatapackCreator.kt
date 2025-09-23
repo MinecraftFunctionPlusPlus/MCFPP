@@ -5,7 +5,6 @@ import top.mcfpp.Project
 import top.mcfpp.io.FileUtils.delAllFile
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.Native
-import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.ExtensionFunction
@@ -165,25 +164,11 @@ object DatapackCreator {
         }
     }
 
-    private fun genClass(currPath: String, cls: Class) {
-        //成员
-        cls.field.forEachFunction {
-            genFunction("$currPath\\function\\${cls.identifier.toSnakeCase()}", it)
-        }
-        cls.constructors.forEach {
-            genFunction("$currPath\\function\\${cls.identifier.toSnakeCase()}", it)
-        }
-    }
-
     private fun genNamespace(path: String, namespace: MutableMap.MutableEntry<String, Namespace>) {
         val currPath = "$path\\${Project.config.name}\\data\\${namespace.key}"
 
         namespace.value.field.forEachFunction {
             genFunction("$currPath\\function", it)
-        }
-
-        namespace.value.field.forEachClass {
-            genClass(currPath, it)
         }
 
         namespace.value.field.forEachTemplate {

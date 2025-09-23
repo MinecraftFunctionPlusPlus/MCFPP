@@ -70,10 +70,7 @@ typeDeclaration
 
 //类或函数声明
 declarations
-    :   classDeclaration
-    |   genericClassImplement
-    |   objectClassDeclaration
-    |   functionDeclaration
+    :   functionDeclaration
     |   inlineFunctionDeclaration
     |   nativeFuncDeclaration
     |   compileTimeFuncDeclaration
@@ -83,47 +80,6 @@ declarations
     |   interfaceDeclaration
     |   enumDeclaration
     |   annotation
-    ;
-
-//类声明
-classDeclaration
-    :   STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? (classBody | ';')
-    ;
-
-objectClassDeclaration
-    :   FINAL? OBJECT CLASS classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? (classBody | ';')
-    ;
-
-classMemberDeclaration
-    :   accessModifier? classMember
-    ;
-
-classBody
-    :   '{' (doc_comment? classMemberDeclaration)* '}'
-    ;
-
-//类成员
-classMember
-    :   classFunctionDeclaration
-    |   classFieldDeclaration
-    |   classConstructorDeclaration
-    |   nativeClassFunctionDeclaration
-    |   abstractClassFunctionDeclaration
-    |   annotation
-    |   operationOverrideDeclaration
-    |   nativeOperationOverrideDeclaration
-    ;
-
-classFunctionDeclaration
-    :   OVERRIDE? FUNCTION Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
-    ;
-
-abstractClassFunctionDeclaration
-    :   OVERRIDE? FUNCTION Identifier functionParams (ARROW functionReturnType)? ';'
-    ;
-
-nativeClassFunctionDeclaration
-    :   OVERRIDE? FUNCTION Identifier functionParams (ARROW functionReturnType)? '=' javaRefer ';'
     ;
 
 operationOverrideDeclaration
@@ -153,10 +109,6 @@ supportOperator
     |   Identifier
     ;
 
-classFieldDeclaration
-    :   accessModifier? VAR? Identifier (AS type)? ('=' expression)? accessor? ';'
-    ;
-
 accessor
     :   '{' getter? setter? '}'
     ;
@@ -173,10 +125,6 @@ setter
     |   SET '=' javaRefer ';'
     |   SET '=' expression ';'
     |   SET ';'
-    ;
-
-genericClassImplement
-    :   IMPL STATIC? FINAL? ABSTRACT? CLASS classWithoutNamespace readOnlyArgs (COLON className (',' className)*)? (classBody | ';')
     ;
 
 //数据模板
@@ -289,11 +237,6 @@ accessModifier
     ;
 
 //构造函数声明
-classConstructorDeclaration
-    :   accessModifier? CONSTRUCTOR normalParams '{' functionBody '}'
-    ;
-
-//构造函数声明
 templateConstructorDeclaration
     :   accessModifier? CONSTRUCTOR normalParams '{' functionBody '}'
     ;
@@ -301,10 +244,6 @@ templateConstructorDeclaration
 //变量声明
 fieldDeclaration
     :   fieldModifier? VAR Identifier (AS type)? ('=' expression)?
-    ;
-
-fieldDeclarationExpression
-    :   Identifier ( '=' expression)?
     ;
 
 fieldModifier : CONST|DYNAMIC|IMPORT;

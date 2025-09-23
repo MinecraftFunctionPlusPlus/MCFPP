@@ -95,11 +95,7 @@ open class MCString : NBTBasedData {
         }else {
             when (type) {
                 MCFPPBaseType.JsonText -> {
-                    if(parentClass() != null && (parent as Var<*>).identifier != "this") {
-                        JsonTextConcrete(NBTChatComponent(getTempVar(), false))
-                    }else{
-                        JsonTextConcrete(NBTChatComponent(this, false))
-                    }
+                    JsonTextConcrete(NBTChatComponent(this, false))
                 }
                 else -> re
             }
@@ -142,53 +138,12 @@ open class MCString : NBTBasedData {
     @InsertCommand
     override fun assignCommand(a: NBTBasedData) : MCString {
         nbtType = a.nbtType
-        return assignCommandLambda(a,
-            ifThisIsClassMemberAndAIsConcrete = {b, final ->
-                b as MCStringConcrete
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetValue(nbtPath, b.value))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-                MCString(this)
-            },
-            ifThisIsClassMemberAndAIsNotConcrete = {b, final ->
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-                MCString(this)
-            },
-            ifThisIsNormalVarAndAIsConcrete = {b ->
-                MCStringConcrete(this, (b as MCStringConcrete).value)
-            },
-            ifThisIsNormalVarAndAIsClassMember = {b, final ->
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-                MCString(this)
-            },
-            ifThisIsNormalVarAndAIsNotConcrete = {b ->
-                Function.addCommand(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                NBTBasedData(this)
-            }) as MCString
+        return if(a is MCStringConcrete){
+            MCStringConcrete(this, a.value)
+        } else {
+            Function.addCommand(Commands.dataSetFrom(nbtPath, a.nbtPath))
+            MCString(this)
+        }
     }
 
     override fun getTempVar(): MCString {

@@ -2,7 +2,9 @@ package top.mcfpp.model.scope
 
 import org.jetbrains.annotations.Nullable
 import top.mcfpp.core.lang.Var
-import top.mcfpp.model.compound.*
+import top.mcfpp.model.compound.CompoundData
+import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.Interface
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.type.MCFPPType
@@ -63,53 +65,6 @@ class NamespaceScope: SimpleLibScope{
 
     override fun hasFunction(function: Function, considerParent: Boolean): Boolean{
         return functions.containsKey(function.identifier) && functions[function.identifier]!!.contains(function) || fileFields.any { it.hasFunction(function, considerParent) }
-    }
-    //endregion
-
-    //region class
-    override fun forEachClass(operation: (Class) -> Any?){
-        for (`class` in classes.values()){
-            operation(`class`)
-            fileFields.forEach { it.forEachClass(operation) }
-        }
-    }
-
-    /**
-     * 根据所给的id获取一个类
-     *
-     * @param identifier
-     */
-    override fun getClass(identifier: String, readOnlyParam: List<MCFPPType>): GenericClass? {
-        super.getClass(identifier, readOnlyParam)?.let { return it }
-        for(field in fileFields){
-            field.getClass(identifier, readOnlyParam)?.let { return it }
-        }
-        return null
-    }
-
-    override fun getClass(identifier: String): Class? {
-        super.getClass(identifier)?.let { return it }
-        for(field in fileFields){
-            field.getClass(identifier)?.let { return it }
-        }
-        return null
-    }
-
-    override fun hasClass(cls: Class): Boolean{
-        return classes.containsValue(cls) || fileFields.any { it.hasClass(cls) }
-    }
-
-    override fun hasNotGenericClass(cls: String): Boolean{
-        return classes.values().any { it.identifier == cls && it !is GenericClass } || fileFields.any { it.hasNotGenericClass(cls) }
-    }
-
-    override fun hasNotGenericClass(cls: Class): Boolean{
-        return classes.values().any { it == cls && it !is GenericClass } || fileFields.any { it.hasNotGenericClass(cls) }
-    }
-
-
-    override fun hasClass(identifier: String): Boolean{
-        return classes.containsKey(identifier) || fileFields.any { it.hasClass(identifier) }
     }
     //endregion
 
@@ -195,32 +150,28 @@ class NamespaceScope: SimpleLibScope{
     //endregion
 
     override fun hasDeclaredType(identifier: String): Boolean{
-        return hasEnum(identifier) || hasTemplate(identifier) || hasInterface(identifier) || hasClass(identifier)
+        return hasEnum(identifier) || hasTemplate(identifier) || hasInterface(identifier)
                 || fileFields.any { it.hasDeclaredType(identifier) }
     }
 
     override fun hasDeclaredType(type: CompoundData): Boolean{
-        if(type !is GenericClass){
-            val identifier = type.identifier
-            return hasEnum(identifier) || hasTemplate(identifier) || hasInterface(identifier) || hasNotGenericClass(identifier)
-                    || fileFields.any { it.hasDeclaredType(identifier) }
-        }else{
-            return hasClass(type) || fileFields.any { it.hasClass(type) }
-        }
+        val identifier = type.identifier
+        return hasEnum(identifier) || hasTemplate(identifier) || hasInterface(identifier)
+                || fileFields.any { it.hasDeclaredType(identifier) }
     }
 
     override fun getDeclaredType(identifier: String): CompoundData?{
-        return getEnum(identifier) ?: getTemplate(identifier) ?: getInterface(identifier) ?: getClass(identifier)
+        return getEnum(identifier) ?: getTemplate(identifier) ?: getInterface(identifier)
         ?: fileFields.firstOrNull { it.hasDeclaredType(identifier) }?.getDeclaredType(identifier)
     }
 
     override fun getType(key: String): MCFPPType? {
-        return (getEnum(key) ?: getTemplate(key) ?: getInterface(key) ?: getClass(key))?.getType()?: typeAlias[key]
+        return (getEnum(key) ?: getTemplate(key) ?: getInterface(key))?.getType() ?: typeAlias[key]
         ?: fileFields.firstOrNull { it.containType(key) }?.getType(key)
     }
 
     override fun containType(id: String): Boolean {
-        return hasEnum(id) || hasTemplate(id) || hasInterface(id) || hasClass(id) || typeAlias.containsKey(id)
+        return hasEnum(id) || hasTemplate(id) || hasInterface(id) || typeAlias.containsKey(id)
                 || fileFields.any { it.containType(id) }
     }
 
@@ -228,7 +179,6 @@ class NamespaceScope: SimpleLibScope{
         forEachEnum { action(it.getType()) }
         forEachTemplate { action(it.getType()) }
         forEachInterface { action(it.getType()) }
-        forEachClass { action(it.getType()) }
         typeAlias.values.forEach { action(it) }
         fileFields.forEach { it.forEachType(action) }
     }
@@ -239,7 +189,6 @@ class NamespaceScope: SimpleLibScope{
             forEachEnum { list.add(it.getType()) }
             forEachTemplate { list.add(it.getType()) }
             forEachInterface { list.add(it.getType()) }
-            forEachClass { list.add(it.getType()) }
             list.addAll(typeAlias.values)
             fileFields.forEach { list.addAll(it.allTypes) }
             return list

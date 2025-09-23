@@ -1,9 +1,7 @@
 package top.mcfpp.model
 
 import top.mcfpp.model.Member.AccessModifier
-import top.mcfpp.model.compound.Class
 import top.mcfpp.model.compound.DataTemplate
-import top.mcfpp.model.compound.ObjectClass
 import top.mcfpp.model.compound.ObjectDataTemplate
 import java.io.Serializable
 
@@ -46,18 +44,12 @@ interface Member: Serializable {
      * 是否是静态的。默认为否
      */
     val isStatic : Boolean
-        get() = parentClass() is ObjectClass || parentTemplate() is ObjectDataTemplate
+        get() = parentTemplate() is ObjectDataTemplate
 
     /**
      * 这个成员是否不可被继承
      */
     var isFinal: Boolean
-
-    /**
-     * 获取这个成员的父类，可能不存在
-     * @return
-     */
-    fun parentClass(): Class?
 
     /**
      * 获取这个成员的父数据模板，可能不存在

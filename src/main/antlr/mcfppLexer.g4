@@ -101,7 +101,6 @@ IMPORT: 'import';
 
 INLINE:'inline';
 
-CLASS:'class';
 OBJECT:'object';
 INTERFACE:'interface';
 DATA:'data';

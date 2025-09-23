@@ -38,46 +38,4 @@ class GenericTest {
             """.trimIndent()
         MCFPPStringTest.readFromString(test, arrayOf("debug"))
     }
-
-    @Test
-    fun classGenericTest(){
-        val test =
-            """
-                class Test<T as type>{
-                    public i as T;
-                }
-                
-                func main(){
-                    var test = Test<int>();
-                    test.i = 5;
-                    print(test.i);
-                }
-            """.trimIndent()
-        MCFPPStringTest.readFromString(test, arrayOf("debug"))
-    }
-
-    @Test
-    fun classOverLoad(){
-        val test =
-            """
-                class Test<i as int>{
-                    func print(){
-                        print(this.i);
-                    }
-                }
-                
-                class Test<i as int, j as int>{
-                    func print(){
-                        print(this.i + this.j);
-                    }
-                }
-                
-                func main(){
-                    var test = Test<5>();
-                    var test2 = Test<5, 6>();
-                }
-            """.trimIndent()
-        MCFPPStringTest.readFromString(test)
-    }
-
 }

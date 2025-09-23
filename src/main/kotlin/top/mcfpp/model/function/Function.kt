@@ -13,15 +13,15 @@ import top.mcfpp.command.*
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
-import top.mcfpp.core.lang.obj.ClassPointer
-import top.mcfpp.core.lang.obj.ClassPointerConcrete
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.doc.Document
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lib.NamespaceID
 import top.mcfpp.model.*
 import top.mcfpp.model.annotation.Annotation
-import top.mcfpp.model.compound.*
+import top.mcfpp.model.compound.CompoundData
+import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.Interface
 import top.mcfpp.model.scope.FunctionScope
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.type.*
@@ -235,7 +235,6 @@ open class Function : Member, FieldContainer, WithDocument {
     var ownerType : OwnerType
         get() {
             return when(owner){
-                is Class -> OwnerType.CLASS
                 is DataTemplate -> OwnerType.TEMPLATE
                 null -> OwnerType.NONE
                 else -> OwnerType.BASIC
@@ -264,14 +263,8 @@ open class Function : Member, FieldContainer, WithDocument {
             val n = if(ownerType == OwnerType.NONE){
                 NamespaceID(namespace, identifier + re)
             }else{
-                if(parentClass() is ObjectClass){
-                    NamespaceID(namespace, owner!!.identifier)
-                        .appendIdentifier("static", false)
-                        .appendIdentifier(identifier + re)
-                }else{
-                    NamespaceID(namespace, owner!!.identifier)
-                        .appendIdentifier(identifier + re)
-                }
+                NamespaceID(namespace, owner!!.identifier)
+                    .appendIdentifier(identifier + re)
             }
             return n
         }
@@ -332,21 +325,6 @@ open class Function : Member, FieldContainer, WithDocument {
         scope = FunctionScope(MCFPPFile.currFile?.field)
         ownerType = OwnerType.NONE
         this.namespace = namespace
-        this.ast = context
-    }
-
-    /**
-     * 创建一个函数，并指定它所属的类。
-     * @param identifier 函数的标识符
-     */
-    constructor(identifier: String, cls: Class, context: FunctionBodyContext?) {
-        this.identifier = identifier
-        commands = CommandList()
-        normalParams = ArrayList()
-        namespace = cls.namespace
-        ownerType = OwnerType.CLASS
-        owner = cls
-        scope = FunctionScope(cls.field)
         this.ast = context
     }
 
@@ -538,7 +516,6 @@ open class Function : Member, FieldContainer, WithDocument {
         }
         when(caller){
             is MCFPPType, is DataTemplateObject, null -> invoke(normalArgs.values.toList())
-            is ClassPointer -> invoke(normalArgs.values.toList(), caller)
             is Var<*> -> invoke(normalArgs.values.toList(), caller)
         }
         return returnVar
@@ -555,12 +532,6 @@ open class Function : Member, FieldContainer, WithDocument {
         addCommand("function $namespaceID")
         //static关键字，将值传回
         staticArgRef(normalArgs)
-        //销毁指针，释放堆内存
-        for (p in scope.allVars){
-            if (p is ClassPointer){
-                p.dispose()
-            }
-        }
         //调用完毕，将子函数的栈销毁
         addCommand(Commands.stackOut())
         //取出栈内的值
@@ -587,49 +558,6 @@ open class Function : Member, FieldContainer, WithDocument {
         addCommand("function " + this.namespaceID)
         //static参数传回
         staticArgRef(normalArgs)
-        //销毁指针，释放堆内存
-        for (p in scope.allVars){
-            if (p is ClassPointer){
-                p.dispose()
-            }
-        }
-        //调用完毕，将子函数的栈销毁
-        addCommand(Commands.stackOut())
-        //取出栈内的值
-        fieldRestore()
-    }
-
-    /**
-     * 调用这个函数。
-     *
-     * @param normalArgs 函数的参数
-     * @param callerClassP 调用函数的实例
-     * @see top.mcfpp.antlr.MCFPPExprVisitor.visitVar
-     */
-    @InsertCommand
-    protected open fun invoke(normalArgs: List<Var<*>>, callerClassP: ClassPointer) {
-        //变量进栈
-        fieldStore()
-        //给函数开栈
-        addCommand(Commands.stackIn())
-        //参数传递
-        argPass(normalArgs)
-        callerClassP.stackIndex ++
-        //函数调用的命令
-        if(callerClassP is ClassPointerConcrete || callerClassP.clazz.children.isEmpty()){
-            addCommands(Commands.selectRun(callerClassP,Command.build("function $namespaceID")))
-        }else{
-            addCommands(Commands.selectRun(callerClassP,Command.build("function mcfpp.dynamic:function with entity @s data.functions.$identifier")))
-        }
-        //static关键字，将值传回
-        staticArgRef(normalArgs)
-        //销毁指针，释放堆内存
-        for (p in scope.allVars){
-            if (p is ClassPointer){
-                p.dispose()
-            }
-        }
-        callerClassP.stackIndex --
         //调用完毕，将子函数的栈销毁
         addCommand(Commands.stackOut())
         //取出栈内的值
@@ -653,12 +581,6 @@ open class Function : Member, FieldContainer, WithDocument {
         addCommand("function $namespaceID")
         //static关键字，将值传回
         staticArgRef(normalArgs)
-        //销毁指针，释放堆内存
-        for (p in scope.allVars){
-            if (p is ClassPointer){
-                p.dispose()
-            }
-        }
         //调用完毕，将子函数的栈销毁
         addCommand(Commands.stackOut())
         //取出栈内的值
@@ -754,7 +676,7 @@ open class Function : Member, FieldContainer, WithDocument {
 
     fun fieldStore(){
         addComment("[Function ${this.namespaceID}] Store vars into the Stack")
-        Companion.currField.forEachVar { v ->
+        currField.forEachVar { v ->
             v.storeToStack()
         }
     }
@@ -767,7 +689,7 @@ open class Function : Member, FieldContainer, WithDocument {
     @InsertCommand
     open fun fieldRestore(){
         addComment("[Function ${this.namespaceID}] Take vars out of the Stack")
-        Companion.currField.forEachVar { v ->
+        currField.forEachVar { v ->
             run {
                 v.getFromStack()
             }
@@ -826,18 +748,6 @@ open class Function : Member, FieldContainer, WithDocument {
             }
         }
         return false
-    }
-
-    /**
-     * 获取函数所在的类。可能不存在
-     *
-     * @return 返回这个函数所在的类，如果不存在则返回null
-     */
-    @Override
-    override fun parentClass(): Class? {
-        return if (ownerType == OwnerType.CLASS) {
-            owner as Class
-        } else null
     }
 
     /**
@@ -931,14 +841,6 @@ open class Function : Member, FieldContainer, WithDocument {
             block()
         }finally {
             currFunction = old
-        }
-    }
-
-    fun disposeClassPtr(){
-        for (p in scope.allVars){
-            if (p is ClassPointer){
-                p.dispose()
-            }
         }
     }
 

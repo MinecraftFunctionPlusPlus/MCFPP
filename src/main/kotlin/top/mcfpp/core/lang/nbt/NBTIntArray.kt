@@ -41,54 +41,12 @@ open class NBTIntArray: NBTArray {
     @InsertCommand
     protected open fun assignCommand(a: NBTIntArray) : NBTIntArray {
         nbtType = a.nbtType
-        return assignCommandLambda(a,
-            ifThisIsClassMemberAndAIsConcrete = {b, final ->
-                b as NBTIntArrayConcrete
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetValue(nbtPath, b.value))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-                NBTIntArray(this)
-            },
-            ifThisIsClassMemberAndAIsNotConcrete = {b, final ->
-                //对类中的成员的值进行修改
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-                NBTIntArray(this)
-            },
-            ifThisIsNormalVarAndAIsConcrete = {b ->
-                NBTIntArrayConcrete(this, (b as NBTIntArrayConcrete).value)
-            },
-            ifThisIsNormalVarAndAIsClassMember = {b, final ->
-                if(final.size == 2){
-                    Function.addCommand(final[0])
-                }
-                final.last().build(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                if(final.last().isMacro){
-                    Function.addCommands(final.last().buildMacroFunction())
-                }else{
-                    Function.addCommand(final.last())
-                }
-                NBTIntArray(this)
-            },
-            ifThisIsNormalVarAndAIsNotConcrete = {b ->
-                Function.addCommand(Commands.dataSetFrom(nbtPath, b.nbtPath))
-                NBTIntArray(this)
-            }
-        ) as NBTIntArray
+        return if(a is NBTIntArrayConcrete){
+            NBTIntArrayConcrete(this, a.value)
+        } else {
+            Function.addCommand(Commands.dataSetFrom(nbtPath, a.nbtPath))
+            NBTIntArray(this)
+        }
     }
 
 }

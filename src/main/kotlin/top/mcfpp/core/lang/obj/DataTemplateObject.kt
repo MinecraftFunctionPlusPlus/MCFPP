@@ -109,21 +109,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     }
 
     fun assignCommand(obj: DataTemplateObject){
-        if(parentClass() != null){
-            //是成员
-            //TODO 选择两个实体的代价和复制整个模板数据的代价谁更大？
-            val b = if(obj.parentClass() != null) obj.getTempVar() else obj
-            val c = Commands.selectRun(parent!!, Commands.dataSetFrom(nbtPath, b.nbtPath))
-            Function.addCommands(c)
-        }else {
-            if (obj.parentClass() != null) {
-                //obj是成员
-                val c = Commands.selectRun(obj.parent!!, Commands.dataSetFrom(obj.nbtPath, nbtPath))
-                Function.addCommands(c)
-            } else {
-                Function.addCommand(Commands.dataSetFrom(nbtPath, obj.nbtPath))
-            }
-        }
+        Function.addCommand(Commands.dataSetFrom(nbtPath, obj.nbtPath))
     }
 
     override fun explicitCast(type: MCFPPType): Var<*> {
@@ -383,11 +369,7 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<HashMap<String,
         }
         val parent = this.parent
         val nbt = tagCache!!
-        if(parent != null){
-            Function.addCommands(Commands.selectRun(parent, Commands.dataSetValue(nbtPath, nbt)))
-        }else {
-            Function.addCommand(Commands.dataSetValue(nbtPath, nbt))
-        }
+        Function.addCommand(Commands.dataSetValue(nbtPath, nbt))
         val re = DataTemplateObject(this)
         if(replace){
             if(parentTemplate() != null) {

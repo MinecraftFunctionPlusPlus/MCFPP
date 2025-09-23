@@ -3,7 +3,6 @@ package top.mcfpp.cl
 import org.apache.logging.log4j.core.config.ConfigurationSource
 import org.apache.logging.log4j.core.config.Configurator
 import top.mcfpp.MCFPP
-import top.mcfpp.core.lang.UnresolvedVar
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.util.UwU
 import java.io.FileInputStream
@@ -16,17 +15,6 @@ fun main(){
         Configurator.initialize(null,source)
     }catch (e:Exception){
         println("Failed to load log4j2.xml")
-    }
-    for(namespace in GlobalScope.libNamespaces.values){
-        namespace.field.forEachClass { c ->
-            run {
-                for (v in c.field.allVars){
-                    if(v is UnresolvedVar){
-                        c.field.putVar(c.identifier, v, true)
-                    }
-                }
-            }
-        }
     }
     GlobalScope.init()
     println("MCFPP ${MCFPP.VERSION} (${Instant.now()})")

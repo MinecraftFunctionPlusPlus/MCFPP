@@ -20,19 +20,12 @@ import top.mcfpp.lib.Execute
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.Generic
 import top.mcfpp.model.Namespace
-import top.mcfpp.model.compound.Class
-import top.mcfpp.model.compound.ObjectClass
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam
-import top.mcfpp.model.function.FunctionParam.Companion.typeToStringList
 import top.mcfpp.model.function.InternalFunction
 import top.mcfpp.model.function.NoStackFunction
-import top.mcfpp.model.property.FunctionAccessor
-import top.mcfpp.model.property.FunctionMutator
-import top.mcfpp.model.property.Property
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.type.MCFPPEnumType
-import top.mcfpp.type.MCFPPGenericClassType
 import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
@@ -79,14 +72,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             LogProcessor.error("Function should return a value: " + Function.currFunction.namespaceID)
         }
         //释放指针
-        Function.currFunction.disposeClassPtr()
         Function.currFunction = Function.nullFunction
-        if (Class.currClass == null) {
-            //不在类中
-            Function.currFunction = Function.nullFunction
-        } else {
-            Function.currFunction = Class.currClass!!.classPreInit
-        }
     }
 
     override fun visitFunctionBody(ctx: mcfppParser.FunctionBodyContext): Any? = withCompilationContext(ctx) {
@@ -131,7 +117,6 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         if (ctx.expression() != null) {
             Function.addComment(ctx.text)
             init = MCFPPExprVisitor(
-                if(type is MCFPPGenericClassType) type else null,
                 if(type is MCFPPEnumType) type else null
             ).visitExpression(ctx.expression())
         }
@@ -195,7 +180,6 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             }
             val type = left.type
             val right: Var<*> = MCFPPExprVisitor(
-                if(type is MCFPPGenericClassType) type else null,
                 if(type is MCFPPEnumType) type else null
             ).visitExpression(ctx.expression())
             if(right !is MCFPPValue<*> && left.parent is DataTemplateObjectConcrete){
@@ -236,7 +220,6 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             LogProcessor.error("A 'return' expression required in function: " + Function.currFunction.namespaceID)
         }
         //释放指针
-        Function.currFunction.disposeClassPtr()
         Function.currFunction = Function.nullFunction
     }
 
@@ -576,7 +559,6 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
     @InsertCommand
     fun exitWhileBlock() {
-        Function.currFunction.disposeClassPtr()
         Function.addCommand("return 1")
         Function.currFunction = Function.currFunction.parent[0]
         Function.addComment("while loop end")
@@ -696,7 +678,6 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     
     @InsertCommand
     fun exitDoWhileBlock() {
-        Function.currFunction.disposeClassPtr()
         //返回1
         Function.addCommand("return 1")
         Function.currFunction = Function.currFunction.parent[0]
@@ -797,105 +778,6 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addCommand(exec.run(execFunction))
         return null
     }
-
-    //region class
-    override fun visitClassDeclaration(ctx: mcfppParser.ClassDeclarationContext): Any? = withCompilationContext(ctx) {
-        if(ctx.readOnlyParams() == null){
-            super.visitClassDeclaration(ctx)
-        }
-        return null
-    }
-
-    override fun visitClassBody(ctx: mcfppParser.ClassBodyContext): Any? = withCompilationContext(ctx) {
-        enterClassBody(ctx)
-        super.visitClassBody(ctx)
-        exitClassBody()
-        return null
-    }
-
-    /**
-     * 进入类体。
-     * @param ctx the parse tree
-     */
-    private fun enterClassBody(ctx: mcfppParser.ClassBodyContext) {
-        //获取类的对象
-        val parent = ctx.parent
-        if(parent is mcfppParser.ClassDeclarationContext){
-            val identifier = parent.classWithoutNamespace().text
-            Class.currClass = GlobalScope.getClass(Project.currNamespace, identifier)
-        }else{
-            parent as mcfppParser.ObjectClassDeclarationContext
-            val identifier = parent.classWithoutNamespace().text
-            Class.currClass = GlobalScope.getObject(Project.currNamespace, identifier) as ObjectClass
-        }
-        //设置作用域
-        Function.currFunction = Class.currClass!!.classPreInit
-    }
-
-    private fun exitClassBody() {
-        Class.currClass = null
-        Function.currFunction = Function.nullFunction
-    }
-
-    override fun visitClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext): Any? = withCompilationContext(ctx) {
-        //是类的成员函数
-        enterClassFunctionDeclaration(ctx)
-        super.visitClassFunctionDeclaration(ctx)
-        exitClassFunctionDeclaration()
-        return null
-    }
-
-    private fun enterClassFunctionDeclaration(ctx: mcfppParser.ClassFunctionDeclarationContext) {
-        //解析参数
-        val types = FunctionParam.parseReadonlyAndNormalParamTypes(ctx.functionParams())
-        //获取缓存中的对象
-        val f = Class.currClass!!.field.getFunction(ctx.Identifier().text, types.first.map { it.build("") }, types.second.map { it.build("") })
-        Function.currFunction = f
-    }
-
-    private fun exitClassFunctionDeclaration() {
-        Function.currFunction = Class.currClass!!.classPreInit
-    }
-
-    override fun visitClassConstructorDeclaration(ctx: mcfppParser.ClassConstructorDeclarationContext): Any? = withCompilationContext(ctx) {
-        //是构造函数
-        enterClassConstructorDeclaration(ctx)
-        super.visitClassConstructorDeclaration(ctx)
-        exitClassConstructorDeclaration()
-        return null
-    }
-
-    private fun enterClassConstructorDeclaration(ctx: mcfppParser.ClassConstructorDeclarationContext) {
-        val types = FunctionParam.parseNormalParamTypes(ctx.normalParams())
-        val c = Class.currClass!!.getConstructorByString(types.typeToStringList())!!
-        Function.currFunction = c
-    }
-
-    private fun exitClassConstructorDeclaration() {
-        Function.currFunction = Class.currClass!!.classPreInit
-    }
-
-    private lateinit var currProperty: Property
-    override fun visitClassFieldDeclaration(ctx: mcfppParser.ClassFieldDeclarationContext): Any? = withCompilationContext(ctx) {
-        val id = ctx.Identifier().text
-        currProperty = Class.currClass!!.field.getProperty(id)!!
-        return super.visitClassFieldDeclaration(ctx)
-    }
-
-    override fun visitGetter(ctx: mcfppParser.GetterContext): Any? = withCompilationContext(ctx) {
-        if(ctx.functionBody() != null){
-            Function.currFunction = (currProperty.accessor as FunctionAccessor).function
-        }
-        return super.visitGetter(ctx)
-    }
-
-    override fun visitSetter(ctx: mcfppParser.SetterContext): Any? = withCompilationContext(ctx) {
-        if(ctx.functionBody() != null){
-            Function.currFunction = (currProperty.mutator as FunctionMutator).function
-        }
-        return super.visitSetter(ctx)
-    }
-    //endregion
 
     //region template
 

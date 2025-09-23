@@ -1,9 +1,8 @@
 package top.mcfpp.mni.annotation;
 
 import org.jetbrains.annotations.NotNull;
-import top.mcfpp.model.compound.DataTemplate;
 import top.mcfpp.model.annotation.DataTemplateAnnotation;
-import top.mcfpp.util.LogProcessor;
+import top.mcfpp.model.compound.DataTemplate;
 
 public class To extends DataTemplateAnnotation {
     String className;

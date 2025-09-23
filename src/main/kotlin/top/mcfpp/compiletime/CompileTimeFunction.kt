@@ -1,7 +1,6 @@
 package top.mcfpp.compiletime
 
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.core.lang.obj.ClassPointer
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.scope.IScope
 import top.mcfpp.model.function.Function
@@ -26,12 +25,5 @@ class CompileTimeFunction : Function {
             field.putVar(readOnlyParams[argi.index].identifier,argi.value,true)
         }
          */
-    }
-
-    override fun invoke(normalArgs: List<Var<*>>, callerClassP: ClassPointer) {
-        val field = makeField()
-        argPass(field, normalArgs)
-        val visitor = MCFPPCompileTimeVisitor(field)
-        visitor.visit(this.ast)
     }
 }
