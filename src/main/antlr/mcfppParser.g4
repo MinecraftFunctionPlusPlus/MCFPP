@@ -34,25 +34,29 @@ options {
 
 //一个mcfpp文件
 compilationUnit
-    :   namespaceDeclaration?
-        importDeclaration*
-        typealiasDeclaration*
-        topStatement
+    :   (namespaceDeclaration (separator | EOF))?
+        (importDeclaration (separator | EOF))*
+        (typealiasDeclaration (separator | EOF))*
+        topStatement?
         typeDeclaration*
         EOF
     ;
 
+separator
+    :   (SEMICOLON | NL)+
+    ;
+
 topStatement
-    : statement*
+    : (statement (separator | EOF))+
     ;
 
 //命名空间声明
 namespaceDeclaration
-    :   doc_comment? NAMESPACE Identifier (DOT Identifier)* ';'
+    :   doc_comment? NAMESPACE Identifier (DOT Identifier)*
     ;
 
 importDeclaration
-    :   IMPORT importType (AS Identifier)? (FROM Identifier)? ';'
+    :   IMPORT importType (AS Identifier)? (FROM Identifier)?
     ;
 
 importType
@@ -60,7 +64,7 @@ importType
     ;
 
 typealiasDeclaration
-    :   TYPEALIAS type AS Identifier ';'
+    :   TYPEALIAS type AS Identifier
     ;
 
 //类或函数声明
@@ -83,18 +87,18 @@ declarations
     ;
 
 operationOverrideDeclaration
-    :   OPERATOR supportOperator functionParams (ARROW functionReturnType)? '{' functionBody '}'
+    :   OPERATOR supportOperator NL* functionParams NL* (ARROW functionReturnType)? NL* curlBlock
     ;
 
 nativeOperationOverrideDeclaration
-    :   OPERATOR supportOperator functionParams (ARROW functionReturnType)? '=' javaRefer ';'
+    :   OPERATOR supportOperator NL* functionParams NL* (ARROW functionReturnType)? NL* '=' NL* javaRefer
     ;
 
 supportOperator
     :   '+'
     |   '-'
     |   '*'
-    |   '/'
+    |   SLASH
     |   '%'
     |   '>'
     |   '<'
@@ -110,39 +114,47 @@ supportOperator
     ;
 
 accessor
-    :   '{' getter? setter? '}'
+    :   '{' NL* getter? NL* setter? NL* '}'
     ;
 
 getter
-    :   GET '{' functionBody '}'
-    |   GET '=' javaRefer ';'
-    |   GET '=' expression ';'
-    |   GET ';'
+    :   GET NL* curlBlock
+    |   GET NL* '=' NL* javaRefer SEMICOLON
+    |   GET NL* '=' NL* expression SEMICOLON?
+    |   GET SEMICOLON?
     ;
 
 setter
-    :   SET '{' functionBody '}'
-    |   SET '=' javaRefer ';'
-    |   SET '=' expression ';'
-    |   SET ';'
+    :   SET NL* curlBlock
+    |   SET NL* '=' javaRefer
+    |   SET NL* '=' expression
+    |   SET SEMICOLON
+    ;
+
+compoundDeclaration
+    :   declarationName NL* (COLON NL* extendName NL* (',' NL* extendName NL*)*)?
     ;
 
 //数据模板
 templateDeclaration
-    :   FINAL? DATA classWithoutNamespace readOnlyParams? ((COLON className (',' className)*) | AS type)? (templateBody | ';')
+    :   FINAL? NL* DATA NL*
+        (compoundDeclaration
+        | (declarationName NL* AS NL* type)
+        )
+        NL* templateBody?
     ;
 
 //数据模板
 objectTemplateDeclaration
-    :   FINAL? OBJECT DATA classWithoutNamespace readOnlyParams? (COLON className (',' className)*)? (templateBody | ';')
+    :   FINAL? NL* OBJECT NL* DATA NL* compoundDeclaration NL* templateBody?
     ;
 
 templateBody
-    :   '{' (doc_comment? templateMemberDeclaration)* '}'
+    :   '{' NL* (doc_comment? templateMemberDeclaration NL*)* '}'
     ;
 
 templateMemberDeclaration
-    :   accessModifier? templateMember
+    :   accessModifier? NL* templateMember
     ;
 
 templateMember
@@ -154,12 +166,16 @@ templateMember
     |   annotation
     ;
 
+functionDeclarationPart
+    :   FUNCTION NL* Identifier NL* functionParams (NL* ARROW NL* functionReturnType)?
+    ;
+
 templateFunctionDeclaration
-    :  OVERRIDE? FUNCTION Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
+    :   OVERRIDE? NL* functionDeclarationPart NL* curlBlock
     ;
 
 templateFieldDeclaration
-    :   accessModifier? CONST? VAR? Identifier (AS templateType)? ('=' expression)? accessor? ';'
+    :    CONST? NL* VAR? NL* Identifier NL* (AS NL* templateType)? (NL* '=' expression)? NL* accessor?
     ;
 
 templateType
@@ -171,50 +187,58 @@ singleTemplateFieldType
     ;
 
 unionTemplateFieldType
-    :   '(' type (PIPE type)* ')' QUEST?
+    :   '(' NL* type NL* (PIPE type NL*)* ')' QUEST?
+    ;
+
+declarationName
+    :   classWithoutNamespace NL* readOnlyParams?
+    ;
+
+extendName
+    :   className readOnlyArgs?
     ;
 
 //接口声明
 interfaceDeclaration
-    :   INTERFACE classWithoutNamespace (ARROW className (',' className)*)? (interfaceBody | ';')
+    :   INTERFACE NL* compoundDeclaration NL* interfaceBody?
     ;
 
 interfaceBody
-    :   '{'( doc_comment? annotation? interfaceFunctionDeclaration )* '}'
+    :   '{' NL* ( doc_comment? NL* annotation? NL* interfaceFunctionDeclaration )* NL* '}'
     ;
 
 interfaceFunctionDeclaration
-    :   FUNCTION Identifier functionParams (ARROW functionReturnType)? ';'
+    :   functionDeclarationPart NL* curlBlock?
     ;
 
 compileTimeFuncDeclaration
-    :   CONST FUNCTION Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
+    :   CONST NL* functionDeclarationPart NL* curlBlock
     ;
 
 inlineFunctionDeclaration
-    :   INLINE FUNCTION Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
+    :   INLINE NL* functionDeclarationPart NL* curlBlock
     ;
 
 //函数声明
 functionDeclaration
-    :   FUNCTION Identifier functionParams? (ARROW functionReturnType)? '{' functionBody '}'
+    :   functionDeclarationPart NL* curlBlock
     ;
 
 extensionFunctionDeclaration
-    :   FUNCTION (type '.')? Identifier functionParams (ARROW functionReturnType)? '{' functionBody '}'
+    :   FUNCTION NL* (type '.')? Identifier functionParams (NL* ARROW NL* functionReturnType)? NL* curlBlock
     ;
 
 //枚举
 enumDeclaration
-    :   ENUM Identifier '{' enumBody '}'
+    :   ENUM NL* Identifier NL* enumBody
     ;
 
 enumBody
-    :   enumMember (',' enumMember)*
+    :   '{' NL* enumMember (NL* ',' NL* enumMember)* NL* '}'
     ;
 
 enumMember
-    :   Identifier ('=' nbtValue)?
+    :   Identifier NL* ('=' NL* nbtValue)?
     ;
 
 
@@ -223,7 +247,7 @@ namespaceID
     ;
 
 nativeFuncDeclaration
-    :   FUNCTION Identifier functionParams (ARROW functionReturnType)? '=' javaRefer ';'
+    :   functionDeclarationPart NL* '=' NL* javaRefer SEMICOLON?
     ;
 
 javaRefer
@@ -238,41 +262,41 @@ accessModifier
 
 //构造函数声明
 templateConstructorDeclaration
-    :   accessModifier? CONSTRUCTOR normalParams '{' functionBody '}'
+    :   CONSTRUCTOR NL* normalParams NL* curlBlock
     ;
 
 //变量声明
 fieldDeclaration
-    :   fieldModifier? VAR Identifier (AS type)? ('=' expression)?
+    :   fieldModifier? NL* VAR NL* Identifier NL* (AS NL* type)? NL* ('=' NL* expression)?
     ;
 
 fieldModifier : CONST|DYNAMIC|IMPORT;
 
 functionParams
-    :   readOnlyParams? normalParams
+    :   readOnlyParams? NL* normalParams
     ;
 
 readOnlyParams
-    :   '<' parameterList? '>'
+    :   '<' NL* parameterList? NL* '>'
     ;
 
 normalParams
-    :   '(' parameterList? ')'
+    :   '(' NL* parameterList? NL* ')'
     ;
 
 //参数列表
 parameterList
-    :   parameter (',' parameter)*
+    :   parameter (NL* ',' NL* parameter)*
     ;
 
 //参数
 parameter
-    :   STATIC? VAR? (Identifier AS)? type ('=' value)?
+    :   STATIC? NL* VAR? NL* (Identifier NL* AS NL*)? type (NL* '=' NL* value)?
     ;
 
 //能作为语句的表达式
 statementExpression
-    :   (varWithSelector '=' )? expression
+    :   (varWithSelector NL* '=' NL* )? expression
     ;
 
 //表达式
@@ -283,49 +307,47 @@ expression
 
 //其他运算符
 commonBinaryOperatorExpression
-    :   conditionalOrExpression (commonBinaryOperator conditionalOrExpression)*
+    :   conditionalOrExpression (NL* op+=('|' | Identifier) NL* conditionalOrExpression)*
     ;
-
-commonBinaryOperator: '|' | Identifier;
 
 //或
 conditionalOrExpression
-    :   conditionalAndExpression ( '||' conditionalAndExpression )*
+    :   conditionalAndExpression (NL* op+='||' NL* conditionalAndExpression )*
     ;
 
 //与
 conditionalAndExpression
-    :   equalityExpression ( '&&' equalityExpression )*
+    :   equalityExpression (NL* op+='&&' NL* equalityExpression )*
     ;
 
 //等同
 equalityExpression
-    :   relationalExpression ( op=('==' | '!=' | WVEQ) relationalExpression )*
+    :   relationalExpression (NL* op+=('==' | '!=' | WVEQ) NL* relationalExpression )*
     ;
 
 //比较关系
 relationalExpression
-    :   additiveExpression ( op=('<' | '>' | '<=' | '>=') additiveExpression )*
+    :   additiveExpression (NL* op+=('<' | '>' | '<=' | '>=') NL* additiveExpression )*
     ;
 
 //加减
 additiveExpression
-    :   multiplicativeExpression ( op=('+' | '-') multiplicativeExpression )*
+    :   multiplicativeExpression (NL* op+=('+' | '-') NL* multiplicativeExpression )*
     ;
 
 //乘除
 multiplicativeExpression
-    :   castExpression ( op=( '*' | '/' | '%' ) castExpression )*
+    :   castExpression (NL* op+=( '*' | SLASH | '%' ) NL* castExpression )*
     ;
 
 //强制类型转换表达式
 castExpression
-    :  unaryExpression (AS type)?
+    :  unaryExpression (NL* AS NL* type)?
     ;
 
 //一元表达式
 unaryExpression
-    :   '!' unaryExpression
+    :   '!' NL* unaryExpression
     |   rightVarExpression
     ;
 
@@ -335,20 +357,20 @@ rightVarExpression
     ;
 
 varWithSelector
-    : jvmAccessExpression selector*
+    : jvmAccessExpression (NL* selector)*
     ;
 
 jvmAccessExpression
-    :   propertyOperator (COLONCOLON Identifier)?
+    :   propertyOperator (NL* COLONCOLON NL* Identifier)?
     ;
 
 //字段操作器
 propertyOperator
-    :   primary ('[' propertyOperatorExpression (',' propertyOperatorExpression)* ']')?
+    :   primary (NL* '[' NL* propertyOperatorExpression (NL* ',' NL* propertyOperatorExpression)* NL* ']')?
     ;
 
 propertyOperatorExpression
-    :   Identifier '=' expression
+    :   Identifier NL* '=' NL* expression
     ;
 
 //初级表达式
@@ -368,70 +390,65 @@ var
     ;
 
 bucketExpression
-    :   '(' expression ')'
+    :   '(' NL* (expression NL*)? ')'
     ;
 
 varWithSuffix
-    :   Identifier identifierSuffix*
+    :   Identifier NL* identifierSuffix*
     ;
 
 functionCall
-    :   namespaceID arguments
+    :   namespaceID NL* arguments
     ;
 
 identifierSuffix
-    :   '[' expression ']'
-    |   '[' ']' //empty bucket
+    :   '[' NL* (expression NL*)? ']'
     ;
 
 selector
-    :   '.' var
+    :   '.' NL* var
     ;
 
 arguments
-    :   readOnlyArgs? normalArgs
+    :   readOnlyArgs? NL* normalArgs
     ;
 
 readOnlyArgs
-    :   '<' expressionList? '>'
+    :   '<' NL* (expressionList NL*)? '>'
     ;
 
 normalArgs
-    :   '(' expressionList? ')'
-    ;
-
-functionBody
-    :   statement*
+    :   '(' NL* (expressionList NL*)? ')'
     ;
 
 statement
-    :   fieldDeclaration ';'
-    |   statementExpression ';'
+    :   fieldDeclaration
+    |   statementExpression
     |   ifStatement
     |   whileStatement
-    |   doWhileStatement ';'
-    |   ';'
+    |   doWhileStatement
     |   tryStoreStatement
-    |   controlStatement ';'
+    |   controlStatement
     |   orgCommand
-    |   returnStatement ';'
+    |   SEMICOLON
+    |   returnStatement
     |   executeStatement
     ;
 
 executeStatement
-    :   EXECUTE '(' executeContext (',' executeContext)* ')' block
+    :   EXECUTE NL* '(' NL* executeContext (NL* ',' NL* executeContext)* NL* ')' NL* block
     ;
 
 executeContext
-    :   executeExpression '=' expression
+    :   executeExpression NL* '=' NL* expression
     ;
 
 executeExpression
-    :   var ('.' var)*
+    :   var (NL* '.' NL* var)*
     ;
 
 orgCommand
-    :   DIV orgCommandContent+ OrgCommandEnd
+    :   SLASH (NL* orgCommandContent)* OrgCommandEnd
     ;
 
 orgCommandContent
@@ -449,52 +466,44 @@ controlStatement
     ;
 
 ifStatement
-    :   IF'('expression')' ifBlock elseIfStatement* elseStatement?
+    :   IF NL* bucketExpression NL* block (NL* elseIfStatement)* (NL* elseStatement)?
     ;
 
 elseIfStatement
-    :   ELSE IF '('expression')' block
+    :   ELSE NL* IF NL* bucketExpression NL* block
     ;
 
 elseStatement
-    :   ELSE block
-    ;
-
-ifBlock
-    :   block
+    :   ELSE NL* block
     ;
 
 whileStatement
-    :   WHILE '(' expression ')' whileBlock
-    ;
-
-whileBlock
-    :   block
+    :   WHILE NL* bucketExpression NL* block
     ;
 
 doWhileStatement
-    :   DO doWhileBlock WHILE '(' expression ')'
-    ;
-
-doWhileBlock
-    :   block
+    :   DO NL* block NL* WHILE NL* bucketExpression
     ;
 
 tryStoreStatement
-    :   TRY block  STORE '(' Identifier ')' ';'
+    :   TRY NL* block NL* STORE NL* '(' NL* Identifier NL* ')'
     ;
 
 returnStatement
-    : RETURN expression?
+    : RETURN (NL* expression)?
+    ;
+
+curlBlock
+    :   '{' NL* (statement (separator statement)* separator?)? NL* '}'
     ;
 
 block
-    :   '{' statement* '}'
+    :   curlBlock
     |   statement
     ;
 
 expressionList
-    :   expression (',' expression)*
+    :   expression (NL* ',' NL* expression)*
     ;
 
 type
@@ -504,24 +513,22 @@ type
 typeWithoutExcl
     :   normalType
     |   VecType
-    |   LIST '<' type '>'
-    |   MAP '<' type '>'
-    |   DICT '<' type '>'
-    |   ENTITY '<' nbtInt '>'
-    |   ENTITY '<' LineString (',' LineString)* '>'
-    |   ENTITY '<' nbtInt ',' LineString (',' LineString)* '>'
-    |   className readOnlyArgs?
+    |   (LIST | MAP | DICT) NL* '<' NL* type NL* '>'
+    |   ENTITY NL* '<' NL* nbtInt NL* '>'
+    |   ENTITY NL* '<' NL* LineString (NL* ',' NL* LineString)* NL* '>'
+    |   ENTITY NL* '<' NL* nbtInt NL* ',' NL* LineString (NL* ',' NL* LineString)* NL* '>'
+    |   className NL* readOnlyArgs?
     |   Identifier
     |   unionTemplateType
     |   anonymousTemplateType
     ;
 
 anonymousTemplateType
-    :   DATA (COLON className (',' className)*)? templateBody
+    :   DATA (NL* COLON NL* extendName (NL* ',' NL* extendName)*)? NL* templateBody
     ;
 
 unionTemplateType
-    :   '(' type (UNION type)* ')'
+    :   '(' NL* type (NL* UNION NL* type)* NL* ')'
     ;
 
 normalType
@@ -559,7 +566,7 @@ value
     ;
 
 coordinate
-    :   coordinateDimension coordinateDimension coordinateDimension?
+    :   coordinateDimension NL* coordinateDimension (NL* coordinateDimension)?
     ;
 
 coordinateDimension
@@ -567,7 +574,7 @@ coordinateDimension
     ;
 
 className
-    :   (Identifier ('.' Identifier)* ':')? classWithoutNamespace
+    :   (Identifier ('.' Identifier)* ':' NL*)? classWithoutNamespace
     ;
 
 classWithoutNamespace
@@ -575,17 +582,17 @@ classWithoutNamespace
     ;
 
 annotation
-    :   '@' id=Identifier annotationArgs?
+    :   '@' id=Identifier NL* annotationArgs?
     ;
 
 annotationArgs
-    :   '<' (value (',' value)*)? '>'
+    :   '<' (NL* value (NL* ',' NL* value)*)? NL* '>'
     ;
 
 range
-    :   num1=var '..' num2=var
-    |   num1=var '..'
-    |   '..' num2=var
+    :   num1=var NL* '..' NL* num2=var
+    |   num1=var NL* '..'
+    |   '..' NL* num2=var
     ;
 
 nbtValue
@@ -612,16 +619,16 @@ nbtFloat: NBTFloat;
 nbtDouble: NBTDouble;
 nbtBool: TRUE | FALSE;
 
-nbtByteArray: NBT_BYTE_ARRAY_BEGIN nbtByte (',' nbtByte)* ']';
-nbtIntArray: NBT_INT_ARRAY_BEGIN nbtInt (',' nbtInt)* ']';
-nbtLongArray: NBT_LONG_ARRAY_BEGIN nbtLong (',' nbtLong)* ']';
+nbtByteArray: NBT_BYTE_ARRAY_BEGIN NL* nbtByte (NL* ',' NL* nbtByte)* NL* ']';
+nbtIntArray: NBT_INT_ARRAY_BEGIN NL* nbtInt (NL* ',' NL* nbtInt)* NL* ']';
+nbtLongArray: NBT_LONG_ARRAY_BEGIN NL* nbtLong (NL* ',' NL* nbtLong)* NL* ']';
 
-nbtList: '[' (expression (',' expression)* )* ']';
-nbtKeyValuePair: key=Identifier ':' expression;
-nbtCompound: '{'( nbtKeyValuePair (',' nbtKeyValuePair)* )*'}';
+nbtList: '[' (NL* expression (NL* ','NL* expression)* )* NL* ']';
+nbtKeyValuePair: key=Identifier NL* ':' NL* expression;
+nbtCompound: '{'(NL* nbtKeyValuePair (NL* ',' NL* nbtKeyValuePair)* )* NL* '}';
 
 multiLineStringLiteral
-    : TRIPLE_QUOTE_OPEN multiLineStringContent * TRIPLE_QUOTE_CLOSE
+    : TRIPLE_QUOTE_OPEN multiLineStringContent* TRIPLE_QUOTE_CLOSE
     ;
 
 multiLineStringContent
@@ -631,7 +638,7 @@ multiLineStringContent
     ;
 
 multiLineStringExpression
-    : MultiLineStrExprStart  expression '}'
+    : MultiLineStrExprStart NL* expression NL* '}'
     ;
 //
 // Whitespace and comments

@@ -10,9 +10,9 @@ import top.mcfpp.core.lang.*
  */
 class InlineFunction : Function {
 
-    constructor(name: String, context: mcfppParser.FunctionBodyContext) : super(name, context = context)
+    constructor(name: String, context: mcfppParser.CurlBlockContext) : super(name, context = context)
 
-    constructor(name: String, namespace: String, context: mcfppParser.FunctionBodyContext) : super(name, namespace, context = context)
+    constructor(name: String, namespace: String, context: mcfppParser.CurlBlockContext) : super(name, namespace, context = context)
 
     override fun argPass(normalArgs: List<Var<*>>) {
         for (i in this.normalParams.indices) {

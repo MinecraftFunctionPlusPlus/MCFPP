@@ -42,7 +42,7 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
 
     override fun visitTemplateDeclaration(ctx: mcfppParser.TemplateDeclarationContext): Unit = withCompilationContext(ctx) {
         //注册模板
-        val id = ctx.classWithoutNamespace().text
+        val id = (ctx.declarationName()?: ctx.compoundDeclaration().declarationName()).classWithoutNamespace().text
         val namespace1 = GlobalScope.localNamespaces[Project.currNamespace]!!
         val template = if(namespace1.field.hasTemplate(id)){
             namespace1.field.getTemplate(id)!!
@@ -61,7 +61,7 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
 
     override fun visitObjectTemplateDeclaration(ctx: mcfppParser.ObjectTemplateDeclarationContext): Unit = withCompilationContext(ctx) {
         //注册模板
-        val id = ctx.classWithoutNamespace().text
+        val id = ctx.compoundDeclaration().declarationName().classWithoutNamespace().text
         val namespace1 = GlobalScope.localNamespaces[Project.currNamespace]!!
         val objectTemplate = namespace1.field.getObject(id)
         if(objectTemplate !is ObjectDataTemplate){
@@ -79,11 +79,11 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
 
     override fun visitFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext): Unit = withCompilationContext(ctx) {
         //获取函数对象
-        val types = ctx.functionParams()?.let { FunctionParam.parseReadonlyAndNormalParamTypes(it) }
+        val types = ctx.functionDeclarationPart().functionParams()?.let { FunctionParam.parseReadonlyAndNormalParamTypes(it) }
         //获取缓存中的对象
         val f = GlobalScope.getFunction(
             Project.currNamespace,
-            ctx.Identifier().text,
+            ctx.functionDeclarationPart().Identifier().text,
             types?.first?.map { it.build("") }?:ArrayList(),
             types?.second?.map { it.build("") }?:ArrayList()
         )

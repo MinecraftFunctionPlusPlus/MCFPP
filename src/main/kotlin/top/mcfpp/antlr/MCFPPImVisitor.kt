@@ -60,9 +60,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     private fun enterFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext) {
         val f: Function
         //获取函数对象
-        val types = ctx.functionParams()?.let { FunctionParam.parseReadonlyAndNormalParamTypes(it) }
+        val types = ctx.functionDeclarationPart().functionParams()?.let { FunctionParam.parseReadonlyAndNormalParamTypes(it) }
         //获取缓存中的对象
-        f = GlobalScope.getFunction(Project.currNamespace, ctx.Identifier().text, types?.first?.map { it.build("") }?:ArrayList(), types?.second?.map { it.build("") }?:ArrayList())
+        f = GlobalScope.getFunction(Project.currNamespace, ctx.functionDeclarationPart().Identifier().text, types?.first?.map { it.build("") }?:ArrayList(), types?.second?.map { it.build("") }?:ArrayList())
         Function.currFunction = f
     }
 
@@ -75,7 +75,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.currFunction = Function.nullFunction
     }
 
-    override fun visitFunctionBody(ctx: mcfppParser.FunctionBodyContext): Any? = withCompilationContext(ctx) {
+    override fun visitCurlBlock(ctx: mcfppParser.CurlBlockContext): Any? = withCompilationContext(ctx) {
         if(ctx.parent is CompileTimeFuncDeclarationContext) return null
         if(Function.currFunction !is Generic<*>){
             ctx.statement().forEach {
@@ -89,7 +89,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     //泛型函数编译使用的入口
-    fun visitFunctionBody(ctx: mcfppParser.FunctionBodyContext, function: Function){
+    fun visitCurlBlock(ctx: mcfppParser.CurlBlockContext, function: Function){
         val lastFunction = Function.currFunction
         Function.currFunction = function
         ctx.statement().forEach {
@@ -238,12 +238,22 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     override fun visitBlock(ctx: mcfppParser.BlockContext): Any? = withCompilationContext(ctx) {
-        ctx.statement().forEach {
-            if(Function.currFunction.hasReturnStatement){
-                return@forEach
+        if(ctx.curlBlock() != null) {
+            ctx.curlBlock().statement().forEach {
+                if(Function.currFunction.hasReturnStatement){
+                    return@forEach
+                }
+                visitStatement(it)
             }
-            visitStatement(it)
+        }else{
+            ctx.children().forEach {
+                if(Function.currFunction.hasReturnStatement){
+                    return null
+                }
+                visitStatement(it as mcfppParser.StatementContext)
+            }
         }
+
         return null
     }
 
@@ -273,7 +283,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         //获取if语句以后的所有语句
         val index = ctx.parent.parent.children().indexOf(ctx.parent)
         val list =  ctx.parent.parent.children().subList(index + 1, ctx.parent.parent.children().size) as List<mcfppParser.StatementContext>
-        list.forEach { ctx.ifBlock().block().addChild(it) }
+        list.forEach { ctx.block().addChild(it) }
         list.forEach { l -> ctx.elseIfStatement().forEach { it.block().addChild(l) } }
         do {
             //if分支
@@ -288,7 +298,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                     GlobalScope.localNamespaces[f.namespace]!!.field.addFunction(f, false)
                     Function.currFunction = f
                 }
-                visitIfBlock(ctx.ifBlock())
+                visitBlock(ctx.block())
                 //由于原来的调用if的函数已经被return命令返回，需要if_branch函数帮助清理它的栈
                 if(breakIf != ConditionType.ALWAYS_TRUE) {
                     Function.addCommand(Commands.stackOut())
@@ -361,7 +371,12 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addComment("if branch start")
         //匿名函数的定义
         val f = NoStackFunction(TempPool.getFunctionIdentify("if_branch"), Function.currFunction)
-        when(val exp = MCFPPExprVisitor().visitExpression(ctx.expression())){
+        val expr = ctx.bucketExpression().expression()
+        if(expr == null){
+            LogProcessor.error("The condition of if statement is null.")
+            return false to f
+        }
+        when(val exp = MCFPPExprVisitor().visit(expr)){
             is ScoreBoolConcrete -> {
                 if (exp.value) {
                     //函数调用的命令
@@ -415,7 +430,12 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addComment("else-if branch start")
         //匿名函数的定义
         val f = NoStackFunction(TempPool.getFunctionIdentify("else_if_branch"), Function.currFunction)
-        when(val exp = MCFPPExprVisitor().visitExpression(ctx.expression())){
+        val expr = ctx.bucketExpression().expression()
+        if(expr == null){
+            LogProcessor.error("The condition of if statement is null.")
+            return false to f
+        }
+        when(val exp = MCFPPExprVisitor().visit(expr)){
             is ScoreBoolConcrete -> {
                 if (exp.value) {
                     //函数调用的命令
@@ -466,7 +486,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
     override fun visitWhileStatement(ctx: mcfppParser.WhileStatementContext): Any? = withCompilationContext(ctx) {
         enterWhileStatement()
-        super.visitWhileStatement(ctx)
+        visitWhileBlock(ctx.block())
         exitWhileStatement()
         return null
     }
@@ -495,9 +515,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
 
-    override fun visitWhileBlock(ctx: mcfppParser.WhileBlockContext): Any? = withCompilationContext(ctx) {
+    fun visitWhileBlock(ctx: mcfppParser.BlockContext): Any? = withCompilationContext(ctx) {
         enterWhileBlock(ctx)
-        super.visitWhileBlock(ctx)
+        visitBlock(ctx)
         exitWhileBlock()
         return null
     }
@@ -508,7 +528,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
      */
     
     @InsertCommand
-    fun enterWhileBlock(ctx: mcfppParser.WhileBlockContext) {
+    fun enterWhileBlock(ctx: mcfppParser.BlockContext) {
         //入栈
         Function.addCommand(Commands.stackIn())
         Function.addComment("while start")
@@ -521,7 +541,12 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
         GlobalScope.localNamespaces[f.namespace]!!.field.addFunction(f,false)
         //循环条件判断，此时目标函数是外while函数。条件表达式在外while中计算。
-        when(val exp = MCFPPExprVisitor().visitExpression(parent.expression())){
+        val expr = parent.bucketExpression().expression()
+        if(expr == null){
+            LogProcessor.error("The condition of while statement is null.")
+            return
+        }
+        when(val exp = MCFPPExprVisitor().visit(expr)){
             is ScoreBoolConcrete -> {
                 if(exp.value){
                     //内while函数的返回值表示循环是否被阻断，使用execute if判断。若成立，则继续运行外while函数
@@ -572,7 +597,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
     override fun visitDoWhileStatement(ctx: mcfppParser.DoWhileStatementContext): Any? = withCompilationContext(ctx) {
         enterDoWhileStatement()
-        super.visitDoWhileStatement(ctx)
+        visitDoWhileBlock(ctx.block())
         exitDoWhileStatement()
         return null
     }
@@ -601,9 +626,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
 
-    override fun visitDoWhileBlock(ctx: mcfppParser.DoWhileBlockContext): Any? = withCompilationContext(ctx) {
+    fun visitDoWhileBlock(ctx: mcfppParser.BlockContext): Any? = withCompilationContext(ctx) {
         enterDoWhileBlock(ctx)
-        super.visitDoWhileBlock(ctx)
+        visitBlock(ctx)
         exitDoWhileBlock()
         return null
     }
@@ -614,7 +639,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
      */
     
     @InsertCommand
-    fun enterDoWhileBlock(ctx: mcfppParser.DoWhileBlockContext) {
+    fun enterDoWhileBlock(ctx: mcfppParser.BlockContext) {
         Function.addComment("do while start")
         //匿名函数的定义
         val f: Function = InternalFunction("_dowhile_", Function.currFunction)
@@ -639,7 +664,12 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         )
         //递归调用
         val parent = ctx.parent as mcfppParser.DoWhileStatementContext
-        when(val exp = MCFPPExprVisitor().visitExpression(parent.expression())){
+        val expr = parent.bucketExpression().expression()
+        if(expr == null){
+            LogProcessor.error("The condition of do-while statement is null.")
+            return
+        }
+        when(val exp = MCFPPExprVisitor().visit(expr)){
             is ScoreBoolConcrete -> {
                 if(exp.value){
                     Function.addCommand("execute " +

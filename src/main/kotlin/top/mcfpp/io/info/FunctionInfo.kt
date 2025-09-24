@@ -1,10 +1,10 @@
 package top.mcfpp.io.info
 
-import top.mcfpp.antlr.mcfppParser.FunctionBodyContext
+import top.mcfpp.antlr.mcfppParser.CurlBlockContext
 import top.mcfpp.io.info.AbstractFunctionInfo.Companion.currFunction
 import top.mcfpp.model.function.Function
-import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.GenericFunction
+import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.type.MCFPPType
 
 interface AbstractFunctionInfo<T: Function>: ModelInfo<T> {
@@ -33,7 +33,7 @@ data class FunctionInfo(
     var isAbstract: Boolean,
     var tags: List<FunctionTagInfo>,
     var isOverride: Boolean,
-    var context: FunctionBodyContext?
+    var context: CurlBlockContext?
 ): AbstractFunctionInfo<Function> {
     override fun get(): Function {
         val f = Function(identifier, namespace, null)
@@ -73,7 +73,7 @@ data class GenericFunctionInfo(
     var identifier: String,
     var normalParams: List<FunctionParamInfo>,
     var readonlyParams: List<FunctionParamInfo>,
-    var context: FunctionBodyContext,
+    var context: CurlBlockContext,
     var returnType: MCFPPType,
     var isAbstract: Boolean,
     var tags: List<FunctionTagInfo>,

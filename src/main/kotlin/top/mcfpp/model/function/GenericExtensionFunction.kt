@@ -22,7 +22,7 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
      * @param name 函数的标识符
      */
     @Suppress("ConvertSecondaryConstructorToPrimary")
-    constructor(name: String, owner: CompoundData, namespace: String = Project.currNamespace, ctx: mcfppParser.FunctionBodyContext):super(name, owner, namespace, ctx)
+    constructor(name: String, owner: CompoundData, namespace: String = Project.currNamespace, ctx: mcfppParser.CurlBlockContext):super(name, owner, namespace, ctx)
 
     override fun invoke(readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>, caller: CanSelectMember?): Var<*> {
         return invoke(mapReadonlyArgs(readOnlyArgs), mapNormalArgs(normalArgs), caller)
@@ -119,7 +119,7 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
                 }
             }
             addComment(qwq)
-            MCFPPImVisitor().visitFunctionBody(ast!!)
+            MCFPPImVisitor().visitCurlBlock(ast!!)
         }
         return cf to args.filter { e -> e.value !is MCFPPValue<*> } as LinkedHashMap
     }

@@ -1,7 +1,7 @@
 package top.mcfpp.model.function
 
 import top.mcfpp.Project
-import top.mcfpp.antlr.mcfppParser.FunctionBodyContext
+import top.mcfpp.antlr.mcfppParser.CurlBlockContext
 import top.mcfpp.lib.NamespaceID
 import top.mcfpp.model.compound.CompoundData
 
@@ -9,7 +9,7 @@ open class ExtensionFunction(
     name: String,
     owner: CompoundData,
     namespace: String = Project.currNamespace,
-    context: FunctionBodyContext
+    context: CurlBlockContext
 ) : Function(name, namespace, context) {
 
     init {

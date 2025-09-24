@@ -8,7 +8,7 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.antlr.MCFPPExprVisitor
 import top.mcfpp.antlr.MCFPPImVisitor
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.antlr.mcfppParser.FunctionBodyContext
+import top.mcfpp.antlr.mcfppParser.CurlBlockContext
 import top.mcfpp.command.*
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.UnknownVar
@@ -212,7 +212,7 @@ open class Function : Member, FieldContainer, WithDocument {
     /**
      * 函数的语法树。当语法树为空的时候，函数会被直接编译而不做编译期常量优化
      */
-    var ast: FunctionBodyContext? = null
+    var ast: CurlBlockContext? = null
 
     var context: FunctionContext = FunctionContext()
 
@@ -318,7 +318,7 @@ open class Function : Member, FieldContainer, WithDocument {
      * @param identifier 函数的标识符
      * @param namespace 函数的命名空间
      */
-    constructor(identifier: String, namespace: String = Project.currNamespace, context: FunctionBodyContext?){
+    constructor(identifier: String, namespace: String = Project.currNamespace, context: CurlBlockContext?){
         this.identifier = identifier
         commands = CommandList()
         normalParams = ArrayList()
@@ -332,7 +332,7 @@ open class Function : Member, FieldContainer, WithDocument {
      * 创建一个函数，并指定它所属的接口。接口的函数总是抽象并且公开的
      * @param identifier 函数的标识符
      */
-    constructor(identifier: String, itf: Interface, context: FunctionBodyContext?) {
+    constructor(identifier: String, itf: Interface, context: CurlBlockContext?) {
         this.identifier = identifier
         commands = CommandList()
         normalParams = ArrayList()
@@ -350,7 +350,7 @@ open class Function : Member, FieldContainer, WithDocument {
      * 创建一个函数，并指定它所属的结构体。
      * @param name 函数的标识符
      */
-    constructor(name: String, template: DataTemplate, context: FunctionBodyContext?) {
+    constructor(name: String, template: DataTemplate, context: CurlBlockContext?) {
         this.identifier = name
         normalParams = ArrayList()
         namespace = template.namespace
@@ -627,7 +627,7 @@ open class Function : Member, FieldContainer, WithDocument {
         compiledFunctions[values] = cf
         cf.ast = null
         cf.runInFunction {
-            MCFPPImVisitor().visitFunctionBody(ast!!)
+            MCFPPImVisitor().visitCurlBlock(ast!!)
         }
         return cf to args.filter { it !is MCFPPValue<*> } as LinkedHashMap
     }

@@ -1,11 +1,11 @@
 package top.mcfpp.io.info
 
-import top.mcfpp.antlr.mcfppParser.FunctionBodyContext
+import top.mcfpp.antlr.mcfppParser.CurlBlockContext
 import top.mcfpp.model.function.DataTemplateConstructor
 
 data class TemplateConstructorInfo(
     val normalParams: List<FunctionParamInfo>,
-    val context: FunctionBodyContext?
+    val context: CurlBlockContext?
 ): ModelInfo<DataTemplateConstructor> {
     override fun get(): DataTemplateConstructor {
         val constructor = DataTemplateConstructor(DataTemplateInfo.currTemplate!!, null)

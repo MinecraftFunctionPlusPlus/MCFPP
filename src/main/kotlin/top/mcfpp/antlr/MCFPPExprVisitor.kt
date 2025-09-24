@@ -83,7 +83,7 @@ class MCFPPExprVisitor(
             if(visitCommonBinaryOperatorExpressionRe!! != MCFloat.ssObj){
                 visitCommonBinaryOperatorExpressionRe = visitCommonBinaryOperatorExpressionRe!!.getTempVar()
             }
-            visitCommonBinaryOperatorExpressionRe = visitCommonBinaryOperatorExpressionRe!!.binaryComputation(b!!, ctx.commonBinaryOperator(i - 1).text)
+            visitCommonBinaryOperatorExpressionRe = visitCommonBinaryOperatorExpressionRe!!.binaryComputation(b!!, ctx.op[i].text)
             processVarCache[processVarCache.size - 1] = visitCommonBinaryOperatorExpressionRe!!
         }
         processVarCache.remove(visitCommonBinaryOperatorExpressionRe!!)
@@ -105,7 +105,7 @@ class MCFPPExprVisitor(
             if(visitConditionalOrExpressionRe!! != MCFloat.ssObj){
                 visitConditionalOrExpressionRe = visitConditionalOrExpressionRe!!.getTempVar()
             }
-            visitConditionalOrExpressionRe = visitConditionalOrExpressionRe!!.binaryComputation(b!!, "||")
+            visitConditionalOrExpressionRe = visitConditionalOrExpressionRe!!.binaryComputation(b!!, ctx.op[i].text)
             processVarCache[processVarCache.size - 1] = visitConditionalOrExpressionRe!!
         }
         processVarCache.remove(visitConditionalOrExpressionRe!!)
@@ -125,7 +125,7 @@ class MCFPPExprVisitor(
         processVarCache.add(visitConditionalAndExpressionRe!!)
         for (i in 1..<ctx.equalityExpression().size) {
             val b: Var<*> = visitEqualityExpression(ctx.equalityExpression(i))
-            visitConditionalAndExpressionRe = visitConditionalAndExpressionRe!!.binaryComputation(b, "&&")
+            visitConditionalAndExpressionRe = visitConditionalAndExpressionRe!!.binaryComputation(b, ctx.op[i].text)
             processVarCache[processVarCache.size - 1] = visitConditionalAndExpressionRe!!
         }
         processVarCache.remove(visitConditionalAndExpressionRe!!)
@@ -144,7 +144,7 @@ class MCFPPExprVisitor(
         processVarCache.add(visitEqualityExpressionRe!!)
         for (i in 1..<ctx.relationalExpression().size) {
             val b: Var<*> = visitRelationalExpression(ctx.relationalExpression(i))
-            visitEqualityExpressionRe = visitEqualityExpressionRe!!.binaryComputation(b, "&&")
+            visitEqualityExpressionRe = visitEqualityExpressionRe!!.binaryComputation(b, ctx.op[i].text)
             processVarCache[processVarCache.size - 1] = visitEqualityExpressionRe!!
         }
         processVarCache.remove(visitEqualityExpressionRe!!)
@@ -163,7 +163,7 @@ class MCFPPExprVisitor(
         processVarCache.add(visitRelationalExpressionRe!!)
         for (i in 1..<ctx.additiveExpression().size) {
             val b: Var<*> = visitAdditiveExpression(ctx.additiveExpression(i))
-            visitRelationalExpressionRe = visitRelationalExpressionRe!!.binaryComputation(b, ctx.op.text)
+            visitRelationalExpressionRe = visitRelationalExpressionRe!!.binaryComputation(b, ctx.op[i].text)
             processVarCache[processVarCache.size - 1] = visitRelationalExpressionRe!!
         }
         processVarCache.remove(visitRelationalExpressionRe!!)
@@ -188,7 +188,7 @@ class MCFPPExprVisitor(
                     visitAdditiveExpressionRe = visitAdditiveExpressionRe!!.getTempVar()
                 }
             }
-            visitAdditiveExpressionRe = visitAdditiveExpressionRe!!.binaryComputation(b!!, ctx.op.text)
+            visitAdditiveExpressionRe = visitAdditiveExpressionRe!!.binaryComputation(b!!, ctx.op[i].text)
             processVarCache[processVarCache.size - 1] = visitAdditiveExpressionRe!!
         }
         processVarCache.remove(visitAdditiveExpressionRe!!)
@@ -212,7 +212,7 @@ class MCFPPExprVisitor(
             if(visitMultiplicativeExpressionRe != MCFloat.ssObj){
                 visitMultiplicativeExpressionRe = visitMultiplicativeExpressionRe!!.getTempVar()
             }
-            visitAdditiveExpressionRe = visitAdditiveExpressionRe!!.binaryComputation(b!!, ctx.op.text)
+            visitAdditiveExpressionRe = visitAdditiveExpressionRe!!.binaryComputation(b!!, ctx.op[i].text)
             processVarCache[processVarCache.size - 1] = visitMultiplicativeExpressionRe!!
         }
         processVarCache.remove(visitMultiplicativeExpressionRe!!)

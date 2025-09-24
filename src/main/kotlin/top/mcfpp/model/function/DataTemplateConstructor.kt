@@ -2,7 +2,7 @@ package top.mcfpp.model.function
 
 import top.mcfpp.antlr.MCFPPExprVisitor
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.antlr.mcfppParser.FunctionBodyContext
+import top.mcfpp.antlr.mcfppParser.CurlBlockContext
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.io.MCFPPFile
@@ -13,7 +13,7 @@ import top.mcfpp.util.Utils.addFirst
 import top.mcfpp.util.Utils.subMap
 import java.util.*
 
-open class DataTemplateConstructor(val data: DataTemplate, ctx: FunctionBodyContext?): Function(
+open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext?): Function(
     "_init_" + data.identifier.lowercase(Locale.getDefault()) + "_" + data.constructors.size,
     data,
     ctx

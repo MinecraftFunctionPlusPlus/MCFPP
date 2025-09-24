@@ -60,7 +60,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 
     override fun visitInterfaceDeclaration(ctx: mcfppParser.InterfaceDeclarationContext): Any? = withCompilationContext(ctx) {
         //注册类
-        val id = ctx.classWithoutNamespace().text
+        val id = ctx.compoundDeclaration().declarationName().classWithoutNamespace().text
         val namespace = GlobalScope.localNamespaces[Project.currNamespace]!!
 
         if (namespace.field.hasInterface(id)) {
@@ -84,18 +84,18 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     override fun visitInterfaceFunctionDeclaration(ctx: mcfppParser.InterfaceFunctionDeclarationContext): Any? = withCompilationContext(ctx) {
         //创建函数对象
         val f = Function(
-            ctx.Identifier().text,
+            ctx.functionDeclarationPart().Identifier().text,
             Interface.currInterface!!,
             null
         )
-        f.returnType = ctx.functionReturnType()?.type()?.let {
+        f.returnType = ctx.functionDeclarationPart().functionReturnType()?.type()?.let {
             MCFPPType.parseFromContextNotNull(it.typeWithoutExcl().type(), typeScope)
         }?: MCFPPPrivateType.Void
         //解析参数
-        f.addParamsFromContext(ctx.functionParams())
+        f.addParamsFromContext(ctx.functionDeclarationPart().functionParams())
         //注册函数
         if (Interface.currInterface!!.field.hasFunction(f, true)) {
-            LogProcessor.error("Already defined function:" + ctx.Identifier().text + "in interface " + Interface.currInterface!!.identifier)
+            LogProcessor.error("Already defined function:" + ctx.functionDeclarationPart().Identifier().text + "in interface " + Interface.currInterface!!.identifier)
             Function.currFunction = Function.nullFunction
         }
         return null
@@ -111,19 +111,19 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     
     override fun visitFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext): Any? = withCompilationContext(ctx) {
         //创建函数对象
-        val identifier = ctx.Identifier().text
-        val f = if(ctx.functionParams()?.readOnlyParams() != null && ctx.functionParams().readOnlyParams().parameterList().parameter().size != 0){
-            GenericFunction(identifier, Project.currNamespace, ctx.functionBody())
+        val identifier = ctx.functionDeclarationPart().Identifier().text
+        val f = if(ctx.functionDeclarationPart().functionParams()?.readOnlyParams() != null && ctx.functionDeclarationPart().functionParams().readOnlyParams().parameterList().parameter().size != 0){
+            GenericFunction(identifier, Project.currNamespace, ctx.curlBlock())
         }else {
-            Function(identifier, Project.currNamespace, ctx.functionBody())
+            Function(identifier, Project.currNamespace, ctx.curlBlock())
         }
-        f.returnType = if(ctx.functionReturnType()?.type() != null){
-            MCFPPType.parseFromContextNotNull(ctx.functionReturnType().type(), typeScope)
+        f.returnType = if(ctx.functionDeclarationPart().functionReturnType()?.type() != null){
+            MCFPPType.parseFromContextNotNull(ctx.functionDeclarationPart().functionReturnType().type(), typeScope)
         }else{
             MCFPPPrivateType.Void
         }
         //解析参数
-        ctx.functionParams()?.let { f.addParamsFromContext(it) }
+        ctx.functionDeclarationPart().functionParams()?.let { f.addParamsFromContext(it) }
         //不是类的成员
         f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
@@ -138,8 +138,8 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             namespace.field.addFunction(f,false)
         }
         if (f.isEntrance
-            && ctx.functionParams().normalParams().parameterList().parameter().size != 0
-            && (ctx.functionParams().readOnlyParams() == null || ctx.functionParams().readOnlyParams().parameterList().parameter().size != 0)
+            && ctx.functionDeclarationPart().functionParams().normalParams().parameterList().parameter().size != 0
+            && (ctx.functionDeclarationPart().functionParams().readOnlyParams() == null || ctx.functionDeclarationPart().functionParams().readOnlyParams().parameterList().parameter().size != 0)
             ) {
             LogProcessor.error("Entrance function shouldn't have parameter:" + f.namespaceID)
         }
@@ -150,10 +150,10 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //创建函数对象
         val f: Function
         //是否是内联函数
-        val identifier : String = ctx.Identifier().text
-        f = InlineFunction(identifier, Project.currNamespace, ctx.functionBody())
+        val identifier : String = ctx.functionDeclarationPart().Identifier().text
+        f = InlineFunction(identifier, Project.currNamespace, ctx.curlBlock())
         //解析参数
-        f.addParamsFromContext(ctx.functionParams())
+        f.addParamsFromContext(ctx.functionDeclarationPart().functionParams())
         //不是类的成员
         f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
@@ -165,8 +165,8 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             Function.currFunction = Function.nullFunction
         }
         if (f.isEntrance
-            && ctx.functionParams().normalParams().parameterList().parameter().size != 0
-            && (ctx.functionParams().readOnlyParams() == null || ctx.functionParams().readOnlyParams().parameterList().parameter().size != 0)
+            && ctx.functionDeclarationPart().functionParams().normalParams().parameterList().parameter().size != 0
+            && (ctx.functionDeclarationPart().functionParams().readOnlyParams() == null || ctx.functionDeclarationPart().functionParams().readOnlyParams().parameterList().parameter().size != 0)
         ) {
             LogProcessor.error("Entrance function shouldn't have parameter:" + f.namespaceID)
         }
@@ -177,18 +177,18 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //创建函数对象
         val f: Function
         //是否是编译时函数
-        val identifier : String = ctx.Identifier().text
+        val identifier : String = ctx.functionDeclarationPart().Identifier().text
         f = CompileTimeFunction(
             identifier,Project.currNamespace,
-            ctx.functionBody()
+            ctx.curlBlock()
         )
-        f.returnType = if(ctx.functionReturnType()?.type() != null){
-            MCFPPType.parseFromContextNotNull(ctx.functionReturnType().type(), typeScope)
+        f.returnType = if(ctx.functionDeclarationPart().functionReturnType()?.type() != null){
+            MCFPPType.parseFromContextNotNull(ctx.functionDeclarationPart().functionReturnType().type(), typeScope)
         }else{
             MCFPPPrivateType.Void
         }
         //解析参数
-        f.addParamsFromContext(ctx.functionParams())
+        f.addParamsFromContext(ctx.functionDeclarationPart().functionParams())
         //不是类的成员
         f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
@@ -201,8 +201,8 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             Function.currFunction = Function.nullFunction
         }
         if (f.isEntrance
-            && ctx.functionParams().normalParams().parameterList().parameter().size != 0
-            && (ctx.functionParams().readOnlyParams() == null || ctx.functionParams().readOnlyParams().parameterList().parameter().size != 0)
+            && ctx.functionDeclarationPart().functionParams().normalParams().parameterList().parameter().size != 0
+            && (ctx.functionDeclarationPart().functionParams().readOnlyParams() == null || ctx.functionDeclarationPart().functionParams().readOnlyParams().parameterList().parameter().size != 0)
         ) {
             LogProcessor.error("Entrance function shouldn't have parameter:" + f.namespaceID)
         }
@@ -230,9 +230,9 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val data = type.instanceData
         //创建函数对象
         val f = if(ctx.functionParams().readOnlyParams() != null && ctx.functionParams().readOnlyParams().parameterList().parameter().size != 0){
-            GenericExtensionFunction(ctx.Identifier().text, data, Project.currNamespace, ctx.functionBody())
+            GenericExtensionFunction(ctx.Identifier().text, data, Project.currNamespace, ctx.curlBlock())
         }else{
-            ExtensionFunction(ctx.Identifier().text, data, Project.currNamespace, ctx.functionBody())
+            ExtensionFunction(ctx.Identifier().text, data, Project.currNamespace, ctx.curlBlock())
         }
         //解析参数
         f.accessModifier = AccessModifier.PUBLIC
@@ -259,13 +259,13 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
      */
     
     override fun visitNativeFuncDeclaration(ctx: mcfppParser.NativeFuncDeclarationContext): Any? = withCompilationContext(ctx) {
-        val nf = NativeFunction(ctx.Identifier().text, Project.currNamespace)
-        nf.returnType = if(ctx.functionReturnType()?.type() != null){
-            MCFPPType.parseFromContextNotNull(ctx.functionReturnType().type(), typeScope)
+        val nf = NativeFunction(ctx.functionDeclarationPart().Identifier().text, Project.currNamespace)
+        nf.returnType = if(ctx.functionDeclarationPart().functionReturnType()?.type() != null){
+            MCFPPType.parseFromContextNotNull(ctx.functionDeclarationPart().functionReturnType().type(), typeScope)
         }else{
             MCFPPPrivateType.Void
         }
-        nf.addParamsFromContext(ctx.functionParams())
+        nf.addParamsFromContext(ctx.functionDeclarationPart().functionParams())
         try {
             //根据JavaRefer找到类
             val refer = ctx.javaRefer().text
@@ -291,7 +291,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 }
             }
             if(!hasFind){
-                throw NoSuchMethodException("Cannot find method ${ctx.Identifier().text} with correct parameters in class $clsName")
+                throw NoSuchMethodException("Cannot find method ${ctx.functionDeclarationPart().Identifier().text} with correct parameters in class $clsName")
             }
         } catch (e: ClassNotFoundException) {
             LogProcessor.error("Cannot find java class: " + e.message)
@@ -305,7 +305,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         if (!namespace.field.hasFunction(nf, true)) {
             namespace.field.addFunction(nf,false)
         } else {
-            LogProcessor.error("Already defined function:" + ctx.Identifier().text)
+            LogProcessor.error("Already defined function:" + ctx.functionDeclarationPart().Identifier().text)
             Function.currFunction = Function.nullFunction
         }
         return nf
@@ -315,7 +315,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 //region template
     override fun visitTemplateDeclaration(ctx: TemplateDeclarationContext): Any? = withCompilationContext(ctx) {
         //获取注册的模板
-        val id = ctx.classWithoutNamespace().text
+        val id = (ctx.declarationName()?: ctx.compoundDeclaration().declarationName()).classWithoutNamespace().text
         val namespace1 = GlobalScope.localNamespaces[Project.currNamespace]!!
         val template = if(namespace1.field.hasTemplate(id)){
             namespace1.field.getTemplate(id)!!
@@ -325,7 +325,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         DataTemplate.currTemplate = template
         currClassOrTemplate = template
         typeScope = template.field
-        for (c in ctx.className()){
+        for (c in ctx.compoundDeclaration()?.extendName() ?: emptyList()){
             //是否存在继承
             val (namespace, identifier) = c.text.splitNamespaceID()
             val s = GlobalScope.getTemplate(namespace, identifier)
@@ -371,7 +371,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 
     override fun visitObjectTemplateDeclaration(ctx: mcfppParser.ObjectTemplateDeclarationContext): Any? = withCompilationContext(ctx) {
         //注册模板
-        val id = ctx.classWithoutNamespace().text
+        val id = ctx.compoundDeclaration().declarationName().classWithoutNamespace().text
         val namespace1 = GlobalScope.localNamespaces[Project.currNamespace]!!
         val objectTemplate = namespace1.field.getObject(id)
         if(objectTemplate !is ObjectDataTemplate){
@@ -380,7 +380,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         DataTemplate.currTemplate = objectTemplate
         currClassOrTemplate = objectTemplate
         typeScope = objectTemplate.field
-        for (c in ctx.className()){
+        for (c in ctx.compoundDeclaration().extendName()){
             //是否存在继承
             val (namespace, identifier) = c.text.splitNamespaceID()
             val s = GlobalScope.getTemplate(namespace, identifier)
@@ -414,7 +414,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         DataTemplate.currTemplate = template
         currClassOrTemplate = template
         typeScope = template.field
-        for (c in ctx.className()){
+        for (c in ctx.extendName()){
             //是否存在继承
             val (namespace, identifier) = c.text.splitNamespaceID()
             val s = GlobalScope.getTemplate(namespace, identifier)
@@ -497,37 +497,37 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 
     override fun visitTemplateFunctionDeclaration(ctx: mcfppParser.TemplateFunctionDeclarationContext): Any = withCompilationContext(ctx) {
         //创建函数对象
-        val f = if(ctx.functionParams().readOnlyParams() != null && ctx.functionParams().readOnlyParams().parameterList().parameter().size != 0){
+        val f = if(ctx.functionDeclarationPart().functionParams().readOnlyParams() != null && ctx.functionDeclarationPart().functionParams().readOnlyParams().parameterList().parameter().size != 0){
             GenericFunction(
-                ctx.Identifier().text,
+                ctx.functionDeclarationPart().Identifier().text,
                 DataTemplate.currTemplate!!,
-                ctx.functionBody()
+                ctx.curlBlock()
             )
         }else {
             Function(
-                ctx.Identifier().text,
+                ctx.functionDeclarationPart().Identifier().text,
                 DataTemplate.currTemplate!!,
-                ctx.functionBody()
+                ctx.curlBlock()
             )
         }
-        f.returnType = if(ctx.functionReturnType()?.type() != null){
-            MCFPPType.parseFromContextNotNull(ctx.functionReturnType().type(), typeScope)
+        f.returnType = if(ctx.functionDeclarationPart().functionReturnType()?.type() != null){
+            MCFPPType.parseFromContextNotNull(ctx.functionDeclarationPart().functionReturnType().type(), typeScope)
         }else{
             MCFPPPrivateType.Void
         }
         //解析参数
-        f.addParamsFromContext(ctx.functionParams())
+        f.addParamsFromContext(ctx.functionDeclarationPart().functionParams())
         //注册函数
         //注册函数
         if (DataTemplate.currTemplate!!.field.hasFunction(f, true)) {
             if(ctx.OVERRIDE() != null){
                 if(isStatic){
-                    LogProcessor.error("Cannot override static method ${ctx.Identifier()}")
+                    LogProcessor.error("Cannot override static method ${ctx.functionDeclarationPart().Identifier()}")
                     throw Exception()
                 }
                 f.isOverride = true
             }else{
-                LogProcessor.error("Already defined function:" + ctx.Identifier().text + "in template " + DataTemplate.currTemplate!!.identifier)
+                LogProcessor.error("Already defined function:" + ctx.functionDeclarationPart().Identifier().text + "in template " + DataTemplate.currTemplate!!.identifier)
                 Function.currFunction = Function.nullFunction
             }
         }else {
@@ -598,7 +598,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
         //类构造函数
         //创建构造函数对象，注册函数
-        val f = DataTemplateConstructor(DataTemplate.currTemplate!!, ctx.functionBody())
+        val f = DataTemplateConstructor(DataTemplate.currTemplate!!, ctx.curlBlock())
         f.file = MCFPPFile.currFile!!
         f.addParamsFromContext(ctx.normalParams())
         return f

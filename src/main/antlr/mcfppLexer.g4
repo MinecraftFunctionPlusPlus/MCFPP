@@ -2,6 +2,19 @@ lexer grammar mcfppLexer;
 
 import unicodeClass;
 
+@members {
+boolean afterNewline = true;
+
+@Override
+public Token nextToken() {
+    Token token = super.nextToken();
+    if (token.getType() != NL && token.getType() != WS) {
+        afterNewline = false;
+    }
+    return token;
+}
+}
+
 //Base Character Set
 RESERVED: '...' ;
 DOT: '.' ;
@@ -14,7 +27,9 @@ LCURL: '{' -> pushMode(DEFAULT_MODE);
 RCURL: '}' -> popMode;
 MULT: '*' ;
 MOD: '%' ;
-DIV: '/'  -> pushMode(OrgCommand);
+SLASH
+    : '/' {if(afterNewline){afterNewline = false; pushMode(OrgCommand);}}
+    ;
 ADD: '+' ;
 SUB: '-' ;
 INCR: '++' ;
@@ -221,15 +236,19 @@ BooleanConstant
 
 LineString: ('"' .*? '"' )|( '\'' .*? '\'' );
 
-WS  :  [ \t\r\n\u000C]+ -> skip
+NL
+    :   ('\r'? '\n')+ {afterNewline = true;}
+    ;
+
+WS  :  [ \t\u000C]+ -> skip
     ;
 
 DOC_COMMENT
-    :   '#{' .*? '}#'
+    :   '###' .*? '###'
     ;
 
 SIMPLE_DOC_COMMENT
-    :   '#>'.*? '\n'
+    :   '###'.*? '\n'
     ;
 
 BLOCK_COMMENT
@@ -243,7 +262,7 @@ LINE_COMMENT
 mode OrgCommand ;
 
 OrgCommandText
-    :  ~('$'|[\r\n])+ | '$'
+    :  ~([$/])+ | '$'
     ;
 
 OrgCommandExprStart
@@ -251,7 +270,7 @@ OrgCommandExprStart
     ;
 
 OrgCommandEnd
-    :   ('\r\n' | '\n') -> popMode
+    :   SLASH -> popMode
     ;
 
 mode MultiLineString ;

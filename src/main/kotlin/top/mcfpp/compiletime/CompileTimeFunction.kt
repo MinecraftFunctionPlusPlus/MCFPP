@@ -7,7 +7,7 @@ import top.mcfpp.model.function.Function
 
 class CompileTimeFunction : Function {
     @Suppress("ConvertSecondaryConstructorToPrimary")
-    constructor(name:String, namespace:String, context:mcfppParser.FunctionBodyContext):super(name,namespace, context)
+    constructor(name:String, namespace:String, context:mcfppParser.CurlBlockContext):super(name,namespace, context)
 
     fun setField(parent: IScope){
         this.scope = CompileTimeFunctionScope(parent)

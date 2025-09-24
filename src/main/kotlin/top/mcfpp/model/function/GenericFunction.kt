@@ -21,19 +21,19 @@ class GenericFunction : Function, Generic<Function> {
      * @param identifier 函数的标识符
      * @param namespace 函数的命名空间
      */
-    constructor(identifier: String, namespace: String = Project.currNamespace, ctx: mcfppParser.FunctionBodyContext) : super(identifier, namespace, ctx)
+    constructor(identifier: String, namespace: String = Project.currNamespace, ctx: mcfppParser.CurlBlockContext) : super(identifier, namespace, ctx)
 
     /**
      * 创建一个函数，并指定它所属的接口。接口的函数总是抽象并且公开的
      * @param identifier 函数的标识符
      */
-    constructor(identifier: String, itf: Interface, ctx: mcfppParser.FunctionBodyContext) : super(identifier, itf, ctx)
+    constructor(identifier: String, itf: Interface, ctx: mcfppParser.CurlBlockContext) : super(identifier, itf, ctx)
 
     /**
      * 创建一个函数，并指定它所属的结构体。
      * @param name 函数的标识符
      */
-    constructor(name: String, template: DataTemplate, ctx: mcfppParser.FunctionBodyContext) : super(
+    constructor(name: String, template: DataTemplate, ctx: mcfppParser.CurlBlockContext) : super(
         name,
         template,
         ctx
@@ -146,7 +146,7 @@ class GenericFunction : Function, Generic<Function> {
                 }
             }
             addComment(qwq)
-            MCFPPImVisitor().visitFunctionBody(ast!!)
+            MCFPPImVisitor().visitCurlBlock(ast!!)
         }
         return cf to args.filter { e -> e.value !is MCFPPValue<*> } as LinkedHashMap
     }

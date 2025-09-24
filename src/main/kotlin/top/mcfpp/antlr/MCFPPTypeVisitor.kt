@@ -69,7 +69,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
 
     override fun visitInterfaceDeclaration(ctx: mcfppParser.InterfaceDeclarationContext): Unit = withCompilationContext(ctx){
         //注册类
-        val id = ctx.classWithoutNamespace().text
+        val id = ctx.compoundDeclaration().declarationName().classWithoutNamespace().text
         val nsp = GlobalScope.localNamespaces[Project.currNamespace]!!
         if (nsp.field.hasDeclaredType(id)) {
             //重复声明
@@ -78,7 +78,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         } else {
             //如果没有声明过这个类
             val itf = Interface(id, Project.currNamespace)
-            for (p in ctx.className()){
+            for (p in ctx.compoundDeclaration().extendName()){
                 //是否存在继承
                 val nsn = p.text.splitNamespaceID()
                 val namespace  = nsn.first
@@ -96,7 +96,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
 
     override fun visitTemplateDeclaration(ctx: mcfppParser.TemplateDeclarationContext): Unit = withCompilationContext(ctx) {
         //注册模板
-        val id = ctx.classWithoutNamespace().text
+        val id = (ctx.declarationName()?: ctx.compoundDeclaration().declarationName()).classWithoutNamespace().text
         val nsp = GlobalScope.localNamespaces[Project.currNamespace]!!
         if (nsp.field.hasDeclaredType(id)) {
             //重复声明
@@ -118,7 +118,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
      */
     override fun visitObjectTemplateDeclaration(ctx: mcfppParser.ObjectTemplateDeclarationContext): Unit = withCompilationContext(ctx){
         //注册模板
-        val id = ctx.classWithoutNamespace().text
+        val id = ctx.compoundDeclaration().declarationName().classWithoutNamespace().text
         val nsp = GlobalScope.localNamespaces[Project.currNamespace]!!
         if (nsp.field.hasObject(id)) {
             //重复声明
