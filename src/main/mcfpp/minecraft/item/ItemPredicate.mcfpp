@@ -29,18 +29,18 @@ data NotItemPredicate: ItemPredicatePart {
     predicate as ItemPredicate;
 }
 
-#{
+###
 由一个`|`隔开的两个测试项组成的测试项，两个测试项的关系为或
-}#
+###
 data OrItemPredicatePart: ItemPredicatePart {
     predicate1 as ItemPredicatePart;
     predicate2 as ItemPredicatePart;
 }
 
 #========================物品谓词=====================
-#{
+###
 对应于`minecraft:item_predicate`，用于指定某个物品需要满足的特征。
-}#
+###
 @From<"top.mcfpp.mni.minecraft.ItemPredicateData">
 data ItemPredicate {
     parts as list<ItemPredicatePart>! = [];

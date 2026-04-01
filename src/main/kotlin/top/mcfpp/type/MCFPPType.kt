@@ -96,7 +96,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
         normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier,
     ): Pair<Function, Boolean> {
-        val member = objectData.field.getFunction(key, readOnlyArgs, normalArgs)
+        val member = objectData.scope.getFunction(key, readOnlyArgs, normalArgs)
         return if(member is UnknownFunction){
             Pair(UnknownFunction(key), true)
         }else{
@@ -171,14 +171,14 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                 if (tag !is ListTag) return false
                 if (tag.size == 0) return true
                 //检查List中的元素是否符合泛型
-                return generic.checkNBTType(tag[0])
+                return generic[0].checkNBTType(tag[0])
             }
 
             is MCFPPDictType -> {
                 if (tag !is CompoundTag) return false
                 //检查Dict中的元素是否符合泛型
                 for (key in tag.values()) {
-                    if (!generic.checkNBTType(key)) return false
+                    if (!generic[0].checkNBTType(key)) return false
                 }
                 return true
             }
@@ -259,6 +259,22 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             typeCache[this.simpleName] = this
         }
 
+        fun parsePrimitiveType(ctx: TypeContext): MCFPPType?{
+            val t = ctx.typeWithoutExcl().normalType()?: return null
+            return t.NBT()?.let { MCFPPNBTType.NBT }
+                ?:t.BOOL()?.let { MCFPPBaseType.Bool }
+                ?:t.BYTE()?.let { MCFPPNBTType.Byte }
+                ?:t.BYTEARRAY()?.let { MCFPPNBTType.ByteArray }
+                ?:t.DOUBLE()?.let { MCFPPNBTType.Double }
+                ?:t.FLOAT()?.let { MCFPPBaseType.Float }
+                ?:t.INT()?.let { MCFPPBaseType.Int }
+                ?:t.INTARRAY()?.let { MCFPPNBTType.IntArray }
+                ?:t.LONG()?.let { MCFPPNBTType.Long }
+                ?:t.LONGARRAY()?.let { MCFPPNBTType.LongArray }
+                ?:t.SHORT()?.let { MCFPPNBTType.Short }
+                ?:t.STRING()?.let { MCFPPBaseType.String }
+        }
+
         /**
          * 根据类型标识符中获取一个类型
          */
@@ -301,6 +317,8 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             val nspID = typeStr.splitNamespaceID()
             val template = GlobalScope.getTemplate(nspID.first, nspID.second)
             if(template !=null) return template.getType()
+            val obj = GlobalScope.getObject(nspID.first, nspID.second)
+            if(obj !=null) return obj.getType()
             val enum = GlobalScope.getEnum(nspID.first, nspID.second)
             if(enum != null) return enum.getType()
 
@@ -331,24 +349,36 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             }
             //list类型
             if(ctx.LIST() != null){
-                return MCFPPListType(parseFromContext(ctx.type(), typeScope)?: run {
-                    LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
-                    MCFPPBaseType.Any
-                })
+                return if(ctx.type() != null){
+                    MCFPPListType(parseFromContext(ctx.type(), typeScope)?: run {
+                        LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
+                        MCFPPBaseType.Any
+                    })
+                }else{
+                    MCFPPListType(MCFPPPrivateType.Wildcard)
+                }
             }
             //dict类型
             if(ctx.DICT()!= null){
-                return MCFPPDictType(parseFromContext(ctx.type(), typeScope)?: run {
-                    LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
-                    MCFPPBaseType.Any
-                })
+                if(ctx.type() != null){
+                    return MCFPPDictType(parseFromContext(ctx.type(), typeScope)?: run {
+                        LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
+                        MCFPPBaseType.Any
+                    })
+                }else{
+                    MCFPPDictType(MCFPPPrivateType.Wildcard)
+                }
             }
             //map类型
             if(ctx.MAP()!= null){
-                return MCFPPMapType(parseFromContext(ctx.type(), typeScope)?: run {
-                    LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
-                    MCFPPBaseType.Any
-                })
+                if(ctx.type() != null){
+                    return MCFPPMapType(parseFromContext(ctx.type(), typeScope)?: run {
+                        LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
+                        MCFPPBaseType.Any
+                    })
+                }else{
+                    MCFPPMapType(MCFPPPrivateType.Wildcard)
+                }
             }
             //selector类型
             if(ctx.ENTITY() != null){

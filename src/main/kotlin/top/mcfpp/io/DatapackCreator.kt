@@ -114,6 +114,11 @@ object DatapackCreator {
         } catch (e: IOException) {
             throw e
         }
+        //如果有额外数据，复制并覆盖可能的重复文件
+        if(Project.config.dataPath != null){
+            LogProcessor.debug("Copying extra data...")
+            Utils.copyRecursively(Project.config.dataPath!!, Paths.get(path + "\\${Project.config.name}\\data"), true)
+        }
     }
 
     private fun genFunction(currPath: String, f: Function){
@@ -149,33 +154,45 @@ object DatapackCreator {
 
     private fun genObject(currPath: String, obj: CompoundData){
         //成员
-        obj.field.forEachFunction {
+        obj.scope.forEachFunction {
             genFunction("${currPath}\\function\\${obj.identifier.toSnakeCase()}\\static", it)
+            it.compiledFunctions.values.forEach {qwq ->
+                genFunction("${currPath}\\function\\${obj.identifier.toSnakeCase()}\\static", qwq)
+            }
         }
     }
 
     private fun genTemplate(currPath: String, t: DataTemplate){
         //成员
-        t.field.forEachFunction {
+        t.scope.forEachFunction {
             genTemplateFunction("$currPath\\function\\${t.identifier.toSnakeCase()}", it)
+            it.compiledFunctions.values.forEach {qwq ->
+                genTemplateFunction("$currPath\\function\\${t.identifier.toSnakeCase()}", qwq)
+            }
         }
         t.constructors.forEach {
             genTemplateFunction("$currPath\\function\\${t.identifier.toSnakeCase()}", it)
+            it.compiledFunctions.values.forEach {qwq ->
+                genTemplateFunction("$currPath\\function\\${t.identifier.toSnakeCase()}", qwq)
+            }
         }
     }
 
     private fun genNamespace(path: String, namespace: MutableMap.MutableEntry<String, Namespace>) {
         val currPath = "$path\\${Project.config.name}\\data\\${namespace.key}"
 
-        namespace.value.field.forEachFunction {
+        namespace.value.scope.forEachFunction {
             genFunction("$currPath\\function", it)
+            it.compiledFunctions.values.forEach { qwq ->
+                genFunction("$currPath\\function", qwq)
+            }
         }
 
-        namespace.value.field.forEachTemplate {
+        namespace.value.scope.forEachTemplate {
             genTemplate(currPath, it)
         }
 
-        namespace.value.field.forEachObject {
+        namespace.value.scope.forEachObject {
             genObject(currPath, it)
         }
     }

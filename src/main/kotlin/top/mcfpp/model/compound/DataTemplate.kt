@@ -2,18 +2,17 @@ package top.mcfpp.model.compound
 
 import top.mcfpp.Project
 import top.mcfpp.antlr.mcfppParser
-import top.mcfpp.core.lang.ConcreteVar
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
-import top.mcfpp.model.scope.CompoundDataScope
-import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.function.DataTemplateConstructor
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.property.Property
+import top.mcfpp.model.scope.CompoundDataScope
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.type.MCFPPBaseType
@@ -21,6 +20,7 @@ import top.mcfpp.type.MCFPPDataTemplateType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
+import top.mcfpp.util.Utils.v
 
 /**
  * 结构体是一种和类的语法极为相似的数据结构。在结构体中，只能有int类型的数据，或者说记分板的数据作为结构体的成员。
@@ -50,20 +50,26 @@ open class DataTemplate : FieldContainer, CompoundData {
      * 调用构造函数之前对成员进行初始化的部分
      */
     val preInit = HashMap<String, mcfppParser.ExpressionContext>()
-    val preInit2 = HashMap<String, Var<*>>()    //HashMap<String, MCFPPValue<*>>
 
+    var companionObject: DataTemplate? = null
+
+    var isInterface = false
+
+    var isAbstract = false
+
+    var isFinal = false
 
     /**
      * 获取这个容器中变量应该拥有的前缀
      * @return 其中的变量将会添加的前缀
      */
     override val prefix: String
-        get() = namespace + "_template_" + identifier + "_"
+        get() = namespace + "_${isInterface.v({"template"}, {"interface"})}_" + identifier + "_"
 
     @Suppress("ConvertSecondaryConstructorToPrimary")
     constructor(identifier: String, namespace: String = Project.currNamespace){
         this.identifier = identifier
-        field = top.mcfpp.model.scope.CompoundDataScope(ArrayList())
+        scope = CompoundDataScope(ArrayList())
         this.namespace = namespace
     }
 
@@ -81,7 +87,7 @@ open class DataTemplate : FieldContainer, CompoundData {
      * @return 返回值
      */
     fun checkCompoundStruct(compoundTag: CompoundTag) : Boolean {
-        for (member in field.allVars.filter { it !is ConcreteVar<*,*> }){
+        for (member in scope.allVars){
             if(!compoundTag.containsKey(member.identifier)) return false
             if(!member.type.checkNBTType(compoundTag[member.identifier]!!)) return false
         }
@@ -89,7 +95,7 @@ open class DataTemplate : FieldContainer, CompoundData {
     }
 
     fun checkDictionaryStruct(dict: Map<String, Var<*>>) : Boolean {
-        for (member in field.allVars.filter { it !is ConcreteVar<*,*> && !it.nullable }){
+        for (member in scope.allVars.filter { !it.nullable }){
             if(!dict.containsKey(member.identifier)) return false
             if(!dict[member.identifier]!!.type.isSubOf(member.type)) return false
         }
@@ -108,6 +114,10 @@ open class DataTemplate : FieldContainer, CompoundData {
     override fun addMember(member: Member): Boolean {
         return when(member){
             is DataTemplateConstructor -> {
+                if(this.isAbstract){
+                    LogProcessor.error("Abstract DataTemplate Constructor")
+                    return false
+                }
                 if (constructors.contains(member)) {
                     return false
                 } else {
@@ -116,19 +126,23 @@ open class DataTemplate : FieldContainer, CompoundData {
                 }
             }
             is Function -> {
-                field.addFunction(member, false)
+                if(member.isAbstract && !this.isAbstract){
+                    LogProcessor.error("Cannot declare an abstract function in a non-abstract template")
+                    return false
+                }
+                scope.addFunction(member, false)
             }
             is Var<*> -> {
                 if(member is DataTemplateObject){
                     if(ifInfinitiveReference(member.templateType)) {
                         LogProcessor.error("Infinitive reference: ${member.templateType.identifier} -> ${this.identifier}")
-                        return field.putVar(member.identifier, UnknownVar(member.identifier))
+                        return scope.putVar(member.identifier, UnknownVar(member.identifier))
                     }
                 }
-                field.putVar(member.identifier, member)
+                scope.putVar(member.identifier, member)
             }
             is Property -> {
-                field.putProperty(member.identifier, member)
+                scope.putProperty(member.identifier, member)
             }
             else -> {
                 throw IllegalArgumentException("")
@@ -136,26 +150,35 @@ open class DataTemplate : FieldContainer, CompoundData {
         }
     }
 
-    override fun extends(compoundData: CompoundData): CompoundData {
-        if(parent.contains(compoundData)){
-            LogProcessor.warn("Already extends template '${compoundData.identifier}'")
-            return this
-        }
-        super.extends(compoundData)
-        //把所有成员都塞进去
-        compoundData.field.forEachVar {
-            val b = field.getVar(it.identifier) != null
-            if(b){
-                LogProcessor.warn("Duplicate var '${it.identifier}' in template '${compoundData.identifier}'. Overriding it.")
+    fun flatExtends(): CompoundData {
+        for (compoundData in parent){
+            //把所有成员都塞进去
+            compoundData.scope.forEachVar {
+                val b = scope.getVar(it.identifier) != null
+                if(b){
+                    LogProcessor.warn("Duplicate var '${it.identifier}' in template '$identifier'. Overriding it.")
+                }
+                scope.putVar(it.identifier, it, true)
             }
-            field.putVar(it.identifier, it, true)
-        }
-        compoundData.field.forEachProperty {
-            val b = field.getProperty(it.identifier) != null
-            if(b){
-                LogProcessor.warn("Duplicate property '${it.identifier}' in template '${compoundData.identifier}'. Overriding it.")
+            compoundData.scope.forEachProperty {
+                val b = scope.getProperty(it.identifier) != null
+                if(b){
+                    LogProcessor.warn("Duplicate property '${it.identifier}' in template '$identifier'. Overriding it.")
+                }
+                scope.putProperty(it.identifier, it, true)
             }
-            field.putProperty(it.identifier, it, true)
+        }
+        //函数继承检测
+        for (f in this.scope.functions.values.flatten().filter { it.isOverride }){
+            var isFound = false
+            for (compoundData in parent){
+                if(compoundData.scope.hasFunction(f, true)){
+                    isFound = true
+                }
+            }
+            if(!isFound){
+                LogProcessor.error("Function '${f.identifier}' in template '$identifier' overrides nothing.")
+            }
         }
         return this
     }
@@ -167,7 +190,7 @@ open class DataTemplate : FieldContainer, CompoundData {
 
     fun getConstructorByString(normalParams: List<String>): DataTemplateConstructor?{
         return getConstructorByType(
-            ArrayList(normalParams.map { MCFPPType.parseFromString(it, field)?: MCFPPBaseType.Any })
+            ArrayList(normalParams.map { MCFPPType.parseFromString(it, scope)?: MCFPPBaseType.Any })
         )
     }
 

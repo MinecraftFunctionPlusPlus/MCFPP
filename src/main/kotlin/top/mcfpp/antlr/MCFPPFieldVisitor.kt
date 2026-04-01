@@ -6,6 +6,7 @@ import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.antlr.mcfppParser.TemplateDeclarationContext
 import top.mcfpp.compiletime.CompileTimeFunction
 import top.mcfpp.core.lang.MCFPPValue
+import top.mcfpp.core.lang.UnionTypeVar
 import top.mcfpp.core.lang.UnionTypeVarConcrete
 import top.mcfpp.core.lang.Var
 import top.mcfpp.exception.UndefinedException
@@ -13,7 +14,9 @@ import top.mcfpp.io.MCFPPFile
 import top.mcfpp.model.Member
 import top.mcfpp.model.Member.AccessModifier
 import top.mcfpp.model.Namespace
-import top.mcfpp.model.compound.*
+import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.ObjectDataTemplate
+import top.mcfpp.model.compound.TypeDataTemplate
 import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.property.Property
@@ -36,11 +39,9 @@ import kotlin.reflect.jvm.javaMethod
  */
 open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
 
-    protected var isStatic = false
+    protected var isInObject = false
 
     protected lateinit var typeScope : IScopeWithType
-
-    private var currClassOrTemplate: CompoundData? = null
 
     /**
      * 遍历整个文件。一个文件包含了命名空间的声明，函数的声明，类的声明以及全局变量的声明。全局变量是可以跨文件调用的。
@@ -48,59 +49,13 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
      * @return null
      */
     override fun visitCompilationUnit(ctx: mcfppParser.CompilationUnitContext): Any? = withCompilationContext(ctx) {
-        typeScope = GlobalScope.localNamespaces[Project.currNamespace]!!.field
+        typeScope = GlobalScope.localNamespaces[Project.currNamespace]!!.scope
         //文件结构，类和函数
         for (t in ctx.typeDeclaration()) {
             visit(t)
         }
         return null
     }
-
-//region interface
-
-    override fun visitInterfaceDeclaration(ctx: mcfppParser.InterfaceDeclarationContext): Any? = withCompilationContext(ctx) {
-        //注册类
-        val id = ctx.compoundDeclaration().declarationName().classWithoutNamespace().text
-        val namespace = GlobalScope.localNamespaces[Project.currNamespace]!!
-
-        if (namespace.field.hasInterface(id)) {
-            //重复声明
-            Interface.currInterface = namespace.field.getInterface(id)
-        } else {
-            throw UndefinedException("Interface Should have been defined: $id")
-        }
-        typeScope = Interface.currInterface!!.field
-        currClassOrTemplate = Interface.currInterface
-        //接口成员
-        for (m in ctx.interfaceBody().interfaceFunctionDeclaration()){
-            visit(m)
-        }
-        typeScope = MCFPPFile.currFile!!.field.namespaceField
-        currClassOrTemplate = null
-        return null
-    }
-
-
-    override fun visitInterfaceFunctionDeclaration(ctx: mcfppParser.InterfaceFunctionDeclarationContext): Any? = withCompilationContext(ctx) {
-        //创建函数对象
-        val f = Function(
-            ctx.functionDeclarationPart().Identifier().text,
-            Interface.currInterface!!,
-            null
-        )
-        f.returnType = ctx.functionDeclarationPart().functionReturnType()?.type()?.let {
-            MCFPPType.parseFromContextNotNull(it.typeWithoutExcl().type(), typeScope)
-        }?: MCFPPPrivateType.Void
-        //解析参数
-        f.addParamsFromContext(ctx.functionDeclarationPart().functionParams())
-        //注册函数
-        if (Interface.currInterface!!.field.hasFunction(f, true)) {
-            LogProcessor.error("Already defined function:" + ctx.functionDeclarationPart().Identifier().text + "in interface " + Interface.currInterface!!.identifier)
-            Function.currFunction = Function.nullFunction
-        }
-        return null
-    }
-//endregion
 
 //region function
     /**
@@ -128,14 +83,14 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
         val namespace = GlobalScope.localNamespaces[f.namespace]!!
-        if (namespace.field.hasFunction(f, true)) {
+        if (namespace.scope.hasFunction(f, true)) {
             LogProcessor.error("Already defined function: " + f.namespaceID)
             Function.currFunction = Function.nullFunction
-        } else if(namespace.field.hasDeclaredType(f.identifier)) {
+        } else if(namespace.scope.hasDeclaredType(f.identifier)) {
             LogProcessor.error("Function name conflicted with type name: " + f.identifier)
             Function.currFunction = Function.nullFunction
         } else{
-            namespace.field.addFunction(f,false)
+            namespace.scope.addFunction(f,false)
         }
         if (f.isEntrance
             && ctx.functionDeclarationPart().functionParams().normalParams().parameterList().parameter().size != 0
@@ -158,8 +113,8 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
         val namespace = GlobalScope.localNamespaces[f.namespace]!!
-        if (!namespace.field.hasFunction(f, true)) {
-            namespace.field.addFunction(f,false)
+        if (!namespace.scope.hasFunction(f, true)) {
+            namespace.scope.addFunction(f,false)
         } else {
             LogProcessor.error("Already defined function:" + f.namespaceID)
             Function.currFunction = Function.nullFunction
@@ -193,9 +148,9 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
         val namespace = GlobalScope.localNamespaces[f.namespace]!!
-        if (!namespace.field.hasFunction(f, true)) {
-            f.setField(namespace.field)
-            namespace.field.addFunction(f,false)
+        if (!namespace.scope.hasFunction(f, true)) {
+            f.setField(namespace.scope)
+            namespace.scope.addFunction(f,false)
         } else {
             LogProcessor.error("Already defined function:" + f.namespaceID)
             Function.currFunction = Function.nullFunction
@@ -243,7 +198,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
         f.ownerType = ownerType
         f.addParamsFromContext(ctx.functionParams())
-        val field = data.field
+        val field = data.scope
         //注册函数
         if (!field.addFunction(f,false)) {
             LogProcessor.error("Already defined function:" + ctx.Identifier().text + "in type " + type.typeName)
@@ -302,8 +257,8 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val namespace = GlobalScope.localNamespaces[nf.namespace]!!
         //是普通的函数
         nf.ownerType = Function.Companion.OwnerType.NONE
-        if (!namespace.field.hasFunction(nf, true)) {
-            namespace.field.addFunction(nf,false)
+        if (!namespace.scope.hasFunction(nf, true)) {
+            namespace.scope.addFunction(nf,false)
         } else {
             LogProcessor.error("Already defined function:" + ctx.functionDeclarationPart().Identifier().text)
             Function.currFunction = Function.nullFunction
@@ -317,14 +272,13 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //获取注册的模板
         val id = (ctx.declarationName()?: ctx.compoundDeclaration().declarationName()).classWithoutNamespace().text
         val namespace1 = GlobalScope.localNamespaces[Project.currNamespace]!!
-        val template = if(namespace1.field.hasTemplate(id)){
-            namespace1.field.getTemplate(id)!!
+        val template = if(namespace1.scope.hasTemplate(id)){
+            namespace1.scope.getTemplate(id)!!
         }else{
             throw UndefinedException("Template should have been defined: $id")
         }
         DataTemplate.currTemplate = template
-        currClassOrTemplate = template
-        typeScope = template.field
+        typeScope = template.scope
         for (c in ctx.compoundDeclaration()?.extendName() ?: emptyList()){
             //是否存在继承
             val (namespace, identifier) = c.text.splitNamespaceID()
@@ -344,12 +298,16 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 }
             }
         }
-        if(ctx.AS() != null){
-            template as TypeDataTemplate
-            template.typeAs = MCFPPType.parseFromContextNotNull(ctx.type(), typeScope)
-        }
-        isStatic = false
+        isInObject = false
         ctx.templateBody()?.let { visitTemplateBody(it) }
+
+        if(!template.isAbstract){
+            template.scope.forEachFunction {
+                if(it.isAbstract){
+                    LogProcessor.error("${it.identifier} is abstract, but not implemented.")
+                }
+            }
+        }
 
         //默认构造函数和默认字段
         if(template is TypeDataTemplate){
@@ -362,9 +320,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }else if(template.constructors.isEmpty()){
             template.addMember(DataTemplateConstructor(DataTemplate.currTemplate!!, null))
         }
-
         DataTemplate.currTemplate = null
-        currClassOrTemplate = null
         typeScope = MCFPPFile.currFile!!.field.namespaceField
         return null
     }
@@ -373,36 +329,45 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //注册模板
         val id = ctx.compoundDeclaration().declarationName().classWithoutNamespace().text
         val namespace1 = GlobalScope.localNamespaces[Project.currNamespace]!!
-        val objectTemplate = namespace1.field.getObject(id)
+        val objectTemplate = namespace1.scope.getObject(id)
         if(objectTemplate !is ObjectDataTemplate){
             throw UndefinedException("Template should have been defined: $id")
         }
         DataTemplate.currTemplate = objectTemplate
-        currClassOrTemplate = objectTemplate
-        typeScope = objectTemplate.field
+        typeScope = objectTemplate.scope
         for (c in ctx.compoundDeclaration().extendName()){
             //是否存在继承
             val (namespace, identifier) = c.text.splitNamespaceID()
-            val s = GlobalScope.getTemplate(namespace, identifier)
+            val s = GlobalScope.getData(namespace, identifier)
             if(s == null){
-                val o = GlobalScope.getObject(namespace, identifier)
-                if(o is ObjectDataTemplate) {
-                    if(o == objectTemplate){
-                        LogProcessor.error("Infinitive reference: $id -> $identifier")
-                    }else{
-                        objectTemplate.extends(o)
-                    }
-                }else{
-                    LogProcessor.error("Undefined template: " + c.text)
-                }
+                LogProcessor.error("${c.text} is undefined.")
             }else{
-                objectTemplate.extends(s)
+                if(s.isSubOf(objectTemplate) || s == objectTemplate){
+                    LogProcessor.error("Infinitive reference: $id -> $identifier")
+                }else if(s.isFinal){
+                    LogProcessor.error("Cannot extends $identifier because it's final")
+                }else {
+                    objectTemplate.extends(s)
+                }
             }
         }
+        isInObject = true
         ctx.templateBody()?.let { visitTemplateBody(it) }
-        isStatic = true
+
+        if(!objectTemplate.isAbstract){
+            objectTemplate.scope.forEachFunction {
+                if(it.isAbstract){
+                    LogProcessor.error("${it.identifier} is abstract, but not implemented.")
+                }
+            }
+        }
+
+        //如果没有构造函数，生成默认的构造函数
+        if(objectTemplate.constructors.isEmpty()){
+            objectTemplate.addMember(DataTemplateConstructor(DataTemplate.currTemplate!!, null))
+        }
+
         DataTemplate.currTemplate = null
-        currClassOrTemplate = null
         typeScope = MCFPPFile.currFile!!.field.namespaceField
         return null
     }
@@ -412,37 +377,71 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val template = DataTemplate(TempPool.getAnonymousTemplateIdentify())
         val qwq = DataTemplate.currTemplate
         DataTemplate.currTemplate = template
-        currClassOrTemplate = template
-        typeScope = template.field
+        typeScope = template.scope
         for (c in ctx.extendName()){
             //是否存在继承
             val (namespace, identifier) = c.text.splitNamespaceID()
-            val s = GlobalScope.getTemplate(namespace, identifier)
+            val s = GlobalScope.getData(namespace, identifier)
             if(s == null){
-                val o = GlobalScope.getObject(namespace, identifier)
-                if(o is ObjectDataTemplate) {
-                    template.extends(o)
-                }else{
-                    LogProcessor.error("Undefined template: " + c.text)
-                }
+                LogProcessor.error("${c.text} is undefined.")
             }else{
                 if(s == template){
                     LogProcessor.error("Infinitive reference: ${template.identifier} -> $identifier")
-                }else{
+                }else if(s.isFinal){
+                    LogProcessor.error("Cannot extends $identifier because it's final")
+                }else {
                     template.extends(s)
                 }
             }
         }
-        isStatic = false
+        isInObject = false
         visitTemplateBody(ctx.templateBody())
+
+        if(!template.isAbstract){
+            template.scope.forEachFunction {
+                if(it.isAbstract){
+                    LogProcessor.error("${it.identifier} is abstract, but not implemented.")
+                }
+            }
+        }
+
         //如果没有构造函数，生成默认的构造函数
         if(template.constructors.isEmpty()){
             template.addMember(DataTemplateConstructor(DataTemplate.currTemplate!!, null))
         }
         DataTemplate.currTemplate = qwq
-        currClassOrTemplate = qwq
         typeScope = MCFPPFile.currFile!!.field.namespaceField
         return template
+    }
+
+    override fun visitInterfaceDeclaration(ctx: mcfppParser.InterfaceDeclarationContext): Any? = withCompilationContext(ctx) {
+        //注册类
+        val id = ctx.compoundDeclaration().declarationName().classWithoutNamespace().text
+        val namespace1 = GlobalScope.localNamespaces[Project.currNamespace]!!
+        val itf = if(namespace1.scope.hasInterface(id)){
+            namespace1.scope.getInterface(id)!!
+        }else{
+            throw UndefinedException("Interface should have been defined: $id")
+        }
+        typeScope = itf.scope
+        for (c in ctx.compoundDeclaration().extendName()){
+            //是否存在继承
+            val (namespace, identifier) = c.text.splitNamespaceID()
+            val s = GlobalScope.getInterface(namespace, identifier)
+            if(s == null){
+                LogProcessor.error("Undefined interface: " + c.text)
+            }else{
+                if(s == itf || s.isSubOf(itf)){
+                    LogProcessor.error("Infinitive reference: ${itf.identifier} -> $identifier")
+                }else{
+                    itf.extends(s)
+                }
+            }
+        }
+        //接口成员
+        ctx.templateBody()?.let { visitTemplateBody(it) }
+        typeScope = MCFPPFile.currFile!!.field.namespaceField
+        return null
     }
 
     override fun visitTemplateBody(ctx: mcfppParser.TemplateBodyContext): Any? = withCompilationContext(ctx) {
@@ -467,6 +466,9 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val accessModifier = AccessModifier.valueOf((ctx.accessModifier()?.text?:"public").uppercase(Locale.getDefault()))
         //访问修饰符
         if(m is Member){
+            if(DataTemplate.currTemplate!!.isInterface && accessModifier != AccessModifier.PUBLIC){
+                LogProcessor.error("Members in interface must be public")
+            }
             m.accessModifier = accessModifier
             DataTemplate.currTemplate!!.addMember(m)
         }else if(m is Pair<*,*>){//Pair<Var, Property>
@@ -474,6 +476,9 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             val p = m.second as Property?
             if(v == null || p == null) return null
             //访问修饰符
+            if(DataTemplate.currTemplate!!.isInterface && accessModifier != AccessModifier.PUBLIC){
+                LogProcessor.error("Members in interface must be public")
+            }
             v.accessModifier = AccessModifier.valueOf((ctx.accessModifier()?.text?:"public").uppercase(Locale.getDefault()))
             p.accessModifier = v.accessModifier
             DataTemplate.currTemplate!!.addMember(v)
@@ -481,7 +486,6 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
         return null
     }
-
     
     override fun visitTemplateMember(ctx: mcfppParser.TemplateMemberContext): Any? = withCompilationContext(ctx) {
         return if (ctx.templateFunctionDeclaration() != null) {
@@ -515,25 +519,15 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }else{
             MCFPPPrivateType.Void
         }
+        if(ctx.OVERRIDE() != null){
+            f.isOverride = true
+        }
         //解析参数
         f.addParamsFromContext(ctx.functionDeclarationPart().functionParams())
-        //注册函数
-        //注册函数
-        if (DataTemplate.currTemplate!!.field.hasFunction(f, true)) {
-            if(ctx.OVERRIDE() != null){
-                if(isStatic){
-                    LogProcessor.error("Cannot override static method ${ctx.functionDeclarationPart().Identifier()}")
-                    throw Exception()
-                }
-                f.isOverride = true
-            }else{
-                LogProcessor.error("Already defined function:" + ctx.functionDeclarationPart().Identifier().text + "in template " + DataTemplate.currTemplate!!.identifier)
-                Function.currFunction = Function.nullFunction
-            }
-        }else {
-            if(ctx.OVERRIDE()!= null){
-                LogProcessor.error("Method ${f.identifier} in template ${DataTemplate.currTemplate!!.namespaceID} overrides nothing")
-            }
+        //检测重复定义
+        if (DataTemplate.currTemplate!!.scope.hasFunction(f, true)) {
+            LogProcessor.error("Already defined function:" + ctx.functionDeclarationPart().Identifier().text + "in template " + DataTemplate.currTemplate!!.identifier)
+            Function.currFunction = Function.nullFunction
         }
         return f
     }
@@ -543,55 +537,98 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             LogProcessor.error("TypeDataTemplate cannot have field: " + ctx.Identifier().text)
             return null to null
         }
+        val isConst = ctx.CONST() != null
+        if(!isInObject && isConst){
+            //只有在object中定义的常量才有意义
+            LogProcessor.error("Constant can only be declared in object: " + ctx.Identifier().text)
+            return null to null
+        }
         var `var` = ctx.templateType()?.let {
             if (it.singleTemplateFieldType() != null) {
                 val type = MCFPPType.parseFromContextNotNull(it.singleTemplateFieldType().type(), typeScope)
-                type.build(ctx.Identifier().text).apply {
-                    nullable = it.singleTemplateFieldType().QUEST() != null
+                if(!isInObject){
+                    type.build(ctx.Identifier().text).apply {
+                        nullable = it.singleTemplateFieldType().QUEST() != null
+                    }
+                }else{
+                    //object中的字段作为全局字段，是长久保存并且不可追踪的，其中的字段应当是不确定的。
+                    type.buildUnConcrete(ctx.Identifier().text).apply {
+                        nullable = it.singleTemplateFieldType().QUEST() != null
+                    }
                 }
             } else {
                 val unionTypes = ArrayList<MCFPPType>()
                 for (type in it.unionTemplateFieldType().type()) {
                     unionTypes.add(MCFPPType.parseFromContextNotNull(type, typeScope))
                 }
-                UnionTypeVarConcrete(
-                    ctx.Identifier().text,
-                    unionTypes[0].defaultValue(),
-                    *unionTypes.toTypedArray()
-                ).apply {
-                    nullable = it.unionTemplateFieldType().QUEST() != null
+                if(!isInObject){
+                    UnionTypeVarConcrete(
+                        ctx.Identifier().text,
+                        unionTypes[0].defaultValue(),
+                        *unionTypes.toTypedArray()
+                    ).apply {
+                        nullable = it.unionTemplateFieldType().QUEST() != null
+                    }
+                }else{
+                    UnionTypeVar(
+                        ctx.Identifier().text,
+                        *unionTypes.toTypedArray()
+                    ).apply {
+                        nullable = it.unionTemplateFieldType().QUEST() != null
+                    }
                 }
             }
         }
-        var init: Var<*>?
+
+        var init: Var<*>? = null
+        if(isConst && ctx.expression() == null){
+            LogProcessor.error("Const template field ${ctx.Identifier().text} must have an initializer")
+            return null to null
+        }
         if(`var` == null && ctx.expression() == null){
             LogProcessor.error("Template field ${ctx.Identifier().text} must have a type or an initializer")
             return null to null
         }else if(`var` == null){
-            Function.extraFunction.runInFunction {
-                init = MCFPPExprVisitor().visit(ctx.expression())!!
+            if(isInObject){
+                //for object data, only fields with const flag will be treated as concrete var, even if
+                //they have a concrete initializer.
+                Function.extraFunction.runInFunction { init = MCFPPExprVisitor().visit(ctx.expression())!! }
                 val type = init!!.type
-                `var` = type.buildUnConcrete(ctx.Identifier().text, DataTemplate.currTemplate!!)
-                if(init is MCFPPValue<*>){
-                    DataTemplate.currTemplate!!.preInit2[`var`!!.identifier] = init!!
+                if(isConst){
+                    if(init !is MCFPPValue<*>){
+                        LogProcessor.error("Const template field must have a concrete initializer.")
+                        return null to null
+                    }
+                    `var` = type.build(ctx.Identifier().text, (init as MCFPPValue<*>).value)
                 }else{
-                    DataTemplate.currTemplate!!.preInit[`var`!!.identifier] = ctx.expression()
+                    `var` = type.buildUnConcrete(ctx.Identifier().text)
+                    `var`.isDynamic = true
+                    DataTemplate.currTemplate!!.preInit[`var`.identifier] = ctx.expression()
                 }
+            }else{
+                Function.extraFunction.runInFunction { init = MCFPPExprVisitor().visit(ctx.expression())!! }
+                val type = init!!.type
+                `var` = type.buildUnConcrete(ctx.Identifier().text)
+                DataTemplate.currTemplate!!.preInit[`var`.identifier] = ctx.expression()
             }
         }
+
         //是否是静态的
-        `var`!!.isStatic = isStatic
-        if (DataTemplate.currTemplate!!.field.containVar(ctx.Identifier().text)
+        `var`.isStatic = isInObject
+        `var`.isConst = isConst
+        if (DataTemplate.currTemplate!!.scope.containVar(ctx.Identifier().text)
         ) {
             LogProcessor.error("Duplicate defined variable name:" + ctx.Identifier().text)
             return null to null
         }
         //属性访问器
-        val properties = (ctx.accessor()?.let {visit(ctx.accessor())}?: Property.buildSimpleProperty(`var`!!)) as Property
+        val properties = (ctx.accessor()?.let {visit(ctx.accessor())}?: Property.buildSimpleProperty(`var`)) as Property
+        `var`.declaredParentTemplate = DataTemplate.currTemplate!!
+        properties.declaredParentTemplate = DataTemplate.currTemplate!!
         return `var` to properties
     }
 
-    override fun visitTemplateConstructorDeclaration(ctx: mcfppParser.TemplateConstructorDeclarationContext): Any = withCompilationContext(ctx) {
+    override fun visitTemplateConstructorDeclaration(ctx: mcfppParser.TemplateConstructorDeclarationContext): Any? = withCompilationContext(ctx) {
         if(DataTemplate.currTemplate is TypeDataTemplate){
             LogProcessor.error("TypeDataTemplate cannot have constructor")
             return null to null
@@ -600,7 +637,11 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //创建构造函数对象，注册函数
         val f = DataTemplateConstructor(DataTemplate.currTemplate!!, ctx.curlBlock())
         f.file = MCFPPFile.currFile!!
-        f.addParamsFromContext(ctx.normalParams())
+        ctx.normalParams()?.let { f.addParamsFromContext(ctx.normalParams()) }
+        if(isInObject && f.paramCount() != 0){
+            LogProcessor.error("Object constructor must have no parameter.")
+            return null
+        }
         return f
     }
 

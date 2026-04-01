@@ -25,4 +25,9 @@ public @interface MNIOperator {
      * 额外的标记信息
      */
     String[] tag() default {};
+
+    /**
+     * 当参数都是常量时，是否返回常量。默认为false
+     */
+    boolean returnsConstWhenArgsConst() default false;
 }

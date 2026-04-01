@@ -27,8 +27,7 @@ class GenericTest {
         val test =
             """
                 func main(){
-                    var qwq = int;
-                    test<qwq>();
+                    test<int>();
                 }
                 
                 func test<T as type>(){

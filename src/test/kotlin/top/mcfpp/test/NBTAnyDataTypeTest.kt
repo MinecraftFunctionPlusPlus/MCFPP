@@ -10,7 +10,7 @@ class NBTTypeTest {
         val test =
             """
                 func main(){
-                    var l as list<int> = [];
+                    var l = [] as list<int>;
                     l.add(1);
                     l.add(2);
                     print(l::jvm);

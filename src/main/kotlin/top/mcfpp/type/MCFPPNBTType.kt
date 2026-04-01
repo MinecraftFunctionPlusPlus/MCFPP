@@ -226,8 +226,10 @@ class MCFPPNBTType {
 }
 
 class MCFPPListType(
-    val generic: MCFPPType = MCFPPBaseType.Any
+    g: MCFPPType = MCFPPBaseType.Any
 ): MCFPPType(arrayListOf(MCFPPNBTType.NBT)), MCFPPTypeWithGeneric{
+
+    override val generic: List<MCFPPType> = listOf(g)
 
     override val objectData: CompoundData
         get() = NBTList.data
@@ -235,36 +237,53 @@ class MCFPPListType(
     override val typeName: String
         get() = "list"
 
-    override val nbtType: java.lang.Class<out Tag<*>>
+    override val nbtType: Class<out Tag<*>>
         get() = ListTag::class.java
 
     override fun defaultValue() = ArrayList<Var<*>>()
     @Suppress("UNCHECKED_CAST")
-    override fun build(identifier: String, value: Any?): Var<*> = NBTListConcrete(value as ArrayList<Var<*>>, identifier, generic)
-    override fun buildUnConcrete(identifier: String): Var<*> = NBTList(identifier, generic)
+    override fun build(identifier: String, value: Any?): Var<*> = NBTListConcrete(value as ArrayList<Var<*>>, identifier, generic[0])
+    override fun buildUnConcrete(identifier: String): Var<*> = NBTList(identifier, generic[0])
 
     override fun toString(): String {
-        return "list[${generic.typeName}]"
+        return "list[${generic[0].typeName}]"
     }
 
     override fun replaceGenericParam(type: Map<String, MCFPPType>): MCFPPListType {
         if(type.size != 1) throw IllegalArgumentException("Need 1 generic param but get ${type.size}")
-        if (generic is MCFPPGenericParamType) {
-            if(type.containsKey(generic.identifier)){
-                return MCFPPListType(type[generic.identifier]!!)
+        if (generic[0] is MCFPPGenericParamType) {
+            val g = generic[0] as MCFPPGenericParamType
+            if(type.containsKey(g.identifier)){
+                return MCFPPListType(type[g.identifier]!!)
             }else{
-                throw IllegalArgumentException("No generic param ${generic.identifier}")
+                throw IllegalArgumentException("No generic param ${g.identifier}")
             }
-        }else if(generic is MCFPPTypeWithGeneric){
-            return MCFPPListType(generic.replaceGenericParam(type))
+        }else if(generic[0] is MCFPPTypeWithGeneric){
+            return MCFPPListType((generic[0] as MCFPPTypeWithGeneric).replaceGenericParam(type))
         }
         return this
     }
+
+    override fun isSubOf(parentType: MCFPPType): Boolean {
+        return super.isSubOf(parentType)
+                || parentType is MCFPPListType && generic[0].isSubOf(parentType.generic[0])
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return other is MCFPPListType && other.generic[0] == generic[0]
+    }
+
+    override fun hashCode(): Int {
+        return generic[0].hashCode() xor generic[0].hashCode()
+    }
+
 }
 
 class MCFPPImmutableListType(
-    val generic: MCFPPType = MCFPPBaseType.Any
+    g: MCFPPType = MCFPPBaseType.Any
 ): MCFPPType(arrayListOf(MCFPPNBTType.NBT)), MCFPPTypeWithGeneric{
+
+    override val generic: List<MCFPPType> = listOf(g)
 
     override val instanceData by lazy {
         CompoundData("ImmutableList", "mcfpp.lang").apply {
@@ -283,55 +302,85 @@ class MCFPPImmutableListType(
     override val typeName: String
         get() = "ImmutableList"
 
-    override val nbtType: java.lang.Class<out Tag<*>>
+    override val nbtType: Class<out Tag<*>>
         get() = ListTag::class.java
 
     override fun defaultValue() = ListTag()
-    override fun build(identifier: String, value: Any?): Var<*> = ImmutableListConcrete(value as ListTag, identifier, generic)
-    override fun buildUnConcrete(identifier: String): Var<*> = ImmutableList(identifier, generic)
+    override fun build(identifier: String, value: Any?): Var<*> = ImmutableListConcrete(value as ListTag, identifier, generic[0])
+    override fun buildUnConcrete(identifier: String): Var<*> = ImmutableList(identifier, generic[0])
 
     override fun toString(): String {
-        return "ImmutableList[${generic.typeName}]"
+        return "ImmutableList[${generic[0].typeName}]"
     }
 
     override fun replaceGenericParam(type: Map<String, MCFPPType>): MCFPPImmutableListType {
         if(type.size != 1) throw IllegalArgumentException("Need 1 generic param but get ${type.size}")
-        if (generic is MCFPPGenericParamType) {
-            if(type.containsKey(generic.identifier)){
-                return MCFPPImmutableListType(type[generic.identifier]!!)
+        if (generic[0] is MCFPPGenericParamType) {
+            val g = generic[0] as MCFPPGenericParamType
+            if(type.containsKey(g.identifier)){
+                return MCFPPImmutableListType(type[g.identifier]!!)
             }else{
-                throw IllegalArgumentException("No generic param ${generic.identifier}")
+                throw IllegalArgumentException("No generic param ${g.identifier}")
             }
-        }else if(generic is MCFPPTypeWithGeneric){
-            return MCFPPImmutableListType(generic.replaceGenericParam(type))
+        }else if(generic[0] is MCFPPTypeWithGeneric){
+            return MCFPPImmutableListType((generic[0] as MCFPPTypeWithGeneric).replaceGenericParam(type))
         }
         return this
+    }
+
+    override fun isSubOf(parentType: MCFPPType): Boolean {
+        return super.isSubOf(parentType)
+                || parentType is MCFPPImmutableListType && generic[0].isSubOf(parentType.generic[0])
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return other is MCFPPImmutableListType && other.generic[0] == generic[0]
+    }
+
+    override fun hashCode(): Int {
+        return generic[0].hashCode() xor generic[0].hashCode()
     }
 }
 
 open class MCFPPCompoundType(
-    val generic: MCFPPType
+    g: MCFPPType
 ): MCFPPType(arrayListOf(MCFPPNBTType.NBT)), MCFPPTypeWithGeneric{
+
+    override val generic: List<MCFPPType> = listOf(g)
 
     override val typeName: String
         get() = "compound"
 
     override fun toString(): String {
-        return "compound[${generic.typeName}]"
+        return "compound[${generic[0].typeName}]"
     }
 
     override fun replaceGenericParam(type: Map<String, MCFPPType>): MCFPPCompoundType {
         if(type.size != 1) throw IllegalArgumentException("Need 1 generic param but get ${type.size}")
-        if (generic is MCFPPGenericParamType) {
-            if(type.containsKey(generic.identifier)){
-                return MCFPPCompoundType(type[generic.identifier]!!)
+        if (generic[0] is MCFPPGenericParamType) {
+            val g = generic[0] as MCFPPGenericParamType
+            if(type.containsKey(g.identifier)){
+                return MCFPPCompoundType(type[g.identifier]!!)
             }else{
-                throw IllegalArgumentException("No generic param ${generic.identifier}")
+                throw IllegalArgumentException("No generic param ${g.identifier}")
             }
-        }else if(generic is MCFPPTypeWithGeneric){
-            return MCFPPCompoundType(generic.replaceGenericParam(type))
+        }else if(generic[0] is MCFPPTypeWithGeneric){
+            return MCFPPCompoundType((generic[0] as MCFPPTypeWithGeneric).replaceGenericParam(type))
         }
         return this
+    }
+
+    override fun isSubOf(parentType: MCFPPType): Boolean {
+        return super.isSubOf(parentType)
+                || parentType is MCFPPCompoundType && generic[0].isSubOf(parentType.generic[0])
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return other is MCFPPCompoundType && other.generic[0] == generic[0]
+    }
+
+    override fun hashCode(): Int {
+        return generic[0].hashCode() xor generic[0].hashCode()
     }
 }
 
@@ -340,13 +389,13 @@ class MCFPPDictType(generic: MCFPPType): MCFPPCompoundType(generic){
         get() = "dict"
 
     override fun toString(): String {
-        return "dict[${generic.typeName}]"
+        return "dict[${generic[0].typeName}]"
     }
 
     override val objectData: CompoundData
         get() = NBTDictionary.data
 
-    override val nbtType: java.lang.Class<out Tag<*>>
+    override val nbtType: Class<out Tag<*>>
         get() = CompoundTag::class.java
 
     override fun defaultValue() = HashMap<String, Var<*>>()
@@ -356,16 +405,30 @@ class MCFPPDictType(generic: MCFPPType): MCFPPCompoundType(generic){
 
     override fun replaceGenericParam(type: Map<String, MCFPPType>): MCFPPDictType {
         if(type.size != 1) throw IllegalArgumentException("Need 1 generic param but get ${type.size}")
-        if (generic is MCFPPGenericParamType) {
-            if(type.containsKey(generic.identifier)){
-                return MCFPPDictType(type[generic.identifier]!!)
+        if (generic[0] is MCFPPGenericParamType) {
+            val g = generic[0] as MCFPPGenericParamType
+            if(type.containsKey(g.identifier)){
+                return MCFPPDictType(type[g.identifier]!!)
             }else{
-                throw IllegalArgumentException("No generic param ${generic.identifier}")
+                throw IllegalArgumentException("No generic param ${g.identifier}")
             }
-        }else if(generic is MCFPPTypeWithGeneric){
-            return MCFPPDictType(generic.replaceGenericParam(type))
+        }else if(generic[0] is MCFPPTypeWithGeneric){
+            return MCFPPDictType((generic[0] as MCFPPTypeWithGeneric).replaceGenericParam(type))
         }
         return this
+    }
+
+    override fun isSubOf(parentType: MCFPPType): Boolean {
+        return super.isSubOf(parentType)
+                || parentType is MCFPPDictType && generic[0].isSubOf(parentType.generic[0])
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return other is MCFPPDictType && other.generic[0] == generic[0]
+    }
+
+    override fun hashCode(): Int {
+        return generic[0].hashCode() xor generic[0].hashCode()
     }
 }
 
@@ -374,31 +437,45 @@ class MCFPPMapType(generic: MCFPPType): MCFPPCompoundType(generic){
         get() = "map"
 
     override fun toString(): String {
-        return "map[${generic.typeName}]"
+        return "map[${generic[0].typeName}]"
     }
 
     override val objectData: CompoundData
         get() = NBTMap.data
 
-    override val nbtType: java.lang.Class<out Tag<*>>
+    override val nbtType: Class<out Tag<*>>
         get() = CompoundTag::class.java
 
     override fun defaultValue() = HashMap<String, Var<*>>()
     @Suppress("UNCHECKED_CAST")
-    override fun build(identifier: String, value: Any?): Var<*> = NBTMapConcrete(value as HashMap<String, Var<*>>, identifier, generic)
-    override fun buildUnConcrete(identifier: String): Var<*> = NBTMap(identifier, generic)
+    override fun build(identifier: String, value: Any?): Var<*> = NBTMapConcrete(value as HashMap<String, Var<*>>, identifier, generic[0])
+    override fun buildUnConcrete(identifier: String): Var<*> = NBTMap(identifier, generic[0])
 
     override fun replaceGenericParam(type: Map<String, MCFPPType>): MCFPPMapType {
         if(type.size != 1) throw IllegalArgumentException("Need 1 generic param but get ${type.size}")
-        if (generic is MCFPPGenericParamType) {
-            if(type.containsKey(generic.identifier)){
-                return MCFPPMapType(type[generic.identifier]!!)
+        if (generic[0] is MCFPPGenericParamType) {
+            val g = generic[0] as MCFPPGenericParamType
+            if(type.containsKey(g.identifier)){
+                return MCFPPMapType(type[g.identifier]!!)
             }else{
-                throw IllegalArgumentException("No generic param ${generic.identifier}")
+                throw IllegalArgumentException("No generic param ${g.identifier}")
             }
-        }else if(generic is MCFPPTypeWithGeneric){
-            return MCFPPMapType(generic.replaceGenericParam(type))
+        }else if(generic[0] is MCFPPTypeWithGeneric){
+            return MCFPPMapType((generic[0] as MCFPPTypeWithGeneric).replaceGenericParam(type))
         }
         return this
+    }
+
+    override fun isSubOf(parentType: MCFPPType): Boolean {
+        return super.isSubOf(parentType)
+                || parentType is MCFPPMapType && generic[0].isSubOf(parentType.generic[0])
+    }
+
+    override fun equals(other: Any?): Boolean {
+        return other is MCFPPMapType && other.generic[0] == generic[0]
+    }
+
+    override fun hashCode(): Int {
+        return generic[0].hashCode() xor generic[0].hashCode()
     }
 }

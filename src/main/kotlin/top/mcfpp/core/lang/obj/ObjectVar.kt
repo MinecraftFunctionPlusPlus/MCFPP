@@ -4,7 +4,9 @@ import top.mcfpp.core.lang.ConcreteVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Member
+import top.mcfpp.model.compound.ObjectDataTemplate
 import top.mcfpp.model.function.Function
+import top.mcfpp.type.MCFPPObjectDataTemplateType
 import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
@@ -35,6 +37,9 @@ class ObjectVar(type: CanSelectMember, identifier: String = TempPool.getVarIdent
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         return value.getMemberVar(key, accessModifier).apply {
             first?.parent = value
+            if(value is MCFPPObjectDataTemplateType) {
+                first?.nbtPath = ((value as MCFPPObjectDataTemplateType).template as ObjectDataTemplate).nbtPath.memberIndex(key)
+            }
         }
     }
 

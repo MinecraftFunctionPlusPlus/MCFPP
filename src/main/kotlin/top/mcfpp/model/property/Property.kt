@@ -23,9 +23,13 @@ data class Property(val identifier: String, val accessor: AbstractAccessor?, val
 
     var parent: Var<*>? = null
 
+    var declaredParentTemplate: DataTemplate? = null
+
     override var accessModifier: Member.AccessModifier = Member.AccessModifier.PUBLIC
 
     override var isStatic: Boolean = true
+
+    var isInherited: Boolean = false
 
     override fun parentTemplate(): DataTemplate? {
         if(parent?.type is MCFPPDataTemplateType){

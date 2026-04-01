@@ -51,4 +51,9 @@ public @interface MNIFunction {
      */
     String identifier() default "";
 
+    /**
+     * 当参数都是常量时，是否返回常量。默认为false
+     */
+    boolean returnsConstWhenArgsConst() default false;
+
 }

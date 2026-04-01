@@ -12,6 +12,7 @@ import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.MCFPPTypeWithGeneric
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.ValueWrapper
+import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.util.stream.Collectors
 import java.util.stream.Stream
@@ -38,6 +39,8 @@ class NativeFunction : Function, Native {
     val readOnlyParams: ArrayList<FunctionParam> = ArrayList()
 
     var caller: MCFPPType = MCFPPPrivateType.Void
+
+    var returnsConstWhenArgsConst = false
 
     /**
      * 通过一个java方法来构造一个NativeFunction，同时手动指定mcfpp方法的名字
@@ -69,12 +72,34 @@ class NativeFunction : Function, Native {
         val list = argPass(readOnlyArgs, normalArgs)
         //一定是静态的
         try {
-            javaMethod.invoke(null,
+            javaMethod.invoke(
+                null,
                 *list.toTypedArray(),
-                *if(this.caller != MCFPPPrivateType.Void) arrayOf(caller) else emptyArray(),
-                *if(this.returnType != MCFPPPrivateType.Void) arrayOf(valueWrapper) else emptyArray()
+                *if (this.caller != MCFPPPrivateType.Void) arrayOf(caller) else emptyArray(),
+                *if (this.returnType != MCFPPPrivateType.Void) arrayOf(valueWrapper) else emptyArray()
             )
-        }catch (e: Exception){
+        } catch (e: IllegalArgumentException) {
+            // 参数类型或数量不匹配
+            val expected = javaMethod.parameterTypes.map { it.typeName }
+            val providedArgs = buildList {
+                addAll(list)
+                if (this@NativeFunction.caller != MCFPPPrivateType.Void) add(caller)
+                if (this@NativeFunction.returnType != MCFPPPrivateType.Void) add(valueWrapper)
+            }
+            val providedTypes = providedArgs.map { it?.javaClass?.typeName ?: "null" }
+            val msg = StringBuilder().apply {
+                appendLine("Error when invoking native function: ${this@NativeFunction.identifier}")
+                appendLine("Reason: parameter mismatch (IllegalArgumentException)")
+                appendLine("Method: ${javaMethod.declaringClass.name}.${javaMethod.name}")
+                appendLine("Expected parameter types (${expected.size}): ${expected.joinToString(", ")}")
+                append("Provided parameter types (${providedTypes.size}): ${providedTypes.joinToString(", ")}")
+            }.toString()
+            LogProcessor.error(msg, e)
+        } catch (e: InvocationTargetException) {
+            // 被调用方法内部抛出异常
+            val target = e.targetException
+            LogProcessor.error("Error when invoking native function: ${this.identifier}, caused by: ${target::class.java.name}: ${target.message}", target)
+        } catch (e: Exception) {
             LogProcessor.error("Error when invoking native function: ${this.identifier}", e)
         }
         returnVar = valueWrapper.value

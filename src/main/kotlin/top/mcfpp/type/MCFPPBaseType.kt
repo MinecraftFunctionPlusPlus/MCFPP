@@ -1,5 +1,6 @@
 package top.mcfpp.type
 
+import top.mcfpp.RangeVarConcreteData
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
@@ -54,12 +55,12 @@ class MCFPPBaseType {
     object Int: MCFPPType(arrayListOf(Any)){
 
         override val instanceData by lazy {
-                CompoundData("int","mcfpp").apply {
-                    this.commonType = Int
-                    extends(Any.instanceData)
-                    injectedBy(MCIntData::class.java)
-                }
+            CompoundData("int","mcfpp").apply {
+                this.commonType = Int
+                extends(Any.instanceData)
+                injectedBy(MCIntData::class.java)
             }
+        }
 
         override val concreteInstanceData by lazy {
             CompoundData("int","mcfpp").apply {
@@ -108,7 +109,19 @@ class MCFPPBaseType {
     object Float: MCFPPType(arrayListOf(Any)){
 
         override val instanceData by lazy {
-            CompoundData("float","mcfpp")
+            CompoundData("float","mcfpp").apply {
+                this.commonType = Float
+                extends(Any.instanceData)
+                injectedBy(MCFloatData::class.java)
+            }
+        }
+
+        override val concreteInstanceData by lazy {
+            CompoundData("float","mcfpp").apply {
+                this.commonType = Float
+                extends(Any.concreteInstanceData)
+                injectedBy(MCFloatConcreteData::class.java)
+            }
         }
 
         override val typeName: kotlin.String
@@ -161,8 +174,9 @@ class MCFPPBaseType {
     object JsonText: MCFPPType(arrayListOf(MCFPPNBTType.NBT)){
 
         override val instanceData by lazy {
-            CompoundData("JsonText","mcfpp.lang").apply {
+            CompoundData("text","mcfpp.lang").apply {
                 extends(MCFPPNBTType.NBT.instanceData)
+                injectedBy(JsonTextData::class.java)
 
                 addMember(MCInt("color"))
                 addMember(ScoreBool("bold"))
@@ -175,8 +189,18 @@ class MCFPPBaseType {
         }
 
         override val concreteInstanceData: CompoundData by lazy {
-            CompoundData("JsonTextConcrete","mcfpp.lang").apply {
-                extends(instanceData)
+            CompoundData("text","mcfpp.lang").apply {
+                extends(MCFPPNBTType.NBT.concreteInstanceData)
+                injectedBy(JsonTextConcreteData::class.java)
+
+                addMember(MCInt("color"))
+                addMember(ScoreBool("bold"))
+                addMember(ScoreBool("italic"))
+                addMember(ScoreBool("underlined"))
+                addMember(ScoreBool("strikethrough"))
+                addMember(ScoreBool("obfuscated"))
+                addMember(MCString("insertion"))
+
             }
         }
 
@@ -197,6 +221,14 @@ class MCFPPBaseType {
         override val instanceData by lazy {
             CompoundData("range","mcfpp.lang").apply {
                 extends(Any.instanceData)
+                injectedBy(RangeVarData::class.java)
+            }
+        }
+
+        override val concreteInstanceData by lazy{
+            CompoundData("range","mcfpp.lang").apply {
+                extends(Any.concreteInstanceData)
+                injectedBy(RangeVarConcreteData::class.java)
             }
         }
 

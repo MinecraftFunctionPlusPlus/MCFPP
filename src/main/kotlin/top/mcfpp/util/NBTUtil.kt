@@ -46,6 +46,9 @@ object NBTUtil {
             }
             is NBTListConcrete -> valueToNBT(v.value)
             is NBTDictionary -> valueToNBT(v.value)
+            is NBTIntArrayConcrete -> valueToNBT(v.value)
+            is NBTLongArrayConcrete -> valueToNBT(v.value)
+            is NBTByteArrayConcrete -> valueToNBT(v.value)
             else -> {
                 LogProcessor.error("Cannot cast mcfpp var $v to nbt value")
                 IntTag(0)

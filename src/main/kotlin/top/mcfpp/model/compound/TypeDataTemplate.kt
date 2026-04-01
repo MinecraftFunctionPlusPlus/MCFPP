@@ -8,6 +8,10 @@ import top.mcfpp.type.MCFPPType
 
 class TypeDataTemplate(var typeAs: MCFPPType, identifier: String, namespace: String = Project.currNamespace) : DataTemplate(identifier, namespace) {
 
+    init {
+        isFinal = true
+    }
+
     override fun getType(): MCFPPDataTemplateType {
         return super.getType()
     }

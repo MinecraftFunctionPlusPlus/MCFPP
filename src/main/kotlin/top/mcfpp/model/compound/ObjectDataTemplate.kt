@@ -1,10 +1,12 @@
 package top.mcfpp.model.compound
 
 import top.mcfpp.Project
+import top.mcfpp.lib.NBTPath
+import top.mcfpp.lib.StorageSource
 import top.mcfpp.type.MCFPPObjectDataTemplateType
 
-open class ObjectDataTemplate(identifier: String, namespace: String = Project.currNamespace) : DataTemplate(identifier, namespace),
-    ObjectCompoundData {
+open class ObjectDataTemplate(identifier: String, namespace: String = Project.currNamespace)
+    : DataTemplate(identifier, namespace), ObjectCompoundData {
 
     /**
      * 获取这个容器中变量应该拥有的前缀
@@ -13,6 +15,9 @@ open class ObjectDataTemplate(identifier: String, namespace: String = Project.cu
     override val prefix: String
         get() = namespace + "_object_template_" + identifier + "_"
 
+
+    val nbtPath: NBTPath
+        get() = NBTPath(StorageSource("mcfpp:system")).memberIndex(namespaceID)
 
     /**
      * 获取这个类对于的classType

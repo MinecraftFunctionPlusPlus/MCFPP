@@ -20,7 +20,7 @@ open class MCFPPDataTemplateType(
 ) : MCFPPType(parentType) {
 
     override val objectData: CompoundData
-        get() = template
+        get() = template.companionObject?: CompoundData(template.identifier, template.namespaceID)
 
     override val typeName: String
         get() = "template(${template.namespace}:${template.identifier})"
@@ -36,7 +36,7 @@ open class MCFPPDataTemplateType(
 
     override fun defaultValue(): Any? {
         val map = HashMap<String, Var<*>>()
-        template.field.allVars.map {
+        template.scope.allVars.map {
             if(!it.nullable){
                 val v = it.type.defaultValueVar()
                 v.identifier = it.identifier

@@ -60,7 +60,7 @@ class MCFPPTypeVar : ConcreteVar<MCFPPTypeVar, MCFPPType>{
     override fun replaceMemberVar(v: Var<*>) {
         when(val type = type){
             is MCFPPCompoundType -> {
-                type.objectData.field.putVar(v.identifier, v, true)
+                type.objectData.scope.putVar(v.identifier, v, true)
             }
             else -> TODO()
         }

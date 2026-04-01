@@ -211,7 +211,7 @@ NBTByte: IntConstant NBTByteSuffix;
 NBTShort: IntConstant NBTShortSuffix;
 NBTInt: IntConstant;
 NBTLong: IntConstant NBTLongSuffix;
-NBTFloat: (FractionalConstant ExponentPart? NBTFloatSuffix?) | (IntConstant NBTFloatSuffix?);
+NBTFloat: (DigitSequence|FractionalConstant) ExponentPart? NBTFloatSuffix? ;
 NBTDouble: (DigitSequence|FractionalConstant) ExponentPart? NBTDoubleSuffix;
 NBTBool: BooleanConstant;
 
@@ -244,7 +244,8 @@ WS  :  [ \t\u000C]+ -> skip
     ;
 
 DOC_COMMENT
-    :   '###' .*? '###'
+    :   '#{' .*? '}#'
+    |   '###' NL+ .*? NL+ '###'
     ;
 
 SIMPLE_DOC_COMMENT
@@ -262,7 +263,7 @@ LINE_COMMENT
 mode OrgCommand ;
 
 OrgCommandText
-    :  ~([$/])+ | '$'
+    :   ~[$\r\n]+ | '$'
     ;
 
 OrgCommandExprStart
@@ -270,7 +271,7 @@ OrgCommandExprStart
     ;
 
 OrgCommandEnd
-    :   SLASH -> popMode
+    :   ('\r'? '\n')+ {afterNewline = true;} -> type(NL), popMode
     ;
 
 mode MultiLineString ;

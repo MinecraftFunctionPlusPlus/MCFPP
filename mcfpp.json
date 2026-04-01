@@ -1,7 +1,7 @@
 {
     "sourcePath": "src/main/mcfpp",
     "description": "MCFPP Standard Library",
-    "namespace": "lang",
+    "namespace": "mcfpp",
     "targetPath": "src/main/resources/datapack",
     "copyImport": false,
     "args": [

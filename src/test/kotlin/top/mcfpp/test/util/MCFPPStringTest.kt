@@ -8,9 +8,13 @@ import org.apache.logging.log4j.core.config.ConfigurationSource
 import org.apache.logging.log4j.core.config.Configurator
 import top.mcfpp.CompileSettings
 import top.mcfpp.Project
+import top.mcfpp.Project.compileStage
+import top.mcfpp.Project.stageProcessor
 import top.mcfpp.antlr.*
 import top.mcfpp.io.DatapackCreator
 import top.mcfpp.io.MCFPPFile
+import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.ObjectDataTemplate
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.parseArgs
 import top.mcfpp.util.LogProcessor
@@ -51,10 +55,30 @@ object MCFPPStringTest {
         LogProcessor.debug("Generate Type Index...")
         Project.currNamespace = MCFPPFile.currFile!!.namespace.identifier
         MCFPPTypeVisitor().visitCompilationUnit(context)
-        MCFPPFile.currFile!!.field.namespaceField = GlobalScope.localNamespaces[Project.currNamespace]!!.field
+        MCFPPFile.currFile!!.field.namespaceField = GlobalScope.localNamespaces[Project.currNamespace]!!.scope
+
+        //匹配伴随对象
+        GlobalScope.localNamespaces.values.flatMap { it.scope.template.values }.forEach {
+            GlobalScope.localNamespaces[it.namespace]?.scope?.getObject(it.identifier)?.let { obj ->
+                it.companionObject = obj as? ObjectDataTemplate
+            }
+        }
+        //解析所有泛型类的泛型参数类型
+        stageProcessor[compileStage.ordinal].forEach { it() }
+
         LogProcessor.debug("Generate Function Index...")
         MCFPPFieldVisitor().visit(context)
         GlobalScope.importedLibNamespaces.clear()
+
+        //继承解析
+        GlobalScope.localNamespaces.values.flatMap { it.scope.template.values }.forEach {
+            if(it.parent.isNotEmpty()){
+                it.flatExtends()
+            }else{
+                (it.extends(DataTemplate.baseDataTemplate) as DataTemplate).flatExtends()
+            }
+        }
+        
         val visitor = MCFPPImVisitor()
         LogProcessor.debug("Compiling mcfpp code...")
         visitor.visit(context)

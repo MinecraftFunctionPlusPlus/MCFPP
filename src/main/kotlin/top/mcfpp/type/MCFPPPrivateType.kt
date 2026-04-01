@@ -85,4 +85,20 @@ abstract class MCFPPPrivateType(parentType: ArrayList<MCFPPType> = arrayListOf()
 
     }
 
+    object Wildcard: MCFPPPrivateType(arrayListOf()){
+        override val typeName: String
+            get() = "*"
+
+        override fun buildReturnVar(): Var<*> {
+            throw UnsupportedOperationException("Cannot build return var for wildcard type")
+        }
+
+        override val objectData: CompoundData
+            get() = throw UnsupportedOperationException("Cannot build return var for wildcard type")
+
+        override fun isSubOf(parentType: MCFPPType): Boolean {
+            return true
+        }
+    }
+
 }

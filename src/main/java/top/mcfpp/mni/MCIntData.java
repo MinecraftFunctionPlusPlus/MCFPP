@@ -21,62 +21,62 @@ public class MCIntData {
         returnValue.setValue(new JsonTextConcrete(l, "re"));
     }
 
-    @MNIOperator(operator = "+",paramType = "int", returnType = "int")
+    @MNIOperator(operator = "+",paramType = "int", returnType = "int", returnsConstWhenArgsConst = true)
     public static void plus(MCInt a, MCInt caller, ValueWrapper<MCInt> returnValue) {
         returnValue.setValue((MCInt) caller.plus(a));
     }
     
-    @MNIOperator(operator = "-", paramType = "int", returnType = "int")
+    @MNIOperator(operator = "-", paramType = "int", returnType = "int", returnsConstWhenArgsConst = true)
     public static void minus(MCInt a, MCInt caller, ValueWrapper<MCInt> returnValue) {
         returnValue.setValue((MCInt) caller.minus(a));
     }
 
-    @MNIOperator(operator = "*", paramType = "int", returnType = "int")
+    @MNIOperator(operator = "*", paramType = "int", returnType = "int", returnsConstWhenArgsConst = true)
     public static void times(MCInt a, MCInt caller, ValueWrapper<MCInt> returnValue) {
         returnValue.setValue((MCInt) caller.times(a));
     }
 
-    @MNIOperator(operator = "/", paramType = "int", returnType = "int")
+    @MNIOperator(operator = "/", paramType = "int", returnType = "int", returnsConstWhenArgsConst = true)
     public static void div(MCInt a, MCInt caller, ValueWrapper<MCInt> returnValue) {
         returnValue.setValue((MCInt) caller.div(a));
     }
 
-    @MNIOperator(operator = "%", paramType = "int", returnType = "int")
+    @MNIOperator(operator = "%", paramType = "int", returnType = "int", returnsConstWhenArgsConst = true)
     public static void rem(MCInt a, MCInt caller, ValueWrapper<MCInt> returnValue) {
         returnValue.setValue((MCInt) caller.rem(a));
     }
 
-    @MNIOperator(operator = ">", paramType = "int", returnType = "bool")
+    @MNIOperator(operator = ">", paramType = "int", returnType = "bool", returnsConstWhenArgsConst = true)
     public static void isBigger(MCInt a, MCInt caller, ValueWrapper<BaseBool> returnValue) {
         returnValue.setValue((BaseBool) caller.isBigger(a));
     }
 
-    @MNIOperator(operator = "<", paramType = "int", returnType = "bool")
+    @MNIOperator(operator = "<", paramType = "int", returnType = "bool", returnsConstWhenArgsConst = true)
     public static void isSmaller(MCInt a, MCInt caller, ValueWrapper<BaseBool> returnValue) {
         returnValue.setValue((BaseBool) caller.isSmaller(a));
     }
 
-    @MNIOperator(operator = "<=", paramType = "int", returnType = "bool")
+    @MNIOperator(operator = "<=", paramType = "int", returnType = "bool", returnsConstWhenArgsConst = true)
     public static void isSmallerOrEqual(MCInt a, MCInt caller, ValueWrapper<BaseBool> returnValue) {
         returnValue.setValue((BaseBool) caller.isSmallerOrEqual(a));
     }
 
-    @MNIOperator(operator = ">=", paramType = "int", returnType = "bool")
+    @MNIOperator(operator = ">=", paramType = "int", returnType = "bool", returnsConstWhenArgsConst = true)
     public static void isBiggerOrEqual(MCInt a, MCInt caller, ValueWrapper<BaseBool> returnValue) {
         returnValue.setValue((BaseBool) caller.isBiggerOrEqual(a));
     }
 
-    @MNIOperator(operator = "==", paramType = "int", returnType = "bool")
+    @MNIOperator(operator = "==", paramType = "int", returnType = "bool", returnsConstWhenArgsConst = true)
     public static void isEqual(MCInt a, MCInt caller, ValueWrapper<BaseBool> returnValue) {
         returnValue.setValue((BaseBool) caller.isEqual(a));
     }
 
-    @MNIOperator(operator = "!=", paramType = "int", returnType = "bool")
+    @MNIOperator(operator = "!=", paramType = "int", returnType = "bool", returnsConstWhenArgsConst = true)
     public static void isNotEqual(MCInt a, MCInt caller, ValueWrapper<BaseBool> returnValue) {
         returnValue.setValue((BaseBool) caller.isNotEqual(a));
     }
 
-    @MNIOperator(operator = "~=", paramType = "range", returnType = "bool")
+    @MNIOperator(operator = "~=", paramType = "range", returnType = "bool", returnsConstWhenArgsConst = true)
     public static void inRange(RangeVar a, MCInt caller, ValueWrapper<BaseBool> returnValue) {
         returnValue.setValue((BaseBool) caller.inRange(a));
     }

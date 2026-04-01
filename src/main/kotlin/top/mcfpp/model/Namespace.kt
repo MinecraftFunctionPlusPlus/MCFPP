@@ -4,6 +4,8 @@ import top.mcfpp.Project
 import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
+import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.ObjectDataTemplate
 import top.mcfpp.model.compound.UnsolvedTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.GenericFunction
@@ -25,7 +27,7 @@ import java.lang.reflect.Modifier
 
 class Namespace(val identifier: String): Serializable, FieldContainer {
 
-    val field : NamespaceScope = NamespaceScope()
+    val scope : NamespaceScope = NamespaceScope(identifier)
 
     override val prefix get() =  "namespace_$identifier"
 
@@ -33,25 +35,36 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
      * 合并命名空间
      */
     fun merge(namespace: Namespace, force: Boolean = false){
-        namespace.field.forEachFunction { field.addFunction(it, force) }
-        namespace.field.forEachInterface { field.addInterface(it.identifier, it, force) }
-        namespace.field.forEachTemplate { field.addTemplate(it.identifier, it, force) }
+        namespace.scope.forEachFunction { scope.addFunction(it, force) }
+        namespace.scope.forEachInterface { scope.addInterface(it.identifier, it, force) }
+        namespace.scope.forEachTemplate { scope.addTemplate(it.identifier, it, force) }
+        namespace.scope.forEachObject { scope.addObject(it.identifier, it, force) }
     }
 
     fun resolve(){
-        field.forEachTemplate { t ->
+        scope.forEachTemplate { t ->
             run {
-                t.field.forEachVar { resolveVar(it) }
-                t.field.forEachFunction { resolveFunction(it) }
+                t.scope.forEachVar { resolveVar(it) }
+                t.scope.forEachFunction { resolveFunction(it) }
+                if(t.companionObject != null){
+                    //find companion object
+                    t.companionObject = scope.getObject(t.identifier) as DataTemplate
+                }
             }
         }
-        field.forEachObject { o ->
+        scope.forEachObject { o ->
             run {
-                o.field.forEachVar { resolveVar(it) }
-                o.field.forEachFunction { resolveFunction(it) }
+                o.scope.forEachVar { resolveVar(it) }
+                o.scope.forEachFunction { resolveFunction(it) }
+                if(o is DataTemplate) {
+                    o.companionObject = o
+                }
             }
         }
-        field.forEachFunction { resolveFunction(it) }
+        scope.forEachFunction { resolveFunction(it) }
+        //继承关系处理
+        scope.forEachTemplate { it.flatExtends() }
+        scope.forEachObject { if(it is ObjectDataTemplate) it.flatExtends() }
     }
 
     private fun resolveFunction(f: Function){
@@ -104,7 +117,7 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
                             continue
                         }
                         if(nsp.second == "*"){
-                            qwq.field.forEachType {
+                            qwq.scope.forEachType {
                                 val d = simpleFieldWithType.putType(it.simpleName, it)
                                 if(!d){
                                     simpleFieldWithType.putType(it.simpleName, it, true)
@@ -112,7 +125,7 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
                                 }
                             }
                         }else{
-                            val owo = qwq.field.getDeclaredType(nsp.second)?.getType()
+                            val owo = qwq.scope.getDeclaredType(nsp.second)?.getType()
                             if(owo == null){
                                 LogProcessor.error("Declared type '$import' not found")
                                 continue
@@ -181,19 +194,19 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
                 }
                 //有继承
                 if(mniRegister.override){
-                    val result = field.hasFunction(nf, true)
+                    val result = scope.hasFunction(nf, true)
                     if(!result){
                         LogProcessor.error("Method ${nf.identifier} in class ${cls.name} overrides nothing")
                         continue
                     }else{
                         nf.isOverride = true
-                        this.field.addFunction(nf, true)
+                        this.scope.addFunction(nf, true)
                     }
                 }else {
-                    val result = this.field.addFunction(nf, false)
+                    val result = this.scope.addFunction(nf, false)
                     if(!result){
                         LogProcessor.warn("Duplicate method ${nf.identifier} in class ${cls.name}. If you want to override it, please add @MNIRegister(override = true) to the method")
-                        this.field.addFunction(nf, true)
+                        this.scope.addFunction(nf, true)
                     }
                 }
             }
@@ -207,8 +220,8 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
 
     companion object {
         val currNamespaceField: NamespaceScope
-            get() = GlobalScope.localNamespaces[Project.currNamespace]?.field?:
-                GlobalScope.importedLibNamespaces[Project.currNamespace]?.field?:
-                GlobalScope.stdNamespaces[Project.currNamespace]!!.field
+            get() = GlobalScope.localNamespaces[Project.currNamespace]?.scope?:
+                GlobalScope.importedLibNamespaces[Project.currNamespace]?.scope?:
+                GlobalScope.stdNamespaces[Project.currNamespace]!!.scope
     }
 }

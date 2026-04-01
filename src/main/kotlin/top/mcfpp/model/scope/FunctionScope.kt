@@ -113,6 +113,11 @@ open class FunctionScope : SimpleScopeWithVar, SimpleScopeWithType {
         return vars.remove(id)
     }
 
+    fun clearVar(){
+        fieldVarSet.clear()
+        vars.clear()
+    }
+
     override fun forEachVar(action: (Var<*>) -> Unit) {
         for (v in vars.values){
             action(v)
@@ -134,7 +139,7 @@ open class FunctionScope : SimpleScopeWithVar, SimpleScopeWithType {
     }
 
     override fun getType(key: String) : MCFPPType? {
-        var re = types.getOrDefault(key, null)
+        var re = types.getOrDefault<String, MCFPPType?>(key, null)
         if(re == null && parent is IScopeWithType){
             re = (parent as IScopeWithType).getType(key)
         }

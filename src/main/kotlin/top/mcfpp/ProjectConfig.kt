@@ -3,6 +3,7 @@ package top.mcfpp
 import top.mcfpp.command.CommentLevel
 import top.mcfpp.util.MCUUID
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.*
 
 //TODO 标准库引用逻辑优化
@@ -35,12 +36,12 @@ open class ProjectConfig(
     /**
      * 注释输出等级
      */
-    var commentLevel : CommentLevel = CommentLevel.DEBUG,
+    var commentLevel : CommentLevel = CommentLevel.INFO,
 
     /**
      * 工程的根目录
      */
-    var root: Path? = null,
+    var root: Path = Paths.get(""),
 
     /**
      * 工程的名字
@@ -80,5 +81,15 @@ open class ProjectConfig(
     /**
      * 临时世界实体的UUID
      */
-    var tempItemEntityUUID: MCUUID = MCUUID(UUID.fromString("810d6071-f121-4972-80d6-60cc19b40cf8"))
+    var tempItemEntityUUID: MCUUID = MCUUID(UUID.fromString("810d6071-f121-4972-80d6-60cc19b40cf8")),
+
+    /**
+     * 是否生成bin.mclib
+     */
+    var noMcLib: Boolean = false,
+
+    /**
+    * 数据文件夹路径
+    */
+    var dataPath: Path? = null,
 )

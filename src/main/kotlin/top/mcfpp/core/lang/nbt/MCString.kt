@@ -1,6 +1,7 @@
 package top.mcfpp.core.lang.nbt
 
 import top.mcfpp.annotations.InsertCommand
+import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.JsonTextConcrete
 import top.mcfpp.core.lang.MCFPPValue
@@ -192,5 +193,9 @@ class MCStringConcrete: MCString, MCFPPValue<StringTag> {
         return MCStringConcrete(value).apply {
             isTemp = true
         }
+    }
+
+    override fun toCommandPart(): Command {
+        return Command(value.value)
     }
 }

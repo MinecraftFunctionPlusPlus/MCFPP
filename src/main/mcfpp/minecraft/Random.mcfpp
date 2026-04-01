@@ -3,19 +3,19 @@ data Random {
     private id as string;
 
     constructor(){
-        /random reset ${this.id} 0 true true
+        /random reset ${this.id} 0 true true/
     }
 
     constructor(string){
         this.id = p0;
-        /random reset ${this.id} 0 true true
+        /random reset ${this.id} 0 true true/
     }
 
     constructor(id as string, seed as int, includeWorldSeed as bool, includeGameSeed as bool){
         this.id = id;
-        /random reset ${this.id} ${seed} ${includeWorldSeed} ${includeGameSeed}
+        /random reset ${this.id} ${seed} ${includeWorldSeed} ${includeGameSeed}/
     }
 }
 
 @From<"top.mcfpp.mni.minecraft.RandomObjectData">
-object data Random;
+object data Random

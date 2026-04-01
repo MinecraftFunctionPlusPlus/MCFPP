@@ -15,6 +15,7 @@ import top.mcfpp.model.Member
 import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.type.*
@@ -78,6 +79,9 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     var isTemp = false
 
     open var parent : CanSelectMember? = null
+
+    @Transient
+    var declaredParentTemplate: DataTemplate? = null
 
     /**
      * 访问修饰符
@@ -197,7 +201,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         re.hasAssigned = true
         if(stackIndex != 0) trackLost = true
         return if(re is MCFPPValue<*> && re.isDynamic){
-            re.toDynamic(false) as Self
+            (re.toDynamic(false) as Self).apply { isDynamic = true }
         }else {
             re
         }
@@ -219,7 +223,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             return this
         }
         if(this.type.isSubOf(type)){
-            return this
+            return this.clone().apply { this.type = type }
         }
         return when(type){
             MCFPPBaseType.Any -> {
@@ -238,10 +242,13 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             }
             is MCFPPUnionType -> {
                 if(type.types.contains(this.type)){
-                    this
+                    this.clone().apply { this.type = type }
                 }else{
                     buildCastErrorVar(type)
                 }
+            }
+            is MCFPPTypeWithGeneric -> {
+                genericCast(type)
             }
             else -> {
                 buildCastErrorVar(type)
@@ -250,7 +257,11 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     }
 
     open fun canExplicitCast(type: MCFPPType): Boolean{
-        return this.type.isSubOf(type) || type == MCFPPNBTType.NBT || type == MCFPPBaseType.Any || type is MCFPPUnionType && type.types.contains(this.type)
+        return this.type.isSubOf(type)
+                || type == MCFPPNBTType.NBT
+                || type == MCFPPBaseType.Any
+                || type is MCFPPUnionType && type.types.contains(this.type)
+                || type is MCFPPTypeWithGeneric && canGenericCast(type)
     }
 
     /**
@@ -275,6 +286,9 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
                     buildCastErrorVar(type)
                 }
             }
+            is MCFPPTypeWithGeneric -> {
+                return genericCast(type)
+            }
             else -> {
                 buildCastErrorVar(type)
             }
@@ -282,7 +296,30 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     }
 
     open fun canImplicitCast(type: MCFPPType): Boolean{
-        return this.type == type || type == MCFPPBaseType.Any || type is MCFPPUnionType && type.types.contains(this.type)
+        return this.type == type
+                || type == MCFPPBaseType.Any
+                || type is MCFPPUnionType && type.types.contains(this.type)
+                || type is MCFPPTypeWithGeneric && canGenericCast(type)
+    }
+
+    open fun genericCast(type: MCFPPType): Var<*> {
+        if(this.type !is MCFPPTypeWithGeneric) return buildCastErrorVar(type)
+        if(this.type.typeName != type.typeName) return buildCastErrorVar(type)
+        if((this.type as MCFPPTypeWithGeneric).generic.size == (type as MCFPPTypeWithGeneric).generic.size){
+            for(i in 0..<(this.type as MCFPPTypeWithGeneric).generic.size){
+                if(!(this.type as MCFPPTypeWithGeneric).generic[i].isSubOf((type as MCFPPTypeWithGeneric).generic[i])){
+                    return buildCastErrorVar(type)
+                }
+            }
+            return this.clone().apply { this.type = type }
+        }
+        return buildCastErrorVar(type)
+    }
+
+    open fun canGenericCast(type: MCFPPTypeWithGeneric): Boolean{
+        return this.type.typeName == (type as MCFPPType).typeName
+                && (this.type as MCFPPTypeWithGeneric).generic.size == type.generic.size
+                && (this.type as MCFPPTypeWithGeneric).generic.zip(type.generic).all { (a, b) -> a.isSubOf(b) }
     }
 
     @Override
@@ -297,6 +334,37 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         return `var`
     }
 
+    fun constBinaryComputation(a: Var<*>, operation: String): Var<*>?{
+        if(this !is MCFPPValue<*>){
+            LogProcessor.error("$identifier is not a concrete value")
+            return null
+        }
+        if(a !is MCFPPValue<*>){
+            LogProcessor.error("${a.identifier} is not a concrete value")
+            return null
+        }
+        var qwq = a.implicitCast(this.type)
+        if(qwq.isError){
+            val pwp = this.implicitCast(a.type)
+            if(!pwp.isError){
+                return pwp.constBinaryComputation(a, operation)
+            }else{
+                qwq = a
+            }
+        }
+        val operator = (type.concreteInstanceData).scope.getOperator(operation, a.type)
+        val re = if(operator != null && operator is NativeFunction && operator.returnsConstWhenArgsConst) {
+            operator.invoke(arrayListOf(qwq), this)
+        } else if(operator == null) {
+            LogProcessor.error("Unsupported operation '$operation' between ${type.typeName} and ${a.type.typeName}")
+            return null
+        } else {
+            LogProcessor.error("Only const natives is premise here")
+            return null
+        }
+        return re
+    }
+
     fun binaryComputation(a: Var<*>, operation: String): Var<*>{
         var qwq = a.implicitCast(this.type)
         if(qwq.isError){
@@ -307,18 +375,36 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
                 qwq = a
             }
         }
-        val operator = (if(this is MCFPPValue<*>) type.concreteInstanceData else type.instanceData).field.getOperator(operation, a.type)
+        val operator = (if(this is MCFPPValue<*>) type.concreteInstanceData else type.instanceData).scope.getOperator(operation, a.type)
         val re = if(operator != null) {
-            operator.invoke(operator.mapNormalArgs(arrayListOf(qwq)), this)
+            operator.invoke(arrayListOf(qwq), this)
         } else {
             LogProcessor.error("Unsupported operation '$operation' between ${type.typeName} and ${a.type.typeName}")
-            UnknownVar("${type.typeName}_$operation{a.type.typeName}_" + TempPool.getVarIdentify()).apply { isError = true }
+            UnknownVar("${type.typeName}_${operation}_${a.type.typeName}_" + TempPool.getVarIdentify()).apply { isError = true }
+        }
+        return re
+    }
+
+    fun constUnaryComputation(operation: String): Var<*>{
+        if(this !is MCFPPValue<*>){
+            LogProcessor.error("$identifier is not a concrete value")
+            return UnknownVar("${type.typeName}_${operation}_" + TempPool.getVarIdentify()).apply { isError = true }
+        }
+        val operator = type.concreteInstanceData.scope.getOperator(operation, null)
+        val re = if(operator != null && operator is NativeFunction && operator.returnsConstWhenArgsConst) {
+            operator.invoke(arrayListOf(), this)
+        } else if(operator == null) {
+            LogProcessor.error("Unsupported operation '$operation' for ${type.typeName}")
+            UnknownVar("${type.typeName}_${operation}_" + TempPool.getVarIdentify()).apply { isError = true }
+        } else {
+            LogProcessor.error("Only const native function is premise here")
+            UnknownVar("${type.typeName}_${operation}_" + TempPool.getVarIdentify()).apply { isError = true }
         }
         return re
     }
 
     fun unaryComputation(operation: String): Var<*>{
-        val operator = (if(this is MCFPPValue<*>) type.concreteInstanceData else type.instanceData).field.getOperator(operation, null)
+        val operator = (if(this is MCFPPValue<*>) type.concreteInstanceData else type.instanceData).scope.getOperator(operation, null)
         val re = if(operator != null) {
             operator.invoke(arrayListOf(), this)
         } else {

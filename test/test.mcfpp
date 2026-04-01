@@ -1,23 +1,195 @@
-namespace test;
+import mcfpp.minecraft:Random
+import mcfpp.minecraft.resource:Predicate
+import mcfpp.minecraft.std:*
 
-import mcfpp.standard:*;
+func start(){
+    Snake.init()
+    Snake.alive = true
+    Snake.score = 0
+    Snake.render(Snake.score)
+}
 
-var qwq as float = 1;
-var node = "123";
-
-class MyClass {
-    var myVar as int = 0;
-
-    func myMethod() -> void {
-        print(myVar);
+@Tick
+func main(){
+    execute(as=@a){
+        var newDir = 0
+        if(Predicate.of("qwq:up").pass()){
+            newDir = 0
+        }
+        if(Predicate.of("qwq:right").pass()){
+            newDir = 1
+        }
+        if(Predicate.of("qwq:down").pass()){
+            newDir = 2
+        }
+        if(Predicate.of("qwq:left").pass()){
+            newDir = 3
+        }
+        if((newDir + 2) % 4 != Snake.dir){
+            Snake.dir = newDir
+        }
+    }
+    if(Snake.alive){
+        Snake.alive = Snake.step()
+        Snake.score = Snake.snakeLen - 3
+        Snake.render(Snake.score)
     }
 }
 
-data MyData {
-    var qwq as (float|text);
-    var pwp as int;
-}
+object data Snake {
+    const var ROWS = 20
+    const var COLS = 20
+    const var CH_EMPTY = "□"
+    const var CH_SNAKE = "■"
+    const var CH_FOOD = "*"
 
-func test(qwq as int) -> void{
-    print(node);
+    var dir = 1
+
+    var alive = false
+    var score = 0
+
+    const var MAXCELLS = Snake.ROWS * Snake.COLS
+    var snake as list<int> = []
+    var headIdx = 0
+    var tailIdx = 0
+    var occupied as list<list<bool>> = []
+
+    var gameMap as list<list<string>> = []
+    var foodR = -1
+    var foodC = -1
+
+    var snakeLen as int {
+        get = (Snake.tailIdx - Snake.headIdx + Snake.MAXCELLS) % Snake.MAXCELLS
+    }
+
+    func queueAdd(v as int){
+        Snake.snake[Snake.tailIdx] = v
+        Snake.tailIdx = (Snake.tailIdx + 1) % Snake.MAXCELLS
+    }
+
+    func queueRemove() -> int {
+        var v as int = Snake.snake[Snake.headIdx]
+        Snake.headIdx = (Snake.headIdx + 1) % Snake.MAXCELLS
+        return v
+    }
+
+    func init() {
+        var gM as list<list<string>> = []
+        for(r: 0..(Snake.ROWS-1)){
+            gM.add([] as list<string>)
+            for(c: 0..(Snake.COLS-1)){
+                gM[r].add(Snake.CH_EMPTY)
+            }
+        }
+        Snake.gameMap = gM
+        var midR = Snake.ROWS / 2
+        var midC = Snake.COLS / 2
+        var c1 = midC - 1
+        var c2 = midC
+        var c3 = midC + 1
+        Snake.headIdx = 0
+        Snake.tailIdx = 0
+        Snake.queueAdd(midR * Snake.COLS + c1)
+        Snake.queueAdd(midR * Snake.COLS + c2)
+        Snake.queueAdd(midR * Snake.COLS + c3)
+        var o as list<list<bool>> = []
+        for(r : 0..(Snake.ROWS-1)){
+            o.add([] as list<bool>)
+            for(c : 0..(Snake.COLS-1)){
+                o[r].add(false)
+            }
+        }
+        Snake.occupied = o
+
+        Snake.occupied[midR][c1] = true
+        Snake.occupied[midR][c2] = true
+        Snake.occupied[midR][c3] = true
+        
+        Snake.gameMap[midR][c1] = Snake.CH_SNAKE
+        Snake.gameMap[midR][c2] = Snake.CH_SNAKE
+        Snake.gameMap[midR][c3] = Snake.CH_SNAKE
+        Snake.placeFood()
+    }
+
+    func placeFood() {
+        if(Snake.snakeLen == Snake.ROWS * Snake.COLS) {
+            return
+        }
+        while(true){
+            var r = Random.roll(Snake.ROWS)
+            var c = Random.roll(Snake.COLS)
+            if(!Snake.occupied[r][c]){
+                Snake.foodR = r
+                Snake.foodC = c
+                Snake.gameMap[r][c] = Snake.CH_FOOD
+                break
+            }
+        }
+    }
+
+    func flush(){
+        for(i: 0..19){
+            print("")
+        }
+    }
+
+    func render(score as int){
+        Snake.flush()
+        var t as text = "Score: " + score.toText()
+        print(t)
+        for(r : 0..(Snake.ROWS-1)){
+            var line as text = ""
+            for(c : 0..(Snake.COLS-1)){
+                line = line + Snake.gameMap[r][c]
+            }
+            print(line)
+        }
+    }
+
+    func step() -> bool {
+        var headPos = Snake.snake[(Snake.tailIdx - 1 + Snake.MAXCELLS) % Snake.MAXCELLS]
+        var hr = headPos / Snake.COLS
+        var hc = headPos % Snake.COLS
+        var nr = hr
+        var nc = hc
+        if(Snake.dir == 0) {
+            nr = hr - 1
+        }else if(Snake.dir == 1) {
+            nc = hc + 1
+        }else if(Snake.dir == 2) {
+            nr = hr + 1
+        }else if(Snake.dir == 3) {
+            nc = hc - 1
+        }
+
+        if(nr < 0 || nr >= Snake.ROWS || nc < 0 || nc >= Snake.COLS) {
+            return false
+        }
+
+        var grow = nr == Snake.foodR && nc == Snake.foodC
+
+        var tailPos = Snake.snake[Snake.headIdx]
+        var tailR = tailPos / Snake.COLS
+        var tailC = tailPos % Snake.COLS
+        if(Snake.occupied[nr][nc]) {
+            if(!(!grow && nr == tailR && nc == tailC)) {
+                return false
+            }
+        }
+
+        Snake.queueAdd(nr * Snake.COLS + nc)
+        Snake.occupied[nr][nc] = true
+        Snake.gameMap[nr][nc] = Snake.CH_SNAKE
+
+        if(grow){
+            Snake.placeFood()
+        }else{
+            var removed = Snake.queueRemove()
+            var r = removed / Snake.COLS
+            var c = removed % Snake.COLS
+            Snake.gameMap[r][c] = Snake.CH_EMPTY
+            Snake.occupied[r][c] = false
+        }
+        return true
+    }
 }

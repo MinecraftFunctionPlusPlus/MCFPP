@@ -43,7 +43,6 @@ fun compile(config: ProjectConfig){
     val start: Long = System.currentTimeMillis()
 
     Project.config = config
-    if(config.root != null) Project.root = config.root!!
     Project.compileStage = Project.CompileStage.PRE_INIT
     Project.stageProcessor[0].forEach { it() }
     Project.init() //初始化
@@ -54,7 +53,7 @@ fun compile(config: ProjectConfig){
     Project.runAnnotation() //执行注解
     Project.compile() //编译
     Project.optimization() //优化
-    Project.genIndex() //生成索引
+    if(!Project.config.noMcLib) Project.genIndex() //生成索引
     Project.ctx.clear()
     if(!Project.config.noDatapack){
         Project.compileStage = Project.CompileStage.GEN_DATAPACK

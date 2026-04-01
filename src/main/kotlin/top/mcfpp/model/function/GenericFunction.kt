@@ -9,7 +9,6 @@ import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Generic
 import top.mcfpp.model.compound.DataTemplate
-import top.mcfpp.model.compound.Interface
 import top.mcfpp.util.LogProcessor
 
 class GenericFunction : Function, Generic<Function> {
@@ -22,12 +21,6 @@ class GenericFunction : Function, Generic<Function> {
      * @param namespace 函数的命名空间
      */
     constructor(identifier: String, namespace: String = Project.currNamespace, ctx: mcfppParser.CurlBlockContext) : super(identifier, namespace, ctx)
-
-    /**
-     * 创建一个函数，并指定它所属的接口。接口的函数总是抽象并且公开的
-     * @param identifier 函数的标识符
-     */
-    constructor(identifier: String, itf: Interface, ctx: mcfppParser.CurlBlockContext) : super(identifier, itf, ctx)
 
     /**
      * 创建一个函数，并指定它所属的结构体。
@@ -43,7 +36,7 @@ class GenericFunction : Function, Generic<Function> {
         return invoke(mapReadonlyArgs(readOnlyArgs), mapNormalArgs(normalArgs), caller)
     }
 
-    override fun invoke(readOnlyArgs: LinkedHashMap<String, Var<*>>, normalArgs: LinkedHashMap<String, Var<*>>, caller: CanSelectMember?): Var<*> {
+    private fun invoke(readOnlyArgs: LinkedHashMap<String, Var<*>>, normalArgs: LinkedHashMap<String, Var<*>>, caller: CanSelectMember?): Var<*> {
         return compile(completeDefaultValue((readOnlyArgs + normalArgs) as LinkedHashMap)).let {(k, v) -> k.invoke(v, caller)}
     }
 

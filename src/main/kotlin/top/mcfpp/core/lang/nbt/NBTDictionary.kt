@@ -76,10 +76,10 @@ open class NBTDictionary : NBTBasedData {
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         var re: Function = UnknownFunction(key)
-        data.field.forEachFunction {
+        data.scope.forEachFunction {
             //TODO 我们约定it为NativeFunction，但是没有考虑拓展函数
             assert(it is NativeFunction)
-            val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to (type as MCFPPDictType).generic))
+            val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to (type as MCFPPDictType).generic[0]))
             if(nf.isSelf(key, normalArgs)){
                 re = nf
             }
@@ -172,10 +172,10 @@ class NBTDictionaryConcrete : NBTDictionary, PartialConcreteValue<CompoundTag, H
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         var re: Function = UnknownFunction(key)
-        data.field.forEachFunction {
+        data.scope.forEachFunction {
             //TODO 我们约定it为NativeFunction，但是没有考虑拓展函数
             assert(it is NativeFunction)
-            val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to (type as MCFPPDictType).generic))
+            val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to (type as MCFPPDictType).generic[0]))
             if(nf.isSelf(key, normalArgs)){
                 re = nf
             }
@@ -214,7 +214,7 @@ class NBTDictionaryConcrete : NBTDictionary, PartialConcreteValue<CompoundTag, H
 
             is MCFPPMapType -> {
                 if(type.generic == (this.type as MCFPPDictType).generic){
-                    NBTMapConcrete(value, genericType = type.generic).setAs(this)
+                    NBTMapConcrete(value, genericType = type.generic[0]).setAs(this)
                 }else{
                     buildCastErrorVar(type)
                 }
@@ -257,7 +257,7 @@ class NBTDictionaryConcrete : NBTDictionary, PartialConcreteValue<CompoundTag, H
                 }
             }
             is MCFPPDataTemplateType -> {
-                return if(type.template.checkDictionaryStruct(value)){
+                if(type.template.checkDictionaryStruct(value)){
                     if(isAllConcrete()){
                         DataTemplateObjectConcrete(type.template, value, identifier)
                     }else {
@@ -296,7 +296,7 @@ class NBTDictionaryConcrete : NBTDictionary, PartialConcreteValue<CompoundTag, H
         return if(index is MCString){
             if(index is MCStringConcrete){
                 if(!value.containsKey(index.value.value)){
-                    val re = (type as MCFPPDictType).generic.build(index.value.value)
+                    val re = (type as MCFPPDictType).generic[0].build(index.value.value)
                     re.parent = this
                     re.nbtPath = nbtPath.memberIndex(index.value.value)
                     PropertyVar(Property.buildSimpleSetter(index.value.value), re, this)

@@ -12,10 +12,12 @@ import org.antlr.v4.runtime.tree.ParseTree
 import top.mcfpp.Project
 import top.mcfpp.antlr.*
 import top.mcfpp.model.Namespace
-import top.mcfpp.model.scope.FileScope
-import top.mcfpp.model.scope.GlobalScope
+import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionTag
+import top.mcfpp.model.scope.FileScope
+import top.mcfpp.model.scope.GlobalScope
+import top.mcfpp.model.scope.NamespaceScope
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper.pathToNamespace
 import top.mcfpp.util.StringHelper.toSnakeCase
@@ -34,7 +36,7 @@ class MCFPPFile : File {
 
     val unsolvedImports = hashMapOf<String, String>()
 
-    val inputStream : FileInputStream by lazy { FileInputStream(this) }
+    private val inputStream : FileInputStream by lazy { FileInputStream(this) }
 
     /**
      * 此文件对应的命名空间，默认为文件的父目录和源代码目录的相对路径
@@ -49,7 +51,11 @@ class MCFPPFile : File {
 
     constructor(path: String) : super(path) {
         val n = Project.config.sourcePath!!.toAbsolutePath().relativize(this.toPath().toAbsolutePath().parent).toString()
-        val str = Project.config.rootNamespace + "." + n.pathToNamespace().toSnakeCase()
+        val str = if(n.isEmpty()){
+            Project.config.rootNamespace
+        }else{
+            Project.config.rootNamespace + "." + n.pathToNamespace().toSnakeCase()
+        }
         namespace = GlobalScope.getOrCreateNamespace(str)
     }
 
@@ -87,7 +93,7 @@ class MCFPPFile : File {
         currFile = this
         Project.currNamespace = namespace.identifier
         MCFPPTypeVisitor().visit(tree())
-        field.namespaceField = namespace.field
+        field.namespaceField = namespace.scope
         Project.currNamespace = Project.config.rootNamespace
         currFile = null
     }
@@ -121,23 +127,28 @@ class MCFPPFile : File {
         Project.currNamespace = namespace.identifier
         //引用
         for (n in unsolvedImports){
-            val qwq = GlobalScope.getNamespace(n.key)
+            val qwq = GlobalScope.getUnsolvedImportNamespace(n.key)
             if(qwq == null){
                 LogProcessor.error("Namespace '$n' not found")
                 continue
             }
             if(n.value == "*"){
-                field.importedNamespaceField.add(qwq.field)
+                field.importedNamespaceField[qwq.identifier] = qwq.scope
             }else{
-                val owo = qwq.field.getDeclaredType(n.value)
+                val owo = qwq.scope.getDeclaredType(n.value)
                 if(owo == null){
                     LogProcessor.error("Declared type '${n.key}.${n.value}' not found")
                     continue
                 }
-                val result = field.importField.addDeclaredType(owo)
+                val result = field.importField.getOrPut(owo.namespace) { NamespaceScope(owo.namespace) }
+                    .addDeclaredType(owo)
+                if(owo is DataTemplate){
+                    owo.companionObject?.let {
+                        field.importField[owo.namespace]!!.addObject(it.identifier, it)
+                    }
+                }
                 if(!result){
-                    val pwp = field.importField.getDeclaredType(n.value)
-                    LogProcessor.error("Already have import '${pwp!!.namespaceID}")
+                    LogProcessor.error("Already have import '${owo.namespaceID}")
                 }
             }
         }
@@ -188,6 +199,7 @@ class MCFPPFile : File {
                             .executes {
                                 try {
                                     val clazz = Class.forName(getString(it, "className"))
+                                    LogProcessor.debug("Injecting class $clazz to namespace ${it.source.namespace.identifier}")
                                     it.source.namespace.injectedBy(clazz)
                                     return@executes 1
                                 }catch (e: ClassNotFoundException){
@@ -197,44 +209,6 @@ class MCFPPFile : File {
                             }
                     )
             )
-        }
-
-        /**
-         * 获得targetPath相对于sourcePath的相对路径
-         * @param sourcePath    : 原文件路径
-         * @param targetPath    : 目标文件路径
-         * @return 返回相对路径
-         */
-        private fun getRelativePath(sourcePath: String, targetPath: String): String {
-            val pathSB: StringBuilder = StringBuilder()
-            if (targetPath.indexOf(sourcePath) == 0) {
-                pathSB.append(targetPath.replace(sourcePath, ""))
-            } else {
-                val sourcePathArray: List<String> = sourcePath.split("/")
-                val targetPathArray: List<String> = targetPath.split("/")
-                if (targetPathArray.size >= sourcePathArray.size) {
-                    var i = 0
-                    while (i < targetPathArray.size) {
-                        if (!(sourcePathArray.size > i && targetPathArray[i] == sourcePathArray[i])) {
-                            pathSB.append("../".repeat(0.coerceAtLeast(sourcePathArray.size - i)))
-                            while (i < targetPathArray.size) {
-                                pathSB.append(targetPathArray[i]).append("/")
-                                i++
-                            }
-                            break
-                        }
-                        i++
-                    }
-                } else {
-                    for (i in sourcePathArray.indices) {
-                        if (!(targetPathArray.size > i && targetPathArray[i] == sourcePathArray[i])) {
-                            pathSB.append("../".repeat(sourcePathArray.size - i))
-                            break
-                        }
-                    }
-                }
-            }
-            return pathSB.toString()
         }
 
         fun findFiles(inputPath: String): List<Path> {

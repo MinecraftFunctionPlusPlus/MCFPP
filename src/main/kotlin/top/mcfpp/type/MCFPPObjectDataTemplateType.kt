@@ -18,7 +18,7 @@ class MCFPPObjectDataTemplateType(
 ) : MCFPPDataTemplateType(template, parentType) {
 
     override val typeName: String
-        get() = "template(${template.namespace}:${template.identifier})"
+        get() = "object(${template.namespace}:${template.identifier})"
 
     override fun tryResolve() {
         if(template is UnsolvedObjectTemplate){
@@ -33,5 +33,9 @@ class MCFPPObjectDataTemplateType(
     override fun buildUnConcrete(identifier: String): Var<*> {
         LogProcessor.error("Cannot build var from object: $typeName")
         return UnknownVar(identifier)
+    }
+
+    override fun replaceMemberVar(v: Var<*>) {
+        template.scope.putVar(v.identifier, v, true)
     }
 }

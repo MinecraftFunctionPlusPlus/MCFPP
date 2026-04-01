@@ -48,7 +48,7 @@ class FunctionParam(
     var isReadOnly: Boolean = false
 ) {
 
-    var typeName: String = type.typeName
+    var typeName: String = type.toString()
 
     var defaultVar: Var<*>? = null
 
@@ -63,6 +63,10 @@ class FunctionParam(
         }
         qwq.nbtPath = NBTPath.getNormalStackPath(qwq)
         return qwq
+    }
+
+    override fun toString(): String {
+        return "$identifier as $type"
     }
 
     companion object {

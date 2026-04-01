@@ -25,6 +25,8 @@ class MCFPPGenericParamType(
     parentType: ArrayList<out MCFPPType>
 ) : MCFPPType(parentType), MCFPPTypeWithGeneric {   //TODO: 泛型的CompoundData
 
+    override val generic: List<MCFPPType> = emptyList()
+
     override val objectData: CompoundData
         get() = MCFPPBaseType.Any.instanceData
 

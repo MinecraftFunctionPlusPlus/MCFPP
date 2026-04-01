@@ -9,8 +9,6 @@ interface Generic<T> where T : Function{
     val readOnlyParams: ArrayList<FunctionParam>
     fun invoke(readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>, caller: CanSelectMember?): Var<*>
 
-    fun invoke(readOnlyArgs: LinkedHashMap<String, Var<*>>, normalArgs: LinkedHashMap<String, Var<*>>, caller: CanSelectMember?): Var<*>
-
     //fun compile(readOnlyArgs: ArrayList<Var<*>>) : T
 
     fun isSelf(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): Boolean

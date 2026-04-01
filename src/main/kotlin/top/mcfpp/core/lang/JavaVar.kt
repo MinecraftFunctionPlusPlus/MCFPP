@@ -35,6 +35,7 @@ class JavaVar : ConcreteVar<JavaVar, Any?> {
      * @param identifier 标识符。如不指定，则为随机uuid
      * @param value 值
      */
+    @JvmOverloads
     constructor(value: Any?, identifier: String = TempPool.getVarIdentify()) : super(identifier) {
         this.value = value
     }

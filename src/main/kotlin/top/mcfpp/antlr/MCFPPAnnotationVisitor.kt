@@ -37,15 +37,15 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
                 args.add(a.value!!)
             }
         }
-        Annotation.newInstance(annotation, args)?.let { annotationCache.add(it) }
+        Annotation.build(annotation, args)?.let { annotationCache.add(it) }
     }
 
     override fun visitTemplateDeclaration(ctx: mcfppParser.TemplateDeclarationContext): Unit = withCompilationContext(ctx) {
         //注册模板
         val id = (ctx.declarationName()?: ctx.compoundDeclaration().declarationName()).classWithoutNamespace().text
         val namespace1 = GlobalScope.localNamespaces[Project.currNamespace]!!
-        val template = if(namespace1.field.hasTemplate(id)){
-            namespace1.field.getTemplate(id)!!
+        val template = if(namespace1.scope.hasTemplate(id)){
+            namespace1.scope.getTemplate(id)!!
         }else{
             throw UndefinedException("Template should have been defined: $id")
         }
@@ -59,11 +59,31 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
         DataTemplate.currTemplate = null
     }
 
+
+    override fun visitInterfaceDeclaration(ctx: mcfppParser.InterfaceDeclarationContext) {
+        //注册模板
+        val id = ctx.compoundDeclaration().declarationName().classWithoutNamespace().text
+        val namespace1 = GlobalScope.localNamespaces[Project.currNamespace]!!
+        val itf = if(namespace1.scope.hasInterface(id)){
+            namespace1.scope.getInterface(id)!!
+        }else{
+            throw UndefinedException("Interface should have been defined: $id")
+        }
+        annotationCache.forEach {
+            it.on(itf)
+        }
+        itf.annotations.addAll(annotationCache)
+        annotationCache.clear()
+        DataTemplate.currTemplate = itf
+        ctx.templateBody()?.let { visitTemplateBody(it) }
+        DataTemplate.currTemplate = null
+    }
+
     override fun visitObjectTemplateDeclaration(ctx: mcfppParser.ObjectTemplateDeclarationContext): Unit = withCompilationContext(ctx) {
         //注册模板
         val id = ctx.compoundDeclaration().declarationName().classWithoutNamespace().text
         val namespace1 = GlobalScope.localNamespaces[Project.currNamespace]!!
-        val objectTemplate = namespace1.field.getObject(id)
+        val objectTemplate = namespace1.scope.getObject(id)
         if(objectTemplate !is ObjectDataTemplate){
             throw UndefinedException("Template should have been defined: $id")
         }
@@ -96,7 +116,7 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
 
     override fun visitTemplateFieldDeclaration(ctx: mcfppParser.TemplateFieldDeclarationContext): Unit = withCompilationContext(ctx) {
         //获取字段对象
-        val field = DataTemplate.currTemplate!!.field.getVar(ctx.Identifier().text)!!
+        val field = DataTemplate.currTemplate!!.scope.getVar(ctx.Identifier().text)!!
         annotationCache.forEach {
             it.on(field)
         }

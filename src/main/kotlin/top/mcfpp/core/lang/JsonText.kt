@@ -47,11 +47,13 @@ open class JsonText : NBTBasedData {
 
     override fun doAssignedBy(b: Var<*>): NBTBasedData {
         when (b) {
+            is JsonTextConcrete -> return JsonTextConcrete(this, b.value)
             is JsonText -> assignCommand(b)
             else -> LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
         }
         return this
     }
+
     override fun clone(): NBTBasedData {
         return JsonText(this)
     }

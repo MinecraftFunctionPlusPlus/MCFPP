@@ -15,7 +15,7 @@ class BaseTest {
                     i = i + p;
                 }
             """.trimIndent()
-        MCFPPStringTest.readFromString(test, arrayOf("debug"))
+        MCFPPStringTest.readFromString(test, arrayOf("-debug"))
     }
 
     @Test
@@ -43,7 +43,7 @@ class BaseTest {
                     print(a);
                 }
             """.trimIndent()
-        MCFPPStringTest.readFromString(test, arrayOf("debug"))
+        MCFPPStringTest.readFromString(test, arrayOf("-debug"))
     }
 
     @Test
@@ -80,7 +80,7 @@ class BaseTest {
                     print(b);
                 }
             """.trimIndent()
-        MCFPPStringTest.readFromString(test, arrayOf("debug"))
+        MCFPPStringTest.readFromString(test, arrayOf("-debug"))
     }
 
     @Test

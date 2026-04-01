@@ -10,6 +10,7 @@ import top.mcfpp.model.Member
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
+import top.mcfpp.model.scope.CompoundDataScope
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
@@ -29,7 +30,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
 
     val templateType: DataTemplate
 
-    var instanceField: top.mcfpp.model.scope.CompoundDataScope
+    var instanceField: CompoundDataScope
 
     final override var type: MCFPPType
 
@@ -41,7 +42,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     constructor(template: DataTemplate, identifier: String = TempPool.getVarIdentify()): super(identifier) {
         this.templateType = template
         this.identifier = identifier
-        instanceField = template.field.createDataTemplateInstance(this)
+        instanceField = template.scope.createDataTemplateInstance(this)
         type = templateType.getType()
     }
 
@@ -58,7 +59,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     override fun doAssignedBy(b: Var<*>): DataTemplateObject {
         when (b) {
             is DataTemplateObjectConcrete -> {
-                if (b.type.objectData.isSubOf(this.templateType)) {
+                if ((b.type as MCFPPDataTemplateType).template.isSubOf(this.templateType)) {
                     this.assignMembers(b)
                     return this
                 } else {
@@ -101,9 +102,13 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     private fun assignMembers(template: DataTemplateObjectConcrete){
         instanceField.forEachVar {
             if(it !is ConcreteVar<*, *>){
-                it.replacedBy(it.assignedBy(template.value[it.identifier]!!))
+                template.value[it.identifier]?.let { v ->
+                    it.replacedBy(it.assignedBy(v))
+                }
             }else{
-                it.replacedBy(it.assignedBy(template.instanceField.getVar(it.identifier)!!))
+                template.instanceField.getVar(it.identifier)?.let { v ->
+                    it.replacedBy(it.assignedBy(v))
+                }
             }
         }
     }
@@ -209,7 +214,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         //获取函数
-        val member = templateType.field.getFunction(key, readOnlyArgs, normalArgs)
+        val member = templateType.scope.getFunction(key, readOnlyArgs, normalArgs)
         return if(member is UnknownFunction){
             Pair(UnknownFunction(key), true)
         }else{
@@ -269,7 +274,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         val f = getMemberFunction("toCommandPart", arrayListOf(), arrayListOf(), Member.AccessModifier.PUBLIC).first
         if(f is UnknownFunction) throw IllegalArgumentException("Cannot find toCommandPart function")
         if(f.isOverride){
-            val command = (f.invoke(linkedMapOf(), this) as JavaVar).value as Command
+            val command = (f.invoke(arrayListOf(), this) as JavaVar).value as Command
             return command
         }else{
             return super.toCommandPart()

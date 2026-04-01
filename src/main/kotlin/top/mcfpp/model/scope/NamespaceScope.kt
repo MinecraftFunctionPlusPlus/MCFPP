@@ -4,7 +4,6 @@ import org.jetbrains.annotations.Nullable
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
-import top.mcfpp.model.compound.Interface
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.type.MCFPPType
@@ -32,8 +31,11 @@ class NamespaceScope: SimpleLibScope{
 
     private var fileFields = ArrayList<FileScope>()
 
-    constructor(): super(){
+    val identifier : String
+
+    constructor(identifier: String): super(){
         parent.add(GlobalScope)
+        this.identifier = identifier
     }
 
     /**
@@ -43,6 +45,7 @@ class NamespaceScope: SimpleLibScope{
     constructor(cache: NamespaceScope) : super(cache) {
         parent = cache.parent
         fileFields = cache.fileFields
+        this.identifier = cache.identifier
     }
 
     //region function
@@ -111,7 +114,7 @@ class NamespaceScope: SimpleLibScope{
 
     //region interface
 
-    override fun forEachInterface(operation: (Interface) -> Any?){
+    override fun forEachInterface(operation: (DataTemplate) -> Any?){
         for(`interface` in interfaces.values){
             operation(`interface`)
             fileFields.forEach { it.forEachInterface(operation) }
@@ -124,7 +127,7 @@ class NamespaceScope: SimpleLibScope{
      * @param identifier 接口的标识符
      * @return 获取到的接口。如果不存在，则返回null
      */
-    override fun getInterface(identifier: String): Interface? {
+    override fun getInterface(identifier: String): DataTemplate? {
         return interfaces[identifier] ?: fileFields.firstOrNull { it.hasInterface(identifier) }?.getInterface(identifier)
     }
 
@@ -144,7 +147,7 @@ class NamespaceScope: SimpleLibScope{
      * @param itf 接口
      * @return
      */
-    override fun hasInterface(itf: Interface): Boolean {
+    override fun hasInterface(itf: DataTemplate): Boolean {
         return interfaces.containsKey(itf.identifier) || fileFields.any { it.hasInterface(itf) }
     }
     //endregion

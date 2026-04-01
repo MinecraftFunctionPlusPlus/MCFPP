@@ -74,14 +74,14 @@ open class ScoreBool : BaseBool, OnScoreboard {
                 Function.addCommand(
                     Command.build("execute store result score $name $boolObject").build(b.toCommandPart())
                 )
-                return this
+                return ScoreBool(this)
             }
 
             is BaseBool -> {
                 Function.addCommand(
                     Command.build("execute store result score $name $boolObject if").build(b.toCommandPart())
                 )
-                return this
+                return ScoreBool(this)
             }
 
             else -> {
@@ -219,17 +219,17 @@ open class ScoreBool : BaseBool, OnScoreboard {
 
     override fun storeToStack() {
         if(hasStoredInStack) return
-        Function.addCommand("execute " +
-                "store result $nbtPath int 1 " +
-                "run scoreboard players get $name $boolObject")
+        Function.addCommand(Command("execute store result")
+            .build(nbtPath.toCommandPart())
+            .build("int 1 run scoreboard players get $name $boolObject"))
         hasStoredInStack = true
     }
 
     override fun getFromStack() {
         if(parent != null) return
-        Function.addCommand("execute " +
+        Function.addCommand(Command("execute " +
                 "store result score $name $boolObject " +
-                "run data get $nbtPath")
+                "run data get").build(nbtPath.toCommandPart()))
     }
 
     override fun toCommandPart(): Command {

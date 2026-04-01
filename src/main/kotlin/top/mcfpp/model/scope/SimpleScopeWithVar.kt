@@ -42,7 +42,7 @@ interface SimpleScopeWithVar : IScopeWithVar {
      * @return 变量的对象。若不存在，则返回null。
      */
     override fun getVar(key: String): Var<*>? {
-        val re: Var<*>? = vars.getOrDefault(key, null)
+        val re: Var<*>? = vars.getOrDefault<String, Var<*>?>(key, null)
         if (re != null) {
             re.stackIndex = 0
         }

@@ -1,6 +1,7 @@
 package top.mcfpp.io.info
 
 import top.mcfpp.core.lang.Var
+import top.mcfpp.model.compound.DataTemplateParam
 import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.type.MCFPPType
 
@@ -31,4 +32,21 @@ data class FunctionParamInfo(
         }
     }
 
+}
+data class DataTemplateParamInfo(
+    var identifier: String,
+    var type: MCFPPType
+): ModelInfo<DataTemplateParam> {
+    override fun get(): DataTemplateParam {
+        return DataTemplateParam(type.typeName ,identifier, type)
+    }
+
+    companion object {
+        fun from(param: DataTemplateParam): DataTemplateParamInfo {
+            return DataTemplateParamInfo(
+                param.identifier,
+                param.type!!
+            )
+        }
+    }
 }

@@ -9,13 +9,12 @@ class DataTemplateTest {
         val test =
             """
                 data Test{
-                    qwq as nbt;
-                    
+                    qwq as int;
                     func test(){}
                 }
                 
                 func main(){
-                    var t as Test = {qwq:1};
+                    var t = {qwq:1} as Test;
                     print(t.qwq);
                     print(t);
                     t.qwq = 6;
@@ -62,7 +61,7 @@ class DataTemplateTest {
                 }
                 
                 func main(){
-                    var t as Test2 = {qwq:1,qwq2:"test"};
+                    var t = {qwq:1,qwq2:"test"} as Test2;
                     print(t.qwq);
                     print(t.qwq2);
                     print(t);

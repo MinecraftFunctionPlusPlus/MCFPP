@@ -134,10 +134,10 @@ open class NBTMap : NBTBasedData {
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         var re: Function = UnknownFunction(key)
-        data.field.forEachFunction {
+        data.scope.forEachFunction {
             //TODO 我们约定it为NativeFunction，但是没有考虑拓展函数
             assert(it is NativeFunction)
-            val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to (type as MCFPPMapType).generic))
+            val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to (type as MCFPPMapType).generic[0]))
             if(nf.isSelf(key, normalArgs)){
                 re = nf
             }
@@ -221,10 +221,10 @@ class NBTMapConcrete : NBTMap, MCFPPValue<HashMap<String, Var<*>>> {
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         var re: Function = UnknownFunction(key)
-        data.field.forEachFunction {
+        data.scope.forEachFunction {
             //TODO 我们约定it为NativeFunction，但是没有考虑拓展函数
             assert(it is NativeFunction)
-            val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to (type as MCFPPMapType).generic))
+            val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to (type as MCFPPMapType).generic[0]))
             if(nf.isSelf(key, normalArgs)){
                 re = nf
             }
@@ -280,7 +280,7 @@ class NBTMapConcrete : NBTMap, MCFPPValue<HashMap<String, Var<*>>> {
         return if(index is MCString){
             if(index is MCStringConcrete){
                 if(!value.containsKey(index.value.value)){
-                    val re = (type as MCFPPMapType).generic.build(index.value.value)
+                    val re = (type as MCFPPMapType).generic[0].build(index.value.value)
                     re.parent = this
                     re.nbtPath = keyValueSet.nbtPath.memberIndex(index.value.value)
                     PropertyVar(Property(re.identifier, null, AnonymousNativeMutator{_, v ->

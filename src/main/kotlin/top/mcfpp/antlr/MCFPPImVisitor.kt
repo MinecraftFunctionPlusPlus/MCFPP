@@ -1,30 +1,34 @@
 package top.mcfpp.antlr
 
+import org.antlr.v4.runtime.ParserRuleContext
 import org.antlr.v4.runtime.RuleContext
+import org.antlr.v4.runtime.tree.TerminalNode
 import top.mcfpp.Project
 import top.mcfpp.Project.withCompilationContext
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.antlr.RuleContextExtension.children
+import top.mcfpp.antlr.mcfppParser.BlockContext
 import top.mcfpp.antlr.mcfppParser.CompileTimeFuncDeclarationContext
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
+import top.mcfpp.core.lang.JavaVar
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.bool.BaseBool
 import top.mcfpp.core.lang.bool.ExecuteBool
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
+import top.mcfpp.core.lang.iterator.ConcreteIterator
 import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lib.Execute
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.Generic
 import top.mcfpp.model.Namespace
+import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function
-import top.mcfpp.model.function.FunctionParam
-import top.mcfpp.model.function.InternalFunction
-import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.scope.GlobalScope
+import top.mcfpp.model.scope.MCFPPFuncGetter
 import top.mcfpp.type.MCFPPEnumType
 import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
@@ -39,7 +43,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         if(ctx.statement().size == 0) return null
         MCFPPFile.currFile!!.topFunction.runInFunction {
             //注册函数
-            GlobalScope.localNamespaces[Project.currNamespace]!!.field.addFunction(Function.currFunction, force = false)
+            GlobalScope.localNamespaces[Project.currNamespace]!!.scope.addFunction(Function.currFunction, force = false)
             isInTopStatement = true
             super.visitTopStatement(ctx)
             isInTopStatement = false
@@ -107,9 +111,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
      */
     @InsertCommand
     override fun visitFieldDeclaration(ctx: mcfppParser.FieldDeclarationContext):Any? = withCompilationContext(ctx) {
-        //变量生成
         val fieldModifier = ctx.fieldModifier()?.text
-        //只有类字段构建
         var type = ctx.type()?.let {
             MCFPPType.parseFromContextNotNull(it, Function.currFunction.scope)
         }
@@ -207,7 +209,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         val data = MCFPPType.parseFromContext(ctx.type(), MCFPPFile.currFile!!.field)?.instanceData?: return
         //解析参数
         val types = FunctionParam.parseReadonlyAndNormalParamTypes(ctx.functionParams())
-        val field = data.field
+        val field = data.scope
         //获取缓存中的对象
         f = field.getFunction(ctx.Identifier().text, types.first.map { it.build("") }, types.second.map { it.build("") })
 
@@ -275,16 +277,27 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     private var breakIf = ConditionType.NORMAL
-    @Suppress("UNCHECKED_CAST")
     override fun visitIfStatement(ctx: mcfppParser.IfStatementContext): Any? = withCompilationContext(ctx) {
         //进入if函数
         breakIf = ConditionType.NORMAL
         Function.addComment("if start")
         //获取if语句以后的所有语句
-        val index = ctx.parent.parent.children().indexOf(ctx.parent)
-        val list =  ctx.parent.parent.children().subList(index + 1, ctx.parent.parent.children().size) as List<mcfppParser.StatementContext>
-        list.forEach { ctx.block().addChild(it) }
-        list.forEach { l -> ctx.elseIfStatement().forEach { it.block().addChild(l) } }
+        val index = (ctx.parent.parent as ParserRuleContext).children.indexOf(ctx.parent)
+        val list =  (ctx.parent.parent as ParserRuleContext).children.subList(index + 1, ctx.parent.parent.childCount)
+        list.forEach {
+            if(it is TerminalNode){
+                ctx.block().addChild(it)
+            }else{
+                ctx.block().addChild(it as RuleContext)
+            }
+        }
+        list.forEach { l -> ctx.elseIfStatement().forEach {
+            if(l is TerminalNode){
+                it.block().addChild(l)
+            }else{
+                it.block().addChild(l as RuleContext)
+            }
+        } }
         do {
             //if分支
             val (c,f) = enterIfBranch(ctx)
@@ -295,7 +308,11 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                     if (!GlobalScope.localNamespaces.containsKey(f.namespace)) {
                         GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
                     }
-                    GlobalScope.localNamespaces[f.namespace]!!.field.addFunction(f, false)
+                    GlobalScope.localNamespaces[f.namespace]!!.scope.addFunction(f, false)
+                    //同时，外层定义域中的变量可能丢失跟踪，这里处理为强制全部丢失跟踪
+                    Function.currFunction.scope.forEachVar {
+                        if(it is MCFPPValue<*>) it.toDynamic(true)
+                    }
                     Function.currFunction = f
                 }
                 visitBlock(ctx.block())
@@ -319,7 +336,11 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                         //所以让我们注册函数
                         if (!GlobalScope.localNamespaces.containsKey(f2.namespace))
                             GlobalScope.localNamespaces[f2.namespace] = Namespace(f2.namespace)
-                        GlobalScope.localNamespaces[f2.namespace]!!.field.addFunction(f2, false)
+                        GlobalScope.localNamespaces[f2.namespace]!!.scope.addFunction(f2, false)
+                        //同时，外层定义域中的变量可能丢失跟踪，这里处理为强制全部丢失跟踪
+                        Function.currFunction.scope.forEachVar {
+                            if(it is MCFPPValue<*>) it.toDynamic(true)
+                        }
                         Function.currFunction = f2
                     }
                     visitBlock(it.block())
@@ -342,15 +363,19 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 val f3 = NoStackFunction(TempPool.getFunctionIdentify("else_branch"), Function.currFunction)
                 if (!GlobalScope.localNamespaces.containsKey(f3.namespace))
                     GlobalScope.localNamespaces[f3.namespace] = Namespace(f3.namespace)
-                GlobalScope.localNamespaces[f3.namespace]!!.field.addFunction(f3, false)
+                GlobalScope.localNamespaces[f3.namespace]!!.scope.addFunction(f3, false)
                 Function.addCommand(Command("return run").build(Commands.function(f3)))
+                //同样的，外层定义域中的变量可能丢失跟踪，这里处理为强制全部丢失跟踪
+                Function.currFunction.scope.forEachVar {
+                    if(it is MCFPPValue<*>) it.toDynamic(true)
+                }
                 Function.currFunction = f3
             }
             if(ctx.elseStatement() != null){
                 visitBlock(ctx.elseStatement().block())
             }
             if(!Function.currFunction.hasReturnStatement){
-                list.forEach { visitStatement(it) }
+                list.forEach { visit(it) }
             }
             if(breakIf != ConditionType.ALWAYS_FALSE){
                 Function.addCommand(Commands.stackOut())
@@ -396,7 +421,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 //注册函数
                 if(!GlobalScope.localNamespaces.containsKey(f.namespace))
                     GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
-                GlobalScope.localNamespaces[f.namespace]!!.field.addFunction(f,false)
+                GlobalScope.localNamespaces[f.namespace]!!.scope.addFunction(f,false)
                 //给子函数开栈
                 Function.addCommand(
                     Command("execute").build(exp.toCommandPart()).build("run return run").build(Commands.function(f))
@@ -407,7 +432,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 //注册函数
                 if(!GlobalScope.localNamespaces.containsKey(f.namespace))
                     GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
-                GlobalScope.localNamespaces[f.namespace]!!.field.addFunction(f,false)
+                GlobalScope.localNamespaces[f.namespace]!!.scope.addFunction(f,false)
                 Function.addCommand(
                     Command("execute if").build(exp.toCommandPart()).build("run return run").build(Commands.function(f))
                 )
@@ -455,7 +480,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 //注册函数
                 if(!GlobalScope.localNamespaces.containsKey(f.namespace))
                     GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
-                GlobalScope.localNamespaces[f.namespace]!!.field.addFunction(f,false)
+                GlobalScope.localNamespaces[f.namespace]!!.scope.addFunction(f,false)
                 //给子函数开栈
                 Function.addCommand(
                     Command("execute").build(exp.toCommandPart()).build("run return run").build(Commands.function(f))
@@ -467,7 +492,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 //注册函数
                 if(!GlobalScope.localNamespaces.containsKey(f.namespace))
                     GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
-                GlobalScope.localNamespaces[f.namespace]!!.field.addFunction(f,false)
+                GlobalScope.localNamespaces[f.namespace]!!.scope.addFunction(f,false)
                 Function.addCommand(
                     Command("execute if").build(exp.toCommandPart()).build("run return run").build(Commands.function(f))
                 )
@@ -500,10 +525,14 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addCommand(Commands.stackIn())
         Function.addCommand(Commands.function(whileFunction))
         Function.addCommand(Commands.stackOut())
+        //同时，外层定义域中的变量可能丢失跟踪，这里处理为强制全部丢失跟踪
+        Function.currFunction.scope.forEachVar {
+            if(it is MCFPPValue<*>) it.toDynamic(true)
+        }
         Function.currFunction = whileFunction
         if(!GlobalScope.localNamespaces.containsKey(whileFunction.namespace))
             GlobalScope.localNamespaces[whileFunction.namespace] = Namespace(whileFunction.namespace)
-        GlobalScope.localNamespaces[whileFunction.namespace]!!.field.addFunction(whileFunction,false)
+        GlobalScope.localNamespaces[whileFunction.namespace]!!.scope.addFunction(whileFunction,false)
     }
 
     
@@ -539,7 +568,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         f.parent.add(f)
         if(!GlobalScope.localNamespaces.containsKey(f.namespace))
             GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
-        GlobalScope.localNamespaces[f.namespace]!!.field.addFunction(f,false)
+        GlobalScope.localNamespaces[f.namespace]!!.scope.addFunction(f,false)
         //循环条件判断，此时目标函数是外while函数。条件表达式在外while中计算。
         val expr = parent.bucketExpression().expression()
         if(expr == null){
@@ -612,10 +641,14 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         //Function.addCommand(Commands.stackIn())
         //Function.addCommand(Commands.function(doWhileFunction))
         //Function.addCommand(Commands.stackOut())
+        //同时，外层定义域中的变量可能丢失跟踪，这里处理为强制全部丢失跟踪
+        Function.currFunction.scope.forEachVar {
+            if(it is MCFPPValue<*>) it.toDynamic(true)
+        }
         Function.currFunction = doWhileFunction
         if(!GlobalScope.localNamespaces.containsKey(doWhileFunction.namespace))
             GlobalScope.localNamespaces[doWhileFunction.namespace] = Namespace(doWhileFunction.namespace)
-        GlobalScope.localNamespaces[doWhileFunction.namespace]!!.field.addFunction(doWhileFunction,false)
+        GlobalScope.localNamespaces[doWhileFunction.namespace]!!.scope.addFunction(doWhileFunction,false)
     }
 
     @InsertCommand
@@ -648,7 +681,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         if(!GlobalScope.localNamespaces.containsKey(f.namespace)) {
             GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
         }
-        GlobalScope.localNamespaces[f.namespace]!!.field.addFunction(f,false)
+        GlobalScope.localNamespaces[f.namespace]!!.scope.addFunction(f,false)
         //给子函数开栈
         Function.currFunction.parent[0].commands.addAll(
             arrayOf(
@@ -786,27 +819,60 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             var arg: Execute.WriteOnlyVar? = null
             for (exp in context.executeExpression().`var`()){
                 if(arg == null){
-                    val qwq = exec.data.field.getVar(exp.text) as Execute.WriteOnlyVar?
+                    val qwq = exec.data.scope.getVar(exp.text) as Execute.WriteOnlyVar?
                     if(qwq == null){
                         LogProcessor.error("Cannot find argument: ${exp.text}")
                         continue
                     }
                     arg = qwq
                 }else{
-                    arg = arg.getData().field.getVar(exp.text) as Execute.WriteOnlyVar
+                    arg = arg.getData().scope.getVar(exp.text) as Execute.WriteOnlyVar
                 }
             }
             val value = MCFPPExprVisitor().visitExpression(context.expression())
             arg?.assignedBy(value)
         }
         val execFunction = NoStackFunction(TempPool.getFunctionIdentify("execute"), Function.currFunction)
-        GlobalScope.localNamespaces[execFunction.namespace]!!.field.addFunction(execFunction, false)
+        GlobalScope.localNamespaces[execFunction.namespace]!!.scope.addFunction(execFunction, false)
         val l = Function.currFunction
         Function.currFunction = execFunction
         super.visitExecuteStatement(ctx)
         Function.currFunction = l
         Function.addCommand(exec.run(execFunction))
         return null
+    }
+
+    override fun visitForeachStatement(ctx: mcfppParser.ForeachStatementContext): Any? {
+        val id = ctx.Identifier().text
+        val qwq = MCFPPExprVisitor().visitExpression(ctx.expression())
+        // try to get iterator
+        val func = MCFPPFuncGetter.getFunction(qwq, "iterator", emptyList(), arrayListOf())
+        if(func is UnknownFunction){
+            LogProcessor.error("Not iterable")
+            return null
+        }
+        func.invoke(arrayListOf(), qwq)
+        val iterator = (func.returnVar as JavaVar).value
+        if(iterator is ConcreteIterator<*>){
+            visitConcreteForeach(id, iterator, ctx.block())
+        }else{
+            //同时，外层定义域中的变量可能丢失跟踪，这里处理为强制全部丢失跟踪
+            Function.currFunction.scope.forEachVar {
+                if(it is MCFPPValue<*>) it.toDynamic(true)
+            }
+            TODO()
+        }
+        return null
+    }
+
+    fun visitConcreteForeach(id: String, iterator: ConcreteIterator<*>, ctx: BlockContext){
+        for (v in iterator){
+            val i = v.type.buildUnConcrete(id).assignedBy(v)
+            Function.addCommands(Commands.internalFunction(Function.currFunction){
+                Function.currFunction.scope.putVar(id, i)
+                visitBlock(ctx)
+            })
+        }
     }
 
     //region template

@@ -23,16 +23,17 @@ import top.mcfpp.util.StringHelper.splitMNIParam
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 import java.io.Serializable
-import java.lang.Class
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 
 open class CompoundData : FieldContainer, Serializable, WithDocument {
 
     /**
-     * 父结构C
+     * 父结构
      */
     var parent = ArrayList<CompoundData>()
+
+    var parentID = ArrayList<String>()
 
     /**
      * 子结构
@@ -53,7 +54,7 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
      * 成员变量和成员函数
      */
     @Transient
-    var field: CompoundDataScope
+    var scope: CompoundDataScope
 
     /**
      * 注解
@@ -83,14 +84,16 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
     @Transient
     override var document: Document = Document()
 
+    var processedExtends: Boolean = false
+
     constructor(identifier: String, namespace: String = Project.currNamespace){
         this.identifier = identifier
         this.namespace = namespace
-        field = top.mcfpp.model.scope.CompoundDataScope(ArrayList())
+        scope = CompoundDataScope(ArrayList())
     }
 
     protected constructor(){
-        field = top.mcfpp.model.scope.CompoundDataScope(ArrayList())
+        scope = CompoundDataScope(ArrayList())
     }
 
     open fun initialize(){}
@@ -102,7 +105,7 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
      * @return 如果字段存在，则返回此字段，否则返回null
      */
     fun getVar(key: String, isStatic: Boolean = false): Var<*>? {
-        var re = field.getVar(key)
+        var re = scope.getVar(key)
         val iterator = parent.iterator()
         while (re == null && iterator.hasNext()){
             re = iterator.next().getVar(key,isStatic)
@@ -120,7 +123,7 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
      * @return 如果函数存在，则返回此函数，否则返回null
      */
     fun getFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>, isStatic: Boolean = false): Function {
-        var re = field.getFunction(key, readOnlyArgs, normalArgs)
+        var re = scope.getFunction(key, readOnlyArgs, normalArgs)
         val iterator = parent.iterator()
         while (re is UnknownFunction && iterator.hasNext()){
             re = iterator.next().getFunction(key,readOnlyArgs , normalArgs ,isStatic)
@@ -134,9 +137,9 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
      */
     open fun addMember(member: Member): Boolean {
         return when (member) {
-            is Function -> field.addFunction(member, false)
-            is Var<*> -> field.putVar(member.identifier, member)
-            is Property -> field.putProperty(member.identifier, member)
+            is Function -> scope.addFunction(member, false)
+            is Var<*> -> scope.putVar(member.identifier, member)
+            is Property -> scope.putProperty(member.identifier, member)
             else -> TODO()
         }
     }
@@ -184,10 +187,19 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
         return compoundData.isSubOf(this)
     }
 
+    override fun equals(other: Any?): Boolean {
+        if(other !is CompoundData) return false
+        return this.namespaceID == other.namespaceID && this.identifier == other.identifier
+    }
+
     open fun extends(compoundData: CompoundData): CompoundData {
+        if(parent.contains(compoundData)){
+            LogProcessor.warn("Already extends template '${compoundData.identifier}'")
+            return this
+        }
         parent.add(compoundData)
         compoundData.children.add(this)
-        field.parent.add(compoundData.field)
+        scope.parent.add(compoundData.scope)
         return this
     }
 
@@ -197,7 +209,7 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
 
     fun unExtends(compoundData: CompoundData): CompoundData {
         parent.remove(compoundData)
-        field.parent.remove(compoundData.field)
+        scope.parent.remove(compoundData.scope)
         return this
     }
 
@@ -277,7 +289,8 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
             return
         }
         nf.caller = getType()
-        field.addOperator(mniBinaryOperator.operator, paramType, nf, false)
+        nf.returnsConstWhenArgsConst = mniBinaryOperator.returnsConstWhenArgsConst
+        scope.addOperator(mniBinaryOperator.operator, paramType, nf, false)
     }
 
     private fun addMNIMethod(method: Method, mniRegister: MNIFunction, tag: Array<String>? = null){
@@ -338,30 +351,35 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
         for(nt in normalType){
             nf.appendNormalParam(nt.first, "p${nf.paramCount()}", nt.second)
         }
+        nf.returnsConstWhenArgsConst = mniRegister.returnsConstWhenArgsConst
         //有继承
         if(mniRegister.override){
-            val result = field.hasFunction(nf, true)
+            val result = scope.hasFunction(nf, true)
             if(!result){
                 LogProcessor.error("Method ${nf.identifier} in class ${method.declaringClass.name} overrides nothing")
                 return
             }else{
                 nf.isOverride = true
-                this.field.addFunction(nf, true)
+                this.scope.addFunction(nf, true)
             }
         }else {
-            val result = this.field.addFunction(nf, false)
+            val result = this.scope.addFunction(nf, false)
             if(!result){
                 LogProcessor.warn("Duplicate method ${nf.identifier} in class ${method.declaringClass.name}. If you want to override it, please add @MNIRegister(override = true) to the method")
-                this.field.addFunction(nf, true)
+                this.scope.addFunction(nf, true)
             }
         }
     }
 
 
     fun forMember(operation: (Member) -> Any?){
-        field.forEachFunction { operation(it) }
-        field.forEachVar { operation(it) }
-        field.forEachProperty { operation(it) }
+        scope.forEachFunction { operation(it) }
+        scope.forEachVar { operation(it) }
+        scope.forEachProperty { operation(it) }
+    }
+
+    override fun hashCode(): Int {
+        return javaClass.hashCode()
     }
 
     companion object {

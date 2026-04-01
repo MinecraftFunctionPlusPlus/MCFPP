@@ -15,7 +15,6 @@ import top.mcfpp.command.CommentLevel
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.model.function.Function
 import kotlin.math.max
-import kotlin.math.min
 
 object LogProcessor {
 
@@ -42,7 +41,7 @@ object LogProcessor {
     }
 
     @JvmStatic
-    inline fun debug(msg: String, e: Exception){
+    inline fun debug(msg: String, e: Throwable){
         if(level > LogLevel.DEBUG) return
         logger.debug(msg, e)
     }
@@ -54,7 +53,7 @@ object LogProcessor {
     }
 
     @JvmStatic
-    inline fun info(msg: String, e: Exception){
+    inline fun info(msg: String, e: Throwable){
         if(level > LogLevel.INFO) return
         logger.info(msg, e)
     }
@@ -62,7 +61,6 @@ object LogProcessor {
     @JvmStatic
     inline fun warn(msg: String){
         if(level > LogLevel.WARN) return
-        logger.warn(msg)
         if(Project.ctx.isNotEmpty()){
             logger.warn(
                 "Warning while compiling \n" +
@@ -75,35 +73,60 @@ object LogProcessor {
         }
         Project.warningCount++
         if(CompileSettings.isDebug){
-            val stackTrace = Thread.currentThread().stackTrace
-            val sb = StringBuilder("Compiler Stack trace:")
-            for (i in 1..<min(stackTrace.size, 8)) {
-                sb.append("\n    at " + stackTrace[i].toString())
-            }
-            if(stackTrace.size > 6){
-                sb.append("\n    ...")
-            }
-            logger.warn(sb.toString())
+            logger.warn(getStackTrace())
         }
     }
 
     @JvmStatic
-    inline fun warn(msg: String, e: Exception){
+    inline fun warn(msg: String, e: Throwable){
         if(level > LogLevel.WARN) return
-        logger.warn(msg, e)
+        if(Project.ctx.isNotEmpty()){
+            logger.warn(
+                "Error while compiling " +
+                        MCFPPFile.currFile!!.absolutePath + ">>\n" + msg
+                        + Project.ctx.first().let { "\n" + getLineInfo(it) }
+                ,e
+            )
+            Function.addComment(msg, CommentLevel.ERROR)
+        }else{
+            logger.warn("$msg\n${e.stackTraceToString()}")
+        }
         Function.addComment(msg, CommentLevel.WARN)
         Project.warningCount++
-        if(CompileSettings.isDebug){
-            val stackTrace = Thread.currentThread().stackTrace
-            val sb = StringBuilder("Compiler Stack trace:")
-            for (i in 1..<min(stackTrace.size, 8)) {
-                sb.append("\n    at " + stackTrace[i].toString())
+    }
+
+    inline fun getStackTrace(): String{
+        val stackTrace = Thread.currentThread().stackTrace
+        val sb = StringBuilder("Compiler Stack trace:")
+        var i = 1
+        var lines = 0
+        var seenExpr = false
+
+        while (i < stackTrace.size && lines < 8) {
+            val frame = stackTrace[i]
+            if (frame.className == "top.mcfpp.antlr.MCFPPExprVisitor") {
+                if (!seenExpr) {
+                    sb.append("\n    at ").append(frame)
+                    seenExpr = true
+                    i++
+                    lines++
+                } else {
+                    sb.append("\n    (skip stacks in MCFPPExprVisitor)")
+                    while (i < stackTrace.size && stackTrace[i].className == "top.mcfpp.antlr.MCFPPExprVisitor") {
+                        i++
+                    }
+                }
+            } else {
+                sb.append("\n    at ").append(frame)
+                i++
+                lines++
             }
-            if(stackTrace.size > 6){
-                sb.append("\n    ...")
-            }
-            logger.warn(sb.toString())
         }
+
+        if (i < stackTrace.size) {
+            sb.append("\n    ...")
+        }
+        return sb.toString()
     }
 
     @JvmStatic
@@ -121,35 +144,26 @@ object LogProcessor {
         }
         Project.errorCount++
         if(CompileSettings.isDebug){
-            val stackTrace = Thread.currentThread().stackTrace
-            val sb = StringBuilder("Compiler Stack trace:")
-            for (i in 1..<min(stackTrace.size, 8)) {
-                sb.append("\n    at " + stackTrace[i].toString())
-            }
-            if(stackTrace.size > 6){
-                sb.append("\n    ...")
-            }
-            logger.error(sb.toString())
+            logger.error(getStackTrace())
         }
     }
 
     @JvmStatic
-    inline fun error(msg: String, e: Exception){
+    inline fun error(msg: String, e: Throwable){
         if(level > LogLevel.ERROR) return
-        logger.error("$msg\n${e.stackTraceToString()}")
+        if(Project.ctx.isNotEmpty()){
+            logger.error(
+                "Error while compiling " +
+                        MCFPPFile.currFile!!.absolutePath + ">>\n" + msg
+                        + Project.ctx.first().let { "\n" + getLineInfo(it) }
+                ,e
+            )
+            Function.addComment(msg, CommentLevel.ERROR)
+        }else{
+            logger.error("$msg\n${e.stackTraceToString()}")
+        }
         Function.addComment(msg, CommentLevel.ERROR)
         Project.errorCount++
-        if(CompileSettings.isDebug){
-            val stackTrace = Thread.currentThread().stackTrace
-            val sb = StringBuilder("Compiler Stack trace:")
-            for (i in 1..<min(stackTrace.size, 8)) {
-                sb.append("\n    at " + stackTrace[i].toString())
-            }
-            if(stackTrace.size > 6){
-                sb.append("\n    ...")
-            }
-            logger.error(sb.toString())
-        }
     }
 
     @JvmStatic

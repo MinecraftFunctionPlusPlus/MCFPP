@@ -10,6 +10,7 @@ import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.primitive.IntTag
 import top.mcfpp.type.MCFPPPrivateType
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.MCFPPTypeAliasType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper.splitNamespaceID
@@ -71,26 +72,25 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         //注册类
         val id = ctx.compoundDeclaration().declarationName().classWithoutNamespace().text
         val nsp = GlobalScope.localNamespaces[Project.currNamespace]!!
-        if (nsp.field.hasDeclaredType(id)) {
+        if (nsp.scope.hasDeclaredType(id)) {
             //重复声明
             LogProcessor.error("Type has been defined: $id in namespace ${Project.currNamespace}")
-            Interface.currInterface = nsp.field.getInterface(id)
+            DataTemplate.currTemplate = nsp.scope.getInterface(id)
         } else {
             //如果没有声明过这个类
-            val itf = Interface(id, Project.currNamespace)
-            for (p in ctx.compoundDeclaration().extendName()){
-                //是否存在继承
-                val nsn = p.text.splitNamespaceID()
-                val namespace  = nsn.first
-                val identifier = nsn.second
-                val pc = GlobalScope.getInterface(namespace, identifier)
-                if(pc == null){
-                    LogProcessor.error("Undefined Interface: " + p.text)
-                }else{
-                    itf.extends(pc)
-                }
+            val itf = if(ctx.compoundDeclaration().declarationName().readOnlyParams() == null) {
+                DataTemplate(id,Project.currNamespace)
+            } else {
+                val qwq = GenericDataTemplate(ctx.templateBody(), id, Project.currNamespace)
+                qwq.readOnlyParams.addAll(ctx.compoundDeclaration().declarationName().readOnlyParams().parameterList().parameter().map {
+                    DataTemplateParam(it.type().text, it.Identifier().text)
+                })
+                qwq
             }
-            nsp.field.addInterface(id, itf)
+            itf.parentID.addAll(ctx.compoundDeclaration().extendName().map { it.text })
+            itf.isInterface = true
+            itf.isAbstract = true
+            nsp.scope.addInterface(id, itf)
         }
     }
 
@@ -98,18 +98,38 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         //注册模板
         val id = (ctx.declarationName()?: ctx.compoundDeclaration().declarationName()).classWithoutNamespace().text
         val nsp = GlobalScope.localNamespaces[Project.currNamespace]!!
-        if (nsp.field.hasDeclaredType(id)) {
+        if (nsp.scope.hasDeclaredType(id)) {
             //重复声明
             LogProcessor.error("Type has been defined: $id in namespace ${Project.currNamespace}")
-            DataTemplate.currTemplate = nsp.field.getTemplate(id)
+            DataTemplate.currTemplate = nsp.scope.getTemplate(id)
         }
+        val isAbstract = ctx.ABSTRACT() != null
+        val isFinal = ctx.FINAL() != null
         if(ctx.AS() != null){
-            val template = TypeDataTemplate(MCFPPPrivateType.Void, id, Project.currNamespace)
-            nsp.field.addTemplate(id, template)
+            if(isAbstract){
+                LogProcessor.error("Typeas Template cannot be abstract")
+            }
+            if(isFinal){
+                LogProcessor.warn("Redundant modifiers")
+            }
+            val type = MCFPPType.parsePrimitiveType(ctx.type())?: run {
+                LogProcessor.error("Must be a primitive type: $id")
+                MCFPPPrivateType.Void
+            }
+            val template = TypeDataTemplate(type, id, Project.currNamespace)
+                nsp.scope.addTemplate(id, template)
         }else{
-            val template = DataTemplate(id,Project.currNamespace)
-            template.extends(DataTemplate.baseDataTemplate)
-            nsp.field.addTemplate(id, template)
+            val template = if(ctx.compoundDeclaration()?.declarationName()?.readOnlyParams() == null) {
+                DataTemplate(id,Project.currNamespace)
+            } else {
+                val qwq = GenericDataTemplate(ctx.templateBody(), id, Project.currNamespace)
+                qwq.readOnlyParams.addAll(ctx.compoundDeclaration().declarationName().readOnlyParams().parameterList().parameter().map {
+                    DataTemplateParam(it.type().text, it.Identifier().text)
+                })
+                qwq
+            }
+            template.parentID.addAll(ctx.compoundDeclaration().extendName().map { it.text })
+            nsp.scope.addTemplate(id, template)
         }
     }
 
@@ -120,26 +140,35 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         //注册模板
         val id = ctx.compoundDeclaration().declarationName().classWithoutNamespace().text
         val nsp = GlobalScope.localNamespaces[Project.currNamespace]!!
-        if (nsp.field.hasObject(id)) {
+        if (nsp.scope.hasObject(id)) {
             //重复声明
             LogProcessor.error("Type has been defined: $id in namespace ${Project.currNamespace}")
             return
         }
-        val template = ObjectDataTemplate(id,Project.currNamespace)
-        template.extends(DataTemplate.baseDataTemplate)
-        nsp.field.addObject(id, template)
+        val template = if(ctx.compoundDeclaration().declarationName().readOnlyParams() == null) {
+            ObjectDataTemplate(id,Project.currNamespace)
+        } else {
+            val qwq = GenericObjectDataTemplate(ctx.templateBody(), id, Project.currNamespace)
+            qwq.readOnlyParams.addAll(ctx.compoundDeclaration().declarationName().readOnlyParams().parameterList().parameter().map {
+                DataTemplateParam(it.type().text, it.Identifier().text)
+            })
+            qwq
+        }
+        template.parentID.addAll(ctx.compoundDeclaration().extendName().map { it.text })
+        template.companionObject = template as ObjectDataTemplate
+        nsp.scope.addObject(id, template)
     }
 
     override fun visitEnumDeclaration(ctx: mcfppParser.EnumDeclarationContext): Unit = withCompilationContext(ctx) {
         //注册枚举
         val id = ctx.Identifier().text
         val nsp = GlobalScope.localNamespaces[Project.currNamespace]!!
-        if (nsp.field.hasDeclaredType(id)) {
+        if (nsp.scope.hasDeclaredType(id)) {
             //重复声明
             LogProcessor.error("Type has been defined: $id in namespace ${Project.currNamespace}")
         }
         val enum = Enum(id, Project.currNamespace)
-        nsp.field.addEnum(id, enum)
+        nsp.scope.addEnum(id, enum)
         //添加成员
         for (m in ctx.enumBody().enumMember()) {
             val value = enum.getNextMemberValue()

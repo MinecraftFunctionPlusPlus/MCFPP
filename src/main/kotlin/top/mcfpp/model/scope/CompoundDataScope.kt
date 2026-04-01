@@ -235,7 +235,7 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
     }
 
     override fun getProperty(key: String): Property? {
-        return property.getOrDefault(key, null)
+        return property.getOrDefault<String, Property?>(key, null)
     }
 
     override fun containProperty(id: String): Boolean {

@@ -2,6 +2,8 @@ package top.mcfpp.model.scope
 
 import org.jetbrains.annotations.Nullable
 import top.mcfpp.model.compound.CompoundData
+import top.mcfpp.model.compound.GenericObjectDataTemplate
+import top.mcfpp.type.MCFPPType
 
 interface IScopeWithObject: IScope {
     /**
@@ -30,6 +32,9 @@ interface IScopeWithObject: IScope {
      */
     @Nullable
     fun getObject(identifier: String): CompoundData?
+
+
+    fun getObject(identifier: String, readOnlyArgs: List<MCFPPType>): GenericObjectDataTemplate?
 
     /**
      * 是否存在此单例

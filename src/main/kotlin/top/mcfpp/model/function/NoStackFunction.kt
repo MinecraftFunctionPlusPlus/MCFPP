@@ -7,6 +7,8 @@ class NoStackFunction(identifier: String, parent: Function) : Function(identifie
     init {
         this.parent.add(parent)
         scope = NoStackFunctionScope(parent.scope)
+        this.returnType = parent.returnType
+        this.returnVar = parent.returnVar
     }
 
 }

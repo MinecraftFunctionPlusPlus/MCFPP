@@ -15,7 +15,6 @@ import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.Enum
-import top.mcfpp.model.compound.Interface
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionTag
 import top.mcfpp.model.function.NativeFunction
@@ -91,11 +90,11 @@ object GlobalScope : FieldContainer, IScope {
         stdNamespaces["mcfpp"] = Namespace("mcfpp")
         stdNamespaces["mcfpp.lang"] = Namespace("mcfpp.lang")
 
-        stdNamespaces["mcfpp"]!!.field.addFunction(Project.mcfppSystemTick, true)
+        stdNamespaces["mcfpp"]!!.scope.addFunction(Project.mcfppSystemTick, true)
 
         FunctionTag.TICK.functions.add(Project.mcfppSystemTick)
 
-        stdNamespaces["mcfpp.lang"]!!.field.addTemplate("DataObject", DataTemplate.baseDataTemplate)
+        stdNamespaces["mcfpp.lang"]!!.scope.addTemplate("DataObject", DataTemplate.baseDataTemplate)
         DataTemplate.baseDataTemplate.injectedBy(DataObjectData::class.java)
 
         listOf(
@@ -106,9 +105,11 @@ object GlobalScope : FieldContainer, IScope {
             "Dynamic" to Dynamic::class.java,
             "MCFPPEntity" to MCFPPEntity::class.java,
             "Name" to Name::class.java,
+            "Tick" to Tick::class.java,
+            "Load" to Load::class.java,
             "DataOnly" to DataOnly::class.java
         ).forEach {
-            stdNamespaces["mcfpp.lang"]!!.field.addAnnotation(it.first, it.second)
+            stdNamespaces["mcfpp.lang"]!!.scope.addAnnotation(it.first, it.second)
         }
 
         return this
@@ -117,6 +118,11 @@ object GlobalScope : FieldContainer, IScope {
     @JvmStatic
     fun getNamespace(namespace: String): Namespace?{
         return localNamespaces[namespace]?: importedLibNamespaces[namespace]?: stdNamespaces[namespace]
+    }
+
+    @JvmStatic
+    fun getUnsolvedImportNamespace(namespace: String): Namespace?{
+        return localNamespaces[namespace]?: libNamespaces[namespace]?: stdNamespaces[namespace]
     }
 
     @JvmStatic
@@ -144,7 +150,7 @@ object GlobalScope : FieldContainer, IScope {
             val f = MCFPPFile.currFile?.field?.getAccessibleFunction(identifier, readOnlyParams, normalParams)
             if(f != null && f !is UnknownFunction) return f
             for (n in stdNamespaces.values){
-                val f1 = n.field.getFunction(identifier, readOnlyParams, normalParams)
+                val f1 = n.scope.getFunction(identifier, readOnlyParams, normalParams)
                 if(f1 !is UnknownFunction) return f1
             }
             return UnknownFunction(identifier)
@@ -156,7 +162,13 @@ object GlobalScope : FieldContainer, IScope {
         if(np == null){
             np = stdNamespaces[namespace]
         }
-        return np?.field?.getFunction(identifier, readOnlyParams, normalParams)?: UnknownFunction(identifier)
+        return np?.scope?.getFunction(identifier, readOnlyParams, normalParams)?: UnknownFunction(identifier)
+    }
+
+    fun getData(namespace: String? = null, identifier: String): DataTemplate? {
+        return getTemplate(namespace, identifier)
+            ?: getObject(namespace, identifier)?.let { if(it !is DataTemplate) null else it }
+            ?: getInterface(namespace, identifier)
     }
 
     /**
@@ -168,14 +180,14 @@ object GlobalScope : FieldContainer, IScope {
      * @return 获取的接口。如果有多个相同标识符的接口（一般出现在命名空间未填写的情况下），则返回首先找到的那一个
      */
     @JvmStatic
-    fun getInterface(namespace: String? = null, identifier: String): Interface?{
+    fun getInterface(namespace: String? = null, identifier: String): DataTemplate?{
         if(namespace == null){
-            var itf: Interface?
+            var itf: DataTemplate?
             //命名空间为空，从全局寻找
             itf = MCFPPFile.currFile?.field?.getAccessibleInterface(identifier)
             if(itf != null) return itf
             for (nsp in stdNamespaces.values){
-                itf = nsp.field.getInterface(identifier)
+                itf = nsp.scope.getInterface(identifier)
                 if(itf != null) return itf
             }
             return null
@@ -188,7 +200,7 @@ object GlobalScope : FieldContainer, IScope {
         if(np == null){
             np = stdNamespaces[namespace]
         }
-        return np?.field?.getInterface(identifier)
+        return np?.scope?.getInterface(identifier)
     }
 
     /**
@@ -207,37 +219,33 @@ object GlobalScope : FieldContainer, IScope {
             template = MCFPPFile.currFile?.field?.getAccessibleTemplate(identifier)
             if(template != null) return template
             for (nsp in stdNamespaces.values){
-                template = nsp.field.getTemplate(identifier)
+                template = nsp.scope.getTemplate(identifier)
                 if(template != null) return template
             }
             return null
+        }else{
+            //命名空间为空，从全局寻找
+            val template = MCFPPFile.currFile?.field?.getAccessibleTemplate(namespace, identifier)
+            if(template != null) return template
+            return stdNamespaces[namespace]?.scope?.getTemplate(identifier)
         }
-        //按照指定的命名空间寻找
-        var np = localNamespaces[namespace]
-        if(np == null){
-            np = importedLibNamespaces[namespace]
-        }
-        if(np == null){
-            np = stdNamespaces[namespace]
-        }
-        return np?.field?.getTemplate(identifier)
     }
 
     @JvmStatic
     fun getTemplate(filter: (DataTemplate) -> Boolean): List<DataTemplate>{
         val list = ArrayList<DataTemplate>()
         for (nsp in localNamespaces.values){
-            nsp.field.forEachTemplate {
+            nsp.scope.forEachTemplate {
                 if(filter(it)) list.add(it)
             }
         }
         for (nsp in importedLibNamespaces.values){
-            nsp.field.forEachTemplate {
+            nsp.scope.forEachTemplate {
                 if(filter(it)) list.add(it)
             }
         }
         for (nsp in stdNamespaces.values){
-            nsp.field.forEachTemplate {
+            nsp.scope.forEachTemplate {
                 if(filter(it)) list.add(it)
             }
         }
@@ -252,20 +260,16 @@ object GlobalScope : FieldContainer, IScope {
             enum = MCFPPFile.currFile?.field?.getAccessibleEnum(identifier)
             if(enum != null) return enum
             for (nsp in stdNamespaces.values){
-                enum = nsp.field.getEnum(identifier)
+                enum = nsp.scope.getEnum(identifier)
                 if(enum != null) return enum
             }
             return null
+        }else{
+            //命名空间为空，从全局寻找
+            val template = MCFPPFile.currFile?.field?.getAccessibleEnum(namespace, identifier)
+            if(template != null) return template
+            return stdNamespaces[namespace]?.scope?.getEnum(identifier)
         }
-        //按照指定的命名空间寻找
-        var np = localNamespaces[namespace]
-        if(np == null){
-            np = importedLibNamespaces[namespace]
-        }
-        if(np == null){
-            np = stdNamespaces[namespace]
-        }
-        return np?.field?.getEnum(identifier)
     }
 
     /**
@@ -284,44 +288,36 @@ object GlobalScope : FieldContainer, IScope {
             obj = MCFPPFile.currFile?.field?.getAccessibleObject(identifier)
             if(obj != null) return obj
             for (nsp in stdNamespaces.values){
-                obj = nsp.field.getObject(identifier)
+                obj = nsp.scope.getObject(identifier)
                 if(obj != null) return obj
             }
             return null
+        }else{
+            //命名空间为空，从全局寻找
+            val template = MCFPPFile.currFile?.field?.getAccessibleObject(namespace, identifier)
+            if(template != null) return template
+            return stdNamespaces[namespace]?.scope?.getObject(identifier)
         }
-        //按照指定的命名空间寻找
-        var np = localNamespaces[namespace]
-        if(np == null){
-            np = importedLibNamespaces[namespace]
-        }
-        if(np == null){
-            np = stdNamespaces[namespace]
-        }
-        return np?.field?.getObject(identifier)
     }
 
     @JvmStatic
-    fun getAnnotation(namespace: String?, identifier: String): java.lang.Class<out Annotation>? {
+    fun getAnnotation(namespace: String?, identifier: String): Class<out Annotation>? {
         if(namespace == null){
-            var annotation: java.lang.Class<out Annotation>?
+            var annotation: Class<out Annotation>?
             //命名空间为空，从全局寻找
             annotation = MCFPPFile.currFile?.field?.getAccessibleAnnotation(identifier)
             if(annotation != null) return annotation
             for (nsp in stdNamespaces.values){
-                annotation = nsp.field.getAnnotation(identifier)
+                annotation = nsp.scope.getAnnotation(identifier)
                 if(annotation != null) return annotation
             }
             return null
+        }else{
+            //命名空间为空，从全局寻找
+            val template = MCFPPFile.currFile?.field?.getAccessibleAnnotation(namespace, identifier)
+            if(template != null) return template
+            return stdNamespaces[namespace]?.scope?.getAnnotation(identifier)
         }
-        //按照指定的命名空间寻找
-        var np = localNamespaces[namespace]
-        if(np == null){
-            np = importedLibNamespaces[namespace]
-        }
-        if(np == null){
-            np = stdNamespaces[namespace]
-        }
-        return np?.field?.getAnnotation(identifier)
     }
 
     @JvmStatic
@@ -362,7 +358,7 @@ object GlobalScope : FieldContainer, IScope {
      */
     fun printAll() {
         for(namespace in localNamespaces.values){
-            namespace.field.forEachFunction { s ->
+            namespace.scope.forEachFunction { s ->
                 run {
                     if (s is NativeFunction) {
                         println(s.namespaceID.toString() + " = " + s.javaMethodName )
@@ -386,11 +382,11 @@ object GlobalScope : FieldContainer, IScope {
                     }
                 }
             }
-            namespace.field.forEachTemplate { s ->
+            namespace.scope.forEachTemplate { s ->
                 run {
                     println("template " + s.identifier)
                     println("\tfunctions:")
-                    s.field.forEachFunction {f ->
+                    s.scope.forEachFunction { f ->
                         run {
                             println(
                                 "\t\t" + f.accessModifier.name
@@ -410,7 +406,7 @@ object GlobalScope : FieldContainer, IScope {
                         }
                     }
                     println("\tattributes:")
-                    for (v in s.field.allVars.toList()) {
+                    for (v in s.scope.allVars.toList()) {
                         println(
                             "\t\t" + v.accessModifier.name
                                 .lowercase(Locale.getDefault()) + " " + v.type + " " + v.identifier
@@ -418,11 +414,11 @@ object GlobalScope : FieldContainer, IScope {
                     }
                 }
             }
-            namespace.field.forEachInterface { i ->
+            namespace.scope.forEachInterface { i ->
                 run {
                     println("interface " + i.identifier)
                     println("\tfunctions:")
-                    i.field.forEachFunction {f ->
+                    i.scope.forEachFunction { f ->
                         run {
                             println(
                                 "\t\t" + f.accessModifier.name

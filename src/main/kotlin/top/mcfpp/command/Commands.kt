@@ -13,6 +13,7 @@ import top.mcfpp.lib.EntitySource
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.Function.Companion.addCommand
+import top.mcfpp.model.function.InternalFunction
 import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.nbt.tags.Tag
@@ -334,7 +335,7 @@ object Commands {
     fun tempFunction(parent: Function, operation: (tempFunction: Function) -> Unit) : Pair<Command, Function>{
         val l = Function.currFunction
         val f = NoStackFunction(TempPool.getFunctionIdentify("temp"), parent)
-        GlobalScope.localNamespaces[Project.currNamespace]!!.field.addFunction(f, false)
+        GlobalScope.localNamespaces[Project.currNamespace]!!.scope.addFunction(f, false)
         Function.currFunction = f
         operation(f)
         Function.currFunction = l
@@ -354,11 +355,21 @@ object Commands {
     fun tempFunction(prefix: String, parent: Function, operation: (tempFunction: Function) -> Unit) : Pair<Command, Function>{
         val l = Function.currFunction
         val f = NoStackFunction(TempPool.getFunctionIdentify("${prefix}_temp"), parent)
-        GlobalScope.localNamespaces[Project.currNamespace]!!.field.addFunction(f, false)
+        GlobalScope.localNamespaces[Project.currNamespace]!!.scope.addFunction(f, false)
         Function.currFunction = f
         operation(f)
         Function.currFunction = l
         return function(f) to f
+    }
+
+    @JvmStatic
+    fun internalFunction(parent: Function , operation: (fakeFunction: Function) -> Unit) : Array<Command>{
+        val l = Function.currFunction
+        val f = InternalFunction("fake", parent)
+        Function.currFunction = f
+        operation(f)
+        Function.currFunction = l
+        return f.commands.toTypedArray()
     }
 
     /**

@@ -359,7 +359,7 @@ open class Command: Serializable {
                     is Var<*> -> c.build(part.toCommandPart())
                     is Command -> c.build(part)
                     is NBTPath -> c.build(part.toCommandPart())
-                    else -> c.build(parts.toString())
+                    else -> c.build(part.toString())
                 }
             }
             return c

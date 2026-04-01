@@ -14,7 +14,8 @@ class PropertyVar(val property: Property, var field: Var<*>, val caller: Var<*>)
     override var type: MCFPPType = field.type
 
     override fun explicitCast(type: MCFPPType): Var<*> {
-        throw IllegalStateException("Property cannot be casted")
+        field.parent = caller
+        return field.explicitCast(type)
     }
 
     override fun canExplicitCast(type: MCFPPType): Boolean {
@@ -22,7 +23,8 @@ class PropertyVar(val property: Property, var field: Var<*>, val caller: Var<*>)
     }
 
     override fun implicitCast(type: MCFPPType): Var<*> {
-        throw IllegalStateException("Property cannot be casted")
+        field.parent = caller
+        return field.implicitCast(type)
     }
 
     override fun canImplicitCast(type: MCFPPType): Boolean {
@@ -48,11 +50,11 @@ class PropertyVar(val property: Property, var field: Var<*>, val caller: Var<*>)
         return field.getMemberVar(key, accessModifier)
     }
 
-    fun getter(): Var<*> {
+    fun get(): Var<*> {
         return property.getter(caller, field)
     }
 
-    fun setter(b: Var<*>){
+    fun set(b: Var<*>){
         property.setter(caller, field, b)
     }
 

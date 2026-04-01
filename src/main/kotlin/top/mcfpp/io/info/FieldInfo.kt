@@ -5,25 +5,14 @@ import top.mcfpp.model.scope.CompoundDataScope
 
 data class FieldInfo(
     var vars: ArrayList<Var<*>>,
-//    var vars: ArrayList<Quadruple<String, MCFPPType, Any?, String?>>,
     var functions: ArrayList<AbstractFunctionInfo<*>>,
     var properties: ArrayList<PropertyInfo>
-): ModelInfo<top.mcfpp.model.scope.CompoundDataScope> {
-    override fun get(): top.mcfpp.model.scope.CompoundDataScope {
-        val field = top.mcfpp.model.scope.CompoundDataScope(ArrayList())
+): ModelInfo<CompoundDataScope> {
+    override fun get(): CompoundDataScope {
+        val field = CompoundDataScope(ArrayList())
         vars.forEach {
-            field.putVar(it.identifier, it, false)
+            field.putVar(it.identifier, it, true)
         }
-//        vars.forEach {(i, t, v, n) ->
-//            val b = if(v == null){
-//                t.buildUnConcrete(i)
-//            }else{
-//                t.build(i, v)
-//            }
-//            if(b is OnScoreboard){
-//                b.name = n!!
-//            }
-//        }
         functions.forEach {
             field.addFunction(it.get(), true)
         }
@@ -34,27 +23,19 @@ data class FieldInfo(
     }
 
     companion object {
-        fun from(field: top.mcfpp.model.scope.CompoundDataScope): FieldInfo {
+        fun from(field: CompoundDataScope): FieldInfo {
             val functions = ArrayList<AbstractFunctionInfo<*>>()
             field.forEachFunction {
                 functions.add(AbstractFunctionInfo.from(it))
             }
-            val properties = ArrayList<PropertyInfo>()
-            field.forEachProperty {
-                properties.add(PropertyInfo.from(it))
-            }
             return FieldInfo(
-                ArrayList(field.allVars),
-//                ArrayList(field.allVars.map {
-//                    Quadruple(
-//                        it.identifier,
-//                        it.type,
-//                        if(it is MCFPPValue<*>) it.value else null,
-//                        if(it is OnScoreboard) it.name else null
-//                    )
-//                }),
+                ArrayList(field.allVars.filter {
+                    it.declaredParentTemplate == (DataTemplateInfo.currTemplate ?: GenericDataTemplateInfo.currTemplate)
+                }),
                 ArrayList(functions),
-                ArrayList(properties)
+                ArrayList(field.allProperties.filter {
+                    it.declaredParentTemplate == (DataTemplateInfo.currTemplate ?: GenericDataTemplateInfo.currTemplate)
+                }.map { PropertyInfo.from(it) }),
             )
         }
     }

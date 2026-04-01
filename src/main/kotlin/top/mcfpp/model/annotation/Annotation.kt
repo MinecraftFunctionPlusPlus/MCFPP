@@ -79,7 +79,7 @@ abstract class Annotation : Serializable {
     }
 
     companion object {
-        fun newInstance(clazz: java.lang.Class<out Annotation>, args: ArrayList<Any>): Annotation? {
+        fun build(clazz: Class<out Annotation>, args: ArrayList<Any>): Annotation? {
             //比对参数
             try {
                 val varType = Array(args.size) { i -> args[i]::class.java }

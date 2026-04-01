@@ -6,28 +6,28 @@ import top.mcfpp.util.ValueWrapper;
 
 public class MCBoolConcreteData {
 
-    @MNIOperator(operator = "==", paramType = "bool", returnType = "bool")
+    @MNIOperator(operator = "==", paramType = "bool", returnType = "bool", returnsConstWhenArgsConst = true)
     public static void isEqual(BaseBool a, BaseBool caller, ValueWrapper<BaseBool> re){
         re.setValue((BaseBool) caller.isEqual(a));
     }
 
-    @MNIOperator(operator = "!=" ,paramType = "bool", returnType = "bool")
+    @MNIOperator(operator = "!=" ,paramType = "bool", returnType = "bool", returnsConstWhenArgsConst = true)
     public static void isNotEqual(BaseBool a, BaseBool caller, ValueWrapper<BaseBool> re){
         re.setValue((BaseBool) caller.isNotEqual(a));
     }
 
-    @MNIOperator(operator = "||", paramType = "bool", returnType = "bool")
+    @MNIOperator(operator = "||", paramType = "bool", returnType = "bool", returnsConstWhenArgsConst = true)
     public static void or(BaseBool a, BaseBool caller, ValueWrapper<BaseBool> re){
         re.setValue((BaseBool) caller.or(a));
     }
 
-    @MNIOperator(operator = "&&", paramType = "bool", returnType = "bool")
+    @MNIOperator(operator = "&&", paramType = "bool", returnType = "bool", returnsConstWhenArgsConst = true)
     public static void and(BaseBool a, BaseBool caller, ValueWrapper<BaseBool> re){
         re.setValue((BaseBool) caller.and(a));
     }
 
     @SuppressWarnings("DataFlowIssue")
-    @MNIOperator(operator = "!", returnType = "bool")
+    @MNIOperator(operator = "!", returnType = "bool", returnsConstWhenArgsConst = true)
     public static void negation(BaseBool caller, ValueWrapper<BaseBool> re){
         re.setValue((BaseBool) caller.negation());
     }

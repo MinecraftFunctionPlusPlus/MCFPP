@@ -1,6 +1,6 @@
 {
-  "description": "",
+  "description": "qwq",
   "namespace": "test",
   "targetPath": "D:\\.minecraft\\saves\\MCFPP Studio\\datapacks",
-  "args": ["-printAll"]
+  "dataPath": "data"
 }

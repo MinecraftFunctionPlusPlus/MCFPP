@@ -110,7 +110,7 @@ class ImmutableListConcrete: ImmutableList, MCFPPValue<ListTag>{
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         var re: Function = UnknownFunction(key)
-        data.field.forEachFunction {
+        data.scope.forEachFunction {
             //TODO 我们约定it为NativeFunction，但是没有考虑拓展函数
             assert(it is NativeFunction)
             val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to genericType))

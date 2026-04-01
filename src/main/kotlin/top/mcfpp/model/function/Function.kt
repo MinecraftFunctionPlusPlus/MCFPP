@@ -21,7 +21,7 @@ import top.mcfpp.model.*
 import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
-import top.mcfpp.model.compound.Interface
+import top.mcfpp.model.compound.ObjectDataTemplate
 import top.mcfpp.model.scope.FunctionScope
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.type.*
@@ -227,7 +227,15 @@ open class Function : Member, FieldContainer, WithDocument {
 
     val annotations: ArrayList<Annotation> = ArrayList()
 
+    /**
+     * 是否是父函数的重写函数
+     */
     var isOverride : Boolean = false
+
+    /**
+     * 重写了哪个父函数
+     */
+    var superFunction: Function? = null
 
     /**
      * 在什么东西里面
@@ -262,6 +270,10 @@ open class Function : Member, FieldContainer, WithDocument {
             }
             val n = if(ownerType == OwnerType.NONE){
                 NamespaceID(namespace, identifier + re)
+            }else if(owner is ObjectDataTemplate){
+                NamespaceID(namespace, owner!!.identifier)
+                    .appendIdentifier("static")
+                    .appendIdentifier(identifier + re)
             }else{
                 NamespaceID(namespace, owner!!.identifier)
                     .appendIdentifier(identifier + re)
@@ -329,24 +341,6 @@ open class Function : Member, FieldContainer, WithDocument {
     }
 
     /**
-     * 创建一个函数，并指定它所属的接口。接口的函数总是抽象并且公开的
-     * @param identifier 函数的标识符
-     */
-    constructor(identifier: String, itf: Interface, context: CurlBlockContext?) {
-        this.identifier = identifier
-        commands = CommandList()
-        normalParams = ArrayList()
-        //readOnlyParams = ArrayList()
-        namespace = itf.namespace
-        ownerType = OwnerType.CLASS
-        owner = itf
-        scope = FunctionScope(null)
-        this.isAbstract = true
-        this.accessModifier = Member.AccessModifier.PUBLIC
-        this.ast = context
-    }
-
-    /**
      * 创建一个函数，并指定它所属的结构体。
      * @param name 函数的标识符
      */
@@ -356,7 +350,7 @@ open class Function : Member, FieldContainer, WithDocument {
         namespace = template.namespace
         ownerType = OwnerType.TEMPLATE
         owner = template
-        scope = FunctionScope(template.field)
+        scope = FunctionScope(template.scope)
         this.returnType = returnType
         this.returnVar = buildReturnVar(returnType)
         this.ast = context
@@ -481,7 +475,7 @@ open class Function : Member, FieldContainer, WithDocument {
             if(param.value() != null){
                 hasDefaultValue = true
                 //编译缺省值表达式，用于赋值参数
-                param1.defaultVar = MCFPPExprVisitor().visit(param.value()!!).explicitCast(param1.type)
+                param1.defaultVar = MCFPPExprVisitor().visit(param.value()!!).implicitCast(param1.type)
             }
         }
         return param1 to v
@@ -507,6 +501,8 @@ open class Function : Member, FieldContainer, WithDocument {
     }
 
     /**
+     * DO NOT CALL THIS FUNCTION DIRECTLY.
+     *
      * @param normalArgs 函数的参数列表，包含了参数名和参数值
      * @param caller 函数的调用者
      */
@@ -604,6 +600,9 @@ open class Function : Member, FieldContainer, WithDocument {
         val argList = args.values.toList()
         compiledFunctions[values]?.let { return it to LinkedHashMap(args.filter { e -> e.value !is MCFPPValue<*> }) }
         val cf = Function(this)
+        cf.scope.clearVar()
+        cf.buildParamVar()
+        cf.buildReturnVar(cf.returnType)
         //替换变量
         for (i in values.indices) {
             if (values[i] != null) {
@@ -801,7 +800,7 @@ open class Function : Member, FieldContainer, WithDocument {
             var hasFoundFunc = true
             //参数比对
             for (i in normalArgs.indices) {
-                if (!scope.getVar(this.normalParams[i].identifier)!!.canImplicitCast(normalArgs[i].type)) {
+                if (!normalArgs[i].canImplicitCast(this.normalParams[i].type)) {
                     hasFoundFunc = false
                     break
                 }
@@ -966,7 +965,7 @@ open class Function : Member, FieldContainer, WithDocument {
          * @param str
          */
         @JvmStatic
-        fun addComment(str: String, type: CommentLevel = CommentLevel.INFO){
+        fun addComment(str: String, type: CommentLevel = CommentLevel.DEBUG){
             if(type < Project.config.commentLevel) return
             if(this.equals(nullFunction)){
                 LogProcessor.warn("Unexpected command added to NullFunction")

@@ -2,6 +2,8 @@ package top.mcfpp.model.scope
 
 import org.jetbrains.annotations.Nullable
 import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.GenericDataTemplate
+import top.mcfpp.type.MCFPPType
 
 interface IScopeWithTemplate: IScope {
     /**
@@ -30,6 +32,8 @@ interface IScopeWithTemplate: IScope {
      */
     @Nullable
     fun getTemplate(identifier: String): DataTemplate?
+
+    fun getTemplate(identifier: String, readOnlyArgs: List<MCFPPType>): GenericDataTemplate?
 
     /**
      * 是否存在此模板

@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.Exec
+import org.gradle.kotlin.dsl.get
 import java.nio.file.Files
 import java.util.Optional
 
@@ -36,9 +38,9 @@ dependencies {
     // Apache
     implementation("org.apache.groovy:groovy-all:4.0.11")
     implementation("org.apache.logging.log4j:log4j-api:2.20.0")
-    implementation("org.apache.logging.log4j:log4j-core:2.20.0")
+    implementation("org.apache.logging.log4j:log4j-core:2.25.3")
     implementation("org.apache.logging.log4j:log4j-slf4j-impl:2.20.0")
-    implementation("org.apache.commons:commons-lang3:3.17.0")
+    implementation("org.apache.commons:commons-lang3:3.18.0")
 
     // Google
     implementation("com.google.guava:guava:33.4.5-jre")
@@ -213,6 +215,18 @@ application {
     mainClass.set("top.mcfpp.MCFPPKt")
 }
 
+val isSnapshotVersion = provider { project.version.toString().endsWith("-SNAPSHOT") }
+val nexusBaseUrl = providers.gradleProperty("nexusBaseUrl").orElse("https://nexus.mcfpp.top")
+val nexusReleasesRepository = providers.gradleProperty("nexusReleasesRepository").orElse("maven-releases")
+val nexusSnapshotsRepository = providers.gradleProperty("nexusSnapshotsRepository").orElse("maven-snapshots")
+// Keep secrets out of the repository: provide nexusUsername/nexusPassword in ~/.gradle/gradle.properties
+// or via ORG_GRADLE_PROJECT_nexusUsername / ORG_GRADLE_PROJECT_nexusPassword.
+val nexusRepositoryUrl = provider {
+    val repositoryName = if(isSnapshotVersion.get()) nexusSnapshotsRepository.get() else nexusReleasesRepository.get()
+    // remove trailing slashes from base URL and append repository path
+    "${nexusBaseUrl.get().replace(Regex("/+$"), "")}/repository/${repositoryName}/"
+}
+
 publishing {
     publications {
         create<MavenPublication>("mavenJava") {
@@ -229,15 +243,16 @@ publishing {
     repositories {
         mavenLocal()
         maven {
-            val baseUrl = "https://nexus.mcfpp.top"
-            url = if (version.toString().endsWith("SNAPSHOT")) {
-                uri("$baseUrl/repository/maven-snapshots/")
-            }else{
-                uri("$baseUrl/repository/maven-releases/")
-            }
+            name = "privateNexus"
+            url = uri(nexusRepositoryUrl.get())
+            isAllowInsecureProtocol = false
             credentials {
-                username = project.findProperty("NEXUS_USERNAME") as String
-                password = project.findProperty("NEXUS_PASSWORD") as String
+                username = providers.gradleProperty("nexusUsername")
+                    .orElse(providers.environmentVariable("NEXUS_USERNAME"))
+                    .orNull
+                password = providers.gradleProperty("nexusPassword")
+                    .orElse(providers.environmentVariable("NEXUS_PASSWORD"))
+                    .orNull
             }
         }
     }

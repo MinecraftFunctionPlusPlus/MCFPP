@@ -3,18 +3,18 @@ package top.mcfpp.type
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.compound.CompoundData
-import top.mcfpp.model.compound.Interface
-import top.mcfpp.model.compound.UnsolvedInterface
+import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.UnsolvedTemplate
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.collection.IntArrayTag
 import top.mcfpp.util.LogProcessor
 
 open class MCFPPInterfaceType(
-    var i: Interface,
+    var i: DataTemplate,
     parentType: ArrayList<out MCFPPType>
 ): MCFPPType(parentType) {
 
-    override val nbtType: java.lang.Class<out Tag<*>>
+    override val nbtType: Class<out Tag<*>>
         get() = IntArrayTag::class.java
 
     override val objectData: CompoundData = CompoundData(i.identifier)
@@ -26,8 +26,8 @@ open class MCFPPInterfaceType(
         get() = i.identifier
 
     override fun tryResolve() {
-        if(i is UnsolvedInterface){
-            i = (i as UnsolvedInterface).resolve()
+        if(i is UnsolvedTemplate){
+            i = (i as UnsolvedTemplate).resolve()
         }
     }
 
@@ -45,6 +45,6 @@ open class MCFPPInterfaceType(
     }
 
     companion object{
-        val regex = Regex("^class\\((.+):(.+)\\)$")
+        val regex = Regex("^interface\\((.+):(.+)\\)$")
     }
 }

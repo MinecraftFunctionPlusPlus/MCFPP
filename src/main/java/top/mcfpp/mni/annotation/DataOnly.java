@@ -27,7 +27,7 @@ public class DataOnly extends Annotation {
 
     @Override
     public void forDataTemplate(@NotNull DataTemplate data) {
-        data.getField().forEachVar((v) -> {
+        data.getScope().forEachVar((v) -> {
             if(v instanceof OnScoreboard scoreboard){
                 scoreboard.setDataOnly(true);
             }

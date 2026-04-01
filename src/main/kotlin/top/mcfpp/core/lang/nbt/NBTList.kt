@@ -34,7 +34,8 @@ open class NBTList : NBTBasedData {
     override var type: MCFPPType
         get() = (field as? MCFPPDeclaredConcreteType)?.type ?: field
 
-    var genericType: MCFPPType
+    val genericType: MCFPPType
+        get() = (type as MCFPPListType).generic[0]
 
     override var nbtType = NBTBasedData.Companion.NBTTypeWithTag.LIST
 
@@ -46,7 +47,6 @@ open class NBTList : NBTBasedData {
                 genericType : MCFPPType
     ) : super(identifier){
         type = MCFPPListType(genericType)
-        this.genericType = genericType
     }
 
     /**
@@ -55,7 +55,6 @@ open class NBTList : NBTBasedData {
      */
     constructor(b: NBTList) : super(b){
         type = b.type
-        this.genericType = (type as MCFPPListType).generic
     }
 
     override fun doAssignedBy(b: Var<*>): NBTList {
@@ -142,7 +141,7 @@ open class NBTList : NBTBasedData {
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         var re: Function = UnknownFunction(key)
-        data.field.forEachFunction {
+        data.scope.forEachFunction {
             //TODO 我们约定it为NativeFunction，但是没有考虑拓展函数=
             val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to genericType))
             if(nf.isSelf(key, normalArgs)){
@@ -158,7 +157,7 @@ open class NBTList : NBTBasedData {
 
     override fun getByIndex(index: Var<*>): PropertyVar {
         if(index is MCInt){
-            val v = genericType.build(TempPool.getVarIdentify())
+            val v = genericType.buildUnConcrete(TempPool.getVarIdentify())
             v.nbtPath = nbtPath.intIndex(index)
             v.parent = this
             return PropertyVar(Property.buildSimpleProperty(v), v,this)
@@ -176,7 +175,7 @@ open class NBTList : NBTBasedData {
     companion object {
         val data by lazy {
             CompoundData("list", "mcfpp.lang").apply {
-                field.putType("E", MCFPPGenericParamType("E", arrayListOf(MCFPPBaseType.Any)))
+                scope.putType("E", MCFPPGenericParamType("E", arrayListOf(MCFPPBaseType.Any)))
                 extends(MCFPPNBTType.NBT.instanceData)
                 injectedBy(NBTListData::class.java)
             }
@@ -253,7 +252,7 @@ class NBTListConcrete: NBTList, PartialConcreteValue<ListTag, ArrayList<Var<*>>>
         if(isSet){
             //循环内一直没更改过isSet的值，说明列表所有变量都可被追踪
             Function.addCommand(Commands.dataSetValue(nbtPath, list))
-            GlobalScope.localNamespaces[commands.second.namespace]!!.field.removeFunction(commands.second)
+            GlobalScope.localNamespaces[commands.second.namespace]!!.scope.removeFunction(commands.second)
         }else{
             Function.addCommand(commands.first)
         }
@@ -261,6 +260,9 @@ class NBTListConcrete: NBTList, PartialConcreteValue<ListTag, ArrayList<Var<*>>>
 
     override fun toDynamic(replace: Boolean): Var<*> {
         val re = NBTList(this)
+        if(!hasStoredInStack){
+            synchronous()
+        }
         if(replace){
             if(parentTemplate() != null) {
                 (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
@@ -275,7 +277,7 @@ class NBTListConcrete: NBTList, PartialConcreteValue<ListTag, ArrayList<Var<*>>>
         val re = if(index is MCInt){
             if(index is MCIntConcrete){
                 if(index.value >= value.size){
-                    LogProcessor.error("Index out of bounds")
+                    LogProcessor.error("Index ${index.value} out of bounds for length ${value.size}")
                     val re = UnknownVar("error_${identifier}_index_${index.identifier}")
                     return PropertyVar(Property.buildSimpleProperty(re), re, this)
                 }else{
@@ -315,13 +317,15 @@ class NBTListConcrete: NBTList, PartialConcreteValue<ListTag, ArrayList<Var<*>>>
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         var re: Function = UnknownFunction(key)
-        data.field.forEachFunction {
+        data.scope.forEachFunctionUntil {
             //TODO 我们约定it为NativeFunction，但是没有考虑拓展函数
             assert(it is NativeFunction)
             val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to genericType))
             if(nf.isSelf(key, normalArgs)){
                 re = nf
+                return@forEachFunctionUntil false
             }
+            return@forEachFunctionUntil true
         }
         val iterator = data.parent.iterator()
         while (re is UnknownFunction && iterator.hasNext()){
@@ -354,7 +358,7 @@ class NBTListConcrete: NBTList, PartialConcreteValue<ListTag, ArrayList<Var<*>>>
             }
         }
 
-        fun getEmpty() = NBTListConcrete(ArrayList(), "empty", MCFPPBaseType.Any).apply { isEmptyTemp = true }
+        fun getEmpty() = NBTListConcrete(ArrayList(), "empty", MCFPPPrivateType.Wildcard).apply { isEmptyTemp = true }
 
         val listTempNBTPath = NBTPath(StorageSource("mcfpp:system")).memberIndex("temp_list")
 

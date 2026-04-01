@@ -106,9 +106,9 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
             data.nbtPath = NBTPath(EntitySource(this))
             return data to true
         }
-        val p = getData().field.getProperty(key)
+        val p = getData().scope.getProperty(key)
         if(p != null) return PropertyVar(p, Void, this) to true
-        val v = getData().field.getVar(key)
+        val v = getData().scope.getVar(key)
         if(v is SelectorParamMap) {
             v.selector = this
             return v to true
@@ -181,13 +181,13 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
                 }
                 parent.add(compoundData)
                 compoundData.children.add(this)
-                field.parent.add(compoundData.field)
+                scope.parent.add(compoundData.scope)
                 //把所有成员都塞进去
-                compoundData.field.forEachVar {
-                    field.putVar(it.identifier, it, true)
+                compoundData.scope.forEachVar {
+                    scope.putVar(it.identifier, it, true)
                 }
-                compoundData.field.forEachProperty {
-                    field.putProperty(it.identifier, it, true)
+                compoundData.scope.forEachProperty {
+                    scope.putProperty(it.identifier, it, true)
                 }
                 return this
             }

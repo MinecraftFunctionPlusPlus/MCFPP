@@ -63,10 +63,12 @@ public class System {
             case MCInt mcInt -> print(mcInt);
             case NBTList list -> print(list);
             case NBTDictionary dictionary -> print(dictionary);
+            case JsonText jsonText -> print(jsonText);
+            case MCString mcString -> print(mcString);
             case NBTBasedData nbtBasedData -> print(nbtBasedData);
             case BaseBool bool -> print(bool);
             case DataTemplateObject object -> print(object);
-            case PropertyVar property -> printVar(property.getter());
+            case PropertyVar property -> printVar(property.get());
             default -> Function.addCommand("tellraw @a " + "\"" + var + "\"");
         }
     }

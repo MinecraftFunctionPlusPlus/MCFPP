@@ -21,6 +21,8 @@ import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.Native
+import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.ObjectDataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionTag
 import top.mcfpp.model.scope.GlobalScope
@@ -32,7 +34,6 @@ import java.io.File
 import java.io.FileReader
 import java.io.IOException
 import java.net.URLClassLoader
-import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.jar.JarFile
 import kotlin.io.path.*
@@ -52,11 +53,6 @@ object Project {
     val ctx: ArrayDeque<ParserRuleContext> = ArrayDeque()
 
     var modules = ArrayList<Module>()
-
-    /**
-     * 工程的根目录
-     */
-    lateinit var root: Path
 
     fun enableModulePackage(packageName: String, moduleName: String? = null){
         if(moduleName == null){
@@ -79,8 +75,7 @@ object Project {
         try {
             return block()
         } catch (e: Exception) {
-            LogProcessor.error("Fatal error")
-            LogProcessor.error("Caused by: ", e)
+            LogProcessor.error("Fatal error. Caused by: ", e)
             exitProcess(1)
         } finally {
             Project.ctx.removeFirst()
@@ -186,9 +181,9 @@ object Project {
             //读取json
             logger.debug("Reading project from file \"$path\"")
             val reader = FileReader(path)
-            val qwq = File(path)
-            root = Path.of(path).toAbsolutePath().parent
+            val qwq = File(path).absoluteFile
             config.name = qwq.name.substring(0, qwq.name.lastIndexOf('.'))
+            config.root = qwq.parentFile.toPath()
             val json = reader.readText()
             //解析json
             val jsonObject: JSONObject = JSONObject.parse(json) as JSONObject
@@ -268,6 +263,12 @@ object Project {
                 jsonObject.remove("args")
             }
 
+            //额外数据
+            if(jsonObject.containsKey("dataPath")){
+                config.dataPath = config.root.resolve(Path(jsonObject.getString("dataPath")))
+                jsonObject.remove("dataPath")
+            }
+
             for (key in jsonObject.keys) {
                 LogProcessor.warn("Unsupported config item: $key")
             }
@@ -286,12 +287,12 @@ object Project {
             config.version = Utils.version[0]
         }
         if(config.targetPath == null){
-            LogProcessor.warn("Set target path default to \"${root.pathString}/build/\"")
-            config.targetPath = Path(root.pathString,"build/")
+            LogProcessor.warn("Set target path default to \"${config.root.pathString}/build/\"")
+            config.targetPath = Path(config.root.pathString,"build/")
         }
         if(config.sourcePath == null){
-            LogProcessor.warn("Set source path default to \"${root.pathString}\"")
-            config.sourcePath = Path(root.pathString)
+//            LogProcessor.warn("Set source path default to \"${config.root.pathString}\"")
+            config.sourcePath = Path(config.root.pathString)
         }
         if(config.sourcePath!!.notExists()){
             LogProcessor.error("Invalid source path: ${config.sourcePath}")
@@ -312,13 +313,12 @@ object Project {
         projectTick = Function("tick", config.rootNamespace, null)
         projectLoad = Function("load", config.rootNamespace, null)
         projectInit = Function("init", config.rootNamespace, null)
-        GlobalScope.localNamespaces[config.rootNamespace]!!.field.addFunction(projectTick, true)
-        GlobalScope.localNamespaces[config.rootNamespace]!!.field.addFunction(projectLoad, true)
-        GlobalScope.localNamespaces[config.rootNamespace]!!.field.addFunction(projectInit, true)
+        GlobalScope.localNamespaces[config.rootNamespace]!!.scope.addFunction(projectTick, true)
+        GlobalScope.localNamespaces[config.rootNamespace]!!.scope.addFunction(projectLoad, true)
+        GlobalScope.localNamespaces[config.rootNamespace]!!.scope.addFunction(projectInit, true)
         FunctionTag.TICK.functions.add(projectTick)
         FunctionTag.LOAD.functions.add(projectLoad)
         FunctionTag.LOAD.functions.add(projectInit)
-
 
         //读取所有jar
         for (jar in config.jars){
@@ -422,7 +422,6 @@ object Project {
             val json = jsonStream.reader().readText()
             val jsonObject: JSONObject = JSONObject.parse(json) as JSONObject
             modules += Module.fromJson(jsonObject).onEach { it.type = ModuleType.INNER }
-
         }
         //写入缓存
         for (include in config.includes) {
@@ -470,6 +469,12 @@ object Project {
             }
             GlobalScope.importedLibNamespaces.clear()
         }
+        //匹配伴随对象
+        GlobalScope.localNamespaces.values.flatMap { it.scope.template.values }.forEach {
+            GlobalScope.localNamespaces[it.namespace]?.scope?.getObject(it.identifier)?.let { obj ->
+                it.companionObject = obj as? ObjectDataTemplate
+            }
+        }
         //运行命令
         for (file in files) {
             try {
@@ -501,6 +506,14 @@ object Project {
                 e.printStackTrace()
             }
             GlobalScope.importedLibNamespaces.clear()
+        }
+        //继承解析
+        GlobalScope.localNamespaces.values.flatMap { it.scope.template.values }.forEach {
+            if(it.parent.isNotEmpty()){
+                it.flatExtends()
+            }else{
+                (it.extends(DataTemplate.baseDataTemplate) as DataTemplate).flatExtends()
+            }
         }
         stageProcessor[compileStage.ordinal].forEach { it() }
     }
@@ -580,12 +593,17 @@ object Project {
                     "Tags:[\"mcfpp_float_marker\"]," +
                     "UUID:${MCFloat.tempFloatEntityUUIDNBT}}"
             )
+
+            //execute object constructor
+            for(obj in GlobalScope.localNamespaces.values.flatMap { it.scope.objects }.filterIsInstance<ObjectDataTemplate>()){
+                obj.constructors.first.invoke(emptyList(), null)
+            }
         }
 
         //寻找入口函数
         var hasEntrance = false
         for(field in GlobalScope.localNamespaces.values){
-            field.field.forEachFunction { f->
+            field.scope.forEachFunction { f->
                 run {
                     if (f.parent.size == 0 && f !is Native) {
                         //找到了入口函数
@@ -601,7 +619,7 @@ object Project {
             logger.warn("No valid entrance function in Project ${config.rootNamespace}")
             warningCount++
         }
-        logger.info("Complete compiling project " + root.name + " with [$errorCount] error and [$warningCount] warning")
+        logger.info("Complete compiling project " + config.root.name + " with [$errorCount] error and [$warningCount] warning")
         stageProcessor[compileStage.ordinal].forEach { it() }
     }
 
@@ -610,6 +628,7 @@ object Project {
      * 在和工程信息json文件的同一个目录下生成一个.mclib文件
      */
     fun genIndex() {
+        LogProcessor.debug("Writing lib file to ${config.targetPath!!.absolutePathString()}")
         compileStage = CompileStage.GEN_INDEX
         LibBinWriter.write(config.targetPath!!.absolutePathString())
         stageProcessor[compileStage.ordinal].forEach { it() }

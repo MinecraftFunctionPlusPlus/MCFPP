@@ -35,7 +35,8 @@ open class MCFloat : MCNumber<Float> {
      *
      * @param identifier 标识符。默认为
      */
-    constructor(curr: FieldContainer, identifier: String = TempPool.getVarIdentify()) : this(curr.prefix + identifier){
+    constructor(curr: FieldContainer, identifier: String = TempPool.getVarIdentify()) : this(identifier){
+        name = curr.prefix + identifier
         sign = MCInt(name).setObj(SbObject.MCS_float_sign) as MCInt
         int0 = MCInt(name).setObj(SbObject.MCS_float_int0) as MCInt
         int1 = MCInt(name).setObj(SbObject.MCS_float_int1) as MCInt

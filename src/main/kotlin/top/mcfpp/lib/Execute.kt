@@ -17,13 +17,13 @@ class Execute {
     val command = Command("execute")
 
     val data = CompoundData("execute", "mcfpp.shadow").apply {
-        field.putVar("pos", object: WriteOnlyVar(){
+        scope.putVar("pos", object: WriteOnlyVar(){
 
             override var type: MCFPPType = MCFPPBaseType.Pos3
 
             override fun getData(): CompoundData {
                 return CompoundData("execute.pos", "mcfpp.shadow").apply {
-                    field.putVar("x", object : WriteOnlyVar(){
+                    scope.putVar("x", object : WriteOnlyVar(){
                         override fun getData(): CompoundData {
                             return CompoundData("execute.pos.x", "mcfpp.shadow")
                         }
@@ -37,7 +37,7 @@ class Execute {
                             return this
                         }
                     })
-                    field.putVar("y", object : WriteOnlyVar(){
+                    scope.putVar("y", object : WriteOnlyVar(){
                         override fun getData(): CompoundData {
                             return CompoundData("execute.pos.y", "mcfpp.shadow")
                         }
@@ -51,7 +51,7 @@ class Execute {
                             return this
                         }
                     })
-                    field.putVar("z", object : WriteOnlyVar(){
+                    scope.putVar("z", object : WriteOnlyVar(){
                         override fun getData(): CompoundData {
                             return CompoundData("execute.pos.z", "mcfpp.shadow")
                         }

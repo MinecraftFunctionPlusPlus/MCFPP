@@ -2,6 +2,8 @@ package top.mcfpp.util
 
 import top.mcfpp.nbt.tags.collection.IntArrayTag
 import java.io.*
+import java.nio.file.*
+import java.nio.file.attribute.BasicFileAttributes
 import java.util.*
 import kotlin.system.exitProcess
 
@@ -157,5 +159,28 @@ object Utils {
         this.clear()
         this.putAll(newMap)
     }
+
+    fun <T> Boolean.v(ifTrue: () -> T?, ifFalse: () -> T?): T? {
+        return if (this) ifTrue() else ifFalse()
+    }
+
+    fun copyRecursively(source: Path, target: Path, replaceExisting: Boolean = false) {
+        val options = if (replaceExisting) arrayOf(StandardCopyOption.REPLACE_EXISTING) else emptyArray<CopyOption>()
+        Files.walkFileTree(source, object : SimpleFileVisitor<Path>() {
+            override fun preVisitDirectory(dir: Path, attrs: BasicFileAttributes): FileVisitResult {
+                val rel = source.relativize(dir)
+                val dstDir = target.resolve(rel)
+                if (Files.notExists(dstDir)) Files.createDirectories(dstDir)
+                return FileVisitResult.CONTINUE
+            }
+            override fun visitFile(file: Path, attrs: BasicFileAttributes): FileVisitResult {
+                val rel = source.relativize(file)
+                val dst = target.resolve(rel)
+                Files.copy(file, dst, *options)
+                return FileVisitResult.CONTINUE
+            }
+        })
+    }
+
 
 }

@@ -1,8 +1,6 @@
 @From<"top.mcfpp.mni.minecraft.BossBarData">
 data BossBar: ResourceID{
 
-    id as string;
-
     max as int { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; };
     value as int { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; };
     visible as bool { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; };

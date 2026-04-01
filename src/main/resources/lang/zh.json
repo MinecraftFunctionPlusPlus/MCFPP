@@ -1,0 +1,9 @@
+{
+    "error.mcfpp.castError": "Cast error: cannot cast %s to %s",
+    "error.mcfpp.voidCastError": "Cast error: cannot cast void to %s",
+    "error.mcfpp.assignError": "Assign error: cannot assign %s to %s",
+    "error.mcfpp.invalidType": "Invalid type: %s",
+    "error.mcfpp.symbolNotDefined": "Symbol not defined: %s",
+
+    "warn.mcfpp.redundantCast": "Redundant cast: %s is already %s"
+}

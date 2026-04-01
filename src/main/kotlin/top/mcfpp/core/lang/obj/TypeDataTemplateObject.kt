@@ -80,7 +80,7 @@ class TypeDataTemplateObject: Var<TypeDataTemplateObject> {
         normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        val member = templateType.field.getFunction(key, readOnlyArgs, normalArgs)
+        val member = templateType.scope.getFunction(key, readOnlyArgs, normalArgs)
         return if(member is UnknownFunction){
             Pair(UnknownFunction(key), true)
         }else{

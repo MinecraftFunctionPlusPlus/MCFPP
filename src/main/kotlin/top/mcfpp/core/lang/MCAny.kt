@@ -198,7 +198,7 @@ class MCAnyConcrete : MCAny, MCFPPValue<Any?> {
         val re = MCAny(this)
         if(replace){
             if(parentTemplate() != null){
-                parentTemplate()!!.field.putVar(identifier, re, true)
+                parentTemplate()!!.scope.putVar(identifier, re, true)
             }else{
                 Function.currFunction.scope.putVar(identifier, re, true)
             }

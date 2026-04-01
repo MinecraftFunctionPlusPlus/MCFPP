@@ -32,6 +32,14 @@ interface SimpleScopeWithFunction : IScopeWithFunction {
         }
     }
 
+    fun forEachFunctionUntil(operation: (Function) -> Boolean) {
+        for (function in functions.values) {
+            for (f in function) {
+                if (!operation(f)) return
+            }
+        }
+    }
+
     @Nullable
     override fun getFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): Function {
         val functions = this.functions[key]
