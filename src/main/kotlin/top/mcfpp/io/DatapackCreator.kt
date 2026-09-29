@@ -63,26 +63,14 @@ object DatapackCreator {
             for(module in Project.modules){
                 module.extract(Path("$path/Imports/data"))
             }
-            val importMcMeta = DatapackMcMeta(
-                DatapackMcMeta.Pack(
-                    Utils.getVersion(Project.config.version),
-                    "MCFPP imports"
-                )
-            )
-            val importMcMetaJson: String = JSON.toJSONString(importMcMeta)
+            val importMcMetaJson = packMcMetaJson(Project.config.version, "MCFPP imports")
             Files.write(Paths.get("$path/Imports/pack.mcmeta"), importMcMetaJson.toByteArray())
 
         }
 
         LogProcessor.debug("Creating datapack...")
         //生成
-        val datapackMcMeta = DatapackMcMeta(
-            DatapackMcMeta.Pack(
-                Utils.getVersion(Project.config.version),
-                Project.config.description
-            )
-        )
-        val datapackMcMetaJson: String = JSON.toJSONString(datapackMcMeta)
+        val datapackMcMetaJson = packMcMetaJson(Project.config.version, Project.config.description)
         //创建文件夹
         try {
             Files.createDirectories(Paths.get("$path/${Project.config.name}/data"))
@@ -204,7 +192,20 @@ object DatapackCreator {
      * @property pack
      * @constructor Create empty Datapack mc meta
      */
-    internal class DatapackMcMeta(var pack: Pack) {
-        internal class Pack(var pack_format: Int, var description: String)
+    internal fun packMcMetaJson(version: String, description: String): String {
+        val pack = linkedMapOf<String, Any>("description" to description)
+        val format = when (version) {
+            "26.1" -> listOf(101, 1)
+            "26.2" -> listOf(107, 1)
+            "26.3" -> listOf(121, 0)
+            else -> null
+        }
+        if (format == null) {
+            pack["pack_format"] = Utils.getVersion(version)
+        } else {
+            pack["min_format"] = format
+            pack["max_format"] = format
+        }
+        return JSON.toJSONString(mapOf("pack" to pack))
     }
 }

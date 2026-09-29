@@ -63,7 +63,8 @@ object FileUtils {
     fun extractFolderFromInner(folderInJar: String, outputDir: String) {
         val f = File(DatapackCreator::class.java.getProtectionDomain().codeSource.location.toURI())
         if(!f.isFile){
-            copyAllFiles("src/main/resources/$folderInJar", outputDir)
+            val source = File("src/main/resources/$folderInJar")
+            if (source.isDirectory) copyAllFiles(source.path, outputDir)
             return
         }
         JarFile(f).use { jarFile ->
@@ -75,9 +76,9 @@ object FileUtils {
                     try {
                         //LogProcessor.debug("Extracting $entry.name to $outputDir")
                         jarFile.getInputStream(entry).use {stream ->
-                            val outputPath =
-                                Paths.get(outputDir, entry.name.substring(folderInJar.length))
-                            Files.createDirectories(outputPath)
+                            val relativeName = entry.name.substring(folderInJar.length).trimStart('/')
+                            val outputPath = Paths.get(outputDir).resolve(relativeName)
+                            Files.createDirectories(outputPath.parent)
                             Files.copy(stream, outputPath, StandardCopyOption.REPLACE_EXISTING)
                         }
                     } catch (e: IOException) {

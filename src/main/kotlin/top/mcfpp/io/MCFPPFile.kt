@@ -22,7 +22,6 @@ import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper.pathToNamespace
 import top.mcfpp.util.StringHelper.toSnakeCase
 import java.io.File
-import java.io.FileInputStream
 import java.io.IOException
 import java.nio.file.*
 import java.nio.file.attribute.BasicFileAttributes
@@ -35,8 +34,6 @@ class MCFPPFile : File {
     val field: FileScope = FileScope()
 
     val unsolvedImports = hashMapOf<String, String>()
-
-    private val inputStream : FileInputStream by lazy { FileInputStream(this) }
 
     /**
      * 此文件对应的命名空间，默认为文件的父目录和源代码目录的相对路径
@@ -68,7 +65,14 @@ class MCFPPFile : File {
 
     fun token(): CommonTokenStream {
         if(!Project.tokens.contains(this)){
-            val charStream: CharStream = CharStreams.fromStream(inputStream)
+            val source = try {
+                VersionPreprocessor.process(readText(Charsets.UTF_8), Project.config.version)
+            } catch (e: VersionPreprocessor.Error) {
+                syntaxError = true
+                LogProcessor.error("Preprocessor error in $absolutePath:${e.line}: ${e.message}")
+                ""
+            }
+            val charStream: CharStream = CharStreams.fromString(source, absolutePath)
             val tokens = CommonTokenStream(mcfppLexer(charStream))
             Project.tokens[this] = tokens
         }
@@ -92,7 +96,13 @@ class MCFPPFile : File {
     fun indexType(){
         currFile = this
         Project.currNamespace = namespace.identifier
-        MCFPPTypeVisitor().visit(tree())
+        val parsedTree = tree()
+        if (syntaxError) {
+            Project.currNamespace = Project.config.rootNamespace
+            currFile = null
+            return
+        }
+        MCFPPTypeVisitor().visit(parsedTree)
         field.namespaceField = namespace.scope
         Project.currNamespace = Project.config.rootNamespace
         currFile = null

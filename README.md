@@ -124,4 +124,26 @@ func calculate(){
 
 Compound assignments `+=`, `-=`, `*=`, `/=`, and `%=` read the target, apply the corresponding operation, and write the result back. `++` and `--` are not supported.
 
+## Compile for a Minecraft version
+
+Set the target version in `mcfpp.json`, for example `"version": "26.3"`. Each build produces one data pack for that target; change `version` and build again for another version. Targets `26.1`, `26.2`, `26.3`, and the previously supported older versions are available.
+
+```mcfpp
+#if MC >= 26.1
+func greet(){
+  /say 26.1 or newer
+}
+#elif MC >= 1.21.6
+func greet(){
+  /say 1.21.6 to 1.21.8
+}
+#else
+func greet(){
+  /say older version
+}
+#endif
+```
+
+Directives may be nested and can surround imports, declarations, or function statements. A condition compares `MC` with a version using `==`, `!=`, `<`, `<=`, `>`, or `>=`; logical combinations are not supported. Versions are compared component by component. Spell older versions in full, such as `1.21.6`, rather than `21.6`. Ordinary `#` comments retain their behavior.
+
 For more syntax information, refer to the [MCFPP API](https://www.mcfpp.top).

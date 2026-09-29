@@ -25,7 +25,7 @@ import kotlin.io.path.Path
 import kotlin.io.path.absolutePathString
 
 object MCFPPStringTest {
-    fun readFromString(str: String, args: Array<String> = arrayOf(), targetPath: String? = null){
+    fun readFromString(str: String, args: Array<String> = arrayOf(), targetPath: String? = null, version: String = "1.20"){
         val source = ConfigurationSource(ResourceReader::class.java.classLoader.getResourceAsStream("log4j2.xml"))
         Configurator.initialize(null,source)
         //编译参数
@@ -36,7 +36,7 @@ object MCFPPStringTest {
         Project.config.root = Path.of("./")
         Project.config.name = "debug"
         //版本77
-        Project.config.version = "1.20"
+        Project.config.version = version
         //描述
         Project.config.description = "debug datapacks"
         //默认命名空间
@@ -47,7 +47,7 @@ object MCFPPStringTest {
         Project.init() //初始化
         Project.readProject() //读取引用的库的索引
         //解析文件
-        val charStream: CharStream = CharStreams.fromString(str)
+        val charStream: CharStream = CharStreams.fromString(VersionPreprocessor.process(str, Project.config.version))
         val tokens = CommonTokenStream(mcfppLexer(charStream))
         val parser = mcfppParser(tokens)
         val context = parser.compilationUnit()
@@ -127,7 +127,7 @@ object MCFPPStringTest {
             if(!CompileSettings.ignoreStdLib){
                 GlobalScope.importedLibNamespaces["mcfpp.sys"] = GlobalScope.libNamespaces["mcfpp.sys"]!!
             }
-            val charStream: CharStream = CharStreams.fromString(code)
+            val charStream: CharStream = CharStreams.fromString(VersionPreprocessor.process(code, Project.config.version))
             val tokens = CommonTokenStream(mcfppLexer(charStream))
             val parser = mcfppParser(tokens)
             val context = parser.compilationUnit()

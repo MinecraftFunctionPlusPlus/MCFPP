@@ -283,8 +283,8 @@ object Project {
 
     fun checkConfig(): Boolean{
         if (!Utils.version.contains(config.version)){
-            LogProcessor.warn("Unsupported version: ${config.version}")
-            config.version = Utils.version[0]
+            LogProcessor.error("Unsupported version: ${config.version}")
+            return false
         }
         if(config.targetPath == null){
             LogProcessor.warn("Set target path default to \"${config.root.pathString}/build/\"")
@@ -634,4 +634,3 @@ object Project {
         stageProcessor[compileStage.ordinal].forEach { it() }
     }
 }
-

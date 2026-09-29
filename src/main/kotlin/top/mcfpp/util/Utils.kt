@@ -21,6 +21,7 @@ object Utils {
     }
 
     val version = arrayOf(
+        "26.3", "26.2", "26.1",
         "1.21.7", "1.21.8",
         "1.21.6",
         "1.21.5",
@@ -85,9 +86,7 @@ object Utils {
 
             "1.14.4", "1.14.3", "1.14.2", "1.14.1", "1.14", "1.13.2", "1.13.1", "1.13" -> 4
 
-            else -> {
-                81
-            }
+            else -> throw IllegalArgumentException("Unsupported legacy data pack version: $version")
         }
     }
 
