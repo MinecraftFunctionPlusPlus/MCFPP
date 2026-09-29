@@ -38,7 +38,7 @@ scoreboard players operation float_exp int = @s float_exp
 scoreboard players operation float_exp int *= -1 int
 scoreboard players add float_exp int 1
 #对齐小数点
-execute if score float_int0 int matches 10000.. run function math.3vec_float:hpo/float/div_align
+execute if score float_int0 int matches 10000.. run function math.float:hpo/float/div_align
 
 #---------
 #高低位

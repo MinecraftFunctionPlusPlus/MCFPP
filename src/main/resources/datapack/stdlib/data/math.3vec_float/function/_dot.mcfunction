@@ -24,7 +24,7 @@ scoreboard players operation float_exp int = 3vec_float_x_exp int
 scoreboard players operation float_exp int += @s 3vec_float_x_exp
 scoreboard players remove float_exp int 1
 #小数位对齐
-execute if score float_int0 int matches 100000000.. run function math.3vec_float:hpo/float/mult_align
+execute if score float_int0 int matches 100000000.. run function math.float:hpo/float/mult_align
 scoreboard players operation float_int1 int = float_int0 int
 scoreboard players operation float_int0 int /= 10000 int
 scoreboard players operation float_int1 int %= 10000 int
@@ -58,7 +58,7 @@ scoreboard players operation float_exp int = 3vec_float_y_exp int
 scoreboard players operation float_exp int += @s 3vec_float_y_exp
 scoreboard players remove float_exp int 1
 #小数位对齐
-execute if score float_int0 int matches 100000000.. run function math.3vec_float:hpo/float/mult_align
+execute if score float_int0 int matches 100000000.. run function math.float:hpo/float/mult_align
 scoreboard players operation float_int1 int = float_int0 int
 scoreboard players operation float_int0 int /= 10000 int
 scoreboard players operation float_int1 int %= 10000 int
@@ -78,18 +78,18 @@ execute if score float_exp int = @s float_exp if score float_int0 int >= sstemp1
 scoreboard players operation sstempe int = float_exp int
 scoreboard players operation sstempe int -= @s float_exp
 #交换使得大数在前
-execute if score sstempr int matches 1 run function math.3vec_float:hpo/float/add_swap
+execute if score sstempr int matches 1 run function math.float:hpo/float/add_swap
 #符号
 scoreboard players operation sstemp1 int *= sstemp_sign int
 #对齐
-execute if score sstempe int matches 1..2 run function math.3vec_float:hpo/float/add_search/1_2
-execute if score sstempe int matches 3..5 run function math.3vec_float:hpo/float/add_search/3_5
-execute if score sstempe int matches 6.. run function math.3vec_float:hpo/float/add_search/6_8
+execute if score sstempe int matches 1..2 run function math.float:hpo/float/add_search/1_2
+execute if score sstempe int matches 3..5 run function math.float:hpo/float/add_search/3_5
+execute if score sstempe int matches 6.. run function math.float:hpo/float/add_search/6_8
 scoreboard players operation float_int0 int += sstemp1 int
 #对齐小数点
-execute if score float_int0 int matches 100000.. run function math.3vec_float:hpo/float/add_search/align_s2
-execute if score float_int0 int matches 100..99999 run function math.3vec_float:hpo/float/add_search/align_s1
-execute if score float_int0 int matches 0..99 run function math.3vec_float:hpo/float/add_search/align_s0
+execute if score float_int0 int matches 100000.. run function math.float:hpo/float/add_search/align_s2
+execute if score float_int0 int matches 100..99999 run function math.float:hpo/float/add_search/align_s1
+execute if score float_int0 int matches 0..99 run function math.float:hpo/float/add_search/align_s0
 scoreboard players operation float_int1 int = float_int0 int
 scoreboard players operation float_int0 int /= 10000 int
 scoreboard players operation float_int1 int %= 10000 int
@@ -123,7 +123,7 @@ scoreboard players operation float_exp int = 3vec_float_z_exp int
 scoreboard players operation float_exp int += @s 3vec_float_z_exp
 scoreboard players remove float_exp int 1
 #小数位对齐
-execute if score float_int0 int matches 100000000.. run function math.3vec_float:hpo/float/mult_align
+execute if score float_int0 int matches 100000000.. run function math.float:hpo/float/mult_align
 scoreboard players operation float_int1 int = float_int0 int
 scoreboard players operation float_int0 int /= 10000 int
 scoreboard players operation float_int1 int %= 10000 int
@@ -143,18 +143,18 @@ execute if score float_exp int = @s float_exp if score float_int0 int >= sstemp1
 scoreboard players operation sstempe int = float_exp int
 scoreboard players operation sstempe int -= @s float_exp
 #交换使得大数在前
-execute if score sstempr int matches 1 run function math.3vec_float:hpo/float/add_swap
+execute if score sstempr int matches 1 run function math.float:hpo/float/add_swap
 #符号
 scoreboard players operation sstemp1 int *= sstemp_sign int
 #对齐
-execute if score sstempe int matches 1..2 run function math.3vec_float:hpo/float/add_search/1_2
-execute if score sstempe int matches 3..5 run function math.3vec_float:hpo/float/add_search/3_5
-execute if score sstempe int matches 6.. run function math.3vec_float:hpo/float/add_search/6_8
+execute if score sstempe int matches 1..2 run function math.float:hpo/float/add_search/1_2
+execute if score sstempe int matches 3..5 run function math.float:hpo/float/add_search/3_5
+execute if score sstempe int matches 6.. run function math.float:hpo/float/add_search/6_8
 scoreboard players operation float_int0 int += sstemp1 int
 #对齐小数点
-execute if score float_int0 int matches 100000.. run function math.3vec_float:hpo/float/add_search/align_s2
-execute if score float_int0 int matches 100..99999 run function math.3vec_float:hpo/float/add_search/align_s1
-execute if score float_int0 int matches 0..99 run function math.3vec_float:hpo/float/add_search/align_s0
+execute if score float_int0 int matches 100000.. run function math.float:hpo/float/add_search/align_s2
+execute if score float_int0 int matches 100..99999 run function math.float:hpo/float/add_search/align_s1
+execute if score float_int0 int matches 0..99 run function math.float:hpo/float/add_search/align_s0
 scoreboard players operation float_int1 int = float_int0 int
 scoreboard players operation float_int0 int /= 10000 int
 scoreboard players operation float_int1 int %= 10000 int

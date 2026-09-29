@@ -81,6 +81,13 @@ object GlobalScope : FieldContainer, IScope {
         scoreboards[SbObject.MCFPP_INIT.name] = SbObject.MCFPP_INIT
         scoreboards[SbObject.MCFPP_TEMP.name] = SbObject.MCFPP_TEMP
         scoreboards[SbObject.MCFPP_POINTER_COUNTER.name] = SbObject.MCFPP_POINTER_COUNTER
+        for (scoreboard in listOf(
+            SbObject.MCS_float_sign, SbObject.MCS_float_int0, SbObject.MCS_float_int1, SbObject.MCS_float_exp,
+            SbObject.Math_float_sign, SbObject.Math_float_int0, SbObject.Math_float_int1,
+            SbObject.Math_float_exp, SbObject.Math_int
+        )) {
+            scoreboards[scoreboard.name] = scoreboard
+        }
 
         localNamespaces["default"] = Namespace("default")
 

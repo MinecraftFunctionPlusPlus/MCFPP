@@ -11,7 +11,7 @@ function math.float:hpo/float/_store
 function math.float:hpo/float/_ssrandnew
 scoreboard players set min int -7
 scoreboard players set max int 7
-function math.float:_random
+function math:_random
 scoreboard players operation float_exp int = @s float_exp
 scoreboard players operation float_exp int += random int
 function math.float:hpo/float/_ssprint

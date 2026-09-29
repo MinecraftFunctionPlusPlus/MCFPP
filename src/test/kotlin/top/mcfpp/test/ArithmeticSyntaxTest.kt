@@ -121,8 +121,24 @@ class ArithmeticSyntaxTest {
         """.trimIndent())
         assertEquals(0, Project.errorCount)
         val commands = arithmeticFunction().commands.analyzeAll().joinToString("\n")
-        assertTrue(commands.contains("function math:hpo/float/_add"), commands)
+        assertTrue(commands.contains("function math.float:hpo/float/_add"), commands)
         assertEquals(1, Regex("scoreboard players operation temp_\\d+ mcs_float_sign \\*= temp_\\d+ mcfpp_default").findAll(commands).count(), commands)
+    }
+
+    @Test
+    fun nestedDynamicFloatExpressionCompiles() {
+        MCFPPStringTest.readFromString("""
+            func arithmetic(){
+                dynamic var f as float = 1.5;
+                var expressionNegated = -(f + 0.5);
+            }
+        """.trimIndent())
+        assertEquals(0, Project.errorCount)
+        val commands = arithmeticFunction().commands.analyzeAll().joinToString("\n")
+        assertTrue(commands.contains("function math.float:hpo/float/_add"), commands)
+        assertEquals(4, commands.lines().count {
+            it.startsWith("execute store result storage") && it.contains(" int 1 run scoreboard players operation ")
+        }, commands)
     }
 
     @Test

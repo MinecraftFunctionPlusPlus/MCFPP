@@ -12,7 +12,7 @@ scoreboard players operation float_exp int /= 2 int
 
 #高位低位
 scoreboard players operation inp int = float_int0 int
-function math.float:sqrt/_3sqrt
+function math:sqrt/_3sqrt
 scoreboard players operation res int *= 10 int
 scoreboard players operation float_int0 int = res int
 #小数位对齐

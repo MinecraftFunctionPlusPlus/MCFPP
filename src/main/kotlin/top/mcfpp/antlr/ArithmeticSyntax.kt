@@ -70,7 +70,7 @@ internal fun computeFloatCompound(left: MCFloat, right: Var<*>, operation: Strin
         operand.toTempEntity()
     }
     left.getTempVar()
-    Function.addCommand("execute as ${MCFloat.tempFloatEntityUUID} run function math:hpo/float/$suffix")
+    Function.addCommand("execute as ${MCFloat.tempFloatEntityUUID} run function math.float:hpo/float/$suffix")
     val result = MCFloat().apply { isTemp = true }
     Function.addCommand(Commands.sbPlayerOperation(result.sign, "=", MCFloat.ssObj.sign))
     Function.addCommand(Commands.sbPlayerOperation(result.int0, "=", MCFloat.ssObj.int0))

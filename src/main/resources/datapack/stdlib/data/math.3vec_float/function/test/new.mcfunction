@@ -15,15 +15,15 @@ function math.3vec_float:_ssprint
 execute as @e[tag=vec0,limit=1] run function math.3vec_float:_store
 
 scoreboard players set inp int 20000
-function math.3vec_float:hpo/float/_scoreto
-function math.3vec_float:hpo/float/_store
+function math.float:hpo/float/_scoreto
+function math.float:hpo/float/_store
 function math.3vec_float:_mult
 function math.3vec_float:_ssprint
 execute as @e[tag=vec1,limit=1] run function math.3vec_float:_store
 
 scoreboard players set inp int 40000
-function math.3vec_float:hpo/float/_scoreto
-function math.3vec_float:hpo/float/_store
+function math.float:hpo/float/_scoreto
+function math.float:hpo/float/_store
 function math.3vec_float:_div
 function math.3vec_float:_ssprint
 execute as @e[tag=vec2,limit=1] run function math.3vec_float:_store

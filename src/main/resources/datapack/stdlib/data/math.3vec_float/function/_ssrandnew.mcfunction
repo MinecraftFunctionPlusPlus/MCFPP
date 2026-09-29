@@ -3,17 +3,17 @@
 
 scoreboard players set min int -1800000
 scoreboard players set max int 1800000
-function math.3vec_float:_random
+function math:_random
 execute store result entity @s Rotation[0] float 0.0001 run scoreboard players get random int
 
 scoreboard players set min int -900000
 scoreboard players set max int 900000
-function math.3vec_float:_random
+function math:_random
 execute store result entity @s Rotation[1] float 0.0001 run scoreboard players get random int
 
 scoreboard players set min int 6400
 scoreboard players set max int 32000
-function math.3vec_float:_random
+function math:_random
 execute at @s positioned 0.0 0.0 0.0 run tp @s ^ ^ ^1.0
 execute store result score 3vec_x int run data get entity @s Pos[0] 10000
 execute store result score 3vec_y int run data get entity @s Pos[1] 10000

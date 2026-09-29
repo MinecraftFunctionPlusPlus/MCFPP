@@ -11,6 +11,7 @@ import top.mcfpp.util.UwU
 import java.nio.file.Files
 import kotlin.io.path.Path
 import kotlin.io.path.absolutePathString
+import kotlin.system.exitProcess
 
 /**
  * 编译器的启动入口
@@ -33,9 +34,12 @@ fun main(args: Array<String>) {
         val path = args[0]
         if(!Files.exists(Path(path))){
             LogProcessor.error("Cannot find file: $path")
-            return
+            exitProcess(1)
         }
-        compile(Project.readConfig(path)) //读取配置文件
+        val config = Project.readConfig(path) //读取配置文件
+        if (Project.errorCount > 0) exitProcess(1)
+        compile(config)
+        if (Project.errorCount > 0) exitProcess(1)
     }
 }
 
@@ -53,6 +57,10 @@ fun compile(config: ProjectConfig){
     Project.runAnnotation() //执行注解
     Project.compile() //编译
     Project.optimization() //优化
+    if (Project.errorCount > 0) {
+        Project.ctx.clear()
+        return
+    }
     if(!Project.config.noMcLib) Project.genIndex() //生成索引
     Project.ctx.clear()
     if(!Project.config.noDatapack){

@@ -3,7 +3,7 @@
 #[2147484,8589935],2
 #[8589936,1000000000],25
 
-execute if score inp int matches ..-1 run function math.float.float:hpo/3div_resign
+execute if score inp int matches ..-1 run function math.float:hpo/3div_resign
 scoreboard players set sstemp0 int 1000
 scoreboard players set sstemp1 int 1
 execute if score inp int matches 2147484..8589935 run scoreboard players set sstemp1 int 2

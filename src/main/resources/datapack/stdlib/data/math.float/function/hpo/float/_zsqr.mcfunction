@@ -19,7 +19,7 @@ scoreboard players operation @s float_sign *= @s float_sign
 scoreboard players operation @s float_exp *= 2 int
 scoreboard players remove @s float_exp 1
 #小数位对齐
-execute if score @s float_int0 matches 100000000.. run function math.float.float:hpo/float/zmult_align
+execute if score @s float_int0 matches 100000000.. run function math.float:hpo/float/zmult_align
 
 scoreboard players operation @s float_int1 = @s float_int0
 scoreboard players operation @s float_int0 /= 10000 int

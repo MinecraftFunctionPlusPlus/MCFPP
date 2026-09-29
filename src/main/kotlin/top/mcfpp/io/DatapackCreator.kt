@@ -16,8 +16,8 @@ import top.mcfpp.util.Utils
 import java.io.File
 import java.io.IOException
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
-import kotlin.io.path.Path
 
 
 /**
@@ -61,7 +61,7 @@ object DatapackCreator {
             File("$path/Imports/data").mkdirs()
             //复制库
             for(module in Project.modules){
-                module.extract(Path("$path/Imports/data"))
+                module.extract(Paths.get(path, "Imports", "data"))
             }
             val importMcMetaJson = packMcMetaJson(Project.config.version, "MCFPP imports")
             Files.write(Paths.get("$path/Imports/pack.mcmeta"), importMcMetaJson.toByteArray())
@@ -78,26 +78,24 @@ object DatapackCreator {
             Files.write(Paths.get("$path/${Project.config.name}/pack.mcmeta"), datapackMcMetaJson.toByteArray())
             //写入函数文件
             for(namespace in GlobalScope.localNamespaces){
-                genNamespace(path, namespace)
+                genNamespace(Paths.get(path), namespace)
             }
             for (namespace in GlobalScope.stdNamespaces){
-                genNamespace(path, namespace)
+                genNamespace(Paths.get(path), namespace)
             }
             //写入宏函数
             for ((function, command) in Project.macroFunction){
-                val currPath = "$path/${Project.config.name}/data/mcfpp/function/dynamic/${function}.mcfunction"
+                val currPath = Paths.get(path, Project.config.name, "data", "mcfpp", "function", "dynamic", "${function}.mcfunction")
                 LogProcessor.debug("Writing File: $currPath")
-                Files.createDirectories(Paths.get(currPath).parent)
-                Files.write(Paths.get(currPath), command.toByteArray())
+                Files.createDirectories(currPath.parent)
+                Files.write(currPath, command.toByteArray())
             }
             //写入标签json文件
             for (tag in GlobalScope.functionTags.values) {
-                LogProcessor.debug("Writing File: " + path + "\\${Project.config.name}\\data\\" + tag.namespace + "\\tags\\function\\" + tag.identifier + ".json")
-                Files.createDirectories(Paths.get(path + "/${Project.config.name}/data/" + tag.namespace + "/tags/function"))
-                Files.write(
-                    Paths.get(path + "/${Project.config.name}/data/" + tag.namespace + "/tags/function/" + tag.identifier + ".json"),
-                    tag.tagJSON.toByteArray()
-                )
+                val tagPath = Paths.get(path, Project.config.name, "data", tag.namespace, "tags", "function", "${tag.identifier}.json")
+                LogProcessor.debug("Writing File: $tagPath")
+                Files.createDirectories(tagPath.parent)
+                Files.write(tagPath, tag.tagJSON.toByteArray())
             }
         } catch (e: IOException) {
             throw e
@@ -105,74 +103,65 @@ object DatapackCreator {
         //如果有额外数据，复制并覆盖可能的重复文件
         if(Project.config.dataPath != null){
             LogProcessor.debug("Copying extra data...")
-            Utils.copyRecursively(Project.config.dataPath!!, Paths.get(path + "\\${Project.config.name}\\data"), true)
+            Utils.copyRecursively(Project.config.dataPath!!, Paths.get(path, Project.config.name, "data"), true)
         }
     }
 
-    private fun genFunction(currPath: String, f: Function){
+    private fun genFunction(currPath: Path, f: Function){
         if (f is Native) return
-        LogProcessor.debug("Writing File: $currPath\\${f.identifierWithParamType.toSnakeCase()}.mcfunction")
         f.commands.analyzeAll()
-        val path = if(f is ExtensionFunction){
-            "$currPath\\ex"
-        }else{
-            currPath
-        }
-        Files.createDirectories(Paths.get(path))
-        Files.write(Paths.get("$path\\${f.identifierWithParamType.toSnakeCase()}.mcfunction"), f.cmdStr.toByteArray())
-        if(f.compiledFunctions.isNotEmpty()){
-            for (cf in f.compiledFunctions.values) {
-                LogProcessor.debug("Writing File: $currPath\\${cf.identifierWithParamType.toSnakeCase()}.mcfunction")
-                f.commands.analyzeAll()
-                Files.write(Paths.get("$path\\${f.identifierWithParamType.toSnakeCase()}.mcfunction"), cf.cmdStr.toByteArray())
-            }
-        }
+        val directory = if (f is ExtensionFunction) currPath.resolve("ex") else currPath
+        val output = directory.resolve("${f.identifierWithParamType.toSnakeCase()}.mcfunction")
+        LogProcessor.debug("Writing File: $output")
+        Files.createDirectories(directory)
+        Files.write(output, f.cmdStr.toByteArray())
     }
 
-    private fun genTemplateFunction(currPath: String, f: Function){
+    private fun genTemplateFunction(currPath: Path, f: Function){
         if (f is Native) return
-        val path = if(f is ExtensionFunction) "$currPath\\ex" else currPath
-        Files.createDirectories(Paths.get(path))
+        val directory = if (f is ExtensionFunction) currPath.resolve("ex") else currPath
+        Files.createDirectories(directory)
         for (cf in f.compiledFunctions.values) {
-            LogProcessor.debug("Writing File: $currPath\\${cf.identifierWithParamType.toSnakeCase()}.mcfunction")
-            f.commands.analyzeAll()
-            Files.write(Paths.get("$path\\${f.identifierWithParamType.toSnakeCase()}.mcfunction"), cf.cmdStr.toByteArray())
+            val output = directory.resolve("${cf.identifierWithParamType.toSnakeCase()}.mcfunction")
+            LogProcessor.debug("Writing File: $output")
+            cf.commands.analyzeAll()
+            Files.write(output, cf.cmdStr.toByteArray())
         }
     }
 
-    private fun genObject(currPath: String, obj: CompoundData){
+    private fun genObject(currPath: Path, obj: CompoundData){
         //成员
         obj.scope.forEachFunction {
-            genFunction("${currPath}\\function\\${obj.identifier.toSnakeCase()}\\static", it)
+            genFunction(currPath.resolve("function").resolve(obj.identifier.toSnakeCase()).resolve("static"), it)
             it.compiledFunctions.values.forEach {qwq ->
-                genFunction("${currPath}\\function\\${obj.identifier.toSnakeCase()}\\static", qwq)
+                genFunction(currPath.resolve("function").resolve(obj.identifier.toSnakeCase()).resolve("static"), qwq)
             }
         }
     }
 
-    private fun genTemplate(currPath: String, t: DataTemplate){
+    private fun genTemplate(currPath: Path, t: DataTemplate){
         //成员
         t.scope.forEachFunction {
-            genTemplateFunction("$currPath\\function\\${t.identifier.toSnakeCase()}", it)
+            genTemplateFunction(currPath.resolve("function").resolve(t.identifier.toSnakeCase()), it)
             it.compiledFunctions.values.forEach {qwq ->
-                genTemplateFunction("$currPath\\function\\${t.identifier.toSnakeCase()}", qwq)
+                genTemplateFunction(currPath.resolve("function").resolve(t.identifier.toSnakeCase()), qwq)
             }
         }
         t.constructors.forEach {
-            genTemplateFunction("$currPath\\function\\${t.identifier.toSnakeCase()}", it)
+            genTemplateFunction(currPath.resolve("function").resolve(t.identifier.toSnakeCase()), it)
             it.compiledFunctions.values.forEach {qwq ->
-                genTemplateFunction("$currPath\\function\\${t.identifier.toSnakeCase()}", qwq)
+                genTemplateFunction(currPath.resolve("function").resolve(t.identifier.toSnakeCase()), qwq)
             }
         }
     }
 
-    private fun genNamespace(path: String, namespace: MutableMap.MutableEntry<String, Namespace>) {
-        val currPath = "$path\\${Project.config.name}\\data\\${namespace.key}"
+    private fun genNamespace(path: Path, namespace: MutableMap.MutableEntry<String, Namespace>) {
+        val currPath = path.resolve(Project.config.name).resolve("data").resolve(namespace.key)
 
         namespace.value.scope.forEachFunction {
-            genFunction("$currPath\\function", it)
+            genFunction(currPath.resolve("function"), it)
             it.compiledFunctions.values.forEach { qwq ->
-                genFunction("$currPath\\function", qwq)
+                genFunction(currPath.resolve("function"), qwq)
             }
         }
 

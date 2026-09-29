@@ -7,4 +7,4 @@ tellraw @a "---3vec_float_length_test---"
 execute as @e[tag=math_marker,limit=1] run function math.3vec_float:_ssrandnew
 function math.3vec_float:_unit
 function math.3vec_float:_length
-function math.3vec_float:hpo/float/_ssprint
+function math.float:hpo/float/_ssprint

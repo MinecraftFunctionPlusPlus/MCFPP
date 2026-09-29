@@ -62,7 +62,7 @@ open class MCInt : MCNumber<Int> {
         return when (type) {
             MCFPPBaseType.Float -> {
                 MCInt("inp").assignedBy(this)
-                Function.addCommand("function math:hpo/float/_scoreto")
+                Function.addCommand("function math.float:hpo/float/_scoreto")
                 return MCFloat().assignedBy(MCFloat.ssObj)
             }
             MCFPPNBTType.Long -> {
@@ -86,7 +86,7 @@ open class MCInt : MCNumber<Int> {
         return when (type) {
             MCFPPBaseType.Float -> {
                 MCInt("inp").assignedBy(this)
-                Function.addCommand("function math:hpo/float/_scoreto")
+                Function.addCommand("function math.float:hpo/float/_scoreto")
                 return MCFloat().assignedBy(MCFloat.ssObj)
             }
             else -> re

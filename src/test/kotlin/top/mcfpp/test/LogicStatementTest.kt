@@ -1,7 +1,11 @@
 package top.mcfpp.test
 
+import java.nio.file.Files
+import top.mcfpp.Project
 import top.mcfpp.test.util.MCFPPStringTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class LogicStatementTest {
 
@@ -44,7 +48,7 @@ class LogicStatementTest {
                     print("end");
                 }
             """.trimIndent()
-        MCFPPStringTest.readFromString(test, targetPath = "D:\\.minecraft\\saves\\MCFPP Studio\\datapacks")
+        MCFPPStringTest.readFromString(test, targetPath = Files.createTempDirectory("mcfpp-if-").toString())
     }
 
     @Test
@@ -59,7 +63,7 @@ class LogicStatementTest {
                     }
                 }
             """.trimIndent()
-        MCFPPStringTest.readFromString(test, targetPath = "D:\\.minecraft\\saves\\MCFPP Studio\\datapacks")
+        MCFPPStringTest.readFromString(test, targetPath = Files.createTempDirectory("mcfpp-while-").toString())
     }
 
     @Test
@@ -74,6 +78,64 @@ class LogicStatementTest {
                 } while(i < 10);
             }
         """.trimIndent()
-        MCFPPStringTest.readFromString(test, targetPath = "D:\\.minecraft\\saves\\MCFPP Studio\\datapacks")
+        MCFPPStringTest.readFromString(test, targetPath = Files.createTempDirectory("mcfpp-do-while-").toString())
+    }
+
+    @Test
+    fun nestedIfKeepsStatementsAfterOuterBranch() {
+        val output = Files.createTempDirectory("mcfpp-nested-if-")
+        MCFPPStringTest.readFromString("""
+            func nested(){
+                dynamic var n = 5;
+                if(n > 0){
+                    if(n == 5){
+                        /scoreboard players set #case result 1
+                    }else{
+                        /scoreboard players set #case result 2
+                    }
+                }else{
+                    /scoreboard players set #case result 3
+                }
+                /say continued
+            }
+        """.trimIndent(), targetPath = output.toString())
+        assertEquals(0, Project.errorCount)
+        val functions = output.resolve("debug/data/default.test/function")
+        Files.walk(functions).use { paths ->
+            val branches = paths.filter { it.toString().endsWith(".mcfunction") }
+                .map { Files.readString(it) }
+                .filter { it.contains("scoreboard players set #case result") }
+                .toList()
+            assertEquals(3, branches.size)
+            assertTrue(branches.all { it.contains("say continued") }, branches.joinToString("\n---\n"))
+        }
+    }
+
+    @Test
+    fun nestedConstantIfDoesNotHideOuterElse() {
+        val output = Files.createTempDirectory("mcfpp-nested-constant-")
+        MCFPPStringTest.readFromString("""
+            func nested(){
+                dynamic var n = -5;
+                if(n > 0){
+                    if(true){
+                        /scoreboard players set #case result -1
+                    }
+                }else{
+                    /scoreboard players set #case result 9
+                }
+                /say continued
+            }
+        """.trimIndent(), targetPath = output.toString())
+        assertEquals(0, Project.errorCount)
+        val functions = output.resolve("debug/data/default.test/function")
+        Files.walk(functions).use { paths ->
+            val elseBranches = paths.filter { it.toString().endsWith(".mcfunction") }
+                .map { Files.readString(it) }
+                .filter { it.contains("scoreboard players set #case result 9") }
+                .toList()
+            assertEquals(1, elseBranches.size)
+            assertTrue(elseBranches.single().contains("say continued"))
+        }
     }
 }

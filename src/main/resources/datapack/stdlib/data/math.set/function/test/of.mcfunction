@@ -3,7 +3,7 @@
 tellraw @a "---set_test_of---"
 
 data modify storage math:io list set value ["hello","cber","hi","im","world"]
-function math:list/_toset
+function math.list:_toset
 
 data modify storage math:io input set value "hi"
 function math.set:_of

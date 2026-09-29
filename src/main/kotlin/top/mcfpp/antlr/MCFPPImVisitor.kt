@@ -1,8 +1,6 @@
 package top.mcfpp.antlr
 
-import org.antlr.v4.runtime.ParserRuleContext
 import org.antlr.v4.runtime.RuleContext
-import org.antlr.v4.runtime.tree.TerminalNode
 import top.mcfpp.Project
 import top.mcfpp.Project.withCompilationContext
 import top.mcfpp.annotations.InsertCommand
@@ -41,6 +39,25 @@ import top.mcfpp.util.TempPool
 open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
     var isInTopStatement = false
+
+    // Statements following a branch must run in each branch function, including nested branches.
+    private var followingStatements: List<mcfppParser.StatementContext> = emptyList()
+
+    private fun visitStatements(
+        statements: List<mcfppParser.StatementContext>,
+        afterBlock: List<mcfppParser.StatementContext> = emptyList()
+    ) {
+        val previous = followingStatements
+        try {
+            statements.forEachIndexed { index, statement ->
+                if (Function.currFunction.hasReturnStatement || Function.currFunction.isEnded) return@forEachIndexed
+                followingStatements = statements.drop(index + 1) + afterBlock
+                visitStatement(statement)
+            }
+        } finally {
+            followingStatements = previous
+        }
+    }
 
     override fun visitTopStatement(ctx: mcfppParser.TopStatementContext): Any? = withCompilationContext(ctx) {
         if(ctx.statement().size == 0) return null
@@ -85,12 +102,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     override fun visitCurlBlock(ctx: mcfppParser.CurlBlockContext): Any? = withCompilationContext(ctx) {
         if(ctx.parent is CompileTimeFuncDeclarationContext) return null
         if(Function.currFunction !is Generic<*>){
-            ctx.statement().forEach {
-                if(Function.currFunction.hasReturnStatement || Function.currFunction.isEnded){
-                    return@forEach
-                }
-                visitStatement(it)
-            }
+            visitStatements(ctx.statement())
         }
         return null
     }
@@ -99,12 +111,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     fun visitCurlBlock(ctx: mcfppParser.CurlBlockContext, function: Function){
         val lastFunction = Function.currFunction
         Function.currFunction = function
-        ctx.statement().forEach {
-            if(Function.currFunction.hasReturnStatement){
-                return@forEach
-            }
-            visitStatement(it)
-        }
+        visitStatements(ctx.statement())
         Function.currFunction = lastFunction
     }
 
@@ -260,23 +267,13 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     override fun visitBlock(ctx: mcfppParser.BlockContext): Any? = withCompilationContext(ctx) {
-        if(ctx.curlBlock() != null) {
-            ctx.curlBlock().statement().forEach {
-                if(Function.currFunction.hasReturnStatement){
-                    return@forEach
-                }
-                visitStatement(it)
-            }
-        }else{
-            ctx.children().forEach {
-                if(Function.currFunction.hasReturnStatement){
-                    return null
-                }
-                visitStatement(it as mcfppParser.StatementContext)
-            }
-        }
-
+        visitBlock(ctx, emptyList())
         return null
+    }
+
+    private fun visitBlock(ctx: mcfppParser.BlockContext, afterBlock: List<mcfppParser.StatementContext>) {
+        val statements = ctx.curlBlock()?.statement() ?: ctx.children().map { it as mcfppParser.StatementContext }
+        visitStatements(statements, afterBlock)
     }
 
     private enum class ConditionType {
@@ -298,26 +295,12 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
     private var breakIf = ConditionType.NORMAL
     override fun visitIfStatement(ctx: mcfppParser.IfStatementContext): Any? = withCompilationContext(ctx) {
+        val enclosingCondition = breakIf
+        try {
         //进入if函数
         breakIf = ConditionType.NORMAL
         Function.addComment("if start")
-        //获取if语句以后的所有语句
-        val index = (ctx.parent.parent as ParserRuleContext).children.indexOf(ctx.parent)
-        val list =  (ctx.parent.parent as ParserRuleContext).children.subList(index + 1, ctx.parent.parent.childCount)
-        list.forEach {
-            if(it is TerminalNode){
-                ctx.block().addChild(it)
-            }else{
-                ctx.block().addChild(it as RuleContext)
-            }
-        }
-        list.forEach { l -> ctx.elseIfStatement().forEach {
-            if(l is TerminalNode){
-                it.block().addChild(l)
-            }else{
-                it.block().addChild(l as RuleContext)
-            }
-        } }
+        val continuation = followingStatements
         do {
             //if分支
             val (c,f) = enterIfBranch(ctx)
@@ -335,7 +318,10 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                     }
                     Function.currFunction = f
                 }
-                visitBlock(ctx.block())
+                visitBlock(ctx.block(), continuation)
+                if (!Function.currFunction.hasReturnStatement && !Function.currFunction.isEnded) {
+                    visitStatements(continuation)
+                }
                 //由于原来的调用if的函数已经被return命令返回，需要if_branch函数帮助清理它的栈
                 if(breakIf != ConditionType.ALWAYS_TRUE) {
                     Function.addCommand(Commands.stackOut())
@@ -363,7 +349,10 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                         }
                         Function.currFunction = f2
                     }
-                    visitBlock(it.block())
+                    visitBlock(it.block(), continuation)
+                    if (!Function.currFunction.hasReturnStatement && !Function.currFunction.isEnded) {
+                        visitStatements(continuation)
+                    }
                     //由于原来的调用if的函数已经被return命令返回，需要if_branch函数帮助清理它的栈
                     if(breakIf != ConditionType.ALWAYS_TRUE) {  //这里同理
                         Function.addCommand(Commands.stackOut())
@@ -392,10 +381,10 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 Function.currFunction = f3
             }
             if(ctx.elseStatement() != null){
-                visitBlock(ctx.elseStatement().block())
+                visitBlock(ctx.elseStatement().block(), continuation)
             }
-            if(!Function.currFunction.hasReturnStatement){
-                list.forEach { visit(it) }
+            if(!Function.currFunction.hasReturnStatement && !Function.currFunction.isEnded){
+                visitStatements(continuation)
             }
             if(breakIf != ConditionType.ALWAYS_FALSE){
                 Function.addCommand(Commands.stackOut())
@@ -407,6 +396,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         //if以后的语句已经被全部打包到if分支里面，所以if语句之后的statement没有意义
         Function.currFunction.isEnded = true
         return null
+        } finally {
+            breakIf = enclosingCondition
+        }
     }
 
     /**

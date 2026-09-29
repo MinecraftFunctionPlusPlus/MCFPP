@@ -19,9 +19,9 @@ execute if score sstempr int matches 1 run function math.3vec_float:rmv_swapx
 #符号
 scoreboard players operation sstemp1 int *= sstemp_sign int
 #对齐
-execute if score sstempe int matches 1..2 run function math.3vec_float:hpo/float/add_search/1_2
-execute if score sstempe int matches 3..5 run function math.3vec_float:hpo/float/add_search/3_5
-execute if score sstempe int matches 6.. run function math.3vec_float:hpo/float/add_search/6_8
+execute if score sstempe int matches 1..2 run function math.float:hpo/float/add_search/1_2
+execute if score sstempe int matches 3..5 run function math.float:hpo/float/add_search/3_5
+execute if score sstempe int matches 6.. run function math.float:hpo/float/add_search/6_8
 scoreboard players operation 3vec_float_x_int0 int -= sstemp1 int
 #对齐小数点
 execute if score 3vec_float_x_int0 int matches 100000.. run function math.3vec_float:addx_search/align_s2
@@ -50,9 +50,9 @@ execute if score sstempr int matches 1 run function math.3vec_float:rmv_swapy
 #符号
 scoreboard players operation sstemp1 int *= sstemp_sign int
 #对齐
-execute if score sstempe int matches 1..2 run function math.3vec_float:hpo/float/add_search/1_2
-execute if score sstempe int matches 3..5 run function math.3vec_float:hpo/float/add_search/3_5
-execute if score sstempe int matches 6.. run function math.3vec_float:hpo/float/add_search/6_8
+execute if score sstempe int matches 1..2 run function math.float:hpo/float/add_search/1_2
+execute if score sstempe int matches 3..5 run function math.float:hpo/float/add_search/3_5
+execute if score sstempe int matches 6.. run function math.float:hpo/float/add_search/6_8
 scoreboard players operation 3vec_float_y_int0 int -= sstemp1 int
 #对齐小数点
 execute if score 3vec_float_y_int0 int matches 100000.. run function math.3vec_float:addy_search/align_s2
@@ -81,9 +81,9 @@ execute if score sstempr int matches 1 run function math.3vec_float:rmv_swapz
 #符号
 scoreboard players operation sstemp1 int *= sstemp_sign int
 #对齐
-execute if score sstempe int matches 1..2 run function math.3vec_float:hpo/float/add_search/1_2
-execute if score sstempe int matches 3..5 run function math.3vec_float:hpo/float/add_search/3_5
-execute if score sstempe int matches 6.. run function math.3vec_float:hpo/float/add_search/6_8
+execute if score sstempe int matches 1..2 run function math.float:hpo/float/add_search/1_2
+execute if score sstempe int matches 3..5 run function math.float:hpo/float/add_search/3_5
+execute if score sstempe int matches 6.. run function math.float:hpo/float/add_search/6_8
 scoreboard players operation 3vec_float_z_int0 int -= sstemp1 int
 #对齐小数点
 execute if score 3vec_float_z_int0 int matches 100000.. run function math.3vec_float:addz_search/align_s2
