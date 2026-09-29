@@ -172,7 +172,11 @@ class MCFPPConcreteExprVisitor(
     @Override
     override fun visitCastExpression(ctx: mcfppParser.CastExpressionContext): Var<*>? = withCompilationContext(ctx) {
         val a: Var<*> = visitUnaryExpression(ctx.unaryExpression()) ?: return null
-        return a.explicitCast(MCFPPType.parseFromContextNotNull(ctx.type(), Function.currFunction.scope))
+        return if (ctx.type() != null) {
+            a.explicitCast(MCFPPType.parseFromContextNotNull(ctx.type(), Function.currFunction.scope))
+        } else {
+            a
+        }
     }
 
     /**
@@ -186,7 +190,7 @@ class MCFPPConcreteExprVisitor(
             visitRightVarExpression(ctx.rightVarExpression())
         } else {
             val a = visitUnaryExpression(ctx.unaryExpression()) ?: return null
-            a.constUnaryComputation("!")
+            if (ctx.SUB() != null) negateNumber(a, true) else a.constUnaryComputation("!")
         }
     }
 

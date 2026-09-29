@@ -107,4 +107,21 @@ func test(){
 }
 ```
 
+## Line breaks and arithmetic expressions
+
+A newline or semicolon ends a statement. An expression can continue on the next line when its operator ends the current line. If `/` is the first non-whitespace character on a line, that line is a vanilla Minecraft command; put a division operator on the previous line when splitting division across lines.
+
+```mcfpp
+func calculate(){
+  var x = 12 /
+    3;
+  x += 2;
+  x *= 3;
+  var opposite = -x;
+  /say Calculation complete
+}
+```
+
+Compound assignments `+=`, `-=`, `*=`, `/=`, and `%=` read the target, apply the corresponding operation, and write the result back. `++` and `--` are not supported.
+
 For more syntax information, refer to the [MCFPP API](https://www.mcfpp.top).

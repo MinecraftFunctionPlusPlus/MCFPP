@@ -13,6 +13,9 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.JavaVar
 import top.mcfpp.core.lang.MCFPPValue
+import top.mcfpp.core.lang.MCFloat
+import top.mcfpp.core.lang.MCNumber
+import top.mcfpp.core.lang.PropertyVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.bool.BaseBool
 import top.mcfpp.core.lang.bool.ExecuteBool
@@ -145,22 +148,18 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         if (Function.currField.containVar(ctx.Identifier().text)) {
             LogProcessor.error("Duplicate defined variable:" + ctx.Identifier().text)
         }
-        if(init != null){
-            //变量赋值
-            Function.currField.putVar(`var`.identifier, `var`.assignedBy(init), true)
-        }else{
-            Function.currField.putVar(`var`.identifier, `var`, true)
-        }
+        val stored = if (init != null) `var`.assignedBy(init) else `var`
+        Function.currField.putVar(`var`.identifier, stored, true)
         when(fieldModifier){
             "const" -> {
-                if(!`var`.hasAssigned){
-                    LogProcessor.error("The const field ${`var`.identifier} must be initialized.")
+                if(!stored.hasAssigned){
+                    LogProcessor.error("The const field ${stored.identifier} must be initialized.")
                 }
-                `var`.isConst = true
+                stored.isConst = true
             }
             "dynamic" -> {
-                if(`var` is MCFPPValue<*>){
-                    `var`.toDynamic(true)
+                if(stored is MCFPPValue<*>){
+                    stored.toDynamic(true)
                 }
             }
         }
@@ -175,19 +174,40 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     override fun visitStatementExpression(ctx: mcfppParser.StatementExpressionContext):Any? = withCompilationContext(ctx) {
         Function.addComment("expression: " + ctx.text)
         if(ctx.varWithSelector() != null){
-            val left: Var<*> = MCFPPExprVisitor().visitVarWithSelector(ctx.varWithSelector())
-            if (left.isConst) {
+            val left: Var<*> = MCFPPExprVisitor().visitAssignableVarWithSelector(ctx.varWithSelector())
+            if (left.isConst || (left is PropertyVar && left.field.isConst)) {
                 LogProcessor.error("Cannot assign a constant repeatedly: " + left.identifier)
                 return null
             }
             val type = left.type
+            val assignment = ctx.assignmentOperator().text
+            val current = if (assignment == "=") null else {
+                val value = if (left is PropertyVar) left.get() else left
+                when (value) {
+                    is MCFPPValue<*> -> value.clone()
+                    is MCNumber<*> -> value.type.buildUnConcrete(TempPool.getVarIdentify()).apply {
+                        isTemp = true
+                    }.assignedBy(value).apply {
+                        // Float operators load a non-temp operand into their shared work registers.
+                        if (this is MCFloat) isTemp = false
+                    }
+                    else -> value.getTempVar()
+                }
+            }
             val right: Var<*> = MCFPPExprVisitor(
                 if(type is MCFPPEnumType) type else null
             ).visitExpression(ctx.expression())
-            if(right !is MCFPPValue<*> && left.parent is DataTemplateObjectConcrete){
+            val operator = assignment.dropLast(1)
+            val assigned = when (current) {
+                null -> right
+                is MCFloat -> computeFloatCompound(current, right, operator)
+                else -> current.binaryComputation(right, operator)
+            }
+            if (assigned.isError) return null
+            if(assigned !is MCFPPValue<*> && left.parent is DataTemplateObjectConcrete){
                 left.parent = (left.parent as DataTemplateObjectConcrete).toDynamic(true)
             }
-            left.replacedBy(left.assignedBy(right))
+            left.replacedBy(left.assignedBy(assigned))
         }else{
             MCFPPExprVisitor().visitExpression(ctx.expression())
         }

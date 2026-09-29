@@ -246,7 +246,7 @@ class MCFPPExprVisitor(
             visitRightVarExpression(ctx.rightVarExpression())
         } else {
             val a: Var<*> = visitUnaryExpression(ctx.unaryExpression())
-            a.unaryComputation("!")
+            if (ctx.SUB() != null) negateNumber(a)!! else a.unaryComputation("!")
         }
     }
 
@@ -269,9 +269,18 @@ class MCFPPExprVisitor(
      */
     @Override
     override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var<*> = withCompilationContext(ctx) {
+        resolveVarWithSelector(ctx, false)
+    }
+
+    /** Resolve an assignment target without calling its final property getter. */
+    fun visitAssignableVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var<*> = withCompilationContext(ctx) {
+        resolveVarWithSelector(ctx, true)
+    }
+
+    private fun resolveVarWithSelector(ctx: mcfppParser.VarWithSelectorContext, preserveFinalProperty: Boolean): Var<*> {
         currSelector = null
         currSelector = visitJvmAccessExpression(ctx.jvmAccessExpression())
-        if(currSelector is PropertyVar){
+        if(currSelector is PropertyVar && (!preserveFinalProperty || ctx.selector().isNotEmpty())){
             currSelector = (currSelector as PropertyVar).get();
         }
         if(currSelector is UnknownVar){

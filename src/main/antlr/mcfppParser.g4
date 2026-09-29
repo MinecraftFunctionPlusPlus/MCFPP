@@ -288,7 +288,11 @@ parameter
 
 //能作为语句的表达式
 statementExpression
-    :   (varWithSelector NL* ASSIGNMENT NL* )? expression
+    :   (varWithSelector assignmentOperator NL* )? expression
+    ;
+
+assignmentOperator
+    :   ASSIGNMENT | ADD_ASSIGNMENT | SUB_ASSIGNMENT | MULT_ASSIGNMENT | DIV_ASSIGNMENT | MOD_ASSIGNMENT
     ;
 
 //表达式
@@ -299,47 +303,47 @@ expression
 
 //其他运算符
 commonBinaryOperatorExpression
-    :   conditionalOrExpression (op+=(PIPE | Identifier) conditionalOrExpression)*
+    :   conditionalOrExpression (op+=(PIPE | Identifier) NL* conditionalOrExpression)*
     ;
 
 //或
 conditionalOrExpression
-    :   conditionalAndExpression (NL* op+=DISJ NL* conditionalAndExpression )*
+    :   conditionalAndExpression (op+=DISJ NL* conditionalAndExpression )*
     ;
 
 //与
 conditionalAndExpression
-    :   equalityExpression (NL* op+=CONJ NL* equalityExpression )*
+    :   equalityExpression (op+=CONJ NL* equalityExpression )*
     ;
 
 //等同
 equalityExpression
-    :   relationalExpression (NL* op+=(EQEQ | EXCL_EQ | WVEQ) NL* relationalExpression )*
+    :   relationalExpression (op+=(EQEQ | EXCL_EQ | WVEQ) NL* relationalExpression )*
     ;
 
 //比较关系
 relationalExpression
-    :   additiveExpression (NL* op+=(LANGLE | RANGLE | LE | GE) NL* additiveExpression )*
+    :   additiveExpression (op+=(LANGLE | RANGLE | LE | GE) NL* additiveExpression )*
     ;
 
 //加减
 additiveExpression
-    :   multiplicativeExpression (NL* op+=(ADD | SUB) NL* multiplicativeExpression )*
+    :   multiplicativeExpression (op+=(ADD | SUB) NL* multiplicativeExpression )*
     ;
 
 //乘除
 multiplicativeExpression
-    :   castExpression (NL* op+=(MULT | SLASH | MOD) NL* castExpression )*
+    :   castExpression (op+=(MULT | SLASH | MOD) NL* castExpression )*
     ;
 
 //强制类型转换表达式
 castExpression
-    :  unaryExpression (NL* AS NL* type)?
+    :  unaryExpression (AS NL* type)?
     ;
 
 //一元表达式
 unaryExpression
-    :   EXCL NL* unaryExpression
+    :   (EXCL | SUB) NL* unaryExpression
     |   rightVarExpression
     ;
 
@@ -487,7 +491,7 @@ tryStoreStatement
     ;
 
 returnStatement
-    : RETURN (NL* expression)?
+    : RETURN expression?
     ;
 
 curlBlock
@@ -587,8 +591,8 @@ annotationArgs
     ;
 
 range
-    :   num1=range1 NL* RANGE NL* num2=range1
-    |   num1=range1 NL* RANGE
+    :   num1=range1 RANGE NL* num2=range1
+    |   num1=range1 RANGE
     |   RANGE NL* num2=range1
     ;
 

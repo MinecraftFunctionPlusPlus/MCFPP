@@ -163,7 +163,7 @@ open class MCFloat : MCNumber<Float> {
     @InsertCommand
     override fun times(a: Var<*>): Var<*> {
         //t = t * a
-        if(!isTemp) return getTempVar().minus(a)
+        if(!isTemp) return getTempVar().times(a)
         if(a as MCFloat != tempFloat) a.toTempEntity()
         Function.addCommand("execute as $tempFloatEntityUUID run function math:hpo/float/_mult")
         return this
@@ -400,7 +400,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
      * @param curr 域容器
      * @param value 值
      */
-    constructor(curr: FieldContainer, value: Float, identifier: String = TempPool.getVarIdentify()) : super(curr.prefix + identifier) {
+    constructor(curr: FieldContainer, value: Float, identifier: String = TempPool.getVarIdentify()) : super(curr, identifier) {
         this.value = value
     }
 
