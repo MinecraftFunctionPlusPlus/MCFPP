@@ -72,14 +72,15 @@ class NativeFunction : Function, Native {
         val list = argPass(readOnlyArgs, normalArgs)
         val noWrites = javaMethod.isAnnotationPresent(top.mcfpp.mni.annotation.NoExternalWrites::class.java) ||
             javaMethod.declaringClass.isAnnotationPresent(top.mcfpp.mni.annotation.NoExternalWrites::class.java)
+        val actualCaller = if (caller is top.mcfpp.core.lang.MCAny && caller !is top.mcfpp.core.lang.MCObject)
+            caller.semanticValue() else (caller as? Var<*>)?.let(top.mcfpp.analysis.StorageAccess::read) ?: caller
         val observed = if (noWrites) emptyList() else top.mcfpp.analysis.StorageAccess.visibleValues(currFunction.scope) +
-            readOnlyArgs + normalArgs + listOfNotNull(caller as? Var<*>)
+            readOnlyArgs + normalArgs + listOfNotNull(actualCaller as? Var<*>)
         top.mcfpp.analysis.StorageAccess.flush(observed)
-        val hostValues = observed.distinct().mapNotNull { value ->
+        val hostIdentities = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Var<*>, Boolean>())
+        val hostValues = observed.filter(hostIdentities::add).mapNotNull { value ->
             top.mcfpp.analysis.StorageAccess.hostSnapshot(value)?.let { value to it }
         }
-        val actualCaller = if (caller is top.mcfpp.core.lang.MCAny && caller !is top.mcfpp.core.lang.MCObject)
-            caller.semanticValue() else caller
         //一定是静态的
         try {
             javaMethod.invoke(

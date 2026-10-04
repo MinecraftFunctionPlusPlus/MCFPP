@@ -120,6 +120,19 @@ class FlowFacts private constructor(private val facts: MutableMap<Place, ValueFa
         facts[place] = if (unknownRange) value.copy(type = previous?.type?.join(value.type) ?: TypeKnowledge.Unknown,
             value = ValueKnowledge.Unknown) else value
     }
+
+    /** A static write updates complete ancestor snapshots while invalidating overlapping read caches. */
+    fun writeConstant(place: Place, value: ValueFacts) {
+        val constant = (value.value as? ValueKnowledge.Constant)?.value
+        val ancestors = if (constant == null || PathSegment.UnknownIndex in place.path) emptyMap() else facts.filterKeys {
+            it.root == place.root && it.path.size < place.path.size && place.path.take(it.path.size) == it.path
+        }.mapNotNull { (key, fact) ->
+            val old = (fact.value as? ValueKnowledge.Constant)?.value ?: return@mapNotNull null
+            old.replacing(place.path.drop(key.path.size), constant)?.let { key to fact.copy(value = ValueKnowledge.Constant(it)) }
+        }.toMap()
+        write(place, value)
+        facts.putAll(ancestors)
+    }
     fun children(place: Place): Map<Place, ValueFacts> = facts.filterKeys {
         it.root == place.root && it.path.size == place.path.size + 1 && it.path.take(place.path.size) == place.path
     }

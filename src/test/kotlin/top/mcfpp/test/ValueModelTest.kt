@@ -105,6 +105,34 @@ class ValueModelTest {
         assertFalse(root.index(1).overlaps(root.index(2)))
     }
 
+    @Test fun staticWritesRebuildCompleteAncestorsWithoutMutatingEarlierSnapshots() {
+        val root = Place(SymbolId.fresh())
+        val list = root.field("list")
+        val original = CompilerValue.Typed(MCFPPBaseType.Object.typeId, CompilerValue.Record(mapOf(
+            "list" to CompilerValue.Sequence(listOf(CompilerValue.Integral(1), CompilerValue.Integral(2))),
+            "sibling" to CompilerValue.Integral(9)
+        )))
+        val hash = original.hashCode()
+        val facts = FlowFacts().apply {
+            initialize(root, ValueFacts(TypeKnowledge.Exact(MCFPPBaseType.Object.typeId), ValueKnowledge.Constant(original)))
+            initialize(list, ValueFacts(TypeKnowledge.Unknown, ValueKnowledge.Constant(
+                CompilerValue.Sequence(listOf(CompilerValue.Integral(1), CompilerValue.Integral(2))))))
+            initialize(list.index(0), constant(1))
+            initialize(list.index(1), constant(2))
+            initialize(root.field("sibling"), constant(9))
+        }
+        facts.writeConstant(list.index(0), constant(5))
+        assertEquals(hash, original.hashCode())
+        assertEquals(ValueKnowledge.Constant(CompilerValue.Sequence(listOf(CompilerValue.Integral(5), CompilerValue.Integral(2)))),
+            facts.read(list)!!.value)
+        assertEquals(constant(2), facts.read(list.index(1)))
+        assertEquals(constant(9), facts.read(root.field("sibling")))
+        assertNotEquals(ValueKnowledge.Constant(original), facts.read(root)!!.value)
+        facts.writeConstant(list.unknownIndex(), constant(7))
+        assertEquals(ValueKnowledge.Unknown, facts.read(root)!!.value)
+        assertEquals(ValueKnowledge.Unknown, facts.read(list.index(1))!!.value)
+    }
+
     @Test fun materializationPreservesFactsAndCacheVersionsTrackWrites() {
         val place = Place(SymbolId.fresh())
         val layout = StorageLayout.Scoreboard("value", "mcfpp_default")

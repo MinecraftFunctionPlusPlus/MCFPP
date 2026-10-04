@@ -401,8 +401,10 @@ class CollectionStorageTest {
         """)
         val erased = assertIs<MCAny>(main.scope.getVar("erased"))
         assertNotNull(erased.compilerPayload)
-        assertNull(erased.storageBinding)
-        assertEquals(MCFPPBaseType.Int, assertIs<MCFPPTypeVar>(main.scope.getVar("preserved")).value)
+        val binding = assertNotNull(erased.storageBinding)
+        assertEquals(StorageLayout.CompilerOnly, binding.data.layout)
+        assertEquals(binding.place, main.scope.getVar("interpreted")!!.storageBinding!!.place)
+        assertEquals(MCFPPBaseType.Int, assertIs<MCFPPTypeVar>(assertIs<MCAny>(main.scope.getVar("preserved")).semanticValue()).value)
         assertFalse(main.commands.analyzeAll().any { "set value" in it || "set from" in it })
     }
 
@@ -415,7 +417,7 @@ class CollectionStorageTest {
             }
         """)
         assertIs<MCObject>(main.scope.getVar("erased"))
-        assertEquals(MCFPPBaseType.Int, assertIs<MCFPPTypeVar>(main.scope.getVar("preserved")).value)
+        assertEquals(MCFPPBaseType.Int, assertIs<MCFPPTypeVar>(assertIs<MCAny>(main.scope.getVar("preserved")).semanticValue()).value)
         assertFalse(main.commands.analyzeAll().any { "set value" in it || "set from" in it })
     }
 
@@ -469,7 +471,7 @@ class CollectionStorageTest {
                 var preserved = interpreted["kind"];
             }
         """)
-        assertEquals(MCFPPBaseType.Int, assertIs<MCFPPTypeVar>(main.scope.getVar("preserved")).value)
+        assertEquals(MCFPPBaseType.Int, assertIs<MCFPPTypeVar>(assertIs<MCAny>(main.scope.getVar("preserved")).semanticValue()).value)
         assertFalse(main.commands.analyzeAll().any { "set value" in it || "set from" in it })
         assertTrue(main.commands.analyzeAll().contains("say barrier"))
     }

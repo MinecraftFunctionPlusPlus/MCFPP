@@ -115,7 +115,7 @@ open class MCAny : Var<MCAny> {
     override fun storeToStack() { if (compilerPayload == null) StorageAccess.materialize(this) }
     override fun getFromStack() {}
     open fun buildInferredVar(type: MCFPPType): Var<*> {
-        compilerPayload?.let { if (it.type == type) return it }
+        if (storageBinding == null) compilerPayload?.let { if (it.type == type) return it }
         return StorageAccess.read(StorageAccess.view(this, type, diagnose = false).apply { isDynamic = this@MCAny.isDynamic })
     }
 }

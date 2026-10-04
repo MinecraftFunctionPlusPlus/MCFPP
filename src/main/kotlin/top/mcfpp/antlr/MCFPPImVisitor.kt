@@ -171,7 +171,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         `var`.isConst = fieldModifier == "const"
         `var`.isDynamic = fieldModifier == "dynamic"
         `var`.bindDeclaration()
-        val stored = if (isViewInitializer(ctx.expression()) && init?.storageBinding?.view != null && init.type == type) {
+        val stored = if (`var`.isDynamic && init != null && !top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(init)) {
+            `var`.assignedBy(init)
+        } else if (isViewInitializer(ctx.expression()) && init?.storageBinding?.view != null && init.type == type) {
             top.mcfpp.analysis.StorageAccess.adapter(type, `var`.identifier, init.storageBinding!!).apply {
                 symbol = `var`.symbol
                 isConst = `var`.isConst

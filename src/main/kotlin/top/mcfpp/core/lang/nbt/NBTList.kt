@@ -170,15 +170,26 @@ open class NBTList : NBTBasedData {
     }
 
     companion object {
-        internal fun copyCompilerPart(value: Var<*>): Var<*> = when (value) {
-            is MCAny -> value.clone().apply {
-                compilerPayload = value.compilerPayload?.let(::copyCompilerPart)
-                val payload = compilerPayload
-                if (this is MCAnyConcrete && payload is MCFPPValue<*>) this.value = payload.value
+        internal fun copyCompilerPart(value: Var<*>): Var<*> {
+            val static = value.storageBinding?.data?.layout == top.mcfpp.analysis.StorageLayout.CompilerOnly
+            val source = if (static) top.mcfpp.analysis.StorageAccess.read(value) else value
+            val copied = when (source) {
+                is MCAny -> source.clone().apply {
+                    compilerPayload = source.compilerPayload?.let(::copyCompilerPart)
+                    val payload = compilerPayload
+                    if (this is MCAnyConcrete && payload is MCFPPValue<*>) this.value = payload.value
+                }
+                is NBTListConcrete -> NBTListConcrete(source, ArrayList(source.value.map(::copyCompilerPart)))
+                is NBTDictionaryConcrete -> NBTDictionaryConcrete(source, source.value)
+                else -> source.clone()
             }
-            is NBTListConcrete -> NBTListConcrete(value, ArrayList(value.value.map(::copyCompilerPart)))
-            is NBTDictionaryConcrete -> NBTDictionaryConcrete(value, value.value)
-            else -> value.clone()
+            if (static) {
+                copied.storageBinding = null
+                copied.storageReadVersion = null
+                copied.symbol = null
+                copied.parent = null
+            }
+            return copied
         }
         val data by lazy {
             CompoundData("list", "mcfpp.lang").apply {

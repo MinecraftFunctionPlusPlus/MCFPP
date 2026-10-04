@@ -30,6 +30,24 @@ sealed interface CompilerValue {
         override fun toString() = "Record(fields=$fields)"
     }
     data class Typed(val type: TypeId, val payload: CompilerValue) : CompilerValue
+
+    /** Persistent replacement of a known field/index; no mutable host value is retained. */
+    fun replacing(path: List<PathSegment>, value: CompilerValue): CompilerValue? {
+        if (path.isEmpty()) return value
+        if (this is Typed) return payload.replacing(path, value)?.let { Typed(type, it) }
+        val tail = path.drop(1)
+        return when (val head = path.first()) {
+            is PathSegment.Field -> if (this is Record) {
+                val replacement = if (tail.isEmpty()) value else fields[head.name]?.replacing(tail, value) ?: return null
+                Record(fields + (head.name to replacement))
+            } else null
+            is PathSegment.Index -> if (this is Sequence && head.index in elements.indices) {
+                val replacement = elements[head.index].replacing(tail, value) ?: return null
+                Sequence(elements.mapIndexed { index, element -> if (index == head.index) replacement else element })
+            } else null
+            PathSegment.UnknownIndex -> null
+        }
+    }
 }
 
 /** Temporary boundary for the existing backends. A partially known value has no full snapshot. */
