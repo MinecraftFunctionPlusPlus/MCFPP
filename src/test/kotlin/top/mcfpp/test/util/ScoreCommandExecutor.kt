@@ -120,7 +120,8 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         val clearCompound = Regex("data modify storage mcfpp:system stack_frame\\[(\\d+)]\\.(\\S+) set value \\{\\}")
         val storeTest = Regex("execute store success score (\\S+ \\S+) (if|unless) score (\\S+ \\S+) = (\\S+ \\S+)")
         val storeMatch = Regex("execute store success score (\\S+ \\S+) (if|unless) score (\\S+ \\S+) matches (-?\\d+)")
-        val appendNbt = Regex("data modify storage (\\S+) ($nbtPath) append from storage (\\S+) ($nbtPath)")
+        val insertNbt = Regex("data modify storage (\\S+) ($nbtPath) (append|prepend|insert -?\\d+) from storage (\\S+) ($nbtPath)")
+        val compareNbt = Regex("execute store success score (\\S+ \\S+) run data modify storage (\\S+) ($nbtPath) set from storage (\\S+) ($nbtPath)")
         val removeNbt = Regex("data remove storage (\\S+) ($nbtPath)")
         val testNbt = Regex("execute store success score (\\S+ \\S+) if data storage (\\S+) ($nbtPath)")
         val macroCall = Regex("function (\\S+) with storage (\\S+) ($nbtPath)")
@@ -187,7 +188,11 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                 writeNbt("mcfpp:system", "stack_frame[${it.groupValues[1]}].${it.groupValues[2]}", CompoundTag())
                 return@command false
             }
-            restore.matchEntire(command)?.let { values[it.groupValues[1]] = (readNbt(it.groupValues[2], it.groupValues[3]).value as Number).toInt(); return@command false }
+            restore.matchEntire(command)?.let {
+                val value = readNbt(it.groupValues[2], it.groupValues[3])
+                values[it.groupValues[1]] = if (value is ListTag) value.size else (value.value as Number).toInt()
+                return@command false
+            }
             setNbt.matchEntire(command)?.let {
                 writeNbt(it.groupValues[1], it.groupValues[2], Tag.toNBT(it.groupValues[3])); return@command false
             }
@@ -195,9 +200,24 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                 val value = readNbt(it.groupValues[3], it.groupValues[4])
                 writeNbt(it.groupValues[1], it.groupValues[2], value.copy()); return@command false
             }
-            appendNbt.matchEntire(command)?.let {
-                val value = readNbt(it.groupValues[3], it.groupValues[4])
-                (readNbt(it.groupValues[1], it.groupValues[2]) as ListTag).add(value.copy())
+            compareNbt.matchEntire(command)?.let {
+                val value = readNbt(it.groupValues[4], it.groupValues[5])
+                val changed = readNbt(it.groupValues[2], it.groupValues[3]) != value
+                writeNbt(it.groupValues[2], it.groupValues[3], value.copy())
+                values[it.groupValues[1]] = if (changed) 1 else 0
+                return@command false
+            }
+            insertNbt.matchEntire(command)?.let {
+                val path = it.groupValues[5]
+                val value = readNbt(it.groupValues[4], path.removeSuffix("[]"))
+                val elements = if (path.endsWith("[]")) (value as ListTag).value.map { tag -> tag.copy() } else listOf(value.copy())
+                val list = readNbt(it.groupValues[1], it.groupValues[2]) as ListTag
+                val position = when (it.groupValues[3]) {
+                    "append" -> list.size
+                    "prepend" -> 0
+                    else -> it.groupValues[3].removePrefix("insert ").toInt().let { index -> if (index < 0) list.size + index + 1 else index }
+                }
+                if (position in 0..list.size) list.value.addAll(position, elements)
                 return@command false
             }
             removeNbt.matchEntire(command)?.let {

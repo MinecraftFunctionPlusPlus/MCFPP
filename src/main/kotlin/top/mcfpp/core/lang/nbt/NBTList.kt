@@ -5,7 +5,6 @@ import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.lib.NBTPath
-import top.mcfpp.mni.NBTListConcreteData
 import top.mcfpp.mni.NBTListData
 import top.mcfpp.model.Member
 import top.mcfpp.model.compound.CompoundData
@@ -297,30 +296,6 @@ class NBTListConcrete: NBTList, PartialConcreteValue<ListTag, ArrayList<Var<*>>>
         return "[$type,value=$value]"
     }
 
-    override fun getMemberFunction(
-        key: String,
-        readOnlyArgs: List<Var<*>>,
-        normalArgs: List<Var<*>>,
-        accessModifier: Member.AccessModifier
-    ): Pair<Function, Boolean> {
-        var re: Function = UnknownFunction(key)
-        data.scope.forEachFunctionUntil {
-            //TODO 我们约定it为NativeFunction，但是没有考虑拓展函数
-            assert(it is NativeFunction)
-            val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to genericType))
-            if(nf.isSelf(key, normalArgs)){
-                re = nf
-                return@forEachFunctionUntil false
-            }
-            return@forEachFunctionUntil true
-        }
-        val iterator = data.parent.iterator()
-        while (re is UnknownFunction && iterator.hasNext()){
-            re = iterator.next().getFunction(key, readOnlyArgs, normalArgs,isStatic)
-        }
-        return re to true
-    }
-
     override fun replaceMemberVar(v: Var<*>) {
         value[value.indexOfFirst { it.identifier == v.identifier }] = v
     }
@@ -338,12 +313,7 @@ class NBTListConcrete: NBTList, PartialConcreteValue<ListTag, ArrayList<Var<*>>>
     }
 
     companion object {
-        val data by lazy {
-            CompoundData("list", "mcfpp.lang").apply {
-                extends(MCFPPNBTType.NBT.instanceData)
-                injectedBy(NBTListConcreteData::class.java)
-            }
-        }
+        val data get() = NBTList.data
 
         fun getEmpty() = NBTListConcrete(ArrayList(), "empty", MCFPPPrivateType.Wildcard).apply { isEmptyTemp = true }
 

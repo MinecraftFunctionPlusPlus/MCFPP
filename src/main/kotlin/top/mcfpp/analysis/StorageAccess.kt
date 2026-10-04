@@ -302,9 +302,10 @@ object StorageAccess {
         val path = if (index is MCInt) if (selected != null) root.path.intIndex(selected as MCInt) else root.path.intIndex(number!!)
             else if (selected != null) root.path.memberIndex(selected as MCString) else root.path.memberIndex(quotedKey(key!!))
         if (root.data.facts.read(place) == null) {
-            val actual = if (type in erasedTypes && place.path.last() == PathSegment.UnknownIndex)
-                root.data.facts.children(root.place).values.map { it.type }.reduceOrNull(TypeKnowledge::join) ?: TypeKnowledge.Unknown
-                else if (type in erasedTypes) TypeKnowledge.Unknown else TypeKnowledge.Exact(type.typeId)
+            val actual = if (type in erasedTypes) root.data.facts.read(root.place.unknownIndex())?.type
+                ?: if (place.path.last() == PathSegment.UnknownIndex) root.data.facts.children(root.place).values
+                    .map { it.type }.reduceOrNull(TypeKnowledge::join) ?: TypeKnowledge.Unknown else TypeKnowledge.Unknown
+                else TypeKnowledge.Exact(type.typeId)
             root.data.facts.initialize(place, ValueFacts(actual, ValueKnowledge.Unknown))
         }
         return adapter(type, TempPool.getVarIdentify(), root.copy(place = place, path = path)).apply { parent = container }
@@ -474,6 +475,7 @@ object StorageAccess {
         binding.data.write(binding.place, ValueFacts(if (source is MCAny) source.typeKnowledge else TypeKnowledge.Exact(source.type.typeId),
             snapshot?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown))
         if (PathSegment.UnknownIndex !in binding.place.path) {
+            binding.data.facts.forgetDescendants(binding.place)
             original?.data?.types?.let(binding.data.types::putAll)
             binding.data.facts.copyFrom(parts, binding.place, binding.place, includeRoot = false)
             binding.data.listSizes.putAll(sizes)
@@ -683,7 +685,7 @@ object StorageAccess {
     private val supportsMixedLists get() = top.mcfpp.command.TargetCapabilities
         .forVersion(top.mcfpp.Project.config.version)?.heterogeneousLists == true
 
-    private fun collectionEncodingSupported(value: Var<*>): Boolean {
+    internal fun collectionEncodingSupported(value: Var<*>): Boolean {
         if (supportsMixedLists || value.storageBinding != null) return true
         return when (value) {
             is NBTListConcrete -> {
@@ -707,7 +709,7 @@ object StorageAccess {
         }
     }
 
-    private fun sourceEncoding(value: Var<*>): Class<out Tag<*>>? {
+    internal fun sourceEncoding(value: Var<*>): Class<out Tag<*>>? {
         value.storageBinding?.let { binding ->
             val type = (binding.data.facts.read(binding.place)?.type as? TypeKnowledge.Exact)?.type
                 ?.let(binding.data.types::get) ?: return null
@@ -717,7 +719,7 @@ object StorageAccess {
         return encoding(actualType(value))
     }
 
-    private fun encoding(type: MCFPPType): Class<out Tag<*>>? = when (type.typeId) {
+    internal fun encoding(type: MCFPPType): Class<out Tag<*>>? = when (type.typeId) {
         MCFPPBaseType.Any.typeId, MCFPPBaseType.Object.typeId, MCFPPNBTType.NBT.typeId -> null
         MCFPPBaseType.Float.typeId -> if (FloatProviders.enabled) top.mcfpp.nbt.tags.primitive.FloatTag::class.java else CompoundTag::class.java
         MCFPPNBTType.Byte.typeId -> top.mcfpp.nbt.tags.primitive.ByteTag::class.java
@@ -734,7 +736,7 @@ object StorageAccess {
         }
     }
 
-    private fun reportListEncoding() {
+    internal fun reportListEncoding() {
         LogProcessor.error("Target '${top.mcfpp.Project.config.version}' cannot materialize or modify a list with mixed or unproven NBT element encodings; convert elements to a common encoding or select a target with heterogeneous lists")
     }
 

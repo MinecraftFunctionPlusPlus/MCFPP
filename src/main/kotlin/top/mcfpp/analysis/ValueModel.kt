@@ -136,6 +136,10 @@ class FlowFacts private constructor(private val facts: MutableMap<Place, ValueFa
     fun children(place: Place): Map<Place, ValueFacts> = facts.filterKeys {
         it.root == place.root && it.path.size == place.path.size + 1 && it.path.take(place.path.size) == place.path
     }
+    /** A collection edit replaces its indexed shape; old descendants must not survive at obsolete indices. */
+    fun forgetDescendants(place: Place) {
+        facts.keys.removeAll { it.root == place.root && it.path.size > place.path.size && it.path.take(place.path.size) == place.path }
+    }
     fun copyFrom(source: FlowFacts, from: Place, to: Place, includeRoot: Boolean = true) {
         val copied = source.facts.filterKeys {
             it.root == from.root && (if (includeRoot) it.path.size >= from.path.size else it.path.size > from.path.size) && it.path.take(from.path.size) == from.path
