@@ -173,7 +173,7 @@ class MCFPPConcreteExprVisitor(
     override fun visitCastExpression(ctx: mcfppParser.CastExpressionContext): Var<*>? = withCompilationContext(ctx) {
         val a: Var<*> = visitUnaryExpression(ctx.unaryExpression()) ?: return null
         return if (ctx.type() != null) {
-            a.explicitCast(MCFPPType.parseFromContextNotNull(ctx.type(), Function.currFunction.scope))
+            top.mcfpp.analysis.StorageAccess.view(a, MCFPPType.parseFromContextNotNull(ctx.type(), Function.currFunction.scope))
         } else {
             a
         }

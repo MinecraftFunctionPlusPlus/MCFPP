@@ -340,6 +340,7 @@ open class MCFloat : MCNumber<Float> {
     }
 
     override fun storeToStack() {
+        storageBinding?.let { it.data.materialize(); return }
         if (FloatProviders.enabled) return // The runtime value already lives in NBT.
         if (nbtPath.pathList.isEmpty()) nbtPath = NBTPath.getNormalStackPath(this)
         val parts = listOf("sign" to sign, "int0" to int0, "int1" to int1, "exp" to exp)
@@ -353,6 +354,15 @@ open class MCFloat : MCNumber<Float> {
     }
 
     override fun getFromStack() {
+        storageBinding?.let { binding ->
+            if (!FloatProviders.enabled) {
+                for ((key, score) in listOf("sign" to sign, "int0" to int0, "int1" to int1, "exp" to exp))
+                    top.mcfpp.analysis.StorageAccess.restoreScore(
+                        top.mcfpp.analysis.StorageAccess.adapter(top.mcfpp.type.MCFPPBaseType.Int, key, binding.field(key)),
+                        score.name, score.sbObject.toString())
+            }
+            return
+        }
         if (FloatProviders.enabled) return
         for ((key, score) in listOf("sign" to sign, "int0" to int0, "int1" to int1, "exp" to exp))
             Function.addCommand(Command("execute store result score ${score.name} ${score.sbObject} run")
@@ -459,6 +469,11 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
     }
 
     override fun toDynamic(replace: Boolean): Var<*> {
+        if (storageBinding != null) {
+            val re = top.mcfpp.analysis.StorageAccess.read(MCFloat(this).apply { isDynamic = true })
+            if (replace) replacedBy(re)
+            return re
+        }
         val qwq = if (FloatProviders.enabled) FloatProviders.materialize(this) else MCFloat(this)
         // A concrete float can have dynamic components after an arithmetic operation.
         // Only constant components need to be written to their scoreboards.

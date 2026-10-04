@@ -1,6 +1,7 @@
 package top.mcfpp.antlr
 
 import org.antlr.v4.runtime.RuleContext
+import org.antlr.v4.runtime.tree.ParseTree
 import top.mcfpp.Project
 import top.mcfpp.Project.withCompilationContext
 import top.mcfpp.annotations.InsertCommand
@@ -94,7 +95,8 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
     private fun exitFunctionDeclaration() {
         //函数是否有返回值
-        if(Function.currFunction !is Generic<*> && Function.currFunction.returnType !=  MCFPPPrivateType.Void && !Function.currFunction.hasReturnStatement){
+        if(Function.currFunction !is Generic<*> && Function.currFunction.returnType !=  MCFPPPrivateType.Void && !Function.currFunction.hasReturnStatement &&
+            !SpecializationPolicy.needsStaticErasedBindings(Function.currFunction)){
             LogProcessor.error("Function should return a value: " + Function.currFunction.namespaceID)
         }
         //释放指针
@@ -105,6 +107,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         if(ctx.parent is CompileTimeFuncDeclarationContext) return null
         if(Function.currFunction !is Generic<*>){
             val function = Function.currFunction
+            if (SpecializationPolicy.needsStaticErasedBindings(function)) return null
             if (function.bodyCompiled || function.bodyBeingCompiled) return null
             function.bodyBeingCompiled = true
             try {
@@ -168,7 +171,15 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         `var`.isConst = fieldModifier == "const"
         `var`.isDynamic = fieldModifier == "dynamic"
         `var`.bindDeclaration()
-        val stored = if (init != null) `var`.assignedBy(init) else `var`
+        val stored = if (isViewInitializer(ctx.expression()) && init?.storageBinding?.view != null && init.type == type) {
+            top.mcfpp.analysis.StorageAccess.adapter(type, `var`.identifier, init.storageBinding!!).apply {
+                symbol = `var`.symbol
+                isConst = `var`.isConst
+                isDynamic = `var`.isDynamic
+                hasAssigned = true
+                if (this is top.mcfpp.core.lang.MCAny) payloadType = (init as? top.mcfpp.core.lang.MCAny)?.inferredType ?: init.type
+            }
+        } else if (init != null) `var`.assignedBy(init) else `var`
         Function.currField.putVar(`var`.identifier, stored, true)
         when(fieldModifier){
             "const" -> {
@@ -184,6 +195,14 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             }
         }
         return null
+    }
+
+    private fun isViewInitializer(expression: ParseTree?): Boolean = when (expression) {
+        null -> false
+        is mcfppParser.CastExpressionContext -> expression.type() != null ||
+            isViewInitializer(expression.unaryExpression())
+        is mcfppParser.BucketExpressionContext -> isViewInitializer(expression.expression())
+        else -> expression.childCount == 1 && isViewInitializer(expression.getChild(0))
     }
 
     /**
@@ -791,6 +810,8 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
      */
     @InsertCommand
     override fun visitOrgCommand(ctx: mcfppParser.OrgCommandContext):Any? = withCompilationContext(ctx) {
+        val observed = top.mcfpp.analysis.StorageAccess.visibleValues(Function.currField)
+        top.mcfpp.analysis.StorageAccess.flush(observed)
         val command = Command()
         for (content in ctx.orgCommandContent()){
             if(content.OrgCommandText() != null){
@@ -801,6 +822,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             }
         }
         Function.addCommand(command)
+        top.mcfpp.analysis.StorageAccess.barrier(observed)
         return null
     }
 

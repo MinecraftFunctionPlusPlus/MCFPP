@@ -13,6 +13,23 @@ import top.mcfpp.antlr.MCFPPImVisitor
 
 /** Ordinary runtime constants never cause a new function body. */
 object SpecializationPolicy {
+    /** A compiler-only interpretation of an erased formal needs its static payload binding. */
+    fun needsStaticErasedBindings(function: Function): Boolean {
+        val body = function.ast ?: return false
+        val erased = function.normalParams.filter { it.type == top.mcfpp.type.MCFPPBaseType.Any || it.type == top.mcfpp.type.MCFPPBaseType.Object }
+            .map { it.identifier }.toSet()
+        if (erased.isEmpty()) return false
+        fun inspect(tree: org.antlr.v4.runtime.tree.ParseTree): Boolean {
+            if (tree is top.mcfpp.antlr.mcfppParser.CastExpressionContext && tree.type() != null &&
+                tree.unaryExpression().text.trim('(', ')') in erased) {
+                val target = MCFPPType.parseFromString(tree.type().text, function.scope)
+                if (target != null && !target.hasRuntimeRepresentation) return true
+            }
+            return (0 until tree.childCount).any { inspect(tree.getChild(it)) }
+        }
+        return inspect(body)
+    }
+
     fun bind(type: MCFPPType, bindings: Map<String, MCFPPType>): MCFPPType = when (type) {
         is MCFPPDeclaredConcreteType -> MCFPPDeclaredConcreteType(bind(type.type, bindings))
         is MCFPPGenericParamType -> bindings[type.identifier] ?: type

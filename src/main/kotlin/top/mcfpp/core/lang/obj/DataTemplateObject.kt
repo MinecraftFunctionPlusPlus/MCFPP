@@ -3,9 +3,11 @@ package top.mcfpp.core.lang.obj
 
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
+import top.mcfpp.analysis.*
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.mni.annotation.ConcreteOnly
+import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.Member
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.Function
@@ -57,6 +59,23 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     }
 
     override fun doAssignedBy(b: Var<*>): DataTemplateObject {
+        if (b is DataTemplateObject && (b.storageBinding != null || b !is DataTemplateObjectConcrete)) {
+            StorageAccess.ensure(b)
+            val copy = DataTemplateObject(templateType, identifier).apply {
+                setAs(this@DataTemplateObject)
+                storageBinding = null
+                storageReadVersion = null
+                if (nbtPath.pathList.isEmpty()) nbtPath = NBTPath.temp.memberIndex(identifier)
+                bindDeclaration()
+            }
+            StorageAccess.encodeTo(copy.nbtPath, b)
+            val place = Place(copy.symbol!!.id)
+            val data = StoredData(place, copy.nbtPath.clone())
+            data.types[copy.type.typeId] = copy.type
+            data.facts.initialize(place, ValueFacts(TypeKnowledge.Exact(copy.type.typeId), ValueKnowledge.Unknown))
+            copy.storageBinding = StorageBinding(data, place, data.path)
+            return copy
+        }
         when (b) {
             is DataTemplateObjectConcrete -> {
                 if ((b.type as MCFPPDataTemplateType).template.isSubOf(this.templateType)) {
@@ -114,6 +133,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     }
 
     fun assignCommand(obj: DataTemplateObject){
+        obj.storageBinding?.data?.materialize()
         Function.addCommand(Commands.dataSetFrom(nbtPath, obj.nbtPath))
     }
 
@@ -144,6 +164,9 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     }
 
     override fun implicitCast(type: MCFPPType): Var<*> {
+        if (type == this.type) return this
+        if (type is MCFPPDataTemplateType && templateType.isSubOf(type.template))
+            return StorageAccess.view(this, type, diagnose = false)
         val r = super.implicitCast(type)
         if(!r.isError) return r
         when(type){
@@ -177,6 +200,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         if(isTemp) return this
         val re = DataTemplateObject(templateType)
         re.isTemp = true
+        re.nbtPath = NBTPath.temp.memberIndex(re.identifier)
         return re.assignedBy(this)
     }
 
@@ -185,6 +209,16 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     override fun getFromStack() {}
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
+        storageBinding?.let { binding ->
+            val declaration = templateType.scope.getVar(key) ?: return null to true
+            val property = templateType.scope.getProperty(key) ?: return null to true
+            val field = top.mcfpp.analysis.StorageAccess.adapter(declaration.type, key, binding.field(key))
+            field.parent = this
+            field.isConst = declaration.isConst
+            field.nullable = declaration.nullable
+            field.isDynamic = templateType.alwaysDynamic
+            return PropertyVar(property, field, this) to (accessModifier >= property.accessModifier)
+        }
         val v = instanceField.getVar(key)?.clone(this)
         v?.parent = this
         val property = instanceField.getProperty(key)

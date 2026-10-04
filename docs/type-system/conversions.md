@@ -35,5 +35,7 @@ long/double 到 int 同样保留 Minecraft `data get` 操作及其范围与舍�
 26.3 后端使用 FloatTag；这两种持久化格式不会自动互相转换。数值提供器后端的已知非有限输入编码会报错。
 集合、text 等源重载以及其余数值转换仍待后端实现。
 
-语言 `as` 的端到端重解释迁移尚未完成，当前 explicitCast 旧路径仍存在。
-新源码需要值转换时应使用此 API；不能将目前的 `as` 实现视为目标规范已经完成。
+语言 `as` 现在通过 StorageAccess/TypedView 解释同一 Place；两个表达式 visitor 均不再调用旧 explicitCast 或 NumericConversions。
+例如 `value as float` 不等于 `toFloat(value)`，不会产生 from_int/_scoreto，也不会把来源 IntTag 改成 FloatTag。
+未使用视图不强制物化；实际访问时保留来源编码。旧浮点要求四分量布局，访问已知整数/布尔标量布局会诊断并建议 toFloat。
+普通来源无法证明兼容时警告，any 来源不插入类型标签或运行时验证；完整的其余布局诊断和存储迁移仍见 [迁移状态](./migration.md)。

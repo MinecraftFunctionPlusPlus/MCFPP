@@ -228,7 +228,7 @@ class NBTDictionaryConcrete : NBTDictionary, PartialConcreteValue<CompoundTag, H
                 }
             }
 
-            MCFPPBaseType.Any -> (MCAnyConcrete(value).setAs(this) as MCAnyConcrete).apply { lastVar = this@NBTDictionaryConcrete }
+            MCFPPBaseType.Any -> (MCAnyConcrete(value).setAs(this) as MCAnyConcrete).apply { bindPayload(this@NBTDictionaryConcrete) }
             else -> buildCastErrorVar(type)
         }
     }

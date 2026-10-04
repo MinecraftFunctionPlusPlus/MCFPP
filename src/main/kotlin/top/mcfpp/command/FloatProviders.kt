@@ -7,12 +7,9 @@ import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.lib.IntPath
-import top.mcfpp.lib.MemberPath
-import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.lib.StorageSource
 import top.mcfpp.model.function.Function
 import top.mcfpp.nbt.tags.primitive.FloatTag
-import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.util.LogProcessor
 
 /** Native single-precision float backend introduced in Java Edition 26.3. */
@@ -24,16 +21,7 @@ object FloatProviders {
     private fun temporary() = MCFloat().apply { isTemp = true }
 
     /** A new stack frame has already been pushed when normal parameters are copied. */
-    fun callerValue(value: MCFloat): MCFloat = MCFloat(value).apply {
-        val first = nbtPath.pathList.firstOrNull() as? MemberPath
-        val member = first?.value as? MCStringConcrete
-        val index = member?.value?.value?.let { Regex("stack_frame\\[(\\d+)]").matchEntire(it) }
-            ?.groupValues?.get(1)?.toInt()
-        if (index != null) {
-            // getNormalStackPath represents the root and index in one member.
-            nbtPath.pathList[0] = MemberPath(MCStringConcrete(StringTag("stack_frame[${index + 1}]")))
-        }
-    }
+    fun callerValue(value: MCFloat): MCFloat = top.mcfpp.analysis.StorageAccess.callerValue(value) as MCFloat
 
     fun snapshot(value: MCFloat): MCFloat {
         if (value.isError) return value

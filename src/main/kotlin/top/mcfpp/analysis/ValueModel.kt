@@ -100,6 +100,10 @@ class FlowFacts private constructor(private val facts: MutableMap<Place, ValueFa
     constructor() : this(linkedMapOf(), true)
     fun fork() = FlowFacts(LinkedHashMap(facts), reachable)
     fun read(place: Place): ValueFacts? = facts[place]
+    fun initialize(place: Place, value: ValueFacts) {
+        check(place !in facts) { "Place is already initialized: $place" }
+        facts[place] = value
+    }
     fun write(place: Place, value: ValueFacts) {
         invalidate(place)
         facts[place] = value

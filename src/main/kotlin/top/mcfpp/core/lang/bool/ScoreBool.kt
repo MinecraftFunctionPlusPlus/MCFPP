@@ -218,6 +218,7 @@ open class ScoreBool : BaseBool, OnScoreboard {
     }
 
     override fun storeToStack() {
+        storageBinding?.let { it.data.materialize(); return }
         if(hasStoredInStack) return
         Function.addCommand(Command("execute store result")
             .build(nbtPath.toCommandPart())
@@ -226,6 +227,7 @@ open class ScoreBool : BaseBool, OnScoreboard {
     }
 
     override fun getFromStack() {
+        if (top.mcfpp.analysis.StorageAccess.restoreScore(this, name, boolObject.toString())) return
         if(parent != null) return
         Function.addCommand(Command("execute " +
                 "store result score $name $boolObject " +
@@ -384,6 +386,11 @@ class ScoreBoolConcrete : ScoreBool, MCFPPValue<Boolean> {
     }
 
     override fun toDynamic(replace: Boolean): Var<*> {
+        if (storageBinding != null) {
+            val re = top.mcfpp.analysis.StorageAccess.read(ScoreBool(this).apply { isDynamic = true })
+            if (replace) replacedBy(re)
+            return re
+        }
         if(isDataOnly) return this
         Function.addCommand("scoreboard players set $name $boolObject ${if(value) 1 else 0}")
         val re = ScoreBool(this)

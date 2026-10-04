@@ -70,12 +70,22 @@ class NativeFunction : Function, Native {
     fun invoke(readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>, caller: CanSelectMember?): Var<*> {
         val valueWrapper = ValueWrapper(returnVar)
         val list = argPass(readOnlyArgs, normalArgs)
+        val noWrites = javaMethod.isAnnotationPresent(top.mcfpp.mni.annotation.NoExternalWrites::class.java) ||
+            javaMethod.declaringClass.isAnnotationPresent(top.mcfpp.mni.annotation.NoExternalWrites::class.java)
+        val observed = if (noWrites) emptyList() else top.mcfpp.analysis.StorageAccess.visibleValues(currFunction.scope) +
+            readOnlyArgs + normalArgs + listOfNotNull(caller as? Var<*>)
+        top.mcfpp.analysis.StorageAccess.flush(observed)
+        val hostValues = observed.distinct().mapNotNull { value ->
+            top.mcfpp.analysis.StorageAccess.hostSnapshot(value)?.let { value to it }
+        }
+        val actualCaller = if (caller is top.mcfpp.core.lang.MCAny && caller !is top.mcfpp.core.lang.MCObject)
+            caller.semanticValue() else caller
         //一定是静态的
         try {
             javaMethod.invoke(
                 null,
                 *list.toTypedArray(),
-                *if (this.caller != MCFPPPrivateType.Void) arrayOf(caller) else emptyArray(),
+                *if (this.caller != MCFPPPrivateType.Void) arrayOf(actualCaller) else emptyArray(),
                 *if (this.returnType != MCFPPPrivateType.Void) arrayOf(valueWrapper) else emptyArray()
             )
         } catch (e: IllegalArgumentException) {
@@ -83,7 +93,7 @@ class NativeFunction : Function, Native {
             val expected = javaMethod.parameterTypes.map { it.typeName }
             val providedArgs = buildList {
                 addAll(list)
-                if (this@NativeFunction.caller != MCFPPPrivateType.Void) add(caller)
+                if (this@NativeFunction.caller != MCFPPPrivateType.Void) add(actualCaller)
                 if (this@NativeFunction.returnType != MCFPPPrivateType.Void) add(valueWrapper)
             }
             val providedTypes = providedArgs.map { it?.javaClass?.typeName ?: "null" }
@@ -101,6 +111,9 @@ class NativeFunction : Function, Native {
             LogProcessor.error("Error when invoking native function: ${this.identifier}, caused by: ${target::class.java.name}: ${target.message}", target)
         } catch (e: Exception) {
             LogProcessor.error("Error when invoking native function: ${this.identifier}", e)
+        } finally {
+            top.mcfpp.analysis.StorageAccess.commitHostChanges(hostValues)
+            top.mcfpp.analysis.StorageAccess.barrier(observed)
         }
         returnVar = valueWrapper.value
         return returnVar

@@ -66,6 +66,10 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
     @InsertCommand
     protected open fun assignCommand(a: NBTBasedData) : NBTBasedData {
         nbtType = a.nbtType
+        if (a.storageBinding != null) {
+            top.mcfpp.analysis.StorageAccess.encodeTo(nbtPath, a)
+            return NBTBasedData(this)
+        }
         return if(a is NBTBasedDataConcrete){
             NBTBasedDataConcrete(this, a.value)
         } else {
@@ -112,6 +116,7 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
     override fun getTempVar(): NBTBasedData {
         val temp = NBTBasedData()
         temp.isTemp = true
+        temp.nbtPath = top.mcfpp.lib.NBTPath.temp.memberIndex(temp.identifier)
         return temp.assignCommand(this)
     }
 

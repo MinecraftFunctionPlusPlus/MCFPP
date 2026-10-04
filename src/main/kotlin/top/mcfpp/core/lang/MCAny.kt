@@ -1,172 +1,131 @@
 package top.mcfpp.core.lang
 
-import top.mcfpp.core.lang.nbt.NBTBasedData
+import top.mcfpp.analysis.*
 import top.mcfpp.model.FieldContainer
+import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 
-/** Erased payload with optional actual-type knowledge. Unknown types require `as` for concrete operations. */
+/** any and object use the same untagged NBT payload; type knowledge is independent. */
 open class MCAny : Var<MCAny> {
-
     override var type: MCFPPType = MCFPPBaseType.Any
-
-    var lastVar : Var<*>? = null
-
+    var payloadType: MCFPPType? = null
+    // This live specialization channel is never a runtime payload or an immutable cache key.
+    @Transient var compilerPayload: Var<*>? = null
     var container: FieldContainer? = null
 
+    val typeKnowledge: TypeKnowledge
+        get() = storageBinding?.let { it.data.facts.read(it.place)?.type ?: TypeKnowledge.Unknown }
+            ?: payloadType?.let { TypeKnowledge.Exact(it.typeId) } ?: TypeKnowledge.Unknown
+
     val inferredType: MCFPPType?
-        get() = lastVar?.type
+        get() {
+            val knowledge = typeKnowledge as? TypeKnowledge.Exact ?: return null
+            val actual = storageBinding?.data?.types?.get(knowledge.type) ?: payloadType
+            return actual?.takeIf { it.typeId == knowledge.type && it != MCFPPBaseType.Any && it != MCFPPBaseType.Object }
+        }
 
-    /**
-     * 创建一个int值。它的标识符和mc名相同。
-     * @param identifier identifier
-     */
     constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier)
-
-    /**
-     * 复制一个int
-     * @param b 被复制的int值
-     */
-    constructor(b: MCAny) : super(b){
-        lastVar = b.lastVar
+    constructor(b: MCAny) : super(b) {
+        payloadType = b.payloadType
+        compilerPayload = b.compilerPayload
         container = b.container
     }
 
-    /**
-     * 将b中的值赋值给此变量。
-     *
-     * @param b 变量的对象
-     *
-     * @return 重新获取跟踪的此变量
-     */
+    fun bindPayload(source: Var<*>): MCAny {
+        payloadType = (source as? MCAny)?.inferredType ?: source.type
+        compilerPayload = if (!payloadType!!.hasRuntimeRepresentation) (source as? MCAny)?.compilerPayload ?: source else null
+        if (compilerPayload == null) storageBinding = StorageAccess.ensure(source)
+        return this
+    }
+
     override fun doAssignedBy(b: Var<*>): MCAny {
-        if (b is MCAny && b.inferredType == null) {
-            if (inferredType != null) LogProcessor.warn("Any actual type information is lost at this assignment; use 'as' before concrete operations")
-            Function.addCommand(top.mcfpp.command.Commands.dataSetFrom(nbtPath, b.nbtPath))
-            return MCAny(this).apply { lastVar = null }
+        val sourceType = (b as? MCAny)?.inferredType ?: b.type
+        val snapshot = ValueSnapshot.of(b)
+        val re: MCAny = when {
+            this is MCObject -> MCObject(identifier).apply { setAs(this@MCAny) }
+            snapshot != null && b is MCFPPValue<*> -> MCAnyConcrete(this, b.value)
+            else -> MCAny(this)
         }
-        val source = if (b is MCAny) b.lastVar ?: b.buildInferredVar(b.inferredType!!) else b
-        if (!source.type.hasRuntimeRepresentation) return MCAny(this).apply { lastVar = source }
-        if (source is MCFPPValue<*> && top.mcfpp.analysis.ValueSnapshot.of(source) != null)
-            return MCAnyConcrete(this, source.value).apply { lastVar = source }
-        val runtimeSource = if (source is MCFPPValue<*>) source.toDynamic(false) else source
-        val target = (container?.let { source.type.buildUnConcrete(identifier, it) } ?: source.type.buildUnConcrete(identifier)).setAs(this)
-        val assigned = target.assignedBy(runtimeSource)
-        return MCAny(this).apply { lastVar = assigned }
+        re.storageBinding = null
+        re.payloadType = (b as? MCAny)?.inferredType ?: b.type.takeUnless { it == MCFPPBaseType.Any || it == MCFPPBaseType.Object }
+        re.compilerPayload = if (!sourceType.hasRuntimeRepresentation) (b as? MCAny)?.compilerPayload ?: b else null
+        if (re.compilerPayload != null) return re
+        re.bindDeclaration()
+        if (re.nbtPath.pathList.isEmpty()) re.nbtPath = top.mcfpp.lib.NBTPath.getNormalStackPath(re)
+        val place = Place(re.symbol!!.id)
+        val path = re.nbtPath.clone()
+        val frozen = StorageAccess.constantEncoding(b)?.let { top.mcfpp.nbt.tags.Tag.toSNBT(it) }
+        val data = StoredData(place, path, frozen?.let { snbt ->
+            { Function.addCommand(top.mcfpp.command.Commands.dataSetValue(path, top.mcfpp.nbt.tags.Tag.toNBT(snbt))) }
+        })
+        re.payloadType?.let { data.types[it.typeId] = it }
+        data.facts.write(place, ValueFacts((b as? MCAny)?.typeKnowledge ?: TypeKnowledge.Exact(b.type.typeId),
+            snapshot?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown))
+        re.storageBinding = StorageBinding(data, place, path)
+        if (frozen == null) StorageAccess.encodeTo(path, b)
+        if (isDynamic) data.materialize()
+        if (b is MCAny && b.inferredType == null && inferredType != null)
+            LogProcessor.warn("Any actual type information is lost at this assignment; use 'as' before concrete operations")
+        return re
     }
 
     fun semanticValue(): Var<*> {
-        val actual = inferredType
-        if (actual == null) {
+        val actual = inferredType ?: run {
             LogProcessor.error("Actual type of any '$identifier' is unknown; use 'as' before a concrete operation")
-            return top.mcfpp.core.lang.UnknownVar(identifier).apply { isError = true }
+            return UnknownVar(identifier).apply { isError = true }
         }
         return buildInferredVar(actual)
     }
 
-    override fun getMemberVar(key: String, accessModifier: top.mcfpp.model.Member.AccessModifier): Pair<Var<*>?, Boolean> =
-        semanticValue().getMemberVar(key, accessModifier)
-
-    override fun getMemberFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>, accessModifier: top.mcfpp.model.Member.AccessModifier): Pair<Function, Boolean> =
+    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier) = semanticValue().getMemberVar(key, accessModifier)
+    override fun getMemberFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>, accessModifier: Member.AccessModifier) =
         semanticValue().getMemberFunction(key, readOnlyArgs, normalArgs, accessModifier)
 
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        return when(type){
-            MCFPPBaseType.Any -> this
-            else -> {
-                buildInferredVar(type)
-            }
-        }
-    }
-
+    override fun explicitCast(type: MCFPPType): Var<*> = StorageAccess.view(this, type)
     override fun canExplicitCast(type: MCFPPType) = true
-
     override fun implicitCast(type: MCFPPType): Var<*> {
         if (!canImplicitCast(type)) return Var.buildCastErrorVar(type)
         if (type == MCFPPBaseType.Any) return this
-        if (type == MCFPPBaseType.Object) return MCObject().setAs(this).apply { (this as MCObject).lastVar = this@MCAny.lastVar }
+        if (type == MCFPPBaseType.Object) return MCObject(identifier).apply { setAs(this@MCAny); copyPayload(this@MCAny) }
         return semanticValue().implicitCast(type)
     }
-
     override fun canImplicitCast(type: MCFPPType) = top.mcfpp.model.function.ParameterMatcher.accepts(this, type)
-
-    override fun clone(): MCAny {
-        return MCAny(this)
+    fun copyPayload(source: MCAny) {
+        payloadType = source.payloadType
+        compilerPayload = source.compilerPayload
     }
-
-    /**
-     * 返回一个临时变量。这个变量将用于右值的计算过程中，用于避免计算时对原来的变量进行修改
-     *
-     * @return
-     */
+    override fun clone(): MCAny = MCAny(this)
     override fun getTempVar(): MCAny {
-        return this
+        if (compilerPayload != null) return this
+        val re = MCAny().apply { nbtPath = top.mcfpp.lib.NBTPath.temp.memberIndex(identifier); isTemp = true; bindDeclaration() }
+        return re.assignedBy(this)
     }
-
-    override fun storeToStack() { lastVar?.storeToStack() }
-
-    override fun getFromStack() { lastVar?.getFromStack() }
-
-    open fun buildInferredVar(type: MCFPPType): Var<*>{
-        lastVar?.let { if (it.type == type && !type.hasRuntimeRepresentation) return it }
-        val re = if(container != null){
-            type.buildUnConcrete(this.identifier, container!!).setAs(this)
-        } else{
-            type.buildUnConcrete(this.identifier).setAs(this)
-        }
-        return re
+    override fun storeToStack() { if (compilerPayload == null) StorageAccess.materialize(this) }
+    override fun getFromStack() {}
+    open fun buildInferredVar(type: MCFPPType): Var<*> {
+        compilerPayload?.let { if (it.type == type) return it }
+        return StorageAccess.read(StorageAccess.view(this, type, diagnose = false).apply { isDynamic = this@MCAny.isDynamic })
     }
 }
 
 class MCAnyConcrete : MCAny, MCFPPValue<Any?> {
-
     override var value: Any?
-
-    /**
-     * 创建一个固定的any。它的标识符和mc名一致
-     * @param identifier 标识符。如不指定，则为随机uuid
-     * @param value 值
-     */
-    constructor(value: Any?, identifier: String = TempPool.getVarIdentify()) : super(identifier) {
-        this.value = value
-    }
-
-    /**
-     * 创建一个MCAny类型的变量。它是v的跟踪版本
-     */
-    constructor(v : MCAny, value: Any?): super(v){
-        this.value = value
-    }
-
-    constructor(v: MCAnyConcrete) : super(v){
-        this.value = v.value
-    }
-
-    override fun clone(): MCAnyConcrete {
-        return MCAnyConcrete(this)
-    }
-
+    constructor(value: Any?, identifier: String = TempPool.getVarIdentify()) : super(identifier) { this.value = value }
+    constructor(v: MCAny, value: Any?) : super(v) { this.value = value }
+    constructor(v: MCAnyConcrete) : super(v) { value = v.value }
+    override fun clone() = MCAnyConcrete(this)
     override fun toDynamic(replace: Boolean): Var<*> {
-        val actual = inferredType
-        val runtime = if (actual != null) (buildInferredVar(actual) as? MCFPPValue<*>)?.toDynamic(false) else null
-        val re = MCAny(this).apply { lastVar = runtime }
-        if (replace) {
-            if (parentTemplate() != null) parentTemplate()!!.scope.putVar(identifier, re, true)
-            else Function.currFunction.scope.putVar(identifier, re, true)
+        if (compilerPayload != null) {
+            LogProcessor.error("Compiler-only value '${compilerPayload!!.type}' cannot be materialized as any")
+            return this
         }
+        StorageAccess.materialize(this)
+        val re = MCAny(this).apply { isDynamic = true }
+        if (replace) replacedBy(re)
         return re
     }
-
-    override fun buildInferredVar(type: MCFPPType): Var<*> {
-        val re = if(container != null){
-            type.build(this.identifier, container!!, value).setAs(this)
-        } else{
-            type.build(this.identifier, value).setAs(this)
-        }
-        return re
-    }
-
 }

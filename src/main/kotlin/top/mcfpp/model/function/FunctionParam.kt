@@ -65,6 +65,12 @@ class FunctionParam(
             qwq.toFunctionParam()
         }
         qwq.nbtPath = NBTPath.getNormalStackPath(qwq)
+        if (qwq is DataTemplateObject && !isReadOnly && type.hasRuntimeRepresentation) {
+            qwq.hasAssigned = true
+            qwq.isDynamic = true
+            qwq.bindDeclaration()
+            top.mcfpp.analysis.StorageAccess.ensure(qwq)
+        }
         return qwq
     }
 

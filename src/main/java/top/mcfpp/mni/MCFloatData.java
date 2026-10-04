@@ -5,6 +5,7 @@ import top.mcfpp.core.lang.MCFloat;
 import top.mcfpp.core.lang.bool.BaseBool;
 import top.mcfpp.util.ValueWrapper;
 
+@top.mcfpp.mni.annotation.NoExternalWrites
 public class MCFloatData {
     @MNIOperator(paramType = "float", operator = "+", returnType = "float", returnsConstWhenArgsConst = true)
     public static void plus(MCFloat a, MCFloat caller, ValueWrapper<MCFloat> returnValue) {

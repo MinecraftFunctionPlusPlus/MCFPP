@@ -18,6 +18,7 @@ import kotlin.test.assertNotEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 import kotlin.test.assertNull
+import kotlin.test.assertNotNull
 import kotlin.test.assertSame
 import kotlin.test.assertIs
 
@@ -187,7 +188,7 @@ class TypeKernelTest {
     }
 
     @Test fun anyMatchingUsesActualTypeEvenWhenValueIsUnknown() {
-        val value = MCAny("erased").apply { lastVar = MCInt("runtime") }
+        val value = MCAny("erased").apply { bindPayload(MCInt("runtime")) }
         assertTrue(ParameterMatcher.accepts(value, MCFPPBaseType.Int))
         assertTrue(ParameterMatcher.accepts(value, MCFPPBaseType.Float))
         assertFalse(ParameterMatcher.accepts(value, MCFPPBaseType.String))
@@ -281,8 +282,11 @@ class TypeKernelTest {
         val source = top.mcfpp.core.lang.obj.DataTemplateObjectConcrete(template, hashMapOf("count" to MCIntConcrete(7)), "source")
         val target = source.implicitCast(DataTemplate.baseDataTemplate.getType())
         assertFalse(target.isError)
-        assertIs<top.mcfpp.core.lang.obj.DataTemplateObjectConcrete>(target)
-        assertEquals(7, (target.value.getValue("count") as MCIntConcrete).value)
+        assertIs<top.mcfpp.core.lang.obj.DataTemplateObject>(target)
+        assertNotNull(top.mcfpp.analysis.ValueSnapshot.of(target))
+        val encoded = top.mcfpp.analysis.StorageAccess.constantEncoding(target) as top.mcfpp.nbt.tags.CompoundTag
+        assertEquals(7, (encoded["count"] as top.mcfpp.nbt.tags.primitive.IntTag).value)
+        assertEquals(source.storageBinding!!.place, target.storageBinding!!.place)
         assertNull(target.instanceField.getVar("count"))
     }
 

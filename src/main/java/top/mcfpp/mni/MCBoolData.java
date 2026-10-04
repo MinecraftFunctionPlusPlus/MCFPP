@@ -4,6 +4,7 @@ import top.mcfpp.annotations.MNIOperator;
 import top.mcfpp.core.lang.bool.BaseBool;
 import top.mcfpp.util.ValueWrapper;
 
+@top.mcfpp.mni.annotation.NoExternalWrites
 public class MCBoolData {
 
     @MNIOperator(operator = "==", paramType = "bool", returnType = "bool", returnsConstWhenArgsConst = true)

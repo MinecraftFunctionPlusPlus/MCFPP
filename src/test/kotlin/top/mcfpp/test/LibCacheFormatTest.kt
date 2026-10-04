@@ -10,7 +10,7 @@ import kotlin.test.assertEquals
 
 class LibCacheFormatTest {
     @Test fun oldAndUnknownCacheFormatsProduceARecompileDiagnostic() {
-        for ((magic, version) in listOf(0 to 0, LibBinFormat.MAGIC to (LibBinFormat.VERSION + 1))) {
+        for ((magic, version) in listOf(0 to 0, LibBinFormat.MAGIC to (LibBinFormat.VERSION - 1), LibBinFormat.MAGIC to (LibBinFormat.VERSION + 1))) {
             val buffer = Output(64)
             buffer.writeInt(magic)
             buffer.writeInt(version)

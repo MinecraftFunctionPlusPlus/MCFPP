@@ -1,18 +1,27 @@
 # 下一阶段：存储位置、擦除载荷与 as 视图
 
-这是下一会话的实施计划，**不是已实现功能说明**。
-继续原始类型重构目标，先阅读 [会话交接](./session-handoff-2026-10-04.md)，并重新核对当前源码。
-当前 140 个测试通过是新的实现基线；最终仍需完成原方案余下阶段，不能在本阶段结束后宣称整个重构完成。
+本计划的首条纵向路径已经在续接会话中实现，完整阶段和整个重构仍未完成。
+先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
+上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
+
+## 已完成的纵向路径与优先剩余工作
+
+- StorageAccess 连接声明、字段、视图、延迟 NBT 物化和记分板缓存，写入使用位置版本失效，兄弟字段事实可保留。
+- any/object 共用无标签载荷，删除 lastVar；int/bool/any/object IR 的分支和普通返回保留独立类型知识。
+- 语言 as 使用同一 Place 的 TypedView，普通来源复用纯结构检查；模板赋值仍复制，旧浮点标量布局拒绝实际访问。
+- 擦除/模板形参返回、static 写回、表达式活跃临时值及早先参数已加入实际跨帧和递归测试。
+- 受限 IR 推导 Pure/Unknown；未知用户调用与未标注 MNI 有提交/失效屏障，数值 MNI 明确标注无外部写入。
+
+下一次优先扩展擦除循环/旧分支与泛型集合元素的知识分析，以及含调用的递归效果摘要；随后统一模板方法/构造、实体/动态索引、剩余布局和 MNI 接口。
+下文保留原实施顺序和全阶段验收清单；条目出现不表示已通过。
 
 ## 首要问题与交付范围
 
-当前 Symbol/Place/TypedView/StorageVersions 已有模型，但大多数旧 visitor、模板、擦除值和存储操作仍依靠 Var 对象。
-语言 as 仍调用 explicitCast，包含数值转换；MCAny/MCObject 仍使用 lastVar，跨控制流和函数边界没有完整的公共载荷槽。
-因此下一部分先建立一个可验证的纵向路径：
+上一会话只有位置/视图/版本模型，语言 as 与 lastVar 尚未迁入；此次已建立以下可验证的纵向路径：
 
 > 同一 Place 的读写和物化 → 共用擦除载荷 → as 解释视图 → 模板成员访问与重叠写入失效。
 
-首批覆盖 int、bool、26.3 float、原始 NBT 和数据模板；旧浮点布局给准确的访问能力判断，并保持现有后端可编译。
+首批接入 int、bool、26.3 float、原始 NBT 和数据模板的集中适配；旧浮点保留现有后端，已知标量来源的四分量访问给明确诊断。
 其他类型通过明确的内部边界继续迁入，不增加用户可选择的两套语义模式。
 形参、返回和模板赋值的行为必须同步验证，不能只实现局部表达式。
 
@@ -27,15 +36,15 @@
 | `analysis/ValueModel.kt` | Place 重叠、FlowFacts、TypedView、StorageLayout、StorageVersions；连接真实读写和缓存 |
 | `analysis/TypedIR.kt` | View/Convert/Call/Effect 目前多为模型，扩展实际 lowering/后端 |
 | `analysis/PrimitiveCompiler.kt` | 已接入的 int/bool 路径，保留分支汇合、循环和旧条件栈正确性 |
-| `antlr/MCFPPExprVisitor.kt` | visitCastExpression 仍调用 explicitCast；普通调用结果捕获也在这里 |
+| `antlr/MCFPPExprVisitor.kt` | visitCastExpression 使用 StorageAccess；操作数捕获、调用结果及临时值保存也在这里 |
 | `antlr/MCFPPImVisitor.kt` | 旧赋值、分支、模板/集合语法仍直接生成命令或 toDynamic |
 | `core/lang/Var.kt` | 声明约束、旧转换、replacedBy、symbol 及变量适配边界 |
-| `core/lang/MCAny.kt`、`MCObject.kt` | 已知类型、编译器载荷和 lastVar；迁移统一载荷读写 |
+| `core/lang/MCAny.kt`、`MCObject.kt` | 统一擦除载荷、类型知识及内部编译器载荷；继续扩展容器和循环 |
 | `core/lang/obj/DataTemplateObject.kt` | 模板字段实例、复制约定、旧 cast 与成员变化回调 |
 | `type/ReinterpretationCompatibility.kt` | 现有纯兼容检查，应复用而非在 visitor 复制规则 |
 | `model/function/Function.kt` | 形参、返回、fieldStore/fieldRestore、调用帧及返回槽 |
 | `model/function/SpecializationPolicy.kt` | 普通参数不按常量特化；compiler-only 值保留内部特化约束 |
-| `model/function/NativeFunction.kt` | 旧反射/MNI 边界，效果未知时保守失效 |
+| `model/function/NativeFunction.kt` | 旧反射/MNI 边界，NoExternalWrites 之外默认保守屏障 |
 | `backend/NumericConversions.kt` | 显式值转换，as 路径不得调用 |
 | `command/FloatProviders.kt`、`TargetCapabilities.kt` | 原有数值提供器和目标能力，保留已验证行为 |
 

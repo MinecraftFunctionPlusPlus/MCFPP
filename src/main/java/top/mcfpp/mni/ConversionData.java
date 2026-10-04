@@ -10,6 +10,7 @@ import top.mcfpp.type.*;
 import top.mcfpp.util.ValueWrapper;
 
 /** Concrete language overloads; unknown any never has a conversion fallback. */
+@top.mcfpp.mni.annotation.NoExternalWrites
 public class ConversionData {
     @MNIFunction(normalParams = {"int"}, returnType = "int")
     public static void toInt(MCInt value, ValueWrapper<Var<?>> result) {

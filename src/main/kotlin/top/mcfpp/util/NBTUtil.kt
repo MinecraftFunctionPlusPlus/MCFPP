@@ -18,12 +18,13 @@ object NBTUtil {
 
     @JvmStatic
     fun varToNBT(v : Var<*>): Tag<*>?{
+        if (v.storageBinding != null) return top.mcfpp.analysis.StorageAccess.constantEncoding(v)
         if(v !is MCFPPValue<*>) return null
         return when(v){
             //is Entity -> TODO()
             is JavaVar -> if(v.value is Var<*>) varToNBT(v.value as Var<*>) else valueToNBT(v.value)
             //is JsonString -> TODO()
-            is MCAnyConcrete -> v.lastVar?.let { varToNBT(it) } ?: valueToNBT(v.value)
+            is MCAnyConcrete -> if (v.storageBinding != null) top.mcfpp.analysis.StorageAccess.constantEncoding(v) else valueToNBT(v.value)
             is ScoreBoolConcrete -> ByteTag(v.value)
             is MCByteConcrete -> ByteTag(v.value)
             is MCShortConcrete -> ShortTag(v.value)
@@ -35,6 +36,7 @@ object NBTUtil {
             is MCStringConcrete -> v.value
             is NBTBasedDataConcrete -> v.value
             is UnionTypeVarConcrete -> valueToNBT(v.value)
+            is JsonTextConcrete -> Tag.toNBT(v.toCommandPart().toString())
             is EnumVarConcrete -> v.value.data
             is DataTemplateObjectConcrete -> CompoundTag().apply {
                 for ((key, value) in v.value){

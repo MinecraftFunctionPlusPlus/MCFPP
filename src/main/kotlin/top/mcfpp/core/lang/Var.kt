@@ -51,6 +51,12 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     @Transient
     var symbol: top.mcfpp.analysis.Symbol? = null
 
+    @Transient
+    var storageBinding: top.mcfpp.analysis.StorageBinding? = null
+
+    @Transient
+    var storageReadVersion: Long? = null
+
     fun bindDeclaration(name: String = identifier, previous: Var<*>? = null) {
         symbol = previous?.symbol ?: symbol ?: top.mcfpp.analysis.Symbol(
             top.mcfpp.analysis.SymbolId.fresh(), name, type.typeId, !isConst,
@@ -59,6 +65,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     }
 
     fun valueRef(): top.mcfpp.analysis.ValueRef {
+        storageBinding?.view?.let { return it }
         top.mcfpp.analysis.ValueSnapshot.of(this)?.let { return top.mcfpp.analysis.ValueRef.Constant(type.typeId, it) }
         bindDeclaration()
         return top.mcfpp.analysis.ValueRef.Read(type.typeId, top.mcfpp.analysis.Place(symbol!!.id))
@@ -164,6 +171,8 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
 
     fun setAs(v: Var<*>): Var<*>{
         this.symbol = v.symbol
+        this.storageBinding = v.storageBinding
+        this.storageReadVersion = v.storageReadVersion
         this.identifier = v.identifier
         this.isStatic = v.isStatic
         this.accessModifier = v.accessModifier
@@ -229,7 +238,8 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             LogProcessor.error("Cannot assign a non-value variable to a declared-concrete variable.")
             return this as Self
         }
-        val re = doAssignedBy(v)
+        val re = if (storageBinding != null && this !is PropertyVar)
+            top.mcfpp.analysis.StorageAccess.write(this, v) as Self else doAssignedBy(v)
         re.isDynamic = isDynamic
         re.hasAssigned = true
         if(stackIndex != 0) trackLost = true
@@ -259,12 +269,12 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             return this.clone().apply { this.type = type }
         }
         return when(type){
-            MCFPPBaseType.Object -> MCObject().setAs(this).apply { (this as MCObject).lastVar = this@Var }
+            MCFPPBaseType.Object -> MCObject().setAs(this).apply { (this as MCObject).bindPayload(this@Var) }
             MCFPPBaseType.Any -> {
                 if(this is MCFPPValue<*> && top.mcfpp.analysis.ValueSnapshot.of(this) != null){
-                    (MCAnyConcrete(value).setAs(this) as MCAnyConcrete).apply { lastVar = this@Var }
+                    (MCAnyConcrete(value).setAs(this) as MCAnyConcrete).apply { bindPayload(this@Var) }
                 }else{
-                    (MCAny().setAs(this) as MCAny).apply { lastVar = this@Var }
+                    (MCAny().setAs(this) as MCAny).apply { bindPayload(this@Var) }
                 }
             }
             MCFPPNBTType.NBT -> {
@@ -306,12 +316,12 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             return this
         }
         return when(type){
-            MCFPPBaseType.Object -> MCObject().setAs(this).apply { (this as MCObject).lastVar = this@Var }
+            MCFPPBaseType.Object -> MCObject().setAs(this).apply { (this as MCObject).bindPayload(this@Var) }
             MCFPPBaseType.Any -> {
                 if(this is MCFPPValue<*> && top.mcfpp.analysis.ValueSnapshot.of(this) != null){
-                    (MCAnyConcrete(value).setAs(this) as MCAnyConcrete).apply { lastVar = this@Var }
+                    (MCAnyConcrete(value).setAs(this) as MCAnyConcrete).apply { bindPayload(this@Var) }
                 }else{
-                    (MCAny().setAs(this) as MCAny).apply { lastVar = this@Var }
+                    (MCAny().setAs(this) as MCAny).apply { bindPayload(this@Var) }
                 }
             }
             is MCFPPUnionType -> {
@@ -383,6 +393,10 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     }
 
     fun binaryComputation(a: Var<*>, operation: String): Var<*>{
+        val loaded = top.mcfpp.analysis.StorageAccess.read(this)
+        if (loaded !== this) return loaded.binaryComputation(a, operation)
+        val operand = top.mcfpp.analysis.StorageAccess.read(a)
+        if (operand !== a) return binaryComputation(operand, operation)
         if (this is MCAny && this !is MCObject) {
             val receiver = semanticValue()
             return if (receiver.isError) receiver else receiver.binaryComputation(a, operation)
@@ -431,6 +445,8 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     }
 
     fun unaryComputation(operation: String): Var<*>{
+        val loaded = top.mcfpp.analysis.StorageAccess.read(this)
+        if (loaded !== this) return loaded.unaryComputation(operation)
         if (this is MCAny && this !is MCObject) {
             val receiver = semanticValue()
             return if (receiver.isError) receiver else receiver.unaryComputation(operation)
@@ -623,6 +639,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             LogProcessor.error("Cannot assign a non-value variable to a declared-concrete variable.")
             return
         }
+        if (storageBinding != null && parent is DataTemplateObject) return
         if(v is MCInt && this is MCInt && holder != null){
             holder!!.replaceScore(v)
             holder!!.onScoreChange(v)

@@ -9,6 +9,7 @@ import top.mcfpp.lib.ScoreChatComponent;
 import top.mcfpp.lib.PlainChatComponent;
 import top.mcfpp.util.ValueWrapper;
 
+@top.mcfpp.mni.annotation.NoExternalWrites
 public class MCIntData {
 
     @MNIFunction(caller = "int", returnType = "text", override = true)

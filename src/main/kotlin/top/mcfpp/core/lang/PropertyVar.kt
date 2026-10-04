@@ -51,7 +51,7 @@ class PropertyVar(val property: Property, var field: Var<*>, val caller: Var<*>)
     }
 
     fun get(): Var<*> {
-        return property.getter(caller, field)
+        return top.mcfpp.analysis.StorageAccess.read(property.getter(caller, field))
     }
 
     fun set(b: Var<*>){

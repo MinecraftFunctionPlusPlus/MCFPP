@@ -218,6 +218,7 @@ open class Function : Member, FieldContainer, WithDocument {
 
     @Transient var bodyCompiled = false
     @Transient var bodyBeingCompiled = false
+    @Transient var runtimeEffect: top.mcfpp.analysis.Effect = top.mcfpp.analysis.Effect.Unknown
 
     var context: FunctionContext = FunctionContext()
 
@@ -512,6 +513,9 @@ open class Function : Member, FieldContainer, WithDocument {
         if (FloatProviders.enabled && result is MCFloat) {
             result.nbtPath = NBTPath.temp.memberIndex(result.name)
         }
+        if (result is top.mcfpp.core.lang.MCAny || result is top.mcfpp.core.lang.nbt.NBTBasedData || result is DataTemplateObject) {
+            result.nbtPath = NBTPath.temp.memberIndex(prefix + "return")
+        }
         if (returnType !is MCFPPPrivateType) {
             // Normal function calls are runtime operations; observing one constant
             // return statement cannot prove the value of all reachable returns.
@@ -541,24 +545,42 @@ open class Function : Member, FieldContainer, WithDocument {
             })){
             return compile(completed).let {(k, v) -> k.invoke(v, caller)}
         }
+        if (SpecializationPolicy.needsStaticErasedBindings(this)) {
+            LogProcessor.error("Function '$identifier' requires a compiler-only erased payload for specialization; a runtime payload has no such layout")
+            return UnknownVar("return").apply { type = returnType; isError = true }
+        }
         // Imported and forward-declared runtime bodies are lowered once, without
         // specializing ordinary constant arguments. Recursive calls reuse that body.
         if (ast != null && !bodyCompiled && !bodyBeingCompiled)
             runInFunction { MCFPPImVisitor().visitCurlBlock(ast!!) }
+        val returnedKnowledge = top.mcfpp.analysis.PrimitiveCompiler.returnKnowledge(this, completed)
+        val observed = if (runtimeEffect != top.mcfpp.analysis.Effect.Pure && runtimeEffect != top.mcfpp.analysis.Effect.ReadsRuntime)
+            top.mcfpp.analysis.StorageAccess.visibleValues(currFunction.scope) else emptyList()
+        top.mcfpp.analysis.StorageAccess.flush(observed)
         when(caller){
             is MCFPPType, is DataTemplateObject, null -> invoke(normalArgs.values.toList())
             is Var<*> -> invoke(normalArgs.values.toList(), caller)
+        }
+        top.mcfpp.analysis.StorageAccess.barrier(observed)
+        if (returnVar is top.mcfpp.core.lang.MCAny && (returnVar as top.mcfpp.core.lang.MCAny).compilerPayload == null) {
+            val value = returnVar as top.mcfpp.core.lang.MCAny
+            val place = top.mcfpp.analysis.Place(value.symbol!!.id)
+            val data = top.mcfpp.analysis.StoredData(place, value.nbtPath.clone())
+            for (type in listOf(top.mcfpp.type.MCFPPBaseType.Int, top.mcfpp.type.MCFPPBaseType.Bool)) data.types[type.typeId] = type
+            data.facts.initialize(place, top.mcfpp.analysis.ValueFacts(returnedKnowledge, top.mcfpp.analysis.ValueKnowledge.Unknown))
+            value.storageBinding = top.mcfpp.analysis.StorageBinding(data, place, data.path)
         }
         return returnVar
     }
 
     protected open fun invoke(normalArgs: List<Var<*>>){
+        val capturedArgs = captureArguments(normalArgs)
         //变量进栈
         fieldStore()
         //给函数开栈
         addCommand(Commands.stackIn())
         //参数传递
-        argPass(normalArgs)
+        argPass(capturedArgs)
         //函数调用的命令
         addCommand("function $namespaceID")
         //static关键字，将值传回
@@ -576,6 +598,7 @@ open class Function : Member, FieldContainer, WithDocument {
      * @param caller
      */
     protected open fun invoke(normalArgs: List<Var<*>>, caller: Var<*>){
+        val capturedArgs = captureArguments(normalArgs)
         //变量进栈
         fieldStore()
         //基本类型
@@ -585,7 +608,7 @@ open class Function : Member, FieldContainer, WithDocument {
         //传入this参数
         scope.putVar("this", caller, true)
         //参数传递
-        argPass(normalArgs)
+        argPass(capturedArgs)
         addCommand("function " + this.namespaceID)
         //static参数传回
         staticArgRef(normalArgs)
@@ -602,12 +625,13 @@ open class Function : Member, FieldContainer, WithDocument {
      * @param data 数据模板的实例
      */
     protected open fun invoke(normalArgs: List<Var<*>>, data: DataTemplateObject){
+        val capturedArgs = captureArguments(normalArgs)
         //变量进栈
         fieldStore()
         //给函数开栈
         addCommand(Commands.stackIn())
         //参数传递
-        argPass(normalArgs)
+        argPass(capturedArgs)
         //函数调用的命令
         addCommand("function $namespaceID")
         //static关键字，将值传回
@@ -616,6 +640,12 @@ open class Function : Member, FieldContainer, WithDocument {
         addCommand(Commands.stackOut())
         //取出栈内的值
         fieldRestore()
+    }
+
+    private fun captureArguments(arguments: List<Var<*>>) = arguments.map {
+        if (it is top.mcfpp.core.lang.MCAny && it.compilerPayload == null ||
+            it is top.mcfpp.core.lang.nbt.NBTBasedData && top.mcfpp.analysis.ValueSnapshot.of(it) == null ||
+            it is DataTemplateObject && it.storageBinding != null) it.getTempVar() else it
     }
 
     /**
@@ -718,8 +748,9 @@ open class Function : Member, FieldContainer, WithDocument {
                 }
                 //如果是static参数
                 val target = args[i]
-                val destination = if (FloatProviders.enabled && target is MCFloat && target !is MCFPPValue<*>) {
-                    FloatProviders.callerValue(target)
+                val destination = if (target.storageBinding != null || target is top.mcfpp.core.lang.nbt.NBTBasedData ||
+                    target is DataTemplateObject || FloatProviders.enabled && target is MCFloat && target !is MCFPPValue<*>) {
+                    top.mcfpp.analysis.StorageAccess.callerValue(target)
                 } else target
                 destination.assignedBy(scope.getVar(normalParams[i].identifier)!!)
             }

@@ -27,6 +27,8 @@ object NumericConversions {
 
     @JvmStatic
     fun convert(value: Var<*>, target: MCFPPType): Var<*> {
+        val loaded = top.mcfpp.analysis.StorageAccess.read(value)
+        if (loaded !== value) return convert(loaded, target)
         if (value.isError) return target.buildUnConcrete(TempPool.getVarIdentify()).apply { isError = true }
         if (value.type == target) return value
         if (target == MCFPPBaseType.Int) return toInt(value)
@@ -121,6 +123,11 @@ object NumericConversions {
 
     @JvmStatic
     fun toNBT(value: Var<*>): Var<*> {
+        value.storageBinding?.let {
+            top.mcfpp.analysis.StorageAccess.constantEncoding(value)?.let { tag -> return NBTBasedDataConcrete(tag) }
+            it.data.materialize()
+            return value.toNBTVar()
+        }
         if (!value.type.hasRuntimeRepresentation) {
             LogProcessor.error("${value.type.typeName} cannot be encoded as a Minecraft NBT payload")
             return NBTBasedData().apply { isError = true }

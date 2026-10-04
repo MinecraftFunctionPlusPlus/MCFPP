@@ -82,6 +82,8 @@ class MCFPPExprVisitor(
         visitCommonBinaryOperatorExpressionRe = visitConditionalOrExpression(ctx.conditionalOrExpression(0))
         processVarCache.add(visitCommonBinaryOperatorExpressionRe!!)
         for (i in 1..<ctx.conditionalOrExpression().size) {
+            visitCommonBinaryOperatorExpressionRe = top.mcfpp.analysis.StorageAccess.capture(visitCommonBinaryOperatorExpressionRe!!)
+            processVarCache[processVarCache.lastIndex] = visitCommonBinaryOperatorExpressionRe!!
             var b: Var<*>? = visitConditionalOrExpression(ctx.conditionalOrExpression(i))
             if(b is MCFloat && !FloatProviders.enabled) b = b.toTempEntity()
             if(visitCommonBinaryOperatorExpressionRe!! != MCFloat.ssObj){
@@ -104,6 +106,8 @@ class MCFPPExprVisitor(
         visitConditionalOrExpressionRe = visitConditionalAndExpression(ctx.conditionalAndExpression(0))
         processVarCache.add(visitConditionalOrExpressionRe!!)
         for (i in 1..<ctx.conditionalAndExpression().size) {
+            visitConditionalOrExpressionRe = top.mcfpp.analysis.StorageAccess.capture(visitConditionalOrExpressionRe!!)
+            processVarCache[processVarCache.lastIndex] = visitConditionalOrExpressionRe!!
             var b: Var<*>? = visitConditionalAndExpression(ctx.conditionalAndExpression(i))
             if(b is MCFloat && !FloatProviders.enabled) b = b.toTempEntity()
             if(visitConditionalOrExpressionRe!! != MCFloat.ssObj){
@@ -128,6 +132,8 @@ class MCFPPExprVisitor(
         visitConditionalAndExpressionRe = visitEqualityExpression(ctx.equalityExpression(0))
         processVarCache.add(visitConditionalAndExpressionRe!!)
         for (i in 1..<ctx.equalityExpression().size) {
+            visitConditionalAndExpressionRe = top.mcfpp.analysis.StorageAccess.capture(visitConditionalAndExpressionRe!!)
+            processVarCache[processVarCache.lastIndex] = visitConditionalAndExpressionRe!!
             val b: Var<*> = visitEqualityExpression(ctx.equalityExpression(i))
             visitConditionalAndExpressionRe = visitConditionalAndExpressionRe!!.binaryComputation(b, ctx.op[i-1].text)
             processVarCache[processVarCache.size - 1] = visitConditionalAndExpressionRe!!
@@ -147,6 +153,8 @@ class MCFPPExprVisitor(
         visitEqualityExpressionRe = visitRelationalExpression(ctx.relationalExpression(0))
         processVarCache.add(visitEqualityExpressionRe!!)
         for (i in 1..<ctx.relationalExpression().size) {
+            visitEqualityExpressionRe = top.mcfpp.analysis.StorageAccess.capture(visitEqualityExpressionRe!!)
+            processVarCache[processVarCache.lastIndex] = visitEqualityExpressionRe!!
             val b: Var<*> = visitRelationalExpression(ctx.relationalExpression(i))
             visitEqualityExpressionRe = visitEqualityExpressionRe!!.binaryComputation(b, ctx.op[i-1].text)
             processVarCache[processVarCache.size - 1] = visitEqualityExpressionRe!!
@@ -166,6 +174,8 @@ class MCFPPExprVisitor(
         visitRelationalExpressionRe = visitAdditiveExpression(ctx.additiveExpression(0))
         processVarCache.add(visitRelationalExpressionRe!!)
         for (i in 1..<ctx.additiveExpression().size) {
+            visitRelationalExpressionRe = top.mcfpp.analysis.StorageAccess.capture(visitRelationalExpressionRe!!)
+            processVarCache[processVarCache.lastIndex] = visitRelationalExpressionRe!!
             val b: Var<*> = visitAdditiveExpression(ctx.additiveExpression(i))
             visitRelationalExpressionRe = visitRelationalExpressionRe!!.binaryComputation(b, ctx.op[i-1].text)
             processVarCache[processVarCache.size - 1] = visitRelationalExpressionRe!!
@@ -185,6 +195,8 @@ class MCFPPExprVisitor(
         visitAdditiveExpressionRe = visitMultiplicativeExpression(ctx.multiplicativeExpression(0))
         processVarCache.add(visitAdditiveExpressionRe!!)
         for (i in 1..<ctx.multiplicativeExpression().size) {
+            visitAdditiveExpressionRe = top.mcfpp.analysis.StorageAccess.capture(visitAdditiveExpressionRe!!)
+            processVarCache[processVarCache.lastIndex] = visitAdditiveExpressionRe!!
             var b: Var<*>? = visitMultiplicativeExpression(ctx.multiplicativeExpression(i))
             if(b is MCFloat && !FloatProviders.enabled) {
                 b = b.toTempEntity()
@@ -211,6 +223,8 @@ class MCFPPExprVisitor(
         visitMultiplicativeExpressionRe = visitCastExpression(ctx.castExpression(0))
         processVarCache.add(visitMultiplicativeExpressionRe!!)
         for (i in 1..<ctx.castExpression().size) {
+            visitMultiplicativeExpressionRe = top.mcfpp.analysis.StorageAccess.capture(visitMultiplicativeExpressionRe!!)
+            processVarCache[processVarCache.lastIndex] = visitMultiplicativeExpressionRe!!
             var b: Var<*>? = visitCastExpression(ctx.castExpression(i))
             if(b is MCFloat && !FloatProviders.enabled) b = b.toTempEntity()
             if((!FloatProviders.enabled || visitMultiplicativeExpressionRe !is MCFloat) && visitMultiplicativeExpressionRe != MCFloat.ssObj){
@@ -232,7 +246,7 @@ class MCFPPExprVisitor(
     override fun visitCastExpression(ctx: mcfppParser.CastExpressionContext): Var<*> = withCompilationContext(ctx) {
         val a: Var<*> = visitUnaryExpression(ctx.unaryExpression())
         if(ctx.type() != null){
-            return a.explicitCast(MCFPPType.parseFromContextNotNull(ctx.type(), Function.currFunction.scope))
+            return top.mcfpp.analysis.StorageAccess.view(a, MCFPPType.parseFromContextNotNull(ctx.type(), Function.currFunction.scope))
         }else{
             return a
         }
@@ -298,6 +312,7 @@ class MCFPPExprVisitor(
         for (selector in ctx.selector()){
             visitSelector(selector)
         }
+        if (!preserveFinalProperty && currSelector is PropertyVar) currSelector = (currSelector as PropertyVar).get()
         return currSelector!!
     }
 
@@ -418,13 +433,12 @@ class MCFPPExprVisitor(
 
     override fun visitFunctionCall(ctx: mcfppParser.FunctionCallContext): Var<*> = withCompilationContext(ctx) {
         //是函数调用，将已经计算好的中间量存储到栈中
-        for (v in processVarCache){
-            v.storeToStack()
-        }
+        val spills = top.mcfpp.analysis.StorageAccess.spill(processVarCache)
         //函数的调用
         Function.addComment(ctx.text)
         //参数获取
         val normalArgs: ArrayList<Var<*>> = ArrayList()
+        val originalArgs: ArrayList<Var<*>> = ArrayList()
         val readOnlyArgs: ArrayList<Var<*>> = ArrayList()
         val exprVisitor = MCFPPExprVisitor()
         val concreteExprVisitor = MCFPPConcreteExprVisitor()
@@ -444,7 +458,10 @@ class MCFPPExprVisitor(
                 LogProcessor.error(TextTranslator.SYMBOL_NOT_DEFINED.translate(arg.identifier))
                 return UnknownVar("error_" + ctx.text)
             }
-            normalArgs.add(arg)
+            val captured = top.mcfpp.analysis.StorageAccess.capture(arg)
+            originalArgs.add(arg)
+            normalArgs.add(captured)
+            exprVisitor.processVarCache.add(captured)
         }
         //Try to get function
         val p = ctx.namespaceID().text.splitNamespaceID()
@@ -458,22 +475,26 @@ class MCFPPExprVisitor(
         }
         //Function invoke
         if (func !is UnknownFunction) {
+            val passedArgs = normalArgs.mapIndexed { index, value ->
+                if (func.normalParams.getOrNull(index)?.isStatic == true) originalArgs[index] else value
+            }
             val returnVar = if(func is Generic<*>){
                 if(readOnlyArgs.any { it is UnknownVar } || normalArgs.any { it is UnknownVar }){
                     UnknownVar("re")
                 }else{
-                    func.invoke(readOnlyArgs, normalArgs, currSelector)
+                    func.invoke(readOnlyArgs, passedArgs, currSelector)
                 }
             }else{
                 if(normalArgs.any { it is UnknownVar }){
                     UnknownVar("re")
                 }else {
-                    func.invoke(normalArgs, currSelector)
+                    func.invoke(passedArgs, currSelector)
                 }
             }
             //函数树
             Function.currFunction.child.add(func)
             func.parent.add(Function.currFunction)
+            top.mcfpp.analysis.StorageAccess.restore(spills)
             return if (FloatProviders.enabled && returnVar is MCFloat && returnVar !is MCFPPValue<*>) {
                 FloatProviders.snapshot(returnVar)
             } else if (returnVar is MCFloat && top.mcfpp.analysis.ValueSnapshot.of(returnVar) == null && !returnVar.isError) {
@@ -493,6 +514,11 @@ class MCFPPExprVisitor(
                 snapshot.isTemp = true
                 snapshot.nbtPath = NBTPath.getNormalStackPath(snapshot)
                 snapshot
+            } else if (returnVar is MCAny && returnVar.compilerPayload == null && !returnVar.isError) {
+                returnVar.getTempVar()
+            } else if ((returnVar is top.mcfpp.core.lang.obj.DataTemplateObject || returnVar is NBTBasedData) &&
+                top.mcfpp.analysis.ValueSnapshot.of(returnVar) == null && !returnVar.isError) {
+                top.mcfpp.analysis.StorageAccess.capture(returnVar)
             } else returnVar
         }
         //可能是模板的构造函数
@@ -506,6 +532,7 @@ class MCFPPExprVisitor(
             } else {
                 constructor.invoke(normalArgs, init)
             }
+            top.mcfpp.analysis.StorageAccess.restore(spills)
             //可能会对init进行替换
             return Function.currFunction.scope.getVar(init.identifier) ?: init
         }
@@ -513,6 +540,7 @@ class MCFPPExprVisitor(
         LogProcessor.error("Function ${func.identifier}<${readOnlyArgs.joinToString(",") { it.type.typeName }}>(${normalArgs.map { it.type.typeName }.joinToString(",")}) not defined")
         Function.addComment("[Failed to Compile]${ctx.text}")
         func.invoke(normalArgs,currSelector)
+        top.mcfpp.analysis.StorageAccess.restore(spills)
         return func.returnVar
     }
 
@@ -526,7 +554,7 @@ class MCFPPExprVisitor(
                 if(MCFPPImVisitor.inLoopStatement(ctx) && pwp is MCFPPValue<*>){
                     pwp.toDynamic(true)
                 }else{
-                    pwp
+                    top.mcfpp.analysis.StorageAccess.read(pwp)
                 }
             }else{
                 UnknownVar(qwq)
@@ -544,7 +572,7 @@ class MCFPPExprVisitor(
                 LogProcessor.error("Cannot access member $qwq")
                 UnknownVar(qwq)
             }else{
-                re.first!!
+                top.mcfpp.analysis.StorageAccess.read(re.first!!)
             }
         }
         if(re is UnknownVar && currSelector == null){

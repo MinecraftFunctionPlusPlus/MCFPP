@@ -362,6 +362,7 @@ open class MCInt : MCNumber<Int>, OnScoreboard {
     }
 
     override fun storeToStack() {
+        storageBinding?.let { it.data.materialize(); return }
         if(hasStoredInStack) return
         Function.addCommand(Command("execute store result")
             .build(nbtPath.toCommandPart())
@@ -370,6 +371,7 @@ open class MCInt : MCNumber<Int>, OnScoreboard {
     }
 
     override fun getFromStack() {
+        if (top.mcfpp.analysis.StorageAccess.restoreScore(this, name, sbObject.toString())) return
         if(parent != null) return
         Function.addCommand(
             Command("execute store result score $name $sbObject run data get")
@@ -431,6 +433,11 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
      *
      */
     override fun toDynamic(replace: Boolean): Var<*> {
+        if (storageBinding != null) {
+            val re = top.mcfpp.analysis.StorageAccess.read(MCInt(this).apply { isDynamic = true })
+            if (replace) replacedBy(re)
+            return re
+        }
         Function.addCommand("scoreboard players set $name $sbObject $value")
         val re = MCInt(this)
         if(replace){

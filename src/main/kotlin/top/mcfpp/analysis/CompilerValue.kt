@@ -40,7 +40,11 @@ object ValueSnapshot {
         is MCFPPType -> CompilerValue.TypeValue(value.typeId)
         is Var<*> -> when {
             value.symbol != null && !value.hasAssigned -> null
-            value is top.mcfpp.core.lang.MCAny && value.lastVar != null -> value.lastVar?.let(::of)?.let { CompilerValue.Typed(value.type.typeId, it) }
+            value.storageBinding != null -> StorageAccess.snapshot(value)
+            value is top.mcfpp.core.lang.JsonTextConcrete -> value.toCommandPart().let { command ->
+                if (command.isMacro) null else CompilerValue.Typed(value.type.typeId, CompilerValue.Nbt(Tag.toSNBT(Tag.toNBT(command.toString()))))
+            }
+            value is top.mcfpp.core.lang.MCAny && value.compilerPayload != null -> value.compilerPayload?.let(::of)?.let { CompilerValue.Typed(value.type.typeId, it) }
             value is MCFPPValue<*> -> of(value.value)?.let { CompilerValue.Typed(value.type.typeId, it) }
             else -> null
         }
