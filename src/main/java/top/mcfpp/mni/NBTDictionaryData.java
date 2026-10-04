@@ -1,77 +1,37 @@
 package top.mcfpp.mni;
 
 import top.mcfpp.annotations.MNIFunction;
-import top.mcfpp.command.Command;
-import top.mcfpp.command.Commands;
+import top.mcfpp.backend.DictionaryOperations;
 import top.mcfpp.core.lang.bool.ScoreBool;
 import top.mcfpp.core.lang.nbt.MCString;
-import top.mcfpp.core.lang.nbt.MCStringConcrete;
 import top.mcfpp.core.lang.nbt.NBTDictionary;
-import top.mcfpp.core.lang.nbt.NBTDictionaryConcrete;
-import top.mcfpp.model.function.Function;
+import top.mcfpp.mni.annotation.NoExternalWrites;
+import top.mcfpp.mni.annotation.WritesReceiver;
 import top.mcfpp.util.ValueWrapper;
 
+/** One signature per member, with value/layout selection at the storage boundary. */
 public class NBTDictionaryData {
+    @WritesReceiver
     @MNIFunction(caller = "dict", genericType = "E")
-    public static void clear(NBTDictionary caller){
-        Function.addCommand(new Command("data modify")
-                .build(caller.getNbtPath().toCommandPart(), true)
-                .build(" set value {}", false)
-        );
+    public static void clear(NBTDictionary caller) {
+        DictionaryOperations.INSTANCE.clear(caller);
     }
 
+    @NoExternalWrites
     @MNIFunction(normalParams = "string", caller = "dict", returnType = "bool", genericType = "E")
-    public static void containsKey(MCString key, NBTDictionary caller, ValueWrapper<ScoreBool> re){
-        if(key instanceof MCStringConcrete keyC){
-            Function.addCommand(new Command("execute " +
-                    "store result score " + re.getValue().getName() + " " + re.getValue().getBoolObject() + " " +
-                    "if data")
-                    .build(caller.getNbtPath().toCommandPart(), true).build("." + keyC.getValue().getValue(), false)
-            );
-        }else {
-            Function.addCommand(new Command("execute " +
-                "store result score " + re.getValue().getName() + " " + re.getValue().getBoolObject() + " " +
-                "if data")
-                .build(caller.getNbtPath().toCommandPart(), true).build(".", false).buildMacro(key, false)
-            );
-        }
+    public static void containsKey(MCString key, NBTDictionary caller, ValueWrapper<ScoreBool> result) {
+        result.setValue(DictionaryOperations.INSTANCE.containsKey(caller, key));
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = "dict<E>", caller = "dict", genericType = "E")
-    public static void merge(NBTDictionary source, NBTDictionary caller){
-        if(source instanceof NBTDictionaryConcrete dictC){
-            if(((NBTDictionaryConcrete) source).isAllConcrete()){
-                Function.addCommand(Commands.dataMergeValue(caller.getNbtPath(), dictC.getConcretePart()));
-            }else {
-                ((NBTDictionaryConcrete) source).toDynamic(true);
-                Function.addCommand(new Command("data modify")
-                        .build(caller.getNbtPath().toCommandPart(), true)
-                        .build("merge from", true)
-                        .build(source.getNbtPath().toCommandPart(), true)
-                );
-            }
-        }else {
-            Function.addCommand(new Command("data modify")
-                .build(caller.getNbtPath().toCommandPart(), true)
-                .build("merge from", true)
-                .build(source.getNbtPath().toCommandPart(), true)
-            );
-        }
+    public static void merge(NBTDictionary source, NBTDictionary caller) {
+        DictionaryOperations.INSTANCE.merge(caller, source);
     }
 
-    @MNIFunction(normalParams = {"string"}, caller = "dict")
-    public static void remove(MCString key, NBTDictionary caller){
-        if(key instanceof MCStringConcrete keyC){
-            Function.addCommand(new Command("data remove")
-                .build(caller.getNbtPath().toCommandPart(), true)
-                .build("." + keyC.getValue().getValue(), false)
-            );
-        }else {
-            Function.addCommand(new Command("data remove")
-                .build(caller.getNbtPath().toCommandPart(), true)
-                .build(".", false)
-                .buildMacro(key, false)
-            );
-        }
+    @WritesReceiver
+    @MNIFunction(normalParams = "string", caller = "dict", genericType = "E")
+    public static void remove(MCString key, NBTDictionary caller) {
+        DictionaryOperations.INSTANCE.remove(caller, key);
     }
 }

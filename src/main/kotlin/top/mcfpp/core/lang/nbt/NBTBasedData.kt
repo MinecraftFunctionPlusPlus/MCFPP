@@ -114,10 +114,7 @@ open class NBTBasedData : Var<NBTBasedData>, Indexable {
      * @return
      */
     override fun getTempVar(): NBTBasedData {
-        val temp = NBTBasedData()
-        temp.isTemp = true
-        temp.nbtPath = top.mcfpp.lib.NBTPath.temp.memberIndex(temp.identifier)
-        return temp.assignCommand(this)
+        return top.mcfpp.analysis.StorageAccess.capture(this) as NBTBasedData
     }
 
     override fun storeToStack() {

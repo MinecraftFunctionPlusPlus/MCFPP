@@ -5,7 +5,6 @@ import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
-import top.mcfpp.mni.NBTDictionaryConcreteData
 import top.mcfpp.mni.NBTDictionaryData
 import top.mcfpp.model.Member
 import top.mcfpp.model.compound.CompoundData
@@ -170,28 +169,6 @@ class NBTDictionaryConcrete : NBTDictionary, PartialConcreteValue<CompoundTag, H
         return NBTDictionaryConcrete(this)
     }
 
-    override fun getMemberFunction(
-        key: String,
-        readOnlyArgs: List<Var<*>>,
-        normalArgs: List<Var<*>>,
-        accessModifier: Member.AccessModifier
-    ): Pair<Function, Boolean> {
-        var re: Function = UnknownFunction(key)
-        data.scope.forEachFunction {
-            //TODO 我们约定it为NativeFunction，但是没有考虑拓展函数
-            assert(it is NativeFunction)
-            val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to (type as MCFPPDictType).generic[0]))
-            if(nf.isSelf(key, normalArgs)){
-                re = nf
-            }
-        }
-        val iterator = data.parent.iterator()
-        while (re is UnknownFunction && iterator.hasNext()){
-            re = iterator.next().getFunction(key, readOnlyArgs, normalArgs,isStatic)
-        }
-        return re to true
-    }
-
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
         top.mcfpp.analysis.StorageAccess.materialize(this)
@@ -323,12 +300,7 @@ class NBTDictionaryConcrete : NBTDictionary, PartialConcreteValue<CompoundTag, H
     }
 
     companion object {
-        val data by lazy {
-            CompoundData("dict", "mcfpp.lang").apply {
-                initialize()
-                injectedBy(NBTDictionaryConcreteData::class.java)
-            }
-        }
+        val data get() = NBTDictionary.data
     }
 
 }

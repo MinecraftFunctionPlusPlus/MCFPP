@@ -91,6 +91,19 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         root.keys.removeAll { it.startsWith("$key.") || it.startsWith("$key[") }
         root[key] = value
     }
+    private fun removeNbt(source: String, path: String) {
+        val (root, key) = address(source, path)
+        if (root.remove(key) != null) return
+        val parts = segments(key)
+        for (size in parts.size - 1 downTo 1) {
+            var parent = root[key.substring(0, parts[size - 1].end)] ?: continue
+            for (part in parts.drop(size).dropLast(1)) parent = element(parent, part)
+            val last = parts.last()
+            if (last.name != null) (parent as CompoundTag).value.remove(last.name)
+            else (parent as ListTag).value.removeAt(if (last.index!! < 0) parent.size + last.index else last.index)
+            return
+        }
+    }
     init {
         val nbtPath = """(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s"'])+"""
         val set = Regex("scoreboard players set (\\S+ \\S+) (-?\\d+)")
@@ -108,6 +121,8 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         val storeTest = Regex("execute store success score (\\S+ \\S+) (if|unless) score (\\S+ \\S+) = (\\S+ \\S+)")
         val storeMatch = Regex("execute store success score (\\S+ \\S+) (if|unless) score (\\S+ \\S+) matches (-?\\d+)")
         val appendNbt = Regex("data modify storage (\\S+) ($nbtPath) append from storage (\\S+) ($nbtPath)")
+        val removeNbt = Regex("data remove storage (\\S+) ($nbtPath)")
+        val testNbt = Regex("execute store success score (\\S+ \\S+) if data storage (\\S+) ($nbtPath)")
         val macroCall = Regex("function (\\S+) with storage (\\S+) ($nbtPath)")
         var steps = 0
         var branchStackInitialized = false
@@ -183,6 +198,16 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             appendNbt.matchEntire(command)?.let {
                 val value = readNbt(it.groupValues[3], it.groupValues[4])
                 (readNbt(it.groupValues[1], it.groupValues[2]) as ListTag).add(value.copy())
+                return@command false
+            }
+            removeNbt.matchEntire(command)?.let {
+                removeNbt(it.groupValues[1], it.groupValues[2])
+                return@command false
+            }
+            testNbt.matchEntire(command)?.let {
+                val exists = try { readNbt(it.groupValues[2], it.groupValues[3]); true }
+                    catch (_: IllegalStateException) { false } catch (_: IndexOutOfBoundsException) { false }
+                values[it.groupValues[1]] = if (exists) 1 else 0
                 return@command false
             }
             storeTest.matchEntire(command)?.let {

@@ -446,6 +446,12 @@ open class Function : Member, FieldContainer, WithDocument {
         }
     }
 
+    fun bindIncomingParameters() {
+        for (param in normalParams) if (!param.isReadOnly && param.type.hasRuntimeRepresentation) {
+            scope.getVar(param.identifier)?.let(top.mcfpp.analysis.StorageAccess::bindIncomingParameter)
+        }
+    }
+
     /**
      * 从语法树写入这个函数的形参信息，同时为这个函数准备好包含形参的缓存
      *

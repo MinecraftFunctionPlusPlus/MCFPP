@@ -111,7 +111,10 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             if (function.bodyCompiled || function.bodyBeingCompiled) return null
             function.bodyBeingCompiled = true
             try {
-                if (!top.mcfpp.analysis.PrimitiveCompiler.tryCompile(ctx, function)) visitStatements(ctx.statement())
+                if (!top.mcfpp.analysis.PrimitiveCompiler.tryCompile(ctx, function)) {
+                    function.bindIncomingParameters()
+                    visitStatements(ctx.statement())
+                }
             } finally {
                 function.bodyBeingCompiled = false
                 function.bodyCompiled = true
@@ -124,6 +127,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     fun visitCurlBlock(ctx: mcfppParser.CurlBlockContext, function: Function){
         val lastFunction = Function.currFunction
         Function.currFunction = function
+        function.bindIncomingParameters()
         visitStatements(ctx.statement())
         Function.currFunction = lastFunction
     }

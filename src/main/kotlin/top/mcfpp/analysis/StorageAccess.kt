@@ -75,6 +75,23 @@ class StoredData(val root: Place, val path: NBTPath, private var initialize: (()
 object StorageAccess {
     private val erasedTypes get() = setOf(MCFPPBaseType.Any, MCFPPBaseType.Object)
 
+    /** Runtime parameters arrive in the callee frame; no writer may capture an uninitialized prototype register. */
+    fun bindIncomingParameter(value: Var<*>): StorageBinding {
+        value.storageBinding?.let { return it }
+        value.hasAssigned = true
+        value.isDynamic = true
+        value.bindDeclaration()
+        if (value.nbtPath.pathList.isEmpty()) value.nbtPath = NBTPath.getNormalStackPath(value)
+        val place = Place(value.symbol!!.id)
+        val data = StoredData(place, value.nbtPath.clone())
+        data.types[value.type.typeId] = value.type
+        data.facts.initialize(place, ValueFacts(if (value is MCAny) TypeKnowledge.Unknown else TypeKnowledge.Exact(value.type.typeId),
+            ValueKnowledge.Unknown))
+        seedParts(data, place, value)
+        data.facts.invalidate(place)
+        return StorageBinding(data, place, data.path).also { value.storageBinding = it }
+    }
+
     fun ensure(value: Var<*>): StorageBinding {
         value.storageBinding?.let { return it }
         val encodingSupported = !hasRuntimeRepresentation(value) || collectionEncodingSupported(value)
@@ -204,7 +221,7 @@ object StorageAccess {
         else -> null
     }
 
-    private fun quotedKey(key: String) = if (key.matches(Regex("[A-Za-z0-9_+-]+"))) key
+    fun quotedKey(key: String) = if (key.matches(Regex("[A-Za-z0-9_+-]+"))) key
         else top.mcfpp.backend.NbtEncoding.snbt(top.mcfpp.nbt.tags.primitive.StringTag(key))
 
     /** Ordinary collection assignment copies both encoding and immutable knowledge, with a new root identity. */
@@ -726,7 +743,7 @@ object StorageAccess {
             .build("$tag 1 run scoreboard players get $player $objective"))
     }
 
-    private fun snapshotTag(value: CompilerValue, type: TypeId? = null): Tag<*>? = when (value) {
+    internal fun snapshotTag(value: CompilerValue, type: TypeId? = null): Tag<*>? = when (value) {
         is CompilerValue.Typed -> snapshotTag(value.payload, value.type)
         is CompilerValue.Integral -> when (type) {
             MCFPPNBTType.Byte.typeId -> top.mcfpp.nbt.tags.primitive.ByteTag(value.value.toByte())
@@ -763,7 +780,7 @@ object StorageAccess {
 
     fun actualType(value: Var<*>) = if (value is MCAny) value.inferredType ?: value.type else value.type
 
-    private fun restore(type: MCFPPType, snapshot: CompilerValue, name: String,
+    internal fun restore(type: MCFPPType, snapshot: CompilerValue, name: String,
                         types: Map<TypeId, MCFPPType> = emptyMap()): Var<*>? {
         val payload = if (snapshot is CompilerValue.Typed) snapshot.payload else snapshot
         if (type in erasedTypes) {

@@ -395,8 +395,8 @@ class MCFPPDictType(generic: MCFPPType): MCFPPCompoundType(generic){
 
     override fun defaultValue() = HashMap<String, Var<*>>()
     @Suppress("UNCHECKED_CAST")
-    override fun build(identifier: String, value: Any?): Var<*> = NBTDictionaryConcrete(value as HashMap<String, Var<*>>, identifier)
-    override fun buildUnConcrete(identifier: String): Var<*> = NBTDictionary(identifier)
+    override fun build(identifier: String, value: Any?): Var<*> = NBTDictionaryConcrete(value as HashMap<String, Var<*>>, identifier).apply { type = this@MCFPPDictType }
+    override fun buildUnConcrete(identifier: String): Var<*> = NBTDictionary(identifier).apply { type = this@MCFPPDictType }
 
     override fun replaceGenericParam(type: Map<String, MCFPPType>): MCFPPDictType {
         if (generic[0] is MCFPPGenericParamType) {

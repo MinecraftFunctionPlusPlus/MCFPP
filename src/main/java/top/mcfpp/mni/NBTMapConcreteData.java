@@ -13,8 +13,8 @@ public class NBTMapConcreteData {
 
     @MNIFunction(caller = "map", genericType = "E")
     public static void clear(NBTMapConcrete caller){
-        NBTDictionaryConcreteData.clear((NBTDictionaryConcrete) caller.getKeyValueSet());
         NBTListConcreteData.clear((NBTListConcrete) caller.getKeyList());
+        // This legacy map and its dictionary adapter share the same host map.
         caller.getValue().clear();
     }
 
@@ -47,7 +47,7 @@ public class NBTMapConcreteData {
     public static void merge(NBTMap source, NBTMapConcrete caller){
         if(source instanceof NBTMapConcrete sourceC){
             NBTListConcreteData.addAll(sourceC.getKeyList(),(NBTListConcrete)caller.getKeyList());
-            NBTDictionaryConcreteData.merge(sourceC.getKeyValueSet(), (NBTDictionaryConcrete) caller.getKeyValueSet());
+            caller.getValue().putAll(sourceC.getValue());
         }else {
             caller.toDynamic(true);
             NBTMapData.merge(source, caller);
