@@ -1,326 +1,146 @@
-@file:Suppress("LeakingThis")
-
 package top.mcfpp.core.lang.nbt
 
-import top.mcfpp.annotations.InsertCommand
+import top.mcfpp.analysis.StorageAccess
+import top.mcfpp.backend.MapOperations
 import top.mcfpp.command.Commands
-import top.mcfpp.core.lang.MCFPPValue
-import top.mcfpp.core.lang.PropertyVar
-import top.mcfpp.core.lang.UnknownVar
-import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.obj.DataTemplateObject
-import top.mcfpp.mni.NBTMapConcreteData
 import top.mcfpp.mni.NBTMapData
-import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Member
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.property.AnonymousNativeMutator
+import top.mcfpp.model.property.AbstractAccessor
+import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.property.Property
-import top.mcfpp.model.property.SimpleAccessor
-import top.mcfpp.nbt.tags.CompoundTag
-import top.mcfpp.nbt.tags.collection.ListTag
 import top.mcfpp.nbt.tags.primitive.StringTag
-import top.mcfpp.type.MCFPPBaseType
-import top.mcfpp.type.MCFPPMapType
-import top.mcfpp.type.MCFPPType
+import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
-import top.mcfpp.util.NBTUtil
 import top.mcfpp.util.TempPool
-import top.mcfpp.util.TextTranslator
-import top.mcfpp.util.TextTranslator.translate
 
+/** One ordered entry list owns both keys and values; no second membership cache exists. */
 open class NBTMap : NBTBasedData {
+    @Suppress("MUST_BE_INITIALIZED_OR_BE_FINAL_WARNING")
+    override var type: MCFPPType
+        get() = (field as? MCFPPDeclaredConcreteType)?.type ?: field
+    val genericType get() = (type as MCFPPMapType).generic.single()
 
-    var keyList: NBTList
-    var keyValueSet: NBTDictionary
-
-    val genericType: MCFPPType
-
-    override var parent: CanSelectMember? = null
-        get() = super.parent
-        set(value) {
-            field = value
-            keyValueSet.parent = value
-            keyValueSet.parent = value
-        }
-
-    /**
-     * 创建一个map值。它的标识符和mc名相同。
-     * @param identifier identifier
-     */
-    constructor(identifier: String = TempPool.getVarIdentify(), genericType : MCFPPType) : super(identifier){
-        this.genericType = genericType
-        keyList = NBTList("keys", MCFPPBaseType.String)
-        keyList.parent = parent
-        keyList.nbtPath = nbtPath.memberIndex("keys")
-        keyValueSet = NBTDictionary("keyValueSet")
-        keyValueSet.parent = parent
-        keyValueSet.nbtPath = nbtPath.memberIndex("keyValueSet")
+    constructor(identifier: String = TempPool.getVarIdentify(), genericType: MCFPPType) : super(identifier) {
         type = MCFPPMapType(genericType)
     }
 
-    constructor(b: NBTMap): super(b){
-        this.genericType = b.genericType
-        this.keyList = b.keyList.clone()
-        this.keyList.parent = parent
-        this.keyList.nbtPath = nbtPath.memberIndex("keys")
-        this.keyValueSet = b.keyValueSet.clone() as NBTDictionary
-        this.keyValueSet.parent = parent
-        this.keyValueSet.nbtPath = nbtPath.memberIndex("keyValueSet")
-        type = MCFPPMapType(genericType)
-    }
+    constructor(source: NBTMap) : super(source) { type = source.type }
 
     override fun doAssignedBy(b: Var<*>): NBTMap {
-        when (b) {
-            is NBTMap -> {
-                return assignCommand(b) as NBTMap
-            }
-
-            else -> {
-                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
-                return this
-            }
-        }
+        if (b is NBTMap) return assignCommand(b) as NBTMap
+        LogProcessor.error("Cannot assign '${b.type}' to '$type'")
+        return this
     }
 
-    private fun convertDictValueToMap(tag: CompoundTag): CompoundTag{
-        val mapTag = CompoundTag()
-        mapTag.put("keyValueSet", tag)
-        val list = ListTag()
-        for ((key, value) in tag){
-            val kv = CompoundTag()
-            kv.put("key", StringTag(key))
-            kv.put("value", value)
-            list.add(kv)
-        }
-        mapTag.put("keyValueList", list)
-        return mapTag
-    }
-
-    @InsertCommand
     override fun assignCommand(a: NBTBasedData): NBTBasedData {
-        nbtType = a.nbtType
-        return if(a is NBTMapConcrete){
-            if(!a.isAllConcrete()){
-                Function.addCommand(Commands.dataSetFrom(keyValueSet.nbtPath, a.keyValueSet.nbtPath))
-            }
-            NBTMapConcrete(this, a.value)
-        }else {
-            Function.addCommand(Commands.dataSetFrom(nbtPath, a.nbtPath))
-            NBTMap(this)
-        }
+        if (a.storageBinding != null) return StorageAccess.copyCollection(NBTMap(this), a) as NBTMap
+        if (a is NBTMapConcrete) return NBTMapConcrete(this, a.value)
+        Function.addCommand(Commands.dataSetFrom(nbtPath, a.nbtPath))
+        return NBTMap(this)
     }
-
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        return when(key){
-            "keys" -> {
-                return PropertyVar(Property.buildSimpleGetter("keys"), keyList, this) to true
-            }
-            "keyValueSet" -> {
-                return PropertyVar(Property.buildSimpleGetter("keyValueSet"), keyValueSet, this) to true
-            }
-            else -> null to true
+        val value = when (key) {
+            "keys" -> MapOperations.keys(this)
+            "keyValueSet" -> MapOperations.dictionary(this)
+            else -> return null to true
         }
+        return PropertyVar(Property.buildSimpleGetter(key), value, this) to true
     }
 
-    override fun getMemberFunction(
-        key: String,
-        readOnlyArgs: List<Var<*>>,
-        normalArgs: List<Var<*>>,
-        accessModifier: Member.AccessModifier
-    ): Pair<Function, Boolean> {
-        var re: Function = UnknownFunction(key)
+    override fun getMemberFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>,
+                                   accessModifier: Member.AccessModifier): Pair<Function, Boolean> {
+        var result: Function = UnknownFunction(key)
         data.scope.forEachFunction {
-            //TODO 我们约定it为NativeFunction，但是没有考虑拓展函数
-            assert(it is NativeFunction)
-            val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to (type as MCFPPMapType).generic[0]))
-            if(nf.isSelf(key, normalArgs)){
-                re = nf
-            }
+            val native = (it as NativeFunction).replaceGenericParams(mapOf("E" to genericType))
+            if (native.isSelf(key, normalArgs)) result = native
         }
-        val iterator = data.parent.iterator()
-        while (re is UnknownFunction && iterator.hasNext()){
-            re = iterator.next().getFunction(key, readOnlyArgs, normalArgs,isStatic)
-        }
-        return re to true
+        val parents = data.parent.iterator()
+        while (result is UnknownFunction && parents.hasNext())
+            result = parents.next().getFunction(key, readOnlyArgs, normalArgs, isStatic)
+        return result to true
     }
 
     override fun getByIndex(index: Var<*>): PropertyVar {
-        return if(index is MCString){
-            val re = genericType.buildUnConcrete("").setAs(this)
-            re.parent = this
-            re.nbtPath = keyValueSet.nbtPath.memberIndex(index)
-            re.isDynamic = true
-            val property = Property("", SimpleAccessor(), AnonymousNativeMutator { _, v ->
-                re.assignedBy(v)
-                if(index is MCStringConcrete){
-                    Function.addCommand(Commands.dataAppendValue(keyList.nbtPath, index.value))
-                }else {
-                    Function.addCommand(Commands.dataAppendFrom(keyList.nbtPath, index.nbtPath))
-                }
-                return@AnonymousNativeMutator re
-            })
-            PropertyVar(property, re, this)
-        }else {
-            LogProcessor.error("Index must be a string")
-            val re = UnknownVar("error_${identifier}_index_${index.identifier}")
-            return PropertyVar(Property.buildSimpleProperty(re), re, this)
+        val key = if (index is MCAny && index !is MCObject) index.semanticValue() else index
+        if (key !is MCString || key.type.typeId != MCFPPBaseType.String.typeId) {
+            LogProcessor.error("Map index must be a string")
+            val error = UnknownVar(TempPool.getVarIdentify()).apply { isError = true }
+            return PropertyVar(Property.buildSimpleProperty(error), error, this)
         }
+        val selected = MapOperations.captureKey(key)
+        val value = genericType.buildUnConcrete(TempPool.getVarIdentify())
+        val accessor = object : AbstractAccessor() {
+            override fun getter(caller: CanSelectMember, field: Var<*>) = MapOperations.element(this@NBTMap, selected)
+        }
+        val property = Property("", accessor, AnonymousNativeMutator { _, incoming ->
+            MapOperations.put(this, selected, incoming)
+            value
+        })
+        return PropertyVar(property, value, this)
     }
+
+    override fun clone() = NBTMap(this)
 
     companion object {
         val data by lazy {
-            CompoundData("map","mcfpp.lang").apply {
-                initialize()
-                extends(MCFPPBaseType.Any.instanceData)
+            CompoundData("map", "mcfpp.lang").apply {
+                scope.putType("E", MCFPPGenericParamType("E", arrayListOf(MCFPPBaseType.Any)))
+                extends(MCFPPNBTType.NBT.instanceData)
                 injectedBy(NBTMapData::class.java)
             }
         }
+        internal val entryType get() = MCFPPDictType(MCFPPBaseType.Any)
+        internal val entriesType get() = MCFPPListType(entryType)
     }
 }
 
 class NBTMapConcrete : NBTMap, MCFPPValue<HashMap<String, Var<*>>> {
-
     override var value: HashMap<String, Var<*>>
+    internal var extraFields: HashMap<String, Var<*>> = hashMapOf()
 
-    /**
-     * 创建一个固定的map。它的标识符和mc名一致
-     * @param identifier 标识符。如不指定，则为随机uuid
-     * @param value 值
-     */
-    constructor(value: HashMap<String, Var<*>>, identifier: String = TempPool.getVarIdentify(), genericType: MCFPPType) : super(identifier, genericType){
-        this.value = value
-        keyList = NBTListConcrete(ArrayList(value.keys.map { MCStringConcrete(StringTag(it)) }), "keys", MCFPPBaseType.String).setAs(keyValueSet) as NBTListConcrete
-        keyValueSet = NBTDictionaryConcrete(value).setAs(keyValueSet) as NBTDictionaryConcrete
+    constructor(value: HashMap<String, Var<*>>, identifier: String = TempPool.getVarIdentify(),
+                genericType: MCFPPType) : super(identifier, genericType) { this.value = LinkedHashMap(value) }
+
+    constructor(source: NBTMap, value: HashMap<String, Var<*>>) : super(source) {
+        this.value = LinkedHashMap(value.mapValues { NBTList.copyCompilerPart(it.value) })
+        if (source is NBTMapConcrete) extraFields = HashMap(source.extraFields.mapValues { NBTList.copyCompilerPart(it.value) })
     }
 
-    /**
-     * 复制一个map
-     * @param b 被复制的map值
-     */
-    constructor(b: NBTMap, value: HashMap<String, Var<*>>) : super(b){
-        this.value = value
-        keyList = NBTListConcrete(ArrayList(value.keys.map { MCStringConcrete(StringTag(it)) }), "keys", MCFPPBaseType.String).setAs(keyList) as NBTListConcrete
-        keyValueSet = NBTDictionaryConcrete(value).setAs(keyValueSet) as NBTDictionaryConcrete
+    constructor(source: NBTMapConcrete) : super(source) {
+        value = source.value
+        extraFields = source.extraFields
     }
 
-    constructor(v: NBTMapConcrete) : super(v){
-        this.value = v.value
-        keyList = NBTListConcrete(ArrayList(v.value.keys.map { MCStringConcrete(StringTag(it)) }), "keys", MCFPPBaseType.String).setAs(keyList) as NBTListConcrete
-        keyValueSet = v.keyValueSet.clone().setAs(keyValueSet) as NBTDictionaryConcrete
-    }
-
-    override fun getMemberFunction(
-        key: String,
-        readOnlyArgs: List<Var<*>>,
-        normalArgs: List<Var<*>>,
-        accessModifier: Member.AccessModifier
-    ): Pair<Function, Boolean> {
-        var re: Function = UnknownFunction(key)
-        data.scope.forEachFunction {
-            //TODO 我们约定it为NativeFunction，但是没有考虑拓展函数
-            assert(it is NativeFunction)
-            val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to (type as MCFPPMapType).generic[0]))
-            if(nf.isSelf(key, normalArgs)){
-                re = nf
-            }
+    /** The compiler payload mirrors physical paths, so a child write replaces immutable ancestors. */
+    internal fun physicalValue(): NBTDictionaryConcrete {
+        val rows = value.map { (key, part) ->
+            NBTDictionaryConcrete(hashMapOf("key" to MCStringConcrete(StringTag(key), "key"), "value" to part), "entry")
         }
-        val iterator = data.parent.iterator()
-        while (re is UnknownFunction && iterator.hasNext()){
-            re = iterator.next().getFunction(key, readOnlyArgs, normalArgs,isStatic)
-        }
-        return re to true
+        return NBTDictionaryConcrete(HashMap(extraFields).apply {
+            put("entries", NBTListConcrete(ArrayList(rows), "entries", entryType))
+        }, "map_layout")
     }
 
-    override fun replaceMemberVar(v: Var<*>) {
-        value[v.identifier] = v
-    }
-
-    fun isAllConcrete(): Boolean {
-        return value.values.all { it is MCFPPValue<*> }
-    }
-
-    fun getConcretePart(): CompoundTag {
-        val compound = CompoundTag()
-        for (v in value){
-            if(v.value is MCFPPValue<*>){
-                compound.put(v.key, NBTUtil.valueToNBT((v.value as MCFPPValue<*>).value))
-            }
-        }
-        return compound
-    }
-
-    override fun clone(): NBTMapConcrete {
-        return NBTMapConcrete(this)
-    }
+    fun isAllConcrete() = top.mcfpp.analysis.ValueSnapshot.of(this) != null
+    override fun clone() = NBTMapConcrete(this)
 
     override fun toDynamic(replace: Boolean): Var<*> {
-        (keyList as NBTListConcrete).synchronous()
-        (keyValueSet as NBTDictionaryConcrete).toDynamic(false)
-        val re = NBTMap(this)
-        if(replace){
-            if(parentTemplate() != null) {
-                (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
-            }else{
-                Function.currFunction.scope.putVar(identifier, re, true)
-            }
+        StorageAccess.materialize(this)
+        val result = NBTMap(this)
+        if (replace) {
+            if (parentTemplate() != null) (parent as DataTemplateObject).instanceField.putVar(identifier, result, true)
+            else Function.currFunction.scope.putVar(identifier, result, true)
         }
-        return re
+        return result
     }
 
-    fun indexOf(key: String): Int{
-        return (keyValueSet as NBTDictionaryConcrete).value.keys.indexOfFirst { it == key }
-    }
-
-    override fun getByIndex(index: Var<*>): PropertyVar {
-        return if(index is MCString){
-            if(index is MCStringConcrete){
-                if(!value.containsKey(index.value.value)){
-                    val re = (type as MCFPPMapType).generic[0].build(index.value.value)
-                    re.parent = this
-                    re.nbtPath = keyValueSet.nbtPath.memberIndex(index.value.value)
-                    PropertyVar(Property(re.identifier, null, AnonymousNativeMutator{_, v ->
-                        if(v !is MCFPPValue<*>){
-                            re.assignedBy(v)
-                        }
-                        //如果没有这个键，就添加。重复判断避免重复赋值的时候重复添加
-                        if(!value.containsKey(index.value.value)){
-                            (keyList as NBTListConcrete).value.add(MCStringConcrete(index))
-                        }
-                        return@AnonymousNativeMutator re
-                    }), re, this)
-                }else {
-                    val re = value[index.value.value]!!
-                    re.identifier = index.value.value
-                    re.parent = this
-                    re.nbtPath = keyValueSet.nbtPath.memberIndex(index.value.value)
-                    if(re !is MCFPPValue<*>){
-                        re.isDynamic = true
-                    }
-                    PropertyVar(Property.buildSimpleProperty(re), re, this)
-                }
-            }else {
-                toDynamic(true)
-                PropertyVar(Property.buildSimpleProperty(super.getByIndex(index)), super.getByIndex(index),this)
-            }
-        }else{
-            LogProcessor.error("Index must be a string")
-            val re = UnknownVar("error_index_${index.identifier}")
-            PropertyVar(Property.buildSimpleProperty(re), re, this)
-        }
-    }
-
-    companion object{
-        val data by lazy {
-            CompoundData("map","mcfpp.lang").apply {
-                initialize()
-                extends(MCFPPBaseType.Any.instanceData)
-                injectedBy(NBTMapConcreteData::class.java)
-            }
-        }
-    }
+    companion object { val data get() = NBTMap.data }
 }

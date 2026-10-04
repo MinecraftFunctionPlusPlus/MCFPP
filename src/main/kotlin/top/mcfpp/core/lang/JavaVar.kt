@@ -167,7 +167,7 @@ class JavaVar : ConcreteVar<JavaVar, Any?> {
                 is ScoreBoolConcrete -> v.value
                 is MCStringConcrete -> v.value
                 is NBTListConcrete -> v.value
-                is NBTMapConcrete -> (v.keyValueSet as NBTDictionaryConcrete).value
+                is NBTMapConcrete -> v.value
                 is NBTDictionaryConcrete -> v.value
                 is NBTBasedDataConcrete -> v.value
                 else -> v

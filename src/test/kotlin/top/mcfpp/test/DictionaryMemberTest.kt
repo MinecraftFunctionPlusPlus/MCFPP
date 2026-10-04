@@ -10,7 +10,6 @@ import top.mcfpp.core.lang.nbt.NBTDictionary
 import top.mcfpp.core.lang.nbt.NBTDictionaryConcrete
 import top.mcfpp.core.lang.nbt.NBTMapConcrete
 import top.mcfpp.core.lang.nbt.MCStringConcrete
-import top.mcfpp.mni.NBTMapConcreteData
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.lib.NBTPath
@@ -174,16 +173,18 @@ class DictionaryMemberTest {
         assertEquals(1, execute(main).read(main.scope.getVar("result") as ScoreBool))
     }
 
-    @Test fun legacyMapHostAdaptersKeepTheirBehaviorAfterRemovingDictionaryConcreteSignatures() {
-        compile("func main(){}")
-        val caller = NBTMapConcrete(hashMapOf("first" to MCIntConcrete(2)), "caller", MCFPPBaseType.Int)
-        val incoming = NBTMapConcrete(hashMapOf("second" to MCIntConcrete(7)), "incoming", MCFPPBaseType.Int)
-        NBTMapConcreteData.merge(incoming, caller)
-        assertEquals(7, assertIs<MCIntConcrete>(caller.value["second"]).value)
-        assertSame(caller.value, assertIs<NBTDictionaryConcrete>(caller.keyValueSet).value)
-        NBTMapConcreteData.clear(caller)
-        assertTrue(caller.value.isEmpty())
-        assertTrue(assertIs<NBTDictionaryConcrete>(caller.keyValueSet).value.isEmpty())
+    @Test fun mapDictionaryInteropUsesCurrentSharedStorageAfterNativeWrites() {
+        val main = compile("""
+            func main(){
+                var caller = {entries:[{key:"first",value:2}]} as map<int>;
+                var incoming = {entries:[{key:"second",value:7}]} as map<int>;
+                caller.merge(incoming);
+                var projection = caller.keyValueSet;
+                caller.clear();
+                dynamic var result = projection["second"] + caller.size();
+            }
+        """)
+        assertEquals(7, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
     @Test fun aPartialDictionaryMergeDiagnosesUnsupportedKnownEmptyKeysBeforeWriting() {

@@ -19,7 +19,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         private set
     private val frames = mutableListOf<MutableMap<String, Tag<*>>>()
     private val storage = mutableMapOf<String, MutableMap<String, Tag<*>>>()
-    private data class Segment(val name: String?, val index: Int?, val end: Int)
+    private data class Segment(val name: String?, val index: Int?, val end: Int, val predicate: CompoundTag? = null)
     private fun segments(path: String): List<Segment> {
         val result = mutableListOf<Segment>()
         var cursor = 0
@@ -27,9 +27,26 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             when (path[cursor]) {
                 '.' -> cursor++
                 '[' -> {
-                    val end = path.indexOf(']', cursor)
+                    var end = cursor + 1
+                    var quote: Char? = null
+                    var escaped = false
+                    var depth = 0
+                    while (end < path.length) {
+                        val char = path[end]
+                        if (quote != null) {
+                            if (char == quote && !escaped) quote = null
+                            escaped = char == '\\' && !escaped
+                        } else when (char) {
+                            '"', '\'' -> { quote = char; escaped = false }
+                            '[' -> depth++
+                            ']' -> if (depth == 0) break else depth--
+                        }
+                        end++
+                    }
                     check(end > cursor) { "Invalid NBT path $path" }
-                    result += Segment(null, path.substring(cursor + 1, end).toInt(), end + 1)
+                    val selector = path.substring(cursor + 1, end)
+                    result += if (selector.startsWith("{")) Segment(null, null, end + 1, Tag.toNBT(selector) as CompoundTag)
+                        else Segment(null, selector.toInt(), end + 1)
                     cursor = end + 1
                 }
                 '"', '\'' -> {
@@ -52,9 +69,14 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         }
         return result
     }
-    private fun element(value: Tag<*>, segment: Segment): Tag<*> = if (segment.name != null)
-        (value as CompoundTag)[segment.name] ?: error("Missing NBT member ${segment.name}")
-        else (value as ListTag).let { it[if (segment.index!! < 0) it.size + segment.index else segment.index] }
+    private fun matches(value: Tag<*>, predicate: CompoundTag) = value is CompoundTag &&
+        predicate.value.all { (key, part) -> value[key] == part }
+    private fun element(value: Tag<*>, segment: Segment): Tag<*> = when {
+        segment.name != null -> (value as CompoundTag)[segment.name] ?: error("Missing NBT member ${segment.name}")
+        segment.predicate != null -> (value as ListTag).filter { matches(it, segment.predicate) }.singleOrNull()
+            ?: error("NBT predicate must select one entry")
+        else -> (value as ListTag).let { it[if (segment.index!! < 0) it.size + segment.index else segment.index] }
+    }
     private fun address(source: String, path: String): Pair<MutableMap<String, Tag<*>>, String> {
         val frame = Regex("stack_frame\\[(\\d+)]\\.(.*)").matchEntire(path)
         return if (source == "mcfpp:system" && frame != null) frames[frame.groupValues[1].toInt()] to frame.groupValues[2]
@@ -84,10 +106,11 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             for (part in parts.drop(size).dropLast(1)) parent = element(parent, part)
             val last = parts.last()
             if (last.name != null) (parent as CompoundTag).put(last.name, value)
+            else if (last.predicate != null) (parent as ListTag).value.indices.filter { matches(parent[it], last.predicate) }.forEach { parent[it] = value.copy() }
             else (parent as ListTag).let { it[if (last.index!! < 0) it.size + last.index else last.index] = value }
             return
         }
-        check(parts.none { it.index != null }) { "Cannot write an index without an existing list: $path" }
+        check(parts.none { it.index != null || it.predicate != null }) { "Cannot write an index without an existing list: $path" }
         root.keys.removeAll { it.startsWith("$key.") || it.startsWith("$key[") }
         root[key] = value
     }
@@ -100,6 +123,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             for (part in parts.drop(size).dropLast(1)) parent = element(parent, part)
             val last = parts.last()
             if (last.name != null) (parent as CompoundTag).value.remove(last.name)
+            else if (last.predicate != null) (parent as ListTag).value.removeAll { matches(it, last.predicate) }
             else (parent as ListTag).value.removeAt(if (last.index!! < 0) parent.size + last.index else last.index)
             return
         }
@@ -160,7 +184,11 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             macroCall.matchEntire(command)?.let { call ->
                 val arguments = readNbt(call.groupValues[2], call.groupValues[3]) as CompoundTag
                 val replacements = arguments.value.mapValues { (_, value) ->
-                    when (value) { is StringTag -> value.value; else -> value.value.toString() }
+                    when (value) {
+                        is StringTag -> value.value
+                        is CompoundTag -> top.mcfpp.backend.NbtEncoding.snbt(value)
+                        else -> value.value.toString()
+                    }
                 }
                 val body = functions.getValue(call.groupValues[1]).map { line ->
                     if (!line.startsWith("$")) line else Regex("\\$\\(([^)]+)\\)").replace(line.removePrefix("$")) { parameter ->

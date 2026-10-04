@@ -47,6 +47,7 @@ object NBTUtil {
                 }
             }
             is NBTListConcrete -> valueToNBT(v.value)
+            is NBTMapConcrete -> varToNBT(v.physicalValue())
             is NBTDictionary -> valueToNBT(v.value)
             is NBTIntArrayConcrete -> valueToNBT(v.value)
             is NBTLongArrayConcrete -> valueToNBT(v.value)

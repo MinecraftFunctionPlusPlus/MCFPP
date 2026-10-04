@@ -13,6 +13,8 @@ import top.mcfpp.core.lang.nbt.NBTList
 import top.mcfpp.core.lang.nbt.NBTListConcrete
 import top.mcfpp.core.lang.nbt.NBTDictionary
 import top.mcfpp.core.lang.nbt.NBTDictionaryConcrete
+import top.mcfpp.core.lang.nbt.NBTMap
+import top.mcfpp.core.lang.nbt.NBTMapConcrete
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.lib.SbObject
@@ -98,7 +100,7 @@ object StorageAccess {
         if (!encodingSupported) reportListEncoding()
         val snapshot = ValueSnapshot.of(value)
         val frozen = constantEncoding(value)?.let { top.mcfpp.backend.NbtEncoding.snbt(it) }
-        if (value.symbol == null && (snapshot != null || value is NBTListConcrete || value is NBTDictionaryConcrete)) value.hasAssigned = true
+        if (value.symbol == null && (snapshot != null || value is NBTListConcrete || value is NBTDictionaryConcrete || value is NBTMapConcrete)) value.hasAssigned = true
         if (value.symbol == null && value.identifier.isBlank()) value.identifier = TempPool.getVarIdentify()
         value.bindDeclaration()
         if (value.nbtPath.pathList.isEmpty()) value.nbtPath = NBTPath.getNormalStackPath(value)
@@ -138,6 +140,16 @@ object StorageAccess {
         if (value is MCFPPTypeVar) data.types[value.value.typeId] = value.value
         if (value is MCAny && value.compilerPayload != null) {
             seedParts(data, parent, value.compilerPayload!!)
+            return
+        }
+        if (value is NBTMapConcrete) {
+            // Register the map root type, then seed its real fields rather than a second host-key cache.
+            value.physicalValue().value.forEach { (key, part) ->
+                val place = parent.field(key)
+                data.facts.initialize(place, ValueFacts(TypeKnowledge.Exact(part.type.typeId),
+                    ValueSnapshot.of(part)?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown))
+                seedParts(data, place, part)
+            }
             return
         }
         val parts = when (value) {
@@ -188,7 +200,7 @@ object StorageAccess {
                 else copyWriter(path, value.nbtPath)
             is ScoreBool -> if (!value.isDataOnly) scoreWriter(path, value.name, value.boolObject.toString(), "byte")
                 else copyWriter(path, value.nbtPath)
-            is NBTListConcrete, is NBTDictionaryConcrete -> partialWriter(value, path)!!
+            is NBTListConcrete, is NBTDictionaryConcrete, is NBTMapConcrete -> partialWriter(value, path)!!
             is MCFloat -> if (FloatProviders.enabled) copyWriter(path, value.nbtPath) else {
                 val writers = listOf("sign" to value.sign, "int0" to value.int0, "int1" to value.int1, "exp" to value.exp)
                     .map { (key, score) -> scoreWriter(path.memberIndex(key), score.name, score.sbObject.toString(), "int") }
@@ -204,6 +216,7 @@ object StorageAccess {
     }
 
     private fun partialWriter(value: Var<*>, path: NBTPath): (() -> Unit)? = when (value) {
+        is NBTMapConcrete -> partialWriter(value.physicalValue(), path)
         is NBTListConcrete -> {
             val elements = value.value.map { element ->
                 val slot = NBTPath.temp.memberIndex(TempPool.getVarIdentify())
@@ -378,7 +391,8 @@ object StorageAccess {
     }
 
     private fun staticLayoutAccessible(actual: MCFPPType, target: MCFPPType) = target in erasedTypes || actual == target ||
-        actual is MCFPPListType && target is MCFPPListType || actual is MCFPPDictType && target is MCFPPDictType
+        actual is MCFPPListType && target is MCFPPListType ||
+        (actual is MCFPPDictType || actual is MCFPPMapType) && (target is MCFPPDictType || target is MCFPPMapType)
 
     /** Loading a register is materialization, not a logical write. */
     fun read(value: Var<*>): Var<*> {
@@ -393,7 +407,7 @@ object StorageAccess {
                 storageReadVersion = version
             }
         }
-        if (value is DataTemplateObject || value is NBTListConcrete || value is NBTDictionaryConcrete) return if (value is MCFPPValue<*> && snapshot(value) == null)
+        if (value is DataTemplateObject || value is NBTListConcrete || value is NBTDictionaryConcrete || value is NBTMapConcrete) return if (value is MCFPPValue<*> && snapshot(value) == null)
             adapter(value.type, value.identifier, binding).apply { setAs(value); storageReadVersion = version } else value
         if (value is MCAny) return value
         val constant = snapshot(value)
@@ -678,6 +692,7 @@ object StorageAccess {
             is MCAny -> value.compilerPayload == null
             is NBTListConcrete -> value.value.all(::hasRuntimeRepresentation)
             is NBTDictionaryConcrete -> value.value.values.all(::hasRuntimeRepresentation)
+            is NBTMapConcrete -> value.physicalValue().value.values.all(::hasRuntimeRepresentation)
             else -> true
         }
     }
@@ -694,6 +709,7 @@ object StorageAccess {
                     value.value.all(::collectionEncodingSupported)
             }
             is NBTDictionaryConcrete -> value.value.values.all(::collectionEncodingSupported)
+            is NBTMapConcrete -> collectionEncodingSupported(value.physicalValue())
             else -> true
         }
     }
@@ -809,6 +825,29 @@ object StorageAccess {
                 restore(elementType, part, key, types) ?: return null
             }
             return NBTDictionaryConcrete(HashMap(fields), name).apply { this.type = type }
+        }
+        if (payload is CompilerValue.Record && type is MCFPPMapType) {
+            fun unwrapped(part: CompilerValue): CompilerValue = if (part is CompilerValue.Typed) unwrapped(part.payload) else part
+            val entries = payload.fields["entries"]?.let(::unwrapped) as? CompilerValue.Sequence ?: return null
+            val values = linkedMapOf<String, Var<*>>()
+            for (entry in entries.elements) {
+                val row = unwrapped(entry) as? CompilerValue.Record ?: return null
+                val key = row.fields["key"]?.let(::unwrapped) ?: return null
+                val text = when (key) {
+                    is CompilerValue.Text -> key.value
+                    is CompilerValue.Nbt -> (Tag.toNBT(key.snbt) as? top.mcfpp.nbt.tags.primitive.StringTag)?.value
+                    else -> null
+                } ?: return null
+                if (text in values) return null
+                val part = row.fields["value"] ?: return null
+                val elementType = (part as? CompilerValue.Typed)?.type?.let(types::get) ?: return null
+                values[text] = restore(elementType, part, text, types) ?: return null
+            }
+            val extra = payload.fields.filterKeys { it != "entries" }.mapValues { (key, part) ->
+                val fieldType = (part as? CompilerValue.Typed)?.type?.let(types::get) ?: return null
+                restore(fieldType, part, key, types) ?: return null
+            }
+            return NBTMapConcrete(LinkedHashMap(values), name, type.generic.single()).apply { extraFields = HashMap(extra) }
         }
         val raw: Any = when (payload) {
             is CompilerValue.Typed -> return restore(type, payload, name, types)

@@ -180,6 +180,7 @@ open class NBTList : NBTBasedData {
                 }
                 is NBTListConcrete -> NBTListConcrete(source, ArrayList(source.value.map(::copyCompilerPart)))
                 is NBTDictionaryConcrete -> NBTDictionaryConcrete(source, source.value)
+                is NBTMapConcrete -> NBTMapConcrete(source, source.value)
                 else -> source.clone()
             }
             if (static) {

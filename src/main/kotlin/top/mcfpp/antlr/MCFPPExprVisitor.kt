@@ -736,7 +736,9 @@ class MCFPPExprVisitor(
                         identifier = key; symbol = null; storageBinding = null; storageReadVersion = null
                         parent = null; isConst = false; isFinal = false; isTemp = false
                     }
-                else value.type.buildUnConcrete(key).assignedBy(value)
+                // The field name belongs to the compound path, not a register or frame slot.
+                // Reusing it here can overwrite a live parameter with the same identifier.
+                else value
             }
             return compound
         }else if(ctx.nbtList() != null){

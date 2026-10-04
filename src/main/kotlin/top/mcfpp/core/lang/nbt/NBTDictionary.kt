@@ -193,14 +193,6 @@ class NBTDictionaryConcrete : NBTDictionary, PartialConcreteValue<CompoundTag, H
                 }
             }
 
-            is MCFPPMapType -> {
-                if(type.generic == (this.type as MCFPPDictType).generic){
-                    NBTMapConcrete(value, genericType = type.generic[0]).setAs(this)
-                }else{
-                    buildCastErrorVar(type)
-                }
-            }
-
             MCFPPNBTType.NBT -> {
                 if (isAllConcrete()) {
                     NBTBasedDataConcrete(this, NBTUtil.valueToNBT(value))
@@ -217,7 +209,6 @@ class NBTDictionaryConcrete : NBTDictionary, PartialConcreteValue<CompoundTag, H
     override fun canImplicitCast(type: MCFPPType): Boolean {
         return when(type){
             is MCFPPDictType -> type.generic == (this.type as MCFPPDictType).generic
-            is MCFPPMapType -> type.generic == (this.type as MCFPPDictType).generic
             MCFPPNBTType.NBT -> true
             MCFPPBaseType.Any -> true
             else -> false

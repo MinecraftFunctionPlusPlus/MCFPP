@@ -1,52 +1,42 @@
 package top.mcfpp.mni;
 
 import top.mcfpp.annotations.MNIFunction;
-import top.mcfpp.command.Command;
+import top.mcfpp.backend.MapOperations;
 import top.mcfpp.core.lang.MCInt;
 import top.mcfpp.core.lang.bool.ScoreBool;
-import top.mcfpp.core.lang.bool.ScoreBoolConcrete;
 import top.mcfpp.core.lang.nbt.MCString;
-import top.mcfpp.core.lang.nbt.NBTListConcrete;
 import top.mcfpp.core.lang.nbt.NBTMap;
-import top.mcfpp.model.function.Function;
+import top.mcfpp.mni.annotation.NoExternalWrites;
+import top.mcfpp.mni.annotation.WritesReceiver;
 import top.mcfpp.util.ValueWrapper;
 
+/** One member signature for every map value and storage layout. */
 public class NBTMapData {
-
+    @WritesReceiver
     @MNIFunction(caller = "map", genericType = "E")
-    public static void clear(NBTMap caller){
-        NBTListData.clear(caller.getKeyList());
-        NBTDictionaryData.clear(caller.getKeyValueSet());
+    public static void clear(NBTMap caller) { MapOperations.INSTANCE.clear(caller); }
+
+    @NoExternalWrites
+    @MNIFunction(normalParams = "string", caller = "map", returnType = "bool", genericType = "E")
+    public static void containsKey(MCString key, NBTMap caller, ValueWrapper<ScoreBool> result) {
+        result.setValue(MapOperations.INSTANCE.containsKey(caller, key));
     }
 
-    @MNIFunction(normalParams = {"string"}, caller = "map", returnType = "bool", genericType = "E")
-    public static void containsKey(MCString key, NBTMap caller, ValueWrapper<ScoreBool> re){
-        NBTDictionaryData.containsKey(key, caller.getKeyValueSet(), re);
-    }
-
+    @NoExternalWrites
     @MNIFunction(caller = "map", returnType = "bool", genericType = "E")
-    public static void isEmpty(NBTMap caller, ValueWrapper<ScoreBool> re){
-        re.setValue(new ScoreBoolConcrete(((NBTListConcrete) (caller.getKeyList())).getValue().isEmpty(), "return"));
+    public static void isEmpty(NBTMap caller, ValueWrapper<ScoreBool> result) {
+        result.setValue(MapOperations.INSTANCE.isEmpty(caller));
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = "string", caller = "map", genericType = "E")
-    public static void remove(MCString key, NBTMap caller) {
-        NBTDictionaryData.remove(key, caller.getKeyValueSet());
-        NBTListData.remove(key, caller.getKeyList());
-    }
+    public static void remove(MCString key, NBTMap caller) { MapOperations.INSTANCE.remove(caller, key); }
 
+    @WritesReceiver
     @MNIFunction(normalParams = "map<E>", caller = "map", genericType = "E")
-    public static void merge(NBTMap source, NBTMap caller){
-        NBTListData.addAll(source.getKeyList(), caller.getKeyList());
-        NBTDictionaryData.merge(source.getKeyValueSet(), caller.getKeyValueSet());
-    }
+    public static void merge(NBTMap source, NBTMap caller) { MapOperations.INSTANCE.merge(caller, source); }
 
+    @NoExternalWrites
     @MNIFunction(caller = "map", returnType = "int", genericType = "E")
-    public static void size(NBTMap caller, ValueWrapper<MCInt> re){
-        var r = re.getValue();
-        Function.addCommand(
-                new Command("execute store score").build(r.getIdentifier(),true).build(r.getSbObject().toString(), true)
-                        .build("run data get", true).build(caller.getKeyValueSet().nbtPath.toCommandPart(), true)
-        );
-    }
+    public static void size(NBTMap caller, ValueWrapper<MCInt> result) { result.setValue(MapOperations.INSTANCE.size(caller)); }
 }
