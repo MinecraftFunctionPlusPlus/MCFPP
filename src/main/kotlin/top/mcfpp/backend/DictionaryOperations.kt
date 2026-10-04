@@ -122,6 +122,11 @@ object DictionaryOperations {
             return
         }
         val incoming = record(source)
+        if (binding.data.layout != StorageLayout.CompilerOnly && incoming?.fields?.keys?.any { it.isEmpty() } == true &&
+            TargetCapabilities.forVersion(Project.config.version)?.emptyNbtPathKeys != true) {
+            LogProcessor.error("Cannot merge known dictionary fields with an empty key: the target cannot traverse empty keys and no verified literal encoding is available")
+            return
+        }
         val old = record(caller)
         if (binding.data.layout == StorageLayout.CompilerOnly && (old == null || incoming == null)) {
             LogProcessor.error("Compiler-only dictionary merge requires complete compile-time values")
@@ -158,7 +163,20 @@ object DictionaryOperations {
                 Function.addCommand(Command("data modify").build(binding.path.toCommandPart()).build("merge from").build(original.path.toCommandPart()))
             }
         if (incoming == null) binding.data.write(binding.place, ValueFacts(TypeKnowledge.Exact(caller.type.typeId), ValueKnowledge.Unknown))
-        else for (name in incoming.fields.keys)
-            binding.data.write(binding.place.field(name), ValueFacts(TypeKnowledge.Unknown, ValueKnowledge.Unknown))
+        else {
+            binding.data.types.putAll(original.data.types)
+            // Freeze all incoming facts before writes can invalidate an overlapping source view.
+            val fields = incoming.fields.map { (name, value) ->
+                val nested = compound(value)
+                val fact = if (nested) ValueFacts(TypeKnowledge.Unknown, ValueKnowledge.Unknown)
+                    else original.data.facts.read(original.place.field(name)) ?: ValueFacts(TypeKnowledge.Unknown, ValueKnowledge.Constant(value))
+                Triple(name, nested, fact)
+            }
+            for ((name, nested, fact) in fields) {
+                // Compound fields merge into existing data; scalar fields replace their slots completely.
+                binding.data.write(binding.place.field(name), fact)
+                if (!nested) binding.data.facts.forgetDescendants(binding.place.field(name))
+            }
+        }
     }
 }

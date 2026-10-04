@@ -2,14 +2,21 @@ package top.mcfpp.test
 
 import top.mcfpp.Project
 import top.mcfpp.analysis.*
+import top.mcfpp.backend.DictionaryOperations
+import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.nbt.NBTDictionary
 import top.mcfpp.core.lang.nbt.NBTDictionaryConcrete
 import top.mcfpp.core.lang.nbt.NBTMapConcrete
+import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.mni.NBTMapConcreteData
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
+import top.mcfpp.lib.NBTPath
+import top.mcfpp.nbt.tags.CompoundTag
+import top.mcfpp.nbt.tags.primitive.IntTag
+import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.test.util.MCFPPStringTest
 import top.mcfpp.test.util.ScoreCommandExecutor
 import top.mcfpp.type.MCFPPBaseType
@@ -177,5 +184,98 @@ class DictionaryMemberTest {
         NBTMapConcreteData.clear(caller)
         assertTrue(caller.value.isEmpty())
         assertTrue(assertIs<NBTDictionaryConcrete>(caller.keyValueSet).value.isEmpty())
+    }
+
+    @Test fun aPartialDictionaryMergeDiagnosesUnsupportedKnownEmptyKeysBeforeWriting() {
+        val main = compile("func main(){}")
+        Function.currFunction = main
+        val receiver = NBTDictionary("partial").apply {
+            nbtPath = NBTPath.temp.memberIndex(identifier)
+            hasAssigned = true; isDynamic = true
+        }
+        val binding = StorageAccess.ensure(receiver)
+        binding.data.facts.initialize(binding.place.field("kept"), ValueFacts(TypeKnowledge.Exact(MCFPPBaseType.Int.typeId),
+            ValueKnowledge.Constant(CompilerValue.Typed(MCFPPBaseType.Int.typeId, CompilerValue.Integral(2)))))
+        Function.addCommand(Commands.dataSetValue(receiver.nbtPath, CompoundTag().apply { put("kept", IntTag(2)) }))
+        val before = binding.data.facts.fork()
+        val commands = main.commands.analyzeAll().filterNot { it.startsWith("#") }
+        val incoming = NBTDictionaryConcrete(hashMapOf("" to MCIntConcrete(7), "added" to MCIntConcrete(8)), "incoming")
+        DictionaryOperations.merge(receiver, incoming)
+        assertTrue(Project.errorCount > 0)
+        assertEquals(before, binding.data.facts)
+        assertEquals(commands, main.commands.analyzeAll().filterNot { it.startsWith("#") })
+        val machine = execute(main)
+        val result = assertIs<CompoundTag>(machine.readNbt("mcfpp:system", "temp.partial"))
+        assertNull(result[""])
+        assertNull(result["added"])
+        assertEquals(2, assertIs<IntTag>(result["kept"]).value)
+    }
+
+    @Test fun aBulkDeepMergeKeepsUnrelatedFactsAndRecordsKnownScalarInputs() {
+        val main = compile("""
+            func update(values as dict<any>, runtime as int) -> int {
+                values["runtime"] = runtime;
+                values.merge({nested:{added:8},scalar:7});
+                return (values["runtime"] as int) + values["scalar"];
+            }
+            func main(){
+                var values as dict<any> = {nested:{kept:2}};
+                dynamic var result = update(values,5);
+            }
+        """)
+        assertEquals(12, execute(main).read(main.scope.getVar("result") as MCInt))
+    }
+
+    @Test fun mergingAnUnknownRuntimeSourceCopiesWholeNbtAndDeepMergesExistingFields() {
+        val main = compile("""
+            func update(values as dict<any>, extra as dict<any>) -> int {
+                values.merge(extra);
+                var nested = values["nested"] as dict<any>;
+                return (nested["kept"] as int)*100 + (nested["added"] as int)*10 + (values["scalar"] as int);
+            }
+            func main(){
+                var values as dict<any> = {nested:{kept:2}};
+                var extra as dict<any> = {nested:{added:8},scalar:7};
+                dynamic var result = update(values,extra);
+            }
+        """)
+        assertEquals(287, execute(main).read(main.scope.getVar("result") as MCInt))
+    }
+
+    @Test fun bulkMergeFreezesIncomingFactsBeforeAnOverlappingSourceIsInvalidated() {
+        val main = compile("func main(){}")
+        Function.currFunction = main
+        val nested = NBTDictionaryConcrete(hashMapOf("added" to MCIntConcrete(8)), "nested")
+        val patch = NBTDictionaryConcrete(hashMapOf("patch" to nested, "scalar" to MCIntConcrete(7)), "patch")
+        val values = NBTDictionaryConcrete(hashMapOf("patch" to patch, "runtime" to MCIntConcrete(0)), "values").apply {
+            nbtPath = NBTPath.temp.memberIndex(identifier)
+        }
+        val binding = StorageAccess.ensure(values)
+        binding.data.write(binding.place.field("runtime"), ValueFacts(TypeKnowledge.Exact(MCFPPBaseType.Int.typeId), ValueKnowledge.Unknown))
+        val incoming = StorageAccess.adapter(patch.type, "incoming", binding.copy(place = binding.place.field("patch"),
+            path = binding.path.memberIndex("patch"))) as NBTDictionary
+        DictionaryOperations.merge(values, incoming)
+        assertEquals(0, Project.errorCount)
+        val scalar = binding.data.facts.read(binding.place.field("scalar"))!!
+        assertEquals(TypeKnowledge.Exact(MCFPPBaseType.Int.typeId), scalar.type)
+        assertEquals(CompilerValue.Typed(MCFPPBaseType.Int.typeId, CompilerValue.Integral(7)), assertIs<ValueKnowledge.Constant>(scalar.value).value)
+        val result = assertIs<CompoundTag>(execute(main).readNbt("mcfpp:system", "temp.values"))
+        assertEquals(7, assertIs<IntTag>(result["scalar"]).value)
+        assertEquals(8, assertIs<IntTag>(assertIs<CompoundTag>(result["patch"])["added"]).value)
+    }
+
+    @Test fun compilerOnlyDictionariesCanStillMergeKnownEmptyKeysWithoutRuntimeEncoding() {
+        val main = compile("func main(){}")
+        Function.currFunction = main
+        val values = NBTDictionaryConcrete(hashMapOf("kind" to MCFPPTypeVar(MCFPPBaseType.Int)), "values")
+        val incoming = NBTDictionaryConcrete(hashMapOf("" to MCFPPTypeVar(MCFPPBaseType.Float)), "incoming")
+        DictionaryOperations.merge(values, incoming)
+        assertEquals(0, Project.errorCount)
+        assertTrue(DictionaryOperations.containsKey(values, MCStringConcrete(StringTag(""))).let {
+            assertIs<top.mcfpp.core.lang.bool.ScoreBoolConcrete>(it).value
+        })
+        assertNotNull(ValueSnapshot.of(values))
+        assertEquals(StorageLayout.CompilerOnly, values.storageBinding!!.data.layout)
+        assertFalse(main.commands.analyzeAll().any { "set value" in it || "merge value" in it })
     }
 }

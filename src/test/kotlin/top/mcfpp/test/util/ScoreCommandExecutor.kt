@@ -104,6 +104,13 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             return
         }
     }
+    private fun mergeNbt(destination: CompoundTag, source: CompoundTag) {
+        for ((name, value) in source.value) {
+            val old = destination[name]
+            if (old is CompoundTag && value is CompoundTag) mergeNbt(old, value)
+            else destination.put(name, value.copy())
+        }
+    }
     init {
         val nbtPath = """(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s"'])+"""
         val set = Regex("scoreboard players set (\\S+ \\S+) (-?\\d+)")
@@ -117,6 +124,8 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         val restore = Regex("execute store result score (\\S+ \\S+) run data get storage (\\S+) ($nbtPath)(?: 1(?:\\.0)?)?")
         val setNbt = Regex("data modify storage (\\S+) ($nbtPath) set value (.*)")
         val copyNbt = Regex("data modify storage (\\S+) ($nbtPath) set from storage (\\S+) ($nbtPath)")
+        val mergeNbtValue = Regex("data modify storage (\\S+) ($nbtPath) merge value (.*)")
+        val mergeNbtFrom = Regex("data modify storage (\\S+) ($nbtPath) merge from storage (\\S+) ($nbtPath)")
         val clearCompound = Regex("data modify storage mcfpp:system stack_frame\\[(\\d+)]\\.(\\S+) set value \\{\\}")
         val storeTest = Regex("execute store success score (\\S+ \\S+) (if|unless) score (\\S+ \\S+) = (\\S+ \\S+)")
         val storeMatch = Regex("execute store success score (\\S+ \\S+) (if|unless) score (\\S+ \\S+) matches (-?\\d+)")
@@ -199,6 +208,15 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             copyNbt.matchEntire(command)?.let {
                 val value = readNbt(it.groupValues[3], it.groupValues[4])
                 writeNbt(it.groupValues[1], it.groupValues[2], value.copy()); return@command false
+            }
+            mergeNbtValue.matchEntire(command)?.let {
+                mergeNbt(readNbt(it.groupValues[1], it.groupValues[2]) as CompoundTag, Tag.toNBT(it.groupValues[3]) as CompoundTag)
+                return@command false
+            }
+            mergeNbtFrom.matchEntire(command)?.let {
+                val source = readNbt(it.groupValues[3], it.groupValues[4]).copy() as CompoundTag
+                mergeNbt(readNbt(it.groupValues[1], it.groupValues[2]) as CompoundTag, source)
+                return@command false
             }
             compareNbt.matchEntire(command)?.let {
                 val value = readNbt(it.groupValues[4], it.groupValues[5])
