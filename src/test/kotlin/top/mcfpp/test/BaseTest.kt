@@ -1,7 +1,13 @@
 package top.mcfpp.test
 
+import top.mcfpp.Project
+import top.mcfpp.core.lang.MCInt
+import top.mcfpp.core.lang.MCIntConcrete
+import top.mcfpp.io.MCFPPFile
 import top.mcfpp.test.util.MCFPPStringTest
 import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertIs
 
 class BaseTest {
 
@@ -87,12 +93,16 @@ class BaseTest {
     fun topStatementTest(){
         val test =
             """
-                int i = 0;
-                dynamic int qwq;
+                var i = 0;
+                dynamic var qwq = 1;
                 print(i);
                 print(qwq);
             """.trimIndent()
         MCFPPStringTest.readFromString(test)
+        assertEquals(0, Project.errorCount)
+        val scope = MCFPPFile.currFile!!.topFunction.scope
+        assertEquals(0, assertIs<MCIntConcrete>(scope.getVar("i")).value)
+        assertIs<MCInt>(scope.getVar("qwq"))
     }
 
     @Test

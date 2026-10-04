@@ -347,6 +347,49 @@ class CollectionStorageTest {
         assertFalse(main.commands.analyzeAll().any { it.contains("set value") || it.contains("set from") })
     }
 
+    @Test fun compilerOnlyDictionaryCopiesDoNotShareNestedListContents() {
+        val main = compile("""
+            func main(){
+                var values = {types:[int,float]};
+                var copied = values;
+                values["types"][0] = float;
+                var preserved = copied["types"][0];
+                var changed = values["types"][0];
+            }
+        """)
+        assertEquals(MCFPPBaseType.Int, (main.scope.getVar("preserved") as MCFPPTypeVar).value)
+        assertEquals(MCFPPBaseType.Float, (main.scope.getVar("changed") as MCFPPTypeVar).value)
+        assertFalse(main.commands.analyzeAll().any { "set value" in it || "set from" in it })
+    }
+
+    @Test fun compilerOnlyCopiesRemainIndependentThroughMultipleDictionaryLevels() {
+        val main = compile("""
+            func main(){
+                var values = {outer:{types:[int,float]}};
+                var copied = values;
+                values["outer"]["types"][-1] = int;
+                var preserved = copied["outer"]["types"][-1];
+                var changed = values["outer"]["types"][-1];
+            }
+        """)
+        assertEquals(MCFPPBaseType.Float, (main.scope.getVar("preserved") as MCFPPTypeVar).value)
+        assertEquals(MCFPPBaseType.Int, (main.scope.getVar("changed") as MCFPPTypeVar).value)
+    }
+
+    @Test fun compilerOnlyListCopiesDoNotShareNestedDictionaryContents() {
+        val main = compile("""
+            func main(){
+                var values = [{kind:int},{kind:float}];
+                var copied = values;
+                values[0]["kind"] = float;
+                var preserved = copied[0]["kind"];
+                var changed = values[0]["kind"];
+            }
+        """)
+        assertEquals(MCFPPBaseType.Int, (main.scope.getVar("preserved") as MCFPPTypeVar).value)
+        assertEquals(MCFPPBaseType.Float, (main.scope.getVar("changed") as MCFPPTypeVar).value)
+    }
+
     @Test fun anEmptyLiteralStillHasARuntimeRepresentation() {
         val main = compile("func main(){ dynamic var values = []; }")
         assertTrue(main.scope.getVar("values")!!.type.hasRuntimeRepresentation)

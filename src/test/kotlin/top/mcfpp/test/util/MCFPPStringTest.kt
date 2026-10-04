@@ -47,13 +47,14 @@ object MCFPPStringTest {
         Project.init() //初始化
         Project.readProject() //读取引用的库的索引
         //解析文件
+        MCFPPFile.currFile = MCFPPFile()
         val charStream: CharStream = CharStreams.fromString(VersionPreprocessor.process(str, Project.config.version))
         val tokens = CommonTokenStream(mcfppLexer(charStream))
         val parser = mcfppParser(tokens)
         parser.removeErrorListeners()
         parser.addErrorListener(MCFPPErrorListener())
         val context = parser.compilationUnit()
-        MCFPPFile.currFile = MCFPPFile()
+        if (MCFPPFile.currFile!!.syntaxError) return
         LogProcessor.debug("Generate Type Index...")
         Project.currNamespace = MCFPPFile.currFile!!.namespace.identifier
         MCFPPTypeVisitor().visitCompilationUnit(context)

@@ -170,9 +170,9 @@ open class NBTList : NBTBasedData {
     }
 
     companion object {
-        private fun copyCompilerPart(value: Var<*>): Var<*> = when (value) {
+        internal fun copyCompilerPart(value: Var<*>): Var<*> = when (value) {
             is NBTListConcrete -> NBTListConcrete(value, ArrayList(value.value.map(::copyCompilerPart)))
-            is NBTDictionaryConcrete -> NBTDictionaryConcrete(value, HashMap(value.value.mapValues { copyCompilerPart(it.value) }))
+            is NBTDictionaryConcrete -> NBTDictionaryConcrete(value, value.value)
             else -> value.clone()
         }
         val data by lazy {

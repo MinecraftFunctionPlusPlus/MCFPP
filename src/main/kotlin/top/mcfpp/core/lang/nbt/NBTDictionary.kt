@@ -159,7 +159,7 @@ class NBTDictionaryConcrete : NBTDictionary, PartialConcreteValue<CompoundTag, H
     }
 
     constructor(dict: NBTDictionary, value: HashMap<String, Var<*>>): super(dict){
-        this.value = HashMap(value.mapValues { it.value.clone() })
+        this.value = HashMap(value.mapValues { NBTList.copyCompilerPart(it.value) })
     }
 
     constructor(v: NBTDictionaryConcrete) : super(v){

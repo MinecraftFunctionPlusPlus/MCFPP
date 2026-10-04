@@ -731,8 +731,12 @@ class MCFPPExprVisitor(
             for (kv in ctx.nbtCompound().nbtKeyValuePair()){
                 val key = kv.Identifier().text
                 val value = top.mcfpp.analysis.StorageAccess.capture(visit(kv.expression())).also { processVarCache.add(it) }
-                val v = value.type.buildUnConcrete(key)
-                compound.value[key] = v.assignedBy(value)
+                compound.value[key] = if (!value.type.hasRuntimeRepresentation && top.mcfpp.analysis.ValueSnapshot.of(value) != null)
+                    value.clone().apply {
+                        identifier = key; symbol = null; storageBinding = null; storageReadVersion = null
+                        parent = null; isConst = false; isFinal = false; isTemp = false
+                    }
+                else value.type.buildUnConcrete(key).assignedBy(value)
             }
             return compound
         }else if(ctx.nbtList() != null){

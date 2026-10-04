@@ -163,9 +163,14 @@ object Project {
     fun init() {
         compileStage = CompileStage.INIT
         //全局缓存初始化
+        MCFPPFile.currFile = null
+        Function.currFunction = Function.nullFunction
+        Function.forcedField = null
+        DataTemplate.currTemplate = null
         GlobalScope.init()
         ctx.clear()
         trees.clear()
+        tokens.clear()
         currNamespace = config.rootNamespace
         errorCount = 0
         warningCount = 0
