@@ -5,7 +5,6 @@ import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.lib.NBTPath
-import top.mcfpp.lib.StorageSource
 import top.mcfpp.mni.NBTListConcreteData
 import top.mcfpp.mni.NBTListData
 import top.mcfpp.model.Member
@@ -13,9 +12,7 @@ import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
-import top.mcfpp.model.property.AnonymousNativeMutator
 import top.mcfpp.model.property.Property
-import top.mcfpp.model.property.SimpleAccessor
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.nbt.tags.collection.ListTag
 import top.mcfpp.type.*
@@ -95,10 +92,11 @@ open class NBTList : NBTBasedData {
     @InsertCommand
     override fun assignCommand(a: NBTBasedData) : NBTList {
         nbtType = a.nbtType
+        if (a.storageBinding != null) return top.mcfpp.analysis.StorageAccess.copyCollection(NBTList(this), a) as NBTList
         //对类中的成员的值进行修改
         when (a) {
             is NBTListConcrete -> {
-                return NBTListConcrete(this, a.value)
+                return NBTListConcrete(this, ArrayList(a.value.map(::copyCompilerPart)))
             }
 
             is NBTBasedDataConcrete -> {
@@ -156,10 +154,9 @@ open class NBTList : NBTBasedData {
     }
 
     override fun getByIndex(index: Var<*>): PropertyVar {
-        if(index is MCInt){
-            val v = genericType.buildUnConcrete(TempPool.getVarIdentify())
-            v.nbtPath = nbtPath.intIndex(index)
-            v.parent = this
+        val actual = if (index is MCAny && index !is MCObject) index.semanticValue() else index
+        if(actual.type.typeId == MCFPPBaseType.Int.typeId && actual is MCInt){
+            val v = top.mcfpp.analysis.StorageAccess.element(this, actual, genericType)
             return PropertyVar(Property.buildSimpleProperty(v), v,this)
         }else{
             LogProcessor.error("Index must be a int")
@@ -173,6 +170,11 @@ open class NBTList : NBTBasedData {
     }
 
     companion object {
+        private fun copyCompilerPart(value: Var<*>): Var<*> = when (value) {
+            is NBTListConcrete -> NBTListConcrete(value, ArrayList(value.value.map(::copyCompilerPart)))
+            is NBTDictionaryConcrete -> NBTDictionaryConcrete(value, HashMap(value.value.mapValues { copyCompilerPart(it.value) }))
+            else -> value.clone()
+        }
         val data by lazy {
             CompoundData("list", "mcfpp.lang").apply {
                 scope.putType("E", MCFPPGenericParamType("E", arrayListOf(MCFPPBaseType.Any)))
@@ -259,10 +261,8 @@ class NBTListConcrete: NBTList, PartialConcreteValue<ListTag, ArrayList<Var<*>>>
     }
 
     override fun toDynamic(replace: Boolean): Var<*> {
+        top.mcfpp.analysis.StorageAccess.materialize(this)
         val re = NBTList(this)
-        if(!hasStoredInStack){
-            synchronous()
-        }
         if(replace){
             if(parentTemplate() != null) {
                 (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
@@ -274,36 +274,7 @@ class NBTListConcrete: NBTList, PartialConcreteValue<ListTag, ArrayList<Var<*>>>
     }
 
     override fun getByIndex(index: Var<*>): PropertyVar {
-        val re = if(index is MCInt){
-            if(index is MCIntConcrete){
-                if(index.value >= value.size){
-                    LogProcessor.error("Index ${index.value} out of bounds for length ${value.size}")
-                    val re = UnknownVar("error_${identifier}_index_${index.identifier}")
-                    return PropertyVar(Property.buildSimpleProperty(re), re, this)
-                }else{
-                    value[index.value]
-                }
-            }else {
-                //index未知
-                if(!hasStoredInStack) synchronous()
-                toDynamic(true)
-                return super.getByIndex(index)
-            }
-        }else{
-            LogProcessor.error("Index must be a int")
-            val re = UnknownVar("error_${identifier}_index_${index.identifier}")
-            return PropertyVar(Property.buildSimpleProperty(re), re, this)
-        }
-        re.nbtPath = getTempPath(re)
-        re.parent = this
-        re.isDynamic = true
-        val property = Property(re.identifier, SimpleAccessor(), AnonymousNativeMutator { _, v ->
-            if(v !is MCFPPValue<*> && !hasStoredInStack){
-                synchronous()
-            }
-            re.assignedBy(v)
-        })
-        return PropertyVar(property, re, this)
+        return super.getByIndex(index)
     }
 
     override fun toString(): String {
@@ -360,20 +331,6 @@ class NBTListConcrete: NBTList, PartialConcreteValue<ListTag, ArrayList<Var<*>>>
 
         fun getEmpty() = NBTListConcrete(ArrayList(), "empty", MCFPPPrivateType.Wildcard).apply { isEmptyTemp = true }
 
-        val listTempNBTPath = NBTPath(StorageSource("mcfpp:system")).memberIndex("temp_list")
-
-        val listIndexHashMap: HashMap<Var<*>, Int> = HashMap()
-
-        fun getTempPath(v: Var<*>): NBTPath {
-            val index = if (listIndexHashMap.containsKey(v)) {
-                listIndexHashMap[v]!!
-            } else {
-                val re = listIndexHashMap.size
-                listIndexHashMap[v] = re
-                re
-            }
-            return listTempNBTPath.memberIndex(index.toString())
-        }
 
     }
 }

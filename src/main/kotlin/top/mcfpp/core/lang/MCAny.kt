@@ -65,6 +65,12 @@ open class MCAny : Var<MCAny> {
         re.payloadType?.let { data.types[it.typeId] = it }
         data.facts.write(place, ValueFacts((b as? MCAny)?.typeKnowledge ?: TypeKnowledge.Exact(b.type.typeId),
             snapshot?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown))
+        b.storageBinding?.let { original ->
+            data.types.putAll(original.data.types)
+            data.facts.copyFrom(original.data.facts, original.place, place, includeRoot = false)
+            for ((key, size) in original.data.listSizes) if (key.root == original.place.root && key.path.take(original.place.path.size) == original.place.path)
+                data.listSizes[Place(place.root, key.path.drop(original.place.path.size))] = size
+        }
         re.storageBinding = StorageBinding(data, place, path)
         if (frozen == null) StorageAccess.encodeTo(path, b)
         if (isDynamic) data.materialize()

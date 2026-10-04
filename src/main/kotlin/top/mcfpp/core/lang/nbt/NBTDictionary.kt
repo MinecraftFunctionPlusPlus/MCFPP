@@ -35,7 +35,7 @@ open class NBTDictionary : NBTBasedData {
      * 复制一个dict
      * @param b 被复制的dict值
      */
-    constructor(b: NBTDictionary) : super(b)
+    constructor(b: NBTDictionary) : super(b) { type = b.type }
 
     /**
      * 将b中的值赋值给此变量
@@ -57,6 +57,7 @@ open class NBTDictionary : NBTBasedData {
     @InsertCommand
     override fun assignCommand(a: NBTBasedData): NBTBasedData {
         nbtType = a.nbtType
+        if (a.storageBinding != null) return top.mcfpp.analysis.StorageAccess.copyCollection(NBTDictionary(this), a) as NBTDictionary
         return if(a is NBTDictionaryConcrete){
             NBTDictionaryConcrete(this, a.value)
         }else {
@@ -92,10 +93,14 @@ open class NBTDictionary : NBTBasedData {
     }
 
     override fun getByIndex(index: Var<*>): PropertyVar {
-        return if(index is MCString){
-            PropertyVar(Property.buildSimpleProperty(super.getByStringIndex(index)), super.getByStringIndex(index), this)
+        val actual = if (index is MCAny && index !is MCObject) index.semanticValue() else index
+        return if(actual.type.typeId == MCFPPBaseType.String.typeId && actual is MCString){
+            val element = top.mcfpp.analysis.StorageAccess.element(this, actual, (type as MCFPPDictType).generic[0])
+            PropertyVar(Property.buildSimpleProperty(element), element, this)
         }else{
-            throw IllegalArgumentException("Index must be a string")
+            LogProcessor.error("Index must be a string")
+            val error = UnknownVar(TempPool.getVarIdentify()).apply { isError = true }
+            PropertyVar(Property.buildSimpleProperty(error), error, this)
         }
     }
 
@@ -189,8 +194,7 @@ class NBTDictionaryConcrete : NBTDictionary, PartialConcreteValue<CompoundTag, H
 
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
-        if(value.isEmpty()) return NBTDictionary(this)
-        Function.addCommand(Commands.dataSetValue(nbtPath, getConcretePart()))
+        top.mcfpp.analysis.StorageAccess.materialize(this)
         val re = NBTDictionary(this)
         if(replace){
             if(parentTemplate() != null) {
@@ -293,29 +297,7 @@ class NBTDictionaryConcrete : NBTDictionary, PartialConcreteValue<CompoundTag, H
     }
 
     override fun getByIndex(index: Var<*>): PropertyVar {
-        return if(index is MCString){
-            if(index is MCStringConcrete){
-                if(!value.containsKey(index.value.value)){
-                    val re = (type as MCFPPDictType).generic[0].build(index.value.value)
-                    re.parent = this
-                    re.nbtPath = nbtPath.memberIndex(index.value.value)
-                    PropertyVar(Property.buildSimpleSetter(index.value.value), re, this)
-                }else{
-                    val re = value[index.value.value]!!
-                    re.identifier = index.value.value
-                    re.parent = this
-                    re.nbtPath = nbtPath.memberIndex(index.value.value)
-                    PropertyVar(Property.buildSimpleProperty(re), re, this)
-                }
-            }else {
-                toDynamic(true)
-                PropertyVar(Property.buildSimpleProperty(super.getByStringIndex(index)), super.getByStringIndex(index),this)
-            }
-        }else{
-            LogProcessor.error("Index must be a string")
-            val re = UnknownVar("error_index_${index.identifier}")
-            PropertyVar(Property.buildSimpleProperty(re), re, this)
-        }
+        return super.getByIndex(index)
     }
 
     override fun replaceMemberVar(v: Var<*>) {

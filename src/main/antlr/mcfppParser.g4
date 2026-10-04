@@ -627,7 +627,7 @@ nbtByteArray: NBT_BYTE_ARRAY_BEGIN NL* nbtByte (NL* COMMA NL* nbtByte)* NL* RSQU
 nbtIntArray: NBT_INT_ARRAY_BEGIN NL* nbtInt (NL* COMMA NL* nbtInt)* NL* RSQUARE;
 nbtLongArray: NBT_LONG_ARRAY_BEGIN NL* nbtLong (NL* COMMA NL* nbtLong)* NL* RSQUARE;
 
-nbtList: LSQUARE (NL* expression (NL* COMMA NL* expression)* )* NL* RSQUARE;
+nbtList: LSQUARE NL* (expression (NL* COMMA NL* expression)*)? NL* RSQUARE;
 nbtKeyValuePair: key=Identifier NL* COLON NL* expression;
 nbtCompound: LCURL (NL* nbtKeyValuePair (NL* COMMA NL* nbtKeyValuePair)* )* NL* RCURL;
 

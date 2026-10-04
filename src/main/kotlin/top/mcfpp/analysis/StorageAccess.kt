@@ -7,6 +7,11 @@ import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.BaseBool
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.nbt.NBTBasedData
+import top.mcfpp.core.lang.nbt.MCString
+import top.mcfpp.core.lang.nbt.NBTList
+import top.mcfpp.core.lang.nbt.NBTListConcrete
+import top.mcfpp.core.lang.nbt.NBTDictionary
+import top.mcfpp.core.lang.nbt.NBTDictionaryConcrete
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.lib.SbObject
@@ -34,6 +39,7 @@ class StoredData(val root: Place, val path: NBTPath, private var initialize: (()
     val facts = FlowFacts()
     val versions = StorageVersions()
     val types = mutableMapOf<TypeId, MCFPPType>()
+    val listSizes = mutableMapOf<Place, Int>()
     private val registers = mutableMapOf<Pair<Place, TypeId>, StorageLayout.Scoreboard>()
     private val nbtLayout get() = StorageLayout.Nbt(path.source.toString(), path.toCommandPart().toString())
 
@@ -43,17 +49,20 @@ class StoredData(val root: Place, val path: NBTPath, private var initialize: (()
     }
 
     fun register(place: Place, type: TypeId, objective: String): StorageLayout.Scoreboard =
-        registers.getOrPut(place to type) { StorageLayout.Scoreboard(TempPool.getVarIdentify(), objective) }
+        if (PathSegment.UnknownIndex in place.path) StorageLayout.Scoreboard(TempPool.getVarIdentify(), objective)
+        else registers.getOrPut(place to type) { StorageLayout.Scoreboard(TempPool.getVarIdentify(), objective) }
 
     fun write(place: Place, fact: ValueFacts) {
         versions.invalidate(place)
         facts.write(place, fact)
+        listSizes.keys.removeAll { it.overlaps(place) && it.path.size >= place.path.size }
     }
 
     fun barrier() {
         materialize()
         versions.invalidate(root)
         facts.barrier()
+        listSizes.clear()
     }
 }
 
@@ -65,13 +74,15 @@ object StorageAccess {
         value.storageBinding?.let { return it }
         val snapshot = ValueSnapshot.of(value)
         val frozen = constantEncoding(value)?.let { Tag.toSNBT(it) }
-        if (value.symbol == null && snapshot != null) value.hasAssigned = true
+        if (value.symbol == null && (snapshot != null || value is NBTListConcrete || value is NBTDictionaryConcrete)) value.hasAssigned = true
+        if (value.symbol == null && value.identifier.isBlank()) value.identifier = TempPool.getVarIdentify()
         value.bindDeclaration()
         if (value.nbtPath.pathList.isEmpty()) value.nbtPath = NBTPath.getNormalStackPath(value)
         val place = Place(value.symbol!!.id)
         val path = value.nbtPath.clone()
         // Capture constants and physical addresses now. A delayed write never captures a mutable Var.
-        val initial: (() -> Unit)? = if (frozen != null) ({ Function.addCommand(Commands.dataSetValue(path, Tag.toNBT(frozen))) })
+        val initial: (() -> Unit)? = if (!actualType(value).hasRuntimeRepresentation) null
+            else if (frozen != null) ({ emit(Commands.dataSetValue(path, Tag.toNBT(frozen))) })
             else when (value) {
                 is MCInt -> if (!value.isDataOnly) scoreWriter(path, value.name, value.sbObject.toString(), numericTag(value.type)) else null
                 is ScoreBool -> if (!value.isDataOnly) scoreWriter(path, value.name, value.boolObject.toString(), "byte") else null
@@ -79,11 +90,11 @@ object StorageAccess {
                     val parts = listOf("sign" to value.sign, "int0" to value.int0, "int1" to value.int1, "exp" to value.exp)
                         .map { (key, score) -> key to (score.name to score.sbObject.toString()) }
                     ({
-                        Function.addCommand(Commands.dataSetValue(path, CompoundTag()))
+                        emit(Commands.dataSetValue(path, CompoundTag()))
                         parts.forEach { (key, score) -> scoreWriter(path.memberIndex(key), score.first, score.second, "int")() }
                     })
                 } else null
-                else -> null
+                else -> partialWriter(value, path)
             }
         val data = StoredData(place, path, initial)
         data.types[actualType(value).typeId] = actualType(value)
@@ -91,20 +102,163 @@ object StorageAccess {
         data.facts.write(place, ValueFacts(if (value is MCAny) value.typeKnowledge else TypeKnowledge.Exact(value.type.typeId),
             snapshot?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown,
             if (value.symbol != null && !value.hasAssigned) ValueState.UNINITIALIZED else ValueState.INITIALIZED))
-        if (value is DataTemplateObject) seedFields(data, place, value)
+        seedParts(data, place, value)
         value.storageBinding = binding
         return binding
     }
 
-    private fun seedFields(data: StoredData, parent: Place, value: DataTemplateObject) {
-        for (field in value.instanceField.allVars.filterNot { it.isStatic }) {
-            val place = parent.field(field.identifier)
-            val snapshot = ValueSnapshot.of(field)
-            data.types[field.type.typeId] = field.type
-            data.facts.initialize(place, ValueFacts(TypeKnowledge.Exact(field.type.typeId),
-                snapshot?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown))
-            if (field is DataTemplateObject) seedFields(data, place, field)
+    private fun seedParts(data: StoredData, parent: Place, value: Var<*>) {
+        val parts = when (value) {
+            is DataTemplateObject -> value.instanceField.allVars.filterNot { it.isStatic }.map { parent.field(it.identifier) to it }
+            is NBTListConcrete -> {
+                data.listSizes[parent] = value.value.size
+                value.value.mapIndexed { index, element -> parent.index(index) to element }
+            }
+            is NBTDictionaryConcrete -> value.value.map { (key, element) -> parent.field(key) to element }
+            else -> emptyList()
         }
+        for ((place, part) in parts) {
+            val snapshot = ValueSnapshot.of(part)
+            data.types[actualType(part).typeId] = actualType(part)
+            part.storageBinding?.data?.types?.let(data.types::putAll)
+            data.facts.initialize(place, ValueFacts((part as? MCAny)?.typeKnowledge ?: TypeKnowledge.Exact(part.type.typeId),
+                snapshot?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown))
+            seedParts(data, place, part)
+        }
+    }
+
+    private fun emit(command: Command) {
+        if (command.isMacro && top.mcfpp.command.TargetCapabilities.forVersion(top.mcfpp.Project.config.version)?.functionMacros != true) {
+            LogProcessor.error("Target '${top.mcfpp.Project.config.version}' cannot access a runtime index without function macros")
+            return
+        }
+        Function.addCommands(command.buildMacroFunction())
+    }
+
+    /** Freeze source codecs/addresses, including partially known containers, before delayed materialization. */
+    private fun frozenWriter(value: Var<*>, path: NBTPath): () -> Unit {
+        if (!actualType(value).hasRuntimeRepresentation) {
+            LogProcessor.error("Compiler-only value '${actualType(value)}' cannot be stored in a runtime collection")
+            return {}
+        }
+        constantEncoding(value)?.let { tag ->
+            val snbt = Tag.toSNBT(tag)
+            return { emit(Commands.dataSetValue(path, Tag.toNBT(snbt))) }
+        }
+        value.storageBinding?.let { binding ->
+            val source = binding.path.clone()
+            val data = binding.data
+            return { data.materialize(); emit(Commands.dataSetFrom(path, source)) }
+        }
+        return when (value) {
+            is MCInt -> if (!value.isDataOnly) scoreWriter(path, value.name, value.sbObject.toString(), numericTag(value.type))
+                else copyWriter(path, value.nbtPath)
+            is ScoreBool -> if (!value.isDataOnly) scoreWriter(path, value.name, value.boolObject.toString(), "byte")
+                else copyWriter(path, value.nbtPath)
+            is NBTListConcrete, is NBTDictionaryConcrete -> partialWriter(value, path)!!
+            is MCFloat -> if (FloatProviders.enabled) copyWriter(path, value.nbtPath) else {
+                val writers = listOf("sign" to value.sign, "int0" to value.int0, "int1" to value.int1, "exp" to value.exp)
+                    .map { (key, score) -> scoreWriter(path.memberIndex(key), score.name, score.sbObject.toString(), "int") }
+                ({ emit(Commands.dataSetValue(path, CompoundTag())); writers.forEach { it() } })
+            }
+            else -> copyWriter(path, value.nbtPath)
+        }
+    }
+
+    private fun copyWriter(destination: NBTPath, source: NBTPath): () -> Unit {
+        val path = source.clone()
+        return { emit(Commands.dataSetFrom(destination, path)) }
+    }
+
+    private fun partialWriter(value: Var<*>, path: NBTPath): (() -> Unit)? = when (value) {
+        is NBTListConcrete -> {
+            val elements = value.value.map { element ->
+                val slot = NBTPath.temp.memberIndex(TempPool.getVarIdentify())
+                frozenWriter(element, slot) to slot
+            }
+            ({
+                emit(Commands.dataSetValue(path, top.mcfpp.nbt.tags.collection.ListTag()))
+                elements.forEach { (writer, slot) -> writer(); emit(Commands.dataAppendFrom(path, slot)) }
+            })
+        }
+        is NBTDictionaryConcrete -> {
+            val fields = value.value.map { (key, element) -> frozenWriter(element, path.memberIndex(quotedKey(key))) }
+            ({ emit(Commands.dataSetValue(path, CompoundTag())); fields.forEach { it() } })
+        }
+        else -> null
+    }
+
+    private fun quotedKey(key: String) = if (key.matches(Regex("[A-Za-z0-9_+-]+"))) key
+        else Tag.toSNBT(top.mcfpp.nbt.tags.primitive.StringTag(key))
+
+    /** Ordinary collection assignment copies both encoding and immutable knowledge, with a new root identity. */
+    fun copyCollection(target: Var<*>, source: Var<*>): Var<*> {
+        val original = ensure(source)
+        target.bindDeclaration()
+        if (target.nbtPath.pathList.isEmpty()) target.nbtPath = NBTPath.getNormalStackPath(target)
+        val place = Place(target.symbol!!.id)
+        val path = target.nbtPath.clone()
+        val frozen = constantEncoding(source)?.let { Tag.toSNBT(it) }
+        val data = StoredData(place, path, frozen?.let { snbt -> { emit(Commands.dataSetValue(path, Tag.toNBT(snbt))) } })
+        data.types.putAll(original.data.types)
+        data.types[target.type.typeId] = target.type
+        val root = original.data.facts.read(original.place) ?: ValueFacts(TypeKnowledge.Unknown, ValueKnowledge.Unknown)
+        // The copied value has the source's declared interpretation; its physical encoding is preserved.
+        data.facts.initialize(place, root.copy(type = TypeKnowledge.Exact(target.type.typeId)))
+        data.facts.copyFrom(original.data.facts, original.place, place, includeRoot = false)
+        for ((key, size) in original.data.listSizes) if (key.root == original.place.root && key.path.take(original.place.path.size) == original.place.path)
+            data.listSizes[Place(place.root, key.path.drop(original.place.path.size))] = size
+        target.storageBinding = StorageBinding(data, place, path, trustConstants = original.trustConstants)
+        if (frozen == null) encodeTo(path, source)
+        return target
+    }
+
+    fun element(container: Var<*>, index: Var<*>, type: MCFPPType): Var<*> {
+        val payload = ValueSnapshot.of(index).let { if (it is CompilerValue.Typed) it.payload else it }
+        val number = (payload as? CompilerValue.Integral)?.value?.toInt()
+        val key = when (payload) {
+            is CompilerValue.Text -> payload.value
+            is CompilerValue.Nbt -> (Tag.toNBT(payload.snbt) as? top.mcfpp.nbt.tags.primitive.StringTag)?.value
+            else -> null
+        }
+        if (!runtimeEncodable(container)) {
+            val part = if (!index.isDynamic) when (container) {
+                is NBTListConcrete -> number?.let { container.value.getOrNull(if (it < 0) container.value.size + it else it) }
+                is NBTDictionaryConcrete -> key?.let { container.value[it] }
+                else -> null
+            } else null
+            if (part != null && ValueSnapshot.of(part) != null) return part.clone().apply { parent = container }
+            LogProcessor.error("Compiler-only collection access requires a known constant index and element")
+            return UnknownVar(TempPool.getVarIdentify()).apply { isError = true }
+        }
+        val root = ensure(container)
+        val size = root.data.listSizes[root.place]
+        val normalized = number?.let { if (it < 0) size?.let { size -> size + it } else it }
+        if (index is MCInt && normalized != null && size != null && normalized !in 0 until size) {
+            LogProcessor.error("Index $number out of bounds for length $size")
+            return UnknownVar(TempPool.getVarIdentify()).apply { isError = true }
+        }
+        val place = if (index is MCInt && normalized != null) root.place.index(normalized)
+            else if (index is MCString && key != null) root.place.field(key) else root.place.unknownIndex()
+        val selected = if (!index.isDynamic && (number != null || key != null)) null else {
+            // The evaluated index belongs to the caller's frame and survives later/recursive RHS calls.
+            val captured = index.type.buildUnConcrete(TempPool.getVarIdentify()).apply {
+                nbtPath = NBTPath.stack.intIndex(0).memberIndex(identifier)
+                hasAssigned = true; isDynamic = true; isTemp = true
+                if (this is MCInt) isDataOnly = true
+            }
+            encodeTo(captured.nbtPath, index)
+            captured
+        }
+        val path = if (index is MCInt) if (selected != null) root.path.intIndex(selected as MCInt) else root.path.intIndex(number!!)
+            else if (selected != null) root.path.memberIndex(selected as MCString) else root.path.memberIndex(quotedKey(key!!))
+        if (root.data.facts.read(place) == null) {
+            val actual = if (type in erasedTypes && place.path.last() == PathSegment.UnknownIndex)
+                root.data.facts.children(root.place).values.map { it.type }.reduceOrNull(TypeKnowledge::join) ?: TypeKnowledge.Unknown
+                else if (type in erasedTypes) TypeKnowledge.Unknown else TypeKnowledge.Exact(type.typeId)
+            root.data.facts.initialize(place, ValueFacts(actual, ValueKnowledge.Unknown))
+        }
+        return adapter(type, TempPool.getVarIdentify(), root.copy(place = place, path = path)).apply { parent = container }
     }
 
     fun view(source: Var<*>, target: MCFPPType, diagnose: Boolean = true): Var<*> {
@@ -165,7 +319,7 @@ object StorageAccess {
         val data = binding.data
         val version = data.versions.version(binding.place)
         if (value.storageReadVersion == version) return value
-        if (value is DataTemplateObject) return if (value is MCFPPValue<*> && snapshot(value) == null)
+        if (value is DataTemplateObject || value is NBTListConcrete || value is NBTDictionaryConcrete) return if (value is MCFPPValue<*> && snapshot(value) == null)
             adapter(value.type, value.identifier, binding).apply { setAs(value); storageReadVersion = version } else value
         if (value is MCAny) return value
         val constant = snapshot(value)
@@ -209,19 +363,30 @@ object StorageAccess {
 
     private fun loadScore(binding: StorageBinding, layout: StorageLayout.Scoreboard) {
         if (binding.data.versions.isMaterialized(binding.place, layout)) return
-        Function.addCommand(Command("execute store result score ${layout.player} ${layout.objective} run data get")
+        emit(Command("execute store result score ${layout.player} ${layout.objective} run data get")
             .build(binding.path.toCommandPart()).build("1"))
         binding.data.versions.materialize(binding.place, layout)
     }
 
     fun write(target: Var<*>, source: Var<*>): Var<*> {
         val binding = target.storageBinding ?: error("Missing storage binding")
+        val original = source.storageBinding
+        val parts = FlowFacts()
+        original?.let { parts.copyFrom(it.data.facts, it.place, binding.place, includeRoot = false) }
+        val sizes = original?.data?.listSizes?.filterKeys {
+            it.root == original.place.root && it.path.take(original.place.path.size) == original.place.path
+        }?.mapKeys { (key, _) -> Place(binding.place.root, binding.place.path + key.path.drop(original.place.path.size)) }.orEmpty()
         binding.data.materialize()
         encodeTo(binding.path, source)
         val snapshot = ValueSnapshot.of(source)
         binding.data.types[actualType(source).typeId] = actualType(source)
         binding.data.write(binding.place, ValueFacts(if (source is MCAny) source.typeKnowledge else TypeKnowledge.Exact(source.type.typeId),
             snapshot?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown))
+        if (PathSegment.UnknownIndex !in binding.place.path) {
+            original?.data?.types?.let(binding.data.types::putAll)
+            binding.data.facts.copyFrom(parts, binding.place, binding.place, includeRoot = false)
+            binding.data.listSizes.putAll(sizes)
+        }
         return adapter(target.type, target.identifier, binding).apply {
             setAs(target)
             hasAssigned = true
@@ -262,7 +427,7 @@ object StorageAccess {
             if (changed == old) continue
             val binding = value.storageBinding ?: continue
             val tag = snapshotTag(changed) ?: continue
-            Function.addCommand(Commands.dataSetValue(binding.path, tag))
+            emit(Commands.dataSetValue(binding.path, tag))
             binding.data.write(binding.place, ValueFacts(TypeKnowledge.Exact(actualType(value).typeId), ValueKnowledge.Constant(changed)))
         }
     }
@@ -280,7 +445,7 @@ object StorageAccess {
     fun restore(spills: List<Spill>) {
         for ((value, slot) in spills) {
             fun score(player: String, objective: String, path: NBTPath = slot) {
-                Function.addCommand(Command("execute store result score $player $objective run data get").build(path.toCommandPart()).build("1"))
+                emit(Command("execute store result score $player $objective run data get").build(path.toCommandPart()).build("1"))
             }
             when (value) {
                 is MCInt -> score(value.name, value.sbObject.toString())
@@ -288,12 +453,12 @@ object StorageAccess {
                 is MCFloat -> if (!FloatProviders.enabled) {
                     for ((key, part) in listOf("sign" to value.sign, "int0" to value.int0, "int1" to value.int1, "exp" to value.exp))
                         score(part.name, part.sbObject.toString(), slot.memberIndex(key))
-                } else Function.addCommand(Commands.dataSetFrom(value.nbtPath, slot))
-                else -> Function.addCommand(Commands.dataSetFrom(value.nbtPath, slot))
+                } else emit(Commands.dataSetFrom(value.nbtPath, slot))
+                else -> emit(Commands.dataSetFrom(value.nbtPath, slot))
             }
             value.storageBinding?.let {
                 if (value is MCInt || value is ScoreBool || value is MCFloat && !FloatProviders.enabled)
-                    Function.addCommand(Commands.dataSetFrom(it.path, slot))
+                    emit(Commands.dataSetFrom(it.path, slot))
                 it.data.versions.invalidate(it.place)
                 value.storageReadVersion = it.data.versions.version(it.place)
             }
@@ -353,30 +518,31 @@ object StorageAccess {
         source.storageBinding?.let { binding ->
             binding.data.materialize()
             if (path.toCommandPart().toString() != binding.path.toCommandPart().toString())
-                Function.addCommand(Commands.dataSetFrom(path, binding.path))
+                emit(Commands.dataSetFrom(path, binding.path))
             return
         }
-        constantEncoding(source)?.let { Function.addCommand(Commands.dataSetValue(path, it)); return }
+        constantEncoding(source)?.let { emit(Commands.dataSetValue(path, it)); return }
         when (source) {
-            is MCInt -> if (source.isDataOnly) Function.addCommand(Commands.dataSetFrom(path, source.nbtPath))
+            is MCInt -> if (source.isDataOnly) emit(Commands.dataSetFrom(path, source.nbtPath))
                 else scoreWriter(path, source.name, source.sbObject.toString(), numericTag(source.type))()
-            is ScoreBool -> if (source.isDataOnly) Function.addCommand(Commands.dataSetFrom(path, source.nbtPath))
+            is ScoreBool -> if (source.isDataOnly) emit(Commands.dataSetFrom(path, source.nbtPath))
                 else scoreWriter(path, source.name, source.boolObject.toString(), "byte")()
             is BaseBool -> encodeTo(path, source.toScoreBool(false))
-            is MCFloat -> if (FloatProviders.enabled) Function.addCommand(Commands.dataSetFrom(path, source.nbtPath)) else {
-                Function.addCommand(Commands.dataSetValue(path, CompoundTag()))
+            is MCFloat -> if (FloatProviders.enabled) emit(Commands.dataSetFrom(path, source.nbtPath)) else {
+                emit(Commands.dataSetValue(path, CompoundTag()))
                 for ((key, score) in listOf("sign" to source.sign, "int0" to source.int0, "int1" to source.int1, "exp" to source.exp))
                     scoreWriter(path.memberIndex(key), score.name, score.sbObject.toString(), "int")()
             }
-            is DataTemplateObject, is NBTBasedData, is MCAny -> Function.addCommand(Commands.dataSetFrom(path, source.nbtPath))
+            is DataTemplateObject, is NBTBasedData, is MCAny -> emit(Commands.dataSetFrom(path, source.nbtPath))
             else -> {
                 source.storeToStack()
-                Function.addCommand(Commands.dataSetFrom(path, source.nbtPath))
+                emit(Commands.dataSetFrom(path, source.nbtPath))
             }
         }
     }
 
     fun constantEncoding(value: Var<*>): Tag<*>? {
+        if (!runtimeEncodable(value)) return null
         if (value.storageBinding != null) {
             val frozen = snapshot(value) ?: return null
             return snapshotTag(frozen)
@@ -389,8 +555,14 @@ object StorageAccess {
         return NBTUtil.varToNBT(value)?.let { Tag.toNBT(Tag.toSNBT(it)) }
     }
 
+    private fun runtimeEncodable(value: Var<*>): Boolean = actualType(value).hasRuntimeRepresentation && when (value) {
+        is NBTListConcrete -> value.value.all(::runtimeEncodable)
+        is NBTDictionaryConcrete -> value.value.values.all(::runtimeEncodable)
+        else -> true
+    }
+
     private fun scoreWriter(path: NBTPath, player: String, objective: String, tag: String): () -> Unit = {
-        Function.addCommand(Command("execute store result").build(path.toCommandPart())
+        emit(Command("execute store result").build(path.toCommandPart())
             .build("$tag 1 run scoreboard players get $player $objective"))
     }
 

@@ -241,6 +241,9 @@ class MCFPPListType(
     g: MCFPPType = MCFPPBaseType.Any
 ): MCFPPType(arrayListOf(MCFPPBaseType.Object)), MCFPPTypeWithGeneric{
 
+    // Wildcard is the internal empty-list literal, which has an ordinary empty NBT encoding.
+    override val hasRuntimeRepresentation: Boolean get() = generic[0] === MCFPPPrivateType.Wildcard || generic.all { it.hasRuntimeRepresentation }
+
     override val typeId: TypeId
         get() = TypeId.Applied(TypeId.Builtin(typeName), generic.map { it.typeId })
 
@@ -286,6 +289,8 @@ class MCFPPListType(
 class MCFPPImmutableListType(
     g: MCFPPType = MCFPPBaseType.Any
 ): MCFPPType(arrayListOf(MCFPPBaseType.Object)), MCFPPTypeWithGeneric{
+
+    override val hasRuntimeRepresentation: Boolean get() = generic.all { it.hasRuntimeRepresentation }
 
     override val typeId: TypeId
         get() = TypeId.Applied(TypeId.Builtin(typeName), generic.map { it.typeId })
@@ -341,6 +346,8 @@ class MCFPPImmutableListType(
 open class MCFPPCompoundType(
     g: MCFPPType
 ): MCFPPType(arrayListOf(MCFPPBaseType.Object)), MCFPPTypeWithGeneric{
+
+    override val hasRuntimeRepresentation: Boolean get() = generic.all { it.hasRuntimeRepresentation }
 
     override val typeId: TypeId
         get() = TypeId.Applied(TypeId.Builtin(typeName), generic.map { it.typeId })

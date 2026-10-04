@@ -105,8 +105,29 @@ class FlowFacts private constructor(private val facts: MutableMap<Place, ValueFa
         facts[place] = value
     }
     fun write(place: Place, value: ValueFacts) {
+        val unknownRange = PathSegment.UnknownIndex in place.path
+        val previous = facts[place]
         invalidate(place)
-        facts[place] = value
+        facts.entries.forEach { (key, fact) ->
+            if (!key.overlaps(place) || key == place) return@forEach
+            val type = when {
+                key.path.size > place.path.size -> TypeKnowledge.Unknown
+                key.path.size == place.path.size && (unknownRange || PathSegment.UnknownIndex in key.path) -> fact.type.join(value.type)
+                else -> fact.type
+            }
+            facts[key] = fact.copy(type = type)
+        }
+        facts[place] = if (unknownRange) value.copy(type = previous?.type?.join(value.type) ?: TypeKnowledge.Unknown,
+            value = ValueKnowledge.Unknown) else value
+    }
+    fun children(place: Place): Map<Place, ValueFacts> = facts.filterKeys {
+        it.root == place.root && it.path.size == place.path.size + 1 && it.path.take(place.path.size) == place.path
+    }
+    fun copyFrom(source: FlowFacts, from: Place, to: Place, includeRoot: Boolean = true) {
+        val copied = source.facts.filterKeys {
+            it.root == from.root && (if (includeRoot) it.path.size >= from.path.size else it.path.size > from.path.size) && it.path.take(from.path.size) == from.path
+        }.mapKeys { (key, _) -> Place(to.root, to.path + key.path.drop(from.path.size)) }
+        facts.putAll(copied)
     }
     fun invalidate(place: Place) {
         facts.entries.forEach { (key, value) ->

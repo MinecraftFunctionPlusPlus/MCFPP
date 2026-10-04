@@ -29,7 +29,7 @@ class MCFPPTypeVar : ConcreteVar<MCFPPTypeVar, MCFPPType>{
     }
 
     override fun clone(): MCFPPTypeVar {
-        return this
+        return MCFPPTypeVar(value, identifier).apply { setAs(this@MCFPPTypeVar) }
     }
 
     override fun getTempVar(): MCFPPTypeVar {

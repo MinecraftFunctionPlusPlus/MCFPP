@@ -59,7 +59,7 @@ class MCFPPExprVisitor(
         Function.currFunction = f
         return if(ctx.primary() != null){
             currSelector = null
-            val q = visitPrimary(ctx.primary())
+            val q = visitPrimary(ctx.primary()).let { if (it is PropertyVar) it.get() else it }
             Function.currFunction = l
             l.commands.addAll(f.commands)
             q
@@ -607,6 +607,7 @@ class MCFPPExprVisitor(
                 if(re is PropertyVar){
                     re = re.get()
                 }
+                if (re is MCAny && re !is MCObject) re = re.semanticValue()
                 if(value.expression() != null){
                     if(re !is Indexable){
                         LogProcessor.error("Cannot index ${re.type}")
@@ -729,7 +730,7 @@ class MCFPPExprVisitor(
             val compound = NBTDictionaryConcrete(HashMap())
             for (kv in ctx.nbtCompound().nbtKeyValuePair()){
                 val key = kv.Identifier().text
-                val value = visit(kv.expression())
+                val value = top.mcfpp.analysis.StorageAccess.capture(visit(kv.expression())).also { processVarCache.add(it) }
                 val v = value.type.buildUnConcrete(key)
                 compound.value[key] = v.assignedBy(value)
             }
@@ -737,18 +738,14 @@ class MCFPPExprVisitor(
         }else if(ctx.nbtList() != null){
             val valueList = ArrayList<Var<*>>()
             for (expr in ctx.nbtList().expression()){
-                valueList.add(visit(expr))
+                valueList.add(top.mcfpp.analysis.StorageAccess.capture(visit(expr)).also { processVarCache.add(it) })
             }
             val re = if(valueList.isEmpty()){
                 NBTListConcrete.getEmpty()
             }else{
                 NBTListConcrete(valueList, "", valueList.first().type)
             }
-            return if(re.value.all { it is MCFPPValue<*> }){
-                re
-            }else{
-                re.toDynamic(false)
-            }
+            return re
         }else if(ctx.nbtByteArray() != null){
             return NBTBasedDataConcrete(Tag.toNBT(ctx.nbtByteArray().text))
         }else if(ctx.nbtIntArray() != null) {

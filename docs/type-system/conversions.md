@@ -39,3 +39,5 @@ long/double 到 int 同样保留 Minecraft `data get` 操作及其范围与舍�
 例如 `value as float` 不等于 `toFloat(value)`，不会产生 from_int/_scoreto，也不会把来源 IntTag 改成 FloatTag。
 未使用视图不强制物化；实际访问时保留来源编码。旧浮点要求四分量布局，访问已知整数/布尔标量布局会诊断并建议 toFloat。
 普通来源无法证明兼容时警告，any 来源不插入类型标签或运行时验证；完整的其余布局诊断和存储迁移仍见 [迁移状态](./migration.md)。
+
+list/dict 的 as 视图也共享来源位置和编码，普通集合赋值则复制。含编译器专用元素的集合不能因 as 或 dynamic 自动生成 NBT 表示；这不增加集合的 toNBT 源重载。

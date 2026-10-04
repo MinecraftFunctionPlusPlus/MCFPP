@@ -6,6 +6,8 @@ import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
+import top.mcfpp.core.lang.nbt.NBTList
+import top.mcfpp.core.lang.nbt.NBTDictionary
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.lib.MemberPath
 import top.mcfpp.lib.NBTPath
@@ -639,7 +641,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             LogProcessor.error("Cannot assign a non-value variable to a declared-concrete variable.")
             return
         }
-        if (storageBinding != null && parent is DataTemplateObject) return
+        if (storageBinding != null && (parent is DataTemplateObject || parent is NBTList || parent is NBTDictionary)) return
         if(v is MCInt && this is MCInt && holder != null){
             holder!!.replaceScore(v)
             holder!!.onScoreChange(v)

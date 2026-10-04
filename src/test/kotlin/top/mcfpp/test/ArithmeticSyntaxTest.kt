@@ -8,9 +8,9 @@ import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.MCIntConcrete
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.MCFloatConcrete
-import top.mcfpp.core.lang.nbt.NBTListConcrete
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.test.util.MCFPPStringTest
+import top.mcfpp.test.util.ScoreCommandExecutor
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
@@ -163,15 +163,15 @@ class ArithmeticSyntaxTest {
             func arithmetic(){
                 var values = [1, 2];
                 values[0] += 3;
+                dynamic var updated = values[0];
+                dynamic var preserved = values[1];
             }
         """.trimIndent())
         assertEquals(0, Project.errorCount)
         val function = arithmeticFunction()
-        val values = function.scope.getVar("values") as NBTListConcrete
-        assertTrue(values.value[0] is MCInt)
-        val writes = function.commands.analyzeAll().count {
-            Regex("scoreboard players set temp_\\d+ mcfpp_default 4").containsMatchIn(it)
-        }
-        assertEquals(1, writes)
+        val machine = ScoreCommandExecutor(function.commands.analyzeAll())
+        assertEquals(4, machine.read(function.scope.getVar("updated") as MCInt))
+        assertEquals(2, machine.read(function.scope.getVar("preserved") as MCInt))
+        assertEquals(0, machine.stackDepth)
     }
 }
