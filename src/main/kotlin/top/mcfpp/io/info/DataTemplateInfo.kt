@@ -58,6 +58,13 @@ data class DataTemplateInfo(
         private var infoCache = HashMap<DataTemplateInfo, DataTemplate>()
 
         init {
+            resetCaches()
+        }
+
+        fun resetCaches() {
+            currTemplate = null
+            templateCache.clear()
+            infoCache.clear()
             infoCache[from(DataTemplate.baseDataTemplate)] = DataTemplate.baseDataTemplate
         }
 
@@ -130,6 +137,12 @@ data class GenericDataTemplateInfo(
 
         private var templateCache = HashMap<GenericDataTemplate, GenericDataTemplateInfo>()
         private var infoCache = HashMap<GenericDataTemplateInfo, GenericDataTemplate>()
+
+        fun resetCaches() {
+            currTemplate = null
+            templateCache.clear()
+            infoCache.clear()
+        }
 
         fun from(template: GenericDataTemplate): GenericDataTemplateInfo {
             templateCache[template]?.let { return it }

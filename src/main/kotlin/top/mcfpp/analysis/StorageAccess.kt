@@ -73,7 +73,7 @@ object StorageAccess {
 
     fun ensure(value: Var<*>): StorageBinding {
         value.storageBinding?.let { return it }
-        val encodingSupported = collectionEncodingSupported(value)
+        val encodingSupported = !hasRuntimeRepresentation(value) || collectionEncodingSupported(value)
         if (!encodingSupported) reportListEncoding()
         val snapshot = ValueSnapshot.of(value)
         val frozen = constantEncoding(value)?.let { top.mcfpp.backend.NbtEncoding.snbt(it) }
@@ -84,7 +84,7 @@ object StorageAccess {
         val place = Place(value.symbol!!.id)
         val path = value.nbtPath.clone()
         // Capture constants and physical addresses now. A delayed write never captures a mutable Var.
-        val initial: (() -> Unit)? = if (!encodingSupported || !actualType(value).hasRuntimeRepresentation) null
+        val initial: (() -> Unit)? = if (!encodingSupported || !hasRuntimeRepresentation(value)) null
             else if (frozen != null) ({ emit(Commands.dataSetValue(path, Tag.toNBT(frozen))) })
             else when (value) {
                 is MCInt -> if (!value.isDataOnly) scoreWriter(path, value.name, value.sbObject.toString(), numericTag(value.type)) else null
@@ -140,7 +140,7 @@ object StorageAccess {
 
     /** Freeze source codecs/addresses, including partially known containers, before delayed materialization. */
     private fun frozenWriter(value: Var<*>, path: NBTPath): () -> Unit {
-        if (!actualType(value).hasRuntimeRepresentation) {
+        if (!hasRuntimeRepresentation(value)) {
             LogProcessor.error("Compiler-only value '${actualType(value)}' cannot be stored in a runtime collection")
             return {}
         }
@@ -229,12 +229,12 @@ object StorageAccess {
             LogProcessor.error("Cannot generate dictionary access with an unknown string key: no verified NBT-path escaping backend is available")
             return UnknownVar(TempPool.getVarIdentify()).apply { isError = true }
         }
-        if (key?.isEmpty() == true && runtimeEncodable(container) && top.mcfpp.command.TargetCapabilities
+        if (key?.isEmpty() == true && hasRuntimeRepresentation(container) && top.mcfpp.command.TargetCapabilities
                 .forVersion(top.mcfpp.Project.config.version)?.emptyNbtPathKeys != true) {
             LogProcessor.error("Target '${top.mcfpp.Project.config.version}' cannot traverse an empty NBT path key")
             return UnknownVar(TempPool.getVarIdentify()).apply { isError = true }
         }
-        if (!runtimeEncodable(container)) {
+        if (!hasRuntimeRepresentation(container)) {
             val part = if (!index.isDynamic) when (container) {
                 is NBTListConcrete -> number?.let { container.value.getOrNull(if (it < 0) container.value.size + it else it) }
                 is NBTDictionaryConcrete -> key?.let { container.value[it] }
@@ -277,7 +277,7 @@ object StorageAccess {
 
     fun view(source: Var<*>, target: MCFPPType, diagnose: Boolean = true): Var<*> {
         if (source.isError) return source
-        if (!target.hasRuntimeRepresentation || !actualType(source).hasRuntimeRepresentation) {
+        if (!target.hasRuntimeRepresentation || !hasRuntimeRepresentation(source)) {
             if (target == actualType(source) && source is MCAny && source.compilerPayload != null) return source.compilerPayload!!
             if (target in erasedTypes) return source.implicitCast(target)
             return error(target, "Compiler-only value has no storage layout accessible as '$target'")
@@ -384,6 +384,10 @@ object StorageAccess {
 
     fun write(target: Var<*>, source: Var<*>): Var<*> {
         val binding = target.storageBinding ?: error("Missing storage binding")
+        if (!hasRuntimeRepresentation(source)) {
+            LogProcessor.error("Compiler-only value '${actualType(source)}' cannot be written to a runtime place")
+            return target.clone().apply { isError = true }
+        }
         if (!collectionEncodingSupported(source) || !listWriteSupported(target, source)) {
             reportListEncoding()
             return target.clone().apply { isError = true }
@@ -413,7 +417,13 @@ object StorageAccess {
         }
     }
 
-    fun materialize(value: Var<*>) { ensure(value).data.materialize() }
+    fun materialize(value: Var<*>) {
+        if (!hasRuntimeRepresentation(value)) {
+            LogProcessor.error("Compiler-only value '${actualType(value)}' cannot be materialized")
+            return
+        }
+        ensure(value).data.materialize()
+    }
 
     fun capture(value: Var<*>): Var<*> {
         val loaded = read(value)
@@ -435,7 +445,7 @@ object StorageAccess {
 
     /** Legacy natives can mutate a concrete host container; commit that change before dropping its facts. */
     fun hostSnapshot(value: Var<*>): CompilerValue? {
-        if (value !is MCFPPValue<*> || !actualType(value).hasRuntimeRepresentation) return null
+        if (value !is MCFPPValue<*> || !hasRuntimeRepresentation(value)) return null
         return ValueSnapshot.of(value.clone().apply { storageBinding = null; symbol = null })
     }
 
@@ -454,7 +464,7 @@ object StorageAccess {
 
     /** Expression temporaries outlive calls but must not share the callee's scratch slots. */
     fun spill(values: Collection<Var<*>>): List<Spill> = values.distinct().mapNotNull { value ->
-        if (!value.isTemp || value.isError || !actualType(value).hasRuntimeRepresentation || ValueSnapshot.of(value) != null) return@mapNotNull null
+        if (!value.isTemp || value.isError || !hasRuntimeRepresentation(value) || ValueSnapshot.of(value) != null) return@mapNotNull null
         val slot = NBTPath.stack.intIndex(0).memberIndex(TempPool.getVarIdentify())
         encodeTo(slot, value)
         Spill(value, slot)
@@ -512,7 +522,7 @@ object StorageAccess {
     }
 
     fun flush(values: Collection<Var<*>>) {
-        values.filter { it.hasAssigned && actualType(it).hasRuntimeRepresentation }
+        values.filter { it.hasAssigned && hasRuntimeRepresentation(it) }
             .map { ensure(it).data }.distinct().forEach(StoredData::materialize)
     }
 
@@ -529,7 +539,7 @@ object StorageAccess {
     }
 
     fun encodeTo(path: NBTPath, source: Var<*>) {
-        if (!actualType(source).hasRuntimeRepresentation) {
+        if (!hasRuntimeRepresentation(source)) {
             LogProcessor.error("Compiler-only value '${actualType(source)}' cannot be stored in an erased runtime payload")
             return
         }
@@ -561,7 +571,7 @@ object StorageAccess {
     }
 
     fun constantEncoding(value: Var<*>): Tag<*>? {
-        if (!runtimeEncodable(value) || !collectionEncodingSupported(value)) return null
+        if (!hasRuntimeRepresentation(value) || !collectionEncodingSupported(value)) return null
         if (value.storageBinding != null) {
             val frozen = snapshot(value) ?: return null
             return snapshotTag(frozen)
@@ -574,9 +584,11 @@ object StorageAccess {
         return NBTUtil.varToNBT(value)?.copy()
     }
 
-    private fun runtimeEncodable(value: Var<*>): Boolean = actualType(value).hasRuntimeRepresentation && when (value) {
-        is NBTListConcrete -> value.value.all(::runtimeEncodable)
-        is NBTDictionaryConcrete -> value.value.values.all(::runtimeEncodable)
+    /** A representable declared type may still carry compiler-only parts through erased fields. */
+    fun hasRuntimeRepresentation(value: Var<*>): Boolean = actualType(value).hasRuntimeRepresentation && when (value) {
+        is MCAny -> value.compilerPayload == null
+        is NBTListConcrete -> value.value.all(::hasRuntimeRepresentation)
+        is NBTDictionaryConcrete -> value.value.values.all(::hasRuntimeRepresentation)
         else -> true
     }
 

@@ -780,7 +780,7 @@ open class Function : Member, FieldContainer, WithDocument {
     }
 
     private fun hasRuntimePayload(value: Var<*>): Boolean =
-        (if (value is top.mcfpp.core.lang.MCAny) value.inferredType ?: value.type else value.type).hasRuntimeRepresentation
+        top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(value)
 
     /**
      * 让函数返回一个值。如果函数的返回值类型是void，则会抛出异常。

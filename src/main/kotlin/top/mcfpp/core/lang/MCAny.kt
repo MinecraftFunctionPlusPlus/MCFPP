@@ -37,13 +37,12 @@ open class MCAny : Var<MCAny> {
 
     fun bindPayload(source: Var<*>): MCAny {
         payloadType = (source as? MCAny)?.inferredType ?: source.type
-        compilerPayload = if (!payloadType!!.hasRuntimeRepresentation) (source as? MCAny)?.compilerPayload ?: source else null
-        if (compilerPayload == null) storageBinding = StorageAccess.ensure(source)
+        compilerPayload = if (!StorageAccess.hasRuntimeRepresentation(source)) (source as? MCAny)?.compilerPayload ?: source else null
+        storageBinding = if (compilerPayload == null) StorageAccess.ensure(source) else null
         return this
     }
 
     override fun doAssignedBy(b: Var<*>): MCAny {
-        val sourceType = (b as? MCAny)?.inferredType ?: b.type
         val snapshot = ValueSnapshot.of(b)
         val re: MCAny = when {
             this is MCObject -> MCObject(identifier).apply { setAs(this@MCAny) }
@@ -52,8 +51,12 @@ open class MCAny : Var<MCAny> {
         }
         re.storageBinding = null
         re.payloadType = (b as? MCAny)?.inferredType ?: b.type.takeUnless { it == MCFPPBaseType.Any || it == MCFPPBaseType.Object }
-        re.compilerPayload = if (!sourceType.hasRuntimeRepresentation) (b as? MCAny)?.compilerPayload ?: b else null
-        if (re.compilerPayload != null) return re
+        re.compilerPayload = if (!StorageAccess.hasRuntimeRepresentation(b))
+            top.mcfpp.core.lang.nbt.NBTList.copyCompilerPart((b as? MCAny)?.compilerPayload ?: b) else null
+        re.compilerPayload?.let { payload ->
+            if (re is MCAnyConcrete && payload is MCFPPValue<*>) re.value = payload.value
+            return re
+        }
         re.bindDeclaration()
         if (re.nbtPath.pathList.isEmpty()) re.nbtPath = top.mcfpp.lib.NBTPath.getNormalStackPath(re)
         val place = Place(re.symbol!!.id)
@@ -106,7 +109,6 @@ open class MCAny : Var<MCAny> {
     }
     override fun clone(): MCAny = MCAny(this)
     override fun getTempVar(): MCAny {
-        if (compilerPayload != null) return this
         val re = MCAny().apply { nbtPath = top.mcfpp.lib.NBTPath.temp.memberIndex(identifier); isTemp = true; bindDeclaration() }
         return re.assignedBy(this)
     }
@@ -125,8 +127,8 @@ class MCAnyConcrete : MCAny, MCFPPValue<Any?> {
     constructor(v: MCAnyConcrete) : super(v) { value = v.value }
     override fun clone() = MCAnyConcrete(this)
     override fun toDynamic(replace: Boolean): Var<*> {
-        if (compilerPayload != null) {
-            LogProcessor.error("Compiler-only value '${compilerPayload!!.type}' cannot be materialized as any")
+        if (!StorageAccess.hasRuntimeRepresentation(this)) {
+            LogProcessor.error("Compiler-only value '${inferredType ?: type}' cannot be materialized as any")
             return this
         }
         StorageAccess.materialize(this)

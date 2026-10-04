@@ -171,6 +171,11 @@ open class NBTList : NBTBasedData {
 
     companion object {
         internal fun copyCompilerPart(value: Var<*>): Var<*> = when (value) {
+            is MCAny -> value.clone().apply {
+                compilerPayload = value.compilerPayload?.let(::copyCompilerPart)
+                val payload = compilerPayload
+                if (this is MCAnyConcrete && payload is MCFPPValue<*>) this.value = payload.value
+            }
             is NBTListConcrete -> NBTListConcrete(value, ArrayList(value.value.map(::copyCompilerPart)))
             is NBTDictionaryConcrete -> NBTDictionaryConcrete(value, value.value)
             else -> value.clone()

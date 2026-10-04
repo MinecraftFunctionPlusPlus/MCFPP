@@ -81,7 +81,7 @@ object SpecializationPolicy {
 
     fun requiresParameter(type: MCFPPType, value: Var<*>): Boolean =
         type is MCFPPDeclaredConcreteType || !type.hasRuntimeRepresentation ||
-            !(if (value is MCAny) value.inferredType ?: value.type else value.type).hasRuntimeRepresentation
+            !StorageAccess.hasRuntimeRepresentation(value)
 
     fun key(function: Function, arguments: List<Var<*>>, specialized: List<Boolean>): SpecializationKey {
         require(arguments.size == specialized.size)

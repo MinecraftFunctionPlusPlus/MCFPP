@@ -7,6 +7,7 @@ import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.nbt.NBTListConcrete
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.SpecializationPolicy
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.test.util.MCFPPStringTest
 import top.mcfpp.test.util.ScoreCommandExecutor
@@ -388,6 +389,112 @@ class CollectionStorageTest {
         """)
         assertEquals(MCFPPBaseType.Int, (main.scope.getVar("preserved") as MCFPPTypeVar).value)
         assertEquals(MCFPPBaseType.Float, (main.scope.getVar("changed") as MCFPPTypeVar).value)
+    }
+
+    @Test fun aCompilerOnlyDictionaryUsesTheStaticErasedPayloadChannel() {
+        val main = compile("""
+            func main(){
+                var erased as any = {kind:int};
+                var interpreted = erased as dict<any>;
+                var preserved = interpreted["kind"];
+            }
+        """)
+        val erased = assertIs<MCAny>(main.scope.getVar("erased"))
+        assertNotNull(erased.compilerPayload)
+        assertNull(erased.storageBinding)
+        assertEquals(MCFPPBaseType.Int, assertIs<MCFPPTypeVar>(main.scope.getVar("preserved")).value)
+        assertFalse(main.commands.analyzeAll().any { "set value" in it || "set from" in it })
+    }
+
+    @Test fun aCompilerOnlyDictionaryCanTravelThroughObjectAndAnExplicitView() {
+        val main = compile("""
+            func main(){
+                var erased as object = {kind:int};
+                var interpreted = erased as dict<any>;
+                var preserved = interpreted["kind"];
+            }
+        """)
+        assertIs<MCObject>(main.scope.getVar("erased"))
+        assertEquals(MCFPPBaseType.Int, assertIs<MCFPPTypeVar>(main.scope.getVar("preserved")).value)
+        assertFalse(main.commands.analyzeAll().any { "set value" in it || "set from" in it })
+    }
+
+    @Test fun ordinaryErasedCopiesDoNotShareCompilerOnlyNestedContainers() {
+        val main = compile("""
+            func main(){
+                var erased as any = {types:[int,float]};
+                var copied = erased;
+                erased["types"][0] = float;
+                var preserved = copied["types"][0];
+                var changed = erased["types"][0];
+            }
+        """)
+        assertEquals(MCFPPBaseType.Int, assertIs<MCFPPTypeVar>(main.scope.getVar("preserved")).value)
+        assertEquals(MCFPPBaseType.Float, assertIs<MCFPPTypeVar>(main.scope.getVar("changed")).value)
+    }
+
+    @Test fun compilerOnlyErasedFieldsAreCopiedRecursivelyWithTheirContainer() {
+        val main = compile("""
+            func main(){
+                var values = {nested:{kind:int} as any};
+                var copied = values;
+                values["nested"]["kind"] = float;
+                var preserved = copied["nested"]["kind"];
+            }
+        """)
+        assertEquals(MCFPPBaseType.Int, assertIs<MCFPPTypeVar>(main.scope.getVar("preserved")).value)
+    }
+
+    @Test fun dynamicDeclarationsRejectCompilerOnlyContentsBeforeEmittingPayloadWrites() {
+        for (source in listOf(
+            "dynamic var value = {kind:int};",
+            "dynamic var value as any = {kind:int};",
+            "dynamic var value as object = {kind:int};",
+            "var erased as any = {kind:int}; dynamic var value = erased;",
+            "dynamic var value = [{kind:int}];"
+        )) {
+            MCFPPStringTest.readFromString("func main(){ $source }", version = "26.3")
+            assertTrue(Project.errorCount > 0, source)
+            val main = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single()
+            assertFalse(main.commands.analyzeAll().any { "set value" in it || "set from" in it }, source)
+        }
+    }
+
+    @Test fun aRuntimeBarrierDoesNotMaterializeCompilerOnlyErasedContainers() {
+        val main = compile("""
+            func main(){
+                var erased as any = {kind:int};
+                /say barrier
+                var interpreted = erased as dict<any>;
+                var preserved = interpreted["kind"];
+            }
+        """)
+        assertEquals(MCFPPBaseType.Int, assertIs<MCFPPTypeVar>(main.scope.getVar("preserved")).value)
+        assertFalse(main.commands.analyzeAll().any { "set value" in it || "set from" in it })
+        assertTrue(main.commands.analyzeAll().contains("say barrier"))
+    }
+
+    @Test fun compilerOnlyContainerSpecializationUsesAnImmutableCompletePayload() {
+        val main = compile("func main(){ var erased as any = {kind:int}; }")
+        val erased = assertIs<MCAny>(main.scope.getVar("erased"))
+        val payload = assertIs<top.mcfpp.core.lang.nbt.NBTDictionaryConcrete>(erased.compilerPayload)
+        assertTrue(payload.type.hasRuntimeRepresentation)
+        assertTrue(SpecializationPolicy.requiresParameter(payload.type, payload))
+        assertTrue(SpecializationPolicy.requiresParameter(MCFPPBaseType.Any, erased))
+        val key = SpecializationPolicy.key(main, listOf(erased), listOf(true))
+        val originalHash = key.hashCode()
+        assertIs<MCFPPTypeVar>(payload.value.getValue("kind")).value = MCFPPBaseType.Float
+        assertEquals(originalHash, key.hashCode())
+        assertNotEquals(key, SpecializationPolicy.key(main, listOf(erased), listOf(true)))
+    }
+
+    @Test fun explicitMaterializationRejectsCompilerOnlyContainersWithoutWriting() {
+        val main = compile("func main(){ var erased as any = {kind:int}; }")
+        Function.currFunction = main
+        val before = main.commands.analyzeAll()
+        StorageAccess.materialize(main.scope.getVar("erased")!!)
+        assertTrue(Project.errorCount > 0)
+        assertEquals(before, main.commands.analyzeAll())
     }
 
     @Test fun anEmptyLiteralStillHasARuntimeRepresentation() {

@@ -189,7 +189,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 stored.isConst = true
             }
             "dynamic" -> {
-                if(stored is MCFPPValue<*>){
+                if(stored is MCFPPValue<*> && !stored.isError){
                     stored.toDynamic(true)
                 }
             }

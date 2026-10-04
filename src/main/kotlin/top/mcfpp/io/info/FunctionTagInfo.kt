@@ -17,6 +17,10 @@ data class FunctionTagInfo(
 
         private val infoCache = HashMap<FunctionTagInfo, FunctionTag>()
 
+        fun resetCache() {
+            infoCache.clear()
+        }
+
         fun from(tag: FunctionTag): FunctionTagInfo {
             return FunctionTagInfo(tag.namespace, tag.identifier)
         }

@@ -45,6 +45,26 @@ class SpecializationPolicyTest {
         }
     }
 
+    @Test fun compilerOnlyContainerParametersUseCompletePayloadSpecialization() {
+        MCFPPStringTest.readFromString("""
+            func inspect<T as type>(value as T) -> type { return value["kind"]; }
+            func main(){
+                var first = inspect<any>({kind:int});
+                var second = inspect<any>({kind:int});
+                var third = inspect<any>({kind:float});
+            }
+        """.trimIndent(), version = "26.3")
+        assertEquals(0, Project.errorCount)
+        val generic = function("inspect") as GenericFunction
+        assertEquals(2, generic.compiledFunctions.size)
+        assertTrue(generic.compiledFunctions.values.all { it.normalParams.isEmpty() })
+        assertEquals(MCFPPBaseType.Int, assertIs<MCFPPTypeVar>(function("main").scope.getVar("first")).value)
+        assertEquals(MCFPPBaseType.Int, assertIs<MCFPPTypeVar>(function("main").scope.getVar("second")).value)
+        assertEquals(MCFPPBaseType.Float, assertIs<MCFPPTypeVar>(function("main").scope.getVar("third")).value)
+        assertTrue(function("main").commands.analyzeAll().none { "set value" in it || "set from" in it })
+        executeMain()
+    }
+
     @Test fun missingReturnPathsAreRejectedWhileAContinuationReturnIsAccepted() {
         MCFPPStringTest.readFromString("""
             func choose(flag as bool) -> int {

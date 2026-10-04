@@ -20,6 +20,7 @@ import top.mcfpp.core.lang.Var
 import top.mcfpp.io.LibBinReader
 import top.mcfpp.io.LibBinWriter
 import top.mcfpp.io.MCFPPFile
+import top.mcfpp.io.info.LibraryMetadata
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.Native
@@ -168,6 +169,7 @@ object Project {
         Function.forcedField = null
         DataTemplate.currTemplate = null
         GlobalScope.init()
+        LibraryMetadata.reset()
         ctx.clear()
         trees.clear()
         tokens.clear()

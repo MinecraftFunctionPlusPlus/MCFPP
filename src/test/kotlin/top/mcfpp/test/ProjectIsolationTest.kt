@@ -1,11 +1,19 @@
 package top.mcfpp.test
 
 import org.junit.jupiter.api.io.TempDir
+import org.antlr.v4.runtime.CharStreams
+import org.antlr.v4.runtime.CommonTokenStream
 import top.mcfpp.Project
+import top.mcfpp.antlr.mcfppLexer
+import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.io.MCFPPFile
+import top.mcfpp.io.info.DataTemplateInfo
+import top.mcfpp.io.info.GenericDataTemplateInfo
+import top.mcfpp.io.info.FunctionTagInfo
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionTag
 import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.GenericDataTemplate
 import top.mcfpp.model.scope.GlobalScope
 import java.nio.file.Path
 import kotlin.io.path.writeText
@@ -13,6 +21,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertNull
+import kotlin.test.assertNotSame
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -77,5 +86,53 @@ class ProjectIsolationTest {
         assertSame(Function.nullFunction, Function.currFunction)
         assertNull(Function.forcedField)
         assertNull(DataTemplate.currTemplate)
+    }
+
+    @Test fun templateMetadataCachesAreLimitedToTheCurrentProject() {
+        Project.init()
+        val original = DataTemplate("Cached", "metadata.isolation")
+        val info = DataTemplateInfo.from(original)
+        val first = info.get()
+        assertSame(first, info.get())
+
+        original.isAbstract = true
+        Project.init()
+
+        assertNotSame(first, info.get())
+        val updated = DataTemplateInfo.from(original)
+        assertNotSame(info, updated)
+        assertTrue(updated.isAbstract)
+        assertSame(DataTemplate.baseDataTemplate, DataTemplateInfo.from(DataTemplate.baseDataTemplate).get())
+    }
+
+    @Test fun genericTemplateMetadataCachesAreLimitedToTheCurrentProject() {
+        Project.init()
+        val parser = mcfppParser(CommonTokenStream(mcfppLexer(CharStreams.fromString("{}"))))
+        val original = GenericDataTemplate(parser.templateBody(), "Cached", "metadata.isolation")
+        val info = GenericDataTemplateInfo.from(original)
+        val first = info.get()
+        assertSame(first, info.get())
+
+        original.isAbstract = true
+        Project.init()
+
+        assertNotSame(first, info.get())
+        val updated = GenericDataTemplateInfo.from(original)
+        assertNotSame(info, updated)
+        assertTrue(updated.isAbstract)
+    }
+
+    @Test fun cachedFunctionTagsDoNotRetainFunctionsFromThePreviousProject() {
+        Project.init()
+        val info = FunctionTagInfo("metadata.isolation", "cached")
+        val first = info.get()
+        first.functions.add(Function("previous", "metadata.isolation", null))
+        assertSame(first, info.get())
+
+        Project.init()
+
+        val next = info.get()
+        assertNotSame(first, next)
+        assertTrue(next.functions.isEmpty())
     }
 }

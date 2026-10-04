@@ -228,8 +228,9 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             return this as Self
         }
         val actualType = if (b is MCAny) b.inferredType ?: b.type else b.type
-        if (isDynamic && !actualType.hasRuntimeRepresentation) {
+        if (isDynamic && !top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(b)) {
             LogProcessor.error("Compiler-only value '$actualType' cannot be materialized by a dynamic declaration")
+            isError = true
             return this as Self
         }
         var v = b.implicitCast(this.type)
