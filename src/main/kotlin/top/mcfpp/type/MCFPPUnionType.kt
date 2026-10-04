@@ -4,7 +4,12 @@ import top.mcfpp.core.lang.UnionTypeVar
 import top.mcfpp.core.lang.UnionTypeVarConcrete
 import top.mcfpp.core.lang.Var
 
-class MCFPPUnionType(vararg val types: MCFPPType): MCFPPType() {
+class MCFPPUnionType(vararg alternatives: MCFPPType): MCFPPType() {
+    val types: Array<out MCFPPType> = alternatives.flatMap { if (it is MCFPPUnionType) it.types.toList() else listOf(it) }
+        .distinctBy { it.typeId }.sortedBy { it.typeId.toString() }.toTypedArray()
+    init { require(types.isNotEmpty()) { "A union needs at least one alternative" } }
+    override val typeId: TypeId = TypeId.Union(types.map { it.typeId }.toSet())
+
     override val typeName: String
         get() = "UnionType(${types.joinToString(", ")})"
 

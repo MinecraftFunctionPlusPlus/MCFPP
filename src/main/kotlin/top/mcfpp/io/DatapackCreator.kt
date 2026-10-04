@@ -183,12 +183,9 @@ object DatapackCreator {
      */
     internal fun packMcMetaJson(version: String, description: String): String {
         val pack = linkedMapOf<String, Any>("description" to description)
-        val format = when (version) {
-            "26.1" -> listOf(101, 1)
-            "26.2" -> listOf(107, 1)
-            "26.3" -> listOf(121, 0)
-            else -> null
-        }
+        val capability = top.mcfpp.command.TargetCapabilities.forVersion(version)
+            ?: throw IllegalArgumentException("Unsupported version: $version")
+        val format = capability.packFormat
         if (format == null) {
             pack["pack_format"] = Utils.getVersion(version)
         } else {

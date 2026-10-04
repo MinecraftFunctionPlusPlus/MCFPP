@@ -50,6 +50,8 @@ object MCFPPStringTest {
         val charStream: CharStream = CharStreams.fromString(VersionPreprocessor.process(str, Project.config.version))
         val tokens = CommonTokenStream(mcfppLexer(charStream))
         val parser = mcfppParser(tokens)
+        parser.removeErrorListeners()
+        parser.addErrorListener(MCFPPErrorListener())
         val context = parser.compilationUnit()
         MCFPPFile.currFile = MCFPPFile()
         LogProcessor.debug("Generate Type Index...")

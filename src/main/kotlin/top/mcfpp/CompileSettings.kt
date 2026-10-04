@@ -25,4 +25,7 @@ object CompileSettings {
      * 是否输出全部编译结果
      */
     var printAll = false
+
+    /** Internal optimization switch for the migrated IR; language binding always runs. */
+    var foldIRConstants = true
 }

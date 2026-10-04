@@ -33,6 +33,8 @@ data class DataTemplateInfo(
             DataTemplate(identifier, namespace)
         }
         currTemplate = template
+        template.isInterface = isInterface
+        template.isAbstract = isAbstract
         template.scope = field.get()
         parents.forEach {
             template.extends(it.get())
@@ -67,7 +69,7 @@ data class DataTemplateInfo(
                 template.isAbstract,
                 template.namespace,
                 template.identifier,
-                if(template != DataTemplate.baseDataTemplate) template.parent.map { from(it as DataTemplate) } else emptyList(),
+                if(template != DataTemplate.baseDataTemplate) template.parent.filterIsInstance<DataTemplate>().map { from(it) } else emptyList(),
                 FieldInfo.from(template.scope),
                 template.constructors.map { TemplateConstructorInfo.from(it) },
                 template.companionObject != null,
@@ -102,6 +104,8 @@ data class GenericDataTemplateInfo(
             GenericDataTemplate(context, identifier, namespace)
         }
         currTemplate = template
+        template.isInterface = isInterface
+        template.isAbstract = isAbstract
         template.scope = field.get()
         parents.forEach {
             template.extends(it.get())

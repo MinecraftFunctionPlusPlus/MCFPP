@@ -221,7 +221,7 @@ open class ScoreBool : BaseBool, OnScoreboard {
         if(hasStoredInStack) return
         Function.addCommand(Command("execute store result")
             .build(nbtPath.toCommandPart())
-            .build("int 1 run scoreboard players get $name $boolObject"))
+            .build("byte 1 run scoreboard players get $name $boolObject"))
         hasStoredInStack = true
     }
 

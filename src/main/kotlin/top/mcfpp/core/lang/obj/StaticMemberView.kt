@@ -12,23 +12,23 @@ import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 
-class ObjectVar(type: CanSelectMember, identifier: String = TempPool.getVarIdentify()) :
-    ConcreteVar<ObjectVar, CanSelectMember>(identifier, type) {
+class StaticMemberView(type: CanSelectMember, identifier: String = TempPool.getVarIdentify()) :
+    ConcreteVar<StaticMemberView, CanSelectMember>(identifier, type) {
 
-    override var type: MCFPPType = MCFPPPrivateType.MCFPPObjectVarType
+    override var type: MCFPPType = MCFPPPrivateType.StaticMemberViewType
 
     override fun toDynamic(replace: Boolean): Var<*> {
         return this
     }
 
-    override fun doAssignedBy(b: Var<*>): ObjectVar {
+    override fun doAssignedBy(b: Var<*>): StaticMemberView {
         LogProcessor.error("Cannot assign value to object type variable")
         return this
     }
 
-    override fun clone(): ObjectVar = this
+    override fun clone(): StaticMemberView = this
 
-    override fun getTempVar(): ObjectVar = this
+    override fun getTempVar(): StaticMemberView = this
 
     override fun storeToStack() {}
 

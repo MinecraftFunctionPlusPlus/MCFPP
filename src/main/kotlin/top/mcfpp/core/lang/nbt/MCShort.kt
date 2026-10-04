@@ -2,6 +2,7 @@ package top.mcfpp.core.lang.nbt
 
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Commands
+import top.mcfpp.command.Command
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.model.FieldContainer
@@ -24,6 +25,13 @@ open class MCShort: MCInt {
     constructor(b: MCShort) : super(b)
 
     constructor(b: MCInt): super(b)
+
+    override fun storeToStack() {
+        if (hasStoredInStack) return
+        Function.addCommand(Command("execute store result").build(nbtPath.toCommandPart())
+            .build("short 1 run scoreboard players get $name $sbObject"))
+        hasStoredInStack = true
+    }
 
     override fun doAssignedBy(b: Var<*>) : MCInt {
         return when (b) {
@@ -92,8 +100,10 @@ class MCShortConcrete: MCShort, MCFPPValue<Short> {
     }
 
     override fun toDynamic(replace: Boolean): Var<*> {
-        MCIntConcrete(this, value.toInt()).toDynamic(replace)
-        return MCShort(this)
+        MCIntConcrete(this, value.toInt()).toDynamic(false)
+        val runtime = MCShort(this)
+        if (replace) replacedBy(runtime)
+        return runtime
     }
 
     override fun plus(a: Var<*>): Var<*> {

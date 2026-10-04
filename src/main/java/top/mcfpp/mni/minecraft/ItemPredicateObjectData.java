@@ -3,7 +3,7 @@ package top.mcfpp.mni.minecraft;
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.core.lang.obj.DataTemplateObject;
 import top.mcfpp.core.lang.MCInt;
-import top.mcfpp.core.lang.obj.ObjectVar;
+import top.mcfpp.core.lang.obj.StaticMemberView;
 import top.mcfpp.core.lang.RangeVar;
 import top.mcfpp.core.lang.nbt.MCString;
 import top.mcfpp.core.lang.nbt.NBTBasedData;
@@ -13,7 +13,7 @@ import top.mcfpp.util.ValueWrapper;
 public class ItemPredicateObjectData {
 
     @MNIFunction(caller = "ItemPredicate", normalParams = {"string"}, returnType = "ItemPredicatePart")
-    public static void hasComponent(MCString id, ObjectVar caller, ValueWrapper<DataTemplateObject> re){
+    public static void hasComponent(MCString id, StaticMemberView caller, ValueWrapper<DataTemplateObject> re){
         re.set(DataTemplate.newInstance("mcfpp.minecraft.item", "ContainPart"));
     }
 

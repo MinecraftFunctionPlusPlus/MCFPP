@@ -11,12 +11,14 @@ import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.antlr.mcfppParser.CurlBlockContext
 import top.mcfpp.command.*
 import top.mcfpp.core.lang.MCFPPValue
+import top.mcfpp.core.lang.MCFloat
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.doc.Document
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.lib.NamespaceID
+import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.*
 import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.compound.CompoundData
@@ -214,9 +216,20 @@ open class Function : Member, FieldContainer, WithDocument {
      */
     var ast: CurlBlockContext? = null
 
+    @Transient var bodyCompiled = false
+    @Transient var bodyBeingCompiled = false
+
     var context: FunctionContext = FunctionContext()
 
-    open val compiledFunctions: HashMap<List<Any?>, Function> = HashMap()
+    @Transient
+    var typedIR: top.mcfpp.analysis.TypedIR? = null
+
+    @Transient
+    var typedIRExitFunctions: List<Function> = emptyList()
+
+    val declarationId = top.mcfpp.analysis.SymbolId.fresh()
+
+    open val compiledFunctions: HashMap<top.mcfpp.analysis.SpecializationKey, Function> = HashMap()
 
     val staticRefValue: HashMap<String, Var<*>> = HashMap()
 
@@ -487,16 +500,31 @@ open class Function : Member, FieldContainer, WithDocument {
      * @param returnType
      */
     fun buildReturnVar(returnType: MCFPPType): Var<*>{
-        return if(returnType is MCFPPPrivateType){
+        if (returnType is top.mcfpp.type.MCFPPGenericParamType)
+            return top.mcfpp.core.lang.UnknownVar("return").apply { type = returnType }
+        val result = if(returnType is MCFPPPrivateType){
             returnType.buildReturnVar()
         }else if(returnType is MCFPPConcreteType) {
             returnType.build("return", this)
         }else{
             returnType.buildUnConcrete("return", this)
         }
+        if (FloatProviders.enabled && result is MCFloat) {
+            result.nbtPath = NBTPath.temp.memberIndex(result.name)
+        }
+        if (returnType !is MCFPPPrivateType) {
+            // Normal function calls are runtime operations; observing one constant
+            // return statement cannot prove the value of all reachable returns.
+            result.isDynamic = returnType.hasRuntimeRepresentation && returnType !is MCFPPDeclaredConcreteType
+            result.bindDeclaration("return")
+        }
+        return result
     }
 
     fun invoke(normalArgs: List<Var<*>>, caller: CanSelectMember?): Var<*> {
+        // A failed overload lookup has no formal parameters to map. Preserve the
+        // diagnostic and recovery result instead of indexing an empty signature.
+        if (this is UnknownFunction) return invoke(linkedMapOf(), caller)
         return invoke(mapNormalArgs(normalArgs), caller)
     }
 
@@ -507,9 +535,16 @@ open class Function : Member, FieldContainer, WithDocument {
      * @param caller 函数的调用者
      */
     open fun invoke(normalArgs: LinkedHashMap<String, Var<*>>, caller: CanSelectMember?): Var<*>{
-        if(ast != null){
-            return compile(completeDefaultValue(normalArgs)).let {(k, v) -> k.invoke(v, caller)}
+        val completed = if (ast != null) completeDefaultValue(normalArgs) else normalArgs
+        if(ast != null && (this is DataTemplateConstructor || normalParams.any { p ->
+                completed[p.identifier]?.let { SpecializationPolicy.requiresParameter(p.type, it) } == true
+            })){
+            return compile(completed).let {(k, v) -> k.invoke(v, caller)}
         }
+        // Imported and forward-declared runtime bodies are lowered once, without
+        // specializing ordinary constant arguments. Recursive calls reuse that body.
+        if (ast != null && !bodyCompiled && !bodyBeingCompiled)
+            runInFunction { MCFPPImVisitor().visitCurlBlock(ast!!) }
         when(caller){
             is MCFPPType, is DataTemplateObject, null -> invoke(normalArgs.values.toList())
             is Var<*> -> invoke(normalArgs.values.toList(), caller)
@@ -596,16 +631,23 @@ open class Function : Member, FieldContainer, WithDocument {
 
     open fun compile(args: LinkedHashMap<String, Var<*>>): Pair<Function, LinkedHashMap<String, Var<*>>>{
         //函数参数已知条件下的编译
-        val values = args.values.map { if (it is MCFPPValue<*>) it.value else null }
         val argList = args.values.toList()
-        compiledFunctions[values]?.let { return it to LinkedHashMap(args.filter { e -> e.value !is MCFPPValue<*> }) }
+        val specialized = normalParams.zip(argList).map { (param, value) -> SpecializationPolicy.requiresParameter(param.type, value) }
+        if (specialized.none { it }) return this to args
+        if (argList.indices.any { specialized[it] && !top.mcfpp.analysis.SpecializationKeys.isConstant(argList[it]) }) {
+            LogProcessor.error("Specialized parameters require complete immutable compile-time values")
+            return UnknownFunction(identifier) to args
+        }
+        val runtimeArgs = LinkedHashMap(args.filterKeys { name -> !specialized[normalParams.indexOfFirst { it.identifier == name }] })
+        val cacheKey = SpecializationPolicy.key(this, argList, specialized)
+        compiledFunctions[cacheKey]?.let { return it to runtimeArgs }
         val cf = Function(this)
         cf.scope.clearVar()
         cf.buildParamVar()
-        cf.buildReturnVar(cf.returnType)
+        cf.returnVar = cf.buildReturnVar(cf.returnType)
         //替换变量
-        for (i in values.indices) {
-            if (values[i] != null) {
+        for (i in argList.indices) {
+            if (specialized[i]) {
                 cf.scope.putVar(
                     normalParams[i].identifier,
                     cf.scope.getVar(normalParams[i].identifier)!!.assignedBy(argList[i]),
@@ -616,19 +658,19 @@ open class Function : Member, FieldContainer, WithDocument {
         //去除确定的参数
         val params = ArrayList<FunctionParam>(normalParams)
         for (i in argList.indices) {
-            if (argList[i] is MCFPPValue<*>) {
+            if (specialized[i]) {
                 params.remove(normalParams[i])
             }
         }
         cf.normalParams = params
         cf.commands.clear()
         cf.identifier = this.identifier + "_" + compiledFunctions.size
-        compiledFunctions[values] = cf
+        compiledFunctions[cacheKey] = cf
         cf.ast = null
         cf.runInFunction {
             MCFPPImVisitor().visitCurlBlock(ast!!)
         }
-        return cf to args.filter { it !is MCFPPValue<*> } as LinkedHashMap
+        return cf to runtimeArgs
     }
 
     /**
@@ -638,7 +680,11 @@ open class Function : Member, FieldContainer, WithDocument {
      */
     @InsertCommand
     open fun argPass(normalArgs: List<Var<*>>){
-        val tempArgs = normalArgs.map { it.getTempVar() }.toCollection(ArrayList())
+        val tempArgs = normalArgs.map {
+            if (FloatProviders.enabled && it is MCFloat && it !is MCFPPValue<*>) {
+                FloatProviders.callerValue(it)
+            } else it.getTempVar()
+        }.toCollection(ArrayList())
         for (i in this.normalParams.indices) {
             if(i >= tempArgs.size){
                 //参数缺省值
@@ -647,6 +693,9 @@ open class Function : Member, FieldContainer, WithDocument {
             //参数传递和子函数的参数进栈
             val p = scope.getVar(this.normalParams[i].identifier)!!
             p.isConst = false
+            // The body was checked with a runtime parameter. Copying a constant argument
+            // must therefore write that parameter's storage, without changing its facts.
+            p.isDynamic = this.normalParams[i].type.hasRuntimeRepresentation
             val pp = p.assignedBy(tempArgs[i])
             if(!this.normalParams[i].isStatic) pp.isConst = true
             scope.putVar(p.identifier, pp, true)
@@ -668,7 +717,11 @@ open class Function : Member, FieldContainer, WithDocument {
                     hasAddComment = true
                 }
                 //如果是static参数
-                args[i].assignedBy(scope.getVar(normalParams[i].identifier)!!)
+                val target = args[i]
+                val destination = if (FloatProviders.enabled && target is MCFloat && target !is MCFPPValue<*>) {
+                    FloatProviders.callerValue(target)
+                } else target
+                destination.assignedBy(scope.getVar(normalParams[i].identifier)!!)
             }
         }
     }
@@ -676,7 +729,7 @@ open class Function : Member, FieldContainer, WithDocument {
     fun fieldStore(){
         addComment("[Function ${this.namespaceID}] Store vars into the Stack")
         currField.forEachVar { v ->
-            v.storeToStack()
+            if (hasRuntimePayload(v)) v.storeToStack()
         }
     }
 
@@ -690,10 +743,13 @@ open class Function : Member, FieldContainer, WithDocument {
         addComment("[Function ${this.namespaceID}] Take vars out of the Stack")
         currField.forEachVar { v ->
             run {
-                v.getFromStack()
+                if (hasRuntimePayload(v)) v.getFromStack()
             }
         }
     }
+
+    private fun hasRuntimePayload(value: Var<*>): Boolean =
+        (if (value is top.mcfpp.core.lang.MCAny) value.inferredType ?: value.type else value.type).hasRuntimeRepresentation
 
     /**
      * 让函数返回一个值。如果函数的返回值类型是void，则会抛出异常。
@@ -706,7 +762,7 @@ open class Function : Member, FieldContainer, WithDocument {
             LogProcessor.error("Function $identifier has no return value but tried to return a ${v.type}")
             return
         }
-        if((returnVar.hasAssigned || v !is MCFPPValue<*>) && returnVar.type is MCFPPDeclaredConcreteType){
+        if((returnVar.hasAssigned || top.mcfpp.analysis.ValueSnapshot.of(v) == null) && returnType is MCFPPDeclaredConcreteType){
             LogProcessor.error("Function $namespaceID must return a concrete value")
             return
         }
@@ -731,22 +787,11 @@ open class Function : Member, FieldContainer, WithDocument {
      */
     @Override
     override fun equals(other: Any?): Boolean {
-        if (other is Function) {
-            if (this.identifier == other.identifier && this.normalParams.size == other.normalParams.size) {
-                if (this.normalParams.size == 0) {
-                    return true
-                }
-                //参数比对
-                for (i in normalParams.indices) {
-                    if (other.normalParams[i].type.typeName != this.normalParams[i].type.typeName) {
-                        return false
-                    }
-                }
-            }else{
-                return false
-            }
-        }
-        return false
+        if (other !is Function || namespace != other.namespace || identifier != other.identifier || owner != other.owner) return false
+        fun readonly(f: Function) = (f as? top.mcfpp.model.Generic<*>)?.readOnlyParams
+            ?: (f as? NativeFunction)?.readOnlyParams ?: emptyList()
+        return normalParams.map { it.type.typeId } == other.normalParams.map { it.type.typeId }
+            && readonly(this).map { it.type.typeId } == readonly(other).map { it.type.typeId }
     }
 
     /**
@@ -792,46 +837,11 @@ open class Function : Member, FieldContainer, WithDocument {
         return namespaceID.hashCode()
     }
 
-    fun isSelf(key: String, normalArgs: List<Var<*>>) : Boolean{
-        if (this.identifier == key && this.normalParams.size == normalArgs.size) {
-            if (this.normalParams.size == 0) {
-                return true
-            }
-            var hasFoundFunc = true
-            //参数比对
-            for (i in normalArgs.indices) {
-                if (!normalArgs[i].canImplicitCast(this.normalParams[i].type)) {
-                    hasFoundFunc = false
-                    break
-                }
-            }
-            return hasFoundFunc
-        }else{
-            return false
-        }
-    }
+    fun isSelf(key: String, normalArgs: List<Var<*>>): Boolean =
+        ParameterMatcher.accepts(this, key, emptyList(), normalArgs, false)
 
-    fun isSelfWithDefaultValue(key: String, normalArgs: List<Var<*>>) : Boolean{
-        if(key != this.identifier || normalArgs.size > this.normalParams.size) return false
-        if (this.normalParams.size == 0) {
-            return true
-        }
-        var hasFoundFunc = true
-        //参数比对
-        var index = 0
-        while (index < normalArgs.size) {
-            if (!scope.getVar(this.normalParams[index].identifier)!!.canImplicitCast(normalArgs[index].type)) {
-                hasFoundFunc = false
-                break
-            }
-            index++
-        }
-        return if(hasFoundFunc){
-            this.normalParams[index].hasDefault
-        }else{
-            false
-        }
-    }
+    fun isSelfWithDefaultValue(key: String, normalArgs: List<Var<*>>): Boolean =
+        ParameterMatcher.accepts(this, key, emptyList(), normalArgs, true)
 
     fun <T> runInFunction(block: () -> T){
         val old = currFunction
@@ -869,7 +879,7 @@ open class Function : Member, FieldContainer, WithDocument {
         val currBaseFunction: Function
             get() {
                 var ret = currFunction
-                while(ret is InternalFunction){
+                while(ret is InternalFunction || ret is NoStackFunction){
                     ret = ret.parent[0]
                 }
                 return ret

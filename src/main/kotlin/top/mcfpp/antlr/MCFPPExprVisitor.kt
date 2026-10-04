@@ -1,5 +1,7 @@
 package top.mcfpp.antlr
 
+import top.mcfpp.command.FloatProviders
+
 import top.mcfpp.Project.withCompilationContext
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.antlr.mcfppParser.Range1Context
@@ -8,8 +10,9 @@ import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.nbt.*
 import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
-import top.mcfpp.core.lang.obj.ObjectVar
+import top.mcfpp.core.lang.obj.StaticMemberView
 import top.mcfpp.lib.EntitySelector
+import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.Generic
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.Function
@@ -80,7 +83,7 @@ class MCFPPExprVisitor(
         processVarCache.add(visitCommonBinaryOperatorExpressionRe!!)
         for (i in 1..<ctx.conditionalOrExpression().size) {
             var b: Var<*>? = visitConditionalOrExpression(ctx.conditionalOrExpression(i))
-            if(b is MCFloat) b = b.toTempEntity()
+            if(b is MCFloat && !FloatProviders.enabled) b = b.toTempEntity()
             if(visitCommonBinaryOperatorExpressionRe!! != MCFloat.ssObj){
                 visitCommonBinaryOperatorExpressionRe = visitCommonBinaryOperatorExpressionRe!!.getTempVar()
             }
@@ -102,7 +105,7 @@ class MCFPPExprVisitor(
         processVarCache.add(visitConditionalOrExpressionRe!!)
         for (i in 1..<ctx.conditionalAndExpression().size) {
             var b: Var<*>? = visitConditionalAndExpression(ctx.conditionalAndExpression(i))
-            if(b is MCFloat) b = b.toTempEntity()
+            if(b is MCFloat && !FloatProviders.enabled) b = b.toTempEntity()
             if(visitConditionalOrExpressionRe!! != MCFloat.ssObj){
                 visitConditionalOrExpressionRe = visitConditionalOrExpressionRe!!.getTempVar()
             }
@@ -183,7 +186,7 @@ class MCFPPExprVisitor(
         processVarCache.add(visitAdditiveExpressionRe!!)
         for (i in 1..<ctx.multiplicativeExpression().size) {
             var b: Var<*>? = visitMultiplicativeExpression(ctx.multiplicativeExpression(i))
-            if(b is MCFloat) {
+            if(b is MCFloat && !FloatProviders.enabled) {
                 b = b.toTempEntity()
                 if(visitAdditiveExpressionRe!! != MCFloat.ssObj){
                     visitAdditiveExpressionRe = visitAdditiveExpressionRe!!.getTempVar()
@@ -209,8 +212,8 @@ class MCFPPExprVisitor(
         processVarCache.add(visitMultiplicativeExpressionRe!!)
         for (i in 1..<ctx.castExpression().size) {
             var b: Var<*>? = visitCastExpression(ctx.castExpression(i))
-            if(b is MCFloat) b = b.toTempEntity()
-            if(visitMultiplicativeExpressionRe != MCFloat.ssObj){
+            if(b is MCFloat && !FloatProviders.enabled) b = b.toTempEntity()
+            if((!FloatProviders.enabled || visitMultiplicativeExpressionRe !is MCFloat) && visitMultiplicativeExpressionRe != MCFloat.ssObj){
                 visitMultiplicativeExpressionRe = visitMultiplicativeExpressionRe!!.getTempVar()
             }
             visitMultiplicativeExpressionRe = visitMultiplicativeExpressionRe!!.binaryComputation(b!!, ctx.op[i-1].text)
@@ -289,7 +292,7 @@ class MCFPPExprVisitor(
             if(type == null){
                 LogProcessor.error(TextTranslator.SYMBOL_NOT_DEFINED.translate(currSelector!!.identifier))
             }else{
-                currSelector = ObjectVar(type)
+                currSelector = StaticMemberView(type)
             }
         }
         for (selector in ctx.selector()){
@@ -471,7 +474,26 @@ class MCFPPExprVisitor(
             //函数树
             Function.currFunction.child.add(func)
             func.parent.add(Function.currFunction)
-            return returnVar
+            return if (FloatProviders.enabled && returnVar is MCFloat && returnVar !is MCFPPValue<*>) {
+                FloatProviders.snapshot(returnVar)
+            } else if (returnVar is MCFloat && top.mcfpp.analysis.ValueSnapshot.of(returnVar) == null && !returnVar.isError) {
+                MCFloat().apply { isTemp = true }.assignedBy(returnVar)
+            } else if (returnVar is MCInt && top.mcfpp.analysis.ValueSnapshot.of(returnVar) == null && !returnVar.isError) {
+                // A later call can overwrite the same return score before this expression
+                // consumes it. Capture each call result at the expression boundary.
+                if (returnVar.isDataOnly) returnVar.getFromStack()
+                val snapshot = returnVar.type.buildUnConcrete(TempPool.getVarIdentify(), Function.currFunction) as MCInt
+                snapshot.isTemp = true
+                snapshot.nbtPath = NBTPath.getNormalStackPath(snapshot)
+                Function.addCommand(top.mcfpp.command.Commands.sbPlayerOperation(snapshot, "=", returnVar))
+                snapshot.hasAssigned = true
+                snapshot
+            } else if (returnVar is top.mcfpp.core.lang.bool.BaseBool && top.mcfpp.analysis.ValueSnapshot.of(returnVar) == null && !returnVar.isError) {
+                val snapshot = top.mcfpp.core.lang.bool.ScoreBool(Function.currFunction).assignedBy(returnVar)
+                snapshot.isTemp = true
+                snapshot.nbtPath = NBTPath.getNormalStackPath(snapshot)
+                snapshot
+            } else returnVar
         }
         //可能是模板的构造函数
         val template: DataTemplate? = GlobalScope.getTemplate(p.first, p.second)
@@ -530,12 +552,12 @@ class MCFPPExprVisitor(
             val typeStr = ctx.Identifier().text
             val type = MCFPPType.parseFromString(typeStr, Function.currFunction.scope)
             if(type != null){
-                re = ObjectVar(type)
+                re = StaticMemberView(type)
             }
         }
         if(re is UnknownVar && enumType != null && currSelector == null){
             //从枚举获取
-            currSelector = ObjectVar(enumType!!)
+            currSelector = StaticMemberView(enumType!!)
             val re2  = currSelector!!.getMemberVar(qwq, currSelector!!.getAccess(Function.currFunction))
             if (re2.first == null) {
                 LogProcessor.error("Cannot get member ${enumType!!.simpleName}.$qwq")

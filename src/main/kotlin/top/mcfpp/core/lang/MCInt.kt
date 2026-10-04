@@ -3,6 +3,7 @@ package top.mcfpp.core.lang
 import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
+import top.mcfpp.command.FloatProviders
 import top.mcfpp.core.lang.bool.CommandBoolPart
 import top.mcfpp.core.lang.bool.ExecuteBool
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
@@ -13,6 +14,7 @@ import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.obj.EnumVar
 import top.mcfpp.core.lang.obj.EnumVarConcrete
+import top.mcfpp.lib.SbObject
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.function.Function
 import top.mcfpp.nbt.tags.primitive.IntTag
@@ -30,7 +32,12 @@ import kotlin.math.nextUp
 /**
  * 代表了mc中的一个整数。实质上是记分板中的一个记分项。你可以对它进行加减乘除等基本运算操作，以及大小比较等逻辑运算。
  */
-open class MCInt : MCNumber<Int> {
+open class MCInt : MCNumber<Int>, OnScoreboard {
+
+    override fun setObj(sbObject: SbObject): MCInt {
+        this.sbObject = sbObject
+        return this
+    }
 
     constructor(curr: FieldContainer, identifier: String = TempPool.getVarIdentify()) : super(curr, identifier)
 
@@ -61,15 +68,10 @@ open class MCInt : MCNumber<Int> {
         //TODO 类支持
         return when (type) {
             MCFPPBaseType.Float -> {
-                MCInt("inp").assignedBy(this)
-                Function.addCommand("function math.float:hpo/float/_scoreto")
-                return MCFloat().assignedBy(MCFloat.ssObj)
+                return top.mcfpp.backend.NumericConversions.convert(this, type)
             }
             MCFPPNBTType.Long -> {
-                storeToStack()
-                val ret = MCLong()
-                Function.addCommand(Commands.dataSetFrom(ret.nbtPath, nbtPath))
-                ret
+                top.mcfpp.backend.NumericConversions.convert(this, type)
             }
             else -> re
         }
@@ -82,19 +84,18 @@ open class MCInt : MCNumber<Int> {
     override fun implicitCast(type: MCFPPType): Var<*> {
         val re = super.implicitCast(type)
         if(!re.isError) return re
+        if (this.type != MCFPPBaseType.Int) return re
         //TODO 类支持
         return when (type) {
             MCFPPBaseType.Float -> {
-                MCInt("inp").assignedBy(this)
-                Function.addCommand("function math.float:hpo/float/_scoreto")
-                return MCFloat().assignedBy(MCFloat.ssObj)
+                return top.mcfpp.backend.NumericConversions.promoteToFloat(this)
             }
             else -> re
         }
     }
 
     override fun canImplicitCast(type: MCFPPType): Boolean {
-        return super.canImplicitCast(type) || type == MCFPPBaseType.Float
+        return super.canImplicitCast(type)
     }
 
     //this = a
@@ -440,21 +441,6 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
             }
         }
         return re
-    }
-
-    @Override
-    override fun explicitCast(type: MCFPPType): Var<*> {
-        val re = super.explicitCast(type)
-        if(!re.isError) return re
-        //TODO 类支持
-        return when (type) {
-            MCFPPBaseType.Float -> MCFloatConcrete(value.toFloat(), this.identifier)
-            MCFPPNBTType.Long -> {
-                storeToStack()
-                return MCLongConcrete(LongTag(value.toLong()), this.identifier)
-            }
-            else -> re
-        }
     }
 
     @InsertCommand

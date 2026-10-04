@@ -52,17 +52,11 @@ open class MCByte: MCInt {
     }
 
     override fun implicitCast(type: MCFPPType): Var<*> {
-        val re = super.implicitCast(type)
-        if(!re.isError) return re
-        return when (type) {
-            MCFPPNBTType.Short -> MCShort(this)
-            MCFPPBaseType.Int -> MCInt(this)
-            else -> re
-        }
+        return super.implicitCast(type)
     }
 
     override fun canImplicitCast(type: MCFPPType): Boolean {
-        return super.canImplicitCast(type) || type == MCFPPNBTType.Short || type == MCFPPBaseType.Int
+        return super.canImplicitCast(type)
     }
     override fun storeToStack() {
         if(hasStoredInStack) return
@@ -117,8 +111,10 @@ class MCByteConcrete: MCByte, MCFPPValue<Byte> {
     }
 
     override fun toDynamic(replace: Boolean): Var<*> {
-        MCIntConcrete(this, value.toInt()).toDynamic(replace)
-        return MCByte(this)
+        MCIntConcrete(this, value.toInt()).toDynamic(false)
+        val runtime = MCByte(this)
+        if (replace) replacedBy(runtime)
+        return runtime
     }
 
     override fun plus(a: Var<*>): Var<*> {

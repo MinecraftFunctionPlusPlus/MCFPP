@@ -288,3 +288,34 @@ enum class OperatingSystem {
         }
     }
 }
+// Regenerate serialized language signatures after type, parser, or MNI metadata changes.
+// Run before check; processResources then copies the updated index into the runtime output.
+tasks.register<JavaExec>("regenerateStdlib") {
+    group = "build"
+    description = "Recompile the bundled MCFPP standard library index without rewriting datapacks."
+    dependsOn(tasks.classes)
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass.set("top.mcfpp.MCFPPKt")
+    val indexDirectory = layout.buildDirectory.dir("stdlib-index")
+    val indexConfig = layout.buildDirectory.file("stdlib-index.json")
+    doFirst {
+        val configFile = indexConfig.get().asFile
+        configFile.parentFile.mkdirs()
+        configFile.writeText(groovy.json.JsonOutput.toJson(mapOf(
+            "sourcePath" to file("src/main/mcfpp").absolutePath,
+            "targetPath" to indexDirectory.get().asFile.absolutePath,
+            "description" to "MCFPP Standard Library",
+            "namespace" to "mcfpp",
+            "noDatapack" to true,
+            "copyImport" to false,
+            "args" to listOf("-ignoreStdLib", "-isLib", "-level=info")
+        )))
+        setArgs(listOf(configFile.absolutePath))
+    }
+    doLast {
+        copy {
+            from(indexDirectory.get().file("bin.mclib"))
+            into("src/main/resources/datapack")
+        }
+    }
+}

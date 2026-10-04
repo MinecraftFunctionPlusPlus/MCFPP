@@ -1,0 +1,125 @@
+# 下一阶段：存储位置、擦除载荷与 as 视图
+
+这是下一会话的实施计划，**不是已实现功能说明**。
+继续原始类型重构目标，先阅读 [会话交接](./session-handoff-2026-10-04.md)，并重新核对当前源码。
+当前 140 个测试通过是新的实现基线；最终仍需完成原方案余下阶段，不能在本阶段结束后宣称整个重构完成。
+
+## 首要问题与交付范围
+
+当前 Symbol/Place/TypedView/StorageVersions 已有模型，但大多数旧 visitor、模板、擦除值和存储操作仍依靠 Var 对象。
+语言 as 仍调用 explicitCast，包含数值转换；MCAny/MCObject 仍使用 lastVar，跨控制流和函数边界没有完整的公共载荷槽。
+因此下一部分先建立一个可验证的纵向路径：
+
+> 同一 Place 的读写和物化 → 共用擦除载荷 → as 解释视图 → 模板成员访问与重叠写入失效。
+
+首批覆盖 int、bool、26.3 float、原始 NBT 和数据模板；旧浮点布局给准确的访问能力判断，并保持现有后端可编译。
+其他类型通过明确的内部边界继续迁入，不增加用户可选择的两套语义模式。
+形参、返回和模板赋值的行为必须同步验证，不能只实现局部表达式。
+
+## 实施前复核
+
+1. 确认交接提交存在、工作区状态与当前分支；保留用户新增修改。
+2. 读取 `migration.md` 和 `conversions.md`，明确哪些缺失属于旧路径，不把目标规范当作当前承诺。
+3. 重点读取以下入口：
+
+| 入口 | 当前作用与待迁移位置 |
+| --- | --- |
+| `analysis/ValueModel.kt` | Place 重叠、FlowFacts、TypedView、StorageLayout、StorageVersions；连接真实读写和缓存 |
+| `analysis/TypedIR.kt` | View/Convert/Call/Effect 目前多为模型，扩展实际 lowering/后端 |
+| `analysis/PrimitiveCompiler.kt` | 已接入的 int/bool 路径，保留分支汇合、循环和旧条件栈正确性 |
+| `antlr/MCFPPExprVisitor.kt` | visitCastExpression 仍调用 explicitCast；普通调用结果捕获也在这里 |
+| `antlr/MCFPPImVisitor.kt` | 旧赋值、分支、模板/集合语法仍直接生成命令或 toDynamic |
+| `core/lang/Var.kt` | 声明约束、旧转换、replacedBy、symbol 及变量适配边界 |
+| `core/lang/MCAny.kt`、`MCObject.kt` | 已知类型、编译器载荷和 lastVar；迁移统一载荷读写 |
+| `core/lang/obj/DataTemplateObject.kt` | 模板字段实例、复制约定、旧 cast 与成员变化回调 |
+| `type/ReinterpretationCompatibility.kt` | 现有纯兼容检查，应复用而非在 visitor 复制规则 |
+| `model/function/Function.kt` | 形参、返回、fieldStore/fieldRestore、调用帧及返回槽 |
+| `model/function/SpecializationPolicy.kt` | 普通参数不按常量特化；compiler-only 值保留内部特化约束 |
+| `model/function/NativeFunction.kt` | 旧反射/MNI 边界，效果未知时保守失效 |
+| `backend/NumericConversions.kt` | 显式值转换，as 路径不得调用 |
+| `command/FloatProviders.kt`、`TargetCapabilities.kt` | 原有数值提供器和目标能力，保留已验证行为 |
+
+这些路径相对于 `src/main/kotlin/top/mcfpp`。
+
+## 建议实施顺序
+
+### 1. 将位置与写入版本连接到真实存储
+
+- 明确声明位置、字段路径、集合元素路径和临时表达式结果的身份。
+  不因 Concrete 适配对象变成运行时对象重新分配声明 Symbol。
+- 提供统一的读、写、materialize、invalidate 接口；布局选择由目标能力和来源编码决定。
+- 物化不撤销 Constant 事实；写入递增位置版本并失效重叠字段、视图和同步缓存。
+- 已知字段写尽量保留兄弟字段事实；未知索引或未知范围保守失效容器/共享对象。
+- 递归和连续调用需要保存所有尚未消费的临时结果；当前只复制了标量返回位置，不能假设完整帧分配已经完成。
+- 编译器对象只在内部静态通道传递，禁止通过 erased/object 声明强制物化到 Minecraft。
+
+先用直接模型测试和一个完整解析到命令的样例验证，再逐步替换旧读写调用。
+不能在各 visitor 重新散布 hasStoredInStack、trackLost 或新的等价布尔标记。
+
+### 2. any/object 采用共用载荷槽
+
+- 已知具体类型保持原有表示，跨分支或普通函数边界需要统一表示时使用 NBT 槽和来源的约定编码。
+- 区分载荷位置与类型知识：值未知但类型 Exact 时仍能绑定操作；不同实际类型汇合为 Candidates。
+- 所有到达路径共同成立的类型和值事实才可保留；信息丢失处警告，未经 as 的具体操作报错。
+- 未知载荷支持复制、赋值、传参和返回，不依靠 lastVar 重建对象，也不新增运行时类型标签和成员分派。
+- object 只使用其声明签名，不能因优化掌握实际类型而开放成员。
+- 已知 any 的重载匹配继续采用实际类型；未知 any 仅直接匹配 any/object。
+- type 等可快照的编译器载荷保留现有内部特化；任意可变 Java 对象需要明确引用/版本模型，不能塞入不可变常量缓存键。
+
+### 3. as 下沉为真正的 TypedView
+
+- visitCastExpression 只负责目标类型解析和视图绑定，不调用 NumericConversions、构造器或旧 explicitCast。
+- 视图指向来源 Place，目标类型仅决定成员、方法和存储访问解释。
+- any 来源不做运行时验证；普通来源复用 checkReinterpretation，不能证明兼容时警告后继续尝试。
+- 仅在目标没有该布局的访问能力时给代码生成错误及转换建议；正常未知类型、私有成员和不可访问成员仍是语言错误。
+- 取得未使用视图尽量不生成命令。必要物化只保存来源编码，不能悄悄转换成目标数值或补字段。
+- 对不兼容视图不推导来源未经证明的常量；字段匹配也不能自动满足目标的无实现抽象能力。
+- 目标方法按目标模板定义绑定，不做来源方法动态分派。
+- 视图写入使用第 1 步的失效接口；源变量和其他视图下一次读取不能沿用旧常量或旧同步副本。
+- 普通模板赋值保留复制约定，只有解释视图共享数据位置。
+
+### 4. 同步迁移调用、效果与旧代码
+
+- 用户函数从 IR 推导效果；递归保守求解；未声明 MNI 和原始命令使用未知效果。
+- 未知效果前提交可能被读取的延迟写入，之后撤销可能被修改的位置事实和缓存。
+- 原始 function 命令嵌套调用时保持旧目标的内部条件帧，不重置调用方状态。
+- 将旧数值 as 样例迁为 toInt/toFloat 等函数，保留专门测试 as 不生成转换操作。
+- 标准库、示例和原生签名随语义一起迁移；修改缓存结构/元数据时升级版本并重新生成 bin.mclib。
+- 适配器集中放在边界，完成仓库内调用迁移后删除，不能变成长期第二套模型。
+
+## 本阶段必须新增的实际断言
+
+| 范围 | 验收用例 |
+| --- | --- |
+| any 控制流 | 同类型不同值保持 Exact；不同类型为 Candidates；未知操作报错；显式 as 后可绑定；类型分析不受折叠开关影响 |
+| 擦除传递 | any/object 跨分支、形参、返回和集合保存后载荷保持；未知载荷可复制；编译器专用值不会生成 NBT 写入 |
+| as 生成 | 不调用构造器、不补字段、不复制模板、不调用 toFloat/toInt、不生成类型检查；未使用视图不做无必要物化 |
+| 模板关系 | 名义上转、无法证明的下转、结构相同/额外/缺失/可选字段、嵌套循环、可写不变、只读递归、私有与抽象能力 |
+| 视图诊断 | 不兼容但可生成访问时仅警告；布局无访问能力时明确代码生成错误；正常访问控制不被绕过 |
+| 别名写入 | 视图 A 修改字段后源与视图 B 读取新值；重叠缓存失效；已知字段不误清兄弟字段；未知索引保守失效 |
+| 存储 | scoreboard/NBT/实体路径/帧之间正确搬运；未修改同一位置不重复同步；物化后仍保留可证明常量 |
+| 调用 | 嵌套、连续、递归调用不覆盖活跃返回或临时值；提前返回栈平衡；未知 MNI/原始命令屏障无过期事实 |
+| 数值与后端 | int/float 提升方向不变；NBT 映射不直接算术；旧/新浮点编码保持来源布局；26.3 无旧库调用 |
+| 优化等价性 | 开/关已迁入路径的折叠，结果及副作用顺序相同；命令减少不能改变行为 |
+
+使用单元断言、命令结构检查和独立执行器。服务端缺失时明确记录待验证项，不把执行器当作实际目标验证。
+宽松重解释的错误数据不要求安全运行结果，但必须验证诊断、生成方式和优化器不制造错误常量。
+
+## 验证与交付
+
+按改动运行相关测试；出现新缺陷时扩展回归，已有检查通过后不要无理由反复运行。
+阶段完成时依次运行以下命令，**不要并行启动 Gradle 构建**：
+
+```sh
+./gradlew regenerateStdlib -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
+./gradlew check --rerun-tasks -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
+git diff --check
+```
+
+regenerateStdlib 后单独执行 check，使 processResources 复制新索引。
+更新 migration.md、conversions.md、verification.md 和交接记录中的实现边界、测试总数、服务端状态。
+交付应同时给出代码、诊断断言、命令结果和已知限制，不能只提交类型/存储模型占位类。
+
+此阶段完成后，继续迁移全部集合、模板构造、浮点、泛型及 MNI，统一成员签名，清除 Concrete 双层继承和旧状态。
+最终核心类型检查、控制流、参数匹配和命令生成不能再依赖 MCFPPValue 或 Concrete 子类判定；
+该最终条件当前尚未满足。

@@ -17,7 +17,7 @@ import java.util.Objects;
 
 public class DataObjectData {
 
-    @MNIFunction(caller = "DataObject", returnType = "text", override = true)
+    @MNIFunction(caller = "DataObject", returnType = "text")
     public static void toText(DataTemplateObject caller, ValueWrapper<JsonTextConcrete> returnValue) throws IOException {
         var l = new ListChatComponent();
         if(caller instanceof DataTemplateObjectConcrete callerC){

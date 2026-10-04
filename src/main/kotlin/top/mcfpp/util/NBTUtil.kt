@@ -23,13 +23,13 @@ object NBTUtil {
             //is Entity -> TODO()
             is JavaVar -> if(v.value is Var<*>) varToNBT(v.value as Var<*>) else valueToNBT(v.value)
             //is JsonString -> TODO()
-            is MCAnyConcrete -> valueToNBT(v.value)
+            is MCAnyConcrete -> v.lastVar?.let { varToNBT(it) } ?: valueToNBT(v.value)
             is ScoreBoolConcrete -> ByteTag(v.value)
             is MCByteConcrete -> ByteTag(v.value)
             is MCShortConcrete -> ShortTag(v.value)
             is MCIntConcrete -> IntTag(v.value)
             is MCLongConcrete -> v.value
-            is MCFloatConcrete -> FloatTag(v.value)
+            is MCFloatConcrete -> if (top.mcfpp.command.FloatProviders.enabled) FloatTag(v.value) else v.legacyNBTEncoding()
             is MCDoubleConcrete -> v.value
             is MCFPPTypeVar -> TODO()
             is MCStringConcrete -> v.value

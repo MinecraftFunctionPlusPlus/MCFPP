@@ -42,26 +42,7 @@ interface SimpleScopeWithFunction : IScopeWithFunction {
 
     @Nullable
     override fun getFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): Function {
-        val functions = this.functions[key]
-        if(!functions.isNullOrEmpty()){
-            if(functions.size == 1) return functions[0]
-            for (f in functions) {
-                if(f is Generic<*> && f.isSelf(key, readOnlyArgs, normalArgs)){
-                    return f
-                }
-                if(f.isSelf(key, normalArgs)){
-                    return f
-                }
-            }
-            for (f in functions) {
-                if(f is Generic<*> && f.isSelfWithDefaultValue(key, readOnlyArgs, normalArgs)){
-                    return f
-                }
-                if(f.isSelfWithDefaultValue(key, normalArgs)){
-                    return f
-                }
-            }
-        }
+        top.mcfpp.model.function.ParameterMatcher.select(this.functions[key].orEmpty(), key, readOnlyArgs, normalArgs)?.let { return it }
         parent.forEach {
             if(it is IScopeWithFunction){
                 val re = it.getFunction(key, readOnlyArgs, normalArgs)
@@ -87,7 +68,7 @@ interface SimpleScopeWithFunction : IScopeWithFunction {
     }
 
     override fun hasFunction(function: Function, considerParent: Boolean): Boolean{
-        val qwq = functions.containsKey(function.identifier) && functions[function.identifier]!!.contains(function)
+        val qwq = functions.containsKey(function.identifier) && functions[function.identifier]!!.any { top.mcfpp.model.function.ParameterMatcher.sameSignature(it, function) }
         return if(considerParent && !qwq && parent.isNotEmpty()) {
             parent.any { it is IScopeWithFunction && it.hasFunction(function, true) }
         }else{

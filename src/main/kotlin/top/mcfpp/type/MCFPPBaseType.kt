@@ -22,7 +22,17 @@ import top.mcfpp.nbt.tags.primitive.StringTag
  * 类型单例
  */
 class MCFPPBaseType {
-    object Any: MCFPPType(arrayListOf()){
+    object Object: MCFPPType() {
+        override val typeId: TypeId = TypeId.Builtin("object")
+        override val typeName: kotlin.String get() = "object"
+        override val instanceData by lazy { CompoundData("object", "mcfpp.lang") }
+        override fun build(identifier: kotlin.String, value: kotlin.Any?): Var<*> = MCObject(identifier)
+        override fun buildUnConcrete(identifier: kotlin.String): Var<*> = MCObject(identifier)
+    }
+
+    object Any: MCFPPType(arrayListOf(Object)){
+
+        override val typeId: TypeId = TypeId.Builtin("MCFPPBaseType.Any")
 
         override val instanceData by lazy {
             CompoundData("any","mcfpp.lang").apply {
@@ -52,7 +62,9 @@ class MCFPPBaseType {
 
     }
 
-    object Int: MCFPPType(arrayListOf(Any)){
+    object Int: MCFPPType(arrayListOf(Object)){
+
+        override val typeId: TypeId = TypeId.Builtin("MCFPPBaseType.Int")
 
         override val instanceData by lazy {
             CompoundData("int","mcfpp").apply {
@@ -62,13 +74,7 @@ class MCFPPBaseType {
             }
         }
 
-        override val concreteInstanceData by lazy {
-            CompoundData("int","mcfpp").apply {
-                this.commonType = Int
-                extends(Any.concreteInstanceData)
-                injectedBy(MCIntConcreteData::class.java)
-            }
-        }
+        override val concreteInstanceData get() = instanceData
 
         override val typeName: kotlin.String
             get() = "int"
@@ -85,7 +91,9 @@ class MCFPPBaseType {
         override fun buildUnConcrete(identifier: kotlin.String): Var<*> = MCInt(identifier)
 
     }
-    object String: MCFPPType(arrayListOf(Any)){
+    object String: MCFPPType(arrayListOf(Object)){
+
+        override val typeId: TypeId = TypeId.Builtin("MCFPPBaseType.String")
 
         override val objectData: CompoundData
             get() = MCString.data
@@ -106,7 +114,9 @@ class MCFPPBaseType {
         override fun buildUnConcrete(identifier: kotlin.String): Var<*> = MCString(identifier)
     }
 
-    object Float: MCFPPType(arrayListOf(Any)){
+    object Float: MCFPPType(arrayListOf(Object)){
+
+        override val typeId: TypeId = TypeId.Builtin("MCFPPBaseType.Float")
 
         override val instanceData by lazy {
             CompoundData("float","mcfpp").apply {
@@ -116,13 +126,7 @@ class MCFPPBaseType {
             }
         }
 
-        override val concreteInstanceData by lazy {
-            CompoundData("float","mcfpp").apply {
-                this.commonType = Float
-                extends(Any.concreteInstanceData)
-                injectedBy(MCFloatConcreteData::class.java)
-            }
-        }
+        override val concreteInstanceData get() = instanceData
 
         override val typeName: kotlin.String
             get() = "float"
@@ -139,7 +143,9 @@ class MCFPPBaseType {
 
     }
 
-    object Bool: MCFPPType(arrayListOf(Any)){
+    object Bool: MCFPPType(arrayListOf(Object)){
+
+        override val typeId: TypeId = TypeId.Builtin("MCFPPBaseType.Bool")
 
         override val instanceData by lazy {
             CompoundData("bool","mcfpp.lang").apply {
@@ -149,13 +155,7 @@ class MCFPPBaseType {
             }
         }
 
-        override val concreteInstanceData by lazy{
-            CompoundData("bool","mcfpp.lang").apply {
-                this.commonType = Bool
-                extends(Any.instanceData)
-                injectedBy(MCBoolConcreteData::class.java)
-            }
-        }
+        override val concreteInstanceData get() = instanceData
 
         override val typeName: kotlin.String
             get() = "bool"
@@ -171,7 +171,9 @@ class MCFPPBaseType {
         override fun buildUnConcrete(identifier: kotlin.String): Var<*> = ScoreBool(identifier)
     }
 
-    object JsonText: MCFPPType(arrayListOf(MCFPPNBTType.NBT)){
+    object JsonText: MCFPPType(arrayListOf(Object)){
+
+        override val typeId: TypeId = TypeId.Builtin("MCFPPBaseType.JsonText")
 
         override val instanceData by lazy {
             CompoundData("text","mcfpp.lang").apply {
@@ -216,7 +218,9 @@ class MCFPPBaseType {
         override fun buildUnConcrete(identifier: kotlin.String): Var<*> = JsonText(identifier)
     }
 
-    object Range: MCFPPType(arrayListOf(Any)){
+    object Range: MCFPPType(arrayListOf(Object)){
+
+        override val typeId: TypeId = TypeId.Builtin("MCFPPBaseType.Range")
 
         override val instanceData by lazy {
             CompoundData("range","mcfpp.lang").apply {
@@ -242,7 +246,9 @@ class MCFPPBaseType {
         override fun buildUnConcrete(identifier: kotlin.String): Var<*> = RangeVar(identifier)
     }
 
-    object Pos3: MCFPPType(arrayListOf(Any)){
+    object Pos3: MCFPPType(arrayListOf(Object)){
+
+        override val typeId: TypeId = TypeId.Builtin("MCFPPBaseType.Pos3")
 
         override val instanceData by lazy {
             CompoundData("pos3", "mcfpp").apply {
@@ -257,7 +263,9 @@ class MCFPPBaseType {
         override fun buildUnConcrete(identifier: kotlin.String): Var<*> = Pos3Var(identifier)
     }
 
-    object Pos2: MCFPPType(arrayListOf(Any)){
+    object Pos2: MCFPPType(arrayListOf(Object)){
+
+        override val typeId: TypeId = TypeId.Builtin("MCFPPBaseType.Pos2")
 
         override val instanceData by lazy {
             CompoundData("pos2", "mcfpp").apply {

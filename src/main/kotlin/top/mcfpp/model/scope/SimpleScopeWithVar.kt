@@ -24,12 +24,14 @@ interface SimpleScopeWithVar : IScopeWithVar {
      */
     override fun putVar(key: String, `var`: Var<*>, forced: Boolean): Boolean {
         if(forced){
+            `var`.bindDeclaration(key, vars[key])
             vars[key] = `var`
             return true
         }
         return if (vars.containsKey(key)) {
             false
         } else {
+            `var`.bindDeclaration(key)
             vars[key] = `var`
             true
         }

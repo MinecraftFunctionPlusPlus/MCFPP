@@ -53,6 +53,9 @@ class FunctionParam(
     var defaultVar: Var<*>? = null
 
     fun buildVar(): Var<*>{
+        if (type is MCFPPGenericParamType || type is top.mcfpp.type.MCFPPDeclaredConcreteType &&
+            (type as top.mcfpp.type.MCFPPDeclaredConcreteType).type is MCFPPGenericParamType)
+            return top.mcfpp.core.lang.UnknownVar(identifier).apply { type = this@FunctionParam.type }
         val qwq = if(( isReadOnly || type is MCFPPConcreteType ) && type != MCFPPBaseType.Any){
             type.build(identifier, function)
         }else{
@@ -80,7 +83,7 @@ class FunctionParam(
          */
 
         fun isSubOf(subType: MCFPPType, parentType: MCFPPType): Boolean{
-            return subType.isSubOf(parentType)
+            return top.mcfpp.type.TypeRelations.resolveImplicitConversion(subType, parentType) != null
         }
 
         /**
@@ -107,7 +110,7 @@ class FunctionParam(
         fun parseReadonlyAndNormalParamTypes(params: mcfppParser.FunctionParamsContext): Pair<ArrayList<MCFPPType>,ArrayList<MCFPPType>>{
             val r = ArrayList<MCFPPType>()
             val n = ArrayList<MCFPPType>()
-            val typeScope = SimpleScopeWithType.getTypeScope()
+            val typeScope = SimpleScopeWithType.getTypeScope().apply { parent.add(top.mcfpp.io.MCFPPFile.currFile?.field) }
             //解析只读参数
             params.readOnlyParams()?.let {
                 for (param in it.parameterList()?.parameter()?: emptyList()) {
@@ -132,7 +135,7 @@ class FunctionParam(
 
         fun parseNormalParamTypes(params: mcfppParser.NormalParamsContext): ArrayList<MCFPPType>{
             val n = ArrayList<MCFPPType>()
-            val typeScope = SimpleScopeWithType.getTypeScope()
+            val typeScope = SimpleScopeWithType.getTypeScope().apply { parent.add(top.mcfpp.io.MCFPPFile.currFile?.field) }
             for (param in (params.parameterList()?.parameter()?: emptyList())) {
                 n.add(MCFPPType.parseFromString(param.type().text, typeScope)?: run {
                     LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(param.type().text))

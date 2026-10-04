@@ -7,6 +7,8 @@ import top.mcfpp.util.TextTranslator.translate
 
 class UnresolvedType(type: String) : MCFPPType() {
 
+    override val isValueType: Boolean get() = false
+
     val originalTypeString : String = type
 
     override val typeName: String

@@ -114,15 +114,8 @@ open class SimpleLibScope
             is MCFPPInterfaceType -> addInterface(type.i.identifier, type.i, forced)
 
             is MCFPPTypeAliasType -> {
-                if (forced) {
-                    typeAlias[key] = type
-                }else{
-                    if(!typeAlias.containsKey(key)){
-                        typeAlias[key] = type
-                        return false
-                    }
-                    typeAlias[key] = type
-                }
+                if (!forced && containType(key)) return false
+                typeAlias[key] = type
                 return true
             }
 
@@ -131,7 +124,26 @@ open class SimpleLibScope
     }
 
     override fun getType(key: String): MCFPPType? {
-        return (getEnum(key) ?: getTemplate(key) ?: getInterface(key))?.getType()?: typeAlias[key]
+        return (getEnum(key) ?: getTemplate(key) ?: getInterface(key))?.getType() ?: resolveAlias(key)
+    }
+
+    protected fun resolveAlias(key: String): MCFPPType? = typeAlias[key]?.let {
+        if (it is MCFPPTypeAliasType) it.resolve(this) else it
+    }
+
+    fun resolveTypeAliases() {
+        typeAlias.keys.toList().forEach { resolveAlias(it) }
+    }
+
+    /** Export resolved targets, never parser contexts or a second alias identity. */
+    fun resolvedAliases(): Map<String, MCFPPType> = typeAlias.keys.mapNotNull { name ->
+        resolveAlias(name)?.let { name to it }
+    }.toMap()
+
+    fun putResolvedAlias(name: String, target: MCFPPType, forced: Boolean = false): Boolean {
+        if (!forced && containType(name)) return false
+        typeAlias[name] = target
+        return true
     }
 
     override fun containType(id: String): Boolean {

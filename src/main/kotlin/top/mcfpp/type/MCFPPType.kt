@@ -39,6 +39,12 @@ import kotlin.reflect.KClass
  */
 open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()): CanSelectMember {
 
+    open val typeId: TypeId = TypeId.fresh()
+
+    open val isValueType: Boolean get() = true
+
+    open val hasRuntimeRepresentation: Boolean get() = isValueType
+
     open val objectData: CompoundData = CompoundData("unknown", "mcfpp")
 
     open val instanceData: CompoundData get() = CompoundData(typeName, "mcfpp")
@@ -64,18 +70,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
      *
      * @param parentType 指定类型
      */
-    open fun isSubOf(parentType: MCFPPType):Boolean{
-        if(this == parentType) return true
-        if(parentType is MCFPPUnionType){
-            parentType.types.forEach {
-                if(isSubOf(it)) return true
-            }
-        }
-        for(parentTypeSingle in this.parentType){
-            if(parentTypeSingle.isSubOf(parentType)) return true
-        }
-        return false
-    }
+    open fun isSubOf(parentType: MCFPPType): Boolean = TypeRelations.isSubtype(this, parentType)
 
     override fun toString(): String {
         return typeName
@@ -112,16 +107,9 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
         LogProcessor.error("Cannot replace member var in $typeName")
     }
 
-    override fun equals(other: Any?): Boolean {
-        if(other !is MCFPPType){
-            return false
-        }
-        return other.typeName == this.typeName
-    }
+    final override fun equals(other: Any?): Boolean = other is MCFPPType && typeId == other.typeId
 
-    override fun hashCode(): Int {
-        return typeName.hashCode()
-    }
+    final override fun hashCode(): Int = typeId.hashCode()
 
     open fun defaultValue(): Any? = null
 
@@ -211,6 +199,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             MCFPPBaseType.Bool,
             MCFPPBaseType.String,
             MCFPPBaseType.Any,
+            MCFPPBaseType.Object,
             MCFPPBaseType.JsonText,
             MCFPPBaseType.Pos2,
             MCFPPBaseType.Pos3,
@@ -231,7 +220,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             MCFPPEntityType.NormalSelector,
             MCFPPEntityType.Player,
 
-            MCFPPPrivateType.MCFPPObjectVarType,
+            MCFPPPrivateType.StaticMemberViewType,
             MCFPPPrivateType.CommandReturn
         ).associateBy { it.simpleName }.toMutableMap()}
 
@@ -279,6 +268,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
          * 根据类型标识符中获取一个类型
          */
         fun parseFromString(typeStr: String, typeScope: IScopeWithType): MCFPPType? {
+            if(typeStr.isEmpty()) return null
             if(typeStr.last() == '!'){
                 val qwq = parseFromString(typeStr.substring(0, typeStr.length - 1), typeScope)
                 return qwq?.let { MCFPPDeclaredConcreteType(qwq) }
@@ -311,7 +301,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             }
             //局域匹配
             if(typeScope.containType(typeStr)){
-                return typeScope.getType(typeStr)!!
+                return typeScope.getType(typeStr)
             }
             //全局匹配
             val nspID = typeStr.splitNamespaceID()
@@ -392,6 +382,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             }
             //自定义类型
             if(ctx.className() != null){
+                if (typeScope.containType(ctx.text)) return typeScope.getType(ctx.text)
                 val nspID = ctx.className().text.splitNamespaceID()
                 //数据模板
                 val template = GlobalScope.getTemplate(nspID.first, nspID.second)
@@ -423,11 +414,10 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             }
             //泛型类型
             if(typeScope.containType(ctx.text)){
-                return typeScope.getType(ctx.text)!!
+                return typeScope.getType(ctx.text)
             }
             return null
         }
     }
 
 }
-

@@ -49,12 +49,14 @@ open class FunctionScope : SimpleScopeWithVar, SimpleScopeWithType {
     override fun putVar(key: String, `var`: Var<*>, forced: Boolean): Boolean {
         fieldVarSet.add(key)
         if(forced){
+            `var`.bindDeclaration(key, vars[key])
             vars[key] = `var`
             return true
         }
         return if (vars.containsKey(key)) {
             false
         } else {
+            `var`.bindDeclaration(key)
             vars[key] = `var`
             true
         }
@@ -62,6 +64,7 @@ open class FunctionScope : SimpleScopeWithVar, SimpleScopeWithType {
 
     fun replaceVar(key: String, `var`: Var<*>): Boolean {
         return if (vars.containsKey(key)) {
+            `var`.bindDeclaration(key, vars[key])
             vars[key] = `var`
             true
         } else {
@@ -138,15 +141,11 @@ open class FunctionScope : SimpleScopeWithVar, SimpleScopeWithType {
         }
     }
 
-    override fun getType(key: String) : MCFPPType? {
-        var re = types.getOrDefault<String, MCFPPType?>(key, null)
-        if(re == null && parent is IScopeWithType){
-            re = (parent as IScopeWithType).getType(key)
-        }
-        return re
-    }
+    override fun getType(key: String): MCFPPType? = types[key]
+        ?: parent.filterIsInstance<IScopeWithType>().firstNotNullOfOrNull { it.getType(key) }
+
     override fun containType(id: String): Boolean {
-        return types.containsKey(id)
+        return types.containsKey(id) || parent.filterIsInstance<IScopeWithType>().any { it.containType(id) }
     }
 
     override fun removeType(id: String): MCFPPType? {

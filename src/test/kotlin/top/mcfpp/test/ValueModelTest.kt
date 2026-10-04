@@ -1,0 +1,184 @@
+package top.mcfpp.test
+
+import top.mcfpp.analysis.*
+import top.mcfpp.core.lang.MCInt
+import top.mcfpp.core.lang.MCIntConcrete
+import top.mcfpp.type.*
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertNotEquals
+import kotlin.test.assertTrue
+import kotlin.test.assertFalse
+import kotlin.test.assertNull
+
+class ValueModelTest {
+    @Test fun requiredCompileTimeValuesAreADeclarationConstraintAfterAdapterReplacement() {
+        val declared = MCFPPDeclaredConcreteType(MCFPPBaseType.Int).build("required", 4)
+        declared.bindDeclaration()
+        val assigned = declared.assignedBy(MCIntConcrete(5))
+        assertEquals(declared.symbol, assigned.symbol)
+        assertTrue(assigned.symbol!!.requiresConstant)
+        assertTrue(ValueSnapshot.of(assigned) != null)
+        val errors = top.mcfpp.Project.errorCount
+        assigned.assignedBy(MCInt("runtime"))
+        assertEquals(errors + 1, top.mcfpp.Project.errorCount)
+        assigned.replacedBy(MCInt("runtime"))
+        assertEquals(errors + 2, top.mcfpp.Project.errorCount)
+    }
+    private val int = MCFPPBaseType.Int.typeId
+    private val bool = MCFPPBaseType.Bool.typeId
+    private fun constant(value: Long) = ValueFacts(TypeKnowledge.Exact(int), ValueKnowledge.Constant(CompilerValue.Integral(value)))
+
+    @Test fun snapshotsNeverRetainMutableContainerOrVarPayloads() {
+        val value = MCIntConcrete(4)
+        val source = mutableListOf(value)
+        val snapshot = ValueSnapshot.of(source)
+        val hash = snapshot.hashCode()
+        value.value = 9
+        source.clear()
+        assertEquals(hash, snapshot.hashCode())
+        assertNotEquals(snapshot, ValueSnapshot.of(listOf(value)))
+        assertNull(ValueSnapshot.of(listOf(MCInt("unknown"))))
+        assertNotEquals(ValueSnapshot.of(null), ValueSnapshot.of(MCInt("unknown")))
+    }
+
+    @Test fun identityAndConstantConstructorsDefensivelyFreezeCollections() {
+        val arguments = mutableListOf(int)
+        val applied = TypeId.Applied(TypeId.Builtin("list"), arguments)
+        val ids = hashSetOf<TypeId>(applied)
+        arguments.clear()
+        assertTrue(applied in ids)
+        assertEquals(listOf(int), applied.arguments)
+        val fields = mutableMapOf("value" to CompilerValue.Integral(3))
+        val record = CompilerValue.Record(fields)
+        val payloads = mutableListOf<CompilerValue>(record)
+        val sequence = CompilerValue.Sequence(payloads)
+        val values = hashSetOf<CompilerValue>(sequence)
+        fields.clear()
+        payloads.clear()
+        assertTrue(sequence in values)
+        assertEquals(CompilerValue.Integral(3), (sequence.elements.single() as CompilerValue.Record).fields["value"])
+        val segments = mutableListOf<PathSegment>(PathSegment.Field("value"))
+        val place = Place(SymbolId.fresh(), segments)
+        val places = hashSetOf(place)
+        segments.clear()
+        assertTrue(place in places)
+        assertEquals(listOf(PathSegment.Field("value")), place.path)
+    }
+
+    @Test fun cloningAnInitializedValuePreservesFactsWithoutInitializingAnUnknownDeclaration() {
+        val scope = top.mcfpp.model.scope.FunctionScope(null)
+        val initialized = MCIntConcrete(7).apply { hasAssigned = true; isDynamic = true }
+        scope.putVar("initialized", initialized)
+        val copy = initialized.clone()
+        assertEquals(initialized.symbol, copy.symbol)
+        assertEquals(ValueSnapshot.of(initialized), ValueSnapshot.of(copy))
+        assertTrue(copy.isDynamic)
+        val uninitialized = MCIntConcrete(0)
+        scope.putVar("uninitialized", uninitialized)
+        assertNull(ValueSnapshot.of(uninitialized.clone()))
+    }
+
+    @Test fun joinsKeepSharedTypesAndValuesAcrossReachablePaths() {
+        val place = Place(SymbolId.fresh())
+        val a = FlowFacts().apply { write(place, constant(7)) }
+        val b = a.fork()
+        assertEquals(constant(7), a.join(b).read(place))
+        b.write(place, constant(8))
+        assertEquals(ValueFacts(TypeKnowledge.Exact(int), ValueKnowledge.Unknown), a.join(b).read(place))
+        b.write(place, ValueFacts(TypeKnowledge.Exact(bool), ValueKnowledge.Constant(CompilerValue.Bool(true))))
+        assertEquals(TypeKnowledge.Candidates(setOf(int, bool)), a.join(b).read(place)!!.type)
+        b.reachable = false
+        assertEquals(a, a.join(b))
+    }
+
+    @Test fun viewsSharePlaceIdentityAndInvalidateOnlyOverlappingFields() {
+        val root = Place(SymbolId.fresh())
+        val left = root.field("left")
+        val right = root.field("right")
+        val facts = FlowFacts().apply { write(left, constant(1)); write(right, constant(2)) }
+        val view = ValueRef.TypedView(MCFPPBaseType.Object.typeId, ValueRef.Read(int, left), left)
+        facts.invalidate(view.place)
+        assertEquals(ValueKnowledge.Unknown, facts.read(left)!!.value)
+        assertEquals(constant(2), facts.read(right))
+        assertTrue(root.index(1).overlaps(root.unknownIndex()))
+        assertFalse(root.index(1).overlaps(root.index(2)))
+    }
+
+    @Test fun materializationPreservesFactsAndCacheVersionsTrackWrites() {
+        val place = Place(SymbolId.fresh())
+        val layout = StorageLayout.Scoreboard("value", "mcfpp_default")
+        val storage = StorageVersions()
+        val facts = FlowFacts().apply { write(place, constant(4)) }
+        storage.materialize(place, layout)
+        assertTrue(storage.isMaterialized(place, layout))
+        assertEquals(constant(4), facts.read(place))
+        storage.invalidate(place.field("nested"))
+        assertFalse(storage.isMaterialized(place, layout))
+        storage.materialize(place, layout)
+        assertTrue(storage.isMaterialized(place, layout))
+    }
+
+    @Test fun irBranchesJoinEqualConstantsAndLoopsReachAConservativeFixedPoint() {
+        val place = Place(SymbolId.fresh())
+        val condition = Place(SymbolId.fresh())
+        fun write(value: Long) = Instruction.Write(place, ValueRef.Constant(int, CompilerValue.Integral(value)))
+        val ir = TypedIR(0, listOf(
+            BasicBlock(0, emptyList(), Terminator.Branch(ValueRef.Read(bool, condition), 1, 2)),
+            BasicBlock(1, listOf(write(5)), Terminator.Jump(3)),
+            BasicBlock(2, listOf(write(5)), Terminator.Jump(3)),
+            BasicBlock(3, emptyList(), Terminator.Return(null))
+        ))
+        assertEquals(constant(5), FlowAnalysis.analyze(ir).entries.getValue(3).read(place))
+        val loop = TypedIR(0, listOf(
+            BasicBlock(0, listOf(write(1)), Terminator.Jump(1)),
+            BasicBlock(1, emptyList(), Terminator.Branch(ValueRef.Read(bool, condition), 2, 3)),
+            BasicBlock(2, listOf(write(2)), Terminator.Jump(1)),
+            BasicBlock(3, emptyList(), Terminator.Return(null))
+        ))
+        assertEquals(ValueKnowledge.Unknown, FlowAnalysis.analyze(loop).entries.getValue(1).read(place)!!.value)
+    }
+
+    @Test fun rawCommandsAndUnknownCallsAreBarriersButPureCallsAreNot() {
+        val place = Place(SymbolId.fresh())
+        val initial = FlowFacts().apply { write(place, constant(1)) }
+        fun result(effect: Effect) = FlowAnalysis.analyze(TypedIR(0, listOf(BasicBlock(0,
+            listOf(Instruction.Call(null, SymbolId.fresh(), emptyList(), effect)), Terminator.Return(null)))), initial).exits.getValue(0)
+        assertEquals(constant(1), result(Effect.Pure).read(place))
+        assertEquals(ValueKnowledge.Unknown, result(Effect.Unknown).read(place)!!.value)
+        val raw = FlowAnalysis.analyze(TypedIR(0, listOf(BasicBlock(0,
+            listOf(Instruction.RawCommand("data remove storage example:data values")), Terminator.Return(null)))), initial)
+        assertEquals(ValueKnowledge.Unknown, raw.exits.getValue(0).read(place)!!.value)
+    }
+    @Test fun specializationKeysDistinguishNullUnknownErrorsAndTargets() {
+        val function = top.mcfpp.model.function.Function("generic", context = null)
+        val value = MCIntConcrete(4)
+        val key = SpecializationKeys.forArguments(function, listOf(value))
+        val cache = hashMapOf(key to "compiled")
+        value.value = 9
+        assertEquals("compiled", cache[key])
+        assertNull(cache[SpecializationKeys.forArguments(function, listOf(value))])
+        val version = top.mcfpp.Project.config.version
+        try {
+            top.mcfpp.Project.config.version = "26.3"
+            val native = SpecializationKeys.forArguments(function, listOf(value))
+            top.mcfpp.Project.config.version = "26.2"
+            assertNotEquals(native, SpecializationKeys.forArguments(function, listOf(value)))
+        } finally { top.mcfpp.Project.config.version = version }
+        assertNotEquals(SpecializationKeys.argument(top.mcfpp.core.lang.MCAnyConcrete(null)), SpecializationArgument.Unknown)
+        assertEquals(SpecializationArgument.Error, SpecializationKeys.argument(MCInt("error").apply { isError = true }))
+    }
+
+    @Test fun trackingLossKeepsDeclarationIdentity() {
+        top.mcfpp.test.util.MCFPPStringTest.readFromString("func arithmetic(){ var value = 4; value = 5; }", version = "26.3")
+        assertEquals(0, top.mcfpp.Project.errorCount)
+        val function = top.mcfpp.model.scope.GlobalScope.localNamespaces["default.test"]!!.scope.functions["arithmetic"]!!.first()
+        val value = function.scope.getVar("value") as MCIntConcrete
+        val symbol = value.symbol
+        function.runInFunction { value.toDynamic(true) }
+        assertEquals(symbol, function.scope.getVar("value")!!.symbol)
+        assertEquals(int, symbol!!.declaredType)
+        assertTrue(function.scope.getVar("value")!!.valueRef() is ValueRef.Read)
+    }
+
+}

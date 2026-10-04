@@ -72,13 +72,13 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }else {
             Function(identifier, Project.currNamespace, ctx.curlBlock())
         }
+        ctx.functionDeclarationPart().functionParams()?.let { f.addParamsFromContext(it) }
         f.returnType = if(ctx.functionDeclarationPart().functionReturnType()?.type() != null){
-            MCFPPType.parseFromContextNotNull(ctx.functionDeclarationPart().functionReturnType().type(), typeScope)
+            MCFPPType.parseFromContextNotNull(ctx.functionDeclarationPart().functionReturnType().type(), f.scope)
         }else{
             MCFPPPrivateType.Void
         }
         //解析参数
-        ctx.functionDeclarationPart().functionParams()?.let { f.addParamsFromContext(it) }
         //不是类的成员
         f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
@@ -191,13 +191,13 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
         //解析参数
         f.accessModifier = AccessModifier.PUBLIC
+        f.addParamsFromContext(ctx.functionParams())
         f.returnType = if(ctx.functionReturnType()?.type() != null){
-            MCFPPType.parseFromContextNotNull(ctx.functionReturnType().type(), typeScope)
+            MCFPPType.parseFromContextNotNull(ctx.functionReturnType().type(), f.scope)
         }else{
             MCFPPPrivateType.Void
         }
         f.ownerType = ownerType
-        f.addParamsFromContext(ctx.functionParams())
         val field = data.scope
         //注册函数
         if (!field.addFunction(f,false)) {
@@ -525,7 +525,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         //解析参数
         f.addParamsFromContext(ctx.functionDeclarationPart().functionParams())
         //检测重复定义
-        if (DataTemplate.currTemplate!!.scope.hasFunction(f, true)) {
+        if (DataTemplate.currTemplate!!.scope.hasFunction(f, !f.isOverride)) {
             LogProcessor.error("Already defined function:" + ctx.functionDeclarationPart().Identifier().text + "in template " + DataTemplate.currTemplate!!.identifier)
             Function.currFunction = Function.nullFunction
         }

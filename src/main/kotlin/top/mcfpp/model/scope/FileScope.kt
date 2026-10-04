@@ -122,23 +122,19 @@ class FileScope: SimpleLibScope(){
          return qwq?:UnknownFunction(key)
     }
 
-    private val hasChecked = false
+    override fun getType(key: String): MCFPPType? = super.getType(key)
+        ?: namespaceField.getType(key)
+        ?: importField.values.firstNotNullOfOrNull { it.getType(key) }
+        ?: importedNamespaceField.values.firstNotNullOfOrNull { it.getType(key) }
+
+    override fun containType(id: String): Boolean = super.containType(id)
+        || namespaceField.containType(id)
+        || importField.values.any { it.containType(id) }
+        || importedNamespaceField.values.any { it.containType(id) }
+
     fun checkIndex() {
-        if(hasChecked) return
-        for ((k, v) in typeAlias){
-            if(v is MCFPPTypeAliasType){
-                val qwq = MCFPPType.parseFromContext(v.t, this)
-                if(qwq == null){
-                    LogProcessor.error("Undefined type: ${v.t.text}")
-                    continue
-                }
-                if(qwq is MCFPPTypeAliasType){
-                    LogProcessor.error("Cannot use type alias in type alias: ${v.t.text}")
-                    continue
-                }
-                typeAlias[k] = qwq
-            }
-        }
+        resolveTypeAliases()
+        namespaceField.resolveTypeAliases()
     }
 
 }

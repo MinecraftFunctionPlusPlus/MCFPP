@@ -11,6 +11,8 @@ MCFPP is a new object-oriented language that compiles into Minecraft data packs.
 
 [MCFPP API](https://www.mcfpp.top)
 
+[Type system specification](./docs/type-system/specification.md) · [Migration status and guide](./docs/type-system/migration.md)
+
 ## [Future Plans](./TODO_CN.md)
 
 * [ ] Code optimization
@@ -127,6 +129,8 @@ Compound assignments `+=`, `-=`, `*=`, `/=`, and `%=` read the target, apply the
 ## Compile for a Minecraft version
 
 Set the target version in `mcfpp.json`, for example `"version": "26.3"`. Each build produces one data pack for that target; change `version` and build again for another version. Targets `26.1`, `26.2`, `26.3`, and the previously supported older versions are available.
+
+Targeting `26.3` automatically uses native number providers and NBT floats for float arithmetic, comparisons, compound assignments, and integer conversions. Earlier targets keep XiaoDouMathLib. See the [26.3 float backend notes](docs/float-providers-26.3.md) for the implementation and storage migration details.
 
 ```mcfpp
 #if MC >= 26.1

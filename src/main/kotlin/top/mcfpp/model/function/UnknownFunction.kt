@@ -19,7 +19,7 @@ open class UnknownFunction: Function {
      */
     @Suppress("ConvertSecondaryConstructorToPrimary")
     constructor(identifier: String, namespace: String = Project.currNamespace):super(identifier,namespace, context = null){
-        returnVar = UnknownVar("return")
+        returnVar = UnknownVar("return").apply { isError = true }
     }
 
     override fun invoke(normalArgs: LinkedHashMap<String, Var<*>>, caller: CanSelectMember?): Var<*> {

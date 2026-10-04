@@ -15,7 +15,7 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
 
     override val readOnlyParams: ArrayList<FunctionParam> = ArrayList()
 
-    override val compiledFunctions: HashMap<List<Any?>, Function> = HashMap()
+    override val compiledFunctions: HashMap<top.mcfpp.analysis.SpecializationKey, Function> = HashMap()
 
     /**
      * 创建一个函数
@@ -62,6 +62,8 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
                 throw Exception()
             }
             scope.putVar(p.identifier, v)
+            if (p.type == top.mcfpp.type.MCFPPConcreteType.Type)
+                scope.putType(p.identifier, top.mcfpp.type.MCFPPGenericParamType(p.identifier, arrayListOf()))
         }
         hasDefaultValue = false
         for (param in n.parameter()) {
@@ -72,113 +74,12 @@ class GenericExtensionFunction: ExtensionFunction, Generic<ExtensionFunction> {
         }
     }
 
-    override fun compile(args: LinkedHashMap<String, Var<*>>): Pair<Function, LinkedHashMap<String, Var<*>>> {
-        //函数参数已知条件下的编译
-        val argList = args.values.toList()
-        val readOnlyArgs = argList.subList(0, readOnlyParams.size)  //一定是MCFPPValue<*>
-        val normalArgs = argList.subList(readOnlyArgs.size, args.size)
-        val normalValues = normalArgs.map { if (it is MCFPPValue<*>) it.value else null }
-        val values = readOnlyArgs + normalValues
-        compiledFunctions[values]?.let { return it to args.filter { e -> e.value !is MCFPPValue<*> } as LinkedHashMap  }
-        val cf = Function(this)
-        //替换变量
-        for (i in readOnlyArgs.indices){
-            cf.scope.putVar(
-                readOnlyParams[i].identifier,
-                cf.scope.getVar(readOnlyParams[i].identifier)!!.assignedBy(readOnlyArgs[i]),
-                true
-            )
-            if(readOnlyArgs[i] is MCFPPTypeVar){
-                cf.scope.putType(readOnlyParams[i].identifier, (readOnlyArgs[i] as MCFPPTypeVar).value)
-            }
-        }
-        for (i in normalValues.indices) {
-            if (normalValues[i] != null) {
-                cf.scope.putVar(
-                    normalParams[i].identifier,
-                    cf.scope.getVar(normalParams[i].identifier)!!.assignedBy(normalArgs[i]),
-                    true
-                )
-            }
-        }
-        //去除确定的参数
-        val params = ArrayList<FunctionParam>()
-        for (i in normalArgs.indices) {
-            if (normalArgs[i] !is MCFPPValue<*>) {
-                params.add(normalParams[i])
-            }
-        }
-        cf.normalParams = params
-        cf.commands.clear()
-        cf.identifier = this.identifier + "_" + compiledFunctions.size
-        compiledFunctions[values] = cf
-        cf.ast = null
-        cf.runInFunction {
-            val qwq = buildString {
-                for ((index, np) in normalParams.withIndex()) {
-                    append("${np.typeName} ${np.identifier} = ${values[index]}, ")
-                }
-            }
-            addComment(qwq)
-            MCFPPImVisitor().visitCurlBlock(ast!!)
-        }
-        return cf to args.filter { e -> e.value !is MCFPPValue<*> } as LinkedHashMap
-    }
+    override fun compile(args: LinkedHashMap<String, Var<*>>): Pair<Function, LinkedHashMap<String, Var<*>>> =
+        SpecializationPolicy.compileGeneric(this, readOnlyParams, args)
 
-    override fun isSelf(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): Boolean {
-        if (this.identifier == key && this.normalParams.size == normalArgs.size && this.readOnlyParams.size == readOnlyArgs.size) {
-            if (this.normalParams.size == 0 && this.readOnlyParams.size == 0) {
-                return true
-            }
-            var hasFoundFunc = true
-            //参数比对
-            for (i in normalArgs.indices) {
-                if (!scope.getVar(normalParams[i].identifier)!!.canImplicitCast(normalArgs[i].type)) {
-                    hasFoundFunc = false
-                    break
-                }
-            }
-            if(hasFoundFunc){
-                for (i in readOnlyArgs.indices) {
-                    if (!scope.getVar(readOnlyParams[i].identifier)!!.canImplicitCast(readOnlyArgs[i].type)) {
-                        hasFoundFunc = false
-                        break
-                    }
-                }
-            }
-            return hasFoundFunc
-        }else{
-            return false
-        }
-    }
+    override fun isSelf(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): Boolean =
+        ParameterMatcher.accepts(this, key, readOnlyArgs, normalArgs, false)
 
-
-    override fun isSelfWithDefaultValue(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): Boolean {
-        if(key != this.identifier || normalArgs.size > this.normalParams.size || readOnlyArgs.size > this.normalParams.size) return false
-        if (this.normalParams.size == 0 && this.readOnlyParams.size == 0) {
-            return true
-        }
-        var hasFoundFunc = true
-        //参数比对
-        var index = 0
-        while (index < normalArgs.size) {
-            if (!scope.getVar(normalParams[index].identifier)!!.canImplicitCast(normalArgs[index].type)) {
-                hasFoundFunc = false
-                break
-            }
-            index++
-        }
-        hasFoundFunc = hasFoundFunc && this.normalParams[index].hasDefault
-        if(!hasFoundFunc) return false
-        index = 0
-        while (index < readOnlyArgs.size) {
-            if (!scope.getVar(readOnlyParams[index].identifier)!!.canImplicitCast(readOnlyArgs[index].type)) {
-                hasFoundFunc = false
-                break
-            }
-            index++
-        }
-        return hasFoundFunc && this.readOnlyParams[index].hasDefault
-    }
-
+    override fun isSelfWithDefaultValue(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): Boolean =
+        ParameterMatcher.accepts(this, key, readOnlyArgs, normalArgs, true)
 }

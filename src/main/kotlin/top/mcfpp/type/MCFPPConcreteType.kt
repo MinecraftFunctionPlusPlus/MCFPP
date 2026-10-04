@@ -10,6 +10,8 @@ import top.mcfpp.util.LogProcessor
 
 open class MCFPPConcreteType(parentType: ArrayList<MCFPPType> = arrayListOf()): MCFPPType(parentType) {
 
+    override val hasRuntimeRepresentation: Boolean get() = false
+
     final override val objectData: CompoundData
         get() = concreteInstanceData
 
@@ -27,6 +29,8 @@ open class MCFPPConcreteType(parentType: ArrayList<MCFPPType> = arrayListOf()): 
 
     object Type: MCFPPConcreteType(arrayListOf()){
 
+        override val typeId: TypeId = TypeId.Builtin("MCFPPConcreteType.Type")
+
         override val concreteInstanceData: CompoundData
             get() = data
 
@@ -38,7 +42,9 @@ open class MCFPPConcreteType(parentType: ArrayList<MCFPPType> = arrayListOf()): 
         override fun build(identifier: String, value: Any?): Var<*> = MCFPPTypeVar(value as MCFPPType, identifier)
     }
 
-    object JavaVar: MCFPPConcreteType(arrayListOf(MCFPPBaseType.Any)){
+    object JavaVar: MCFPPConcreteType(arrayListOf(MCFPPBaseType.Object)){
+
+        override val typeId: TypeId = TypeId.Builtin("MCFPPConcreteType.JavaVar")
 
         override val concreteInstanceData: CompoundData by lazy {
             CompoundData("JavaVar","mcfpp")

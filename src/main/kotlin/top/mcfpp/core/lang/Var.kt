@@ -47,6 +47,23 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
      */
     lateinit var identifier: String
 
+    /** Declaration identity survives tracking loss and backend adapter replacement. */
+    @Transient
+    var symbol: top.mcfpp.analysis.Symbol? = null
+
+    fun bindDeclaration(name: String = identifier, previous: Var<*>? = null) {
+        symbol = previous?.symbol ?: symbol ?: top.mcfpp.analysis.Symbol(
+            top.mcfpp.analysis.SymbolId.fresh(), name, type.typeId, !isConst,
+            type is MCFPPDeclaredConcreteType, isDynamic
+        )
+    }
+
+    fun valueRef(): top.mcfpp.analysis.ValueRef {
+        top.mcfpp.analysis.ValueSnapshot.of(this)?.let { return top.mcfpp.analysis.ValueRef.Constant(type.typeId, it) }
+        bindDeclaration()
+        return top.mcfpp.analysis.ValueRef.Read(type.typeId, top.mcfpp.analysis.Place(symbol!!.id))
+    }
+
     private val stackFrameRegex get() = Regex("^stack_frame\\[\\d+]\$\n")
 
     /**
@@ -146,6 +163,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     }
 
     fun setAs(v: Var<*>): Var<*>{
+        this.symbol = v.symbol
         this.identifier = v.identifier
         this.isStatic = v.isStatic
         this.accessModifier = v.accessModifier
@@ -153,6 +171,12 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         this.nbtPath = v.nbtPath.clone()
         this.stackIndex = v.stackIndex
         this.isConst = v.isConst
+        this.hasAssigned = v.hasAssigned
+        this.isDynamic = v.isDynamic
+        this.isError = v.isError
+        this.nullable = v.nullable
+        this.isFinal = v.isFinal
+        this.declaredParentTemplate = v.declaredParentTemplate
         return this
     }
 
@@ -188,11 +212,20 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             }
             return this as Self
         }
+        if (!b.isError && !top.mcfpp.model.function.ParameterMatcher.accepts(b, type)) {
+            LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
+            return this as Self
+        }
+        val actualType = if (b is MCAny) b.inferredType ?: b.type else b.type
+        if (isDynamic && !actualType.hasRuntimeRepresentation) {
+            LogProcessor.error("Compiler-only value '$actualType' cannot be materialized by a dynamic declaration")
+            return this as Self
+        }
         var v = b.implicitCast(this.type)
         if(v.isError){
             v = b
         }
-        if(type is MCFPPDeclaredConcreteType && v !is MCFPPValue<*>){
+        if((symbol?.requiresConstant == true || type is MCFPPDeclaredConcreteType) && top.mcfpp.analysis.ValueSnapshot.of(v) == null){
             LogProcessor.error("Cannot assign a non-value variable to a declared-concrete variable.")
             return this as Self
         }
@@ -226,8 +259,9 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             return this.clone().apply { this.type = type }
         }
         return when(type){
+            MCFPPBaseType.Object -> MCObject().setAs(this).apply { (this as MCObject).lastVar = this@Var }
             MCFPPBaseType.Any -> {
-                if(this is MCFPPValue<*>){
+                if(this is MCFPPValue<*> && top.mcfpp.analysis.ValueSnapshot.of(this) != null){
                     (MCAnyConcrete(value).setAs(this) as MCAnyConcrete).apply { lastVar = this@Var }
                 }else{
                     (MCAny().setAs(this) as MCAny).apply { lastVar = this@Var }
@@ -272,8 +306,9 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             return this
         }
         return when(type){
+            MCFPPBaseType.Object -> MCObject().setAs(this).apply { (this as MCObject).lastVar = this@Var }
             MCFPPBaseType.Any -> {
-                if(this is MCFPPValue<*>){
+                if(this is MCFPPValue<*> && top.mcfpp.analysis.ValueSnapshot.of(this) != null){
                     (MCAnyConcrete(value).setAs(this) as MCAnyConcrete).apply { lastVar = this@Var }
                 }else{
                     (MCAny().setAs(this) as MCAny).apply { lastVar = this@Var }
@@ -295,32 +330,13 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         }
     }
 
-    open fun canImplicitCast(type: MCFPPType): Boolean{
-        return this.type == type
-                || type == MCFPPBaseType.Any
-                || type is MCFPPUnionType && type.types.contains(this.type)
-                || type is MCFPPTypeWithGeneric && canGenericCast(type)
-    }
+    open fun canImplicitCast(type: MCFPPType): Boolean = TypeRelations.resolveImplicitConversion(this.type, type) != null
 
-    open fun genericCast(type: MCFPPType): Var<*> {
-        if(this.type !is MCFPPTypeWithGeneric) return buildCastErrorVar(type)
-        if(this.type.typeName != type.typeName) return buildCastErrorVar(type)
-        if((this.type as MCFPPTypeWithGeneric).generic.size == (type as MCFPPTypeWithGeneric).generic.size){
-            for(i in 0..<(this.type as MCFPPTypeWithGeneric).generic.size){
-                if(!(this.type as MCFPPTypeWithGeneric).generic[i].isSubOf((type as MCFPPTypeWithGeneric).generic[i])){
-                    return buildCastErrorVar(type)
-                }
-            }
-            return this.clone().apply { this.type = type }
-        }
-        return buildCastErrorVar(type)
-    }
+    open fun genericCast(type: MCFPPType): Var<*> =
+        if (TypeRelations.isSubtype(this.type, type)) clone().apply { this.type = type } else buildCastErrorVar(type)
 
-    open fun canGenericCast(type: MCFPPTypeWithGeneric): Boolean{
-        return this.type.typeName == (type as MCFPPType).typeName
-                && (this.type as MCFPPTypeWithGeneric).generic.size == type.generic.size
-                && (this.type as MCFPPTypeWithGeneric).generic.zip(type.generic).all { (a, b) -> a.isSubOf(b) }
-    }
+    open fun canGenericCast(type: MCFPPTypeWithGeneric): Boolean =
+        type is MCFPPType && TypeRelations.isSubtype(this.type, type)
 
     @Override
     public abstract override fun clone(): Self
@@ -335,6 +351,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     }
 
     fun constBinaryComputation(a: Var<*>, operation: String): Var<*>?{
+        if (rejectNbtArithmetic(a, operation)) return null
         if(this !is MCFPPValue<*>){
             LogProcessor.error("$identifier is not a concrete value")
             return null
@@ -352,7 +369,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
                 qwq = a
             }
         }
-        val operator = (type.concreteInstanceData).scope.getOperator(operation, a.type)
+        val operator = (type.concreteInstanceData).scope.getOperator(operation, qwq.type)
         val re = if(operator != null && operator is NativeFunction && operator.returnsConstWhenArgsConst) {
             operator.invoke(arrayListOf(qwq), this)
         } else if(operator == null) {
@@ -366,6 +383,15 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     }
 
     fun binaryComputation(a: Var<*>, operation: String): Var<*>{
+        if (this is MCAny && this !is MCObject) {
+            val receiver = semanticValue()
+            return if (receiver.isError) receiver else receiver.binaryComputation(a, operation)
+        }
+        if (a is MCAny && a !is MCObject) {
+            val operand = a.semanticValue()
+            return if (operand.isError) operand else binaryComputation(operand, operation)
+        }
+        if (rejectNbtArithmetic(a, operation)) return UnknownVar(identifier).apply { isError = true }
         var qwq = a.implicitCast(this.type)
         if(qwq.isError){
             val pwp = this.implicitCast(a.type)
@@ -375,7 +401,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
                 qwq = a
             }
         }
-        val operator = (if(this is MCFPPValue<*>) type.concreteInstanceData else type.instanceData).scope.getOperator(operation, a.type)
+        val operator = (if(this is MCFPPValue<*>) type.concreteInstanceData else type.instanceData).scope.getOperator(operation, qwq.type)
         val re = if(operator != null) {
             operator.invoke(arrayListOf(qwq), this)
         } else {
@@ -386,6 +412,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     }
 
     fun constUnaryComputation(operation: String): Var<*>{
+        if (rejectNbtArithmetic(null, operation)) return UnknownVar(identifier).apply { isError = true }
         if(this !is MCFPPValue<*>){
             LogProcessor.error("$identifier is not a concrete value")
             return UnknownVar("${type.typeName}_${operation}_" + TempPool.getVarIdentify()).apply { isError = true }
@@ -404,6 +431,11 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     }
 
     fun unaryComputation(operation: String): Var<*>{
+        if (this is MCAny && this !is MCObject) {
+            val receiver = semanticValue()
+            return if (receiver.isError) receiver else receiver.unaryComputation(operation)
+        }
+        if (rejectNbtArithmetic(null, operation)) return UnknownVar(identifier).apply { isError = true }
         val operator = (if(this is MCFPPValue<*>) type.concreteInstanceData else type.instanceData).scope.getOperator(operation, null)
         val re = if(operator != null) {
             operator.invoke(arrayListOf(), this)
@@ -412,6 +444,14 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             UnknownVar("${type.typeName}_${operation}_" + TempPool.getVarIdentify()).apply { isError = true }
         }
         return re
+    }
+
+    private fun rejectNbtArithmetic(other: Var<*>?, operation: String): Boolean {
+        val mappings = setOf(MCFPPNBTType.Byte, MCFPPNBTType.Short, MCFPPNBTType.Long, MCFPPNBTType.Double)
+        if (operation !in setOf("+", "-", "*", "/", "%", "<", ">", "<=", ">=", "==", "!=", "++", "--", "negation")) return false
+        if (type !in mappings && other?.type !in mappings) return false
+        LogProcessor.error("NBT numeric types do not support ordinary arithmetic; use toInt(value) or toFloat(value) before '$operation'")
+        return true
     }
 
     protected fun errorOp(): Nothing = throw IllegalArgumentException()
@@ -579,7 +619,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     override fun replaceMemberVar(v: Var<*>){}
 
     open fun replacedBy(v : Var<*>){
-        if(this.type is MCFPPDeclaredConcreteType && v !is MCFPPValue<*>){
+        if((symbol?.requiresConstant == true || type is MCFPPDeclaredConcreteType) && top.mcfpp.analysis.ValueSnapshot.of(v) == null){
             LogProcessor.error("Cannot assign a non-value variable to a declared-concrete variable.")
             return
         }

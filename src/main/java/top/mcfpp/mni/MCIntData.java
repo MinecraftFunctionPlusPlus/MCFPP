@@ -6,6 +6,7 @@ import top.mcfpp.core.lang.*;
 import top.mcfpp.core.lang.bool.BaseBool;
 import top.mcfpp.lib.ListChatComponent;
 import top.mcfpp.lib.ScoreChatComponent;
+import top.mcfpp.lib.PlainChatComponent;
 import top.mcfpp.util.ValueWrapper;
 
 public class MCIntData {
@@ -13,7 +14,9 @@ public class MCIntData {
     @MNIFunction(caller = "int", returnType = "text", override = true)
     public static void toText(MCInt caller, ValueWrapper<JsonTextConcrete> returnValue) {
         if(caller instanceof MCIntConcrete intConcrete){
-            MCIntConcreteData.toText(intConcrete, returnValue);
+            var text = new ListChatComponent();
+            text.append(new PlainChatComponent(intConcrete.getValue().toString()));
+            returnValue.setValue(new JsonTextConcrete(text, "re"));
             return;
         }
         var l = new ListChatComponent();

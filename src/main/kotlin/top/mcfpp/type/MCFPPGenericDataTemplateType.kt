@@ -10,6 +10,11 @@ class MCFPPGenericDataTemplateType(
     parentType: ArrayList<out MCFPPType>
 ): MCFPPDataTemplateType(template, parentType) {
 
+    override val typeId: TypeId = TypeId.Specialized(
+        TypeId.Declaration("template", template.namespace, template.identifier),
+        genericVar.map { requireNotNull(top.mcfpp.analysis.ValueSnapshot.of(it)) { "Generic arguments require a complete immutable value" } }
+    )
+
     override val typeName: String
         get() = "${super.typeName}[${genericVar.joinToString("_") {it.value.toString()}}]"
 

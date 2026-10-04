@@ -10,7 +10,9 @@ import top.mcfpp.model.compound.EnumMember
 
 open class MCFPPEnumType(
     var enum: Enum
-): MCFPPType(arrayListOf(MCFPPBaseType.Any)) {
+): MCFPPType(arrayListOf(MCFPPBaseType.Object)) {
+
+    override val typeId: TypeId get() = TypeId.Declaration("enum", enum.namespace, enum.identifier)
 
     override val objectData: CompoundData
         get() = enum

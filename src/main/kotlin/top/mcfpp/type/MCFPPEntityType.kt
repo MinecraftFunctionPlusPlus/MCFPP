@@ -17,7 +17,9 @@ import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 
-class MCFPPEntityType(val limit: Int? = null, val types: List<String>? = null, val isName: Boolean = false) : MCFPPConcreteType(arrayListOf(MCFPPBaseType.Any)) {
+class MCFPPEntityType(val limit: Int? = null, val types: List<String>? = null, val isName: Boolean = false) : MCFPPConcreteType(arrayListOf(MCFPPBaseType.Object)) {
+
+    override val typeId: TypeId get() = TypeId.Selector(limit, types?.toList(), isName)
 
     override val concreteInstanceData: CompoundData
         get() = data
@@ -53,22 +55,7 @@ class MCFPPEntityType(val limit: Int? = null, val types: List<String>? = null, v
         return SelectorVar(qwq, identifier)
     }
 
-    override fun equals(other: Any?): Boolean {
-        if (other == this) return true
-        if (other !is MCFPPEntityType) return false
-        if (limit != other.limit) return false
-        if (types == null && other.types == null) return true
-        if (types == null) return false
-        if (other.types == null) return false
-        return types.size == other.types.size && types.zip(other.types).all { it.first == it.second }
-    }
 
-    override fun hashCode(): Int {
-        var result = super.hashCode()
-        result = 31 * result + (limit ?: 0)
-        result = 31 * result + (types?.hashCode() ?: 0)
-        return result
-    }
 
     fun canCastTo(other: MCFPPEntityType): Boolean {
         if (this == other) return true
@@ -284,6 +271,8 @@ class MCFPPEntityType(val limit: Int? = null, val types: List<String>? = null, v
     }
 
     object Player: MCFPPConcreteType(arrayListOf(NormalSelector)){
+        override val typeId: TypeId = TypeId.Builtin("player")
+
         override val typeName: String
             get() = "Player"
 

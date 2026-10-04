@@ -13,6 +13,8 @@ import top.mcfpp.annotations.InsertCommand
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.command.CommentLevel
+import top.mcfpp.command.FloatProviders
+import top.mcfpp.command.TargetCapabilities
 import top.mcfpp.core.lang.MCFloat
 import top.mcfpp.core.lang.Var
 import top.mcfpp.io.LibBinReader
@@ -169,6 +171,7 @@ object Project {
         warningCount = 0
         constants.clear()
         macroFunction.clear()
+        modules.clear()
         classLoader = Thread.currentThread().contextClassLoader
         files.clear()
         stageProcessor[compileStage.ordinal].forEach { it() }
@@ -282,7 +285,7 @@ object Project {
     }
 
     fun checkConfig(): Boolean{
-        if (!Utils.version.contains(config.version)){
+        if (TargetCapabilities.forVersion(config.version) == null){
             LogProcessor.error("Unsupported version: ${config.version}")
             return false
         }
@@ -589,10 +592,12 @@ object Project {
             Function.addComment("class init", CommentLevel.INFO)
 
             //浮点数临时marker实体
-            Function.addCommand("summon marker 0 0 0 {" +
-                    "Tags:[\"mcfpp_float_marker\"]," +
-                    "UUID:${MCFloat.tempFloatEntityUUIDNBT}}"
-            )
+            if (!FloatProviders.enabled) {
+                Function.addCommand("summon marker 0 0 0 {" +
+                        "Tags:[\"mcfpp_float_marker\"]," +
+                        "UUID:${MCFloat.tempFloatEntityUUIDNBT}}"
+                )
+            }
 
             //execute object constructor
             for(obj in GlobalScope.localNamespaces.values.flatMap { it.scope.objects }.filterIsInstance<ObjectDataTemplate>()){
@@ -609,7 +614,13 @@ object Project {
                         //找到了入口函数
                         hasEntrance = true
                         f.commands.add(0, Commands.stackIn())
-                        f.commands.add(Commands.stackOut())
+                        if (f.typedIRExitFunctions.isEmpty()) {
+                            f.commands.add(Commands.stackOut())
+                        } else {
+                            f.typedIRExitFunctions.forEach { exit ->
+                                exit.commands.add(exit.commands.size - 1, Commands.stackOut())
+                            }
+                        }
                         logger.debug("Find entrance function: {} {}", f.tags, f.identifier)
                     }
                 }

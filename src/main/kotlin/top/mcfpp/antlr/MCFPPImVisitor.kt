@@ -84,9 +84,11 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     private fun enterFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext) {
         val f: Function
         //获取函数对象
-        val types = ctx.functionDeclarationPart().functionParams()?.let { FunctionParam.parseReadonlyAndNormalParamTypes(it) }
-        //获取缓存中的对象
-        f = GlobalScope.getFunction(Project.currNamespace, ctx.functionDeclarationPart().Identifier().text, types?.first?.map { it.build("") }?:ArrayList(), types?.second?.map { it.build("") }?:ArrayList())
+        // Declaration lookup is by the resolved declaration itself. Constructing fake
+        // argument values here applies call conversions and cannot represent generic T.
+        f = GlobalScope.localNamespaces[Project.currNamespace]!!.scope.functions[
+            ctx.functionDeclarationPart().Identifier().text]?.firstOrNull { it.ast === ctx.curlBlock() }
+            ?: UnknownFunction(ctx.functionDeclarationPart().Identifier().text)
         Function.currFunction = f
     }
 
@@ -102,7 +104,15 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     override fun visitCurlBlock(ctx: mcfppParser.CurlBlockContext): Any? = withCompilationContext(ctx) {
         if(ctx.parent is CompileTimeFuncDeclarationContext) return null
         if(Function.currFunction !is Generic<*>){
-            visitStatements(ctx.statement())
+            val function = Function.currFunction
+            if (function.bodyCompiled || function.bodyBeingCompiled) return null
+            function.bodyBeingCompiled = true
+            try {
+                if (!top.mcfpp.analysis.PrimitiveCompiler.tryCompile(ctx, function)) visitStatements(ctx.statement())
+            } finally {
+                function.bodyBeingCompiled = false
+                function.bodyCompiled = true
+            }
         }
         return null
     }
@@ -155,6 +165,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         if (Function.currField.containVar(ctx.Identifier().text)) {
             LogProcessor.error("Duplicate defined variable:" + ctx.Identifier().text)
         }
+        `var`.isConst = fieldModifier == "const"
+        `var`.isDynamic = fieldModifier == "dynamic"
+        `var`.bindDeclaration()
         val stored = if (init != null) `var`.assignedBy(init) else `var`
         Function.currField.putVar(`var`.identifier, stored, true)
         when(fieldModifier){
@@ -261,7 +274,8 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             val ret: Var<*> = MCFPPExprVisitor().visitExpression(ctx.expression())
             Function.currBaseFunction.assignReturnVar(ret)
         }
-        Function.currBaseFunction.hasReturnStatement = true
+        // A return terminates this path, not the other branches of the declaration.
+        Function.currFunction.hasReturnStatement = true
         Function.addCommand("return 1")
         return null
     }
@@ -301,6 +315,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         breakIf = ConditionType.NORMAL
         Function.addComment("if start")
         val continuation = followingStatements
+        val returningPaths = ArrayList<Boolean>()
         do {
             //if分支
             val (c,f) = enterIfBranch(ctx)
@@ -322,6 +337,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 if (!Function.currFunction.hasReturnStatement && !Function.currFunction.isEnded) {
                     visitStatements(continuation)
                 }
+                returningPaths.add(Function.currFunction.hasReturnStatement)
                 //由于原来的调用if的函数已经被return命令返回，需要if_branch函数帮助清理它的栈
                 if(breakIf != ConditionType.ALWAYS_TRUE) {
                     Function.addCommand(Commands.stackOut())
@@ -353,6 +369,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                     if (!Function.currFunction.hasReturnStatement && !Function.currFunction.isEnded) {
                         visitStatements(continuation)
                     }
+                    returningPaths.add(Function.currFunction.hasReturnStatement)
                     //由于原来的调用if的函数已经被return命令返回，需要if_branch函数帮助清理它的栈
                     if(breakIf != ConditionType.ALWAYS_TRUE) {  //这里同理
                         Function.addCommand(Commands.stackOut())
@@ -386,6 +403,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             if(!Function.currFunction.hasReturnStatement && !Function.currFunction.isEnded){
                 visitStatements(continuation)
             }
+            returningPaths.add(Function.currFunction.hasReturnStatement)
             if(breakIf != ConditionType.ALWAYS_FALSE){
                 Function.addCommand(Commands.stackOut())
                 Function.currFunction = Function.currFunction.parent[0]
@@ -395,6 +413,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addComment("if end")
         //if以后的语句已经被全部打包到if分支里面，所以if语句之后的statement没有意义
         Function.currFunction.isEnded = true
+        Function.currFunction.hasReturnStatement = returningPaths.isNotEmpty() && returningPaths.all { it }
         return null
         } finally {
             breakIf = enclosingCondition

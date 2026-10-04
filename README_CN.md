@@ -13,6 +13,8 @@ MCFPP是一个能被编译为Minecraft数据包的全新的面向对象的语言
 
 [MCFPP API](https://www.mcfpp.top)
 
+[类型规范](./docs/type-system/specification.md) · [迁移状态与指南](./docs/type-system/migration.md)
+
 ## [后续计划](./TODO_CN.md)
 
 * [ ] 代码优化
@@ -131,6 +133,8 @@ func calculate(){
 ## 按 Minecraft 版本编译
 
 在项目配置 `mcfpp.json` 中设置目标版本，例如 `"version": "26.3"`。每次编译只生成该目标版本的数据包；分别修改 `version` 并编译即可得到不同版本的输出。支持目标版本 `26.1`、`26.2`、`26.3` 及已有的旧版本。
+
+目标为 `26.3` 时，浮点运算自动使用原生数值提供器及 NBT float，支持四则运算、取余、比较、复合赋值和整数转换。旧版本继续使用 XiaoDouMathLib。调研依据、实现方案和存储格式迁移说明见 [26.3 浮点后端](docs/float-providers-26.3.md)。
 
 ```mcfpp
 #if MC >= 26.1

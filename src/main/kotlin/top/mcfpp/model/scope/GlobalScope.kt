@@ -102,7 +102,9 @@ object GlobalScope : FieldContainer, IScope {
         FunctionTag.TICK.functions.add(Project.mcfppSystemTick)
 
         stdNamespaces["mcfpp.lang"]!!.scope.addTemplate("DataObject", DataTemplate.baseDataTemplate)
-        DataTemplate.baseDataTemplate.injectedBy(DataObjectData::class.java)
+        if (DataTemplate.baseDataTemplate.scope.functions["toText"].isNullOrEmpty()) {
+            DataTemplate.baseDataTemplate.injectedBy(DataObjectData::class.java)
+        }
 
         listOf(
             "From" to From::class.java,

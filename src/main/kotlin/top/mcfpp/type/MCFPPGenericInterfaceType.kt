@@ -10,6 +10,11 @@ class MCFPPGenericInterfaceType(
     parentType: ArrayList<out MCFPPType>
 ): MCFPPDataTemplateType(itf, parentType) {
 
+    override val typeId: TypeId = TypeId.Specialized(
+        TypeId.Declaration("interface", itf.namespace, itf.identifier),
+        genericVar.map { requireNotNull(top.mcfpp.analysis.ValueSnapshot.of(it)) { "Generic arguments require a complete immutable value" } }
+    )
+
     override val typeName: String
         get() = "${super.typeName}[${genericVar.joinToString("_") {it.value.toString()}}]"
 

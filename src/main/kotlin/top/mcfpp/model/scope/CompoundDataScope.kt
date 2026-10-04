@@ -84,12 +84,14 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
     //region Var<*>
     override fun putVar(key: String, `var`: Var<*>, forced: Boolean): Boolean {
         if(forced){
+            `var`.bindDeclaration(key, vars[key])
             vars[key] = `var`
             return true
         }
         return if (vars.containsKey(key)) {
             false
         } else {
+            `var`.bindDeclaration(key)
             vars[key] = `var`
             true
         }
@@ -166,26 +168,7 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
     //region Function
     @Nullable
     override fun getFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): Function {
-        val functions = this.functions[key]
-        if(!functions.isNullOrEmpty()){
-            if(functions.size == 1) return functions[0]
-            for (f in functions) {
-                if(f is Generic<*> && f.isSelf(key, readOnlyArgs, normalArgs)){
-                    return f
-                }
-                if(f.isSelf(key, normalArgs)){
-                    return f
-                }
-            }
-            for (f in functions) {
-                if(f is Generic<*> && f.isSelfWithDefaultValue(key, readOnlyArgs, normalArgs)){
-                    return f
-                }
-                if(f.isSelfWithDefaultValue(key, normalArgs)){
-                    return f
-                }
-            }
-        }
+        top.mcfpp.model.function.ParameterMatcher.select(this.functions[key].orEmpty(), key, readOnlyArgs, normalArgs)?.let { return it }
         parent.forEach {
             if(it is IScopeWithFunction){
                 val re = it.getFunction(key, readOnlyArgs, normalArgs)
@@ -211,7 +194,7 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
     }
 
     override fun hasFunction(function: Function, considerParent: Boolean): Boolean{
-        val qwq = functions.containsKey(function.identifier) && functions[function.identifier]!!.contains(function)
+        val qwq = functions.containsKey(function.identifier) && functions[function.identifier]!!.any { top.mcfpp.model.function.ParameterMatcher.sameSignature(it, function) }
         return if(considerParent && !qwq && parent.isNotEmpty()) {
             parent.any { it is IScopeWithFunction && it.hasFunction(function, true) }
         }else{
@@ -268,6 +251,10 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
             it.parent = selector
             if(it is OnScoreboard){
                 it.name = selector.identifier + "_" + it.identifier
+            }
+            if (it is top.mcfpp.core.lang.MCFloat) {
+                it.name = selector.identifier + "_" + it.identifier
+                for (component in listOf(it.sign, it.int0, it.int1, it.exp)) component.name = it.name
             }
             if(it.nbtPath.pathList.isEmpty()) return@forEach
             it.nbtPath.pathList.removeLast()

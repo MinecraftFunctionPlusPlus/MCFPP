@@ -3,6 +3,7 @@ package top.mcfpp.test
 import java.nio.file.Files
 import top.mcfpp.Project
 import top.mcfpp.test.util.MCFPPStringTest
+import top.mcfpp.test.util.ScoreCommandExecutor
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -81,33 +82,41 @@ class LogicStatementTest {
         MCFPPStringTest.readFromString(test, targetPath = Files.createTempDirectory("mcfpp-do-while-").toString())
     }
 
+    private fun executeOutput(output: java.nio.file.Path): ScoreCommandExecutor {
+        val directory = output.resolve("debug/data/default.test/function")
+        val functions = Files.walk(directory).use { paths ->
+            paths.filter { it.toString().endsWith(".mcfunction") }.toList().associate {
+                "default.test:" + directory.relativize(it).toString().removeSuffix(".mcfunction") to Files.readAllLines(it)
+            }
+        }
+        return ScoreCommandExecutor(functions.getValue("default.test:nested"), functions).also {
+            assertEquals(0, it.stackDepth)
+        }
+    }
+
     @Test
     fun nestedIfKeepsStatementsAfterOuterBranch() {
-        val output = Files.createTempDirectory("mcfpp-nested-if-")
-        MCFPPStringTest.readFromString("""
-            func nested(){
-                dynamic var n = 5;
-                if(n > 0){
-                    if(n == 5){
-                        /scoreboard players set #case result 1
+        for ((input, expected) in listOf(5 to 1, 1 to 2, -5 to 3)) {
+            val output = Files.createTempDirectory("mcfpp-nested-if-")
+            MCFPPStringTest.readFromString("""
+                func nested(){
+                    dynamic var n = $input;
+                    if(n > 0){
+                        if(n == 5){
+                            /scoreboard players set #case result 1
+                        }else{
+                            /scoreboard players set #case result 2
+                        }
                     }else{
-                        /scoreboard players set #case result 2
+                        /scoreboard players set #case result 3
                     }
-                }else{
-                    /scoreboard players set #case result 3
+                    /say continued
                 }
-                /say continued
-            }
-        """.trimIndent(), targetPath = output.toString())
-        assertEquals(0, Project.errorCount)
-        val functions = output.resolve("debug/data/default.test/function")
-        Files.walk(functions).use { paths ->
-            val branches = paths.filter { it.toString().endsWith(".mcfunction") }
-                .map { Files.readString(it) }
-                .filter { it.contains("scoreboard players set #case result") }
-                .toList()
-            assertEquals(3, branches.size)
-            assertTrue(branches.all { it.contains("say continued") }, branches.joinToString("\n---\n"))
+            """.trimIndent(), targetPath = output.toString(), version = "26.3")
+            assertEquals(0, Project.errorCount)
+            val machine = executeOutput(output)
+            assertEquals(expected, machine.values.getValue("#case result"))
+            assertEquals(listOf("continued"), machine.messages)
         }
     }
 
@@ -126,16 +135,10 @@ class LogicStatementTest {
                 }
                 /say continued
             }
-        """.trimIndent(), targetPath = output.toString())
+        """.trimIndent(), targetPath = output.toString(), version = "26.3")
         assertEquals(0, Project.errorCount)
-        val functions = output.resolve("debug/data/default.test/function")
-        Files.walk(functions).use { paths ->
-            val elseBranches = paths.filter { it.toString().endsWith(".mcfunction") }
-                .map { Files.readString(it) }
-                .filter { it.contains("scoreboard players set #case result 9") }
-                .toList()
-            assertEquals(1, elseBranches.size)
-            assertTrue(elseBranches.single().contains("say continued"))
-        }
+        val machine = executeOutput(output)
+        assertEquals(9, machine.values.getValue("#case result"))
+        assertEquals(listOf("continued"), machine.messages)
     }
 }

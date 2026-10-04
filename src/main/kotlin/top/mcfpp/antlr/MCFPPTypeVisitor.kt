@@ -40,6 +40,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         for (lib in ctx.importDeclaration()){
             visitImportDeclaration(lib)
         }
+        ctx.typealiasDeclaration().forEach(::visitTypealiasDeclaration)
         //文件结构，类和函数
         for (t in ctx.typeDeclaration()) {
             visitTypeDeclaration(t)
@@ -61,7 +62,9 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
     override fun visitTypealiasDeclaration(ctx: mcfppParser.TypealiasDeclarationContext) {
         //类型别名引用
         val id = ctx.Identifier().text
-        Namespace.currNamespaceField.putType(id, MCFPPTypeAliasType(ctx.type()))
+        if (!Namespace.currNamespaceField.putType(id, MCFPPTypeAliasType(ctx.type()))) {
+            LogProcessor.error("Type has been defined: $id in namespace ${Project.currNamespace}")
+        }
     }
 
     fun importType(ctx: mcfppParser.ImportTypeContext): Pair<String?, String>  {

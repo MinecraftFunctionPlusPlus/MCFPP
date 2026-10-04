@@ -89,7 +89,7 @@ object Commands {
     @JvmStatic
     fun sbPlayerOperation(a: ScoreBool, operation: String, b: MCInt): Command {
         return Command.build("scoreboard players operation")
-            .build(a.identifier,a.identifier)
+            .build(a.name,a.name)
             .build(a.boolObject.toString(),a.boolObject.toString())
             .build(operation,"operation")
             .build(b.name,b.name)
@@ -102,17 +102,17 @@ object Commands {
             .build(a.name,a.name)
             .build(a.sbObject.toString(),a.sbObject.toString())
             .build(operation,"operation")
-            .build(b.identifier,b.identifier)
+            .build(b.name,b.name)
             .build(b.boolObject.toString(),b.boolObject.toString())
     }
 
     @JvmStatic
     fun sbPlayerOperation(a: ScoreBool, operation: String, b: ScoreBool): Command {
         return Command.build("scoreboard players operation")
-            .build(a.identifier,a.identifier)
+            .build(a.name,a.name)
             .build(a.boolObject.toString(),a.boolObject.toString())
             .build(operation,"operation")
-            .build(b.identifier,b.identifier)
+            .build(b.name,b.name)
             .build(b.boolObject.toString(),b.boolObject.toString())
     }
 
@@ -150,7 +150,7 @@ object Commands {
     @JvmStatic
     fun sbPlayerSet(a: ScoreBool, value: Boolean): Command {
         return Command.build("scoreboard players set")
-            .build(a.identifier,a.identifier)
+            .build(a.name,a.name)
             .build(a.boolObject.toString(),a.boolObject.toString())
             .build((if(value) 1 else 0).toString())
     }

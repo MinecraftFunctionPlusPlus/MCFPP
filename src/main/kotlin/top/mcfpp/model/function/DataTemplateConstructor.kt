@@ -7,7 +7,7 @@ import top.mcfpp.antlr.mcfppParser.CurlBlockContext
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
-import top.mcfpp.core.lang.obj.ObjectVar
+import top.mcfpp.core.lang.obj.StaticMemberView
 import top.mcfpp.io.MCFPPFile
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Member
@@ -79,13 +79,14 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
 
     private fun superCompile(args: LinkedHashMap<String, Var<*>>): Pair<Function, LinkedHashMap<String, Var<*>>>{
         //函数参数已知条件下的编译
-        val values = args.values.map { if (it is MCFPPValue<*>) it.value else null }
+        val values = args.values.map { if (it is MCFPPValue<*> && top.mcfpp.analysis.SpecializationKeys.isConstant(it)) it.value else null }
         val argList = args.values.toList()
-        compiledFunctions[values]?.let { return it to LinkedHashMap(args.filter { e -> e.value !is MCFPPValue<*> }) }
+        val cacheKey = top.mcfpp.analysis.SpecializationKeys.forArguments(this, args.values)
+        compiledFunctions[cacheKey]?.let { return it to LinkedHashMap(args.filter { e -> !top.mcfpp.analysis.SpecializationKeys.isConstant(e.value) }) }
         val cf = Function(this)
         //替换变量
         for (i in values.indices) {
-            if (values[i] != null) {
+            if (top.mcfpp.analysis.SpecializationKeys.isConstant(argList[i])) {
                 cf.scope.putVar(
                     normalParams[i].identifier,
                     cf.scope.getVar(normalParams[i].identifier)!!.assignedBy(argList[i]),
@@ -96,18 +97,18 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
         //去除确定的参数
         val params = ArrayList<FunctionParam>(normalParams)
         for (i in argList.indices) {
-            if (argList[i] is MCFPPValue<*>) {
+            if (top.mcfpp.analysis.SpecializationKeys.isConstant(argList[i])) {
                 params.remove(normalParams[i])
             }
         }
         cf.normalParams = params
         cf.commands.clear()
         cf.identifier = this.identifier + "_" + compiledFunctions.size
-        compiledFunctions[values] = cf
+        compiledFunctions[cacheKey] = cf
         cf.ast = null
         cf.runInFunction {
             if(data is ObjectDataTemplate){
-                val qwq = ObjectVar(data.getType())
+                val qwq = StaticMemberView(data.getType())
                 //初始化
                 for ((k, v) in data.preInit) {
                     val init = MCFPPExprVisitor().visitExpression(v)
@@ -122,7 +123,7 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
             }
             MCFPPImVisitor().visitCurlBlock(ast!!)
         }
-        return cf to args.filter { it !is MCFPPValue<*> } as LinkedHashMap
+        return cf to LinkedHashMap(args.filter { !top.mcfpp.analysis.SpecializationKeys.isConstant(it.value) })
     }
 }
 

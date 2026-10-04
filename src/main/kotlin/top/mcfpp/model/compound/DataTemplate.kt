@@ -78,7 +78,7 @@ open class DataTemplate : FieldContainer, CompoundData {
      */
     override fun getType(): MCFPPDataTemplateType =
         MCFPPDataTemplateType(this,
-            ArrayList(parent.filterIsInstance<DataTemplate>().map { it.getType() })
+            ArrayList<MCFPPType>(parent.filterIsInstance<DataTemplate>().map { it.getType() }).apply { add(MCFPPBaseType.Object) }
         )
 
     /**
@@ -213,7 +213,7 @@ open class DataTemplate : FieldContainer, CompoundData {
 
         val baseDataTemplate by lazy {
             DataTemplate("DataObject","mcfpp.lang").apply {
-                extends(MCFPPBaseType.Any.instanceData)
+                extends(MCFPPBaseType.Object.instanceData)
                 //在GlobalField中注册和获取函数
             }
         }

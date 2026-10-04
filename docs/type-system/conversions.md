@@ -1,0 +1,39 @@
+# 显式值转换 API
+
+标准库提供 `toInt`、`toFloat`、`toByte`、`toShort`、`toLong`、`toDouble` 的具体数值源重载。
+没有未知 `any` 的兜底重载；已知实际类型的 `any` 按该类型匹配。
+bool 不因 ByteTag 编码而匹配 byte 参数。
+
+当前运行时支持如下。`—` 表示编译错误，包括输入为常量的情况；不通过宿主强转假装支持。
+
+| 来源 | toInt | toFloat | toByte | toShort | toLong | toDouble |
+| --- | --- | --- | --- | --- | --- | --- |
+| int / byte / short | 精确值 | 所选浮点后端 | 有符号 8 位窄化 | 有符号 16 位窄化 | 精确扩大 | 精确扩大 |
+| float | 所选浮点后端 | 原值 | — | — | — | — |
+| long | data get 后端操作 | — | — | — | 原值 | — |
+| double | data get 后端操作 | — | — | — | — | 原值 |
+
+byte/short 窄化采用低 8/16 位再按有符号数解释。运行时先复制来源记分板，再规范余数与符号；不会修改来源。
+例如 `toByte(128)` 为 -128，`toShort(65535)` 为 -1。常量折叠与生成命令在整数边界上分别执行并比较。
+int/byte/short 到 long/double 的扩大保留全部来源位。
+
+26.3 后端的 int/float 转换采用 `minecraft:from_int` / `minecraft:from_float`。
+int 到 float 使用单精度表示，大整数可能失去低位；例如 16777217 表示为 16777216。
+已有后端对可求值的 float 到 int 转换采用向零截断，超出 32 位有符号范围的已知值报错。
+运行时值的异常结果由目标数值提供器决定；实际服务端验证仍待完成。
+
+旧浮点后端采用现有 `_scoreto` / `_toscore` 操作，包括常量输入。
+尚未证明模拟库与宿主浮点的舍入等价，因此这些显式转换不直接用 Kotlin 强转折叠。
+旧后端的浮点算术和比较同样保留模拟库调用，不将工作寄存器包装成带宿主常量的对象；旧后端余数明确报错。
+long/double 到 int 同样保留 Minecraft `data get` 操作及其范围与舍入行为，不调用 Kotlin 强转折叠。
+这些路径的精度和异常输入仍需目标服务端对照验证。
+
+`toNBT` 当前有 int、float、bool、string、byte、short、long、double、原始 nbt、NBT 数组和 DataObject 重载。
+它生成来源约定的 NBT 编码，保留 ByteTag / ShortTag / IntTag 的区别。
+常量编码复制 Tag，运行时编码通过内部存储搬运完成。
+旧浮点分量后端使用 `{sign:int,int0:int,int1:int,exp:int}` 复合编码，栈保存与恢复逐项搬运四个分量。
+26.3 后端使用 FloatTag；这两种持久化格式不会自动互相转换。数值提供器后端的已知非有限输入编码会报错。
+集合、text 等源重载以及其余数值转换仍待后端实现。
+
+语言 `as` 的端到端重解释迁移尚未完成，当前 explicitCast 旧路径仍存在。
+新源码需要值转换时应使用此 API；不能将目前的 `as` 实现视为目标规范已经完成。

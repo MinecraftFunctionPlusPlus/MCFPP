@@ -14,6 +14,8 @@ open class MCFPPInterfaceType(
     parentType: ArrayList<out MCFPPType>
 ): MCFPPType(parentType) {
 
+    override val typeId: TypeId get() = TypeId.Declaration("interface", i.namespace, i.identifier)
+
     override val nbtType: Class<out Tag<*>>
         get() = IntArrayTag::class.java
 

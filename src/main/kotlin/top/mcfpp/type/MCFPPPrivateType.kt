@@ -21,7 +21,9 @@ abstract class MCFPPPrivateType(parentType: ArrayList<MCFPPType> = arrayListOf()
         return UnknownVar(identifier)
     }
 
-    object CommandReturn: MCFPPPrivateType(parentType = arrayListOf(MCFPPBaseType.Any)){
+    object CommandReturn: MCFPPPrivateType(parentType = arrayListOf(MCFPPBaseType.Object)){
+
+        override val typeId: TypeId = TypeId.Builtin("MCFPPPrivateType.CommandReturn")
 
         override fun buildReturnVar(): Var<*> {
             return top.mcfpp.core.lang.CommandReturn.empty
@@ -40,9 +42,12 @@ abstract class MCFPPPrivateType(parentType: ArrayList<MCFPPType> = arrayListOf()
             get() = CompoundTag::class.java
     }
 
-    object MCFPPObjectVarType: MCFPPPrivateType() {
+    object StaticMemberViewType: MCFPPPrivateType() {
+        override val isValueType: Boolean get() = false
+
+        override val typeId: TypeId = TypeId.Builtin("MCFPPPrivateType.StaticMemberViewType")
         override val typeName: String
-            get() = "ObjectVar"
+            get() = "StaticMemberView"
 
         override fun buildReturnVar(): Var<*> {
             TODO("Not yet implemented")
@@ -50,6 +55,8 @@ abstract class MCFPPPrivateType(parentType: ArrayList<MCFPPType> = arrayListOf()
     }
 
     object MCFPPCoordinateDimension: MCFPPPrivateType(){
+
+        override val typeId: TypeId = TypeId.Builtin("MCFPPPrivateType.MCFPPCoordinateDimension")
         override val typeName: String
             get() = "CoordinateDimension"
 
@@ -60,6 +67,9 @@ abstract class MCFPPPrivateType(parentType: ArrayList<MCFPPType> = arrayListOf()
 
 
     object Void: MCFPPPrivateType(arrayListOf()){
+        override val isValueType: Boolean get() = false
+
+        override val typeId: TypeId = TypeId.Builtin("MCFPPPrivateType.Void")
         override fun buildReturnVar(): Var<*> {
             return top.mcfpp.core.lang.Void
         }
@@ -73,6 +83,8 @@ abstract class MCFPPPrivateType(parentType: ArrayList<MCFPPType> = arrayListOf()
     }
 
     object Null: MCFPPPrivateType(arrayListOf()){
+
+        override val typeId: TypeId = TypeId.Builtin("MCFPPPrivateType.Null")
         override fun buildReturnVar(): Var<*> {
             return top.mcfpp.core.lang.Null
         }
@@ -86,6 +98,9 @@ abstract class MCFPPPrivateType(parentType: ArrayList<MCFPPType> = arrayListOf()
     }
 
     object Wildcard: MCFPPPrivateType(arrayListOf()){
+        override val isValueType: Boolean get() = false
+
+        override val typeId: TypeId = TypeId.Builtin("MCFPPPrivateType.Wildcard")
         override val typeName: String
             get() = "*"
 
@@ -96,9 +111,6 @@ abstract class MCFPPPrivateType(parentType: ArrayList<MCFPPType> = arrayListOf()
         override val objectData: CompoundData
             get() = throw UnsupportedOperationException("Cannot build return var for wildcard type")
 
-        override fun isSubOf(parentType: MCFPPType): Boolean {
-            return true
-        }
     }
 
 }

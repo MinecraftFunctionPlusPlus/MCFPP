@@ -10,9 +10,11 @@ import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.model.function.Function
 import top.mcfpp.command.Commands
+import top.mcfpp.command.FloatProviders
 
 /** Negate numeric values without changing the operand. */
 internal fun negateNumber(value: Var<*>, concreteOnly: Boolean = false): Var<*>? {
+    if (FloatProviders.enabled && value is MCFloat && !concreteOnly) return FloatProviders.negate(value)
     if (value is MCFloatConcrete && value !== MCFloat.ssObj) return MCFloatConcrete(-value.value)
     if (value === MCFloat.ssObj && concreteOnly) return null
     if (value is MCFloat && !concreteOnly) {
@@ -46,6 +48,18 @@ internal fun negateNumber(value: Var<*>, concreteOnly: Boolean = false): Var<*>?
 
 /** Float operators use shared work registers, so preserve both operands before invoking them. */
 internal fun computeFloatCompound(left: MCFloat, right: Var<*>, operation: String): Var<*> {
+    if (FloatProviders.enabled) {
+        val operand = if (right is MCFloat) right else right.implicitCast(MCFPPBaseType.Float)
+        if (operand !is MCFloat || operand.isError) {
+            LogProcessor.error("Float operation '$operation' requires a numeric operand")
+            return UnknownVar("invalid_float_operand").apply { isError = true }
+        }
+        if (operation !in listOf("+", "-", "*", "/", "%")) {
+            LogProcessor.error("Float operation '$operation' is not supported")
+            return UnknownVar("invalid_float_operation").apply { isError = true }
+        }
+        return FloatProviders.arithmetic(left, operand, operation)
+    }
     val suffix = when (operation) {
         "+" -> "_add"
         "-" -> "_rmv"

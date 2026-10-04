@@ -8,7 +8,9 @@ import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.collection.ListTag
 
-class MCFPPVectorType(val dimension: Int): MCFPPType(arrayListOf(MCFPPBaseType.Any)) {
+class MCFPPVectorType(val dimension: Int): MCFPPType(arrayListOf(MCFPPBaseType.Object)) {
+
+    override val typeId: TypeId get() = TypeId.Applied(TypeId.Builtin("vector"), listOf(TypeId.Builtin(dimension.toString())))
 
     override val instanceData by lazy {
         CompoundData("vector", "mcfpp")

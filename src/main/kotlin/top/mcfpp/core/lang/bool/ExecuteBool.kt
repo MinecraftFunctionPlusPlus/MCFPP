@@ -29,7 +29,7 @@ class ExecuteBool(): BaseBool(), MCFPPValue<ArrayList<AbstractBoolPart>> {
     override fun toDynamic(replace: Boolean): Var<*> {
         val re = ScoreBool(this.identifier)
         val cmd = Command.build("execute")
-            .build("store score ${re.identifier} ${re.boolObject}")
+            .build("store success score ${re.name} ${re.boolObject}")
             .build(toCommandPart())
         Function.addCommand(cmd)
         if(replace){

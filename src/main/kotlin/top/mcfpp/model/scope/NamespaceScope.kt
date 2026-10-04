@@ -169,7 +169,7 @@ class NamespaceScope: SimpleLibScope{
     }
 
     override fun getType(key: String): MCFPPType? {
-        return (getEnum(key) ?: getTemplate(key) ?: getInterface(key))?.getType() ?: typeAlias[key]
+        return (getEnum(key) ?: getTemplate(key) ?: getInterface(key))?.getType() ?: resolveAlias(key)
         ?: fileFields.firstOrNull { it.containType(key) }?.getType(key)
     }
 

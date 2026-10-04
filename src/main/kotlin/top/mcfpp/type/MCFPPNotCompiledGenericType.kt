@@ -7,6 +7,16 @@ import kotlin.reflect.KClass
 
 class MCFPPNotCompiledGenericType(val type: KClass<out MCFPPType>): MCFPPType() {
 
+    override val typeId: TypeId = TypeId.Builtin("constructor:" + when (type) {
+        MCFPPListType::class -> "list"
+        MCFPPDictType::class -> "dict"
+        MCFPPMapType::class -> "map"
+        MCFPPImmutableListType::class -> "ImmutableList"
+        else -> error("Unregistered type constructor: $type")
+    })
+
+    override val isValueType: Boolean get() = false
+
     override val typeName: String
         get() = type.simpleName!!
 

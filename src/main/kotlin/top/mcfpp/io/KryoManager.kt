@@ -20,17 +20,20 @@ object KryoManager {
     val kryo = Kryo().apply {
         isRegistrationRequired = false
         references = true
+        addDefaultSerializer(top.mcfpp.type.TypeId::class.java, TypeIdentitySerializer())
         instantiatorStrategy = StdInstantiatorStrategy()
 
         register(DataTemplate::class.java, object : Serializer<DataTemplate>() {
             override fun write(p0: Kryo, p1: Output, p2: DataTemplate) {
+                writeIdentity(p1, p2)
                 val info = DataTemplateInfo.from(p2)
                 p0.writeObject(p1, info)
             }
 
             override fun read(p0: Kryo, p1: Input, p2: Class<out DataTemplate>): DataTemplate {
+                val identity = readIdentity(p1)
                 val data = p0.readObject(p1, DataTemplateInfo::class.java)
-                return UnsolvedTemplate(data)
+                return UnsolvedTemplate(data, identity.name, identity.namespace, identity.isInterface, identity.isAbstract)
             }
         })
 
@@ -48,6 +51,7 @@ object KryoManager {
 
         register(MCFPPDataTemplateType::class.java, object : Serializer<MCFPPDataTemplateType>() {
             override fun write(p0: Kryo, p1: Output, p2: MCFPPDataTemplateType) {
+                writeIdentity(p1, p2.template)
                 val info = DataTemplateInfo.from(p2.template)
                 p0.writeObject(p1, info)
                 p0.writeObject(p1, p2.parentType)
@@ -55,14 +59,16 @@ object KryoManager {
 
             @Suppress("UNCHECKED_CAST")
             override fun read(p0: Kryo, p1: Input, p2: Class<out MCFPPDataTemplateType>): MCFPPDataTemplateType {
+                val identity = readIdentity(p1)
                 val data = p0.readObject(p1, DataTemplateInfo::class.java)
                 val parentType = p0.readObject(p1, ArrayList::class.java) as ArrayList<MCFPPType>
-                return MCFPPDataTemplateType(UnsolvedTemplate(data), parentType)
+                return MCFPPDataTemplateType(UnsolvedTemplate(data, identity.name, identity.namespace, identity.isInterface, identity.isAbstract), parentType)
             }
         })
 
         register(MCFPPObjectDataTemplateType::class.java, object : Serializer<MCFPPObjectDataTemplateType>() {
             override fun write(p0: Kryo, p1: Output, p2: MCFPPObjectDataTemplateType) {
+                writeIdentity(p1, p2.template)
                 val info = DataTemplateInfo.from(p2.template)
                 p0.writeObject(p1, info)
                 p0.writeObject(p1, p2.parentType)
@@ -70,9 +76,10 @@ object KryoManager {
 
             @Suppress("UNCHECKED_CAST")
             override fun read(p0: Kryo, p1: Input, p2: Class<out MCFPPObjectDataTemplateType>): MCFPPObjectDataTemplateType {
+                val identity = readIdentity(p1)
                 val data = p0.readObject(p1, DataTemplateInfo::class.java)
                 val parentType = p0.readObject(p1, ArrayList::class.java) as ArrayList<out MCFPPType>
-                return MCFPPObjectDataTemplateType(UnsolvedObjectTemplate(data), parentType)
+                return MCFPPObjectDataTemplateType(UnsolvedObjectTemplate(data, identity.name, identity.namespace, identity.isInterface, identity.isAbstract), parentType)
             }
         })
 
@@ -102,4 +109,15 @@ object KryoManager {
             }
         })
     }
+
+    // Metadata graphs can refer to a DataTemplateInfo while its fields are still being
+    // read. Identity is therefore a separate prefix, never read from that partial object.
+    private data class DeclarationIdentity(val name: String, val namespace: String, val isInterface: Boolean, val isAbstract: Boolean)
+    private fun writeIdentity(output: Output, template: DataTemplate) {
+        output.writeString(template.identifier)
+        output.writeString(template.namespace)
+        output.writeBoolean(template.isInterface)
+        output.writeBoolean(template.isAbstract)
+    }
+    private fun readIdentity(input: Input) = DeclarationIdentity(input.readString(), input.readString(), input.readBoolean(), input.readBoolean())
 }

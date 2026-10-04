@@ -17,6 +17,15 @@ object LibBinReader {
 
     fun readFromStream(stream: InputStream) {
         Input(stream).use { input ->
+            val validHeader = try {
+                input.readInt() == LibBinFormat.MAGIC && input.readInt() == LibBinFormat.VERSION
+            } catch (_: com.esotericsoftware.kryo.KryoException) {
+                false
+            }
+            if (!validHeader) {
+                top.mcfpp.util.LogProcessor.error("Unsupported MCFPP library cache format. Recompile the library sources with this compiler.")
+                return
+            }
             val info = kryo.readObject(input, GlobalFieldInfo::class.java)
             GlobalScope.mergeInfo(info)
             //解析命名空间

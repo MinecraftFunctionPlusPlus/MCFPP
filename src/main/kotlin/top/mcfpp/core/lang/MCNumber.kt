@@ -6,15 +6,15 @@ import top.mcfpp.model.FieldContainer
 import top.mcfpp.util.TempPool
 
 /**
- * 代表了mcfpp中的一个数字类型。数字类型都是以记分板为基础的。
+ * 代表了mcfpp中的一个数字类型。整数使用记分板；浮点数按目标版本使用记分板分量或NBT。
  *
  * @param T 这个数字类型中包装的类型
  */
-abstract class MCNumber<T> : Var<MCNumber<T>>, OnScoreboard {
+abstract class MCNumber<T> : Var<MCNumber<T>> {
 
-    override var isDataOnly: Boolean = false
+    var isDataOnly: Boolean = false
 
-    final override var name: String
+    var name: String
 
     var holder: ScoreHolder? = null
 
@@ -60,8 +60,7 @@ abstract class MCNumber<T> : Var<MCNumber<T>>, OnScoreboard {
         isDataOnly = b.isDataOnly
     }
 
-    @Override
-    override fun setObj(sbObject: SbObject): MCNumber<T> {
+    open fun setObj(sbObject: SbObject): MCNumber<T> {
         this.sbObject = sbObject
         return this
     }

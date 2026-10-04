@@ -18,6 +18,8 @@ object LibBinWriter {
 
         FileOutputStream(libPath.toFile()).use { fileOutputStream ->
             Output(fileOutputStream).use { output ->
+                output.writeInt(LibBinFormat.MAGIC)
+                output.writeInt(LibBinFormat.VERSION)
                 kryo.writeObject(output, GlobalScope.getInfo())
                 output.flush()
             }

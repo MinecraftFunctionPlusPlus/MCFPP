@@ -533,7 +533,8 @@ unionTemplateType
     ;
 
 normalType
-    :   INT
+    :   OBJECT
+    |   INT
     |   ENTITY
     |   BOOL
     |   BYTE

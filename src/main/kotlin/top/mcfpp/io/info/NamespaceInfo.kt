@@ -2,13 +2,16 @@ package top.mcfpp.io.info
 
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.type.MCFPPType
 
 data class NamespaceInfo (
     var identifier: String,
     var functions: ArrayList<AbstractFunctionInfo<*>>,
     var template: ArrayList<DataTemplateInfo>,
     var enums: ArrayList<EnumInfo>,
-    var objectDataInfo: ArrayList<DataTemplateInfo>
+    var objectDataInfo: ArrayList<DataTemplateInfo>,
+    var aliases: HashMap<String, MCFPPType>,
+    var interfaces: ArrayList<DataTemplateInfo>
 ): ModelInfo<Namespace>{
     override fun get(): Namespace {
         val namespace = Namespace(identifier)
@@ -27,6 +30,11 @@ data class NamespaceInfo (
             val template = t.get()
             namespace.scope.addObject(template.identifier, template)
         }
+        for (info in interfaces) {
+            val template = info.get()
+            namespace.scope.addInterface(template.identifier, template)
+        }
+        for ((name, target) in aliases) namespace.scope.putResolvedAlias(name, target)
         return namespace
     }
 
@@ -55,7 +63,9 @@ data class NamespaceInfo (
                 functions,
                 templates,
                 enums,
-                objects
+                objects,
+                HashMap(namespace.scope.resolvedAliases()),
+                ArrayList(namespace.scope.interfaces.values.map { DataTemplateInfo.from(it) })
             )
         }
     }

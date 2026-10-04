@@ -223,7 +223,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     }
 
     override fun onMemberVarChanged(member: Var<*>) {
-        if(member is MCFPPValue<*> && isConcrete()){
+        if(!isTemp && member is MCFPPValue<*> && isConcrete()){
             this.replacedBy(this.toConcrete())
         }
     }
@@ -317,7 +317,14 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<HashMap<String,
         this.value = HashMap()
         if(template.checkDictionaryStruct(value)){
             for ((k,v) in value) {
-                val thisV = instanceField.getVar(k)!!.assignedBy(v)
+                val field = instanceField.getVar(k)
+                if (field == null) {
+                    // A nominal parent view retains the source payload's extra fields.
+                    // They do not become members of the parent declaration.
+                    this.value[k] = v.clone()
+                    continue
+                }
+                val thisV = field.assignedBy(v)
                 thisV.parent = this
                 instanceField.putVar(k, thisV, true)
                 this.value[k] = thisV
@@ -331,7 +338,12 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<HashMap<String,
         this.value = HashMap()
         if(templateType.checkDictionaryStruct(value)){
             for ((k,v) in value) {
-                val thisV = instanceField.getVar(k)!!.assignedBy(v)
+                val field = instanceField.getVar(k)
+                if (field == null) {
+                    this.value[k] = v.clone()
+                    continue
+                }
+                val thisV = field.assignedBy(v)
                 thisV.parent = this
                 instanceField.putVar(k, thisV, true)
                 this.value[k] = thisV
@@ -346,7 +358,12 @@ class DataTemplateObjectConcrete: DataTemplateObject, MCFPPValue<HashMap<String,
         this.value = HashMap()
         if(templateType.checkDictionaryStruct(obj.value)){
             for ((k,v) in obj.value) {
-                val thisV = instanceField.getVar(k)!!.assignedBy(v)
+                val field = instanceField.getVar(k)
+                if (field == null) {
+                    this.value[k] = v.clone()
+                    continue
+                }
+                val thisV = field.assignedBy(v)
                 thisV.parent = this
                 instanceField.putVar(k, thisV, true)
                 this.value[k] = thisV

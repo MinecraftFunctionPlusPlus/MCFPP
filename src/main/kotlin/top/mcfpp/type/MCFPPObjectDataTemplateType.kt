@@ -17,6 +17,8 @@ class MCFPPObjectDataTemplateType(
     parentType: ArrayList<out MCFPPType>
 ) : MCFPPDataTemplateType(template, parentType) {
 
+    override val typeId: TypeId get() = TypeId.Declaration("object", template.namespace, template.identifier)
+
     override val typeName: String
         get() = "object(${template.namespace}:${template.identifier})"
 

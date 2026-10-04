@@ -8,7 +8,7 @@ import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.CommandReturn;
 import top.mcfpp.core.lang.MCInt;
 import top.mcfpp.core.lang.obj.EnumVar;
-import top.mcfpp.core.lang.obj.ObjectVar;
+import top.mcfpp.core.lang.obj.StaticMemberView;
 import top.mcfpp.core.lang.obj.TypeDataTemplateObject;
 import top.mcfpp.lib.SbObject;
 import top.mcfpp.model.compound.TypeDataTemplate;
@@ -40,7 +40,7 @@ public class WorldObjectData {
     }
 
     @MNIAccessor("time")
-    public static void getTime(ObjectVar caller, ValueWrapper<TypeDataTemplateObject> re){
+    public static void getTime(StaticMemberView caller, ValueWrapper<TypeDataTemplateObject> re){
         var t = new MCInt("time");
         t.setSbObject(SbObject.Companion.getMCFPP_TEMP());
         Function.addCommand("execute store result score time " + SbObject.Companion.getMCFPP_TEMP() + " run time query day");
@@ -50,7 +50,7 @@ public class WorldObjectData {
     }
 
     @MNIMutator("time")
-    public static void setTime(TypeDataTemplateObject time, ObjectVar caller){
+    public static void setTime(TypeDataTemplateObject time, StaticMemberView caller){
         Commands.processMacroCommand(Command.Companion.buildAll("time set", time));
     }
 

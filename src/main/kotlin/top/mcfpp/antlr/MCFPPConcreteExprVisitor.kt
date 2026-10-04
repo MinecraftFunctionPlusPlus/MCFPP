@@ -7,7 +7,7 @@ import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.nbt.*
-import top.mcfpp.core.lang.obj.ObjectVar
+import top.mcfpp.core.lang.obj.StaticMemberView
 import top.mcfpp.lib.EntitySelector
 import top.mcfpp.model.function.Function
 import top.mcfpp.nbt.tags.Tag
@@ -215,7 +215,7 @@ class MCFPPConcreteExprVisitor(
             if(type == null){
                 LogProcessor.error(TextTranslator.SYMBOL_NOT_DEFINED.translate(currSelector!!.identifier))
             }else{
-                currSelector = ObjectVar(type)
+                currSelector = StaticMemberView(type)
             }
         }
         for (selector in ctx.selector()){
@@ -356,11 +356,11 @@ class MCFPPConcreteExprVisitor(
             if(type == null){
                 LogProcessor.error(TextTranslator.SYMBOL_NOT_DEFINED.translate(ctx.text))
             }else{
-                re = ObjectVar(type)
+                re = StaticMemberView(type)
             }
         }
         if(re is UnknownVar && enumType != null && currSelector == null){
-            currSelector = ObjectVar(enumType!!)
+            currSelector = StaticMemberView(enumType!!)
             val re2  = currSelector!!.getMemberVar(qwq, currSelector!!.getAccess(Function.currFunction))
             if (re2.first == null) {
                 LogProcessor.error("Cannot get member ${enumType!!.simpleName}.$qwq")

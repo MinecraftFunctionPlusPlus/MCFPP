@@ -1,7 +1,9 @@
 package top.mcfpp.test
 
 import top.mcfpp.test.util.MCFPPStringTest
+import top.mcfpp.Project
 import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class NBTTypeTest {
 
@@ -17,6 +19,7 @@ class NBTTypeTest {
                 }
             """.trimIndent()
         MCFPPStringTest.readFromString(test, arrayOf("-debug"))
+        assertEquals(0, Project.errorCount)
         println()
     }
 
@@ -38,6 +41,7 @@ class NBTTypeTest {
             }
         """.trimIndent()
         MCFPPStringTest.readFromString(test, arrayOf("-debug","-printAll"))
+        assertEquals(0, Project.errorCount)
         println()
     }
 
@@ -59,6 +63,7 @@ class NBTTypeTest {
             }
         """.trimIndent()
         MCFPPStringTest.readFromString(test, arrayOf("-debug","-printAll"))
+        assertEquals(0, Project.errorCount)
         println()
     }
 
