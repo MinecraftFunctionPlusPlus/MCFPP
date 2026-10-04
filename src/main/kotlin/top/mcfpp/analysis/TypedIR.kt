@@ -3,7 +3,7 @@ package top.mcfpp.analysis
 import top.mcfpp.type.TypeId
 
 /** Basic blocks and explicit reads/writes, with no dependency on Var implementation classes. */
-data class TypedIR(val entry: Int, val blocks: List<BasicBlock>)
+data class TypedIR(val entry: Int, val blocks: List<BasicBlock>, val runtimeValues: Set<Int> = emptySet())
 data class BasicBlock(val id: Int, val instructions: List<Instruction>, val terminator: Terminator)
 
 sealed interface Instruction {
@@ -33,7 +33,7 @@ sealed interface Effect {
 object FlowAnalysis {
     data class Result(val entries: Map<Int, FlowFacts>, val exits: Map<Int, FlowFacts>, val values: Map<Pair<Int, Int>, ValueFacts>)
 
-    fun analyze(ir: TypedIR, initial: FlowFacts = FlowFacts(), evaluator: (String, CompilerValue, CompilerValue) -> CompilerValue? = { _, _, _ -> null }, canFoldBranch: (ValueRef) -> Boolean = { true }): Result {
+    fun analyze(ir: TypedIR, initial: FlowFacts = FlowFacts(), evaluator: (String, CompilerValue, CompilerValue) -> CompilerValue? = { _, _, _ -> null }, canFoldBranch: (ValueRef) -> Boolean = { it !is ValueRef.Result || it.instruction !in ir.runtimeValues }): Result {
         require(ir.blocks.map { it.id }.distinct().size == ir.blocks.size)
         val blocks = ir.blocks.associateBy { it.id }
         require(ir.entry in blocks)
@@ -63,10 +63,21 @@ object FlowAnalysis {
                 is Instruction.RawCommand -> state.barrier()
                 is Instruction.View -> values[instruction.result] = value(instruction.value)
                 is Instruction.Binary -> {
-                    val left = (value(instruction.left).value as? ValueKnowledge.Constant)?.value
-                    val right = (value(instruction.right).value as? ValueKnowledge.Constant)?.value
+                    val leftFact = value(instruction.left)
+                    val rightFact = value(instruction.right)
+                    // Only any exposes actual-type knowledge. Object and concrete signatures
+                    // retain their static operators even when the payload type is known.
+                    fun operandType(ref: ValueRef, fact: ValueFacts): TypeId? =
+                        if (ref.type == top.mcfpp.type.MCFPPBaseType.Any.typeId) (fact.type as? TypeKnowledge.Exact)?.type else ref.type
+                    val leftType = operandType(instruction.left, leftFact)
+                    val rightType = operandType(instruction.right, rightFact)
+                    val type = if (leftType != null && rightType != null)
+                        top.mcfpp.type.TypeRelations.resolveOperator(instruction.operation, leftType, rightType) else null
+                    val left = (leftFact.value as? ValueKnowledge.Constant)?.value
+                    val right = (rightFact.value as? ValueKnowledge.Constant)?.value
                     val folded = if (left != null && right != null) evaluator(instruction.operation, left, right) else null
-                    values[instruction.result] = ValueFacts(TypeKnowledge.Exact(instruction.type), folded?.let { ValueKnowledge.Constant(it) } ?: ValueKnowledge.Unknown)
+                    values[instruction.result] = ValueFacts(type?.let { TypeKnowledge.Exact(it) } ?: TypeKnowledge.Unknown,
+                        if (type != null && folded != null) ValueKnowledge.Constant(folded) else ValueKnowledge.Unknown)
                 }
                 is Instruction.Promote -> values[instruction.result] = ValueFacts(TypeKnowledge.Exact(instruction.type), ValueKnowledge.Unknown)
                 is Instruction.Convert -> values[instruction.result] = ValueFacts(TypeKnowledge.Exact(instruction.type), ValueKnowledge.Unknown)

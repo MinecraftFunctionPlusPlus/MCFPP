@@ -39,13 +39,25 @@ object PrimitiveCompiler {
         if (function.ownerType != OwnerType.NONE || function.normalParams.any { it.type.typeId !in types } ||
             function.returnType !== MCFPPPrivateType.Void && function.returnType.typeId !in types ||
             function.scope.vars.keys.any { name -> function.normalParams.none { it.identifier == name } }) return false
-        val lowering = try { Lowering(function) } catch (_: Unsupported) { return false }
-        val diagnostics = mutableListOf<String>()
-        try {
+        // Discover reads before binding operators. A lexical walk cannot know the types
+        // arriving through a loop backedge, break, continue, or a reachable branch merge.
+        val declarationIds = mutableMapOf<Int, SymbolId>()
+        fun lower(lowering: Lowering): List<String> {
+            val diagnostics = mutableListOf<String>()
             context.statement().forEach { statement ->
                 try { lowering.statement(statement) }
                 catch (invalid: Invalid) { diagnostics += invalid.diagnostic }
             }
+            return diagnostics
+        }
+        val draft = try { Lowering(function, declarationIds, exploratory = true).also { lower(it) } }
+            catch (_: Unsupported) { return false }
+        val bindingFacts = FlowAnalysis.analyze(draft.finish(), initial = draft.initialFacts, evaluator = PrimitiveEvaluation::binary)
+        val readTypes = draft.readSites.mapValues { (_, result) -> bindingFacts.values[result]?.type ?: TypeKnowledge.Unknown }
+        val lowering = try { Lowering(function, declarationIds, readTypes) } catch (_: Unsupported) { return false }
+        val diagnostics = mutableListOf<String>()
+        try {
+            diagnostics += lower(lowering)
         } catch (_: Unsupported) { return false }
         diagnostics.forEach(top.mcfpp.util.LogProcessor::error)
         val ir = lowering.finish()
@@ -125,7 +137,8 @@ object PrimitiveCompiler {
         return returned.reduceOrNull(TypeKnowledge::join) ?: TypeKnowledge.Unknown
     }
 
-    private class Lowering(val function: Function) {
+    private class Lowering(val function: Function, private val declarationIds: MutableMap<Int, SymbolId>,
+                           private val readTypes: Map<Int, TypeKnowledge> = emptyMap(), private val exploratory: Boolean = false) {
         val symbols = linkedMapOf<String, Symbol>()
         private data class Block(val id: Int, val instructions: MutableList<Instruction> = mutableListOf(), var terminator: Terminator? = null)
         private val blocks = mutableListOf(Block(0))
@@ -142,6 +155,7 @@ object PrimitiveCompiler {
         private val origins = mutableMapOf<Int, Place>()
         private val views = mutableSetOf<Int>()
         val warnings = mutableListOf<String>()
+        val readSites = mutableMapOf<Int, Pair<Int, Int>>()
         init {
             for (parameter in function.normalParams) {
                 val existing = function.scope.getVar(parameter.identifier) ?: throw Unsupported()
@@ -161,7 +175,7 @@ object PrimitiveCompiler {
         private fun jump(block: Block) { if (current.terminator == null) terminate(Terminator.Jump(block.id)) }
         fun finish(): TypedIR {
             if (current.terminator == null) terminate(Terminator.Return(null))
-            return TypedIR(0, blocks.map { BasicBlock(it.id, it.instructions, it.terminator ?: Terminator.Unreachable) })
+            return TypedIR(0, blocks.map { BasicBlock(it.id, it.instructions, it.terminator ?: Terminator.Unreachable) }, runtimeResults.toSet())
         }
         private fun scoped(block: Parser.BlockContext) {
             val prior = LinkedHashMap(visible)
@@ -176,7 +190,7 @@ object PrimitiveCompiler {
             }
         }
         private fun condition(context: Parser.BucketExpressionContext): ValueRef =
-            expression(context.expression() ?: unsupported()).also { if (it.type != bool) invalid("Condition must be bool") }
+            expression(context.expression() ?: unsupported()).also { if (it.type != bool && !(exploratory && it.type == any)) invalid("Condition must be bool") }
         private fun conditional(context: Parser.IfStatementContext) {
             val merge = newBlock()
             val before = LinkedHashMap(knowledge)
@@ -202,8 +216,6 @@ object PrimitiveCompiler {
             knowledge = LinkedHashMap(before.mapValues { (id, original) -> branches.map { it[id] ?: original }.reduceOrNull(TypeKnowledge::join) ?: original })
         }
         private fun loop(context: Parser.WhileStatementContext) {
-            // Erased loop facts require a separate binding fixed point; use the migration boundary.
-            if (visible.values.any { it.declaredType in erased }) unsupported()
             val header = newBlock()
             val body = newBlock()
             val exit = newBlock()
@@ -233,7 +245,8 @@ object PrimitiveCompiler {
             context.returnStatement()?.let {
                 val value = it.expression()?.let(::expression)
                 if (function.returnType === MCFPPPrivateType.Void && value != null ||
-                    value != null && value.type != function.returnType.typeId && function.returnType.typeId !in erased) invalid("Return type mismatch")
+                    value != null && value.type != function.returnType.typeId && function.returnType.typeId !in erased &&
+                    !(exploratory && value.type == any)) invalid("Return type mismatch")
                 terminate(Terminator.Return(value)); return
             }
             context.controlStatement()?.let {
@@ -250,10 +263,10 @@ object PrimitiveCompiler {
                 val value = expression(initializer)
                 if (value is ValueRef.Result && value.instruction in views) unsupported() // View declarations share storage in StorageAccess.
                 val type = when (declared) { "int" -> int; "bool" -> bool; "any" -> any; "object" -> obj; else -> value.type }
-                if (value.type != type && type !in erased) invalid("Cannot assign ${value.type} to $type")
+                if (value.type != type && type !in erased && !(exploratory && value.type == any)) invalid("Cannot assign ${value.type} to $type")
                 val name = declaration.Identifier().text
                 if (name in symbols) invalid("Duplicate defined variable: $name")
-                val symbol = Symbol(SymbolId.fresh(), name, type, modifier != "const", forceRuntime = modifier == "dynamic")
+                val symbol = Symbol(declarationIds.getOrPut(declaration.start.tokenIndex, SymbolId::fresh), name, type, modifier != "const", forceRuntime = modifier == "dynamic")
                 symbols[name] = symbol
                 visible[name] = symbol
                 if (depth == 0) exportedSymbols.add(symbol)
@@ -268,8 +281,8 @@ object PrimitiveCompiler {
                 if (!symbol.mutable) invalid("Cannot assign a constant repeatedly: ${symbol.name}")
                 val operation = assignment.assignmentOperator().text
                 val value = if (operation == "=") expression(assignment.expression())
-                    else binary(operation.dropLast(1), read(symbol), expression(assignment.expression()))
-                if (value.type != symbol.declaredType && symbol.declaredType !in erased) invalid("Assignment type mismatch for ${symbol.name}")
+                    else binary(operation.dropLast(1), read(symbol, target), expression(assignment.expression()))
+                if (value.type != symbol.declaredType && symbol.declaredType !in erased && !(exploratory && value.type == any)) invalid("Assignment type mismatch for ${symbol.name}")
                 write(symbol, value)
                 return
             }
@@ -287,19 +300,23 @@ object PrimitiveCompiler {
             if (symbol.forceRuntime || runtime(value)) runtimeSymbols.add(symbol.id) else runtimeSymbols.remove(symbol.id)
             instructions += Instruction.Write(place, value)
         }
-        private fun read(symbol: Symbol): ValueRef {
+        private fun read(symbol: Symbol, site: ParserRuleContext): ValueRef {
             val result = nextResult++
             val place = Place(symbol.id)
             if (symbol.id in runtimeSymbols) runtimeResults.add(result)
-            val type = if (symbol.declaredType == any) (knowledge[symbol.id] as? TypeKnowledge.Exact)?.type ?: any else symbol.declaredType
+            val actual = readTypes[site.start.tokenIndex] ?: knowledge[symbol.id]
+            val type = if (symbol.declaredType == any && !exploratory) (actual as? TypeKnowledge.Exact)?.type ?: any else symbol.declaredType
+            readSites[site.start.tokenIndex] = current.id to result
             origins[result] = place
             instructions += Instruction.Read(result, place, type)
             return ValueRef.Result(type, result)
         }
         private fun binary(operation: String, left: ValueRef, right: ValueRef): ValueRef {
             if (operation !in setOf("+", "-", "*", "==", "!=", "<", ">", "<=", ">=", "&&", "||")) unsupported()
-            if (left.type == any || right.type == any) invalid("Actual type of any is unknown; use 'as' before a concrete operation")
-            val type = top.mcfpp.type.TypeRelations.resolveOperator(operation, left.type, right.type)
+            val type = if (left.type == any || right.type == any) {
+                if (!exploratory) invalid("Actual type of any is unknown; use 'as' before a concrete operation")
+                any
+            } else top.mcfpp.type.TypeRelations.resolveOperator(operation, left.type, right.type)
                 ?: invalid("Unsupported operation '$operation' between ${left.type} and ${right.type}")
             val result = nextResult++
             if (runtime(left) || runtime(right)) runtimeResults.add(result)
@@ -358,7 +375,7 @@ object PrimitiveCompiler {
                 else -> unsupported()
             }
             is Parser.VarWithSuffixContext -> if (node.identifierSuffix().isNotEmpty()) unsupported()
-                else read(visible[node.Identifier().text] ?: unsupported())
+                else read(visible[node.Identifier().text] ?: unsupported(), node)
             is Parser.ValueContext -> expression(node.nbtValue() ?: unsupported())
             is Parser.NbtValueContext -> when {
                 node.nbtInt() != null -> ValueRef.Constant(int, CompilerValue.Integral(node.nbtInt().text.toIntOrNull()?.toLong() ?: unsupported()))

@@ -58,6 +58,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         val copyNbt = Regex("data modify storage (\\S+) (\\S+) set from storage (\\S+) (\\S+)")
         val clearCompound = Regex("data modify storage mcfpp:system stack_frame\\[(\\d+)]\\.(\\S+) set value \\{\\}")
         val storeTest = Regex("execute store success score (\\S+ \\S+) (if|unless) score (\\S+ \\S+) = (\\S+ \\S+)")
+        val storeMatch = Regex("execute store success score (\\S+ \\S+) (if|unless) score (\\S+ \\S+) matches (-?\\d+)")
         var steps = 0
         var branchStackInitialized = false
         lateinit var execute: (String) -> Boolean
@@ -118,6 +119,11 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             }
             storeTest.matchEntire(command)?.let {
                 val condition = values.getValue(it.groupValues[3]) == values.getValue(it.groupValues[4])
+                values[it.groupValues[1]] = if (condition == (it.groupValues[2] == "if")) 1 else 0
+                return@command false
+            }
+            storeMatch.matchEntire(command)?.let {
+                val condition = values.getValue(it.groupValues[3]) == it.groupValues[4].toInt()
                 values[it.groupValues[1]] = if (condition == (it.groupValues[2] == "if")) 1 else 0
                 return@command false
             }
