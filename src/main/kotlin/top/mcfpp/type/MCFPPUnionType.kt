@@ -8,6 +8,7 @@ class MCFPPUnionType(vararg alternatives: MCFPPType): MCFPPType() {
     val types: Array<out MCFPPType> = alternatives.flatMap { if (it is MCFPPUnionType) it.types.toList() else listOf(it) }
         .distinctBy { it.typeId }.sortedBy { it.typeId.toString() }.toTypedArray()
     init { require(types.isNotEmpty()) { "A union needs at least one alternative" } }
+    override val hasRuntimeRepresentation: Boolean get() = types.all { it.hasRuntimeRepresentation }
     override val typeId: TypeId = TypeId.Union(types.map { it.typeId }.toSet())
 
     override val typeName: String

@@ -32,12 +32,13 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                     result += Segment(null, path.substring(cursor + 1, end).toInt(), end + 1)
                     cursor = end + 1
                 }
-                '"' -> {
+                '"', '\'' -> {
+                    val quote = path[cursor]
                     val start = cursor++
                     var escaped = false
                     while (cursor < path.length) {
                         val char = path[cursor++]
-                        if (char == '"' && !escaped) break
+                        if (char == quote && !escaped) break
                         escaped = char == '\\' && !escaped
                     }
                     result += Segment((Tag.toNBT(path.substring(start, cursor)) as StringTag).value, null, cursor)
@@ -91,6 +92,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         root[key] = value
     }
     init {
+        val nbtPath = """(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s"'])+"""
         val set = Regex("scoreboard players set (\\S+ \\S+) (-?\\d+)")
         val add = Regex("scoreboard players (add|remove) (\\S+ \\S+) (\\d+)")
         val operation = Regex("scoreboard players operation (\\S+ \\S+) (=|\\+=|-=|\\*=|%=) (\\S+ \\S+)")
@@ -98,15 +100,15 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         val matches = Regex("execute if score (\\S+ \\S+) matches (-?\\d+|(?:-?\\d+)?\\.\\.(?:-?\\d+)?) run (.*)")
         val guardStore = Regex("execute store result storage mcfpp:system ir_branch_stack\\[0].condition byte 1 run scoreboard players get (\\S+ \\S+)")
         val guardTest = Regex("execute (if|unless) data storage mcfpp:system ir_branch_stack\\[0]\\{condition:1b} run (.*)")
-        val save = Regex("execute store result storage (\\S+) (\\S+) (int|byte|short) 1 run scoreboard players get (\\S+ \\S+)")
-        val restore = Regex("execute store result score (\\S+ \\S+) run data get storage (\\S+) (\\S+?)(?: 1(?:\\.0)?)?")
-        val setNbt = Regex("data modify storage (\\S+) (\\S+) set value (.*)")
-        val copyNbt = Regex("data modify storage (\\S+) (\\S+) set from storage (\\S+) (\\S+)")
+        val save = Regex("execute store result storage (\\S+) ($nbtPath) (int|byte|short) 1 run scoreboard players get (\\S+ \\S+)")
+        val restore = Regex("execute store result score (\\S+ \\S+) run data get storage (\\S+) ($nbtPath)(?: 1(?:\\.0)?)?")
+        val setNbt = Regex("data modify storage (\\S+) ($nbtPath) set value (.*)")
+        val copyNbt = Regex("data modify storage (\\S+) ($nbtPath) set from storage (\\S+) ($nbtPath)")
         val clearCompound = Regex("data modify storage mcfpp:system stack_frame\\[(\\d+)]\\.(\\S+) set value \\{\\}")
         val storeTest = Regex("execute store success score (\\S+ \\S+) (if|unless) score (\\S+ \\S+) = (\\S+ \\S+)")
         val storeMatch = Regex("execute store success score (\\S+ \\S+) (if|unless) score (\\S+ \\S+) matches (-?\\d+)")
-        val appendNbt = Regex("data modify storage (\\S+) (\\S+) append from storage (\\S+) (\\S+)")
-        val macroCall = Regex("function (\\S+) with storage (\\S+) (\\S+)")
+        val appendNbt = Regex("data modify storage (\\S+) ($nbtPath) append from storage (\\S+) ($nbtPath)")
+        val macroCall = Regex("function (\\S+) with storage (\\S+) ($nbtPath)")
         var steps = 0
         var branchStackInitialized = false
         lateinit var execute: (String) -> Boolean
@@ -176,11 +178,11 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             }
             copyNbt.matchEntire(command)?.let {
                 val value = readNbt(it.groupValues[3], it.groupValues[4])
-                writeNbt(it.groupValues[1], it.groupValues[2], Tag.toNBT(Tag.toSNBT(value))); return@command false
+                writeNbt(it.groupValues[1], it.groupValues[2], value.copy()); return@command false
             }
             appendNbt.matchEntire(command)?.let {
                 val value = readNbt(it.groupValues[3], it.groupValues[4])
-                (readNbt(it.groupValues[1], it.groupValues[2]) as ListTag).add(Tag.toNBT(Tag.toSNBT(value)))
+                (readNbt(it.groupValues[1], it.groupValues[2]) as ListTag).add(value.copy())
                 return@command false
             }
             storeTest.matchEntire(command)?.let {

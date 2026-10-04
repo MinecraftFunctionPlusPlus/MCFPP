@@ -11,6 +11,7 @@ import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.test.util.MCFPPStringTest
 import top.mcfpp.test.util.ScoreCommandExecutor
 import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.TypeId
 import kotlin.test.*
 import kotlin.test.Test
 
@@ -183,6 +184,115 @@ class CollectionStorageTest {
         val machine = execute(main)
         assertEquals(10, machine.read(main.scope.getVar("before") as MCInt))
         assertEquals(9, machine.read(main.scope.getVar("result") as MCInt))
+    }
+
+    @Test fun dynamicDictionaryKeysTreatPunctuationAndWhitespaceAsLiteralNames() {
+        for (version in listOf("26.3", "1.20.2")) for (key in listOf("a.b", "with space", "a[b]", "a'b", "a\"b", "a'\"b", "a\\b")) {
+            val literal = top.mcfpp.nbt.tags.Tag.toSNBT(top.mcfpp.nbt.tags.primitive.StringTag(key))
+            val main = compile("""
+                func main(){
+                    var values as dict<any> = {first:2};
+                    values[$literal] = 9;
+                    dynamic var key = $literal;
+                    dynamic var before = (values[key] as int) + 0;
+                    values[key] = 7;
+                    dynamic var result = (values[key] as int) + values["first"];
+                }
+            """, version)
+            val binding = main.scope.getVar("values")!!.storageBinding!!
+            assertEquals(TypeKnowledge.Exact(MCFPPBaseType.Int.typeId), binding.data.facts.read(binding.place.field(key))!!.type)
+            val machine = execute(main)
+            assertEquals(9, machine.read(main.scope.getVar("before") as MCInt), "$version/$key")
+            assertEquals(9, machine.read(main.scope.getVar("result") as MCInt), "$version/$key")
+        }
+    }
+
+    @Test fun unknownDictionaryKeysHaveAnExplicitBackendDiagnostic() {
+        MCFPPStringTest.readFromString("""
+            func lookup(values as dict<any>, key as string) -> int { return values[key] as int; }
+            func main(){ var values as dict<any> = {first:2}; dynamic var result = lookup(values,"first"); }
+        """.trimIndent(), version = "26.3")
+        assertTrue(Project.errorCount > 0)
+        assertTrue(Project.macroFunction.isEmpty())
+    }
+
+    @Test fun targetsBeforeHeterogeneousNbtListsRejectMixedElementEncodings() {
+        for (version in listOf("1.20.2", "1.21.4")) {
+            MCFPPStringTest.readFromString("func main(){ dynamic var values = [2,true] as list<any>; }", version = version)
+            assertTrue(Project.errorCount > 0, version)
+        }
+    }
+
+    @Test fun targetsBeforeHeterogeneousNbtListsRejectIncompatibleElementWrites() {
+        for (version in listOf("1.20.2", "1.21.4")) {
+            MCFPPStringTest.readFromString("func main(){ var values = [2,9] as list<any>; values[0] = true; }", version = version)
+            assertTrue(Project.errorCount > 0, version)
+        }
+    }
+
+    @Test fun heterogeneousNbtTargetsPreserveMixedValuesAndElementWrites() {
+        for (version in listOf("1.21.5", "26.3")) {
+            val main = compile("""
+                func main(){
+                    var values = [2,true] as list<any>;
+                    dynamic var before = values[1] == true;
+                    values[0] = false;
+                    dynamic var result = values[0] == false;
+                }
+            """, version)
+            assertTrue(main.commands.analyzeAll().any { "set value [2,1b]" in it })
+            val machine = execute(main)
+            assertEquals(1, machine.read(main.scope.getVar("before") as ScoreBool))
+            assertEquals(1, machine.read(main.scope.getVar("result") as ScoreBool))
+        }
+    }
+
+    @Test fun heterogeneousLiteralTypesKeepAllElementIdentities() {
+        val main = compile("func main(){ var values = [2,true]; }")
+        val element = (main.scope.getVar("values")!!.type as top.mcfpp.type.MCFPPListType).generic.single()
+        assertEquals(TypeId.Union(setOf(MCFPPBaseType.Int.typeId, MCFPPBaseType.Bool.typeId)), element.typeId)
+        MCFPPStringTest.readFromString("func main(){ dynamic var values = [int,2]; }", version = "26.3")
+        assertTrue(Project.errorCount > 0)
+    }
+
+    @Test fun languageBoolAndNbtByteShareEncodingWithoutSharingIdentityOnLegacyTargets() {
+        val main = compile("""
+            func main(){
+                var values = [true,1b] as list<any>;
+                values[1] = false;
+                dynamic var result = (values[0] as bool) == (values[1] as bool);
+            }
+        """, "1.20.2")
+        val binding = main.scope.getVar("values")!!.storageBinding!!
+        assertEquals(TypeKnowledge.Exact(MCFPPBaseType.Bool.typeId), binding.data.facts.read(binding.place.index(0))!!.type)
+        assertEquals(0, execute(main).read(main.scope.getVar("result") as ScoreBool))
+    }
+
+    @Test fun partiallyKnownMixedAndNestedListsUseVisiblePayloads() {
+        val main = compile("""
+            func main(){
+                dynamic var flag = true;
+                var values = [[2,flag]] as list<any>;
+                var nested = values[0] as list<any>;
+                dynamic var result = nested[1] == true;
+            }
+        """)
+        assertEquals(1, execute(main).read(main.scope.getVar("result") as ScoreBool))
+        MCFPPStringTest.readFromString("func main(){ dynamic var values = [[2,true]]; }", version = "1.20.2")
+        assertTrue(Project.errorCount > 0)
+    }
+
+    @Test fun emptyDictionaryKeysFollowTheExplicitTargetCapability() {
+        val main = compile("""
+            func main(){
+                var values as dict<any> = {first:2};
+                values[""] = 7;
+                dynamic var result = values[""] + 0;
+            }
+        """, "1.20.2")
+        assertEquals(7, execute(main).read(main.scope.getVar("result") as MCInt))
+        MCFPPStringTest.readFromString("func main(){ var values as dict<any> = {first:2}; values[\"\"] = 7; }", version = "1.21.5")
+        assertTrue(Project.errorCount > 0)
     }
 
     @Test fun aLaterRhsCallDoesNotChangeAnAlreadyEvaluatedIndex() {

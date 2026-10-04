@@ -72,6 +72,8 @@ object GlobalScope : FieldContainer, IScope {
         stdNamespaces.clear()
         functionTags.clear()
         scoreboards.clear()
+        FunctionTag.TICK.functions.clear()
+        FunctionTag.LOAD.functions.clear()
 
         functionTags["minecraft:tick"] = FunctionTag.TICK
         functionTags["minecraft:load"] = FunctionTag.LOAD

@@ -42,7 +42,7 @@ object ValueSnapshot {
             value.symbol != null && !value.hasAssigned -> null
             value.storageBinding != null -> StorageAccess.snapshot(value)
             value is top.mcfpp.core.lang.JsonTextConcrete -> value.toCommandPart().let { command ->
-                if (command.isMacro) null else CompilerValue.Typed(value.type.typeId, CompilerValue.Nbt(Tag.toSNBT(Tag.toNBT(command.toString()))))
+                if (command.isMacro) null else CompilerValue.Typed(value.type.typeId, CompilerValue.Nbt(top.mcfpp.backend.NbtEncoding.snbt(Tag.toNBT(command.toString()))))
             }
             value is top.mcfpp.core.lang.MCAny && value.compilerPayload != null -> value.compilerPayload?.let(::of)?.let { CompilerValue.Typed(value.type.typeId, it) }
             value is MCFPPValue<*> -> of(value.value)?.let { CompilerValue.Typed(value.type.typeId, it) }
@@ -57,7 +57,7 @@ object ValueSnapshot {
         is Float -> CompilerValue.FloatBits(value.toRawBits())
         is Double -> CompilerValue.DoubleBits(value.toRawBits())
         is String -> CompilerValue.Text(value)
-        is Tag<*> -> CompilerValue.Nbt(Tag.toSNBT(value))
+        is Tag<*> -> CompilerValue.Nbt(top.mcfpp.backend.NbtEncoding.snbt(value))
         is Map<*, *> -> {
             if (value.keys.any { it !is String }) null else {
                 val fields = sortedMapOf<String, CompilerValue>()

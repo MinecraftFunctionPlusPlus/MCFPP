@@ -201,12 +201,12 @@ object Commands {
                 val new = a.clone()
                 new.source = EntitySource(SelectorVar(EntitySelector('s')))
                 return Command.build("execute as").build(selector.toCommandPart()).build("run")
-                    .build("data modify").build(new.toCommandPart()).build("set value ${Tag.toSNBT(value)}")
+                    .build("data modify").build(new.toCommandPart()).build("set value ${top.mcfpp.backend.NbtEncoding.snbt(value)}")
             }
         }
         return Command.build("data modify")
             .build(a.toCommandPart())
-            .build("set value ${Tag.toSNBT(value)}")
+            .build("set value ${top.mcfpp.backend.NbtEncoding.snbt(value)}")
     }
 
     /**
@@ -249,7 +249,7 @@ object Commands {
     fun dataMergeValue(a: NBTPath, value: Tag<*>): Command{
         return Command.build("data modify")
             .build(a.toCommandPart())
-            .build("merge value ${Tag.toSNBT(value)}")
+            .build("merge value ${top.mcfpp.backend.NbtEncoding.snbt(value)}")
     }
 
     @JvmStatic
@@ -264,7 +264,7 @@ object Commands {
     fun dataAppendValue(a: NBTPath, value: Tag<*>): Command{
         return Command.build("data modify")
             .build(a.toCommandPart())
-            .build("append value ${Tag.toSNBT(value)}")
+            .build("append value ${top.mcfpp.backend.NbtEncoding.snbt(value)}")
     }
 
     @JvmStatic

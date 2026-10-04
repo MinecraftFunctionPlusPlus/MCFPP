@@ -180,7 +180,6 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
                     return this
                 }
                 parent.add(compoundData)
-                compoundData.children.add(this)
                 scope.parent.add(compoundData.scope)
                 //把所有成员都塞进去
                 compoundData.scope.forEachVar {

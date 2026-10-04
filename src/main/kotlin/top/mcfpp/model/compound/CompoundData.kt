@@ -36,11 +36,6 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
     var parentID = ArrayList<String>()
 
     /**
-     * 子结构
-     */
-    var children = ArrayList<CompoundData>()
-
-    /**
      * 标识符
      */
     lateinit var identifier: String
@@ -198,7 +193,6 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
             return this
         }
         parent.add(compoundData)
-        compoundData.children.add(this)
         scope.parent.add(compoundData.scope)
         return this
     }

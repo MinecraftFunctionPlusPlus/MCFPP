@@ -10,14 +10,16 @@ data class TargetCapability(
     val legacyPackFormat: Int?,
     val packFormat: List<Int>?,
     val functionReturn: Boolean,
-    val functionMacros: Boolean
+    val functionMacros: Boolean,
+    val heterogeneousLists: Boolean,
+    val emptyNbtPathKeys: Boolean
 )
 
 /** Explicit supported targets. An unverified future release never inherits capabilities by name. */
 object TargetCapabilities {
     private val targets: Map<String, TargetCapability> = Collections.unmodifiableMap(buildMap {
         fun legacy(format: Int, vararg versions: String) {
-            versions.forEach { put(it, TargetCapability(it, FloatBackend.SCOREBOARD_EMULATION, format, null, format >= 18, format >= 18)) }
+            versions.forEach { put(it, TargetCapability(it, FloatBackend.SCOREBOARD_EMULATION, format, null, format >= 18, format >= 18, format >= 71, format < 71)) }
         }
         legacy(81, "1.21.7", "1.21.8")
         legacy(80, "1.21.6")
@@ -37,9 +39,9 @@ object TargetCapabilities {
         legacy(6, "1.16.5", "1.16.4", "1.16.3", "1.16.2")
         legacy(5, "1.16.1", "1.16", "1.15.2", "1.15.1", "1.15")
         legacy(4, "1.14.4", "1.14.3", "1.14.2", "1.14.1", "1.14", "1.13.2", "1.13.1", "1.13")
-        put("26.1", TargetCapability("26.1", FloatBackend.SCOREBOARD_EMULATION, null, listOf(101, 1), true, true))
-        put("26.2", TargetCapability("26.2", FloatBackend.SCOREBOARD_EMULATION, null, listOf(107, 1), true, true))
-        put("26.3", TargetCapability("26.3", FloatBackend.NUMBER_PROVIDER, null, listOf(121, 0), true, true))
+        put("26.1", TargetCapability("26.1", FloatBackend.SCOREBOARD_EMULATION, null, listOf(101, 1), true, true, true, false))
+        put("26.2", TargetCapability("26.2", FloatBackend.SCOREBOARD_EMULATION, null, listOf(107, 1), true, true, true, false))
+        put("26.3", TargetCapability("26.3", FloatBackend.NUMBER_PROVIDER, null, listOf(121, 0), true, true, true, false))
     })
 
     val supportedVersions: Set<String> get() = targets.keys

@@ -234,7 +234,10 @@ BooleanConstant
     |   FALSE
     ;
 
-LineString: ('"' .*? '"' )|( '\'' .*? '\'' );
+LineString
+    : '"' ('\\' ["\\] | ~["\\\r\n])* '"'
+    | '\'' ('\\' ['\\] | ~['\\\r\n])* '\''
+    ;
 
 NL
     :   ('\r'? '\n')+ {afterNewline = true;}

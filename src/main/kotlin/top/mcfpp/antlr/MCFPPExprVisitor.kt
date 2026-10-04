@@ -633,7 +633,7 @@ class MCFPPExprVisitor(
         //Const
         if (ctx.LineString() != null) {
             val r: String = ctx.LineString().text
-            return MCStringConcrete(StringTag(r.substring(1, r.length - 1)))
+            return MCStringConcrete(Tag.toNBT(r) as StringTag)
         } else if (ctx.multiLineStringLiteral()!=null){
             val stringArray = mutableListOf<String>()
             var isConcrete = true
@@ -711,7 +711,7 @@ class MCFPPExprVisitor(
 
     override fun visitNbtValue(ctx: mcfppParser.NbtValueContext): Var<*> = withCompilationContext(ctx) {
         if(ctx.LineString() != null) {
-            return MCStringConcrete(StringTag(ctx.LineString().text))
+            return MCStringConcrete(Tag.toNBT(ctx.LineString().text) as StringTag)
         }else if(ctx.nbtBool() != null){
             return ScoreBoolConcrete(ctx.nbtBool().text == "true")
         }else if(ctx.nbtByte() != null){
@@ -743,7 +743,9 @@ class MCFPPExprVisitor(
             val re = if(valueList.isEmpty()){
                 NBTListConcrete.getEmpty()
             }else{
-                NBTListConcrete(valueList, "", valueList.first().type)
+                val types = valueList.map { it.type }.distinctBy { it.typeId }
+                val elementType = if (types.size == 1) types.single() else top.mcfpp.type.MCFPPUnionType(*types.toTypedArray())
+                NBTListConcrete(valueList, "", elementType)
             }
             return re
         }else if(ctx.nbtByteArray() != null){

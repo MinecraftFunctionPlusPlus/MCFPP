@@ -185,8 +185,10 @@ class MCStringConcrete: MCString, MCFPPValue<StringTag> {
     }
 
     override fun toDynamic(replace: Boolean): Var<*> {
-        NBTBasedDataConcrete(this, value).toDynamic(replace)
-        return MCString(this)
+        top.mcfpp.analysis.StorageAccess.materialize(this)
+        val re = MCString(this)
+        if (replace) replacedBy(re)
+        return re
     }
 
     override fun getTempVar(): MCString {

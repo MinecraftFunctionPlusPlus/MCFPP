@@ -7,6 +7,7 @@ import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.BaseBool
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.nbt.NBTBasedData
+import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.core.lang.nbt.MCString
 import top.mcfpp.core.lang.nbt.NBTList
 import top.mcfpp.core.lang.nbt.NBTListConcrete
@@ -72,8 +73,10 @@ object StorageAccess {
 
     fun ensure(value: Var<*>): StorageBinding {
         value.storageBinding?.let { return it }
+        val encodingSupported = collectionEncodingSupported(value)
+        if (!encodingSupported) reportListEncoding()
         val snapshot = ValueSnapshot.of(value)
-        val frozen = constantEncoding(value)?.let { Tag.toSNBT(it) }
+        val frozen = constantEncoding(value)?.let { top.mcfpp.backend.NbtEncoding.snbt(it) }
         if (value.symbol == null && (snapshot != null || value is NBTListConcrete || value is NBTDictionaryConcrete)) value.hasAssigned = true
         if (value.symbol == null && value.identifier.isBlank()) value.identifier = TempPool.getVarIdentify()
         value.bindDeclaration()
@@ -81,7 +84,7 @@ object StorageAccess {
         val place = Place(value.symbol!!.id)
         val path = value.nbtPath.clone()
         // Capture constants and physical addresses now. A delayed write never captures a mutable Var.
-        val initial: (() -> Unit)? = if (!actualType(value).hasRuntimeRepresentation) null
+        val initial: (() -> Unit)? = if (!encodingSupported || !actualType(value).hasRuntimeRepresentation) null
             else if (frozen != null) ({ emit(Commands.dataSetValue(path, Tag.toNBT(frozen))) })
             else when (value) {
                 is MCInt -> if (!value.isDataOnly) scoreWriter(path, value.name, value.sbObject.toString(), numericTag(value.type)) else null
@@ -141,8 +144,9 @@ object StorageAccess {
             LogProcessor.error("Compiler-only value '${actualType(value)}' cannot be stored in a runtime collection")
             return {}
         }
+        if (!collectionEncodingSupported(value)) { reportListEncoding(); return {} }
         constantEncoding(value)?.let { tag ->
-            val snbt = Tag.toSNBT(tag)
+            val snbt = top.mcfpp.backend.NbtEncoding.snbt(tag)
             return { emit(Commands.dataSetValue(path, Tag.toNBT(snbt))) }
         }
         value.storageBinding?.let { binding ->
@@ -189,7 +193,7 @@ object StorageAccess {
     }
 
     private fun quotedKey(key: String) = if (key.matches(Regex("[A-Za-z0-9_+-]+"))) key
-        else Tag.toSNBT(top.mcfpp.nbt.tags.primitive.StringTag(key))
+        else top.mcfpp.backend.NbtEncoding.snbt(top.mcfpp.nbt.tags.primitive.StringTag(key))
 
     /** Ordinary collection assignment copies both encoding and immutable knowledge, with a new root identity. */
     fun copyCollection(target: Var<*>, source: Var<*>): Var<*> {
@@ -198,7 +202,7 @@ object StorageAccess {
         if (target.nbtPath.pathList.isEmpty()) target.nbtPath = NBTPath.getNormalStackPath(target)
         val place = Place(target.symbol!!.id)
         val path = target.nbtPath.clone()
-        val frozen = constantEncoding(source)?.let { Tag.toSNBT(it) }
+        val frozen = constantEncoding(source)?.let { top.mcfpp.backend.NbtEncoding.snbt(it) }
         val data = StoredData(place, path, frozen?.let { snbt -> { emit(Commands.dataSetValue(path, Tag.toNBT(snbt))) } })
         data.types.putAll(original.data.types)
         data.types[target.type.typeId] = target.type
@@ -221,6 +225,15 @@ object StorageAccess {
             is CompilerValue.Nbt -> (Tag.toNBT(payload.snbt) as? top.mcfpp.nbt.tags.primitive.StringTag)?.value
             else -> null
         }
+        if (index is MCString && key == null) {
+            LogProcessor.error("Cannot generate dictionary access with an unknown string key: no verified NBT-path escaping backend is available")
+            return UnknownVar(TempPool.getVarIdentify()).apply { isError = true }
+        }
+        if (key?.isEmpty() == true && runtimeEncodable(container) && top.mcfpp.command.TargetCapabilities
+                .forVersion(top.mcfpp.Project.config.version)?.emptyNbtPathKeys != true) {
+            LogProcessor.error("Target '${top.mcfpp.Project.config.version}' cannot traverse an empty NBT path key")
+            return UnknownVar(TempPool.getVarIdentify()).apply { isError = true }
+        }
         if (!runtimeEncodable(container)) {
             val part = if (!index.isDynamic) when (container) {
                 is NBTListConcrete -> number?.let { container.value.getOrNull(if (it < 0) container.value.size + it else it) }
@@ -232,6 +245,7 @@ object StorageAccess {
             return UnknownVar(TempPool.getVarIdentify()).apply { isError = true }
         }
         val root = ensure(container)
+        root.data.types[type.typeId] = type
         val size = root.data.listSizes[root.place]
         val normalized = number?.let { if (it < 0) size?.let { size -> size + it } else it }
         if (index is MCInt && normalized != null && size != null && normalized !in 0 until size) {
@@ -240,7 +254,7 @@ object StorageAccess {
         }
         val place = if (index is MCInt && normalized != null) root.place.index(normalized)
             else if (index is MCString && key != null) root.place.field(key) else root.place.unknownIndex()
-        val selected = if (!index.isDynamic && (number != null || key != null)) null else {
+        val selected = if (key != null || !index.isDynamic && number != null) null else {
             // The evaluated index belongs to the caller's frame and survives later/recursive RHS calls.
             val captured = index.type.buildUnConcrete(TempPool.getVarIdentify()).apply {
                 nbtPath = NBTPath.stack.intIndex(0).memberIndex(identifier)
@@ -370,6 +384,10 @@ object StorageAccess {
 
     fun write(target: Var<*>, source: Var<*>): Var<*> {
         val binding = target.storageBinding ?: error("Missing storage binding")
+        if (!collectionEncodingSupported(source) || !listWriteSupported(target, source)) {
+            reportListEncoding()
+            return target.clone().apply { isError = true }
+        }
         val original = source.storageBinding
         val parts = FlowFacts()
         original?.let { parts.copyFrom(it.data.facts, it.place, binding.place, includeRoot = false) }
@@ -515,6 +533,7 @@ object StorageAccess {
             LogProcessor.error("Compiler-only value '${actualType(source)}' cannot be stored in an erased runtime payload")
             return
         }
+        if (!collectionEncodingSupported(source)) { reportListEncoding(); return }
         source.storageBinding?.let { binding ->
             binding.data.materialize()
             if (path.toCommandPart().toString() != binding.path.toCommandPart().toString())
@@ -542,7 +561,7 @@ object StorageAccess {
     }
 
     fun constantEncoding(value: Var<*>): Tag<*>? {
-        if (!runtimeEncodable(value)) return null
+        if (!runtimeEncodable(value) || !collectionEncodingSupported(value)) return null
         if (value.storageBinding != null) {
             val frozen = snapshot(value) ?: return null
             return snapshotTag(frozen)
@@ -552,13 +571,71 @@ object StorageAccess {
             val parts = MCFloat.floatToMCFloat(value.value)
             return CompoundTag().apply { for ((i, key) in listOf("sign", "int0", "int1", "exp").withIndex()) put(key, IntTag(parts[i])) }
         }
-        return NBTUtil.varToNBT(value)?.let { Tag.toNBT(Tag.toSNBT(it)) }
+        return NBTUtil.varToNBT(value)?.copy()
     }
 
     private fun runtimeEncodable(value: Var<*>): Boolean = actualType(value).hasRuntimeRepresentation && when (value) {
         is NBTListConcrete -> value.value.all(::runtimeEncodable)
         is NBTDictionaryConcrete -> value.value.values.all(::runtimeEncodable)
         else -> true
+    }
+
+    private val supportsMixedLists get() = top.mcfpp.command.TargetCapabilities
+        .forVersion(top.mcfpp.Project.config.version)?.heterogeneousLists == true
+
+    private fun collectionEncodingSupported(value: Var<*>): Boolean {
+        if (supportsMixedLists || value.storageBinding != null) return true
+        return when (value) {
+            is NBTListConcrete -> {
+                val encodings = value.value.map(::sourceEncoding)
+                (encodings.size <= 1 || encodings.all { it != null } && encodings.distinct().size == 1) &&
+                    value.value.all(::collectionEncodingSupported)
+            }
+            is NBTDictionaryConcrete -> value.value.values.all(::collectionEncodingSupported)
+            else -> true
+        }
+    }
+
+    private fun listWriteSupported(target: Var<*>, source: Var<*>): Boolean {
+        if (supportsMixedLists || target.parent !is NBTList) return true
+        val binding = target.storageBinding!!
+        val parent = Place(binding.place.root, binding.place.path.dropLast(1))
+        val expected = sourceEncoding(source) ?: return false
+        return binding.data.facts.children(parent).values.all {
+            val type = (it.type as? TypeKnowledge.Exact)?.type?.let(binding.data.types::get) ?: return@all false
+            encoding(type) == expected
+        }
+    }
+
+    private fun sourceEncoding(value: Var<*>): Class<out Tag<*>>? {
+        value.storageBinding?.let { binding ->
+            val type = (binding.data.facts.read(binding.place)?.type as? TypeKnowledge.Exact)?.type
+                ?.let(binding.data.types::get) ?: return null
+            return encoding(type)
+        }
+        if (value is NBTBasedDataConcrete) return value.value.javaClass
+        return encoding(actualType(value))
+    }
+
+    private fun encoding(type: MCFPPType): Class<out Tag<*>>? = when (type.typeId) {
+        MCFPPBaseType.Any.typeId, MCFPPBaseType.Object.typeId, MCFPPNBTType.NBT.typeId -> null
+        MCFPPBaseType.Float.typeId -> if (FloatProviders.enabled) top.mcfpp.nbt.tags.primitive.FloatTag::class.java else CompoundTag::class.java
+        MCFPPNBTType.Byte.typeId -> top.mcfpp.nbt.tags.primitive.ByteTag::class.java
+        MCFPPNBTType.Short.typeId -> top.mcfpp.nbt.tags.primitive.ShortTag::class.java
+        MCFPPNBTType.Long.typeId -> top.mcfpp.nbt.tags.primitive.LongTag::class.java
+        MCFPPNBTType.Double.typeId -> top.mcfpp.nbt.tags.primitive.DoubleTag::class.java
+        MCFPPNBTType.ByteArray.typeId -> top.mcfpp.nbt.tags.collection.ByteArrayTag::class.java
+        MCFPPNBTType.IntArray.typeId -> top.mcfpp.nbt.tags.collection.IntArrayTag::class.java
+        MCFPPNBTType.LongArray.typeId -> top.mcfpp.nbt.tags.collection.LongArrayTag::class.java
+        else -> when (type) {
+            is MCFPPUnionType -> type.types.map(::encoding).distinct().singleOrNull()
+            is MCFPPListType, is MCFPPImmutableListType, is MCFPPCompoundType, is MCFPPDataTemplateType -> type.nbtType
+            else -> if (type in setOf(MCFPPBaseType.Int, MCFPPBaseType.Bool, MCFPPBaseType.String)) type.nbtType else null
+        }
+    }
+
+    private fun reportListEncoding() {
+        LogProcessor.error("Target '${top.mcfpp.Project.config.version}' cannot materialize or modify a list with mixed or unproven NBT element encodings; convert elements to a common encoding or select a target with heterogeneous lists")
     }
 
     private fun scoreWriter(path: NBTPath, player: String, objective: String, tag: String): () -> Unit = {

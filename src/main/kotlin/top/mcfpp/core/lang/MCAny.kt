@@ -58,7 +58,7 @@ open class MCAny : Var<MCAny> {
         if (re.nbtPath.pathList.isEmpty()) re.nbtPath = top.mcfpp.lib.NBTPath.getNormalStackPath(re)
         val place = Place(re.symbol!!.id)
         val path = re.nbtPath.clone()
-        val frozen = StorageAccess.constantEncoding(b)?.let { top.mcfpp.nbt.tags.Tag.toSNBT(it) }
+        val frozen = StorageAccess.constantEncoding(b)?.let { top.mcfpp.backend.NbtEncoding.snbt(it) }
         val data = StoredData(place, path, frozen?.let { snbt ->
             { Function.addCommand(top.mcfpp.command.Commands.dataSetValue(path, top.mcfpp.nbt.tags.Tag.toNBT(snbt))) }
         })
