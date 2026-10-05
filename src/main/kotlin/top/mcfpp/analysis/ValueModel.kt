@@ -40,6 +40,16 @@ class Place(val root: SymbolId, path: List<PathSegment> = emptyList()) {
     override fun toString() = "Place(root=$root, path=$path)"
 }
 
+/** A logical access range plus the immutable result IDs that capture its runtime indices. */
+class Location(val place: Place, indices: Map<Int, Int> = emptyMap()) {
+    val indices: Map<Int, Int> = Collections.unmodifiableMap(LinkedHashMap(indices))
+    init { require(indices.keys.all { place.path.getOrNull(it) == PathSegment.UnknownIndex }) }
+    fun child(segment: PathSegment, capturedIndex: Int? = null) = Location(Place(place.root, place.path + segment),
+        if (capturedIndex == null) indices else indices + (place.path.size to capturedIndex))
+    override fun equals(other: Any?) = other is Location && place == other.place && indices == other.indices
+    override fun hashCode() = 31 * place.hashCode() + indices.hashCode()
+}
+
 sealed interface TypeKnowledge {
     data class Exact(val type: TypeId) : TypeKnowledge
     class Candidates(types: Set<TypeId>) : TypeKnowledge {
@@ -92,7 +102,7 @@ sealed interface ValueRef {
     data class Constant(override val type: TypeId, val value: CompilerValue) : ValueRef
     data class Read(override val type: TypeId, val place: Place) : ValueRef
     data class Result(override val type: TypeId, val instruction: Int) : ValueRef
-    data class TypedView(override val type: TypeId, val source: ValueRef, val place: Place) : ValueRef
+    data class TypedView(override val type: TypeId, val source: ValueRef, val place: Place, val location: Location = Location(place)) : ValueRef
 }
 
 /** Reachability is separate from the facts of an initialized, uninitialized, or erroneous value. */
@@ -100,8 +110,30 @@ class FlowFacts private constructor(private val facts: MutableMap<Place, ValueFa
                                     private val lengths: MutableMap<Place, Int>) {
     constructor() : this(linkedMapOf(), true, linkedMapOf())
     fun fork() = FlowFacts(LinkedHashMap(facts), reachable, LinkedHashMap(lengths))
-    fun read(place: Place): ValueFacts? = facts[place]
-    fun length(place: Place): Int? = lengths[place]
+    private fun alternatives(place: Place): List<Place>? {
+        var locations = listOf(Place(place.root))
+        for (segment in place.path) locations = if (segment == PathSegment.UnknownIndex) {
+            locations.flatMap { parent ->
+                val size = lengths[parent] ?: return null
+                (0 until size).map(parent::index)
+            }
+        } else locations.map { Place(it.root, it.path + segment) }
+        return locations
+    }
+    fun read(place: Place): ValueFacts? {
+        if (PathSegment.UnknownIndex !in place.path) return facts[place]
+        val candidates = alternatives(place) ?: return facts[place]
+        if (candidates.isEmpty()) return null
+        val values = candidates.map { facts[it] ?: return null }
+        val joined = values.reduce(ValueFacts::join)
+        return joined.copy(value = ValueKnowledge.Unknown,
+            type = if (joined.state == ValueState.INITIALIZED) joined.type else TypeKnowledge.Unknown)
+    }
+    fun length(place: Place): Int? {
+        if (PathSegment.UnknownIndex !in place.path) return lengths[place]
+        val candidates = alternatives(place) ?: return lengths[place]
+        return candidates.map { lengths[it] ?: return null }.distinct().singleOrNull()
+    }
     fun setLength(place: Place, length: Int) { require(length >= 0); lengths[place] = length }
     fun knownLengths(): Map<Place, Int> = lengths.toMap()
     fun knownTypes(): Map<Place, TypeKnowledge> = facts.mapValues { (_, fact) ->
@@ -150,10 +182,22 @@ class FlowFacts private constructor(private val facts: MutableMap<Place, ValueFa
     }
     /** A collection edit replaces its indexed shape; old descendants must not survive at obsolete indices. */
     fun forgetDescendants(place: Place) {
-        facts.keys.removeAll { it.root == place.root && it.path.size > place.path.size && it.path.take(place.path.size) == place.path }
-        lengths.keys.removeAll { it.root == place.root && it.path.size > place.path.size && it.path.take(place.path.size) == place.path }
+        facts.keys.removeAll { it.overlaps(place) && it.path.size > place.path.size }
+        lengths.keys.removeAll { it.overlaps(place) && it.path.size > place.path.size }
     }
     fun copyFrom(source: FlowFacts, from: Place, to: Place, includeRoot: Boolean = true) {
+        // A write through one unknown index does not replace every member of the range.
+        if (PathSegment.UnknownIndex in to.path) return
+        if (PathSegment.UnknownIndex in from.path) {
+            val alternatives = source.alternatives(from)
+            if (alternatives != null) {
+                val copies = alternatives.map { part -> FlowFacts().apply { copyFrom(source, part, to, includeRoot) } }
+                val joined = copies.reduceOrNull { a, b -> a.join(b) } ?: return
+                facts.putAll(joined.facts.mapValues { it.value.copy(value = ValueKnowledge.Unknown) })
+                lengths.putAll(joined.lengths)
+                return
+            }
+        }
         val copied = source.facts.filterKeys {
             it.root == from.root && (if (includeRoot) it.path.size >= from.path.size else it.path.size > from.path.size) && it.path.take(from.path.size) == from.path
         }.mapKeys { (key, _) -> Place(to.root, to.path + key.path.drop(from.path.size)) }

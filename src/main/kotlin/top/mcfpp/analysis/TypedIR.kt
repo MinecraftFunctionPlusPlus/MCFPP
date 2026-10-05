@@ -8,8 +8,9 @@ data class TypedIR(val entry: Int, val blocks: List<BasicBlock>, val runtimeValu
 data class BasicBlock(val id: Int, val instructions: List<Instruction>, val terminator: Terminator)
 
 sealed interface Instruction {
-    data class Read(val result: Int, val place: Place, val type: TypeId) : Instruction
-    data class Write(val place: Place, val value: ValueRef, val containerType: TypeId? = null) : Instruction
+    data class Read(val result: Int, val place: Place, val type: TypeId, val location: Location = Location(place)) : Instruction
+    data class Write(val place: Place, val value: ValueRef, val containerType: TypeId? = null, val location: Location = Location(place)) : Instruction
+    data class CaptureIndex(val result: Int, val value: ValueRef, val container: Location) : Instruction
     data class Binary(val result: Int, val operation: String, val left: ValueRef, val right: ValueRef, val type: TypeId) : Instruction
     data class Promote(val result: Int, val value: ValueRef, val type: TypeId) : Instruction
     data class Convert(val result: Int, val value: ValueRef, val type: TypeId) : Instruction
@@ -18,7 +19,8 @@ sealed interface Instruction {
     data class Call(val result: Int?, val declaration: SymbolId, val arguments: List<ValueRef>, val effect: Effect,
                     val returnType: TypeId? = null, val argumentPlaces: List<Place?> = emptyList(),
                     val parameterTypes: List<TypeId> = emptyList(), val staticParameters: Set<Int> = emptySet(),
-                    val provisional: Boolean = false, val resultPlace: Place? = null) : Instruction
+                    val provisional: Boolean = false, val resultPlace: Place? = null,
+                    val argumentLocations: List<Location?> = emptyList()) : Instruction
     data class RawCommand(val command: String) : Instruction
 }
 sealed interface Terminator {
@@ -64,15 +66,16 @@ object FlowAnalysis {
             val state = entries.getValue(id).fork()
             val values = mutableMapOf<Int, ValueFacts>()
             val origins = mutableMapOf<Int, Place>()
-            val snapshots = mutableMapOf<Int, FlowFacts>()
+            data class Snapshot(val place: Place, val facts: FlowFacts)
+            val snapshots = mutableMapOf<Int, Snapshot>()
             fun origin(ref: ValueRef): Place? = when (ref) {
                 is ValueRef.Read -> ref.place
                 is ValueRef.Result -> origins[ref.instruction]
                 is ValueRef.TypedView -> ref.place
                 else -> null
             }
-            fun capture(place: Place) = FlowFacts().apply { copyFrom(state, place, place) }
-            fun snapshot(ref: ValueRef): FlowFacts? = when (ref) {
+            fun capture(place: Place) = Snapshot(Place(place.root), FlowFacts().apply { copyFrom(state, place, Place(place.root)) })
+            fun snapshot(ref: ValueRef): Snapshot? = when (ref) {
                 is ValueRef.Result -> snapshots[ref.instruction]
                 is ValueRef.Read -> capture(ref.place)
                 is ValueRef.TypedView -> snapshot(ref.source)
@@ -102,8 +105,9 @@ object FlowAnalysis {
                     val written = value(instruction.value)
                     state.forgetDescendants(instruction.place)
                     state.write(instruction.place, written)
-                    if (source != null) state.copyFrom(frozen!!, source, instruction.place, includeRoot = false)
+                    if (source != null) state.copyFrom(frozen!!.facts, frozen.place, instruction.place, includeRoot = false)
                 }
+                is Instruction.CaptureIndex -> values[instruction.result] = value(instruction.value)
                 is Instruction.Construct -> {
                     val parts = instruction.parts.mapValues { value(it.value) }
                     val capturedParts = instruction.parts.mapValues { snapshot(it.value) }
@@ -122,7 +126,7 @@ object FlowAnalysis {
                         val child = Place(instruction.place.root, instruction.place.path + segment)
                         state.write(child, part)
                         val source = origin(instruction.parts.getValue(segment))
-                        if (source != null) state.copyFrom(capturedParts.getValue(segment)!!, source, child, includeRoot = false)
+                        if (source != null) capturedParts.getValue(segment)!!.let { state.copyFrom(it.facts, it.place, child, includeRoot = false) }
                     }
                     // Seeding children must not invalidate the newly built complete root snapshot.
                     state.refine(instruction.place, fact)
@@ -139,14 +143,18 @@ object FlowAnalysis {
                         is Effect.Writes -> effect.places.forEach { place ->
                             state.forgetDescendants(place)
                             state.write(place, (state.read(place) ?: ValueFacts(TypeKnowledge.Unknown, ValueKnowledge.Unknown))
-                                .copy(type = TypeKnowledge.Unknown, value = ValueKnowledge.Unknown))
+                                .copy(type = written[place] ?: TypeKnowledge.Unknown, value = ValueKnowledge.Unknown))
                         }
                         Effect.Unknown -> state.barrier()
                         else -> Unit
                     }
-                    for ((place, type) in written) if (instruction.effect == Effect.Unknown ||
-                        (instruction.effect as? Effect.Writes)?.places?.any { it.path.size <= place.path.size && it.overlaps(place) } == true)
-                        state.refine(place, (state.read(place) ?: ValueFacts(type, ValueKnowledge.Unknown)).copy(type = type))
+                    for ((place, type) in written) {
+                        if (PathSegment.UnknownIndex in place.path) continue
+                        val affected = instruction.effect == Effect.Unknown || (instruction.effect as? Effect.Writes)?.places?.any {
+                            it.path.size <= place.path.size && it.overlaps(place)
+                        } == true
+                        if (affected) state.refine(place, (state.read(place) ?: ValueFacts(type, ValueKnowledge.Unknown)).copy(type = type))
+                    }
                     instruction.resultPlace?.let {
                         state.forgetDescendants(it)
                         state.write(it, ValueFacts(returned, ValueKnowledge.Unknown))

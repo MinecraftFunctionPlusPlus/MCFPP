@@ -191,19 +191,19 @@ object PrimitiveCompiler {
                     val data = data(place)
                     if (symbol.declaredType == any && finalTypes.read(place)?.type is TypeKnowledge.Candidates)
                         top.mcfpp.util.LogProcessor.warn("Any '${symbol.name}' has multiple actual types after a control-flow join; use 'as' before concrete operations")
-                    value.storageBinding = StorageBinding(data, place, value.nbtPath)
+                    value.storageBinding = StorageBinding(data, place, backend.address(lowering.location(symbol)))
                     value
                 }
                 else -> lowering.types.getValue(symbol.declaredType).buildUnConcrete(symbol.name).also { value ->
                     val data = data(place)
-                    value.storageBinding = StorageBinding(data, place, backend.address(place))
+                    value.storageBinding = StorageBinding(data, place, backend.address(lowering.location(symbol)))
                 }
             }
             adapter.symbol = symbol
             adapter.hasAssigned = true
             adapter.isConst = !symbol.mutable
             adapter.isDynamic = symbol.forceRuntime
-            adapter.nbtPath = if (nbt(symbol.declaredType)) backend.address(place) else NBTPath.getNormalStackPath(adapter)
+            adapter.nbtPath = if (nbt(symbol.declaredType)) backend.address(lowering.location(symbol)) else NBTPath.getNormalStackPath(adapter)
             function.scope.putVar(symbol.name, adapter, true)
         }
     }
@@ -224,8 +224,9 @@ object PrimitiveCompiler {
                            private val valueLengths: Map<Int, Int> = emptyMap(), private val exploratory: Boolean = false) {
         val symbols = linkedMapOf<String, Symbol>()
         val types = PrimitiveCompiler.types.toMutableMap()
-        private val aliases = mutableMapOf<SymbolId, Place>()
-        fun place(symbol: Symbol) = aliases[symbol.id] ?: Place(symbol.id)
+        private val aliases = mutableMapOf<SymbolId, Location>()
+        fun location(symbol: Symbol) = aliases[symbol.id] ?: Location(Place(symbol.id))
+        fun place(symbol: Symbol) = location(symbol).place
         private fun register(type: MCFPPType): MCFPPType {
             if (!supportedType(type) && type !== MCFPPPrivateType.Wildcard) unsupported()
             types[type.typeId] = type
@@ -260,6 +261,7 @@ object PrimitiveCompiler {
         val initialFacts = FlowFacts()
         private var knowledge = linkedMapOf<SymbolId, TypeKnowledge>()
         private val origins = mutableMapOf<Int, Place>()
+        private val locations = mutableMapOf<Int, Location>()
         private val sourceTypes = mutableMapOf<Int, TypeId>()
         private val parentTypes = mutableMapOf<Int, TypeId>()
         private var expectedLiteral: Pair<Int, MCFPPType>? = null
@@ -414,7 +416,7 @@ object PrimitiveCompiler {
                 symbols[name] = symbol
                 visible[name] = symbol
                 if (depth == 0) exportedSymbols.add(symbol)
-                if (view) aliases[symbol.id] = origins.getValue((value as ValueRef.Result).instruction)
+                if (view) aliases[symbol.id] = locations.getValue((value as ValueRef.Result).instruction)
                 else write(symbol, assigned)
                 return
             }
@@ -428,13 +430,13 @@ object PrimitiveCompiler {
                 if (suffix.identifierSuffix().isEmpty() && !symbol.mutable) invalid("Cannot assign a constant repeatedly: ${symbol.name}")
                 val operation = assignment.assignmentOperator().text
                 val indexedDestination = if (suffix.identifierSuffix().isEmpty()) null else indexed(suffix, writing = true, readFinal = operation != "=")
-                val destination = if (indexedDestination == null) place(symbol) to symbol.declaredType
-                    else (indexedDestination as ValueRef.Result).let { origins.getValue(it.instruction) to sourceTypes.getValue(it.instruction) }
+                val destination = if (indexedDestination == null) location(symbol) to symbol.declaredType
+                    else (indexedDestination as ValueRef.Result).let { locations.getValue(it.instruction) to sourceTypes.getValue(it.instruction) }
                 val value = if (operation == "=") boundValue(expression(assignment.expression()))
                     else binary(operation.dropLast(1), read(destination.first, destination.second, target), expression(assignment.expression()))
                 if (value.type != destination.second && destination.second !in erased && !(exploratory && value.type == any)) invalid("Assignment type mismatch for ${symbol.name}")
                 if (suffix.identifierSuffix().isEmpty()) write(symbol, value)
-                else instructions += Instruction.Write(destination.first, value, (indexedDestination as? ValueRef.Result)?.let { parentTypes[it.instruction] })
+                else instructions += Instruction.Write(destination.first.place, value, (indexedDestination as? ValueRef.Result)?.let { parentTypes[it.instruction] }, destination.first)
                 return
             }
             if (context.SEMICOLON() == null) unsupported()
@@ -446,34 +448,39 @@ object PrimitiveCompiler {
             else -> false
         }
         private fun write(symbol: Symbol, value: ValueRef) {
-            val place = place(symbol)
+            val location = location(symbol)
             knowledge[symbol.id] = if (value.type in erased) TypeKnowledge.Unknown else TypeKnowledge.Exact(value.type)
             if (symbol.forceRuntime || runtime(value)) runtimeSymbols.add(symbol.id) else runtimeSymbols.remove(symbol.id)
-            instructions += Instruction.Write(place, value)
+            instructions += Instruction.Write(location.place, value, location = location)
         }
-        private fun read(symbol: Symbol, site: ParserRuleContext): ValueRef = read(place(symbol), symbol.declaredType, site)
-        private fun read(place: Place, declared: TypeId, site: ParserRuleContext): ValueRef {
+        private fun read(symbol: Symbol, site: ParserRuleContext): ValueRef = read(location(symbol), symbol.declaredType, site)
+        private fun read(location: Location, declared: TypeId, site: ParserRuleContext): ValueRef {
+            val place = location.place
             val result = nextResult++
-            if (place.root in runtimeSymbols) runtimeResults.add(result)
+            if (place.root in runtimeSymbols || location.indices.isNotEmpty()) runtimeResults.add(result)
             val actual = valueTypes[site.start.tokenIndex] ?: if (place.path.isEmpty()) knowledge[place.root] else null
             val type = if (declared == any && !exploratory) (actual as? TypeKnowledge.Exact)?.type ?: any else declared
             valueSites[site.start.tokenIndex] = current.id to result
             origins[result] = place
+            locations[result] = location
             sourceTypes[result] = declared
             valueConstants[site.start.tokenIndex]?.let { provenConstants[result] = it }
-            instructions += Instruction.Read(result, place, type)
+            instructions += Instruction.Read(result, place, type, location)
             return ValueRef.Result(type, result)
         }
         private fun indexed(node: Parser.VarWithSuffixContext, writing: Boolean = false, readFinal: Boolean = true): ValueRef {
             val symbol = visible[node.Identifier().text] ?: unsupported()
             var value = read(symbol, node)
             for ((index, suffix) in node.identifierSuffix().withIndex()) {
-                val container = types[value.type] ?: unsupported()
+                val key = boundValue(expression(suffix.expression() ?: unsupported()))
+                val container = if (value.type == any) {
+                    if (!exploratory) invalid("Actual type of any is unknown; use 'as' before indexed access")
+                    register(if (key.type == MCFPPBaseType.String.typeId) MCFPPDictType(MCFPPBaseType.Any) else MCFPPListType(MCFPPBaseType.Any))
+                } else types[value.type] ?: unsupported()
                 if (writing && index == node.identifierSuffix().lastIndex && container is MCFPPImmutableListType)
                     invalid("ImmutableList elements cannot be assigned")
                 val element = (container as? MCFPPTypeWithGeneric)?.generic?.single() ?: unsupported()
-                val key = expression(suffix.expression() ?: unsupported())
-                val constant = if (runtime(key)) null else when (key) {
+                val constant = when (key) {
                     is ValueRef.Constant -> key.value
                     is ValueRef.Result -> provenConstants[key.instruction]
                     else -> null
@@ -483,7 +490,7 @@ object PrimitiveCompiler {
                     is MCFPPListType, is MCFPPImmutableListType -> {
                         if (key.type != int && !(exploratory && key.type == any)) invalid("List index must be int")
                         val number = (constant as? CompilerValue.Integral)?.value?.toInt()
-                        if (number == null) { if (!exploratory) unsupported(); PathSegment.UnknownIndex }
+                        if (number == null) PathSegment.UnknownIndex
                         else {
                             val normalized = if (number < 0) knownSize?.plus(number) else number
                             if (normalized == null) { if (!exploratory) unsupported(); PathSegment.UnknownIndex }
@@ -500,11 +507,17 @@ object PrimitiveCompiler {
                     }
                     else -> unsupported()
                 }
-                val source = origins[(value as? ValueRef.Result)?.instruction] ?: unsupported()
-                val destination = Place(source.root, source.path + segment)
+                val source = locations[(value as? ValueRef.Result)?.instruction] ?: unsupported()
+                val captured = if (segment == PathSegment.UnknownIndex && container !is MCFPPDictType) {
+                    val result = nextResult++
+                    instructions += Instruction.CaptureIndex(result, key, source)
+                    result
+                } else null
+                val destination = source.child(segment, captured)
                 value = if (!readFinal && index == node.identifierSuffix().lastIndex) {
                     val result = nextResult++
-                    origins[result] = destination
+                    origins[result] = destination.place
+                    locations[result] = destination
                     sourceTypes[result] = element.typeId
                     ValueRef.Result(element.typeId, result)
                 } else read(destination, element.typeId, suffix)
@@ -537,6 +550,7 @@ object PrimitiveCompiler {
             if (parts.values.any(::runtime)) runtimeResults.add(result)
             val place = Place(symbol.id)
             origins[result] = place
+            locations[result] = Location(place)
             sourceTypes[result] = type
             instructions += Instruction.Construct(result, place, type, parts.toMap(), sequence)
             return ValueRef.Result(type, result)
@@ -611,12 +625,12 @@ object PrimitiveCompiler {
                 val symbol = Symbol(declarationIds.getOrPut(-context.start.tokenIndex - 1, SymbolId::fresh), name, type, mutable = false, forceRuntime = true)
                 symbols[name] = symbol
                 sourceTypes[it] = type
-                Place(symbol.id).also { place -> origins[it] = place }
+                Place(symbol.id).also { place -> origins[it] = place; locations[it] = Location(place) }
             }
             instructions += Instruction.Call(result, target.declarationId, args, target.runtimeEffect, type,
                 args.map { value -> (value as? ValueRef.Result)?.let { origins[it.instruction] } },
                 target.normalParams.map { it.type.typeId }, target.normalParams.indices.filter { target.normalParams[it].isStatic }.toSet(),
-                provisional, resultPlace)
+                provisional, resultPlace, args.map { value -> (value as? ValueRef.Result)?.let { locations[it.instruction] } })
             if (target.runtimeEffect == Effect.Unknown) knowledge.replaceAll { _, _ -> TypeKnowledge.Unknown }
             val actual = if (type == any && !exploratory) (valueTypes[context.start.tokenIndex] as? TypeKnowledge.Exact)?.type else null
             if (actual != null && result != null) provenResults[result] = actual
@@ -647,9 +661,10 @@ object PrimitiveCompiler {
                     val result = nextResult++
                     views.add(result)
                     origins[result] = place
+                    locations[result] = locations.getValue((source as ValueRef.Result).instruction)
                     sourceTypes[result] = target
                     runtimeResults.add(result)
-                    instructions += Instruction.View(result, ValueRef.TypedView(target, source, place))
+                    instructions += Instruction.View(result, ValueRef.TypedView(target, source, place, locations.getValue(result)))
                     ValueRef.Result(target, result)
                 }
             }
@@ -710,19 +725,27 @@ object PrimitiveCompiler {
             val symbol = symbols.getValue(place.root)
             return Score(function.prefix + symbol.name, objective(symbol.declaredType))
         }
-        fun address(place: Place): NBTPath {
+        fun address(place: Place): NBTPath = address(Location(place))
+        fun address(location: Location): NBTPath {
+            val place = location.place
             val name = symbols.getValue(place.root).name
             var path = if (name.startsWith("$")) internal(name) else NBTPath.stack.intIndex(0).memberIndex(name)
-            for (segment in place.path) path = when (segment) {
-                is PathSegment.Field -> path.memberIndex(segment.name)
+            for ((position, segment) in place.path.withIndex()) path = when (segment) {
+                is PathSegment.Field -> path.memberIndex(StorageAccess.quotedKey(segment.name))
                 is PathSegment.Index -> path.intIndex(segment.index)
-                PathSegment.UnknownIndex -> error("Runtime index has no captured address")
+                PathSegment.UnknownIndex -> {
+                    val id = "index_${location.indices.getValue(position)}"
+                    path.intIndex(MCInt(id).apply { isDataOnly = true; hasAssigned = true; nbtPath = internal(id) })
+                }
             }
             return path
         }
         private fun path(place: Place) = address(place)
         private fun internal(name: String, frame: Int = 0) = NBTPath.stack.intIndex(frame).memberIndex("\$ir").memberIndex(name)
-        private fun emit(command: Command) { commands += command.analyze() }
+        private fun emit(command: Command) {
+            // Every dynamic address parameter belongs to this frame's IR slots.
+            commands += command.buildMacroFunction(NBTPath.stack.intIndex(0).memberIndex("\$ir")).analyze()
+        }
         private fun encode(destination: NBTPath, value: ValueRef) {
             val existing = (value as? ValueRef.Result)?.let { nbtResults[it.instruction] }
             if (existing != null) { emit(Commands.dataSetFrom(destination, existing)); return }
@@ -732,7 +755,7 @@ object PrimitiveCompiler {
                 emit(Commands.dataSetValue(destination, tag))
             } else {
                 val tag = if (value.type == bool) "byte" else "int"
-                commands += "execute store result ${destination.toCommandPart()} $tag 1 run scoreboard players get ${score(value)}"
+                emit(Command("execute store result").build(destination.toCommandPart()).build("$tag 1 run scoreboard players get ${score(value)}"))
             }
         }
         private fun constant(value: ValueRef): CompilerValue? = when (value) {
@@ -751,10 +774,10 @@ object PrimitiveCompiler {
             if (value is ValueRef.Result && value.instruction in results) return results.getValue(value.instruction)
             if (value is ValueRef.Result && value.instruction in viewResults) {
                 val view = viewResults.getValue(value.instruction)
-                val sourcePath = (view.source as? ValueRef.Result)?.let { nbtResults[it.instruction] } ?: path(view.place)
+                val sourcePath = (view.source as? ValueRef.Result)?.let { nbtResults[it.instruction] } ?: address(view.location)
                 if (!nbt(symbols.getValue(view.place.root).declaredType) && view.place.path.isEmpty()) encode(sourcePath, view.source)
                 return temporary(value.type).also {
-                    commands += "execute store result score $it run data get ${sourcePath.toCommandPart()} 1"
+                    emit(Command("execute store result score $it run data get").build(sourcePath.toCommandPart()).build("1"))
                     results[value.instruction] = it
                 }
             }
@@ -821,7 +844,8 @@ object PrimitiveCompiler {
                 if (!parameter.isStatic) return@forEachIndexed
                 val destination = instruction.argumentPlaces.getOrNull(index) ?: return@forEachIndexed
                 val source = internal("static_${id}_$index")
-                if (nbt(symbols.getValue(destination.root).declaredType) || destination.path.isNotEmpty()) emit(Commands.dataSetFrom(path(destination), source))
+                val location = instruction.argumentLocations.getOrNull(index) ?: Location(destination)
+                if (nbt(symbols.getValue(destination.root).declaredType) || destination.path.isNotEmpty()) emit(Commands.dataSetFrom(address(location), source))
                 else commands += "execute store result score ${place(destination)} run data get ${source.toCommandPart()} 1"
                 materializedPlaces.add(destination)
                 initialized.add(destination)
@@ -861,7 +885,7 @@ object PrimitiveCompiler {
                 GlobalScope.localNamespaces.getValue(function.namespace).scope.addFunction(destination, false)
             }
             val hasControlFlow = ir.blocks.size > 1
-            val supportsReturn = top.mcfpp.command.TargetCapabilities.forVersion(top.mcfpp.Project.config.version)?.functionReturn == true
+            val supportsReturn = top.mcfpp.command.TargetCapabilities.forVersion(top.mcfpp.Project.config.version)?.functionReturnRun == true
             val exits = mutableListOf<Function>()
             for (block in reachable) {
                 blockId = block.id
@@ -879,7 +903,7 @@ object PrimitiveCompiler {
                 for (instruction in block.instructions) when (instruction) {
                     is Instruction.Read -> if (nbt(symbols.getValue(instruction.place.root).declaredType) || instruction.place.path.isNotEmpty()) {
                         val snapshot = internal("read_${instruction.result}")
-                        emit(Commands.dataSetFrom(snapshot, path(instruction.place)))
+                        emit(Commands.dataSetFrom(snapshot, address(instruction.location)))
                         nbtResults[instruction.result] = snapshot
                     } else if (runtime(ValueRef.Result(instruction.type, instruction.result))) {
                         val snapshot = temporary(instruction.type)
@@ -889,7 +913,7 @@ object PrimitiveCompiler {
                     is Instruction.Write -> {
                         if (nbt(symbols.getValue(instruction.place.root).declaredType) || instruction.place.path.isNotEmpty()) {
                             materializedPlaces.add(instruction.place)
-                            encode(path(instruction.place), instruction.value)
+                            encode(address(instruction.location), instruction.value)
                             initialized.add(instruction.place)
                             continue
                         }
@@ -927,6 +951,15 @@ object PrimitiveCompiler {
                         }
                     }
                     is Instruction.RawCommand -> commands.add(instruction.command)
+                    is Instruction.CaptureIndex -> {
+                        val index = temporary(int)
+                        val length = temporary(int)
+                        commands += "scoreboard players operation $index = ${score(instruction.value)}"
+                        emit(Command("execute store result score $length run data get")
+                            .build(address(instruction.container).toCommandPart()).build("1"))
+                        commands += "execute if score $index matches ..-1 run scoreboard players operation $index += $length"
+                        commands += "execute store result ${internal("index_${instruction.result}").toCommandPart()} int 1 run scoreboard players get $index"
+                    }
                     is Instruction.Construct -> {
                         val destination = path(instruction.place)
                         val literal = constant(ValueRef.Result(instruction.type, instruction.result))?.takeUnless { lowering.runtime(ValueRef.Result(instruction.type, instruction.result)) }
@@ -941,7 +974,9 @@ object PrimitiveCompiler {
                             }
                         } else {
                             emit(Commands.dataSetValue(destination, top.mcfpp.nbt.tags.CompoundTag()))
-                            instruction.parts.forEach { (segment, value) -> encode(destination.memberIndex((segment as PathSegment.Field).name), value) }
+                            instruction.parts.forEach { (segment, value) ->
+                                encode(destination.memberIndex(StorageAccess.quotedKey((segment as PathSegment.Field).name)), value)
+                            }
                         }
                         nbtResults[instruction.result] = destination
                         initialized.add(instruction.place)
@@ -950,7 +985,7 @@ object PrimitiveCompiler {
                     is Instruction.View -> {
                         if (nbt(instruction.value.type)) {
                             nbtResults[instruction.result] = (instruction.value.source as? ValueRef.Result)?.let { nbtResults[it.instruction] }
-                                ?: path(instruction.value.place)
+                                ?: address(instruction.value.location)
                         } else {
                             viewResults[instruction.result] = instruction.value
                             score(ValueRef.Result(instruction.value.type, instruction.result))

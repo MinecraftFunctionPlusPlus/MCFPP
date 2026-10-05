@@ -280,7 +280,7 @@ open class Command: Serializable {
     fun buildMacroFunction(nbtPath: NBTPath): Command{
         if(!isMacro) return this
         val f = UUID.randomUUID().toString()
-        Project.macroFunction[f] = this.toString()
+        Project.macroFunction[f] = "$$this"
         return Command.build("function mcfpp:dynamic/$f with").build(nbtPath.toCommandPart())
     }
 

@@ -537,11 +537,22 @@ class CollectionStorageTest {
         assertTrue(Project.errorCount > 0)
     }
 
-    @Test fun targetsWithoutMacrosReportDynamicIndexAccessInsteadOfEmittingUnsupportedCommands() {
-        MCFPPStringTest.readFromString("""
+    @Test fun targetsWithoutMacrosAcceptProvenIndicesAndRejectUnknownIndices() {
+        val main = compile("""
             func main(){
                 var values = [2,9] as list<any>;
                 dynamic var index = 1;
+                values[index] = 7;
+                dynamic var result = values[index] + 0;
+            }
+        """, "1.20")
+        assertEquals(7, execute(main).read(main.scope.getVar("result") as MCInt))
+        assertTrue(Project.macroFunction.isEmpty())
+        MCFPPStringTest.readFromString("""
+            func identity(value as int) -> int { return value; }
+            func main(){
+                var values = [2,9] as list<any>;
+                dynamic var index = identity(1);
                 values[index] = 7;
             }
         """.trimIndent(), version = "1.20")

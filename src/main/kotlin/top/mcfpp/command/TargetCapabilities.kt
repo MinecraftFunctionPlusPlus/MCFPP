@@ -9,7 +9,7 @@ data class TargetCapability(
     val floatBackend: FloatBackend,
     val legacyPackFormat: Int?,
     val packFormat: List<Int>?,
-    val functionReturn: Boolean,
+    val functionReturnRun: Boolean,
     val functionMacros: Boolean,
     val heterogeneousLists: Boolean,
     val emptyNbtPathKeys: Boolean
@@ -19,7 +19,7 @@ data class TargetCapability(
 object TargetCapabilities {
     private val targets: Map<String, TargetCapability> = Collections.unmodifiableMap(buildMap {
         fun legacy(format: Int, vararg versions: String) {
-            versions.forEach { put(it, TargetCapability(it, FloatBackend.SCOREBOARD_EMULATION, format, null, format >= 18, format >= 18, format >= 71, format < 71)) }
+            versions.forEach { put(it, TargetCapability(it, FloatBackend.SCOREBOARD_EMULATION, format, null, format >= 26, format >= 18, format >= 71, format < 71)) }
         }
         legacy(81, "1.21.7", "1.21.8")
         legacy(80, "1.21.6")

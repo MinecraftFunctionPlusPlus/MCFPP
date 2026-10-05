@@ -30,6 +30,8 @@ object IRCollectionValidation {
             else -> codec(value.type)
         }
         for (block in ir.blocks.filter { it.id in facts.entries }) for ((position, instruction) in block.instructions.withIndex()) {
+            if (instruction is Instruction.CaptureIndex && !target.functionMacros)
+                diagnostics += "Target '${target.version}' cannot access a dynamic list index without function macros"
             val accessed = when (instruction) {
                 is Instruction.Read -> instruction.place
                 is Instruction.Write -> instruction.place
@@ -43,13 +45,15 @@ object IRCollectionValidation {
                 if (codecs.any { it == null } || codecs.distinct().size != 1)
                     diagnostics += "Target '${target.version}' requires a proven common NBT encoding for list elements"
             }
-            if (instruction !is Instruction.Write || instruction.place.path.lastOrNull() !is PathSegment.Index) continue
+            if (instruction !is Instruction.Write) continue
+            val segment = instruction.place.path.lastOrNull()
+            if (segment !is PathSegment.Index && segment != PathSegment.UnknownIndex) continue
             val state = facts.beforeWrites[block.id to position] ?: continue
             val parent = Place(instruction.place.root, instruction.place.path.dropLast(1))
             val actual = (state.read(parent)?.type as? TypeKnowledge.Exact)?.type?.let(types::get)
             val container = actual ?: instruction.containerType?.let(types::get)
             if (container !is MCFPPListType && container !is MCFPPImmutableListType) continue
-            val children = state.children(parent).values
+            val children = state.children(parent).filterKeys { it.path.last() is PathSegment.Index }.values
             val common = if (state.length(parent) != null && children.size == state.length(parent) && children.isNotEmpty()) {
                 val codecs = children.map { codec(it.type) }
                 if (codecs.any { it == null }) null else codecs.distinct().singleOrNull()

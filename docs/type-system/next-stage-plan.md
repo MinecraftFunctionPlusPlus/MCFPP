@@ -28,8 +28,9 @@
 - 标量和擦除调用用独立帧槽保存操作数、早先参数与返回，static 写回保留其他位置的事实并更新擦除实际类型；直接调用返回值具有 Place，表达式 as 按求值顺序读取。已知 any 返回可直接绑定运算、条件与重载，保持 any 声明，普通返回的值知识仍未知。函数物理存储前缀按声明命名空间确定，MCFL 升至 9。
 - list/dict/ImmutableList 的可编码字面量、已知下标/键、普通复制及命名共享视图接入实际 IR 的分支和 while；元素类型采用回边不动点，读取捕获独立子事实和嵌套长度，整体替换撤销旧后代。可编码集合的普通形参/返回和递归载荷保持独立，static 已知字段写入映射位置并传播类型证据，条件改写和未知效果撤销旧元素类型。
 - IR 后端生成前检查旧目标的共同列表编码及空键能力；空字典保持 dict<any> 的运行时身份，上下文字面量不引入可变泛型协变。只读槽写入拒绝，嵌套可变元素仍可操作；void 调用作为集合元素产生诊断。
+- 列表动态下标接入 IR；Location 区分逻辑范围与捕获地址，负数在 RHS 前归一，嵌套读、共享视图及 static 写回保持原索引。未知读取合并共同类型/形状，未知写入合并可能类型并撤销重叠后代，不把一次写入视为整个范围已赋值。宏直接使用当前帧的 IR 参数；1.20.2 的控制流不用 return run。
 
-下一次优先将动态下标和集合成员调用接入同一 IR 与位置效果分析，再扩展 map/NBT 数组、部分已知静态容器、未知字典字符串键和投影路径。集合返回与 static 整体替换的完整子形状、其余循环及泛型默认实参仍需扩展。继续覆盖模板/浮点/泛型及 T! 调用、全局/实体写入与递归擦除返回类型，统一模板构造、剩余布局和 MNI 接口。原始命令跨函数修改物理记分板需要与帧保存/恢复核实；列表浮点查找、数组重解释、空键和其余 SNBT 编码仍需扩大目标对照。
+下一次优先将集合成员调用接入同一 IR 与位置效果分析，再扩展 map/NBT 数组、部分已知静态容器、未知字典字符串键和投影路径。未知长度上的负数字面下标、集合返回与 static 整体替换的完整子形状、其余循环及泛型默认实参仍需扩展。继续覆盖模板/浮点/泛型及 T! 调用、全局/实体写入与递归擦除返回类型，统一模板构造、剩余布局和 MNI 接口。原始命令跨函数修改物理记分板需要与帧保存/恢复核实；列表浮点查找、数组重解释、空键和其余 SNBT 编码仍需扩大目标对照。
 下文保留原实施顺序和全阶段验收清单；条目出现不表示已通过。
 
 ## 首要问题与交付范围
@@ -51,10 +52,10 @@
 | 入口 | 当前作用与待迁移位置 |
 | --- | --- |
 | `analysis/ValueModel.kt` | Place 重叠、FlowFacts、TypedView、StorageLayout、StorageVersions；连接真实读写和缓存 |
-| `analysis/TypedIR.kt` | 实际 Read/Write/View/Construct/Call、捕获的集合形状、参数与外部位置元数据；继续扩展动态地址、转换及其余类型 |
-| `analysis/PrimitiveCompiler.kt` | 标量/擦除及已知下标 list/dict/ImmutableList 控制流、自由函数调用图与帧后端；继续接入动态索引和成员 |
-| `analysis/EffectAnalysis.kt`、`ReturnTypeAnalysis.kt` | 递归外部写入摘要、static 子位置及无值求值的调用类型证据；扩展动态集合/全局位置及递归擦除返回 |
-| `analysis/IRCollectionValidation.kt` | 生成命令前检查列表共同编码与空键访问能力；随成员和动态地址迁入扩大 |
+| `analysis/TypedIR.kt` | 实际 Read/Write/View/Construct/Call/CaptureIndex、捕获的集合形状、参数与外部位置元数据；继续扩展成员、转换及其余类型 |
+| `analysis/PrimitiveCompiler.kt` | 标量/擦除、list/dict/ImmutableList 控制流与列表动态索引、自由函数调用图与帧后端；继续接入成员 |
+| `analysis/EffectAnalysis.kt`、`ReturnTypeAnalysis.kt` | 递归外部写入摘要、static 已知子位置及未知列表范围的写入类型证据；扩展其余集合/全局位置及递归擦除返回 |
+| `analysis/IRCollectionValidation.kt` | 生成命令前检查列表共同编码、空键和动态索引宏能力；随成员迁入扩大 |
 | `antlr/MCFPPExprVisitor.kt` | visitCastExpression 使用 StorageAccess；操作数捕获、调用结果及临时值保存也在这里 |
 | `antlr/MCFPPImVisitor.kt` | 旧赋值、分支、模板/集合语法仍直接生成命令或 toDynamic |
 | `core/lang/Var.kt` | 声明约束、旧转换、replacedBy、symbol 及变量适配边界 |
@@ -135,8 +136,8 @@
 
 ## 验证与交付
 
-按改动运行相关测试；出现新缺陷时扩展回归，已有检查通过后不要无理由反复运行。
-阶段完成时依次运行以下命令，**不要并行启动 Gradle 构建**：
+用户最新要求：不做过度防御与工程化，优先清晰可读；整项任务完成前仅做必要检查。按改动运行直接受影响的测试，缺陷修复后检查对应回归，已有检查通过后不要无理由重复运行。
+类型布局、语言签名或 MNI/缓存元数据改变时重建标准库；整项重构完成时进行完整 check。需要这些检查时顺序执行，**不要并行启动 Gradle 构建**：
 
 ```sh
 ./gradlew regenerateStdlib -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
@@ -144,7 +145,7 @@
 git diff --check
 ```
 
-regenerateStdlib 后单独执行 check，使 processResources 复制新索引。
+regenerateStdlib 后再执行必要测试或最终 check，使 processResources 复制新索引；纯瞬态 IR 改动不要求每个小阶段重建索引或全量检查。
 更新 migration.md、conversions.md、verification.md 和交接记录中的实现边界、测试总数、服务端状态。
 交付应同时给出代码、诊断断言、命令结果和已知限制，不能只提交类型/存储模型占位类。
 

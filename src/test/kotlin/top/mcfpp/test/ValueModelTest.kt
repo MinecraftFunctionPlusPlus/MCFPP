@@ -64,6 +64,12 @@ class ValueModelTest {
         segments.clear()
         assertTrue(place in places)
         assertEquals(listOf(PathSegment.Field("value")), place.path)
+        val indices = mutableMapOf(0 to 3)
+        val location = Location(Place(place.root).unknownIndex(), indices)
+        val locations = hashSetOf(location)
+        indices.clear()
+        assertTrue(location in locations)
+        assertEquals(mapOf(0 to 3), location.indices)
     }
 
     @Test fun cloningAnInitializedValuePreservesFactsWithoutInitializingAnUnknownDeclaration() {

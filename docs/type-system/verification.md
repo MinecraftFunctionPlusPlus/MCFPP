@@ -1,8 +1,19 @@
 # 当前阶段验证记录
 
-最终验证日期：2026-10-05（Asia/Shanghai）。续接起始基线为上一会话的 140 项测试，浮点后端及算术修改继续保留。
+最新验证日期：2026-10-05（Asia/Shanghai）。本轮动态列表 IR 的必要检查为 106 项；最近完整检查属于提交 72dc557，共 346 项。续接起始基线为上一会话的 140 项测试，浮点后端及算术修改继续保留。
 
-## 实际执行
+## 最新必要检查：动态列表 IR
+
+```sh
+./gradlew test --tests top.mcfpp.test.DynamicIndexIRTest --tests top.mcfpp.test.CollectionIRTest --tests top.mcfpp.test.CollectionStorageTest --tests top.mcfpp.test.ValueModelTest --tests top.mcfpp.test.IRCallTest --tests top.mcfpp.test.EffectAnalysisTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
+git diff --check
+```
+
+6 个套件、106 个测试，0 失败、0 错误、0 跳过。DynamicIndexIRTest 新增 13 项，覆盖动态/嵌套索引、RHS 前捕获与负数归一、循环范围类型、独立集合副本、共享视图、递归帧、static 地址写回，以及未知范围写入不伪造全局类型。CollectionStorageTest 的 39 项同时验证复杂键转义、已证明下标可用于无宏目标，以及真正未知的下标被拒绝。
+
+日志：`F:/DevCache/.codex/runtime/mcfpp-dynamic-index-ir-final.log`；当前 XML 只包含本轮 6 个必要套件。按用户最新要求没有重复全量构建；Location/IR 属于瞬态分析数据，未改变序列化签名，MCFL 保持 9，复用上一轮索引。
+
+## 最近完整检查：72dc557
 
 ```sh
 ./gradlew regenerateStdlib -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
@@ -31,8 +42,8 @@
 - 新增 ProjectIsolationTest：6 项通过；连续项目初始化清除旧标签、词法/语法缓存、元数据图缓存和编译上下文，同路径文件更新后重新解析。
 - git diff --check：通过。
 
-本轮在 Windows 使用工作区外的 Temurin 21 与 Gradle 8.14 执行同一任务；标准库重建后单独运行 check --rerun-tasks，确保 processResources 使用新索引。
-最新日志位于 `F:/DevCache/.codex/runtime/mcfpp-collection-ir-stdlib.log`、`mcfpp-collection-ir-check.log`；扩大的集合/调用/存储联合检查为 `mcfpp-collection-ir-expanded.log`，151 项全部通过，追加非法输入检查后的集合套件为 `mcfpp-collection-ir-final-boundary.log`，18 项通过。IR 调用、只读列表、数组、map 和字典阶段日志保留在同一目录。完整结果也可从 `build/test-results/test/TEST-*.xml` 复核。
+该完整检查在 Windows 使用工作区外的 Temurin 21 与 Gradle 8.14；标准库重建后单独运行 check --rerun-tasks，确保 processResources 使用新索引。
+完整检查日志位于 `F:/DevCache/.codex/runtime/mcfpp-collection-ir-stdlib.log`、`mcfpp-collection-ir-check.log`；扩大的集合/调用/存储联合检查为 `mcfpp-collection-ir-expanded.log`，151 项全部通过，追加非法输入检查后的集合套件为 `mcfpp-collection-ir-final-boundary.log`，18 项通过。IR 调用、只读列表、数组、map 和字典阶段日志保留在同一目录；当前 XML 已由最新必要检查更新。
 
 ## 反向验证与本轮发现的回归
 
@@ -71,6 +82,8 @@ NBT 数组首批 9 项回归在迁入前实际失败 8 项：字面量降为 nbt
 集合 IR 的首批 7 项在迁入前均失败，初步接入后的联合 53 项通过。扩大到 135 项时暴露 IR 绕过旧目标混合编码检查，以及 dict<any> 字面量缺少上下文约束；IRCollectionValidation 现于后端生成前检查共同编码、写入前形状和空键能力。已知键直接赋值曾错误读取尚不存在的空键，现跳过最终左值读取；现代目标的混合常量仍保留可见 bool 编码。共享导出适配器的测试最初把手动写入命令附加在已移除的入口帧之后，现先执行真实函数，再单独验证适配器共享事实；该调整不算作产品帧修复。
 补查类型及形状的 28 项中有 4 项失败（`mcfpp-collection-ir-boundary-red.log`）：static 元素改写沿用旧 int、条件改写借用输入类型、嵌套捕获丢失原形状，以及空字典推导为不可运行时的 wildcard。调用后的改写位置现先撤销旧类型，再接收无常量值的 callee 类型证据；条件未完全初始化的输出保持未知，未改动兄弟事实不受影响。Read 保存求值时子事实/长度，Construct 和 Write 从捕获快照复制，后续调用不能改变此前操作数的形状；空字典保持 dict<any>。普通 list<any> 返回元素仍须显式 as，相关样例没有假设普通函数会计算常量返回；一个原始命令样例也按语法要求改为独立一行。
 非法 void 调用作为集合元素的追加检查曾使测试进程以 1 退出（`mcfpp-collection-ir-void-red.log`），没有生成可用的单项 XML 报告。集合类型查询现在转为逐语句收集的编译诊断，并断言不发布调用/构造命令。最终集合 18 项与完整 346 项通过；标准库 0 错误/0 警告。Function 的 IR/效果和 Var 的存储绑定属于瞬态字段，未改变序列化签名或布局，本轮保持 MCFL 9 并重建索引，测试堆内存设置未变。
+动态列表 IR 的初始拒绝检查在进程中断前记录 10 项已执行、9 项失败和 1 项跳过（`mcfpp-dynamic-index-ir-red.log`），没有声称全部新增用例均已失败。迁入后修正了测试中的保留字函数名，并将执行器不支持的条件 store 形式简化为无条件读取长度；随后 66 项通过。未知范围 static 写入的补查使必要检查增至 67 项，确认一次赋值不等于整片范围已初始化。扩到 106 项发现两项复杂字典键路径遗漏转义；IR 地址现复用 StorageAccess.quotedKey。旧无宏测试把有已知值的 dynamic 变量当作未知下标，已同时断言已证明值可生成、普通函数返回的未知值会诊断。最终 106 项全部通过，没有修改执行器来容忍错误命令。
+宏生成显式绑定当前帧的 IR 参数，补齐带绑定路径的宏函数 `$` 前缀，两个嵌套运行时下标实际执行通过。目标能力区分宏与 return run：1.20.2 删除 return run，1.20.3 重新加入，IR 在 1.20.2 使用原有条件栈后端。依据 [官方 1.20.2 发布说明](https://www.minecraft.net/en-us/article/minecraft-java-edition-1-20-2) 和 [官方 1.20.3 发布说明](https://www.minecraft.net/en-us/article/minecraft-java-edition-1-20-3)。
 
 完整回归发现并修复了模板安全向上转型时处理额外字段的空指针。
 后续回归修复了动态集合的 Java 调试视图被误送入运行时变量构造的问题；编译器对象载荷保留在原生调用边界。
@@ -96,7 +109,7 @@ NBT 数组首批 9 项回归在迁入前实际失败 8 项：字面量降为 nbt
 - 模板普通赋值/参数/返回复制载荷，as 共享位置；别名写入撤销重叠缓存并保留已知兄弟字段。
 - 求值后保存的操作数及较早参数跨递归调用恢复，后续调用的写回仍保留；未知用户函数/原生函数产生事实和缓存屏障，纯 IR 函数保留事实。
 - list/dict 的已知元素、部分已知字面量、擦除载荷和普通副本保留子事实；未知下标写入撤销重叠值并合并可能元素类型，正负已知索引归一到同一位置。
-- 动态下标在 RHS 调用前捕获，多个未知下标使用独立读寄存器；已知 any 下标采用实际 int/string 类型，byte 不因继承获得 int 下标签名；无宏目标明确拒绝动态下标。
+- 列表动态下标接入 IR；Location 记录各层独立捕获结果，负数在 RHS 改写容器前归一，static 写回与命名视图保留原地址。未知范围读取保留共同类型/形状但无常量值，未知写入合并可能类型、撤销重叠后代；普通副本独立。已知 any 下标采用实际 int/string 类型，byte 不因继承获得 int 下标签名；无宏目标拒绝未知下标，dynamic 布局不撤销已证明的下标值。
 - 编译器专用列表拒绝 dynamic 物化，静态副本和已知下标仍可使用；混合字面量保留完整联合身份，含编译器专用分支的联合拒绝物化；空列表保持运行时表示。
 - list/dict 的编译器专用内容经 any/object 保留内部静态载荷，普通副本递归复制嵌套擦除字段；动态声明和显式物化在载荷写入前诊断，运行时屏障不物化这些值。完整静态实参的特化键保持不可变，泛型调用复用相同静态载荷的函数体。
 - 完整静态 list/dict/type 的 as 共享 CompilerOnly 位置和写版本，原始命令不撤销静态事实；已知子位置写入及整体替换更新所有视图的读值，祖先完整快照重新生成，旧快照和普通副本仍独立；原生 list clear/add 的宿主变更提交到同一位置。
@@ -123,7 +136,7 @@ NBT 数组首批 9 项回归在迁入前实际失败 8 项：字面量降为 nbt
 ## 未完成验收
 
 这些结果验证的是 migration.md 中已接入的范围，不能替代整份重构方案的验收。
-动态下标、集合成员、map/NBT 数组与编译器专用集合的 IR，集合返回/static 整体替换的完整子形状，模板/浮点及泛型/T! 的调用与控制流、其余循环语法、未知字典字符串键的运行时后端、其余原生成员编码检查、全局/实体位置的递归效果及完整擦除返回类型不动点、模板方法/构造、其余布局和转换后端、MNI 全面迁移及旧体系移除仍列在迁移指南中。原始命令直接跨函数修改物理记分板与帧恢复的关系仍需核实。
+集合成员、map/NBT 数组与编译器专用集合的 IR，未知长度上的负数字面下标、集合返回/static 整体替换的完整子形状，模板/浮点及泛型/T! 的调用与控制流、其余循环语法、未知字典字符串键的运行时后端、其余原生成员编码检查、全局/实体位置的递归效果及完整擦除返回类型不动点、模板方法/构造、其余布局和转换后端、MNI 全面迁移及旧体系移除仍列在迁移指南中。原始命令直接跨函数修改物理记分板与帧恢复的关系仍需核实。
 as、擦除载荷和存储已经有实际贯通路径；不能把这些测试外推为全部语言类型和调用路径均已完成。
 旧浮点测试验证分量搬运和命令结构，未证明模拟库的全部数值精度、舍入及异常行为。
 旧测试仍有仅打印诊断的用例；测试通过不能证明其全部输入都符合新语义。
