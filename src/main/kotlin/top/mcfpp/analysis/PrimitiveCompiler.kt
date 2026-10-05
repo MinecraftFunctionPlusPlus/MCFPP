@@ -94,8 +94,7 @@ object PrimitiveCompiler {
             for ((id, entry) in prepared.toMap()) {
                 val draft = entry.lowering
                 val binding = FlowAnalysis.analyze(graph.getValue(id), initial = draft.initialFacts, evaluator = PrimitiveEvaluation::binary,
-                    callKnowledge = { call, args -> ReturnTypeAnalysis.callKnowledge(call, graph, args) },
-                    callWrites = { call, args -> ReturnTypeAnalysis.callWrites(call, graph, args) })
+                    callSummary = { call, args -> ReturnTypeAnalysis.summarize(call, graph, args) })
                 val valueTypes = draft.valueSites.mapValues { (_, result) -> binding.values[result]?.type ?: TypeKnowledge.Unknown }
                 val valueConstants = draft.valueSites.mapNotNull { (site, result) ->
                     (binding.values[result]?.value as? ValueKnowledge.Constant)?.value?.let { site to it }
@@ -151,12 +150,10 @@ object PrimitiveCompiler {
         val ir = graph.getValue(function.declarationId)
         val evaluator = if (top.mcfpp.CompileSettings.foldIRConstants) PrimitiveEvaluation::binary else { _: String, _: CompilerValue, _: CompilerValue -> null }
         val facts = FlowAnalysis.analyze(ir, initial = lowering.initialFacts, evaluator = evaluator, canFoldBranch = { !lowering.runtime(it) },
-            callKnowledge = { call, args -> ReturnTypeAnalysis.callKnowledge(call, graph, args) },
-            callWrites = { call, args -> ReturnTypeAnalysis.callWrites(call, graph, args) }, foldQueries = top.mcfpp.CompileSettings.foldIRConstants)
+            callSummary = { call, args -> ReturnTypeAnalysis.summarize(call, graph, args) }, foldQueries = top.mcfpp.CompileSettings.foldIRConstants)
         val typeFacts = if (top.mcfpp.CompileSettings.foldIRConstants) facts else FlowAnalysis.analyze(ir,
             initial = lowering.initialFacts, evaluator = PrimitiveEvaluation::binary, canFoldBranch = { !lowering.runtime(it) },
-            callKnowledge = { call, args -> ReturnTypeAnalysis.callKnowledge(call, graph, args) },
-            callWrites = { call, args -> ReturnTypeAnalysis.callWrites(call, graph, args) })
+            callSummary = { call, args -> ReturnTypeAnalysis.summarize(call, graph, args) })
         diagnostics += IRCollectionValidation.validate(ir, typeFacts, lowering.types,
             top.mcfpp.command.TargetCapabilities.forVersion(top.mcfpp.Project.config.version)!!)
         diagnostics.forEach(top.mcfpp.util.LogProcessor::error)
@@ -239,6 +236,19 @@ object PrimitiveCompiler {
             (type as? MCFPPUnionType)?.types?.forEach(::register)
             return type
         }
+        /** Reconstruct structural types learned from already compiled callees, without a global type cache. */
+        private fun register(id: TypeId): MCFPPType = types[id] ?: register(when (id) {
+            MCFPPPrivateType.Wildcard.typeId -> MCFPPPrivateType.Wildcard
+            is TypeId.Applied -> when (id.constructor) {
+                TypeId.Builtin("list") -> MCFPPListType(register(id.arguments.single()))
+                TypeId.Builtin("ImmutableList") -> MCFPPImmutableListType(register(id.arguments.single()))
+                TypeId.Builtin("dict") -> MCFPPDictType(register(id.arguments.single()))
+                TypeId.Builtin("map") -> MCFPPMapType(register(id.arguments.single()))
+                else -> unsupported()
+            }
+            is TypeId.Union -> MCFPPUnionType(*id.alternatives.map(::register).toTypedArray())
+            else -> unsupported()
+        })
         private fun type(context: Parser.TypeContext): MCFPPType {
             if (context.EXCL() != null) unsupported()
             val syntax = context.typeWithoutExcl()
@@ -554,6 +564,7 @@ object PrimitiveCompiler {
             val token = site?.start?.tokenIndex
             val actual = token?.let(valueTypes::get) ?: if (place.path.isEmpty()) knowledge[place.root] else null
             val type = if (declared == any && !exploratory) (actual as? TypeKnowledge.Exact)?.type ?: any else declared
+            register(type)
             if (token != null) valueSites[token] = current.id to result
             origins[result] = place
             locations[result] = location
@@ -611,7 +622,7 @@ object PrimitiveCompiler {
                             if (normalized == null) {
                                 // Old targets retain their literal negative-index backend until captured offsets
                                 // can be lowered without macros. Unknown runtime indices remain a diagnostic.
-                                if (!top.mcfpp.command.TargetCapabilities.forVersion(top.mcfpp.Project.config.version)!!.functionMacros) unsupported()
+                                if (!exploratory && !top.mcfpp.command.TargetCapabilities.forVersion(top.mcfpp.Project.config.version)!!.functionMacros) unsupported()
                                 PathSegment.UnknownIndex
                             }
                             else {
@@ -760,7 +771,7 @@ object PrimitiveCompiler {
                 provisional, resultPlace, args.map { value -> (value as? ValueRef.Result)?.let { locations[it.instruction] } })
             if (target.runtimeEffect == Effect.Unknown) knowledge.replaceAll { _, _ -> TypeKnowledge.Unknown }
             val actual = if (type == any && !exploratory) (valueTypes[context.start.tokenIndex] as? TypeKnowledge.Exact)?.type else null
-            if (actual != null && result != null) provenResults[result] = actual
+            if (actual != null && result != null) { register(actual); provenResults[result] = actual }
             return ValueRef.Result(type, result ?: -1)
         }
         private fun memberResult(context: ParserRuleContext, result: Int, type: TypeId, runtime: Boolean): Place {

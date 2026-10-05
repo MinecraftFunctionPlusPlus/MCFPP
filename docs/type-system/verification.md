@@ -1,8 +1,19 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。本轮作用域 IR 联合检查 46 项通过；分离源码名与存储名后，相关 28 项复查通过。最近完整检查属于提交 72dc557，共 346 项。续接起始基线为上一会话的 140 项测试，浮点后端及算术修改继续保留。
+最新验证日期：2026-10-06（Asia/Shanghai）。本轮调用子形状联合检查 61 项通过。最近完整检查属于提交 72dc557，共 346 项。续接起始基线为上一会话的 140 项测试，浮点后端及算术修改继续保留。
 
-## 最新必要检查：IR 词法作用域
+## 最新必要检查：调用返回与 static 写回的子形状
+
+```sh
+./gradlew test --tests top.mcfpp.test.CallShapeIRTest --tests top.mcfpp.test.CollectionIRTest --tests top.mcfpp.test.IRCallTest --tests top.mcfpp.test.DynamicIndexIRTest --tests top.mcfpp.test.NbtArrayIRTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
+git diff --check
+```
+
+5 个套件、61 项，0 失败/错误/跳过。新增 CallShapeIRTest 的 6 项覆盖嵌套集合返回与透传、较早参数在后续 static 调用前的形状快照、static 整体替换及旧后代清理、不同返回分支的共同信息、数组返回长度，以及普通常量实参不能选择返回/写入分支。折叠开关均覆盖，包含 26.3 和无宏的 1.20.1；返回元素保留类型但值仍为 Unknown。
+
+首轮两个新用例失败：无宏目标在形状绑定前提前回退；已编译被调函数返回的嵌套类型对象未登记到调用方。探索阶段推迟负索引回退，并从不可变 TypeId 恢复受支持的容器类型后通过。当前 XML 为上述 5 个套件；日志：`F:/DevCache/.codex/runtime/mcfpp-call-shape-ir-final.log`。没有重复全量构建或标准库重建，MCFL 保持 9。递归子形状仍保守处理，命名范围及通用迭代器尚未接入。
+
+## 上一阶段必要检查：IR 词法作用域（eef6d44）
 
 ```sh
 ./gradlew test --tests top.mcfpp.test.ScopeIRTest --tests top.mcfpp.test.LoopIRTest --tests top.mcfpp.test.CollectionIRTest --tests top.mcfpp.test.IRCallTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
@@ -12,7 +23,7 @@ git diff --check
 
 联合 4 个套件、46 项通过。新增 ScopeIRTest 的 5 项覆盖同级块同名声明、嵌套遮蔽及初始化读取外层、同名集合/共享视图、循环和递归局部存储、未读取 NBT 局部的父路径初始化，以及同域重复声明和越界引用诊断。
 
-首次检查发现越界引用会退回旧入口，从而泄漏常量分支内的局部变量；现直接诊断。另一个测试变量名误用了保留字，已修正。声明 Symbol 保留源码名，存储名独立按声明位置分配；此调整后只复查 3 个相关套件、28 项，0 失败/错误/跳过，当前 XML 为这 3 个套件。日志：`F:/DevCache/.codex/runtime/mcfpp-scope-ir-final.log` 和 `mcfpp-scope-ir-storage-names.log`。未重复全量构建或标准库重建，MCFL 保持 9。
+首次检查发现越界引用会退回旧入口，从而泄漏常量分支内的局部变量；现直接诊断。另一个测试变量名误用了保留字，已修正。声明 Symbol 保留源码名，存储名独立按声明位置分配；此调整后只复查 3 个相关套件、28 项，0 失败/错误/跳过。日志：`F:/DevCache/.codex/runtime/mcfpp-scope-ir-final.log` 和 `mcfpp-scope-ir-storage-names.log`。未重复全量构建或标准库重建，MCFL 保持 9。
 
 ## 上一阶段必要检查：do…while 与闭合整数区间循环 IR（711331e）
 
