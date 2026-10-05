@@ -1,8 +1,14 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段59标准库重建成功，六套件单次联合50项全部通过；MCFL13 `bin.mclib` 为282180 bytes。最近完整检查仍属于提交 `72dc557`，共346项；本轮未运行完整check或实际Minecraft服务端，整个迁移仍未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段60必要回归 TemplateInitialization6 + ConstructorExecution7 单次联合13项全部通过；阶段59 MCFL13 `bin.mclib` 282180 bytes保持不变。最近完整检查仍属于提交 `72dc557`，共346项；本轮未运行完整check或实际Minecraft服务端，整个迁移仍未完成。
 
-## 最新必要检查：库声明词法环境恢复（阶段 59）
+## 最新必要检查：消费端库函数主体导出（阶段 60）
+
+`DatapackCreator` 新增的库导出入口仅导出 `bodyCompiled` 的非 Native 函数，并按实际 namespace ID 写入；收集器遍历 `compiledFunctions`、`GenericDataTemplate.compiledTemplates`、模板接口/对象/companion，使用 identity visited 避免重复实例。库测试 helper 真实读取 consumer 目录生成的所有 `.mcfunction`，main 与 callee 均从磁盘执行；generic wrapper 有非空文件，generic prototype 不输出，没有从 Imports 或内存补漏。
+
+实现前红测单方法失败：XML `2026-10-05T23:52:01.504Z`，`restoredGenericSpecializationsKeepTheDeclarationFileForRuntimeArguments` 在执行器报告缺失 `fixture.defaults:add_0_int`，定位为消费包未导出 wrapper/callee。collector修复后 `TemplateInitializationTest` 6项与 `ConstructorExecutionTest` 7项单次联合全过，0 failures/errors/skips，Gradle exit0；fresh XML 时间戳 `2026-10-05T23:53:57.493Z`、`23:54:08.422Z`。日志 `mcfpp-library-body-export-red.log` 与 `mcfpp-library-body-export-final.log`。MCFL13及bin 282180 bytes未变；未重建stdlib、未运行fullcheck或实际服务器。
+
+## 历史必要检查：库声明词法环境恢复（阶段 59）
 
 库元数据保存声明文件的namespace和unsolvedImports；全部includes读取后，分别恢复声明文件的FileScope，供调用图绑定与函数编译使用。普通函数、构造器及泛型特化共用声明上下文入口，并在结束后恢复调用方上下文。泛型模板和object实例继承其声明环境，不序列化整个FileScope或Project。
 

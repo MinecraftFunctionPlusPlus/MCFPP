@@ -7,6 +7,7 @@ import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.io.LibBinFormat
 import top.mcfpp.io.KryoManager
+import top.mcfpp.io.DatapackCreator
 import top.mcfpp.io.info.NativeFunctionInfo
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.ObjectDataTemplate
@@ -91,16 +92,22 @@ class TemplateInitializationTest {
         return GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single()
     }
 
-    private fun execute(main: Function, templates: List<DataTemplate>): ScoreCommandExecutor {
+    private fun execute(main: Function, output: Path): ScoreCommandExecutor {
+        val consumer = output.resolve("consumer")
+        DatapackCreator.createDatapack(consumer.toString())
+        val data = consumer.resolve(Project.config.name).resolve("data")
         val functions = LinkedHashMap<String, List<String>>()
-        fun collect(function: Function) {
-            functions[function.namespaceID.toString()] = function.commands.analyzeAll()
-            function.compiledFunctions.values.forEach(::collect)
+        Files.walk(data).use { paths ->
+            paths.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".mcfunction") }.forEach { file ->
+                val relative = data.relativize(file)
+                if (relative.nameCount >= 3 && relative.getName(1).toString() == "function") {
+                    val identifier = relative.subpath(2, relative.nameCount).joinToString("/") { it.toString() }
+                        .removeSuffix(".mcfunction")
+                    functions["${relative.getName(0)}:$identifier"] = Files.readAllLines(file)
+                }
+            }
         }
-        (GlobalScope.localNamespaces.values + GlobalScope.libNamespaces.values).flatMap { it.scope.functions.values.flatten() }.forEach(::collect)
-        templates.forEach { data -> data.constructors.forEach(::collect); data.scope.forEachFunction { collect(it) } }
-        functions.putAll(Project.macroFunction.mapKeys { "mcfpp:dynamic/${it.key}" }.mapValues { listOf(it.value) })
-        return ScoreCommandExecutor(main.commands.analyzeAll(), functions).also { assertEquals(0, it.stackDepth) }
+        return ScoreCommandExecutor(functions.getValue(main.namespaceID.toString()), functions).also { assertEquals(0, it.stackDepth) }
     }
 
     @Test fun implicitAndExplicitInitializersRoundTripInDeclarationOrderAndRunForEveryInstance() {
@@ -130,7 +137,7 @@ class TemplateInitializationTest {
             assertNotSame(original, restored)
             assertEquals(listOf("z", "a"), restored.preInit.keys.toList())
             if (constructor.isEmpty()) assertNull(restored.constructors.single().ast)
-            val machine = execute(main, listOf(restored))
+            val machine = execute(main, output)
             assertEquals(4, machine.read(main.scope.getVar("z") as MCInt))
             assertEquals(5, machine.read(main.scope.getVar("a") as MCInt))
             assertEquals(9, machine.read(main.scope.getVar("firstZ") as MCInt))
@@ -157,7 +164,7 @@ class TemplateInitializationTest {
         val restored = GlobalScope.getTemplate("fixture.defaults", "Box")!!
         assertNotSame(original, restored)
         assertNotNull(GlobalScope.libNamespaces.getValue("fixture.defaults").scope.functions.getValue("produce").single().ast)
-        assertEquals(44, execute(main, listOf(restored)).read(main.scope.getVar("result") as MCInt))
+        assertEquals(44, execute(main, output).read(main.scope.getVar("result") as MCInt))
     }
 
     @Test fun restoredGenericSpecializationsKeepTheDeclarationFileForRuntimeArguments() = withLibrary { output ->
@@ -180,7 +187,15 @@ class TemplateInitializationTest {
         assertNotSame(original, restored)
         assertNotNull(restored.ast)
         assertEquals(1, restored.compiledFunctions.size)
-        val machine = execute(main, emptyList())
+        val machine = execute(main, output)
+        val wrapper = restored.compiledFunctions.values.single()
+        val functionDirectory = output.resolve("consumer").resolve(Project.config.name).resolve("data")
+            .resolve(wrapper.namespaceID.namespace).resolve("function")
+        val wrapperFile = functionDirectory.resolve("${wrapper.namespaceID.identifier}.mcfunction")
+        assertTrue(Files.exists(wrapperFile), wrapperFile.toString())
+        assertTrue(Files.readAllLines(wrapperFile).any { it.isNotBlank() && !it.trimStart().startsWith("#") })
+        assertFalse(Files.exists(functionDirectory.resolve("${restored.namespaceID.identifier}.mcfunction")),
+            "An uncompiled generic prototype must not be exported")
         assertEquals(5, machine.read(main.scope.getVar("first") as MCInt))
         assertEquals(6, machine.read(main.scope.getVar("second") as MCInt))
     }
@@ -211,7 +226,7 @@ class TemplateInitializationTest {
         val restored = GlobalScope.getTemplate("fixture.defaults", "Box")!!
         assertNotSame(original, restored)
         assertNotNull(GlobalScope.libNamespaces.getValue("fixture.defaults").scope.functions.getValue("produce").single().ast)
-        assertEquals(4, execute(main, listOf(restored)).read(main.scope.getVar("result") as MCInt))
+        assertEquals(4, execute(main, output).read(main.scope.getVar("result") as MCInt))
     }
 
     @Test fun restoredObjectInitializersExecuteWhenTheirConstructorIsExplicitlyInvoked() = withLibrary { output ->
@@ -240,7 +255,7 @@ class TemplateInitializationTest {
             Function.addCommand(Commands.stackOut())
         }
         assertEquals(0, Project.errorCount)
-        val machine = execute(main, listOf(restored))
+        val machine = execute(main, output)
         assertEquals(IntTag(4), machine.readNbt("mcfpp:system", restored.nbtPath.memberIndex("z").pathToCommandPart().toString()))
         assertEquals(IntTag(5), machine.readNbt("mcfpp:system", restored.nbtPath.memberIndex("a").pathToCommandPart().toString()))
     }

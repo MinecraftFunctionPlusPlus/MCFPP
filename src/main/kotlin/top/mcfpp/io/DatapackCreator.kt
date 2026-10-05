@@ -7,6 +7,7 @@ import top.mcfpp.model.Namespace
 import top.mcfpp.model.Native
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.GenericDataTemplate
 import top.mcfpp.model.compound.ObjectDataTemplate
 import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.Function
@@ -84,6 +85,7 @@ object DatapackCreator {
             for (namespace in GlobalScope.stdNamespaces){
                 genNamespace(Paths.get(path), namespace)
             }
+            genCompiledLibraryFunctions(Paths.get(path))
             //写入宏函数
             for ((function, command) in Project.macroFunction){
                 val currPath = Paths.get(path, Project.config.name, "data", "mcfpp", "function", "dynamic", "${function}.mcfunction")
@@ -116,6 +118,49 @@ object DatapackCreator {
         LogProcessor.debug("Writing File: $output")
         Files.createDirectories(directory)
         Files.write(output, f.cmdStr.toByteArray())
+    }
+
+    /** Imported bodies are generated in the consumer pack at their actual call targets. */
+    private fun genCompiledLibraryFunctions(path: Path) {
+        val functions = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Function, Boolean>())
+        val compounds = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<CompoundData, Boolean>())
+
+        fun exportFunction(function: Function) {
+            if (!functions.add(function)) return
+            if (function !is Native && function.bodyCompiled) {
+                function.commands.analyzeAll()
+                val id = function.namespaceID
+                val output = path.resolve(Project.config.name).resolve("data")
+                    .resolve(id.namespace).resolve("function").resolve("${id.identifier}.mcfunction")
+                LogProcessor.debug("Writing File: $output")
+                Files.createDirectories(output.parent)
+                Files.write(output, function.cmdStr.toByteArray())
+            }
+            function.compiledFunctions.values.forEach(::exportFunction)
+        }
+
+        fun exportCompound(compound: CompoundData) {
+            if (!compounds.add(compound)) return
+            compound.scope.forEachFunction(::exportFunction)
+            if (compound is DataTemplate) {
+                compound.constructors.forEach(::exportFunction)
+                compound.companionObject?.let(::exportCompound)
+            }
+            if (compound is GenericDataTemplate) {
+                compound.compiledTemplates.values.forEach(::exportCompound)
+            }
+        }
+
+        for (namespace in GlobalScope.libNamespaces.values) {
+            val scope = namespace.scope
+            scope.forEachFunction(::exportFunction)
+            scope.template.values.forEach(::exportCompound)
+            scope.genericTemplate.values.forEach(::exportCompound)
+            scope.interfaces.values.forEach(::exportCompound)
+            scope.genericInterfaces.values.forEach(::exportCompound)
+            scope.objects.forEach(::exportCompound)
+            scope.genericObjects.values.forEach(::exportCompound)
+        }
     }
 
     private fun genTemplateFunction(currPath: Path, f: Function){
