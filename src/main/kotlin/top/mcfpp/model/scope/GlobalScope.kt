@@ -19,6 +19,7 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionTag
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
+import top.mcfpp.type.MCFPPType
 import java.util.*
 
 /**
@@ -174,6 +175,29 @@ object GlobalScope : FieldContainer, IScope {
             np = stdNamespaces[namespace]
         }
         return np?.scope?.getFunction(identifier, readOnlyParams, normalParams)?: UnknownFunction(identifier)
+    }
+
+    fun getFunctionByTypes(namespace: String?, identifier: String, normalParams: List<MCFPPType>,
+                           file: FileScope? = MCFPPFile.currFile?.field): top.mcfpp.model.function.ParameterMatcher.TypeSelection {
+        if (namespace == null) {
+            file?.getAccessibleFunctionByTypes(identifier, normalParams)?.let {
+                if (it != top.mcfpp.model.function.ParameterMatcher.TypeSelection.Missing) return it
+            }
+            for (scope in stdNamespaces.values) {
+                val candidate = scope.scope.getFunctionByTypes(identifier, normalParams)
+                if (candidate != top.mcfpp.model.function.ParameterMatcher.TypeSelection.Missing) return candidate
+            }
+            return top.mcfpp.model.function.ParameterMatcher.TypeSelection.Missing
+        }
+        val scope = localNamespaces[namespace] ?: libNamespaces[namespace] ?: stdNamespaces[namespace]
+        return scope?.scope?.getFunctionByTypes(identifier, normalParams) ?: top.mcfpp.model.function.ParameterMatcher.TypeSelection.Missing
+    }
+
+    fun getFunctionCandidates(namespace: String?, identifier: String, file: FileScope?): List<Function> {
+        if (namespace == null) return file?.getAccessibleFunctionCandidates(identifier).orEmpty() +
+            stdNamespaces.values.flatMap { it.scope.getFunctionCandidates(identifier) }
+        return (localNamespaces[namespace] ?: libNamespaces[namespace] ?: stdNamespaces[namespace])?.scope
+            ?.getFunctionCandidates(identifier).orEmpty()
     }
 
     fun getData(namespace: String? = null, identifier: String): DataTemplate? {

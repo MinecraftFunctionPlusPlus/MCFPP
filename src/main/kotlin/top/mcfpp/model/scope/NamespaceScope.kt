@@ -66,6 +66,19 @@ class NamespaceScope: SimpleLibScope{
         return re
     }
 
+    override fun getFunctionByTypes(key: String, normalArgs: List<MCFPPType>): top.mcfpp.model.function.ParameterMatcher.TypeSelection {
+        val result = super.getFunctionByTypes(key, normalArgs)
+        if (result != top.mcfpp.model.function.ParameterMatcher.TypeSelection.Missing) return result
+        for (scope in fileFields) {
+            val candidate = scope.getFunctionByTypes(key, normalArgs)
+            if (candidate != top.mcfpp.model.function.ParameterMatcher.TypeSelection.Missing) return candidate
+        }
+        return result
+    }
+
+    override fun getFunctionCandidates(key: String): List<Function> = super.getFunctionCandidates(key) +
+        fileFields.flatMap { it.getFunctionCandidates(key) }
+
     override fun hasFunction(function: Function, considerParent: Boolean): Boolean{
         return functions.containsKey(function.identifier) && functions[function.identifier]!!.contains(function) || fileFields.any { it.hasFunction(function, considerParent) }
     }

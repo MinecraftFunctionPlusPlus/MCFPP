@@ -112,6 +112,17 @@ class FileScope: SimpleLibScope(){
         return qwq
     }
 
+    fun getAccessibleFunctionByTypes(key: String, normalArgs: List<MCFPPType>): top.mcfpp.model.function.ParameterMatcher.TypeSelection {
+        for (scope in listOf(namespaceField) + importField.values + importedNamespaceField.values) {
+            val candidate = scope.getFunctionByTypes(key, normalArgs)
+            if (candidate != top.mcfpp.model.function.ParameterMatcher.TypeSelection.Missing) return candidate
+        }
+        return top.mcfpp.model.function.ParameterMatcher.TypeSelection.Missing
+    }
+
+    fun getAccessibleFunctionCandidates(key: String): List<Function> =
+        (listOf(namespaceField) + importField.values + importedNamespaceField.values).flatMap { it.getFunctionCandidates(key) }
+
      fun getAccessibleFunction(namespace:String, key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): Function {
          if(namespaceField.identifier == namespace){
              return namespaceField.getFunction(key, readOnlyArgs, normalArgs)

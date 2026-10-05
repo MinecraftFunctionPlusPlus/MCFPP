@@ -105,8 +105,9 @@ class SpecializationPolicyTest {
         assertTrue(increment.compiledFunctions.isEmpty())
         val commands = function("main").commands.analyzeAll()
         assertEquals(3, commands.count { it == "function ${increment.namespaceID}" })
-        val parameter = increment.scope.getVar("value") as top.mcfpp.core.lang.MCInt
-        assertEquals(3, commands.count { it.startsWith("scoreboard players set ${parameter.name} ${parameter.sbObject}") })
+        val main = function("main")
+        assertEquals(3, main.typedIR!!.blocks.flatMap { it.instructions }.filterIsInstance<top.mcfpp.analysis.Instruction.Call>().size)
+        assertNull(top.mcfpp.analysis.ValueSnapshot.of(main.scope.getVar("first")))
         val machine = executeMain()
         for ((name, value) in listOf("first" to 2, "second" to 3, "third" to 4))
             assertEquals(value, machine.read(function("main").scope.getVar(name) as top.mcfpp.core.lang.MCInt))

@@ -325,7 +325,7 @@ open class Function : Member, FieldContainer, WithDocument {
      */
     @get:Override
     override val prefix: String
-        get() = Project.currNamespace + "_func_" + identifier + "_"
+        get() = namespace + "_func_" + identifier + "_"
 
     /**
      * 这个函数的形参类型

@@ -58,6 +58,37 @@ object ParameterMatcher {
     fun select(functions: List<Function>, key: String, readonly: List<Var<*>>, normal: List<Var<*>>): Function? {
         val matches = functions.mapNotNull { match(it, key, readonly, normal, true) }
         if (matches.isEmpty()) return null
+        val best = best(matches)
+        if (best.size == 1) return best.single().function
+        LogProcessor.error("Ambiguous overload '$key': ${best.joinToString { it.function.toString() }}")
+        return UnknownFunction(key)
+    }
+
+    sealed interface TypeSelection {
+        data class Selected(val function: Function) : TypeSelection
+        data class Ambiguous(val functions: List<Function>) : TypeSelection
+        object Missing : TypeSelection
+    }
+
+    /** Preliminary type-only binding; value requirements remain the responsibility of the IR boundary. */
+    fun selectTypes(functions: List<Function>, key: String, normal: List<MCFPPType>): TypeSelection {
+        val matches = functions.mapNotNull { function ->
+            val readonly = (function as? Generic<*>)?.readOnlyParams ?: (function as? NativeFunction)?.readOnlyParams ?: emptyList()
+            if (function.identifier != key || readonly.isNotEmpty() || normal.size > function.normalParams.size ||
+                function.normalParams.drop(normal.size).any { !it.hasDefault }) return@mapNotNull null
+            val targets = function.normalParams.take(normal.size).map { it.type }
+            val ranks = normal.zip(targets).map { (source, target) -> conversion(source, target)?.rank ?: return@mapNotNull null }
+            Match(function, ranks, targets, function.normalParams.size - normal.size)
+        }
+        val best = best(matches)
+        return when (best.size) {
+            0 -> TypeSelection.Missing
+            1 -> TypeSelection.Selected(best.single().function)
+            else -> TypeSelection.Ambiguous(best.map { it.function })
+        }
+    }
+
+    private fun best(matches: List<Match>): List<Match> {
         fun better(a: Match, b: Match): Boolean {
             if (a.ranks.zip(b.ranks).all { (x, y) -> x <= y } && a.ranks.zip(b.ranks).any { (x, y) -> x < y }) return true
             if (a.ranks != b.ranks) return false
@@ -65,9 +96,6 @@ object ParameterMatcher {
                 a.targets.zip(b.targets).any { (x, y) -> x != y }) return true
             return a.targets == b.targets && a.defaults < b.defaults
         }
-        val best = matches.filter { candidate -> matches.none { other -> other !== candidate && better(other, candidate) } }
-        if (best.size == 1) return best.single().function
-        LogProcessor.error("Ambiguous overload '$key': ${best.joinToString { it.function.toString() }}")
-        return UnknownFunction(key)
+        return matches.filter { candidate -> matches.none { other -> other !== candidate && better(other, candidate) } }
     }
 }

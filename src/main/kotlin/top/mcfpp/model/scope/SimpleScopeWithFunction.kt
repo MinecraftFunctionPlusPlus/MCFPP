@@ -52,6 +52,19 @@ interface SimpleScopeWithFunction : IScopeWithFunction {
         return UnknownFunction(key)
     }
 
+    fun getFunctionByTypes(key: String, normalArgs: List<top.mcfpp.type.MCFPPType>): top.mcfpp.model.function.ParameterMatcher.TypeSelection {
+        val selected = top.mcfpp.model.function.ParameterMatcher.selectTypes(functions[key].orEmpty(), key, normalArgs)
+        if (selected != top.mcfpp.model.function.ParameterMatcher.TypeSelection.Missing) return selected
+        for (scope in parent) if (scope is SimpleScopeWithFunction) {
+            val result = scope.getFunctionByTypes(key, normalArgs)
+            if (result != top.mcfpp.model.function.ParameterMatcher.TypeSelection.Missing) return result
+        }
+        return top.mcfpp.model.function.ParameterMatcher.TypeSelection.Missing
+    }
+
+    fun getFunctionCandidates(key: String): List<Function> = functions[key].orEmpty() +
+        parent.filterIsInstance<SimpleScopeWithFunction>().flatMap { it.getFunctionCandidates(key) }
+
     override fun addFunction(function: Function, force: Boolean): Boolean{
         if(hasFunction(function, false)){
             if(force){

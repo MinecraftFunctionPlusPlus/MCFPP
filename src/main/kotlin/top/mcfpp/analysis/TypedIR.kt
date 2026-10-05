@@ -3,7 +3,8 @@ package top.mcfpp.analysis
 import top.mcfpp.type.TypeId
 
 /** Basic blocks and explicit reads/writes, with no dependency on Var implementation classes. */
-data class TypedIR(val entry: Int, val blocks: List<BasicBlock>, val runtimeValues: Set<Int> = emptySet())
+data class TypedIR(val entry: Int, val blocks: List<BasicBlock>, val runtimeValues: Set<Int> = emptySet(),
+                   val parameters: List<SymbolId> = emptyList(), val externalRoots: Set<SymbolId> = emptySet())
 data class BasicBlock(val id: Int, val instructions: List<Instruction>, val terminator: Terminator)
 
 sealed interface Instruction {
@@ -13,7 +14,10 @@ sealed interface Instruction {
     data class Promote(val result: Int, val value: ValueRef, val type: TypeId) : Instruction
     data class Convert(val result: Int, val value: ValueRef, val type: TypeId) : Instruction
     data class View(val result: Int, val value: ValueRef.TypedView) : Instruction
-    data class Call(val result: Int?, val declaration: SymbolId, val arguments: List<ValueRef>, val effect: Effect) : Instruction
+    data class Call(val result: Int?, val declaration: SymbolId, val arguments: List<ValueRef>, val effect: Effect,
+                    val returnType: TypeId? = null, val argumentPlaces: List<Place?> = emptyList(),
+                    val parameterTypes: List<TypeId> = emptyList(), val staticParameters: Set<Int> = emptySet(),
+                    val provisional: Boolean = false, val resultPlace: Place? = null) : Instruction
     data class RawCommand(val command: String) : Instruction
 }
 sealed interface Terminator {
@@ -33,7 +37,16 @@ sealed interface Effect {
 object FlowAnalysis {
     data class Result(val entries: Map<Int, FlowFacts>, val exits: Map<Int, FlowFacts>, val values: Map<Pair<Int, Int>, ValueFacts>)
 
-    fun analyze(ir: TypedIR, initial: FlowFacts = FlowFacts(), evaluator: (String, CompilerValue, CompilerValue) -> CompilerValue? = { _, _, _ -> null }, canFoldBranch: (ValueRef) -> Boolean = { it !is ValueRef.Result || it.instruction !in ir.runtimeValues }): Result {
+    fun analyze(ir: TypedIR, initial: FlowFacts = FlowFacts(), evaluator: (String, CompilerValue, CompilerValue) -> CompilerValue? = { _, _, _ -> null }, canFoldBranch: (ValueRef) -> Boolean = { it !is ValueRef.Result || it.instruction !in ir.runtimeValues },
+                callKnowledge: (Instruction.Call, List<TypeKnowledge>) -> TypeKnowledge = { call, _ ->
+                    call.returnType?.takeUnless { it == top.mcfpp.type.MCFPPBaseType.Any.typeId || it == top.mcfpp.type.MCFPPBaseType.Object.typeId }
+                        ?.let(TypeKnowledge::Exact) ?: TypeKnowledge.Unknown
+                }, callWrites: (Instruction.Call, List<TypeKnowledge>) -> Map<Place, TypeKnowledge> = { call, _ ->
+                    call.staticParameters.mapNotNull { index -> call.argumentPlaces.getOrNull(index)?.let { place ->
+                        place to (call.parameterTypes.getOrNull(index)?.takeUnless { it == top.mcfpp.type.MCFPPBaseType.Any.typeId || it == top.mcfpp.type.MCFPPBaseType.Object.typeId }
+                            ?.let(TypeKnowledge::Exact) ?: TypeKnowledge.Unknown)
+                    } }.toMap()
+                }): Result {
         require(ir.blocks.map { it.id }.distinct().size == ir.blocks.size)
         val blocks = ir.blocks.associateBy { it.id }
         require(ir.entry in blocks)
@@ -55,10 +68,20 @@ object FlowAnalysis {
             for (instruction in block.instructions) when (instruction) {
                 is Instruction.Read -> values[instruction.result] = value(ValueRef.Read(instruction.type, instruction.place))
                 is Instruction.Write -> state.write(instruction.place, value(instruction.value))
-                is Instruction.Call -> when (val effect = instruction.effect) {
-                    is Effect.Writes -> effect.places.forEach(state::invalidate)
-                    Effect.Unknown -> state.barrier()
-                    else -> Unit
+                is Instruction.Call -> {
+                    val arguments = instruction.arguments.map { value(it).type }
+                    val returned = callKnowledge(instruction, arguments)
+                    val written = callWrites(instruction, arguments)
+                    when (val effect = instruction.effect) {
+                        is Effect.Writes -> effect.places.forEach(state::invalidate)
+                        Effect.Unknown -> state.barrier()
+                        else -> Unit
+                    }
+                    for ((place, type) in written) if (instruction.effect == Effect.Unknown ||
+                        (instruction.effect as? Effect.Writes)?.places?.any { it.overlaps(place) } == true)
+                        state.write(place, ValueFacts(type, ValueKnowledge.Unknown))
+                    instruction.resultPlace?.let { state.write(it, ValueFacts(returned, ValueKnowledge.Unknown)) }
+                    instruction.result?.let { values[it] = ValueFacts(returned, ValueKnowledge.Unknown) }
                 }
                 is Instruction.RawCommand -> state.barrier()
                 is Instruction.View -> values[instruction.result] = value(instruction.value)
