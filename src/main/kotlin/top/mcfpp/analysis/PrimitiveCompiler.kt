@@ -41,7 +41,7 @@ object PrimitiveCompiler {
     private val obj = MCFPPBaseType.Object.typeId
     private val erased = setOf(any, obj)
     private val types = listOf(MCFPPBaseType.Int, MCFPPBaseType.Bool, MCFPPBaseType.Any, MCFPPBaseType.Object,
-        MCFPPBaseType.String, MCFPPNBTType.Byte, MCFPPNBTType.Long,
+        MCFPPBaseType.String, MCFPPBaseType.Range, MCFPPNBTType.Byte, MCFPPNBTType.Long,
         MCFPPNBTType.ByteArray, MCFPPNBTType.IntArray, MCFPPNBTType.LongArray).associateBy { it.typeId }
     private fun nbt(type: TypeId) = type != int && type != bool
     private fun supportedType(type: MCFPPType): Boolean = type !is MCFPPDeclaredConcreteType && when (type) {
@@ -258,6 +258,7 @@ object PrimitiveCompiler {
                 syntax.DICT() != null -> MCFPPDictType(element)
                 syntax.MAP() != null -> MCFPPMapType(element)
                 syntax.IMMUTABLE_LIST() != null -> MCFPPImmutableListType(element)
+                syntax.text == "range" -> MCFPPBaseType.Range
                 syntax.normalType() != null -> types.values.firstOrNull { it.typeName == syntax.text } ?: unsupported()
                 syntax.readOnlyArgs() != null || syntax.anonymousTemplateType() != null -> unsupported()
                 else -> function.scope.getType(syntax.text) ?: unsupported()
@@ -395,15 +396,28 @@ object PrimitiveCompiler {
             node.children.orEmpty().filterIsInstance<ParserRuleContext>().singleOrNull()?.let(::range)
 
         private fun loop(context: Parser.ForeachStatementContext) {
-            val range = range(context.expression()) ?: unsupported()
+            val range = range(context.expression())
             fun bound(node: Parser.Range1Context?): ValueRef {
                 if (node == null) invalid("Both sides of the iterated range must exist")
                 return boundValue(expression(node.`var`() ?: node.value())).also {
                     if (it.type != int && !(exploratory && it.type == any)) invalid("Range iteration requires integer bounds")
                 }
             }
-            val first = bound(range.num1)
-            val last = bound(range.num2)
+            val first: ValueRef
+            val last: ValueRef
+            if (range != null) {
+                first = bound(range.num1)
+                last = bound(range.num2)
+            } else {
+                val source = boundValue(expression(context.expression()))
+                if (source.type != MCFPPBaseType.Range.typeId && !(exploratory && source.type == any)) unsupported()
+                val location = locations[(source as? ValueRef.Result)?.instruction] ?: unsupported()
+                fun endpoint(name: String, token: Int): ValueRef = read(location.child(PathSegment.Field(name)), any, null, token).also {
+                    if (it.type != int && !exploratory) invalid("Range iteration requires proven integer endpoints on both sides")
+                }
+                first = endpoint("left", context.start.tokenIndex)
+                last = endpoint("right", context.COLON().symbol.tokenIndex)
+            }
             fun known(value: ValueRef) = ((if (value is ValueRef.Constant) value.value else
                 (value as? ValueRef.Result)?.let { provenConstants[it.instruction] }) as? CompilerValue.Integral)?.value
             val start = known(first)
@@ -509,7 +523,7 @@ object PrimitiveCompiler {
                 expectedLiteral = declared?.let { literalToken(initializer)?.let { token -> token to types.getValue(it) } }
                 val value = try { expression(initializer) } finally { expectedLiteral = previous }
                 val view = value is ValueRef.Result && value.instruction in views
-                if (view && types[value.type] !is MCFPPTypeWithGeneric && TypeRelations.arrayElementType(value.type) == null) unsupported()
+                if (view && value.type != MCFPPBaseType.Range.typeId && types[value.type] !is MCFPPTypeWithGeneric && TypeRelations.arrayElementType(value.type) == null) unsupported()
                 val type = declared ?: value.type
                 if (type !in types) invalid("A void expression cannot initialize a value")
                 val assigned = boundValue(value)
@@ -557,11 +571,10 @@ object PrimitiveCompiler {
             instructions += Instruction.Write(location.place, value, location = location)
         }
         private fun read(symbol: Symbol, site: ParserRuleContext? = null): ValueRef = read(location(symbol), symbol.declaredType, site)
-        private fun read(location: Location, declared: TypeId, site: ParserRuleContext?): ValueRef {
+        private fun read(location: Location, declared: TypeId, site: ParserRuleContext?, token: Int? = site?.start?.tokenIndex): ValueRef {
             val place = location.place
             val result = nextResult++
             if (place.root in runtimeSymbols || location.indices.isNotEmpty() || location.keys.values.any { it is ValueRef.Result }) runtimeResults.add(result)
-            val token = site?.start?.tokenIndex
             val actual = token?.let(valueTypes::get) ?: if (place.path.isEmpty()) knowledge[place.root] else null
             val type = if (declared == any && !exploratory) (actual as? TypeKnowledge.Exact)?.type ?: any else declared
             register(type)
@@ -656,7 +669,7 @@ object PrimitiveCompiler {
             }
             return value
         }
-        private fun construct(node: ParserRuleContext, parts: Map<PathSegment, ValueRef>, sequence: Boolean, arrayType: MCFPPType? = null): ValueRef {
+        private fun construct(node: ParserRuleContext, parts: Map<PathSegment, ValueRef>, sequence: Boolean, valueType: MCFPPType? = null): ValueRef {
             val alternatives = parts.values.map { types[it.type] ?: invalid("A void expression cannot initialize a collection element") }.distinctBy { it.typeId }
             val element = when (alternatives.size) {
                 0 -> if (sequence) MCFPPPrivateType.Wildcard else MCFPPBaseType.Any
@@ -673,9 +686,10 @@ object PrimitiveCompiler {
                     TypeRelations.resolveImplicitConversion(types.getValue(part.type), target) == null)
                     invalid("Literal element cannot be assigned to ${target.typeName}")
             }
-            val type = register(arrayType ?: contextual ?: if (sequence) MCFPPListType(element) else MCFPPDictType(element)).typeId
-            val name = "\$collection_${node.start.tokenIndex}"
-            val symbol = Symbol(declarationIds.getOrPut(-node.start.tokenIndex - 1, SymbolId::fresh), name, type, mutable = false)
+            val type = register(valueType ?: contextual ?: if (sequence) MCFPPListType(element) else MCFPPDictType(element)).typeId
+            val token = if (node is Parser.RangeContext) node.RANGE().symbol.tokenIndex else node.start.tokenIndex
+            val name = "\$collection_$token"
+            val symbol = Symbol(declarationIds.getOrPut(-token - 1, SymbolId::fresh), name, type, mutable = false)
             symbols[name] = symbol
             val result = nextResult++
             if (parts.values.any(::runtime)) runtimeResults.add(result)
@@ -691,7 +705,20 @@ object PrimitiveCompiler {
             val parts = elements.mapIndexed { index, value ->
                 PathSegment.Index(index) as PathSegment to ValueRef.Constant(elementType, CompilerValue.Integral(value))
             }.toMap()
-            return construct(node, parts, sequence = true, arrayType = type)
+            return construct(node, parts, sequence = true, valueType = type)
+        }
+        private fun rangeValue(node: Parser.RangeContext): ValueRef {
+            val parts = linkedMapOf<PathSegment, ValueRef>()
+            for ((name, endpoint) in listOf("left" to node.num1, "right" to node.num2)) {
+                if (endpoint == null) continue
+                val value = boundValue(expression(endpoint.`var`() ?: endpoint.value()))
+                if (value.type != int && !(exploratory && value.type == any)) unsupported()
+                parts[PathSegment.Field(name)] = value
+            }
+            val numbers = parts.values.map { ((it as? ValueRef.Constant)?.value ?: (it as? ValueRef.Result)?.let { ref -> provenConstants[ref.instruction] }) as? CompilerValue.Integral }
+            if (numbers.size == 2 && numbers.all { it != null } && numbers[0]!!.value > numbers[1]!!.value)
+                invalid("Left range bound must not exceed the right bound")
+            return construct(node, parts, sequence = false, valueType = MCFPPBaseType.Range)
         }
         private fun boundValue(value: ValueRef): ValueRef = if (value is ValueRef.Result)
             provenResults[value.instruction]?.let { value.copy(type = it) } ?: value else value
@@ -907,7 +934,7 @@ object PrimitiveCompiler {
                 val source = expression(node.unaryExpression())
                 if (node.type() == null) source else {
                     val target = type(node.type()).typeId
-                    if (target !in setOf(int, bool) && types[target] !is MCFPPTypeWithGeneric && TypeRelations.arrayElementType(target) == null) unsupported()
+                    if (target !in setOf(int, bool, MCFPPBaseType.Range.typeId) && types[target] !is MCFPPTypeWithGeneric && TypeRelations.arrayElementType(target) == null) unsupported()
                     val place = (source as? ValueRef.Result)?.let { origins[it.instruction] } ?: unsupported()
                     val sourceType = (source as? ValueRef.Result)?.let { sourceTypes[it.instruction] } ?: source.type
                     if (nbt(target) && !nbt(sourceType)) unsupported()
@@ -944,6 +971,7 @@ object PrimitiveCompiler {
             is Parser.PrimaryContext -> when {
                 node.value() != null -> expression(node.value())
                 node.`var`() != null -> expression(node.`var`())
+                node.range() != null -> rangeValue(node.range())
                 else -> unsupported()
             }
             is Parser.VarContext -> when {

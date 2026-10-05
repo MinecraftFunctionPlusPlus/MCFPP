@@ -13,6 +13,7 @@ object IRCollectionValidation {
         MCFPPNBTType.IntArray.typeId -> "int_array"
         MCFPPNBTType.LongArray.typeId -> "long_array"
         MCFPPBaseType.String.typeId -> "string"
+        MCFPPBaseType.Range.typeId -> "compound"
         is TypeId.Applied -> when (type.constructor) {
             TypeId.Builtin("list"), TypeId.Builtin("ImmutableList") -> "list"
             TypeId.Builtin("dict"), TypeId.Builtin("map") -> "compound"

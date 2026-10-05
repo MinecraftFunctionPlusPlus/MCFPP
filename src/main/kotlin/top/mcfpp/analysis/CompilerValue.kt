@@ -63,6 +63,7 @@ object ValueSnapshot {
                 if (command.isMacro) null else CompilerValue.Typed(value.type.typeId, CompilerValue.Nbt(top.mcfpp.backend.NbtEncoding.snbt(Tag.toNBT(command.toString()))))
             }
             value is top.mcfpp.core.lang.MCAny && value.compilerPayload != null -> value.compilerPayload?.let(::of)?.let { CompilerValue.Typed(value.type.typeId, it) }
+            value is top.mcfpp.core.lang.RangeVar -> of(value.parts())?.let { CompilerValue.Typed(value.type.typeId, it) }
             value is top.mcfpp.core.lang.nbt.NBTMapConcrete -> of(value.physicalValue())?.let {
                 CompilerValue.Typed(value.type.typeId, (it as CompilerValue.Typed).payload)
             }

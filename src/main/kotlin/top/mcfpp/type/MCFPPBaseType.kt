@@ -1,6 +1,5 @@
 package top.mcfpp.type
 
-import top.mcfpp.RangeVarConcreteData
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
@@ -229,20 +228,13 @@ class MCFPPBaseType {
             }
         }
 
-        override val concreteInstanceData by lazy{
-            CompoundData("range","mcfpp.lang").apply {
-                extends(Any.concreteInstanceData)
-                injectedBy(RangeVarConcreteData::class.java)
-            }
-        }
-
         override val typeName: kotlin.String
             get() = "range"
 
         override fun defaultValue() = 0f to 0f
 
         @Suppress("UNCHECKED_CAST")
-        override fun build(identifier: kotlin.String, value: kotlin.Any?): Var<*> = RangeVarConcrete(value as Pair<kotlin.Float?, kotlin.Float?>, identifier)
+        override fun build(identifier: kotlin.String, value: kotlin.Any?): Var<*> = RangeVarConcrete(value as Pair<Number?, Number?>, identifier)
         override fun buildUnConcrete(identifier: kotlin.String): Var<*> = RangeVar(identifier)
     }
 

@@ -56,7 +56,7 @@ object StringHelper {
     }
 
     @JvmStatic
-    fun Pair<Float?, Float?>.toRangeStr(): String{
+    fun Pair<Number?, Number?>.toRangeStr(): String{
         return buildString {
             if(first != null) append(first)
             append("..")

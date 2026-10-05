@@ -328,7 +328,7 @@ open class MCInt : MCNumber<Int>, OnScoreboard {
         if(a is RangeVarConcrete){
             val left = a.value.first
             val right = a.value.second
-            val range = if(a.isIntRange()) a else RangeVarConcrete(left?.nextUp() to right?.nextDown())
+            val range = if(a.isIntRange()) a else RangeVarConcrete(left?.toFloat()?.nextUp() to right?.toFloat()?.nextDown())
             val re = ExecuteBool()
             re.value.add(
                 CommandBoolPart(
@@ -612,8 +612,8 @@ class MCIntConcrete : MCInt, MCFPPValue<Int> {
         if(a is RangeVarConcrete){
             val left = a.value.first
             val right = a.value.second
-            if(left != null && value < left) return ScoreBoolConcrete(false)
-            if(right!= null && value > right) return ScoreBoolConcrete(false)
+            if(left != null && value.toDouble() < left.toDouble()) return ScoreBoolConcrete(false)
+            if(right!= null && value.toDouble() > right.toDouble()) return ScoreBoolConcrete(false)
             return ScoreBoolConcrete(true)
         }
         if(!a.isIntRange()){

@@ -19,10 +19,12 @@ abstract class EntitySelectorPredicate {
     abstract val v: Var<*>
 
     open fun valueString(): String{
+        if (v is RangeVarConcrete) return (v as RangeVarConcrete).value.toRangeStr()
         return (v as MCFPPValue<*>).value.toString()
     }
 
     open fun toCommandPart(): Command {
+        if (v is RangeVar) return Command.build("$identifier=").build(v.toCommandPart(), false)
         return if(v is MCFPPValue<*>){
             Command.build("$identifier=${valueString()}")
         }else{

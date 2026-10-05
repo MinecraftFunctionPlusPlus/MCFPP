@@ -519,7 +519,7 @@ open class Function : Member, FieldContainer, WithDocument {
         if (FloatProviders.enabled && result is MCFloat) {
             result.nbtPath = NBTPath.temp.memberIndex(result.name)
         }
-        if (result is top.mcfpp.core.lang.MCAny || result is top.mcfpp.core.lang.nbt.NBTBasedData || result is DataTemplateObject) {
+        if (result is top.mcfpp.core.lang.MCAny || result is top.mcfpp.core.lang.RangeVar || result is top.mcfpp.core.lang.nbt.NBTBasedData || result is DataTemplateObject) {
             result.nbtPath = NBTPath.temp.memberIndex(prefix + "return")
         }
         if (returnType !is MCFPPPrivateType) {
@@ -651,7 +651,7 @@ open class Function : Member, FieldContainer, WithDocument {
     private fun captureArguments(arguments: List<Var<*>>) = arguments.map {
         if (it is top.mcfpp.core.lang.MCAny && it.compilerPayload == null ||
             it is top.mcfpp.core.lang.nbt.NBTBasedData && top.mcfpp.analysis.ValueSnapshot.of(it) == null ||
-            it is DataTemplateObject && it.storageBinding != null) it.getTempVar() else it
+            it is DataTemplateObject && it.storageBinding != null || it is top.mcfpp.core.lang.RangeVar) it.getTempVar() else it
     }
 
     /**

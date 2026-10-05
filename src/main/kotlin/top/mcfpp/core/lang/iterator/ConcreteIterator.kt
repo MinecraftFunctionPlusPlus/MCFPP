@@ -32,10 +32,10 @@ class ConcreteIterator<T: Var<*>>(identifier: String, val iterator: Iterator<T>)
         @JvmStatic
         @JvmOverloads
         fun fromIntRange(identifier: String = TempPool.getVarIdentify(), range: RangeVarConcrete): ConcreteIterator<MCIntConcrete> {
-            val list = (range.value.first!!.toInt()..range.value.second!!.toInt()).map {
+            val values = (range.value.first!!.toInt()..range.value.second!!.toInt()).asSequence().map {
                 MCIntConcrete(it)
             }
-            return ConcreteIterator(identifier, list.iterator())
+            return ConcreteIterator(identifier, values.iterator())
         }
     }
 }

@@ -279,9 +279,7 @@ class MCFPPConcreteExprVisitor(
             val right = ctx.range().num2?.let { qwq(it) }
             if(left is MCNumber<*>? && right is MCNumber<*>?){
                 if(left is MCFPPValue<*>? && right is MCFPPValue<*>?){
-                    val leftValue = left?.value.toString().toFloatOrNull()
-                    val rightValue = right?.value.toString().toFloatOrNull()
-                    return RangeVarConcrete(leftValue to rightValue)
+                    return RangeVar.fromBounds(left, right)
                 }else{
                     LogProcessor.error("Only concrete var is permitted in this context: ${ctx.range().text}")
                     return null

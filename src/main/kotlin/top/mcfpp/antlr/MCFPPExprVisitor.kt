@@ -369,25 +369,13 @@ class MCFPPExprVisitor(
                     visitValue(ctx.value())
                 }
             }
-            val left = ctx.range().num1?.let { qwq(it) }
-            val right = ctx.range().num2?.let { qwq(it) }
+            val left = ctx.range().num1?.let { top.mcfpp.analysis.StorageAccess.capture(qwq(it)) }
+            val pending = processVarCache.size
+            left?.let(processVarCache::add)
+            val right = try { ctx.range().num2?.let { qwq(it) } }
+                finally { if (left != null) processVarCache.removeAt(pending) }
             if(left is MCNumber<*>? && right is MCNumber<*>?){
-                if(left is MCFPPValue<*>? && right is MCFPPValue<*>?){
-                    val leftValue = left?.value.toString().toFloatOrNull()
-                    val rightValue = right?.value.toString().toFloatOrNull()
-                    return RangeVarConcrete(leftValue to rightValue)
-                }else{
-                    val range = RangeVar()
-                    if(left is MCInt){
-                        range.left = MCFloat(range.identifier + "_left")
-                    }
-                    if(right is MCInt){
-                        range.right = MCFloat(range.identifier + "_right")
-                    }
-                    left?.let { range.left.assignedBy(it) }
-                    right?.let { range.right.assignedBy(it) }
-                    return range
-                }
+                return RangeVar.fromBounds(left, right)
             }else{
                 LogProcessor.error("Range sides should be a number: ${left?.type} and ${right?.type}")
                 return UnknownVar("range_" + UUID.randomUUID())
@@ -516,7 +504,7 @@ class MCFPPExprVisitor(
                 snapshot
             } else if (returnVar is MCAny && returnVar.compilerPayload == null && !returnVar.isError) {
                 returnVar.getTempVar()
-            } else if ((returnVar is top.mcfpp.core.lang.obj.DataTemplateObject || returnVar is NBTBasedData) &&
+            } else if ((returnVar is top.mcfpp.core.lang.obj.DataTemplateObject || returnVar is NBTBasedData || returnVar is RangeVar) &&
                 top.mcfpp.analysis.ValueSnapshot.of(returnVar) == null && !returnVar.isError) {
                 top.mcfpp.analysis.StorageAccess.capture(returnVar)
             } else returnVar

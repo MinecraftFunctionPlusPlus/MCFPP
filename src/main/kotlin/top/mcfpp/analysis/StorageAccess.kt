@@ -164,6 +164,7 @@ object StorageAccess {
                 elements.mapIndexed { index, element -> parent.index(index) to element }
             }.orEmpty()
             is NBTDictionaryConcrete -> value.value.map { (key, element) -> parent.field(key) to element }
+            is RangeVar -> value.parts().map { (key, element) -> parent.field(key) to element }
             else -> emptyList()
         }
         for ((place, part) in parts) {
@@ -205,7 +206,7 @@ object StorageAccess {
                 else copyWriter(path, value.nbtPath)
             is ScoreBool -> if (!value.isDataOnly) scoreWriter(path, value.name, value.boolObject.toString(), "byte")
                 else copyWriter(path, value.nbtPath)
-            is NBTListConcrete, is NBTDictionaryConcrete, is NBTMapConcrete -> partialWriter(value, path)!!
+            is NBTListConcrete, is NBTDictionaryConcrete, is NBTMapConcrete, is RangeVar -> partialWriter(value, path)!!
             is MCFloat -> if (FloatProviders.enabled) copyWriter(path, value.nbtPath) else {
                 val writers = listOf("sign" to value.sign, "int0" to value.int0, "int1" to value.int1, "exp" to value.exp)
                     .map { (key, score) -> scoreWriter(path.memberIndex(key), score.name, score.sbObject.toString(), "int") }
@@ -221,6 +222,10 @@ object StorageAccess {
     }
 
     private fun partialWriter(value: Var<*>, path: NBTPath): (() -> Unit)? = when (value) {
+        is RangeVar -> {
+            val fields = value.parts().map { (key, endpoint) -> frozenWriter(endpoint, path.memberIndex(key)) }
+            ({ emit(Commands.dataSetValue(path, CompoundTag())); fields.forEach { it() } })
+        }
         is NBTMapConcrete -> partialWriter(value.physicalValue(), path)
         is NBTListConcrete -> {
             val elements = value.value.map { element ->
@@ -684,7 +689,8 @@ object StorageAccess {
             val frozen = snapshot(value) ?: return null
             return snapshotTag(frozen)
         }
-        if (ValueSnapshot.of(value) == null) return null
+        val snapshot = ValueSnapshot.of(value) ?: return null
+        if (value is RangeVar) return snapshotTag(snapshot)
         if (value is MCFloatConcrete && !FloatProviders.enabled) {
             val parts = MCFloat.floatToMCFloat(value.value)
             return CompoundTag().apply { for ((i, key) in listOf("sign", "int0", "int1", "exp").withIndex()) put(key, IntTag(parts[i])) }
@@ -745,6 +751,7 @@ object StorageAccess {
     }
 
     internal fun encoding(type: MCFPPType): Class<out Tag<*>>? = when (type.typeId) {
+        MCFPPBaseType.Range.typeId -> CompoundTag::class.java
         MCFPPBaseType.Any.typeId, MCFPPBaseType.Object.typeId, MCFPPNBTType.NBT.typeId -> null
         MCFPPBaseType.Float.typeId -> if (FloatProviders.enabled) top.mcfpp.nbt.tags.primitive.FloatTag::class.java else CompoundTag::class.java
         MCFPPNBTType.Byte.typeId -> top.mcfpp.nbt.tags.primitive.ByteTag::class.java
@@ -816,6 +823,18 @@ object StorageAccess {
     internal fun restore(type: MCFPPType, snapshot: CompilerValue, name: String,
                         types: Map<TypeId, MCFPPType> = emptyMap()): Var<*>? {
         val payload = if (snapshot is CompilerValue.Typed) snapshot.payload else snapshot
+        if (type == MCFPPBaseType.Range && payload is CompilerValue.Record) {
+            fun endpoint(name: String): Number? {
+                val part = payload.fields[name] ?: return null
+                val raw = if (part is CompilerValue.Typed) part.payload else part
+                return when (raw) {
+                    is CompilerValue.Integral -> raw.value.toInt()
+                    is CompilerValue.FloatBits -> Float.fromBits(raw.bits)
+                    else -> return null
+                }
+            }
+            return RangeVarConcrete(endpoint("left") to endpoint("right"), name)
+        }
         if (type in erasedTypes) {
             var actual = payload
             while (actual is CompilerValue.Typed && actual.type in erasedTypes.map { it.typeId }) actual = actual.payload

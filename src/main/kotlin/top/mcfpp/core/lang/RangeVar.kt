@@ -1,218 +1,149 @@
 package top.mcfpp.core.lang
 
+import top.mcfpp.analysis.StorageAccess
+import top.mcfpp.analysis.TypeKnowledge
+import top.mcfpp.analysis.ValueState
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.model.FieldContainer
+import top.mcfpp.lib.NBTPath
 import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPNBTType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
-import top.mcfpp.util.TextTranslator
-import top.mcfpp.util.TextTranslator.translate
-import kotlin.experimental.and
 
-open class RangeVar: Var<RangeVar> {
-
+/** Optional numeric endpoints. Integers retain Int identity and never pass through Float. */
+open class RangeVar : Var<RangeVar> {
     var prefix: FieldContainer? = null
-
     override var type: MCFPPType = MCFPPBaseType.Range
 
-    //01 10 11 00(不合法)
-    //1表示有，0表示没有
-    var point: Byte = 0b00
-
-    var left: MCNumber<*>
-    var right: MCNumber<*>
-
-    /**
-     * 创建一个range类型的变量。它的mc名和变量所在的域容器有关。
-     *
-     * @param identifier 标识符。默认为
-     */
-    @Suppress("LeakingThis")
-    constructor(
-        curr: FieldContainer,
-        identifier: String = TempPool.getVarIdentify()
-    ) : super(identifier) {
-        this.prefix = curr
-        left = MCFloat(curr ,identifier + "_left")
-        left.nbtPath = this.nbtPath.memberIndex("left")
-        right = MCFloat(curr, identifier + "_right")
-        right.nbtPath = this.nbtPath.memberIndex("right")
-    }
-
-    /**
-     * 创建一个range值。它的标识符和mc名相同。
-     * @param identifier identifier
-     */
-    @Suppress("LeakingThis")
-    constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier){
-        left = MCFloat(identifier + "_left")
-        left.nbtPath = this.nbtPath.memberIndex("left")
-        right = MCFloat(identifier + "_right")
-        right.nbtPath = this.nbtPath.memberIndex("right")
-    }
-
-    /**
-     * 复制一个range
-     * @param b 被复制的range值
-     */
-    constructor(b: RangeVar) : super(b){
-        if(prefix != null){
-            left = MCFloat(prefix!! ,b.identifier + "_left")
-            right = MCFloat(prefix!! ,b.identifier + "_right")
-        }else{
-            left = MCFloat(b.identifier + "_left")
-            right = MCFloat(b.identifier + "_right")
+    // Bit 2 denotes the left endpoint, bit 1 the right endpoint.
+    var point: Byte = 0
+        get() {
+            val binding = storageBinding ?: return field
+            return listOf("left" to 2, "right" to 1).sumOf { (name, bit) ->
+                if (binding.data.facts.read(binding.place.field(name))?.state == ValueState.INITIALIZED) bit else 0
+            }.toByte()
         }
-        point = b.point
+    private var leftValue: MCNumber<*>
+    private var rightValue: MCNumber<*>
+    var left: MCNumber<*>
+        get() = endpoint("left", leftValue)
+        set(value) { leftValue = value }
+    var right: MCNumber<*>
+        get() = endpoint("right", rightValue)
+        set(value) { rightValue = value }
+
+    constructor(identifier: String = TempPool.getVarIdentify()) : super(identifier) {
+        nbtPath = NBTPath.getNormalStackPath(this)
+        leftValue = MCFloat(identifier + "_left")
+        rightValue = MCFloat(identifier + "_right")
+    }
+    constructor(curr: FieldContainer, identifier: String = TempPool.getVarIdentify()) : this(identifier) { prefix = curr }
+    constructor(source: RangeVar) : super(source) {
+        prefix = source.prefix
+        point = source.point
+        leftValue = source.leftValue.clone()
+        rightValue = source.rightValue.clone()
+    }
+
+    private fun endpoint(name: String, fallback: MCNumber<*>): MCNumber<*> {
+        val binding = storageBinding?.field(name) ?: return fallback
+        val id = (binding.data.facts.read(binding.place)?.type as? TypeKnowledge.Exact)?.type
+        val type = when (id) {
+            MCFPPBaseType.Int.typeId -> MCFPPBaseType.Int
+            MCFPPBaseType.Float.typeId -> MCFPPBaseType.Float
+            else -> {
+                LogProcessor.error("Range endpoint '$name' requires a proven int or float layout")
+                return fallback.clone().apply { isError = true }
+            }
+        }
+        return StorageAccess.read(StorageAccess.adapter(type, identifier + "_" + name, binding)) as MCNumber<*>
+    }
+
+    fun parts(): Map<String, MCNumber<*>> = buildMap {
+        if (point.toInt() and 2 != 0) put("left", left)
+        if (point.toInt() and 1 != 0) put("right", right)
     }
 
     override fun doAssignedBy(b: Var<*>): RangeVar {
-        when (b) {
-            is RangeVar -> {
-                this.point = b.point
-                if (point and 2 != 0.toByte()) left.assignedBy(b.left)
-                if (point and 1 != 0.toByte()) right.assignedBy(b.right)
-            }
+        if (b !is RangeVar) { LogProcessor.error("Cannot assign ${b.type} to range"); return this }
+        val copied = StorageAccess.copyCollection(RangeVar(this), b) as RangeVar
+        if (isDynamic) copied.storageBinding!!.data.materialize()
+        return copied
+    }
+    override fun clone() = RangeVar(this)
+    override fun getTempVar(): RangeVar = if (isTemp) this else RangeVar().apply {
+        isTemp = true
+        nbtPath = NBTPath.temp.memberIndex(identifier)
+    }.assignedBy(this)
+    override fun storeToStack() { StorageAccess.ensure(this).data.materialize() }
+    override fun getFromStack() = Unit
+    override fun toNBTVar() = StorageAccess.view(this, MCFPPNBTType.NBT, diagnose = false) as NBTBasedData
 
-            else -> {
-                LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
+    override fun toCommandPart(): Command {
+        val loaded = StorageAccess.read(this)
+        if (loaded is RangeVarConcrete) return loaded.toCommandPart()
+        return Command("").apply {
+            if (point.toInt() and 2 != 0) buildMacro(left, false)
+            build("..", false)
+            if (point.toInt() and 1 != 0) buildMacro(right, false)
+        }
+    }
+    fun isIntRange() = parts().values.all { it is MCInt }
+
+    companion object {
+        fun fromBounds(left: MCNumber<*>?, right: MCNumber<*>?): RangeVar {
+            if ((left == null || left is MCFPPValue<*>) && (right == null || right is MCFPPValue<*>))
+                return RangeVarConcrete(((left as? MCFPPValue<*>)?.value as Number?) to ((right as? MCFPPValue<*>)?.value as Number?))
+            return RangeVar().apply {
+                point = ((if (left == null) 0 else 2) + (if (right == null) 0 else 1)).toByte()
+                if (left != null) this.left = left.getTempVar() as MCNumber<*>
+                if (right != null) this.right = right.getTempVar() as MCNumber<*>
             }
         }
-        return this
     }
-
-    override fun clone(): RangeVar {
-        return RangeVar(this)
-    }
-
-    override fun getTempVar(): RangeVar {
-        if (isTemp) return this
-        val re = RangeVar()
-        re.isTemp = true
-        return re.assignedBy(this)
-    }
-
-    override fun storeToStack() {
-        if(point and 2 != 0.toByte()) left.storeToStack()
-        if(point and 1 != 0.toByte()) right.storeToStack()
-    }
-
-    override fun getFromStack() {
-        if(point and 2 != 0.toByte()) left.getFromStack()
-        if(point and 1 != 0.toByte()) right.getFromStack()
-    }
-
-    override fun toNBTVar(): NBTBasedData {
-        val n = NBTBasedData()
-        n.identifier = identifier
-        n.isStatic = isStatic
-        n.accessModifier = accessModifier
-        n.isTemp = isTemp
-        n.stackIndex = stackIndex
-        n.isConst = isConst
-        n.nbtPath = nbtPath
-        return n
-    }
-
-    override fun toCommandPart() : Command{
-        val command = Command("")
-        if(point and 2 != 0.toByte()) command.buildMacro(left, false)
-        command.build("..")
-        if(point and 1 != 0.toByte()) command.buildMacro(right, false)
-        return command
-    }
-
-    fun isIntRange(): Boolean{
-        return left is MCInt && right is MCInt
-    }
-
 }
 
-class RangeVarConcrete: MCFPPValue<Pair<Float?, Float?>>, RangeVar{
+class RangeVarConcrete : RangeVar, MCFPPValue<Pair<Number?, Number?>> {
+    override var value: Pair<Number?, Number?>
 
-    override var value: Pair<Float?, Float?>
-
-    /**
-     * 创建一个固定的range
-     *
-     * @param identifier 标识符
-     * @param curr 域容器
-     * @param value 值
-     */
-    constructor(
-        curr: FieldContainer,
-        value: Pair<Float?, Float?>,
-        identifier: String = TempPool.getVarIdentify()
-    ) : super(curr.prefix + identifier) {
+    constructor(value: Pair<Number?, Number?>, identifier: String = TempPool.getVarIdentify()) : super(identifier) {
         this.value = value
-        if(value.second == null && value.first == null) {
-            LogProcessor.error("Range should have at least one side")
-        }
-        if(value.first != null && value.second != null && value.second!! < value.first!!){
-            LogProcessor.error("Left value should be smaller than right value")
-        }
-        value.first?.let { left.assignedBy(MCFloatConcrete(it, identifier + "_left")) }
-        value.second?.let { right.assignedBy(MCFloatConcrete(it, identifier + "_right")) }
+        initialize()
     }
-
-    /**
-     * 创建一个固定的range。它的标识符和mc名一致
-     * @param identifier 标识符。如不指定，则为随机uuid
-     * @param value 值
-     */
-    constructor(value: Pair<Float?, Float?>, identifier: String = TempPool.getVarIdentify()) : super(identifier) {
+    constructor(curr: FieldContainer, value: Pair<Number?, Number?>, identifier: String = TempPool.getVarIdentify()) : super(curr, identifier) {
         this.value = value
-        if(value.second == null && value.first == null) {
-            LogProcessor.error("Range should have at least one side")
-        }
-        if(value.first != null && value.second != null && value.second!! < value.first!!){
-            LogProcessor.error("Left value should be smaller than right value")
-        }
-        value.first?.let { left.assignedBy(MCFloatConcrete(it, identifier + "_left")) }
-        value.second?.let { right.assignedBy(MCFloatConcrete(it, identifier + "_right")) }
+        initialize()
     }
-
-    constructor(range: RangeVar, value: Pair<Float?, Float?>) : super(range){
+    constructor(source: RangeVar, value: Pair<Number?, Number?>) : super(source) {
         this.value = value
-        if(value.second == null && value.first == null) {
-            LogProcessor.error("Range should have at least one side")
-        }
-        if(value.first != null && value.second != null && value.second!! < value.first!!){
+        initialize()
+    }
+    constructor(source: RangeVarConcrete) : this(source, source.value)
+
+    private fun initialize() {
+        val (first, last) = value
+        if (first == null && last == null) LogProcessor.error("Range should have at least one side")
+        if (first != null && last != null && first.toDouble() > last.toDouble())
             LogProcessor.error("Left value should be smaller than right value")
+        fun number(value: Number, suffix: String): MCNumber<*> = when (value) {
+            is Int -> MCIntConcrete(value, identifier + suffix)
+            is Float -> MCFloatConcrete(value, identifier + suffix)
+            else -> error("Range endpoints must be language int or float")
         }
-        value.first?.let { left.assignedBy(MCFloatConcrete(it, identifier + "_left")) }
-        value.second?.let { right.assignedBy(MCFloatConcrete(it, identifier + "_right")) }
+        point = ((if (first == null) 0 else 2) + (if (last == null) 0 else 1)).toByte()
+        if (first != null) left = number(first, "_left")
+        if (last != null) right = number(last, "_right")
     }
-
-    constructor(range: RangeVarConcrete) : super(range){
-        this.value = range.value
-        value.first?.let { left.assignedBy(MCFloatConcrete(it, identifier + "_left")) }
-        value.second?.let { right.assignedBy(MCFloatConcrete(it, identifier + "_right")) }
-    }
-
     override fun toDynamic(replace: Boolean): Var<*> {
-        value.first?.let { (left as MCFloatConcrete).toDynamic(false) }
-        value.second?.let { (right as MCFloatConcrete).toDynamic(false) }
-        return RangeVar(this)
+        StorageAccess.ensure(this).data.materialize()
+        val result = RangeVar(this).apply { isDynamic = true }
+        if (replace) replacedBy(result)
+        return result
     }
-
-    override fun getTempVar(): RangeVarConcrete {
-        if (isTemp) return this
-        return RangeVarConcrete(value)
-    }
-
-    override fun clone(): RangeVarConcrete {
-        return RangeVarConcrete(this)
-    }
-
-    override fun toCommandPart() : Command{
-        val command = Command("")
-        if(value.first != null) command.build(value.first!!.toString(), false)
-        command.build("..")
-        if(value.second != null) command.build(value.second!!.toString(), false)
-        return command
-    }
-
+    override fun getTempVar(): RangeVarConcrete = if (isTemp) this else RangeVarConcrete(value).apply { isTemp = true }
+    override fun clone() = RangeVarConcrete(this)
+    override fun toCommandPart() = Command("${value.first ?: ""}..${value.second ?: ""}")
 }

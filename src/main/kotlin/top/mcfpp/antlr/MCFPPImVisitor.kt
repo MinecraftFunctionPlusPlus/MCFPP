@@ -915,11 +915,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         if(iterator is ConcreteIterator<*>){
             visitConcreteForeach(id, iterator, ctx.block())
         }else{
-            //同时，外层定义域中的变量可能丢失跟踪，这里处理为强制全部丢失跟踪
-            Function.currFunction.scope.forEachVar {
-                if(it is MCFPPValue<*>) it.toDynamic(true)
-            }
-            TODO()
+            LogProcessor.error("Runtime iterator lowering is not available for this loop")
         }
         return null
     }

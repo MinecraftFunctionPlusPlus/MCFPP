@@ -1,8 +1,23 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。本轮调用子形状联合检查 61 项通过。最近完整检查属于提交 72dc557，共 346 项。续接起始基线为上一会话的 140 项测试，浮点后端及算术修改继续保留。
+最新验证日期：2026-10-06（Asia/Shanghai）。本轮范围值联合检查 40 项通过，旧入口捕获/返回补查 25 项通过；MCFL 10 标准库重建为 0 错误/0 警告。最近完整检查属于提交 72dc557，共 346 项。续接起始基线为上一会话的 140 项测试，浮点后端及算术修改继续保留。
 
-## 最新必要检查：调用返回与 static 写回的子形状
+## 最新必要检查：整数范围值与命名范围 IR
+
+```sh
+./gradlew regenerateStdlib -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
+./gradlew test --tests top.mcfpp.test.RangeIRTest --tests top.mcfpp.test.LoopIRTest --tests top.mcfpp.test.CallShapeIRTest --tests top.mcfpp.test.IRCallTest --tests top.mcfpp.test.LibCacheFormatTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
+./gradlew test --tests top.mcfpp.test.RangeIRTest --tests top.mcfpp.test.IRCallTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
+git diff --check
+```
+
+5 个套件、40 项通过。新增 RangeIRTest 的 8 项覆盖命名/返回/擦除范围、超过 Float 精度的整数及 32 位极值、端点求值顺序、独立副本和共享视图、static 写回、分支/嵌套集合、缺失或不明端点诊断、旧入口精确编码及选择器格式。跨折叠开关与 26.3/1.20.2/1.20.1 执行。
+
+检查修复了范围返回槽缺少 NBT 地址、as range 类型入口遗漏和探索阶段 any 范围提前回退。旧入口动态范围迭代仍有明确边界，用例分开验证动态范围物化和常量迭代；补齐旧入口返回载荷写出、返回快照及左端点跨右端点调用的保存后，2 个套件、25 项通过，0 失败/错误/跳过。当前 XML 为这 2 个套件。
+
+日志：`F:/DevCache/.codex/runtime/mcfpp-range-values-final.log`、`mcfpp-range-values-legacy-return.log`、`mcfpp-range-values-stdlib.log`。范围端点缓存结构及成员签名发生变化，库格式升级为 MCFL 10，已验证二进制格式头并重建标准库为 0 错误/0 警告；没有重复完整 check。浮点范围 IR、未知端点形参的迭代及通用运行时迭代器仍未完成。
+
+## 上一阶段必要检查：调用返回与 static 写回的子形状（0c3e65f）
 
 ```sh
 ./gradlew test --tests top.mcfpp.test.CallShapeIRTest --tests top.mcfpp.test.CollectionIRTest --tests top.mcfpp.test.IRCallTest --tests top.mcfpp.test.DynamicIndexIRTest --tests top.mcfpp.test.NbtArrayIRTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
@@ -11,7 +26,7 @@ git diff --check
 
 5 个套件、61 项，0 失败/错误/跳过。新增 CallShapeIRTest 的 6 项覆盖嵌套集合返回与透传、较早参数在后续 static 调用前的形状快照、static 整体替换及旧后代清理、不同返回分支的共同信息、数组返回长度，以及普通常量实参不能选择返回/写入分支。折叠开关均覆盖，包含 26.3 和无宏的 1.20.1；返回元素保留类型但值仍为 Unknown。
 
-首轮两个新用例失败：无宏目标在形状绑定前提前回退；已编译被调函数返回的嵌套类型对象未登记到调用方。探索阶段推迟负索引回退，并从不可变 TypeId 恢复受支持的容器类型后通过。当前 XML 为上述 5 个套件；日志：`F:/DevCache/.codex/runtime/mcfpp-call-shape-ir-final.log`。没有重复全量构建或标准库重建，MCFL 保持 9。递归子形状仍保守处理，命名范围及通用迭代器尚未接入。
+首轮两个新用例失败：无宏目标在形状绑定前提前回退；已编译被调函数返回的嵌套类型对象未登记到调用方。探索阶段推迟负索引回退，并从不可变 TypeId 恢复受支持的容器类型后通过。日志：`F:/DevCache/.codex/runtime/mcfpp-call-shape-ir-final.log`。没有重复全量构建或标准库重建，该轮 MCFL 保持 9。递归子形状仍保守处理；该轮尚未接入命名范围及通用迭代器。
 
 ## 上一阶段必要检查：IR 词法作用域（eef6d44）
 
