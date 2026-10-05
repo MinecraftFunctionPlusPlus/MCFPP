@@ -13,7 +13,8 @@ sealed interface Instruction {
     data class CaptureIndex(val result: Int, val value: ValueRef, val container: Location) : Instruction
     data class ListMember(val operation: ListOperation, val receiver: Location, val type: TypeId,
                           val argument: ValueRef? = null, val argumentPlace: Place? = null,
-                          val index: ValueRef? = null, val knownIndex: Int? = null) : Instruction
+                          val index: ValueRef? = null, val knownIndex: Int? = null,
+                          val result: Int? = null, val resultPlace: Place? = null) : Instruction
     data class DictionaryMember(val operation: DictionaryOperation, val receiver: Location, val type: TypeId,
                                 val argument: ValueRef? = null, val key: String? = null,
                                 val result: Int? = null, val resultPlace: Place? = null) : Instruction {
@@ -62,7 +63,7 @@ object FlowAnalysis {
                         place to (call.parameterTypes.getOrNull(index)?.takeUnless { it == top.mcfpp.type.MCFPPBaseType.Any.typeId || it == top.mcfpp.type.MCFPPBaseType.Object.typeId }
                             ?.let(TypeKnowledge::Exact) ?: TypeKnowledge.Unknown)
                     } }.toMap()
-                }): Result {
+                }, foldQueries: Boolean = true): Result {
         require(ir.blocks.map { it.id }.distinct().size == ir.blocks.size)
         val blocks = ir.blocks.associateBy { it.id }
         require(ir.entry in blocks)
@@ -123,7 +124,23 @@ object FlowAnalysis {
                 is Instruction.ListMember -> {
                     beforeWrites[id to position] = state.fork()
                     val source = instruction.argument?.let(::snapshot)
-                    ListFacts.edit(state, instruction, source?.facts, source?.place, instruction.argument?.let(::value))
+                    val argument = instruction.argument?.let(::value)
+                    if (instruction.operation.search) {
+                        val found = ListFacts.find(state, instruction, argument!!)
+                        if (instruction.operation == ListOperation.REMOVE) {
+                            if (found != -1) ListFacts.edit(state, instruction.copy(operation = ListOperation.REMOVE_AT,
+                                argument = null, argumentPlace = null, knownIndex = found), null, null, null)
+                        } else {
+                            val contains = instruction.operation == ListOperation.CONTAINS
+                            val type = if (contains) top.mcfpp.type.MCFPPBaseType.Bool.typeId else top.mcfpp.type.MCFPPBaseType.Int.typeId
+                            val known = found?.takeIf { foldQueries }?.let {
+                                if (contains) CompilerValue.Bool(it >= 0) else CompilerValue.Integral(it.toLong())
+                            }
+                            val fact = ValueFacts(TypeKnowledge.Exact(type), known?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown)
+                            values[instruction.result!!] = fact
+                            instruction.resultPlace?.let { state.write(it, fact); origins[instruction.result] = it }
+                        }
+                    } else ListFacts.edit(state, instruction, source?.facts, source?.place, argument)
                 }
                 is Instruction.DictionaryMember -> {
                     val place = instruction.receiver.place

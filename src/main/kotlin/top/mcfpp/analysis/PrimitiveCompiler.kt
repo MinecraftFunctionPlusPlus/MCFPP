@@ -10,6 +10,7 @@ import top.mcfpp.core.lang.MCAny
 import top.mcfpp.core.lang.MCObject
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
+import top.mcfpp.backend.ListSearch
 import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.collection.ListTag
@@ -147,7 +148,7 @@ object PrimitiveCompiler {
         val evaluator = if (top.mcfpp.CompileSettings.foldIRConstants) PrimitiveEvaluation::binary else { _: String, _: CompilerValue, _: CompilerValue -> null }
         val facts = FlowAnalysis.analyze(ir, initial = lowering.initialFacts, evaluator = evaluator, canFoldBranch = { !lowering.runtime(it) },
             callKnowledge = { call, args -> ReturnTypeAnalysis.callKnowledge(call, graph, args) },
-            callWrites = { call, args -> ReturnTypeAnalysis.callWrites(call, graph, args) })
+            callWrites = { call, args -> ReturnTypeAnalysis.callWrites(call, graph, args) }, foldQueries = top.mcfpp.CompileSettings.foldIRConstants)
         val typeFacts = if (top.mcfpp.CompileSettings.foldIRConstants) facts else FlowAnalysis.analyze(ir,
             initial = lowering.initialFacts, evaluator = PrimitiveEvaluation::binary, canFoldBranch = { !lowering.runtime(it) },
             callKnowledge = { call, args -> ReturnTypeAnalysis.callKnowledge(call, graph, args) },
@@ -156,7 +157,7 @@ object PrimitiveCompiler {
             top.mcfpp.command.TargetCapabilities.forVersion(top.mcfpp.Project.config.version)!!)
         diagnostics.forEach(top.mcfpp.util.LogProcessor::error)
         val returns = ir.blocks.filter { it.id in facts.entries && it.terminator is Terminator.Return }
-        val backend = Backend(function, lowering, ir, facts)
+        val backend = Backend(function, lowering, ir, facts, typeFacts)
         if (diagnostics.isEmpty()) backend.generate()
         lowering.warnings.forEach(top.mcfpp.util.LogProcessor::warn)
         function.hasReturnStatement = function.returnType !== MCFPPPrivateType.Void ||
@@ -636,6 +637,15 @@ object PrimitiveCompiler {
             if (actual != null && result != null) provenResults[result] = actual
             return ValueRef.Result(type, result ?: -1)
         }
+        private fun memberResult(context: Parser.FunctionCallContext, result: Int, type: TypeId, runtime: Boolean): Place {
+            if (runtime) runtimeResults.add(result)
+            valueSites[context.start.tokenIndex] = current.id to result
+            val identifier = "\$member_${context.start.tokenIndex}"
+            val symbol = Symbol(declarationIds.getOrPut(-context.start.tokenIndex - 1, SymbolId::fresh), identifier, type, mutable = false, forceRuntime = runtime)
+            symbols[identifier] = symbol
+            sourceTypes[result] = type
+            return Place(symbol.id).also { origins[result] = it; locations[result] = Location(it) }
+        }
         private fun member(source: ValueRef, context: Parser.FunctionCallContext): ValueRef {
             val receiver = boundValue(source)
             if (context.arguments().readOnlyArgs() != null) unsupported()
@@ -666,7 +676,7 @@ object PrimitiveCompiler {
                 else invalid("No matching ${container.typeName} member '$name'")
             }
             val location = locations[(receiver as? ValueRef.Result)?.instruction] ?: unsupported()
-            if (selected.javaMethod.declaringClass == top.mcfpp.mni.NBTListData::class.java) {
+            if (selected.javaMethod.declaringClass in setOf(top.mcfpp.mni.NBTListData::class.java, top.mcfpp.mni.ImmutableListData::class.java)) {
                 val operation = when (selected.identifier) {
                     "clear" -> ListOperation.CLEAR
                     "add" -> ListOperation.APPEND
@@ -675,15 +685,22 @@ object PrimitiveCompiler {
                     "prependAll" -> ListOperation.PREPEND_ALL
                     "insert" -> ListOperation.INSERT
                     "removeAt" -> ListOperation.REMOVE_AT
+                    "indexOf" -> ListOperation.INDEX_OF
+                    "lastIndexOf" -> ListOperation.LAST_INDEX_OF
+                    "contains" -> ListOperation.CONTAINS
+                    "remove" -> ListOperation.REMOVE
                     else -> unsupported()
                 }
                 val index = arguments.firstOrNull()?.takeIf { operation == ListOperation.INSERT || operation == ListOperation.REMOVE_AT }
                 val constant = if (index is ValueRef.Constant) index.value else (index as? ValueRef.Result)?.let { provenConstants[it.instruction] }
                 val argument = arguments.lastOrNull()?.takeUnless { operation == ListOperation.REMOVE_AT }
+                val result = if (operation.query) nextResult++ else null
+                val type = if (operation == ListOperation.CONTAINS) bool else int
+                val resultPlace = result?.let { memberResult(context, it, type, runtime(receiver) || arguments.any(::runtime)) }
                 instructions += Instruction.ListMember(operation, location, container.typeId, argument,
                     (argument as? ValueRef.Result)?.let { origins[it.instruction] }, index,
-                    (constant as? CompilerValue.Integral)?.value?.toInt())
-                return ValueRef.Result(MCFPPPrivateType.Void.typeId, -1)
+                    (constant as? CompilerValue.Integral)?.value?.toInt(), result, resultPlace)
+                return ValueRef.Result(if (result == null) MCFPPPrivateType.Void.typeId else type, result ?: -1)
             }
             if (selected.javaMethod.declaringClass != top.mcfpp.mni.NBTDictionaryData::class.java) unsupported()
             val operation = when (selected.identifier) {
@@ -701,15 +718,7 @@ object PrimitiveCompiler {
                 }
             } else null
             val result = if (operation == DictionaryOperation.CONTAINS_KEY) nextResult++ else null
-            val resultPlace = result?.let {
-                runtimeResults.add(it)
-                valueSites[context.start.tokenIndex] = current.id to it
-                val identifier = "\$member_${context.start.tokenIndex}"
-                val symbol = Symbol(declarationIds.getOrPut(-context.start.tokenIndex - 1, SymbolId::fresh), identifier, bool, mutable = false, forceRuntime = true)
-                symbols[identifier] = symbol
-                sourceTypes[it] = bool
-                Place(symbol.id).also { place -> origins[it] = place; locations[it] = Location(place) }
-            }
+            val resultPlace = result?.let { memberResult(context, it, bool, true) }
             instructions += Instruction.DictionaryMember(operation, location, container.typeId, arguments.singleOrNull(), key, result, resultPlace)
             return ValueRef.Result(if (result == null) MCFPPPrivateType.Void.typeId else bool, result ?: -1)
         }
@@ -784,7 +793,8 @@ object PrimitiveCompiler {
         }
     }
 
-    private class Backend(val function: Function, val lowering: Lowering, val ir: TypedIR, val facts: FlowAnalysis.Result) {
+    private class Backend(val function: Function, val lowering: Lowering, val ir: TypedIR, val facts: FlowAnalysis.Result,
+                          val typeFacts: FlowAnalysis.Result) {
         private var blockId = 0
         private val commands = mutableListOf<String>()
         val materializedPlaces = hashSetOf<Place>()
@@ -944,6 +954,32 @@ object PrimitiveCompiler {
             }
         }
 
+        private fun search(instruction: Instruction.ListMember, position: Int) {
+            val type = if (instruction.operation == ListOperation.CONTAINS) bool else int
+            if (instruction.operation.query && !runtime(ValueRef.Result(type, instruction.result!!))) return
+            val workspace = internal("list_search_${callNumber++}")
+            emit(Commands.dataSetValue(workspace, top.mcfpp.nbt.tags.CompoundTag()))
+            emit(Commands.dataSetFrom(workspace.memberIndex("source"), address(instruction.receiver)))
+            encode(workspace.memberIndex("needle"), instruction.argument!!)
+            val state = typeFacts.beforeWrites.getValue(blockId to position)
+            val needle = (instruction.argument as? ValueRef.Result)?.let { typeFacts.values[blockId to it.instruction]?.type as? TypeKnowledge.Exact }?.type
+                ?: instruction.argument.type
+            val scope = ListFacts.matchScope(state, instruction, needle)
+            check(scope != ListMatchScope.Unknown) { "Unbound list comparison reached command generation" }
+            val index = ListSearch.find(workspace, (scope as? ListMatchScope.Indices)?.values,
+                instruction.operation == ListOperation.LAST_INDEX_OF, ::emit)
+            if (instruction.operation == ListOperation.REMOVE) {
+                ListSearch.remove(workspace, index, ::emit)
+                emit(Command("execute if score ${ListSearch.key(index)} matches 0.. run")
+                    .build(Commands.dataSetFrom(address(instruction.receiver), workspace.memberIndex("output"))))
+            } else if (instruction.operation == ListOperation.CONTAINS) {
+                val result = temporary(bool)
+                commands += "scoreboard players set $result 0"
+                commands += "execute if score ${ListSearch.key(index)} matches 0.. run scoreboard players set $result 1"
+                results[instruction.result!!] = result
+            } else results[instruction.result!!] = Score(index.name, index.sbObject.toString())
+        }
+
         fun generate() {
             val reachable = ir.blocks.filter { it.id in facts.entries }
             if (reachable.any { block -> block.instructions.any { it is Instruction.RawCommand || it is Instruction.Call && it.effect == Effect.Unknown } }) {
@@ -979,7 +1015,7 @@ object PrimitiveCompiler {
                 if (block.id == 0 && reachable.any { candidate -> candidate.instructions.any { it is Instruction.Call ||
                     it is Instruction.Construct || it is Instruction.Read && nbt(symbols.getValue(it.place.root).declaredType) } })
                     emit(Commands.dataSetValue(NBTPath.stack.intIndex(0).memberIndex("\$ir"), top.mcfpp.nbt.tags.CompoundTag()))
-                for (instruction in block.instructions) when (instruction) {
+                for ((position, instruction) in block.instructions.withIndex()) when (instruction) {
                     is Instruction.Read -> if (nbt(symbols.getValue(instruction.place.root).declaredType) || instruction.place.path.isNotEmpty()) {
                         val snapshot = internal("read_${instruction.result}")
                         emit(Commands.dataSetFrom(snapshot, address(instruction.location)))
@@ -1031,6 +1067,7 @@ object PrimitiveCompiler {
                     }
                     is Instruction.RawCommand -> commands.add(instruction.command)
                     is Instruction.ListMember -> {
+                        if (instruction.operation.search) { search(instruction, position); continue }
                         val destination = address(instruction.receiver)
                         val id = callNumber++
                         val source = internal("list_value_$id")

@@ -4,11 +4,47 @@ import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.TypeId
 
 enum class ListOperation(val bulk: Boolean = false) {
-    CLEAR, APPEND, PREPEND, APPEND_ALL(true), PREPEND_ALL(true), INSERT, REMOVE_AT
+    CLEAR, APPEND, PREPEND, APPEND_ALL(true), PREPEND_ALL(true), INSERT, REMOVE_AT,
+    INDEX_OF, LAST_INDEX_OF, CONTAINS, REMOVE;
+
+    val query: Boolean get() = this == INDEX_OF || this == LAST_INDEX_OF || this == CONTAINS
+    val search: Boolean get() = query || this == REMOVE
+}
+
+sealed interface ListMatchScope {
+    object All : ListMatchScope
+    data class Indices(val values: List<Int>) : ListMatchScope
+    object Unknown : ListMatchScope
 }
 
 /** List splices move complete element subtrees, including nested collection lengths. */
 object ListFacts {
+    fun matchScope(state: FlowFacts, instruction: Instruction.ListMember, needle: TypeId?): ListMatchScope {
+        if (needle == null || needle == MCFPPBaseType.Any.typeId || needle == MCFPPBaseType.Object.typeId) return ListMatchScope.Unknown
+        val generic = (instruction.type as TypeId.Applied).arguments.single()
+        if (generic != MCFPPBaseType.Any.typeId && generic != MCFPPBaseType.Object.typeId) return ListMatchScope.All
+        val place = instruction.receiver.place
+        val size = state.length(place)
+        if (size != null) {
+            val types = (0 until size).map { (state.read(place.index(it))?.type as? TypeKnowledge.Exact)?.type ?: return ListMatchScope.Unknown }
+            return ListMatchScope.Indices(types.indices.filter { types[it] == needle })
+        }
+        val common = (state.read(place.unknownIndex())?.type as? TypeKnowledge.Exact)?.type ?: return ListMatchScope.Unknown
+        return if (common == needle) ListMatchScope.All else ListMatchScope.Indices(emptyList())
+    }
+
+    fun find(state: FlowFacts, instruction: Instruction.ListMember, needle: ValueFacts): Int? {
+        fun constant(fact: ValueFacts?): CompilerValue? {
+            if (fact?.state != ValueState.INITIALIZED) return null
+            val value = (fact.value as? ValueKnowledge.Constant)?.value ?: return null
+            return if (value is CompilerValue.Typed) value else (fact.type as? TypeKnowledge.Exact)?.type?.let { CompilerValue.Typed(it, value) }
+        }
+        val place = instruction.receiver.place
+        val size = state.length(place) ?: return null
+        val elements = (0 until size).map { constant(state.read(place.index(it))) ?: return null }
+        return ListValues.indexOf(elements, constant(needle) ?: return null, instruction.operation == ListOperation.LAST_INDEX_OF)
+    }
+
     fun position(operation: ListOperation, index: Int?, size: Int?): Int? = when (operation) {
         ListOperation.APPEND, ListOperation.APPEND_ALL -> size
         ListOperation.PREPEND, ListOperation.PREPEND_ALL, ListOperation.CLEAR -> 0

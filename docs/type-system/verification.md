@@ -1,8 +1,20 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-05（Asia/Shanghai）。本轮列表变更 IR 的必要联合检查为 79 项，最后列表专项复查 5 项；最近完整检查属于提交 72dc557，共 346 项。续接起始基线为上一会话的 140 项测试，浮点后端及算术修改继续保留。
+最新验证日期：2026-10-05（Asia/Shanghai）。本轮列表查询 IR 的必要检查为 53 项；最近完整检查属于提交 72dc557，共 346 项。续接起始基线为上一会话的 140 项测试，浮点后端及算术修改继续保留。
 
-## 最新必要检查：列表变更 IR
+## 最新必要检查：列表查询与按值删除 IR
+
+```sh
+./gradlew test --tests top.mcfpp.test.ListQueryIRTest --tests top.mcfpp.test.ListIRTest --tests top.mcfpp.test.ListMemberTest --tests top.mcfpp.test.ImmutableListTest --tests top.mcfpp.test.DynamicIndexIRTest --tests top.mcfpp.test.EffectAnalysisTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
+./gradlew compileKotlin -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
+git diff --check
+```
+
+6 个套件、53 项，0 失败、0 错误、0 跳过。新增 ListQueryIRTest 的 5 项覆盖查询纯效果与独立结果、来源不变、空列表、递归删除首项、未匹配保持数据、擦除 bool/int 身份、已知删除的子形状、动态接收者实参副作用、只读列表查询，以及未知类型诊断和显式视图。跨 26.3/1.20.2/1.20 与折叠开关执行；旧浮点及编译器专用查询通过既有成员套件保留。
+
+日志：`F:/DevCache/.codex/runtime/mcfpp-list-query-ir.log`；当前 XML 为上述 6 个套件。移除旧后端不再使用的导入和辅助函数后，单独编译检查通过，日志为 `mcfpp-list-query-ir-compile.log`。没有重复全量构建或标准库重建，MCFL 保持 9。
+
+## 上一阶段必要检查：列表变更 IR（21224b0）
 
 ```sh
 ./gradlew test --tests top.mcfpp.test.ListIRTest --tests top.mcfpp.test.ListMemberTest --tests top.mcfpp.test.DictionaryIRTest --tests top.mcfpp.test.DynamicIndexIRTest --tests top.mcfpp.test.CollectionIRTest --tests top.mcfpp.test.EffectAnalysisTest --tests top.mcfpp.test.ValueModelTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
@@ -12,7 +24,7 @@ git diff --check
 
 联合 7 个套件、79 项通过。新增 ListIRTest 的 5 项覆盖三种目标/折叠开关下的七种列表变更、循环增长、嵌套子形状、自追加副本、动态索引参数求值顺序、static 递归接收者效果及非法写入诊断。首次联合检查发现未知长度后丢失共同元素类型；不同长度合流现保留范围类型证据，固定下标可读取共同范围事实，追加保留已有位置。混合类型范围仍拒绝未经视图的具体操作。
 
-空批量操作补充为直接保留原事实，并只复查 ListIRTest 的 5 项，全部通过；当前 XML 为该专项结果。日志分别为 `F:/DevCache/.codex/runtime/mcfpp-list-ir-final.log`、`mcfpp-list-ir-empty-batch.log`。测试中的循环块分隔符已修正。MCFL 保持 9，本轮没有全量构建或标准库重建。
+空批量操作补充为直接保留原事实，并只复查 ListIRTest 的 5 项，全部通过。日志分别为 `F:/DevCache/.codex/runtime/mcfpp-list-ir-final.log`、`mcfpp-list-ir-empty-batch.log`。测试中的循环块分隔符已修正。MCFL 保持 9，该轮没有全量构建或标准库重建。
 
 ## 上一阶段必要检查：字典成员 IR（4bed87f）
 
@@ -159,7 +171,7 @@ NBT 数组首批 9 项回归在迁入前实际失败 8 项：字面量降为 nbt
 ## 未完成验收
 
 这些结果验证的是 migration.md 中已接入的范围，不能替代整份重构方案的验收。
-列表查询、按值删除及其余集合成员、map/NBT 数组与编译器专用集合的 IR，未知长度上的负数字面下标、集合返回/static 整体替换的完整子形状，模板/浮点及泛型/T! 的调用与控制流、其余循环语法、未知字典字符串键的运行时后端、其余原生成员编码检查、全局/实体位置的递归效果及完整擦除返回类型不动点、模板方法/构造、其余布局和转换后端、MNI 全面迁移及旧体系移除仍列在迁移指南中。原始命令直接跨函数修改物理记分板与帧恢复的关系仍需核实。
+其余集合成员、map/NBT 数组与编译器专用集合的 IR，未知长度上的负数字面下标、集合返回/static 整体替换的完整子形状，模板/浮点及泛型/T! 的调用与控制流、其余循环语法、未知字典字符串键的运行时后端、其余原生成员编码检查、全局/实体位置的递归效果及完整擦除返回类型不动点、模板方法/构造、其余布局和转换后端、MNI 全面迁移及旧体系移除仍列在迁移指南中。原始命令直接跨函数修改物理记分板与帧恢复的关系仍需核实。
 as、擦除载荷和存储已经有实际贯通路径；不能把这些测试外推为全部语言类型和调用路径均已完成。
 旧浮点测试验证分量搬运和命令结构，未证明模拟库的全部数值精度、舍入及异常行为。
 旧测试仍有仅打印诊断的用例；测试通过不能证明其全部输入都符合新语义。

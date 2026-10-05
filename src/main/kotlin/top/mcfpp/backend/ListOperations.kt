@@ -13,15 +13,9 @@ import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.nbt.NBTList
 import top.mcfpp.core.lang.nbt.NBTListConcrete
 import top.mcfpp.lib.NBTPath
-import top.mcfpp.lib.SbObject
 import top.mcfpp.model.function.Function
-import top.mcfpp.nbt.tags.collection.ListTag
 import top.mcfpp.nbt.tags.CompoundTag
-import top.mcfpp.nbt.tags.Tag
-import top.mcfpp.nbt.tags.primitive.FloatTag
-import top.mcfpp.nbt.tags.primitive.DoubleTag
 import top.mcfpp.type.MCFPPBaseType
-import top.mcfpp.type.MCFPPNBTType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 
@@ -32,9 +26,7 @@ object ListOperations {
     private fun integer(value: MCInt) = (payload(ValueSnapshot.of(value)) as? CompilerValue.Integral)?.value?.toInt()
     private fun emit(command: Command) = Function.addCommands(command.buildMacroFunction())
     private fun scratch() = NBTPath.temp.memberIndex(TempPool.getVarIdentify())
-    private fun score() = MCInt().apply { sbObject = SbObject.MCFPP_TEMP; hasAssigned = true; isDynamic = true; isTemp = true }
     private fun key(value: MCInt) = "${value.name} ${value.sbObject}"
-    private fun set(value: MCInt, number: Int) = Function.addCommand("scoreboard players set ${key(value)} $number")
     private fun macroSupported(index: MCInt): Boolean {
         if (integer(index) != null || TargetCapabilities.forVersion(Project.config.version)?.functionMacros == true) return true
         LogProcessor.error("Target '${Project.config.version}' cannot modify a list at a runtime index without function macros")
@@ -233,43 +225,10 @@ object ListOperations {
         commit(caller, saved, position, 1, null, false, 0)
     }
 
-    private fun unbox(value: CompilerValue): CompilerValue = if (value is CompilerValue.Typed &&
-        value.type in setOf(MCFPPBaseType.Any.typeId, MCFPPBaseType.Object.typeId)) unbox(value.payload) else value
-
-    private fun equal(left: CompilerValue, right: CompilerValue): Boolean {
-        val a = unbox(left)
-        val b = unbox(right)
-        if (a is CompilerValue.Typed && b is CompilerValue.Typed) return a.type == b.type && equal(a.payload, b.payload)
-        if (a is CompilerValue.Sequence && b is CompilerValue.Sequence) return a.elements.size == b.elements.size &&
-            a.elements.zip(b.elements).all { (x, y) -> equal(x, y) }
-        if (a is CompilerValue.Record && b is CompilerValue.Record) return a.fields.keys == b.fields.keys &&
-            a.fields.all { (key, value) -> equal(value, b.fields.getValue(key)) }
-        if (a is CompilerValue.Nbt && b is CompilerValue.Nbt) return Tag.toNBT(a.snbt) == Tag.toNBT(b.snbt)
-        return a == b
-    }
-
-    private fun foldableTag(tag: Tag<*>): Boolean = when (tag) {
-        is FloatTag, is DoubleTag -> false
-        is ListTag -> tag.all(::foldableTag)
-        is CompoundTag -> tag.value.values.all(::foldableTag)
-        else -> true
-    }
-
-    /** Float bits do not prove equality in the legacy layout; retain the actual command backend. */
-    private fun foldable(value: CompilerValue): Boolean = when (value) {
-        is CompilerValue.FloatBits, is CompilerValue.DoubleBits -> false
-        is CompilerValue.Typed -> value.type !in setOf(MCFPPBaseType.Float.typeId, MCFPPNBTType.Double.typeId) && foldable(value.payload)
-        is CompilerValue.Sequence -> value.elements.all(::foldable)
-        is CompilerValue.Record -> value.fields.values.all(::foldable)
-        is CompilerValue.Nbt -> foldableTag(Tag.toNBT(value.snbt))
-        else -> true
-    }
-
     fun indexOf(caller: NBTList, needle: Var<*>, last: Boolean): MCInt {
         val old = sequence(caller)
         val value = ValueSnapshot.of(needle)
-        if (old != null && value != null && foldable(old) && foldable(value)) return MCIntConcrete(if (last) old.elements.indexOfLast { equal(it, value) }
-            else old.elements.indexOfFirst { equal(it, value) })
+        if (old != null && value != null) ListValues.indexOf(old.elements, value, last)?.let { return MCIntConcrete(it) }
         val binding = StorageAccess.ensure(caller)
         if (binding.data.layout == StorageLayout.CompilerOnly || !StorageAccess.hasRuntimeRepresentation(needle)) {
             LogProcessor.error("Compiler-only list lookup requires complete compile-time values")
@@ -289,31 +248,11 @@ object ListOperations {
             }
             children.filterValues { it.type == TypeKnowledge.Exact(type) }.keys.map { (it.path.last() as PathSegment.Index).index }
         } else null
-        val list = scratch()
-        val element = scratch()
-        val probe = scratch()
-        StorageAccess.encodeTo(list, caller)
-        StorageAccess.encodeTo(element, needle)
-        val result = score()
-        val cursor = score()
-        val size = score()
-        val changed = score()
-        set(result, -1); set(cursor, 0)
-        emit(Command("execute store result score ${key(size)} run data get").build(list.toCommandPart()))
-        val loop = Commands.tempFunction("list_find", Function.currFunction) { function ->
-            emit(Commands.dataSetFrom(probe, list.intIndex(0)))
-            emit(Command("execute store success score ${key(changed)} run").build(Commands.dataSetFrom(probe, element)))
-            val match = Command("execute if score ${key(changed)} matches 0 run scoreboard players operation ${key(result)} = ${key(cursor)}")
-            if (eligible == null) emit(match) else eligible.forEach { index ->
-                emit(Command("execute if score ${key(cursor)} matches $index run").build(match))
-            }
-            emit(Command("data remove").build(list.intIndex(0).toCommandPart()))
-            Function.addCommand("scoreboard players add ${key(cursor)} 1")
-            val recurse = Command("execute if score ${key(cursor)} < ${key(size)} run").build(Commands.function(function))
-            emit(if (last) recurse else Command("execute if score ${key(result)} matches -1 run").build(recurse))
-        }
-        emit(Command("execute if score ${key(size)} matches 1.. run").build(loop.first))
-        return result
+        val workspace = scratch()
+        emit(Commands.dataSetValue(workspace, CompoundTag()))
+        StorageAccess.encodeTo(workspace.memberIndex("source"), caller)
+        StorageAccess.encodeTo(workspace.memberIndex("needle"), needle)
+        return ListSearch.find(workspace, eligible, last, ::emit)
     }
 
     fun contains(caller: NBTList, needle: Var<*>): ScoreBool {
@@ -332,26 +271,12 @@ object ListOperations {
         if (index.isError) return
         integer(index)?.let { if (it >= 0) removeAt(caller, index); return }
         val saved = save(caller)
-        val list = scratch()
-        val output = scratch()
-        val cursor = score()
-        val size = score()
-        val rebuild = Commands.tempFunction("list_remove", Function.currFunction) {
-            StorageAccess.encodeTo(list, caller)
-            emit(Commands.dataSetValue(output, ListTag()))
-            set(cursor, 0)
-            emit(Command("execute store result score ${key(size)} run data get").build(list.toCommandPart()))
-            val loop = Commands.tempFunction("list_keep", Function.currFunction) { function ->
-                emit(Command("execute unless score ${key(cursor)} = ${key(index)} run")
-                    .build(Commands.dataAppendFrom(output, list.intIndex(0))))
-                emit(Command("data remove").build(list.intIndex(0).toCommandPart()))
-                Function.addCommand("scoreboard players add ${key(cursor)} 1")
-                emit(Command("execute if score ${key(cursor)} < ${key(size)} run").build(Commands.function(function)))
-            }
-            emit(Command("execute if score ${key(size)} matches 1.. run").build(loop.first))
-            emit(Commands.dataSetFrom(saved.binding.path, output))
-        }
-        emit(Command("execute if score ${key(index)} matches 0.. run").build(rebuild.first))
+        val workspace = scratch()
+        emit(Commands.dataSetValue(workspace, CompoundTag()))
+        StorageAccess.encodeTo(workspace.memberIndex("source"), caller)
+        ListSearch.remove(workspace, index, ::emit)
+        emit(Command("execute if score ${key(index)} matches 0.. run")
+            .build(Commands.dataSetFrom(saved.binding.path, workspace.memberIndex("output"))))
         commit(caller, saved, null, 1, null, false, 0)
     }
 }

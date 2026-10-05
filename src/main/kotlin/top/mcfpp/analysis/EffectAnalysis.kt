@@ -27,7 +27,7 @@ object EffectAnalysis {
                         is Instruction.RawCommand -> Effect.Unknown
                         is Instruction.Write -> Effect.Writes(setOf(instruction.place))
                         is Instruction.DictionaryMember -> instruction.effect
-                        is Instruction.ListMember -> Effect.Writes(setOf(instruction.receiver.place))
+                        is Instruction.ListMember -> if (instruction.operation.query) Effect.Pure else Effect.Writes(setOf(instruction.receiver.place))
                         is Instruction.Call -> callEffect(instruction, functions, effects)
                         else -> Effect.Pure
                     }

@@ -49,6 +49,12 @@ object IRCollectionValidation {
                 diagnostics += "Target '${target.version}' cannot access an empty dictionary key"
             if (instruction is Instruction.ListMember) {
                 val state = facts.beforeWrites.getValue(block.id to position)
+                if (instruction.operation.search) {
+                    val argument = instruction.argument!!
+                    val needle = (argument as? ValueRef.Result)?.let { facts.values[block.id to it.instruction]?.type as? TypeKnowledge.Exact }?.type ?: argument.type
+                    if (ListFacts.matchScope(state, instruction, needle) == ListMatchScope.Unknown)
+                        diagnostics += "List lookup requires known needle and element types; use an explicit as view"
+                }
                 if (instruction.index != null) {
                     if (instruction.knownIndex == null && !target.functionMacros)
                         diagnostics += "Target '${target.version}' cannot modify a list at a runtime index without function macros"
@@ -58,7 +64,7 @@ object IRCollectionValidation {
                     if (size != null && index != null && index !in 0..(size - removed))
                         diagnostics += "List index ${instruction.knownIndex} is outside ${if (removed == 0) "insertion into" else "length"} $size"
                 }
-                if (!target.heterogeneousLists && instruction.argument != null) {
+                if (!target.heterogeneousLists && instruction.argument != null && !instruction.operation.search) {
                     val incoming = if (instruction.operation.bulk) elements(state, instruction.argumentPlace, instruction.argument.type)
                         else listOf(encoding(block.id, instruction.argument))
                     val codecs = elements(state, instruction.receiver.place, instruction.type) + incoming
