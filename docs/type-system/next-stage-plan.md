@@ -1,4 +1,4 @@
-# 下一阶段：普通模板推断字段声明完成（阶段 58）
+# 下一阶段：导入构造 RHS 的声明词法环境（阶段 59）
 
 本计划的首条纵向路径已经在续接会话中实现，完整阶段和整个重构仍未完成。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
@@ -56,11 +56,15 @@
 
 const 只限制重赋；compiler-only const 保留完整 `ValueSnapshot` 且不物化，`T!` 独立检查完整值，inferred mirrored 不继承约束。field annotation 在 annotation 转存后触发 helper 补 stage；函数 annotation 从真实 AST 声明取得。错误 RHS 不写默认值，self/forward 引用给清晰诊断。普通模板 typed const 允许每实例初始化。
 
-首轮联合 28 项为 27 pass/1 fail（唯一失败是负向测试字符串少了两个顶层声明间的换行，语法早退导致测试 helper 找不到 object）；修正测试后定向复查该方法 1 项通过，0 failures/errors/skips。其余首轮 27 项通过；没有最终联合 28 项复跑。MCFL 12 schema 未变，stdlib 重建触及本地 20 个 Slot inferred fields 后 bin 为 267356 bytes。构建、XML时间和测试边界见 verification.md。保留的限制：导入 RHS lexical scope 未持久化，object 自动 load 未验证；旧 consume 的 `flatExtends` 重复继承字段警告待处理。
+阶段57历史：首轮28项27通过/1测试夹具失败；修正负向source换行后定向复查该方法1项通过，没有最终联合28项复跑。MCFL12 schema不变，stdlib含本地20个Slot inferred fields后为267356 bytes。记录见verification.md。导入RHS lexical scope、import object自动load仍待处理；phase56 consume记录的`flatExtends`重复继承警告未清理。
 
-### 阶段 58：普通模板推断字段声明完成
+### 阶段 58：普通模板推断字段声明绑定（受限支持）
 
-普通模板 inferred field 仍使用旧 `extraFunction` probe。下一阶段扩展现有 PrimitiveCompiler Lowering/FlowAnalysis 做纯声明绑定，不建立平行 typechecker，也不通过编译某个构造器来伪造字段的名义类型。所有函数签名完成后先让声明类型 ready，再建立实例、形参与方法；构造 RHS 已证实可读取形参（阶段57 typed const），因此 overload 候选需要一致的声明类型。T! 未绑定时不伪造完整值；generic instance 的分析只写自身 scope，不污染 prototype。准备好的 IR 应可供各 constructor 复用。可分阶段纳入 template fields/static/method calls/compiler-only，但保持同一 Lowering 路径。
+阶段58已接入：普通模板 inferred fields 复用 `PrimitiveCompiler` 私有图的 Lowering/FlowAnalysis/ReturnTypeAnalysis 做 pure declaration binding，不发布 IR、不执行用户函数、不生成命令。普通构造参数与未绑定 T! 保持 Unknown，同字段 across ctor overload 要求同一 TypeId；支持 this 单字段/此前字段。anonymous 统一队列，泛型类型实参绑定后的实例独立完成，继承后annotations与模板参数/返回 adapter刷新并保留Symbol/Place。Runtime receiver按声明类型初始化可编码默认字段；Unknown erased不伪造snapshot，NBT遇不可编码child返回整体null；普通模板局部声明buildUnConcrete防止DataOnly空地址写入。pure AST binding与runtime AST generation分离，不重复执行RHS。native/generic/compiler-only/static、多级this/member method等未迁入语法继续legacy `extraFunction`。阶段58验证37个不同用例跨轮各自通过，非一次联合37项。
+
+### 阶段 59：导入构造 RHS 的声明词法环境
+
+导入构造器的 transient `file` 仍为 null，导入 RHS 声明依赖 caller lexical scope。阶段59只聚焦持久化/恢复导入 RHS 所需的声明词法环境；source constructor 编译时恢复 file/namespace 不表示 import scope 已解决。import object 自动 load 是独立未验证缺口，不并入本阶段承诺。
 
 ### 旧浮点乘除（阶段 50 已实现）
 
@@ -72,7 +76,7 @@ const 只限制重赋；compiler-only const 保留完整 `ValueSnapshot` 且不�
 
 阶段 51 已将旧浮点算术/比较、Promote/Convert 接入 IR：四分量值使用独立 NBT 帧，`LegacyFloatCommands` 负责读写和调用，保留旧四记分板 return ABI。普通/递归/static、旧与 IR 双向调用、早先参数、多实参、常量与连续返回均经真实库命令执行；最终 20 项必要复查通过，0 failures/errors/skips。Native 路径不变；旧浮点算术/比较及跨数值折叠禁止宿主 Float 计算，`16777217` 保持八位十进制精度；identity/toNBT 保留来源 codec。包含 FloatBits 端点的旧浮点范围，其静态顺序不使用宿主比较，整数/native 行为不变；浮点迭代语义未定义，不新增迭代行为。
 
-已知 int/bool/byte/short as legacyfloat 仍沿旧入口并在实际访问时诊断；未用视图不报错，unknown any 视图不做运行时 typecheck，命名 float 视图的来源随后被写成已知标量，再读取视图会诊断。阶段56/57完成有序初始化 RHS 持久化与 const 初始化语义，MCFL 12；验证记录见上。下一步阶段58完成普通模板推断字段声明绑定。未知端点范围和浮点/混合迭代的步长及不前进策略仍未定义，保留现有诊断。整个17项迁移仍未完成，模板/泛型/T!、其余控制流/集合及 MNI 尚待统一。
+已知 int/bool/byte/short as legacyfloat 仍沿旧入口并在实际访问时诊断；未用视图不报错，unknown any 视图不做运行时 typecheck，命名 float 视图的来源随后被写成已知标量，再读取视图会诊断。阶段56/57完成有序初始化 RHS 持久化与 const 初始化语义，MCFL 12；验证记录见上。阶段58已为部分语法接入普通模板推断字段声明绑定，其他语法仍沿旧路径；下一步阶段59只处理导入构造 RHS 的声明词法环境，import object 自动 load 是独立未验证缺口。未知端点范围和浮点/混合迭代的步长及不前进策略仍未定义，保留现有诊断。整个17项迁移仍未完成，模板/泛型/T!、其余控制流/集合及 MNI 尚待统一。
 
 - 26.3 原生 float 的字面量、算术/比较、循环、递归调用、static 写回、擦除与共享视图、集合元素和范围载荷进入 IR；int→float 提升作为 Promote，用于声明、赋值、返回、普通/成员实参和上下文集合字面量。运算与旧入口共享提供器表达式，值保存在 NBT 帧，负零取负保留符号；常量非有限值、反向已知范围和有损 static 写回明确诊断。旧浮点后端现已进入 IR；其余来源转换和完整 MNI 接口仍待迁入；浮点/混合迭代语义未定义并保留现有诊断，不扩展步长或不前进规则。
 

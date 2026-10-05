@@ -1,8 +1,18 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段 57 标准库重建成功，MCFL 12 schema 不变，生成 `bin.mclib` 267356 bytes；Project 语言错误/警告均为 0（Kotlin 编译有 4 条常规 warning）。首轮联合 28 项有 1 项失败；修正负向测试字符串的顶层声明换行后，定向复查该方法 1 项通过、0 failures/errors/skips，日志 `mcfpp-template-const-order-final.log`，XML 时间戳 `2026-10-05T22:24:27.881Z`。日志确认 self/forward 分别触发 `Cannot infer object field 'first'/'later' before its initializer is evaluated`。联合首轮其余 27 项均通过，不表示最终 28 项联合复跑。标准库日志 `mcfpp-template-const-stdlib.log`，首轮联合日志 `mcfpp-template-const.log`。未运行完整 check 或实际服务端；最近完整检查仍属于提交 72dc557，共 346 项。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段58 pure declaration binding 经分轮覆盖37个不同检查用例全部通过，但并非一次37项联合运行：runtime receiver修复后的 TemplateFieldInferenceTest 6项5通过/1失败，修复 runtime binding 后单独复查该方法1项通过（其余5项已在首轮通过）；另一次运行的 Const4、ConstructorExecution7、TemplateInitialization3、IRCall17共31项全部通过。相关 fresh XML 时间戳分别为 `2026-10-05T23:06:25.229Z`（6项5/1）、`23:09:30.812Z`（定向1项全过）、`23:09:52.487Z`（Const4）、`23:09:48.914Z`（ConstructorExecution7）、`23:09:52.695Z`（TemplateInitialization3）、`23:09:51.101Z`（IRCall17）。日志见各段；未重建标准库、未运行完整 check 或实际服务端。最近完整检查仍属于提交 72dc557，共 346 项。
 
-## 最新必要检查：模板 const 字段运行时初始化（阶段 57）
+## 最新必要检查：普通模板推断字段声明绑定（阶段 58）
+
+普通模板 inferred fields 复用 `PrimitiveCompiler` 私有图的 Lowering、FlowAnalysis 与 ReturnTypeAnalysis 做声明/类型绑定；不发布 IR、不执行用户函数、不生成命令。普通构造参数和未绑定 `T!` 保持 Unknown；同字段在不同 ctor overload 下要求一致 `TypeId`。支持 `this` 单字段及此前字段读取。anonymous template 走同一声明队列；generic 类型实参绑定完成后再分析其实例，继承完成后再应用 annotations 并刷新模板参数/返回 adapter，保留既有 Symbol/Place。
+
+声明绑定不会重复执行 RHS：pure AST binding 与 runtime AST 生成是两个阶段。运行时 receiver 按声明类型初始化可编码的默认字段，Unknown erased 值不伪造 snapshot；NBT codec 遇不可编码 child 返回整体 null。普通模板局部声明使用 `buildUnConcrete`，避免复制 defaultVar 图而向 DataOnly 空地址写命令。未接入路径继续用 legacy `extraFunction`，包括 native/generic/compiler-only/static、多级 `this`/member method 等语法；阶段范围仍有限。
+
+验证历程：早期定向测试在 test compile 阶段因 `@Test` 名称解析失败；之后一次 worker 通信退出，没有 fresh XML。`--info` 单类诊断轮6项显示两项 discarded-probe assertion把标准库 Slot 初始化命令误当用户probe；仅检查本地 source function calls 后修正 helper。第三项 NBT codec NPE导致 worker exit。runtime修复后 TemplateFieldInference 6项 fresh XML 为5 pass/1 fail，失败是产品生成非法空地址NBT命令 `data modify storage mcfpp:system  set value 0`，严格执行器拒绝；ImVisitor修复后定向该方法1项通过。随后指定其余31项四套件全过。合计37个不同用例各自最终通过，未将分轮结果写成最终联合37项通过。日志：`mcfpp-template-field-inference.log`、`mcfpp-template-field-inference-final.log`、`mcfpp-template-field-inference-diagnostic.log`、`mcfpp-template-field-inference-runtime-fix.log`、`mcfpp-template-field-inference-dataonly-final.log`、`mcfpp-template-field-inference-regression.log`。
+
+MCFL 12 schema 与 `bin.mclib` 267356 bytes 保持不变；本轮无 stdlib 重建、full check 或服务器测试。阶段57 const/runtime 初始化结果仍见后文历史段；导入构造 RHS lexical scope、import object 自动 load、未迁入的模板路径及旧消费警告仍是缺口。
+
+## 历史必要检查：模板 const 字段运行时初始化（阶段 57）
 
 `sharedProject.prepareObjectInitializers` 在 annotation、完整签名和继承信息 ready 后、用户函数 body 编译前编译完整本地 object constructor，使用已有 guard 避免重复。source inferred object 字段按声明顺序暂存上下文、访问和已解析 annotation；FieldVisitor 不试算 RHS，由实际 constructor `prepareBody` 单次求值并补齐 field/property/Symbol。typed const RHS 同样登记；普通 typed const 可对每个 receiver runtime 初始化，传入参数先绑定，再跑 RHS。两个不同 receiver（1、2）实测正确初始化。
 

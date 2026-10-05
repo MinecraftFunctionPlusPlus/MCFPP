@@ -10,6 +10,7 @@ import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.nbt.*
 import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
+import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.obj.StaticMemberView
 import top.mcfpp.lib.EntitySelector
 import top.mcfpp.lib.NBTPath
@@ -18,6 +19,7 @@ import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.model.function.ParameterMatcher
+import top.mcfpp.model.function.NativeDataTemplateConstructor
 import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.scope.GlobalScope
@@ -524,7 +526,17 @@ class MCFPPExprVisitor(
                 top.mcfpp.analysis.StorageAccess.restore(spills)
                 return UnknownVar("error_${ctx.text}").apply { isError = true }
             }
-            val init = DataTemplateObjectConcrete(template.getType().defaultValueVar() as DataTemplateObjectConcrete)
+            val init = if (selection.function is NativeDataTemplateConstructor) {
+                DataTemplateObjectConcrete(template.getType().defaultValueVar() as DataTemplateObjectConcrete)
+            } else {
+                val receiver = template.getType().buildUnConcrete(TempPool.getVarIdentify()) as? DataTemplateObject
+                if (receiver == null) {
+                    top.mcfpp.analysis.StorageAccess.restore(spills)
+                    return UnknownVar("error_${ctx.text}").apply { isError = true }
+                }
+                top.mcfpp.analysis.StorageAccess.initializeTemplateReceiver(receiver)
+                receiver
+            }
             selection.function.invoke(normalArgs, init)
             top.mcfpp.analysis.StorageAccess.restore(spills)
             //可能会对init进行替换

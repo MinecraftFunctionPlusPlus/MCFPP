@@ -2,6 +2,7 @@ package top.mcfpp.antlr
 
 import top.mcfpp.Project
 import top.mcfpp.Project.withCompilationContext
+import top.mcfpp.analysis.PrimitiveCompiler
 import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.antlr.mcfppParser.TemplateDeclarationContext
 import top.mcfpp.compiletime.CompileTimeFunction
@@ -409,6 +410,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         if(template.constructors.isEmpty()){
             template.addMember(DataTemplateConstructor(DataTemplate.currTemplate!!, null))
         }
+        Project.registerAnonymousTemplate(template)
         DataTemplate.currTemplate = qwq
         typeScope = MCFPPFile.currFile!!.field.namespaceField
         return template
@@ -582,7 +584,6 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             }
         }
 
-        var init: Var<*>? = null
         if(isConst && ctx.expression() == null){
             LogProcessor.error("Const template field ${ctx.Identifier().text} must have an initializer")
             return null to null
@@ -591,18 +592,11 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             LogProcessor.error("Template field ${ctx.Identifier().text} must have a type or an initializer")
             return null to null
         }else if(`var` == null){
-            if(isInObject){
-                val member = ctx.parent.parent as mcfppParser.TemplateMemberDeclarationContext
-                val access = AccessModifier.valueOf((member.accessModifier()?.text ?: "public").uppercase(Locale.getDefault()))
-                template.deferredFields[name] = DataTemplate.DeferredFieldDeclaration(ctx, access)
-                template.preInit[name] = ctx.expression()
-                return null to null
-            }else{
-                Function.extraFunction.runInFunction { init = MCFPPExprVisitor().visit(ctx.expression())!! }
-                val type = init!!.type
-                `var` = type.buildUnConcrete(ctx.Identifier().text)
-                DataTemplate.currTemplate!!.preInit[`var`.identifier] = ctx.expression()
-            }
+            val member = ctx.parent.parent as mcfppParser.TemplateMemberDeclarationContext
+            val access = AccessModifier.valueOf((member.accessModifier()?.text ?: "public").uppercase(Locale.getDefault()))
+            template.deferredFields[name] = DataTemplate.DeferredFieldDeclaration(ctx, access)
+            template.preInit[name] = ctx.expression()
+            return null to null
         } else if (ctx.expression() != null) {
             DataTemplate.currTemplate!!.preInit[`var`.identifier] = ctx.expression()
         }
@@ -623,10 +617,59 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         return `var` to properties
     }
 
-    internal fun completeObjectField(template: ObjectDataTemplate, declaration: DataTemplate.DeferredFieldDeclaration, type: MCFPPType): Var<*> {
+    internal fun completeTemplateFields(template: DataTemplate) {
+        if (template is ObjectDataTemplate || template.deferredFields.isEmpty()) return
+        val previousTemplate = DataTemplate.currTemplate
+        val previousFile = MCFPPFile.currFile
+        val previousNamespace = Project.currNamespace
+        try {
+            DataTemplate.currTemplate = template
+            MCFPPFile.currFile = template.constructors.firstOrNull()?.file ?: previousFile
+            Project.currNamespace = template.namespace
+            // Flattening retains the existing rule that an inherited field replaces a same-named local field.
+            for ((name, declaration) in template.deferredFields.toMap()) {
+                if (template.scope.getVar(name) != null) {
+                    template.pendingFieldAnnotations.getOrPut(name) { arrayListOf() }.addAll(declaration.annotations)
+                    template.deferredFields.remove(name)
+                }
+            }
+            if (template.deferredFields.isEmpty()) return
+            val declared = template.scope.allVars.associate { it.identifier to it.type }
+            val bindings = template.constructors.map { PrimitiveCompiler.prepareInitializers(it, template.preInit, declared) }
+            if (bindings.all { it != null }) {
+                val diagnostics = bindings.flatMap { it!!.diagnostics }.distinct()
+                diagnostics.forEach(LogProcessor::error)
+                if (diagnostics.isNotEmpty()) return
+                for ((name, declaration) in template.deferredFields.toMap()) {
+                    val types = bindings.mapNotNull { it!!.inferredTypes[name] }.distinctBy { it.typeId }
+                    if (types.size != 1 || bindings.any { name !in it!!.inferredTypes }) {
+                        LogProcessor.error("Cannot infer one declaration type for template field '$name' across its constructors")
+                        continue
+                    }
+                    completeTemplateField(template, declaration, types.single())
+                }
+            } else {
+                // Types outside the current IR boundary retain the legacy probe until their lowering is migrated.
+                for ((_, declaration) in template.deferredFields.toMap()) {
+                    val errors = Project.errorCount
+                    var value: Var<*>? = null
+                    Function.extraFunction.runInFunction {
+                        value = MCFPPExprVisitor().visitExpression(declaration.context.expression())
+                    }
+                    value?.let { if (!it.isError && Project.errorCount == errors) completeTemplateField(template, declaration, it.type) }
+                }
+            }
+        } finally {
+            DataTemplate.currTemplate = previousTemplate
+            MCFPPFile.currFile = previousFile
+            Project.currNamespace = previousNamespace
+        }
+    }
+
+    internal fun completeTemplateField(template: DataTemplate, declaration: DataTemplate.DeferredFieldDeclaration, type: MCFPPType): Var<*> {
         val previous = DataTemplate.currTemplate
         DataTemplate.currTemplate = template
-        isInObject = true
+        isInObject = template is ObjectDataTemplate
         typeScope = template.scope
         try {
             val context = declaration.context
@@ -636,8 +679,12 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             val (field, property) = buildTemplateField(context, fieldValue)
             field.accessModifier = declaration.access
             property.accessModifier = declaration.access
-            declaration.annotations.forEach { it.on(field) }
-            field.annotations.addAll(declaration.annotations)
+            if (template is ObjectDataTemplate) {
+                declaration.annotations.forEach { it.on(field) }
+                field.annotations.addAll(declaration.annotations)
+            } else {
+                template.pendingFieldAnnotations.getOrPut(field.identifier) { arrayListOf() }.addAll(declaration.annotations)
+            }
             template.addMember(field)
             template.addMember(property)
             template.deferredFields.remove(field.identifier)

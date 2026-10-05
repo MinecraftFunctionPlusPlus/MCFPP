@@ -3,6 +3,7 @@ package top.mcfpp.model.compound
 import top.mcfpp.Project
 import top.mcfpp.antlr.MCFPPGenericDataTemplateFieldVisitor
 import top.mcfpp.antlr.MCFPPGenericDataTemplateImVisitor
+import top.mcfpp.antlr.MCFPPFieldVisitor
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.MCFPPTypeVar
 import top.mcfpp.core.lang.MCFPPValue
@@ -74,6 +75,10 @@ open class GenericDataTemplate : DataTemplate {
         //注册
         currTemplate = template
         MCFPPGenericDataTemplateFieldVisitor(template).visitTemplateDeclaration(ctx.parent as mcfppParser.TemplateDeclarationContext)
+        template.flatExtends()
+        MCFPPFieldVisitor().completeTemplateFields(template)
+        template.applyDeclarationAnnotations()
+        (template.constructors + template.scope.functions.values.flatten()).forEach { it.refreshTemplateSignature() }
         currTemplate = template
         MCFPPGenericDataTemplateImVisitor().visitTemplateBody(ctx)
         index ++

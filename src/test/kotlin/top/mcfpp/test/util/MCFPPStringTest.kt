@@ -77,14 +77,11 @@ object MCFPPStringTest {
 
         //继承解析
         GlobalScope.localNamespaces.values.flatMap { it.scope.template.values }.forEach {
-            if(it.parent.isNotEmpty()){
-                it.flatExtends()
-            }else{
-                (it.extends(DataTemplate.baseDataTemplate) as DataTemplate).flatExtends()
-            }
+            if(it.parent.isEmpty()) it.extends(DataTemplate.baseDataTemplate)
         }
         
         MCFPPAnnotationVisitor().visit(context)
+        Project.completeTemplateDeclarations()
         Project.prepareObjectInitializers()
         val visitor = MCFPPImVisitor()
         LogProcessor.debug("Compiling mcfpp code...")

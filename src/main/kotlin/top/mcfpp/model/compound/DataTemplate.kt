@@ -58,9 +58,27 @@ open class DataTemplate : FieldContainer, CompoundData {
         val annotations: MutableList<top.mcfpp.model.annotation.Annotation> = arrayListOf()
     )
 
-    /** Source declarations awaiting type inference in the actual object constructor. */
+    /** Source declarations awaiting pure type binding, or the actual object initializer. */
     @Transient
     val deferredFields = LinkedHashMap<String, DeferredFieldDeclaration>()
+
+    @Transient
+    val pendingFieldAnnotations = LinkedHashMap<String, MutableList<top.mcfpp.model.annotation.Annotation>>()
+
+    /** Apply source annotations after inheritance and inferred fields have their canonical declarations. */
+    internal fun applyDeclarationAnnotations() {
+        annotations.forEach { it.on(this) }
+        for ((name, annotations) in pendingFieldAnnotations) {
+            val field = scope.getVar(name)
+            if (field == null) {
+                LogProcessor.error("Cannot apply annotations to unresolved template field '$name'")
+                continue
+            }
+            annotations.forEach { it.on(field) }
+            field.annotations.addAll(annotations)
+        }
+        pendingFieldAnnotations.clear()
+    }
 
     var companionObject: DataTemplate? = null
 
@@ -165,14 +183,14 @@ open class DataTemplate : FieldContainer, CompoundData {
         for (compoundData in parent){
             //把所有成员都塞进去
             compoundData.scope.forEachVar {
-                val b = scope.getVar(it.identifier) != null
+                val b = scope.getVar(it.identifier) != null || it.identifier in deferredFields
                 if(b){
                     LogProcessor.warn("Duplicate var '${it.identifier}' in template '$identifier'. Overriding it.")
                 }
                 scope.putVar(it.identifier, it, true)
             }
             compoundData.scope.forEachProperty {
-                val b = scope.getProperty(it.identifier) != null
+                val b = scope.getProperty(it.identifier) != null || it.identifier in deferredFields
                 if(b){
                     LogProcessor.warn("Duplicate property '${it.identifier}' in template '$identifier'. Overriding it.")
                 }

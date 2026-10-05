@@ -1,10 +1,10 @@
 # 类型系统续接记录（2026-10-04）
 
-本轮从 2026-10-04 续接，首次存储/视图纵向路径通过 161 项测试。阶段 54 已提交 `107e8ac`，阶段 55 已提交 `4b5b7bd`，阶段 56 已提交 `0fb7cb8`；阶段 57 已实现并验证，提交状态以 Git 历史为准。最近完整 346 项仍属于 `72dc557`；整个 17 项类型系统重构仍未完成。
+本轮从 2026-10-04 续接，首次存储/视图纵向路径通过 161 项测试。阶段54已提交`107e8ac`，阶段55已提交`4b5b7bd`，阶段56已提交`0fb7cb8`，阶段57已提交`3865673`。阶段58普通模板inferred字段已接入部分声明绑定支持，37个不同必要用例跨轮各自通过。最近完整346项仍属于`72dc557`；整个17项重构未完成。
 
 ## 当前进度
 
-阶段 52 NBT 地址与自动宏捕获已提交 `dadb6cc`；阶段 53 宿主对象身份修复已提交 `890833b`，最终 35 项通过。阶段 54 构造候选解析已提交 `107e8ac`，ConstructorResolution 4 项通过。阶段 55 receiver/初始化帧已提交 `4b5b7bd`，ConstructorExecution 7 项通过。阶段 56 持久化有序字段 RHS、升至 MCFL 12，已提交 `0fb7cb8`；标准库重建及 TemplateInitialization 3 + ConstructorExecution 7 + LibCacheFormat 3 共 13 项通过。阶段 57 const 字段真实初始化已实现并验证，提交状态以 Git 历史为准。下一步阶段 58 完成普通模板推断字段声明绑定。
+阶段52 NBT地址与宏捕获已提交`dadb6cc`；阶段53对象身份`890833b`；阶段54候选解析`107e8ac`；阶段55 receiver/帧`4b5b7bd`；阶段56有序RHS持久化与MCFL12`0fb7cb8`；阶段57 const真实初始化`3865673`。阶段58普通模板 inferred 字段已接入限定语法域的声明绑定；37个不同必要测试分轮各自通过。下一步阶段59只处理导入构造 RHS 的声明词法环境；import object 自动 load 独立未验证。
 用户随后要求继续完成并按进度提交；该轮实现已提交为 747f0b4，擦除 while 不动点绑定提交为 467343f，list/dict 元素贯通提交为 a1bafaa，集合编码与项目隔离提交为 702fbce，嵌套静态副本及编译上下文隔离提交为 8ce9fde，静态集合擦除通道及元数据缓存隔离提交为 dd3b43a，完整静态 as 视图的共享写入提交为 e73fa03，字典成员统一及输入帧修复提交为 6315054，列表共享成员及查找后端提交为 217a5cd，字典整体合并事实与空键边界提交为 47a7b5c，map 共享成员、位置与 entry 布局迁移提交为 fa64338，只读列表与 NBT 数组迁移提交为 a623399，实际 IR 调用与递归效果分析提交为 f5a9902。集合 IR 控制流与子位置证据提交为 72dc557。动态列表 IR 提交为 9f74d5e。字典成员 IR 提交为 4bed87f。列表变更成员 IR 提交为 21224b0。列表查询与按值删除 IR 提交为 ea7dca8。NBT 数组 IR 提交为 313886b。map 索引与成员 IR 提交为 9245a62。map 投影 IR 提交为 ab1f3cb。do…while 与闭合整数区间循环 IR 提交为 711331e。IR 词法作用域提交为 eef6d44。调用子形状提交为 0c3e65f。整数范围值和命名范围 IR 提交为 8aee6b7。递归返回/写回形状提交为 eb83a60。26.3 原生浮点 IR 提交为 7cd1a69。2026-10-06 继续显式转换 IR，阶段 47 提交 b56ede9，阶段 48 提交 860c799。阶段 49 旧浮点加减提交 `82d955b`，阶段 50 乘除代码提交 `bee57c1`、静态审计文档提交 `dfdb99a`；阶段 51 旧浮点 IR 最终复查 20 项通过。阶段 49 必要检查 46 项、阶段 50 必要检查 36 项。MCFL 保持 11，未改签名/缓存结构且未重建 bin.mclib。最近完整检查仍为 72dc557 的 346 项，整体 17 项迁移未完成。
 
 本次用户要求读取文件，继续上一会话尚未完成的项目任务。读取交接与下一阶段计划后，继续类型系统迁移，未扩展到独立 MNI 元编程计划。
@@ -154,27 +154,33 @@ receiver 独立放入固定 `frame0.this`；普通构造实参不再按普通常
 
 field annotation 在 MCFPPAnnotationVisitor 转存后触发 helper 补 annotation stage；函数 annotation 按真实 AST 声明查找，无 fake args。error RHS 不写默认值；self/forward 引用诊断准确。首轮联合 28 项中 27 pass/1 fail，失败仅因负向测试字符串两个顶层声明间少换行，语法早退后 object lookup 抛 NoSuchElementException；加换行后只定向复查该方法，新 XML 1/0，`2026-10-05T22:24:27.881Z`，exit0/BUILD SUCCESSFUL in6s。`--info` 明确出现 `Cannot infer object field 'first'/'later' before its initializer is evaluated`。其余首轮27项已过；没有联合复跑28项。MCFL12 schema未变；stdlib本轮本地重编20个 Slot inferred fields，bin 267356 bytes（+198）。日志 `mcfpp-template-const-stdlib.log`、`mcfpp-template-const.log`、`mcfpp-template-const-order-final.log`。执行器实际运行 load/storage/constructor/main，helper隔离少数 world bootstrap 命令，不代表服务器验证。旧 consume 的9119 `flatExtends`重复继承警告仍是phase56记录，不是本轮新计数。
 
+## 阶段 58：普通模板推断字段声明绑定（受限支持域）
+
+普通模板 inferred 字段复用 `PrimitiveCompiler` 私有图的 Lowering、FlowAnalysis、ReturnTypeAnalysis 做纯 AST 声明绑定：不发布 IR、不执行用户函数、不生成命令。普通 constructor 参数与未绑定 T! 保持 Unknown；同字段跨 overload 要求同一 TypeId。`this` 单字段与此前字段读取可用；anonymous 统一队列，泛型实参绑定后的实例独立完成，继承后 annotations 与模板参数/return adapter 刷新并保留 Symbol/Place。运行时 receiver 按声明类型初始化可编码默认字段，Unknown erased 不伪造 snapshot，NBT codec 遇不可编码 child 返回整体 null；ordinary template local declaration 使用 `buildUnConcrete` 防 DataOnly 空地址写入。pure binding与runtime AST生成分离，不重复执行RHS。未覆盖 native/generic/compiler-only/static、多级this/member method等继续走legacy `extraFunction`。
+
+测试经历：早期定向检查在test compile阶段因Kotlin `Test` 名称冲突失败；随后worker通信中断、无fresh XML。--info 单类诊断6项中两项discarded-probe断言误把stdlib Slot初始化命令算作用户probe；测试helper现只检查本地source function calls。第三项NBT codec NPE导致worker exit，另有一skip。runtime修复后的6项XML为5 pass/1 fail（产品生成非法空地址NBT命令，严格执行器拒绝）；ImVisitor修复后定向该失败方法通过，fresh XML timestamp `2026-10-05T23:09:30.812Z`，1/0/0/0。随后 Const4 + ConstructorExecution7 + TemplateInitialization3 + IRCall17 共31项通过，fresh XML timestamps `23:09:52.487Z`、`23:09:48.914Z`、`23:09:52.695Z`、`23:09:51.101Z`，各自0 failures/errors/skips。故37个不同必要用例跨轮最终各自通过，非一次联合37项。日志 `mcfpp-template-field-inference.log`、`mcfpp-template-field-inference-final.log`、`mcfpp-template-field-inference-diagnostic.log`、`mcfpp-template-field-inference-runtime-fix.log`、`mcfpp-template-field-inference-dataonly-final.log`、`mcfpp-template-field-inference-regression.log`。无stdlib重建/fullcheck/服务端；MCFL12 schema/bin267356不变。
+
 ## 后续仍需完成
 
-- 标量/擦除及可编码 list/dict/map/ImmutableList/NBT 数组、范围值和已证明整数端点的命名范围迭代已迁入 IR，26.3 原生浮点、short/double/nbt 载荷、标量/数组显式转换及 map 两种投影也已接入；旧浮点 IR 最终复查20项通过，旧return ABI保留。阶段52–57已完成，阶段56提交`0fb7cb8`；阶段57代码已实现并验证，定向测试1项通过（首轮其他27项通过，未联合复跑）。下一步阶段58完成普通模板推断字段纯声明绑定。导入 RHS 声明词法 scope未完整持久化，import object自动load未验证；phase56 consume重复继承警告待清理。其余集合成员、编译器专用集合、未知端点范围形参/浮点范围/通用迭代器、模板/泛型/T!等尚未统一。旧转换和DataObject等来源仍走适配；无宏目标上未知长度的负数字面下标仍走旧边界。
+- 标量/擦除及可编码 list/dict/map/ImmutableList/NBT 数组、范围值和已证明整数端点的命名范围迭代已迁入 IR，26.3 原生浮点、short/double/nbt 载荷、标量/数组显式转换及 map 两种投影也已接入；旧浮点 IR 最终复查20项通过，旧return ABI保留。阶段52–57已完成并按进度提交；阶段56为`0fb7cb8`、阶段57为`3865673`。阶段58已接入限定语法域，仍有旧路径未迁移。阶段58的37个不同必要用例跨轮各自通过，非一次联合37项。下一步阶段59只处理导入构造 RHS 的声明词法环境；import object 自动 load 独立未验证。导入 RHS 声明词法 scope未完整持久化，import object自动load未验证；phase56 consume重复继承警告待清理。其余集合成员、编译器专用集合、未知端点范围形参/浮点范围/通用迭代器、模板/泛型/T!等尚未统一。旧转换和DataObject等来源仍走适配；无宏目标上未知长度的负数字面下标仍走旧边界。
 - 参数相关 static 已知子位置、未知列表范围、普通集合返回/static 整体替换子形状与递归效果不动点已接入受限 IR 图；同一类型/形状输入的递归返回及写回已求解，输入变化仍保守。继续扩展其余集合、成员、全局、实体及全部调用位置。无法证明的函数仍采用未知屏障，原始命令跨函数修改物理记分板与帧恢复仍需核实。
 - 未知字典字符串键的运行时路径后端、其余原生成员/集合的编码能力检查、实体路径、全部布局访问诊断、模板方法与构造仍需完成迁移；map 的字符串值键和可编码投影已接入，但编译器专用值及其余控制语句仍需扩展。本轮递归样例不代表完整帧分配覆盖全部类型。
 - MNI 显式上下文、值/位置接口及其余成员签名统一未完成；Concrete 体系、hasStoredInStack、trackLost 等旧状态仍存在。
-- 未配置实际 Minecraft 服务端；独立执行器通过不等于实际目标验证。阶段56最终13项必要复查通过；阶段57首轮28项1fail后，仅重查问题方法1项通过，不能写成联合28项最终通过。仍缺服务器验证及其余类型系统迁移工作。
+- 未配置实际 Minecraft 服务端；独立执行器通过不等于实际目标验证。阶段58有37个不同必要测试用例跨轮各自通过，不是联合37项。仍缺服务器验证及其余类型系统迁移工作。
 
 下次优先执行 [下一阶段计划](./next-stage-plan.md) 中标出的剩余工作。整个类型系统重构尚未完成。
 
 ## 本轮自检
 
-平均 3.8/5；阶段57实现 const runtime 初始化，修正后定向self/forward测试1项通过，准确记录首轮28项1个测试夹具失败且其余27项通过；仍缺导入词法scope、object自动load、phase56重复继承警告清理及阶段58声明绑定，整体迁移和服务器验证未完成。
+平均3.8/5；阶段58在列明语法域复用IR私有图Lowering/FlowAnalysis，37个不同测试用例分轮通过且未声称一次联合；worker/断言失败及fallback边界有记录。导入词法scope、object自动load、旧路径覆盖、phase56继承警告清理及其余类型迁移和服务器验证仍未完成。
 
 | 维度 | 评分 | 证据与改进 |
 | --- | --- | --- |
-| 准确性 | 4/5 | 记录 MCFL 12 schema、bin 267356、stdlib语言0 errors/warnings、28项首轮与1项定向复查，未误称28项全绿 |
-| 完整性 | 3/5 | const/init 事实与必要测试已记录；导入词法 scope、object 自动 load、普通模板 inferred declaration、模板/泛型/T!、集合/MNI 与服务器验证未完成 |
+| 准确性 | 4/5 | 记录阶段58分轮的37个不同用例通过，不误称单次联合；含worker中断、5/1轮及各fresh XML时间戳 |
+| 完整性 | 3/5 | 普通模板 inferred 声明绑定仅覆盖列出的语法；导入词法scope、object自动load、其他模板/泛型/T!、集合/MNI与服务器验证仍未完成 |
 | 清晰度 | 4/5 | 区分标准库编译警告、语言诊断与测试夹具错误，历史保留 |
 | 可操作性 | 4/5 | 阶段58指定复用 PrimitiveCompiler Lowering/FlowAnalysis，禁止平行 typechecker 和 probe 编译 |
 | 简洁性 | 4/5 | 只更新当前阶段事实与交接，不重写历史记录 |
 
-优先改进：阶段58用现有 Lowering/FlowAnalysis 完成普通模板 inferred 字段的纯声明绑定，保持 prototype/generic scope 隔离；同时继续处理导入词法 scope。完整性仍为3/5，因为其余模板/泛型/T!、控制流/集合、MNI与实际服务器验证仍有缺口。
+优先改进：阶段59处理导入构造 RHS 声明词法环境；阶段58仅支持语法子集，其他模板路径需后续迁入。完整性仍为3/5，因为其余模板/泛型/T!、控制流/集合、MNI与实际服务器验证仍有缺口。
 自检：用户能复核实现和测试，也会看到整项重构仍未结束；没有把阶段通过写成项目全部完成。

@@ -10,6 +10,7 @@ import org.apache.logging.log4j.LogManager
 import org.apache.logging.log4j.Logger
 import org.apache.tools.zip.ZipFile
 import top.mcfpp.annotations.InsertCommand
+import top.mcfpp.antlr.MCFPPFieldVisitor
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.command.CommentLevel
@@ -25,6 +26,7 @@ import top.mcfpp.lib.SbObject
 import top.mcfpp.model.Namespace
 import top.mcfpp.model.Native
 import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.GenericDataTemplate
 import top.mcfpp.model.compound.ObjectDataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionTag
@@ -123,6 +125,9 @@ object Project {
      */
     val macroFunction : LinkedHashMap<String, String> = LinkedHashMap()
 
+    private val anonymousTemplates = arrayListOf<DataTemplate>()
+    private var templateDeclarationsReady = false
+
     var compileStage = CompileStage.PRE_INIT
     enum class CompileStage {
         PRE_INIT,
@@ -178,6 +183,8 @@ object Project {
         warningCount = 0
         constants.clear()
         macroFunction.clear()
+        anonymousTemplates.clear()
+        templateDeclarationsReady = false
         modules.clear()
         classLoader = Thread.currentThread().contextClassLoader
         files.clear()
@@ -519,11 +526,7 @@ object Project {
         }
         //继承解析
         GlobalScope.localNamespaces.values.flatMap { it.scope.template.values }.forEach {
-            if(it.parent.isNotEmpty()){
-                it.flatExtends()
-            }else{
-                (it.extends(DataTemplate.baseDataTemplate) as DataTemplate).flatExtends()
-            }
+            if(it.parent.isEmpty()) it.extends(DataTemplate.baseDataTemplate)
         }
         stageProcessor[compileStage.ordinal].forEach { it() }
     }
@@ -545,9 +548,35 @@ object Project {
         stageProcessor[compileStage.ordinal].forEach { it() }
     }
 
-    /**
-     * 编译工程
-     */
+    fun completeTemplateDeclarations() {
+        val templates = GlobalScope.localNamespaces.values.flatMap { it.scope.template.values }.filterNot { it is GenericDataTemplate }
+        val completed = hashSetOf<DataTemplate>()
+        fun complete(template: DataTemplate) {
+            if (!completed.add(template)) return
+            template.parent.filterIsInstance<DataTemplate>().filter { it in templates || it in anonymousTemplates }.forEach(::complete)
+            template.flatExtends()
+            MCFPPFieldVisitor().completeTemplateFields(template)
+            template.applyDeclarationAnnotations()
+        }
+        templates.forEach(::complete)
+        var index = 0
+        while (index < anonymousTemplates.size) complete(anonymousTemplates[index++])
+        val functions = GlobalScope.localNamespaces.values.flatMap { it.scope.functions.values.flatten() } +
+            (templates + anonymousTemplates).flatMap { it.constructors + it.scope.functions.values.flatten() }
+        functions.forEach { it.refreshTemplateSignature() }
+        templateDeclarationsReady = true
+    }
+
+    fun registerAnonymousTemplate(template: DataTemplate) {
+        anonymousTemplates.add(template)
+        if (templateDeclarationsReady) {
+            template.flatExtends()
+            MCFPPFieldVisitor().completeTemplateFields(template)
+            template.applyDeclarationAnnotations()
+            (template.constructors + template.scope.functions.values.flatten()).forEach { it.refreshTemplateSignature() }
+        }
+    }
+
     fun prepareObjectInitializers() {
         GlobalScope.localNamespaces.values.flatMap { it.scope.objects }.filterIsInstance<ObjectDataTemplate>().forEach { template ->
             template.constructors.filter { it !is Native }.forEach { it.compileBody() }
@@ -556,6 +585,7 @@ object Project {
 
     fun compile() {
         compileStage = CompileStage.COMPILE
+        completeTemplateDeclarations()
         prepareObjectInitializers()
         //工程文件编译
         //解析文件

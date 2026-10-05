@@ -454,6 +454,19 @@ open class Function : Member, FieldContainer, WithDocument {
         }
     }
 
+    internal fun refreshTemplateSignature() {
+        if (bodyCompiled) return
+        for (param in normalParams) if (!param.isReadOnly && param.type is MCFPPDataTemplateType) {
+            val value = param.buildVar()
+            scope.putVar(param.identifier, value, true)
+            value.storageBinding = null
+            top.mcfpp.analysis.StorageAccess.bindIncomingParameter(value)
+        }
+        if (returnType is MCFPPDataTemplateType) {
+            returnVar = buildReturnVar(returnType).apply { bindDeclaration(previous = returnVar) }
+        }
+    }
+
     fun bindIncomingParameters() {
         for (param in normalParams) if (!param.isReadOnly && param.type.hasRuntimeRepresentation) {
             scope.getVar(param.identifier)?.let(top.mcfpp.analysis.StorageAccess::bindIncomingParameter)

@@ -32,6 +32,7 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.scope.MCFPPFuncGetter
 import top.mcfpp.type.MCFPPEnumType
+import top.mcfpp.type.MCFPPDataTemplateType
 import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
@@ -167,6 +168,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             val qwq = type.buildUnConcrete(ctx.Identifier().text, Function.currFunction)
             qwq.hasAssigned = true
             qwq
+        }else if (type is MCFPPDataTemplateType && init?.storageBinding != null &&
+            top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(init)) {
+            type.buildUnConcrete(ctx.Identifier().text, Function.currFunction)
         }else{
             type.build(ctx.Identifier().text, Function.currFunction)
         }

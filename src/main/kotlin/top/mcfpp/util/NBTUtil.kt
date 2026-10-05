@@ -38,13 +38,16 @@ object NBTUtil {
             is UnionTypeVarConcrete -> valueToNBT(v.value)
             is JsonTextConcrete -> Tag.toNBT(v.toCommandPart().toString())
             is EnumVarConcrete -> v.value.data
-            is DataTemplateObjectConcrete -> CompoundTag().apply {
+            is DataTemplateObjectConcrete -> {
+                val result = CompoundTag()
                 for ((key, value) in v.value){
                     if(!value.hasAssigned){
                         continue
                     }
-                    put(key, varToNBT(value)!!)
+                    val encoded = varToNBT(value) ?: return null
+                    result.put(key, encoded)
                 }
+                result
             }
             is NBTListConcrete -> valueToNBT(v.value)
             is NBTMapConcrete -> varToNBT(v.physicalValue())

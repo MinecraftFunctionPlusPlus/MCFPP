@@ -64,6 +64,21 @@ object PrimitiveCompiler {
     private data class Prepared(val function: Function, val declarations: MutableMap<Int, SymbolId>,
                                 val lowering: Lowering, val diagnostics: List<String>)
 
+    internal data class InitializerBinding(val inferredTypes: Map<String, MCFPPType>, val diagnostics: List<String>)
+    private data class InitializerFields(val expressions: LinkedHashMap<String, Parser.ExpressionContext>,
+                                         val declared: Map<String, MCFPPType>, val file: FileScope?)
+
+    /** Declaration-only binding: all IR and facts remain local, and no function is compiled or invoked. */
+    internal fun prepareInitializers(constructor: Function, initializers: LinkedHashMap<String, Parser.ExpressionContext>,
+                                     declaredFields: Map<String, MCFPPType>): InitializerBinding? {
+        val file = (constructor as? top.mcfpp.model.function.DataTemplateConstructor)?.file?.field
+            ?: top.mcfpp.io.MCFPPFile.currFile?.field
+        val fields = InitializerFields(initializers, declaredFields, file)
+        val (prepared, _) = prepare(null, constructor, fields) ?: return null
+        val root = prepared.first { it.function === constructor }
+        return InitializerBinding(root.lowering.inferredFields.toMap(), prepared.flatMap { it.diagnostics }.distinct())
+    }
+
     private fun functions(): List<Function> = (GlobalScope.localNamespaces.values + GlobalScope.libNamespaces.values + GlobalScope.stdNamespaces.values)
         .flatMap { it.scope.functions.values.flatten() }.flatMap { listOf(it) + it.compiledFunctions.values }
 
@@ -80,17 +95,25 @@ object PrimitiveCompiler {
     }
 
     /** Discover and bind an entire reachable call graph before any backend mutates a scope or emits commands. */
-    private fun prepare(context: Parser.CurlBlockContext, root: Function): Pair<List<Prepared>, Map<SymbolId, TypedIR>>? {
+    private fun prepare(context: Parser.CurlBlockContext?, root: Function, fields: InitializerFields? = null): Pair<List<Prepared>, Map<SymbolId, TypedIR>>? {
         val prepared = linkedMapOf<SymbolId, Prepared>()
         val unsupported = hashSetOf<SymbolId>()
+        fun rootFields(function: Function) = fields?.takeIf { function === root }
+        fun lowerBody(function: Function, lowering: Lowering): List<String> = if (rootFields(function) != null)
+            lowering.initializers() else lower(if (function === root) context!! else function.ast!!, lowering)
         fun discover(function: Function, body: Parser.CurlBlockContext?) {
-            if (function.declarationId in prepared || function.declarationId in unsupported || body == null || function.bodyCompiled) return
-            if (!supportedSignature(function) || function.scope.vars.keys.any { name -> function.normalParams.none { it.identifier == name } }) {
+            val initializerRoot = rootFields(function) != null
+            if (function.declarationId in prepared || function.declarationId in unsupported ||
+                !initializerRoot && (body == null || function.bodyCompiled)) return
+            if (!initializerRoot && (!supportedSignature(function) || function.scope.vars.keys.any { name -> function.normalParams.none { it.identifier == name } })) {
                 unsupported.add(function.declarationId); return
             }
             val declarations = mutableMapOf<Int, SymbolId>()
-            val draft = Lowering(function, declarations, exploratory = true)
-            val diagnostics = try { lower(body, draft) } catch (_: Unsupported) { unsupported.add(function.declarationId); return }
+            val draft: Lowering
+            val diagnostics = try {
+                draft = Lowering(function, declarations, exploratory = true, initializerFields = rootFields(function))
+                lowerBody(function, draft)
+            } catch (_: Unsupported) { unsupported.add(function.declarationId); return }
             prepared[function.declarationId] = Prepared(function, declarations, draft, diagnostics)
             draft.calls.values.forEach { discover(it, it.ast) }
         }
@@ -112,9 +135,12 @@ object PrimitiveCompiler {
                     (binding.values[result]?.value as? ValueKnowledge.Constant)?.value?.let { site to it }
                 }.toMap()
                 val valueLengths = draft.valueSites.mapNotNull { (site, result) -> binding.lengths[result]?.let { site to it } }.toMap()
-                val bound = Lowering(entry.function, entry.declarations, valueTypes, valueConstants, valueLengths)
-                val diagnostics = try { lower(if (entry.function === root) context else entry.function.ast!!, bound) }
-                    catch (_: Unsupported) { prepared.remove(id); unsupported.add(id); continue }
+                val bound: Lowering
+                val diagnostics = try {
+                    bound = Lowering(entry.function, entry.declarations, valueTypes, valueConstants, valueLengths,
+                        initializerFields = rootFields(entry.function))
+                    lowerBody(entry.function, bound)
+                } catch (_: Unsupported) { prepared.remove(id); unsupported.add(id); continue }
                 prepared[id] = Prepared(entry.function, entry.declarations, bound, diagnostics)
             }
             if (root.declarationId !in prepared) return null
@@ -256,7 +282,8 @@ object PrimitiveCompiler {
     private class Lowering(val function: Function, private val declarationIds: MutableMap<Int, SymbolId>,
                            private val valueTypes: Map<Int, TypeKnowledge> = emptyMap(),
                            private val valueConstants: Map<Int, CompilerValue> = emptyMap(),
-                           private val valueLengths: Map<Int, Int> = emptyMap(), private val exploratory: Boolean = false) {
+                           private val valueLengths: Map<Int, Int> = emptyMap(), private val exploratory: Boolean = false,
+                           private val initializerFields: InitializerFields? = null) {
         val symbols = linkedMapOf<String, Symbol>()
         val types = PrimitiveCompiler.types.toMutableMap()
         private val aliases = mutableMapOf<SymbolId, Location>()
@@ -330,11 +357,20 @@ object PrimitiveCompiler {
         val valueSites = mutableMapOf<Int, Pair<Int, Int>>()
         val calls = linkedMapOf<SymbolId, Function>()
         val diagnostics = mutableListOf<String>()
+        val inferredFields = linkedMapOf<String, MCFPPType>()
+        private val fields = linkedMapOf<String, Symbol>()
+        private val fieldNames = initializerFields?.let { (it.expressions.keys + it.declared.keys).distinct() }.orEmpty()
+        private fun declarationType(type: MCFPPType): MCFPPType = if (type is MCFPPDeclaredConcreteType) type.type else type
         init {
-            for (parameter in function.normalParams) {
-                register(parameter.type)
-                val existing = function.scope.getVar(parameter.identifier) ?: throw Unsupported()
-                val declaration = existing.symbol ?: Symbol(SymbolId.fresh(), parameter.identifier, parameter.type.typeId, mutable = true)
+            for ((index, parameter) in function.normalParams.withIndex()) {
+                val type = if (initializerFields == null) parameter.type else declarationType(parameter.type)
+                register(type)
+                val declaration = if (initializerFields != null)
+                    Symbol(declarationIds.getOrPut(Int.MIN_VALUE + index, SymbolId::fresh), parameter.identifier, type.typeId, mutable = true)
+                else {
+                    val existing = function.scope.getVar(parameter.identifier) ?: throw Unsupported()
+                    existing.symbol ?: Symbol(SymbolId.fresh(), parameter.identifier, type.typeId, mutable = true)
+                }
                 val symbol = if (parameter.isStatic) declaration.copy(forceRuntime = true) else declaration
                 symbols[symbol.name] = symbol
                 visible[symbol.name] = symbol
@@ -345,7 +381,45 @@ object PrimitiveCompiler {
                 knowledge[symbol.id] = actual
                 initialFacts.write(Place(symbol.id), ValueFacts(actual, ValueKnowledge.Unknown))
             }
-            if (function.returnType !== MCFPPPrivateType.Void) register(function.returnType)
+            if (initializerFields == null && function.returnType !== MCFPPPrivateType.Void) register(function.returnType)
+            initializerFields?.declared?.forEach { (name, type) ->
+                val symbol = field(name, register(declarationType(type)).typeId)
+                val actual = if (symbol.declaredType in erased) TypeKnowledge.Unknown else TypeKnowledge.Exact(symbol.declaredType)
+                initialFacts.write(place(symbol), ValueFacts(actual, ValueKnowledge.Unknown))
+            }
+        }
+        private fun field(name: String, type: TypeId): Symbol = fields.getOrPut(name) {
+            Symbol(declarationIds.getOrPut(Int.MIN_VALUE / 2 + fieldNames.indexOf(name), SymbolId::fresh), name, type,
+                mutable = false).also { symbols["\$field_$name"] = it }
+        }
+
+        fun initializers(): List<String> {
+            for ((name, initializer) in initializerFields!!.expressions) {
+                try {
+                    val value = boundValue(expression(initializer))
+                    if (value.type == MCFPPPrivateType.Void.typeId) invalid("A void expression cannot initialize field '$name'")
+                    val declaration = fields[name] ?: field(name, register(value.type).typeId).also {
+                        inferredFields[name] = types.getValue(it.declaredType)
+                    }
+                    // Keep nominal field types; actual RHS facts refine erased fields for later inference.
+                    write(declaration, promote(value, declaration.declaredType))
+                } catch (failure: Invalid) {
+                    diagnostics += failure.diagnostic
+                }
+            }
+            return diagnostics.toList()
+        }
+
+        private fun receiverField(node: Parser.VarWithSelectorContext): ValueRef? {
+            if (initializerFields == null) return null
+            if (node.jvmAccessExpression().Identifier() != null) return null
+            val property = node.jvmAccessExpression().propertyOperator()
+            if (property.propertyOperatorExpression().isNotEmpty() || property.primary().THIS() == null) return null
+            val selected = node.selector().singleOrNull()?.`var`()?.varWithSuffix() ?: unsupported()
+            val name = selected.Identifier().text
+            val symbol = fields[name] ?: if (name in initializerFields.expressions)
+                invalid("Cannot infer field '$name' before its initializer is evaluated (forward or self reference)") else unsupported()
+            return indexed(selected, initialValue = read(symbol, selected))
         }
         private fun newBlock() = Block(blocks.size).also(blocks::add)
         private fun terminate(terminator: Terminator) { current.terminator = terminator }
@@ -806,7 +880,7 @@ object PrimitiveCompiler {
                     ?.let { (knowledge[it.root] as? TypeKnowledge.Exact)?.type } else null
                 return types[actual ?: value.type] ?: unsupported()
             }
-            val file = function.scope.parent.filterIsInstance<FileScope>().firstOrNull()
+            val file = function.scope.parent.filterIsInstance<FileScope>().firstOrNull() ?: initializerFields?.file
             var provisional = false
             var provisionalType: TypeId? = null
             val target = when (val selected = GlobalScope.getFunctionByTypes(name.first, name.second, args.map(::argumentType), file)) {
@@ -826,6 +900,7 @@ object PrimitiveCompiler {
                     candidates.first()
                 }
             }
+            if (initializerFields != null && target is NativeFunction) unsupported()
             if (conversion(target)) {
                 val value = args.single()
                 val type = register(target.returnType).typeId
@@ -1037,10 +1112,13 @@ object PrimitiveCompiler {
                 else binary("==", value, ValueRef.Constant(bool, CompilerValue.Bool(false)))
             }
             is Parser.RightVarExpressionContext -> expression(node.varWithSelector())
-            is Parser.VarWithSelectorContext -> node.selector().fold(expression(node.jvmAccessExpression())) { receiver, selector ->
-                val selected = selector.`var`()
-                if (selected.functionCall() != null) member(receiver, selected.functionCall())
-                else projection(receiver, selected.varWithSuffix() ?: unsupported())
+            is Parser.VarWithSelectorContext -> receiverField(node) ?: run {
+                if (initializerFields != null && node.selector().isNotEmpty()) unsupported()
+                node.selector().fold(expression(node.jvmAccessExpression())) { receiver, selector ->
+                    val selected = selector.`var`()
+                    if (selected.functionCall() != null) member(receiver, selected.functionCall())
+                    else projection(receiver, selected.varWithSuffix() ?: unsupported())
+                }
             }
             is Parser.JvmAccessExpressionContext -> if (node.Identifier() != null) unsupported() else expression(node.propertyOperator())
             is Parser.PropertyOperatorContext -> if (node.propertyOperatorExpression().isNotEmpty()) unsupported() else expression(node.primary())

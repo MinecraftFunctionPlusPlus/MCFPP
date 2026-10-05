@@ -67,11 +67,12 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
         val receiver = if (data is ObjectDataTemplate) StaticMemberView(data.getType())
             else target.scope.getVar("this") as DataTemplateObject
         for ((name, expression) in data.preInit) {
+            if (data !is ObjectDataTemplate && name in data.deferredFields) continue
             val errors = Project.errorCount
             val value = MCFPPExprVisitor().visitExpression(expression)
             if (value is UnknownVar || value.isError || Project.errorCount != errors) continue
             if (data is ObjectDataTemplate) {
-                data.deferredFields[name]?.let { MCFPPFieldVisitor().completeObjectField(data, it, value.type) }
+                data.deferredFields[name]?.let { MCFPPFieldVisitor().completeTemplateField(data, it, value.type) }
             }
             val field = receiver.getMemberVar(name, Member.AccessModifier.PRIVATE).first ?: continue
             if (field.isConst && !StorageAccess.hasRuntimeRepresentation(value) && ValueSnapshot.of(value) == null) {

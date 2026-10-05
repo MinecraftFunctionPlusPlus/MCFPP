@@ -7,6 +7,7 @@ import top.mcfpp.exception.UndefinedException
 import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.ObjectDataTemplate
+import top.mcfpp.model.compound.GenericDataTemplate
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.util.LogProcessor
@@ -48,8 +49,8 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
         }else{
             throw UndefinedException("Template should have been defined: $id")
         }
-        annotationCache.forEach {
-            it.on(template)
+        if (template is GenericDataTemplate || template is ObjectDataTemplate) {
+            annotationCache.forEach { it.on(template) }
         }
         template.annotations.addAll(annotationCache)
         annotationCache.clear()
@@ -117,6 +118,12 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
             declaration.annotations.addAll(annotationCache)
             annotationCache.clear()
             return
+        }
+        val template = DataTemplate.currTemplate!!
+        if (template !is GenericDataTemplate && template !is ObjectDataTemplate) {
+            template.pendingFieldAnnotations.getOrPut(ctx.Identifier().text) { arrayListOf() }.addAll(annotationCache)
+            annotationCache.clear()
+            return@withCompilationContext
         }
         //获取字段对象
         val field = DataTemplate.currTemplate!!.scope.getVar(ctx.Identifier().text)!!

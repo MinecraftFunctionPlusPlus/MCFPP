@@ -95,6 +95,24 @@ object StorageAccess {
         return StorageBinding(data, place, data.path).also { value.storageBinding = it }
     }
 
+    /** Allocate a runtime receiver without pretending erased defaults are complete constants. */
+    internal fun initializeTemplateReceiver(value: DataTemplateObject) {
+        fun defaults(source: MCFPPType): Tag<*>? {
+            val type = if (source is MCFPPDeclaredConcreteType) source.type else source
+            if (!type.hasRuntimeRepresentation || type in erasedTypes) return null
+            if (type is MCFPPDataTemplateType) {
+                return CompoundTag().apply {
+                    type.template.scope.allVars.filterNot { it.isStatic || it.nullable }.forEach { field ->
+                        defaults(field.type)?.let { put(field.identifier, it) }
+                    }
+                }
+            }
+            return ValueSnapshot.of(type.defaultValueVar())?.let { snapshotTag(it) }
+        }
+        val binding = bindIncomingParameter(value)
+        emit(Commands.dataSetValue(binding.path, defaults(value.type) as CompoundTag))
+    }
+
     fun ensure(value: Var<*>): StorageBinding {
         value.storageBinding?.let { return it }
         val encodingSupported = !hasRuntimeRepresentation(value) || collectionEncodingSupported(value)
