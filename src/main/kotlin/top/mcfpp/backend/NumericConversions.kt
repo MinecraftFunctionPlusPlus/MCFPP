@@ -59,9 +59,11 @@ object NumericConversions {
         }
         if (value is MCFloat && value.type == MCFPPBaseType.Float) {
             if (FloatProviders.enabled) return FloatProviders.toInt(value)
-            if (value is MCFloatConcrete && !value.value.isFinite()) {
-                LogProcessor.error("Float-to-int conversion requires a finite input")
-                return MCInt().apply { isError = true }
+            if (value is MCFloatConcrete) {
+                top.mcfpp.analysis.NumericConversion.floatToIntError(value.value)?.let { diagnostic ->
+                    LogProcessor.error(diagnostic)
+                    return MCInt().apply { isError = true }
+                }
             }
             val runtime = if (value is MCFPPValue<*>) value.toDynamic(false) else value
             MCFloat.ssObj.assignedBy(runtime)

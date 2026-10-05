@@ -184,7 +184,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         val nbtPath = """(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s"'])+"""
         val set = Regex("scoreboard players set (\\S+ \\S+) (-?\\d+)")
         val add = Regex("scoreboard players (add|remove) (\\S+ \\S+) (\\d+)")
-        val operation = Regex("scoreboard players operation (\\S+ \\S+) (=|\\+=|-=|\\*=|%=) (\\S+ \\S+)")
+        val operation = Regex("scoreboard players operation (\\S+ \\S+) (=|\\+=|-=|\\*=|/=|%=) (\\S+ \\S+)")
         val compare = Regex("execute (if|unless) score (\\S+ \\S+) (=|<|>|<=|>=) (\\S+ \\S+) run (.*)")
         val matches = Regex("execute if score (\\S+ \\S+) matches (-?\\d+|(?:-?\\d+)?\\.\\.(?:-?\\d+)?) run (.*)")
         val guardStore = Regex("execute store result storage mcfpp:system ir_branch_stack\\[0].condition byte 1 run scoreboard players get (\\S+ \\S+)")
@@ -210,7 +210,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         var branchStackInitialized = false
         lateinit var execute: (String) -> Boolean
         fun run(body: List<String>) {
-            for (command in body.filterNot { it.startsWith("#") }) if (execute(command)) break
+            for (command in body.map(String::trim).filterNot { it.isEmpty() || it.startsWith("#") }) if (execute(command)) break
         }
         execute = command@{ command ->
             check(++steps < 10000) { "Command execution did not terminate" }
@@ -374,11 +374,13 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             operation.matchEntire(command)?.let {
                 val target = it.groupValues[1]
                 val right = values.getValue(it.groupValues[3])
+                if (it.groupValues[2] == "/=" && right == 0) return@command false
                 values[target] = when (it.groupValues[2]) {
                     "=" -> right
                     "+=" -> values.getValue(target) + right
                     "-=" -> values.getValue(target) - right
                     "*=" -> values.getValue(target) * right
+                    "/=" -> Math.floorDiv(values.getValue(target), right)
                     "%=" -> Math.floorMod(values.getValue(target), right)
                     else -> error(command)
                 }

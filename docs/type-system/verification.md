@@ -1,8 +1,14 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段 47 的旧浮点布局/比较检查共 36 项通过，标准库重建 0 错误/0 警告，MCFL 升至 11。显式转换 IR 前序检查为联合 52 项、返回接口补查 32 项及 ConversionIRTest 8 项通过。最近完整检查仍属于提交 72dc557，共 346 项；本阶段未运行完整 check 或实际 Minecraft 服务端。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段 48 的旧浮点转换修复必要检查共 33 项通过；MCFL 保持 11，未重建标准库。最近完整检查仍属于提交 72dc557，共 346 项；阶段 48 未运行完整 check 或实际 Minecraft 服务端。
 
-## 最新必要检查：旧浮点编码与比较基础（阶段 47）
+## 最新必要检查：旧浮点转换（阶段 48）
+
+旧 `_scoreto` / `_toscore` 缩放、旧浮点转 int 边界与相关转换回归通过。联合四个套件共 33 项：LegacyFloatConversionTest 6、LegacyFloatLayoutTest 5、ConversionTest 12、FloatProviderTest 10，0 failures/errors/skips。日志：`F:/DevCache/.codex/runtime/mcfpp-legacy-float-conversions.log`。MCFL 保持 11；本阶段未改索引结构/签名，未重建 `bin.mclib`。未运行完整 check 或实际 Minecraft 服务端。
+
+实现规则：旧浮点值为 `sign * (int0 * 10000 + int1) * 10^(exp-8)`；int→旧浮点按八位十进制有效数字截断，不使用常量 codec 的 nearest/ties-to-even 舍入，零规范为全零，Int.MIN_VALUE/MAX_VALUE 均丢失低位，±2147483648 附近为 ±2147483600。旧浮点→int 向零截断，未知运行时超范围饱和至 Int.MIN_VALUE/MAX_VALUE；已知非有限或超范围值复用 NumericConversion.floatToIntError 编译诊断。旧转换仍未接入 旧浮点 IR。
+
+## 历史检查：旧浮点编码与比较基础（阶段 47）
 
 ```sh
 ./gradlew regenerateStdlib
