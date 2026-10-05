@@ -4,6 +4,7 @@ package top.mcfpp.analysis
 object PrimitiveEvaluation {
     fun binary(operation: String, left: CompilerValue, right: CompilerValue): CompilerValue? {
         if (left is CompilerValue.FloatBits && right is CompilerValue.FloatBits) {
+            if (!top.mcfpp.command.FloatProviders.enabled) return null
             val a = Float.fromBits(left.bits)
             val b = Float.fromBits(right.bits)
             return when (operation) {

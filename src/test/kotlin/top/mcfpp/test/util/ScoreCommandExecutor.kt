@@ -192,6 +192,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         val guardStore = Regex("execute store result storage mcfpp:system ir_branch_stack\\[0].condition byte 1 run scoreboard players get (\\S+ \\S+)")
         val guardTest = Regex("execute (if|unless) data storage mcfpp:system ir_branch_stack\\[0]\\{condition:1b} run (.*)")
         val save = Regex("execute store result storage (\\S+) ($nbtPath) (int|byte|short|long|double) 1 run scoreboard players get (\\S+ \\S+)")
+        val saveOperation = Regex("execute store result storage (\\S+) ($nbtPath) int 1 run (scoreboard players operation (\\S+ \\S+) = \\S+ \\S+)")
         val restore = Regex("execute store result score (\\S+ \\S+) run data get storage (\\S+) ($nbtPath)(?: 1(?:\\.0)?)?")
         val setNbt = Regex("data modify storage (\\S+) ($nbtPath) set value (.*)")
         val copyNbt = Regex("data modify storage (\\S+) ($nbtPath) set from storage (\\S+) ($nbtPath)")
@@ -271,6 +272,11 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                 return@command false
             }
             set.matchEntire(command)?.let { values[scoreKey(it.groupValues[1])] = it.groupValues[2].toInt(); return@command false }
+            saveOperation.matchEntire(command)?.let {
+                execute(it.groupValues[3])
+                writeNbt(it.groupValues[1], it.groupValues[2], IntTag(values.getValue(scoreKey(it.groupValues[4]))))
+                return@command false
+            }
             add.matchEntire(command)?.let {
                 val target = scoreKey(it.groupValues[2])
                 val delta = it.groupValues[3].toInt() * if (it.groupValues[1] == "add") 1 else -1

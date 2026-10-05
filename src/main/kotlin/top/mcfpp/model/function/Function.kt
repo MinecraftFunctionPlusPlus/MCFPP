@@ -649,7 +649,8 @@ open class Function : Member, FieldContainer, WithDocument {
     }
 
     private fun captureArguments(arguments: List<Var<*>>) = arguments.map {
-        if (it is top.mcfpp.core.lang.MCAny && it.compilerPayload == null ||
+        if (!FloatProviders.enabled && it is MCFloat) top.mcfpp.analysis.StorageAccess.capture(it)
+        else if (it is top.mcfpp.core.lang.MCAny && it.compilerPayload == null ||
             it is top.mcfpp.core.lang.nbt.NBTBasedData && top.mcfpp.analysis.ValueSnapshot.of(it) == null ||
             it is DataTemplateObject && it.storageBinding != null || it is top.mcfpp.core.lang.RangeVar) it.getTempVar() else it
     }
@@ -719,6 +720,9 @@ open class Function : Member, FieldContainer, WithDocument {
         val tempArgs = normalArgs.map {
             if (FloatProviders.enabled && it is MCFloat && it !is MCFPPValue<*>) {
                 FloatProviders.callerValue(it)
+            } else if (!FloatProviders.enabled && it is MCFloat) {
+                // Legacy float arguments were captured independently before pushing the frame.
+                it
             } else it.getTempVar()
         }.toCollection(ArrayList())
         for (i in this.normalParams.indices) {

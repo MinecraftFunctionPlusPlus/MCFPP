@@ -302,9 +302,9 @@ object FlowAnalysis {
                         if (type != null && folded != null) ValueKnowledge.Constant(folded) else ValueKnowledge.Unknown)
                 }
                 is Instruction.Promote -> {
-                    val source = (value(instruction.value).value as? ValueKnowledge.Constant)?.value as? CompilerValue.Integral
-                    val constant = source?.takeIf { foldIntrinsics && instruction.type == top.mcfpp.type.MCFPPBaseType.Float.typeId }
-                        ?.let { CompilerValue.FloatBits(it.value.toInt().toFloat().toRawBits()) }
+                    val source = (value(instruction.value).value as? ValueKnowledge.Constant)?.value
+                    val constant = source?.takeIf { foldIntrinsics }
+                        ?.let { NumericConversion.fold(instruction.value.type, instruction.type, it) }
                     values[instruction.result] = ValueFacts(TypeKnowledge.Exact(instruction.type),
                         constant?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown)
                 }

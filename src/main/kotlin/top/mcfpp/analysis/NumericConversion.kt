@@ -21,13 +21,14 @@ object NumericConversion {
     fun floatToIntError(value: Float): String? = when {
         !value.isFinite() -> "Float-to-int conversion requires a finite input"
         value.toDouble() < Int.MIN_VALUE.toDouble() || value.toDouble() >= 2147483648.0 ->
-            "Minecraft 26.3 float-to-int conversion is outside the 32-bit integer range"
+            "Float-to-int conversion is outside the 32-bit integer range"
         else -> null
     }
 
     fun fold(source: TypeId, target: TypeId, value: CompilerValue): CompilerValue? {
         if (source == target) return value
         if (target == MCFPPNBTType.NBT.typeId) return CompilerValue.Typed(target, CompilerValue.Typed(source, value))
+        if (!top.mcfpp.command.FloatProviders.enabled && (source == float || target == float)) return null
         if (value is CompilerValue.Typed) return fold(source, target, value.payload)
         if (source in integers && value is CompilerValue.Integral) return when (target) {
             int, long -> value

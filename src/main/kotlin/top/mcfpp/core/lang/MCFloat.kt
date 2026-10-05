@@ -120,6 +120,8 @@ open class MCFloat : MCNumber<Float> {
         return if(a is MCFloatConcrete){
             MCFloatConcrete(this, a.value)
         }else {
+            // Runtime assignment must discard a declaration's concrete default value.
+            if (this is MCFloatConcrete) return MCFloat(this).assignCommand(a)
             //this = a
             val pwp = a as MCFloat
             if(isTemp){
@@ -147,7 +149,8 @@ open class MCFloat : MCNumber<Float> {
         if (FloatProviders.enabled) return FloatProviders.arithmetic(this, a as MCFloat, "+")
         //t = t + a
         if(!isTemp) return getTempVar().plus(a)
-        if(a as MCFloat != tempFloat) a.toTempEntity()
+        val operand = a as MCFloat
+        if (operand !== tempFloat) operand.toTempEntity()
         Function.addCommand("execute as $tempFloatEntityUUID run function math.float:hpo/float/_add")
         return this
     }
@@ -162,7 +165,8 @@ open class MCFloat : MCNumber<Float> {
         if (FloatProviders.enabled) return FloatProviders.arithmetic(this, a as MCFloat, "-")
         //t = t - a
         if(!isTemp) return getTempVar().minus(a)
-        if(a as MCFloat != tempFloat) a.toTempEntity()
+        val operand = a as MCFloat
+        if (operand !== tempFloat) operand.toTempEntity()
         Function.addCommand("execute as $tempFloatEntityUUID run function math.float:hpo/float/_rmv")
         return this
     }
@@ -177,7 +181,8 @@ open class MCFloat : MCNumber<Float> {
         if (FloatProviders.enabled) return FloatProviders.arithmetic(this, a as MCFloat, "*")
         //t = t * a
         if(!isTemp) return getTempVar().times(a)
-        if(a as MCFloat != tempFloat) a.toTempEntity()
+        val operand = a as MCFloat
+        if (operand !== tempFloat) operand.toTempEntity()
         Function.addCommand("execute as $tempFloatEntityUUID run function math.float:hpo/float/_mult")
         return this
     }
@@ -192,7 +197,8 @@ open class MCFloat : MCNumber<Float> {
         if (FloatProviders.enabled) return FloatProviders.arithmetic(this, a as MCFloat, "/")
         //t = t - a
         if(!isTemp) return getTempVar().div(a)
-        if(a as MCFloat != tempFloat) a.toTempEntity()
+        val operand = a as MCFloat
+        if (operand !== tempFloat) operand.toTempEntity()
         Function.addCommand("execute as $tempFloatEntityUUID run function math.float:hpo/float/_div")
         return this
     }

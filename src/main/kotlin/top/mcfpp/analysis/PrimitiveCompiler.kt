@@ -11,6 +11,9 @@ import top.mcfpp.core.lang.MCObject
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.command.FloatProviders
+import top.mcfpp.backend.LegacyFloatCommands
+import top.mcfpp.backend.LegacyFloatComparison
+import top.mcfpp.core.lang.MCFloat
 import top.mcfpp.backend.ListSearch
 import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.nbt.tags.Tag
@@ -55,7 +58,7 @@ object PrimitiveCompiler {
             it === MCFPPPrivateType.Wildcard || supportedType(it)
         }
         is MCFPPUnionType -> type.types.all(::supportedType)
-        else -> type.typeId in types && (type.typeId != float || FloatProviders.enabled)
+        else -> type.typeId in types
     }
 
     private data class Prepared(val function: Function, val declarations: MutableMap<Int, SymbolId>,
@@ -168,7 +171,15 @@ object PrimitiveCompiler {
         if (typeFacts.values.values.any { fact ->
             val value = (fact.value as? ValueKnowledge.Constant)?.value
             value is CompilerValue.FloatBits && !Float.fromBits(value.bits).isFinite()
-        }) diagnostics += "Minecraft 26.3 float providers require finite float values"
+        }) diagnostics += "Float values require finite input"
+        if (!FloatProviders.enabled && ir.blocks.any { block -> block.instructions.any {
+                it is Instruction.Binary && it.operation == "%" && (it.left.type == float || it.right.type == float)
+            } }) diagnostics += "Legacy float remainder has no runtime implementation"
+        if (!FloatProviders.enabled) for (block in ir.blocks) for (instruction in block.instructions.filterIsInstance<Instruction.Read>()) {
+            val actual = (typeFacts.values[block.id to instruction.result]?.type as? TypeKnowledge.Exact)?.type
+            if (instruction.type == float && actual in setOf(int, bool, MCFPPNBTType.Byte.typeId, MCFPPNBTType.Short.typeId))
+                diagnostics += "Legacy float requires its four-component layout; use toFloat(value) for numeric conversion"
+        }
         for (block in ir.blocks) for (instruction in block.instructions.filterIsInstance<Instruction.Convert>()) {
             if (instruction.value.type != float || instruction.type != int) continue
             val value = when (val source = instruction.value) {
@@ -742,7 +753,7 @@ object PrimitiveCompiler {
             val numbers = parts.values.map { value ->
                 when (val number = (value as? ValueRef.Constant)?.value ?: (value as? ValueRef.Result)?.let { provenConstants[it.instruction] }) {
                     is CompilerValue.Integral -> number.value.toDouble()
-                    is CompilerValue.FloatBits -> Float.fromBits(number.bits).toDouble()
+                    is CompilerValue.FloatBits -> if (FloatProviders.enabled) Float.fromBits(number.bits).toDouble() else null
                     else -> null
                 }
             }
@@ -995,6 +1006,8 @@ object PrimitiveCompiler {
                 val source = expression(node.unaryExpression())
                 if (node.type() == null) source else {
                     val target = type(node.type()).typeId
+                    if (!FloatProviders.enabled && target == float && boundValue(source).type in
+                        setOf(int, bool, MCFPPNBTType.Byte.typeId, MCFPPNBTType.Short.typeId)) unsupported()
                     if (target !in setOf(int, bool, float, MCFPPBaseType.Range.typeId) && types[target] !is MCFPPTypeWithGeneric && TypeRelations.arrayElementType(target) == null) unsupported()
                     val place = (source as? ValueRef.Result)?.let { origins[it.instruction] } ?: unsupported()
                     val sourceType = (source as? ValueRef.Result)?.let { sourceTypes[it.instruction] } ?: source.type
@@ -1055,7 +1068,7 @@ object PrimitiveCompiler {
                 node.nbtFloat() != null -> {
                     register(MCFPPBaseType.Float)
                     val value = node.nbtFloat().text.toNBTFloat()
-                    if (!value.isFinite()) invalid("Minecraft 26.3 float providers require finite float values")
+                    if (!value.isFinite()) invalid("Float values require finite input")
                     ValueRef.Constant(float, CompilerValue.FloatBits(value.toRawBits()))
                 }
                 node.nbtBool() != null -> ValueRef.Constant(bool, CompilerValue.Bool(node.nbtBool().TRUE() != null))
@@ -1120,6 +1133,24 @@ object PrimitiveCompiler {
         }
         private fun path(place: Place) = address(place)
         private fun internal(name: String, frame: Int = 0) = NBTPath.stack.intIndex(frame).memberIndex("\$ir").memberIndex(name)
+        private fun legacyComponents(value: MCFloat) = LegacyFloatComparison.Components(
+            "${value.sign.name} ${value.sign.sbObject}", "${value.int0.name} ${value.int0.sbObject}",
+            "${value.int1.name} ${value.int1.sbObject}", "${value.exp.name} ${value.exp.sbObject}")
+        private fun legacyFloat(value: ValueRef): NBTPath {
+            top.mcfpp.Project.enableModulePackage("math.float", "stdlib")
+            return (value as? ValueRef.Result)?.let { nbtResults[it.instruction] }
+                ?: internal("float_operand_${callNumber++}").also { encode(it, value) }
+        }
+        private fun floatFromInt(result: Int, source: Score) {
+            if (FloatProviders.enabled) {
+                computeFloat(result, "{type:\"minecraft:from_int\",input:${FloatProviders.scoreProvider(source.name, source.objective)}}")
+            } else {
+                top.mcfpp.Project.enableModulePackage("math.float", "stdlib")
+                val destination = internal("float_$result")
+                LegacyFloatCommands.fromInt(source.toString(), destination, ::emit)
+                nbtResults[result] = destination
+            }
+        }
         private fun floatProvider(value: ValueRef): String {
             val stored = (value as? ValueRef.Result)?.let { nbtResults[it.instruction] }
             if (stored != null) return FloatProviders.storageProvider("mcfpp:system", stored.pathToCommandPart().toString())
@@ -1140,12 +1171,14 @@ object PrimitiveCompiler {
                 !runtime(result) -> emit(Commands.dataSetValue(destination, StorageAccess.snapshotTag(constant(result)!!, instruction.type)!!))
                 instruction.type == float -> {
                     val input = score(value)
-                    computeFloat(instruction.result, "{type:\"minecraft:from_int\",input:${FloatProviders.scoreProvider(input.name, input.objective)}}")
+                    floatFromInt(instruction.result, input)
                     emit(Commands.dataSetFrom(destination, nbtResults.getValue(instruction.result)))
                 }
                 else -> {
                     val source = if (value.type == float) temporary(int).also {
-                        commands += "execute store result score $it run compute default integer {type:\"minecraft:from_float\",input:${floatProvider(value)}}"
+                        if (FloatProviders.enabled)
+                            commands += "execute store result score $it run compute default integer {type:\"minecraft:from_float\",input:${floatProvider(value)}}"
+                        else LegacyFloatCommands.toInt(legacyFloat(value), it.toString(), ::emit)
                     } else if (value.type in setOf(MCFPPNBTType.Long.typeId, MCFPPNBTType.Double.typeId)) {
                         // Even literals use the target data-get rule, never a host numeric cast.
                         val input = internal("convert_input_${instruction.result}")
@@ -1326,7 +1359,9 @@ object PrimitiveCompiler {
             commands += "function ${target.namespaceID}"
             instruction.result?.let {
                 val destination = internal("result_$id", 1)
-                if (nbt(instruction.returnType!!) && target.returnVar !is MCInt) emit(Commands.dataSetFrom(destination, target.returnVar.nbtPath))
+                if (!FloatProviders.enabled && target.returnVar is MCFloat)
+                    LegacyFloatCommands.store(destination, legacyComponents(target.returnVar as MCFloat), ::emit)
+                else if (nbt(instruction.returnType!!) && target.returnVar !is MCInt) emit(Commands.dataSetFrom(destination, target.returnVar.nbtPath))
                 else {
                     val tag = when (instruction.returnType) {
                         bool, MCFPPNBTType.Byte.typeId -> "byte"
@@ -1429,11 +1464,11 @@ object PrimitiveCompiler {
                 constants.clear() // Literals must be initialized on every reachable entry.
                 initialized.clear()
                 initialized.addAll(storagePlaces.filter { facts.entries.getValue(block.id).read(it)?.state == ValueState.INITIALIZED })
-                if (block.id == 0 && reachable.any { candidate -> candidate.instructions.any { it is Instruction.Call ||
+                if (block.id == 0 && ((!FloatProviders.enabled && function.returnVar is MCFloat) || reachable.any { candidate -> candidate.instructions.any { it is Instruction.Call ||
                     it is Instruction.Construct || it is Instruction.Promote || it is Instruction.Convert ||
                     it is Instruction.Binary && (it.left.type == float || it.right.type == float) ||
                     it is Instruction.Read && nbt(symbols.getValue(it.place.root).declaredType) ||
-                    it is Instruction.Write && storageNames.getValue(it.place.root).startsWith("$") && nbt(symbols.getValue(it.place.root).declaredType) } })
+                    it is Instruction.Write && storageNames.getValue(it.place.root).startsWith("$") && nbt(symbols.getValue(it.place.root).declaredType) } }))
                     emit(Commands.dataSetValue(NBTPath.stack.intIndex(0).memberIndex("\$ir"), top.mcfpp.nbt.tags.CompoundTag()))
                 for ((position, instruction) in block.instructions.withIndex()) when (instruction) {
                     is Instruction.Read -> if (nbt(symbols.getValue(instruction.place.root).declaredType) || instruction.place.path.isNotEmpty()) {
@@ -1463,14 +1498,29 @@ object PrimitiveCompiler {
                     is Instruction.Binary -> {
                         if (!runtime(ValueRef.Result(instruction.type, instruction.result))) continue
                         if (instruction.left.type == float && instruction.right.type == float) {
-                            val left = floatProvider(instruction.left)
-                            val right = floatProvider(instruction.right)
-                            if (instruction.type == float) computeFloat(instruction.result,
-                                FloatProviders.arithmeticProvider(left, right, instruction.operation))
-                            else {
-                                val result = temporary(bool)
-                                commands += "execute store success score $result ${FloatProviders.comparisonClause(left, right, instruction.operation)}"
-                                results[instruction.result] = result
+                            if (FloatProviders.enabled) {
+                                val left = floatProvider(instruction.left)
+                                val right = floatProvider(instruction.right)
+                                if (instruction.type == float) computeFloat(instruction.result,
+                                    FloatProviders.arithmeticProvider(left, right, instruction.operation))
+                                else {
+                                    val result = temporary(bool)
+                                    commands += "execute store success score $result ${FloatProviders.comparisonClause(left, right, instruction.operation)}"
+                                    results[instruction.result] = result
+                                }
+                            } else {
+                                val left = legacyFloat(instruction.left)
+                                val right = legacyFloat(instruction.right)
+                                if (instruction.type == float) {
+                                    val destination = internal("float_${instruction.result}")
+                                    LegacyFloatCommands.arithmetic(left, right, instruction.operation, destination, ::emit)
+                                    nbtResults[instruction.result] = destination
+                                } else {
+                                    val result = temporary(bool)
+                                    LegacyFloatCommands.comparison(left, right, instruction.operation,
+                                        temporary(int).toString(), result.toString(), ::emit)
+                                    results[instruction.result] = result
+                                }
                             }
                             continue
                         }
@@ -1500,7 +1550,7 @@ object PrimitiveCompiler {
                     is Instruction.Promote -> {
                         if (!runtime(ValueRef.Result(instruction.type, instruction.result))) continue
                         val source = score(instruction.value)
-                        computeFloat(instruction.result, "{type:\"minecraft:from_int\",input:${FloatProviders.scoreProvider(source.name, source.objective)}}")
+                        floatFromInt(instruction.result, source)
                     }
                     is Instruction.Convert -> convert(instruction)
                     is Instruction.RawCommand -> commands.add(instruction.command)
@@ -1630,6 +1680,10 @@ object PrimitiveCompiler {
                     }
                     is Terminator.Return -> {
                         terminator.value?.let { value ->
+                            if (!FloatProviders.enabled && function.returnVar is MCFloat) {
+                                LegacyFloatCommands.load(legacyFloat(value), legacyComponents(function.returnVar as MCFloat), ::emit)
+                                return@let
+                            }
                             // byte/short use NBT inside IR but retain the existing scalar return ABI.
                             if (nbt(function.returnType.typeId) && function.returnVar !is MCInt) {
                                 encode(function.returnVar.nbtPath, value)

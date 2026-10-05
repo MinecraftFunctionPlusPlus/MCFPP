@@ -1,12 +1,20 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段 50 必要检查 Gradle exit 0，旧浮点乘除共 36 项通过；MCFL 保持 11，未重建标准库。最近完整检查仍属于提交 72dc557，共 346 项；本阶段未运行完整 check 或实际 Minecraft 服务端。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段 51 最终复查 20 项通过，Gradle exit 0；MCFL 11 未变，未重建标准库。最近完整检查仍属于提交 72dc557，共 346 项；本阶段未运行完整 check 或实际 Minecraft 服务端。
 
-## 最新必要检查：旧浮点乘除（阶段 50）
+## 最新必要检查：旧浮点 IR（阶段 51）
 
-LegacyFloatMultiplyDivideTest 7、LegacyFloatArithmeticTest 6、LegacyFloatConversionTest 6、LegacyFloatLayoutTest 5、ConversionTest 12 联合共 36 项通过，0 failures/errors/skips。7 项中包括 executor 和入口断言，并非全为库函数执行。日志：`F:/DevCache/.codex/runtime/mcfpp-legacy-float-mul-div.log`。MCFL 11 未变，未改签名/缓存结构，未重建标准库；未运行完整 check 或实际 Minecraft 服务端。
+最终复查 LegacyFloatIRTest 9、LegacyFloatLayoutTest 5、LegacyFloatConversionTest 6，共 20 项通过，0 failures/errors/skips。日志：`F:/DevCache/.codex/runtime/mcfpp-legacy-float-ir-final.log`。首轮 51 项有 3 项失败，其余 42 项通过；修复 identity/诊断后首次复查因 4 处智能转换导致编译失败并已修复。随后 22 项检查有 1 项失败、其中算术 13 项通过；修复 Concrete 目标的默认 0 覆写后，最终 20 项全部通过。相关历史日志：`mcfpp-legacy-float-ir.log`、`mcfpp-legacy-float-ir-interop.log`、`mcfpp-legacy-float-ir-interop-final.log`。MCFL 11 未变，无签名/缓存结构变化，未重建标准库；未运行完整 check 或实际 Minecraft 服务端。
 
-阶段 50 将符号为零的乘除（包括分母为零及 0/0）在算术前规范为四个零分量，不执行会失败的 `/=0` 或 `%=0`，不新增已知零编译诊断，也不定义 IEEE 特殊值。非零乘法维持精确截断；除法固定 7 次十进制长除，若 A<D 再做 1 次，精确商向零截断为 8 位有效数字。右分量只读且不依赖 return；`div_align` 因仍被 inverse/3vec 引用而保留。阶段 49 的加减和相关缺陷作为历史记录保留。
+旧浮点算术/比较、Promote/Convert 已接入 IR，四分量使用独立 NBT 帧，纯 `LegacyFloatCommands` 负责读写/调用，并保留旧 4 记分板 return ABI。普通、递归、static、旧与 IR 双向调用、早先参数、多实参、常量及连续返回已由真实库命令执行。旧算术/比较不做宿主浮点折叠或跨数值折叠；`16777217` 保留八位十进制表示。identity/toNBT 保留来源 codec。包含 FloatBits 端点的旧浮点范围，其静态顺序不再用宿主比较（整数/native 行为不变），未定义浮点迭代语义。
+
+已知 int/bool/byte/short as legacyfloat 仍沿旧入口并在实际访问时诊断；未使用的视图不报错，unknown any 视图不做运行时 typecheck，命名 float 视图的来源随后被写成已知标量，再读取视图会诊断。阶段 50 乘除和阶段 49 加减的历史验证见下文。
+
+## 历史必要检查：旧浮点乘除（阶段 50）
+
+LegacyFloatMultiplyDivideTest 7、LegacyFloatArithmeticTest 6、LegacyFloatConversionTest 6、LegacyFloatLayoutTest 5、ConversionTest 12 联合共 36 项通过，0 failures/errors/skips。日志：`F:/DevCache/.codex/runtime/mcfpp-legacy-float-mul-div.log`。7 项中包括 executor 和入口断言，并非全为库函数执行。MCFL 11 未变，未改签名/缓存结构，未重建标准库；未运行完整 check 或实际 Minecraft 服务端。
+
+任一符号为零的乘除（包括分母为零及 0/0）在算术前规范为四个零分量，不执行会失败的 `/=0` 或 `%=0`，不新增已知零编译诊断，也不定义 IEEE 特殊值。非零乘法维持精确截断；除法固定 7 次十进制长除，若 A<D 再做 1 次，精确商向零截断为 8 位有效数字。右分量只读且不依赖 return；`div_align` 因仍被 inverse/3vec 引用而保留。
 
 ## 历史必要检查：旧浮点加减（阶段 49）
 

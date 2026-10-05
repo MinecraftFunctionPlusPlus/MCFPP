@@ -86,7 +86,7 @@ class MCFPPExprVisitor(
             processVarCache[processVarCache.lastIndex] = visitCommonBinaryOperatorExpressionRe!!
             var b: Var<*>? = visitConditionalOrExpression(ctx.conditionalOrExpression(i))
             if(b is MCFloat && !FloatProviders.enabled) b = b.toTempEntity()
-            if(visitCommonBinaryOperatorExpressionRe!! != MCFloat.ssObj){
+            if(visitCommonBinaryOperatorExpressionRe!! !== MCFloat.ssObj){
                 visitCommonBinaryOperatorExpressionRe = visitCommonBinaryOperatorExpressionRe!!.getTempVar()
             }
             visitCommonBinaryOperatorExpressionRe = visitCommonBinaryOperatorExpressionRe!!.binaryComputation(b!!, ctx.op[i-1].text)
@@ -110,7 +110,7 @@ class MCFPPExprVisitor(
             processVarCache[processVarCache.lastIndex] = visitConditionalOrExpressionRe!!
             var b: Var<*>? = visitConditionalAndExpression(ctx.conditionalAndExpression(i))
             if(b is MCFloat && !FloatProviders.enabled) b = b.toTempEntity()
-            if(visitConditionalOrExpressionRe!! != MCFloat.ssObj){
+            if(visitConditionalOrExpressionRe!! !== MCFloat.ssObj){
                 visitConditionalOrExpressionRe = visitConditionalOrExpressionRe!!.getTempVar()
             }
             visitConditionalOrExpressionRe = visitConditionalOrExpressionRe!!.binaryComputation(b!!, ctx.op[i-1].text)
@@ -200,7 +200,7 @@ class MCFPPExprVisitor(
             var b: Var<*>? = visitMultiplicativeExpression(ctx.multiplicativeExpression(i))
             if(b is MCFloat && !FloatProviders.enabled) {
                 b = b.toTempEntity()
-                if(visitAdditiveExpressionRe!! != MCFloat.ssObj){
+                if(visitAdditiveExpressionRe!! !== MCFloat.ssObj){
                     visitAdditiveExpressionRe = visitAdditiveExpressionRe!!.getTempVar()
                 }
             }
@@ -227,7 +227,7 @@ class MCFPPExprVisitor(
             processVarCache[processVarCache.lastIndex] = visitMultiplicativeExpressionRe!!
             var b: Var<*>? = visitCastExpression(ctx.castExpression(i))
             if(b is MCFloat && !FloatProviders.enabled) b = b.toTempEntity()
-            if((!FloatProviders.enabled || visitMultiplicativeExpressionRe !is MCFloat) && visitMultiplicativeExpressionRe != MCFloat.ssObj){
+            if((!FloatProviders.enabled || visitMultiplicativeExpressionRe !is MCFloat) && visitMultiplicativeExpressionRe !== MCFloat.ssObj){
                 visitMultiplicativeExpressionRe = visitMultiplicativeExpressionRe!!.getTempVar()
             }
             visitMultiplicativeExpressionRe = visitMultiplicativeExpressionRe!!.binaryComputation(b!!, ctx.op[i-1].text)
