@@ -4,6 +4,8 @@ import com.alibaba.fastjson2.JSON
 import com.alibaba.fastjson2.JSONObject
 import com.alibaba.fastjson2.JSONReader
 import top.mcfpp.Project
+import top.mcfpp.analysis.CompilerValue
+import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.command.FloatProviders
 import top.mcfpp.core.lang.MCFloat
 import top.mcfpp.core.lang.MCFloatConcrete
@@ -86,6 +88,7 @@ class FloatProviderTest {
             for (command in commands.filterNot { it.startsWith("#") }) {
                 modify.matchEntire(command)?.let {
                     val source = it.groupValues[2]
+                    if (source == "value {}") return@let
                     data[it.groupValues[1]] = when {
                         source.startsWith("compute default float ") -> value(objectValue(source.removePrefix("compute default float ")))
                         source.startsWith("from ") -> data.getValue(source.removePrefix("from "))
@@ -200,9 +203,13 @@ class FloatProviderTest {
             var negated = -value;
             var remainder = -8.5 % 2.0;
         """.trimIndent())
-        assertEquals(8.75f, (function.scope.getVar("value") as MCFloatConcrete).value)
-        assertEquals(-8.75f, (function.scope.getVar("negated") as MCFloatConcrete).value)
-        assertEquals(-0.5f, (function.scope.getVar("remainder") as MCFloatConcrete).value)
+        fun constant(name: String): Float {
+            val snapshot = StorageAccess.snapshot(function.scope.getVar(name)!!) as CompilerValue.Typed
+            return Float.fromBits((snapshot.payload as CompilerValue.FloatBits).bits)
+        }
+        assertEquals(8.75f, constant("value"))
+        assertEquals(-8.75f, constant("negated"))
+        assertEquals(-0.5f, constant("remainder"))
         assertFalse(commands.any { it.contains("set compute") || it.contains("scoreboard players") })
     }
 

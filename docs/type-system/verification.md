@@ -1,8 +1,20 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。本轮递归返回/写回形状联合检查 50 项通过。MCFL 保持 10，本轮没有改变库签名/格式；最近标准库重建属于 8aee6b7，为 0 错误/0 警告。最近完整检查属于提交 72dc557，共 346 项。续接起始基线为上一会话的 140 项测试，浮点后端及算术修改继续保留。
+最新验证日期：2026-10-06（Asia/Shanghai）。本轮原生浮点 IR 联合检查 59 项通过，范围边界补查 14 项通过。MCFL 保持 10，本轮没有改变库签名/格式；最近标准库重建属于 8aee6b7，为 0 错误/0 警告。最近完整检查属于提交 72dc557，共 346 项。续接起始基线为上一会话的 140 项测试，旧模拟浮点后端继续保留。
 
-## 最新必要检查：递归返回与 static 写回形状
+## 最新必要检查：26.3 原生浮点 IR
+
+```sh
+./gradlew test --tests top.mcfpp.test.FloatIRTest --tests top.mcfpp.test.FloatProviderTest --tests top.mcfpp.test.IRCallTest --tests top.mcfpp.test.RangeIRTest --tests top.mcfpp.test.CollectionIRTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
+./gradlew test --tests top.mcfpp.test.FloatIRTest --tests top.mcfpp.test.RangeIRTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
+git diff --check
+```
+
+5 个套件、59 项通过。新增 FloatIRTest 的 6 项覆盖算术/比较和循环回边、递归返回与较早参数捕获、static 浮点写回、声明/返回/实参/默认参数/集合元素提升、动态下标跨 RHS 调用、共享视图、负零、精度边界、浮点范围载荷及非法输入诊断；折叠开关均执行。旧 FloatProviderTest 继续覆盖原生表达式和 26.2/1.21.8 的旧后端选择。
+
+首轮旧常量测试依赖 MCFloatConcrete 适配对象强转失败，改为从 StorageAccess 查询不可变快照，仍检查值和不生成运行时计算命令；测试的旧扁平执行器跳过新增 IR 容器初始化。复核补齐已知浮点范围的左右端点顺序检查后，浮点和范围 2 个套件、14 项通过，0 失败/错误/跳过，当前 XML 为这 2 个套件。日志：`F:/DevCache/.codex/runtime/mcfpp-float-ir-final.log`、`mcfpp-float-ir-range-bounds.log`。未运行完整 check 或重建标准库；旧模拟浮点 IR、显式转换 MNI、浮点/未知范围迭代和实际服务端对照仍未完成。
+
+## 上一阶段必要检查：递归返回与 static 写回形状（eb83a60）
 
 ```sh
 ./gradlew test --tests top.mcfpp.test.CallShapeIRTest --tests top.mcfpp.test.RangeIRTest --tests top.mcfpp.test.IRCallTest --tests top.mcfpp.test.DynamicIndexIRTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
@@ -10,7 +22,7 @@
 git diff --check
 ```
 
-4 个套件、50 项，0 失败/错误/跳过，当前 XML 为这 4 个套件。CallShapeIRTest 从 6 项扩为 12 项，新增递归擦除返回的嵌套类型/长度、相互递归范围端点、递归 static 整体替换、不同返回类型和变化的递归输入不得伪造证明、无返回递归不采用调用后返回值，以及递归嵌套输出收敛到共同有限形状。正向运行覆盖折叠开关和无宏 1.20.1；子值仍为 Unknown。
+4 个套件、50 项，0 失败/错误/跳过。CallShapeIRTest 从 6 项扩为 12 项，新增递归擦除返回的嵌套类型/长度、相互递归范围端点、递归 static 整体替换、不同返回类型和变化的递归输入不得伪造证明、无返回递归不采用调用后返回值，以及递归嵌套输出收敛到共同有限形状。正向运行覆盖折叠开关和无宏 1.20.1；子值仍为 Unknown。
 
 首轮一个新增反例因缺少块后分隔导致语法错误，修正后全部通过。最后整理测试导入/图收集后，单独 compileTestKotlin 通过。日志：`F:/DevCache/.codex/runtime/mcfpp-recursive-shape-final.log`、`mcfpp-recursive-shape-cleanup.log`。没有重复完整 check 或标准库重建。不同递归输入形状仍返回保守摘要，未知范围形参、浮点范围和通用迭代器仍未完成。
 

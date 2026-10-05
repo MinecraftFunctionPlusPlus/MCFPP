@@ -301,7 +301,13 @@ object FlowAnalysis {
                     values[instruction.result] = ValueFacts(type?.let { TypeKnowledge.Exact(it) } ?: TypeKnowledge.Unknown,
                         if (type != null && folded != null) ValueKnowledge.Constant(folded) else ValueKnowledge.Unknown)
                 }
-                is Instruction.Promote -> values[instruction.result] = ValueFacts(TypeKnowledge.Exact(instruction.type), ValueKnowledge.Unknown)
+                is Instruction.Promote -> {
+                    val source = (value(instruction.value).value as? ValueKnowledge.Constant)?.value as? CompilerValue.Integral
+                    val constant = source?.takeIf { instruction.type == top.mcfpp.type.MCFPPBaseType.Float.typeId }
+                        ?.let { CompilerValue.FloatBits(it.value.toInt().toFloat().toRawBits()) }
+                    values[instruction.result] = ValueFacts(TypeKnowledge.Exact(instruction.type),
+                        constant?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown)
+                }
                 is Instruction.Convert -> values[instruction.result] = ValueFacts(TypeKnowledge.Exact(instruction.type), ValueKnowledge.Unknown)
             }
             values.forEach { (result, fact) -> resultFacts[id to result] = fact }

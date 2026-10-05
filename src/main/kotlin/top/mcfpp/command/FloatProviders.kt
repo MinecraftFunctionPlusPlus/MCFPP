@@ -50,8 +50,34 @@ object FloatProviders {
             preparePath(path)
             emit(Commands.dataSetFrom(sourcePath, path))
         }
-        return "{type:\"minecraft:storage\",storage:${quoted((sourcePath.source as StorageSource).storage)}," +
-                "path:${quoted(sourcePath.pathToCommandPart().toString())}}"
+        return storageProvider((sourcePath.source as StorageSource).storage, sourcePath.pathToCommandPart().toString())
+    }
+
+    // Shared command expressions; the IR backend supplies already captured operands.
+    fun storageProvider(storage: String, path: String) =
+        "{type:\"minecraft:storage\",storage:${quoted(storage)},path:${quoted(path)}}"
+
+    fun scoreProvider(name: String, objective: String) =
+        "{type:\"minecraft:score\",target:{type:\"minecraft:fixed\",name:${quoted(name)}},score:${quoted(objective)}}"
+
+    fun arithmeticProvider(left: String, right: String, operation: String): String = when (operation) {
+        "+" -> "{type:\"minecraft:add\",inputs:[$left,$right]}"
+        "*" -> "{type:\"minecraft:mul\",inputs:[$left,$right]}"
+        "-" -> "{type:\"minecraft:sub\",left:$left,right:$right}"
+        "/" -> "{type:\"minecraft:div\",left:$left,right:$right}"
+        "%" -> "{type:\"minecraft:mod\",left:$left,right:$right}"
+        else -> error("Unsupported float operation: $operation")
+    }
+
+    fun comparisonClause(left: String, right: String, operation: String): String {
+        val test = when (operation) {
+            ">", "<=" -> "{max:$right}"
+            "<", ">=" -> "{min:$right}"
+            "==", "!=" -> right
+            else -> error("Unsupported float comparison: $operation")
+        }
+        val clause = if (operation in listOf(">", "<", "!=")) "unless" else "if"
+        return "$clause predicate {type:\"minecraft:float_value_check\",value:$left,test:$test}"
     }
 
     private fun provider(value: MCFloat): String =
@@ -109,17 +135,7 @@ object FloatProviders {
             val result = MCFloatConcrete(value)
             return if (valid(result)) result else invalidFloat()
         }
-        val a = provider(left)
-        val b = provider(right)
-        val expression = when (operation) {
-            "+" -> "{type:\"minecraft:add\",inputs:[$a,$b]}"
-            "*" -> "{type:\"minecraft:mul\",inputs:[$a,$b]}"
-            "-" -> "{type:\"minecraft:sub\",left:$a,right:$b}"
-            "/" -> "{type:\"minecraft:div\",left:$a,right:$b}"
-            "%" -> "{type:\"minecraft:mod\",left:$a,right:$b}"
-            else -> error("Unsupported float operation: $operation")
-        }
-        return evaluate(expression)
+        return evaluate(arithmeticProvider(provider(left), provider(right), operation))
     }
 
     fun negate(value: MCFloat): Var<*> {
@@ -141,26 +157,15 @@ object FloatProviders {
                 else -> error("Unsupported float comparison: $operation")
             })
         }
-        val a = provider(left)
-        val b = provider(right)
-        val test = when (operation) {
-            ">", "<=" -> "{max:$b}"
-            "<", ">=" -> "{min:$b}"
-            "==", "!=" -> b
-            else -> error("Unsupported float comparison: $operation")
-        }
-        val clause = if (operation in listOf(">", "<", "!=")) "unless" else "if"
         val result = ScoreBool()
-        Function.addCommand("execute store success score ${result.name} ${result.boolObject} $clause predicate " +
-                "{type:\"minecraft:float_value_check\",value:$a,test:$test}")
+        Function.addCommand("execute store success score ${result.name} ${result.boolObject} " +
+                comparisonClause(provider(left), provider(right), operation))
         return result
     }
 
     fun fromInt(value: MCInt): MCFloat {
         if (value is MCIntConcrete) return MCFloatConcrete(value.value.toFloat())
-        val input = if (value.isDataOnly) storage(value.nbtPath) else
-            "{type:\"minecraft:score\",target:{type:\"minecraft:fixed\",name:${quoted(value.name)}}," +
-                    "score:${quoted(value.sbObject.toString())}}"
+        val input = if (value.isDataOnly) storage(value.nbtPath) else scoreProvider(value.name, value.sbObject.toString())
         return evaluate("{type:\"minecraft:from_int\",input:$input}")
     }
 

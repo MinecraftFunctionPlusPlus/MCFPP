@@ -7,6 +7,7 @@ import top.mcfpp.type.*
 object IRCollectionValidation {
     private fun codec(type: TypeId): String? = when (type) {
         MCFPPBaseType.Int.typeId -> "int"
+        MCFPPBaseType.Float.typeId -> if (top.mcfpp.command.FloatProviders.enabled) "float" else "compound"
         MCFPPBaseType.Bool.typeId, MCFPPNBTType.Byte.typeId -> "byte"
         MCFPPNBTType.Long.typeId -> "long"
         MCFPPNBTType.ByteArray.typeId -> "byte_array"

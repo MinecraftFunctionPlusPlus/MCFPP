@@ -1,8 +1,26 @@
 package top.mcfpp.analysis
 
-/** Only rules shared with the int/bool scoreboard backend are folded here. */
+/** Arithmetic shared with the selected runtime representation; no user functions are evaluated. */
 object PrimitiveEvaluation {
     fun binary(operation: String, left: CompilerValue, right: CompilerValue): CompilerValue? {
+        if (left is CompilerValue.FloatBits && right is CompilerValue.FloatBits) {
+            val a = Float.fromBits(left.bits)
+            val b = Float.fromBits(right.bits)
+            return when (operation) {
+                "+" -> CompilerValue.FloatBits((a + b).toRawBits())
+                "-" -> CompilerValue.FloatBits((a - b).toRawBits())
+                "*" -> CompilerValue.FloatBits((a * b).toRawBits())
+                "/" -> CompilerValue.FloatBits((a / b).toRawBits())
+                "%" -> CompilerValue.FloatBits((a % b).toRawBits())
+                "==" -> CompilerValue.Bool(a == b)
+                "!=" -> CompilerValue.Bool(a != b)
+                "<" -> CompilerValue.Bool(a < b)
+                ">" -> CompilerValue.Bool(a > b)
+                "<=" -> CompilerValue.Bool(a <= b)
+                ">=" -> CompilerValue.Bool(a >= b)
+                else -> null
+            }
+        }
         if (left is CompilerValue.Integral && right is CompilerValue.Integral) {
             val a = left.value.toInt()
             val b = right.value.toInt()

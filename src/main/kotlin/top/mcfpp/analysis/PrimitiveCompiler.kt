@@ -10,6 +10,7 @@ import top.mcfpp.core.lang.MCAny
 import top.mcfpp.core.lang.MCObject
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
+import top.mcfpp.command.FloatProviders
 import top.mcfpp.backend.ListSearch
 import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.nbt.tags.Tag
@@ -30,17 +31,19 @@ import top.mcfpp.util.TempPool
 import top.mcfpp.util.StringHelper.splitNamespaceID
 import top.mcfpp.util.NBTUtil.toNBTByte
 import top.mcfpp.util.NBTUtil.toNBTLong
+import top.mcfpp.util.NBTUtil.toNBTFloat
 
 /** Internal migration boundary for scalar, erased and collection IR, without mutable Var-based analysis. */
 object PrimitiveCompiler {
     private class Unsupported : RuntimeException()
     private class Invalid(val diagnostic: String) : RuntimeException()
     private val int = MCFPPBaseType.Int.typeId
+    private val float = MCFPPBaseType.Float.typeId
     private val bool = MCFPPBaseType.Bool.typeId
     private val any = MCFPPBaseType.Any.typeId
     private val obj = MCFPPBaseType.Object.typeId
     private val erased = setOf(any, obj)
-    private val types = listOf(MCFPPBaseType.Int, MCFPPBaseType.Bool, MCFPPBaseType.Any, MCFPPBaseType.Object,
+    private val types = listOf(MCFPPBaseType.Int, MCFPPBaseType.Float, MCFPPBaseType.Bool, MCFPPBaseType.Any, MCFPPBaseType.Object,
         MCFPPBaseType.String, MCFPPBaseType.Range, MCFPPNBTType.Byte, MCFPPNBTType.Long,
         MCFPPNBTType.ByteArray, MCFPPNBTType.IntArray, MCFPPNBTType.LongArray).associateBy { it.typeId }
     private fun nbt(type: TypeId) = type != int && type != bool
@@ -49,7 +52,7 @@ object PrimitiveCompiler {
             it === MCFPPPrivateType.Wildcard || supportedType(it)
         }
         is MCFPPUnionType -> type.types.all(::supportedType)
-        else -> type.typeId in types
+        else -> type.typeId in types && (type.typeId != float || FloatProviders.enabled)
     }
 
     private data class Prepared(val function: Function, val declarations: MutableMap<Int, SymbolId>,
@@ -156,6 +159,10 @@ object PrimitiveCompiler {
             callSummary = { call, args -> ReturnTypeAnalysis.summarize(call, graph, args) })
         diagnostics += IRCollectionValidation.validate(ir, typeFacts, lowering.types,
             top.mcfpp.command.TargetCapabilities.forVersion(top.mcfpp.Project.config.version)!!)
+        if (typeFacts.values.values.any { fact ->
+            val value = (fact.value as? ValueKnowledge.Constant)?.value
+            value is CompilerValue.FloatBits && !Float.fromBits(value.bits).isFinite()
+        }) diagnostics += "Minecraft 26.3 float providers require finite float values"
         diagnostics.forEach(top.mcfpp.util.LogProcessor::error)
         val returns = ir.blocks.filter { it.id in facts.entries && it.terminator is Terminator.Return }
         val backend = Backend(function, lowering, ir, facts, typeFacts)
@@ -503,7 +510,7 @@ object PrimitiveCompiler {
                 return
             }
             context.returnStatement()?.let {
-                val value = it.expression()?.let { node -> boundValue(expression(node)) }
+                val value = it.expression()?.let { node -> promote(boundValue(expression(node)), function.returnType.typeId) }
                 if (function.returnType === MCFPPPrivateType.Void && value != null ||
                     value != null && value.type != function.returnType.typeId && function.returnType.typeId !in erased &&
                     !(exploratory && value.type == any)) invalid("Return type mismatch")
@@ -523,10 +530,10 @@ object PrimitiveCompiler {
                 expectedLiteral = declared?.let { literalToken(initializer)?.let { token -> token to types.getValue(it) } }
                 val value = try { expression(initializer) } finally { expectedLiteral = previous }
                 val view = value is ValueRef.Result && value.instruction in views
-                if (view && value.type != MCFPPBaseType.Range.typeId && types[value.type] !is MCFPPTypeWithGeneric && TypeRelations.arrayElementType(value.type) == null) unsupported()
+                if (view && value.type !in setOf(float, MCFPPBaseType.Range.typeId) && types[value.type] !is MCFPPTypeWithGeneric && TypeRelations.arrayElementType(value.type) == null) unsupported()
                 val type = declared ?: value.type
                 if (type !in types) invalid("A void expression cannot initialize a value")
-                val assigned = boundValue(value)
+                val assigned = promote(boundValue(value), type)
                 if (assigned.type != type && type !in erased && !(exploratory && assigned.type == any)) invalid("Cannot assign ${assigned.type} to $type")
                 val symbol = declare(declaration, type)
                 if (view) aliases[symbol.id] = locations.getValue((value as ValueRef.Result).instruction)
@@ -545,8 +552,8 @@ object PrimitiveCompiler {
                 val indexedDestination = if (suffix.identifierSuffix().isEmpty()) null else indexed(suffix, writing = true, readFinal = operation != "=")
                 val destination = if (indexedDestination == null) location(symbol) to symbol.declaredType
                     else (indexedDestination as ValueRef.Result).let { locations.getValue(it.instruction) to sourceTypes.getValue(it.instruction) }
-                val value = if (operation == "=") boundValue(expression(assignment.expression()))
-                    else binary(operation.dropLast(1), read(destination.first, destination.second, target), expression(assignment.expression()))
+                val value = promote(if (operation == "=") boundValue(expression(assignment.expression()))
+                    else binary(operation.dropLast(1), read(destination.first, destination.second, target), expression(assignment.expression())), destination.second)
                 if (value.type != destination.second && destination.second !in erased && !(exploratory && value.type == any)) invalid("Assignment type mismatch for ${symbol.name}")
                 if (suffix.identifierSuffix().isEmpty()) write(symbol, value)
                 else {
@@ -697,7 +704,9 @@ object PrimitiveCompiler {
             origins[result] = place
             locations[result] = Location(place)
             sourceTypes[result] = type
-            instructions += Instruction.Construct(result, place, type, parts.toMap(), sequence)
+            val assignedParts = if (contextual == null) parts.toMap() else
+                parts.mapValues { promote(it.value, (contextual as MCFPPTypeWithGeneric).generic.single().typeId) }
+            instructions += Instruction.Construct(result, place, type, assignedParts, sequence)
             return ValueRef.Result(type, result)
         }
         private fun array(node: Parser.NbtValueContext, type: MCFPPType, elements: List<Long>): ValueRef {
@@ -712,27 +721,46 @@ object PrimitiveCompiler {
             for ((name, endpoint) in listOf("left" to node.num1, "right" to node.num2)) {
                 if (endpoint == null) continue
                 val value = boundValue(expression(endpoint.`var`() ?: endpoint.value()))
-                if (value.type != int && !(exploratory && value.type == any)) unsupported()
+                if (value.type !in setOf(int, float) && !(exploratory && value.type == any)) unsupported()
                 parts[PathSegment.Field(name)] = value
             }
-            val numbers = parts.values.map { ((it as? ValueRef.Constant)?.value ?: (it as? ValueRef.Result)?.let { ref -> provenConstants[ref.instruction] }) as? CompilerValue.Integral }
-            if (numbers.size == 2 && numbers.all { it != null } && numbers[0]!!.value > numbers[1]!!.value)
+            val numbers = parts.values.map { value ->
+                when (val number = (value as? ValueRef.Constant)?.value ?: (value as? ValueRef.Result)?.let { provenConstants[it.instruction] }) {
+                    is CompilerValue.Integral -> number.value.toDouble()
+                    is CompilerValue.FloatBits -> Float.fromBits(number.bits).toDouble()
+                    else -> null
+                }
+            }
+            if (numbers.size == 2 && numbers.all { it != null } && numbers[0]!! > numbers[1]!!)
                 invalid("Left range bound must not exceed the right bound")
             return construct(node, parts, sequence = false, valueType = MCFPPBaseType.Range)
         }
         private fun boundValue(value: ValueRef): ValueRef = if (value is ValueRef.Result)
             provenResults[value.instruction]?.let { value.copy(type = it) } ?: value else value
 
+        private fun promote(value: ValueRef, target: TypeId): ValueRef {
+            if (value.type != int || target != float) return value
+            register(MCFPPBaseType.Float)
+            val result = nextResult++
+            if (runtime(value)) runtimeResults.add(result)
+            instructions += Instruction.Promote(result, value, float)
+            return ValueRef.Result(float, result)
+        }
         private fun binary(operation: String, sourceLeft: ValueRef, sourceRight: ValueRef): ValueRef {
-            val left = boundValue(sourceLeft)
-            val right = boundValue(sourceRight)
+            var left = boundValue(sourceLeft)
+            var right = boundValue(sourceRight)
             if (left.type == MCFPPBaseType.String.typeId || right.type == MCFPPBaseType.String.typeId) unsupported()
-            if (operation !in setOf("+", "-", "*", "==", "!=", "<", ">", "<=", ">=", "&&", "||")) unsupported()
+            if (operation !in setOf("+", "-", "*", "==", "!=", "<", ">", "<=", ">=", "&&", "||") &&
+                !(operation in setOf("/", "%") && (left.type == float || right.type == float))) unsupported()
             val type = if (left.type == any || right.type == any) {
                 if (!exploratory) invalid("Actual type of any is unknown; use 'as' before a concrete operation")
                 any
             } else top.mcfpp.type.TypeRelations.resolveOperator(operation, left.type, right.type)
                 ?: invalid("Unsupported operation '$operation' between ${left.type} and ${right.type}")
+            if (left.type == float || right.type == float) {
+                left = promote(left, float)
+                right = promote(right, float)
+            }
             val result = nextResult++
             if (runtime(left) || runtime(right)) runtimeResults.add(result)
             instructions += Instruction.Binary(result, operation, left, right, type)
@@ -777,8 +805,13 @@ object PrimitiveCompiler {
             if (target.returnType !== MCFPPPrivateType.Void) register(target.returnType)
             for (parameter in target.normalParams.drop(args.size)) {
                 val constant = ValueSnapshot.of(parameter.defaultVar) as? CompilerValue.Typed ?: unsupported()
-                if (constant.type !in setOf(int, bool)) unsupported()
+                if (constant.type !in setOf(int, bool, float)) unsupported()
                 args += ValueRef.Constant(constant.type, constant.payload)
+            }
+            target.normalParams.forEachIndexed { index, parameter ->
+                if (parameter.isStatic && args[index].type == int && parameter.type.typeId == float)
+                    invalid("A static float parameter requires a float argument; promotion cannot write back to int")
+                args[index] = promote(args[index], parameter.type.typeId)
             }
             calls[target.declarationId] = target
             val type = provisionalType ?: target.returnType.typeId
@@ -848,13 +881,16 @@ object PrimitiveCompiler {
                     literalToken(argument)?.let { it to expected }
                 }
                 try { boundValue(expression(argument)) } finally { expectedLiteral = previous }
-            }
+            }.toMutableList()
             val selected = when (val selection = ParameterMatcher.selectTypes(candidates, name, arguments.map { types[it.type] ?: unsupported() })) {
                 is ParameterMatcher.TypeSelection.Selected -> selection.function as NativeFunction
                 is ParameterMatcher.TypeSelection.Ambiguous -> invalid("Ambiguous member '$name'")
                 ParameterMatcher.TypeSelection.Missing -> if (exploratory && arguments.any { it.type == any })
                     candidates.singleOrNull { it.normalParams.size == arguments.size } ?: unsupported()
                 else invalid("No matching ${container.typeName} member '$name'")
+            }
+            selected.normalParams.forEachIndexed { index, parameter ->
+                arguments[index] = promote(arguments[index], parameter.type.typeId)
             }
             val location = locations[(receiver as? ValueRef.Result)?.instruction] ?: unsupported()
             if (selected.javaMethod.declaringClass == top.mcfpp.mni.NBTMapData::class.java) {
@@ -934,7 +970,7 @@ object PrimitiveCompiler {
                 val source = expression(node.unaryExpression())
                 if (node.type() == null) source else {
                     val target = type(node.type()).typeId
-                    if (target !in setOf(int, bool, MCFPPBaseType.Range.typeId) && types[target] !is MCFPPTypeWithGeneric && TypeRelations.arrayElementType(target) == null) unsupported()
+                    if (target !in setOf(int, bool, float, MCFPPBaseType.Range.typeId) && types[target] !is MCFPPTypeWithGeneric && TypeRelations.arrayElementType(target) == null) unsupported()
                     val place = (source as? ValueRef.Result)?.let { origins[it.instruction] } ?: unsupported()
                     val sourceType = (source as? ValueRef.Result)?.let { sourceTypes[it.instruction] } ?: source.type
                     if (nbt(target) && !nbt(sourceType)) unsupported()
@@ -957,6 +993,8 @@ object PrimitiveCompiler {
                 val value = expression(node.unaryExpression())
                 if (node.SUB() != null && value.type == int && value is ValueRef.Constant && value.value is CompilerValue.Integral)
                     ValueRef.Constant(int, CompilerValue.Integral((-value.value.value.toInt()).toLong()))
+                else if (node.SUB() != null && boundValue(value).type == float)
+                    binary("*", ValueRef.Constant(float, CompilerValue.FloatBits((-1f).toRawBits())), value)
                 else if (node.SUB() != null) binary("-", ValueRef.Constant(int, CompilerValue.Integral(0)), value)
                 else binary("==", value, ValueRef.Constant(bool, CompilerValue.Bool(false)))
             }
@@ -987,6 +1025,12 @@ object PrimitiveCompiler {
                 node.nbtByte() != null -> ValueRef.Constant(MCFPPNBTType.Byte.typeId, CompilerValue.Integral(node.nbtByte().text.toNBTByte().toLong()))
                 node.nbtLong() != null -> ValueRef.Constant(MCFPPNBTType.Long.typeId, CompilerValue.Integral(node.nbtLong().text.toNBTLong()))
                 node.nbtInt() != null -> ValueRef.Constant(int, CompilerValue.Integral(node.nbtInt().text.toIntOrNull()?.toLong() ?: unsupported()))
+                node.nbtFloat() != null -> {
+                    register(MCFPPBaseType.Float)
+                    val value = node.nbtFloat().text.toNBTFloat()
+                    if (!value.isFinite()) invalid("Minecraft 26.3 float providers require finite float values")
+                    ValueRef.Constant(float, CompilerValue.FloatBits(value.toRawBits()))
+                }
                 node.nbtBool() != null -> ValueRef.Constant(bool, CompilerValue.Bool(node.nbtBool().TRUE() != null))
                 node.LineString() != null -> ValueRef.Constant(MCFPPBaseType.String.typeId, CompilerValue.Text((Tag.toNBT(node.LineString().text) as StringTag).value))
                 node.nbtList() != null -> construct(node, node.nbtList().expression().mapIndexed { index, part -> PathSegment.Index(index) as PathSegment to boundValue(expression(part)) }.toMap(), true)
@@ -1049,6 +1093,17 @@ object PrimitiveCompiler {
         }
         private fun path(place: Place) = address(place)
         private fun internal(name: String, frame: Int = 0) = NBTPath.stack.intIndex(frame).memberIndex("\$ir").memberIndex(name)
+        private fun floatProvider(value: ValueRef): String {
+            val stored = (value as? ValueRef.Result)?.let { nbtResults[it.instruction] }
+            if (stored != null) return FloatProviders.storageProvider("mcfpp:system", stored.pathToCommandPart().toString())
+            val known = constant(value) as? CompilerValue.FloatBits ?: error("Unmaterialized float $value")
+            return Float.fromBits(known.bits).toString()
+        }
+        private fun computeFloat(result: Int, provider: String) {
+            val destination = internal("float_$result")
+            emit(Command("data modify").build(destination.toCommandPart()).build("set compute default float $provider"))
+            nbtResults[result] = destination
+        }
         private fun emit(command: Command) {
             // Every dynamic address parameter belongs to this frame's IR slots.
             commands += command.buildMacroFunction(NBTPath.stack.intIndex(0).memberIndex("\$ir")).analyze()
@@ -1296,7 +1351,9 @@ object PrimitiveCompiler {
                 initialized.clear()
                 initialized.addAll(storagePlaces.filter { facts.entries.getValue(block.id).read(it)?.state == ValueState.INITIALIZED })
                 if (block.id == 0 && reachable.any { candidate -> candidate.instructions.any { it is Instruction.Call ||
-                    it is Instruction.Construct || it is Instruction.Read && nbt(symbols.getValue(it.place.root).declaredType) ||
+                    it is Instruction.Construct || it is Instruction.Promote ||
+                    it is Instruction.Binary && (it.left.type == float || it.right.type == float) ||
+                    it is Instruction.Read && nbt(symbols.getValue(it.place.root).declaredType) ||
                     it is Instruction.Write && storageNames.getValue(it.place.root).startsWith("$") && nbt(symbols.getValue(it.place.root).declaredType) } })
                     emit(Commands.dataSetValue(NBTPath.stack.intIndex(0).memberIndex("\$ir"), top.mcfpp.nbt.tags.CompoundTag()))
                 for ((position, instruction) in block.instructions.withIndex()) when (instruction) {
@@ -1326,6 +1383,18 @@ object PrimitiveCompiler {
                     }
                     is Instruction.Binary -> {
                         if (!runtime(ValueRef.Result(instruction.type, instruction.result))) continue
+                        if (instruction.left.type == float && instruction.right.type == float) {
+                            val left = floatProvider(instruction.left)
+                            val right = floatProvider(instruction.right)
+                            if (instruction.type == float) computeFloat(instruction.result,
+                                FloatProviders.arithmeticProvider(left, right, instruction.operation))
+                            else {
+                                val result = temporary(bool)
+                                commands += "execute store success score $result ${FloatProviders.comparisonClause(left, right, instruction.operation)}"
+                                results[instruction.result] = result
+                            }
+                            continue
+                        }
                         val left = score(instruction.left)
                         val right = score(instruction.right)
                         val result = temporary(instruction.type)
@@ -1348,6 +1417,11 @@ object PrimitiveCompiler {
                                 commands += "execute $condition score $left $operation $right run scoreboard players set $result 1"
                             }
                         }
+                    }
+                    is Instruction.Promote -> {
+                        if (!runtime(ValueRef.Result(instruction.type, instruction.result))) continue
+                        val source = score(instruction.value)
+                        computeFloat(instruction.result, "{type:\"minecraft:from_int\",input:${FloatProviders.scoreProvider(source.name, source.objective)}}")
                     }
                     is Instruction.RawCommand -> commands.add(instruction.command)
                     is Instruction.CaptureKey -> {

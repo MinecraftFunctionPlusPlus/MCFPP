@@ -1,5 +1,8 @@
 package top.mcfpp.test.util
 
+import com.alibaba.fastjson2.JSON
+import com.alibaba.fastjson2.JSONObject
+import com.alibaba.fastjson2.JSONReader
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.nbt.tags.CompoundTag
@@ -13,6 +16,7 @@ import top.mcfpp.nbt.tags.collection.ByteArrayTag
 import top.mcfpp.nbt.tags.collection.IntArrayTag
 import top.mcfpp.nbt.tags.collection.LongArrayTag
 import top.mcfpp.nbt.tags.primitive.LongTag
+import top.mcfpp.nbt.tags.primitive.FloatTag
 
 /** Strict executor for the scoreboard and control-flow command subset covered by these tests. */
 class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<String>> = emptyMap()) {
@@ -157,6 +161,23 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             else destination.put(name, value.copy())
         }
     }
+    private fun provider(source: Any): Float {
+        if (source is Number) return source.toFloat()
+        val value = source as JSONObject
+        fun input(name: String) = provider(value[name]!!)
+        return when (value.getString("type")) {
+            "minecraft:storage" -> (readNbt(value.getString("storage"), value.getString("path")).value as Number).toFloat()
+            "minecraft:score" -> values.getValue("${value.getJSONObject("target").getString("name")} ${value.getString("score")}").toFloat()
+            "minecraft:from_int" -> input("input")
+            "minecraft:add" -> value.getJSONArray("inputs").map(::provider).reduce(Float::plus)
+            "minecraft:mul" -> value.getJSONArray("inputs").map(::provider).reduce(Float::times)
+            "minecraft:sub" -> input("left") - input("right")
+            "minecraft:div" -> input("left") / input("right")
+            "minecraft:mod" -> input("left") % input("right")
+            "minecraft:negate" -> -input("input")
+            else -> error("Unsupported float provider: $value")
+        }
+    }
     init {
         val nbtPath = """(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s"'])+"""
         val set = Regex("scoreboard players set (\\S+ \\S+) (-?\\d+)")
@@ -170,6 +191,8 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         val restore = Regex("execute store result score (\\S+ \\S+) run data get storage (\\S+) ($nbtPath)(?: 1(?:\\.0)?)?")
         val setNbt = Regex("data modify storage (\\S+) ($nbtPath) set value (.*)")
         val copyNbt = Regex("data modify storage (\\S+) ($nbtPath) set from storage (\\S+) ($nbtPath)")
+        val computeFloat = Regex("data modify storage (\\S+) ($nbtPath) set compute default float (.*)")
+        val floatCheck = Regex("execute store success score (\\S+ \\S+) (if|unless) predicate (.*)")
         val mergeNbtValue = Regex("data modify storage (\\S+) ($nbtPath) merge value (.*)")
         val mergeNbtFrom = Regex("data modify storage (\\S+) ($nbtPath) merge from storage (\\S+) ($nbtPath)")
         val clearCompound = Regex("data modify storage mcfpp:system stack_frame\\[(\\d+)]\\.(\\S+) set value \\{\\}")
@@ -260,6 +283,22 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             }
             setNbt.matchEntire(command)?.let {
                 writeNbt(it.groupValues[1], it.groupValues[2], Tag.toNBT(it.groupValues[3])); return@command false
+            }
+            computeFloat.matchEntire(command)?.let {
+                val expression = JSON.parse(it.groupValues[3], JSONReader.Feature.AllowUnQuotedFieldNames)
+                writeNbt(it.groupValues[1], it.groupValues[2], FloatTag(provider(expression)))
+                return@command false
+            }
+            floatCheck.matchEntire(command)?.let {
+                val predicate = JSON.parseObject(it.groupValues[3], JSONReader.Feature.AllowUnQuotedFieldNames)
+                check(predicate.getString("type") == "minecraft:float_value_check")
+                val actual = provider(predicate["value"]!!)
+                val test = predicate["test"]!!
+                val matched = if (test is JSONObject && !test.containsKey("type"))
+                    (!test.containsKey("min") || actual >= provider(test["min"]!!)) &&
+                    (!test.containsKey("max") || actual <= provider(test["max"]!!)) else actual == provider(test)
+                values[it.groupValues[1]] = if (matched == (it.groupValues[2] == "if")) 1 else 0
+                return@command false
             }
             copyNbt.matchEntire(command)?.let {
                 val value = readNbt(it.groupValues[3], it.groupValues[4])
