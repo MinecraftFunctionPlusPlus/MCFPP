@@ -254,7 +254,7 @@ class FloatProviderTest {
         }
         val commands = function.commands.analyzeAll()
         assertTrue(commands.any { it.contains("set from entity @s data.value") })
-        assertTrue(Project.macroFunction.values.any { it.contains("set from storage example:values values[\$(index)]") })
+        assertEquals(2, Project.macroFunction.values.count { it.contains("set from storage example:values values[\$(arg_0)]") })
         assertEquals(3, commands.count { it.contains("set compute default float") })
         assertEquals(2, commands.count { it.contains("run scoreboard players get index mcfpp_default") })
         assertFalse(commands.filter { it.contains("set compute") }.any { it.contains("example:values") || it.contains("entity_float") })

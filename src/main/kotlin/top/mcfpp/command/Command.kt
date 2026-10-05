@@ -1,14 +1,15 @@
 package top.mcfpp.command
 
 import top.mcfpp.Project
+import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.command.Command.CommandPart
 import top.mcfpp.command.Command.MacroPart
 import top.mcfpp.core.lang.Var
 import top.mcfpp.exception.CommandException
-import top.mcfpp.lib.MemberPath
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.TempPool
+import top.mcfpp.nbt.tags.CompoundTag
 import java.io.Serializable
 import java.util.*
 
@@ -254,20 +255,22 @@ open class Command: Serializable {
     fun buildMacroFunction() : Array<Command>{
         if(!isMacro) return arrayOf(this)
         val f = TempPool.getFunctionIdentify("macro")
-        val sharedPath = NBTPath.getMaxImmediateSharedPath(*commandParts.filterIsInstance<MacroPart>().map { it.v.nbtPath }.toTypedArray())?: NBTPath.macroTemp
-        Project.macroFunction[f] = "$$this"
-        val re = ArrayList<Command>()
-        for (v in commandParts.filterIsInstance<MacroPart>().map { it.v }){
-            if(v.nbtPath.pathList.last() !is MemberPath || !sharedPath.isImmediateParentOf(v.nbtPath)){
-                //变量需要传递
-                re.addAll(
-                    Commands.fakeFunction(Function.nullFunction) {
-                        v.clone().apply { sharedPath.memberIndex(v.identifier) }.assignedBy(v)
-                    }
-                )
-            }
+        val argumentPath = NBTPath.macroTemp.memberIndex(f)
+        val slots = IdentityHashMap<Var<*>, String>()
+        val variables = ArrayList<Var<*>>()
+        val body = StringBuilder("$")
+        for (part in commandParts) {
+            if (part is MacroPart) {
+                val slot = slots[part.v] ?: "arg_${variables.size}".also { slots[part.v] = it; variables.add(part.v) }
+                body.append("$(").append(slot).append(")")
+            } else body.append(part)
         }
-        re.add(Command.build("function mcfpp:dynamic/$f with").build(sharedPath.toCommandPart()))
+        Project.macroFunction[f] = body.toString()
+        val re = Commands.fakeFunction(Function.nullFunction) {
+            Function.addCommand(Commands.dataSetValue(argumentPath, CompoundTag()))
+            variables.forEach { StorageAccess.encodeTo(argumentPath.memberIndex(slots[it]!!), it) }
+        }.toMutableList()
+        re.add(Command.build("function mcfpp:dynamic/$f with").build(argumentPath.toCommandPart()))
         return re.toTypedArray()
     }
 

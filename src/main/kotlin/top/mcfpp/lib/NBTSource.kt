@@ -45,11 +45,11 @@ class EntitySource(val entity: SelectorVar): NBTSource{
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is EntitySource) return false
-        return entity == other.entity
+        return sourceKey(this) == sourceKey(other)
     }
 
     override fun hashCode(): Int {
-        return entity.hashCode()
+        return sourceKey(this).hashCode()
     }
 }
 
@@ -65,10 +65,10 @@ class BlockSource(val pos: Pos3Var): NBTSource{
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is BlockSource) return false
-        return pos == other.pos
+        return sourceKey(this) == sourceKey(other)
     }
 
     override fun hashCode(): Int {
-        return pos.hashCode()
+        return sourceKey(this).hashCode()
     }
 }

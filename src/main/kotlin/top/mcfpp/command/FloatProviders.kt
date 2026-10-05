@@ -6,7 +6,6 @@ import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.lib.NBTPath
-import top.mcfpp.lib.IntPath
 import top.mcfpp.lib.StorageSource
 import top.mcfpp.model.function.Function
 import top.mcfpp.nbt.tags.primitive.FloatTag
@@ -26,20 +25,11 @@ object FloatProviders {
     fun snapshot(value: MCFloat): MCFloat {
         if (value.isError) return value
         val result = temporary()
-        preparePath(value.nbtPath)
         emit(Commands.dataSetFrom(result.nbtPath, value.nbtPath))
         return result
     }
 
-    private fun preparePath(path: NBTPath) {
-        path.pathList.filterIsInstance<IntPath>().map { it.value }
-            .filter { it !is MCIntConcrete && !it.isDataOnly }.forEach {
-                // A previous macro use may have cached an earlier score value.
-                it.hasStoredInStack = false
-                it.storeToStack()
-            }
-    }
-
+    // Macro lowering captures live index values directly into its own argument compound.
     private fun emit(command: Command) = Function.addCommands(command.buildMacroFunction())
 
     /** Providers can only read command storage. Snapshot other sources and macro paths. */
@@ -47,7 +37,6 @@ object FloatProviders {
         var sourcePath = path
         if (path.source !is StorageSource || path.pathToCommandPart().isMacro) {
             sourcePath = temporary().nbtPath
-            preparePath(path)
             emit(Commands.dataSetFrom(sourcePath, path))
         }
         return storageProvider((sourcePath.source as StorageSource).storage, sourcePath.pathToCommandPart().toString())
@@ -103,11 +92,9 @@ object FloatProviders {
     fun assign(target: MCFloat, value: MCFloat): MCFloat {
         if (!valid(value)) return MCFloat(target).apply { parent = target.parent; isError = true }
         if (value is MCFloatConcrete && !target.isDataOnly) return MCFloatConcrete(target, value.value)
-        preparePath(target.nbtPath)
         if (value is MCFloatConcrete) {
             emit(Commands.dataSetValue(target.nbtPath, FloatTag(value.value)))
         } else {
-            preparePath(value.nbtPath)
             emit(Commands.dataSetFrom(target.nbtPath, value.nbtPath))
         }
         return if (target is MCFloatConcrete) MCFloat(target).apply { parent = target.parent } else target
@@ -116,7 +103,6 @@ object FloatProviders {
     fun materialize(value: MCFloatConcrete): MCFloat {
         val result = MCFloat(value).apply { parent = value.parent }
         if (!valid(value)) return result.apply { isError = true }
-        preparePath(result.nbtPath)
         emit(Commands.dataSetValue(result.nbtPath, FloatTag(value.value)))
         return result
     }

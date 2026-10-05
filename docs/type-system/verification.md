@@ -1,10 +1,16 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段 51 最终复查 20 项通过，Gradle exit 0；MCFL 11 未变，未重建标准库。最近完整检查仍属于提交 72dc557，共 346 项；本阶段未运行完整 check 或实际 Minecraft 服务端。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段 52 最终复查 NBTAddressTest 7、FloatProviderTest 10，共 17 项通过，Gradle exit 0；前轮 CollectionStorageTest 39、MapMemberTest 16 通过，合计 72 项中仅首轮 FloatProviderTest 1 项失败，其余 71 项通过。MCFL 11 未变，未重建标准库。最近完整检查仍属于提交 72dc557，共 346 项；本阶段未运行完整 check 或实际 Minecraft 服务端。
 
-## 最新必要检查：旧浮点 IR（阶段 51）
+## 最新必要检查：NBT 地址等价与宏捕获（阶段 52）
 
-最终复查 LegacyFloatIRTest 9、LegacyFloatLayoutTest 5、LegacyFloatConversionTest 6，共 20 项通过，0 failures/errors/skips。日志：`F:/DevCache/.codex/runtime/mcfpp-legacy-float-ir-final.log`。首轮 51 项有 3 项失败，其余 42 项通过；修复 identity/诊断后首次复查因 4 处智能转换导致编译失败并已修复。随后 22 项检查有 1 项失败、其中算术 13 项通过；修复 Concrete 目标的默认 0 覆写后，最终 20 项全部通过。相关历史日志：`mcfpp-legacy-float-ir.log`、`mcfpp-legacy-float-ir-interop.log`、`mcfpp-legacy-float-ir-interop-final.log`。MCFL 11 未变，无签名/缓存结构变化，未重建标准库；未运行完整 check 或实际 Minecraft 服务端。
+NBTAddressTest 7、FloatProviderTest 10，共 17 项通过，0 failures/errors/skips。首轮四套件共 72 项仅 `FloatProviderTest.nonStorageAndDynamicIndexSourcesAreCopiedBeforeEvaluation` 失败（读取次数预期 2、实际 4），其余 71 项通过；`FloatProviders.preparePath` 原先预写动态 index，随后自动宏参数编码又读取一次。移除该重复预写后保留原 2 次读取断言，定向复查 17 项全部通过。日志：`F:/DevCache/.codex/runtime/mcfpp-nbt-address.log`、`mcfpp-nbt-address-final.log`。
+
+`NBTAddressKey` 冻结地址 source 与 path segments；按快照比较路径段和长度，父子路径同时检查 source，修复 equals 自递归，避免不同来源或不同深度路径被判为同址。自动宏参数使用独立 arg 槽，值来自实际绑定或 scoreboard；FloatProviders 不再预先重复写入 index。前轮 CollectionStorageTest 39、MapMemberTest 16 均通过，故最终只复查直接受影响的两个套件。MCFL 11 未变；未运行完整 check、未重建标准库或实际 Minecraft 服务端。
+
+## 历史必要检查：旧浮点 IR（阶段 51）
+
+最终复查 LegacyFloatIRTest 9、LegacyFloatLayoutTest 5、LegacyFloatConversionTest 6，共 20 项通过，0 failures/errors/skips。日志：`F:/DevCache/.codex/runtime/mcfpp-legacy-float-ir-final.log`。首轮 51 项有 3 项失败；修复 identity/诊断后首次复查因 4 处智能转换导致编译失败并已修复。随后 22 项检查有 1 项失败、其中算术 13 项通过；修复 Concrete 目标的默认 0 覆写后，最终 20 项全部通过。相关历史日志：`mcfpp-legacy-float-ir.log`、`mcfpp-legacy-float-ir-interop.log`、`mcfpp-legacy-float-ir-interop-final.log`。MCFL 11 未变，无签名/缓存结构变化，未重建标准库；未运行完整 check 或实际 Minecraft 服务端。
 
 旧浮点算术/比较、Promote/Convert 已接入 IR，四分量使用独立 NBT 帧，纯 `LegacyFloatCommands` 负责读写/调用，并保留旧 4 记分板 return ABI。普通、递归、static、旧与 IR 双向调用、早先参数、多实参、常量及连续返回已由真实库命令执行。旧算术/比较不做宿主浮点折叠或跨数值折叠；`16777217` 保留八位十进制表示。identity/toNBT 保留来源 codec。包含 FloatBits 端点的旧浮点范围，其静态顺序不再用宿主比较（整数/native 行为不变），未定义浮点迭代语义。
 

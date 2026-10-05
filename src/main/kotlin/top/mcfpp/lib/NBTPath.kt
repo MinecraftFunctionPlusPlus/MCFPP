@@ -82,27 +82,14 @@ class NBTPath(var source: NBTSource): Serializable {
     }
 
     fun isParentOf(other: NBTPath): Boolean{
-        if(pathList.size >= other.pathList.size){
-            return false
-        }
-        for (i in pathList.withIndex()){
-            if(i.value != other.pathList[i.index]){
-                return false
-            }
-        }
-        return true
+        val key = NBTAddressKey.of(this)
+        val target = NBTAddressKey.of(other)
+        return key.source == target.source && key.segments.size < target.segments.size &&
+            target.segments.take(key.segments.size) == key.segments
     }
 
     fun isImmediateParentOf(other: NBTPath): Boolean{
-        if(pathList.size + 1 != other.pathList.size){
-            return false
-        }
-        for (i in pathList.withIndex()){
-            if(i.value != other.pathList[i.index]){
-                return false
-            }
-        }
-        return true
+        return pathList.size + 1 == other.pathList.size && isParentOf(other)
     }
 
     fun isChildOf(other: NBTPath): Boolean{
@@ -176,16 +163,11 @@ class NBTPath(var source: NBTSource): Serializable {
     }
 
     override fun equals(other: Any?): Boolean {
-        if(other == this) return true
-        if(other !is NBTPath) return false
-        if(source != other.source) return false
-        for (i in pathList.withIndex()){
-            if(i.value != other.pathList[i.index]){
-                return false
-            }
-        }
-        return true
+        if(this === other) return true
+        return other is NBTPath && NBTAddressKey.of(this) == NBTAddressKey.of(other)
     }
+
+    override fun hashCode(): Int = NBTAddressKey.of(this).hashCode()
 
     companion object{
 
@@ -210,23 +192,24 @@ class NBTPath(var source: NBTSource): Serializable {
             }
             //保证源一致
             if(path.any { it.source != path[0].source }) return null
-            val map = HashMap<NBTPath?, Int>()
+            val map = LinkedHashMap<NBTAddressKey?, Pair<NBTPath?, Int>>()
             for (i in path){
                 val parent = i.parent()
-                map[parent] = (map[parent]?:0) + 1
+                val key = parent?.let(NBTAddressKey::of)
+                map[key] = parent to ((map[key]?.second ?: 0) + 1)
             }
-            val re = map.maxByOrNull { it.value }?.key
-            if(map[re] == 1 && map.size != 1){
+            val re = map.maxByOrNull { it.value.second }?.value ?: return null
+            if(re.second == 1 && map.size != 1){
                 return null
             }
-            return re
+            return re.first
         }
 
         fun getSharedPath(vararg path: NBTPath): NBTPath?{
             if(path.isEmpty()){
                 return null
             }
-            var re = path[0]
+            var re = path[0].clone()
             for (i in path.withIndex()){
                 re = getSharedPath(re, i.value) ?: return null
             }
@@ -234,11 +217,11 @@ class NBTPath(var source: NBTSource): Serializable {
         }
 
         fun getSharedPath(path1: NBTPath, path2: NBTPath): NBTPath?{
-            if(path2.pathList.size < path1.pathList.size) return getSharedPath()
-            if(path1.isParentOf(path2)){
-                return path1.clone()
-            }
-            return path1.parent()?.let { getSharedPath(it, path2) }
+            val first = NBTAddressKey.of(path1)
+            val second = NBTAddressKey.of(path2)
+            if(first.source != second.source) return null
+            val length = first.segments.zip(second.segments).takeWhile { it.first == it.second }.size
+            return path1.clone().apply { while(pathList.size > length) pathList.removeLast() }
         }
 
         //storage mcfpp:system test.stack_frame[0].qwq
