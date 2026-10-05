@@ -13,7 +13,6 @@ import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Member
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.ObjectDataTemplate
-import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.Utils.addFirst
 import top.mcfpp.util.Utils.subMap
 import java.util.*
@@ -32,25 +31,6 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
             val (p,v) = parseParam(param)
             normalParams.add(p)
             scope.putVar(p.identifier, v)
-        }
-    }
-
-    fun isSelf(d: DataTemplate, normalParams: List<MCFPPType>) : Boolean{
-        if (this.data == d && this.normalParams.size == normalParams.size) {
-            if (this.normalParams.size == 0) {
-                return true
-            }
-            var hasFoundFunc = true
-            //参数比对
-            for (i in normalParams.indices) {
-                if (!FunctionParam.isSubOf(normalParams[i],this.normalParams[i].type)) {
-                    hasFoundFunc = false
-                    break
-                }
-            }
-            return hasFoundFunc
-        }else{
-            return false
         }
     }
 

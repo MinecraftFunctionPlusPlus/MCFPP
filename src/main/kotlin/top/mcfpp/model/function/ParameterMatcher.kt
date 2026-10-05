@@ -70,6 +70,15 @@ object ParameterMatcher {
         object Missing : TypeSelection
     }
 
+    fun selectConstructor(constructors: List<DataTemplateConstructor>, arguments: List<Var<*>>): TypeSelection {
+        val matches = best(constructors.mapNotNull { match(it, it.identifier, emptyList(), arguments, true) })
+        return when (matches.size) {
+            0 -> TypeSelection.Missing
+            1 -> TypeSelection.Selected(matches.single().function)
+            else -> TypeSelection.Ambiguous(matches.map { it.function })
+        }
+    }
+
     /** Preliminary type-only binding; value requirements remain the responsibility of the IR boundary. */
     fun selectTypes(functions: List<Function>, key: String, normal: List<MCFPPType>): TypeSelection {
         val matches = functions.mapNotNull { function ->

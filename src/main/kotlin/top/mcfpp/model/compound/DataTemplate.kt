@@ -10,6 +10,7 @@ import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.DataTemplateConstructor
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.ParameterMatcher
 import top.mcfpp.model.property.Property
 import top.mcfpp.model.scope.CompoundDataScope
 import top.mcfpp.model.scope.GlobalScope
@@ -188,24 +189,8 @@ open class DataTemplate : FieldContainer, CompoundData {
         return template == this && reference.any { it == template || it.ifInfinitiveReference(template) }
     }
 
-    fun getConstructorByString(normalParams: List<String>): DataTemplateConstructor?{
-        return getConstructorByType(
-            ArrayList(normalParams.map { MCFPPType.parseFromString(it, scope)?: MCFPPBaseType.Any })
-        )
-    }
-
-    /**
-     * 根据参数列表获取一个类的构造函数
-     * @return 返回这个类的参数
-     */
-    fun getConstructorByType(normalParams: List<MCFPPType>): DataTemplateConstructor? {
-        for (f in constructors) {
-            if(f.isSelf(this, normalParams)){
-                return f
-            }
-        }
-        return null
-    }
+    fun resolveConstructor(arguments: List<Var<*>>): ParameterMatcher.TypeSelection =
+        ParameterMatcher.selectConstructor(constructors, arguments)
 
     companion object{
 

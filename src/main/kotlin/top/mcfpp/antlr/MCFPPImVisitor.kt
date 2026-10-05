@@ -460,9 +460,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         when(val exp = MCFPPExprVisitor().visit(expr)){
             is ScoreBoolConcrete -> {
                 if (exp.value) {
-                    //函数调用的命令
-                    //给子函数开栈
-                    Function.addCommand("function " + f.namespaceID)
+                    // visitIfStatement inlines a branch that is known to run.
                     //LogProcessor.warn("The condition is always true. ")
                     breakIf = ConditionType.ALWAYS_TRUE
                 } else {
@@ -519,9 +517,8 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         when(val exp = MCFPPExprVisitor().visit(expr)){
             is ScoreBoolConcrete -> {
                 if (exp.value) {
-                    //函数调用的命令
-                    //给子函数开栈
-                    Function.addCommand("function " + f.namespaceID)
+                    // A runtime chain registers this branch; a static chain inlines it.
+                    if (breakIf == ConditionType.NORMAL) Function.addCommand("function " + f.namespaceID)
                     //LogProcessor.warn("The condition is always true. ")
                     breakIf = if(breakIf == ConditionType.NORMAL) ConditionType.NORMAL else ConditionType.ALWAYS_TRUE
                 } else {

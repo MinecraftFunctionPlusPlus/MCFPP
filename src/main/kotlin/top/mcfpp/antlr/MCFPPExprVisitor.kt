@@ -17,6 +17,7 @@ import top.mcfpp.model.Generic
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam
+import top.mcfpp.model.function.ParameterMatcher
 import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.scope.GlobalScope
@@ -300,7 +301,7 @@ class MCFPPExprVisitor(
         if(currSelector is PropertyVar && (!preserveFinalProperty || ctx.selector().isNotEmpty())){
             currSelector = (currSelector as PropertyVar).get();
         }
-        if(currSelector is UnknownVar){
+        if(currSelector is UnknownVar && !currSelector!!.isError){
             val typeStr = ctx.jvmAccessExpression().text
             val type = MCFPPType.parseFromString(typeStr, Function.currFunction.scope)
             if(type == null){
@@ -354,7 +355,7 @@ class MCFPPExprVisitor(
         if (ctx.`var`() != null) {
             //变量
             val qwq = visitVar(ctx.`var`())
-            if(qwq is UnknownVar && ctx.parent.parent !is mcfppParser.VarWithSelectorContext){
+            if(qwq is UnknownVar && !qwq.isError && ctx.parent.parent !is mcfppParser.VarWithSelectorContext){
                 LogProcessor.error(TextTranslator.SYMBOL_NOT_DEFINED.translate(qwq.identifier))
             }
             return qwq
@@ -513,14 +514,18 @@ class MCFPPExprVisitor(
         //可能是模板的构造函数
         val template: DataTemplate? = GlobalScope.getTemplate(p.first, p.second)
         if(template != null) {
-            val init = DataTemplateObjectConcrete(template.getType().defaultValueVar() as DataTemplateObjectConcrete)
-            val constructor = template.getConstructorByString(FunctionParam.getArgTypeNames(normalArgs))
-            if (constructor == null) {
-                LogProcessor.error("No constructor like: " + FunctionParam.getArgTypeNames(normalArgs) + " defined in class " + ctx.namespaceID().text)
+            val selection = template.resolveConstructor(normalArgs)
+            if (selection !is ParameterMatcher.TypeSelection.Selected) {
+                when (selection) {
+                    is ParameterMatcher.TypeSelection.Ambiguous -> LogProcessor.error("Ambiguous constructor '${ctx.namespaceID().text}': ${selection.functions.joinToString()}")
+                    else -> LogProcessor.error("No constructor like: " + FunctionParam.getArgTypeNames(normalArgs) + " defined in class " + ctx.namespaceID().text)
+                }
                 Function.addComment("[Failed to compile]${ctx.text}")
-            } else {
-                constructor.invoke(normalArgs, init)
+                top.mcfpp.analysis.StorageAccess.restore(spills)
+                return UnknownVar("error_${ctx.text}").apply { isError = true }
             }
+            val init = DataTemplateObjectConcrete(template.getType().defaultValueVar() as DataTemplateObjectConcrete)
+            selection.function.invoke(normalArgs, init)
             top.mcfpp.analysis.StorageAccess.restore(spills)
             //可能会对init进行替换
             return Function.currFunction.scope.getVar(init.identifier) ?: init

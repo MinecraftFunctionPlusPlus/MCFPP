@@ -1,8 +1,14 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段 53 最终复查 VarIdentityTest 5、StorageViewTest 21、LegacyFloatIRTest 9，共 35 项通过，Gradle exit 0。阶段 52 最终 17 项通过；阶段 53 首轮 63 项有 2 项失败，其余 61 项通过。MCFL 11 未变，未重建标准库。最近完整检查仍属于提交 72dc557，共 346 项；本阶段未运行完整 check 或实际 Minecraft 服务端。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段 54 ConstructorResolutionTest 最终 4 项通过，Gradle exit 0。首轮 ConstructorResolutionTest 4 + TypeBindingTest 4 + StorageViewTest 21 共 29 项有 3 项失败；随后 ConstructorResolutionTest 4 + LogicStatementTest 6 有 1 项失败，修复断言后最终 4 项通过。MCFL 11 未变，未重建标准库。最近完整检查仍属于提交 72dc557，共 346 项；本阶段未运行完整 check 或实际 Minecraft 服务端。
 
-## 最新必要检查：宿主值对象身份（阶段 53）
+## 最新必要检查：模板构造器重载解析（阶段 54）
+
+ConstructorResolutionTest 最终 4 项通过，0 failures/errors/skips。覆盖精确候选不受声明顺序影响、T! 拒绝未知形参但接受完整常量、默认实参在 if/else-if 常量分支中的执行、歧义无构造副作用（只容许公共帧前言）。解析以 `ParameterMatcher.match`/`best` 选择候选，复用类型、完整值、默认参数及歧义判断；旧的字符串/类型顺序重载接口已删除，只有 `Selected` 才初始化对象，错误 `UnknownVar` 后续 visitor 访问不再重复诊断。常真 if 及静态 false→true else-if 主体内联时不再调用未注册函数。
+
+首轮 ConstructorResolutionTest 4、TypeBindingTest 4、StorageViewTest 21 共 29 项有 3 项失败，TypeBinding/StorageView 全过；中间复查 ConstructorResolutionTest 4 + LogicStatementTest 6 共 10 项有 1 项失败，LogicStatement 6 全过，剩余失败是测试误禁公共 stack prepend 前言。最终仅复查 ConstructorResolutionTest 4 项通过。日志：`F:/DevCache/.codex/runtime/mcfpp-constructor-resolution.log`、`mcfpp-constructor-resolution-final.log`、`mcfpp-constructor-resolution-complete.log`。MCFL 11 未变；未重建标准库、未运行完整 check 或实际 Minecraft 服务端。模板构造 compile 的普通常量特化、`this`/`preInit` 帧尚未改动。
+
+## 历史必要检查：宿主值对象身份（阶段 53）
 
 VarIdentityTest 5、StorageViewTest 21、LegacyFloatIRTest 9，共 35 项最终复查通过，0 failures/errors/skips。首轮 VarIdentityTest 5、NBTAddressTest 7、StorageViewTest 21、ListMemberTest 19、SpecializationPolicyTest 11 共 63 项有 2 项失败；后四套件共 58 项全部通过。失败分别为跨递归调用的 legacy visitor 表达式结果错误（期望 sum 24、得到 49）和 spill 测试执行器未建立帧。括号子 visitor 现共享父级活跃值列表，同时保留各自结果字段；直接 spill 测试通过真实 stack prepend/remove 建立执行器帧。最终复查使用 `F:/DevCache/.codex/runtime/mcfpp-var-identity-final.log`，首轮日志为 `mcfpp-var-identity.log`。
 
