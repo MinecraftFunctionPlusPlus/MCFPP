@@ -10,6 +10,7 @@ object EffectAnalysis {
             when (instruction) {
                 is Instruction.Write -> instruction.place.path.size
                 is Instruction.DictionaryMember -> instruction.receiver.place.path.size + 1
+                is Instruction.ListMember -> instruction.receiver.place.path.size
                 is Instruction.Call -> instruction.argumentPlaces.sumOf { it?.path?.size ?: 0 }
                 else -> 0
             }
@@ -26,6 +27,7 @@ object EffectAnalysis {
                         is Instruction.RawCommand -> Effect.Unknown
                         is Instruction.Write -> Effect.Writes(setOf(instruction.place))
                         is Instruction.DictionaryMember -> instruction.effect
+                        is Instruction.ListMember -> Effect.Writes(setOf(instruction.receiver.place))
                         is Instruction.Call -> callEffect(instruction, functions, effects)
                         else -> Effect.Pure
                     }

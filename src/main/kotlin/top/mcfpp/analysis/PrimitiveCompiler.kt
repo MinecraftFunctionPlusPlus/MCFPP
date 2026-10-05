@@ -638,12 +638,19 @@ object PrimitiveCompiler {
         }
         private fun member(source: ValueRef, context: Parser.FunctionCallContext): ValueRef {
             val receiver = boundValue(source)
-            val container = types[receiver.type] as? MCFPPDictType ?: if (exploratory && receiver.type == any)
-                register(MCFPPDictType(MCFPPBaseType.Any)) as MCFPPDictType else unsupported()
             if (context.arguments().readOnlyArgs() != null) unsupported()
             val name = context.namespaceID().text
-            val candidates = container.objectData.scope.getFunctionCandidates(name).filterIsInstance<NativeFunction>()
-                .map { it.replaceGenericParams(mapOf("E" to container.generic.single())) }
+            val container = types[receiver.type].let { declared ->
+                if (receiver.type != any) declared else if (exploratory) {
+                    val place = (receiver as? ValueRef.Result)?.let { origins[it.instruction] }
+                    types[(knowledge[place?.root] as? TypeKnowledge.Exact)?.type] ?:
+                        register(if (name in setOf("merge", "containsKey", "remove", "clear")) MCFPPDictType(MCFPPBaseType.Any) else MCFPPListType(MCFPPBaseType.Any))
+                } else invalid("Actual type of any is unknown; use 'as' before a member call")
+            }
+            if (container !is MCFPPDictType && container !is MCFPPListType && container !is MCFPPImmutableListType) unsupported()
+            val members = if (container is MCFPPDictType) container.objectData else container.instanceData
+            val candidates = members.scope.getFunctionCandidates(name).filterIsInstance<NativeFunction>()
+                .map { it.replaceGenericParams(mapOf("E" to (container as MCFPPTypeWithGeneric).generic.single())) }
             val arguments = context.arguments().normalArgs().expressionList()?.expression().orEmpty().mapIndexed { index, argument ->
                 val previous = expectedLiteral
                 expectedLiteral = candidates.singleOrNull()?.normalParams?.getOrNull(index)?.type?.let { expected ->
@@ -656,7 +663,27 @@ object PrimitiveCompiler {
                 is ParameterMatcher.TypeSelection.Ambiguous -> invalid("Ambiguous member '$name'")
                 ParameterMatcher.TypeSelection.Missing -> if (exploratory && arguments.any { it.type == any })
                     candidates.singleOrNull { it.normalParams.size == arguments.size } ?: unsupported()
-                else invalid("No matching dictionary member '$name'")
+                else invalid("No matching ${container.typeName} member '$name'")
+            }
+            val location = locations[(receiver as? ValueRef.Result)?.instruction] ?: unsupported()
+            if (selected.javaMethod.declaringClass == top.mcfpp.mni.NBTListData::class.java) {
+                val operation = when (selected.identifier) {
+                    "clear" -> ListOperation.CLEAR
+                    "add" -> ListOperation.APPEND
+                    "prepend" -> ListOperation.PREPEND
+                    "addAll" -> ListOperation.APPEND_ALL
+                    "prependAll" -> ListOperation.PREPEND_ALL
+                    "insert" -> ListOperation.INSERT
+                    "removeAt" -> ListOperation.REMOVE_AT
+                    else -> unsupported()
+                }
+                val index = arguments.firstOrNull()?.takeIf { operation == ListOperation.INSERT || operation == ListOperation.REMOVE_AT }
+                val constant = if (index is ValueRef.Constant) index.value else (index as? ValueRef.Result)?.let { provenConstants[it.instruction] }
+                val argument = arguments.lastOrNull()?.takeUnless { operation == ListOperation.REMOVE_AT }
+                instructions += Instruction.ListMember(operation, location, container.typeId, argument,
+                    (argument as? ValueRef.Result)?.let { origins[it.instruction] }, index,
+                    (constant as? CompilerValue.Integral)?.value?.toInt())
+                return ValueRef.Result(MCFPPPrivateType.Void.typeId, -1)
             }
             if (selected.javaMethod.declaringClass != top.mcfpp.mni.NBTDictionaryData::class.java) unsupported()
             val operation = when (selected.identifier) {
@@ -673,7 +700,6 @@ object PrimitiveCompiler {
                     if (it == null && !exploratory) invalid("Cannot generate dictionary access with an unknown string key: no verified NBT-path escaping backend is available")
                 }
             } else null
-            val location = locations[(receiver as? ValueRef.Result)?.instruction] ?: unsupported()
             val result = if (operation == DictionaryOperation.CONTAINS_KEY) nextResult++ else null
             val resultPlace = result?.let {
                 runtimeResults.add(it)
@@ -1004,6 +1030,35 @@ object PrimitiveCompiler {
                         }
                     }
                     is Instruction.RawCommand -> commands.add(instruction.command)
+                    is Instruction.ListMember -> {
+                        val destination = address(instruction.receiver)
+                        val id = callNumber++
+                        val source = internal("list_value_$id")
+                        instruction.argument?.let { encode(source, it) }
+                        val index = instruction.index?.let { value ->
+                            instruction.knownIndex?.let(::MCIntConcrete) ?: MCInt("list_index_$id").apply {
+                                nbtPath = internal(identifier); isDataOnly = true; hasAssigned = true
+                                encode(nbtPath, value)
+                            }
+                        }
+                        when (instruction.operation) {
+                            ListOperation.CLEAR -> emit(Commands.dataSetValue(destination, ListTag()))
+                            ListOperation.REMOVE_AT -> emit(Command("data remove").build(destination.intIndex(index!!).toCommandPart()))
+                            else -> {
+                                val command = Command("data modify").build(destination.toCommandPart())
+                                when (instruction.operation) {
+                                    ListOperation.APPEND, ListOperation.APPEND_ALL -> command.build("append")
+                                    ListOperation.PREPEND, ListOperation.PREPEND_ALL -> command.build("prepend")
+                                    ListOperation.INSERT -> {
+                                        command.build("insert")
+                                        if (instruction.knownIndex != null) command.build(instruction.knownIndex.toString()) else command.buildMacro(index!!)
+                                    }
+                                    else -> error("Not an insertion")
+                                }
+                                emit(command.build("from").build((if (instruction.operation.bulk) source.iteratorIndex() else source).toCommandPart()))
+                            }
+                        }
+                    }
                     is Instruction.DictionaryMember -> {
                         val destination = address(instruction.receiver)
                         when (instruction.operation) {

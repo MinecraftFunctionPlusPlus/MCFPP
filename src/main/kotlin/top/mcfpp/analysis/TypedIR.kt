@@ -11,6 +11,9 @@ sealed interface Instruction {
     data class Read(val result: Int, val place: Place, val type: TypeId, val location: Location = Location(place)) : Instruction
     data class Write(val place: Place, val value: ValueRef, val containerType: TypeId? = null, val location: Location = Location(place)) : Instruction
     data class CaptureIndex(val result: Int, val value: ValueRef, val container: Location) : Instruction
+    data class ListMember(val operation: ListOperation, val receiver: Location, val type: TypeId,
+                          val argument: ValueRef? = null, val argumentPlace: Place? = null,
+                          val index: ValueRef? = null, val knownIndex: Int? = null) : Instruction
     data class DictionaryMember(val operation: DictionaryOperation, val receiver: Location, val type: TypeId,
                                 val argument: ValueRef? = null, val key: String? = null,
                                 val result: Int? = null, val resultPlace: Place? = null) : Instruction {
@@ -117,6 +120,11 @@ object FlowAnalysis {
                     if (source != null) state.copyFrom(frozen!!.facts, frozen.place, instruction.place, includeRoot = false)
                 }
                 is Instruction.CaptureIndex -> values[instruction.result] = value(instruction.value)
+                is Instruction.ListMember -> {
+                    beforeWrites[id to position] = state.fork()
+                    val source = instruction.argument?.let(::snapshot)
+                    ListFacts.edit(state, instruction, source?.facts, source?.place, instruction.argument?.let(::value))
+                }
                 is Instruction.DictionaryMember -> {
                     val place = instruction.receiver.place
                     when (instruction.operation) {

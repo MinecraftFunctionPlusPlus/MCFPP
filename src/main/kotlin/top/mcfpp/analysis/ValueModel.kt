@@ -121,7 +121,12 @@ class FlowFacts private constructor(private val facts: MutableMap<Place, ValueFa
         return locations
     }
     fun read(place: Place): ValueFacts? {
-        if (PathSegment.UnknownIndex !in place.path) return facts[place]
+        if (PathSegment.UnknownIndex !in place.path) return facts[place] ?: facts.entries.filter { (range, _) ->
+            range.root == place.root && range.path.size == place.path.size &&
+                range.path.zip(place.path).all { (left, right) -> left == right || left == PathSegment.UnknownIndex }
+        }.map { it.value }.reduceOrNull(ValueFacts::join)?.let {
+            it.copy(value = ValueKnowledge.Unknown, type = if (it.state == ValueState.INITIALIZED) it.type else TypeKnowledge.Unknown)
+        }
         val candidates = alternatives(place) ?: return facts[place]
         if (candidates.isEmpty()) return null
         val values = candidates.map { facts[it] ?: return null }
@@ -229,6 +234,20 @@ class FlowFacts private constructor(private val facts: MutableMap<Place, ValueFa
                 b == null -> a.copy(value = ValueKnowledge.Unknown, state = ValueState.UNINITIALIZED)
                 else -> a.join(b)
             }
+        }
+        // Different lengths discard exact shape, but every existing element may still share one type.
+        for (place in lengths.keys + other.lengths.keys) {
+            if (lengths[place] == other.lengths[place]) continue
+            val range = place.unknownIndex()
+            val left = read(range)
+            val right = other.read(range)
+            val common = when {
+                lengths[place] == 0 -> right
+                other.lengths[place] == 0 -> left
+                left != null && right != null -> left.join(right)
+                else -> null
+            }
+            if (common != null) joined[range] = common.copy(value = ValueKnowledge.Unknown)
         }
         return FlowFacts(joined, true, lengths.filter { (place, size) -> other.lengths[place] == size }.toMutableMap())
     }
