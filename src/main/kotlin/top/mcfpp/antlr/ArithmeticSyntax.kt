@@ -15,7 +15,7 @@ import top.mcfpp.command.FloatProviders
 /** Negate numeric values without changing the operand. */
 internal fun negateNumber(value: Var<*>, concreteOnly: Boolean = false): Var<*>? {
     if (FloatProviders.enabled && value is MCFloat && !concreteOnly) return FloatProviders.negate(value)
-    if (value is MCFloatConcrete && value !== MCFloat.ssObj) return MCFloatConcrete(-value.value)
+    if (value is MCFloatConcrete) return MCFloatConcrete(-value.value)
     if (value === MCFloat.ssObj && concreteOnly) return null
     if (value is MCFloat && !concreteOnly) {
         val result = MCFloat().apply { isTemp = true }

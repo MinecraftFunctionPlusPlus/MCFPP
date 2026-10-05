@@ -24,6 +24,7 @@ import kotlin.math.absoluteValue
 import kotlin.math.floor
 import kotlin.math.log10
 import kotlin.math.pow
+import kotlin.math.round
 
 open class MCFloat : MCNumber<Float> {
 
@@ -208,17 +209,7 @@ open class MCFloat : MCNumber<Float> {
      * @return 计算结果
      */
     @InsertCommand
-    override fun isBigger(a: Var<*>): Var<*> {
-        if (FloatProviders.enabled) return FloatProviders.compare(this, a as MCFloat, ">")
-        //re = t > a
-        if(!isTemp) return getTempVar().isBigger(a)
-        if(a as MCFloat != tempFloat) a.toTempEntity()
-        val re = ScoreBool()
-        Function.addCommand(
-            "execute store result score ${re.name} ${re.boolObject} as $tempFloatEntityUUID " +
-                    "run function math.float:hpo/float/_isbigger")
-        return re
-    }
+    override fun isBigger(a: Var<*>): Var<*> = compare(a as MCFloat, ">")
 
     /**
      * 这个数是否小于a
@@ -226,17 +217,7 @@ open class MCFloat : MCNumber<Float> {
      * @return 计算结果
      */
     @InsertCommand
-    override fun isSmaller(a: Var<*>): Var<*> {
-        if (FloatProviders.enabled) return FloatProviders.compare(this, a as MCFloat, "<")
-        //re = t < a
-        if(!isTemp) return getTempVar().isSmaller(a)
-        if(a as MCFloat != tempFloat) a.toTempEntity()
-        val re = ScoreBool()
-        Function.addCommand(
-            "execute store result score ${re.name} ${re.boolObject} as $tempFloatEntityUUID " +
-                    "run function math.float:hpo/float/_issmaller")
-        return re
-    }
+    override fun isSmaller(a: Var<*>): Var<*> = compare(a as MCFloat, "<")
 
     /**
      * 这个数是否小于等于a
@@ -244,17 +225,7 @@ open class MCFloat : MCNumber<Float> {
      * @return 计算结果
      */
     @InsertCommand
-    override fun isSmallerOrEqual(a: Var<*>): Var<*> {
-        if (FloatProviders.enabled) return FloatProviders.compare(this, a as MCFloat, "<=")
-        //re = t <= a
-        if(!isTemp) return getTempVar().isSmallerOrEqual(a)
-        if(a as MCFloat != tempFloat) a.toTempEntity()
-        val re = ScoreBool()
-        Function.addCommand(
-            "execute store result score ${re.name} ${re.boolObject} as $tempFloatEntityUUID " +
-                    "run function math.float:hpo/float/_issmallerorequal")
-        return re
-    }
+    override fun isSmallerOrEqual(a: Var<*>): Var<*> = compare(a as MCFloat, "<=")
 
     /**
      * 这个数是否大于等于a
@@ -262,17 +233,7 @@ open class MCFloat : MCNumber<Float> {
      * @return 计算结果
      */
     @InsertCommand
-    override fun isBiggerOrEqual(a: Var<*>): Var<*> {
-        if (FloatProviders.enabled) return FloatProviders.compare(this, a as MCFloat, ">=")
-        //re = t >= a
-        if(!isTemp) return getTempVar().isBiggerOrEqual(a)
-        if(a as MCFloat != tempFloat) a.toTempEntity()
-        val re = ScoreBool()
-        Function.addCommand(
-            "execute store result score ${re.name} ${re.boolObject} as $tempFloatEntityUUID " +
-                    "run function math.float:hpo/float/_isbiggerorequal")
-        return re
-    }
+    override fun isBiggerOrEqual(a: Var<*>): Var<*> = compare(a as MCFloat, ">=")
 
     /**
      * 这个数是否等于a
@@ -280,17 +241,7 @@ open class MCFloat : MCNumber<Float> {
      * @return 计算结果
      */
     @InsertCommand
-    override fun isEqual(a: Var<*>): Var<*> {
-        if (FloatProviders.enabled) return FloatProviders.compare(this, a as MCFloat, "==")
-        //re = t == a
-        if(!isTemp) return getTempVar().isEqual(a)
-        if(a as MCFloat != tempFloat) a.toTempEntity()
-        val re = ScoreBool()
-        Function.addCommand(
-            "execute store result score ${re.name} ${re.boolObject} as $tempFloatEntityUUID " +
-                    "run function math.float:hpo/float/_equal")
-        return re
-    }
+    override fun isEqual(a: Var<*>): Var<*> = compare(a as MCFloat, "==")
 
     /**
      * 这个数是否不等于a
@@ -298,16 +249,25 @@ open class MCFloat : MCNumber<Float> {
      * @return 计算结果
      */
     @InsertCommand
-    override fun isNotEqual(a: Var<*>): Var<*> {
-        if (FloatProviders.enabled) return FloatProviders.compare(this, a as MCFloat, "!=")
-        //re = t != a
-        if(!isTemp) return getTempVar().isNotEqual(a)
-        if(a as MCFloat != tempFloat) a.toTempEntity()
-        val re = ScoreBool()
-        Function.addCommand(
-            "execute store result score ${re.name} ${re.boolObject} as $tempFloatEntityUUID " +
-                    "run function math.float:hpo/float/_notequal")
-        return re
+    override fun isNotEqual(a: Var<*>): Var<*> = compare(a as MCFloat, "!=")
+
+    private fun compare(other: MCFloat, operation: String): Var<*> {
+        if (FloatProviders.enabled) return FloatProviders.compare(this, other, operation)
+        fun prepare(value: MCFloat): MCFloat {
+            val loaded = top.mcfpp.analysis.StorageAccess.read(value) as MCFloat
+            return if (loaded is MCFloatConcrete) loaded.toDynamic(false) as MCFloat else loaded
+        }
+        val left = prepare(this)
+        val right = prepare(other)
+        val result = ScoreBool()
+        if (left.isError || right.isError) return result.apply { isError = true }
+        fun components(value: MCFloat) = top.mcfpp.backend.LegacyFloatComparison.Components(
+            "${value.sign.name} ${value.sign.sbObject}", "${value.int0.name} ${value.int0.sbObject}",
+            "${value.int1.name} ${value.int1.sbObject}", "${value.exp.name} ${value.exp.sbObject}")
+        val comparison = MCInt().apply { isTemp = true }
+        top.mcfpp.backend.LegacyFloatComparison.emit(components(left), components(right), operation,
+            "${comparison.name} ${comparison.sbObject}", "${result.name} ${result.boolObject}", Function::addCommand)
+        return result
     }
 
     /**
@@ -386,17 +346,18 @@ open class MCFloat : MCNumber<Float> {
         const val tempFloatEntityUUIDNBT = "[I;1403656652,-1603846101,-1952345304,-866142527]"
 
         fun floatToMCFloat(float: Float): Array<Int>{
-            //获取指数部分
-            val sign = if (float < 0) -1 else if(float == 0f) 0 else 1
-            val absFloat = float.absoluteValue
-            val exponent = floor(log10(absFloat.toDouble())).toInt()
-            val factor = 10.0.pow((8 - exponent - 1).toDouble()).toInt()
-            val n =  exponent + 1
-            val qwq = (absFloat * factor).toInt()
-            return arrayOf(sign, qwq/10000, qwq%10000, n)
+            require(float.isFinite()) { "Legacy float encoding requires a finite input" }
+            if (float == 0f) return arrayOf(0, 0, 0, 0)
+            val absolute = float.toDouble().absoluteValue
+            var exponent = floor(log10(absolute)).toInt()
+            // Eight decimal significant digits, nearest with ties to even. Scaling stays in Double
+            // so small/subnormal values and exponents above seven do not lose their mantissa.
+            var mantissa = round(absolute * 10.0.pow(7 - exponent)).toInt()
+            if (mantissa == 100_000_000) { mantissa /= 10; exponent++ }
+            return arrayOf(if (float < 0) -1 else 1, mantissa / 10000, mantissa % 10000, exponent + 1)
         }
 
-        val ssObj = MCFloatConcrete(value = Float.NaN)
+        val ssObj = MCFloat()
 
         val tempFloat : MCFloat = MCFloat()
 
@@ -469,6 +430,10 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
     }
 
     override fun toDynamic(replace: Boolean): Var<*> {
+        if (!value.isFinite()) {
+            LogProcessor.error("Float materialization requires a finite input")
+            return MCFloat(this).apply { isError = true }
+        }
         if (storageBinding != null) {
             val re = top.mcfpp.analysis.StorageAccess.read(MCFloat(this).apply { isDynamic = true })
             if (replace) replacedBy(re)
@@ -496,6 +461,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
      * @param value
      */
     private fun setJavaValue(value: Float){
+        if (!value.isFinite()) return // Native diagnostics handle non-finite host inputs before materialization.
         val qwq = floatToMCFloat(value)
         sign = MCIntConcrete(sign, qwq[0])
         int0 = MCIntConcrete(int0, qwq[1])
@@ -530,7 +496,6 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
     @InsertCommand
     override fun getTempVar(): MCFloat {
         if (FloatProviders.enabled) return MCFloatConcrete(this).apply { isTemp = true }
-        ssObj.value = value
         val qwq = floatToMCFloat(value)
         Function.addCommand("scoreboard players set float_sign int ${qwq[0]}")
         Function.addCommand("scoreboard players set float_int0 int ${qwq[1]}")
@@ -565,33 +530,4 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
         if (FloatProviders.enabled) FloatProviders.arithmetic(this, a as MCFloat, "%")
         else getTempVar().rem(a)
 
-    @InsertCommand
-    override fun isBigger(a: Var<*>): Var<*> =
-        if (FloatProviders.enabled) FloatProviders.compare(this, a as MCFloat, ">")
-        else getTempVar().isBigger(a)
-
-    @InsertCommand
-    override fun isSmaller(a: Var<*>): Var<*> =
-        if (FloatProviders.enabled) FloatProviders.compare(this, a as MCFloat, "<")
-        else getTempVar().isSmaller(a)
-
-    @InsertCommand
-    override fun isSmallerOrEqual(a: Var<*>): Var<*> =
-        if (FloatProviders.enabled) FloatProviders.compare(this, a as MCFloat, "<=")
-        else getTempVar().isSmallerOrEqual(a)
-
-    @InsertCommand
-    override fun isBiggerOrEqual(a: Var<*>): Var<*> =
-        if (FloatProviders.enabled) FloatProviders.compare(this, a as MCFloat, ">=")
-        else getTempVar().isBiggerOrEqual(a)
-
-    @InsertCommand
-    override fun isEqual(a: Var<*>): Var<*> =
-        if (FloatProviders.enabled) FloatProviders.compare(this, a as MCFloat, "==")
-        else getTempVar().isEqual(a)
-
-    @InsertCommand
-    override fun isNotEqual(a: Var<*>): Var<*> =
-        if (FloatProviders.enabled) FloatProviders.compare(this, a as MCFloat, "!=")
-        else getTempVar().isNotEqual(a)
 }

@@ -711,7 +711,12 @@ class MCFPPExprVisitor(
         }else if(ctx.nbtLong() != null){
             return MCLongConcrete(LongTag(ctx.nbtLong().text.toNBTLong()))
         }else if(ctx.nbtFloat() != null){
-            return MCFloatConcrete(ctx.nbtFloat().text.toNBTFloat())
+            val value = ctx.nbtFloat().text.toNBTFloat()
+            if (!value.isFinite()) {
+                LogProcessor.error("Float literals require finite values")
+                return MCFloat().apply { isError = true }
+            }
+            return MCFloatConcrete(value)
         }else if(ctx.nbtDouble() != null) {
             return MCDoubleConcrete(DoubleTag(ctx.nbtDouble().text.toNBTDouble()))
         }else if(ctx.nbtCompound() != null){

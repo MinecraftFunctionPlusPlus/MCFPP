@@ -52,10 +52,9 @@ class ConversionTest {
         assertEquals(0, Project.errorCount)
     }
 
-    @Test fun legacyArithmeticAndComparisonsNeverReuseAHostConstantForWorkRegisters() {
+    @Test fun legacyArithmeticNeverReusesAHostConstantForWorkRegisters() {
         reset("1.20.2")
-        for ((operation, expected) in listOf("+" to "_add", "-" to "_rmv", "*" to "_mult", "/" to "_div",
-            "==" to "_equal", "!=" to "_notequal", ">=" to "_isbiggerorequal")) {
+        for ((operation, expected) in listOf("+" to "_add", "-" to "_rmv", "*" to "_mult", "/" to "_div")) {
             Function.currFunction.commands.clear()
             val left = MCFloatConcrete(1.25f)
             val right = MCFloatConcrete(1.0f)

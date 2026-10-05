@@ -1,6 +1,18 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。本轮显式转换 IR 联合检查 52 项通过，返回接口补查 32 项通过，最后扩展两种调用入口后 ConversionIRTest 的 8 项通过。MCFL 保持 10，本轮没有改变库签名/格式；最近标准库重建属于 8aee6b7，为 0 错误/0 警告。最近完整检查属于提交 72dc557，共 346 项。续接起始基线为上一会话的 140 项测试，旧模拟浮点后端继续保留。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段 47 的旧浮点布局/比较检查共 36 项通过，标准库重建 0 错误/0 警告，MCFL 升至 11。显式转换 IR 前序检查为联合 52 项、返回接口补查 32 项及 ConversionIRTest 8 项通过。最近完整检查仍属于提交 72dc557，共 346 项；本阶段未运行完整 check 或实际 Minecraft 服务端。
+
+## 最新必要检查：旧浮点编码与比较基础（阶段 47）
+
+```sh
+./gradlew regenerateStdlib
+./gradlew test --tests top.mcfpp.test.LegacyFloatLayoutTest --tests top.mcfpp.test.ConversionTest --tests top.mcfpp.test.FloatProviderTest --tests top.mcfpp.test.FloatIRTest --tests top.mcfpp.test.LibCacheFormatTest
+git diff --check
+```
+
+五个套件共 36 项通过：LegacyFloatLayoutTest 5、ConversionTest 12、FloatProviderTest 10、FloatIRTest 6、LibCacheFormatTest 3。日志为 `F:/DevCache/.codex/runtime/mcfpp-legacy-float-layout-final.log`；此前四个套件的 33 项通过记录在 `mcfpp-legacy-float-layout.log`。标准库重建日志为 `mcfpp-legacy-float-stdlib.log`，0 错误/0 警告；`bin.mclib` 的格式头已核验为 MCFL 11。
+
+编码覆盖极大/极小有限 Float、零和舍入边界；比较覆盖正负值、零、高低分量优先级及六种运算，检查命令不依赖旧比较库、不修改操作数，且不使用 return。非有限字面量、物化和 toNBT 有诊断断言。旧浮点算术仍使用模拟库，转换库 `_scoreto`/`_toscore` 尚待修复；未运行完整 check 或 Minecraft 服务端。
 
 ## 最新必要检查：显式转换 IR 与返回接口
 

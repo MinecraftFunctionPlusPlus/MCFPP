@@ -123,6 +123,10 @@ object NumericConversions {
 
     @JvmStatic
     fun toNBT(value: Var<*>): Var<*> {
+        if (value is MCFloatConcrete && !value.value.isFinite()) {
+            LogProcessor.error("toNBT(float) requires a finite input")
+            return NBTBasedData().apply { isError = true }
+        }
         value.storageBinding?.let {
             top.mcfpp.analysis.StorageAccess.constantEncoding(value)?.let { tag -> return NBTBasedDataConcrete(tag) }
             it.data.materialize()
@@ -138,10 +142,6 @@ object NumericConversions {
             if (value is MCFloatConcrete) return NBTBasedDataConcrete(value.legacyNBTEncoding())
             value.storeToStack()
             return value.toNBTVar()
-        }
-        if (value is MCFloatConcrete && !value.value.isFinite()) {
-            LogProcessor.error("toNBT(float) requires a finite input for the number-provider backend")
-            return NBTBasedData().apply { isError = true }
         }
         if (ValueSnapshot.of(value) != null) {
             NBTUtil.varToNBT(value)?.let { return NBTBasedDataConcrete(it.copy()) }
