@@ -187,7 +187,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         val add = Regex("scoreboard players (add|remove) (\\S+ \\S+) (\\d+)")
         val operation = Regex("scoreboard players operation (\\S+ \\S+) (=|\\+=|-=|\\*=|/=|%=|><) (\\S+ \\S+)")
         val compare = Regex("execute (if|unless) score (\\S+ \\S+) (=|<|>|<=|>=) (\\S+ \\S+) (?:run (.*)|((?:if|unless) score .*))")
-        val matches = Regex("execute if score (\\S+ \\S+) matches (-?\\d+|(?:-?\\d+)?\\.\\.(?:-?\\d+)?) (?:run (.*)|((?:if|unless) score .*))")
+        val matches = Regex("execute (if|unless) score (\\S+ \\S+) matches (-?\\d+|(?:-?\\d+)?\\.\\.(?:-?\\d+)?) (?:run (.*)|((?:if|unless) score .*))")
         val asIdentity = Regex("execute as (\\S+) run (.*)")
         val guardStore = Regex("execute store result storage mcfpp:system ir_branch_stack\\[0].condition byte 1 run scoreboard players get (\\S+ \\S+)")
         val guardTest = Regex("execute (if|unless) data storage mcfpp:system ir_branch_stack\\[0]\\{condition:1b} run (.*)")
@@ -434,13 +434,13 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                 return@command false
             }
             matches.matchEntire(command)?.let {
-                val value = values.getValue(scoreKey(it.groupValues[1]))
-                val range = it.groupValues[2]
+                val value = values.getValue(scoreKey(it.groupValues[2]))
+                val range = it.groupValues[3]
                 val bounds = range.split("..")
                 val match = if (bounds.size == 1) value == range.toInt() else
                     (bounds[0].isEmpty() || value >= bounds[0].toInt()) && (bounds[1].isEmpty() || value <= bounds[1].toInt())
-                if (match) return@command execute(
-                    if (it.groupValues[4].isNotEmpty()) "execute ${it.groupValues[4]}" else it.groupValues[3])
+                if (match == (it.groupValues[1] == "if")) return@command execute(
+                    if (it.groupValues[5].isNotEmpty()) "execute ${it.groupValues[5]}" else it.groupValues[4])
                 return@command false
             }
             if (command.startsWith("say ")) { messages.add(command.removePrefix("say ")); return@command false }

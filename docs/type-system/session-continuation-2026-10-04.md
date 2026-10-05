@@ -1,10 +1,10 @@
 # 类型系统续接记录（2026-10-04）
 
-本轮从 2026-10-04 续接，首次存储/视图纵向路径通过 161 项测试。最新全量结果以 [验证记录](./verification.md) 为准；整个类型系统重构仍未完成。
+本轮从 2026-10-04 续接，首次存储/视图纵向路径通过 161 项测试。阶段 54 已提交 `107e8ac`；阶段 55 receiver 与初始化帧已实现，ConstructorExecution 最终 7 项通过（首轮 80 项/4 失败，中间 11 项/1 失败为历史）。最新全量结果以 [验证记录](./verification.md) 为准；整个 17 项类型系统重构仍未完成。
 
 ## 当前进度
 
-阶段 52 NBT 地址与自动宏捕获已提交 `dadb6cc`；阶段 53 宿主对象身份修复已提交 `890833b`，最终 35 项通过。阶段 54 构造器候选解析最终 4 项通过；下一步阶段 55 审计并建立固定 this 帧/独立 receiver，再处理普通构造实参特化与 `this`/`preInit`。
+阶段 52 NBT 地址与自动宏捕获已提交 `dadb6cc`；阶段 53 宿主对象身份修复已提交 `890833b`，最终 35 项通过。阶段 54 构造候选解析已提交 `107e8ac`，ConstructorResolution 4 项通过。阶段 55 固定 frame0.this 独立 receiver，普通构造实参不再常量特化（T!/compiler-only 仍遵守 SpecializationPolicy），每次运行 preInit（含 AST-null 默认构造），以 FrameExit(function,index) 统一 IR/旧出口；原/特化模板及 static object 构造器均导出。最终 ConstructorExecution 7 项通过。下一步阶段 56 持久化模板初始化表达式并统一 const 字段初始化规则，可能升 MCFL 12 并重建标准库。
 用户随后要求继续完成并按进度提交；该轮实现已提交为 747f0b4，擦除 while 不动点绑定提交为 467343f，list/dict 元素贯通提交为 a1bafaa，集合编码与项目隔离提交为 702fbce，嵌套静态副本及编译上下文隔离提交为 8ce9fde，静态集合擦除通道及元数据缓存隔离提交为 dd3b43a，完整静态 as 视图的共享写入提交为 e73fa03，字典成员统一及输入帧修复提交为 6315054，列表共享成员及查找后端提交为 217a5cd，字典整体合并事实与空键边界提交为 47a7b5c，map 共享成员、位置与 entry 布局迁移提交为 fa64338，只读列表与 NBT 数组迁移提交为 a623399，实际 IR 调用与递归效果分析提交为 f5a9902。集合 IR 控制流与子位置证据提交为 72dc557。动态列表 IR 提交为 9f74d5e。字典成员 IR 提交为 4bed87f。列表变更成员 IR 提交为 21224b0。列表查询与按值删除 IR 提交为 ea7dca8。NBT 数组 IR 提交为 313886b。map 索引与成员 IR 提交为 9245a62。map 投影 IR 提交为 ab1f3cb。do…while 与闭合整数区间循环 IR 提交为 711331e。IR 词法作用域提交为 eef6d44。调用子形状提交为 0c3e65f。整数范围值和命名范围 IR 提交为 8aee6b7。递归返回/写回形状提交为 eb83a60。26.3 原生浮点 IR 提交为 7cd1a69。2026-10-06 继续显式转换 IR，阶段 47 提交 b56ede9，阶段 48 提交 860c799。阶段 49 旧浮点加减提交 `82d955b`，阶段 50 乘除代码提交 `bee57c1`、静态审计文档提交 `dfdb99a`；阶段 51 旧浮点 IR 最终复查 20 项通过。阶段 49 必要检查 46 项、阶段 50 必要检查 36 项。MCFL 保持 11，未改签名/缓存结构且未重建 bin.mclib。最近完整检查仍为 72dc557 的 346 项，整体 17 项迁移未完成。
 
 本次用户要求读取文件，继续上一会话尚未完成的项目任务。读取交接与下一阶段计划后，继续类型系统迁移，未扩展到独立 MNI 元编程计划。
@@ -136,27 +136,33 @@
 
 首轮 ConstructorResolutionTest 4、TypeBindingTest 4、StorageViewTest 21 共 29 项有 3 项失败，后两套件 25 项全过；中间 ConstructorResolutionTest 4 + LogicStatementTest 6 有 1 项失败，LogicStatementTest 全过，剩余为测试误禁公共 stack prepend 前言。最终 ConstructorResolutionTest 4 项全部通过，覆盖声明顺序、T! 未知值拒绝/字面量接受、默认实参在 if/else-if 常量分支中的执行、歧义无构造副作用。日志：`F:/DevCache/.codex/runtime/mcfpp-constructor-resolution.log`、`mcfpp-constructor-resolution-final.log`、`mcfpp-constructor-resolution-complete.log`。MCFL 11 未变；未重建标准库、未运行完整 check 或实际服务器。
 
+## 阶段 55：模板构造 receiver 与初始化帧
+
+receiver 独立放入固定 `frame0.this`；普通构造实参不再按普通常量特化，T!/compiler-only 仍遵循 SpecializationPolicy。参数只编码入帧，不污染 callee facts；receiver 写回保留 source type，Unknown effect barrier 可撤销知识。`preInit` 每次运行（包括 AST-null 隐式默认构造）；FrameExit(function,index) 统一 IR/旧路径出口，entry 插入 pop，caller 在写回后 pop。原/特化模板与 static object 构造器均导出。显式类型非 const 字段登记 preInit；static 赋值经 `replacedBy` 后物化，非 const object 字段动态化。普通模板复制规则保持不变。
+
+首轮 8 套件 80 项有 4 项失败（两个 set 保留字样例、typed initializer 漏登记使 94 得 90、executor 缺 unless score matches），其余 76 项通过。随后 ConstructorExecution 7 + ConstructorResolution 4 共 11 项有 1 项 object ctor 文件空；静态写入/物化修复后最终只复查 ConstructorExecutionTest 7 项，全部通过，0 failures/errors/skips。Resolution 4 项此前已全部通过。测试真实执行初始化值、独立 receiver，并检查 static object 导出到 NBT=4。日志：`F:/DevCache/.codex/runtime/mcfpp-constructor-receiver.log`、`mcfpp-constructor-receiver-final.log`、`mcfpp-constructor-receiver-complete.log`。MCFL 11 未变，无标准库重建、完整 check 或服务器验证。
+
 ## 后续仍需完成
 
-- 标量/擦除及可编码 list/dict/map/ImmutableList/NBT 数组、范围值和已证明整数端点的命名范围迭代已迁入 IR，26.3 原生浮点、short/double/nbt 载荷、标量/数组显式转换及 map 两种投影也已接入；旧浮点 IR 最终复查 20 项通过，旧 return ABI 保留。阶段 52 NBT 地址与宏捕获已完成，阶段 53 Var/Pos 身份修复最终 35 项通过，阶段 54 构造器候选解析最终 4 项通过。下一步阶段55先建立 this 帧/独立 receiver，再移除普通构造实参常量特化并处理 `this`/`preInit`。其余集合成员、编译器专用集合、未知端点范围形参/浮点范围/通用迭代器、模板/泛型/T! 等尚未统一。旧转换和 DataObject 等来源仍走适配；无宏目标上未知长度的负数字面下标仍走旧边界。
+- 标量/擦除及可编码 list/dict/map/ImmutableList/NBT 数组、范围值和已证明整数端点的命名范围迭代已迁入 IR，26.3 原生浮点、short/double/nbt 载荷、标量/数组显式转换及 map 两种投影也已接入；旧浮点 IR 最终复查 20 项通过，旧 return ABI 保留。阶段 52–55 已完成，阶段55 ConstructorExecution 最终 7 项通过。下一步阶段56持久化字段初始化表达式（DataTemplateInfo/ConstructorInfo RHS）并处理 typed const 与 inferred object const 的只读运行时初始化规则；预计 MCFL 12、重建标准库及真实库往返测试。其余集合成员、编译器专用集合、未知端点范围形参/浮点范围/通用迭代器、模板/泛型/T! 等尚未统一。旧转换和 DataObject 等来源仍走适配；无宏目标上未知长度的负数字面下标仍走旧边界。
 - 参数相关 static 已知子位置、未知列表范围、普通集合返回/static 整体替换子形状与递归效果不动点已接入受限 IR 图；同一类型/形状输入的递归返回及写回已求解，输入变化仍保守。继续扩展其余集合、成员、全局、实体及全部调用位置。无法证明的函数仍采用未知屏障，原始命令跨函数修改物理记分板与帧恢复仍需核实。
 - 未知字典字符串键的运行时路径后端、其余原生成员/集合的编码能力检查、实体路径、全部布局访问诊断、模板方法与构造仍需完成迁移；map 的字符串值键和可编码投影已接入，但编译器专用值及其余控制语句仍需扩展。本轮递归样例不代表完整帧分配覆盖全部类型。
 - MNI 显式上下文、值/位置接口及其余成员签名统一未完成；Concrete 体系、hasStoredInStack、trackLost 等旧状态仍存在。
-- 未配置实际 Minecraft 服务端；独立执行器通过不等于实际目标验证。阶段 54 最终 4 项必要复查通过；仍缺实际服务器验证及其余类型系统迁移工作。
+- 未配置实际 Minecraft 服务端；独立执行器通过不等于实际目标验证。阶段 55 最终 7 项必要复查通过；仍缺实际服务器验证及其余类型系统迁移工作。
 
 下次优先执行 [下一阶段计划](./next-stage-plan.md) 中标出的剩余工作。整个类型系统重构尚未完成。
 
 ## 本轮自检
 
-平均 3.8/5；阶段 54 最终 4 项必要复查通过，模板构造候选已统一，但 this 帧、其余迁移和服务器验证仍未完成。
+平均 3.8/5；阶段 55 ConstructorExecution 最终 7 项通过，receiver/初始化帧与构造路径已接入；下一阶段需验证库初始化表达式往返及 const 字段规则，整体迁移和服务器验证未完成。
 
 | 维度 | 评分 | 证据与改进 |
 | --- | --- | --- |
-| 准确性 | 4/5 | 阶段 54 最终 ConstructorResolutionTest 4 项通过，首轮和中间失败及断言修正均有记录；MCFL 11，仍缺实际服务器及其余迁移 |
-| 完整性 | 3/5 | 构造候选选择已统一；this 帧、普通构造实参特化、模板/泛型/T!、其余控制流/集合、MNI 和实际服务器验证仍未完成 |
-| 清晰度 | 4/5 | 最新记录列出候选规则、最终套件和下一步 this 帧审计；长历史仍按阶段保留 |
-| 可操作性 | 4/5 | 最终4项和三份日志已记录；下一步先验证固定 this 帧与独立 receiver |
-| 简洁性 | 4/5 | 构造选择复用 ParameterMatcher，错误候选不触发对象初始化；未复制常量特化实现 |
+| 准确性 | 4/5 | 记录阶段55 80/4首轮、11/1中间、7/0最终复查与三份日志；MCFL 11，仍缺库往返和服务端验证 |
+| 完整性 | 3/5 | receiver/preInit/export 已覆盖；字段初始化 RHS 库持久化、typed/inferred const 初始化、模板/泛型/T!、其余控制流/集合、MNI 和服务器验证未完成 |
+| 清晰度 | 4/5 | 当前结果、历史失败和阶段56范围分别记录，长历史保留 |
+| 可操作性 | 4/5 | 下一步指出 DataTemplateInfo/ConstructorInfo、GenericDataTemplateInfo 和 MCFL 12 库往返验证 |
+| 简洁性 | 4/5 | 仅更新当前状态与必要证据，未重写历史阶段记录 |
 
-优先改进：先建立并验证固定 this 帧和独立 receiver；随后去除普通构造实参常量特化并统一 `this`/`preInit`。完整性仍为 3/5，因为模板/泛型/T!、其余控制流/集合、MNI 与实际服务器验证仍有缺口。
+优先改进：为模板/object 初始化表达式建立持久化映射，验证 MCFL 12 标准库往返；统一 typed const 与 inferred object const 的只读初始化和后续重赋拒绝。完整性仍为 3/5，因为其余模板/泛型/T!、控制流/集合、MNI 与实际服务器验证仍有缺口。
 自检：用户能复核实现和测试，也会看到整项重构仍未结束；没有把阶段通过写成项目全部完成。

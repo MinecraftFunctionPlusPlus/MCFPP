@@ -611,11 +611,14 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 `var` = type.buildUnConcrete(ctx.Identifier().text)
                 DataTemplate.currTemplate!!.preInit[`var`.identifier] = ctx.expression()
             }
+        } else if (ctx.expression() != null && !isConst) {
+            DataTemplate.currTemplate!!.preInit[`var`.identifier] = ctx.expression()
         }
 
         //是否是静态的
         `var`.isStatic = isInObject
         `var`.isConst = isConst
+        if (isInObject) `var`.isDynamic = !isConst
         if (DataTemplate.currTemplate!!.scope.containVar(ctx.Identifier().text)
         ) {
             LogProcessor.error("Duplicate defined variable name:" + ctx.Identifier().text)

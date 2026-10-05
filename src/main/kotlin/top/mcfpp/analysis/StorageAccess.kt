@@ -470,6 +470,16 @@ object StorageAccess {
         binding.data.versions.materialize(binding.place, layout)
     }
 
+    /** Receiver calls mutate the same payload without changing the source's nominal type. */
+    fun writeReceiver(target: Var<*>, source: Var<*>) {
+        val binding = target.storageBinding ?: error("Missing receiver storage binding")
+        val knowledge = binding.data.facts.read(binding.place)?.type ?: TypeKnowledge.Unknown
+        binding.data.materialize()
+        encodeTo(binding.path, source)
+        binding.data.write(binding.place, ValueFacts(knowledge, ValueKnowledge.Unknown))
+        binding.data.facts.forgetDescendants(binding.place)
+    }
+
     fun write(target: Var<*>, source: Var<*>): Var<*> {
         val binding = target.storageBinding ?: error("Missing storage binding")
         val static = binding.data.layout == StorageLayout.CompilerOnly

@@ -1453,7 +1453,7 @@ object PrimitiveCompiler {
             }
             val hasControlFlow = ir.blocks.size > 1
             val supportsReturn = top.mcfpp.command.TargetCapabilities.forVersion(top.mcfpp.Project.config.version)?.functionReturnRun == true
-            val exits = mutableListOf<Function>()
+            val exits = mutableListOf<Function.FrameExit>()
             for (block in reachable) {
                 blockId = block.id
                 commands.clear()
@@ -1700,7 +1700,8 @@ object PrimitiveCompiler {
                         }
                         if ((hasControlFlow || terminator.value != null) && supportsReturn) {
                             commands += "return 0"
-                            exits.add(destinations.getValue(block.id))
+                            val destination = destinations.getValue(block.id)
+                            exits.add(Function.FrameExit(destination, destination.commands.size + commands.size - 1))
                         }
                     }
                     Terminator.Unreachable -> error("Reachable block without terminator")
@@ -1708,7 +1709,7 @@ object PrimitiveCompiler {
                 val destination = destinations.getValue(block.id)
                 destination.runInFunction { commands.forEach(Function::addCommand) }
             }
-            function.typedIRExitFunctions = exits
+            function.frameExits.addAll(exits)
         }
     }
 }

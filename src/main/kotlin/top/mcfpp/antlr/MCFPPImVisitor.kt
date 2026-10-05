@@ -105,22 +105,29 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
     override fun visitCurlBlock(ctx: mcfppParser.CurlBlockContext): Any? = withCompilationContext(ctx) {
         if(ctx.parent is CompileTimeFuncDeclarationContext) return null
+        Function.currFunction.compileBody(context = ctx)
+        return null
+    }
+
+    fun compileFunctionBody(ctx: mcfppParser.CurlBlockContext?, beforeBody: () -> Unit = {}) {
         if(Function.currFunction !is Generic<*>){
             val function = Function.currFunction
-            if (SpecializationPolicy.needsStaticErasedBindings(function)) return null
-            if (function.bodyCompiled || function.bodyBeingCompiled) return null
+            if (SpecializationPolicy.needsStaticErasedBindings(function)) return
+            if (function.bodyCompiled || function.bodyBeingCompiled) return
             function.bodyBeingCompiled = true
             try {
-                if (!top.mcfpp.analysis.PrimitiveCompiler.tryCompile(ctx, function)) {
+                beforeBody()
+                val compiled = ctx != null && top.mcfpp.analysis.PrimitiveCompiler.tryCompile(ctx, function)
+                if (!compiled) {
                     function.bindIncomingParameters()
-                    visitStatements(ctx.statement())
+                    if (ctx != null) visitStatements(ctx.statement())
+                    if (!function.hasReturnStatement && !function.isEnded) function.registerFrameExit()
                 }
             } finally {
                 function.bodyBeingCompiled = false
                 function.bodyCompiled = true
             }
         }
-        return null
     }
 
     //泛型函数编译使用的入口
@@ -301,6 +308,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         }
         // A return terminates this path, not the other branches of the declaration.
         Function.currFunction.hasReturnStatement = true
+        Function.currFunction.registerFrameExit()
         Function.addCommand("return 1")
         return null
     }
@@ -363,9 +371,8 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                     visitStatements(continuation)
                 }
                 returningPaths.add(Function.currFunction.hasReturnStatement)
-                //由于原来的调用if的函数已经被return命令返回，需要if_branch函数帮助清理它的栈
+                if (!Function.currFunction.hasReturnStatement && !Function.currFunction.isEnded) Function.currFunction.registerFrameExit()
                 if(breakIf != ConditionType.ALWAYS_TRUE) {
-                    Function.addCommand(Commands.stackOut())
                     Function.currFunction = Function.currFunction.parent[0]
                 }
                 Function.addComment("if branch end")
@@ -395,9 +402,8 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                         visitStatements(continuation)
                     }
                     returningPaths.add(Function.currFunction.hasReturnStatement)
-                    //由于原来的调用if的函数已经被return命令返回，需要if_branch函数帮助清理它的栈
+                    if (!Function.currFunction.hasReturnStatement && !Function.currFunction.isEnded) Function.currFunction.registerFrameExit()
                     if(breakIf != ConditionType.ALWAYS_TRUE) {  //这里同理
-                        Function.addCommand(Commands.stackOut())
                         Function.currFunction = Function.currFunction.parent[0]
                     }
                     Function.addComment("else-if branch end")
@@ -429,8 +435,8 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 visitStatements(continuation)
             }
             returningPaths.add(Function.currFunction.hasReturnStatement)
+            if (!Function.currFunction.hasReturnStatement && !Function.currFunction.isEnded) Function.currFunction.registerFrameExit()
             if(breakIf != ConditionType.ALWAYS_FALSE){
-                Function.addCommand(Commands.stackOut())
                 Function.currFunction = Function.currFunction.parent[0]
             }
             Function.addComment("else branch end")

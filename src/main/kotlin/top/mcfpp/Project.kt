@@ -620,14 +620,14 @@ object Project {
                     if (f.parent.size == 0 && f !is Native) {
                         //找到了入口函数
                         hasEntrance = true
-                        f.commands.add(0, Commands.stackIn())
-                        if (f.typedIRExitFunctions.isEmpty()) {
+                        if (f.frameExits.isEmpty()) {
                             f.commands.add(Commands.stackOut())
                         } else {
-                            f.typedIRExitFunctions.forEach { exit ->
-                                exit.commands.add(exit.commands.size - 1, Commands.stackOut())
+                            f.frameExits.forEach { exit ->
+                                exit.function.commands.add(exit.commandIndex, Commands.stackOut())
                             }
                         }
+                        f.commands.add(0, Commands.stackIn())
                         logger.debug("Find entrance function: {} {}", f.tags, f.identifier)
                     }
                 }

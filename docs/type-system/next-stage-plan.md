@@ -1,4 +1,4 @@
-# 下一阶段：存储位置、擦除载荷与 as 视图
+# 下一阶段：模板初始化表达式与只读字段
 
 本计划的首条纵向路径已经在续接会话中实现，完整阶段和整个重构仍未完成。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
@@ -48,11 +48,13 @@
 
 - 同一类型/形状输入的直接与相互递归已有返回/写回不动点，从无返回路径开始求解，保留共同子类型和长度并清除值知识。始终不返回的调用不会证明后续返回值；嵌套递归输出只保留共同有限形状。递归输入类型/形状变化时仍给保守摘要，不复用另一载荷的证明。
 
-阶段 47 修复旧浮点常量编码/比较，阶段 48 修复旧转换缩放，阶段 49 完成加减，阶段 50 完成乘除，阶段 51 将旧浮点算术/比较、Promote/Convert 接入 IR。阶段 52 完成 NBTSource/NBTPath 地址等价迁移与自动宏捕获，最终 17 项通过。阶段 53 删除 `Var`、`Pos3Var`、`Pos2Var`、`PosDimension` 的 8 个 equals/hashCode 覆盖，宿主统一对象身份，语言值仍使用 `CompilerValue`；缓存只移除目标引用、spill 仅对同一引用去重。括号子 visitor 共享活跃值列表并保留独立结果字段，阶段53最终35项通过。阶段54构造候选已通过`ParameterMatcher.match`/`best`统一解析，复用类型、完整值、默认实参与歧义处理；仅 Selected 初始化对象，旧字符串/类型顺序接口移除，isError值不重复绑定诊断。常真 if 及静态 false→true else-if 主体内联不发悬空调用。ConstructorResolutionTest最终4项通过，首轮29项有3失败、中间10项有1失败。不扩展范围语义，未知 range 形参端点、浮点/混合迭代步长及不前进策略仍未定义，保留现有诊断。下一步阶段55先构建固定 this 帧和独立 receiver，再取消普通构造实参常量特化，保留T!/compiler-only keys。部分已知静态容器和未知字典字符串键也待处理。无宏目标上的未知长度负数字面下标、变化输入递归形状及泛型默认实参仍需扩展。继续覆盖模板/泛型/T! 调用、全局/实体写入，统一剩余布局和 MNI 接口。原始命令跨函数修改物理记分板需要与帧保存/恢复核实；列表浮点查找、数组重解释、空键和其余 SNBT 编码仍需扩大目标对照。
+阶段 47–54 的历史进展见 verification.md。阶段 55 固定了 frame0.this 独立 receiver；普通构造实参不再按普通常量特化，T!/compiler-only 仍遵守 SpecializationPolicy。参数只编码入帧；preInit 每次执行，包括 AST-null 隐式默认构造。FrameExit(function,index) 统一 IR/旧出口，entry 插 pop，caller 在 receiver 写回后 pop；原/特化模板与 static object 构造器均导出。显式类型非 const 字段登记 preInit，static 赋值 replacedBy 后物化，非 const object 字段动态化。最终 ConstructorExecution 7 项通过，ConstructorResolution 4 项此前全过；首轮 80 项有 4 失败，中间 11 项有 1 失败。MCFL 11 不变，无标准库重建、完整 check 或服务端验证。
 
-### 阶段 55 候选审计：模板构造器 this/preInit 帧
+### 阶段 56：模板初始化表达式和只读运行时初始化
 
-用 `Box` 作最小反例：预初始化 `value=7`，构造器接收 `input` 并赋给 `this.value`；创建两个对象值为 1 和 2 后把第一个改为 9，结果应为 92。当前代码先移除 `this`，执行 preInit 时却再次读取 `args["this"]`，callee scope 还可能复用 caller 对象；需先建立固定 this 帧和独立 receiver。优先复用 `FunctionParam.buildVar` 建立动态 receiver，以及 `StorageAccess` 的捕获/写回；抽出统一的函数体前初始化钩子并复用 `SpecializationPolicy`，避免复制整套 compile 流程。审计时分别检查对象静态初始化、`NativeDataTemplateConstructor` 和 AST-null 隐式默认构造器，不混入本轮改造。此处是代码审计候选，尚未实现或执行阶段 55。
+`DataTemplateInfo` 不保存 `preInit`，`ConstructorInfo` 只存 body AST；普通模板/object 导入会丢字段初始化 RHS。`GenericDataTemplateInfo` 已有 body AST，需分别审计。`DataTemplate.preInit` 当前为 HashMap；保存/恢复初始化表达式时要核实声明顺序及 RHS 对前序字段的依赖，避免改变运行时顺序。为字段初始化表达式增加持久化映射会改变库布局，预计升至 MCFL 12，须重建标准库并执行真实库导出/导入往返测试。
+
+另审 typed const 字段 RHS 被忽略，以及 inferred object const 被强制转成 `MCFPPValue` 的错误混同。统一只读运行时初始化的求值、类型转换/错误诊断和后续重赋拒绝；普通可变模板字段与既有模板赋值/传参复制规则保持现状。
 
 ### 旧浮点乘除（阶段 50 已实现）
 
@@ -64,7 +66,7 @@
 
 阶段 51 已将旧浮点算术/比较、Promote/Convert 接入 IR：四分量值使用独立 NBT 帧，`LegacyFloatCommands` 负责读写和调用，保留旧四记分板 return ABI。普通/递归/static、旧与 IR 双向调用、早先参数、多实参、常量与连续返回均经真实库命令执行；最终 20 项必要复查通过，0 failures/errors/skips。Native 路径不变；旧浮点算术/比较及跨数值折叠禁止宿主 Float 计算，`16777217` 保持八位十进制精度；identity/toNBT 保留来源 codec。包含 FloatBits 端点的旧浮点范围，其静态顺序不使用宿主比较，整数/native 行为不变；浮点迭代语义未定义，不新增迭代行为。
 
-已知 int/bool/byte/short as legacyfloat 仍沿旧入口并在实际访问时诊断；未用视图不报错，unknown any 视图不做运行时 typecheck，命名 float 视图的来源随后被写成已知标量，再读取视图会诊断。阶段 54 已完成构造器候选解析，最终4项通过。下一步阶段55先审计并建立固定 this 帧/独立 receiver，再处理普通构造实参常量特化与 `this`/`preInit`。未知端点范围和浮点/混合迭代的步长及不前进策略仍未定义，保留现有诊断。整个17项迁移仍未完成，模板/泛型/T!、其余控制流/集合及MNI尚待统一。
+已知 int/bool/byte/short as legacyfloat 仍沿旧入口并在实际访问时诊断；未用视图不报错，unknown any 视图不做运行时 typecheck，命名 float 视图的来源随后被写成已知标量，再读取视图会诊断。阶段 55 receiver/初始化帧最终 ConstructorExecution 7 项通过，阶段 54 ConstructorResolution 4 项此前通过。下一步阶段 56 处理初始化表达式导入持久化和 const 初始化规则；可能升级 MCFL 12 并重建标准库。未知端点范围和浮点/混合迭代的步长及不前进策略仍未定义，保留现有诊断。整个 17 项迁移仍未完成，模板/泛型/T!、其余控制流/集合及 MNI 尚待统一。
 
 - 26.3 原生 float 的字面量、算术/比较、循环、递归调用、static 写回、擦除与共享视图、集合元素和范围载荷进入 IR；int→float 提升作为 Promote，用于声明、赋值、返回、普通/成员实参和上下文集合字面量。运算与旧入口共享提供器表达式，值保存在 NBT 帧，负零取负保留符号；常量非有限值、反向已知范围和有损 static 写回明确诊断。旧浮点后端现已进入 IR；其余来源转换和完整 MNI 接口仍待迁入；浮点/混合迭代语义未定义并保留现有诊断，不扩展步长或不前进规则。
 

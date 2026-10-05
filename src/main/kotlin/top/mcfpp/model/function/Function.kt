@@ -226,7 +226,15 @@ open class Function : Member, FieldContainer, WithDocument {
     var typedIR: top.mcfpp.analysis.TypedIR? = null
 
     @Transient
-    var typedIRExitFunctions: List<Function> = emptyList()
+    val frameExits: MutableList<FrameExit> = ArrayList()
+
+    data class FrameExit(val function: Function, val commandIndex: Int)
+
+    fun registerFrameExit() {
+        var owner = this
+        while (owner is NoStackFunction) owner = owner.parent.first()
+        owner.frameExits.add(FrameExit(this, commands.size))
+    }
 
     val declarationId = top.mcfpp.analysis.SymbolId.fresh()
 
@@ -452,6 +460,25 @@ open class Function : Member, FieldContainer, WithDocument {
         }
     }
 
+    protected open fun prepareBody(target: Function) {
+        val template = owner as? DataTemplate ?: return
+        if (isStatic || template is ObjectDataTemplate) return
+        target.scope.putVar("this", incomingReceiver(target, template), true)
+    }
+
+    private fun incomingReceiver(target: Function, template: DataTemplate): DataTemplateObject =
+        (FunctionParam(template.getType(), "this", target).buildVar() as DataTemplateObject).apply {
+            nbtPath = NBTPath.stack.intIndex(0).memberIndex("this")
+            storageBinding = null
+            top.mcfpp.analysis.StorageAccess.bindIncomingParameter(this)
+        }
+
+    internal fun compileBody(target: Function = this, context: CurlBlockContext? = ast) {
+        target.runInFunction {
+            MCFPPImVisitor().compileFunctionBody(context) { prepareBody(target) }
+        }
+    }
+
     /**
      * 从语法树写入这个函数的形参信息，同时为这个函数准备好包含形参的缓存
      *
@@ -546,9 +573,9 @@ open class Function : Member, FieldContainer, WithDocument {
      */
     open fun invoke(normalArgs: LinkedHashMap<String, Var<*>>, caller: CanSelectMember?): Var<*>{
         val completed = if (ast != null) completeDefaultValue(normalArgs) else normalArgs
-        if(ast != null && (this is DataTemplateConstructor || normalParams.any { p ->
+        if(ast != null && normalParams.any { p ->
                 completed[p.identifier]?.let { SpecializationPolicy.requiresParameter(p.type, it) } == true
-            })){
+            }){
             return compile(completed).let {(k, v) -> k.invoke(v, caller)}
         }
         if (SpecializationPolicy.needsStaticErasedBindings(this)) {
@@ -558,14 +585,15 @@ open class Function : Member, FieldContainer, WithDocument {
         // Imported and forward-declared runtime bodies are lowered once, without
         // specializing ordinary constant arguments. Recursive calls reuse that body.
         if (ast != null && !bodyCompiled && !bodyBeingCompiled)
-            runInFunction { MCFPPImVisitor().visitCurlBlock(ast!!) }
+            compileBody(this)
         val returnedKnowledge = top.mcfpp.analysis.PrimitiveCompiler.returnKnowledge(this, completed)
         val observed = if (runtimeEffect != top.mcfpp.analysis.Effect.Pure && runtimeEffect != top.mcfpp.analysis.Effect.ReadsRuntime)
             top.mcfpp.analysis.StorageAccess.visibleValues(currFunction.scope) else emptyList()
         top.mcfpp.analysis.StorageAccess.flush(observed)
         when(caller){
-            is MCFPPType, is DataTemplateObject, null -> invoke(normalArgs.values.toList())
-            is Var<*> -> invoke(normalArgs.values.toList(), caller)
+            is DataTemplateObject -> invoke(completed.values.toList(), caller)
+            is MCFPPType, null -> invoke(completed.values.toList())
+            is Var<*> -> invoke(completed.values.toList(), caller)
         }
         top.mcfpp.analysis.StorageAccess.barrier(observed)
         if (returnVar is top.mcfpp.core.lang.MCAny && (returnVar as top.mcfpp.core.lang.MCAny).compilerPayload == null) {
@@ -631,17 +659,23 @@ open class Function : Member, FieldContainer, WithDocument {
      * @param data 数据模板的实例
      */
     protected open fun invoke(normalArgs: List<Var<*>>, data: DataTemplateObject){
+        top.mcfpp.analysis.StorageAccess.ensure(data)
+        val capturedReceiver = top.mcfpp.analysis.StorageAccess.capture(data)
         val capturedArgs = captureArguments(normalArgs)
         //变量进栈
         fieldStore()
         //给函数开栈
         addCommand(Commands.stackIn())
+        top.mcfpp.analysis.StorageAccess.encodeTo(NBTPath.stack.intIndex(0).memberIndex("this"),
+            top.mcfpp.analysis.StorageAccess.callerValue(capturedReceiver))
         //参数传递
         argPass(capturedArgs)
         //函数调用的命令
         addCommand("function $namespaceID")
         //static关键字，将值传回
         staticArgRef(normalArgs)
+        val incoming = incomingReceiver(this, data.templateType)
+        top.mcfpp.analysis.StorageAccess.writeReceiver(top.mcfpp.analysis.StorageAccess.callerValue(data), incoming)
         //调用完毕，将子函数的栈销毁
         addCommand(Commands.stackOut())
         //取出栈内的值
@@ -679,6 +713,12 @@ open class Function : Member, FieldContainer, WithDocument {
         val cacheKey = SpecializationPolicy.key(this, argList, specialized)
         compiledFunctions[cacheKey]?.let { return it to runtimeArgs }
         val cf = Function(this)
+        cf.normalParams = ArrayList(normalParams.map { param ->
+            FunctionParam(param.type, param.identifier, cf, param.isStatic, param.hasDefault, param.isReadOnly).apply {
+                defaultVar = param.defaultVar
+                typeName = param.typeName
+            }
+        })
         cf.scope.clearVar()
         cf.buildParamVar()
         cf.returnVar = cf.buildReturnVar(cf.returnType)
@@ -693,20 +733,12 @@ open class Function : Member, FieldContainer, WithDocument {
             }
         }
         //去除确定的参数
-        val params = ArrayList<FunctionParam>(normalParams)
-        for (i in argList.indices) {
-            if (specialized[i]) {
-                params.remove(normalParams[i])
-            }
-        }
-        cf.normalParams = params
+        cf.normalParams = ArrayList(cf.normalParams.filterIndexed { index, _ -> !specialized[index] })
         cf.commands.clear()
         cf.identifier = this.identifier + "_" + compiledFunctions.size
         compiledFunctions[cacheKey] = cf
         cf.ast = null
-        cf.runInFunction {
-            MCFPPImVisitor().visitCurlBlock(ast!!)
-        }
+        compileBody(cf)
         return cf to runtimeArgs
     }
 
@@ -717,26 +749,20 @@ open class Function : Member, FieldContainer, WithDocument {
      */
     @InsertCommand
     open fun argPass(normalArgs: List<Var<*>>){
-        val tempArgs = normalArgs.map {
-            if (FloatProviders.enabled && it is MCFloat && it !is MCFPPValue<*>) {
-                FloatProviders.callerValue(it)
-            } else if (!FloatProviders.enabled && it is MCFloat) {
-                // Legacy float arguments were captured independently before pushing the frame.
-                it
-            } else it.getTempVar()
-        }.toCollection(ArrayList())
         for (i in this.normalParams.indices) {
-            if(i >= tempArgs.size){
-                //参数缺省值
-                tempArgs.add(this.normalParams[i].defaultVar!!)
-            }
+            val argument = normalArgs.getOrNull(i) ?: this.normalParams[i].defaultVar!!
+            val incoming = top.mcfpp.analysis.StorageAccess.callerValue(argument)
             //参数传递和子函数的参数进栈
             val p = scope.getVar(this.normalParams[i].identifier)!!
+            if (p.storageBinding != null && this.normalParams[i].type.hasRuntimeRepresentation) {
+                top.mcfpp.analysis.StorageAccess.encodeTo(p.storageBinding!!.path, incoming)
+                continue
+            }
             p.isConst = false
             // The body was checked with a runtime parameter. Copying a constant argument
             // must therefore write that parameter's storage, without changing its facts.
             p.isDynamic = this.normalParams[i].type.hasRuntimeRepresentation
-            val pp = p.assignedBy(tempArgs[i])
+            val pp = p.assignedBy(if (!FloatProviders.enabled && incoming is MCFloat) incoming else incoming.getTempVar())
             if(!this.normalParams[i].isStatic) pp.isConst = true
             scope.putVar(p.identifier, pp, true)
         }

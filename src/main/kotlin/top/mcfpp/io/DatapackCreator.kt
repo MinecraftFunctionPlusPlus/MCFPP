@@ -7,6 +7,7 @@ import top.mcfpp.model.Namespace
 import top.mcfpp.model.Native
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.ObjectDataTemplate
 import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
@@ -119,14 +120,8 @@ object DatapackCreator {
 
     private fun genTemplateFunction(currPath: Path, f: Function){
         if (f is Native) return
-        val directory = if (f is ExtensionFunction) currPath.resolve("ex") else currPath
-        Files.createDirectories(directory)
-        for (cf in f.compiledFunctions.values) {
-            val output = directory.resolve("${cf.identifierWithParamType.toSnakeCase()}.mcfunction")
-            LogProcessor.debug("Writing File: $output")
-            cf.commands.analyzeAll()
-            Files.write(output, cf.cmdStr.toByteArray())
-        }
+        genFunction(currPath, f)
+        f.compiledFunctions.values.forEach { genFunction(currPath, it) }
     }
 
     private fun genObject(currPath: Path, obj: CompoundData){
@@ -137,21 +132,18 @@ object DatapackCreator {
                 genFunction(currPath.resolve("function").resolve(obj.identifier.toSnakeCase()).resolve("static"), qwq)
             }
         }
+        if (obj is ObjectDataTemplate) obj.constructors.forEach {
+            genTemplateFunction(currPath.resolve("function").resolve(obj.identifier.toSnakeCase()).resolve("static"), it)
+        }
     }
 
     private fun genTemplate(currPath: Path, t: DataTemplate){
         //成员
         t.scope.forEachFunction {
             genTemplateFunction(currPath.resolve("function").resolve(t.identifier.toSnakeCase()), it)
-            it.compiledFunctions.values.forEach {qwq ->
-                genTemplateFunction(currPath.resolve("function").resolve(t.identifier.toSnakeCase()), qwq)
-            }
         }
         t.constructors.forEach {
             genTemplateFunction(currPath.resolve("function").resolve(t.identifier.toSnakeCase()), it)
-            it.compiledFunctions.values.forEach {qwq ->
-                genTemplateFunction(currPath.resolve("function").resolve(t.identifier.toSnakeCase()), qwq)
-            }
         }
     }
 

@@ -1,8 +1,14 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段 54 ConstructorResolutionTest 最终 4 项通过，Gradle exit 0。首轮 ConstructorResolutionTest 4 + TypeBindingTest 4 + StorageViewTest 21 共 29 项有 3 项失败；随后 ConstructorResolutionTest 4 + LogicStatementTest 6 有 1 项失败，修复断言后最终 4 项通过。MCFL 11 未变，未重建标准库。最近完整检查仍属于提交 72dc557，共 346 项；本阶段未运行完整 check 或实际 Minecraft 服务端。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段 55 ConstructorExecutionTest 最终 7 项通过，Gradle exit 0；ConstructorResolutionTest 4 项在前轮已通过。首轮 8 套件共 80 项有 4 项失败（76 通过）；ConstructorExecution 7 + ConstructorResolution 4 中间复查 11 项有 1 项失败；静态对象初始化修复后最终 ConstructorExecution 7 项全过。日志：`mcfpp-constructor-receiver.log`、`mcfpp-constructor-receiver-final.log`、`mcfpp-constructor-receiver-complete.log`。MCFL 11 未变，未重建标准库；本阶段未运行完整 check 或实际 Minecraft 服务端。最近完整检查仍属于提交 72dc557，共 346 项。
 
-## 最新必要检查：模板构造器重载解析（阶段 54）
+## 最新必要检查：模板构造 receiver 与初始化帧（阶段 55）
+
+普通模板构造器不再按普通常量实参做常量特化；T! 和 compiler-only 仍按 `SpecializationPolicy` 处理。receiver 使用固定 `frame0.this` 独立传递；参数只编码入帧，不污染 callee facts。调用返回通过 `FrameExit(function,index)` 统一 IR/旧路径出口；entry 路径插入 pop，caller 路径先写回 receiver 再 pop。`preInit` 每次运行，包括 AST-null 隐式默认构造；原/特化模板及 static object 构造器均导出。显式类型非 const 字段现登记 preInit；静态字段赋值通过 `replacedBy` 后物化，非 const object 字段动态化。receiver 写回保留 source type，Unknown effect barrier 仍可撤销知识。普通模板赋值/传参的复制规则不变。
+
+ConstructorExecutionTest 最终 7 项真实执行/导出检查通过，0 failures/errors/skips；测试还检查 static object 导出命令实际产生 NBT 值 4。首轮 8 套件共 80 项有 4 项失败：两个 set 保留字样例、typed initializer 漏登记导致运行结果 90 而非 94、执行器缺 `unless score matches`；其余 76 项通过。中间复查 ConstructorExecution 7 + ConstructorResolution 4 共 11 项有 1 项失败（object constructor 文件为空），静态赋值物化修复后最终 7 项全过；ConstructorResolution 4 项此前已全过。MCFL 11 未变；无标准库重建、完整 check 或服务端测试。
+
+## 历史必要检查：模板构造器重载解析（阶段 54）
 
 ConstructorResolutionTest 最终 4 项通过，0 failures/errors/skips。覆盖精确候选不受声明顺序影响、T! 拒绝未知形参但接受完整常量、默认实参在 if/else-if 常量分支中的执行、歧义无构造副作用（只容许公共帧前言）。解析以 `ParameterMatcher.match`/`best` 选择候选，复用类型、完整值、默认参数及歧义判断；旧的字符串/类型顺序重载接口已删除，只有 `Selected` 才初始化对象，错误 `UnknownVar` 后续 visitor 访问不再重复诊断。常真 if 及静态 false→true else-if 主体内联时不再调用未注册函数。
 
