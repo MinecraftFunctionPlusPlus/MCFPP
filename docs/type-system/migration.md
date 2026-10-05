@@ -48,7 +48,8 @@
 | map 投影 IR | keys/keyValueSet 为纯读 MapProjection，结果拥有独立 Place 和载荷；字段实际类型、常量与嵌套长度跟随快照复制，后续来源变更不影响投影。键列表复用 MapCommands 的无宏循环，支持递归返回、直接下标与成员查询；字典投影按已知键复制完整 value，未知键及运行时空字段名仍明确诊断 |
 | map 成员与位置 | clear/containsKey/isEmpty/remove/merge/size 共用签名；索引写入覆盖已有键或追加新键，merge 浅覆盖完整值并保持键唯一。普通赋值/参数/返回独立复制，as 共享位置；完整静态视图持久更新祖先快照，未知键写入撤销常量并合并可能值类型。keys/keyValueSet 是独立投影；字典投影仅支持已知键，运行时空键明确诊断 |
 | 目标能力 | 显式版本表统一配置检查、包格式、浮点后端、函数宏、return run、异构列表和空键路径能力；未知版本不推测能力；旧目标拒绝混合/未证明共同编码的列表构造与元素写入，空键路径遵循目标限制；不支持 return run 的目标使用独立的递归分支条件栈，包含支持宏的 1.20.2 |
-| NBT 地址与自动宏捕获 | `NBTAddressKey` 冻结地址 source 与 path segments；按快照比较路径段和长度，父子路径同时检查 source，修复 equals 自递归。自动宏使用独立参数槽，从实际绑定或 scoreboard 捕获值；FloatProviders 不再重复预写动态 index。阶段 52 定向复查 17 项通过；Var/Pos 对象身份契约仍待修复 |
+| NBT 地址与自动宏捕获 | `NBTAddressKey` 冻结地址 source 与 path segments；按快照比较路径段和长度，父子路径同时检查 source，修复 equals 自递归。自动宏使用独立参数槽，从实际绑定或 scoreboard 捕获值；FloatProviders 不再重复预写动态 index。阶段 52 定向复查 17 项通过 |
+| 宿主值对象身份 | `Var`、`Pos3Var`、`Pos2Var`、`PosDimension` 的 8 个 equals/hashCode 覆盖已删除；宿主对象按引用身份比较，语言值仍使用 `CompilerValue`。表达式缓存只移除指定引用，spill 只对同一引用去重；括号子 visitor 共享活跃值列表并保留独立结果字段 |
 
 基本块路径先建立控制流并求解类型事实，再绑定操作、检查类型，最后进行值分析和命令生成；它不在分析过程中替换 Var 或 Symbol。
 现有调用方仍通过集中在该路径出口的 Var 适配对象读取编译结果。
@@ -93,7 +94,7 @@ map 现在只保存一份 entry 列表，布局为 `{entries:[{key:"first",value
 5. 将已有递归效果摘要扩展到其余集合位置、成员、模板、浮点、全局及实体位置，完成递归擦除返回的完整类型不动点，并为 MNI 提供显式上下文与值/位置接口。当前普通自由函数的标量/擦除以及可编码 list/dict/ImmutableList 签名接入实际 IR 调用；static 已知字段和未知列表范围传播无常量值的写入类型证据，未知范围与调用方旧类型合并，条件改写不能借用调用前类型。泛型、T!、原生成员和其余签名保留适配边界；无法证明的函数使用未知屏障，旧反射 MNI 尚未全面迁移。
 6. 将模板构造过程纳入值与位置模型，移除其余旧常量组合特化。普通函数及泛型普通参数已采用新的特化策略；模板构造器仍通过旧构造适配路径工作。
 7. 将版本缓存扩展到全部实体、集合、调用帧和临时值；未知字典键尚无已验证的运行时路径转义后端，当前明确拒绝生成，map 已用字符串值和 compound 谓词避免成员名拼接；旧目标的原生成员操作、原始 nbt/其余集合仍需全面接入编码能力检查；已有标量/擦除递归样例通过不代表完整帧分配已完成，原始命令直接修改其他函数的物理记分板仍需与统一布局规划核实；删除 hasStoredInStack、trackLost、Concrete 双层体系与双成员表。
-8. 旧浮点算术、比较、Promote/Convert 已接入 IR，四分量数据使用独立 NBT 帧，由 LegacyFloatCommands 处理读写/调用并保留旧四记分板 return ABI。普通/递归/static、旧与 IR 双向调用、早先参数、多实参、常量和连续返回均有真实库命令执行覆盖。阶段 51 最终 20 项通过；阶段 52 NBT 地址与宏捕获最终复查 17 项通过，首轮 72 项有 1 项失败、其余 71 项通过。NBTAddressKey 冻结 source/segments，按快照比较路径段和长度，父子路径同时检查 source，修复 equals 自递归；自动宏参数使用独立槽并取自实际绑定或 scoreboard，删除 FloatProviders 对动态 index 的重复预写。日志见 verification.md；MCFL 11 未变，无标准库重建、完整 check 或服务器验证。Var.equals/hashCode 身份契约仍待修复：可变字段参与 hash，坐标 Var 子类也有覆盖；BlockSource.pos、EntitySource.entity 和 NBTPath 地址比较是相关依赖。下一步移除 Var/Pos equals/hashCode 值语义并验证缓存与 spill 行为。未知 range 形参无端点类型承诺，浮点/混合迭代步长与不前进策略未定义，保留现有诊断，不视为已承诺功能。整个 17 项迁移仍未完成；模板/泛型/T!、其余控制流/集合和 MNI 继续迁移。
+8. 旧浮点算术、比较、Promote/Convert 已接入 IR，四分量数据使用独立 NBT 帧，由 LegacyFloatCommands 处理读写/调用并保留旧四记分板 return ABI。普通/递归/static、旧与 IR 双向调用、早先参数、多实参、常量和连续返回均有真实库命令执行覆盖。阶段 51 最终 20 项通过；阶段 52 地址与宏捕获最终复查 17 项通过；阶段 53 VarIdentity 5、StorageView 21、LegacyFloatIR 9 共 35 项最终通过，首轮 63 项有 2 项失败、其余 61 项通过。删除八个宿主 equals/hashCode 覆盖，Var/Pos 统一对象身份，语言值仍使用 CompilerValue；缓存只移除目标引用，spill 仅去重同一引用，括号子 visitor 共享活跃值列表但保留独立结果字段。详情和日志见 verification.md。MCFL 11 未变，无标准库重建、完整 check 或服务器验证。未知 range 形参无端点类型承诺，浮点/混合迭代步长与不前进策略未定义，保留现有诊断，不视为已承诺功能。整个 17 项迁移仍未完成；模板/泛型/T!、其余控制流/集合和 MNI 继续迁移。
 
 在这些项目完成前，核心路径仍存在 MCFPPValue / Concrete 判断，不能宣称已经完成原方案阶段 6。
 现有持久化浮点数据不会自动转换布局，完整的持久化迁移 API 仍待实现。
@@ -118,4 +119,4 @@ regenerateStdlib 从 src/main/mcfpp 重建 src/main/resources/datapack/bin.mclib
 基本块命令执行器严格拒绝未支持的指令，并检查入口栈帧在各可达返回路径上平衡。
 旧测试中仍有仅打印结果的用例；构建成功不能代替全部语言行为验收。
 当前没有配置目标 Minecraft 服务端，实际服务端验证尚未完成。
-阶段 52 必要复查 17 项通过，0 failures/errors/skips；前轮集合测试 55 项通过。MCFL 11 未变，未重建标准库、未运行完整 check 或实际服务端。最近完整 346 项仍属于提交 72dc557。历史阶段 47 的旧浮点布局/比较 36 项、标准库重建 0 错误/0 警告，以及显式转换 IR 的 52 项、返回补查 32 项和调用入口复查 8 项结果见 [验证记录](./verification.md)。
+阶段 53 最终必要复查 35 项通过，0 failures/errors/skips；阶段 52 最终复查 17 项通过，阶段 53 首轮 63 项有 2 项失败、其余 61 项通过。MCFL 11 未变，未重建标准库、未运行完整 check 或实际服务端。最近完整 346 项仍属于提交 72dc557。历史阶段 47 的旧浮点布局/比较 36 项、标准库重建 0 错误/0 警告，以及显式转换 IR 的 52 项、返回补查 32 项和调用入口复查 8 项结果见 [验证记录](./verification.md)。

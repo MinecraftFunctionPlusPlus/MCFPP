@@ -4,7 +4,7 @@
 
 ## 当前进度
 
-阶段 51 旧浮点 IR 已提交 `74c67e7`。阶段 52 已完成 NBTSource/NBTPath 地址等价与自动宏捕获修复，最终 NBTAddressTest 7、FloatProviderTest 10 共 17 项通过；首轮 72 项有 1 项失败，其余 71 项通过。下一步处理 Var/Pos equals/hashCode 身份契约。
+阶段 52 NBT 地址与自动宏捕获已提交 `dadb6cc`。阶段 53 删除 Var/Pos 值相等覆盖，最终 VarIdentityTest 5、StorageViewTest 21、LegacyFloatIRTest 9 共 35 项通过；首轮 63 项有 2 项失败，其余 61 项通过。下一步统一模板构造器实参匹配，再处理普通构造实参特化与 `this`/`preInit`。
 用户随后要求继续完成并按进度提交；该轮实现已提交为 747f0b4，擦除 while 不动点绑定提交为 467343f，list/dict 元素贯通提交为 a1bafaa，集合编码与项目隔离提交为 702fbce，嵌套静态副本及编译上下文隔离提交为 8ce9fde，静态集合擦除通道及元数据缓存隔离提交为 dd3b43a，完整静态 as 视图的共享写入提交为 e73fa03，字典成员统一及输入帧修复提交为 6315054，列表共享成员及查找后端提交为 217a5cd，字典整体合并事实与空键边界提交为 47a7b5c，map 共享成员、位置与 entry 布局迁移提交为 fa64338，只读列表与 NBT 数组迁移提交为 a623399，实际 IR 调用与递归效果分析提交为 f5a9902。集合 IR 控制流与子位置证据提交为 72dc557。动态列表 IR 提交为 9f74d5e。字典成员 IR 提交为 4bed87f。列表变更成员 IR 提交为 21224b0。列表查询与按值删除 IR 提交为 ea7dca8。NBT 数组 IR 提交为 313886b。map 索引与成员 IR 提交为 9245a62。map 投影 IR 提交为 ab1f3cb。do…while 与闭合整数区间循环 IR 提交为 711331e。IR 词法作用域提交为 eef6d44。调用子形状提交为 0c3e65f。整数范围值和命名范围 IR 提交为 8aee6b7。递归返回/写回形状提交为 eb83a60。26.3 原生浮点 IR 提交为 7cd1a69。2026-10-06 继续显式转换 IR，阶段 47 提交 b56ede9，阶段 48 提交 860c799。阶段 49 旧浮点加减提交 `82d955b`，阶段 50 乘除代码提交 `bee57c1`、静态审计文档提交 `dfdb99a`；阶段 51 旧浮点 IR 最终复查 20 项通过。阶段 49 必要检查 46 项、阶段 50 必要检查 36 项。MCFL 保持 11，未改签名/缓存结构且未重建 bin.mclib。最近完整检查仍为 72dc557 的 346 项，整体 17 项迁移未完成。
 
 本次用户要求读取文件，继续上一会话尚未完成的项目任务。读取交接与下一阶段计划后，继续类型系统迁移，未扩展到独立 MNI 元编程计划。
@@ -124,27 +124,33 @@
 
 必要复查 NBTAddressTest 7、FloatProviderTest 10，共 17 项通过，0 failures/errors/skips。首轮 NBTAddressTest 7、FloatProviderTest 10、CollectionStorageTest 39、MapMemberTest 16 共 72 项有 1 项失败（FloatProvider 的 index 读取次数预期 2、实际 4），其余 71 项通过；移除重复预写后只复查直接受影响的 17 项。日志：`F:/DevCache/.codex/runtime/mcfpp-nbt-address.log`、`mcfpp-nbt-address-final.log`。MCFL 11 未变；未重建标准库、未运行完整 check 或实际服务器。
 
+## 阶段 53：宿主值对象身份
+
+删除 `Var`、`Pos3Var`、`Pos2Var`、`PosDimension` 共 8 个 equals/hashCode 覆盖；宿主值统一对象身份，语言值比较仍使用 `CompilerValue`。表达式缓存只移除请求的引用，spill 去重只合并同一对象引用。括号子 visitor 共享父级活跃值列表、保留自身结果字段与函数参数 visitor；修复真实递归表达式 sum 期望 24、错误得到 49。直接 spill 用例通过 stack prepend/remove 建立执行器帧。
+
+首轮 VarIdentityTest 5、NBTAddressTest 7、StorageViewTest 21、ListMemberTest 19、SpecializationPolicyTest 11 共 63 项有 2 项失败；后四套件共 58 项通过。修复后最终复查 VarIdentityTest 5、StorageViewTest 21、LegacyFloatIRTest 9，共 35 项通过，0 failures/errors/skips。日志：`F:/DevCache/.codex/runtime/mcfpp-var-identity.log`、`mcfpp-var-identity-final.log`。MCFL 11 未变；未重建标准库、未运行完整 check 或实际服务器。
+
 ## 后续仍需完成
 
-- 标量/擦除及可编码 list/dict/map/ImmutableList/NBT 数组、范围值和已证明整数端点的命名范围迭代已迁入 IR，26.3 原生浮点、short/double/nbt 载荷、标量/数组显式转换及 map 两种投影也已接入；旧浮点编码/比较和 `_scoreto`/`_toscore` 缩放已修复，阶段 51 的旧浮点算术/比较、Promote/Convert 已接入 IR 并最终复查 20 项通过；四分量帧和 LegacyFloatCommands 已覆盖实际调用，旧 return ABI 保留。阶段 52 NBTSource/NBTPath 地址等价与宏捕获已完成，最终 17 项通过。下一步移除 Var/Pos equals/hashCode 值语义并验证缓存/spill。其余集合成员、编译器专用集合、未知端点范围形参/浮点范围/通用迭代器、模板/泛型/T! 等尚未统一。旧转换和 DataObject 等来源仍走适配；无宏目标上未知长度的负数字面下标仍走旧边界。
+- 标量/擦除及可编码 list/dict/map/ImmutableList/NBT 数组、范围值和已证明整数端点的命名范围迭代已迁入 IR，26.3 原生浮点、short/double/nbt 载荷、标量/数组显式转换及 map 两种投影也已接入；旧浮点编码/比较和 `_scoreto`/`_toscore` 缩放已修复，阶段 51 的旧浮点算术/比较、Promote/Convert 已接入 IR 并最终复查 20 项通过；四分量帧和 LegacyFloatCommands 已覆盖实际调用，旧 return ABI 保留。阶段 52 NBT 地址与宏捕获已完成，阶段 53 Var/Pos 对象身份修复最终 35 项通过。下一步统一模板构造器实参匹配，再移除普通构造实参常量特化并处理 `this`/`preInit`。其余集合成员、编译器专用集合、未知端点范围形参/浮点范围/通用迭代器、模板/泛型/T! 等尚未统一。旧转换和 DataObject 等来源仍走适配；无宏目标上未知长度的负数字面下标仍走旧边界。
 - 参数相关 static 已知子位置、未知列表范围、普通集合返回/static 整体替换子形状与递归效果不动点已接入受限 IR 图；同一类型/形状输入的递归返回及写回已求解，输入变化仍保守。继续扩展其余集合、成员、全局、实体及全部调用位置。无法证明的函数仍采用未知屏障，原始命令跨函数修改物理记分板与帧恢复仍需核实。
 - 未知字典字符串键的运行时路径后端、其余原生成员/集合的编码能力检查、实体路径、全部布局访问诊断、模板方法与构造仍需完成迁移；map 的字符串值键和可编码投影已接入，但编译器专用值及其余控制语句仍需扩展。本轮递归样例不代表完整帧分配覆盖全部类型。
 - MNI 显式上下文、值/位置接口及其余成员签名统一未完成；Concrete 体系、hasStoredInStack、trackLost 等旧状态仍存在。
-- 未配置实际 Minecraft 服务端；独立执行器通过不等于实际目标验证。阶段 52 最终 17 项必要复查通过；仍缺实际服务器验证及其余类型系统迁移工作。
+- 未配置实际 Minecraft 服务端；独立执行器通过不等于实际目标验证。阶段 53 最终 35 项必要复查通过；仍缺实际服务器验证及其余类型系统迁移工作。
 
 下次优先执行 [下一阶段计划](./next-stage-plan.md) 中标出的剩余工作。整个类型系统重构尚未完成。
 
 ## 本轮自检
 
-平均 3.8/5；阶段 52 最终 17 项必要复查通过，NBT 地址等价和宏捕获已修复，但 Var/Pos 身份、其余迁移和服务器验证仍未完成。
+平均 3.8/5；阶段 53 最终 35 项必要复查通过，Var/Pos 对象身份已统一，但模板构造匹配、其余迁移和服务器验证仍未完成。
 
 | 维度 | 评分 | 证据与改进 |
 | --- | --- | --- |
-| 准确性 | 4/5 | 阶段 52 最终 17 项复查通过，首轮唯一失败及修复后复查均有记录；MCFL 保持 11，仍缺实际 Minecraft 执行及其余迁移工作 |
-| 完整性 | 3/5 | NBT 地址等价与宏捕获已修复；Var/Pos 身份、模板/泛型/T!、其余控制流/集合、MNI 和实际服务器验证仍未完成 |
-| 清晰度 | 4/5 | 最新记录区分阶段 52 与历史阶段，并列出直接受影响测试；多份文档有重复，后续继续按阶段维护 |
-| 可操作性 | 4/5 | 17 项最终复查和两份日志已记录；下一步移除 Var/Pos equals/hashCode 值语义并验证缓存/spill |
-| 简洁性 | 4/5 | 地址 source/segments 由 NBTAddressKey 集中冻结，宏参数复用实际绑定/score，避免重复 index 写入；记录保留阶段与历史边界 |
+| 准确性 | 4/5 | 阶段 53 最终 35 项复查通过，首轮两项失败和修复后复查均有记录；MCFL 保持 11，仍缺实际 Minecraft 执行及其余迁移工作 |
+| 完整性 | 3/5 | 宿主值身份已统一；模板构造匹配、普通构造实参特化、模板/泛型/T!、其余控制流/集合、MNI 和实际服务器验证仍未完成 |
+| 清晰度 | 4/5 | 最新记录区分阶段 53 与阶段 52，并列出直接受影响测试；多份文档有重复，后续继续按阶段维护 |
+| 可操作性 | 4/5 | 35 项最终复查和两份日志已记录；下一步处理模板构造器实参匹配并保留明确的T!完整值/默认值规则 |
+| 简洁性 | 4/5 | 宿主对象身份与 CompilerValue 语言值比较分开；表达式缓存及 spill 均只按引用身份操作 |
 
-优先改进：实施 Var/Pos equals/hashCode 对象身份修复，核对缓存和 spill 行为；随后继续其余迁移并补真实目标对照。完整性仍为 3/5，因为模板/泛型/T!、其余控制流/集合、MNI 与实际服务器验证仍有缺口。
+优先改进：实现模板构造器精准类型优先、T! 完整值、默认实参与歧义处理；随后去除普通构造实参的常量特化并统一 `this`/`preInit`。完整性仍为 3/5，因为模板/泛型/T!、其余控制流/集合、MNI 与实际服务器验证仍有缺口。
 自检：用户能复核实现和测试，也会看到整项重构仍未结束；没有把阶段通过写成项目全部完成。

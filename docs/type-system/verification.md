@@ -1,8 +1,14 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段 52 最终复查 NBTAddressTest 7、FloatProviderTest 10，共 17 项通过，Gradle exit 0；前轮 CollectionStorageTest 39、MapMemberTest 16 通过，合计 72 项中仅首轮 FloatProviderTest 1 项失败，其余 71 项通过。MCFL 11 未变，未重建标准库。最近完整检查仍属于提交 72dc557，共 346 项；本阶段未运行完整 check 或实际 Minecraft 服务端。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段 53 最终复查 VarIdentityTest 5、StorageViewTest 21、LegacyFloatIRTest 9，共 35 项通过，Gradle exit 0。阶段 52 最终 17 项通过；阶段 53 首轮 63 项有 2 项失败，其余 61 项通过。MCFL 11 未变，未重建标准库。最近完整检查仍属于提交 72dc557，共 346 项；本阶段未运行完整 check 或实际 Minecraft 服务端。
 
-## 最新必要检查：NBT 地址等价与宏捕获（阶段 52）
+## 最新必要检查：宿主值对象身份（阶段 53）
+
+VarIdentityTest 5、StorageViewTest 21、LegacyFloatIRTest 9，共 35 项最终复查通过，0 failures/errors/skips。首轮 VarIdentityTest 5、NBTAddressTest 7、StorageViewTest 21、ListMemberTest 19、SpecializationPolicyTest 11 共 63 项有 2 项失败；后四套件共 58 项全部通过。失败分别为跨递归调用的 legacy visitor 表达式结果错误（期望 sum 24、得到 49）和 spill 测试执行器未建立帧。括号子 visitor 现共享父级活跃值列表，同时保留各自结果字段；直接 spill 测试通过真实 stack prepend/remove 建立执行器帧。最终复查使用 `F:/DevCache/.codex/runtime/mcfpp-var-identity-final.log`，首轮日志为 `mcfpp-var-identity.log`。
+
+删除 `Var`、`Pos3Var`、`Pos2Var`、`PosDimension` 共 8 个 equals/hashCode 覆盖后，宿主对象统一按对象身份比较；语言值仍由 `CompilerValue` 比较。表达式缓存只删除目标引用，spill 的 `distinct()` 只合并同一引用，避免同名但不同临时值混淆。MCFL 11 未变；未运行完整 check、未重建标准库或实际 Minecraft 服务端。
+
+## 历史必要检查：NBT 地址等价与宏捕获（阶段 52）
 
 NBTAddressTest 7、FloatProviderTest 10，共 17 项通过，0 failures/errors/skips。首轮四套件共 72 项仅 `FloatProviderTest.nonStorageAndDynamicIndexSourcesAreCopiedBeforeEvaluation` 失败（读取次数预期 2、实际 4），其余 71 项通过；`FloatProviders.preparePath` 原先预写动态 index，随后自动宏参数编码又读取一次。移除该重复预写后保留原 2 次读取断言，定向复查 17 项全部通过。日志：`F:/DevCache/.codex/runtime/mcfpp-nbt-address.log`、`mcfpp-nbt-address-final.log`。
 

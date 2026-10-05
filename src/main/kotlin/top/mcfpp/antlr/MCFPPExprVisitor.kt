@@ -41,9 +41,9 @@ import top.mcfpp.util.TextTranslator.translate
 import java.util.*
 
 class MCFPPExprVisitor(
-    private var enumType: MCFPPEnumType? = null
+    private var enumType: MCFPPEnumType? = null,
+    var processVarCache: ArrayList<Var<*>> = ArrayList()
 ): mcfppParserBaseVisitor<Var<*>>() {
-    var processVarCache : ArrayList<Var<*>> = ArrayList()
 
     private var currSelector : Var<*>? = null
 
@@ -416,7 +416,8 @@ class MCFPPExprVisitor(
     }
 
     override fun visitBucketExpression(ctx: mcfppParser.BucketExpressionContext): Var<*> = withCompilationContext(ctx) {
-        return MCFPPExprVisitor().visit(ctx.expression())
+        // Keep separate expression result fields while preserving outer values across nested calls.
+        return MCFPPExprVisitor(processVarCache = processVarCache).visit(ctx.expression())
     }
 
     override fun visitFunctionCall(ctx: mcfppParser.FunctionCallContext): Var<*> = withCompilationContext(ctx) {

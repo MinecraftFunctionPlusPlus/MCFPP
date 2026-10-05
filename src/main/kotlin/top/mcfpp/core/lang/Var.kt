@@ -617,24 +617,6 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         }
     }
 
-    override fun equals(other: Any?): Boolean {
-        if(other !is Var<*>) return false
-        if(this.parent != other.parent) return false
-        if(this is MCFPPValue<*> != other is MCFPPValue<*>) return false
-        if(this is MCFPPValue<*> && other is MCFPPValue<*> && this.value != other.value) return false
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = identifier.hashCode()
-        result = 31 * result + stackIndex
-        result = 31 * result + hasAssigned.hashCode()
-        result = 31 * result + (parent?.hashCode() ?: 0)
-        result = 31 * result + accessModifier.hashCode()
-        result = 31 * result + type.hashCode()
-        return result
-    }
-
     override fun replaceMemberVar(v: Var<*>){}
 
     open fun replacedBy(v : Var<*>){

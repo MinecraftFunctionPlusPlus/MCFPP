@@ -110,18 +110,6 @@ class Pos3Var: ConcreteVar<Pos3Var, ArrayList<PosDimension>> {
         }
     }
 
-    override fun equals(other: Any?): Boolean {
-        if(!super.equals(other)) return false
-        return x == (other as Pos3Var).x && y == other.y && z == other.z
-    }
-
-    override fun hashCode(): Int {
-        var result = super.hashCode()
-        result = 31 * result + x.hashCode()
-        result = 31 * result + y.hashCode()
-        result = 31 * result + z.hashCode()
-        return result
-    }
 }
 
 class Pos2Var: ConcreteVar<Pos2Var, ArrayList<PosDimension>> {
@@ -211,17 +199,6 @@ class Pos2Var: ConcreteVar<Pos2Var, ArrayList<PosDimension>> {
         }
     }
 
-    override fun equals(other: Any?): Boolean {
-        if(!super.equals(other)) return false
-        return x == (other as Pos2Var).x && z == other.z
-    }
-
-    override fun hashCode(): Int {
-        var result = super.hashCode()
-        result = 31 * result + x.hashCode()
-        result = 31 * result + z.hashCode()
-        return result
-    }
 }
 
 open class PosDimension: ConcreteVar<PosDimension, Pair<String, Number>> {
@@ -288,19 +265,6 @@ open class PosDimension: ConcreteVar<PosDimension, Pair<String, Number>> {
             c.build(number.toString(), false)
         }
         return c
-    }
-
-    override fun equals(other: Any?): Boolean {
-        if(other !is PosDimension) return false
-        if(this === other) return true
-        return value == other.value
-    }
-
-    override fun hashCode(): Int {
-        var result = super.hashCode()
-        result = 31 * result + prefix.hashCode()
-        result = 31 * result + number.hashCode()
-        return result
     }
 
 }
