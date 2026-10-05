@@ -259,6 +259,8 @@ object PrimitiveCompiler {
         private var current = blocks.first()
         private val instructions get() = current.instructions
         private val visible = linkedMapOf<String, Symbol>()
+        private var declaredHere = linkedSetOf<String>()
+        private val localNames = hashSetOf<String>()
         val exportedSymbols = mutableListOf<Symbol>()
         private var depth = 0
         private val loops = ArrayDeque<Pair<Int, Int>>()
@@ -292,6 +294,7 @@ object PrimitiveCompiler {
                 val symbol = if (parameter.isStatic) declaration.copy(forceRuntime = true) else declaration
                 symbols[symbol.name] = symbol
                 visible[symbol.name] = symbol
+                declaredHere.add(symbol.name)
                 exportedSymbols.add(symbol)
                 runtimeSymbols.add(symbol.id)
                 val actual = if (symbol.declaredType in erased) TypeKnowledge.Unknown else TypeKnowledge.Exact(symbol.declaredType)
@@ -309,8 +312,12 @@ object PrimitiveCompiler {
                 function.normalParams.map { symbols.getValue(it.identifier).id },
                 function.normalParams.filter { it.isStatic }.map { symbols.getValue(it.identifier).id }.toSet())
         }
-        private fun scoped(block: Parser.BlockContext) {
+        private fun scoped(block: Parser.BlockContext, bindings: Map<String, Symbol> = emptyMap()) {
             val prior = LinkedHashMap(visible)
+            val priorDeclarations = declaredHere
+            declaredHere = LinkedHashSet(bindings.keys)
+            localNames.addAll(bindings.keys)
+            visible.putAll(bindings)
             depth++
             try {
                 if (block.curlBlock() != null) block.curlBlock().statement().forEach(::statement)
@@ -319,6 +326,7 @@ object PrimitiveCompiler {
                 depth--
                 visible.clear()
                 visible.putAll(prior)
+                declaredHere = priorDeclarations
             }
         }
         private fun condition(context: Parser.BucketExpressionContext): ValueRef =
@@ -412,14 +420,8 @@ object PrimitiveCompiler {
             terminate(Terminator.Branch(binary("<=", read(index), read(limit)), body.id, exit.id))
             current = body
             write(item, read(index))
-            val prior = LinkedHashMap(visible)
-            visible[context.Identifier().text] = item
             loops.addLast(step.id to exit.id)
-            try { scoped(context.block()) } finally {
-                loops.removeLast()
-                visible.clear()
-                visible.putAll(prior)
-            }
+            try { scoped(context.block(), mapOf(context.Identifier().text to item)) } finally { loops.removeLast() }
             jump(step)
             current = step
             // Stop before incrementing the inclusive upper bound, including Int.MAX_VALUE.
@@ -433,6 +435,25 @@ object PrimitiveCompiler {
         private fun unsupported(): Nothing = throw Unsupported()
         private fun invalid(message: String): Nothing = throw Invalid(message)
 
+        private fun lookup(name: String): Symbol = visible[name] ?: run {
+            if (name in localNames && function.scope.getType(name) == null) invalid("Symbol is outside its scope: $name")
+            unsupported()
+        }
+
+        private fun declare(context: Parser.FieldDeclarationContext, type: TypeId): Symbol {
+            val name = context.Identifier().text
+            if (!declaredHere.add(name)) invalid("Duplicate defined variable: $name")
+            localNames.add(name)
+            val modifier = context.fieldModifier()?.text
+            val storedName = if (depth == 0) name else "\$local_${context.start.tokenIndex}_$name"
+            val symbol = Symbol(declarationIds.getOrPut(context.start.tokenIndex, SymbolId::fresh), name,
+                type, modifier != "const", forceRuntime = modifier == "dynamic")
+            symbols[storedName] = symbol
+            visible[name] = symbol
+            if (depth == 0) exportedSymbols.add(symbol)
+            return symbol
+        }
+
         fun statement(context: Parser.StatementContext) {
             // An error in a nested statement must not erase the loop's remaining body or backedge.
             try { lowerStatement(context) } catch (invalid: Invalid) {
@@ -440,13 +461,7 @@ object PrimitiveCompiler {
                 // A later binding pass may resolve this initializer. Keep its name visible meanwhile.
                 context.fieldDeclaration()?.let { declaration ->
                     val name = declaration.Identifier().text
-                    if (name !in visible) {
-                        val symbol = Symbol(declarationIds.getOrPut(declaration.start.tokenIndex, SymbolId::fresh), name,
-                            declaration.type()?.let(::type)?.typeId ?: any, declaration.fieldModifier()?.text != "const")
-                        symbols[name] = symbol
-                        visible[name] = symbol
-                        if (depth == 0) exportedSymbols.add(symbol)
-                    }
+                    if (name !in declaredHere) declare(declaration, declaration.type()?.let(::type)?.typeId ?: any)
                 }
             }
         }
@@ -489,12 +504,7 @@ object PrimitiveCompiler {
                 if (type !in types) invalid("A void expression cannot initialize a value")
                 val assigned = boundValue(value)
                 if (assigned.type != type && type !in erased && !(exploratory && assigned.type == any)) invalid("Cannot assign ${assigned.type} to $type")
-                val name = declaration.Identifier().text
-                if (name in symbols) invalid("Duplicate defined variable: $name")
-                val symbol = Symbol(declarationIds.getOrPut(declaration.start.tokenIndex, SymbolId::fresh), name, type, modifier != "const", forceRuntime = modifier == "dynamic")
-                symbols[name] = symbol
-                visible[name] = symbol
-                if (depth == 0) exportedSymbols.add(symbol)
+                val symbol = declare(declaration, type)
                 if (view) aliases[symbol.id] = locations.getValue((value as ValueRef.Result).instruction)
                 else write(symbol, assigned)
                 return
@@ -504,7 +514,7 @@ object PrimitiveCompiler {
                 val target = assignment.varWithSelector()
                 if (target == null) { expression(assignment.expression()); return }
                 val suffix = target.jvmAccessExpression().propertyOperator().primary().`var`()?.varWithSuffix() ?: unsupported()
-                val symbol = visible[suffix.Identifier().text] ?: unsupported()
+                val symbol = lookup(suffix.Identifier().text)
                 if (target.selector().isNotEmpty() || target.jvmAccessExpression().Identifier() != null) unsupported()
                 if (suffix.identifierSuffix().isEmpty() && !symbol.mutable) invalid("Cannot assign a constant repeatedly: ${symbol.name}")
                 val operation = assignment.assignmentOperator().text
@@ -553,7 +563,7 @@ object PrimitiveCompiler {
             return ValueRef.Result(type, result)
         }
         private fun indexed(node: Parser.VarWithSuffixContext, writing: Boolean = false, readFinal: Boolean = true, initialValue: ValueRef? = null): ValueRef {
-            var value = initialValue ?: read(visible[node.Identifier().text] ?: unsupported(), node)
+            var value = initialValue ?: read(lookup(node.Identifier().text), node)
             for ((index, suffix) in node.identifierSuffix().withIndex()) {
                 val key = boundValue(expression(suffix.expression() ?: unsupported()))
                 val container = if (value.type == any) {
@@ -962,6 +972,7 @@ object PrimitiveCompiler {
         private val viewResults = mutableMapOf<Int, ValueRef.TypedView>()
         private val constants = mutableMapOf<Pair<TypeId, CompilerValue>, Score>()
         private val symbols = lowering.symbols.values.associateBy { it.id }
+        private val storageNames = lowering.symbols.entries.associate { it.value.id to it.key }
         private val destinations = mutableMapOf(0 to function)
         private val storagePlaces = hashSetOf<Place>()
         private val initialized = hashSetOf<Place>()
@@ -970,12 +981,12 @@ object PrimitiveCompiler {
         private fun temporary(type: TypeId) = Score(TempPool.getVarIdentify(), objective(type))
         private fun place(place: Place): Score {
             val symbol = symbols.getValue(place.root)
-            return Score(function.prefix + symbol.name, objective(symbol.declaredType))
+            return Score(function.prefix + storageNames.getValue(place.root), objective(symbol.declaredType))
         }
         fun address(place: Place): NBTPath = address(Location(place))
         fun address(location: Location): NBTPath {
             val place = location.place
-            val name = symbols.getValue(place.root).name
+            val name = storageNames.getValue(place.root)
             var path = if (name.startsWith("$")) internal(name) else NBTPath.stack.intIndex(0).memberIndex(name)
             for ((position, segment) in place.path.withIndex()) path = when (segment) {
                 is PathSegment.Field -> path.memberIndex(StorageAccess.quotedKey(segment.name))
@@ -1246,7 +1257,8 @@ object PrimitiveCompiler {
                 initialized.clear()
                 initialized.addAll(storagePlaces.filter { facts.entries.getValue(block.id).read(it)?.state == ValueState.INITIALIZED })
                 if (block.id == 0 && reachable.any { candidate -> candidate.instructions.any { it is Instruction.Call ||
-                    it is Instruction.Construct || it is Instruction.Read && nbt(symbols.getValue(it.place.root).declaredType) } })
+                    it is Instruction.Construct || it is Instruction.Read && nbt(symbols.getValue(it.place.root).declaredType) ||
+                    it is Instruction.Write && storageNames.getValue(it.place.root).startsWith("$") && nbt(symbols.getValue(it.place.root).declaredType) } })
                     emit(Commands.dataSetValue(NBTPath.stack.intIndex(0).memberIndex("\$ir"), top.mcfpp.nbt.tags.CompoundTag()))
                 for ((position, instruction) in block.instructions.withIndex()) when (instruction) {
                     is Instruction.Read -> if (nbt(symbols.getValue(instruction.place.root).declaredType) || instruction.place.path.isNotEmpty()) {

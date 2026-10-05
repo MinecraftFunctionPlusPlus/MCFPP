@@ -1,8 +1,20 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-05（Asia/Shanghai）。本轮循环 IR 的必要检查为 50 项；最近完整检查属于提交 72dc557，共 346 项。续接起始基线为上一会话的 140 项测试，浮点后端及算术修改继续保留。
+最新验证日期：2026-10-06（Asia/Shanghai）。本轮作用域 IR 联合检查 46 项通过；分离源码名与存储名后，相关 28 项复查通过。最近完整检查属于提交 72dc557，共 346 项。续接起始基线为上一会话的 140 项测试，浮点后端及算术修改继续保留。
 
-## 最新必要检查：do…while 与闭合整数区间循环 IR
+## 最新必要检查：IR 词法作用域
+
+```sh
+./gradlew test --tests top.mcfpp.test.ScopeIRTest --tests top.mcfpp.test.LoopIRTest --tests top.mcfpp.test.CollectionIRTest --tests top.mcfpp.test.IRCallTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
+./gradlew test --tests top.mcfpp.test.ScopeIRTest --tests top.mcfpp.test.LoopIRTest --tests top.mcfpp.test.IRCallTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
+git diff --check
+```
+
+联合 4 个套件、46 项通过。新增 ScopeIRTest 的 5 项覆盖同级块同名声明、嵌套遮蔽及初始化读取外层、同名集合/共享视图、循环和递归局部存储、未读取 NBT 局部的父路径初始化，以及同域重复声明和越界引用诊断。
+
+首次检查发现越界引用会退回旧入口，从而泄漏常量分支内的局部变量；现直接诊断。另一个测试变量名误用了保留字，已修正。声明 Symbol 保留源码名，存储名独立按声明位置分配；此调整后只复查 3 个相关套件、28 项，0 失败/错误/跳过，当前 XML 为这 3 个套件。日志：`F:/DevCache/.codex/runtime/mcfpp-scope-ir-final.log` 和 `mcfpp-scope-ir-storage-names.log`。未重复全量构建或标准库重建，MCFL 保持 9。
+
+## 上一阶段必要检查：do…while 与闭合整数区间循环 IR（711331e）
 
 ```sh
 ./gradlew test --tests top.mcfpp.test.LoopIRTest --tests top.mcfpp.test.ErasedFlowTest --tests top.mcfpp.test.IRCallTest --tests top.mcfpp.test.CollectionIRTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
@@ -11,7 +23,7 @@ git diff --check
 
 4 个套件、50 项，0 失败、0 错误、0 跳过。新增 LoopIRTest 的 6 项覆盖 do…while 的先执行后判断、continue 转向条件、至少一次写入的类型证据，以及闭合整数区间的边界一次求值、迭代变量副本、嵌套同名循环变量、break/continue、32 位极值、动态空区间、返回和递归帧。跨折叠开关及 26.3/1.20.2/1.20.1 执行。
 
-首轮一处正向样例因 any 声明语法写错而失败；修正两处同类样例后全部通过，并确认负向回边用例实际触发语义诊断而非语法错误。日志：`F:/DevCache/.codex/runtime/mcfpp-loop-ir-final.log`；当前 XML 为上述 4 个套件。未重复全量构建或标准库重建，MCFL 保持 9。命名 range 值、浮点范围和通用迭代器仍在旧边界，不由本次结果证明完成。
+首轮一处正向样例因 any 声明语法写错而失败；修正两处同类样例后全部通过，并确认负向回边用例实际触发语义诊断而非语法错误。日志：`F:/DevCache/.codex/runtime/mcfpp-loop-ir-final.log`；该次为上述 4 个套件。未重复全量构建或标准库重建，MCFL 保持 9。命名 range 值、浮点范围和通用迭代器仍在旧边界，不由本次结果证明完成。
 
 ## 上一阶段必要检查：map 投影 IR（ab1f3cb）
 

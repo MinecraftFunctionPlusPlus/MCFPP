@@ -16,6 +16,7 @@
 | 声明与值 | 稳定 Symbol；不可变常量快照；独立 TypeKnowledge / ValueKnowledge；StorageAccess 将 Place、TypedView、FlowFacts、StorageVersions 接入实际 NBT 与记分板读写 |
 | 基本块编译 | 无所属模板的 int/bool/any/object、string/byte/long 载荷及可编码 list/dict/map/ImmutableList/NBT 数组形参、返回和普通调用；集合字面量、已知键、动态下标、复制与共享视图接入同一 IR。先在私有调用图上求解效果和控制流事实，再绑定重载并生成命令；分支与循环采用不动点事实，break/continue/return 排除不可达前驱；类型分析独立于折叠开关 |
 | 循环 IR | while、do…while 和直接闭合整数区间 for 使用普通基本块。do…while 至少执行一次，continue 转向尾部条件；区间边界只求值一次，迭代变量每轮复制，嵌套变量作用域独立。上界包含在内，递增前检查结束以避免 Int.MAX_VALUE 溢出；普通函数不在编译期执行，区间不逐项展开。命名 range、浮点范围和通用迭代器尚未迁入 |
+| IR 词法作用域 | 重名检查只针对当前作用域，分支/嵌套块可以有独立同名声明；初始化先按外层可见性求值，随后遮蔽名称。声明 ID 稳定，Symbol 保留源码名，记分板/NBT 存储名独立分配；退出块后恢复可见绑定，越界引用直接诊断。foreach 变量属于循环体作用域，局部共享视图继续指向原 Place，递归保存独立局部存储 |
 | 常量与存储 | 基本块路径进行分支汇合与循环不动点分析；常量延迟物化；dynamic 保留运行时表示；分支不物化未修改的无关变量 |
 | 原始命令与调用 | 原始命令前提交延迟数据，之后撤销类型、值事实和同步缓存；受限 IR 调用图求解 Pure/Writes/Unknown 的递归不动点，static 形参写入映射到实际位置，普通参数副本的局部写入不外泄。未迁入调用与未标注 MNI 保守使用未知效果；已审计数值及 list/dict/map/ImmutableList 查询 MNI 标注 NoExternalWrites；list/dict/map 变更标注 WritesReceiver，由存储接口提交并失效受影响位置 |
 | 缓存 | 不可变特化键包含声明、值实参、目标版本和影响生成的选项；真实空值、未知值与错误分离；库索引新增格式头与版本；项目重置清除词法/语法缓存、元数据图缓存、当前编译上下文与旧 load/tick 函数，移除无人读取且保留旧项目的反向子类型列表 |
@@ -112,4 +113,4 @@ regenerateStdlib 从 src/main/mcfpp 重建 src/main/resources/datapack/bin.mclib
 基本块命令执行器严格拒绝未支持的指令，并检查入口栈帧在各可达返回路径上平衡。
 旧测试中仍有仅打印结果的用例；构建成功不能代替全部语言行为验收。
 当前没有配置目标 Minecraft 服务端，实际服务端验证尚未完成。
-循环 IR 本轮必要检查 50 项通过；最近完整 346 项属于提交 72dc557，结果与日志见 [验证记录](./verification.md)。
+作用域 IR 联合 46 项通过，存储名分离后复查 28 项通过；最近完整 346 项属于提交 72dc557，结果与日志见 [验证记录](./verification.md)。
