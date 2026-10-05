@@ -25,26 +25,9 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
     ctx
 ) {
 
-    @Transient
-    var file: MCFPPFile? = MCFPPFile.currFile
-
-    internal override fun compileBody(target: Function, context: CurlBlockContext?) {
-        val source = file
-        if (source == null) {
-            super.compileBody(target, context)
-            return
-        }
-        val callerFile = MCFPPFile.currFile
-        val callerNamespace = Project.currNamespace
-        try {
-            MCFPPFile.currFile = source
-            Project.currNamespace = data.namespace
-            super.compileBody(target, context)
-        } finally {
-            MCFPPFile.currFile = callerFile
-            Project.currNamespace = callerNamespace
-        }
-    }
+    var file: MCFPPFile?
+        get() = declarationFile
+        set(value) { declarationFile = value }
 
     fun addParamsFromContext(ctx: mcfppParser.NormalParamsContext) {
         val n = ctx.parameterList()?:return

@@ -5,10 +5,13 @@ import top.mcfpp.model.function.DataTemplateConstructor
 
 data class TemplateConstructorInfo(
     val normalParams: List<FunctionParamInfo>,
-    val context: CurlBlockContext?
+    val context: CurlBlockContext?,
+    val declarationEnvironment: DeclarationEnvironmentInfo?
 ): ModelInfo<DataTemplateConstructor> {
     override fun get(): DataTemplateConstructor {
         val constructor = DataTemplateConstructor(DataTemplateInfo.currTemplate!!, null)
+        constructor.declarationFile = null
+        constructor.declarationEnvironment = declarationEnvironment
         normalParams.forEach {
             AbstractFunctionInfo.currFunction = constructor
             constructor.normalParams.add(it.get())
@@ -22,7 +25,8 @@ data class TemplateConstructorInfo(
         fun from(constructor: DataTemplateConstructor): TemplateConstructorInfo {
             return TemplateConstructorInfo(
                 constructor.normalParams.map { FunctionParamInfo.from(it) },
-                constructor.ast
+                constructor.ast,
+                DeclarationEnvironmentInfo.from(constructor.declarationFile) ?: constructor.declarationEnvironment
             )
         }
     }

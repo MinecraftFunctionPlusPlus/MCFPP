@@ -27,12 +27,21 @@ open class GenericObjectDataTemplate : GenericDataTemplate {
     constructor(ctx: mcfppParser.TemplateBodyContext, identifier: String, namespace: String = Project.currNamespace) :super(ctx, identifier, namespace)
 
     override fun compile(readOnlyArgs: List<Var<*>>) : CompiledGenericDataTemplate {
+        val file = restoreDeclarationEnvironment()
+        return if (file == null) compileInDeclarationEnvironment(readOnlyArgs)
+        else file.withDeclarationContext { compileInDeclarationEnvironment(readOnlyArgs) }
+    }
+
+    private fun compileInDeclarationEnvironment(readOnlyArgs: List<Var<*>>): CompiledGenericDataTemplate {
         val template = CompiledGenericObjectDataTemplate(
             "${identifier}_${readOnlyParams.joinToString("_") { it.typeIdentifier }}_$index",
             namespace,
             this,
             readOnlyArgs.map { it as MCFPPValue<*> }
         )
+        template.declarationFile = declarationFile
+        template.declarationEnvironment = declarationEnvironment
+        template.restoreDeclarationEnvironment()
         for (parent in this.parent){
             template.extends(parent)
         }

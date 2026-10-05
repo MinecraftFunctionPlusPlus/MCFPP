@@ -17,6 +17,8 @@ import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.doc.Document
 import top.mcfpp.io.MCFPPFile
+import top.mcfpp.io.info.DeclarationEnvironmentInfo
+import top.mcfpp.model.scope.FileScope
 import top.mcfpp.lib.NamespaceID
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.*
@@ -109,6 +111,21 @@ import java.lang.reflect.Method
  * @see InternalFunction
  */
 open class Function : Member, FieldContainer, WithDocument {
+
+    @Transient
+    var declarationFile: MCFPPFile? = MCFPPFile.currFile
+
+    @Transient
+    var declarationEnvironment: DeclarationEnvironmentInfo? = null
+
+    internal fun restoreDeclarationEnvironment(): MCFPPFile? {
+        val file = declarationFile ?: declarationEnvironment?.restore()?.also { declarationFile = it }
+        if (file != null) {
+            scope.parent.removeAll { it is FileScope }
+            scope.parent.add(file.field)
+        }
+        return file
+    }
 
     /**
      * 函数的返回类型
@@ -392,6 +409,8 @@ open class Function : Member, FieldContainer, WithDocument {
         this.isAbstract = function.isAbstract
         this.accessModifier = function.accessModifier
         this.ast = function.ast
+        this.declarationFile = function.declarationFile
+        this.declarationEnvironment = function.declarationEnvironment
     }
 
     /**
@@ -487,9 +506,13 @@ open class Function : Member, FieldContainer, WithDocument {
         }
 
     internal open fun compileBody(target: Function = this, context: CurlBlockContext? = ast) {
-        target.runInFunction {
-            MCFPPImVisitor().compileFunctionBody(context) { prepareBody(target) }
+        val compile = {
+            target.runInFunction {
+                MCFPPImVisitor().compileFunctionBody(context) { prepareBody(target) }
+            }
         }
+        val file = restoreDeclarationEnvironment()
+        if (file == null) compile() else file.withDeclarationContext(compile)
     }
 
     /**

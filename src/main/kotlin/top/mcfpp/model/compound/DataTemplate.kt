@@ -1,6 +1,9 @@
 package top.mcfpp.model.compound
 
 import top.mcfpp.Project
+import top.mcfpp.io.MCFPPFile
+import top.mcfpp.io.info.DeclarationEnvironmentInfo
+import top.mcfpp.model.scope.FileScope
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
@@ -38,6 +41,21 @@ import top.mcfpp.util.Utils.v
  */
 open class DataTemplate : FieldContainer, CompoundData {
 
+    @Transient
+    var declarationFile: MCFPPFile? = MCFPPFile.currFile
+
+    @Transient
+    var declarationEnvironment: DeclarationEnvironmentInfo? = null
+
+    internal fun restoreDeclarationEnvironment(): MCFPPFile? {
+        val file = declarationFile ?: declarationEnvironment?.restore()?.also { declarationFile = it }
+        if (file != null) {
+            scope.parent.removeAll { it is FileScope }
+            scope.parent.add(file.field)
+        }
+        return file
+    }
+
     /**
      * 构造函数
      */
@@ -67,17 +85,27 @@ open class DataTemplate : FieldContainer, CompoundData {
 
     /** Apply source annotations after inheritance and inferred fields have their canonical declarations. */
     internal fun applyDeclarationAnnotations() {
-        annotations.forEach { it.on(this) }
-        for ((name, annotations) in pendingFieldAnnotations) {
-            val field = scope.getVar(name)
-            if (field == null) {
-                LogProcessor.error("Cannot apply annotations to unresolved template field '$name'")
-                continue
+        val apply = {
+            val callerTemplate = currTemplate
+            currTemplate = this
+            try {
+                annotations.forEach { it.on(this) }
+                for ((name, annotations) in pendingFieldAnnotations) {
+                    val field = scope.getVar(name)
+                    if (field == null) {
+                        LogProcessor.error("Cannot apply annotations to unresolved template field '$name'")
+                        continue
+                    }
+                    annotations.forEach { it.on(field) }
+                    field.annotations.addAll(annotations)
+                }
+                pendingFieldAnnotations.clear()
+            } finally {
+                currTemplate = callerTemplate
             }
-            annotations.forEach { it.on(field) }
-            field.annotations.addAll(annotations)
         }
-        pendingFieldAnnotations.clear()
+        val file = restoreDeclarationEnvironment()
+        if (file == null) apply() else file.withDeclarationContext(apply)
     }
 
     var companionObject: DataTemplate? = null

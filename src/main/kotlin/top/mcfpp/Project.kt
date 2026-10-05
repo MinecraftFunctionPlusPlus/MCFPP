@@ -455,6 +455,7 @@ object Project {
                 LogProcessor.error("Error while reading lib file at $include: $e")
             }
         }
+        restoreDeclarationEnvironments()
         //函数参数解析
         GlobalScope.importedLibNamespaces.clear()
         //读取所有文件
@@ -467,6 +468,37 @@ object Project {
             LogProcessor.error("Cannot find any mcfpp file in path: ${config.sourcePath}")
         }
         stageProcessor[compileStage.ordinal].forEach { it() }
+    }
+
+    /** Bind declaration imports after the last include, before any body or call graph is analyzed. */
+    private fun restoreDeclarationEnvironments() {
+        val functions = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Function, Boolean>())
+        val compounds = java.util.Collections.newSetFromMap(
+            java.util.IdentityHashMap<top.mcfpp.model.compound.CompoundData, Boolean>()
+        )
+        fun restoreFunction(function: Function) {
+            if (functions.add(function)) function.restoreDeclarationEnvironment()
+        }
+        fun restoreCompound(compound: top.mcfpp.model.compound.CompoundData) {
+            if (!compounds.add(compound)) return
+            if (compound is DataTemplate) {
+                compound.restoreDeclarationEnvironment()
+                compound.constructors.forEach(::restoreFunction)
+                compound.companionObject?.let(::restoreCompound)
+            }
+            compound.scope.forEachFunction(::restoreFunction)
+        }
+        val namespaces = GlobalScope.libNamespaces.values + GlobalScope.stdNamespaces.values
+        for (namespace in namespaces) {
+            val scope = namespace.scope
+            scope.forEachFunction(::restoreFunction)
+            scope.template.values.forEach(::restoreCompound)
+            scope.genericTemplate.values.forEach(::restoreCompound)
+            scope.interfaces.values.forEach(::restoreCompound)
+            scope.genericInterfaces.values.forEach(::restoreCompound)
+            scope.objects.forEach(::restoreCompound)
+            scope.genericObjects.values.forEach(::restoreCompound)
+        }
     }
 
     /**

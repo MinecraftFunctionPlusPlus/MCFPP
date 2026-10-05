@@ -1,8 +1,18 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段58 pure declaration binding 经分轮覆盖37个不同检查用例全部通过，但并非一次37项联合运行：runtime receiver修复后的 TemplateFieldInferenceTest 6项5通过/1失败，修复 runtime binding 后单独复查该方法1项通过（其余5项已在首轮通过）；另一次运行的 Const4、ConstructorExecution7、TemplateInitialization3、IRCall17共31项全部通过。相关 fresh XML 时间戳分别为 `2026-10-05T23:06:25.229Z`（6项5/1）、`23:09:30.812Z`（定向1项全过）、`23:09:52.487Z`（Const4）、`23:09:48.914Z`（ConstructorExecution7）、`23:09:52.695Z`（TemplateInitialization3）、`23:09:51.101Z`（IRCall17）。日志见各段；未重建标准库、未运行完整 check 或实际服务端。最近完整检查仍属于提交 72dc557，共 346 项。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段59标准库重建成功，六套件单次联合50项全部通过；MCFL13 `bin.mclib` 为282180 bytes。最近完整检查仍属于提交 `72dc557`，共346项；本轮未运行完整check或实际Minecraft服务端，整个迁移仍未完成。
 
-## 最新必要检查：普通模板推断字段声明绑定（阶段 58）
+## 最新必要检查：库声明词法环境恢复（阶段 59）
+
+库元数据保存声明文件的namespace和unsolvedImports；全部includes读取后，分别恢复声明文件的FileScope，供调用图绑定与函数编译使用。普通函数、构造器及泛型特化共用声明上下文入口，并在结束后恢复调用方上下文。泛型模板和object实例继承其声明环境，不序列化整个FileScope或Project。
+
+实现前三个定向红测均失败：构造RHS及自由函数预期44、实际99，泛型调用预期5、实际10，跨库导入预期0个语言错误、实际1个。fresh XML为 `2026-10-05T23:25:44.039Z`，3 tests/3 failures/0 errors/0 skipped。首次标准库重建虽完成Kotlin编译，却报告54个原生MNI类型解析错误、0警告；延迟annotation callback时缺少声明文件上下文，无法解析模板自身的类型。class/field callbacks恢复声明环境，并保存/恢复currTemplate后，第二次重建成功，Project报告0个语言错误、0个警告。
+
+最终单次联合运行：TemplateInitialization6、ConstructorExecution7、IRCall17、LibCacheFormat3、SpecializationPolicy11、TemplateFieldInference6，共50项、0 failures/errors/skips，Gradle exit0。六份fresh XML时间戳分别为 `2026-10-05T23:38:42.679Z`、`23:38:52.714Z`、`23:38:53.474Z`、`23:38:54.764Z`、`23:38:54.770Z`、`23:38:55.104Z`。标准库MCFL由12升至13，bin由267356增至282180 bytes；格式测试及实际Kryo库往返均通过。
+
+日志位于 `F:/DevCache/.codex/runtime/`：`mcfpp-library-declaration-scope-red.log`、`mcfpp-library-declaration-scope-stdlib.log`、`mcfpp-library-declaration-scope-stdlib-final.log`、`mcfpp-library-declaration-scope-final.log`。此阶段验证内存中命令的执行；消费端物理库函数主体导出、方法owner恢复及imported object自动load仍待解决。
+
+## 历史必要检查：普通模板推断字段声明绑定（阶段 58）
 
 普通模板 inferred fields 复用 `PrimitiveCompiler` 私有图的 Lowering、FlowAnalysis 与 ReturnTypeAnalysis 做声明/类型绑定；不发布 IR、不执行用户函数、不生成命令。普通构造参数和未绑定 `T!` 保持 Unknown；同字段在不同 ctor overload 下要求一致 `TypeId`。支持 `this` 单字段及此前字段读取。anonymous template 走同一声明队列；generic 类型实参绑定完成后再分析其实例，继承完成后再应用 annotations 并刷新模板参数/返回 adapter，保留既有 Symbol/Place。
 

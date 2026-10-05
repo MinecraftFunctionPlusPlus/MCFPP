@@ -9,7 +9,6 @@ import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.MCFPPGenericParamType
 import top.mcfpp.type.MCFPPTypeWithGeneric
 import top.mcfpp.util.LogProcessor
-import top.mcfpp.antlr.MCFPPImVisitor
 
 /** Ordinary runtime constants never cause a new function body. */
 object SpecializationPolicy {
@@ -75,7 +74,7 @@ object SpecializationPolicy {
         compiled.identifier = function.identifier + "_" + function.compiledFunctions.size
         compiled.ast = null
         function.compiledFunctions[cacheKey] = compiled
-        compiled.runInFunction { MCFPPImVisitor().visitCurlBlock(function.ast!!) }
+        function.compileBody(compiled, function.ast)
         return compiled to runtimeArgs
     }
 

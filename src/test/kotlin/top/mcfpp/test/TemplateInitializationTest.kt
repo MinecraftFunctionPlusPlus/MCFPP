@@ -73,8 +73,8 @@ class TemplateInitializationTest {
         }
     }
 
-    private fun write(source: String, output: Path) {
-        Project.config.includes.clear()
+    private fun write(source: String, output: Path, includes: List<Path> = emptyList()) {
+        Project.config.includes = ArrayList(includes.map(Path::toString))
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")
         assertEquals(0, Project.errorCount)
         assertTrue(Files.exists(output.resolve("bin.mclib")))
@@ -84,8 +84,8 @@ class TemplateInitializationTest {
         }
     }
 
-    private fun consume(source: String, output: Path): Function {
-        Project.config.includes = arrayListOf(output.toString())
+    private fun consume(source: String, output: Path, includes: List<Path> = listOf(output)): Function {
+        Project.config.includes = ArrayList(includes.map(Path::toString))
         MCFPPStringTest.readFromString(source.trimIndent(), version = "26.3")
         assertEquals(0, Project.errorCount)
         return GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single()
@@ -135,6 +135,83 @@ class TemplateInitializationTest {
             assertEquals(5, machine.read(main.scope.getVar("a") as MCInt))
             assertEquals(9, machine.read(main.scope.getVar("firstZ") as MCInt))
         }
+    }
+
+    @Test fun restoredInitializersAndFreeFunctionsKeepTheirDeclarationNamespace() = withLibrary { output ->
+        write("""
+            namespace fixture.defaults;
+            func seed() -> int { return 4; }
+            func produce() -> int { return seed(); }
+            data Box { const value as int = produce(); }
+            func main(){}
+        """, output)
+        val original = GlobalScope.getTemplate("fixture.defaults", "Box")!!
+        val main = consume("""
+            import fixture.defaults:*;
+            func seed() -> int { return 9; }
+            func main(){
+                var box = Box();
+                dynamic var result = box.value * 10 + produce();
+            }
+        """, output)
+        val restored = GlobalScope.getTemplate("fixture.defaults", "Box")!!
+        assertNotSame(original, restored)
+        assertNotNull(GlobalScope.libNamespaces.getValue("fixture.defaults").scope.functions.getValue("produce").single().ast)
+        assertEquals(44, execute(main, listOf(restored)).read(main.scope.getVar("result") as MCInt))
+    }
+
+    @Test fun restoredGenericSpecializationsKeepTheDeclarationFileForRuntimeArguments() = withLibrary { output ->
+        write("""
+            namespace fixture.defaults;
+            func seed() -> int { return 4; }
+            func add<T as type>(value as int) -> int { return seed() + value; }
+            func main(){}
+        """, output)
+        val original = GlobalScope.localNamespaces.getValue("fixture.defaults").scope.functions.getValue("add").single()
+        val main = consume("""
+            import fixture.defaults:*;
+            func seed() -> int { return 9; }
+            func main(){
+                dynamic var first = add<int>(1);
+                dynamic var second = add<int>(2);
+            }
+        """, output)
+        val restored = GlobalScope.libNamespaces.getValue("fixture.defaults").scope.functions.getValue("add").single()
+        assertNotSame(original, restored)
+        assertNotNull(restored.ast)
+        assertEquals(1, restored.compiledFunctions.size)
+        val machine = execute(main, emptyList())
+        assertEquals(5, machine.read(main.scope.getVar("first") as MCInt))
+        assertEquals(6, machine.read(main.scope.getVar("second") as MCInt))
+    }
+
+    @Test fun restoredDeclarationImportsResolveLibrariesLoadedAfterTheirUsers() = withLibrary { output ->
+        val helper = output.resolve("helper")
+        val library = output.resolve("library")
+        write("""
+            namespace fixture.helper;
+            typealias int as Seed;
+            func seed() -> int { return 4; }
+            func main(){}
+        """, helper)
+        write("""
+            namespace fixture.defaults;
+            import fixture.helper:*;
+            func produce() -> int { var value as Seed = seed(); return value; }
+            data Box { value as int = produce(); }
+            func main(){}
+        """, library, includes = listOf(helper))
+        val original = GlobalScope.getTemplate("fixture.defaults", "Box")!!
+        val main = consume("""
+            import fixture.defaults:*;
+            typealias bool as Seed;
+            func seed() -> int { return 9; }
+            func main(){ var box = Box(); dynamic var result = box.value; }
+        """, library, includes = listOf(library, helper))
+        val restored = GlobalScope.getTemplate("fixture.defaults", "Box")!!
+        assertNotSame(original, restored)
+        assertNotNull(GlobalScope.libNamespaces.getValue("fixture.defaults").scope.functions.getValue("produce").single().ast)
+        assertEquals(4, execute(main, listOf(restored)).read(main.scope.getVar("result") as MCInt))
     }
 
     @Test fun restoredObjectInitializersExecuteWhenTheirConstructorIsExplicitlyInvoked() = withLibrary { output ->

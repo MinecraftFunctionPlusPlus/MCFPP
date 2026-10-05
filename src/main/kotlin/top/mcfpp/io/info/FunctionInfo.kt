@@ -33,10 +33,13 @@ data class FunctionInfo(
     var isAbstract: Boolean,
     var tags: List<FunctionTagInfo>,
     var isOverride: Boolean,
-    var context: CurlBlockContext?
+    var context: CurlBlockContext?,
+    val declarationEnvironment: DeclarationEnvironmentInfo?
 ): AbstractFunctionInfo<Function> {
     override fun get(): Function {
         val f = Function(identifier, namespace, null)
+        f.declarationFile = null
+        f.declarationEnvironment = declarationEnvironment
         f.returnType = returnType
         currFunction = f
         normalParams.forEach {
@@ -62,7 +65,8 @@ data class FunctionInfo(
                 function.isAbstract,
                 function.tags.map { FunctionTagInfo.from(it) },
                 function.isOverride,
-                function.ast
+                function.ast,
+                DeclarationEnvironmentInfo.from(function.declarationFile) ?: function.declarationEnvironment
             )
         }
     }
@@ -77,10 +81,13 @@ data class GenericFunctionInfo(
     var returnType: MCFPPType,
     var isAbstract: Boolean,
     var tags: List<FunctionTagInfo>,
-    var isOverride: Boolean
+    var isOverride: Boolean,
+    val declarationEnvironment: DeclarationEnvironmentInfo?
 ): AbstractFunctionInfo<GenericFunction> {
     override fun get(): GenericFunction {
         val f = GenericFunction(identifier, namespace, context)
+        f.declarationFile = null
+        f.declarationEnvironment = declarationEnvironment
         f.returnType = returnType
         currFunction = f
         normalParams.forEach {
@@ -109,7 +116,8 @@ data class GenericFunctionInfo(
                 genericFunction.returnType,
                 genericFunction.isAbstract,
                 genericFunction.tags.map { FunctionTagInfo.from(it) },
-                genericFunction.isOverride
+                genericFunction.isOverride,
+                DeclarationEnvironmentInfo.from(genericFunction.declarationFile) ?: genericFunction.declarationEnvironment
             )
         }
     }

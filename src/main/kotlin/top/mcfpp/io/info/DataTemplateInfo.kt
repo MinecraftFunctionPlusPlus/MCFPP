@@ -24,7 +24,8 @@ data class DataTemplateInfo(
     var constructor: List<TemplateConstructorInfo>,
     var hasCompanionObject: Boolean,
     var isObject: Boolean,
-    val initializers: Map<String, ExpressionContext>
+    val initializers: Map<String, ExpressionContext>,
+    val declarationEnvironment: DeclarationEnvironmentInfo?
 ): AbstractTemplateInfo<DataTemplate> {
 
     override fun get(): DataTemplate {
@@ -34,6 +35,8 @@ data class DataTemplateInfo(
         }else {
             DataTemplate(identifier, namespace)
         }
+        template.declarationFile = null
+        template.declarationEnvironment = declarationEnvironment
         currTemplate = template
         template.isInterface = isInterface
         template.isAbstract = isAbstract
@@ -84,7 +87,8 @@ data class DataTemplateInfo(
                 template.constructors.map { TemplateConstructorInfo.from(it) },
                 template.companionObject != null,
                 template is ObjectDataTemplate,
-                LinkedHashMap(template.preInit)
+                LinkedHashMap(template.preInit),
+                DeclarationEnvironmentInfo.from(template.declarationFile) ?: template.declarationEnvironment
             )
             currTemplate = null
             templateCache[template] = d
@@ -104,7 +108,8 @@ data class GenericDataTemplateInfo(
     var field: FieldInfo,
     var constructor: List<TemplateConstructorInfo>,
     var hasCompanionObject: Boolean,
-    var isObject: Boolean
+    var isObject: Boolean,
+    val declarationEnvironment: DeclarationEnvironmentInfo?
 ): AbstractTemplateInfo<DataTemplate> {
 
     override fun get(): DataTemplate {
@@ -114,6 +119,8 @@ data class GenericDataTemplateInfo(
         }else {
             GenericDataTemplate(context, identifier, namespace)
         }
+        template.declarationFile = null
+        template.declarationEnvironment = declarationEnvironment
         currTemplate = template
         template.isInterface = isInterface
         template.isAbstract = isAbstract
@@ -162,7 +169,8 @@ data class GenericDataTemplateInfo(
                 FieldInfo.from(template.scope),
                 template.constructors.map { TemplateConstructorInfo.from(it) },
                 template.companionObject != null,
-                template is GenericObjectDataTemplate
+                template is GenericObjectDataTemplate,
+                DeclarationEnvironmentInfo.from(template.declarationFile) ?: template.declarationEnvironment
             )
             currTemplate = null
             templateCache[template] = d

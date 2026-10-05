@@ -42,6 +42,12 @@ open class GenericDataTemplate : DataTemplate {
     }
 
     open fun compile(readOnlyArgs: List<Var<*>>): CompiledGenericDataTemplate {
+        val file = restoreDeclarationEnvironment()
+        return if (file == null) compileInDeclarationEnvironment(readOnlyArgs)
+        else file.withDeclarationContext { compileInDeclarationEnvironment(readOnlyArgs) }
+    }
+
+    private fun compileInDeclarationEnvironment(readOnlyArgs: List<Var<*>>): CompiledGenericDataTemplate {
         //只读属性
         val args = ArrayList<Var<*>>()
         for (i in readOnlyParams.indices) {
@@ -58,7 +64,10 @@ open class GenericDataTemplate : DataTemplate {
             this,
             args.map { it as MCFPPValue<*> }
         )
+        template.declarationFile = declarationFile
+        template.declarationEnvironment = declarationEnvironment
         template.initialize()
+        template.restoreDeclarationEnvironment()
         for (parent in this.parent){
             template.extends(parent)
         }

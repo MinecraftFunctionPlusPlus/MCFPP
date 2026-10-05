@@ -58,6 +58,25 @@ class MCFPPFile : File {
 
     constructor(file: File) : this(file.absolutePath)
 
+    /** A loaded declaration has a namespace and imports, but no source file to reopen. */
+    internal constructor(namespace: Namespace): super(".") {
+        this.namespace = namespace
+        field.namespaceField = namespace.scope
+    }
+
+    internal fun <T> withDeclarationContext(action: () -> T): T {
+        val callerFile = currFile
+        val callerNamespace = Project.currNamespace
+        try {
+            currFile = this
+            Project.currNamespace = namespace.identifier
+            return action()
+        } finally {
+            currFile = callerFile
+            Project.currNamespace = callerNamespace
+        }
+    }
+
     internal constructor(): super("."){
         val str = Project.config.rootNamespace + ".test"
         namespace = GlobalScope.getOrCreateNamespace(str)
