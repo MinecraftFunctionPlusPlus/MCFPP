@@ -265,6 +265,10 @@ object PrimitiveCompiler {
         private val sourceTypes = mutableMapOf<Int, TypeId>()
         private val parentTypes = mutableMapOf<Int, TypeId>()
         private var expectedLiteral: Pair<Int, MCFPPType>? = null
+        private fun literalToken(node: ParserRuleContext): Int? = when {
+            node is Parser.NbtValueContext && (node.nbtList() != null || node.nbtCompound() != null) -> node.start.tokenIndex
+            else -> node.children.orEmpty().filterIsInstance<ParserRuleContext>().singleOrNull()?.let(::literalToken)
+        }
         private val provenConstants = mutableMapOf<Int, CompilerValue>()
         private val provenResults = mutableMapOf<Int, TypeId>()
         private val views = mutableSetOf<Int>()
@@ -397,10 +401,6 @@ object PrimitiveCompiler {
                 val modifier = declaration.fieldModifier()?.text
                 if (modifier == "import") unsupported()
                 val declared = declaration.type()?.let(::type)?.typeId
-                fun literalToken(node: ParserRuleContext): Int? = when {
-                    node is Parser.NbtValueContext && (node.nbtList() != null || node.nbtCompound() != null) -> node.start.tokenIndex
-                    else -> node.children.orEmpty().filterIsInstance<ParserRuleContext>().singleOrNull()?.let(::literalToken)
-                }
                 val previous = expectedLiteral
                 expectedLiteral = declared?.let { literalToken(initializer)?.let { token -> token to types.getValue(it) } }
                 val value = try { expression(initializer) } finally { expectedLiteral = previous }
@@ -636,6 +636,57 @@ object PrimitiveCompiler {
             if (actual != null && result != null) provenResults[result] = actual
             return ValueRef.Result(type, result ?: -1)
         }
+        private fun member(source: ValueRef, context: Parser.FunctionCallContext): ValueRef {
+            val receiver = boundValue(source)
+            val container = types[receiver.type] as? MCFPPDictType ?: if (exploratory && receiver.type == any)
+                register(MCFPPDictType(MCFPPBaseType.Any)) as MCFPPDictType else unsupported()
+            if (context.arguments().readOnlyArgs() != null) unsupported()
+            val name = context.namespaceID().text
+            val candidates = container.objectData.scope.getFunctionCandidates(name).filterIsInstance<NativeFunction>()
+                .map { it.replaceGenericParams(mapOf("E" to container.generic.single())) }
+            val arguments = context.arguments().normalArgs().expressionList()?.expression().orEmpty().mapIndexed { index, argument ->
+                val previous = expectedLiteral
+                expectedLiteral = candidates.singleOrNull()?.normalParams?.getOrNull(index)?.type?.let { expected ->
+                    literalToken(argument)?.let { it to expected }
+                }
+                try { boundValue(expression(argument)) } finally { expectedLiteral = previous }
+            }
+            val selected = when (val selection = ParameterMatcher.selectTypes(candidates, name, arguments.map { types[it.type] ?: unsupported() })) {
+                is ParameterMatcher.TypeSelection.Selected -> selection.function as NativeFunction
+                is ParameterMatcher.TypeSelection.Ambiguous -> invalid("Ambiguous member '$name'")
+                ParameterMatcher.TypeSelection.Missing -> if (exploratory && arguments.any { it.type == any })
+                    candidates.singleOrNull { it.normalParams.size == arguments.size } ?: unsupported()
+                else invalid("No matching dictionary member '$name'")
+            }
+            if (selected.javaMethod.declaringClass != top.mcfpp.mni.NBTDictionaryData::class.java) unsupported()
+            val operation = when (selected.identifier) {
+                "clear" -> DictionaryOperation.CLEAR
+                "remove" -> DictionaryOperation.REMOVE
+                "merge" -> DictionaryOperation.MERGE
+                "containsKey" -> DictionaryOperation.CONTAINS_KEY
+                else -> unsupported()
+            }
+            val key = if (operation == DictionaryOperation.REMOVE || operation == DictionaryOperation.CONTAINS_KEY) {
+                val value = arguments.single()
+                val constant = if (value is ValueRef.Constant) value.value else (value as? ValueRef.Result)?.let { provenConstants[it.instruction] }
+                (constant as? CompilerValue.Text)?.value.also {
+                    if (it == null && !exploratory) invalid("Cannot generate dictionary access with an unknown string key: no verified NBT-path escaping backend is available")
+                }
+            } else null
+            val location = locations[(receiver as? ValueRef.Result)?.instruction] ?: unsupported()
+            val result = if (operation == DictionaryOperation.CONTAINS_KEY) nextResult++ else null
+            val resultPlace = result?.let {
+                runtimeResults.add(it)
+                valueSites[context.start.tokenIndex] = current.id to it
+                val identifier = "\$member_${context.start.tokenIndex}"
+                val symbol = Symbol(declarationIds.getOrPut(-context.start.tokenIndex - 1, SymbolId::fresh), identifier, bool, mutable = false, forceRuntime = true)
+                symbols[identifier] = symbol
+                sourceTypes[it] = bool
+                Place(symbol.id).also { place -> origins[it] = place; locations[it] = Location(place) }
+            }
+            instructions += Instruction.DictionaryMember(operation, location, container.typeId, arguments.singleOrNull(), key, result, resultPlace)
+            return ValueRef.Result(if (result == null) MCFPPPrivateType.Void.typeId else bool, result ?: -1)
+        }
         private fun expression(node: ParserRuleContext): ValueRef = when (node) {
             is Parser.ExpressionContext -> expression(node.primary() ?: node.commonBinaryOperatorExpression())
             is Parser.CommonBinaryOperatorExpressionContext -> fold(node.conditionalOrExpression(), node.op)
@@ -676,7 +727,9 @@ object PrimitiveCompiler {
                 else binary("==", value, ValueRef.Constant(bool, CompilerValue.Bool(false)))
             }
             is Parser.RightVarExpressionContext -> expression(node.varWithSelector())
-            is Parser.VarWithSelectorContext -> if (node.selector().isNotEmpty()) unsupported() else expression(node.jvmAccessExpression())
+            is Parser.VarWithSelectorContext -> node.selector().fold(expression(node.jvmAccessExpression())) { receiver, selector ->
+                member(receiver, selector.`var`().functionCall() ?: unsupported())
+            }
             is Parser.JvmAccessExpressionContext -> if (node.Identifier() != null) unsupported() else expression(node.propertyOperator())
             is Parser.PropertyOperatorContext -> if (node.propertyOperatorExpression().isNotEmpty()) unsupported() else expression(node.primary())
             is Parser.PrimaryContext -> when {
@@ -951,6 +1004,24 @@ object PrimitiveCompiler {
                         }
                     }
                     is Instruction.RawCommand -> commands.add(instruction.command)
+                    is Instruction.DictionaryMember -> {
+                        val destination = address(instruction.receiver)
+                        when (instruction.operation) {
+                            DictionaryOperation.CLEAR -> emit(Commands.dataSetValue(destination, top.mcfpp.nbt.tags.CompoundTag()))
+                            DictionaryOperation.REMOVE -> emit(Command("data remove").build(destination.memberIndex(StorageAccess.quotedKey(instruction.key!!)).toCommandPart()))
+                            DictionaryOperation.MERGE -> {
+                                val source = internal("merge_${callNumber++}")
+                                encode(source, instruction.argument!!)
+                                emit(Command("data modify").build(destination.toCommandPart()).build("merge from").build(source.toCommandPart()))
+                            }
+                            DictionaryOperation.CONTAINS_KEY -> {
+                                val result = temporary(bool)
+                                emit(Command("execute store success score $result if data")
+                                    .build(destination.memberIndex(StorageAccess.quotedKey(instruction.key!!)).toCommandPart()))
+                                results[instruction.result!!] = result
+                            }
+                        }
+                    }
                     is Instruction.CaptureIndex -> {
                         val index = temporary(int)
                         val length = temporary(int)

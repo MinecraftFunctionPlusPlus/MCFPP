@@ -35,6 +35,7 @@ object IRCollectionValidation {
             val accessed = when (instruction) {
                 is Instruction.Read -> instruction.place
                 is Instruction.Write -> instruction.place
+                is Instruction.DictionaryMember -> instruction.key?.let(instruction.receiver.place::field) ?: instruction.receiver.place
                 else -> null
             }
             if (!target.emptyNbtPathKeys && accessed?.path?.any { it is PathSegment.Field && it.name.isEmpty() } == true)

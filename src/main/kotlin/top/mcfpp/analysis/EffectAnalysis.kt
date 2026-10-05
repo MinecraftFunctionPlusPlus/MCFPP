@@ -9,6 +9,7 @@ object EffectAnalysis {
         val pathBound = functions.values.sumOf { ir -> ir.blocks.sumOf { block -> block.instructions.sumOf { instruction ->
             when (instruction) {
                 is Instruction.Write -> instruction.place.path.size
+                is Instruction.DictionaryMember -> instruction.receiver.place.path.size + 1
                 is Instruction.Call -> instruction.argumentPlaces.sumOf { it?.path?.size ?: 0 }
                 else -> 0
             }
@@ -24,6 +25,7 @@ object EffectAnalysis {
                     val observed = when (instruction) {
                         is Instruction.RawCommand -> Effect.Unknown
                         is Instruction.Write -> Effect.Writes(setOf(instruction.place))
+                        is Instruction.DictionaryMember -> instruction.effect
                         is Instruction.Call -> callEffect(instruction, functions, effects)
                         else -> Effect.Pure
                     }

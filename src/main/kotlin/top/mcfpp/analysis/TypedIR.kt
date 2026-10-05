@@ -11,6 +11,15 @@ sealed interface Instruction {
     data class Read(val result: Int, val place: Place, val type: TypeId, val location: Location = Location(place)) : Instruction
     data class Write(val place: Place, val value: ValueRef, val containerType: TypeId? = null, val location: Location = Location(place)) : Instruction
     data class CaptureIndex(val result: Int, val value: ValueRef, val container: Location) : Instruction
+    data class DictionaryMember(val operation: DictionaryOperation, val receiver: Location, val type: TypeId,
+                                val argument: ValueRef? = null, val key: String? = null,
+                                val result: Int? = null, val resultPlace: Place? = null) : Instruction {
+        val effect: Effect get() = when (operation) {
+            DictionaryOperation.CONTAINS_KEY -> Effect.Pure
+            DictionaryOperation.REMOVE -> Effect.Writes(setOf(key?.let(receiver.place::field) ?: receiver.place))
+            else -> Effect.Writes(setOf(receiver.place))
+        }
+    }
     data class Binary(val result: Int, val operation: String, val left: ValueRef, val right: ValueRef, val type: TypeId) : Instruction
     data class Promote(val result: Int, val value: ValueRef, val type: TypeId) : Instruction
     data class Convert(val result: Int, val value: ValueRef, val type: TypeId) : Instruction
@@ -108,6 +117,34 @@ object FlowAnalysis {
                     if (source != null) state.copyFrom(frozen!!.facts, frozen.place, instruction.place, includeRoot = false)
                 }
                 is Instruction.CaptureIndex -> values[instruction.result] = value(instruction.value)
+                is Instruction.DictionaryMember -> {
+                    val place = instruction.receiver.place
+                    when (instruction.operation) {
+                        DictionaryOperation.CLEAR -> {
+                            state.forgetDescendants(place)
+                            state.write(place, ValueFacts(TypeKnowledge.Exact(instruction.type),
+                                ValueKnowledge.Constant(CompilerValue.Typed(instruction.type, CompilerValue.Record(emptyMap())))))
+                        }
+                        DictionaryOperation.REMOVE -> {
+                            val target = instruction.key?.let(place::field) ?: place
+                            state.forgetDescendants(target)
+                            state.write(target, ValueFacts(TypeKnowledge.Unknown, ValueKnowledge.Unknown, ValueState.UNINITIALIZED))
+                        }
+                        DictionaryOperation.MERGE -> {
+                            val source = snapshot(instruction.argument!!)
+                            if (source != null) DictionaryFacts.merge(state, place, source.facts, source.place)
+                            else {
+                                state.forgetDescendants(place)
+                                state.write(place, ValueFacts(TypeKnowledge.Exact(instruction.type), ValueKnowledge.Unknown))
+                            }
+                        }
+                        DictionaryOperation.CONTAINS_KEY -> {
+                            val fact = ValueFacts(TypeKnowledge.Exact(top.mcfpp.type.MCFPPBaseType.Bool.typeId), ValueKnowledge.Unknown)
+                            values[instruction.result!!] = fact
+                            instruction.resultPlace?.let { state.write(it, fact); origins[instruction.result] = it }
+                        }
+                    }
+                }
                 is Instruction.Construct -> {
                     val parts = instruction.parts.mapValues { value(it.value) }
                     val capturedParts = instruction.parts.mapValues { snapshot(it.value) }
