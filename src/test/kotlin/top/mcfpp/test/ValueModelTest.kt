@@ -105,6 +105,57 @@ class ValueModelTest {
         assertFalse(root.index(1).overlaps(root.index(2)))
     }
 
+    @Test fun collectionLengthsFollowCopiesAndReachableJoinsWithoutSharingMutableState() {
+        val source = Place(SymbolId.fresh())
+        val nested = source.index(0)
+        val facts = FlowFacts().apply {
+            write(source, ValueFacts(TypeKnowledge.Unknown, ValueKnowledge.Unknown))
+            setLength(source, 2)
+            setLength(nested, 3)
+        }
+        val branch = facts.fork()
+        assertEquals(facts, branch)
+        branch.setLength(nested, 4)
+        assertNotEquals(facts, branch)
+        assertEquals(3, facts.length(nested))
+        assertEquals(2, facts.join(branch).length(source))
+        assertNull(facts.join(branch).length(nested))
+        branch.reachable = false
+        assertEquals(3, facts.join(branch).length(nested))
+        val copied = Place(SymbolId.fresh())
+        val copy = FlowFacts().apply { copyFrom(facts, source, copied, includeRoot = false) }
+        assertEquals(2, copy.length(copied))
+        assertEquals(3, copy.length(copied.index(0)))
+        copy.setLength(copied.index(0), 7)
+        assertEquals(3, facts.length(nested))
+    }
+
+    @Test fun elementWritesPreserveParentLengthsWhileReplacementAndUnknownEffectsWithdrawShapes() {
+        val root = Place(SymbolId.fresh())
+        val left = root.index(0)
+        val right = root.index(1)
+        val facts = FlowFacts().apply {
+            setLength(root, 2)
+            setLength(left, 3)
+            setLength(right, 4)
+        }
+        facts.write(left.index(0), constant(5))
+        assertEquals(2, facts.length(root))
+        assertEquals(3, facts.length(left))
+        facts.write(left, constant(6))
+        assertNull(facts.length(left))
+        assertEquals(4, facts.length(right))
+        facts.invalidate(root.unknownIndex())
+        assertEquals(2, facts.length(root))
+        assertNull(facts.length(right))
+        facts.setLength(left, 1)
+        facts.write(root, constant(7))
+        assertTrue(facts.knownLengths().isEmpty())
+        facts.setLength(root, 1)
+        facts.barrier()
+        assertTrue(facts.knownLengths().isEmpty())
+    }
+
     @Test fun staticWritesRebuildCompleteAncestorsWithoutMutatingEarlierSnapshots() {
         val root = Place(SymbolId.fresh())
         val list = root.field("list")

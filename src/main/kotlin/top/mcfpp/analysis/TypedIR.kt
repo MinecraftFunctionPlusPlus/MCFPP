@@ -9,11 +9,12 @@ data class BasicBlock(val id: Int, val instructions: List<Instruction>, val term
 
 sealed interface Instruction {
     data class Read(val result: Int, val place: Place, val type: TypeId) : Instruction
-    data class Write(val place: Place, val value: ValueRef) : Instruction
+    data class Write(val place: Place, val value: ValueRef, val containerType: TypeId? = null) : Instruction
     data class Binary(val result: Int, val operation: String, val left: ValueRef, val right: ValueRef, val type: TypeId) : Instruction
     data class Promote(val result: Int, val value: ValueRef, val type: TypeId) : Instruction
     data class Convert(val result: Int, val value: ValueRef, val type: TypeId) : Instruction
     data class View(val result: Int, val value: ValueRef.TypedView) : Instruction
+    data class Construct(val result: Int, val place: Place, val type: TypeId, val parts: Map<PathSegment, ValueRef>, val sequence: Boolean) : Instruction
     data class Call(val result: Int?, val declaration: SymbolId, val arguments: List<ValueRef>, val effect: Effect,
                     val returnType: TypeId? = null, val argumentPlaces: List<Place?> = emptyList(),
                     val parameterTypes: List<TypeId> = emptyList(), val staticParameters: Set<Int> = emptySet(),
@@ -35,7 +36,8 @@ sealed interface Effect {
 
 /** Conservative forward fixed point, including backedges and unreachable predecessor filtering. */
 object FlowAnalysis {
-    data class Result(val entries: Map<Int, FlowFacts>, val exits: Map<Int, FlowFacts>, val values: Map<Pair<Int, Int>, ValueFacts>)
+    data class Result(val entries: Map<Int, FlowFacts>, val exits: Map<Int, FlowFacts>, val values: Map<Pair<Int, Int>, ValueFacts>,
+                      val lengths: Map<Pair<Int, Int>, Int>, val beforeWrites: Map<Pair<Int, Int>, FlowFacts>)
 
     fun analyze(ir: TypedIR, initial: FlowFacts = FlowFacts(), evaluator: (String, CompilerValue, CompilerValue) -> CompilerValue? = { _, _, _ -> null }, canFoldBranch: (ValueRef) -> Boolean = { it !is ValueRef.Result || it.instruction !in ir.runtimeValues },
                 callKnowledge: (Instruction.Call, List<TypeKnowledge>) -> TypeKnowledge = { call, _ ->
@@ -53,38 +55,114 @@ object FlowAnalysis {
         val entries = mutableMapOf(ir.entry to initial.fork())
         val exits = mutableMapOf<Int, FlowFacts>()
         val resultFacts = mutableMapOf<Pair<Int, Int>, ValueFacts>()
+        val resultLengths = mutableMapOf<Pair<Int, Int>, Int>()
+        val beforeWrites = mutableMapOf<Pair<Int, Int>, FlowFacts>()
         val pending = ArrayDeque<Int>().apply { add(ir.entry) }
         while (pending.isNotEmpty()) {
             val id = pending.removeFirst()
             val block = blocks.getValue(id)
             val state = entries.getValue(id).fork()
             val values = mutableMapOf<Int, ValueFacts>()
+            val origins = mutableMapOf<Int, Place>()
+            val snapshots = mutableMapOf<Int, FlowFacts>()
+            fun origin(ref: ValueRef): Place? = when (ref) {
+                is ValueRef.Read -> ref.place
+                is ValueRef.Result -> origins[ref.instruction]
+                is ValueRef.TypedView -> ref.place
+                else -> null
+            }
+            fun capture(place: Place) = FlowFacts().apply { copyFrom(state, place, place) }
+            fun snapshot(ref: ValueRef): FlowFacts? = when (ref) {
+                is ValueRef.Result -> snapshots[ref.instruction]
+                is ValueRef.Read -> capture(ref.place)
+                is ValueRef.TypedView -> snapshot(ref.source)
+                else -> null
+            }
             fun value(ref: ValueRef): ValueFacts = when (ref) {
                 is ValueRef.Constant -> ValueFacts(TypeKnowledge.Exact(ref.type), ValueKnowledge.Constant(ref.value))
                 is ValueRef.Read -> state.read(ref.place) ?: ValueFacts(TypeKnowledge.Exact(ref.type), ValueKnowledge.Unknown, ValueState.UNINITIALIZED)
                 is ValueRef.Result -> values[ref.instruction] ?: ValueFacts(TypeKnowledge.Exact(ref.type), ValueKnowledge.Unknown)
                 is ValueRef.TypedView -> ValueFacts(TypeKnowledge.Exact(ref.type), ValueKnowledge.Unknown)
             }
-            for (instruction in block.instructions) when (instruction) {
-                is Instruction.Read -> values[instruction.result] = value(ValueRef.Read(instruction.type, instruction.place))
-                is Instruction.Write -> state.write(instruction.place, value(instruction.value))
+            for ((position, instruction) in block.instructions.withIndex()) when (instruction) {
+                is Instruction.Read -> {
+                    val existing = state.read(instruction.place)
+                    values[instruction.result] = existing ?: ValueFacts(
+                        if (instruction.type in setOf(top.mcfpp.type.MCFPPBaseType.Any.typeId, top.mcfpp.type.MCFPPBaseType.Object.typeId)) TypeKnowledge.Unknown else TypeKnowledge.Exact(instruction.type),
+                        ValueKnowledge.Unknown, state.read(Place(instruction.place.root))?.state ?: ValueState.UNINITIALIZED)
+                    origins[instruction.result] = instruction.place
+                    snapshots[instruction.result] = capture(instruction.place)
+                    state.length(instruction.place)?.let { resultLengths[id to instruction.result] = it }
+                        ?: resultLengths.remove(id to instruction.result)
+                }
+                is Instruction.Write -> {
+                    if (instruction.place.path.isNotEmpty()) beforeWrites[id to position] = state.fork()
+                    val source = origin(instruction.value)
+                    val frozen = snapshot(instruction.value) ?: source?.let { capture(it) }
+                    val written = value(instruction.value)
+                    state.forgetDescendants(instruction.place)
+                    state.write(instruction.place, written)
+                    if (source != null) state.copyFrom(frozen!!, source, instruction.place, includeRoot = false)
+                }
+                is Instruction.Construct -> {
+                    val parts = instruction.parts.mapValues { value(it.value) }
+                    val capturedParts = instruction.parts.mapValues { snapshot(it.value) }
+                    val constants = parts.mapValues { (segment, fact) ->
+                        val constant = (fact.value as? ValueKnowledge.Constant)?.value
+                        constant?.let { if (it is CompilerValue.Typed) it else CompilerValue.Typed(
+                            (fact.type as? TypeKnowledge.Exact)?.type ?: instruction.parts.getValue(segment).type, it) }
+                    }
+                    val constant = if (constants.values.any { it == null }) null else if (instruction.sequence)
+                        CompilerValue.Sequence(constants.values.map { it!! }) else CompilerValue.Record(constants.mapKeys { (it.key as PathSegment.Field).name }.mapValues { it.value!! })
+                    val fact = ValueFacts(TypeKnowledge.Exact(instruction.type), constant?.let { ValueKnowledge.Constant(CompilerValue.Typed(instruction.type, it)) }
+                        ?: ValueKnowledge.Partial(parts.mapValues { it.value.value }.filterValues { it != ValueKnowledge.Unknown }))
+                    state.forgetDescendants(instruction.place)
+                    state.write(instruction.place, fact)
+                    for ((segment, part) in parts) {
+                        val child = Place(instruction.place.root, instruction.place.path + segment)
+                        state.write(child, part)
+                        val source = origin(instruction.parts.getValue(segment))
+                        if (source != null) state.copyFrom(capturedParts.getValue(segment)!!, source, child, includeRoot = false)
+                    }
+                    // Seeding children must not invalidate the newly built complete root snapshot.
+                    state.refine(instruction.place, fact)
+                    if (instruction.sequence) state.setLength(instruction.place, instruction.parts.size)
+                    values[instruction.result] = fact
+                    origins[instruction.result] = instruction.place
+                    snapshots[instruction.result] = capture(instruction.place)
+                }
                 is Instruction.Call -> {
                     val arguments = instruction.arguments.map { value(it).type }
                     val returned = callKnowledge(instruction, arguments)
                     val written = callWrites(instruction, arguments)
                     when (val effect = instruction.effect) {
-                        is Effect.Writes -> effect.places.forEach(state::invalidate)
+                        is Effect.Writes -> effect.places.forEach { place ->
+                            state.forgetDescendants(place)
+                            state.write(place, (state.read(place) ?: ValueFacts(TypeKnowledge.Unknown, ValueKnowledge.Unknown))
+                                .copy(type = TypeKnowledge.Unknown, value = ValueKnowledge.Unknown))
+                        }
                         Effect.Unknown -> state.barrier()
                         else -> Unit
                     }
                     for ((place, type) in written) if (instruction.effect == Effect.Unknown ||
-                        (instruction.effect as? Effect.Writes)?.places?.any { it.overlaps(place) } == true)
-                        state.write(place, ValueFacts(type, ValueKnowledge.Unknown))
-                    instruction.resultPlace?.let { state.write(it, ValueFacts(returned, ValueKnowledge.Unknown)) }
+                        (instruction.effect as? Effect.Writes)?.places?.any { it.path.size <= place.path.size && it.overlaps(place) } == true)
+                        state.refine(place, (state.read(place) ?: ValueFacts(type, ValueKnowledge.Unknown)).copy(type = type))
+                    instruction.resultPlace?.let {
+                        state.forgetDescendants(it)
+                        state.write(it, ValueFacts(returned, ValueKnowledge.Unknown))
+                    }
+                    instruction.resultPlace?.let { place -> instruction.result?.let {
+                        origins[it] = place
+                        snapshots[it] = capture(place)
+                    } }
                     instruction.result?.let { values[it] = ValueFacts(returned, ValueKnowledge.Unknown) }
                 }
                 is Instruction.RawCommand -> state.barrier()
-                is Instruction.View -> values[instruction.result] = value(instruction.value)
+                is Instruction.View -> {
+                    values[instruction.result] = value(instruction.value)
+                    origins[instruction.result] = instruction.value.place
+                    snapshot(instruction.value)?.let { snapshots[instruction.result] = it }
+                }
                 is Instruction.Binary -> {
                     val leftFact = value(instruction.left)
                     val rightFact = value(instruction.right)
@@ -126,6 +204,6 @@ object FlowAnalysis {
                 }
             }
         }
-        return Result(entries, exits, resultFacts)
+        return Result(entries, exits, resultFacts, resultLengths, beforeWrites)
     }
 }

@@ -39,20 +39,23 @@ object ReturnTypeAnalysis {
     fun callWrites(call: Instruction.Call, functions: Map<SymbolId, TypedIR>, arguments: List<TypeKnowledge>,
                    visiting: Set<SymbolId> = emptySet()): Map<Place, TypeKnowledge> {
         val ir = functions[call.declaration]
-        val analysis = if (call.staticParameters.any { call.parameterTypes.getOrNull(it) in
-                setOf(top.mcfpp.type.MCFPPBaseType.Any.typeId, top.mcfpp.type.MCFPPBaseType.Object.typeId) })
+        val analysis = if (call.staticParameters.isNotEmpty() && call.effect != Effect.Pure)
             analyze(call.declaration, functions, arguments, visiting) else null
         val exits = ir?.blocks?.filter { it.terminator is Terminator.Return }?.mapNotNull { analysis?.exits?.get(it.id) }.orEmpty()
-        return call.staticParameters.mapNotNull { index ->
-            val place = call.argumentPlaces.getOrNull(index) ?: return@mapNotNull null
+        val joined = exits.reduceOrNull { a, b -> a.join(b) }
+        val written = linkedMapOf<Place, TypeKnowledge>()
+        for (index in call.staticParameters) {
+            val place = call.argumentPlaces.getOrNull(index) ?: continue
+            val parameter = ir?.parameters?.getOrNull(index)
             val declared = call.parameterTypes.getOrNull(index)
             val type = if (declared != null && declared !in setOf(top.mcfpp.type.MCFPPBaseType.Any.typeId, top.mcfpp.type.MCFPPBaseType.Object.typeId))
-                TypeKnowledge.Exact(declared) else {
-                val parameter = ir?.parameters?.getOrNull(index)
-                exits.map { exit -> parameter?.let { exit.read(Place(it))?.type } ?: TypeKnowledge.Unknown }
-                    .reduceOrNull(TypeKnowledge::join) ?: TypeKnowledge.Unknown
+                TypeKnowledge.Exact(declared) else parameter?.let { joined?.knownTypes()?.get(Place(it)) } ?: TypeKnowledge.Unknown
+            written[place] = type
+            if (parameter != null) joined?.knownTypes()?.forEach { (source, knowledge) ->
+                if (source.root == parameter && source.path.isNotEmpty())
+                    written[Place(place.root, place.path + source.path)] = knowledge
             }
-            place to type
-        }.toMap()
+        }
+        return written
     }
 }

@@ -41,6 +41,7 @@ long/double 到 int 同样保留 Minecraft `data get` 操作及其范围与舍�
 普通来源无法证明兼容时警告，any 来源不插入类型标签或运行时验证；完整的其余布局诊断和存储迁移仍见 [迁移状态](./migration.md)。
 
 普通 int/bool/any/object 自由函数的 IR 调用返回值也有独立 Place，支持 `(identity(value) as int)` 直接建立视图；读取发生在后续有副作用的调用之前。已知 any 返回的实际类型可以用于运算和重载绑定，调用与返回载荷仍在运行时执行，不生成转换、类型标签或一般用户函数的编译期结果。
+可编码 list/dict/ImmutableList 的形参和返回也可使用 IR 帧载荷；已知下标/键的集合视图在分支和 while 中共享原 Place，普通集合副本保持独立。嵌套字面量的较早操作数同时捕获载荷和形状，后续 static 写回不改变该快照；static 元素改写更新或撤销实际类型证据，不执行数值转换。动态下标及集合成员调用仍使用内部适配边界。
 
 list/dict/map/ImmutableList 与 NBT 数组的 as 视图也共享来源位置和编码，普通集合赋值则复制。ImmutableList 限制列表槽与变更成员，不把可变来源变成深度不可变数据。含编译器专用元素的集合不能因 as 或 dynamic 自动生成 NBT 表示；这不增加集合的 toNBT 源重载。
 NBT 数组字面量、复制与物化保留 ByteArrayTag/IntArrayTag/LongArrayTag 格式。byte/long 数组元素参加 int 运算须显式 toInt；按格式索引不调用转换函数，bool 的 ByteTag 编码也不赋予 byte 数组赋值能力。

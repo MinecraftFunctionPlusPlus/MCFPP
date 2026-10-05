@@ -96,10 +96,22 @@ sealed interface ValueRef {
 }
 
 /** Reachability is separate from the facts of an initialized, uninitialized, or erroneous value. */
-class FlowFacts private constructor(private val facts: MutableMap<Place, ValueFacts>, var reachable: Boolean) {
-    constructor() : this(linkedMapOf(), true)
-    fun fork() = FlowFacts(LinkedHashMap(facts), reachable)
+class FlowFacts private constructor(private val facts: MutableMap<Place, ValueFacts>, var reachable: Boolean,
+                                    private val lengths: MutableMap<Place, Int>) {
+    constructor() : this(linkedMapOf(), true, linkedMapOf())
+    fun fork() = FlowFacts(LinkedHashMap(facts), reachable, LinkedHashMap(lengths))
     fun read(place: Place): ValueFacts? = facts[place]
+    fun length(place: Place): Int? = lengths[place]
+    fun setLength(place: Place, length: Int) { require(length >= 0); lengths[place] = length }
+    fun knownLengths(): Map<Place, Int> = lengths.toMap()
+    fun knownTypes(): Map<Place, TypeKnowledge> = facts.mapValues { (_, fact) ->
+        if (fact.state == ValueState.INITIALIZED) fact.type else TypeKnowledge.Unknown
+    }
+    fun refineTypes(source: FlowFacts) {
+        source.facts.forEach { (place, fact) -> facts[place]?.let { facts[place] = it.copy(type = fact.type) } }
+    }
+    /** Refine evidence after an effect or after seeding a constructed shape, without another logical write. */
+    fun refine(place: Place, value: ValueFacts) { facts[place] = value }
     fun initialize(place: Place, value: ValueFacts) {
         check(place !in facts) { "Place is already initialized: $place" }
         facts[place] = value
@@ -139,19 +151,25 @@ class FlowFacts private constructor(private val facts: MutableMap<Place, ValueFa
     /** A collection edit replaces its indexed shape; old descendants must not survive at obsolete indices. */
     fun forgetDescendants(place: Place) {
         facts.keys.removeAll { it.root == place.root && it.path.size > place.path.size && it.path.take(place.path.size) == place.path }
+        lengths.keys.removeAll { it.root == place.root && it.path.size > place.path.size && it.path.take(place.path.size) == place.path }
     }
     fun copyFrom(source: FlowFacts, from: Place, to: Place, includeRoot: Boolean = true) {
         val copied = source.facts.filterKeys {
             it.root == from.root && (if (includeRoot) it.path.size >= from.path.size else it.path.size > from.path.size) && it.path.take(from.path.size) == from.path
         }.mapKeys { (key, _) -> Place(to.root, to.path + key.path.drop(from.path.size)) }
         facts.putAll(copied)
+        val shapes = source.lengths.filterKeys { it.root == from.root && it.path.size >= from.path.size && it.path.take(from.path.size) == from.path }
+            .mapKeys { (key, _) -> Place(to.root, to.path + key.path.drop(from.path.size)) }
+        lengths.putAll(shapes)
     }
     fun invalidate(place: Place) {
+        lengths.keys.removeAll { it.overlaps(place) && it.path.size >= place.path.size }
         facts.entries.forEach { (key, value) ->
             if (key.overlaps(place)) facts[key] = value.copy(value = ValueKnowledge.Unknown)
         }
     }
     fun barrier() {
+        lengths.clear()
         facts.entries.forEach { (key, value) -> facts[key] = value.copy(value = ValueKnowledge.Unknown,
             type = TypeKnowledge.Unknown) }
     }
@@ -168,10 +186,10 @@ class FlowFacts private constructor(private val facts: MutableMap<Place, ValueFa
                 else -> a.join(b)
             }
         }
-        return FlowFacts(joined, true)
+        return FlowFacts(joined, true, lengths.filter { (place, size) -> other.lengths[place] == size }.toMutableMap())
     }
-    override fun equals(other: Any?) = other is FlowFacts && reachable == other.reachable && facts == other.facts
-    override fun hashCode() = 31 * facts.hashCode() + reachable.hashCode()
+    override fun equals(other: Any?) = other is FlowFacts && reachable == other.reachable && facts == other.facts && lengths == other.lengths
+    override fun hashCode() = 31 * (31 * facts.hashCode() + lengths.hashCode()) + reachable.hashCode()
 }
 
 sealed interface StorageLayout {
