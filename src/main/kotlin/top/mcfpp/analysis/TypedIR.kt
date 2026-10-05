@@ -32,7 +32,7 @@ sealed interface Instruction {
     }
     data class Binary(val result: Int, val operation: String, val left: ValueRef, val right: ValueRef, val type: TypeId) : Instruction
     data class Promote(val result: Int, val value: ValueRef, val type: TypeId) : Instruction
-    data class Convert(val result: Int, val value: ValueRef, val type: TypeId) : Instruction
+    data class Convert(val result: Int, val value: ValueRef, val type: TypeId, val place: Place? = null) : Instruction
     data class View(val result: Int, val value: ValueRef.TypedView) : Instruction
     data class Construct(val result: Int, val place: Place, val type: TypeId, val parts: Map<PathSegment, ValueRef>, val sequence: Boolean) : Instruction
     data class Call(val result: Int?, val declaration: SymbolId, val arguments: List<ValueRef>, val effect: Effect,
@@ -64,7 +64,7 @@ object FlowAnalysis {
 
     fun analyze(ir: TypedIR, initial: FlowFacts = FlowFacts(), evaluator: (String, CompilerValue, CompilerValue) -> CompilerValue? = { _, _, _ -> null }, canFoldBranch: (ValueRef) -> Boolean = { it !is ValueRef.Result || it.instruction !in ir.runtimeValues },
                 callSummary: (Instruction.Call, List<Snapshot>) -> ReturnTypeAnalysis.Summary = { call, _ -> ReturnTypeAnalysis.unknown(call) },
-                foldQueries: Boolean = true): Result {
+                foldIntrinsics: Boolean = true): Result {
         require(ir.blocks.map { it.id }.distinct().size == ir.blocks.size)
         val blocks = ir.blocks.associateBy { it.id }
         require(ir.entry in blocks)
@@ -152,7 +152,7 @@ object FlowAnalysis {
                             MapOperation.SIZE -> size?.let { CompilerValue.Integral(it.toLong()) }
                             MapOperation.IS_EMPTY -> size?.let { CompilerValue.Bool(it == 0) }
                             else -> key?.let { name -> MapFacts.keys(state, entries)?.let { CompilerValue.Bool(name in it) } }
-                        }?.takeIf { foldQueries }
+                        }?.takeIf { foldIntrinsics }
                         val type = if (instruction.operation == MapOperation.SIZE) top.mcfpp.type.MCFPPBaseType.Int.typeId else top.mcfpp.type.MCFPPBaseType.Bool.typeId
                         val fact = ValueFacts(TypeKnowledge.Exact(type), known?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown)
                         values[instruction.result!!] = fact
@@ -174,7 +174,7 @@ object FlowAnalysis {
                         } else {
                             val contains = instruction.operation == ListOperation.CONTAINS
                             val type = if (contains) top.mcfpp.type.MCFPPBaseType.Bool.typeId else top.mcfpp.type.MCFPPBaseType.Int.typeId
-                            val known = found?.takeIf { foldQueries }?.let {
+                            val known = found?.takeIf { foldIntrinsics }?.let {
                                 if (contains) CompilerValue.Bool(it >= 0) else CompilerValue.Integral(it.toLong())
                             }
                             val fact = ValueFacts(TypeKnowledge.Exact(type), known?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown)
@@ -303,12 +303,27 @@ object FlowAnalysis {
                 }
                 is Instruction.Promote -> {
                     val source = (value(instruction.value).value as? ValueKnowledge.Constant)?.value as? CompilerValue.Integral
-                    val constant = source?.takeIf { instruction.type == top.mcfpp.type.MCFPPBaseType.Float.typeId }
+                    val constant = source?.takeIf { foldIntrinsics && instruction.type == top.mcfpp.type.MCFPPBaseType.Float.typeId }
                         ?.let { CompilerValue.FloatBits(it.value.toInt().toFloat().toRawBits()) }
                     values[instruction.result] = ValueFacts(TypeKnowledge.Exact(instruction.type),
                         constant?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown)
                 }
-                is Instruction.Convert -> values[instruction.result] = ValueFacts(TypeKnowledge.Exact(instruction.type), ValueKnowledge.Unknown)
+                is Instruction.Convert -> {
+                    val source = value(instruction.value)
+                    val constant = (source.value as? ValueKnowledge.Constant)?.value?.takeIf { foldIntrinsics }?.let {
+                        NumericConversion.fold(instruction.value.type, instruction.type, it)
+                    }
+                    val fact = ValueFacts(TypeKnowledge.Exact(instruction.type), constant?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown)
+                    values[instruction.result] = fact
+                    instruction.place?.let { place ->
+                        state.forgetDescendants(place)
+                        state.write(place, fact)
+                        if (instruction.type == instruction.value.type || instruction.type == top.mcfpp.type.MCFPPNBTType.NBT.typeId)
+                            snapshot(instruction.value)?.let { state.copyFrom(it.facts, it.place, place, includeRoot = false) }
+                        origins[instruction.result] = place
+                        snapshots[instruction.result] = capture(place)
+                    }
+                }
             }
             values.forEach { (result, fact) -> resultFacts[id to result] = fact }
             if (!state.reachable) {

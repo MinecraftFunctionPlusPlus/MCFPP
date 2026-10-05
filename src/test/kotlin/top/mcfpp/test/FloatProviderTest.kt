@@ -84,6 +84,8 @@ class FloatProviderTest {
             val setScore = Regex("^scoreboard players set (\\S+ \\S+) (-?\\d+)$")
             val copyScore = Regex("^scoreboard players operation (\\S+ \\S+) = (\\S+ \\S+)$")
             val cast = Regex("^execute store result score (\\S+ \\S+) run compute default integer (.+)$")
+            val load = Regex("^execute store result score (\\S+ \\S+) run data get (storage \\S+ \\S+) 1$")
+            val save = Regex("^execute store result (storage \\S+ \\S+) int 1 run scoreboard players get (\\S+ \\S+)$")
             val check = Regex("^execute store success score (\\S+ \\S+) (if|unless) predicate (.+)$")
             for (command in commands.filterNot { it.startsWith("#") }) {
                 modify.matchEntire(command)?.let {
@@ -99,6 +101,8 @@ class FloatProviderTest {
                 setScore.matchEntire(command)?.let { scores[it.groupValues[1]] = it.groupValues[2].toInt() }
                 copyScore.matchEntire(command)?.let { scores[it.groupValues[1]] = scores.getValue(it.groupValues[2]) }
                 cast.matchEntire(command)?.let { scores[it.groupValues[1]] = value(objectValue(it.groupValues[2])).toInt() }
+                load.matchEntire(command)?.let { scores[it.groupValues[1]] = data.getValue(it.groupValues[2]).toInt() }
+                save.matchEntire(command)?.let { data[it.groupValues[1]] = scores.getValue(it.groupValues[2]).toFloat() }
                 check.matchEntire(command)?.let {
                     val matches = predicate(objectValue(it.groupValues[3]))
                     scores[it.groupValues[1]] = if (matches == (it.groupValues[2] == "if")) 1 else 0

@@ -4,6 +4,8 @@
 没有未知 `any` 的兜底重载；已知实际类型的 `any` 按该类型匹配。
 bool 不因 ByteTag 编码而匹配 byte 参数。
 
+已有标量和数组源重载已按 ConversionData 的原生函数身份接入 IR Convert，普通同名用户函数仍使用自身函数体。short、double 和原始 nbt 载荷可进入普通参数、返回及控制流；26.3 的显式数值转换与 toNBT 可参与循环/递归和擦除返回的实际类型绑定，旧浮点转换仍保留模拟库入口。DataObject 等尚未迁入 IR 的来源继续使用旧适配。
+
 当前运行时支持如下。`—` 表示编译错误，包括输入为常量的情况；不通过宿主强转假装支持。
 
 | 来源 | toInt | toFloat | toByte | toShort | toLong | toDouble |
@@ -31,8 +33,9 @@ long/double 到 int 同样保留 Minecraft `data get` 操作及其范围与舍�
 `toNBT` 当前有 int、float、bool、string、byte、short、long、double、原始 nbt、NBT 数组和 DataObject 重载。
 它生成来源约定的 NBT 编码，保留 ByteTag / ShortTag / IntTag 的区别。
 常量编码复制 Tag，运行时编码通过内部存储搬运完成。
+IR 的 toNBT 结果拥有独立位置和快照，保留来源编码；常量快照同时记录 nbt 结果身份和内部来源格式，避免 short/byte 编码退化为 int。byte/short 在 IR 内用 NBT 传递，函数返回仍遵守现有记分板接口，调用方按原宽度捕获，兼容旧入口。
 旧浮点分量后端使用 `{sign:int,int0:int,int1:int,exp:int}` 复合编码，栈保存与恢复逐项搬运四个分量。
-26.3 后端使用 FloatTag；这两种持久化格式不会自动互相转换。数值提供器后端的已知非有限输入编码会报错。
+26.3 后端使用 FloatTag；这两种持久化格式不会自动互相转换。数值提供器后端的已知非有限输入编码会报错。IR 的 Promote/Convert 折叠遵守 foldIRConstants；关闭优化仍在单独类型分析中检查已知非法输入，不折叠 long/double 到 int 的后端读操作。
 集合、text 等源重载以及其余数值转换仍待后端实现。
 
 语言 `as` 现在通过 StorageAccess/TypedView 解释同一 Place；两个表达式 visitor 均不再调用旧 explicitCast 或 NumericConversions。

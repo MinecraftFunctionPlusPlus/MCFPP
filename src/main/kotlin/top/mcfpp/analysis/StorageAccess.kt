@@ -823,6 +823,7 @@ object StorageAccess {
     internal fun restore(type: MCFPPType, snapshot: CompilerValue, name: String,
                         types: Map<TypeId, MCFPPType> = emptyMap()): Var<*>? {
         val payload = if (snapshot is CompilerValue.Typed) snapshot.payload else snapshot
+        if (type == MCFPPNBTType.NBT) return snapshotTag(snapshot, type.typeId)?.let { type.build(name, it) }
         if (type == MCFPPBaseType.Range && payload is CompilerValue.Record) {
             fun endpoint(name: String): Number? {
                 val part = payload.fields[name] ?: return null
@@ -899,7 +900,7 @@ object StorageAccess {
             }
             is CompilerValue.Bool -> payload.value
             is CompilerValue.FloatBits -> Float.fromBits(payload.bits)
-            is CompilerValue.DoubleBits -> Double.fromBits(payload.bits)
+            is CompilerValue.DoubleBits -> top.mcfpp.nbt.tags.primitive.DoubleTag(Double.fromBits(payload.bits))
             is CompilerValue.Nbt -> Tag.toNBT(payload.snbt)
             is CompilerValue.Text -> top.mcfpp.nbt.tags.primitive.StringTag(payload.value)
             else -> return null

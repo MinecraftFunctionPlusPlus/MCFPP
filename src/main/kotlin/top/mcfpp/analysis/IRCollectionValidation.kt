@@ -10,6 +10,8 @@ object IRCollectionValidation {
         MCFPPBaseType.Float.typeId -> if (top.mcfpp.command.FloatProviders.enabled) "float" else "compound"
         MCFPPBaseType.Bool.typeId, MCFPPNBTType.Byte.typeId -> "byte"
         MCFPPNBTType.Long.typeId -> "long"
+        MCFPPNBTType.Short.typeId -> "short"
+        MCFPPNBTType.Double.typeId -> "double"
         MCFPPNBTType.ByteArray.typeId -> "byte_array"
         MCFPPNBTType.IntArray.typeId -> "int_array"
         MCFPPNBTType.LongArray.typeId -> "long_array"

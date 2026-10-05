@@ -32,6 +32,8 @@ import top.mcfpp.util.StringHelper.splitNamespaceID
 import top.mcfpp.util.NBTUtil.toNBTByte
 import top.mcfpp.util.NBTUtil.toNBTLong
 import top.mcfpp.util.NBTUtil.toNBTFloat
+import top.mcfpp.util.NBTUtil.toNBTShort
+import top.mcfpp.util.NBTUtil.toNBTDouble
 
 /** Internal migration boundary for scalar, erased and collection IR, without mutable Var-based analysis. */
 object PrimitiveCompiler {
@@ -44,7 +46,8 @@ object PrimitiveCompiler {
     private val obj = MCFPPBaseType.Object.typeId
     private val erased = setOf(any, obj)
     private val types = listOf(MCFPPBaseType.Int, MCFPPBaseType.Float, MCFPPBaseType.Bool, MCFPPBaseType.Any, MCFPPBaseType.Object,
-        MCFPPBaseType.String, MCFPPBaseType.Range, MCFPPNBTType.Byte, MCFPPNBTType.Long,
+        MCFPPBaseType.String, MCFPPBaseType.Range, MCFPPNBTType.Byte, MCFPPNBTType.Short, MCFPPNBTType.Long,
+        MCFPPNBTType.Double, MCFPPNBTType.NBT,
         MCFPPNBTType.ByteArray, MCFPPNBTType.IntArray, MCFPPNBTType.LongArray).associateBy { it.typeId }
     private fun nbt(type: TypeId) = type != int && type != bool
     private fun supportedType(type: MCFPPType): Boolean = type !is MCFPPDeclaredConcreteType && when (type) {
@@ -64,6 +67,9 @@ object PrimitiveCompiler {
     private fun supportedSignature(function: Function) = function.ownerType == OwnerType.NONE && function !is NativeFunction &&
         function !is Generic<*> && function.normalParams.all { supportedType(it.type) } &&
         (function.returnType === MCFPPPrivateType.Void || supportedType(function.returnType))
+
+    private fun conversion(function: Function) = function is NativeFunction &&
+        function.javaMethod.declaringClass == top.mcfpp.mni.ConversionData::class.java
 
     private fun lower(context: Parser.CurlBlockContext, lowering: Lowering): List<String> {
         context.statement().forEach(lowering::statement)
@@ -153,7 +159,7 @@ object PrimitiveCompiler {
         val ir = graph.getValue(function.declarationId)
         val evaluator = if (top.mcfpp.CompileSettings.foldIRConstants) PrimitiveEvaluation::binary else { _: String, _: CompilerValue, _: CompilerValue -> null }
         val facts = FlowAnalysis.analyze(ir, initial = lowering.initialFacts, evaluator = evaluator, canFoldBranch = { !lowering.runtime(it) },
-            callSummary = { call, args -> ReturnTypeAnalysis.summarize(call, graph, args) }, foldQueries = top.mcfpp.CompileSettings.foldIRConstants)
+            callSummary = { call, args -> ReturnTypeAnalysis.summarize(call, graph, args) }, foldIntrinsics = top.mcfpp.CompileSettings.foldIRConstants)
         val typeFacts = if (top.mcfpp.CompileSettings.foldIRConstants) facts else FlowAnalysis.analyze(ir,
             initial = lowering.initialFacts, evaluator = PrimitiveEvaluation::binary, canFoldBranch = { !lowering.runtime(it) },
             callSummary = { call, args -> ReturnTypeAnalysis.summarize(call, graph, args) })
@@ -163,6 +169,15 @@ object PrimitiveCompiler {
             val value = (fact.value as? ValueKnowledge.Constant)?.value
             value is CompilerValue.FloatBits && !Float.fromBits(value.bits).isFinite()
         }) diagnostics += "Minecraft 26.3 float providers require finite float values"
+        for (block in ir.blocks) for (instruction in block.instructions.filterIsInstance<Instruction.Convert>()) {
+            if (instruction.value.type != float || instruction.type != int) continue
+            val value = when (val source = instruction.value) {
+                is ValueRef.Constant -> source.value
+                is ValueRef.Result -> (typeFacts.values[block.id to source.instruction]?.value as? ValueKnowledge.Constant)?.value
+                else -> null
+            }
+            (value as? CompilerValue.FloatBits)?.let { NumericConversion.floatToIntError(Float.fromBits(it.bits)) }?.let(diagnostics::add)
+        }
         diagnostics.forEach(top.mcfpp.util.LogProcessor::error)
         val returns = ir.blocks.filter { it.id in facts.entries && it.terminator is Terminator.Return }
         val backend = Backend(function, lowering, ir, facts, typeFacts)
@@ -791,14 +806,24 @@ object PrimitiveCompiler {
                     if (!exploratory) invalid("Actual type of any is unknown; use 'as' before binding '${name.second}'")
                     // A draft records possibilities; only the fixed-point binding may select a concrete overload.
                     val candidates = GlobalScope.getFunctionCandidates(name.first, name.second, file).filter {
-                        supportedSignature(it) && args.size <= it.normalParams.size && it.normalParams.drop(args.size).all { parameter -> parameter.hasDefault }
+                        (supportedSignature(it) || conversion(it)) && args.size <= it.normalParams.size && it.normalParams.drop(args.size).all { parameter -> parameter.hasDefault }
                     }.distinctBy { it.declarationId }
                     if (candidates.isEmpty()) unsupported()
-                    candidates.forEach { calls[it.declarationId] = it }
+                    candidates.filterNot(::conversion).forEach { calls[it.declarationId] = it }
                     provisional = true
                     provisionalType = candidates.map { it.returnType.typeId }.distinct().singleOrNull() ?: any
                     candidates.first()
                 }
+            }
+            if (conversion(target)) {
+                val value = args.single()
+                val type = register(target.returnType).typeId
+                if (!(exploratory && value.type == any) && !NumericConversion.supported(value.type, type))
+                    invalid("${target.identifier}(${types.getValue(value.type).typeName}) has no runtime implementation for this target")
+                val result = nextResult++
+                val place = memberResult(context, result, type, runtime(value))
+                instructions += Instruction.Convert(result, value, type, place)
+                return ValueRef.Result(type, result)
             }
             if (!supportedSignature(target)) unsupported()
             target.normalParams.forEach { register(it.type) }
@@ -1023,7 +1048,9 @@ object PrimitiveCompiler {
                 CompilerValue.Text((Tag.toNBT(node.LineString().text) as StringTag).value)) else expression(node.nbtValue() ?: unsupported())
             is Parser.NbtValueContext -> when {
                 node.nbtByte() != null -> ValueRef.Constant(MCFPPNBTType.Byte.typeId, CompilerValue.Integral(node.nbtByte().text.toNBTByte().toLong()))
+                node.nbtShort() != null -> ValueRef.Constant(MCFPPNBTType.Short.typeId, CompilerValue.Integral(node.nbtShort().text.toNBTShort().toLong()))
                 node.nbtLong() != null -> ValueRef.Constant(MCFPPNBTType.Long.typeId, CompilerValue.Integral(node.nbtLong().text.toNBTLong()))
+                node.nbtDouble() != null -> ValueRef.Constant(MCFPPNBTType.Double.typeId, CompilerValue.DoubleBits(node.nbtDouble().text.toNBTDouble().toRawBits()))
                 node.nbtInt() != null -> ValueRef.Constant(int, CompilerValue.Integral(node.nbtInt().text.toIntOrNull()?.toLong() ?: unsupported()))
                 node.nbtFloat() != null -> {
                     register(MCFPPBaseType.Float)
@@ -1103,6 +1130,51 @@ object PrimitiveCompiler {
             val destination = internal("float_$result")
             emit(Command("data modify").build(destination.toCommandPart()).build("set compute default float $provider"))
             nbtResults[result] = destination
+        }
+        private fun convert(instruction: Instruction.Convert) {
+            val value = instruction.value
+            val destination = instruction.place?.let(::path) ?: internal("convert_${instruction.result}")
+            val result = ValueRef.Result(instruction.type, instruction.result)
+            when {
+                instruction.type == MCFPPNBTType.NBT.typeId || instruction.type == value.type -> encode(destination, value)
+                !runtime(result) -> emit(Commands.dataSetValue(destination, StorageAccess.snapshotTag(constant(result)!!, instruction.type)!!))
+                instruction.type == float -> {
+                    val input = score(value)
+                    computeFloat(instruction.result, "{type:\"minecraft:from_int\",input:${FloatProviders.scoreProvider(input.name, input.objective)}}")
+                    emit(Commands.dataSetFrom(destination, nbtResults.getValue(instruction.result)))
+                }
+                else -> {
+                    val source = if (value.type == float) temporary(int).also {
+                        commands += "execute store result score $it run compute default integer {type:\"minecraft:from_float\",input:${floatProvider(value)}}"
+                    } else if (value.type in setOf(MCFPPNBTType.Long.typeId, MCFPPNBTType.Double.typeId)) {
+                        // Even literals use the target data-get rule, never a host numeric cast.
+                        val input = internal("convert_input_${instruction.result}")
+                        encode(input, value)
+                        temporary(int).also { commands += "execute store result score $it run data get ${input.toCommandPart()} 1" }
+                    } else score(value)
+                    val encoded = if (instruction.type in setOf(MCFPPNBTType.Byte.typeId, MCFPPNBTType.Short.typeId)) {
+                        val period = if (instruction.type == MCFPPNBTType.Byte.typeId) 256 else 65536
+                        val modulus = score(ValueRef.Constant(int, CompilerValue.Integral(period.toLong())))
+                        temporary(int).also {
+                            commands += "scoreboard players operation $it = $source"
+                            commands += "scoreboard players operation $it %= $modulus"
+                            commands += "execute if score $it matches ..-1 run scoreboard players operation $it += $modulus"
+                            commands += "execute if score $it matches ${period / 2}.. run scoreboard players operation $it -= $modulus"
+                        }
+                    } else source
+                    val tag = when (instruction.type) {
+                        MCFPPNBTType.Byte.typeId -> "byte"
+                        MCFPPNBTType.Short.typeId -> "short"
+                        MCFPPNBTType.Long.typeId -> "long"
+                        MCFPPNBTType.Double.typeId -> "double"
+                        else -> "int"
+                    }
+                    commands += "execute store result ${destination.toCommandPart()} $tag 1 run scoreboard players get $encoded"
+                    if (instruction.type == int) results[instruction.result] = encoded
+                }
+            }
+            nbtResults[instruction.result] = destination
+            instruction.place?.let { initialized.add(it); materializedPlaces.add(it) }
         }
         private fun emit(command: Command) {
             // Every dynamic address parameter belongs to this frame's IR slots.
@@ -1254,8 +1326,15 @@ object PrimitiveCompiler {
             commands += "function ${target.namespaceID}"
             instruction.result?.let {
                 val destination = internal("result_$id", 1)
-                if (nbt(instruction.returnType!!)) emit(Commands.dataSetFrom(destination, target.returnVar.nbtPath))
-                else commands += "execute store result ${destination.toCommandPart()} ${if (instruction.returnType == bool) "byte" else "int"} 1 run scoreboard players get ${physical(target.returnVar)}"
+                if (nbt(instruction.returnType!!) && target.returnVar !is MCInt) emit(Commands.dataSetFrom(destination, target.returnVar.nbtPath))
+                else {
+                    val tag = when (instruction.returnType) {
+                        bool, MCFPPNBTType.Byte.typeId -> "byte"
+                        MCFPPNBTType.Short.typeId -> "short"
+                        else -> "int"
+                    }
+                    commands += "execute store result ${destination.toCommandPart()} $tag 1 run scoreboard players get ${physical(target.returnVar)}"
+                }
             }
             target.normalParams.forEachIndexed { index, parameter ->
                 if (!parameter.isStatic) return@forEachIndexed
@@ -1351,7 +1430,7 @@ object PrimitiveCompiler {
                 initialized.clear()
                 initialized.addAll(storagePlaces.filter { facts.entries.getValue(block.id).read(it)?.state == ValueState.INITIALIZED })
                 if (block.id == 0 && reachable.any { candidate -> candidate.instructions.any { it is Instruction.Call ||
-                    it is Instruction.Construct || it is Instruction.Promote ||
+                    it is Instruction.Construct || it is Instruction.Promote || it is Instruction.Convert ||
                     it is Instruction.Binary && (it.left.type == float || it.right.type == float) ||
                     it is Instruction.Read && nbt(symbols.getValue(it.place.root).declaredType) ||
                     it is Instruction.Write && storageNames.getValue(it.place.root).startsWith("$") && nbt(symbols.getValue(it.place.root).declaredType) } })
@@ -1423,6 +1502,7 @@ object PrimitiveCompiler {
                         val source = score(instruction.value)
                         computeFloat(instruction.result, "{type:\"minecraft:from_int\",input:${FloatProviders.scoreProvider(source.name, source.objective)}}")
                     }
+                    is Instruction.Convert -> convert(instruction)
                     is Instruction.RawCommand -> commands.add(instruction.command)
                     is Instruction.CaptureKey -> {
                         val destination = internal("map_key_${instruction.result}")
@@ -1550,7 +1630,8 @@ object PrimitiveCompiler {
                     }
                     is Terminator.Return -> {
                         terminator.value?.let { value ->
-                            if (nbt(function.returnType.typeId)) {
+                            // byte/short use NBT inside IR but retain the existing scalar return ABI.
+                            if (nbt(function.returnType.typeId) && function.returnVar !is MCInt) {
                                 encode(function.returnVar.nbtPath, value)
                                 return@let
                             }

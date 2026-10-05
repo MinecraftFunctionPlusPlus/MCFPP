@@ -17,6 +17,7 @@ import top.mcfpp.nbt.tags.collection.IntArrayTag
 import top.mcfpp.nbt.tags.collection.LongArrayTag
 import top.mcfpp.nbt.tags.primitive.LongTag
 import top.mcfpp.nbt.tags.primitive.FloatTag
+import top.mcfpp.nbt.tags.primitive.DoubleTag
 
 /** Strict executor for the scoreboard and control-flow command subset covered by these tests. */
 class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<String>> = emptyMap()) {
@@ -169,6 +170,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             "minecraft:storage" -> (readNbt(value.getString("storage"), value.getString("path")).value as Number).toFloat()
             "minecraft:score" -> values.getValue("${value.getJSONObject("target").getString("name")} ${value.getString("score")}").toFloat()
             "minecraft:from_int" -> input("input")
+            "minecraft:from_float" -> input("input").toInt().toFloat()
             "minecraft:add" -> value.getJSONArray("inputs").map(::provider).reduce(Float::plus)
             "minecraft:mul" -> value.getJSONArray("inputs").map(::provider).reduce(Float::times)
             "minecraft:sub" -> input("left") - input("right")
@@ -187,11 +189,12 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         val matches = Regex("execute if score (\\S+ \\S+) matches (-?\\d+|(?:-?\\d+)?\\.\\.(?:-?\\d+)?) run (.*)")
         val guardStore = Regex("execute store result storage mcfpp:system ir_branch_stack\\[0].condition byte 1 run scoreboard players get (\\S+ \\S+)")
         val guardTest = Regex("execute (if|unless) data storage mcfpp:system ir_branch_stack\\[0]\\{condition:1b} run (.*)")
-        val save = Regex("execute store result storage (\\S+) ($nbtPath) (int|byte|short) 1 run scoreboard players get (\\S+ \\S+)")
+        val save = Regex("execute store result storage (\\S+) ($nbtPath) (int|byte|short|long|double) 1 run scoreboard players get (\\S+ \\S+)")
         val restore = Regex("execute store result score (\\S+ \\S+) run data get storage (\\S+) ($nbtPath)(?: 1(?:\\.0)?)?")
         val setNbt = Regex("data modify storage (\\S+) ($nbtPath) set value (.*)")
         val copyNbt = Regex("data modify storage (\\S+) ($nbtPath) set from storage (\\S+) ($nbtPath)")
         val computeFloat = Regex("data modify storage (\\S+) ($nbtPath) set compute default float (.*)")
+        val computeInt = Regex("execute store result score (\\S+ \\S+) run compute default integer (.*)")
         val floatCheck = Regex("execute store success score (\\S+ \\S+) (if|unless) predicate (.*)")
         val mergeNbtValue = Regex("data modify storage (\\S+) ($nbtPath) merge value (.*)")
         val mergeNbtFrom = Regex("data modify storage (\\S+) ($nbtPath) merge from storage (\\S+) ($nbtPath)")
@@ -260,7 +263,13 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             }
             save.matchEntire(command)?.let {
                 val value = values.getValue(it.groupValues[4])
-                val tag = when (it.groupValues[3]) { "byte" -> ByteTag(value.toByte()); "short" -> ShortTag(value.toShort()); else -> IntTag(value) }
+                val tag = when (it.groupValues[3]) {
+                    "byte" -> ByteTag(value.toByte())
+                    "short" -> ShortTag(value.toShort())
+                    "long" -> LongTag(value.toLong())
+                    "double" -> DoubleTag(value.toDouble())
+                    else -> IntTag(value)
+                }
                 writeNbt(it.groupValues[1], it.groupValues[2], tag)
                 return@command false
             }
@@ -277,6 +286,8 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                     is ByteArrayTag -> value.value.size
                     is IntArrayTag -> value.value.size
                     is LongArrayTag -> value.value.size
+                    is FloatTag -> kotlin.math.floor(value.value.toDouble()).toInt()
+                    is DoubleTag -> kotlin.math.floor(value.value).toInt()
                     else -> (value.value as Number).toInt()
                 }
                 return@command false
@@ -287,6 +298,13 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             computeFloat.matchEntire(command)?.let {
                 val expression = JSON.parse(it.groupValues[3], JSONReader.Feature.AllowUnQuotedFieldNames)
                 writeNbt(it.groupValues[1], it.groupValues[2], FloatTag(provider(expression)))
+                return@command false
+            }
+            computeInt.matchEntire(command)?.let {
+                val expression = JSON.parseObject(it.groupValues[2], JSONReader.Feature.AllowUnQuotedFieldNames)
+                check(expression.getString("type") == "minecraft:from_float")
+                // Preserve the int result: converting it back through Float would round Int.MAX_VALUE.
+                values[it.groupValues[1]] = provider(expression["input"]!!).toInt()
                 return@command false
             }
             floatCheck.matchEntire(command)?.let {

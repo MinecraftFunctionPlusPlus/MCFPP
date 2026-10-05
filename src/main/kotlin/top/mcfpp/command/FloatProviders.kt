@@ -172,8 +172,8 @@ object FloatProviders {
     fun toInt(value: MCFloat): Var<*> {
         if (!valid(value)) return MCInt().apply { isError = true }
         if (value is MCFloatConcrete) {
-            if (value.value.toDouble() < Int.MIN_VALUE.toDouble() || value.value.toDouble() >= 2147483648.0) {
-                LogProcessor.error("Minecraft 26.3 float-to-int conversion is outside the 32-bit integer range")
+            top.mcfpp.analysis.NumericConversion.floatToIntError(value.value)?.let {
+                LogProcessor.error(it)
                 return MCInt().apply { isError = true }
             }
             return MCIntConcrete(value.value.toInt())

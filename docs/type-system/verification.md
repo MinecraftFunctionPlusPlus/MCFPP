@@ -1,8 +1,23 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。本轮原生浮点 IR 联合检查 59 项通过，范围边界补查 14 项通过。MCFL 保持 10，本轮没有改变库签名/格式；最近标准库重建属于 8aee6b7，为 0 错误/0 警告。最近完整检查属于提交 72dc557，共 346 项。续接起始基线为上一会话的 140 项测试，旧模拟浮点后端继续保留。
+最新验证日期：2026-10-06（Asia/Shanghai）。本轮显式转换 IR 联合检查 52 项通过，返回接口补查 32 项通过，最后扩展两种调用入口后 ConversionIRTest 的 8 项通过。MCFL 保持 10，本轮没有改变库签名/格式；最近标准库重建属于 8aee6b7，为 0 错误/0 警告。最近完整检查属于提交 72dc557，共 346 项。续接起始基线为上一会话的 140 项测试，旧模拟浮点后端继续保留。
 
-## 最新必要检查：26.3 原生浮点 IR
+## 最新必要检查：显式转换 IR 与返回接口
+
+```sh
+./gradlew test --tests top.mcfpp.test.ConversionIRTest --tests top.mcfpp.test.ConversionTest --tests top.mcfpp.test.FloatIRTest --tests top.mcfpp.test.FloatProviderTest --tests top.mcfpp.test.IRCallTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
+./gradlew test --tests top.mcfpp.test.ConversionIRTest --tests top.mcfpp.test.NbtArrayIRTest --tests top.mcfpp.test.IRCallTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
+./gradlew test --tests top.mcfpp.test.ConversionIRTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
+git diff --check
+```
+
+首轮 toNBT(short) 常量快照被重标为 IntTag；保留 nbt 外层身份和内部来源格式后，5 个套件、52 项通过。检查覆盖窄化/扩大、26.3 浮点转换与循环/递归、已知 any 重载、编码副本、直接 as、long/double 常量后端读、普通同名函数、非法组合和越界诊断，并保留旧模拟后端回归。转换及提升折叠开关均执行。
+
+随后旧调用入口复现 short 返回的 NBT 地址为空。byte/short 返回改为保留既有记分板接口，IR 调用方按 byte/short 捕获；转换、数组和普通调用共 3 个套件、32 项通过。最后将返回用例扩为旧/IR 两种调用方和 byte/short 两种宽度，ConversionIRTest 的 8 项通过，0 失败/错误/跳过，当前 XML 为这个套件。
+
+日志：`F:/DevCache/.codex/runtime/mcfpp-conversion-ir-final.log`、`mcfpp-conversion-ir-abi.log`、`mcfpp-conversion-ir-return-callers.log`。MCFL 保持 10，未运行完整 check 或重建标准库。未实现的数值组合仍诊断；旧浮点转换、DataObject 等来源和实际服务端舍入/异常对照仍待完成。
+
+## 上一阶段必要检查：26.3 原生浮点 IR（7cd1a69）
 
 ```sh
 ./gradlew test --tests top.mcfpp.test.FloatIRTest --tests top.mcfpp.test.FloatProviderTest --tests top.mcfpp.test.IRCallTest --tests top.mcfpp.test.RangeIRTest --tests top.mcfpp.test.CollectionIRTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
@@ -12,7 +27,7 @@ git diff --check
 
 5 个套件、59 项通过。新增 FloatIRTest 的 6 项覆盖算术/比较和循环回边、递归返回与较早参数捕获、static 浮点写回、声明/返回/实参/默认参数/集合元素提升、动态下标跨 RHS 调用、共享视图、负零、精度边界、浮点范围载荷及非法输入诊断；折叠开关均执行。旧 FloatProviderTest 继续覆盖原生表达式和 26.2/1.21.8 的旧后端选择。
 
-首轮旧常量测试依赖 MCFloatConcrete 适配对象强转失败，改为从 StorageAccess 查询不可变快照，仍检查值和不生成运行时计算命令；测试的旧扁平执行器跳过新增 IR 容器初始化。复核补齐已知浮点范围的左右端点顺序检查后，浮点和范围 2 个套件、14 项通过，0 失败/错误/跳过，当前 XML 为这 2 个套件。日志：`F:/DevCache/.codex/runtime/mcfpp-float-ir-final.log`、`mcfpp-float-ir-range-bounds.log`。未运行完整 check 或重建标准库；旧模拟浮点 IR、显式转换 MNI、浮点/未知范围迭代和实际服务端对照仍未完成。
+首轮旧常量测试依赖 MCFloatConcrete 适配对象强转失败，改为从 StorageAccess 查询不可变快照，仍检查值和不生成运行时计算命令；测试的旧扁平执行器跳过新增 IR 容器初始化。复核补齐已知浮点范围的左右端点顺序检查后，浮点和范围 2 个套件、14 项通过，0 失败/错误/跳过。日志：`F:/DevCache/.codex/runtime/mcfpp-float-ir-final.log`、`mcfpp-float-ir-range-bounds.log`。未运行完整 check 或重建标准库；该阶段旧模拟浮点 IR、显式转换 MNI、浮点/未知范围迭代和实际服务端对照仍未完成。
 
 ## 上一阶段必要检查：递归返回与 static 写回形状（eb83a60）
 
