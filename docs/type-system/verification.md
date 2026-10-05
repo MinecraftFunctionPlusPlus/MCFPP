@@ -1,8 +1,14 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段 55 ConstructorExecutionTest 最终 7 项通过，Gradle exit 0；ConstructorResolutionTest 4 项在前轮已通过。首轮 8 套件共 80 项有 4 项失败（76 通过）；ConstructorExecution 7 + ConstructorResolution 4 中间复查 11 项有 1 项失败；静态对象初始化修复后最终 ConstructorExecution 7 项全过。日志：`mcfpp-constructor-receiver.log`、`mcfpp-constructor-receiver-final.log`、`mcfpp-constructor-receiver-complete.log`。MCFL 11 未变，未重建标准库；本阶段未运行完整 check 或实际 Minecraft 服务端。最近完整检查仍属于提交 72dc557，共 346 项。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段 56 最终 TemplateInitializationTest 3、ConstructorExecutionTest 7、LibCacheFormatTest 3 共 13 项全部通过，Gradle exit 0（BUILD SUCCESSFUL in 30s）。MCFL 12 标准库单独重建成功，语言 errors/warnings 均为 0，生成 bin.mclib 267158 bytes。首轮 12 项 9 fail/3 pass；中间 13 项进程中断且 XML 过期；诊断轮 3 项完成、1 fail/1 skipped，修复后最终 13 全过。日志：`mcfpp-template-initializers-stdlib-final.log`、`mcfpp-template-initializers-complete.log`。最终 consume 阶段每次报告的 9119 项语言警告来自 `flatExtends` 重复继承字段，仍待清理；本阶段未运行完整 check 或实际 Minecraft 服务端。最近完整检查仍属于提交 72dc557，共 346 项。
 
-## 最新必要检查：模板构造 receiver 与初始化帧（阶段 55）
+## 最新必要检查：模板初始化表达式库往返（阶段 56）
+
+`DataTemplateInfo` 按声明顺序持久化字段初始化表达式，`DataTemplate.preInit` 使用 `LinkedHashMap`；`GenericDataTemplateInfo` 原已有 body AST，没有重复增加。源码构造器编译恢复声明文件与命名空间；`@Transient` 文件字段不会随库保存，导入构造器的 `file` 仍为 null 并依赖 caller，词法 scope 是已知缺口。Kryo 三个自定义 reader 先 reference 再 nested read，避免循环声明回读时以未完成对象算 hash；依据 [Kryo 5.6.2 Serializer References](https://github.com/EsotericSoftware/kryo/blob/kryo-parent-5.6.2/README.md#serializer-references)。生产和字符串测试共享 `MCFPPFile.resolveImports`。
+
+TemplateInitializationTest 3、ConstructorExecutionTest 7、LibCacheFormatTest 3 的本轮 XML 均为新时间戳，合计 13 项、0 failures/errors/skips。测试覆盖声明顺序、库导入后的显式模板构造执行、Kryo 循环引用和 MCFL 12 格式。历史首轮 12 项有 9 fail/3 pass（reader 循环初始化的 caller 为 null）；随后 13 项尝试发生 worker 中断且结果 XML 过期；诊断轮 3 项中 1 fail/1 skipped，发现 restored object 的 Defaults RHS 使用了无法解析的 `Defaults.z` 和 Box 调用导入绑定问题。共享 resolveImports 与入口绑定修复后最终联合 13 项全通过。注意 object 测试只显式调用构造器，不证明库 object 自动 load；导入 RHS 的声明词法 scope 完整持久化仍待解决。最终日志：`F:/DevCache/.codex/runtime/mcfpp-template-initializers-complete.log`。MCFL 12；未运行完整 check 或实际 Minecraft 服务端。
+
+## 历史必要检查：模板构造 receiver 与初始化帧（阶段 55）
 
 普通模板构造器不再按普通常量实参做常量特化；T! 和 compiler-only 仍按 `SpecializationPolicy` 处理。receiver 使用固定 `frame0.this` 独立传递；参数只编码入帧，不污染 callee facts。调用返回通过 `FrameExit(function,index)` 统一 IR/旧路径出口；entry 路径插入 pop，caller 路径先写回 receiver 再 pop。`preInit` 每次运行，包括 AST-null 隐式默认构造；原/特化模板及 static object 构造器均导出。显式类型非 const 字段现登记 preInit；静态字段赋值通过 `replacedBy` 后物化，非 const object 字段动态化。receiver 写回保留 source type，Unknown effect barrier 仍可撤销知识。普通模板赋值/传参的复制规则不变。
 

@@ -50,7 +50,7 @@ open class DataTemplate : FieldContainer, CompoundData {
     /**
      * 调用构造函数之前对成员进行初始化的部分
      */
-    val preInit = HashMap<String, mcfppParser.ExpressionContext>()
+    val preInit = LinkedHashMap<String, mcfppParser.ExpressionContext>()
 
     var companionObject: DataTemplate? = null
 

@@ -473,7 +473,7 @@ open class Function : Member, FieldContainer, WithDocument {
             top.mcfpp.analysis.StorageAccess.bindIncomingParameter(this)
         }
 
-    internal fun compileBody(target: Function = this, context: CurlBlockContext? = ast) {
+    internal open fun compileBody(target: Function = this, context: CurlBlockContext? = ast) {
         target.runInFunction {
             MCFPPImVisitor().compileFunctionBody(context) { prepareBody(target) }
         }

@@ -3,16 +3,22 @@ package top.mcfpp.model.compound
 import top.mcfpp.io.info.DataTemplateInfo
 import top.mcfpp.io.info.GenericDataTemplateInfo
 
-class UnsolvedTemplate(val info: DataTemplateInfo, name: String = info.identifier, namespace: String = info.namespace,
-                       interfaceFlag: Boolean = info.isInterface, abstractFlag: Boolean = info.isAbstract): DataTemplate(name, namespace) {
+class UnsolvedTemplate(name: String, namespace: String, interfaceFlag: Boolean, abstractFlag: Boolean): DataTemplate(name, namespace) {
+    lateinit var info: DataTemplateInfo
+    constructor(info: DataTemplateInfo, name: String = info.identifier, namespace: String = info.namespace,
+                interfaceFlag: Boolean = info.isInterface, abstractFlag: Boolean = info.isAbstract):
+            this(name, namespace, interfaceFlag, abstractFlag) { this.info = info }
     init { isInterface = interfaceFlag; isAbstract = abstractFlag }
     fun resolve(): DataTemplate {
         return info.get()
     }
 }
 
-class UnsolvedObjectTemplate(val info: DataTemplateInfo, name: String = info.identifier, namespace: String = info.namespace,
-                             interfaceFlag: Boolean = info.isInterface, abstractFlag: Boolean = info.isAbstract): ObjectDataTemplate(name, namespace){
+class UnsolvedObjectTemplate(name: String, namespace: String, interfaceFlag: Boolean, abstractFlag: Boolean): ObjectDataTemplate(name, namespace){
+    lateinit var info: DataTemplateInfo
+    constructor(info: DataTemplateInfo, name: String = info.identifier, namespace: String = info.namespace,
+                interfaceFlag: Boolean = info.isInterface, abstractFlag: Boolean = info.isAbstract):
+            this(name, namespace, interfaceFlag, abstractFlag) { this.info = info }
     init { isInterface = interfaceFlag; isAbstract = abstractFlag }
     fun resolve(): ObjectDataTemplate {
         return info.get() as ObjectDataTemplate

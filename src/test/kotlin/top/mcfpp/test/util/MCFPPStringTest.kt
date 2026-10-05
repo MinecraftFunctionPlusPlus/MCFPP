@@ -70,6 +70,8 @@ object MCFPPStringTest {
         stageProcessor[compileStage.ordinal].forEach { it() }
 
         LogProcessor.debug("Generate Function Index...")
+        MCFPPFile.currFile!!.resolveImports()
+        MCFPPFile.currFile!!.field.checkIndex()
         MCFPPFieldVisitor().visit(context)
         GlobalScope.importedLibNamespaces.clear()
 

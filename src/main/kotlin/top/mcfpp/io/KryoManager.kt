@@ -32,8 +32,12 @@ object KryoManager {
 
             override fun read(p0: Kryo, p1: Input, p2: Class<out DataTemplate>): DataTemplate {
                 val identity = readIdentity(p1)
-                val data = p0.readObject(p1, DataTemplateInfo::class.java)
-                return UnsolvedTemplate(data, identity.name, identity.namespace, identity.isInterface, identity.isAbstract)
+                val template = UnsolvedTemplate(identity.name, identity.namespace, identity.isInterface, identity.isAbstract)
+                // Register before nested reads can refer back: Kryo 5.6.2 README, Serializer references.
+                // https://github.com/EsotericSoftware/kryo/blob/kryo-parent-5.6.2/README.md#serializer-references
+                p0.reference(template)
+                template.info = p0.readObject(p1, DataTemplateInfo::class.java)
+                return template
             }
         })
 
@@ -60,9 +64,12 @@ object KryoManager {
             @Suppress("UNCHECKED_CAST")
             override fun read(p0: Kryo, p1: Input, p2: Class<out MCFPPDataTemplateType>): MCFPPDataTemplateType {
                 val identity = readIdentity(p1)
-                val data = p0.readObject(p1, DataTemplateInfo::class.java)
-                val parentType = p0.readObject(p1, ArrayList::class.java) as ArrayList<MCFPPType>
-                return MCFPPDataTemplateType(UnsolvedTemplate(data, identity.name, identity.namespace, identity.isInterface, identity.isAbstract), parentType)
+                val template = UnsolvedTemplate(identity.name, identity.namespace, identity.isInterface, identity.isAbstract)
+                val type = MCFPPDataTemplateType(template, arrayListOf())
+                p0.reference(type)
+                template.info = p0.readObject(p1, DataTemplateInfo::class.java)
+                type.parentType = p0.readObject(p1, ArrayList::class.java) as ArrayList<MCFPPType>
+                return type
             }
         })
 
@@ -77,9 +84,12 @@ object KryoManager {
             @Suppress("UNCHECKED_CAST")
             override fun read(p0: Kryo, p1: Input, p2: Class<out MCFPPObjectDataTemplateType>): MCFPPObjectDataTemplateType {
                 val identity = readIdentity(p1)
-                val data = p0.readObject(p1, DataTemplateInfo::class.java)
-                val parentType = p0.readObject(p1, ArrayList::class.java) as ArrayList<out MCFPPType>
-                return MCFPPObjectDataTemplateType(UnsolvedObjectTemplate(data, identity.name, identity.namespace, identity.isInterface, identity.isAbstract), parentType)
+                val template = UnsolvedObjectTemplate(identity.name, identity.namespace, identity.isInterface, identity.isAbstract)
+                val type = MCFPPObjectDataTemplateType(template, arrayListOf())
+                p0.reference(type)
+                template.info = p0.readObject(p1, DataTemplateInfo::class.java)
+                type.parentType = p0.readObject(p1, ArrayList::class.java) as ArrayList<out MCFPPType>
+                return type
             }
         })
 

@@ -1,6 +1,7 @@
 package top.mcfpp.io.info
 
 import top.mcfpp.antlr.mcfppParser.TemplateBodyContext
+import top.mcfpp.antlr.mcfppParser.ExpressionContext
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.GenericDataTemplate
 import top.mcfpp.model.compound.GenericObjectDataTemplate
@@ -22,7 +23,8 @@ data class DataTemplateInfo(
     var field: FieldInfo,
     var constructor: List<TemplateConstructorInfo>,
     var hasCompanionObject: Boolean,
-    var isObject: Boolean
+    var isObject: Boolean,
+    val initializers: Map<String, ExpressionContext>
 ): AbstractTemplateInfo<DataTemplate> {
 
     override fun get(): DataTemplate {
@@ -40,6 +42,7 @@ data class DataTemplateInfo(
             template.extends(it.get())
             currTemplate = template
         }
+        template.preInit.putAll(initializers)
         constructor.forEach {
             template.constructors.add(it.get())
         }
@@ -80,7 +83,8 @@ data class DataTemplateInfo(
                 FieldInfo.from(template.scope),
                 template.constructors.map { TemplateConstructorInfo.from(it) },
                 template.companionObject != null,
-                template is ObjectDataTemplate
+                template is ObjectDataTemplate,
+                LinkedHashMap(template.preInit)
             )
             currTemplate = null
             templateCache[template] = d

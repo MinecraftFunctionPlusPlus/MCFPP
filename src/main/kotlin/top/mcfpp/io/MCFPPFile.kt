@@ -135,6 +135,16 @@ class MCFPPFile : File {
         if(syntaxError) return
         currFile = this
         Project.currNamespace = namespace.identifier
+        resolveImports()
+        //检查索引
+        field.checkIndex()
+        //编译
+        MCFPPFieldVisitor().visit(tree())
+        Project.currNamespace = Project.config.rootNamespace
+        currFile = null
+    }
+
+    internal fun resolveImports() {
         //引用
         for (n in unsolvedImports){
             val qwq = GlobalScope.getUnsolvedImportNamespace(n.key)
@@ -162,12 +172,6 @@ class MCFPPFile : File {
                 }
             }
         }
-        //检查索引
-        field.checkIndex()
-        //编译
-        MCFPPFieldVisitor().visit(tree())
-        Project.currNamespace = Project.config.rootNamespace
-        currFile = null
     }
 
     fun runAnnotation(){
