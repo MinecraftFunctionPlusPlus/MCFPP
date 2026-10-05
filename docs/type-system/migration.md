@@ -14,7 +14,8 @@
 | any/object 载荷 | 共用无运行时类型标签的 NBT 载荷；删除 lastVar；已知 any 按实际类型绑定，未知载荷支持复制、传参、返回与显式视图；含编译器专用字段的 list/dict 通过内部静态载荷传递，普通擦除赋值递归复制；object 保持声明签名限制 |
 | NBT 数值 | byte / short / long / double 不再隐式进入 int / float 算术；Byte.build 保留实参；修正错误的成员注入 |
 | 声明与值 | 稳定 Symbol；不可变常量快照；独立 TypeKnowledge / ValueKnowledge；StorageAccess 将 Place、TypedView、FlowFacts、StorageVersions 接入实际 NBT 与记分板读写 |
-| 基本块编译 | 无所属模板的 int/bool/any/object、string 载荷及可编码 list/dict/ImmutableList 形参、返回和普通调用；集合字面量、已知键、列表已知/动态下标、复制与共享视图接入同一 IR。先在私有调用图上求解效果和控制流事实，再绑定重载并生成命令；分支与 while 采用循环不动点事实，break/continue/return 排除不可达前驱；类型分析独立于折叠开关 |
+| 基本块编译 | 无所属模板的 int/bool/any/object、string/byte/long 载荷及可编码 list/dict/map/ImmutableList/NBT 数组形参、返回和普通调用；集合字面量、已知键、动态下标、复制与共享视图接入同一 IR。先在私有调用图上求解效果和控制流事实，再绑定重载并生成命令；分支与循环采用不动点事实，break/continue/return 排除不可达前驱；类型分析独立于折叠开关 |
+| 循环 IR | while、do…while 和直接闭合整数区间 for 使用普通基本块。do…while 至少执行一次，continue 转向尾部条件；区间边界只求值一次，迭代变量每轮复制，嵌套变量作用域独立。上界包含在内，递增前检查结束以避免 Int.MAX_VALUE 溢出；普通函数不在编译期执行，区间不逐项展开。命名 range、浮点范围和通用迭代器尚未迁入 |
 | 常量与存储 | 基本块路径进行分支汇合与循环不动点分析；常量延迟物化；dynamic 保留运行时表示；分支不物化未修改的无关变量 |
 | 原始命令与调用 | 原始命令前提交延迟数据，之后撤销类型、值事实和同步缓存；受限 IR 调用图求解 Pure/Writes/Unknown 的递归不动点，static 形参写入映射到实际位置，普通参数副本的局部写入不外泄。未迁入调用与未标注 MNI 保守使用未知效果；已审计数值及 list/dict/map/ImmutableList 查询 MNI 标注 NoExternalWrites；list/dict/map 变更标注 WritesReceiver，由存储接口提交并失效受影响位置 |
 | 缓存 | 不可变特化键包含声明、值实参、目标版本和影响生成的选项；真实空值、未知值与错误分离；库索引新增格式头与版本；项目重置清除词法/语法缓存、元数据图缓存、当前编译上下文与旧 load/tick 函数，移除无人读取且保留旧项目的反向子类型列表 |
@@ -76,7 +77,7 @@ map 现在只保存一份 entry 列表，布局为 `{entries:[{key:"first",value
 
 以下内容仍是后续阶段的必要工作，不能算作此次验收已通过：
 
-1. 将其余表达式、形参/返回类型、集合、模板、浮点、foreach/do-while 和调用接入同一基本块与存储接口。
+1. 将其余表达式、形参/返回类型、集合、模板、浮点、命名范围/通用迭代器和调用接入同一基本块与存储接口；do…while 与直接闭合整数区间 for 已接入。
 2. 将擦除类型的候选分析扩展到旧 visitor 控制流、其余循环、全部用户调用及其余集合。list/dict/map/ImmutableList 与 NBT 数组的可编码载荷、已知键及动态下标已迁入 IR 的分支与 while；map 投影已接入，其余成员调用和编译器专用集合仍需统一。无宏目标上未知长度的负数字面下标保留旧边界；字典四个成员、列表成员与 map 六个成员已进入 IR，其余成员调用保留旧适配边界。
 3. 扩展视图布局能力诊断至所有类型、实体与动态索引；继续迁入模板方法、构造和抽象能力的实际调用路径。
    完整编译器专用 list/dict/type 的命名 as 视图现共享 Place；已知字段/索引写入、整体替换、普通副本及静态 list 的追加、插入和删除有断言。部分已知静态容器、任意 Java 编译器对象及其余原生成员仍未完成位置迁移，未知静态下标或非完整值写入明确诊断。无法安全折叠的静态浮点集合查找仍给出后端诊断。
@@ -111,4 +112,4 @@ regenerateStdlib 从 src/main/mcfpp 重建 src/main/resources/datapack/bin.mclib
 基本块命令执行器严格拒绝未支持的指令，并检查入口栈帧在各可达返回路径上平衡。
 旧测试中仍有仅打印结果的用例；构建成功不能代替全部语言行为验收。
 当前没有配置目标 Minecraft 服务端，实际服务端验证尚未完成。
-map 投影 IR 本轮必要检查 45 项通过；最近完整 346 项属于提交 72dc557，结果与日志见 [验证记录](./verification.md)。
+循环 IR 本轮必要检查 50 项通过；最近完整 346 项属于提交 72dc557，结果与日志见 [验证记录](./verification.md)。

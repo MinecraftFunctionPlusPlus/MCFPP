@@ -360,6 +360,75 @@ object PrimitiveCompiler {
             jump(header)
             current = exit
         }
+        private fun loop(context: Parser.DoWhileStatementContext) {
+            val body = newBlock()
+            val test = newBlock()
+            val exit = newBlock()
+            jump(body)
+            current = body
+            loops.addLast(test.id to exit.id)
+            try { scoped(context.block()) } finally { loops.removeLast() }
+            jump(test)
+            current = test
+            terminate(Terminator.Branch(condition(context.bucketExpression()), body.id, exit.id))
+            current = exit
+        }
+        private fun range(node: ParserRuleContext): Parser.RangeContext? = if (node is Parser.RangeContext) node else
+            node.children.orEmpty().filterIsInstance<ParserRuleContext>().singleOrNull()?.let(::range)
+
+        private fun loop(context: Parser.ForeachStatementContext) {
+            val range = range(context.expression()) ?: unsupported()
+            fun bound(node: Parser.Range1Context?): ValueRef {
+                if (node == null) invalid("Both sides of the iterated range must exist")
+                return boundValue(expression(node.`var`() ?: node.value())).also {
+                    if (it.type != int && !(exploratory && it.type == any)) invalid("Range iteration requires integer bounds")
+                }
+            }
+            val first = bound(range.num1)
+            val last = bound(range.num2)
+            fun known(value: ValueRef) = ((if (value is ValueRef.Constant) value.value else
+                (value as? ValueRef.Result)?.let { provenConstants[it.instruction] }) as? CompilerValue.Integral)?.value
+            val start = known(first)
+            val end = known(last)
+            if (start != null && end != null && start > end) invalid("Left range bound must not exceed the right bound")
+
+            fun local(suffix: String, token: Int): Symbol {
+                val name = "\$for_${context.start.tokenIndex}_$suffix"
+                // Each synthetic declaration has a stable source token in every binding pass.
+                return Symbol(declarationIds.getOrPut(-token - 1, SymbolId::fresh), name, int, mutable = true).also { symbols[name] = it }
+            }
+            val index = local("index", context.start.tokenIndex)
+            val limit = local("end", context.COLON().symbol.tokenIndex)
+            val item = local("value", context.Identifier().symbol.tokenIndex)
+            write(index, first)
+            write(limit, last)
+            val header = newBlock()
+            val body = newBlock()
+            val step = newBlock()
+            val increment = newBlock()
+            val exit = newBlock()
+            jump(header)
+            current = header
+            terminate(Terminator.Branch(binary("<=", read(index), read(limit)), body.id, exit.id))
+            current = body
+            write(item, read(index))
+            val prior = LinkedHashMap(visible)
+            visible[context.Identifier().text] = item
+            loops.addLast(step.id to exit.id)
+            try { scoped(context.block()) } finally {
+                loops.removeLast()
+                visible.clear()
+                visible.putAll(prior)
+            }
+            jump(step)
+            current = step
+            // Stop before incrementing the inclusive upper bound, including Int.MAX_VALUE.
+            terminate(Terminator.Branch(binary("<", read(index), read(limit)), increment.id, exit.id))
+            current = increment
+            write(index, binary("+", read(index), ValueRef.Constant(int, CompilerValue.Integral(1))))
+            jump(header)
+            current = exit
+        }
         private var nextResult = 0
         private fun unsupported(): Nothing = throw Unsupported()
         private fun invalid(message: String): Nothing = throw Invalid(message)
@@ -386,6 +455,8 @@ object PrimitiveCompiler {
             if (current.terminator != null) current = newBlock() // Check unreachable source too.
             context.ifStatement()?.let { conditional(it); return }
             context.whileStatement()?.let { loop(it); return }
+            context.doWhileStatement()?.let { loop(it); return }
+            context.foreachStatement()?.let { loop(it); return }
             context.orgCommand()?.let {
                 if (it.orgCommandContent().any { content -> content.orgCommandExpression() != null }) unsupported()
                 instructions += Instruction.RawCommand(it.orgCommandContent().joinToString("") { content -> content.OrgCommandText().text }.trim())
@@ -465,18 +536,19 @@ object PrimitiveCompiler {
             if (symbol.forceRuntime || runtime(value)) runtimeSymbols.add(symbol.id) else runtimeSymbols.remove(symbol.id)
             instructions += Instruction.Write(location.place, value, location = location)
         }
-        private fun read(symbol: Symbol, site: ParserRuleContext): ValueRef = read(location(symbol), symbol.declaredType, site)
-        private fun read(location: Location, declared: TypeId, site: ParserRuleContext): ValueRef {
+        private fun read(symbol: Symbol, site: ParserRuleContext? = null): ValueRef = read(location(symbol), symbol.declaredType, site)
+        private fun read(location: Location, declared: TypeId, site: ParserRuleContext?): ValueRef {
             val place = location.place
             val result = nextResult++
             if (place.root in runtimeSymbols || location.indices.isNotEmpty() || location.keys.values.any { it is ValueRef.Result }) runtimeResults.add(result)
-            val actual = valueTypes[site.start.tokenIndex] ?: if (place.path.isEmpty()) knowledge[place.root] else null
+            val token = site?.start?.tokenIndex
+            val actual = token?.let(valueTypes::get) ?: if (place.path.isEmpty()) knowledge[place.root] else null
             val type = if (declared == any && !exploratory) (actual as? TypeKnowledge.Exact)?.type ?: any else declared
-            valueSites[site.start.tokenIndex] = current.id to result
+            if (token != null) valueSites[token] = current.id to result
             origins[result] = place
             locations[result] = location
             sourceTypes[result] = declared
-            valueConstants[site.start.tokenIndex]?.let { provenConstants[result] = it }
+            token?.let(valueConstants::get)?.let { provenConstants[result] = it }
             instructions += Instruction.Read(result, place, type, location)
             return ValueRef.Result(type, result)
         }
