@@ -1,8 +1,20 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-05（Asia/Shanghai）。本轮 map IR 的必要检查为 54 项；最近完整检查属于提交 72dc557，共 346 项。续接起始基线为上一会话的 140 项测试，浮点后端及算术修改继续保留。
+最新验证日期：2026-10-05（Asia/Shanghai）。本轮 map 投影 IR 的必要检查为 45 项；最近完整检查属于提交 72dc557，共 346 项。续接起始基线为上一会话的 140 项测试，浮点后端及算术修改继续保留。
 
-## 最新必要检查：map 索引与成员 IR
+## 最新必要检查：map 投影 IR
+
+```sh
+./gradlew test --tests top.mcfpp.test.MapProjectionIRTest --tests top.mcfpp.test.MapIRTest --tests top.mcfpp.test.MapMemberTest --tests top.mcfpp.test.CollectionIRTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
+./gradlew compileKotlin -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
+git diff --check
+```
+
+4 个套件、45 项，0 失败、0 错误、0 跳过，首轮通过。新增 MapProjectionIRTest 的 5 项确认 keys/keyValueSet 及直接投影下标使用实际 IR，覆盖子字段实际类型、嵌套长度、独立副本、后续实参 static 调用前捕获、循环回边重新投影、键列表递归返回、无宏目标，以及未知键/空字段名/旧布局诊断。跨折叠开关及 26.3/1.20.2/1.20.1 执行。
+
+日志：`F:/DevCache/.codex/runtime/mcfpp-map-projection-ir.log`；当前 XML 为上述 4 个套件。移除未用导入并消除新增参数遮蔽后，单独 compileKotlin 通过，日志为 `mcfpp-map-projection-ir-compile.log`。没有重复全量构建或标准库重建，MCFL 保持 9。
+
+## 上一阶段必要检查：map 索引与成员 IR（9245a62）
 
 ```sh
 ./gradlew test --tests top.mcfpp.test.MapIRTest --tests top.mcfpp.test.MapMemberTest --tests top.mcfpp.test.DynamicIndexIRTest --tests top.mcfpp.test.ValueModelTest --tests top.mcfpp.test.EffectAnalysisTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
@@ -11,7 +23,7 @@ git diff --check
 
 5 个套件、54 项，0 失败、0 错误、0 跳过。新增 MapIRTest 的 6 项确认实际 IR，并覆盖已知键的实际类型、普通副本、删除后共享视图按键定位、动态接收者与 RHS 前键捕获、浅覆盖合并和自合并、循环与递归 static 写回、查询纯效果、未知键共同值证据、旧布局/非法类型诊断。跨折叠开关及 26.3/1.20.2/1.20.1 执行；无宏目标的未知键写入、删除及查询继续使用普通命令循环。
 
-首次编译修复了校验局部变量重名；随后检查发现遗漏 map<T> 类型语法入口，非法赋值退回旧 visitor 并触发已有属性替换异常。补齐入口后，54 项中剩余两项因执行器不支持合并条件的命令写法失败；恢复既有等价嵌套 execute 写法后全部通过。日志：`F:/DevCache/.codex/runtime/mcfpp-map-ir-final.log`；当前 XML 为上述 5 个套件。未重复全量构建或标准库重建，MCFL 仍为 9。
+首次编译修复了校验局部变量重名；随后检查发现遗漏 map<T> 类型语法入口，非法赋值退回旧 visitor 并触发已有属性替换异常。补齐入口后，54 项中剩余两项因执行器不支持合并条件的命令写法失败；恢复既有等价嵌套 execute 写法后全部通过。日志：`F:/DevCache/.codex/runtime/mcfpp-map-ir-final.log`；该次为上述 5 个套件。未重复全量构建或标准库重建，MCFL 仍为 9。
 
 ## 上一阶段必要检查：NBT 数组 IR（313886b）
 

@@ -480,9 +480,8 @@ object PrimitiveCompiler {
             instructions += Instruction.Read(result, place, type, location)
             return ValueRef.Result(type, result)
         }
-        private fun indexed(node: Parser.VarWithSuffixContext, writing: Boolean = false, readFinal: Boolean = true): ValueRef {
-            val symbol = visible[node.Identifier().text] ?: unsupported()
-            var value = read(symbol, node)
+        private fun indexed(node: Parser.VarWithSuffixContext, writing: Boolean = false, readFinal: Boolean = true, initialValue: ValueRef? = null): ValueRef {
+            var value = initialValue ?: read(visible[node.Identifier().text] ?: unsupported(), node)
             for ((index, suffix) in node.identifierSuffix().withIndex()) {
                 val key = boundValue(expression(suffix.expression() ?: unsupported()))
                 val container = if (value.type == any) {
@@ -682,7 +681,7 @@ object PrimitiveCompiler {
             if (actual != null && result != null) provenResults[result] = actual
             return ValueRef.Result(type, result ?: -1)
         }
-        private fun memberResult(context: Parser.FunctionCallContext, result: Int, type: TypeId, runtime: Boolean): Place {
+        private fun memberResult(context: ParserRuleContext, result: Int, type: TypeId, runtime: Boolean): Place {
             if (runtime) runtimeResults.add(result)
             valueSites[context.start.tokenIndex] = current.id to result
             val identifier = "\$member_${context.start.tokenIndex}"
@@ -690,6 +689,23 @@ object PrimitiveCompiler {
             symbols[identifier] = symbol
             sourceTypes[result] = type
             return Place(symbol.id).also { origins[result] = it; locations[result] = Location(it) }
+        }
+        private fun projection(source: ValueRef, context: Parser.VarWithSuffixContext): ValueRef {
+            val receiver = boundValue(source)
+            val name = context.Identifier().text
+            if (name !in setOf("keys", "keyValueSet")) unsupported()
+            val container = if (receiver.type == any) {
+                if (!exploratory) invalid("Actual type of any is unknown; use 'as' before a map projection")
+                register(MCFPPMapType(MCFPPBaseType.Any))
+            } else types[receiver.type]
+            if (container !is MCFPPMapType) unsupported()
+            val dictionary = name == "keyValueSet"
+            val type = register(if (dictionary) MCFPPDictType(container.generic.single()) else MCFPPListType(MCFPPBaseType.String)).typeId
+            val result = nextResult++
+            val place = memberResult(context, result, type, runtime(receiver))
+            val location = locations[(receiver as? ValueRef.Result)?.instruction] ?: unsupported()
+            instructions += Instruction.MapProjection(result, place, location, type, dictionary)
+            return indexed(context, initialValue = ValueRef.Result(type, result))
         }
         private fun member(source: ValueRef, context: Parser.FunctionCallContext): ValueRef {
             val receiver = boundValue(source)
@@ -826,7 +842,9 @@ object PrimitiveCompiler {
             }
             is Parser.RightVarExpressionContext -> expression(node.varWithSelector())
             is Parser.VarWithSelectorContext -> node.selector().fold(expression(node.jvmAccessExpression())) { receiver, selector ->
-                member(receiver, selector.`var`().functionCall() ?: unsupported())
+                val selected = selector.`var`()
+                if (selected.functionCall() != null) member(receiver, selected.functionCall())
+                else projection(receiver, selected.varWithSuffix() ?: unsupported())
             }
             is Parser.JvmAccessExpressionContext -> if (node.Identifier() != null) unsupported() else expression(node.propertyOperator())
             is Parser.PropertyOperatorContext -> if (node.propertyOperatorExpression().isNotEmpty()) unsupported() else expression(node.primary())
@@ -924,6 +942,28 @@ object PrimitiveCompiler {
                 val tag = if (value.type == bool) "byte" else "int"
                 emit(Command("execute store result").build(destination.toCommandPart()).build("$tag 1 run scoreboard players get ${score(value)}"))
             }
+        }
+        private fun projection(instruction: Instruction.MapProjection, position: Int) {
+            val destination = path(instruction.place)
+            val entries = address(instruction.receiver).memberIndex("entries")
+            if (instruction.dictionary) {
+                val state = typeFacts.beforeWrites.getValue(blockId to position)
+                val source = MapFacts.resolve(state, instruction.receiver).field("entries")
+                val names = MapFacts.keys(state, source)!!
+                emit(Commands.dataSetValue(destination, top.mcfpp.nbt.tags.CompoundTag()))
+                names.forEachIndexed { index, name ->
+                    emit(Commands.dataSetFrom(destination.memberIndex(StorageAccess.quotedKey(name)), entries.intIndex(index).memberIndex("value")))
+                }
+            } else {
+                val workspace = internal("map_keys_${callNumber++}")
+                emit(Commands.dataSetValue(workspace, top.mcfpp.nbt.tags.CompoundTag()))
+                emit(Commands.dataSetFrom(workspace.memberIndex("source"), entries))
+                top.mcfpp.backend.MapCommands.keys(workspace, ::emit)
+                emit(Commands.dataSetFrom(destination, workspace.memberIndex("output")))
+            }
+            nbtResults[instruction.result] = destination
+            initialized.add(instruction.place)
+            materializedPlaces.add(instruction.place)
         }
         private fun map(instruction: Instruction.MapMember) {
             val destination = address(instruction.receiver).memberIndex("entries")
@@ -1193,6 +1233,7 @@ object PrimitiveCompiler {
                         encode(destination.memberIndex("key"), instruction.value)
                     }
                     is Instruction.MapMember -> map(instruction)
+                    is Instruction.MapProjection -> projection(instruction, position)
                     is Instruction.ListMember -> {
                         if (instruction.operation.search) { search(instruction, position); continue }
                         val destination = address(instruction.receiver)

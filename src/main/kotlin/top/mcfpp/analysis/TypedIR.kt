@@ -15,6 +15,8 @@ sealed interface Instruction {
     data class MapMember(val operation: MapOperation, val receiver: Location, val type: TypeId,
                          val key: ValueRef? = null, val argument: ValueRef? = null,
                          val result: Int? = null, val resultPlace: Place? = null) : Instruction
+    data class MapProjection(val result: Int, val place: Place, val receiver: Location,
+                             val type: TypeId, val dictionary: Boolean) : Instruction
     data class ListMember(val operation: ListOperation, val receiver: Location, val type: TypeId,
                           val argument: ValueRef? = null, val argumentPlace: Place? = null,
                           val index: ValueRef? = null, val knownIndex: Int? = null,
@@ -129,6 +131,14 @@ object FlowAnalysis {
                 }
                 is Instruction.CaptureIndex -> values[instruction.result] = value(instruction.value)
                 is Instruction.CaptureKey -> values[instruction.result] = value(instruction.value)
+                is Instruction.MapProjection -> {
+                    beforeWrites[id to position] = state.fork()
+                    values[instruction.result] = MapFacts.project(state, instruction)
+                    origins[instruction.result] = instruction.place
+                    snapshots[instruction.result] = capture(instruction.place)
+                    state.length(instruction.place)?.let { resultLengths[id to instruction.result] = it }
+                        ?: resultLengths.remove(id to instruction.result)
+                }
                 is Instruction.MapMember -> {
                     beforeWrites[id to position] = state.fork()
                     val key = instruction.key?.let { (value(it).value as? ValueKnowledge.Constant)?.value }?.let(MapFacts::text)

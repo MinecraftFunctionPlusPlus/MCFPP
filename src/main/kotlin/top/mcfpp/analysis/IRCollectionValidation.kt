@@ -44,6 +44,7 @@ object IRCollectionValidation {
                 is Instruction.Read -> instruction.location
                 is Instruction.Write -> instruction.location
                 is Instruction.MapMember -> instruction.receiver
+                is Instruction.MapProjection -> instruction.receiver
                 is Instruction.ListMember -> instruction.receiver
                 is Instruction.DictionaryMember -> instruction.receiver
                 else -> null
@@ -58,6 +59,15 @@ object IRCollectionValidation {
                     diagnostics += "Map access requires an entries list; as does not convert or initialize the old map layout"
             }
             if (instruction is Instruction.MapMember) mapLayout(instruction.receiver.place)
+            if (instruction is Instruction.MapProjection) {
+                val receiver = MapFacts.resolve(beforeAccess!!, instruction.receiver)
+                mapLayout(receiver)
+                if (instruction.dictionary) {
+                    val keys = MapFacts.keys(beforeAccess, receiver.field("entries"))
+                    if (keys == null) diagnostics += "Map dictionary projection requires known keys: no verified runtime NBT member-name escaping backend is available"
+                    else if (keys.any(String::isEmpty)) diagnostics += "Runtime map dictionary projection cannot encode empty member names with the current NBT backend"
+                }
+            }
             location?.keys?.keys?.forEach { index -> mapLayout(Place(location.place.root, location.place.path.take(index - 1))) }
             if (instruction is Instruction.CaptureIndex && !target.functionMacros)
                 diagnostics += "Target '${target.version}' cannot access a dynamic sequence index without function macros"

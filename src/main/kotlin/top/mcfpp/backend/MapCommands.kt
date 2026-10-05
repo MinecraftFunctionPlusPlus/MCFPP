@@ -67,6 +67,23 @@ object MapCommands {
         return result
     }
 
+    fun keys(workspace: NBTPath, emit: (Command) -> Unit) {
+        val working = workspace.memberIndex("remaining")
+        val output = workspace.memberIndex("output")
+        val remaining = score()
+        emit(Commands.dataSetFrom(working, workspace.memberIndex("source")))
+        emit(Commands.dataSetValue(output, ListTag()))
+        emit(Command("execute store result score ${key(remaining)} run data get").build(working.toCommandPart()))
+        val loop = Commands.tempFunction("map_keys", Function.currFunction) { function ->
+            fun add(command: Command) = Function.addCommands(command.buildMacroFunction())
+            add(Commands.dataAppendFrom(output, working.intIndex(0).memberIndex("key")))
+            add(Command("data remove").build(working.intIndex(0).toCommandPart()))
+            add(Command("scoreboard players remove ${key(remaining)} 1"))
+            add(Command("execute if score ${key(remaining)} matches 1.. run").build(Commands.function(function)))
+        }
+        emit(Command("execute if score ${key(remaining)} matches 1.. run").build(loop.first))
+    }
+
     fun merge(workspace: NBTPath, emit: (Command) -> Unit) {
         val incoming = workspace.memberIndex("rows")
         val overlay = workspace.memberIndex("overlay")

@@ -14,7 +14,6 @@ import top.mcfpp.lib.SbObject
 import top.mcfpp.model.function.Function
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
-import top.mcfpp.nbt.tags.collection.ListTag
 import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
@@ -281,20 +280,11 @@ object MapOperations {
     fun keys(caller: NBTMap): NBTList {
         val list = entries(caller) ?: return NBTList(genericType = MCFPPBaseType.String).apply { isError = true }
         keys(list)?.let { return NBTListConcrete(ArrayList(it.map { name -> MCStringConcrete(StringTag(name)) }), TempPool.getVarIdentify(), MCFPPBaseType.String) }
-        val working = scratch()
-        val output = scratch()
-        val remaining = score()
-        StorageAccess.encodeTo(working, list)
-        emit(Commands.dataSetValue(output, ListTag()))
-        emit(Command("execute store result score ${address(remaining)} run data get").build(working.toCommandPart()))
-        val loop = Commands.tempFunction("map_keys", Function.currFunction) { function ->
-            emit(Commands.dataAppendFrom(output, working.intIndex(0).memberIndex("key")))
-            emit(Command("data remove").build(working.intIndex(0).toCommandPart()))
-            Function.addCommand("scoreboard players remove ${address(remaining)} 1")
-            emit(Command("execute if score ${address(remaining)} matches 1.. run").build(Commands.function(function)))
-        }
-        emit(Command("execute if score ${address(remaining)} matches 1.. run").build(loop.first))
-        return NBTList(genericType = MCFPPBaseType.String).apply { nbtPath = output; hasAssigned = true; isDynamic = true }
+        val workspace = scratch()
+        emit(Commands.dataSetValue(workspace, CompoundTag()))
+        StorageAccess.encodeTo(workspace.memberIndex("source"), list)
+        MapCommands.keys(workspace, ::emit)
+        return NBTList(genericType = MCFPPBaseType.String).apply { nbtPath = workspace.memberIndex("output"); hasAssigned = true; isDynamic = true }
     }
 
     fun dictionary(caller: NBTMap): NBTDictionary {

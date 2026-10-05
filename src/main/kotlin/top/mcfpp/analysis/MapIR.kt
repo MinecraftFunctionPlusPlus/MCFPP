@@ -35,6 +35,37 @@ object MapFacts {
         val element = (type as TypeId.Applied).arguments.single()
         return if (element in setOf(MCFPPBaseType.Any.typeId, MCFPPBaseType.Object.typeId)) TypeKnowledge.Unknown else TypeKnowledge.Exact(element)
     }
+    fun project(state: FlowFacts, instruction: Instruction.MapProjection): ValueFacts {
+        val source = state.fork()
+        val entries = resolve(source, instruction.receiver).field("entries")
+        val destination = instruction.place
+        val size = source.length(entries)
+        val names = keys(source, entries)
+        val parts = linkedMapOf<PathSegment, CompilerValue>()
+        state.forgetDescendants(destination)
+        val root = ValueFacts(TypeKnowledge.Exact(instruction.type), ValueKnowledge.Unknown)
+        state.write(destination, root)
+        if (!instruction.dictionary && size != null) state.setLength(destination, size)
+        if (size != null && (!instruction.dictionary || names != null)) for (index in 0 until size) {
+            val from = entries.index(index).field(if (instruction.dictionary) "value" else "key")
+            val segment = if (instruction.dictionary) PathSegment.Field(names!![index]) else PathSegment.Index(index)
+            val generic = (instruction.type as TypeId.Applied).arguments.single()
+            val declared = if (generic in setOf(MCFPPBaseType.Any.typeId, MCFPPBaseType.Object.typeId)) TypeKnowledge.Unknown else TypeKnowledge.Exact(generic)
+            val fact = source.read(from) ?: ValueFacts(declared, ValueKnowledge.Unknown)
+            val child = Place(destination.root, destination.path + segment)
+            state.write(child, fact)
+            state.copyFrom(source, from, child, includeRoot = false)
+            (fact.value as? ValueKnowledge.Constant)?.value?.let {
+                parts[segment] = if (it is CompilerValue.Typed) it else CompilerValue.Typed((fact.type as? TypeKnowledge.Exact)?.type ?: generic, it)
+            }
+        }
+        val complete = size != null && parts.size == size && (!instruction.dictionary || names != null)
+        val constant = if (!complete) null else if (instruction.dictionary)
+            CompilerValue.Record(parts.mapKeys { (it.key as PathSegment.Field).name }) else CompilerValue.Sequence(parts.values.toList())
+        val result = root.copy(value = constant?.let { ValueKnowledge.Constant(CompilerValue.Typed(instruction.type, it)) } ?: ValueKnowledge.Unknown)
+        state.refine(destination, result)
+        return result
+    }
     private fun invalidate(state: FlowFacts, receiver: Place, possible: TypeKnowledge) {
         val entries = receiver.field("entries")
         state.forgetDescendants(entries)
