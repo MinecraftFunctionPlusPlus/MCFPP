@@ -149,6 +149,7 @@ NBT:        'nbt';
 ANY:        'any';
 VOID:       'void';
 LIST:       'list';
+IMMUTABLE_LIST: 'ImmutableList';
 MAP:        'map';
 DICT:       'dict';
 TYPE:       'Type';

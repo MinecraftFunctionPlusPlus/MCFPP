@@ -348,6 +348,10 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                     MCFPPListType(MCFPPPrivateType.Wildcard)
                 }
             }
+            //只读列表类型
+            if(ctx.IMMUTABLE_LIST() != null){
+                return MCFPPImmutableListType(ctx.type()?.let { parseFromContextNotNull(it, typeScope) } ?: MCFPPPrivateType.Wildcard)
+            }
             //dict类型
             if(ctx.DICT()!= null){
                 if(ctx.type() != null){

@@ -23,7 +23,7 @@ DataObject 仍是数据模板基类，位于 object 下；nbt 表示原始 NBT�
 查询从实参类型指向形参类型；查询本身不能生成命令或修改变量。
 int 可以提升到 float，反方向不允许隐式转换。
 NBT byte / short / long / double 不继承普通 int / float 算术语义；bool 的 ByteTag 编码不改变类型身份。
-可变容器参数不变。当前 ImmutableList 成员表仍暴露可写操作，因而暂不授权协变。
+可变容器参数不变。ImmutableList 使用只读列表接口；当前类型关系同样保留泛型不变策略，尚未引入协变转换。
 重载按精确匹配、名义父类型、int 到 float 提升、object、any 排序；同级选择最具体候选，否则报歧义。
 缺省实参只在对应参数声明默认值时省略；单一候选也必须验证实参。
 

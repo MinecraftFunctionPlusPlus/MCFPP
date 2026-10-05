@@ -40,5 +40,6 @@ long/double 到 int 同样保留 Minecraft `data get` 操作及其范围与舍�
 未使用视图不强制物化；实际访问时保留来源编码。旧浮点要求四分量布局，访问已知整数/布尔标量布局会诊断并建议 toFloat。
 普通来源无法证明兼容时警告，any 来源不插入类型标签或运行时验证；完整的其余布局诊断和存储迁移仍见 [迁移状态](./migration.md)。
 
-list/dict 的 as 视图也共享来源位置和编码，普通集合赋值则复制。含编译器专用元素的集合不能因 as 或 dynamic 自动生成 NBT 表示；这不增加集合的 toNBT 源重载。
+list/dict/map/ImmutableList 与 NBT 数组的 as 视图也共享来源位置和编码，普通集合赋值则复制。ImmutableList 限制列表槽与变更成员，不把可变来源变成深度不可变数据。含编译器专用元素的集合不能因 as 或 dynamic 自动生成 NBT 表示；这不增加集合的 toNBT 源重载。
+NBT 数组字面量、复制与物化保留 ByteArrayTag/IntArrayTag/LongArrayTag 格式。byte/long 数组元素参加 int 运算须显式 toInt；按格式索引不调用转换函数，bool 的 ByteTag 编码也不赋予 byte 数组赋值能力。
 旧目标的列表元素必须具有相同 NBT 格式：bool 和 byte 可共用 ByteTag 编码，int 与 bool 则不能混合；这种物理编码兼容不会改变语言类型身份。混合编码不通过宿主强转修补，构造或写入时明确诊断。

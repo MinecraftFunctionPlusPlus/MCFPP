@@ -9,6 +9,10 @@ import top.mcfpp.nbt.tags.primitive.IntTag
 import top.mcfpp.nbt.tags.primitive.ShortTag
 import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.nbt.tags.collection.ListTag
+import top.mcfpp.nbt.tags.collection.ByteArrayTag
+import top.mcfpp.nbt.tags.collection.IntArrayTag
+import top.mcfpp.nbt.tags.collection.LongArrayTag
+import top.mcfpp.nbt.tags.primitive.LongTag
 
 /** Strict executor for the scoreboard and control-flow command subset covered by these tests. */
 class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<String>> = emptyMap()) {
@@ -75,7 +79,25 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         segment.name != null -> (value as CompoundTag)[segment.name] ?: error("Missing NBT member ${segment.name}")
         segment.predicate != null -> (value as ListTag).filter { matches(it, segment.predicate) }.singleOrNull()
             ?: error("NBT predicate must select one entry")
-        else -> (value as ListTag).let { it[if (segment.index!! < 0) it.size + segment.index else segment.index] }
+        else -> {
+            val index = segment.index!!
+            when (value) {
+                is ListTag -> value[if (index < 0) value.size + index else index]
+                is ByteArrayTag -> value.value.let { ByteTag(it[if (index < 0) it.size + index else index]) }
+                is IntArrayTag -> value.value.let { IntTag(it[if (index < 0) it.size + index else index]) }
+                is LongArrayTag -> value.value.let { LongTag(it[if (index < 0) it.size + index else index]) }
+                else -> error("Cannot index NBT $value")
+            }
+        }
+    }
+    private fun writeElement(parent: Tag<*>, index: Int, value: Tag<*>) {
+        when (parent) {
+            is ListTag -> parent[if (index < 0) parent.size + index else index] = value
+            is ByteArrayTag -> parent.value.let { it[if (index < 0) it.size + index else index] = (value as ByteTag).value }
+            is IntArrayTag -> parent.value.let { it[if (index < 0) it.size + index else index] = (value as IntTag).value }
+            is LongArrayTag -> parent.value.let { it[if (index < 0) it.size + index else index] = (value as LongTag).value }
+            else -> error("Cannot write an NBT index in $parent")
+        }
     }
     private fun address(source: String, path: String): Pair<MutableMap<String, Tag<*>>, String> {
         val frame = Regex("stack_frame\\[(\\d+)]\\.(.*)").matchEntire(path)
@@ -107,7 +129,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             val last = parts.last()
             if (last.name != null) (parent as CompoundTag).put(last.name, value)
             else if (last.predicate != null) (parent as ListTag).value.indices.filter { matches(parent[it], last.predicate) }.forEach { parent[it] = value.copy() }
-            else (parent as ListTag).let { it[if (last.index!! < 0) it.size + last.index else last.index] = value }
+            else writeElement(parent, last.index!!, value)
             return
         }
         check(parts.none { it.index != null || it.predicate != null }) { "Cannot write an index without an existing list: $path" }
@@ -227,7 +249,13 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             }
             restore.matchEntire(command)?.let {
                 val value = readNbt(it.groupValues[2], it.groupValues[3])
-                values[it.groupValues[1]] = if (value is ListTag) value.size else (value.value as Number).toInt()
+                values[it.groupValues[1]] = when (value) {
+                    is ListTag -> value.size
+                    is ByteArrayTag -> value.value.size
+                    is IntArrayTag -> value.value.size
+                    is LongArrayTag -> value.value.size
+                    else -> (value.value as Number).toInt()
+                }
                 return@command false
             }
             setNbt.matchEntire(command)?.let {

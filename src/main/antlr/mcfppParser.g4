@@ -514,7 +514,7 @@ type
 typeWithoutExcl
     :   normalType
     |   VecType
-    |   (LIST | MAP | DICT) NL* LANGLE NL* (type | MULT) NL* RANGLE
+    |   (LIST | IMMUTABLE_LIST | MAP | DICT) NL* LANGLE NL* (type | MULT) NL* RANGLE
     |   ENTITY NL* LANGLE NL* nbtInt NL* RANGLE
     |   ENTITY NL* LANGLE NL* LineString (NL* COMMA NL* LineString)* NL* RANGLE
     |   ENTITY NL* LANGLE NL* nbtInt NL* COMMA NL* LineString (NL* COMMA NL* LineString)* NL* RANGLE
@@ -623,9 +623,9 @@ nbtFloat: SUB? NBTFloat;
 nbtDouble: SUB? NBTDouble;
 nbtBool: TRUE | FALSE;
 
-nbtByteArray: NBT_BYTE_ARRAY_BEGIN NL* nbtByte (NL* COMMA NL* nbtByte)* NL* RSQUARE;
-nbtIntArray: NBT_INT_ARRAY_BEGIN NL* nbtInt (NL* COMMA NL* nbtInt)* NL* RSQUARE;
-nbtLongArray: NBT_LONG_ARRAY_BEGIN NL* nbtLong (NL* COMMA NL* nbtLong)* NL* RSQUARE;
+nbtByteArray: NBT_BYTE_ARRAY_BEGIN NL* (nbtByte (NL* COMMA NL* nbtByte)*)? NL* RSQUARE;
+nbtIntArray: NBT_INT_ARRAY_BEGIN NL* (nbtInt (NL* COMMA NL* nbtInt)*)? NL* RSQUARE;
+nbtLongArray: NBT_LONG_ARRAY_BEGIN NL* (nbtLong (NL* COMMA NL* nbtLong)*)? NL* RSQUARE;
 
 nbtList: LSQUARE NL* (expression (NL* COMMA NL* expression)*)? NL* RSQUARE;
 nbtKeyValuePair: key=Identifier NL* COLON NL* expression;

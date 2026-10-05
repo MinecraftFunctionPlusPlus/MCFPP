@@ -66,6 +66,9 @@ object ValueSnapshot {
             value is top.mcfpp.core.lang.nbt.NBTMapConcrete -> of(value.physicalValue())?.let {
                 CompilerValue.Typed(value.type.typeId, (it as CompilerValue.Typed).payload)
             }
+            value is top.mcfpp.core.lang.nbt.NBTArray -> value.constantElements()?.let(::of)?.let {
+                CompilerValue.Typed(value.type.typeId, it)
+            }
             value is MCFPPValue<*> -> of(value.value)?.let { CompilerValue.Typed(value.type.typeId, it) }
             else -> null
         }

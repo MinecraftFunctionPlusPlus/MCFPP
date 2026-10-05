@@ -31,7 +31,7 @@ open class NBTList : NBTBasedData {
         get() = (field as? MCFPPDeclaredConcreteType)?.type ?: field
 
     val genericType: MCFPPType
-        get() = (type as MCFPPListType).generic[0]
+        get() = (type as MCFPPTypeWithGeneric).generic.single()
 
     override var nbtType = NBTBasedData.Companion.NBTTypeWithTag.LIST
 
@@ -138,14 +138,15 @@ open class NBTList : NBTBasedData {
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         var re: Function = UnknownFunction(key)
-        data.scope.forEachFunction {
+        val members = type.instanceData
+        members.scope.forEachFunction {
             //TODO 我们约定it为NativeFunction，但是没有考虑拓展函数=
             val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to genericType))
             if(nf.isSelf(key, normalArgs)){
                 re = nf
             }
         }
-        val iterator = data.parent.iterator()
+        val iterator = members.parent.iterator()
         while (re is UnknownFunction && iterator.hasNext()){
             re = iterator.next().getFunction(key, readOnlyArgs, normalArgs,isStatic)
         }
@@ -156,7 +157,8 @@ open class NBTList : NBTBasedData {
         val actual = if (index is MCAny && index !is MCObject) index.semanticValue() else index
         if(actual.type.typeId == MCFPPBaseType.Int.typeId && actual is MCInt){
             val v = top.mcfpp.analysis.StorageAccess.element(this, actual, genericType)
-            return PropertyVar(Property.buildSimpleProperty(v), v,this)
+            val property = if (type is MCFPPImmutableListType) Property.buildSimpleGetter(v.identifier) else Property.buildSimpleProperty(v)
+            return PropertyVar(property, v,this)
         }else{
             LogProcessor.error("Index must be a int")
             val re = UnknownVar("error_${identifier}_index_${index.identifier}")
@@ -216,11 +218,11 @@ open class NBTList : NBTBasedData {
  *
  * 此时仍然会直接编译为`tellraw @a "1"`，而不是输出为计分板的值或者NBT的值。
  */
-class NBTListConcrete: NBTList, PartialConcreteValue<ListTag, ArrayList<Var<*>>> {
+open class NBTListConcrete: NBTList, PartialConcreteValue<ListTag, ArrayList<Var<*>>> {
 
     var isEmptyTemp: Boolean = false
 
-    override var value: ArrayList<Var<*>>
+    final override var value: ArrayList<Var<*>>
 
     constructor(value: ArrayList<Var<*>>, identifier: String, genericType: MCFPPType) : super(identifier, genericType){
         type = MCFPPListType(genericType)

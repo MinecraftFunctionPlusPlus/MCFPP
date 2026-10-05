@@ -15,6 +15,7 @@ import top.mcfpp.core.lang.nbt.NBTDictionary
 import top.mcfpp.core.lang.nbt.NBTDictionaryConcrete
 import top.mcfpp.core.lang.nbt.NBTMap
 import top.mcfpp.core.lang.nbt.NBTMapConcrete
+import top.mcfpp.core.lang.nbt.NBTArray
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.lib.SbObject
@@ -158,6 +159,10 @@ object StorageAccess {
                 data.listSizes[parent] = value.value.size
                 value.value.mapIndexed { index, element -> parent.index(index) to element }
             }
+            is NBTArray -> value.constantElements()?.let { elements ->
+                data.listSizes[parent] = elements.size
+                elements.mapIndexed { index, element -> parent.index(index) to element }
+            }.orEmpty()
             is NBTDictionaryConcrete -> value.value.map { (key, element) -> parent.field(key) to element }
             else -> emptyList()
         }
@@ -273,6 +278,10 @@ object StorageAccess {
             LogProcessor.error("Cannot generate dictionary access with an unknown string key: no verified NBT-path escaping backend is available")
             return UnknownVar(TempPool.getVarIdentify()).apply { isError = true }
         }
+        if (index is MCInt && number == null && top.mcfpp.command.TargetCapabilities.forVersion(top.mcfpp.Project.config.version)?.functionMacros != true) {
+            LogProcessor.error("Target '${top.mcfpp.Project.config.version}' cannot access a runtime index without function macros")
+            return UnknownVar(TempPool.getVarIdentify()).apply { isError = true }
+        }
         if (key?.isEmpty() == true && hasRuntimeRepresentation(container) && top.mcfpp.command.TargetCapabilities
                 .forVersion(top.mcfpp.Project.config.version)?.emptyNbtPathKeys != true) {
             LogProcessor.error("Target '${top.mcfpp.Project.config.version}' cannot traverse an empty NBT path key")
@@ -302,7 +311,7 @@ object StorageAccess {
         }
         val place = if (index is MCInt && normalized != null) root.place.index(normalized)
             else if (index is MCString && key != null) root.place.field(key) else root.place.unknownIndex()
-        val selected = if (key != null || !index.isDynamic && number != null) null else {
+        val selected = if (key != null || number != null) null else {
             // The evaluated index belongs to the caller's frame and survives later/recursive RHS calls.
             val captured = index.type.buildUnConcrete(TempPool.getVarIdentify()).apply {
                 nbtPath = NBTPath.stack.intIndex(0).memberIndex(identifier)
@@ -391,7 +400,7 @@ object StorageAccess {
     }
 
     private fun staticLayoutAccessible(actual: MCFPPType, target: MCFPPType) = target in erasedTypes || actual == target ||
-        actual is MCFPPListType && target is MCFPPListType ||
+        (actual is MCFPPListType || actual is MCFPPImmutableListType) && (target is MCFPPListType || target is MCFPPImmutableListType) ||
         (actual is MCFPPDictType || actual is MCFPPMapType) && (target is MCFPPDictType || target is MCFPPMapType)
 
     /** Loading a register is materialization, not a logical write. */
@@ -779,8 +788,14 @@ object StorageAccess {
         is CompilerValue.DoubleBits -> top.mcfpp.nbt.tags.primitive.DoubleTag(Double.fromBits(value.bits))
         is CompilerValue.Sequence -> {
             val elements = value.elements.map { snapshotTag(it) }
-            if (elements.any { it == null }) null else top.mcfpp.nbt.tags.collection.ListTag().apply {
-                elements.forEach { add(it!!) }
+            if (elements.any { it == null }) null else when (type) {
+                MCFPPNBTType.ByteArray.typeId -> if (elements.all { it is top.mcfpp.nbt.tags.primitive.ByteTag })
+                    top.mcfpp.nbt.tags.collection.ByteArrayTag(elements.map { (it as top.mcfpp.nbt.tags.primitive.ByteTag).value }.toByteArray()) else null
+                MCFPPNBTType.IntArray.typeId -> if (elements.all { it is IntTag })
+                    top.mcfpp.nbt.tags.collection.IntArrayTag(elements.map { (it as IntTag).value }.toIntArray()) else null
+                MCFPPNBTType.LongArray.typeId -> if (elements.all { it is top.mcfpp.nbt.tags.primitive.LongTag })
+                    top.mcfpp.nbt.tags.collection.LongArrayTag(elements.map { (it as top.mcfpp.nbt.tags.primitive.LongTag).value }.toLongArray()) else null
+                else -> top.mcfpp.nbt.tags.collection.ListTag().apply { elements.forEach { add(it!!) } }
             }
         }
         is CompilerValue.Record -> {
@@ -812,12 +827,14 @@ object StorageAccess {
                 compilerPayload = restored
             }
         }
-        if (payload is CompilerValue.Sequence && type is MCFPPListType) {
+        if (payload is CompilerValue.Sequence && (type is MCFPPListType || type is MCFPPImmutableListType)) {
             val elements = payload.elements.map { part ->
                 val elementType = (part as? CompilerValue.Typed)?.type?.let(types::get) ?: return null
                 restore(elementType, part, TempPool.getVarIdentify(), types) ?: return null
             }
-            return NBTListConcrete(ArrayList(elements), name, type.generic.single())
+            val generic = (type as MCFPPTypeWithGeneric).generic.single()
+            return if (type is MCFPPImmutableListType) ImmutableListConcrete(ArrayList(elements), name, generic)
+                else NBTListConcrete(ArrayList(elements), name, generic)
         }
         if (payload is CompilerValue.Record && type is MCFPPDictType) {
             val fields = payload.fields.mapValues { (key, part) ->
@@ -848,6 +865,9 @@ object StorageAccess {
                 restore(fieldType, part, key, types) ?: return null
             }
             return NBTMapConcrete(LinkedHashMap(values), name, type.generic.single()).apply { extraFields = HashMap(extra) }
+        }
+        if (payload is CompilerValue.Sequence && type in setOf(MCFPPNBTType.ByteArray, MCFPPNBTType.IntArray, MCFPPNBTType.LongArray)) {
+            return snapshotTag(payload, type.typeId)?.let { type.build(name, it) }
         }
         val raw: Any = when (payload) {
             is CompilerValue.Typed -> return restore(type, payload, name, types)

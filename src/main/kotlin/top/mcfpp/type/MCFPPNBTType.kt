@@ -165,11 +165,7 @@ class MCFPPNBTType {
             }
         }
 
-        override val concreteInstanceData by lazy {
-            CompoundData("ByteArray","mcfpp").apply {
-                extends(NBT.instanceData)
-            }
-        }
+        override val concreteInstanceData get() = instanceData
 
 
         override val typeName: String
@@ -192,11 +188,7 @@ class MCFPPNBTType {
             }
         }
 
-        override val concreteInstanceData by lazy {
-            CompoundData("IntArray","mcfpp").apply {
-                extends(NBT.instanceData)
-            }
-        }
+        override val concreteInstanceData get() = instanceData
 
 
         override val typeName: String
@@ -219,11 +211,7 @@ class MCFPPNBTType {
             }
         }
 
-        override val concreteInstanceData by lazy {
-            CompoundData("LongArray","mcfpp").apply {
-                extends(NBT.instanceData)
-            }
-        }
+        override val concreteInstanceData get() = instanceData
 
 
         override val typeName: String
@@ -251,6 +239,9 @@ class MCFPPListType(
 
     override val objectData: CompoundData
         get() = NBTList.data
+
+    override val instanceData get() = NBTList.data
+    override val concreteInstanceData get() = instanceData
 
     override val typeName: String
         get() = "list"
@@ -297,19 +288,8 @@ class MCFPPImmutableListType(
 
     override val generic: List<MCFPPType> = listOf(g)
 
-    override val instanceData by lazy {
-        CompoundData("ImmutableList", "mcfpp.lang").apply {
-            extends(MCFPPNBTType.NBT.instanceData)
-            injectedBy(NBTListData::class.java)
-        }
-    }
-
-    override val concreteInstanceData by lazy {
-        CompoundData("ImmutableList", "mcfpp.lang").apply {
-            extends(MCFPPNBTType.NBT.concreteInstanceData)
-            injectedBy(NBTListConcreteData::class.java)
-        }
-    }
+    override val instanceData get() = ImmutableList.data
+    override val concreteInstanceData get() = instanceData
 
     override val typeName: String
         get() = "ImmutableList"
@@ -317,8 +297,9 @@ class MCFPPImmutableListType(
     override val nbtType: Class<out Tag<*>>
         get() = ListTag::class.java
 
-    override fun defaultValue() = ListTag()
-    override fun build(identifier: String, value: Any?): Var<*> = ImmutableListConcrete(value as ListTag, identifier, generic[0])
+    override fun defaultValue() = ArrayList<Var<*>>()
+    @Suppress("UNCHECKED_CAST")
+    override fun build(identifier: String, value: Any?): Var<*> = ImmutableListConcrete(value as ArrayList<Var<*>>, identifier, generic[0])
     override fun buildUnConcrete(identifier: String): Var<*> = ImmutableList(identifier, generic[0])
 
     override fun toString(): String {

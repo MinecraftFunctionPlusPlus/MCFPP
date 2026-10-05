@@ -1,131 +1,44 @@
 package top.mcfpp.core.lang
 
-import top.mcfpp.command.Command
-import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.core.lang.nbt.NBTList
-import top.mcfpp.core.lang.obj.DataTemplateObject
-import top.mcfpp.model.Member
-import top.mcfpp.model.function.Function
-import top.mcfpp.model.function.NativeFunction
-import top.mcfpp.model.function.UnknownFunction
-import top.mcfpp.model.property.Property
-import top.mcfpp.model.property.SimpleAccessor
-import top.mcfpp.nbt.tags.Tag
-import top.mcfpp.nbt.tags.collection.ListTag
-import top.mcfpp.type.MCFPPBaseType
-import top.mcfpp.type.MCFPPImmutableListType
-import top.mcfpp.type.MCFPPListType
-import top.mcfpp.type.MCFPPType
+import top.mcfpp.core.lang.nbt.NBTListConcrete
+import top.mcfpp.mni.ImmutableListData
+import top.mcfpp.model.compound.CompoundData
+import top.mcfpp.type.*
 import top.mcfpp.util.TempPool
 
+/** A read-only list interpretation; aliases still observe changes to the same underlying place. */
 open class ImmutableList : NBTList {
+    constructor(identifier: String = TempPool.getVarIdentify(), genericType: MCFPPType) : super(identifier, genericType) {
+        type = MCFPPImmutableListType(genericType)
+    }
+    constructor(source: NBTList) : super(source) { type = MCFPPImmutableListType(source.genericType) }
+    override fun clone() = ImmutableList(this)
 
-    override var type: MCFPPType = MCFPPImmutableListType(genericType)
-
-    /**
-     * 创建一个list值。它的标识符和mc名相同。
-     * @param identifier identifier
-     */
-    constructor(identifier: String = TempPool.getVarIdentify(),
-                genericType : MCFPPType
-    ) : super(identifier, genericType)
-
-    /**
-     * 复制一个list
-     * @param b 被复制的list值
-     */
-    constructor(b: ImmutableList) : super(b)
-
-    override fun getByIndex(index: Var<*>): PropertyVar {
-        val p = super.getByIndex(index)
-        return PropertyVar(Property(p.identifier, SimpleAccessor(), null), p, this)
+    companion object {
+        val data by lazy {
+            CompoundData("ImmutableList", "mcfpp.lang").apply {
+                scope.putType("E", MCFPPGenericParamType("E", arrayListOf(MCFPPBaseType.Any)))
+                extends(MCFPPNBTType.NBT.instanceData)
+                injectedBy(ImmutableListData::class.java)
+            }
+        }
     }
 }
 
-class ImmutableListConcrete: ImmutableList, MCFPPValue<ListTag>{
-
-    override var value: ListTag
-
-    constructor(value: ListTag, identifier: String, genericType: MCFPPType) : super(identifier, genericType){
-        type = MCFPPListType(genericType)
-        this.value = value
+/** Shares the list value codec without a second set of constant-only members. */
+class ImmutableListConcrete : NBTListConcrete {
+    constructor(value: ArrayList<Var<*>>, identifier: String, genericType: MCFPPType) : super(value, identifier, genericType) {
+        type = MCFPPImmutableListType(genericType)
     }
-
-    constructor(list : ImmutableList, value: ListTag):super(list){
-        this.value = value
+    constructor(source: NBTList, value: ArrayList<Var<*>>) : super(source, value) {
+        type = MCFPPImmutableListType(source.genericType)
     }
-
-
-    constructor(v: ImmutableListConcrete) : super(v){
-        this.value = v.value
-    }
-
-    override fun clone(): ImmutableListConcrete {
-        return ImmutableListConcrete(this)
-    }
-
-    override fun toDynamic(replace: Boolean): Var<*> {
-        val parent = parent
-        Function.addCommand(Command("data modify")
-            .build(nbtPath.toCommandPart())
-            .build("set value ${Tag.toSNBT(value)}")
-        )
-        val re = NBTList(this)
-        if(replace){
-            if(parentTemplate() != null) {
-                (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
-            }else{
-                Function.currFunction.scope.putVar(identifier, re, true)
-            }
-        }
-        return re
-    }
-
-    override fun getByIndex(index: Var<*>): PropertyVar {
-        val v = if(index is MCInt){
-            if(index is MCIntConcrete){
-                if(index.value >= value.size){
-                    throw IndexOutOfBoundsException("Index out of bounds")
-                }else{
-                    NBTBasedDataConcrete(value[index.value])
-                }
-            }else {
-                //index未知
-                super.getByIntIndex(index)
-            }
-        }else{
-            throw IllegalArgumentException("Index must be a int")
-        }
-        return PropertyVar(Property.buildSimpleProperty(v), v,this)
-    }
-
-    override fun toString(): String {
-        return "[$type,value=${Tag.toSNBT(value)}]"
-    }
-
-    override fun getMemberFunction(
-        key: String,
-        readOnlyArgs: List<Var<*>>,
-        normalArgs: List<Var<*>>,
-        accessModifier: Member.AccessModifier
-    ): Pair<Function, Boolean> {
-        var re: Function = UnknownFunction(key)
-        data.scope.forEachFunction {
-            //TODO 我们约定it为NativeFunction，但是没有考虑拓展函数
-            assert(it is NativeFunction)
-            val nf = (it as NativeFunction).replaceGenericParams(mapOf("E" to genericType))
-            if(nf.isSelf(key, normalArgs)){
-                re = nf
-            }
-        }
-        val iterator = data.parent.iterator()
-        while (re is UnknownFunction && iterator.hasNext()){
-            re = iterator.next().getFunction(key, readOnlyArgs, normalArgs, isStatic)
-        }
-        return re to true
-    }
+    constructor(source: ImmutableListConcrete) : super(source) { type = source.type }
+    override fun clone() = ImmutableListConcrete(this)
 
     companion object {
-        val empty = ImmutableListConcrete(ListTag(), "empty", MCFPPBaseType.Any)
+        val data get() = ImmutableList.data
+        val empty get() = ImmutableListConcrete(arrayListOf(), "empty", MCFPPBaseType.Any)
     }
 }

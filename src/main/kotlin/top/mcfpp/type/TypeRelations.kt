@@ -21,8 +21,7 @@ object TypeRelations {
         if (target == MCFPPBaseType.Object) return true
         if (source is MCFPPUnionType) return source.types.all { subtype(it, target, HashSet(visited)) }
         if (target is MCFPPUnionType) return target.types.any { subtype(source, it, HashSet(visited)) }
-        // Mutable containers are invariant. ImmutableList currently exposes mutation in its MNI
-        // table too, so covariance is not justified for that interface either.
+        // Container arguments remain invariant, including the read-only list interface.
         if (source is MCFPPTypeWithGeneric && target is MCFPPTypeWithGeneric) return false
         return source.parentType.any { subtype(it, target, HashSet(visited)) }
     }

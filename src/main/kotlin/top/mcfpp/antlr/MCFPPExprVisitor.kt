@@ -755,11 +755,11 @@ class MCFPPExprVisitor(
             }
             return re
         }else if(ctx.nbtByteArray() != null){
-            return NBTBasedDataConcrete(Tag.toNBT(ctx.nbtByteArray().text))
+            return NBTByteArrayConcrete(top.mcfpp.nbt.tags.collection.ByteArrayTag(ctx.nbtByteArray().nbtByte().map { it.text.toNBTByte() }.toByteArray()))
         }else if(ctx.nbtIntArray() != null) {
-            return NBTBasedDataConcrete(Tag.toNBT(ctx.nbtIntArray().text))
+            return NBTIntArrayConcrete(top.mcfpp.nbt.tags.collection.IntArrayTag(ctx.nbtIntArray().nbtInt().map { it.text.toInt() }.toIntArray()))
         }else if(ctx.nbtLongArray() != null) {
-            return NBTBasedDataConcrete(Tag.toNBT(ctx.nbtLongArray().text))
+            return NBTLongArrayConcrete(top.mcfpp.nbt.tags.collection.LongArrayTag(ctx.nbtLongArray().nbtLong().map { it.text.toNBTLong() }.toLongArray()))
         }else {
             LogProcessor.error("Invalid NBT value")
             throw IllegalArgumentException("nbt:" + ctx.text)
