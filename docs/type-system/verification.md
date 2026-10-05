@@ -1,8 +1,20 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。本轮范围值联合检查 40 项通过，旧入口捕获/返回补查 25 项通过；MCFL 10 标准库重建为 0 错误/0 警告。最近完整检查属于提交 72dc557，共 346 项。续接起始基线为上一会话的 140 项测试，浮点后端及算术修改继续保留。
+最新验证日期：2026-10-06（Asia/Shanghai）。本轮递归返回/写回形状联合检查 50 项通过。MCFL 保持 10，本轮没有改变库签名/格式；最近标准库重建属于 8aee6b7，为 0 错误/0 警告。最近完整检查属于提交 72dc557，共 346 项。续接起始基线为上一会话的 140 项测试，浮点后端及算术修改继续保留。
 
-## 最新必要检查：整数范围值与命名范围 IR
+## 最新必要检查：递归返回与 static 写回形状
+
+```sh
+./gradlew test --tests top.mcfpp.test.CallShapeIRTest --tests top.mcfpp.test.RangeIRTest --tests top.mcfpp.test.IRCallTest --tests top.mcfpp.test.DynamicIndexIRTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
+./gradlew compileTestKotlin -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
+git diff --check
+```
+
+4 个套件、50 项，0 失败/错误/跳过，当前 XML 为这 4 个套件。CallShapeIRTest 从 6 项扩为 12 项，新增递归擦除返回的嵌套类型/长度、相互递归范围端点、递归 static 整体替换、不同返回类型和变化的递归输入不得伪造证明、无返回递归不采用调用后返回值，以及递归嵌套输出收敛到共同有限形状。正向运行覆盖折叠开关和无宏 1.20.1；子值仍为 Unknown。
+
+首轮一个新增反例因缺少块后分隔导致语法错误，修正后全部通过。最后整理测试导入/图收集后，单独 compileTestKotlin 通过。日志：`F:/DevCache/.codex/runtime/mcfpp-recursive-shape-final.log`、`mcfpp-recursive-shape-cleanup.log`。没有重复完整 check 或标准库重建。不同递归输入形状仍返回保守摘要，未知范围形参、浮点范围和通用迭代器仍未完成。
+
+## 上一阶段必要检查：整数范围值与命名范围 IR（8aee6b7）
 
 ```sh
 ./gradlew regenerateStdlib -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
@@ -13,7 +25,7 @@ git diff --check
 
 5 个套件、40 项通过。新增 RangeIRTest 的 8 项覆盖命名/返回/擦除范围、超过 Float 精度的整数及 32 位极值、端点求值顺序、独立副本和共享视图、static 写回、分支/嵌套集合、缺失或不明端点诊断、旧入口精确编码及选择器格式。跨折叠开关与 26.3/1.20.2/1.20.1 执行。
 
-检查修复了范围返回槽缺少 NBT 地址、as range 类型入口遗漏和探索阶段 any 范围提前回退。旧入口动态范围迭代仍有明确边界，用例分开验证动态范围物化和常量迭代；补齐旧入口返回载荷写出、返回快照及左端点跨右端点调用的保存后，2 个套件、25 项通过，0 失败/错误/跳过。当前 XML 为这 2 个套件。
+检查修复了范围返回槽缺少 NBT 地址、as range 类型入口遗漏和探索阶段 any 范围提前回退。旧入口动态范围迭代仍有明确边界，用例分开验证动态范围物化和常量迭代；补齐旧入口返回载荷写出、返回快照及左端点跨右端点调用的保存后，2 个套件、25 项通过，0 失败/错误/跳过。
 
 日志：`F:/DevCache/.codex/runtime/mcfpp-range-values-final.log`、`mcfpp-range-values-legacy-return.log`、`mcfpp-range-values-stdlib.log`。范围端点缓存结构及成员签名发生变化，库格式升级为 MCFL 10，已验证二进制格式头并重建标准库为 0 错误/0 警告；没有重复完整 check。浮点范围 IR、未知端点形参的迭代及通用运行时迭代器仍未完成。
 

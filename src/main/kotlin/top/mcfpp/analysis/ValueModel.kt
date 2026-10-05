@@ -113,7 +113,9 @@ class FlowFacts private constructor(private val facts: MutableMap<Place, ValueFa
     constructor() : this(linkedMapOf(), true, linkedMapOf())
     fun fork() = FlowFacts(LinkedHashMap(facts), reachable, LinkedHashMap(lengths))
     /** Calls may transfer type and shape evidence, but never specialize on ordinary argument values. */
-    fun withoutValues() = FlowFacts(facts.mapValuesTo(linkedMapOf()) { (_, fact) -> fact.copy(value = ValueKnowledge.Unknown,
+    fun withoutValues(initializedOnly: Boolean = false) = FlowFacts(facts.filterValues {
+        !initializedOnly || it.state == ValueState.INITIALIZED
+    }.mapValuesTo(linkedMapOf()) { (_, fact) -> fact.copy(value = ValueKnowledge.Unknown,
         type = if (fact.state == ValueState.INITIALIZED) fact.type else TypeKnowledge.Unknown) },
         reachable, LinkedHashMap(lengths))
     private fun alternatives(place: Place): List<Place>? {

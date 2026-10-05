@@ -240,6 +240,10 @@ object FlowAnalysis {
                 }
                 is Instruction.Call -> {
                     val summary = callSummary(instruction, instruction.arguments.map(::evidence))
+                    if (!summary.canReturn) {
+                        state.reachable = false
+                        break
+                    }
                     val returned = summary.type
                     val written = summary.writes
                     when (val effect = instruction.effect) {
@@ -301,6 +305,11 @@ object FlowAnalysis {
                 is Instruction.Convert -> values[instruction.result] = ValueFacts(TypeKnowledge.Exact(instruction.type), ValueKnowledge.Unknown)
             }
             values.forEach { (result, fact) -> resultFacts[id to result] = fact }
+            if (!state.reachable) {
+                exits[id] = state
+                returns.remove(id)
+                continue
+            }
             (block.terminator as? Terminator.Return)?.value?.let { returns[id] = evidence(it) }
             if (exits[id] == state) continue
             exits[id] = state
