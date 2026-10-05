@@ -5,7 +5,6 @@ import top.mcfpp.Project.withCompilationContext
 import top.mcfpp.annotations.MNIFunction
 import top.mcfpp.antlr.mcfppParser.TemplateDeclarationContext
 import top.mcfpp.compiletime.CompileTimeFunction
-import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.UnionTypeVar
 import top.mcfpp.core.lang.UnionTypeVarConcrete
 import top.mcfpp.core.lang.Var
@@ -23,6 +22,7 @@ import top.mcfpp.model.property.Property
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.scope.IScopeWithType
 import top.mcfpp.type.MCFPPDataTemplateType
+import top.mcfpp.type.MCFPPDeclaredConcreteType
 import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
@@ -538,9 +538,10 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             return null to null
         }
         val isConst = ctx.CONST() != null
-        if(!isInObject && isConst){
-            //只有在object中定义的常量才有意义
-            LogProcessor.error("Constant can only be declared in object: " + ctx.Identifier().text)
+        val template = DataTemplate.currTemplate!!
+        val name = ctx.Identifier().text
+        if (template.scope.containVar(name) || template.deferredFields.containsKey(name)) {
+            LogProcessor.error("Duplicate defined variable name: $name")
             return null to null
         }
         var `var` = ctx.templateType()?.let {
@@ -552,7 +553,8 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                     }
                 }else{
                     //object中的字段作为全局字段，是长久保存并且不可追踪的，其中的字段应当是不确定的。
-                    type.buildUnConcrete(ctx.Identifier().text).apply {
+                    (if (type is MCFPPDeclaredConcreteType || isConst && !type.hasRuntimeRepresentation) type.build(ctx.Identifier().text)
+                        else type.buildUnConcrete(ctx.Identifier().text)).apply {
                         nullable = it.singleTemplateFieldType().QUEST() != null
                     }
                 }
@@ -590,45 +592,59 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             return null to null
         }else if(`var` == null){
             if(isInObject){
-                //for object data, only fields with const flag will be treated as concrete var, even if
-                //they have a concrete initializer.
-                Function.extraFunction.runInFunction { init = MCFPPExprVisitor().visit(ctx.expression())!! }
-                val type = init!!.type
-                if(isConst){
-                    if(init !is MCFPPValue<*>){
-                        LogProcessor.error("Const template field must have a concrete initializer.")
-                        return null to null
-                    }
-                    `var` = type.build(ctx.Identifier().text, (init as MCFPPValue<*>).value)
-                }else{
-                    `var` = type.buildUnConcrete(ctx.Identifier().text)
-                    `var`.isDynamic = true
-                    DataTemplate.currTemplate!!.preInit[`var`.identifier] = ctx.expression()
-                }
+                val member = ctx.parent.parent as mcfppParser.TemplateMemberDeclarationContext
+                val access = AccessModifier.valueOf((member.accessModifier()?.text ?: "public").uppercase(Locale.getDefault()))
+                template.deferredFields[name] = DataTemplate.DeferredFieldDeclaration(ctx, access)
+                template.preInit[name] = ctx.expression()
+                return null to null
             }else{
                 Function.extraFunction.runInFunction { init = MCFPPExprVisitor().visit(ctx.expression())!! }
                 val type = init!!.type
                 `var` = type.buildUnConcrete(ctx.Identifier().text)
                 DataTemplate.currTemplate!!.preInit[`var`.identifier] = ctx.expression()
             }
-        } else if (ctx.expression() != null && !isConst) {
+        } else if (ctx.expression() != null) {
             DataTemplate.currTemplate!!.preInit[`var`.identifier] = ctx.expression()
         }
 
-        //是否是静态的
+        return buildTemplateField(ctx, `var`)
+    }
+
+    private fun buildTemplateField(ctx: mcfppParser.TemplateFieldDeclarationContext, `var`: Var<*>): Pair<Var<*>, Property> {
+        val isConst = ctx.CONST() != null
         `var`.isStatic = isInObject
         `var`.isConst = isConst
         if (isInObject) `var`.isDynamic = !isConst
-        if (DataTemplate.currTemplate!!.scope.containVar(ctx.Identifier().text)
-        ) {
-            LogProcessor.error("Duplicate defined variable name:" + ctx.Identifier().text)
-            return null to null
-        }
+        `var`.bindDeclaration()
         //属性访问器
         val properties = (ctx.accessor()?.let {visit(ctx.accessor())}?: Property.buildSimpleProperty(`var`)) as Property
         `var`.declaredParentTemplate = DataTemplate.currTemplate!!
         properties.declaredParentTemplate = DataTemplate.currTemplate!!
         return `var` to properties
+    }
+
+    internal fun completeObjectField(template: ObjectDataTemplate, declaration: DataTemplate.DeferredFieldDeclaration, type: MCFPPType): Var<*> {
+        val previous = DataTemplate.currTemplate
+        DataTemplate.currTemplate = template
+        isInObject = true
+        typeScope = template.scope
+        try {
+            val context = declaration.context
+            val inferredType = if (type is MCFPPDeclaredConcreteType) type.type else type
+            val fieldValue = if (inferredType.hasRuntimeRepresentation) inferredType.buildUnConcrete(context.Identifier().text)
+                else inferredType.build(context.Identifier().text)
+            val (field, property) = buildTemplateField(context, fieldValue)
+            field.accessModifier = declaration.access
+            property.accessModifier = declaration.access
+            declaration.annotations.forEach { it.on(field) }
+            field.annotations.addAll(declaration.annotations)
+            template.addMember(field)
+            template.addMember(property)
+            template.deferredFields.remove(field.identifier)
+            return field
+        } finally {
+            DataTemplate.currTemplate = previous
+        }
     }
 
     override fun visitTemplateConstructorDeclaration(ctx: mcfppParser.TemplateConstructorDeclarationContext): Any? = withCompilationContext(ctx) {

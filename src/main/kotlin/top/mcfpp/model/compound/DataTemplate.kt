@@ -52,6 +52,16 @@ open class DataTemplate : FieldContainer, CompoundData {
      */
     val preInit = LinkedHashMap<String, mcfppParser.ExpressionContext>()
 
+    data class DeferredFieldDeclaration(
+        val context: mcfppParser.TemplateFieldDeclarationContext,
+        val access: Member.AccessModifier,
+        val annotations: MutableList<top.mcfpp.model.annotation.Annotation> = arrayListOf()
+    )
+
+    /** Source declarations awaiting type inference in the actual object constructor. */
+    @Transient
+    val deferredFields = LinkedHashMap<String, DeferredFieldDeclaration>()
+
     var companionObject: DataTemplate? = null
 
     var isInterface = false

@@ -2,6 +2,7 @@ package top.mcfpp.core.lang.obj
 
 import top.mcfpp.core.lang.ConcreteVar
 import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Member
 import top.mcfpp.model.compound.ObjectDataTemplate
@@ -35,6 +36,13 @@ class StaticMemberView(type: CanSelectMember, identifier: String = TempPool.getV
     override fun getFromStack() {}
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
+        if (value is MCFPPObjectDataTemplateType) {
+            val template = (value as MCFPPObjectDataTemplateType).template as ObjectDataTemplate
+            if (template.deferredFields.containsKey(key)) {
+                LogProcessor.error("Cannot infer object field '$key' before its initializer is evaluated (forward or self reference)")
+                return UnknownVar(key).apply { isError = true } to true
+            }
+        }
         return value.getMemberVar(key, accessModifier).apply {
             first?.parent = value
             if(value is MCFPPObjectDataTemplateType) {

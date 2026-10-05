@@ -84,6 +84,8 @@ object MCFPPStringTest {
             }
         }
         
+        MCFPPAnnotationVisitor().visit(context)
+        Project.prepareObjectInitializers()
         val visitor = MCFPPImVisitor()
         LogProcessor.debug("Compiling mcfpp code...")
         visitor.visit(context)

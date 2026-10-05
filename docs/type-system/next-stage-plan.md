@@ -1,4 +1,4 @@
-# 下一阶段：模板 const 字段初始化语义（阶段 57）
+# 下一阶段：普通模板推断字段声明完成（阶段 58）
 
 本计划的首条纵向路径已经在续接会话中实现，完整阶段和整个重构仍未完成。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
@@ -48,15 +48,19 @@
 
 - 同一类型/形状输入的直接与相互递归已有返回/写回不动点，从无返回路径开始求解，保留共同子类型和长度并清除值知识。始终不返回的调用不会证明后续返回值；嵌套递归输出只保留共同有限形状。递归输入类型/形状变化时仍给保守摘要，不复用另一载荷的证明。
 
-阶段 47–55 历史进展见 verification.md。阶段 56 已将有序字段 RHS 持久化在 `DataTemplateInfo`，`preInit` 使用 `LinkedHashMap`；`GenericDataTemplateInfo` 复用已有 body AST。源码构造器编译恢复声明文件与命名空间；导入构造器 transient file 仍为 null 并依赖 caller，词法 scope 尚未完整持久化。Kryo reader 先 reference 再 nested read；生产与字符串测试共享 `MCFPPFile.resolveImports`。MCFL 12 标准库重建成功，语言错误/警告为 0；TemplateInitialization 3、ConstructorExecution 7、LibCacheFormat 3 共 13 项通过。consume 阶段 9119 项 `flatExtends` 重复继承字段警告仍待清理；object 自动 load 未验证。最终日志 `mcfpp-template-initializers-complete.log`；没有运行完整 check 或实际服务器。
+阶段 47–56 历史进展见 verification.md。阶段 56 已将有序字段 RHS 持久化在 `DataTemplateInfo`，`preInit` 使用 `LinkedHashMap`；`GenericDataTemplateInfo` 复用已有 body AST。源码构造器编译恢复声明文件与命名空间；导入构造器 transient file 仍为 null 并依赖 caller，词法 scope 尚未完整持久化。Kryo reader 先 reference 再 nested read；生产与字符串测试共享 `MCFPPFile.resolveImports`。MCFL 12 标准库重建成功，语言错误/警告为 0；阶段56最终13项通过。阶段57实现及验证详见 verification.md。consume 阶段此前记录的 9119 项 `flatExtends` 重复继承字段警告仍待清理；object 自动 load 未验证。没有运行完整 check 或实际服务器。
 
-### 阶段 57：模板 const 字段初始化
+### 阶段 57：模板 const 字段初始化（已完成）
 
-typed const 字段 RHS 当前被忽略，inferred object const 目前被强制转成 `MCFPPValue`。目标是让 const 只限制重赋；`T!` 完整值与 compiler-only 约束独立应用，不因 readonly 混成编译期常量。
+已实现：`sharedProject.prepareObjectInitializers` 在 annotation、完整签名和继承 ready 后、用户函数 body 编译前编译完整本地 object constructor，并由已有 body guard 防止重复。source inferred object 字段上下文/访问/annotation 按声明顺序暂存，FieldVisitor 不试算 RHS，真实 constructor `prepareBody` 单次求值并补 field/property/Symbol；typed const RHS 同样登记。constructor 先绑定 incoming 参数，再求 RHS，两个 receiver 1/2 已实际验证。
 
-计划采用的 object 路径：让生产 `Project.compile` 与 string helper 共享 `prepareObjectInitializers`，在用户函数主体编译前编译完整本地 object constructor；复用现有 `bodyCompiled` guard 防重复，不新增 prebody buffer。RHS 函数调用可能按需 compileBody 并访问尚未 ready 的字段，需诊断。普通模板 typed const 可走 `prepareBody`，普通模板 inferred field 仍用旧 `extraFunction` probe，需另迁。
+const 只限制重赋；compiler-only const 保留完整 `ValueSnapshot` 且不物化，`T!` 独立检查完整值，inferred mirrored 不继承约束。field annotation 在 annotation 转存后触发 helper 补 stage；函数 annotation 从真实 AST 声明取得。错误 RHS 不写默认值，self/forward 引用给清晰诊断。普通模板 typed const 允许每实例初始化。
 
-待字段和函数签名全部 ready 后，对实际 RHS 求值一次，推断字段类型并绑定 Symbol，同时保留真实初始化命令；不通过 throwaway probe 重复求值 RHS。诊断前向引用与自循环，统一类型转换/初始化错误及后续重赋拒绝。阶段 56 的库持久化与模板普通赋值/传参复制规则保持现状；object 自动 load、导入 RHS 声明词法 scope 另行验证。
+首轮联合 28 项为 27 pass/1 fail（唯一失败是负向测试字符串少了两个顶层声明间的换行，语法早退导致测试 helper 找不到 object）；修正测试后定向复查该方法 1 项通过，0 failures/errors/skips。其余首轮 27 项通过；没有最终联合 28 项复跑。MCFL 12 schema 未变，stdlib 重建触及本地 20 个 Slot inferred fields 后 bin 为 267356 bytes。构建、XML时间和测试边界见 verification.md。保留的限制：导入 RHS lexical scope 未持久化，object 自动 load 未验证；旧 consume 的 `flatExtends` 重复继承字段警告待处理。
+
+### 阶段 58：普通模板推断字段声明完成
+
+普通模板 inferred field 仍使用旧 `extraFunction` probe。下一阶段扩展现有 PrimitiveCompiler Lowering/FlowAnalysis 做纯声明绑定，不建立平行 typechecker，也不通过编译某个构造器来伪造字段的名义类型。所有函数签名完成后先让声明类型 ready，再建立实例、形参与方法；构造 RHS 已证实可读取形参（阶段57 typed const），因此 overload 候选需要一致的声明类型。T! 未绑定时不伪造完整值；generic instance 的分析只写自身 scope，不污染 prototype。准备好的 IR 应可供各 constructor 复用。可分阶段纳入 template fields/static/method calls/compiler-only，但保持同一 Lowering 路径。
 
 ### 旧浮点乘除（阶段 50 已实现）
 
@@ -68,7 +72,7 @@ typed const 字段 RHS 当前被忽略，inferred object const 目前被强制�
 
 阶段 51 已将旧浮点算术/比较、Promote/Convert 接入 IR：四分量值使用独立 NBT 帧，`LegacyFloatCommands` 负责读写和调用，保留旧四记分板 return ABI。普通/递归/static、旧与 IR 双向调用、早先参数、多实参、常量与连续返回均经真实库命令执行；最终 20 项必要复查通过，0 failures/errors/skips。Native 路径不变；旧浮点算术/比较及跨数值折叠禁止宿主 Float 计算，`16777217` 保持八位十进制精度；identity/toNBT 保留来源 codec。包含 FloatBits 端点的旧浮点范围，其静态顺序不使用宿主比较，整数/native 行为不变；浮点迭代语义未定义，不新增迭代行为。
 
-已知 int/bool/byte/short as legacyfloat 仍沿旧入口并在实际访问时诊断；未用视图不报错，unknown any 视图不做运行时 typecheck，命名 float 视图的来源随后被写成已知标量，再读取视图会诊断。阶段 56 已完成有序初始化 RHS 持久化，MCFL 12 标准库重建及 13 项往返/构造测试通过。下一步阶段 57 统一 const 字段初始化和值语义。未知端点范围和浮点/混合迭代的步长及不前进策略仍未定义，保留现有诊断。整个 17 项迁移仍未完成，模板/泛型/T!、其余控制流/集合及 MNI 尚待统一。
+已知 int/bool/byte/short as legacyfloat 仍沿旧入口并在实际访问时诊断；未用视图不报错，unknown any 视图不做运行时 typecheck，命名 float 视图的来源随后被写成已知标量，再读取视图会诊断。阶段56/57完成有序初始化 RHS 持久化与 const 初始化语义，MCFL 12；验证记录见上。下一步阶段58完成普通模板推断字段声明绑定。未知端点范围和浮点/混合迭代的步长及不前进策略仍未定义，保留现有诊断。整个17项迁移仍未完成，模板/泛型/T!、其余控制流/集合及 MNI 尚待统一。
 
 - 26.3 原生 float 的字面量、算术/比较、循环、递归调用、static 写回、擦除与共享视图、集合元素和范围载荷进入 IR；int→float 提升作为 Promote，用于声明、赋值、返回、普通/成员实参和上下文集合字面量。运算与旧入口共享提供器表达式，值保存在 NBT 帧，负零取负保留符号；常量非有限值、反向已知范围和有损 static 写回明确诊断。旧浮点后端现已进入 IR；其余来源转换和完整 MNI 接口仍待迁入；浮点/混合迭代语义未定义并保留现有诊断，不扩展步长或不前进规则。
 

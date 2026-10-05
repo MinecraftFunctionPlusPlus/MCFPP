@@ -7,7 +7,6 @@ import top.mcfpp.exception.UndefinedException
 import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.ObjectDataTemplate
-import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.util.LogProcessor
@@ -98,15 +97,14 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
     }
 
     override fun visitFunctionDeclaration(ctx: mcfppParser.FunctionDeclarationContext): Unit = withCompilationContext(ctx) {
-        //获取函数对象
-        val types = ctx.functionDeclarationPart().functionParams()?.let { FunctionParam.parseReadonlyAndNormalParamTypes(it) }
-        //获取缓存中的对象
-        val f = GlobalScope.getFunction(
-            Project.currNamespace,
-            ctx.functionDeclarationPart().Identifier().text,
-            types?.first?.map { it.build("") }?:ArrayList(),
-            types?.second?.map { it.build("") }?:ArrayList()
-        )
+        val name = ctx.functionDeclarationPart().Identifier().text
+        val f = GlobalScope.localNamespaces[Project.currNamespace]!!.scope.functions[name]
+            ?.firstOrNull { it.ast === ctx.curlBlock() }
+        if (f == null) {
+            LogProcessor.error("Function declaration was not indexed: $name")
+            annotationCache.clear()
+            return@withCompilationContext
+        }
         annotationCache.forEach {
             it.on(f)
         }
@@ -115,6 +113,11 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
     }
 
     override fun visitTemplateFieldDeclaration(ctx: mcfppParser.TemplateFieldDeclarationContext): Unit = withCompilationContext(ctx) {
+        DataTemplate.currTemplate!!.deferredFields[ctx.Identifier().text]?.let { declaration ->
+            declaration.annotations.addAll(annotationCache)
+            annotationCache.clear()
+            return
+        }
         //获取字段对象
         val field = DataTemplate.currTemplate!!.scope.getVar(ctx.Identifier().text)!!
         annotationCache.forEach {

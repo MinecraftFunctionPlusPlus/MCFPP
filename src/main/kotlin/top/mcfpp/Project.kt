@@ -548,8 +548,15 @@ object Project {
     /**
      * 编译工程
      */
+    fun prepareObjectInitializers() {
+        GlobalScope.localNamespaces.values.flatMap { it.scope.objects }.filterIsInstance<ObjectDataTemplate>().forEach { template ->
+            template.constructors.filter { it !is Native }.forEach { it.compileBody() }
+        }
+    }
+
     fun compile() {
         compileStage = CompileStage.COMPILE
+        prepareObjectInitializers()
         //工程文件编译
         //解析文件
         for (file in files) {

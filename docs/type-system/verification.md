@@ -1,8 +1,16 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段 56 最终 TemplateInitializationTest 3、ConstructorExecutionTest 7、LibCacheFormatTest 3 共 13 项全部通过，Gradle exit 0（BUILD SUCCESSFUL in 30s）。MCFL 12 标准库单独重建成功，语言 errors/warnings 均为 0，生成 bin.mclib 267158 bytes。首轮 12 项 9 fail/3 pass；中间 13 项进程中断且 XML 过期；诊断轮 3 项完成、1 fail/1 skipped，修复后最终 13 全过。日志：`mcfpp-template-initializers-stdlib-final.log`、`mcfpp-template-initializers-complete.log`。最终 consume 阶段每次报告的 9119 项语言警告来自 `flatExtends` 重复继承字段，仍待清理；本阶段未运行完整 check 或实际 Minecraft 服务端。最近完整检查仍属于提交 72dc557，共 346 项。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段 57 标准库重建成功，MCFL 12 schema 不变，生成 `bin.mclib` 267356 bytes；Project 语言错误/警告均为 0（Kotlin 编译有 4 条常规 warning）。首轮联合 28 项有 1 项失败；修正负向测试字符串的顶层声明换行后，定向复查该方法 1 项通过、0 failures/errors/skips，日志 `mcfpp-template-const-order-final.log`，XML 时间戳 `2026-10-05T22:24:27.881Z`。日志确认 self/forward 分别触发 `Cannot infer object field 'first'/'later' before its initializer is evaluated`。联合首轮其余 27 项均通过，不表示最终 28 项联合复跑。标准库日志 `mcfpp-template-const-stdlib.log`，首轮联合日志 `mcfpp-template-const.log`。未运行完整 check 或实际服务端；最近完整检查仍属于提交 72dc557，共 346 项。
 
-## 最新必要检查：模板初始化表达式库往返（阶段 56）
+## 最新必要检查：模板 const 字段运行时初始化（阶段 57）
+
+`sharedProject.prepareObjectInitializers` 在 annotation、完整签名和继承信息 ready 后、用户函数 body 编译前编译完整本地 object constructor，使用已有 guard 避免重复。source inferred object 字段按声明顺序暂存上下文、访问和已解析 annotation；FieldVisitor 不试算 RHS，由实际 constructor `prepareBody` 单次求值并补齐 field/property/Symbol。typed const RHS 同样登记；普通 typed const 可对每个 receiver runtime 初始化，传入参数先绑定，再跑 RHS。两个不同 receiver（1、2）实测正确初始化。
+
+const 仅限制重赋，不等同于 compiler-only：compiler-only const 保留 `ValueSnapshot` 完整值而不物化，`T!` 独立要求完整值，inferred mirrored 不继承该约束。字段 annotation 在 annotation visitor 转存后触发 helper 补 annotation stage；函数 annotation 按真实 AST 声明定位，无 fake args。错误 RHS 不写默认值；self/forward 引用明确诊断且不生成对应初始化写入。
+
+首轮联合 28 项（TemplateConstInitialization 4、TemplateInitialization 3、ConstructorExecution 7、LibCacheFormat 3、SpecializationPolicy 11）为 27 pass/1 fail。唯一失败是负向测试字符串中两个顶层声明缺少换行，解析早退后 helper 找不到 object；仅调整测试字符串后，定向该方法 1 项通过。XML 新时间戳为 `2026-10-05T22:24:27.881Z`，0 failures/errors/skips；首轮的其他 27 项全过，未再联合运行。构建日志：`mcfpp-template-const-stdlib.log`、`mcfpp-template-const.log`、`mcfpp-template-const-order-final.log`。真实执行覆盖 load 中帧/global storage、constructor 和 main；测试 helper 隔离 objective、`math:_init` 与 marker summon，并非服务器验证。此次本地 source object 路径重编译含 20 个 Slot 推断字段，MCFL 12 descriptor schema 未变；bin 267356 bytes（增加 198）。
+
+## 历史必要检查：模板初始化表达式库往返（阶段 56）
 
 `DataTemplateInfo` 按声明顺序持久化字段初始化表达式，`DataTemplate.preInit` 使用 `LinkedHashMap`；`GenericDataTemplateInfo` 原已有 body AST，没有重复增加。源码构造器编译恢复声明文件与命名空间；`@Transient` 文件字段不会随库保存，导入构造器的 `file` 仍为 null 并依赖 caller，词法 scope 是已知缺口。Kryo 三个自定义 reader 先 reference 再 nested read，避免循环声明回读时以未完成对象算 hash；依据 [Kryo 5.6.2 Serializer References](https://github.com/EsotericSoftware/kryo/blob/kryo-parent-5.6.2/README.md#serializer-references)。生产和字符串测试共享 `MCFPPFile.resolveImports`。
 
