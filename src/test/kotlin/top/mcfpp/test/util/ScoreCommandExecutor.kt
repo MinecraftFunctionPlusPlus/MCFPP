@@ -23,6 +23,7 @@ import top.mcfpp.nbt.tags.primitive.DoubleTag
 class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<String>> = emptyMap()) {
     val values = mutableMapOf<String, Int>()
     val messages = mutableListOf<String>()
+    val failedScoreOperations = mutableListOf<String>()
     val branchGuards = mutableListOf<Int>()
     var stackDepth = 0
         private set
@@ -396,7 +397,10 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                     values[source] = left
                     return@command false
                 }
-                if (it.groupValues[2] == "/=" && right == 0) return@command false
+                if (it.groupValues[2] in setOf("/=", "%=") && right == 0) {
+                    failedScoreOperations.add(command)
+                    return@command false
+                }
                 values[target] = when (it.groupValues[2]) {
                     "=" -> right
                     "+=" -> values.getValue(target) + right

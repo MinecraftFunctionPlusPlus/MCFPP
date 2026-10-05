@@ -1,16 +1,24 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段 49 的旧浮点加减必要检查共 46 项通过；MCFL 保持 11，未重建标准库。最近完整检查仍属于提交 72dc557，共 346 项；本阶段未运行完整 check 或实际 Minecraft 服务端。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段 50 必要检查 Gradle exit 0，旧浮点乘除共 36 项通过；MCFL 保持 11，未重建标准库。最近完整检查仍属于提交 72dc557，共 346 项；本阶段未运行完整 check 或实际 Minecraft 服务端。
 
-## 最新必要检查：旧浮点加减（阶段 49）
+## 最新必要检查：旧浮点乘除（阶段 50）
 
-Gradle exit 0；LegacyFloatArithmeticTest 6、LegacyFloatConversionTest 6、LegacyFloatLayoutTest 5、ConversionTest 12、IRCallTest 17 联合共 46 项，0 failures/errors/skips。新增 6 项覆盖实际库函数执行、executor 语义及真实 visitor 捕获顺序下连续表达式，并非每项都执行 mcfunction。日志：`F:/DevCache/.codex/runtime/mcfpp-legacy-float-add-sub.log`。MCFL 11 未变，未改签名/缓存结构，未重建标准库；未运行完整 check 或实际 Minecraft 服务端。
+LegacyFloatMultiplyDivideTest 7、LegacyFloatArithmeticTest 6、LegacyFloatConversionTest 6、LegacyFloatLayoutTest 5、ConversionTest 12 联合共 36 项通过，0 failures/errors/skips。7 项中包括 executor 和入口断言，并非全为库函数执行。日志：`F:/DevCache/.codex/runtime/mcfpp-legacy-float-mul-div.log`。MCFL 11 未变，未改签名/缓存结构，未重建标准库；未运行完整 check 或实际 Minecraft 服务端。
+
+阶段 50 将符号为零的乘除（包括分母为零及 0/0）在算术前规范为四个零分量，不执行会失败的 `/=0` 或 `%=0`，不新增已知零编译诊断，也不定义 IEEE 特殊值。非零乘法维持精确截断；除法固定 7 次十进制长除，若 A<D 再做 1 次，精确商向零截断为 8 位有效数字。右分量只读且不依赖 return；`div_align` 因仍被 inverse/3vec 引用而保留。阶段 49 的加减和相关缺陷作为历史记录保留。
+
+## 历史必要检查：旧浮点加减（阶段 49）
+
+LegacyFloatArithmeticTest 6、LegacyFloatConversionTest 6、LegacyFloatLayoutTest 5、ConversionTest 12、IRCallTest 17 联合共 46 项通过，0 failures/errors/skips。Gradle exit 0。日志：`F:/DevCache/.codex/runtime/mcfpp-legacy-float-add-sub.log`。新增 6 项覆盖实际库函数执行、executor 语义及真实 visitor 捕获顺序下的连续表达式，并非每项都执行 mcfunction。MCFL 11 未变，未改签名/缓存结构、未重建标准库；未运行完整 check 或实际 Minecraft 服务端。
+
+旧 `_add`/`_rmv` 共用主体，零先分流；非零时正幅值对齐一个十进制保护位及 sticky 位，精确十进制加减后向零截断为 8 位有效数字。工作尾数 9/10 位时归一化正确；右实体分量只读且不依赖 return。executor 只扩展 single identity execute as、score 位置 `@s`、交换和 score 条件链。
 
 ## 历史必要检查：旧浮点转换（阶段 48）
 
-旧 `_scoreto` / `_toscore` 缩放、旧浮点转 int 边界与相关转换回归通过。联合四个套件共 33 项：LegacyFloatConversionTest 6、LegacyFloatLayoutTest 5、ConversionTest 12、FloatProviderTest 10，0 failures/errors/skips。日志：`F:/DevCache/.codex/runtime/mcfpp-legacy-float-conversions.log`。MCFL 保持 11；本阶段未改索引结构/签名，未重建 `bin.mclib`。未运行完整 check 或实际 Minecraft 服务端。
+LegacyFloatConversionTest 6、LegacyFloatLayoutTest 5、ConversionTest 12、FloatProviderTest 10 联合共 33 项通过，0 failures/errors/skips。日志：`F:/DevCache/.codex/runtime/mcfpp-legacy-float-conversions.log`。MCFL 保持 11；本阶段未改索引结构/签名，未重建 `bin.mclib`。未运行完整 check 或实际 Minecraft 服务端。
 
-实现规则：旧浮点值为 `sign * (int0 * 10000 + int1) * 10^(exp-8)`；int→旧浮点按八位十进制有效数字截断，不使用常量 codec 的 nearest/ties-to-even 舍入，零规范为全零，Int.MIN_VALUE/MAX_VALUE 均丢失低位，±2147483648 附近为 ±2147483600。旧浮点→int 向零截断，未知运行时超范围饱和至 Int.MIN_VALUE/MAX_VALUE；已知非有限或超范围值复用 NumericConversion.floatToIntError 编译诊断。旧转换仍未接入旧浮点 IR。
+旧值为 `sign * (int0 * 10000 + int1) * 10^(exp-8)`；int→旧浮点按八位十进制有效数字截断，与常量 codec 的 nearest/ties-to-even 舍入不同；零规范为全零，Int.MIN_VALUE/MAX_VALUE 均丢失低位，±2147483648 附近为 ±2147483600。旧浮点→int 向零截断，未知运行时超范围饱和至 Int.MIN_VALUE/MAX_VALUE；已知非有限或超范围复用 NumericConversion.floatToIntError 编译诊断。旧转换尚未接入旧浮点 IR。
 
 ## 历史检查：旧浮点编码与比较基础（阶段 47）
 
