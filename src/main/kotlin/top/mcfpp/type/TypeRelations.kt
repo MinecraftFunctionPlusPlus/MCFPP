@@ -2,6 +2,13 @@ package top.mcfpp.type
 
 /** Pure language queries: these never build variables, emit commands, or mutate scopes. */
 object TypeRelations {
+    fun arrayElementType(type: TypeId): MCFPPType? = when (type) {
+        MCFPPNBTType.ByteArray.typeId -> MCFPPNBTType.Byte
+        MCFPPNBTType.IntArray.typeId -> MCFPPBaseType.Int
+        MCFPPNBTType.LongArray.typeId -> MCFPPNBTType.Long
+        else -> null
+    }
+
     fun checkReinterpretation(source: MCFPPType, target: MCFPPType): ReinterpretationCompatibility.Result =
         ReinterpretationCompatibility.check(source, target)
 

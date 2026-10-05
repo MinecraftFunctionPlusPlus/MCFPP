@@ -2,6 +2,7 @@ package top.mcfpp.analysis
 
 import top.mcfpp.type.TypeId
 import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.TypeRelations
 
 /** Propagates type evidence across calls, without evaluating an ordinary function with argument values. */
 object ReturnTypeAnalysis {
@@ -10,6 +11,8 @@ object ReturnTypeAnalysis {
     private fun element(type: TypeId?, path: List<PathSegment>): TypeKnowledge {
         var current = type
         repeat(path.size) {
+            val arrayElement = current?.let(TypeRelations::arrayElementType)
+            if (arrayElement != null) { current = arrayElement.typeId; return@repeat }
             val container = current as? TypeId.Applied ?: return TypeKnowledge.Unknown
             if (container.constructor !in setOf(TypeId.Builtin("list"), TypeId.Builtin("ImmutableList"), TypeId.Builtin("dict"))) return TypeKnowledge.Unknown
             current = container.arguments.single()

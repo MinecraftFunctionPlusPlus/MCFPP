@@ -1,8 +1,19 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-05（Asia/Shanghai）。本轮列表查询 IR 的必要检查为 53 项；最近完整检查属于提交 72dc557，共 346 项。续接起始基线为上一会话的 140 项测试，浮点后端及算术修改继续保留。
+最新验证日期：2026-10-05（Asia/Shanghai）。本轮 NBT 数组 IR 的必要检查为 48 项；最近完整检查属于提交 72dc557，共 346 项。续接起始基线为上一会话的 140 项测试，浮点后端及算术修改继续保留。
 
-## 最新必要检查：列表查询与按值删除 IR
+## 最新必要检查：NBT 数组 IR
+
+```sh
+./gradlew test --tests top.mcfpp.test.NbtArrayIRTest --tests top.mcfpp.test.NbtArrayTest --tests top.mcfpp.test.DynamicIndexIRTest --tests top.mcfpp.test.IRCallTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
+git diff --check
+```
+
+4 个套件、48 项，0 失败、0 错误、0 跳过。新增 NbtArrayIRTest 的 7 项覆盖实际 IR 入口、数组共享视图与独立擦除副本、byte/long 跨帧精确编码（含 64 位边界）、空数组格式、静态写回前捕获索引、递归和循环，以及非法元素操作/旧目标混合数组编码。折叠开关均覆盖，涉及 26.3/1.20.2/1.20.1。
+
+首轮 47 项中，数组视图一项发现主函数仍退回旧路径；补齐 as 入口后全部通过。随后保留无宏目标上未知长度的字面负索引旧路径，补充回归后 48 项通过。日志：`F:/DevCache/.codex/runtime/mcfpp-array-ir-final.log`；当前 XML 为上述 4 个套件。没有重复全量构建或标准库重建，MCFL 保持 9。
+
+## 上一阶段必要检查：列表查询与按值删除 IR（ea7dca8）
 
 ```sh
 ./gradlew test --tests top.mcfpp.test.ListQueryIRTest --tests top.mcfpp.test.ListIRTest --tests top.mcfpp.test.ListMemberTest --tests top.mcfpp.test.ImmutableListTest --tests top.mcfpp.test.DynamicIndexIRTest --tests top.mcfpp.test.EffectAnalysisTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
@@ -12,7 +23,7 @@ git diff --check
 
 6 个套件、53 项，0 失败、0 错误、0 跳过。新增 ListQueryIRTest 的 5 项覆盖查询纯效果与独立结果、来源不变、空列表、递归删除首项、未匹配保持数据、擦除 bool/int 身份、已知删除的子形状、动态接收者实参副作用、只读列表查询，以及未知类型诊断和显式视图。跨 26.3/1.20.2/1.20 与折叠开关执行；旧浮点及编译器专用查询通过既有成员套件保留。
 
-日志：`F:/DevCache/.codex/runtime/mcfpp-list-query-ir.log`；当前 XML 为上述 6 个套件。移除旧后端不再使用的导入和辅助函数后，单独编译检查通过，日志为 `mcfpp-list-query-ir-compile.log`。没有重复全量构建或标准库重建，MCFL 保持 9。
+日志：`F:/DevCache/.codex/runtime/mcfpp-list-query-ir.log`；该次为上述 6 个套件。移除旧后端不再使用的导入和辅助函数后，单独编译检查通过，日志为 `mcfpp-list-query-ir-compile.log`。没有重复全量构建或标准库重建，MCFL 保持 9。
 
 ## 上一阶段必要检查：列表变更 IR（21224b0）
 

@@ -28,6 +28,8 @@ import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.type.*
 import top.mcfpp.util.TempPool
 import top.mcfpp.util.StringHelper.splitNamespaceID
+import top.mcfpp.util.NBTUtil.toNBTByte
+import top.mcfpp.util.NBTUtil.toNBTLong
 
 /** Internal migration boundary for scalar, erased and collection IR, without mutable Var-based analysis. */
 object PrimitiveCompiler {
@@ -38,7 +40,9 @@ object PrimitiveCompiler {
     private val any = MCFPPBaseType.Any.typeId
     private val obj = MCFPPBaseType.Object.typeId
     private val erased = setOf(any, obj)
-    private val types = listOf(MCFPPBaseType.Int, MCFPPBaseType.Bool, MCFPPBaseType.Any, MCFPPBaseType.Object, MCFPPBaseType.String).associateBy { it.typeId }
+    private val types = listOf(MCFPPBaseType.Int, MCFPPBaseType.Bool, MCFPPBaseType.Any, MCFPPBaseType.Object,
+        MCFPPBaseType.String, MCFPPNBTType.Byte, MCFPPNBTType.Long,
+        MCFPPNBTType.ByteArray, MCFPPNBTType.IntArray, MCFPPNBTType.LongArray).associateBy { it.typeId }
     private fun nbt(type: TypeId) = type != int && type != bool
     private fun supportedType(type: MCFPPType): Boolean = type !is MCFPPDeclaredConcreteType && when (type) {
         is MCFPPListType, is MCFPPDictType, is MCFPPImmutableListType -> (type as MCFPPTypeWithGeneric).generic.all {
@@ -406,7 +410,7 @@ object PrimitiveCompiler {
                 expectedLiteral = declared?.let { literalToken(initializer)?.let { token -> token to types.getValue(it) } }
                 val value = try { expression(initializer) } finally { expectedLiteral = previous }
                 val view = value is ValueRef.Result && value.instruction in views
-                if (view && types[value.type] !is MCFPPTypeWithGeneric) unsupported()
+                if (view && types[value.type] !is MCFPPTypeWithGeneric && TypeRelations.arrayElementType(value.type) == null) unsupported()
                 val type = declared ?: value.type
                 if (type !in types) invalid("A void expression cannot initialize a value")
                 val assigned = boundValue(value)
@@ -480,28 +484,34 @@ object PrimitiveCompiler {
                 } else types[value.type] ?: unsupported()
                 if (writing && index == node.identifierSuffix().lastIndex && container is MCFPPImmutableListType)
                     invalid("ImmutableList elements cannot be assigned")
-                val element = (container as? MCFPPTypeWithGeneric)?.generic?.single() ?: unsupported()
+                val arrayElement = TypeRelations.arrayElementType(container.typeId)
+                val element = arrayElement ?: (container as? MCFPPTypeWithGeneric)?.generic?.single() ?: unsupported()
                 val constant = when (key) {
                     is ValueRef.Constant -> key.value
                     is ValueRef.Result -> provenConstants[key.instruction]
                     else -> null
                 }
                 val knownSize = valueLengths[if (index == 0) node.start.tokenIndex else node.identifierSuffix()[index - 1].start.tokenIndex]
-                val segment = when (container) {
-                    is MCFPPListType, is MCFPPImmutableListType -> {
-                        if (key.type != int && !(exploratory && key.type == any)) invalid("List index must be int")
+                val segment = when {
+                    container is MCFPPListType || container is MCFPPImmutableListType || arrayElement != null -> {
+                        if (key.type != int && !(exploratory && key.type == any)) invalid("Sequence index must be int")
                         val number = (constant as? CompilerValue.Integral)?.value?.toInt()
                         if (number == null) PathSegment.UnknownIndex
                         else {
                             val normalized = if (number < 0) knownSize?.plus(number) else number
-                            if (normalized == null) { if (!exploratory) unsupported(); PathSegment.UnknownIndex }
+                            if (normalized == null) {
+                                // Old targets retain their literal negative-index backend until captured offsets
+                                // can be lowered without macros. Unknown runtime indices remain a diagnostic.
+                                if (!top.mcfpp.command.TargetCapabilities.forVersion(top.mcfpp.Project.config.version)!!.functionMacros) unsupported()
+                                PathSegment.UnknownIndex
+                            }
                             else {
-                                if (knownSize != null && normalized !in 0 until knownSize) invalid("List index $number is outside length $knownSize")
+                                if (knownSize != null && normalized !in 0 until knownSize) invalid("Sequence index $number is outside length $knownSize")
                                 PathSegment.Index(normalized)
                             }
                         }
                     }
-                    is MCFPPDictType -> {
+                    container is MCFPPDictType -> {
                         if (key.type != MCFPPBaseType.String.typeId && !(exploratory && key.type == any)) invalid("Dictionary key must be string")
                         val text = (constant as? CompilerValue.Text)?.value
                         if (text == null) { if (!exploratory) unsupported(); PathSegment.UnknownIndex } else PathSegment.Field(text)
@@ -526,7 +536,7 @@ object PrimitiveCompiler {
             }
             return value
         }
-        private fun construct(node: ParserRuleContext, parts: Map<PathSegment, ValueRef>, sequence: Boolean): ValueRef {
+        private fun construct(node: ParserRuleContext, parts: Map<PathSegment, ValueRef>, sequence: Boolean, arrayType: MCFPPType? = null): ValueRef {
             val alternatives = parts.values.map { types[it.type] ?: invalid("A void expression cannot initialize a collection element") }.distinctBy { it.typeId }
             val element = when (alternatives.size) {
                 0 -> if (sequence) MCFPPPrivateType.Wildcard else MCFPPBaseType.Any
@@ -543,7 +553,7 @@ object PrimitiveCompiler {
                     TypeRelations.resolveImplicitConversion(types.getValue(part.type), target) == null)
                     invalid("Literal element cannot be assigned to ${target.typeName}")
             }
-            val type = register(contextual ?: if (sequence) MCFPPListType(element) else MCFPPDictType(element)).typeId
+            val type = register(arrayType ?: contextual ?: if (sequence) MCFPPListType(element) else MCFPPDictType(element)).typeId
             val name = "\$collection_${node.start.tokenIndex}"
             val symbol = Symbol(declarationIds.getOrPut(-node.start.tokenIndex - 1, SymbolId::fresh), name, type, mutable = false)
             symbols[name] = symbol
@@ -555,6 +565,13 @@ object PrimitiveCompiler {
             sourceTypes[result] = type
             instructions += Instruction.Construct(result, place, type, parts.toMap(), sequence)
             return ValueRef.Result(type, result)
+        }
+        private fun array(node: Parser.NbtValueContext, type: MCFPPType, elements: List<Long>): ValueRef {
+            val elementType = TypeRelations.arrayElementType(type.typeId)!!.typeId
+            val parts = elements.mapIndexed { index, value ->
+                PathSegment.Index(index) as PathSegment to ValueRef.Constant(elementType, CompilerValue.Integral(value))
+            }.toMap()
+            return construct(node, parts, sequence = true, arrayType = type)
         }
         private fun boundValue(value: ValueRef): ValueRef = if (value is ValueRef.Result)
             provenResults[value.instruction]?.let { value.copy(type = it) } ?: value else value
@@ -735,7 +752,7 @@ object PrimitiveCompiler {
                 val source = expression(node.unaryExpression())
                 if (node.type() == null) source else {
                     val target = type(node.type()).typeId
-                    if (target !in setOf(int, bool) && types[target] !is MCFPPTypeWithGeneric) unsupported()
+                    if (target !in setOf(int, bool) && types[target] !is MCFPPTypeWithGeneric && TypeRelations.arrayElementType(target) == null) unsupported()
                     val place = (source as? ValueRef.Result)?.let { origins[it.instruction] } ?: unsupported()
                     val sourceType = (source as? ValueRef.Result)?.let { sourceTypes[it.instruction] } ?: source.type
                     if (nbt(target) && !nbt(sourceType)) unsupported()
@@ -756,7 +773,7 @@ object PrimitiveCompiler {
             }
             is Parser.UnaryExpressionContext -> if (node.rightVarExpression() != null) expression(node.rightVarExpression()) else {
                 val value = expression(node.unaryExpression())
-                if (node.SUB() != null && value is ValueRef.Constant && value.value is CompilerValue.Integral)
+                if (node.SUB() != null && value.type == int && value is ValueRef.Constant && value.value is CompilerValue.Integral)
                     ValueRef.Constant(int, CompilerValue.Integral((-value.value.value.toInt()).toLong()))
                 else if (node.SUB() != null) binary("-", ValueRef.Constant(int, CompilerValue.Integral(0)), value)
                 else binary("==", value, ValueRef.Constant(bool, CompilerValue.Bool(false)))
@@ -782,11 +799,16 @@ object PrimitiveCompiler {
             is Parser.ValueContext -> if (node.LineString() != null) ValueRef.Constant(MCFPPBaseType.String.typeId,
                 CompilerValue.Text((Tag.toNBT(node.LineString().text) as StringTag).value)) else expression(node.nbtValue() ?: unsupported())
             is Parser.NbtValueContext -> when {
+                node.nbtByte() != null -> ValueRef.Constant(MCFPPNBTType.Byte.typeId, CompilerValue.Integral(node.nbtByte().text.toNBTByte().toLong()))
+                node.nbtLong() != null -> ValueRef.Constant(MCFPPNBTType.Long.typeId, CompilerValue.Integral(node.nbtLong().text.toNBTLong()))
                 node.nbtInt() != null -> ValueRef.Constant(int, CompilerValue.Integral(node.nbtInt().text.toIntOrNull()?.toLong() ?: unsupported()))
                 node.nbtBool() != null -> ValueRef.Constant(bool, CompilerValue.Bool(node.nbtBool().TRUE() != null))
                 node.LineString() != null -> ValueRef.Constant(MCFPPBaseType.String.typeId, CompilerValue.Text((Tag.toNBT(node.LineString().text) as StringTag).value))
                 node.nbtList() != null -> construct(node, node.nbtList().expression().mapIndexed { index, part -> PathSegment.Index(index) as PathSegment to boundValue(expression(part)) }.toMap(), true)
                 node.nbtCompound() != null -> construct(node, node.nbtCompound().nbtKeyValuePair().associate { PathSegment.Field(it.key.text) as PathSegment to boundValue(expression(it.expression())) }, false)
+                node.nbtByteArray() != null -> array(node, MCFPPNBTType.ByteArray, node.nbtByteArray().nbtByte().map { it.text.toNBTByte().toLong() })
+                node.nbtIntArray() != null -> array(node, MCFPPNBTType.IntArray, node.nbtIntArray().nbtInt().map { it.text.toInt().toLong() })
+                node.nbtLongArray() != null -> array(node, MCFPPNBTType.LongArray, node.nbtLongArray().nbtLong().map { it.text.toNBTLong() })
                 else -> unsupported()
             }
             else -> unsupported()
@@ -1129,7 +1151,9 @@ object PrimitiveCompiler {
                             ?.let { StorageAccess.snapshotTag(it, instruction.type) }
                         if (literal != null) emit(Commands.dataSetValue(destination, literal))
                         else if (instruction.sequence) {
-                            emit(Commands.dataSetValue(destination, ListTag()))
+                            val empty = if (TypeRelations.arrayElementType(instruction.type) != null)
+                                lowering.types.getValue(instruction.type).defaultValue() as Tag<*> else ListTag()
+                            emit(Commands.dataSetValue(destination, empty))
                             for ((segment, value) in instruction.parts) {
                                 val source = internal("part_${instruction.result}_${(segment as PathSegment.Index).index}")
                                 encode(source, value)

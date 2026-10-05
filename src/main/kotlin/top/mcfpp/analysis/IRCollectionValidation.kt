@@ -7,7 +7,11 @@ import top.mcfpp.type.*
 object IRCollectionValidation {
     private fun codec(type: TypeId): String? = when (type) {
         MCFPPBaseType.Int.typeId -> "int"
-        MCFPPBaseType.Bool.typeId -> "byte"
+        MCFPPBaseType.Bool.typeId, MCFPPNBTType.Byte.typeId -> "byte"
+        MCFPPNBTType.Long.typeId -> "long"
+        MCFPPNBTType.ByteArray.typeId -> "byte_array"
+        MCFPPNBTType.IntArray.typeId -> "int_array"
+        MCFPPNBTType.LongArray.typeId -> "long_array"
         MCFPPBaseType.String.typeId -> "string"
         is TypeId.Applied -> when (type.constructor) {
             TypeId.Builtin("list"), TypeId.Builtin("ImmutableList") -> "list"
@@ -37,7 +41,7 @@ object IRCollectionValidation {
         }
         for (block in ir.blocks.filter { it.id in facts.entries }) for ((position, instruction) in block.instructions.withIndex()) {
             if (instruction is Instruction.CaptureIndex && !target.functionMacros)
-                diagnostics += "Target '${target.version}' cannot access a dynamic list index without function macros"
+                diagnostics += "Target '${target.version}' cannot access a dynamic sequence index without function macros"
             val accessed = when (instruction) {
                 is Instruction.Read -> instruction.place
                 is Instruction.Write -> instruction.place

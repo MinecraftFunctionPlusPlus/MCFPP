@@ -875,7 +875,7 @@ object StorageAccess {
             is CompilerValue.Integral -> when (type) {
                 MCFPPNBTType.Byte -> payload.value.toByte()
                 MCFPPNBTType.Short -> payload.value.toShort()
-                MCFPPNBTType.Long -> payload.value
+                MCFPPNBTType.Long -> top.mcfpp.nbt.tags.primitive.LongTag(payload.value)
                 else -> payload.value.toInt()
             }
             is CompilerValue.Bool -> payload.value
