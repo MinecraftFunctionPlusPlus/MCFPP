@@ -184,9 +184,10 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         val nbtPath = """(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s"'])+"""
         val set = Regex("scoreboard players set (\\S+ \\S+) (-?\\d+)")
         val add = Regex("scoreboard players (add|remove) (\\S+ \\S+) (\\d+)")
-        val operation = Regex("scoreboard players operation (\\S+ \\S+) (=|\\+=|-=|\\*=|/=|%=) (\\S+ \\S+)")
-        val compare = Regex("execute (if|unless) score (\\S+ \\S+) (=|<|>|<=|>=) (\\S+ \\S+) run (.*)")
-        val matches = Regex("execute if score (\\S+ \\S+) matches (-?\\d+|(?:-?\\d+)?\\.\\.(?:-?\\d+)?) run (.*)")
+        val operation = Regex("scoreboard players operation (\\S+ \\S+) (=|\\+=|-=|\\*=|/=|%=|><) (\\S+ \\S+)")
+        val compare = Regex("execute (if|unless) score (\\S+ \\S+) (=|<|>|<=|>=) (\\S+ \\S+) (?:run (.*)|((?:if|unless) score .*))")
+        val matches = Regex("execute if score (\\S+ \\S+) matches (-?\\d+|(?:-?\\d+)?\\.\\.(?:-?\\d+)?) (?:run (.*)|((?:if|unless) score .*))")
+        val asIdentity = Regex("execute as (\\S+) run (.*)")
         val guardStore = Regex("execute store result storage mcfpp:system ir_branch_stack\\[0].condition byte 1 run scoreboard players get (\\S+ \\S+)")
         val guardTest = Regex("execute (if|unless) data storage mcfpp:system ir_branch_stack\\[0]\\{condition:1b} run (.*)")
         val save = Regex("execute store result storage (\\S+) ($nbtPath) (int|byte|short|long|double) 1 run scoreboard players get (\\S+ \\S+)")
@@ -208,12 +209,26 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         val macroCall = Regex("function (\\S+) with storage (\\S+) ($nbtPath)")
         var steps = 0
         var branchStackInitialized = false
+        var identity: String? = null
+        fun scoreKey(key: String): String {
+            val player = key.substringBefore(' ')
+            if (!player.startsWith("@")) return key
+            check(player == "@s") { "Unsupported score selector: $player" }
+            return "${identity ?: error("@s needs an executor identity")} ${key.substringAfter(' ')}"
+        }
         lateinit var execute: (String) -> Boolean
         fun run(body: List<String>) {
             for (command in body.map(String::trim).filterNot { it.isEmpty() || it.startsWith("#") }) if (execute(command)) break
         }
         execute = command@{ command ->
             check(++steps < 10000) { "Command execution did not terminate" }
+            asIdentity.matchEntire(command)?.let {
+                val next = it.groupValues[1]
+                check(!next.startsWith("@")) { "Only one explicit executor identity is supported" }
+                val previous = identity
+                identity = next
+                try { return@command execute(it.groupValues[2]) } finally { identity = previous }
+            }
             if (command == "data modify storage mcfpp:system stack_frame prepend value {}") { stackDepth++; frames.add(0, mutableMapOf()); return@command false }
             if (command == "data remove storage mcfpp:system stack_frame[0]") { stackDepth--; check(stackDepth >= 0); frames.removeAt(0); return@command false }
             if (command == "execute unless data storage mcfpp:system ir_branch_stack run data modify storage mcfpp:system ir_branch_stack set value []") {
@@ -223,7 +238,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             if (command == "data modify storage mcfpp:system ir_branch_stack set value []") { branchGuards.clear(); branchStackInitialized = true; return@command false }
             if (command == "data modify storage mcfpp:system ir_branch_stack prepend value {condition:0b}") { branchGuards.add(0, 0); return@command false }
             if (command == "data remove storage mcfpp:system ir_branch_stack[0]") { branchGuards.removeAt(0); return@command false }
-            guardStore.matchEntire(command)?.let { branchGuards[0] = values.getValue(it.groupValues[1]); return@command false }
+            guardStore.matchEntire(command)?.let { branchGuards[0] = values.getValue(scoreKey(it.groupValues[1])); return@command false }
             guardTest.matchEntire(command)?.let {
                 if ((branchGuards[0] == 1) == (it.groupValues[1] == "if")) return@command execute(it.groupValues[2])
                 return@command false
@@ -254,15 +269,15 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                 run(functions.getValue(command.removePrefix("function ")))
                 return@command false
             }
-            set.matchEntire(command)?.let { values[it.groupValues[1]] = it.groupValues[2].toInt(); return@command false }
+            set.matchEntire(command)?.let { values[scoreKey(it.groupValues[1])] = it.groupValues[2].toInt(); return@command false }
             add.matchEntire(command)?.let {
-                val target = it.groupValues[2]
+                val target = scoreKey(it.groupValues[2])
                 val delta = it.groupValues[3].toInt() * if (it.groupValues[1] == "add") 1 else -1
                 values[target] = values.getValue(target) + delta
                 return@command false
             }
             save.matchEntire(command)?.let {
-                val value = values.getValue(it.groupValues[4])
+                val value = values.getValue(scoreKey(it.groupValues[4]))
                 val tag = when (it.groupValues[3]) {
                     "byte" -> ByteTag(value.toByte())
                     "short" -> ShortTag(value.toShort())
@@ -281,7 +296,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             }
             restore.matchEntire(command)?.let {
                 val value = readNbt(it.groupValues[2], it.groupValues[3])
-                values[it.groupValues[1]] = when (value) {
+                values[scoreKey(it.groupValues[1])] = when (value) {
                     is ListTag -> value.size
                     is ByteArrayTag -> value.value.size
                     is IntArrayTag -> value.value.size
@@ -304,7 +319,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                 val expression = JSON.parseObject(it.groupValues[2], JSONReader.Feature.AllowUnQuotedFieldNames)
                 check(expression.getString("type") == "minecraft:from_float")
                 // Preserve the int result: converting it back through Float would round Int.MAX_VALUE.
-                values[it.groupValues[1]] = provider(expression["input"]!!).toInt()
+                values[scoreKey(it.groupValues[1])] = provider(expression["input"]!!).toInt()
                 return@command false
             }
             floatCheck.matchEntire(command)?.let {
@@ -315,7 +330,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                 val matched = if (test is JSONObject && !test.containsKey("type"))
                     (!test.containsKey("min") || actual >= provider(test["min"]!!)) &&
                     (!test.containsKey("max") || actual <= provider(test["max"]!!)) else actual == provider(test)
-                values[it.groupValues[1]] = if (matched == (it.groupValues[2] == "if")) 1 else 0
+                values[scoreKey(it.groupValues[1])] = if (matched == (it.groupValues[2] == "if")) 1 else 0
                 return@command false
             }
             copyNbt.matchEntire(command)?.let {
@@ -335,7 +350,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                 val value = readNbt(it.groupValues[4], it.groupValues[5])
                 val changed = readNbt(it.groupValues[2], it.groupValues[3]) != value
                 writeNbt(it.groupValues[2], it.groupValues[3], value.copy())
-                values[it.groupValues[1]] = if (changed) 1 else 0
+                values[scoreKey(it.groupValues[1])] = if (changed) 1 else 0
                 return@command false
             }
             insertNbt.matchEntire(command)?.let {
@@ -358,22 +373,29 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             testNbt.matchEntire(command)?.let {
                 val exists = try { readNbt(it.groupValues[2], it.groupValues[3]); true }
                     catch (_: IllegalStateException) { false } catch (_: IndexOutOfBoundsException) { false }
-                values[it.groupValues[1]] = if (exists) 1 else 0
+                values[scoreKey(it.groupValues[1])] = if (exists) 1 else 0
                 return@command false
             }
             storeTest.matchEntire(command)?.let {
-                val condition = values.getValue(it.groupValues[3]) == values.getValue(it.groupValues[4])
-                values[it.groupValues[1]] = if (condition == (it.groupValues[2] == "if")) 1 else 0
+                val condition = values.getValue(scoreKey(it.groupValues[3])) == values.getValue(scoreKey(it.groupValues[4]))
+                values[scoreKey(it.groupValues[1])] = if (condition == (it.groupValues[2] == "if")) 1 else 0
                 return@command false
             }
             storeMatch.matchEntire(command)?.let {
-                val condition = values.getValue(it.groupValues[3]) == it.groupValues[4].toInt()
-                values[it.groupValues[1]] = if (condition == (it.groupValues[2] == "if")) 1 else 0
+                val condition = values.getValue(scoreKey(it.groupValues[3])) == it.groupValues[4].toInt()
+                values[scoreKey(it.groupValues[1])] = if (condition == (it.groupValues[2] == "if")) 1 else 0
                 return@command false
             }
             operation.matchEntire(command)?.let {
-                val target = it.groupValues[1]
-                val right = values.getValue(it.groupValues[3])
+                val target = scoreKey(it.groupValues[1])
+                val right = values.getValue(scoreKey(it.groupValues[3]))
+                if (it.groupValues[2] == "><") {
+                    val source = scoreKey(it.groupValues[3])
+                    val left = values.getValue(target)
+                    values[target] = right
+                    values[source] = left
+                    return@command false
+                }
                 if (it.groupValues[2] == "/=" && right == 0) return@command false
                 values[target] = when (it.groupValues[2]) {
                     "=" -> right
@@ -387,8 +409,8 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                 return@command false
             }
             compare.matchEntire(command)?.let {
-                val left = values.getValue(it.groupValues[2])
-                val right = values.getValue(it.groupValues[4])
+                val left = values.getValue(scoreKey(it.groupValues[2]))
+                val right = values.getValue(scoreKey(it.groupValues[4]))
                 val condition = when (it.groupValues[3]) {
                     "=" -> left == right
                     "<" -> left < right
@@ -397,16 +419,18 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                     ">=" -> left >= right
                     else -> error(command)
                 }
-                if (condition == (it.groupValues[1] == "if")) return@command execute(it.groupValues[5])
+                if (condition == (it.groupValues[1] == "if")) return@command execute(
+                    if (it.groupValues[6].isNotEmpty()) "execute ${it.groupValues[6]}" else it.groupValues[5])
                 return@command false
             }
             matches.matchEntire(command)?.let {
-                val value = values.getValue(it.groupValues[1])
+                val value = values.getValue(scoreKey(it.groupValues[1]))
                 val range = it.groupValues[2]
                 val bounds = range.split("..")
                 val match = if (bounds.size == 1) value == range.toInt() else
                     (bounds[0].isEmpty() || value >= bounds[0].toInt()) && (bounds[1].isEmpty() || value <= bounds[1].toInt())
-                if (match) return@command execute(it.groupValues[3])
+                if (match) return@command execute(
+                    if (it.groupValues[4].isNotEmpty()) "execute ${it.groupValues[4]}" else it.groupValues[3])
                 return@command false
             }
             if (command.startsWith("say ")) { messages.add(command.removePrefix("say ")); return@command false }
