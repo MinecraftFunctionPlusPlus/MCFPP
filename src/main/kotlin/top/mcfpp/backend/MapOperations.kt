@@ -33,7 +33,6 @@ object MapOperations {
     private fun emit(command: Command) = Function.addCommands(command.buildMacroFunction())
     private fun score() = MCInt().apply { sbObject = SbObject.MCFPP_TEMP; hasAssigned = true; isDynamic = true; isTemp = true }
     private fun address(value: MCInt) = "${value.name} ${value.sbObject}"
-    private fun set(value: MCInt, number: Int) = Function.addCommand("scoreboard players set ${address(value)} $number")
     private fun fail(message: String): Var<*> {
         LogProcessor.error(message)
         return UnknownVar(TempPool.getVarIdentify()).apply { isError = true }
@@ -165,33 +164,13 @@ object MapOperations {
     /** Rebuild with one shallow replacement, or append one new key. Inputs are frozen before the loop. */
     private fun overlay(list: NBTList, incoming: NBTPath, remove: Boolean = false) {
         val binding = StorageAccess.ensure(list)
-        val working = scratch()
-        val output = scratch()
-        val probe = scratch()
-        val remaining = score()
-        val changed = score()
-        val found = score()
-        StorageAccess.encodeTo(working, list)
-        emit(Commands.dataSetValue(output, ListTag()))
-        set(found, 0)
-        emit(Command("execute store result score ${address(remaining)} run data get").build(working.toCommandPart()))
-        val loop = Commands.tempFunction("map_overlay", Function.currFunction) { function ->
-            emit(Commands.dataSetFrom(probe, working.intIndex(0).memberIndex("key")))
-            emit(Command("execute store success score ${address(changed)} run")
-                .build(Commands.dataSetFrom(probe, incoming.memberIndex("key"))))
-            if (!remove) emit(Command("execute if score ${address(changed)} matches 0 run")
-                .build(Commands.dataSetFrom(working.intIndex(0).memberIndex("value"), incoming.memberIndex("value"))))
-            emit(Command("execute if score ${address(changed)} matches 0 run scoreboard players set ${address(found)} 1"))
-            val append = Commands.dataAppendFrom(output, working.intIndex(0))
-            emit(if (remove) Command("execute if score ${address(changed)} matches 1 run").build(append) else append)
-            emit(Command("data remove").build(working.intIndex(0).toCommandPart()))
-            Function.addCommand("scoreboard players remove ${address(remaining)} 1")
-            emit(Command("execute if score ${address(remaining)} matches 1.. run").build(Commands.function(function)))
-        }
-        emit(Command("execute if score ${address(remaining)} matches 1.. run").build(loop.first))
-        if (!remove) emit(Command("execute if score ${address(found)} matches 0 run").build(Commands.dataAppendFrom(output, incoming)))
+        val workspace = scratch()
+        emit(Commands.dataSetValue(workspace, CompoundTag()))
+        StorageAccess.encodeTo(workspace.memberIndex("source"), list)
+        emit(Commands.dataSetFrom(workspace.memberIndex("incoming"), incoming))
+        MapCommands.overlay(workspace, remove, ::emit)
         binding.data.materialize()
-        emit(Commands.dataSetFrom(binding.path, output))
+        emit(Commands.dataSetFrom(binding.path, workspace.memberIndex("output")))
     }
 
     private fun invalidate(list: NBTList, possible: TypeKnowledge) {
@@ -236,26 +215,13 @@ object MapOperations {
             fail("Compiler-only map lookup requires a known key and entry keys")
             return ScoreBool().apply { isError = true }
         }
-        val working = scratch()
-        val needle = scratch()
-        val probe = scratch()
-        val remaining = score()
-        val changed = score()
+        val workspace = scratch()
+        emit(Commands.dataSetValue(workspace, CompoundTag()))
+        StorageAccess.encodeTo(workspace.memberIndex("source"), list)
+        StorageAccess.encodeTo(workspace.memberIndex("needle"), selected)
+        val found = MapCommands.contains(workspace, ::emit)
         val result = ScoreBool().apply { hasAssigned = true; isDynamic = true; isTemp = true }
-        StorageAccess.encodeTo(working, list)
-        StorageAccess.encodeTo(needle, selected)
-        Function.addCommand("scoreboard players set ${result.name} ${result.boolObject} 0")
-        emit(Command("execute store result score ${address(remaining)} run data get").build(working.toCommandPart()))
-        val loop = Commands.tempFunction("map_find", Function.currFunction) { function ->
-            emit(Commands.dataSetFrom(probe, working.intIndex(0).memberIndex("key")))
-            emit(Command("execute store success score ${address(changed)} run").build(Commands.dataSetFrom(probe, needle)))
-            emit(Command("execute if score ${address(changed)} matches 0 run scoreboard players set ${result.name} ${result.boolObject} 1"))
-            emit(Command("data remove").build(working.intIndex(0).toCommandPart()))
-            Function.addCommand("scoreboard players remove ${address(remaining)} 1")
-            emit(Command("execute if score ${address(remaining)} matches 1.. run")
-                .build(Command("execute if score ${result.name} ${result.boolObject} matches 0 run").build(Commands.function(function))))
-        }
-        emit(Command("execute if score ${address(remaining)} matches 1.. run").build(loop.first))
+        Function.addCommand("scoreboard players operation ${result.name} ${result.boolObject} = ${MapCommands.key(found)}")
         return result
     }
 
@@ -296,9 +262,6 @@ object MapOperations {
             fail("Map source has no supported runtime encoding")
             return
         }
-        val incoming = scratch()
-        val head = scratch()
-        val remaining = score()
         val targetBinding = StorageAccess.ensure(target)
         val sourceBinding = StorageAccess.ensure(original)
         val possible = if (targetBinding.data.listSizes[targetBinding.place] == 0) valueType(source, original)
@@ -306,16 +269,12 @@ object MapOperations {
         targetBinding.data.types.putAll(sourceBinding.data.types)
         // A delayed initializer belongs before the source loop, never in a repeated overlay body.
         StorageAccess.ensure(target).data.materialize()
-        StorageAccess.encodeTo(incoming, original)
-        emit(Command("execute store result score ${address(remaining)} run data get").build(incoming.toCommandPart()))
-        val loop = Commands.tempFunction("map_merge", Function.currFunction) { function ->
-            emit(Commands.dataSetFrom(head, incoming.intIndex(0)))
-            overlay(target, head)
-            emit(Command("data remove").build(incoming.intIndex(0).toCommandPart()))
-            Function.addCommand("scoreboard players remove ${address(remaining)} 1")
-            emit(Command("execute if score ${address(remaining)} matches 1.. run").build(Commands.function(function)))
-        }
-        emit(Command("execute if score ${address(remaining)} matches 1.. run").build(loop.first))
+        val workspace = scratch()
+        emit(Commands.dataSetValue(workspace, CompoundTag()))
+        StorageAccess.encodeTo(workspace.memberIndex("source"), target)
+        StorageAccess.encodeTo(workspace.memberIndex("rows"), original)
+        MapCommands.merge(workspace, ::emit)
+        emit(Commands.dataSetFrom(targetBinding.path, workspace.memberIndex("output")))
         invalidate(target, possible)
     }
 

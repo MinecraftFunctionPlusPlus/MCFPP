@@ -40,14 +40,16 @@ class Place(val root: SymbolId, path: List<PathSegment> = emptyList()) {
     override fun toString() = "Place(root=$root, path=$path)"
 }
 
-/** A logical access range plus the immutable result IDs that capture its runtime indices. */
-class Location(val place: Place, indices: Map<Int, Int> = emptyMap()) {
+/** A logical access range plus captured sequence indices and string-key predicates. */
+class Location(val place: Place, indices: Map<Int, Int> = emptyMap(), keys: Map<Int, ValueRef> = emptyMap()) {
     val indices: Map<Int, Int> = Collections.unmodifiableMap(LinkedHashMap(indices))
+    val keys: Map<Int, ValueRef> = Collections.unmodifiableMap(LinkedHashMap(keys))
     init { require(indices.keys.all { place.path.getOrNull(it) == PathSegment.UnknownIndex }) }
-    fun child(segment: PathSegment, capturedIndex: Int? = null) = Location(Place(place.root, place.path + segment),
-        if (capturedIndex == null) indices else indices + (place.path.size to capturedIndex))
-    override fun equals(other: Any?) = other is Location && place == other.place && indices == other.indices
-    override fun hashCode() = 31 * place.hashCode() + indices.hashCode()
+    fun child(segment: PathSegment, capturedIndex: Int? = null, key: ValueRef? = null) = Location(Place(place.root, place.path + segment),
+        if (capturedIndex == null) indices else indices + (place.path.size to capturedIndex),
+        if (key == null) keys else keys + (place.path.size to key))
+    override fun equals(other: Any?) = other is Location && place == other.place && indices == other.indices && keys == other.keys
+    override fun hashCode() = 31 * (31 * place.hashCode() + indices.hashCode()) + keys.hashCode()
 }
 
 sealed interface TypeKnowledge {

@@ -11,6 +11,7 @@ object EffectAnalysis {
                 is Instruction.Write -> instruction.place.path.size
                 is Instruction.DictionaryMember -> instruction.receiver.place.path.size + 1
                 is Instruction.ListMember -> instruction.receiver.place.path.size
+                is Instruction.MapMember -> instruction.receiver.place.path.size + 1
                 is Instruction.Call -> instruction.argumentPlaces.sumOf { it?.path?.size ?: 0 }
                 else -> 0
             }
@@ -28,6 +29,7 @@ object EffectAnalysis {
                         is Instruction.Write -> Effect.Writes(setOf(instruction.place))
                         is Instruction.DictionaryMember -> instruction.effect
                         is Instruction.ListMember -> if (instruction.operation.query) Effect.Pure else Effect.Writes(setOf(instruction.receiver.place))
+                        is Instruction.MapMember -> if (instruction.operation.query) Effect.Pure else Effect.Writes(setOf(instruction.receiver.place.field("entries")))
                         is Instruction.Call -> callEffect(instruction, functions, effects)
                         else -> Effect.Pure
                     }

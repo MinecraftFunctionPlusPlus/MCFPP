@@ -45,7 +45,7 @@ object PrimitiveCompiler {
         MCFPPNBTType.ByteArray, MCFPPNBTType.IntArray, MCFPPNBTType.LongArray).associateBy { it.typeId }
     private fun nbt(type: TypeId) = type != int && type != bool
     private fun supportedType(type: MCFPPType): Boolean = type !is MCFPPDeclaredConcreteType && when (type) {
-        is MCFPPListType, is MCFPPDictType, is MCFPPImmutableListType -> (type as MCFPPTypeWithGeneric).generic.all {
+        is MCFPPListType, is MCFPPDictType, is MCFPPImmutableListType, is MCFPPMapType -> (type as MCFPPTypeWithGeneric).generic.all {
             it === MCFPPPrivateType.Wildcard || supportedType(it)
         }
         is MCFPPUnionType -> type.types.all(::supportedType)
@@ -246,6 +246,7 @@ object PrimitiveCompiler {
             val result = when {
                 syntax.LIST() != null -> MCFPPListType(element)
                 syntax.DICT() != null -> MCFPPDictType(element)
+                syntax.MAP() != null -> MCFPPMapType(element)
                 syntax.IMMUTABLE_LIST() != null -> MCFPPImmutableListType(element)
                 syntax.normalType() != null -> types.values.firstOrNull { it.typeName == syntax.text } ?: unsupported()
                 syntax.readOnlyArgs() != null || syntax.anonymousTemplateType() != null -> unsupported()
@@ -269,6 +270,8 @@ object PrimitiveCompiler {
         private val locations = mutableMapOf<Int, Location>()
         private val sourceTypes = mutableMapOf<Int, TypeId>()
         private val parentTypes = mutableMapOf<Int, TypeId>()
+        private data class MapDestination(val receiver: Location, val key: ValueRef, val type: TypeId)
+        private val mapDestinations = mutableMapOf<Int, MapDestination>()
         private var expectedLiteral: Pair<Int, MCFPPType>? = null
         private fun literalToken(node: ParserRuleContext): Int? = when {
             node is Parser.NbtValueContext && (node.nbtList() != null || node.nbtCompound() != null) -> node.start.tokenIndex
@@ -441,7 +444,11 @@ object PrimitiveCompiler {
                     else binary(operation.dropLast(1), read(destination.first, destination.second, target), expression(assignment.expression()))
                 if (value.type != destination.second && destination.second !in erased && !(exploratory && value.type == any)) invalid("Assignment type mismatch for ${symbol.name}")
                 if (suffix.identifierSuffix().isEmpty()) write(symbol, value)
-                else instructions += Instruction.Write(destination.first.place, value, (indexedDestination as? ValueRef.Result)?.let { parentTypes[it.instruction] }, destination.first)
+                else {
+                    val map = (indexedDestination as? ValueRef.Result)?.let { mapDestinations[it.instruction] }
+                    if (map != null) instructions += Instruction.MapMember(MapOperation.PUT, map.receiver, map.type, map.key, value)
+                    else instructions += Instruction.Write(destination.first.place, value, (indexedDestination as? ValueRef.Result)?.let { parentTypes[it.instruction] }, destination.first)
+                }
                 return
             }
             if (context.SEMICOLON() == null) unsupported()
@@ -462,7 +469,7 @@ object PrimitiveCompiler {
         private fun read(location: Location, declared: TypeId, site: ParserRuleContext): ValueRef {
             val place = location.place
             val result = nextResult++
-            if (place.root in runtimeSymbols || location.indices.isNotEmpty()) runtimeResults.add(result)
+            if (place.root in runtimeSymbols || location.indices.isNotEmpty() || location.keys.values.any { it is ValueRef.Result }) runtimeResults.add(result)
             val actual = valueTypes[site.start.tokenIndex] ?: if (place.path.isEmpty()) knowledge[place.root] else null
             val type = if (declared == any && !exploratory) (actual as? TypeKnowledge.Exact)?.type ?: any else declared
             valueSites[site.start.tokenIndex] = current.id to result
@@ -490,6 +497,27 @@ object PrimitiveCompiler {
                     is ValueRef.Constant -> key.value
                     is ValueRef.Result -> provenConstants[key.instruction]
                     else -> null
+                }
+                if (container is MCFPPMapType) {
+                    if (key.type != MCFPPBaseType.String.typeId && !(exploratory && key.type == any)) invalid("Map index must be string")
+                    val source = locations[(value as? ValueRef.Result)?.instruction] ?: unsupported()
+                    val captured = MapFacts.text(constant)?.let { ValueRef.Constant(MCFPPBaseType.String.typeId, CompilerValue.Text(it)) } ?: run {
+                        val result = nextResult++
+                        instructions += Instruction.CaptureKey(result, key)
+                        ValueRef.Result(MCFPPBaseType.String.typeId, result)
+                    }
+                    val destination = source.child(PathSegment.Field("entries")).child(PathSegment.UnknownIndex, key = captured).child(PathSegment.Field("value"))
+                    value = if (!readFinal && index == node.identifierSuffix().lastIndex) {
+                        val result = nextResult++
+                        origins[result] = destination.place
+                        locations[result] = destination
+                        sourceTypes[result] = element.typeId
+                        ValueRef.Result(element.typeId, result)
+                    } else read(destination, element.typeId, suffix)
+                    val result = (value as ValueRef.Result).instruction
+                    parentTypes[result] = container.typeId
+                    mapDestinations[result] = MapDestination(source, key, container.typeId)
+                    continue
                 }
                 val knownSize = valueLengths[if (index == 0) node.start.tokenIndex else node.identifierSuffix()[index - 1].start.tokenIndex]
                 val segment = when {
@@ -674,8 +702,8 @@ object PrimitiveCompiler {
                         register(if (name in setOf("merge", "containsKey", "remove", "clear")) MCFPPDictType(MCFPPBaseType.Any) else MCFPPListType(MCFPPBaseType.Any))
                 } else invalid("Actual type of any is unknown; use 'as' before a member call")
             }
-            if (container !is MCFPPDictType && container !is MCFPPListType && container !is MCFPPImmutableListType) unsupported()
-            val members = if (container is MCFPPDictType) container.objectData else container.instanceData
+            if (container !is MCFPPDictType && container !is MCFPPListType && container !is MCFPPImmutableListType && container !is MCFPPMapType) unsupported()
+            val members = if (container is MCFPPDictType || container is MCFPPMapType) container.objectData else container.instanceData
             val candidates = members.scope.getFunctionCandidates(name).filterIsInstance<NativeFunction>()
                 .map { it.replaceGenericParams(mapOf("E" to (container as MCFPPTypeWithGeneric).generic.single())) }
             val arguments = context.arguments().normalArgs().expressionList()?.expression().orEmpty().mapIndexed { index, argument ->
@@ -693,6 +721,24 @@ object PrimitiveCompiler {
                 else invalid("No matching ${container.typeName} member '$name'")
             }
             val location = locations[(receiver as? ValueRef.Result)?.instruction] ?: unsupported()
+            if (selected.javaMethod.declaringClass == top.mcfpp.mni.NBTMapData::class.java) {
+                val operation = when (selected.identifier) {
+                    "clear" -> MapOperation.CLEAR
+                    "remove" -> MapOperation.REMOVE
+                    "merge" -> MapOperation.MERGE
+                    "containsKey" -> MapOperation.CONTAINS_KEY
+                    "size" -> MapOperation.SIZE
+                    "isEmpty" -> MapOperation.IS_EMPTY
+                    else -> unsupported()
+                }
+                val result = if (operation.query) nextResult++ else null
+                val type = if (operation == MapOperation.SIZE) int else bool
+                val resultPlace = result?.let { memberResult(context, it, type, runtime(receiver) || arguments.any(::runtime)) }
+                val key = arguments.singleOrNull()?.takeIf { operation == MapOperation.REMOVE || operation == MapOperation.CONTAINS_KEY }
+                instructions += Instruction.MapMember(operation, location, container.typeId, key,
+                    arguments.singleOrNull()?.takeIf { operation == MapOperation.MERGE }, result, resultPlace)
+                return ValueRef.Result(if (result == null) MCFPPPrivateType.Void.typeId else type, result ?: -1)
+            }
             if (selected.javaMethod.declaringClass in setOf(top.mcfpp.mni.NBTListData::class.java, top.mcfpp.mni.ImmutableListData::class.java)) {
                 val operation = when (selected.identifier) {
                     "clear" -> ListOperation.CLEAR
@@ -845,8 +891,18 @@ object PrimitiveCompiler {
                 is PathSegment.Field -> path.memberIndex(StorageAccess.quotedKey(segment.name))
                 is PathSegment.Index -> path.intIndex(segment.index)
                 PathSegment.UnknownIndex -> {
-                    val id = "index_${location.indices.getValue(position)}"
-                    path.intIndex(MCInt(id).apply { isDataOnly = true; hasAssigned = true; nbtPath = internal(id) })
+                    val key = location.keys[position]
+                    if (key != null) {
+                        val predicate = if (key is ValueRef.Constant) top.mcfpp.core.lang.nbt.NBTBasedDataConcrete(
+                            top.mcfpp.nbt.tags.CompoundTag().apply { put("key", StringTag(MapFacts.text(key.value)!!)) })
+                        else top.mcfpp.core.lang.nbt.NBTBasedData("map_key_${(key as ValueRef.Result).instruction}").apply {
+                            hasAssigned = true; isDynamic = true; nbtPath = internal(identifier)
+                        }
+                        path.nbtIndex(predicate)
+                    } else {
+                        val id = "index_${location.indices.getValue(position)}"
+                        path.intIndex(MCInt(id).apply { isDataOnly = true; hasAssigned = true; nbtPath = internal(id) })
+                    }
                 }
             }
             return path
@@ -867,6 +923,49 @@ object PrimitiveCompiler {
             } else {
                 val tag = if (value.type == bool) "byte" else "int"
                 emit(Command("execute store result").build(destination.toCommandPart()).build("$tag 1 run scoreboard players get ${score(value)}"))
+            }
+        }
+        private fun map(instruction: Instruction.MapMember) {
+            val destination = address(instruction.receiver).memberIndex("entries")
+            if (instruction.operation.query && constant(ValueRef.Result(
+                    if (instruction.operation == MapOperation.SIZE) int else bool, instruction.result!!)) != null &&
+                instruction.result !in lowering.runtimeResults) return
+            if (instruction.operation == MapOperation.CLEAR) {
+                emit(Commands.dataSetValue(destination, ListTag()))
+                return
+            }
+            if (instruction.operation == MapOperation.SIZE || instruction.operation == MapOperation.IS_EMPTY) {
+                val count = temporary(int)
+                emit(Command("execute store result score $count run data get").build(destination.toCommandPart()))
+                results[instruction.result!!] = if (instruction.operation == MapOperation.SIZE) count else temporary(bool).also {
+                    commands += "execute store success score $it if score $count matches 0"
+                }
+                return
+            }
+            val workspace = internal("map_${callNumber++}")
+            emit(Commands.dataSetValue(workspace, top.mcfpp.nbt.tags.CompoundTag()))
+            emit(Commands.dataSetFrom(workspace.memberIndex("source"), destination))
+            when (instruction.operation) {
+                MapOperation.CONTAINS_KEY -> {
+                    encode(workspace.memberIndex("needle"), instruction.key!!)
+                    val found = top.mcfpp.backend.MapCommands.contains(workspace, ::emit)
+                    results[instruction.result!!] = Score(found.name, found.sbObject.toString())
+                }
+                MapOperation.MERGE -> {
+                    encode(workspace.memberIndex("map"), instruction.argument!!)
+                    emit(Commands.dataSetFrom(workspace.memberIndex("rows"), workspace.memberIndex("map").memberIndex("entries")))
+                    top.mcfpp.backend.MapCommands.merge(workspace, ::emit)
+                    emit(Commands.dataSetFrom(destination, workspace.memberIndex("output")))
+                }
+                MapOperation.PUT, MapOperation.REMOVE -> {
+                    val incoming = workspace.memberIndex("incoming")
+                    emit(Commands.dataSetValue(incoming, top.mcfpp.nbt.tags.CompoundTag()))
+                    encode(incoming.memberIndex("key"), instruction.key!!)
+                    instruction.argument?.let { encode(incoming.memberIndex("value"), it) }
+                    top.mcfpp.backend.MapCommands.overlay(workspace, instruction.operation == MapOperation.REMOVE, ::emit)
+                    emit(Commands.dataSetFrom(destination, workspace.memberIndex("output")))
+                }
+                else -> error("Unsupported map operation")
             }
         }
         private fun constant(value: ValueRef): CompilerValue? = when (value) {
@@ -1088,6 +1187,12 @@ object PrimitiveCompiler {
                         }
                     }
                     is Instruction.RawCommand -> commands.add(instruction.command)
+                    is Instruction.CaptureKey -> {
+                        val destination = internal("map_key_${instruction.result}")
+                        emit(Commands.dataSetValue(destination, top.mcfpp.nbt.tags.CompoundTag()))
+                        encode(destination.memberIndex("key"), instruction.value)
+                    }
+                    is Instruction.MapMember -> map(instruction)
                     is Instruction.ListMember -> {
                         if (instruction.operation.search) { search(instruction, position); continue }
                         val destination = address(instruction.receiver)

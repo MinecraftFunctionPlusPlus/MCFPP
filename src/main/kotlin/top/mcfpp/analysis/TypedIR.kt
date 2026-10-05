@@ -11,6 +11,10 @@ sealed interface Instruction {
     data class Read(val result: Int, val place: Place, val type: TypeId, val location: Location = Location(place)) : Instruction
     data class Write(val place: Place, val value: ValueRef, val containerType: TypeId? = null, val location: Location = Location(place)) : Instruction
     data class CaptureIndex(val result: Int, val value: ValueRef, val container: Location) : Instruction
+    data class CaptureKey(val result: Int, val value: ValueRef) : Instruction
+    data class MapMember(val operation: MapOperation, val receiver: Location, val type: TypeId,
+                         val key: ValueRef? = null, val argument: ValueRef? = null,
+                         val result: Int? = null, val resultPlace: Place? = null) : Instruction
     data class ListMember(val operation: ListOperation, val receiver: Location, val type: TypeId,
                           val argument: ValueRef? = null, val argumentPlace: Place? = null,
                           val index: ValueRef? = null, val knownIndex: Int? = null,
@@ -102,13 +106,15 @@ object FlowAnalysis {
             }
             for ((position, instruction) in block.instructions.withIndex()) when (instruction) {
                 is Instruction.Read -> {
-                    val existing = state.read(instruction.place)
+                    if (instruction.location.keys.isNotEmpty()) beforeWrites[id to position] = state.fork()
+                    val resolved = MapFacts.resolve(state, instruction.location)
+                    val existing = state.read(resolved)
                     values[instruction.result] = existing ?: ValueFacts(
                         if (instruction.type in setOf(top.mcfpp.type.MCFPPBaseType.Any.typeId, top.mcfpp.type.MCFPPBaseType.Object.typeId)) TypeKnowledge.Unknown else TypeKnowledge.Exact(instruction.type),
                         ValueKnowledge.Unknown, state.read(Place(instruction.place.root))?.state ?: ValueState.UNINITIALIZED)
-                    origins[instruction.result] = instruction.place
-                    snapshots[instruction.result] = capture(instruction.place)
-                    state.length(instruction.place)?.let { resultLengths[id to instruction.result] = it }
+                    origins[instruction.result] = resolved
+                    snapshots[instruction.result] = capture(resolved)
+                    state.length(resolved)?.let { resultLengths[id to instruction.result] = it }
                         ?: resultLengths.remove(id to instruction.result)
                 }
                 is Instruction.Write -> {
@@ -116,11 +122,34 @@ object FlowAnalysis {
                     val source = origin(instruction.value)
                     val frozen = snapshot(instruction.value) ?: source?.let { capture(it) }
                     val written = value(instruction.value)
-                    state.forgetDescendants(instruction.place)
-                    state.write(instruction.place, written)
-                    if (source != null) state.copyFrom(frozen!!.facts, frozen.place, instruction.place, includeRoot = false)
+                    val resolved = MapFacts.resolve(state, instruction.location)
+                    state.forgetDescendants(resolved)
+                    state.write(resolved, written)
+                    if (source != null) state.copyFrom(frozen!!.facts, frozen.place, resolved, includeRoot = false)
                 }
                 is Instruction.CaptureIndex -> values[instruction.result] = value(instruction.value)
+                is Instruction.CaptureKey -> values[instruction.result] = value(instruction.value)
+                is Instruction.MapMember -> {
+                    beforeWrites[id to position] = state.fork()
+                    val key = instruction.key?.let { (value(it).value as? ValueKnowledge.Constant)?.value }?.let(MapFacts::text)
+                    val receiver = MapFacts.resolve(state, instruction.receiver)
+                    if (instruction.operation.query) {
+                        val entries = receiver.field("entries")
+                        val size = state.length(entries)
+                        val known = when (instruction.operation) {
+                            MapOperation.SIZE -> size?.let { CompilerValue.Integral(it.toLong()) }
+                            MapOperation.IS_EMPTY -> size?.let { CompilerValue.Bool(it == 0) }
+                            else -> key?.let { name -> MapFacts.keys(state, entries)?.let { CompilerValue.Bool(name in it) } }
+                        }?.takeIf { foldQueries }
+                        val type = if (instruction.operation == MapOperation.SIZE) top.mcfpp.type.MCFPPBaseType.Int.typeId else top.mcfpp.type.MCFPPBaseType.Bool.typeId
+                        val fact = ValueFacts(TypeKnowledge.Exact(type), known?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown)
+                        values[instruction.result!!] = fact
+                        instruction.resultPlace?.let { state.write(it, fact); origins[instruction.result] = it }
+                    } else {
+                        val source = instruction.argument?.let(::snapshot)
+                        MapFacts.edit(state, instruction, key, instruction.argument?.let(::value), source?.facts, source?.place)
+                    }
+                }
                 is Instruction.ListMember -> {
                     beforeWrites[id to position] = state.fork()
                     val source = instruction.argument?.let(::snapshot)

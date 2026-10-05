@@ -15,7 +15,7 @@ object IRCollectionValidation {
         MCFPPBaseType.String.typeId -> "string"
         is TypeId.Applied -> when (type.constructor) {
             TypeId.Builtin("list"), TypeId.Builtin("ImmutableList") -> "list"
-            TypeId.Builtin("dict") -> "compound"
+            TypeId.Builtin("dict"), TypeId.Builtin("map") -> "compound"
             else -> null
         }
         is TypeId.Union -> type.alternatives.map(::codec).takeUnless { it.any { part -> part == null } }?.distinct()?.singleOrNull()
@@ -40,6 +40,25 @@ object IRCollectionValidation {
             return listOf((type as? TypeId.Applied)?.arguments?.singleOrNull()?.let(::codec))
         }
         for (block in ir.blocks.filter { it.id in facts.entries }) for ((position, instruction) in block.instructions.withIndex()) {
+            val location = when (instruction) {
+                is Instruction.Read -> instruction.location
+                is Instruction.Write -> instruction.location
+                is Instruction.MapMember -> instruction.receiver
+                is Instruction.ListMember -> instruction.receiver
+                is Instruction.DictionaryMember -> instruction.receiver
+                else -> null
+            }
+            if (!target.functionMacros && location?.keys?.values?.any { it is ValueRef.Result } == true)
+                diagnostics += "Target '${target.version}' cannot access a map value at an unknown key without function macros"
+            val beforeAccess = facts.beforeWrites[block.id to position]
+            fun payload(value: CompilerValue?): CompilerValue? = if (value is CompilerValue.Typed) payload(value.payload) else value
+            fun mapLayout(receiver: Place) {
+                val known = payload((beforeAccess?.read(receiver)?.value as? ValueKnowledge.Constant)?.value)
+                if (known is CompilerValue.Record && payload(known.fields["entries"]) !is CompilerValue.Sequence)
+                    diagnostics += "Map access requires an entries list; as does not convert or initialize the old map layout"
+            }
+            if (instruction is Instruction.MapMember) mapLayout(instruction.receiver.place)
+            location?.keys?.keys?.forEach { index -> mapLayout(Place(location.place.root, location.place.path.take(index - 1))) }
             if (instruction is Instruction.CaptureIndex && !target.functionMacros)
                 diagnostics += "Target '${target.version}' cannot access a dynamic sequence index without function macros"
             val accessed = when (instruction) {

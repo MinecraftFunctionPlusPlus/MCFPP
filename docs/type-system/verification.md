@@ -1,8 +1,19 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-05（Asia/Shanghai）。本轮 NBT 数组 IR 的必要检查为 48 项；最近完整检查属于提交 72dc557，共 346 项。续接起始基线为上一会话的 140 项测试，浮点后端及算术修改继续保留。
+最新验证日期：2026-10-05（Asia/Shanghai）。本轮 map IR 的必要检查为 54 项；最近完整检查属于提交 72dc557，共 346 项。续接起始基线为上一会话的 140 项测试，浮点后端及算术修改继续保留。
 
-## 最新必要检查：NBT 数组 IR
+## 最新必要检查：map 索引与成员 IR
+
+```sh
+./gradlew test --tests top.mcfpp.test.MapIRTest --tests top.mcfpp.test.MapMemberTest --tests top.mcfpp.test.DynamicIndexIRTest --tests top.mcfpp.test.ValueModelTest --tests top.mcfpp.test.EffectAnalysisTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
+git diff --check
+```
+
+5 个套件、54 项，0 失败、0 错误、0 跳过。新增 MapIRTest 的 6 项确认实际 IR，并覆盖已知键的实际类型、普通副本、删除后共享视图按键定位、动态接收者与 RHS 前键捕获、浅覆盖合并和自合并、循环与递归 static 写回、查询纯效果、未知键共同值证据、旧布局/非法类型诊断。跨折叠开关及 26.3/1.20.2/1.20.1 执行；无宏目标的未知键写入、删除及查询继续使用普通命令循环。
+
+首次编译修复了校验局部变量重名；随后检查发现遗漏 map<T> 类型语法入口，非法赋值退回旧 visitor 并触发已有属性替换异常。补齐入口后，54 项中剩余两项因执行器不支持合并条件的命令写法失败；恢复既有等价嵌套 execute 写法后全部通过。日志：`F:/DevCache/.codex/runtime/mcfpp-map-ir-final.log`；当前 XML 为上述 5 个套件。未重复全量构建或标准库重建，MCFL 仍为 9。
+
+## 上一阶段必要检查：NBT 数组 IR（313886b）
 
 ```sh
 ./gradlew test --tests top.mcfpp.test.NbtArrayIRTest --tests top.mcfpp.test.NbtArrayTest --tests top.mcfpp.test.DynamicIndexIRTest --tests top.mcfpp.test.IRCallTest -Dorg.gradle.jvmargs=-Xmx2g -Pkotlin.daemon.jvmargs=-Xmx2g
@@ -11,7 +22,7 @@ git diff --check
 
 4 个套件、48 项，0 失败、0 错误、0 跳过。新增 NbtArrayIRTest 的 7 项覆盖实际 IR 入口、数组共享视图与独立擦除副本、byte/long 跨帧精确编码（含 64 位边界）、空数组格式、静态写回前捕获索引、递归和循环，以及非法元素操作/旧目标混合数组编码。折叠开关均覆盖，涉及 26.3/1.20.2/1.20.1。
 
-首轮 47 项中，数组视图一项发现主函数仍退回旧路径；补齐 as 入口后全部通过。随后保留无宏目标上未知长度的字面负索引旧路径，补充回归后 48 项通过。日志：`F:/DevCache/.codex/runtime/mcfpp-array-ir-final.log`；当前 XML 为上述 4 个套件。没有重复全量构建或标准库重建，MCFL 保持 9。
+首轮 47 项中，数组视图一项发现主函数仍退回旧路径；补齐 as 入口后全部通过。随后保留无宏目标上未知长度的字面负索引旧路径，补充回归后 48 项通过。日志：`F:/DevCache/.codex/runtime/mcfpp-array-ir-final.log`；该次为上述 4 个套件。没有重复全量构建或标准库重建，MCFL 保持 9。
 
 ## 上一阶段必要检查：列表查询与按值删除 IR（ea7dca8）
 
