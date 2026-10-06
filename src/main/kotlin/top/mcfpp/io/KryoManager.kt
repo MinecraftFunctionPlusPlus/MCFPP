@@ -17,6 +17,7 @@ import top.mcfpp.type.MCFPPGenericDataTemplateType
 import top.mcfpp.type.TypeId
 import top.mcfpp.type.MCFPPObjectDataTemplateType
 import top.mcfpp.type.MCFPPType
+import top.mcfpp.type.MCFPPNotCompiledGenericType
 
 object KryoManager {
     val kryo = Kryo().apply {
@@ -108,6 +109,17 @@ object KryoManager {
                 template.info = p0.readObject(p1, DataTemplateInfo::class.java)
                 type.parentType = p0.readObject(p1, ArrayList::class.java) as ArrayList<out MCFPPType>
                 return type
+            }
+        })
+
+        register(MCFPPNotCompiledGenericType::class.java, object : Serializer<MCFPPNotCompiledGenericType>() {
+            override fun write(kryo: Kryo, output: Output, value: MCFPPNotCompiledGenericType) {
+                output.writeString((value.typeId as TypeId.Builtin).key.removePrefix("constructor:"))
+            }
+
+            override fun read(kryo: Kryo, input: Input, type: Class<out MCFPPNotCompiledGenericType>): MCFPPNotCompiledGenericType {
+                val name = input.readString()
+                return MCFPPType.nativeConstructor(name) ?: error("Unknown native type constructor: $name")
             }
         })
 

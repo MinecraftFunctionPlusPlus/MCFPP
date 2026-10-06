@@ -364,6 +364,9 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             "ImmutableList" to MCFPPImmutableListType::class,
         )
 
+        internal fun nativeConstructor(name: String): MCFPPNotCompiledGenericType? =
+            genericTypeClassCache[name]?.let(::MCFPPNotCompiledGenericType)
+
         /**
          * 将这个类型注册入缓存
          */
@@ -397,7 +400,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                 return qwq?.let { MCFPPDeclaredConcreteType(qwq) }
             }
             typeCache[typeStr]?.let { return it }
-            genericTypeCache[typeStr]?.let { return MCFPPNotCompiledGenericType(genericTypeClassCache[typeStr]!!) }
+            nativeConstructor(typeStr)?.let { return it }
             //使用泛型
             if(typeStr.contains("<")){
                 val charStream: CharStream = CharStreams.fromString(typeStr)
@@ -485,7 +488,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                         MCFPPBaseType.Any
                     })
                 }else{
-                    MCFPPDictType(MCFPPPrivateType.Wildcard)
+                    return MCFPPDictType(MCFPPPrivateType.Wildcard)
                 }
             }
             //map类型

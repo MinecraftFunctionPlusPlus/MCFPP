@@ -30,6 +30,8 @@ import top.mcfpp.type.MCFPPDataTemplateType
 import top.mcfpp.type.MCFPPDeclaredConcreteType
 import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
+import top.mcfpp.type.MCFPPNotCompiledGenericType
+import top.mcfpp.type.MCFPPTypeWithGeneric
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper.splitNamespaceID
 import top.mcfpp.util.TempPool
@@ -245,9 +247,20 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                     MCFPPType.parseFromString(it.split(" ").last(), Namespace.currNamespaceField)
                 }
                 //比对
-                if(nf.readOnlyParams.map { it.type } == readOnlyType && nf.normalParams.map { it.type } == normalType){
+                fun matchesNativeType(declared: MCFPPType, registered: MCFPPType?): Boolean =
+                    declared == registered || registered is MCFPPNotCompiledGenericType &&
+                        registered.type.isInstance(declared) && declared is MCFPPTypeWithGeneric &&
+                        declared.generic.singleOrNull() === MCFPPPrivateType.Wildcard
+                if(nf.readOnlyParams.map { it.type } == readOnlyType && nf.normalParams.size == normalType.size &&
+                    nf.normalParams.zip(normalType).all { (param, registered) -> matchesNativeType(param.type, registered) }){
                     hasFind = true
                     nf.javaMethod = method
+                    nf.normalParams.zip(normalType).forEach { (param, registered) ->
+                        if (registered is MCFPPNotCompiledGenericType && param.type != registered) {
+                            param.type = registered
+                            nf.scope.removeVar(param.identifier)
+                        }
+                    }
                     break
                 }
             }

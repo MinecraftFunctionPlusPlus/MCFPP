@@ -2672,6 +2672,103 @@ class LibFieldAccessTest {
         }
     }
 
+    @Test
+    fun nativePrintCommandsUseEncodedValuesAcrossLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = """
+            func main(){
+                var box=Box();
+                dynamic var integerInput=7; dynamic var boolInput=true;
+                dynamic var stringInput="live"; dynamic var nbtInput as nbt={value:9} as nbt;
+                dynamic var anyInput as any=42; dynamic var payload=Payload(7);
+                dynamic var result=box.observe(integerInput,boolInput,stringInput,nbtInput,anyInput,payload);
+            }
+        """
+        write("""
+            namespace fixture.fields;
+            data Payload {value as int;constructor(initial as int){this.value=initial;}}
+            data Box {
+                func observe(i as int,b as bool,s as string,n as nbt,erased as any,payload as Payload)->int {
+                    print(i); print(b); print(s); print(n); print(erased); print(payload);
+                    print(("styled").toText()); print([2,3]); print({value:4});
+                    print("quote \" slash \\");
+                    return 7;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val observe = (main.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("observe").single()
+            for ((type, method) in listOf(MCFPPListType(MCFPPBaseType.Any) to "printList", top.mcfpp.type.MCFPPDictType(MCFPPBaseType.Any) to "printDict")) {
+                val selected = GlobalScope.getFunction(null, "print", emptyList(), listOf(type.buildUnConcrete("collectionProbe")))
+                assertEquals(method, assertIs<top.mcfpp.model.function.NativeFunction>(selected).javaMethod.name)
+            }
+            val directory = output.resolve("consumer")
+            DatapackCreator.createDatapack(directory.toString())
+            val data = directory.resolve(Project.config.name).resolve("data")
+            val functions = linkedMapOf<String, List<String>>()
+            Files.walk(data).use { paths ->
+                paths.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".mcfunction") }.forEach { file ->
+                    val relative = data.relativize(file)
+                    if (relative.nameCount >= 3 && relative.getName(1).toString() == "function") {
+                        val id = relative.subpath(2, relative.nameCount).joinToString("/").removeSuffix(".mcfunction")
+                        functions["${relative.getName(0)}:$id"] = Files.readAllLines(file)
+                    }
+                }
+            }
+            val commands = functions.getValue(observe.namespaceID.toString())
+            val call = Regex("function (mcfpp:dynamic/\\S+) with storage (\\S+) (\\S+)")
+            val macroBodies = commands.mapIndexedNotNull { index, command ->
+                call.matchEntire(command)?.let { match ->
+                    assertEquals(1, commands.count { call.matchEntire(it)?.groupValues?.get(1) == match.groupValues[1] })
+                    val preparation = "data modify storage ${match.groupValues[2]} ${match.groupValues[3]}"
+                    assertTrue(commands.take(index).any { it.startsWith(preparation) && " set " in it })
+                    functions.getValue(match.groupValues[1]).also { body -> assertFalse(body.any { "return run" in it }) }.map { index to it }
+                }
+            }.flatten()
+            val emitted = (commands.mapIndexed { index, command -> index to command } + macroBodies)
+                .map { (index, command) -> index to command.removePrefix("\$") }.filter { it.second.startsWith("tellraw @a ") }
+            assertEquals(10, emitted.size)
+            val parameters = setOf("s", "n", "erased", "payload").map { "stack_frame[0].$it" }.toSet()
+            val copy = Regex("data modify storage mcfpp:system (\\S+) set from storage mcfpp:system (\\S+)")
+            fun origin(path: String, before: Int): String {
+                var current = path
+                var limit = before
+                while (current !in parameters) {
+                    val index = commands.take(limit).indexOfLast { copy.matchEntire(it)?.groupValues?.get(1) == current }
+                    assertTrue(index >= 0, "No preceding copy prepares $current for $path")
+                    current = copy.matchEntire(commands[index])!!.groupValues[2]
+                    limit = index
+                }
+                return current
+            }
+            val nbtOrigins = arrayListOf<String>()
+            val components = emitted.flatMap { (index, command) ->
+                val payload = com.alibaba.fastjson2.JSON.parse(command.removePrefix("tellraw @a "))
+                val parts = if (payload is com.alibaba.fastjson2.JSONArray) payload.map { it as com.alibaba.fastjson2.JSONObject }
+                else listOf(payload as com.alibaba.fastjson2.JSONObject)
+                parts.filter { it.getString("type") == "nbt" }.forEach { component ->
+                    assertEquals("mcfpp:system", component.getString("storage"))
+                    assertFalse(component.getBooleanValue("interpret"))
+                    nbtOrigins.add(origin(component.getString("nbt"), index))
+                }
+                parts
+            }
+            assertEquals(2, components.count { it.getString("type") == "score" })
+            assertEquals(parameters, nbtOrigins.toSet())
+            assertEquals(4, nbtOrigins.size)
+            val plain = components.filter { it.getString("type") == "text" }.map { it.getString("text") }
+            assertTrue("styled" in plain)
+            assertTrue("quote \" slash \\" in plain)
+            assertTrue(plain.any { it.startsWith("[") && Tag.toNBT(it) == Tag.toNBT("[2,3]") })
+            assertTrue(plain.any { it.startsWith("{") && Tag.toNBT(it) == Tag.toNBT("{value:4}") })
+            assertFalse((commands + macroBodies.map { it.second }).any { "TODO" in it })
+        }
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

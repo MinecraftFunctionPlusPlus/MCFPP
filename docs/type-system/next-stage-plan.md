@@ -1,4 +1,4 @@
-# 下一阶段：迁移 System print 原生入口（阶段 104）
+# 下一阶段：delegated-int 模板基础（阶段 105）
 
 阶段87普通值位置type拒绝规则继续生效。阶段88–103完成受测集合、数值、文本转换/拼接、predicate及StdCommands受测void入口的限定迁移；当前库格式MCFL32。whole17仍未完成。
 
@@ -42,11 +42,15 @@ PlainChatComponent纯文本使用Fastjson2 `JSON.toJSONString` 编码单个字�
 
 source/fresh fixture验证DamageType初始化为 `minecraft:generic`、damage宏的参数准备与调用顺序，以及旧目标下direct-context动态float拒绝；常量沿现有编码路径。标准库和Cache联合回归成功，MCFL32、三份资源同hash。没有验证world或float执行；详见verification.md。
 
-### 阶段 104 计划：System print 原生入口
+### 阶段 104：System print 原生入口（已限定验证）
 
-将System九种print语言入口接入单context：text、string、any、int、list、dict、NBT、DTO、bool；Java方法采用唯一名 `printText/printString/printAny/printInt/printList/printDict/printNbt/printObject/printBool`，`sys.mcfpp`显式绑定九项。`NativePrintOperations`按现有组件发射整个 `buildMacroFunction()` 数组。未知any使用来源编码NBT，不反射或猜测类型；DTO移除TODO输出占位，删除无外部调用的 `printVar`。预计MCFL33，一个source/fresh导出fixture及必要Cache回归与标准库重建；不模拟world、不扩fullcheck/server。
+九种print语言入口已接入单context；`NativePrintOperations`按既有组件导出，合法 `list<*>`/`dict<*>` 使用native pattern桥接和闭合pattern codec。DTO输出TODO占位与无外部调用的 `printVar` 已删除。MCFL33；分轮验证及边界见verification.md。最终仅print fixture复查通过，Cache仅首轮通过，不代表最终joint2全绿。未验证macro/world执行、frame清理或tellraw渲染。
 
-阶段88–103详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL32。
+### 阶段 105 计划：delegated-int 模板基础
+
+验证 `data Seconds as int`：未知普通int构造参数、typed copy与 `as int` 共享Place视图并保持读写一致。使用一个source/fresh实际磁盘fixture检查值4/9/494与frame0，同时修复specialized type构造身份、ctor参数/dispatch、StorageAccess/snapshot/restore与视图证明，并持久化 `typeAs`。预计需要MCFL34；具体标准库重建和必要回归由实现后的ABI决定。尚未编码或验证，不扩展到Time或其他MNI。
+
+阶段88–104详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL33。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

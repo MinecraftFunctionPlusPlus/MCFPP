@@ -132,6 +132,12 @@ class NativeFunction : Function, Native {
         return returnVar
     }
 
+    override fun buildParamVar() {
+        for (param in normalParams) {
+            if (param.type !is MCFPPNotCompiledGenericType) scope.putVar(param.identifier, param.buildVar())
+        }
+    }
+
     private fun argPass(readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): ArrayList<Var<*>>{
         val list = ArrayList<Var<*>>()
         for (index in readOnlyParams.indices){

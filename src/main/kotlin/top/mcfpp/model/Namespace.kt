@@ -17,6 +17,7 @@ import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPGenericParamType
 import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
+import top.mcfpp.type.MCFPPNotCompiledGenericType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper.splitMNIParam
 import top.mcfpp.util.StringHelper.splitNamespaceID
@@ -70,6 +71,7 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
     private fun resolveFunction(f: Function){
         for (np in f.normalParams){
             np.type.tryResolve()
+            if (f is NativeFunction && np.type is MCFPPNotCompiledGenericType) continue
             f.scope.putVar(np.identifier, np.buildVar())
         }
         if(f is GenericFunction){

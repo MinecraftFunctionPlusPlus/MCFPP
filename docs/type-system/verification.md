@@ -2,7 +2,25 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 阶段 103：damage void 原生入口（已限定验证）
+## 阶段 104：System print 原生入口（已限定验证）
+
+九种print入口（text/string/any/int/list/dict/NBT/DTO/bool）接入单context，合法 `list<*>`/`dict<*>` 通过既有native pattern桥接；闭合pattern codec不实例化ScopeVar。修复了dict wildcard解析遗漏return及stdlib缓存中的KClass恢复问题，并删除 `printVar` 与DTO输出TODO占位。
+
+分轮验证：stdlib1因两处grammar问题失败8s；stdlib2因dict wildcard返回缺失失败9s；stdlib3成功6s。joint首次在test编译期因错误的 `getFunction` 调用失败11s，无worker/XML；修正后final2的worker217失败11s，fixture读取stdlib缓存时KClass崩溃，未产生producer Project总数；stdlib4成功10s。final3 worker218失败21s，producer4/9119，失败于pattern scope `buildVar`，未到磁盘断言；stdlib5成功14s。final4 worker219失败24s，producer0/9119，source命令断言对参数 `s` 的NBT路径要求过严，未进入consumer。final5仅复查fixture：worker220正常、exit0、BUILD SUCCESSFUL in15s，fresh XML `2026-10-06T22:48:46.728Z` 为1/0/0/0；source0/9119、fresh consumer0/9120。source实际检查10个tellraw：int/bool为score，string/NBT/any/payload为NBT，其余为plain JSON文本；consumer成功导出main、payload初始化、Box.observe及Box初始化函数，实际模型与命令断言通过。没有ScoreCommandExecutor，未断言返回值/frame清理；无macro/world执行或渲染验证。Cache只在首轮独立通过，未复跑；不称最终联合2项全绿。MCFL33，source/resource/build索引三份bin均285692 bytes、SHA256 `D9185309EF9D513D04D234E8FE7D22DA837045F01668A97D1D671622A1951B63`，raw header `4c46434d21000000`。无fullcheck/server；whole17仍未完成。
+
+### 阶段 104 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 区分compile失败、stdlib缓存崩溃、source断言失败和最终单fixture通过。 |
+| 完整性 | 3/5 | 九入口ABI与受测导出路径完成；其他MNI、macro/world执行和whole17未完成。 |
+| 清晰性 | 4/5 | 明确source tellraw检查不等于执行器或世界渲染。 |
+| 可执行性 | 4/5 | 阶段105限定delegated-int模板字段和实际库往返。 |
+| 简洁性 | 4/5 | 按轮次保留必要失败边界与最终证据。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 历史必要检查：damage void 原生入口（阶段 103）
 
 迁移四个damage void接口至显式context，避免旧Java primitive-float、`DamageType`及selector（实际为 `SelectorVar`）签名不匹配；DamageType实际是ResourceID data。语言identifier和默认语义保留。动态float使用现有 `FloatProviders.enabled` 能力边界；未建新浮点引擎。
 

@@ -5,7 +5,7 @@
 
 ## 当前规则（截至2026-10-07，Asia/Shanghai）
 
-用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–92完成受测集合与数值算术迁移，阶段93迁移ConversionData数值转换入口，阶段94迁移toText入口，阶段95改为显式Java方法名引用，阶段96接入text与拼接，阶段97统一String/NBT的toText入口，阶段98恢复T! text快照与即时拼接，阶段99迁移DataObjectData.toText，阶段100转义PlainChatComponent纯文本，阶段101迁移LootTablePredicateData两个谓词入口，阶段102迁移受测StdCommands void入口，阶段103迁移四个damage void入口；当前MCFL32，whole17未完成。
+用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–92完成受测集合与数值算术迁移，阶段93–104按验证记录接入转换、文本、谓词、命令及System print受测入口；当前MCFL33，whole17未完成。
 
 ## 当前已接入
 
@@ -47,7 +47,7 @@
 
 阶段103：四个damage void入口迁入显式context，保留语言标识及默认语义，处理ResourceID DamageType与SelectorVar签名差异。动态float受现有 `FloatProviders.enabled` 限制；不新增浮点引擎。damage fixture与Cache回归均通过，source/fresh生成宏及MCFL32资源已验证；未验证world/float执行。详细边界见verification.md。
 
-阶段104计划迁移System九种print语言入口；其余历史边界与下一阶段方案见next-stage-plan.md。
+阶段104迁移System九种print语言入口并完成限定验证；最终fixture复查通过，Cache仅首轮通过，未验证macro/world执行或tellraw渲染。当前MCFL33；下一阶段为delegated-int模板字段基础，详见next-stage-plan.md。
 
 重构不要求兼容旧 `.mcfpp` 写法；显式引用新旧语法无需并行保留。
 
