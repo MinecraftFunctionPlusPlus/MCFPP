@@ -63,13 +63,11 @@ class MCFPPConcreteExprVisitor(
     @Override
     override fun visitExpression(ctx: mcfppParser.ExpressionContext): Var<*>? = withCompilationContext(ctx) {
         Function.nullFunction.run {
-            if(ctx.primary() != null){
-                currSelector = null
-                return@withCompilationContext visitPrimary(ctx.primary())
-            }else{
-                currSelector = null
-                return@withCompilationContext visitCommonBinaryOperatorExpression(ctx.commonBinaryOperatorExpression())
-            }
+            currSelector = null
+            val result = if(ctx.primary() != null) visitPrimary(ctx.primary())
+                else visitCommonBinaryOperatorExpression(ctx.commonBinaryOperatorExpression())
+            return@withCompilationContext if (result is StaticMemberView && result.value is MCFPPType)
+                MCFPPTypeVar(result.value as MCFPPType) else result
         }
     }
 
@@ -239,6 +237,10 @@ class MCFPPConcreteExprVisitor(
             }else{
                 currSelector = StaticMemberView(type)
             }
+        }
+        val initial = currSelector
+        if (ctx.selector().isNotEmpty() && initial is MCFPPTypeVar) {
+            currSelector = StaticMemberView(initial.value)
         }
         for (selector in ctx.selector()){
             if(currSelector == null) return null

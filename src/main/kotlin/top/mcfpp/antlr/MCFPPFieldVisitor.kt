@@ -555,7 +555,8 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             if (it.singleTemplateFieldType() != null) {
                 val type = MCFPPType.parseFromContextNotNull(it.singleTemplateFieldType().type(), typeScope)
                 if(!isInObject){
-                    type.build(ctx.Identifier().text).apply {
+                    (if (type is MCFPPDataTemplateType) type.buildUnConcrete(ctx.Identifier().text)
+                        else type.build(ctx.Identifier().text)).apply {
                         nullable = it.singleTemplateFieldType().QUEST() != null
                     }
                 }else{

@@ -227,6 +227,29 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
         internal fun builtinTypesById(): Map<TypeId, MCFPPType> =
             typeCache.values.filter { it.typeId is TypeId.Builtin }.associateBy { it.typeId }
 
+        internal fun resolveTypeId(id: TypeId): MCFPPType? = when (id) {
+            is TypeId.Builtin -> builtinTypesById()[id]
+                ?: MCFPPPrivateType.Wildcard.takeIf { it.typeId == id }
+            is TypeId.Declaration -> {
+                val scope = GlobalScope.getUnsolvedImportNamespace(id.namespace)?.scope
+                val declaration = when (id.kind) {
+                    "template" -> scope?.getTemplate(id.name)
+                    "interface" -> scope?.getInterface(id.name)
+                    "object" -> scope?.getObject(id.name)
+                    "enum" -> scope?.getEnum(id.name)
+                    else -> null
+                }
+                declaration?.getType()?.takeIf { it.typeId == id }
+            }
+            is TypeId.Applied -> {
+                val constructor = id.constructor as? TypeId.Builtin
+                val factory = constructor?.let { genericTypeCache[it.key] }
+                val argument = id.arguments.singleOrNull()?.let(::resolveTypeId)
+                if (factory != null && argument != null) factory(argument) else null
+            }
+            else -> null
+        }
+
         private fun resolveBareTemplateType(type: MCFPPType?): MCFPPType? {
             val template = (type as? MCFPPDataTemplateType)?.template
             return if (template is top.mcfpp.model.compound.GenericDataTemplate)

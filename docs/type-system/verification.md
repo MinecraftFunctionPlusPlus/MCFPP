@@ -1,8 +1,18 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段70类型表达式声明作用域限定验证通过：36个不同用例跨轮各自通过（29+Logic6+最终1），非一次联合36或最终7绿；提交记录见Git历史。MCFL17、`bin.mclib` 289989 bytes未变，本轮无stdlib/fullcheck/实际Minecraft服务端。阶段69提交`10267379e30bd43af6c38bcd7e6a673d195a6102`。阶段71尚未实现或测试；最近完整检查仍属于`72dc557`的346项，整个17项迁移仍未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段71声明/容器类型值限定验证通过：6个不同用例跨轮各自通过（初轮5+新71方法1），最终仅必要2项复查，非最终联合6。提交记录见Git历史；阶段70提交`1d593d19c71f5c42a3adb4aaf0e2dbdaae5c1b16`。MCFL17、`bin.mclib` 289989 bytes未变，无stdlib/fullcheck/实际Minecraft服务端。阶段72静态类型集合尚未实现或测试；最近完整检查仍为`72dc557`的346项，整个17项迁移仍未完成。
 
-## 最新必要检查：类型表达式声明作用域（阶段 70）
+## 最新必要检查：声明/容器类型值身份（阶段 71）
+
+阶段71四个生产文件ConcreteExprVisitor、MCFPPType、MCFPPGenericDataTemplateType、FieldVisitor及一个fixture完成限定类型值路径。Concrete在visitExpression统一出口归一最终类型StaticMemberView，裸primary也覆盖；Meta带selector时转回StaticMemberView保留静态成员选择。resolveTypeId仅支持builtin/Wildcard、完整ID校验的Declaration及既有四种单参数Applied工厂；generic type只剥顶层Typed链后的TypeValue并注册已有types map。普通typed MCFPPDataTemplateType字段以unknown buildUnConcrete登记，其他类型/T!仍原build，真实receiver沿既有codec默认，shape校验保留。wire/layout/签名schema未改，MCFL17/bin289989未变，无stdlib/fullcheck/服务器。
+
+新fixture的LeafAlias/Leaf/list<int>在source及fresh consumer字段、constructor、read和自由函数参数full ID/canonical断言及磁盘4/9/7/frame0全部到达；旧70模型与磁盘4/6/8/bool1/frame0亦复查通过。producer两次0 errors/0 warnings，consumer两次0 errors/已知9119 warnings。
+
+日志前缀`mcfpp-generic-type-value-identity`，目录F:/DevCache/.codex/runtime。`-red.log` fresh XML `2026-10-06T05:56:12.123Z` 1fail，producer5 errors，worker130正常finish，BUILD FAILED in6s；裸Leaf/alias快捷primary未成为类型值。初次`-final.log`联合6项LibFieldAccess3 XML `06:02:49.065Z` 2绿1红、Cache3 `06:02:55.136Z` 3绿，总5/6，producer仍5 errors；worker131正常，BUILD FAILED in24s。归一移至Expression后`-expression-final.log`单1 XML `06:12:21.301Z` producer22 errors/0 warnings，worker132正常，BUILD FAILED in7s：晚声明Leaf默认{}先被FieldVisitor冻结，Leaf完成后clone结构校验失败，尚未进入consumer。失败轮helper仍尝试输出debug/index，不能写成未生成文件。
+
+最终`-field-final.log` XML `2026-10-06T06:18:57.009Z` tests2、failures/errors/skips0，worker133正常finish，Gradle exit0/BUILD SUCCESSFUL in15s。最终是必要2项复查，非最终联合6；首轮5绿+新71方法1=6个不同用例跨轮各自通过，旧70在最终2中复查不额外计成第7个。阶段70提交`1d593d19c71f5c42a3adb4aaf0e2dbdaae5c1b16`；阶段71提交记录见Git历史。普通visitor命名类型值/list<type>、Sequence/Record递归snapshot、Concrete known index留阶段72；Union/Vector/Specialized/Selector/Opaque及全集、object/interface未验。
+
+## 历史必要检查：类型表达式声明作用域（阶段 70）
 
 六个生产文件ConcreteExprVisitor、MCFPPType、Function、FieldVisitor、ImVisitor、DataTemplate与一个fixture完成限定纵向路径。类型解析、readonly表达式及bucket/NBT/container/union/!递归透传显式lookup scope和真实词法caller；FunctionScope checked lookup保留raw null屏蔽，其他IScopeWithType不假设有vars、不回退caller.vars、不创建fake Function。Concrete七处binary运算符索引改为`ctx.op[i-1]`。ImVisitor七处whole-scope控制流转换共用helper，跳过CompilerOnly及无runtime表示的值，保留trackLost/barrier；普通赋值及显式dynamic转换约束不变。DataTemplate两个结构检查仅排除isStatic，保留真实字段类型校验和各自原nullable规则。
 
@@ -10,7 +20,7 @@ fixture以caller的T=bool、N=90影子验证Envelope<Int,2>/Bool4声明绑定，
 
 `mcfpp-generic-type-declaration-scope-red.log`首次在N不完整及binary op索引越界处fatal，worker异常退出，无fresh XML；旧`04:46:28` XML不计为阶段70有效assert红测。`-final.log`联合30项29过1失败，exit1/1m12s：LibFieldAccess9 XML `2026-10-06T05:21:31.442Z`新方法因TypeVar.toDynamic NotImplemented失败；LibMemberAccess3 `05:21:46.932Z`、ConstructorExecution7 `05:21:28.434Z`、SpecializationPolicy11 `05:21:50.247Z`全绿。
 
-`-control-final.log`必要7项，正常worker、exit1/12s：Logic6 XML `05:31:50.465Z`全绿，新方法XML `05:31:47.979Z`失败，producer96 errors源于结构检查误把静态T/N要求为运行时字段。`-payload-final.log`最终仅复查该方法：XML `2026-10-06T05:40:52.111Z`，1/0/0/0，worker129正常finish，exit0/BUILD SUCCESSFUL in16s。29+Logic6+最终1=36个不同用例跨轮各自通过，不是联合36项或最终7项全绿。MCFL17/bin289989完全未变，未重建stdlib，未运行fullcheck/服务器。阶段69提交`10267379e30bd43af6c38bcd7e6a673d195a6102`；阶段70提交见Git历史。阶段71 Declaration/Applied TypeValue恢复尚未实现或测试。
+`-control-final.log`必要7项，正常worker、exit1/12s：Logic6 XML `05:31:50.465Z`全绿，新方法XML `05:31:47.979Z`失败，producer96 errors源于结构检查误把静态T/N要求为运行时字段。`-payload-final.log`最终仅复查该方法：XML `2026-10-06T05:40:52.111Z`，1/0/0/0，worker129正常finish，exit0/BUILD SUCCESSFUL in16s。29+Logic6+最终1=36个不同用例跨轮各自通过，不是联合36项或最终7项全绿。MCFL17/bin289989完全未变，未重建stdlib，未运行fullcheck/服务器。阶段69提交`10267379e30bd43af6c38bcd7e6a673d195a6102`；阶段70提交`1d593d19c71f5c42a3adb4aaf0e2dbdaae5c1b16`；当时阶段71尚未实现，现限定结果见最新记录。
 
 ## 历史必要检查：显式 generic 类型与跨库 canonical 特化（阶段 69）
 

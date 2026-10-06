@@ -8,6 +8,7 @@ import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.analysis.ValueSnapshot
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.MCInt
+import top.mcfpp.core.lang.MCFPPTypeVar
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.io.DatapackCreator
 import top.mcfpp.io.LibBinFormat
@@ -21,6 +22,7 @@ import top.mcfpp.test.util.MCFPPStringTest
 import top.mcfpp.test.util.ScoreCommandExecutor
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPDataTemplateType
+import top.mcfpp.type.MCFPPListType
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.*
@@ -644,6 +646,105 @@ class LibFieldAccessTest {
         assertEquals(6, machine.read(main.scope.getVar("intAmount") as MCInt))
         assertEquals(8, machine.read(main.scope.getVar("flagAmount") as MCInt))
         assertEquals(1, machine.values.getValue("#generic_bool result"))
+    }
+
+    @Test fun frozenDeclarationAndContainerTypeArgumentsRestoreCanonicalTypes() = withLibrary { output ->
+        write("""
+            namespace fixture.fields;
+            typealias Leaf as LeafAlias;
+            func readLeaf(arg as Holder<LeafAlias>)->int { return arg.read().read(); }
+            func readList(arg as Holder<list<int>>)->int { var values=arg.read(); return values[0]; }
+            data Leaf {
+                private value as int;
+                constructor(v as int){ this.value=v; }
+                func read()->int { return this.value; }
+            }
+            data Holder<T as type> {
+                private value as T;
+                constructor(v as T){ this.value=v; }
+                func read()->T { return this.value; }
+            }
+            func main(){
+                var first=Holder<LeafAlias>(Leaf(4));
+                var second=Holder<Leaf>(Leaf(9));
+                var listed=Holder<list<int>>([7]);
+                dynamic var firstResult=readLeaf(first); dynamic var secondResult=readLeaf(second);
+                dynamic var listResult=readList(listed);
+            }
+        """, output)
+        val sourceScope = GlobalScope.localNamespaces.getValue("fixture.fields").scope
+        val sourceLeaf = sourceScope.getTemplate("Leaf")!!
+        val sourcePrototype = assertIs<GenericDataTemplate>(sourceScope.getTemplate("Holder"))
+        val sourceMain = sourceScope.functions.getValue("main").single()
+        val sourceFirst = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(sourceMain.scope.getVar("first")).templateType)
+        val sourceSecond = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(sourceMain.scope.getVar("second")).templateType)
+        val sourceListed = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(sourceMain.scope.getVar("listed")).templateType)
+        assertSame(sourceFirst, sourceSecond)
+        assertNotSame(sourceFirst, sourceListed)
+        val sourceBoundLeaf = assertIs<MCFPPTypeVar>(sourceFirst.scope.getVar("T")).value
+        assertSame(sourceLeaf, assertIs<MCFPPDataTemplateType>(sourceBoundLeaf).template)
+        for (type in listOf(sourceFirst.scope.getVar("value")!!.type,
+            sourceFirst.constructors.single().normalParams.single().type,
+            sourceFirst.scope.functions.getValue("read").single().returnType)) {
+            assertEquals(sourceLeaf.getType().typeId, type.typeId)
+            assertSame(sourceLeaf, assertIs<MCFPPDataTemplateType>(type).template)
+        }
+        val sourceListType = assertIs<MCFPPListType>(assertIs<MCFPPTypeVar>(sourceListed.scope.getVar("T")).value)
+        assertEquals(MCFPPBaseType.Int, sourceListType.generic.single())
+        for (type in listOf(sourceListed.scope.getVar("value")!!.type,
+            sourceListed.constructors.single().normalParams.single().type,
+            sourceListed.scope.functions.getValue("read").single().returnType)) {
+            assertEquals(sourceListType.typeId, type.typeId)
+        }
+        assertSame(sourceFirst, assertIs<MCFPPDataTemplateType>(sourceScope.functions.getValue("readLeaf").single().normalParams.single().type).template)
+        assertSame(sourceListed, assertIs<MCFPPDataTemplateType>(sourceScope.functions.getValue("readList").single().normalParams.single().type).template)
+        val sourceLeafHolderId = sourceFirst.getType().typeId
+        val sourceListHolderId = sourceListed.getType().typeId
+        val main = consume("""
+            import fixture.fields:*;
+            func main(){
+                var listed=Holder<list<int>>([7]);
+                var second=Holder<Leaf>(Leaf(9));
+                var first=Holder<LeafAlias>(Leaf(4));
+                dynamic var firstResult=readLeaf(first); dynamic var secondResult=readLeaf(second);
+                dynamic var listResult=readList(listed);
+            }
+        """, output)
+        assertEquals(0, Project.errorCount)
+        val restoredScope = GlobalScope.libNamespaces.getValue("fixture.fields").scope
+        val leaf = restoredScope.getTemplate("Leaf")!!
+        val prototype = assertIs<GenericDataTemplate>(restoredScope.getTemplate("Holder"))
+        assertNotSame(sourceLeaf, leaf)
+        assertNotSame(sourcePrototype, prototype)
+        val first = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("first")).templateType)
+        val second = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("second")).templateType)
+        val listed = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("listed")).templateType)
+        assertSame(first, second)
+        assertNotSame(first, listed)
+        assertSame(prototype, first.originTemplate)
+        assertSame(prototype, listed.originTemplate)
+        assertEquals(sourceLeafHolderId, first.getType().typeId)
+        assertEquals(sourceListHolderId, listed.getType().typeId)
+        assertSame(leaf, assertIs<MCFPPDataTemplateType>(assertIs<MCFPPTypeVar>(first.scope.getVar("T")).value).template)
+        for (type in listOf(first.scope.getVar("value")!!.type,
+            first.constructors.single().normalParams.single().type,
+            first.scope.functions.getValue("read").single().returnType)) {
+            assertEquals(leaf.getType().typeId, type.typeId)
+            assertSame(leaf, assertIs<MCFPPDataTemplateType>(type).template)
+        }
+        val listType = assertIs<MCFPPListType>(assertIs<MCFPPTypeVar>(listed.scope.getVar("T")).value)
+        assertEquals(MCFPPBaseType.Int, listType.generic.single())
+        for (type in listOf(listed.scope.getVar("value")!!.type,
+            listed.constructors.single().normalParams.single().type,
+            listed.scope.functions.getValue("read").single().returnType)) {
+            assertEquals(listType.typeId, type.typeId)
+        }
+        assertSame(first, assertIs<MCFPPDataTemplateType>(restoredScope.functions.getValue("readLeaf").single().normalParams.single().type).template)
+        assertSame(listed, assertIs<MCFPPDataTemplateType>(restoredScope.functions.getValue("readList").single().normalParams.single().type).template)
+        val machine = execute(main, output)
+        assertEquals(4, machine.read(main.scope.getVar("firstResult") as MCInt))
+        assertEquals(9, machine.read(main.scope.getVar("secondResult") as MCInt))
+        assertEquals(7, machine.read(main.scope.getVar("listResult") as MCInt))
     }
 
     private fun write(source: String, output: Path) {
