@@ -24,8 +24,9 @@ class MCFPPNBTType {
 
         override val typeId: TypeId = TypeId.Builtin("MCFPPNBTType.NBT")
 
-        override val objectData by lazy {
+        override val instanceData by lazy {
             CompoundData("nbt","mcfpp").apply {
+                commonType = NBT
                 extends(MCFPPBaseType.Any.instanceData)
                 injectedBy(NBTBasedDataData::class.java)
             }
@@ -33,6 +34,7 @@ class MCFPPNBTType {
 
         override val concreteInstanceData by lazy {
             CompoundData("nbt","mcfpp").apply {
+                commonType = NBT
                 extends(MCFPPBaseType.Any.instanceData)
                 injectedBy(NBTBasedDataConcreteData::class.java)
             }

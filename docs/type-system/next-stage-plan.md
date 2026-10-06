@@ -1,18 +1,18 @@
-# 下一阶段：迁移 toText 原生入口（阶段 94）
+# 下一阶段：匹配显式原生转换的方法名（阶段 95）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–93完成了受测集合和数值入口的限定迁移；当前库格式MCFL25。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–94完成受测集合、数值及toText入口的限定迁移；当前库格式MCFL26。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
-阶段93已将ConversionData的49个静态转换入口接入显式context。nullable receiver、`withArguments`、唯一Java名与原语言identifier alias均按指定路径验证；最终fixture仅单项复查，分轮证据见verification.md。
+阶段93已将ConversionData的49个静态转换入口接入显式context；阶段94七个toText入口限定验证通过。两阶段的跨轮结果见verification.md。
 
-### 阶段94计划：七个 toText 原生入口
+### 阶段 94：toText 原生入口（已限定验证）
 
-迁移七个方法：MCIntData 1个，MCString/MCStringConcrete各1个，NBT/Concrete各1个，Any/Concrete各1个；普通source可达5个Java方法并覆盖int的两种状态。两个Any方法不改变unknown-any规则。实现共用小型typed Kotlin领域helper，保留原注解与effects；不改变文本载荷/聊天渲染语义。
+七个入口使用单receiver context和typed Kotlin helper；普通source可达五个Java方法并覆盖int两种状态，Any两方法没有source覆盖。移除MCString的TODO member lookup，接通String runtime/Concrete实例metadata并将NBT metadata放回instanceData。测试覆盖source与fresh consumer磁盘payload、score/NBT及frame0，不代表聊天渲染或跨帧寿命。
 
-原方法签名变化需MCFL25→26并重建stdlib。必要fixture为普通Box source/fresh真实磁盘调用，在pop前检查6个text/JSON-NBT载荷及score/NBT字段、返回7与frame0；该用例只验证payload，不代表聊天渲染或跨帧寿命。另跑旧/未知缓存格式回归。阶段94尚未实现或验证。
+用户已明确不要求兼容旧 `.mcfpp` 显式Java写法。阶段95应将 `conversions.mcfpp` 的49个native RHS改为真实Java方法名 `toTargetFromSource`，并把LibFieldAccessTest中的 `decodeByte` 显式引用改为 `toIntFromByte`；不得再用FieldVisitor的语言identifier alias回退匹配Java成员。Namespace/CompoundData继续用annotation identifier处理正常语言重载，不增加registry或schema字段。MCFL26不变，但标准库源码改变后仍需重建stdlib；只复跑既有conversion fixture source/fresh定向验证。
 
-阶段88–93详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL25。
+阶段88–94详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL26。阶段96 text及更广MNI迁移后续另行规划，不并入95。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

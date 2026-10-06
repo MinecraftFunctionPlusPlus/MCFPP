@@ -4,7 +4,7 @@
 
 ## 当前进度
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段93已完成限定验证；提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段94已完成限定验证，MCFL26；提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。用户明确无需兼容旧 `.mcfpp` 显式Java方法引用。
 
 ### 用户最新规则（2026-10-06）
 
@@ -39,6 +39,24 @@ ConversionData的49个静态入口（36数值转换、13个toNBT）迁入context
 | 清晰性 | 4/5 | 区分跨轮各自通过与最终单fixture复查，明确受测路径与未实现转换的诊断边界。 |
 | 可执行性 | 4/5 | 阶段94七个toText方法、MCFL26及必要fixture已限定。 |
 | 简洁性 | 4/5 | 当前记录聚焦阶段93结果与范围。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+### 阶段 94：toText 原生入口（已限定验证）
+
+七个toText入口接入单receiver context和 `NativeTextOperations`，source覆盖五个Java方法及int两种状态；Any两项仍无source覆盖。移除 `MCString.getMemberFunction` 的TODO override，继承Var的实例成员/签名查找；String runtime/Concrete lazy `instanceData` 与NBT `instanceData`/`commonType`接通，NBT不再误用 `objectData`。MCFL25→26。
+
+stdlib首轮 `mcfpp-native-text-context-stdlib.log` 重建成功，Project0/0，但291364-byte产物属metadata修复前中间版本。首轮final Cache XML `2026-10-06T20:03:51.866Z`通过，text fixture `20:03:52.582Z`失败于 `MCString.getMemberFunction` 的NotImplementedError；删除TODO后final2 XML `20:07:52.114Z`仍有3个 `Function toText<>() not defined` producer errors。metadata修复后stdlib2成功12s、Project0/0；final3 worker199 exit0/BUILD SUCCESSFUL in18s，XML `20:12:46.049Z`为1/0/0/0，source0/9119 warnings、fresh0/9120。fresh consumer真实磁盘payload、score/NBT结果7和frame0通过；Cache及fixture两项跨轮各自通过，最终仅fixture复查。最终source/build资源/build索引均291070 bytes、MCFL26、SHA256 `9ED46C95796CBADE0007D246E630FF094F9018B03772AB57B145B98E412EEAE5`。未验证聊天渲染或跨帧寿命，无fullcheck/server。
+
+### 阶段 94 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 区分TODO查找、producer缺toText及metadata修复后的source/fresh磁盘结果。 |
+| 完整性 | 3/5 | 七个入口完成ABI迁移，其中五个有source/fresh覆盖，Any两个无source覆盖；其他MNI与whole17仍未完成。 |
+| 清晰性 | 4/5 | 明确记录final3是单fixture复查，两项跨轮各自通过。 |
+| 可执行性 | 4/5 | 阶段95明确改用Java真实方法名并保留语言层identifier重载。 |
+| 简洁性 | 4/5 | 只更新当前阶段与下一步，保留此前历史。 |
 
 平均3.8/5，whole17完整性仍为3/5。
 

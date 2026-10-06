@@ -57,15 +57,6 @@ open class MCString : NBTBasedData {
         TODO("Not yet implemented")
     }
 
-    override fun getMemberFunction(
-        key: String,
-        readOnlyArgs: List<Var<*>>,
-        normalArgs: List<Var<*>>,
-        accessModifier: Member.AccessModifier
-    ): Pair<Function, Boolean> {
-        TODO("Not yet implemented")
-    }
-
     override fun doAssignedBy(b: Var<*>): MCString {
         when (b) {
             is MCString -> return assignCommand(b)

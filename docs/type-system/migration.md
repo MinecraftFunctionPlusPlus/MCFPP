@@ -5,7 +5,7 @@
 
 ## 当前规则（截至2026-10-07，Asia/Shanghai）
 
-用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。阶段87已实现并限定验证；阶段88–92完成受测集合与数值算术迁移，阶段93迁移ConversionData数值转换入口，当前MCFL25；whole17未完成。
+用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。用户无需兼容旧 `.mcfpp` 显式Java方法引用。阶段87已实现并限定验证；阶段88–92完成受测集合与数值算术迁移，阶段93迁移ConversionData数值转换入口，阶段94迁移toText入口；当前MCFL26，whole17未完成。
 
 ## 当前已接入
 
@@ -25,7 +25,9 @@
 
 阶段92：删除四个byte/short Java类中的44个已拒绝算术注册及 `MCFPPNBTType.injectedBy` 的4处注册；不涉及没有这些注册的long/double。保留精确格式、转换和统一拒绝诊断。MCFL23→24，stdlib Project0/0，三份bin292301 bytes且SHA256一致。Conversion、TypeKernel、CacheFormat三个不同用例各自通过；TypeKernel五个预期负例分别报告拒绝错误。下一阶段93迁移ConversionData的49个数值转换入口。
 
-阶段93：ConversionData的49个静态入口（36个numeric conversions及13个toNBT）接入显式context，支持nullable receiver/`withArguments`，按declaredVoid与static构造NF；唯一Java名通过原MNIFunction.identifier保留语言别名，Namespace/CompoundData/FieldVisitor匹配effective identifier，`NumericConversions`发布实际结果引用；迁移49个ABI不表示所有转换均可执行，既有unsupported诊断保持。MCFL24→25，stdlib0/0，三份291070-byte资源SHA256为 `D41A947D59084FA3A36D66B940988FF4CD19CA087D54947E5B336B1DADE76832`。Cache、ConversionIR、新fixture三个不同用例跨轮各过；最终仅复查fixture，不是联合3项。String返回NBT的错误引用已通过typed view修复，保留真实payload/address而不扩隐式转换。磁盘值-1/17/ByteTag 1/`hello`/`{value:7}`、frame0通过。下一阶段94迁移七个toText入口。
+阶段93：ConversionData的49个静态入口（36个numeric conversions及13个toNBT）接入显式context，支持nullable receiver/`withArguments`，按declaredVoid与static构造NF；唯一Java名通过原MNIFunction.identifier保留语言别名，Namespace/CompoundData/FieldVisitor匹配effective identifier，`NumericConversions`发布实际结果引用；迁移49个ABI不表示所有转换均可执行，既有unsupported诊断保持。MCFL24→25，stdlib0/0，三份291070-byte资源SHA256为 `D41A947D59084FA3A36D66B940988FF4CD19CA087D54947E5B336B1DADE76832`。Cache、ConversionIR、新fixture三个不同用例跨轮各过；最终仅复查fixture，不是联合3项。String返回NBT的错误引用已通过typed view修复，保留真实payload/address而不扩隐式转换。磁盘值-1/17/ByteTag 1/`hello`/`{value:7}`、frame0通过。阶段94迁移七个toText入口。
+
+阶段94：七个 `toText` 方法接入单receiver context与 `NativeTextOperations`；源码实际覆盖五个Java方法和int两种状态，两个Any入口无source覆盖。移除 `MCString.getMemberFunction` TODO，恢复Var的实例成员/签名查找；String runtime/Concrete lazy `instanceData` 接通，NBT由错误的 `objectData` 转为 `instanceData` 并使用 `commonType`。MCFL25→26，最终三份291070-byte资源SHA256均为 `9ED46C95796CBADE0007D246E630FF094F9018B03772AB57B145B98E412EEAE5`。Cache与text fixture两个用例跨轮各自通过，final3只复查fixture；source/fresh磁盘payload与返回7/frame0通过。无聊天渲染、跨帧寿命或fullcheck/server验证；whole17仍未完成。
 
 阶段85 source template ABSTRACT/FINAL与object FINAL、compiled final、final继承拒绝及abstract默认ctor跳过已限定验证；两个Info保存final，Kryo声明前缀及early/Unsolved壳同步final。8prod34+/19-加两个fixture110行共9文件144+/19-，另更新标准库资源bin。MCFL18真实wire升级；旧/未知缓存格式拒绝回归通过。stdlib重建14s、compiler0/0、287554 bytes；最终必要联合3全绿，正例source/fresh0errors（fresh9119已知warnings）、磁盘4/9/4/4/frame0及独立模型通过；三种final父负例分别source1/fresh1预期错误，拒绝及父关系正确。无fullcheck/server，whole17未完成。
 
@@ -185,7 +187,7 @@ map 现在只保存一份 entry 列表，布局为 `{entries:[{key:"first",value
 
 ## 库索引
 
-当前库索引采用MCFL格式头与版本25：在保留阶段16的generic kind/readonly绑定与阶段15函数/Property权限后，新增generic类型专用immutable TypeId wire，并包含阶段88–93的原生函数/运算符/转换签名；该generic类型专用serializer只序列化冻结身份，不写其Compiled/prototype/AST/cache或可变实参图；声明Info仍保存body AST和有序RHS。canonical参数与父类恢复延迟到COMPILE；版本24及更早索引要求重新编译。旧浮点用户持久化数据不会自动迁移。
+当前库索引采用MCFL格式头与版本26：在保留阶段16的generic kind/readonly绑定与阶段15函数/Property权限后，新增generic类型专用immutable TypeId wire，并包含阶段88–94的原生函数/运算符/转换及文本签名；该generic类型专用serializer只序列化冻结身份，不写其Compiled/prototype/AST/cache或可变实参图；声明Info仍保存body AST和有序RHS。canonical参数与父类恢复延迟到COMPILE；版本25及更早索引要求重新编译。旧浮点用户持久化数据不会自动迁移。
 集合 IR、形状事实与动态索引的 Location 属于瞬态分析数据；Function.typedIR、runtimeEffect 与 Var.storageBinding 不序列化。MCFL17的generic Type wire仅保存稳定immutable身份；泛型参数/父类canonicalization延迟到COMPILE。该generic类型serializer不写Compiled/prototype/Var或template cache图；声明元数据仍沿既有Info保存body AST和有序RHS。runtime IR与StorageBinding仍为Transient。本次不自动转换用户已有的持久化范围或浮点载荷。
 类型布局、语言签名或 MNI 元数据改变后，运行：
 

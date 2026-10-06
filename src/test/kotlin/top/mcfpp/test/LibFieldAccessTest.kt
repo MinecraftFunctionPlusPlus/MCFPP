@@ -2245,6 +2245,57 @@ class LibFieldAccessTest {
         check(main)
     }
 
+    @Test
+    fun nativeTextMethodsUseReceiverContextAcrossLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = """
+            func main(){
+                var box=Box();
+                dynamic var integerInput=7; dynamic var stringInput="live";
+                dynamic var nbtInput as nbt={value:9} as nbt;
+                dynamic var result=box.observe(integerInput,stringInput,nbtInput);
+            }
+        """
+        write("""
+            namespace fixture.fields;
+            data Box {
+                func observe(v as int,s as string,n as nbt)->int {
+                    dynamic var runtimeInt=v.toText();
+                    dynamic var constantInt=(4).toText();
+                    dynamic var runtimeString=s.toText();
+                    dynamic var constantString=("fixed").toText();
+                    dynamic var runtimeNbt=n.toText();
+                    dynamic var constantNbt=toNBT(3).toText();
+                    /data modify storage fixture:observed runtimeInt set from storage mcfpp:system stack_frame[0].runtimeInt
+                    /data modify storage fixture:observed constantInt set from storage mcfpp:system stack_frame[0].constantInt
+                    /data modify storage fixture:observed runtimeString set from storage mcfpp:system stack_frame[0].runtimeString
+                    /data modify storage fixture:observed constantString set from storage mcfpp:system stack_frame[0].constantString
+                    /data modify storage fixture:observed runtimeNbt set from storage mcfpp:system stack_frame[0].runtimeNbt
+                    /data modify storage fixture:observed constantNbt set from storage mcfpp:system stack_frame[0].constantNbt
+                    return 7;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val machine = execute(main, output)
+            assertEquals(7, machine.read(main.scope.getVar("result") as MCInt))
+            for ((name, value) in listOf("constantInt" to "4", "constantString" to "fixed", "constantNbt" to "3")) {
+                assertEquals(Tag.toNBT("""[{type:"text",text:"$value"}]"""), machine.readNbt("fixture:observed", name))
+            }
+            val scoreName = (machine.readNbt("fixture:observed", "runtimeInt[0].score.name") as top.mcfpp.nbt.tags.primitive.StringTag).value
+            val objective = (machine.readNbt("fixture:observed", "runtimeInt[0].score.objective") as top.mcfpp.nbt.tags.primitive.StringTag).value
+            assertEquals(Tag.toNBT("""[{type:"score",score:{name:"$scoreName",objective:"$objective"}}]"""), machine.readNbt("fixture:observed", "runtimeInt"))
+            assertEquals(7, machine.values.getValue("$scoreName $objective"))
+            for ((name, parameter) in listOf("runtimeString" to "s", "runtimeNbt" to "n")) {
+                assertEquals(Tag.toNBT("""[{type:"nbt",storage:"mcfpp:system",nbt:"stack_frame[0].$parameter",interpret:false}]"""), machine.readNbt("fixture:observed", name))
+            }
+        }
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

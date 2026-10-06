@@ -2,7 +2,27 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 阶段 93：数值转换显式调用上下文（已限定验证）
+## 阶段 94：toText 显式接收者上下文（已限定验证）
+
+七个 toText 入口迁入单 receiver context，并由 `NativeTextOperations` 执行 typed 操作。当前源码覆盖五个 Java 方法，另有 int 的两种状态；两个 Any 入口仍无 source 覆盖。`MCString.getMemberFunction` 的 TODO override 已移除，继承 Var 的运行时/Concrete 实例成员和签名查找；String runtime/Concrete lazy `instanceData` 已接通，NBT 使用 `instanceData` 与 `commonType`，不再错误写入 `objectData`。MCFL25→26。
+
+`mcfpp-native-text-context-stdlib.log`：首轮stdlib成功，Project 0/0；产物291364 bytes、MCFL26、SHA256 `3D351CE4619D1CD631CEA400D2D169043D4DBE8DEBDA76AAF17B52B80A954890`，这是接通type metadata前的中间产物。首轮final worker正常但失败：Cache XML `2026-10-06T20:03:51.866Z` 1/0/0/0；text fixture `20:03:52.582Z` 1项失败，`MCString.getMemberFunction` 抛 `NotImplementedError`。移除TODO后final2 XML `20:07:52.114Z`仍失败，producer有3个 `Function toText<>() not defined` 错误，未到consumer。接通String/NBT实例类型metadata后，`mcfpp-native-text-context-stdlib2.log` 成功12s、Project0/0；final3 worker199 exit0/BUILD SUCCESSFUL in18s，XML `2026-10-06T20:12:46.049Z` 1/0/0/0，source0/9119 warnings、fresh consumer0/9120。consumer实际磁盘检查六个text payload、score与NBT字段，结果7并通过frame0。Cache与text fixture两个不同用例跨轮各自通过，final3仅复查fixture，不是联合2项；没有验证聊天渲染或跨帧寿命，无fullcheck/server。
+
+最终source/build资源/build索引bin均为291070 bytes、MCFL26（raw header `4c46434d1a000000`）、SHA256 `9ED46C95796CBADE0007D246E630FF094F9018B03772AB57B145B98E412EEAE5`。
+
+### 阶段 94 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录了TODO成员查找与实例metadata两轮缺口，以及最终source/fresh磁盘结果和同步MCFL26产物。 |
+| 完整性 | 3/5 | 七个入口完成ABI迁移，其中五个有source/fresh覆盖，Any两个无source覆盖；普通MNI、IR和whole17仍未完成。 |
+| 清晰性 | 4/5 | 区分两轮失败边界、最终单fixture复查与跨轮两个用例各过。 |
+| 可执行性 | 4/5 | 阶段95改为匹配Java实际方法名的显式转换引用，并保留语言重载identifier。 |
+| 简洁性 | 4/5 | 保留历史，只更新阶段94结果与下一阶段范围。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 历史必要检查：数值转换显式调用上下文（阶段 93）
 
 ConversionData的49个静态入口迁入context：36个数值转换与13个 `toNBT` 转换。context支持nullable receiver与 `withArguments`；NF按声明的void/static属性构造，实例调用仍按Var处理。Java唯一方法名配合原MNIFunction.identifier保留语言层重载名，Namespace/CompoundData/FieldVisitor按有效名称解析入口，`NumericConversions` 发布真实结果引用；这只是49个入口的ABI迁移，不宣称所有转换已有执行实现，既有unsupported诊断保持。MCFL24→25。
 

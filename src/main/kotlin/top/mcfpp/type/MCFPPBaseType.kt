@@ -97,6 +97,22 @@ class MCFPPBaseType {
         override val objectData: CompoundData
             get() = MCString.data
 
+        override val instanceData by lazy {
+            CompoundData("string", "mcfpp").apply {
+                commonType = String
+                extends(Any.instanceData)
+                injectedBy(MCStringData::class.java)
+            }
+        }
+
+        override val concreteInstanceData by lazy {
+            CompoundData("string", "mcfpp").apply {
+                commonType = String
+                extends(Any.instanceData)
+                injectedBy(MCStringConcreteData::class.java)
+            }
+        }
+
         override val typeName: kotlin.String
             get() = "string"
 
