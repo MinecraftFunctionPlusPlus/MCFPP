@@ -1,8 +1,16 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段84静态字段/显式constructor限定通过，最终必要联合2全绿，三不同case跨轮各过；source4/9/4/9、fresh9/4/9/4、ordinary7/frame0真实磁盘通过。MCFL17/bin289989/schema未变，无stdlib/fullcheck/server。下一85 abstract/final flags尚未实现/测试；最近完整346项仍为72dc557，whole17未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段85 source/fresh abstract/final标志限定通过，MCFL18标准库287554 bytes重建0errors/0warnings，最终必要联合3全绿。正例source/fresh磁盘4/9/4/4/frame0；三个final父负例各source1个预期错误、fresh1个预期错误/9119已知warnings。无fullcheck/server；下一86 generic父项实际readonly解析待RED/API实现，whole17未完成。
 
-## 最新必要检查：generic object静态字段初始化（阶段 84）
+## 最新必要检查：abstract/final标志持久化（阶段 85）
+
+8prod34+/19-加两个fixture110行共9文件144+/19-，另资源bin更新。source标志/compiled final、ordinary及generic final父拒绝、abstract默认ctor跳过、两Info final及Kryo prefix/early壳已限定接入。MCFL18；不扩TypeAS、实际generic父参数、interface runtime/shape全套或abstract运行时构造。
+
+RED worker170正常FAILED9s，fresh XML2026-10-06T12:31:02.661Z 2fail：positive source3errors/0warnings（abstract标志缺失），negative首Source Child:Closed未拒绝；尚未fresh与后两case。单独stdlib SUCCESS14s、compiler0/0；src/resource、build/stdlib-index、build/resources均header4c46434d12000000、287554 bytes，SHA256 3EE448D21ADA523A2CD08565671A309B865C4DAEC52340AAA0C26E75888038D1。
+
+最终必要联合3 worker171正常exit0/SUCCESS25s：LibFieldAccess XML2026-10-06T12:43:21.888Z 2/0/0/0；LibCacheFormat XML12:43:29.774Z 1/0/0/0。positive source0/0、fresh0/9119，source/fresh实际磁盘4/9/4/4/frame0、abstract/noCtor、Contract绑定int签名、final prototype/compiled及fresh独立模型全部通过；negative三条case各source1/0、fresh1/9119，明确拒绝及父关系通过，不能称负例0errors。旧/未知缓存格式拒绝回归绿。无fullcheck/server；自评4/3/4/4/4平均3.8、whole17未完成；下一86待RED/API实现。
+
+## 历史必要检查：generic object静态字段初始化（阶段 84）
 
 7prod+1fixture共125+/22-：共享对象marker静态root、constructor/字段完成/导出；静态binding/cold read保留标志与完整快照，派生read/write保留parent，避免同名normal参数被替换。显式初始化，不依赖自动load；不验证generic compiler-only字段/直接Kryo object fieldtype。MCFL17/bin289989/schema未变，无stdlib/fullcheck/server。
 

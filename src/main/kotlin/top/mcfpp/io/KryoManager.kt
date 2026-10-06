@@ -34,7 +34,7 @@ object KryoManager {
 
             override fun read(p0: Kryo, p1: Input, p2: Class<out DataTemplate>): DataTemplate {
                 val identity = readIdentity(p1)
-                val template = UnsolvedTemplate(identity.name, identity.namespace, identity.isInterface, identity.isAbstract)
+                val template = UnsolvedTemplate(identity.name, identity.namespace, identity.isInterface, identity.isAbstract, identity.isFinal)
                 // Register before nested reads can refer back: Kryo 5.6.2 README, Serializer references.
                 // https://github.com/EsotericSoftware/kryo/blob/kryo-parent-5.6.2/README.md#serializer-references
                 p0.reference(template)
@@ -66,7 +66,7 @@ object KryoManager {
             @Suppress("UNCHECKED_CAST")
             override fun read(p0: Kryo, p1: Input, p2: Class<out MCFPPDataTemplateType>): MCFPPDataTemplateType {
                 val identity = readIdentity(p1)
-                val template = UnsolvedTemplate(identity.name, identity.namespace, identity.isInterface, identity.isAbstract)
+                val template = UnsolvedTemplate(identity.name, identity.namespace, identity.isInterface, identity.isAbstract, identity.isFinal)
                 val type = MCFPPDataTemplateType(template, arrayListOf())
                 p0.reference(type)
                 template.info = p0.readObject(p1, DataTemplateInfo::class.java)
@@ -102,7 +102,7 @@ object KryoManager {
             @Suppress("UNCHECKED_CAST")
             override fun read(p0: Kryo, p1: Input, p2: Class<out MCFPPObjectDataTemplateType>): MCFPPObjectDataTemplateType {
                 val identity = readIdentity(p1)
-                val template = UnsolvedObjectTemplate(identity.name, identity.namespace, identity.isInterface, identity.isAbstract)
+                val template = UnsolvedObjectTemplate(identity.name, identity.namespace, identity.isInterface, identity.isAbstract, identity.isFinal)
                 val type = MCFPPObjectDataTemplateType(template, arrayListOf())
                 p0.reference(type)
                 template.info = p0.readObject(p1, DataTemplateInfo::class.java)
@@ -140,12 +140,13 @@ object KryoManager {
 
     // Metadata graphs can refer to a DataTemplateInfo while its fields are still being
     // read. Identity is therefore a separate prefix, never read from that partial object.
-    private data class DeclarationIdentity(val name: String, val namespace: String, val isInterface: Boolean, val isAbstract: Boolean)
+    private data class DeclarationIdentity(val name: String, val namespace: String, val isInterface: Boolean, val isAbstract: Boolean, val isFinal: Boolean)
     private fun writeIdentity(output: Output, template: DataTemplate) {
         output.writeString(template.identifier)
         output.writeString(template.namespace)
         output.writeBoolean(template.isInterface)
         output.writeBoolean(template.isAbstract)
+        output.writeBoolean(template.isFinal)
     }
-    private fun readIdentity(input: Input) = DeclarationIdentity(input.readString(), input.readString(), input.readBoolean(), input.readBoolean())
+    private fun readIdentity(input: Input) = DeclarationIdentity(input.readString(), input.readString(), input.readBoolean(), input.readBoolean(), input.readBoolean())
 }

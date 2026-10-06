@@ -85,6 +85,7 @@ open class GenericDataTemplate : DataTemplate {
             when {
                 parent == null -> LogProcessor.error("Undefined template: $name")
                 parent == this -> LogProcessor.error("Infinitive reference: $identifier -> $name")
+                parent.isFinal -> LogProcessor.error("Cannot extends $identifier because it's final")
                 else -> extends(parent)
             }
         }
@@ -140,6 +141,7 @@ open class GenericDataTemplate : DataTemplate {
         template.declarationFile = declarationFile
         template.declarationEnvironment = declarationEnvironment
         template.isAbstract = isAbstract
+        template.isFinal = isFinal
         template.isInterface = isInterface
         template.initialize()
         template.restoreDeclarationEnvironment()

@@ -1782,6 +1782,116 @@ class LibFieldAccessTest {
             assertEquals(expected, machine.read(main.scope.getVar(name) as MCInt))
     }
 
+    @Test fun templateModifiersSurviveLibraryRoundTrip() = withLibrary { output ->
+        write("""
+            namespace fixture.fields;
+            data abstract Base { abstract func read()->int; }
+            data Child : Base {
+                private value as int;
+                constructor(v as int){this.value=v;}
+                override func read()->int{return this.value;}
+            }
+            data abstract Contract<T as type> { abstract func exchange(value as T)->T; }
+            data Box<T as type> {
+                private value as int;
+                constructor(v as int){this.value=v;}
+                func read()->int{return this.value;}
+            }
+            final data Closed {}
+            final data GenericClosed<T as type> {}
+            final object data ClosedObject {}
+            final object data GenericClosedObject<N as int> { func read()->int{return N;} }
+            func acceptClosed(value as Closed)->int{return 0;}
+            func main(){
+                var first=Child(4);
+                var second=Child(9);
+                var box=Box<(Contract<int>)>(4);
+                var closed=GenericClosed<int>();
+                dynamic var firstResult=first.read();
+                dynamic var secondResult=second.read();
+                dynamic var boxResult=box.read();
+                dynamic var objectResult=(GenericClosedObject<4>).read();
+            }
+        """, output)
+        fun check(namespace: top.mcfpp.model.Namespace): List<DataTemplate> {
+            val scope = namespace.scope
+            val base = scope.getTemplate("Base")!!
+            assertTrue(base.isAbstract)
+            assertTrue(base.constructors.isEmpty())
+            assertTrue(base.scope.functions.getValue("read").single().isAbstract)
+            val child = scope.getTemplate("Child")!!
+            assertFalse(child.isAbstract)
+            val contract = assertIs<GenericDataTemplate>(scope.getTemplate("Contract"))
+            assertTrue(contract.isAbstract)
+            assertFalse(contract.isInterface)
+            assertTrue(contract.constructors.isEmpty())
+            val actual = contract.compiledTemplates.values.single()
+            assertTrue(actual.isAbstract)
+            assertFalse(actual.isInterface)
+            assertTrue(actual.constructors.isEmpty())
+            val exchange = actual.scope.functions.getValue("exchange").single()
+            assertTrue(exchange.isAbstract)
+            assertSame(actual, exchange.owner)
+            assertEquals(MCFPPBaseType.Int.typeId, exchange.normalParams.single().type.typeId)
+            assertEquals(MCFPPBaseType.Int.typeId, exchange.returnType.typeId)
+            val finals = listOf(scope.getTemplate("Closed")!!, scope.getTemplate("GenericClosed")!!,
+                scope.getObject("ClosedObject") as DataTemplate, scope.getObject("GenericClosedObject") as DataTemplate)
+            finals.forEach { assertTrue(it.isFinal) }
+            val specialized = finals.filterIsInstance<GenericDataTemplate>().map { it.compiledTemplates.values.single() }
+            specialized.forEach { assertTrue(it.isFinal) }
+            return listOf(base, child, contract, actual) + finals + specialized
+        }
+        val sourceNamespace = GlobalScope.localNamespaces.getValue("fixture.fields")
+        val sourceModels = check(sourceNamespace)
+        val sourceMain = sourceNamespace.scope.functions.getValue("main").single()
+        val sourceMachine = execute(sourceMain, output)
+        for ((name, expected) in listOf("firstResult" to 4, "secondResult" to 9, "boxResult" to 4, "objectResult" to 4))
+            assertEquals(expected, sourceMachine.read(sourceMain.scope.getVar(name) as MCInt))
+        val main = consume("""
+            import fixture.fields:*;
+            func main(){
+                var second=Child(9);
+                var first=Child(4);
+                var box=Box<(Contract<int>)>(4);
+                var closed=GenericClosed<int>();
+                dynamic var firstResult=first.read();
+                dynamic var secondResult=second.read();
+                dynamic var boxResult=box.read();
+                dynamic var objectResult=(GenericClosedObject<4>).read();
+            }
+        """, output)
+        assertEquals(0, Project.errorCount)
+        val restoredModels = check(GlobalScope.libNamespaces.getValue("fixture.fields"))
+        sourceModels.zip(restoredModels).forEach { (source, restored) -> assertNotSame(source, restored) }
+        val machine = execute(main, output)
+        for ((name, expected) in listOf("firstResult" to 4, "secondResult" to 9, "boxResult" to 4, "objectResult" to 4))
+            assertEquals(expected, machine.read(main.scope.getVar(name) as MCInt))
+    }
+
+    @Test fun finalTemplateParentsAreRejectedAcrossLibraryRoundTrip() = withLibrary { output ->
+        val declarations = """
+            final data Closed {}
+            final object data ClosedObject {}
+        """.trimIndent()
+        write("namespace fixture.fields;\n$declarations\nfunc main(){}", output)
+        for ((child, parentName) in listOf("data Child : Closed {}" to "Closed",
+            "data Child<T as type> : Closed {}" to "Closed", "data Child : ClosedObject {}" to "ClosedObject")) {
+            Project.config.includes = arrayListOf()
+            MCFPPStringTest.readFromString("namespace fixture.fields;\n$declarations\n$child\nfunc main(){}", version = "26.3")
+            assertTrue(Project.errorCount > 0, "Source must reject final parent: $child")
+            val sourceScope = GlobalScope.localNamespaces.getValue("fixture.fields").scope
+            val sourceParent = sourceScope.getTemplate(parentName) ?: sourceScope.getObject(parentName) as DataTemplate
+            assertTrue(sourceParent.isFinal)
+            assertFalse(sourceScope.getTemplate("Child")!!.parent.any { it === sourceParent })
+            consume("import fixture.fields:*;\n$child\nfunc main(){}", output)
+            assertTrue(Project.errorCount > 0, "Consumer must reject restored final parent: $child")
+            val restoredScope = GlobalScope.libNamespaces.getValue("fixture.fields").scope
+            val restoredParent = restoredScope.getTemplate(parentName) ?: restoredScope.getObject(parentName) as DataTemplate
+            assertTrue(restoredParent.isFinal)
+            assertFalse(GlobalScope.localNamespaces.getValue("default.test").scope.getTemplate("Child")!!.parent.any { it === restoredParent })
+        }
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

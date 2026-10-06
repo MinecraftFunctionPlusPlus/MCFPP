@@ -291,13 +291,16 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             if(s == null){
                 val o = GlobalScope.getObject(namespace, identifier)
                 if(o is ObjectDataTemplate) {
-                    template.extends(o)
+                    if (o.isFinal) LogProcessor.error("Cannot extends $identifier because it's final")
+                    else template.extends(o)
                 }else{
                     LogProcessor.error("Undefined template: " + c.text)
                 }
             }else{
                 if(s == template){
                     LogProcessor.error("Infinitive reference: $id -> $identifier")
+                }else if(s.isFinal){
+                    LogProcessor.error("Cannot extends $identifier because it's final")
                 }else{
                     template.extends(s)
                 }
@@ -323,7 +326,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                         TypeDataTemplate.Companion::defaultConstructor.javaMethod!!
                     )
                 )
-            }else if(template.constructors.isEmpty()){
+            }else if(!template.isAbstract && template.constructors.isEmpty()){
                 template.addMember(DataTemplateConstructor(DataTemplate.currTemplate!!, null))
             }
         }

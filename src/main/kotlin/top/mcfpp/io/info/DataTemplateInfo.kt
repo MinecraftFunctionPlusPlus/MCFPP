@@ -22,6 +22,7 @@ interface AbstractTemplateInfo<T: DataTemplate>: ModelInfo<T>{
 data class DataTemplateInfo(
     val isInterface: Boolean,
     val isAbstract: Boolean,
+    val isFinal: Boolean,
     var namespace: String,
     var identifier: String,
     var parents: List<AbstractTemplateInfo<*>>,
@@ -45,6 +46,7 @@ data class DataTemplateInfo(
         currTemplate = template
         template.isInterface = isInterface
         template.isAbstract = isAbstract
+        template.isFinal = isFinal
         template.scope = field.get(template)
         parents.forEach {
             template.extends(it.get())
@@ -89,6 +91,7 @@ data class DataTemplateInfo(
             val d = DataTemplateInfo(
                 template.isInterface,
                 template.isAbstract,
+                template.isFinal,
                 template.namespace,
                 template.identifier,
                 if(template != DataTemplate.baseDataTemplate) template.parent.filterIsInstance<DataTemplate>().map { AbstractTemplateInfo.from(it) } else emptyList(),
@@ -109,6 +112,7 @@ data class DataTemplateInfo(
 data class GenericDataTemplateInfo(
     val isInterface: Boolean,
     val isAbstract: Boolean,
+    val isFinal: Boolean,
     var namespace: String,
     var identifier: String,
     var parents: List<AbstractTemplateInfo<*>>,
@@ -133,6 +137,7 @@ data class GenericDataTemplateInfo(
         currTemplate = template
         template.isInterface = isInterface
         template.isAbstract = isAbstract
+        template.isFinal = isFinal
         template.scope = field.get(template)
         parents.forEach {
             template.extends(it.get())
@@ -174,6 +179,7 @@ data class GenericDataTemplateInfo(
             val d = GenericDataTemplateInfo(
                 template.isInterface,
                 template.isAbstract,
+                template.isFinal,
                 template.namespace,
                 template.identifier,
                 template.parent.filterIsInstance<DataTemplate>().map { AbstractTemplateInfo.from(it) },

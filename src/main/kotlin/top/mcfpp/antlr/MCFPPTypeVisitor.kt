@@ -131,6 +131,8 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
                 })
                 qwq
             }
+            template.isAbstract = isAbstract
+            template.isFinal = isFinal
             template.parentID.addAll(ctx.compoundDeclaration().extendName().map { it.text })
             nsp.scope.addTemplate(id, template)
         }
@@ -157,6 +159,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             })
             qwq
         }
+        template.isFinal = ctx.FINAL() != null
         template.parentID.addAll(ctx.compoundDeclaration().extendName().map { it.text })
         template.companionObject = template
         nsp.scope.addObject(id, template)
