@@ -2,11 +2,31 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 阶段 96：text 与拼接运算（已限定验证）
+## 阶段 97：统一文本原生方法（已限定验证）
+
+String与NBT的 `toText` 各由同一Java类处理，按实际receiver状态分流；删除重复的Concrete入口/helper，未扩展到其他native或effects。沿用现有fixture，两个即时常量concat初始化改为直接调用 `toText`。三份bin均为291176 bytes、MCFL28（raw header `4c46434d1c000000`）、SHA256 `2550D9609261BC26BFB713DE15CA6630FFEAF6805B52024C37DCE5930C57381B`。
+
+标准库 `mcfpp-unified-text-methods-stdlib.log` exit0，BUILD SUCCESSFUL in4s，Project0/0。联合 `mcfpp-unified-text-methods-final.log` exit0、worker206正常、BUILD SUCCESSFUL in17s；LibFieldAccess XML `2026-10-06T21:02:40.295Z` 为2/0/0/0，Cache XML `21:02:39.664Z` 为1/0/0/0。source/fresh各项目计数依次为0/9119、0/9120、0/9118、0/9119；两条text fixture的payload、copies、return7和frame0断言通过。生成命令将 `("A").toText()` 与 `("B").toText()` 各自写成文本tag literal，但 `joinedConstant`/`suffixedConstant` 仍由临时数组append生成，没有单条 `AB`/`AS` literal；本轮不证明拼接常量折叠。无fullcheck/server。
+
+这项验证被重复执行：首轮报告的stdlib54s/joint35s日志随后被第二次同名重定向覆盖，首轮worker号无法从现存证据恢复；上述最新XML和worker206作为可核验结果。重复执行是代理未识别摘要中已完成的验证，不应计作额外覆盖。
+
+### 阶段 97 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 使用当前fresh XML、worker206及三份同hash MCFL28资源；明确区分toText literal与concat未折叠。 |
+| 完整性 | 3/5 | 两个现有fixture及缓存格式受测通过；即时拼接fold仍未证明，whole17仍未完成。 |
+| 清晰性 | 4/5 | 说明重复运行覆盖首轮日志，并以最新可查证据为准。 |
+| 可执行性 | 4/5 | 下一步只调查T! text常量拼接/普通copy的snapshot缺口。 |
+| 简洁性 | 3/5 | 阶段执行摘要已清楚；避免未识别已完成任务而重复构建。 |
+
+平均3.6/5，whole17完整性仍为3/5。
+
+## 历史必要检查：text 与拼接运算（阶段 96）
 
 text receiver赋值与三类构造路径归一；两个拼接 `MNIOperator` 接入单context，concat以直接typed core helper处理组件，JsonTextConcreteData重复注入复用JsonTextData。MCFL27。
 
-`mcfpp-native-text-concat-stdlib.log`：标准库成功57s，Project0/0。初始RED `mcfpp-native-text-concat-red.log` worker201/FAILED12s，XML `2026-10-06T20:41:25.805Z` 1/1/0/0；producer1 error/9118 warnings，首因 `observe<>(nbt,nbt) not defined`，对应字符串toDynamic退成NBT，未到fresh或磁盘断言。首轮联合 `mcfpp-native-text-concat-final.log`：Cache XML `2026-10-06T20:46:44.428Z` 1/0/0/0通过；fixture XML `20:46:40.257Z`失败，source执行器不支持生成的 `data modify ... append value {"type":"text","text":"S"}` 字面组件命令，未到consumer。final2 worker203、FAILED10s，fixture XML `20:48:31.164Z`仍失败于source观察，期待ListTag却读到CompoundTag，未到consumer。runtime adapter修复后final3 worker204 exit0/BUILD SUCCESSFUL in14s，fixture XML `20:51:29.163Z` 1/0/0/0；source0/9118 warnings，fresh consumer0/9119。source与fresh consumer磁盘均通过12项命名观察、original/copy组件与return7/frame0断言。Cache和fixture两个不同用例跨轮各自通过，final3只复查fixture，不是最终联合2项。12个观察名中A/B来自constant origin；未知MNI屏障可能物化并丢失已知值，未单独证明每个const-fold分支。没有验证聊天渲染或跨帧寿命，无fullcheck/server。
+`mcfpp-native-text-concat-stdlib.log`：标准库成功57s，Project0/0。初始RED `mcfpp-native-text-concat-red.log` worker201/FAILED12s，XML `2026-10-06T20:41:25.805Z` 1/1/0/0；producer1 error/9118 warnings，首因 `observe<>(nbt,nbt) not defined`，对应text物化实际退成NBT，未到fresh或磁盘断言。首轮联合 `mcfpp-native-text-concat-final.log`：Cache XML `2026-10-06T20:46:44.428Z` 1/0/0/0通过；fixture XML `20:46:40.257Z`失败，source执行器不支持生成的 `data modify ... append value {"type":"text","text":"S"}` 字面组件命令，未到consumer。final2 worker203、FAILED10s，fixture XML `20:48:31.164Z`仍失败于source观察，期待ListTag却读到CompoundTag，未到consumer。runtime adapter修复后final3 worker204 exit0/BUILD SUCCESSFUL in14s，fixture XML `20:51:29.163Z` 1/0/0/0；source0/9118 warnings，fresh consumer0/9119。source与fresh consumer磁盘均通过12项命名观察、original/copy组件与return7/frame0断言。Cache和fixture两个不同用例跨轮各自通过，final3只复查fixture，不是最终联合2项。12个观察名中A/B来自constant origin；未知MNI屏障可能物化并丢失已知值，未单独证明每个const-fold分支。没有验证聊天渲染或跨帧寿命，无fullcheck/server。
 
 source/build资源/build索引三份bin均为291364 bytes、MCFL27（raw header `4c46434d1b000000`）、SHA256 `A674D9E8FB3AD848A9F8CCC5E68CF31E2305271395D0A6B90122E1CD0827AD1A`。
 

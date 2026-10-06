@@ -6,6 +6,6 @@ public class MCStringData {
 
     @MNIFunction(caller = "string", returnType = "text", override = true)
     public static void toText(NativeCallContext context) {
-        top.mcfpp.backend.NativeTextOperations.INSTANCE.nbt(context);
+        top.mcfpp.backend.NativeTextOperations.INSTANCE.string(context);
     }
 }

@@ -36,7 +36,7 @@ class MCFPPNBTType {
             CompoundData("nbt","mcfpp").apply {
                 commonType = NBT
                 extends(MCFPPBaseType.Any.instanceData)
-                injectedBy(NBTBasedDataConcreteData::class.java)
+                injectedBy(NBTBasedDataData::class.java)
             }
         }
 

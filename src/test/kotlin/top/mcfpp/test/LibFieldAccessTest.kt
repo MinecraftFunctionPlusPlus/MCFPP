@@ -2323,8 +2323,8 @@ class LibFieldAccessTest {
                     dynamic var constantLeftCopy=constantLeft; dynamic var constantRightCopy=constantRight;
                     dynamic var joinedRuntime=left+right;
                     dynamic var suffixedRuntime=left+"S";
-                    dynamic var joinedConstant=constantLeft+constantRight;
-                    dynamic var suffixedConstant=constantLeft+"S";
+                    dynamic var joinedConstant=("A").toText()+("B").toText();
+                    dynamic var suffixedConstant=("A").toText()+"S";
                     dynamic var originalA=constantLeft; dynamic var originalB=constantRight;
                     $copies
                     return 7;

@@ -4,6 +4,7 @@ import top.mcfpp.core.lang.JsonTextConcrete
 import top.mcfpp.core.lang.JsonText
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.MCIntConcrete
+import top.mcfpp.core.lang.nbt.MCString
 import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
@@ -32,15 +33,15 @@ object NativeTextOperations {
     }
 
     fun nbt(context: NativeCallContext) = context.withAdapters { receiver, _ ->
-        publish(context, NBTChatComponent(receiver as NBTBasedData, false, null))
+        val value = receiver as NBTBasedData
+        publish(context, if (value is NBTBasedDataConcrete) PlainChatComponent(Tag.toSNBT(value.value))
+            else NBTChatComponent(value, false, null))
     }
 
-    fun stringValue(context: NativeCallContext) = context.withAdapters { receiver, _ ->
-        publish(context, PlainChatComponent((receiver as MCStringConcrete).value.value))
-    }
-
-    fun nbtValue(context: NativeCallContext) = context.withAdapters { receiver, _ ->
-        publish(context, PlainChatComponent(Tag.toSNBT((receiver as NBTBasedDataConcrete).value)))
+    fun string(context: NativeCallContext) = context.withAdapters { receiver, _ ->
+        val value = receiver as MCString
+        publish(context, if (value is MCStringConcrete) PlainChatComponent(value.value.value)
+            else NBTChatComponent(value, false, null))
     }
 
     fun representation(context: NativeCallContext) = context.withAdapters { receiver, _ ->

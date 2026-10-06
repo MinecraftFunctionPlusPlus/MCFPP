@@ -109,7 +109,7 @@ class MCFPPBaseType {
             CompoundData("string", "mcfpp").apply {
                 commonType = String
                 extends(Any.instanceData)
-                injectedBy(MCStringConcreteData::class.java)
+                injectedBy(MCStringData::class.java)
             }
         }
 

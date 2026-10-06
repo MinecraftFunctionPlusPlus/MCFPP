@@ -5,7 +5,7 @@
 
 ## 当前规则（截至2026-10-07，Asia/Shanghai）
 
-用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–92完成受测集合与数值算术迁移，阶段93迁移ConversionData数值转换入口，阶段94迁移toText入口，阶段95改为显式Java方法名引用，阶段96接入text与拼接；当前MCFL27，whole17未完成。
+用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–92完成受测集合与数值算术迁移，阶段93迁移ConversionData数值转换入口，阶段94迁移toText入口，阶段95改为显式Java方法名引用，阶段96接入text与拼接，阶段97统一String/NBT的toText入口；当前MCFL28，whole17未完成。
 
 ## 当前已接入
 
@@ -32,6 +32,10 @@
 阶段95：`conversions.mcfpp` 的49个native RHS改为Java真实方法名 `toTargetFromSource`，`decodeByte` 使用 `ConversionData.toIntFromByte`；FieldVisitor取消语言identifier alias回退，Namespace/CompoundData仍通过annotation identifier支持语言重载。用户无需兼容旧 `.mcfpp` 显式Java引用。MCFL26不变；stdlib重建Project0/0，既有conversion fixture source/fresh定向复查通过，资源291070 bytes、三份SHA256一致。只验证既有路径，未复跑Cache或其他旧绿，whole17仍未完成。
 
 阶段96：接通text runtime assignment/三个构造路径和两项concat operator单context，JsonTextConcreteData去重注入复用JsonTextData。MCFL26→27；标准库Project0/0，三份291364-byte资源SHA256相同。首轮fixture命令执行器不支持text component append；final2在source读取到CompoundTag而预期ListTag；runtime adapter修复后final3单fixture通过，source/fresh consumer实际磁盘均验证12观察、original/copy与return7/frame0。Cache和fixture两个用例跨轮各过，final3非联合2项。未知MNI屏障物化后常量折叠路径仍未完全验证；无聊天渲染、跨帧寿命、fullcheck/server。
+
+阶段97：String/NBT各自的toText入口合并到单一Java类，依据实际receiver状态处理runtime与Concrete调用，并移除重复Concrete类及重复helper；不扩展到其他native或effects。MCFL27→28，标准库Project0/0，三份291176-byte资源SHA256相同。指定text fixture与Cache回归联合通过；即时toText输入为tag literal，但AB/AS拼接仍走临时数组append，未证明concat折叠。验证细节及重复执行说明见verification.md。whole17仍未完成。
+
+重构不要求兼容旧 `.mcfpp` 写法；显式引用新旧语法无需并行保留。
 
 阶段85 source template ABSTRACT/FINAL与object FINAL、compiled final、final继承拒绝及abstract默认ctor跳过已限定验证；两个Info保存final，Kryo声明前缀及early/Unsolved壳同步final。8prod34+/19-加两个fixture110行共9文件144+/19-，另更新标准库资源bin。MCFL18真实wire升级；旧/未知缓存格式拒绝回归通过。stdlib重建14s、compiler0/0、287554 bytes；最终必要联合3全绿，正例source/fresh0errors（fresh9119已知warnings）、磁盘4/9/4/4/frame0及独立模型通过；三种final父负例分别source1/fresh1预期错误，拒绝及父关系正确。无fullcheck/server，whole17未完成。
 
@@ -191,7 +195,7 @@ map 现在只保存一份 entry 列表，布局为 `{entries:[{key:"first",value
 
 ## 库索引
 
-当前库索引采用MCFL格式头与版本27：在保留阶段16的generic kind/readonly绑定与阶段15函数/Property权限后，新增generic类型专用immutable TypeId wire，并包含阶段88–96的原生函数/运算符/转换及文本签名；该generic类型专用serializer只序列化冻结身份，不写其Compiled/prototype/AST/cache或可变实参图；声明Info仍保存body AST和有序RHS。canonical参数与父类恢复延迟到COMPILE；版本26及更早索引要求重新编译。旧浮点用户持久化数据不会自动迁移。
+当前库索引采用MCFL格式头与版本28：在保留阶段16的generic kind/readonly绑定与阶段15函数/Property权限后，新增generic类型专用immutable TypeId wire，并包含阶段88–97的原生函数/运算符/转换及文本签名；该generic类型专用serializer只序列化冻结身份，不写其Compiled/prototype/AST/cache或可变实参图；声明Info仍保存body AST和有序RHS。canonical参数与父类恢复延迟到COMPILE；版本27及更早索引要求重新编译。旧浮点用户持久化数据不会自动迁移。
 集合 IR、形状事实与动态索引的 Location 属于瞬态分析数据；Function.typedIR、runtimeEffect 与 Var.storageBinding 不序列化。MCFL17的generic Type wire仅保存稳定immutable身份；泛型参数/父类canonicalization延迟到COMPILE。该generic类型serializer不写Compiled/prototype/Var或template cache图；声明元数据仍沿既有Info保存body AST和有序RHS。runtime IR与StorageBinding仍为Transient。本次不自动转换用户已有的持久化范围或浮点载荷。
 类型布局、语言签名或 MNI 元数据改变后，运行：
 
