@@ -28,6 +28,7 @@ import top.mcfpp.type.MCFPPDataTemplateType
 import top.mcfpp.type.MCFPPListType
 import top.mcfpp.type.MCFPPUnionType
 import top.mcfpp.type.MCFPPVectorType
+import top.mcfpp.type.MCFPPEntityType
 import top.mcfpp.type.TypeId
 import java.nio.file.Files
 import java.nio.file.Path
@@ -1085,6 +1086,82 @@ class LibFieldAccessTest {
         val machine = execute(main, output)
         assertEquals(4, machine.read(main.scope.getVar("twoResult") as MCInt))
         assertEquals(9, machine.read(main.scope.getVar("threeResult") as MCInt))
+    }
+
+    @Test fun frozenSelectorTypeArgumentsPreserveFiltersAcrossLibraryRoundTrip() = withLibrary { output ->
+        write("""
+            namespace fixture.fields;
+            typealias entity<2,"minecraft:pig","!minecraft:cow"> as Selection;
+            func readSelection(arg as Box<Selection>)->int { return arg.read(); }
+            func readAnyEntity(arg as Box<entity>)->int { return arg.read(); }
+            data Box<T as type> {
+                private value as int;
+                constructor(v as int){ this.value=v; }
+                func read()->int { return this.value; }
+            }
+            func main(){
+                var selected=Box<Selection>(4); var anyEntity=Box<entity>(9);
+                dynamic var selectedResult=readSelection(selected);
+                dynamic var anyResult=readAnyEntity(anyEntity);
+            }
+        """, output)
+        val filters = listOf("\"minecraft:pig\"", "\"!minecraft:cow\"")
+        val selectedId = TypeId.Selector(2, filters, false)
+        val generalId = TypeId.Selector(null, null, false)
+        val sourceScope = GlobalScope.localNamespaces.getValue("fixture.fields").scope
+        val sourcePrototype = assertIs<GenericDataTemplate>(sourceScope.getTemplate("Box"))
+        val sourceMain = sourceScope.functions.getValue("main").single()
+        val sourceSelected = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(sourceMain.scope.getVar("selected")).templateType)
+        val sourceGeneral = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(sourceMain.scope.getVar("anyEntity")).templateType)
+        assertNotSame(sourceSelected, sourceGeneral)
+        val sourceModels = listOf(sourceSelected, sourceGeneral)
+        val expectedIds = listOf(selectedId, generalId)
+        for ((model, expected) in sourceModels.zip(expectedIds)) {
+            assertSame(sourcePrototype, model.originTemplate)
+            val type = assertIs<MCFPPEntityType>(assertIs<MCFPPTypeVar>(model.scope.getVar("T")).value)
+            assertEquals(expected.limit, type.limit)
+            assertEquals(expected.entities, type.types)
+            assertFalse(type.isName)
+            assertEquals(expected, type.typeId)
+        }
+        assertSame(sourceSelected, assertIs<MCFPPDataTemplateType>(sourceScope.functions.getValue("readSelection").single().normalParams.single().type).template)
+        assertSame(sourceGeneral, assertIs<MCFPPDataTemplateType>(sourceScope.functions.getValue("readAnyEntity").single().normalParams.single().type).template)
+        val sourceIds = sourceModels.map { it.getType().typeId }
+        val sourceSnapshots = sourceModels.map { assertNotNull(ValueSnapshot.of(it.scope.getVar("T"))) }
+        assertNotEquals(sourceIds[0], sourceIds[1])
+        assertNotEquals(sourceSnapshots[0], sourceSnapshots[1])
+
+        val main = consume("""
+            import fixture.fields:*;
+            func main(){
+                var anyEntity=Box<entity>(9); var selected=Box<Selection>(4);
+                dynamic var selectedResult=readSelection(selected);
+                dynamic var anyResult=readAnyEntity(anyEntity);
+            }
+        """, output)
+        assertEquals(0, Project.errorCount)
+        val restoredScope = GlobalScope.libNamespaces.getValue("fixture.fields").scope
+        val prototype = assertIs<GenericDataTemplate>(restoredScope.getTemplate("Box"))
+        assertNotSame(sourcePrototype, prototype)
+        val selected = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("selected")).templateType)
+        val general = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("anyEntity")).templateType)
+        assertNotSame(selected, general)
+        for ((index, model) in listOf(selected, general).withIndex()) {
+            assertSame(prototype, model.originTemplate)
+            assertNotSame(sourceModels[index], model)
+            assertEquals(sourceIds[index], model.getType().typeId)
+            assertEquals(sourceSnapshots[index], ValueSnapshot.of(model.scope.getVar("T")))
+            val type = assertIs<MCFPPEntityType>(assertIs<MCFPPTypeVar>(model.scope.getVar("T")).value)
+            assertEquals(expectedIds[index].limit, type.limit)
+            assertEquals(expectedIds[index].entities, type.types)
+            assertFalse(type.isName)
+            assertEquals(expectedIds[index], type.typeId)
+        }
+        assertSame(selected, assertIs<MCFPPDataTemplateType>(restoredScope.functions.getValue("readSelection").single().normalParams.single().type).template)
+        assertSame(general, assertIs<MCFPPDataTemplateType>(restoredScope.functions.getValue("readAnyEntity").single().normalParams.single().type).template)
+        val machine = execute(main, output)
+        assertEquals(4, machine.read(main.scope.getVar("selectedResult") as MCInt))
+        assertEquals(9, machine.read(main.scope.getVar("anyResult") as MCInt))
     }
 
     private fun write(source: String, output: Path) {

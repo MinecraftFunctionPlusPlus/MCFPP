@@ -1,8 +1,16 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段75冻结向量TypeValue必要联合2项（新75+旧71）全过，source/fresh静态模型及consumer真实磁盘4/9/frame0到达。MCFL17/bin289989/schema不变，无stdlib/fullcheck/server。阶段76冻结SelectorTypeValue尚未实现或测试；最近完整346项仍为72dc557，整个17项未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段76冻结SelectorTypeValue最终单方法1/0/0/0，source/fresh模型及consumer真实磁盘4/9/frame0通过；并非joint2/fullcheck。MCFL17/bin289989/schema不变，无stdlib/fullcheck/server。阶段77 direct Union TypeValue表达式尚未实现或测试；最新完整346项仍为72dc557，whole17未完成。
 
-## 最新必要检查：冻结向量TypeValue（阶段 75）
+## 最新必要检查：冻结SelectorTypeValue（阶段 76）
+
+阶段76仅MCFPPType.resolveTypeId一行Selector分支，复用MCFPPEntityType(limit,entities,isName).takeIf完整ID相等；保持原顺序、null、引号与flag，无registry/schema/runtime扩展。frozenSelectorTypeArgumentsPreserveFiltersAcrossLibraryRoundTrip新增76行及MCEntity import；加4docs预计6文件。
+
+实际fixture覆盖Selection alias entity<2,"minecraft:pig","!minecraft:cow">及bare entity（null limit/types），前置readSelection/readAnyEntity进入真实wire。Box静态T、真实int字段，source selected4→general9，fresh反序general9→selected4；原引号/ordered types/false的完整Selector ID、两Box/snapshot不同、source/fresh prototype与Compiled独立、前置param canonical、FullID/T snapshots稳定及fresh字段通过；consumer真实磁盘4/9/frame0。isName=true未有source入口，entity世界/runtime未验证；null不归一empty，但empty source未覆盖。
+
+RED mcfpp-generic-selector-type-value-red.log：fresh XML2026-10-06T08:16:47.105Z，1fail/0error/skip，worker145正常exit1/FAILED10s；source0/0、模型及写库通过，fresh读库后4次Cannot restore frozen T及2次read undefined，共6errors/9119warnings，fresh模型/disk未到。FINAL mcfpp-generic-selector-type-value-final.log：fresh XML2026-10-06T08:20:24.280Z，1/0/0/0，worker146正常exit0/SUCCESS20s，source0/0、consumer0/9119，模型及consumer磁盘通过。仅FINAL1，不是joint2/fullcheck；既有serializer/wire未改，MCFL17/bin289989/schema不变，无stdlib/fullcheck/server。阶段75已提交d6dfb7f57b5844839c00a9df5261c61d9d1acd00（6文件118+/22-），阶段76提交以Git历史为准。
+
+## 历史必要检查：冻结向量TypeValue（阶段 75）
 
 阶段75仅一个生产文件MCFPPType.kt与68行fixture及import接通限定Vector身份恢复；加4docs共6文件。Applied分支识别Builtin(vector)，读取唯一Builtin数字key.toIntOrNull，构造MCFPPVectorType(dim)并核对FullID；原四种元素类型工厂不变，不新增>0维数约束、registry、wire或Vector runtime支持。
 

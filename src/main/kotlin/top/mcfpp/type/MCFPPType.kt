@@ -258,6 +258,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                 }
             }
             is TypeId.Specialized -> resolveSpecialization(id)?.getType()
+            is TypeId.Selector -> MCFPPEntityType(id.limit, id.entities, id.isName).takeIf { it.typeId == id }
             is TypeId.Union -> {
                 val alternatives = id.alternatives.map(::resolveTypeId)
                 if (alternatives.isEmpty() || alternatives.any { it == null }) null
