@@ -1,4 +1,4 @@
-# 下一阶段：修复字段与 Property 访问权限（阶段 64）
+# 下一阶段：来源感知字段解析与权限拒绝（阶段 65）
 
 本计划的首条纵向路径已经在续接会话中实现，完整阶段和整个重构仍未完成。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
@@ -82,9 +82,11 @@ const 只限制重赋；compiler-only const 保留完整 `ValueSnapshot` 且不�
 
 持久化并恢复普通、generic、native函数的`accessModifier`；generic特化已有Function复制权限，不重复新增传递逻辑。成员检查须使用真实声明模板，表达式NoStackFunction须保留词法访问上下文，继承成员须以原声明owner判定权限。升级MCFL并重建stdlib，用真实库往返验证内部private/protected调用合法、外部及子类对基类private的访问被拒绝。final源码语义及metadata缺口独立保留，不增加无消费者的`isFinal`字段。imported object autoLoad所有权不纳入本阶段承诺。阶段63已以MCFL14真实库往返验证通过；首轮14项13通过/1失败，根因是model注入NativeFunction修改PRIVATE后第二次genIndex复用PUBLIC写快照。修正writer重写缓存后，最终LibMemberAccess3 + TemplateInitialization8 + LibCacheFormat3联合14项全过；两次stdlib Project语言诊断均0错误/0警告，最终bin285207 bytes。
 
-### 阶段 64：修复字段与 Property 访问权限
+### 阶段 65：来源感知字段解析与权限拒绝
 
-为PropertyInfo持久化accessModifier（schema升级并重建stdlib）；复用已恢复的`declaredParentTemplate`，在真实Var/Property解析后以原声明owner判断权限。统一明确Function词法权限入口，让`NoStack`/`Internal`只沿词法parent解析caller；实例字段、object静态字段及旧constant入口共享权限选择，保留无模板owner时原bool行为，不改runtime parent或存储布局。真实库往返覆盖Base.private/Child.protected合法读写、外部及子类访问基类private拒绝、object内部qualified private调用合法且外部拒绝；object仍显式初始化，autoLoad仍独立未解决。范围不保证所有unqualified字段/方法入口迁移；Native.replaceGenericParams的owner/access缺口单独跟进。final源码语义和其他未持久化metadata不扩展。
+先调用既有virtual raw `getVar(key)`恰好一次；若为null立即返回，以保留`Internal.fieldVarSet`和原stackIndex。随后独立从`this`开始沿`FunctionScope`首个parent逐层检查`vars`寻找来源，不再次调用`getVar`。任何更近的FunctionScope局部（包括祖先局部）直接允许；来源位于`CompoundDataScope`时，Property/Var按原声明owner与access检查。两个visitor在读取或物化被拒绝的结果前立即报错并返回`UnknownVar`。用库往返fixture验证object unqualified private=7、local shadow=8、Base限定访问=4，Intruder unqualified private被拒绝。
+
+本阶段不增加无约束的unqualified method lookup：namespace/import函数解析不等同模板成员访问。普通实例的unqualified寻址与`Internal.fieldVarSet`另留阶段66；更广的method/custom-property receiver帧、普通return跨旧while/doWhile、Native.clone owner复制、final语义、imported object autoLoad和MNI仍未解决。另有独立库往返缺口待先行red：generic类prototype目前可能通过namespace.template入口以普通`DataTemplateInfo`序列化，丢失generic类别；泛型方法测试不能证明generic类恢复。阶段64的访问权限及while帧结果见verification.md。
 
 ### 旧浮点乘除（阶段 50 已实现）
 

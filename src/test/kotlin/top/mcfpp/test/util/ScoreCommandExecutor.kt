@@ -186,8 +186,9 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         val set = Regex("scoreboard players set (\\S+ \\S+) (-?\\d+)")
         val add = Regex("scoreboard players (add|remove) (\\S+ \\S+) (\\d+)")
         val operation = Regex("scoreboard players operation (\\S+ \\S+) (=|\\+=|-=|\\*=|/=|%=|><) (\\S+ \\S+)")
-        val compare = Regex("execute (if|unless) score (\\S+ \\S+) (=|<|>|<=|>=) (\\S+ \\S+) (?:run (.*)|((?:if|unless) score .*))")
-        val matches = Regex("execute (if|unless) score (\\S+ \\S+) matches (-?\\d+|(?:-?\\d+)?\\.\\.(?:-?\\d+)?) (?:run (.*)|((?:if|unless) score .*))")
+        val compare = Regex("execute (if|unless) score (\\S+ \\S+) (=|<|>|<=|>=) (\\S+ \\S+) (?:run (.*)|((?:if|unless) (?:score|function) .*))")
+        val matches = Regex("execute (if|unless) score (\\S+ \\S+) matches (-?\\d+|(?:-?\\d+)?\\.\\.(?:-?\\d+)?) (?:run (.*)|((?:if|unless) (?:score|function) .*))")
+        val functionCondition = Regex("execute (if|unless) function (\\S+) (?:run (.*)|((?:if|unless) (?:score|function) .*))")
         val asIdentity = Regex("execute as (\\S+) run (.*)")
         val guardStore = Regex("execute store result storage mcfpp:system ir_branch_stack\\[0].condition byte 1 run scoreboard players get (\\S+ \\S+)")
         val guardTest = Regex("execute (if|unless) data storage mcfpp:system ir_branch_stack\\[0]\\{condition:1b} run (.*)")
@@ -219,8 +220,16 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             return "${identity ?: error("@s needs an executor identity")} ${key.substringAfter(' ')}"
         }
         lateinit var execute: (String) -> Boolean
-        fun run(body: List<String>) {
-            for (command in body.map(String::trim).filterNot { it.isEmpty() || it.startsWith("#") }) if (execute(command)) break
+        var returnedValue = 0
+        fun run(body: List<String>): Int {
+            val outerValue = returnedValue
+            returnedValue = 0
+            try {
+                for (command in body.map(String::trim).filterNot { it.isEmpty() || it.startsWith("#") }) if (execute(command)) break
+                return returnedValue
+            } finally {
+                returnedValue = outerValue
+            }
         }
         execute = command@{ command ->
             check(++steps < 10000) { "Command execution did not terminate" }
@@ -245,7 +254,10 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                 if ((branchGuards[0] == 1) == (it.groupValues[1] == "if")) return@command execute(it.groupValues[2])
                 return@command false
             }
-            if (Regex("return -?\\d+").matches(command)) return@command true
+            if (Regex("return -?\\d+").matches(command)) {
+                returnedValue = command.removePrefix("return ").toInt()
+                return@command true
+            }
             macroCall.matchEntire(command)?.let { call ->
                 val arguments = readNbt(call.groupValues[2], call.groupValues[3]) as CompoundTag
                 val replacements = arguments.value.mapValues { (_, value) ->
@@ -264,7 +276,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                 return@command false
             }
             if (command.startsWith("return run function ")) {
-                run(functions.getValue(command.removePrefix("return run function ")))
+                returnedValue = run(functions.getValue(command.removePrefix("return run function ")))
                 return@command true
             }
             if (command.startsWith("function ")) {
@@ -441,6 +453,12 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                     (bounds[0].isEmpty() || value >= bounds[0].toInt()) && (bounds[1].isEmpty() || value <= bounds[1].toInt())
                 if (match == (it.groupValues[1] == "if")) return@command execute(
                     if (it.groupValues[5].isNotEmpty()) "execute ${it.groupValues[5]}" else it.groupValues[4])
+                return@command false
+            }
+            functionCondition.matchEntire(command)?.let {
+                val nonzero = run(functions.getValue(it.groupValues[2])) != 0
+                if (nonzero == (it.groupValues[1] == "if")) return@command execute(
+                    if (it.groupValues[4].isNotEmpty()) "execute ${it.groupValues[4]}" else it.groupValues[3])
                 return@command false
             }
             if (command.startsWith("say ")) { messages.add(command.removePrefix("say ")); return@command false }

@@ -1,8 +1,16 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段63 MCFL14标准库重建与LibMemberAccess3 + TemplateInitialization8 + LibCacheFormat3单次联合14项全通过；最终 `bin.mclib` 285207 bytes。最近完整检查仍属于提交 `72dc557`，共346项；本轮未运行完整check或实际Minecraft服务端，整个迁移仍未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段64 MCFL15标准库重建Project语言错误/警告0/0，`bin.mclib` 286207 bytes；最终定向字段方法1项与LogicStatementTest6单次联合7项全通过。最近完整检查仍属于提交 `72dc557`，共346项；本轮未运行完整check或实际Minecraft服务端，整个迁移仍未完成。
 
-## 最新必要检查：库函数访问修饰符持久化（阶段 63）
+## 最新必要检查：库字段与 Property 权限（阶段 64）
+
+仅`PropertyInfo.accessModifier`新增持久化；Var权限原已由Kryo保存，运行时adapter复制声明access/owner，但binding仍为transient。权限判断复用恢复的声明owner，Function的`accessTo`通过`NoStack`/`Internal`沿词法caller检查。`StorageAccess.inFrame(binding, stackIndex)`创建指定帧偏移的地址view，共享data、Place及versions。旧visitor while body使用`NoStack`共享外层while frame，移除无匹配的body push并登记真实child，修复了物理帧结构。`FunctionConditionTest`按官方1.20.3 DataPack单ID、function-return及score短路条件的受限子集执行：[Minecraft Java Edition 1.20.3](https://www.minecraft.net/en-us/article/minecraft-java-edition-1-20-3)。
+
+真实库往返验证 Base.private constructor/while 写入4后读5、Child.protected为6、object静态private为7，且frame0平衡；独立consumer对外部private/protected字段读取及Intruder读取基类private产生编译错误。对象仍需显式初始化，未覆盖入口继续跟进。
+
+验证历程保留各轮边界：实现前红测2项producer分别有3/9个权限语言错误（XML `2026-10-06T01:08:01.481Z`）。首轮16项15通过，四份XML时间戳依次为`01:12:03.039Z`、`01:12:08.757Z`、`01:12:12.153Z`、`01:12:08.744Z`；唯一失败为执行器不支持嵌套function条件。补执行器后字段用例仍报缺失`stack_frame[0].this.hidden`（`01:17:19.814Z`），FunctionConditionTest补验1项通过（`01:17:28.966Z`）；frame偏移修复后字段方法仍有退出帧泄漏（`01:24:01.542Z`），当轮ConstructorExecution7通过（`01:24:05.182Z`）。while body共享外层帧后，最终仅复查该字段方法1项与LogicStatementTest6，共7项全过、0 failures/errors/skips，Gradle exit0；XML时间戳`2026-10-06T01:30:51.910Z`、`01:30:57.600Z`。15（首轮其余绿）+1（FunctionCondition补验）+7（ConstructorExecution补验）+7（最终字段/逻辑复查）=30个不同用例跨轮各自通过，非一次联合30项。三次标准库重建Project语言诊断均0/0；最终MCFL15/bin286207 bytes。日志：`mcfpp-library-field-access-red.log`、`mcfpp-library-field-access-stdlib.log`、`mcfpp-library-field-access-final.log`、`mcfpp-library-field-access-complete.log`、`mcfpp-library-field-access-stdlib-complete.log`、`mcfpp-library-field-access-runtime-complete.log`、`mcfpp-library-field-access-stdlib-final.log`、`mcfpp-library-field-access-runtime-final.log`。未运行fullcheck或服务器。
+
+## 历史必要检查：库函数访问修饰符持久化（阶段 63）
 
 普通、generic、native函数`accessModifier`已写入并从MCFL14库恢复；泛型特化保留权限。`FuncGetter`按声明owner执行权限检查；临时`NoStackFunction`只用于解包词法caller，不改运行时storage或原function owner。writer每次重建时清除普通/generic缓存写快照，reader仍读取canonical缓存；`FieldInfo.from`显式owner过滤并在恢复本地Var/Property的`declaredParentTemplate`，防止再写库时丢失字段。
 

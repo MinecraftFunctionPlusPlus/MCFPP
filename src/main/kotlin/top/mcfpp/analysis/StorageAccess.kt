@@ -629,20 +629,27 @@ object StorageAccess {
         }
     }
 
-    /** Rebase an address while a callee frame is active; data identity and write versions stay shared. */
-    fun callerValue(value: Var<*>): Var<*> = value.clone().apply {
-        val first = nbtPath.pathList.firstOrNull() as? top.mcfpp.lib.MemberPath
+    private fun offsetFrame(path: NBTPath, offset: Int): NBTPath = path.clone().apply {
+        val first = pathList.firstOrNull() as? top.mcfpp.lib.MemberPath
         val member = first?.value as? top.mcfpp.core.lang.nbt.MCStringConcrete
         val text = member?.value?.value
         val index = text?.let { Regex("stack_frame\\[(\\d+)]").matchEntire(it) }?.groupValues?.get(1)?.toInt()
         if (index != null) {
-            nbtPath.pathList[0] = top.mcfpp.lib.MemberPath(top.mcfpp.core.lang.nbt.MCStringConcrete(
-                top.mcfpp.nbt.tags.primitive.StringTag("stack_frame[${index + 1}]")))
+            pathList[0] = top.mcfpp.lib.MemberPath(top.mcfpp.core.lang.nbt.MCStringConcrete(
+                top.mcfpp.nbt.tags.primitive.StringTag("stack_frame[${index + offset}]")))
         } else if (text == "stack_frame") {
-            val element = nbtPath.pathList.getOrNull(1) as? top.mcfpp.lib.IntPath
+            val element = pathList.getOrNull(1) as? top.mcfpp.lib.IntPath
             val frame = element?.value as? MCIntConcrete
-            if (frame != null) nbtPath.pathList[1] = top.mcfpp.lib.IntPath(MCIntConcrete(frame.value + 1))
+            if (frame != null) pathList[1] = top.mcfpp.lib.IntPath(MCIntConcrete(frame.value + offset))
         }
+    }
+
+    internal fun inFrame(binding: StorageBinding, offset: Int): StorageBinding =
+        if (offset == 0) binding else binding.copy(path = offsetFrame(binding.path, offset))
+
+    /** Rebase an address while a callee frame is active; data identity and write versions stay shared. */
+    fun callerValue(value: Var<*>): Var<*> = value.clone().apply {
+        nbtPath = offsetFrame(nbtPath, 1)
         storageBinding = storageBinding?.copy(path = nbtPath.clone())
     }
 

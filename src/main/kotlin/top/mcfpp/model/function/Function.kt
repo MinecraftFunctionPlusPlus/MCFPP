@@ -909,6 +909,12 @@ open class Function : Member, FieldContainer, WithDocument {
         } else null
     }
 
+    fun accessTo(template: DataTemplate): Member.AccessModifier {
+        var caller = this
+        while (caller is NoStackFunction || caller is InternalFunction) caller = caller.parent.first()
+        return caller.parentTemplate()?.getAccess(template) ?: Member.AccessModifier.PUBLIC
+    }
+
     override fun toString(): String {
         //参数
         val paramStr = StringBuilder(returnType.typeName).append(" ")

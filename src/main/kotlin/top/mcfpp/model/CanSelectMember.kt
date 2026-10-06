@@ -1,6 +1,7 @@
 package top.mcfpp.model
 
 import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.PropertyVar
 import top.mcfpp.model.function.Function
 
 /**
@@ -18,6 +19,15 @@ interface CanSelectMember{
      * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
      */
     fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean>
+
+    fun getMemberVar(key: String, function: Function): Pair<Var<*>?, Boolean> {
+        val selected = getMemberVar(key, Member.AccessModifier.PUBLIC)
+        val candidate = selected.first ?: return selected
+        val owner = if (candidate is PropertyVar) candidate.property.declaredParentTemplate
+            else candidate.declaredParentTemplate
+        val access = if (candidate is PropertyVar) candidate.property.accessModifier else candidate.accessModifier
+        return if (owner == null) selected else candidate to (function.accessTo(owner) >= access)
+    }
 
     /**
      * 根据方法标识符和方法的参数列表获取一个方法。如果没有这个方法，则返回null

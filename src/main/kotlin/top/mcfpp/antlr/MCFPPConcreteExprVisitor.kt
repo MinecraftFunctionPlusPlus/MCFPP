@@ -243,7 +243,7 @@ class MCFPPConcreteExprVisitor(
         for (operator in ctx.propertyOperatorExpression()){
             val identifier = operator.Identifier().text //要操作的字段名
             val value = visitExpression(operator.expression()) ?: return null
-            val member = re.getMemberVar(identifier, re.getAccess(Function.currFunction))   //获取字段
+            val member = re.getMemberVar(identifier, Function.currFunction)   //获取字段
             val field = Var.checkMember(member, identifier)
             field.replacedBy(field.assignedBy(value))
         }
@@ -334,7 +334,7 @@ class MCFPPConcreteExprVisitor(
                 UnknownVar(qwq)
             }
         }else{
-            val re  = currSelector!!.getMemberVar(qwq, currSelector!!.getAccess(Function.currFunction))
+            val re  = currSelector!!.getMemberVar(qwq, Function.currFunction)
             if (re.first == null) {
                 LogProcessor.error("Cannot get member $qwq")
                 UnknownVar(qwq)
@@ -359,7 +359,7 @@ class MCFPPConcreteExprVisitor(
         }
         if(re is UnknownVar && enumType != null && currSelector == null){
             currSelector = StaticMemberView(enumType!!)
-            val re2  = currSelector!!.getMemberVar(qwq, currSelector!!.getAccess(Function.currFunction))
+            val re2  = currSelector!!.getMemberVar(qwq, Function.currFunction)
             if (re2.first == null) {
                 LogProcessor.error("Cannot get member ${enumType!!.simpleName}.$qwq")
             }else if (!re2.second){

@@ -212,7 +212,10 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         storageBinding?.let { binding ->
             val declaration = templateType.scope.getVar(key) ?: return null to true
             val property = templateType.scope.getProperty(key) ?: return null to true
-            val field = top.mcfpp.analysis.StorageAccess.adapter(declaration.type, key, binding.field(key))
+            val field = top.mcfpp.analysis.StorageAccess.adapter(declaration.type, key,
+                top.mcfpp.analysis.StorageAccess.inFrame(binding, stackIndex).field(key))
+            field.accessModifier = declaration.accessModifier
+            field.declaredParentTemplate = declaration.declaredParentTemplate
             field.parent = this
             field.isConst = declaration.isConst
             field.nullable = declaration.nullable

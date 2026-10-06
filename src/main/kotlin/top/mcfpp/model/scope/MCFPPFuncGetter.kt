@@ -4,7 +4,6 @@ import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
-import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.util.LogProcessor
 
 /**
@@ -30,10 +29,7 @@ object MCFPPFuncGetter{
         val func = curr.getMemberFunction(identifier, readOnlyArgs, normalArgs, Member.AccessModifier.PUBLIC)
         val owner = func.first.parentTemplate()
         val accessible = if (owner != null) {
-            var caller = Function.currFunction
-            while (caller is NoStackFunction) caller = caller.parent.first()
-            val access = caller.parentTemplate()?.getAccess(owner) ?: Member.AccessModifier.PUBLIC
-            access >= func.first.accessModifier
+            Function.currFunction.accessTo(owner) >= func.first.accessModifier
         } else {
             func.second
         }

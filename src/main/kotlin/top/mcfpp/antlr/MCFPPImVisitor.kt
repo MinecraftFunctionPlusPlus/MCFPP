@@ -621,14 +621,12 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     
     @InsertCommand
     fun enterWhileBlock(ctx: mcfppParser.BlockContext) {
-        //入栈
-        Function.addCommand(Commands.stackIn())
         Function.addComment("while start")
         val parent: mcfppParser.WhileStatementContext = ctx.parent as mcfppParser.WhileStatementContext
-        //while语句块编译的目标函数，即内while函数
-        val f: Function = InternalFunction("_while_block_", Function.currFunction)
-        f.child.add(f)
-        f.parent.add(f)
+        //循环体共享外while函数已经建立的栈帧。
+        val outerWhile = Function.currFunction
+        val f: Function = NoStackFunction(TempPool.getFunctionIdentify("_while_block_"), outerWhile)
+        outerWhile.child.add(f)
         if(!GlobalScope.localNamespaces.containsKey(f.namespace))
             GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
         GlobalScope.localNamespaces[f.namespace]!!.scope.addFunction(f,false)
