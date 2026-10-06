@@ -14,6 +14,7 @@ import top.mcfpp.core.lang.nbt.NBTList
 import top.mcfpp.core.lang.nbt.NBTListConcrete
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.function.Function
+import top.mcfpp.mni.NativeCallContext
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.util.LogProcessor
@@ -125,6 +126,10 @@ object ListOperations {
     fun clear(caller: NBTList) {
         StorageAccess.ensure(caller)
         StorageAccess.write(caller, NBTListConcrete(arrayListOf(), TempPool.getVarIdentify(), caller.genericType))
+    }
+
+    fun clear(context: NativeCallContext) {
+        context.writeReceiver(CompilerValue.Sequence(emptyList()))
     }
 
     fun add(caller: NBTList, source: Var<*>, prepend: Boolean) {

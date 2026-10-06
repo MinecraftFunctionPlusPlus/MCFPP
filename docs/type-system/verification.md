@@ -2,6 +2,14 @@
 
 最新规则日期：2026-10-06（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
+## 阶段 88：list.clear 显式调用上下文（已限定验证）
+
+新增36行 `NativeCallContext`，公开函数、receiver的ValueRef/Place、当前immutable `CompilerValue`快照及通用 `writeReceiver(CompilerValue)`；内部private Var桥执行显式 `function.runInFunction` 与 `StorageAccess` 恢复/写回。Java `clear` 改为单一context签名；NativeFunction使用实际 `invocationArgs` context，CompoundData识别精确单context ABI，其他native ABI保留。33行fixture通过真实实例owner在 `reset` 中执行clear/add；source与fresh库consumer均从生成的mcfunction执行得到7，入口栈帧为0。领域操作仍在 `ListOperations`，本阶段没有统一所有StorageAccess/MNI入口。
+
+MCFL19→20：stdlib日志 `mcfpp-native-call-context-stdlib2.log`，exit0/BUILD SUCCESSFUL in16s、Project 0 errors/0 warnings；bin资源292301 bytes，SHA256 `9FC7D934242FEABE333BDFEFCFD5AE128CA306CDC97D8DC841BEACEE734F51AA`，raw header `4c46434d14000000`。首次stdlib尝试因 `List<NativeCallContext>` 类型推断错误于compileKotlin失败13s，无测试worker；显式 `List<Any?>` 修复后重建。首次processResources仍带旧hash，随后独立test调用同步build资源；build/stdlib-index、src资源与build资源三份最终产物大小及hash相同。
+
+最终三项联合 `mcfpp-native-call-context-final.log`：worker183正常，exit0/BUILD SUCCESSFUL in23s。LibCacheFormatTest fresh XML `2026-10-06T16:48:53.890Z`、LibFieldAccessTest `2026-10-06T16:48:54.610Z`、ListMemberTest `2026-10-06T16:48:59.413Z`，每套件1/0 failures/0 errors/0 skips。source项目0 errors/9118 warnings、fresh consumer 0/9119、IR clear回归0/9118；警告是既有flatExtends重复继承字段类别。只证明指定三项，无fullcheck/server；whole17仍未完成。
+
 ## 阶段 87：`type` 仅用于泛型参数（已实现并限定验证）
 
 新增 `TypeUsage` 统一判定及源码入口检查，覆盖已绑定普通签名、IR/擦除值与集合、延迟字段声明。普通值位置不保存 `TypeValue`；依赖普通 `type` 存储的旧30个正例撤回，4个合法的直接泛型类型表达式库往返 fixture 保留。9个新规则方法与相关回归跨轮验证；本轮不改变 MCFL19/bin292301，也未重建标准库、运行 fullcheck 或服务器。whole17仍未完成。

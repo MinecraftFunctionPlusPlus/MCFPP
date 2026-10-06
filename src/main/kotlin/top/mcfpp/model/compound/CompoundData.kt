@@ -334,8 +334,9 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
         if(mniRegister.caller != "void"){
             exceptedParamCount++
         }
+        val contextAbi = method.parameterTypes.contentEquals(arrayOf(top.mcfpp.mni.NativeCallContext::class.java))
         //检查method的参数
-        if(method.parameterCount != exceptedParamCount){
+        if(method.parameterCount != if (contextAbi) 1 else exceptedParamCount){
             LogProcessor.error("Method ${method.name} in class ${method.declaringClass.name} has wrong parameter count")
             return
         }

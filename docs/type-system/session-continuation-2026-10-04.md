@@ -1,6 +1,6 @@
 # 类型系统续接记录（2026-10-04）
 
-本轮从 2026-10-04 续接，首次存储/视图纵向路径通过 161 项测试。阶段54已提交`107e8ac`，阶段55已提交`4b5b7bd`，阶段56已提交`0fb7cb8`，阶段57已提交`3865673`。阶段58普通模板inferred字段已接入部分声明绑定支持并提交`e6f83fe`，37个不同必要用例跨轮各自通过。阶段59导入声明环境恢复与MCFL13重建后，50项指定测试联合通过，提交`6200561`。阶段60 consumer函数体导出限定回归13项联合通过，提交`3468341`。阶段61的26个不同用例跨轮各自通过。阶段62目录/JAR/ZIP资源复制与模板初始化联合11项通过。阶段63 MCFL14库权限往返联合14项全部通过，提交`1918db9`。阶段64 MCFL15字段/Property访问权限与while帧修复后，最终定向7项全部通过，提交`bda4d5a`。阶段65字段权限联合11项全过；阶段66当前实例未限定字段寻址的LibFieldAccess4 + ConstructorExecution7联合11项全过，MCFL15/bin286207未变。阶段67 generic类readonly源码特化及namespace类别恢复已验证，MCFL16/bin286243；41个不同用例跨轮各自通过。阶段68未注解generic类T绑定限定语法已验证，17个不同用例跨轮通过，MCFL16/bin不变，已提交`adf50f8968483c77fcca7a482e37a2eef8eae871`。阶段69显式generic类型及跨库canonical特化限定验证通过，MCFL17/bin289989，19个不同用例跨轮各自通过。阶段69已提交`10267379e30bd43af6c38bcd7e6a673d195a6102`。阶段70六个生产文件和一个fixture限定验证通过，36个不同用例跨轮各自通过，提交记录见Git历史；MCFL17/bin289989未变，无stdlib/fullcheck/服务器。阶段70已提交`1d593d19c71f5c42a3adb4aaf0e2dbdaae5c1b16`；阶段71四prod+fixture有限类型值路径6个不同用例跨轮各自通过，最终必要2项复查，提交记录见Git历史，MCFL17/bin289989未变。阶段72限定静态类型集合路径跨轮5个不同用例各过，磁盘4/9/frame0；阶段73最终必要联合2项全过，模型及磁盘4/9/frame0；阶段74必要联合4项全过，source/fresh模型及consumer磁盘4/9/frame0；阶段75必要联合2项全过，source/fresh模型及consumer磁盘4/9/frame0；阶段76最终单方法通过，source/fresh模型及consumer磁盘4/9/frame0；阶段77最终必要1项通过，source/fresh模型及consumer磁盘4/9/frame0；阶段78 alias有根匿名冻结身份限定通过，四个不同用例跨轮各自通过，最终仅新1复查；阶段79 generic用户函数自身readonly依赖签名已限定验证，最终必要联合5全绿、磁盘4/9/7/frame0通过；阶段80 generic object静态N/方法已限定验证，三用例跨轮各过、最终仅新1，consumer磁盘4/9/4/frame0；阶段81 generic interface静态TypeValue已限定验证，三个case跨轮各过、最终仅新1；阶段82 source generic特化磁盘导出已限定通过，最终必要联合3全绿、source磁盘4/9/4/9/frame0；阶段83 generated-vs-legal名字隔离已限定验证，四case跨轮各过、最终新1；阶段84 generic object静态字段/显式constructor初始化限定通过，最终联合2全绿，source4/9/4/9、fresh9/4/9/4/frame0；阶段85 abstract/final flags已限定通过，MCFL18/stdlib287554/最终联合3全绿；阶段86 actual generic父项限定通过、MCFL19/stdlib292301/最终联合3；阶段87当前按严格type声明规则处理；imported object自动load仍独立未解决。最近完整346项仍属于`72dc557`；整个17项重构未完成。
+本轮从 2026-10-04 续接，首次存储/视图纵向路径通过 161 项测试。阶段54已提交`107e8ac`，阶段55已提交`4b5b7bd`，阶段56已提交`0fb7cb8`，阶段57已提交`3865673`。阶段58普通模板inferred字段已接入部分声明绑定支持并提交`e6f83fe`，37个不同必要用例跨轮各自通过。阶段59导入声明环境恢复与MCFL13重建后，50项指定测试联合通过，提交`6200561`。阶段60 consumer函数体导出限定回归13项联合通过，提交`3468341`。阶段61的26个不同用例跨轮各自通过。阶段62目录/JAR/ZIP资源复制与模板初始化联合11项通过。阶段63 MCFL14库权限往返联合14项全部通过，提交`1918db9`。阶段64 MCFL15字段/Property访问权限与while帧修复后，最终定向7项全部通过，提交`bda4d5a`。阶段65字段权限联合11项全过；阶段66当前实例未限定字段寻址的LibFieldAccess4 + ConstructorExecution7联合11项全过，MCFL15/bin286207未变。阶段67 generic类readonly源码特化及namespace类别恢复已验证，MCFL16/bin286243；41个不同用例跨轮各自通过。阶段68未注解generic类T绑定限定语法已验证，17个不同用例跨轮通过，MCFL16/bin不变，已提交`adf50f8968483c77fcca7a482e37a2eef8eae871`。阶段69显式generic类型及跨库canonical特化限定验证通过，MCFL17/bin289989，19个不同用例跨轮各自通过。阶段69已提交`10267379e30bd43af6c38bcd7e6a673d195a6102`。阶段70六个生产文件和一个fixture限定验证通过，36个不同用例跨轮各自通过，提交记录见Git历史；MCFL17/bin289989未变，无stdlib/fullcheck/服务器。阶段70已提交`1d593d19c71f5c42a3adb4aaf0e2dbdaae5c1b16`；阶段71四prod+fixture有限类型值路径6个不同用例跨轮各自通过，最终必要2项复查，提交记录见Git历史，MCFL17/bin289989未变。阶段72限定静态类型集合路径跨轮5个不同用例各过，磁盘4/9/frame0；阶段73最终必要联合2项全过，模型及磁盘4/9/frame0；阶段74必要联合4项全过，source/fresh模型及consumer磁盘4/9/frame0；阶段75必要联合2项全过，source/fresh模型及consumer磁盘4/9/frame0；阶段76最终单方法通过，source/fresh模型及consumer磁盘4/9/frame0；阶段77最终必要1项通过，source/fresh模型及consumer磁盘4/9/frame0；阶段78 alias有根匿名冻结身份限定通过，四个不同用例跨轮各自通过，最终仅新1复查；阶段79 generic用户函数自身readonly依赖签名已限定验证，最终必要联合5全绿、磁盘4/9/7/frame0通过；阶段80 generic object静态N/方法已限定验证，三用例跨轮各过、最终仅新1，consumer磁盘4/9/4/frame0；阶段81 generic interface静态TypeValue已限定验证，三个case跨轮各过、最终仅新1；阶段82 source generic特化磁盘导出已限定通过，最终必要联合3全绿、source磁盘4/9/4/9/frame0；阶段83 generated-vs-legal名字隔离已限定验证，四case跨轮各过、最终新1；阶段84 generic object静态字段/显式constructor初始化限定通过，最终联合2全绿，source4/9/4/9、fresh9/4/9/4/frame0；阶段85 abstract/final flags已限定通过，MCFL18/stdlib287554/最终联合3全绿；阶段86 actual generic父项限定通过、MCFL19/stdlib292301/最终联合3；阶段87 `type` 仅用于泛型参数已实现并限定验证，提交`bde5a25`；阶段88 list.clear显式上下文迁移及MCFL20已限定验证，三项回归通过。下一步阶段89候选为其余10个list native方法迁移；imported object自动load仍独立未解决。最近完整346项仍属于`72dc557`；整个17项重构未完成。
 
 ## 当前进度
 
@@ -12,9 +12,25 @@
 
 `TypeUsage` 统一判定接入源码声明入口、已绑定普通签名、IR/擦除值与集合、延迟字段。依赖普通 `type` 存储的旧30个正例已撤回，4个合法的直接泛型类型表达式库往返 fixture 保留；9个新规则方法与相关回归跨轮各自通过。验证分轮及失败修复细节见 `verification.md`：最终5项定向复查全过，不能描述为单次全套通过。底层以runtime carrier保留存储形状，但不改变 `T!` 语言类型或放宽常量要求。MCFL19/bin292301未变，无stdlib/fullcheck/server。
 
-### 阶段 88：候选工作范围，等待 root 确认
+### 阶段 88：list.clear 显式调用上下文（已限定验证）
 
-回到17项迁移中 MNI 显式 context/value/place 的实际入口。Sol只读调研的候选从真实legacy实例成员 `list.clear()` 接入小型 `NativeCallContext`，暴露显式函数、receiver的ValueRef/Place、immutable CompilerValue快照与 `writeReceiver(CompilerValue)`；内部私有Var桥使用 `function.runInFunction` 和 `StorageAccess.restore(actualType,payload,...,binding.types)/write`，领域clear仍留在 `ListOperations`。保留一个IR clear检查，并新增模板实例 `reset` 中clear/add的源码及磁盘用例；`ListMemberTest` 当前直接走PrimitiveCompiler IR，不能单独证明native入口。`NativeFunctionInfo`已有methodString；删除旧 `clear(NBTList)` ABI可能需要MCFL升级及stdlib重建。该方案/API待root最终确认，尚未编码或验证。本阶段87普通值位置规则继续生效。
+36行 `NativeCallContext`公开Function、receiver的ValueRef/Place、当前immutable CompilerValue快照及通用 `writeReceiver(CompilerValue)`；private Var桥执行显式 `function.runInFunction` 和 `StorageAccess.restore(actualType,payload,...,binding.types)/write`。Java clear改为单context，NativeFunction使用真实invocationArgs，CompoundData识别精确单context签名，其他旧native ABI不变。33行新fixture从真实模板实例owner调用reset内clear/add；source及fresh库consumer均执行磁盘mcfunction得到7，frame0。MCFL19→20，stdlib与资源头 `4c46434d14000000`，292301 bytes，SHA256 `9FC7D934242FEABE333BDFEFCFD5AE128CA306CDC97D8DC841BEACEE734F51AA`；三产物一致。首轮stdlib compileKotlin因List推断过窄失败，类型注解后stdlib2成功，独立测试调用才同步build resource。final worker183 exit0/BUILD SUCCESSFUL in23s，Cache/LibField/ListMember三项分别fresh 16:48:53.890Z、16:48:54.610Z、16:48:59.413Z全绿；source0/9118 warnings、fresh0/9119、IR0/9118，均为已知重复flatExtends warning。未fullcheck/server；整体17项仍未完成。
+
+### 阶段 89：其余 list native 方法（候选）
+
+计划把余下10个方法迁到context，保持Java不暴露Var/ValueWrapper，内部支持普通参数值/位置与返回值/位置，领域逻辑在ListOperations。删除旧methodString ABI可能再升级MCFL并重建stdlib。此范围尚未实施或验证，operator与其他MNI仍不在本阶段。
+
+### 阶段 88 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 标准库失败修复、三份fresh XML及资源hash均按实际轮次记录。 |
+| 完整性 | 3/5 | 仅clear及指定回归受测，其他list native方法与whole17/MNI仍未完成。 |
+| 清晰性 | 4/5 | 区分Java context、内部StorageAccess桥和ListOperations领域逻辑。 |
+| 可执行性 | 4/5 | 阶段89聚焦剩余10方法及methodString缓存影响。 |
+| 简洁性 | 4/5 | 当前阶段记录聚焦小范围入口与验证。 |
+
+平均3.8/5，whole17完整性仍为3/5。
 
 ### 阶段 87 自检
 
@@ -434,5 +450,5 @@ final3 worker177正常exit0/SUCCESS1m1s，fresh XML2026-10-06T14:00:39.735Z联�
 | 可操作性 | 4/5 | 阶段62目录/ZIP/JAR复制11项通过；阶段63三套件MCFL14权限往返14项通过；阶段64字段/逻辑7项、阶段65权限11项、阶段66实例字段与构造器11项全绿；阶段67 MCFL16及最终5项（含旧float ABI）全绿、41个不同用例跨轮各自通过；阶段68完成未注解Cell<T as type>限定consumer/磁盘验收；阶段69完成MCFL17显式generic类型签名与跨库往返验证；阶段70声明scope及绑定T/N限定路径完成模型和磁盘4/6/8/bool1/frame0验证，36个不同用例跨轮各自通过；阶段71source/fresh Leaf及Applied类型canonical、真实磁盘4/9/7/frame0达成，最终必要2项复查；阶段78匿名alias字段注解、透明alias及合法named声明隔离的canonical/快照与consumer磁盘4/9/frame0达成，阶段79联合5通过，依赖签名及readonly完整冻结绑定达到实际磁盘4/9/7/frame0；80 canonical静态object/方法与consumer真实磁盘4/9/4/frame0通过，source仅模型/库写入；81 abstract接口绑定和readonly canonical TypeValue/model及consumer磁盘4/9/frame0通过，82 source实际目标文件及磁盘4/9/4/9/frame0通过，最终联合3全绿；83 generated-vs-legal target/owner prefix及source盘4/9/4/9/frame0通过；84静态字段/显式constructor最终联合2全绿，下一85 abstract/final flags待RED |
 | 简洁性 | 4/5 | 只更新当前阶段事实与交接，不重写历史记录 |
 
-优先改进：阶段88候选范围是17项迁移中的MNI显式context/value/place实际入口；Sol正在只读调查，具体最小入口与回归范围待root确认。阶段87普通值位置拒绝规则继续生效，不恢复旧字段/集合正向假设。阶段86只验证受测actual generic父及裸interface恢复，不扩super或source object/interface actualgeneric父；完整Kryo身份、整体IR/MNI和whole17仍未完成。
+优先改进：阶段89候选是剩余10个list native方法迁入context，并验证参数/返回位置边界及methodString缓存升级；阶段88的clear入口限定通过。阶段87普通值位置拒绝规则继续生效，不恢复旧正例。整体IR/MNI和whole17仍未完成。
 自检：用户能复核实现和测试，也会看到整项重构仍未结束；没有把阶段通过写成项目全部完成。

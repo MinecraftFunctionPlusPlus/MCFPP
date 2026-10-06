@@ -6,6 +6,7 @@ import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Native
+import top.mcfpp.mni.NativeCallContext
 import top.mcfpp.type.MCFPPNotCompiledGenericType
 import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
@@ -82,23 +83,20 @@ class NativeFunction : Function, Native {
         val hostValues = observed.filter(hostIdentities::add).mapNotNull { value ->
             top.mcfpp.analysis.StorageAccess.hostSnapshot(value)?.let { value to it }
         }
+        val invocationArgs: List<Any?> = if (javaMethod.parameterTypes.contentEquals(arrayOf(NativeCallContext::class.java))) {
+            listOf(NativeCallContext(Function.currFunction, actualCaller as Var<*>))
+        } else buildList {
+            addAll(list)
+            if (this@NativeFunction.caller != MCFPPPrivateType.Void) add(actualCaller)
+            if (this@NativeFunction.returnType != MCFPPPrivateType.Void) add(valueWrapper)
+        }
         //一定是静态的
         try {
-            javaMethod.invoke(
-                null,
-                *list.toTypedArray(),
-                *if (this.caller != MCFPPPrivateType.Void) arrayOf(actualCaller) else emptyArray(),
-                *if (this.returnType != MCFPPPrivateType.Void) arrayOf(valueWrapper) else emptyArray()
-            )
+            javaMethod.invoke(null, *invocationArgs.toTypedArray())
         } catch (e: IllegalArgumentException) {
             // 参数类型或数量不匹配
             val expected = javaMethod.parameterTypes.map { it.typeName }
-            val providedArgs = buildList {
-                addAll(list)
-                if (this@NativeFunction.caller != MCFPPPrivateType.Void) add(actualCaller)
-                if (this@NativeFunction.returnType != MCFPPPrivateType.Void) add(valueWrapper)
-            }
-            val providedTypes = providedArgs.map { it?.javaClass?.typeName ?: "null" }
+            val providedTypes = invocationArgs.map { it?.javaClass?.typeName ?: "null" }
             val msg = StringBuilder().apply {
                 appendLine("Error when invoking native function: ${this@NativeFunction.identifier}")
                 appendLine("Reason: parameter mismatch (IllegalArgumentException)")

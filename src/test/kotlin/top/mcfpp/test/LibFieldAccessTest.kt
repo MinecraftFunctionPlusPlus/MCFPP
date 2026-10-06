@@ -1975,6 +1975,39 @@ class LibFieldAccessTest {
         assertEquals(10, machine.read(main.scope.getVar("numberResult") as MCInt))
     }
 
+    @Test
+    fun nativeListClearUsesExplicitReceiverContextAcrossLibraryRoundTrip() = withLibrary { output ->
+        write("""
+            namespace fixture.fields;
+            data Box {
+                items as list<int>;
+                constructor(){this.items=[2,3];}
+                func reset()->int {
+                    this.items.clear();
+                    this.items.add(7);
+                    return this.items[0];
+                }
+            }
+            func main(){
+                var box=Box();
+                dynamic var result=box.reset();
+            }
+        """, output)
+        val sourceMain = GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single()
+        val sourceMachine = execute(sourceMain, output)
+        assertEquals(7, sourceMachine.read(sourceMain.scope.getVar("result") as MCInt))
+        val main = consume("""
+            import fixture.fields:*;
+            func main(){
+                var box=Box();
+                dynamic var result=box.reset();
+            }
+        """, output)
+        assertEquals(0, Project.errorCount)
+        val machine = execute(main, output)
+        assertEquals(7, machine.read(main.scope.getVar("result") as MCInt))
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

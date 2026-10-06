@@ -1,10 +1,10 @@
-# 下一阶段：MNI 显式 context/value/place 入口（阶段 88，待 root 确认）
+# 下一阶段：其余 list native 方法的显式调用上下文（阶段 89）
 
-阶段87已限定接入普通 `type` 值拒绝规则：普通typed/inferred/const变量、data/object字段、普通参数/返回以及擦除/集合位置均拒绝；`typealias`、内部 `TypeVar`解析与现有readonly泛型绑定保留。不要恢复旧普通字段/集合正例。阶段87实现与分轮验证见verification.md。
+阶段87限制 `type` 值仅用于泛型参数已限定验证；普通值位置及擦除/集合中的TypeValue拒绝，`typealias`、内部TypeVar解析与现有readonly泛型绑定保留。阶段88已将list.clear的受测legacy入口迁入显式 `NativeCallContext`，MCFL20，三项必要检查通过。整体17项目标仍未完成。
 
-候选入口从真实legacy实例成员 `list.clear()` 迁移到小型 `NativeCallContext`，暴露显式函数、immutable值与receiver位置，领域逻辑留在 `ListOperations`，内部沿用 `StorageAccess` 桥接。既有 `ListMemberTest` 的 clear 直接走 `PrimitiveCompiler` IR lowering，不能单独证明新native入口；需要一个模板实例方法 `reset` 中调用 `clear/add` 的源码+磁盘用例，并保留一个IR clear回归。Sol的只读调研已给出该候选，root尚未确认最终最小API。
+阶段89候选：将剩余10个list native方法迁到同一调用context；共11个方法（clear已在阶段88完成）。context内部需要将普通参数绑定到值快照/位置，并适配真实返回值/返回位置，但Java API不暴露 `Var` 或 `ValueWrapper`；领域逻辑仍由 `ListOperations` 实现。此次只扩list native入口，不扩 operator 或全部MNI。`NativeFunctionInfo`持久化methodString；删除剩余10个旧methodString会使旧bin失效，计划确认后升级MCFL并重建stdlib。此阶段尚未编码/验证。
 
-`NativeFunctionInfo`已有持久化的完整methodString；若最终ABI删除旧 `clear(NBTList)`，旧bin会失效。API确认后再选择是否升级MCFL并重建标准库，不能预设无需格式变更。整体17项重构仍未完成。
+阶段88详细实施与分轮验证见verification.md；source/fresh reset(clear/add)输出7且栈帧为0。标准库和项目资源应使用MCFL20。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 
@@ -163,6 +163,10 @@ Contract<T>及Box<(Contract<int/bool>)>前置签名使用显式type primary，in
 ### 阶段 87：仅泛型参数承载 `type` 值（已实现并限定验证）
 
 `TypeUsage`统一判定接入源码声明入口、已绑定普通签名、IR/擦除值与集合、延迟字段；普通值位置拒绝保存 `TypeValue`。依赖普通 `type` 存储的旧30个正例已撤回；4个合法的直接泛型类型表达式库fixture保留。最终5项定向复查全绿，19个不同用例跨轮各自通过，非单次全套；MCFL19/bin292301未变，无stdlib/fullcheck/server。细节和先前红测见verification.md。
+
+### 阶段 88：list.clear 显式调用上下文（已限定验证）
+
+36行 `NativeCallContext` 暴露Function、receiver的ValueRef/Place、immutable CompilerValue快照与通用writeReceiver；内部private Var桥执行function.runInFunction和StorageAccess恢复/写回。Java clear为单context，NativeFunction采用实际invocationArgs，CompoundData按精确签名识别，其他native ABI不变。真实实例owner模板 `reset` 的clear/add源码库往返执行结果7，frame0；保留一个IR clear和cache拒旧检查。MCFL19→20，stdlib Project0/0，三个bin产物292301 bytes且SHA一致。限定测试与资源记录见verification.md；其他native列表成员尚未迁移。
 
 ### 旧浮点乘除（阶段 50 已实现）
 

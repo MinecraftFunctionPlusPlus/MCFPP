@@ -60,5 +60,5 @@ public class NBTListData {
 
     @WritesReceiver
     @MNIFunction(caller = "list", genericType = "E")
-    public static void clear(NBTList caller) { ListOperations.INSTANCE.clear(caller); }
+    public static void clear(NativeCallContext context) { ListOperations.INSTANCE.clear(context); }
 }

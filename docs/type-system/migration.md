@@ -5,15 +5,17 @@
 
 ## 当前规则（2026-10-06）
 
-用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。阶段87已实现并限定验证；whole17未完成。
+用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。阶段87已实现并限定验证；阶段88 `NativeCallContext`/list.clear已升级MCFL20并限定验证；whole17未完成。
 
 ## 当前已接入
 
 阶段86（历史）actual generic父项限定通过：8prod+新fixture99行/helper2行+bin，共11文件175+/35-。声明环境内解析完整父文本并tryResolve，actual T/N冻结绑定后解析；两Info nullable parentExpressions为source权威，避免复制specialized parentInfo。共享INDEX_TYPE恢复hook同时接Project与StringTest，compiled父readonly names的vars/properties不继承覆盖子T/N；裸Marker interface只验证canonical父恢复。MCFL19标准库292301 bytes重建0errors/0warnings，最终联合3全绿、cache回归在此前绿，跨轮4不同case各过。
 
-新86 source0errors/9118warnings、fresh0/9121warnings，source盘4/9/bool1/5、fresh4/9/bool1/10/frame0；旧modifier与final负例也通过，负例每次1错误为expected。source已有flatExtends重复警告，未解决该类别。无fullcheck/server，不扩super、source object/interface actualgeneric父或完整Kryo specialized身份。阶段87当前限定路径见下；以下85为历史记录。
+新86 source0errors/9118warnings、fresh0/9121warnings，source盘4/9/bool1/5、fresh4/9/bool1/10/frame0；旧modifier与final负例也通过，负例每次1错误为expected。source已有flatExtends重复警告，未解决该类别。无fullcheck/server，不扩super、source object/interface actualgeneric父或完整Kryo specialized身份。阶段87/88当前限定路径见下；以下85为历史记录。
 
 阶段87：`TypeUsage`统一判定接入源码声明入口、已绑定普通签名、IR/擦除值与集合、延迟字段，普通值位置拒绝保存 `TypeValue`。依赖普通 `type` 存储的旧30个正例撤回，4个合法的直接泛型类型表达式库往返fixture保留；9个新规则方法及相关回归共19个不同用例跨轮各自通过。final3为5项定向复查全绿，而非单次全套通过；各轮验证与修复边界见verification.md。底层runtime carrier保留 `T!` 语言类型及常量要求。MCFL19/bin292301不变，无stdlib/fullcheck/server。
+
+阶段88：`NativeCallContext`作为legacy实例成员 `list.clear()` 的显式调用入口，公开函数、receiver ValueRef/Place、immutable CompilerValue快照与通用receiver写回；private Var桥内部沿用StorageAccess，领域逻辑仍在ListOperations。Java clear用单context ABI，NativeFunction以实际invocationArgs构造context，其他native ABI保持原样。MCFL19→20；stdlib2 Project0/0，三份292301-byte bin资源SHA相同。三项联合回归source/fresh实际文件均执行reset clear/add并得7、frame0；详见verification.md。仅为受测路径，MNI其余入口与whole17仍未完成。
 
 阶段85 source template ABSTRACT/FINAL与object FINAL、compiled final、final继承拒绝及abstract默认ctor跳过已限定验证；两个Info保存final，Kryo声明前缀及early/Unsolved壳同步final。8prod34+/19-加两个fixture110行共9文件144+/19-，另更新标准库资源bin。MCFL18真实wire升级；旧/未知缓存格式拒绝回归通过。stdlib重建14s、compiler0/0、287554 bytes；最终必要联合3全绿，正例source/fresh0errors（fresh9119已知warnings）、磁盘4/9/4/4/frame0及独立模型通过；三种final父负例分别source1/fresh1预期错误，拒绝及父关系正确。无fullcheck/server，whole17未完成。
 
