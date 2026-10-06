@@ -11,6 +11,8 @@ class MCFPPTypeAliasType(val t: mcfppParser.TypeContext): MCFPPType() {
     @Transient private var failed = false
     @Transient private var resolved: MCFPPType? = null
 
+    internal val cachedTarget: MCFPPType? get() = resolved
+
     /** The alias is a declaration placeholder, never a distinct language value type. */
     fun resolve(scope: IScopeWithType): MCFPPType? {
         resolved?.let { return it }

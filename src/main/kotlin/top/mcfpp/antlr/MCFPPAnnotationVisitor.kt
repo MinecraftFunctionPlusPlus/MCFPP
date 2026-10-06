@@ -18,6 +18,9 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
 
     private val annotationCache = ArrayList<Annotation>()
 
+    // Anonymous bodies replay annotations when their actual model is created.
+    override fun visitAnonymousTemplateType(ctx: mcfppParser.AnonymousTemplateTypeContext) = Unit
+
     override fun visitAnnotation(ctx: mcfppParser.AnnotationContext): Unit = withCompilationContext(ctx) {
         //获取注解
         val qwq = ctx.Identifier().text.splitNamespaceID()

@@ -30,6 +30,7 @@ import top.mcfpp.type.MCFPPUnionType
 import top.mcfpp.type.MCFPPVectorType
 import top.mcfpp.type.MCFPPEntityType
 import top.mcfpp.type.TypeId
+import top.mcfpp.util.TempPool
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.*
@@ -1236,6 +1237,91 @@ class LibFieldAccessTest {
         val bound = assertIs<MCFPPTypeVar>(first.scope.getVar("T"))
         assertEquals(alias.typeId, assertIs<MCFPPUnionType>(bound.value).typeId)
         assertEquals(sourceScalarSnapshot, ValueSnapshot.of(bound))
+        assertSame(first, assertIs<MCFPPDataTemplateType>(restoredScope.functions.getValue("readBox").single().normalParams.single().type).template)
+        val machine = execute(main, output)
+        assertEquals(4, machine.read(main.scope.getVar("firstResult") as MCInt))
+        assertEquals(9, machine.read(main.scope.getVar("secondResult") as MCInt))
+    }
+
+    @Test fun frozenAnonymousAliasTypeArgumentsRestoreCanonicalTypesAcrossLibraryRoundTrip() = withLibrary { output ->
+        val namedIdentifier = "data_${TempPool.anonymousTemplateCount}"
+        write("""
+            namespace fixture.fields;
+            typealias data {
+                @DataOnly
+                value as int;
+            } as X;
+            typealias X as Y;
+            data $namedIdentifier { value as int; }
+            func readBox(arg as Box<X>)->int { return arg.read(); }
+            data Box<T as type> {
+                private value as int;
+                constructor(v as int){ this.value=v; }
+                func read()->int { return this.value; }
+            }
+            func main(){
+                var first=Box<X>(4); var second=Box<Y>(9);
+                dynamic var firstResult=readBox(first);
+                dynamic var secondResult=readBox(second);
+            }
+        """, output)
+        val sourceScope = GlobalScope.localNamespaces.getValue("fixture.fields").scope
+        val sourceAlias = assertIs<MCFPPDataTemplateType>(sourceScope.getType("X"))
+        sourceAlias.tryResolve()
+        val sourceTarget = sourceAlias.template
+        val sourceNamed = sourceScope.getTemplate(namedIdentifier)!!
+        assertNotSame(sourceNamed, sourceTarget)
+        assertNotEquals(sourceNamed.getType().typeId, sourceAlias.typeId)
+        assertSame(sourceTarget, assertIs<MCFPPDataTemplateType>(sourceScope.getType("Y")).template)
+        assertTrue(assertIs<MCInt>(sourceTarget.scope.getVar("value")).isDataOnly)
+        val sourceAnonymousId = assertIs<TypeId.Declaration>(sourceAlias.typeId)
+        val sourcePrototype = assertIs<GenericDataTemplate>(sourceScope.getTemplate("Box"))
+        val sourceMain = sourceScope.functions.getValue("main").single()
+        val sourceFirst = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(sourceMain.scope.getVar("first")).templateType)
+        val sourceSecond = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(sourceMain.scope.getVar("second")).templateType)
+        assertSame(sourceFirst, sourceSecond)
+        assertSame(sourcePrototype, sourceFirst.originTemplate)
+        val sourceBound = assertIs<MCFPPTypeVar>(sourceFirst.scope.getVar("T"))
+        assertSame(sourceTarget, assertIs<MCFPPDataTemplateType>(sourceBound.value).template)
+        assertSame(sourceTarget, assertIs<MCFPPDataTemplateType>(sourceFirst.scope.getType("T")).template)
+        assertSame(sourceFirst, assertIs<MCFPPDataTemplateType>(sourceScope.functions.getValue("readBox").single().normalParams.single().type).template)
+        val sourceSnapshot = assertNotNull(ValueSnapshot.of(sourceBound))
+        val sourceBoxId = sourceFirst.getType().typeId
+
+        val main = consume("""
+            import fixture.fields:*;
+            func main(){
+                var second=Box<Y>(9); var first=Box<X>(4);
+                dynamic var firstResult=readBox(first);
+                dynamic var secondResult=readBox(second);
+            }
+        """, output)
+        assertEquals(0, Project.errorCount)
+        val restoredScope = GlobalScope.libNamespaces.getValue("fixture.fields").scope
+        val alias = assertIs<MCFPPDataTemplateType>(restoredScope.getType("X"))
+        alias.tryResolve()
+        val target = alias.template
+        val named = restoredScope.getTemplate(namedIdentifier)!!
+        assertNotSame(named, target)
+        assertNotEquals(named.getType().typeId, alias.typeId)
+        assertEquals(sourceNamed.getType().typeId, named.getType().typeId)
+        assertSame(target, assertIs<MCFPPDataTemplateType>(restoredScope.getType("Y")).template)
+        assertTrue(assertIs<MCInt>(target.scope.getVar("value")).isDataOnly)
+        assertNotSame(sourceTarget, target)
+        assertEquals(sourceAnonymousId, alias.typeId)
+        val prototype = assertIs<GenericDataTemplate>(restoredScope.getTemplate("Box"))
+        assertNotSame(sourcePrototype, prototype)
+        val first = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("first")).templateType)
+        val second = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("second")).templateType)
+        assertSame(first, second)
+        assertSame(prototype, first.originTemplate)
+        assertNotSame(sourceFirst, first)
+        val bound = assertIs<MCFPPTypeVar>(first.scope.getVar("T"))
+        assertSame(target, assertIs<MCFPPDataTemplateType>(bound.value).template)
+        assertSame(target, assertIs<MCFPPDataTemplateType>(first.scope.getType("T")).template)
+        assertEquals(sourceAnonymousId, bound.value.typeId)
+        assertEquals(sourceSnapshot, ValueSnapshot.of(bound))
+        assertEquals(sourceBoxId, first.getType().typeId)
         assertSame(first, assertIs<MCFPPDataTemplateType>(restoredScope.functions.getValue("readBox").single().normalParams.single().type).template)
         val machine = execute(main, output)
         assertEquals(4, machine.read(main.scope.getVar("firstResult") as MCInt))

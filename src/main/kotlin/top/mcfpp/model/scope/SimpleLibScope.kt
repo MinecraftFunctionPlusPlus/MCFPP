@@ -135,6 +135,10 @@ open class SimpleLibScope
         typeAlias.keys.toList().forEach { resolveAlias(it) }
     }
 
+    internal fun cachedAliasTargets(): List<MCFPPType> = typeAlias.values.mapNotNull {
+        if (it is MCFPPTypeAliasType) it.cachedTarget else it
+    }
+
     /** Export resolved targets, never parser contexts or a second alias identity. */
     fun resolvedAliases(): Map<String, MCFPPType> = typeAlias.keys.mapNotNull { name ->
         resolveAlias(name)?.let { name to it }

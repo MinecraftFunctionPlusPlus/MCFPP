@@ -1,8 +1,18 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段77 direct Union TypeValue表达式最终必要1项通过，source/fresh静态模型及consumer磁盘4/9/frame0到达，Union runtime布局未验。MCFL17/bin289989/wire/schema不变，无stdlib/fullcheck/server。阶段78匿名模板alias冻结身份尚未实现或测试；最新完整346项仍为72dc557，whole17未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段78 alias有根匿名冻结身份限定通过，source/fresh模型与consumer磁盘4/9/frame0到达；四个不同用例跨轮各自通过，最终仅新1复查。MCFL17/bin289989/wire/schema不变，无stdlib/fullcheck/server。阶段79 generic函数自身readonly依赖签名尚未实现或测试；最近完整346项仍为72dc557，whole17未完成。
 
-## 最新必要检查：direct Union TypeValue表达式（阶段 77）
+## 最新必要检查：匿名alias冻结类型身份（阶段 78）
+
+六个prod入口：两个visitor在真实anonymous model创建时转存field annotation，并停止全局annotation pass错误进入匿名body；TypeAlias.cachedTarget和SimpleLibScope.cachedAliasTargets仅读取已缓存目标，不触发解析。template Declaration恢复按完整ID匹配named与alias目标，tryResolve后要求template===唯一，否则诊断/null，不用语义equals去重。TempPool匿名名改data-N，用户Identifier不能包含'-'，既有NamespaceID保留；无global registry、新TypeId variant或wire字段。
+
+fixture frozenAnonymousAliasTypeArgumentsRestoreCanonicalTypesAcrossLibraryRoundTrip使用匿名X@DataOnly、透明Y及捕获旧合法data_N的named声明，两个目标引用/完整ID不同；source X4→Y9，fresh Y9→X4。前置readBox Box<X>、canonical T.value/scope.types[T]、source/fresh prototype/Compiled独立、FullID/snapshot及consumer磁盘4/9/frame0通过。只验证alias有根匿名、static T/runtime int，不实例化X，不验匿名method/constructor，不保证重新parse/rebuild稳定ID、全部跨library碰撞、无根匿名或Opaque。
+
+日志前缀mcfpp-generic-anonymous-type-value，目录F:/DevCache/.codex/runtime。初始-red.log worker149 fatal AnnotationVisitor.currTemplate!! NPE，FAILED7s，无fresh XML；旧77 XML08:36:39.179Z不属于78，未到write/source模型/consumer。-annotation.log worker150正常exit1/FAILED16s：新78 XML2026-10-06T09:05:17.281Z 1fail，producer0/0、source@DataOnly/canonical/write通过，consumer3 errors/9119 warnings（两次frozen T及read undefined）；既有TemplateFieldInference2 XML09:05:21.696Z均绿。-final.log worker151正常FAILED23s：LibField XML09:13:28.179Z 2tests/1fail，旧71绿；Template XML09:13:33.020Z anonymousForward1绿。新78 producer7 syntax errors源于fixture将named data置于alias之前，仅移动fixture，未改grammar或放宽断言。
+
+最终-final2.log worker152正常exit0/SUCCESS10s，新78 XML2026-10-06T09:17:26.630Z 1/0/0/0，producer0/0、consumer0/9119，全部模型与磁盘通过。最终仅新1方法复查；四个不同用例跨轮各自通过，不是最终联合3或fullcheck。六prod+fixture+四docs预计11文件；MCFL17/bin289989/layout/签名schema未变，无stdlib/fullcheck/server。阶段77已提交4925f67c363e0f2856bfc2e34af89441bf167665（7文件147+/23-）；阶段78提交记录见Git历史。阶段79先以单fixture RED界定generic函数自身readonly依赖Box<T>普通形参/返回的source/library/fresh路径，优先复用UnresolvedType文字placeholder与共享boundSignature；尚未实现/测试，schema需按实际改动核对，whole17未完成。
+
+## 历史必要检查：direct Union TypeValue表达式（阶段 77）
 
 阶段77两个prod：MCFPPType.data改为lazy CompoundData(Type,mcfpp)，commonType=MCFPPConcreteType.Type并injectedBy新增19行Java MCFPPTypeData；类标注NoExternalWrites，MNIOperator('|')接受type/返回type，returnsConstWhenArgsConst=true，返回MCFPPTypeVar(MCFPPUnionType(actual caller/other types))。复用两visitor既有Native dispatch，无grammar/visitor override、registry、runtime Union或用户函数求值。内建scope在编译器中按需初始化，未新增namespace持久Native签名，oldbin库读/consumer通过；不重建stdlib、不升VERSION。两prod+78行fixture+4docs预计7文件。
 

@@ -36,7 +36,7 @@ object TempPool {
 
     @JvmStatic
     fun getAnonymousTemplateIdentify(): String {
-        return "data_${nextAnonymousTemplateID()}"
+        return "data-${nextAnonymousTemplateID()}"
     }
 
     private fun nextNamespaceID(): Int {

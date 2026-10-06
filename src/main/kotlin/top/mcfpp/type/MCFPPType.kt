@@ -243,14 +243,25 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                 ?: MCFPPPrivateType.Wildcard.takeIf { it.typeId == id }
             is TypeId.Declaration -> {
                 val scope = GlobalScope.getUnsolvedImportNamespace(id.namespace)?.scope
-                val declaration = when (id.kind) {
-                    "template" -> scope?.getTemplate(id.name)
-                    "interface" -> scope?.getInterface(id.name)
-                    "object" -> scope?.getObject(id.name)
-                    "enum" -> scope?.getEnum(id.name)
-                    else -> null
+                if (id.kind == "template") {
+                    val matches = (listOfNotNull(scope?.getTemplate(id.name)?.getType() as? MCFPPDataTemplateType) +
+                        scope?.cachedAliasTargets().orEmpty().filterIsInstance<MCFPPDataTemplateType>())
+                        .filter { it.typeId == id }
+                    matches.forEach { it.tryResolve() }
+                    val first = matches.firstOrNull()
+                    if (first != null && matches.any { it.typeId != id || it.template !== first.template }) {
+                        LogProcessor.error("Ambiguous template identity '${id.namespace}:${id.name}'")
+                        null
+                    } else first
+                } else {
+                    val declaration = when (id.kind) {
+                        "interface" -> scope?.getInterface(id.name)
+                        "object" -> scope?.getObject(id.name)
+                        "enum" -> scope?.getEnum(id.name)
+                        else -> null
+                    }
+                    declaration?.getType()?.takeIf { it.typeId == id }
                 }
-                declaration?.getType()?.takeIf { it.typeId == id }
             }
             is TypeId.Applied -> {
                 val constructor = id.constructor as? TypeId.Builtin

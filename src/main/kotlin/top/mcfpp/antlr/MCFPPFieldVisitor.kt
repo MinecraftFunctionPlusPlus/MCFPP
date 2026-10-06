@@ -402,6 +402,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
         isInObject = false
         visitTemplateBody(ctx.templateBody())
+        MCFPPAnnotationVisitor().visitTemplateBody(ctx.templateBody())
 
         if(!template.isAbstract){
             template.scope.forEachFunction {
