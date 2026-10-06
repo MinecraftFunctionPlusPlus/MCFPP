@@ -4,7 +4,7 @@
 
 ## 当前进度
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段90实现和指定验证已完成；提交记录以Git历史为准。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段91已实现并完成限定验证；提交记录以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。
 
 ### 用户最新规则（2026-10-06）
 
@@ -24,19 +24,37 @@
 
 验证分轮完成：Cache、ListMember与新列表往返fixture三个不同用例均各自通过；最终仅复查失败fixture，XML `2026-10-06T17:31:52.308Z` 为1/0/0/0，worker正常、BUILD SUCCESSFUL in18s。source为0 errors/9118 warnings，fresh consumer为0/9119；结果与frame0断言从consumer磁盘函数执行。首轮consumer曾因tempFunction namespace NPE报8 errors，根因修复后用例通过。未跑fullcheck/server；本阶段没有统一其他MNI或operator。
 
-### 阶段 90：字典、Map与ImmutableList原生方法（已限定验证）
+### 阶段 91：int/float/bool 原生运算符（已限定验证）
+
+28个 `MNIOperator` 方法接入显式单context：int12（含 `~=` 右侧 `RangeVar`）、float11、bool5（4个二元和一元 `!`）。Kotlin `NativeOperatorOperations` 直接调用typed core；在真实 `runInFunction` 中规范化非 `ScoreBool` 的 `BaseBool` receiver/参数和结果，再ensure并发布真实引用。CompoundData保留旧2/3参数ABI并接受精确单context ABI。MCFL22→23，stdlib重建一次成功（12s，Project0 errors/0 warnings），292007 bytes；三份bin的SHA256一致，为 `800AF3AFB375C71643E23C11B2EB64261D3691F38F17D2204CC18FC62D477422`。
+
+验证分轮：首轮Cache与PrimitiveIR各1项通过，新fixture因执行器不支持score比较命令失败，未到fresh consumer；补充真实score比较/范围链后，final2单fixture通过，XML `2026-10-06T18:51:39.029Z`，source0/9118 warnings、fresh0/9119。consumer磁盘函数断言int/float/range/bool七个结果 `1/1/1/0/1/0/0` 与frame0。三个不同用例跨轮各自通过，final2仅复查fixture，不是联合3项；无fullcheck/server。阶段91未迁移完其他MNI，legacy循环与private Var桥仍在，whole17保持ACTIVE。
+
+### 阶段 91 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录了首轮执行器缺口、final2新鲜XML、三份bin哈希和磁盘结果。 |
+| 完整性 | 3/5 | 28个指定运算符已验证，但其他MNI和legacy循环仍未迁移，whole17未完成。 |
+| 清晰性 | 4/5 | 区分首轮失败与最终单fixture复查，没有称最终联合3项全绿。 |
+| 可执行性 | 4/5 | 阶段92精确列出44个拒绝的byte/short注册、MCFL24和三项验证。 |
+| 简洁性 | 4/5 | 保留历史并集中说明本阶段实施、验证和边界。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+### 阶段 90：字典、Map与ImmutableList原生方法（历史）
 
 Dictionary 4、Map 6、ImmutableList 3个原生方法复用现有context/API，未增加新context或operator。字典已知key限制、Map dynamic key、readonly list dynamic needle均保留。MCFL21→22，stdlib Project0/0、292301 bytes；三份资源SHA一致。source/fresh consumer磁盘fixture实测7个结果10/5/227/7/2/11/-1及frame0。缓存回归和新fixture两个不同用例跨轮各自通过，final5只复查fixture；不是最终联合2全绿。其余MNI仍未全部统一，whole17未完成，详情见verification.md。
 
-### 阶段 90 自检
+### 阶段 90 自检（历史）
 
 | 维度 | 评分 | 证据与改进 |
 | --- | --- | --- |
 | 准确性 | 4/5 | stdlib三份MCFL22产物hash一致；保留首轮producer错误、三次source执行失败与final5 fresh XML证据。 |
 | 完整性 | 3/5 | 13个字典/Map/ImmutableList方法的限定范围已验证，其他MNI、旧循环和whole17仍未完成。 |
 | 清晰性 | 4/5 | 分开记录字典限制、dynamic key/needle和source/fresh的执行边界。 |
-| 可执行性 | 4/5 | 阶段91按28个精确算子、Bool运行时表示和MCFL23重建列出最小验证。 |
-| 简洁性 | 4/5 | 当前进度仅补充阶段90结果与下一阶段范围，保留历史。 |
+| 可执行性 | 4/5 | 当时阶段91按28个精确算子、Bool运行时表示和MCFL23重建列出最小验证。 |
+| 简洁性 | 4/5 | 当时仅补充阶段90结果与下一阶段范围，保留历史。 |
 
 平均3.8/5，whole17完整性仍为3/5。
 
@@ -482,5 +500,5 @@ final3 worker177正常exit0/SUCCESS1m1s，fresh XML2026-10-06T14:00:39.735Z联�
 | 可操作性 | 4/5 | 阶段62目录/ZIP/JAR复制11项通过；阶段63三套件MCFL14权限往返14项通过；阶段64字段/逻辑7项、阶段65权限11项、阶段66实例字段与构造器11项全绿；阶段67 MCFL16及最终5项（含旧float ABI）全绿、41个不同用例跨轮各自通过；阶段68完成未注解Cell<T as type>限定consumer/磁盘验收；阶段69完成MCFL17显式generic类型签名与跨库往返验证；阶段70声明scope及绑定T/N限定路径完成模型和磁盘4/6/8/bool1/frame0验证，36个不同用例跨轮各自通过；阶段71source/fresh Leaf及Applied类型canonical、真实磁盘4/9/7/frame0达成，最终必要2项复查；阶段78匿名alias字段注解、透明alias及合法named声明隔离的canonical/快照与consumer磁盘4/9/frame0达成，阶段79联合5通过，依赖签名及readonly完整冻结绑定达到实际磁盘4/9/7/frame0；80 canonical静态object/方法与consumer真实磁盘4/9/4/frame0通过，source仅模型/库写入；81 abstract接口绑定和readonly canonical TypeValue/model及consumer磁盘4/9/frame0通过，82 source实际目标文件及磁盘4/9/4/9/frame0通过，最终联合3全绿；83 generated-vs-legal target/owner prefix及source盘4/9/4/9/frame0通过；84静态字段/显式constructor最终联合2全绿，下一85 abstract/final flags待RED |
 | 简洁性 | 4/5 | 只更新当前阶段事实与交接，不重写历史记录 |
 
-当前优先改进：阶段91计划迁移int/float/bool共28个MNIOperator入口，核实显式值/位置与Bool运行时适配，并按methodString变更重建MCFL23。阶段87普通值位置type拒绝规则继续生效；阶段90只证明指定集合原生方法路径。整体IR/MNI和whole17仍未完成。
+当前优先改进：阶段92计划删除44个已被统一拒绝的byte/short算术注册并升级MCFL24；阶段91只验证指定int/float/bool运算符。阶段87普通值位置type拒绝规则继续生效；其他MNI入口、legacy循环和whole17仍未完成。
 自检：用户能复核实现和测试，也会看到整项重构仍未结束；没有把阶段通过写成项目全部完成。

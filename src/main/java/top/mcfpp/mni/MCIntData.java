@@ -1,9 +1,11 @@
 package top.mcfpp.mni;
 
 import top.mcfpp.annotations.MNIOperator;
+import top.mcfpp.backend.NativeOperatorOperations;
 import top.mcfpp.annotations.MNIFunction;
-import top.mcfpp.core.lang.*;
-import top.mcfpp.core.lang.bool.BaseBool;
+import top.mcfpp.core.lang.JsonTextConcrete;
+import top.mcfpp.core.lang.MCInt;
+import top.mcfpp.core.lang.MCIntConcrete;
 import top.mcfpp.lib.ListChatComponent;
 import top.mcfpp.lib.ScoreChatComponent;
 import top.mcfpp.lib.PlainChatComponent;
@@ -26,63 +28,63 @@ public class MCIntData {
     }
 
     @MNIOperator(operator = "+",paramType = "int", returnType = "int", returnsConstWhenArgsConst = true)
-    public static void plus(MCInt a, MCInt caller, ValueWrapper<MCInt> returnValue) {
-        returnValue.setValue((MCInt) caller.plus(a));
+    public static void plus(NativeCallContext context) {
+        NativeOperatorOperations.INSTANCE.integer(context, "+");
     }
     
     @MNIOperator(operator = "-", paramType = "int", returnType = "int", returnsConstWhenArgsConst = true)
-    public static void minus(MCInt a, MCInt caller, ValueWrapper<MCInt> returnValue) {
-        returnValue.setValue((MCInt) caller.minus(a));
+    public static void minus(NativeCallContext context) {
+        NativeOperatorOperations.INSTANCE.integer(context, "-");
     }
 
     @MNIOperator(operator = "*", paramType = "int", returnType = "int", returnsConstWhenArgsConst = true)
-    public static void times(MCInt a, MCInt caller, ValueWrapper<MCInt> returnValue) {
-        returnValue.setValue((MCInt) caller.times(a));
+    public static void times(NativeCallContext context) {
+        NativeOperatorOperations.INSTANCE.integer(context, "*");
     }
 
     @MNIOperator(operator = "/", paramType = "int", returnType = "int", returnsConstWhenArgsConst = true)
-    public static void div(MCInt a, MCInt caller, ValueWrapper<MCInt> returnValue) {
-        returnValue.setValue((MCInt) caller.div(a));
+    public static void div(NativeCallContext context) {
+        NativeOperatorOperations.INSTANCE.integer(context, "/");
     }
 
     @MNIOperator(operator = "%", paramType = "int", returnType = "int", returnsConstWhenArgsConst = true)
-    public static void rem(MCInt a, MCInt caller, ValueWrapper<MCInt> returnValue) {
-        returnValue.setValue((MCInt) caller.rem(a));
+    public static void rem(NativeCallContext context) {
+        NativeOperatorOperations.INSTANCE.integer(context, "%");
     }
 
     @MNIOperator(operator = ">", paramType = "int", returnType = "bool", returnsConstWhenArgsConst = true)
-    public static void isBigger(MCInt a, MCInt caller, ValueWrapper<BaseBool> returnValue) {
-        returnValue.setValue((BaseBool) caller.isBigger(a));
+    public static void isBigger(NativeCallContext context) {
+        NativeOperatorOperations.INSTANCE.integer(context, ">");
     }
 
     @MNIOperator(operator = "<", paramType = "int", returnType = "bool", returnsConstWhenArgsConst = true)
-    public static void isSmaller(MCInt a, MCInt caller, ValueWrapper<BaseBool> returnValue) {
-        returnValue.setValue((BaseBool) caller.isSmaller(a));
+    public static void isSmaller(NativeCallContext context) {
+        NativeOperatorOperations.INSTANCE.integer(context, "<");
     }
 
     @MNIOperator(operator = "<=", paramType = "int", returnType = "bool", returnsConstWhenArgsConst = true)
-    public static void isSmallerOrEqual(MCInt a, MCInt caller, ValueWrapper<BaseBool> returnValue) {
-        returnValue.setValue((BaseBool) caller.isSmallerOrEqual(a));
+    public static void isSmallerOrEqual(NativeCallContext context) {
+        NativeOperatorOperations.INSTANCE.integer(context, "<=");
     }
 
     @MNIOperator(operator = ">=", paramType = "int", returnType = "bool", returnsConstWhenArgsConst = true)
-    public static void isBiggerOrEqual(MCInt a, MCInt caller, ValueWrapper<BaseBool> returnValue) {
-        returnValue.setValue((BaseBool) caller.isBiggerOrEqual(a));
+    public static void isBiggerOrEqual(NativeCallContext context) {
+        NativeOperatorOperations.INSTANCE.integer(context, ">=");
     }
 
     @MNIOperator(operator = "==", paramType = "int", returnType = "bool", returnsConstWhenArgsConst = true)
-    public static void isEqual(MCInt a, MCInt caller, ValueWrapper<BaseBool> returnValue) {
-        returnValue.setValue((BaseBool) caller.isEqual(a));
+    public static void isEqual(NativeCallContext context) {
+        NativeOperatorOperations.INSTANCE.integer(context, "==");
     }
 
     @MNIOperator(operator = "!=", paramType = "int", returnType = "bool", returnsConstWhenArgsConst = true)
-    public static void isNotEqual(MCInt a, MCInt caller, ValueWrapper<BaseBool> returnValue) {
-        returnValue.setValue((BaseBool) caller.isNotEqual(a));
+    public static void isNotEqual(NativeCallContext context) {
+        NativeOperatorOperations.INSTANCE.integer(context, "!=");
     }
 
     @MNIOperator(operator = "~=", paramType = "range", returnType = "bool", returnsConstWhenArgsConst = true)
-    public static void inRange(RangeVar a, MCInt caller, ValueWrapper<BaseBool> returnValue) {
-        returnValue.setValue((BaseBool) caller.inRange(a));
+    public static void inRange(NativeCallContext context) {
+        NativeOperatorOperations.INSTANCE.inRange(context);
     }
 
 }

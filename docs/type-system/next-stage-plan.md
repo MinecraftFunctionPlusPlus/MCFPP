@@ -1,14 +1,14 @@
-# 下一阶段：接入 int/float/bool 运算符调用上下文（阶段 91）
+# 下一阶段：移除被拒绝的 byte/short 算术注册（阶段 92）
 
-阶段87的普通值位置type拒绝规则继续生效。阶段88–90已将list、Dictionary、Map、ImmutableList共24个受测原生方法接入 `NativeCallContext`；阶段90 MCFL22标准库与资源已重建，source/fresh指定用例通过。whole17仍未完成。
+阶段87的普通值位置type拒绝规则继续生效。阶段88–91已将list、Dictionary、Map、ImmutableList和int/float/bool运算符入口接入 `NativeCallContext`；阶段91使用MCFL23。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
-阶段91目标迁移 int/float/bool 的28个 `MNIOperator` 方法：int 11个普通算术/比较加 `~=` range，float 11个普通算术/比较，bool 4个二元逻辑/比较及一元 `!`。总数为27个二元（包含range）和1个一元；标准算术/比较核心为26个二元及1个一元。CompoundData operator loader接受精确单context ABI，同时保留caller与const flag。Java方法仅收context；Kotlin backend直接委托现有typed core（如 `plus`、`isEqual`、`and`、`negation`、`inRange`），避免再次调用会重新dispatch的binary/unary computation。
+阶段91已限定迁移28个 `MNIOperator` 方法：int 12（含 `~=` range）、float 11、bool 5；最终fixture及缓存/IR回归跨轮各自通过，详见verification.md。
 
-context应在 `function.runInFunction` 内把 `BaseBool` 的非 `ScoreBool` receiver/argument adapter转为 `toScoreBool(false)`，随后确保并公开引用；结果发布复用转换helper，写回真实 `ScoreBool` adapter，避免fakeRead且不改cast规则或引入新框架。byte/short/long/double不在本阶段；合法Meta union readonly表达式仍保留。旧methodString移除预计MCFL22→23并重建stdlib。必要验证为Box模板实例方法source/fresh往返：未知int/float/bool参数覆盖非交换运算、比较及嵌套Bool条件/返回，并断言值与返回位置；另跑旧/未知缓存回归和一项IR算术回归。当前API/代码尚未实现。
+实现保留legacy循环和private Var桥，未声称所有MNI已迁移。下一步仅移除四个byte/short Java类中各11个已被 `Var.rejectNbtArithmetic` 拒绝的算术注册，以及 `MCFPPNBTType.injectedBy` 的四个对应注册；不触及long/double（它们没有这些注册）、精确NBT格式、转换或统一拒绝诊断。MCFL23→24并重建stdlib。必要验证限于 `TypeKernelTest.nbtNumericArithmeticAndImplicitAssignmentAreRejectedByTheCompiler`、`ConversionTest.nbtMappedInputsBecomeArithmeticOnlyThroughConversions` 和旧/未知缓存拒绝回归；不新增fixture。阶段92尚未实施或验证。
 
-阶段88–90详细实施与分轮验证见verification.md；集合native往返fixture在source/fresh consumer磁盘执行并断言。标准库和项目资源当前使用MCFL22。
+阶段88–91详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL23。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

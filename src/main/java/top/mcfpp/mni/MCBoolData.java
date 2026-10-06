@@ -1,35 +1,33 @@
 package top.mcfpp.mni;
 
 import top.mcfpp.annotations.MNIOperator;
-import top.mcfpp.core.lang.bool.BaseBool;
-import top.mcfpp.util.ValueWrapper;
+import top.mcfpp.backend.NativeOperatorOperations;
 
 @top.mcfpp.mni.annotation.NoExternalWrites
 public class MCBoolData {
 
     @MNIOperator(operator = "==", paramType = "bool", returnType = "bool", returnsConstWhenArgsConst = true)
-    public static void isEqual(BaseBool a, BaseBool caller, ValueWrapper<BaseBool> re){
-        re.setValue((BaseBool) caller.isEqual(a));
+    public static void isEqual(NativeCallContext context){
+        NativeOperatorOperations.INSTANCE.logical(context, "==");
     }
 
     @MNIOperator(operator = "!=" ,paramType = "bool", returnType = "bool", returnsConstWhenArgsConst = true)
-    public static void isNotEqual(BaseBool a, BaseBool caller, ValueWrapper<BaseBool> re){
-        re.setValue((BaseBool) caller.isNotEqual(a));
+    public static void isNotEqual(NativeCallContext context){
+        NativeOperatorOperations.INSTANCE.logical(context, "!=");
     }
 
     @MNIOperator(operator = "||", paramType = "bool", returnType = "bool", returnsConstWhenArgsConst = true)
-    public static void or(BaseBool a, BaseBool caller, ValueWrapper<BaseBool> re){
-        re.setValue((BaseBool) caller.or(a));
+    public static void or(NativeCallContext context){
+        NativeOperatorOperations.INSTANCE.logical(context, "||");
     }
 
     @MNIOperator(operator = "&&", paramType = "bool", returnType = "bool", returnsConstWhenArgsConst = true)
-    public static void and(BaseBool a, BaseBool caller, ValueWrapper<BaseBool> re){
-        re.setValue((BaseBool) caller.and(a));
+    public static void and(NativeCallContext context){
+        NativeOperatorOperations.INSTANCE.logical(context, "&&");
     }
 
-    @SuppressWarnings("DataFlowIssue")
     @MNIOperator(operator = "!", returnType = "bool", returnsConstWhenArgsConst = true)
-    public static void negation(BaseBool caller, ValueWrapper<BaseBool> re){
-        re.setValue((BaseBool) caller.negation());
+    public static void negation(NativeCallContext context){
+        NativeOperatorOperations.INSTANCE.logical(context, "!");
     }
 }

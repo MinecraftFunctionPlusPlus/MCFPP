@@ -12,6 +12,7 @@ import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.MCIntConcrete
 import top.mcfpp.core.lang.MCFPPTypeVar
+import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.obj.StaticMemberView
 import top.mcfpp.core.lang.nbt.NBTListConcrete
@@ -2127,6 +2128,70 @@ class LibFieldAccessTest {
                     "mapResult" to 227, "mapSource" to 7, "firstQuery" to 2,
                     "secondQuery" to 11, "absentQuery" to -1)) {
                 assertEquals(expected, machine.read(main.scope.getVar(name) as MCInt), name)
+            }
+        }
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+    }
+
+    @Test
+    fun nativePrimitiveOperatorsUseExplicitContextAcrossLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = """
+            func main(){
+                var box=Box();
+                dynamic var a=17; dynamic var b=5; dynamic var outside=27;
+                dynamic var x as float=7.5; dynamic var y as float=2.0;
+                dynamic var yes=true; dynamic var no=false;
+                dynamic var integerResult=box.integer(a,b);
+                dynamic var floatingResult=box.floating(x,y);
+                dynamic var insideResult=box.ranged(a);
+                dynamic var outsideResult=box.ranged(outside);
+                dynamic var firstLogical=box.logical(yes,no);
+                dynamic var secondLogical=box.logical(no,yes);
+                dynamic var thirdLogical=box.logical(yes,yes);
+            }
+        """
+        write("""
+            namespace fixture.fields;
+            data Box {
+                func integer(a as int,b as int)->int {
+                    if(a+b!=22){return -1;}
+                    if(a-b!=12){return -2;}
+                    if(a*b!=85){return -3;}
+                    if(a/b!=3){return -4;}
+                    if(a%b!=2){return -5;}
+                    if(a>b&&b<a&&a>=b&&b<=a&&a!=b&&a==a){return 1;}
+                    return 0;
+                }
+                func floating(a as float,b as float)->int {
+                    if(a+b!=9.5){return -1;}
+                    if(a-b!=5.5){return -2;}
+                    if(a*b!=15.0){return -3;}
+                    if(a/b!=3.75){return -4;}
+                    if(a%b!=1.5){return -5;}
+                    if(a>b&&b<a&&a>=b&&b<=a&&a!=b&&a==a){return 1;}
+                    return 0;
+                }
+                func ranged(value as int)->int {
+                    if(value~=10..20){return 1;}
+                    return 0;
+                }
+                func logical(a as bool,b as bool)->bool {
+                    return (a!=b)&&!(a==b)&&(a||b)&&!(a&&b)&&!(!a);
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val machine = execute(main, output)
+            for ((name, expected) in listOf("integerResult" to 1, "floatingResult" to 1,
+                    "insideResult" to 1, "outsideResult" to 0)) {
+                assertEquals(expected, machine.read(main.scope.getVar(name) as MCInt), name)
+            }
+            for ((name, expected) in listOf("firstLogical" to 1, "secondLogical" to 0, "thirdLogical" to 0)) {
+                assertEquals(expected, machine.read(main.scope.getVar(name) as ScoreBool), name)
             }
         }
         check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())

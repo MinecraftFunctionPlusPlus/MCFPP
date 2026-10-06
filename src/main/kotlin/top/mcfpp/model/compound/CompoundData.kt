@@ -278,7 +278,8 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
             return
         }
         //检查method的参数
-        if((paramType != null && method.parameterCount != 3) || (paramType == null && method.parameterCount != 2)){
+        val contextAbi = method.parameterTypes.contentEquals(arrayOf(top.mcfpp.mni.NativeCallContext::class.java))
+        if(method.parameterCount != if (contextAbi) 1 else if (paramType != null) 3 else 2){
             LogProcessor.error("Method ${method.name} in class ${method.declaringClass.name} has wrong parameter count")
             return
         }

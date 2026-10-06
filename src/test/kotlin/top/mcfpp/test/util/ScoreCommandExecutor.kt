@@ -203,8 +203,9 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         val mergeNbtValue = Regex("data modify storage (\\S+) ($nbtPath) merge value (.*)")
         val mergeNbtFrom = Regex("data modify storage (\\S+) ($nbtPath) merge from storage (\\S+) ($nbtPath)")
         val clearCompound = Regex("data modify storage mcfpp:system stack_frame\\[(\\d+)]\\.(\\S+) set value \\{\\}")
-        val storeTest = Regex("execute store success score (\\S+ \\S+) (if|unless) score (\\S+ \\S+) = (\\S+ \\S+)")
-        val storeMatch = Regex("execute store success score (\\S+ \\S+) (if|unless) score (\\S+ \\S+) matches (-?\\d+)")
+        val storedScoreConditions = Regex("execute store success score (\\S+ \\S+) ((?:if|unless) score .*)")
+        val scoreCondition = Regex("(if|unless) score (\\S+ \\S+) (?:(=|<|>|<=|>=) (\\S+ \\S+)|matches (-?\\d+|(?:-?\\d+)?\\.\\.(?:-?\\d+)?))(?: ((?:if|unless) score .*))?")
+        val storedFunctionResult = Regex("execute store result score (\\S+ \\S+) run function (\\S+)")
         val insertNbt = Regex("data modify storage (\\S+) ($nbtPath) (append|prepend|insert -?\\d+) from storage (\\S+) ($nbtPath)")
         val compareNbt = Regex("execute store success score (\\S+ \\S+) run data modify storage (\\S+) ($nbtPath) set from storage (\\S+) ($nbtPath)")
         val removeNbt = Regex("data remove storage (\\S+) ($nbtPath)")
@@ -218,6 +219,32 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             if (!player.startsWith("@")) return key
             check(player == "@s") { "Unsupported score selector: $player" }
             return "${identity ?: error("@s needs an executor identity")} ${key.substringAfter(' ')}"
+        }
+        fun testScoreConditions(conditions: String): Boolean {
+            var remaining = conditions
+            while (remaining.isNotEmpty()) {
+                val condition = scoreCondition.matchEntire(remaining) ?: error("Unsupported score conditions: $remaining")
+                val left = values.getValue(scoreKey(condition.groupValues[2]))
+                val match = if (condition.groupValues[3].isNotEmpty()) {
+                    val right = values.getValue(scoreKey(condition.groupValues[4]))
+                    when (condition.groupValues[3]) {
+                        "=" -> left == right
+                        "<" -> left < right
+                        ">" -> left > right
+                        "<=" -> left <= right
+                        ">=" -> left >= right
+                        else -> error(remaining)
+                    }
+                } else {
+                    val range = condition.groupValues[5]
+                    val bounds = range.split("..")
+                    if (bounds.size == 1) left == range.toInt() else
+                        (bounds[0].isEmpty() || left >= bounds[0].toInt()) && (bounds[1].isEmpty() || left <= bounds[1].toInt())
+                }
+                if (match != (condition.groupValues[1] == "if")) return false
+                remaining = condition.groupValues[6]
+            }
+            return true
         }
         lateinit var execute: (String) -> Boolean
         var returnedValue = 0
@@ -395,14 +422,12 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                 values[scoreKey(it.groupValues[1])] = if (exists) 1 else 0
                 return@command false
             }
-            storeTest.matchEntire(command)?.let {
-                val condition = values.getValue(scoreKey(it.groupValues[3])) == values.getValue(scoreKey(it.groupValues[4]))
-                values[scoreKey(it.groupValues[1])] = if (condition == (it.groupValues[2] == "if")) 1 else 0
+            storedScoreConditions.matchEntire(command)?.let {
+                values[scoreKey(it.groupValues[1])] = if (testScoreConditions(it.groupValues[2])) 1 else 0
                 return@command false
             }
-            storeMatch.matchEntire(command)?.let {
-                val condition = values.getValue(scoreKey(it.groupValues[3])) == it.groupValues[4].toInt()
-                values[scoreKey(it.groupValues[1])] = if (condition == (it.groupValues[2] == "if")) 1 else 0
+            storedFunctionResult.matchEntire(command)?.let {
+                values[scoreKey(it.groupValues[1])] = run(functions.getValue(it.groupValues[2]))
                 return@command false
             }
             operation.matchEntire(command)?.let {

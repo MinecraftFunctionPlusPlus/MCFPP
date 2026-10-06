@@ -2,7 +2,15 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 阶段 90：字典、Map与ImmutableList原生方法（已限定验证）
+## 阶段 91：int/float/bool 原生运算符（已限定验证）
+
+28个 `MNIOperator` 方法迁入显式单context入口：int 12（含 `~=` 的右侧 `RangeVar`）、float 11、bool 5（4个二元及一元 `!`）。Kotlin `NativeOperatorOperations` 直接调用typed core，避免递归dispatch；在 `runInFunction` 内规范化非 `ScoreBool` 的 `BaseBool` receiver/参数和结果，再ensure并发布真实引用。CompoundData保留旧2/3参数ABI并接受精确单context ABI。MCFL22→23。
+
+`mcfpp-native-operator-context-stdlib.log`：标准库重建成功，BUILD SUCCESSFUL in12s，Project 0 errors/0 warnings；MCFL23、292007 bytes。source/build/资源三份bin SHA256一致：`800AF3AFB375C71643E23C11B2EB64261D3691F38F17D2204CC18FC62D477422`。
+
+首轮联合 `mcfpp-native-operator-context-final.log` worker191正常、exit1/BUILD FAILED in19s：Cache XML `2026-10-06T18:45:32.190Z` 与PrimitiveIR XML `18:45:36.586Z`各1/0/0/0；新fixture XML `18:45:32.931Z`为1/1/0/0。source函数已编译0 errors/9118 warnings，但执行器不支持 `execute store success ... if score ...`，未到fresh consumer。执行器补入score比较/范围链及真实function返回值（缺失score仍报错、未知语法仍拒绝）后，`mcfpp-native-operator-context-final2.log` worker192正常、exit0/BUILD SUCCESSFUL in15s；新fixture XML `2026-10-06T18:51:39.029Z`为1/0/0/0，source0/9118、fresh0/9119。source与fresh consumer均执行磁盘函数；结果int/float/range/bool七项为1/1/1/0/1/0/0，frame0通过。三个不同用例跨轮各自通过，最终仅复查fixture，并非最终联合3项。未跑fullcheck/server；legacy循环、私有Var桥及其他MNI仍未完成，whole17保持ACTIVE。
+
+## 历史必要检查：字典、Map与ImmutableList原生方法（阶段 90）
 
 共13个方法迁入现有 `NativeCallContext`：Dictionary 4个、Map 6个、ImmutableList 3个。Java原生层只接收调用context，普通参数和实际结果值/位置经已有引用传递；领域实现分别在 `DictionaryOperations`、`MapOperations`、`ListOperations`。保留字典未知字符串key限制，Map允许dynamic key，readonly list允许dynamic needle。MCFL21→22，bin头为 `4c46434d16000000`。
 
@@ -14,7 +22,7 @@
 
 最终final5 worker190正常，exit0/BUILD SUCCESSFUL in17s，LibFieldAccess XML `2026-10-06T18:20:53.447Z` 为1/0/0/0；source0/9123 warnings、fresh consumer0/9124 warnings。fixture从生成的source与fresh consumer磁盘函数执行，得到字典10/5、map227/7、只读列表2/11/-1，并通过frame0检查。此前CacheFormat旧/未知格式回归在首轮XML已通过，因此本轮最终仅复查fixture，不是联合2绿。Warnings包含已知flatExtends及StorageAccess类别；无fullcheck/server。仍有旧legacy `makeRuntime`循环与其余MNI待迁移，whole17保持ACTIVE未完成。
 
-## 阶段 89：其余 list 原生方法显式调用上下文（已限定验证）
+## 历史必要检查：其余 list 原生方法显式调用上下文（阶段 89）
 
 其余10个列表原生方法已与阶段88的 `clear` 共用 `NativeCallContext`，共迁移11个方法。Java层通过context传递普通实参、结果值/位置；内部private Var桥复用 `StorageAccess`，领域操作仍由 `ListOperations` 执行。`Commands.tempFunction` 两个重载沿用父namespace、注册到已存在的canonical namespace，使用 `runInFunction` 恢复调用上下文；生成的函数标记 `bodyCompiled`，使库导出器能写出其函数体。
 

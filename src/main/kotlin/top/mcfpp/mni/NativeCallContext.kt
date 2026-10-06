@@ -5,15 +5,19 @@ import top.mcfpp.analysis.Place
 import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.analysis.ValueRef
 import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.bool.BaseBool
+import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
 
 /** Explicit native call boundary; Var and global StorageAccess remain internal compatibility bridges. */
 class NativeCallContext internal constructor(
     val function: Function,
-    private val receiverAdapter: Var<*>,
-    private val argumentAdapters: List<Var<*>>
+    receiver: Var<*>,
+    arguments: List<Var<*>>
 ) {
+    private val receiverAdapter = normalize(receiver)
+    private val argumentAdapters = arguments.map(::normalize)
     private val binding = StorageAccess.ensure(receiverAdapter)
     private var publishedResult: Var<*>? = null
 
@@ -37,15 +41,24 @@ class NativeCallContext internal constructor(
         it.view ?: ValueRef.Read(value.type.typeId, it.place)
     }
 
+    private fun normalize(value: Var<*>): Var<*> {
+        var adapter = value
+        function.runInFunction {
+            if (value is BaseBool && value !is ScoreBool) adapter = value.toScoreBool(false)
+        }
+        return adapter
+    }
+
     /** The legacy domain implementation uses adapters only inside the explicit caller context. */
     internal fun withAdapters(action: (Var<*>, List<Var<*>>) -> Unit) {
         function.runInFunction { action(receiverAdapter, argumentAdapters) }
     }
 
     internal fun publishResult(value: Var<*>) {
-        val reference = reference(value)
-        result = StorageAccess.snapshot(value)?.let { ValueRef.Constant(value.type.typeId, it) } ?: reference
-        publishedResult = value
+        val adapter = normalize(value)
+        val reference = reference(adapter)
+        result = StorageAccess.snapshot(adapter)?.let { ValueRef.Constant(adapter.type.typeId, it) } ?: reference
+        publishedResult = adapter
     }
 
     internal fun resultAdapter(): Var<*>? = publishedResult
