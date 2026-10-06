@@ -2481,6 +2481,48 @@ class LibFieldAccessTest {
         check(main)
     }
 
+    @Test
+    fun nativePredicateMethodsCaptureBooleanResultsAcrossLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = """
+            func main(){
+                var box=Box();
+                dynamic var result=box.observe();
+            }
+        """
+        write("""
+            namespace fixture.fields;
+            import mcfpp.minecraft.resource:*;
+            data Box {
+                func observe()->int {
+                    dynamic var passed=Predicate.of("fixture:allowed").pass();
+                    dynamic var failed=Predicate.of("fixture:allowed").fail();
+                    return 7;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val box = (main.scope.getVar("box") as DataTemplateObject).templateType
+            val observe = box.scope.functions.getValue("observe").single()
+            assertIs<ScoreBool>(observe.scope.getVar("passed"))
+            assertIs<ScoreBool>(observe.scope.getVar("failed"))
+            val directory = output.resolve("consumer")
+            DatapackCreator.createDatapack(directory.toString())
+            val commands = Files.walk(directory.resolve(Project.config.name).resolve("data")).use { paths ->
+                paths.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".mcfunction") }
+                    .flatMap { Files.readAllLines(it).stream() }.toList()
+            }
+            for (condition in listOf("if", "unless")) {
+                assertTrue(commands.any { Regex("execute store success score \\S+ \\S+ $condition predicate fixture:allowed").matches(it) }, condition)
+            }
+            assertFalse(commands.filter { "predicate fixture:allowed" in it }.any { "TODO" in it })
+        }
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

@@ -1,6 +1,6 @@
-# 下一阶段：迁移 loot table predicate 原生入口（阶段 101）
+# 下一阶段：迁移 StdCommands void 原生入口（阶段 102）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–100完成受测集合、数值、toText、显式转换引用与文本拼接的限定迁移；当前库格式MCFL29。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–101完成受测集合、数值、文本转换/拼接及predicate入口的限定迁移；当前库格式MCFL30。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -26,11 +26,17 @@ String与NBT的toText入口已按实际receiver状态合并到各自单一Java�
 
 PlainChatComponent纯文本使用Fastjson2 `JSON.toJSONString` 编码单个字符串。source/fresh fixture通过带引号、反斜线的 `toText`、T!副本/拼接与NBT字符串 `toText`。MCFL29不变；不扩展控制字符、style、decoder或聊天渲染。
 
-### 阶段 101 计划：LootTablePredicateData.pass/fail
+### 阶段 101：LootTablePredicateData.pass/fail（已限定验证）
 
-只将 `LootTablePredicateData.pass/fail` 两个bool入口迁入context；在 `NativePredicateOperations` 用单一query helper复用 `CommandBoolPart` 的 `if/unless predicate`，经现有 `publishResult`/normalize返回 `ScoreBool`，读取id时调用 `PropertyVar.get`。不改静态 `of`/factory、effects或world模拟。一个source/fresh库往返fixture经现有 `Predicate.of(literal)`路径检查生成命令包含 `execute store success score ... if/unless predicate`。执行器不模拟world resource-id predicate，因此不断言世界侧值或frame0。预计MCFL30，按实际ABI重建stdlib并联合fixture与Cache回归；不扩fullcheck/server。
+`LootTablePredicateData.pass/fail` 两个bool入口迁入context；`NativePredicateOperations`复用 `CommandBoolPart` 的 `if/unless predicate`，通过现有结果发布路径得到 `ScoreBool`，id读取使用 `PropertyVar.get`。不改静态 `of`/factory、effects或world模拟。source/fresh库往返检查生成命令，Cache回归通过；MCFL30。执行器不模拟world predicate，不据此声称世界侧求值或frame0。结果见verification.md。
 
-阶段88–100详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL29。
+### 阶段 102 计划：StdCommands void 方法
+
+限定迁移 `StdCommands` 中16个不受Java primitive-float签名冲突影响的void语言方法；place/playsound仍可有 `MCFloat` 参数。保留damage的4个primitive-float入口及其他107个 `CommandReturn` 返回入口，不触碰这些真实消费边界。为void调用删除当前Java wrapper入口，保留语言identifier、参数默认值、effects和原命令词序；单context Java方法使用唯一名称及原annotation identifier。
+
+在 `NativeStdCommandOperations` 使用私有emit helper：于 `context.withArguments` 中构造原命令，对 `command.buildMacroFunction()` 的结果按原顺序逐条 `Function.addCommand`，最后只调用一次。非宏命令直接发出自身，不添加return-run前缀，也不经旧 `processMacroCommandReturn`；不改变其他Commands宏API或宿主快照。新增一个source/fresh库往返命令fixture：使用已验证可构造的 `TemplatePool()`，设置 `pool.id`，并在 `Box.observe(target as string)` 中分别调用 `place(pool, "fixture:constant", 2)` 和 `place(pool, target, 2)`；main传literal，但普通形参 `target` 在调用体内仍是未知值。检查实际导出宏准备先于唯一最终调用，且宏体没有return-run；参数已知时是否走非宏路径按实际输出记录，不作预设。无需构造Player或扩展浮点语义，不模拟world/frame0。预计MCFL31，按ABI变更重建stdlib，并联合fixture与Cache回归；不扩fullcheck/server。
+
+阶段88–101详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL30。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

@@ -2,7 +2,25 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 阶段 100：转义 PlainChatComponent 文本（已限定验证）
+## 阶段 101：LootTablePredicate 原生入口（已限定验证）
+
+`LootTablePredicateData.pass/fail` 两个 bool 入口接入 `NativeCallContext`；`NativePredicateOperations` 复用 `CommandBoolPart` 生成 `if/unless predicate`，通过现有 `publishResult` 规范化并发布 `ScoreBool`，predicate id 经 `PropertyVar.get` 读取。静态 `of`/factory、effects与world模拟未改。
+
+`mcfpp-native-predicate-context-stdlib.log`：标准库重建exit0、BUILD SUCCESSFUL in8s，Project0/0。`mcfpp-native-predicate-context-final.log`：worker213正常，exit0、BUILD SUCCESSFUL in18s；LibFieldAccess XML `2026-10-06T21:49:26.530Z`、Cache XML `21:49:25.760Z`，均1/0/0/0。source/fresh Project分别0/9118、0/9119。source与fresh consumer导出的函数包含 `execute store success score ... if predicate fixture:allowed` 和 `unless predicate`，scope有两个 `ScoreBool`。三份资源均MCFL30、291353 bytes、SHA256 `FBFA847ACD3BE926FA7DE85948509C012DBB44AE4AD7017E8E2A0E9A508F37B2`，raw header `4c46434d1e000000`。只验证命令生成与库往返，不模拟world predicate或声称frame0；无fullcheck/server。
+
+### 阶段 101 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | fresh XML、source/fresh诊断、双谓词命令及同步MCFL30资源均可核对。 |
+| 完整性 | 3/5 | 两个predicate入口的受测路径通过；world执行、其余MNI与whole17仍未完成。 |
+| 清晰性 | 4/5 | 明确本阶段检查的是生成命令，不是world predicate求值。 |
+| 可执行性 | 4/5 | 阶段102限定16个StdCommands void入口及宏命令顺序。 |
+| 简洁性 | 4/5 | 仅保留两个套件、产物和执行边界。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 历史必要检查：转义 PlainChatComponent 文本（阶段 100）
 
 `PlainChatComponent` 对纯text改用项目Fastjson2 `JSON.toJSONString` 编码单个字符串，保证引号/反斜线的JSON转义；不扩展控制字符、style或decoder。无MCFL变化。RED `mcfpp-plain-text-escaping-red.log` worker211、exit1/BUILD FAILED in12s，XML `2026-10-06T21:40:00.543Z` 1/1/0/0；producer10 errors/9118 warnings，首因是在 `toText` 结果发布时 `ValueSnapshot.of`→`Tag.toNBT` 将含引号文本当SNBT解析并失败。10是producer诊断总数，不视作10个独立根因；未到fresh consumer。
 

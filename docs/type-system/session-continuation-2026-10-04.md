@@ -4,7 +4,7 @@
 
 ## 当前进度
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段100已完成限定验证，MCFL29；阶段99提交`0fe27dc`、阶段98提交`6a6af4d`、阶段97提交`637d14f`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段101已完成限定验证，MCFL30；阶段100提交`81b2c2f`、阶段99提交`0fe27dc`、阶段98提交`6a6af4d`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
 
 ### 用户最新规则（2026-10-06）
 
@@ -75,6 +75,22 @@ stdlib首轮 `mcfpp-native-text-context-stdlib.log` 重建成功，Project0/0，
 | 清晰性 | 4/5 | 区分Java方法名和语言annotation identifier，明确不兼容旧显式引用。 |
 | 可执行性 | 4/5 | 阶段96限制text拼接方法和必要缓存回归。 |
 | 简洁性 | 4/5 | 仅更新当前阶段和下一步，保留历史。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+### 阶段 101：LootTablePredicate 原生入口（已限定验证）
+
+`LootTablePredicateData.pass/fail` 两个bool方法接入 `NativeCallContext`；`NativePredicateOperations`复用 `CommandBoolPart` 生成 `if/unless predicate`，经现有结果发布路径规范化为 `ScoreBool`，读取predicate id使用 `PropertyVar.get`。静态 `of`/factory、effects和world模拟未改。stdlib重建8s、Project0/0；联合Cache与新fixture由worker213在18s内成功。LibFieldAccess XML `2026-10-06T21:49:26.530Z`、Cache `21:49:25.760Z`均1/0/0/0；source/fresh分别0/9118和0/9119。source/fresh导出函数包含if/unless predicate的store-success-score命令，scope有两个ScoreBool；三份MCFL30资源291353 bytes、SHA256 `FBFA847ACD3BE926FA7DE85948509C012DBB44AE4AD7017E8E2A0E9A508F37B2`。不模拟world predicate或断言frame0，无fullcheck/server。
+
+### 阶段 101 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 命令、XML、source/fresh诊断和资源hash有记录。 |
+| 完整性 | 3/5 | 受测谓词命令路径已通过，world求值及whole17仍未完成。 |
+| 清晰性 | 4/5 | 明确没有验证world侧结果。 |
+| 可执行性 | 4/5 | 阶段102限定16个void方法和宏命令次序。 |
+| 简洁性 | 4/5 | 只记录本阶段证据和边界。 |
 
 平均3.8/5，whole17完整性仍为3/5。
 
