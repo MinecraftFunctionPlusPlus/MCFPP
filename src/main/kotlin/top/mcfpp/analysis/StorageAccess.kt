@@ -492,8 +492,8 @@ object StorageAccess {
         }
         val binding = value.storageBinding ?: return value
         val data = binding.data
-        val version = data.versions.version(binding.place)
-        if (value.storageReadVersion == version) return value
+        val version = Function.currFunction to data.versions.version(binding.place)
+        if (value.storageReadVersion?.let { it.first === version.first && it.second == version.second } == true) return value
         if (data.layout == StorageLayout.CompilerOnly) {
             if (snapshot(value) == null) return error(value.type, "Compiler-only place has no known value for '${value.type}'")
             return adapter(value.type, value.identifier, binding).apply {
@@ -551,10 +551,10 @@ object StorageAccess {
     }
 
     private fun loadScore(binding: StorageBinding, layout: StorageLayout.Scoreboard) {
-        if (binding.data.versions.isMaterialized(binding.place, layout)) return
+        if (binding.data.versions.isMaterialized(binding.place, layout, Function.currFunction)) return
         emit(Command("execute store result score ${layout.player} ${layout.objective} run data get")
             .build(binding.path.toCommandPart()).build("1"))
-        binding.data.versions.materialize(binding.place, layout)
+        binding.data.versions.materialize(binding.place, layout, Function.currFunction)
     }
 
     /** Receiver calls mutate the same payload without changing the source's nominal type. */
@@ -700,7 +700,7 @@ object StorageAccess {
                 if (value is MCInt || value is ScoreBool || value is MCFloat && !FloatProviders.enabled)
                     emit(Commands.dataSetFrom(it.path, slot))
                 it.data.versions.invalidate(it.place)
-                value.storageReadVersion = it.data.versions.version(it.place)
+                value.storageReadVersion = Function.currFunction to it.data.versions.version(it.place)
             }
         }
     }

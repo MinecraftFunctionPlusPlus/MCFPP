@@ -2865,6 +2865,40 @@ class LibFieldAccessTest {
         assertEquals(sourceId, check(main))
     }
 
+    @Test
+    fun branchFunctionsLoadTheirOwnRegistersAcrossLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = """
+            func main(){
+                var box=Box();
+                dynamic var positive=box.observe(2);
+                dynamic var zero=box.observe(0);
+            }
+        """
+        write("""
+            namespace fixture.fields;
+            data Box {
+                func observe(value as int)->int {
+                    dynamic var total=7;
+                    if(value>0){ total=total+1; }
+                    if(value>1){ total=total+2; }
+                    return total;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val machine = execute(main, output)
+            assertEquals(10, machine.read(main.scope.getVar("positive") as MCInt))
+            assertEquals(7, machine.read(main.scope.getVar("zero") as MCInt))
+            val observe = (main.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("observe").single()
+            assertTrue(observe.compiledFunctions.isEmpty())
+        }
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

@@ -57,7 +57,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
     var storageBinding: top.mcfpp.analysis.StorageBinding? = null
 
     @Transient
-    var storageReadVersion: Long? = null
+    var storageReadVersion: Pair<Function, Long>? = null
 
     fun bindDeclaration(name: String = identifier, previous: Var<*>? = null) {
         symbol = previous?.symbol ?: symbol ?: top.mcfpp.analysis.Symbol(

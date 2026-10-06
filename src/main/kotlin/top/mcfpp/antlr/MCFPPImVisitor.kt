@@ -1,6 +1,7 @@
 package top.mcfpp.antlr
 
 import top.mcfpp.analysis.TypeUsage
+import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.analysis.ValueSnapshot
 
 import org.antlr.v4.runtime.RuleContext
@@ -501,6 +502,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                     GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
                 GlobalScope.localNamespaces[f.namespace]!!.scope.addFunction(f,false)
                 Function.currFunction.scope.forEachVar { makeRuntime(it) }
+                StorageAccess.flush(StorageAccess.visibleValues(Function.currFunction.scope))
                 Function.addCommand(
                     Command("execute").build(exp.toCommandPart()).build("run return run").build(Commands.function(f))
                 )
@@ -512,6 +514,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                     GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
                 GlobalScope.localNamespaces[f.namespace]!!.scope.addFunction(f,false)
                 Function.currFunction.scope.forEachVar { makeRuntime(it) }
+                StorageAccess.flush(StorageAccess.visibleValues(Function.currFunction.scope))
                 Function.addCommand(
                     Command("execute if").build(exp.toCommandPart()).build("run return run").build(Commands.function(f))
                 )

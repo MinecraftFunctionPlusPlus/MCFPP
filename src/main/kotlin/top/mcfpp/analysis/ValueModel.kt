@@ -1,8 +1,10 @@
 package top.mcfpp.analysis
 
 import top.mcfpp.type.TypeId
+import top.mcfpp.model.function.Function
 import java.util.concurrent.atomic.AtomicLong
 import java.util.Collections
+import java.util.IdentityHashMap
 
 @JvmInline value class SymbolId(val value: Long) {
     companion object {
@@ -276,8 +278,13 @@ class StorageVersions {
     private var nextWrite = 0L
     private val writes = mutableMapOf<Place, Long>()
     private val materialized = mutableMapOf<Pair<Place, StorageLayout>, Long>()
+    private val ownedMaterialized = IdentityHashMap<Function, MutableMap<Pair<Place, StorageLayout>, Long>>()
     fun version(place: Place) = writes.filterKeys { it.overlaps(place) }.values.maxOrNull() ?: 0L
     fun invalidate(place: Place) { writes[place] = ++nextWrite }
-    fun isMaterialized(place: Place, layout: StorageLayout) = materialized[place to layout] == version(place)
-    fun materialize(place: Place, layout: StorageLayout) { materialized[place to layout] = version(place) }
+    fun isMaterialized(place: Place, layout: StorageLayout, owner: Function? = null) =
+        (if (owner == null) materialized else ownedMaterialized[owner])?.get(place to layout) == version(place)
+    fun materialize(place: Place, layout: StorageLayout, owner: Function? = null) {
+        val cache = if (owner == null) materialized else ownedMaterialized.getOrPut(owner) { mutableMapOf() }
+        cache[place to layout] = version(place)
+    }
 }

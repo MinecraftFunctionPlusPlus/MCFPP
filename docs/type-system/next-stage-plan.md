@@ -1,6 +1,6 @@
-# 下一阶段：恢复动态分支中的局部值（阶段 107）
+# 下一阶段：清理 System 类型查询并迁移日志接口（阶段 108）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–106完成受测集合、数值、文本转换/拼接、predicate、StdCommands void、System print、delegated-int模板及Time路径的限定迁移；当前库格式MCFL36。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–107完成受测集合、数值、文本转换/拼接、predicate、StdCommands void、System print、delegated-int模板、Time路径及两个legacy分支入口的限定迁移；当前库格式MCFL36。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -54,11 +54,15 @@ source/fresh fixture验证DamageType初始化为 `minecraft:generic`、damage宏
 
 `TimeData`的12项运算及`TimeObjectData`的6个factory已迁到单context；context的`declaredReturnType`由真实callee给出，Time结果使用独立Place，六倍率factory移除GlobalScope静态缓存且倍率不变。FieldInfo恢复operators，DataTemplateInfo支持self-signature，MCFL35→36。指定fixture最终复查的source/fresh结果1027809与frame0通过；Cache仅MCFL35首轮通过，未复跑MCFL36。详细轮次和未验证边界见verification.md。
 
-### 阶段 107 计划：恢复动态分支中的局部值
+### 阶段 107：恢复动态分支中的局部值（已限定验证）
 
-修复legacy动态分支中共享score名字的分支读取：`Var.storageReadVersion` 与 `StorageVersions` 的score缓存纳入命令所属 `Function` 身份；动态分支跳转前由父Function flush可见runtime bindings，使lazy初始化支配所有路径，不在每个分支重复初始化。一个source/fresh往返fixture在普通 `Box.observe(value as int)` 中令初值dynamic：`if value > 0` 加1、`if value > 1` 加2；main调用 `observe(2)` 与 `observe(0)`，验证磁盘结果10/7及frame0。只修此legacy路径，不引入全CFG事实合并、新optimizer或world模拟。尚未编码/验证；MCFL36当前不变，是否需要schema变化待实现确认。
+在legacy动态if的两个分支入口修复共享score名的局部值读取：score缓存owner使用实际Function对象identity；父函数在条件跳转前flush可见runtime bindings，使lazy初始化支配分支路径。单source/fresh fixture真实磁盘结果10/7和frame0通过。未扩至CFG/loop/全量facts；MCFL36不变，详见verification.md。
 
-阶段88–106详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL36。
+### 阶段 108 计划：System日志接口
+
+删除没有合法普通值返回路径的旧`System.typeOf`方法；将debug/info/warn/error四个void方法迁入显式context，保留编译期concrete内容及runtime宿主`toString`诊断语义，标注`NoExternalWrites`。不扩展运行时日志或新框架。四个持久化Java方法签名改变，计划将MCFL36升级至37并重建标准库；尚未编码或验证。
+
+阶段88–107详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL36。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

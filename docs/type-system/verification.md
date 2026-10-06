@@ -2,7 +2,25 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 阶段 106：Time 显式原生接口（已限定验证）
+## 阶段 107：动态分支中的局部值读取（已限定验证）
+
+4个生产文件和单fixture限定修复legacy两个动态分支入口的score缓存归属：缓存owner使用实际`Function`对象identity、`Pair.first ===`及`IdentityHashMap`，不使用Function语义equals；父函数在动态if跳转前flush可见runtime bindings，使lazy初始化支配分支路径。范围仅为这两个legacy入口，不代表CFG/loop/全量facts迁移；MCFL36不变。
+
+首轮 `mcfpp-branch-read-context-final.log` 在compileKotlin失败18s，4处 `Unresolved reference: StorageAccess`，无worker和fresh XML。补入单行import后，final2仅跑新fixture：worker7正常，exit0/BUILD SUCCESSFUL in50s，fresh XML `2026-10-06T23:53:37.602Z` 为1/0/0/0；source/fresh Project分别0/9118与0/9119。source/fresh真实磁盘结果10/7与frame0断言通过。无stdlib、Cache、其他套件、fullcheck或server验证；MCFL36不变。whole17仍未完成。
+
+### 阶段 107 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 区分首次Kotlin导入错误与final2单fixture结果，并限定owner身份及分支范围。 |
+| 完整性 | 3/5 | 两个legacy分支路径受测通过；CFG、loop、全量facts与whole17仍未完成。 |
+| 清晰性 | 4/5 | 说明缓存用Function对象identity，不把分支局部修复概括为完整数据流分析。 |
+| 可执行性 | 4/5 | 阶段108限定System.typeOf删除及四种日志入口迁移。 |
+| 简洁性 | 4/5 | 仅保留必要编译失败和最终fresh证据。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 历史必要检查：Time 显式原生接口（阶段 106）
 
 18个Time运算/factory入口接入单context；`declaredReturnType`由真实callee提供，函数仍指向命令所属caller。Time结果创建新的canonical wrapper和独立Place，不clone receiver；六倍率factory不再使用GlobalScope静态缓存，倍率1/20/1200/72000/144000/24000保持不变。`FieldInfo`恢复operator scope，`DataTemplateInfo`先登记canonical模板，再恢复self-signature；MCFL35→36。
 

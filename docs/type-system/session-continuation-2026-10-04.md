@@ -4,7 +4,7 @@
 
 ## 当前进度
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段106 Time显式接口已完成限定验证，MCFL36；阶段105提交`4664c8b`、阶段104提交`c862427`、阶段103提交`683a46e`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段107两个legacy动态分支入口已完成限定验证，MCFL36；阶段106提交`cf5e8f9`、阶段105提交`4664c8b`、阶段104提交`c862427`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
 
 ### 阶段104：System print原生入口（已限定验证）
 
@@ -14,9 +14,13 @@
 
 `Seconds as int` 的普通参数初始化、默认构造与dispatch已接通；typed copy保持独立Place，`as int`视图共享Place，并恢复immutable typed snapshot/restore。阶段105的source/fresh磁盘最终结果494、frame0断言通过，4/9为中间读数；三份MCFL34 bin为285804 bytes且SHA256一致。细节见verification.md。
 
-### 阶段106：Time显式原生接口（已限定验证）
+### 阶段106：Time显式原生接口（历史；已限定验证）
 
-Time的18项运算/factory入口迁入单context；declaredReturnType由真实callee提供，Time结果使用独立Place，六倍率不变并移除静态factory缓存。FieldInfo恢复operators，DataTemplateInfo先登记canonical模板，再恢复self-signature。MCFL35首轮source因operators未恢复而有29个错误；MCFL36后source错误归零，但final2执行器遇共享flag分支的缺失临时score，未到consumer。final3仅复查fixture通过，source/fresh分别0/9125与0/9126，结果1027809和frame0断言通过。bool→byte有7条既有representation警告，不代表已证明兼容。Cache仅MCFL35首轮通过；三份MCFL36 bin 289309 bytes且SHA256一致。各轮详见verification.md。下一阶段107计划修复动态分支中的局部值物化与score缓存，尚未编码或验证。
+Time的18项运算/factory入口迁入单context；declaredReturnType由真实callee提供，Time结果使用独立Place，六倍率不变并移除静态factory缓存。MCFL36后final3仅复查fixture通过，source/fresh分别0/9125与0/9126，结果1027809和frame0断言通过；细节见verification.md。
+
+### 阶段107：动态分支中的局部值读取（已限定验证）
+
+score缓存owner使用实际`Function`对象identity、`Pair.first ===`及`IdentityHashMap`；动态if跳转前由父Function flush可见runtime bindings。仅覆盖两个legacy分支入口，不代表CFG/loop或全量facts迁移。首轮仅因StorageAccess import缺失编译失败，无worker/XML；final2 worker7正常、exit0/BUILD SUCCESSFUL in50s，XML `2026-10-06T23:53:37.602Z` 为1/0/0/0，source/fresh分别0/9118和0/9119，磁盘10/7及frame0通过。MCFL36/bin未变；未跑stdlib、Cache、fullcheck或server。下一阶段108计划清理System.typeOf并迁移四种日志接口，尚未编码/验证。
 
 ### 用户最新规则（2026-10-06）
 
