@@ -13,12 +13,12 @@ import top.mcfpp.util.LogProcessor
 /** Explicit native call boundary; Var and global StorageAccess remain internal compatibility bridges. */
 class NativeCallContext internal constructor(
     val function: Function,
-    receiver: Var<*>,
+    receiver: Var<*>?,
     arguments: List<Var<*>>
 ) {
-    private val receiverAdapter = normalize(receiver)
+    private val receiverAdapter = receiver?.let(::normalize)
     private val argumentAdapters = arguments.map(::normalize)
-    private val binding = StorageAccess.ensure(receiverAdapter)
+    private val binding = receiverAdapter?.let(StorageAccess::ensure)
     private var publishedResult: Var<*>? = null
 
     val arguments: List<ValueRef> = argumentAdapters.map(::reference)
@@ -26,14 +26,14 @@ class NativeCallContext internal constructor(
     var result: ValueRef? = null
         private set
 
-    val receiver: ValueRef
-        get() = binding.view ?: ValueRef.Read(receiverAdapter.type.typeId, binding.place)
+    val receiver: ValueRef?
+        get() = receiverAdapter?.let(::reference)
 
-    val receiverPlace: Place
-        get() = binding.place
+    val receiverPlace: Place?
+        get() = binding?.place
 
     val receiverSnapshot: CompilerValue?
-        get() = StorageAccess.snapshot(receiverAdapter)
+        get() = receiverAdapter?.let(StorageAccess::snapshot)
 
     fun argumentSnapshot(index: Int): CompilerValue? = StorageAccess.snapshot(argumentAdapters[index])
 
@@ -51,7 +51,18 @@ class NativeCallContext internal constructor(
 
     /** The legacy domain implementation uses adapters only inside the explicit caller context. */
     internal fun withAdapters(action: (Var<*>, List<Var<*>>) -> Unit) {
-        function.runInFunction { action(receiverAdapter, argumentAdapters) }
+        function.runInFunction {
+            val receiver = receiverAdapter
+            if (receiver == null) {
+                LogProcessor.error("Native call has no receiver")
+                return@runInFunction
+            }
+            action(receiver, argumentAdapters)
+        }
+    }
+
+    internal fun withArguments(action: (List<Var<*>>) -> Unit) {
+        function.runInFunction { action(argumentAdapters) }
     }
 
     internal fun publishResult(value: Var<*>) {
@@ -65,13 +76,19 @@ class NativeCallContext internal constructor(
 
     fun writeReceiver(payload: CompilerValue) {
         function.runInFunction {
-            val value = StorageAccess.restore(StorageAccess.actualType(receiverAdapter), payload,
-                receiverAdapter.identifier, binding.data.types)
-            if (value == null) {
-                LogProcessor.error("Cannot restore native receiver payload as '${StorageAccess.actualType(receiverAdapter)}'")
+            val receiver = receiverAdapter
+            if (receiver == null) {
+                LogProcessor.error("Native call has no receiver to write")
                 return@runInFunction
             }
-            StorageAccess.write(receiverAdapter, value)
+            val stored = StorageAccess.ensure(receiver)
+            val value = StorageAccess.restore(StorageAccess.actualType(receiver), payload,
+                receiver.identifier, stored.data.types)
+            if (value == null) {
+                LogProcessor.error("Cannot restore native receiver payload as '${StorageAccess.actualType(receiver)}'")
+                return@runInFunction
+            }
+            StorageAccess.write(receiver, value)
         }
     }
 }

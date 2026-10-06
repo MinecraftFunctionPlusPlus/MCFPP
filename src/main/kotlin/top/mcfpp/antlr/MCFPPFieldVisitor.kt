@@ -230,12 +230,13 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             //根据JavaRefer找到类
             val refer = ctx.javaRefer().text
             val clsName = refer.substring(0,refer.lastIndexOf('.'))
+            val methodName = refer.substringAfterLast('.')
             val clazz = Project.classLoader.loadClass(clsName)
             val methods = clazz.methods
             var hasFind = false
             for(method in methods){
-                if(method.name != nf.identifier) continue
                 val mniRegister = method.getAnnotation(MNIFunction::class.java) ?: continue
+                if (method.name != methodName && mniRegister.identifier.ifEmpty { method.name } != methodName) continue
                 //解析MNIMethod注解成员
                 val readOnlyType = mniRegister.readOnlyParams.map {
                     MCFPPType.parseFromString(it.split(" ").last(), Namespace.currNamespaceField)

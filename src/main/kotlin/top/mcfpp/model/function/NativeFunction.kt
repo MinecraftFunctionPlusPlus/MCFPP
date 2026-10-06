@@ -83,8 +83,16 @@ class NativeFunction : Function, Native {
         val hostValues = observed.filter(hostIdentities::add).mapNotNull { value ->
             top.mcfpp.analysis.StorageAccess.hostSnapshot(value)?.let { value to it }
         }
-        val context = if (javaMethod.parameterTypes.contentEquals(arrayOf(NativeCallContext::class.java)))
-            NativeCallContext(Function.currFunction, actualCaller as Var<*>, list) else null
+        val context = if (javaMethod.parameterTypes.contentEquals(arrayOf(NativeCallContext::class.java))) {
+            val receiver = if (this.caller == MCFPPPrivateType.Void) null else {
+                if (actualCaller !is Var<*>) {
+                    LogProcessor.error("Native function '$identifier' requires a receiver")
+                    return UnknownVar(identifier).apply { type = returnType; isError = true }
+                }
+                actualCaller
+            }
+            NativeCallContext(Function.currFunction, receiver, list)
+        } else null
         val valueWrapper = if (context == null) ValueWrapper(returnVar) else null
         val invocationArgs: List<Any?> = if (context != null) listOf(context) else buildList {
             addAll(list)

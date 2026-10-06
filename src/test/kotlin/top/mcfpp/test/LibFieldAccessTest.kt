@@ -39,6 +39,7 @@ import top.mcfpp.type.MCFPPVectorType
 import top.mcfpp.type.MCFPPEntityType
 import top.mcfpp.type.TypeId
 import top.mcfpp.util.TempPool
+import top.mcfpp.nbt.tags.Tag
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.*
@@ -2193,6 +2194,50 @@ class LibFieldAccessTest {
             for ((name, expected) in listOf("firstLogical" to 1, "secondLogical" to 0, "thirdLogical" to 0)) {
                 assertEquals(expected, machine.read(main.scope.getVar(name) as ScoreBool), name)
             }
+        }
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+    }
+
+    @Test
+    fun nativeStaticConversionsUseArgumentContextAcrossLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = """
+            func main(){
+                var box=Box();
+                dynamic var narrowInput=255; dynamic var promoteInput=17;
+                dynamic var flag=true; dynamic var stringInput="hello";
+                dynamic var payload as nbt={value:7} as nbt;
+                dynamic var narrowed=box.narrow(narrowInput);
+                dynamic var promoted=box.promote(promoteInput);
+                dynamic var booleanPayload=box.boolPayload(flag);
+                dynamic var stringPayload=box.stringPayload(stringInput);
+                dynamic var nbtPayload=box.nbtPayload(payload);
+                /data modify storage mcfpp:system temp.native_conversion_bool set from storage mcfpp:system stack_frame[0].booleanPayload
+                /data modify storage mcfpp:system temp.native_conversion_string set from storage mcfpp:system stack_frame[0].stringPayload
+                /data modify storage mcfpp:system temp.native_conversion_nbt set from storage mcfpp:system stack_frame[0].nbtPayload
+            }
+        """
+        write("""
+            namespace fixture.fields;
+            func decodeByte(value as byte)->int = top.mcfpp.mni.ConversionData.toInt;
+            data Box {
+                func narrow(value as int)->int {return decodeByte(toByte(value));}
+                func promote(value as int)->int {return toInt(toFloat(value));}
+                func boolPayload(value as bool)->nbt {return toNBT(value);}
+                func stringPayload(value as string)->nbt {return toNBT(value);}
+                func nbtPayload(value as nbt)->nbt {return toNBT(value);}
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val machine = execute(main, output)
+            assertEquals(-1, machine.read(main.scope.getVar("narrowed") as MCInt))
+            assertEquals(17, machine.read(main.scope.getVar("promoted") as MCInt))
+            assertEquals(Tag.toNBT("1b"), machine.readNbt("mcfpp:system", "temp.native_conversion_bool"))
+            assertEquals(Tag.toNBT("\"hello\""), machine.readNbt("mcfpp:system", "temp.native_conversion_string"))
+            assertEquals(Tag.toNBT("{value:7}"), machine.readNbt("mcfpp:system", "temp.native_conversion_nbt"))
         }
         check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
         val main = consume("import fixture.fields:*;\n$mainSource", output)

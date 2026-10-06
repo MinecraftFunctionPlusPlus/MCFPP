@@ -149,7 +149,7 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
                     LogProcessor.error("MNIMethod ${method.name} in class ${cls.name} must be static")
                     continue
                 }
-                val nf = NativeFunction(method.name, javaMethod = method)
+                val nf = NativeFunction(mniRegister.identifier.ifEmpty { method.name }, javaMethod = method)
                 //解析MNIMethod注解成员
                 val callerType = MCFPPType.parseFromString(mniRegister.caller, simpleFieldWithType)
                 nf.caller = callerType?: run {
@@ -182,7 +182,8 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
                 }
                 nf.returnType = returnType
                 //检查method的参数s
-                if(method.parameterCount != readOnlyType.size + normalType.size + 1){
+                val contextAbi = method.parameterTypes.contentEquals(arrayOf(top.mcfpp.mni.NativeCallContext::class.java))
+                if(method.parameterCount != if (contextAbi) 1 else readOnlyType.size + normalType.size + 1){
                     LogProcessor.error("Method ${method.name} in class ${cls.name} has wrong parameter count")
                     continue
                 }

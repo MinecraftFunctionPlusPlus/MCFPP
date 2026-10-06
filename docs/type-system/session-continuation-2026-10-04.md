@@ -4,7 +4,7 @@
 
 ## 当前进度
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段92已完成限定验证；提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段93已完成限定验证；提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。
 
 ### 用户最新规则（2026-10-06）
 
@@ -24,7 +24,25 @@
 
 验证分轮完成：Cache、ListMember与新列表往返fixture三个不同用例均各自通过；最终仅复查失败fixture，XML `2026-10-06T17:31:52.308Z` 为1/0/0/0，worker正常、BUILD SUCCESSFUL in18s。source为0 errors/9118 warnings，fresh consumer为0/9119；结果与frame0断言从consumer磁盘函数执行。首轮consumer曾因tempFunction namespace NPE报8 errors，根因修复后用例通过。未跑fullcheck/server；本阶段没有统一其他MNI或operator。
 
-### 阶段 92：移除被拒绝的 byte/short 算术注册（已限定验证）
+### 阶段 93：数值转换显式调用上下文（已限定验证）
+
+ConversionData的49个静态入口（36数值转换、13个toNBT）迁入context。支持nullable receiver与 `withArguments`，NF按declaredVoid/static构造，Java唯一方法名仍以原MNIFunction.identifier保留语言别名；Namespace/CompoundData/FieldVisitor匹配有效标识，`NumericConversions` 发布实际结果引用；ABI迁移不表示全部转换均可执行，unsupported诊断保持。MCFL24→25，stdlib Project0/0、三份291070-byte bin的SHA256均为 `D41A947D59084FA3A36D66B940988FF4CD19CA087D54947E5B336B1DADE76832`。
+
+验证分轮：首轮worker194失败于fixture局部名 `text` 保留字；final2 worker195在producer发现 `toNBT(string)` 返回引用仍为String，consumer未运行。final3 worker196 exit0/BUILD SUCCESSFUL in17s，fresh XML `2026-10-06T19:45:12.763Z`为1/0/0/0，producer0/9119 warnings、fresh0/9120；磁盘结果-1、17、ByteTag 1、String `hello`、NBT `{value:7}`及frame0通过。Cache与ConversionIR此前已通过，三个不同用例跨轮各过；final3仅fixture复查，不是联合3项。typed-view修复保留payload与地址、不添加String→NBT隐式转换；无fullcheck/server。
+
+### 阶段 93 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 明确记录两轮fixture失败边界、final3 fresh XML及MCFL25三份一致产物。 |
+| 完整性 | 3/5 | 49个ConversionData入口受测路径完成，其他MNI及whole17仍未完成。 |
+| 清晰性 | 4/5 | 区分跨轮各自通过与最终单fixture复查，明确受测路径与未实现转换的诊断边界。 |
+| 可执行性 | 4/5 | 阶段94七个toText方法、MCFL26及必要fixture已限定。 |
+| 简洁性 | 4/5 | 当前记录聚焦阶段93结果与范围。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+### 阶段 92：移除被拒绝的 byte/short 算术注册（历史）
 
 删除byte/short四个Java类中的44个算术注册，以及 `MCFPPNBTType.injectedBy` 的4处注册；不改long/double、精确格式、转换或统一拒绝guard。MCFL23→24，stdlib重建成功55s，Project0/0；source、stdlib-index和build资源三份bin均为292301 bytes、MCFL24、SHA256 `6EADA06D3343578C0A08E13C691D0CC9742C87071476615260D993A2980A1994`。
 

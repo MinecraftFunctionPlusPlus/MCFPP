@@ -2,7 +2,27 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 阶段 92：移除被拒绝的 byte/short 算术注册（已限定验证）
+## 阶段 93：数值转换显式调用上下文（已限定验证）
+
+ConversionData的49个静态入口迁入context：36个数值转换与13个 `toNBT` 转换。context支持nullable receiver与 `withArguments`；NF按声明的void/static属性构造，实例调用仍按Var处理。Java唯一方法名配合原MNIFunction.identifier保留语言层重载名，Namespace/CompoundData/FieldVisitor按有效名称解析入口，`NumericConversions` 发布真实结果引用；这只是49个入口的ABI迁移，不宣称所有转换已有执行实现，既有unsupported诊断保持。MCFL24→25。
+
+`mcfpp-native-conversion-context-stdlib.log`：stdlib重建成功26s，Project0 errors/0 warnings。三份bin均为291070 bytes、MCFL25（raw header `4c46434d19000000`）、SHA256 `D41A947D59084FA3A36D66B940988FF4CD19CA087D54947E5B336B1DADE76832`。
+
+首轮联合 `mcfpp-native-conversion-context-final.log` worker194/FAILED27s：ConversionIR XML `2026-10-06T19:36:28.288Z`、Cache XML `19:36:32.528Z`通过；新fixture XML `19:36:32.533Z`失败。producer因局部变量名 `text` 是保留字而有13个语法错误，未到consumer。改名后final2 worker195/FAILED11s、XML `19:40:56.169Z`：producer仍有1个错误/9119 warnings，`toNBT(string)` 的返回引用类型未转为NBT，consumer未运行。共享toNBT typed-view修复保留原载荷和地址，不扩String→NBT隐式转换。final3 worker196正常、exit0/BUILD SUCCESSFUL in17s，XML `2026-10-06T19:45:12.763Z`为1/0/0/0；producer0/9119、fresh consumer0/9120。consumer从生成的磁盘函数验证255→byte→int为-1、17→float→int为17，bool/String/NBT载荷为ByteTag 1、`hello`、`{value:7}`，并通过frame0。三个不同用例跨轮各自通过，final3仅复查fixture，不是最终联合3项。无fullcheck/server。
+
+### 阶段 93 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录了变量名语法失误、NBT返回适配缺口和final3磁盘结果。 |
+| 完整性 | 3/5 | 49个ConversionData入口的指定路径已验证，但其他MNI与whole17仍未完成。 |
+| 清晰性 | 4/5 | 区分三项跨轮各过与final3单fixture复查，明确受测路径与未实现转换的诊断边界。 |
+| 可执行性 | 4/5 | 下一阶段94按七个toText入口、MCFL26和最小往返用例列出。 |
+| 简洁性 | 4/5 | 只补阶段93结果与下一阶段范围，历史保留。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 历史必要检查：移除被拒绝的 byte/short 算术注册（阶段 92）
 
 删除四个byte/short Java类中的44个 `MNIOperator` 注册，并移除 `MCFPPNBTType.injectedBy` 的4个对应注册；`LibBinFormat.VERSION` 从23升至24。byte/short精确格式、转换和 `Var.rejectNbtArithmetic` 统一拒绝逻辑保留；long/double原本没有这些注册，本阶段未改动。
 

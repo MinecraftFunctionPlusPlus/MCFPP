@@ -12,6 +12,7 @@ import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.function.Function
+import top.mcfpp.mni.NativeCallContext
 import top.mcfpp.nbt.tags.primitive.DoubleTag
 import top.mcfpp.nbt.tags.primitive.LongTag
 import top.mcfpp.type.MCFPPBaseType
@@ -23,6 +24,14 @@ import top.mcfpp.util.TempPool
 
 /** Explicit value conversions. Reinterpretation must never call this service. */
 object NumericConversions {
+    fun convert(context: NativeCallContext, target: MCFPPType) = context.withArguments { arguments ->
+        context.publishResult(convert(arguments[0], target))
+    }
+
+    fun toNBT(context: NativeCallContext) = context.withArguments { arguments ->
+        context.publishResult(toNBT(arguments[0]))
+    }
+
     private val scoreTypes get() = setOf(MCFPPBaseType.Int, MCFPPNBTType.Byte, MCFPPNBTType.Short)
 
     @JvmStatic
@@ -132,7 +141,7 @@ object NumericConversions {
         value.storageBinding?.let {
             top.mcfpp.analysis.StorageAccess.constantEncoding(value)?.let { tag -> return NBTBasedDataConcrete(tag) }
             it.data.materialize()
-            return value.toNBTVar()
+            return runtimeNBT(value)
         }
         if (!value.type.hasRuntimeRepresentation) {
             LogProcessor.error("${value.type.typeName} cannot be encoded as a Minecraft NBT payload")
@@ -143,7 +152,7 @@ object NumericConversions {
         if (value is MCFloat && !FloatProviders.enabled) {
             if (value is MCFloatConcrete) return NBTBasedDataConcrete(value.legacyNBTEncoding())
             value.storeToStack()
-            return value.toNBTVar()
+            return runtimeNBT(value)
         }
         if (ValueSnapshot.of(value) != null) {
             NBTUtil.varToNBT(value)?.let { return NBTBasedDataConcrete(it.copy()) }
@@ -155,9 +164,15 @@ object NumericConversions {
         }
         if (runtime is OnScoreboard && runtime.nbtPath.pathList.isEmpty())
             runtime.nbtPath = NBTPath.getNormalStackPath(runtime)
-        if (runtime is MCInt && runtime.isDataOnly) return runtime.toNBTVar()
+        if (runtime is MCInt && runtime.isDataOnly) return runtimeNBT(runtime)
         runtime.storeToStack()
-        return runtime.toNBTVar()
+        return runtimeNBT(runtime)
+    }
+
+    private fun runtimeNBT(value: Var<*>): Var<*> {
+        val encoded = value.toNBTVar()
+        return if (encoded.type == MCFPPNBTType.NBT) encoded
+        else top.mcfpp.analysis.StorageAccess.view(encoded, MCFPPNBTType.NBT, diagnose = false)
     }
 
     private fun unsupported(value: Var<*>, target: MCFPPType): Var<*> {
