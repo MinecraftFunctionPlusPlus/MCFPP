@@ -1621,6 +1621,52 @@ class LibFieldAccessTest {
         assertEquals(9, machine.read(main.scope.getVar("secondResult") as MCInt))
     }
 
+    @Test fun sourceGenericSpecializationsExportAllRuntimeTargetsToDisk() = withLibrary { output ->
+        write("""
+            namespace fixture.fields;
+            data Box<T as type> {
+                private value as int;
+                constructor(v as int){ this.value=v; }
+                func read()->int { return this.value; }
+            }
+            func relay<T as type>(arg as Box<(T)>)->int { return arg.read(); }
+            object data Settings<N as int> {
+                func read()->int { return N; }
+            }
+            func main(){
+                dynamic var firstInput=4; dynamic var secondInput=9;
+                var first=Box<int>(firstInput); var second=Box<int>(secondInput);
+                dynamic var firstResult=relay<int>(first);
+                dynamic var secondResult=relay<int>(second);
+                dynamic var firstStatic=(Settings<4>).read();
+                dynamic var secondStatic=(Settings<9>).read();
+            }
+        """, output)
+        val scope = GlobalScope.localNamespaces.getValue("fixture.fields").scope
+        val box = assertIs<GenericDataTemplate>(scope.getTemplate("Box"))
+        val relay = assertIs<GenericFunction>(scope.functions.getValue("relay").single())
+        val settings = assertIs<GenericObjectDataTemplate>(scope.getObject("Settings"))
+        assertEquals(1, box.compiledTemplates.size)
+        assertEquals(1, relay.compiledFunctions.size)
+        assertEquals(2, settings.compiledTemplates.size)
+        val compiledBox = box.compiledTemplates.values.single()
+        val targets = listOf(compiledBox.constructors.single(), compiledBox.scope.functions.getValue("read").single()) +
+            settings.compiledTemplates.values.map { it.scope.functions.getValue("read").single() }
+        val main = scope.functions.getValue("main").single()
+        // The existing executor reads only generated disk files; no library consumer or in-memory body supplies targets.
+        val machine = execute(main, output)
+        val data = output.resolve("consumer").resolve(Project.config.name).resolve("data")
+        for (target in targets) {
+            val (namespace, identifier) = target.namespaceID.toString().split(':', limit = 2)
+            val file = data.resolve(namespace).resolve("function").resolve("$identifier.mcfunction")
+            assertTrue(Files.isRegularFile(file), "Missing source specialization: ${target.namespaceID}")
+        }
+        assertEquals(4, machine.read(main.scope.getVar("firstResult") as MCInt))
+        assertEquals(9, machine.read(main.scope.getVar("secondResult") as MCInt))
+        assertEquals(4, machine.read(main.scope.getVar("firstStatic") as MCInt))
+        assertEquals(9, machine.read(main.scope.getVar("secondStatic") as MCInt))
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

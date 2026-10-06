@@ -1,8 +1,16 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段81 generic interface静态TypeValue限定通过，source/fresh模型与consumer磁盘4/9/frame0到达；三个case跨轮各过、最终仅新1。MCFL17/bin289989/wire/schema未变，无stdlib/fullcheck/server。下一82 source磁盘导出先单fixture RED，尚未实现/测试；最近完整346项仍为72dc557，whole17未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段82 source generic特化磁盘导出限定通过，最终必要联合3全绿；source实际磁盘4/9/4/9/frame0及目标文件到达。MCFL17/bin289989/schema未变，无stdlib/fullcheck/server。下一83 internal generated名字与合法source碰撞待单fixture RED，尚未实现/测试；最近完整346项仍为72dc557，whole17未完成。
 
-## 最新必要检查：generic interface静态TypeValue（阶段 81）
+## 最新必要检查：source generic特化磁盘导出（阶段 82）
+
+阶段82只改DatapackCreator（12行新增/2行删除）：genNamespace局部exportCompound以IdentityHashMap backing set按对象身份去重，ObjectCompoundData复用genObject、普通DataTemplate复用genTemplate，递归GenericDataTemplate.compiledTemplates；现有template/object根接入。genFunction/genTemplateFunction/genObject及自由函数行为原样，不套imported bodyCompiled过滤、不扩companion/interface/autoload或空prototype整理。46行fixture sourceGenericSpecializationsExportAllRuntimeTargetsToDisk只source，不consume；source Box1/relay1/Settings2缓存复用，实际namespaceID文件与磁盘执行无内存fallback。
+
+RED mcfpp-source-generic-export-red.log：worker161正常FAILED8s，fresh XML2026-10-06T10:58:59.571Z 1fail/0error/skip，source0/0、cache断言通过；真实盘调用缺fixture.fields:box_type_0/_init_box_type_0_0_int（ScoreCommandExecutor283），未到文件/结果断言。FINAL必要联合3：worker162正常exit0/SUCCESS18s；LibField XML2026-10-06T11:02:57.476Z 2/0/0/0（新82+旧80），Template XML11:03:03.015Z 1/0/0/0（普通restoredObjectMethods）。新82 source0/0，Box显式init/read与两Settings read文件存在，relay wrapper实际磁盘调用，结果4/9/4/9、frame0均通过。旧80 source0/0、consumer0/9119且磁盘4/9/4；旧普通object source0/0、consumer0/9119，init/set/read7及来源独立。最终联合3全绿，不是分轮合计或fullcheck。
+
+仅受测source generic template/object输出，不声称所有generic/abstract语法或接口runtime可用；autoload、静态字段强转/字段初始化、interface runtime、legacy wrapper/Kryo全集、空prototype导出及整体IR/MNI旧体系保留。MCFL17/bin289989/schema/注册/codec未变，无stdlib/fullcheck/server。81提交2437ccfa9af2f21ddb3b2c9201b25535a4418f28（10文件202+/37-），82提交见Git历史；whole17未完成。下一83仅internal generated名字与合法source碰撞，先单source fixture RED：Settings<N>与Settings_int_0、relay wrapper与relay_0在真实target/file/prefix上隔离；拟仅两个现有identifier表达式末尾加'-'并保留separator，FullID/key arguments不变，不造命名系统、不预设schema/stdlib变化，尚未实现/测试。
+
+## 历史必要检查：generic interface静态TypeValue（阶段 81）
 
 阶段81仅五prod：FieldVisitor恢复interface真实currTemplate/typeScope，generic prototype只prepareHeader并finally恢复；共享compile复制isInterface，Specialized身份按origin interface kind；共享BodyVisitor不生成接口默认ctor。Type解析/有限resolveSpecialization及现MCFPPGenericDataTemplateType.tryResolve按exact interface声明和canonical快路径恢复，复用已注册serializer，无新wrapper/registry。shared member声明入口补f.isAbstract=ctx.ABSTRACT()!=null，FunctionInfo原有字段，不改metadata。115行fixture frozenGenericInterfaceTypeArgumentsRestoreBoundSignaturesAcrossLibraryRoundTrip不构造/调用interface，Contract<T>抽象exchange参数/返回绑定Int/Bool，static TypeValue进入普通Box的runtime int字段。
 

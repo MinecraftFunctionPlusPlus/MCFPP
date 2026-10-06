@@ -1,6 +1,6 @@
-# 下一阶段：源码generic特化磁盘导出（阶段 82）
+# 下一阶段：生成名字与合法源码名字隔离（阶段 83）
 
-阶段81 generic interface静态TypeValue限定通过，三个case跨轮各过、最终仅新1复查；阶段82尚未实现/测试，整个17项重构仍未完成。
+阶段82 source generic特化磁盘导出限定通过，最终必要联合3全绿；阶段83尚未实现/测试，整个17项重构仍未完成。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 
@@ -148,9 +148,13 @@ existing UnresolvedType保留自身readonly Identifier依赖，shared bound sign
 
 Contract<T>及Box<(Contract<int/bool>)>前置签名使用显式type primary，interface origin/FullID/readonly快照、canonical Box、抽象exchange实际Int/Bool参数返回/noCtor和fresh独立模型已通过；consumer实际磁盘4/9/frame0。沿existing generic wrapper/已注册serializer及isInterface/kind，不新增wire/metadata，MCFL17/bin289989未变。shared成员声明入口按ABSTRACT保存flag；最终仅新1，三case跨轮各过。不构造/运行interface，不扩generic继承、runtime布局/shape转换/annotations或autoload，legacy interface wrapper未激活。
 
-### 阶段 82：源码generic特化磁盘导出（先单fixture RED）
+### 阶段 82：源码generic特化磁盘导出（已限定验证）
 
-仅source项目：Box<int> runtime int ctor/read，经relay<T>(Box<(T)>)->int返回4/9，及(Settings<4>).read()/9返回4/9；同一main观测4/9/4/9、frame0。只从实际生成磁盘装载所有函数，不in-memory fallback，不做library/fresh或interface runtime。已确认genTemplate/genObject不递归prototype.compiledTemplates，namespace只登记prototype，compiled ctor/read/static read文件缺失；先singlefixture RED再定最小递归API，尚未实现/测试。保留genFunction AST-null synthetic/std helper行为，不套imported bodyCompiled过滤；按真实对象引用去重，compiled按marker走静态/普通输出路径。不顺带autoload、接口runtime、一般未编译prototype整理、名字冲突或wire变更。
+仅namespace导出加局部身份visited/compiledTemplates递归，marker复用静态输出、普通模板复用原输出，其余genFunction/helper行为不变。source-only Box1/relay1/Settings2实际磁盘4/9/4/9/frame0及init/read/static read目标文件通过，无内存fallback或库consumer。最终新82+旧80+普通ObjectMethods联合3全绿。MCFL17/bin289989/schema未变，无stdlib/fullcheck/server；autoload、接口runtime、empty prototype及一般语法完整性等边界保留。
+
+### 阶段 83：internal generated名字隔离（先单source fixture RED）
+
+单source项目让Settings<N>特化与合法Settings_int_0声明、generic relay wrapper与合法relay_0函数同时调用；校验实际target/file/prefix隔离及数值/帧，不靠FullID相等掩盖backend覆盖。先真实RED，尚未实现/测试；拟只在两个现有生成identifier表达式末尾加'-'保留既有separator，FullID/key arguments不变。不新建命名系统、无证据不升schema或重建stdlib，不顺带autoload/interface runtime/一般prototype整理或其他名字机制。
 
 ### 旧浮点乘除（阶段 50 已实现）
 
@@ -162,7 +166,7 @@ Contract<T>及Box<(Contract<int/bool>)>前置签名使用显式type primary，in
 
 阶段 51 已将旧浮点算术/比较、Promote/Convert 接入 IR：四分量值使用独立 NBT 帧，`LegacyFloatCommands` 负责读写和调用，保留旧四记分板 return ABI。普通/递归/static、旧与 IR 双向调用、早先参数、多实参、常量与连续返回均经真实库命令执行；最终 20 项必要复查通过，0 failures/errors/skips。Native 路径不变；旧浮点算术/比较及跨数值折叠禁止宿主 Float 计算，`16777217` 保持八位十进制精度；identity/toNBT 保留来源 codec。包含 FloatBits 端点的旧浮点范围，其静态顺序不使用宿主比较，整数/native 行为不变；浮点迭代语义未定义，不新增迭代行为。
 
-已知 int/bool/byte/short as legacyfloat 仍沿旧入口并在实际访问时诊断；未用视图不报错，unknown any 视图不做运行时 typecheck，命名 float 视图的来源随后被写成已知标量，再读取视图会诊断。阶段56/57完成有序初始化 RHS 持久化与 const 初始化语义，MCFL 12；验证记录见上。阶段58已为部分语法接入普通模板推断字段声明绑定，其他语法仍沿旧路径；阶段59导入声明环境已实现；阶段60消费端库函数主体导出已在限定路径验证；阶段61已恢复受支持模板方法owner，阶段62已修复模块资源复制；当时待办的阶段63函数权限已完成；当前下一步为阶段82源码generic特化磁盘导出，先单fixture RED。imported object自动load仍未解决。未知端点范围和浮点/混合迭代的步长及不前进策略仍未定义，保留现有诊断。整个17项迁移仍未完成，模板/泛型/T!、其余控制流/集合及 MNI 尚待统一。
+已知 int/bool/byte/short as legacyfloat 仍沿旧入口并在实际访问时诊断；未用视图不报错，unknown any 视图不做运行时 typecheck，命名 float 视图的来源随后被写成已知标量，再读取视图会诊断。阶段56/57完成有序初始化 RHS 持久化与 const 初始化语义，MCFL 12；验证记录见上。阶段58已为部分语法接入普通模板推断字段声明绑定，其他语法仍沿旧路径；阶段59导入声明环境已实现；阶段60消费端库函数主体导出已在限定路径验证；阶段61已恢复受支持模板方法owner，阶段62已修复模块资源复制；当时待办的阶段63函数权限已完成；当前下一步为阶段83 internal generated名字隔离，先单source fixture RED。imported object自动load仍未解决。未知端点范围和浮点/混合迭代的步长及不前进策略仍未定义，保留现有诊断。整个17项迁移仍未完成，模板/泛型/T!、其余控制流/集合及 MNI 尚待统一。
 
 - 26.3 原生 float 的字面量、算术/比较、循环、递归调用、static 写回、擦除与共享视图、集合元素和范围载荷进入 IR；int→float 提升作为 Promote，用于声明、赋值、返回、普通/成员实参和上下文集合字面量。运算与旧入口共享提供器表达式，值保存在 NBT 帧，负零取负保留符号；常量非有限值、反向已知范围和有损 static 写回明确诊断。旧浮点后端现已进入 IR；其余来源转换和完整 MNI 接口仍待迁入；浮点/混合迭代语义未定义并保留现有诊断，不扩展步长或不前进规则。
 

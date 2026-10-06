@@ -9,6 +9,7 @@ import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.GenericDataTemplate
 import top.mcfpp.model.compound.ObjectDataTemplate
+import top.mcfpp.model.compound.ObjectCompoundData
 import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
@@ -194,6 +195,15 @@ object DatapackCreator {
 
     private fun genNamespace(path: Path, namespace: MutableMap.MutableEntry<String, Namespace>) {
         val currPath = path.resolve(Project.config.name).resolve("data").resolve(namespace.key)
+        val visited = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<CompoundData, Boolean>())
+        fun exportCompound(compound: CompoundData) {
+            if (!visited.add(compound)) return
+            when (compound) {
+                is ObjectCompoundData -> genObject(currPath, compound)
+                is DataTemplate -> genTemplate(currPath, compound)
+            }
+            if (compound is GenericDataTemplate) compound.compiledTemplates.values.forEach(::exportCompound)
+        }
 
         namespace.value.scope.forEachFunction {
             genFunction(currPath.resolve("function"), it)
@@ -203,11 +213,11 @@ object DatapackCreator {
         }
 
         namespace.value.scope.forEachTemplate {
-            genTemplate(currPath, it)
+            exportCompound(it)
         }
 
         namespace.value.scope.forEachObject {
-            genObject(currPath, it)
+            exportCompound(it)
         }
     }
 
