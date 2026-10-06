@@ -1,5 +1,6 @@
 package top.mcfpp.lib
 
+import com.alibaba.fastjson2.JSON
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.nbt.NBTBasedData
@@ -78,7 +79,7 @@ class ListChatComponent: ChatComponent() {
 
 class PlainChatComponent(var value: String) : ChatComponent() {
     override fun toCommandPart(): Command {
-        val c = Command("""{"type": "text", "text": "$value"}""")
+        val c = Command("""{"type": "text", "text": ${JSON.toJSONString(value)}}""")
         if(styles.isNotEmpty()){
             c.build(",").build(styleToString())
         }

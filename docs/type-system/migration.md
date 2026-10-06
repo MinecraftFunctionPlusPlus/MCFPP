@@ -5,7 +5,7 @@
 
 ## 当前规则（截至2026-10-07，Asia/Shanghai）
 
-用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–92完成受测集合与数值算术迁移，阶段93迁移ConversionData数值转换入口，阶段94迁移toText入口，阶段95改为显式Java方法名引用，阶段96接入text与拼接，阶段97统一String/NBT的toText入口，阶段98恢复T! text快照与即时拼接，阶段99迁移DataObjectData.toText；当前MCFL29，whole17未完成。
+用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–92完成受测集合与数值算术迁移，阶段93迁移ConversionData数值转换入口，阶段94迁移toText入口，阶段95改为显式Java方法名引用，阶段96接入text与拼接，阶段97统一String/NBT的toText入口，阶段98恢复T! text快照与即时拼接，阶段99迁移DataObjectData.toText，阶段100转义PlainChatComponent纯文本；当前MCFL29，whole17未完成。
 
 ## 当前已接入
 
@@ -38,6 +38,8 @@
 阶段98：`EncodedChatComponent`保存不可变SNBT快照，`StorageAccess.restore`将完整text ListTag恢复为immutable encoded component并保留声明类型。T! copy与拼接的source/fresh磁盘fixture得到A/A/AB/AS及return7/frame0；生成命令中joined/suffixed是flat component literal list。MCFL28/wire不变，无stdlib或Cache回归。只验证现有T! text路径，不扩展其他类型/effects，whole17仍未完成。
 
 阶段99：仅将 `DataObjectData.toText` 迁入显式context，复用 `NativeTextOperations` 中的DTO SNBT/runtimeNBTChat实现。source/fresh普通Payload/Box fixture磁盘验证字段值7、返回7、runtime NBT组件及frame0；普通data走 `buildUnConcrete`，不据此宣称Concrete覆盖。JavaVar的host转换及Any host/getDefault/equalNull保持原范围。MCFL28→29；stdlib Project0/0，三份291431-byte bin SHA256一致；fixture与Cache两项最终联合全绿。whole17仍未完成。
+
+阶段100：`PlainChatComponent` 的纯文本编码对text使用Fastjson2 `JSON.toJSONString` 转义单个字符串；引号和反斜线的T!快照/copy/concat及NBT字符串toText在source/fresh磁盘fixture通过。MCFL29不变，无Cache/stdlib；未覆盖控制字符或聊天渲染。whole17仍未完成。
 
 重构不要求兼容旧 `.mcfpp` 写法；显式引用新旧语法无需并行保留。
 

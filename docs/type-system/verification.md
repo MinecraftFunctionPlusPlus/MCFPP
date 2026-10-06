@@ -2,7 +2,25 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 阶段 99：迁移 DataObjectData.toText（已限定验证）
+## 阶段 100：转义 PlainChatComponent 文本（已限定验证）
+
+`PlainChatComponent` 对纯text改用项目Fastjson2 `JSON.toJSONString` 编码单个字符串，保证引号/反斜线的JSON转义；不扩展控制字符、style或decoder。无MCFL变化。RED `mcfpp-plain-text-escaping-red.log` worker211、exit1/BUILD FAILED in12s，XML `2026-10-06T21:40:00.543Z` 1/1/0/0；producer10 errors/9118 warnings，首因是在 `toText` 结果发布时 `ValueSnapshot.of`→`Tag.toNBT` 将含引号文本当SNBT解析并失败。10是producer诊断总数，不视作10个独立根因；未到fresh consumer。
+
+final `mcfpp-plain-text-escaping-final.log` worker212正常、exit0/BUILD SUCCESSFUL in17s，XML `2026-10-06T21:41:53.747Z` 1/0/0/0；source0/9118 warnings、fresh0/9119。磁盘mcfunction执行检查original/copied的quote+backslash文本、joined加` tail`、NBT字符串toText、return7/frame0；日志118877、118878、118882、118884为flat literal components。无fullcheck/server；不据此声称控制字符或聊天渲染验证。
+
+### 阶段 100 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录RED首因而未把10个诊断误当独立根因，final磁盘断言有证据。 |
+| 完整性 | 3/5 | 指定转义fixture通过；控制字符、聊天渲染及whole17未完成。 |
+| 清晰性 | 4/5 | 区分producer解析失败和最终source/fresh磁盘执行。 |
+| 可执行性 | 4/5 | 下一阶段限定LootTablePredicateData的两个谓词入口。 |
+| 简洁性 | 4/5 | 只覆盖单fixture及必要边界。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 历史必要检查：迁移 DataObjectData.toText（阶段 99）
 
 将单个 `DataObjectData.toText` Java入口迁入context，复用既有 `NativeTextOperations` 的DTO SNBT/runtimeNBTChat逻辑；没有扩展到JavaVar的toCommandPart、Any host/getDefault/equalNull或effects。MCFL29，source/build/stdlib-index三份bin均291431 bytes、raw header `4c46434d1d000000`、SHA256 `37576145F097FEEB0FB97CFFA7A35F970750A51B4687D846F82A3A9EE5473B7F`。
 

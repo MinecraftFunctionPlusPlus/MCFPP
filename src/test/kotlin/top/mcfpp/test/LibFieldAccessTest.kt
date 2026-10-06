@@ -2435,6 +2435,52 @@ class LibFieldAccessTest {
         check(main)
     }
 
+    @Test
+    fun plainTextEscapingSurvivesSnapshotsAndLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = """
+            func main(){
+                var box=Box();
+                dynamic var result=box.observe();
+            }
+        """
+        write("""
+            namespace fixture.fields;
+            data Box {
+                func observe()->int {
+                    var original as text! = ("quote \" slash \\").toText();
+                    var copied as text! = original;
+                    var joined as text! = ("quote \" slash \\").toText()+" tail";
+                    var nbtText as text! = toNBT("x").toText();
+                    /data modify storage fixture:observed original set from storage mcfpp:system stack_frame[0].original
+                    /data modify storage fixture:observed copied set from storage mcfpp:system stack_frame[0].copied
+                    /data modify storage fixture:observed joined set from storage mcfpp:system stack_frame[0].joined
+                    /data modify storage fixture:observed nbtText set from storage mcfpp:system stack_frame[0].nbtText
+                    return 7;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val machine = execute(main, output)
+            assertEquals(7, machine.read(main.scope.getVar("result") as MCInt))
+            val original = "quote \" slash \\"
+            for ((name, expected) in listOf("original" to original, "copied" to original, "joined" to "$original tail", "nbtText" to "\"x\"")) {
+                val payload = assertIs<top.mcfpp.nbt.tags.collection.ListTag>(machine.readNbt("fixture:observed", name))
+                assertTrue(payload.isNotEmpty(), name)
+                val actual = payload.joinToString("") { element ->
+                    val component = assertIs<top.mcfpp.nbt.tags.CompoundTag>(element)
+                    assertEquals(Tag.toNBT("\"text\""), component["type"], name)
+                    assertIs<top.mcfpp.nbt.tags.primitive.StringTag>(component["text"]).value
+                }
+                assertEquals(expected, actual, name)
+            }
+        }
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")
