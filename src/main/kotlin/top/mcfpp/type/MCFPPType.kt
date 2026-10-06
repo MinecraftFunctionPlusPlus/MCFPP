@@ -248,9 +248,14 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             }
             is TypeId.Applied -> {
                 val constructor = id.constructor as? TypeId.Builtin
-                val factory = constructor?.let { genericTypeCache[it.key] }
-                val argument = id.arguments.singleOrNull()?.let(::resolveTypeId)
-                if (factory != null && argument != null) factory(argument) else null
+                if (constructor?.key == "vector") {
+                    val dimension = (id.arguments.singleOrNull() as? TypeId.Builtin)?.key?.toIntOrNull()
+                    dimension?.let { MCFPPVectorType(it) }?.takeIf { it.typeId == id }
+                } else {
+                    val factory = constructor?.let { genericTypeCache[it.key] }
+                    val argument = id.arguments.singleOrNull()?.let(::resolveTypeId)
+                    if (factory != null && argument != null) factory(argument) else null
+                }
             }
             is TypeId.Specialized -> resolveSpecialization(id)?.getType()
             is TypeId.Union -> {

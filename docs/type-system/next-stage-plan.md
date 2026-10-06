@@ -1,6 +1,6 @@
-# 下一阶段：冻结向量TypeValue（阶段 75）
+# 下一阶段：冻结SelectorTypeValue（阶段 76）
 
-阶段74源码联合类型与冻结身份已限定验证；阶段75尚未实现或测试，整个17项重构仍未完成。
+阶段75冻结向量TypeValue已限定验证；阶段76尚未实现或测试，整个17项重构仍未完成。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 
@@ -120,9 +120,13 @@ const 只限制重赋；compiler-only const 保留完整 `ValueSnapshot` 且不�
 
 新增至少一个PIPE '|'的unionType，旧UNION '&'及unionTemplateType/UnionDataTemplate不变；表达式优先级不变。递归scope/caller解析invalid项诊断null，复用MCFPPUnionType及有限Union resolver完整ID检查。Scalar/ReorderedScalar仅经typealias将Union作为Box静态T；source/fresh规范化snapshot/canonical/fullID与consumer真实磁盘4/9/frame0通过。必要联合4项全过，旧DataTemplate.unionTest仅语法smoke；direct readonly union expression及Union runtime值/布局未验。MCFL17/bin289989/schema不变，无stdlib/fullcheck/服务器。
 
-### 阶段 75：冻结向量TypeValue（待实现/红测）
+### 阶段 75：冻结向量TypeValue（已限定验证）
 
-vec2/vec3已有源码类型入口及MCFPPVectorType(dimension)工厂。TypeId是Applied(Builtin(vector), [Builtin数字维数])，维数不是四种容器工厂的元素类型参数。拟在有限Applied resolver识别vector并恢复唯一数字维数、核对完整ID；保留未知ID诊断，不扩展Vector runtime。真实Box<T as type>字段仍int，前置vec2/vec3自由签名、source/fresh反序构造、维度/静态快照/canonical/FullID及consumer磁盘4/9/frame0为计划；尚未实现或测试。Selector/Opaque、generic object/interface、direct union表达式及既有缺口保留。
+仅MCFPPType Applied分支恢复Builtin(vector)唯一数字维度并核对FullID，四种元素类型工厂不变，无新>0约束/registry/wire/Vector runtime。前置vec2/vec3 Box静态T签名与fresh反序的维度、snapshot/canonical/FullID及consumer磁盘4/9/frame0验证；最终必要联合2项（新75+旧71）全过。MCFL17/bin289989/schema不变，无stdlib/fullcheck/server；完整轮次见verification.md。
+
+### 阶段 76：冻结SelectorTypeValue（待实现/红测）
+
+已完成只读调研，尚未实现或测试。有限恢复TypeId.Selector(limit nullable, entities ordered nullable list, isName)，复用MCFPPEntityType(limit,entities,isName)并核对FullID；现有wire已保存三个字段。source alias entity<2,"minecraft:pig","!minecraft:cow"> as Selection及Box静态T/int字段为候选真实库fixture；不排序、不去原始引号、不扩runtime，isName=true无已确认source入口仍未验。Opaque内部unresolved/alias/generic placeholders应先解析，不造数字registry或Any；匿名模板实际Declaration，其未登记namespace的alias图恢复与源码重建稳定身份是独立缺口。direct Union表达式已研究但尚未实现/测试，阶段77候选统一type | type native静态签名。
 
 ### 旧浮点乘除（阶段 50 已实现）
 
@@ -134,7 +138,7 @@ vec2/vec3已有源码类型入口及MCFPPVectorType(dimension)工厂。TypeId是
 
 阶段 51 已将旧浮点算术/比较、Promote/Convert 接入 IR：四分量值使用独立 NBT 帧，`LegacyFloatCommands` 负责读写和调用，保留旧四记分板 return ABI。普通/递归/static、旧与 IR 双向调用、早先参数、多实参、常量与连续返回均经真实库命令执行；最终 20 项必要复查通过，0 failures/errors/skips。Native 路径不变；旧浮点算术/比较及跨数值折叠禁止宿主 Float 计算，`16777217` 保持八位十进制精度；identity/toNBT 保留来源 codec。包含 FloatBits 端点的旧浮点范围，其静态顺序不使用宿主比较，整数/native 行为不变；浮点迭代语义未定义，不新增迭代行为。
 
-已知 int/bool/byte/short as legacyfloat 仍沿旧入口并在实际访问时诊断；未用视图不报错，unknown any 视图不做运行时 typecheck，命名 float 视图的来源随后被写成已知标量，再读取视图会诊断。阶段56/57完成有序初始化 RHS 持久化与 const 初始化语义，MCFL 12；验证记录见上。阶段58已为部分语法接入普通模板推断字段声明绑定，其他语法仍沿旧路径；阶段59导入声明环境已实现；阶段60消费端库函数主体导出已在限定路径验证；阶段61已恢复受支持模板方法owner，阶段62已修复模块资源复制；当时待办的阶段63函数权限已完成；当前下一步为阶段75冻结向量TypeValue。imported object自动load仍未解决。未知端点范围和浮点/混合迭代的步长及不前进策略仍未定义，保留现有诊断。整个17项迁移仍未完成，模板/泛型/T!、其余控制流/集合及 MNI 尚待统一。
+已知 int/bool/byte/short as legacyfloat 仍沿旧入口并在实际访问时诊断；未用视图不报错，unknown any 视图不做运行时 typecheck，命名 float 视图的来源随后被写成已知标量，再读取视图会诊断。阶段56/57完成有序初始化 RHS 持久化与 const 初始化语义，MCFL 12；验证记录见上。阶段58已为部分语法接入普通模板推断字段声明绑定，其他语法仍沿旧路径；阶段59导入声明环境已实现；阶段60消费端库函数主体导出已在限定路径验证；阶段61已恢复受支持模板方法owner，阶段62已修复模块资源复制；当时待办的阶段63函数权限已完成；当前下一步为阶段76冻结SelectorTypeValue。imported object自动load仍未解决。未知端点范围和浮点/混合迭代的步长及不前进策略仍未定义，保留现有诊断。整个17项迁移仍未完成，模板/泛型/T!、其余控制流/集合及 MNI 尚待统一。
 
 - 26.3 原生 float 的字面量、算术/比较、循环、递归调用、static 写回、擦除与共享视图、集合元素和范围载荷进入 IR；int→float 提升作为 Promote，用于声明、赋值、返回、普通/成员实参和上下文集合字面量。运算与旧入口共享提供器表达式，值保存在 NBT 帧，负零取负保留符号；常量非有限值、反向已知范围和有损 static 写回明确诊断。旧浮点后端现已进入 IR；其余来源转换和完整 MNI 接口仍待迁入；浮点/混合迭代语义未定义并保留现有诊断，不扩展步长或不前进规则。
 

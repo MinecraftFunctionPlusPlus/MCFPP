@@ -27,6 +27,7 @@ import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPDataTemplateType
 import top.mcfpp.type.MCFPPListType
 import top.mcfpp.type.MCFPPUnionType
+import top.mcfpp.type.MCFPPVectorType
 import top.mcfpp.type.TypeId
 import java.nio.file.Files
 import java.nio.file.Path
@@ -1016,6 +1017,74 @@ class LibFieldAccessTest {
         val machine = execute(main, output)
         assertEquals(4, machine.read(main.scope.getVar("firstResult") as MCInt))
         assertEquals(9, machine.read(main.scope.getVar("secondResult") as MCInt))
+    }
+
+    @Test fun frozenVectorTypeArgumentsRestoreDimensionsAcrossLibraryRoundTrip() = withLibrary { output ->
+        write("""
+            namespace fixture.fields;
+            func readTwo(arg as Box<vec2>)->int { return arg.read(); }
+            func readThree(arg as Box<vec3>)->int { return arg.read(); }
+            data Box<T as type> {
+                private value as int;
+                constructor(v as int){ this.value=v; }
+                func read()->int { return this.value; }
+            }
+            func main(){
+                var two=Box<vec2>(4); var three=Box<vec3>(9);
+                dynamic var twoResult=readTwo(two);
+                dynamic var threeResult=readThree(three);
+            }
+        """, output)
+        val sourceScope = GlobalScope.localNamespaces.getValue("fixture.fields").scope
+        val sourcePrototype = assertIs<GenericDataTemplate>(sourceScope.getTemplate("Box"))
+        val sourceMain = sourceScope.functions.getValue("main").single()
+        val sourceTwo = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(sourceMain.scope.getVar("two")).templateType)
+        val sourceThree = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(sourceMain.scope.getVar("three")).templateType)
+        assertNotSame(sourceTwo, sourceThree)
+        assertSame(sourcePrototype, sourceTwo.originTemplate)
+        assertSame(sourcePrototype, sourceThree.originTemplate)
+        assertEquals(2, assertIs<MCFPPVectorType>(assertIs<MCFPPTypeVar>(sourceTwo.scope.getVar("T")).value).dimension)
+        assertEquals(3, assertIs<MCFPPVectorType>(assertIs<MCFPPTypeVar>(sourceThree.scope.getVar("T")).value).dimension)
+        assertSame(sourceTwo, assertIs<MCFPPDataTemplateType>(sourceScope.functions.getValue("readTwo").single().normalParams.single().type).template)
+        assertSame(sourceThree, assertIs<MCFPPDataTemplateType>(sourceScope.functions.getValue("readThree").single().normalParams.single().type).template)
+        val sourceTwoId = sourceTwo.getType().typeId
+        val sourceThreeId = sourceThree.getType().typeId
+        assertNotEquals(sourceTwoId, sourceThreeId)
+        val sourceTwoSnapshot = assertNotNull(ValueSnapshot.of(sourceTwo.scope.getVar("T")))
+        val sourceThreeSnapshot = assertNotNull(ValueSnapshot.of(sourceThree.scope.getVar("T")))
+        assertNotEquals(sourceTwoSnapshot, sourceThreeSnapshot)
+
+        val main = consume("""
+            import fixture.fields:*;
+            func main(){
+                var three=Box<vec3>(9); var two=Box<vec2>(4);
+                dynamic var twoResult=readTwo(two);
+                dynamic var threeResult=readThree(three);
+            }
+        """, output)
+        assertEquals(0, Project.errorCount)
+        val restoredScope = GlobalScope.libNamespaces.getValue("fixture.fields").scope
+        val prototype = assertIs<GenericDataTemplate>(restoredScope.getTemplate("Box"))
+        assertNotSame(sourcePrototype, prototype)
+        val two = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("two")).templateType)
+        val three = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("three")).templateType)
+        assertNotSame(two, three)
+        assertSame(prototype, two.originTemplate)
+        assertSame(prototype, three.originTemplate)
+        assertNotSame(sourceTwo, two)
+        assertNotSame(sourceThree, three)
+        assertEquals(sourceTwoId, two.getType().typeId)
+        assertEquals(sourceThreeId, three.getType().typeId)
+        assertNotEquals(two.getType().typeId, three.getType().typeId)
+        assertEquals(2, assertIs<MCFPPVectorType>(assertIs<MCFPPTypeVar>(two.scope.getVar("T")).value).dimension)
+        assertEquals(3, assertIs<MCFPPVectorType>(assertIs<MCFPPTypeVar>(three.scope.getVar("T")).value).dimension)
+        assertEquals(sourceTwoSnapshot, ValueSnapshot.of(two.scope.getVar("T")))
+        assertEquals(sourceThreeSnapshot, ValueSnapshot.of(three.scope.getVar("T")))
+        assertSame(two, assertIs<MCFPPDataTemplateType>(restoredScope.functions.getValue("readTwo").single().normalParams.single().type).template)
+        assertSame(three, assertIs<MCFPPDataTemplateType>(restoredScope.functions.getValue("readThree").single().normalParams.single().type).template)
+        val machine = execute(main, output)
+        assertEquals(4, machine.read(main.scope.getVar("twoResult") as MCInt))
+        assertEquals(9, machine.read(main.scope.getVar("threeResult") as MCInt))
     }
 
     private fun write(source: String, output: Path) {

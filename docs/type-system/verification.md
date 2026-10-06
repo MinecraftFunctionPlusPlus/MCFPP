@@ -1,8 +1,16 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段74源码联合类型与冻结身份必要联合4项全过；source/fresh静态模型及consumer真实磁盘4/9/frame0到达，旧unionTest仅语法smoke。MCFL17/bin289989/schema不变，无stdlib/fullcheck/服务器。阶段75冻结向量TypeValue尚未实现或测试；最近完整检查仍为72dc557的346项，整个17项迁移未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段75冻结向量TypeValue必要联合2项（新75+旧71）全过，source/fresh静态模型及consumer真实磁盘4/9/frame0到达。MCFL17/bin289989/schema不变，无stdlib/fullcheck/server。阶段76冻结SelectorTypeValue尚未实现或测试；最近完整346项仍为72dc557，整个17项未完成。
 
-## 最新必要检查：源码联合类型与冻结身份（阶段 74）
+## 最新必要检查：冻结向量TypeValue（阶段 75）
+
+阶段75仅一个生产文件MCFPPType.kt与68行fixture及import接通限定Vector身份恢复；加4docs共6文件。Applied分支识别Builtin(vector)，读取唯一Builtin数字key.toIntOrNull，构造MCFPPVectorType(dim)并核对FullID；原四种元素类型工厂不变，不新增>0维数约束、registry、wire或Vector runtime支持。
+
+frozenVectorTypeArgumentsRestoreDimensionsAcrossLibraryRoundTrip以前置readTwo(Box<vec2>)/readThree(Box<vec3>)进入真实wire；Box的T仅静态，字段仍int。source维数2→4/3→9，fresh反序3→9/2→4；实际T dimension2/3、不同完整Specialized ID/不可变snapshot、前置参数与main canonical、source/fresh prototype及Compiled独立、FullID/snapshot稳定均到达，consumer真实磁盘4/9/frame0通过。
+
+RED mcfpp-generic-vector-type-value-red.log：fresh XML2026-10-06T08:02:09.718Z，1failure/0error/skip，worker143正常exit1/FAILED11s；producer0/0、source模型及写库通过，fresh读库后4次Cannot restore frozen T of Box及2次read undefined，共6errors/9119warnings，未到fresh模型或disk。FINAL mcfpp-generic-vector-type-value-final.log：fresh XML2026-10-06T08:07:30.426Z，2/0/0/0，worker144正常exit0/SUCCESS24s；新75与旧71 frozenDeclarationAndContainerTypeArgumentsRestoreCanonicalTypes各source0/0、consumer0/9119，模型及consumer磁盘均过。仅必要联合2项，非fullcheck/server/stdlib；MCFL17/bin289989/schema不变。阶段74提交16e1051e672ba8a6d732d09239e1d13c92d18025（7文件144+/19-），阶段73为186a712f；阶段75提交以Git历史为准。
+
+## 历史必要检查：源码联合类型与冻结身份（阶段 74）
 
 阶段74保留旧UNION token '&'及unionTemplateType/UnionDataTemplate，新unionType要求至少一个PIPE '|'；primary/var/expression优先级不变。MCFPPType新union解析递归传scope/caller，invalid项诊断并返回null，不补Any；复用既有MCFPPUnionType规范化。有限TypeId.Union resolver要求非空、所有alternative可恢复及最终FullID相同。两prod+fixture+4docs共7文件；wire/schema/MCFL17/bin289989不变，无stdlib/fullcheck/服务器，最新完整346项仍为72dc557。
 
