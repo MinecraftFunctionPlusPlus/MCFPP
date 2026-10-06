@@ -192,6 +192,7 @@ class MCFPPBaseType {
 
         override val instanceData by lazy {
             CompoundData("text","mcfpp.lang").apply {
+                commonType = JsonText
                 extends(MCFPPNBTType.NBT.instanceData)
                 injectedBy(JsonTextData::class.java)
 
@@ -207,8 +208,9 @@ class MCFPPBaseType {
 
         override val concreteInstanceData: CompoundData by lazy {
             CompoundData("text","mcfpp.lang").apply {
+                commonType = JsonText
                 extends(MCFPPNBTType.NBT.concreteInstanceData)
-                injectedBy(JsonTextConcreteData::class.java)
+                injectedBy(JsonTextData::class.java)
 
                 addMember(MCInt("color"))
                 addMember(ScoreBool("bold"))

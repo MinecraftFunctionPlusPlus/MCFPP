@@ -1,20 +1,20 @@
-# 下一阶段：接入 text 与拼接运算（阶段 96）
+# 下一阶段：统一 String/NBT 的 toText receiver 分流（阶段 97）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–95完成受测集合、数值、toText与显式转换引用的限定迁移；当前库格式MCFL26。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–96完成受测集合、数值、toText、显式转换引用与text拼接的限定迁移；当前库格式MCFL27。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
-阶段93已将ConversionData的49个静态转换入口接入显式context；阶段94七个toText入口限定验证通过；阶段95已将49个stdlib引用改为真实Java方法名并定向复查。分轮结果见verification.md。
+阶段93已迁移ConversionData的49个入口；阶段94完成toText入口限定验证；阶段95改为匹配显式Java方法名；阶段96完成text receiver赋值与拼接限定验证。分轮结果见verification.md。
 
-### 阶段 95：显式转换方法引用（已限定验证）
+### 阶段 96：text 与拼接运算（已限定验证）
 
-`conversions.mcfpp` 的49个显式native引用现匹配真实Java方法名 `toTargetFromSource`，既有 `decodeByte` fixture使用 `toIntFromByte`。FieldVisitor不再用语言identifier回退查找；Namespace/CompoundData仍以annotation identifier支持语言重载。用户无需兼容旧 `.mcfpp` 显式Java引用，MCFL26和wire不变。stdlib重建及既有conversion fixture source/fresh复查通过。
+接通text的runtime receiver赋值与三个构造路径；两项concat operator走单context，JsonTextConcreteData重复注入改为复用JsonTextData。MCFL26→27。fixture的source与fresh consumer磁盘断言覆盖12项text payload、original/copy、return7和frame0；不能据此宣称未知MNI屏障后的常量折叠分支、聊天渲染或跨帧寿命均已验证。final3仅单fixture复查，Cache在首轮独立通过。
 
-### 阶段 96 计划：text 与两项拼接运算符
+### 阶段 97 计划：String/NBT toText receiver 分流
 
-限定于text方法及统一两个MNIOperator入口。先处理 `JsonTextConcreteData` 重复注入，改为复用 `JsonTextData`；concat由小型直接调用core的Kotlin helper实现，不新增通用框架。单个Box source/fresh fixture使用真实text形参，通过 `toText` 产生L/R/A/B，验证组件顺序、operand副本及pop前结果；不以 `string as text` 代替。待必要RED确认现有string调用错误、append数组未flatten和const mutable副本风险，不预判这些问题一定存在。MCFL升级与stdlib重建按最终ABI确定；保留Cache回归作为必要联合检查，具体范围以Root冻结的method targets为准。聊天渲染不纳入此阶段。
+将String与NBT的toText runtime/Concrete入口各合并到同一Java类，删除 `MCStringConcreteData` 与 `NBTBasedDataConcreteData` 的重复注入；helper按实际receiver状态分流constant/runtime，不把具体层范围扩大到其他native或effects。必要验证复用现有toText fixture与Cache回归，不新增测试框架；若复用阶段96用例，将两个constant concat初始化改为直接toText表达式以覆盖即时常量分支。按最终方法签名判断是否需更新库版本并重建stdlib；不得假定未知MNI屏障下的const mutable-copy行为已通过。
 
-阶段88–95详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL26。
+阶段88–96详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL27。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

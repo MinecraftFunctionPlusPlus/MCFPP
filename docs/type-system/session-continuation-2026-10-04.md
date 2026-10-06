@@ -4,7 +4,7 @@
 
 ## 当前进度
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段95已完成限定验证，MCFL26；提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段96已完成限定验证，MCFL27；提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
 
 ### 用户最新规则（2026-10-06）
 
@@ -75,6 +75,22 @@ stdlib首轮 `mcfpp-native-text-context-stdlib.log` 重建成功，Project0/0，
 | 清晰性 | 4/5 | 区分Java方法名和语言annotation identifier，明确不兼容旧显式引用。 |
 | 可执行性 | 4/5 | 阶段96限制text拼接方法和必要缓存回归。 |
 | 简洁性 | 4/5 | 仅更新当前阶段和下一步，保留历史。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+### 阶段 96：text 与拼接运算（已限定验证）
+
+text receiver赋值和三类构造路径已接通；两个concat operator使用单context，`JsonTextConcreteData` 重复注入改为复用 `JsonTextData`。MCFL26→27。标准库成功57s、Project0/0。初始RED worker201/FAILED12s，XML `2026-10-06T20:41:25.805Z` 1/1/0/0；producer1 error/9118 warnings，`observe<>(nbt,nbt) not defined`，字符串toDynamic实际退成NBT，未到fresh或磁盘断言。首轮Cache XML `20:46:44.428Z`通过；fixture `20:46:40.257Z`失败于source执行器不支持text component append命令，未到consumer。final2 worker203在source观察到CompoundTag而非预期ListTag后失败。修复runtime adapter后final3 worker204 exit0/BUILD SUCCESSFUL in14s，fixture fresh XML `20:51:29.163Z` 1/0/0/0；source0/9118 warnings、fresh0/9119。source及fresh consumer真实磁盘均通过12项payload观察、original/copy及return7/frame0。两个不同用例跨轮各过，final3仅单fixture复查；常量来源的A/B和未知MNI屏障物化后的const-fold路径没有单独完整证明。最终三份291364-byte bin为MCFL27、SHA256 `A674D9E8FB3AD848A9F8CCC5E68CF31E2305271395D0A6B90122E1CD0827AD1A`。无聊天渲染/跨帧寿命/fullcheck/server。
+
+### 阶段 96 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 区分source执行器命令缺口、ListTag观察失败与最终source/fresh磁盘断言。 |
+| 完整性 | 3/5 | 受测text/concat路径完成；未知调用屏障后的常量折叠与whole17仍待继续。 |
+| 清晰性 | 4/5 | 说明跨轮两个用例各过、final3仅复查fixture。 |
+| 可执行性 | 4/5 | 阶段97限定String/NBT receiver分流并复用现有toText fixture与Cache检查。 |
+| 简洁性 | 4/5 | 保留历史，仅新增当前阶段和下一步。 |
 
 平均3.8/5，whole17完整性仍为3/5。
 

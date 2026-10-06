@@ -2296,6 +2296,62 @@ class LibFieldAccessTest {
         check(main)
     }
 
+    @Test
+    fun nativeTextConcatenationUsesOneSignatureAcrossLibraryRoundTrip() = withLibrary { output ->
+        val observations = linkedMapOf(
+            "joinedRuntime" to "LR", "suffixedRuntime" to "LS", "joinedConstant" to "AB", "suffixedConstant" to "AS",
+            "left" to "L", "right" to "R", "originalA" to "A", "originalB" to "B",
+            "leftCopy" to "L", "rightCopy" to "R", "constantLeftCopy" to "A", "constantRightCopy" to "B"
+        )
+        val copies = observations.keys.joinToString("\n") { name ->
+            "/data modify storage fixture:observed $name set from storage mcfpp:system stack_frame[0].$name"
+        }
+        val mainSource = """
+            func main(){
+                var box=Box();
+                dynamic var leftInput as text=("L").toText();
+                dynamic var rightInput as text=("R").toText();
+                dynamic var result=box.observe(leftInput,rightInput);
+            }
+        """
+        write("""
+            namespace fixture.fields;
+            data Box {
+                func observe(left as text,right as text)->int {
+                    dynamic var leftCopy=left; dynamic var rightCopy=right;
+                    var constantLeft=("A").toText(); var constantRight=("B").toText();
+                    dynamic var constantLeftCopy=constantLeft; dynamic var constantRightCopy=constantRight;
+                    dynamic var joinedRuntime=left+right;
+                    dynamic var suffixedRuntime=left+"S";
+                    dynamic var joinedConstant=constantLeft+constantRight;
+                    dynamic var suffixedConstant=constantLeft+"S";
+                    dynamic var originalA=constantLeft; dynamic var originalB=constantRight;
+                    $copies
+                    return 7;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val machine = execute(main, output)
+            assertEquals(7, machine.read(main.scope.getVar("result") as MCInt))
+            for ((name, expected) in observations) {
+                val payload = assertIs<top.mcfpp.nbt.tags.collection.ListTag>(machine.readNbt("fixture:observed", name))
+                assertTrue(payload.isNotEmpty(), name)
+                val actual = payload.joinToString("") { element ->
+                    val component = assertIs<top.mcfpp.nbt.tags.CompoundTag>(element)
+                    assertEquals(Tag.toNBT("\"text\""), component["type"], name)
+                    assertIs<top.mcfpp.nbt.tags.primitive.StringTag>(component["text"]).value
+                }
+                assertEquals(expected, actual, name)
+            }
+        }
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

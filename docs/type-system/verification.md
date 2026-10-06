@@ -2,7 +2,27 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 阶段 95：显式原生转换引用（已限定验证）
+## 阶段 96：text 与拼接运算（已限定验证）
+
+text receiver赋值与三类构造路径归一；两个拼接 `MNIOperator` 接入单context，concat以直接typed core helper处理组件，JsonTextConcreteData重复注入复用JsonTextData。MCFL27。
+
+`mcfpp-native-text-concat-stdlib.log`：标准库成功57s，Project0/0。初始RED `mcfpp-native-text-concat-red.log` worker201/FAILED12s，XML `2026-10-06T20:41:25.805Z` 1/1/0/0；producer1 error/9118 warnings，首因 `observe<>(nbt,nbt) not defined`，对应字符串toDynamic退成NBT，未到fresh或磁盘断言。首轮联合 `mcfpp-native-text-concat-final.log`：Cache XML `2026-10-06T20:46:44.428Z` 1/0/0/0通过；fixture XML `20:46:40.257Z`失败，source执行器不支持生成的 `data modify ... append value {"type":"text","text":"S"}` 字面组件命令，未到consumer。final2 worker203、FAILED10s，fixture XML `20:48:31.164Z`仍失败于source观察，期待ListTag却读到CompoundTag，未到consumer。runtime adapter修复后final3 worker204 exit0/BUILD SUCCESSFUL in14s，fixture XML `20:51:29.163Z` 1/0/0/0；source0/9118 warnings，fresh consumer0/9119。source与fresh consumer磁盘均通过12项命名观察、original/copy组件与return7/frame0断言。Cache和fixture两个不同用例跨轮各自通过，final3只复查fixture，不是最终联合2项。12个观察名中A/B来自constant origin；未知MNI屏障可能物化并丢失已知值，未单独证明每个const-fold分支。没有验证聊天渲染或跨帧寿命，无fullcheck/server。
+
+source/build资源/build索引三份bin均为291364 bytes、MCFL27（raw header `4c46434d1b000000`）、SHA256 `A674D9E8FB3AD848A9F8CCC5E68CF31E2305271395D0A6B90122E1CD0827AD1A`。
+
+### 阶段 96 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录了两轮fixture失败位置、最终source/fresh磁盘断言与同步MCFL27产物。 |
+| 完整性 | 3/5 | text赋值与拼接受测路径通过；未知MNI屏障下的常量折叠和whole17仍未完成。 |
+| 清晰性 | 4/5 | 区分source执行器失败、source shape失败和final3单fixture复查。 |
+| 可执行性 | 4/5 | 阶段97限制为String/NBT到text的receiver分流和已有回归。 |
+| 简洁性 | 4/5 | 只记录本阶段验证证据、边界与下一步。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 历史必要检查：显式原生转换引用（阶段 95）
 
 标准库 `conversions.mcfpp` 的49个native RHS已改为匹配Java真实方法名 `toTargetFromSource`；现有 `decodeByte` fixture明确引用 `ConversionData.toIntFromByte`。FieldVisitor只按真实Java方法名匹配，不再回退到语言重载identifier；Namespace/CompoundData仍以annotation identifier解析正常语言重载。用户不要求兼容旧 `.mcfpp` 显式Java方法引用。MCFL26与库wire不变。
 

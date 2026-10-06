@@ -6,6 +6,7 @@ import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.lib.ChatComponent
 import top.mcfpp.lib.ListChatComponent
 import top.mcfpp.lib.NBTChatComponent
+import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.property.Property
@@ -48,7 +49,10 @@ open class JsonText : NBTBasedData {
     override fun doAssignedBy(b: Var<*>): NBTBasedData {
         when (b) {
             is JsonTextConcrete -> return JsonTextConcrete(this, b.value)
-            is JsonText -> assignCommand(b)
+            is JsonText -> {
+                assignCommand(b)
+                return JsonText(this)
+            }
             else -> LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
         }
         return this
@@ -61,7 +65,13 @@ open class JsonText : NBTBasedData {
     override fun getTempVar(): JsonText {
         val temp = JsonText()
         temp.isTemp = true
-        return temp.assignCommand(this) as JsonText
+        temp.nbtPath = NBTPath.temp.memberIndex(temp.identifier)
+        if (this is JsonTextConcrete) {
+            val payload = if (value is ListChatComponent) value else value.toListComponent()
+            Function.addCommand(Command.build("data modify").build(temp.nbtPath.toCommandPart())
+                .build("set value").build(payload.toCommandPart()))
+        } else temp.assignCommand(this)
+        return temp
     }
 
     override fun getByIndex(index: Var<*>): PropertyVar {
@@ -93,23 +103,24 @@ open class JsonText : NBTBasedData {
     }
 
     override fun plus(a: Var<*>): Var<*> {
+        val result = getTempVar()
         return when(a){
             is JsonTextConcrete -> {
-                val cmd = Command.build("data modify")
-                    .build(nbtPath.toCommandPart())
-                    .build("append value")
-                    .build(a.toCommandPart())
-                Function.addCommand(cmd)
-                this
+                val components = (a.value as? ListChatComponent)?.components ?: listOf(a.value)
+                for (component in components) {
+                    Function.addCommand(Command.build("data modify").build(result.nbtPath.toCommandPart())
+                        .build("append value").build(component.toCommandPart()))
+                }
+                result
             }
             is JsonText -> {
                 Function.addCommand(
                     Command.build("data modify")
-                        .build(nbtPath.toCommandPart())
+                        .build(result.nbtPath.toCommandPart())
                         .build("append from")
-                        .build(a.nbtPath.toCommandPart())
+                        .build(a.nbtPath.iteratorIndex().toCommandPart())
                 )
-                this
+                result
             }
             else -> errorOp()
         }
@@ -126,16 +137,18 @@ class JsonTextConcrete : MCFPPValue<ChatComponent>, JsonText {
      * @param value 值
      */
     constructor(value: ChatComponent, identifier: String = TempPool.getVarIdentify()) : super(identifier) {
-        this.value = value
+        this.value = copyComponents(value)
     }
 
     constructor(jsonText: JsonText, value: ChatComponent) : super(jsonText){
-        this.value = value
+        this.value = copyComponents(value)
     }
 
     constructor(int: JsonTextConcrete) : super(int){
-        this.value = int.value
+        this.value = copyComponents(int.value)
     }
+
+    override fun clone(): JsonTextConcrete = JsonTextConcrete(this)
 
     override fun toDynamic(replace: Boolean): Var<*> {
         val parent = parent
@@ -145,7 +158,7 @@ class JsonTextConcrete : MCFPPValue<ChatComponent>, JsonText {
             .build("set value ")
             .build(v.toCommandPart())
         Function.addCommand(cmd)
-        val re = NBTBasedData(this)
+        val re = JsonText(this)
         if(replace){
             if(parentTemplate() != null){
                 (parent as DataTemplateObject).instanceField.putVar(identifier, re, true)
@@ -161,23 +174,18 @@ class JsonTextConcrete : MCFPPValue<ChatComponent>, JsonText {
     }
 
     override fun plus(a: Var<*>): Var<*> {
-        when(a){
+        return when(a){
             is JsonTextConcrete -> {
-                val v = value as? ListChatComponent ?: value.toListComponent()
-                if(a.value is ListChatComponent){
-                    v.append((a.value as ListChatComponent).components)
-                }else{
-                    v.append(a.value)
-                }
-                value = v
+                val result = copyComponents(value)
+                result.components.addAll((a.value as? ListChatComponent)?.components ?: listOf(a.value))
+                JsonTextConcrete(result)
             }
-            is JsonText -> {
-                val v = value as? ListChatComponent?: value.toListComponent()
-                v.append(NBTChatComponent(a, true))
-                value = v
-            }
+            is JsonText -> super.plus(a)
             else -> errorOp()
         }
-        return this
+    }
+
+    private fun copyComponents(component: ChatComponent): ListChatComponent = ListChatComponent().apply {
+        components.addAll((component as? ListChatComponent)?.components ?: listOf(component))
     }
 }

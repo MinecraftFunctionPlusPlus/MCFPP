@@ -207,6 +207,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         val scoreCondition = Regex("(if|unless) score (\\S+ \\S+) (?:(=|<|>|<=|>=) (\\S+ \\S+)|matches (-?\\d+|(?:-?\\d+)?\\.\\.(?:-?\\d+)?))(?: ((?:if|unless) score .*))?")
         val storedFunctionResult = Regex("execute store result score (\\S+ \\S+) run function (\\S+)")
         val insertNbt = Regex("data modify storage (\\S+) ($nbtPath) (append|prepend|insert -?\\d+) from storage (\\S+) ($nbtPath)")
+        val appendNbtValue = Regex("data modify storage (\\S+) ($nbtPath) append value (.*)")
         val compareNbt = Regex("execute store success score (\\S+ \\S+) run data modify storage (\\S+) ($nbtPath) set from storage (\\S+) ($nbtPath)")
         val removeNbt = Regex("data remove storage (\\S+) ($nbtPath)")
         val testNbt = Regex("execute store success score (\\S+ \\S+) if data storage (\\S+) ($nbtPath)")
@@ -397,6 +398,11 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                 val changed = readNbt(it.groupValues[2], it.groupValues[3]) != value
                 writeNbt(it.groupValues[2], it.groupValues[3], value.copy())
                 values[scoreKey(it.groupValues[1])] = if (changed) 1 else 0
+                return@command false
+            }
+            appendNbtValue.matchEntire(command)?.let {
+                val list = readNbt(it.groupValues[1], it.groupValues[2]) as ListTag
+                list.value.add(Tag.toNBT(it.groupValues[3]))
                 return@command false
             }
             insertNbt.matchEntire(command)?.let {
