@@ -13,6 +13,7 @@ import top.mcfpp.core.lang.Var
 import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.Project
+import top.mcfpp.mni.MCFPPTypeData
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
@@ -195,7 +196,12 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
 
     companion object{
 
-        val data = CompoundData("Type","mcfpp")
+        val data by lazy {
+            CompoundData("Type", "mcfpp").apply {
+                commonType = MCFPPConcreteType.Type
+                injectedBy(MCFPPTypeData::class.java)
+            }
+        }
 
         private val typeCache:MutableMap<String, MCFPPType> by lazy { arrayListOf(
             MCFPPPrivateType.Void,

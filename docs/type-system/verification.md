@@ -1,8 +1,16 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段76冻结SelectorTypeValue最终单方法1/0/0/0，source/fresh模型及consumer真实磁盘4/9/frame0通过；并非joint2/fullcheck。MCFL17/bin289989/schema不变，无stdlib/fullcheck/server。阶段77 direct Union TypeValue表达式尚未实现或测试；最新完整346项仍为72dc557，whole17未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段77 direct Union TypeValue表达式最终必要1项通过，source/fresh静态模型及consumer磁盘4/9/frame0到达，Union runtime布局未验。MCFL17/bin289989/wire/schema不变，无stdlib/fullcheck/server。阶段78匿名模板alias冻结身份尚未实现或测试；最新完整346项仍为72dc557，whole17未完成。
 
-## 最新必要检查：冻结SelectorTypeValue（阶段 76）
+## 最新必要检查：direct Union TypeValue表达式（阶段 77）
+
+阶段77两个prod：MCFPPType.data改为lazy CompoundData(Type,mcfpp)，commonType=MCFPPConcreteType.Type并injectedBy新增19行Java MCFPPTypeData；类标注NoExternalWrites，MNIOperator('|')接受type/返回type，returnsConstWhenArgsConst=true，返回MCFPPTypeVar(MCFPPUnionType(actual caller/other types))。复用两visitor既有Native dispatch，无grammar/visitor override、registry、runtime Union或用户函数求值。内建scope在编译器中按需初始化，未新增namespace持久Native签名，oldbin库读/consumer通过；不重建stdlib、不升VERSION。两prod+78行fixture+4docs预计7文件。
+
+unionTypeExpressionsShareCanonicalSpecializationsAcrossLibraryRoundTrip以sourceScalar alias(int|string)作对照，前置readBox Box<(int|string)>；ordinary intType=int/scalarType=(intType|string)→Box<scalarType>(4)，direct Box<(string|int|int)>(9)，fresh反序direct9→named(string|intType)4。source/fresh MetaUnion两alternative IDs/snapshot与alias一致，同Box cache/frontparam/T binding、fresh对象隔离、FullBoxID/T snapshots稳定及consumer实际磁盘4/9/frame0通过。T仅静态，真实字段int；Union runtime值/布局未验证。
+
+RED mcfpp-generic-union-expression-red.log：fresh XML2026-10-06T08:32:26.901Z，1fail/0error/skip，worker147正常exit1/FAILED7s；producer7/0，最早front readonly与ordinary named left及重复readonly的type | type不支持，invalid type/any read/readonly incomplete级联。仍genIndex写lib/debug，write() errorCount断言终止；后续source模型/consumer读库/fresh/disk未到。FINAL mcfpp-generic-union-expression-final.log：fresh XML2026-10-06T08:36:39.179Z，1/0/0/0，worker148正常exit0/SUCCESS23s，source0/0、consumer0/9119，完整模型及consumer磁盘通过。最终必要1，非fullcheck/stdlib/server；MCFL17/bin289989/wire/schema不变。阶段76提交bfa00985dae6954038f6caaf69352d9a74adf107（6文件119+/19-），阶段77提交以Git历史为准。
+
+## 历史必要检查：冻结SelectorTypeValue（阶段 76）
 
 阶段76仅MCFPPType.resolveTypeId一行Selector分支，复用MCFPPEntityType(limit,entities,isName).takeIf完整ID相等；保持原顺序、null、引号与flag，无registry/schema/runtime扩展。frozenSelectorTypeArgumentsPreserveFiltersAcrossLibraryRoundTrip新增76行及MCEntity import；加4docs预计6文件。
 

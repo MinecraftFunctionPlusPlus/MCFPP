@@ -1,6 +1,6 @@
-# 下一阶段：direct Union TypeValue表达式（阶段 77）
+# 下一阶段：匿名模板alias冻结身份（阶段 78）
 
-阶段76冻结SelectorTypeValue已限定验证；阶段77尚未实现或测试，整个17项重构仍未完成。
+阶段77 direct Union TypeValue表达式已限定验证；阶段78尚未实现或测试，整个17项重构仍未完成。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 
@@ -128,9 +128,13 @@ const 只限制重赋；compiler-only const 保留完整 `ValueSnapshot` 且不�
 
 仅一行Selector resolver复用MCFPPEntityType并校验完整ID，原顺序/null/引号/flag保持。真实fixture覆盖Selection entity<2,"minecraft:pig","!minecraft:cow">及bare entity，两个前置签名、source/fresh canonical/不可变快照/FullID与consumer磁盘4/9/frame0通过；最终仅1项，非joint2。isName=true、empty source与世界/runtime仍未验。MCFL17/bin289989/schema不变，无stdlib/fullcheck/server；75提交d6dfb7f57b5844839c00a9df5261c61d9d1acd00，76提交以Git历史为准。
 
-### 阶段 77：direct Union TypeValue表达式（待实现/红测）
+### 阶段 77：direct Union TypeValue表达式（已限定验证）
 
-API只读确认，尚未实现或测试。计划MCFPPType.data lazy commonType=MCFPPConcreteType.Type并injectedBy新的Type MNI；类标注NoExternalWrites，MNIOperator('|')使用type参数/type返回及returnsConstWhenArgsConst=true，返回MCFPPTypeVar(MCFPPUnionType(actualTwoTypes))，复用共享dispatch。不改grammar/visitor优先级，不扩runtime Union，不执行用户函数。前置Box<(int|string)>、ordinary intType=int/scalarType=(intType|string)、Box<scalarType>及direct重复readonly表达式验证fresh顺序/canonical/snapshot与consumer磁盘为计划。Opaque内部占位应先解析，anonymous Declaration别名根恢复/源码重建身份、generic object/interface及其余边界保持。
+lazy Type.data及新增NoExternalWrites Type MNI operator '|'复用既有Native dispatch，type参数/返回及returnsConstWhenArgsConst；无grammar/visitor override、registry、runtime Union或用户函数求值。front Box<(int|string)>、ordinary named Meta表达式、direct重复输入及alias对照的source/fresh canonical/FullID/snapshot与consumer磁盘4/9/frame0通过，最终必要1项。内建scope不新增namespace持久Native签名，oldbin实际读取通过；MCFL17/bin289989/schema不变，无stdlib/fullcheck/server。
+
+### 阶段 78：匿名模板alias冻结身份（待RED界定）
+
+只读已知anonymous DataTemplate实际Declaration，TempPool进程序号及Project匿名完成队列不等于namespace登记。alias目标持久DataTemplateInfo并读为UnsolvedTemplate shell，infoCache可恢复模型；冻结T的Declaration resolver目前namespace getter无匿名入口。计划真实typealias data { value as int; } as X及前置Box<X>，source/fresh canonical/fullID/snapshot与consumer磁盘验证，先RED界定实际缺口，恢复实现依据实际边界再定；尚未实现或测试。不为Opaque内部占位造global registry/Any，不承诺无alias匿名签名或源码重建ID稳定；flag/identity collision及scope canonical问题独立。Union runtime、Selector未覆盖入口及其余既有缺口保留。
 
 ### 旧浮点乘除（阶段 50 已实现）
 
@@ -142,7 +146,7 @@ API只读确认，尚未实现或测试。计划MCFPPType.data lazy commonType=M
 
 阶段 51 已将旧浮点算术/比较、Promote/Convert 接入 IR：四分量值使用独立 NBT 帧，`LegacyFloatCommands` 负责读写和调用，保留旧四记分板 return ABI。普通/递归/static、旧与 IR 双向调用、早先参数、多实参、常量与连续返回均经真实库命令执行；最终 20 项必要复查通过，0 failures/errors/skips。Native 路径不变；旧浮点算术/比较及跨数值折叠禁止宿主 Float 计算，`16777217` 保持八位十进制精度；identity/toNBT 保留来源 codec。包含 FloatBits 端点的旧浮点范围，其静态顺序不使用宿主比较，整数/native 行为不变；浮点迭代语义未定义，不新增迭代行为。
 
-已知 int/bool/byte/short as legacyfloat 仍沿旧入口并在实际访问时诊断；未用视图不报错，unknown any 视图不做运行时 typecheck，命名 float 视图的来源随后被写成已知标量，再读取视图会诊断。阶段56/57完成有序初始化 RHS 持久化与 const 初始化语义，MCFL 12；验证记录见上。阶段58已为部分语法接入普通模板推断字段声明绑定，其他语法仍沿旧路径；阶段59导入声明环境已实现；阶段60消费端库函数主体导出已在限定路径验证；阶段61已恢复受支持模板方法owner，阶段62已修复模块资源复制；当时待办的阶段63函数权限已完成；当前下一步为阶段77 direct Union TypeValue表达式。imported object自动load仍未解决。未知端点范围和浮点/混合迭代的步长及不前进策略仍未定义，保留现有诊断。整个17项迁移仍未完成，模板/泛型/T!、其余控制流/集合及 MNI 尚待统一。
+已知 int/bool/byte/short as legacyfloat 仍沿旧入口并在实际访问时诊断；未用视图不报错，unknown any 视图不做运行时 typecheck，命名 float 视图的来源随后被写成已知标量，再读取视图会诊断。阶段56/57完成有序初始化 RHS 持久化与 const 初始化语义，MCFL 12；验证记录见上。阶段58已为部分语法接入普通模板推断字段声明绑定，其他语法仍沿旧路径；阶段59导入声明环境已实现；阶段60消费端库函数主体导出已在限定路径验证；阶段61已恢复受支持模板方法owner，阶段62已修复模块资源复制；当时待办的阶段63函数权限已完成；当前下一步为阶段78匿名模板alias冻结身份。imported object自动load仍未解决。未知端点范围和浮点/混合迭代的步长及不前进策略仍未定义，保留现有诊断。整个17项迁移仍未完成，模板/泛型/T!、其余控制流/集合及 MNI 尚待统一。
 
 - 26.3 原生 float 的字面量、算术/比较、循环、递归调用、static 写回、擦除与共享视图、集合元素和范围载荷进入 IR；int→float 提升作为 Promote，用于声明、赋值、返回、普通/成员实参和上下文集合字面量。运算与旧入口共享提供器表达式，值保存在 NBT 帧，负零取负保留符号；常量非有限值、反向已知范围和有损 static 写回明确诊断。旧浮点后端现已进入 IR；其余来源转换和完整 MNI 接口仍待迁入；浮点/混合迭代语义未定义并保留现有诊断，不扩展步长或不前进规则。
 
