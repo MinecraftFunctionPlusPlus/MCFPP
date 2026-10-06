@@ -1,6 +1,6 @@
-# 下一阶段：冻结Specialized类型值（阶段 73）
+# 下一阶段：源码联合类型与冻结身份（阶段 74）
 
-阶段72完整静态类型集合已限定验证；阶段73尚未实现或测试，整个17项重构仍未完成。
+阶段73冻结Specialized类型值已限定验证；阶段74尚未实现或测试，整个17项重构仍未完成。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 
@@ -112,9 +112,13 @@ const 只限制重赋；compiler-only const 保留完整 `ValueSnapshot` 且不�
 
 六prod+fixture接通普通expr统一类型值出口、Meta selector静态view、Typed/TypeValue/Sequence/Record共享登记、CompilerOnly子facts seeding及Concrete完整已知索引。中间Property getter恢复DTO receiver，最终赋值property保持原路径。前置readBundle wire签名、named types/direct [Leaf] canonical、source/fresh身份及磁盘4/9/frame0已验证；仅实例顺序反转。首轮4绿+最终新方法1共5个不同用例跨轮各过，非最终联合5；MCFL17/bin289989及schema不变，无stdlib/fullcheck/服务器。完整轮次见verification.md，提交以Git历史为准。
 
-### 阶段 73：冻结Specialized类型值（待实现/红测）
+### 阶段 73：冻结Specialized类型值（已限定验证）
 
-优先以前置readNested(arg as Holder<Cell<int>>)及source/fresh反序实例化覆盖TypeValue.Specialized恢复、canonical字段/constructor/return及真实磁盘4/9/frame0。复用现有Generic prototype readonly快照恢复与compile/cache，抽取小型共享helper；按consumer当前target/options生成，语言TypeId使用真实声明和冻结实参，不借generated index。不新增registry/框架/schema；未知ID保持null及既有诊断。尚未实现或测试。Union/Vector/Selector/Opaque、generic object/interface、函数自身未绑定dependent readonly formal/return及imported object自动load保留独立边界，整个17项未完成。
+两个prod与一个fixture共享resolveSpecialization(id)，复用snapshot restore/prototype.compile当前target/options并核对声明与FullID；tryResolve保留READ_LIB/currentcanonical路径。前置Holder<Cell<int>> wire、canonical成员签名、fresh独立模型、稳定FullID/T快照及磁盘4/9/frame0通过。最终必要联合2项（新73+旧72）全过，非全量；MCFL17/bin289989/schema未变，无stdlib/fullcheck/服务器。阶段72提交ee46fba877b9af3570ddeb1b8f65f8742d22c11d；阶段73提交以Git历史为准。
+
+### 阶段 74：源码联合类型与冻结身份（待实现/红测）
+
+当前unionTemplateType parser只接受模板并构造旧UnionDataTemplate（extends所有alternatives）；(int|string)源码当前非法，不能称为已有合法Union身份。拟将来源统一到已有MCFPPUnionType规范化factory，并在resolver对TypeId.Union逐项有限恢复，未知alternative整体null。真实Box<T as type>保持runtime value int，前置readBox(Box<Scalar>)及透明typealias (int|string) as Scalar验证顺序/重复/alias同静态身份、fresh完整快照/TypeId与磁盘4/9/frame0。T仅用于静态实参，不扩展Union运行时布局。尚未实现或测试，schema/bin判断留实际结果；Vector/Selector/Opaque、generic object/interface与其余既有缺口保留。
 
 ### 旧浮点乘除（阶段 50 已实现）
 
@@ -126,7 +130,7 @@ const 只限制重赋；compiler-only const 保留完整 `ValueSnapshot` 且不�
 
 阶段 51 已将旧浮点算术/比较、Promote/Convert 接入 IR：四分量值使用独立 NBT 帧，`LegacyFloatCommands` 负责读写和调用，保留旧四记分板 return ABI。普通/递归/static、旧与 IR 双向调用、早先参数、多实参、常量与连续返回均经真实库命令执行；最终 20 项必要复查通过，0 failures/errors/skips。Native 路径不变；旧浮点算术/比较及跨数值折叠禁止宿主 Float 计算，`16777217` 保持八位十进制精度；identity/toNBT 保留来源 codec。包含 FloatBits 端点的旧浮点范围，其静态顺序不使用宿主比较，整数/native 行为不变；浮点迭代语义未定义，不新增迭代行为。
 
-已知 int/bool/byte/short as legacyfloat 仍沿旧入口并在实际访问时诊断；未用视图不报错，unknown any 视图不做运行时 typecheck，命名 float 视图的来源随后被写成已知标量，再读取视图会诊断。阶段56/57完成有序初始化 RHS 持久化与 const 初始化语义，MCFL 12；验证记录见上。阶段58已为部分语法接入普通模板推断字段声明绑定，其他语法仍沿旧路径；阶段59导入声明环境已实现；阶段60消费端库函数主体导出已在限定路径验证；阶段61已恢复受支持模板方法owner，阶段62已修复模块资源复制；当时待办的阶段63函数权限已完成；当前下一步为阶段73冻结Specialized类型值。imported object自动load仍未解决。未知端点范围和浮点/混合迭代的步长及不前进策略仍未定义，保留现有诊断。整个17项迁移仍未完成，模板/泛型/T!、其余控制流/集合及 MNI 尚待统一。
+已知 int/bool/byte/short as legacyfloat 仍沿旧入口并在实际访问时诊断；未用视图不报错，unknown any 视图不做运行时 typecheck，命名 float 视图的来源随后被写成已知标量，再读取视图会诊断。阶段56/57完成有序初始化 RHS 持久化与 const 初始化语义，MCFL 12；验证记录见上。阶段58已为部分语法接入普通模板推断字段声明绑定，其他语法仍沿旧路径；阶段59导入声明环境已实现；阶段60消费端库函数主体导出已在限定路径验证；阶段61已恢复受支持模板方法owner，阶段62已修复模块资源复制；当时待办的阶段63函数权限已完成；当前下一步为阶段74源码联合类型与冻结身份。imported object自动load仍未解决。未知端点范围和浮点/混合迭代的步长及不前进策略仍未定义，保留现有诊断。整个17项迁移仍未完成，模板/泛型/T!、其余控制流/集合及 MNI 尚待统一。
 
 - 26.3 原生 float 的字面量、算术/比较、循环、递归调用、static 写回、擦除与共享视图、集合元素和范围载荷进入 IR；int→float 提升作为 Promote，用于声明、赋值、返回、普通/成员实参和上下文集合字面量。运算与旧入口共享提供器表达式，值保存在 NBT 帧，负零取负保留符号；常量非有限值、反向已知范围和有损 static 写回明确诊断。旧浮点后端现已进入 IR；其余来源转换和完整 MNI 接口仍待迁入；浮点/混合迭代语义未定义并保留现有诊断，不扩展步长或不前进规则。
 

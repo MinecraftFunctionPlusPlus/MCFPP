@@ -11,11 +11,15 @@ import top.mcfpp.antlr.mcfppParser.TypeWithoutExclContext
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.analysis.CompilerValue
+import top.mcfpp.analysis.StorageAccess
+import top.mcfpp.Project
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.GenericDataTemplate
+import top.mcfpp.model.compound.CompiledGenericDataTemplate
 import top.mcfpp.model.compound.UnionDataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
@@ -248,7 +252,41 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                 val argument = id.arguments.singleOrNull()?.let(::resolveTypeId)
                 if (factory != null && argument != null) factory(argument) else null
             }
+            is TypeId.Specialized -> resolveSpecialization(id)?.getType()
             else -> null
+        }
+
+        internal fun resolveSpecialization(id: TypeId.Specialized): CompiledGenericDataTemplate? {
+            // Includes must all restore their declaration imports before specialization.
+            if (Project.compileStage == Project.CompileStage.READ_LIB) return null
+            val declaration = id.constructor as? TypeId.Declaration ?: return null
+            if (declaration.kind != "template") return null
+            val prototype = GlobalScope.getUnsolvedImportNamespace(declaration.namespace)?.scope
+                ?.getTemplate(declaration.name) as? GenericDataTemplate ?: return null
+            if (prototype.namespace != declaration.namespace || prototype.identifier != declaration.name || prototype.isInterface) return null
+            if (id.arguments.size != prototype.readOnlyParams.size) {
+                LogProcessor.error("Readonly argument count does not match template '${prototype.identifier}'")
+                return null
+            }
+            val types = builtinTypesById().toMutableMap()
+            val arguments = ArrayList<Var<*>>()
+            for ((parameter, snapshot) in prototype.readOnlyParams.zip(id.arguments)) {
+                val type = parameter.type!!
+                types[type.typeId] = type
+                registerSnapshotTypes(snapshot, types)
+                val value = StorageAccess.restore(type, snapshot, parameter.identifier, types)
+                if (value == null) {
+                    LogProcessor.error("Cannot restore frozen readonly argument '${parameter.identifier}' of ${declaration.name}")
+                    return null
+                }
+                arguments.add(value)
+            }
+            val canonical = prototype.compile(arguments) ?: return null
+            if (canonical.getType().typeId != id) {
+                LogProcessor.error("Restored specialization identity does not match '${declaration.namespace}:${declaration.name}'")
+                return null
+            }
+            return canonical
         }
 
         internal fun registerSnapshotTypes(snapshot: CompilerValue, types: MutableMap<TypeId, MCFPPType>) {

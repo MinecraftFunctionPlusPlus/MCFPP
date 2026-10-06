@@ -1,8 +1,16 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段72完整静态类型集合限定验证通过，首轮4绿+最终新方法1=5个不同用例跨轮各自通过，非最终联合5。阶段71已提交`baa8f0704d58fcbc29706cb28181d821c9cc6138`（9文件185+/27-）；阶段72预计保存11文件，提交以Git历史为准。MCFL17/bin289989未变，无stdlib/fullcheck/实际Minecraft服务端。阶段73冻结Specialized类型值尚未实现或测试；最近完整检查仍为`72dc557`的346项，整个17项迁移仍未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段73冻结Specialized类型值限定验证通过，最终必要联合2项（新73+旧72）全过，source/fresh模型及真实磁盘4/9/frame0各到达。阶段72已提交`ee46fba877b9af3570ddeb1b8f65f8742d22c11d`，11文件197+/32-；阶段73提交以Git历史为准。MCFL17/bin289989/schema未变，无stdlib/fullcheck/服务器。阶段74源码联合类型与冻结身份尚未实现或测试；最近完整检查仍为`72dc557`的346项，整个17项迁移未完成。
 
-## 最新必要检查：完整静态类型集合（阶段 72）
+## 最新必要检查：冻结Specialized类型值（阶段 73）
+
+阶段73两个生产文件MCFPPType、MCFPPGenericDataTemplateType（42+/22-）与新增89行fixture完成限定Specialized恢复。共享resolveSpecialization(id)复用现有类型查找、snapshot restore与prototype.compile，使用consumer当前target/options，核对template Declaration的namespace/kind/name及最终FullID；resolver委托该入口，tryResolve保留READ_LIB守卫和currentcanonical快速路径。
+
+前置Holder<Cell<int>>自由函数签名进入真实wire。source/fresh Holder.T、字段/ctor/read/free签名指向canonical Cell，Cell.T及成员为Int；fresh prototypes/Compiled不同于source，FullID及T snapshots稳定。只反转实例构造4→9/9→4，不宣称生成index反转；source/fresh模型及consumer真实磁盘4/9/frame0通过。schema/MCFL17/bin289989未改，无stdlib/fullcheck/实际服务器。Union/Vector/Selector/Opaque及generic object/interface未扩展。
+
+日志F:/DevCache/.codex/runtime/mcfpp-generic-specialized-type-value-red.log：fresh XML2026-10-06T07:14:31.258Z，1fail，source0/0、source模型及库生成/读取已过；consumer completeTemplateDeclarations两次Cannot restore frozen readonly argument T Holder，随后read/unknown未定义，共4 errors/9119 warnings，fresh模型与disk未到；worker138正常FAILED10s。最终-final.log XML2026-10-06T07:21:12.937Z，tests2/failures/errors/skips0（新73+旧72），worker139正常exit0/SUCCESS23s；两个producer0/0、两个consumer0/9119，模型及disk4/9/frame0各过。这是最终必要联合2全过，不是新全量或5项跨轮。阶段72提交ee46fba877b9af3570ddeb1b8f65f8742d22c11d，exact11文件197+/32-；阶段73当前7文件含4docs，提交以Git历史为准。
+
+## 历史必要检查：完整静态类型集合（阶段 72）
 
 六个生产文件ExprVisitor、ConcreteExprVisitor、MCFPPType、MCFPPGenericDataTemplateType、GenericDataTemplate、StorageAccess与一个fixture完成限定路径。普通表达式统一出口将最终StaticMemberView归一为MCFPPTypeVar；初始Meta带selector转回静态view。共享registerSnapshotTypes遍历Typed/TypeValue/Sequence/Record；readonly CompilerOnly绑定复用internal seedParts登记子facts与长度。Concrete完整已知索引复用Indexable.getByIndex及Property getter，未知/不完整索引仍拒绝。visitSelector消费下一成员前读取中间PropertyVar，使this.cell.read保留DTO receiver；最终赋值property不提前读取。TypeId resolver仍限阶段71支持集，无schema变化。真实库纵向验证限list<type>/Sequence；Record walker代码接通不代表任意Record、Specialized或Opaque已验证。
 

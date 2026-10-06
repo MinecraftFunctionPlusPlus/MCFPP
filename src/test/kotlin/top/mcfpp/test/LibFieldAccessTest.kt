@@ -847,6 +847,95 @@ class LibFieldAccessTest {
         assertEquals(9, machine.read(main.scope.getVar("secondResult") as MCInt))
     }
 
+    @Test fun frozenSpecializedTypeArgumentsRestoreCanonicalTypesAcrossLibraryRoundTrip() = withLibrary { output ->
+        write("""
+            namespace fixture.fields;
+            func readNested(arg as Holder<Cell<int>>)->int { return arg.read().read(); }
+            data Cell<T as type> {
+                private value as T;
+                constructor(v as T){ this.value=v; }
+                func read()->T { return this.value; }
+            }
+            data Holder<T as type> {
+                private value as T;
+                constructor(v as T){ this.value=v; }
+                func read()->T { return this.value; }
+            }
+            func main(){
+                var first=Holder<Cell<int>>(Cell<int>(4));
+                var second=Holder<Cell<int>>(Cell<int>(9));
+                dynamic var firstResult=readNested(first);
+                dynamic var secondResult=readNested(second);
+            }
+        """, output)
+
+        fun checkHolder(holder: CompiledGenericDataTemplate,
+                        cellPrototype: GenericDataTemplate): CompiledGenericDataTemplate {
+            val type = assertIs<MCFPPTypeVar>(holder.scope.getVar("T")).value
+            val cell = assertIs<CompiledGenericDataTemplate>(assertIs<MCFPPDataTemplateType>(type).template)
+            assertSame(cellPrototype, cell.originTemplate)
+            for (memberType in listOf(holder.scope.getVar("value")!!.type,
+                holder.constructors.single().normalParams.single().type,
+                holder.scope.functions.getValue("read").single().returnType)) {
+                assertEquals(type.typeId, memberType.typeId)
+                assertSame(cell, assertIs<MCFPPDataTemplateType>(memberType).template)
+            }
+            assertEquals(MCFPPBaseType.Int, assertIs<MCFPPTypeVar>(cell.scope.getVar("T")).value)
+            for (memberType in listOf(cell.scope.getVar("value")!!.type,
+                cell.constructors.single().normalParams.single().type,
+                cell.scope.functions.getValue("read").single().returnType)) {
+                assertEquals(MCFPPBaseType.Int.typeId, memberType.typeId)
+            }
+            return cell
+        }
+
+        val sourceScope = GlobalScope.localNamespaces.getValue("fixture.fields").scope
+        val sourceCellPrototype = assertIs<GenericDataTemplate>(sourceScope.getTemplate("Cell"))
+        val sourceHolderPrototype = assertIs<GenericDataTemplate>(sourceScope.getTemplate("Holder"))
+        val sourceMain = sourceScope.functions.getValue("main").single()
+        val sourceFirst = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(sourceMain.scope.getVar("first")).templateType)
+        val sourceSecond = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(sourceMain.scope.getVar("second")).templateType)
+        assertSame(sourceFirst, sourceSecond)
+        assertSame(sourceHolderPrototype, sourceFirst.originTemplate)
+        val sourceCell = checkHolder(sourceFirst, sourceCellPrototype)
+        assertSame(sourceFirst, assertIs<MCFPPDataTemplateType>(sourceScope.functions.getValue("readNested").single().normalParams.single().type).template)
+        val sourceHolderId = sourceFirst.getType().typeId
+        val sourceCellId = sourceCell.getType().typeId
+        val sourceHolderSnapshot = assertNotNull(ValueSnapshot.of(sourceFirst.scope.getVar("T")))
+        val sourceCellSnapshot = assertNotNull(ValueSnapshot.of(sourceCell.scope.getVar("T")))
+
+        val main = consume("""
+            import fixture.fields:*;
+            func main(){
+                var second=Holder<Cell<int>>(Cell<int>(9));
+                var first=Holder<Cell<int>>(Cell<int>(4));
+                dynamic var firstResult=readNested(first);
+                dynamic var secondResult=readNested(second);
+            }
+        """, output)
+        assertEquals(0, Project.errorCount)
+        val restoredScope = GlobalScope.libNamespaces.getValue("fixture.fields").scope
+        val cellPrototype = assertIs<GenericDataTemplate>(restoredScope.getTemplate("Cell"))
+        val holderPrototype = assertIs<GenericDataTemplate>(restoredScope.getTemplate("Holder"))
+        assertNotSame(sourceCellPrototype, cellPrototype)
+        assertNotSame(sourceHolderPrototype, holderPrototype)
+        val first = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("first")).templateType)
+        val second = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("second")).templateType)
+        assertSame(first, second)
+        assertSame(holderPrototype, first.originTemplate)
+        assertNotSame(sourceFirst, first)
+        val cell = checkHolder(first, cellPrototype)
+        assertNotSame(sourceCell, cell)
+        assertEquals(sourceHolderId, first.getType().typeId)
+        assertEquals(sourceCellId, cell.getType().typeId)
+        assertEquals(sourceHolderSnapshot, ValueSnapshot.of(first.scope.getVar("T")))
+        assertEquals(sourceCellSnapshot, ValueSnapshot.of(cell.scope.getVar("T")))
+        assertSame(first, assertIs<MCFPPDataTemplateType>(restoredScope.functions.getValue("readNested").single().normalParams.single().type).template)
+        val machine = execute(main, output)
+        assertEquals(4, machine.read(main.scope.getVar("firstResult") as MCInt))
+        assertEquals(9, machine.read(main.scope.getVar("secondResult") as MCInt))
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")
