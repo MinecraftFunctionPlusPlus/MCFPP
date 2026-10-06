@@ -4,6 +4,8 @@ import com.esotericsoftware.kryo.io.Input
 import top.mcfpp.CompileSettings
 import top.mcfpp.Project
 import top.mcfpp.ProjectConfig
+import top.mcfpp.analysis.CompilerValue
+import top.mcfpp.analysis.ValueSnapshot
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.obj.DataTemplateObject
@@ -523,6 +525,125 @@ class LibFieldAccessTest {
             func main(){ var item as Cell; }
         """.trimIndent(), version = "26.3")
         assertTrue(Project.errorCount > 0, "A generic template type must require its readonly arguments")
+    }
+
+    @Test fun genericTypeExpressionsUseBoundDeclarationScopeAcrossLibraryRoundTrip() = withLibrary { output ->
+        write("""
+            namespace fixture.fields;
+            data Cell<T as type> {
+                private value as T;
+                constructor(v as T){ this.value=v; }
+                func read()->T { return this.value; }
+            }
+            data Sized<N as int> {
+                private value as int;
+                constructor(v as int){ this.value=v+N; }
+                func read()->int { return this.value; }
+            }
+            data Envelope<T as type,N as int> {
+                private cell as Cell<(T)>;
+                private sized as Sized<(N+1)>;
+                constructor(supplied as Cell<(T)>){ this.cell=supplied; this.sized=Sized<N+1>(3); }
+                func passCell(item as Cell<(T)>)->Cell<(T)> { return item; }
+                func passSized(item as Sized<(N+1)>)->Sized<(N+1)> { return item; }
+                func read()->T { return this.passCell(this.cell).read(); }
+                func amount()->int { return this.passSized(this.sized).read(); }
+            }
+            func main(){
+                var T=bool; var N=90;
+                var intCell=Cell<int>(4); var first=Envelope<int,2>(intCell);
+                var flagCell=Cell<bool>(true); var flag=Envelope<bool,4>(flagCell);
+                dynamic var intResult=first.read(); dynamic var intAmount=first.amount();
+                dynamic var flagAmount=flag.amount(); dynamic var flagResult=flag.read();
+                /scoreboard players set #generic_bool result 0
+                if(flagResult){
+                    /scoreboard players set #generic_bool result 1
+                }
+            }
+        """, output)
+        val original = assertIs<GenericDataTemplate>(GlobalScope.localNamespaces.getValue("fixture.fields").scope.getTemplate("Envelope"))
+        val sourceMain = GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single()
+        val sourceTemplates = listOf("first", "flag").map {
+            assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(sourceMain.scope.getVar(it)).templateType)
+        }
+        val sourceTypeIds = sourceTemplates.map { it.getType().typeId }
+        for ((index, compiled) in sourceTemplates.withIndex()) {
+            val type = if (index == 0) MCFPPBaseType.Int else MCFPPBaseType.Bool
+            assertEquals(type, compiled.scope.getType("T"))
+            assertEquals(CompilerValue.Typed(MCFPPBaseType.Int.typeId, CompilerValue.Integral(if (index == 0) 2L else 4L)),
+                ValueSnapshot.of(compiled.scope.getVar("N")))
+            val cell = assertIs<MCFPPDataTemplateType>(compiled.scope.getVar("cell")!!.type)
+            val supplied = assertIs<MCFPPDataTemplateType>(compiled.constructors.single().normalParams.single().type)
+            val passCell = compiled.scope.functions.getValue("passCell").single()
+            assertSame(cell.template, supplied.template)
+            assertSame(cell.template, assertIs<MCFPPDataTemplateType>(passCell.normalParams.single().type).template)
+            assertSame(cell.template, assertIs<MCFPPDataTemplateType>(passCell.returnType).template)
+            assertSame(cell.template, assertIs<DataTemplateObject>(sourceMain.scope.getVar(if (index == 0) "intCell" else "flagCell")).templateType)
+            assertEquals(type, cell.template.scope.getVar("value")!!.type)
+            val sized = assertIs<MCFPPDataTemplateType>(compiled.scope.getVar("sized")!!.type)
+            val passSized = compiled.scope.functions.getValue("passSized").single()
+            assertSame(sized.template, assertIs<MCFPPDataTemplateType>(passSized.normalParams.single().type).template)
+            assertSame(sized.template, assertIs<MCFPPDataTemplateType>(passSized.returnType).template)
+            assertEquals(if (index == 0) 3 else 5, assertIs<CompiledGenericDataTemplate>(sized.template).args.single().value)
+            for (name in listOf("cell", "sized")) {
+                assertSame(compiled, compiled.scope.getVar(name)!!.declaredParentTemplate)
+                assertSame(compiled, compiled.scope.getProperty(name)!!.declaredParentTemplate)
+                assertEquals(AccessModifier.PRIVATE, compiled.scope.getVar(name)!!.accessModifier)
+                assertEquals(AccessModifier.PRIVATE, compiled.scope.getProperty(name)!!.accessModifier)
+            }
+        }
+        val main = consume("""
+            import fixture.fields:*;
+            func main(){
+                var T=bool; var N=90;
+                var flagCell=Cell<bool>(true); var flag=Envelope<bool,4>(flagCell);
+                var intCell=Cell<int>(4); var first=Envelope<int,2>(intCell);
+                dynamic var intResult=first.read(); dynamic var intAmount=first.amount();
+                dynamic var flagAmount=flag.amount(); dynamic var flagResult=flag.read();
+                /scoreboard players set #generic_bool result 0
+                if(flagResult){
+                    /scoreboard players set #generic_bool result 1
+                }
+            }
+        """, output)
+        assertEquals(0, Project.errorCount)
+        val restored = assertIs<GenericDataTemplate>(GlobalScope.getTemplate("fixture.fields", "Envelope"))
+        assertNotSame(original, restored)
+        val templates = listOf("first", "flag").map {
+            assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar(it)).templateType)
+        }
+        assertEquals(sourceTypeIds, templates.map { it.getType().typeId })
+        for ((index, compiled) in templates.withIndex()) {
+            assertSame(restored, compiled.originTemplate)
+            val type = if (index == 0) MCFPPBaseType.Int else MCFPPBaseType.Bool
+            assertEquals(type, compiled.scope.getType("T"))
+            assertEquals(CompilerValue.Typed(MCFPPBaseType.Int.typeId, CompilerValue.Integral(if (index == 0) 2L else 4L)),
+                ValueSnapshot.of(compiled.scope.getVar("N")))
+            val cell = assertIs<MCFPPDataTemplateType>(compiled.scope.getVar("cell")!!.type)
+            val supplied = assertIs<MCFPPDataTemplateType>(compiled.constructors.single().normalParams.single().type)
+            val passCell = compiled.scope.functions.getValue("passCell").single()
+            assertSame(cell.template, supplied.template)
+            assertSame(cell.template, assertIs<MCFPPDataTemplateType>(passCell.normalParams.single().type).template)
+            assertSame(cell.template, assertIs<MCFPPDataTemplateType>(passCell.returnType).template)
+            assertSame(cell.template, assertIs<DataTemplateObject>(main.scope.getVar(if (index == 0) "intCell" else "flagCell")).templateType)
+            assertEquals(type, cell.template.scope.getVar("value")!!.type)
+            val sized = assertIs<MCFPPDataTemplateType>(compiled.scope.getVar("sized")!!.type)
+            val passSized = compiled.scope.functions.getValue("passSized").single()
+            assertSame(sized.template, assertIs<MCFPPDataTemplateType>(passSized.normalParams.single().type).template)
+            assertSame(sized.template, assertIs<MCFPPDataTemplateType>(passSized.returnType).template)
+            assertEquals(if (index == 0) 3 else 5, assertIs<CompiledGenericDataTemplate>(sized.template).args.single().value)
+            for (name in listOf("cell", "sized")) {
+                assertSame(compiled, compiled.scope.getVar(name)!!.declaredParentTemplate)
+                assertSame(compiled, compiled.scope.getProperty(name)!!.declaredParentTemplate)
+                assertEquals(AccessModifier.PRIVATE, compiled.scope.getVar(name)!!.accessModifier)
+                assertEquals(AccessModifier.PRIVATE, compiled.scope.getProperty(name)!!.accessModifier)
+            }
+        }
+        val machine = execute(main, output)
+        assertEquals(4, machine.read(main.scope.getVar("intResult") as MCInt))
+        assertEquals(6, machine.read(main.scope.getVar("intAmount") as MCInt))
+        assertEquals(8, machine.read(main.scope.getVar("flagAmount") as MCInt))
+        assertEquals(1, machine.values.getValue("#generic_bool result"))
     }
 
     private fun write(source: String, output: Path) {

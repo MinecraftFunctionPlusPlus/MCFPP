@@ -144,7 +144,7 @@ open class DataTemplate : FieldContainer, CompoundData {
      * @return 返回值
      */
     fun checkCompoundStruct(compoundTag: CompoundTag) : Boolean {
-        for (member in scope.allVars){
+        for (member in scope.allVars.filter { !it.isStatic }){
             if(!compoundTag.containsKey(member.identifier)) return false
             if(!member.type.checkNBTType(compoundTag[member.identifier]!!)) return false
         }
@@ -152,7 +152,7 @@ open class DataTemplate : FieldContainer, CompoundData {
     }
 
     fun checkDictionaryStruct(dict: Map<String, Var<*>>) : Boolean {
-        for (member in scope.allVars.filter { !it.nullable }){
+        for (member in scope.allVars.filter { !it.nullable && !it.isStatic }){
             if(!dict.containsKey(member.identifier)) return false
             if(!dict[member.identifier]!!.type.isSubOf(member.type)) return false
         }

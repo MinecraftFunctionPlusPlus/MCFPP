@@ -1,10 +1,20 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段69显式 generic 类型签名与跨库特化恢复已限定验证；MCFL17，`bin.mclib` 289989 bytes。标准库重建一次，Project 0 errors/0 warnings，BUILD SUCCESSFUL in12s。19个不同用例跨轮各自通过，非最终联合19项。最近完整检查仍属于提交`72dc557`，共346项；本轮未运行完整check或实际Minecraft服务端，整个迁移仍未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段70类型表达式声明作用域限定验证通过：36个不同用例跨轮各自通过（29+Logic6+最终1），非一次联合36或最终7绿；提交记录见Git历史。MCFL17、`bin.mclib` 289989 bytes未变，本轮无stdlib/fullcheck/实际Minecraft服务端。阶段69提交`10267379e30bd43af6c38bcd7e6a673d195a6102`。阶段71尚未实现或测试；最近完整检查仍属于`72dc557`的346项，整个17项迁移仍未完成。
 
-## 最新必要检查：显式 generic 类型与跨库 canonical 特化（阶段 69）
+## 最新必要检查：类型表达式声明作用域（阶段 70）
 
-专用serializer只写入immutable specialization `TypeId`，读取shell；所有includes读取完成并进入COMPILE后，再恢复canonical prototype/cache。源码readonly实参以冻结的CompilerValue恢复，不依赖mutable genericVar或生成index。新增arity检查；当前TypeValue registry仅覆盖builtin/formal types如Int/Bool，Declaration/Applied TypeValue仍待支持。准备阶段复用FieldVisitor，实际`prepareHeader`在原声明file上下文中、绑定readonly实参之前运行；共享`completeTemplateDeclarations`提前解析namespace普通形参与返回并按parent-first完成缓存实例继承，随后刷新签名。模板参数签名刷新`param.typeName`，避免恢复shell仍带`Cell[]`时两个read overload生成相同namespace ID；不改全局getter。晚期ready compile先flat再执行annotation/completion；这不是INDEX_TYPE全局预扫描。
+六个生产文件ConcreteExprVisitor、MCFPPType、Function、FieldVisitor、ImVisitor、DataTemplate与一个fixture完成限定纵向路径。类型解析、readonly表达式及bucket/NBT/container/union/!递归透传显式lookup scope和真实词法caller；FunctionScope checked lookup保留raw null屏蔽，其他IScopeWithType不假设有vars、不回退caller.vars、不创建fake Function。Concrete七处binary运算符索引改为`ctx.op[i-1]`。ImVisitor七处whole-scope控制流转换共用helper，跳过CompilerOnly及无runtime表示的值，保留trackLost/barrier；普通赋值及显式dynamic转换约束不变。DataTemplate两个结构检查仅排除isStatic，保留真实字段类型校验和各自原nullable规则。
+
+fixture以caller的T=bool、N=90影子验证Envelope<Int,2>/Bool4声明绑定，fresh consumer反序实例化。nested `Cell<(T)>`、`Sized<(N+1)>`覆盖字段、constructor和method参数/返回canonical签名及private owner；readonly N快照2/4、Sized实参3/5。最终producer 0 errors/0 warnings，consumer 0 errors及已知9119 warnings；模型断言和磁盘4/6/8/bool1/frame0全部到达。
+
+`mcfpp-generic-type-declaration-scope-red.log`首次在N不完整及binary op索引越界处fatal，worker异常退出，无fresh XML；旧`04:46:28` XML不计为阶段70有效assert红测。`-final.log`联合30项29过1失败，exit1/1m12s：LibFieldAccess9 XML `2026-10-06T05:21:31.442Z`新方法因TypeVar.toDynamic NotImplemented失败；LibMemberAccess3 `05:21:46.932Z`、ConstructorExecution7 `05:21:28.434Z`、SpecializationPolicy11 `05:21:50.247Z`全绿。
+
+`-control-final.log`必要7项，正常worker、exit1/12s：Logic6 XML `05:31:50.465Z`全绿，新方法XML `05:31:47.979Z`失败，producer96 errors源于结构检查误把静态T/N要求为运行时字段。`-payload-final.log`最终仅复查该方法：XML `2026-10-06T05:40:52.111Z`，1/0/0/0，worker129正常finish，exit0/BUILD SUCCESSFUL in16s。29+Logic6+最终1=36个不同用例跨轮各自通过，不是联合36项或最终7项全绿。MCFL17/bin289989完全未变，未重建stdlib，未运行fullcheck/服务器。阶段69提交`10267379e30bd43af6c38bcd7e6a673d195a6102`；阶段70提交见Git历史。阶段71 Declaration/Applied TypeValue恢复尚未实现或测试。
+
+## 历史必要检查：显式 generic 类型与跨库 canonical 特化（阶段 69）
+
+专用serializer只写入immutable specialization `TypeId`，读取shell；所有includes读取完成并进入COMPILE后，再恢复canonical prototype/cache。源码readonly实参以冻结的CompilerValue恢复，不依赖mutable genericVar或生成index。新增arity检查；当时TypeValue registry仅覆盖builtin/formal types如Int/Bool，Declaration/Applied TypeValue仍待支持。准备阶段复用FieldVisitor，实际`prepareHeader`在原声明file上下文中、绑定readonly实参之前运行；共享`completeTemplateDeclarations`提前解析namespace普通形参与返回并按parent-first完成缓存实例继承，随后刷新签名。模板参数签名刷新`param.typeName`，避免恢复shell仍带`Cell[]`时两个read overload生成相同namespace ID；不改全局getter。晚期ready compile先flat再执行annotation/completion；这不是INDEX_TYPE全局预扫描。
 
 fixture在generic与晚声明普通Base之前声明`readCell`/`readFlag`及同名Int/Bool overload。源码bucket index为Int0/Bool1，fresh consumer自然反转为Bool0/Int1；源码Bool实参是`true`，固定score观察结果为1。源码与consumer实例对象及生成identifier不同，但冻结TypeId相同；constructor参数、private Var/Property owner与protected Base owner canonical，两个read overload各自namespace ID不同。consumer实际磁盘执行4/9/Base 2/Bool 1，frame0。负向Plain<3>及缺失Cell实参分别以独立项目验证并产生语言诊断。fixture helper进入COMPILE阶段，与正式项目流程一致。
 

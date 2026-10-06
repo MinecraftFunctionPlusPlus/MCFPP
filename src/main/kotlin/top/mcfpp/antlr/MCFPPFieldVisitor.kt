@@ -76,7 +76,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
         ctx.functionDeclarationPart().functionParams()?.let { f.addParamsFromContext(it) }
         f.returnType = if(ctx.functionDeclarationPart().functionReturnType()?.type() != null){
-            MCFPPType.parseFromContextNotNull(ctx.functionDeclarationPart().functionReturnType().type(), f.scope)
+            MCFPPType.parseFromContextNotNull(ctx.functionDeclarationPart().functionReturnType().type(), f.scope, f)
         }else{
             MCFPPPrivateType.Void
         }
@@ -140,7 +140,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             ctx.curlBlock()
         )
         f.returnType = if(ctx.functionDeclarationPart().functionReturnType()?.type() != null){
-            MCFPPType.parseFromContextNotNull(ctx.functionDeclarationPart().functionReturnType().type(), typeScope)
+            MCFPPType.parseFromContextNotNull(ctx.functionDeclarationPart().functionReturnType().type(), f.scope, f)
         }else{
             MCFPPPrivateType.Void
         }
@@ -195,7 +195,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         f.accessModifier = AccessModifier.PUBLIC
         f.addParamsFromContext(ctx.functionParams())
         f.returnType = if(ctx.functionReturnType()?.type() != null){
-            MCFPPType.parseFromContextNotNull(ctx.functionReturnType().type(), f.scope)
+            MCFPPType.parseFromContextNotNull(ctx.functionReturnType().type(), f.scope, f)
         }else{
             MCFPPPrivateType.Void
         }
@@ -218,7 +218,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     override fun visitNativeFuncDeclaration(ctx: mcfppParser.NativeFuncDeclarationContext): Any? = withCompilationContext(ctx) {
         val nf = NativeFunction(ctx.functionDeclarationPart().Identifier().text, Project.currNamespace)
         nf.returnType = if(ctx.functionDeclarationPart().functionReturnType()?.type() != null){
-            MCFPPType.parseFromContextNotNull(ctx.functionDeclarationPart().functionReturnType().type(), typeScope)
+            MCFPPType.parseFromContextNotNull(ctx.functionDeclarationPart().functionReturnType().type(), nf.scope, nf)
         }else{
             MCFPPPrivateType.Void
         }
@@ -522,7 +522,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             )
         }
         f.returnType = if(ctx.functionDeclarationPart().functionReturnType()?.type() != null){
-            MCFPPType.parseFromContextNotNull(ctx.functionDeclarationPart().functionReturnType().type(), typeScope)
+            MCFPPType.parseFromContextNotNull(ctx.functionDeclarationPart().functionReturnType().type(), f.scope, f)
         }else{
             MCFPPPrivateType.Void
         }

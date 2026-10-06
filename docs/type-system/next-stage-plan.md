@@ -1,6 +1,6 @@
-# 下一阶段：泛型类型表达式的作用域（阶段 70）
+# 下一阶段：冻结类型值身份恢复（阶段 71）
 
-本计划的首条纵向路径已经在续接会话中实现，完整阶段和整个重构仍未完成。
+阶段70声明作用域纵向路径已限定验证；阶段71尚未实现或测试，整个17项重构仍未完成。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 
@@ -96,13 +96,17 @@ const 只限制重赋；compiler-only const 保留完整 `ValueSnapshot` 且不�
 
 ### 阶段 69：泛型类型标注与声明准备（已限定验证）
 
-显式generic类型参数与late declaration准备已在限定路径通过真实库往返：共享`prepareHeader`在原声明file上下文、bind参数前运行；`completeTemplateDeclarations` parent-first完成cached实例，再刷新签名，无INDEX_TYPE全局预扫描。形参、字段、构造器、返回签名共用canonical specialization；bucket顺序反转不改变稳定TypeId/owner，consumer从生成文件执行。MCFL17/bin289989；stdlib日志`mcfpp-generic-template-explicit-type-stdlib.log`；19个不同用例跨轮各自通过，分轮结果见verification.md。当前TypeValue仅保证builtin/formal types；BoundT/N与Declaration/Applied TypeValue仍未覆盖。
+显式generic类型参数与late declaration准备已在限定路径通过真实库往返：共享`prepareHeader`在原声明file上下文、bind参数前运行；`completeTemplateDeclarations` parent-first完成cached实例，再刷新签名，无INDEX_TYPE全局预扫描。形参、字段、构造器、返回签名共用canonical specialization；bucket顺序反转不改变稳定TypeId/owner，consumer从生成文件执行。MCFL17/bin289989；stdlib日志`mcfpp-generic-template-explicit-type-stdlib.log`；19个不同用例跨轮各自通过，分轮结果见verification.md。阶段69当时TypeValue仅保证builtin/formal types；绑定T/N表达式在阶段70限定解决，Declaration/Applied TypeValue仍待71。
 
-### 阶段 70：泛型类型表达式的作用域（待研究/红测）
+### 阶段 70：泛型类型表达式的作用域（已限定验证）
 
-目标是让`Cell<(T)>`、`Sized<(N+1)>`等类型实参在其声明词法scope解析，而不是误读调用方同名绑定。候选入口为`ConcreteExprVisitor`增加可选`lookupTypeScope`/lexical caller，并让bucket/NBT/类型递归解析透传该scope；可复用`FunctionScope`的checked `getVar`，但`IScopeWithType`不要求本身有vars。真实method `f.scope`/`f`应传入签名解析，不创建fake Function。
+`Cell<(T)>`、`Sized<(N+1)>`在声明scope和真实caller中解析，递归路径透传context；checked lookup保留raw null，纯type scope不回退caller.vars，无fake Function。六个生产文件和一个fixture覆盖影子T=bool/N=90、反序consumer、字段/constructor/method参数与返回canonical及private owner。七处binary索引修正；七处控制流转换跳过CompilerOnly/无runtime表示；两个结构检查仅排除static字段而保留真字段校验。
 
-先以Bound T与N的嵌套类型表达式构造红测，区分声明scope与caller中同名值；验证字段、参数/返回签名和缓存身份仍使用声明绑定。此方案尚未实现或测试，需先审具体调用链。Declaration/Applied TypeValue、generic object/interface及其它类型注册边界仍待后续研究；整体迁移未完成。
+29项首轮绿、Logic6和最终新方法1分别通过，共36个不同用例跨轮各自通过；最后仅1项复查，不是联合36或最终7绿。实际磁盘4/6/8/bool1/frame0；MCFL17/bin289989未变，无stdlib/fullcheck/服务器。完整轮次见verification.md；阶段70提交记录见Git历史。
+
+### 阶段 71：Declaration/Applied TypeValue恢复（待定实现/验证）
+
+研究既有TypeId到类型的canonical恢复入口，让immutable wire中的声明/容器类型值恢复真实类型registry，不序列化mutable Var/cache图，不向analysis底层引入GlobalScope或新serializer框架。需以真实库往返及磁盘执行验证，不能只比较TypeId。当前尚未实现或测试；函数自身未绑定的dependent readonly formal/return、generic object/interface、旧控制流完整IR、Opaque/Selector及全集身份仍是独立边界。
 
 ### 旧浮点乘除（阶段 50 已实现）
 
@@ -114,7 +118,7 @@ const 只限制重赋；compiler-only const 保留完整 `ValueSnapshot` 且不�
 
 阶段 51 已将旧浮点算术/比较、Promote/Convert 接入 IR：四分量值使用独立 NBT 帧，`LegacyFloatCommands` 负责读写和调用，保留旧四记分板 return ABI。普通/递归/static、旧与 IR 双向调用、早先参数、多实参、常量与连续返回均经真实库命令执行；最终 20 项必要复查通过，0 failures/errors/skips。Native 路径不变；旧浮点算术/比较及跨数值折叠禁止宿主 Float 计算，`16777217` 保持八位十进制精度；identity/toNBT 保留来源 codec。包含 FloatBits 端点的旧浮点范围，其静态顺序不使用宿主比较，整数/native 行为不变；浮点迭代语义未定义，不新增迭代行为。
 
-已知 int/bool/byte/short as legacyfloat 仍沿旧入口并在实际访问时诊断；未用视图不报错，unknown any 视图不做运行时 typecheck，命名 float 视图的来源随后被写成已知标量，再读取视图会诊断。阶段56/57完成有序初始化 RHS 持久化与 const 初始化语义，MCFL 12；验证记录见上。阶段58已为部分语法接入普通模板推断字段声明绑定，其他语法仍沿旧路径；阶段59导入声明环境已实现；阶段60消费端库函数主体导出已在限定路径验证；阶段61已恢复受支持模板方法owner，阶段62已修复模块资源复制；下一步阶段63恢复函数权限。imported object自动load仍未解决。未知端点范围和浮点/混合迭代的步长及不前进策略仍未定义，保留现有诊断。整个17项迁移仍未完成，模板/泛型/T!、其余控制流/集合及 MNI 尚待统一。
+已知 int/bool/byte/short as legacyfloat 仍沿旧入口并在实际访问时诊断；未用视图不报错，unknown any 视图不做运行时 typecheck，命名 float 视图的来源随后被写成已知标量，再读取视图会诊断。阶段56/57完成有序初始化 RHS 持久化与 const 初始化语义，MCFL 12；验证记录见上。阶段58已为部分语法接入普通模板推断字段声明绑定，其他语法仍沿旧路径；阶段59导入声明环境已实现；阶段60消费端库函数主体导出已在限定路径验证；阶段61已恢复受支持模板方法owner，阶段62已修复模块资源复制；当时待办的阶段63函数权限已完成；当前下一步为阶段71冻结类型值身份恢复。imported object自动load仍未解决。未知端点范围和浮点/混合迭代的步长及不前进策略仍未定义，保留现有诊断。整个17项迁移仍未完成，模板/泛型/T!、其余控制流/集合及 MNI 尚待统一。
 
 - 26.3 原生 float 的字面量、算术/比较、循环、递归调用、static 写回、擦除与共享视图、集合元素和范围载荷进入 IR；int→float 提升作为 Promote，用于声明、赋值、返回、普通/成员实参和上下文集合字面量。运算与旧入口共享提供器表达式，值保存在 NBT 帧，负零取负保留符号；常量非有限值、反向已知范围和有损 static 写回明确诊断。旧浮点后端现已进入 IR；其余来源转换和完整 MNI 接口仍待迁入；浮点/混合迭代语义未定义并保留现有诊断，不扩展步长或不前进规则。
 

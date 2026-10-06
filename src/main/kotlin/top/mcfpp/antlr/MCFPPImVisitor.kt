@@ -45,6 +45,14 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     // Statements following a branch must run in each branch function, including nested branches.
     private var followingStatements: List<mcfppParser.StatementContext> = emptyList()
 
+    private fun makeRuntime(value: Var<*>) {
+        if (value is MCFPPValue<*> &&
+            value.storageBinding?.data?.layout != top.mcfpp.analysis.StorageLayout.CompilerOnly &&
+            top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(value)) {
+            value.toDynamic(true)
+        }
+    }
+
     private fun visitStatements(
         statements: List<mcfppParser.StatementContext>,
         afterBlock: List<mcfppParser.StatementContext> = emptyList()
@@ -366,7 +374,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                     GlobalScope.localNamespaces[f.namespace]!!.scope.addFunction(f, false)
                     //同时，外层定义域中的变量可能丢失跟踪，这里处理为强制全部丢失跟踪
                     Function.currFunction.scope.forEachVar {
-                        if(it is MCFPPValue<*>) it.toDynamic(true)
+                        makeRuntime(it)
                     }
                     Function.currFunction = f
                 }
@@ -397,7 +405,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                         GlobalScope.localNamespaces[f2.namespace]!!.scope.addFunction(f2, false)
                         //同时，外层定义域中的变量可能丢失跟踪，这里处理为强制全部丢失跟踪
                         Function.currFunction.scope.forEachVar {
-                            if(it is MCFPPValue<*>) it.toDynamic(true)
+                            makeRuntime(it)
                         }
                         Function.currFunction = f2
                     }
@@ -428,7 +436,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 Function.addCommand(Command("return run").build(Commands.function(f3)))
                 //同样的，外层定义域中的变量可能丢失跟踪，这里处理为强制全部丢失跟踪
                 Function.currFunction.scope.forEachVar {
-                    if(it is MCFPPValue<*>) it.toDynamic(true)
+                    makeRuntime(it)
                 }
                 Function.currFunction = f3
             }
@@ -593,7 +601,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addCommand(Commands.stackOut())
         //同时，外层定义域中的变量可能丢失跟踪，这里处理为强制全部丢失跟踪
         Function.currFunction.scope.forEachVar {
-            if(it is MCFPPValue<*>) it.toDynamic(true)
+            makeRuntime(it)
         }
         Function.currFunction = whileFunction
         if(!GlobalScope.localNamespaces.containsKey(whileFunction.namespace))
@@ -686,7 +694,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.currFunction.scope.forEachVar {
             if(!it.trackLost){
                 it.trackLost = true
-                if(it is MCFPPValue<*>) it.toDynamic(true)
+                makeRuntime(it)
             }
         }
     }
@@ -710,7 +718,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         //Function.addCommand(Commands.stackOut())
         //同时，外层定义域中的变量可能丢失跟踪，这里处理为强制全部丢失跟踪
         Function.currFunction.scope.forEachVar {
-            if(it is MCFPPValue<*>) it.toDynamic(true)
+            makeRuntime(it)
         }
         Function.currFunction = doWhileFunction
         if(!GlobalScope.localNamespaces.containsKey(doWhileFunction.namespace))
@@ -815,7 +823,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.currFunction.scope.forEachVar {
             if(it.trackLost){
                 it.trackLost = false
-                if(it is MCFPPValue<*>) it.toDynamic(true)
+                makeRuntime(it)
             }
         }
     }

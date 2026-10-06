@@ -276,10 +276,10 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
         /**
          * 根据类型标识符中获取一个类型
          */
-        fun parseFromString(typeStr: String, typeScope: IScopeWithType): MCFPPType? {
+        fun parseFromString(typeStr: String, typeScope: IScopeWithType, caller: Function? = null): MCFPPType? {
             if(typeStr.isEmpty()) return null
             if(typeStr.last() == '!'){
-                val qwq = parseFromString(typeStr.substring(0, typeStr.length - 1), typeScope)
+                val qwq = parseFromString(typeStr.substring(0, typeStr.length - 1), typeScope, caller)
                 return qwq?.let { MCFPPDeclaredConcreteType(qwq) }
             }
             typeCache[typeStr]?.let { return it }
@@ -289,7 +289,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                 val charStream: CharStream = CharStreams.fromString(typeStr)
                 val tokens = CommonTokenStream(mcfppLexer(charStream))
                 val parser = mcfppParser(tokens)
-                return parseFromContext(parser.type(), typeScope)
+                return parseFromContext(parser.type(), typeScope, caller)
             }
             //正则匹配
             val templateResult = MCFPPDataTemplateType.regex.find(typeStr)
@@ -324,15 +324,15 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             return null
         }
 
-        fun parseFromContextNotNull(ctx: TypeContext, typeScope: IScopeWithType): MCFPPType {
-            return parseFromContext(ctx, typeScope)?: run {
+        fun parseFromContextNotNull(ctx: TypeContext, typeScope: IScopeWithType, caller: Function? = null): MCFPPType {
+            return parseFromContext(ctx, typeScope, caller)?: run {
                 LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.text))
                 MCFPPBaseType.Any
             }
         }
 
-        fun parseFromContext(ctx: TypeContext, typeScope: IScopeWithType): MCFPPType?{
-            val qwq = parseFromContext(ctx.typeWithoutExcl(), typeScope)
+        fun parseFromContext(ctx: TypeContext, typeScope: IScopeWithType, caller: Function? = null): MCFPPType?{
+            val qwq = parseFromContext(ctx.typeWithoutExcl(), typeScope, caller)
             return if(ctx.EXCL() != null){
                  qwq?.let { MCFPPDeclaredConcreteType(it) }
             }else{
@@ -340,7 +340,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             }
         }
 
-        private fun parseFromContext(ctx: TypeWithoutExclContext, typeScope: IScopeWithType): MCFPPType? {
+        private fun parseFromContext(ctx: TypeWithoutExclContext, typeScope: IScopeWithType, caller: Function?): MCFPPType? {
             typeCache[ctx.text]?.let { return it }
             //向量
             if(ctx.VecType() != null){
@@ -349,7 +349,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             //list类型
             if(ctx.LIST() != null){
                 return if(ctx.type() != null){
-                    MCFPPListType(parseFromContext(ctx.type(), typeScope)?: run {
+                    MCFPPListType(parseFromContext(ctx.type(), typeScope, caller)?: run {
                         LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
                         MCFPPBaseType.Any
                     })
@@ -359,12 +359,12 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             }
             //只读列表类型
             if(ctx.IMMUTABLE_LIST() != null){
-                return MCFPPImmutableListType(ctx.type()?.let { parseFromContextNotNull(it, typeScope) } ?: MCFPPPrivateType.Wildcard)
+                return MCFPPImmutableListType(ctx.type()?.let { parseFromContextNotNull(it, typeScope, caller) } ?: MCFPPPrivateType.Wildcard)
             }
             //dict类型
             if(ctx.DICT()!= null){
                 if(ctx.type() != null){
-                    return MCFPPDictType(parseFromContext(ctx.type(), typeScope)?: run {
+                    return MCFPPDictType(parseFromContext(ctx.type(), typeScope, caller)?: run {
                         LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
                         MCFPPBaseType.Any
                     })
@@ -375,7 +375,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             //map类型
             if(ctx.MAP()!= null){
                 if(ctx.type() != null){
-                    return MCFPPMapType(parseFromContext(ctx.type(), typeScope)?: run {
+                    return MCFPPMapType(parseFromContext(ctx.type(), typeScope, caller)?: run {
                         LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
                         MCFPPBaseType.Any
                     })
@@ -402,7 +402,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                 if(template != null) {
                     if (template is top.mcfpp.model.compound.GenericDataTemplate) {
                         val arguments = ArrayList<Var<*>>()
-                        val visitor = top.mcfpp.antlr.MCFPPConcreteExprVisitor()
+                        val visitor = top.mcfpp.antlr.MCFPPConcreteExprVisitor(lookupTypeScope = typeScope, lexicalCaller = caller)
                         for (expression in ctx.readOnlyArgs()?.expressionList()?.expression().orEmpty()) {
                             val value = visitor.visit(expression) ?: return null
                             if (value.isError || value is UnknownVar) return null
@@ -424,7 +424,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             if(ctx.unionTemplateType() != null){
                 val types = ArrayList<MCFPPDataTemplateType>()
                 for (type in ctx.unionTemplateType().type()){
-                    val t = parseFromContext(type, typeScope)?: run {
+                    val t = parseFromContext(type, typeScope, caller)?: run {
                         LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(type.text))
                         MCFPPBaseType.Any
                     }

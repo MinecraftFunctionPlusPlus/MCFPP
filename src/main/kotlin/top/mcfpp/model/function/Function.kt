@@ -537,7 +537,7 @@ open class Function : Member, FieldContainer, WithDocument {
     protected open fun parseParam(param: mcfppParser.ParameterContext) : Pair<FunctionParam,Var<*>>{
         //参数构建
         val param1 = FunctionParam(
-            MCFPPType.parseFromContextNotNull(param.type(), this.scope),
+            MCFPPType.parseFromContextNotNull(param.type(), this.scope, this),
             param.Identifier()?.text?: "p${paramCount()}",
             this,
             param.STATIC() != null,
