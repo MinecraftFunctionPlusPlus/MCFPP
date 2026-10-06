@@ -119,7 +119,7 @@ object SpecializationPolicy {
         compiled.returnType = signature.returnType
         compiled.returnVar = compiled.buildReturnVar(compiled.returnType)
         compiled.commands.clear()
-        compiled.identifier = function.identifier + "_" + function.compiledFunctions.size
+        compiled.identifier = function.identifier + "-" + function.compiledFunctions.size
         compiled.ast = null
         function.compiledFunctions[cacheKey] = compiled
         function.compileBody(compiled, function.ast)

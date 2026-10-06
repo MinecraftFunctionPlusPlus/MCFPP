@@ -1,8 +1,16 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段82 source generic特化磁盘导出限定通过，最终必要联合3全绿；source实际磁盘4/9/4/9/frame0及目标文件到达。MCFL17/bin289989/schema未变，无stdlib/fullcheck/server。下一83 internal generated名字与合法source碰撞待单fixture RED，尚未实现/测试；最近完整346项仍为72dc557，whole17未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段83 generated-vs-legal名字隔离限定通过，当前source实际盘4/9/4/9/frame0及targets/owner prefixes到达；四case跨轮各过、最终仅新1。MCFL17/bin289989/schema未变，无stdlib/fullcheck/server。下一84 generic object静态字段/显式constructor初始化先单fixture RED，无autoload，尚未实现/测试；最近完整346项仍为72dc557，whole17未完成。
 
-## 最新必要检查：source generic特化磁盘导出（阶段 82）
+## 最新必要检查：生成名字与合法源码名字隔离（阶段 83）
+
+阶段83仅两prod表达式：GenericDataTemplate生成标识符的编号分隔符改为'-'（Settings_int-0），SpecializationPolicy generic wrapper改relay-0；共享factory仍覆盖ordinary/object/interface，FullID仍origin Declaration+冻结arguments，key/options/metadata/schema/MCFL17/bin289989不变，无stdlib/fullcheck/server。42行source-only fixture generatedSpecializationNamesDoNotOverwriteLegalSourceDeclarations让合法Settings_int_0与relay_0同时存在，无consume/in-memory fallback；只验证generated-vs-legal名字、真实targets/files与物理owner storage prefix，不扩一般member Function.prefix、casefold或跨库同名机制。
+
+RED mcfpp-generated-name-collision-red.log：worker163正常FAILED8s，fresh XML2026-10-06T11:13:40.509Z 1fail/0error/skip，source0/0/cache过；盘执行缺temp_2462 mcfpp_default，无结果断言，不能写4→9。writer同settings_int_0/static/read及relay_0_int重复，两个调用均旧relay_0_int。试joint4 worker164正常FAILED15s，XML11:17:58.039Z 4tests/1fail；旧79/82/80各绿（source0/0，库fresh0/9119已知warnings），新83盘4/9/4/9/frame0和object namespaceID distinct已过，第1705行失败是ROOT fixture误比较两个read的Function.prefix（既有行为忽略owner），非namespace/生产rename失败。只改为比较各owner.prefix，其他断言不变。
+
+最终-final2.log worker165正常exit0/SUCCESS8s，fresh XML2026-10-06T11:23:47.843Z 新1/0/0/0，当前source0/0，无consume；盘4/9/4/9/frame0、generated Settings_int-0与合法Settings_int_0的object namespaceID/owner prefix、free function namespaceID/prefix及四targets distinct均绿。最终仅新1，四个不同case跨轮各过，非最终联合4全绿。82提交6512e115f0fc8d7d2770b60e6516169450829cf2（6文件97+/17-），83提交见Git历史；whole17未完成。下一84 generic object typed static字段与显式constructor初始化，先单fixture RED验证source/fresh磁盘4/9，不做自动load；已知StaticMemberView concrete casts、constructor guards、compiledobject ctor导出/共享静态NBT root待实证，尚未实现/测试。
+
+## 历史必要检查：source generic特化磁盘导出（阶段 82）
 
 阶段82只改DatapackCreator（12行新增/2行删除）：genNamespace局部exportCompound以IdentityHashMap backing set按对象身份去重，ObjectCompoundData复用genObject、普通DataTemplate复用genTemplate，递归GenericDataTemplate.compiledTemplates；现有template/object根接入。genFunction/genTemplateFunction/genObject及自由函数行为原样，不套imported bodyCompiled过滤、不扩companion/interface/autoload或空prototype整理。46行fixture sourceGenericSpecializationsExportAllRuntimeTargetsToDisk只source，不consume；source Box1/relay1/Settings2缓存复用，实际namespaceID文件与磁盘执行无内存fallback。
 

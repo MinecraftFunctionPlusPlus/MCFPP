@@ -133,7 +133,7 @@ open class GenericDataTemplate : DataTemplate {
         compiledTemplates[key]?.let { return it }
 
         val template = createCompiledTemplate(
-            "${identifier}_${readOnlyParams.joinToString("_") { it.typeIdentifier }}_$index",
+            "${identifier}_${readOnlyParams.joinToString("_") { it.typeIdentifier }}-$index",
             args.map { it as MCFPPValue<*> },
             key.arguments.map { (it as SpecializationArgument.Constant).value }
         )

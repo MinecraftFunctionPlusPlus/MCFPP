@@ -1667,6 +1667,48 @@ class LibFieldAccessTest {
         assertEquals(9, machine.read(main.scope.getVar("secondStatic") as MCInt))
     }
 
+    @Test fun generatedSpecializationNamesDoNotOverwriteLegalSourceDeclarations() = withLibrary { output ->
+        write("""
+            namespace fixture.fields;
+            object data Settings<N as int> {
+                func read()->int { return N; }
+            }
+            object data Settings_int_0 {
+                func read()->int { return 9; }
+            }
+            func relay<T as type>(arg as int)->int { return arg; }
+            func relay_0(arg as int)->int { return arg+5; }
+            func main(){
+                dynamic var input=4;
+                dynamic var generatedObject=(Settings<4>).read();
+                dynamic var declaredObject=Settings_int_0.read();
+                dynamic var generatedFunction=relay<int>(input);
+                dynamic var declaredFunction=relay_0(input);
+            }
+        """, output)
+        val scope = GlobalScope.localNamespaces.getValue("fixture.fields").scope
+        val settings = assertIs<GenericObjectDataTemplate>(scope.getObject("Settings"))
+        val relay = assertIs<GenericFunction>(scope.functions.getValue("relay").single())
+        assertEquals(1, settings.compiledTemplates.size)
+        assertEquals(1, relay.compiledFunctions.size)
+        val generatedObject = settings.compiledTemplates.values.single().scope.functions.getValue("read").single()
+        val declaredObject = assertIs<ObjectDataTemplate>(scope.getObject("Settings_int_0")).scope.functions.getValue("read").single()
+        val generatedFunction = relay.compiledFunctions.values.single()
+        val declaredFunction = scope.functions.getValue("relay_0").single()
+        val main = scope.functions.getValue("main").single()
+        val machine = execute(main, output)
+        assertEquals(4, machine.read(main.scope.getVar("generatedObject") as MCInt))
+        assertEquals(9, machine.read(main.scope.getVar("declaredObject") as MCInt))
+        assertEquals(4, machine.read(main.scope.getVar("generatedFunction") as MCInt))
+        assertEquals(9, machine.read(main.scope.getVar("declaredFunction") as MCInt))
+        assertNotEquals(generatedObject.namespaceID, declaredObject.namespaceID)
+        assertNotEquals(generatedObject.owner!!.prefix, declaredObject.owner!!.prefix)
+        assertNotEquals(generatedFunction.namespaceID, declaredFunction.namespaceID)
+        assertNotEquals(generatedFunction.prefix, declaredFunction.prefix)
+        assertEquals(4, listOf(generatedObject, declaredObject, generatedFunction, declaredFunction)
+            .map { it.namespaceID }.toSet().size)
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")
