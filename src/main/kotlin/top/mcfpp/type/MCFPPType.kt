@@ -224,6 +224,15 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             MCFPPPrivateType.CommandReturn
         ).associateBy { it.simpleName }.toMutableMap()}
 
+        internal fun builtinTypesById(): Map<TypeId, MCFPPType> =
+            typeCache.values.filter { it.typeId is TypeId.Builtin }.associateBy { it.typeId }
+
+        private fun resolveBareTemplateType(type: MCFPPType?): MCFPPType? {
+            val template = (type as? MCFPPDataTemplateType)?.template
+            return if (template is top.mcfpp.model.compound.GenericDataTemplate)
+                template.compile(emptyList())?.getType() else type
+        }
+
         /**
          * 类型注册缓存。键值对的第一个元素判断字符串是否满足条件，而第二个元素则是用于从一个字符串中解析出一个类型
          */
@@ -288,7 +297,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                 val (first, second) = templateResult.destructured
                 val template = GlobalScope.getTemplate(first, second)
                 if(template != null){
-                    return template.getType()
+                    return resolveBareTemplateType(template.getType())
                 }else{
                     LogProcessor.warn("Unknown type: $typeStr")
                     return MCFPPBaseType.Any
@@ -301,12 +310,12 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             }
             //局域匹配
             if(typeScope.containType(typeStr)){
-                return typeScope.getType(typeStr)
+                return resolveBareTemplateType(typeScope.getType(typeStr))
             }
             //全局匹配
             val nspID = typeStr.splitNamespaceID()
             val template = GlobalScope.getTemplate(nspID.first, nspID.second)
-            if(template !=null) return template.getType()
+            if(template !=null) return resolveBareTemplateType(template.getType())
             val obj = GlobalScope.getObject(nspID.first, nspID.second)
             if(obj !=null) return obj.getType()
             val enum = GlobalScope.getEnum(nspID.first, nspID.second)
@@ -386,11 +395,27 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             }
             //自定义类型
             if(ctx.className() != null){
-                if (typeScope.containType(ctx.text)) return typeScope.getType(ctx.text)
+                if (typeScope.containType(ctx.text)) return resolveBareTemplateType(typeScope.getType(ctx.text))
                 val nspID = ctx.className().text.splitNamespaceID()
                 //数据模板
                 val template = GlobalScope.getTemplate(nspID.first, nspID.second)
-                if(template != null) return template.getType()
+                if(template != null) {
+                    if (template is top.mcfpp.model.compound.GenericDataTemplate) {
+                        val arguments = ArrayList<Var<*>>()
+                        val visitor = top.mcfpp.antlr.MCFPPConcreteExprVisitor()
+                        for (expression in ctx.readOnlyArgs()?.expressionList()?.expression().orEmpty()) {
+                            val value = visitor.visit(expression) ?: return null
+                            if (value.isError || value is UnknownVar) return null
+                            arguments.add(value)
+                        }
+                        return template.compile(arguments)?.getType()
+                    }
+                    if (ctx.readOnlyArgs() != null) {
+                        LogProcessor.error("Ordinary template '${template.identifier}' does not accept readonly arguments")
+                        return null
+                    }
+                    return template.getType()
+                }
                 //枚举
                 val enum = GlobalScope.getEnum(nspID.first, nspID.second)
                 if(enum != null) return enum.getType()
@@ -418,7 +443,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             }
             //泛型类型
             if(typeScope.containType(ctx.text)){
-                return typeScope.getType(ctx.text)
+                return resolveBareTemplateType(typeScope.getType(ctx.text))
             }
             return null
         }

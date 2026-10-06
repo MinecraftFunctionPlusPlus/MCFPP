@@ -81,6 +81,7 @@ object MCFPPStringTest {
         }
         
         MCFPPAnnotationVisitor().visit(context)
+        Project.compileStage = Project.CompileStage.COMPILE
         Project.completeTemplateDeclarations()
         Project.prepareObjectInitializers()
         val visitor = MCFPPImVisitor()

@@ -24,11 +24,14 @@ import top.mcfpp.core.lang.Var
 import top.mcfpp.model.property.Property
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.ParameterMatcher
+import top.mcfpp.model.scope.GlobalScope
+import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPDataTemplateType
 import top.mcfpp.type.MCFPPGenericDataTemplateType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.TypeId
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.StringHelper.splitNamespaceID
 
 /**
  * 结构体是一种和类的语法极为相似的数据结构。在结构体中，只能有int类型的数据，或者说记分板的数据作为结构体的成员。
@@ -72,6 +75,27 @@ open class GenericDataTemplate : DataTemplate {
             Function.currFunction = callerFunction
             currTemplate = callerTemplate
         }
+    }
+
+    internal fun prepareHeader() {
+        if (readOnlyParams.all { it.type != null }) return
+        for (param in readOnlyParams) {
+            param.type = MCFPPType.parseFromString(param.typeIdentifier, scope) ?: run {
+                LogProcessor.error("Invalid readonly template parameter type: ${param.typeIdentifier}")
+                MCFPPBaseType.Any
+            }
+        }
+        for (name in parentID) {
+            val (namespace, identifier) = name.splitNamespaceID()
+            val parent = GlobalScope.getTemplate(namespace, identifier)
+                ?: (GlobalScope.getObject(namespace, identifier) as? ObjectDataTemplate)
+            when {
+                parent == null -> LogProcessor.error("Undefined template: $name")
+                parent == this -> LogProcessor.error("Infinitive reference: $identifier -> $name")
+                else -> extends(parent)
+            }
+        }
+        if (parent.isEmpty()) extends(DataTemplate.baseDataTemplate)
     }
 
     protected fun bindReadonlyArguments(readOnlyArgs: List<Var<*>>): List<Var<*>>? {
@@ -118,6 +142,7 @@ open class GenericDataTemplate : DataTemplate {
     }
 
     private fun compileInDeclarationEnvironment(readOnlyArgs: List<Var<*>>): CompiledGenericDataTemplate? {
+        prepareHeader()
         val args = bindReadonlyArguments(readOnlyArgs) ?: return null
         val key = SpecializationKeys.forArguments(declarationId, args)
         compiledTemplates[key]?.let { return it }
@@ -157,12 +182,14 @@ open class GenericDataTemplate : DataTemplate {
                 }
             }
         }
-        template.flatExtends()
+        if (Project.templateDeclarationsReady) template.flatExtends()
         currTemplate = template
         top.mcfpp.antlr.MCFPPAnnotationVisitor().visitTemplateBody(ctx)
-        MCFPPFieldVisitor().completeTemplateFields(template)
-        template.applyDeclarationAnnotations()
-        (template.constructors + template.scope.functions.values.flatten()).forEach { it.refreshTemplateSignature() }
+        if (Project.templateDeclarationsReady) {
+            MCFPPFieldVisitor().completeTemplateFields(template)
+            template.applyDeclarationAnnotations()
+            (template.constructors + template.scope.functions.values.flatten()).forEach { it.refreshTemplateSignature() }
+        }
         index ++
 
         compiledTemplates[key] = template
@@ -185,7 +212,7 @@ class DataTemplateParam(
     var identifier: String,
 
     /**
-     * 参数的类型。只有在[Project.INDEX_TYPE]阶段结束后才有值
+     * 参数类型在首次 prepareHeader 后解析；从库恢复的参数已保存该类型。
      */
     var type: MCFPPType? = null
 )

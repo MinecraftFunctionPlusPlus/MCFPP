@@ -126,7 +126,8 @@ object Project {
     val macroFunction : LinkedHashMap<String, String> = LinkedHashMap()
 
     private val anonymousTemplates = arrayListOf<DataTemplate>()
-    private var templateDeclarationsReady = false
+    internal var templateDeclarationsReady = false
+        private set
 
     var compileStage = CompileStage.PRE_INIT
     enum class CompileStage {
@@ -592,7 +593,20 @@ object Project {
     }
 
     fun completeTemplateDeclarations() {
-        val templates = GlobalScope.localNamespaces.values.flatMap { it.scope.template.values }.filterNot { it is GenericDataTemplate }
+        val namespaces = GlobalScope.localNamespaces.values + GlobalScope.libNamespaces.values + GlobalScope.stdNamespaces.values
+        val declarations = namespaces.flatMap { namespace ->
+            val scope = namespace.scope
+            scope.template.values + scope.genericTemplate.values + scope.interfaces.values +
+                scope.genericInterfaces.values + scope.objects.filterIsInstance<DataTemplate>() + scope.genericObjects.values
+        }
+        val functions = namespaces.flatMap { it.scope.functions.values.flatten() } +
+            declarations.flatMap { it.constructors + it.scope.functions.values.flatten() }
+        functions.forEach { function ->
+            function.normalParams.forEach { it.type.tryResolve() }
+            function.returnType.tryResolve()
+        }
+        val templates = GlobalScope.localNamespaces.values.flatMap { it.scope.template.values }.filterNot { it is GenericDataTemplate } +
+            declarations.filterIsInstance<GenericDataTemplate>().flatMap { it.compiledTemplates.values.toList() }
         val completed = hashSetOf<DataTemplate>()
         fun complete(template: DataTemplate) {
             if (!completed.add(template)) return
@@ -604,9 +618,11 @@ object Project {
         templates.forEach(::complete)
         var index = 0
         while (index < anonymousTemplates.size) complete(anonymousTemplates[index++])
-        val functions = GlobalScope.localNamespaces.values.flatMap { it.scope.functions.values.flatten() } +
-            (templates + anonymousTemplates).flatMap { it.constructors + it.scope.functions.values.flatten() }
-        functions.forEach { it.refreshTemplateSignature() }
+        (functions + completed.flatMap { it.constructors + it.scope.functions.values.flatten() }).forEach {
+            it.normalParams.forEach { param -> param.type.tryResolve() }
+            it.returnType.tryResolve()
+            it.refreshTemplateSignature()
+        }
         templateDeclarationsReady = true
     }
 

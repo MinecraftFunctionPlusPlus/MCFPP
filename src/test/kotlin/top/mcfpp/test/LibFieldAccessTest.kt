@@ -18,6 +18,7 @@ import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.test.util.MCFPPStringTest
 import top.mcfpp.test.util.ScoreCommandExecutor
 import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPDataTemplateType
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.*
@@ -413,6 +414,115 @@ class LibFieldAccessTest {
         assertEquals(4, machine.read(main.scope.getVar("firstResult") as MCInt))
         assertEquals(9, machine.read(main.scope.getVar("secondResult") as MCInt))
         assertEquals(1, machine.values.getValue("#generic_bool result"))
+    }
+
+    @Test fun explicitGenericTypesShareCanonicalSpecializationsAcrossSignaturesAndInheritance() = withLibrary { output ->
+        write("""
+            namespace fixture.fields;
+            func readCell(value as Cell<int>)->int { return value.read(); }
+            func readFlag(value as Cell<bool>)->bool { return value.read(); }
+            func read(value as Cell<bool>)->bool { return readFlag(value); }
+            func read(value as Cell<int>)->int { return readCell(value); }
+            data Cell<T as type>:Base {
+                private value as T;
+                constructor(v as T){ this.base=2; this.value=v; }
+                func read()->T { return this.value; }
+                func readBase()->int { return this.base; }
+            }
+            data Base {
+                protected base as int;
+            }
+            func main(){
+                var first as Cell<int> = Cell<int>(4); var second as Cell<int> = Cell<int>(9);
+                var flag as Cell<bool> = Cell<bool>(true);
+                dynamic var firstResult=read(first); dynamic var secondResult=read(second);
+                dynamic var baseResult=first.readBase(); dynamic var flagResult=read(flag);
+                /scoreboard players set #generic_bool result 0
+                if(flagResult){
+                    /scoreboard players set #generic_bool result 1
+                }
+            }
+        """, output)
+        val sourceScope = GlobalScope.localNamespaces.getValue("fixture.fields").scope
+        assertEquals(2, sourceScope.functions.getValue("read").map { it.namespaceID.toString() }.toSet().size)
+        val original = assertIs<GenericDataTemplate>(sourceScope.getTemplate("Cell"))
+        val sourceMain = sourceScope.functions.getValue("main").single()
+        val sourceFirst = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(sourceMain.scope.getVar("first")).templateType)
+        val sourceSecond = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(sourceMain.scope.getVar("second")).templateType)
+        val sourceFlag = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(sourceMain.scope.getVar("flag")).templateType)
+        val sourceParameter = assertIs<MCFPPDataTemplateType>(
+            sourceScope.functions.getValue("readCell").single().normalParams.single().type)
+        assertSame(sourceFirst, sourceSecond)
+        assertSame(sourceFirst, sourceParameter.template)
+        val sourceBoolParameter = assertIs<MCFPPDataTemplateType>(
+            sourceScope.functions.getValue("readFlag").single().normalParams.single().type)
+        assertSame(sourceFlag, sourceBoolParameter.template)
+        assertSame(sourceFirst, sourceFirst.constructors.single().data)
+        assertSame(sourceFirst, sourceFirst.scope.getVar("value")!!.declaredParentTemplate)
+        assertSame(sourceScope.getTemplate("Base"), sourceFirst.scope.getVar("base")!!.declaredParentTemplate)
+        val intTypeId = sourceFirst.getType().typeId
+        val boolTypeId = sourceFlag.getType().typeId
+        val sourceIntIdentifier = sourceFirst.identifier
+        val sourceBoolIdentifier = sourceFlag.identifier
+        val main = consume("""
+            import fixture.fields:*;
+            func main(){
+                var flag as Cell<bool> = Cell<bool>(true);
+                var first as Cell<int> = Cell<int>(4); var second as Cell<int> = Cell<int>(9);
+                dynamic var firstResult=read(first); dynamic var secondResult=read(second);
+                dynamic var baseResult=first.readBase(); dynamic var flagResult=read(flag);
+                /scoreboard players set #generic_bool result 0
+                if(flagResult){
+                    /scoreboard players set #generic_bool result 1
+                }
+            }
+        """, output)
+        assertEquals(0, Project.errorCount)
+        val restored = assertIs<GenericDataTemplate>(GlobalScope.getTemplate("fixture.fields", "Cell"))
+        assertNotSame(original, restored)
+        assertEquals(2, GlobalScope.libNamespaces.getValue("fixture.fields").scope.functions.getValue("read")
+            .map { it.namespaceID.toString() }.toSet().size)
+        val first = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("first")).templateType)
+        val second = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("second")).templateType)
+        val flag = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("flag")).templateType)
+        val parameter = assertIs<MCFPPDataTemplateType>(
+            GlobalScope.libNamespaces.getValue("fixture.fields").scope.functions.getValue("readCell").single().normalParams.single().type)
+        assertSame(first, second)
+        assertSame(first, parameter.template)
+        val boolParameter = assertIs<MCFPPDataTemplateType>(
+            GlobalScope.libNamespaces.getValue("fixture.fields").scope.functions.getValue("readFlag").single().normalParams.single().type)
+        assertSame(flag, boolParameter.template)
+        assertEquals(intTypeId, first.getType().typeId)
+        assertEquals(boolTypeId, flag.getType().typeId)
+        assertNotEquals(sourceIntIdentifier, first.identifier)
+        assertNotEquals(sourceBoolIdentifier, flag.identifier)
+        for (compiled in listOf(first, flag)) {
+            assertSame(restored, compiled.originTemplate)
+            assertSame(compiled, compiled.constructors.single().data)
+            assertSame(compiled, compiled.scope.getVar("value")!!.declaredParentTemplate)
+            assertSame(compiled, compiled.scope.getProperty("value")!!.declaredParentTemplate)
+            assertEquals(AccessModifier.PRIVATE, compiled.scope.getVar("value")!!.accessModifier)
+            assertSame(GlobalScope.getTemplate("fixture.fields", "Base"), compiled.scope.getVar("base")!!.declaredParentTemplate)
+            assertEquals(AccessModifier.PROTECTED, compiled.scope.getVar("base")!!.accessModifier)
+        }
+        val machine = execute(main, output)
+        assertEquals(4, machine.read(main.scope.getVar("firstResult") as MCInt))
+        assertEquals(9, machine.read(main.scope.getVar("secondResult") as MCInt))
+        assertEquals(2, machine.read(main.scope.getVar("baseResult") as MCInt))
+        assertEquals(1, machine.values.getValue("#generic_bool result"))
+    }
+
+    @Test fun explicitTemplateTypesRejectUnexpectedOrMissingReadonlyArguments() = withLibrary {
+        MCFPPStringTest.readFromString("""
+            data Plain {}
+            func main(){ var item as Plain<3>; }
+        """.trimIndent(), version = "26.3")
+        assertTrue(Project.errorCount > 0, "An ordinary template type must reject unexpected readonly arguments")
+        MCFPPStringTest.readFromString("""
+            data Cell<T as type> {}
+            func main(){ var item as Cell; }
+        """.trimIndent(), version = "26.3")
+        assertTrue(Project.errorCount > 0, "A generic template type must require its readonly arguments")
     }
 
     private fun write(source: String, output: Path) {

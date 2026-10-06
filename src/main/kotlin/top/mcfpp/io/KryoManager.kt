@@ -13,6 +13,8 @@ import top.mcfpp.model.compound.UnsolvedObjectTemplate
 import top.mcfpp.model.compound.UnsolvedTemplate
 import top.mcfpp.model.function.FunctionTag
 import top.mcfpp.type.MCFPPDataTemplateType
+import top.mcfpp.type.MCFPPGenericDataTemplateType
+import top.mcfpp.type.TypeId
 import top.mcfpp.type.MCFPPObjectDataTemplateType
 import top.mcfpp.type.MCFPPType
 
@@ -70,6 +72,22 @@ object KryoManager {
                 template.info = p0.readObject(p1, DataTemplateInfo::class.java)
                 type.parentType = p0.readObject(p1, ArrayList::class.java) as ArrayList<MCFPPType>
                 return type
+            }
+        })
+
+        register(MCFPPGenericDataTemplateType::class.java, object : Serializer<MCFPPGenericDataTemplateType>() {
+            private val identitySerializer = TypeIdentitySerializer()
+
+            override fun write(kryo: Kryo, output: Output, value: MCFPPGenericDataTemplateType) {
+                kryo.writeObject(output, value.typeId, identitySerializer)
+            }
+
+            override fun read(kryo: Kryo, input: Input, type: Class<out MCFPPGenericDataTemplateType>): MCFPPGenericDataTemplateType {
+                val identity = kryo.readObject(input, TypeId.Specialized::class.java, identitySerializer)
+                val declaration = identity.constructor as TypeId.Declaration
+                return MCFPPGenericDataTemplateType(
+                    DataTemplate(declaration.name, declaration.namespace), arrayListOf(), arrayListOf(), identity
+                )
             }
         })
 

@@ -1,8 +1,18 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段68未注解 generic 类`Cell<T as type>`字段、构造参数及返回类型的实例绑定已限定验证；MCFL16与`bin.mclib` 286243 bytes不变，无stdlib重建。17个不同用例跨轮各自通过，不是单次联合17项。最近完整检查仍属于提交`72dc557`，共346项；本轮未运行完整check或实际Minecraft服务端，整个迁移仍未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段69显式 generic 类型签名与跨库特化恢复已限定验证；MCFL17，`bin.mclib` 289989 bytes。标准库重建一次，Project 0 errors/0 warnings，BUILD SUCCESSFUL in12s。19个不同用例跨轮各自通过，非最终联合19项。最近完整检查仍属于提交`72dc557`，共346项；本轮未运行完整check或实际Minecraft服务端，整个迁移仍未完成。
 
-## 最新必要检查：未注解 generic 类类型绑定（阶段 68）
+## 最新必要检查：显式 generic 类型与跨库 canonical 特化（阶段 69）
+
+专用serializer只写入immutable specialization `TypeId`，读取shell；所有includes读取完成并进入COMPILE后，再恢复canonical prototype/cache。源码readonly实参以冻结的CompilerValue恢复，不依赖mutable genericVar或生成index。新增arity检查；当前TypeValue registry仅覆盖builtin/formal types如Int/Bool，Declaration/Applied TypeValue仍待支持。准备阶段复用FieldVisitor，实际`prepareHeader`在原声明file上下文中、绑定readonly实参之前运行；共享`completeTemplateDeclarations`提前解析namespace普通形参与返回并按parent-first完成缓存实例继承，随后刷新签名。模板参数签名刷新`param.typeName`，避免恢复shell仍带`Cell[]`时两个read overload生成相同namespace ID；不改全局getter。晚期ready compile先flat再执行annotation/completion；这不是INDEX_TYPE全局预扫描。
+
+fixture在generic与晚声明普通Base之前声明`readCell`/`readFlag`及同名Int/Bool overload。源码bucket index为Int0/Bool1，fresh consumer自然反转为Bool0/Int1；源码Bool实参是`true`，固定score观察结果为1。源码与consumer实例对象及生成identifier不同，但冻结TypeId相同；constructor参数、private Var/Property owner与protected Base owner canonical，两个read overload各自namespace ID不同。consumer实际磁盘执行4/9/Base 2/Bool 1，frame0。负向Plain<3>及缺失Cell实参分别以独立项目验证并产生语言诊断。fixture helper进入COMPILE阶段，与正式项目流程一致。
+
+红测`mcfpp-generic-template-explicit-type-red.log`：XML `2026-10-06T04:14:18.082Z`，1失败，producer 7 errors，6s。首轮19项`-final.log` exit1/1m29s：LibFieldAccess8于`04:23:17.448Z`为6过2失败（bare Cell未拒绝；Kryo尝试向只读集合add时异常），TemplateInitialization8于`04:23:33.298Z`及LibCacheFormat3于`04:23:33.289Z`通过。之后`-complete.log`必要5项exit1/18s：LibFieldAccess2于`04:34:44.076Z`均失败、Cache3于`04:34:48.397Z`通过；库读取成功，但bare Cell早期scope-return遗漏，字符串helper仍处于READ_LIB，未执行tryResolve，consumer两处`read()`未定义，尚未进入consumer模型/磁盘断言。
+
+最终`mcfpp-generic-template-explicit-type-restored-final.log`正常worker、exit0、BUILD SUCCESSFUL in24s：LibFieldAccess2于`04:46:28.322Z`及LibCacheFormat3于`04:46:33.118Z`均全过。生成index反转、source/fresh实例对象和生成identifier不同但冻结TypeId相同、private owner、overload namespace ID及磁盘4/9/2/bool1/frame0断言通过；缺参和不接受readonly实参的普通模板诊断通过。17项首轮通过 + 最终2项 =19个不同用例跨轮各自通过，不是一次联合19项。标准库日志`mcfpp-generic-template-explicit-type-stdlib.log`；无fullcheck/服务器。BoundT/N及Declaration/Applied TypeValue未覆盖。
+
+## 历史必要检查：未注解 generic 类类型绑定（阶段 68）
 
 修改仅限三个入口：generic prototype 的FieldVisitor仍解析readonly签名/parent，但将成员body、default constructor和abstract检查延至T绑定后；AnnotationVisitor保持top-level行为并跳过prototype body；特化复制`isAbstract`，注册实际成员并运行原abstract检查，`flatExtends`后设置`currTemplate`为实例，再由现有annotation visitor转存字段annotations后complete/apply/refresh。范围限于未注解普通generic class；top-level/method annotation持久化、source abstract/final flags到model、generic object/interface、显式`Cell<int>`类型注记未覆盖。
 

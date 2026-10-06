@@ -1,4 +1,4 @@
-# 下一阶段：泛型类型标注与声明准备（阶段 69）
+# 下一阶段：泛型类型表达式的作用域（阶段 70）
 
 本计划的首条纵向路径已经在续接会话中实现，完整阶段和整个重构仍未完成。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
@@ -94,13 +94,15 @@ const 只限制重赋；compiler-only const 保留完整 `ValueSnapshot` 且不�
 
 限定的三个入口已实现：prototype仍解析readonly签名/parents，成员body、default constructor和abstract检查延后到T绑定后；annotation visitor保留top-level逻辑并跳过prototype body；实例复制`isAbstract`、注册实际成员及运行原abstract检查。`flatExtends`后设`currTemplate`为实例，再由`MCFPPAnnotationVisitor.visitTemplateBody(ctx)`转存字段annotations，最后complete/apply/refresh。支持未注解普通generic class字段、构造器参数及返回类型。producer Int 4/9同一Compiled、Bool true不同Compiled；consumer反序恢复`scope.types[T]`、字段/constructor/read的Int/Bool类型、private Var/Property owner和TypeId；磁盘4/9、固定score `#generic_bool`观察值1、frame0。MCFL16/bin286243不变。17个不同用例跨轮各自通过，非单轮联合。generic object/interface、top-level/method annotations持久化、source abstract/final flags及显式Cell<int>类型注记未覆盖，详见verification.md。
 
-### 阶段 69：泛型类型标注与声明准备（待研究/红测）
+### 阶段 69：泛型类型标注与声明准备（已限定验证）
 
-当前`MCFPPType`的className分支忽略readonly type arguments；不能只接literal parser而跳过前置声明准备。先用红测覆盖函数形参`Cell<int>`先于generic class声明，且其普通父类`Base`声明更晚；验证继承字段、构造器与consumer磁盘恢复的type annotation和Ctor同一cache TypeId。
+显式generic类型参数与late declaration准备已在限定路径通过真实库往返：共享`prepareHeader`在原声明file上下文、bind参数前运行；`completeTemplateDeclarations` parent-first完成cached实例，再刷新签名，无INDEX_TYPE全局预扫描。形参、字段、构造器、返回签名共用canonical specialization；bucket顺序反转不改变稳定TypeId/owner，consumer从生成文件执行。MCFL17/bin289989；stdlib日志`mcfpp-generic-template-explicit-type-stdlib.log`；19个不同用例跨轮各自通过，分轮结果见verification.md。当前TypeValue仅保证builtin/formal types；BoundT/N与Declaration/Applied TypeValue仍未覆盖。
 
-候选准备顺序：`INDEX_TYPE`后先准备ordinary generic headers（readonly types、显式parents、defaultDataObject），FieldVisitor避免重复header；`RESOLVE_FIELD`阶段早期specialization只登记identity和本地members，parents未ready时不得flat/infer或缓存半成品；现有`completeTemplateDeclarations`递归完成cached compiledTemplates，先ordinary parents，再实例fields/signature adapters，最后接入TypeParser。具体API与生产文件待审核，当前仅为候选流程，尚未实现。
+### 阶段 70：泛型类型表达式的作用域（待研究/红测）
 
-边界：bound T/nested type scope、一般parent arguments、generic object/interface、annotations与完整Kryo身份需另行研究。imported object autoLoad、普通return跨旧while/doWhile、Native.clone owner复制、MNI和整体迁移仍未解决。阶段68与67验证见verification.md。
+目标是让`Cell<(T)>`、`Sized<(N+1)>`等类型实参在其声明词法scope解析，而不是误读调用方同名绑定。候选入口为`ConcreteExprVisitor`增加可选`lookupTypeScope`/lexical caller，并让bucket/NBT/类型递归解析透传该scope；可复用`FunctionScope`的checked `getVar`，但`IScopeWithType`不要求本身有vars。真实method `f.scope`/`f`应传入签名解析，不创建fake Function。
+
+先以Bound T与N的嵌套类型表达式构造红测，区分声明scope与caller中同名值；验证字段、参数/返回签名和缓存身份仍使用声明绑定。此方案尚未实现或测试，需先审具体调用链。Declaration/Applied TypeValue、generic object/interface及其它类型注册边界仍待后续研究；整体迁移未完成。
 
 ### 旧浮点乘除（阶段 50 已实现）
 

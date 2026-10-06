@@ -24,7 +24,6 @@ import top.mcfpp.model.property.Property
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.scope.IScopeWithType
 import top.mcfpp.type.MCFPPDataTemplateType
-import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPDeclaredConcreteType
 import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
@@ -283,14 +282,8 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         DataTemplate.currTemplate = template
         typeScope = template.scope
         if (template is GenericDataTemplate) {
-            for (param in template.readOnlyParams) {
-                param.type = MCFPPType.parseFromString(param.typeIdentifier, typeScope) ?: run {
-                    LogProcessor.error("Invalid readonly template parameter type: ${param.typeIdentifier}")
-                    MCFPPBaseType.Any
-                }
-            }
-        }
-        for (c in ctx.compoundDeclaration()?.extendName() ?: emptyList()){
+            template.prepareHeader()
+        } else for (c in ctx.compoundDeclaration()?.extendName() ?: emptyList()){
             //是否存在继承
             val (namespace, identifier) = c.text.splitNamespaceID()
             val s = GlobalScope.getTemplate(namespace, identifier)

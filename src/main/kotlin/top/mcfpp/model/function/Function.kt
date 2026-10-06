@@ -476,6 +476,7 @@ open class Function : Member, FieldContainer, WithDocument {
     internal fun refreshTemplateSignature() {
         if (bodyCompiled) return
         for (param in normalParams) if (!param.isReadOnly && param.type is MCFPPDataTemplateType) {
+            param.typeName = param.type.toString()
             val value = param.buildVar()
             scope.putVar(param.identifier, value, true)
             value.storageBinding = null
