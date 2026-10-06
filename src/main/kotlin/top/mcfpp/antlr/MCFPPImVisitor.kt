@@ -386,10 +386,6 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                         GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
                     }
                     GlobalScope.localNamespaces[f.namespace]!!.scope.addFunction(f, false)
-                    //同时，外层定义域中的变量可能丢失跟踪，这里处理为强制全部丢失跟踪
-                    Function.currFunction.scope.forEachVar {
-                        makeRuntime(it)
-                    }
                     Function.currFunction = f
                 }
                 visitBlock(ctx.block(), continuation)
@@ -417,10 +413,6 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                         if (!GlobalScope.localNamespaces.containsKey(f2.namespace))
                             GlobalScope.localNamespaces[f2.namespace] = Namespace(f2.namespace)
                         GlobalScope.localNamespaces[f2.namespace]!!.scope.addFunction(f2, false)
-                        //同时，外层定义域中的变量可能丢失跟踪，这里处理为强制全部丢失跟踪
-                        Function.currFunction.scope.forEachVar {
-                            makeRuntime(it)
-                        }
                         Function.currFunction = f2
                     }
                     visitBlock(it.block(), continuation)
@@ -447,11 +439,11 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 if (!GlobalScope.localNamespaces.containsKey(f3.namespace))
                     GlobalScope.localNamespaces[f3.namespace] = Namespace(f3.namespace)
                 GlobalScope.localNamespaces[f3.namespace]!!.scope.addFunction(f3, false)
-                Function.addCommand(Command("return run").build(Commands.function(f3)))
                 //同样的，外层定义域中的变量可能丢失跟踪，这里处理为强制全部丢失跟踪
                 Function.currFunction.scope.forEachVar {
                     makeRuntime(it)
                 }
+                Function.addCommand(Command("return run").build(Commands.function(f3)))
                 Function.currFunction = f3
             }
             if(ctx.elseStatement() != null){
@@ -508,7 +500,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 if(!GlobalScope.localNamespaces.containsKey(f.namespace))
                     GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
                 GlobalScope.localNamespaces[f.namespace]!!.scope.addFunction(f,false)
-                //给子函数开栈
+                Function.currFunction.scope.forEachVar { makeRuntime(it) }
                 Function.addCommand(
                     Command("execute").build(exp.toCommandPart()).build("run return run").build(Commands.function(f))
                 )
@@ -519,6 +511,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 if(!GlobalScope.localNamespaces.containsKey(f.namespace))
                     GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
                 GlobalScope.localNamespaces[f.namespace]!!.scope.addFunction(f,false)
+                Function.currFunction.scope.forEachVar { makeRuntime(it) }
                 Function.addCommand(
                     Command("execute if").build(exp.toCommandPart()).build("run return run").build(Commands.function(f))
                 )
@@ -550,7 +543,10 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             is ScoreBoolConcrete -> {
                 if (exp.value) {
                     // A runtime chain registers this branch; a static chain inlines it.
-                    if (breakIf == ConditionType.NORMAL) Function.addCommand("function " + f.namespaceID)
+                    if (breakIf == ConditionType.NORMAL) {
+                        Function.currFunction.scope.forEachVar { makeRuntime(it) }
+                        Function.addCommand("function " + f.namespaceID)
+                    }
                     //LogProcessor.warn("The condition is always true. ")
                     breakIf = if(breakIf == ConditionType.NORMAL) ConditionType.NORMAL else ConditionType.ALWAYS_TRUE
                 } else {
@@ -566,7 +562,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 if(!GlobalScope.localNamespaces.containsKey(f.namespace))
                     GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
                 GlobalScope.localNamespaces[f.namespace]!!.scope.addFunction(f,false)
-                //给子函数开栈
+                Function.currFunction.scope.forEachVar { makeRuntime(it) }
                 Function.addCommand(
                     Command("execute").build(exp.toCommandPart()).build("run return run").build(Commands.function(f))
                 )
@@ -578,6 +574,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 if(!GlobalScope.localNamespaces.containsKey(f.namespace))
                     GlobalScope.localNamespaces[f.namespace] = Namespace(f.namespace)
                 GlobalScope.localNamespaces[f.namespace]!!.scope.addFunction(f,false)
+                Function.currFunction.scope.forEachVar { makeRuntime(it) }
                 Function.addCommand(
                     Command("execute if").build(exp.toCommandPart()).build("run return run").build(Commands.function(f))
                 )

@@ -339,8 +339,7 @@ class ScoreBoolConcrete : ScoreBool, MCFPPValue<Boolean> {
     //取反
     @InsertCommand
     override fun negation(): Var<*> {
-        value = !value
-        return this
+        return ScoreBoolConcrete(!value)
     }
 
     @InsertCommand

@@ -50,6 +50,7 @@ class ExecuteBool(): BaseBool(), MCFPPValue<ArrayList<AbstractBoolPart>> {
     }
 
     override fun and(a: Var<*>): Var<*> {
+        if (a is ScoreBoolConcrete) return if (a.value) this else ScoreBoolConcrete(false)
         return when(a){
             is ExecuteBool -> {
                 value.addAll(a.value)

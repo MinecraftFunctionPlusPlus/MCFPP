@@ -12,6 +12,7 @@ import top.mcfpp.core.lang.nbt.*
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.function.Function
+import top.mcfpp.mni.NativeCallContext
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.primitive.StringTag
@@ -21,6 +22,30 @@ import top.mcfpp.util.TempPool
 
 /** Map keys are string values, never interpolated NBT member names. */
 object MapOperations {
+    fun clear(context: NativeCallContext) = context.withAdapters { caller, _ ->
+        clear(caller as NBTMap)
+    }
+
+    fun merge(context: NativeCallContext) = context.withAdapters { caller, arguments ->
+        merge(caller as NBTMap, arguments[0] as NBTMap)
+    }
+
+    fun remove(context: NativeCallContext) = context.withAdapters { caller, arguments ->
+        remove(caller as NBTMap, arguments[0] as MCString)
+    }
+
+    fun containsKey(context: NativeCallContext) = context.withAdapters { caller, arguments ->
+        context.publishResult(containsKey(caller as NBTMap, arguments[0] as MCString))
+    }
+
+    fun isEmpty(context: NativeCallContext) = context.withAdapters { caller, _ ->
+        context.publishResult(isEmpty(caller as NBTMap))
+    }
+
+    fun size(context: NativeCallContext) = context.withAdapters { caller, _ ->
+        context.publishResult(size(caller as NBTMap))
+    }
+
     private fun payload(value: CompilerValue?): CompilerValue? = if (value is CompilerValue.Typed) payload(value.payload) else value
     private fun text(value: CompilerValue?): String? = when (val part = payload(value)) {
         is CompilerValue.Text -> part.value

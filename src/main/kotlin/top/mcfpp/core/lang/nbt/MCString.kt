@@ -148,9 +148,7 @@ open class MCString : NBTBasedData {
     }
 
     override fun getTempVar(): MCString {
-        val temp = MCString()
-        temp.isTemp = true
-        return temp.assignCommand(this)
+        return top.mcfpp.analysis.StorageAccess.capture(this) as MCString
     }
 
     companion object {

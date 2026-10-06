@@ -2059,6 +2059,82 @@ class LibFieldAccessTest {
         check(main)
     }
 
+    @Test
+    fun nativeCollectionMethodsUseExplicitContextAcrossLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = """
+            func main(){
+                var box=Box();
+                dynamic var key="first";
+                dynamic var two=2; dynamic var three=3; dynamic var absent=9;
+                dynamic var dictionaryResult=box.dictionary();
+                dynamic var dictionarySource=box.dictionaryExtra["added"];
+                dynamic var mapResult=box.mapEdit(key);
+                dynamic var mapSource=box.mapExtra["third"];
+                dynamic var firstQuery=box.query(two);
+                dynamic var secondQuery=box.query(three);
+                dynamic var absentQuery=box.query(absent);
+            }
+        """
+        write("""
+            namespace fixture.fields;
+            data Box {
+                dictionaryItems as dict<int>; dictionaryExtra as dict<int>;
+                mapItems as map<int>; mapExtra as map<int>;
+                readOnlyItems as ImmutableList<int>;
+                constructor(){
+                    this.dictionaryItems={gone:2,kept:3} as dict<int>; this.dictionaryExtra={added:5} as dict<int>;
+                    this.mapItems={entries:[{key:"first",value:2},{key:"second",value:3}]} as map<int>;
+                    this.mapExtra={entries:[{key:"third",value:7}]} as map<int>;
+                    this.readOnlyItems=[2,3,2] as ImmutableList<int>;
+                }
+                func dictionary()->int {
+                    var before=this.dictionaryItems.containsKey("gone");
+                    this.dictionaryItems.remove("gone");
+                    var gone=this.dictionaryItems.containsKey("gone");
+                    this.dictionaryItems.merge(this.dictionaryExtra);
+                    var merged=this.dictionaryItems.containsKey("added");
+                    var copied=this.dictionaryItems["added"];
+                    this.dictionaryItems.clear();
+                    var cleared=this.dictionaryItems.containsKey("added");
+                    if(before&&!gone&&merged&&!cleared){return copied+this.dictionaryExtra["added"];}
+                    return -1;
+                }
+                func mapEdit(key as string)->int {
+                    var firstSize=this.mapItems.size();
+                    var found=this.mapItems.containsKey(key);
+                    this.mapItems.remove(key); this.mapItems.merge(this.mapExtra);
+                    var afterSize=this.mapItems.size();
+                    var present=this.mapItems.containsKey("third");
+                    var copied=this.mapItems["third"];
+                    this.mapItems.clear();
+                    var empty=this.mapItems.isEmpty();
+                    var clearedSize=this.mapItems.size();
+                    if(found&&present&&empty){return firstSize*100+afterSize*10+copied+clearedSize;}
+                    return -1;
+                }
+                func query(needle as int)->int {
+                    var first=this.readOnlyItems.indexOf(needle);
+                    var last=this.readOnlyItems.lastIndexOf(needle);
+                    if(this.readOnlyItems.contains(needle)){return first*10+last;}
+                    return -1;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val machine = execute(main, output)
+            for ((name, expected) in listOf("dictionaryResult" to 10, "dictionarySource" to 5,
+                    "mapResult" to 227, "mapSource" to 7, "firstQuery" to 2,
+                    "secondQuery" to 11, "absentQuery" to -1)) {
+                assertEquals(expected, machine.read(main.scope.getVar(name) as MCInt), name)
+            }
+        }
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

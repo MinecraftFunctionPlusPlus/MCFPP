@@ -12,6 +12,7 @@ import top.mcfpp.core.lang.nbt.MCString
 import top.mcfpp.core.lang.nbt.NBTDictionary
 import top.mcfpp.core.lang.nbt.NBTDictionaryConcrete
 import top.mcfpp.model.function.Function
+import top.mcfpp.mni.NativeCallContext
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.primitive.StringTag
@@ -23,6 +24,22 @@ import top.mcfpp.util.TempPool
 
 /** Shared dictionary implementations. Constant knowledge and storage effects are independent of Var subclasses. */
 object DictionaryOperations {
+    fun clear(context: NativeCallContext) = context.withAdapters { caller, _ ->
+        clear(caller as NBTDictionary)
+    }
+
+    fun merge(context: NativeCallContext) = context.withAdapters { caller, arguments ->
+        merge(caller as NBTDictionary, arguments[0] as NBTDictionary)
+    }
+
+    fun remove(context: NativeCallContext) = context.withAdapters { caller, arguments ->
+        remove(caller as NBTDictionary, arguments[0] as MCString)
+    }
+
+    fun containsKey(context: NativeCallContext) = context.withAdapters { caller, arguments ->
+        context.publishResult(containsKey(caller as NBTDictionary, arguments[0] as MCString))
+    }
+
     private fun payload(value: CompilerValue?): CompilerValue? = if (value is CompilerValue.Typed) payload(value.payload) else value
     private fun record(value: Var<*>) = payload(ValueSnapshot.of(value)) as? CompilerValue.Record
 

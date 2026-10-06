@@ -1,12 +1,14 @@
-# 下一阶段：迁移字典、Map与ImmutableList原生方法（阶段 90）
+# 下一阶段：接入 int/float/bool 运算符调用上下文（阶段 91）
 
-阶段87限制 `type` 值仅用于泛型参数已限定验证；普通值位置及擦除/集合中的TypeValue拒绝，`typealias`、内部TypeVar解析与现有readonly泛型绑定保留。阶段88迁入list.clear、阶段89迁入其余10个list原生方法，现共11个方法使用显式 `NativeCallContext`，MCFL21；whole17仍未完成。
+阶段87的普通值位置type拒绝规则继续生效。阶段88–90已将list、Dictionary、Map、ImmutableList共24个受测原生方法接入 `NativeCallContext`；阶段90 MCFL22标准库与资源已重建，source/fresh指定用例通过。whole17仍未完成。
 
-阶段89已验证：context内部绑定普通参数值/位置及实际返回值/返回位置，Java API不暴露 `Var` 或 `ValueWrapper`；领域逻辑仍由 `ListOperations` 实现。`Commands.tempFunction`沿父namespace注册到现存canonical namespace，并安全恢复function上下文，库导出器可收集生成函数体。MCFL21标准库与资源已重建，三项不同用例跨轮各自通过；最终仅失败fixture单项复查。分轮证据见verification.md。
+阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
-阶段90计划迁移13个原生方法：Dictionary 4个、Map 6个、ImmutableList 3个。复用现有context API，不新增context入口或扩展operator。保持字典仅接受已知key的限制，Map查询允许dynamic key，readonly list允许dynamic needle。必要验证限于一条模板实例源码/fresh库往返fixture及旧/未知缓存格式拒绝回归；NativeCallContext、NativeFunction和ListOperations不变，不额外跑IR套件。methodString ABI变更预计将MCFL升至22并重建stdlib；实施前按实际签名核准范围。
+阶段91目标迁移 int/float/bool 的28个 `MNIOperator` 方法：int 11个普通算术/比较加 `~=` range，float 11个普通算术/比较，bool 4个二元逻辑/比较及一元 `!`。总数为27个二元（包含range）和1个一元；标准算术/比较核心为26个二元及1个一元。CompoundData operator loader接受精确单context ABI，同时保留caller与const flag。Java方法仅收context；Kotlin backend直接委托现有typed core（如 `plus`、`isEqual`、`and`、`negation`、`inRange`），避免再次调用会重新dispatch的binary/unary computation。
 
-阶段88/89详细实施与分轮验证见verification.md；列表reset(clear/add)以及其余列表查询和变更均有指定的source/fresh库磁盘验证。标准库和项目资源当前使用MCFL21。
+context应在 `function.runInFunction` 内把 `BaseBool` 的非 `ScoreBool` receiver/argument adapter转为 `toScoreBool(false)`，随后确保并公开引用；结果发布复用转换helper，写回真实 `ScoreBool` adapter，避免fakeRead且不改cast规则或引入新框架。byte/short/long/double不在本阶段；合法Meta union readonly表达式仍保留。旧methodString移除预计MCFL22→23并重建stdlib。必要验证为Box模板实例方法source/fresh往返：未知int/float/bool参数覆盖非交换运算、比较及嵌套Bool条件/返回，并断言值与返回位置；另跑旧/未知缓存回归和一项IR算术回归。当前API/代码尚未实现。
+
+阶段88–90详细实施与分轮验证见verification.md；集合native往返fixture在source/fresh consumer磁盘执行并断言。标准库和项目资源当前使用MCFL22。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

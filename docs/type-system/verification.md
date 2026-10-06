@@ -2,6 +2,18 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
+## 阶段 90：字典、Map与ImmutableList原生方法（已限定验证）
+
+共13个方法迁入现有 `NativeCallContext`：Dictionary 4个、Map 6个、ImmutableList 3个。Java原生层只接收调用context，普通参数和实际结果值/位置经已有引用传递；领域实现分别在 `DictionaryOperations`、`MapOperations`、`ListOperations`。保留字典未知字符串key限制，Map允许dynamic key，readonly list允许dynamic needle。MCFL21→22，bin头为 `4c46434d16000000`。
+
+同阶段修复了四个暴露的问题：`ExecuteBool.and` 对已知bool分支生成正确结果；`ScoreBoolConcrete.negation` 返回新常量而不原地修改输入；`MCString.getTempVar` 通过 `StorageAccess.capture` 创建有效地址；legacy if/elseif/else 将 `makeRuntime` 移到静态判定之后、dispatch之前。旧循环遍历仍保留，未声称whole17 rule 11已完成。
+
+`mcfpp-native-collection-context-stdlib.log`：标准库重建一次成功，exit0/BUILD SUCCESSFUL in13s，Project 0 errors/0 warnings，292301 bytes。source `build/stdlib-index/bin.mclib`、`src/main/resources/datapack/bin.mclib` 与 `build/resources/main/datapack/bin.mclib` 最终大小与SHA256相同：292301 bytes，`EEFF5FC16E8751D87D4248E8380BBFCC4980FB08BD1E7BA6B06A1DD849E2B4D6`。
+
+首次联合 `mcfpp-native-collection-context-final.log` worker186/FAILED15s：Cache XML `2026-10-06T17:51:44.690Z` 为1/0/0/0；新LibField fixture `17:51:45.439Z` producer报2个 `cannot assign dict to dict`，因fixture字典初始化缺少显式 `as dict<int>`。修复后final2 worker187/FAILED11s、XML `17:57:13.560Z`：source编译0/9123，但source执行缺少 `dictionary_cleared` score；final3 worker188/FAILED18s、XML `18:06:23.847Z`：source仍0/9123，在临时storage目标路径为空的执行命令失败；final4 worker189/FAILED13s、XML `18:12:36.327Z`：source仍0/9123，`mapEdit_clearedSize` score未生成/读取，consumer未运行。以上失败轮均未到fresh consumer断言。
+
+最终final5 worker190正常，exit0/BUILD SUCCESSFUL in17s，LibFieldAccess XML `2026-10-06T18:20:53.447Z` 为1/0/0/0；source0/9123 warnings、fresh consumer0/9124 warnings。fixture从生成的source与fresh consumer磁盘函数执行，得到字典10/5、map227/7、只读列表2/11/-1，并通过frame0检查。此前CacheFormat旧/未知格式回归在首轮XML已通过，因此本轮最终仅复查fixture，不是联合2绿。Warnings包含已知flatExtends及StorageAccess类别；无fullcheck/server。仍有旧legacy `makeRuntime`循环与其余MNI待迁移，whole17保持ACTIVE未完成。
+
 ## 阶段 89：其余 list 原生方法显式调用上下文（已限定验证）
 
 其余10个列表原生方法已与阶段88的 `clear` 共用 `NativeCallContext`，共迁移11个方法。Java层通过context传递普通实参、结果值/位置；内部private Var桥复用 `StorageAccess`，领域操作仍由 `ListOperations` 执行。`Commands.tempFunction` 两个重载沿用父namespace、注册到已存在的canonical namespace，使用 `runInFunction` 恢复调用上下文；生成的函数标记 `bodyCompiled`，使库导出器能写出其函数体。

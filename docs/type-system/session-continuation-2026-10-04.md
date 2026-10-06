@@ -1,8 +1,10 @@
 # 类型系统续接记录（2026-10-04）
 
-本轮从 2026-10-04 续接，首次存储/视图纵向路径通过 161 项测试。阶段54已提交`107e8ac`，阶段55已提交`4b5b7bd`，阶段56已提交`0fb7cb8`，阶段57已提交`3865673`。阶段58普通模板inferred字段已接入部分声明绑定支持并提交`e6f83fe`，37个不同必要用例跨轮各自通过。阶段59导入声明环境恢复与MCFL13重建后，50项指定测试联合通过，提交`6200561`。阶段60 consumer函数体导出限定回归13项联合通过，提交`3468341`。阶段61的26个不同用例跨轮各自通过。阶段62目录/JAR/ZIP资源复制与模板初始化联合11项通过。阶段63 MCFL14库权限往返联合14项全部通过，提交`1918db9`。阶段64 MCFL15字段/Property访问权限与while帧修复后，最终定向7项全部通过，提交`bda4d5a`。阶段65字段权限联合11项全过；阶段66当前实例未限定字段寻址的LibFieldAccess4 + ConstructorExecution7联合11项全过，MCFL15/bin286207未变。阶段67 generic类readonly源码特化及namespace类别恢复已验证，MCFL16/bin286243；41个不同用例跨轮各自通过。阶段68未注解generic类T绑定限定语法已验证，17个不同用例跨轮通过，MCFL16/bin不变，已提交`adf50f8968483c77fcca7a482e37a2eef8eae871`。阶段69显式generic类型及跨库canonical特化限定验证通过，MCFL17/bin289989，19个不同用例跨轮各自通过。阶段69已提交`10267379e30bd43af6c38bcd7e6a673d195a6102`。阶段70六个生产文件和一个fixture限定验证通过，36个不同用例跨轮各自通过，提交记录见Git历史；MCFL17/bin289989未变，无stdlib/fullcheck/服务器。阶段70已提交`1d593d19c71f5c42a3adb4aaf0e2dbdaae5c1b16`；阶段71四prod+fixture有限类型值路径6个不同用例跨轮各自通过，最终必要2项复查，提交记录见Git历史，MCFL17/bin289989未变。阶段72限定静态类型集合路径跨轮5个不同用例各过，磁盘4/9/frame0；阶段73最终必要联合2项全过，模型及磁盘4/9/frame0；阶段74必要联合4项全过，source/fresh模型及consumer磁盘4/9/frame0；阶段75必要联合2项全过，source/fresh模型及consumer磁盘4/9/frame0；阶段76最终单方法通过，source/fresh模型及consumer磁盘4/9/frame0；阶段77最终必要1项通过，source/fresh模型及consumer磁盘4/9/frame0；阶段78 alias有根匿名冻结身份限定通过，四个不同用例跨轮各自通过，最终仅新1复查；阶段79 generic用户函数自身readonly依赖签名已限定验证，最终必要联合5全绿、磁盘4/9/7/frame0通过；阶段80 generic object静态N/方法已限定验证，三用例跨轮各过、最终仅新1，consumer磁盘4/9/4/frame0；阶段81 generic interface静态TypeValue已限定验证，三个case跨轮各过、最终仅新1；阶段82 source generic特化磁盘导出已限定通过，最终必要联合3全绿、source磁盘4/9/4/9/frame0；阶段83 generated-vs-legal名字隔离已限定验证，四case跨轮各过、最终新1；阶段84 generic object静态字段/显式constructor初始化限定通过，最终联合2全绿，source4/9/4/9、fresh9/4/9/4/frame0；阶段85 abstract/final flags已限定通过，MCFL18/stdlib287554/最终联合3全绿；阶段86 actual generic父项限定通过、MCFL19/stdlib292301/最终联合3；阶段87 `type` 仅用于泛型参数已实现并限定验证，提交`bde5a25`；阶段88 list.clear显式上下文迁移及MCFL20已限定验证，三项回归通过；阶段89剩余10个list native方法接入显式上下文，MCFL21/bin292007，三个不同用例跨轮各自通过、最终仅失败fixture复查1项。下一步阶段90处理Dictionary/Map/ImmutableList共13个方法；imported object自动load仍独立未解决。最近完整346项仍属于`72dc557`；整个17项重构未完成。
+本轮从 2026-10-04 续接，首次存储/视图纵向路径通过 161 项测试。阶段54已提交`107e8ac`，阶段55已提交`4b5b7bd`，阶段56已提交`0fb7cb8`，阶段57已提交`3865673`。阶段58普通模板inferred字段已接入部分声明绑定支持并提交`e6f83fe`，37个不同必要用例跨轮各自通过。阶段59导入声明环境恢复与MCFL13重建后，50项指定测试联合通过，提交`6200561`。阶段60 consumer函数体导出限定回归13项联合通过，提交`3468341`。阶段61的26个不同用例跨轮各自通过。阶段62目录/JAR/ZIP资源复制与模板初始化联合11项通过。阶段63 MCFL14库权限往返联合14项全部通过，提交`1918db9`。阶段64 MCFL15字段/Property访问权限与while帧修复后，最终定向7项全部通过，提交`bda4d5a`。阶段65字段权限联合11项全过；阶段66当前实例未限定字段寻址的LibFieldAccess4 + ConstructorExecution7联合11项全过，MCFL15/bin286207未变。阶段67 generic类readonly源码特化及namespace类别恢复已验证，MCFL16/bin286243；41个不同用例跨轮各自通过。阶段68未注解generic类T绑定限定语法已验证，17个不同用例跨轮通过，MCFL16/bin不变，已提交`adf50f8968483c77fcca7a482e37a2eef8eae871`。阶段69显式generic类型及跨库canonical特化限定验证通过，MCFL17/bin289989，19个不同用例跨轮各自通过。阶段69已提交`10267379e30bd43af6c38bcd7e6a673d195a6102`。阶段70六个生产文件和一个fixture限定验证通过，36个不同用例跨轮各自通过，提交记录见Git历史；MCFL17/bin289989未变，无stdlib/fullcheck/服务器。阶段70已提交`1d593d19c71f5c42a3adb4aaf0e2dbdaae5c1b16`；阶段71四prod+fixture有限类型值路径6个不同用例跨轮各自通过，最终必要2项复查，提交记录见Git历史，MCFL17/bin289989未变。阶段72限定静态类型集合路径跨轮5个不同用例各过，磁盘4/9/frame0；阶段73最终必要联合2项全过，模型及磁盘4/9/frame0；阶段74必要联合4项全过，source/fresh模型及consumer磁盘4/9/frame0；阶段75必要联合2项全过，source/fresh模型及consumer磁盘4/9/frame0；阶段76最终单方法通过，source/fresh模型及consumer磁盘4/9/frame0；阶段77最终必要1项通过，source/fresh模型及consumer磁盘4/9/frame0；阶段78 alias有根匿名冻结身份限定通过，四个不同用例跨轮各自通过，最终仅新1复查；阶段79 generic用户函数自身readonly依赖签名已限定验证，最终必要联合5全绿、磁盘4/9/7/frame0通过；阶段80 generic object静态N/方法已限定验证，三用例跨轮各过、最终仅新1，consumer磁盘4/9/4/frame0；阶段81 generic interface静态TypeValue已限定验证，三个case跨轮各过、最终仅新1；阶段82 source generic特化磁盘导出已限定通过，最终必要联合3全绿、source磁盘4/9/4/9/frame0；阶段83 generated-vs-legal名字隔离已限定验证，四case跨轮各过、最终新1；阶段84 generic object静态字段/显式constructor初始化限定通过，最终联合2全绿，source4/9/4/9、fresh9/4/9/4/frame0；阶段85 abstract/final flags已限定通过，MCFL18/stdlib287554/最终联合3全绿；阶段86 actual generic父项限定通过、MCFL19/stdlib292301/最终联合3；阶段87 `type` 仅用于泛型参数已实现并限定验证，提交`bde5a25`；阶段88 list.clear显式上下文迁移及MCFL20已限定验证，三项回归通过；阶段89剩余10个list native方法接入显式上下文，MCFL21/bin292007，三个不同用例跨轮各自通过、最终仅失败fixture复查1项。阶段90已将Dictionary/Map/ImmutableList共13个方法接入context并限定验证；下一步阶段91处理int/float/bool运算符入口；imported object自动load仍独立未解决。最近完整346项仍属于`72dc557`；整个17项重构未完成。
 
 ## 当前进度
+
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段90实现和指定验证已完成；提交记录以Git历史为准。
 
 ### 用户最新规则（2026-10-06）
 
@@ -22,18 +24,30 @@
 
 验证分轮完成：Cache、ListMember与新列表往返fixture三个不同用例均各自通过；最终仅复查失败fixture，XML `2026-10-06T17:31:52.308Z` 为1/0/0/0，worker正常、BUILD SUCCESSFUL in18s。source为0 errors/9118 warnings，fresh consumer为0/9119；结果与frame0断言从consumer磁盘函数执行。首轮consumer曾因tempFunction namespace NPE报8 errors，根因修复后用例通过。未跑fullcheck/server；本阶段没有统一其他MNI或operator。
 
-### 阶段 90：字典、Map与ImmutableList原生方法（待实现）
+### 阶段 90：字典、Map与ImmutableList原生方法（已限定验证）
 
-计划迁移Dictionary 4个、Map 6个、ImmutableList 3个方法；复用现有context/API，不扩新的context或operator。保留字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle；以一条模板实例源码/fresh库往返fixture验证consumer磁盘执行，并保留一条IR查询检查。旧methodString变更将MCFL升至22并重建stdlib。具体接口仍待阶段实现与验证，whole17未完成。
+Dictionary 4、Map 6、ImmutableList 3个原生方法复用现有context/API，未增加新context或operator。字典已知key限制、Map dynamic key、readonly list dynamic needle均保留。MCFL21→22，stdlib Project0/0、292301 bytes；三份资源SHA一致。source/fresh consumer磁盘fixture实测7个结果10/5/227/7/2/11/-1及frame0。缓存回归和新fixture两个不同用例跨轮各自通过，final5只复查fixture；不是最终联合2全绿。其余MNI仍未全部统一，whole17未完成，详情见verification.md。
 
-### 阶段 89 自检
+### 阶段 90 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | stdlib三份MCFL22产物hash一致；保留首轮producer错误、三次source执行失败与final5 fresh XML证据。 |
+| 完整性 | 3/5 | 13个字典/Map/ImmutableList方法的限定范围已验证，其他MNI、旧循环和whole17仍未完成。 |
+| 清晰性 | 4/5 | 分开记录字典限制、dynamic key/needle和source/fresh的执行边界。 |
+| 可执行性 | 4/5 | 阶段91按28个精确算子、Bool运行时表示和MCFL23重建列出最小验证。 |
+| 简洁性 | 4/5 | 当前进度仅补充阶段90结果与下一阶段范围，保留历史。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+### 阶段 89 自检（历史）
 
 | 维度 | 评分 | 证据与改进 |
 | --- | --- | --- |
 | 准确性 | 4/5 | 区分首次consumer namespace错误、修复后的单fixture复查与另外两项此前通过；记录标准库hash及fresh XML。 |
 | 完整性 | 3/5 | 11个list方法已迁移，但仅指定库往返、ListMember与缓存回归受测，whole17/MNI仍未完成。 |
 | 清晰性 | 4/5 | Java调用上下文、内部Var桥、namespace注册和ListOperations职责分别说明。 |
-| 可执行性 | 4/5 | 阶段90限定为字典/Map/ImmutableList 13方法及真实库fixture。 |
+| 可执行性 | 4/5 | 当时阶段90限定为字典/Map/ImmutableList 13方法及真实库fixture。 |
 | 简洁性 | 4/5 | 当前验证分轮和边界集中记录。 |
 
 平均3.8/5，whole17完整性仍为3/5。
@@ -468,5 +482,5 @@ final3 worker177正常exit0/SUCCESS1m1s，fresh XML2026-10-06T14:00:39.735Z联�
 | 可操作性 | 4/5 | 阶段62目录/ZIP/JAR复制11项通过；阶段63三套件MCFL14权限往返14项通过；阶段64字段/逻辑7项、阶段65权限11项、阶段66实例字段与构造器11项全绿；阶段67 MCFL16及最终5项（含旧float ABI）全绿、41个不同用例跨轮各自通过；阶段68完成未注解Cell<T as type>限定consumer/磁盘验收；阶段69完成MCFL17显式generic类型签名与跨库往返验证；阶段70声明scope及绑定T/N限定路径完成模型和磁盘4/6/8/bool1/frame0验证，36个不同用例跨轮各自通过；阶段71source/fresh Leaf及Applied类型canonical、真实磁盘4/9/7/frame0达成，最终必要2项复查；阶段78匿名alias字段注解、透明alias及合法named声明隔离的canonical/快照与consumer磁盘4/9/frame0达成，阶段79联合5通过，依赖签名及readonly完整冻结绑定达到实际磁盘4/9/7/frame0；80 canonical静态object/方法与consumer真实磁盘4/9/4/frame0通过，source仅模型/库写入；81 abstract接口绑定和readonly canonical TypeValue/model及consumer磁盘4/9/frame0通过，82 source实际目标文件及磁盘4/9/4/9/frame0通过，最终联合3全绿；83 generated-vs-legal target/owner prefix及source盘4/9/4/9/frame0通过；84静态字段/显式constructor最终联合2全绿，下一85 abstract/final flags待RED |
 | 简洁性 | 4/5 | 只更新当前阶段事实与交接，不重写历史记录 |
 
-优先改进：阶段89候选是剩余10个list native方法迁入context，并验证参数/返回位置边界及methodString缓存升级；阶段88的clear入口限定通过。阶段87普通值位置拒绝规则继续生效，不恢复旧正例。整体IR/MNI和whole17仍未完成。
+当前优先改进：阶段91计划迁移int/float/bool共28个MNIOperator入口，核实显式值/位置与Bool运行时适配，并按methodString变更重建MCFL23。阶段87普通值位置type拒绝规则继续生效；阶段90只证明指定集合原生方法路径。整体IR/MNI和whole17仍未完成。
 自检：用户能复核实现和测试，也会看到整项重构仍未结束；没有把阶段通过写成项目全部完成。
