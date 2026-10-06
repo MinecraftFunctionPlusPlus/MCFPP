@@ -18,6 +18,7 @@ import top.mcfpp.type.TypeId
 import top.mcfpp.type.MCFPPObjectDataTemplateType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.MCFPPNotCompiledGenericType
+import top.mcfpp.type.MCFPPTypeDataTemplateType
 
 object KryoManager {
     val kryo = Kryo().apply {
@@ -72,6 +73,25 @@ object KryoManager {
                 p0.reference(type)
                 template.info = p0.readObject(p1, DataTemplateInfo::class.java)
                 type.parentType = p0.readObject(p1, ArrayList::class.java) as ArrayList<MCFPPType>
+                return type
+            }
+        })
+
+        register(MCFPPTypeDataTemplateType::class.java, object : Serializer<MCFPPTypeDataTemplateType>() {
+            override fun write(kryo: Kryo, output: Output, value: MCFPPTypeDataTemplateType) {
+                writeIdentity(output, value.template)
+                kryo.writeObject(output, DataTemplateInfo.from(value.template))
+                kryo.writeObject(output, value.parentType)
+            }
+
+            @Suppress("UNCHECKED_CAST")
+            override fun read(kryo: Kryo, input: Input, clazz: Class<out MCFPPTypeDataTemplateType>): MCFPPTypeDataTemplateType {
+                val identity = readIdentity(input)
+                val template = UnsolvedTemplate(identity.name, identity.namespace, identity.isInterface, identity.isAbstract, identity.isFinal)
+                val type = MCFPPTypeDataTemplateType(template)
+                kryo.reference(type)
+                template.info = kryo.readObject(input, DataTemplateInfo::class.java)
+                type.parentType = kryo.readObject(input, ArrayList::class.java) as ArrayList<MCFPPType>
                 return type
             }
         })

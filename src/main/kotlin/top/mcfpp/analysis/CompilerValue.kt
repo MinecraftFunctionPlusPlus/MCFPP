@@ -59,6 +59,9 @@ object ValueSnapshot {
         is Var<*> -> when {
             value.symbol != null && !value.hasAssigned -> null
             value.storageBinding != null -> StorageAccess.snapshot(value)
+            value is top.mcfpp.core.lang.obj.TypeDataTemplateObject -> of(value.delegateVar)?.let {
+                CompilerValue.Typed(value.type.typeId, if (it is CompilerValue.Typed) it.payload else it)
+            }
             value is top.mcfpp.core.lang.JsonTextConcrete -> value.toCommandPart().let { command ->
                 if (command.isMacro) null else CompilerValue.Typed(value.type.typeId, CompilerValue.Nbt(top.mcfpp.backend.NbtEncoding.snbt(Tag.toNBT(command.toString()))))
             }

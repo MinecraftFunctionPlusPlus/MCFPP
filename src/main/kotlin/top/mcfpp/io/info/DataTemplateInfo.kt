@@ -6,6 +6,8 @@ import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.GenericDataTemplate
 import top.mcfpp.model.compound.GenericObjectDataTemplate
 import top.mcfpp.model.compound.ObjectDataTemplate
+import top.mcfpp.model.compound.TypeDataTemplate
+import top.mcfpp.type.MCFPPType
 
 interface AbstractTemplateInfo<T: DataTemplate>: ModelInfo<T>{
 
@@ -32,6 +34,7 @@ data class DataTemplateInfo(
     var constructor: List<TemplateConstructorInfo>,
     var hasCompanionObject: Boolean,
     var isObject: Boolean,
+    val typeAs: MCFPPType?,
     val initializers: Map<String, ExpressionContext>,
     val declarationEnvironment: DeclarationEnvironmentInfo?
 ): AbstractTemplateInfo<DataTemplate> {
@@ -40,6 +43,9 @@ data class DataTemplateInfo(
         infoCache[this]?.let { return it }
         val template = if(isObject){
             ObjectDataTemplate(identifier, namespace)
+        }else if (typeAs != null) {
+            typeAs.tryResolve()
+            TypeDataTemplate(typeAs, identifier, namespace)
         }else {
             DataTemplate(identifier, namespace)
         }
@@ -103,6 +109,7 @@ data class DataTemplateInfo(
                 template.constructors.map { TemplateConstructorInfo.from(it) },
                 template.companionObject != null,
                 template is ObjectDataTemplate,
+                (template as? TypeDataTemplate)?.typeAs,
                 LinkedHashMap(template.preInit),
                 DeclarationEnvironmentInfo.from(template.declarationFile) ?: template.declarationEnvironment
             )

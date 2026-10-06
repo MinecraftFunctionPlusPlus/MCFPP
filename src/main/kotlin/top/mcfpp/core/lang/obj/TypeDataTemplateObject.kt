@@ -10,6 +10,7 @@ import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
+import top.mcfpp.analysis.StorageAccess
 
 class TypeDataTemplateObject: Var<TypeDataTemplateObject> {
 
@@ -25,7 +26,8 @@ class TypeDataTemplateObject: Var<TypeDataTemplateObject> {
     constructor(template: TypeDataTemplate, identifier: String = TempPool.getVarIdentify()): super(identifier) {
         this.templateType = template
         this.identifier = identifier
-        delegateVar = templateType.typeAs.build(identifier)
+        type = template.getType()
+        delegateVar = templateType.typeAs.buildUnConcrete(identifier)
         delegateVar.parent = this
     }
 
@@ -41,14 +43,19 @@ class TypeDataTemplateObject: Var<TypeDataTemplateObject> {
 
     constructor(template: TypeDataTemplate, value: Any): super(){
         templateType = template
-        delegateVar = templateType.typeAs.build(value)
+        type = template.getType()
+        delegateVar = templateType.typeAs.build(identifier, value)
         delegateVar.parent = this
 
     }
 
     override fun doAssignedBy(b: Var<*>): TypeDataTemplateObject {
         if(b is TypeDataTemplateObject && b.templateType == templateType){
-            delegateVar = delegateVar.assignedBy(b)
+            StorageAccess.copyCollection(this, b)
+            val binding = storageBinding!!
+            delegateVar = StorageAccess.adapter(templateType.typeAs, identifier, binding.copy(
+                view = top.mcfpp.analysis.ValueRef.TypedView(templateType.typeAs.typeId,
+                    top.mcfpp.analysis.ValueRef.Read(type.typeId, binding.place), binding.place))).also { it.parent = this }
         }else{
             LogProcessor.error(TextTranslator.ASSIGN_ERROR.translate(b.type.typeName, type.typeName))
         }
@@ -96,6 +103,7 @@ class TypeDataTemplateObject: Var<TypeDataTemplateObject> {
     }
 
     override fun explicitCast(type: MCFPPType): Var<*> {
+        if (type == templateType.typeAs) return StorageAccess.view(this, type)
         val qwq = super.explicitCast(type)
         if(!qwq.isError) return qwq
         val pwp = delegateVar.explicitCast(type)

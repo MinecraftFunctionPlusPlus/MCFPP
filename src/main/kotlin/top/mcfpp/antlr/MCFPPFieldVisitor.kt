@@ -319,7 +319,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                     NativeDataTemplateConstructor(
                         DataTemplate.currTemplate!!,
                         TypeDataTemplate.Companion::defaultConstructor.javaMethod!!
-                    )
+                    ).apply { appendNormalParam(template.typeAs, "value") }
                 )
             }else if(!template.isAbstract && template.constructors.isEmpty()){
                 template.addMember(DataTemplateConstructor(DataTemplate.currTemplate!!, null))

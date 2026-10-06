@@ -12,6 +12,8 @@ object ReinterpretationCompatibility {
     fun check(source: MCFPPType, target: MCFPPType): Result = check(source, target, hashSetOf())
 
     private fun check(source: MCFPPType, target: MCFPPType, visited: MutableSet<Pair<TypeId, TypeId>>): Result {
+        if (source is MCFPPTypeDataTemplateType && source.typeAs == target ||
+            target is MCFPPTypeDataTemplateType && target.typeAs == source) return Result.Compatible
         if (source == MCFPPBaseType.Any || TypeRelations.isSubtype(source, target)) return Result.Compatible
         if (!visited.add(source.typeId to target.typeId)) return Result.Compatible
         if (source !is MCFPPDataTemplateType || target !is MCFPPDataTemplateType)

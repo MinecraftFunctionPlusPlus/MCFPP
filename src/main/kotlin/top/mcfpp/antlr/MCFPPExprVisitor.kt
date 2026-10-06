@@ -557,7 +557,9 @@ class MCFPPExprVisitor(
                 top.mcfpp.analysis.StorageAccess.restore(spills)
                 return UnknownVar("error_${ctx.text}").apply { isError = true }
             }
-            val init = if (selection.function is NativeDataTemplateConstructor) {
+            val init = if (template is top.mcfpp.model.compound.TypeDataTemplate) {
+                template.getType().buildUnConcrete(TempPool.getVarIdentify())
+            } else if (selection.function is NativeDataTemplateConstructor) {
                 DataTemplateObjectConcrete(template.getType().defaultValueVar() as DataTemplateObjectConcrete)
             } else {
                 val receiver = template.getType().buildUnConcrete(TempPool.getVarIdentify()) as? DataTemplateObject

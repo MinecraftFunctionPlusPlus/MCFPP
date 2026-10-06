@@ -168,6 +168,7 @@ object StorageAccess {
         val initial: (() -> Unit)? = if (!encodingSupported || !hasRuntimeRepresentation(value)) null
             else if (frozen != null) ({ emit(Commands.dataSetValue(path, Tag.toNBT(frozen))) })
             else when (value) {
+                is top.mcfpp.core.lang.obj.TypeDataTemplateObject -> frozenWriter(value.delegateVar, path)
                 is MCInt -> if (!value.isDataOnly) scoreWriter(path, value.name, value.sbObject.toString(), numericTag(value.type)) else null
                 is ScoreBool -> if (!value.isDataOnly) scoreWriter(path, value.name, value.boolObject.toString(), "byte") else null
                 is MCFloat -> if (!FloatProviders.enabled) {
@@ -189,6 +190,12 @@ object StorageAccess {
             if (value.symbol != null && !value.hasAssigned) ValueState.UNINITIALIZED else ValueState.INITIALIZED))
         seedParts(data, place, value)
         value.storageBinding = binding
+        if (value is top.mcfpp.core.lang.obj.TypeDataTemplateObject) {
+            data.types[value.templateType.typeAs.typeId] = value.templateType.typeAs
+            value.delegateVar = adapter(value.templateType.typeAs, value.identifier,
+                binding.copy(view = ValueRef.TypedView(value.templateType.typeAs.typeId,
+                    ValueRef.Read(value.type.typeId, place), place))).also { it.parent = value }
+        }
         return binding
     }
 
@@ -441,6 +448,10 @@ object StorageAccess {
         value.nbtPath = binding.path.clone()
         value.hasAssigned = true
         value.isDynamic = binding.data.layout != StorageLayout.CompilerOnly
+        if (value is top.mcfpp.core.lang.obj.TypeDataTemplateObject) {
+            value.delegateVar = adapter(value.templateType.typeAs, name, binding.copy(view = ValueRef.TypedView(
+                value.templateType.typeAs.typeId, ValueRef.Read(type.typeId, binding.place), binding.place))).also { it.parent = value }
+        }
         return value
     }
 
@@ -452,7 +463,10 @@ object StorageAccess {
     private fun constantFor(type: MCFPPType, binding: StorageBinding, template: Boolean = false): CompilerValue? {
         if (!binding.trustConstants) return null
         val fact = binding.data.facts.read(binding.place) ?: return null
+        val delegated = binding.view != null && (fact.type as? TypeKnowledge.Exact)?.type
+            ?.let(binding.data.types::get)?.let { it is MCFPPTypeDataTemplateType && it.typeAs == type } == true
         if (type !in erasedTypes && fact.type != TypeKnowledge.Exact(type.typeId) && !template &&
+            !delegated &&
             !(binding.data.layout == StorageLayout.CompilerOnly && (fact.type as? TypeKnowledge.Exact)?.type
                 ?.let(binding.data.types::get)?.let { staticLayoutAccessible(it, type) } == true)) return null
         val constant = (fact.value as? ValueKnowledge.Constant)?.value ?: return null
@@ -491,6 +505,11 @@ object StorageAccess {
         if (value is DataTemplateObject || value is NBTListConcrete || value is NBTDictionaryConcrete || value is NBTMapConcrete) return if (value is MCFPPValue<*> && snapshot(value) == null)
             adapter(value.type, value.identifier, binding).apply { setAs(value); parent = value.parent; storageReadVersion = version } else value
         if (value is MCAny) return value
+        if (value is top.mcfpp.core.lang.obj.TypeDataTemplateObject) {
+            value.delegateVar = read(value.delegateVar).also { it.parent = value }
+            value.storageReadVersion = version
+            return value
+        }
         val constant = snapshot(value)
         if (constant != null && !value.isDynamic) {
             restore(value.type, constant, value.identifier)?.let { re ->
@@ -578,8 +597,14 @@ object StorageAccess {
             encodeTo(binding.path, source)
         }
         binding.data.types[actualType(source).typeId] = actualType(source)
-        binding.data.write(binding.place, ValueFacts(if (source is MCAny) source.typeKnowledge else TypeKnowledge.Exact(source.type.typeId),
-            snapshot?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown))
+        val represented = (binding.data.facts.read(binding.place)?.type as? TypeKnowledge.Exact)?.type
+            ?.let(binding.data.types::get)?.let { it as? MCFPPTypeDataTemplateType }
+            ?.takeIf { binding.view != null && it.typeAs == target.type }
+        val writtenSnapshot = if (represented != null && snapshot != null) CompilerValue.Typed(represented.typeId,
+            if (snapshot is CompilerValue.Typed) snapshot.payload else snapshot) else snapshot
+        binding.data.write(binding.place, ValueFacts(if (represented != null) TypeKnowledge.Exact(represented.typeId)
+            else if (source is MCAny) source.typeKnowledge else TypeKnowledge.Exact(source.type.typeId),
+            writtenSnapshot?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown))
         if (PathSegment.UnknownIndex !in binding.place.path) {
             binding.data.facts.forgetDescendants(binding.place)
             original?.data?.types?.let(binding.data.types::putAll)
@@ -751,6 +776,7 @@ object StorageAccess {
         }
         constantEncoding(source)?.let { emit(Commands.dataSetValue(path, it)); return }
         when (source) {
+            is top.mcfpp.core.lang.obj.TypeDataTemplateObject -> encodeTo(path, source.delegateVar)
             is MCInt -> if (source.isDataOnly) emit(Commands.dataSetFrom(path, source.nbtPath))
                 else scoreWriter(path, source.name, source.sbObject.toString(), numericTag(source.type))()
             is ScoreBool -> if (source.isDataOnly) emit(Commands.dataSetFrom(path, source.nbtPath))
@@ -775,6 +801,7 @@ object StorageAccess {
             val frozen = snapshot(value) ?: return null
             return snapshotTag(frozen)
         }
+        if (value is top.mcfpp.core.lang.obj.TypeDataTemplateObject) return constantEncoding(value.delegateVar)
         val snapshot = ValueSnapshot.of(value) ?: return null
         if (value is RangeVar) return snapshotTag(snapshot)
         if (value is MCFloatConcrete && !FloatProviders.enabled) {
@@ -909,6 +936,13 @@ object StorageAccess {
     internal fun restore(type: MCFPPType, snapshot: CompilerValue, name: String,
                         types: Map<TypeId, MCFPPType> = emptyMap()): Var<*>? {
         val payload = if (snapshot is CompilerValue.Typed) snapshot.payload else snapshot
+        if (type is MCFPPTypeDataTemplateType) {
+            val delegate = restore(type.typeAs, CompilerValue.Typed(type.typeAs.typeId, payload), name, types) ?: return null
+            return type.buildUnConcrete(name).let { it as top.mcfpp.core.lang.obj.TypeDataTemplateObject }.apply {
+                delegateVar = delegate.also { it.parent = this }
+                hasAssigned = true
+            }
+        }
         if (type == MCFPPNBTType.NBT) return snapshotTag(snapshot, type.typeId)?.let { type.build(name, it) }
         if (type == MCFPPBaseType.Range && payload is CompilerValue.Record) {
             fun endpoint(name: String): Number? {

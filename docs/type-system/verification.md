@@ -2,9 +2,29 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 阶段 104：System print 原生入口（已限定验证）
+## 阶段 105：delegated-int 模板基础（已限定验证）
 
-九种print入口（text/string/any/int/list/dict/NBT/DTO/bool）接入单context，合法 `list<*>`/`dict<*>` 通过既有native pattern桥接；闭合pattern codec不实例化ScopeVar。修复了dict wildcard解析遗漏return及stdlib缓存中的KClass恢复问题，并删除 `printVar` 与DTO输出TODO占位。
+`Seconds as int` 的delegated整数wrapper接入普通参数初始化、默认构造与dispatch；typed copy持有独立Place，`as int`视图共享原Place，immutable typed snapshot/restore与codec、ConstructorInfo恢复已接通。MCFL33→34。
+
+RED `mcfpp-delegated-int-template-red2.log`：worker1正常，exit1/BUILD FAILED in45s；XML `2026-10-06T22:58:31.135Z` 为1/1/0/0，producer4/9118。首因 `No constructor like: [int] defined in class Seconds`，后续三处 `original` 未定义；未到consumer。最初 `red.log` 包含JAVA_HOME错误及wrapper下载失败，没有运行测试worker或产生新XML，不作为测试结果。
+
+`mcfpp-delegated-int-template-stdlib.log`：exit0/BUILD SUCCESSFUL in39s，Project0/0。joint `mcfpp-delegated-int-template-final.log`：worker3正常，exit0/BUILD SUCCESSFUL in34s；LibFieldAccess XML `2026-10-06T23:11:06.462Z` 为1/0/0/0，Cache XML `23:11:12.399Z` 为3/0/0/0，共4项。source/fresh Project分别0/9118、0/9119。source/fresh模型断言通过：Seconds与int分离、copy有独立Place、`as int`视图共享Place；磁盘最终结果494和frame0检查通过，4和9是表达式中间读数。三份bin为MCFL34、285804 bytes、SHA256 `7CD88CD7C40F219871598992A817DAB725FDC6D1BF3DF2ED6F3744D76D16D0F9`，raw header `4c46434d22000000`。无Time/浮点/fullcheck/server扩展；whole17仍未完成。
+
+### 阶段 105 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 区分无效JAVA_HOME启动、真实RED、producer错误与最终磁盘验证范围。 |
+| 完整性 | 3/5 | delegated-int受测路径与Cache回归通过；未扩到Time/浮点或whole17。 |
+| 清晰性 | 4/5 | 明确4/9为中间读数，最终磁盘结果为494。 |
+| 可执行性 | 4/5 | 阶段106限定Time运算与工厂的显式context迁移。 |
+| 简洁性 | 4/5 | 保留必要失败边界及最终两个suite的证据。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 历史必要检查：System print 原生入口（阶段 104）
+
+九种print入口（text/string/any/int/list/dict/NBT/DTO/bool）接入单context，合法 `list<*>`/`dict<*>` 通过既有native pattern桥接；闭合pattern codec只保存既有集合名，native签名加载不构造pattern的ScopeVar。修复了dict wildcard解析遗漏return及stdlib缓存中的KClass恢复问题，并删除 `printVar` 与DTO输出TODO占位。
 
 分轮验证：stdlib1因两处grammar问题失败8s；stdlib2因dict wildcard返回缺失失败9s；stdlib3成功6s。joint首次在test编译期因错误的 `getFunction` 调用失败11s，无worker/XML；修正后final2的worker217失败11s，fixture读取stdlib缓存时KClass崩溃，未产生producer Project总数；stdlib4成功10s。final3 worker218失败21s，producer4/9119，失败于pattern scope `buildVar`，未到磁盘断言；stdlib5成功14s。final4 worker219失败24s，producer0/9119，source命令断言对参数 `s` 的NBT路径要求过严，未进入consumer。final5仅复查fixture：worker220正常、exit0、BUILD SUCCESSFUL in15s，fresh XML `2026-10-06T22:48:46.728Z` 为1/0/0/0；source0/9119、fresh consumer0/9120。source实际检查10个tellraw：int/bool为score，string/NBT/any/payload为NBT，其余为plain JSON文本；consumer成功导出main、payload初始化、Box.observe及Box初始化函数，实际模型与命令断言通过。没有ScoreCommandExecutor，未断言返回值/frame清理；无macro/world执行或渲染验证。Cache只在首轮独立通过，未复跑；不称最终联合2项全绿。MCFL33，source/resource/build索引三份bin均285692 bytes、SHA256 `D9185309EF9D513D04D234E8FE7D22DA837045F01668A97D1D671622A1951B63`，raw header `4c46434d21000000`。无fullcheck/server；whole17仍未完成。
 

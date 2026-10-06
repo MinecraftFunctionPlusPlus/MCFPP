@@ -2769,6 +2769,52 @@ class LibFieldAccessTest {
         check(main)
     }
 
+    @Test
+    fun delegatedIntegerTemplatesCopyAndShareViewsAcrossLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = """
+            func main(){
+                var box=Box();
+                dynamic var result=box.observe(4);
+            }
+        """
+        write("""
+            namespace fixture.fields;
+            data Seconds as int;
+            data Box {
+                func observe(initial as int)->int {
+                    var original=Seconds(initial);
+                    var copied=original;
+                    var view=copied as int;
+                    dynamic var before=view;
+                    view=9;
+                    dynamic var after=copied as int;
+                    dynamic var untouched=original as int;
+                    return before*100+after*10+untouched;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function): TypeId {
+            val machine = execute(main, output)
+            assertEquals(494, machine.read(main.scope.getVar("result") as MCInt))
+            val observe = (main.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("observe").single()
+            assertTrue(observe.compiledFunctions.isEmpty(), "Ordinary runtime input must not specialize the body")
+            val original = assertIs<top.mcfpp.core.lang.obj.TypeDataTemplateObject>(observe.scope.getVar("original"))
+            val copied = assertIs<top.mcfpp.core.lang.obj.TypeDataTemplateObject>(observe.scope.getVar("copied"))
+            val view = assertNotNull(observe.scope.getVar("view"))
+            assertEquals(original.templateType.getType().typeId, original.type.typeId)
+            assertEquals(original.type.typeId, copied.type.typeId)
+            assertNotEquals(MCFPPBaseType.Int.typeId, original.type.typeId)
+            assertNotEquals(assertNotNull(original.storageBinding).place, assertNotNull(copied.storageBinding).place)
+            assertEquals(copied.storageBinding!!.place, assertNotNull(view.storageBinding).place)
+            return original.type.typeId
+        }
+        val sourceId = check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        assertEquals(sourceId, check(main))
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

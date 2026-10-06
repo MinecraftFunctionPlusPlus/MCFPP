@@ -29,6 +29,11 @@ class NativeDataTemplateConstructor(data: DataTemplate, javaMethod: Method = Nat
     }
 
     override fun invoke(normalArgs: LinkedHashMap<String, Var<*>>, caller: CanSelectMember?): Var<*> {
+        if (data is top.mcfpp.model.compound.TypeDataTemplate) {
+            caller as top.mcfpp.core.lang.obj.TypeDataTemplateObject
+            top.mcfpp.model.compound.TypeDataTemplate.defaultConstructor(normalArgs.values.single(), caller)
+            return caller
+        }
         caller as DataTemplateObject
         //初始化
         for ((k, v) in data.preInit) {

@@ -1,6 +1,6 @@
-# 下一阶段：delegated-int 模板基础（阶段 105）
+# 下一阶段：Time 显式原生接口（阶段 106）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–103完成受测集合、数值、文本转换/拼接、predicate及StdCommands受测void入口的限定迁移；当前库格式MCFL32。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–105完成受测集合、数值、文本转换/拼接、predicate、StdCommands void、System print及delegated-int模板路径的限定迁移；当前库格式MCFL34。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -46,11 +46,15 @@ source/fresh fixture验证DamageType初始化为 `minecraft:generic`、damage宏
 
 九种print语言入口已接入单context；`NativePrintOperations`按既有组件导出，合法 `list<*>`/`dict<*>` 使用native pattern桥接和闭合pattern codec。DTO输出TODO占位与无外部调用的 `printVar` 已删除。MCFL33；分轮验证及边界见verification.md。最终仅print fixture复查通过，Cache仅首轮通过，不代表最终joint2全绿。未验证macro/world执行、frame清理或tellraw渲染。
 
-### 阶段 105 计划：delegated-int 模板基础
+### 阶段 105：delegated-int 模板基础（已限定验证）
 
-验证 `data Seconds as int`：未知普通int构造参数、typed copy与 `as int` 共享Place视图并保持读写一致。使用一个source/fresh实际磁盘fixture检查值4/9/494与frame0，同时修复specialized type构造身份、ctor参数/dispatch、StorageAccess/snapshot/restore与视图证明，并持久化 `typeAs`。预计需要MCFL34；具体标准库重建和必要回归由实现后的ABI决定。尚未编码或验证，不扩展到Time或其他MNI。
+`data Seconds as int` delegated整数wrapper的普通参数初始化、默认构造与dispatch已接通；typed copy保持独立Place，`as int`视图共享原Place，immutable typed snapshot/restore、codec与ConstructorInfo恢复已接通。MCFL33→34。RED的构造器失败修复后，指定fixture与Cache回归共4项全过；source/fresh磁盘最终值494和frame0通过，4/9仅为中间读数。详见verification.md。不扩展Time或其他MNI。
 
-阶段88–104详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL33。
+### 阶段 106 计划：Time 显式原生接口
+
+迁移 `TimeData` 的12项运算及 `TimeObjectData` 的6个factory到单context；context新增由实际 `NativeFunction` 提供的 `declaredReturnType`，函数仍是命令所属caller。Time结果创建新wrapper，不clone receiver；核心整数运算/比较直接调用既有MCInt实现。移除六倍率工厂的 `GlobalScope` 静态缓存，保持倍率1/20/1200/72000/144000/24000。计划一个source/fresh磁盘fixture观察普通未知int、工厂/运算及原receiver保持不变；预计MCFL35。尚未编码或验证。
+
+阶段88–105详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL34。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

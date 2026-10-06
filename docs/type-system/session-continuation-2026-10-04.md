@@ -4,11 +4,15 @@
 
 ## 当前进度
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段104已完成限定验证，MCFL33；阶段103提交`683a46e`、阶段102提交`07670f1`、阶段101提交`ded6ce8`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段105 delegated-int模板路径已完成限定验证，MCFL34；阶段104提交`c862427`、阶段103提交`683a46e`、阶段102提交`07670f1`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
 
 ### 阶段104：System print原生入口（已限定验证）
 
-九种print入口接入显式context；合法 `list<*>`/`dict<*>` 通过既有native pattern桥接，闭合pattern codec避免实例化ScopeVar。删除 `printVar` 及DTO输出TODO占位。历轮stdlib/fixture失败、修复及最终证据见verification.md；最终仅fixture复查通过，Cache首轮独立通过。source检查10个tellraw，consumer成功导出相关main/初始化/observe文件；未用ScoreCommandExecutor，无返回值/frame清理、macro/world执行或渲染结论。当前bin为MCFL33、285692 bytes，三份SHA256一致。下一阶段105聚焦 `data Seconds as int` 的普通参数初始化、typed copy及共享Place读写，计划见next-stage-plan.md。
+九种print入口接入显式context；合法 `list<*>`/`dict<*>` 通过既有native pattern桥接，闭合pattern codec只保存既有集合名，native签名加载不构造pattern的ScopeVar。删除 `printVar` 及DTO输出TODO占位。历轮stdlib/fixture失败、修复及最终证据见verification.md；最终仅fixture复查通过，Cache首轮独立通过。source检查10个tellraw，consumer成功导出相关main/初始化/observe文件；未用ScoreCommandExecutor，无返回值/frame清理、macro/world执行或渲染结论。阶段104的bin为MCFL33、285692 bytes，三份SHA256一致。
+
+### 阶段105：delegated-int模板基础（已限定验证）
+
+`Seconds as int` 的普通参数初始化、默认构造与dispatch已接通；typed copy保持独立Place，`as int`视图共享Place，并恢复immutable typed snapshot/restore。正式RED首因Seconds缺少int构造器，后续3处名称未定义，合计4个producer错误，修复后stdlib Project0/0、指定fixture与Cache共4项通过。source/fresh磁盘最终结果494、frame0断言通过，4/9为中间读数；三份MCFL34 bin为285804 bytes且SHA256一致。细节见verification.md。下一阶段106计划Time运算及factory的显式context迁移，尚未编码/验证，见next-stage-plan.md。
 
 ### 用户最新规则（2026-10-06）
 
