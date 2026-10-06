@@ -1,8 +1,14 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段61共26个不同用例跨轮各自通过（首轮26项24通过/2失败，修复后仅重跑两失败方法并通过），不是一次最终联合26项；MCFL13 `bin.mclib` 282180 bytes未变。最近完整检查仍属于提交 `72dc557`，共346项；本轮未运行完整check或实际Minecraft服务端，整个迁移仍未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段62目录/ZIP/JAR模块资源复制与既有模板初始化单次联合11项通过；MCFL13 `bin.mclib` 282180 bytes未变。最近完整检查仍属于提交 `72dc557`，共346项；本轮未运行完整check或实际Minecraft服务端，整个迁移仍未完成。
 
-## 最新必要检查：恢复导入成员 owner 与模板 scope（阶段 61）
+## 最新必要检查：目录与归档模块资源复制（阶段 62）
+
+`Project.readFromDIR/JAR/ZIP`保留来源`resourcePath`；归档module入口路径包含`datapack/`，`FileUtils.extractTo`剥除完整`sourceDir/`并去掉残余前导斜杠；缺少packages字段的base-only module继续导入。JAR/ZIP reader关闭archive handle，测试临时目录可清理。目录、ZIP、JAR三类真实库来源均精确复制base-only module的资源、函数及tag；`copyImport=false`时不导出Imports。
+
+阶段62红测fresh XML `2026-10-06T00:17:38.651Z`，3项全部因缺 `function/marker.mcfunction` 失败。修复后唯一联合验证LibModuleCopyTest3 + TemplateInitializationTest8，共11项全过、0 failures/errors/skips、Gradle exit0/BUILD SUCCESSFUL in52s。fresh XML时间戳 `2026-10-06T00:22:51.552Z`、`00:22:53.265Z`。日志 `mcfpp-library-module-copy-red.log` 与 `mcfpp-library-module-copy-final.log`。MCFL13/bin282180未变，无stdlib重建、fullcheck或服务器验证。ZipFile关闭资源参考 [Java ZipFile.close](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/zip/ZipFile.html#close()) 与 [Kotlin use](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin.io/use.html)。
+
+## 历史必要检查：恢复导入成员 owner 与模板 scope（阶段 61）
 
 `FieldInfo`保留无参 `get()`，新增owner参数并复用restore；`DataTemplateInfo`普通/泛型模板通过`field.get(template)`恢复canonical field scope。修复的是本地方法owner与方法scope.parent中canonical field优先项，不是Var字段owner。三个`FunctionInfo`恢复已序列化的`isAbstract`。参数NBT/score/return/Symbol/Place无需重绑。
 

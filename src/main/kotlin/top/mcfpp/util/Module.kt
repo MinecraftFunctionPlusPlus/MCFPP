@@ -63,14 +63,14 @@ class Module(var id: String) {
             for (b in base){
                 val target = targetRoot.resolve(b.id)
                 for (provide in b.provides){
-                    val source = "$id/data/$provide"
+                    val source = "datapack/$id/data/$provide"
                     it.extractTo(source, target.absolutePathString())
                 }
             }
             for (p in packages.filter { entry -> entry.value }.keys){
                 val target = targetRoot.resolve(p.id)
                 for (provide in p.provides){
-                    val source = "$id/data/$provide"
+                    val source = "datapack/$id/data/$provide"
                     it.extractTo(source, target.absolutePathString())
                 }
             }
@@ -105,7 +105,7 @@ class Module(var id: String) {
                 for (i in base) {
                     module.base.add(Package(i.key).apply { provides.addFirst(i.value as String) })
                 }
-                val packages = mjson.getJSONObject("packages")?: continue
+                val packages = mjson.getJSONObject("packages") ?: JSONObject()
                 for ((key, value) in packages) {
                     if(value is String){
                         val qwq = Package(key)

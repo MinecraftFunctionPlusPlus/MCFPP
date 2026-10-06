@@ -119,7 +119,7 @@ object FileUtils {
             .filter { it.name.startsWith("$sourceDir/") }
             .forEach { entry ->
                 //LogProcessor.debug("Extracting $entry.name to $targetDir")
-                val outputFile = File(outputDir, entry.name.removePrefix(sourceDir))
+                val outputFile = File(outputDir, entry.name.removePrefix("$sourceDir/"))
                 if (entry.isDirectory) {
                     outputFile.mkdirs()
                 } else {

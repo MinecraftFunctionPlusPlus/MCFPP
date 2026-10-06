@@ -349,28 +349,32 @@ object Project {
 
 
         fun readFromJar(path: String){
-            val jarFile = JarFile(path)
             if(!Path(path).exists()){
                 LogProcessor.warn("Cannot find jar at: $path")
                 return
             }
-            val jarEntry = jarFile.getJarEntry("datapack/bin.mclib")
-            if (jarEntry != null) {
-                jarFile.getInputStream(jarEntry).use {
-                    LibBinReader.readFromStream(it)
+            JarFile(path).use { jarFile ->
+                val jarEntry = jarFile.getJarEntry("datapack/bin.mclib")
+                if (jarEntry != null) {
+                    jarFile.getInputStream(jarEntry).use {
+                        LibBinReader.readFromStream(it)
+                    }
+                }else{
+                    LogProcessor.warn("Cannot find lib file at: ${jarFile.name}")
                 }
-            }else{
-                LogProcessor.warn("Cannot find lib file at: ${jarFile.name}")
-            }
-            val moduleEntry = jarFile.getJarEntry("datapack/module.json")
-            if (moduleEntry != null) {
-                jarFile.getInputStream(moduleEntry).use {stream ->
-                    val json = stream.reader().readText()
-                    val jsonObject: JSONObject = JSONObject.parse(json) as JSONObject
-                    modules += Module.fromJson(jsonObject).onEach { it.type = ModuleType.JAR }
+                val moduleEntry = jarFile.getJarEntry("datapack/module.json")
+                if (moduleEntry != null) {
+                    jarFile.getInputStream(moduleEntry).use {stream ->
+                        val json = stream.reader().readText()
+                        val jsonObject: JSONObject = JSONObject.parse(json) as JSONObject
+                        modules += Module.fromJson(jsonObject).onEach {
+                            it.type = ModuleType.JAR
+                            it.resourcePath = Path(path)
+                        }
+                    }
+                }else{
+                    LogProcessor.warn("Cannot find module.json at: ${jarFile.name}")
                 }
-            }else{
-                LogProcessor.warn("Cannot find module.json at: ${jarFile.name}")
             }
         }
 
@@ -388,7 +392,10 @@ object Project {
                 moduleFile.inputStream().use {stream ->
                     val json = stream.reader().readText()
                     val jsonObject: JSONObject = JSONObject.parse(json) as JSONObject
-                    modules += Module.fromJson(jsonObject).onEach { it.type = ModuleType.DIR }
+                    modules += Module.fromJson(jsonObject).onEach {
+                        it.type = ModuleType.DIR
+                        it.resourcePath = Path(directory)
+                    }
                 }
             }else{
                 LogProcessor.warn("Cannot find module.json at: $directory")
@@ -396,26 +403,30 @@ object Project {
         }
 
         fun readFromZip(path: String){
-            val zipFile = ZipFile(path)
             if(!Path(path).exists()){
                 LogProcessor.warn("Cannot find zip at: $path")
                 return
             }
-            val zipEntry = zipFile.getEntry("datapack/bin.mclib")
-            if (zipEntry!= null) {
-                zipFile.getInputStream(zipEntry).use {
-                    LibBinReader.readFromStream(it)
+            ZipFile(path).use { zipFile ->
+                val zipEntry = zipFile.getEntry("datapack/bin.mclib")
+                if (zipEntry!= null) {
+                    zipFile.getInputStream(zipEntry).use {
+                        LibBinReader.readFromStream(it)
+                    }
                 }
-            }
-            val moduleEntry = zipFile.getEntry("datapack/module.json")
-            if (moduleEntry != null) {
-                zipFile.getInputStream(moduleEntry).use {stream ->
-                    val json = stream.reader().readText()
-                    val jsonObject: JSONObject = JSONObject.parse(json) as JSONObject
-                    modules += Module.fromJson(jsonObject).onEach { it.type = ModuleType.ZIP }
+                val moduleEntry = zipFile.getEntry("datapack/module.json")
+                if (moduleEntry != null) {
+                    zipFile.getInputStream(moduleEntry).use {stream ->
+                        val json = stream.reader().readText()
+                        val jsonObject: JSONObject = JSONObject.parse(json) as JSONObject
+                        modules += Module.fromJson(jsonObject).onEach {
+                            it.type = ModuleType.ZIP
+                            it.resourcePath = Path(path)
+                        }
+                    }
+                }else{
+                    LogProcessor.warn("Cannot find module.json at: ${zipFile.name}")
                 }
-            }else{
-                LogProcessor.warn("Cannot find module.json at: ${zipFile.name}")
             }
         }
 

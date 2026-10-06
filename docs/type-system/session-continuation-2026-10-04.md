@@ -1,10 +1,10 @@
 # 类型系统续接记录（2026-10-04）
 
-本轮从 2026-10-04 续接，首次存储/视图纵向路径通过 161 项测试。阶段54已提交`107e8ac`，阶段55已提交`4b5b7bd`，阶段56已提交`0fb7cb8`，阶段57已提交`3865673`。阶段58普通模板inferred字段已接入部分声明绑定支持并提交`e6f83fe`，37个不同必要用例跨轮各自通过。阶段59导入声明环境恢复与MCFL13重建后，50项指定测试联合通过，提交`6200561`。阶段60 consumer函数体导出限定回归13项联合通过，提交`3468341`。阶段61的26个不同用例跨轮各自通过。最近完整346项仍属于`72dc557`；整个17项重构未完成。
+本轮从 2026-10-04 续接，首次存储/视图纵向路径通过 161 项测试。阶段54已提交`107e8ac`，阶段55已提交`4b5b7bd`，阶段56已提交`0fb7cb8`，阶段57已提交`3865673`。阶段58普通模板inferred字段已接入部分声明绑定支持并提交`e6f83fe`，37个不同必要用例跨轮各自通过。阶段59导入声明环境恢复与MCFL13重建后，50项指定测试联合通过，提交`6200561`。阶段60 consumer函数体导出限定回归13项联合通过，提交`3468341`。阶段61的26个不同用例跨轮各自通过。阶段62目录/JAR/ZIP资源复制与模板初始化联合11项通过。最近完整346项仍属于`72dc557`；整个17项重构未完成。
 
 ## 当前进度
 
-阶段52 NBT地址与宏捕获已提交`dadb6cc`；阶段53对象身份`890833b`；阶段54候选解析`107e8ac`；阶段55 receiver/帧`4b5b7bd`；阶段56有序RHS持久化与MCFL12`0fb7cb8`；阶段57 const真实初始化`3865673`。阶段58普通模板 inferred 字段已接入限定语法域的声明绑定并提交`e6f83fe`；37个不同必要测试分轮各自通过。阶段59导入声明环境恢复已提交`6200561`，MCFL13标准库重建成功，六套件联合50项全过。阶段60限定消费端函数body导出已实现，TemplateInitialization6 + ConstructorExecution7联合13项通过。阶段60已提交`3468341`；阶段61 owner/scope限定迁移已完成并经26个用例跨轮验证。下一步阶段62修复模块资源路径恢复；imported object自动load仍独立未解决。
+阶段52 NBT地址与宏捕获已提交`dadb6cc`；阶段53对象身份`890833b`；阶段54候选解析`107e8ac`；阶段55 receiver/帧`4b5b7bd`；阶段56有序RHS持久化与MCFL12`0fb7cb8`；阶段57 const真实初始化`3865673`。阶段58普通模板 inferred 字段已接入限定语法域的声明绑定并提交`e6f83fe`；37个不同必要测试分轮各自通过。阶段59导入声明环境恢复已提交`6200561`，MCFL13标准库重建成功，六套件联合50项全过。阶段60限定消费端函数body导出已实现，TemplateInitialization6 + ConstructorExecution7联合13项通过。阶段60已提交`3468341`；阶段61 owner/scope限定迁移已完成并经26个用例跨轮验证。阶段62模块资源复制已验证，MCFL13/bin282180不变。下一步阶段63持久化函数accessModifier；imported object自动load仍独立未解决。
 用户随后要求继续完成并按进度提交；该轮实现已提交为 747f0b4，擦除 while 不动点绑定提交为 467343f，list/dict 元素贯通提交为 a1bafaa，集合编码与项目隔离提交为 702fbce，嵌套静态副本及编译上下文隔离提交为 8ce9fde，静态集合擦除通道及元数据缓存隔离提交为 dd3b43a，完整静态 as 视图的共享写入提交为 e73fa03，字典成员统一及输入帧修复提交为 6315054，列表共享成员及查找后端提交为 217a5cd，字典整体合并事实与空键边界提交为 47a7b5c，map 共享成员、位置与 entry 布局迁移提交为 fa64338，只读列表与 NBT 数组迁移提交为 a623399，实际 IR 调用与递归效果分析提交为 f5a9902。集合 IR 控制流与子位置证据提交为 72dc557。动态列表 IR 提交为 9f74d5e。字典成员 IR 提交为 4bed87f。列表变更成员 IR 提交为 21224b0。列表查询与按值删除 IR 提交为 ea7dca8。NBT 数组 IR 提交为 313886b。map 索引与成员 IR 提交为 9245a62。map 投影 IR 提交为 ab1f3cb。do…while 与闭合整数区间循环 IR 提交为 711331e。IR 词法作用域提交为 eef6d44。调用子形状提交为 0c3e65f。整数范围值和命名范围 IR 提交为 8aee6b7。递归返回/写回形状提交为 eb83a60。26.3 原生浮点 IR 提交为 7cd1a69。2026-10-06 继续显式转换 IR，阶段 47 提交 b56ede9，阶段 48 提交 860c799。阶段 49 旧浮点加减提交 `82d955b`，阶段 50 乘除代码提交 `bee57c1`、静态审计文档提交 `dfdb99a`；阶段 51 旧浮点 IR 最终复查 20 项通过。阶段 49 必要检查 46 项、阶段 50 必要检查 36 项。MCFL 保持 11，未改签名/缓存结构且未重建 bin.mclib。最近完整检查仍为 72dc557 的 346 项，整体 17 项迁移未完成。
 
 本次用户要求读取文件，继续上一会话尚未完成的项目任务。读取交接与下一阶段计划后，继续类型系统迁移，未扩展到独立 MNI 元编程计划。
@@ -178,9 +178,15 @@ field annotation 在 MCFPPAnnotationVisitor 转存后触发 helper 补 annotatio
 
 首轮TemplateInitialization8 + ConstructorExecution7 + SpecializationPolicy11共26项，24通过/2失败。其后只复查两个失败方法并通过，fresh XML `2026-10-06T00:09:23.003Z`，2/0/0/0；合计26个不同用例跨轮各自全通过，非单次最终联合26项。首轮TemplateInitialization XML `00:04:27.892Z` 有2失败；ConstructorExecution `00:04:40.457Z`、SpecializationPolicy `00:04:41.396Z`均全过。实际库往返检查实例927/generic12、object7及frame0，并保留继承owner和静态路径。MCFL13/bin282180不变，无stdlib重建/fullcheck/服务器测试。日志 `mcfpp-library-member-owner-red.log`、`mcfpp-library-member-owner-final.log`、`mcfpp-library-member-owner-complete.log`。
 
+## 阶段 62：模块资源复制与归档路径
+
+`Project.readFromDIR/JAR/ZIP`恢复真实resourcePath；归档module使用`datapack/`前缀，extractTo剥除完整sourceDir/并规整entry路径，base-only module不因无packages字段丢失；JAR/ZIP关闭handle。目录、ZIP、JAR fixture精确复制base-only资源、函数和tag，`copyImport=false`不导出Imports。
+
+红测三项均缺`function/marker.mcfunction`（XML `2026-10-06T00:17:38.651Z`）。最终单次联合LibModuleCopy3 + TemplateInitialization8，11项全通过、0失败/错误/跳过，XML时间戳`00:22:51.552Z`和`00:22:53.265Z`，Gradle exit0/52s。MCFL13/bin282180不变，无stdlib重建/fullcheck/服务器。资源关闭参考链接见verification.md。日志 `mcfpp-library-module-copy-red.log`、`mcfpp-library-module-copy-final.log`。
+
 ## 后续仍需完成
 
-- 标量/擦除及可编码 list/dict/map/ImmutableList/NBT 数组、范围值和已证明整数端点的命名范围迭代已迁入 IR，26.3 原生浮点、short/double/nbt 载荷、标量/数组显式转换及 map 两种投影也已接入；旧浮点 IR 最终复查20项通过，旧return ABI保留。阶段52–57提交状态见Git历史；阶段58限定语法域实现已提交`e6f83fe`。阶段59导入声明环境已持久化namespace/unsolvedImports，并恢复各自FileScope currFile；MCFL13重建后50项联合通过。阶段60限定消费端body导出已实现并13项联合通过；阶段61受支持模板方法owner/scope已恢复，imported object自动load仍未解决；phase56 consume重复继承警告待清理。下一步阶段62修复模块资源路径恢复。其余集合成员、编译器专用集合、未知端点范围形参/浮点范围/通用迭代器、模板/泛型/T!等尚未统一。旧转换和DataObject等来源仍走适配；无宏目标上未知长度的负数字面下标仍走旧边界。
+- 标量/擦除及可编码 list/dict/map/ImmutableList/NBT 数组、范围值和已证明整数端点的命名范围迭代已迁入 IR，26.3 原生浮点、short/double/nbt 载荷、标量/数组显式转换及 map 两种投影也已接入；旧浮点 IR 最终复查20项通过，旧return ABI保留。阶段52–57提交状态见Git历史；阶段58限定语法域实现已提交`e6f83fe`。阶段59导入声明环境已持久化namespace/unsolvedImports，并恢复各自FileScope currFile；MCFL13重建后50项联合通过。阶段60限定消费端body导出已实现并13项联合通过；阶段61受支持模板方法owner/scope已恢复，imported object自动load仍未解决；phase56 consume重复继承警告待清理。阶段62模块资源路径已修复并通过限定回归；下一步阶段63持久化accessModifier。其余集合成员、编译器专用集合、未知端点范围形参/浮点范围/通用迭代器、模板/泛型/T!等尚未统一。旧转换和DataObject等来源仍走适配；无宏目标上未知长度的负数字面下标仍走旧边界。
 - 参数相关 static 已知子位置、未知列表范围、普通集合返回/static 整体替换子形状与递归效果不动点已接入受限 IR 图；同一类型/形状输入的递归返回及写回已求解，输入变化仍保守。继续扩展其余集合、成员、全局、实体及全部调用位置。无法证明的函数仍采用未知屏障，原始命令跨函数修改物理记分板与帧恢复仍需核实。
 - 未知字典字符串键的运行时路径后端、其余原生成员/集合的编码能力检查、实体路径、全部布局访问诊断、模板方法与构造仍需完成迁移；map 的字符串值键和可编码投影已接入，但编译器专用值及其余控制语句仍需扩展。本轮递归样例不代表完整帧分配覆盖全部类型。
 - MNI 显式上下文、值/位置接口及其余成员签名统一未完成；Concrete 体系、hasStoredInStack、trackLost 等旧状态仍存在。
@@ -190,15 +196,15 @@ field annotation 在 MCFPPAnnotationVisitor 转存后触发 helper 补 annotatio
 
 ## 本轮自检
 
-平均3.8/5；阶段58限定语法域复用IR私有图Lowering/FlowAnalysis，阶段59 MCFL13和联合50项通过，阶段60包含磁盘consumer执行的13项检查全绿；阶段61首轮26项24/2，定向修复后另2项通过，证据按跨轮范围记录。阶段61恢复受支持模板方法owner/scope；模块资源路径、imported object自动load、未覆盖成员语义、phase56继承警告及其余迁移/服务器验证仍未完成。
+平均3.8/5；阶段58限定语法域复用IR私有图Lowering/FlowAnalysis，阶段59 MCFL13和联合50项通过，阶段60包含磁盘consumer执行的13项检查全绿；阶段61首轮26项24/2、定向复查2项通过，证据按跨轮范围记录；阶段62目录/JAR/ZIP联合11项全过。阶段61恢复受支持模板方法owner/scope；imported object自动load、未覆盖成员语义、phase56继承警告及其余迁移/服务器验证仍未完成。
 
 | 维度 | 评分 | 证据与改进 |
 | --- | --- | --- |
-| 准确性 | 4/5 | 阶段58分轮37项、阶段59联合50项、阶段60磁盘执行13项和阶段61跨轮26用例分别记录；包含红测及fresh XML证据 |
-| 完整性 | 3/5 | 普通模板 inferred 声明绑定及库成员owner恢复仅覆盖列出的语义；模块资源路径、object自动load、其他模板/泛型/T!、集合/MNI与服务器验证仍未完成 |
+| 准确性 | 4/5 | 阶段58分轮37项、阶段59联合50项、阶段60联合13项（含消费包磁盘执行）、阶段61跨轮26用例和阶段62联合11项分别记录；包含红测及fresh XML证据 |
+| 完整性 | 3/5 | 普通模板 inferred 声明绑定及库成员owner恢复仅覆盖列出的语义；imported object自动load、其他模板/泛型/T!、集合/MNI与服务器验证仍未完成 |
 | 清晰度 | 4/5 | 区分标准库编译警告、语言诊断与测试夹具错误，历史保留 |
-| 可操作性 | 4/5 | 阶段58复用 PrimitiveCompiler私有分析图；阶段60磁盘consumer回归13项通过；阶段61限定FieldInfo/DataTemplateInfo/FunctionInfo恢复 |
+| 可操作性 | 4/5 | 阶段61限定FieldInfo/DataTemplateInfo/FunctionInfo恢复；阶段62目录/ZIP/JAR实际复制回归及模板初始化11项通过；下一步仍需补库权限与词法调用上下文 |
 | 简洁性 | 4/5 | 只更新当前阶段事实与交接，不重写历史记录 |
 
-优先改进：阶段62修复模块资源路径恢复，再界定imported object自动load所有权；阶段61仅覆盖限定导入成员owner与canonical scope。完整性仍为3/5，因为其余模板/泛型/T!、控制流/集合、MNI、自动加载与实际服务器验证仍有缺口。
+优先改进：阶段63持久化并验证函数accessModifier，恢复真实库调用权限语义；阶段61仅覆盖限定导入成员owner与canonical scope。完整性仍为3/5，因为其余模板/泛型/T!、控制流/集合、MNI、自动加载与实际服务器验证仍有缺口。
 自检：用户能复核实现和测试，也会看到整项重构仍未结束；没有把阶段通过写成项目全部完成。
