@@ -555,7 +555,12 @@ class MCFPPExprVisitor(
         //没有数组选取
         val qwq: String = ctx.Identifier().text
         var re = if(currSelector == null) {
-            val pwp = Function.currFunction.scope.getVar(qwq)
+            val member = Function.currFunction.scope.getVar(qwq, Function.currFunction)
+            if (!member.second) {
+                LogProcessor.error("Cannot access member $qwq")
+                return@withCompilationContext UnknownVar(qwq).apply { isError = true }
+            }
+            val pwp = member.first
             if(pwp != null) {
                 if(MCFPPImVisitor.inLoopStatement(ctx) && pwp is MCFPPValue<*>){
                     pwp.toDynamic(true)

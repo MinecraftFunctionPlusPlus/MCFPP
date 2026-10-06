@@ -1,6 +1,7 @@
 package top.mcfpp.model.scope
 
 import top.mcfpp.core.lang.Var
+import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPType
 
 /**
@@ -87,6 +88,22 @@ open class FunctionScope : SimpleScopeWithVar, SimpleScopeWithType {
         return if (p is IScopeWithVar) {
             p.getVar(key)
         } else null
+    }
+
+    fun getVar(key: String, caller: Function): Pair<Var<*>?, Boolean> {
+        val value = getVar(key) ?: return null to true
+        var source: IScope? = this
+        while (source is FunctionScope) {
+            if (source.vars.containsKey(key)) return value to true
+            source = source.parent.firstOrNull()
+        }
+        if (source is CompoundDataScope) {
+            val property = source.getProperty(key)
+            val owner = if (property != null) property.declaredParentTemplate else value.declaredParentTemplate
+            val access = property?.accessModifier ?: value.accessModifier
+            if (owner != null) return value to (caller.accessTo(owner) >= access)
+        }
+        return value to true
     }
 
     override val allVars: Collection<Var<*>>

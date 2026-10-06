@@ -1,8 +1,14 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段64 MCFL15标准库重建Project语言错误/警告0/0，`bin.mclib` 286207 bytes；最终定向字段方法1项与LogicStatementTest6单次联合7项全通过。最近完整检查仍属于提交 `72dc557`，共346项；本轮未运行完整check或实际Minecraft服务端，整个迁移仍未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段65限定字段权限检查 LibFieldAccess3 + TemplateInitialization8 单次联合11项全通过；MCFL15及`bin.mclib` 286207 bytes未变，未重建标准库。最近完整检查仍属于提交 `72dc557`，共346项；本轮未运行完整check或实际Minecraft服务端，整个迁移仍未完成。
 
-## 最新必要检查：库字段与 Property 权限（阶段 64）
+## 最新必要检查：来源感知未限定字段权限（阶段 65）
+
+`FunctionScope.getVar(key)`原始virtual lookup恰好调用一次，null时立即返回，以保留`Internal.fieldVarSet`与原始stackIndex；随后单独沿`FunctionScope`首parent链检查vars来源。任何更近的FunctionScope局部（包括祖先局部）允许；CompoundDataScope中的Property/Var按声明owner/access检查。两个visitor在读取或物化拒绝结果前诊断并返回`UnknownVar`；Concrete fallback遵守已有`isError`标记。范围是字段访问权限，不宣称普通实例未限定字段已正确寻址；不改变`Internal`查找/putVar。
+
+红测唯一方法失败于`IntruderLeak`读取继承Base.private未被拒绝（XML `2026-10-06T01:49:30.383Z`）；producer和consumer均0语言错误，正向磁盘执行的object=7、local shadow=8、Base限定字段=4已通过。最终单次LibFieldAccessTest3 + TemplateInitializationTest8共11项全通过，0 failures/errors/skips，Gradle exit0/1m09s；fresh XML时间戳`2026-10-06T01:52:42.391Z`、`01:52:52.484Z`。正负向诊断及真实库恢复通过；日志 `mcfpp-unqualified-field-access-red.log`、`mcfpp-unqualified-field-access-final.log`。MCFL15/bin286207未变，无stdlib重建、fullcheck或服务器；阶段64已提交`bda4d5a`。
+
+## 历史必要检查：库字段与 Property 权限（阶段 64）
 
 仅`PropertyInfo.accessModifier`新增持久化；Var权限原已由Kryo保存，运行时adapter复制声明access/owner，但binding仍为transient。权限判断复用恢复的声明owner，Function的`accessTo`通过`NoStack`/`Internal`沿词法caller检查。`StorageAccess.inFrame(binding, stackIndex)`创建指定帧偏移的地址view，共享data、Place及versions。旧visitor while body使用`NoStack`共享外层while frame，移除无匹配的body push并登记真实child，修复了物理帧结构。`FunctionConditionTest`按官方1.20.3 DataPack单ID、function-return及score短路条件的受限子集执行：[Minecraft Java Edition 1.20.3](https://www.minecraft.net/en-us/article/minecraft-java-edition-1-20-3)。
 

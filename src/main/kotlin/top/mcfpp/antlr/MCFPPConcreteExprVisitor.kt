@@ -209,7 +209,7 @@ class MCFPPConcreteExprVisitor(
     override fun visitVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var<*>? = withCompilationContext(ctx) {
         currSelector = null
         currSelector = visitJvmAccessExpression(ctx.jvmAccessExpression()) ?: return null
-        if(currSelector is UnknownVar){
+        if(currSelector is UnknownVar && !currSelector!!.isError){
             val typeStr = ctx.jvmAccessExpression().text
             val type = MCFPPType.parseFromString(typeStr, Function.currFunction.scope)
             if(type == null){
@@ -322,7 +322,12 @@ class MCFPPConcreteExprVisitor(
     override fun visitVarWithSuffix(ctx: mcfppParser.VarWithSuffixContext): Var<*>? = withCompilationContext(ctx) {
         val qwq: String = ctx.Identifier().text
         var re = if(currSelector == null) {
-            val pwp = Function.currFunction.scope.getVar(qwq)
+            val member = Function.currFunction.scope.getVar(qwq, Function.currFunction)
+            if (!member.second) {
+                LogProcessor.error("Cannot access member $qwq")
+                return@withCompilationContext UnknownVar(qwq).apply { isError = true }
+            }
+            val pwp = member.first
             if(pwp != null) {
                 if(pwp.isConst) {
                     pwp
@@ -348,7 +353,7 @@ class MCFPPConcreteExprVisitor(
                 re.first!!
             }
         }
-        if(re is UnknownVar && currSelector == null){
+        if(re is UnknownVar && !re.isError && currSelector == null){
             val typeStr = ctx.Identifier().text
             val type = MCFPPType.parseFromString(typeStr, Function.currFunction.scope)
             if(type == null){

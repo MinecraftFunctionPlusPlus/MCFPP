@@ -1,4 +1,4 @@
-# 下一阶段：来源感知字段解析与权限拒绝（阶段 65）
+# 下一阶段：当前实例未限定字段寻址（阶段 66）
 
 本计划的首条纵向路径已经在续接会话中实现，完整阶段和整个重构仍未完成。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
@@ -82,11 +82,15 @@ const 只限制重赋；compiler-only const 保留完整 `ValueSnapshot` 且不�
 
 持久化并恢复普通、generic、native函数的`accessModifier`；generic特化已有Function复制权限，不重复新增传递逻辑。成员检查须使用真实声明模板，表达式NoStackFunction须保留词法访问上下文，继承成员须以原声明owner判定权限。升级MCFL并重建stdlib，用真实库往返验证内部private/protected调用合法、外部及子类对基类private的访问被拒绝。final源码语义及metadata缺口独立保留，不增加无消费者的`isFinal`字段。imported object autoLoad所有权不纳入本阶段承诺。阶段63已以MCFL14真实库往返验证通过；首轮14项13通过/1失败，根因是model注入NativeFunction修改PRIVATE后第二次genIndex复用PUBLIC写快照。修正writer重写缓存后，最终LibMemberAccess3 + TemplateInitialization8 + LibCacheFormat3联合14项全过；两次stdlib Project语言诊断均0错误/0警告，最终bin285207 bytes。
 
-### 阶段 65：来源感知字段解析与权限拒绝
+### 阶段 66：当前实例未限定字段寻址
 
-先调用既有virtual raw `getVar(key)`恰好一次；若为null立即返回，以保留`Internal.fieldVarSet`和原stackIndex。随后独立从`this`开始沿`FunctionScope`首个parent逐层检查`vars`寻找来源，不再次调用`getVar`。任何更近的FunctionScope局部（包括祖先局部）直接允许；来源位于`CompoundDataScope`时，Property/Var按原声明owner与access检查。两个visitor在读取或物化被拒绝的结果前立即报错并返回`UnknownVar`。用库往返fixture验证object unqualified private=7、local shadow=8、Base限定访问=4，Intruder unqualified private被拒绝。
+来源定位确认命中`CompoundDataScope`中的普通实例成员声明后，才读取当前scope已有raw `getVar("this")`所得的真实receiver；确认其为`DataTemplateObject`后，才用`receiver.getMemberVar(key, caller)`处理该字段，允许该特定情形的raw null例外。更近FunctionScope局部直接返回原raw结果（包括`fieldVarSet`造成的null）；object/static、无owner readonly、无receiver及未解析名称继续保留原raw行为。不改全局`Internal` lookup或`putVar`。真实库fixture用constructor中的未限定`hidden=v`，if进入while执行`hidden=hidden+1`，检查值5/9、local shadow 8、protected字段6。
 
-本阶段不增加无约束的unqualified method lookup：namespace/import函数解析不等同模板成员访问。普通实例的unqualified寻址与`Internal.fieldVarSet`另留阶段66；更广的method/custom-property receiver帧、普通return跨旧while/doWhile、Native.clone owner复制、final语义、imported object autoLoad和MNI仍未解决。另有独立库往返缺口待先行red：generic类prototype目前可能通过namespace.template入口以普通`DataTemplateInfo`序列化，丢失generic类别；泛型方法测试不能证明generic类恢复。阶段64的访问权限及while帧结果见verification.md。
+阶段65已建立来源权限判定，但不声称普通实例未限定字段寻址正确。更广的method/custom-property receiver帧、普通return跨旧while/doWhile、Native.clone owner复制、final语义、imported object autoLoad和MNI仍未解决。阶段64–65访问权限与范围验证见verification.md。
+
+### 阶段 67：generic class prototype 库恢复红测
+
+独立做源码与真实库roundtrip red：generic类的readonly签名、类特化入口及namespace持久化类别均待验证。`DataTemplateParam.type`尚无赋值入口，ExprVisitor模板构造分支忽略`readOnlyArgs`且未调用`GenericDataTemplate.compile`；同时核实`namespace.template`是否把generic prototype恢复为普通`DataTemplateInfo`。泛型方法测试不能证明generic class恢复。先确认源码特化入口和namespace持久化类别两段，再界定修复范围。
 
 ### 旧浮点乘除（阶段 50 已实现）
 

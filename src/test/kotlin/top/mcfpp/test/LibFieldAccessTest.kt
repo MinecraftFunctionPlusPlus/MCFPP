@@ -125,6 +125,64 @@ class LibFieldAccessTest {
         assertTrue(Project.errorCount > 0, "The object's private static field must reject external reads")
     }
 
+    @Test fun unqualifiedFieldAccessChecksDeclarationsWithoutRejectingLocalShadows() = withLibrary { output ->
+        write("""
+            namespace fixture.fields;
+            data Base {
+                private hidden as int;
+                constructor(){ this.hidden=4; }
+                func read()->int { return this.hidden; }
+            }
+            data Intruder:Base {
+                func shadow()->int { var hidden=8; return hidden; }
+            }
+            object data Defaults {
+                private value as int=4;
+                func setValue(v as int){ Defaults.value=v; }
+                func read()->int { return value; }
+            }
+            func main(){
+                var base=Base(); var child=Intruder();
+                Defaults.setValue(7);
+                dynamic var result=Defaults.read();
+                dynamic var shadow=child.shadow(); dynamic var qualified=base.read();
+            }
+        """, output)
+        val original = GlobalScope.localNamespaces.getValue("fixture.fields").scope.getObject("Defaults")!!
+        val main = consume("""
+            import fixture.fields:*;
+            func main(){
+                var base=Base(); var child=Intruder();
+                Defaults.setValue(7);
+                dynamic var result=Defaults.read();
+                dynamic var shadow=child.shadow(); dynamic var qualified=base.read();
+            }
+        """, output)
+        assertEquals(0, Project.errorCount)
+        val restored = GlobalScope.getObject("fixture.fields", "Defaults") as ObjectDataTemplate
+        assertNotSame(original, restored)
+        val initializer = Function("initialize", main.namespace, null)
+        initializer.runInFunction {
+            Function.addCommand(Commands.stackIn())
+            restored.constructors.single().invoke(emptyList(), null)
+            Function.addCommand(Commands.stackOut())
+        }
+        main.commands.addAll(0, initializer.commands)
+        assertEquals(0, Project.errorCount)
+        val machine = execute(main, output)
+        assertEquals(7, machine.read(main.scope.getVar("result") as MCInt))
+        assertEquals(8, machine.read(main.scope.getVar("shadow") as MCInt))
+        assertEquals(4, machine.read(main.scope.getVar("qualified") as MCInt))
+        consume("""
+            import fixture.fields:*;
+            data IntruderLeak:Base {
+                func leak()->int { return hidden; }
+            }
+            func main(){ var child=IntruderLeak(); child.leak(); }
+        """, output)
+        assertTrue(Project.errorCount > 0, "An unqualified inherited private field must reject access before reading")
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")
