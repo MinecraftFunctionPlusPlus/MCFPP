@@ -34,6 +34,10 @@ abstract class ChatComponent {
     }
 }
 
+class EncodedChatComponent(private val snbt: String) : ChatComponent() {
+    override fun toCommandPart(): Command = Command(snbt)
+}
+
 /**
  * 一个json原始文本
  *

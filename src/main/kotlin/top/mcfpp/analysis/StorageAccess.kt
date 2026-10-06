@@ -1,5 +1,6 @@
 package top.mcfpp.analysis
 
+import top.mcfpp.backend.NbtEncoding
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.command.FloatProviders
@@ -17,12 +18,15 @@ import top.mcfpp.core.lang.nbt.NBTMap
 import top.mcfpp.core.lang.nbt.NBTMapConcrete
 import top.mcfpp.core.lang.nbt.NBTArray
 import top.mcfpp.core.lang.obj.DataTemplateObject
+import top.mcfpp.lib.EncodedChatComponent
+import top.mcfpp.lib.ListChatComponent
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.lib.SbObject
 import top.mcfpp.model.compound.ObjectCompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
+import top.mcfpp.nbt.tags.collection.ListTag
 import top.mcfpp.nbt.tags.primitive.IntTag
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
@@ -987,7 +991,15 @@ object StorageAccess {
             is CompilerValue.Text -> top.mcfpp.nbt.tags.primitive.StringTag(payload.value)
             else -> return null
         }
-        if (type is MCFPPDataTemplateType || type in erasedTypes || type == MCFPPBaseType.JsonText) return null
+        if (type == MCFPPBaseType.JsonText) {
+            val encoded = raw as? ListTag ?: return null
+            val components = ListChatComponent()
+            for (component in encoded) {
+                components.components.add(EncodedChatComponent(NbtEncoding.snbt(component)))
+            }
+            return type.build(name, components)
+        }
+        if (type is MCFPPDataTemplateType || type in erasedTypes) return null
         return type.build(name, raw)
     }
 

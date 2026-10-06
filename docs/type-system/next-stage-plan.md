@@ -1,10 +1,10 @@
-# 下一阶段：验证 T! 文本快照的拼接与复制（阶段 98）
+# 下一阶段：为 DataObjectData 接入 toText context（阶段 99）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–97完成受测集合、数值、toText、显式转换引用与文本拼接的限定迁移；当前库格式MCFL28。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–98完成受测集合、数值、toText、显式转换引用与文本拼接的限定迁移；当前库格式MCFL28。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
-阶段93已迁移ConversionData的49个入口；阶段94完成toText入口限定验证；阶段95改为匹配显式Java方法名；阶段96完成text receiver赋值与拼接限定验证；阶段97统一String/NBT toText入口。分轮结果见verification.md。
+阶段93已迁移ConversionData的49个入口；阶段94完成toText入口限定验证；阶段95改为匹配显式Java方法名；阶段96完成text receiver赋值与拼接限定验证；阶段97统一String/NBT toText入口；阶段98限定恢复T!文本快照与拼接。分轮结果见verification.md。
 
 ### 阶段 96：text 与拼接运算（已限定验证）
 
@@ -14,11 +14,15 @@
 
 String与NBT的toText入口已按实际receiver状态合并到各自单一Java类；移除重复Concrete入口，不扩展到其他native/effects。MCFL27→28。指定fixture与Cache回归通过；两个toText输入是literal，但拼接结果仍由临时数组append形成，尚未证明AB/AS即时折叠。
 
-### 阶段 98 计划：T! text常量拼接与普通copy
+### 阶段 98：T! text常量拼接与普通copy（已限定验证）
 
-先以一个窄RED确认 `StorageAccess.restore` 对 `JsonText` 排除后，完整T! snapshot读取是否退回runtime，以及普通copy/拼接实际是否丢失constant事实。只按必要缺口实现immutable text snapshot重建，不新增通用parser、cache或框架，不扩展到其他类型/effects。复用现有source/fresh fixture最小验证，保留未知调用屏障语义；若仅已有fixture不能区分直接literal拼接与常量来源值，应在该fixture中增加观察而不扩大套件。
+`StorageAccess.restore`恢复完整text ListTag快照为immutable encoded component，并保留声明类型。已复用单个fixture验证T! copy/concat的source与fresh磁盘结果A/A/AB/AS、return7/frame0；joined/suffixed由直接literal component list生成。MCFL28不变。
 
-阶段88–97详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL28。
+### 阶段 99 计划：DataObjectData.toText显式context
+
+只将 `DataObjectData.toText` 迁入现有 `NativeCallContext`，复用 `NativeTextOperations` 的旧DTO SNBT/runtimeNBTChat核心逻辑。保持JavaVar的host转换、Any host/getDefault/equalNull路径，暂不扩展scope。增加一个普通Payload/Box的source/fresh runtime fixture；普通data构造走 `buildUnConcrete`，不据此宣称Concrete覆盖。按最终ABI判断MCFL是否变化，必要时重建stdlib并运行Cache格式回归；不扩展effects或其他类型。
+
+阶段88–98详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL28。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

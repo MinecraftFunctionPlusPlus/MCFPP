@@ -4,7 +4,7 @@
 
 ## 当前进度
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段97已完成限定验证，MCFL28；提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段98已完成限定验证，MCFL28；阶段97提交`637d14f`，当前提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
 
 ### 用户最新规则（2026-10-06）
 
@@ -78,7 +78,23 @@ stdlib首轮 `mcfpp-native-text-context-stdlib.log` 重建成功，Project0/0，
 
 平均3.8/5，whole17完整性仍为3/5。
 
-### 阶段 97：统一文本原生方法（已限定验证）
+### 阶段 98：T! text快照、copy与即时拼接（已限定验证）
+
+两个生产文件修改不可变text snapshot恢复：完整ListTag恢复为immutable `EncodedChatComponent`，再以声明类型构造。RED `mcfpp-known-text-snapshot-red.log` worker207 exit1/FAILED17s，XML `2026-10-06T21:14:21.835Z` 1/1/0/0；producer2/9118，joined和suffixed均为text→text赋值错误，未进fresh。final `mcfpp-known-text-snapshot-final.log` worker208正常exit0/BUILD SUCCESSFUL in28s，XML `21:19:02.182Z` 1/0/0/0；source0/9118、fresh0/9119。生成consumer磁盘函数并执行得到original=A、copy=A、joined=AB、suffixed=AS、return7/frame0；日志118890/118894显示joined/suffixed直接作为含组件的flat literal list。MCFL28、bin291176/hash2550…不变；无stdlib/Cache/fullcheck/server。仅一RED及一final，无其他suite重跑。
+
+### 阶段 98 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | fresh XML、source/fresh诊断及磁盘literal payload均有证据。 |
+| 完整性 | 3/5 | 当前text快照路径受测完成，whole17仍ACTIVE未完成。 |
+| 清晰性 | 4/5 | 区分RED producer失败与final source/fresh执行。 |
+| 可执行性 | 4/5 | 阶段99限于DataObjectData.toText和一个runtime往返fixture。 |
+| 简洁性 | 4/5 | 只记录该阶段的必要错误、修复和验证。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+### 阶段 97：统一文本原生方法（历史）
 
 String与NBT的toText入口分别统一到单Java类，依照实际receiver状态分流，移除重复Concrete类和helper；未扩展其他native/effects。阶段96 fixture的两个即时常量concat初始化改为直接toText表达式。stdlib `mcfpp-unified-text-methods-stdlib.log` exit0、Project0/0、BUILD SUCCESSFUL in4s；指定联合 `mcfpp-unified-text-methods-final.log` worker206正常、exit0/BUILD SUCCESSFUL in17s。LibField XML `2026-10-06T21:02:40.295Z` 2/0/0/0，Cache XML `21:02:39.664Z` 1/0/0/0；四个source/fresh Project依次0/9119、0/9120、0/9118、0/9119。两条text fixture的payload/copy、return7/frame0断言通过；三份bin为291176 bytes、MCFL28、SHA256 `2550D9609261BC26BFB713DE15CA6630FFEAF6805B52024C37DCE5930C57381B`。
 

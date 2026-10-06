@@ -2,7 +2,25 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 阶段 97：统一文本原生方法（已限定验证）
+## 阶段 98：恢复 T! 文本快照与即时拼接（已限定验证）
+
+两个生产文件调整 `EncodedChatComponent` 的不可变SNBT快照和 `StorageAccess.restore`：完整text ListTag恢复为immutable encoded component，再以原声明类型构造；没有通用wrapper递归、新parser/cache或effects变更。MCFL28、三份291176-byte bin及SHA256 `2550D9609261BC26BFB713DE15CA6630FFEAF6805B52024C37DCE5930C57381B`不变。
+
+RED `mcfpp-known-text-snapshot-red.log` worker207、exit1/BUILD FAILED in17s；XML `2026-10-06T21:14:21.835Z` 1/1/0/0。producer为2 errors/9118 warnings；`joined`与`suffixed`两个T!声明均报 `Assign error: cannot assign text to text`，未进入fresh consumer。修复后只复查该fixture一次：`mcfpp-known-text-snapshot-final.log` worker208正常、exit0/BUILD SUCCESSFUL in28s，XML `2026-10-06T21:19:02.182Z` 1/0/0/0；producer0/9118 warnings、fresh consumer0/9119。实际磁盘mcfunction执行断言验证original=A、copied=A、joined=AB、suffixed=AS、return7/frame0；生成命令将AB/AS直接写作包含A/B或A/S组件的flat literal list（日志118890、118894）。无stdlib/Cache/fullcheck/server。
+
+### 阶段 98 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录RED producer错误、fresh通过、磁盘payload和literal-flat-list命令证据。 |
+| 完整性 | 3/5 | 限定T! text snapshot/copy/concat路径通过；whole17仍未完成。 |
+| 清晰性 | 4/5 | 清楚区分RED未到consumer与最终source/fresh执行。 |
+| 可执行性 | 4/5 | 下一步只迁移DataObjectData.toText并用runtime源码fixture验证。 |
+| 简洁性 | 4/5 | 仅保留必要轮次、范围和下一步边界。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 历史必要检查：统一文本原生方法（阶段 97）
 
 String与NBT的 `toText` 各由同一Java类处理，按实际receiver状态分流；删除重复的Concrete入口/helper，未扩展到其他native或effects。沿用现有fixture，两个即时常量concat初始化改为直接调用 `toText`。三份bin均为291176 bytes、MCFL28（raw header `4c46434d1c000000`）、SHA256 `2550D9609261BC26BFB713DE15CA6630FFEAF6805B52024C37DCE5930C57381B`。
 

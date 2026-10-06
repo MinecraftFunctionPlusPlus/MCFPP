@@ -5,7 +5,7 @@
 
 ## 当前规则（截至2026-10-07，Asia/Shanghai）
 
-用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–92完成受测集合与数值算术迁移，阶段93迁移ConversionData数值转换入口，阶段94迁移toText入口，阶段95改为显式Java方法名引用，阶段96接入text与拼接，阶段97统一String/NBT的toText入口；当前MCFL28，whole17未完成。
+用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–92完成受测集合与数值算术迁移，阶段93迁移ConversionData数值转换入口，阶段94迁移toText入口，阶段95改为显式Java方法名引用，阶段96接入text与拼接，阶段97统一String/NBT的toText入口，阶段98恢复T! text快照与即时拼接；当前MCFL28，whole17未完成。
 
 ## 当前已接入
 
@@ -34,6 +34,8 @@
 阶段96：接通text runtime assignment/三个构造路径和两项concat operator单context，JsonTextConcreteData去重注入复用JsonTextData。MCFL26→27；标准库Project0/0，三份291364-byte资源SHA256相同。首轮fixture命令执行器不支持text component append；final2在source读取到CompoundTag而预期ListTag；runtime adapter修复后final3单fixture通过，source/fresh consumer实际磁盘均验证12观察、original/copy与return7/frame0。Cache和fixture两个用例跨轮各过，final3非联合2项。未知MNI屏障物化后常量折叠路径仍未完全验证；无聊天渲染、跨帧寿命、fullcheck/server。
 
 阶段97：String/NBT各自的toText入口合并到单一Java类，依据实际receiver状态处理runtime与Concrete调用，并移除重复Concrete类及重复helper；不扩展到其他native或effects。MCFL27→28，标准库Project0/0，三份291176-byte资源SHA256相同。指定text fixture与Cache回归联合通过；即时toText输入为tag literal，但AB/AS拼接仍走临时数组append，未证明concat折叠。验证细节及重复执行说明见verification.md。whole17仍未完成。
+
+阶段98：`EncodedChatComponent`保存不可变SNBT快照，`StorageAccess.restore`将完整text ListTag恢复为immutable encoded component并保留声明类型。T! copy与拼接的source/fresh磁盘fixture得到A/A/AB/AS及return7/frame0；生成命令中joined/suffixed是flat component literal list。MCFL28/wire不变，无stdlib或Cache回归。只验证现有T! text路径，不扩展其他类型/effects，whole17仍未完成。
 
 重构不要求兼容旧 `.mcfpp` 写法；显式引用新旧语法无需并行保留。
 
