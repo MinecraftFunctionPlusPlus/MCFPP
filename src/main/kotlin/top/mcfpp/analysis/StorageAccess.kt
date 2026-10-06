@@ -153,7 +153,7 @@ object StorageAccess {
         return binding
     }
 
-    private fun seedParts(data: StoredData, parent: Place, value: Var<*>) {
+    internal fun seedParts(data: StoredData, parent: Place, value: Var<*>) {
         data.types[value.type.typeId] = value.type
         data.types[actualType(value).typeId] = actualType(value)
         if (value is MCFPPTypeVar) data.types[value.value.typeId] = value.value

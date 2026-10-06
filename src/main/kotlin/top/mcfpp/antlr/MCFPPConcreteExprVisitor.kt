@@ -406,12 +406,28 @@ class MCFPPConcreteExprVisitor(
                 re = re2.first!!
             }
         }
-        if (ctx.identifierSuffix() == null || ctx.identifierSuffix().size == 0) {
-            return re
-        } else {
-            LogProcessor.error("indexer is not supported in this context")
-            return null
+        for (suffix in ctx.identifierSuffix()) {
+            val expression = suffix.expression()
+            if (expression == null) {
+                LogProcessor.error("Only a complete index is allowed in this context")
+                return null
+            }
+            val index = MCFPPConcreteExprVisitor(enumType, lookupScope, caller).visitExpression(expression)
+            if (index == null || index.isError || top.mcfpp.analysis.ValueSnapshot.of(index) == null) {
+                LogProcessor.error("Index requires a complete compile-time value")
+                return null
+            }
+            if (re !is Indexable || re.isError || top.mcfpp.analysis.ValueSnapshot.of(re) == null) {
+                LogProcessor.error("Cannot index an incomplete value of ${re.type}")
+                return null
+            }
+            re = (re as Indexable).getByIndex(index).get()
+            if (re.isError || top.mcfpp.analysis.ValueSnapshot.of(re) == null) {
+                LogProcessor.error("Indexed value requires a complete compile-time value")
+                return null
+            }
         }
+        return re
     }
 
     @Suppress("ASSIGNED_BUT_NEVER_ACCESSED_VARIABLE", "UNUSED_VALUE")

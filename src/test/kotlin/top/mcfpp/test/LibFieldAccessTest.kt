@@ -6,14 +6,17 @@ import top.mcfpp.Project
 import top.mcfpp.ProjectConfig
 import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.analysis.ValueSnapshot
+import top.mcfpp.analysis.StorageLayout
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.MCFPPTypeVar
 import top.mcfpp.core.lang.obj.DataTemplateObject
+import top.mcfpp.core.lang.nbt.NBTListConcrete
 import top.mcfpp.io.DatapackCreator
 import top.mcfpp.io.LibBinFormat
 import top.mcfpp.model.Member.AccessModifier
 import top.mcfpp.model.compound.ObjectDataTemplate
+import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.GenericDataTemplate
 import top.mcfpp.model.compound.CompiledGenericDataTemplate
 import top.mcfpp.model.function.Function
@@ -745,6 +748,103 @@ class LibFieldAccessTest {
         assertEquals(4, machine.read(main.scope.getVar("firstResult") as MCInt))
         assertEquals(9, machine.read(main.scope.getVar("secondResult") as MCInt))
         assertEquals(7, machine.read(main.scope.getVar("listResult") as MCInt))
+    }
+
+    @Test fun frozenTypeCollectionsShareCanonicalSpecializationsAcrossLibraryRoundTrip() = withLibrary { output ->
+        write("""
+            namespace fixture.fields;
+            func readBundle(arg as Bundle<[Leaf]>)->int { return arg.read(); }
+            data Leaf {
+                private value as int;
+                constructor(v as int){ this.value=v; }
+                func read()->int { return this.value; }
+            }
+            data Cell<T as type> {
+                private value as T;
+                constructor(v as T){ this.value=v; }
+                func read()->T { return this.value; }
+            }
+            data Bundle<Types as list<type>> {
+                private cell as Cell<(Types[0])>;
+                constructor(v as Cell<(Types[0])>){ this.cell=v; }
+                func read()->int { return this.cell.read().read(); }
+            }
+            func main(){
+                var leafType=Leaf;
+                var types as list<type> = [leafType];
+                var first=Bundle<types>(Cell<Leaf>(Leaf(4)));
+                var second=Bundle<[Leaf]>(Cell<Leaf>(Leaf(9)));
+                dynamic var firstResult=readBundle(first);
+                dynamic var secondResult=readBundle(second);
+            }
+        """, output)
+
+        fun checkBundle(bundle: CompiledGenericDataTemplate, leaf: DataTemplate,
+                        cellPrototype: GenericDataTemplate): CompiledGenericDataTemplate {
+            val types = assertIs<NBTListConcrete>(bundle.scope.getVar("Types"))
+            assertEquals(StorageLayout.CompilerOnly, types.storageBinding!!.data.layout)
+            assertNotNull(ValueSnapshot.of(types))
+            val leafType = assertIs<MCFPPTypeVar>(types.value.single()).value
+            assertSame(leaf, assertIs<MCFPPDataTemplateType>(leafType).template)
+            val cell = assertIs<CompiledGenericDataTemplate>(assertIs<MCFPPDataTemplateType>(bundle.scope.getVar("cell")!!.type).template)
+            assertSame(cellPrototype, cell.originTemplate)
+            assertSame(cell, assertIs<MCFPPDataTemplateType>(bundle.constructors.single().normalParams.single().type).template)
+            assertSame(leaf, assertIs<MCFPPDataTemplateType>(cell.scope.getVar("value")!!.type).template)
+            assertSame(leaf, assertIs<MCFPPDataTemplateType>(cell.constructors.single().normalParams.single().type).template)
+            assertSame(leaf, assertIs<MCFPPDataTemplateType>(cell.scope.functions.getValue("read").single().returnType).template)
+            return cell
+        }
+
+        val sourceScope = GlobalScope.localNamespaces.getValue("fixture.fields").scope
+        val sourceLeaf = sourceScope.getTemplate("Leaf")!!
+        val sourceCellPrototype = assertIs<GenericDataTemplate>(sourceScope.getTemplate("Cell"))
+        val sourceBundlePrototype = assertIs<GenericDataTemplate>(sourceScope.getTemplate("Bundle"))
+        val sourceMain = sourceScope.functions.getValue("main").single()
+        val sourceFirst = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(sourceMain.scope.getVar("first")).templateType)
+        val sourceSecond = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(sourceMain.scope.getVar("second")).templateType)
+        assertSame(sourceFirst, sourceSecond)
+        assertSame(sourceBundlePrototype, sourceFirst.originTemplate)
+        val sourceCell = checkBundle(sourceFirst, sourceLeaf, sourceCellPrototype)
+        assertSame(sourceFirst, assertIs<MCFPPDataTemplateType>(sourceScope.functions.getValue("readBundle").single().normalParams.single().type).template)
+        val sourceSnapshot = ValueSnapshot.of(sourceFirst.scope.getVar("Types"))!!
+        assertEquals(sourceSnapshot, ValueSnapshot.of(sourceSecond.scope.getVar("Types")))
+        val sourceBundleId = sourceFirst.getType().typeId
+        val sourceCellId = sourceCell.getType().typeId
+
+        val main = consume("""
+            import fixture.fields:*;
+            func main(){
+                var second=Bundle<[Leaf]>(Cell<Leaf>(Leaf(9)));
+                var leafType=Leaf;
+                var types as list<type> = [leafType];
+                var first=Bundle<types>(Cell<Leaf>(Leaf(4)));
+                dynamic var firstResult=readBundle(first);
+                dynamic var secondResult=readBundle(second);
+            }
+        """, output)
+        assertEquals(0, Project.errorCount)
+        val restoredScope = GlobalScope.libNamespaces.getValue("fixture.fields").scope
+        val leaf = restoredScope.getTemplate("Leaf")!!
+        val cellPrototype = assertIs<GenericDataTemplate>(restoredScope.getTemplate("Cell"))
+        val bundlePrototype = assertIs<GenericDataTemplate>(restoredScope.getTemplate("Bundle"))
+        assertNotSame(sourceLeaf, leaf)
+        assertNotSame(sourceCellPrototype, cellPrototype)
+        assertNotSame(sourceBundlePrototype, bundlePrototype)
+        val first = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("first")).templateType)
+        val second = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("second")).templateType)
+        assertSame(first, second)
+        assertSame(bundlePrototype, first.originTemplate)
+        assertNotSame(sourceFirst, first)
+        val cell = checkBundle(first, leaf, cellPrototype)
+        assertNotSame(sourceCell, cell)
+        assertEquals(sourceBundleId, first.getType().typeId)
+        assertEquals(sourceCellId, cell.getType().typeId)
+        assertEquals(sourceSnapshot, ValueSnapshot.of(first.scope.getVar("Types")))
+        assertEquals(ValueSnapshot.of(first.scope.getVar("Types")), ValueSnapshot.of(second.scope.getVar("Types")))
+        assertSame(first, assertIs<MCFPPDataTemplateType>(restoredScope.functions.getValue("readBundle").single().normalParams.single().type).template)
+        val machine = execute(main, output)
+        assertEquals(4, machine.read(main.scope.getVar("firstResult") as MCInt))
+        assertEquals(9, machine.read(main.scope.getVar("secondResult") as MCInt))
     }
 
     private fun write(source: String, output: Path) {

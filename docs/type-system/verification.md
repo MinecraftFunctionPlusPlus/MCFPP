@@ -1,8 +1,18 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段71声明/容器类型值限定验证通过：6个不同用例跨轮各自通过（初轮5+新71方法1），最终仅必要2项复查，非最终联合6。提交记录见Git历史；阶段70提交`1d593d19c71f5c42a3adb4aaf0e2dbdaae5c1b16`。MCFL17、`bin.mclib` 289989 bytes未变，无stdlib/fullcheck/实际Minecraft服务端。阶段72静态类型集合尚未实现或测试；最近完整检查仍为`72dc557`的346项，整个17项迁移仍未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段72完整静态类型集合限定验证通过，首轮4绿+最终新方法1=5个不同用例跨轮各自通过，非最终联合5。阶段71已提交`baa8f0704d58fcbc29706cb28181d821c9cc6138`（9文件185+/27-）；阶段72预计保存11文件，提交以Git历史为准。MCFL17/bin289989未变，无stdlib/fullcheck/实际Minecraft服务端。阶段73冻结Specialized类型值尚未实现或测试；最近完整检查仍为`72dc557`的346项，整个17项迁移仍未完成。
 
-## 最新必要检查：声明/容器类型值身份（阶段 71）
+## 最新必要检查：完整静态类型集合（阶段 72）
+
+六个生产文件ExprVisitor、ConcreteExprVisitor、MCFPPType、MCFPPGenericDataTemplateType、GenericDataTemplate、StorageAccess与一个fixture完成限定路径。普通表达式统一出口将最终StaticMemberView归一为MCFPPTypeVar；初始Meta带selector转回静态view。共享registerSnapshotTypes遍历Typed/TypeValue/Sequence/Record；readonly CompilerOnly绑定复用internal seedParts登记子facts与长度。Concrete完整已知索引复用Indexable.getByIndex及Property getter，未知/不完整索引仍拒绝。visitSelector消费下一成员前读取中间PropertyVar，使this.cell.read保留DTO receiver；最终赋值property不提前读取。TypeId resolver仍限阶段71支持集，无schema变化。真实库纵向验证限list<type>/Sequence；Record walker代码接通不代表任意Record、Specialized或Opaque已验证。
+
+前置readBundle的Bundle<[Leaf]>签名经过真实wire；named types与direct [Leaf]共享canonical Bundle/Cell。source/fresh Bundle、Cell、Leaf为不同对象，完整TypeId稳定；仅反转两实例构造顺序，不宣称生成index自然反转。最终producer0 errors/0 warnings，consumer0 errors/已知9119 warnings，完整模型与真实磁盘4/9/frame0全部到达。
+
+日志目录F:/DevCache/.codex/runtime，前缀mcfpp-generic-type-collection。-red.log：fresh XML 2026-10-06T06:31:46.159Z，1fail，producer10/0，worker134正常finish，FAILED in7s；helper仍尝试debug/index。-final.log必要联合5：LibField2 XML06:40:28.704Z旧71绿/新72红，CollectionStorage2 XML06:40:35.002Z全绿，CompilerOnlyView1 XML06:40:35.187Z绿；总4/5，worker135正常，FAILED in27s。新72 producer0/0、consumer0/9119及完整模型已过，但Cell.read缺this.value，尚未到磁盘4/9/frame0。
+
+-runtime-diagnostic.log单1：fresh XML 2026-10-06T06:49:46.687Z，worker136正常，FAILED in10s；owner/scope正确，bundle.read未unwrap中间PropertyVar，普通Var调用缺this，ctor及free→Bundle receiver正确。临时打印已删除。最终-receiver-final.log：fresh XML 2026-10-06T06:58:57.286Z，tests1、failures/errors/skips0，worker137正常，exit0/SUCCESS in14s，actual4/9/frame0。首轮4绿+新72最终1=5个不同用例跨轮各自通过，非最终联合5。阶段72提交以Git历史为准；MCFL17/bin289989未变，无stdlib/fullcheck/实际服务器。阶段73Specialized类型值尚未实现或测试。
+
+## 历史必要检查：声明/容器类型值身份（阶段 71）
 
 阶段71四个生产文件ConcreteExprVisitor、MCFPPType、MCFPPGenericDataTemplateType、FieldVisitor及一个fixture完成限定类型值路径。Concrete在visitExpression统一出口归一最终类型StaticMemberView，裸primary也覆盖；Meta带selector时转回StaticMemberView保留静态成员选择。resolveTypeId仅支持builtin/Wildcard、完整ID校验的Declaration及既有四种单参数Applied工厂；generic type只剥顶层Typed链后的TypeValue并注册已有types map。普通typed MCFPPDataTemplateType字段以unknown buildUnConcrete登记，其他类型/T!仍原build，真实receiver沿既有codec默认，shape校验保留。wire/layout/签名schema未改，MCFL17/bin289989未变，无stdlib/fullcheck/服务器。
 
@@ -10,7 +20,7 @@
 
 日志前缀`mcfpp-generic-type-value-identity`，目录F:/DevCache/.codex/runtime。`-red.log` fresh XML `2026-10-06T05:56:12.123Z` 1fail，producer5 errors，worker130正常finish，BUILD FAILED in6s；裸Leaf/alias快捷primary未成为类型值。初次`-final.log`联合6项LibFieldAccess3 XML `06:02:49.065Z` 2绿1红、Cache3 `06:02:55.136Z` 3绿，总5/6，producer仍5 errors；worker131正常，BUILD FAILED in24s。归一移至Expression后`-expression-final.log`单1 XML `06:12:21.301Z` producer22 errors/0 warnings，worker132正常，BUILD FAILED in7s：晚声明Leaf默认{}先被FieldVisitor冻结，Leaf完成后clone结构校验失败，尚未进入consumer。失败轮helper仍尝试输出debug/index，不能写成未生成文件。
 
-最终`-field-final.log` XML `2026-10-06T06:18:57.009Z` tests2、failures/errors/skips0，worker133正常finish，Gradle exit0/BUILD SUCCESSFUL in15s。最终是必要2项复查，非最终联合6；首轮5绿+新71方法1=6个不同用例跨轮各自通过，旧70在最终2中复查不额外计成第7个。阶段70提交`1d593d19c71f5c42a3adb4aaf0e2dbdaae5c1b16`；阶段71提交记录见Git历史。普通visitor命名类型值/list<type>、Sequence/Record递归snapshot、Concrete known index留阶段72；Union/Vector/Specialized/Selector/Opaque及全集、object/interface未验。
+最终`-field-final.log` XML `2026-10-06T06:18:57.009Z` tests2、failures/errors/skips0，worker133正常finish，Gradle exit0/BUILD SUCCESSFUL in15s。最终是必要2项复查，非最终联合6；首轮5绿+新71方法1=6个不同用例跨轮各自通过，旧70在最终2中复查不额外计成第7个。阶段70提交`1d593d19c71f5c42a3adb4aaf0e2dbdaae5c1b16`；阶段71已提交`baa8f0704d58fcbc29706cb28181d821c9cc6138`。普通visitor命名类型值/list<type>、Sequence/Record递归snapshot、Concrete known index留阶段72；Union/Vector/Specialized/Selector/Opaque及全集、object/interface未验。
 
 ## 历史必要检查：类型表达式声明作用域（阶段 70）
 

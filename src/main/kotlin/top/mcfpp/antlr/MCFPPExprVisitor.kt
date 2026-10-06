@@ -61,7 +61,7 @@ class MCFPPExprVisitor(
         val l = Function.currFunction
         val f = NoStackFunction(TempPool.getFunctionIdentify("expression"),Function.currFunction)
         Function.currFunction = f
-        return if(ctx.primary() != null){
+        val result = if(ctx.primary() != null){
             currSelector = null
             val q = visitPrimary(ctx.primary()).let { if (it is PropertyVar) it.get() else it }
             Function.currFunction = l
@@ -74,6 +74,8 @@ class MCFPPExprVisitor(
             l.commands.addAll(f.commands)
             q
         }
+        return if (result is StaticMemberView && result.value is MCFPPType)
+            MCFPPTypeVar(result.value as MCFPPType) else result
     }
 
     private var visitCommonBinaryOperatorExpressionRe : Var<*>? = null
@@ -313,6 +315,10 @@ class MCFPPExprVisitor(
                 currSelector = StaticMemberView(type)
             }
         }
+        val initial = currSelector
+        if (ctx.selector().isNotEmpty() && initial is MCFPPTypeVar) {
+            currSelector = StaticMemberView(initial.value)
+        }
         for (selector in ctx.selector()){
             visitSelector(selector)
         }
@@ -343,6 +349,7 @@ class MCFPPExprVisitor(
     }
 
     override fun visitSelector(ctx: mcfppParser.SelectorContext): Var<*> = withCompilationContext(ctx) {
+        if (currSelector is PropertyVar) currSelector = (currSelector as PropertyVar).get()
         //进入visitVar，currSelector作为成员选择的上下文
         currSelector = visitVar(ctx.`var`())
         return currSelector!!

@@ -8,7 +8,6 @@ import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.core.lang.Var
 import top.mcfpp.Project
 import top.mcfpp.analysis.StorageAccess
-import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.util.LogProcessor
 
 class MCFPPGenericDataTemplateType(
@@ -38,11 +37,7 @@ class MCFPPGenericDataTemplateType(
             for ((parameter, snapshot) in prototype.readOnlyParams.zip(typeId.arguments)) {
                 val type = parameter.type!!
                 types[type.typeId] = type
-                var payload = snapshot
-                while (payload is CompilerValue.Typed) payload = payload.payload
-                if (payload is CompilerValue.TypeValue) {
-                    MCFPPType.resolveTypeId(payload.id)?.let { types[payload.id] = it }
-                }
+                MCFPPType.registerSnapshotTypes(snapshot, types)
                 val value = StorageAccess.restore(type, snapshot, parameter.identifier, types)
                 if (value == null) {
                     LogProcessor.error("Cannot restore frozen readonly argument '${parameter.identifier}' of ${declaration.name}")

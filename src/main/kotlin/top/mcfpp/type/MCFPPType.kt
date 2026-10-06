@@ -10,6 +10,7 @@ import top.mcfpp.antlr.mcfppParser.TypeContext
 import top.mcfpp.antlr.mcfppParser.TypeWithoutExclContext
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
+import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.FieldContainer
 import top.mcfpp.model.Member
@@ -248,6 +249,22 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                 if (factory != null && argument != null) factory(argument) else null
             }
             else -> null
+        }
+
+        internal fun registerSnapshotTypes(snapshot: CompilerValue, types: MutableMap<TypeId, MCFPPType>) {
+            fun register(id: TypeId) {
+                if (id !in types) resolveTypeId(id)?.let { types[id] = it }
+            }
+            when (snapshot) {
+                is CompilerValue.Typed -> {
+                    register(snapshot.type)
+                    registerSnapshotTypes(snapshot.payload, types)
+                }
+                is CompilerValue.TypeValue -> register(snapshot.id)
+                is CompilerValue.Sequence -> snapshot.elements.forEach { registerSnapshotTypes(it, types) }
+                is CompilerValue.Record -> snapshot.fields.values.forEach { registerSnapshotTypes(it, types) }
+                else -> Unit
+            }
         }
 
         private fun resolveBareTemplateType(type: MCFPPType?): MCFPPType? {

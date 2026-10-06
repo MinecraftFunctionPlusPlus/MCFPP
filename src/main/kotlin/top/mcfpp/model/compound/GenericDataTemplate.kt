@@ -122,6 +122,7 @@ open class GenericDataTemplate : DataTemplate {
             val types = HashMap(cast.storageBinding?.data?.types.orEmpty())
             types[cast.type.typeId] = cast.type
             if (cast is MCFPPTypeVar) types[cast.value.typeId] = cast.value
+            MCFPPType.registerSnapshotTypes(snapshot, types)
             val value = StorageAccess.restore(cast.type, snapshot, param.identifier, types)
             if (value !is MCFPPValue<*>) {
                 LogProcessor.error("Readonly template argument layout is not supported for '${param.identifier}'")
@@ -135,6 +136,7 @@ open class GenericDataTemplate : DataTemplate {
             val data = StoredData(place, value.nbtPath.clone(), layout = StorageLayout.CompilerOnly)
             data.types.putAll(types)
             data.facts.initialize(place, ValueFacts(TypeKnowledge.Exact(value.type.typeId), ValueKnowledge.Constant(snapshot)))
+            StorageAccess.seedParts(data, place, value)
             value.storageBinding = StorageBinding(data, place, data.path)
             args.add(value)
         }
