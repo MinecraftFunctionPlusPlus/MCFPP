@@ -140,6 +140,7 @@ open class GenericDataTemplate : DataTemplate {
         template.declarationFile = declarationFile
         template.declarationEnvironment = declarationEnvironment
         template.isAbstract = isAbstract
+        template.isInterface = isInterface
         template.initialize()
         template.restoreDeclarationEnvironment()
         for (parent in this.parent){
@@ -208,7 +209,11 @@ open class CompiledGenericDataTemplate(
     argumentValues: List<CompilerValue>
 ) : DataTemplate(identifier, namespace) {
     protected val identity = TypeId.Specialized(
-        TypeId.Declaration(if (originTemplate is ObjectCompoundData) "object" else "template",
+        TypeId.Declaration(when {
+            originTemplate is ObjectCompoundData -> "object"
+            originTemplate.isInterface -> "interface"
+            else -> "template"
+        },
             originTemplate.namespace, originTemplate.identifier), argumentValues
     )
 

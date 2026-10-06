@@ -29,7 +29,7 @@ class MCFPPGenericDataTemplateFieldVisitor(val template: DataTemplate) : MCFPPFi
             }
         }
         //如果没有构造函数，自动添加默认的空构造函数
-        if (!isInObject && template.constructors.isEmpty()) {
+        if (!isInObject && !template.isInterface && template.constructors.isEmpty()) {
             DataTemplate.currTemplate!!.addMember(DataTemplateConstructor(DataTemplate.currTemplate!!, null))
         }
         DataTemplate.currTemplate = null

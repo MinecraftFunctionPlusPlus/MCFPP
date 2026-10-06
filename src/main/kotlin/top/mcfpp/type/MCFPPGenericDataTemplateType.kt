@@ -21,10 +21,13 @@ class MCFPPGenericDataTemplateType(
         // Includes must all restore their declaration imports before specialization.
         if (Project.compileStage == Project.CompileStage.READ_LIB) return
         val declaration = typeId.constructor as? TypeId.Declaration ?: return
-        if (declaration.kind != "template") return
-        val prototype = GlobalScope.getUnsolvedImportNamespace(declaration.namespace)?.scope
-            ?.getTemplate(declaration.name) as? GenericDataTemplate ?: return
-        if (prototype.namespace != declaration.namespace || prototype.identifier != declaration.name || prototype.isInterface) return
+        val scope = GlobalScope.getUnsolvedImportNamespace(declaration.namespace)?.scope ?: return
+        val prototype = when (declaration.kind) {
+            "template" -> scope.getTemplate(declaration.name)
+            "interface" -> scope.getInterface(declaration.name)
+            else -> null
+        } as? GenericDataTemplate ?: return
+        if (prototype.getType().typeId != declaration) return
         val compiled = template as? CompiledGenericDataTemplate
         if (compiled?.originTemplate !== prototype) {
             val canonical = MCFPPType.resolveSpecialization(typeId) ?: return

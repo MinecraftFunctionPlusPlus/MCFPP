@@ -438,24 +438,35 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }else{
             throw UndefinedException("Interface should have been defined: $id")
         }
+        val previousTemplate = DataTemplate.currTemplate
+        val previousScope = typeScope
+        DataTemplate.currTemplate = itf
         typeScope = itf.scope
-        for (c in ctx.compoundDeclaration().extendName()){
-            //是否存在继承
-            val (namespace, identifier) = c.text.splitNamespaceID()
-            val s = GlobalScope.getInterface(namespace, identifier)
-            if(s == null){
-                LogProcessor.error("Undefined interface: " + c.text)
-            }else{
-                if(s == itf || s.isSubOf(itf)){
-                    LogProcessor.error("Infinitive reference: ${itf.identifier} -> $identifier")
+        try {
+            if (itf is GenericDataTemplate) {
+                itf.prepareHeader()
+                return null
+            }
+            for (c in ctx.compoundDeclaration().extendName()){
+                //是否存在继承
+                val (namespace, identifier) = c.text.splitNamespaceID()
+                val s = GlobalScope.getInterface(namespace, identifier)
+                if(s == null){
+                    LogProcessor.error("Undefined interface: " + c.text)
                 }else{
-                    itf.extends(s)
+                    if(s == itf || s.isSubOf(itf)){
+                        LogProcessor.error("Infinitive reference: ${itf.identifier} -> $identifier")
+                    }else{
+                        itf.extends(s)
+                    }
                 }
             }
+            //接口成员
+            ctx.templateBody()?.let { visitTemplateBody(it) }
+        } finally {
+            DataTemplate.currTemplate = previousTemplate
+            typeScope = previousScope
         }
-        //接口成员
-        ctx.templateBody()?.let { visitTemplateBody(it) }
-        typeScope = MCFPPFile.currFile!!.field.namespaceField
         return null
     }
 
@@ -529,6 +540,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 ctx.curlBlock()
             )
         }
+        f.isAbstract = ctx.ABSTRACT() != null
         f.addParamsFromContext(ctx.functionDeclarationPart().functionParams())
         f.returnType = if(ctx.functionDeclarationPart().functionReturnType()?.type() != null){
             f.parseDeclaredType(ctx.functionDeclarationPart().functionReturnType().type())

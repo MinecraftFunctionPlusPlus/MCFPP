@@ -1506,6 +1506,121 @@ class LibFieldAccessTest {
         assertEquals(4, machine.read(main.scope.getVar("repeatedResult") as MCInt))
     }
 
+    @Test fun frozenGenericInterfaceTypeArgumentsRestoreBoundSignaturesAcrossLibraryRoundTrip() = withLibrary { output ->
+        write("""
+            namespace fixture.fields;
+            func readIntBox(arg as Box<(Contract<int>)>)->int { return arg.read(); }
+            func readBoolBox(arg as Box<(Contract<bool>)>)->int { return arg.read(); }
+            interface Contract<T as type> {
+                abstract func exchange(value as T)->T;
+            }
+            data Box<T as type> {
+                private value as int;
+                constructor(v as int){ this.value=v; }
+                func read()->int { return this.value; }
+            }
+            func main(){
+                dynamic var firstInput=4; dynamic var secondInput=9;
+                var first=Box<(Contract<int>)>(firstInput);
+                var second=Box<(Contract<bool>)>(secondInput);
+                dynamic var firstResult=readIntBox(first);
+                dynamic var secondResult=readBoolBox(second);
+            }
+        """, output)
+
+        fun checkBindings(contract: GenericDataTemplate, box: GenericDataTemplate, main: Function,
+                          readers: List<Function>): Map<TypeId, CompiledGenericDataTemplate> {
+            assertTrue(contract.isInterface)
+            assertTrue(contract.isAbstract)
+            assertEquals(2, contract.compiledTemplates.size)
+            assertEquals(2, box.compiledTemplates.size)
+            val contracts = contract.compiledTemplates.values.associateBy {
+                assertIs<MCFPPTypeVar>(it.scope.getVar("T")).value.typeId
+            }
+            assertEquals(setOf(MCFPPBaseType.Int.typeId, MCFPPBaseType.Bool.typeId), contracts.keys)
+            for ((key, compiled) in contract.compiledTemplates) {
+                assertSame(contract, compiled.originTemplate)
+                assertTrue(compiled.isInterface)
+                assertTrue(compiled.isAbstract)
+                assertTrue(compiled.constructors.isEmpty())
+                val bound = assertIs<MCFPPTypeVar>(compiled.scope.getVar("T"))
+                val snapshot = assertNotNull(ValueSnapshot.of(bound))
+                assertTrue(bound.isConst)
+                assertEquals(StorageLayout.CompilerOnly, assertNotNull(bound.storageBinding).data.layout)
+                assertSame(bound.value, compiled.scope.getType("T"))
+                val id = assertIs<TypeId.Specialized>(compiled.getType().typeId)
+                assertEquals(TypeId.Declaration("interface", "fixture.fields", "Contract"), id.constructor)
+                assertEquals(listOf(snapshot), id.arguments)
+                assertEquals(id.arguments, key.arguments.map { assertIs<SpecializationArgument.Constant>(it).value })
+                assertSame(compiled, assertIs<MCFPPDataTemplateType>(MCFPPType.resolveTypeId(id)).template)
+                val exchange = compiled.scope.functions.getValue("exchange").single()
+                assertTrue(exchange.isAbstract)
+                assertSame(compiled, exchange.owner)
+                assertSame(bound.value, exchange.normalParams.single().type)
+                assertSame(bound.value, exchange.returnType)
+            }
+            val boxes = listOf("first", "second").map { name ->
+                assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar(name)).templateType)
+            }
+            assertNotSame(boxes[0], boxes[1])
+            val result = LinkedHashMap<TypeId, CompiledGenericDataTemplate>()
+            for ((index, type) in listOf(MCFPPBaseType.Int, MCFPPBaseType.Bool).withIndex()) {
+                val compiled = boxes[index]
+                assertSame(box, compiled.originTemplate)
+                val bound = assertIs<MCFPPTypeVar>(compiled.scope.getVar("T"))
+                val actual = assertIs<MCFPPDataTemplateType>(bound.value)
+                assertSame(contracts.getValue(type.typeId), actual.template)
+                assertSame(actual.template, assertIs<MCFPPDataTemplateType>(compiled.scope.getType("T")).template)
+                assertSame(compiled, assertIs<MCFPPDataTemplateType>(readers[index].normalParams.single().type).template)
+                val id = assertIs<TypeId.Specialized>(compiled.getType().typeId)
+                assertEquals(listOf(assertNotNull(ValueSnapshot.of(bound))), id.arguments)
+                val key = box.compiledTemplates.entries.single { it.value === compiled }.key
+                assertEquals(id.arguments, key.arguments.map { assertIs<SpecializationArgument.Constant>(it).value })
+                result[type.typeId] = compiled
+            }
+            return result
+        }
+
+        val sourceScope = GlobalScope.localNamespaces.getValue("fixture.fields").scope
+        val sourceContract = assertIs<GenericDataTemplate>(sourceScope.getInterface("Contract"))
+        val sourceBox = assertIs<GenericDataTemplate>(sourceScope.getTemplate("Box"))
+        val sourceBoxes = checkBindings(sourceContract, sourceBox, sourceScope.functions.getValue("main").single(),
+            listOf(sourceScope.functions.getValue("readIntBox").single(), sourceScope.functions.getValue("readBoolBox").single()))
+        val main = consume("""
+            import fixture.fields:*;
+            func main(){
+                dynamic var secondInput=9; dynamic var firstInput=4;
+                var second=Box<(Contract<bool>)>(secondInput);
+                var first=Box<(Contract<int>)>(firstInput);
+                dynamic var firstResult=readIntBox(first);
+                dynamic var secondResult=readBoolBox(second);
+            }
+        """, output)
+        assertEquals(0, Project.errorCount)
+        val restoredScope = GlobalScope.libNamespaces.getValue("fixture.fields").scope
+        val contract = assertIs<GenericDataTemplate>(restoredScope.getInterface("Contract"))
+        val box = assertIs<GenericDataTemplate>(restoredScope.getTemplate("Box"))
+        assertNotSame(sourceContract, contract)
+        assertNotSame(sourceBox, box)
+        val boxes = checkBindings(contract, box, main,
+            listOf(restoredScope.functions.getValue("readIntBox").single(), restoredScope.functions.getValue("readBoolBox").single()))
+        for ((typeId, compiled) in boxes) {
+            val source = sourceBoxes.getValue(typeId)
+            assertNotSame(source, compiled)
+            assertEquals(source.getType().typeId, compiled.getType().typeId)
+            assertEquals(ValueSnapshot.of(source.scope.getVar("T")!!), ValueSnapshot.of(compiled.scope.getVar("T")!!))
+            val sourceTarget = assertIs<MCFPPDataTemplateType>(assertIs<MCFPPTypeVar>(source.scope.getVar("T")).value).template
+            val target = assertIs<MCFPPDataTemplateType>(assertIs<MCFPPTypeVar>(compiled.scope.getVar("T")).value).template
+            assertNotSame(sourceTarget, target)
+            assertEquals(sourceTarget.getType().typeId, target.getType().typeId)
+            assertEquals(ValueSnapshot.of(sourceTarget.scope.getVar("T")!!), ValueSnapshot.of(target.scope.getVar("T")!!))
+            assertNotSame(sourceTarget.scope.functions.getValue("exchange").single(), target.scope.functions.getValue("exchange").single())
+        }
+        val machine = execute(main, output)
+        assertEquals(4, machine.read(main.scope.getVar("firstResult") as MCInt))
+        assertEquals(9, machine.read(main.scope.getVar("secondResult") as MCInt))
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

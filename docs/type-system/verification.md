@@ -1,8 +1,18 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段80 generic object静态N/方法路径限定通过，source/fresh模型及consumer磁盘4/9/4/frame0到达；三个不同用例跨轮各过，最终仅新1复查。MCFL17/bin289989/wire/schema未变，无stdlib/fullcheck/server。下一81 generic interface静态TypeValue先单fixture RED，尚未实现/测试；最近完整346项仍为72dc557，whole17未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段81 generic interface静态TypeValue限定通过，source/fresh模型与consumer磁盘4/9/frame0到达；三个case跨轮各过、最终仅新1。MCFL17/bin289989/wire/schema未变，无stdlib/fullcheck/server。下一82 source磁盘导出先单fixture RED，尚未实现/测试；最近完整346项仍为72dc557，whole17未完成。
 
-## 最新必要检查：generic object静态身份与方法（阶段 80）
+## 最新必要检查：generic interface静态TypeValue（阶段 81）
+
+阶段81仅五prod：FieldVisitor恢复interface真实currTemplate/typeScope，generic prototype只prepareHeader并finally恢复；共享compile复制isInterface，Specialized身份按origin interface kind；共享BodyVisitor不生成接口默认ctor。Type解析/有限resolveSpecialization及现MCFPPGenericDataTemplateType.tryResolve按exact interface声明和canonical快路径恢复，复用已注册serializer，无新wrapper/registry。shared member声明入口补f.isAbstract=ctx.ABSTRACT()!=null，FunctionInfo原有字段，不改metadata。115行fixture frozenGenericInterfaceTypeArgumentsRestoreBoundSignaturesAcrossLibraryRoundTrip不构造/调用interface，Contract<T>抽象exchange参数/返回绑定Int/Bool，static TypeValue进入普通Box的runtime int字段。
+
+source模型与library写入、fresh独立prototype/Contract/Box/abstract函数、readonly Meta/scopeT/CompilerOnly完整snapshot/cache.arguments、interface FullID/有限resolver、noCtor及前置Box签名通过；source Int4→Bool9、fresh反序Bool9→Int4，真实consumer磁盘4/9/frame0。仅static interface TypeValue/T int,bool，不验generic继承grammar/shape转换、runtime接口布局、annotations、一般source abstract/final flags、defaults全集；legacyInterface wrapper和Kryo全集未激活/验证。sourcewriter递归导出、autoload、静态字段强转及整体IR/MNI旧体系仍未完成。
+
+日志前缀mcfpp-generic-interface-type-value，目录F:/DevCache/.codex/runtime。RED worker158 FAILED7s，两前置Contract<int>/bool Invalid type后FieldVisitor528 currTemplate NPE fatal，SKIPPED/无fresh XML（旧80 XML10:17:31.086Z不计）；无producer完成计数/库/source检查/fresh/disk。joint3 worker159正常FAILED26s，fresh XML2026-10-06T10:37:28.651Z 3tests/1fail(new81)/2pass(old73+old80)，三个producer各0/0，旧consumer各0/9119，磁盘73=4/9、80=4/9/4/frame0。新81 source模型部分flags/noCtor/snapshot/ID/resolver通过，exchange.isAbstract第1557行失败为生产遗漏ABSTRACT标记，未到consumer/disk；仅补shared声明入口一行，未改fixture/schema。
+
+final2 worker160正常exit0/SUCCESS13s，fresh XML2026-10-06T10:43:19.510Z 新1/0/0/0，source0/0、consumer0/9119已知warnings，全部模型及consumer磁盘通过。最终仅新1复查，三个不同case跨轮各过，不是最终联合3全绿；80轮普通ObjectMethods不算81第四case。无Info/backing字段、codec/Kryo注册/VERSION变化，MCFL17/bin289989不变，无stdlib/fullcheck/server。80提交3301770618f70ce16f79050213d106c4913f4743（常规18文件224+/176-），81提交见Git历史；whole17未完成。下一82仅source磁盘导出先单fixture RED，尚未实现/测试。
+
+## 历史必要检查：generic object静态身份与方法（阶段 80）
 
 阶段80共13个prod文件（含删除47行旧GenericObjectFieldVisitor）：generic object及compiled object使用ObjectCompoundData/self companion，共享一个factory及TemplateBody注册visitor，prototype只准备header。Member.isStatic和Function命名/prepareBody识别静态owner；ObjectType/GenericObjectType保稳定object身份及有限exact object lookup/canonical重绑定，GenericInfo恢复self而不另造companion。复用原generic冻结/缓存/声明完成及lazy body编译，生成运行时命令，不执行用户constexpr。未添加Info/backing class字段、Kryo注册或TypeId codec；MCFL17/bin289989不变，无stdlib/fullcheck/server。
 

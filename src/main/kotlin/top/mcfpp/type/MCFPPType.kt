@@ -293,9 +293,10 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             val prototype = when (declaration.kind) {
                 "template" -> scope.getTemplate(declaration.name) as? GenericDataTemplate
                 "object" -> scope.getObject(declaration.name) as? GenericObjectDataTemplate
+                "interface" -> scope.getInterface(declaration.name) as? GenericDataTemplate
                 else -> null
             } ?: return null
-            if (prototype.namespace != declaration.namespace || prototype.identifier != declaration.name || prototype.isInterface) return null
+            if (prototype.getType().typeId != declaration) return null
             val prepare = { prototype.prepareHeader() }
             val file = prototype.restoreDeclarationEnvironment()
             if (file == null) prepare() else file.withDeclarationContext(prepare)
@@ -513,6 +514,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                 //数据模板
                 val template = GlobalScope.getTemplate(nspID.first, nspID.second)
                     ?: (GlobalScope.getObject(nspID.first, nspID.second) as? DataTemplate)
+                    ?: GlobalScope.getInterface(nspID.first, nspID.second)
                 if(template != null) {
                     if (template is top.mcfpp.model.compound.GenericDataTemplate) {
                         val arguments = ArrayList<Var<*>>()
