@@ -1,6 +1,8 @@
 package top.mcfpp.mni.minecraft;
 
 import top.mcfpp.annotations.MNIFunction;
+import top.mcfpp.backend.NativeStdCommandOperations;
+import top.mcfpp.mni.NativeCallContext;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.*;
@@ -31,32 +33,24 @@ public class StdCommands {
     }
 
     //region clone
-    @MNIFunction(normalParams = {"Area", "pos3", "CloneMaskMode = replace", "CloneOperation = normal"})
-    public static void clone(DataTemplateObject source, Pos3Var destination, EnumVar mode, EnumVar op, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("clone", source, destination, mode, op);
-        Commands.processMacroCommandReturn(re, command);
-        Function.addCommand(command);
+    @MNIFunction(identifier = "clone", normalParams = {"Area", "pos3", "CloneMaskMode = replace", "CloneOperation = normal"})
+    public static void cloneArea(NativeCallContext context){
+        NativeStdCommandOperations.INSTANCE.cloneArea(context);
     }
 
-    @MNIFunction(normalParams = {"Area", "pos3", "CloneMaskMode = replace", "CloneOperation = normal"})
-    public static void cloneStrict(DataTemplateObject source, Pos3Var destination, EnumVar mode, EnumVar op, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("clone", source, destination, "strict", mode, op);
-        Commands.processMacroCommandReturn(re, command);
-        Function.addCommand(command);
+    @MNIFunction(identifier = "cloneStrict", normalParams = {"Area", "pos3", "CloneMaskMode = replace", "CloneOperation = normal"})
+    public static void cloneStrictArea(NativeCallContext context){
+        NativeStdCommandOperations.INSTANCE.cloneStrictArea(context);
     }
 
-    @MNIFunction(normalParams = {"Area", "pos3", "BlockPredicate", "CloneOperation = normal"})
-    public static void clone(DataTemplateObject source, Pos3Var destination, DataTemplateObject filter, EnumVar op, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("clone", source, destination, "filtered", filter, op);
-        Commands.processMacroCommandReturn(re, command);
-        Function.addCommand(command);
+    @MNIFunction(identifier = "clone", normalParams = {"Area", "pos3", "BlockPredicate", "CloneOperation = normal"})
+    public static void cloneFiltered(NativeCallContext context){
+        NativeStdCommandOperations.INSTANCE.cloneFiltered(context);
     }
 
-    @MNIFunction(normalParams = {"Area", "pos3", "BlockPredicate", "CloneOperation = normal"})
-    public static void cloneStrict(DataTemplateObject source, Pos3Var destination, DataTemplateObject filter, EnumVar op, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("clone", source, destination, "strict filtered", filter, op);
-        Commands.processMacroCommandReturn(re, command);
-        Function.addCommand(command);
+    @MNIFunction(identifier = "cloneStrict", normalParams = {"Area", "pos3", "BlockPredicate", "CloneOperation = normal"})
+    public static void cloneStrictFiltered(NativeCallContext context){
+        NativeStdCommandOperations.INSTANCE.cloneStrictFiltered(context);
     }
     //endregion
 
@@ -113,10 +107,8 @@ public class StdCommands {
     //region enchant
     //TODO 更高等级的附魔支持
     @MNIFunction(normalParams = {"entity", "Enchant", "int = 1", "Slot = weapon_mainhand"})
-    public static void enchant(EntityVar target, DataTemplateObject enchantment, MCInt level, EnumVar slot, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("enchant", target, enchantment, level, slot);
-        Commands.processMacroCommandReturn(re, command);
-        Function.addCommand(command);
+    public static void enchant(NativeCallContext context){
+        NativeStdCommandOperations.INSTANCE.enchant(context);
     }
     //endregion
 
@@ -721,68 +713,50 @@ public class StdCommands {
 
     //region place
     @MNIFunction(identifier = "place",normalParams = {"ConfiguredFeature"})
-    public static void placeFeature(DataTemplateObject feature, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("place feature", feature);
-        Commands.processMacroCommandReturn(re, command);
-        Function.addCommand(command);
+    public static void placeFeature(NativeCallContext context){
+        NativeStdCommandOperations.INSTANCE.placeFeature(context);
     }
 
     @MNIFunction(identifier = "place",normalParams = {"ConfiguredFeature", "pos3"})
-    public static void placeFeature(DataTemplateObject feature, Pos3Var pos, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("place feature", feature, pos);
-        Commands.processMacroCommandReturn(re, command);
-        Function.addCommand(command);
+    public static void placeFeatureAt(NativeCallContext context){
+        NativeStdCommandOperations.INSTANCE.placeFeatureAt(context);
     }
 
     @MNIFunction(identifier = "place",normalParams = {"TemplatePool", "string", "int"})
-    public static void placeJigsaw(DataTemplateObject pool, MCString target, MCInt maxDepth, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("place jigsaw", pool, target, maxDepth);
-        Commands.processMacroCommandReturn(re, command);
-        Function.addCommand(command);
+    public static void placeJigsaw(NativeCallContext context){
+        NativeStdCommandOperations.INSTANCE.placeJigsaw(context);
     }
 
     @MNIFunction(identifier = "place",normalParams = {"TemplatePool", "string", "int", "pos3"})
-    public static void placeJigsaw(DataTemplateObject pool, MCString target, MCInt maxDepth, Pos3Var pos, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("place jigsaw", pool, target, maxDepth, pos);
-        Commands.processMacroCommandReturn(re, command);
-        Function.addCommand(command);
+    public static void placeJigsawAt(NativeCallContext context){
+        NativeStdCommandOperations.INSTANCE.placeJigsawAt(context);
     }
 
     @MNIFunction(identifier = "place",normalParams = {"Structure"})
-    public static void placeStructure(DataTemplateObject structure, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("place structure", structure);
-        Commands.processMacroCommandReturn(re, command);
-        Function.addCommand(command);
+    public static void placeStructure(NativeCallContext context){
+        NativeStdCommandOperations.INSTANCE.placeStructure(context);
     }
 
     @MNIFunction(identifier = "place",normalParams = {"Structure", "pos3"})
-    public static void placeStructure(DataTemplateObject structure, Pos3Var pos, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("place structure", structure, pos);
-        Commands.processMacroCommandReturn(re, command);
-        Function.addCommand(command);
+    public static void placeStructureAt(NativeCallContext context){
+        NativeStdCommandOperations.INSTANCE.placeStructureAt(context);
     }
 
     @MNIFunction(identifier = "place", normalParams = {"string", "pos3 = pos3.RELATIVE", "PlaceRotation = none", "PlaceMirror = none", "float = 1.0", "int = System.randInt()"})
-    public static void placeTemplate(MCString name, Pos3Var pos, EnumVar rotation, EnumVar mirror, MCFloat integrity, MCInt seed, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("place", name, pos, rotation, mirror, integrity, seed);
-        Commands.processMacroCommandReturn(re, command);
-        Function.addCommand(command);
+    public static void placeTemplate(NativeCallContext context){
+        NativeStdCommandOperations.INSTANCE.placeTemplate(context);
     }
 
     @MNIFunction(identifier = "placeStrict" ,normalParams = {"string", "pos3 = pos3.HERE", "PlaceRotation = none", "PlaceMirror = none", "float = 1.0", "int = System.randInt()"})
-    public static void placeTemplateStrict(MCString name, Pos3Var pos, EnumVar rotation, EnumVar mirror, MCFloat integrity, MCInt seed, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("place", name, pos, rotation, mirror, integrity, seed, "strict");
-        Commands.processMacroCommandReturn(re, command);
-        Function.addCommand(command);
+    public static void placeTemplateStrict(NativeCallContext context){
+        NativeStdCommandOperations.INSTANCE.placeTemplateStrict(context);
     }
     //endregion
 
     //region playsound
     @MNIFunction(normalParams = {"Sound", "SoundType", "Player = @s", "pos3 = pos3.HERE", "float = 1.0", "float = 1.0", "float = 0.0"})
-    public static void playsound(DataTemplateObject sound, EnumVar type, PlayerVar player, Pos3Var pos, MCFloat volume, MCFloat pitch, MCFloat distance, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("playsound", sound, type, player, pos, volume, pitch, distance);
-        Commands.processMacroCommandReturn(re, command);
-        Function.addCommand(command);
+    public static void playsound(NativeCallContext context){
+        NativeStdCommandOperations.INSTANCE.playsound(context);
     }
     //endregion
 
@@ -988,17 +962,13 @@ public class StdCommands {
     }
 
     @MNIFunction(normalParams = {"Player", "text", "TitlePos"})
-    public static void titleTitle(PlayerVar player, JsonText text, EnumVar pos, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("title", player, pos, text);
-        Commands.processMacroCommandReturn(re, command);
-        Function.addCommand(command);
+    public static void titleTitle(NativeCallContext context){
+        NativeStdCommandOperations.INSTANCE.titleTitle(context);
     }
 
     @MNIFunction(normalParams = {"Player", "Time", "Time", "Time"})
-    public static void titleSet(PlayerVar player, TypeDataTemplateObject fadeIn, TypeDataTemplateObject stay, TypeDataTemplateObject fadeOut, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("title", player, "times", fadeIn, stay, fadeOut);
-        Commands.processMacroCommandReturn(re, command);
-        Function.addCommand(command);
+    public static void titleSet(NativeCallContext context){
+        NativeStdCommandOperations.INSTANCE.titleSet(context);
     }
     //endregion
 

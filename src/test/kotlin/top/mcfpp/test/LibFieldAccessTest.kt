@@ -2523,6 +2523,67 @@ class LibFieldAccessTest {
         check(main)
     }
 
+    @Test
+    fun nativeVoidCommandsEmitMacrosOnceAcrossLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = """
+            func main(){
+                var box=Box();
+                dynamic var result=box.observe("fixture:dynamic");
+            }
+        """
+        write("""
+            namespace fixture.fields;
+            import mcfpp.minecraft.resource:*;
+            import mcfpp.minecraft.std:*;
+            data Box {
+                func observe(target as string)->int {
+                    var pool=TemplatePool();
+                    pool.id="fixture:pool";
+                    place(pool,"fixture:constant",2);
+                    place(pool,target,2);
+                    return 7;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val observe = (main.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("observe").single()
+            val directory = output.resolve("consumer")
+            DatapackCreator.createDatapack(directory.toString())
+            val data = directory.resolve(Project.config.name).resolve("data")
+            val functions = linkedMapOf<String, List<String>>()
+            Files.walk(data).use { paths ->
+                paths.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".mcfunction") }.forEach { file ->
+                    val relative = data.relativize(file)
+                    if (relative.nameCount >= 3 && relative.getName(1).toString() == "function") {
+                        val id = relative.subpath(2, relative.nameCount).joinToString("/").removeSuffix(".mcfunction")
+                        functions["${relative.getName(0)}:$id"] = Files.readAllLines(file)
+                    }
+                }
+            }
+            val commands = functions.getValue(observe.namespaceID.toString())
+            val call = Regex("function (mcfpp:dynamic/\\S+) with storage (\\S+) (\\S+)")
+            val macros = commands.mapIndexedNotNull { index, command -> call.matchEntire(command)?.let { index to it } }
+            assertTrue(macros.isNotEmpty(), "The unknown target must be supplied through a macro")
+            val bodies = macros.map { (index, match) ->
+                val id = match.groupValues[1]
+                assertEquals(1, macros.count { it.second.groupValues[1] == id }, id)
+                val preparation = "data modify storage ${match.groupValues[2]} ${match.groupValues[3]}"
+                assertTrue(commands.take(index).any { it.startsWith(preparation) && " set " in it }, id)
+                functions.getValue(id).also { body ->
+                    assertTrue(body.any { it.startsWith("\$place jigsaw ") }, id)
+                    assertFalse(body.any { "return run" in it || it.removePrefix("\$").startsWith("return ") }, id)
+                }
+            }
+            assertTrue(macros.any { (index, _) -> commands.take(index).any { "set from storage mcfpp:system stack_frame[0].target" in it } })
+            assertEquals(2, commands.count { it.startsWith("place jigsaw ") } + bodies.sumOf { body -> body.count { it.startsWith("\$place jigsaw ") } })
+        }
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

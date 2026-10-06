@@ -2,7 +2,25 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 阶段 101：LootTablePredicate 原生入口（已限定验证）
+## 阶段 102：StdCommands void 原生入口（已限定验证）
+
+16个无Java primitive-float签名冲突的void接口迁入单context；`place`仍可有 `MCFloat` 参数。保留四个damage primitive-float入口及其他107个 `CommandReturn` 接口。`ResourceID.toCommandPart` 实现以 `@MNIFunction.override=true` 替换失效的源码覆盖，并在Java wrapper中读取 `id.toCommandPart`；未知target作为普通参数处理。未改变其他Commands宏API或host snapshot。
+
+首轮 `mcfpp-native-void-command-context-stdlib.log` 重建成功10s、Project0/0；joint worker214失败15s。LibFieldAccess XML `2026-10-06T22:00:36.130Z` 为1/1/0/0，producer3/9118，首因是 `id.toCommandPart` 语言成员未定义，随后 `place` 出现null Command转换；Cache XML `22:00:35.360Z` 为1/0/0/0。ResourceID修复后，`mcfpp-native-void-command-context-stdlib2.log` 成功7s、Project0/0；仅复查fixture的 `mcfpp-native-void-command-context-final2.log` worker215正常、exit0/BUILD SUCCESSFUL in11s，XML `2026-10-06T22:07:40.238Z` 为1/0/0/0，source0/9118、fresh0/9119。两个place调用均生成一次macro调用，准备参数先于调用；未知target在frame0读取后复制进macro槽，宏体无return-run。该fixture不证明非宏路径或world/frame执行。MCFL31，三份资源285743 bytes、SHA256 `6BB5D52369DC314C2389C3623A99AA862D975BFB02C45A99344B38B1F7D387C6`，raw header `4c46434d1f000000`。Cache只首轮通过，未重跑；无fullcheck/server。
+
+### 阶段 102 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录ResourceID首轮故障、修复后XML及两个实际宏调用顺序。 |
+| 完整性 | 3/5 | 受测宏命令路径通过；非宏路径、world执行及whole17未完成。 |
+| 清晰性 | 4/5 | 区分普通未知参数、macro准备和调用，不扩展到world模拟。 |
+| 可执行性 | 4/5 | 阶段103限定damage void ABI及动态float拒绝边界。 |
+| 简洁性 | 4/5 | 只记录必要两轮、Cache一次通过及验证限制。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 历史必要检查：LootTablePredicate 原生入口（阶段 101）
 
 `LootTablePredicateData.pass/fail` 两个 bool 入口接入 `NativeCallContext`；`NativePredicateOperations` 复用 `CommandBoolPart` 生成 `if/unless predicate`，通过现有 `publishResult` 规范化并发布 `ScoreBool`，predicate id 经 `PropertyVar.get` 读取。静态 `of`/factory、effects与world模拟未改。
 

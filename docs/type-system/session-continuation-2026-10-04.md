@@ -4,7 +4,7 @@
 
 ## 当前进度
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段101已完成限定验证，MCFL30；阶段100提交`81b2c2f`、阶段99提交`0fe27dc`、阶段98提交`6a6af4d`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段102已完成限定验证，MCFL31；阶段101提交`ded6ce8`、阶段100提交`81b2c2f`、阶段99提交`0fe27dc`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
 
 ### 用户最新规则（2026-10-06）
 
@@ -78,7 +78,23 @@ stdlib首轮 `mcfpp-native-text-context-stdlib.log` 重建成功，Project0/0，
 
 平均3.8/5，whole17完整性仍为3/5。
 
-### 阶段 101：LootTablePredicate 原生入口（已限定验证）
+### 阶段 102：StdCommands void 原生入口（已限定验证）
+
+16个void方法迁入context；保留四个damage primitive-float方法和107个 `CommandReturn` 方法。`ResourceID.toCommandPart`通过annotation override替换失效的源码覆盖，并由Java wrapper读取 `id.toCommandPart`。stdlib首轮成功10s，Project0/0；joint首轮worker214在15s失败：LibFieldAccess XML `2026-10-06T22:00:36.130Z` 1/1/0/0、producer3/9118，`id.toCommandPart` 未定义后引发place null Command；Cache XML `22:00:35.360Z` 1/0/0/0通过。修复后stdlib2成功7s、Project0/0；仅复查新fixture的worker215 exit0/BUILD SUCCESSFUL in11s，XML `22:07:40.238Z` 1/0/0/0，source0/9118、fresh0/9119。两个place调用实际均为macro；参数准备先于各自唯一调用，未知target先从frame0读取再写入macro槽，宏体没有return-run。Cache未重复运行；不声称非宏路径或world/frame执行已验证。三份MCFL31 bin为285743 bytes、SHA256 `6BB5D52369DC314C2389C3623A99AA862D975BFB02C45A99344B38B1F7D387C6`。
+
+### 阶段 102 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录首轮ResourceID错误与final2宏顺序证据。 |
+| 完整性 | 3/5 | 只验证受测宏调用路径；非宏/world行为和whole17仍未完成。 |
+| 清晰性 | 4/5 | 明确unknown target是普通参数，且不声称world求值。 |
+| 可执行性 | 4/5 | 下一阶段限制为四个damage void入口及现有float能力边界。 |
+| 简洁性 | 4/5 | 保留必要构建、测试和资源证据。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+### 阶段 101：LootTablePredicate 原生入口（历史）
 
 `LootTablePredicateData.pass/fail` 两个bool方法接入 `NativeCallContext`；`NativePredicateOperations`复用 `CommandBoolPart` 生成 `if/unless predicate`，经现有结果发布路径规范化为 `ScoreBool`，读取predicate id使用 `PropertyVar.get`。静态 `of`/factory、effects和world模拟未改。stdlib重建8s、Project0/0；联合Cache与新fixture由worker213在18s内成功。LibFieldAccess XML `2026-10-06T21:49:26.530Z`、Cache `21:49:25.760Z`均1/0/0/0；source/fresh分别0/9118和0/9119。source/fresh导出函数包含if/unless predicate的store-success-score命令，scope有两个ScoreBool；三份MCFL30资源291353 bytes、SHA256 `FBFA847ACD3BE926FA7DE85948509C012DBB44AE4AD7017E8E2A0E9A508F37B2`。不模拟world predicate或断言frame0，无fullcheck/server。
 

@@ -1,6 +1,6 @@
-# 下一阶段：迁移 StdCommands void 原生入口（阶段 102）
+# 下一阶段：迁移 damage void 原生入口（阶段 103）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–101完成受测集合、数值、文本转换/拼接及predicate入口的限定迁移；当前库格式MCFL30。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–102完成受测集合、数值、文本转换/拼接、predicate及StdCommands部分void入口的限定迁移；当前库格式MCFL31。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -30,13 +30,19 @@ PlainChatComponent纯文本使用Fastjson2 `JSON.toJSONString` 编码单个字�
 
 `LootTablePredicateData.pass/fail` 两个bool入口迁入context；`NativePredicateOperations`复用 `CommandBoolPart` 的 `if/unless predicate`，通过现有结果发布路径得到 `ScoreBool`，id读取使用 `PropertyVar.get`。不改静态 `of`/factory、effects或world模拟。source/fresh库往返检查生成命令，Cache回归通过；MCFL30。执行器不模拟world predicate，不据此声称世界侧求值或frame0。结果见verification.md。
 
-### 阶段 102 计划：StdCommands void 方法
+### 阶段 102：StdCommands void 方法（已限定验证）
 
-限定迁移 `StdCommands` 中16个不受Java primitive-float签名冲突影响的void语言方法；place/playsound仍可有 `MCFloat` 参数。保留damage的4个primitive-float入口及其他107个 `CommandReturn` 返回入口，不触碰这些真实消费边界。为void调用删除当前Java wrapper入口，保留语言identifier、参数默认值、effects和原命令词序；单context Java方法使用唯一名称及原annotation identifier。
+16个不受Java primitive-float签名冲突影响的void语言方法迁入显式context；`place`/playsound仍可有 `MCFloat` 参数。保留damage的4个primitive-float入口及其他107个 `CommandReturn` 返回入口，不触碰这些真实消费边界。单context Java方法使用唯一名称及原annotation identifier，保留语言identifier、参数默认值、effects和原命令词序。`ResourceID.toCommandPart`以 `@MNIFunction.override=true` 声明替换失效的源码覆盖，并在Java wrapper中读取 `id.toCommandPart`。
 
-在 `NativeStdCommandOperations` 使用私有emit helper：于 `context.withArguments` 中构造原命令，对 `command.buildMacroFunction()` 的结果按原顺序逐条 `Function.addCommand`，最后只调用一次。非宏命令直接发出自身，不添加return-run前缀，也不经旧 `processMacroCommandReturn`；不改变其他Commands宏API或宿主快照。新增一个source/fresh库往返命令fixture：使用已验证可构造的 `TemplatePool()`，设置 `pool.id`，并在 `Box.observe(target as string)` 中分别调用 `place(pool, "fixture:constant", 2)` 和 `place(pool, target, 2)`；main传literal，但普通形参 `target` 在调用体内仍是未知值。检查实际导出宏准备先于唯一最终调用，且宏体没有return-run；参数已知时是否走非宏路径按实际输出记录，不作预设。无需构造Player或扩展浮点语义，不模拟world/frame0。预计MCFL31，按ABI变更重建stdlib，并联合fixture与Cache回归；不扩fullcheck/server。
+`NativeStdCommandOperations` 私有emit helper在 `context.withArguments` 中构造原命令，按 `buildMacroFunction()` 顺序添加准备命令，最后调用一次；非宏路径直接发出自身，不加return-run，也不经旧 `processMacroCommandReturn`。source/fresh fixture使用 `TemplatePool()`、设置 `pool.id`，在 `Box.observe(target as string)` 中调用 `place(pool, "fixture:constant", 2)` 与 `place(pool, target, 2)`；main传literal，但普通形参 `target` 在调用体内仍是未知值。两个place调用实际均生成一次macro，准备参数先于调用且宏体无return-run。stdlib2和失败fixture修复后单项通过；Cache只首轮通过。MCFL31；不据此声称非宏路径或world执行已覆盖。详见verification.md。
 
-阶段88–101详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL30。
+### 阶段 103 计划：damage void 方法
+
+只迁移4个damage void接口，按其实际参数类型处理旧Java primitive-float、`DamageType`和`EntityVar` selector不匹配；其中DamageType是ResourceID data，selector实际为 `SelectorVar`。为语言重载保留annotation identifier，Java方法使用唯一名称；不扩普通声明/default参数API。damage的浮点边界使用现有 `FloatProviders.enabled` 检查：常量按 `Float.toString` 编码，动态26.3值走现有宏路径；旧目标不支持动态float时明确拒绝，不建新浮点引擎、不改默认damage语义。
+
+一个source/fresh fixture验证动态26.3 amount的宏命令；DamageType如何在源码中构造与赋 `minecraft:generic` id须以fixture实际验证为准，不预写为已运行。必要检查还包含该fixture内direct context的旧目标动态float拒绝和Cache回归；不跑服务器或扩大旧green。预计MCFL32并按ABI变化重建stdlib。具体签名/用例需实现前复核。
+
+阶段88–102详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL31。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

@@ -5,7 +5,7 @@
 
 ## 当前规则（截至2026-10-07，Asia/Shanghai）
 
-用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–92完成受测集合与数值算术迁移，阶段93迁移ConversionData数值转换入口，阶段94迁移toText入口，阶段95改为显式Java方法名引用，阶段96接入text与拼接，阶段97统一String/NBT的toText入口，阶段98恢复T! text快照与即时拼接，阶段99迁移DataObjectData.toText，阶段100转义PlainChatComponent纯文本，阶段101迁移LootTablePredicateData两个谓词入口；当前MCFL30，whole17未完成。
+用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–92完成受测集合与数值算术迁移，阶段93迁移ConversionData数值转换入口，阶段94迁移toText入口，阶段95改为显式Java方法名引用，阶段96接入text与拼接，阶段97统一String/NBT的toText入口，阶段98恢复T! text快照与即时拼接，阶段99迁移DataObjectData.toText，阶段100转义PlainChatComponent纯文本，阶段101迁移LootTablePredicateData两个谓词入口，阶段102迁移受测StdCommands void入口；当前MCFL31，whole17未完成。
 
 ## 当前已接入
 
@@ -42,6 +42,8 @@
 阶段100：`PlainChatComponent` 的纯文本编码对text使用Fastjson2 `JSON.toJSONString` 转义单个字符串；引号和反斜线的T!快照/copy/concat及NBT字符串toText在source/fresh磁盘fixture通过。MCFL29不变，无Cache/stdlib；未覆盖控制字符或聊天渲染。whole17仍未完成。
 
 阶段101：`LootTablePredicateData.pass/fail` 两个bool入口使用显式context；`NativePredicateOperations`复用 `CommandBoolPart` 生成谓词条件，并通过现有结果发布路径返回 `ScoreBool`。source/fresh导出命令及Cache回归通过，MCFL30；不涉及world模拟或谓词求值。验证范围与日志见verification.md。
+
+阶段102：16个不受Java primitive-float签名冲突影响的StdCommands void入口迁入显式context；`place`仍可带 `MCFloat` 参数。保留damage的四个primitive-float入口及其他107个 `CommandReturn` 接口。修复`ResourceID.toCommandPart`以声明override并从Java wrapper读取 `id.toCommandPart`。真实fixture验证两个place调用各自生成一次macro，准备参数先于调用；未知target按普通参数处理。MCFL31，source/fresh项目均0 errors，Cache回归在首轮通过；详细轮次见verification.md。不据此声称非宏路径或world执行已覆盖。
 
 重构不要求兼容旧 `.mcfpp` 写法；显式引用新旧语法无需并行保留。
 
