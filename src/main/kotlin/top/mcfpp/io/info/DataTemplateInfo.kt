@@ -40,7 +40,7 @@ data class DataTemplateInfo(
         currTemplate = template
         template.isInterface = isInterface
         template.isAbstract = isAbstract
-        template.scope = field.get()
+        template.scope = field.get(template)
         parents.forEach {
             template.extends(it.get())
             currTemplate = template
@@ -124,7 +124,7 @@ data class GenericDataTemplateInfo(
         currTemplate = template
         template.isInterface = isInterface
         template.isAbstract = isAbstract
-        template.scope = field.get()
+        template.scope = field.get(template)
         parents.forEach {
             template.extends(it.get())
             currTemplate = template

@@ -1,6 +1,7 @@
 package top.mcfpp.io.info
 
 import top.mcfpp.core.lang.Var
+import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.scope.CompoundDataScope
 
 data class FieldInfo(
@@ -8,13 +9,23 @@ data class FieldInfo(
     var functions: ArrayList<AbstractFunctionInfo<*>>,
     var properties: ArrayList<PropertyInfo>
 ): ModelInfo<CompoundDataScope> {
-    override fun get(): CompoundDataScope {
+    override fun get(): CompoundDataScope = restore(null)
+
+    internal fun get(owner: DataTemplate): CompoundDataScope = restore(owner)
+
+    private fun restore(owner: DataTemplate?): CompoundDataScope {
         val field = CompoundDataScope(ArrayList())
+        if (owner != null) owner.scope = field
         vars.forEach {
             field.putVar(it.identifier, it, true)
         }
         functions.forEach {
-            field.addFunction(it.get(), true)
+            val function = it.get()
+            if (owner != null) {
+                function.owner = owner
+                function.scope.parent.add(0, field)
+            }
+            field.addFunction(function, true)
         }
         properties.forEach {
             field.putProperty(it.identifier, it.get(), true)

@@ -49,6 +49,7 @@ data class FunctionInfo(
             f.addTag(tag.get())
         }
         f.isOverride = isOverride
+        f.isAbstract = isAbstract
         f.ast = context
         f.buildParamVar()
         currFunction = null
@@ -100,6 +101,7 @@ data class GenericFunctionInfo(
             f.addTag(tag.get())
         }
         f.isOverride = isOverride
+        f.isAbstract = isAbstract
         f.buildParamVar()
         currFunction = null
         return f
@@ -150,6 +152,7 @@ data class NativeFunctionInfo(
             f.addTag(tag.get())
         }
         f.isOverride = isOverride
+        f.isAbstract = isAbstract
         f.caller = caller
         f.buildParamVar()
         currFunction = null

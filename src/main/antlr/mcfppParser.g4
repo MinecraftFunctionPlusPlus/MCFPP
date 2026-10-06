@@ -381,8 +381,8 @@ primary
 
 var
     :   bucketExpression
-    |   varWithSuffix
     |   functionCall
+    |   varWithSuffix
     ;
 
 bucketExpression

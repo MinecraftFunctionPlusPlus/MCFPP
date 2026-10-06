@@ -229,6 +229,95 @@ class TemplateInitializationTest {
         assertEquals(4, execute(main, output).read(main.scope.getVar("result") as MCInt))
     }
 
+    @Test fun restoredTemplateMethodsKeepOwnersAndIndependentReceivers() = withLibrary { output ->
+        write("""
+            namespace fixture.members;
+            data Box {
+                value as int;
+                constructor(value as int){ this.value = value; }
+                func setValue(value as int){ this.value = value; }
+                func add<T as type>(amount as int) -> int { return this.value + amount; }
+            }
+            data Child : Box {
+                constructor(value as int){ this.value = value; }
+            }
+            func main(){}
+        """, output)
+        val original = GlobalScope.getTemplate("fixture.members", "Box")!!
+        val main = consume("""
+            import fixture.members:*;
+            func main(){
+                var first = Box(1);
+                var second = Box(2);
+                var child = Child(3);
+                first.setValue(9);
+                child.setValue(7);
+                dynamic var result = first.value * 100 + second.value * 10 + child.value;
+                dynamic var added = first.add<int>(3);
+            }
+        """, output)
+        val box = GlobalScope.getTemplate("fixture.members", "Box")!!
+        val child = GlobalScope.getTemplate("fixture.members", "Child")!!
+        assertNotSame(original, box)
+        val setter = box.scope.functions.getValue("setValue").single()
+        assertSame(box, setter.owner)
+        assertSame(box, child.scope.getFunction("setValue", emptyList(), listOf(top.mcfpp.core.lang.MCIntConcrete(7))).owner)
+        val generic = box.scope.functions.getValue("add").single()
+        assertSame(box, generic.owner)
+        val machine = execute(main, output)
+        assertEquals(927, machine.read(main.scope.getVar("result") as MCInt))
+        assertEquals(12, machine.read(main.scope.getVar("added") as MCInt))
+        val functions = output.resolve("consumer").resolve(Project.config.name).resolve("data")
+            .resolve(setter.namespaceID.namespace).resolve("function")
+        assertTrue(Files.exists(functions.resolve("${setter.namespaceID.identifier}.mcfunction")))
+        val wrapper = generic.compiledFunctions.values.single()
+        assertTrue(Files.exists(functions.resolve("${wrapper.namespaceID.identifier}.mcfunction")))
+        assertTrue(setter.namespaceID.identifier.startsWith("box/"))
+        assertTrue(wrapper.namespaceID.identifier.startsWith("box/"))
+    }
+
+    @Test fun restoredObjectMethodsKeepStaticOwnersAndTemplateScope() = withLibrary { output ->
+        write("""
+            namespace fixture.members;
+            object data Defaults {
+                value as int = 4;
+                func setValue(value as int){ Defaults.value = value; }
+                func read() -> int { return value; }
+            }
+            func main(){}
+        """, output)
+        val original = GlobalScope.localNamespaces.getValue("fixture.members").scope.objects
+            .filterIsInstance<ObjectDataTemplate>().single { it.identifier == "Defaults" }
+        val main = consume("""
+            import fixture.members:*;
+            func main(){ Defaults.setValue(7); dynamic var result = Defaults.read(); }
+        """, output)
+        val defaults = GlobalScope.libNamespaces.getValue("fixture.members").scope.objects
+            .filterIsInstance<ObjectDataTemplate>().single { it.identifier == "Defaults" }
+        assertNotSame(original, defaults)
+        val setter = defaults.scope.functions.getValue("setValue").single()
+        val reader = defaults.scope.functions.getValue("read").single()
+        for (method in listOf(setter, reader)) {
+            assertSame(defaults, method.owner)
+            assertTrue(method.isStatic)
+            assertTrue(method.namespaceID.identifier.startsWith("defaults/static/"))
+        }
+        val initializer = Function("initialize", main.namespace, null)
+        initializer.runInFunction {
+            Function.addCommand(Commands.stackIn())
+            defaults.constructors.single().invoke(emptyList(), null)
+            Function.addCommand(Commands.stackOut())
+        }
+        main.commands.addAll(0, initializer.commands)
+        assertEquals(0, Project.errorCount)
+        val machine = execute(main, output)
+        assertEquals(7, machine.read(main.scope.getVar("result") as MCInt))
+        val functions = output.resolve("consumer").resolve(Project.config.name).resolve("data")
+            .resolve(setter.namespaceID.namespace).resolve("function")
+        for (method in listOf(setter, reader))
+            assertTrue(Files.exists(functions.resolve("${method.namespaceID.identifier}.mcfunction")))
+    }
+
     @Test fun restoredObjectInitializersExecuteWhenTheirConstructorIsExplicitlyInvoked() = withLibrary { output ->
         write("""
             namespace fixture.defaults;

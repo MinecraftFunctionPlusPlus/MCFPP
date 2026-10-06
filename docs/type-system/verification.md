@@ -1,8 +1,14 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段60必要回归 TemplateInitialization6 + ConstructorExecution7 单次联合13项全部通过；阶段59 MCFL13 `bin.mclib` 282180 bytes保持不变。最近完整检查仍属于提交 `72dc557`，共346项；本轮未运行完整check或实际Minecraft服务端，整个迁移仍未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段61共26个不同用例跨轮各自通过（首轮26项24通过/2失败，修复后仅重跑两失败方法并通过），不是一次最终联合26项；MCFL13 `bin.mclib` 282180 bytes未变。最近完整检查仍属于提交 `72dc557`，共346项；本轮未运行完整check或实际Minecraft服务端，整个迁移仍未完成。
 
-## 最新必要检查：消费端库函数主体导出（阶段 60）
+## 最新必要检查：恢复导入成员 owner 与模板 scope（阶段 61）
+
+`FieldInfo`保留无参 `get()`，新增owner参数并复用restore；`DataTemplateInfo`普通/泛型模板通过`field.get(template)`恢复canonical field scope。修复的是本地方法owner与方法scope.parent中canonical field优先项，不是Var字段owner。三个`FunctionInfo`恢复已序列化的`isAbstract`。参数NBT/score/return/Symbol/Place无需重绑。
+
+实现前红测 fresh XML `2026-10-06T00:02:12.468Z`，两个方法分别有5/2个语言错误。首轮三套件26项中24通过、2失败，TemplateInitialization XML `2026-10-06T00:04:27.892Z`；ConstructorExecution7和SpecializationPolicy11分别于`00:04:40.457Z`、`00:04:41.396Z`全过。普通模板方法fixture产生`Cannot get member add`及后续比较错误；修正grammar中 var 后函数调用优先级（bucket仍先）解决。object fixture复用已有main.scope生成ctor prologue，fieldStore读取尚未赋值的main.result，导致执行器报missing `default.test_func_main_result`；改用独立空scope临时Function生成prologue后通过，这是测试夹具初始化顺序修正，与未登记无关。只复查两失败方法后 fresh XML `2026-10-06T00:09:23.003Z`，2/0/0/0。合计26个不同用例跨轮各自通过，非最终联合26项。真实库往返检查保留继承owner及静态路径：实例927/generic12、object7，frame0。MCFL13/bin282180不变，无stdlib重建、fullcheck或服务器验证。日志 `mcfpp-library-member-owner-red.log`、`mcfpp-library-member-owner-final.log`、`mcfpp-library-member-owner-complete.log`。
+
+## 历史必要检查：消费端库函数主体导出（阶段 60）
 
 `DatapackCreator` 新增的库导出入口仅导出 `bodyCompiled` 的非 Native 函数，并按实际 namespace ID 写入；收集器遍历 `compiledFunctions`、`GenericDataTemplate.compiledTemplates`、模板接口/对象/companion，使用 identity visited 避免重复实例。库测试 helper 真实读取 consumer 目录生成的所有 `.mcfunction`，main 与 callee 均从磁盘执行；generic wrapper 有非空文件，generic prototype 不输出，没有从 Imports 或内存补漏。
 
