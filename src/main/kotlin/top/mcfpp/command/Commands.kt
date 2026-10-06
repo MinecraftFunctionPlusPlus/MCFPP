@@ -333,13 +333,7 @@ object Commands {
      */
     @JvmStatic
     fun tempFunction(parent: Function, operation: (tempFunction: Function) -> Unit) : Pair<Command, Function>{
-        val l = Function.currFunction
-        val f = NoStackFunction(TempPool.getFunctionIdentify("temp"), parent)
-        GlobalScope.localNamespaces[Project.currNamespace]!!.scope.addFunction(f, false)
-        Function.currFunction = f
-        operation(f)
-        Function.currFunction = l
-        return function(f) to f
+        return createTempFunction(TempPool.getFunctionIdentify("temp"), parent, operation)
     }
 
     /**
@@ -353,12 +347,15 @@ object Commands {
      */
     @JvmStatic
     fun tempFunction(prefix: String, parent: Function, operation: (tempFunction: Function) -> Unit) : Pair<Command, Function>{
-        val l = Function.currFunction
-        val f = NoStackFunction(TempPool.getFunctionIdentify("${prefix}_temp"), parent)
-        GlobalScope.localNamespaces[Project.currNamespace]!!.scope.addFunction(f, false)
-        Function.currFunction = f
-        operation(f)
-        Function.currFunction = l
+        return createTempFunction(TempPool.getFunctionIdentify("${prefix}_temp"), parent, operation)
+    }
+
+    private fun createTempFunction(identifier: String, parent: Function, operation: (Function) -> Unit): Pair<Command, Function> {
+        val f = NoStackFunction(identifier, parent).apply { namespace = parent.namespace }
+        GlobalScope.getUnsolvedImportNamespace(parent.namespace)!!.scope.addFunction(f, false)
+        f.runInFunction { operation(f) }
+        // Generated bodies must also be exported when their declaration namespace belongs to a library.
+        f.bodyCompiled = true
         return function(f) to f
     }
 

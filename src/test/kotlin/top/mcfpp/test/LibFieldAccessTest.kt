@@ -2008,6 +2008,57 @@ class LibFieldAccessTest {
         assertEquals(7, machine.read(main.scope.getVar("result") as MCInt))
     }
 
+    @Test
+    fun nativeListMethodsUseArgumentAndResultReferencesAcrossLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = """
+            func main(){
+                dynamic var index=2;
+                dynamic var two=2; dynamic var three=3; dynamic var absent=9;
+                var mutationBox=Box(); var bulkBox=Box(); var queryBox=Box();
+                dynamic var mutationResult=mutationBox.mutation(index);
+                dynamic var bulkResult=bulkBox.bulk();
+                dynamic var sourceResult=bulkBox.extra[0];
+                dynamic var firstQuery=queryBox.query(two);
+                dynamic var secondQuery=queryBox.query(three);
+                dynamic var absentQuery=queryBox.query(absent);
+            }
+        """
+        write("""
+            namespace fixture.fields;
+            data Box {
+                items as list<int>; extra as list<int>;
+                constructor(){this.items=[2,3,2];this.extra=[4,5];}
+                func mutation(index as int)->int {
+                    this.items.prepend(1); this.items.add(4);
+                    this.items.insert(index,8); this.items.removeAt(-1); this.items.remove(8);
+                    return this.items[2];
+                }
+                func bulk()->int {
+                    this.items.addAll(this.extra); this.items.prependAll(this.extra);
+                    return this.items[0]+this.items[6];
+                }
+                func query(needle as int)->int {
+                    var first=this.items.indexOf(needle);
+                    var last=this.items.lastIndexOf(needle);
+                    if(this.items.contains(needle)){return first*10+last;}
+                    return -1;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val machine = execute(main, output)
+            for ((name, expected) in listOf("mutationResult" to 3, "bulkResult" to 9, "sourceResult" to 4,
+                    "firstQuery" to 2, "secondQuery" to 11, "absentQuery" to -1)) {
+                assertEquals(expected, machine.read(main.scope.getVar(name) as MCInt), name)
+            }
+        }
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

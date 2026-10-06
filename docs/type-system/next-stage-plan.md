@@ -1,10 +1,12 @@
-# 下一阶段：其余 list native 方法的显式调用上下文（阶段 89）
+# 下一阶段：迁移字典、Map与ImmutableList原生方法（阶段 90）
 
-阶段87限制 `type` 值仅用于泛型参数已限定验证；普通值位置及擦除/集合中的TypeValue拒绝，`typealias`、内部TypeVar解析与现有readonly泛型绑定保留。阶段88已将list.clear的受测legacy入口迁入显式 `NativeCallContext`，MCFL20，三项必要检查通过。整体17项目标仍未完成。
+阶段87限制 `type` 值仅用于泛型参数已限定验证；普通值位置及擦除/集合中的TypeValue拒绝，`typealias`、内部TypeVar解析与现有readonly泛型绑定保留。阶段88迁入list.clear、阶段89迁入其余10个list原生方法，现共11个方法使用显式 `NativeCallContext`，MCFL21；whole17仍未完成。
 
-阶段89候选：将剩余10个list native方法迁到同一调用context；共11个方法（clear已在阶段88完成）。context内部需要将普通参数绑定到值快照/位置，并适配真实返回值/返回位置，但Java API不暴露 `Var` 或 `ValueWrapper`；领域逻辑仍由 `ListOperations` 实现。此次只扩list native入口，不扩 operator 或全部MNI。`NativeFunctionInfo`持久化methodString；删除剩余10个旧methodString会使旧bin失效，计划确认后升级MCFL并重建stdlib。此阶段尚未编码/验证。
+阶段89已验证：context内部绑定普通参数值/位置及实际返回值/返回位置，Java API不暴露 `Var` 或 `ValueWrapper`；领域逻辑仍由 `ListOperations` 实现。`Commands.tempFunction`沿父namespace注册到现存canonical namespace，并安全恢复function上下文，库导出器可收集生成函数体。MCFL21标准库与资源已重建，三项不同用例跨轮各自通过；最终仅失败fixture单项复查。分轮证据见verification.md。
 
-阶段88详细实施与分轮验证见verification.md；source/fresh reset(clear/add)输出7且栈帧为0。标准库和项目资源应使用MCFL20。
+阶段90计划迁移13个原生方法：Dictionary 4个、Map 6个、ImmutableList 3个。复用现有context API，不新增context入口或扩展operator。保持字典仅接受已知key的限制，Map查询允许dynamic key，readonly list允许dynamic needle。必要验证限于一条模板实例源码/fresh库往返fixture及旧/未知缓存格式拒绝回归；NativeCallContext、NativeFunction和ListOperations不变，不额外跑IR套件。methodString ABI变更预计将MCFL升至22并重建stdlib；实施前按实际签名核准范围。
+
+阶段88/89详细实施与分轮验证见verification.md；列表reset(clear/add)以及其余列表查询和变更均有指定的source/fresh库磁盘验证。标准库和项目资源当前使用MCFL21。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

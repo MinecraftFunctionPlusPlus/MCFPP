@@ -4,6 +4,7 @@ import top.mcfpp.Project
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Native
 import top.mcfpp.mni.NativeCallContext
@@ -69,7 +70,6 @@ class NativeFunction : Function, Native {
     }
 
     fun invoke(readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>, caller: CanSelectMember?): Var<*> {
-        val valueWrapper = ValueWrapper(returnVar)
         val list = argPass(readOnlyArgs, normalArgs)
         val noWrites = javaMethod.isAnnotationPresent(top.mcfpp.mni.annotation.NoExternalWrites::class.java) ||
             javaMethod.declaringClass.isAnnotationPresent(top.mcfpp.mni.annotation.NoExternalWrites::class.java)
@@ -83,9 +83,10 @@ class NativeFunction : Function, Native {
         val hostValues = observed.filter(hostIdentities::add).mapNotNull { value ->
             top.mcfpp.analysis.StorageAccess.hostSnapshot(value)?.let { value to it }
         }
-        val invocationArgs: List<Any?> = if (javaMethod.parameterTypes.contentEquals(arrayOf(NativeCallContext::class.java))) {
-            listOf(NativeCallContext(Function.currFunction, actualCaller as Var<*>))
-        } else buildList {
+        val context = if (javaMethod.parameterTypes.contentEquals(arrayOf(NativeCallContext::class.java)))
+            NativeCallContext(Function.currFunction, actualCaller as Var<*>, list) else null
+        val valueWrapper = if (context == null) ValueWrapper(returnVar) else null
+        val invocationArgs: List<Any?> = if (context != null) listOf(context) else buildList {
             addAll(list)
             if (this@NativeFunction.caller != MCFPPPrivateType.Void) add(actualCaller)
             if (this@NativeFunction.returnType != MCFPPPrivateType.Void) add(valueWrapper)
@@ -115,7 +116,11 @@ class NativeFunction : Function, Native {
             top.mcfpp.analysis.StorageAccess.commitHostChanges(hostValues)
             top.mcfpp.analysis.StorageAccess.barrier(observed)
         }
-        returnVar = valueWrapper.value
+        returnVar = if (context == null) valueWrapper!!.value else if (returnType == MCFPPPrivateType.Void) returnVar
+        else context.resultAdapter() ?: run {
+            LogProcessor.error("Native function '$identifier' did not publish its result")
+            UnknownVar(identifier).apply { type = returnType; isError = true }
+        }
         return returnVar
     }
 

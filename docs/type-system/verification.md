@@ -1,8 +1,16 @@
 # 当前阶段验证记录
 
-最新规则日期：2026-10-06（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
+最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 阶段 88：list.clear 显式调用上下文（已限定验证）
+## 阶段 89：其余 list 原生方法显式调用上下文（已限定验证）
+
+其余10个列表原生方法已与阶段88的 `clear` 共用 `NativeCallContext`，共迁移11个方法。Java层通过context传递普通实参、结果值/位置；内部private Var桥复用 `StorageAccess`，领域操作仍由 `ListOperations` 执行。`Commands.tempFunction` 两个重载沿用父namespace、注册到已存在的canonical namespace，使用 `runInFunction` 恢复调用上下文；生成的函数标记 `bodyCompiled`，使库导出器能写出其函数体。
+
+MCFL20→21。`mcfpp-native-list-context-stdlib.log`：exit0/BUILD SUCCESSFUL in11s，Project 0 errors/0 warnings；资源292007 bytes，MCFL21，build/stdlib-index、src资源、build资源SHA256均为`4E97F3CBAB14B1EF3A89991DEC1722121768A113AF1D243DFC9ABC7DE498561F`。阶段89标准库重建一次成功。
+
+首轮 `mcfpp-native-list-context-final.log` 中Cache和ListMember用例通过，新列表fixture在consumer触发tempFunction namespace NPE并产生8个语言错误；source为0/9118 warnings。namespace注册和上下文恢复修复后，仅重跑fixture：`mcfpp-native-list-context-final2.log` worker185正常、exit0/BUILD SUCCESSFUL in18s；fresh XML `2026-10-06T17:31:52.308Z` 为1/0 failures/0 errors/0 skips，source0/9118、consumer0/9119。三项不同用例跨轮各自通过，最终只有该fixture单项复查，并非最终联合三项。测试实际执行consumer磁盘生成函数，列表结果和frame0检查通过。warnings来自既有flatExtends重复继承类别；无fullcheck/server，whole17及其他MNI入口仍未完成。
+
+## 历史必要检查：list.clear 显式调用上下文（阶段 88）
 
 新增36行 `NativeCallContext`，公开函数、receiver的ValueRef/Place、当前immutable `CompilerValue`快照及通用 `writeReceiver(CompilerValue)`；内部private Var桥执行显式 `function.runInFunction` 与 `StorageAccess` 恢复/写回。Java `clear` 改为单一context签名；NativeFunction使用实际 `invocationArgs` context，CompoundData识别精确单context ABI，其他native ABI保留。33行fixture通过真实实例owner在 `reset` 中执行clear/add；source与fresh库consumer均从生成的mcfunction执行得到7，入口栈帧为0。领域操作仍在 `ListOperations`，本阶段没有统一所有StorageAccess/MNI入口。
 

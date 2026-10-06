@@ -132,6 +132,34 @@ object ListOperations {
         context.writeReceiver(CompilerValue.Sequence(emptyList()))
     }
 
+    fun add(context: NativeCallContext, prepend: Boolean) = context.withAdapters { caller, arguments ->
+        add(caller as NBTList, arguments[0], prepend)
+    }
+
+    fun addAll(context: NativeCallContext, prepend: Boolean) = context.withAdapters { caller, arguments ->
+        addAll(caller as NBTList, arguments[0] as NBTList, prepend)
+    }
+
+    fun insert(context: NativeCallContext) = context.withAdapters { caller, arguments ->
+        insert(caller as NBTList, arguments[0] as MCInt, arguments[1])
+    }
+
+    fun removeAt(context: NativeCallContext) = context.withAdapters { caller, arguments ->
+        removeAt(caller as NBTList, arguments[0] as MCInt)
+    }
+
+    fun remove(context: NativeCallContext) = context.withAdapters { caller, arguments ->
+        remove(caller as NBTList, arguments[0])
+    }
+
+    fun indexOf(context: NativeCallContext, last: Boolean) = context.withAdapters { caller, arguments ->
+        context.publishResult(indexOf(caller as NBTList, arguments[0], last))
+    }
+
+    fun contains(context: NativeCallContext) = context.withAdapters { caller, arguments ->
+        context.publishResult(contains(caller as NBTList, arguments[0]))
+    }
+
     fun add(caller: NBTList, source: Var<*>, prepend: Boolean) {
         if (!canAdd(caller, source, false)) return
         val old = sequence(caller)
