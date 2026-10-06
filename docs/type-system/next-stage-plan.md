@@ -1,10 +1,10 @@
-# 下一阶段：为 DataObjectData 接入 toText context（阶段 99）
+# 下一阶段：转义 PlainChatComponent 文本（阶段 100）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–98完成受测集合、数值、toText、显式转换引用与文本拼接的限定迁移；当前库格式MCFL28。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–99完成受测集合、数值、toText、显式转换引用与文本拼接的限定迁移；当前库格式MCFL29。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
-阶段93已迁移ConversionData的49个入口；阶段94完成toText入口限定验证；阶段95改为匹配显式Java方法名；阶段96完成text receiver赋值与拼接限定验证；阶段97统一String/NBT toText入口；阶段98限定恢复T!文本快照与拼接。分轮结果见verification.md。
+阶段93已迁移ConversionData的49个入口；阶段94完成toText入口限定验证；阶段95改为匹配显式Java方法名；阶段96完成text receiver赋值与拼接限定验证；阶段97统一String/NBT toText入口；阶段98恢复T!文本快照；阶段99迁移DataObjectData.toText。分轮结果见verification.md。
 
 ### 阶段 96：text 与拼接运算（已限定验证）
 
@@ -18,11 +18,15 @@ String与NBT的toText入口已按实际receiver状态合并到各自单一Java�
 
 `StorageAccess.restore`恢复完整text ListTag快照为immutable encoded component，并保留声明类型。已复用单个fixture验证T! copy/concat的source与fresh磁盘结果A/A/AB/AS、return7/frame0；joined/suffixed由直接literal component list生成。MCFL28不变。
 
-### 阶段 99 计划：DataObjectData.toText显式context
+### 阶段 99：DataObjectData.toText显式context（已限定验证）
 
-只将 `DataObjectData.toText` 迁入现有 `NativeCallContext`，复用 `NativeTextOperations` 的旧DTO SNBT/runtimeNBTChat核心逻辑。保持JavaVar的host转换、Any host/getDefault/equalNull路径，暂不扩展scope。增加一个普通Payload/Box的source/fresh runtime fixture；普通data构造走 `buildUnConcrete`，不据此宣称Concrete覆盖。按最终ABI判断MCFL是否变化，必要时重建stdlib并运行Cache格式回归；不扩展effects或其他类型。
+仅迁移 `DataObjectData.toText`，复用旧DTO SNBT/runtimeNBTChat逻辑；JavaVar与Any路径保持现状。普通Payload/Box fixture从source/fresh磁盘执行，验证字段7、返回7及NBT组件；普通data构造使用 `buildUnConcrete`，不代表Concrete覆盖。MCFL28→29，必要stdlib与Cache回归已通过。
 
-阶段88–98详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL28。
+### 阶段 100 计划：PlainChatComponent JSON字符串转义
+
+PlainChatComponent当前文本编码未转义。沿用项目Fastjson2的 `JSON.toJSONString(value)` 编码单个字符串，限定修复双引号、反斜线等JSON字符串转义。用一个source/fresh fixture验证带引号/反斜线的 `toText`、T!副本/拼接与NBT字符串 `toText`；仅该fixture一次RED和最终复查，不扩展style、decoder或其他MNI签名。预计不改库ABI，不升MCFL、不重建stdlib/Cache；以fixture实际结果确认。不得扩fullcheck/server。
+
+阶段88–99详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL29。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

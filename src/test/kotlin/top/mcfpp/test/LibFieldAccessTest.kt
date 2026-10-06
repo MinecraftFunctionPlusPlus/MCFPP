@@ -2397,6 +2397,44 @@ class LibFieldAccessTest {
         check(main)
     }
 
+    @Test
+    fun nativeTemplateTextUsesReceiverContextAcrossLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = """
+            func main(){
+                var box=Box();
+                dynamic var payload=Payload(7);
+                dynamic var result=box.observe(payload);
+            }
+        """
+        write("""
+            namespace fixture.fields;
+            data Payload {
+                value as int;
+                constructor(initial as int){this.value=initial;}
+            }
+            data Box {
+                func observe(payload as Payload)->int {
+                    dynamic var payloadText=payload.toText();
+                    /data modify storage fixture:observed payloadText set from storage mcfpp:system stack_frame[0].payloadText
+                    /data modify storage fixture:observed payloadValue set from storage mcfpp:system stack_frame[0].payload.value
+                    return 7;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val machine = execute(main, output)
+            assertEquals(7, machine.read(main.scope.getVar("result") as MCInt))
+            assertEquals(Tag.toNBT("7"), machine.readNbt("fixture:observed", "payloadValue"))
+            assertEquals(Tag.toNBT("""[{type:"nbt",storage:"mcfpp:system",nbt:"stack_frame[0].payload",interpret:false}]"""),
+                machine.readNbt("fixture:observed", "payloadText"))
+        }
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

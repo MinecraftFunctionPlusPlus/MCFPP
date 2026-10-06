@@ -2,7 +2,25 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 阶段 98：恢复 T! 文本快照与即时拼接（已限定验证）
+## 阶段 99：迁移 DataObjectData.toText（已限定验证）
+
+将单个 `DataObjectData.toText` Java入口迁入context，复用既有 `NativeTextOperations` 的DTO SNBT/runtimeNBTChat逻辑；没有扩展到JavaVar的toCommandPart、Any host/getDefault/equalNull或effects。MCFL29，source/build/stdlib-index三份bin均291431 bytes、raw header `4c46434d1d000000`、SHA256 `37576145F097FEEB0FB97CFFA7A35F970750A51B4687D846F82A3A9EE5473B7F`。
+
+旧ABI基线 `mcfpp-native-template-text-red.log` 实际为GREEN：worker209正常、BUILD SUCCESSFUL in15s，XML `2026-10-06T21:28:54.597Z` 1/0/0/0，source0/9118 warnings、fresh0/9119；它不是负例。MCFL29标准库重建exit0/BUILD SUCCESSFUL in10s、Project0/0。joint2 worker210正常exit0/BUILD SUCCESSFUL in19s；LibFieldAccess XML `2026-10-06T21:34:31.588Z` 1/0/0/0，Cache XML `21:34:30.893Z` 1/0/0/0；source/fresh Project分别0/9118与0/9119。consumer磁盘mcfunction执行确认 `Payload.value=7`、Box result=7、runtime NBT component SNBT与frame0。该fixture走普通data `buildUnConcrete`，不证明Concrete分支；无fullcheck/server。
+
+### 阶段 99 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 明确基线日志实际为GREEN，记录MCFL29、source/fresh磁盘结果。 |
+| 完整性 | 3/5 | 只迁移DataObjectData入口；Concrete、JavaVar/Any和whole17仍未完成。 |
+| 清晰性 | 4/5 | 区分旧ABI基线、schema重建及两项最终联合测试。 |
+| 可执行性 | 4/5 | 阶段100限于PlainChatComponent JSON字符串转义和单fixture回归。 |
+| 简洁性 | 4/5 | 聚焦一个入口和一个纵向fixture。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 历史必要检查：恢复 T! 文本快照与即时拼接（阶段 98）
 
 两个生产文件调整 `EncodedChatComponent` 的不可变SNBT快照和 `StorageAccess.restore`：完整text ListTag恢复为immutable encoded component，再以原声明类型构造；没有通用wrapper递归、新parser/cache或effects变更。MCFL28、三份291176-byte bin及SHA256 `2550D9609261BC26BFB713DE15CA6630FFEAF6805B52024C37DCE5930C57381B`不变。
 

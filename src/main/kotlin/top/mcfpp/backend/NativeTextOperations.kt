@@ -8,6 +8,8 @@ import top.mcfpp.core.lang.nbt.MCString
 import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
+import top.mcfpp.core.lang.obj.DataTemplateObject
+import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.lib.ChatComponent
 import top.mcfpp.lib.ListChatComponent
 import top.mcfpp.lib.NBTChatComponent
@@ -16,6 +18,7 @@ import top.mcfpp.lib.ScoreChatComponent
 import top.mcfpp.mni.NativeCallContext
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.util.NBTUtil
 
 object NativeTextOperations {
     fun plusText(context: NativeCallContext) = context.withAdapters { receiver, arguments ->
@@ -42,6 +45,12 @@ object NativeTextOperations {
         val value = receiver as MCString
         publish(context, if (value is MCStringConcrete) PlainChatComponent(value.value.value)
             else NBTChatComponent(value, false, null))
+    }
+
+    fun template(context: NativeCallContext) = context.withAdapters { receiver, _ ->
+        val value = receiver as DataTemplateObject
+        publish(context, if (value is DataTemplateObjectConcrete) PlainChatComponent(Tag.toSNBT(NBTUtil.varToNBT(value)!!))
+            else NBTChatComponent(value.toNBTVar(), false, null))
     }
 
     fun representation(context: NativeCallContext) = context.withAdapters { receiver, _ ->

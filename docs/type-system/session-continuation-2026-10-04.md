@@ -4,7 +4,7 @@
 
 ## 当前进度
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段98已完成限定验证，MCFL28；阶段97提交`637d14f`，当前提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段99已完成限定验证，MCFL29；阶段98提交`6a6af4d`、阶段97提交`637d14f`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
 
 ### 用户最新规则（2026-10-06）
 
@@ -78,7 +78,23 @@ stdlib首轮 `mcfpp-native-text-context-stdlib.log` 重建成功，Project0/0，
 
 平均3.8/5，whole17完整性仍为3/5。
 
-### 阶段 98：T! text快照、copy与即时拼接（已限定验证）
+### 阶段 99：DataObjectData.toText（已限定验证）
+
+仅迁移 `DataObjectData.toText` 至显式context，复用 `NativeTextOperations` 的旧DTO SNBT/runtimeNBTChat实现；JavaVar与Any路径不变。baseline日志 `mcfpp-native-template-text-red.log` 实际是GREEN：worker209正常、XML `2026-10-06T21:28:54.597Z` 1/0/0/0、source0/9118、fresh0/9119。MCFL29标准库重建Project0/0、BUILD SUCCESSFUL in10s。joint2 worker210正常、BUILD SUCCESSFUL in19s；LibField XML `2026-10-06T21:34:31.588Z`与Cache XML `21:34:30.893Z`分别1/0/0/0。三份291431-byte bin SHA256 `37576145F097FEEB0FB97CFFA7A35F970750A51B4687D846F82A3A9EE5473B7F`。consumer磁盘函数执行验证Payload.value7、result7、runtime NBT组件与frame0；构造走普通data的 `buildUnConcrete`，不证明Concrete分支。无fullcheck/server。
+
+### 阶段 99 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 区分green baseline、schema29联合测试及普通data构造边界。 |
+| 完整性 | 3/5 | DataObjectData单入口受测通过，Concrete、JavaVar/Any范围及whole17仍未完成。 |
+| 清晰性 | 4/5 | 给出source/fresh磁盘组件、值与frame0证据。 |
+| 可执行性 | 4/5 | 阶段100仅处理PlainChatComponent JSON转义。 |
+| 简洁性 | 4/5 | 保持一个入口、一个fixture和必要Cache回归。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+### 阶段 98：T! text快照、copy与即时拼接（历史）
 
 两个生产文件修改不可变text snapshot恢复：完整ListTag恢复为immutable `EncodedChatComponent`，再以声明类型构造。RED `mcfpp-known-text-snapshot-red.log` worker207 exit1/FAILED17s，XML `2026-10-06T21:14:21.835Z` 1/1/0/0；producer2/9118，joined和suffixed均为text→text赋值错误，未进fresh。final `mcfpp-known-text-snapshot-final.log` worker208正常exit0/BUILD SUCCESSFUL in28s，XML `21:19:02.182Z` 1/0/0/0；source0/9118、fresh0/9119。生成consumer磁盘函数并执行得到original=A、copy=A、joined=AB、suffixed=AS、return7/frame0；日志118890/118894显示joined/suffixed直接作为含组件的flat literal list。MCFL28、bin291176/hash2550…不变；无stdlib/Cache/fullcheck/server。仅一RED及一final，无其他suite重跑。
 
