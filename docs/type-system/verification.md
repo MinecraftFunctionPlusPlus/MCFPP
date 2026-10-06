@@ -1,8 +1,20 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段67 MCFL16 generic 类只读实参/源码特化完成限定验证；stdlib 项目0 errors/0 warnings，`bin.mclib` 286243 bytes。41个不同用例跨轮各自通过，最后定向5项全绿；不是一次联合41项。最近完整检查仍属于提交 `72dc557`，共346项；本轮未运行完整check或实际Minecraft服务端，整个迁移仍未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段68未注解 generic 类`Cell<T as type>`字段、构造参数及返回类型的实例绑定已限定验证；MCFL16与`bin.mclib` 286243 bytes不变，无stdlib重建。17个不同用例跨轮各自通过，不是单次联合17项。最近完整检查仍属于提交`72dc557`，共346项；本轮未运行完整check或实际Minecraft服务端，整个迁移仍未完成。
 
-## 最新必要检查：generic 类只读实参与源码特化（阶段 67）
+## 最新必要检查：未注解 generic 类类型绑定（阶段 68）
+
+修改仅限三个入口：generic prototype 的FieldVisitor仍解析readonly签名/parent，但将成员body、default constructor和abstract检查延至T绑定后；AnnotationVisitor保持top-level行为并跳过prototype body；特化复制`isAbstract`，注册实际成员并运行原abstract检查，`flatExtends`后设置`currTemplate`为实例，再由现有annotation visitor转存字段annotations后complete/apply/refresh。范围限于未注解普通generic class；top-level/method annotation持久化、source abstract/final flags到model、generic object/interface、显式`Cell<int>`类型注记未覆盖。
+
+新fixture producer以Int 4/9共享同一Compiled、Bool true使用另一Compiled；consumer按Bool/Int反序实例化并核对`scope.types[T]`、字段/构造器参数/read返回的Int/Bool、private Var/Property canonical owner及稳定TypeId。磁盘consumer读取4/9；通过固定外部score `#generic_bool` 初值0、真实if分支设为1观察bool结果，frame0平衡。literal type/value readonly绑定沿用阶段67；本阶段没有生产while/return/executor改动。
+
+实现前红测 `mcfpp-generic-template-type-binding-red.log`：XML `2026-10-06T03:48:33.608Z`，1项失败，producer expected0/actual3，构造参数、read返回和字段各报`Invalid type: T`，未进入库/consumer。首轮17项联合日志 `mcfpp-generic-template-type-binding-final.log` 正常结束、76s/exit1：LibFieldAccess6 XML `03:51:23.534Z` 为5过1失败，另TemplateInitialization8 `03:51:39.066Z`、LibCacheFormat3 `03:51:39.057Z`全过。producer/consumer的模型、owner、TypeId和实际Int磁盘结果4/9以及frame0已通过；测试初次在读取`flagScore`时误读取data-only变量的score。
+
+观察变量复查 `mcfpp-generic-template-type-binding-complete.log`：XML `03:56:45.151Z`，1失败，仍为执行期读取未运行else分支的scope变量寄存器名；真实true/else continuation存在，不能解释为续接语句丢失或bool产生错误，4/9/frame0已过。最后fixture改用LogicStatementTest已有固定外部score观察方式，单方法 `mcfpp-generic-template-type-binding-observable-final.log` XML `2026-10-06T04:00:36.056Z`，1/0/0/0、worker正常、BUILD SUCCESSFUL in10s；磁盘4/9、`#generic_bool`为1、frame0平衡。16项首轮绿 + 新方法最终单项绿 =17个不同用例跨轮各自通过，不是最终联合17项。MCFL16/bin286243未变，无stdlib重建、fullcheck或服务器。日志均位于`F:/DevCache/.codex/runtime/`。
+
+边界仍有generic object/interface、top-level/method annotations、source abstract/final flags与显式`Cell<int>`类型注记等未验证语法；下一阶段见next-stage-plan.md。
+
+## 历史必要检查：generic 类只读实参与源码特化（阶段 67）
 
 generic prototype 的 readonly 签名与源码实例化入口已接通。`AbstractTemplateInfo` 保存 generic kind/parent factory，构造器恢复接受明确 owner；完整 immutable argument snapshot 用于 `SpecializationKey` 与基于原型的 `TypeId`，producer 和反向 consumer 身份一致。readonly argument 是独立 `CompilerOnly` 静态绑定，不进入实例重定位、默认载荷或runtime参数物化。已知完整的动态局部`n`可作为readonly值；`Var.assignedBy`在动态转换前冻结完整值，保留`n=3`后再次读取`n=5`。移除普通`GenericDataTemplate`过早的constructor body遍历，真实调用复用lazy `compileBody/prepareBody`并保持`this`上下文。DTO参数转换跳过static/CompilerOnly绑定。
 

@@ -131,6 +131,7 @@ open class GenericDataTemplate : DataTemplate {
         )
         template.declarationFile = declarationFile
         template.declarationEnvironment = declarationEnvironment
+        template.isAbstract = isAbstract
         template.initialize()
         template.restoreDeclarationEnvironment()
         for (parent in this.parent){
@@ -149,7 +150,16 @@ open class GenericDataTemplate : DataTemplate {
         //注册
         currTemplate = template
         MCFPPGenericDataTemplateFieldVisitor(template).visitTemplateDeclaration(ctx.parent as mcfppParser.TemplateDeclarationContext)
+        if (!template.isAbstract) {
+            template.scope.forEachFunction {
+                if (it.isAbstract) {
+                    LogProcessor.error("${it.identifier} is abstract, but not implemented.")
+                }
+            }
+        }
         template.flatExtends()
+        currTemplate = template
+        top.mcfpp.antlr.MCFPPAnnotationVisitor().visitTemplateBody(ctx)
         MCFPPFieldVisitor().completeTemplateFields(template)
         template.applyDeclarationAnnotations()
         (template.constructors + template.scope.functions.values.flatten()).forEach { it.refreshTemplateSignature() }

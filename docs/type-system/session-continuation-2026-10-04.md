@@ -1,10 +1,10 @@
 # 类型系统续接记录（2026-10-04）
 
-本轮从 2026-10-04 续接，首次存储/视图纵向路径通过 161 项测试。阶段54已提交`107e8ac`，阶段55已提交`4b5b7bd`，阶段56已提交`0fb7cb8`，阶段57已提交`3865673`。阶段58普通模板inferred字段已接入部分声明绑定支持并提交`e6f83fe`，37个不同必要用例跨轮各自通过。阶段59导入声明环境恢复与MCFL13重建后，50项指定测试联合通过，提交`6200561`。阶段60 consumer函数体导出限定回归13项联合通过，提交`3468341`。阶段61的26个不同用例跨轮各自通过。阶段62目录/JAR/ZIP资源复制与模板初始化联合11项通过。阶段63 MCFL14库权限往返联合14项全部通过，提交`1918db9`。阶段64 MCFL15字段/Property访问权限与while帧修复后，最终定向7项全部通过，提交`bda4d5a`。阶段65字段权限联合11项全过；阶段66当前实例未限定字段寻址的LibFieldAccess4 + ConstructorExecution7联合11项全过，MCFL15/bin286207未变。阶段67 generic类readonly源码特化及namespace类别恢复已验证，MCFL16/bin286243；41个不同用例跨轮各自通过。最近完整346项仍属于`72dc557`；整个17项重构未完成。
+本轮从 2026-10-04 续接，首次存储/视图纵向路径通过 161 项测试。阶段54已提交`107e8ac`，阶段55已提交`4b5b7bd`，阶段56已提交`0fb7cb8`，阶段57已提交`3865673`。阶段58普通模板inferred字段已接入部分声明绑定支持并提交`e6f83fe`，37个不同必要用例跨轮各自通过。阶段59导入声明环境恢复与MCFL13重建后，50项指定测试联合通过，提交`6200561`。阶段60 consumer函数体导出限定回归13项联合通过，提交`3468341`。阶段61的26个不同用例跨轮各自通过。阶段62目录/JAR/ZIP资源复制与模板初始化联合11项通过。阶段63 MCFL14库权限往返联合14项全部通过，提交`1918db9`。阶段64 MCFL15字段/Property访问权限与while帧修复后，最终定向7项全部通过，提交`bda4d5a`。阶段65字段权限联合11项全过；阶段66当前实例未限定字段寻址的LibFieldAccess4 + ConstructorExecution7联合11项全过，MCFL15/bin286207未变。阶段67 generic类readonly源码特化及namespace类别恢复已验证，MCFL16/bin286243；41个不同用例跨轮各自通过。阶段68未注解generic类T绑定限定语法已验证，17个不同用例跨轮通过，MCFL16/bin不变。最近完整346项仍属于`72dc557`；整个17项重构未完成。
 
 ## 当前进度
 
-阶段52 NBT地址与宏捕获已提交`dadb6cc`；阶段53对象身份`890833b`；阶段54候选解析`107e8ac`；阶段55 receiver/帧`4b5b7bd`；阶段56有序RHS持久化与MCFL12`0fb7cb8`；阶段57 const真实初始化`3865673`。阶段58普通模板 inferred 字段已接入限定语法域的声明绑定并提交`e6f83fe`；37个不同必要测试分轮各自通过。阶段59导入声明环境恢复已提交`6200561`，MCFL13标准库重建成功，六套件联合50项全过。阶段60限定消费端函数body导出已实现，TemplateInitialization6 + ConstructorExecution7联合13项通过。阶段60已提交`3468341`；阶段61 owner/scope限定迁移已完成并经26个用例跨轮验证。阶段62模块资源复制已验证，MCFL13/bin282180不变。阶段63函数权限持久化已完成，MCFL14/bin285207，提交`1918db9`。阶段64已完成字段/Property权限修复并提交`bda4d5a`，MCFL15/bin286207；最终字段方法1项+LogicStatement6项通过。阶段65来源权限检查的LibFieldAccess3 + TemplateInitialization8联合11项全过，MCFL15/bin不变。阶段66当前实例未限定字段访问LibFieldAccess4 + ConstructorExecution7联合11项全过，producer、consumer及磁盘执行覆盖5/9/8/6。阶段67 generic类readonly签名、源码特化及namespace类别恢复已限定验证，MCFL16/bin286243；阶段实现细节和分轮测试记录见verification.md。下一步阶段68处理未注解generic类类型绑定；imported object自动load仍独立未解决。
+阶段52 NBT地址与宏捕获已提交`dadb6cc`；阶段53对象身份`890833b`；阶段54候选解析`107e8ac`；阶段55 receiver/帧`4b5b7bd`；阶段56有序RHS持久化与MCFL12`0fb7cb8`；阶段57 const真实初始化`3865673`。阶段58普通模板 inferred 字段已接入限定语法域的声明绑定并提交`e6f83fe`；37个不同必要测试分轮各自通过。阶段59导入声明环境恢复已提交`6200561`，MCFL13标准库重建成功，六套件联合50项全过。阶段60限定消费端函数body导出已实现，TemplateInitialization6 + ConstructorExecution7联合13项通过。阶段60已提交`3468341`；阶段61 owner/scope限定迁移已完成并经26个用例跨轮验证。阶段62模块资源复制已验证，MCFL13/bin282180不变。阶段63函数权限持久化已完成，MCFL14/bin285207，提交`1918db9`。阶段64已完成字段/Property权限修复并提交`bda4d5a`，MCFL15/bin286207；最终字段方法1项+LogicStatement6项通过。阶段65来源权限检查的LibFieldAccess3 + TemplateInitialization8联合11项全过，MCFL15/bin不变。阶段66当前实例未限定字段访问LibFieldAccess4 + ConstructorExecution7联合11项全过，producer、consumer及磁盘执行覆盖5/9/8/6。阶段67 generic类readonly签名、源码特化及namespace类别恢复已限定验证，MCFL16/bin286243；阶段68未注解普通generic类T绑定亦已限定验证，17个不同用例跨轮各自通过。阶段细节与分轮测试见verification.md。下一步阶段69研究泛型类型注记和声明准备；imported object自动load仍独立未解决。
 用户随后要求继续完成并按进度提交；该轮实现已提交为 747f0b4，擦除 while 不动点绑定提交为 467343f，list/dict 元素贯通提交为 a1bafaa，集合编码与项目隔离提交为 702fbce，嵌套静态副本及编译上下文隔离提交为 8ce9fde，静态集合擦除通道及元数据缓存隔离提交为 dd3b43a，完整静态 as 视图的共享写入提交为 e73fa03，字典成员统一及输入帧修复提交为 6315054，列表共享成员及查找后端提交为 217a5cd，字典整体合并事实与空键边界提交为 47a7b5c，map 共享成员、位置与 entry 布局迁移提交为 fa64338，只读列表与 NBT 数组迁移提交为 a623399，实际 IR 调用与递归效果分析提交为 f5a9902。集合 IR 控制流与子位置证据提交为 72dc557。动态列表 IR 提交为 9f74d5e。字典成员 IR 提交为 4bed87f。列表变更成员 IR 提交为 21224b0。列表查询与按值删除 IR 提交为 ea7dca8。NBT 数组 IR 提交为 313886b。map 索引与成员 IR 提交为 9245a62。map 投影 IR 提交为 ab1f3cb。do…while 与闭合整数区间循环 IR 提交为 711331e。IR 词法作用域提交为 eef6d44。调用子形状提交为 0c3e65f。整数范围值和命名范围 IR 提交为 8aee6b7。递归返回/写回形状提交为 eb83a60。26.3 原生浮点 IR 提交为 7cd1a69。2026-10-06 继续显式转换 IR，阶段 47 提交 b56ede9，阶段 48 提交 860c799。阶段 49 旧浮点加减提交 `82d955b`，阶段 50 乘除代码提交 `bee57c1`、静态审计文档提交 `dfdb99a`；阶段 51 旧浮点 IR 最终复查 20 项通过。阶段 49 必要检查 46 项、阶段 50 必要检查 36 项。MCFL 保持 11，未改签名/缓存结构且未重建 bin.mclib。最近完整检查仍为 72dc557 的 346 项，整体 17 项迁移未完成。
 
 本次用户要求读取文件，继续上一会话尚未完成的项目任务。读取交接与下一阶段计划后，继续类型系统迁移，未扩展到独立 MNI 元编程计划。
@@ -212,11 +212,17 @@ field annotation 在 MCFPPAnnotationVisitor 转存后触发 helper 补 annotatio
 
 `AbstractTemplateInfo`保存generic kind/parent factory，构造器恢复接受明确owner；完整immutable argument snapshot用于`SpecializationKey`及prototype-based `TypeId`。readonly实参作为CompilerOnly静态绑定，不进入实例/default载荷及runtime参数物化。已知完整动态局部值可作为实参，`Var.assignedBy`转换前freeze完整值，保留`n=3`和后续`n=5`；不能证明完整值的runtime parameter仍拒绝，即使调用点传3。DTO转换过滤static/CompilerOnly绑定，普通`GenericDataTemplate`移除过早constructor body traversal并用lazy compile保持真实`this`上下文。MCFL16/bin286243。
 
-验证完整轮次和红测/worker边界见verification.md。特别是最终41个不同用例跨轮各自通过（不是单次联合41）；第五generic fixture单独通过后，其余33项首轮有3失败，再经6项Logic控制及最终5项（含旧失败复查和旧float ABI）各自验证。无fullcheck/服务端。下一阶段68限定未注解`Cell<T as type>`实例化前类型绑定；generic object、top-level annotation持久化、显式类型实参及imported object autoLoad仍未覆盖。
+验证完整轮次和红测/worker边界见verification.md。特别是最终41个不同用例跨轮各自通过（不是单次联合41）；第五generic fixture单独通过后，其余33项首轮有3失败，再经6项Logic控制及最终5项（含旧失败复查和旧float ABI）各自验证。无fullcheck/服务端。阶段68已限定支持未注解普通generic class实例化后绑定T；generic object、top-level/method annotation持久化、source abstract/final到model、显式Cell<int>类型注记及imported object autoLoad仍未覆盖。下一步阶段69研究前置类型注记与声明准备。
+
+## 阶段 68：未注解 generic 类类型绑定
+
+限定的prototype/instance流程在三个入口完成：prototype保留readonly签名及parents，延后字段、constructor、abstract检查；实例绑定T后注册实际members、继承并刷新field/constructor/read签名。producer Int 4/9共享Compiled、Bool true异型；consumer反序检查`scope.types[T]`、Int/Bool字段及constructor/read签名、private Var/Property owner和TypeId。磁盘consumer 4/9，固定外部score `#generic_bool`经过真实if置1，frame0。
+
+红测XML `03:48:33.608Z` 在producer的field、constructor参数和return三处报`Invalid type: T`。首轮17项为16绿/1失败（LibFieldAccess6 1fail，TemplateInitialization8和LibCacheFormat3全过）；失败在磁盘执行末尾读取data-only `flagScore`。一次观察变量复查仍读到未执行else分支变量，true/else continuation均在；调整为固定外部score观察后，单方法XML `2026-10-06T04:00:36.056Z` 1/0/0/0通过。17个不同用例跨轮各自通过，非单次联合；MCFL16/bin286243不变，无stdlib/fullcheck/服务器。详细日志及XML轮次见verification.md。下一阶段69的类型标注/声明准备顺序尚待红测和评审。
 
 ## 后续仍需完成
 
-- 标量/擦除及可编码 list/dict/map/ImmutableList/NBT 数组、范围值和已证明整数端点的命名范围迭代已迁入 IR，26.3 原生浮点、short/double/nbt 载荷、标量/数组显式转换及 map 两种投影也已接入；旧浮点 IR 最终复查20项通过，旧return ABI保留。阶段58限定语法域实现已提交`e6f83fe`；阶段59导入声明环境已持久化namespace/unsolvedImports，MCFL13重建后50项联合通过；阶段60限定消费端body导出已实现并13项联合通过；阶段61受支持模板方法owner/scope已恢复；阶段62模块资源路径已修复并通过限定回归；阶段63函数accessModifier已持久化并通过MCFL14库往返14项联合验证；阶段64仅新增PropertyInfo.accessModifier持久化并通过MCFL15定向验证。阶段66已验证受限的当前实例未限定字段寻址；阶段67已限定接通Box<N as int> readonly签名、源码特化和namespace generic类别；下一步阶段68处理未注解Cell<T as type>的绑定/字段/构造器/返回签名。T字段完整语义、generic object、top-level annotations、显式Cell<int>类型标注及所有Kryo身份均未覆盖。imported object自动load、其他未迁入集合成员、编译器专用集合、未知端点范围形参/浮点范围/通用迭代器、模板/泛型/T!等尚未统一。旧转换和DataObject等来源仍走适配；无宏目标上未知长度的负数字面下标仍走旧边界。
+- 标量/擦除及可编码 list/dict/map/ImmutableList/NBT 数组、范围值和已证明整数端点的命名范围迭代已迁入 IR，26.3 原生浮点、short/double/nbt 载荷、标量/数组显式转换及 map 两种投影也已接入；旧浮点 IR 最终复查20项通过，旧return ABI保留。阶段58限定语法域实现已提交`e6f83fe`；阶段59导入声明环境已持久化namespace/unsolvedImports，MCFL13重建后50项联合通过；阶段60限定消费端body导出已实现并13项联合通过；阶段61受支持模板方法owner/scope已恢复；阶段62模块资源路径已修复并通过限定回归；阶段63函数accessModifier已持久化并通过MCFL14库往返14项联合验证；阶段64仅新增PropertyInfo.accessModifier持久化并通过MCFL15定向验证。阶段66已验证受限的当前实例未限定字段寻址；阶段67已接通Box<N as int> readonly签名、源码特化和namespace generic类别；阶段68已限定支持未注解普通generic class实例化后绑定T。下一步阶段69研究类型注记及声明准备；generic object/interface、annotations、source abstract/final flags、显式Cell<int>类型注记及完整Kryo身份未覆盖。imported object自动load、其他未迁入集合成员、编译器专用集合、未知端点范围形参/浮点范围/通用迭代器、模板/泛型/T!等尚未统一。旧转换和DataObject等来源仍走适配；无宏目标上未知长度的负数字面下标仍走旧边界。
 - 参数相关 static 已知子位置、未知列表范围、普通集合返回/static 整体替换子形状与递归效果不动点已接入受限 IR 图；同一类型/形状输入的递归返回及写回已求解，输入变化仍保守。继续扩展其余集合、成员、全局、实体及全部调用位置。无法证明的函数仍采用未知屏障，原始命令跨函数修改物理记分板与帧恢复仍需核实。
 - 未知字典字符串键的运行时路径后端、其余原生成员/集合的编码能力检查、实体路径、全部布局访问诊断、模板方法与构造仍需完成迁移；map 的字符串值键和可编码投影已接入，但编译器专用值及其余控制语句仍需扩展。本轮递归样例不代表完整帧分配覆盖全部类型。
 - MNI 显式上下文、值/位置接口及其余成员签名统一未完成；Concrete 体系、hasStoredInStack、trackLost 等旧状态仍存在。
@@ -226,15 +232,15 @@ field annotation 在 MCFPPAnnotationVisitor 转存后触发 helper 补 annotatio
 
 ## 本轮自检
 
-平均3.8/5；阶段58限定语法域复用IR私有图Lowering/FlowAnalysis，阶段59 MCFL13和联合50项通过，阶段60有包含磁盘consumer执行的13项检查全绿；阶段61首轮26项24/2后定向复查2项通过，阶段62目录/JAR/ZIP联合11项全过；阶段63 MCFL14函数权限库往返14项联合全绿；阶段64 MCFL15字段权限/while帧后最终7项全过；阶段65权限11项、阶段66实例字段/构造器11项分别联合全绿；阶段67标准库0/0并MCFL16，41个不同必要用例跨轮各自通过，最后5项及旧float ABI全绿。完整性保持3/5：未注解generic类类型绑定、generic object/annotation/T!等语义、imported object autoLoad、其余成员与IR迁移及实际服务器验证仍未完成。
+平均3.8/5；阶段58限定语法域复用IR私有图Lowering/FlowAnalysis，阶段59 MCFL13和联合50项通过，阶段60有包含磁盘consumer执行的13项检查全绿；阶段61首轮26项24/2后定向复查2项通过，阶段62目录/JAR/ZIP联合11项全过；阶段63 MCFL14函数权限库往返14项联合全绿；阶段64 MCFL15字段权限/while帧后最终7项全过；阶段65权限11项、阶段66实例字段/构造器11项分别联合全绿；阶段67标准库0/0并MCFL16，41个不同用例跨轮各自通过；阶段68未注解generic类T绑定17个不同用例跨轮各自通过，MCFL16不变，限定磁盘结果/TypeId/private owner均验证。完整性保持3/5：显式generic类型注记准备、generic object/interface/annotation/T!其他语义、imported object autoLoad、其余成员与IR迁移及实际服务器验证仍未完成。
 
 | 维度 | 评分 | 证据与改进 |
 | --- | --- | --- |
-| 准确性 | 4/5 | 阶段58分轮37项、59联合50项、60联合13项（含consumer磁盘执行）、61跨轮26项、62联合11项、63联合14项、64跨轮30个不同用例、65联合11项、66联合11项、67跨轮41个不同用例分别记录；包含红测/worker中断及fresh XML证据 |
-| 完整性 | 3/5 | 函数accessModifier、限定字段/Property权限和当前实例未限定寻址已有受限验证；未注解generic类类型绑定、generic object/top-level annotation/T!扩展、imported object自动load、集合/MNI与服务器验证仍未完成 |
+| 准确性 | 4/5 | 阶段58分轮37项、59联合50项、60联合13项（含consumer磁盘执行）、61跨轮26项、62联合11项、63联合14项、64跨轮30个不同用例、65联合11项、66联合11项、67跨轮41个、68跨轮17个不同用例分别记录；阶段68最后fixture补观察后单方法通过，非最终联合17项；包含红测/worker中断及fresh XML证据 |
+| 完整性 | 3/5 | 函数accessModifier、限定字段/Property权限和当前实例未限定寻址已有受限验证；泛型类型注记/声明准备、generic object/interface与annotations、T!扩展、imported object自动load、集合/MNI与服务器验证仍未完成 |
 | 清晰度 | 4/5 | 区分标准库编译警告、语言诊断与测试夹具错误，历史保留 |
-| 可操作性 | 4/5 | 阶段62目录/ZIP/JAR复制11项通过；阶段63三套件MCFL14权限往返14项通过；阶段64字段/逻辑7项、阶段65权限11项、阶段66实例字段与构造器11项全绿；阶段67 MCFL16及最终5项（含旧float ABI）全绿、41个不同用例跨轮各自通过；阶段68已明确未注解Cell<T as type>的三入口实施和consumer/磁盘验收 |
+| 可操作性 | 4/5 | 阶段62目录/ZIP/JAR复制11项通过；阶段63三套件MCFL14权限往返14项通过；阶段64字段/逻辑7项、阶段65权限11项、阶段66实例字段与构造器11项全绿；阶段67 MCFL16及最终5项（含旧float ABI）全绿、41个不同用例跨轮各自通过；阶段68未注解Cell<T as type>完成限定consumer/磁盘验收；阶段69已有类型注记与声明准备红测计划，API待评审 |
 | 简洁性 | 4/5 | 只更新当前阶段事实与交接，不重写历史记录 |
 
-优先改进：按阶段68先以未注解Cell<T as type>验证源码类型绑定、generic实例恢复和consumer磁盘身份，再扩展未覆盖generic语法。完整性仍为3/5，因为未覆盖成员入口、导入object自动加载及其余模板/泛型/T!、控制流/集合、MNI和实际服务器验证仍有缺口。
+优先改进：阶段69先用前置Cell<int>形参与晚声明的普通父类的红测验证声明准备、继承字段和consumer磁盘TypeId，再决定TypeParser接入方案。完整性仍为3/5，因为未覆盖成员入口、导入object自动加载及其余模板/泛型/T!、控制流/集合、MNI和实际服务器验证仍有缺口。
 自检：用户能复核实现和测试，也会看到整项重构仍未结束；没有把阶段通过写成项目全部完成。

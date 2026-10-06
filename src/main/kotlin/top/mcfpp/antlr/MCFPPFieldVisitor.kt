@@ -310,26 +310,28 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             }
         }
         isInObject = false
-        ctx.templateBody()?.let { visitTemplateBody(it) }
+        if (template !is GenericDataTemplate) {
+            ctx.templateBody()?.let { visitTemplateBody(it) }
 
-        if(!template.isAbstract){
-            template.scope.forEachFunction {
-                if(it.isAbstract){
-                    LogProcessor.error("${it.identifier} is abstract, but not implemented.")
+            if(!template.isAbstract){
+                template.scope.forEachFunction {
+                    if(it.isAbstract){
+                        LogProcessor.error("${it.identifier} is abstract, but not implemented.")
+                    }
                 }
             }
-        }
 
-        //默认构造函数和默认字段
-        if(template is TypeDataTemplate){
-            template.addMember(
-                NativeDataTemplateConstructor(
-                    DataTemplate.currTemplate!!,
-                    TypeDataTemplate.Companion::defaultConstructor.javaMethod!!
+            //默认构造函数和默认字段
+            if(template is TypeDataTemplate){
+                template.addMember(
+                    NativeDataTemplateConstructor(
+                        DataTemplate.currTemplate!!,
+                        TypeDataTemplate.Companion::defaultConstructor.javaMethod!!
+                    )
                 )
-            )
-        }else if(template.constructors.isEmpty()){
-            template.addMember(DataTemplateConstructor(DataTemplate.currTemplate!!, null))
+            }else if(template.constructors.isEmpty()){
+                template.addMember(DataTemplateConstructor(DataTemplate.currTemplate!!, null))
+            }
         }
         DataTemplate.currTemplate = null
         typeScope = MCFPPFile.currFile!!.field.namespaceField
