@@ -585,6 +585,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addComment("while start")
         //外while函数。这个函数中包含了while循环的逻辑
         val whileFunction = InternalFunction("_while_", Function.currFunction)
+        top.mcfpp.analysis.StorageAccess.barrier(
+            top.mcfpp.analysis.StorageAccess.visibleValues(Function.currFunction.scope)
+        )
         Function.addCommand(Commands.stackIn())
         Function.addCommand(Commands.function(whileFunction))
         Function.addCommand(Commands.stackOut())
@@ -602,6 +605,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     @InsertCommand
     fun exitWhileStatement() {
         Function.currFunction = Function.currFunction.parent[0]
+        top.mcfpp.analysis.StorageAccess.barrier(
+            top.mcfpp.analysis.StorageAccess.visibleValues(Function.currFunction.scope)
+        )
         //调用完毕，将子函数的栈销毁
         Function.addComment("while end")
     }

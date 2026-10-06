@@ -6,14 +6,18 @@ import top.mcfpp.Project
 import top.mcfpp.ProjectConfig
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.MCInt
+import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.io.DatapackCreator
 import top.mcfpp.io.LibBinFormat
 import top.mcfpp.model.Member.AccessModifier
 import top.mcfpp.model.compound.ObjectDataTemplate
+import top.mcfpp.model.compound.GenericDataTemplate
+import top.mcfpp.model.compound.CompiledGenericDataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.test.util.MCFPPStringTest
 import top.mcfpp.test.util.ScoreCommandExecutor
+import top.mcfpp.type.MCFPPBaseType
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.*
@@ -230,6 +234,101 @@ class LibFieldAccessTest {
         assertEquals(9, machine.read(main.scope.getVar("unchanged") as MCInt))
         assertEquals(8, machine.read(main.scope.getVar("shadowed") as MCInt))
         assertEquals(6, machine.read(main.scope.getVar("inherited") as MCInt))
+    }
+
+    @Test fun genericTemplateRoundTripKeepsReadonlyArgumentsAndPrivateOwners() = withLibrary { output ->
+        write("""
+            namespace fixture.fields;
+            data Box<N as int> {
+                private value as int;
+                constructor(v as int){ this.value=v; }
+                private func secret()->int { return this.value; }
+                func read()->int { return this.secret(); }
+                func readArgument()->int { return N; }
+            }
+            func main(){
+                dynamic var n=3;
+                var first=Box<n>(4); var second=Box<3>(9);
+                n=5;
+                var third=Box<n>(6);
+                dynamic var firstResult=first.read();
+                dynamic var secondResult=second.read();
+                dynamic var thirdResult=third.read();
+                dynamic var firstArgument=first.readArgument(); dynamic var thirdArgument=third.readArgument();
+            }
+        """, output)
+        val original = assertIs<GenericDataTemplate>(
+            GlobalScope.localNamespaces.getValue("fixture.fields").scope.getTemplate("Box"))
+        val producerMain = GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single()
+        val firstSource = assertIs<CompiledGenericDataTemplate>(
+            assertIs<DataTemplateObject>(producerMain.scope.getVar("first")).templateType)
+        val secondSource = assertIs<CompiledGenericDataTemplate>(
+            assertIs<DataTemplateObject>(producerMain.scope.getVar("second")).templateType)
+        val thirdSource = assertIs<CompiledGenericDataTemplate>(
+            assertIs<DataTemplateObject>(producerMain.scope.getVar("third")).templateType)
+        assertSame(firstSource, secondSource)
+        assertNotSame(firstSource, thirdSource)
+        assertEquals(3, firstSource.args.single().value)
+        assertEquals(5, thirdSource.args.single().value)
+        val firstTypeId = firstSource.getType().typeId
+        val thirdTypeId = thirdSource.getType().typeId
+        assertNotEquals(firstTypeId, thirdTypeId)
+        val main = consume("""
+            import fixture.fields:*;
+            func main(){
+                var third=Box<5>(6);
+                var first=Box<3>(4); var second=Box<3>(9);
+                dynamic var firstResult=first.read();
+                dynamic var secondResult=second.read();
+                dynamic var thirdResult=third.read();
+                dynamic var firstArgument=first.readArgument(); dynamic var thirdArgument=third.readArgument();
+            }
+        """, output)
+        assertEquals(0, Project.errorCount)
+        val restored = assertIs<GenericDataTemplate>(GlobalScope.getTemplate("fixture.fields", "Box"))
+        assertNotSame(original, restored)
+        assertEquals(MCFPPBaseType.Int, restored.readOnlyParams.single().type)
+        val first = assertIs<CompiledGenericDataTemplate>(
+            assertIs<DataTemplateObject>(main.scope.getVar("first")).templateType)
+        val second = assertIs<CompiledGenericDataTemplate>(
+            assertIs<DataTemplateObject>(main.scope.getVar("second")).templateType)
+        val third = assertIs<CompiledGenericDataTemplate>(
+            assertIs<DataTemplateObject>(main.scope.getVar("third")).templateType)
+        assertSame(first, second)
+        assertNotSame(first, third)
+        assertEquals(3, first.args.single().value)
+        assertEquals(5, third.args.single().value)
+        assertEquals(firstTypeId, first.getType().typeId)
+        assertEquals(thirdTypeId, third.getType().typeId)
+        for (compiled in listOf(first, third)) {
+            assertSame(restored, compiled.originTemplate)
+            assertSame(compiled, compiled.scope.getVar("value")!!.declaredParentTemplate)
+            assertSame(compiled, compiled.scope.getProperty("value")!!.declaredParentTemplate)
+            assertSame(compiled, compiled.scope.functions.getValue("secret").single().owner)
+            assertEquals(AccessModifier.PRIVATE, compiled.scope.getVar("value")!!.accessModifier)
+            assertEquals(AccessModifier.PRIVATE, compiled.scope.getProperty("value")!!.accessModifier)
+            assertEquals(AccessModifier.PRIVATE, compiled.scope.functions.getValue("secret").single().accessModifier)
+        }
+        val machine = execute(main, output)
+        assertEquals(4, machine.read(main.scope.getVar("firstResult") as MCInt))
+        assertEquals(9, machine.read(main.scope.getVar("secondResult") as MCInt))
+        assertEquals(6, machine.read(main.scope.getVar("thirdResult") as MCInt))
+        assertEquals(3, machine.read(main.scope.getVar("firstArgument") as MCInt))
+        assertEquals(5, machine.read(main.scope.getVar("thirdArgument") as MCInt))
+        consume("""
+            import fixture.fields:*;
+            func make(n as int)->int {
+                var item=Box<n>(1);
+                return item.read();
+            }
+            func main(){ make(3); }
+        """, output)
+        assertTrue(Project.errorCount > 0, "A runtime parameter must not supply a readonly template argument")
+        consume("""
+            data Plain { constructor(v as int){} }
+            func main(){ var item=Plain<3>(1); }
+        """, output)
+        assertTrue(Project.errorCount > 0, "An ordinary template must reject readonly template arguments")
     }
 
     private fun write(source: String, output: Path) {

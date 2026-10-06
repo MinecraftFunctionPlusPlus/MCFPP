@@ -1,6 +1,9 @@
 package top.mcfpp.model.scope
 
 import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.obj.DataTemplateObject
+import top.mcfpp.analysis.StorageAccess
+import top.mcfpp.analysis.StorageLayout
 
 
 /**
@@ -28,6 +31,14 @@ class InternalFunctionScope(parent: FunctionScope?) : FunctionScope(parent) {
         }
         val re: Var<*>? = (parent[0] as IScopeWithVar).getVar(key)
         if (re != null) {
+            val binding = re.storageBinding
+            if (binding != null && binding.data.layout != StorageLayout.CompilerOnly && re !is DataTemplateObject) {
+                return re.clone().apply {
+                    stackIndex = re.stackIndex + 1
+                    storageBinding = StorageAccess.inFrame(binding, 1)
+                    storageReadVersion = null
+                }
+            }
             re.stackIndex++
         }
         return re
@@ -35,6 +46,15 @@ class InternalFunctionScope(parent: FunctionScope?) : FunctionScope(parent) {
 
     override fun putVar(key: String, `var`: Var<*>, forced: Boolean): Boolean {
         if(`var`.stackIndex != 0){
+            val binding = `var`.storageBinding
+            if (binding != null && binding.data.layout != StorageLayout.CompilerOnly && `var` !is DataTemplateObject) {
+                val parentValue = `var`.clone().apply {
+                    stackIndex = `var`.stackIndex - 1
+                    storageBinding = StorageAccess.inFrame(binding, -1)
+                    storageReadVersion = null
+                }
+                return (parent[0] as FunctionScope).putVar(key, parentValue, forced)
+            }
             `var`.stackIndex --
             val result = (parent[0] as FunctionScope).putVar(key, `var`, forced)
             `var`.stackIndex ++

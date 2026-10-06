@@ -16,6 +16,7 @@ import top.mcfpp.lib.EntitySelector
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.Generic
 import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.GenericDataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.model.function.ParameterMatcher
@@ -437,10 +438,12 @@ class MCFPPExprVisitor(
         for (expr in ctx.arguments().readOnlyArgs()?.expressionList()?.expression()?: emptyList()) {
             val arg = concreteExprVisitor.visit(expr)
             if(arg is UnknownVar){
-                return UnknownVar("error_" + ctx.text)
+                top.mcfpp.analysis.StorageAccess.restore(spills)
+                return UnknownVar("error_" + ctx.text).apply { isError = true }
             }else if(arg == null){
                 LogProcessor.error("ReadOnly argument should be concrete: ${expr.text}")
-                return UnknownVar("error_" + ctx.text)
+                top.mcfpp.analysis.StorageAccess.restore(spills)
+                return UnknownVar("error_" + ctx.text).apply { isError = true }
             }
             readOnlyArgs.add(arg)
         }
@@ -514,8 +517,21 @@ class MCFPPExprVisitor(
             } else returnVar
         }
         //可能是模板的构造函数
-        val template: DataTemplate? = GlobalScope.getTemplate(p.first, p.second)
-        if(template != null) {
+        val declaration = GlobalScope.getTemplate(p.first, p.second)
+        if(declaration != null) {
+            fun failedTemplate(message: String? = null): UnknownVar {
+                if (message != null) LogProcessor.error(message)
+                Function.addComment("[Failed to compile]${ctx.text}")
+                top.mcfpp.analysis.StorageAccess.restore(spills)
+                return UnknownVar("error_${ctx.text}").apply { isError = true }
+            }
+            val template = if (declaration is GenericDataTemplate) {
+                declaration.compile(readOnlyArgs) ?: return failedTemplate()
+            } else {
+                if (ctx.arguments().readOnlyArgs() != null)
+                    return failedTemplate("Ordinary template '${declaration.identifier}' does not accept readonly arguments")
+                declaration
+            }
             val selection = template.resolveConstructor(normalArgs)
             if (selection !is ParameterMatcher.TypeSelection.Selected) {
                 when (selection) {

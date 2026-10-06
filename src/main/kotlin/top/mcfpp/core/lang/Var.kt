@@ -247,6 +247,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         re.hasAssigned = true
         if(stackIndex != 0) trackLost = true
         return if(re is MCFPPValue<*> && re.isDynamic){
+            top.mcfpp.analysis.StorageAccess.ensure(re)
             (re.toDynamic(false) as Self).apply { isDynamic = true }
         }else {
             re

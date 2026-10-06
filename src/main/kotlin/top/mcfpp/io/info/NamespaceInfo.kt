@@ -7,11 +7,11 @@ import top.mcfpp.type.MCFPPType
 data class NamespaceInfo (
     var identifier: String,
     var functions: ArrayList<AbstractFunctionInfo<*>>,
-    var template: ArrayList<DataTemplateInfo>,
+    var template: ArrayList<AbstractTemplateInfo<*>>,
     var enums: ArrayList<EnumInfo>,
-    var objectDataInfo: ArrayList<DataTemplateInfo>,
+    var objectDataInfo: ArrayList<AbstractTemplateInfo<*>>,
     var aliases: HashMap<String, MCFPPType>,
-    var interfaces: ArrayList<DataTemplateInfo>
+    var interfaces: ArrayList<AbstractTemplateInfo<*>>
 ): ModelInfo<Namespace>{
     override fun get(): Namespace {
         val namespace = Namespace(identifier)
@@ -41,21 +41,21 @@ data class NamespaceInfo (
     companion object {
         fun from(namespace: Namespace): NamespaceInfo {
             val functions = ArrayList<AbstractFunctionInfo<*>>()
-            val templates = ArrayList<DataTemplateInfo>()
+            val templates = ArrayList<AbstractTemplateInfo<*>>()
             val enums = ArrayList<EnumInfo>()
-            val objects = ArrayList<DataTemplateInfo>()
+            val objects = ArrayList<AbstractTemplateInfo<*>>()
             namespace.scope.forEachFunction {
                 functions.add(AbstractFunctionInfo.from(it))
             }
             namespace.scope.forEachTemplate {
-                templates.add(DataTemplateInfo.from(it))
+                templates.add(AbstractTemplateInfo.from(it))
             }
             namespace.scope.forEachEnum {
                 enums.add(EnumInfo.from(it))
             }
             namespace.scope.forEachObject {
                 if(it is DataTemplate){
-                    objects.add(DataTemplateInfo.from(it))
+                    objects.add(AbstractTemplateInfo.from(it))
                 }
             }
             return NamespaceInfo(
@@ -65,7 +65,7 @@ data class NamespaceInfo (
                 enums,
                 objects,
                 HashMap(namespace.scope.resolvedAliases()),
-                ArrayList(namespace.scope.interfaces.values.map { DataTemplateInfo.from(it) })
+                ArrayList(namespace.scope.interfaces.values.map { AbstractTemplateInfo.from(it) })
             )
         }
     }

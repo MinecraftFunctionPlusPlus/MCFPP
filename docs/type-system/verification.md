@@ -1,8 +1,18 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段66 LibFieldAccess4 + ConstructorExecution7 单次联合11项全通过；MCFL15及`bin.mclib` 286207 bytes未变，未重建标准库。最近完整检查仍属于提交 `72dc557`，共346项；本轮未运行完整check或实际Minecraft服务端，整个迁移仍未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段67 MCFL16 generic 类只读实参/源码特化完成限定验证；stdlib 项目0 errors/0 warnings，`bin.mclib` 286243 bytes。41个不同用例跨轮各自通过，最后定向5项全绿；不是一次联合41项。最近完整检查仍属于提交 `72dc557`，共346项；本轮未运行完整check或实际Minecraft服务端，整个迁移仍未完成。
 
-## 最新必要检查：当前实例未限定字段寻址（阶段 66）
+## 最新必要检查：generic 类只读实参与源码特化（阶段 67）
+
+generic prototype 的 readonly 签名与源码实例化入口已接通。`AbstractTemplateInfo` 保存 generic kind/parent factory，构造器恢复接受明确 owner；完整 immutable argument snapshot 用于 `SpecializationKey` 与基于原型的 `TypeId`，producer 和反向 consumer 身份一致。readonly argument 是独立 `CompilerOnly` 静态绑定，不进入实例重定位、默认载荷或runtime参数物化。已知完整的动态局部`n`可作为readonly值；`Var.assignedBy`在动态转换前冻结完整值，保留`n=3`后再次读取`n=5`。移除普通`GenericDataTemplate`过早的constructor body遍历，真实调用复用lazy `compileBody/prepareBody`并保持`this`上下文。DTO参数转换跳过static/CompilerOnly绑定。
+
+新增真实库roundtrip fixture覆盖源码`Box<N as int>`的readonly实参、同参复用/异参特化、private owner与实际磁盘命令：producer readonly特化实参为3/3/5，consumer反序恢复为5/3/3，磁盘运行结果4/9/6并检查`readArgument`读取3/5，frame0平衡。负向fixture使用无法证明完整值的runtime parameter `n`（即使调用点传3也拒绝），普通`Plain<arg>`同样拒绝；已知完整动态局部值不在拒绝范围。
+
+标准库一次 `regenerateStdlib` 成功，Project 0 errors/0 warnings，BUILD SUCCESSFUL in16s；MCFL16，`bin.mclib` 286243 bytes。红测 fresh XML `2026-10-06T02:22:19.229Z`，1项失败，producer报告10个错误，首要诊断为旧路径的 Variable n must be const；这里的 n 是 main 中完整已知的 dynamic 局部值，并非runtime parameter。测试尚未生成库或进入consumer。之后三轮worker异常（`mcfpp-generic-template-roundtrip-final.log` 17s、`-complete.log` 17s、`-stabilized.log` 16s）均无fresh XML；失败位于producer编译，旧XML时间戳不得当作该轮结果。最终修复后单项第五fixture通过：XML `03:00:07.465Z`，1/0/0/0，BUILD SUCCESSFUL in34s。
+
+余下33项回归首轮有30项通过、3项失败：LibFieldAccess4 XML `03:02:15.941Z`（2失败：嵌套owner的StackOverflow与未限定实例执行未终止），ConstructorExecution7 XML `03:02:13.453Z`（1失败：缺少`temp_2098`），SpecializationPolicy11、TemplateInitialization8、LibCacheFormat3分别于`03:02:22.320Z`、`03:02:23.132Z`、`03:02:15.927Z`全过。之后10项控制复查有6过4失败，LibFieldAccess3 XML `03:22:40.533Z`与ConstructorExecution1 `03:22:38.650Z`因执行器取不到runtime return scoreboard失败，LogicStatement6于`03:22:46.568Z`全过。`Function.assignReturnVar`修复后，最终LibFieldAccess3、ConstructorExecution1、LegacyFloatIR1共5项全过，XML依次为`03:27:56.379Z`、`03:27:54.688Z`、`03:28:04.725Z`，0 failures/errors/skips，worker正常、BUILD SUCCESSFUL in45s。30个首轮绿 + 6个逻辑控制 + 最终5项（含原33项中的3个失败用例、第5generic fixture及旧float ABI1项）=41个不同用例跨轮各自通过，不是一次联合41项。后续失败的修复边界：runtime-bound且非DTO/非CompilerOnly的InternalFunctionScope局部读取clone binding逐层加一并清`readVersion`，写入clone逐层减一，不改变源binding/mask；旧while进入/离开barrier清runtime facts/cache。普通runtime return用既有`bindIncomingParameter`创建无initializer的稳定目标，各分支assignedBy后仅失效值知识，再于callee内读取稳定register，避免未初始化score物化和弹帧后访问。`T!`、CompilerOnly与void guard保留；这不宣称普通return跨while/do全面支持。日志位于`F:/DevCache/.codex/runtime/mcfpp-generic-template-roundtrip-{stdlib,red,final,complete,stabilized,bound-values,regressions,control-final,return-final}.log`。无fullcheck/服务器；阶段66提交`1d67cdf`。
+
+## 历史必要检查：当前实例未限定字段寻址（阶段 66）
 
 来源分析确认`CompoundDataScope`中的普通实例字段声明，且当前scope的raw `getVar("this")`返回真实`DataTemplateObject`后，才将该字段转给`receiver.getMemberVar(key, caller)`。更近FunctionScope局部返回原raw结果（包括`fieldVarSet`产生的null）；object/static、无owner readonly、无receiver及未解析名保持原行为。没有改变`Internal`全局lookup/putVar或frame布局。
 

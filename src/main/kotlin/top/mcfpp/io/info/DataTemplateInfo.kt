@@ -11,6 +11,11 @@ interface AbstractTemplateInfo<T: DataTemplate>: ModelInfo<T>{
 
     companion object {
         var currTemplate : DataTemplate? = null
+
+        fun from(template: DataTemplate): AbstractTemplateInfo<*> = when (template) {
+            is GenericDataTemplate -> GenericDataTemplateInfo.from(template)
+            else -> DataTemplateInfo.from(template)
+        }
     }
 }
 
@@ -47,7 +52,7 @@ data class DataTemplateInfo(
         }
         template.preInit.putAll(initializers)
         constructor.forEach {
-            template.constructors.add(it.get())
+            template.constructors.add(it.get(template))
         }
         currTemplate = null
         infoCache[this] = template
@@ -86,7 +91,7 @@ data class DataTemplateInfo(
                 template.isAbstract,
                 template.namespace,
                 template.identifier,
-                if(template != DataTemplate.baseDataTemplate) template.parent.filterIsInstance<DataTemplate>().map { from(it) } else emptyList(),
+                if(template != DataTemplate.baseDataTemplate) template.parent.filterIsInstance<DataTemplate>().map { AbstractTemplateInfo.from(it) } else emptyList(),
                 FieldInfo.from(template.scope, template),
                 template.constructors.map { TemplateConstructorInfo.from(it) },
                 template.companionObject != null,
@@ -137,7 +142,7 @@ data class GenericDataTemplateInfo(
             template.readOnlyParams.add(it.get())
         }
         constructor.forEach {
-            template.constructors.add(it.get())
+            template.constructors.add(it.get(template))
         }
         currTemplate = null
         infoCache[this] = template
@@ -171,7 +176,7 @@ data class GenericDataTemplateInfo(
                 template.isAbstract,
                 template.namespace,
                 template.identifier,
-                template.parent.map { from(it as GenericDataTemplate) },
+                template.parent.filterIsInstance<DataTemplate>().map { AbstractTemplateInfo.from(it) },
                 template.readOnlyParams.map { DataTemplateParamInfo.from(it) },
                 template.ctx,
                 FieldInfo.from(template.scope, template),

@@ -1,17 +1,34 @@
 package top.mcfpp.model.compound
 
 import top.mcfpp.Project
+import top.mcfpp.analysis.SpecializationKey
+import top.mcfpp.analysis.SpecializationKeys
+import top.mcfpp.analysis.StorageAccess
+import top.mcfpp.analysis.SymbolId
+import top.mcfpp.analysis.ValueSnapshot
+import top.mcfpp.analysis.CompilerValue
+import top.mcfpp.analysis.SpecializationArgument
+import top.mcfpp.analysis.Place
+import top.mcfpp.analysis.StoredData
+import top.mcfpp.analysis.StorageBinding
+import top.mcfpp.analysis.StorageLayout
+import top.mcfpp.analysis.TypeKnowledge
+import top.mcfpp.analysis.ValueKnowledge
+import top.mcfpp.analysis.ValueFacts
 import top.mcfpp.antlr.MCFPPGenericDataTemplateFieldVisitor
-import top.mcfpp.antlr.MCFPPGenericDataTemplateImVisitor
 import top.mcfpp.antlr.MCFPPFieldVisitor
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.core.lang.MCFPPTypeVar
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.property.Property
+import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.ParameterMatcher
 import top.mcfpp.type.MCFPPDataTemplateType
 import top.mcfpp.type.MCFPPGenericDataTemplateType
 import top.mcfpp.type.MCFPPType
+import top.mcfpp.type.TypeId
+import top.mcfpp.util.LogProcessor
 
 /**
  * 结构体是一种和类的语法极为相似的数据结构。在结构体中，只能有int类型的数据，或者说记分板的数据作为结构体的成员。
@@ -30,7 +47,10 @@ open class GenericDataTemplate : DataTemplate {
 
     val ctx: mcfppParser.TemplateBodyContext
 
-    val compiledTemplates: HashMap<List<Any?>, CompiledGenericDataTemplate> = HashMap()
+    @Transient
+    val declarationId = SymbolId.fresh()
+
+    val compiledTemplates: HashMap<SpecializationKey, CompiledGenericDataTemplate> = HashMap()
 
     val readOnlyParams: ArrayList<DataTemplateParam> = ArrayList()
 
@@ -41,28 +61,73 @@ open class GenericDataTemplate : DataTemplate {
         this.ctx = ctx
     }
 
-    open fun compile(readOnlyArgs: List<Var<*>>): CompiledGenericDataTemplate {
-        val file = restoreDeclarationEnvironment()
-        return if (file == null) compileInDeclarationEnvironment(readOnlyArgs)
-        else file.withDeclarationContext { compileInDeclarationEnvironment(readOnlyArgs) }
+    open fun compile(readOnlyArgs: List<Var<*>>): CompiledGenericDataTemplate? {
+        val callerFunction = Function.currFunction
+        val callerTemplate = currTemplate
+        try {
+            val file = restoreDeclarationEnvironment()
+            return if (file == null) compileInDeclarationEnvironment(readOnlyArgs)
+            else file.withDeclarationContext { compileInDeclarationEnvironment(readOnlyArgs) }
+        } finally {
+            Function.currFunction = callerFunction
+            currTemplate = callerTemplate
+        }
     }
 
-    private fun compileInDeclarationEnvironment(readOnlyArgs: List<Var<*>>): CompiledGenericDataTemplate {
-        //只读属性
+    protected fun bindReadonlyArguments(readOnlyArgs: List<Var<*>>): List<Var<*>>? {
+        if (readOnlyArgs.size != readOnlyParams.size) {
+            LogProcessor.error("Readonly argument count does not match template '$identifier'")
+            return null
+        }
         val args = ArrayList<Var<*>>()
         for (i in readOnlyParams.indices) {
-            val r = readOnlyArgs[i].implicitCast(readOnlyParams[i].type!!)
-            r.isConst = true
-            args.add(r)
+            val param = readOnlyParams[i]
+            val type = param.type
+            val argument = readOnlyArgs[i]
+            if (type == null || !ParameterMatcher.accepts(argument, type) || !SpecializationKeys.isConstant(argument)) {
+                LogProcessor.error("Readonly template argument '${param.identifier}' requires a complete value of ${param.typeIdentifier}")
+                return null
+            }
+            val cast = argument.implicitCast(type)
+            if (cast.isError) return null
+            val snapshot = ValueSnapshot.of(cast)
+            if (snapshot == null) {
+                LogProcessor.error("Readonly template argument '${param.identifier}' requires a complete compile-time value")
+                return null
+            }
+            val types = HashMap(cast.storageBinding?.data?.types.orEmpty())
+            types[cast.type.typeId] = cast.type
+            if (cast is MCFPPTypeVar) types[cast.value.typeId] = cast.value
+            val value = StorageAccess.restore(cast.type, snapshot, param.identifier, types)
+            if (value !is MCFPPValue<*>) {
+                LogProcessor.error("Readonly template argument layout is not supported for '${param.identifier}'")
+                return null
+            }
+            value.isConst = true
+            value.hasAssigned = true
+            value.isStatic = true
+            value.bindDeclaration()
+            val place = Place(value.symbol!!.id)
+            val data = StoredData(place, value.nbtPath.clone(), layout = StorageLayout.CompilerOnly)
+            data.types.putAll(types)
+            data.facts.initialize(place, ValueFacts(TypeKnowledge.Exact(value.type.typeId), ValueKnowledge.Constant(snapshot)))
+            value.storageBinding = StorageBinding(data, place, data.path)
+            args.add(value)
         }
-        val values = args.map { (it as MCFPPValue<*>).value }
-        compiledTemplates[values]?.let { return it }
+        return args
+    }
+
+    private fun compileInDeclarationEnvironment(readOnlyArgs: List<Var<*>>): CompiledGenericDataTemplate? {
+        val args = bindReadonlyArguments(readOnlyArgs) ?: return null
+        val key = SpecializationKeys.forArguments(declarationId, args)
+        compiledTemplates[key]?.let { return it }
 
         val template = CompiledGenericDataTemplate(
             "${identifier}_${readOnlyParams.joinToString("_") { it.typeIdentifier }}_$index",
             namespace,
             this,
-            args.map { it as MCFPPValue<*> }
+            args.map { it as MCFPPValue<*> },
+            key.arguments.map { (it as SpecializationArgument.Constant).value }
         )
         template.declarationFile = declarationFile
         template.declarationEnvironment = declarationEnvironment
@@ -88,11 +153,9 @@ open class GenericDataTemplate : DataTemplate {
         MCFPPFieldVisitor().completeTemplateFields(template)
         template.applyDeclarationAnnotations()
         (template.constructors + template.scope.functions.values.flatten()).forEach { it.refreshTemplateSignature() }
-        currTemplate = template
-        MCFPPGenericDataTemplateImVisitor().visitTemplateBody(ctx)
         index ++
 
-        compiledTemplates[args.map { (it as MCFPPValue<*>).value }] = template
+        compiledTemplates[key] = template
 
         return template
     }
@@ -121,10 +184,15 @@ open class CompiledGenericDataTemplate(
     identifier: String,
     namespace: String = Project.currNamespace,
     var originTemplate: GenericDataTemplate,
-    val args: List<MCFPPValue<*>>
+    val args: List<MCFPPValue<*>>,
+    argumentValues: List<CompilerValue>
 ) : DataTemplate(identifier, namespace) {
+    private val identity = TypeId.Specialized(
+        TypeId.Declaration("template", originTemplate.namespace, originTemplate.identifier), argumentValues
+    )
+
     override fun getType(): MCFPPDataTemplateType {
         val t = super.getType()
-        return MCFPPGenericDataTemplateType(t.template, ArrayList(args), t.parentType)
+        return MCFPPGenericDataTemplateType(t.template, ArrayList(args), t.parentType, identity)
     }
 }

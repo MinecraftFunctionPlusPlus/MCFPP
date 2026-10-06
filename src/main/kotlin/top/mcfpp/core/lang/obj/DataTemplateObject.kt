@@ -300,6 +300,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     fun toFunctionParam(){
         Function.extraFunction.runInFunction {
             for (field in this.instanceField.allVars){
+                if (field.isStatic || field.storageBinding?.data?.layout == StorageLayout.CompilerOnly) continue
                 if(field is MCFPPValue<*> && field !is ConcreteVar<*, *>){
                     field.toDynamic(true)
                 }

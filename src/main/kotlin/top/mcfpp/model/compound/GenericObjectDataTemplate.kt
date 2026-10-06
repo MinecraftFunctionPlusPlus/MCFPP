@@ -1,6 +1,10 @@
 package top.mcfpp.model.compound
 
 import top.mcfpp.Project
+import top.mcfpp.analysis.SpecializationKeys
+import top.mcfpp.analysis.SpecializationArgument
+import top.mcfpp.analysis.CompilerValue
+import top.mcfpp.model.function.Function
 import top.mcfpp.antlr.MCFPPGenericDataTemplateImVisitor
 import top.mcfpp.antlr.MCFPPGenericObjectDataTemplateFieldVisitor
 import top.mcfpp.antlr.mcfppParser
@@ -26,18 +30,29 @@ open class GenericObjectDataTemplate : GenericDataTemplate {
     @Suppress("ConvertSecondaryConstructorToPrimary")
     constructor(ctx: mcfppParser.TemplateBodyContext, identifier: String, namespace: String = Project.currNamespace) :super(ctx, identifier, namespace)
 
-    override fun compile(readOnlyArgs: List<Var<*>>) : CompiledGenericDataTemplate {
-        val file = restoreDeclarationEnvironment()
-        return if (file == null) compileInDeclarationEnvironment(readOnlyArgs)
-        else file.withDeclarationContext { compileInDeclarationEnvironment(readOnlyArgs) }
+    override fun compile(readOnlyArgs: List<Var<*>>) : CompiledGenericDataTemplate? {
+        val callerFunction = Function.currFunction
+        val callerTemplate = currTemplate
+        try {
+            val file = restoreDeclarationEnvironment()
+            return if (file == null) compileInDeclarationEnvironment(readOnlyArgs)
+            else file.withDeclarationContext { compileInDeclarationEnvironment(readOnlyArgs) }
+        } finally {
+            Function.currFunction = callerFunction
+            currTemplate = callerTemplate
+        }
     }
 
-    private fun compileInDeclarationEnvironment(readOnlyArgs: List<Var<*>>): CompiledGenericDataTemplate {
+    private fun compileInDeclarationEnvironment(readOnlyArgs: List<Var<*>>): CompiledGenericDataTemplate? {
+        val args = bindReadonlyArguments(readOnlyArgs) ?: return null
+        val key = SpecializationKeys.forArguments(declarationId, args)
+        compiledTemplates[key]?.let { return it }
         val template = CompiledGenericObjectDataTemplate(
             "${identifier}_${readOnlyParams.joinToString("_") { it.typeIdentifier }}_$index",
             namespace,
             this,
-            readOnlyArgs.map { it as MCFPPValue<*> }
+            args.map { it as MCFPPValue<*> },
+            key.arguments.map { (it as SpecializationArgument.Constant).value }
         )
         template.declarationFile = declarationFile
         template.declarationEnvironment = declarationEnvironment
@@ -47,8 +62,7 @@ open class GenericObjectDataTemplate : GenericDataTemplate {
         }
         //只读属性
         for (i in readOnlyParams.indices) {
-            val r = readOnlyArgs[i].clone()
-            r.isConst = true
+            val r = args[i]
             if(r is MCFPPTypeVar){
                 template.scope.putType(readOnlyParams[i].identifier, r.value)
             }
@@ -62,7 +76,7 @@ open class GenericObjectDataTemplate : GenericDataTemplate {
         MCFPPGenericDataTemplateImVisitor().visitTemplateBody(ctx)
         index ++
 
-        compiledTemplates[readOnlyArgs] = template
+        compiledTemplates[key] = template
 
         return template
     }
@@ -87,5 +101,6 @@ class CompiledGenericObjectDataTemplate(
     identifier: String,
     namespace: String = Project.currNamespace,
     originClass: GenericObjectDataTemplate,
-    args: List<MCFPPValue<*>>
-) : CompiledGenericDataTemplate(identifier, namespace, originClass, args)
+    args: List<MCFPPValue<*>>,
+    argumentValues: List<CompilerValue>
+) : CompiledGenericDataTemplate(identifier, namespace, originClass, args, argumentValues)

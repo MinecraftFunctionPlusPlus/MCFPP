@@ -38,8 +38,8 @@ open class MCFPPDataTemplateType(
 
     override fun defaultValue(): Any? {
         val map = HashMap<String, Var<*>>()
-        template.scope.allVars.map {
-            if(!it.nullable){
+        template.scope.allVars.forEach {
+            if(!it.nullable && !it.isStatic){
                 val v = it.type.defaultValueVar()
                 v.identifier = it.identifier
                 map[it.identifier] = v

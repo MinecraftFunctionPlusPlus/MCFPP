@@ -25,7 +25,8 @@ object SpecializationKeys {
         else -> ValueSnapshot.of(value)?.let { SpecializationArgument.Constant(it) } ?: SpecializationArgument.Unknown
     }
     fun isConstant(value: Var<*>): Boolean = argument(value) is SpecializationArgument.Constant
-    fun forArguments(function: Function, arguments: Collection<Var<*>>) = SpecializationKey(
-        function.declarationId, arguments.map(::argument), GenerationOptions(Project.config.version, CompileSettings.maxWhileInline, CompileSettings.foldIRConstants)
+    fun forArguments(function: Function, arguments: Collection<Var<*>>) = forArguments(function.declarationId, arguments)
+    fun forArguments(declaration: SymbolId, arguments: Collection<Var<*>>) = SpecializationKey(
+        declaration, arguments.map(::argument), GenerationOptions(Project.config.version, CompileSettings.maxWhileInline, CompileSettings.foldIRConstants)
     )
 }

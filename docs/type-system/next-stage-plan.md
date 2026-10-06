@@ -1,4 +1,4 @@
-# 下一阶段：generic 类只读签名与源码特化（阶段 67）
+# 下一阶段：未注解 generic 类类型绑定（阶段 68）
 
 本计划的首条纵向路径已经在续接会话中实现，完整阶段和整个重构仍未完成。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
@@ -86,11 +86,17 @@ const 只限制重赋；compiler-only const 保留完整 `ValueSnapshot` 且不�
 
 仅当来源是`CompoundDataScope`中的普通实例字段声明，且当前scope原始`getVar("this")`取到真实`DataTemplateObject`，才调用`receiver.getMemberVar(key, caller)`。更近FunctionScope局部保持原始raw结果（含`fieldVarSet` null）；object/static、无owner readonly、无receiver与未解析名继续走原路径。producer/consumer真实库往返覆盖未限定constructor写、if→while写、第二实例及shadow/protected读取，结果5/9/8/6；LibFieldAccess4 + ConstructorExecution7单次11项通过。未改`Internal`全局lookup/putVar或frame布局，详见verification.md。
 
-### 阶段 67：generic 类只读签名与源码特化
+### 阶段 67：generic 类只读签名与源码特化（已验证）
 
-先用真实库红测核验readonly签名和generic类源码特化入口。`DataTemplateParam.type`当前无赋值入口，ExprVisitor模板构造忽略`readOnlyArgs`且未调用`GenericDataTemplate.compile`；还需确定namespace是否持久化generic类别。只限定支持`Box<N as int>`：冻结SpecializationKey，保持original prototype的TypeId身份；namespace使用`AbstractTemplateInfo`记录kind/父类型并恢复factory，`CtorInfo`明确owner。计划fixture producer实例3/3/5，反向消费库身份相同且磁盘结果4/9/6并检查private owner。此范围不代表T字段、generic object或Kryo所有身份恢复已完成。
+限定路径已实现并通过真实库往返：prototype readonly签名和源码特化入口连接，generic kind/parent factory经`AbstractTemplateInfo`恢复，构造器恢复接受明确owner。不可变完整实参快照同时定义`SpecializationKey`与原型派生`TypeId`；readonly实参独立保留为CompilerOnly静态绑定，不进入运行时重定位、默认字段载荷或参数物化。完整值在`Var.assignedBy`的dynamic转换前冻结；已知完整动态局部n可传递，无法证明完整值的runtime parameter n即使调用处传3也拒绝。ordinary generic constructor body改由原lazy编译入口执行。producer/反向consumer身份、private owner和磁盘结果均按阶段验证记录通过；MCFL16/bin286243。41个不同用例跨轮各自通过，非单轮41项。T字段、generic object、qualified readonly/full Kryo identity等未覆盖。
 
-普通return跨旧while/doWhile、Native.clone owner复制、final语义、imported object autoLoad和MNI仍未解决。阶段64–66访问权限与范围验证见verification.md。
+### 阶段 68：未注解 generic 类类型绑定（待实施）
+
+范围限定为未注解`Cell<T as type>`：先绑定`T`，再编译body内字段、构造参数和返回签名。最小fixture以`int`实参4/9共享一个Compiled实例、`bool`实参true产生另一个；consumer按bool/int反序导入后检查`scope.types[T]`、field type、constructor parameter与return type均恢复为Int/Bool，并保持稳定`TypeId`和private owner；真实磁盘结果4/9/1、frame0。
+
+限制改动在三个生产入口：FieldVisitor为generic prototype解析readonly签名和parent，但跳过body/default constructor/abstract检查并执行共同清理；AnnotationVisitor保留top-level annotation行为，只跳过prototype body；`GenericDataTemplate.compile`复制`isAbstract`。实例化时由现有GenericFieldVisitor注册字段，之后执行原non-abstract检查；`flatExtends`后设置`currTemplate=compiled`，由`MCFPPAnnotationVisitor.visitTemplateBody(ctx)`转存/重放字段annotations，最后complete fields/apply/refresh。该visitor负责annotation访问，不是构造器body执行入口。默认构造由现有generic field visitor建立，不增加placeholder type或并行分析框架；MCFL16不升级。
+
+范围之外：top-level template annotations尚未持久化进GenericInfo、method annotation visitor、source abstract/final到model的传递、generic interface/object、显式`Cell<int>`类型标注、完整qualified readonly快照/Kryo身份仍需分别验证。imported object autoLoad、普通return跨旧while/doWhile、Native.clone owner复制、MNI和整体迁移也仍未解决。阶段67及64–66验证见verification.md。
 
 ### 旧浮点乘除（阶段 50 已实现）
 

@@ -248,6 +248,7 @@ class CompoundDataScope(parent: ArrayList<IScope?>) :
     fun createDataTemplateInstance(selector: DataTemplateObject): CompoundDataScope {
         val re = CompoundDataScope(this)
         re.allVars.forEach {
+            if (it.isStatic) return@forEach
             it.parent = selector
             if(it is OnScoreboard){
                 it.name = selector.identifier + "_" + it.identifier

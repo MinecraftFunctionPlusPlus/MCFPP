@@ -869,7 +869,13 @@ open class Function : Member, FieldContainer, WithDocument {
             LogProcessor.error("Function $namespaceID must return a concrete value")
             return
         }
+        val runtimeReturn = if (returnVar.isDynamic && returnType !is MCFPPDeclaredConcreteType && hasRuntimePayload(returnVar))
+            top.mcfpp.analysis.StorageAccess.bindIncomingParameter(returnVar) else null
         returnVar = returnVar.assignedBy(v)
+        runtimeReturn?.let {
+            it.data.facts.invalidate(it.place)
+            returnVar = top.mcfpp.analysis.StorageAccess.read(returnVar)
+        }
         //if(returnVar is MCFPPValue<*> && returnVar.type !is MCFPPConcreteType){
         //    returnVar = (returnVar as MCFPPValue<*>).toDynamic(false)
         //}

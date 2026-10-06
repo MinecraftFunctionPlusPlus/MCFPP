@@ -15,7 +15,8 @@ class MCFPPGenericDataTemplateFieldVisitor(val template: DataTemplate) : MCFPPFi
         //先解析函数和构造函数
         for (c in ctx.templateBody().templateMemberDeclaration()) {
             c!!
-            if (c.templateMember() != null && (c.templateMember().templateFunctionDeclaration() != null)) {
+            if (c.templateMember() != null && (c.templateMember().templateFunctionDeclaration() != null ||
+                        c.templateMember().templateConstructorDeclaration() != null)) {
                 visit(c)
             }
         }

@@ -329,11 +329,20 @@ class MCFPPConcreteExprVisitor(
             }
             val pwp = member.first
             if(pwp != null) {
-                if(pwp.isConst) {
+                if (pwp.isError) return@withCompilationContext pwp
+                val snapshot = top.mcfpp.analysis.ValueSnapshot.of(pwp)
+                if (snapshot == null) {
+                    LogProcessor.error("Variable $qwq requires a complete compile-time value in this context")
+                    return@withCompilationContext UnknownVar(qwq).apply { isError = true }
+                }
+                if(pwp is MCFPPValue<*>) {
                     pwp
                 } else {
-                    LogProcessor.error("Variable $qwq must be const in this context")
-                    null
+                    top.mcfpp.analysis.StorageAccess.restore(pwp.type, snapshot, qwq,
+                        pwp.storageBinding?.data?.types.orEmpty()) ?: run {
+                        LogProcessor.error("Compile-time value layout is not supported for $qwq")
+                        return@withCompilationContext UnknownVar(qwq).apply { isError = true }
+                    }
                 }
             }else{
                 UnknownVar(qwq)
