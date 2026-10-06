@@ -1,8 +1,16 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段73冻结Specialized类型值限定验证通过，最终必要联合2项（新73+旧72）全过，source/fresh模型及真实磁盘4/9/frame0各到达。阶段72已提交`ee46fba877b9af3570ddeb1b8f65f8742d22c11d`，11文件197+/32-；阶段73提交以Git历史为准。MCFL17/bin289989/schema未变，无stdlib/fullcheck/服务器。阶段74源码联合类型与冻结身份尚未实现或测试；最近完整检查仍为`72dc557`的346项，整个17项迁移未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段74源码联合类型与冻结身份必要联合4项全过；source/fresh静态模型及consumer真实磁盘4/9/frame0到达，旧unionTest仅语法smoke。MCFL17/bin289989/schema不变，无stdlib/fullcheck/服务器。阶段75冻结向量TypeValue尚未实现或测试；最近完整检查仍为72dc557的346项，整个17项迁移未完成。
 
-## 最新必要检查：冻结Specialized类型值（阶段 73）
+## 最新必要检查：源码联合类型与冻结身份（阶段 74）
+
+阶段74保留旧UNION token '&'及unionTemplateType/UnionDataTemplate，新unionType要求至少一个PIPE '|'；primary/var/expression优先级不变。MCFPPType新union解析递归传scope/caller，invalid项诊断并返回null，不补Any；复用既有MCFPPUnionType规范化。有限TypeId.Union resolver要求非空、所有alternative可恢复及最终FullID相同。两prod+fixture+4docs共7文件；wire/schema/MCFL17/bin289989不变，无stdlib/fullcheck/服务器，最新完整346项仍为72dc557。
+
+frozenUnionTypeArgumentsNormalizeAcrossLibraryRoundTrip仅通过typealias Scalar=(int|string)、ReorderedScalar=(string|int|int)输入静态T；Box真实字段仍int。source/fresh alias顺序/重复归一，T不可变snapshot/FullID、同canonical Box、前置readBox参数及fresh独立对象均验证，producer0/0、consumer0/已知9119 warnings；仅consumer实际磁盘4/9/frame0。direct readonly union expression及Union实际runtime值/布局未验证。
+
+红测mcfpp-generic-union-type-value-red.log：fresh XML2026-10-06T07:39:55.386Z，worker140正常exit1/FAILED6s，最早两处mismatched input '|' expecting {')','&',NL}；只到source语法，没有library restore RED。最终-final.log worker142正常exit0/SUCCESS37s；fresh XML LibField1 2026-10-06T07:50:55.410Z、DataTemplate1 07:51:00.071Z、LibCacheFormat1 07:51:00.252Z、TypeKernel1 07:51:00.258Z，全部0fail/error/skip。必要联合4项包含新fixture、unionsNormalizeOrderDuplicatesAndNesting、immutableTypeIdentitiesRoundTripThroughLibrarySerialization及DataTemplateTest.unionTest。旧unionTest实际0errors/4warnings（common representation未证明的as警告）及既存TODO tellraw templateData，无errorCount或disk断言；只算语法smoke，不宣称Union runtime已验证。阶段74提交以Git历史为准。
+
+## 历史必要检查：冻结Specialized类型值（阶段 73）
 
 阶段73两个生产文件MCFPPType、MCFPPGenericDataTemplateType（42+/22-）与新增89行fixture完成限定Specialized恢复。共享resolveSpecialization(id)复用现有类型查找、snapshot restore与prototype.compile，使用consumer当前target/options，核对template Declaration的namespace/kind/name及最终FullID；resolver委托该入口，tryResolve保留READ_LIB守卫和currentcanonical快速路径。
 

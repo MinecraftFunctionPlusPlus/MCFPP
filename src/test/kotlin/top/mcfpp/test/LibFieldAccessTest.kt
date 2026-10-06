@@ -26,6 +26,8 @@ import top.mcfpp.test.util.ScoreCommandExecutor
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPDataTemplateType
 import top.mcfpp.type.MCFPPListType
+import top.mcfpp.type.MCFPPUnionType
+import top.mcfpp.type.TypeId
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.*
@@ -931,6 +933,86 @@ class LibFieldAccessTest {
         assertEquals(sourceHolderSnapshot, ValueSnapshot.of(first.scope.getVar("T")))
         assertEquals(sourceCellSnapshot, ValueSnapshot.of(cell.scope.getVar("T")))
         assertSame(first, assertIs<MCFPPDataTemplateType>(restoredScope.functions.getValue("readNested").single().normalParams.single().type).template)
+        val machine = execute(main, output)
+        assertEquals(4, machine.read(main.scope.getVar("firstResult") as MCInt))
+        assertEquals(9, machine.read(main.scope.getVar("secondResult") as MCInt))
+    }
+
+    @Test fun frozenUnionTypeArgumentsNormalizeAcrossLibraryRoundTrip() = withLibrary { output ->
+        write("""
+            namespace fixture.fields;
+            typealias (int|string) as Scalar;
+            typealias (string|int|int) as ReorderedScalar;
+            func readBox(arg as Box<Scalar>)->int { return arg.read(); }
+            data Box<T as type> {
+                private value as int;
+                constructor(v as int){ this.value=v; }
+                func read()->int { return this.value; }
+            }
+            func main(){
+                var first=Box<Scalar>(4);
+                var second=Box<ReorderedScalar>(9);
+                dynamic var firstResult=readBox(first);
+                dynamic var secondResult=readBox(second);
+            }
+        """, output)
+        val expectedAlternatives = setOf(MCFPPBaseType.Int.typeId, MCFPPBaseType.String.typeId)
+        val sourceScope = GlobalScope.localNamespaces.getValue("fixture.fields").scope
+        val sourceScalar = assertIs<MCFPPUnionType>(sourceScope.getType("Scalar"))
+        val sourceReordered = assertIs<MCFPPUnionType>(sourceScope.getType("ReorderedScalar"))
+        assertEquals(expectedAlternatives, sourceScalar.types.map { it.typeId }.toSet())
+        assertEquals(2, sourceScalar.types.size)
+        assertEquals(2, sourceReordered.types.size)
+        assertEquals(TypeId.Union(expectedAlternatives), sourceScalar.typeId)
+        assertEquals(sourceScalar.typeId, sourceReordered.typeId)
+        assertEquals(ValueSnapshot.of(sourceScalar), ValueSnapshot.of(sourceReordered))
+        val sourcePrototype = assertIs<GenericDataTemplate>(sourceScope.getTemplate("Box"))
+        val sourceMain = sourceScope.functions.getValue("main").single()
+        val sourceFirst = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(sourceMain.scope.getVar("first")).templateType)
+        val sourceSecond = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(sourceMain.scope.getVar("second")).templateType)
+        assertSame(sourceFirst, sourceSecond)
+        assertSame(sourcePrototype, sourceFirst.originTemplate)
+        val sourceBound = assertIs<MCFPPTypeVar>(sourceFirst.scope.getVar("T"))
+        assertEquals(sourceScalar.typeId, assertIs<MCFPPUnionType>(sourceBound.value).typeId)
+        val sourceSnapshot = assertNotNull(ValueSnapshot.of(sourceBound))
+        assertSame(sourceFirst, assertIs<MCFPPDataTemplateType>(sourceScope.functions.getValue("readBox").single().normalParams.single().type).template)
+        val sourceBoxId = sourceFirst.getType().typeId
+
+        val main = consume("""
+            import fixture.fields:*;
+            func main(){
+                var second=Box<ReorderedScalar>(9);
+                var first=Box<Scalar>(4);
+                dynamic var firstResult=readBox(first);
+                dynamic var secondResult=readBox(second);
+            }
+        """, output)
+        assertEquals(0, Project.errorCount)
+        val restoredScope = GlobalScope.libNamespaces.getValue("fixture.fields").scope
+        val scalar = assertIs<MCFPPUnionType>(restoredScope.getType("Scalar"))
+        val reordered = assertIs<MCFPPUnionType>(restoredScope.getType("ReorderedScalar"))
+        assertNotSame(sourceScalar, scalar)
+        assertNotSame(sourceReordered, reordered)
+        assertEquals(expectedAlternatives, scalar.types.map { it.typeId }.toSet())
+        assertEquals(2, scalar.types.size)
+        assertEquals(2, reordered.types.size)
+        assertEquals(TypeId.Union(expectedAlternatives), scalar.typeId)
+        assertEquals(sourceScalar.typeId, scalar.typeId)
+        assertEquals(scalar.typeId, reordered.typeId)
+        assertEquals(ValueSnapshot.of(sourceScalar), ValueSnapshot.of(scalar))
+        assertEquals(ValueSnapshot.of(scalar), ValueSnapshot.of(reordered))
+        val prototype = assertIs<GenericDataTemplate>(restoredScope.getTemplate("Box"))
+        assertNotSame(sourcePrototype, prototype)
+        val first = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("first")).templateType)
+        val second = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("second")).templateType)
+        assertSame(first, second)
+        assertSame(prototype, first.originTemplate)
+        assertNotSame(sourceFirst, first)
+        assertEquals(sourceBoxId, first.getType().typeId)
+        val bound = assertIs<MCFPPTypeVar>(first.scope.getVar("T"))
+        assertEquals(scalar.typeId, assertIs<MCFPPUnionType>(bound.value).typeId)
+        assertEquals(sourceSnapshot, ValueSnapshot.of(bound))
+        assertSame(first, assertIs<MCFPPDataTemplateType>(restoredScope.functions.getValue("readBox").single().normalParams.single().type).template)
         val machine = execute(main, output)
         assertEquals(4, machine.read(main.scope.getVar("firstResult") as MCInt))
         assertEquals(9, machine.read(main.scope.getVar("secondResult") as MCInt))

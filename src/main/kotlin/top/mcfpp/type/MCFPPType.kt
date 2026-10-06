@@ -253,6 +253,11 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                 if (factory != null && argument != null) factory(argument) else null
             }
             is TypeId.Specialized -> resolveSpecialization(id)?.getType()
+            is TypeId.Union -> {
+                val alternatives = id.alternatives.map(::resolveTypeId)
+                if (alternatives.isEmpty() || alternatives.any { it == null }) null
+                else MCFPPUnionType(*alternatives.filterNotNull().toTypedArray()).takeIf { it.typeId == id }
+            }
             else -> null
         }
 
@@ -513,6 +518,17 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                     }
                 }
                 return MCFPPDataTemplateType(UnionDataTemplate(types.map { it.template }), types)
+            }
+            if (ctx.unionType() != null) {
+                val alternatives = ArrayList<MCFPPType>()
+                for (alternative in ctx.unionType().type()) {
+                    val type = parseFromContext(alternative, typeScope, caller) ?: run {
+                        LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(alternative.text))
+                        return null
+                    }
+                    alternatives.add(type)
+                }
+                return MCFPPUnionType(*alternatives.toTypedArray())
             }
             //匿名内部模板
             if(ctx.anonymousTemplateType() != null){

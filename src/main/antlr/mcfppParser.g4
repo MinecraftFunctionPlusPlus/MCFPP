@@ -520,12 +520,17 @@ typeWithoutExcl
     |   ENTITY NL* LANGLE NL* nbtInt NL* COMMA NL* LineString (NL* COMMA NL* LineString)* NL* RANGLE
     |   className NL* readOnlyArgs?
     |   Identifier
+    |   unionType
     |   unionTemplateType
     |   anonymousTemplateType
     ;
 
 anonymousTemplateType
     :   DATA (NL* COLON NL* extendName (NL* COMMA NL* extendName)*)? NL* templateBody
+    ;
+
+unionType
+    :   LPAREN NL* type (NL* PIPE NL* type)+ NL* RPAREN
     ;
 
 unionTemplateType
