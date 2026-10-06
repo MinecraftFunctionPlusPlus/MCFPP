@@ -1,6 +1,8 @@
 package top.mcfpp.model.scope
 
 import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.obj.DataTemplateObject
+import top.mcfpp.model.compound.ObjectDataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.type.MCFPPType
 
@@ -91,17 +93,25 @@ open class FunctionScope : SimpleScopeWithVar, SimpleScopeWithType {
     }
 
     fun getVar(key: String, caller: Function): Pair<Var<*>?, Boolean> {
-        val value = getVar(key) ?: return null to true
+        val value = getVar(key)
         var source: IScope? = this
         while (source is FunctionScope) {
             if (source.vars.containsKey(key)) return value to true
             source = source.parent.firstOrNull()
         }
         if (source is CompoundDataScope) {
+            val declaration = value ?: source.getVar(key) ?: return value to true
             val property = source.getProperty(key)
-            val owner = if (property != null) property.declaredParentTemplate else value.declaredParentTemplate
-            val access = property?.accessModifier ?: value.accessModifier
-            if (owner != null) return value to (caller.accessTo(owner) >= access)
+            val owner = if (property != null) property.declaredParentTemplate else declaration.declaredParentTemplate
+            val access = property?.accessModifier ?: declaration.accessModifier
+            if (owner != null && owner !is ObjectDataTemplate && !declaration.isStatic) {
+                val receiver = getVar("this") as? DataTemplateObject
+                if (receiver != null) {
+                    if (caller.accessTo(owner) < access) return value to false
+                    return receiver.getMemberVar(key, caller)
+                }
+            }
+            if (value != null && owner != null) return value to (caller.accessTo(owner) >= access)
         }
         return value to true
     }

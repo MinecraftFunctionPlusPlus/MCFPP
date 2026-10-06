@@ -183,6 +183,55 @@ class LibFieldAccessTest {
         assertTrue(Project.errorCount > 0, "An unqualified inherited private field must reject access before reading")
     }
 
+    @Test fun unqualifiedInstanceFieldsUseTheCurrentReceiverInNestedBodies() = withLibrary { output ->
+        write("""
+            namespace fixture.fields;
+            data Base {
+                private hidden as int;
+                protected shared as int;
+                constructor(v as int){ hidden=v; }
+                func increment()->int {
+                    if(true){
+                        dynamic var counter=0;
+                        while(counter<1){ hidden=hidden+1; counter=counter+1; }
+                    }
+                    return hidden;
+                }
+                func read()->int { return hidden; }
+                func shadow()->int { var hidden=8; return hidden; }
+            }
+            data Child:Base {
+                constructor(){ shared=6; }
+                func readProtected()->int { return shared; }
+            }
+            func main(){
+                var first=Base(4); var second=Base(9); var child=Child();
+                dynamic var incremented=first.increment();
+                dynamic var unchanged=second.read();
+                dynamic var shadowed=first.shadow();
+                dynamic var inherited=child.readProtected();
+            }
+        """, output)
+        val original = GlobalScope.localNamespaces.getValue("fixture.fields").scope.getTemplate("Base")!!
+        val main = consume("""
+            import fixture.fields:*;
+            func main(){
+                var first=Base(4); var second=Base(9); var child=Child();
+                dynamic var incremented=first.increment();
+                dynamic var unchanged=second.read();
+                dynamic var shadowed=first.shadow();
+                dynamic var inherited=child.readProtected();
+            }
+        """, output)
+        assertEquals(0, Project.errorCount)
+        assertNotSame(original, GlobalScope.getTemplate("fixture.fields", "Base"))
+        val machine = execute(main, output)
+        assertEquals(5, machine.read(main.scope.getVar("incremented") as MCInt))
+        assertEquals(9, machine.read(main.scope.getVar("unchanged") as MCInt))
+        assertEquals(8, machine.read(main.scope.getVar("shadowed") as MCInt))
+        assertEquals(6, machine.read(main.scope.getVar("inherited") as MCInt))
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

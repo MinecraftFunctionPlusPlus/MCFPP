@@ -1,4 +1,4 @@
-# 下一阶段：当前实例未限定字段寻址（阶段 66）
+# 下一阶段：generic 类只读签名与源码特化（阶段 67）
 
 本计划的首条纵向路径已经在续接会话中实现，完整阶段和整个重构仍未完成。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
@@ -82,15 +82,15 @@ const 只限制重赋；compiler-only const 保留完整 `ValueSnapshot` 且不�
 
 持久化并恢复普通、generic、native函数的`accessModifier`；generic特化已有Function复制权限，不重复新增传递逻辑。成员检查须使用真实声明模板，表达式NoStackFunction须保留词法访问上下文，继承成员须以原声明owner判定权限。升级MCFL并重建stdlib，用真实库往返验证内部private/protected调用合法、外部及子类对基类private的访问被拒绝。final源码语义及metadata缺口独立保留，不增加无消费者的`isFinal`字段。imported object autoLoad所有权不纳入本阶段承诺。阶段63已以MCFL14真实库往返验证通过；首轮14项13通过/1失败，根因是model注入NativeFunction修改PRIVATE后第二次genIndex复用PUBLIC写快照。修正writer重写缓存后，最终LibMemberAccess3 + TemplateInitialization8 + LibCacheFormat3联合14项全过；两次stdlib Project语言诊断均0错误/0警告，最终bin285207 bytes。
 
-### 阶段 66：当前实例未限定字段寻址
+### 阶段 66：当前实例未限定字段寻址（已验证）
 
-来源定位确认命中`CompoundDataScope`中的普通实例成员声明后，才读取当前scope已有raw `getVar("this")`所得的真实receiver；确认其为`DataTemplateObject`后，才用`receiver.getMemberVar(key, caller)`处理该字段，允许该特定情形的raw null例外。更近FunctionScope局部直接返回原raw结果（包括`fieldVarSet`造成的null）；object/static、无owner readonly、无receiver及未解析名称继续保留原raw行为。不改全局`Internal` lookup或`putVar`。真实库fixture用constructor中的未限定`hidden=v`，if进入while执行`hidden=hidden+1`，检查值5/9、local shadow 8、protected字段6。
+仅当来源是`CompoundDataScope`中的普通实例字段声明，且当前scope原始`getVar("this")`取到真实`DataTemplateObject`，才调用`receiver.getMemberVar(key, caller)`。更近FunctionScope局部保持原始raw结果（含`fieldVarSet` null）；object/static、无owner readonly、无receiver与未解析名继续走原路径。producer/consumer真实库往返覆盖未限定constructor写、if→while写、第二实例及shadow/protected读取，结果5/9/8/6；LibFieldAccess4 + ConstructorExecution7单次11项通过。未改`Internal`全局lookup/putVar或frame布局，详见verification.md。
 
-阶段65已建立来源权限判定，但不声称普通实例未限定字段寻址正确。更广的method/custom-property receiver帧、普通return跨旧while/doWhile、Native.clone owner复制、final语义、imported object autoLoad和MNI仍未解决。阶段64–65访问权限与范围验证见verification.md。
+### 阶段 67：generic 类只读签名与源码特化
 
-### 阶段 67：generic class prototype 库恢复红测
+先用真实库红测核验readonly签名和generic类源码特化入口。`DataTemplateParam.type`当前无赋值入口，ExprVisitor模板构造忽略`readOnlyArgs`且未调用`GenericDataTemplate.compile`；还需确定namespace是否持久化generic类别。只限定支持`Box<N as int>`：冻结SpecializationKey，保持original prototype的TypeId身份；namespace使用`AbstractTemplateInfo`记录kind/父类型并恢复factory，`CtorInfo`明确owner。计划fixture producer实例3/3/5，反向消费库身份相同且磁盘结果4/9/6并检查private owner。此范围不代表T字段、generic object或Kryo所有身份恢复已完成。
 
-独立做源码与真实库roundtrip red：generic类的readonly签名、类特化入口及namespace持久化类别均待验证。`DataTemplateParam.type`尚无赋值入口，ExprVisitor模板构造分支忽略`readOnlyArgs`且未调用`GenericDataTemplate.compile`；同时核实`namespace.template`是否把generic prototype恢复为普通`DataTemplateInfo`。泛型方法测试不能证明generic class恢复。先确认源码特化入口和namespace持久化类别两段，再界定修复范围。
+普通return跨旧while/doWhile、Native.clone owner复制、final语义、imported object autoLoad和MNI仍未解决。阶段64–66访问权限与范围验证见verification.md。
 
 ### 旧浮点乘除（阶段 50 已实现）
 

@@ -1,8 +1,14 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段65限定字段权限检查 LibFieldAccess3 + TemplateInitialization8 单次联合11项全通过；MCFL15及`bin.mclib` 286207 bytes未变，未重建标准库。最近完整检查仍属于提交 `72dc557`，共346项；本轮未运行完整check或实际Minecraft服务端，整个迁移仍未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段66 LibFieldAccess4 + ConstructorExecution7 单次联合11项全通过；MCFL15及`bin.mclib` 286207 bytes未变，未重建标准库。最近完整检查仍属于提交 `72dc557`，共346项；本轮未运行完整check或实际Minecraft服务端，整个迁移仍未完成。
 
-## 最新必要检查：来源感知未限定字段权限（阶段 65）
+## 最新必要检查：当前实例未限定字段寻址（阶段 66）
+
+来源分析确认`CompoundDataScope`中的普通实例字段声明，且当前scope的raw `getVar("this")`返回真实`DataTemplateObject`后，才将该字段转给`receiver.getMemberVar(key, caller)`。更近FunctionScope局部返回原raw结果（包括`fieldVarSet`产生的null）；object/static、无owner readonly、无receiver及未解析名保持原行为。没有改变`Internal`全局lookup/putVar或frame布局。
+
+实现前红测停在producer错误数assert：XML `2026-10-06T02:01:40.044Z`，5个语言错误，首要诊断为`Symbol not defined: hidden`；未生成库或进入磁盘执行。修复后LibFieldAccessTest4 + ConstructorExecutionTest7单次联合11项通过，0 failures/errors/skips、Gradle exit0/36s；fresh XML时间`2026-10-06T02:04:38.416Z`、`02:04:49.046Z`。producer/consumer及真实磁盘命令执行均通过，验证constructor未限定写入、nested if/while更新、第二实例、local shadow和protected字段预期5/9/8/6，frame0平衡；负向访问consumer继续产生预期语言错误。日志 `mcfpp-unqualified-instance-field-red.log`、`mcfpp-unqualified-instance-field-final.log`。MCFL15/bin286207未变，未重建stdlib、fullcheck或服务器；阶段65提交`d181e10`。
+
+## 历史必要检查：来源感知未限定字段权限（阶段 65）
 
 `FunctionScope.getVar(key)`原始virtual lookup恰好调用一次，null时立即返回，以保留`Internal.fieldVarSet`与原始stackIndex；随后单独沿`FunctionScope`首parent链检查vars来源。任何更近的FunctionScope局部（包括祖先局部）允许；CompoundDataScope中的Property/Var按声明owner/access检查。两个visitor在读取或物化拒绝结果前诊断并返回`UnknownVar`；Concrete fallback遵守已有`isError`标记。范围是字段访问权限，不宣称普通实例未限定字段已正确寻址；不改变`Internal`查找/putVar。
 
