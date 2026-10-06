@@ -9,6 +9,12 @@ class MCFPPTypeDataTemplateType(
     template: DataTemplate
 ): MCFPPDataTemplateType(template, arrayListOf(MCFPPBaseType.Any)){
 
+    override val instanceData: DataTemplate
+        get() {
+            tryResolve()
+            return template
+        }
+
     val typeAs: MCFPPType get() {
         tryResolve()
         return (template as TypeDataTemplate).typeAs

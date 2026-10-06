@@ -91,7 +91,7 @@ class NativeFunction : Function, Native {
                 }
                 actualCaller
             }
-            NativeCallContext(Function.currFunction, receiver, list)
+            NativeCallContext(Function.currFunction, receiver, list, returnType)
         } else null
         val valueWrapper = if (context == null) ValueWrapper(returnVar) else null
         val invocationArgs: List<Any?> = if (context != null) listOf(context) else buildList {

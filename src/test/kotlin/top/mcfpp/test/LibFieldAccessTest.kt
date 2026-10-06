@@ -2815,6 +2815,56 @@ class LibFieldAccessTest {
         assertEquals(sourceId, check(main))
     }
 
+    @Test
+    fun nativeTimeMethodsUseDeclaredReturnTypesAcrossLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = """
+            func main(){ var box=Box(); dynamic var result=box.observe(4,2); }
+        """
+        write("""
+            namespace fixture.fields;
+            import mcfpp.minecraft:*;
+            data Box {
+                func observe(initial as int,offset as int)->int {
+                    var ticks=Time.tick(initial); var seconds=Time.second(initial);
+                    var minutes=Time.min(initial); var hours=Time.hour(initial);
+                    var days=Time.day(initial); var gameDays=Time.gameDay(initial);
+                    var factoryTotal=(ticks as int)+(seconds as int)+(minutes as int)+(hours as int)+(days as int)+(gameDays as int);
+                    var original=Time.tick(initial); var right=Time.tick(offset);
+                    var sum=original+right; var difference=original-right; var product=original*right;
+                    var quotient=original/right; var remainder=original%right;
+                    var arithmeticCode=(sum as int)*10000+(difference as int)*1000+(product as int)*100+(quotient as int)*10+(remainder as int);
+                    var flags=toInt((original>right) as byte)+toInt((original<right) as byte)*2+
+                        toInt((original>=right) as byte)*4+toInt((original<=right) as byte)*8+
+                        toInt((original==right) as byte)*16+toInt((original!=right) as byte)*32+
+                        toInt((original~=2..5) as byte)*64;
+                    return factoryTotal+arithmeticCode+flags+(original as int);
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function): TypeId {
+            val machine = execute(main, output)
+            assertEquals(1027809, machine.read(main.scope.getVar("result") as MCInt))
+            val observe = (main.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("observe").single()
+            assertTrue(observe.compiledFunctions.isEmpty())
+            fun wrapper(name: String) = assertIs<top.mcfpp.core.lang.obj.TypeDataTemplateObject>(observe.scope.getVar(name))
+            val original = wrapper("original")
+            val originalPlace = assertNotNull(original.storageBinding).place
+            assertEquals(original.templateType.getType().typeId, original.type.typeId)
+            assertNotEquals(MCFPPBaseType.Int.typeId, original.type.typeId)
+            for (name in listOf("ticks", "seconds", "minutes", "hours", "days", "gameDays", "sum", "difference", "product", "quotient", "remainder")) {
+                val result = wrapper(name)
+                assertEquals(original.type.typeId, result.type.typeId)
+                assertNotEquals(originalPlace, assertNotNull(result.storageBinding).place)
+            }
+            return original.type.typeId
+        }
+        val sourceId = check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\nimport mcfpp.minecraft:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        assertEquals(sourceId, check(main))
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

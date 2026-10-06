@@ -3,11 +3,13 @@ package top.mcfpp.io.info
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.scope.CompoundDataScope
+import top.mcfpp.type.MCFPPType
 
 data class FieldInfo(
     var vars: ArrayList<Var<*>>,
     var functions: ArrayList<AbstractFunctionInfo<*>>,
-    var properties: ArrayList<PropertyInfo>
+    var properties: ArrayList<PropertyInfo>,
+    var operators: Map<String, Map<MCFPPType?, AbstractFunctionInfo<*>>>
 ): ModelInfo<CompoundDataScope> {
     override fun get(): CompoundDataScope = restore(null)
 
@@ -33,6 +35,16 @@ data class FieldInfo(
             if (owner != null) property.declaredParentTemplate = owner
             field.putProperty(it.identifier, property, true)
         }
+        operators.forEach { (symbol, overloads) ->
+            overloads.forEach { (type, info) ->
+                val function = info.get()
+                if (owner != null) {
+                    function.owner = owner
+                    function.scope.parent.add(0, field)
+                }
+                field.addOperator(symbol, type, function, true)
+            }
+        }
         return field
     }
 
@@ -50,6 +62,9 @@ data class FieldInfo(
                 ArrayList(field.allProperties.filter {
                     it.declaredParentTemplate == owner
                 }.map { PropertyInfo.from(it) }),
+                field.operators.mapValues { (_, overloads) ->
+                    overloads.mapValues { (_, function) -> AbstractFunctionInfo.from(function) }
+                },
             )
         }
     }

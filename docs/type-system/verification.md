@@ -2,7 +2,25 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 阶段 105：delegated-int 模板基础（已限定验证）
+## 阶段 106：Time 显式原生接口（已限定验证）
+
+18个Time运算/factory入口接入单context；`declaredReturnType`由真实callee提供，函数仍指向命令所属caller。Time结果创建新的canonical wrapper和独立Place，不clone receiver；六倍率factory不再使用GlobalScope静态缓存，倍率1/20/1200/72000/144000/24000保持不变。`FieldInfo`恢复operator scope，`DataTemplateInfo`先登记canonical模板，再恢复self-signature；MCFL35→36。
+
+首轮MCFL35 stdlib1成功21s、Project0/0；final1 worker4正常，exit1/BUILD FAILED in22s。Cache XML `2026-10-06T23:23:58.692Z`为1/0/0/0；Time fixture XML `23:23:59.713Z`为1/1/0/0，source29/9118，operator表未持久化和恢复，未到执行器。MCFL36 stdlib2重建成功8s、Project0/0。final2 worker5正常、BUILD FAILED in20s，XML `2026-10-06T23:29:15.698Z` 1/1/0/0；source0/9118，但执行器在source check中因共享flag分支的旧AST读缓存缺失 `temp_2829` 而失败，未到consumer。将七种bool结果观察改为现有 `toInt(condition as byte)` 后，final3仅复查fixture：worker6正常、exit0/BUILD SUCCESSFUL in17s，XML `2026-10-06T23:34:47.825Z` 为1/0/0/0；source0/9125、fresh0/9126。实际磁盘结果1027809与helper frame0检查通过，名义Time及11个factory/算术结果Place断言通过；没有独立factoryTotal/arithmeticCode/flags磁盘断言，也未验证所有结果两两Place。Cache仅在MCFL35首轮通过，未在最终MCFL36复跑；不称最终联合2项全绿。三份MCFL36 bin均289309 bytes、SHA256 `543007E30D67400BDE5A121EFCF143A7E8522B45582006EA91D40FB7C4EB89E9`，raw header `4c46434d24000000`。bool转byte产生的7 warnings为既有representation提示，未证明checker兼容；无unit fix、fullcheck或server验证。whole17仍未完成。
+
+### 阶段 106 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 区分运算符加载缺失、source执行器缺失分数与最终受测fixture通过。 |
+| 完整性 | 3/5 | Time单context受测路径完成；分支读缓存、bool表示证明及whole17仍未完成。 |
+| 清晰性 | 4/5 | 说明最终磁盘值与缺少的逐结果断言，不把类型view说成已证明兼容。 |
+| 可执行性 | 4/5 | 阶段107限定跨分支动态局部值物化与往返。 |
+| 简洁性 | 4/5 | 按必要轮次记录证据与边界。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 历史必要检查：delegated-int 模板基础（阶段 105）
 
 `Seconds as int` 的delegated整数wrapper接入普通参数初始化、默认构造与dispatch；typed copy持有独立Place，`as int`视图共享原Place，immutable typed snapshot/restore与codec、ConstructorInfo恢复已接通。MCFL33→34。
 

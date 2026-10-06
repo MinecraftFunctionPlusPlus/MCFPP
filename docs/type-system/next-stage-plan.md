@@ -1,6 +1,6 @@
-# 下一阶段：Time 显式原生接口（阶段 106）
+# 下一阶段：恢复动态分支中的局部值（阶段 107）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–105完成受测集合、数值、文本转换/拼接、predicate、StdCommands void、System print及delegated-int模板路径的限定迁移；当前库格式MCFL34。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–106完成受测集合、数值、文本转换/拼接、predicate、StdCommands void、System print、delegated-int模板及Time路径的限定迁移；当前库格式MCFL36。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -50,11 +50,15 @@ source/fresh fixture验证DamageType初始化为 `minecraft:generic`、damage宏
 
 `data Seconds as int` delegated整数wrapper的普通参数初始化、默认构造与dispatch已接通；typed copy保持独立Place，`as int`视图共享原Place，immutable typed snapshot/restore、codec与ConstructorInfo恢复已接通。MCFL33→34。RED的构造器失败修复后，指定fixture与Cache回归共4项全过；source/fresh磁盘最终值494和frame0通过，4/9仅为中间读数。详见verification.md。不扩展Time或其他MNI。
 
-### 阶段 106 计划：Time 显式原生接口
+### 阶段 106：Time 显式原生接口（已限定验证）
 
-迁移 `TimeData` 的12项运算及 `TimeObjectData` 的6个factory到单context；context新增由实际 `NativeFunction` 提供的 `declaredReturnType`，函数仍是命令所属caller。Time结果创建新wrapper，不clone receiver；核心整数运算/比较直接调用既有MCInt实现。移除六倍率工厂的 `GlobalScope` 静态缓存，保持倍率1/20/1200/72000/144000/24000。计划一个source/fresh磁盘fixture观察普通未知int、工厂/运算及原receiver保持不变；预计MCFL35。尚未编码或验证。
+`TimeData`的12项运算及`TimeObjectData`的6个factory已迁到单context；context的`declaredReturnType`由真实callee给出，Time结果使用独立Place，六倍率factory移除GlobalScope静态缓存且倍率不变。FieldInfo恢复operators，DataTemplateInfo支持self-signature，MCFL35→36。指定fixture最终复查的source/fresh结果1027809与frame0通过；Cache仅MCFL35首轮通过，未复跑MCFL36。详细轮次和未验证边界见verification.md。
 
-阶段88–105详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL34。
+### 阶段 107 计划：恢复动态分支中的局部值
+
+修复legacy动态分支中共享score名字的分支读取：`Var.storageReadVersion` 与 `StorageVersions` 的score缓存纳入命令所属 `Function` 身份；动态分支跳转前由父Function flush可见runtime bindings，使lazy初始化支配所有路径，不在每个分支重复初始化。一个source/fresh往返fixture在普通 `Box.observe(value as int)` 中令初值dynamic：`if value > 0` 加1、`if value > 1` 加2；main调用 `observe(2)` 与 `observe(0)`，验证磁盘结果10/7及frame0。只修此legacy路径，不引入全CFG事实合并、新optimizer或world模拟。尚未编码/验证；MCFL36当前不变，是否需要schema变化待实现确认。
+
+阶段88–106详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL36。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

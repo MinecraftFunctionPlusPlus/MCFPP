@@ -5,7 +5,7 @@
 
 ## 当前规则（截至2026-10-07，Asia/Shanghai）
 
-用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–105按验证记录接入受测集合、数值/文本/命令入口及delegated-int模板路径；当前MCFL34，whole17未完成。
+用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–106按验证记录接入受测集合、数值/文本/命令、delegated-int模板及Time路径；当前MCFL36，whole17未完成。
 
 ## 当前已接入
 
@@ -47,7 +47,7 @@
 
 阶段103：四个damage void入口迁入显式context，保留语言标识及默认语义，处理ResourceID DamageType与SelectorVar签名差异。动态float受现有 `FloatProviders.enabled` 限制；不新增浮点引擎。damage fixture与Cache回归均通过，source/fresh生成宏及MCFL32资源已验证；未验证world/float执行。详细边界见verification.md。
 
-阶段104迁移System九种print语言入口并完成限定验证；最终fixture复查通过，Cache仅首轮通过，未验证macro/world执行或tellraw渲染。阶段105的delegated-int模板路径及限定验证见verification.md。当前MCFL34；下一阶段迁移Time运算与factory，详见next-stage-plan.md。
+阶段104迁移System九种print语言入口并完成限定验证；最终fixture复查通过，Cache仅首轮通过，未验证macro/world执行或tellraw渲染。阶段105 delegated-int与阶段106 Time路径已完成限定验证，细节见verification.md。当前MCFL36；下一阶段修复动态分支局部值，详见next-stage-plan.md。
 
 重构不要求兼容旧 `.mcfpp` 写法；显式引用新旧语法无需并行保留。
 
@@ -209,7 +209,7 @@ map 现在只保存一份 entry 列表，布局为 `{entries:[{key:"first",value
 
 ## 库索引
 
-当前库索引采用MCFL格式头与版本28：在保留阶段16的generic kind/readonly绑定与阶段15函数/Property权限后，新增generic类型专用immutable TypeId wire，并包含阶段88–97的原生函数/运算符/转换及文本签名；该generic类型专用serializer只序列化冻结身份，不写其Compiled/prototype/AST/cache或可变实参图；声明Info仍保存body AST和有序RHS。canonical参数与父类恢复延迟到COMPILE；版本27及更早索引要求重新编译。旧浮点用户持久化数据不会自动迁移。
+当前库索引采用MCFL格式头与版本36：在保留既有generic kind/readonly绑定、权限与类型身份后，包含阶段88–106的原生函数/运算符/转换、文本签名、delegated-int `typeAs`及Time operator信息。generic类型专用serializer仍只序列化冻结身份，不写Compiled/prototype/AST/cache或可变实参图；声明Info仍保存body AST和有序RHS。canonical参数、父类及Time签名恢复遵循各自读取阶段；版本35及更早索引要求重新编译。旧浮点用户持久化数据不会自动迁移。
 集合 IR、形状事实与动态索引的 Location 属于瞬态分析数据；Function.typedIR、runtimeEffect 与 Var.storageBinding 不序列化。MCFL17的generic Type wire仅保存稳定immutable身份；泛型参数/父类canonicalization延迟到COMPILE。该generic类型serializer不写Compiled/prototype/Var或template cache图；声明元数据仍沿既有Info保存body AST和有序RHS。runtime IR与StorageBinding仍为Transient。本次不自动转换用户已有的持久化范围或浮点载荷。
 类型布局、语言签名或 MNI 元数据改变后，运行：
 

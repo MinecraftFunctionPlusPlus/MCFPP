@@ -9,12 +9,15 @@ import top.mcfpp.core.lang.bool.BaseBool
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.type.MCFPPType
+import top.mcfpp.type.MCFPPPrivateType
 
 /** Explicit native call boundary; Var and global StorageAccess remain internal compatibility bridges. */
 class NativeCallContext internal constructor(
     val function: Function,
     receiver: Var<*>?,
-    arguments: List<Var<*>>
+    arguments: List<Var<*>>,
+    val declaredReturnType: MCFPPType = MCFPPPrivateType.Void
 ) {
     private val receiverAdapter = receiver?.let(::normalize)
     private val argumentAdapters = arguments.map(::normalize)

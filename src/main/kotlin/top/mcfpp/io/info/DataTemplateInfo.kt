@@ -55,6 +55,8 @@ data class DataTemplateInfo(
         template.isInterface = isInterface
         template.isAbstract = isAbstract
         template.isFinal = isFinal
+        // Self-typed native signatures must resolve to this canonical model while its scope is restored.
+        infoCache[this] = template
         template.scope = field.get(template)
         if (parentExpressions != null) template.parentID.addAll(parentExpressions)
         else parents.forEach {
@@ -66,7 +68,6 @@ data class DataTemplateInfo(
             template.constructors.add(it.get(template))
         }
         currTemplate = null
-        infoCache[this] = template
         if(hasCompanionObject){
             template.companionObject = ObjectDataTemplate(identifier, namespace)
         }

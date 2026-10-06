@@ -4,7 +4,7 @@
 
 ## 当前进度
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段105 delegated-int模板路径已完成限定验证，MCFL34；阶段104提交`c862427`、阶段103提交`683a46e`、阶段102提交`07670f1`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段106 Time显式接口已完成限定验证，MCFL36；阶段105提交`4664c8b`、阶段104提交`c862427`、阶段103提交`683a46e`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
 
 ### 阶段104：System print原生入口（已限定验证）
 
@@ -12,7 +12,11 @@
 
 ### 阶段105：delegated-int模板基础（已限定验证）
 
-`Seconds as int` 的普通参数初始化、默认构造与dispatch已接通；typed copy保持独立Place，`as int`视图共享Place，并恢复immutable typed snapshot/restore。正式RED首因Seconds缺少int构造器，后续3处名称未定义，合计4个producer错误，修复后stdlib Project0/0、指定fixture与Cache共4项通过。source/fresh磁盘最终结果494、frame0断言通过，4/9为中间读数；三份MCFL34 bin为285804 bytes且SHA256一致。细节见verification.md。下一阶段106计划Time运算及factory的显式context迁移，尚未编码/验证，见next-stage-plan.md。
+`Seconds as int` 的普通参数初始化、默认构造与dispatch已接通；typed copy保持独立Place，`as int`视图共享Place，并恢复immutable typed snapshot/restore。阶段105的source/fresh磁盘最终结果494、frame0断言通过，4/9为中间读数；三份MCFL34 bin为285804 bytes且SHA256一致。细节见verification.md。
+
+### 阶段106：Time显式原生接口（已限定验证）
+
+Time的18项运算/factory入口迁入单context；declaredReturnType由真实callee提供，Time结果使用独立Place，六倍率不变并移除静态factory缓存。FieldInfo恢复operators，DataTemplateInfo先登记canonical模板，再恢复self-signature。MCFL35首轮source因operators未恢复而有29个错误；MCFL36后source错误归零，但final2执行器遇共享flag分支的缺失临时score，未到consumer。final3仅复查fixture通过，source/fresh分别0/9125与0/9126，结果1027809和frame0断言通过。bool→byte有7条既有representation警告，不代表已证明兼容。Cache仅MCFL35首轮通过；三份MCFL36 bin 289309 bytes且SHA256一致。各轮详见verification.md。下一阶段107计划修复动态分支中的局部值物化与score缓存，尚未编码或验证。
 
 ### 用户最新规则（2026-10-06）
 
