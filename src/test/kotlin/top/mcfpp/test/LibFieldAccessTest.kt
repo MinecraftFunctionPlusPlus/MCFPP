@@ -7,10 +7,13 @@ import top.mcfpp.ProjectConfig
 import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.analysis.ValueSnapshot
 import top.mcfpp.analysis.StorageLayout
+import top.mcfpp.analysis.SpecializationArgument
 import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.MCInt
+import top.mcfpp.core.lang.MCIntConcrete
 import top.mcfpp.core.lang.MCFPPTypeVar
 import top.mcfpp.core.lang.obj.DataTemplateObject
+import top.mcfpp.core.lang.obj.StaticMemberView
 import top.mcfpp.core.lang.nbt.NBTListConcrete
 import top.mcfpp.io.DatapackCreator
 import top.mcfpp.io.LibBinFormat
@@ -18,6 +21,8 @@ import top.mcfpp.model.Member.AccessModifier
 import top.mcfpp.model.compound.ObjectDataTemplate
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.GenericDataTemplate
+import top.mcfpp.model.compound.GenericObjectDataTemplate
+import top.mcfpp.model.compound.CompiledGenericObjectDataTemplate
 import top.mcfpp.model.compound.CompiledGenericDataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.GenericFunction
@@ -25,6 +30,7 @@ import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.test.util.MCFPPStringTest
 import top.mcfpp.test.util.ScoreCommandExecutor
 import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.MCFPPDataTemplateType
 import top.mcfpp.type.MCFPPListType
 import top.mcfpp.type.MCFPPUnionType
@@ -1421,6 +1427,83 @@ class LibFieldAccessTest {
         assertEquals(4, machine.read(main.scope.getVar("firstResult") as MCInt))
         assertEquals(9, machine.read(main.scope.getVar("secondResult") as MCInt))
         assertEquals(7, machine.read(main.scope.getVar("thirdResult") as MCInt))
+    }
+
+    @Test fun genericObjectReadonlyValuesShareCanonicalSpecializationsAcrossLibraryRoundTrip() = withLibrary { output ->
+        write("""
+            namespace fixture.fields;
+            object data Settings<N as int> {
+                func read()->int { return N; }
+            }
+            func main(){
+                dynamic var firstResult=(Settings<4>).read();
+                dynamic var secondResult=(Settings<9>).read();
+                dynamic var repeatedResult=(Settings<4>).read();
+            }
+        """, output)
+
+        fun checkBindings(prototype: GenericObjectDataTemplate): Map<Int, CompiledGenericObjectDataTemplate> {
+            assertSame(prototype, prototype.companionObject)
+            assertEquals(2, prototype.compiledTemplates.size)
+            val objects = prototype.compiledTemplates.values.associateBy {
+                assertIs<MCIntConcrete>(it.scope.getVar("N")).value
+            }
+            assertEquals(setOf(4, 9), objects.keys)
+            val result = objects.mapValues { (_, value) -> assertIs<CompiledGenericObjectDataTemplate>(value) }
+            assertNotSame(result.getValue(4), result.getValue(9))
+            for ((key, value) in prototype.compiledTemplates) {
+                val compiled = assertIs<CompiledGenericObjectDataTemplate>(value)
+                assertSame(prototype, compiled.originTemplate)
+                assertSame(compiled, compiled.companionObject)
+                val bound = assertIs<MCIntConcrete>(compiled.scope.getVar("N"))
+                assertTrue(bound.isConst)
+                val snapshot = assertNotNull(ValueSnapshot.of(bound))
+                assertEquals(StorageLayout.CompilerOnly, assertNotNull(bound.storageBinding).data.layout)
+                assertEquals(listOf(snapshot), key.arguments.map { assertIs<SpecializationArgument.Constant>(it).value })
+                val typeId = assertIs<TypeId.Specialized>(compiled.getType().typeId)
+                assertEquals(TypeId.Declaration("object", "fixture.fields", "Settings"), typeId.constructor)
+                assertEquals(listOf(snapshot), typeId.arguments)
+                assertSame(compiled, assertIs<MCFPPDataTemplateType>(compiled.getType()).template)
+                assertSame(compiled, assertIs<MCFPPDataTemplateType>(MCFPPType.resolveTypeId(typeId)).template)
+                val read = compiled.scope.functions.getValue("read").single()
+                assertSame(compiled, read.owner)
+                assertTrue(read.isStatic)
+                val staticView = assertIs<StaticMemberView>(read.scope.getVar("this"))
+                assertSame(compiled, assertIs<MCFPPDataTemplateType>(staticView.value).template)
+            }
+            assertNotEquals(result.getValue(4).getType().typeId, result.getValue(9).getType().typeId)
+            return result
+        }
+
+        val sourceScope = GlobalScope.localNamespaces.getValue("fixture.fields").scope
+        val sourcePrototype = assertIs<GenericObjectDataTemplate>(sourceScope.getObject("Settings"))
+        val sourceObjects = checkBindings(sourcePrototype)
+        val sourceIds = sourceObjects.mapValues { it.value.getType().typeId }
+        val sourceSnapshots = sourceObjects.mapValues { assertNotNull(ValueSnapshot.of(it.value.scope.getVar("N")!!)) }
+        val main = consume("""
+            import fixture.fields:*;
+            func main(){
+                dynamic var secondResult=(Settings<9>).read();
+                dynamic var firstResult=(Settings<4>).read();
+                dynamic var repeatedResult=(Settings<4>).read();
+            }
+        """, output)
+        assertEquals(0, Project.errorCount)
+        val restoredScope = GlobalScope.libNamespaces.getValue("fixture.fields").scope
+        val prototype = assertIs<GenericObjectDataTemplate>(restoredScope.getObject("Settings"))
+        assertNotSame(sourcePrototype, prototype)
+        val objects = checkBindings(prototype)
+        for ((number, compiled) in objects) {
+            assertNotSame(sourceObjects.getValue(number), compiled)
+            assertNotSame(sourceObjects.getValue(number).scope.functions.getValue("read").single(),
+                compiled.scope.functions.getValue("read").single())
+            assertEquals(sourceIds.getValue(number), compiled.getType().typeId)
+            assertEquals(sourceSnapshots.getValue(number), ValueSnapshot.of(compiled.scope.getVar("N")!!))
+        }
+        val machine = execute(main, output)
+        assertEquals(4, machine.read(main.scope.getVar("firstResult") as MCInt))
+        assertEquals(9, machine.read(main.scope.getVar("secondResult") as MCInt))
+        assertEquals(4, machine.read(main.scope.getVar("repeatedResult") as MCInt))
     }
 
     private fun write(source: String, output: Path) {

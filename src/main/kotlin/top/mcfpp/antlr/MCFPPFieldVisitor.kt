@@ -17,6 +17,7 @@ import top.mcfpp.model.Namespace
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.GenericDataTemplate
 import top.mcfpp.model.compound.ObjectDataTemplate
+import top.mcfpp.model.compound.ObjectCompoundData
 import top.mcfpp.model.compound.TypeDataTemplate
 import top.mcfpp.model.function.*
 import top.mcfpp.model.function.Function
@@ -336,11 +337,17 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val id = ctx.compoundDeclaration().declarationName().classWithoutNamespace().text
         val namespace1 = GlobalScope.localNamespaces[Project.currNamespace]!!
         val objectTemplate = namespace1.scope.getObject(id)
-        if(objectTemplate !is ObjectDataTemplate){
+        if(objectTemplate !is DataTemplate || objectTemplate !is ObjectCompoundData){
             throw UndefinedException("Template should have been defined: $id")
         }
         DataTemplate.currTemplate = objectTemplate
         typeScope = objectTemplate.scope
+        if (objectTemplate is GenericDataTemplate) {
+            objectTemplate.prepareHeader()
+            DataTemplate.currTemplate = null
+            typeScope = MCFPPFile.currFile!!.field.namespaceField
+            return null
+        }
         for (c in ctx.compoundDeclaration().extendName()){
             //是否存在继承
             val (namespace, identifier) = c.text.splitNamespaceID()

@@ -25,7 +25,7 @@ import top.mcfpp.model.*
 import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
-import top.mcfpp.model.compound.ObjectDataTemplate
+import top.mcfpp.model.compound.ObjectCompoundData
 import top.mcfpp.model.scope.FunctionScope
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.type.*
@@ -305,7 +305,7 @@ open class Function : Member, FieldContainer, WithDocument {
             }
             val n = if(ownerType == OwnerType.NONE){
                 NamespaceID(namespace, identifier + re)
-            }else if(owner is ObjectDataTemplate){
+            }else if(owner is ObjectCompoundData){
                 NamespaceID(namespace, owner!!.identifier)
                     .appendIdentifier("static")
                     .appendIdentifier(identifier + re)
@@ -491,7 +491,7 @@ open class Function : Member, FieldContainer, WithDocument {
 
     protected open fun prepareBody(target: Function) {
         val template = owner as? DataTemplate ?: return
-        if (isStatic || template is ObjectDataTemplate) return
+        if (isStatic || template is ObjectCompoundData) return
         target.scope.putVar("this", incomingReceiver(target, template), true)
     }
 

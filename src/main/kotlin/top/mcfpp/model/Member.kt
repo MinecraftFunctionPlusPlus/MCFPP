@@ -2,7 +2,7 @@ package top.mcfpp.model
 
 import top.mcfpp.model.Member.AccessModifier
 import top.mcfpp.model.compound.DataTemplate
-import top.mcfpp.model.compound.ObjectDataTemplate
+import top.mcfpp.model.compound.ObjectCompoundData
 import java.io.Serializable
 
 /**
@@ -44,7 +44,7 @@ interface Member: Serializable {
      * 是否是静态的。默认为否
      */
     val isStatic : Boolean
-        get() = parentTemplate() is ObjectDataTemplate
+        get() = parentTemplate() is ObjectCompoundData
 
     /**
      * 这个成员是否不可被继承

@@ -20,6 +20,7 @@ import top.mcfpp.model.Member
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.GenericDataTemplate
+import top.mcfpp.model.compound.GenericObjectDataTemplate
 import top.mcfpp.model.compound.CompiledGenericDataTemplate
 import top.mcfpp.model.compound.UnionDataTemplate
 import top.mcfpp.model.function.Function
@@ -288,10 +289,16 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             // Includes must all restore their declaration imports before specialization.
             if (Project.compileStage == Project.CompileStage.READ_LIB) return null
             val declaration = id.constructor as? TypeId.Declaration ?: return null
-            if (declaration.kind != "template") return null
-            val prototype = GlobalScope.getUnsolvedImportNamespace(declaration.namespace)?.scope
-                ?.getTemplate(declaration.name) as? GenericDataTemplate ?: return null
+            val scope = GlobalScope.getUnsolvedImportNamespace(declaration.namespace)?.scope ?: return null
+            val prototype = when (declaration.kind) {
+                "template" -> scope.getTemplate(declaration.name) as? GenericDataTemplate
+                "object" -> scope.getObject(declaration.name) as? GenericObjectDataTemplate
+                else -> null
+            } ?: return null
             if (prototype.namespace != declaration.namespace || prototype.identifier != declaration.name || prototype.isInterface) return null
+            val prepare = { prototype.prepareHeader() }
+            val file = prototype.restoreDeclarationEnvironment()
+            if (file == null) prepare() else file.withDeclarationContext(prepare)
             if (id.arguments.size != prototype.readOnlyParams.size) {
                 LogProcessor.error("Readonly argument count does not match template '${prototype.identifier}'")
                 return null
@@ -505,6 +512,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                 val nspID = ctx.className().text.splitNamespaceID()
                 //数据模板
                 val template = GlobalScope.getTemplate(nspID.first, nspID.second)
+                    ?: (GlobalScope.getObject(nspID.first, nspID.second) as? DataTemplate)
                 if(template != null) {
                     if (template is top.mcfpp.model.compound.GenericDataTemplate) {
                         val arguments = ArrayList<Var<*>>()

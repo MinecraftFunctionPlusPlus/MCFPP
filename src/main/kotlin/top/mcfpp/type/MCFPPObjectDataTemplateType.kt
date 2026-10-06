@@ -3,7 +3,8 @@ package top.mcfpp.type
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.*
-import top.mcfpp.model.compound.ObjectDataTemplate
+import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.ObjectCompoundData
 import top.mcfpp.model.compound.UnsolvedObjectTemplate
 import top.mcfpp.util.LogProcessor
 
@@ -12,10 +13,11 @@ import top.mcfpp.util.LogProcessor
  * 模板类型
  * @see DataTemplate
  */
-class MCFPPObjectDataTemplateType(
-    template: ObjectDataTemplate,
+open class MCFPPObjectDataTemplateType(
+    template: DataTemplate,
     parentType: ArrayList<out MCFPPType>
 ) : MCFPPDataTemplateType(template, parentType) {
+    init { require(template is ObjectCompoundData) }
 
     override val typeId: TypeId get() = TypeId.Declaration("object", template.namespace, template.identifier)
 

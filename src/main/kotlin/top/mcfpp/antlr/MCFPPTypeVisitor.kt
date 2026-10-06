@@ -158,7 +158,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             qwq
         }
         template.parentID.addAll(ctx.compoundDeclaration().extendName().map { it.text })
-        template.companionObject = template as ObjectDataTemplate
+        template.companionObject = template
         nsp.scope.addObject(id, template)
     }
 

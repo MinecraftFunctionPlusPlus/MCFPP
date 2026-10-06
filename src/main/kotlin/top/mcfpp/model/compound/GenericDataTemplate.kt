@@ -122,16 +122,18 @@ open class GenericDataTemplate : DataTemplate {
         return args
     }
 
+    protected open fun createCompiledTemplate(identifier: String, args: List<MCFPPValue<*>>,
+                                              argumentValues: List<CompilerValue>): CompiledGenericDataTemplate =
+        CompiledGenericDataTemplate(identifier, namespace, this, args, argumentValues)
+
     private fun compileInDeclarationEnvironment(readOnlyArgs: List<Var<*>>): CompiledGenericDataTemplate? {
         prepareHeader()
         val args = bindReadonlyArguments(readOnlyArgs) ?: return null
         val key = SpecializationKeys.forArguments(declarationId, args)
         compiledTemplates[key]?.let { return it }
 
-        val template = CompiledGenericDataTemplate(
+        val template = createCompiledTemplate(
             "${identifier}_${readOnlyParams.joinToString("_") { it.typeIdentifier }}_$index",
-            namespace,
-            this,
             args.map { it as MCFPPValue<*> },
             key.arguments.map { (it as SpecializationArgument.Constant).value }
         )
@@ -155,7 +157,7 @@ open class GenericDataTemplate : DataTemplate {
 
         //注册
         currTemplate = template
-        MCFPPGenericDataTemplateFieldVisitor(template).visitTemplateDeclaration(ctx.parent as mcfppParser.TemplateDeclarationContext)
+        MCFPPGenericDataTemplateFieldVisitor(template).visitTemplateBody(ctx)
         if (!template.isAbstract) {
             template.scope.forEachFunction {
                 if (it.isAbstract) {
@@ -205,8 +207,9 @@ open class CompiledGenericDataTemplate(
     val args: List<MCFPPValue<*>>,
     argumentValues: List<CompilerValue>
 ) : DataTemplate(identifier, namespace) {
-    private val identity = TypeId.Specialized(
-        TypeId.Declaration("template", originTemplate.namespace, originTemplate.identifier), argumentValues
+    protected val identity = TypeId.Specialized(
+        TypeId.Declaration(if (originTemplate is ObjectCompoundData) "object" else "template",
+            originTemplate.namespace, originTemplate.identifier), argumentValues
     )
 
     override fun getType(): MCFPPDataTemplateType {

@@ -146,7 +146,7 @@ data class GenericDataTemplateInfo(
         }
         currTemplate = null
         infoCache[this] = template
-        if(hasCompanionObject){
+        if(hasCompanionObject && !isObject){
             template.companionObject = GenericObjectDataTemplate(context, identifier, namespace)
         }
         return template

@@ -1,8 +1,18 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段79 generic用户函数自身readonly依赖Box<(T)>签名限定通过，最终必要联合5全绿，source/fresh模型及consumer磁盘4/9/7/frame0到达。MCFL17/bin289989/wire/schema未变，无stdlib/fullcheck/server。下一80 generic object限定路径待单fixture RED，尚未实现或测试；最近完整346项仍为72dc557，whole17未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段80 generic object静态N/方法路径限定通过，source/fresh模型及consumer磁盘4/9/4/frame0到达；三个不同用例跨轮各过，最终仅新1复查。MCFL17/bin289989/wire/schema未变，无stdlib/fullcheck/server。下一81 generic interface静态TypeValue先单fixture RED，尚未实现/测试；最近完整346项仍为72dc557，whole17未完成。
 
-## 最新必要检查：泛型函数readonly依赖签名（阶段 79）
+## 最新必要检查：generic object静态身份与方法（阶段 80）
+
+阶段80共13个prod文件（含删除47行旧GenericObjectFieldVisitor）：generic object及compiled object使用ObjectCompoundData/self companion，共享一个factory及TemplateBody注册visitor，prototype只准备header。Member.isStatic和Function命名/prepareBody识别静态owner；ObjectType/GenericObjectType保稳定object身份及有限exact object lookup/canonical重绑定，GenericInfo恢复self而不另造companion。复用原generic冻结/缓存/声明完成及lazy body编译，生成运行时命令，不执行用户constexpr。未添加Info/backing class字段、Kryo注册或TypeId codec；MCFL17/bin289989不变，无stdlib/fullcheck/server。
+
+83行fixture genericObjectReadonlyValuesShareCanonicalSpecializationsAcrossLibraryRoundTrip：source Settings<4>→9→4，fresh 9→4→4；2个canonical对象、N CompilerOnly完整snapshot/cache.arguments、prototype/compiled self-companion、method owner/isStatic及canonical StaticMemberView this、source/fresh独立模型与object FullID/快照稳定、有限resolveTypeId返回canonical对象通过。source执行模型/库写入断言，真实磁盘执行来自consumer，结果4/9/4、frame0。仅static N/runtime int返回；StaticMemberView字段39–49强转、字段初始化、autoload、interface、local writer空prototype/漏compiledTemplates递归导出及genericobject wrapper作为直接库fieldtype的Kryo路径未验，不宣称全集。
+
+日志前缀mcfpp-generic-object-readonly，目录F:/DevCache/.codex/runtime。RED worker155 fatal ClassCastException TypeVisitor161，FAILED8s，无fresh XML（旧79 XML09:46:39.847Z不算80）；只SKIPPED，无producer结果/库/source模型/fresh/disk。final联合3 worker156正常FAILED32s：LibField2 XML2026-10-06T10:12:58.042Z旧79绿/新80红，Template1 XML10:13:02.626Z普通ObjectMethods绿。新80 source0/0、部分source模型/key/typeId通过，过强this==null夹具断言失败，实际为StaticMemberView(Settings9)，未到全部source/fresh/disk。仅将fixture改为StaticMemberView及其canonical模板断言，未再改prod。
+
+final2 worker157正常exit0/SUCCESS10s，新80 XML2026-10-06T10:17:31.086Z 1/0/0/0，source0/0、consumer0/9119已知warnings，全部source/fresh模型及反序consumer磁盘通过。最终仅新1复查；三个不同用例跨轮各自通过，不是最终联合3全绿。79已提交84c373d3f8c4179392bdf04c0ac14d3bb05dc486（12文件262+/65-），80提交见Git历史。下一81仅generic interface静态TypeValue，先单fixture RED，尚未实现/测试；优先既有GenericDataTemplate/GenericType+现注册serializer/isInterface及TypeId kind，不预设新wrapper/registry/schema。whole17未完成。
+
+## 历史必要检查：泛型函数readonly依赖签名（阶段 79）
 
 七prod：Function.parseDeclaredType仅在generic用户函数自身readonly Identifier terminal出现在type AST时保存现有UnresolvedType文字；member先参数后返回，param/return统一Unknown adapter保留类型。SpecializationPolicy.resolveBoundSignature在声明环境中以独立FunctionScope顺序绑定完整readonly值，ParameterMatcher和compileGeneric共享真实normal/return类型；只Unresolved签名按Identifier token/readonly位置归一，已知类型仍FullID。StorageAccess.freezeReadonly接受已cast输入，登记完整snapshot/types、fresh Symbol及CompilerOnly root/parts；GenericDataTemplate等价复用。compiled移除本地readonly占位后安装fresh绑定，ordinary运行时实参保持Unknown key；不执行用户body或type运行时反射。延期识别仅GenericFunction，共享compileGeneric不代表新增generic extension/native入口已验证。
 

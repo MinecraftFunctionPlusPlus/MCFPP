@@ -7,6 +7,7 @@ import top.mcfpp.exception.UndefinedException
 import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.ObjectDataTemplate
+import top.mcfpp.model.compound.ObjectCompoundData
 import top.mcfpp.model.compound.GenericDataTemplate
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.nbt.tags.Tag
@@ -87,7 +88,7 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
         val id = ctx.compoundDeclaration().declarationName().classWithoutNamespace().text
         val namespace1 = GlobalScope.localNamespaces[Project.currNamespace]!!
         val objectTemplate = namespace1.scope.getObject(id)
-        if(objectTemplate !is ObjectDataTemplate){
+        if(objectTemplate !is DataTemplate || objectTemplate !is ObjectCompoundData){
             throw UndefinedException("Template should have been defined: $id")
         }
         annotationCache.forEach {
@@ -96,7 +97,7 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
         objectTemplate.annotations.addAll(annotationCache)
         annotationCache.clear()
         DataTemplate.currTemplate = objectTemplate
-        ctx.templateBody()?.let { visitTemplateBody(it) }
+        if (objectTemplate !is GenericDataTemplate) ctx.templateBody()?.let { visitTemplateBody(it) }
         DataTemplate.currTemplate = null
     }
 
