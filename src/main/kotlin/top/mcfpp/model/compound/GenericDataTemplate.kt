@@ -79,7 +79,7 @@ open class GenericDataTemplate : DataTemplate {
             }
         }
         for (name in parentID) {
-            val (namespace, identifier) = name.splitNamespaceID()
+            val (namespace, identifier) = name.substringBefore('<').splitNamespaceID()
             val parent = GlobalScope.getTemplate(namespace, identifier)
                 ?: (GlobalScope.getObject(namespace, identifier) as? ObjectDataTemplate)
             when {
@@ -145,10 +145,6 @@ open class GenericDataTemplate : DataTemplate {
         template.isInterface = isInterface
         template.initialize()
         template.restoreDeclarationEnvironment()
-        for (parent in this.parent){
-            template.extends(parent)
-        }
-
         //只读属性
         for (i in readOnlyParams.indices) {
             if(args[i] is MCFPPTypeVar){
@@ -156,6 +152,13 @@ open class GenericDataTemplate : DataTemplate {
             }
             template.scope.putVar(readOnlyParams[i].identifier, args[i], false)
             template.scope.putProperty(readOnlyParams[i].identifier, Property.buildSimpleProperty(args[i]))
+        }
+
+        if (parentID.isNotEmpty()) {
+            template.parentID.addAll(parentID)
+            template.resolveDeclaredParents()
+        } else for (parent in this.parent) {
+            template.extends(parent)
         }
 
         //注册

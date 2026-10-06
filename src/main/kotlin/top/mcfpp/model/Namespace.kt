@@ -63,8 +63,8 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
         }
         scope.forEachFunction { resolveFunction(it) }
         //继承关系处理
-        scope.forEachTemplate { it.flatExtends() }
-        scope.forEachObject { if(it is ObjectDataTemplate) it.flatExtends() }
+        scope.forEachTemplate { if (it.parentID.isEmpty() || it.parent.isNotEmpty()) it.flatExtends() }
+        scope.forEachObject { if(it is ObjectDataTemplate && (it.parentID.isEmpty() || it.parent.isNotEmpty())) it.flatExtends() }
     }
 
     private fun resolveFunction(f: Function){

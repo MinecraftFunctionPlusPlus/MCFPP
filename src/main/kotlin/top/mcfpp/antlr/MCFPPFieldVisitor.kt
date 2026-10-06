@@ -284,28 +284,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         typeScope = template.scope
         if (template is GenericDataTemplate) {
             template.prepareHeader()
-        } else for (c in ctx.compoundDeclaration()?.extendName() ?: emptyList()){
-            //是否存在继承
-            val (namespace, identifier) = c.text.splitNamespaceID()
-            val s = GlobalScope.getTemplate(namespace, identifier)
-            if(s == null){
-                val o = GlobalScope.getObject(namespace, identifier)
-                if(o is ObjectDataTemplate) {
-                    if (o.isFinal) LogProcessor.error("Cannot extends $identifier because it's final")
-                    else template.extends(o)
-                }else{
-                    LogProcessor.error("Undefined template: " + c.text)
-                }
-            }else{
-                if(s == template){
-                    LogProcessor.error("Infinitive reference: $id -> $identifier")
-                }else if(s.isFinal){
-                    LogProcessor.error("Cannot extends $identifier because it's final")
-                }else{
-                    template.extends(s)
-                }
-            }
-        }
+        } else template.resolveDeclaredParents()
         isInObject = false
         if (template !is GenericDataTemplate) {
             ctx.templateBody()?.let { visitTemplateBody(it) }

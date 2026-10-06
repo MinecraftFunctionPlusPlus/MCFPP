@@ -432,6 +432,8 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             if(template !=null) return resolveBareTemplateType(template.getType())
             val obj = GlobalScope.getObject(nspID.first, nspID.second)
             if(obj !=null) return obj.getType()
+            val itf = GlobalScope.getInterface(nspID.first, nspID.second)
+            if(itf != null) return resolveBareTemplateType(itf.getType())
             val enum = GlobalScope.getEnum(nspID.first, nspID.second)
             if(enum != null) return enum.getType()
 

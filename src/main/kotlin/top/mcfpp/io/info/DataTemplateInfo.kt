@@ -26,6 +26,8 @@ data class DataTemplateInfo(
     var namespace: String,
     var identifier: String,
     var parents: List<AbstractTemplateInfo<*>>,
+    /** Non-null source expressions replace copied parent metadata; null preserves manual/default parents. */
+    val parentExpressions: List<String>?,
     var field: FieldInfo,
     var constructor: List<TemplateConstructorInfo>,
     var hasCompanionObject: Boolean,
@@ -48,7 +50,8 @@ data class DataTemplateInfo(
         template.isAbstract = isAbstract
         template.isFinal = isFinal
         template.scope = field.get(template)
-        parents.forEach {
+        if (parentExpressions != null) template.parentID.addAll(parentExpressions)
+        else parents.forEach {
             template.extends(it.get())
             currTemplate = template
         }
@@ -94,7 +97,8 @@ data class DataTemplateInfo(
                 template.isFinal,
                 template.namespace,
                 template.identifier,
-                if(template != DataTemplate.baseDataTemplate) template.parent.filterIsInstance<DataTemplate>().map { AbstractTemplateInfo.from(it) } else emptyList(),
+                if(template.parentID.isEmpty() && template != DataTemplate.baseDataTemplate) template.parent.filterIsInstance<DataTemplate>().map { AbstractTemplateInfo.from(it) } else emptyList(),
+                template.parentID.takeIf { it.isNotEmpty() }?.toList(),
                 FieldInfo.from(template.scope, template),
                 template.constructors.map { TemplateConstructorInfo.from(it) },
                 template.companionObject != null,
@@ -116,6 +120,8 @@ data class GenericDataTemplateInfo(
     var namespace: String,
     var identifier: String,
     var parents: List<AbstractTemplateInfo<*>>,
+    /** Non-null source expressions replace copied parent metadata; null preserves manual/default parents. */
+    val parentExpressions: List<String>?,
     var generic: List<DataTemplateParamInfo>,
     var context: TemplateBodyContext,
     var field: FieldInfo,
@@ -139,7 +145,8 @@ data class GenericDataTemplateInfo(
         template.isAbstract = isAbstract
         template.isFinal = isFinal
         template.scope = field.get(template)
-        parents.forEach {
+        if (parentExpressions != null) template.parentID.addAll(parentExpressions)
+        else parents.forEach {
             template.extends(it.get())
             currTemplate = template
         }
@@ -182,7 +189,8 @@ data class GenericDataTemplateInfo(
                 template.isFinal,
                 template.namespace,
                 template.identifier,
-                template.parent.filterIsInstance<DataTemplate>().map { AbstractTemplateInfo.from(it) },
+                if (template.parentID.isEmpty()) template.parent.filterIsInstance<DataTemplate>().map { AbstractTemplateInfo.from(it) } else emptyList(),
+                template.parentID.takeIf { it.isNotEmpty() }?.toList(),
                 template.readOnlyParams.map { DataTemplateParamInfo.from(it) },
                 template.ctx,
                 FieldInfo.from(template.scope, template),

@@ -56,6 +56,33 @@ open class DataTemplate : FieldContainer, CompoundData {
         return file
     }
 
+    /** Resolve source parent expressions against this declaration's scope and imports. */
+    internal fun resolveDeclaredParents() {
+        val callerTemplate = currTemplate
+        val callerFunction = Function.currFunction
+        try {
+            val file = restoreDeclarationEnvironment()
+            val resolve = {
+                currTemplate = this
+                for (name in parentID) {
+                    val declared = MCFPPType.parseFromString(name, scope) as? MCFPPDataTemplateType
+                    declared?.tryResolve()
+                    val parent = declared?.template
+                    when {
+                        parent == null -> LogProcessor.error("Undefined template: $name")
+                        parent == this -> LogProcessor.error("Infinitive reference: $identifier -> $name")
+                        parent.isFinal -> LogProcessor.error("Cannot extends ${parent.identifier} because it's final")
+                        else -> extends(parent)
+                    }
+                }
+            }
+            if (file == null) resolve() else file.withDeclarationContext(resolve)
+        } finally {
+            currTemplate = callerTemplate
+            Function.currFunction = callerFunction
+        }
+    }
+
     /**
      * 构造函数
      */
@@ -209,8 +236,11 @@ open class DataTemplate : FieldContainer, CompoundData {
 
     fun flatExtends(): CompoundData {
         for (compoundData in parent){
+            val readonlyNames = (compoundData as? CompiledGenericDataTemplate)?.originTemplate
+                ?.readOnlyParams?.map { it.identifier }.orEmpty()
             //把所有成员都塞进去
             compoundData.scope.forEachVar {
+                if (it.identifier in readonlyNames) return@forEachVar
                 val b = scope.getVar(it.identifier) != null || it.identifier in deferredFields
                 if(b){
                     LogProcessor.warn("Duplicate var '${it.identifier}' in template '$identifier'. Overriding it.")
@@ -218,6 +248,7 @@ open class DataTemplate : FieldContainer, CompoundData {
                 scope.putVar(it.identifier, it, true)
             }
             compoundData.scope.forEachProperty {
+                if (it.identifier in readonlyNames) return@forEachProperty
                 val b = scope.getProperty(it.identifier) != null || it.identifier in deferredFields
                 if(b){
                     LogProcessor.warn("Duplicate property '${it.identifier}' in template '$identifier'. Overriding it.")

@@ -1892,6 +1892,105 @@ class LibFieldAccessTest {
         }
     }
 
+    @Test fun genericParentArgumentsBindCanonicalMembersAcrossLibraryRoundTrip() = withLibrary { output ->
+        write("""
+            namespace fixture.fields;
+            interface BaseMarker {}
+            interface DerivedMarker : BaseMarker {}
+            data Parent<T as type> {
+                protected value as T;
+                constructor(v as T){this.value=v;}
+                func read()->T{return this.value;}
+            }
+            data IntChild : Parent<int> { constructor(v as int){this.value=v;} }
+            data Child<T as type> : Parent<(T)> { constructor(v as T){this.value=v;} }
+            data Offset<N as int> { func number()->int{return N;} }
+            data Shift<N as int> : Offset<(N+1)> {}
+            func main(){
+                dynamic var input4=4; dynamic var input9=9;
+                var first=IntChild(input4); var second=Child<int>(input9); var flag=Child<bool>(true);
+                var shifted=Shift<4>();
+                dynamic var firstResult=first.read(); dynamic var secondResult=second.read();
+                dynamic var flagResult=flag.read(); dynamic var numberResult=shifted.number();
+                /scoreboard players set #parent_bool result 0
+                if(flagResult){
+                    /scoreboard players set #parent_bool result 1
+                }
+            }
+        """, output)
+        fun check(namespace: top.mcfpp.model.Namespace, main: Function, shiftValue: Int): List<DataTemplate> {
+            val scope = namespace.scope
+            val baseMarker = scope.getInterface("BaseMarker")!!
+            assertTrue(scope.getInterface("DerivedMarker")!!.parent.any { it === baseMarker })
+            val parent = assertIs<GenericDataTemplate>(scope.getTemplate("Parent"))
+            val child = assertIs<GenericDataTemplate>(scope.getTemplate("Child"))
+            assertEquals(2, parent.compiledTemplates.size)
+            assertEquals(2, child.compiledTemplates.size)
+            val actualParents = parent.compiledTemplates.values.associateBy { it.scope.getType("T")!!.typeId }
+            val actualChildren = child.compiledTemplates.values.associateBy { it.scope.getType("T")!!.typeId }
+            val orderedTypes = listOf(MCFPPBaseType.Int.typeId, MCFPPBaseType.Bool.typeId)
+            val orderedParents = orderedTypes.map { actualParents.getValue(it) }
+            val orderedChildren = orderedTypes.map { actualChildren.getValue(it) }
+            val intChild = scope.getTemplate("IntChild")!!
+            val intParent = actualParents.getValue(MCFPPBaseType.Int.typeId)
+            assertTrue(intChild.parent.any { it === intParent })
+            val children = listOf(intChild) + orderedChildren
+            for (actualChild in children) {
+                val type = if (actualChild === intChild) MCFPPBaseType.Int else actualChild.scope.getType("T")!!
+                val actualParent = actualParents.getValue(type.typeId)
+                assertTrue(actualChild.parent.any { it === actualParent })
+                val field = actualChild.scope.getVar("value")!!
+                assertEquals(type.typeId, field.type.typeId)
+                assertSame(actualParent, field.declaredParentTemplate)
+                val reader = actualChild.scope.getFunction("read", emptyList(), emptyList())
+                assertSame(actualParent, reader.owner)
+                assertEquals(type.typeId, reader.returnType.typeId)
+                assertTrue(actualChild.getType().isSubOf(actualParent.getType()))
+            }
+            assertSame(intChild, assertIs<DataTemplateObject>(main.scope.getVar("first")).templateType)
+            val shift = assertIs<GenericDataTemplate>(scope.getTemplate("Shift")).compiledTemplates.values.single()
+            val offset = assertIs<GenericDataTemplate>(scope.getTemplate("Offset")).compiledTemplates.values.single()
+            assertEquals(shiftValue, assertIs<MCIntConcrete>(shift.scope.getVar("N")).value)
+            assertTrue(shift.parent.any { it === offset })
+            assertEquals(shiftValue + 1, assertIs<MCIntConcrete>(offset.scope.getVar("N")).value)
+            assertSame(offset, shift.scope.getFunction("number", emptyList(), emptyList()).owner)
+            return listOf(parent, child, intChild) + orderedParents + orderedChildren + listOf(shift, offset)
+        }
+        val sourceNamespace = GlobalScope.localNamespaces.getValue("fixture.fields")
+        val sourceMain = sourceNamespace.scope.functions.getValue("main").single()
+        val sourceModels = check(sourceNamespace, sourceMain, 4)
+        val sourceIds = sourceModels.take(7).map { it.getType().typeId }
+        val sourceMachine = execute(sourceMain, output)
+        assertEquals(4, sourceMachine.read(sourceMain.scope.getVar("firstResult") as MCInt))
+        assertEquals(9, sourceMachine.read(sourceMain.scope.getVar("secondResult") as MCInt))
+        assertEquals(1, sourceMachine.values.getValue("#parent_bool result"))
+        assertEquals(5, sourceMachine.read(sourceMain.scope.getVar("numberResult") as MCInt))
+        val main = consume("""
+            import fixture.fields:*;
+            data Parent {}
+            func main(){
+                dynamic var input4=4; dynamic var input9=9;
+                var flag=Child<bool>(true); var second=Child<int>(input9); var first=IntChild(input4);
+                var shifted=Shift<9>();
+                dynamic var firstResult=first.read(); dynamic var secondResult=second.read();
+                dynamic var flagResult=flag.read(); dynamic var numberResult=shifted.number();
+                /scoreboard players set #parent_bool result 0
+                if(flagResult){
+                    /scoreboard players set #parent_bool result 1
+                }
+            }
+        """, output)
+        assertEquals(0, Project.errorCount)
+        val models = check(GlobalScope.libNamespaces.getValue("fixture.fields"), main, 9)
+        sourceModels.zip(models).forEach { (source, restored) -> assertNotSame(source, restored) }
+        assertEquals(sourceIds.toSet(), models.take(7).map { it.getType().typeId }.toSet())
+        val machine = execute(main, output)
+        assertEquals(4, machine.read(main.scope.getVar("firstResult") as MCInt))
+        assertEquals(9, machine.read(main.scope.getVar("secondResult") as MCInt))
+        assertEquals(1, machine.values.getValue("#parent_bool result"))
+        assertEquals(10, machine.read(main.scope.getVar("numberResult") as MCInt))
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

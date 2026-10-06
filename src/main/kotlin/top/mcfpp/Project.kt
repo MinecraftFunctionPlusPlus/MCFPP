@@ -513,12 +513,25 @@ object Project {
         }
     }
 
+    internal fun resolveImportedTemplateParents() {
+        for (namespace in GlobalScope.libNamespaces.values + GlobalScope.stdNamespaces.values) {
+            val scope = namespace.scope
+            for (template in scope.template.values + scope.interfaces.values + scope.objects.filterIsInstance<DataTemplate>()) {
+                if (template !is GenericDataTemplate && template.parentID.isNotEmpty()) {
+                    template.resolveDeclaredParents()
+                    template.flatExtends()
+                }
+            }
+        }
+    }
+
     /**
      * 编制类型索引
      */
     fun indexType(){
         compileStage = CompileStage.INDEX_TYPE
         logger.debug("Generate Type Index...")
+        resolveImportedTemplateParents()
         //解析文件
         for (file in files) {
             try {
@@ -606,6 +619,9 @@ object Project {
             function.returnType.tryResolve()
         }
         val templates = GlobalScope.localNamespaces.values.flatMap { it.scope.template.values }.filterNot { it is GenericDataTemplate } +
+            (GlobalScope.libNamespaces.values + GlobalScope.stdNamespaces.values)
+                .flatMap { it.scope.template.values + it.scope.interfaces.values + it.scope.objects.filterIsInstance<DataTemplate>() }
+                .filter { it !is GenericDataTemplate && it.parentID.isNotEmpty() } +
             declarations.filterIsInstance<GenericDataTemplate>().flatMap { it.compiledTemplates.values.toList() }
         val completed = hashSetOf<DataTemplate>()
         fun complete(template: DataTemplate) {

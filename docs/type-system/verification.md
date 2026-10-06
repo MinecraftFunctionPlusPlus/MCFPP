@@ -1,8 +1,16 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段85 source/fresh abstract/final标志限定通过，MCFL18标准库287554 bytes重建0errors/0warnings，最终必要联合3全绿。正例source/fresh磁盘4/9/4/4/frame0；三个final父负例各source1个预期错误、fresh1个预期错误/9119已知warnings。无fullcheck/server；下一86 generic父项实际readonly解析待RED/API实现，whole17未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段86 actual generic父项限定通过，MCFL19/stdlib292301，最终联合3全绿、跨轮4个不同用例各过。新86 source0errors/9118warnings、fresh0/9121warnings，磁盘4/9/bool1/5与4/9/bool1/10/frame0。警告含source且属于既有flatExtends重复类别；无fullcheck/server，下一87 generic object compiler-only静态字段待RED，whole17未完成。
 
-## 最新必要检查：abstract/final标志持久化（阶段 85）
+## 最新必要检查：实际generic父项绑定（阶段 86）
+
+8prod+2test（fixture99/helper2）+bin共11文件175+/35-；声明环境纯parser/tryResolve、actual T/N绑定后完整父项、Info nullable文本权威、Project/StringTest共享INDEX hook、只排CompiledGeneric父readonly名vars/properties。MCFL19；stdlib独立SUCCESS36s/compiler0/0，三artifact292301 bytes/header4c46434d13000000，SHA256 097F4A5ABA51792E4F748D25DBE0459BC38F03E97C2339358C763DF92125938C。
+
+日志位于F:/DevCache/.codex/runtime/mcfpp-generic-parents-{red,stdlib,final,final2,diagnostic,diagnostic2,final3}.log。RED172 fatal FAILED9s：Parent<int>/Parent<(T)>/Offset<(N+1)>全文未找到→value缺失→Var633 NPE，无fresh XML。trial173 joint3，Lib XML13:26:27.137Z两fail、Cache13:26:26.471Z一green，READ_LIB与complete各BossBar报错共2errors；未模型/consumer。trial174 joint3 XML13:37:09.387Z三fail，各仅complete BossBar1error。diag175单1FAILED8s/XML13:44:53.283Z无表（root误只查std）；diag176单1FAILED8s/XML13:51:11.734Z表显示BossBar无parent。最终根因是StringTest未调用INDEX hook，不是tryResolve单独解决；全部TEMP已删除。
+
+final3 worker177正常exit0/SUCCESS1m1s，XML2026-10-06T14:00:39.735Z 3/0/0/0。新86 source0errors/9118warnings、fresh0/9121warnings，source盘4/9/bool1/5、fresh4/9/bool1/10/frame0及canonical父/字段/read owner、TypeID、Shift4→Offset5/Shift9→Offset10模型全部通过。旧85正例source0/9118 fresh0/9119；三final负例各source1/9118、fresh1/9119为expected拒绝。警告均既有flatExtends重复类别，source也有，不能写source0/0。cache在trial173绿，最终仅联合3，跨轮4不同case各过。无fullcheck/server；不扩super、source object/interface actualgeneric父、Kryo全集或compiler-only字段。下一87待RED/实现，whole17未完成。
+
+## 历史必要检查：abstract/final标志持久化（阶段 85）
 
 8prod34+/19-加两个fixture110行共9文件144+/19-，另资源bin更新。source标志/compiled final、ordinary及generic final父拒绝、abstract默认ctor跳过、两Info final及Kryo prefix/early壳已限定接入。MCFL18；不扩TypeAS、实际generic父参数、interface runtime/shape全套或abstract运行时构造。
 

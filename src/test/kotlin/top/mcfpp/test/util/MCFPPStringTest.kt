@@ -56,6 +56,8 @@ object MCFPPStringTest {
         val context = parser.compilationUnit()
         if (MCFPPFile.currFile!!.syntaxError) return
         LogProcessor.debug("Generate Type Index...")
+        Project.compileStage = Project.CompileStage.INDEX_TYPE
+        Project.resolveImportedTemplateParents()
         Project.currNamespace = MCFPPFile.currFile!!.namespace.identifier
         MCFPPTypeVisitor().visitCompilationUnit(context)
         MCFPPFile.currFile!!.field.namespaceField = GlobalScope.localNamespaces[Project.currNamespace]!!.scope
