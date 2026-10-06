@@ -1,18 +1,20 @@
-# 下一阶段：匹配显式原生转换的方法名（阶段 95）
+# 下一阶段：接入 text 与拼接运算（阶段 96）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–94完成受测集合、数值及toText入口的限定迁移；当前库格式MCFL26。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–95完成受测集合、数值、toText与显式转换引用的限定迁移；当前库格式MCFL26。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
-阶段93已将ConversionData的49个静态转换入口接入显式context；阶段94七个toText入口限定验证通过。两阶段的跨轮结果见verification.md。
+阶段93已将ConversionData的49个静态转换入口接入显式context；阶段94七个toText入口限定验证通过；阶段95已将49个stdlib引用改为真实Java方法名并定向复查。分轮结果见verification.md。
 
-### 阶段 94：toText 原生入口（已限定验证）
+### 阶段 95：显式转换方法引用（已限定验证）
 
-七个入口使用单receiver context和typed Kotlin helper；普通source可达五个Java方法并覆盖int两种状态，Any两方法没有source覆盖。移除MCString的TODO member lookup，接通String runtime/Concrete实例metadata并将NBT metadata放回instanceData。测试覆盖source与fresh consumer磁盘payload、score/NBT及frame0，不代表聊天渲染或跨帧寿命。
+`conversions.mcfpp` 的49个显式native引用现匹配真实Java方法名 `toTargetFromSource`，既有 `decodeByte` fixture使用 `toIntFromByte`。FieldVisitor不再用语言identifier回退查找；Namespace/CompoundData仍以annotation identifier支持语言重载。用户无需兼容旧 `.mcfpp` 显式Java引用，MCFL26和wire不变。stdlib重建及既有conversion fixture source/fresh复查通过。
 
-用户已明确不要求兼容旧 `.mcfpp` 显式Java写法。阶段95应将 `conversions.mcfpp` 的49个native RHS改为真实Java方法名 `toTargetFromSource`，并把LibFieldAccessTest中的 `decodeByte` 显式引用改为 `toIntFromByte`；不得再用FieldVisitor的语言identifier alias回退匹配Java成员。Namespace/CompoundData继续用annotation identifier处理正常语言重载，不增加registry或schema字段。MCFL26不变，但标准库源码改变后仍需重建stdlib；只复跑既有conversion fixture source/fresh定向验证。
+### 阶段 96 计划：text 与两项拼接运算符
 
-阶段88–94详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL26。阶段96 text及更广MNI迁移后续另行规划，不并入95。
+限定于text方法及统一两个MNIOperator入口。先处理 `JsonTextConcreteData` 重复注入，改为复用 `JsonTextData`；concat由小型直接调用core的Kotlin helper实现，不新增通用框架。单个Box source/fresh fixture使用真实text形参，通过 `toText` 产生L/R/A/B，验证组件顺序、operand副本及pop前结果；不以 `string as text` 代替。待必要RED确认现有string调用错误、append数组未flatten和const mutable副本风险，不预判这些问题一定存在。MCFL升级与stdlib重建按最终ABI确定；保留Cache回归作为必要联合检查，具体范围以Root冻结的method targets为准。聊天渲染不纳入此阶段。
+
+阶段88–95详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL26。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

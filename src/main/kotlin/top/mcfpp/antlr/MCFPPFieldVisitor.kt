@@ -235,8 +235,8 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             val methods = clazz.methods
             var hasFind = false
             for(method in methods){
+                if (method.name != methodName) continue
                 val mniRegister = method.getAnnotation(MNIFunction::class.java) ?: continue
-                if (method.name != methodName && mniRegister.identifier.ifEmpty { method.name } != methodName) continue
                 //解析MNIMethod注解成员
                 val readOnlyType = mniRegister.readOnlyParams.map {
                     MCFPPType.parseFromString(it.split(" ").last(), Namespace.currNamespaceField)

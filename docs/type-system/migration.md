@@ -5,7 +5,7 @@
 
 ## 当前规则（截至2026-10-07，Asia/Shanghai）
 
-用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。用户无需兼容旧 `.mcfpp` 显式Java方法引用。阶段87已实现并限定验证；阶段88–92完成受测集合与数值算术迁移，阶段93迁移ConversionData数值转换入口，阶段94迁移toText入口；当前MCFL26，whole17未完成。
+用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–92完成受测集合与数值算术迁移，阶段93迁移ConversionData数值转换入口，阶段94迁移toText入口，阶段95改为显式Java方法名引用；当前MCFL26，whole17未完成。
 
 ## 当前已接入
 
@@ -28,6 +28,8 @@
 阶段93：ConversionData的49个静态入口（36个numeric conversions及13个toNBT）接入显式context，支持nullable receiver/`withArguments`，按declaredVoid与static构造NF；唯一Java名通过原MNIFunction.identifier保留语言别名，Namespace/CompoundData/FieldVisitor匹配effective identifier，`NumericConversions`发布实际结果引用；迁移49个ABI不表示所有转换均可执行，既有unsupported诊断保持。MCFL24→25，stdlib0/0，三份291070-byte资源SHA256为 `D41A947D59084FA3A36D66B940988FF4CD19CA087D54947E5B336B1DADE76832`。Cache、ConversionIR、新fixture三个不同用例跨轮各过；最终仅复查fixture，不是联合3项。String返回NBT的错误引用已通过typed view修复，保留真实payload/address而不扩隐式转换。磁盘值-1/17/ByteTag 1/`hello`/`{value:7}`、frame0通过。阶段94迁移七个toText入口。
 
 阶段94：七个 `toText` 方法接入单receiver context与 `NativeTextOperations`；源码实际覆盖五个Java方法和int两种状态，两个Any入口无source覆盖。移除 `MCString.getMemberFunction` TODO，恢复Var的实例成员/签名查找；String runtime/Concrete lazy `instanceData` 接通，NBT由错误的 `objectData` 转为 `instanceData` 并使用 `commonType`。MCFL25→26，最终三份291070-byte资源SHA256均为 `9ED46C95796CBADE0007D246E630FF094F9018B03772AB57B145B98E412EEAE5`。Cache与text fixture两个用例跨轮各自通过，final3只复查fixture；source/fresh磁盘payload与返回7/frame0通过。无聊天渲染、跨帧寿命或fullcheck/server验证；whole17仍未完成。
+
+阶段95：`conversions.mcfpp` 的49个native RHS改为Java真实方法名 `toTargetFromSource`，`decodeByte` 使用 `ConversionData.toIntFromByte`；FieldVisitor取消语言identifier alias回退，Namespace/CompoundData仍通过annotation identifier支持语言重载。用户无需兼容旧 `.mcfpp` 显式Java引用。MCFL26不变；stdlib重建Project0/0，既有conversion fixture source/fresh定向复查通过，资源291070 bytes、三份SHA256一致。只验证既有路径，未复跑Cache或其他旧绿，whole17仍未完成。
 
 阶段85 source template ABSTRACT/FINAL与object FINAL、compiled final、final继承拒绝及abstract默认ctor跳过已限定验证；两个Info保存final，Kryo声明前缀及early/Unsolved壳同步final。8prod34+/19-加两个fixture110行共9文件144+/19-，另更新标准库资源bin。MCFL18真实wire升级；旧/未知缓存格式拒绝回归通过。stdlib重建14s、compiler0/0、287554 bytes；最终必要联合3全绿，正例source/fresh0errors（fresh9119已知warnings）、磁盘4/9/4/4/frame0及独立模型通过；三种final父负例分别source1/fresh1预期错误，拒绝及父关系正确。无fullcheck/server，whole17未完成。
 

@@ -4,7 +4,7 @@
 
 ## 当前进度
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段94已完成限定验证，MCFL26；提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。用户明确无需兼容旧 `.mcfpp` 显式Java方法引用。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段95已完成限定验证，MCFL26；提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
 
 ### 用户最新规则（2026-10-06）
 
@@ -57,6 +57,24 @@ stdlib首轮 `mcfpp-native-text-context-stdlib.log` 重建成功，Project0/0，
 | 清晰性 | 4/5 | 明确记录final3是单fixture复查，两项跨轮各自通过。 |
 | 可执行性 | 4/5 | 阶段95明确改用Java真实方法名并保留语言层identifier重载。 |
 | 简洁性 | 4/5 | 只更新当前阶段与下一步，保留此前历史。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+### 阶段 95：显式原生转换引用（已限定验证）
+
+`conversions.mcfpp` 的49个native RHS已逐项改成真实Java名 `toTargetFromSource`，既有 `decodeByte` fixture改为 `ConversionData.toIntFromByte`。FieldVisitor仅按真实Java方法名匹配，不再回退语言identifier；Namespace/CompoundData仍用annotation identifier解析正常语言重载。无旧 `.mcfpp` 显式Java引用兼容要求，MCFL26/wire未变。
+
+`mcfpp-native-reference-stdlib.log` 成功9s，Project0/0；final worker200 exit0/BUILD SUCCESSFUL in18s，fresh XML `2026-10-06T20:31:00.566Z` 单fixture 1/0/0/0，source0/9119 warnings、fresh0/9120。source/build资源/build索引三份均291070 bytes、MCFL26、SHA256 `3F507523A551F5CE2A42B2CA93BA5AB01207F4518B5CF47AC80D13A0AA6B58EA`。仅运行既有conversion fixture；未重跑Cache或其他旧绿，无fullcheck/server。
+
+### 阶段 95 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录了真实方法名匹配、唯一fixture及三份MCFL26产物。 |
+| 完整性 | 3/5 | 49个stdlib引用与转换fixture路径通过，但whole17与其他MNI仍未完成。 |
+| 清晰性 | 4/5 | 区分Java方法名和语言annotation identifier，明确不兼容旧显式引用。 |
+| 可执行性 | 4/5 | 阶段96限制text拼接方法和必要缓存回归。 |
+| 简洁性 | 4/5 | 仅更新当前阶段和下一步，保留历史。 |
 
 平均3.8/5，whole17完整性仍为3/5。
 

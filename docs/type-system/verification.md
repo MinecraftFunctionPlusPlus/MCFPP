@@ -2,7 +2,25 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 阶段 94：toText 显式接收者上下文（已限定验证）
+## 阶段 95：显式原生转换引用（已限定验证）
+
+标准库 `conversions.mcfpp` 的49个native RHS已改为匹配Java真实方法名 `toTargetFromSource`；现有 `decodeByte` fixture明确引用 `ConversionData.toIntFromByte`。FieldVisitor只按真实Java方法名匹配，不再回退到语言重载identifier；Namespace/CompoundData仍以annotation identifier解析正常语言重载。用户不要求兼容旧 `.mcfpp` 显式Java方法引用。MCFL26与库wire不变。
+
+`mcfpp-native-reference-stdlib.log`：stdlib重建exit0/BUILD SUCCESSFUL in9s，Project0/0。`mcfpp-native-reference-final.log`：worker200正常，exit0/BUILD SUCCESSFUL in18s；fresh XML `2026-10-06T20:31:00.566Z`，`nativeStaticConversionsUseArgumentContextAcrossLibraryRoundTrip()` 1/0/0/0，source0/9119 warnings、fresh consumer0/9120。source与fresh库资源及索引均为291070 bytes、MCFL26，SHA256 `3F507523A551F5CE2A42B2CA93BA5AB01207F4518B5CF47AC80D13A0AA6B58EA`。仅复查既有conversion fixture，Cache和其他旧绿未重复运行；无fullcheck/server。
+
+### 阶段 95 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录了严格方法名匹配、唯一定向fixture、MCFL26同步产物和source/fresh诊断。 |
+| 完整性 | 3/5 | 49个引用声明及既有转换fixture路径通过，其他MNI与whole17仍未完成。 |
+| 清晰性 | 4/5 | 区分Java真实方法名与语言annotation identifier，说明不兼容旧显式引用。 |
+| 可执行性 | 4/5 | 阶段96计划限定于text拼接与两项operator，不扩大到聊天渲染。 |
+| 简洁性 | 4/5 | 仅记录阶段95结果和下一阶段范围。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 历史必要检查：toText 显式接收者上下文（阶段 94）
 
 七个 toText 入口迁入单 receiver context，并由 `NativeTextOperations` 执行 typed 操作。当前源码覆盖五个 Java 方法，另有 int 的两种状态；两个 Any 入口仍无 source 覆盖。`MCString.getMemberFunction` 的 TODO override 已移除，继承 Var 的运行时/Concrete 实例成员和签名查找；String runtime/Concrete lazy `instanceData` 已接通，NBT 使用 `instanceData` 与 `commonType`，不再错误写入 `objectData`。MCFL25→26。
 

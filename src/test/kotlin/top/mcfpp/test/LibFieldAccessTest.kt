@@ -2221,7 +2221,7 @@ class LibFieldAccessTest {
         """
         write("""
             namespace fixture.fields;
-            func decodeByte(value as byte)->int = top.mcfpp.mni.ConversionData.toInt;
+            func decodeByte(value as byte)->int = top.mcfpp.mni.ConversionData.toIntFromByte;
             data Box {
                 func narrow(value as int)->int {return decodeByte(toByte(value));}
                 func promote(value as int)->int {return toInt(toFloat(value));}
