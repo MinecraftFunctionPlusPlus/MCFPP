@@ -1,8 +1,16 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段83 generated-vs-legal名字隔离限定通过，当前source实际盘4/9/4/9/frame0及targets/owner prefixes到达；四case跨轮各过、最终仅新1。MCFL17/bin289989/schema未变，无stdlib/fullcheck/server。下一84 generic object静态字段/显式constructor初始化先单fixture RED，无autoload，尚未实现/测试；最近完整346项仍为72dc557，whole17未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段84静态字段/显式constructor限定通过，最终必要联合2全绿，三不同case跨轮各过；source4/9/4/9、fresh9/4/9/4、ordinary7/frame0真实磁盘通过。MCFL17/bin289989/schema未变，无stdlib/fullcheck/server。下一85 abstract/final flags尚未实现/测试；最近完整346项仍为72dc557，whole17未完成。
 
-## 最新必要检查：生成名字与合法源码名字隔离（阶段 83）
+## 最新必要检查：generic object静态字段初始化（阶段 84）
+
+7prod+1fixture共125+/22-：共享对象marker静态root、constructor/字段完成/导出；静态binding/cold read保留标志与完整快照，派生read/write保留parent，避免同名normal参数被替换。显式初始化，不依赖自动load；不验证generic compiler-only字段/直接Kryo object fieldtype。MCFL17/bin289989/schema未变，无stdlib/fullcheck/server。
+
+RED worker166 fatal ClassCastException（StaticMemberView强转ObjectDataTemplate），FAILED7s、无fresh XML，旧83 XML不计84。joint3 worker167新84 source0/0、模型/初始化检查通过但执行缺value score；旧82与ordinary绿。final2 worker168新84绿，ordinary执行缺frame.value失败：派生field adapter丢parent导致同名参数污染；没有以缺score回退掩盖。
+
+final3 worker169正常exit0/SUCCESS23s，必要联合2全部通过：Lib新84 XML2026-10-06T12:15:59.928Z 1/0/0/0；ordinary Template XML12:15:54.957Z 1/0/0/0。source0/0、fresh0/9119已知warnings，source4/9/4/9、fresh9/4/9/4、ordinary7及frame0、真实files均通过。三个不同case跨轮各过，最终仅联合2；未运行全量检查或服务器。自评准确性/完整性/清晰性/可执行性/简洁性4/3/4/4/4，平均3.8；整个17项未完成。下一85 source/fresh abstract/final flags尚未实现或测试。
+
+## 历史必要检查：生成名字与合法源码名字隔离（阶段 83）
 
 阶段83仅两prod表达式：GenericDataTemplate生成标识符的编号分隔符改为'-'（Settings_int-0），SpecializationPolicy generic wrapper改relay-0；共享factory仍覆盖ordinary/object/interface，FullID仍origin Declaration+冻结arguments，key/options/metadata/schema/MCFL17/bin289989不变，无stdlib/fullcheck/server。42行source-only fixture generatedSpecializationNamesDoNotOverwriteLegalSourceDeclarations让合法Settings_int_0与relay_0同时存在，无consume/in-memory fallback；只验证generated-vs-legal名字、真实targets/files与物理owner storage prefix，不扩一般member Function.prefix、casefold或跨库同名机制。
 

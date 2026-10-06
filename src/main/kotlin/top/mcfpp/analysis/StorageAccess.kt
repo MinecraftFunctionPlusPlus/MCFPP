@@ -19,6 +19,7 @@ import top.mcfpp.core.lang.nbt.NBTArray
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.lib.SbObject
+import top.mcfpp.model.compound.ObjectCompoundData
 import top.mcfpp.model.function.Function
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
@@ -105,6 +106,18 @@ object StorageAccess {
         value.storageBinding?.let { return it }
         value.hasAssigned = true
         value.isDynamic = true
+        return bindStoredValue(value)
+    }
+
+    fun bindStaticField(value: Var<*>) {
+        if (value.storageBinding == null && hasRuntimeRepresentation(value)) {
+            if (!value.isDynamic && ValueSnapshot.of(value) != null) ensure(value)
+            else bindStoredValue(value)
+        }
+    }
+
+    private fun bindStoredValue(value: Var<*>): StorageBinding {
+        value.storageBinding?.let { return it }
         value.bindDeclaration()
         if (value.nbtPath.pathList.isEmpty()) value.nbtPath = NBTPath.getNormalStackPath(value)
         val place = Place(value.symbol!!.id)
@@ -450,6 +463,12 @@ object StorageAccess {
 
     /** Loading a register is materialization, not a logical write. */
     fun read(value: Var<*>): Var<*> {
+        if (value.storageBinding == null && value.isStatic) {
+            (value.declaredParentTemplate as? ObjectCompoundData)?.let { owner ->
+                value.nbtPath = owner.nbtPath.memberIndex(value.identifier)
+                bindStaticField(value)
+            }
+        }
         val binding = value.storageBinding ?: return value
         val data = binding.data
         val version = data.versions.version(binding.place)
@@ -458,21 +477,23 @@ object StorageAccess {
             if (snapshot(value) == null) return error(value.type, "Compiler-only place has no known value for '${value.type}'")
             return adapter(value.type, value.identifier, binding).apply {
                 setAs(value)
+                parent = value.parent
                 storageReadVersion = version
             }
         }
         if (value is DataTemplateObject || value is NBTListConcrete || value is NBTDictionaryConcrete || value is NBTMapConcrete) return if (value is MCFPPValue<*> && snapshot(value) == null)
-            adapter(value.type, value.identifier, binding).apply { setAs(value); storageReadVersion = version } else value
+            adapter(value.type, value.identifier, binding).apply { setAs(value); parent = value.parent; storageReadVersion = version } else value
         if (value is MCAny) return value
         val constant = snapshot(value)
         if (constant != null && !value.isDynamic) {
             restore(value.type, constant, value.identifier)?.let { re ->
                 re.setAs(value)
+                re.parent = value.parent
                 re.storageReadVersion = version
                 return re
             }
         }
-        val re = adapter(value.type, value.identifier, binding).apply { setAs(value); storageReadVersion = version }
+        val re = adapter(value.type, value.identifier, binding).apply { setAs(value); parent = value.parent; storageReadVersion = version }
         data.materialize()
         when (re) {
             is MCInt -> {
@@ -565,6 +586,7 @@ object StorageAccess {
         }
         return adapter(target.type, target.identifier, binding).apply {
             setAs(target)
+            parent = target.parent
             hasAssigned = true
             storageReadVersion = null
             if (this is MCAny) payloadType = (source as? MCAny)?.inferredType ?: source.type

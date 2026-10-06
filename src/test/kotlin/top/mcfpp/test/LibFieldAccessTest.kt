@@ -1709,6 +1709,79 @@ class LibFieldAccessTest {
             .map { it.namespaceID }.toSet().size)
     }
 
+    @Test fun genericObjectStaticFieldsInitializeIndependentlyAcrossLibraryRoundTrip() = withLibrary { output ->
+        write("""
+            namespace fixture.fields;
+            object data Settings<N as int> {
+                value as int=N;
+                constructor(){}
+                func read()->int { return value; }
+            }
+            func main(){
+                dynamic var readFirst=(Settings<4>).read();
+                dynamic var readSecond=(Settings<9>).read();
+                dynamic var directFirst=(Settings<4>).value;
+                dynamic var directSecond=(Settings<9>).value;
+            }
+        """, output)
+
+        fun initializeAndExecute(main: Function, settings: GenericObjectDataTemplate): ScoreCommandExecutor {
+            assertEquals(2, settings.compiledTemplates.size)
+            val initializer = Function("initialize", main.namespace, null)
+            initializer.runInFunction {
+                Function.addCommand(Commands.stackIn())
+                settings.compiledTemplates.values.forEach { it.constructors.single().invoke(emptyList(), null) }
+                Function.addCommand(Commands.stackOut())
+            }
+            main.commands.addAll(0, initializer.commands)
+            assertEquals(0, Project.errorCount)
+            val fields = settings.compiledTemplates.values.map { compiled ->
+                assertIs<CompiledGenericObjectDataTemplate>(compiled)
+                for (method in listOf(compiled.constructors.single(), compiled.scope.functions.getValue("read").single())) {
+                    assertSame(compiled, method.owner)
+                    assertTrue(method.isStatic)
+                }
+                val field = assertIs<MCInt>(compiled.scope.getVar("value"))
+                assertSame(compiled, field.declaredParentTemplate)
+                assertTrue(field.isStatic)
+                assertTrue(field.isDynamic)
+                field
+            }
+            assertNotEquals(fields[0].nbtPath, fields[1].nbtPath)
+            return execute(main, output)
+        }
+
+        val sourceScope = GlobalScope.localNamespaces.getValue("fixture.fields").scope
+        val sourceSettings = assertIs<GenericObjectDataTemplate>(sourceScope.getObject("Settings"))
+        val sourceObjects = sourceSettings.compiledTemplates.values.associateBy {
+            assertIs<MCIntConcrete>(it.scope.getVar("N")).value
+        }
+        val sourceMain = sourceScope.functions.getValue("main").single()
+        val sourceMachine = initializeAndExecute(sourceMain, sourceSettings)
+        for ((name, expected) in listOf("directFirst" to 4, "directSecond" to 9, "readFirst" to 4, "readSecond" to 9))
+            assertEquals(expected, sourceMachine.read(sourceMain.scope.getVar(name) as MCInt))
+
+        val main = consume("""
+            import fixture.fields:*;
+            func main(){
+                dynamic var readFirst=(Settings<9>).read();
+                dynamic var readSecond=(Settings<4>).read();
+                dynamic var directFirst=(Settings<9>).value;
+                dynamic var directSecond=(Settings<4>).value;
+            }
+        """, output)
+        assertEquals(0, Project.errorCount)
+        val settings = assertIs<GenericObjectDataTemplate>(GlobalScope.libNamespaces.getValue("fixture.fields").scope.getObject("Settings"))
+        assertNotSame(sourceSettings, settings)
+        val machine = initializeAndExecute(main, settings)
+        for (compiled in settings.compiledTemplates.values) {
+            val number = assertIs<MCIntConcrete>(compiled.scope.getVar("N")).value
+            assertNotSame(sourceObjects.getValue(number), compiled)
+        }
+        for ((name, expected) in listOf("directFirst" to 9, "directSecond" to 4, "readFirst" to 9, "readSecond" to 4))
+            assertEquals(expected, machine.read(main.scope.getVar(name) as MCInt))
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

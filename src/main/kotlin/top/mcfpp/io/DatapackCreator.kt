@@ -8,7 +8,6 @@ import top.mcfpp.model.Native
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.GenericDataTemplate
-import top.mcfpp.model.compound.ObjectDataTemplate
 import top.mcfpp.model.compound.ObjectCompoundData
 import top.mcfpp.model.function.ExtensionFunction
 import top.mcfpp.model.function.Function
@@ -178,7 +177,7 @@ object DatapackCreator {
                 genFunction(currPath.resolve("function").resolve(obj.identifier.toSnakeCase()).resolve("static"), qwq)
             }
         }
-        if (obj is ObjectDataTemplate) obj.constructors.forEach {
+        if (obj is DataTemplate) obj.constructors.forEach {
             genTemplateFunction(currPath.resolve("function").resolve(obj.identifier.toSnakeCase()).resolve("static"), it)
         }
     }

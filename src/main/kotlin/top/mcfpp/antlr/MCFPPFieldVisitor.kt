@@ -644,7 +644,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     }
 
     internal fun completeTemplateFields(template: DataTemplate) {
-        if (template is ObjectDataTemplate || template.deferredFields.isEmpty()) return
+        if (template is ObjectCompoundData || template.deferredFields.isEmpty()) return
         val previousTemplate = DataTemplate.currTemplate
         val previousFile = MCFPPFile.currFile
         val previousNamespace = Project.currNamespace
@@ -695,7 +695,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     internal fun completeTemplateField(template: DataTemplate, declaration: DataTemplate.DeferredFieldDeclaration, type: MCFPPType): Var<*> {
         val previous = DataTemplate.currTemplate
         DataTemplate.currTemplate = template
-        isInObject = template is ObjectDataTemplate
+        isInObject = template is ObjectCompoundData
         typeScope = template.scope
         try {
             val context = declaration.context
@@ -705,7 +705,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             val (field, property) = buildTemplateField(context, fieldValue)
             field.accessModifier = declaration.access
             property.accessModifier = declaration.access
-            if (template is ObjectDataTemplate) {
+            if (template is ObjectCompoundData) {
                 declaration.annotations.forEach { it.on(field) }
                 field.annotations.addAll(declaration.annotations)
             } else {

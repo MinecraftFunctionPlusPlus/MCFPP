@@ -15,7 +15,7 @@ import top.mcfpp.io.MCFPPFile
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Member
 import top.mcfpp.model.compound.DataTemplate
-import top.mcfpp.model.compound.ObjectDataTemplate
+import top.mcfpp.model.compound.ObjectCompoundData
 import top.mcfpp.util.LogProcessor
 import java.util.*
 
@@ -47,14 +47,14 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
     override fun prepareBody(target: Function) {
         super.prepareBody(target)
         target.bindIncomingParameters()
-        val receiver = if (data is ObjectDataTemplate) StaticMemberView(data.getType())
+        val receiver = if (data is ObjectCompoundData) StaticMemberView(data.getType())
             else target.scope.getVar("this") as DataTemplateObject
         for ((name, expression) in data.preInit) {
-            if (data !is ObjectDataTemplate && name in data.deferredFields) continue
+            if (data !is ObjectCompoundData && name in data.deferredFields) continue
             val errors = Project.errorCount
             val value = MCFPPExprVisitor().visitExpression(expression)
             if (value is UnknownVar || value.isError || Project.errorCount != errors) continue
-            if (data is ObjectDataTemplate) {
+            if (data is ObjectCompoundData) {
                 data.deferredFields[name]?.let { MCFPPFieldVisitor().completeTemplateField(data, it, value.type) }
             }
             val field = receiver.getMemberVar(name, Member.AccessModifier.PRIVATE).first ?: continue
@@ -64,7 +64,7 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
             }
             val assigned = field.assignedBy(value)
             if (assigned.isError || Project.errorCount != errors) continue
-            if (data is ObjectDataTemplate) {
+            if (data is ObjectCompoundData) {
                 assigned.isConst = field.isConst
                 assigned.isStatic = field.isStatic
                 assigned.accessModifier = field.accessModifier
