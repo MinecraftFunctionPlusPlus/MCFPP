@@ -17,6 +17,7 @@ data class FieldInfo(
         val field = CompoundDataScope(ArrayList())
         if (owner != null) owner.scope = field
         vars.forEach {
+            if (owner != null) it.declaredParentTemplate = owner
             field.putVar(it.identifier, it, true)
         }
         functions.forEach {
@@ -28,24 +29,26 @@ data class FieldInfo(
             field.addFunction(function, true)
         }
         properties.forEach {
-            field.putProperty(it.identifier, it.get(), true)
+            val property = it.get()
+            if (owner != null) property.declaredParentTemplate = owner
+            field.putProperty(it.identifier, property, true)
         }
         return field
     }
 
     companion object {
-        fun from(field: CompoundDataScope): FieldInfo {
+        fun from(field: CompoundDataScope, owner: DataTemplate): FieldInfo {
             val functions = ArrayList<AbstractFunctionInfo<*>>()
             field.forEachFunction {
                 functions.add(AbstractFunctionInfo.from(it))
             }
             return FieldInfo(
                 ArrayList(field.allVars.filter {
-                    it.declaredParentTemplate == (DataTemplateInfo.currTemplate ?: GenericDataTemplateInfo.currTemplate)
+                    it.declaredParentTemplate == owner
                 }),
                 ArrayList(functions),
                 ArrayList(field.allProperties.filter {
-                    it.declaredParentTemplate == (DataTemplateInfo.currTemplate ?: GenericDataTemplateInfo.currTemplate)
+                    it.declaredParentTemplate == owner
                 }.map { PropertyInfo.from(it) }),
             )
         }

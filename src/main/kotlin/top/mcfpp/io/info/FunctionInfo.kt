@@ -2,6 +2,7 @@ package top.mcfpp.io.info
 
 import top.mcfpp.antlr.mcfppParser.CurlBlockContext
 import top.mcfpp.io.info.AbstractFunctionInfo.Companion.currFunction
+import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.GenericFunction
 import top.mcfpp.model.function.NativeFunction
@@ -34,7 +35,8 @@ data class FunctionInfo(
     var tags: List<FunctionTagInfo>,
     var isOverride: Boolean,
     var context: CurlBlockContext?,
-    val declarationEnvironment: DeclarationEnvironmentInfo?
+    val declarationEnvironment: DeclarationEnvironmentInfo?,
+    val accessModifier: Member.AccessModifier
 ): AbstractFunctionInfo<Function> {
     override fun get(): Function {
         val f = Function(identifier, namespace, null)
@@ -50,6 +52,7 @@ data class FunctionInfo(
         }
         f.isOverride = isOverride
         f.isAbstract = isAbstract
+        f.accessModifier = accessModifier
         f.ast = context
         f.buildParamVar()
         currFunction = null
@@ -67,7 +70,8 @@ data class FunctionInfo(
                 function.tags.map { FunctionTagInfo.from(it) },
                 function.isOverride,
                 function.ast,
-                DeclarationEnvironmentInfo.from(function.declarationFile) ?: function.declarationEnvironment
+                DeclarationEnvironmentInfo.from(function.declarationFile) ?: function.declarationEnvironment,
+                function.accessModifier
             )
         }
     }
@@ -83,7 +87,8 @@ data class GenericFunctionInfo(
     var isAbstract: Boolean,
     var tags: List<FunctionTagInfo>,
     var isOverride: Boolean,
-    val declarationEnvironment: DeclarationEnvironmentInfo?
+    val declarationEnvironment: DeclarationEnvironmentInfo?,
+    val accessModifier: Member.AccessModifier
 ): AbstractFunctionInfo<GenericFunction> {
     override fun get(): GenericFunction {
         val f = GenericFunction(identifier, namespace, context)
@@ -102,6 +107,7 @@ data class GenericFunctionInfo(
         }
         f.isOverride = isOverride
         f.isAbstract = isAbstract
+        f.accessModifier = accessModifier
         f.buildParamVar()
         currFunction = null
         return f
@@ -119,7 +125,8 @@ data class GenericFunctionInfo(
                 genericFunction.isAbstract,
                 genericFunction.tags.map { FunctionTagInfo.from(it) },
                 genericFunction.isOverride,
-                DeclarationEnvironmentInfo.from(genericFunction.declarationFile) ?: genericFunction.declarationEnvironment
+                DeclarationEnvironmentInfo.from(genericFunction.declarationFile) ?: genericFunction.declarationEnvironment,
+                genericFunction.accessModifier
             )
         }
     }
@@ -135,7 +142,8 @@ data class NativeFunctionInfo(
     var isAbstract: Boolean,
     var tags: List<FunctionTagInfo>,
     var isOverride: Boolean,
-    var caller: MCFPPType
+    var caller: MCFPPType,
+    val accessModifier: Member.AccessModifier
 ): AbstractFunctionInfo<NativeFunction> {
     override fun get(): NativeFunction {
         val data = NativeFunction.stringToMethod(methodString)
@@ -153,6 +161,7 @@ data class NativeFunctionInfo(
         }
         f.isOverride = isOverride
         f.isAbstract = isAbstract
+        f.accessModifier = accessModifier
         f.caller = caller
         f.buildParamVar()
         currFunction = null
@@ -171,7 +180,8 @@ data class NativeFunctionInfo(
                 function.isAbstract,
                 function.tags.map { FunctionTagInfo.from(it) },
                 function.isOverride,
-                function.caller
+                function.caller,
+                function.accessModifier
             )
         }
     }

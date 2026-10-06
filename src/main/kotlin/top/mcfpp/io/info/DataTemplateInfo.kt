@@ -63,6 +63,10 @@ data class DataTemplateInfo(
         private var templateCache = HashMap<DataTemplate, DataTemplateInfo>()
         private var infoCache = HashMap<DataTemplateInfo, DataTemplate>()
 
+        fun clearWriteCache() {
+            templateCache.clear()
+        }
+
         init {
             resetCaches()
         }
@@ -83,7 +87,7 @@ data class DataTemplateInfo(
                 template.namespace,
                 template.identifier,
                 if(template != DataTemplate.baseDataTemplate) template.parent.filterIsInstance<DataTemplate>().map { from(it) } else emptyList(),
-                FieldInfo.from(template.scope),
+                FieldInfo.from(template.scope, template),
                 template.constructors.map { TemplateConstructorInfo.from(it) },
                 template.companionObject != null,
                 template is ObjectDataTemplate,
@@ -149,6 +153,10 @@ data class GenericDataTemplateInfo(
         private var templateCache = HashMap<GenericDataTemplate, GenericDataTemplateInfo>()
         private var infoCache = HashMap<GenericDataTemplateInfo, GenericDataTemplate>()
 
+        fun clearWriteCache() {
+            templateCache.clear()
+        }
+
         fun resetCaches() {
             currTemplate = null
             templateCache.clear()
@@ -166,7 +174,7 @@ data class GenericDataTemplateInfo(
                 template.parent.map { from(it as GenericDataTemplate) },
                 template.readOnlyParams.map { DataTemplateParamInfo.from(it) },
                 template.ctx,
-                FieldInfo.from(template.scope),
+                FieldInfo.from(template.scope, template),
                 template.constructors.map { TemplateConstructorInfo.from(it) },
                 template.companionObject != null,
                 template is GenericObjectDataTemplate,

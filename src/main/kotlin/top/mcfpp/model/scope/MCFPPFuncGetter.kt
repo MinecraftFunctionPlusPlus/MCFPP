@@ -1,10 +1,10 @@
 package top.mcfpp.model.scope
 
 import top.mcfpp.core.lang.Var
-import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.util.LogProcessor
 
 /**
@@ -27,22 +27,17 @@ object MCFPPFuncGetter{
         readOnlyArgs: List<Var<*>>,
         normalArgs: ArrayList<Var<*>>
     ): Function {
-        //是类的成员方法或扩展方法
-        val accessModifier : Member.AccessModifier = if(curr is DataTemplateObject){
-            //类指针
-            if(Function.currFunction.ownerType == Function.Companion.OwnerType.CLASS){
-                Function.currFunction.parentTemplate()!!.getAccess(curr.templateType)
-            }else{
-                Member.AccessModifier.PUBLIC
-            }
+        val func = curr.getMemberFunction(identifier, readOnlyArgs, normalArgs, Member.AccessModifier.PUBLIC)
+        val owner = func.first.parentTemplate()
+        val accessible = if (owner != null) {
+            var caller = Function.currFunction
+            while (caller is NoStackFunction) caller = caller.parent.first()
+            val access = caller.parentTemplate()?.getAccess(owner) ?: Member.AccessModifier.PUBLIC
+            access >= func.first.accessModifier
+        } else {
+            func.second
         }
-        else{
-            //基本类型
-            Member.AccessModifier.PUBLIC
-        }
-        //开始选择函数
-        val func = curr.getMemberFunction(identifier, readOnlyArgs, normalArgs, accessModifier)
-        if (!func.second){
+        if (!accessible){
             LogProcessor.error("Cannot access member $identifier")
         }
         return func.first

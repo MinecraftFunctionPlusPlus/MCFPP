@@ -1,8 +1,16 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段62目录/ZIP/JAR模块资源复制与既有模板初始化单次联合11项通过；MCFL13 `bin.mclib` 282180 bytes未变。最近完整检查仍属于提交 `72dc557`，共346项；本轮未运行完整check或实际Minecraft服务端，整个迁移仍未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段63 MCFL14标准库重建与LibMemberAccess3 + TemplateInitialization8 + LibCacheFormat3单次联合14项全通过；最终 `bin.mclib` 285207 bytes。最近完整检查仍属于提交 `72dc557`，共346项；本轮未运行完整check或实际Minecraft服务端，整个迁移仍未完成。
 
-## 最新必要检查：目录与归档模块资源复制（阶段 62）
+## 最新必要检查：库函数访问修饰符持久化（阶段 63）
+
+普通、generic、native函数`accessModifier`已写入并从MCFL14库恢复；泛型特化保留权限。`FuncGetter`按声明owner执行权限检查；临时`NoStackFunction`只用于解包词法caller，不改运行时storage或原function owner。writer每次重建时清除普通/generic缓存写快照，reader仍读取canonical缓存；`FieldInfo.from`显式owner过滤并在恢复本地Var/Property的`declaredParentTemplate`，防止再写库时丢失字段。
+
+首轮测试14项13通过/1失败（LibMemberAccess3 XML `2026-10-06T00:36:57.610Z`；TemplateInitialization8及LibCacheFormat3通过）。失败为model注入PRIVATE NativeFunction后再次`genIndex`复用了PUBLIC写快照，权限检查不是IR/clone绕过。首轮红测三项原本都暴露库权限丢失；之后`restoredMethodsUseLexicalOwnerForPrivateAndProtectedCalls` 的producer main加入真实合法private/protected调用，证明确为cache往返权限问题。两次标准库重建的语言诊断均为0 errors/0 warnings。
+
+最终单次联合：LibMemberAccess3、TemplateInitialization8、LibCacheFormat3，共14项全过、0 failures/errors/skips、Gradle exit0。XML时间戳 `2026-10-06T00:49:26.509Z`、`00:49:32.487Z`、`00:49:32.476Z`。MCFL从13升至14，最终bin为285207 bytes（282676 bytes为首次中间快照，非最终产物）。真实库往返覆盖producer内部private/protected调用、外部拒绝、子类对基类private拒绝及model-injected private native双次写/读；无private-native源码语法。未运行fullcheck/服务器。日志 `mcfpp-library-member-access-red.log`、`mcfpp-library-member-access-stdlib.log`、`mcfpp-library-member-access-final.log`、`mcfpp-library-member-access-stdlib-complete.log`、`mcfpp-library-member-access-complete.log`。
+
+## 历史必要检查：目录与归档模块资源复制（阶段 62）
 
 `Project.readFromDIR/JAR/ZIP`保留来源`resourcePath`；归档module入口路径包含`datapack/`，`FileUtils.extractTo`剥除完整`sourceDir/`并去掉残余前导斜杠；缺少packages字段的base-only module继续导入。JAR/ZIP reader关闭archive handle，测试临时目录可清理。目录、ZIP、JAR三类真实库来源均精确复制base-only module的资源、函数及tag；`copyImport=false`时不导出Imports。
 
