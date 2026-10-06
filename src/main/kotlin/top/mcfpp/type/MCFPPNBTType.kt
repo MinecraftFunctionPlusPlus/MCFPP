@@ -55,14 +55,12 @@ class MCFPPNBTType {
         override val instanceData by lazy {
             CompoundData("byte","mcfpp").apply {
                 extends(NBT.instanceData)
-                injectedBy(MCByteData::class.java)
             }
         }
 
         override val concreteInstanceData by lazy {
             CompoundData("byte","mcfpp").apply {
                 extends(NBT.instanceData)
-                injectedBy(MCByteConcreteData::class.java)
             }
         }
 
@@ -82,14 +80,12 @@ class MCFPPNBTType {
         override val instanceData by lazy {
             CompoundData("short","mcfpp").apply {
                 extends(NBT.instanceData)
-                injectedBy(MCShortData::class.java)
             }
         }
 
         override val concreteInstanceData by lazy {
             CompoundData("short","mcfpp").apply {
                 extends(NBT.instanceData)
-                injectedBy(MCShortConcreteData::class.java)
             }
         }
 

@@ -1,10 +1,10 @@
 # 类型系统续接记录（2026-10-04）
 
-本轮从 2026-10-04 续接，首次存储/视图纵向路径通过 161 项测试。阶段54已提交`107e8ac`，阶段55已提交`4b5b7bd`，阶段56已提交`0fb7cb8`，阶段57已提交`3865673`。阶段58普通模板inferred字段已接入部分声明绑定支持并提交`e6f83fe`，37个不同必要用例跨轮各自通过。阶段59导入声明环境恢复与MCFL13重建后，50项指定测试联合通过，提交`6200561`。阶段60 consumer函数体导出限定回归13项联合通过，提交`3468341`。阶段61的26个不同用例跨轮各自通过。阶段62目录/JAR/ZIP资源复制与模板初始化联合11项通过。阶段63 MCFL14库权限往返联合14项全部通过，提交`1918db9`。阶段64 MCFL15字段/Property访问权限与while帧修复后，最终定向7项全部通过，提交`bda4d5a`。阶段65字段权限联合11项全过；阶段66当前实例未限定字段寻址的LibFieldAccess4 + ConstructorExecution7联合11项全过，MCFL15/bin286207未变。阶段67 generic类readonly源码特化及namespace类别恢复已验证，MCFL16/bin286243；41个不同用例跨轮各自通过。阶段68未注解generic类T绑定限定语法已验证，17个不同用例跨轮通过，MCFL16/bin不变，已提交`adf50f8968483c77fcca7a482e37a2eef8eae871`。阶段69显式generic类型及跨库canonical特化限定验证通过，MCFL17/bin289989，19个不同用例跨轮各自通过。阶段69已提交`10267379e30bd43af6c38bcd7e6a673d195a6102`。阶段70六个生产文件和一个fixture限定验证通过，36个不同用例跨轮各自通过，提交记录见Git历史；MCFL17/bin289989未变，无stdlib/fullcheck/服务器。阶段70已提交`1d593d19c71f5c42a3adb4aaf0e2dbdaae5c1b16`；阶段71四prod+fixture有限类型值路径6个不同用例跨轮各自通过，最终必要2项复查，提交记录见Git历史，MCFL17/bin289989未变。阶段72限定静态类型集合路径跨轮5个不同用例各过，磁盘4/9/frame0；阶段73最终必要联合2项全过，模型及磁盘4/9/frame0；阶段74必要联合4项全过，source/fresh模型及consumer磁盘4/9/frame0；阶段75必要联合2项全过，source/fresh模型及consumer磁盘4/9/frame0；阶段76最终单方法通过，source/fresh模型及consumer磁盘4/9/frame0；阶段77最终必要1项通过，source/fresh模型及consumer磁盘4/9/frame0；阶段78 alias有根匿名冻结身份限定通过，四个不同用例跨轮各自通过，最终仅新1复查；阶段79 generic用户函数自身readonly依赖签名已限定验证，最终必要联合5全绿、磁盘4/9/7/frame0通过；阶段80 generic object静态N/方法已限定验证，三用例跨轮各过、最终仅新1，consumer磁盘4/9/4/frame0；阶段81 generic interface静态TypeValue已限定验证，三个case跨轮各过、最终仅新1；阶段82 source generic特化磁盘导出已限定通过，最终必要联合3全绿、source磁盘4/9/4/9/frame0；阶段83 generated-vs-legal名字隔离已限定验证，四case跨轮各过、最终新1；阶段84 generic object静态字段/显式constructor初始化限定通过，最终联合2全绿，source4/9/4/9、fresh9/4/9/4/frame0；阶段85 abstract/final flags已限定通过，MCFL18/stdlib287554/最终联合3全绿；阶段86 actual generic父项限定通过、MCFL19/stdlib292301/最终联合3；阶段87 `type` 仅用于泛型参数已实现并限定验证，提交`bde5a25`；阶段88 list.clear显式上下文迁移及MCFL20已限定验证，三项回归通过；阶段89剩余10个list native方法接入显式上下文，MCFL21/bin292007，三个不同用例跨轮各自通过、最终仅失败fixture复查1项。阶段90已将Dictionary/Map/ImmutableList共13个方法接入context并限定验证；下一步阶段91处理int/float/bool运算符入口；imported object自动load仍独立未解决。最近完整346项仍属于`72dc557`；整个17项重构未完成。
+本轮从 2026-10-04 续接，首次存储/视图纵向路径通过 161 项测试。阶段54已提交`107e8ac`，阶段55已提交`4b5b7bd`，阶段56已提交`0fb7cb8`，阶段57已提交`3865673`。阶段58普通模板inferred字段已接入部分声明绑定支持并提交`e6f83fe`，37个不同必要用例跨轮各自通过。阶段59导入声明环境恢复与MCFL13重建后，50项指定测试联合通过，提交`6200561`。阶段60 consumer函数体导出限定回归13项联合通过，提交`3468341`。阶段61的26个不同用例跨轮各自通过。阶段62目录/JAR/ZIP资源复制与模板初始化联合11项通过。阶段63 MCFL14库权限往返联合14项全部通过，提交`1918db9`。阶段64 MCFL15字段/Property访问权限与while帧修复后，最终定向7项全部通过，提交`bda4d5a`。阶段65字段权限联合11项全过；阶段66当前实例未限定字段寻址的LibFieldAccess4 + ConstructorExecution7联合11项全过，MCFL15/bin286207未变。阶段67 generic类readonly源码特化及namespace类别恢复已验证，MCFL16/bin286243；41个不同用例跨轮各自通过。阶段68未注解generic类T绑定限定语法已验证，17个不同用例跨轮通过，MCFL16/bin不变，已提交`adf50f8968483c77fcca7a482e37a2eef8eae871`。阶段69显式generic类型及跨库canonical特化限定验证通过，MCFL17/bin289989，19个不同用例跨轮各自通过。阶段69已提交`10267379e30bd43af6c38bcd7e6a673d195a6102`。阶段70六个生产文件和一个fixture限定验证通过，36个不同用例跨轮各自通过，提交记录见Git历史；MCFL17/bin289989未变，无stdlib/fullcheck/服务器。阶段70已提交`1d593d19c71f5c42a3adb4aaf0e2dbdaae5c1b16`；阶段71四prod+fixture有限类型值路径6个不同用例跨轮各自通过，最终必要2项复查，提交记录见Git历史，MCFL17/bin289989未变。阶段72限定静态类型集合路径跨轮5个不同用例各过，磁盘4/9/frame0；阶段73最终必要联合2项全过，模型及磁盘4/9/frame0；阶段74必要联合4项全过，source/fresh模型及consumer磁盘4/9/frame0；阶段75必要联合2项全过，source/fresh模型及consumer磁盘4/9/frame0；阶段76最终单方法通过，source/fresh模型及consumer磁盘4/9/frame0；阶段77最终必要1项通过，source/fresh模型及consumer磁盘4/9/frame0；阶段78 alias有根匿名冻结身份限定通过，四个不同用例跨轮各自通过，最终仅新1复查；阶段79 generic用户函数自身readonly依赖签名已限定验证，最终必要联合5全绿、磁盘4/9/7/frame0通过；阶段80 generic object静态N/方法已限定验证，三用例跨轮各过、最终仅新1，consumer磁盘4/9/4/frame0；阶段81 generic interface静态TypeValue已限定验证，三个case跨轮各过、最终仅新1；阶段82 source generic特化磁盘导出已限定通过，最终必要联合3全绿、source磁盘4/9/4/9/frame0；阶段83 generated-vs-legal名字隔离已限定验证，四case跨轮各过、最终新1；阶段84 generic object静态字段/显式constructor初始化限定通过，最终联合2全绿，source4/9/4/9、fresh9/4/9/4/frame0；阶段85 abstract/final flags已限定通过，MCFL18/stdlib287554/最终联合3全绿；阶段86 actual generic父项限定通过、MCFL19/stdlib292301/最终联合3；阶段87 `type` 仅用于泛型参数已实现并限定验证，提交`bde5a25`；阶段88 list.clear显式上下文迁移及MCFL20已限定验证，三项回归通过；阶段89剩余10个list native方法接入显式上下文，MCFL21/bin292007，三个不同用例跨轮各自通过、最终仅失败fixture复查1项。阶段90已将Dictionary/Map/ImmutableList共13个方法接入context并限定验证；阶段91的28个int/float/bool运算符入口及阶段92的44个byte/short拒绝注册删除均已限定验证，当前库格式MCFL24；imported object自动load仍独立未解决。最近完整346项仍属于`72dc557`；整个17项重构未完成。
 
 ## 当前进度
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段91已实现并完成限定验证；提交记录以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段92已完成限定验证；提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。
 
 ### 用户最新规则（2026-10-06）
 
@@ -24,7 +24,25 @@
 
 验证分轮完成：Cache、ListMember与新列表往返fixture三个不同用例均各自通过；最终仅复查失败fixture，XML `2026-10-06T17:31:52.308Z` 为1/0/0/0，worker正常、BUILD SUCCESSFUL in18s。source为0 errors/9118 warnings，fresh consumer为0/9119；结果与frame0断言从consumer磁盘函数执行。首轮consumer曾因tempFunction namespace NPE报8 errors，根因修复后用例通过。未跑fullcheck/server；本阶段没有统一其他MNI或operator。
 
-### 阶段 91：int/float/bool 原生运算符（已限定验证）
+### 阶段 92：移除被拒绝的 byte/short 算术注册（已限定验证）
+
+删除byte/short四个Java类中的44个算术注册，以及 `MCFPPNBTType.injectedBy` 的4处注册；不改long/double、精确格式、转换或统一拒绝guard。MCFL23→24，stdlib重建成功55s，Project0/0；source、stdlib-index和build资源三份bin均为292301 bytes、MCFL24、SHA256 `6EADA06D3343578C0A08E13C691D0CC9742C87071476615260D993A2980A1994`。
+
+final日志worker193正常、exit0/BUILD SUCCESSFUL in44s：Conversion、CacheFormat、TypeKernel三个fresh XML分别为 `2026-10-06T19:17:57.589Z`、`19:18:01.088Z`、`19:18:01.096Z`，均1/0/0/0。Conversion项目0/9118 warnings；TypeKernel的byte/short/long/double算术及byte→int赋值五个拒绝片段各有1个预期错误/9118 warnings。缓存拒绝用例通过。没有新增fixture/fullcheck/server。阶段92已限定验证，whole17仍未完成。
+
+### 阶段 92 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 明确Project的0错误与TypeKernel五个预期拒绝诊断，并记录同步bin哈希。 |
+| 完整性 | 3/5 | 本次byte/short限定范围及缓存格式已验证，其他MNI和whole17仍未完成。 |
+| 清晰性 | 4/5 | 区分删除的byte/short注册、未改动的long/double与保留的转换。 |
+| 可执行性 | 4/5 | 下一步49个ConversionData入口和两项必要回归已有明确范围。 |
+| 简洁性 | 4/5 | 更新当前证据，历史阶段继续保留。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+### 阶段 91：int/float/bool 原生运算符（历史）
 
 28个 `MNIOperator` 方法接入显式单context：int12（含 `~=` 右侧 `RangeVar`）、float11、bool5（4个二元和一元 `!`）。Kotlin `NativeOperatorOperations` 直接调用typed core；在真实 `runInFunction` 中规范化非 `ScoreBool` 的 `BaseBool` receiver/参数和结果，再ensure并发布真实引用。CompoundData保留旧2/3参数ABI并接受精确单context ABI。MCFL22→23，stdlib重建一次成功（12s，Project0 errors/0 warnings），292007 bytes；三份bin的SHA256一致，为 `800AF3AFB375C71643E23C11B2EB64261D3691F38F17D2204CC18FC62D477422`。
 

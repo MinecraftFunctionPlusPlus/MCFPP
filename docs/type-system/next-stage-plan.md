@@ -1,14 +1,18 @@
-# 下一阶段：移除被拒绝的 byte/short 算术注册（阶段 92）
+# 下一阶段：迁移数值转换到显式原生上下文（阶段 93）
 
-阶段87的普通值位置type拒绝规则继续生效。阶段88–91已将list、Dictionary、Map、ImmutableList和int/float/bool运算符入口接入 `NativeCallContext`；阶段91使用MCFL23。whole17仍未完成。
+阶段87的普通值位置type拒绝规则继续生效。阶段88–92完成了集合/基础数值运算的限定迁移；当前库格式为MCFL24。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
-阶段91已限定迁移28个 `MNIOperator` 方法：int 12（含 `~=` range）、float 11、bool 5；最终fixture及缓存/IR回归跨轮各自通过，详见verification.md。
+阶段92已限定移除44个被统一拒绝的byte/short算术注册，保留精确NBT格式、转换和统一拒绝诊断；详见verification.md。
 
-实现保留legacy循环和private Var桥，未声称所有MNI已迁移。下一步仅移除四个byte/short Java类中各11个已被 `Var.rejectNbtArithmetic` 拒绝的算术注册，以及 `MCFPPNBTType.injectedBy` 的四个对应注册；不触及long/double（它们没有这些注册）、精确NBT格式、转换或统一拒绝诊断。MCFL23→24并重建stdlib。必要验证限于 `TypeKernelTest.nbtNumericArithmeticAndImplicitAssignmentAreRejectedByTheCompiler`、`ConversionTest.nbtMappedInputsBecomeArithmeticOnlyThroughConversions` 和旧/未知缓存拒绝回归；不新增fixture。阶段92尚未实施或验证。
+### 阶段93计划：数值转换的显式调用接口
 
-阶段88–91详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL23。
+将 `ConversionData` 的49个静态入口（6×6 numeric conversion，加13个 `toNBT` 转换）迁入显式context，不添加未知any转换。context允许无receiver并以null表示；参数经 `withArguments` 传递，NF按声明void/static构造，实例入口仍使用Var。Java方法使用唯一名（如 `toIntFromByte`），通过既有MNIFunction.identifier保持语言名 `toInt`，防止Java重载生成名冲突；Namespace/CompoundData对精确context参数识别arity，FieldVisitor以Java方法末段匹配实际/effective语言名。`NumericConversions`加context overload并发布真实结果引用，不引入第二套转换语义。
+
+删除旧ConversionData方法签名会改变methodString，因此MCFL24→25并重建stdlib。必要测试：一个普通Box source/fresh磁盘往返经255→byte→int得到-1、17→float→int得到17、bool/string/NBT转NBT得到`1b`/`hello`/`{value:7}`；显式decodeByte声明链接旧 `ConversionData.toInt` alias；并运行旧/未知缓存回归与 `ConversionIRTest.userFunctionsNamedLikeConversionsKeepTheirOwnBehavior`。当前阶段93尚未实现或验证。
+
+阶段88–92详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL24。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

@@ -2,7 +2,27 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 阶段 91：int/float/bool 原生运算符（已限定验证）
+## 阶段 92：移除被拒绝的 byte/short 算术注册（已限定验证）
+
+删除四个byte/short Java类中的44个 `MNIOperator` 注册，并移除 `MCFPPNBTType.injectedBy` 的4个对应注册；`LibBinFormat.VERSION` 从23升至24。byte/short精确格式、转换和 `Var.rejectNbtArithmetic` 统一拒绝逻辑保留；long/double原本没有这些注册，本阶段未改动。
+
+`mcfpp-nbt-operator-removal-stdlib.log`：stdlib重建exit0/BUILD SUCCESSFUL in55s，Project 0 errors/0 warnings。source `build/stdlib-index/bin.mclib`、资源bin及build资源bin均为MCFL24（raw header `4c46434d18000000`）、292301 bytes、SHA256 `6EADA06D3343578C0A08E13C691D0CC9742C87071476615260D993A2980A1994`。
+
+`mcfpp-nbt-operator-removal-final.log`：worker193正常，exit0/BUILD SUCCESSFUL in44s。ConversionTest XML `2026-10-06T19:17:57.589Z`、LibCacheFormatTest `19:18:01.088Z`、TypeKernelTest `19:18:01.096Z`均为1/0 failures/0 errors/0 skips。Conversion项目0 errors/9118既有warnings；TypeKernel的五个预期负例各产生1个错误/9118 warnings，覆盖byte/short/long/double算术及byte隐式赋值为int；旧/未知缓存格式拒绝回归通过。无新fixture、fullcheck或server；阶段92限定验证完成，不代表其他数值/转换迁移已完成。
+
+### 阶段 92 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 区分stdlib 0/0与TypeKernel预期拒绝错误，记录三份MCFL24产物同hash。 |
+| 完整性 | 3/5 | 44个拒绝注册及缓存拒绝路径已核验；whole17和其他MNI仍未完成。 |
+| 清晰性 | 4/5 | 将byte/short注册删除与long/double、转换及统一拒绝guard区分。 |
+| 可执行性 | 4/5 | 阶段93列出49个ConversionData入口、MCFL25及最小往返验证。 |
+| 简洁性 | 4/5 | 仅记录本阶段改动、验证和下一步。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 历史必要检查：int/float/bool 原生运算符（阶段 91）
 
 28个 `MNIOperator` 方法迁入显式单context入口：int 12（含 `~=` 的右侧 `RangeVar`）、float 11、bool 5（4个二元及一元 `!`）。Kotlin `NativeOperatorOperations` 直接调用typed core，避免递归dispatch；在 `runInFunction` 内规范化非 `ScoreBool` 的 `BaseBool` receiver/参数和结果，再ensure并发布真实引用。CompoundData保留旧2/3参数ABI并接受精确单context ABI。MCFL22→23。
 

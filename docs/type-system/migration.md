@@ -5,7 +5,7 @@
 
 ## 当前规则（截至2026-10-07，Asia/Shanghai）
 
-用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。阶段87已实现并限定验证；阶段88–90迁移24个集合方法、阶段91迁移28个int/float/bool运算符入口到 `NativeCallContext`，MCFL23；whole17未完成。
+用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。阶段87已实现并限定验证；阶段88–91迁移集合与基础数值运算入口，阶段92移除44个byte/short算术注册，当前MCFL24；whole17未完成。
 
 ## 当前已接入
 
@@ -21,7 +21,9 @@
 
 阶段90：迁移Dictionary 4、Map 6、ImmutableList 3个原生方法，复用既有 `NativeCallContext`，不新建调用context或扩展operator。字典key限制、Map dynamic key与readonly list dynamic needle边界保留。MCFL21→22，stdlib与source/build资源292301 bytes、SHA256 `EEFF5FC16E8751D87D4248E8380BBFCC4980FB08BD1E7BA6B06A1DD849E2B4D6`。新fixture最终source/fresh consumer磁盘结果10/5/227/7/2/11/-1及frame0通过；旧/未知缓存格式回归另在首轮通过。三次执行器/fixture修复失败均止于source端，final5单项复查通过；详见verification.md。whole17仍未完成。
 
-阶段91：int12（含 `~=` range）、float11、bool5个原生运算符共28项接入显式单context入口，Kotlin层直接调用typed core，Bool适配在真实调用作用域内完成。MCFL22→23；stdlib与三份资源292007 bytes、SHA256 `800AF3AFB375C71643E23C11B2EB64261D3691F38F17D2204CC18FC62D477422`。Cache、PrimitiveIR与新fixture三个不同用例跨轮各自通过；首轮执行器缺score比较命令，最终仅复查fixture，不是最终联合3项。source/fresh consumer磁盘结果及frame0通过。legacy循环、private Var桥和其他MNI仍未完成，whole17未完成。下一阶段92删除byte/short四类各11个已拒绝算术注册及4个 `injectedBy` 注册，升级MCFL24并重建stdlib；保留精确格式、转换和统一拒绝诊断。
+阶段91：int12（含 `~=` range）、float11、bool5个原生运算符共28项接入显式单context入口，Kotlin层直接调用typed core，Bool适配在真实调用作用域内完成。MCFL22→23；stdlib与三份资源292007 bytes、SHA256 `800AF3AFB375C71643E23C11B2EB64261D3691F38F17D2204CC18FC62D477422`。Cache、PrimitiveIR与新fixture三个不同用例跨轮各自通过；首轮执行器缺score比较命令，最终仅复查fixture，不是最终联合3项。source/fresh consumer磁盘结果及frame0通过。legacy循环、private Var桥和其他MNI仍未完成，whole17未完成。
+
+阶段92：删除四个byte/short Java类中的44个已拒绝算术注册及 `MCFPPNBTType.injectedBy` 的4处注册；不涉及没有这些注册的long/double。保留精确格式、转换和统一拒绝诊断。MCFL23→24，stdlib Project0/0，三份bin292301 bytes且SHA256一致。Conversion、TypeKernel、CacheFormat三个不同用例各自通过；TypeKernel五个预期负例分别报告拒绝错误。下一阶段93迁移ConversionData的49个数值转换入口。
 
 阶段85 source template ABSTRACT/FINAL与object FINAL、compiled final、final继承拒绝及abstract默认ctor跳过已限定验证；两个Info保存final，Kryo声明前缀及early/Unsolved壳同步final。8prod34+/19-加两个fixture110行共9文件144+/19-，另更新标准库资源bin。MCFL18真实wire升级；旧/未知缓存格式拒绝回归通过。stdlib重建14s、compiler0/0、287554 bytes；最终必要联合3全绿，正例source/fresh0errors（fresh9119已知warnings）、磁盘4/9/4/4/frame0及独立模型通过；三种final父负例分别source1/fresh1预期错误，拒绝及父关系正确。无fullcheck/server，whole17未完成。
 
