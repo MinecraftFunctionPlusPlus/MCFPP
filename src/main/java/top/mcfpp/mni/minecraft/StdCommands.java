@@ -56,51 +56,23 @@ public class StdCommands {
 
     //region damage
     @MNIFunction(normalParams = {"entity", "float", "DamageType = GENERIC"})
-    public static void damage(EntityVar target, float amount, EnumVar type, ValueWrapper<CommandReturn> re){
-        Command command;
-        if(target.isMulti()){
-            command = Command.Companion.buildAll("execute as", target, "run damage @s", amount, type);
-        }else {
-            command = Command.Companion.buildAll("damage", target, amount, type);
-        }
-        Commands.processMacroCommandReturn(re, command);
-        Function.addCommand(command);
+    public static void damage(NativeCallContext context){
+        NativeStdCommandOperations.INSTANCE.damage(context);
     }
 
     @MNIFunction(normalParams = {"entity", "float", "pos3", "DamageType = GENERIC"})
-    public static void damageAt(EntityVar target, float amount, Pos3Var location, EnumVar type, ValueWrapper<CommandReturn> re){
-        Command command;
-        if(target.isMulti()){
-            command = Command.Companion.buildAll("execute as", target, "run damage @s", amount, type, "at", location);
-        }else {
-            command = Command.Companion.buildAll("damage", target, amount, type, "at", location);
-        }
-        Commands.processMacroCommandReturn(re, command);
-        Function.addCommand(command);
+    public static void damageAt(NativeCallContext context){
+        NativeStdCommandOperations.INSTANCE.damageAt(context);
     }
 
-    @MNIFunction(normalParams = {"entity", "float", "entity<1>" , "DamageType = GENERIC"})
-    public static void damage(EntityVar target, float amount, EntityVar by, EnumVar type, ValueWrapper<CommandReturn> re){
-        Command command;
-        if(target.isMulti()){
-            command = Command.Companion.buildAll("execute as", target, "run damage @s", amount, type, "by", by);
-        }else {
-            command = Command.Companion.buildAll("damage", target, amount, type, "by", by);
-        }
-        Commands.processMacroCommandReturn(re, command);
-        Function.addCommand(command);
+    @MNIFunction(identifier = "damage", normalParams = {"entity", "float", "entity<1>" , "DamageType = GENERIC"})
+    public static void damageBy(NativeCallContext context){
+        NativeStdCommandOperations.INSTANCE.damageBy(context);
     }
 
-    @MNIFunction(normalParams = {"entity", "float", "entity<1>", "entity<1>" , "DamageType = GENERIC"})
-    public static void damage(EntityVar target, float amount, EntityVar by, EntityVar source, EnumVar type, ValueWrapper<CommandReturn> re){
-        Command command;
-        if(target.isMulti()){
-            command = Command.Companion.buildAll("execute as", target, "run damage @s", amount, type, "by", by, "from", source);
-        }else {
-            command = Command.Companion.buildAll("damage", target, amount, type, "by", by, "from", source);
-        }
-        Commands.processMacroCommandReturn(re, command);
-        Function.addCommand(command);
+    @MNIFunction(identifier = "damage", normalParams = {"entity", "float", "entity<1>", "entity<1>" , "DamageType = GENERIC"})
+    public static void damageFrom(NativeCallContext context){
+        NativeStdCommandOperations.INSTANCE.damageFrom(context);
     }
     //endregion
 

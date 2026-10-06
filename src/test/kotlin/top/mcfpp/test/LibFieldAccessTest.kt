@@ -2584,6 +2584,94 @@ class LibFieldAccessTest {
         check(main)
     }
 
+    @Test
+    fun nativeDamageCommandsUseFloatArgumentsAcrossLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = """
+            func main(){
+                var box=Box();
+                dynamic var result=box.observe(3.5);
+            }
+        """
+        write("""
+            namespace fixture.fields;
+            import mcfpp.minecraft.resource:*;
+            import mcfpp.minecraft.std:*;
+            data Box {
+                func observe(amount as float)->int {
+                    var kind=DamageType();
+                    kind.id="minecraft:generic";
+                    damage(@p,amount,kind);
+                    damage(@e,2.0,kind);
+                    return 7;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val observe = (main.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("observe").single()
+            val directory = output.resolve("consumer")
+            DatapackCreator.createDatapack(directory.toString())
+            val data = directory.resolve(Project.config.name).resolve("data")
+            val functions = linkedMapOf<String, List<String>>()
+            Files.walk(data).use { paths ->
+                paths.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".mcfunction") }.forEach { file ->
+                    val relative = data.relativize(file)
+                    if (relative.nameCount >= 3 && relative.getName(1).toString() == "function") {
+                        val id = relative.subpath(2, relative.nameCount).joinToString("/").removeSuffix(".mcfunction")
+                        functions["${relative.getName(0)}:$id"] = Files.readAllLines(file)
+                    }
+                }
+            }
+            val commands = functions.getValue(observe.namespaceID.toString())
+            val call = Regex("function (mcfpp:dynamic/\\S+) with storage (\\S+) (\\S+)")
+            val macros = commands.mapIndexedNotNull { index, command -> call.matchEntire(command)?.let { index to it } }
+            assertTrue(macros.isNotEmpty())
+            val bodies = macros.flatMap { (index, match) ->
+                val id = match.groupValues[1]
+                assertEquals(1, macros.count { it.second.groupValues[1] == id }, id)
+                val preparation = "data modify storage ${match.groupValues[2]} ${match.groupValues[3]}"
+                assertTrue(commands.take(index).any { it.startsWith(preparation) && " set " in it }, id)
+                functions.getValue(id).also { body -> assertFalse(body.any { "return run" in it || it.removePrefix("\$").startsWith("return ") }) }
+            }
+            val damage = (commands + bodies).filter { it.removePrefix("\$").startsWith("damage ") || it.removePrefix("\$").startsWith("execute as ") && "run damage @s" in it }
+            assertEquals(2, damage.size)
+            assertTrue(damage.any { it.removePrefix("\$").startsWith("damage @p ") })
+            assertTrue(damage.any { it.removePrefix("\$").startsWith("execute as @e ") && "run damage @s 2.0" in it })
+            assertTrue(macros.any { (index, _) -> commands.take(index).any { "set from storage mcfpp:system stack_frame[0].amount" in it } })
+            assertTrue((commands + bodies).any { "minecraft:generic" in it || "stack_frame[0].kind.id" in it })
+        }
+        val sourceMain = GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single()
+        check(sourceMain)
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+        val observe = (main.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("observe").single()
+        val kind = observe.scope.getVar("kind")!!
+        val version = Project.config.version
+        try {
+            Project.config.version = "1.20.2"
+            val function = Function("legacyDamage", main.namespace, null)
+            val selector = top.mcfpp.core.lang.entity.SelectorVar(top.mcfpp.lib.EntitySelector('p'))
+            val dynamic = top.mcfpp.mni.NativeCallContext(function, null, listOf(selector, top.mcfpp.core.lang.MCFloat(), kind))
+            val errors = Project.errorCount
+            val before = function.commands.size
+            top.mcfpp.backend.NativeStdCommandOperations.damage(dynamic)
+            assertEquals(errors + 1, Project.errorCount)
+            assertEquals(before, function.commands.size)
+            val constant = top.mcfpp.mni.NativeCallContext(function, null, listOf(selector, top.mcfpp.core.lang.MCFloatConcrete(2.0f), kind))
+            val constantBefore = function.commands.size
+            top.mcfpp.backend.NativeStdCommandOperations.damage(constant)
+            assertEquals(errors + 1, Project.errorCount)
+            val emitted = function.commands.drop(constantBefore).map { it.toString() }
+            assertTrue(emitted.any { command ->
+                command.startsWith("damage @p 2.0 ") || command.startsWith("function mcfpp:dynamic/") &&
+                    Project.macroFunction[command.substringAfter("mcfpp:dynamic/").substringBefore(' ')]?.startsWith("\$damage @p 2.0 ") == true
+            })
+        } finally {
+            Project.config.version = version
+        }
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

@@ -1,6 +1,6 @@
-# 下一阶段：迁移 damage void 原生入口（阶段 103）
+# 下一阶段：迁移 System print 原生入口（阶段 104）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–102完成受测集合、数值、文本转换/拼接、predicate及StdCommands部分void入口的限定迁移；当前库格式MCFL31。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–103完成受测集合、数值、文本转换/拼接、predicate及StdCommands受测void入口的限定迁移；当前库格式MCFL32。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -36,13 +36,17 @@ PlainChatComponent纯文本使用Fastjson2 `JSON.toJSONString` 编码单个字�
 
 `NativeStdCommandOperations` 私有emit helper在 `context.withArguments` 中构造原命令，按 `buildMacroFunction()` 顺序添加准备命令，最后调用一次；非宏路径直接发出自身，不加return-run，也不经旧 `processMacroCommandReturn`。source/fresh fixture使用 `TemplatePool()`、设置 `pool.id`，在 `Box.observe(target as string)` 中调用 `place(pool, "fixture:constant", 2)` 与 `place(pool, target, 2)`；main传literal，但普通形参 `target` 在调用体内仍是未知值。两个place调用实际均生成一次macro，准备参数先于调用且宏体无return-run。stdlib2和失败fixture修复后单项通过；Cache只首轮通过。MCFL31；不据此声称非宏路径或world执行已覆盖。详见verification.md。
 
-### 阶段 103 计划：damage void 方法
+### 阶段 103：damage void 方法（已限定验证）
 
-只迁移4个damage void接口，按其实际参数类型处理旧Java primitive-float、`DamageType`和`EntityVar` selector不匹配；其中DamageType是ResourceID data，selector实际为 `SelectorVar`。为语言重载保留annotation identifier，Java方法使用唯一名称；不扩普通声明/default参数API。damage的浮点边界使用现有 `FloatProviders.enabled` 检查：常量按 `Float.toString` 编码，动态26.3值走现有宏路径；旧目标不支持动态float时明确拒绝，不建新浮点引擎、不改默认damage语义。
+四个damage void接口已迁入显式context，处理旧Java primitive-float、`DamageType`和selector（实际为 `SelectorVar`）参数签名；DamageType为ResourceID data。保留语言标识及默认语义。浮点能力沿用 `FloatProviders.enabled`，未建新浮点引擎。
 
-一个source/fresh fixture验证动态26.3 amount的宏命令；DamageType如何在源码中构造与赋 `minecraft:generic` id须以fixture实际验证为准，不预写为已运行。必要检查还包含该fixture内direct context的旧目标动态float拒绝和Cache回归；不跑服务器或扩大旧green。预计MCFL32并按ABI变化重建stdlib。具体签名/用例需实现前复核。
+source/fresh fixture验证DamageType初始化为 `minecraft:generic`、damage宏的参数准备与调用顺序，以及旧目标下direct-context动态float拒绝；常量沿现有编码路径。标准库和Cache联合回归成功，MCFL32、三份资源同hash。没有验证world或float执行；详见verification.md。
 
-阶段88–102详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL31。
+### 阶段 104 计划：System print 原生入口
+
+将System九种print语言入口接入单context：text、string、any、int、list、dict、NBT、DTO、bool；Java方法采用唯一名 `printText/printString/printAny/printInt/printList/printDict/printNbt/printObject/printBool`，`sys.mcfpp`显式绑定九项。`NativePrintOperations`按现有组件发射整个 `buildMacroFunction()` 数组。未知any使用来源编码NBT，不反射或猜测类型；DTO移除TODO输出占位，删除无外部调用的 `printVar`。预计MCFL33，一个source/fresh导出fixture及必要Cache回归与标准库重建；不模拟world、不扩fullcheck/server。
+
+阶段88–103详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL32。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

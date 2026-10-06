@@ -4,7 +4,7 @@
 
 ## 当前进度
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段102已完成限定验证，MCFL31；阶段101提交`ded6ce8`、阶段100提交`81b2c2f`、阶段99提交`0fe27dc`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段103已完成限定验证，MCFL32；阶段102提交`07670f1`、阶段101提交`ded6ce8`、阶段100提交`81b2c2f`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
 
 ### 用户最新规则（2026-10-06）
 
@@ -78,7 +78,23 @@ stdlib首轮 `mcfpp-native-text-context-stdlib.log` 重建成功，Project0/0，
 
 平均3.8/5，whole17完整性仍为3/5。
 
-### 阶段 102：StdCommands void 原生入口（已限定验证）
+### 阶段 103：damage void 原生入口（已限定验证）
+
+四个damage void方法接入context，保留语言identifier/default语义；ResourceID DamageType和SelectorVar通过Java参数适配，动态float受 `FloatProviders.enabled` 检查。stdlib一次成功8s、Project0/0；联合2项worker216正常exit0/BUILD SUCCESSFUL in19s。LibFieldAccess XML `2026-10-06T22:23:00.710Z`、Cache `22:22:59.798Z`均1/0/0/0；source0/9118、fresh0/9119。source/fresh函数初始化DamageType并写入 `minecraft:generic`，先准备amount与id再分别发damage宏一次；direct context旧目标动态float报错且不输出命令，常量保留。MCFL32三份bin284899 bytes，SHA256 `768075ABA8DFA56BFC1B294A0F05D0F3CF97BEC9A70B6595CBECFCAD7A09C6A0`。未验证world/float执行，不fullcheck/server。
+
+### 阶段 103 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 标准库、两份fresh XML、source/fresh错误数、命令顺序和资源SHA可复核。 |
+| 完整性 | 3/5 | 四个damage入口限定路径通过；float/world执行及whole17仍未完成。 |
+| 清晰性 | 4/5 | 指明动态float目标能力检查和未执行world边界。 |
+| 可执行性 | 4/5 | 阶段104限定九种print入口与未知any编码。 |
+| 简洁性 | 4/5 | 只保留阶段证据和下一步边界。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+### 阶段 102：StdCommands void 原生入口（历史）
 
 16个void方法迁入context；保留四个damage primitive-float方法和107个 `CommandReturn` 方法。`ResourceID.toCommandPart`通过annotation override替换失效的源码覆盖，并由Java wrapper读取 `id.toCommandPart`。stdlib首轮成功10s，Project0/0；joint首轮worker214在15s失败：LibFieldAccess XML `2026-10-06T22:00:36.130Z` 1/1/0/0、producer3/9118，`id.toCommandPart` 未定义后引发place null Command；Cache XML `22:00:35.360Z` 1/0/0/0通过。修复后stdlib2成功7s、Project0/0；仅复查新fixture的worker215 exit0/BUILD SUCCESSFUL in11s，XML `22:07:40.238Z` 1/0/0/0，source0/9118、fresh0/9119。两个place调用实际均为macro；参数准备先于各自唯一调用，未知target先从frame0读取再写入macro槽，宏体没有return-run。Cache未重复运行；不声称非宏路径或world/frame执行已验证。三份MCFL31 bin为285743 bytes、SHA256 `6BB5D52369DC314C2389C3623A99AA862D975BFB02C45A99344B38B1F7D387C6`。
 

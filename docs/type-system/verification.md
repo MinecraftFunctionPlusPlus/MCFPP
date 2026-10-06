@@ -2,7 +2,25 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 阶段 102：StdCommands void 原生入口（已限定验证）
+## 阶段 103：damage void 原生入口（已限定验证）
+
+迁移四个damage void接口至显式context，避免旧Java primitive-float、`DamageType`及selector（实际为 `SelectorVar`）签名不匹配；DamageType实际是ResourceID data。语言identifier和默认语义保留。动态float使用现有 `FloatProviders.enabled` 能力边界；未建新浮点引擎。
+
+`mcfpp-native-damage-context-stdlib.log`：exit0/BUILD SUCCESSFUL in8s，Project0/0。`mcfpp-native-damage-context-final.log`：worker216正常、exit0/BUILD SUCCESSFUL in19s。LibFieldAccess XML `2026-10-06T22:23:00.710Z`与Cache XML `22:22:59.798Z`均1/0/0/0；source/fresh Project分别0/9118、0/9119。source与fresh consumer实际命令初始化DamageType并将 `minecraft:generic` 写入id，准备amount和id后分别调用damage宏一次。旧目标的direct-context动态float拒绝生成命令；常量路径按现有编码保留。三份MCFL32资源均284899 bytes、SHA256 `768075ABA8DFA56BFC1B294A0F05D0F3CF97BEC9A70B6595CBECFCAD7A09C6A0`，raw header `4c46434d20000000`。没有world/float执行或完整damage语义验证；无fullcheck/server。
+
+### 阶段 103 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | fresh XML、source/fresh诊断、宏准备与调用命令及同hash资源可核对。 |
+| 完整性 | 3/5 | 基本damage生成路径通过；其余参数组合、float/world执行及whole17仍未完成。 |
+| 清晰性 | 4/5 | 区分合法常量与受目标能力限制的动态float。 |
+| 可执行性 | 4/5 | 阶段104限定System九种print类型与库导出fixture。 |
+| 简洁性 | 4/5 | 保留单次标准库与联合检查证据。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 历史必要检查：StdCommands void 原生入口（阶段 102）
 
 16个无Java primitive-float签名冲突的void接口迁入单context；`place`仍可有 `MCFloat` 参数。保留四个damage primitive-float入口及其他107个 `CommandReturn` 接口。`ResourceID.toCommandPart` 实现以 `@MNIFunction.override=true` 替换失效的源码覆盖，并在Java wrapper中读取 `id.toCommandPart`；未知target作为普通参数处理。未改变其他Commands宏API或host snapshot。
 
