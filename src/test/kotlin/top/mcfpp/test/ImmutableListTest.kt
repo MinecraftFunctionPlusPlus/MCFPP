@@ -99,20 +99,4 @@ class ImmutableListTest {
         }
     }
 
-    @Test fun compilerOnlyViewsAndCopiesKeepTheirElementValues() {
-        val main = compile("""
-            func main(){
-                var source = [int,float];
-                var view = source as ImmutableList<any>;
-                var copied = view;
-                source[0] = bool;
-                var current = view[0] as type;
-                var old = copied[0] as type;
-            }
-        """)
-        assertEquals(MCFPPBaseType.Bool, assertIs<MCFPPTypeVar>(main.scope.getVar("current")).value)
-        assertEquals(MCFPPBaseType.Int, assertIs<MCFPPTypeVar>(main.scope.getVar("old")).value)
-        assertNotNull(ValueSnapshot.of(main.scope.getVar("copied")))
-        assertFalse(main.commands.analyzeAll().any { "set from" in it || "set value" in it })
-    }
 }

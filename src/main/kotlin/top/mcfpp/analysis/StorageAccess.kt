@@ -420,13 +420,16 @@ object StorageAccess {
     }
 
     fun adapter(type: MCFPPType, name: String, binding: StorageBinding): Var<*> {
+        var carrier = type
+        while (carrier is MCFPPDeclaredConcreteType) carrier = carrier.type
         val value = if (binding.data.layout == StorageLayout.CompilerOnly) {
             val constant = constantFor(type, binding)
             if (constant == null) {
                 // An address can be a write destination before its first value is known.
-                if (type.hasRuntimeRepresentation) type.buildUnConcrete(name) else UnknownVar(name).apply { this.type = type }
+                if (type.hasRuntimeRepresentation) carrier.buildUnConcrete(name) else UnknownVar(name).apply { this.type = type }
             } else restore(type, constant, name, binding.data.types) ?: return error(type, "Compiler-only layout is inaccessible as '$type'")
-        } else type.buildUnConcrete(name)
+        } else carrier.buildUnConcrete(name)
+        value.type = type
         value.storageBinding = if (binding.view != null) binding.copy(view = ValueRef.TypedView(type.typeId,
             if (binding.view.place == binding.place) binding.view.source else ValueRef.Read(
                 (binding.data.facts.read(binding.place)?.type as? TypeKnowledge.Exact)?.type ?: type.typeId, binding.place),

@@ -4,6 +4,7 @@ import top.mcfpp.Project
 import top.mcfpp.antlr.MCFPPExprVisitor
 import top.mcfpp.antlr.MCFPPFieldVisitor
 import top.mcfpp.analysis.StorageAccess
+import top.mcfpp.analysis.TypeUsage
 import top.mcfpp.analysis.ValueSnapshot
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.antlr.mcfppParser
@@ -54,8 +55,16 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
             val errors = Project.errorCount
             val value = MCFPPExprVisitor().visitExpression(expression)
             if (value is UnknownVar || value.isError || Project.errorCount != errors) continue
+            TypeUsage.ordinaryDiagnostic(value.type, ValueSnapshot.of(value))?.let {
+                LogProcessor.error(it)
+            }
+            if (Project.errorCount != errors) {
+                data.deferredFields.remove(name)
+                continue
+            }
             if (data is ObjectCompoundData) {
-                data.deferredFields[name]?.let { MCFPPFieldVisitor().completeTemplateField(data, it, value.type) }
+                val declaration = data.deferredFields[name]
+                if (declaration != null && MCFPPFieldVisitor().completeTemplateField(data, declaration, value.type) == null) continue
             }
             val field = receiver.getMemberVar(name, Member.AccessModifier.PRIVATE).first ?: continue
             if (field.isConst && !StorageAccess.hasRuntimeRepresentation(value) && ValueSnapshot.of(value) == null) {

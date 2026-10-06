@@ -1,14 +1,20 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段86 actual generic父项限定通过，MCFL19/stdlib292301，最终联合3全绿、跨轮4个不同用例各过。新86 source0errors/9118warnings、fresh0/9121warnings，磁盘4/9/bool1/5与4/9/bool1/10/frame0。警告含source且属于既有flatExtends重复类别；无fullcheck/server，下一87 generic object compiler-only静态字段待RED，whole17未完成。
+最新规则日期：2026-10-06（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 最新必要检查：实际generic父项绑定（阶段 86）
+## 阶段 87：`type` 仅用于泛型参数（已实现并限定验证）
+
+新增 `TypeUsage` 统一判定及源码入口检查，覆盖已绑定普通签名、IR/擦除值与集合、延迟字段声明。普通值位置不保存 `TypeValue`；依赖普通 `type` 存储的旧30个正例撤回，4个合法的直接泛型类型表达式库往返 fixture 保留。9个新规则方法与相关回归跨轮验证；本轮不改变 MCFL19/bin292301，也未重建标准库、运行 fullcheck 或服务器。whole17仍未完成。
+
+阶段87分轮验证：最初 RED `mcfpp-type-only-generic-red.log`，worker180/exit1，fresh `2026-10-06T15:02:56.067Z`，4项3失败；字段仍注册为 `Meta`、普通函数 type 参数未报错，是有效的拒绝缺口证据；locals 实得6个错误而非预期4个，const 漏了 `var` 使预期计数断言先失败，不能据此判断声明是否被拒绝；readonly/typealias 用例通过。首个18项联合因重复 `ValueSnapshot` import 在 compileKotlin 失败、无新 XML。修复后 `final2.log` worker181/BUILD FAILED in1m42s，fresh 18项中16过2失败：locals 用例被 `forced` 语法错误多报；const 初始化回归报 `Cannot build variable 'int' as the compiler cannot track its type`，对应底层 storage adapter 的 `T!` carrier 问题。最终 `final3.log` worker182 正常、exit0/BUILD SUCCESSFUL in39s，5/5通过：TypeVariableDeclarationTest 1（2026-10-06T15:55:51.615Z）、TemplateConstInitializationTest 1（2026-10-06T15:55:46.016Z）、CompilerOnlyViewTest 2（2026-10-06T15:55:52.513Z）、LibFieldAccessTest 1（2026-10-06T15:55:54.382Z），均0失败/错误/跳过。final2的18个不同用例已包含9个新规则方法；final3五项中两个原失败复查通过、两个CompilerOnly方法重复复查，只有阶段84 genericObjectStaticFieldsInitialize...是第19个不同用例。19个不同用例跨轮各自通过，不表示单次19项联合通过。适配修复以底层 runtime carrier 保持存储形状，但保留原 `T!` 语言类型和常量要求。详见 `mcfpp-type-only-generic-{red,final,final2,final3}.log`。阶段86历史验证如下。
+
+## 历史必要检查：实际generic父项绑定（阶段 86）
 
 8prod+2test（fixture99/helper2）+bin共11文件175+/35-；声明环境纯parser/tryResolve、actual T/N绑定后完整父项、Info nullable文本权威、Project/StringTest共享INDEX hook、只排CompiledGeneric父readonly名vars/properties。MCFL19；stdlib独立SUCCESS36s/compiler0/0，三artifact292301 bytes/header4c46434d13000000，SHA256 097F4A5ABA51792E4F748D25DBE0459BC38F03E97C2339358C763DF92125938C。
 
 日志位于F:/DevCache/.codex/runtime/mcfpp-generic-parents-{red,stdlib,final,final2,diagnostic,diagnostic2,final3}.log。RED172 fatal FAILED9s：Parent<int>/Parent<(T)>/Offset<(N+1)>全文未找到→value缺失→Var633 NPE，无fresh XML。trial173 joint3，Lib XML13:26:27.137Z两fail、Cache13:26:26.471Z一green，READ_LIB与complete各BossBar报错共2errors；未模型/consumer。trial174 joint3 XML13:37:09.387Z三fail，各仅complete BossBar1error。diag175单1FAILED8s/XML13:44:53.283Z无表（root误只查std）；diag176单1FAILED8s/XML13:51:11.734Z表显示BossBar无parent。最终根因是StringTest未调用INDEX hook，不是tryResolve单独解决；全部TEMP已删除。
 
-final3 worker177正常exit0/SUCCESS1m1s，XML2026-10-06T14:00:39.735Z 3/0/0/0。新86 source0errors/9118warnings、fresh0/9121warnings，source盘4/9/bool1/5、fresh4/9/bool1/10/frame0及canonical父/字段/read owner、TypeID、Shift4→Offset5/Shift9→Offset10模型全部通过。旧85正例source0/9118 fresh0/9119；三final负例各source1/9118、fresh1/9119为expected拒绝。警告均既有flatExtends重复类别，source也有，不能写source0/0。cache在trial173绿，最终仅联合3，跨轮4不同case各过。无fullcheck/server；不扩super、source object/interface actualgeneric父、Kryo全集或compiler-only字段。下一87待RED/实现，whole17未完成。
+final3 worker177正常exit0/SUCCESS1m1s，XML2026-10-06T14:00:39.735Z 3/0/0/0。新86 source0errors/9118warnings、fresh0/9121warnings，source盘4/9/bool1/5、fresh4/9/bool1/10/frame0及canonical父/字段/read owner、TypeID、Shift4→Offset5/Shift9→Offset10模型全部通过。旧85正例source0/9118 fresh0/9119；三final负例各source1/9118、fresh1/9119为expected拒绝。警告均既有flatExtends重复类别，source也有，不能写source0/0。cache在trial173绿，最终仅联合3，跨轮4不同case各过。无fullcheck/server；不扩super、source object/interface actualgeneric父、Kryo全集或compiler-only字段。当时下一87待RED/实现，现已完成限定验证；whole17未完成。
 
 ## 历史必要检查：abstract/final标志持久化（阶段 85）
 

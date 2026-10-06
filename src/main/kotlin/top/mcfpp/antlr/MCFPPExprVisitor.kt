@@ -1,5 +1,8 @@
 package top.mcfpp.antlr
 
+import top.mcfpp.analysis.TypeUsage
+import top.mcfpp.analysis.ValueSnapshot
+
 import top.mcfpp.command.FloatProviders
 
 import top.mcfpp.Project.withCompilationContext
@@ -456,6 +459,11 @@ class MCFPPExprVisitor(
         }
         for (expr in ctx.arguments().normalArgs().expressionList()?.expression()?: emptyList()) {
             val arg = exprVisitor.visit(expr)!!
+            TypeUsage.ordinaryDiagnostic(arg.type, ValueSnapshot.of(arg))?.let {
+                LogProcessor.error(it)
+                top.mcfpp.analysis.StorageAccess.restore(spills)
+                return UnknownVar("error_" + ctx.text).apply { isError = true }
+            }
             if(arg is UnknownVar){
                 LogProcessor.error(TextTranslator.SYMBOL_NOT_DEFINED.translate(arg.identifier))
                 return UnknownVar("error_" + ctx.text)

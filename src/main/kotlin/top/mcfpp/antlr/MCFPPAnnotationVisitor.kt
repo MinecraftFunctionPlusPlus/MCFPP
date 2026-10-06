@@ -124,13 +124,16 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
             return
         }
         val template = DataTemplate.currTemplate!!
+        val field = template.scope.getVar(ctx.Identifier().text) ?: run {
+            annotationCache.clear()
+            return@withCompilationContext
+        }
         if (template !is GenericDataTemplate && template !is ObjectDataTemplate) {
             template.pendingFieldAnnotations.getOrPut(ctx.Identifier().text) { arrayListOf() }.addAll(annotationCache)
             annotationCache.clear()
             return@withCompilationContext
         }
         //获取字段对象
-        val field = DataTemplate.currTemplate!!.scope.getVar(ctx.Identifier().text)!!
         annotationCache.forEach {
             it.on(field)
         }

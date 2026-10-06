@@ -48,29 +48,6 @@ class ListMemberTest {
         assertEquals(1235, execute(main).read(main.scope.getVar("result") as MCInt))
     }
 
-    @Test fun mutatingAStaticViewUpdatesItsRootAndCopiesIncomingElements() {
-        val main = compile("""
-            func main(){
-                var values = [int];
-                var view = values as list<any>;
-                var extra = [float,bool];
-                var incoming = extra as list<any>;
-                view.prependAll(incoming);
-                extra[0] = int;
-                view.insert(-1,string);
-                view.removeAt(-2);
-                var first = values[0] as type;
-                var second = values[1] as type;
-                var last = values[-1] as type;
-            }
-        """)
-        assertEquals(MCFPPBaseType.Float, assertIs<MCFPPTypeVar>(main.scope.getVar("first")).value)
-        assertEquals(MCFPPBaseType.Bool, assertIs<MCFPPTypeVar>(main.scope.getVar("second")).value)
-        assertEquals(MCFPPBaseType.String, assertIs<MCFPPTypeVar>(main.scope.getVar("last")).value)
-        assertNotNull(ValueSnapshot.of(main.scope.getVar("values")))
-        assertFalse(main.commands.analyzeAll().any { "set value" in it || "set from" in it })
-    }
-
     @Test fun appendingAnUnknownPrimitiveKeepsItsEncodingAndExistingElementFacts() {
         val main = compile("""
             func append(value as int) -> int {

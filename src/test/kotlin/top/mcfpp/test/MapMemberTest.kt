@@ -117,25 +117,6 @@ class MapMemberTest {
         assertTrue(Project.macroFunction.isEmpty())
     }
 
-    @Test fun compilerOnlyMapViewsKeepImmutableValuesAndSharedWrites() {
-        val main = compile("""
-            func main(){
-                var root = {entries:[{key:"first",value:int}]};
-                var values = root as map<any>;
-                values["first"] = float;
-                values["next"] = bool;
-                var copied = values;
-                copied["first"] = string;
-                var first = values["first"] as type;
-                var second = values["next"] as type;
-            }
-        """)
-        assertEquals(top.mcfpp.type.MCFPPBaseType.Float, assertIs<MCFPPTypeVar>(main.scope.getVar("first")).value)
-        assertEquals(top.mcfpp.type.MCFPPBaseType.Bool, assertIs<MCFPPTypeVar>(main.scope.getVar("second")).value)
-        assertNotNull(ValueSnapshot.of(main.scope.getVar("values")))
-        assertFalse(main.commands.analyzeAll().any { "set value" in it || "set from" in it })
-    }
-
     @Test fun runtimeStringKeysUseCompoundPredicatesWithTheirFullEscaping() {
         val main = compile("""
             func lookup(values as map<int>, key as string) -> int { return values[key]; }
@@ -233,30 +214,6 @@ class MapMemberTest {
             func main(){ dynamic var result = edit("first",7); }
         """)
         assertEquals(14, execute(main).read(main.scope.getVar("result") as MCInt))
-    }
-
-    @Test fun staticMergeRemovalAndClearPreserveExtraRootFieldsAndCopiedValues() {
-        val main = compile("""
-            func main(){
-                var root = {entries:[{key:"first",value:int}],extra:bool};
-                var values = root as map<any>;
-                var incoming = {entries:[{key:"first",value:float},{key:"next",value:string}]} as map<any>;
-                values.merge(incoming);
-                incoming["first"] = bool;
-                var kept = values["first"] as type;
-                values.remove("next");
-                var removed = values.containsKey("next");
-                values.clear();
-                var empty = values.isEmpty();
-                var extra = root["extra"] as type;
-            }
-        """)
-        assertEquals(top.mcfpp.type.MCFPPBaseType.Float, assertIs<MCFPPTypeVar>(main.scope.getVar("kept")).value)
-        assertEquals(top.mcfpp.type.MCFPPBaseType.Bool, assertIs<MCFPPTypeVar>(main.scope.getVar("extra")).value)
-        assertEquals(CompilerValue.Bool(false), assertIs<CompilerValue.Typed>(ValueSnapshot.of(main.scope.getVar("removed"))).payload)
-        assertEquals(CompilerValue.Bool(true), assertIs<CompilerValue.Typed>(ValueSnapshot.of(main.scope.getVar("empty"))).payload)
-        assertNotNull(ValueSnapshot.of(main.scope.getVar("root")))
-        assertFalse(main.commands.analyzeAll().any { "set value" in it || "set from" in it })
     }
 
     @Test fun runtimeDictionaryProjectionDiagnosesUnsupportedEmptyMemberNames() {

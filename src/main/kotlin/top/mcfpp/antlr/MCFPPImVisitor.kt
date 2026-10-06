@@ -1,5 +1,8 @@
 package top.mcfpp.antlr
 
+import top.mcfpp.analysis.TypeUsage
+import top.mcfpp.analysis.ValueSnapshot
+
 import org.antlr.v4.runtime.RuleContext
 import org.antlr.v4.runtime.tree.ParseTree
 import top.mcfpp.Project
@@ -164,6 +167,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             init = MCFPPExprVisitor(
                 if(type is MCFPPEnumType) type else null
             ).visitExpression(ctx.expression())
+            if (init.isError) return null
         }
         //类型推断
         if(type == null && init == null){
@@ -171,6 +175,10 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             return null to null
         }else if(type == null){
             type = init!!.type
+        }
+        TypeUsage.ordinaryDiagnostic(type, init?.let(ValueSnapshot::of))?.let {
+            LogProcessor.error(it)
+            return null
         }
         val `var` = if(fieldModifier == "import"){
             val qwq = type.buildUnConcrete(ctx.Identifier().text, Function.currFunction)
@@ -268,6 +276,10 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 else -> current.binaryComputation(right, operator)
             }
             if (assigned.isError) return null
+            TypeUsage.ordinaryDiagnostic(assigned.type, ValueSnapshot.of(assigned))?.let {
+                LogProcessor.error(it)
+                return null
+            }
             if(assigned !is MCFPPValue<*> && left.parent is DataTemplateObjectConcrete){
                 left.parent = (left.parent as DataTemplateObjectConcrete).toDynamic(true)
             }
@@ -316,7 +328,9 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addComment(ctx.text)
         if (ctx.expression() != null) {
             val ret: Var<*> = MCFPPExprVisitor().visitExpression(ctx.expression())
-            Function.currBaseFunction.assignReturnVar(ret)
+            val diagnostic = TypeUsage.ordinaryDiagnostic(ret.type, ValueSnapshot.of(ret))
+            if (diagnostic != null) LogProcessor.error(diagnostic)
+            else Function.currBaseFunction.assignReturnVar(ret)
         }
         // A return terminates this path, not the other branches of the declaration.
         Function.currFunction.hasReturnStatement = true
@@ -941,6 +955,10 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
     fun visitConcreteForeach(id: String, iterator: ConcreteIterator<*>, ctx: BlockContext){
         for (v in iterator){
+            TypeUsage.ordinaryDiagnostic(v.type, ValueSnapshot.of(v))?.let {
+                LogProcessor.error(it)
+                return
+            }
             val i = v.type.buildUnConcrete(id).assignedBy(v)
             Function.addCommands(Commands.internalFunction(Function.currFunction){
                 Function.currFunction.scope.putVar(id, i)

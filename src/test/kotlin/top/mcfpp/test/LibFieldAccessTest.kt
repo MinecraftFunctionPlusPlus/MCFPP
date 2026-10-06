@@ -567,7 +567,7 @@ class LibFieldAccessTest {
                 func amount()->int { return this.passSized(this.sized).read(); }
             }
             func main(){
-                var T=bool; var N=90;
+                var T=true; var N=90;
                 var intCell=Cell<int>(4); var first=Envelope<int,2>(intCell);
                 var flagCell=Cell<bool>(true); var flag=Envelope<bool,4>(flagCell);
                 dynamic var intResult=first.read(); dynamic var intAmount=first.amount();
@@ -612,7 +612,7 @@ class LibFieldAccessTest {
         val main = consume("""
             import fixture.fields:*;
             func main(){
-                var T=bool; var N=90;
+                var T=true; var N=90;
                 var flagCell=Cell<bool>(true); var flag=Envelope<bool,4>(flagCell);
                 var intCell=Cell<int>(4); var first=Envelope<int,2>(intCell);
                 dynamic var intResult=first.read(); dynamic var intAmount=first.amount();
@@ -782,9 +782,7 @@ class LibFieldAccessTest {
                 func read()->int { return this.cell.read().read(); }
             }
             func main(){
-                var leafType=Leaf;
-                var types as list<type> = [leafType];
-                var first=Bundle<types>(Cell<Leaf>(Leaf(4)));
+                var first=Bundle<[Leaf]>(Cell<Leaf>(Leaf(4)));
                 var second=Bundle<[Leaf]>(Cell<Leaf>(Leaf(9)));
                 dynamic var firstResult=readBundle(first);
                 dynamic var secondResult=readBundle(second);
@@ -827,9 +825,7 @@ class LibFieldAccessTest {
             import fixture.fields:*;
             func main(){
                 var second=Bundle<[Leaf]>(Cell<Leaf>(Leaf(9)));
-                var leafType=Leaf;
-                var types as list<type> = [leafType];
-                var first=Bundle<types>(Cell<Leaf>(Leaf(4)));
+                var first=Bundle<[Leaf]>(Cell<Leaf>(Leaf(4)));
                 dynamic var firstResult=readBundle(first);
                 dynamic var secondResult=readBundle(second);
             }
@@ -1183,9 +1179,7 @@ class LibFieldAccessTest {
                 func read()->int { return this.value; }
             }
             func main(){
-                var intType=int;
-                var scalarType=(intType|string);
-                var first=Box<scalarType>(4);
+                var first=Box<(int|string)>(4);
                 var second=Box<(string|int|int)>(9);
                 dynamic var firstResult=readBox(first);
                 dynamic var secondResult=readBox(second);
@@ -1197,18 +1191,14 @@ class LibFieldAccessTest {
         assertEquals(expectedId, sourceAlias.typeId)
         val sourcePrototype = assertIs<GenericDataTemplate>(sourceScope.getTemplate("Box"))
         val sourceMain = sourceScope.functions.getValue("main").single()
-        val sourceScalar = assertIs<MCFPPTypeVar>(sourceMain.scope.getVar("scalarType"))
-        val sourceUnion = assertIs<MCFPPUnionType>(sourceScalar.value)
-        assertEquals(2, sourceUnion.types.size)
-        assertEquals(expectedId, sourceUnion.typeId)
-        val sourceScalarSnapshot = assertNotNull(ValueSnapshot.of(sourceScalar))
         val sourceFirst = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(sourceMain.scope.getVar("first")).templateType)
         val sourceSecond = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(sourceMain.scope.getVar("second")).templateType)
         assertSame(sourceFirst, sourceSecond)
         assertSame(sourcePrototype, sourceFirst.originTemplate)
         val sourceBound = assertIs<MCFPPTypeVar>(sourceFirst.scope.getVar("T"))
+        val sourceScalarSnapshot = assertNotNull(ValueSnapshot.of(sourceBound))
+        assertEquals(2, assertIs<MCFPPUnionType>(sourceBound.value).types.size)
         assertEquals(expectedId, assertIs<MCFPPUnionType>(sourceBound.value).typeId)
-        assertEquals(sourceScalarSnapshot, ValueSnapshot.of(sourceBound))
         assertSame(sourceFirst, assertIs<MCFPPDataTemplateType>(sourceScope.functions.getValue("readBox").single().normalParams.single().type).template)
         val sourceBoxId = sourceFirst.getType().typeId
 
@@ -1216,9 +1206,7 @@ class LibFieldAccessTest {
             import fixture.fields:*;
             func main(){
                 var second=Box<(string|int|int)>(9);
-                var intType=int;
-                var scalarType=(string|intType);
-                var first=Box<scalarType>(4);
+                var first=Box<(string|int)>(4);
                 dynamic var firstResult=readBox(first);
                 dynamic var secondResult=readBox(second);
             }
@@ -1228,11 +1216,6 @@ class LibFieldAccessTest {
         val alias = assertIs<MCFPPUnionType>(restoredScope.getType("Scalar"))
         assertNotSame(sourceAlias, alias)
         assertEquals(expectedId, alias.typeId)
-        val scalar = assertIs<MCFPPTypeVar>(main.scope.getVar("scalarType"))
-        val union = assertIs<MCFPPUnionType>(scalar.value)
-        assertEquals(2, union.types.size)
-        assertEquals(alias.typeId, union.typeId)
-        assertEquals(sourceScalarSnapshot, assertNotNull(ValueSnapshot.of(scalar)))
         val prototype = assertIs<GenericDataTemplate>(restoredScope.getTemplate("Box"))
         assertNotSame(sourcePrototype, prototype)
         val first = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("first")).templateType)
@@ -1242,6 +1225,7 @@ class LibFieldAccessTest {
         assertNotSame(sourceFirst, first)
         assertEquals(sourceBoxId, first.getType().typeId)
         val bound = assertIs<MCFPPTypeVar>(first.scope.getVar("T"))
+        assertEquals(2, assertIs<MCFPPUnionType>(bound.value).types.size)
         assertEquals(alias.typeId, assertIs<MCFPPUnionType>(bound.value).typeId)
         assertEquals(sourceScalarSnapshot, ValueSnapshot.of(bound))
         assertSame(first, assertIs<MCFPPDataTemplateType>(restoredScope.functions.getValue("readBox").single().normalParams.single().type).template)
@@ -1345,7 +1329,7 @@ class LibFieldAccessTest {
             }
             func relay<T as type>(arg as Box<(T)>)->Box<(T)> { return arg; }
             func main(){
-                var T=string;
+                var T="caller";
                 dynamic var firstInput=4; dynamic var secondInput=9; dynamic var thirdInput=7;
                 var first=relay<int>(Box<int>(firstInput));
                 var second=relay<int>(Box<int>(secondInput));
@@ -1396,7 +1380,7 @@ class LibFieldAccessTest {
         val main = consume("""
             import fixture.fields:*;
             func main(){
-                var T=string;
+                var T="caller";
                 dynamic var thirdInput=7; dynamic var secondInput=9; dynamic var firstInput=4;
                 var third=relay<bool>(Box<bool>(thirdInput));
                 var second=relay<int>(Box<int>(secondInput));

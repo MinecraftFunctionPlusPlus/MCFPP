@@ -1,6 +1,10 @@
-# 下一阶段：generic object编译器专用静态字段（阶段 87）
+# 下一阶段：MNI 显式 context/value/place 入口（阶段 88，待 root 确认）
 
-阶段86 actual generic父项已限定验证，MCFL19标准库重建及最终联合3全绿，跨轮4个不同用例各过；阶段87尚未实现/测试，整个17项重构仍未完成。
+阶段87已限定接入普通 `type` 值拒绝规则：普通typed/inferred/const变量、data/object字段、普通参数/返回以及擦除/集合位置均拒绝；`typealias`、内部 `TypeVar`解析与现有readonly泛型绑定保留。不要恢复旧普通字段/集合正例。阶段87实现与分轮验证见verification.md。
+
+候选入口从真实legacy实例成员 `list.clear()` 迁移到小型 `NativeCallContext`，暴露显式函数、immutable值与receiver位置，领域逻辑留在 `ListOperations`，内部沿用 `StorageAccess` 桥接。既有 `ListMemberTest` 的 clear 直接走 `PrimitiveCompiler` IR lowering，不能单独证明新native入口；需要一个模板实例方法 `reset` 中调用 `clear/add` 的源码+磁盘用例，并保留一个IR clear回归。Sol的只读调研已给出该候选，root尚未确认最终最小API。
+
+`NativeFunctionInfo`已有持久化的完整methodString；若最终ABI删除旧 `clear(NBTList)`，旧bin会失效。API确认后再选择是否升级MCFL并重建标准库，不能预设无需格式变更。整体17项重构仍未完成。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 
@@ -12,9 +16,9 @@
 - 擦除/模板形参返回、static 写回、表达式活跃临时值及早先参数已加入实际跨帧和递归测试。
 - 受限 IR 调用图推导 Pure/Writes/Unknown 的递归不动点；static 形参写入映射实际参数位置，普通参数副本写入不外泄。未知用户调用与未标注 MNI 有提交/失效屏障，数值 MNI 明确标注无外部写入。
 - 2026-10-05 继续接入擦除 while 循环：操作绑定先读取完整控制流的不动点事实，包含 break/continue/return 与不可达过滤；动态条件元数据同时用于普通返回类型分析。
-- list/dict 的直线元素读写接入 StorageAccess，保留子元素实际类型、复制子事实与共享视图；动态下标按求值顺序捕获，未知位置的读寄存器彼此独立；编译器专用元素不进入运行时 NBT。
+- list/dict 的直线元素读写接入 StorageAccess，保留子元素实际类型、复制子事实与共享视图；动态下标按求值顺序捕获，未知位置的读寄存器彼此独立；编译器专用元素不进入运行时 NBT。普通集合不得因此承载 `type` 值。
 - 已知字符串键的点、空格、引号和反斜线完整转义；未知字符串键明确拒绝生成。列表保留完整元素联合身份，集中编码使用可见载荷，旧目标对混合/未证明共同编码的列表构造与元素写入进行能力检查，空键路径由能力表控制。
-- 编译器专用集合的普通赋值递归复制嵌套列表/字典；type 字典字段从完整值建立静态字段，不调用运行时变量构造器。
+- [旧假设待迁移] 编译器专用集合赋值递归复制嵌套列表/字典；此前“type 字典字段从完整值建立静态字段”的正向行为不构成语言规则，需改为拒绝普通字段/容器保存 `type` 值。
 - list/dict 的实际内容决定能否进入运行时载荷；编译器专用擦除字段保留内部静态通道，普通副本递归复制，屏障和调用帧跳过不可物化的值，泛型按完整不可变静态实参特化。
 - 完整静态 list/dict/type 的命名 as 视图使用 CompilerOnly 布局并共享 Place/写版本；已知写入重建不可变祖先快照，普通复制读取最新值并脱离来源绑定；静态 list 的 clear/add 变更回写事实，运行时屏障保留静态位置。
 - 字典常量/运行时成员合为一份签名；clear/remove/merge 通过接收者位置写入，未改动字段保留事实，containsKey/remove 复用复杂键和未知键限制；MCFL 升至 5。旧 visitor 的运行时形参绑定输入帧，NBT 临时值及字典工厂保留语言类型和泛型。
@@ -156,9 +160,9 @@ Contract<T>及Box<(Contract<int/bool>)>前置签名使用显式type primary，in
 
 两个现有生成编号separator改'-'，Settings_int-0/relay-0与合法Settings_int_0/relay_0真实target和owner storage prefix隔离，source盘4/9/4/9/frame0通过；四case跨轮各过、最终仅新1。原成员Function.prefix不含owner，试joint夹具误比较后仅修OWNERprefix断言。FullID/key/options、MCFL17/bin289989/schema不变，无stdlib/fullcheck/server。不扩一般member prefix、casefold、跨库同名或命名系统。
 
-### 阶段 87：generic object编译器专用静态字段（先单fixture RED）
+### 阶段 87：仅泛型参数承载 `type` 值（已实现并限定验证）
 
-阶段86 actual generic父项、nullable父表达式metadata、声明环境与共享INDEX hook已限定验证，MCFL19标准库292301 bytes，最终联合3全绿，跨轮4不同case各过；source已有9118重复警告，未清理该类别。下一87只研究非const type fromT的generic object compiler-only typed static字段显式初始化，与const/dynamic独立；先单source/fresh initializer fixture RED，最小build capability/dynamicflag边界待API与实现，尚未测试。不扩autoload、super、source object/interface actualgeneric父、interface runtime/完整shape或完整Kryo身份。
+`TypeUsage`统一判定接入源码声明入口、已绑定普通签名、IR/擦除值与集合、延迟字段；普通值位置拒绝保存 `TypeValue`。依赖普通 `type` 存储的旧30个正例已撤回；4个合法的直接泛型类型表达式库fixture保留。最终5项定向复查全绿，19个不同用例跨轮各自通过，非单次全套；MCFL19/bin292301未变，无stdlib/fullcheck/server。细节和先前红测见verification.md。
 
 ### 旧浮点乘除（阶段 50 已实现）
 
@@ -170,7 +174,7 @@ Contract<T>及Box<(Contract<int/bool>)>前置签名使用显式type primary，in
 
 阶段 51 已将旧浮点算术/比较、Promote/Convert 接入 IR：四分量值使用独立 NBT 帧，`LegacyFloatCommands` 负责读写和调用，保留旧四记分板 return ABI。普通/递归/static、旧与 IR 双向调用、早先参数、多实参、常量与连续返回均经真实库命令执行；最终 20 项必要复查通过，0 failures/errors/skips。Native 路径不变；旧浮点算术/比较及跨数值折叠禁止宿主 Float 计算，`16777217` 保持八位十进制精度；identity/toNBT 保留来源 codec。包含 FloatBits 端点的旧浮点范围，其静态顺序不使用宿主比较，整数/native 行为不变；浮点迭代语义未定义，不新增迭代行为。
 
-已知 int/bool/byte/short as legacyfloat 仍沿旧入口并在实际访问时诊断；未用视图不报错，unknown any 视图不做运行时 typecheck，命名 float 视图的来源随后被写成已知标量，再读取视图会诊断。阶段56/57完成有序初始化 RHS 持久化与 const 初始化语义，MCFL 12；验证记录见上。阶段58已为部分语法接入普通模板推断字段声明绑定，其他语法仍沿旧路径；阶段59导入声明环境已实现；阶段60消费端库函数主体导出已在限定路径验证；阶段61已恢复受支持模板方法owner，阶段62已修复模块资源复制；当时待办的阶段63函数权限已完成；当前下一步为阶段87 generic object compiler-only静态字段，先单fixture RED；阶段86 actual generic父项已限定通过，MCFL19/stdlib292301。imported object自动load仍未解决。未知端点范围和浮点/混合迭代的步长及不前进策略仍未定义，保留现有诊断。整个17项迁移仍未完成，模板/泛型/T!、其余控制流/集合及 MNI 尚待统一。
+已知 int/bool/byte/short as legacyfloat 仍沿旧入口并在实际访问时诊断；未用视图不报错，unknown any 视图不做运行时 typecheck，命名 float 视图的来源随后被写成已知标量，再读取视图会诊断。阶段56/57完成有序初始化 RHS 持久化与 const 初始化语义，MCFL 12；验证记录见上。阶段58已为部分语法接入普通模板推断字段声明绑定，其他语法仍沿旧路径；阶段59导入声明环境已实现；阶段60消费端库函数主体导出已在限定路径验证；阶段61已恢复受支持模板方法owner，阶段62已修复模块资源复制；当时待办的阶段63函数权限已完成；阶段86 actual generic父项已限定通过，MCFL19/stdlib292301。阶段87严格限制 `type` 声明范围已限定验证。阶段88候选为从真实legacy实例成员 `list.clear()` 接入小型 NativeCallContext；具体API/最小回归仍待root确认。imported object自动load仍未解决。未知端点范围和浮点/混合迭代的步长及不前进策略仍未定义，保留现有诊断。整个17项迁移仍未完成，模板/泛型/T!、其余控制流/集合及 MNI 尚待统一。
 
 - 26.3 原生 float 的字面量、算术/比较、循环、递归调用、static 写回、擦除与共享视图、集合元素和范围载荷进入 IR；int→float 提升作为 Promote，用于声明、赋值、返回、普通/成员实参和上下文集合字面量。运算与旧入口共享提供器表达式，值保存在 NBT 帧，负零取负保留符号；常量非有限值、反向已知范围和有损 static 写回明确诊断。旧浮点后端现已进入 IR；其余来源转换和完整 MNI 接口仍待迁入；浮点/混合迭代语义未定义并保留现有诊断，不扩展步长或不前进规则。
 

@@ -41,7 +41,7 @@ import top.mcfpp.util.NBTUtil.toNBTDouble
 /** Internal migration boundary for scalar, erased and collection IR, without mutable Var-based analysis. */
 object PrimitiveCompiler {
     private class Unsupported : RuntimeException()
-    private class Invalid(val diagnostic: String) : RuntimeException()
+    private class Invalid(val diagnostic: String, val recoverDeclaration: Boolean = true) : RuntimeException()
     private val int = MCFPPBaseType.Int.typeId
     private val float = MCFPPBaseType.Float.typeId
     private val bool = MCFPPBaseType.Bool.typeId
@@ -323,6 +323,7 @@ object PrimitiveCompiler {
                 syntax.readOnlyArgs() != null || syntax.anonymousTemplateType() != null -> unsupported()
                 else -> function.scope.getType(syntax.text) ?: unsupported()
             }
+            TypeUsage.ordinaryDiagnostic(result)?.let { throw Invalid(it, recoverDeclaration = false) }
             return register(result)
         }
         private data class Block(val id: Int, val instructions: MutableList<Instruction> = mutableListOf(), var terminator: Terminator? = null)
@@ -590,7 +591,7 @@ object PrimitiveCompiler {
             try { lowerStatement(context) } catch (invalid: Invalid) {
                 diagnostics += invalid.diagnostic
                 // A later binding pass may resolve this initializer. Keep its name visible meanwhile.
-                context.fieldDeclaration()?.let { declaration ->
+                context.fieldDeclaration()?.takeIf { invalid.recoverDeclaration }?.let { declaration ->
                     val name = declaration.Identifier().text
                     if (name !in declaredHere) declare(declaration, declaration.type()?.let(::type)?.typeId ?: any)
                 }
@@ -610,7 +611,11 @@ object PrimitiveCompiler {
                 return
             }
             context.returnStatement()?.let {
-                val value = it.expression()?.let { node -> promote(boundValue(expression(node)), function.returnType.typeId) }
+                val value = it.expression()?.let { node ->
+                    val value = boundValue(expression(node))
+                    checkOrdinary(value)
+                    promote(value, function.returnType.typeId)
+                }
                 if (function.returnType === MCFPPPrivateType.Void && value != null ||
                     value != null && value.type != function.returnType.typeId && function.returnType.typeId !in erased &&
                     !(exploratory && value.type == any)) invalid("Return type mismatch")
@@ -629,6 +634,7 @@ object PrimitiveCompiler {
                 val previous = expectedLiteral
                 expectedLiteral = declared?.let { literalToken(initializer)?.let { token -> token to types.getValue(it) } }
                 val value = try { expression(initializer) } finally { expectedLiteral = previous }
+                checkOrdinary(boundValue(value))
                 val view = value is ValueRef.Result && value.instruction in views
                 if (view && value.type !in setOf(float, MCFPPBaseType.Range.typeId) && types[value.type] !is MCFPPTypeWithGeneric && TypeRelations.arrayElementType(value.type) == null) unsupported()
                 val type = declared ?: value.type
@@ -654,6 +660,7 @@ object PrimitiveCompiler {
                     else (indexedDestination as ValueRef.Result).let { locations.getValue(it.instruction) to sourceTypes.getValue(it.instruction) }
                 val value = promote(if (operation == "=") boundValue(expression(assignment.expression()))
                     else binary(operation.dropLast(1), read(destination.first, destination.second, target), expression(assignment.expression())), destination.second)
+                checkOrdinary(value)
                 if (value.type != destination.second && destination.second !in erased && !(exploratory && value.type == any)) invalid("Assignment type mismatch for ${symbol.name}")
                 if (suffix.identifierSuffix().isEmpty()) write(symbol, value)
                 else {
@@ -837,6 +844,16 @@ object PrimitiveCompiler {
         }
         private fun boundValue(value: ValueRef): ValueRef = if (value is ValueRef.Result)
             provenResults[value.instruction]?.let { value.copy(type = it) } ?: value else value
+
+        private fun checkOrdinary(value: ValueRef) {
+            val constant = when (value) {
+                is ValueRef.Constant -> value.value
+                is ValueRef.Result -> provenConstants[value.instruction]
+                else -> null
+            }
+            val type = types[value.type] ?: return
+            TypeUsage.ordinaryDiagnostic(type, constant)?.let { throw Invalid(it, recoverDeclaration = false) }
+        }
 
         private fun promote(value: ValueRef, target: TypeId): ValueRef {
             if (value.type != int || target != float) return value

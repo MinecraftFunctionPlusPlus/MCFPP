@@ -73,6 +73,10 @@ object SpecializationPolicy {
             }
             val normal = function.normalParams.map { resolveType(it.type) ?: return@resolve null }
             val result = resolveType(function.returnType) ?: return@resolve null
+            (normal + result).firstNotNullOfOrNull { TypeUsage.ordinaryDiagnostic(it) }?.let {
+                LogProcessor.error(it)
+                return@resolve null
+            }
             BoundSignature(values, types, normal, result)
         }
         val file = function.restoreDeclarationEnvironment()

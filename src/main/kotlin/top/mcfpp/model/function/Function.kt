@@ -540,15 +540,27 @@ open class Function : Member, FieldContainer, WithDocument {
         else MCFPPType.parseFromContextNotNull(context, scope, this)
     }
 
-    protected open fun parseParam(param: mcfppParser.ParameterContext) : Pair<FunctionParam,Var<*>>{
+    internal fun parseDeclaredReturnType(context: mcfppParser.TypeContext): MCFPPType {
+        val type = parseDeclaredType(context)
+        top.mcfpp.analysis.TypeUsage.ordinaryDiagnostic(type)?.let {
+            LogProcessor.error(it)
+            return MCFPPPrivateType.Void
+        }
+        return type
+    }
+
+    protected open fun parseParam(param: mcfppParser.ParameterContext, isReadOnly: Boolean = false) : Pair<FunctionParam,Var<*>>{
+        val declaredType = parseDeclaredType(param.type())
+        val diagnostic = if (isReadOnly) null else top.mcfpp.analysis.TypeUsage.ordinaryDiagnostic(declaredType)
+        diagnostic?.let(LogProcessor::error)
         //参数构建
         val param1 = FunctionParam(
-            parseDeclaredType(param.type()),
+            if (diagnostic == null) declaredType else MCFPPBaseType.Any,
             param.Identifier()?.text?: "p${paramCount()}",
             this,
             param.STATIC() != null,
             param.value() != null,
-            this is Generic<*>
+            isReadOnly
         )
         val v = param1.buildVar()
         //检查缺省参数是否合法
@@ -566,7 +578,11 @@ open class Function : Member, FieldContainer, WithDocument {
                 hasDefaultValue = true
                 //编译缺省值表达式，用于赋值参数
                 val literal = MCFPPExprVisitor().visit(param.value()!!)
-                param1.defaultVar = if (param1.type is UnresolvedType) literal else literal.implicitCast(param1.type)
+                val error = if (isReadOnly) null else top.mcfpp.analysis.TypeUsage.ordinaryDiagnostic(literal.type, top.mcfpp.analysis.ValueSnapshot.of(literal))
+                if (error != null) {
+                    LogProcessor.error(error)
+                    param1.defaultVar = top.mcfpp.core.lang.UnknownVar(param1.identifier).apply { isError = true }
+                } else param1.defaultVar = if (param1.type is UnresolvedType) literal else literal.implicitCast(param1.type)
             }
         }
         return param1 to v

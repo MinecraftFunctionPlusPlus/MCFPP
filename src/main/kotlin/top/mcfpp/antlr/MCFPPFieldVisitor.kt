@@ -1,5 +1,7 @@
 package top.mcfpp.antlr
 
+import top.mcfpp.analysis.TypeUsage
+
 import top.mcfpp.Project
 import top.mcfpp.Project.withCompilationContext
 import top.mcfpp.analysis.PrimitiveCompiler
@@ -77,7 +79,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
         ctx.functionDeclarationPart().functionParams()?.let { f.addParamsFromContext(it) }
         f.returnType = if(ctx.functionDeclarationPart().functionReturnType()?.type() != null){
-            f.parseDeclaredType(ctx.functionDeclarationPart().functionReturnType().type())
+            f.parseDeclaredReturnType(ctx.functionDeclarationPart().functionReturnType().type())
         }else{
             MCFPPPrivateType.Void
         }
@@ -141,7 +143,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             ctx.curlBlock()
         )
         f.returnType = if(ctx.functionDeclarationPart().functionReturnType()?.type() != null){
-            MCFPPType.parseFromContextNotNull(ctx.functionDeclarationPart().functionReturnType().type(), f.scope, f)
+            f.parseDeclaredReturnType(ctx.functionDeclarationPart().functionReturnType().type())
         }else{
             MCFPPPrivateType.Void
         }
@@ -196,7 +198,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         f.accessModifier = AccessModifier.PUBLIC
         f.addParamsFromContext(ctx.functionParams())
         f.returnType = if(ctx.functionReturnType()?.type() != null){
-            MCFPPType.parseFromContextNotNull(ctx.functionReturnType().type(), f.scope, f)
+            f.parseDeclaredReturnType(ctx.functionReturnType().type())
         }else{
             MCFPPPrivateType.Void
         }
@@ -219,7 +221,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     override fun visitNativeFuncDeclaration(ctx: mcfppParser.NativeFuncDeclarationContext): Any? = withCompilationContext(ctx) {
         val nf = NativeFunction(ctx.functionDeclarationPart().Identifier().text, Project.currNamespace)
         nf.returnType = if(ctx.functionDeclarationPart().functionReturnType()?.type() != null){
-            MCFPPType.parseFromContextNotNull(ctx.functionDeclarationPart().functionReturnType().type(), nf.scope, nf)
+            nf.parseDeclaredReturnType(ctx.functionDeclarationPart().functionReturnType().type())
         }else{
             MCFPPPrivateType.Void
         }
@@ -525,7 +527,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         f.isAbstract = ctx.ABSTRACT() != null
         f.addParamsFromContext(ctx.functionDeclarationPart().functionParams())
         f.returnType = if(ctx.functionDeclarationPart().functionReturnType()?.type() != null){
-            f.parseDeclaredType(ctx.functionDeclarationPart().functionReturnType().type())
+            f.parseDeclaredReturnType(ctx.functionDeclarationPart().functionReturnType().type())
         }else{
             MCFPPPrivateType.Void
         }
@@ -556,6 +558,10 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         var `var` = ctx.templateType()?.let {
             if (it.singleTemplateFieldType() != null) {
                 val type = MCFPPType.parseFromContextNotNull(it.singleTemplateFieldType().type(), typeScope)
+                TypeUsage.ordinaryDiagnostic(type)?.let { diagnostic ->
+                    LogProcessor.error(diagnostic)
+                    return null to null
+                }
                 if(!isInObject){
                     (if (type is MCFPPDataTemplateType) type.buildUnConcrete(ctx.Identifier().text)
                         else type.build(ctx.Identifier().text)).apply {
@@ -571,7 +577,12 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             } else {
                 val unionTypes = ArrayList<MCFPPType>()
                 for (type in it.unionTemplateFieldType().type()) {
-                    unionTypes.add(MCFPPType.parseFromContextNotNull(type, typeScope))
+                    val alternative = MCFPPType.parseFromContextNotNull(type, typeScope)
+                    TypeUsage.ordinaryDiagnostic(alternative)?.let { diagnostic ->
+                        LogProcessor.error(diagnostic)
+                        return null to null
+                    }
+                    unionTypes.add(alternative)
                 }
                 if(!isInObject){
                     UnionTypeVarConcrete(
@@ -674,7 +685,14 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
     }
 
-    internal fun completeTemplateField(template: DataTemplate, declaration: DataTemplate.DeferredFieldDeclaration, type: MCFPPType): Var<*> {
+    internal fun completeTemplateField(template: DataTemplate, declaration: DataTemplate.DeferredFieldDeclaration, type: MCFPPType): Var<*>? {
+        TypeUsage.ordinaryDiagnostic(type)?.let {
+            LogProcessor.error(it)
+            val name = declaration.context.Identifier().text
+            template.deferredFields.remove(name)
+            template.preInit.remove(name)
+            return null
+        }
         val previous = DataTemplate.currTemplate
         DataTemplate.currTemplate = template
         isInObject = template is ObjectCompoundData

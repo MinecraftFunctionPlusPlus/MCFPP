@@ -59,7 +59,7 @@ class GenericFunction : Function, Generic<Function> {
         val n = ctx.normalParams().parameterList()
         if(r == null && n == null) return
         for (param in r.parameter()){
-            val (p,v) = parseParam(param)
+            val (p,v) = parseParam(param, isReadOnly = true)
             readOnlyParams.add(p)
             if(v.hasAssigned && v !is MCFPPValue<*>){
                 LogProcessor.error("ReadOnly params must have a concrete value")

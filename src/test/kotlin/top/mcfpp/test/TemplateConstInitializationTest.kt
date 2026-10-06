@@ -133,12 +133,9 @@ class TemplateConstInitializationTest {
         }
     }
 
-    @Test fun compilerOnlyConstRetainsCompleteValuesWithoutMaterializingAndRequiredParametersStayStrict() {
+    @Test fun requiredConstFieldsKeepValuesAndRequiredParametersStayStrict() {
         fun source(reject: String) = """
             object data Defaults {
-                const typed as type = int;
-                const inferred = float;
-                const erased as object = int;
                 const required as int! = 3;
                 const mirrored = Defaults.required;
             }
@@ -149,13 +146,6 @@ class TemplateConstInitializationTest {
         for (reject in listOf("", "func reject(value as int){ var rejected = Box(value); }")) {
             val main = compile(source(reject), if (reject.isEmpty()) 0 else 1)
             val defaults = objectTemplate()
-            for (name in listOf("typed", "inferred", "erased")) {
-                val field = defaults.scope.getVar(name)!!
-                assertTrue(field.isConst)
-                assertNotNull(ValueSnapshot.of(field))
-                val path = defaults.nbtPath.memberIndex(name).toCommandPart().toString()
-                assertTrue(defaults.constructors.single().commands.analyzeAll().none { path in it })
-            }
             assertNotNull(ValueSnapshot.of(defaults.scope.getVar("required")))
             assertTrue(defaults.scope.getVar("required")!!.symbol!!.requiresConstant)
             assertFalse(defaults.scope.getVar("mirrored")!!.symbol!!.requiresConstant)

@@ -14,28 +14,6 @@ import kotlin.test.Test
 import kotlin.test.*
 
 class SpecializationPolicyTest {
-    @Test fun compilerTypePayloadsUseInternalSpecializationThroughObjectAndAny() {
-        MCFPPStringTest.readFromString("""
-            func abstractValue(value as object) {}
-            func flexibleValue(value as any) {}
-            func main(){
-                var payload as object = int;
-                var flexible as any = int;
-                abstractValue(payload);
-                abstractValue(payload);
-                abstractValue(float);
-                flexibleValue(flexible);
-                flexibleValue(float);
-            }
-        """.trimIndent(), version = "26.3")
-        assertEquals(0, Project.errorCount)
-        assertEquals(2, function("abstractValue").compiledFunctions.size)
-        assertEquals(2, function("flexibleValue").compiledFunctions.size)
-        assertTrue(function("abstractValue").compiledFunctions.values.all { it.normalParams.isEmpty() })
-        assertTrue(function("main").commands.analyzeAll().none { it.contains(".payload") })
-        assertNotNull(top.mcfpp.analysis.ValueSnapshot.of(function("main").scope.getVar("payload")))
-        assertNotNull(top.mcfpp.analysis.ValueSnapshot.of(function("main").scope.getVar("flexible")))
-    }
 
     @Test fun compilerTypePayloadsCannotBecomeDynamicErasedValues() {
         for (type in listOf("object", "any")) {
@@ -43,26 +21,6 @@ class SpecializationPolicyTest {
             assertTrue(Project.errorCount > 0, type)
             assertTrue(function("main").commands.analyzeAll().none { it.contains("minecraft:from_int") })
         }
-    }
-
-    @Test fun compilerOnlyContainerParametersUseCompletePayloadSpecialization() {
-        MCFPPStringTest.readFromString("""
-            func inspect<T as type>(value as T) -> type { return value["kind"]; }
-            func main(){
-                var first = inspect<any>({kind:int});
-                var second = inspect<any>({kind:int});
-                var third = inspect<any>({kind:float});
-            }
-        """.trimIndent(), version = "26.3")
-        assertEquals(0, Project.errorCount)
-        val generic = function("inspect") as GenericFunction
-        assertEquals(2, generic.compiledFunctions.size)
-        assertTrue(generic.compiledFunctions.values.all { it.normalParams.isEmpty() })
-        assertEquals(MCFPPBaseType.Int, assertIs<MCFPPTypeVar>(function("main").scope.getVar("first")).value)
-        assertEquals(MCFPPBaseType.Int, assertIs<MCFPPTypeVar>(function("main").scope.getVar("second")).value)
-        assertEquals(MCFPPBaseType.Float, assertIs<MCFPPTypeVar>(function("main").scope.getVar("third")).value)
-        assertTrue(function("main").commands.analyzeAll().none { "set value" in it || "set from" in it })
-        executeMain()
     }
 
     @Test fun missingReturnPathsAreRejectedWhileAContinuationReturnIsAccepted() {

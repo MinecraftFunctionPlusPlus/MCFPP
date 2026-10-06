@@ -46,8 +46,7 @@ class DictionaryMemberTest {
         MCFPPStringTest.readFromString("""
             func main(){
                 dynamic var values as dict<any> = {first:2};
-                var extra = {kind:int};
-                values.merge(extra);
+                values.merge({kind:int});
             }
         """.trimIndent(), version = "26.3")
         assertTrue(Project.errorCount > 0)
@@ -55,26 +54,6 @@ class DictionaryMemberTest {
         val values = main.scope.getVar("values")!!
         assertEquals(TypeKnowledge.Exact(MCFPPBaseType.Int.typeId), values.storageBinding!!.data.facts.read(values.storageBinding!!.place.field("first"))!!.type)
         assertFalse(main.commands.analyzeAll().any { "merge from" in it || "merge value" in it })
-    }
-
-    @Test fun mergeCopiesStaticFieldsAndUpdatesAllViews() {
-        val main = compile("""
-            func main(){
-                var source = {kind:int};
-                var view = source as dict<any>;
-                var extra = {other:float};
-                view.merge(extra);
-                extra["other"] = bool;
-                var preserved = source["other"] as type;
-                view.remove("kind");
-                var removed = source.containsKey("kind");
-            }
-        """)
-        assertEquals(MCFPPBaseType.Float, assertIs<MCFPPTypeVar>(main.scope.getVar("preserved")).value)
-        val value = assertIs<CompilerValue.Typed>(ValueSnapshot.of(main.scope.getVar("removed"))).payload
-        assertEquals(CompilerValue.Bool(false), value)
-        assertNotNull(ValueSnapshot.of(main.scope.getVar("source")))
-        assertFalse(main.commands.analyzeAll().any { "set value" in it || "set from" in it })
     }
 
     @Test fun removingAQuotedKeyPreservesUnrelatedElementKnowledge() {
@@ -117,24 +96,6 @@ class DictionaryMemberTest {
             assertTrue(Project.errorCount > 0, operation)
             assertTrue(Project.macroFunction.isEmpty(), operation)
         }
-    }
-
-    @Test fun nestedMergesKeepBothSidesFieldsAndDoNotShareIncomingContainers() {
-        val main = compile("""
-            func main(){
-                var source = {nested:{kept:int} as any};
-                var view = source as dict<any>;
-                var incoming = {nested:{added:float} as any};
-                view.merge(incoming);
-                incoming["nested"]["added"] = bool;
-                var kept = source["nested"]["kept"] as type;
-                var added = source["nested"]["added"] as type;
-            }
-        """)
-        assertEquals(MCFPPBaseType.Int, assertIs<MCFPPTypeVar>(main.scope.getVar("kept")).value)
-        assertEquals(MCFPPBaseType.Float, assertIs<MCFPPTypeVar>(main.scope.getVar("added")).value)
-        assertNotNull(ValueSnapshot.of(main.scope.getVar("source")))
-        assertFalse(main.commands.analyzeAll().any { "set value" in it || "set from" in it })
     }
 
     @Test fun dictionaryTypeFactoriesAndTemporariesKeepTheirGenericIdentity() {

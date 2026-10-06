@@ -191,15 +191,6 @@ class StorageViewTest {
             (main.scope.getVar("second") as MCAny).nbtPath.toCommandPart().toString())
     }
 
-    @Test fun compilerOnlyPayloadsUseStaticSpecializationAndNeverWriteNbt() {
-        val main = compile("""
-            func identity(value as object) -> type { return value as type; }
-            func main(){ var returned = identity(int); }
-        """)
-        assertIs<MCFPPTypeVar>(main.scope.getVar("returned"))
-        assertFalse(main.commands.analyzeAll().any { it.contains("set value") || it.contains("set from") })
-    }
-
     @Test fun erasedEncodingRetainsBooleanByteAndIntegerTagIdentity() {
         reset()
         val integer = MCAny("integer").assignedBy(MCIntConcrete(4))
