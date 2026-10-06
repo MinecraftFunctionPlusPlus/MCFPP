@@ -76,6 +76,28 @@ class StoredData(val root: Place, val path: NBTPath, private var initialize: (()
 
 /** Central boundary between Place/TypedView and the remaining Var-based backends. */
 object StorageAccess {
+    /** Freeze a readonly payload into an independent compiler-only declaration. */
+    internal fun freezeReadonly(value: Var<*>, name: String): Var<*>? {
+        val snapshot = ValueSnapshot.of(value) ?: return null
+        val types = HashMap(value.storageBinding?.data?.types.orEmpty())
+        types[value.type.typeId] = value.type
+        if (value is MCFPPTypeVar) types[value.value.typeId] = value.value
+        MCFPPType.registerSnapshotTypes(snapshot, types)
+        val frozen = restore(value.type, snapshot, name, types) ?: return null
+        if (frozen !is MCFPPValue<*>) return null
+        frozen.isConst = true
+        frozen.isStatic = true
+        frozen.hasAssigned = true
+        frozen.bindDeclaration()
+        val place = Place(frozen.symbol!!.id)
+        val data = StoredData(place, frozen.nbtPath.clone(), layout = StorageLayout.CompilerOnly)
+        data.types.putAll(types)
+        data.facts.initialize(place, ValueFacts(TypeKnowledge.Exact(frozen.type.typeId), ValueKnowledge.Constant(snapshot)))
+        seedParts(data, place, frozen)
+        frozen.storageBinding = StorageBinding(data, place, data.path)
+        return frozen
+    }
+
     private val erasedTypes get() = setOf(MCFPPBaseType.Any, MCFPPBaseType.Object)
 
     /** Runtime parameters arrive in the callee frame; no writer may capture an uninitialized prototype register. */

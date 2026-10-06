@@ -20,6 +20,7 @@ import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.GenericDataTemplate
 import top.mcfpp.model.compound.CompiledGenericDataTemplate
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.GenericFunction
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.test.util.MCFPPStringTest
 import top.mcfpp.test.util.ScoreCommandExecutor
@@ -1326,6 +1327,100 @@ class LibFieldAccessTest {
         val machine = execute(main, output)
         assertEquals(4, machine.read(main.scope.getVar("firstResult") as MCInt))
         assertEquals(9, machine.read(main.scope.getVar("secondResult") as MCInt))
+    }
+
+    @Test fun genericFunctionDependentTypesBindBeforeRuntimeArgumentsAcrossLibraryRoundTrip() = withLibrary { output ->
+        write("""
+            namespace fixture.fields;
+            data Box<T as type> {
+                private value as int;
+                constructor(v as int){ this.value=v; }
+                func read()->int { return this.value; }
+            }
+            func relay<T as type>(arg as Box<(T)>)->Box<(T)> { return arg; }
+            func main(){
+                var T=string;
+                dynamic var firstInput=4; dynamic var secondInput=9; dynamic var thirdInput=7;
+                var first=relay<int>(Box<int>(firstInput));
+                var second=relay<int>(Box<int>(secondInput));
+                var third=relay<bool>(Box<bool>(thirdInput));
+                dynamic var firstResult=first.read();
+                dynamic var secondResult=second.read();
+                dynamic var thirdResult=third.read();
+            }
+        """, output)
+
+        fun checkBindings(main: Function, prototype: GenericDataTemplate, relay: GenericFunction): Map<TypeId, Function> {
+            val first = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("first")).templateType)
+            val second = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("second")).templateType)
+            val third = assertIs<CompiledGenericDataTemplate>(assertIs<DataTemplateObject>(main.scope.getVar("third")).templateType)
+            assertSame(first, second)
+            assertNotSame(first, third)
+            assertNotEquals(first.getType().typeId, third.getType().typeId)
+            assertSame(prototype, first.originTemplate)
+            assertSame(prototype, third.originTemplate)
+            assertEquals(2, relay.compiledFunctions.size)
+            val wrappers = relay.compiledFunctions.values.associateBy {
+                assertIs<MCFPPTypeVar>(it.scope.getVar("T")).value.typeId
+            }
+            assertEquals(setOf(MCFPPBaseType.Int.typeId, MCFPPBaseType.Bool.typeId), wrappers.keys)
+            for ((type, template) in listOf(MCFPPBaseType.Int to first, MCFPPBaseType.Bool to third)) {
+                val wrapper = wrappers.getValue(type.typeId)
+                assertSame(template, assertIs<MCFPPDataTemplateType>(wrapper.normalParams.single().type).template)
+                assertSame(template, assertIs<MCFPPDataTemplateType>(wrapper.returnType).template)
+                assertSame(type, assertIs<MCFPPTypeVar>(wrapper.scope.getVar("T")).value)
+                assertSame(type, wrapper.scope.getType("T"))
+                assertNotNull(ValueSnapshot.of(wrapper.scope.getVar("T")!!))
+                assertSame(type, assertIs<MCFPPTypeVar>(template.scope.getVar("T")).value)
+            }
+            return wrappers
+        }
+
+        val sourceScope = GlobalScope.localNamespaces.getValue("fixture.fields").scope
+        val sourcePrototype = assertIs<GenericDataTemplate>(sourceScope.getTemplate("Box"))
+        val sourceRelay = assertIs<GenericFunction>(sourceScope.functions.getValue("relay").single())
+        val sourceMain = sourceScope.functions.getValue("main").single()
+        val sourceWrappers = checkBindings(sourceMain, sourcePrototype, sourceRelay)
+        val sourceTemplates = sourceWrappers.mapValues { assertIs<MCFPPDataTemplateType>(it.value.returnType).template }
+        val sourceSnapshots = sourceWrappers.mapValues { assertNotNull(ValueSnapshot.of(it.value.scope.getVar("T")!!)) }
+        val sourceKeys = sourceRelay.compiledFunctions.map { (key, wrapper) ->
+            assertIs<MCFPPTypeVar>(wrapper.scope.getVar("T")).value.typeId to key.arguments
+        }.toMap()
+
+        val main = consume("""
+            import fixture.fields:*;
+            func main(){
+                var T=string;
+                dynamic var thirdInput=7; dynamic var secondInput=9; dynamic var firstInput=4;
+                var third=relay<bool>(Box<bool>(thirdInput));
+                var second=relay<int>(Box<int>(secondInput));
+                var first=relay<int>(Box<int>(firstInput));
+                dynamic var firstResult=first.read();
+                dynamic var secondResult=second.read();
+                dynamic var thirdResult=third.read();
+            }
+        """, output)
+        assertEquals(0, Project.errorCount)
+        val restoredScope = GlobalScope.libNamespaces.getValue("fixture.fields").scope
+        val prototype = assertIs<GenericDataTemplate>(restoredScope.getTemplate("Box"))
+        val relay = assertIs<GenericFunction>(restoredScope.functions.getValue("relay").single())
+        assertNotSame(sourcePrototype, prototype)
+        assertNotSame(sourceRelay, relay)
+        val wrappers = checkBindings(main, prototype, relay)
+        for ((typeId, wrapper) in wrappers) {
+            assertNotSame(sourceWrappers.getValue(typeId), wrapper)
+            val template = assertIs<MCFPPDataTemplateType>(wrapper.returnType).template
+            assertNotSame(sourceTemplates.getValue(typeId), template)
+            assertEquals(sourceTemplates.getValue(typeId).getType().typeId, template.getType().typeId)
+            assertEquals(sourceSnapshots.getValue(typeId), ValueSnapshot.of(wrapper.scope.getVar("T")!!))
+        }
+        assertEquals(sourceKeys, relay.compiledFunctions.map { (key, wrapper) ->
+            assertIs<MCFPPTypeVar>(wrapper.scope.getVar("T")).value.typeId to key.arguments
+        }.toMap())
+        val machine = execute(main, output)
+        assertEquals(4, machine.read(main.scope.getVar("firstResult") as MCInt))
+        assertEquals(9, machine.read(main.scope.getVar("secondResult") as MCInt))
+        assertEquals(7, machine.read(main.scope.getVar("thirdResult") as MCInt))
     }
 
     private fun write(source: String, output: Path) {

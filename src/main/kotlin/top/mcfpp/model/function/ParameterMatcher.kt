@@ -12,8 +12,18 @@ import top.mcfpp.util.LogProcessor
 object ParameterMatcher {
     fun sameSignature(a: Function, b: Function): Boolean {
         fun readonly(f: Function) = (f as? Generic<*>)?.readOnlyParams ?: (f as? NativeFunction)?.readOnlyParams ?: emptyList()
-        return a.identifier == b.identifier && a.normalParams.map { it.type.typeId } == b.normalParams.map { it.type.typeId }
-            && readonly(a).map { it.type.typeId } == readonly(b).map { it.type.typeId }
+        fun signature(f: Function): List<Any> {
+            val names = readonly(f).mapIndexed { index, param -> param.identifier to "#readonly$index" }.toMap()
+            fun identity(type: MCFPPType): Any {
+                if (type !is UnresolvedType) return type.typeId
+                val lexer = top.mcfpp.antlr.mcfppLexer(org.antlr.v4.runtime.CharStreams.fromString(type.originalTypeString))
+                return lexer.allTokens.joinToString("") { token ->
+                    if (token.type == top.mcfpp.antlr.mcfppLexer.Identifier) names[token.text] ?: token.text else token.text
+                }
+            }
+            return (readonly(f) + f.normalParams).map { identity(it.type) }
+        }
+        return a.identifier == b.identifier && readonly(a).size == readonly(b).size && signature(a) == signature(b)
     }
 
     fun argumentType(value: Var<*>): MCFPPType = when {
@@ -46,8 +56,16 @@ object ParameterMatcher {
         fun target(param: FunctionParam): MCFPPType {
             return SpecializationPolicy.bind(param.type, bindings)
         }
-        val targets = rp.take(readonly.size).map(::target) + function.normalParams.take(normal.size).map(::target)
         if (readonly.any { !top.mcfpp.analysis.SpecializationKeys.isConstant(it) }) return null
+        if (rp.zip(readonly).any { (param, value) ->
+                val type = target(param)
+                type !is UnresolvedType && !accepts(value, type)
+            }) return null
+        val signature = if (function is GenericFunction)
+            SpecializationPolicy.resolveBoundSignature(function, rp, readonly) ?: return null else null
+        val targets = if (signature != null)
+            signature.readonlyTypes.take(readonly.size) + signature.normalTypes.take(normal.size)
+        else rp.take(readonly.size).map(::target) + function.normalParams.take(normal.size).map(::target)
         val ranks = (readonly + normal).zip(targets).map { (arg, type) ->
             if (!accepts(arg, type)) return null
             conversion(argumentType(arg), type)!!.rank

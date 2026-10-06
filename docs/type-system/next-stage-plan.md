@@ -1,6 +1,6 @@
-# 下一阶段：generic函数readonly依赖签名（阶段 79）
+# 下一阶段：generic object限定纵向路径（阶段 80）
 
-阶段78 alias有根匿名冻结身份已限定验证；阶段79尚未实现或测试，整个17项重构仍未完成。
+阶段79 generic用户函数自身readonly依赖签名已限定验证，最终必要联合5全绿；阶段80尚未实现或测试，整个17项重构仍未完成。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 
@@ -136,9 +136,13 @@ lazy Type.data及新增NoExternalWrites Type MNI operator '|'复用既有Native 
 
 匿名创建入口在真实owner中转存annotation；缓存alias API不触发解析。Declaration完整ID匹配、tryResolve后按template===确认唯一canonical；匿名data-N与合法named data_N隔离。X@DataOnly/透明Y、前置Box<X>、source/fresh T/scope/ID/snapshot及磁盘4/9/frame0通过。四个不同用例跨轮各自通过，最终仅new1复查；MCFL17/bin289989不变，无stdlib/fullcheck/server。不实例化X，不验匿名method/ctor、重新parse稳定ID、全部跨库碰撞、无根匿名或Opaque；详细失败轮次见verification.md。
 
-### 阶段 79：generic函数自身readonly依赖签名（待RED界定）
+### 阶段 79：generic函数自身readonly依赖签名（已限定验证）
 
-先单fixture验证函数自身readonly绑定后Box<T>普通形参及返回在source/library/fresh中的canonical与真实调用，不能以外层已绑定generic模板scope代替本路径。优先复用现有UnresolvedType文字placeholder和共享boundSignature，不预设新增header字段或框架；待RED界定首个真实缺口再定实现，schema按实际持久化改变核对。尚未实现/测试；无根匿名、Opaque、generic object/interface、Union/runtime布局、imported object自动load及其余完整迁移边界保留。
+existing UnresolvedType保留自身readonly Identifier依赖，shared bound signature连接候选匹配和特化；freezeReadonly提供独立CompilerOnly完整快照绑定。relay<T>(Box<(T)>)->Box<(T)> source/fresh签名、恰好2个wrapper及consumer磁盘4/9/7/frame0通过，caller影子不污染；最终必要联合5全绿。MCFL17/bin289989不变，无stdlib/fullcheck/server。仅GenericFunction延期识别/static T/runtime int字段，default literal延期cast实现未有新增断言；native/extension新入口、任意typedef/重载等价、用户constexpr、local空prototype导出等边界保留。
+
+### 阶段 80：generic object（先单fixture RED）
+
+限定合法源码 object data Settings<N as int>{func read()->int{return N;}} 与 (Settings<4>).read()/9 的source/library/fresh路径，先真实RED界定TypeVisitor prototype cast及generic kind/type解析的首个缺口。优先既有GenericInfo.isObject与声明/恢复入口，不预设新wire/version；按实际实现核对schema。尚未实现/测试，不顺带扩interface、autoload、字段或运行时对象初始化语义；其余完整迁移边界仍保留。
 
 ### 旧浮点乘除（阶段 50 已实现）
 
@@ -150,7 +154,7 @@ lazy Type.data及新增NoExternalWrites Type MNI operator '|'复用既有Native 
 
 阶段 51 已将旧浮点算术/比较、Promote/Convert 接入 IR：四分量值使用独立 NBT 帧，`LegacyFloatCommands` 负责读写和调用，保留旧四记分板 return ABI。普通/递归/static、旧与 IR 双向调用、早先参数、多实参、常量与连续返回均经真实库命令执行；最终 20 项必要复查通过，0 failures/errors/skips。Native 路径不变；旧浮点算术/比较及跨数值折叠禁止宿主 Float 计算，`16777217` 保持八位十进制精度；identity/toNBT 保留来源 codec。包含 FloatBits 端点的旧浮点范围，其静态顺序不使用宿主比较，整数/native 行为不变；浮点迭代语义未定义，不新增迭代行为。
 
-已知 int/bool/byte/short as legacyfloat 仍沿旧入口并在实际访问时诊断；未用视图不报错，unknown any 视图不做运行时 typecheck，命名 float 视图的来源随后被写成已知标量，再读取视图会诊断。阶段56/57完成有序初始化 RHS 持久化与 const 初始化语义，MCFL 12；验证记录见上。阶段58已为部分语法接入普通模板推断字段声明绑定，其他语法仍沿旧路径；阶段59导入声明环境已实现；阶段60消费端库函数主体导出已在限定路径验证；阶段61已恢复受支持模板方法owner，阶段62已修复模块资源复制；当时待办的阶段63函数权限已完成；当前下一步为阶段79 generic函数自身readonly依赖签名。imported object自动load仍未解决。未知端点范围和浮点/混合迭代的步长及不前进策略仍未定义，保留现有诊断。整个17项迁移仍未完成，模板/泛型/T!、其余控制流/集合及 MNI 尚待统一。
+已知 int/bool/byte/short as legacyfloat 仍沿旧入口并在实际访问时诊断；未用视图不报错，unknown any 视图不做运行时 typecheck，命名 float 视图的来源随后被写成已知标量，再读取视图会诊断。阶段56/57完成有序初始化 RHS 持久化与 const 初始化语义，MCFL 12；验证记录见上。阶段58已为部分语法接入普通模板推断字段声明绑定，其他语法仍沿旧路径；阶段59导入声明环境已实现；阶段60消费端库函数主体导出已在限定路径验证；阶段61已恢复受支持模板方法owner，阶段62已修复模块资源复制；当时待办的阶段63函数权限已完成；当前下一步为阶段80 generic object限定纵向路径，先单fixture RED。imported object自动load仍未解决。未知端点范围和浮点/混合迭代的步长及不前进策略仍未定义，保留现有诊断。整个17项迁移仍未完成，模板/泛型/T!、其余控制流/集合及 MNI 尚待统一。
 
 - 26.3 原生 float 的字面量、算术/比较、循环、递归调用、static 写回、擦除与共享视图、集合元素和范围载荷进入 IR；int→float 提升作为 Promote，用于声明、赋值、返回、普通/成员实参和上下文集合字面量。运算与旧入口共享提供器表达式，值保存在 NBT 帧，负零取负保留符号；常量非有限值、反向已知范围和有损 static 写回明确诊断。旧浮点后端现已进入 IR；其余来源转换和完整 MNI 接口仍待迁入；浮点/混合迭代语义未定义并保留现有诊断，不扩展步长或不前进规则。
 

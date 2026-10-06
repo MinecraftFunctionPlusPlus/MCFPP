@@ -9,6 +9,8 @@ import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.MCFPPGenericParamType
 import top.mcfpp.type.MCFPPTypeWithGeneric
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.model.scope.FunctionScope
+import top.mcfpp.type.UnresolvedType
 
 /** Ordinary runtime constants never cause a new function body. */
 object SpecializationPolicy {
@@ -36,13 +38,57 @@ object SpecializationPolicy {
         else -> type
     }
 
+    data class BoundSignature(val readonlyValues: List<Var<*>>, val readonlyTypes: List<MCFPPType>,
+                              val normalTypes: List<MCFPPType>, val returnType: MCFPPType)
+
+    fun resolveBoundSignature(function: Function, readonly: List<FunctionParam>, supplied: List<Var<*>>): BoundSignature? {
+        if (supplied.size > readonly.size || readonly.drop(supplied.size).any { !it.hasDefault }) return null
+        val resolve = resolve@ {
+            val scope = FunctionScope(function.scope)
+            val bindings = LinkedHashMap<String, MCFPPType>()
+            fun resolveType(type: MCFPPType): MCFPPType? = if (type is UnresolvedType) {
+                MCFPPType.parseFromString(type.originalTypeString, scope, function).also {
+                    if (it == null) LogProcessor.error("Invalid bound type: ${type.originalTypeString}")
+                }
+            } else bind(type, bindings)
+            val values = ArrayList<Var<*>>()
+            val types = ArrayList<MCFPPType>()
+            for ((index, param) in readonly.withIndex()) {
+                val value = supplied.getOrNull(index) ?: param.defaultVar ?: return@resolve null
+                val type = resolveType(param.type) ?: return@resolve null
+                if (!ParameterMatcher.accepts(value, type) || !SpecializationKeys.isConstant(value)) return@resolve null
+                val cast = value.implicitCast(type)
+                if (cast.isError) return@resolve null
+                val frozen = StorageAccess.freezeReadonly(cast, param.identifier) ?: run {
+                    LogProcessor.error("Readonly argument layout is not supported for '${param.identifier}'")
+                    return@resolve null
+                }
+                scope.putVar(param.identifier, frozen)
+                if (frozen is MCFPPTypeVar) {
+                    bindings[param.identifier] = frozen.value
+                    scope.putType(param.identifier, frozen.value)
+                }
+                values.add(frozen)
+                types.add(type)
+            }
+            val normal = function.normalParams.map { resolveType(it.type) ?: return@resolve null }
+            val result = resolveType(function.returnType) ?: return@resolve null
+            BoundSignature(values, types, normal, result)
+        }
+        val file = function.restoreDeclarationEnvironment()
+        return if (file == null) resolve() else file.withDeclarationContext(resolve)
+    }
+
     fun compileGeneric(function: Function, readonly: List<FunctionParam>, args: LinkedHashMap<String, Var<*>>): Pair<Function, LinkedHashMap<String, Var<*>>> {
-        val readonlyArgs = readonly.map { args.getValue(it.identifier) }
-        val normalArgs = function.normalParams.map { args.getValue(it.identifier) }
-        val bindings = readonly.zip(readonlyArgs).mapNotNull { (param, value) ->
-            (value as? MCFPPTypeVar)?.let { param.identifier to it.value }
-        }.toMap()
-        val types = function.normalParams.map { bind(it.type, bindings) }
+        val signature = resolveBoundSignature(function, readonly, readonly.map { args.getValue(it.identifier) })
+            ?: return UnknownFunction(function.identifier) to args
+        val readonlyArgs = signature.readonlyValues
+        val types = signature.normalTypes
+        val normalArgs = function.normalParams.mapIndexed { i, param ->
+            val value = args.getValue(param.identifier)
+            if (param.type is UnresolvedType && value === param.defaultVar) value.implicitCast(types[i]) else value
+        }
+        if (normalArgs.any { it.isError }) return UnknownFunction(function.identifier) to args
         val normalSpecialized = types.zip(normalArgs).map { (type, value) -> requiresParameter(type, value) }
         val allArgs = readonlyArgs + normalArgs
         val specialized = List(readonlyArgs.size) { true } + normalSpecialized
@@ -55,9 +101,11 @@ object SpecializationPolicy {
         val cacheKey = key(function, allArgs, specialized)
         function.compiledFunctions[cacheKey]?.let { return it to runtimeArgs }
         val compiled = Function(function)
-        for ((name, type) in bindings) compiled.scope.putType(name, type, true)
-        for ((param, value) in readonly.zip(readonlyArgs))
-            compiled.scope.putVar(param.identifier, compiled.scope.getVar(param.identifier)!!.assignedBy(value), true)
+        for ((param, value) in readonly.zip(readonlyArgs)) {
+            compiled.scope.removeVar(param.identifier)
+            compiled.scope.putVar(param.identifier, value, true)
+            if (value is MCFPPTypeVar) compiled.scope.putType(param.identifier, value.value, true)
+        }
         val runtimeParams = ArrayList<FunctionParam>()
         for (i in function.normalParams.indices) {
             val original = function.normalParams[i]
@@ -68,7 +116,7 @@ object SpecializationPolicy {
             if (!normalSpecialized[i]) runtimeParams.add(param)
         }
         compiled.normalParams = runtimeParams
-        compiled.returnType = bind(function.returnType, bindings)
+        compiled.returnType = signature.returnType
         compiled.returnVar = compiled.buildReturnVar(compiled.returnType)
         compiled.commands.clear()
         compiled.identifier = function.identifier + "_" + function.compiledFunctions.size

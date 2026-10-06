@@ -76,7 +76,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         }
         ctx.functionDeclarationPart().functionParams()?.let { f.addParamsFromContext(it) }
         f.returnType = if(ctx.functionDeclarationPart().functionReturnType()?.type() != null){
-            MCFPPType.parseFromContextNotNull(ctx.functionDeclarationPart().functionReturnType().type(), f.scope, f)
+            f.parseDeclaredType(ctx.functionDeclarationPart().functionReturnType().type())
         }else{
             MCFPPPrivateType.Void
         }
@@ -522,8 +522,9 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                 ctx.curlBlock()
             )
         }
+        f.addParamsFromContext(ctx.functionDeclarationPart().functionParams())
         f.returnType = if(ctx.functionDeclarationPart().functionReturnType()?.type() != null){
-            MCFPPType.parseFromContextNotNull(ctx.functionDeclarationPart().functionReturnType().type(), f.scope, f)
+            f.parseDeclaredType(ctx.functionDeclarationPart().functionReturnType().type())
         }else{
             MCFPPPrivateType.Void
         }
@@ -531,7 +532,6 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             f.isOverride = true
         }
         //解析参数
-        f.addParamsFromContext(ctx.functionDeclarationPart().functionParams())
         //检测重复定义
         if (DataTemplate.currTemplate!!.scope.hasFunction(f, !f.isOverride)) {
             LogProcessor.error("Already defined function:" + ctx.functionDeclarationPart().Identifier().text + "in template " + DataTemplate.currTemplate!!.identifier)

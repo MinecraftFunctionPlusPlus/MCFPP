@@ -1,8 +1,18 @@
 # 当前阶段验证记录
 
-最新验证日期：2026-10-06（Asia/Shanghai）。阶段78 alias有根匿名冻结身份限定通过，source/fresh模型与consumer磁盘4/9/frame0到达；四个不同用例跨轮各自通过，最终仅新1复查。MCFL17/bin289989/wire/schema不变，无stdlib/fullcheck/server。阶段79 generic函数自身readonly依赖签名尚未实现或测试；最近完整346项仍为72dc557，whole17未完成。
+最新验证日期：2026-10-06（Asia/Shanghai）。阶段79 generic用户函数自身readonly依赖Box<(T)>签名限定通过，最终必要联合5全绿，source/fresh模型及consumer磁盘4/9/7/frame0到达。MCFL17/bin289989/wire/schema未变，无stdlib/fullcheck/server。下一80 generic object限定路径待单fixture RED，尚未实现或测试；最近完整346项仍为72dc557，whole17未完成。
 
-## 最新必要检查：匿名alias冻结类型身份（阶段 78）
+## 最新必要检查：泛型函数readonly依赖签名（阶段 79）
+
+七prod：Function.parseDeclaredType仅在generic用户函数自身readonly Identifier terminal出现在type AST时保存现有UnresolvedType文字；member先参数后返回，param/return统一Unknown adapter保留类型。SpecializationPolicy.resolveBoundSignature在声明环境中以独立FunctionScope顺序绑定完整readonly值，ParameterMatcher和compileGeneric共享真实normal/return类型；只Unresolved签名按Identifier token/readonly位置归一，已知类型仍FullID。StorageAccess.freezeReadonly接受已cast输入，登记完整snapshot/types、fresh Symbol及CompilerOnly root/parts；GenericDataTemplate等价复用。compiled移除本地readonly占位后安装fresh绑定，ordinary运行时实参保持Unknown key；不执行用户body或type运行时反射。延期识别仅GenericFunction，共享compileGeneric不代表新增generic extension/native入口已验证。
+
+95行fixture（import+94行method）genericFunctionDependentTypesBindBeforeRuntimeArgumentsAcrossLibraryRoundTrip验证relay<T>(Box<(T)>)->Box<(T)>：source dynamic int4→int9→bool7，fresh bool7→int9→int4，caller影子T=string不污染绑定。相同int/runtime4/9共用一个wrapper、bool独立，恰好2；normal/return canonical Box及origin、scopeT实际Builtin/Meta/type绑定、source/fresh原型/函数/wrapper/template独立、FullID/snapshot/cache.arguments稳定（不比跨fresh declarationSymbolId），consumer真实磁盘4/9/7/frame0通过。仅static T/runtime int字段，不验bool运行时行为、后续复制修改、defaults全集、任意typedef表达式或重载等价、GenericObject/Interface、用户constexpr。dependent default literal已延期到实际bound type cast并在isError时早退，但无新增默认值断言。local writer仍可输出空generic prototype；本fixture验证imported bodyCompiled消费端主体导出，不声称所有writer只导wrapper。
+
+日志前缀mcfpp-generic-function-dependent-types，目录F:/DevCache/.codex/runtime。-red.log worker153正常FAILED8s，fresh XML2026-10-06T09:30:39.558Z 1fail/0error/skip，producer14/0首header T不完整→Symbol T/Invalid Box及return/read级联；genIndex仍尝试lib/debug写出，write.errorCount断言终止，未到source模型/fresh/disk。-final.log compileKotlin FAILED15s，无worker/无fresh XML：MCFPPValue仅interface不继承Var，freezeReadonly错误返回接口导致类型/属性编译失败；只修helper返回Var并检查interface，未改断言。
+
+-final2.log worker154正常exit0/SUCCESS35s，最终必要联合5全部通过；LibField2 fresh XML2026-10-06T09:46:39.847Z，两producer0/0、consumer0/9119；SpecializationPolicy3 XML09:46:45.392Z，三项0/0。新79、旧裸T绑定/普通实参缓存/CompilerOnly容器及78匿名alias@DataOnly实际磁盘均绿，不是跨轮合计或fullcheck。七prod+fixture+四docs预计12文件；未增加Info/class fields/wire/schema，MCFL17/bin289989不变，无stdlib/fullcheck/server。78已提交fa29ec67549817392b86c62f435d3ee459ec7201（11文件160+/25-）；79提交记录见Git历史。下一80先单fixture RED界定generic object Settings<N as int>及(Settings<4>).read()/9的source/library/fresh；已知TypeVisitor prototype cast、kind/type解析缺口待实证，先不扩interface/autoload/字段，wire/version按实际实现核对。whole17未完成。
+
+## 历史必要检查：匿名alias冻结类型身份（阶段 78）
 
 六个prod入口：两个visitor在真实anonymous model创建时转存field annotation，并停止全局annotation pass错误进入匿名body；TypeAlias.cachedTarget和SimpleLibScope.cachedAliasTargets仅读取已缓存目标，不触发解析。template Declaration恢复按完整ID匹配named与alias目标，tryResolve后要求template===唯一，否则诊断/null，不用语义equals去重。TempPool匿名名改data-N，用户Identifier不能包含'-'，既有NamespaceID保留；无global registry、新TypeId variant或wire字段。
 

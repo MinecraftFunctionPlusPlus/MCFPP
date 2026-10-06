@@ -8,13 +8,6 @@ import top.mcfpp.analysis.SymbolId
 import top.mcfpp.analysis.ValueSnapshot
 import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.analysis.SpecializationArgument
-import top.mcfpp.analysis.Place
-import top.mcfpp.analysis.StoredData
-import top.mcfpp.analysis.StorageBinding
-import top.mcfpp.analysis.StorageLayout
-import top.mcfpp.analysis.TypeKnowledge
-import top.mcfpp.analysis.ValueKnowledge
-import top.mcfpp.analysis.ValueFacts
 import top.mcfpp.antlr.MCFPPGenericDataTemplateFieldVisitor
 import top.mcfpp.antlr.MCFPPFieldVisitor
 import top.mcfpp.antlr.mcfppParser
@@ -119,25 +112,11 @@ open class GenericDataTemplate : DataTemplate {
                 LogProcessor.error("Readonly template argument '${param.identifier}' requires a complete compile-time value")
                 return null
             }
-            val types = HashMap(cast.storageBinding?.data?.types.orEmpty())
-            types[cast.type.typeId] = cast.type
-            if (cast is MCFPPTypeVar) types[cast.value.typeId] = cast.value
-            MCFPPType.registerSnapshotTypes(snapshot, types)
-            val value = StorageAccess.restore(cast.type, snapshot, param.identifier, types)
-            if (value !is MCFPPValue<*>) {
+            val value = StorageAccess.freezeReadonly(cast, param.identifier)
+            if (value == null) {
                 LogProcessor.error("Readonly template argument layout is not supported for '${param.identifier}'")
                 return null
             }
-            value.isConst = true
-            value.hasAssigned = true
-            value.isStatic = true
-            value.bindDeclaration()
-            val place = Place(value.symbol!!.id)
-            val data = StoredData(place, value.nbtPath.clone(), layout = StorageLayout.CompilerOnly)
-            data.types.putAll(types)
-            data.facts.initialize(place, ValueFacts(TypeKnowledge.Exact(value.type.typeId), ValueKnowledge.Constant(snapshot)))
-            StorageAccess.seedParts(data, place, value)
-            value.storageBinding = StorageBinding(data, place, data.path)
             args.add(value)
         }
         return args

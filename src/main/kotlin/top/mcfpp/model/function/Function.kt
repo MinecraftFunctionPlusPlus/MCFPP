@@ -133,11 +133,7 @@ open class Function : Member, FieldContainer, WithDocument {
     var returnType : MCFPPType = MCFPPPrivateType.Void
         set(value) {
             field = value
-            if(field is UnresolvedType){
-                returnVar = UnknownVar("return")
-            }else{
-                returnVar = buildReturnVar(field)
-            }
+            returnVar = buildReturnVar(field)
         }
 
     /**
@@ -534,10 +530,20 @@ open class Function : Member, FieldContainer, WithDocument {
         return normalParams.size
     }
 
+    internal fun parseDeclaredType(context: mcfppParser.TypeContext): MCFPPType {
+        val names = (this as? GenericFunction)?.readOnlyParams?.map { it.identifier }?.toSet().orEmpty()
+        fun dependsOnReadonly(tree: org.antlr.v4.runtime.tree.ParseTree): Boolean =
+            if (tree is org.antlr.v4.runtime.tree.TerminalNode)
+                tree.symbol.type == top.mcfpp.antlr.mcfppLexer.Identifier && tree.text in names
+            else (0 until tree.childCount).any { dependsOnReadonly(tree.getChild(it)) }
+        return if (dependsOnReadonly(context)) UnresolvedType(context.text)
+        else MCFPPType.parseFromContextNotNull(context, scope, this)
+    }
+
     protected open fun parseParam(param: mcfppParser.ParameterContext) : Pair<FunctionParam,Var<*>>{
         //参数构建
         val param1 = FunctionParam(
-            MCFPPType.parseFromContextNotNull(param.type(), this.scope, this),
+            parseDeclaredType(param.type()),
             param.Identifier()?.text?: "p${paramCount()}",
             this,
             param.STATIC() != null,
@@ -559,7 +565,8 @@ open class Function : Member, FieldContainer, WithDocument {
             if(param.value() != null){
                 hasDefaultValue = true
                 //编译缺省值表达式，用于赋值参数
-                param1.defaultVar = MCFPPExprVisitor().visit(param.value()!!).implicitCast(param1.type)
+                val literal = MCFPPExprVisitor().visit(param.value()!!)
+                param1.defaultVar = if (param1.type is UnresolvedType) literal else literal.implicitCast(param1.type)
             }
         }
         return param1 to v
@@ -571,7 +578,7 @@ open class Function : Member, FieldContainer, WithDocument {
      * @param returnType
      */
     fun buildReturnVar(returnType: MCFPPType): Var<*>{
-        if (returnType is top.mcfpp.type.MCFPPGenericParamType)
+        if (returnType is UnresolvedType || returnType is top.mcfpp.type.MCFPPGenericParamType)
             return top.mcfpp.core.lang.UnknownVar("return").apply { type = returnType }
         val result = if(returnType is MCFPPPrivateType){
             returnType.buildReturnVar()
