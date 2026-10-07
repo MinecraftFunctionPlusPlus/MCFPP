@@ -4,7 +4,7 @@
 
 ## 当前进度
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段112 Team receiver结果入口已完成限定验证，MCFL41；阶段111 Datapack/Debug结果入口已完成限定验证，MCFL40；阶段110提交`17313ad`，阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段113 Op/Recipe玩家命令入口已完成限定验证，MCFL42；阶段112 Team receiver结果入口已完成限定验证，MCFL41；阶段111 Datapack/Debug结果入口已完成限定验证，MCFL40；阶段110提交`17313ad`，阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
 
 ### 阶段 111：迁移 Datapack 与 Debug 结果接口（已限定验证）
 
@@ -12,7 +12,15 @@ Datapack九个和Debug.start/stop两个命令入口接入单context；Debug.func
 
 首轮stdlib exit0/11s、Project0/0；joint3 worker13正常但1失败，XML `2026-10-07T00:50:12.136Z` tests2/fail1，source检查通过但fresh canonical检查失败；Cache XML `00:50:11.575Z`已通过。修复后stdlib2 exit0/9s、Project0/0；final2仅两个LibFieldAccess fixture，worker14正常、exit0/27s，XML `00:56:50.658Z` tests2/fail0。source/fresh Project 0/9118、0/9119各两次。consumer实际有三个direct命令及enable动态macro准备/调用、root `{}`与双store；无world/executor/frame0。三份MCFL40资源293272 bytes、SHA256 `04023951C6DA76A2DB1C3D0BAB6528A8387D0D8CD5BC92A949B695E390ABAC9A`。Cache只首轮通过。
 
-下一阶段113限定Op/Recipe六个玩家命令入口。root已确定普通entity参数、单context及qualified CommandResult，捕获前检查真实SelectorVar的玩家限定；裸@s和反向player筛选不构成玩家证明。Recipe读取真实DTO.id，并修复Op.deop旧body错误输出op。计划MCFL42及单个source/fresh fixture、必要Cache回归；尚未编码或验证。
+下一阶段114限定Worldborder七个命令结果入口，按现有默认注解、参数和命令词序迁入；fixture检查一个direct命令及六个macro的参数准备、独立root与双store。复用FloatProviders，不扩浮点实现；计划MCFL43及stdlib/Cache，尚未编码或验证。
+
+### 阶段 113：Op/Recipe玩家命令结果（已限定验证）
+
+Op.op/deop、Recipe.give/take/giveAll/takeAll六个player-target入口接入单context qualified `CommandResult`，entity是普通参数。capture前通过SelectorVar的onlyIncludingPlayers证明玩家限定，保留clone与筛选查询；裸@s及反向player筛选被拒。Recipe从DTO真实id读取值；修正Op.deop使其生成deop。source/fresh fixture含正向、static EntityType、克隆及反向query，以及四个负向调用预期拒绝和不发命令检查。
+
+stdlib exit0/10s、Project0/0；联合2 exit1/21s、worker17正常。LibFieldAccess XML `2026-10-07T01:36:37.507Z` 为1/1/0/0，失败于source check调用`EntitySelector('e').type("minecraft:player", false)`导致 `EntitySelector.type` 内部NPE，尚未进入fresh consumer；CacheFormat XML `01:36:36.770Z` 为1/0/0/0。修复内部EntityType工厂改为查询已加载canonical namespace后，只复查该fixture：exit0/18s，worker18正常，XML `2026-10-07T01:39:33.364Z` 为1/0/0/0。source/fresh Project 0/9118、0/9119；负向8条预期诊断（4个selector guard及4个native result未发布）与无命令断言通过。stdlib/Cache未重复运行。MCFL42三份bin为293933 bytes、header `4c46434d2a000000`、SHA256 `1E700715D1CFB0F20C83B6B07954E39AB68B1FE42B4C9F105CB5028651B8C956`。验证导出命令，不涉及world执行或frame0。
+
+阶段87普通值位置 `type` 规则继续生效，whole17保持ACTIVE未完成。
 
 ### 阶段 112：Team receiver命令结果（已限定验证）
 

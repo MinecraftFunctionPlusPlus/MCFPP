@@ -9,6 +9,7 @@ import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.obj.DataTemplateObjectConcrete
 import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.util.LogProcessor
@@ -208,20 +209,17 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
     }
 
     fun onlyIncludingPlayers() : Boolean {
-        if(selectorType == SelectorType.RANDOM_PLAYER || selectorType == SelectorType.NEAREST_PLAYER || selectorType == SelectorType.ALL_PLAYERS || selectorType == SelectorType.SELF){
+        if(selectorType == SelectorType.RANDOM_PLAYER || selectorType == SelectorType.NEAREST_PLAYER || selectorType == SelectorType.ALL_PLAYERS){
             return true
         }
-        if(hasTypePredicate){
-            for (predicate in predicates) {
-                if(predicate is TypePredicate){
-                    if(predicate.type is DataTemplateObjectConcrete && predicate.type.getTagStr("value") == "minecraft:player"){
-                        return true
-                    }
-                    break
-                }
+        return predicates.any {
+            if (it !is TypePredicate || it.reverse) false
+            else {
+                val entityType = it.type as? DataTemplateObjectConcrete
+                val id = entityType?.value?.get("id") as? MCStringConcrete
+                id?.value?.value == "minecraft:player"
             }
         }
-        return false
     }
 
     fun selectingSingleEntity(): Boolean{
@@ -303,7 +301,11 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
     fun name(value: MCString, reverse: Boolean) = addPredicate(NamePredicate(value, reverse))
     fun name(value: String, reverse: Boolean) = addPredicate(NamePredicate(MCStringConcrete(StringTag(value)), reverse))
     fun type(value: DataTemplateObject, reverse: Boolean) = addPredicate(TypePredicate(value, reverse))
-    fun type(value: String, reverse: Boolean) = addPredicate(TypePredicate(DataTemplate.newInstance("mcfpp.minecraft.resource", "EntityType", CompoundTag("value" to value)), reverse))
+    fun type(value: String, reverse: Boolean): EntitySelector {
+        val entityType = GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.resource")!!.scope.getTemplate("EntityType")!!.getType()
+            .build(hashMapOf("id" to MCStringConcrete(StringTag(value)))) as DataTemplateObjectConcrete
+        return addPredicate(TypePredicate(entityType, reverse))
+    }
     fun predicate(value: DataTemplateObject, reverse: Boolean) = addPredicate(PredicatePredicate(value, reverse))
     fun predicate(value: String, reverse: Boolean) = addPredicate(PredicatePredicate(DataTemplate.newInstance("mcfpp.minecraft.resource", "LootTablePredicate", CompoundTag("value" to value)),reverse))
     fun xRotation(value: RangeVar) = addPredicate(XRotationPredicate(value))

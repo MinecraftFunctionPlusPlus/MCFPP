@@ -9,6 +9,7 @@ import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.PropertyVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
+import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.mni.NativeCallContext
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.compound.DataTemplate
@@ -31,16 +32,47 @@ internal fun captureCommandResult(context: NativeCallContext, build: (List<Var<*
 }
 
 object NativeMinecraftCommandOperations {
+    fun op(context: NativeCallContext) = context.withArguments { args ->
+        val players = playerSelector(args[0]) ?: return@withArguments
+        captureCommandResult(context) { Command.buildAll("op", players) }
+    }
+    fun deop(context: NativeCallContext) = context.withArguments { args ->
+        val players = playerSelector(args[0]) ?: return@withArguments
+        captureCommandResult(context) { Command.buildAll("deop", players) }
+    }
+    fun recipeGiveAll(context: NativeCallContext) = context.withArguments { args ->
+        val players = playerSelector(args[0]) ?: return@withArguments
+        captureCommandResult(context) { Command.buildAll("recipe give", players, "*") }
+    }
+    fun recipeTakeAll(context: NativeCallContext) = context.withArguments { args ->
+        val players = playerSelector(args[0]) ?: return@withArguments
+        captureCommandResult(context) { Command.buildAll("recipe take", players, "*") }
+    }
+    fun recipeGive(context: NativeCallContext) = context.withAdapters { receiver, args ->
+        val players = playerSelector(args[0]) ?: return@withAdapters
+        captureCommandResult(context) { Command.buildAll("recipe give", players, templateField(receiver as DataTemplateObject, "id")) }
+    }
+    fun recipeTake(context: NativeCallContext) = context.withAdapters { receiver, args ->
+        val players = playerSelector(args[0]) ?: return@withAdapters
+        captureCommandResult(context) { Command.buildAll("recipe take", players, templateField(receiver as DataTemplateObject, "id")) }
+    }
+    private fun playerSelector(value: Var<*>): SelectorVar? {
+        val selector = value as SelectorVar
+        if (selector.isPlayer()) return selector
+        LogProcessor.error("Command requires a selector that only includes players")
+        return null
+    }
+
     fun teamRegister(context: NativeCallContext) = context.withAdapters { receiver, _ ->
-        captureCommandResult(context) { Command.buildAll("team add", teamField(receiver as DataTemplateObject, "id"), teamField(receiver, "displayName")) }
+        captureCommandResult(context) { Command.buildAll("team add", templateField(receiver as DataTemplateObject, "id"), templateField(receiver, "displayName")) }
     }
     fun teamUnregister(context: NativeCallContext) = context.withAdapters { receiver, _ ->
-        captureCommandResult(context) { Command.buildAll("team remove", teamField(receiver as DataTemplateObject, "id")) }
+        captureCommandResult(context) { Command.buildAll("team remove", templateField(receiver as DataTemplateObject, "id")) }
     }
     fun teamClear(context: NativeCallContext) = context.withAdapters { receiver, _ ->
-        captureCommandResult(context) { Command.buildAll("team empty", teamField(receiver as DataTemplateObject, "id")) }
+        captureCommandResult(context) { Command.buildAll("team empty", templateField(receiver as DataTemplateObject, "id")) }
     }
-    private fun teamField(receiver: DataTemplateObject, name: String): Var<*> {
+    private fun templateField(receiver: DataTemplateObject, name: String): Var<*> {
         val field = DataTemplate.getField(receiver, name)!!
         return if (field is PropertyVar) field.get() else field
     }

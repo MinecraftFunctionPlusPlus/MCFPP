@@ -1,21 +1,16 @@
 package top.mcfpp.mni.minecraft;
 
 import top.mcfpp.annotations.MNIFunction;
-import top.mcfpp.command.Command;
-import top.mcfpp.command.Commands;
-import top.mcfpp.core.lang.CommandReturn;
-import top.mcfpp.core.lang.entity.PlayerVar;
-import top.mcfpp.util.ValueWrapper;
+import top.mcfpp.backend.NativeMinecraftCommandOperations;
+import top.mcfpp.mni.NativeCallContext;
 
 public class OpData {
-    @MNIFunction(normalParams = "Player!",returnType = "CommandReturn")
-    public static void deop(PlayerVar player, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("op", player);
-        Commands.processMacroCommandReturn(re, command);
+    @MNIFunction(normalParams = "entity",returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void deop(NativeCallContext context){
+        NativeMinecraftCommandOperations.INSTANCE.deop(context);
     }
-    @MNIFunction(normalParams = "Player!",returnType = "CommandReturn")
-    public static void op(PlayerVar player, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("op", player);
-        Commands.processMacroCommandReturn(re, command);
+    @MNIFunction(normalParams = "entity",returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void op(NativeCallContext context){
+        NativeMinecraftCommandOperations.INSTANCE.op(context);
     }
 }

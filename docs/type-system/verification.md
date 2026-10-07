@@ -2,7 +2,25 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 当前阶段 112：Team receiver命令结果（已限定验证）
+## 当前阶段 113：Op/Recipe player-target 命令结果（已限定验证）
+
+Op.op/deop、Recipe.give/take/giveAll/takeAll六个入口接入单context qualified `CommandResult`，entity采用普通参数；捕获前由SelectorVar的onlyIncludingPlayers检查玩家限定。查询读取真实EntityType.id的编译期字符串，String工厂按模板要求构造字段值树；不再依赖旧CompoundTag/value构造及带引号的getTagStr比较。保留clone/query行为，不把裸@s或反向player筛选当作证明。Recipe读取DTO实际id；Op.deop现发出deop。source/fresh fixture检查四个direct命令、两个实际id macro及六个独立结果root、readonly/unknown模型、双store和单次初始化；负向四个调用产生预期selector guard与native result未发布诊断，且不发命令。
+
+标准库重建 `mcfpp-native-player-command-results-stdlib.log` exit0/BUILD SUCCESSFUL in10s、Project0/0。首轮联合 `mcfpp-native-player-command-results-final.log` exit1/BUILD FAILED in21s、worker17正常；LibFieldAccess XML `2026-10-07T01:36:37.507Z` 为1/1/0/0，NPE发生在source check的 `EntitySelector('e').type("minecraft:player", false)`，堆栈指向 `EntitySelector.type`，fresh consumer未运行。CacheFormat XML `01:36:36.770Z` 为1/0/0/0。将内部EntityType factory改为查已加载canonical namespace后，仅复查失败fixture：`mcfpp-native-player-command-results-final2.log` exit0/BUILD SUCCESSFUL in18s、worker18正常，XML `2026-10-07T01:39:33.364Z` 为1/0/0/0；source/fresh Project 0/9118和0/9119。四个negative调用实际共8个预期诊断及无命令断言通过。stdlib和Cache未重跑。MCFL42三份资源293933 bytes、header `4c46434d2a000000`、SHA256 `1E700715D1CFB0F20C83B6B07954E39AB68B1FE42B4C9F105CB5028651B8C956`。只验证命令导出，不模拟world或声明frame0；9个Java类、71个CommandReturn注解与7个void wrapper及whole17仍未完成。
+
+### 阶段 113 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录首轮NPE、实际修复边界及最终fresh XML；限定为命令导出。 |
+| 完整性 | 3/5 | 六个指定入口受测通过；其余9个Java类及whole17未完成。 |
+| 清晰性 | 4/5 | 区分source阶段失败、Cache首轮通过与单fixture复查。 |
+| 可执行性 | 4/5 | 下一步仅列Worldborder七个方法并保留默认参数限制。 |
+| 简洁性 | 4/5 | 保留必要轮次、计数和资源证据。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 阶段 112：Team receiver命令结果（已限定验证）
 
 `Team.register`/`unregister`/`clear`三个receiver方法接入单context qualified `CommandResult`；从DTO的真实`id`/`displayName`字段经`withAdapters`读取并解包PropertyVar，再复用既有结果捕获。`Team.mcfpp`显式导入标准库结果类型。fixture检查displayName是严格的NBT chat component（实际NBT storage/address），以及id路径的macro准备、单次调用、双store和root初始化。无生产改动发生在最终断言调整中。
 

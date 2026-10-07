@@ -1,6 +1,6 @@
-# 下一阶段：迁移 Op/Recipe 玩家命令接口（阶段113）
+# 下一阶段：迁移 Worldborder 命令结果接口（阶段114）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–112完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time路径及受测legacy分支入口的限定迁移；当前库格式MCFL41。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–113完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time路径及受测legacy分支入口的限定迁移；当前库格式MCFL42。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -80,11 +80,15 @@ StdCommands以外另有14个Java类：91个CommandReturn返回注解和7个void�
 
 `Team.register`/`unregister`/`clear`三个receiver方法已接入单context qualified `CommandResult`；用现有 `withAdapters` 捕获DTO的真实id/displayName字段并读取PropertyVar，复用 `captureCommandResult`，不重复参数准备或发射。`Team.mcfpp`显式导入标准库结果类型。source/fresh fixture严格检查displayName的NBT chat component、id宏准备及单次调用、双store和root初始化。stdlib2与fixture通过，Cache在首轮通过；MCFL40→41。9个MNIMutator未因此可用，未验证world/frame0；其他Java类及whole17仍未完成。
 
-### 阶段 113 计划：Op/Recipe 玩家命令接口
+### 阶段 113：Op/Recipe 玩家命令接口（已限定验证）
 
-范围限于Op.op/deop、Recipe.give/take和Recipe.giveAll/takeAll六个入口。root已确定使用实际源码可传入的普通 `entity` 参数、单context和qualified `CommandResult`；在捕获结果之前检查SelectorVar仅选择玩家。修正现有onlyIncludingPlayers查询：@a/@p/@r可直接证明，其他选择器需编译期确定的正向minecraft:player筛选；裸@s和反向player筛选不构成证明。Recipe从DTO真实id字段构建命令，修正Op.deop旧body错误输出op。计划MCFL41→42、必要stdlib重建、单个source/fresh fixture及Cache回归；fixture检查六个独立捕获、真实命令与负向选择器拒绝，不模拟世界命令。尚未编码或验证；此前列出的其余命令边界继续保留。
+Op.op/deop、Recipe.give/take/giveAll/takeAll六个player-target入口已接入单context qualified `CommandResult`；entity使用普通参数，在capture前证明SelectorVar只选择玩家。onlyIncludingPlayers查询保留克隆/筛选检查，不把裸@s或反向player筛选视作证明。Recipe使用DTO真实id，Op.deop现生成deop命令。stdlib与source/fresh fixture、Cache回归通过，MCFL41→42；未模拟world/frame0。其他9个Java类及whole17仍未完成。
 
-阶段88–112详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL41。
+### 阶段 114 计划：Worldborder 命令结果接口
+
+限定 `WorldborderData` 的七个 `MNIFunction`：add、setCenter、setDamageAmount、setDamageBuffer、setSize、setWarningDistance、setWarningTime。保留普通参数、现有注解/default字符串及命令词序；接入单context qualified `CommandResult`和七个薄捕获入口。复用 `FloatProviders`，不新增浮点引擎。一个source/fresh fixture以 `Box.observe(amount:float,ticks:int)` 调用七项，使用合法坐标`1 2`，检查一个direct命令和六个macro的参数准备、独立root/双store；必要Cache回归。计划MCFL42→43并重建stdlib，尚未实现或验证。默认表达式是否应用于普通参数仍是旧边界，不据注解声称可省略参数；不扩展size accessors/ mutators或WorldObjectData。
+
+阶段88–113详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL42。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 
