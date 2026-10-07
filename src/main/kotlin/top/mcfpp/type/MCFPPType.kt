@@ -233,8 +233,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             MCFPPEntityType.NormalSelector,
             MCFPPEntityType.Player,
 
-            MCFPPPrivateType.StaticMemberViewType,
-            MCFPPPrivateType.CommandReturn
+            MCFPPPrivateType.StaticMemberViewType
         ).associateBy { it.simpleName }.toMutableMap()}
 
         internal fun builtinTypesById(): Map<TypeId, MCFPPType> =

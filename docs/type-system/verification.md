@@ -1,8 +1,24 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段134，MCFL63；Std外剩余2个Java类、3个CommandReturn注解、旧void wrapper为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段135，MCFL64；旧CommandReturn类型/注解与旧void wrapper均为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
 
-## 当前阶段 134：迁移坐标参数传送接口（已限定验证）
+## 当前阶段 135：退役旧命令结果载体与未注册入口（已限定验证）
+
+删除`PlayerVarData`未注册旧clear/spawnpoint包装、`Debug.function`旧桥、`CommandReturn.kt`三旧carrier、`Commands.processMacroCommandReturn`及私有类型工厂/typeCache引用。新的qualified `CommandResult`不使用旧carrier；保留`processMacroCommand`与`NativeFunction.ValueWrapper`，因为其他旧MNI仍在使用。全源码旧carrier/helper/private type引用已清零，但这不表示旧MNI整体迁移完成。
+
+标准库`mcfpp-retire-command-return-stdlib.log`：native exit0，SUCCESSFUL in1m1s，Project0/0。联合`mcfpp-retire-command-return-joint.log`：native exit0、SUCCESSFUL in47s，Executors30/31正常开始并结束；唯一命令XML `2026-10-07T11:37:38.129Z` 2/0/0/0，Cache XML `11:37:35.764Z` 1/0/0/0。PlayerState/Ride source/fresh Project0/9118、0/9119，negative12/9119；StaticCommands source/fresh0/9118、0/9119。三份bin一致：MCFL64、488316 bytes，header `4c46434d40000000`，SHA256 `4D6436B77BFF85C324D1BD43D9FB579F76CEC34A4B3004DF5B2C24CC13743B2C`。本轮共12路径，含7个生产路径、bin与四份文档；未验证world/frame0/fullcheck。
+
+| 自评维度 | 分数 | 本阶段证据与边界 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录仅退役旧carrier/helper和未注册入口，不声称等价API迁移。 |
+| 完整性 | 3/5 | 三项定向回归通过；whole17和其余旧MNI仍未完成。 |
+| 清晰性 | 4/5 | 区分新CommandResult与仍在使用的ValueWrapper桥。 |
+| 可操作性 | 4/5 | 给出日志、XML、Project计数和库版本证据。 |
+| 简洁性 | 4/5 | 仅记录本阶段必要结果与边界。 |
+
+平均3.8/5；whole17仍未完成。
+
+## 历史阶段 134：迁移坐标参数传送接口（已限定验证）
 
 新增`EntityTeleportData`四个单context qualified结果入口：pos3；pos3+pos2 rotation；pos3+pos3 facing；pos3+entity+Anchor。移除旧EntityVarData实现和EntityUUIDVar注入/import，UUID宿主仍为IntArray。接收selector可为multiple，facing目标须single；未知position/anchor捕获失败。Pos3要求全`^`或全非`^`，rotation不能含`^`；命令树只作签名合同依据，不声称验证Minecraft parser或world执行。
 

@@ -1,7 +1,6 @@
 package top.mcfpp.command
 
 import top.mcfpp.Project
-import top.mcfpp.core.lang.CommandReturn
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.entity.EntityVar
@@ -22,7 +21,6 @@ import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 import top.mcfpp.util.Utils
-import top.mcfpp.util.ValueWrapper
 
 /**
  * 命令总类，提供了大量用于生成命令的方法。默认提供了一些可替换的位点
@@ -273,23 +271,6 @@ object Commands {
            .build(a.toCommandPart())
            .build("append from")
            .build(b.toCommandPart())
-    }
-
-    /**
-     * 判断一条命令是否为宏函数，并让这个命令作为返回值
-     */
-    @JvmStatic
-    fun processMacroCommandReturn(returnVar: ValueWrapper<CommandReturn>, command: Command){
-        if (command.isMacro) {
-            command.prepend("return run")
-            val commandArray = command.buildMacroFunction()
-            returnVar.value = CommandReturn(commandArray[commandArray.size - 1], "return")
-            for (i in 0..<commandArray.size - 1) {
-                addCommand(commandArray[i])
-            }
-        } else {
-            returnVar.value = CommandReturn(command, "return")
-        }
     }
 
     @JvmStatic

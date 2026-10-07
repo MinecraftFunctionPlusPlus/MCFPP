@@ -1,6 +1,6 @@
-# 下一阶段：退役旧命令结果载体与未注册入口（阶段135）
+# 下一阶段：退役范围迭代的宿主返回接口（阶段136）
 
-阶段87普通值位置type拒绝规则继续生效；阶段129已移除语言层 `T!` 后缀。阶段88–134完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及实体命令路径的限定迁移；当前库格式MCFL63，Std外剩余2个Java类及3个CommandReturn注解，旧void wrapper为0。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效；阶段129已移除语言层 `T!` 后缀。阶段88–135完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及实体命令路径的限定迁移；当前库格式MCFL64，旧 `CommandReturn` 类型/注解与旧void wrapper均为0。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -180,9 +180,13 @@ BossBar的add/remove/listAll/setColor/setName/setVisiblePlayers/setStyle七个�
 
 修复StorageAccess.capture让未初始化绑定产生错误变量，ExprVisitor在native参数捕获报错时恢复spills并提前返回后，joint2仅复查coordinate fixture并联合递归参数回归：原生exit0、SUCCESSFUL in32s，Executors28/29正常开始并结束。LibFieldAccess XML `2026-10-07T11:15:10.569Z`、StorageView XML `11:15:16.972Z`均1/0/0/0；coordinate source/fresh Project0/9118与0/9119，negative10/9119，包含selector/prefix guards与未初始化position/anchor捕获诊断。StorageView递归参数回归Project0/9118。Cache仅首轮joint通过；四个不同测试跨轮各自通过，最终联合仅coordinate与递归参数两项；四种坐标调用均由最终同一个coordinate fixture验证。MCFL62→63。三份bin一致：488314 bytes，header `4c46434d3f000000`，SHA256 `BC8D0F0CDB166B3FCE9B223DE1994DF586A7334881EB238E4E5CF4692262A5BC`。无world/frame0验证，详见verification.md.
 
-### 阶段 135 计划：退役旧CommandReturn载体及未注册入口
+### 阶段 135：退役旧CommandReturn载体及未注册入口（已限定验证）
 
-删除未注册的`PlayerVarData`两个wrapper、`Debug.function`旧桥、`core/lang/CommandReturn.kt`三carrier、`Commands.processMacroCommandReturn`及对应的`MCFPPPrivateType.CommandReturn`/typeCache入口和无用imports。新的qualified `CommandResult`接口不依赖该旧carrier；保留`processMacroCommand`及NativeFunction的`ValueWrapper`桥，因为其他旧MNI仍使用。预计MCFL63→64以拒绝旧type/signature索引，需按现有StaticCommands、PlayerState/Ride及Cache回归验证；尚未实施。此范围不等于所有旧MNI迁移完成，不增加runtime function或spawnpoint API。
+删除未注册的`PlayerVarData`旧clear/spawnpoint包装、`Debug.function`旧桥、`core/lang/CommandReturn.kt`三carrier、`Commands.processMacroCommandReturn`及对应的`MCFPPPrivateType.CommandReturn`/typeCache入口。新的qualified `CommandResult`不依赖旧carrier；保留`processMacroCommand`及`NativeFunction.ValueWrapper`桥，因为其他旧MNI仍使用。MCFL63→64。stdlib一次成功（1m1s，Project0/0）；joint仅运行两个既有命令fixture与Cache用例，SUCCESSFUL in47s，Executors30/31正常结束。LibFieldAccess XML `2026-10-07T11:37:38.129Z` 2/0/0/0、Cache XML `11:37:35.764Z` 1/0/0/0；PlayerState/Ride source/fresh Project0/9118、0/9119，negative12/9119；StaticCommands source/fresh 0/9118、0/9119。三份bin均MCFL64、488316 bytes，header `4c46434d40000000`，SHA256 `4D6436B77BFF85C324D1BD43D9FB579F76CEC34A4B3004DF5B2C24CC13743B2C`。未验证world/frame0或完整旧MNI迁移。
+
+### 阶段 136 计划：退役范围迭代的宿主返回接口
+
+删除`RangeVarData.iterator`公共MNI及`Range`注入；legacy foreach先以`StorageAccess.read`读取范围两端，仅对完整已知的Int端点在编译器内部构造`ConcreteIterator`，与typedIR的整数端点要求一致。未知或不兼容端点在生成命令前拒绝，其他iterable沿用旧路径。复用既有`legacyMaterializationAndIterationUseIndependentExactBounds`的`main.typedIR == null`及实际执行断言，并扩展`missingOrUnprovenEndpointsAreRejectedBeforeCommands`负例。尚未实施或验证；需确认库变更后的标准库与缓存回归。
 
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。

@@ -3,8 +3,6 @@ package top.mcfpp.type
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.model.compound.CompoundData
-import top.mcfpp.nbt.tags.CompoundTag
-import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.util.LogProcessor
 
 abstract class MCFPPPrivateType(parentType: ArrayList<MCFPPType> = arrayListOf()) : MCFPPType(parentType) {
@@ -19,27 +17,6 @@ abstract class MCFPPPrivateType(parentType: ArrayList<MCFPPType> = arrayListOf()
     final override fun buildUnConcrete(identifier: String): Var<*> {
         LogProcessor.error("Cannot build var for type: $typeName")
         return UnknownVar(identifier)
-    }
-
-    object CommandReturn: MCFPPPrivateType(parentType = arrayListOf(MCFPPBaseType.Object)){
-
-        override val typeId: TypeId = TypeId.Builtin("MCFPPPrivateType.CommandReturn")
-
-        override fun buildReturnVar(): Var<*> {
-            return top.mcfpp.core.lang.CommandReturn.empty
-        }
-
-        override val instanceData by lazy {
-            CompoundData("CommandReturn","mcfpp").apply {
-                extends(MCFPPBaseType.Any.instanceData)
-            }
-        }
-
-        override val typeName: String
-            get() = "CommandReturn"
-
-        override val nbtType: java.lang.Class<out Tag<*>>
-            get() = CompoundTag::class.java
     }
 
     object StaticMemberViewType: MCFPPPrivateType() {

@@ -4,7 +4,13 @@
 
 ## 当前进度
 
-### 阶段 134：迁移坐标参数传送接口（已限定验证）
+### 阶段 135：退役旧命令结果载体与未注册入口（已限定验证）
+
+移除未注册的`PlayerVarData`旧clear/spawnpoint包装、`Debug.function`桥及`CommandReturn.kt`三种旧carrier、旧宏结果helper与私有类型工厂。新的qualified `CommandResult`不依赖这些旧类型；`processMacroCommand`与`NativeFunction.ValueWrapper`仍供其他旧MNI使用，故此阶段不代表整个MNI迁移完成。
+
+MCFL63→64。stdlib成功，Project0/0；joint仅运行StaticCommands、PlayerState/Ride及Cache三个既有测试，SUCCESSFUL in47s，Executors30/31正常结束。LibFieldAccess XML `2026-10-07T11:37:38.129Z` 2/0/0/0，Cache XML `11:37:35.764Z` 1/0/0/0；PlayerState source/fresh 0/9118、0/9119，negative12/9119；StaticCommands source/fresh 0/9118、0/9119。三份bin均MCFL64/488316 bytes，SHA256 `4D6436B77BFF85C324D1BD43D9FB579F76CEC34A4B3004DF5B2C24CC13743B2C`。未验证world/frame0。
+
+### 历史阶段 134：迁移坐标参数传送接口（已限定验证）
 
 `EntityTeleportData`接入四个单context qualified tp入口：pos3；pos3+pos2 rotation；pos3+pos3 facing；pos3+entity+Anchor。删除EntityVarData旧实现及EntityUUIDVar注入/import，保留UUID IntArray宿主类型。接收selector可为multiple，facing实体需single；position/anchor必须有完整快照。全`^`或全非`^`的Pos3与不含`^`的rotation才生成命令。
 
@@ -94,7 +100,7 @@ stdlib SUCCESSFUL 11s、Project0/0；joint worker40正常、FAILED19s，LibField
 
 stdlib1成功11s/Project0/0；首轮producer因`ENTITY`保留字导入解析失败，Cache XML `2026-10-07T03:22:31.233Z` 1/0/0/0为MCFL48唯一Cache验证。grammar修复后stdlib2成功26s/0/0；final2 producer189/9118，final3 producer9/9118。final4重复执行并覆盖，当前仅保留worker37、FAILED6s及XML `2026-10-07T03:52:30.253Z` 1/1/0/0、producer8/9118；worker36首轮日志/XML已丢失。final5-debug worker38 FAILED28s，XML `2026-10-07T04:04:19.204Z` 1/1/0/0、producer8/9118，诊断显示bare Selector绑定后value仍为Unknown。最终修复后final6 worker39正常、SUCCESS39s，XML `2026-10-07T04:08:58.285Z` 1/0/0/0；source/fresh Project0/9118与0/9119，negative 2/9119，selector guard与未发布`listTag`结果诊断按预期通过。未覆盖predicate selector、world执行、frame0或whole17。
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段134迁移坐标参数tp入口，MCFL63；Std外剩余2个Java类、3个CommandReturn注解及0个旧void wrapper，whole17仍未完成。阶段133坐标成员共享位置写入、132 compiler-only坐标快照及131旧wrapper清理为此前已验证路径。阶段127 Player消息命令已完成限定验证，MCFL57。阶段126 entity-target tp已完成限定验证，MCFL56。阶段125 Player状态与ride命令已完成限定验证，MCFL55；阶段124 Player advancement十个入口已完成限定验证，MCFL54；阶段123 Player XP六个入口已完成限定验证，MCFL53；阶段122 stopRide入口已完成限定验证，MCFL52；阶段121 Entity effect授予两个入口已完成限定验证，MCFL51；阶段120 EntityEffect两个命令入口已完成限定验证，MCFL50；阶段119 Team加入/离开两个命令入口已完成限定验证，MCFL49；阶段118 EntityTag三个结果入口已完成限定验证，MCFL48；阶段117 Random命令结果入口已完成限定验证，MCFL47；阶段116 WorldObject命令结果入口已完成限定验证，MCFL46；阶段115 BossBar命令结果入口已完成限定验证，MCFL45；阶段114 Worldborder命令结果入口已完成限定验证，MCFL43；阶段113 Op/Recipe玩家命令入口已完成限定验证，MCFL42；阶段112 Team receiver结果入口已完成限定验证，MCFL41；阶段111 Datapack/Debug结果入口已完成限定验证，MCFL40；阶段110提交`17313ad`，阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段135退役未注册旧包装、Debug.function桥及CommandReturn载体/helper/factory，MCFL64；旧CommandReturn类型/注解及旧void wrapper均为0，whole17仍未完成。阶段134坐标tp、133坐标成员共享写入及132 compiler-only坐标快照均为此前已验证路径。下一步仅退役`RangeVarData.iterator`公共入口并由legacy foreach内部处理完整已知Int范围，详见阶段136计划。阶段127 Player消息命令已完成限定验证，MCFL57。阶段126 entity-target tp已完成限定验证，MCFL56。阶段125 Player状态与ride命令已完成限定验证，MCFL55；阶段124 Player advancement十个入口已完成限定验证，MCFL54；阶段123 Player XP六个入口已完成限定验证，MCFL53；阶段122 stopRide入口已完成限定验证，MCFL52；阶段121 Entity effect授予两个入口已完成限定验证，MCFL51；阶段120 EntityEffect两个命令入口已完成限定验证，MCFL50；阶段119 Team加入/离开两个命令入口已完成限定验证，MCFL49；阶段118 EntityTag三个结果入口已完成限定验证，MCFL48；阶段117 Random命令结果入口已完成限定验证，MCFL47；阶段116 WorldObject命令结果入口已完成限定验证，MCFL46；阶段115 BossBar命令结果入口已完成限定验证，MCFL45；阶段114 Worldborder命令结果入口已完成限定验证，MCFL43；阶段113 Op/Recipe玩家命令入口已完成限定验证，MCFL42；阶段112 Team receiver结果入口已完成限定验证，MCFL41；阶段111 Datapack/Debug结果入口已完成限定验证，MCFL40；阶段110提交`17313ad`，阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效。重构不要求兼容旧 `.mcfpp` 写法。
 
 ### 阶段 117：Random命令结果接口（已限定验证）
 
