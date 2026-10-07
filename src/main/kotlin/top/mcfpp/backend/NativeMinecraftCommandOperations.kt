@@ -33,6 +33,21 @@ internal fun captureCommandResult(context: NativeCallContext, build: (List<Var<*
 }
 
 object NativeMinecraftCommandOperations {
+    fun worldSetDifficulty(context: NativeCallContext) = context.withArguments { args ->
+        val difficulty = args[0] as? EnumVarConcrete ?: run {
+            LogProcessor.error("Difficulty requires a compile-time enum value")
+            return@withArguments
+        }
+        captureCommandResult(context) { Command.buildAll("difficulty", difficulty.value.identifier) }
+    }
+    fun worldSetWeather(context: NativeCallContext) = context.withArguments { args ->
+        val weather = args[0] as? EnumVarConcrete ?: run {
+            LogProcessor.error("Weather requires a compile-time enum value")
+            return@withArguments
+        }
+        captureCommandResult(context) { Command.buildAll("weather", weather.value.identifier, args[1]) }
+    }
+
     fun bossbarAdd(context: NativeCallContext) = context.withAdapters { receiver, _ ->
         captureCommandResult(context) { Command.buildAll("bossbar add", templateField(receiver as DataTemplateObject, "id"), templateField(receiver, "name")) }
     }

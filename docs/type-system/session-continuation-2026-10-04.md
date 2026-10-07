@@ -4,7 +4,19 @@
 
 ## 当前进度
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段115 BossBar命令结果入口已完成限定验证，MCFL45；阶段114 Worldborder命令结果入口已完成限定验证，MCFL43；阶段113 Op/Recipe玩家命令入口已完成限定验证，MCFL42；阶段112 Team receiver结果入口已完成限定验证，MCFL41；阶段111 Datapack/Debug结果入口已完成限定验证，MCFL40；阶段110提交`17313ad`，阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段116 WorldObject命令结果入口已完成限定验证，MCFL46；阶段115 BossBar命令结果入口已完成限定验证，MCFL45；阶段114 Worldborder命令结果入口已完成限定验证，MCFL43；阶段113 Op/Recipe玩家命令入口已完成限定验证，MCFL42；阶段112 Team receiver结果入口已完成限定验证，MCFL41；阶段111 Datapack/Debug结果入口已完成限定验证，MCFL40；阶段110提交`17313ad`，阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+
+### 阶段 116：WorldObject命令结果接口（已限定验证）
+
+`WorldObjectData.setDifficulty`与`setWeather`两个静态native方法接入单context qualified `CommandResult`，无caller参数、default或readonly参数；capture前要求EnumVarConcrete，keyword使用`value.identifier`，weather duration为int。旧Time缓存及weather/time accessor/mutator未改，生产尚未导出World对象。source/fresh fixture用真实`@From FixtureWorld`检查两个canonical readonly/unknown结果及null snapshot、difficulty direct和weather macro；duration实际按NBT读取→score复制→NBT编码→macro slot捕获。
+
+stdlib exit0/9s、Project0/0；首次联合两项 exit0/24s、worker25正常。LibFieldAccess XML `2026-10-07T02:30:25.319Z` 与Cache XML `02:30:24.427Z`均1/0/0/0；source/fresh Project0/9118、0/9119，negative Project4/9119为预期guard及未发布诊断。实际命令合同、双store、一次root初始化及无裸命令/return-run断言通过；不涉及world执行、executor或frame0，也不据注解推断可省略参数。三份bin均MCFL46、295914 bytes、header `4c46434d2e000000`、SHA256 `8D0FFE6F3302B53F99849D9978C38D30D05DBF067EA7DFE42CF3376E256EEB8F`。
+
+当前剩余6个Java类，55个CommandReturn注解及7个旧void wrapper；whole17保持ACTIVE。
+
+### 阶段 117 计划：Random命令结果接口
+
+范围仅`RandomData.reset`、`RandomObjectData.reset`与`resetAll`：保留实例/静态调用形态、readonly bool和普通int参数；capture前要求完整Typed Bool snapshot，读取DTO真实id，并修复旧重复sequence及world flag词序。一个source/fresh fixture检查不对称flags、2个macro和1个direct命令及3个结果root；单string构造器现有raw reset调用需另行识别。未知readonly bool在ParameterMatcher阶段拒绝，不宣称由native guard覆盖；Random.mcfpp只补标准库import，不迁移其余rand/roll或构造器。计划MCFL46→47，尚未实现或验证。
 
 ### 阶段 111：迁移 Datapack 与 Debug 结果接口（已限定验证）
 
@@ -12,7 +24,7 @@ Datapack九个和Debug.start/stop两个命令入口接入单context；Debug.func
 
 首轮stdlib exit0/11s、Project0/0；joint3 worker13正常但1失败，XML `2026-10-07T00:50:12.136Z` tests2/fail1，source检查通过但fresh canonical检查失败；Cache XML `00:50:11.575Z`已通过。修复后stdlib2 exit0/9s、Project0/0；final2仅两个LibFieldAccess fixture，worker14正常、exit0/27s，XML `00:56:50.658Z` tests2/fail0。source/fresh Project 0/9118、0/9119各两次。consumer实际有三个direct命令及enable动态macro准备/调用、root `{}`与双store；无world/executor/frame0。三份MCFL40资源293272 bytes、SHA256 `04023951C6DA76A2DB1C3D0BAB6528A8387D0D8CD5BC92A949B695E390ABAC9A`。Cache只首轮通过。
 
-下一阶段116限定WorldObjectData.setDifficulty/setWeather两个静态native入口，无caller参数，使用普通Difficulty/Weather与int；capture前仅接收EnumVarConcrete，keyword按value.identifier输出。真实@From fixture检查一个direct和一个macro及int捕获，计划MCFL46与stdlib/Cache，尚未实现或验证。
+
 
 ### 阶段 115：BossBar命令结果接口（已限定验证）
 
@@ -20,7 +32,7 @@ BossBar七个实例方法接入单context qualified `CommandResult`；guard仅�
 
 首轮stdlib1 exit0/10s、Project0/0；joint1 exit1/16s、worker22正常，LibFieldAccess XML `2026-10-07T02:09:58.178Z` 为1/1/0/0，source语法3错误来自保留字`bar.list()`；Cache XML `02:09:57.302Z` 为1/0/0/0。改用listAll后stdlib2 exit0/8s、Project0/0；final2仅fixture复查exit1/17s、worker23正常，XML `2026-10-07T02:13:54.671Z` 1/1/0/0，source0/9118但enum输出为null，fresh未到。加入EnumMemberInfo持久化后MCFL45；stdlib3 exit0/8s、Project0/0，final3仅fixtureexit0/24s、worker24正常，XML `2026-10-07T02:17:15.845Z` 1/0/0/0，source/fresh Project0/9118与0/9119，negative Project4/9119为预期拒绝。Cache只在MCFL44首轮通过，未声称MCFL45有Cache回归。三份资源MCFL45、295914 bytes、header `4c46434d2d000000`、SHA256 `79037281AAB839306736EED308260D0D9550C965B8308F594C9468A60F67A003`。fixture通过模型、snapshot与命令导出断言；未验证world/executor/frame0、旧getter/mutator或静态list。
 
-当前剩余7个Java类，57个CommandReturn注解及7个旧void wrapper；BossBar旧getter/mutator未迁，whole17保持ACTIVE。
+截至阶段115，剩余7个Java类，57个CommandReturn注解及7个旧void wrapper；BossBar旧getter/mutator未迁，whole17保持ACTIVE。
 
 ### 阶段 114：Worldborder命令结果接口（已限定验证）
 

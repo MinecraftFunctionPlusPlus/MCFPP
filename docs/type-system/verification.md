@@ -2,7 +2,25 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 当前阶段 115：BossBar 命令结果（已限定验证）
+## 当前阶段 116：WorldObject 命令结果（已限定验证）
+
+`WorldObjectData.setDifficulty`与`setWeather`两个静态native方法接入单context qualified `CommandResult`，无caller参数、default或readonly参数；capture前要求EnumVarConcrete，keyword使用`value.identifier`，weather duration为int。旧Time缓存及weather/time accessor/mutator未改，生产尚未导出World对象。source/fresh fixture用真实`@From FixtureWorld`检查两个canonical readonly/unknown结果及null snapshot、difficulty direct和weather macro；duration实际按NBT读取→score复制→NBT编码→macro slot捕获。
+
+stdlib exit0/9s、Project0/0；首次联合两项 exit0/24s、worker25正常。LibFieldAccess XML `2026-10-07T02:30:25.319Z` 与Cache XML `02:30:24.427Z`均1/0/0/0；source/fresh Project0/9118、0/9119，negative Project4/9119为预期guard及未发布诊断。实际命令合同、双store、一次root初始化及无裸命令/return-run断言通过；不涉及world执行、executor或frame0，也不据注解推断可省略参数。三份bin均MCFL46、295914 bytes、header `4c46434d2e000000`、SHA256 `8D0FFE6F3302B53F99849D9978C38D30D05DBF067EA7DFE42CF3376E256EEB8F`。
+
+### 阶段 116 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录静态无caller签名、枚举guard、参数捕获和negative边界。 |
+| 完整性 | 3/5 | 两个WorldObject入口及磁盘合同通过；world执行与whole17未完成。 |
+| 清晰性 | 4/5 | 分开标明source/fresh/negative计数和XML时间。 |
+| 可执行性 | 4/5 | 下一步限定Random三个reset入口和不对称参数检查。 |
+| 简洁性 | 4/5 | 只保留本阶段必要验证范围。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 阶段 115：BossBar 命令结果（已限定验证）
 
 BossBar.add/remove/listAll/setColor/setName/setVisiblePlayers/setStyle七个实例方法接入单context qualified `CommandResult`；capture前guard要求EnumVarConcrete，fixture使用literal，unknown enum会被拒绝，entity沿用SelectorVar玩家限定。DTO保留既有id:string并新增name:text；单参id构造器以`id.toText`初始化name，二参构造器为(string,text)。Java `list`更名`listAll`避开语言保留字，生成命令仍为bossbar list。EnumMemberInfo新增SNBT字符串保存enum member数据，读取时重建Tag；无新的runtime enum ABI或snapshot系统。
 

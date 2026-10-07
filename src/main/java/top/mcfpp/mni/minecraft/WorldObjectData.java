@@ -3,6 +3,8 @@ package top.mcfpp.mni.minecraft;
 import top.mcfpp.annotations.MNIAccessor;
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.annotations.MNIMutator;
+import top.mcfpp.backend.NativeMinecraftCommandOperations;
+import top.mcfpp.mni.NativeCallContext;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.CommandReturn;
@@ -33,10 +35,9 @@ public class WorldObjectData {
         return qwq;
     }
 
-    @MNIFunction(normalParams = "Difficulty", returnType = "CommandReturn")
-    public static void setDifficulty(EnumVar difficulty, ValueWrapper<CommandReturn> re) {
-        var command = Command.Companion.buildAll("difficulty", difficulty);
-        Commands.processMacroCommandReturn(re, command);
+    @MNIFunction(normalParams = "Difficulty", returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void setDifficulty(NativeCallContext context) {
+        NativeMinecraftCommandOperations.INSTANCE.worldSetDifficulty(context);
     }
 
     @MNIAccessor("time")
@@ -60,10 +61,9 @@ public class WorldObjectData {
         Commands.processMacroCommandReturn(re, command);
     }
 
-    @MNIFunction(normalParams = {"Weather", "int"}, returnType = "CommandReturn")
-    public static void setWeather(EnumVar weather, MCInt duration, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("weather", weather, duration);
-        Commands.processMacroCommandReturn(re, command);
+    @MNIFunction(normalParams = {"Weather", "int"}, returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void setWeather(NativeCallContext context){
+        NativeMinecraftCommandOperations.INSTANCE.worldSetWeather(context);
     }
 
 
