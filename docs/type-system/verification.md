@@ -1,8 +1,26 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段137，MCFL66；旧CommandReturn链引用/注解与旧void wrapper均为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段138，MCFL67；旧CommandReturn链引用/注解与旧void wrapper均为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
 
-## 当前阶段137：迁移Random整数结果入口（已限定验证）
+## 当前阶段138：迁移泛型类型联合接口（已限定验证）
+
+`MCFPPTypeData.union`使用既有`NativeOperatorOperations.unionType`；不新增context API，`NoExternalWrites`与`returnsConstWhenArgsConst`标记保持。union fixture验证`Box<int|string>`表达式分派及canonical特化身份；源码端检查模型，fresh consumer实际执行磁盘命令并得到4/9、frame0。另一既有用例检查普通type局部变量被拒绝且名称未注册。
+
+stdlib native exit0/SUCCESSFUL13s、Project0/0。joint native exit0/SUCCESSFUL30s，Executors41–43正常开始并结束。Cache XML `2026-10-07T13:03:19.109Z`、union XML `13:03:22.168Z`、TypeVariable XML `13:03:28.618Z`均1/0/0/0。union source/fresh Project 0/9118、0/9119；普通type负例Project5/9118，五条诊断均为`Type values are only allowed as generic parameters`且名称未注册。
+
+唯一日志为`mcfpp-native-type-union-stdlib.log`与`mcfpp-native-type-union-joint.log`。三份bin一致：MCFL67、488120 bytes，header `4c46434d43000000`，SHA256 `48D79A34AA70366FACB6D9422A83173658AB88F5E046FFD0B422D5B40B33AC10`。5个源码/测试改动加bin与4份文档，共10路径。未运行fullcheck或Minecraft world。
+
+| 自评维度 | 分数 | 本阶段证据与边界 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录三个精确用例、实际XML/Project结果及缓存身份。 |
+| 完整性 | 3/5 | 覆盖联合分派和普通type拒绝；whole17仍未完成。 |
+| 清晰性 | 4/5 | 说明联合接口复用既有实现且未新增context API。 |
+| 可操作性 | 4/5 | 给出唯一日志、XML、项目计数及bin身份。 |
+| 简洁性 | 4/5 | 只记录受测路径和未覆盖范围。 |
+
+平均3.8/5；whole17仍未完成。
+
+## 历史阶段137：迁移Random整数结果入口（已限定验证）
 
 `RandomData`与`RandomObjectData`的四个`rand`/`roll`入口使用单context并返回未知int score；receiver入口读取真实`id`，静态入口无receiver。完整已知Int范围先校验，四个结果经表达式临时值两段复制到独立局部。未模拟RNG或world。
 

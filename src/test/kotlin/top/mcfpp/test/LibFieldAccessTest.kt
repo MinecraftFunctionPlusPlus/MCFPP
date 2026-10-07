@@ -1184,7 +1184,7 @@ class LibFieldAccessTest {
                 func read()->int { return this.value; }
             }
             func main(){
-                var first=Box<(int|string)>(4);
+                var first=Box<int|string>(4);
                 var second=Box<(string|int|int)>(9);
                 dynamic var firstResult=readBox(first);
                 dynamic var secondResult=readBox(second);
@@ -1210,7 +1210,7 @@ class LibFieldAccessTest {
         val main = consume("""
             import fixture.fields:*;
             func main(){
-                var second=Box<(string|int|int)>(9);
+                var second=Box<string|int>(9);
                 var first=Box<(string|int)>(4);
                 dynamic var firstResult=readBox(first);
                 dynamic var secondResult=readBox(second);

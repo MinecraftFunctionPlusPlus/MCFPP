@@ -3,12 +3,20 @@ package top.mcfpp.backend
 import top.mcfpp.core.lang.MCFloat
 import top.mcfpp.core.lang.MCInt
 import top.mcfpp.core.lang.MCIntConcrete
+import top.mcfpp.core.lang.MCFPPTypeVar
 import top.mcfpp.core.lang.RangeVar
 import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.mni.NativeCallContext
+import top.mcfpp.type.MCFPPUnionType
 
 /** Native operators reuse core operations without entering operator lookup again. */
 object NativeOperatorOperations {
+    fun unionType(context: NativeCallContext) = context.withAdapters { receiver, arguments ->
+        val left = receiver as MCFPPTypeVar
+        val right = arguments[0] as MCFPPTypeVar
+        context.publishResult(MCFPPTypeVar(MCFPPUnionType(left.value, right.value)))
+    }
+
     fun integer(context: NativeCallContext, operator: String) = context.withAdapters { receiver, arguments ->
         val input = receiver as MCInt
         // Context facts are frozen; core temporary arithmetic can mutate its receiver.

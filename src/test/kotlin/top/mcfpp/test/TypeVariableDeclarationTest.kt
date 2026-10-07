@@ -21,11 +21,12 @@ class TypeVariableDeclarationTest {
                 var inferred=float;
                 const var fixed=bool;
                 const var forced as type=int;
+                var union=int|string;
             }
         """.trimIndent(), version = "26.3")
-        assertEquals(4, Project.errorCount)
+        assertEquals(5, Project.errorCount)
         val main = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single()
-        for (name in listOf("typed", "inferred", "fixed", "forced")) assertNull(main.scope.getVar(name))
+        for (name in listOf("typed", "inferred", "fixed", "forced", "union")) assertNull(main.scope.getVar(name))
     }
 
     @Test fun ordinaryTemplateAndObjectTypeFieldsAreRejected() {
