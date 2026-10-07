@@ -2,6 +2,26 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
+## 当前阶段 112：Team receiver命令结果（已限定验证）
+
+`Team.register`/`unregister`/`clear`三个receiver方法接入单context qualified `CommandResult`；从DTO的真实`id`/`displayName`字段经`withAdapters`读取并解包PropertyVar，再复用既有结果捕获。`Team.mcfpp`显式导入标准库结果类型。fixture检查displayName是严格的NBT chat component（实际NBT storage/address），以及id路径的macro准备、单次调用、双store和root初始化。无生产改动发生在最终断言调整中。
+
+首次stdlib日志 `mcfpp-native-team-command-results-stdlib.log` exit1/BUILD FAILED in11s，Project3 errors/0 warnings，Team三个返回类型均为Invalid qualified type，原因是stdlib源码缺标准库import，测试未启动。补import后的stdlib2 exit0/BUILD SUCCESSFUL in4s，Project0/0。首轮joint日志 `mcfpp-native-team-command-results-final.log` exit1/BUILD FAILED in19s；LibFieldAccess XML `2026-10-07T01:14:09.452Z` 为1 test/1 failure/0 errors/0 skipped，失败于producer宏准备断言，fresh consumer未到；CacheFormat XML `2026-10-07T01:14:08.720Z` 为1/0/0/0。根因是fixture把displayName误当成需要macro准备的文本值，实际是NBT chat component；修正fixture为核对真实NBT地址及组件后，final2仅复跑Team fixture。
+
+final2日志 `mcfpp-native-team-command-results-final2.log` exit0/BUILD SUCCESSFUL in22s，Gradle Test Executor 16正常结束；XML `2026-10-07T01:20:15.674Z` 为1/0/0/0。source/fresh Project分别0 errors/9118 warnings、0/9119。receiver字段、模型合同和consumer实际导出命令断言通过；无world模拟、执行器或frame0结论。Cache只首轮通过，没有在final2重跑。三份产物MCFL41、294070 bytes、header `4c46434d29000000`、SHA256 `41E4F07C70C24D914114C881FEF85A7CFE73F7E364A3F5FA6B0055BBA4CBAADE`。其余12个Java类的77个CommandReturn注解、7个旧void wrapper、9个Team MNIMutator及whole17仍未完成。
+
+### 阶段 112 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录stdlib缺import与fixture误判NBT文本两处真实问题，并区分producer与fresh边界。 |
+| 完整性 | 3/5 | 三个Team方法路径通过；MNIMutator、其余Java类及whole17未完成。 |
+| 清晰性 | 4/5 | 分开记录首轮joint失败、Cache通过和最终fixture复查。 |
+| 可执行性 | 4/5 | 下一阶段限制为Op/Recipe六个player-target入口，先明确参数合同。 |
+| 简洁性 | 4/5 | 只保留必要轮次、XML、Project和资源证据。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
 ## 阶段 111：Datapack 与 Debug 结果接口（已限定验证）
 
 新增11个显式单context qualified `CommandResult` 入口：Datapack九个，Debug.start/stop两个；旧Debug.function TODO保留。内部 `captureCommandResult` 从Std共享逻辑抽取；Std的107处调用仅更名、删旧helper/import，root已逐处确认其他行为未变。无新context API或生产语言对象。fixture以真实 `@From Packs` 对象、显式native profileStart/profileStop和 `Box.observe(name as string)` 验证。

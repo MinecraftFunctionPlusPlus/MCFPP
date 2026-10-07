@@ -4,7 +4,7 @@
 
 ## 当前进度
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段111 Datapack/Debug结果入口已完成限定验证，MCFL40；阶段110提交`17313ad`，阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段112 Team receiver结果入口已完成限定验证，MCFL41；阶段111 Datapack/Debug结果入口已完成限定验证，MCFL40；阶段110提交`17313ad`，阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
 
 ### 阶段 111：迁移 Datapack 与 Debug 结果接口（已限定验证）
 
@@ -12,7 +12,15 @@ Datapack九个和Debug.start/stop两个命令入口接入单context；Debug.func
 
 首轮stdlib exit0/11s、Project0/0；joint3 worker13正常但1失败，XML `2026-10-07T00:50:12.136Z` tests2/fail1，source检查通过但fresh canonical检查失败；Cache XML `00:50:11.575Z`已通过。修复后stdlib2 exit0/9s、Project0/0；final2仅两个LibFieldAccess fixture，worker14正常、exit0/27s，XML `00:56:50.658Z` tests2/fail0。source/fresh Project 0/9118、0/9119各两次。consumer实际有三个direct命令及enable动态macro准备/调用、root `{}`与双store；无world/executor/frame0。三份MCFL40资源293272 bytes、SHA256 `04023951C6DA76A2DB1C3D0BAB6528A8387D0D8CD5BC92A949B695E390ABAC9A`。Cache只首轮通过。
 
-下一阶段112限定Team.register/unregister/clear三项receiver方法；复用withAdapters解包DTO字段及captureCommandResult，fixture走真实@From对象，尚未实现。MNIMutator不因普通字段赋值而声称可用；Op.deop已知构造错误及Op/Recipe Player!合同另待处理。
+下一阶段113限定Op/Recipe六个玩家命令入口。root已确定普通entity参数、单context及qualified CommandResult，捕获前检查真实SelectorVar的玩家限定；裸@s和反向player筛选不构成玩家证明。Recipe读取真实DTO.id，并修复Op.deop旧body错误输出op。计划MCFL42及单个source/fresh fixture、必要Cache回归；尚未编码或验证。
+
+### 阶段 112：Team receiver命令结果（已限定验证）
+
+`Team.register`/`unregister`/`clear`三个receiver方法接入单context qualified `CommandResult`；现有 `withAdapters` 从DTO读取真实id/displayName字段并解包PropertyVar，复用共享结果捕获。`Team.mcfpp`显式导入标准库结果类型。9个MNIMutator和其他12个Java类/7个旧void wrapper不因本次普通字段路径而视作已迁移。
+
+首轮stdlib exit1/BUILD FAILED in11s、Project3/0，三个Team返回类型均因缺少标准库import而报Invalid qualified type，未启动测试。加import后stdlib2 exit0/BUILD SUCCESSFUL in4s、Project0/0。首轮joint exit1/BUILD FAILED in19s；LibFieldAccess XML `2026-10-07T01:14:09.452Z` 为1/1/0/0，失败位于producer宏准备断言，未到fresh consumer；Cache XML `01:14:08.720Z` 为1/0/0/0。原fixture错误要求displayName宏准备，改为严格检查NBT chat component及实际NBT地址后，final2仅复查Team方法：exit0/BUILD SUCCESSFUL in22s、worker16正常，XML `2026-10-07T01:20:15.674Z` 为1/0/0/0，source/fresh Project为0/9118与0/9119。id路径检查macro准备、唯一调用、双store及root初始化；未验证world、执行器或frame0。Cache只首轮通过。三份bin均MCFL41、294070 bytes、header `4c46434d29000000`、SHA256 `41E4F07C70C24D914114C881FEF85A7CFE73F7E364A3F5FA6B0055BBA4CBAADE`。
+
+阶段87的普通值位置 `type` 拒绝规则继续生效；whole17仍ACTIVE未完成。
 
 ### 阶段 110：迁移 StdCommands 命令结果接口（已限定验证）
 

@@ -40,6 +40,9 @@ import top.mcfpp.type.MCFPPEntityType
 import top.mcfpp.type.TypeId
 import top.mcfpp.util.TempPool
 import top.mcfpp.nbt.tags.Tag
+import top.mcfpp.nbt.tags.CompoundTag
+import top.mcfpp.nbt.tags.primitive.ByteTag
+import top.mcfpp.nbt.tags.primitive.StringTag
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.test.*
@@ -3160,6 +3163,99 @@ class LibFieldAccessTest {
                 assertEquals(1, commands.take(index).count { it == initializer })
             }
             assertFalse((commands + body).any { "return run" in it || it.startsWith("debug ") || it.startsWith("datapack ") })
+        }
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+    }
+
+    @Test
+    fun nativeTeamCommandsCaptureReceiverFieldsAcrossLibraryRoundTrip() = withLibrary { output ->
+        for (name in listOf("register", "clear", "unregister")) {
+            val method = top.mcfpp.mni.minecraft.TeamData::class.java.getDeclaredMethod(name, top.mcfpp.mni.NativeCallContext::class.java)
+            val annotation = assertNotNull(method.getAnnotation(top.mcfpp.annotations.MNIFunction::class.java))
+            assertEquals("Team", annotation.caller)
+            assertEquals("mcfpp.minecraft.std:CommandResult", annotation.returnType)
+        }
+        val mainSource = """
+            func main(){ var box=Box(); dynamic var result=box.observe("fixture:team"); }
+        """
+        write("""
+            namespace fixture.fields;
+            import mcfpp.minecraft:*;
+            import mcfpp.minecraft.std:*;
+            data Box {
+                func observe(name as string)->int {
+                    var team=Team(name,("Label").toText());
+                    var registered=team.register(); var emptied=team.clear(); var removed=team.unregister();
+                    var registerValue=registered.result; var clearSuccess=emptied.success; var removeValue=removed.result;
+                    return 7;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val observe = (main.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("observe").single()
+            assertTrue(observe.compiledFunctions.isEmpty())
+            val team = assertIs<DataTemplateObject>(observe.scope.getVar("team"))
+            val idPath = assertNotNull(team.storageBinding).path.memberIndex("id").toCommandPart().toString()
+            val displayNameAddress = assertIs<CompoundTag>(Tag.toNBT("{${assertNotNull(team.storageBinding).path.memberIndex("displayName").toChatComponentPart()}}"))
+            val canonical = assertNotNull(GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.std")).scope.getTemplate("CommandResult")
+            for (name in listOf("registered", "emptied", "removed")) {
+                val value = assertIs<DataTemplateObject>(observe.scope.getVar(name))
+                assertSame(canonical, value.templateType)
+                assertTrue(value.templateType.scope.getVar("result")!!.isConst)
+                assertTrue(value.templateType.scope.getVar("success")!!.isConst)
+                val binding = assertNotNull(value.storageBinding)
+                assertEquals(top.mcfpp.analysis.ValueKnowledge.Unknown, binding.data.facts.read(binding.place)?.value)
+                assertNull(ValueSnapshot.of(value))
+            }
+            for (name in listOf("registerValue", "clearSuccess", "removeValue")) assertNull(ValueSnapshot.of(assertNotNull(observe.scope.getVar(name))))
+            val directory = output.resolve("consumer")
+            DatapackCreator.createDatapack(directory.toString())
+            val data = directory.resolve(Project.config.name).resolve("data")
+            val functions = linkedMapOf<String, List<String>>()
+            Files.walk(data).use { paths ->
+                paths.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".mcfunction") }.forEach { file ->
+                    val relative = data.relativize(file)
+                    if (relative.nameCount >= 3 && relative.getName(1).toString() == "function") {
+                        val id = relative.subpath(2, relative.nameCount).joinToString("/").removeSuffix(".mcfunction")
+                        functions["${relative.getName(0)}:$id"] = Files.readAllLines(file).map(String::trim)
+                    }
+                }
+            }
+            val commands = functions.getValue(observe.namespaceID.toString())
+            val calls = commands.mapIndexedNotNull { index, command -> Regex("function (mcfpp:dynamic/\\S+) with storage (\\S+) (\\S+)").matchEntire(command)?.let { index to it } }
+            assertEquals(3, calls.size)
+            val domains = mutableSetOf<String>()
+            for ((index, call) in calls) {
+                assertEquals(1, commands.count { it == commands[index] })
+                val preparation = "data modify storage ${call.groupValues[2]} ${call.groupValues[3]}"
+                assertTrue(commands.take(index).any { it.startsWith(preparation) && " set " in it })
+                assertTrue(commands.take(index).any { it.startsWith(preparation) && it.endsWith("set from $idPath") })
+                val body = functions.getValue(call.groupValues[1])
+                val capture = assertNotNull(body.singleOrNull { it.startsWith("\$execute store result") }?.removePrefix("\$")?.let {
+                    Regex("execute store result storage (\\S+) (\\S+)\\.result int 1 store success storage (\\S+) (\\S+)\\.success byte 1 run team (add|empty|remove) (.*)").matchEntire(it)
+                })
+                assertEquals(capture.groupValues[1], capture.groupValues[3])
+                assertEquals(capture.groupValues[2], capture.groupValues[4])
+                assertTrue(capture.groupValues[6].startsWith("$("))
+                if (capture.groupValues[5] == "add") {
+                    val parameters = assertNotNull(Regex("\\$\\([^)]+\\) (.+)").matchEntire(capture.groupValues[6]))
+                    val displayName = assertIs<CompoundTag>(Tag.toNBT(parameters.groupValues[1]))
+                    assertEquals(StringTag("nbt"), displayName["type"])
+                    assertEquals(displayNameAddress["storage"], displayName["storage"])
+                    assertEquals(displayNameAddress["nbt"], displayName["nbt"])
+                    assertEquals(ByteTag(1), displayName["interpret"])
+                }
+                assertTrue(domains.add(capture.groupValues[5]))
+                val initializer = "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value {}"
+                assertEquals(1, commands.take(index).count { it == initializer })
+                assertFalse(body.any { "return run" in it || it.removePrefix("\$").startsWith("team ") })
+            }
+            assertEquals(setOf("add", "empty", "remove"), domains)
+            assertFalse(commands.any { "return run" in it || it.startsWith("team ") })
         }
         check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
         val main = consume("import fixture.fields:*;\n$mainSource", output)

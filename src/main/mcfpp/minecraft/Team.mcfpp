@@ -1,3 +1,5 @@
+import mcfpp.minecraft.std:*;
+
 @From<"top.mcfpp.mni.minecraft.TeamData">
 data Team {
     id as string;

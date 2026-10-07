@@ -4,32 +4,27 @@ import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.annotations.MNIMutator;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
-import top.mcfpp.core.lang.CommandReturn;
 import top.mcfpp.core.lang.obj.DataTemplateObject;
 import top.mcfpp.core.lang.obj.EnumVar;
 import top.mcfpp.core.lang.JsonText;
 import top.mcfpp.core.lang.bool.BaseBool;
-import top.mcfpp.model.compound.DataTemplate;
-import top.mcfpp.util.ValueWrapper;
+import top.mcfpp.backend.NativeMinecraftCommandOperations;
+import top.mcfpp.mni.NativeCallContext;
 
 public class TeamData {
-    @MNIFunction(caller = "Team", returnType = "CommandReturn")
-    public static void unregister(DataTemplateObject caller, ValueWrapper<CommandReturn> re) {
-        var command = Command.Companion.buildAll("team remove", caller);
-        Commands.processMacroCommandReturn(re, command);
+    @MNIFunction(caller = "Team", returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void unregister(NativeCallContext context) {
+        NativeMinecraftCommandOperations.INSTANCE.teamUnregister(context);
     }
 
-    @MNIFunction(caller = "Team", returnType = "CommandReturn")
-    public static void register(DataTemplateObject caller, ValueWrapper<CommandReturn> re) {
-        var displayName = DataTemplate.getField(caller, "displayName");
-        var command = Command.Companion.buildAll("team add", caller, displayName);
-        Commands.processMacroCommandReturn(re, command);
+    @MNIFunction(caller = "Team", returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void register(NativeCallContext context) {
+        NativeMinecraftCommandOperations.INSTANCE.teamRegister(context);
     }
 
-    @MNIFunction(caller = "Team", returnType = "CommandReturn")
-    public static void clear(DataTemplateObject caller, ValueWrapper<CommandReturn> re) {
-        var command = Command.Companion.buildAll("team empty", caller);
-        Commands.processMacroCommandReturn(re, command);
+    @MNIFunction(caller = "Team", returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void clear(NativeCallContext context) {
+        NativeMinecraftCommandOperations.INSTANCE.teamClear(context);
     }
 
     @MNIMutator("displayName")
