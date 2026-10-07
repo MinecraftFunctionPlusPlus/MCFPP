@@ -5,6 +5,7 @@ import mcfpp.minecraft.std:*;
 @From<"top.mcfpp.mni.minecraft.EntityEffectData">
 @From<"top.mcfpp.mni.minecraft.EntityRideData">
 @From<"top.mcfpp.mni.minecraft.PlayerXpData">
+@From<"top.mcfpp.mni.minecraft.PlayerAdvancementData">
 data EntityData {
     @Name<"Air">
     air as short;

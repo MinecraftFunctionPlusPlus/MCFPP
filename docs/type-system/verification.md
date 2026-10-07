@@ -1,8 +1,26 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段123，MCFL53；Std外剩余4个Java类含36个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段124，MCFL54；Std外剩余4个Java类含26个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 当前阶段 123：Player XP 命令（已限定验证）
+## 当前阶段 124：Player 成就命令（已限定验证）
+
+`PlayerVarData`十个grant/revoke入口接入单context qualified `CommandResult`，新增`PlayerAdvancementData`挂到`EntityData`。使用qualified `Advancement`并读取真实`ResourceID.id`；capture前检查player selector。标准库SUCCESSFUL in11s、Project0/0；joint worker46正常、SUCCESSFUL in26s。LibFieldAccess XML `2026-10-07T05:43:00.220Z` 与CacheFormat XML `05:42:59.387Z` 均1/0/0/0；source/fresh Project0/9118与0/9119，negative4/9119（2条player guard及`grantAll`/`revokeAll`未发布结果级联诊断）。source/fresh检查8个动态id宏及2个everything direct调用；不模拟world/criterion或frame0。三份bin均MCFL54、473046 bytes、header `4c46434d36000000`、SHA256 `E2084436826232344C6DE71EC93211F4B5F409E0C5065C2BFF8DF8ECE155F1BB`。日志前缀`mcfpp-native-player-advancement-command-results-`。
+
+本阶段11个提交路径含6个源码/测试文件（153+/60−）、bin及四份文档；唯一fixture为`nativePlayerAdvancementCommandsCaptureResultsAcrossLibraryRoundTrip`，联合`oldAndUnknownCacheFormatsProduceARecompileDiagnostic`。不测试criterion或Minecraft world结果。
+
+联合检查原生退出码0。八个宏参数均核对实际Advancement.id或唯一wholeDTO副本的.id来源；十次调用各有独立root及一次初始化、同root双store int1/byte1，canonical readonly结果为Unknown且整体与字段读取快照为空，已知ALL_PLAYERS选择器在连续调用后保持实际kind，无泛型特化。
+
+| 自评维度 | 分数 | 证据及改进方向 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 与fresh XML、negative计数和资源版本核对。 |
+| 完整性 | 3/5 | 十个入口命令生成路径通过；world/criterion及whole17未完成。 |
+| 清晰性 | 4/5 | 区分动态宏、everything direct与玩家guard。 |
+| 可操作性 | 4/5 | 下一阶段收敛到clear/gamemode/ride三类入口。 |
+| 简洁性 | 4/5 | 记录必要构建、测试及bin证据。 |
+
+平均3.8/5；whole17仍未完成。
+
+## 历史必要检查：阶段 123 Player XP 命令（已限定验证）
 
 `PlayerVarData`六个XP入口接入单context qualified `CommandResult`，新增`PlayerXpData`挂到`EntityData`。add/set保留multiple-player合同，query要求single player；capture前验证Player selector。标准库SUCCESSFUL in12s、Project0/0；joint worker45正常、SUCCESSFUL in26s。LibFieldAccess XML `2026-10-07T05:29:58.371Z` 与CacheFormat XML `05:29:57.554Z` 均1/0/0/0；source/fresh Project0/9118与0/9119，negative6/9119（3条selector guard及3条未发布结果级联诊断）。source/fresh均检查四个amount宏和两个直接query；不模拟世界XP值或frame0。三份bin均MCFL53、459939 bytes、header `4c46434d35000000`、SHA256 `D6DC92AA4C19913AFBD97C11F6608D4F42FBB9A0854A5E78FA3B36E2AE13D46D`。日志前缀`mcfpp-native-player-xp-command-results-`。
 

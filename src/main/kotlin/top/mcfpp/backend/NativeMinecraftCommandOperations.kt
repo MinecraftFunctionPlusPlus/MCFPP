@@ -38,6 +38,25 @@ internal fun captureCommandResult(context: NativeCallContext, build: (List<Var<*
 }
 
 object NativeMinecraftCommandOperations {
+    fun playerGrant(context: NativeCallContext) = playerAdvancement(context, "grant", "only")
+    fun playerGrantAll(context: NativeCallContext) = playerAdvancement(context, "grant", "everything")
+    fun playerGrantFrom(context: NativeCallContext) = playerAdvancement(context, "grant", "from")
+    fun playerGrantThrough(context: NativeCallContext) = playerAdvancement(context, "grant", "through")
+    fun playerGrantUntil(context: NativeCallContext) = playerAdvancement(context, "grant", "until")
+    fun playerRevoke(context: NativeCallContext) = playerAdvancement(context, "revoke", "only")
+    fun playerRevokeAll(context: NativeCallContext) = playerAdvancement(context, "revoke", "everything")
+    fun playerRevokeFrom(context: NativeCallContext) = playerAdvancement(context, "revoke", "from")
+    fun playerRevokeThrough(context: NativeCallContext) = playerAdvancement(context, "revoke", "through")
+    fun playerRevokeUntil(context: NativeCallContext) = playerAdvancement(context, "revoke", "until")
+
+    private fun playerAdvancement(context: NativeCallContext, operation: String, mode: String) = context.withAdapters { receiver, args ->
+        val players = playerSelector(receiver) ?: return@withAdapters
+        captureCommandResult(context) {
+            if (mode == "everything") Command.buildAll("advancement", operation, players, mode)
+            else Command.buildAll("advancement", operation, players, mode, templateField(args[0] as DataTemplateObject, "id"))
+        }
+    }
+
     fun playerAddXpPoints(context: NativeCallContext) = playerXpWrite(context, "add", "points")
     fun playerAddXpLevels(context: NativeCallContext) = playerXpWrite(context, "add", "levels")
     fun playerSetXpPoints(context: NativeCallContext) = playerXpWrite(context, "set", "points")

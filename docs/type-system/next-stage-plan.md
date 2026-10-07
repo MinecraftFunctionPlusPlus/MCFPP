@@ -1,6 +1,6 @@
-# 下一阶段：迁移 Player 成就命令（阶段124）
+# 下一阶段：迁移 Player 状态与骑乘命令（阶段125）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–123完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及EntityTag路径的限定迁移；当前库格式MCFL53，Std外剩余4个Java类、36个CommandReturn注解及7个旧void wrapper。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–124完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及EntityTag路径的限定迁移；当前库格式MCFL54，Std外剩余4个Java类、26个CommandReturn注解及7个旧void wrapper。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -126,9 +126,13 @@ BossBar的add/remove/listAll/setColor/setName/setVisiblePlayers/setStyle七个�
 
 `PlayerVarData`六个XP入口接入单context qualified `CommandResult`，`PlayerXpData`通过`@From`挂到`EntityData`。add/set保留multiple-player合同，query要求single player；capture前验证player selector。fixture及Cache回归通过，source/fresh覆盖四个amount宏和两个直接query，不模拟世界XP值。
 
-### 阶段 124 计划：Player 成就命令
+### 阶段 124：Player 成就命令（已限定验证）
 
-限定迁移`PlayerVarData`的`grant`、`grantAll`、`grantFrom`、`grantThrough`、`grantUntil`及对应五个`revoke`入口，接入单context qualified `CommandResult`，caller改为entity；新增`PlayerAdvancementData`挂到`EntityData`。参数显式使用`mcfpp.minecraft.resource:Advancement`，读取真实`ResourceID.id`。按[26.3命令报告](https://raw.githubusercontent.com/misode/mcmeta/26.3-summary/commands/data.json)，词序为`advancement grant/revoke players only/from/through/until id`或`advancement grant/revoke players everything`；`grantAll`/`revokeAll`无参数。capture前检查player selector，计划单fixture覆盖8个动态advancement宏、2个`everything` direct命令及DTO/非玩家拒绝。不覆盖criterion、world执行、typeId、predicate或默认参数；MCFL53→54，尚未实现或验证。
+`PlayerVarData`十个grant/revoke入口接入单context qualified `CommandResult`，caller使用entity；`PlayerAdvancementData`通过`@From`挂到`EntityData`。命令使用qualified `Advancement`及真实`ResourceID.id`，capture前检查player selector。source/fresh fixture覆盖八个动态id宏、两个everything direct调用和DTO/非玩家负向guard；Cache回归通过。不模拟world或criterion。
+
+### 阶段 125 计划：Player 状态与骑乘命令
+
+迁移`PlayerVarData.clear()`、`clear(string,int)`及`setGamemode(Gamemode)`，并将`EntityVarData.ride`迁入已有`EntityRideData`。新增`PlayerStateData`挂到`EntityData`；用两个Java方法名配`@MNIFunction(identifier="clear")`保留clear语言重载，count默认注解不代表已安装默认实参。Gamemode显式引用`mcfpp.minecraft.other:Gamemode`，capture前要求`EnumVarConcrete`并输出`value.identifier`。Player方法先检查player selector；ride使用普通entity参数保留bare选择器，receiver与目标均须是实际单实体SelectorVar，成功后生成`ride receiver mount target`。不改`getLimit`、TypeId或predicate快照；旧clear谓词重载与PlayerInventory五个void桥暂待真实组合合同。fixture计划覆盖动态item id/count宏、clearall/gamemode/ride直接命令及负向guard；MCFL54→55，尚未实现或验证。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

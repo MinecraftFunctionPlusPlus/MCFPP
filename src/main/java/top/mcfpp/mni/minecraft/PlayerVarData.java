@@ -59,65 +59,6 @@ public class PlayerVarData {
         return new ArrayList<>(List.of(attributes));
     }
 
-    @MNIFunction(normalParams = {"Advancement"}, caller = "Player", returnType = "CommandReturn")
-    public static void grant(DataTemplateObject advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        Command command = Command.Companion.buildAll("advancement grant", caller, "only", advancement);
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-
-    @MNIFunction(caller = "Player", returnType = "CommandReturn")
-    public static void grantAll(PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        Command command = Command.Companion.buildAll("advancement grant", caller, "everything");
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-
-    @MNIFunction(normalParams = {"Advancement"}, caller = "Player", returnType = "CommandReturn")
-    public static void grantFrom(DataTemplateObject advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        Command command = Command.Companion.buildAll("advancement grant", caller, "from", advancement);
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-
-    @MNIFunction(normalParams = {"Advancement"}, caller = "Player", returnType = "CommandReturn")
-    public static void grantThrough(DataTemplateObject advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        Command command = Command.Companion.buildAll("advancement grant", caller, "through", advancement);
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-
-    @MNIFunction(normalParams = {"Advancement"}, caller = "Player", returnType = "CommandReturn")
-    public static void grantUntil(DataTemplateObject advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        Command command = Command.Companion.buildAll("advancement grant", caller, "until", advancement);
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-
-    @MNIFunction(normalParams = {"Advancement"}, caller = "Player", returnType = "CommandReturn")
-    public static void revoke(DataTemplateObject advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        Command command = Command.Companion.buildAll("advancement revoke", caller, "only", advancement);
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-    @MNIFunction(caller = "Player", returnType = "CommandReturn")
-    public static void revokeAll(PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        Command command = Command.Companion.buildAll("advancement revoke", caller, "everything");
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-
-    @MNIFunction(normalParams = {"Advancement"}, caller = "Player", returnType = "CommandReturn")
-    public static void revokeFrom(DataTemplateObject advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        Command command = Command.Companion.buildAll("advancement revoke", caller, "from", advancement);
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-
-    @MNIFunction(normalParams = {"Advancement"}, caller = "Player", returnType = "CommandReturn")
-    public static void revokeThrough(DataTemplateObject advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        Command command = Command.Companion.buildAll("advancement revoke", caller, "through", advancement);
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-
-    @MNIFunction(normalParams = {"Advancement"}, caller = "Player", returnType = "CommandReturn")
-    public static void revokeUntil(DataTemplateObject advancement, PlayerVar caller, ValueWrapper<CommandReturn> returnValue) {
-        Command command = Command.Companion.buildAll("advancement revoke", caller, "until", advancement);
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-
     //region clear
     @MNIFunction(caller = "Player", returnType = "CommandReturn")
     public static void clear(PlayerVar caller, ValueWrapper<CommandReturn> returnValue){
