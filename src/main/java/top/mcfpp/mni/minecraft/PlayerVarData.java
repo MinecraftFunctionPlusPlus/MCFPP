@@ -138,44 +138,6 @@ public class PlayerVarData {
     //TODO check(Item item)->bool
     //endregion
 
-    //region xp
-    @MNIFunction(normalParams = {"int"}, caller = "Player", returnType = "CommandReturn")
-    public static void addXpPoints(MCInt points, PlayerVar player, ValueWrapper<CommandReturn> returnValue){
-        Command command = Command.Companion.buildAll("xp add", player, points, "points");
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-
-    @MNIFunction(normalParams = {"int"}, caller = "Player", returnType = "CommandReturn")
-    public static void addXpLevels(MCInt levels, PlayerVar player, ValueWrapper<CommandReturn> returnValue){
-        Command command = Command.Companion.buildAll("xp add", player, levels, "levels");
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-
-    @MNIFunction(normalParams = {"int"}, caller = "Player", returnType = "CommandReturn")
-    public static void setXpPoints(MCInt points, PlayerVar player, ValueWrapper<CommandReturn> returnValue){
-        Command command = Command.Companion.buildAll("xp set", player, points, "points");
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-
-    @MNIFunction(normalParams = {"int"}, caller = "Player", returnType = "CommandReturn")
-    public static void setXpLevels(MCInt levels, PlayerVar player, ValueWrapper<CommandReturn> returnValue){
-        Command command = Command.Companion.buildAll("xp set", player, levels, "levels");
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-
-    @MNIFunction(caller = "Player", returnType = "CommandReturn")
-    public static void queryXpPoints(PlayerVar player, ValueWrapper<CommandReturn> returnValue){
-        Command command = Command.Companion.buildAll("xp query", player, "points");
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-
-    @MNIFunction(caller = "Player", returnType = "CommandReturn")
-    public static void queryXpLevels(PlayerVar player, ValueWrapper<CommandReturn> returnValue){
-        Command command = Command.Companion.buildAll("xp query", player, "levels");
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-    //endregion
-
     //region gameMode
     @MNIFunction(normalParams = {"Gamemode"}, caller = "Player", returnType = "CommandReturn")
     public static void setGamemode(EnumVar mode, PlayerVar player, ValueWrapper<CommandReturn> returnValue){

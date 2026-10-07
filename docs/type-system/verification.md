@@ -1,8 +1,26 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段122，MCFL52；Std外剩余4个Java类含42个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段123，MCFL53；Std外剩余4个Java类含36个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 当前阶段 122：停止骑乘命令（已限定验证）
+## 当前阶段 123：Player XP 命令（已限定验证）
+
+`PlayerVarData`六个XP入口接入单context qualified `CommandResult`，新增`PlayerXpData`挂到`EntityData`。add/set保留multiple-player合同，query要求single player；capture前验证Player selector。标准库SUCCESSFUL in12s、Project0/0；joint worker45正常、SUCCESSFUL in26s。LibFieldAccess XML `2026-10-07T05:29:58.371Z` 与CacheFormat XML `05:29:57.554Z` 均1/0/0/0；source/fresh Project0/9118与0/9119，negative6/9119（3条selector guard及3条未发布结果级联诊断）。source/fresh均检查四个amount宏和两个直接query；不模拟世界XP值或frame0。三份bin均MCFL53、459939 bytes、header `4c46434d35000000`、SHA256 `D6DC92AA4C19913AFBD97C11F6608D4F42FBB9A0854A5E78FA3B36E2AE13D46D`。日志前缀`mcfpp-native-player-xp-command-results-`。
+
+本阶段11个提交路径含6个源码/测试文件（147+/41−）、bin和四份文档。唯一fixture为`nativePlayerXpCommandsCaptureResultsAcrossLibraryRoundTrip`，联合`oldAndUnknownCacheFormatsProduceARecompileDiagnostic`；三条负向调用分别报告`Experience queries require a single-player selector`或`Command requires a selector that only includes players`，并各有未发布结果的级联诊断。
+
+联合检查原生退出码0。每个动态amount宏按实际参数绑定核对NBT读取、score复制、NBT编码、宏参数准备到调用的顺序；六次调用各有独立root及一次初始化，canonical readonly结果保持Unknown与空快照，实际字段读取也没有伪造已知值；两种bare玩家选择器保留实际kind。
+
+| 自评维度 | 分数 | 证据及改进方向 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 对照fresh XML、source/fresh计数和三种负向场景诊断。 |
+| 完整性 | 3/5 | 六个XP入口的生成路径通过；世界XP值及whole17未完成。 |
+| 清晰性 | 4/5 | 区分multiple-player修改与single-player查询合同。 |
+| 可操作性 | 4/5 | 下一步限定Player advancement十入口及selector要求。 |
+| 简洁性 | 4/5 | 保留所需构建、XML和资源证据。 |
+
+平均3.8/5；whole17仍未完成。
+
+## 历史必要检查：阶段 122 停止骑乘命令（已限定验证）
 
 11个提交路径含6项源码/测试（88+/6−）、bin及四份文档。唯一新增fixture `nativeEntityStopRideCommandsCaptureResultsAcrossLibraryRoundTrip` 与 `oldAndUnknownCacheFormatsProduceARecompileDiagnostic` 联合通过，原生退出码0；日志前缀为 `mcfpp-native-entity-stop-ride-command-results-`，保留stdlib/final日志。source/fresh检查同一已知SELF选择器两次调用、canonical readonly结果的Unknown事实与空快照、两个独立捕获root及各一次初始化。
 

@@ -1,6 +1,6 @@
-# 下一阶段：迁移 Player 经验命令（阶段123）
+# 下一阶段：迁移 Player 成就命令（阶段124）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–122完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及EntityTag路径的限定迁移；当前库格式MCFL52，Std外剩余4个Java类、42个CommandReturn注解及7个旧void wrapper。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–123完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及EntityTag路径的限定迁移；当前库格式MCFL53，Std外剩余4个Java类、36个CommandReturn注解及7个旧void wrapper。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -122,9 +122,13 @@ BossBar的add/remove/listAll/setColor/setName/setVisiblePlayers/setStyle七个�
 
 `EntityRideData.stopRide`使用单context结果捕获；复用`SelectorVar.value.selectingSingleEntity()`证明，仅接受单实体selector。指定fixture和Cache回归通过，source/fresh磁盘检查两个调用及DTO/多实体负向guard；未验证Minecraft世界骑乘或frame0。
 
-### 阶段 123 计划：Player 经验命令
+### 阶段 123：Player 经验命令（已限定验证）
 
-限定迁移`PlayerVarData`的`addXpPoints`、`addXpLevels`、`setXpPoints`、`setXpLevels`、`queryXpPoints`与`queryXpLevels`六个入口，改为entity caller，使用单context和qualified结果。按26.3命令报告，add/set接收multiple players、query要求single player；xp重定向到experience。capture前验证真实`SelectorVar`且限制player选择器；计划source/fresh fixture覆盖动态amount宏及两个直接query命令，不模拟世界XP值。`PlayerXpData`通过`@From`挂到`EntityData`，不扩大`PlayerData`可达性。MCFL52→53，尚未实现或验证。
+`PlayerVarData`六个XP入口接入单context qualified `CommandResult`，`PlayerXpData`通过`@From`挂到`EntityData`。add/set保留multiple-player合同，query要求single player；capture前验证player selector。fixture及Cache回归通过，source/fresh覆盖四个amount宏和两个直接query，不模拟世界XP值。
+
+### 阶段 124 计划：Player 成就命令
+
+限定迁移`PlayerVarData`的`grant`、`grantAll`、`grantFrom`、`grantThrough`、`grantUntil`及对应五个`revoke`入口，接入单context qualified `CommandResult`，caller改为entity；新增`PlayerAdvancementData`挂到`EntityData`。参数显式使用`mcfpp.minecraft.resource:Advancement`，读取真实`ResourceID.id`。按[26.3命令报告](https://raw.githubusercontent.com/misode/mcmeta/26.3-summary/commands/data.json)，词序为`advancement grant/revoke players only/from/through/until id`或`advancement grant/revoke players everything`；`grantAll`/`revokeAll`无参数。capture前检查player selector，计划单fixture覆盖8个动态advancement宏、2个`everything` direct命令及DTO/非玩家拒绝。不覆盖criterion、world执行、typeId、predicate或默认参数；MCFL53→54，尚未实现或验证。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

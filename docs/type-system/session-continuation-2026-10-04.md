@@ -4,6 +4,10 @@
 
 ## 当前进度
 
+### 阶段 123：Player XP 命令（已限定验证）
+
+`PlayerVarData`六个XP入口使用单context qualified `CommandResult`；新增`PlayerXpData`挂到`EntityData`。add/set采用multiple-player合同，query限制single player；capture前验证Player selector。stdlib12s/Project0/0；joint worker45正常、SUCCESSFUL in26s。LibFieldAccess XML `2026-10-07T05:29:58.371Z`、Cache XML `05:29:57.554Z` 均1/0/0/0；source/fresh Project0/9118与0/9119，negative6/9119（3条selector guard及3条未发布结果级联诊断）。三份bin MCFL53、459939 bytes、header `4c46434d35000000`、SHA256 `D6DC92AA4C19913AFBD97C11F6608D4F42FBB9A0854A5E78FA3B36E2AE13D46D`。仅验证四个动态参数宏和两个直接query的生成/捕获，不模拟世界XP值或frame0。
+
 ### 阶段 122：停止骑乘命令（已限定验证）
 
 `EntityRideData.stopRide`使用单context结果捕获；仅接受已证明为单实体的selector，DTO与多实体selector在capture前拒绝。stdlib10s/Project0/0；联合worker44正常、SUCCESSFUL in24s。LibFieldAccess XML `2026-10-07T05:14:47.255Z`、Cache XML `05:14:46.352Z` 均1/0/0/0；source/fresh Project0/9118与0/9119，negative4/9119（两场景各有selector guard及未发布结果诊断）。三份bin MCFL52、455477 bytes、header `4c46434d34000000`、SHA256 `71BC9EF7BE9E5257B52242542FF6FB431D64EF725CC6C75DF2C27DC768C84D5B`。仅验证生成命令和负向guard，不涉及世界骑乘、frame0或whole17完成。
@@ -32,7 +36,7 @@ stdlib SUCCESSFUL 11s、Project0/0；joint worker40正常、FAILED19s，LibField
 
 stdlib1成功11s/Project0/0；首轮producer因`ENTITY`保留字导入解析失败，Cache XML `2026-10-07T03:22:31.233Z` 1/0/0/0为MCFL48唯一Cache验证。grammar修复后stdlib2成功26s/0/0；final2 producer189/9118，final3 producer9/9118。final4重复执行并覆盖，当前仅保留worker37、FAILED6s及XML `2026-10-07T03:52:30.253Z` 1/1/0/0、producer8/9118；worker36首轮日志/XML已丢失。final5-debug worker38 FAILED28s，XML `2026-10-07T04:04:19.204Z` 1/1/0/0、producer8/9118，诊断显示bare Selector绑定后value仍为Unknown。最终修复后final6 worker39正常、SUCCESS39s，XML `2026-10-07T04:08:58.285Z` 1/0/0/0；source/fresh Project0/9118与0/9119，negative 2/9119，selector guard与未发布`listTag`结果诊断按预期通过。未覆盖predicate selector、world执行、frame0或whole17。
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段122 stopRide入口已完成限定验证，MCFL52；阶段121 Entity effect授予两个入口已完成限定验证，MCFL51；阶段120 EntityEffect两个命令入口已完成限定验证，MCFL50；阶段119 Team加入/离开两个命令入口已完成限定验证，MCFL49；阶段118 EntityTag三个结果入口已完成限定验证，MCFL48；阶段117 Random命令结果入口已完成限定验证，MCFL47；阶段116 WorldObject命令结果入口已完成限定验证，MCFL46；阶段115 BossBar命令结果入口已完成限定验证，MCFL45；阶段114 Worldborder命令结果入口已完成限定验证，MCFL43；阶段113 Op/Recipe玩家命令入口已完成限定验证，MCFL42；阶段112 Team receiver结果入口已完成限定验证，MCFL41；阶段111 Datapack/Debug结果入口已完成限定验证，MCFL40；阶段110提交`17313ad`，阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效；当前Std外剩余4个Java类、42个CommandReturn注解及7个旧void wrapper，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段123 Player XP六个入口已完成限定验证，MCFL53；阶段122 stopRide入口已完成限定验证，MCFL52；阶段121 Entity effect授予两个入口已完成限定验证，MCFL51；阶段120 EntityEffect两个命令入口已完成限定验证，MCFL50；阶段119 Team加入/离开两个命令入口已完成限定验证，MCFL49；阶段118 EntityTag三个结果入口已完成限定验证，MCFL48；阶段117 Random命令结果入口已完成限定验证，MCFL47；阶段116 WorldObject命令结果入口已完成限定验证，MCFL46；阶段115 BossBar命令结果入口已完成限定验证，MCFL45；阶段114 Worldborder命令结果入口已完成限定验证，MCFL43；阶段113 Op/Recipe玩家命令入口已完成限定验证，MCFL42；阶段112 Team receiver结果入口已完成限定验证，MCFL41；阶段111 Datapack/Debug结果入口已完成限定验证，MCFL40；阶段110提交`17313ad`，阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效；当前Std外剩余4个Java类、36个CommandReturn注解及7个旧void wrapper，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
 
 ### 阶段 117：Random命令结果接口（已限定验证）
 

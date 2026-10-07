@@ -38,6 +38,26 @@ internal fun captureCommandResult(context: NativeCallContext, build: (List<Var<*
 }
 
 object NativeMinecraftCommandOperations {
+    fun playerAddXpPoints(context: NativeCallContext) = playerXpWrite(context, "add", "points")
+    fun playerAddXpLevels(context: NativeCallContext) = playerXpWrite(context, "add", "levels")
+    fun playerSetXpPoints(context: NativeCallContext) = playerXpWrite(context, "set", "points")
+    fun playerSetXpLevels(context: NativeCallContext) = playerXpWrite(context, "set", "levels")
+    fun playerQueryXpPoints(context: NativeCallContext) = playerXpQuery(context, "points")
+    fun playerQueryXpLevels(context: NativeCallContext) = playerXpQuery(context, "levels")
+
+    private fun playerXpWrite(context: NativeCallContext, operation: String, unit: String) = context.withAdapters { receiver, args ->
+        val players = playerSelector(receiver) ?: return@withAdapters
+        captureCommandResult(context) { Command.buildAll("xp", operation, players, args[0], unit) }
+    }
+    private fun playerXpQuery(context: NativeCallContext, unit: String) = context.withAdapters { receiver, _ ->
+        val player = playerSelector(receiver) ?: return@withAdapters
+        if (!player.value.selectingSingleEntity()) {
+            LogProcessor.error("Experience queries require a single-player selector")
+            return@withAdapters
+        }
+        captureCommandResult(context) { Command.buildAll("xp query", player, unit) }
+    }
+
     fun entityStopRide(context: NativeCallContext) = context.withAdapters { receiver, _ ->
         if (receiver !is SelectorVar || !receiver.value.selectingSingleEntity()) {
             LogProcessor.error("Entity dismount commands require a single-entity selector receiver")
@@ -224,8 +244,7 @@ object NativeMinecraftCommandOperations {
         captureCommandResult(context) { Command.buildAll("recipe take", players, templateField(receiver as DataTemplateObject, "id")) }
     }
     private fun playerSelector(value: Var<*>): SelectorVar? {
-        val selector = value as SelectorVar
-        if (selector.isPlayer()) return selector
+        if (value is SelectorVar && value.isPlayer()) return value
         LogProcessor.error("Command requires a selector that only includes players")
         return null
     }
