@@ -207,13 +207,16 @@ object PrimitiveCompiler {
                 diagnostics += "Legacy float requires its four-component layout; use toFloat(value) for numeric conversion"
         }
         for (block in ir.blocks) for (instruction in block.instructions.filterIsInstance<Instruction.Convert>()) {
-            if (instruction.value.type != float || instruction.type != int) continue
+            if (instruction.value.type != float || instruction.type !in setOf(int, MCFPPNBTType.Byte.typeId, MCFPPNBTType.Short.typeId)) continue
             val value = when (val source = instruction.value) {
                 is ValueRef.Constant -> source.value
                 is ValueRef.Result -> (typeFacts.values[block.id to source.instruction]?.value as? ValueKnowledge.Constant)?.value
                 else -> null
             }
-            (value as? CompilerValue.FloatBits)?.let { NumericConversion.floatToIntError(Float.fromBits(it.bits)) }?.let(diagnostics::add)
+            (value as? CompilerValue.FloatBits)?.let {
+                val number = Float.fromBits(it.bits)
+                if (FloatProviders.enabled || !number.isFinite()) NumericConversion.floatToIntError(number) else null
+            }?.let(diagnostics::add)
         }
         diagnostics.forEach(top.mcfpp.util.LogProcessor::error)
         val returns = ir.blocks.filter { it.id in facts.entries && it.terminator is Terminator.Return }
@@ -261,7 +264,7 @@ object PrimitiveCompiler {
                 }
             }
             adapter.symbol = symbol
-            adapter.hasAssigned = true
+            adapter.hasAssigned = finalFacts.read(place)?.state == ValueState.INITIALIZED
             adapter.isConst = !symbol.mutable
             adapter.isDynamic = symbol.forceRuntime
             adapter.nbtPath = if (nbt(symbol.declaredType)) backend.address(lowering.location(symbol)) else NBTPath.getNormalStackPath(adapter)
@@ -411,7 +414,6 @@ object PrimitiveCompiler {
 
         private fun receiverField(node: Parser.VarWithSelectorContext): ValueRef? {
             if (initializerFields == null) return null
-            if (node.jvmAccessExpression().Identifier() != null) return null
             val property = node.jvmAccessExpression().propertyOperator()
             if (property.propertyOperatorExpression().isNotEmpty() || property.primary().THIS() == null) return null
             val selected = node.selector().singleOrNull()?.`var`()?.varWithSuffix() ?: unsupported()
@@ -625,9 +627,15 @@ object PrimitiveCompiler {
             }
             val declaration = context.fieldDeclaration()
             if (declaration != null) {
-                val initializer = declaration.expression() ?: unsupported()
                 val modifier = declaration.fieldModifier()?.text
                 if (modifier == "import") unsupported()
+                val initializer = declaration.expression()
+                if (initializer == null) {
+                    if (modifier == "const") unsupported()
+                    val declared = declaration.type()?.let(::type)?.typeId ?: unsupported()
+                    declare(declaration, declared)
+                    return
+                }
                 val declared = declaration.type()?.let(::type)?.typeId
                 val previous = expectedLiteral
                 expectedLiteral = declared?.let { literalToken(initializer)?.let { token -> token to types.getValue(it) } }
@@ -650,7 +658,7 @@ object PrimitiveCompiler {
                 if (target == null) { expression(assignment.expression()); return }
                 val suffix = target.jvmAccessExpression().propertyOperator().primary().`var`()?.varWithSuffix() ?: unsupported()
                 val symbol = lookup(suffix.Identifier().text)
-                if (target.selector().isNotEmpty() || target.jvmAccessExpression().Identifier() != null) unsupported()
+                if (target.selector().isNotEmpty()) unsupported()
                 if (suffix.identifierSuffix().isEmpty() && !symbol.mutable) invalid("Cannot assign a constant repeatedly: ${symbol.name}")
                 val operation = assignment.assignmentOperator().text
                 val indexedDestination = if (suffix.identifierSuffix().isEmpty()) null else indexed(suffix, writing = true, readFinal = operation != "=")
@@ -1135,7 +1143,7 @@ object PrimitiveCompiler {
                     else projection(receiver, selected.varWithSuffix() ?: unsupported())
                 }
             }
-            is Parser.JvmAccessExpressionContext -> if (node.Identifier() != null) unsupported() else expression(node.propertyOperator())
+            is Parser.JvmAccessExpressionContext -> expression(node.propertyOperator())
             is Parser.PropertyOperatorContext -> if (node.propertyOperatorExpression().isNotEmpty()) unsupported() else expression(node.primary())
             is Parser.PrimaryContext -> when {
                 node.value() != null -> expression(node.value())
@@ -1192,6 +1200,7 @@ object PrimitiveCompiler {
         private val destinations = mutableMapOf(0 to function)
         private val storagePlaces = hashSetOf<Place>()
         private val initialized = hashSetOf<Place>()
+        private val scorePlaces = hashSetOf<Place>()
         private var callNumber = 0
         private fun objective(type: TypeId) = if (type == int) "mcfpp_default" else "mcfpp_boolean"
         private fun temporary(type: TypeId) = Score(TempPool.getVarIdentify(), objective(type))
@@ -1262,6 +1271,23 @@ object PrimitiveCompiler {
             when {
                 instruction.type == MCFPPNBTType.NBT.typeId || instruction.type == value.type -> encode(destination, value)
                 !runtime(result) -> emit(Commands.dataSetValue(destination, StorageAccess.snapshotTag(constant(result)!!, instruction.type)!!))
+                value.type == MCFPPNBTType.Long.typeId && instruction.type == MCFPPNBTType.Double.typeId -> {
+                    val input = internal("convert_input_${instruction.result}")
+                    encode(input, value)
+                    val operand = top.mcfpp.core.lang.nbt.MCLong("convert_input_${instruction.result}").apply {
+                        nbtPath = input
+                        hasAssigned = true
+                    }
+                    emit(Command("data modify").build(destination.toCommandPart()).build("set value")
+                        .buildMacro(operand).build("d", false))
+                }
+                instruction.type == float && value.type in setOf(MCFPPNBTType.Long.typeId, MCFPPNBTType.Double.typeId) -> {
+                    val input = internal("convert_input_${instruction.result}")
+                    encode(input, value)
+                    val provider = FloatProviders.storageProvider((input.source as top.mcfpp.lib.StorageSource).storage,
+                        input.pathToCommandPart().toString())
+                    emit(Command("data modify").build(destination.toCommandPart()).build("set compute default float $provider"))
+                }
                 instruction.type == float -> {
                     val input = score(value)
                     floatFromInt(instruction.result, input)
@@ -1452,17 +1478,7 @@ object PrimitiveCompiler {
             commands += "function ${target.namespaceID}"
             instruction.result?.let {
                 val destination = internal("result_$id", 1)
-                if (!FloatProviders.enabled && target.returnVar is MCFloat)
-                    LegacyFloatCommands.store(destination, legacyComponents(target.returnVar as MCFloat), ::emit)
-                else if (nbt(instruction.returnType!!) && target.returnVar !is MCInt) emit(Commands.dataSetFrom(destination, target.returnVar.nbtPath))
-                else {
-                    val tag = when (instruction.returnType) {
-                        bool, MCFPPNBTType.Byte.typeId -> "byte"
-                        MCFPPNBTType.Short.typeId -> "short"
-                        else -> "int"
-                    }
-                    commands += "execute store result ${destination.toCommandPart()} $tag 1 run scoreboard players get ${physical(target.returnVar)}"
-                }
+                emit(Commands.dataSetFrom(destination, NBTPath.stack.intIndex(0).memberIndex("return")))
             }
             target.normalParams.forEachIndexed { index, parameter ->
                 if (!parameter.isStatic) return@forEachIndexed
@@ -1480,7 +1496,10 @@ object PrimitiveCompiler {
                 val source = internal("static_${id}_$index")
                 val location = instruction.argumentLocations.getOrNull(index) ?: Location(destination)
                 if (nbt(symbols.getValue(destination.root).declaredType) || destination.path.isNotEmpty()) emit(Commands.dataSetFrom(address(location), source))
-                else commands += "execute store result score ${place(destination)} run data get ${source.toCommandPart()} 1"
+                else {
+                    commands += "execute store result score ${place(destination)} run data get ${source.toCommandPart()} 1"
+                    scorePlaces.add(destination)
+                }
                 materializedPlaces.add(destination)
                 initialized.add(destination)
             }
@@ -1492,7 +1511,10 @@ object PrimitiveCompiler {
                 }
                 instruction.resultPlace?.let { place ->
                     emit(Commands.dataSetFrom(path(place), location))
-                    if (!nbt(instruction.returnType)) commands += "scoreboard players operation ${place(place)} = ${results.getValue(result)}"
+                    if (!nbt(instruction.returnType)) {
+                        commands += "scoreboard players operation ${place(place)} = ${results.getValue(result)}"
+                        scorePlaces.add(place)
+                    }
                     initialized.add(place)
                     materializedPlaces.add(place)
                 }
@@ -1527,6 +1549,10 @@ object PrimitiveCompiler {
 
         fun generate() {
             val reachable = ir.blocks.filter { it.id in facts.entries }
+            for (parameter in function.normalParams) {
+                val symbol = lowering.symbols[parameter.identifier] ?: continue
+                if (symbol.declaredType == int || symbol.declaredType == bool) scorePlaces.add(Place(symbol.id))
+            }
             if (reachable.any { block -> block.instructions.any { it is Instruction.RawCommand || it is Instruction.Call && it.effect == Effect.Unknown } }) {
                 // Raw commands can observe any physical register and have unknown writes.
                 storagePlaces.addAll(lowering.symbols.values.map { Place(it.id) })
@@ -1587,6 +1613,7 @@ object PrimitiveCompiler {
                         if (known != null && !lowering.runtime(instruction.value)) commands += "scoreboard players set $destination ${number(known)}"
                         else commands += "scoreboard players operation $destination = ${score(instruction.value)}"
                         initialized.add(instruction.place)
+                        scorePlaces.add(instruction.place)
                     }
                     is Instruction.Binary -> {
                         if (!runtime(ValueRef.Result(instruction.type, instruction.result))) continue
@@ -1646,7 +1673,19 @@ object PrimitiveCompiler {
                         floatFromInt(instruction.result, source)
                     }
                     is Instruction.Convert -> convert(instruction)
-                    is Instruction.RawCommand -> commands.add(instruction.command)
+                    is Instruction.RawCommand -> {
+                        // Raw observers see the current assigned values, including score-backed locals.
+                        for (location in initialized.filter { it.path.isEmpty() && it in scorePlaces }) {
+                            val type = symbols.getValue(location.root).declaredType
+                            if (type == int || type == bool) emit(Command("execute store result")
+                                .build(address(location).toCommandPart())
+                                .build("${if (type == bool) "byte" else "int"} 1 run scoreboard players get ${place(location)}"))
+                        }
+                        commands.add(instruction.command)
+                        constants.clear()
+                        // SSA result registers are captured values, not reusable reads of a Place.
+                        // New Instruction.Read operations always load the actual current score.
+                    }
                     is Instruction.CaptureKey -> {
                         val destination = internal("map_key_${instruction.result}")
                         emit(Commands.dataSetValue(destination, top.mcfpp.nbt.tags.CompoundTag()))
@@ -1773,23 +1812,10 @@ object PrimitiveCompiler {
                     }
                     is Terminator.Return -> {
                         terminator.value?.let { value ->
-                            if (!FloatProviders.enabled && function.returnVar is MCFloat) {
-                                LegacyFloatCommands.load(legacyFloat(value), legacyComponents(function.returnVar as MCFloat), ::emit)
-                                return@let
-                            }
-                            // byte/short use NBT inside IR but retain the existing scalar return ABI.
-                            if (nbt(function.returnType.typeId) && function.returnVar !is MCInt) {
-                                encode(function.returnVar.nbtPath, value)
-                                return@let
-                            }
-                            val destination = when (val result = function.returnVar) {
-                                is MCInt -> Score(result.name, result.sbObject.toString())
-                                is ScoreBool -> Score(result.name, result.boolObject.toString())
-                                else -> error("Unsupported primitive return storage")
-                            }
-                            val known = constant(value)
-                            if (known != null && !lowering.runtime(value)) commands += "scoreboard players set $destination ${number(known)}"
-                            else commands += "scoreboard players operation $destination = ${score(value)}"
+                            val destination = NBTPath.stack.intIndex(0).memberIndex("return")
+                            if (!FloatProviders.enabled && function.returnVar is MCFloat)
+                                emit(Commands.dataSetFrom(destination, legacyFloat(value)))
+                            else encode(destination, value)
                         }
                         if ((hasControlFlow || terminator.value != null) && supportsReturn) {
                             commands += "return 0"

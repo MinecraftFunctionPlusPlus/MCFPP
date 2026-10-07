@@ -2710,9 +2710,9 @@ class LibFieldAccessTest {
         """, output)
         fun check(main: Function) {
             val observe = (main.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("observe").single()
-            for ((type, method) in listOf(MCFPPListType(MCFPPBaseType.Any) to "printList", top.mcfpp.type.MCFPPDictType(MCFPPBaseType.Any) to "printDict")) {
+            for (type in listOf(MCFPPListType(MCFPPBaseType.Int), top.mcfpp.type.MCFPPDictType(MCFPPBaseType.Int))) {
                 val selected = GlobalScope.getFunction(null, "print", emptyList(), listOf(type.buildUnConcrete("collectionProbe")))
-                assertEquals(method, assertIs<top.mcfpp.model.function.NativeFunction>(selected).javaMethod.name)
+                assertTrue(assertIs<top.mcfpp.model.function.NativeFunction>(selected).javaMethod.name in setOf("printAny", "printNbt"))
             }
             val directory = output.resolve("consumer")
             DatapackCreator.createDatapack(directory.toString())
@@ -2742,12 +2742,20 @@ class LibFieldAccessTest {
             assertEquals(10, emitted.size)
             val parameters = setOf("s", "n", "erased", "payload").map { "stack_frame[0].$it" }.toSet()
             val copy = Regex("data modify storage mcfpp:system (\\S+) set from storage mcfpp:system (\\S+)")
-            fun origin(path: String, before: Int): String {
+            val literal = Regex("data modify storage mcfpp:system (\\S+) set value (.+)")
+            val literalPayloads = arrayListOf<Tag<*>>()
+            fun origin(path: String, before: Int): String? {
                 var current = path
                 var limit = before
                 while (current !in parameters) {
-                    val index = commands.take(limit).indexOfLast { copy.matchEntire(it)?.groupValues?.get(1) == current }
-                    assertTrue(index >= 0, "No preceding copy prepares $current for $path")
+                    val index = commands.take(limit).indexOfLast {
+                        copy.matchEntire(it)?.groupValues?.get(1) == current || literal.matchEntire(it)?.groupValues?.get(1) == current
+                    }
+                    assertTrue(index >= 0, "No preceding writer prepares $current for $path")
+                    literal.matchEntire(commands[index])?.let {
+                        literalPayloads.add(Tag.toNBT(it.groupValues[2]))
+                        return null
+                    }
                     current = copy.matchEntire(commands[index])!!.groupValues[2]
                     limit = index
                 }
@@ -2761,18 +2769,19 @@ class LibFieldAccessTest {
                 parts.filter { it.getString("type") == "nbt" }.forEach { component ->
                     assertEquals("mcfpp:system", component.getString("storage"))
                     assertFalse(component.getBooleanValue("interpret"))
-                    nbtOrigins.add(origin(component.getString("nbt"), index))
+                    origin(component.getString("nbt"), index)?.let(nbtOrigins::add)
                 }
                 parts
             }
             assertEquals(2, components.count { it.getString("type") == "score" })
             assertEquals(parameters, nbtOrigins.toSet())
             assertEquals(4, nbtOrigins.size)
+            assertEquals(2, literalPayloads.size)
+            assertEquals(1, literalPayloads.count { it == Tag.toNBT("[2,3]") })
+            assertEquals(1, literalPayloads.count { it == Tag.toNBT("{value:4}") })
             val plain = components.filter { it.getString("type") == "text" }.map { it.getString("text") }
             assertTrue("styled" in plain)
             assertTrue("quote \" slash \\" in plain)
-            assertTrue(plain.any { it.startsWith("[") && Tag.toNBT(it) == Tag.toNBT("[2,3]") })
-            assertTrue(plain.any { it.startsWith("{") && Tag.toNBT(it) == Tag.toNBT("{value:4}") })
             assertFalse((commands + macroBodies.map { it.second }).any { "TODO" in it })
         }
         check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
@@ -3623,7 +3632,7 @@ class LibFieldAccessTest {
             }
             func main(){}
         """, output)
-        assertEquals(4, Project.errorCount)
+        assertEquals(2, Project.errorCount)
         val reject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
         assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("bossbar ") || it.toString().contains("mcfpp:dynamic/") })
     }

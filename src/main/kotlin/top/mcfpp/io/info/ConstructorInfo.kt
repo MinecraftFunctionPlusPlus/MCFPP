@@ -4,8 +4,7 @@ import top.mcfpp.antlr.mcfppParser.CurlBlockContext
 import top.mcfpp.model.function.DataTemplateConstructor
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.TypeDataTemplate
-import top.mcfpp.model.function.NativeDataTemplateConstructor
-import kotlin.reflect.jvm.javaMethod
+import top.mcfpp.model.function.TypeDataTemplateConstructor
 
 data class TemplateConstructorInfo(
     val normalParams: List<FunctionParamInfo>,
@@ -16,7 +15,7 @@ data class TemplateConstructorInfo(
 
     internal fun get(owner: DataTemplate): DataTemplateConstructor {
         val constructor = if (owner is TypeDataTemplate && context == null)
-            NativeDataTemplateConstructor(owner, TypeDataTemplate.Companion::defaultConstructor.javaMethod!!)
+            TypeDataTemplateConstructor(owner)
         else DataTemplateConstructor(owner, null)
         constructor.declarationFile = null
         constructor.declarationEnvironment = declarationEnvironment

@@ -86,7 +86,11 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             } else {
                 val qwq = GenericDataTemplate(ctx.templateBody(), id, Project.currNamespace)
                 qwq.readOnlyParams.addAll(ctx.compoundDeclaration().declarationName().readOnlyParams().parameterList().parameter().map {
-                    DataTemplateParam(it.type().text, it.Identifier().text)
+                    DataTemplateParam(it.type().text, it.Identifier().text, variance = when {
+                        it.OUT() != null -> top.mcfpp.model.compound.DeclarationVariance.OUT
+                        it.IN() != null -> top.mcfpp.model.compound.DeclarationVariance.IN
+                        else -> top.mcfpp.model.compound.DeclarationVariance.INVARIANT
+                    })
                 })
                 qwq
             }
@@ -105,6 +109,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             //重复声明
             LogProcessor.error("Type has been defined: $id in namespace ${Project.currNamespace}")
             DataTemplate.currTemplate = nsp.scope.getTemplate(id)
+            return@withCompilationContext
         }
         val isAbstract = ctx.ABSTRACT() != null
         val isFinal = ctx.FINAL() != null
@@ -127,7 +132,11 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
             } else {
                 val qwq = GenericDataTemplate(ctx.templateBody(), id, Project.currNamespace)
                 qwq.readOnlyParams.addAll(ctx.compoundDeclaration().declarationName().readOnlyParams().parameterList().parameter().map {
-                    DataTemplateParam(it.type().text, it.Identifier().text)
+                    DataTemplateParam(it.type().text, it.Identifier().text, variance = when {
+                        it.OUT() != null -> top.mcfpp.model.compound.DeclarationVariance.OUT
+                        it.IN() != null -> top.mcfpp.model.compound.DeclarationVariance.IN
+                        else -> top.mcfpp.model.compound.DeclarationVariance.INVARIANT
+                    })
                 })
                 qwq
             }
@@ -155,7 +164,11 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         } else {
             val qwq = GenericObjectDataTemplate(ctx.templateBody(), id, Project.currNamespace)
             qwq.readOnlyParams.addAll(ctx.compoundDeclaration().declarationName().readOnlyParams().parameterList().parameter().map {
-                DataTemplateParam(it.type().text, it.Identifier().text)
+                DataTemplateParam(it.type().text, it.Identifier().text, variance = when {
+                        it.OUT() != null -> top.mcfpp.model.compound.DeclarationVariance.OUT
+                        it.IN() != null -> top.mcfpp.model.compound.DeclarationVariance.IN
+                        else -> top.mcfpp.model.compound.DeclarationVariance.INVARIANT
+                    })
             })
             qwq
         }

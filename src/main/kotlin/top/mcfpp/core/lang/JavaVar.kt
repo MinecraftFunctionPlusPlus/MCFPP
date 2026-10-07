@@ -5,23 +5,16 @@ import top.mcfpp.core.lang.bool.ScoreBoolConcrete
 import top.mcfpp.core.lang.nbt.*
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
-import top.mcfpp.model.function.JavaFunction
+import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
-import kotlin.reflect.KProperty1
-import kotlin.reflect.KVisibility
-import kotlin.reflect.full.memberProperties
 
 /**
- * Java var是一个仅仅在编译期间存在的变量。JavaVar对应了编译过程中，编译器的一个变量的对象，可以通过它访问一个编译器变量的成员甚至方法。
- *
- * 一个变量如果被转换为编译器变量就不能够再被转换为普通的变量。编译器变量不能在数据包中被找到。因此JavaVar必定是编译器已知的。
- *
- * Java var只能通过调用NativeFunction获取。
+ * Internal host payload adapter. It does not expose reflective language members.
  *
  * @constructor Create empty Java var
  */
@@ -87,16 +80,7 @@ class JavaVar : ConcreteVar<JavaVar, Any?> {
      * @return 返回一个值对。第一个值是成员变量或null（如果成员变量不存在），第二个值是访问者是否能够访问此变量。
      */
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        //获取value中的一个成员变量
-        if(value == null) {
-            LogProcessor.error("Cannot access properties in $identifier because its value is null")
-            UnknownVar("error_null")
-        }
-        val member = value!!::class.memberProperties.find { it.name == key } as KProperty1<Any, *>?
-        if(member != null){
-            return Pair(JavaVar(member.get(value!!)), member.visibility == KVisibility.PUBLIC)
-        }
-        return Pair(null, true)
+        return null to true
     }
 
     /**
@@ -112,34 +96,7 @@ class JavaVar : ConcreteVar<JavaVar, Any?> {
         normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
-        //获取value中的一个成员方法
-        if(value == null) {
-            LogProcessor.error("Cannot access properties in $identifier because its value is null")
-            throw NullPointerException()
-        }
-        try{
-            val member = value!!::class.java.getMethod(key, *getTypeArray(normalArgs.map { it.type }))
-            return Pair(JavaFunction(member, this), true)
-        }catch (e: NoSuchMethodException){
-            LogProcessor.error("No method '$key' in $identifier}")
-            throw e
-        }
-    }
-
-    private fun getTypeArray(params: List<MCFPPType>): Array<Class<*>>{
-        return params.map {
-            when(it){
-                MCFPPBaseType.Int -> Int::class.java
-                MCFPPBaseType.Float -> Float::class.java
-                MCFPPBaseType.Bool -> Long::class.java
-                MCFPPBaseType.String -> String::class.java
-                is MCFPPListType -> ArrayList::class.java
-                is MCFPPDictType -> HashMap::class.java
-                is MCFPPMapType -> HashMap::class.java
-                MCFPPNBTType.NBT -> Tag::class.java
-                else -> Var::class.java
-            }
-        }.toTypedArray()
+        return UnknownFunction(key) to true
     }
 
     override fun toString(): String {
@@ -156,31 +113,6 @@ class JavaVar : ConcreteVar<JavaVar, Any?> {
     }
 
     companion object{
-
-        fun mcToJava(v : Var<*>) : Any{
-            if(v !is MCFPPValue<*>){
-                return v
-            }
-            return when(v){
-                is MCIntConcrete -> v.value
-                is MCFloatConcrete -> v.value
-                is ScoreBoolConcrete -> v.value
-                is MCStringConcrete -> v.value
-                is NBTListConcrete -> v.value
-                is NBTMapConcrete -> v.value
-                is NBTDictionaryConcrete -> v.value
-                is NBTBasedDataConcrete -> v.value
-                else -> v
-            }
-        }
-
-        fun mcToJava(v: List<Var<*>>): ArrayList<Any>{
-            val re = ArrayList<Any>()
-            for (i in v){
-                re.add(mcToJava(i))
-            }
-            return re
-        }
 
         fun javaToMC(v : Any) : Var<*>{
             return when(v){

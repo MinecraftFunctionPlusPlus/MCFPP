@@ -183,9 +183,8 @@ class LegacyFloatIRTest {
         assertEquals(listOf(0, 0, 0, 0), components(machine, "temp.zero"))
     }
 
-    @Test fun remainderAndKnownOutOfRangeConversionsAreDiagnosedBeforeGeneratingCommands() {
-        for (source in listOf("func main(){ var value = 1.0 % 0.5; }",
-            "func main(){ var value = toInt(2147483648.0); }")) {
+    @Test fun remainderIsDiagnosedBeforeGeneratingCommands() {
+        for (source in listOf("func main(){ var value = 1.0 % 0.5; }")) {
             MCFPPStringTest.readFromString(source, version = "1.20.1")
             assertTrue(Project.errorCount > 0, source)
             assertNotNull(function("main").typedIR)

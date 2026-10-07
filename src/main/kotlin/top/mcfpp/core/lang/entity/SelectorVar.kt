@@ -1,5 +1,7 @@
 package top.mcfpp.core.lang.entity
 
+import top.mcfpp.analysis.StorageAccess
+import top.mcfpp.command.Command
 import top.mcfpp.core.lang.*
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.lib.EntitySelector
@@ -58,7 +60,16 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
      * 复制一个目标选择器
      * @param b 被复制的目标选择器值
      */
-    constructor(b: SelectorVar) : super(b)
+    constructor(b: SelectorVar) : super(b) { value = b.value.clone() }
+
+    override fun doAssignedBy(b: Var<*>): SelectorVar {
+        if (b is SelectorVar) {
+            value = b.value.clone()
+            StorageAccess.ensure(this)
+            return StorageAccess.write(this, b) as SelectorVar
+        }
+        return super.doAssignedBy(b)
+    }
 
     fun isPlayer(): Boolean {
         return value.onlyIncludingPlayers()
@@ -128,20 +139,22 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
     private fun getData(): DataTemplate {
         val types = value.getType()
         val excluded = ArrayList<String>()
+        var selected: DataTemplate? = null
         for ((type, reverse) in types){
+            val name = type.identifier.toCamelCase(true) + "Data"
             if(!reverse){
-                val d = GlobalScope.getTemplate("mcfpp.minecraft.entity", type.toString().toCamelCase(true))
-                if(d == null){
-                    LogProcessor.error("Undefined entity: $type (${type.toString().toCamelCase(true)})")
-                }else{
-                    d.alwaysDynamic = true
-                    return d
+                if (type.namespace == "minecraft") {
+                    GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.entity")?.scope?.getTemplate(name)?.getType()?.let {
+                        it.tryResolve()
+                        selected = it.template
+                    }
                 }
             }else{
-                excluded.add(type.toString().toCamelCase(true))
+                if (type.namespace == "minecraft") excluded.add(name)
             }
         }
         val data = AllEntityDataTemplate(excluded)
+        selected?.let { data.extends(it) }
         data.extends(MCFPPEntityType.data)
         return data
     }
@@ -152,6 +165,11 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
 
     override fun getTempVar(): SelectorVar {
         return SelectorVar(value.clone())
+    }
+
+    override fun toCommandPart(): Command {
+        val loaded = StorageAccess.read(this)
+        return if (loaded is SelectorVar) loaded.value.toCommandPart() else Command("")
     }
 
     interface SelectorParamMap: Indexable {

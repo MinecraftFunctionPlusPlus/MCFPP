@@ -2,16 +2,12 @@ package top.mcfpp.model.scope
 
 import org.jetbrains.annotations.Nullable
 import top.mcfpp.model.compound.CompoundData
-import top.mcfpp.model.compound.GenericObjectDataTemplate
-import top.mcfpp.type.MCFPPType
 
 interface SimpleScopeWithObject : IScopeWithObject {
     /**
      * 方法
      */
     var objects: ArrayList<CompoundData>
-
-    var genericObjects: HashMap<Pair<String, List<MCFPPType>>, GenericObjectDataTemplate>
 
     /**
      * 遍历每一个方法
@@ -36,14 +32,11 @@ interface SimpleScopeWithObject : IScopeWithObject {
         return null
     }
 
-    override fun getObject(identifier: String, readOnlyArgs: List<MCFPPType>): GenericObjectDataTemplate? {
-        return genericObjects[identifier to readOnlyArgs]
-    }
-
     override fun addObject(identifier: String, obj: CompoundData, force: Boolean): Boolean {
-        if(hasObject(obj)){
+        val existing = objects.indexOfFirst { it.identifier == identifier }
+        if(existing >= 0){
             if(force){
-                objects[objects.indexOf(obj)] = obj
+                objects[existing] = obj
                 return true
             }
             return false
@@ -62,7 +55,7 @@ interface SimpleScopeWithObject : IScopeWithObject {
     }
 
     override fun hasObject(obj: CompoundData): Boolean{
-        return objects.contains(obj)
+        return hasObject(obj.identifier)
     }
 
     override fun hasObject(identifier: String): Boolean {

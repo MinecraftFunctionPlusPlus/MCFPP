@@ -3,9 +3,6 @@ package top.mcfpp.core.lang.bool
 import top.mcfpp.command.Command
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.nbt.NBTBasedData
-import top.mcfpp.model.Member
-import top.mcfpp.model.function.Function
-import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.TempPool
@@ -39,18 +36,5 @@ abstract class BaseBool : Var<BaseBool> {
     constructor(b: ScoreBool) : super(b)
 
     abstract fun toScoreBool(replace: Boolean): ScoreBool
-
-    override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        return null to true
-    }
-
-    override fun getMemberFunction(
-        key: String,
-        readOnlyArgs: List<Var<*>>,
-        normalArgs: List<Var<*>>,
-        accessModifier: Member.AccessModifier
-    ): Pair<Function, Boolean> {
-        return UnknownFunction(key) to true
-    }
 
 }

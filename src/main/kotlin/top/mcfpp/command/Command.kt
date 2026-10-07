@@ -93,6 +93,8 @@ open class Command: Serializable {
      * @return
      */
     open fun analyze(): String{
+        if (commandParts.any { it is SelectorGuardPart })
+            throw CommandException("A dynamic selector string must pass consumer macro lowering")
         if(isMacro){
             throw CommandException("Try to analyze a macro command")
         }
@@ -247,6 +249,12 @@ open class Command: Serializable {
     }
     fun buildMacro(v: Var<*>) : Command = buildMacro(v,true)
 
+    /** Propagates only selector-string lexical validation to its real consumer. */
+    fun selectorStringGuard(value: Var<*>, word: Boolean): Command {
+        commandParts.add(SelectorGuardPart(value, word))
+        return this
+    }
+
     /**
      * 将此命令以宏命令的方式调用。自动确定宏参数的路径。
      *
@@ -270,7 +278,13 @@ open class Command: Serializable {
             Function.addCommand(Commands.dataSetValue(argumentPath, CompoundTag()))
             variables.forEach { StorageAccess.encodeTo(argumentPath.memberIndex(slots[it]!!), it) }
         }.toMutableList()
-        re.add(Command.build("function mcfpp:dynamic/$f with").build(argumentPath.toCommandPart()))
+        val conditions = commandParts.filterIsInstance<SelectorGuardPart>().map { guard ->
+            val prepared = top.mcfpp.backend.SelectorStringGuards.prepare(argumentPath.memberIndex(slots.getValue(guard.value)), guard.word, Function.currFunction)
+            re.addAll(prepared.first)
+            prepared.second
+        }
+        val call = Command.build("function mcfpp:dynamic/$f with").build(argumentPath.toCommandPart())
+        re.add(if (conditions.isEmpty()) call else Command("execute ${conditions.joinToString(" ")} run").build(call))
         return re.toTypedArray()
     }
 
@@ -284,7 +298,16 @@ open class Command: Serializable {
         if(!isMacro) return this
         val f = UUID.randomUUID().toString()
         Project.macroFunction[f] = "$$this"
-        return Command.build("function mcfpp:dynamic/$f with").build(nbtPath.toCommandPart())
+        val preparations = ArrayList<Command>()
+        val conditions = commandParts.filterIsInstance<SelectorGuardPart>().map { guard ->
+            val prepared = top.mcfpp.backend.SelectorStringGuards.prepare(nbtPath.memberIndex(guard.value.identifier), guard.word, Function.currFunction)
+            preparations.addAll(prepared.first)
+            prepared.second
+        }
+        val call = Command.build("function mcfpp:dynamic/$f with").build(nbtPath.toCommandPart())
+        if (conditions.isEmpty()) return call
+        preparations.add(Command("execute ${conditions.joinToString(" ")} run").build(call))
+        return Command(preparations.joinToString("\n") { it.analyze() })
     }
 
     fun buildAll(vararg parts: Any?): Command {
@@ -373,6 +396,10 @@ open class Command: Serializable {
      * 表示一个命令片段，作为命令的一部分。一个命令对象中包含数个命令片段。
      */
     protected interface ICommandPart: Serializable
+
+    private data class SelectorGuardPart(val value: Var<*>, val word: Boolean): ICommandPart {
+        override fun toString() = ""
+    }
 
     /**
      * 一个普通的命令片段，由一个固定的字符串构成

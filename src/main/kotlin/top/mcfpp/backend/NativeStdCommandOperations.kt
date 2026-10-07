@@ -2,11 +2,13 @@ package top.mcfpp.backend
 
 import top.mcfpp.command.Command
 import top.mcfpp.command.FloatProviders
+import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.core.lang.MCFloat
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.entity.EntityVar
 import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.core.lang.Var
+import top.mcfpp.core.lang.obj.EnumVarConcrete
 import top.mcfpp.mni.NativeCallContext
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
@@ -461,19 +463,34 @@ object NativeStdCommandOperations {
     }
 
     fun cloneArea(context: NativeCallContext) = emit(context) { args ->
-        Command.buildAll("clone", args[0], args[1], args[2], args[3])
+        val mask = cloneEnum(context, args, 2) ?: return@emit Command()
+        val operation = cloneEnum(context, args, 3) ?: return@emit Command()
+        Command.buildAll("clone", args[0], args[1], mask, operation)
     }
 
     fun cloneStrictArea(context: NativeCallContext) = emit(context) { args ->
-        Command.buildAll("clone", args[0], args[1], "strict", args[2], args[3])
+        val mask = cloneEnum(context, args, 2) ?: return@emit Command()
+        val operation = cloneEnum(context, args, 3) ?: return@emit Command()
+        Command.buildAll("clone", args[0], args[1], "strict", mask, operation)
     }
 
     fun cloneFiltered(context: NativeCallContext) = emit(context) { args ->
-        Command.buildAll("clone", args[0], args[1], "filtered", args[2], args[3])
+        val operation = cloneEnum(context, args, 3) ?: return@emit Command()
+        Command.buildAll("clone", args[0], args[1], "filtered", args[2], operation)
     }
 
     fun cloneStrictFiltered(context: NativeCallContext) = emit(context) { args ->
-        Command.buildAll("clone", args[0], args[1], "strict filtered", args[2], args[3])
+        val operation = cloneEnum(context, args, 3) ?: return@emit Command()
+        Command.buildAll("clone", args[0], args[1], "strict filtered", args[2], operation)
+    }
+
+    private fun cloneEnum(context: NativeCallContext, args: List<Var<*>>, index: Int): String? {
+        val value = args[index]
+        val snapshot = context.argumentSnapshot(index)
+        val member = snapshot?.let { StorageAccess.restore(value.type, it, value.identifier) } as? EnumVarConcrete
+        if (member != null) return member.value.identifier
+        LogProcessor.error("Clone enum command arguments require a complete enum value")
+        return null
     }
 
     fun enchant(context: NativeCallContext) = emit(context) { args ->
@@ -529,6 +546,9 @@ object NativeStdCommandOperations {
             LogProcessor.error("Dynamic float command arguments require a number-provider target")
             return@withArguments
         }
-        build(args).buildMacroFunction().forEach { Function.addCommand(it) }
+        val errors = top.mcfpp.Project.errorCount
+        val command = build(args)
+        if (top.mcfpp.Project.errorCount == errors && args.none { it.isError })
+            command.buildMacroFunction().forEach { Function.addCommand(it) }
     }
 }

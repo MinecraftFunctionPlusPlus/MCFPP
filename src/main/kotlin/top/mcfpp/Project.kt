@@ -509,7 +509,6 @@ object Project {
             scope.interfaces.values.forEach(::restoreCompound)
             scope.genericInterfaces.values.forEach(::restoreCompound)
             scope.objects.forEach(::restoreCompound)
-            scope.genericObjects.values.forEach(::restoreCompound)
         }
     }
 
@@ -543,12 +542,7 @@ object Project {
             }
             GlobalScope.importedLibNamespaces.clear()
         }
-        //匹配伴随对象
-        GlobalScope.localNamespaces.values.flatMap { it.scope.template.values }.forEach {
-            GlobalScope.localNamespaces[it.namespace]?.scope?.getObject(it.identifier)?.let { obj ->
-                it.companionObject = obj as? ObjectDataTemplate
-            }
-        }
+        pairTemplateCompanions()
         //运行命令
         for (file in files) {
             try {
@@ -562,6 +556,16 @@ object Project {
         }
         //解析所有泛型类的泛型参数类型
         stageProcessor[compileStage.ordinal].forEach { it() }
+    }
+
+    /** Pair declarations after every include and source type header is available. */
+    fun pairTemplateCompanions() {
+        (GlobalScope.localNamespaces.values + GlobalScope.libNamespaces.values + GlobalScope.stdNamespaces.values).forEach { namespace ->
+            namespace.scope.template.values.forEach { template ->
+                top.mcfpp.model.compound.GenericDeclarationContract.pair(template,
+                    namespace.scope.getObject(template.identifier) as? DataTemplate)
+            }
+        }
     }
 
     /**
@@ -610,10 +614,15 @@ object Project {
         val declarations = namespaces.flatMap { namespace ->
             val scope = namespace.scope
             scope.template.values + scope.genericTemplate.values + scope.interfaces.values +
-                scope.genericInterfaces.values + scope.objects.filterIsInstance<DataTemplate>() + scope.genericObjects.values
+                scope.genericInterfaces.values + scope.objects.filterIsInstance<DataTemplate>()
         }
         val functions = namespaces.flatMap { it.scope.functions.values.flatten() } +
             declarations.flatMap { it.constructors + it.scope.functions.values.flatten() }
+        declarations.filterIsInstance<GenericDataTemplate>().forEach { declaration ->
+            val file = declaration.restoreDeclarationEnvironment()
+            if (file == null) declaration.prepareHeader()
+            else file.withDeclarationContext { declaration.prepareHeader() }
+        }
         functions.forEach { function ->
             function.normalParams.forEach { it.type.tryResolve() }
             function.returnType.tryResolve()

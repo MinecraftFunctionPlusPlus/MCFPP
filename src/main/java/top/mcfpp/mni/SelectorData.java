@@ -1,178 +1,172 @@
 package top.mcfpp.mni;
 
 import top.mcfpp.annotations.MNIFunction;
-import top.mcfpp.core.lang.obj.DataTemplateObject;
-import top.mcfpp.core.lang.MCInt;
-import top.mcfpp.core.lang.RangeVar;
-import top.mcfpp.core.lang.entity.SelectorVar;
-import top.mcfpp.core.lang.nbt.MCString;
-import top.mcfpp.core.lang.nbt.NBTBasedData;
-import top.mcfpp.lib.*;
-import top.mcfpp.util.ValueWrapper;
+import top.mcfpp.mni.annotation.WritesReceiver;
+import top.mcfpp.backend.NativeSelectorOperations;
 
 public class SelectorData {
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"int"}, caller = "entity", returnType = "entity")
-    public static void x(MCInt x, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new XPredicate(x.getTempVar()));
-        re.setValue(caller);
+    public static void x(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.x(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"int"}, caller = "entity", returnType = "entity")
-    public static void y(MCInt y, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new YPredicate(y.getTempVar()));
-        re.setValue(caller);
+    public static void y(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.y(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"int"}, caller = "entity", returnType = "entity")
-    public static void z(MCInt z, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new ZPredicate(z.getTempVar()));
-        re.setValue(caller);
+    public static void z(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.z(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"range"}, caller = "entity", returnType = "entity")
-    public static void distance(RangeVar distance, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new DistancePredicate(distance.getTempVar()));
-        re.setValue(caller);
+    public static void distance(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.distance(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"int"}, caller = "entity", returnType = "entity")
-    public static void dx(MCInt dx, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new DXPredicate(dx.getTempVar()));
-        re.setValue(caller);
+    public static void dx(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.dx(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"int"}, caller = "entity", returnType = "entity")
-    public static void dy(MCInt dy, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new DYPredicate(dy.getTempVar()));
-        re.setValue(caller);
+    public static void dy(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.dy(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"int"}, caller = "entity", returnType = "entity")
-    public static void dz(MCInt dz, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new DZPredicate(dz.getTempVar()));
-        re.setValue(caller);
+    public static void dz(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.dz(context);
     }
 
     //TODO score
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"string"}, caller = "entity", returnType = "entity")
-    public static void tag(MCString tag, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new TagPredicate((MCString) tag.clone(), false));
-        re.setValue(caller);
+    public static void tag(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.tag(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"string"}, caller = "entity", returnType = "entity")
-    public static void tagNot(MCString tag, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new TagPredicate((MCString) tag.clone(), true));
-        re.setValue(caller);
+    public static void tagNot(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.tagNot(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"string"}, caller = "entity", returnType = "entity")
-    public static void team(MCString team, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new TeamPredicate((MCString) team.clone(), false));
-        re.setValue(caller);
+    public static void team(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.team(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"string"}, caller = "entity", returnType = "entity")
-    public static void teamNot(MCString team, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new TeamPredicate((MCString) team.clone(), true));
-        re.setValue(caller);
+    public static void teamNot(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.teamNot(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"string"}, caller = "entity", returnType = "entity")
-    public static void name(MCString name, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new NamePredicate((MCString) name.clone(), false));
-        re.setValue(caller);
+    public static void name(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.name(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"string"}, caller = "entity", returnType = "entity")
-    public static void nameNot(MCString name, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new NamePredicate((MCString) name.clone(), true));
-        re.setValue(caller);
+    public static void nameNot(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.nameNot(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"mcfpp.minecraft.resource:EntityType"}, caller = "entity", returnType = "entity")
-    public static void type(DataTemplateObject type, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new TypePredicate(type.clone(), false));
-        re.setValue(caller);
+    public static void type(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.type(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"mcfpp.minecraft.resource:EntityType"}, caller = "entity", returnType = "entity")
-    public static void typeNot(DataTemplateObject type, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new TypePredicate(type.clone(), true));
-        re.setValue(caller);
+    public static void typeNot(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.typeNot(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"mcfpp.minecraft.resource:Predicate"}, caller = "entity", returnType = "entity")
-    public static void predicate(DataTemplateObject predicate, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new PredicatePredicate(predicate.clone(), false));
-        re.setValue(caller);
+    public static void predicate(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.predicate(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"mcfpp.minecraft.resource:Predicate"}, caller = "entity", returnType = "entity")
-    public static void predicateNot(DataTemplateObject predicate, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new PredicatePredicate(predicate.clone(), true));
-        re.setValue(caller);
+    public static void predicateNot(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.predicateNot(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"range"}, caller = "entity", returnType = "entity")
-    public static void xRotation(RangeVar xRotation, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new XRotationPredicate(xRotation.getTempVar()));
-        re.setValue(caller);
+    public static void xRotation(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.xRotation(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"range"}, caller = "entity", returnType = "entity")
-    public static void yRotation(RangeVar yRotation, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new YRotationPredicate(yRotation.getTempVar()));
-        re.setValue(caller);
+    public static void yRotation(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.yRotation(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"nbt"}, caller = "entity", returnType = "entity")
-    public static void nbt(NBTBasedData n, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new NBTPredicate(n.getTempVar()));
-        re.setValue(caller);
+    public static void filterNbt(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.nbt(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"range"}, caller = "entity", returnType = "entity")
-    public static void level(RangeVar level, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new LevelPredicate(level.getTempVar()));
-        re.setValue(caller);
+    public static void level(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.level(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"string"}, caller = "entity", returnType = "entity")
-    public static void gamemode(MCString gamemode, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new GamemodePredicate((MCString) gamemode.clone(), false));
-        re.setValue(caller);
+    public static void gamemode(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.gamemode(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"string"}, caller = "entity", returnType = "entity")
-    public static void gamemodeNot(MCString gamemode, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new GamemodePredicate((MCString) gamemode.clone(), true));
-        re.setValue(caller);
+    public static void gamemodeNot(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.gamemodeNot(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"mcfpp.minecraft.resource:Advancement"}, caller = "entity", returnType = "entity")
-    public static void advancements(DataTemplateObject advancements, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new AdvancementsPredicate(advancements.clone(), false));
-        re.setValue(caller);
+    public static void advancements(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.advancements(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"mcfpp.minecraft.resource:Advancement"}, caller = "entity", returnType = "entity")
-    public static void advancementsNot(DataTemplateObject advancements, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new AdvancementsPredicate(advancements.clone(), true));
-        re.setValue(caller);
+    public static void advancementsNot(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.advancementsNot(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"int"}, caller = "entity", returnType = "entity")
-    public static void limit(MCInt limit, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new LimitPredicate(limit.getTempVar()));
-        re.setValue(caller);
+    public static void limit(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.limit(context);
     }
 
+    @WritesReceiver
     @MNIFunction(normalParams = {"string"}, caller = "entity", returnType = "entity")
-    public static void sort(MCString sort, SelectorVar caller, ValueWrapper<SelectorVar> re){
-        caller.getValue().addPredicate(new SortPredicate((MCString) sort.clone()));
-        re.setValue(caller);
+    public static void sort(NativeCallContext context) {
+        NativeSelectorOperations.INSTANCE.sort(context);
     }
 }

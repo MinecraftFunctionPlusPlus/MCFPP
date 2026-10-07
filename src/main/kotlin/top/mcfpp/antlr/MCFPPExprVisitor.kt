@@ -23,7 +23,6 @@ import top.mcfpp.model.compound.GenericDataTemplate
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.model.function.ParameterMatcher
-import top.mcfpp.model.function.NativeDataTemplateConstructor
 import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.function.UnknownFunction
@@ -313,8 +312,17 @@ class MCFPPExprVisitor(
     }
 
     /** Resolve an assignment target without calling its final property getter. */
+    private var assignmentTarget: mcfppParser.VarWithSuffixContext? = null
+
     fun visitAssignableVarWithSelector(ctx: mcfppParser.VarWithSelectorContext): Var<*> = withCompilationContext(ctx) {
-        resolveVarWithSelector(ctx, true)
+        val previous = assignmentTarget
+        assignmentTarget = if (ctx.selector().isNotEmpty()) ctx.selector().last().`var`().varWithSuffix()
+            else ctx.jvmAccessExpression().propertyOperator().primary().`var`()?.varWithSuffix()
+        try {
+            resolveVarWithSelector(ctx, true)
+        } finally {
+            assignmentTarget = previous
+        }
     }
 
     private fun resolveVarWithSelector(ctx: mcfppParser.VarWithSelectorContext, preserveFinalProperty: Boolean): Var<*> {
@@ -325,7 +333,7 @@ class MCFPPExprVisitor(
         }
         if(currSelector is UnknownVar && !currSelector!!.isError){
             val typeStr = ctx.jvmAccessExpression().text
-            val type = MCFPPType.parseFromString(typeStr, Function.currFunction.scope)
+            val type = MCFPPType.parseExpressionType(typeStr, Function.currFunction.scope, Function.currFunction)
             if(type == null){
                 LogProcessor.error(TextTranslator.SYMBOL_NOT_DEFINED.translate(currSelector!!.identifier))
             }else{
@@ -344,12 +352,7 @@ class MCFPPExprVisitor(
     }
 
     override fun visitJvmAccessExpression(ctx: mcfppParser.JvmAccessExpressionContext): Var<*> = withCompilationContext(ctx) {
-        val re = visitPropertyOperator(ctx.propertyOperator())
-        return if(ctx.Identifier() != null){
-            re.getJVM(ctx.Identifier().text)
-        }else{
-            re
-        }
+        visitPropertyOperator(ctx.propertyOperator())
     }
 
     //字段操作器
@@ -409,7 +412,7 @@ class MCFPPExprVisitor(
                 return UnknownVar("range_" + UUID.randomUUID())
             }
         } else if (ctx.type() != null){
-            return MCFPPTypeVar(MCFPPType.parseFromString(ctx.type().text, Function.currFunction.scope)?: run {
+            return MCFPPTypeVar(MCFPPType.parseExpressionType(ctx.type().text, Function.currFunction.scope, Function.currFunction)?: run {
                 LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
                 MCFPPBaseType.Any
             })
@@ -583,8 +586,6 @@ class MCFPPExprVisitor(
             }
             val init = if (template is top.mcfpp.model.compound.TypeDataTemplate) {
                 template.getType().buildUnConcrete(TempPool.getVarIdentify())
-            } else if (selection.function is NativeDataTemplateConstructor) {
-                DataTemplateObjectConcrete(template.getType().defaultValueVar() as DataTemplateObjectConcrete)
             } else {
                 val receiver = template.getType().buildUnConcrete(TempPool.getVarIdentify()) as? DataTemplateObject
                 if (receiver == null) {
@@ -619,7 +620,9 @@ class MCFPPExprVisitor(
             }
             val pwp = member.first
             if(pwp != null) {
-                if(MCFPPImVisitor.inLoopStatement(ctx) && pwp is MCFPPValue<*>){
+                if (ctx === assignmentTarget) {
+                    pwp
+                } else if(MCFPPImVisitor.inLoopStatement(ctx) && pwp is MCFPPValue<*>){
                     pwp.toDynamic(true)
                 }else{
                     top.mcfpp.analysis.StorageAccess.read(pwp)
@@ -640,13 +643,13 @@ class MCFPPExprVisitor(
                 LogProcessor.error("Cannot access member $qwq")
                 UnknownVar(qwq)
             }else{
-                top.mcfpp.analysis.StorageAccess.read(re.first!!)
+                if (ctx === assignmentTarget) re.first!! else top.mcfpp.analysis.StorageAccess.read(re.first!!)
             }
         }
         if(re is UnknownVar && currSelector == null){
             //从类型获取
             val typeStr = ctx.Identifier().text
-            val type = MCFPPType.parseFromString(typeStr, Function.currFunction.scope)
+            val type = MCFPPType.parseExpressionType(typeStr, Function.currFunction.scope, Function.currFunction)
             if(type != null){
                 re = StaticMemberView(type)
             }

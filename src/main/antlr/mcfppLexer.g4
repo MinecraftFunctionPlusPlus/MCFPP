@@ -123,6 +123,8 @@ FUNCTION:'func';
 ENUM:'enum';
 OPERATOR:'operator';
 TYPEALIAS: 'typealias';
+OUT: 'out';
+IN: 'in';
 
 CONSTRUCTOR:'constructor';
 

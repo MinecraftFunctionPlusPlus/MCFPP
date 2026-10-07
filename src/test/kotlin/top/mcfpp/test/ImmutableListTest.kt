@@ -29,9 +29,13 @@ class ImmutableListTest {
     @Test fun constantAndRuntimeFactoriesKeepImmutableIdentityAndOneMemberTable() {
         compile("func main(){}")
         val type = MCFPPImmutableListType(MCFPPBaseType.Int)
-        assertSame(type.instanceData, type.concreteInstanceData)
-        assertEquals(type.typeId, type.buildUnConcrete("runtime").type.typeId)
-        assertEquals(type.typeId, type.build("constant").type.typeId)
+        val runtime = type.buildUnConcrete("runtime")
+        val known = type.build("constant")
+        val member = known.getMemberFunction("toText", emptyList(), emptyList(), top.mcfpp.model.Member.AccessModifier.PUBLIC).first
+        assertIs<top.mcfpp.model.function.NativeFunction>(member)
+        assertSame(member, runtime.getMemberFunction("toText", emptyList(), emptyList(), top.mcfpp.model.Member.AccessModifier.PUBLIC).first)
+        assertEquals(type.typeId, runtime.type.typeId)
+        assertEquals(type.typeId, known.type.typeId)
         assertEquals(type.typeId, type.buildUnConcrete("runtime").clone().type.typeId)
     }
 

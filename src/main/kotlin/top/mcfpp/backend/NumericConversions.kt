@@ -40,7 +40,30 @@ object NumericConversions {
         if (loaded !== value) return convert(loaded, target)
         if (value.isError) return target.buildUnConcrete(TempPool.getVarIdentify()).apply { isError = true }
         if (value.type == target) return value
+        if (!top.mcfpp.analysis.NumericConversion.supported(value.type.typeId, target.typeId)) return unsupported(value, target)
         if (target == MCFPPBaseType.Int) return toInt(value)
+        if (value.type == MCFPPBaseType.Float && target in setOf(MCFPPNBTType.Byte, MCFPPNBTType.Short)) {
+            val integer = toInt(value)
+            if (integer.isError) return integer
+            return narrow(integer as MCInt, if (target == MCFPPNBTType.Byte) 256 else 65536,
+                if (target == MCFPPNBTType.Byte) 128 else 32768, target)
+        }
+        if (value.type in setOf(MCFPPNBTType.Long, MCFPPNBTType.Double) && target == MCFPPBaseType.Float) {
+            val known = ValueSnapshot.of(value)
+            top.mcfpp.analysis.NumericConversion.fold(value.type.typeId, target.typeId, known ?: return FloatProviders.fromStoredNumber(value))
+                ?.let { return MCFloatConcrete(Float.fromBits((it as CompilerValue.FloatBits).bits)) }
+            return FloatProviders.fromStoredNumber(value)
+        }
+        if (value.type == MCFPPNBTType.Long && target == MCFPPNBTType.Double) {
+            val known = ValueSnapshot.of(value)
+            if (known != null) top.mcfpp.analysis.NumericConversion.fold(value.type.typeId, target.typeId, known)
+                ?.let { return MCDoubleConcrete(DoubleTag(Double.fromBits((it as CompilerValue.DoubleBits).bits))) }
+            val result = MCDouble().apply { isTemp = true }
+            top.mcfpp.analysis.StorageAccess.bindIncomingParameter(result)
+            Function.addCommands(Command("data modify").build(result.nbtPath.toCommandPart()).build("set value")
+                .buildMacro(value).build("d", false).buildMacroFunction())
+            return result
+        }
         if (value.type in scoreTypes) {
             val source = toInt(value)
             return when (target) {
@@ -68,14 +91,12 @@ object NumericConversions {
         }
         if (value is MCFloat && value.type == MCFPPBaseType.Float) {
             if (FloatProviders.enabled) return FloatProviders.toInt(value)
-            if (value is MCFloatConcrete) {
-                top.mcfpp.analysis.NumericConversion.floatToIntError(value.value)?.let { diagnostic ->
-                    LogProcessor.error(diagnostic)
-                    return MCInt().apply { isError = true }
-                }
+            if (value is MCFloatConcrete && !value.value.isFinite()) {
+                LogProcessor.error("Legacy float-to-int conversion requires a finite input")
+                return MCInt().apply { isError = true }
             }
-            val runtime = if (value is MCFPPValue<*>) value.toDynamic(false) else value
-            MCFloat.ssObj.assignedBy(runtime)
+            val runtime = if (value is MCFloatConcrete) value.getTempVar() else value
+            MCFloat.ssObj.physicalTemporary().assignedBy(runtime)
             Function.addCommand("function math.float:hpo/float/_toscore")
             return MCInt().apply { isTemp = true }.assignedBy(MCInt("res").setObj(SbObject.Math_int) as MCInt)
         }
@@ -98,7 +119,7 @@ object NumericConversions {
         if (runtime.isDataOnly) runtime.getFromStack()
         (MCInt("inp").setObj(SbObject.Math_int) as MCInt).assignedBy(runtime)
         Function.addCommand("function math.float:hpo/float/_scoreto")
-        return MCFloat().apply { isTemp = true }.assignedBy(MCFloat(MCFloat.ssObj)) as MCFloat
+        return MCFloat().apply { isTemp = true }.assignedBy(MCFloat.ssObj.physicalTemporary()) as MCFloat
     }
 
     private fun narrow(source: MCInt, modulus: Int, sign: Int, target: MCFPPType): Var<*> {
@@ -126,6 +147,7 @@ object NumericConversions {
         if (constant != null) return if (target == MCFPPNBTType.Long) MCLongConcrete(LongTag(constant.value))
             else MCDoubleConcrete(DoubleTag(constant.value.toDouble()))
         val result = target.buildUnConcrete(TempPool.getVarIdentify())
+        top.mcfpp.analysis.StorageAccess.bindIncomingParameter(result)
         val encoding = if (target == MCFPPNBTType.Long) "long" else "double"
         Function.addCommand(Command("execute store result").build(result.nbtPath.toCommandPart())
             .build("$encoding 1 run scoreboard players get ${source.name} ${source.sbObject}"))
@@ -138,14 +160,14 @@ object NumericConversions {
             LogProcessor.error("toNBT(float) requires a finite input")
             return NBTBasedData().apply { isError = true }
         }
+        if (!top.mcfpp.analysis.StorageAccess.hasRuntimeRepresentation(value)) {
+            LogProcessor.error("${value.type.typeName} cannot be encoded as a Minecraft NBT payload")
+            return NBTBasedData().apply { isError = true }
+        }
         value.storageBinding?.let {
             top.mcfpp.analysis.StorageAccess.constantEncoding(value)?.let { tag -> return NBTBasedDataConcrete(tag) }
             it.data.materialize()
             return runtimeNBT(value)
-        }
-        if (!value.type.hasRuntimeRepresentation) {
-            LogProcessor.error("${value.type.typeName} cannot be encoded as a Minecraft NBT payload")
-            return NBTBasedData().apply { isError = true }
         }
         // Encoding reflects the source backend. The old float layout remains a compound
         // of components; a FloatTag would falsely imply cross-backend persistence.

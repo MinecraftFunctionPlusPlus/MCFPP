@@ -155,6 +155,12 @@ object FloatProviders {
         return evaluate("{type:\"minecraft:from_int\",input:$input}")
     }
 
+    /** Storage providers use Number.floatValue; non-finite results fall back to zero. */
+    fun fromStoredNumber(value: Var<*>): MCFloat {
+        top.mcfpp.analysis.StorageAccess.flush(listOf(value))
+        return evaluate(storage(value.nbtPath))
+    }
+
     fun toInt(value: MCFloat): Var<*> {
         if (!valid(value)) return MCInt().apply { isError = true }
         if (value is MCFloatConcrete) {

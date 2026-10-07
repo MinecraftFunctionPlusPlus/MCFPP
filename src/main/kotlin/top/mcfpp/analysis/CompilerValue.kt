@@ -63,8 +63,7 @@ object ValueSnapshot {
                 "ordinal" to CompilerValue.Integral(value.value.value.toLong()),
                 "data" to CompilerValue.Nbt(top.mcfpp.backend.NbtEncoding.snbt(value.value.data))
             )))
-            value is top.mcfpp.core.lang.entity.SelectorVar -> if (value.value.predicates.isEmpty())
-                CompilerValue.Typed(value.type.typeId, CompilerValue.Text(value.value.selectorType.name)) else null
+            value is top.mcfpp.core.lang.entity.SelectorVar -> top.mcfpp.lib.SelectorExpression.snapshot(value.value, value.type.typeId)
             value is top.mcfpp.core.lang.obj.TypeDataTemplateObject -> of(value.delegateVar)?.let {
                 CompilerValue.Typed(value.type.typeId, if (it is CompilerValue.Typed) it.payload else it)
             }

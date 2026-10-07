@@ -26,6 +26,27 @@ object TypeRelations {
         if (target == MCFPPBaseType.Object) return true
         if (source is MCFPPUnionType) return source.types.all { subtype(it, target, HashSet(visited)) }
         if (target is MCFPPUnionType) return target.types.any { subtype(source, it, HashSet(visited)) }
+        val sourceTemplate = (source as? MCFPPDataTemplateType)?.template as? top.mcfpp.model.compound.CompiledGenericDataTemplate
+        val targetTemplate = (target as? MCFPPDataTemplateType)?.template as? top.mcfpp.model.compound.CompiledGenericDataTemplate
+        if (sourceTemplate != null && targetTemplate != null &&
+            sourceTemplate.originTemplate !is top.mcfpp.model.compound.ObjectCompoundData &&
+            sourceTemplate.originTemplate.getType().typeId == targetTemplate.originTemplate.getType().typeId) {
+            return sourceTemplate.originTemplate.readOnlyParams.indices.all { index ->
+                val left = sourceTemplate.args[index]
+                val right = targetTemplate.args[index]
+                when (sourceTemplate.originTemplate.readOnlyParams[index].variance) {
+                    top.mcfpp.model.compound.DeclarationVariance.INVARIANT ->
+                        (source.typeId as TypeId.Specialized).arguments[index] ==
+                            (target.typeId as TypeId.Specialized).arguments[index]
+                    top.mcfpp.model.compound.DeclarationVariance.OUT ->
+                        left is top.mcfpp.core.lang.MCFPPTypeVar && right is top.mcfpp.core.lang.MCFPPTypeVar &&
+                            subtype(left.value, right.value, HashSet(visited))
+                    top.mcfpp.model.compound.DeclarationVariance.IN ->
+                        left is top.mcfpp.core.lang.MCFPPTypeVar && right is top.mcfpp.core.lang.MCFPPTypeVar &&
+                            subtype(right.value, left.value, HashSet(visited))
+                }
+            }
+        }
         // Container arguments remain invariant, including the read-only list interface.
         if (source is MCFPPTypeWithGeneric && target is MCFPPTypeWithGeneric) return false
         return source.parentType.any { subtype(it, target, HashSet(visited)) }

@@ -52,6 +52,9 @@ open class GenericDataTemplate : DataTemplate {
 
     var index = 0
 
+    @Transient private var varianceChecked = false
+    @Transient private var headerPrepared = false
+
     @Suppress("ConvertSecondaryConstructorToPrimary")
     constructor(ctx: mcfppParser.TemplateBodyContext, identifier: String, namespace: String = Project.currNamespace) : super(identifier, namespace) {
         this.ctx = ctx
@@ -71,7 +74,14 @@ open class GenericDataTemplate : DataTemplate {
     }
 
     internal fun prepareHeader() {
-        if (readOnlyParams.all { it.type != null }) return
+        if (!varianceChecked) {
+            for (param in readOnlyParams) if (param.type == null)
+                param.type = MCFPPType.parseFromString(param.typeIdentifier, scope)
+            GenericDeclarationContract.checkVariance(this)
+            varianceChecked = true
+        }
+        if (headerPrepared) return
+        headerPrepared = true
         for (param in readOnlyParams) {
             param.type = MCFPPType.parseFromString(param.typeIdentifier, scope) ?: run {
                 LogProcessor.error("Invalid readonly template parameter type: ${param.typeIdentifier}")
@@ -86,7 +96,7 @@ open class GenericDataTemplate : DataTemplate {
                 parent == null -> LogProcessor.error("Undefined template: $name")
                 parent == this -> LogProcessor.error("Infinitive reference: $identifier -> $name")
                 parent.isFinal -> LogProcessor.error("Cannot extends $identifier because it's final")
-                else -> extends(parent)
+                else -> if (parent !in this.parent) extends(parent)
             }
         }
         if (parent.isEmpty()) extends(DataTemplate.baseDataTemplate)
@@ -182,6 +192,7 @@ open class GenericDataTemplate : DataTemplate {
         index ++
 
         compiledTemplates[key] = template
+        GenericDeclarationContract.bindCompanion(template, args)
 
         return template
     }
@@ -203,8 +214,11 @@ class DataTemplateParam(
     /**
      * 参数类型在首次 prepareHeader 后解析；从库恢复的参数已保存该类型。
      */
-    var type: MCFPPType? = null
+    var type: MCFPPType? = null,
+    val variance: DeclarationVariance = DeclarationVariance.INVARIANT
 )
+
+enum class DeclarationVariance { INVARIANT, OUT, IN }
 
 open class CompiledGenericDataTemplate(
     identifier: String,

@@ -23,7 +23,7 @@ import kotlin.test.assertSame
 import kotlin.test.assertIs
 
 class TypeKernelTest {
-    @Test fun nativeInteropCanReadAnErasedCompilerViewWithoutClaimingAConstantSnapshot() {
+    @Test fun hostInteropCannotCreateOrdinaryLanguageValues() {
         MCFPPStringTest.readFromString("""
             func main(){
                 dynamic var input as int = 1;
@@ -31,13 +31,7 @@ class TypeKernelTest {
                 print(erased);
             }
         """.trimIndent(), version = "26.3")
-        assertEquals(0, Project.errorCount)
-        val function = GlobalScope.localNamespaces["default.test"]!!.scope.functions.getValue("main").single()
-        val erased = function.scope.getVar("erased") as MCAny
-        assertEquals(MCFPPConcreteType.JavaVar, erased.inferredType)
-        assertNull(top.mcfpp.analysis.ValueSnapshot.of(erased))
-        assertFalse(function.commands.analyzeAll().any { it.contains(".erased") })
-        assertTrue(function.commands.analyzeAll().any { it.startsWith("tellraw") })
+        assertTrue(Project.errorCount > 0, "Host descriptors cannot be exposed by language expressions")
     }
     @Test fun arithmeticTypeDoesNotImplySingleScoreboardStorage() {
         val integer: top.mcfpp.core.lang.Var<*> = MCInt("score")
@@ -78,9 +72,13 @@ class TypeKernelTest {
         assertEquals(MCFPPBaseType.Bool, function.scope.getVar("result")!!.type)
     }
     @Test fun primitiveMembersHaveOneSignatureTableForAllValueStates() {
+        MCFPPStringTest.readFromString("func main(){}", version = "26.3")
+        assertEquals(0, Project.errorCount)
         for (type in listOf(MCFPPBaseType.Int, MCFPPBaseType.Float, MCFPPBaseType.Bool)) {
-            assertSame(type.instanceData, type.concreteInstanceData)
-            assertEquals(type.instanceData.scope.functions, type.concreteInstanceData.scope.functions)
+            val known = type.defaultValueVar().getMemberFunction("toText", emptyList(), emptyList(), top.mcfpp.model.Member.AccessModifier.PUBLIC).first
+            val runtime = type.buildUnConcrete("runtime").getMemberFunction("toText", emptyList(), emptyList(), top.mcfpp.model.Member.AccessModifier.PUBLIC).first
+            assertIs<top.mcfpp.model.function.NativeFunction>(known)
+            assertSame(known, runtime)
         }
     }
     @Test fun targetCapabilitiesNeverGuessUnverifiedFutureVersions() {

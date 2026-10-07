@@ -408,7 +408,7 @@ class StorageViewTest {
         val source = MCIntConcrete(4, "value").apply { hasAssigned = true; bindDeclaration() }
         Function.currFunction.scope.putVar("value", source)
         val view = StorageAccess.view(source, MCFPPBaseType.Int)
-        top.mcfpp.model.function.NativeFunction("opaque", javaMethod = StorageViewTest::class.java.getMethod("opaqueWrite"))
+        top.mcfpp.model.function.NativeFunction("opaque", javaMethod = StorageViewTest::class.java.getMethod("opaqueWrite", top.mcfpp.mni.NativeCallContext::class.java))
             .invoke(emptyList(), null)
         assertNull(ValueSnapshot.of(source))
         val read = StorageAccess.read(view) as MCInt
@@ -420,7 +420,7 @@ class StorageViewTest {
     }
 
     companion object {
-        @JvmStatic fun opaqueWrite() {
+        @JvmStatic fun opaqueWrite(@Suppress("UNUSED_PARAMETER") context: top.mcfpp.mni.NativeCallContext) {
             Function.addCommand("data modify storage mcfpp:system stack_frame[0].value set value 8")
         }
     }

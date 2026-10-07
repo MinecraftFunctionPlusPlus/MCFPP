@@ -63,11 +63,7 @@ object MCFPPStringTest {
         MCFPPFile.currFile!!.field.namespaceField = GlobalScope.localNamespaces[Project.currNamespace]!!.scope
 
         //匹配伴随对象
-        GlobalScope.localNamespaces.values.flatMap { it.scope.template.values }.forEach {
-            GlobalScope.localNamespaces[it.namespace]?.scope?.getObject(it.identifier)?.let { obj ->
-                it.companionObject = obj as? ObjectDataTemplate
-            }
-        }
+        Project.pairTemplateCompanions()
         //解析所有泛型类的泛型参数类型
         stageProcessor[compileStage.ordinal].forEach { it() }
 

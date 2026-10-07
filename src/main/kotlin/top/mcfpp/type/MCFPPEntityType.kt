@@ -21,7 +21,7 @@ class MCFPPEntityType(val limit: Int? = null, val types: List<String>? = null, v
 
     override val typeId: TypeId get() = TypeId.Selector(limit, types?.toList(), isName)
 
-    override val concreteInstanceData: CompoundData
+    override val instanceData: CompoundData
         get() = data
 
     override val typeName: String

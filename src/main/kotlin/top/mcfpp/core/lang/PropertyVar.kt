@@ -33,6 +33,11 @@ class PropertyVar(val property: Property, var field: Var<*>, val caller: Var<*>)
 
     override fun doAssignedBy(b: Var<*>): PropertyVar {
         val qwq = property.setter(caller, field, b)
+        if (qwq.isError) {
+            isError = true
+            return this
+        }
+        qwq.identifier = field.identifier
         qwq.parent = caller
         this.field = qwq
         return this

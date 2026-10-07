@@ -34,11 +34,14 @@ internal fun captureCommandResult(context: NativeCallContext, build: (List<Var<*
         LogProcessor.error("Dynamic float command arguments require a number-provider target")
         return@withArguments
     }
+    val errors = top.mcfpp.Project.errorCount
+    val operation = build(args)
+    if (top.mcfpp.Project.errorCount != errors || args.any { it.isError }) return@withArguments
     val result = (context.declaredReturnType.buildUnConcrete(TempPool.getVarIdentify()) as DataTemplateObject).apply { isTemp = true }
     val binding = StorageAccess.bindIncomingParameter(result)
     Function.addCommand(Commands.dataSetValue(binding.path, CompoundTag()))
     val command = Command("execute store result").build(binding.path.memberIndex("result").toCommandPart())
-        .build("int 1 store success").build(binding.path.memberIndex("success").toCommandPart()).build("byte 1 run").build(build(args))
+        .build("int 1 store success").build(binding.path.memberIndex("success").toCommandPart()).build("byte 1 run").build(operation)
     Function.addCommands(command.buildMacroFunction())
     context.publishResult(result)
 }
@@ -399,6 +402,52 @@ object NativeMinecraftCommandOperations {
             return@withAdapters
         }
         captureCommandResult(context) { Command.buildAll("bossbar set", templateField(receiver as DataTemplateObject, "id"), "style", style.value.dataAsString()) }
+    }
+
+    fun bossbarGetMax(context: NativeCallContext) = bossbarRead(context, "max")
+    fun bossbarGetValue(context: NativeCallContext) = bossbarRead(context, "value")
+    fun bossbarGetVisible(context: NativeCallContext) = bossbarRead(context, "visible")
+    fun bossbarSetMax(context: NativeCallContext) = bossbarWriteInt(context, "max")
+    fun bossbarSetValue(context: NativeCallContext) = bossbarWriteInt(context, "value")
+
+    private fun bossbarRead(context: NativeCallContext, attribute: String) = context.withAdapters { receiver, _ ->
+        val id = templateField(receiver as DataTemplateObject, "id")
+        val result = context.declaredReturnType.buildUnConcrete(TempPool.getVarIdentify()).apply { isTemp = true }
+        val score = when (result) {
+            is MCInt -> "${result.name} ${result.sbObject}"
+            is ScoreBool -> "${result.name} ${result.boolObject}"
+            else -> error("Unsupported BossBar property type")
+        }
+        Function.addCommands(Command("execute store result score $score run bossbar get").build(id.toCommandPart())
+            .build(attribute).buildMacroFunction())
+        context.publishResult(result)
+    }
+
+    private fun bossbarWriteInt(context: NativeCallContext, attribute: String) = context.withAdapters { receiver, args ->
+        val id = templateField(receiver as DataTemplateObject, "id")
+        val value = StorageAccess.read(args.single()) as MCInt
+        var snapshot = context.argumentSnapshot(0)
+        while (snapshot is CompilerValue.Typed) snapshot = snapshot.payload
+        val constant = snapshot as? CompilerValue.Integral
+        val command = if (constant != null) Command("bossbar set").build(id.toCommandPart()).build(attribute).build(constant.value.toString())
+        else Command("execute store result bossbar").build(id.toCommandPart()).build(attribute).build("run").build(Commands.sbPlayerGet(value))
+        Function.addCommands(command.buildMacroFunction())
+        context.publishResult(args.single())
+    }
+
+    fun bossbarSetVisible(context: NativeCallContext) = context.withAdapters { receiver, args ->
+        val id = templateField(receiver as DataTemplateObject, "id")
+        val value = StorageAccess.read(args.single()) as ScoreBool
+        var snapshot = context.argumentSnapshot(0)
+        while (snapshot is CompilerValue.Typed) snapshot = snapshot.payload
+        val constant = snapshot as? CompilerValue.Bool
+        fun operation(flag: Boolean) = Command("bossbar set").build(id.toCommandPart()).build("visible $flag")
+        if (constant != null) Function.addCommands(operation(constant.value).buildMacroFunction())
+        else for (flag in listOf(true, false)) {
+            Function.addCommands(Command("execute ${if (flag) "if" else "unless"} score ${value.name} ${value.boolObject} matches 1 run")
+                .build(operation(flag)).buildMacroFunction())
+        }
+        context.publishResult(args.single())
     }
 
     fun worldborderAdd(context: NativeCallContext) = captureCommandResult(context) { args -> Command.buildAll("worldborder add", args[0], args[1]) }

@@ -153,8 +153,8 @@ class ConversionIRTest {
 
     @Test fun unsupportedConversionsAndFloatOverflowAreDiagnosedBeforeEmission() {
         for (source in listOf(
-            "func main(){ var result = toFloat(7L); }",
-            "func main(){ var result = toByte(1.5); }",
+            "func main(){ var result = toByte(7L); }",
+            "func main(){ var result = toLong(1.5); }",
             "func main(){ var result = toInt(2147483648.0); }",
             "func main(){ var value as any = 2; if(true){ value = false; }; var result = toInt(value); }")) {
             MCFPPStringTest.readFromString(source, version = "26.3")

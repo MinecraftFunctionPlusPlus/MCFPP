@@ -135,9 +135,9 @@ class LegacyFloatArithmeticTest {
     private fun calculate(left: MCFloat, right: MCFloat, operation: String): MCFloat {
         // Follow the visitor: freeze the left value, prepare the right entity, then load work.
         val frozenLeft = captured(left)
-        right.toTempEntity()
+        val preparedRight = right.toTempEntity()
         val work = frozenLeft.getTempVar()
-        return work.binaryComputation(MCFloat.tempFloat, operation) as MCFloat
+        return work.binaryComputation(preparedRight, operation) as MCFloat
     }
     private fun components(machine: ScoreCommandExecutor, value: MCFloat) =
         listOf(value.sign, value.int0, value.int1, value.exp).map(machine::read)
@@ -146,6 +146,7 @@ class LegacyFloatArithmeticTest {
         MCFPPStringTest.readFromString("func main(){}", version = "1.20.1")
         Function.currFunction = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single()
         Function.currFunction.commands.clear()
+        Function.addCommand(top.mcfpp.command.Commands.stackIn())
         val inputs = listOf(1f, 0.10000001f, -1.25f, 0.125f)
         val values = inputs.map { MCFloatConcrete(it).toDynamic(false) as MCFloat }
         val left = captured(calculate(values[0], values[1], "-"))

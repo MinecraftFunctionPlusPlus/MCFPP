@@ -35,17 +35,19 @@ data class FunctionParamInfo(
 }
 data class DataTemplateParamInfo(
     var identifier: String,
-    var type: MCFPPType
+    var type: MCFPPType,
+    val variance: top.mcfpp.model.compound.DeclarationVariance = top.mcfpp.model.compound.DeclarationVariance.INVARIANT
 ): ModelInfo<DataTemplateParam> {
     override fun get(): DataTemplateParam {
-        return DataTemplateParam(type.typeName ,identifier, type)
+        return DataTemplateParam(type.typeName ,identifier, type, variance)
     }
 
     companion object {
         fun from(param: DataTemplateParam): DataTemplateParamInfo {
             return DataTemplateParamInfo(
                 param.identifier,
-                param.type!!
+                param.type!!,
+                param.variance
             )
         }
     }

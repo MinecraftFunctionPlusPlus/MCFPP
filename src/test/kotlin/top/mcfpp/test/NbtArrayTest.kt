@@ -119,8 +119,11 @@ class NbtArrayTest {
         val main = compile("func main(){ var bytes = [B;]; var ints = [I;]; var longs = [L;]; }")
         val values = listOf("bytes", "ints", "longs").map { main.scope.getVar(it)!! }
         assertEquals(3, values.map { ValueSnapshot.of(it) }.toSet().size)
-        for (type in listOf(MCFPPNBTType.ByteArray, MCFPPNBTType.IntArray, MCFPPNBTType.LongArray))
-            assertSame(type.instanceData, type.concreteInstanceData)
+        for (value in values) {
+            val member = value.getMemberFunction("toText", emptyList(), emptyList(), top.mcfpp.model.Member.AccessModifier.PUBLIC).first
+            assertIs<top.mcfpp.model.function.NativeFunction>(member)
+            assertSame(member, value.type.buildUnConcrete("runtime").getMemberFunction("toText", emptyList(), emptyList(), top.mcfpp.model.Member.AccessModifier.PUBLIC).first)
+        }
     }
 
     @Test fun emptyArraysKeepTheirFormatAcrossRuntimeParametersAndReturns() {

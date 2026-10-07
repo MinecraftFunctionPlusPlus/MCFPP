@@ -1,6 +1,7 @@
 package top.mcfpp.antlr
 
 import top.mcfpp.analysis.TypeUsage
+import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.analysis.ValueSnapshot
 
@@ -14,7 +15,6 @@ import top.mcfpp.antlr.mcfppParser.BlockContext
 import top.mcfpp.antlr.mcfppParser.CompileTimeFuncDeclarationContext
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
-import top.mcfpp.core.lang.JavaVar
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.MCFloat
 import top.mcfpp.core.lang.MCNumber
@@ -257,7 +257,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             val type = left.type
             val assignment = ctx.assignmentOperator().text
             val current = if (assignment == "=") null else {
-                val value = if (left is PropertyVar) left.get() else left
+                val value = top.mcfpp.analysis.StorageAccess.read(if (left is PropertyVar) left.get() else left)
                 when (value) {
                     is MCFPPValue<*> -> value.clone()
                     is MCNumber<*> -> value.type.buildUnConcrete(TempPool.getVarIdentify()).apply {
@@ -372,6 +372,18 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     private var breakIf = ConditionType.NORMAL
     override fun visitIfStatement(ctx: mcfppParser.IfStatementContext): Any? = withCompilationContext(ctx) {
         val enclosingCondition = breakIf
+        val receiver = Function.currFunction.scope.getVar("this")?.storageBinding
+            ?.takeIf { it.data.layout == top.mcfpp.analysis.StorageLayout.CompilerOnly }
+        val receiverBefore = receiver?.data?.facts?.fork()
+        val receiverPaths = ArrayList<top.mcfpp.analysis.FlowFacts>()
+        fun restoreReceiver() {
+            if (receiver != null && receiverBefore != null) {
+                receiver.data.facts.forgetDescendants(receiver.place)
+                receiver.data.facts.copyFrom(receiverBefore, receiver.place, receiver.place)
+                receiver.data.versions.invalidate(receiver.place)
+            }
+        }
+        fun recordReceiver() { receiver?.data?.facts?.fork()?.let(receiverPaths::add) }
         try {
         //进入if函数
         breakIf = ConditionType.NORMAL
@@ -382,6 +394,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             //if分支
             val (c,f) = enterIfBranch(ctx)
             if(c){
+                restoreReceiver()
                 //此分支会被编译，注册函数
                 if(breakIf != ConditionType.ALWAYS_TRUE) {
                     //并不是必然编译的，所以需要注册函数，让分支内的内容在if_branch函数中执行。如果是必然执行的，那么直接内联即可
@@ -396,6 +409,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                     visitStatements(continuation)
                 }
                 returningPaths.add(Function.currFunction.hasReturnStatement)
+                recordReceiver()
                 if (!Function.currFunction.hasReturnStatement && !Function.currFunction.isEnded) Function.currFunction.registerFrameExit()
                 if(breakIf != ConditionType.ALWAYS_TRUE) {
                     Function.currFunction = Function.currFunction.parent[0]
@@ -406,6 +420,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             if(breakIf == ConditionType.ALWAYS_TRUE) break
             //else if分支
             ctx.elseIfStatement().forEach {
+                restoreReceiver()
                 val (c2, f2) = enterElseIfBranch(it)
                 if(c2){
                     //这条else if分支会被编译
@@ -423,6 +438,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                         visitStatements(continuation)
                     }
                     returningPaths.add(Function.currFunction.hasReturnStatement)
+                    recordReceiver()
                     if (!Function.currFunction.hasReturnStatement && !Function.currFunction.isEnded) Function.currFunction.registerFrameExit()
                     if(breakIf != ConditionType.ALWAYS_TRUE) {  //这里同理
                         Function.currFunction = Function.currFunction.parent[0]
@@ -435,6 +451,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             //不需要继续编译else语句了
             if(breakIf == ConditionType.ALWAYS_TRUE) break
             //else语句
+            restoreReceiver()
             Function.addComment("else branch start")
             if(breakIf != ConditionType.ALWAYS_FALSE){
                 //注册函数
@@ -456,12 +473,19 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 visitStatements(continuation)
             }
             returningPaths.add(Function.currFunction.hasReturnStatement)
+            recordReceiver()
             if (!Function.currFunction.hasReturnStatement && !Function.currFunction.isEnded) Function.currFunction.registerFrameExit()
             if(breakIf != ConditionType.ALWAYS_FALSE){
                 Function.currFunction = Function.currFunction.parent[0]
             }
             Function.addComment("else branch end")
         }while (false)
+        if (receiver != null && receiverPaths.isNotEmpty()) {
+            val joined = receiverPaths.reduce { left, right -> left.join(right) }
+            receiver.data.facts.forgetDescendants(receiver.place)
+            receiver.data.facts.copyFrom(joined, receiver.place, receiver.place)
+            receiver.data.versions.invalidate(receiver.place)
+        }
         Function.addComment("if end")
         //if以后的语句已经被全部打包到if分支里面，所以if语句之后的statement没有意义
         Function.currFunction.isEnded = true
@@ -597,9 +621,18 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     override fun visitWhileStatement(ctx: mcfppParser.WhileStatementContext): Any? = withCompilationContext(ctx) {
+        val receiver = Function.currFunction.scope.getVar("this")?.storageBinding
+            ?.takeIf { it.data.layout == top.mcfpp.analysis.StorageLayout.CompilerOnly }
+        val before = receiver?.data?.facts?.fork()
         enterWhileStatement()
         visitWhileBlock(ctx.block())
         exitWhileStatement()
+        if (receiver != null && before != null) {
+            val joined = before.join(receiver.data.facts)
+            receiver.data.facts.forgetDescendants(receiver.place)
+            receiver.data.facts.copyFrom(joined, receiver.place, receiver.place)
+            receiver.data.versions.invalidate(receiver.place)
+        }
         return null
     }
 
@@ -958,19 +991,24 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             visitConcreteForeach(id, ConcreteIterator.fromIntRange(left, right), ctx.block())
             return null
         }
-        // try to get iterator
-        val func = MCFPPFuncGetter.getFunction(iterable, "iterator", emptyList(), arrayListOf())
-        if(func is UnknownFunction){
-            LogProcessor.error("Not iterable")
-            return null
-        }
-        func.invoke(arrayListOf(), iterable)
-        val iterator = (func.returnVar as JavaVar).value
-        if(iterator is ConcreteIterator<*>){
-            visitConcreteForeach(id, iterator, ctx.block())
-        }else{
-            LogProcessor.error("Runtime iterator lowering is not available for this loop")
-        }
+        var payload = ValueSnapshot.of(iterable)
+        while (payload is CompilerValue.Typed) payload = payload.payload
+        if (payload is CompilerValue.Sequence) {
+            val elements = payload.elements.mapIndexed { index, value ->
+                val typed = value as? CompilerValue.Typed
+                val type = typed?.type?.let(MCFPPType::resolveTypeId)
+                    ?: (iterable.type as? top.mcfpp.type.MCFPPTypeWithGeneric)?.generic?.singleOrNull()
+                if (type == null) {
+                    LogProcessor.error("Iterator element has no declared type")
+                    return null
+                }
+                StorageAccess.restore(type, value, "${id}_$index") ?: run {
+                    LogProcessor.error("Iterator element cannot be restored as '${type}'")
+                    return null
+                }
+            }
+            visitConcreteForeach(id, ConcreteIterator(id, elements.iterator()), ctx.block())
+        } else LogProcessor.error("Runtime iteration requires typed IR with a supported iterable layout")
         return null
     }
 

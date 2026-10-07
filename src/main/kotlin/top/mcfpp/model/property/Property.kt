@@ -2,6 +2,7 @@ package top.mcfpp.model.property
 
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
+import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Member
 import top.mcfpp.model.compound.DataTemplate
@@ -77,8 +78,34 @@ data class Property(val identifier: String, val accessor: AbstractAccessor?, val
     }
 
     companion object {
+        /** Bind declared accessors without evaluating their bodies or initializer expressions. */
+        fun fromContext(ctx: mcfppParser.AccessorContext?, field: Var<*>, template: DataTemplate): Property {
+            if (ctx == null) return buildSimpleProperty(field)
+            val getter = ctx.getter()?.let { declaration ->
+                when {
+                    declaration.javaRefer() != null -> NativeAccessor(declaration.javaRefer().text, template, field)
+                    declaration.expression() != null -> ExpressionAccessor(declaration.expression())
+                    declaration.curlBlock() != null -> FunctionAccessor(field.clone(), template, declaration.curlBlock()).apply {
+                        template.scope.addFunction(function, false)
+                    }
+                    else -> SimpleAccessor()
+                }
+            }
+            val setter = ctx.setter()?.let { declaration ->
+                when {
+                    declaration.javaRefer() != null -> NativeMutator(declaration.javaRefer().text, template, field)
+                    declaration.expression() != null -> ExpressionMutator(declaration.expression())
+                    declaration.curlBlock() != null -> FunctionMutator(field.clone(), template, declaration.curlBlock()).apply {
+                        template.scope.addFunction(function, false)
+                    }
+                    else -> SimpleMutator()
+                }
+            }
+            return Property(field.identifier, getter, setter).apply { isStatic = field.isStatic }
+        }
+
         fun buildSimpleProperty(field: Var<*>): Property {
-            return Property(field.identifier, SimpleAccessor(), SimpleMutator())
+            return Property(field.identifier, SimpleAccessor(), SimpleMutator()).apply { isStatic = field.isStatic }
         }
 
         fun buildSimpleSetter(identifier: String): Property {

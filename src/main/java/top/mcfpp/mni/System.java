@@ -32,18 +32,6 @@ public class System {
     }
 
     @InsertCommand
-    @MNIFunction(identifier = "print", normalParams = {"list"})
-    public static void printList(NativeCallContext context){
-        NativePrintOperations.INSTANCE.print(context);
-    }
- 
-    @InsertCommand
-    @MNIFunction(identifier = "print", normalParams = {"dict"})
-    public static void printDict(NativeCallContext context){
-        NativePrintOperations.INSTANCE.print(context);
-    }
-
-    @InsertCommand
     @MNIFunction(identifier = "print", normalParams = {"nbt"})
     public static void printNbt(NativeCallContext context){
         NativePrintOperations.INSTANCE.print(context);

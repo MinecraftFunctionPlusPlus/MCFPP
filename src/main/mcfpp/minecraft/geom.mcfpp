@@ -1,4 +1,3 @@
-@From<"top.mcfpp.mni.minecraft.AreaData">
 data Area{
     start as pos3;
     end as pos3;

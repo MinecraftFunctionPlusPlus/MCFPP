@@ -9,7 +9,7 @@ import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.Member
 import top.mcfpp.model.compound.ObjectCompoundData
 import top.mcfpp.model.function.Function
-import top.mcfpp.type.MCFPPObjectDataTemplateType
+import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
@@ -38,8 +38,9 @@ class StaticMemberView(type: CanSelectMember, identifier: String = TempPool.getV
     override fun getFromStack() {}
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        if (value is MCFPPObjectDataTemplateType) {
-            val template = (value as MCFPPObjectDataTemplateType).template
+        val objectOwner = (value as? MCFPPType)?.objectData as? ObjectCompoundData
+        if (objectOwner is DataTemplate) {
+            val template = objectOwner
             if (template.deferredFields.containsKey(key)) {
                 LogProcessor.error("Cannot infer object field '$key' before its initializer is evaluated (forward or self reference)")
                 return UnknownVar(key).apply { isError = true } to true
@@ -47,10 +48,10 @@ class StaticMemberView(type: CanSelectMember, identifier: String = TempPool.getV
         }
         return value.getMemberVar(key, accessModifier).apply {
             first?.parent = value
-            if(value is MCFPPObjectDataTemplateType) {
+            if(objectOwner != null) {
                 first?.let { member ->
                     val field = if (member is PropertyVar) member.field else member
-                    field.nbtPath = ((value as MCFPPObjectDataTemplateType).template as ObjectCompoundData).nbtPath.memberIndex(key)
+                    field.nbtPath = objectOwner.nbtPath.memberIndex(key)
                     StorageAccess.bindStaticField(field)
                 }
             }

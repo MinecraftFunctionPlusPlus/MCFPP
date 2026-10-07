@@ -9,6 +9,7 @@ import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.core.lang.nbt.NBTBasedData
 import top.mcfpp.core.lang.nbt.NBTBasedDataConcrete
 import top.mcfpp.core.lang.obj.DataTemplateObject
+import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.util.StringHelper.toRangeStr
 
@@ -141,27 +142,36 @@ class TagPredicate(val tag: MCString, reverse: Boolean): CanReverseEntitySelecto
     override val identifier: String = "tag"
     override val v: Var<*> = tag
     override fun valueString(): String = (tag as MCStringConcrete).value.value
+    override fun toCommandPart(): Command = if (tag is MCStringConcrete) super.toCommandPart()
+        else Command("tag=${if (reverse) "!" else ""}").selectorStringGuard(tag, true).buildMacro(tag, false)
 }
 
 class TeamPredicate(val team: MCString, reverse: Boolean): CanReverseEntitySelectorPredicate(reverse) {
     override val identifier: String = "team"
     override val v: Var<*> = team
     override fun valueString(): String = (team as MCStringConcrete).value.value
+    override fun toCommandPart(): Command = if (team is MCStringConcrete) super.toCommandPart()
+        else Command("team=${if (reverse) "!" else ""}").selectorStringGuard(team, true).buildMacro(team, false)
 }
 
 class NamePredicate(val name: MCString, reverse: Boolean): CanReverseEntitySelectorPredicate(reverse) {
-    override val identifier: String = "team"
+    override val identifier: String = "name"
     override val v: Var<*> = name
-    override fun valueString(): String = (name as MCStringConcrete).value.value
+    override fun valueString(): String = "\"" + (name as MCStringConcrete).value.value
+        .replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+    override fun toCommandPart(): Command = if (name is MCStringConcrete) super.toCommandPart()
+        else Command("name=${if (reverse) "!" else ""}\"").selectorStringGuard(name, false).buildMacro(name, false).build("\"", false)
 }
 class TypePredicate(val type: DataTemplateObject, reverse: Boolean): CanReverseEntitySelectorPredicate(reverse) {
     override val identifier: String = "type"
     override val v: Var<*> = type
+    override fun toCommandPart(): Command = resourcePredicate(identifier, reverse, type)
 }
 
 class PredicatePredicate(val predicate: DataTemplateObject, reverse: Boolean): CanReverseEntitySelectorPredicate(reverse) {
     override val identifier: String = "predicate"
     override val v: Var<*> = predicate
+    override fun toCommandPart(): Command = resourcePredicate(identifier, reverse, predicate)
 }
 
 class XRotationPredicate(val xRotation: RangeVar): EntitySelectorPredicate() {
@@ -197,7 +207,17 @@ class GamemodePredicate(val gamemode: MCString, reverse: Boolean): CanReverseEnt
 class AdvancementsPredicate(val advancements: DataTemplateObject, reverse: Boolean): CanReverseEntitySelectorPredicate(reverse) {
     override val identifier: String = "advancements"
     override val v: Var<*> = advancements
+    override fun toCommandPart(): Command = Command("advancements={")
+        .build(resourceId(advancements).toCommandPart(), false).build(if (reverse) "=false}" else "=true}", false)
 }
+
+private fun resourceId(value: DataTemplateObject): Var<*> {
+    val field = DataTemplate.getField(value, "id")!!
+    return if (field is PropertyVar) field.get() else field
+}
+
+private fun resourcePredicate(name: String, reverse: Boolean, value: DataTemplateObject): Command =
+    Command("$name=${if (reverse) "!" else ""}").build(resourceId(value).toCommandPart(), false)
 
 class LimitPredicate(val limit: MCInt): EntitySelectorPredicate() {
     override val identifier: String = "limit"

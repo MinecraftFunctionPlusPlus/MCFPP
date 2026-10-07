@@ -234,6 +234,17 @@ open class DataTemplate : FieldContainer, CompoundData {
         }
     }
 
+    override fun getAccess(compoundData: CompoundData): Member.AccessModifier {
+        if (companionObject === compoundData || (compoundData as? DataTemplate)?.companionObject === this)
+            return Member.AccessModifier.PRIVATE
+        if (compoundData is DataTemplate) {
+            if (getType().typeId == compoundData.getType().typeId) return Member.AccessModifier.PRIVATE
+            return if (getType().isSubOf(compoundData.getType())) Member.AccessModifier.PROTECTED
+                else Member.AccessModifier.PUBLIC
+        }
+        return super.getAccess(compoundData)
+    }
+
     fun flatExtends(): CompoundData {
         for (compoundData in parent){
             val readonlyNames = (compoundData as? CompiledGenericDataTemplate)?.originTemplate

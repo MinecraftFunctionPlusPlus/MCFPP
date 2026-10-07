@@ -315,10 +315,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             //默认构造函数和默认字段
             if(template is TypeDataTemplate){
                 template.addMember(
-                    NativeDataTemplateConstructor(
-                        DataTemplate.currTemplate!!,
-                        TypeDataTemplate.Companion::defaultConstructor.javaMethod!!
-                    ).apply { appendNormalParam(template.typeAs, "value") }
+                    TypeDataTemplateConstructor(template).apply { appendNormalParam(template.typeAs, "value") }
                 )
             }else if(!template.isAbstract && template.constructors.isEmpty()){
                 template.addMember(DataTemplateConstructor(DataTemplate.currTemplate!!, null))
@@ -643,7 +640,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         if (isInObject) `var`.isDynamic = !isConst
         `var`.bindDeclaration()
         //属性访问器
-        val properties = (ctx.accessor()?.let {visit(ctx.accessor())}?: Property.buildSimpleProperty(`var`)) as Property
+        val properties = Property.fromContext(ctx.accessor(), `var`, DataTemplate.currTemplate!!)
         `var`.declaredParentTemplate = DataTemplate.currTemplate!!
         properties.declaredParentTemplate = DataTemplate.currTemplate!!
         return `var` to properties

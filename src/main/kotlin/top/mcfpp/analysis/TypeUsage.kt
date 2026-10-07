@@ -11,6 +11,9 @@ internal object TypeUsage {
     fun ordinaryDiagnostic(type: MCFPPType, snapshot: CompilerValue? = null): String? {
         fun containsMeta(id: TypeId): Boolean = id == MCFPPConcreteType.Type.typeId ||
             id is TypeId.Union && id.alternatives.any(::containsMeta)
+        fun containsHost(id: TypeId): Boolean = id == MCFPPConcreteType.JavaVar.typeId ||
+            id is TypeId.Union && id.alternatives.any(::containsHost)
+        if (containsHost(type.typeId)) return "Host payloads are only available inside the compiler"
         return if (containsMeta(type.typeId) || snapshot?.containsTypeValue() == true) DIAGNOSTIC else null
     }
 }

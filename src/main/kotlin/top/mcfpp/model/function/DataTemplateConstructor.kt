@@ -50,6 +50,7 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
         target.bindIncomingParameters()
         val receiver = if (data is ObjectCompoundData) StaticMemberView(data.getType())
             else target.scope.getVar("this") as DataTemplateObject
+        if (receiver is DataTemplateObject) target.constructedReceiver = receiver
         for ((name, expression) in data.preInit) {
             if (data !is ObjectCompoundData && name in data.deferredFields) continue
             val errors = Project.errorCount

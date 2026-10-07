@@ -231,7 +231,7 @@ class MCFPPConcreteExprVisitor(
         currSelector = visitJvmAccessExpression(ctx.jvmAccessExpression()) ?: return null
         if(currSelector is UnknownVar && !currSelector!!.isError){
             val typeStr = ctx.jvmAccessExpression().text
-            val type = MCFPPType.parseFromString(typeStr, lookupScope, caller)
+            val type = MCFPPType.parseExpressionType(typeStr, lookupScope, caller)
             if(type == null){
                 LogProcessor.error(TextTranslator.SYMBOL_NOT_DEFINED.translate(currSelector!!.identifier))
             }else{
@@ -249,17 +249,8 @@ class MCFPPConcreteExprVisitor(
         return currSelector
     }
 
-    /**
-     * JVM Access expression, not available in this context
-     */
     override fun visitJvmAccessExpression(ctx: mcfppParser.JvmAccessExpressionContext): Var<*>? = withCompilationContext(ctx) {
-        return if(ctx.Identifier() != null){
-            LogProcessor.error("JVM operator is not allowed in this context")
-            null
-        }else{
-            visitPropertyOperator(ctx.propertyOperator())
-        }
-
+        visitPropertyOperator(ctx.propertyOperator())
     }
 
     override fun visitPropertyOperator(ctx: mcfppParser.PropertyOperatorContext): Var<*>? = withCompilationContext(ctx) {
@@ -313,7 +304,7 @@ class MCFPPConcreteExprVisitor(
                 return UnknownVar("range_" + UUID.randomUUID())
             }
         } else if (ctx.type() != null){
-            return MCFPPTypeVar(MCFPPType.parseFromString(ctx.type().text, lookupScope, caller)?: run {
+            return MCFPPTypeVar(MCFPPType.parseExpressionType(ctx.type().text, lookupScope, caller)?: run {
                 LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(ctx.type().text))
                 MCFPPBaseType.Any
             })
@@ -388,7 +379,7 @@ class MCFPPConcreteExprVisitor(
         }
         if(re is UnknownVar && !re.isError && currSelector == null){
             val typeStr = ctx.Identifier().text
-            val type = MCFPPType.parseFromString(typeStr, lookupScope, caller)
+            val type = MCFPPType.parseExpressionType(typeStr, lookupScope, caller)
             if(type == null){
                 LogProcessor.error(TextTranslator.SYMBOL_NOT_DEFINED.translate(ctx.text))
             }else{

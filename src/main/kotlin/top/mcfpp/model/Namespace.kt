@@ -38,8 +38,14 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
     fun merge(namespace: Namespace, force: Boolean = false){
         namespace.scope.forEachFunction { scope.addFunction(it, force) }
         namespace.scope.forEachInterface { scope.addInterface(it.identifier, it, force) }
-        namespace.scope.forEachTemplate { scope.addTemplate(it.identifier, it, force) }
-        namespace.scope.forEachObject { scope.addObject(it.identifier, it, force) }
+        namespace.scope.forEachTemplate {
+            if (!scope.addTemplate(it.identifier, it, force))
+                LogProcessor.error("Template has been defined: ${it.identifier} in namespace $identifier")
+        }
+        namespace.scope.forEachObject {
+            if (!scope.addObject(it.identifier, it, force))
+                LogProcessor.error("Object has been defined: ${it.identifier} in namespace $identifier")
+        }
     }
 
     fun resolve(){
@@ -49,7 +55,7 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
                 t.scope.forEachFunction { resolveFunction(it) }
                 if(t.companionObject != null){
                     //find companion object
-                    t.companionObject = scope.getObject(t.identifier) as DataTemplate
+                    top.mcfpp.model.compound.GenericDeclarationContract.pair(t, scope.getObject(t.identifier) as? DataTemplate)
                 }
             }
         }

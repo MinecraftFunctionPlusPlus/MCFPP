@@ -68,6 +68,11 @@ open class DataTemplateObject : Var<DataTemplateObject> {
                 if (nbtPath.pathList.isEmpty()) nbtPath = NBTPath.temp.memberIndex(identifier)
                 bindDeclaration()
             }
+            if (!copy.type.hasRuntimeRepresentation) {
+                StorageAccess.ensure(copy)
+                val assigned = StorageAccess.write(copy, b)
+                return assigned as? DataTemplateObject ?: copy.apply { isError = true }
+            }
             StorageAccess.encodeTo(copy.nbtPath, b)
             val place = Place(copy.symbol!!.id)
             val data = StoredData(place, copy.nbtPath.clone())
@@ -219,7 +224,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
             field.parent = this
             field.isConst = declaration.isConst
             field.nullable = declaration.nullable
-            field.isDynamic = templateType.alwaysDynamic
+            field.isDynamic = binding.data.layout != top.mcfpp.analysis.StorageLayout.CompilerOnly && templateType.alwaysDynamic
             return PropertyVar(property, field, this) to (accessModifier >= property.accessModifier)
         }
         val v = instanceField.getVar(key)?.clone(this)
@@ -317,14 +322,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
             val field = DataTemplate.getField(this, "id")!!
             return (if (field is PropertyVar) field.get() else field).toCommandPart()
         }
-        val f = getMemberFunction("toCommandPart", arrayListOf(), arrayListOf(), Member.AccessModifier.PUBLIC).first
-        if(f is UnknownFunction) throw IllegalArgumentException("Cannot find toCommandPart function")
-        if(f.isOverride){
-            val command = (f.invoke(arrayListOf(), this) as JavaVar).value as Command
-            return command
-        }else{
-            return super.toCommandPart()
-        }
+        return top.mcfpp.backend.TemplateCommandFormat.build(this) ?: super.toCommandPart()
     }
 
     fun isInstance(template: DataTemplate): Boolean{

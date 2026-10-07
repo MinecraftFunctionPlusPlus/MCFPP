@@ -39,7 +39,6 @@ class MCFPPBaseType {
             }
         }
 
-        override val concreteInstanceData: CompoundData get() = instanceData
 
         override val typeName: kotlin.String
             get() = "any"
@@ -69,7 +68,6 @@ class MCFPPBaseType {
             }
         }
 
-        override val concreteInstanceData get() = instanceData
 
         override val typeName: kotlin.String
             get() = "int"
@@ -101,13 +99,6 @@ class MCFPPBaseType {
             }
         }
 
-        override val concreteInstanceData by lazy {
-            CompoundData("string", "mcfpp").apply {
-                commonType = String
-                extends(Any.instanceData)
-                injectedBy(MCStringData::class.java)
-            }
-        }
 
         override val typeName: kotlin.String
             get() = "string"
@@ -137,7 +128,6 @@ class MCFPPBaseType {
             }
         }
 
-        override val concreteInstanceData get() = instanceData
 
         override val typeName: kotlin.String
             get() = "float"
@@ -166,7 +156,6 @@ class MCFPPBaseType {
             }
         }
 
-        override val concreteInstanceData get() = instanceData
 
         override val typeName: kotlin.String
             get() = "bool"
@@ -202,22 +191,6 @@ class MCFPPBaseType {
             }
         }
 
-        override val concreteInstanceData: CompoundData by lazy {
-            CompoundData("text","mcfpp.lang").apply {
-                commonType = JsonText
-                extends(MCFPPNBTType.NBT.concreteInstanceData)
-                injectedBy(JsonTextData::class.java)
-
-                addMember(MCInt("color"))
-                addMember(ScoreBool("bold"))
-                addMember(ScoreBool("italic"))
-                addMember(ScoreBool("underlined"))
-                addMember(ScoreBool("strikethrough"))
-                addMember(ScoreBool("obfuscated"))
-                addMember(MCString("insertion"))
-
-            }
-        }
 
         override val typeName: kotlin.String
             get() = "text"

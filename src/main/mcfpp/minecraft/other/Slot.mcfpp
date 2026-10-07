@@ -1,4 +1,3 @@
-@From<"top.mcfpp.mni.minecraft.SlotData">
 data Slot{
     index as int?;
     type as SlotType;
@@ -48,24 +47,24 @@ object data SlotWildcard {
 }
 
 enum SlotType{
-    contents,
-    container,
-    hotbar,
-    inventory,
-    enderchest,
-    villager,
-    horse,
-    weapon,
-    weapon_mainhand,
-    weapon_offhand,
-    armor,
-    armor_head,
-    armor_chest,
-    armor_legs,
-    armor_feet,
-    armor_body,
-    saddle,
-    horse_chest,
-    player_cursor,
-    player_crafting
+    contents = 0,
+    container = 1,
+    hotbar = 2,
+    inventory = 3,
+    enderchest = 4,
+    villager = 5,
+    horse = 6,
+    weapon = 7,
+    weapon_mainhand = 8,
+    weapon_offhand = 9,
+    armor = 10,
+    armor_head = 11,
+    armor_chest = 12,
+    armor_legs = 13,
+    armor_feet = 14,
+    armor_body = 15,
+    saddle = 16,
+    horse_chest = 17,
+    player_cursor = 18,
+    player_crafting = 19
 }

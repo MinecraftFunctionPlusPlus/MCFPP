@@ -20,7 +20,7 @@ import top.mcfpp.nbt.tags.primitive.FloatTag
 import top.mcfpp.nbt.tags.primitive.DoubleTag
 
 /** Strict executor for the scoreboard and control-flow command subset covered by these tests. */
-class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<String>> = emptyMap()) {
+class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<String>> = emptyMap(), targetVersion: String = "26.3") {
     val values = mutableMapOf<String, Int>()
     val messages = mutableListOf<String>()
     val failedScoreOperations = mutableListOf<String>()
@@ -29,6 +29,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         private set
     private val frames = mutableListOf<MutableMap<String, Tag<*>>>()
     private val storage = mutableMapOf<String, MutableMap<String, Tag<*>>>()
+    val failedComputations = mutableListOf<String>()
     private data class Segment(val name: String?, val index: Int?, val end: Int, val predicate: CompoundTag? = null)
     private fun segments(path: String): List<Segment> {
         val result = mutableListOf<Segment>()
@@ -197,6 +198,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         val restore = Regex("execute store result score (\\S+ \\S+) run data get storage (\\S+) ($nbtPath)(?: 1(?:\\.0)?)?")
         val setNbt = Regex("data modify storage (\\S+) ($nbtPath) set value (.*)")
         val copyNbt = Regex("data modify storage (\\S+) ($nbtPath) set from storage (\\S+) ($nbtPath)")
+        val sliceString = Regex("data modify storage (\\S+) ($nbtPath) set string storage (\\S+) ($nbtPath) (-?\\d+) (-?\\d+)")
         val computeFloat = Regex("data modify storage (\\S+) ($nbtPath) set compute default float (.*)")
         val computeInt = Regex("execute store result score (\\S+ \\S+) run compute default integer (.*)")
         val floatCheck = Regex("execute store success score (\\S+ \\S+) (if|unless) predicate (.*)")
@@ -211,6 +213,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         val compareNbt = Regex("execute store success score (\\S+ \\S+) run data modify storage (\\S+) ($nbtPath) set from storage (\\S+) ($nbtPath)")
         val removeNbt = Regex("data remove storage (\\S+) ($nbtPath)")
         val testNbt = Regex("execute store success score (\\S+ \\S+) if data storage (\\S+) ($nbtPath)")
+        val conditionalNbt = Regex("execute (if|unless) data storage (\\S+) ($nbtPath) run (.*)")
         val macroCall = Regex("function (\\S+) with storage (\\S+) ($nbtPath)")
         var steps = 0
         var branchStackInitialized = false
@@ -292,6 +295,8 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                     when (value) {
                         is StringTag -> value.value
                         is CompoundTag -> top.mcfpp.backend.NbtEncoding.snbt(value)
+                        is FloatTag, is DoubleTag -> java.text.DecimalFormat("#", java.text.DecimalFormatSymbols(java.util.Locale.ROOT))
+                            .apply { maximumFractionDigits = 15 }.format(value.value as Number)
                         else -> value.value.toString()
                     }
                 }
@@ -348,25 +353,43 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                     is ByteArrayTag -> value.value.size
                     is IntArrayTag -> value.value.size
                     is LongArrayTag -> value.value.size
-                    is FloatTag -> kotlin.math.floor(value.value.toDouble()).toInt()
-                    is DoubleTag -> kotlin.math.floor(value.value).toInt()
-                    else -> (value.value as Number).toInt()
+                    is StringTag -> value.value.length
+                    else -> {
+                        val number=(value.value as Number).toDouble()
+                        if(targetVersion in listOf("1.20.1","1.20.2")) {
+                            val truncated=number.toInt()
+                            if(number<truncated.toDouble()) truncated-1 else truncated
+                        } else kotlin.math.floor(number).toInt()
+                    }
                 }
                 return@command false
             }
             setNbt.matchEntire(command)?.let {
                 writeNbt(it.groupValues[1], it.groupValues[2], Tag.toNBT(it.groupValues[3])); return@command false
             }
+            sliceString.matchEntire(command)?.let {
+                val value = (readNbt(it.groupValues[3], it.groupValues[4]) as StringTag).value
+                fun position(raw: String): Int = raw.toInt().let { if (it < 0) value.length + it else it }
+                val start = position(it.groupValues[5])
+                val end = position(it.groupValues[6])
+                check(start in 0..value.length && end in start..value.length)
+                writeNbt(it.groupValues[1], it.groupValues[2], StringTag(value.substring(start, end)))
+                return@command false
+            }
             computeFloat.matchEntire(command)?.let {
                 val expression = JSON.parse(it.groupValues[3], JSONReader.Feature.AllowUnQuotedFieldNames)
-                writeNbt(it.groupValues[1], it.groupValues[2], FloatTag(provider(expression)))
+                val result = provider(expression)
+                writeNbt(it.groupValues[1], it.groupValues[2], FloatTag(if (result.isFinite()) result else 0f))
                 return@command false
             }
             computeInt.matchEntire(command)?.let {
                 val expression = JSON.parseObject(it.groupValues[2], JSONReader.Feature.AllowUnQuotedFieldNames)
                 check(expression.getString("type") == "minecraft:from_float")
                 // Preserve the int result: converting it back through Float would round Int.MAX_VALUE.
-                values[scoreKey(it.groupValues[1])] = provider(expression["input"]!!).toInt()
+                val number=provider(expression["input"]!!)
+                val failed=!number.isFinite() || number.toDouble()<Int.MIN_VALUE.toDouble() || number.toDouble()>=2147483648.0
+                if(failed) failedComputations.add(command)
+                values[scoreKey(it.groupValues[1])] = if(failed) 0 else number.toInt()
                 return@command false
             }
             floatCheck.matchEntire(command)?.let {
@@ -420,6 +443,17 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             }
             removeNbt.matchEntire(command)?.let {
                 removeNbt(it.groupValues[1], it.groupValues[2])
+                return@command false
+            }
+            conditionalNbt.matchEntire(command)?.let {
+                val path = it.groupValues[3]
+                val predicateAt = path.indexOf('{')
+                val actualPath = if (predicateAt < 0) path else path.substring(0, predicateAt)
+                val present = try {
+                    val value = readNbt(it.groupValues[2], actualPath)
+                    predicateAt < 0 || matches(value, Tag.toNBT(path.substring(predicateAt)) as CompoundTag)
+                } catch (_: IllegalStateException) { false } catch (_: IndexOutOfBoundsException) { false }
+                if (present == (it.groupValues[1] == "if")) return@command execute(it.groupValues[4])
                 return@command false
             }
             testNbt.matchEntire(command)?.let {
@@ -493,6 +527,16 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                 return@command false
             }
             if (command.startsWith("say ")) { messages.add(command.removePrefix("say ")); return@command false }
+            if (command.startsWith("tellraw @a ")) {
+                val diagnostic = JSON.parseObject(command.removePrefix("tellraw @a "))
+                check(diagnostic.getString("type") == "text")
+                messages.add(diagnostic.getString("text"))
+                return@command false
+            }
+            if (command.startsWith("say ")) {
+                messages.add(command.removePrefix("say "))
+                return@command false
+            }
             error("Unsupported command: $command")
         }
         run(commands)

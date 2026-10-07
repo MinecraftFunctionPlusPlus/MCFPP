@@ -1,13 +1,8 @@
 package top.mcfpp.mni.minecraft;
 
-import top.mcfpp.annotations.MNIAccessor;
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.backend.NativeMinecraftCommandOperations;
 import top.mcfpp.mni.NativeCallContext;
-import top.mcfpp.core.lang.*;
-import top.mcfpp.lib.SbObject;
-import top.mcfpp.model.function.Function;
-import top.mcfpp.util.ValueWrapper;
 
 public class WorldborderData {
 
@@ -29,14 +24,6 @@ public class WorldborderData {
     @MNIFunction(normalParams = {"float = 5.0"}, returnType = "mcfpp.minecraft.std:CommandResult")
     public static void setDamageBuffer(NativeCallContext context){
         NativeMinecraftCommandOperations.INSTANCE.worldborderSetDamageBuffer(context);
-    }
-
-    @MNIAccessor("size")
-    public static void getSize(NormalCompoundDataObject size, ValueWrapper<MCInt> re){
-        var t = new MCInt("size");
-        t.setSbObject(SbObject.Companion.getMCFPP_TEMP());
-        Function.addCommand("execute store result score size " + SbObject.Companion.getMCFPP_TEMP() + " run worldborder get");
-        re.setValue(t);
     }
 
     @MNIFunction(normalParams = {"float = 29999984", "int = 0"}, returnType = "mcfpp.minecraft.std:CommandResult")

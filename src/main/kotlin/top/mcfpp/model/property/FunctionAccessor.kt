@@ -1,6 +1,7 @@
 package top.mcfpp.model.property
 
 import top.mcfpp.core.lang.Var
+import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
@@ -14,8 +15,8 @@ class FunctionAccessor: AbstractAccessor {
         this.function = function
     }
 
-    constructor(field: Var<*>, d: CompoundData): super() {
-        function = Function("get_${field.identifier}", d.namespace, null)
+    constructor(field: Var<*>, d: CompoundData, context: mcfppParser.CurlBlockContext? = null): super() {
+        function = Function("get_${field.identifier}", d.namespace, context)
         function.returnType = field.type
         function.scope.putVar("field", field)
         function.appendNormalParam(field.type, "field")
@@ -26,7 +27,6 @@ class FunctionAccessor: AbstractAccessor {
     }
 
     override fun getter(caller: CanSelectMember, field: Var<*>): Var<*> {
-        function.invoke(arrayListOf(field), caller)
-        return function.returnVar
+        return function.invoke(arrayListOf(field), caller)
     }
 }

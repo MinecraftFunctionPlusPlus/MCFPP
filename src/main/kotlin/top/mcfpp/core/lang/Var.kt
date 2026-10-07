@@ -379,7 +379,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
                 qwq = a
             }
         }
-        val operator = type.concreteInstanceData.getOperator(operation, qwq.type)
+        val operator = type.instanceData.getOperator(operation, qwq.type)
         val re = if(operator != null && operator is NativeFunction && operator.returnsConstWhenArgsConst) {
             operator.invoke(arrayListOf(qwq), this)
         } else if(operator == null) {
@@ -415,7 +415,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
                 qwq = a
             }
         }
-        val operator = (if(this is MCFPPValue<*>) type.concreteInstanceData else type.instanceData).getOperator(operation, qwq.type)
+        val operator = type.instanceData.getOperator(operation, qwq.type)
         val re = if(operator != null) {
             operator.invoke(arrayListOf(qwq), this)
         } else {
@@ -431,7 +431,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             LogProcessor.error("$identifier is not a concrete value")
             return UnknownVar("${type.typeName}_${operation}_" + TempPool.getVarIdentify()).apply { isError = true }
         }
-        val operator = type.concreteInstanceData.getOperator(operation, null)
+        val operator = type.instanceData.getOperator(operation, null)
         val re = if(operator != null && operator is NativeFunction && operator.returnsConstWhenArgsConst) {
             operator.invoke(arrayListOf(), this)
         } else if(operator == null) {
@@ -452,7 +452,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             return if (receiver.isError) receiver else receiver.unaryComputation(operation)
         }
         if (rejectNbtArithmetic(null, operation)) return UnknownVar(identifier).apply { isError = true }
-        val operator = (if(this is MCFPPValue<*>) type.concreteInstanceData else type.instanceData).getOperator(operation, null)
+        val operator = type.instanceData.getOperator(operation, null)
         val re = if(operator != null) {
             operator.invoke(arrayListOf(), this)
         } else {
@@ -594,7 +594,7 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         //获取函数
-        val member = (if(this is MCFPPValue<*>) type.concreteInstanceData else type.instanceData).getFunction(key, readOnlyArgs, normalArgs)
+        val member = type.instanceData.getFunction(key, readOnlyArgs, normalArgs)
         return if(member is UnknownFunction){
             Pair(UnknownFunction(key), true)
         }else{
@@ -627,21 +627,6 @@ abstract class Var<Self: Var<Self>> : Member, Cloneable, CanSelectMember{
             v.parent = this.parent
             parent!!.replaceMemberVar(v)
             parent!!.onMemberVarChanged(v)
-        }
-    }
-
-    fun getJVM(key: String): Var<*>{
-        return when(key){
-            "jvm" -> {
-                JavaVar(this,identifier + "_jvm")
-            }
-            else -> {
-                LogProcessor.error("Unknown jvm key: $key")
-                UnknownVar("error_jvm_" + UUID.randomUUID().toString())
-            }
-        }.apply {
-            isConst = true
-            hasAssigned = true
         }
     }
 

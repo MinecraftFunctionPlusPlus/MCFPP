@@ -99,12 +99,23 @@ class LegacyFloatConversionTest {
         assertEquals(0, Project.errorCount)
     }
 
-    @Test fun knownOutOfRangeFloatsAreDiagnosedBeforeLibraryInvocation() {
+    @Test fun finiteOutOfRangeFloatsUseTheSameSaturatingLibraryForKnownAndRuntimeInputs() {
         for (value in listOf(2147483648f, -2147483904f, Float.MAX_VALUE, -Float.MAX_VALUE)) {
             reset()
-            assertTrue(NumericConversions.convert(MCFloatConcrete(value), top.mcfpp.type.MCFPPBaseType.Int).isError)
-            assertEquals(1, Project.errorCount)
-            assertTrue(Function.currFunction.commands.isEmpty())
+            Function.addCommand(top.mcfpp.command.Commands.stackIn())
+            val known=NumericConversions.convert(MCFloatConcrete(value),top.mcfpp.type.MCFPPBaseType.Int) as MCInt
+            val source=MCFloatConcrete(value).toDynamic(false)
+            val runtime=NumericConversions.convert(source,top.mcfpp.type.MCFPPBaseType.Int) as MCInt
+            val commands=Function.currFunction.commands.analyzeAll()
+            assertEquals(2,commands.count {it=="function math.float:hpo/float/_toscore"})
+            val actual=machine(commands)
+            val encoded=top.mcfpp.core.lang.MCFloat.floatToMCFloat(value)
+            val integer=BigDecimal((encoded[0].toLong()*(encoded[1]*10000L+encoded[2])).toString())
+                .scaleByPowerOfTen(encoded[3]-8).toBigInteger()
+            val expected=integer.coerceIn(java.math.BigInteger.valueOf(Int.MIN_VALUE.toLong()),
+                java.math.BigInteger.valueOf(Int.MAX_VALUE.toLong())).toInt()
+            assertEquals(expected,actual.read(known));assertEquals(expected,actual.read(runtime))
+            assertEquals(0,Project.errorCount)
         }
     }
 

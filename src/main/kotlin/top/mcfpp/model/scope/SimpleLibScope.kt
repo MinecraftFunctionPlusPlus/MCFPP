@@ -47,8 +47,6 @@ open class SimpleLibScope
 
     final override var objects: ArrayList<CompoundData> = ArrayList()
 
-    final override var genericObjects: HashMap<Pair<String, List<MCFPPType>>, GenericObjectDataTemplate> = HashMap()
-
     final override var parent: ArrayList<IScope?> = ArrayList()
 
     constructor()

@@ -5,8 +5,6 @@ func print(nbt) = top.mcfpp.mni.System.printNbt;
 func print(any) = top.mcfpp.mni.System.printAny;
 func print(DataObject) = top.mcfpp.mni.System.printObject;
 func print(text) = top.mcfpp.mni.System.printText;
-func print(list<*>) = top.mcfpp.mni.System.printList;
-func print(dict<*>) = top.mcfpp.mni.System.printDict;
 
 #func insert(string) = top.mcfpp.mni.System.insert;
 func debug() = top.mcfpp.mni.System.debug;

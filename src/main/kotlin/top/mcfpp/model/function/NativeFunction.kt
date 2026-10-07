@@ -13,7 +13,6 @@ import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.MCFPPTypeWithGeneric
 import top.mcfpp.util.LogProcessor
-import top.mcfpp.util.ValueWrapper
 import java.lang.reflect.InvocationTargetException
 import java.lang.reflect.Method
 import java.util.stream.Collectors
@@ -61,7 +60,7 @@ class NativeFunction : Function, Native {
         val clazz = javaMethodString.substringBeforeLast(".")
         val methodName = javaMethodString.substringAfterLast(".")
         val clazzObject = Class.forName(clazz)
-        javaMethod = clazzObject.getMethod(methodName)
+        javaMethod = clazzObject.getMethod(methodName, NativeCallContext::class.java)
         this.javaMethodName = name
     }
 
@@ -78,27 +77,23 @@ class NativeFunction : Function, Native {
             caller.semanticValue() else (caller as? Var<*>)?.let(top.mcfpp.analysis.StorageAccess::read) ?: caller
         val observed = if (noWrites || writesReceiver) emptyList() else top.mcfpp.analysis.StorageAccess.visibleValues(currFunction.scope) +
             readOnlyArgs + normalArgs + listOfNotNull(actualCaller as? Var<*>)
-        top.mcfpp.analysis.StorageAccess.flush(observed)
-        val hostIdentities = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Var<*>, Boolean>())
-        val hostValues = observed.filter(hostIdentities::add).mapNotNull { value ->
-            top.mcfpp.analysis.StorageAccess.hostSnapshot(value)?.let { value to it }
+        if (!javaMethod.parameterTypes.contentEquals(arrayOf(NativeCallContext::class.java))) {
+            LogProcessor.error("Native function '$identifier' must use NativeCallContext")
+            return UnknownVar(identifier).apply { type = returnType; isError = true }
         }
-        val context = if (javaMethod.parameterTypes.contentEquals(arrayOf(NativeCallContext::class.java))) {
-            val receiver = if (this.caller == MCFPPPrivateType.Void) null else {
-                if (actualCaller !is Var<*>) {
-                    LogProcessor.error("Native function '$identifier' requires a receiver")
-                    return UnknownVar(identifier).apply { type = returnType; isError = true }
-                }
-                actualCaller
+        val receiver = if (this.caller == MCFPPPrivateType.Void) null else {
+            if (actualCaller !is Var<*>) {
+                LogProcessor.error("Native function '$identifier' requires a receiver")
+                return UnknownVar(identifier).apply { type = returnType; isError = true }
             }
-            NativeCallContext(Function.currFunction, receiver, list, returnType)
-        } else null
-        val valueWrapper = if (context == null) ValueWrapper(returnVar) else null
-        val invocationArgs: List<Any?> = if (context != null) listOf(context) else buildList {
-            addAll(list)
-            if (this@NativeFunction.caller != MCFPPPrivateType.Void) add(actualCaller)
-            if (this@NativeFunction.returnType != MCFPPPrivateType.Void) add(valueWrapper)
+            actualCaller
         }
+        if (list.any { it.isError } || receiver?.isError == true)
+            return UnknownVar(identifier).apply { type = returnType; isError = true }
+        top.mcfpp.analysis.StorageAccess.flush(observed)
+        val context = NativeCallContext(Function.currFunction, receiver, list, returnType)
+        val errors = Project.errorCount
+        val invocationArgs: List<Any?> = listOf(context)
         //一定是静态的
         try {
             javaMethod.invoke(null, *invocationArgs.toTypedArray())
@@ -121,10 +116,11 @@ class NativeFunction : Function, Native {
         } catch (e: Exception) {
             LogProcessor.error("Error when invoking native function: ${this.identifier}", e)
         } finally {
-            top.mcfpp.analysis.StorageAccess.commitHostChanges(hostValues)
             top.mcfpp.analysis.StorageAccess.barrier(observed)
         }
-        returnVar = if (context == null) valueWrapper!!.value else if (returnType == MCFPPPrivateType.Void) returnVar
+        if (Project.errorCount != errors)
+            return UnknownVar(identifier).apply { type = returnType; isError = true }
+        returnVar = if (returnType == MCFPPPrivateType.Void) returnVar
         else context.resultAdapter() ?: run {
             LogProcessor.error("Native function '$identifier' did not publish its result")
             UnknownVar(identifier).apply { type = returnType; isError = true }
@@ -270,7 +266,7 @@ class NativeFunction : Function, Native {
         }
 
         @Suppress("UNUSED_PARAMETER")
-        internal fun defaultNativeFunction(vararg args: Any?){
+        internal fun defaultNativeFunction(context: NativeCallContext){
             LogProcessor.error("A nativeFunction hadn't linked to a java method.")
         }
 

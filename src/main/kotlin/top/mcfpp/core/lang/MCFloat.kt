@@ -88,7 +88,7 @@ open class MCFloat : MCNumber<Float> {
         Function.addCommand("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_sign} = ${sign.name} ${sign.sbObject}")
         Function.addCommand("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_int0} = ${int0.name} ${int0.sbObject}")
         Function.addCommand("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_int1} = ${int1.name} ${int1.sbObject}")
-        return tempFloat
+        return tempFloat.physicalTemporary()
     }
 
     /**
@@ -302,7 +302,23 @@ open class MCFloat : MCNumber<Float> {
         Function.addCommand("scoreboard players operation float_int0 int = ${int0.name} ${int0.sbObject}")
         Function.addCommand("scoreboard players operation float_int1 int = ${int1.name} ${int1.sbObject}")
         Function.addCommand("scoreboard players operation float_sign int = ${sign.name} ${sign.sbObject}")
-        return MCFloat(ssObj).apply { isTemp = true }
+        return ssObj.physicalTemporary()
+    }
+
+    internal fun physicalTemporary(): MCFloat = MCFloat().also { result ->
+        result.sign = MCInt(sign)
+        result.int0 = MCInt(int0)
+        result.int1 = MCInt(int1)
+        result.exp = MCInt(exp)
+    }.apply {
+        nbtPath = NBTPath.getNormalStackPath(this)
+        isTemp = true
+        hasAssigned = true
+        for (part in listOf(sign, int0, int1, exp)) {
+            part.storageBinding = null
+            part.symbol = null
+            part.storageReadVersion = null
+        }
     }
 
     override fun storeToStack() {
@@ -373,17 +389,17 @@ open class MCFloat : MCNumber<Float> {
             ssObj.int1 = MCInt("float_int1").setObj(SbObject.Math_int) as MCInt
             ssObj.exp = MCInt("float_exp").setObj(SbObject.Math_int) as MCInt
             ssObj.isTemp = true
-            tempFloat.sign = MCInt(tempFloatEntityUUID).setObj(SbObject.MCS_float_sign) as MCInt
-            tempFloat.exp = MCInt(tempFloatEntityUUID).setObj(SbObject.MCS_float_exp) as MCInt
-            tempFloat.int0 = MCInt(tempFloatEntityUUID).setObj(SbObject.MCS_float_int0) as MCInt
-            tempFloat.int1 = MCInt(tempFloatEntityUUID).setObj(SbObject.MCS_float_int1) as MCInt
+            tempFloat.sign = MCInt(tempFloatEntityUUID).setObj(SbObject.Math_float_sign) as MCInt
+            tempFloat.exp = MCInt(tempFloatEntityUUID).setObj(SbObject.Math_float_exp) as MCInt
+            tempFloat.int0 = MCInt(tempFloatEntityUUID).setObj(SbObject.Math_float_int0) as MCInt
+            tempFloat.int1 = MCInt(tempFloatEntityUUID).setObj(SbObject.Math_float_int1) as MCInt
             tempFloat.isTemp = true
         }
 
         fun ssObjToVar(identifier: String = TempPool.getVarIdentify()) : MCFloat{
             val re = MCFloat(identifier)
             re.isTemp = true
-            re.assignedBy(ssObj)
+            re.assignedBy(ssObj.physicalTemporary())
             return re
         }
     }
@@ -489,7 +505,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
         Function.addCommand("scoreboard players set $tempFloatEntityUUID ${SbObject.Math_float_int0} ${(int0 as MCIntConcrete).value}")
         Function.addCommand("scoreboard players set $tempFloatEntityUUID ${SbObject.Math_float_int1} ${(int1 as MCIntConcrete).value}")
         Function.addCommand("scoreboard players set $tempFloatEntityUUID ${SbObject.Math_float_exp} ${(exp as MCIntConcrete).value}")
-        return tempFloat
+        return tempFloat.physicalTemporary()
     }
 
 
@@ -507,7 +523,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
         Function.addCommand("scoreboard players set float_int0 int ${qwq[1]}")
         Function.addCommand("scoreboard players set float_int1 int ${qwq[2]}")
         Function.addCommand("scoreboard players set float_exp int ${qwq[3]}")
-        return MCFloat(ssObj).apply { isTemp = true }
+        return ssObj.physicalTemporary()
     }
 
     // Legacy operations use the simulator until backend-equivalent folding is proven.

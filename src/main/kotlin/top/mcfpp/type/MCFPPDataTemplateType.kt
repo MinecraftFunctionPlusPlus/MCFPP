@@ -22,6 +22,30 @@ open class MCFPPDataTemplateType(
 
     override val typeId: TypeId get() = TypeId.Declaration(if (template.isInterface) "interface" else "template", template.namespace, template.identifier)
 
+    override val hasRuntimeRepresentation: Boolean
+        get() = runtimeFields(hashSetOf())
+
+    internal val instanceFields: List<Var<*>>
+        get() {
+            val readonly = (template as? top.mcfpp.model.compound.CompiledGenericDataTemplate)
+                ?.originTemplate?.readOnlyParams?.map { it.identifier }.orEmpty()
+            return template.scope.allVars.filterNot { it.isStatic || it.identifier in readonly }
+        }
+
+    private fun runtimeFields(visiting: MutableSet<TypeId>): Boolean {
+        if (!visiting.add(typeId)) return true
+        return try {
+            instanceFields.all { field ->
+                val fieldType = field.type
+                if (fieldType is MCFPPDataTemplateType && fieldType !is MCFPPTypeDataTemplateType)
+                    fieldType.runtimeFields(visiting)
+                else fieldType.hasRuntimeRepresentation
+            }
+        } finally {
+            visiting.remove(typeId)
+        }
+    }
+
     override val instanceData: DataTemplate
         get() {
             tryResolve()
@@ -30,6 +54,12 @@ open class MCFPPDataTemplateType(
 
     override val objectData: CompoundData
         get() = template.companionObject?: CompoundData(template.identifier, template.namespaceID)
+
+    override fun replaceMemberVar(v: Var<*>) {
+        val companion = template.companionObject
+        if (companion == null) super.replaceMemberVar(v)
+        else companion.scope.putVar(v.identifier, v, true)
+    }
 
     override val typeName: String
         get() = "template(${template.namespace}:${template.identifier})"

@@ -114,21 +114,21 @@ supportOperator
     ;
 
 accessor
-    :   LCURL NL* getter? separator+ setter? separator* RCURL
+    :   LCURL NL* (getter (separator+ setter)? | setter)? separator* RCURL
     ;
 
 getter
     :   GET NL* curlBlock
-    |   GET NL* ASSIGNMENT NL* javaRefer SEMICOLON
-    |   GET NL* ASSIGNMENT NL* expression SEMICOLON?
-    |   GET SEMICOLON?
+    |   GET NL* ASSIGNMENT NL* javaRefer
+    |   GET NL* ASSIGNMENT NL* expression
+    |   GET
     ;
 
 setter
     :   SET NL* curlBlock
     |   SET NL* ASSIGNMENT javaRefer
     |   SET NL* ASSIGNMENT expression
-    |   SET SEMICOLON
+    |   SET
     ;
 
 compoundDeclaration
@@ -291,7 +291,7 @@ parameterList
 
 //参数
 parameter
-    :   STATIC? NL* VAR? NL* (Identifier NL* AS NL*)? type (NL* ASSIGNMENT NL* value)?
+    :   (OUT | IN)? NL* STATIC? NL* VAR? NL* (Identifier NL* AS NL*)? type (NL* ASSIGNMENT NL* value)?
     ;
 
 //能作为语句的表达式
@@ -365,7 +365,7 @@ varWithSelector
     ;
 
 jvmAccessExpression
-    :   propertyOperator (NL* COLONCOLON NL* Identifier)?
+    :   propertyOperator
     ;
 
 //字段操作器
@@ -418,7 +418,7 @@ arguments
     ;
 
 readOnlyArgs
-    :   LANGLE NL* ((expressionList | MULT) NL*)? RANGLE
+    :   LANGLE NL* (expressionList NL*)? RANGLE
     ;
 
 normalArgs
@@ -522,7 +522,7 @@ type
 typeBody
     :   normalType
     |   VecType
-    |   (LIST | IMMUTABLE_LIST | MAP | DICT) NL* LANGLE NL* (type | MULT) NL* RANGLE
+    |   (LIST | IMMUTABLE_LIST | MAP | DICT) NL* LANGLE NL* type NL* RANGLE
     |   ENTITY NL* LANGLE NL* nbtInt NL* RANGLE
     |   ENTITY NL* LANGLE NL* LineString (NL* COMMA NL* LineString)* NL* RANGLE
     |   ENTITY NL* LANGLE NL* nbtInt NL* COMMA NL* LineString (NL* COMMA NL* LineString)* NL* RANGLE

@@ -18,6 +18,16 @@ import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.util.TempPool
 
 object NativePredicateOperations {
+    fun resourcePredicate(context: NativeCallContext) = context.withArguments { args ->
+        val errors = Project.errorCount
+        val template = GlobalScope.getTemplate("mcfpp.minecraft.resource", "Predicate")!!
+        val result = (template.getType().buildUnConcrete(TempPool.getVarIdentify()) as DataTemplateObject).apply { isTemp = true }
+        val binding = StorageAccess.bindIncomingParameter(result)
+        Function.addCommand(Commands.dataSetValue(binding.path, CompoundTag()))
+        DataTemplate.assignField(result, "id", args.single())
+        if (Project.errorCount == errors && !result.isError && args.none { it.isError }) context.publishResult(result)
+    }
+
     fun containPart(context: NativeCallContext) = factoryPart(context, "ContainPart", listOf("predicate"))
     fun matchPart(context: NativeCallContext) = factoryPart(context, "MatchPart", listOf("predicate", "value"))
     fun subPredicatePart(context: NativeCallContext) = factoryPart(context, "SubPredicatePart", listOf("predicate", "value"))

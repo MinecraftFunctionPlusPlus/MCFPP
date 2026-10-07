@@ -159,7 +159,6 @@ object DatapackCreator {
             scope.interfaces.values.forEach(::exportCompound)
             scope.genericInterfaces.values.forEach(::exportCompound)
             scope.objects.forEach(::exportCompound)
-            scope.genericObjects.values.forEach(::exportCompound)
         }
     }
 

@@ -57,8 +57,6 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
 
     open val instanceData: CompoundData get() = CompoundData(typeName, "mcfpp")
 
-    open val concreteInstanceData: CompoundData get() = instanceData
-
     /**
      * 类型名
      */
@@ -228,7 +226,6 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             MCFPPNBTType.LongArray,
 
             MCFPPConcreteType.Type,
-            MCFPPConcreteType.JavaVar,
 
             MCFPPEntityType.NormalSelector,
             MCFPPEntityType.Player,
@@ -393,6 +390,24 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
         /**
          * 根据类型标识符中获取一个类型
          */
+        /** A bare shared object is selectable even when its paired data declaration needs arguments. */
+        fun parseExpressionType(typeStr: String, typeScope: IScopeWithType, caller: Function? = null): MCFPPType? {
+            if (!typeStr.contains('<')) {
+                val local = typeScope.getType(typeStr)
+                val canSelectObject = local == null || local is MCFPPDataTemplateType &&
+                    local.template is top.mcfpp.model.compound.GenericDataTemplate
+                if (canSelectObject) {
+                    val (namespace, identifier) = typeStr.splitNamespaceID()
+                    if (GlobalScope.getTemplate(namespace, identifier) is top.mcfpp.model.compound.GenericDataTemplate) {
+                        val obj = GlobalScope.getObject(namespace, identifier)
+                        if (obj is top.mcfpp.model.compound.DataTemplate &&
+                            obj !is top.mcfpp.model.compound.GenericDataTemplate) return obj.getType()
+                    }
+                }
+            }
+            return parseFromString(typeStr, typeScope, caller)
+        }
+
         fun parseFromString(typeStr: String, typeScope: IScopeWithType, caller: Function? = null): MCFPPType? {
             if(typeStr.isEmpty()) return null
             if(typeStr.trimEnd().endsWith('!')) return null

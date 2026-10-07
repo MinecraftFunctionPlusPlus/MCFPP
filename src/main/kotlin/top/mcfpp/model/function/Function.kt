@@ -32,6 +32,7 @@ import top.mcfpp.model.scope.FunctionScope
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.type.*
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TempPool
 import java.io.Serializable
 import java.lang.reflect.Method
 
@@ -507,6 +508,10 @@ open class Function : Member, FieldContainer, WithDocument {
     internal open fun compileBody(target: Function = this, context: CurlBlockContext? = ast) {
         val compile = {
             target.runInFunction {
+                if (target.returnType != MCFPPPrivateType.Void && target.hasRuntimePayload(target.returnVar)) {
+                    target.returnVar.nbtPath = NBTPath.stack.intIndex(0).memberIndex("return")
+                    top.mcfpp.analysis.StorageAccess.bindIncomingParameter(target.returnVar)
+                }
                 MCFPPImVisitor().compileFunctionBody(context) { prepareBody(target) }
             }
         }
@@ -552,6 +557,8 @@ open class Function : Member, FieldContainer, WithDocument {
     }
 
     protected open fun parseParam(param: mcfppParser.ParameterContext, isReadOnly: Boolean = false) : Pair<FunctionParam,Var<*>>{
+        if (param.OUT() != null || param.IN() != null)
+            LogProcessor.error("Declaration variance is only allowed on template type parameters")
         val declaredType = parseDeclaredType(param.type())
         val diagnostic = if (isReadOnly) null else top.mcfpp.analysis.TypeUsage.ordinaryDiagnostic(declaredType)
         diagnostic?.let(LogProcessor::error)
@@ -652,24 +659,25 @@ open class Function : Member, FieldContainer, WithDocument {
         val observed = if (runtimeEffect != top.mcfpp.analysis.Effect.Pure && runtimeEffect != top.mcfpp.analysis.Effect.ReadsRuntime)
             top.mcfpp.analysis.StorageAccess.visibleValues(currFunction.scope) else emptyList()
         top.mcfpp.analysis.StorageAccess.flush(observed)
-        when(caller){
+        val result = when(caller){
             is DataTemplateObject -> invoke(completed.values.toList(), caller)
             is MCFPPType, null -> invoke(completed.values.toList())
             is Var<*> -> invoke(completed.values.toList(), caller)
+            else -> returnVar
         }
         top.mcfpp.analysis.StorageAccess.barrier(observed)
-        if (returnVar is top.mcfpp.core.lang.MCAny && (returnVar as top.mcfpp.core.lang.MCAny).compilerPayload == null) {
-            val value = returnVar as top.mcfpp.core.lang.MCAny
-            val place = top.mcfpp.analysis.Place(value.symbol!!.id)
-            val data = top.mcfpp.analysis.StoredData(place, value.nbtPath.clone())
+        if (result is top.mcfpp.core.lang.MCAny && result.compilerPayload == null) {
+            val value = result
+            val binding = top.mcfpp.analysis.StorageAccess.ensure(value)
+            val place = binding.place
+            val data = binding.data
             for (type in listOf(top.mcfpp.type.MCFPPBaseType.Int, top.mcfpp.type.MCFPPBaseType.Bool)) data.types[type.typeId] = type
             data.facts.initialize(place, top.mcfpp.analysis.ValueFacts(returnedKnowledge, top.mcfpp.analysis.ValueKnowledge.Unknown))
-            value.storageBinding = top.mcfpp.analysis.StorageBinding(data, place, data.path)
         }
-        return returnVar
+        return result
     }
 
-    protected open fun invoke(normalArgs: List<Var<*>>){
+    protected open fun invoke(normalArgs: List<Var<*>>): Var<*> {
         val capturedArgs = captureArguments(normalArgs)
         //变量进栈
         fieldStore()
@@ -679,12 +687,14 @@ open class Function : Member, FieldContainer, WithDocument {
         argPass(capturedArgs)
         //函数调用的命令
         addCommand("function $namespaceID")
+        val returned = captureRuntimeReturn()
         //static关键字，将值传回
         staticArgRef(normalArgs)
         //调用完毕，将子函数的栈销毁
         addCommand(Commands.stackOut())
         //取出栈内的值
         fieldRestore()
+        return if (returnType == MCFPPPrivateType.Void) returned else top.mcfpp.analysis.StorageAccess.read(returned)
     }
 
     /**
@@ -693,7 +703,7 @@ open class Function : Member, FieldContainer, WithDocument {
      * @param normalArgs
      * @param caller
      */
-    protected open fun invoke(normalArgs: List<Var<*>>, caller: Var<*>){
+    protected open fun invoke(normalArgs: List<Var<*>>, caller: Var<*>): Var<*> {
         val capturedArgs = captureArguments(normalArgs)
         //变量进栈
         fieldStore()
@@ -706,12 +716,14 @@ open class Function : Member, FieldContainer, WithDocument {
         //参数传递
         argPass(capturedArgs)
         addCommand("function " + this.namespaceID)
+        val returned = captureRuntimeReturn()
         //static参数传回
         staticArgRef(normalArgs)
         //调用完毕，将子函数的栈销毁
         addCommand(Commands.stackOut())
         //取出栈内的值
         fieldRestore()
+        return if (returnType == MCFPPPrivateType.Void) returned else top.mcfpp.analysis.StorageAccess.read(returned)
     }
 
     /**
@@ -720,28 +732,61 @@ open class Function : Member, FieldContainer, WithDocument {
      * @param normalArgs 传入的参数
      * @param data 数据模板的实例
      */
-    protected open fun invoke(normalArgs: List<Var<*>>, data: DataTemplateObject){
+    /** The receiver actually initialized by this constructor body; never a prototype method receiver. */
+    internal var constructedReceiver: DataTemplateObject? = null
+
+    protected open fun invoke(normalArgs: List<Var<*>>, data: DataTemplateObject): Var<*> {
         top.mcfpp.analysis.StorageAccess.ensure(data)
-        val capturedReceiver = top.mcfpp.analysis.StorageAccess.capture(data)
+        val compilerOnly = !data.type.hasRuntimeRepresentation
+        if (compilerOnly && constructedReceiver == null) {
+            LogProcessor.error("Compiler-only receiver methods require an actual bound receiver")
+            data.isError = true
+            return UnknownVar("return").apply { type = returnType; isError = true }
+        }
+        val capturedReceiver = if (compilerOnly) data else top.mcfpp.analysis.StorageAccess.capture(data)
         val capturedArgs = captureArguments(normalArgs)
         //变量进栈
         fieldStore()
         //给函数开栈
         addCommand(Commands.stackIn())
-        top.mcfpp.analysis.StorageAccess.encodeTo(NBTPath.stack.intIndex(0).memberIndex("this"),
+        if (!compilerOnly) top.mcfpp.analysis.StorageAccess.encodeTo(NBTPath.stack.intIndex(0).memberIndex("this"),
             top.mcfpp.analysis.StorageAccess.callerValue(capturedReceiver))
         //参数传递
         argPass(capturedArgs)
         //函数调用的命令
         addCommand("function $namespaceID")
+        val returned = captureRuntimeReturn()
         //static关键字，将值传回
         staticArgRef(normalArgs)
-        val incoming = incomingReceiver(this, data.templateType)
+        val incoming = if (compilerOnly) constructedReceiver
+            else incomingReceiver(this, data.templateType)
+        if (incoming == null || compilerOnly && top.mcfpp.analysis.StorageAccess.snapshot(incoming) == null) {
+            LogProcessor.error("Compiler-only receiver requires a complete constructed value")
+            data.isError = true
+        } else {
         top.mcfpp.analysis.StorageAccess.writeReceiver(top.mcfpp.analysis.StorageAccess.callerValue(data), incoming)
+        if (compilerOnly) data.hasAssigned = true
+        }
         //调用完毕，将子函数的栈销毁
         addCommand(Commands.stackOut())
         //取出栈内的值
         fieldRestore()
+        return if (returnType == MCFPPPrivateType.Void) returned else top.mcfpp.analysis.StorageAccess.read(returned)
+    }
+
+    private fun captureRuntimeReturn(): Var<*> {
+        if (returnType == top.mcfpp.type.MCFPPPrivateType.Void) return returnVar.clone()
+        if (!hasRuntimePayload(returnVar)) return top.mcfpp.analysis.StorageAccess.capture(returnVar)
+        val result = returnType.buildUnConcrete(TempPool.getVarIdentify(), currFunction).apply { isTemp = true }
+        result.nbtPath = NBTPath.stack.intIndex(0).memberIndex(result.identifier)
+        val binding = top.mcfpp.analysis.StorageAccess.bindIncomingParameter(result)
+        returnVar.storageBinding?.let {
+            binding.data.types.putAll(it.data.types)
+            binding.data.facts.copyFrom(it.data.facts.withoutValues(initializedOnly = true), it.place, binding.place)
+        }
+        addCommand(Commands.dataSetFrom(top.mcfpp.analysis.StorageAccess.inFrame(binding, 1).path,
+            NBTPath.stack.intIndex(0).memberIndex("return")))
+        return result
     }
 
     private fun captureArguments(arguments: List<Var<*>>) = arguments.map {

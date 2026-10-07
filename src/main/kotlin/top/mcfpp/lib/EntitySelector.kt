@@ -61,9 +61,9 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
             for (predicate in predicates) {
                 if(predicate is TypePredicate){
                     if(predicate.type is DataTemplateObjectConcrete){
-                        map[predicate.type.getTagStr("value").toNamespaceID()] = predicate.reverse
+                        val id = predicate.type.value["id"] as? MCStringConcrete
+                        if (id != null) map[id.value.value.toNamespaceID()] = predicate.reverse
                     }
-                    break
                 }
             }
         }
@@ -137,10 +137,10 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
                 }
             }
             is NamePredicate -> {
-                if(hasNamePredicate){
+                if(!predicate.reverse && hasNamePredicate){
                     LogProcessor.error("Duplicate name predicate")
                 }else{
-                    hasNamePredicate = true
+                    hasNamePredicate = hasNamePredicate || !predicate.reverse
                     predicates.add(predicate)
                 }
             }
@@ -178,10 +178,10 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
                 }
             }
             is GamemodePredicate -> {
-                if(hasGamemodePredicate){
+                if(!predicate.reverse && hasGamemodePredicate){
                     LogProcessor.error("Duplicate gamemode predicate")
                 }else{
-                    hasGamemodePredicate = true
+                    hasGamemodePredicate = hasGamemodePredicate || !predicate.reverse
                     predicates.add(predicate)
                 }
             }
@@ -200,6 +200,11 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
                     hasSortPredicate = true
                     predicates.add(predicate)
                 }
+            }
+            is TeamPredicate -> {
+                if (!predicate.reverse && predicates.any { it is TeamPredicate && !it.reverse }) {
+                    LogProcessor.error("Duplicate team predicate")
+                } else predicates.add(predicate)
             }
             else -> {
                 predicates.add(predicate)
@@ -241,7 +246,7 @@ class EntitySelector(var selectorType: SelectorType): Serializable {
 
     fun clone(): EntitySelector{
         val re = EntitySelector(selectorType)
-        re.predicates.addAll(this.predicates)
+        predicates.forEach { re.addPredicate(it) }
         return re
     }
 

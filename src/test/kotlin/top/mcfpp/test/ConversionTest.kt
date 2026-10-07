@@ -130,7 +130,7 @@ class ConversionTest {
 
     @Test fun unsupportedRuntimeConversionsReportAnErrorForConstantsToo() {
         reset()
-        assertTrue(NumericConversions.convert(MCLongConcrete(LongTag(7)), MCFPPBaseType.Float).isError)
+        assertTrue(NumericConversions.convert(MCLongConcrete(LongTag(7)), MCFPPNBTType.Byte).isError)
         assertEquals(1, Project.errorCount)
         reset()
         assertTrue(NumericConversions.toNBT(MCFloatConcrete(Float.NaN)).isError)

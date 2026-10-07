@@ -1,6 +1,7 @@
 package top.mcfpp.model.property
 
 import top.mcfpp.core.lang.Var
+import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.model.CanSelectMember
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
@@ -14,8 +15,8 @@ class FunctionMutator: AbstractMutator {
         this.function = function
     }
 
-    constructor(field: Var<*>, d: CompoundData) {
-        function = Function("set_${field.identifier}", d.namespace, null)
+    constructor(field: Var<*>, d: CompoundData, context: mcfppParser.CurlBlockContext? = null) {
+        function = Function("set_${field.identifier}", d.namespace, context)
         function.returnType = field.type
         function.scope.putVar("field", field)
         function.appendNormalParam(field.type, "value")
@@ -27,8 +28,7 @@ class FunctionMutator: AbstractMutator {
     }
 
     override fun setter(caller: CanSelectMember, field: Var<*>, b: Var<*>): Var<*> {
-        function.invoke(arrayListOf(b), caller)
-        return function.returnVar
+        return function.invoke(arrayListOf(b), caller)
     }
 
 }

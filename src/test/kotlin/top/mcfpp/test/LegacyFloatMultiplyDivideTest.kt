@@ -114,6 +114,7 @@ class LegacyFloatMultiplyDivideTest {
         MCFPPStringTest.readFromString("func main(){}", version = "1.20.1")
         Function.currFunction = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single()
         Function.currFunction.commands.clear()
+        Function.addCommand(top.mcfpp.command.Commands.stackIn())
     }
     private fun encoded(value: Float): Decimal {
         val parts = MCFloat.floatToMCFloat(value)
@@ -123,8 +124,8 @@ class LegacyFloatMultiplyDivideTest {
     private fun calculate(left: MCFloat, right: MCFloat, operation: String): MCFloat {
         // Match the visitor's capture, right-entity preparation, and work-register reload order.
         val frozenLeft = captured(left)
-        right.toTempEntity()
-        return frozenLeft.getTempVar().binaryComputation(MCFloat.tempFloat, operation) as MCFloat
+        val preparedRight = right.toTempEntity()
+        return frozenLeft.getTempVar().binaryComputation(preparedRight, operation) as MCFloat
     }
     private fun components(machine: ScoreCommandExecutor, value: MCFloat) =
         listOf(value.sign, value.int0, value.int1, value.exp).map(machine::read)

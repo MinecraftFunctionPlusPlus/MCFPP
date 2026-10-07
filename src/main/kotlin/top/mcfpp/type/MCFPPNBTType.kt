@@ -32,13 +32,6 @@ class MCFPPNBTType {
             }
         }
 
-        override val concreteInstanceData by lazy {
-            CompoundData("nbt","mcfpp").apply {
-                commonType = NBT
-                extends(MCFPPBaseType.Any.instanceData)
-                injectedBy(NBTBasedDataData::class.java)
-            }
-        }
 
         override val typeName: String
             get() = "nbt"
@@ -60,11 +53,6 @@ class MCFPPNBTType {
             }
         }
 
-        override val concreteInstanceData by lazy {
-            CompoundData("byte","mcfpp").apply {
-                extends(NBT.instanceData)
-            }
-        }
 
         override val typeName: String
             get() = "byte"
@@ -85,11 +73,6 @@ class MCFPPNBTType {
             }
         }
 
-        override val concreteInstanceData by lazy {
-            CompoundData("short","mcfpp").apply {
-                extends(NBT.instanceData)
-            }
-        }
 
         override val typeName: String
             get() = "short"
@@ -111,11 +94,6 @@ class MCFPPNBTType {
             }
         }
 
-        override val concreteInstanceData by lazy {
-            CompoundData("long","mcfpp").apply {
-                extends(NBT.instanceData)
-            }
-        }
 
 
         override val typeName: String
@@ -137,11 +115,6 @@ class MCFPPNBTType {
             }
         }
 
-        override val concreteInstanceData by lazy {
-            CompoundData("double","mcfpp").apply {
-                extends(NBT.instanceData)
-            }
-        }
 
         override val typeName: String
             get() = "double"
@@ -163,7 +136,6 @@ class MCFPPNBTType {
             }
         }
 
-        override val concreteInstanceData get() = instanceData
 
 
         override val typeName: String
@@ -186,7 +158,6 @@ class MCFPPNBTType {
             }
         }
 
-        override val concreteInstanceData get() = instanceData
 
 
         override val typeName: String
@@ -209,7 +180,6 @@ class MCFPPNBTType {
             }
         }
 
-        override val concreteInstanceData get() = instanceData
 
 
         override val typeName: String
@@ -239,7 +209,6 @@ class MCFPPListType(
         get() = NBTList.data
 
     override val instanceData get() = NBTList.data
-    override val concreteInstanceData get() = instanceData
 
     override val typeName: String
         get() = "list"
@@ -287,7 +256,6 @@ class MCFPPImmutableListType(
     override val generic: List<MCFPPType> = listOf(g)
 
     override val instanceData get() = ImmutableList.data
-    override val concreteInstanceData get() = instanceData
 
     override val typeName: String
         get() = "ImmutableList"

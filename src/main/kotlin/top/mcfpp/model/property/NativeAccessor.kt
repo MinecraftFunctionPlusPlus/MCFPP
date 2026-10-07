@@ -20,6 +20,7 @@ class NativeAccessor: AbstractAccessor {
         function = NativeFunction("get_${field.identifier}", d.namespace)
         function.returnType = field.type
         function.owner = d
+        function.caller = d.getType()
         try {
             //根据JavaRefer找到类
             val clazz = Project.classLoader.loadClass(javaRefer)
@@ -28,8 +29,13 @@ class NativeAccessor: AbstractAccessor {
             for(method in methods){
                 val mniAccessor = method.getAnnotation(MNIAccessor::class.java) ?: continue
                 if(mniAccessor.value == field.identifier){
+                    if (!method.parameterTypes.contentEquals(arrayOf(top.mcfpp.mni.NativeCallContext::class.java))) {
+                        LogProcessor.error("Native accessor '${field.identifier}' must use NativeCallContext")
+                        continue
+                    }
                     hasFind = true
                     function.javaMethod = method
+                    function.javaMethodName = method.name
                     break
                 }
             }
@@ -42,8 +48,7 @@ class NativeAccessor: AbstractAccessor {
     }
 
     override fun getter(caller: CanSelectMember, field: Var<*>): Var<*> {
-        function.invoke(ArrayList(), caller)
-        return function.returnVar
+        return function.invoke(ArrayList(), caller)
     }
 
 }

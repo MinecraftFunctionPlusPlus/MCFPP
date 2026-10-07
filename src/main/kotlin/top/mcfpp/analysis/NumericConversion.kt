@@ -16,7 +16,11 @@ object NumericConversion {
 
     fun supported(source: TypeId, target: TypeId) = source == target || target == MCFPPNBTType.NBT.typeId ||
         source in integers && target in integers + setOf(float, long, double) ||
-        source in setOf(float, long, double) && target == int
+        source in setOf(float, long, double) && target == int ||
+        source == float && target in setOf(byte, short) ||
+        top.mcfpp.command.FloatProviders.enabled && source in setOf(long, double) && target == float ||
+        source == long && target == double &&
+            top.mcfpp.command.TargetCapabilities.forVersion(top.mcfpp.Project.config.version)?.functionMacros == true
 
     fun floatToIntError(value: Float): String? = when {
         !value.isFinite() -> "Float-to-int conversion requires a finite input"
@@ -38,9 +42,25 @@ object NumericConversion {
             double -> CompilerValue.DoubleBits(value.value.toDouble().toRawBits())
             else -> null
         }
-        if (source == float && target == int && value is CompilerValue.FloatBits) {
+        if (source == float && target in setOf(int, byte, short) && value is CompilerValue.FloatBits) {
             val number = Float.fromBits(value.bits)
-            return if (floatToIntError(number) == null) CompilerValue.Integral(number.toInt().toLong()) else null
+            if (floatToIntError(number) != null) return null
+            val integer = number.toInt()
+            return CompilerValue.Integral(when (target) {
+                byte -> integer.toByte().toLong()
+                short -> integer.toShort().toLong()
+                else -> integer.toLong()
+            })
+        }
+        if (source == long && target == double && value is CompilerValue.Integral && supported(source, target))
+            return CompilerValue.DoubleBits(value.value.toDouble().toRawBits())
+        if (source in setOf(long, double) && target == float && top.mcfpp.command.FloatProviders.enabled) {
+            val result = when (value) {
+                is CompilerValue.Integral -> value.value.toFloat()
+                is CompilerValue.DoubleBits -> Double.fromBits(value.bits).toFloat()
+                else -> return null
+            }
+            return CompilerValue.FloatBits((if (result.isFinite()) result else 0f).toRawBits())
         }
         return null
     }
