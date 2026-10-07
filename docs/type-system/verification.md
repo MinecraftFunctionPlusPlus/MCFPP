@@ -1,8 +1,24 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段130，MCFL60；Std外剩余3个Java类含7个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段131，MCFL60；Std外剩余3个Java类、7个CommandReturn注解、旧void wrapper为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
 
-## 当前阶段 130：迁移实体属性写入接口（已限定验证）
+## 当前阶段 131：清理未注册的旧实体命令包装（已限定验证）
+
+删除未注册且旧ABI不匹配的`PlayerInventoryData`五个void clear wrapper、`WorldObjectData`的weather mutator与`WorldborderData`的size mutator；这不是等价API迁移。`PlayerState.clear`、`World.setWeather`与`Worldborder.setSize`仍可达，其他accessors、Time及宿主模型保留。三个生产路径仅删除71行，无已公开的语言签名、Info、schema或bin变化，当前MCFL60。未重复重建标准库、运行Cache回归或计算资源摘要；资源身份沿用阶段130已核对的记录。
+
+仅运行三个既有fixture：`nativeWorldCommandsCaptureResultsAcrossLibraryRoundTrip`、`nativeWorldborderCommandsCaptureResultsAcrossLibraryRoundTrip`、`nativePlayerStateAndRideCommandsCaptureResultsAcrossLibraryRoundTrip`。日志`mcfpp-remove-unused-command-wrappers-joint.log`原生exit0，BUILD SUCCESSFUL in1m28s；Test Executor 19正常开始并结束。fresh LibFieldAccess XML `2026-10-07T10:05:01.320Z`，3/0/0/0。六个正向source/fresh编译结果依次为0/9118、0/9119、0/9118、0/9119、0/9118、0/9119；两个负向编译为12/9119与4/9119。无world、frame0或fullcheck验证。
+
+| 自评维度 | 分数 | 本阶段证据与边界 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录唯一fresh XML、三个fixture及八个Project计数。 |
+| 完整性 | 3/5 | 只验证删除wrapper相关的三条既有路径；whole17仍未完成。 |
+| 清晰性 | 4/5 | 明确这是移除未注册入口，不是等价API迁移。 |
+| 可操作性 | 4/5 | 给出日志、fixture名与XML时间。 |
+| 简洁性 | 4/5 | 保留必要结果和验证边界。 |
+
+平均3.8/5；whole17仍未完成。
+
+## 历史阶段 130：迁移实体属性写入接口（已限定验证）
 
 `EntityAttributeData`提供`setAttributeBase(attributeId:string,value:double)`和`addAttributeModifier<mode:AttributeModifierType>(attributeId:string,modifier:AttributeModifier)`两个单context入口，并删除两个旧wrapper。保留capture前的selector guard；使用真实`AttributeModifier.id`和`amount`，double宏经MCDouble/NBT准备，operation是显式readonly enum实参。EntityData的`other:*`导入修复同namespace Gamemode签名解析。
 

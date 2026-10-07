@@ -5,7 +5,7 @@
 
 ## 当前规则（截至2026-10-07，Asia/Shanghai）
 
-用户规则：语言不提供 `T!` 后缀；`type` 仅作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。`const` 只限制重赋，不要求值编译期已知；完整 readonly 泛型快照与非 type 编译器专用载荷的内部快照通道保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–130按验证记录接入受测集合、数值/文本/命令、seed结果、Datapack/Debug、delegated-int、Time、诊断接口及受测legacy入口；当前MCFL60；Std外剩余3个Java类、7个CommandReturn注解及7个旧void wrapper；whole17仍未完成。
+用户规则：语言不提供 `T!` 后缀；`type` 仅作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。`const` 只限制重赋，不要求值编译期已知；完整 readonly 泛型快照与非 type 编译器专用载荷的内部快照通道保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–131按验证记录接入受测集合、数值/文本/命令、seed结果、Datapack/Debug、delegated-int、Time、诊断接口及受测legacy入口；当前MCFL60；Std外剩余3个Java类及7个CommandReturn注解，131删除的7个未注册旧void wrapper不再存在；whole17仍未完成。
 
 ## 当前已接入
 
@@ -47,7 +47,7 @@
 
 阶段103：四个damage void入口迁入显式context，保留语言标识及默认语义，处理ResourceID DamageType与SelectorVar签名差异。动态float受现有 `FloatProviders.enabled` 限制；不新增浮点引擎。damage fixture与Cache回归均通过，source/fresh生成宏及MCFL32资源已验证；未验证world/float执行。详细边界见verification.md。
 
-阶段104迁移System九种print语言入口并完成限定验证；最终fixture复查通过，Cache仅首轮通过，未验证macro/world执行或tellraw渲染。阶段105 delegated-int、阶段106 Time及阶段107两个legacy分支入口已限定验证，细节见verification.md。阶段108删除 `System.typeOf` 并迁移四个诊断void接口；阶段109接通seed的普通CommandResult结果捕获；阶段110迁移StdCommands剩余106个结果入口；阶段111迁移Datapack九项及Debug两项；阶段112迁移Team三个receiver结果入口；阶段113迁移Op/Recipe六个player-target入口；阶段114迁移Worldborder七个命令结果入口；阶段115迁移BossBar七个结果入口；阶段116迁移WorldObject两个结果入口；阶段117迁移Random三个reset结果入口；阶段118迁移EntityTag三个结果入口；阶段119迁移实体joinTeam/leaveTeam。阶段120迁移Entity effect清除两个入口；阶段121迁移两个effect授予入口；阶段122迁移stopRide；阶段123迁移Player XP六个入口；阶段124迁移Player advancement十个入口；阶段125迁移Player状态与ride命令；阶段126迁移entity-target tp；阶段127迁移tell/w消息命令；阶段128迁移受测实体属性接口；阶段129退役语言层 `T!` 后缀并接入闭合枚举快照恢复；阶段130迁移两项实体属性写入入口。当前MCFL60，Std外剩余3类、7个CommandReturn注解及7个旧void wrapper；下一步为清理七个未注册的旧wrapper，详见next-stage-plan.md。
+阶段104迁移System九种print语言入口并完成限定验证；最终fixture复查通过，Cache仅首轮通过，未验证macro/world执行或tellraw渲染。阶段105 delegated-int、阶段106 Time及阶段107两个legacy分支入口已限定验证，细节见verification.md。阶段108删除 `System.typeOf` 并迁移四个诊断void接口；阶段109接通seed的普通CommandResult结果捕获；阶段110迁移StdCommands剩余106个结果入口；阶段111迁移Datapack九项及Debug两项；阶段112迁移Team三个receiver结果入口；阶段113迁移Op/Recipe六个player-target入口；阶段114迁移Worldborder七个命令结果入口；阶段115迁移BossBar七个结果入口；阶段116迁移WorldObject两个结果入口；阶段117迁移Random三个reset结果入口；阶段118迁移EntityTag三个结果入口；阶段119迁移实体joinTeam/leaveTeam。阶段120迁移Entity effect清除两个入口；阶段121迁移两个effect授予入口；阶段122迁移stopRide；阶段123迁移Player XP六个入口；阶段124迁移Player advancement十个入口；阶段125迁移Player状态与ride命令；阶段126迁移entity-target tp；阶段127迁移tell/w消息命令；阶段128迁移受测实体属性接口；阶段129退役语言层 `T!` 后缀并接入闭合枚举快照恢复；阶段130迁移两项实体属性写入入口；阶段131删除七个未注册且旧ABI不匹配的void wrapper，不构成等价API迁移。当前MCFL60，Std外剩余3类及7个CommandReturn注解、旧void wrapper为0；下一步为恢复编译器专用坐标值，详见next-stage-plan.md。
 
 阶段126：`EntityTeleportData`将entity-target `tp`接入单context qualified结果并挂到`EntityData`，删除旧`entity<1>`目标重载；坐标tp与setSpawnpoint保持不变。唯一source/fresh fixture验证`@a`到`@p`、canonical readonly/Unknown/null、实际selector kind，以及DTO receiver与多实体destination在capture前拒绝。stdlib与联合Cache回归通过，MCFL56；不模拟world/frame0。
 

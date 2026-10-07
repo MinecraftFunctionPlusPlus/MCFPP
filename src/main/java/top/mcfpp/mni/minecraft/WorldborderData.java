@@ -2,11 +2,8 @@ package top.mcfpp.mni.minecraft;
 
 import top.mcfpp.annotations.MNIAccessor;
 import top.mcfpp.annotations.MNIFunction;
-import top.mcfpp.annotations.MNIMutator;
 import top.mcfpp.backend.NativeMinecraftCommandOperations;
 import top.mcfpp.mni.NativeCallContext;
-import top.mcfpp.command.Command;
-import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.*;
 import top.mcfpp.lib.SbObject;
 import top.mcfpp.model.function.Function;
@@ -40,12 +37,6 @@ public class WorldborderData {
         t.setSbObject(SbObject.Companion.getMCFPP_TEMP());
         Function.addCommand("execute store result score size " + SbObject.Companion.getMCFPP_TEMP() + " run worldborder get");
         re.setValue(t);
-    }
-
-    @MNIMutator("size")
-    public static void setSize(MCInt size, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("worldborder set", size);
-        Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"float = 29999984", "int = 0"}, returnType = "mcfpp.minecraft.std:CommandResult")

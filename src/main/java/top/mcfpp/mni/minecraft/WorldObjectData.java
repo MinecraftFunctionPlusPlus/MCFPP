@@ -7,9 +7,7 @@ import top.mcfpp.backend.NativeMinecraftCommandOperations;
 import top.mcfpp.mni.NativeCallContext;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
-import top.mcfpp.core.lang.CommandReturn;
 import top.mcfpp.core.lang.MCInt;
-import top.mcfpp.core.lang.obj.EnumVar;
 import top.mcfpp.core.lang.obj.StaticMemberView;
 import top.mcfpp.core.lang.obj.TypeDataTemplateObject;
 import top.mcfpp.lib.SbObject;
@@ -53,12 +51,6 @@ public class WorldObjectData {
     @MNIMutator("time")
     public static void setTime(TypeDataTemplateObject time, StaticMemberView caller){
         Commands.processMacroCommand(Command.Companion.buildAll("time set", time));
-    }
-
-    @MNIMutator("weather")
-    public static void setWeather(EnumVar weather, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("weather", weather);
-        Commands.processMacroCommandReturn(re, command);
     }
 
     @MNIFunction(normalParams = {"Weather", "int"}, returnType = "mcfpp.minecraft.std:CommandResult")
