@@ -3494,6 +3494,131 @@ class LibFieldAccessTest {
         check(main)
     }
 
+    @Test
+    fun nativeBossbarCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = """
+            func main(){ var box=Box(); dynamic var result=box.observe("fixture:bar"); }
+        """
+        write("""
+            namespace fixture.fields;
+            import mcfpp.minecraft.std:*;
+            import mcfpp.minecraft.resource:*;
+            data Box {
+                func observe(name as string)->int {
+                    var first=BossBar(name); var bar=BossBar(name,("Label").toText());
+                    var added=bar.add(); var removed=bar.remove(); var listed=bar.listAll();
+                    var colored=bar.setColor(BossBarColor.RED); var named=bar.setName(("NewLabel").toText());
+                    var players=bar.setVisiblePlayers(@a); var styled=bar.setStyle(BossBarStyle.PROGRESS);
+                    var addValue=added.result; var removeSuccess=removed.success; var listValue=listed.result;
+                    var colorSuccess=colored.success; var nameValue=named.result; var playerSuccess=players.success; var styleValue=styled.result;
+                    return 7;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val observe = (main.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("observe").single()
+            assertTrue(observe.compiledFunctions.isEmpty())
+            val first = assertIs<DataTemplateObject>(observe.scope.getVar("first"))
+            assertEquals(MCFPPBaseType.JsonText.typeId, assertNotNull(first.instanceField.getVar("name")).type.typeId)
+            val bar = assertIs<DataTemplateObject>(observe.scope.getVar("bar"))
+            val binding = assertNotNull(bar.storageBinding)
+            val idPath = binding.path.memberIndex("id").toCommandPart().toString()
+            val nameAddress = assertIs<CompoundTag>(Tag.toNBT("{${binding.path.memberIndex("name").toChatComponentPart()}}"))
+            val canonical = assertNotNull(GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.std")).scope.getTemplate("CommandResult")
+            for (name in listOf("added", "removed", "listed", "colored", "named", "players", "styled")) {
+                val value = assertIs<DataTemplateObject>(observe.scope.getVar(name))
+                assertSame(canonical, value.templateType)
+                assertTrue(value.templateType.scope.getVar("result")!!.isConst)
+                assertTrue(value.templateType.scope.getVar("success")!!.isConst)
+                val resultBinding = assertNotNull(value.storageBinding)
+                assertEquals(top.mcfpp.analysis.ValueKnowledge.Unknown, resultBinding.data.facts.read(resultBinding.place)?.value)
+                assertNull(ValueSnapshot.of(value))
+            }
+            for (name in listOf("addValue", "removeSuccess", "listValue", "colorSuccess", "nameValue", "playerSuccess", "styleValue")) assertNull(ValueSnapshot.of(assertNotNull(observe.scope.getVar(name))))
+            val directory = output.resolve("consumer")
+            DatapackCreator.createDatapack(directory.toString())
+            val data = directory.resolve(Project.config.name).resolve("data")
+            val functions = linkedMapOf<String, List<String>>()
+            Files.walk(data).use { paths ->
+                paths.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".mcfunction") }.forEach { file ->
+                    val relative = data.relativize(file)
+                    if (relative.nameCount >= 3 && relative.getName(1).toString() == "function") {
+                        val id = relative.subpath(2, relative.nameCount).joinToString("/").removeSuffix(".mcfunction")
+                        functions["${relative.getName(0)}:$id"] = Files.readAllLines(file).map(String::trim)
+                    }
+                }
+            }
+            val commands = functions.getValue(observe.namespaceID.toString())
+            val stores = Regex("execute store result storage (\\S+) (\\S+)\\.result int 1 store success storage (\\S+) (\\S+)\\.success byte 1 run (.*)")
+            val direct = commands.mapIndexedNotNull { index, command -> stores.matchEntire(command)?.let { index to it } }
+            assertEquals(1, direct.size)
+            assertEquals("bossbar list", direct.single().second.groupValues[5])
+            val calls = commands.mapIndexedNotNull { index, command -> Regex("function (mcfpp:dynamic/\\S+) with storage (\\S+) (\\S+)").matchEntire(command)?.let { index to it } }
+            assertEquals(6, calls.size)
+            val domains = mutableSetOf<String>()
+            val macroCaptures = calls.map { (index, call) ->
+                assertEquals(1, commands.count { it == commands[index] })
+                val preparation = "data modify storage ${call.groupValues[2]} ${call.groupValues[3]}.arg_0 set from $idPath"
+                assertEquals(1, commands.take(index).count { it == preparation })
+                val body = functions.getValue(call.groupValues[1])
+                val capture = assertNotNull(body.singleOrNull { it.startsWith("\$execute store result") }?.removePrefix("\$")?.let(stores::matchEntire))
+                val command = capture.groupValues[5]
+                val arguments = assertNotNull(Regex("bossbar (add|remove|set) \\$\\(arg_0\\)(?: (.*))?").matchEntire(command))
+                val suffix = arguments.groupValues[2]
+                val domain = when (arguments.groupValues[1]) {
+                    "add" -> {
+                        val component = assertIs<CompoundTag>(Tag.toNBT(suffix))
+                        assertEquals(StringTag("nbt"), component["type"])
+                        assertEquals(nameAddress["storage"], component["storage"])
+                        assertEquals(nameAddress["nbt"], component["nbt"])
+                        assertEquals(ByteTag(1), component["interpret"])
+                        "add"
+                    }
+                    "remove" -> { assertEquals("", suffix); "remove" }
+                    else -> when {
+                        suffix == "color red" -> "color"
+                        suffix == "style progress" -> "style"
+                        suffix == "players @a" -> "players"
+                        suffix.startsWith("name ") -> {
+                            assertEquals(Tag.toNBT("[{type:\"text\",text:\"NewLabel\"}]"), Tag.toNBT(suffix.removePrefix("name ")))
+                            "name"
+                        }
+                        else -> error("Unexpected bossbar arguments: $command")
+                    }
+                }
+                assertTrue(domains.add(domain))
+                assertFalse(body.any { "return run" in it || it.removePrefix("\$").startsWith("bossbar ") })
+                index to capture
+            }
+            assertEquals(setOf("add", "remove", "color", "name", "players", "style"), domains)
+            val roots = mutableSetOf<String>()
+            for ((index, capture) in direct + macroCaptures) {
+                assertEquals(capture.groupValues[1], capture.groupValues[3])
+                assertEquals(capture.groupValues[2], capture.groupValues[4])
+                assertTrue(roots.add(capture.groupValues[2]))
+                val initializer = "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value {}"
+                assertEquals(1, commands.take(index).count { it == initializer })
+            }
+            assertEquals(7, roots.size)
+            assertFalse(commands.any { "return run" in it || it.startsWith("bossbar ") })
+        }
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+        val rejected = consume("""
+            import mcfpp.minecraft.resource:*;
+            func reject(color as BossBarColor,style as BossBarStyle){
+                var bar=BossBar("fixture:bad",("Label").toText()); bar.setColor(color); bar.setStyle(style);
+            }
+            func main(){}
+        """, output)
+        assertEquals(4, Project.errorCount)
+        val reject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
+        assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("bossbar ") || it.toString().contains("mcfpp:dynamic/") })
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

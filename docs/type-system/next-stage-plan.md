@@ -1,6 +1,6 @@
-# 下一阶段：迁移 BossBar 命令结果接口（阶段115）
+# 下一阶段：迁移 WorldObject 命令结果接口（阶段116）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–114完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time路径及受测legacy分支入口的限定迁移；当前库格式MCFL43。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–115完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time路径及受测legacy分支入口的限定迁移；当前库格式MCFL45。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -88,11 +88,15 @@ Op.op/deop、Recipe.give/take/giveAll/takeAll六个player-target入口已接入�
 
 `WorldborderData`七个 `MNIFunction`（add、setCenter、setDamageAmount、setDamageBuffer、setSize、setWarningDistance、setWarningTime）接入单context qualified `CommandResult`；保留参数、注解/default及命令词序，backend为薄捕获并复用 `FloatProviders`。`Pos2`使用计算型 `hasRuntimeRepresentation=false`，该标志无序列化backing field，wire不变。source/fresh fixture检查七结果及actual commands：一个direct center与六个macro、七个独立root/双store/一次初始化；amount参数经真实binding path保存float snapshot，ticks经加载、score复制、NBT编码后进入macro槽位。MCFL42→43，stdlib/Cache及fixture限定验证通过；不模拟world/frame0，也不据此声称默认参数可省略或扩展size/WorldObjectData。
 
-### 阶段 115 计划：BossBar 命令结果接口
+### 阶段 115：BossBar 命令结果接口（已限定验证）
 
-范围限于BossBar七个 `MNIFunction`：add/remove/list/setColor/setName/setVisiblePlayers/setStyle。保留实例caller；接入单context qualified `CommandResult`，从DTO真实id/name字段取值，list也捕获结果。玩家参数改普通entity并复用已验证的SelectorVar玩家限定。枚举仍使用普通BossBarColor/Style；仅EnumVarConcrete可输出其声明dataAsString，未知enum须在capture前明确拒绝，不宣称完整enum快照支持T!匹配。补BossBar缺失的name:text字段和stdlib import；首构造器使用id.toText，二参数构造器的name改为text，不保留旧string:string兼容，不新增对象/enum框架。其余属性accessor/mutator不迁，也不声称静态BossBar.list可用。一个source/fresh fixture覆盖未知id七调用、literal enum、@a、只读未知结果及六个macro/一个list direct命令；同时检查构造器与未知enum拒绝。计划MCFL43→44及stdlib/Cache验证，尚未实现。
+BossBar的add/remove/listAll/setColor/setName/setVisiblePlayers/setStyle七个实例方法接入单context qualified `CommandResult`。保留普通枚举并在capture前拒绝未知enum；entity参数沿用SelectorVar玩家限定。DTO保留id:string并新增name:text；单参id构造器以id.toText初始化name，二参构造器使用(string,text)。`listAll`避开保留字而输出原bossbar list命令。EnumMemberInfo保存enum数据的不可变SNBT并在读取时还原Tag。MCFL43→44为入口，MCFL44→45为enum信息持久化。限定fixture通过；Cache仅旧MCFL44首轮通过。未验证world/executor/frame0或旧属性accessor/mutator，不提供静态list入口。
 
-阶段88–114详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL43。
+### 阶段 116 计划：WorldObject 命令结果接口
+
+范围限于 `WorldObjectData.setDifficulty` 与 `setWeather` 两个静态native方法，无caller参数；使用普通Difficulty/Weather枚举和int参数。capture前只接受EnumVarConcrete，并以keyword的`value.identifier`生成命令。fixture从真实`@From`对象调用，检查一个direct和一个macro及int参数捕获。计划MCFL45→46与必要stdlib/Cache验证，尚未编码或验证；不扩到Actor缺失入口或Debug.function。
+
+阶段88–115详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL45。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

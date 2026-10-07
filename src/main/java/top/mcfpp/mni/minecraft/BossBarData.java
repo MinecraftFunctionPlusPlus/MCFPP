@@ -3,17 +3,16 @@ package top.mcfpp.mni.minecraft;
 import top.mcfpp.annotations.MNIAccessor;
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.annotations.MNIMutator;
+import top.mcfpp.backend.NativeMinecraftCommandOperations;
+import top.mcfpp.mni.NativeCallContext;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.*;
 import top.mcfpp.core.lang.bool.ScoreBool;
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete;
-import top.mcfpp.core.lang.entity.PlayerVar;
 import top.mcfpp.core.lang.nbt.MCString;
 import top.mcfpp.core.lang.nbt.MCStringConcrete;
 import top.mcfpp.core.lang.obj.DataTemplateObject;
-import top.mcfpp.core.lang.obj.EnumVar;
-import top.mcfpp.core.lang.obj.EnumVarConcrete;
 import top.mcfpp.model.function.Function;
 import top.mcfpp.util.ValueWrapper;
 
@@ -22,30 +21,19 @@ import java.util.Objects;
 @SuppressWarnings("DataFlowIssue")
 public class BossBarData {
 
-    @MNIFunction(caller = "BossBar", returnType = "CommandReturn")
-    public static void add(DataTemplateObject bossbar, ValueWrapper<CommandReturn> returnValue){
-        var command = Command.Companion.buildAll(
-                "bossbar add",
-                bossbar.getMemberVarWithT("id", MCString.class),
-                bossbar.getMemberVarWithT("name", JsonText.class)
-        );
-        Commands.processMacroCommandReturn(returnValue, command);
+    @MNIFunction(caller = "BossBar", returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void add(NativeCallContext context){
+        NativeMinecraftCommandOperations.INSTANCE.bossbarAdd(context);
     }
 
-    @MNIFunction(caller = "BossBar", returnType = "CommandReturn")
-    public static void remove(DataTemplateObject bossbar, ValueWrapper<CommandReturn> returnValue){
-        var command = Command.Companion.buildAll(
-                "bossbar remove",
-                bossbar.getMemberVarWithT("id", MCString.class)
-        );
-        Commands.processMacroCommandReturn(returnValue, command);
+    @MNIFunction(caller = "BossBar", returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void remove(NativeCallContext context){
+        NativeMinecraftCommandOperations.INSTANCE.bossbarRemove(context);
     }
 
-    @MNIFunction(caller = "BossBar", returnType = "CommandReturn")
-    public static void list(DataTemplateObject bossbar, ValueWrapper<CommandReturn> returnValue){
-        var command = new Command("bossbar list");
-        returnValue.setValue(new CommandReturn(command,"bossbar_list"));
-        Function.addCommand(command);
+    @MNIFunction(caller = "BossBar", returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void listAll(NativeCallContext context){
+        NativeMinecraftCommandOperations.INSTANCE.bossbarList(context);
     }
 
     private static void getIntAttr(String attrID, DataTemplateObject bossbar, ValueWrapper<MCInt> returnValue){
@@ -165,41 +153,23 @@ public class BossBarData {
         }
     }
 
-    @MNIFunction(normalParams = "BossBarColor", caller = "BossBar", returnType = "CommandReturn")
-    public static void setColor(EnumVar color, DataTemplateObject caller, ValueWrapper<CommandReturn> re){
-        var id = caller.getMemberVarWithT("id", MCString.class);
-        Command command = Command.Companion.buildAll("bossbar set", id, "color");
-        if(color instanceof EnumVarConcrete colorC){
-            command.build(colorC.getValue().dataAsString(), true);
-        }else {
-            command.build("","color", true);
-        }
-        Commands.processMacroCommandReturn(re, command);
+    @MNIFunction(normalParams = "BossBarColor", caller = "BossBar", returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void setColor(NativeCallContext context){
+        NativeMinecraftCommandOperations.INSTANCE.bossbarSetColor(context);
     }
 
-    @MNIFunction(normalParams = "text", caller = "BossBar", returnType = "CommandReturn")
-    public static void setName(JsonText name, DataTemplateObject caller, ValueWrapper<CommandReturn> re){
-        var id = caller.getMemberVarWithT("id", MCString.class);
-        Command command = Command.Companion.buildAll("bossbar set", id, "name", name);
-        Commands.processMacroCommandReturn(re, command);
+    @MNIFunction(normalParams = "text", caller = "BossBar", returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void setName(NativeCallContext context){
+        NativeMinecraftCommandOperations.INSTANCE.bossbarSetName(context);
     }
 
-    @MNIFunction(normalParams = "Player!", caller = "BossBar", returnType = "CommandReturn")
-    public static void setVisiblePlayers(PlayerVar players, DataTemplateObject bossbar, ValueWrapper<CommandReturn> returnValue) {
-        var id = bossbar.getMemberVarWithT("id", MCString.class);
-        Command command = Command.Companion.buildAll("bossbar set", id, "players", players);
-        Commands.processMacroCommandReturn(returnValue, command);
+    @MNIFunction(normalParams = "entity", caller = "BossBar", returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void setVisiblePlayers(NativeCallContext context) {
+        NativeMinecraftCommandOperations.INSTANCE.bossbarSetVisiblePlayers(context);
     }
 
-    @MNIFunction(normalParams = "BossBarStyle", caller = "BossBar", returnType = "CommandReturn")
-    public static void setStyle(EnumVar style, DataTemplateObject caller, ValueWrapper<CommandReturn> re){
-        var id = caller.getMemberVarWithT("id", MCString.class);
-        Command command = Command.Companion.buildAll("bossbar set", id, "style");
-        if(style instanceof EnumVarConcrete styleC){
-            command.build(styleC.getValue().dataAsString(), true);
-        }else {
-            command.build("","style", true);
-        }
-        Commands.processMacroCommandReturn(re, command);
+    @MNIFunction(normalParams = "BossBarStyle", caller = "BossBar", returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void setStyle(NativeCallContext context){
+        NativeMinecraftCommandOperations.INSTANCE.bossbarSetStyle(context);
     }
 }

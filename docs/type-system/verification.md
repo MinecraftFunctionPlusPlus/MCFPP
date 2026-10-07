@@ -2,7 +2,25 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 当前阶段 114：Worldborder 命令结果（已限定验证）
+## 当前阶段 115：BossBar 命令结果（已限定验证）
+
+BossBar.add/remove/listAll/setColor/setName/setVisiblePlayers/setStyle七个实例方法接入单context qualified `CommandResult`；capture前guard要求EnumVarConcrete，fixture使用literal，unknown enum会被拒绝，entity沿用SelectorVar玩家限定。DTO保留既有id:string并新增name:text；单参id构造器以`id.toText`初始化name，二参构造器为(string,text)。Java `list`更名`listAll`避开语言保留字，生成命令仍为bossbar list。EnumMemberInfo新增SNBT字符串保存enum member数据，读取时重建Tag；无新的runtime enum ABI或snapshot系统。
+
+标准库首轮 `mcfpp-native-bossbar-command-results-stdlib.log` exit0/BUILD SUCCESSFUL in10s、Project0/0。首轮joint exit1/16s、worker22正常；LibFieldAccess XML `2026-10-07T02:09:58.178Z` 为1/1/0/0，producer解析`bar.list()`报3个语法错误；Cache XML `02:09:57.302Z` 为1/0/0/0（MCFL44）。改名listAll后stdlib2 exit0/8s、Project0/0；final2仅fixture复查exit1/17s、worker23正常，XML `2026-10-07T02:13:54.671Z` 为1/1/0/0，source0/9118但命令是`bossbar set $(arg_0) color null`，尚未到fresh consumer。EnumMemberInfo序列化修复使MCFL44→45；stdlib3 exit0/8s、Project0/0。final3仅fixture exit0/24s、worker24正常，XML `2026-10-07T02:17:15.845Z` 为1/0/0/0；source/fresh Project0/9118与0/9119，negative Project4/9119为预期guard及结果未发布错误。final3 fixture通过模型、真实参数捕获、命令与macro、readonly/unknown结果检查；六个macro加一个list direct，七独立root/双store/单初始化。Cache只在MCFL44首轮通过，未声称MCFL45 Cache已验证。三份产物MCFL45、295914 bytes、header `4c46434d2d000000`、SHA256 `79037281AAB839306736EED308260D0D9550C965B8308F594C9468A60F67A003`。没有world/executor/frame0、getter/mutator或静态list覆盖；whole17仍未完成。
+
+### 阶段 115 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 分开说明语法、enum持久化失败原因及MCFL45最终fixture通过；Cache版本边界明确。 |
+| 完整性 | 3/5 | 七个指定实例入口受测通过；其他Java入口及whole17未完成。 |
+| 清晰性 | 4/5 | 明确列出每轮XML、source/fresh与预期negative计数。 |
+| 可执行性 | 4/5 | 下一步限定WorldObject两个入口和一direct/一macro合同。 |
+| 简洁性 | 4/5 | 保留范围内证据，未扩展world行为或旧访问器。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 阶段 114：Worldborder 命令结果（已限定验证）
 
 WorldborderData七个 `MNIFunction`（add、setCenter、setDamageAmount、setDamageBuffer、setSize、setWarningDistance、setWarningTime）迁入单context qualified `CommandResult`。保留参数、注解/default及命令词序，七个backend入口为薄捕获并复用 `FloatProviders`。`Pos2.hasRuntimeRepresentation=false`是计算属性：坐标只用于编译期表示，避免强制NBT编码；无serialized backing field或额外wire变化。fixture source/fresh检查七结果、readonly/unknown模型及六个macro的确切命令词序和参数槽；consumer生成一个direct center命令和六个macro，检查七独立root、双store和一次初始化。amount按真实binding path编码float snapshot；ticks按加载→score复制→NBT编码进入macro参数槽，不是直接从形参读取。
 

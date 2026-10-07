@@ -1,5 +1,9 @@
+import mcfpp.minecraft.std:*;
+
 @From<"top.mcfpp.mni.minecraft.BossBarData">
 data BossBar: ResourceID{
+
+    name as text;
 
     max as int { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; };
     value as int { get = top.mcfpp.mni.minecraft.BossBarData; set = top.mcfpp.mni.minecraft.BossBarData; };
@@ -7,10 +11,10 @@ data BossBar: ResourceID{
 
     constructor(id as string){
         this.id = id;
-        this.name = id as text;
+        this.name = id.toText();
     }
 
-    constructor(id as string, name as string){
+    constructor(id as string, name as text){
         this.id = id;
         this.name = name;
     }

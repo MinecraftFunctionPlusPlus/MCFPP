@@ -9,6 +9,7 @@ import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.PropertyVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
+import top.mcfpp.core.lang.obj.EnumVarConcrete
 import top.mcfpp.core.lang.entity.SelectorVar
 import top.mcfpp.mni.NativeCallContext
 import top.mcfpp.model.function.Function
@@ -32,6 +33,37 @@ internal fun captureCommandResult(context: NativeCallContext, build: (List<Var<*
 }
 
 object NativeMinecraftCommandOperations {
+    fun bossbarAdd(context: NativeCallContext) = context.withAdapters { receiver, _ ->
+        captureCommandResult(context) { Command.buildAll("bossbar add", templateField(receiver as DataTemplateObject, "id"), templateField(receiver, "name")) }
+    }
+    fun bossbarRemove(context: NativeCallContext) = context.withAdapters { receiver, _ ->
+        captureCommandResult(context) { Command.buildAll("bossbar remove", templateField(receiver as DataTemplateObject, "id")) }
+    }
+    fun bossbarList(context: NativeCallContext) = context.withAdapters { _, _ ->
+        captureCommandResult(context) { Command("bossbar list") }
+    }
+    fun bossbarSetColor(context: NativeCallContext) = context.withAdapters { receiver, args ->
+        val color = args[0] as? EnumVarConcrete ?: run {
+            LogProcessor.error("Bossbar color/style requires a compile-time enum value")
+            return@withAdapters
+        }
+        captureCommandResult(context) { Command.buildAll("bossbar set", templateField(receiver as DataTemplateObject, "id"), "color", color.value.dataAsString()) }
+    }
+    fun bossbarSetName(context: NativeCallContext) = context.withAdapters { receiver, args ->
+        captureCommandResult(context) { Command.buildAll("bossbar set", templateField(receiver as DataTemplateObject, "id"), "name", args[0]) }
+    }
+    fun bossbarSetVisiblePlayers(context: NativeCallContext) = context.withAdapters { receiver, args ->
+        val players = playerSelector(args[0]) ?: return@withAdapters
+        captureCommandResult(context) { Command.buildAll("bossbar set", templateField(receiver as DataTemplateObject, "id"), "players", players) }
+    }
+    fun bossbarSetStyle(context: NativeCallContext) = context.withAdapters { receiver, args ->
+        val style = args[0] as? EnumVarConcrete ?: run {
+            LogProcessor.error("Bossbar color/style requires a compile-time enum value")
+            return@withAdapters
+        }
+        captureCommandResult(context) { Command.buildAll("bossbar set", templateField(receiver as DataTemplateObject, "id"), "style", style.value.dataAsString()) }
+    }
+
     fun worldborderAdd(context: NativeCallContext) = captureCommandResult(context) { args -> Command.buildAll("worldborder add", args[0], args[1]) }
     fun worldborderSetCenter(context: NativeCallContext) = captureCommandResult(context) { args -> Command.buildAll("worldborder center", args[0]) }
     fun worldborderSetDamageAmount(context: NativeCallContext) = captureCommandResult(context) { args -> Command.buildAll("worldborder damage amount", args[0]) }
