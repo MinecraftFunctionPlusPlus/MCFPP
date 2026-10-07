@@ -3719,6 +3719,121 @@ class LibFieldAccessTest {
         assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || Regex("(difficulty|weather) .*?").matches(it.toString()) || "set value {}" in it.toString() })
     }
 
+    @Test
+    fun nativeRandomCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = """
+            func main(){ var box=Box(); dynamic var result=box.observe(4); }
+        """
+        write("""
+            namespace fixture.fields;
+            import mcfpp.minecraft:*;
+            import mcfpp.minecraft.std:*;
+            data Box {
+                func observe(seed as int)->int {
+                    var sequence=Random("fixture:sequence");
+                    var own=sequence.reset<true,false>(seed);
+                    var all=Random.reset<false,true>(seed); var cleared=Random.resetAll();
+                    var ownValue=own.result; var allSuccess=all.success; var clearedValue=cleared.result;
+                    return 7;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val observe = (main.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("observe").single()
+            assertTrue(observe.compiledFunctions.isEmpty())
+            val sequence = assertIs<DataTemplateObject>(observe.scope.getVar("sequence"))
+            val idPath = assertNotNull(sequence.storageBinding).path.memberIndex("id").toCommandPart().toString()
+            val seedPath = assertNotNull(assertNotNull(observe.scope.getVar("seed")).storageBinding).path.toCommandPart().toString()
+            val canonical = assertNotNull(GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.std")).scope.getTemplate("CommandResult")
+            for (name in listOf("own", "all", "cleared")) {
+                val value = assertIs<DataTemplateObject>(observe.scope.getVar(name))
+                assertSame(canonical, value.templateType)
+                assertTrue(value.templateType.scope.getVar("result")!!.isConst)
+                assertTrue(value.templateType.scope.getVar("success")!!.isConst)
+                val binding = assertNotNull(value.storageBinding)
+                assertEquals(top.mcfpp.analysis.ValueKnowledge.Unknown, binding.data.facts.read(binding.place)?.value)
+                assertNull(ValueSnapshot.of(value))
+            }
+            for (name in listOf("ownValue", "allSuccess", "clearedValue")) assertNull(ValueSnapshot.of(assertNotNull(observe.scope.getVar(name))))
+            val directory = output.resolve("consumer")
+            DatapackCreator.createDatapack(directory.toString())
+            val data = directory.resolve(Project.config.name).resolve("data")
+            val functions = linkedMapOf<String, List<String>>()
+            Files.walk(data).use { paths ->
+                paths.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".mcfunction") }.forEach { file ->
+                    val relative = data.relativize(file)
+                    if (relative.nameCount >= 3 && relative.getName(1).toString() == "function") {
+                        val id = relative.subpath(2, relative.nameCount).joinToString("/").removeSuffix(".mcfunction")
+                        functions["${relative.getName(0)}:$id"] = Files.readAllLines(file).map(String::trim)
+                    }
+                }
+            }
+            val constructor = sequence.templateType.constructors.single { it.normalParams.size == 1 }
+            val constructorCommands = functions.getValue(constructor.namespaceID.toString())
+            assertTrue(constructorCommands.any { it.startsWith("random reset ") && it.endsWith(" 0 true true") } ||
+                constructorCommands.any { command -> Regex("function (mcfpp:dynamic/\\S+) with .*?").matchEntire(command)?.let { functions.getValue(it.groupValues[1]).any { body -> body.startsWith("\$random reset ") && body.endsWith(" 0 true true") } } == true })
+            val commands = functions.getValue(observe.namespaceID.toString())
+            val stores = Regex("execute store result storage (\\S+) (\\S+)\\.result int 1 store success storage (\\S+) (\\S+)\\.success byte 1 run (.*)")
+            val direct = commands.mapIndexedNotNull { index, command -> stores.matchEntire(command)?.let { index to it } }
+            assertEquals(1, direct.size)
+            assertEquals("random reset *", direct.single().second.groupValues[5])
+            val calls = commands.mapIndexedNotNull { index, command -> Regex("function (mcfpp:dynamic/\\S+) with storage (\\S+) (\\S+)").matchEntire(command)?.let { index to it } }
+            assertEquals(2, calls.size)
+            val domains = mutableSetOf<String>()
+            val macroCaptures = calls.map { (index, call) ->
+                assertEquals(1, commands.count { it == commands[index] })
+                val body = functions.getValue(call.groupValues[1])
+                val capture = assertNotNull(body.singleOrNull { it.startsWith("\$execute store result") }?.removePrefix("\$")?.let(stores::matchEntire))
+                val command = capture.groupValues[5]
+                val seedSlot = if (command == "random reset \$(arg_0) \$(arg_1) true false") {
+                    assertTrue(domains.add("instance"))
+                    val idPreparation = "data modify storage ${call.groupValues[2]} ${call.groupValues[3]}.arg_0 set from $idPath"
+                    assertEquals(1, commands.take(index).count { it == idPreparation })
+                    1
+                } else {
+                    assertEquals("random reset * \$(arg_0) false true", command)
+                    assertTrue(domains.add("all"))
+                    0
+                }
+                val prefix = "data modify storage ${call.groupValues[2]} ${call.groupValues[3]}.arg_$seedSlot set from "
+                val preparation = commands.take(index).withIndex().single { it.value.startsWith(prefix) }
+                val source = preparation.value.removePrefix(prefix)
+                assertTrue(Regex("storage \\S+ \\S+").matches(source))
+                val encoded = commands.take(preparation.index).withIndex().mapNotNull { entry -> Regex("execute store result ${Regex.escape(source)} int 1 run scoreboard players get (\\S+) (\\S+)").matchEntire(entry.value)?.let { entry.index to it } }.single()
+                val copied = commands.take(encoded.first).withIndex().mapNotNull { entry -> Regex("scoreboard players operation ${Regex.escape(encoded.second.groupValues[1])} ${Regex.escape(encoded.second.groupValues[2])} = (\\S+) (\\S+)").matchEntire(entry.value)?.let { entry.index to it } }.last()
+                val loader = "execute store result score ${copied.second.groupValues[1]} ${copied.second.groupValues[2]} run data get $seedPath 1"
+                val loaded = commands.take(copied.first).withIndex().last { it.value == loader }
+                assertTrue(loaded.index < copied.first && copied.first < encoded.first && encoded.first < preparation.index && preparation.index < index)
+                assertFalse(body.any { "return run" in it || it.removePrefix("\$").startsWith("random reset ") })
+                index to capture
+            }
+            assertEquals(setOf("instance", "all"), domains)
+            val roots = mutableSetOf<String>()
+            for ((index, capture) in direct + macroCaptures) {
+                assertEquals(capture.groupValues[1], capture.groupValues[3])
+                assertEquals(capture.groupValues[2], capture.groupValues[4])
+                assertTrue(roots.add(capture.groupValues[2]))
+                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value {}" })
+            }
+            assertEquals(3, roots.size)
+            assertFalse(commands.any { "return run" in it || it.startsWith("random reset ") })
+        }
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+        val rejected = consume("""
+            import mcfpp.minecraft:*;
+            func reject(flag as bool){ Random.reset<flag,true>(4); }
+            func main(){}
+        """, output)
+        // 完整编译期值错误伴随当前的符号未定义诊断。
+        assertEquals(2, Project.errorCount)
+        val reject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
+        assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("random reset ") || "set value {}" in it.toString() })
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

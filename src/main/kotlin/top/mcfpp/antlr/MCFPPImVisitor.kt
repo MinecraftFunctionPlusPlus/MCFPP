@@ -860,7 +860,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
                 command.build(exp.toCommandPart(), false)
             }
         }
-        Function.addCommand(command)
+        Function.addCommands(command.buildMacroFunction())
         top.mcfpp.analysis.StorageAccess.barrier(observed)
         return null
     }

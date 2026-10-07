@@ -5,7 +5,7 @@
 
 ## 当前规则（截至2026-10-07，Asia/Shanghai）
 
-用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–116按验证记录接入受测集合、数值/文本/命令、seed结果、Datapack/Debug、delegated-int、Time、诊断接口及受测legacy入口；当前MCFL46，whole17未完成。
+用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–117按验证记录接入受测集合、数值/文本/命令、seed结果、Datapack/Debug、delegated-int、Time、诊断接口及受测legacy入口；当前MCFL47，whole17未完成。
 
 ## 当前已接入
 
@@ -47,7 +47,7 @@
 
 阶段103：四个damage void入口迁入显式context，保留语言标识及默认语义，处理ResourceID DamageType与SelectorVar签名差异。动态float受现有 `FloatProviders.enabled` 限制；不新增浮点引擎。damage fixture与Cache回归均通过，source/fresh生成宏及MCFL32资源已验证；未验证world/float执行。详细边界见verification.md。
 
-阶段104迁移System九种print语言入口并完成限定验证；最终fixture复查通过，Cache仅首轮通过，未验证macro/world执行或tellraw渲染。阶段105 delegated-int、阶段106 Time及阶段107两个legacy分支入口已限定验证，细节见verification.md。阶段108删除 `System.typeOf` 并迁移四个诊断void接口；阶段109接通seed的普通CommandResult结果捕获；阶段110迁移StdCommands剩余106个结果入口；阶段111迁移Datapack九项及Debug两项；阶段112迁移Team三个receiver结果入口；阶段113迁移Op/Recipe六个player-target入口；阶段114迁移Worldborder七个命令结果入口；阶段115迁移BossBar七个结果入口；阶段116迁移WorldObject两个结果入口。当前MCFL46，下一阶段限定Random三个reset结果入口，详见next-stage-plan.md。
+阶段104迁移System九种print语言入口并完成限定验证；最终fixture复查通过，Cache仅首轮通过，未验证macro/world执行或tellraw渲染。阶段105 delegated-int、阶段106 Time及阶段107两个legacy分支入口已限定验证，细节见verification.md。阶段108删除 `System.typeOf` 并迁移四个诊断void接口；阶段109接通seed的普通CommandResult结果捕获；阶段110迁移StdCommands剩余106个结果入口；阶段111迁移Datapack九项及Debug两项；阶段112迁移Team三个receiver结果入口；阶段113迁移Op/Recipe六个player-target入口；阶段114迁移Worldborder七个命令结果入口；阶段115迁移BossBar七个结果入口；阶段116迁移WorldObject两个结果入口；阶段117迁移Random三个reset结果入口。当前MCFL47，下一阶段限定Entity标签三个结果入口，详见next-stage-plan.md。
 
 阶段108：debug/info/warn/error四个void方法迁入显式context并标记 `NoExternalWrites`；诊断保留编译期concrete内容及runtime宿主 `toString` 语义，不生成runtime NBT。删除 `System.typeOf`，以符合普通值位置禁止保存 `type` 的规则。两个定向方法与标准库均通过，三份MCFL37资源为289476 bytes且SHA256一致；详见verification.md。whole17仍未完成。
 
@@ -65,9 +65,11 @@
 
 阶段115：BossBar七个方法接入单context qualified `CommandResult`，Enum使用capture前guard，entity参数沿用玩家限定；DTO保留既有id:string并新增name:text字段；单参id构造器以id.toText初始化name，二参构造器使用(string,text)。Java旧 `list` 重命名为 `listAll`以避开语言保留字，命令仍为bossbar list，receiver保持实例调用。新增EnumMemberInfo持久化SNBT字符串并在读取时重建Tag。MCFL43→44引入入口，MCFL44→45持久化Enum信息。source/fresh fixture覆盖七调用、literal enum、@a、readonly/unknown结果以及六个macro和一个list direct命令，验证七个独立root及真实字段/参数准备。最终fixture通过；Cache仅MCFL44首轮通过，未声称MCFL45 Cache验证。没有验证world/executor/frame0、旧属性accessor/mutator或静态BossBar.list；其余7个Java类尚有57个CommandReturn注解及7个旧void wrapper，whole17未完成。
 
-阶段116：`WorldObjectData.setDifficulty`与`setWeather`两个静态native方法迁入单context qualified `CommandResult`，无caller参数、default或readonly参数；capture前要求EnumVarConcrete，keyword使用`value.identifier`，weather duration为int。旧Time缓存及weather/time accessor/mutator未改，生产尚未导出World对象。source/fresh fixture用真实`@From FixtureWorld`检查两个canonical readonly/unknown结果及null snapshot、difficulty direct和weather macro；duration按实际NBT读取→score复制→NBT编码→macro slot捕获。标准库重建和两项定向测试通过，MCFL45→46；标准库Project0/0，source/fresh Project分别0/9118与0/9119，负向Project4/9119为预期guard及未发布诊断。实际命令合同、双store及一次root初始化通过；不涉及world执行、executor或frame0，也不据注解推断可省略参数。当前Std外剩余6个Java类、55个CommandReturn注解及7个旧void wrapper；whole17仍ACTIVE未完成。
+阶段116：`WorldObjectData.setDifficulty`与`setWeather`两个静态native方法迁入单context qualified `CommandResult`，无caller参数、default或readonly参数；capture前要求EnumVarConcrete，keyword使用`value.identifier`，weather duration为int。旧Time缓存及weather/time accessor/mutator未改，生产尚未导出World对象。source/fresh fixture用真实`@From FixtureWorld`检查两个canonical readonly/unknown结果及null snapshot、difficulty direct和weather macro；duration按实际NBT读取→score复制→NBT编码→macro slot捕获。标准库重建和两项定向测试通过，MCFL45→46；标准库Project0/0，source/fresh Project分别0/9118与0/9119，负向Project4/9119为预期guard及未发布诊断。实际命令合同、双store及一次root初始化通过；不涉及world执行、executor或frame0，也不据注解推断可省略参数。截至阶段116，Std外剩余6个Java类、55个CommandReturn注解及7个旧void wrapper。
 
-阶段117计划：仅迁移`RandomData.reset`、`RandomObjectData.reset/resetAll`，保留实例/静态调用形态、readonly bool参数和普通int；capture前检查完整Typed Bool snapshot，读取DTO真实id，修正旧重复sequence及world flag词序。计划一个source/fresh fixture检查不对称flags、2个macro和1个direct命令及3个结果root；单string构造器现有raw reset调用需单独识别。未知readonly bool会在ParameterMatcher阶段拒绝，不能表述为native guard覆盖；Random.mcfpp只补标准库import，不迁移其余rand/roll及构造器。计划MCFL46→47，尚未实现或验证。
+阶段117：`RandomData.reset`、`RandomObjectData.reset`与`resetAll`三个入口接入单context qualified `CommandResult`。flags以完整`CompilerValue.Bool`快照捕获，seed int保留；修复实例/source flag顺序，普通NativeFunction分支传递readonly实参，ImVisitor raw调用使用既有`buildMacroFunction`。`Random.mcfpp`去掉三个旧raw命令末尾的斜杠，测试datapack导出错误现保留异常原因。14个路径包含9项源码/测试、bin及四份文档。MCFL46→47，三份资源296252 bytes、header `4c46434d2f000000`、SHA256 `8D569CF61A35D3D7A7D6371C7C6E6FD4F3AFDE3C09948FD2BBD3BBA2C244547B`。final6 fixture通过source/fresh正向合同及负向检查；未验证整条17项目标、fullcheck、server、world或frame0。
+
+阶段117后，剩余4个Java类含52个CommandReturn注解及7个旧void wrapper；whole17仍ACTIVE未完成。
 
 重构不要求兼容旧 `.mcfpp` 写法；显式引用新旧语法无需并行保留。
 

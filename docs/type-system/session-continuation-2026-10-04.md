@@ -4,7 +4,13 @@
 
 ## 当前进度
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段116 WorldObject命令结果入口已完成限定验证，MCFL46；阶段115 BossBar命令结果入口已完成限定验证，MCFL45；阶段114 Worldborder命令结果入口已完成限定验证，MCFL43；阶段113 Op/Recipe玩家命令入口已完成限定验证，MCFL42；阶段112 Team receiver结果入口已完成限定验证，MCFL41；阶段111 Datapack/Debug结果入口已完成限定验证，MCFL40；阶段110提交`17313ad`，阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段117 Random命令结果入口已完成限定验证，MCFL47；阶段116 WorldObject命令结果入口已完成限定验证，MCFL46；阶段115 BossBar命令结果入口已完成限定验证，MCFL45；阶段114 Worldborder命令结果入口已完成限定验证，MCFL43；阶段113 Op/Recipe玩家命令入口已完成限定验证，MCFL42；阶段112 Team receiver结果入口已完成限定验证，MCFL41；阶段111 Datapack/Debug结果入口已完成限定验证，MCFL40；阶段110提交`17313ad`，阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效；阶段117后Std外剩余4个Java类、52个CommandReturn注解及7个旧void wrapper，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+
+### 阶段 117：Random命令结果接口（已限定验证）
+
+`RandomData.reset`、`RandomObjectData.reset`与`resetAll`三个入口接入单context qualified `CommandResult`；flags用完整`CompilerValue.Bool`快照，seed int保留。修正实例/source flag顺序、readonly实参传递、raw宏调用导出及`Random.mcfpp`三个旧命令行尾斜杠；测试helper现保留datapack异常原因。单参构造器是唯一实际source/fresh覆盖的构造器路径。
+
+stdlib1 exit0/10s、Project0/0。final1 worker26崩溃18s，XML仍为阶段116旧记录，不能据此计算Cache；final2 worker27正常、FAILED14s，LibFieldAccess XML `2026-10-07T02:48:48.594Z` 1/1/0/0，Cache XML `02:48:47.775Z` 1/0/0/0（MCFL47唯一Cache验证）。source Project0/9118后datapack导出失败，fresh consumer尚未运行。final3 worker28 FAILED10s，宏调用未展开；final4 worker29 FAILED13s，构造器raw命令末尾斜杠断言失败。stdlib2 exit0/4s、Project0/0；final5 worker30 FAILED16s，正向通过而negative仍计数不符。final6仅fixture复查，worker31正常、BUILD SUCCESSFUL in21s，XML `2026-10-07T03:08:42.235Z` 1/0/0/0；source/fresh Project0/9118与0/9119，negative Project2/9119含完整编译期值错误及级联符号错误，按更新后的预期通过。三份资源MCFL47、296252 bytes、SHA256 `8D569CF61A35D3D7A7D6371C7C6E6FD4F3AFDE3C09948FD2BBD3BBA2C244547B`。无fullcheck/server/world/frame0；whole17仍未完成。
 
 ### 阶段 116：WorldObject命令结果接口（已限定验证）
 
@@ -12,11 +18,7 @@
 
 stdlib exit0/9s、Project0/0；首次联合两项 exit0/24s、worker25正常。LibFieldAccess XML `2026-10-07T02:30:25.319Z` 与Cache XML `02:30:24.427Z`均1/0/0/0；source/fresh Project0/9118、0/9119，negative Project4/9119为预期guard及未发布诊断。实际命令合同、双store、一次root初始化及无裸命令/return-run断言通过；不涉及world执行、executor或frame0，也不据注解推断可省略参数。三份bin均MCFL46、295914 bytes、header `4c46434d2e000000`、SHA256 `8D0FFE6F3302B53F99849D9978C38D30D05DBF067EA7DFE42CF3376E256EEB8F`。
 
-当前剩余6个Java类，55个CommandReturn注解及7个旧void wrapper；whole17保持ACTIVE。
-
-### 阶段 117 计划：Random命令结果接口
-
-范围仅`RandomData.reset`、`RandomObjectData.reset`与`resetAll`：保留实例/静态调用形态、readonly bool和普通int参数；capture前要求完整Typed Bool snapshot，读取DTO真实id，并修复旧重复sequence及world flag词序。一个source/fresh fixture检查不对称flags、2个macro和1个direct命令及3个结果root；单string构造器现有raw reset调用需另行识别。未知readonly bool在ParameterMatcher阶段拒绝，不宣称由native guard覆盖；Random.mcfpp只补标准库import，不迁移其余rand/roll或构造器。计划MCFL46→47，尚未实现或验证。
+截至阶段116，剩余6个Java类、55个CommandReturn注解及7个旧void wrapper；whole17保持ACTIVE。
 
 ### 阶段 111：迁移 Datapack 与 Debug 结果接口（已限定验证）
 

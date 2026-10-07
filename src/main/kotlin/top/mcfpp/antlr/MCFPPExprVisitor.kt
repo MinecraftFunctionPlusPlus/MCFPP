@@ -24,6 +24,7 @@ import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.FunctionParam
 import top.mcfpp.model.function.ParameterMatcher
 import top.mcfpp.model.function.NativeDataTemplateConstructor
+import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.scope.GlobalScope
@@ -489,6 +490,12 @@ class MCFPPExprVisitor(
                 if (func.normalParams.getOrNull(index)?.isStatic == true) originalArgs[index] else value
             }
             val returnVar = if(func is Generic<*>){
+                if(readOnlyArgs.any { it is UnknownVar } || normalArgs.any { it is UnknownVar }){
+                    UnknownVar("re")
+                }else{
+                    func.invoke(readOnlyArgs, passedArgs, currSelector)
+                }
+            }else if(func is NativeFunction){
                 if(readOnlyArgs.any { it is UnknownVar } || normalArgs.any { it is UnknownVar }){
                     UnknownVar("re")
                 }else{

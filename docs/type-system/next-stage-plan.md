@@ -1,6 +1,6 @@
-# 下一阶段：迁移 Random 命令结果接口（阶段117）
+# 下一阶段：迁移实体标签命令结果接口（阶段118）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–116完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time路径及受测legacy分支入口的限定迁移；当前库格式MCFL46。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–117完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time路径及受测legacy分支入口的限定迁移；当前库格式MCFL47。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -96,11 +96,15 @@ BossBar的add/remove/listAll/setColor/setName/setVisiblePlayers/setStyle七个�
 
 `WorldObjectData.setDifficulty`与`setWeather`两个静态native方法接入单context qualified `CommandResult`，无caller参数、default或readonly参数；capture前要求EnumVarConcrete，keyword使用`value.identifier`，weather duration为int。旧Time缓存及weather/time accessor/mutator未改，生产尚未导出World对象。source/fresh fixture使用真实`@From FixtureWorld`，检查canonical、readonly、unknown/null snapshot，difficulty direct及weather macro；duration实际按NBT读取→score复制→NBT编码→macro slot捕获。标准库Project0/0，source/fresh Project0/9118、0/9119；负向Project4/9119为预期guard与未发布诊断。fixture实际导出命令合同、双store和一次root初始化；不涉及world执行、executor或frame0，也不据注解推断可省略参数。MCFL45→46，完整分轮证据见verification.md。
 
-### 阶段 117 计划：Random 命令结果接口
+### 阶段 117：Random 命令结果接口（已限定验证）
 
-范围仅`RandomData.reset`、`RandomObjectData.reset`与`resetAll`：保留实例/静态调用形态、readonly bool和普通int参数；capture前要求完整Typed Bool snapshot，读取DTO真实id，并修复旧重复sequence及world flag词序。一个source/fresh fixture检查不对称flags、2个macro和1个direct命令及3个结果root；单string构造器现有raw reset调用需另行识别。未知readonly bool在ParameterMatcher阶段拒绝，不宣称由native guard覆盖；Random.mcfpp只补标准库import，不迁移其余rand/roll或构造器。计划MCFL46→47，尚未实现或验证。
+`RandomData.reset`、`RandomObjectData.reset`与`resetAll`三个入口接入单context qualified `CommandResult`；flags用完整`CompilerValue.Bool`快照，seed int保留。修正实例/source flag顺序、readonly实参传递、raw宏调用导出及`Random.mcfpp`三个旧命令行尾斜杠；测试helper保留datapack异常原因。单参构造器是唯一实际source/fresh覆盖的构造器路径。
 
-阶段88–116详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL46。
+验证分轮：stdlib1 exit0/10s、Project0/0。final1 worker26崩溃、BUILD FAILED in18s，XML仍是阶段116旧文件，不计本轮Cache结果。final2 worker27正常、FAILED14s；LibFieldAccess XML `2026-10-07T02:48:48.594Z` 1/1/0/0，Cache XML `02:48:47.775Z` 1/0/0/0，是MCFL47唯一Cache验证；source Project0/9118后datapack导出失败，fresh consumer尚未运行。final3 worker28正常、FAILED10s，宏命令未展开；final4 worker29正常、FAILED13s，构造器raw命令尾斜杠断言失败。stdlib2 exit0/4s、Project0/0。final5 worker30正常、FAILED16s，正向source/fresh通过，负向仍因诊断数不符失败。修正负向预期后final6仅复查fixture：worker31正常、BUILD SUCCESSFUL in21s；XML `2026-10-07T03:08:42.235Z` 1/0/0/0，source/fresh Project0/9118、0/9119，negative Project2/9119，`Variable flag requires a complete compile-time value`与级联`Symbol not defined: flag`均按预期，且无命令/结果发布断言通过。三份资源MCFL47、296252 bytes、header `4c46434d2f000000`、SHA256 `8D569CF61A35D3D7A7D6371C7C6E6FD4F3AFDE3C09948FD2BBD3BBA2C244547B`。无fullcheck/server/world/frame0；whole17仍未完成。
+
+### 阶段 118 计划：Entity 标签命令结果接口
+
+范围拟限`EntityVarData`的`addTag`、`removeTag`、`listTag`三个入口，先明确`EntityData`资源domain class及真实Selector caller合同，再迁入受限方法。计划单个source/fresh/disk fixture验证，不扩到旧22签名；API、实现和验证均待Root确定。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

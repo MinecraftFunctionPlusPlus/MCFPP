@@ -2,7 +2,25 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 当前阶段 116：WorldObject 命令结果（已限定验证）
+## 当前阶段 117：Random 命令结果（已限定验证）
+
+`RandomData.reset`、`RandomObjectData.reset`与`resetAll`三个入口接入单context qualified `CommandResult`；flags使用完整`CompilerValue.Bool`快照并保留seed int。修正实例/source flag顺序，普通NativeFunction分支传递readonly实参，ImVisitor raw调用经既有`buildMacroFunction`导出；`Random.mcfpp`三个旧raw命令去掉末尾斜杠。单参构造器是唯一实际source/fresh覆盖的构造器路径。
+
+stdlib1 exit0/10s、Project0/0。final1 worker26崩溃、FAILED18s，XML仍是阶段116旧记录，不作为本轮结果。final2 worker27正常、FAILED14s；LibFieldAccess XML `2026-10-07T02:48:48.594Z` 1/1/0/0，Cache XML `02:48:47.775Z` 1/0/0/0，为MCFL47唯一Cache验证；source Project0/9118后datapack导出失败，fresh consumer尚未运行。final3 worker28正常、FAILED10s，宏调用未展开；final4 worker29正常、FAILED13s，单参构造器raw命令尾斜杠断言失败。stdlib2 exit0/4s、Project0/0。final5 worker30正常、FAILED16s，正向source/fresh通过，负向仍因诊断数量不符失败。修改负向预期后final6仅复查fixture：worker31正常、BUILD SUCCESSFUL in21s；XML `2026-10-07T03:08:42.235Z` 1/0/0/0，source/fresh Project0/9118与0/9119，negative Project2/9119；两条预期诊断为完整编译期值缺失及级联`Symbol not defined: flag`，且无命令/结果发布断言通过。三份资源MCFL47、296252 bytes、header `4c46434d2f000000`、SHA256 `8D569CF61A35D3D7A7D6371C7C6E6FD4F3AFDE3C09948FD2BBD3BBA2C244547B`。无fullcheck/server/world/frame0，whole17仍未完成。
+
+### 阶段 117 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 区分worker崩溃、四次fixture问题和最后通过，明确negative的两条具体诊断。 |
+| 完整性 | 3/5 | 三个Random入口及单参构造器限定路径通过；whole17仍未完成。 |
+| 清晰性 | 4/5 | 逐轮标明XML、source/fresh及Cache只final2验证。 |
+| 可执行性 | 4/5 | 下一步收敛到EntityTag三入口及Selector caller合同。 |
+| 简洁性 | 4/5 | 保留关键失败边界，不扩写其他Random入口。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 历史必要检查：阶段 116 WorldObject 命令结果（已限定验证）
 
 `WorldObjectData.setDifficulty`与`setWeather`两个静态native方法接入单context qualified `CommandResult`，无caller参数、default或readonly参数；capture前要求EnumVarConcrete，keyword使用`value.identifier`，weather duration为int。旧Time缓存及weather/time accessor/mutator未改，生产尚未导出World对象。source/fresh fixture用真实`@From FixtureWorld`检查两个canonical readonly/unknown结果及null snapshot、difficulty direct和weather macro；duration实际按NBT读取→score复制→NBT编码→macro slot捕获。
 

@@ -96,7 +96,7 @@ object MCFPPStringTest {
             try{
                 DatapackCreator.createDatapack(Project.config.targetPath!!.absolutePathString()) //生成数据包
             }catch (e: Exception){
-                LogProcessor.error("Cannot create datapack in path: ${Project.config.targetPath}")
+                LogProcessor.error("Cannot create datapack in path: ${Project.config.targetPath}", e)
             }
         }
         Project.ctx.clear()

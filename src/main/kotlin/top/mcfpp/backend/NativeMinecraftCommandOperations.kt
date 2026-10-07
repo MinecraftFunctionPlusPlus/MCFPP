@@ -1,6 +1,7 @@
 package top.mcfpp.backend
 
 import top.mcfpp.analysis.StorageAccess
+import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.command.FloatProviders
@@ -33,6 +34,31 @@ internal fun captureCommandResult(context: NativeCallContext, build: (List<Var<*
 }
 
 object NativeMinecraftCommandOperations {
+    fun randomReset(context: NativeCallContext) = context.withAdapters { receiver, args ->
+        val flags = randomFlags(context) ?: return@withAdapters
+        captureCommandResult(context) { Command.buildAll("random reset", templateField(receiver as DataTemplateObject, "id"), args[2], flags.first, flags.second) }
+    }
+    fun randomResetAllSequences(context: NativeCallContext) = context.withArguments { args ->
+        val flags = randomFlags(context) ?: return@withArguments
+        captureCommandResult(context) { Command.buildAll("random reset *", args[2], flags.first, flags.second) }
+    }
+    fun randomResetAll(context: NativeCallContext) = captureCommandResult(context) { Command("random reset *") }
+
+    private fun randomFlags(context: NativeCallContext): Pair<Boolean, Boolean>? {
+        fun flag(index: Int): Boolean? {
+            var snapshot = context.argumentSnapshot(index)
+            while (snapshot is CompilerValue.Typed) snapshot = snapshot.payload
+            return (snapshot as? CompilerValue.Bool)?.value
+        }
+        val world = flag(0)
+        val sequence = flag(1)
+        if (world == null || sequence == null) {
+            LogProcessor.error("Random reset flags require complete boolean values")
+            return null
+        }
+        return world to sequence
+    }
+
     fun worldSetDifficulty(context: NativeCallContext) = context.withArguments { args ->
         val difficulty = args[0] as? EnumVarConcrete ?: run {
             LogProcessor.error("Difficulty requires a compile-time enum value")
