@@ -792,11 +792,9 @@ public class StdCommands {
     //TODO schedule
 
     //region seed
-    @MNIFunction(returnType = "CommandReturn")
-    public static void seed(ValueWrapper<CommandReturn> re){
-        var command = new Command("seed");
-        Commands.processMacroCommandReturn(re, command);
-        Function.addCommand(command);
+    @MNIFunction(returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void seed(NativeCallContext context){
+        NativeStdCommandOperations.INSTANCE.seed(context);
     }
     //endregion
 

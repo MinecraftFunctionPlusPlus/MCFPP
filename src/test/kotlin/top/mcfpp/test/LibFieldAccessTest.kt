@@ -2939,6 +2939,70 @@ class LibFieldAccessTest {
         assertEquals(1, Project.errorCount)
     }
 
+    @Test
+    fun nativeSeedCapturesOneNominalCommandResultAcrossLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = """
+            func main(){ var box=Box(); dynamic var result=box.observe(); }
+        """
+        write("""
+            namespace fixture.fields;
+            import mcfpp.minecraft.std:*;
+            data Box {
+                func observe()->int {
+                    var answer=seed();
+                    var first=answer.result; var passed=answer.success;
+                    var again=answer.result; var passedAgain=answer.success;
+                    return first+again;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function): TypeId {
+            val observe = (main.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("observe").single()
+            assertTrue(observe.compiledFunctions.isEmpty())
+            val answer = assertIs<DataTemplateObject>(observe.scope.getVar("answer"))
+            val canonical = assertNotNull(GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.std"))
+                .scope.getTemplate("CommandResult")
+            assertSame(canonical, answer.templateType)
+            assertEquals(TypeId.Declaration("template", "mcfpp.minecraft.std", "CommandResult"), answer.type.typeId)
+            assertTrue(answer.templateType.scope.getVar("result")!!.isConst)
+            assertTrue(answer.templateType.scope.getVar("success")!!.isConst)
+            val binding = assertNotNull(answer.storageBinding)
+            assertNull(ValueSnapshot.of(answer))
+            assertEquals(top.mcfpp.analysis.ValueKnowledge.Unknown, binding.data.facts.read(binding.place)?.value)
+            for (name in listOf("first", "passed", "again", "passedAgain")) {
+                assertNull(ValueSnapshot.of(assertNotNull(observe.scope.getVar(name))))
+            }
+            assertEquals(MCFPPBaseType.Int.typeId, observe.scope.getVar("first")!!.type.typeId)
+            assertEquals(MCFPPBaseType.Bool.typeId, observe.scope.getVar("passed")!!.type.typeId)
+            val directory = output.resolve("consumer")
+            DatapackCreator.createDatapack(directory.toString())
+            val data = directory.resolve(Project.config.name).resolve("data")
+            val id = observe.namespaceID.toString()
+            val file = data.resolve(id.substringBefore(':')).resolve("function").resolve(id.substringAfter(':') + ".mcfunction")
+            val commands = Files.readAllLines(file).map(String::trim).filter { it.isNotEmpty() && !it.startsWith("#") }
+            val seed = commands.single { Regex(".*\\brun seed$").matches(it) }
+            val stores = assertNotNull(Regex("execute store result storage (\\S+) (\\S+)\\.result int 1 store success storage (\\S+) (\\S+)\\.success byte 1 run seed").matchEntire(seed))
+            assertEquals("mcfpp:system", stores.groupValues[1])
+            assertEquals(stores.groupValues[1], stores.groupValues[3])
+            assertEquals(stores.groupValues[2], stores.groupValues[4])
+            val initialize = "data modify storage ${stores.groupValues[1]} ${stores.groupValues[2]} set value "
+            val initialization = commands.withIndex().single { it.value.startsWith(initialize) }
+            assertEquals(Tag.toNBT("{}"), Tag.toNBT(initialization.value.removePrefix(initialize)))
+            assertTrue(initialization.index < commands.indexOf(seed))
+            assertFalse(commands.any { it == "seed" || "return run seed" in it })
+            for (field in listOf("result", "success")) {
+                val path = binding.path.memberIndex(field).toCommandPart().toString()
+                assertTrue(commands.any { it.startsWith("execute store result score ") && it.endsWith("run data get $path 1") }, path)
+            }
+            return answer.type.typeId
+        }
+        val sourceId = check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        assertEquals(sourceId, check(main))
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

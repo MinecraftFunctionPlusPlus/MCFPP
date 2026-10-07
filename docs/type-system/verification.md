@@ -2,7 +2,27 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 阶段 108：System 诊断接口（已限定验证）
+## 阶段 109：捕获 seed 的命令结果（已限定验证）
+
+普通 `CommandResult` 使用既有nominal类型，暴露只读 `result:int` 与 `success:bool`。seed单context根据真实declaredReturnType建立未知事实，通过root `{}`初始化并在一次命令中双 `execute store`，不由ctor/preInit覆盖。consumer读取类型身份、readonly属性与未知事实，并检查实际磁盘命令合同；不模拟seed世界结果，也不声称frame0。
+
+首轮stdlib `mcfpp-native-seed-result-stdlib.log` exit1/BUILD FAILED in12s：Project 1 error/0 warnings，`CommandResult` 在 `StdCommands.seed` 声明环境中无法解析。`MCFPPFile.runCommand()` 补用既有声明context后，stdlib2 exit0/BUILD SUCCESSFUL in13s，Project0/0。联合首轮worker10正常结束但BUILD FAILED in21s；LibFieldAccess XML `2026-10-07T00:15:39.804Z` 为1/1/0/0，source0/9118，canonical身份、readonly属性、整对象snapshot为空及binding整体未知均通过，随后对模板字段逐项要求知识值导致首个 `result` 读回 `null` 而不是 `Unknown`，未到consumer/磁盘合同；CacheFormat XML `00:15:39.166Z` 为1/0/0/0。
+
+将fixture检查改为四个实际读取变量存在，且它们各自的snapshot均为空后，final2只复查fixture：worker11正常，exit0/BUILD SUCCESSFUL in16s；fresh XML `2026-10-07T00:18:41.752Z` 为1/0/0/0。source/fresh Project分别0/9118与0/9119；模型检查通过，consumer磁盘合同确认root `{}`早于唯一 `run seed`，同一命令分别store result与success，读取对应字段路径，无裸seed或return-run。未模拟世界执行结果/未声称frame0。Cache只在首轮通过。三份bin均MCFL38、291766 bytes、raw header `4c46434d26000000`、SHA256 `9E44A36392EB129EB3BBF5E9B0C2066EE88941232135543898CFE45AFFB27F3C`。没有重跑87–108旧greens、fullcheck或server。
+
+### 阶段 109 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 保留首轮库声明错误、过细fixture断言及最终单fixture结果的边界。 |
+| 完整性 | 3/5 | seed声明和导出合同限定验证；StdCommands剩余106个CommandReturn入口与whole17仍未完成。 |
+| 清晰性 | 4/5 | 区分未知模型事实和磁盘命令合同，不声称世界执行结果。 |
+| 可执行性 | 4/5 | 下一步限定于StdCommands中剩余结果入口。 |
+| 简洁性 | 4/5 | 仅保留stdlib、两轮fresh及Cache首轮证据。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 历史必要检查：System 诊断接口（阶段 108）
 
 删除没有合法普通 `type` 返回消费路径的 `System.typeOf`，并将debug/info/warn/error四个void方法迁入显式 `NativeCallContext`，标记 `NoExternalWrites`。诊断保留编译期concrete内容与runtime adapter的宿主 `toString` 语义，不生成runtime NBT。实现为约40行fixture与约22行backend；MCFL37。
 

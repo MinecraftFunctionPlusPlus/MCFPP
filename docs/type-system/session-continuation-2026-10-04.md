@@ -4,7 +4,15 @@
 
 ## 当前进度
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段108 System诊断接口已完成限定验证，MCFL37；阶段107提交`b4eb5c9`，阶段106提交`cf5e8f9`、阶段105提交`4664c8b`、阶段104提交`c862427`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段109 seed CommandResult结果捕获已完成限定验证，MCFL38；阶段108提交`122d608`，阶段107提交`b4eb5c9`，阶段106提交`cf5e8f9`、阶段105提交`4664c8b`、阶段104提交`c862427`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+
+### 阶段 109：捕获 seed 的命令结果（已限定验证）
+
+普通 `CommandResult` 以canonical声明提供只读 `result:int`/`success:bool`；seed单context按真实declaredReturnType建未知事实，通过root `{}`并在一次命令中双execute-store发布。fixture检查source/fresh模型及实际consumer磁盘合同，无世界执行或frame0结论。`MCFPPFile.runCommand()`使用声明context后标准库重建成功；首轮对字段知识的fixture断言过细，改为四个实际读取变量存在，且它们各自的snapshot均为空后，final2 fixture通过。仅Cache首轮通过，未在此轮联合复跑。
+
+标准库Project0/0、BUILD SUCCESSFUL in13s；final2 worker11正常，BUILD SUCCESSFUL in16s，fresh XML `2026-10-07T00:18:41.752Z` 1/0/0/0，source/fresh Project0/9118和0/9119。consumer文件含root `{}`、单一 `run seed`、同条result/success双store与字段读取路径。MCFL38三份资源291766 bytes、SHA256 `9E44A36392EB129EB3BBF5E9B0C2066EE88941232135543898CFE45AFFB27F3C`。未模拟世界结果，不声称frame0；其他CommandReturn接口仍保留旧实现。
+
+下一阶段110限于StdCommands剩余106个CommandReturn入口，保留标识/defaults/effects/词序，复用单context与seed，宏按准备命令后最终调用一次。fixture将检查seed、nonmacro和动态say macro的导出、readonly与unknown facts；必要Cache回归，不模拟world/frame0。计划MCFL39及stdlib重建；尚未编码或验证。
 
 ### 阶段 108：System 诊断接口（已限定验证）
 

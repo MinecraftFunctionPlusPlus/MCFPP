@@ -10,8 +10,22 @@ import top.mcfpp.core.lang.Var
 import top.mcfpp.mni.NativeCallContext
 import top.mcfpp.model.function.Function
 import top.mcfpp.util.LogProcessor
+import top.mcfpp.util.TempPool
+import top.mcfpp.analysis.StorageAccess
+import top.mcfpp.command.Commands
+import top.mcfpp.core.lang.obj.DataTemplateObject
+import top.mcfpp.nbt.tags.CompoundTag
 
 object NativeStdCommandOperations {
+    fun seed(context: NativeCallContext) = context.withArguments {
+        val result = (context.declaredReturnType.buildUnConcrete(TempPool.getVarIdentify()) as DataTemplateObject).apply { isTemp = true }
+        val binding = StorageAccess.bindIncomingParameter(result)
+        Function.addCommand(Commands.dataSetValue(binding.path, CompoundTag()))
+        Function.addCommand(Command("execute store result").build(binding.path.memberIndex("result").toCommandPart())
+            .build("int 1 store success").build(binding.path.memberIndex("success").toCommandPart()).build("byte 1 run seed"))
+        context.publishResult(result)
+    }
+
     fun damage(context: NativeCallContext) = emit(context) { args ->
         damageCommand(args[0], args[1], args[2])
     }

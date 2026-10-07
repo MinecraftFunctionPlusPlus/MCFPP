@@ -127,7 +127,7 @@ class MCFPPFile : File {
         currFile = null
     }
 
-    fun runCommand(){
+    fun runCommand() = withDeclarationContext {
         if(nameWithoutExtension.isEmpty()){
             useLines {
                 for (i in it){
