@@ -1,8 +1,26 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段142，MCFL70；旧CommandReturn链引用/注解与旧void wrapper均为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段143，MCFL71；旧CommandReturn链引用/注解与旧void wrapper均为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
 
-## 当前阶段142：统一父类型原生操作符解析（已限定验证）
+## 当前阶段143：移除 BossBar 的旧宿主格式化入口（已限定验证）
+
+删除`BossBar.mcfpp`中冗余inline `toCommandPart`宿主签名。BossBar七个原生命令入口直接读取真实字段；作为ResourceID子类型，其格式化由既有内部路径提供。`DataObjectData` base/default/override仍保留，其他DTO格式化路径未迁移。MCFL70→71。
+
+标准库native exit0/SUCCESS7s、Project0/0；joint native exit0/SUCCESS28s、Executors54/55正常结束。Cache XML `2026-10-07T14:50:33.194Z` 1/0/0/0，LibFieldAccess XML `14:50:35.515Z` 2/0/0/0。BossBar source/fresh/negative Project依次0/9118、0/9119、4/9119（两个未知枚举guard及两个未发布结果）；void fixture source/fresh为0/9118、0/9119，导出两条place调用并检查`pool.id`到宏参数的来源。这里只检查source/fresh生成物，不是Minecraft world执行，不声明frame0或execute覆盖。日志`mcfpp-retire-bossbar-host-formatter-stdlib.log`与`mcfpp-retire-bossbar-host-formatter-joint.log`。
+
+三份bin一致：MCFL71、479901 bytes，header `4c46434d47000000`，SHA256 `333E545EF0E1C22218F9E836C65B1961577397725C12D1A17AC33F4D88BA09C0`。两个生产路径、bin与四份文档共7路径；无新测试。
+
+| 自评维度 | 分数 | 本阶段证据与边界 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 仅记录BossBar继承ResourceID的冗余签名，base及其他DTO路径保留。 |
+| 完整性 | 3/5 | BossBar、void与Cache限定回归通过；whole17仍未完成。 |
+| 清晰性 | 4/5 | 区分导出检查与world/execute行为。 |
+| 可操作性 | 4/5 | 提供标准库/joint日志、worker及两份XML结果。 |
+| 简洁性 | 4/5 | 只记录当前退役范围与下一阶段。 |
+
+平均3.8/5；whole17仍ACTIVE未完成。
+
+## 历史阶段142：统一父类型原生操作符解析（已限定验证）
 
 操作符候选沿`CompoundData.parent`链查找，不使用`scope.parent`；按Function/node identity去重，并在最近可用父层选择候选或报告歧义。`ParameterMatcher.selectOperatorTypes`只接受实参子类型到形参的匹配并选择最佳精确候选，不引入数值提升；`SimpleScope`不再过早返回，`Var`四个查询接入统一解析。无ABI、schema或MCFL变化。
 

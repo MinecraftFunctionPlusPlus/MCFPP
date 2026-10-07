@@ -1,6 +1,6 @@
-# 下一阶段：移除 BossBar 的旧宿主格式化入口（阶段143）
+# 下一阶段：退役 SlotWithWildcard 的旧宿主格式化入口（阶段144）
 
-阶段87普通值位置type拒绝规则继续生效；阶段129已移除语言层 `T!` 后缀。阶段88–142完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time、实体命令路径及受测nominal operator lookup；当前库格式MCFL70，旧 `CommandReturn` 类型/注解与旧void wrapper均为0。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效；阶段129已移除语言层 `T!` 后缀。阶段88–143完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time、实体命令路径及受测nominal operator lookup；当前库格式MCFL71，旧 `CommandReturn` 类型/注解与旧void wrapper均为0。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -216,9 +216,13 @@ stdlib SUCCESSFUL8s/Project0/0。joint1失败23s（Executors46/47正常）：pro
 
 操作符候选父类型遍历使用`CompoundData.parent`链，不使用`scope.parent`；按Function/node identity去重并在最近可用父层处理歧义。`ParameterMatcher.selectOperatorTypes`严格匹配实参子类型到形参并选择最佳精确候选，不引入数值提升；`SimpleScope`遍历不再过早返回。`Var`四个查询接入此解析。阶段140 fixture验证`left | right`，TypeKernel两项模型测试验证方向、无数值提升、最近父项和歧义；三项同轮通过。source/fresh磁盘保留`4/9`并集/copy、后续值`91/92`、返回7及frame0；项目计数0/9118与0/9119。MCFL70不变；未覆盖所有后端操作符或world行为。
 
-### 阶段 143 计划：移除 BossBar 的旧宿主格式化入口
+### 阶段 143：移除 BossBar 的旧宿主格式化入口（已限定验证）
 
-仅移除`BossBar.mcfpp`中继承`ResourceID`后多余的inline `toCommandPart`宿主入口；BossBar原生命令实现已读取真实DTO `id`，继承路径可直接使用ResourceID格式化。用现有BossBar跨库fixture回归；不扩展到不继承ResourceID的Team及Area、Slot、ItemPredicate等仍依赖`DataObjectData` base入口的类型，不新增注册表或formatter框架。该入口移除会改变库签名，计划MCFL70→71并重建标准库；尚未实施或验证。
+仅删除`BossBar.mcfpp`中继承`ResourceID`后多余的inline `toCommandPart`宿主入口；BossBar native commands已读取DTO `id`，继承的ResourceID格式化路径继续可用。既有BossBar跨库fixture和void命令fixture、Cache回归同轮通过。MCFL70→71；没有Minecraft world执行或frame0验证。
+
+### 阶段 144 计划：退役 SlotWithWildcard 的旧宿主格式化入口
+
+删除`SlotWithWildcardData`及`Slot.mcfpp`对它的`@From`注册。全源码查询只发现SlotWithWildcard类型定义及七处静态初始化，无普通参数、别名或父类型消费者。保留该类型、private constructor、type字段及静态`SlotWildcard`值；Slot本身和其formatter也保留，不把删除描述为通配符命令迁移。宿主函数缓存签名与注册变化计划MCFL71→72，重建标准库，并以现有void-command和Cache用例作有界回归；尚未实施或验证。
 
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。

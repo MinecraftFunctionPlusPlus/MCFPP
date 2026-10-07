@@ -18,10 +18,6 @@ data BossBar: ResourceID{
         this.id = id;
         this.name = name;
     }
-
-    override func toCommandPart() -> JavaVar {
-        return id.toCommandPart();
-    }
 }
 
 @From<"top.mcfpp.mni.minecraft.BossBarData">
