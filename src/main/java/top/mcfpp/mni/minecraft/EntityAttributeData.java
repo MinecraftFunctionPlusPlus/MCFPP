@@ -5,6 +5,16 @@ import top.mcfpp.backend.NativeMinecraftCommandOperations;
 import top.mcfpp.mni.NativeCallContext;
 
 public class EntityAttributeData {
+    @MNIFunction(normalParams = {"string", "double"}, caller = "entity", returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void setAttributeBase(NativeCallContext context) {
+        NativeMinecraftCommandOperations.INSTANCE.entitySetAttributeBase(context);
+    }
+
+    @MNIFunction(readOnlyParams = "mcfpp.minecraft.other:AttributeModifierType", normalParams = {"string", "mcfpp.minecraft.other:AttributeModifier"}, caller = "entity", returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void addAttributeModifier(NativeCallContext context) {
+        NativeMinecraftCommandOperations.INSTANCE.entityAddAttributeModifier(context);
+    }
+
     @MNIFunction(normalParams = {"string", "float"}, caller = "entity", returnType = "mcfpp.minecraft.std:CommandResult")
     public static void getAttributeBase(NativeCallContext context) {
         NativeMinecraftCommandOperations.INSTANCE.entityGetAttributeBase(context);

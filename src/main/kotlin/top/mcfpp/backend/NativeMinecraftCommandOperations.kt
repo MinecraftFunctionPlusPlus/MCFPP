@@ -38,6 +38,23 @@ internal fun captureCommandResult(context: NativeCallContext, build: (List<Var<*
 }
 
 object NativeMinecraftCommandOperations {
+    fun entitySetAttributeBase(context: NativeCallContext) = entityAttribute(context) { receiver, args ->
+        Command.buildAll("attribute", receiver, args[0], "base set").buildMacro(args[1])
+    }
+    fun entityAddAttributeModifier(context: NativeCallContext) = context.withAdapters { receiver, args ->
+        val target = attributeSelector(receiver) ?: return@withAdapters
+        val mode = context.argumentSnapshot(0)?.let { StorageAccess.restore(args[0].type, it, args[0].identifier) } as? EnumVarConcrete
+        if (mode == null) {
+            LogProcessor.error("Attribute modifier operations require a complete compile-time enum value")
+            return@withAdapters
+        }
+        val modifier = args[2] as DataTemplateObject
+        captureCommandResult(context) {
+            Command.buildAll("attribute", target, args[1], "modifier add", templateField(modifier, "id"))
+                .buildMacro(templateField(modifier, "amount")).build(mode.value.identifier)
+        }
+    }
+
     fun entityGetAttributeBase(context: NativeCallContext) = entityAttribute(context) { receiver, args ->
         Command.buildAll("attribute", receiver, args[0], "base get", args[1])
     }
@@ -52,11 +69,16 @@ object NativeMinecraftCommandOperations {
     }
 
     private fun entityAttribute(context: NativeCallContext, build: (SelectorVar, List<Var<*>>) -> Command) = context.withAdapters { receiver, _ ->
+        val target = attributeSelector(receiver) ?: return@withAdapters
+        captureCommandResult(context) { args -> build(target, args) }
+    }
+
+    private fun attributeSelector(receiver: Var<*>): SelectorVar? {
         if (receiver !is SelectorVar || !receiver.value.selectingSingleEntity()) {
             LogProcessor.error("Entity attribute commands require a single-entity selector receiver")
-            return@withAdapters
+            return null
         }
-        captureCommandResult(context) { args -> build(receiver, args) }
+        return receiver
     }
 
     fun playerTell(context: NativeCallContext) = playerMessage(context, "tell")

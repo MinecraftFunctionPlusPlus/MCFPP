@@ -1,6 +1,6 @@
-# 下一阶段：迁移实体属性写入接口（阶段130）
+# 下一阶段：清理未注册的旧实体命令包装（阶段131）
 
-阶段87普通值位置type拒绝规则继续生效；阶段129已移除语言层 `T!` 后缀。阶段88–129完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及实体命令路径的限定迁移；当前库格式MCFL59，Std外剩余3个Java类、9个CommandReturn注解及7个旧void wrapper。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效；阶段129已移除语言层 `T!` 后缀。阶段88–130完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及实体命令路径的限定迁移；当前库格式MCFL60，Std外剩余3个Java类、7个CommandReturn注解及7个旧void wrapper。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -152,9 +152,13 @@ BossBar的add/remove/listAll/setColor/setName/setVisiblePlayers/setStyle七个�
 
 129移除语言层 `T!` 语法及其带来的完整值声明约束；type仍只可用于泛型参数，const仍只限制重赋，readonly泛型与编译器专用值继续要求完整快照。闭合枚举记录保存完整TypeId、ordinal与不可变SNBT；NBT编码仅投影data，恢复时按实际枚举恢复并校验成员。不新增CompilerValue种类或全局类型注册表。验证分轮与边界见verification.md。
 
-### 阶段 130 计划：迁移实体属性写入接口
+### 阶段 130：迁移实体属性写入接口（已限定验证）
 
-只迁移 `setAttributeBase` 与 `addAttributeModifier`：保留capture前的selector校验，Modifier使用真实`AttributeModifier.id`；amount为double，宏从实际MCDouble/NBT参数准备，operation接收显式readonly enum实参，不把普通Modifier字段视为编译期已知。该阶段尚未实现或验证；不扩大到坐标传送、PlayerInventory或其他属性操作。
+`setAttributeBase(attributeId:string,value:double)`与`addAttributeModifier<mode:AttributeModifierType>(attributeId:string,modifier:AttributeModifier)`接入单context，删除两个旧wrapper；保留capture前selector校验，读取真实`AttributeModifier.id`及amount，double宏从实际MCDouble/NBT参数准备，operation为显式readonly enum实参。EntityData合并为`other:*`导入，使Gamemode与AttributeModifierType同时可见；一般同namespace显式导入覆盖问题仍存在。MCFL59→60；source/fresh与负向边界见verification.md，不模拟world执行。
+
+### 阶段 131 计划：清理未注册的旧实体命令包装
+
+仅删除未注册的`PlayerInventoryData`五个void clear wrapper、`WorldObjectData`的weather mutator与`WorldborderData`的size mutator；保留PlayerInventory宿主模型、Time及其他accessors/TODO。现有`PlayerState.clear`、`World.setWeather`与`Worldborder.setSize`保持可达。此阶段尚未实现或验证；不宣称完整actor迁移或等价API迁移。
 
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。

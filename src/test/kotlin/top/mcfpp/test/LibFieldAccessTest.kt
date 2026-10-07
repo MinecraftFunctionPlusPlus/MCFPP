@@ -4920,6 +4920,129 @@ class LibFieldAccessTest {
         for ((index, name) in listOf("first", "second").withIndex()) assertNotSame(sourceModels[index], (main.scope.getVar(name) as DataTemplateObject).templateType)
     }
 
+    @Test
+    fun nativeEntityAttributeWriteCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = "func main(){ var box=Box(); var modifier=AttributeModifier(); modifier.id=\"fixture:modifier\"; modifier.amount=2.345678901234d; dynamic var result=box.observe(\"fixture:attribute\",3.456789012345d,modifier); }"
+        write("""
+            namespace fixture.fields;
+            import mcfpp.minecraft.std:*;
+            import mcfpp.minecraft.other:*;
+            data Box {
+                func observe(attributeId as string,amount as double,modifier as AttributeModifier)->int {
+                    var target=@p;
+                    var dynamicSet=target.setAttributeBase(attributeId,amount);
+                    var preciseSet=target.setAttributeBase(attributeId,1.234567890123d);
+                    var added=target.addAttributeModifier<AttributeModifierType.add_value>(attributeId,modifier);
+                    var baseAdded=target.addAttributeModifier<AttributeModifierType.add_multiplied_base>(attributeId,modifier);
+                    var totalAdded=target.addAttributeModifier<AttributeModifierType.add_multiplied_total>(attributeId,modifier);
+                    var first=dynamicSet.result; var second=preciseSet.success;
+                    var third=added.result; var fourth=baseAdded.success; var fifth=totalAdded.result;
+                    return 7;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val observe = (main.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("observe").single()
+            assertTrue(observe.compiledFunctions.isEmpty())
+            val target = assertIs<top.mcfpp.core.lang.entity.SelectorVar>(observe.scope.getVar("target"))
+            assertNotNull(ValueSnapshot.of(target))
+            assertEquals(top.mcfpp.lib.EntitySelector.Companion.SelectorType.NEAREST_PLAYER, target.value.selectorType)
+            val amount = assertIs<top.mcfpp.core.lang.nbt.MCDouble>(observe.scope.getVar("amount"))
+            assertNull(ValueSnapshot.of(amount))
+            val modifier = assertIs<DataTemplateObject>(observe.scope.getVar("modifier"))
+            val canonical = assertNotNull(GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.std")).scope.getTemplate("CommandResult")
+            for (name in listOf("dynamicSet", "preciseSet", "added", "baseAdded", "totalAdded")) {
+                val value = assertIs<DataTemplateObject>(observe.scope.getVar(name))
+                assertSame(canonical, value.templateType)
+                assertTrue(value.templateType.scope.getVar("result")!!.isConst)
+                assertTrue(value.templateType.scope.getVar("success")!!.isConst)
+                val binding = assertNotNull(value.storageBinding)
+                assertEquals(top.mcfpp.analysis.ValueKnowledge.Unknown, binding.data.facts.read(binding.place)?.value)
+                assertNull(ValueSnapshot.of(value))
+            }
+            for (name in listOf("first", "second", "third", "fourth", "fifth")) assertNull(ValueSnapshot.of(assertNotNull(observe.scope.getVar(name))))
+            val attributePath = assertNotNull(assertNotNull(observe.scope.getVar("attributeId")).storageBinding).path.toCommandPart().toString()
+            val amountPath = assertNotNull(amount.storageBinding).path.toCommandPart().toString()
+            val modifierPath = assertNotNull(modifier.storageBinding).path.toCommandPart().toString()
+            val directory = output.resolve("consumer")
+            DatapackCreator.createDatapack(directory.toString())
+            val data = directory.resolve(Project.config.name).resolve("data")
+            fun readFunction(id: String): List<String> = Files.readAllLines(data.resolve(id.substringBefore(':')).resolve("function").resolve(id.substringAfter(':') + ".mcfunction")).map(String::trim)
+            val commands = readFunction(observe.namespaceID.toString())
+            val calls = commands.mapIndexedNotNull { index, command -> Regex("function (mcfpp:dynamic/\\S+) with storage (\\S+) (\\S+)").matchEntire(command)?.let { index to it } }
+            assertEquals(5, calls.size)
+            val stores = Regex("execute store result storage (\\S+) (\\S+)\\.result int 1 store success storage (\\S+) (\\S+)\\.success byte 1 run (.*)")
+            val expected = listOf("attribute @p \$(arg_0) base set \$(arg_1)", "attribute @p \$(arg_0) base set \$(arg_1)") +
+                listOf("add_value", "add_multiplied_base", "add_multiplied_total").map { "attribute @p \$(arg_0) modifier add \$(arg_1) \$(arg_2) $it" }
+            val roots = mutableSetOf<String>()
+            for ((position, domain) in expected.withIndex()) {
+                val (index, call) = calls[position]
+                assertEquals(1, commands.count { it == commands[index] })
+                val body = readFunction(call.groupValues[1])
+                val capture = assertNotNull(body.singleOrNull { it.startsWith("\$execute store result") }?.removePrefix("\$")?.let(stores::matchEntire))
+                assertEquals(domain, capture.groupValues[5])
+                val prefix = "data modify storage ${call.groupValues[2]} ${call.groupValues[3]}.arg_"
+                val preparations = commands.take(index).withIndex().filter { it.value.startsWith(prefix) }
+                assertEquals(if (position < 2) 2 else 3, preparations.size)
+                for (slot in preparations.indices) {
+                    val preparation = preparations.single { it.value.startsWith("$prefix$slot set ") }
+                    val assignment = preparation.value.substringAfter("$prefix$slot set ")
+                    if (position == 1 && slot == 1) {
+                        val encoded = if (assignment.startsWith("value ")) assignment.removePrefix("value ") else {
+                            assertTrue(assignment.startsWith("from "))
+                            val source = assignment.removePrefix("from ")
+                            val initializer = commands.take(preparation.index).single { it.startsWith("data modify $source set value ") }
+                            initializer.substringAfter("data modify $source set value ")
+                        }
+                        assertEquals(1.234567890123, assertIs<top.mcfpp.nbt.tags.primitive.DoubleTag>(top.mcfpp.nbt.tags.Tag.toNBT(encoded)).value)
+                    } else {
+                        assertTrue(assignment.startsWith("from "))
+                        val source = assignment.removePrefix("from ")
+                        val actualPath = when {
+                            slot == 0 -> attributePath
+                            position == 0 -> amountPath
+                            slot == 1 -> "$modifierPath.id"
+                            else -> "$modifierPath.amount"
+                        }
+                        if (source != actualPath) {
+                            val copy = if (position >= 2 && slot > 0) {
+                                val field = if (slot == 1) "id" else "amount"
+                                assertTrue(source.endsWith(".$field"))
+                                "data modify ${source.removeSuffix(".$field")} set from $modifierPath"
+                            } else "data modify $source set from $actualPath"
+                            assertEquals(1, commands.take(preparation.index).count { it == copy })
+                        }
+                    }
+                }
+                assertEquals(capture.groupValues[1], capture.groupValues[3])
+                assertEquals(capture.groupValues[2], capture.groupValues[4])
+                assertTrue(roots.add(capture.groupValues[2]))
+                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value {}" })
+                assertFalse(body.any { "return run" in it || it.removePrefix("\$").startsWith("attribute ") })
+            }
+            assertEquals(5, roots.size)
+            assertFalse(commands.any { "return run" in it || it.startsWith("attribute ") || stores.matches(it) })
+        }
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\nimport mcfpp.minecraft.other:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+        val rejected = consume("""
+            import mcfpp.minecraft.entity:*;
+            import mcfpp.minecraft.other:*;
+            func reject(mode as AttributeModifierType,modifier as AttributeModifier){
+                var multiple=@a; multiple.setAttributeBase("fixture:attribute",1.0d);
+                var value=EntityData(); value.addAttributeModifier<AttributeModifierType.add_value>("fixture:attribute",modifier);
+                var one=@p; one.addAttributeModifier<mode>("fixture:attribute",modifier);
+            }
+            func main(){}
+        """, output)
+        assertEquals(6, Project.errorCount)
+        val reject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
+        assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("attribute ") || "set value {}" in it.toString() })
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

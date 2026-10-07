@@ -1,8 +1,30 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段129，MCFL59；Std外剩余3个Java类含9个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段130，MCFL60；Std外剩余3个Java类含7个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
 
-## 当前阶段 129：移除语言层 `T!` 并恢复闭合枚举快照（已限定验证）
+## 当前阶段 130：迁移实体属性写入接口（已限定验证）
+
+`EntityAttributeData`提供`setAttributeBase(attributeId:string,value:double)`和`addAttributeModifier<mode:AttributeModifierType>(attributeId:string,modifier:AttributeModifier)`两个单context入口，并删除两个旧wrapper。保留capture前的selector guard；使用真实`AttributeModifier.id`和`amount`，double宏经MCDouble/NBT准备，operation是显式readonly enum实参。EntityData的`other:*`导入修复同namespace Gamemode签名解析。
+
+首轮stdlib日志`mcfpp-native-entity-attribute-write-stdlib.log`原生exit1、FAILED in10s，Project1 error/0 warnings，错误为`setGamemode`的`mcfpp.minecraft.other:Gamemode`无效；无worker、XML或joint。合并已有同namespace imports后，stdlib2 SUCCESSFUL in4s、Project0/0。joint日志`mcfpp-native-entity-attribute-write-joint.log`原生exit0、SUCCESSFUL in36s，Executor17与18均正常开始并结束。唯一fixture `nativeEntityAttributeWriteCommandsCaptureResultsAcrossLibraryRoundTrip` 与Cache `oldAndUnknownCacheFormatsProduceARecompileDiagnostic`通过；LibFieldAccess XML `2026-10-07T09:48:33.390Z`、Cache XML `2026-10-07T09:48:30.714Z`均1/0/0/0；source/fresh Project0/9118与0/9119，negative6/9119（selector guard、未发布结果级联及未知readonly enum诊断）。
+
+source/fresh均核对五个实际宏文件：运行时double、精确`1.234567890123d`字面量及三种modifier模式。宏参数保持DoubleTag，id/amount来自真实字段或唯一一跳整体副本；五个独立结果root各初始化一次并双store，readonly结果及读取值保持Unknown/null，不按普通值特化。readonly mode从闭合枚举快照恢复真实成员名称，不读取普通`modifier.type`。
+
+命令词序和single target/double参数依据[固定26.3命令树](https://raw.githubusercontent.com/misode/mcmeta/26.3-summary/commands/data.json)；数字宏去掉NBT后缀依据[Mojang 1.20.2说明](https://www.minecraft.net/en-us/article/minecraft-java-edition-1-20-2)。本fixture验证生成合同，没有执行Minecraft世界命令或frame模拟，也未运行fullcheck。
+
+MCFL60，三份bin均485193 bytes、header `4c46434d3c000000`、SHA256 `65338034376FB7218023BAC5984A5CFED155D18C614C9A35F737F82C215A535C`。本阶段11个提交路径含6个源码/测试路径、bin及4份文档。全17项仍未完成。
+
+| 自评维度 | 分数 | 本阶段证据与边界 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录首轮导入错误及修复后成功的真实Project/XML计数。 |
+| 完整性 | 3/5 | 只覆盖两个写入入口，旧void wrapper与whole17仍未完成。 |
+| 清晰性 | 4/5 | 区分double宏、readonly enum和DTO字段来源。 |
+| 可操作性 | 4/5 | 两份日志、唯一fixture与Cache回归可复查。 |
+| 简洁性 | 4/5 | 保留必要构建、结果和边界信息。 |
+
+平均3.8/5；whole17仍未完成。
+
+## 历史阶段 129：移除语言层 `T!` 并恢复闭合枚举快照（已限定验证）
 
 本阶段移除语言后缀及其带来的完整值声明约束；readonly泛型与编译器专用值仍要求完整快照。`ItemPredicate.parts`按普通list处理。闭合枚举记录保存完整enum TypeId、ordinal及不可变SNBT，NBT编码仅投影data，恢复时按实际枚举校验成员；不增加CompilerValue种类、全局registry或host EnumMember逃逸。两项枚举专项fixture覆盖source/fresh磁盘4/9；新增`TypeSuffixSyntaxTest`四项。旧MCFL58枚举联合日志 `mcfpp-frozen-enum-values-final.log` 中的StorageView旧`enum!`断言失败已随新规则撤回，不作为本阶段失败或成功证据。
 

@@ -1,5 +1,5 @@
 import mcfpp.minecraft.std:*;
-import mcfpp.minecraft.other:Gamemode;
+import mcfpp.minecraft.other:*;
 
 @From<"top.mcfpp.mni.minecraft.EntityTagData">
 @From<"top.mcfpp.mni.minecraft.EntityTeamData">
