@@ -1,6 +1,6 @@
-# 下一阶段：清理 System 类型查询并迁移日志接口（阶段 108）
+# 下一阶段：捕获 seed 的命令结果（阶段109）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–107完成受测集合、数值、文本转换/拼接、predicate、StdCommands void、System print、delegated-int模板、Time路径及两个legacy分支入口的限定迁移；当前库格式MCFL36。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–108完成受测集合、数值、文本转换/拼接、predicate、StdCommands void、System print/诊断、delegated-int模板、Time路径及两个legacy分支入口的限定迁移；当前库格式MCFL37。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -58,11 +58,15 @@ source/fresh fixture验证DamageType初始化为 `minecraft:generic`、damage宏
 
 在legacy动态if的两个分支入口修复共享score名的局部值读取：score缓存owner使用实际Function对象identity；父函数在条件跳转前flush可见runtime bindings，使lazy初始化支配分支路径。单source/fresh fixture真实磁盘结果10/7和frame0通过。未扩至CFG/loop/全量facts；MCFL36不变，详见verification.md。
 
-### 阶段 108 计划：System日志接口
+### 阶段 108：System诊断接口（已限定验证）
 
-删除没有合法普通值返回路径的旧`System.typeOf`方法；将debug/info/warn/error四个void方法迁入显式context，保留编译期concrete内容及runtime宿主`toString`诊断语义，标注`NoExternalWrites`。不扩展运行时日志或新框架。四个持久化Java方法签名改变，计划将MCFL36升级至37并重建标准库；尚未编码或验证。
+删除没有合法普通 `type` 返回路径的 `System.typeOf`；debug/info/warn/error四个void方法迁入显式context并标记 `NoExternalWrites`。编译期concrete内容和runtime宿主 `toString` 诊断语义保留，不生成runtime NBT。MCFL36→37；两个定向方法和标准库已通过，详见verification.md。
 
-阶段88–107详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL36。
+### 阶段 109 计划：普通 CommandResult 的声明返回与结果存储
+
+为普通 `CommandResult` 增加只读 `result:int` 与 `success:bool` 声明。seed使用单一context，依据真实 `declaredReturnType` 以 `buildUnConcrete` 和 `bindIncomingParameter` 建立未知事实；通过root `{}`及一次双 `execute store` 序列发布结果，不在构造器或preInit中覆盖。source/fresh fixture检查导出文件中的命令合同、只读属性和未知值，不模拟seed的世界执行结果，不增加ScoreCommandExecutor断言或frame0结论。其他106个CommandReturn入口继续保留旧实现；本阶段不新增模型、serializer或registry。计划MCFL37→38并重建标准库；尚未实现或验证。
+
+阶段88–108详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL37。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

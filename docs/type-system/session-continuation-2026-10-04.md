@@ -4,7 +4,13 @@
 
 ## 当前进度
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段107两个legacy动态分支入口已完成限定验证，MCFL36；阶段106提交`cf5e8f9`、阶段105提交`4664c8b`、阶段104提交`c862427`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段108 System诊断接口已完成限定验证，MCFL37；阶段107提交`b4eb5c9`，阶段106提交`cf5e8f9`、阶段105提交`4664c8b`、阶段104提交`c862427`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+
+### 阶段 108：System 诊断接口（已限定验证）
+
+删除无合法普通 `type` 返回消费路径的 `System.typeOf`，debug/info/warn/error四个void方法改为显式context并标记 `NoExternalWrites`。编译期concrete内容与runtime adapter宿主 `toString` 诊断语义保留，不转成runtime NBT。stdlib exit0/BUILD SUCCESSFUL in10s、Project0/0；joint两项exit0/BUILD SUCCESSFUL in28s、worker8正常。LibFieldAccess/CacheFormat XML分别为 `2026-10-06T23:59:35.568Z` 与 `23:59:34.861Z`，均1/0/0/0；source/fresh Project为0/9120和0/9121，末尾负向Project 1 error为预期literal error。磁盘返回值7与frame0通过。MCFL37三份产物289476 bytes、SHA256 `DEC8A22394F86A1C7D1D4BCC6828871C25BBF8FDAB639EA52E6858BE773AE657`。仅此两方法验证，未跑旧greens、fullcheck/server。
+
+下一阶段109计划为普通 `CommandResult` 声明只读 `result:int`/`success:bool`，使用真实declaredReturnType和单context绑定未知结果，通过root `{}`与一次双execute-store发布；具体磁盘命令合同及readonly/unknown facts由source/fresh检查，不模拟世界结果或声明frame0。其他CommandReturn入口仍保留旧实现；计划MCFL38及stdlib重建，尚未编码或验证。
 
 ### 阶段104：System print原生入口（已限定验证）
 
@@ -18,9 +24,9 @@
 
 Time的18项运算/factory入口迁入单context；declaredReturnType由真实callee提供，Time结果使用独立Place，六倍率不变并移除静态factory缓存。MCFL36后final3仅复查fixture通过，source/fresh分别0/9125与0/9126，结果1027809和frame0断言通过；细节见verification.md。
 
-### 阶段107：动态分支中的局部值读取（已限定验证）
+### 阶段107：动态分支中的局部值读取（历史；已限定验证）
 
-score缓存owner使用实际`Function`对象identity、`Pair.first ===`及`IdentityHashMap`；动态if跳转前由父Function flush可见runtime bindings。仅覆盖两个legacy分支入口，不代表CFG/loop或全量facts迁移。首轮仅因StorageAccess import缺失编译失败，无worker/XML；final2 worker7正常、exit0/BUILD SUCCESSFUL in50s，XML `2026-10-06T23:53:37.602Z` 为1/0/0/0，source/fresh分别0/9118和0/9119，磁盘10/7及frame0通过。MCFL36/bin未变；未跑stdlib、Cache、fullcheck或server。下一阶段108计划清理System.typeOf并迁移四种日志接口，尚未编码/验证。
+score缓存owner使用实际`Function`对象identity、`Pair.first ===`及`IdentityHashMap`；动态if跳转前由父Function flush可见runtime bindings。仅覆盖两个legacy分支入口，不代表CFG/loop或全量facts迁移。首轮仅因StorageAccess import缺失编译失败，无worker/XML；final2 worker7正常、exit0/BUILD SUCCESSFUL in50s，XML `2026-10-06T23:53:37.602Z` 为1/0/0/0，source/fresh分别0/9118和0/9119，磁盘10/7及frame0通过。MCFL36/bin未变；未跑stdlib、Cache、fullcheck或server。
 
 ### 用户最新规则（2026-10-06）
 

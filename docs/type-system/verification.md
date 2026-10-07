@@ -2,7 +2,25 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 阶段 107：动态分支中的局部值读取（已限定验证）
+## 阶段 108：System 诊断接口（已限定验证）
+
+删除没有合法普通 `type` 返回消费路径的 `System.typeOf`，并将debug/info/warn/error四个void方法迁入显式 `NativeCallContext`，标记 `NoExternalWrites`。诊断保留编译期concrete内容与runtime adapter的宿主 `toString` 语义，不生成runtime NBT。实现为约40行fixture与约22行backend；MCFL37。
+
+stdlib `mcfpp-native-diagnostics-stdlib.log` exit0/BUILD SUCCESSFUL in10s，Project0/0。joint `mcfpp-native-diagnostics-final.log` exit0/BUILD SUCCESSFUL in28s、worker8正常；LibFieldAccess XML `2026-10-06T23:59:35.568Z`与CacheFormat XML `23:59:34.861Z`均1/0/0/0。source/fresh Project分别0/9120与0/9121；新warnings各2条。负向检查最后一个Project为1 error/9118 warnings，属于预期literal error。source/fresh磁盘返回值7与frame0通过。src/main/resources、build/resources/main与build/stdlib-index三份均为MCFL37、289476 bytes、SHA256 `DEC8A22394F86A1C7D1D4BCC6828871C25BBF8FDAB639EA52E6858BE773AE657`，raw header `4c46434d25000000`。仅这两个方法通过；未重跑87/107旧greens、fullcheck或server。
+
+### 阶段 108 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录两个fresh XML、预期负向Project错误及一致MCFL37产物。 |
+| 完整性 | 3/5 | 四个诊断入口限定验证；其他MNI与whole17仍未完成。 |
+| 清晰性 | 4/5 | 区分编译期内容和runtime宿主字符串转换，不声称生成NBT。 |
+| 可执行性 | 4/5 | 下一步只新增CommandResult的声明返回类型调用路径。 |
+| 简洁性 | 4/5 | 仅记录必要构建、测试和磁盘证据。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 历史必要检查：动态分支中的局部值读取（阶段 107）
 
 4个生产文件和单fixture限定修复legacy两个动态分支入口的score缓存归属：缓存owner使用实际`Function`对象identity、`Pair.first ===`及`IdentityHashMap`，不使用Function语义equals；父函数在动态if跳转前flush可见runtime bindings，使lazy初始化支配分支路径。范围仅为这两个legacy入口，不代表CFG/loop/全量facts迁移；MCFL36不变。
 

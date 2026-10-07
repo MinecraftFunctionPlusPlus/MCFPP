@@ -5,7 +5,7 @@
 
 ## 当前规则（截至2026-10-07，Asia/Shanghai）
 
-用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–107按验证记录接入受测集合、数值/文本/命令、delegated-int、Time及两个legacy分支入口；当前MCFL36，whole17未完成。
+用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–108按验证记录接入受测集合、数值/文本/命令、delegated-int、Time、诊断接口及两个legacy分支入口；当前MCFL37，whole17未完成。
 
 ## 当前已接入
 
@@ -47,7 +47,9 @@
 
 阶段103：四个damage void入口迁入显式context，保留语言标识及默认语义，处理ResourceID DamageType与SelectorVar签名差异。动态float受现有 `FloatProviders.enabled` 限制；不新增浮点引擎。damage fixture与Cache回归均通过，source/fresh生成宏及MCFL32资源已验证；未验证world/float执行。详细边界见verification.md。
 
-阶段104迁移System九种print语言入口并完成限定验证；最终fixture复查通过，Cache仅首轮通过，未验证macro/world执行或tellraw渲染。阶段105 delegated-int、阶段106 Time及阶段107两个legacy分支入口已限定验证，细节见verification.md。当前MCFL36；下一阶段清理System.typeOf并迁移四种日志接口，详见next-stage-plan.md。
+阶段104迁移System九种print语言入口并完成限定验证；最终fixture复查通过，Cache仅首轮通过，未验证macro/world执行或tellraw渲染。阶段105 delegated-int、阶段106 Time及阶段107两个legacy分支入口已限定验证，细节见verification.md。阶段108删除无合法普通type返回消费路径的 `System.typeOf`，并迁移四个诊断void接口；当前MCFL37，下一阶段计划迁移普通CommandResult结果接口，详见next-stage-plan.md。
+
+阶段108：debug/info/warn/error四个void方法迁入显式context并标记 `NoExternalWrites`；诊断保留编译期concrete内容及runtime宿主 `toString` 语义，不生成runtime NBT。删除 `System.typeOf`，以符合普通值位置禁止保存 `type` 的规则。两个定向方法与标准库均通过，三份MCFL37资源为289476 bytes且SHA256一致；详见verification.md。whole17仍未完成。
 
 重构不要求兼容旧 `.mcfpp` 写法；显式引用新旧语法无需并行保留。
 

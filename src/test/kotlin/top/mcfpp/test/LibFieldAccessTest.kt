@@ -2899,6 +2899,46 @@ class LibFieldAccessTest {
         check(main)
     }
 
+    @Test
+    fun compilerDiagnosticsUseContextAcrossLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = """
+            func main(){
+                var box=Box(); dynamic var message="fixture-message";
+                dynamic var result=box.observe(message);
+            }
+        """
+        write("""
+            namespace fixture.fields;
+            data Box {
+                func observe(message as string)->int {
+                    debug();
+                    info("fixture-info"); info(message);
+                    warn("fixture-warn"); warn(message);
+                    return 7;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val machine = execute(main, output)
+            assertEquals(7, machine.read(main.scope.getVar("result") as MCInt))
+            val observe = (main.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("observe").single()
+            assertTrue(observe.compiledFunctions.isEmpty())
+        }
+        val system = top.mcfpp.mni.System::class.java
+        for (name in listOf("debug", "info", "warn", "error")) {
+            assertEquals(Void.TYPE, system.getDeclaredMethod(name, top.mcfpp.mni.NativeCallContext::class.java).returnType)
+        }
+        assertFalse(system.declaredMethods.any { it.name == "typeOf" })
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+        Project.config.includes = arrayListOf()
+        MCFPPStringTest.readFromString("""func main(){ error("fixture-error"); }""", version = "26.3")
+        assertEquals(1, Project.errorCount)
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

@@ -1,20 +1,12 @@
 package top.mcfpp.mni;
 
-import org.jetbrains.annotations.NotNull;
 import top.mcfpp.annotations.InsertCommand;
 import top.mcfpp.annotations.MNIFunction;
 import top.mcfpp.backend.NativePrintOperations;
-import top.mcfpp.core.lang.*;
-import top.mcfpp.core.lang.nbt.*;
-import top.mcfpp.util.*;
+import top.mcfpp.backend.NativeDiagnosticOperations;
+import top.mcfpp.mni.annotation.NoExternalWrites;
 
 public class System {
-
-    @MNIFunction(normalParams = {"any"}, returnType = "type")
-    public static void typeOf(@NotNull Var<?> value, ValueWrapper<MCFPPTypeVar> returnValue){
-        var re = new MCFPPTypeVar(value.getType(), TempPool.getVarIdentify());
-        returnValue.setValue(re);
-    }
 
     @InsertCommand
     @MNIFunction(identifier = "print", normalParams = {"text"})
@@ -70,36 +62,26 @@ public class System {
     }
 
     @MNIFunction
-    public static void debug(){
-        //噢，在这里断点，这样就可以断点编译了
-        //noinspection unused
-        int i = 0;
+    @NoExternalWrites
+    public static void debug(NativeCallContext context){
+        NativeDiagnosticOperations.INSTANCE.debug(context);
     }
 
     @MNIFunction(normalParams = {"string"})
-    public static void info(@NotNull MCString var){
-        if(var instanceof MCStringConcrete varC){
-            LogProcessor.info(varC.getValue().getValue());
-        }else{
-            LogProcessor.info(var.toString());
-        }
+    @NoExternalWrites
+    public static void info(NativeCallContext context){
+        NativeDiagnosticOperations.INSTANCE.info(context);
     }
 
     @MNIFunction(normalParams = {"string"})
-    public static void warn(@NotNull MCString var){
-        if(var instanceof MCStringConcrete varC){
-            LogProcessor.warn(varC.getValue().getValue());
-        }else{
-            LogProcessor.warn(var.toString());
-        }
+    @NoExternalWrites
+    public static void warn(NativeCallContext context){
+        NativeDiagnosticOperations.INSTANCE.warn(context);
     }
 
     @MNIFunction(normalParams = {"string"})
-    public static void error(@NotNull MCString var){
-        if(var instanceof MCStringConcrete varC){
-            LogProcessor.error(varC.getValue().getValue());
-        }else{
-            LogProcessor.error(var.toString());
-        }
+    @NoExternalWrites
+    public static void error(NativeCallContext context){
+        NativeDiagnosticOperations.INSTANCE.error(context);
     }
 }
