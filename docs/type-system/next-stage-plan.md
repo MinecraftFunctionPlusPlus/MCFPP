@@ -1,6 +1,6 @@
-# 下一阶段：接通坐标成员的共享位置写入（阶段133）
+# 下一阶段：迁移坐标参数传送接口（阶段134）
 
-阶段87普通值位置type拒绝规则继续生效；阶段129已移除语言层 `T!` 后缀。阶段88–132完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及实体命令路径的限定迁移；当前库格式MCFL61，Std外剩余3个Java类及7个CommandReturn注解，旧void wrapper为0。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效；阶段129已移除语言层 `T!` 后缀。阶段88–133完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及实体命令路径的限定迁移；当前库格式MCFL62，Std外剩余3个Java类及7个CommandReturn注解，旧void wrapper为0。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -166,9 +166,15 @@ BossBar的add/remove/listAll/setColor/setName/setVisiblePlayers/setStyle七个�
 
 三个定向fixture通过：标准库SUCCESSFUL in10s，Project0/0；joint SUCCESSFUL in26s，Test Executors20–22均正常开始并结束。StorageView XML `2026-10-07T10:25:35.348Z`、LibFieldAccess `10:25:30.314Z`、CacheFormat `10:25:28.847Z`均1/0/0/0；Worldborder source/fresh Project0/9118与0/9119，StorageView Project0/9118。具体范围见verification.md，不代表新tp、world或frame0验证。
 
-### 阶段 133 计划：接通坐标成员的共享位置写入
+### 阶段 133：接通坐标成员的共享位置写入（已限定验证）
 
-限定修改`PosVar.kt`与`StorageAccess.kt`：移除`PosDimension`不一致的parent override，将x/y/z成员映射到父binding的Index并登记真实Dim事实；复用既有StoredData写入与祖先重建，不改`ValueModel`/`Var`或引入新框架。验证`position`、共享alias写入x后双方快照为9/2/3且replacement独立。阶段133尚未实现或验证；不预判库版本变化，也不扩展到runtime坐标或新tp入口。
+移除`PosDimension`不一致的parent setter/getter；Pos2/Pos3成员索引映射到父Place的Index（x/y/z分别为0/1/2，Pos2的z为1）。仅当whole坐标有快照时seed Dim facts，不以unset值补零；复用`StoredData.write`调用既有`FlowFacts.writeConstant`重建祖先TypedSequence，普通copy保持独立。因默认PosDimension字段布局变化，旧MCFL61中的Pos3在初始化读取时报Kryo reference id -2，因此索引升至MCFL62以要求旧库重编译。
+
+首轮joint `mcfpp-shared-coordinate-member-write-joint.log` FAILED in21s，worker23正常结束；XML `2026-10-07T10:42:16.244Z` 2/2/0/0，两用例均在Project编译和断言前因旧索引序列化布局错误失败。stdlib SUCCESSFUL in7s、Project0/0。升版后joint2 SUCCESSFUL in23s，workers24、25正常开始并结束；StorageView XML `2026-10-07T10:46:30.892Z` 2/0/0/0，Cache XML `10:46:36.186Z` 1/0/0/0。两个StorageView Project均0/9118。限制及具体断言见verification.md。
+
+### 阶段 134 计划：迁移坐标参数传送接口
+
+将EntityVarData旧四个坐标tp入口迁入现有`EntityTeleportData`的单context qualified结果：`pos3`、`pos3 + pos2 rotation`、`pos3 + pos3 facing`、`pos3 + entity + Anchor`。接收selector可为multiple；facing entity需single，未知或不完整快照拒绝。删除旧EntityVarData实现及EntityUUIDVar的注入/import，但保留UUID宿主类型为IntArray，不新增selector API或runtime坐标框架。验证^前缀坐标须全部为^或全部非^，rotation不得含^；26.3命令树证据仅用于参数形状，不宣称验证其parser实现。阶段134尚未实现或验证，MCFL变化待实施时按实际确认。
 
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。

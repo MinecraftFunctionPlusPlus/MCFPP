@@ -1,7 +1,7 @@
 package top.mcfpp.core.lang
 
 import top.mcfpp.command.Command
-import top.mcfpp.model.CanSelectMember
+import top.mcfpp.analysis.StorageAccess
 import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.UnknownFunction
@@ -72,12 +72,10 @@ class Pos3Var: ConcreteVar<Pos3Var, ArrayList<PosDimension>> {
     }
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        return when(key){
-            "x" -> x to true
-            "y" -> y to true
-            "z" -> z to true
-            else -> null to true
-        }.apply { first?.parent = this@Pos3Var }
+        val index = when (key) { "x" -> 0; "y" -> 1; "z" -> 2; else -> return null to true }
+        val root = StorageAccess.ensure(this)
+        return StorageAccess.adapter(MCFPPPrivateType.MCFPPCoordinateDimension, key,
+            root.copy(place = root.place.index(index), path = root.path.intIndex(index))).apply { parent = this@Pos3Var } to true
     }
 
     override fun getMemberFunction(
@@ -165,11 +163,10 @@ class Pos2Var: ConcreteVar<Pos2Var, ArrayList<PosDimension>> {
     }
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
-        return when(key) {
-            "x" -> x to true
-            "z" -> z to true
-            else -> null to true
-        }.apply { first?.parent = this@Pos2Var }
+        val index = when (key) { "x" -> 0; "z" -> 1; else -> return null to true }
+        val root = StorageAccess.ensure(this)
+        return StorageAccess.adapter(MCFPPPrivateType.MCFPPCoordinateDimension, key,
+            root.copy(place = root.place.index(index), path = root.path.intIndex(index))).apply { parent = this@Pos2Var } to true
     }
 
     override fun getMemberFunction(
@@ -208,10 +205,6 @@ open class PosDimension: ConcreteVar<PosDimension, Pair<String, Number>> {
     val number get() = value.second
 
     override var type: MCFPPType = MCFPPPrivateType.MCFPPCoordinateDimension
-
-    @Suppress("SuspiciousVarProperty")
-    override var parent: CanSelectMember? = null
-        get() = super.parent
 
     /**
      * 创建一个int类型的变量。它的mc名和变量所在的域容器有关。

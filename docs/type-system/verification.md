@@ -1,8 +1,26 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段132，MCFL61；Std外剩余3个Java类、7个CommandReturn注解、旧void wrapper为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段133，MCFL62；Std外剩余3个Java类、7个CommandReturn注解、旧void wrapper为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
 
-## 当前阶段 132：恢复编译器专用坐标值（已限定验证）
+## 当前阶段 133：接通坐标成员的共享位置写入（已限定验证）
+
+删除`PosDimension`不一致的parent setter/getter，将Pos2/Pos3的x/y/z成员键映射到父binding的Place.Index 0/1/2（Pos2 z为1）。只在whole位置已有快照时seed真实Dim facts，不为unset值伪造零；通过既有`StoredData.write`调用既有`FlowFacts.writeConstant`与`CompilerValue.replacing`重建祖先TypedSequence，ordinary copy独立。首轮失败证实PosDimension默认对象字段布局变化影响Kryo持久化，因此MCFL61→62；不是新增snapshot字段或payload。
+
+RED联合`mcfpp-shared-coordinate-member-write-joint.log`原生exit1、FAILED in21s、worker23正常结束，XML `2026-10-07T10:42:16.244Z`为2/2/0/0；两用例均在fixture初始化时因旧索引中Kryo无法解析`PosDimension`引用（id -2）失败，尚未进入Project编译或断言。升版后标准库日志`mcfpp-shared-coordinate-member-write-stdlib.log`原生exit0、SUCCESSFUL in7s、Project0/0；joint2原生exit0、SUCCESSFUL in23s，workers24、25正常开始并结束。联合测试为`coordinateMemberWritesShareViewsButLeaveOrdinaryCopiesIndependent`、`coordinateSnapshotsRestoreCompilerOnlyValuesAndMemberDimensions`及缓存回归`oldAndUnknownCacheFormatsProduceARecompileDiagnostic`。StorageView XML `2026-10-07T10:46:30.892Z` 2/0/0/0，Cache XML `10:46:36.186Z` 1/0/0/0；两个StorageView Project均0/9118。
+
+回归验证共享alias写入x后双方快照为9/2/3，普通copy仍为1/2/3、replacement仍为9/8/7且独立；Pos2共享z写入后为4/8，unset成员无快照；包含132的compiler-only快照读取测试。未验证runtime坐标命令、world或frame0。Root核对的三份bin一致：MCFL62、485127 bytes、header `4c46434d3e000000`、SHA256 `70F0067622577F0689A07E759DDA99ACD2E8BE81A6923809C8770E6333CBFC84`。本阶段共4个源码/测试路径、bin及四份文档，9个提交路径。
+
+| 自评维度 | 分数 | 本阶段证据与边界 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录Kryo旧布局失败与升版后XML/Project结果。 |
+| 完整性 | 3/5 | 覆盖共享写入和坐标快照，runtime坐标与whole17仍未完成。 |
+| 清晰性 | 4/5 | 说明父binding索引、whole快照条件和版本变化原因。 |
+| 可操作性 | 4/5 | 列出三份日志、三个测试与fresh XML。 |
+| 简洁性 | 4/5 | 限定在已验证的成员写入与快照路径。 |
+
+平均3.8/5；whole17仍未完成。
+
+## 历史阶段 132：恢复编译器专用坐标值（已限定验证）
 
 `Pos3`与内部`CoordinateDimension`设为compiler-only，`Pos2`原已具备该标记；复用既有Typed-Sequence载荷读取并恢复闭合快照，不增CompilerValue类型、registry或schema字段。恢复严格校验完整TypeId、维数、prefix及数值种类，并同步x/y/z/value；未知/错误维数拒绝，不以零值补全。absolute double zero输出`0.0`，`~`与`^`前缀零保留。MCFL60→61由坐标参数ABI行为改变触发。
 
@@ -1419,7 +1437,7 @@ NBT 数组首批 9 项回归在迁入前实际失败 8 项：字面量降为 nbt
 ## 未完成验收
 
 这些结果验证的是 migration.md 中已接入的范围，不能替代整份重构方案的验收。
-其余集合成员、map/NBT 数组与编译器专用集合的 IR，未知长度上的负数字面下标、集合返回/static 整体替换的完整子形状，模板/浮点及泛型/T! 的调用与控制流、其余循环语法、未知字典字符串键的运行时后端、其余原生成员编码检查、全局/实体位置的递归效果及完整擦除返回类型不动点、模板方法/构造、其余布局和转换后端、MNI 全面迁移及旧体系移除仍列在迁移指南中。原始命令直接跨函数修改物理记分板与帧恢复的关系仍需核实。
+其余集合成员、map/NBT 数组与编译器专用集合的 IR，未知长度上的负数字面下标、集合返回/static 整体替换的完整子形状，模板/浮点及泛型的调用与控制流、其余循环语法、未知字典字符串键的运行时后端、其余原生成员编码检查、全局/实体位置的递归效果及完整擦除返回类型不动点、模板方法/构造、其余布局和转换后端、MNI 全面迁移及旧体系移除仍列在迁移指南中。原始命令直接跨函数修改物理记分板与帧恢复的关系仍需核实。
 as、擦除载荷和存储已经有实际贯通路径；不能把这些测试外推为全部语言类型和调用路径均已完成。
 旧浮点测试验证分量搬运和命令结构，未证明模拟库的全部数值精度、舍入及异常行为。
 旧测试仍有仅打印诊断的用例；测试通过不能证明其全部输入都符合新语义。

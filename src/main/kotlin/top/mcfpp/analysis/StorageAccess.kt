@@ -217,6 +217,8 @@ object StorageAccess {
             return
         }
         val parts = when (value) {
+            is Pos2Var -> if (ValueSnapshot.of(value) != null) value.value.mapIndexed { index, dimension -> parent.index(index) to dimension } else emptyList()
+            is Pos3Var -> if (ValueSnapshot.of(value) != null) value.value.mapIndexed { index, dimension -> parent.index(index) to dimension } else emptyList()
             is DataTemplateObject -> value.instanceField.allVars.filterNot { it.isStatic }.map { parent.field(it.identifier) to it }
             is NBTListConcrete -> {
                 data.listSizes[parent] = value.value.size

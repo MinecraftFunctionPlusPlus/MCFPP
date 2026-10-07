@@ -15,6 +15,62 @@ import kotlin.test.*
 import kotlin.test.Test
 
 class StorageViewTest {
+    @Test fun coordinateMemberWritesShareViewsButLeaveOrdinaryCopiesIndependent() {
+        val main = compile("""
+            func main(){
+                var position=1 2 3;
+                var alias=position as pos3;
+                var copy=position;
+                var replacement=9 8 7;
+                alias.x=replacement.x;
+                var pair=4 5;
+                var pairAlias=pair as pos2;
+                pairAlias.z=replacement.y;
+                var unset as pos3;
+            }
+        """)
+        val position = assertIs<Pos3Var>(main.scope.getVar("position"))
+        val alias = assertIs<Pos3Var>(main.scope.getVar("alias"))
+        val copy = assertIs<Pos3Var>(main.scope.getVar("copy"))
+        val replacement = assertIs<Pos3Var>(main.scope.getVar("replacement"))
+        val originalBinding = assertNotNull(position.storageBinding)
+        assertSame(originalBinding.data, assertNotNull(alias.storageBinding).data)
+        assertEquals(originalBinding.place, assertNotNull(alias.storageBinding).place)
+        assertNotEquals(originalBinding.place, StorageAccess.ensure(copy).place)
+        assertNotEquals(originalBinding.place, assertNotNull(replacement.storageBinding).place)
+        val member = assertIs<PosDimension>(alias.getMemberVar("x", top.mcfpp.model.Member.AccessModifier.PUBLIC).first)
+        assertSame(alias, member.parent)
+        assertEquals("x", member.identifier)
+        assertSame(originalBinding.data, assertNotNull(member.storageBinding).data)
+        assertEquals(originalBinding.place.index(0), assertNotNull(member.storageBinding).place)
+        assertEquals(originalBinding.place.index(0), assertNotNull(position.getMemberVar("x", top.mcfpp.model.Member.AccessModifier.PUBLIC).first?.storageBinding).place)
+        assertEquals(ValueSnapshot.of(position), ValueSnapshot.of(alias))
+        assertEquals("9 2 3", assertIs<Pos3Var>(StorageAccess.read(position)).toCommandPart().toString())
+        assertEquals("9 2 3", assertIs<Pos3Var>(StorageAccess.read(alias)).toCommandPart().toString())
+        assertEquals("1 2 3", assertIs<Pos3Var>(StorageAccess.read(copy)).toCommandPart().toString())
+        assertEquals("9 8 7", assertIs<Pos3Var>(StorageAccess.read(replacement)).toCommandPart().toString())
+        val pair = assertIs<Pos2Var>(main.scope.getVar("pair"))
+        val pairAlias = assertIs<Pos2Var>(main.scope.getVar("pairAlias"))
+        val pairBinding = assertNotNull(pair.storageBinding)
+        assertSame(pairBinding.data, assertNotNull(pairAlias.storageBinding).data)
+        assertEquals(pairBinding.place, assertNotNull(pairAlias.storageBinding).place)
+        val z = assertIs<PosDimension>(pairAlias.getMemberVar("z", top.mcfpp.model.Member.AccessModifier.PUBLIC).first)
+        assertSame(pairAlias, z.parent)
+        assertEquals("z", z.identifier)
+        assertEquals(pairBinding.place.index(1), assertNotNull(z.storageBinding).place)
+        assertEquals(ValueSnapshot.of(pair), ValueSnapshot.of(pairAlias))
+        assertEquals("4 8", assertIs<Pos2Var>(StorageAccess.read(pair)).toCommandPart().toString())
+        val unset = assertIs<Pos3Var>(main.scope.getVar("unset"))
+        assertFalse(unset.hasAssigned)
+        assertNull(ValueSnapshot.of(unset))
+        val unknown = assertNotNull(unset.getMemberVar("x", top.mcfpp.model.Member.AccessModifier.PUBLIC).first)
+        assertNull(ValueSnapshot.of(unknown))
+        assertEquals(StorageLayout.CompilerOnly, assertNotNull(unknown.storageBinding).data.layout)
+        assertEquals(assertNotNull(unset.storageBinding).place.index(0), assertNotNull(unknown.storageBinding).place)
+        assertFalse(main.commands.any { it.toString().startsWith("data modify ") && (" set value " in it.toString() || " set from " in it.toString()) })
+        assertEquals(0, Project.errorCount)
+    }
+
     @Test fun coordinateSnapshotsRestoreCompilerOnlyValuesAndMemberDimensions() {
         val main = compile("func main(){ var unset as pos3; }")
         val unset = assertNotNull(main.scope.getVar("unset"))
