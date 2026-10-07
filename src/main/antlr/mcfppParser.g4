@@ -52,7 +52,7 @@ topStatement
 
 //命名空间声明
 namespaceDeclaration
-    :   doc_comment? NAMESPACE Identifier (DOT Identifier)*
+    :   doc_comment? NAMESPACE namespacePath
     ;
 
 importDeclaration
@@ -60,7 +60,7 @@ importDeclaration
     ;
 
 importType
-    :   Identifier (DOT Identifier)* COLON (Identifier | MULT)
+    :   namespacePath COLON (Identifier | MULT)
     ;
 
 typealiasDeclaration
@@ -235,7 +235,15 @@ enumMember
 
 
 namespaceID
-    : (Identifier (DOT Identifier)* COLON)? Identifier
+    : (namespacePath COLON)? Identifier
+    ;
+
+namespacePath
+    : namespaceSegment (DOT namespaceSegment)*
+    ;
+
+namespaceSegment
+    : Identifier | ENTITY
     ;
 
 nativeFuncDeclaration
@@ -581,7 +589,7 @@ coordinateDimension
     ;
 
 className
-    :   (Identifier (DOT Identifier)* COLON NL*)? classWithoutNamespace
+    :   (namespacePath COLON NL*)? classWithoutNamespace
     ;
 
 classWithoutNamespace

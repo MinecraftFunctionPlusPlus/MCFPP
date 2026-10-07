@@ -178,24 +178,6 @@ public class EntityVarData {
     }
     //endregion
 
-    //region tag
-    @MNIFunction(normalParams = "string" ,caller = "entity", returnType = "CommandReturn")
-    public static void addTag(MCString tag, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
-        var command = Command.Companion.buildAll("tag", caller, "add", tag);
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-    @MNIFunction(normalParams = "string",caller = "entity", returnType = "CommandReturn")
-    public static void removeTag(MCString tag, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
-        var command = Command.Companion.buildAll("tag", caller, "remove", tag);
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-    @MNIFunction(caller = "entity", returnType = "CommandReturn")
-    public static void listTag(EntityVar caller, ValueWrapper<CommandReturn> returnValue){
-        var command = Command.Companion.buildAll("tag", caller, "list");
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-    //endregion
-
     //region team
     @MNIFunction(normalParams = "Team",caller = "entity", returnType = "CommandReturn")
     public static void joinTeam(DataTemplateObject team, EntityVar caller, ValueWrapper<CommandReturn> returnValue){

@@ -34,6 +34,21 @@ internal fun captureCommandResult(context: NativeCallContext, build: (List<Var<*
 }
 
 object NativeMinecraftCommandOperations {
+    fun entityAddTag(context: NativeCallContext) = entityTag(context, "add")
+    fun entityRemoveTag(context: NativeCallContext) = entityTag(context, "remove")
+    fun entityListTag(context: NativeCallContext) = entityTag(context, "list")
+
+    private fun entityTag(context: NativeCallContext, operation: String) = context.withAdapters { receiver, args ->
+        if (receiver !is SelectorVar) {
+            LogProcessor.error("Entity tag commands require a selector receiver")
+            return@withAdapters
+        }
+        captureCommandResult(context) {
+            if (operation == "list") Command.buildAll("tag", receiver, operation)
+            else Command.buildAll("tag", receiver, operation, args[0])
+        }
+    }
+
     fun randomReset(context: NativeCallContext) = context.withAdapters { receiver, args ->
         val flags = randomFlags(context) ?: return@withAdapters
         captureCommandResult(context) { Command.buildAll("random reset", templateField(receiver as DataTemplateObject, "id"), args[2], flags.first, flags.second) }

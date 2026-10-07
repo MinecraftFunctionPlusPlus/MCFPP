@@ -1,8 +1,26 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段118，MCFL48；Std外剩余4个Java类含49个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 当前阶段 117：Random 命令结果（已限定验证）
+## 当前阶段 118：EntityTag 命令结果（已限定验证）
+
+`EntityVarData.addTag`、`removeTag`、`listTag`三个入口迁入`EntityTagData`，使用单context qualified `CommandResult`。grammar只新增`ENTITY`命名空间片段；修正SelectorData的27个旧ABI注解caller/return为entity及6个qualified resource参数，Selector公共父模板接入已加载EntityData。MNI仅在显式qualified解析失败后查询已加载canonical模板。bare Selector保存/恢复immutable完整快照，但不代表predicate selector等形式均支持。
+
+stdlib1成功11s/Project0/0；首轮producer因`ENTITY`保留字导入解析失败，Cache XML `2026-10-07T03:22:31.233Z` 1/0/0/0是MCFL48唯一Cache验证。grammar修复后stdlib2成功26s/Project0/0；final2 producer189/9118，final3 producer9/9118。final4重复执行并覆盖，现存worker37、FAILED6s及XML `2026-10-07T03:52:30.253Z` 1/1/0/0、producer8/9118；worker36首轮日志/XML已丢失。final5-debug worker38 FAILED28s，XML `2026-10-07T04:04:19.204Z` 1/1/0/0、producer8/9118；临时诊断显示bare Selector绑定后成为Unknown。最终修复后final6 worker39正常、BUILD SUCCESSFUL in39s，XML `2026-10-07T04:08:58.285Z` 1/0/0/0；source/fresh Project0/9118、0/9119，negative 2/9119。负向诊断为`Entity tag commands require a selector receiver`及`Native function 'listTag' did not publish its result`；source/fresh模型及consumer合同通过。未验证world、executor、frame0或fullcheck/server。
+
+18个提交路径含13项源码/测试、bin及四份文档。三份资源均为MCFL48、445602 bytes，header `4C46434D30000000`、SHA256 `A5F124E496774A0D0BE2A4F1D87044708338B50F5378C3DB62DDA1896FE559B6`。runtime修复后仅复查fixture，未再生成stdlib或重复Cache测试；临时诊断已删除。
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 区分final4覆盖、诊断性复查与final6通过，标明Cache仅首轮。 |
+| 完整性 | 3/5 | 三个EntityTag入口受测通过；其他入口及whole17未完成。 |
+| 清晰性 | 4/5 | 记录bare Selector快照修复范围和negative实际诊断。 |
+| 可执行性 | 4/5 | 下一步依据26.3命令报告处理Team加入/离开合同。 |
+| 简洁性 | 4/5 | 保留关键失败边界，不扩写未测selector/world路径。 |
+
+平均3.8/5；whole17仍未完成。
+
+## 历史必要检查：阶段 117 Random 命令结果（已限定验证）
 
 `RandomData.reset`、`RandomObjectData.reset`与`resetAll`三个入口接入单context qualified `CommandResult`；flags使用完整`CompilerValue.Bool`快照并保留seed int。修正实例/source flag顺序，普通NativeFunction分支传递readonly实参，ImVisitor raw调用经既有`buildMacroFunction`导出；`Random.mcfpp`三个旧raw命令去掉末尾斜杠。单参构造器是唯一实际source/fresh覆盖的构造器路径。
 

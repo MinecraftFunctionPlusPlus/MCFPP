@@ -14,12 +14,14 @@ import top.mcfpp.model.function.NativeFunction
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.property.Property
 import top.mcfpp.model.scope.CompoundDataScope
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPGenericParamType
 import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.StringHelper.splitMNIParam
+import top.mcfpp.util.StringHelper.splitNamespaceID
 import top.mcfpp.util.TextTranslator
 import top.mcfpp.util.TextTranslator.translate
 import java.io.Serializable
@@ -288,6 +290,13 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
         scope.addOperator(mniBinaryOperator.operator, paramType, nf, false)
     }
 
+    private fun parseMNIType(typeName: String, function: NativeFunction): MCFPPType? {
+        MCFPPType.parseFromString(typeName, function.scope)?.let { return it }
+        val (namespace, identifier) = typeName.splitNamespaceID()
+        if (namespace == null) return null
+        return GlobalScope.getUnsolvedImportNamespace(namespace)?.scope?.getTemplate(identifier)?.getType()
+    }
+
     private fun addMNIMethod(method: Method, mniRegister: MNIFunction, tag: Array<String>? = null){
         if(!Modifier.isStatic(method.modifiers)) {
             LogProcessor.error("MNIMethod ${method.name} in class ${method.declaringClass.name} must be static")
@@ -302,14 +311,14 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
         mniRegister.genericType.map {
             nf.scope.putType(it, MCFPPGenericParamType(it, arrayListOf()))
         }
-        val callerType = MCFPPType.parseFromString(mniRegister.caller, nf.scope)
+        val callerType = parseMNIType(mniRegister.caller, nf)
         nf.caller = callerType?: run {
             LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniRegister.caller) + " in method ${method.name} in class ${method.declaringClass.name}")
             MCFPPPrivateType.Void
         }
         val readOnlyType = mniRegister.readOnlyParams.map {
             val qwq = it.splitMNIParam().first.split(" ", limit = 2)
-            val type = MCFPPType.parseFromString(qwq.last(), nf.scope)?: run {
+            val type = parseMNIType(qwq.last(), nf)?: run {
                 LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(qwq[0]) + " in method ${method.name} in class ${method.declaringClass.name}")
                 MCFPPBaseType.Any
             }
@@ -317,13 +326,13 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
         }
         val normalType = mniRegister.normalParams.map {
             val qwq = it.splitMNIParam().first.split(" ", limit = 2)
-            val type = MCFPPType.parseFromString(qwq.last(), nf.scope)?: run {
+            val type = parseMNIType(qwq.last(), nf)?: run {
                 LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(qwq[0]) + " in method ${method.name} in class ${method.declaringClass.name}")
                 MCFPPBaseType.Any
             }
             type to it.startsWith("static")
         }
-        val returnType = MCFPPType.parseFromString(mniRegister.returnType, nf.scope)?: run {
+        val returnType = parseMNIType(mniRegister.returnType, nf)?: run {
             LogProcessor.error(TextTranslator.INVALID_TYPE_ERROR.translate(mniRegister.returnType) + " in method ${method.name} in class ${method.declaringClass.name}")
             MCFPPBaseType.Any
         }

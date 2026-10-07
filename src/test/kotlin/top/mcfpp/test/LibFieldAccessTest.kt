@@ -3834,6 +3834,102 @@ class LibFieldAccessTest {
         assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("random reset ") || "set value {}" in it.toString() })
     }
 
+    @Test
+    fun nativeEntityTagCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = "func main(){ var box=Box(); dynamic var result=box.observe(\"fixture:tag\"); }"
+        write("""
+            namespace fixture.fields;
+            import mcfpp.minecraft.entity:*;
+            import mcfpp.minecraft.std:*;
+            data Box {
+                func observe(tag as string)->int {
+                    var target=@e;
+                    var added=target.addTag(tag); var removed=target.removeTag(tag); var listed=target.listTag();
+                    var addedValue=added.result; var removedSuccess=removed.success; var listedValue=listed.result;
+                    return 7;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val observe = (main.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("observe").single()
+            assertTrue(observe.compiledFunctions.isEmpty())
+            assertNotNull(ValueSnapshot.of(assertNotNull(observe.scope.getVar("target"))))
+            val canonical = assertNotNull(GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.std")).scope.getTemplate("CommandResult")
+            for (name in listOf("added", "removed", "listed")) {
+                val value = assertIs<DataTemplateObject>(observe.scope.getVar(name))
+                assertSame(canonical, value.templateType)
+                assertTrue(value.templateType.scope.getVar("result")!!.isConst)
+                assertTrue(value.templateType.scope.getVar("success")!!.isConst)
+                val binding = assertNotNull(value.storageBinding)
+                assertEquals(top.mcfpp.analysis.ValueKnowledge.Unknown, binding.data.facts.read(binding.place)?.value)
+                assertNull(ValueSnapshot.of(value))
+            }
+            for (name in listOf("addedValue", "removedSuccess", "listedValue")) assertNull(ValueSnapshot.of(assertNotNull(observe.scope.getVar(name))))
+            val tagPath = assertNotNull(assertNotNull(observe.scope.getVar("tag")).storageBinding).path.toCommandPart().toString()
+            val directory = output.resolve("consumer")
+            DatapackCreator.createDatapack(directory.toString())
+            val data = directory.resolve(Project.config.name).resolve("data")
+            val functions = linkedMapOf<String, List<String>>()
+            Files.walk(data).use { paths ->
+                paths.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".mcfunction") }.forEach { file ->
+                    val relative = data.relativize(file)
+                    if (relative.nameCount >= 3 && relative.getName(1).toString() == "function") {
+                        val id = relative.subpath(2, relative.nameCount).joinToString("/").removeSuffix(".mcfunction")
+                        functions["${relative.getName(0)}:$id"] = Files.readAllLines(file).map(String::trim)
+                    }
+                }
+            }
+            val commands = functions.getValue(observe.namespaceID.toString())
+            val stores = Regex("execute store result storage (\\S+) (\\S+)\\.result int 1 store success storage (\\S+) (\\S+)\\.success byte 1 run (.*)")
+            val direct = commands.mapIndexedNotNull { index, command -> stores.matchEntire(command)?.let { index to it } }
+            assertEquals(1, direct.size)
+            assertEquals("tag @e list", direct.single().second.groupValues[5])
+            val calls = commands.mapIndexedNotNull { index, command -> Regex("function (mcfpp:dynamic/\\S+) with storage (\\S+) (\\S+)").matchEntire(command)?.let { index to it } }
+            assertEquals(2, calls.size)
+            val domains = mutableSetOf<String>()
+            val captures = calls.map { (index, call) ->
+                assertEquals(1, commands.count { it == commands[index] })
+                val body = functions.getValue(call.groupValues[1])
+                val capture = assertNotNull(body.singleOrNull { it.startsWith("\$execute store result") }?.removePrefix("\$")?.let(stores::matchEntire))
+                val domain = capture.groupValues[5]
+                assertTrue(domain == "tag @e add \$(arg_0)" || domain == "tag @e remove \$(arg_0)")
+                assertTrue(domains.add(domain))
+                val prefix = "data modify storage ${call.groupValues[2]} ${call.groupValues[3]}.arg_0 set from "
+                val prep = commands.take(index).withIndex().single { it.value.startsWith(prefix) }
+                val source = prep.value.removePrefix(prefix)
+                if (source != tagPath) {
+                    val copy = "data modify $source set from $tagPath"
+                    assertEquals(1, commands.take(prep.index).count { it == copy })
+                }
+                assertFalse(body.any { "return run" in it || it.removePrefix("\$").startsWith("tag ") })
+                index to capture
+            }
+            assertEquals(setOf("tag @e add \$(arg_0)", "tag @e remove \$(arg_0)"), domains)
+            val roots = mutableSetOf<String>()
+            for ((index, capture) in direct + captures) {
+                assertEquals(capture.groupValues[1], capture.groupValues[3])
+                assertEquals(capture.groupValues[2], capture.groupValues[4])
+                assertTrue(roots.add(capture.groupValues[2]))
+                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value {}" })
+            }
+            assertEquals(3, roots.size)
+            assertFalse(commands.any { "return run" in it || it.startsWith("tag ") })
+        }
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+        val rejected = consume("""
+            import mcfpp.minecraft.entity:*;
+            func reject(){ var value=EntityData(); value.listTag(); }
+            func main(){}
+        """, output)
+        assertEquals(2, Project.errorCount)
+        val reject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
+        assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("tag ") || "set value {}" in it.toString() })
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

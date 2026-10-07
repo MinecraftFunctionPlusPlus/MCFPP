@@ -1,3 +1,6 @@
+import mcfpp.minecraft.std:*;
+
+@From<"top.mcfpp.mni.minecraft.EntityTagData">
 data EntityData {
     @Name<"Air">
     air as short;

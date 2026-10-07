@@ -164,6 +164,10 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
 
         private class AllEntityDataTemplate(excluded: List<String>): DataTemplate("AllEntity","mcfpp"){
             init {
+                GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.entity")?.scope?.getTemplate("EntityData")?.getType()?.let {
+                    it.tryResolve()
+                    extends(it.template)
+                }
                 GlobalScope.getTemplate { data ->
                     data.annotations.any { it is MCFPPEntity } && data.identifier !in excluded
                 }.forEach {

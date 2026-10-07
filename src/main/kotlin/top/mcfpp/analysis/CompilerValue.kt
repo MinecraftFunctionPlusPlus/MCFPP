@@ -59,6 +59,8 @@ object ValueSnapshot {
         is Var<*> -> when {
             value.symbol != null && !value.hasAssigned -> null
             value.storageBinding != null -> StorageAccess.snapshot(value)
+            value is top.mcfpp.core.lang.entity.SelectorVar -> if (value.value.predicates.isEmpty())
+                CompilerValue.Typed(value.type.typeId, CompilerValue.Text(value.value.selectorType.name)) else null
             value is top.mcfpp.core.lang.obj.TypeDataTemplateObject -> of(value.delegateVar)?.let {
                 CompilerValue.Typed(value.type.typeId, if (it is CompilerValue.Typed) it.payload else it)
             }

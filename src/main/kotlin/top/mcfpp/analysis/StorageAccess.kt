@@ -936,6 +936,10 @@ object StorageAccess {
     internal fun restore(type: MCFPPType, snapshot: CompilerValue, name: String,
                         types: Map<TypeId, MCFPPType> = emptyMap()): Var<*>? {
         val payload = if (snapshot is CompilerValue.Typed) snapshot.payload else snapshot
+        if (type is MCFPPEntityType && payload is CompilerValue.Text) {
+            val kind = top.mcfpp.lib.EntitySelector.Companion.SelectorType.entries.firstOrNull { it.name == payload.value } ?: return null
+            return top.mcfpp.core.lang.entity.SelectorVar(top.mcfpp.lib.EntitySelector(kind), name).takeIf { it.type.typeId == type.typeId }
+        }
         if (type is MCFPPTypeDataTemplateType) {
             val delegate = restore(type.typeAs, CompilerValue.Typed(type.typeAs.typeId, payload), name, types) ?: return null
             return type.buildUnConcrete(name).let { it as top.mcfpp.core.lang.obj.TypeDataTemplateObject }.apply {

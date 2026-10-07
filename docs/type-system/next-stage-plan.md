@@ -1,6 +1,6 @@
-# 下一阶段：迁移实体标签命令结果接口（阶段118）
+# 下一阶段：迁移实体队伍命令结果接口（阶段119）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–117完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time路径及受测legacy分支入口的限定迁移；当前库格式MCFL47。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–118完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及EntityTag路径的限定迁移；当前库格式MCFL48，Std外剩余4个Java类、49个CommandReturn注解及7个旧void wrapper。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -102,9 +102,15 @@ BossBar的add/remove/listAll/setColor/setName/setVisiblePlayers/setStyle七个�
 
 验证分轮：stdlib1 exit0/10s、Project0/0。final1 worker26崩溃、BUILD FAILED in18s，XML仍是阶段116旧文件，不计本轮Cache结果。final2 worker27正常、FAILED14s；LibFieldAccess XML `2026-10-07T02:48:48.594Z` 1/1/0/0，Cache XML `02:48:47.775Z` 1/0/0/0，是MCFL47唯一Cache验证；source Project0/9118后datapack导出失败，fresh consumer尚未运行。final3 worker28正常、FAILED10s，宏命令未展开；final4 worker29正常、FAILED13s，构造器raw命令尾斜杠断言失败。stdlib2 exit0/4s、Project0/0。final5 worker30正常、FAILED16s，正向source/fresh通过，负向仍因诊断数不符失败。修正负向预期后final6仅复查fixture：worker31正常、BUILD SUCCESSFUL in21s；XML `2026-10-07T03:08:42.235Z` 1/0/0/0，source/fresh Project0/9118、0/9119，negative Project2/9119，`Variable flag requires a complete compile-time value`与级联`Symbol not defined: flag`均按预期，且无命令/结果发布断言通过。三份资源MCFL47、296252 bytes、header `4c46434d2f000000`、SHA256 `8D569CF61A35D3D7A7D6371C7C6E6FD4F3AFDE3C09948FD2BBD3BBA2C244547B`。无fullcheck/server/world/frame0；whole17仍未完成。
 
-### 阶段 118 计划：Entity 标签命令结果接口
+### 阶段 118：Entity 标签命令结果接口（已限定验证）
 
-范围拟限`EntityVarData`的`addTag`、`removeTag`、`listTag`三个入口，先明确`EntityData`资源domain class及真实Selector caller合同，再迁入受限方法。计划单个source/fresh/disk fixture验证，不扩到旧22签名；API、实现和验证均待Root确定。
+三个入口已迁入`EntityTagData`，source/fresh/disk及DTO拒绝检查通过；bare Selector有完整快照，predicate Selector尚未覆盖。真实轮次和MCFL48资源记录见verification.md。
+
+### 阶段 119 计划：Entity 加入/离开队伍
+
+仅迁移`joinTeam(Team)`和`leaveTeam()`，返回qualified `CommandResult`。已核对[26.3原版生成的命令报告](https://raw.githubusercontent.com/misode/mcmeta/26.3-summary/commands/data.json)：join为队伍ID后接成员选择器，leave仅接成员选择器，删除旧伪Team参数。[官方26.3 Snapshot 1记录](https://www.minecraft.net/en-us/article/minecraft-26-3-snapshot-1)说明result为实际加入/离开的实体数量；world效果尚未验证。
+
+后端复用真实Team.id字段和既有捕获路径，Selector receiver检查早于结果初始化。单个ordinary-template fixture复用`@a`及真实两参Team构造器，检查source/fresh磁盘一条join宏、一条direct leave、两个独立结果位置和DTO负例。不扩到其他Entity方法、predicate快照或新selector框架。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

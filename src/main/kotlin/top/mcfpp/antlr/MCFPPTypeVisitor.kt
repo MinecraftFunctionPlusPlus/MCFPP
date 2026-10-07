@@ -29,7 +29,7 @@ class MCFPPTypeVisitor: mcfppParserBaseVisitor<Unit>() {
         //命名空间
         if (ctx.namespaceDeclaration() != null) {
             //获取命名空间
-            val namespaceStr = ctx.namespaceDeclaration().Identifier().joinToString(".") { it.text }
+            val namespaceStr = ctx.namespaceDeclaration().namespacePath().text
             Project.currNamespace = namespaceStr
             MCFPPFile.currFile!!.namespace = GlobalScope.getOrCreateNamespace(namespaceStr)
         }
