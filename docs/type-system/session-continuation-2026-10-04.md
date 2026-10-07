@@ -4,6 +4,10 @@
 
 ## 当前进度
 
+### 阶段 128：实体属性查询与移除命令（已限定验证）
+
+移除Entity/Player两组失效host属性注入并删除hidden `AttributeData`（取消旧入口，不作等价迁移）；四个实体属性查询/移除方法通过single-context处理。唯一fixture与Cache联合通过，stdlib SUCCESSFUL in1m03s/Project0/0；worker50正常、SUCCESSFUL in45s。Lib XML `2026-10-07T06:47:18.125Z`、Cache XML `2026-10-07T06:47:17.323Z` 均1/0/0/0，source/fresh Project0/9118与0/9119，negative4/9119（两个selector guard及两个未发布结果级联）。source/fresh四条命令验证attribute字符串来源与`AttributeModifier.id` modifier来源；四个root各一次`{}`初始化与双store，readonly结果保持Unknown/null。MCFL58三份bin均483462 bytes、header `4c46434d3a000000`、SHA256 `F8A20971589BA8F3120323C02BC32E8011B145F7439FD1E8A81F2987715A7F14`。旧`setAttributeBase`/`addAttributeModifier`、world执行及whole17仍未完成。
+
 ### 阶段 127：玩家消息命令（已限定验证）
 
 `PlayerMessageData`将`tell`/`w`接入单context qualified结果，caller为entity并新增第九个`@From`。sender的player-only检查是项目API选择；整体`execute as sender run tell|w targets message`只捕获一次聚合结果。唯一fixture与Cache联合通过：stdlib12s/Project0/0，worker49正常、SUCCESS28s；Lib XML `2026-10-07T06:30:55.781Z`、Cache XML `2026-10-07T06:30:54.980Z` 均1/0/0/0，source/fresh Project0/9118与0/9119，negative6/9119（selector guard及未发布结果级联）。source/fresh检查`@p` sender、`@a` targets的两条消息宏和实参来源，不模拟实际发送或JSON。MCFL57三份bin均478528 bytes、header `4c46434d39000000`、SHA256 `3AF8C24128274596ECE416E7353C945F1FAA34C5EAB7627D32D23D7B60EB53D6`。
@@ -52,7 +56,7 @@ stdlib SUCCESSFUL 11s、Project0/0；joint worker40正常、FAILED19s，LibField
 
 stdlib1成功11s/Project0/0；首轮producer因`ENTITY`保留字导入解析失败，Cache XML `2026-10-07T03:22:31.233Z` 1/0/0/0为MCFL48唯一Cache验证。grammar修复后stdlib2成功26s/0/0；final2 producer189/9118，final3 producer9/9118。final4重复执行并覆盖，当前仅保留worker37、FAILED6s及XML `2026-10-07T03:52:30.253Z` 1/1/0/0、producer8/9118；worker36首轮日志/XML已丢失。final5-debug worker38 FAILED28s，XML `2026-10-07T04:04:19.204Z` 1/1/0/0、producer8/9118，诊断显示bare Selector绑定后value仍为Unknown。最终修复后final6 worker39正常、SUCCESS39s，XML `2026-10-07T04:08:58.285Z` 1/0/0/0；source/fresh Project0/9118与0/9119，negative 2/9119，selector guard与未发布`listTag`结果诊断按预期通过。未覆盖predicate selector、world执行、frame0或whole17。
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段127 Player消息命令已完成限定验证，MCFL57；Std外剩余4个Java类、19个CommandReturn注解及7个旧void wrapper，whole17仍未完成。阶段126 entity-target tp已完成限定验证，MCFL56。阶段125 Player状态与ride命令已完成限定验证，MCFL55；阶段124 Player advancement十个入口已完成限定验证，MCFL54；阶段123 Player XP六个入口已完成限定验证，MCFL53；阶段122 stopRide入口已完成限定验证，MCFL52；阶段121 Entity effect授予两个入口已完成限定验证，MCFL51；阶段120 EntityEffect两个命令入口已完成限定验证，MCFL50；阶段119 Team加入/离开两个命令入口已完成限定验证，MCFL49；阶段118 EntityTag三个结果入口已完成限定验证，MCFL48；阶段117 Random命令结果入口已完成限定验证，MCFL47；阶段116 WorldObject命令结果入口已完成限定验证，MCFL46；阶段115 BossBar命令结果入口已完成限定验证，MCFL45；阶段114 Worldborder命令结果入口已完成限定验证，MCFL43；阶段113 Op/Recipe玩家命令入口已完成限定验证，MCFL42；阶段112 Team receiver结果入口已完成限定验证，MCFL41；阶段111 Datapack/Debug结果入口已完成限定验证，MCFL40；阶段110提交`17313ad`，阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段128实体属性查询/移除命令已完成限定验证，MCFL58；Std外剩余3个Java类、9个CommandReturn注解及7个旧void wrapper，whole17仍未完成。阶段127 Player消息命令已完成限定验证，MCFL57。阶段126 entity-target tp已完成限定验证，MCFL56。阶段125 Player状态与ride命令已完成限定验证，MCFL55；阶段124 Player advancement十个入口已完成限定验证，MCFL54；阶段123 Player XP六个入口已完成限定验证，MCFL53；阶段122 stopRide入口已完成限定验证，MCFL52；阶段121 Entity effect授予两个入口已完成限定验证，MCFL51；阶段120 EntityEffect两个命令入口已完成限定验证，MCFL50；阶段119 Team加入/离开两个命令入口已完成限定验证，MCFL49；阶段118 EntityTag三个结果入口已完成限定验证，MCFL48；阶段117 Random命令结果入口已完成限定验证，MCFL47；阶段116 WorldObject命令结果入口已完成限定验证，MCFL46；阶段115 BossBar命令结果入口已完成限定验证，MCFL45；阶段114 Worldborder命令结果入口已完成限定验证，MCFL43；阶段113 Op/Recipe玩家命令入口已完成限定验证，MCFL42；阶段112 Team receiver结果入口已完成限定验证，MCFL41；阶段111 Datapack/Debug结果入口已完成限定验证，MCFL40；阶段110提交`17313ad`，阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效。重构不要求兼容旧 `.mcfpp` 写法。
 
 ### 阶段 117：Random命令结果接口（已限定验证）
 

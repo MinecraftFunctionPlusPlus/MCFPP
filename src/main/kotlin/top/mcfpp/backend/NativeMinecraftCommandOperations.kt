@@ -38,6 +38,27 @@ internal fun captureCommandResult(context: NativeCallContext, build: (List<Var<*
 }
 
 object NativeMinecraftCommandOperations {
+    fun entityGetAttributeBase(context: NativeCallContext) = entityAttribute(context) { receiver, args ->
+        Command.buildAll("attribute", receiver, args[0], "base get", args[1])
+    }
+    fun entityGetAttribute(context: NativeCallContext) = entityAttribute(context) { receiver, args ->
+        Command.buildAll("attribute", receiver, args[0], "get", args[1])
+    }
+    fun entityRemoveAttributeModifier(context: NativeCallContext) = entityAttribute(context) { receiver, args ->
+        Command.buildAll("attribute", receiver, args[0], "modifier remove", templateField(args[1] as DataTemplateObject, "id"))
+    }
+    fun entityGetAttributeModifier(context: NativeCallContext) = entityAttribute(context) { receiver, args ->
+        Command.buildAll("attribute", receiver, args[0], "modifier value get", templateField(args[1] as DataTemplateObject, "id"), args[2])
+    }
+
+    private fun entityAttribute(context: NativeCallContext, build: (SelectorVar, List<Var<*>>) -> Command) = context.withAdapters { receiver, _ ->
+        if (receiver !is SelectorVar || !receiver.value.selectingSingleEntity()) {
+            LogProcessor.error("Entity attribute commands require a single-entity selector receiver")
+            return@withAdapters
+        }
+        captureCommandResult(context) { args -> build(receiver, args) }
+    }
+
     fun playerTell(context: NativeCallContext) = playerMessage(context, "tell")
     fun playerWhisper(context: NativeCallContext) = playerMessage(context, "w")
 

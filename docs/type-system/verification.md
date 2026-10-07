@@ -1,8 +1,26 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段127，MCFL57；Std外剩余4个Java类含19个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段128，MCFL58；Std外剩余3个Java类含9个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 当前阶段 127：玩家消息命令（已限定验证）
+## 当前阶段 128：实体属性查询与移除命令（已限定验证）
+
+清理Entity/Player两组旧host属性注入并删除hidden `AttributeData`（取消旧宿主入口，不称等价迁移）；四个受测实体属性查询/移除接口接入单context。唯一fixture为`nativeEntityAttributeCommandsCaptureResultsAcrossLibraryRoundTrip`，联合`oldAndUnknownCacheFormatsProduceARecompileDiagnostic`，日志前缀`mcfpp-native-entity-attribute-command-results-`。stdlib原生exit0、SUCCESSFUL in1m03s、Project0/0；joint原生exit0、worker50正常结束、SUCCESSFUL in45s。LibFieldAccess XML `2026-10-07T06:47:18.125Z`、Cache XML `2026-10-07T06:47:17.323Z` 各1/0/0/0；source/fresh Project0/9118与0/9119，negative4/9119。三份bin均MCFL58、483462 bytes、header `4c46434d3a000000`、SHA256 `F8A20971589BA8F3120323C02BC32E8011B145F7439FD1E8A81F2987715A7F14`。
+
+source/fresh四个宏按实际词序生成；attribute id直接绑定或唯一一跳复制，`AttributeModifier.id`从Modifier DTO字段读取，均在准备/调用前到达真实参数槽。四个独立root各一次`{}`初始化和双store；结果canonical readonly/Unknown/null，字段读取保持空快照。`@p`保留已知kind且无specialization。仅验证生成合同；旧setter/add路径、动态double、world执行及whole17未完成。
+
+本批13个提交路径含8个源码/测试文件（148+/233−）、bin与四份文档。fixture按observe及实际宏文件核对完整scale 1.0；Modifier.id只接受直接字段来源或严格唯一一跳wholeDTO复制后的.id路径，复制先于准备，准备先于唯一调用。两条single-selector guard与两条未发布结果构成四条负向诊断。剩余旧setAttributeBase/addAttributeModifier改用显式attribute string以解除删除类的依赖，仍待迁移；Modifier默认构造只服务id输入，不证明amount或type字段能力。
+
+| 自评维度 | 分数 | 本阶段证据与范围 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 对照fresh XML、source/fresh计数、负向诊断和三份bin。 |
+| 完整性 | 3/5 | 覆盖四个限定入口；其他属性写入路径与whole17未完成。 |
+| 清晰性 | 4/5 | 明确旧host入口移除不等价迁移及字段取值边界。 |
+| 可操作性 | 4/5 | 下一步仅处理枚举编译期快照的闭合表示。 |
+| 简洁性 | 4/5 | 保留此阶段所需构建、测试和载荷证据。 |
+
+平均3.8/5；whole17仍未完成。
+
+## 历史必要检查：阶段 127 玩家消息命令（已限定验证）
 
 `PlayerMessageData`将`tell`与`w`接入单context qualified结果，caller为entity并挂到`EntityData`第九个`@From`；旧入口缺caller且未发布结果，不称保留了正确旧ABI。唯一fixture为`nativePlayerMessageCommandsCaptureResultsAcrossLibraryRoundTrip`，Cache方法为`oldAndUnknownCacheFormatsProduceARecompileDiagnostic`，日志前缀`mcfpp-native-player-message-command-results-`。标准库SUCCESSFUL in12s、Project0/0；joint原生exit0、worker49正常结束、SUCCESSFUL in28s。LibFieldAccess XML `2026-10-07T06:30:55.781Z` 与Cache XML `2026-10-07T06:30:54.980Z` 均1/0/0/0；source/fresh Project0/9118与0/9119，negative6/9119（player-selector guard与未发布结果级联）。MCFL57三份bin均478528 bytes、header `4c46434d39000000`、SHA256 `3AF8C24128274596ECE416E7353C945F1FAA34C5EAB7627D32D23D7B60EB53D6`。
 

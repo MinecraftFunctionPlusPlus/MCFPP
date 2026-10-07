@@ -1,6 +1,6 @@
-# 下一阶段：迁移实体属性查询与移除命令（阶段128）
+# 下一阶段：补齐枚举编译期快照与恢复（阶段129）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–127完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及实体命令路径的限定迁移；当前库格式MCFL57，Std外剩余4个Java类、19个CommandReturn注解及7个旧void wrapper。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–128完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及实体命令路径的限定迁移；当前库格式MCFL58，Std外剩余3个Java类、9个CommandReturn注解及7个旧void wrapper。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -144,11 +144,13 @@ BossBar的add/remove/listAll/setColor/setName/setVisiblePlayers/setStyle七个�
 
 新语言参数为`entity,string`，caller为`entity`，结果为`mcfpp.minecraft.std:CommandResult`。sender的player限制是项目API选择；固定26.3命令树只要求targets为multiple players。消息沿既有string宏参数路径，不转为JSON。
 
-### 阶段 128 计划：实体属性接口
+### 阶段 128：实体属性查询与移除命令（已限定验证）
 
-清理Entity/Player两组`getMembers`的共享host属性注入，并删除hidden `AttributeData`；其parent.parent强转无法取得合法receiver，此处取消旧宿主入口，不称等价迁移。新增`EntityAttributeData`四个单context qualified结果入口：`getAttributeBase(string,float)`、`getAttribute(string,float)`、`removeAttributeModifier(string,mcfpp.minecraft.other:AttributeModifier)`、`getAttributeModifier(string,mcfpp.minecraft.other:AttributeModifier,float)`；移除对应旧方法，通过`EntityData`第十个`@From`挂接。
+清理Entity/Player两组`getMembers`的旧host属性注入并删除hidden `AttributeData`；这是取消失效宿主入口，不称等价迁移。四个受测单context入口处理attribute base/get与modifier remove/get，通过`EntityData`新增的`@From`接入。fixture/fresh验证四条命令、参数来源与负向selector/DTO；modifier从实际`AttributeModifier.id`字段读取。不覆盖动态double或world行为。MCFL57→58。
 
-attribute使用显式string资源id，modifier读取真实`AttributeModifier.id`字段；actual receiver必须为single `SelectorVar`，guard先于capture。保留`setAttributeBase`/`addAttributeModifier`与四坐标tp。一个普通Box fixture计划以动态id、Modifier DTO和显式完整scale 1.0覆盖三个查询、modifier删除、`@a`及DTO负例；不涉及double amount、未知float或world结果。MCFL57→58，尚未实现或验证。
+### 阶段 129 计划：闭合枚举编译期快照
+
+当前`EnumMember`宿主属性不在`CompilerValue`快照范围，普通Modifier参数不能自动变成readonly。已核实仅保存`Typed(enumTypeId, Integral(ordinal))`会在snapshotTag递归/host commit中误编码。计划使用闭合Record：保存完整enum TypeId及`{ordinal: Integral, data: immutable SNBT}`；snapshotTag遇枚举声明的Typed值时只投影data，恢复时按实际枚举查找合法ordinal并校验data一致。Unknown维持Unknown，不传全局types registry、不新增Value种类、不让host EnumMember逃逸。是否需要MCFL升级按最终serialized ABI判断；尚未实现或验证。
 
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
