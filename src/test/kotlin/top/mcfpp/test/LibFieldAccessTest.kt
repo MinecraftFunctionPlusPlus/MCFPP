@@ -5223,6 +5223,98 @@ class LibFieldAccessTest {
         check(main)
     }
 
+    @Test
+    fun nativeItemPredicateBuildersCaptureFieldsAcrossLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = "func main(){var box=Box();dynamic var result=box.observe(\"fixture:component\",4,({value:7} as nbt));}"
+        write("""
+            namespace fixture.fields;
+            import mcfpp.minecraft.item:*;
+            data Box {
+                func observe(id as string,count as int,payload as nbt)->int {
+                    var damage=DamagePredicate(); damage.damage=2;
+                    var contained=ItemPredicate.hasComponent(id);
+                    var matched=ItemPredicate.componentMatches(id,payload);
+                    var nested=ItemPredicate.subPredicate(id,damage);
+                    var counted=ItemPredicate.hasCount();
+                    var exact=ItemPredicate.count(count);
+                    var ranged=ItemPredicate.count(1 .. 3);
+                    var predicate=ItemPredicate();
+                    predicate.hasComponent(id); predicate.componentMatches(id,payload);
+                    predicate.subPredicate(id,damage); predicate.hasCount(); predicate.count(count);
+                    var copied=predicate.count(1 .. 3);
+                    predicate.hasCount(); damage.damage=99;
+                    /data modify storage fixture:observed contained set from storage mcfpp:system stack_frame[0].contained
+                    /data modify storage fixture:observed matched set from storage mcfpp:system stack_frame[0].matched
+                    /data modify storage fixture:observed nested set from storage mcfpp:system stack_frame[0].nested
+                    /data modify storage fixture:observed counted set from storage mcfpp:system stack_frame[0].counted
+                    /data modify storage fixture:observed exact set from storage mcfpp:system stack_frame[0].exact
+                    /data modify storage fixture:observed ranged set from storage mcfpp:system stack_frame[0].ranged
+                    /data modify storage fixture:observed originalParts set from storage mcfpp:system stack_frame[0].predicate.parts
+                    /data modify storage fixture:observed copiedParts set from storage mcfpp:system stack_frame[0].copied.parts
+                    return 7;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val observe = (main.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("observe").single()
+            assertTrue(observe.compiledFunctions.isEmpty())
+            val namespace = assertNotNull(GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.item"))
+            val names = listOf("contained", "matched", "nested", "counted", "exact", "ranged")
+            val types = listOf("ContainPart", "MatchPart", "SubPredicatePart", "CountPart", "CountMatchPart", "CountRangePart")
+            for ((name, type) in names.zip(types)) {
+                assertSame(namespace.scope.getTemplate(type), assertIs<DataTemplateObject>(observe.scope.getVar(name)).templateType)
+            }
+            val predicate = assertIs<DataTemplateObject>(observe.scope.getVar("predicate"))
+            val copied = assertIs<DataTemplateObject>(observe.scope.getVar("copied"))
+            assertNotEquals(assertNotNull(predicate.storageBinding).place, assertNotNull(copied.storageBinding).place)
+            val machine = execute(main, output)
+            assertEquals(7, machine.read(main.scope.getVar("result") as MCInt))
+            val expected = names.map { assertIs<top.mcfpp.nbt.tags.CompoundTag>(machine.readNbt("fixture:observed", it)) }
+            fun part(index: Int, value: top.mcfpp.nbt.tags.CompoundTag) {
+                if (index in listOf(0, 1, 2)) assertEquals("fixture:component", assertIs<top.mcfpp.nbt.tags.primitive.StringTag>(value.get("predicate")).value)
+                when (index) {
+                    1 -> assertEquals(7, assertIs<top.mcfpp.nbt.tags.primitive.IntTag>(assertIs<top.mcfpp.nbt.tags.CompoundTag>(value.get("value")).get("value")).value)
+                    2 -> assertEquals(2, assertIs<top.mcfpp.nbt.tags.primitive.IntTag>(assertIs<top.mcfpp.nbt.tags.CompoundTag>(value.get("value")).get("damage")).value)
+                    3 -> assertEquals(top.mcfpp.nbt.tags.CompoundTag(), value)
+                    4 -> assertEquals(4, assertIs<top.mcfpp.nbt.tags.primitive.IntTag>(value.get("count")).value)
+                    5 -> {
+                        val range = assertIs<top.mcfpp.nbt.tags.CompoundTag>(value.get("count"))
+                        assertEquals(1, assertIs<top.mcfpp.nbt.tags.primitive.IntTag>(range.get("left")).value)
+                        assertEquals(3, assertIs<top.mcfpp.nbt.tags.primitive.IntTag>(range.get("right")).value)
+                    }
+                }
+            }
+            expected.forEachIndexed(::part)
+            val original = assertIs<top.mcfpp.nbt.tags.collection.ListTag>(machine.readNbt("fixture:observed", "originalParts"))
+            val copy = assertIs<top.mcfpp.nbt.tags.collection.ListTag>(machine.readNbt("fixture:observed", "copiedParts"))
+            assertEquals(7, original.size); assertEquals(6, copy.size)
+            for (index in expected.indices) {
+                assertEquals(expected[index], original[index]); assertEquals(expected[index], copy[index])
+            }
+            assertEquals(top.mcfpp.nbt.tags.CompoundTag(), original[6])
+        }
+        for ((type, caller, effect) in listOf(
+            Triple(top.mcfpp.mni.minecraft.ItemPredicateObjectData::class.java, "void", top.mcfpp.mni.annotation.NoExternalWrites::class.java),
+            Triple(top.mcfpp.mni.minecraft.ItemPredicateData::class.java, "ItemPredicate", top.mcfpp.mni.annotation.WritesReceiver::class.java)
+        )) {
+            val methods = type.declaredMethods.filter { it.isAnnotationPresent(top.mcfpp.annotations.MNIFunction::class.java) }
+            assertEquals(6, methods.size)
+            for (method in methods) {
+                assertEquals(listOf(top.mcfpp.mni.NativeCallContext::class.java), method.parameterTypes.toList())
+                val annotation = method.getAnnotation(top.mcfpp.annotations.MNIFunction::class.java)
+                assertEquals(caller, annotation.caller)
+                assertEquals(if (caller == "void") "ItemPredicatePart" else "ItemPredicate", annotation.returnType)
+                assertTrue(method.isAnnotationPresent(effect) || caller == "void" && type.isAnnotationPresent(effect))
+            }
+            assertEquals(2, methods.count { val annotation = it.getAnnotation(top.mcfpp.annotations.MNIFunction::class.java); annotation.identifier == "count" || it.name == "count" })
+        }
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

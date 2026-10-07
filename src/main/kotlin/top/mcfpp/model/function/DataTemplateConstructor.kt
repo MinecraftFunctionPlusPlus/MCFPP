@@ -53,7 +53,7 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
         for ((name, expression) in data.preInit) {
             if (data !is ObjectCompoundData && name in data.deferredFields) continue
             val errors = Project.errorCount
-            val value = MCFPPExprVisitor().visitExpression(expression)
+            val value = MCFPPExprVisitor().visitExpression(expression, data.scope.getVar(name)?.type)
             if (value is UnknownVar || value.isError || Project.errorCount != errors) continue
             TypeUsage.ordinaryDiagnostic(value.type, ValueSnapshot.of(value))?.let {
                 LogProcessor.error(it)

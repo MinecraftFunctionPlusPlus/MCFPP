@@ -35,7 +35,9 @@ import top.mcfpp.nbt.tags.primitive.LongTag
 import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.type.MCFPPBaseType
 import top.mcfpp.type.MCFPPEnumType
+import top.mcfpp.type.MCFPPListType
 import top.mcfpp.type.MCFPPType
+import org.antlr.v4.runtime.ParserRuleContext
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.NBTUtil.toNBTByte
 import top.mcfpp.util.NBTUtil.toNBTDouble
@@ -54,6 +56,17 @@ class MCFPPExprVisitor(
 ): mcfppParserBaseVisitor<Var<*>>() {
 
     private var currSelector : Var<*>? = null
+    private var expectedLiteral: Pair<Int, MCFPPType>? = null
+
+    fun visitExpression(ctx: mcfppParser.ExpressionContext, expectedType: MCFPPType?): Var<*> {
+        fun literalToken(node: ParserRuleContext): Int? = when {
+            node is mcfppParser.NbtValueContext && node.nbtList() != null -> node.start.tokenIndex
+            else -> node.children.orEmpty().filterIsInstance<ParserRuleContext>().singleOrNull()?.let(::literalToken)
+        }
+        val previous = expectedLiteral
+        expectedLiteral = expectedType?.let { type -> literalToken(ctx)?.let { it to type } }
+        return try { visitExpression(ctx) } finally { expectedLiteral = previous }
+    }
 
     /**
      * 计算一个复杂表达式
@@ -807,7 +820,8 @@ class MCFPPExprVisitor(
                 valueList.add(top.mcfpp.analysis.StorageAccess.capture(visit(expr)).also { processVarCache.add(it) })
             }
             val re = if(valueList.isEmpty()){
-                NBTListConcrete.getEmpty()
+                val expected = expectedLiteral?.takeIf { it.first == ctx.start.tokenIndex }?.second as? MCFPPListType
+                if (expected != null) NBTListConcrete(valueList, "", expected.generic.single()) else NBTListConcrete.getEmpty()
             }else{
                 val types = valueList.map { it.type }.distinctBy { it.typeId }
                 val elementType = if (types.size == 1) types.single() else top.mcfpp.type.MCFPPUnionType(*types.toTypedArray())

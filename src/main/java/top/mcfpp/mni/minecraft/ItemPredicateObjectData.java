@@ -1,45 +1,40 @@
 package top.mcfpp.mni.minecraft;
 
 import top.mcfpp.annotations.MNIFunction;
-import top.mcfpp.core.lang.obj.DataTemplateObject;
-import top.mcfpp.core.lang.MCInt;
-import top.mcfpp.core.lang.obj.StaticMemberView;
-import top.mcfpp.core.lang.RangeVar;
-import top.mcfpp.core.lang.nbt.MCString;
-import top.mcfpp.core.lang.nbt.NBTBasedData;
-import top.mcfpp.model.compound.DataTemplate;
-import top.mcfpp.util.ValueWrapper;
+import top.mcfpp.backend.NativePredicateOperations;
+import top.mcfpp.mni.NativeCallContext;
+import top.mcfpp.mni.annotation.NoExternalWrites;
 
+@NoExternalWrites
 public class ItemPredicateObjectData {
-
-    @MNIFunction(caller = "ItemPredicate", normalParams = {"string"}, returnType = "ItemPredicatePart")
-    public static void hasComponent(MCString id, StaticMemberView caller, ValueWrapper<DataTemplateObject> re){
-        re.set(DataTemplate.newInstance("mcfpp.minecraft.item", "ContainPart"));
+    @MNIFunction(normalParams = {"string"}, returnType = "ItemPredicatePart")
+    public static void hasComponent(NativeCallContext context) {
+        NativePredicateOperations.INSTANCE.containPart(context);
     }
 
-    @MNIFunction(caller = "ItemPredicate", normalParams = {"string", "nbt"}, returnType = "ItemPredicatePart")
-    public static void componentMatches(MCString id, NBTBasedData value, DataTemplateObject caller, ValueWrapper<DataTemplateObject> re){
-        re.set(DataTemplate.newInstance("mcfpp.minecraft.item", "MatchPart"));
+    @MNIFunction(normalParams = {"string", "nbt"}, returnType = "ItemPredicatePart")
+    public static void componentMatches(NativeCallContext context) {
+        NativePredicateOperations.INSTANCE.matchPart(context);
     }
 
-
-    @MNIFunction(caller = "ItemPredicate", normalParams = {"string","ItemSubPredicate"}, returnType = "ItemPredicate")
-    public static void subPredicate(MCString id, DataTemplateObject value , DataTemplateObject caller, ValueWrapper<DataTemplateObject> re){
-        re.set(DataTemplate.newInstance("mcfpp.minecraft.item", "SubPredicatePart"));
+    @MNIFunction(normalParams = {"string", "ItemSubPredicate"}, returnType = "ItemPredicatePart")
+    public static void subPredicate(NativeCallContext context) {
+        NativePredicateOperations.INSTANCE.subPredicatePart(context);
     }
 
-    @MNIFunction(caller = "ItemPredicate", returnType = "ItemPredicatePart")
-    public static void hasCount(DataTemplateObject caller, ValueWrapper<DataTemplateObject> re){
-        re.set(DataTemplate.newInstance("mcfpp.minecraft.item", "CountPart"));
+    @MNIFunction(returnType = "ItemPredicatePart")
+    public static void hasCount(NativeCallContext context) {
+        NativePredicateOperations.INSTANCE.countPart(context);
     }
 
-    @MNIFunction(caller = "ItemPredicate", normalParams = {"int"}, returnType = "ItemPredicatePart")
-    public static void count(MCInt value, DataTemplateObject caller, ValueWrapper<DataTemplateObject> re){
-        re.set(DataTemplate.newInstance("mcfpp.minecraft.item", "CountMatchPart"));
+    @MNIFunction(normalParams = {"int"}, returnType = "ItemPredicatePart")
+    public static void count(NativeCallContext context) {
+        NativePredicateOperations.INSTANCE.countMatchPart(context);
     }
 
-    @MNIFunction(caller = "ItemPredicate", normalParams = {"range"}, returnType = "ItemPredicate")
-    public static void count(RangeVar count, DataTemplateObject caller, ValueWrapper<DataTemplateObject> re){
-        re.set(DataTemplate.newInstance("mcfpp.minecraft.item", "CountRangePart"));
+    @MNIFunction(identifier = "count", normalParams = {"range"}, returnType = "ItemPredicatePart")
+    public static void countRange(NativeCallContext context) {
+        NativePredicateOperations.INSTANCE.countRangePart(context);
     }
+
 }
