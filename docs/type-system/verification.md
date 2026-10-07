@@ -1,8 +1,28 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段139，MCFL68；旧CommandReturn链引用/注解与旧void wrapper均为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段140，MCFL69；旧CommandReturn链引用/注解与旧void wrapper均为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
 
-## 当前阶段139：移除Any旧宿主方法（已限定验证）
+## 当前阶段140：迁移ItemPredicate并集操作（已限定验证）
+
+`ItemPredicatePartData.Or`使用既有`NativePredicateOperations.orPart`与`NoExternalWrites`；原生构造分别赋`predicate1`和`predicate2`后publish。新增`MCFPPDataTemplateType.instanceData`计算getter通过`tryResolve`取得实际template，无backing field或新增schema字段。fixture显式父类型视图，检查canonical Or、无compiledFunctions、joined/copy独立存储及两个`CountMatchPart`字段。
+
+stdlib native exit0/SUCCESSFUL8s、Project0/0。joint1 native exit1/FAILED23s，Executors46/47正常结束；Cache XML `2026-10-07T13:37:10.811Z` 1/0/0/0，fixture XML `13:37:12.896Z` 1/1/0/0，source Project2/9118：并集操作不支持，随后`joined`未定义。joint2仅fixture复查，native exit1/FAILED16s、Executor48正常，XML `13:44:38.497Z` 1/1/0/0；显式父视图操作仍未解析，source Project2/9118。
+
+增加computed getter后joint3仅fixture复查成功，native exit0/SUCCESSFUL24s、Executor49正常；XML `2026-10-07T13:50:27.129Z` 1/0/0/0，source/fresh Project0/9118、0/9119。source/fresh实际磁盘结果为joined/copy各保留`4/9`，修改原left/right后为`91/92`；返回7及execute helper的frame0检查通过。Cache只在joint1运行。日志为`mcfpp-native-item-predicate-or-stdlib.log`、`-joint.log`、`-joint2.log`、`-joint3.log`。
+
+三份bin一致：MCFL69、488038 bytes，header `4c46434d45000000`，SHA256 `C0A270DD9960D2ED16C349D6706D8BCB1DD60FA007D162FE00659EC1033B6C86`。五个源码/测试路径、bin与四份文档共10路径；未验证隐式子类型操作符继承、旧formatter/factory、fullcheck或Minecraft world。
+
+| 自评维度 | 分数 | 本阶段证据与边界 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 区分两轮失败、最终fixture复查及Cache仅首轮通过。 |
+| 完整性 | 3/5 | 覆盖并集复制路径；隐式继承及whole17仍未完成。 |
+| 清晰性 | 4/5 | 说明computed getter解决可达性且未增加schema字段。 |
+| 可操作性 | 4/5 | 保留日志轮次、XML、项目计数及bin身份。 |
+| 简洁性 | 4/5 | 仅列受测路径与未覆盖边界。 |
+
+平均3.8/5；whole17仍未完成。
+
+## 历史阶段139：移除Any旧宿主方法（已限定验证）
 
 移除`MCAnyData.getJavaVar`、`getDefault`、`equalNull`和`MCAnyConcreteData.getJavaVar`，删除`MCAnyConcreteData`类；保留共享`toText`单context路径。这不是nullable协议的等价替代，也没有新增runtime标签或宿主桥框架。
 

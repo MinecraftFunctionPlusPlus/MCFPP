@@ -4,7 +4,13 @@
 
 ## 当前进度
 
-### 阶段 139：移除 Any 的旧宿主方法（已限定验证）
+### 阶段 140：迁移 ItemPredicate 的并集操作（已限定验证）
+
+`ItemPredicatePartData.Or`使用既有`NativePredicateOperations.orPart`；新增`MCFPPDataTemplateType.instanceData`计算getter解析真实template，不增加backing field或wire。fixture显式转成父视图，验证joined与copy的两个`CountMatchPart`字段保持独立，后续left/right写入91/92不串值。
+
+stdlib SUCCESSFUL8s/Project0/0。joint1失败23s，producer不支持`CountMatchPart | CountMatchPart`并报告`joined`未定义，Project2/9118；Cache XML `2026-10-07T13:37:10.811Z`通过。joint2仅fixture复查仍失败16s、Executor48正常，XML `13:44:38.497Z` 1/1/0/0，同一父视图并集操作未解析。新增computed getter后joint3仅fixture复查成功24s、Executor49正常，XML `2026-10-07T13:50:27.129Z` 1/0/0/0，source/fresh 0/9118、0/9119；joined/copy磁盘值4/9，原值91/92，return7/frame0通过。Cache仅joint1运行。MCFL68→69；三bin488038 bytes、SHA256 `C0A270DD9960D2ED16C349D6706D8BCB1DD60FA007D162FE00659EC1033B6C86`。详见verification.md。
+
+### 历史阶段 139：移除 Any 的旧宿主方法（已限定验证）
 
 退役`MCAnyData.getJavaVar`、`getDefault`、`equalNull`与`MCAnyConcreteData.getJavaVar`，删除`MCAnyConcreteData`，保留共享`toText`单context路径。这不提供nullable等价替代，也不增加runtime标签或宿主框架。
 
@@ -122,7 +128,7 @@ stdlib SUCCESSFUL 11s、Project0/0；joint worker40正常、FAILED19s，LibField
 
 stdlib1成功11s/Project0/0；首轮producer因`ENTITY`保留字导入解析失败，Cache XML `2026-10-07T03:22:31.233Z` 1/0/0/0为MCFL48唯一Cache验证。grammar修复后stdlib2成功26s/0/0；final2 producer189/9118，final3 producer9/9118。final4重复执行并覆盖，当前仅保留worker37、FAILED6s及XML `2026-10-07T03:52:30.253Z` 1/1/0/0、producer8/9118；worker36首轮日志/XML已丢失。final5-debug worker38 FAILED28s，XML `2026-10-07T04:04:19.204Z` 1/1/0/0、producer8/9118，诊断显示bare Selector绑定后value仍为Unknown。最终修复后final6 worker39正常、SUCCESS39s，XML `2026-10-07T04:08:58.285Z` 1/0/0/0；source/fresh Project0/9118与0/9119，negative 2/9119，selector guard与未发布`listTag`结果诊断按预期通过。未覆盖predicate selector、world执行、frame0或whole17。
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段139移除Any四个旧宿主方法及`MCAnyConcreteData`，保留共享text路径，MCFL68；旧CommandReturn链引用与注解为0、旧void wrapper为0，whole17仍未完成。阶段138迁移泛型类型联合接口，MCFL67；阶段137迁移Random/RandomObject四个整数结果入口，MCFL66；阶段136退役Range迭代宿主接口，135退役旧CommandReturn载体/helper，134坐标tp及133坐标成员写入均已限定验证。下一步阶段140迁移ItemPredicate并集操作。阶段127 Player消息命令已完成限定验证，MCFL57。阶段126 entity-target tp已完成限定验证，MCFL56。阶段125 Player状态与ride命令已完成限定验证，MCFL55；阶段124 Player advancement十个入口已完成限定验证，MCFL54；阶段123 Player XP六个入口已完成限定验证，MCFL53；阶段122 stopRide入口已完成限定验证，MCFL52；阶段121 Entity effect授予两个入口已完成限定验证，MCFL51；阶段120 EntityEffect两个命令入口已完成限定验证，MCFL50；阶段119 Team加入/离开两个命令入口已完成限定验证，MCFL49；阶段118 EntityTag三个结果入口已完成限定验证，MCFL48；阶段117 Random命令结果入口已完成限定验证，MCFL47；阶段116 WorldObject命令入口已完成限定验证，MCFL46；阶段115 BossBar命令入口已完成限定验证，MCFL45；阶段114 Worldborder命令入口已完成限定验证，MCFL43；阶段113 Op/Recipe玩家命令入口已完成限定验证，MCFL42；阶段112 Team receiver结果入口已完成限定验证，MCFL41；阶段111 Datapack/Debug结果入口已完成限定验证，MCFL40；阶段110提交`17313ad`，阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段140接通ItemPredicate并集原生操作，MCFL69；旧CommandReturn链引用与注解为0、旧void wrapper为0，whole17仍未完成。阶段139移除Any四个旧宿主方法及`MCAnyConcreteData`，保留共享text路径，MCFL68；阶段138迁移泛型类型联合接口，MCFL67；阶段137迁移Random/RandomObject四个整数结果入口，MCFL66；阶段136退役Range迭代宿主接口，135退役旧CommandReturn载体/helper，134坐标tp及133坐标成员写入均已限定验证。下一步阶段141退役ResourceID旧宿主桥。阶段127 Player消息命令已完成限定验证，MCFL57。阶段126 entity-target tp已完成限定验证，MCFL56。阶段125 Player状态与ride命令已完成限定验证，MCFL55；阶段124 Player advancement十个入口已完成限定验证，MCFL54；阶段123 Player XP六个入口已完成限定验证，MCFL53；阶段122 stopRide入口已完成限定验证，MCFL52；阶段121 Entity effect授予两个入口已完成限定验证，MCFL51；阶段120 EntityEffect两个命令入口已完成限定验证，MCFL50；阶段119 Team加入/离开两个命令入口已完成限定验证，MCFL49；阶段118 EntityTag三个结果入口已完成限定验证，MCFL48；阶段117 Random命令结果入口已完成限定验证，MCFL47；阶段116 WorldObject命令入口已完成限定验证，MCFL46；阶段115 BossBar命令入口已完成限定验证，MCFL45；阶段114 Worldborder命令入口已完成限定验证，MCFL43；阶段113 Op/Recipe玩家命令入口已完成限定验证，MCFL42；阶段112 Team receiver结果入口已完成限定验证，MCFL41；阶段111 Datapack/Debug结果入口已完成限定验证，MCFL40；阶段110提交`17313ad`，阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效。重构不要求兼容旧 `.mcfpp` 写法。
 
 ### 阶段 117：Random命令结果接口（已限定验证）
 

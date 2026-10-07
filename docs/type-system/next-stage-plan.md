@@ -1,6 +1,6 @@
-# 下一阶段：迁移 ItemPredicate 的并集操作（阶段140）
+# 下一阶段：退役 ResourceID 的旧宿主桥（阶段141）
 
-阶段87普通值位置type拒绝规则继续生效；阶段129已移除语言层 `T!` 后缀。阶段88–139完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及实体命令路径的限定迁移；当前库格式MCFL68，旧 `CommandReturn` 类型/注解与旧void wrapper均为0。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效；阶段129已移除语言层 `T!` 后缀。阶段88–140完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及实体命令路径的限定迁移；当前库格式MCFL69，旧 `CommandReturn` 类型/注解与旧void wrapper均为0。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -200,9 +200,15 @@ BossBar的add/remove/listAll/setColor/setName/setVisiblePlayers/setStyle七个�
 
 退役`MCAnyData.getJavaVar`、`getDefault`、`equalNull`及`MCAnyConcreteData.getJavaVar`四个旧方法，并删除`MCAnyConcreteData`类；保留共享`toText`单context成员路径。这不是nullable协议的等价迁移，不新增runtime标签或宿主桥框架。stdlib SUCCESSFUL in1m4s/Project0/0；text与Cache两项同轮SUCCESSFUL in48s，Executors44/45正常结束。Cache XML `2026-10-07T13:19:09.271Z`、text XML `13:19:11.425Z`均1/0/0/0；text source/fresh 0/9119、0/9120。六项磁盘组件断言及返回7/frame0通过。未覆盖直接语言调用`Any.toText`、nullable等价支持或world执行。MCFL67→68，三bin488120 bytes，header `4c46434d44000000`，SHA256 `AAD3B6D66FE33D9F6946679B31E2D0ACF239DD2AF83C2C032C49EEF85681AF5B`。详见verification.md。
 
-### 阶段 140 计划：迁移 ItemPredicate 的并集操作
+### 阶段 140：迁移 ItemPredicate 的并集操作（已限定验证）
 
-仅迁移`ItemPredicatePartData.Or`到既有`NativePredicateOperations.orPart`及`NoExternalWrites`路径。原生实现用`buildUnConcrete`创建canonical Or结果，通过`bindIncomingParameter`建立未知值绑定后初始化root，再分别赋`predicate1`和`predicate2`，调用既有publish；修正旧实现第二次赋值误写`predicate1`的问题。测试应确认joined与普通copy仍保留两个不同`CountMatchPart`，并验证后续分别修改左右值时不串改。不运行旧formatter/factory，也不新增宿主模型。预计MCFL68→69，按实际影响重建标准库并运行限定fixture与Cache；尚未实施或验证。
+`ItemPredicatePartData.Or`接入既有`NativePredicateOperations.orPart`与`NoExternalWrites`路径。原生实现建立canonical Or、绑定入参并初始化root，分别赋值`predicate1`/`predicate2`再publish；`MCFPPDataTemplateType.instanceData`的计算getter经`tryResolve`返回实际template，使原先不可达的操作可解析，无新增backing field或schema。fixture显式转到父视图，验证joined与copy保持两个独立`CountMatchPart`，两边后续写91/92不互串。
+
+stdlib SUCCESSFUL8s/Project0/0。joint1失败23s（Executors46/47正常）：producer报`CountMatchPart | CountMatchPart`不支持及`joined`未定义，Project2/9118；Cache XML `2026-10-07T13:37:10.811Z` 1/0/0/0通过。joint2仅复查fixture仍失败16s（Executor48正常），父视图`ItemPredicatePart | ItemPredicatePart`同样不支持，XML `13:44:38.497Z` 1/1/0/0、Project2/9118。新增computed getter后，joint3仅复查fixture成功24s（Executor49正常），XML `2026-10-07T13:50:27.129Z` 1/0/0/0、source/fresh 0/9118和0/9119。source/fresh实际磁盘结果为joined及copy各4/9，原left/right改写为91/92，返回7且frame0检查通过。Cache只在joint1运行；没有重测Cache、旧formatter、world或fullcheck。阶段140涉及5个源码/测试路径、bin及四份文档，共10路径。MCFL68→69；三bin 488038 bytes、header `4c46434d45000000`，SHA256 `C0A270DD9960D2ED16C349D6706D8BCB1DD60FA007D162FE00659EC1033B6C86`。详见verification.md。
+
+### 阶段 141 计划：退役 ResourceID 的旧宿主桥
+
+移除`ResourceID`及`DataObject`上旧`toCommandPart`宿主入口，改走内部formatter：有限DTO使用canonical `ResourceID.id`；无真实覆盖的`DataObject`调用父类实现。保留Area、Slot、ItemPredicate的现有覆盖。将`pool.id`的source/fresh宏字段来源断言加入既有void命令fixture；不新增registry、HostCommandValue或command error协议。删除两个原生方法的缓存签名，预计MCFL69→70；重建标准库并运行限定fixture与Cache，尚未实施或验证。
 
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。

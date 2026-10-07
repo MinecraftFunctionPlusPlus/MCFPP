@@ -22,6 +22,12 @@ open class MCFPPDataTemplateType(
 
     override val typeId: TypeId get() = TypeId.Declaration(if (template.isInterface) "interface" else "template", template.namespace, template.identifier)
 
+    override val instanceData: DataTemplate
+        get() {
+            tryResolve()
+            return template
+        }
+
     override val objectData: CompoundData
         get() = template.companionObject?: CompoundData(template.identifier, template.namespaceID)
 

@@ -5168,6 +5168,52 @@ class LibFieldAccessTest {
         assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("tp ") || "set value {}" in it.toString() })
     }
 
+    @Test
+    fun nativeItemPredicatePartsCopyBothOperandsAcrossLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = "func main(){var box=Box();dynamic var result=box.observe(4,9);}"
+        write("""
+            namespace fixture.fields;
+            import mcfpp.minecraft.item:*;
+            data Box {
+                func observe(first as int,second as int)->int {
+                    var left=CountMatchPart(); var right=CountMatchPart();
+                    left.count=first; right.count=second;
+                    var joined=(left as ItemPredicatePart)|(right as ItemPredicatePart); var copy=joined;
+                    left.count=91; right.count=92;
+                    /data modify storage fixture:observed joinedFirst set from storage mcfpp:system stack_frame[0].joined.predicate1.count
+                    /data modify storage fixture:observed joinedSecond set from storage mcfpp:system stack_frame[0].joined.predicate2.count
+                    /data modify storage fixture:observed copyFirst set from storage mcfpp:system stack_frame[0].copy.predicate1.count
+                    /data modify storage fixture:observed copySecond set from storage mcfpp:system stack_frame[0].copy.predicate2.count
+                    /data modify storage fixture:observed leftCount set from storage mcfpp:system stack_frame[0].left.count
+                    /data modify storage fixture:observed rightCount set from storage mcfpp:system stack_frame[0].right.count
+                    return 7;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val observe = (main.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("observe").single()
+            assertTrue(observe.compiledFunctions.isEmpty())
+            val canonical = assertNotNull(GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.item")).scope.getTemplate("OrItemPredicatePart")
+            val joined = assertIs<DataTemplateObject>(observe.scope.getVar("joined"))
+            val copy = assertIs<DataTemplateObject>(observe.scope.getVar("copy"))
+            assertSame(canonical, joined.templateType)
+            assertSame(canonical, copy.templateType)
+            assertNull(ValueSnapshot.of(joined))
+            assertNull(ValueSnapshot.of(copy))
+            assertNotEquals(assertNotNull(joined.storageBinding).place, assertNotNull(copy.storageBinding).place)
+            val machine = execute(main, output)
+            assertEquals(7, machine.read(main.scope.getVar("result") as MCInt))
+            for ((name, expected) in listOf("joinedFirst" to 4, "joinedSecond" to 9, "copyFirst" to 4, "copySecond" to 9, "leftCount" to 91, "rightCount" to 92)) {
+                assertEquals(expected, assertIs<top.mcfpp.nbt.tags.primitive.IntTag>(machine.readNbt("fixture:observed", name)).value, name)
+            }
+        }
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")
