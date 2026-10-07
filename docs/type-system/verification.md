@@ -1,8 +1,26 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段144，MCFL72；旧CommandReturn链引用/注解与旧void wrapper均为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段145，MCFL73；旧CommandReturn链引用/注解与旧void wrapper均为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
 
-## 当前阶段144：退役 SlotWithWildcard 的旧宿主格式化入口（已限定验证）
+## 当前阶段145：清理 Team 与 ItemPredicate 的旧宿主格式化入口（已限定验证）
+
+删除Team九个不可从语言调用的旧`MNIMutator`包装和inline formatter，保留三个单context函数`register`、`unregister`、`clear`及字段、构造器和枚举。删除`ItemPredicateData.toCommandPart`与仅供它使用的`partCommand`；保留六个实例操作、全部工厂及并集实现，不宣称完整谓词命令格式化已迁移。`DataObjectData`及Area、Slot等其他base formatter保留。四个生产路径，无新测试；MCFL72→73。
+
+标准库native exit0/SUCCESS10s、Project0/0；joint native exit0/SUCCESS32s、Executors58/59正常。Cache XML `2026-10-07T15:30:49.946Z` 1/0/0/0，LibFieldAccess XML `15:30:52.139Z` 3/0/0/0。Team receiver、EntityTeam与ItemPredicate fixture各自source/fresh Project均为0/9118、0/9119；EntityTeam negative为2/9119，分别报告`Entity team commands require a selector receiver`及`Native function 'leaveTeam' did not publish its result`。ItemPredicate并集fixture source/fresh磁盘joined/copy为4/9，left/right后续写入91/92，返回7/frame0。Team fixture只检查导出结果，不是world执行或frame0检查。日志`mcfpp-retire-team-item-predicate-host-formatter-stdlib.log`与`-joint.log`。
+
+三份bin均为MCFL73、474621 bytes，header `4c46434d49000000`，SHA256 `281D73CCC30DE6A05F6522D6DD0F5AA44BD3931F7E4016CC884E2FEBD01B945F`。四个生产文件、bin及四份文档共9路径。
+
+| 自评维度 | 分数 | 本阶段证据与边界 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 区分不可达Team包装和删除失败的ItemPredicate formatter，保留其余API。 |
+| 完整性 | 3/5 | Team、ItemPredicate与Cache限定回归通过；whole17仍未完成。 |
+| 清晰性 | 4/5 | 分清导出检查、NBT结果与未验证的world行为。 |
+| 可操作性 | 4/5 | 提供测试、日志、Executor、XML、项目计数及bin身份。 |
+| 简洁性 | 4/5 | 聚焦本阶段删除范围和剩余formatter边界。 |
+
+平均3.8/5；whole17仍ACTIVE未完成。
+
+## 历史阶段144：退役 SlotWithWildcard 的旧宿主格式化入口（已限定验证）
 
 删除旧宿主类`SlotWithWildcardData`及`Slot.mcfpp`唯一`@From`注册。SlotWithWildcard类型仅有定义与七处静态初始化，无普通参数、别名或父类型消费者；保留该类型、private constructor、type字段、七个静态`SlotWildcard`值以及Slot本身/formatter。不是通配槽位命令迁移；无新测试。
 

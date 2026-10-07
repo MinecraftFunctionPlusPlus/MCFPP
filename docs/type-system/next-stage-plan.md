@@ -1,6 +1,6 @@
-# 下一阶段：清理 Team 与 ItemPredicate 的旧宿主格式化入口（阶段145）
+# 下一阶段：迁移 ItemPredicate 实例与静态工厂操作（阶段146）
 
-阶段87普通值位置type拒绝规则继续生效；阶段129已移除语言层 `T!` 后缀。阶段88–144完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time、实体命令路径及受测nominal operator lookup；当前库格式MCFL72，旧 `CommandReturn` 类型/注解与旧void wrapper均为0。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效；阶段129已移除语言层 `T!` 后缀。阶段88–145完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time、实体命令路径及受测nominal operator lookup；当前库格式MCFL73，旧 `CommandReturn` 类型/注解与旧void wrapper均为0。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -226,11 +226,17 @@ stdlib SUCCESSFUL8s/Project0/0。joint1失败23s（Executors46/47正常）：pro
 
 stdlib native exit0/SUCCESS1m6s、Project0/0；joint native exit0/SUCCESS38s，Executors56/57正常。Cache XML `2026-10-07T15:13:36.217Z`、LibFieldAccess XML `15:13:38.141Z`均1/0/0/0；void fixture source/fresh Project为0/9118、0/9119，验证两条place宏及真实`pool.id`来源。没有Minecraft world或frame0验证。详见verification.md。
 
-### 阶段 145 计划：清理 Team 与 ItemPredicate 的旧宿主格式化入口
+### 阶段 145：清理 Team 与 ItemPredicate 的旧宿主格式化入口（已限定验证）
 
-删除`TeamData`九个不可从语言调用的旧`MNIMutator`包装及其专用imports，并删除`Team.mcfpp`旧inline formatter；保留三个单context函数`register`、`unregister`、`clear`、DTO字段、两个构造器和枚举。`CompoundData.injectedBy`只注册function/operator/getMembers；Team没有`getMembers`，普通字段通过`SimpleProperty`访问，因此这不是迁移九个setter语言API，也不新增Team modify或ResourceID继承。
+删除`TeamData`九个不可从语言调用的旧`MNIMutator`包装及其专用imports，并删除`Team.mcfpp`旧inline formatter；保留三个单context函数`register`、`unregister`、`clear`、DTO字段、两个构造器和枚举。`CompoundData.injectedBy`只注册function/operator/getMembers；Team没有`getMembers`，普通字段通过`SimpleProperty`访问，因此不是迁移九个setter语言API，也未新增Team modify或ResourceID继承。
 
-同阶段删除`ItemPredicateData.toCommandPart`与仅供它调用的`partCommand`；旧formatter虽已注册，却未写回返回值，且全main检索未发现typed命令消费者。保留六个已注册实例操作、静态工厂和并集实现；不宣称完整谓词命令格式化已迁移。共四个源码路径，缓存统一MCFL72→73；重建标准库并回归现有Team receiver、entity Team join-leave、ItemPredicate并集fixture与Cache四方法。尚未实施或验证。
+删除`ItemPredicateData.toCommandPart`及仅供它调用的`partCommand`；该formatter未写回返回值，且无typed命令消费者。保留六个已注册实例操作、全部工厂和并集实现；不宣称完整谓词命令格式化已迁移。四个生产路径，MCFL72→73。
+
+stdlib native0/SUCCESS10s、Project0/0；joint native0/SUCCESS32s、Executors58/59正常。Cache XML `2026-10-07T15:30:49.946Z`、LibFieldAccess XML `15:30:52.139Z`，分别1/0/0/0和3/0/0/0。三个fixture source/fresh均0/9118、0/9119，EntityTeam negative为2/9119（receiver selector guard及`leaveTeam`未发布结果）。ItemPredicate并集fixture磁盘joined/copy为4/9，源值后续写入91/92，返回7/frame0。Team相关fixture检查导出结果，不是world/frame0执行。详见verification.md。
+
+### 阶段 146 计划：迁移 ItemPredicate 实例与静态工厂操作
+
+迁移`ItemPredicateData`六个实例append操作和`ItemPredicateObjectData`六个静态工厂到单`NativeCallContext`，复用`NativePredicateOperations`及现有`ListOperations.add`。实例路径原地追加并publish receiver；静态路径以真实字段构建新`ItemPredicatePart`。保持`NoExternalWrites`/`withArguments`边界，静态工厂没有宿主static receiver；两种count overload使用唯一Java方法名并保留语言identifier。既有errorCount路径确保诊断后不发布成功结果，不改ListOperations API；范围字段沿用现有NBT `{left,right}`载荷。一个source/fresh fixture覆盖12项操作、field/list/copy；并回归现有Or及Cache。计划MCFL73→74；尚未实施或验证。
 
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
