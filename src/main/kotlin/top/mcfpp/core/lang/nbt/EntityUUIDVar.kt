@@ -6,7 +6,6 @@ import top.mcfpp.command.Commands
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
-import top.mcfpp.mni.minecraft.EntityVarData
 import top.mcfpp.model.Member
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.function.Function
@@ -74,9 +73,7 @@ open class EntityUUIDVar : NBTBasedData{
 
     companion object {
         val data by lazy {
-            CompoundData("uuid","mcfpp").apply {
-                injectedBy(EntityVarData::class.java)
-            }
+            CompoundData("uuid","mcfpp")
         }
     }
 

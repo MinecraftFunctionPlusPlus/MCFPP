@@ -1,8 +1,32 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段133，MCFL62；Std外剩余3个Java类、7个CommandReturn注解、旧void wrapper为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段134，MCFL63；Std外剩余2个Java类、3个CommandReturn注解、旧void wrapper为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
 
-## 当前阶段 133：接通坐标成员的共享位置写入（已限定验证）
+## 当前阶段 134：迁移坐标参数传送接口（已限定验证）
+
+新增`EntityTeleportData`四个单context qualified结果入口：pos3；pos3+pos2 rotation；pos3+pos3 facing；pos3+entity+Anchor。移除旧EntityVarData实现和EntityUUIDVar注入/import，UUID宿主仍为IntArray。接收selector可为multiple，facing目标须single；未知position/anchor捕获失败。Pos3要求全`^`或全非`^`，rotation不能含`^`；命令树只作签名合同依据，不声称验证Minecraft parser或world执行。
+
+标准库日志`mcfpp-native-coordinate-teleport-stdlib.log`原生exit0、SUCCESSFUL in59s、Project0/0。首轮`mcfpp-native-coordinate-teleport-joint.log`原生exit1、FAILED in46s，Executors26/27正常结束；Cache XML `2026-10-07T11:07:04.186Z` 1/0/0/0，LibFieldAccess XML `11:07:06.663Z` 2/1/0/0。新coordinate fixture的positive source/fresh Project0/9118、0/9119；negative8/9119。四项selector/prefix backend guards已触发，但缺少position/anchor时capture fallback生成默认值命令，negative命令列表断言失败。
+
+仅修改capture错误传播后，`mcfpp-native-coordinate-teleport-joint2.log`重跑coordinate fixture并联合递归参数StorageView回归：原生exit0、SUCCESSFUL in32s，Executors28/29正常开始并结束。LibFieldAccess XML `2026-10-07T11:15:10.569Z`、StorageView XML `11:15:16.972Z`均1/0/0/0；coordinate source/fresh Project0/9118、0/9119，negative10/9119包含selector/prefix guards及未初始化position/anchor拒绝诊断；递归参数Project0/9118。Cache仅首轮joint通过，另一entity-target tp fixture也只首轮joint通过；四个不同测试跨轮各自通过，最终联合仅coordinate与递归参数两项；四种坐标调用均由最终同一个coordinate fixture验证。两处capture修复不需再次重建标准库。
+
+`nativeCoordinateTeleportCommandsCaptureResultsAcrossLibraryRoundTrip`最终在source/fresh磁盘上验证四条命令：`tp @a 9 2 3`、`tp @a ~ ~ ~ 90 0`、`tp @a ^ ^ ^1 facing ~ ~1 ~`及`tp @a 0 0 0 facing entity @p eyes`。四个结果均为canonical CommandResult，字段const、值事实Unknown、快照为空；四次双store使用独立root，每个root仅初始化一次，普通observe不按常量组合特化。首轮另通过`nativeEntityTeleportCommandsCaptureResultsAcrossLibraryRoundTrip`，source/fresh Project0/9118与0/9119、negative4/9119；最终另通过`anEarlierArgumentSurvivesARecursiveCallInALaterArgument`。四个不同测试跨轮各自通过，最终联合仅coordinate与递归参数两项；四种坐标调用均在最终同一fixture内验证。未执行Minecraft world或坐标命令的frame0模拟。Root核对的三份bin一致：MCFL63、488314 bytes、header `4c46434d3f000000`、SHA256 `BC8D0F0CDB166B3FCE9B223DE1994DF586A7334881EB238E4E5CF4692262A5BC`。阶段共8个源码/测试路径、bin及四份文档（13个路径）。
+
+未初始化值的根因是参数capture调用getTempVar：Pos3临时赋值将默认维度置为已赋值，EnumVarConcrete临时值丢失Symbol并保留默认eyes。capture现沿用ValueSnapshot的`symbol != null && !hasAssigned`判定，复制前直接诊断；ExprVisitor恢复spills并停止调用，通用read及左值访问不变。负例的六个直接诊断为receiver/单facing目标两项、prefix两项及未初始化position/anchor两项；后两项在前端capture拒绝，未进入tp后端。
+
+[固定26.3命令树](https://raw.githubusercontent.com/misode/mcmeta/26.3-summary/commands/data.json)的teleport节点给出vec3、rotation、multiple receiver及single facing目标；[游戏原始语言资源](https://raw.githubusercontent.com/misode/mcmeta/26.3-assets/assets/minecraft/lang/en_us.json)的`argument.pos.mixed`错误文本支持位置全部使用`^`或全部不用`^`。本阶段未读取parser正文或运行服务器。
+
+| 自评维度 | 分数 | 本阶段证据与边界 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 区分首轮negative失败、capture修复和最终XML/Project结果。 |
+| 完整性 | 3/5 | 四种坐标调用有source/fresh覆盖；其余ValueWrapper桥及whole17仍未完成，未执行world。 |
+| 清晰性 | 4/5 | 说明single facing、快照拒绝和坐标prefix合同。 |
+| 可操作性 | 4/5 | 给出独立日志、fixture、XML与版本信息。 |
+| 简洁性 | 4/5 | 保留失败原因、修复效果及验证范围。 |
+
+平均3.8/5；whole17仍未完成。
+
+## 历史阶段 133：接通坐标成员的共享位置写入（已限定验证）
 
 删除`PosDimension`不一致的parent setter/getter，将Pos2/Pos3的x/y/z成员键映射到父binding的Place.Index 0/1/2（Pos2 z为1）。只在whole位置已有快照时seed真实Dim facts，不为unset值伪造零；通过既有`StoredData.write`调用既有`FlowFacts.writeConstant`与`CompilerValue.replacing`重建祖先TypedSequence，ordinary copy独立。首轮失败证实PosDimension默认对象字段布局变化影响Kryo持久化，因此MCFL61→62；不是新增snapshot字段或payload。
 

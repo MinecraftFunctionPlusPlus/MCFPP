@@ -635,7 +635,12 @@ object StorageAccess {
     }
 
     fun capture(value: Var<*>): Var<*> {
+        if (value.symbol != null && !value.hasAssigned) {
+            LogProcessor.error("Cannot capture uninitialized variable '${value.identifier}'")
+            return UnknownVar(value.identifier).apply { type = value.type; isError = true }
+        }
         val loaded = read(value)
+        if (loaded.isError) return loaded
         val captured = if (loaded is MCFloat) {
             val constant = (snapshot(loaded) as? CompilerValue.Typed)?.payload as? CompilerValue.FloatBits
             if (!loaded.isDynamic && loaded is MCFloatConcrete) MCFloatConcrete(loaded.value).apply { isTemp = true }

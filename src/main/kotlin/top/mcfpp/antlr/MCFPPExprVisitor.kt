@@ -470,6 +470,10 @@ class MCFPPExprVisitor(
                 return UnknownVar("error_" + ctx.text)
             }
             val captured = top.mcfpp.analysis.StorageAccess.capture(arg)
+            if (captured.isError) {
+                top.mcfpp.analysis.StorageAccess.restore(spills)
+                return captured
+            }
             originalArgs.add(arg)
             normalArgs.add(captured)
             exprVisitor.processVarCache.add(captured)

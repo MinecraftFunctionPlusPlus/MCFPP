@@ -8,6 +8,8 @@ import top.mcfpp.command.FloatProviders
 import top.mcfpp.core.lang.MCFloat
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.PropertyVar
+import top.mcfpp.core.lang.Pos2Var
+import top.mcfpp.core.lang.Pos3Var
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.obj.EnumVarConcrete
@@ -22,6 +24,7 @@ import top.mcfpp.nbt.tags.CompoundTag
 import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
+import top.mcfpp.type.MCFPPBaseType
 
 internal fun captureCommandResult(context: NativeCallContext, build: (List<Var<*>>) -> Command) = context.withArguments { args ->
     if (!FloatProviders.enabled && args.any { it is MCFloat && it !is MCFPPValue<*> }) {
@@ -102,6 +105,58 @@ object NativeMinecraftCommandOperations {
             return@withAdapters
         }
         captureCommandResult(context) { Command.buildAll("tp", receiver, destination) }
+    }
+
+    fun entityTeleportToPosition(context: NativeCallContext) = teleportCoordinates(context) { receiver, args ->
+        Command.buildAll("tp", receiver, args[0])
+    }
+    fun entityTeleportWithRotation(context: NativeCallContext) = teleportCoordinates(context) { receiver, args ->
+        Command.buildAll("tp", receiver, args[0], args[1])
+    }
+    fun entityTeleportFacingPosition(context: NativeCallContext) = teleportCoordinates(context) { receiver, args ->
+        Command.buildAll("tp", receiver, args[0], "facing", args[1])
+    }
+    fun entityTeleportFacingEntity(context: NativeCallContext) = context.withAdapters { _, args ->
+        val destination = args[1]
+        if (destination !is SelectorVar || !destination.value.selectingSingleEntity()) {
+            LogProcessor.error("Entity teleport commands require a single-entity selector destination")
+            return@withAdapters
+        }
+        val anchor = context.argumentSnapshot(2)?.let { StorageAccess.restore(args[2].type, it, args[2].identifier) } as? EnumVarConcrete
+        if (anchor == null) {
+            LogProcessor.error("Entity teleport anchor requires a complete compile-time enum value")
+            return@withAdapters
+        }
+        teleportCoordinates(context) { receiver, restored ->
+            Command.buildAll("tp", receiver, restored[0], "facing entity", destination, anchor.value.identifier)
+        }
+    }
+
+    private fun teleportCoordinates(context: NativeCallContext, build: (SelectorVar, List<Var<*>>) -> Command) = context.withAdapters { receiver, args ->
+        if (receiver !is SelectorVar) {
+            LogProcessor.error("Entity teleport commands require a selector receiver")
+            return@withAdapters
+        }
+        val restored = args.toMutableList()
+        for ((index, argument) in args.withIndex()) {
+            if (argument.type != MCFPPBaseType.Pos2 && argument.type != MCFPPBaseType.Pos3) continue
+            val coordinate = context.argumentSnapshot(index)?.let { StorageAccess.restore(argument.type, it, argument.identifier) }
+            if (coordinate == null) {
+                LogProcessor.error("Entity teleport coordinates require complete compile-time values")
+                return@withAdapters
+            }
+            val invalid = when (coordinate) {
+                is Pos2Var -> coordinate.value.any { it.prefix == "^" }
+                is Pos3Var -> coordinate.value.any { it.prefix == "^" } && coordinate.value.any { it.prefix != "^" }
+                else -> true
+            }
+            if (invalid) {
+                LogProcessor.error("Entity teleport coordinates have invalid local-coordinate prefixes")
+                return@withAdapters
+            }
+            restored[index] = coordinate
+        }
+        captureCommandResult(context) { build(receiver, restored) }
     }
 
     fun playerClearAll(context: NativeCallContext) = context.withAdapters { receiver, _ ->
