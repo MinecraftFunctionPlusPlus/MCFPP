@@ -38,6 +38,16 @@ internal fun captureCommandResult(context: NativeCallContext, build: (List<Var<*
 }
 
 object NativeMinecraftCommandOperations {
+    fun playerTell(context: NativeCallContext) = playerMessage(context, "tell")
+    fun playerWhisper(context: NativeCallContext) = playerMessage(context, "w")
+
+    private fun playerMessage(context: NativeCallContext, verb: String) = context.withAdapters { receiver, args ->
+        val sender = playerSelector(receiver) ?: return@withAdapters
+        val targets = playerSelector(args[0]) ?: return@withAdapters
+        val message = args[1] as MCString
+        captureCommandResult(context) { Command.buildAll("execute as", sender, "run", verb, targets, message) }
+    }
+
     fun entityTeleportToEntity(context: NativeCallContext) = context.withAdapters { receiver, args ->
         if (receiver !is SelectorVar) {
             LogProcessor.error("Entity teleport commands require a selector receiver")

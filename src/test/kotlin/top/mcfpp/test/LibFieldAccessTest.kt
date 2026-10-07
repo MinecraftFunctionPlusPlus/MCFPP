@@ -4697,6 +4697,87 @@ class LibFieldAccessTest {
         assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("tp ") || "set value {}" in it.toString() })
     }
 
+    @Test
+    fun nativePlayerMessageCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = "func main(){ var box=Box(); dynamic var result=box.observe(\"fixture:message\"); }"
+        write("""
+            namespace fixture.fields;
+            import mcfpp.minecraft.std:*;
+            data Box {
+                func observe(message as string)->int {
+                    var sender=@p; var targets=@a;
+                    var told=sender.tell(targets,message); var whispered=sender.w(targets,message);
+                    var toldValue=told.result; var whisperedSuccess=whispered.success;
+                    return 7;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val observe = (main.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("observe").single()
+            assertTrue(observe.compiledFunctions.isEmpty())
+            for ((name, kind) in listOf("sender" to top.mcfpp.lib.EntitySelector.Companion.SelectorType.NEAREST_PLAYER, "targets" to top.mcfpp.lib.EntitySelector.Companion.SelectorType.ALL_PLAYERS)) {
+                val selector = assertIs<top.mcfpp.core.lang.entity.SelectorVar>(observe.scope.getVar(name))
+                assertNotNull(ValueSnapshot.of(selector))
+                assertEquals(kind, selector.value.selectorType)
+            }
+            val canonical = assertNotNull(GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.std")).scope.getTemplate("CommandResult")
+            for (name in listOf("told", "whispered")) {
+                val value = assertIs<DataTemplateObject>(observe.scope.getVar(name))
+                assertSame(canonical, value.templateType)
+                assertTrue(value.templateType.scope.getVar("result")!!.isConst)
+                assertTrue(value.templateType.scope.getVar("success")!!.isConst)
+                val binding = assertNotNull(value.storageBinding)
+                assertEquals(top.mcfpp.analysis.ValueKnowledge.Unknown, binding.data.facts.read(binding.place)?.value)
+                assertNull(ValueSnapshot.of(value))
+            }
+            for (name in listOf("toldValue", "whisperedSuccess")) assertNull(ValueSnapshot.of(assertNotNull(observe.scope.getVar(name))))
+            val messagePath = assertNotNull(assertNotNull(observe.scope.getVar("message")).storageBinding).path.toCommandPart().toString()
+            val directory = output.resolve("consumer")
+            DatapackCreator.createDatapack(directory.toString())
+            val data = directory.resolve(Project.config.name).resolve("data")
+            fun readFunction(id: String): List<String> = Files.readAllLines(data.resolve(id.substringBefore(':')).resolve("function").resolve(id.substringAfter(':') + ".mcfunction")).map(String::trim)
+            val commands = readFunction(observe.namespaceID.toString())
+            val calls = commands.mapIndexedNotNull { index, command -> Regex("function (mcfpp:dynamic/\\S+) with storage (\\S+) (\\S+)").matchEntire(command)?.let { index to it } }
+            assertEquals(2, calls.size)
+            val stores = Regex("execute store result storage (\\S+) (\\S+)\\.result int 1 store success storage (\\S+) (\\S+)\\.success byte 1 run (.*)")
+            val roots = mutableSetOf<String>()
+            for ((position, verb) in listOf("tell", "w").withIndex()) {
+                val (index, call) = calls[position]
+                assertEquals(1, commands.count { it == commands[index] })
+                val body = readFunction(call.groupValues[1])
+                val capture = assertNotNull(body.singleOrNull { it.startsWith("\$execute store result") }?.removePrefix("\$")?.let(stores::matchEntire))
+                assertEquals("execute as @p run $verb @a \$(arg_0)", capture.groupValues[5])
+                val prefix = "data modify storage ${call.groupValues[2]} ${call.groupValues[3]}.arg_0 set from "
+                val preparation = commands.take(index).withIndex().single { it.value.startsWith(prefix) }
+                val source = preparation.value.removePrefix(prefix)
+                if (source != messagePath) {
+                    val copy = "data modify $source set from $messagePath"
+                    assertEquals(1, commands.take(preparation.index).count { it == copy })
+                }
+                assertEquals(capture.groupValues[1], capture.groupValues[3])
+                assertEquals(capture.groupValues[2], capture.groupValues[4])
+                assertTrue(roots.add(capture.groupValues[2]))
+                assertEquals(1, commands.take(index).count { it == "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value {}" })
+                assertFalse(body.any { "return run" in it || it.removePrefix("\$").startsWith("execute as ") })
+            }
+            assertEquals(2, roots.size)
+            assertFalse(commands.any { "return run" in it || it.startsWith("execute as ") || it.startsWith("tell ") || it.startsWith("w ") || stores.matches(it) })
+        }
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+        val rejected = consume("""
+            import mcfpp.minecraft.entity:*;
+            func reject(){ var sender=@e; var players=@a; sender.tell(players,"x"); var one=@p; var entities=@e; one.w(entities,"x"); var value=EntityData(); value.tell(players,"x"); }
+            func main(){}
+        """, output)
+        assertEquals(6, Project.errorCount)
+        val reject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
+        assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("execute as ") || "set value {}" in it.toString() })
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

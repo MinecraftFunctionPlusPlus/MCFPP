@@ -1,8 +1,26 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段126，MCFL56；Std外剩余4个Java类含21个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段127，MCFL57；Std外剩余4个Java类含19个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 当前阶段 126：实体间传送命令（已限定验证）
+## 当前阶段 127：玩家消息命令（已限定验证）
+
+`PlayerMessageData`将`tell`与`w`接入单context qualified结果，caller为entity并挂到`EntityData`第九个`@From`；旧入口缺caller且未发布结果，不称保留了正确旧ABI。唯一fixture为`nativePlayerMessageCommandsCaptureResultsAcrossLibraryRoundTrip`，Cache方法为`oldAndUnknownCacheFormatsProduceARecompileDiagnostic`，日志前缀`mcfpp-native-player-message-command-results-`。标准库SUCCESSFUL in12s、Project0/0；joint原生exit0、worker49正常结束、SUCCESSFUL in28s。LibFieldAccess XML `2026-10-07T06:30:55.781Z` 与Cache XML `2026-10-07T06:30:54.980Z` 均1/0/0/0；source/fresh Project0/9118与0/9119，negative6/9119（player-selector guard与未发布结果级联）。MCFL57三份bin均478528 bytes、header `4c46434d39000000`、SHA256 `3AF8C24128274596ECE416E7353C945F1FAA34C5EAB7627D32D23D7B60EB53D6`。
+
+source/fresh确认两条`execute as sender run tell|w targets message`宏，message由真实参数绑定进入宏槽；每次调用一个独立root和一次初始化，整体execute结果只捕获一次。sender限制player selector是项目API选择；不表示每个sender分别返回结果。负向覆盖`@e` sender、`@e` targets与DTO receiver；不模拟Minecraft消息发送，不声称world执行或frame0。
+
+标准库重建原生退出码也为0；本批11个提交路径含6个源码/测试文件（110+/16−）、bin及四份文档。fixture读取observe和两个实际宏文件，消息来源为直接绑定或严格唯一一跳复制，复制先于参数准备、准备先于唯一调用。两个规范readonly结果及实际字段读取均无完整快照，结果事实保持Unknown；两个选择器保持真实kind，无普通参数特化。
+
+| 自评维度 | 分数 | 本阶段证据与范围 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 对照两份fresh XML、Project计数和bin身份。 |
+| 完整性 | 3/5 | 覆盖两个消息入口的生成合同；world发送及whole17仍未完成。 |
+| 清晰性 | 4/5 | 区分sender API限制与targets命令合同。 |
+| 可操作性 | 4/5 | 下一步限定到四个实体属性入口。 |
+| 简洁性 | 4/5 | 保留必要的构建、fixture与资源证据。 |
+
+平均3.8/5；whole17仍未完成。
+
+## 历史必要检查：阶段 126 实体间传送命令（已限定验证）
 
 `EntityTeleportData`将entity-target `tp`接入单context qualified结果并挂到`EntityData`；旧entity<1>目标重载删除，坐标tp与setSpawnpoint保持不变。唯一fixture为`nativeEntityTeleportCommandsCaptureResultsAcrossLibraryRoundTrip`，joint Cache方法为`oldAndUnknownCacheFormatsProduceARecompileDiagnostic`。标准库SUCCESSFUL in11s、Project0/0；joint worker48正常、SUCCESSFUL in24s。LibFieldAccess XML `2026-10-07T06:18:09.483Z` 与Cache XML `2026-10-07T06:18:08.748Z` 均1/0/0/0；source/fresh Project0/9118与0/9119，negative4/9119。MCFL56三份bin均476974 bytes、header `4c46434d38000000`、SHA256 `0AE3A1AA1E626CECC2FCB1A55D5BE6141DEC31AD48C89C7F86EBB5BB8F0922FC`。
 
