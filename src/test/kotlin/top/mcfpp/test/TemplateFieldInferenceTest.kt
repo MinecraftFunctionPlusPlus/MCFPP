@@ -69,12 +69,12 @@ class TemplateFieldInferenceTest {
         assertEquals(47, machine.read(main.scope.getVar("result") as MCInt))
     }
 
-    @Test fun erasedReturnEvidenceAndRequiredConstructorValuesDoNotChangeFieldConstraints() {
+    @Test fun erasedReturnEvidenceAndOrdinaryConstructorValuesDoNotChangeFieldConstraints() {
         val main = compile("""
             data Box {
                 var erased as any = produce(initial);
                 const value = this.erased + 1;
-                constructor(initial as int!){}
+                constructor(initial as int){}
             }
             func produce(value as int) -> any { return value; }
             func main(){
@@ -85,7 +85,6 @@ class TemplateFieldInferenceTest {
         """)
         val value = template().scope.getVar("value")!!
         assertEquals(MCFPPBaseType.Int.typeId, value.type.typeId)
-        assertFalse(value.symbol!!.requiresConstant)
         assertFalse(value.symbol!!.mutable)
         assertEquals(47, execute(main).read(main.scope.getVar("result") as MCInt))
     }

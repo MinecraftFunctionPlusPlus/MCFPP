@@ -12,18 +12,15 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNull
 
 class ValueModelTest {
-    @Test fun requiredCompileTimeValuesAreADeclarationConstraintAfterAdapterReplacement() {
-        val declared = MCFPPDeclaredConcreteType(MCFPPBaseType.Int).build("required", 4)
+    @Test fun ordinaryValuesKeepDeclarationIdentityAfterAssignment() {
+        val declared = MCFPPBaseType.Int.build("value", 4)
         declared.bindDeclaration()
         val assigned = declared.assignedBy(MCIntConcrete(5))
         assertEquals(declared.symbol, assigned.symbol)
-        assertTrue(assigned.symbol!!.requiresConstant)
         assertTrue(ValueSnapshot.of(assigned) != null)
         val errors = top.mcfpp.Project.errorCount
         assigned.assignedBy(MCInt("runtime"))
-        assertEquals(errors + 1, top.mcfpp.Project.errorCount)
-        assigned.replacedBy(MCInt("runtime"))
-        assertEquals(errors + 2, top.mcfpp.Project.errorCount)
+        assertEquals(errors, top.mcfpp.Project.errorCount)
     }
     private val int = MCFPPBaseType.Int.typeId
     private val bool = MCFPPBaseType.Bool.typeId

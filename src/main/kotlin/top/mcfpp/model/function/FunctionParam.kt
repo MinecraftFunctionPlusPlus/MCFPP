@@ -53,8 +53,7 @@ class FunctionParam(
     var defaultVar: Var<*>? = null
 
     fun buildVar(): Var<*>{
-        if (type is top.mcfpp.type.UnresolvedType || type is MCFPPGenericParamType || type is top.mcfpp.type.MCFPPDeclaredConcreteType &&
-            (type as top.mcfpp.type.MCFPPDeclaredConcreteType).type is MCFPPGenericParamType)
+        if (type is top.mcfpp.type.UnresolvedType || type is MCFPPGenericParamType)
             return top.mcfpp.core.lang.UnknownVar(identifier).apply { type = this@FunctionParam.type }
         val qwq = if(( isReadOnly || type is MCFPPConcreteType ) && type != MCFPPBaseType.Any){
             type.build(identifier, function)

@@ -78,7 +78,7 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
                 assigned.isStatic = field.isStatic
                 assigned.accessModifier = field.accessModifier
                 assigned.declaredParentTemplate = field.declaredParentTemplate
-                if (assigned !== field) assigned.annotations.addAll(field.annotations)
+                if (assigned !== field) assigned.annotations.addAll(field.annotations.filter { it !in assigned.annotations })
                 assigned.bindDeclaration(previous = field)
                 field.replacedBy(assigned)
                 if (StorageAccess.hasRuntimeRepresentation(assigned)) StorageAccess.materialize(assigned)

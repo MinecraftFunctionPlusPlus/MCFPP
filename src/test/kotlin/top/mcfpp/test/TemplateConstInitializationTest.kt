@@ -77,6 +77,7 @@ class TemplateConstInitializationTest {
                 if (name == "inferred") {
                     assertTrue((field as MCInt).isDataOnly)
                     assertTrue(field.annotations.any { it is top.mcfpp.mni.annotation.DataOnly })
+                    assertEquals(1, field.annotations.count { it is top.mcfpp.mni.annotation.DataOnly })
                 }
             }
             val constructor = defaults.constructors.single()
@@ -133,36 +134,34 @@ class TemplateConstInitializationTest {
         }
     }
 
-    @Test fun requiredConstFieldsKeepValuesAndRequiredParametersStayStrict() {
-        fun source(reject: String) = """
+    @Test fun constFieldsAcceptLiteralAndRuntimeInitializers() {
+        val main = compile("""
             object data Defaults {
-                const required as int! = 3;
+                const required as int = 3;
                 const mirrored = Defaults.required;
             }
-            data Box { constructor(value as int!){} }
-            $reject
-            func main(){ var accepted = Box(3); }
-        """
-        for (reject in listOf("", "func reject(value as int){ var rejected = Box(value); }")) {
-            val main = compile(source(reject), if (reject.isEmpty()) 0 else 1)
-            val defaults = objectTemplate()
-            assertNotNull(ValueSnapshot.of(defaults.scope.getVar("required")))
-            assertTrue(defaults.scope.getVar("required")!!.symbol!!.requiresConstant)
-            assertFalse(defaults.scope.getVar("mirrored")!!.symbol!!.requiresConstant)
-            val machine = execute(main)
-            assertEquals(IntTag(3), machine.readNbt("mcfpp:system", defaults.nbtPath.memberIndex("required").pathToCommandPart().toString()))
-            assertEquals(IntTag(3), machine.readNbt("mcfpp:system", defaults.nbtPath.memberIndex("mirrored").pathToCommandPart().toString()))
-        }
-        compile("""
-            func produce(value as int) -> int {
-                /say produced
-                return value;
-            }
-            object data Defaults { const required as int! = produce(4); }
-            func main(){}
-        """, 1)
+            data Box { constructor(value as int){} }
+            func accept(value as int){ var accepted = Box(value); }
+            func main(){ accept(3); }
+        """)
         val defaults = objectTemplate()
-        val requiredPath = defaults.nbtPath.memberIndex("required").toCommandPart().toString()
-        assertTrue(defaults.constructors.single().commands.analyzeAll().none { requiredPath in it })
+        assertTrue(defaults.scope.getVar("required")!!.isConst)
+        assertTrue(defaults.scope.getVar("mirrored")!!.isConst)
+        val machine = execute(main)
+        assertEquals(IntTag(3), machine.readNbt("mcfpp:system", defaults.nbtPath.memberIndex("required").pathToCommandPart().toString()))
+        assertEquals(IntTag(3), machine.readNbt("mcfpp:system", defaults.nbtPath.memberIndex("mirrored").pathToCommandPart().toString()))
+        val runtimeMain = compile("""
+            func produce(value as int, valid as bool) -> int {
+                /say produced
+                if(valid){ return value; }
+                return 0;
+            }
+            object data Defaults { const required as int = produce(4, true); }
+            func main(){}
+        """)
+        val runtimeDefaults = objectTemplate()
+        val runtimeMachine = execute(runtimeMain)
+        assertEquals(IntTag(4), runtimeMachine.readNbt("mcfpp:system", runtimeDefaults.nbtPath.memberIndex("required").pathToCommandPart().toString()))
+        assertTrue(runtimeDefaults.scope.getVar("required")!!.isConst)
     }
 }

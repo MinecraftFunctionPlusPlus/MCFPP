@@ -4,7 +4,6 @@ import top.mcfpp.analysis.*
 import top.mcfpp.core.lang.MCAny
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.MCFPPTypeVar
-import top.mcfpp.type.MCFPPDeclaredConcreteType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.MCFPPGenericParamType
 import top.mcfpp.type.MCFPPTypeWithGeneric
@@ -32,7 +31,6 @@ object SpecializationPolicy {
     }
 
     fun bind(type: MCFPPType, bindings: Map<String, MCFPPType>): MCFPPType = when (type) {
-        is MCFPPDeclaredConcreteType -> MCFPPDeclaredConcreteType(bind(type.type, bindings))
         is MCFPPGenericParamType -> bindings[type.identifier] ?: type
         is MCFPPTypeWithGeneric -> if (bindings.isEmpty()) type else type.replaceGenericParam(bindings)
         else -> type
@@ -131,7 +129,7 @@ object SpecializationPolicy {
     }
 
     fun requiresParameter(type: MCFPPType, value: Var<*>): Boolean =
-        type is MCFPPDeclaredConcreteType || !type.hasRuntimeRepresentation ||
+        !type.hasRuntimeRepresentation ||
             !StorageAccess.hasRuntimeRepresentation(value)
 
     fun key(function: Function, arguments: List<Var<*>>, specialized: List<Boolean>): SpecializationKey {

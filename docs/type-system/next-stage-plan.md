@@ -1,10 +1,10 @@
-# 下一阶段：补齐枚举编译期快照与恢复（阶段129）
+# 下一阶段：迁移实体属性写入接口（阶段130）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–128完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及实体命令路径的限定迁移；当前库格式MCFL58，Std外剩余3个Java类、9个CommandReturn注解及7个旧void wrapper。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效；阶段129已移除语言层 `T!` 后缀。阶段88–129完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及实体命令路径的限定迁移；当前库格式MCFL59，Std外剩余3个Java类、9个CommandReturn注解及7个旧void wrapper。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
-阶段93已迁移ConversionData的49个入口；阶段94完成toText入口限定验证；阶段95改为匹配显式Java方法名；阶段96完成text receiver赋值与拼接限定验证；阶段97统一String/NBT toText入口；阶段98恢复T!文本快照；阶段99迁移DataObjectData.toText；阶段100限定纯text JSON转义。分轮结果见verification.md。
+阶段93已迁移ConversionData的49个入口；阶段94完成toText入口限定验证；阶段95改为匹配显式Java方法名；阶段96完成text receiver赋值与拼接限定验证；阶段97统一String/NBT toText入口；阶段98记录旧 `T!` 文本快照行为（该后缀已于129退役）；阶段99迁移DataObjectData.toText；阶段100限定纯text JSON转义。分轮结果见verification.md。
 
 ### 阶段 96：text 与拼接运算（已限定验证）
 
@@ -14,7 +14,7 @@
 
 String与NBT的toText入口已按实际receiver状态合并到各自单一Java类；移除重复Concrete入口，不扩展到其他native/effects。MCFL27→28。指定fixture与Cache回归通过；两个toText输入是literal，但拼接结果仍由临时数组append形成，尚未证明AB/AS即时折叠。
 
-### 阶段 98：T! text常量拼接与普通copy（已限定验证）
+### 阶段 98 历史：旧 `T!` text快照、copy与拼接（语义已于阶段129退役）
 
 `StorageAccess.restore`恢复完整text ListTag快照为immutable encoded component，并保留声明类型。已复用单个fixture验证T! copy/concat的source与fresh磁盘结果A/A/AB/AS、return7/frame0；joined/suffixed由直接literal component list生成。MCFL28不变。
 
@@ -24,7 +24,7 @@ String与NBT的toText入口已按实际receiver状态合并到各自单一Java�
 
 ### 阶段 100：PlainChatComponent JSON字符串转义（已限定验证）
 
-PlainChatComponent纯文本使用Fastjson2 `JSON.toJSONString` 编码单个字符串。source/fresh fixture通过带引号、反斜线的 `toText`、T!副本/拼接与NBT字符串 `toText`。MCFL29不变；不扩展控制字符、style、decoder或聊天渲染。
+PlainChatComponent纯文本使用Fastjson2 `JSON.toJSONString` 编码单个字符串。source/fresh fixture通过带引号、反斜线的 `toText`、旧 `T!` 副本/拼接与NBT字符串 `toText`（旧后缀语义已退役）。MCFL29不变；不扩展控制字符、style、decoder或聊天渲染。
 
 ### 阶段 101：LootTablePredicateData.pass/fail（已限定验证）
 
@@ -148,9 +148,13 @@ BossBar的add/remove/listAll/setColor/setName/setVisiblePlayers/setStyle七个�
 
 清理Entity/Player两组`getMembers`的旧host属性注入并删除hidden `AttributeData`；这是取消失效宿主入口，不称等价迁移。四个受测单context入口处理attribute base/get与modifier remove/get，通过`EntityData`新增的`@From`接入。fixture/fresh验证四条命令、参数来源与负向selector/DTO；modifier从实际`AttributeModifier.id`字段读取。不覆盖动态double或world行为。MCFL57→58。
 
-### 阶段 129 计划：闭合枚举编译期快照
+### 阶段 129：移除语言类型后缀并恢复闭合枚举快照（已限定验证）
 
-当前`EnumMember`宿主属性不在`CompilerValue`快照范围，普通Modifier参数不能自动变成readonly。已核实仅保存`Typed(enumTypeId, Integral(ordinal))`会在snapshotTag递归/host commit中误编码。计划使用闭合Record：保存完整enum TypeId及`{ordinal: Integral, data: immutable SNBT}`；snapshotTag遇枚举声明的Typed值时只投影data，恢复时按实际枚举查找合法ordinal并校验data一致。Unknown维持Unknown，不传全局types registry、不新增Value种类、不让host EnumMember逃逸。是否需要MCFL升级按最终serialized ABI判断；尚未实现或验证。
+129移除语言层 `T!` 语法及其带来的完整值声明约束；type仍只可用于泛型参数，const仍只限制重赋，readonly泛型与编译器专用值继续要求完整快照。闭合枚举记录保存完整TypeId、ordinal与不可变SNBT；NBT编码仅投影data，恢复时按实际枚举恢复并校验成员。不新增CompilerValue种类或全局类型注册表。验证分轮与边界见verification.md。
+
+### 阶段 130 计划：迁移实体属性写入接口
+
+只迁移 `setAttributeBase` 与 `addAttributeModifier`：保留capture前的selector校验，Modifier使用真实`AttributeModifier.id`；amount为double，宏从实际MCDouble/NBT参数准备，operation接收显式readonly enum实参，不把普通Modifier字段视为编译期已知。该阶段尚未实现或验证；不扩大到坐标传送、PlayerInventory或其他属性操作。
 
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
@@ -205,13 +209,13 @@ BossBar的add/remove/listAll/setColor/setName/setVisiblePlayers/setStyle七个�
 
 已实现：`sharedProject.prepareObjectInitializers` 在 annotation、完整签名和继承 ready 后、用户函数 body 编译前编译完整本地 object constructor，并由已有 body guard 防止重复。source inferred object 字段上下文/访问/annotation 按声明顺序暂存，FieldVisitor 不试算 RHS，真实 constructor `prepareBody` 单次求值并补 field/property/Symbol；typed const RHS 同样登记。constructor 先绑定 incoming 参数，再求 RHS，两个 receiver 1/2 已实际验证。
 
-const 只限制重赋；compiler-only const 保留完整 `ValueSnapshot` 且不物化，`T!` 独立检查完整值，inferred mirrored 不继承约束。field annotation 在 annotation 转存后触发 helper 补 stage；函数 annotation 从真实 AST 声明取得。错误 RHS 不写默认值，self/forward 引用给清晰诊断。普通模板 typed const 允许每实例初始化。
+const 只限制重赋；compiler-only const 保留完整 `ValueSnapshot` 且不物化，旧 `T!` 完整值声明约束已于阶段129退役，inferred mirrored 不继承约束。field annotation 在 annotation 转存后触发 helper 补 stage；函数 annotation 从真实 AST 声明取得。错误 RHS 不写默认值，self/forward 引用给清晰诊断。普通模板 typed const 允许每实例初始化。
 
 阶段57历史：首轮28项27通过/1测试夹具失败；修正负向source换行后定向复查该方法1项通过，没有最终联合28项复跑。MCFL12 schema不变，stdlib含本地20个Slot inferred fields后为267356 bytes。记录见verification.md。导入RHS lexical scope、import object自动load仍待处理；phase56 consume记录的`flatExtends`重复继承警告未清理。
 
 ### 阶段 58：普通模板推断字段声明绑定（受限支持）
 
-阶段58已接入：普通模板 inferred fields 复用 `PrimitiveCompiler` 私有图的 Lowering/FlowAnalysis/ReturnTypeAnalysis 做 pure declaration binding，不发布 IR、不执行用户函数、不生成命令。普通构造参数与未绑定 T! 保持 Unknown，同字段 across ctor overload 要求同一 TypeId；支持 this 单字段/此前字段。anonymous 统一队列，泛型类型实参绑定后的实例独立完成，继承后annotations与模板参数/返回 adapter刷新并保留Symbol/Place。Runtime receiver按声明类型初始化可编码默认字段；Unknown erased不伪造snapshot，NBT遇不可编码child返回整体null；普通模板局部声明buildUnConcrete防止DataOnly空地址写入。pure AST binding与runtime AST generation分离，不重复执行RHS。native/generic/compiler-only/static、多级this/member method等未迁入语法继续legacy `extraFunction`。阶段58验证37个不同用例跨轮各自通过，非一次联合37项。
+阶段58已接入：普通模板 inferred fields 复用 `PrimitiveCompiler` 私有图的 Lowering/FlowAnalysis/ReturnTypeAnalysis 做 pure declaration binding，不发布 IR、不执行用户函数、不生成命令。普通构造参数保持 Unknown（该历史记录不构成语言后缀语义），同字段 across ctor overload 要求同一 TypeId；支持 this 单字段/此前字段。anonymous 统一队列，泛型类型实参绑定后的实例独立完成，继承后annotations与模板参数/返回 adapter刷新并保留Symbol/Place。Runtime receiver按声明类型初始化可编码默认字段；Unknown erased不伪造snapshot，NBT遇不可编码child返回整体null；普通模板局部声明buildUnConcrete防止DataOnly空地址写入。pure AST binding与runtime AST generation分离，不重复执行RHS。native/generic/compiler-only/static、多级this/member method等未迁入语法继续legacy `extraFunction`。阶段58验证37个不同用例跨轮各自通过，非一次联合37项。
 
 ### 阶段 59：导入构造 RHS 的声明词法环境
 
@@ -325,7 +329,7 @@ Contract<T>及Box<(Contract<int/bool>)>前置签名使用显式type primary，in
 
 阶段 51 已将旧浮点算术/比较、Promote/Convert 接入 IR：四分量值使用独立 NBT 帧，`LegacyFloatCommands` 负责读写和调用，保留旧四记分板 return ABI。普通/递归/static、旧与 IR 双向调用、早先参数、多实参、常量与连续返回均经真实库命令执行；最终 20 项必要复查通过，0 failures/errors/skips。Native 路径不变；旧浮点算术/比较及跨数值折叠禁止宿主 Float 计算，`16777217` 保持八位十进制精度；identity/toNBT 保留来源 codec。包含 FloatBits 端点的旧浮点范围，其静态顺序不使用宿主比较，整数/native 行为不变；浮点迭代语义未定义，不新增迭代行为。
 
-已知 int/bool/byte/short as legacyfloat 仍沿旧入口并在实际访问时诊断；未用视图不报错，unknown any 视图不做运行时 typecheck，命名 float 视图的来源随后被写成已知标量，再读取视图会诊断。阶段56/57完成有序初始化 RHS 持久化与 const 初始化语义，MCFL 12；验证记录见上。阶段58已为部分语法接入普通模板推断字段声明绑定，其他语法仍沿旧路径；阶段59导入声明环境已实现；阶段60消费端库函数主体导出已在限定路径验证；阶段61已恢复受支持模板方法owner，阶段62已修复模块资源复制；当时待办的阶段63函数权限已完成；阶段86 actual generic父项已限定通过，MCFL19/stdlib292301。阶段87严格限制 `type` 声明范围已限定验证。阶段88候选为从真实legacy实例成员 `list.clear()` 接入小型 NativeCallContext；具体API/最小回归仍待root确认。imported object自动load仍未解决。未知端点范围和浮点/混合迭代的步长及不前进策略仍未定义，保留现有诊断。整个17项迁移仍未完成，模板/泛型/T!、其余控制流/集合及 MNI 尚待统一。
+已知 int/bool/byte/short as legacyfloat 仍沿旧入口并在实际访问时诊断；未用视图不报错，unknown any 视图不做运行时 typecheck，命名 float 视图的来源随后被写成已知标量，再读取视图会诊断。阶段56/57完成有序初始化 RHS 持久化与 const 初始化语义，MCFL 12；验证记录见上。阶段58已为部分语法接入普通模板推断字段声明绑定，其他语法仍沿旧路径；阶段59导入声明环境已实现；阶段60消费端库函数主体导出已在限定路径验证；阶段61已恢复受支持模板方法owner，阶段62已修复模块资源复制；当时待办的阶段63函数权限已完成；阶段86 actual generic父项已限定通过，MCFL19/stdlib292301。阶段87严格限制 `type` 声明范围已限定验证。阶段88候选为从真实legacy实例成员 `list.clear()` 接入小型 NativeCallContext；具体API/最小回归仍待root确认。imported object自动load仍未解决。未知端点范围和浮点/混合迭代的步长及不前进策略仍未定义，保留现有诊断。整个17项迁移仍未完成，模板/泛型、其余控制流/集合及 MNI 尚待统一（语言 `T!` 后缀已退役）。
 
 - 26.3 原生 float 的字面量、算术/比较、循环、递归调用、static 写回、擦除与共享视图、集合元素和范围载荷进入 IR；int→float 提升作为 Promote，用于声明、赋值、返回、普通/成员实参和上下文集合字面量。运算与旧入口共享提供器表达式，值保存在 NBT 帧，负零取负保留符号；常量非有限值、反向已知范围和有损 static 写回明确诊断。旧浮点后端现已进入 IR；其余来源转换和完整 MNI 接口仍待迁入；浮点/混合迭代语义未定义并保留现有诊断，不扩展步长或不前进规则。
 

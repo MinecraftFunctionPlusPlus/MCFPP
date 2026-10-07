@@ -33,7 +33,7 @@ object ParameterMatcher {
     }
 
     fun accepts(value: Var<*>, target: MCFPPType): Boolean =
-        (target !is MCFPPDeclaredConcreteType || top.mcfpp.analysis.SpecializationKeys.isConstant(value)) && conversion(argumentType(value), target) != null
+        conversion(argumentType(value), target) != null
 
     private fun conversion(source: MCFPPType, target: MCFPPType): TypeRelations.Conversion? {
         // Bare native container signatures denote a constructor pattern, not a wildcard value.

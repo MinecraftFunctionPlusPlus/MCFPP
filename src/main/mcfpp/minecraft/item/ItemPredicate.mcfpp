@@ -43,7 +43,7 @@ data OrItemPredicatePart: ItemPredicatePart {
 ###
 @From<"top.mcfpp.mni.minecraft.ItemPredicateData">
 data ItemPredicate {
-    parts as list<ItemPredicatePart>! = [];
+    parts as list<ItemPredicatePart> = [];
 }
 
 @From<"top.mcfpp.mni.minecraft.ItemPredicateObjectData">

@@ -9,7 +9,6 @@ import top.mcfpp.model.function.SpecializationPolicy
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.test.util.MCFPPStringTest
 import top.mcfpp.type.MCFPPBaseType
-import top.mcfpp.type.MCFPPDeclaredConcreteType
 import kotlin.test.Test
 import kotlin.test.*
 
@@ -117,7 +116,6 @@ class SpecializationPolicyTest {
         assertEquals(first, second)
         assertNotEquals(first, third)
         assertFalse(SpecializationPolicy.requiresParameter(MCFPPBaseType.Int, MCIntConcrete(1)))
-        assertTrue(SpecializationPolicy.requiresParameter(MCFPPDeclaredConcreteType(MCFPPBaseType.Int), MCIntConcrete(1)))
         assertTrue(SpecializationPolicy.requiresParameter(top.mcfpp.type.MCFPPConcreteType.Type, MCFPPTypeVar(MCFPPBaseType.Int)))
     }
 

@@ -144,7 +144,7 @@ class TypeVariableDeclarationTest {
         }
     }
 
-    @Test fun metaAliasesAndRequiredWrappersCannotDeclareOrdinarySlots() {
+    @Test fun metaAliasesCannotDeclareOrdinarySlots() {
         MCFPPStringTest.readFromString("""
             typealias type as Meta;
             func main(){
@@ -154,12 +154,6 @@ class TypeVariableDeclarationTest {
         assertEquals(1, Project.errorCount)
         var main = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single()
         assertNull(main.scope.getVar("aliased"))
-        MCFPPStringTest.readFromString("""
-            func main(){var required as type! = 1;}
-        """.trimIndent(), version = "26.3")
-        assertTrue(Project.errorCount > 0)
-        main = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single()
-        assertNull(main.scope.getVar("required"))
     }
 
     @Test fun templateReadonlyTypesCannotBeCopiedIntoOrdinaryFields() {

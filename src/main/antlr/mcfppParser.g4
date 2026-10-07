@@ -516,10 +516,10 @@ expressionList
     ;
 
 type
-    :   typeWithoutExcl EXCL?
+    :   typeBody
     ;
 
-typeWithoutExcl
+typeBody
     :   normalType
     |   VecType
     |   (LIST | IMMUTABLE_LIST | MAP | DICT) NL* LANGLE NL* (type | MULT) NL* RANGLE

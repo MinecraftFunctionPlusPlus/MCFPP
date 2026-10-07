@@ -59,6 +59,10 @@ object ValueSnapshot {
         is Var<*> -> when {
             value.symbol != null && !value.hasAssigned -> null
             value.storageBinding != null -> StorageAccess.snapshot(value)
+            value is top.mcfpp.core.lang.obj.EnumVarConcrete -> CompilerValue.Typed(value.type.typeId, CompilerValue.Record(mapOf(
+                "ordinal" to CompilerValue.Integral(value.value.value.toLong()),
+                "data" to CompilerValue.Nbt(top.mcfpp.backend.NbtEncoding.snbt(value.value.data))
+            )))
             value is top.mcfpp.core.lang.entity.SelectorVar -> if (value.value.predicates.isEmpty())
                 CompilerValue.Typed(value.type.typeId, CompilerValue.Text(value.value.selectorType.name)) else null
             value is top.mcfpp.core.lang.obj.TypeDataTemplateObject -> of(value.delegateVar)?.let {

@@ -2356,7 +2356,7 @@ class LibFieldAccessTest {
     }
 
     @Test
-    fun knownTextCopiesAndConcatenationPreserveCompileTimeValuesAcrossLibraryRoundTrip() = withLibrary { output ->
+    fun textCopiesAndConcatenationPreservePayloadsAcrossLibraryRoundTrip() = withLibrary { output ->
         val mainSource = """
             func main(){
                 var box=Box();
@@ -2367,10 +2367,10 @@ class LibFieldAccessTest {
             namespace fixture.fields;
             data Box {
                 func observe()->int {
-                    var original as text! = ("A").toText();
-                    var copied as text! = original;
-                    var joined as text! = ("A").toText()+("B").toText();
-                    var suffixed as text! = ("A").toText()+"S";
+                    var original as text = ("A").toText();
+                    var copied as text = original;
+                    var joined as text = ("A").toText()+("B").toText();
+                    var suffixed as text = ("A").toText()+"S";
                     /data modify storage fixture:observed original set from storage mcfpp:system stack_frame[0].original
                     /data modify storage fixture:observed copied set from storage mcfpp:system stack_frame[0].copied
                     /data modify storage fixture:observed joined set from storage mcfpp:system stack_frame[0].joined
@@ -2450,10 +2450,10 @@ class LibFieldAccessTest {
             namespace fixture.fields;
             data Box {
                 func observe()->int {
-                    var original as text! = ("quote \" slash \\").toText();
-                    var copied as text! = original;
-                    var joined as text! = ("quote \" slash \\").toText()+" tail";
-                    var nbtText as text! = toNBT("x").toText();
+                    var original as text = ("quote \" slash \\").toText();
+                    var copied as text = original;
+                    var joined as text = ("quote \" slash \\").toText()+" tail";
+                    var nbtText as text = toNBT("x").toText();
                     /data modify storage fixture:observed original set from storage mcfpp:system stack_frame[0].original
                     /data modify storage fixture:observed copied set from storage mcfpp:system stack_frame[0].copied
                     /data modify storage fixture:observed joined set from storage mcfpp:system stack_frame[0].joined
@@ -4870,6 +4870,54 @@ class LibFieldAccessTest {
         assertEquals(4, Project.errorCount)
         val reject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
         assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("attribute ") || "set value {}" in it.toString() })
+    }
+
+    @Test
+    fun frozenEnumArgumentsRestoreNominalMembersAcrossLibraryRoundTrip() = withLibrary { output ->
+        write("""
+            namespace fixture.fields;
+            enum Choice { One="fixture:payload", Two={label:"x"} }
+            data Box<E as Choice> {
+                private value as int;
+                constructor(v as int){ this.value=v; }
+                func read()->int { return this.value; }
+            }
+            func main(){
+                var first=Box<Choice.One>(4); var second=Box<Choice.Two>(9);
+                dynamic var firstResult=first.read(); dynamic var secondResult=second.read();
+            }
+        """, output)
+        fun check(main: Function): List<Pair<top.mcfpp.type.TypeId, top.mcfpp.analysis.CompilerValue>> {
+            val namespace = assertNotNull(GlobalScope.getUnsolvedImportNamespace("fixture.fields"))
+            val enum = assertNotNull(namespace.scope.getEnum("Choice"))
+            val models = listOf("first", "second").map { assertIs<DataTemplateObject>(main.scope.getVar(it)).templateType }
+            assertNotEquals(models[0].getType().typeId, models[1].getType().typeId)
+            val snapshots = models.mapIndexed { ordinal, model ->
+                val bound = assertIs<top.mcfpp.core.lang.obj.EnumVarConcrete>(model.scope.getVar("E"))
+                assertEquals(enum.getType().typeId, bound.type.typeId)
+                assertEquals(ordinal, bound.value.value)
+                assertEquals(top.mcfpp.backend.NbtEncoding.snbt(assertNotNull(enum.getMember(ordinal)).data), top.mcfpp.backend.NbtEncoding.snbt(bound.value.data))
+                assertTrue(bound.isConst)
+                model.getType().typeId to assertNotNull(ValueSnapshot.of(bound))
+            }
+            val machine = execute(main, output)
+            assertEquals(4, machine.read(main.scope.getVar("firstResult") as MCInt))
+            assertEquals(9, machine.read(main.scope.getVar("secondResult") as MCInt))
+            return snapshots
+        }
+        val sourceMain = GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single()
+        val sourceModels = listOf("first", "second").map { (sourceMain.scope.getVar(it) as DataTemplateObject).templateType }
+        val source = check(sourceMain)
+        val main = consume("""
+            import fixture.fields:*;
+            func main(){
+                var second=Box<Choice.Two>(9); var first=Box<Choice.One>(4);
+                dynamic var firstResult=first.read(); dynamic var secondResult=second.read();
+            }
+        """, output)
+        assertEquals(0, Project.errorCount)
+        assertEquals(source, check(main))
+        for ((index, name) in listOf("first", "second").withIndex()) assertNotSame(sourceModels[index], (main.scope.getVar(name) as DataTemplateObject).templateType)
     }
 
     private fun write(source: String, output: Path) {

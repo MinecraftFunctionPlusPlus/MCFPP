@@ -18,7 +18,6 @@ data class Symbol(
     val name: String,
     val declaredType: TypeId,
     val mutable: Boolean,
-    val requiresConstant: Boolean = false,
     val forceRuntime: Boolean = false
 )
 

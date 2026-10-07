@@ -136,8 +136,7 @@ object StorageAccess {
 
     /** Allocate a runtime receiver without pretending erased defaults are complete constants. */
     internal fun initializeTemplateReceiver(value: DataTemplateObject) {
-        fun defaults(source: MCFPPType): Tag<*>? {
-            val type = if (source is MCFPPDeclaredConcreteType) source.type else source
+        fun defaults(type: MCFPPType): Tag<*>? {
             if (!type.hasRuntimeRepresentation || type in erasedTypes) return null
             if (type is MCFPPDataTemplateType) {
                 return CompoundTag().apply {
@@ -431,15 +430,13 @@ object StorageAccess {
     }
 
     fun adapter(type: MCFPPType, name: String, binding: StorageBinding): Var<*> {
-        var carrier = type
-        while (carrier is MCFPPDeclaredConcreteType) carrier = carrier.type
         val value = if (binding.data.layout == StorageLayout.CompilerOnly) {
             val constant = constantFor(type, binding)
             if (constant == null) {
                 // An address can be a write destination before its first value is known.
-                if (type.hasRuntimeRepresentation) carrier.buildUnConcrete(name) else UnknownVar(name).apply { this.type = type }
+                if (type.hasRuntimeRepresentation) type.buildUnConcrete(name) else UnknownVar(name).apply { this.type = type }
             } else restore(type, constant, name, binding.data.types) ?: return error(type, "Compiler-only layout is inaccessible as '$type'")
-        } else carrier.buildUnConcrete(name)
+        } else type.buildUnConcrete(name)
         value.type = type
         value.storageBinding = if (binding.view != null) binding.copy(view = ValueRef.TypedView(type.typeId,
             if (binding.view.place == binding.place) binding.view.source else ValueRef.Read(
@@ -619,6 +616,8 @@ object StorageAccess {
         return adapter(target.type, target.identifier, binding).apply {
             setAs(target)
             parent = target.parent
+            if (this is OnScoreboard && target is OnScoreboard) isDataOnly = target.isDataOnly
+            annotations.addAll(target.annotations)
             hasAssigned = true
             storageReadVersion = null
             if (this is MCAny) payloadType = (source as? MCAny)?.inferredType ?: source.type
@@ -891,7 +890,9 @@ object StorageAccess {
     }
 
     internal fun snapshotTag(value: CompilerValue, type: TypeId? = null): Tag<*>? = when (value) {
-        is CompilerValue.Typed -> snapshotTag(value.payload, value.type)
+        is CompilerValue.Typed -> if (value.type is TypeId.Declaration && value.type.kind == "enum")
+            (value.payload as? CompilerValue.Record)?.fields?.get("data")?.let { snapshotTag(it) }
+        else snapshotTag(value.payload, value.type)
         is CompilerValue.Integral -> when (type) {
             MCFPPNBTType.Byte.typeId -> top.mcfpp.nbt.tags.primitive.ByteTag(value.value.toByte())
             MCFPPNBTType.Short.typeId -> top.mcfpp.nbt.tags.primitive.ShortTag(value.value.toShort())
@@ -936,6 +937,16 @@ object StorageAccess {
     internal fun restore(type: MCFPPType, snapshot: CompilerValue, name: String,
                         types: Map<TypeId, MCFPPType> = emptyMap()): Var<*>? {
         val payload = if (snapshot is CompilerValue.Typed) snapshot.payload else snapshot
+        val enumType = type as? MCFPPEnumType
+        if (enumType != null) {
+            if (snapshot !is CompilerValue.Typed || snapshot.type != enumType.typeId || payload !is CompilerValue.Record) return null
+            val ordinal = (payload.fields["ordinal"] as? CompilerValue.Integral)?.value ?: return null
+            if (ordinal !in Int.MIN_VALUE.toLong()..Int.MAX_VALUE.toLong()) return null
+            val member = enumType.enum.getMember(ordinal.toInt()) ?: return null
+            val data = payload.fields["data"] as? CompilerValue.Nbt ?: return null
+            if (data.snbt != NbtEncoding.snbt(member.data)) return null
+            return type.build(name, member)
+        }
         if (type is MCFPPEntityType && payload is CompilerValue.Text) {
             val kind = top.mcfpp.lib.EntitySelector.Companion.SelectorType.entries.firstOrNull { it.name == payload.value } ?: return null
             return top.mcfpp.core.lang.entity.SelectorVar(top.mcfpp.lib.EntitySelector(kind), name).takeIf { it.type.typeId == type.typeId }

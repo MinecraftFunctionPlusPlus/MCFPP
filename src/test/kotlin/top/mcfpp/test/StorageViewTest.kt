@@ -15,6 +15,49 @@ import kotlin.test.*
 import kotlin.test.Test
 
 class StorageViewTest {
+    @Test fun enumSnapshotsKeepNominalIdentityAndEncodeMemberPayloads() {
+        val main = compile("""
+            enum Choice { One="fixture:payload", Two={label:"x"} }
+            func main(){}
+        """)
+        val enum = assertNotNull(GlobalScope.localNamespaces.getValue("default.test").scope.getEnum("Choice"))
+        val type = enum.getType()
+        Function.currFunction = main
+        val snapshots = mutableListOf<CompilerValue>()
+        for ((ordinal, expected) in listOf("\"fixture:payload\"", "{\"label\":\"x\"}").withIndex()) {
+            val member = assertNotNull(enum.getMember(ordinal))
+            val value = top.mcfpp.core.lang.obj.EnumVarConcrete(enum, member, "enum_$ordinal")
+            value.nbtPath = top.mcfpp.lib.NBTPath.temp.memberIndex(value.identifier)
+            val snapshot = assertIs<CompilerValue.Typed>(ValueSnapshot.of(value))
+            assertEquals(type.typeId, snapshot.type)
+            snapshots.add(snapshot)
+            val restored = assertIs<top.mcfpp.core.lang.obj.EnumVarConcrete>(StorageAccess.restore(type, snapshot, "restored"))
+            assertSame(member, restored.value)
+            assertEquals(type.typeId, restored.type.typeId)
+            StorageAccess.ensure(value)
+            assertEquals(top.mcfpp.backend.NbtEncoding.snbt(member.data), top.mcfpp.backend.NbtEncoding.snbt(assertNotNull(StorageAccess.constantEncoding(value))))
+            val destination = top.mcfpp.lib.NBTPath.temp.memberIndex("encoded_$ordinal")
+            StorageAccess.encodeTo(destination, value)
+            val prefix = "data modify ${value.nbtPath.toCommandPart()} set value "
+            val initialized = main.commands.map { it.toString() }.single { it.startsWith(prefix) }.removePrefix(prefix)
+            assertEquals(expected, top.mcfpp.backend.NbtEncoding.snbt(top.mcfpp.nbt.tags.Tag.toNBT(initialized)))
+            assertTrue(main.commands.any { it.toString() == "data modify ${destination.toCommandPart()} set from ${value.nbtPath.toCommandPart()}" })
+            val fields = assertIs<CompilerValue.Record>(snapshot.payload).fields
+            assertNull(StorageAccess.restore(type, CompilerValue.Typed(type.typeId, CompilerValue.Record(fields + ("ordinal" to CompilerValue.Integral(Long.MAX_VALUE)))), "invalid"))
+            assertNull(StorageAccess.restore(type, CompilerValue.Typed(type.typeId, CompilerValue.Record(fields + ("data" to CompilerValue.Nbt("0")))), "invalid"))
+            assertNull(StorageAccess.restore(type, CompilerValue.Typed(TypeId.Declaration("enum", "other", "Choice"), snapshot.payload), "foreign"))
+            member.data = IntTag(99)
+            assertEquals(snapshot, ValueSnapshot.of(value))
+            assertEquals(expected, top.mcfpp.backend.NbtEncoding.snbt(assertNotNull(StorageAccess.constantEncoding(value))))
+        }
+        val nested = CompilerValue.Record(mapOf("string" to snapshots[0], "compound" to CompilerValue.Sequence(listOf(snapshots[1]))))
+        val projected = assertIs<top.mcfpp.nbt.tags.CompoundTag>(StorageAccess.snapshotTag(nested))
+        assertEquals("fixture:payload", assertIs<top.mcfpp.nbt.tags.primitive.StringTag>(projected["string"]).value)
+        val list = assertIs<top.mcfpp.nbt.tags.collection.ListTag>(projected["compound"])
+        assertEquals("x", assertIs<top.mcfpp.nbt.tags.primitive.StringTag>(assertIs<top.mcfpp.nbt.tags.CompoundTag>(list[0])["label"]).value)
+        assertNull(ValueSnapshot.of(top.mcfpp.core.lang.obj.EnumVar(enum, "unknown")))
+    }
+
     private fun compile(source: String, version: String = "26.3"): Function {
         MCFPPStringTest.readFromString(source.trimIndent(), version = version)
         assertEquals(0, Project.errorCount)

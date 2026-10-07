@@ -22,8 +22,6 @@ object TypeRelations {
     private fun subtype(source: MCFPPType, target: MCFPPType, visited: MutableSet<Pair<TypeId, TypeId>>): Boolean {
         if (source.typeId == target.typeId) return true
         if (!visited.add(source.typeId to target.typeId)) return false
-        if (source is MCFPPDeclaredConcreteType) return subtype(source.type, target, visited)
-        if (target is MCFPPDeclaredConcreteType) return subtype(source, target.type, visited)
         if (!source.isValueType || !target.isValueType) return false
         if (target == MCFPPBaseType.Object) return true
         if (source is MCFPPUnionType) return source.types.all { subtype(it, target, HashSet(visited)) }

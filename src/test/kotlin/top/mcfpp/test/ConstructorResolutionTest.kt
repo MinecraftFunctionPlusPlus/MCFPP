@@ -48,29 +48,30 @@ class ConstructorResolutionTest {
         }
     }
 
-    @Test fun constantConstructorRejectsUnknownParametersAndAcceptsLiterals() {
+    @Test fun ordinaryConstructorAcceptsRuntimeParametersAndLiteralsWithoutSpecializing() {
         compile("""
             data Box {
-                constructor(value as int!){
-                    /say constant
+                constructor(value as int){
+                    /say ordinary
                 }
             }
-            func rejected(value as int){ Box(value); }
-            func main(){}
+            func accepted(value as int){ Box(value); }
+            func main(){ accepted(2); }
         """)
-        assertEquals(1, Project.errorCount)
+        assertEquals(0, Project.errorCount)
         assertTrue(box().constructors.all { it.compiledFunctions.isEmpty() })
-        assertTrue(execute().messages.isEmpty())
+        assertEquals(listOf("ordinary"), execute().messages)
         compile("""
             data Box {
-                constructor(value as int!){
-                    /say constant
+                constructor(value as int){
+                    /say ordinary
                 }
             }
             func main(){ Box(1); }
         """)
         assertEquals(0, Project.errorCount)
-        assertEquals(listOf("constant"), execute().messages)
+        assertTrue(box().constructors.all { it.compiledFunctions.isEmpty() })
+        assertEquals(listOf("ordinary"), execute().messages)
     }
 
     @Test fun omittedArgumentsUseConstructorDefaults() {

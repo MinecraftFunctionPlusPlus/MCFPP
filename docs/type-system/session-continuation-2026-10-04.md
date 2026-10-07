@@ -4,7 +4,15 @@
 
 ## 当前进度
 
-### 阶段 128：实体属性查询与移除命令（已限定验证）
+### 阶段 129：移除语言层 `T!` 并恢复闭合枚举快照（已限定验证）
+
+语言不再提供任何 `T!` 后缀；`type` 只用于泛型参数，`const` 只限制重赋。普通值、擦除值及集合均不能承载 `TypeValue`；readonly 泛型完整快照和非 type 编译器专用内部快照保留。闭合枚举记录按完整TypeId、ordinal与不可变SNBT恢复实际成员。
+
+标准库重建成功，Project0/0；定向用例跨轮修复后通过，最终单项复查成功。31个不同用例跨轮各自通过，非一次联合全绿；Cache仅在较早联合轮通过。详见verification.md。当前MCFL59，Std外剩余3类、9个CommandReturn及7个旧void wrapper，whole17仍未完成。
+
+下方阶段129之前的 `T!` 正向记录仅保留历史验证语境，不能作为当前语言合法性的证据；语言后缀已退役。
+
+### 历史阶段 128：实体属性查询与移除命令（已限定验证）
 
 移除Entity/Player两组失效host属性注入并删除hidden `AttributeData`（取消旧入口，不作等价迁移）；四个实体属性查询/移除方法通过single-context处理。唯一fixture与Cache联合通过，stdlib SUCCESSFUL in1m03s/Project0/0；worker50正常、SUCCESSFUL in45s。Lib XML `2026-10-07T06:47:18.125Z`、Cache XML `2026-10-07T06:47:17.323Z` 均1/0/0/0，source/fresh Project0/9118与0/9119，negative4/9119（两个selector guard及两个未发布结果级联）。source/fresh四条命令验证attribute字符串来源与`AttributeModifier.id` modifier来源；四个root各一次`{}`初始化与双store，readonly结果保持Unknown/null。MCFL58三份bin均483462 bytes、header `4c46434d3a000000`、SHA256 `F8A20971589BA8F3120323C02BC32E8011B145F7439FD1E8A81F2987715A7F14`。旧`setAttributeBase`/`addAttributeModifier`、world执行及whole17仍未完成。
 
@@ -56,7 +64,7 @@ stdlib SUCCESSFUL 11s、Project0/0；joint worker40正常、FAILED19s，LibField
 
 stdlib1成功11s/Project0/0；首轮producer因`ENTITY`保留字导入解析失败，Cache XML `2026-10-07T03:22:31.233Z` 1/0/0/0为MCFL48唯一Cache验证。grammar修复后stdlib2成功26s/0/0；final2 producer189/9118，final3 producer9/9118。final4重复执行并覆盖，当前仅保留worker37、FAILED6s及XML `2026-10-07T03:52:30.253Z` 1/1/0/0、producer8/9118；worker36首轮日志/XML已丢失。final5-debug worker38 FAILED28s，XML `2026-10-07T04:04:19.204Z` 1/1/0/0、producer8/9118，诊断显示bare Selector绑定后value仍为Unknown。最终修复后final6 worker39正常、SUCCESS39s，XML `2026-10-07T04:08:58.285Z` 1/0/0/0；source/fresh Project0/9118与0/9119，negative 2/9119，selector guard与未发布`listTag`结果诊断按预期通过。未覆盖predicate selector、world执行、frame0或whole17。
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段128实体属性查询/移除命令已完成限定验证，MCFL58；Std外剩余3个Java类、9个CommandReturn注解及7个旧void wrapper，whole17仍未完成。阶段127 Player消息命令已完成限定验证，MCFL57。阶段126 entity-target tp已完成限定验证，MCFL56。阶段125 Player状态与ride命令已完成限定验证，MCFL55；阶段124 Player advancement十个入口已完成限定验证，MCFL54；阶段123 Player XP六个入口已完成限定验证，MCFL53；阶段122 stopRide入口已完成限定验证，MCFL52；阶段121 Entity effect授予两个入口已完成限定验证，MCFL51；阶段120 EntityEffect两个命令入口已完成限定验证，MCFL50；阶段119 Team加入/离开两个命令入口已完成限定验证，MCFL49；阶段118 EntityTag三个结果入口已完成限定验证，MCFL48；阶段117 Random命令结果入口已完成限定验证，MCFL47；阶段116 WorldObject命令结果入口已完成限定验证，MCFL46；阶段115 BossBar命令结果入口已完成限定验证，MCFL45；阶段114 Worldborder命令结果入口已完成限定验证，MCFL43；阶段113 Op/Recipe玩家命令入口已完成限定验证，MCFL42；阶段112 Team receiver结果入口已完成限定验证，MCFL41；阶段111 Datapack/Debug结果入口已完成限定验证，MCFL40；阶段110提交`17313ad`，阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段129移除语言层 `T!` 并恢复闭合枚举快照已完成限定验证，MCFL59；阶段128实体属性查询/移除命令为此前已验证路径；Std外剩余3个Java类、9个CommandReturn注解及7个旧void wrapper，whole17仍未完成。阶段127 Player消息命令已完成限定验证，MCFL57。阶段126 entity-target tp已完成限定验证，MCFL56。阶段125 Player状态与ride命令已完成限定验证，MCFL55；阶段124 Player advancement十个入口已完成限定验证，MCFL54；阶段123 Player XP六个入口已完成限定验证，MCFL53；阶段122 stopRide入口已完成限定验证，MCFL52；阶段121 Entity effect授予两个入口已完成限定验证，MCFL51；阶段120 EntityEffect两个命令入口已完成限定验证，MCFL50；阶段119 Team加入/离开两个命令入口已完成限定验证，MCFL49；阶段118 EntityTag三个结果入口已完成限定验证，MCFL48；阶段117 Random命令结果入口已完成限定验证，MCFL47；阶段116 WorldObject命令结果入口已完成限定验证，MCFL46；阶段115 BossBar命令结果入口已完成限定验证，MCFL45；阶段114 Worldborder命令结果入口已完成限定验证，MCFL43；阶段113 Op/Recipe玩家命令入口已完成限定验证，MCFL42；阶段112 Team receiver结果入口已完成限定验证，MCFL41；阶段111 Datapack/Debug结果入口已完成限定验证，MCFL40；阶段110提交`17313ad`，阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效。重构不要求兼容旧 `.mcfpp` 写法。
 
 ### 阶段 117：Random命令结果接口（已限定验证）
 
@@ -302,7 +310,7 @@ stdlib首轮 `mcfpp-native-text-context-stdlib.log` 重建成功，Project0/0，
 
 平均3.8/5，whole17完整性仍为3/5。
 
-### 阶段 98：T! text快照、copy与即时拼接（历史）
+### 阶段 98 历史：旧 `T!` text快照、copy与即时拼接（语义已于阶段129退役）
 
 两个生产文件修改不可变text snapshot恢复：完整ListTag恢复为immutable `EncodedChatComponent`，再以声明类型构造。RED `mcfpp-known-text-snapshot-red.log` worker207 exit1/FAILED17s，XML `2026-10-06T21:14:21.835Z` 1/1/0/0；producer2/9118，joined和suffixed均为text→text赋值错误，未进fresh。final `mcfpp-known-text-snapshot-final.log` worker208正常exit0/BUILD SUCCESSFUL in28s，XML `21:19:02.182Z` 1/0/0/0；source0/9118、fresh0/9119。生成consumer磁盘函数并执行得到original=A、copy=A、joined=AB、suffixed=AS、return7/frame0；日志118890/118894显示joined/suffixed直接作为含组件的flat literal list。MCFL28、bin291176/hash2550…不变；无stdlib/Cache/fullcheck/server。仅一RED及一final，无其他suite重跑。
 
@@ -810,7 +818,7 @@ MCFL19；stdlib独立SUCCESS36s/compiler0/0，三artifact292301 bytes/header4c46
 
 final3 worker177正常exit0/SUCCESS1m1s，fresh XML2026-10-06T14:00:39.735Z联合3全绿。新86 source0errors/9118warnings、fresh0/9121warnings；source盘4/9/bool1/5、fresh4/9/bool1/10/frame0，模型/owner/TypeID及Shift4→Offset5、Shift9→Offset10全达。旧85正例source0/9118 fresh0/9119；三负例各source1/9118、fresh1/9119为expected拒绝。cache在173绿，跨轮4不同case各过、最终仅联合3。警告含source、均既有flatExtends重复类别，未解决。无fullcheck/server，85提交7826eebf95df9a2d9f2efdbb774f761661b2a282，86提交见Git历史。
 
-阶段87已实现并限定验证：`TypeUsage` 统一判定接入源码声明入口、已绑定普通签名、IR/擦除值与集合、延迟字段；普通变量/字段/参数/返回及擦除/集合路径拒绝 `TypeValue`。`typealias`、内部 `TypeVar` 解析和现有readonly泛型绑定保留。依赖普通 `type` 存储的旧30个正例撤回，4个合法的直接泛型类型表达式库往返fixture保留；验证分轮详见verification.md，19个不同用例跨轮各自通过，非单次全套通过。底层runtime carrier修复保留 `T!` 语言类型与常量要求；MCFL19/bin292301不变，无stdlib/fullcheck/server。
+阶段87已实现并限定验证：`TypeUsage` 统一判定接入源码声明入口、已绑定普通签名、IR/擦除值与集合、延迟字段；普通变量/字段/参数/返回及擦除/集合路径拒绝 `TypeValue`。`typealias`、内部 `TypeVar` 解析和现有readonly泛型绑定保留。依赖普通 `type` 存储的旧30个正例撤回，4个合法的直接泛型类型表达式库往返fixture保留；验证分轮详见verification.md，19个不同用例跨轮各自通过，非单次全套通过。底层runtime carrier修复属于当时的 `T!` 方案；阶段129已退役该语言后缀，旧正向验证仅为历史记录；MCFL19/bin292301不变，无stdlib/fullcheck/server。
 
 | 自评轴 | 评分 | 本阶段依据 |
 | --- | --- | --- |

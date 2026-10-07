@@ -1,8 +1,28 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段128，MCFL58；Std外剩余3个Java类含9个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段129，MCFL59；Std外剩余3个Java类含9个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
 
-## 当前阶段 128：实体属性查询与移除命令（已限定验证）
+## 当前阶段 129：移除语言层 `T!` 并恢复闭合枚举快照（已限定验证）
+
+本阶段移除语言后缀及其带来的完整值声明约束；readonly泛型与编译器专用值仍要求完整快照。`ItemPredicate.parts`按普通list处理。闭合枚举记录保存完整enum TypeId、ordinal及不可变SNBT，NBT编码仅投影data，恢复时按实际枚举校验成员；不增加CompilerValue种类、全局registry或host EnumMember逃逸。两项枚举专项fixture覆盖source/fresh磁盘4/9；新增`TypeSuffixSyntaxTest`四项。旧MCFL58枚举联合日志 `mcfpp-frozen-enum-values-final.log` 中的StorageView旧`enum!`断言失败已随新规则撤回，不作为本阶段失败或成功证据。
+
+验证日志位于`F:/DevCache/.codex/runtime/mcfpp-remove-type-suffix-`前缀。MCFL59标准库重建native exit0、SUCCESSFUL in1m30s、Project0/0。final（首轮）因`TypeSuffixSyntaxTest`的同包`Test<T>`与`kotlin.test.*`导入冲突，在compileTestKotlin失败，无worker/XML；final2 daemon消失且无完整XML，不推断具体原因；final3逐类worker1–13正常结束，FAILED in1m25s，30项中29通过、1项失败（运行时score缺失）；final4为PowerShell参数配置失败，无worker/XML；final5 worker15正常结束、FAILED in55s，两项中1通过、1项失败（`isDataOnly`标志在字段写回时丢失，XML时间`2026-10-07T08:44:45.932Z`），annotation79未执行。修复使普通调用按IR固定score协议传递int/bool参数，并在字段写回保留DataOnly与声明注解，构造器只补缺失注解；新增运行时初始化验证bool=true路径和字段值4，旧相关用例验证45/5及只读拒绝。两处修复不新增序列化字段或签名，未重复重建标准库。final3历史XML中Cache `2026-10-07T08:31:44.532Z`为1/0/0/0、LibFieldAccess `08:31:46.063Z`为3/0/0/0。修复字段写回后，final6仅复查`typedAndInferredObjectConstKeepRuntimeCallsAndRejectReassignment`，worker16正常结束、SUCCESSFUL in32s；最终XML `2026-10-07T08:52:10.317Z` 为1/0/0/0，source Project0/9118、negative2/9118。Cache仅final3通过；31个不同用例跨轮各自通过，不是单次31项联合全绿。final2产生的heap dump已删除，不对daemon消失原因作推断。
+
+三份bin均MCFL59、482728 bytes、header `4c46434d3b000000`、SHA256 `1921A4EA6A458742746727207E3BF996DDC457F46CD375F5E43EBF078C57405A`。本批共32个source/test路径、bin及5份文档；无fullcheck/server/world验证；whole17仍未完成。
+
+| 自评维度 | 分数 | 本阶段证据与边界 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 对照成功复查、XML、Project计数与三份MCFL59资源；如实区分跨轮通过与单轮失败。 |
+| 完整性 | 3/5 | suffix规则和枚举闭合记录有定向覆盖，whole17及服务器验证未完成。 |
+| 清晰性 | 4/5 | 区分语言后缀退役、泛型快照保留和普通TypeValue禁令。 |
+| 可操作性 | 4/5 | 失败轮次、实际复查方法及下一限定路径均可复核。 |
+| 简洁性 | 3/5 | 记录多轮基础设施及失败边界仍较长，可继续压缩历史。 |
+
+平均3.6/5；whole17仍未完成。
+
+下方阶段129之前的 `T!` 正向记录仅保留历史验证语境，不能作为当前语言合法性的证据；语言后缀已退役。
+
+## 历史阶段 128：实体属性查询与移除命令（已限定验证）
 
 清理Entity/Player两组旧host属性注入并删除hidden `AttributeData`（取消旧宿主入口，不称等价迁移）；四个受测实体属性查询/移除接口接入单context。唯一fixture为`nativeEntityAttributeCommandsCaptureResultsAcrossLibraryRoundTrip`，联合`oldAndUnknownCacheFormatsProduceARecompileDiagnostic`，日志前缀`mcfpp-native-entity-attribute-command-results-`。stdlib原生exit0、SUCCESSFUL in1m03s、Project0/0；joint原生exit0、worker50正常结束、SUCCESSFUL in45s。LibFieldAccess XML `2026-10-07T06:47:18.125Z`、Cache XML `2026-10-07T06:47:17.323Z` 各1/0/0/0；source/fresh Project0/9118与0/9119，negative4/9119。三份bin均MCFL58、483462 bytes、header `4c46434d3a000000`、SHA256 `F8A20971589BA8F3120323C02BC32E8011B145F7439FD1E8A81F2987715A7F14`。
 

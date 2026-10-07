@@ -3,11 +3,12 @@ package top.mcfpp.type
 import org.antlr.v4.runtime.CharStream
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
+import org.antlr.v4.runtime.Token
 import top.mcfpp.antlr.MCFPPFieldVisitor
 import top.mcfpp.antlr.mcfppLexer
 import top.mcfpp.antlr.mcfppParser
 import top.mcfpp.antlr.mcfppParser.TypeContext
-import top.mcfpp.antlr.mcfppParser.TypeWithoutExclContext
+import top.mcfpp.antlr.mcfppParser.TypeBodyContext
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.analysis.CompilerValue
@@ -375,7 +376,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
         }
 
         fun parsePrimitiveType(ctx: TypeContext): MCFPPType?{
-            val t = ctx.typeWithoutExcl().normalType()?: return null
+            val t = ctx.typeBody().normalType()?: return null
             return t.NBT()?.let { MCFPPNBTType.NBT }
                 ?:t.BOOL()?.let { MCFPPBaseType.Bool }
                 ?:t.BYTE()?.let { MCFPPNBTType.Byte }
@@ -395,10 +396,7 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
          */
         fun parseFromString(typeStr: String, typeScope: IScopeWithType, caller: Function? = null): MCFPPType? {
             if(typeStr.isEmpty()) return null
-            if(typeStr.last() == '!'){
-                val qwq = parseFromString(typeStr.substring(0, typeStr.length - 1), typeScope, caller)
-                return qwq?.let { MCFPPDeclaredConcreteType(qwq) }
-            }
+            if(typeStr.trimEnd().endsWith('!')) return null
             typeCache[typeStr]?.let { return it }
             nativeConstructor(typeStr)?.let { return it }
             //使用泛型
@@ -406,7 +404,9 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
                 val charStream: CharStream = CharStreams.fromString(typeStr)
                 val tokens = CommonTokenStream(mcfppLexer(charStream))
                 val parser = mcfppParser(tokens)
-                return parseFromContext(parser.type(), typeScope, caller)
+                val context = parser.type()
+                if (parser.numberOfSyntaxErrors != 0 || tokens.LA(1) != Token.EOF) return null
+                return parseFromContext(context, typeScope, caller)
             }
             //正则匹配
             val templateResult = MCFPPDataTemplateType.regex.find(typeStr)
@@ -451,15 +451,10 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
         }
 
         fun parseFromContext(ctx: TypeContext, typeScope: IScopeWithType, caller: Function? = null): MCFPPType?{
-            val qwq = parseFromContext(ctx.typeWithoutExcl(), typeScope, caller)
-            return if(ctx.EXCL() != null){
-                 qwq?.let { MCFPPDeclaredConcreteType(it) }
-            }else{
-                qwq
-            }
+            return parseFromContext(ctx.typeBody(), typeScope, caller)
         }
 
-        private fun parseFromContext(ctx: TypeWithoutExclContext, typeScope: IScopeWithType, caller: Function?): MCFPPType? {
+        private fun parseFromContext(ctx: TypeBodyContext, typeScope: IScopeWithType, caller: Function?): MCFPPType? {
             typeCache[ctx.text]?.let { return it }
             //向量
             if(ctx.VecType() != null){

@@ -28,7 +28,6 @@ open class NBTList : NBTBasedData {
 
     @Suppress("MUST_BE_INITIALIZED_OR_BE_FINAL_WARNING")
     override var type: MCFPPType
-        get() = (field as? MCFPPDeclaredConcreteType)?.type ?: field
 
     val genericType: MCFPPType
         get() = (type as MCFPPTypeWithGeneric).generic.single()

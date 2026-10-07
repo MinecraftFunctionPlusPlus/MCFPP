@@ -97,13 +97,13 @@ class ConstructorExecutionTest {
         } finally { output.toFile().deleteRecursively() }
     }
 
-    @Test fun onlyRequiredConstantsDistinguishConstructorSpecializationsAndTheirExports() {
+    @Test fun ordinaryConstructorValuesShareOneBodyAndItsExport() {
         val output = Files.createTempDirectory("mcfpp-constructor-required-")
         try {
             val main = compile("""
                 data Box {
                     value as int;
-                    constructor(kind as int!, value as int){ this.value = kind + value; }
+                    constructor(kind as int, value as int){ this.value = kind + value; }
                 }
                 func main(){
                     var first = Box(1,1);
@@ -113,12 +113,11 @@ class ConstructorExecutionTest {
                 }
             """, output)
             val constructor = template().constructors.single()
-            assertEquals(2, constructor.compiledFunctions.size)
-            constructor.compiledFunctions.values.forEach { function ->
-                assertEquals(listOf("value"), function.normalParams.map { it.identifier })
-                assertNull(ValueSnapshot.of(function.scope.getVar("value")!!))
-                assertTrue(Files.readString(exported(output, function)).contains("stack_frame[0].this.value"))
-            }
+            assertTrue(constructor.compiledFunctions.isEmpty())
+            assertEquals(listOf("kind", "value"), constructor.normalParams.map { it.identifier })
+            assertNull(ValueSnapshot.of(constructor.scope.getVar("kind")!!))
+            assertNull(ValueSnapshot.of(constructor.scope.getVar("value")!!))
+            assertTrue(Files.readString(exported(output, constructor)).contains("stack_frame[0].this.value"))
             assertEquals(235, execute(main).read(main.scope.getVar("result") as MCInt))
         } finally { output.toFile().deleteRecursively() }
     }

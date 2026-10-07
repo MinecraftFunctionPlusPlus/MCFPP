@@ -12,6 +12,8 @@ import top.mcfpp.antlr.mcfppParser.CurlBlockContext
 import top.mcfpp.command.*
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.MCFloat
+import top.mcfpp.core.lang.MCInt
+import top.mcfpp.core.lang.bool.ScoreBool
 import top.mcfpp.core.lang.UnknownVar
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
@@ -612,7 +614,7 @@ open class Function : Member, FieldContainer, WithDocument {
         if (returnType !is MCFPPPrivateType) {
             // Normal function calls are runtime operations; observing one constant
             // return statement cannot prove the value of all reachable returns.
-            result.isDynamic = returnType.hasRuntimeRepresentation && returnType !is MCFPPDeclaredConcreteType
+            result.isDynamic = returnType.hasRuntimeRepresentation
             result.bindDeclaration("return")
         }
         return result
@@ -814,6 +816,20 @@ open class Function : Member, FieldContainer, WithDocument {
             val incoming = top.mcfpp.analysis.StorageAccess.callerValue(argument)
             //参数传递和子函数的参数进栈
             val p = scope.getVar(this.normalParams[i].identifier)!!
+            if (typedIR != null && (p.type === MCFPPBaseType.Int && p is MCInt ||
+                    p.type === MCFPPBaseType.Bool && p is ScoreBool)) {
+                // IR bodies read their fixed parameter registers, as IR callers do.
+                val destination = NBTPath.stack.intIndex(0).memberIndex(this.normalParams[i].identifier)
+                top.mcfpp.analysis.StorageAccess.encodeTo(destination, incoming)
+                val score = when (p) {
+                    is MCInt -> "${p.name} ${p.sbObject}"
+                    is ScoreBool -> "${p.name} ${p.boolObject}"
+                    else -> error("Expected an IR score parameter")
+                }
+                addCommand(Command("execute store result score $score run data get")
+                    .build(destination.toCommandPart()).build("1"))
+                continue
+            }
             if (p.storageBinding != null && this.normalParams[i].type.hasRuntimeRepresentation) {
                 top.mcfpp.analysis.StorageAccess.encodeTo(p.storageBinding!!.path, incoming)
                 continue
@@ -889,11 +905,7 @@ open class Function : Member, FieldContainer, WithDocument {
             LogProcessor.error("Function $identifier has no return value but tried to return a ${v.type}")
             return
         }
-        if((returnVar.hasAssigned || top.mcfpp.analysis.ValueSnapshot.of(v) == null) && returnType is MCFPPDeclaredConcreteType){
-            LogProcessor.error("Function $namespaceID must return a concrete value")
-            return
-        }
-        val runtimeReturn = if (returnVar.isDynamic && returnType !is MCFPPDeclaredConcreteType && hasRuntimePayload(returnVar))
+        val runtimeReturn = if (returnVar.isDynamic && hasRuntimePayload(returnVar))
             top.mcfpp.analysis.StorageAccess.bindIncomingParameter(returnVar) else null
         returnVar = returnVar.assignedBy(v)
         runtimeReturn?.let {

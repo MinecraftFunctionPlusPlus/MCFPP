@@ -24,7 +24,6 @@ import top.mcfpp.util.TempPool
 open class NBTMap : NBTBasedData {
     @Suppress("MUST_BE_INITIALIZED_OR_BE_FINAL_WARNING")
     override var type: MCFPPType
-        get() = (field as? MCFPPDeclaredConcreteType)?.type ?: field
     val genericType get() = (type as MCFPPMapType).generic.single()
 
     constructor(identifier: String = TempPool.getVarIdentify(), genericType: MCFPPType) : super(identifier) {

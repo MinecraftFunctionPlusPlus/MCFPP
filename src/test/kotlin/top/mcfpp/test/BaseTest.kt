@@ -109,7 +109,7 @@ class BaseTest {
     fun concreteTest(){
         val test =
             """
-                func test() -> int!{
+                func test() -> int{
                     dynamic var a = 1;
                     return a;
                 }

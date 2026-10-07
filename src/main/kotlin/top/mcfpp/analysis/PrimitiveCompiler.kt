@@ -53,7 +53,7 @@ object PrimitiveCompiler {
         MCFPPNBTType.Double, MCFPPNBTType.NBT,
         MCFPPNBTType.ByteArray, MCFPPNBTType.IntArray, MCFPPNBTType.LongArray).associateBy { it.typeId }
     private fun nbt(type: TypeId) = type != int && type != bool
-    private fun supportedType(type: MCFPPType): Boolean = type !is MCFPPDeclaredConcreteType && when (type) {
+    private fun supportedType(type: MCFPPType): Boolean = when (type) {
         is MCFPPListType, is MCFPPDictType, is MCFPPImmutableListType, is MCFPPMapType -> (type as MCFPPTypeWithGeneric).generic.all {
             it === MCFPPPrivateType.Wildcard || supportedType(it)
         }
@@ -310,8 +310,7 @@ object PrimitiveCompiler {
             else -> unsupported()
         })
         private fun type(context: Parser.TypeContext): MCFPPType {
-            if (context.EXCL() != null) unsupported()
-            val syntax = context.typeWithoutExcl()
+            val syntax = context.typeBody()
             val element = syntax.type()?.let(::type) ?: MCFPPPrivateType.Wildcard
             val result = when {
                 syntax.LIST() != null -> MCFPPListType(element)
@@ -361,10 +360,9 @@ object PrimitiveCompiler {
         val inferredFields = linkedMapOf<String, MCFPPType>()
         private val fields = linkedMapOf<String, Symbol>()
         private val fieldNames = initializerFields?.let { (it.expressions.keys + it.declared.keys).distinct() }.orEmpty()
-        private fun declarationType(type: MCFPPType): MCFPPType = if (type is MCFPPDeclaredConcreteType) type.type else type
         init {
             for ((index, parameter) in function.normalParams.withIndex()) {
-                val type = if (initializerFields == null) parameter.type else declarationType(parameter.type)
+                val type = parameter.type
                 register(type)
                 val declaration = if (initializerFields != null)
                     Symbol(declarationIds.getOrPut(Int.MIN_VALUE + index, SymbolId::fresh), parameter.identifier, type.typeId, mutable = true)
@@ -384,7 +382,7 @@ object PrimitiveCompiler {
             }
             if (initializerFields == null && function.returnType !== MCFPPPrivateType.Void) register(function.returnType)
             initializerFields?.declared?.forEach { (name, type) ->
-                val symbol = field(name, register(declarationType(type)).typeId)
+                val symbol = field(name, register(type).typeId)
                 val actual = if (symbol.declaredType in erased) TypeKnowledge.Unknown else TypeKnowledge.Exact(symbol.declaredType)
                 initialFacts.write(place(symbol), ValueFacts(actual, ValueKnowledge.Unknown))
             }

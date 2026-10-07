@@ -27,7 +27,6 @@ import top.mcfpp.model.property.Property
 import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.model.scope.IScopeWithType
 import top.mcfpp.type.MCFPPDataTemplateType
-import top.mcfpp.type.MCFPPDeclaredConcreteType
 import top.mcfpp.type.MCFPPPrivateType
 import top.mcfpp.type.MCFPPType
 import top.mcfpp.type.MCFPPNotCompiledGenericType
@@ -583,7 +582,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
                     }
                 }else{
                     //object中的字段作为全局字段，是长久保存并且不可追踪的，其中的字段应当是不确定的。
-                    (if (type is MCFPPDeclaredConcreteType || isConst && !type.hasRuntimeRepresentation) type.build(ctx.Identifier().text)
+                    (if (isConst && !type.hasRuntimeRepresentation) type.build(ctx.Identifier().text)
                         else type.buildUnConcrete(ctx.Identifier().text)).apply {
                         nullable = it.singleTemplateFieldType().QUEST() != null
                     }
@@ -713,7 +712,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         typeScope = template.scope
         try {
             val context = declaration.context
-            val inferredType = if (type is MCFPPDeclaredConcreteType) type.type else type
+            val inferredType = type
             val fieldValue = if (inferredType.hasRuntimeRepresentation) inferredType.buildUnConcrete(context.Identifier().text)
                 else inferredType.build(context.Identifier().text)
             val (field, property) = buildTemplateField(context, fieldValue)

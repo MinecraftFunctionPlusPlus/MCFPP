@@ -5,7 +5,7 @@
 
 ## 当前规则（截至2026-10-07，Asia/Shanghai）
 
-用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–128按验证记录接入受测集合、数值/文本/命令、seed结果、Datapack/Debug、delegated-int、Time、诊断接口及受测legacy入口；当前MCFL58；Std外剩余3个Java类、9个CommandReturn注解及7个旧void wrapper；whole17仍未完成。
+用户规则：语言不提供 `T!` 后缀；`type` 仅作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。`const` 只限制重赋，不要求值编译期已知；完整 readonly 泛型快照与非 type 编译器专用载荷的内部快照通道保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–129按验证记录接入受测集合、数值/文本/命令、seed结果、Datapack/Debug、delegated-int、Time、诊断接口及受测legacy入口；当前MCFL59；Std外剩余3个Java类、9个CommandReturn注解及7个旧void wrapper；whole17仍未完成。
 
 ## 当前已接入
 
@@ -13,7 +13,7 @@
 
 新86 source0errors/9118warnings、fresh0/9121warnings，source盘4/9/bool1/5、fresh4/9/bool1/10/frame0；旧modifier与final负例也通过，负例每次1错误为expected。source已有flatExtends重复警告，未解决该类别。无fullcheck/server，不扩super、source object/interface actualgeneric父或完整Kryo specialized身份。阶段87–89当前限定路径见下；以下85为历史记录。
 
-阶段87：`TypeUsage`统一判定接入源码声明入口、已绑定普通签名、IR/擦除值与集合、延迟字段，普通值位置拒绝保存 `TypeValue`。依赖普通 `type` 存储的旧30个正例撤回，4个合法的直接泛型类型表达式库往返fixture保留；9个新规则方法及相关回归共19个不同用例跨轮各自通过。final3为5项定向复查全绿，而非单次全套通过；各轮验证与修复边界见verification.md。底层runtime carrier保留 `T!` 语言类型及常量要求。MCFL19/bin292301不变，无stdlib/fullcheck/server。
+阶段87（当时规则，已被阶段129更新）：`TypeUsage`统一判定接入源码声明入口、已绑定普通签名、IR/擦除值与集合、延迟字段，普通值位置拒绝保存 `TypeValue`。依赖普通 `type` 存储的旧30个正例撤回，4个合法的直接泛型类型表达式库往返fixture保留；9个新规则方法及相关回归共19个不同用例跨轮各自通过。final3为5项定向复查全绿，而非单次全套通过；各轮验证与修复边界见verification.md。MCFL19/bin292301不变，无stdlib/fullcheck/server。阶段129退役语言 `T!` 后缀，不改变 `type` 仅用于泛型参数的规则。
 
 阶段88：`NativeCallContext`作为legacy实例成员 `list.clear()` 的显式调用入口，公开函数、receiver ValueRef/Place、immutable CompilerValue快照与通用receiver写回；private Var桥内部沿用StorageAccess，领域逻辑仍在ListOperations。Java clear用单context ABI，NativeFunction以实际invocationArgs构造context，其他native ABI保持原样。MCFL19→20；stdlib2 Project0/0，三份292301-byte bin资源SHA相同。三项联合回归source/fresh实际文件均执行reset clear/add并得7、frame0；详见verification.md。仅为受测路径，MNI其余入口与whole17仍未完成。
 
@@ -35,11 +35,11 @@
 
 阶段97：String/NBT各自的toText入口合并到单一Java类，依据实际receiver状态处理runtime与Concrete调用，并移除重复Concrete类及重复helper；不扩展到其他native或effects。MCFL27→28，标准库Project0/0，三份291176-byte资源SHA256相同。指定text fixture与Cache回归联合通过；即时toText输入为tag literal，但AB/AS拼接仍走临时数组append，未证明concat折叠。验证细节及重复执行说明见verification.md。whole17仍未完成。
 
-阶段98：`EncodedChatComponent`保存不可变SNBT快照，`StorageAccess.restore`将完整text ListTag恢复为immutable encoded component并保留声明类型。T! copy与拼接的source/fresh磁盘fixture得到A/A/AB/AS及return7/frame0；生成命令中joined/suffixed是flat component literal list。MCFL28/wire不变，无stdlib或Cache回归。只验证现有T! text路径，不扩展其他类型/effects，whole17仍未完成。
+阶段98（旧后缀语义，阶段129已退役）：`EncodedChatComponent`保存不可变SNBT快照，`StorageAccess.restore`将完整text ListTag恢复为immutable encoded component并保留声明类型。旧T! copy与拼接的source/fresh磁盘fixture得到A/A/AB/AS及return7/frame0；生成命令中joined/suffixed是flat component literal list。MCFL28/wire不变，无stdlib或Cache回归。该历史测试不构成当前语言支持 `T!` 的证据，whole17仍未完成。
 
 阶段99：仅将 `DataObjectData.toText` 迁入显式context，复用 `NativeTextOperations` 中的DTO SNBT/runtimeNBTChat实现。source/fresh普通Payload/Box fixture磁盘验证字段值7、返回7、runtime NBT组件及frame0；普通data走 `buildUnConcrete`，不据此宣称Concrete覆盖。JavaVar的host转换及Any host/getDefault/equalNull保持原范围。MCFL28→29；stdlib Project0/0，三份291431-byte bin SHA256一致；fixture与Cache两项最终联合全绿。whole17仍未完成。
 
-阶段100：`PlainChatComponent` 的纯文本编码对text使用Fastjson2 `JSON.toJSONString` 转义单个字符串；引号和反斜线的T!快照/copy/concat及NBT字符串toText在source/fresh磁盘fixture通过。MCFL29不变，无Cache/stdlib；未覆盖控制字符或聊天渲染。whole17仍未完成。
+阶段100（旧后缀语义，阶段129已退役）：`PlainChatComponent` 的纯文本编码对text使用Fastjson2 `JSON.toJSONString` 转义单个字符串；引号和反斜线的旧T!快照/copy/concat及NBT字符串toText在source/fresh磁盘fixture通过。MCFL29不变，无Cache/stdlib；未覆盖控制字符或聊天渲染。该历史测试不构成当前语言支持 `T!` 的证据。
 
 阶段101：`LootTablePredicateData.pass/fail` 两个bool入口使用显式context；`NativePredicateOperations`复用 `CommandBoolPart` 生成谓词条件，并通过现有结果发布路径返回 `ScoreBool`。source/fresh导出命令及Cache回归通过，MCFL30；不涉及world模拟或谓词求值。验证范围与日志见verification.md。
 
@@ -47,7 +47,7 @@
 
 阶段103：四个damage void入口迁入显式context，保留语言标识及默认语义，处理ResourceID DamageType与SelectorVar签名差异。动态float受现有 `FloatProviders.enabled` 限制；不新增浮点引擎。damage fixture与Cache回归均通过，source/fresh生成宏及MCFL32资源已验证；未验证world/float执行。详细边界见verification.md。
 
-阶段104迁移System九种print语言入口并完成限定验证；最终fixture复查通过，Cache仅首轮通过，未验证macro/world执行或tellraw渲染。阶段105 delegated-int、阶段106 Time及阶段107两个legacy分支入口已限定验证，细节见verification.md。阶段108删除 `System.typeOf` 并迁移四个诊断void接口；阶段109接通seed的普通CommandResult结果捕获；阶段110迁移StdCommands剩余106个结果入口；阶段111迁移Datapack九项及Debug两项；阶段112迁移Team三个receiver结果入口；阶段113迁移Op/Recipe六个player-target入口；阶段114迁移Worldborder七个命令结果入口；阶段115迁移BossBar七个结果入口；阶段116迁移WorldObject两个结果入口；阶段117迁移Random三个reset结果入口；阶段118迁移EntityTag三个结果入口；阶段119迁移实体joinTeam/leaveTeam。阶段120迁移Entity effect清除两个入口；阶段121迁移两个effect授予入口；阶段122迁移stopRide；阶段123迁移Player XP六个入口；阶段124迁移Player advancement十个入口；阶段125迁移Player状态与ride命令；阶段126迁移entity-target tp；阶段127迁移tell/w消息命令；阶段128迁移受测实体属性接口。当前MCFL58，Std外剩余3类、9个CommandReturn注解及7个旧void wrapper；下一步限定为枚举编译期快照恢复，详见next-stage-plan.md。
+阶段104迁移System九种print语言入口并完成限定验证；最终fixture复查通过，Cache仅首轮通过，未验证macro/world执行或tellraw渲染。阶段105 delegated-int、阶段106 Time及阶段107两个legacy分支入口已限定验证，细节见verification.md。阶段108删除 `System.typeOf` 并迁移四个诊断void接口；阶段109接通seed的普通CommandResult结果捕获；阶段110迁移StdCommands剩余106个结果入口；阶段111迁移Datapack九项及Debug两项；阶段112迁移Team三个receiver结果入口；阶段113迁移Op/Recipe六个player-target入口；阶段114迁移Worldborder七个命令结果入口；阶段115迁移BossBar七个结果入口；阶段116迁移WorldObject两个结果入口；阶段117迁移Random三个reset结果入口；阶段118迁移EntityTag三个结果入口；阶段119迁移实体joinTeam/leaveTeam。阶段120迁移Entity effect清除两个入口；阶段121迁移两个effect授予入口；阶段122迁移stopRide；阶段123迁移Player XP六个入口；阶段124迁移Player advancement十个入口；阶段125迁移Player状态与ride命令；阶段126迁移entity-target tp；阶段127迁移tell/w消息命令；阶段128迁移受测实体属性接口；阶段129退役语言层 `T!` 后缀并接入闭合枚举快照恢复。当前MCFL59，Std外剩余3类、9个CommandReturn注解及7个旧void wrapper；下一步限定为迁移实体属性写入接口，详见next-stage-plan.md。
 
 阶段126：`EntityTeleportData`将entity-target `tp`接入单context qualified结果并挂到`EntityData`，删除旧`entity<1>`目标重载；坐标tp与setSpawnpoint保持不变。唯一source/fresh fixture验证`@a`到`@p`、canonical readonly/Unknown/null、实际selector kind，以及DTO receiver与多实体destination在capture前拒绝。stdlib与联合Cache回归通过，MCFL56；不模拟world/frame0。
 
@@ -145,11 +145,11 @@ fixture的匿名X带@DataOnly、透明Y及捕获旧合法data_N的named声明具
 
 | 范围 | 实现 |
 | --- | --- |
-| 类型身份 | TypeId；命名空间及声明类别；容器构造器与实参；联合类型去重；T! 使用 T 的身份 |
+| 类型身份 | TypeId；命名空间及声明类别；容器构造器与实参；联合类型去重；语言不提供 `T!` 后缀 |
 | 类型别名 | 透明展开、前向引用、别名链和循环诊断；函数签名使用解析后的类型；库索引保存展开后的别名目标 |
 | 关系与重载 | 统一方向的隐式转换、名义关系、int 到 float 提升、容器不变、候选验证与歧义诊断；IR 的纯类型查询复用同一排序和默认参数规则，歧义不退到父域候选 |
-| object | 语言静态超类型；不依据载荷开放具体成员；DataObject 保持模板基类；type 值经 object/any 使用内部特化传递，dynamic 擦除声明拒绝不可物化的载荷 |
-| any/object 载荷 | 共用无运行时类型标签的 NBT 载荷；删除 lastVar；已知 any 按实际类型绑定，未知载荷支持复制、传参、返回与显式视图；含编译器专用字段的 list/dict 通过内部静态载荷传递，普通擦除赋值递归复制；object 保持声明签名限制 |
+| object | 语言静态超类型；不依据载荷开放具体成员；DataObject 保持模板基类；非 type 编译器载荷可走内部通道，TypeValue 不得经 object/any 成为普通值；dynamic 擦除声明拒绝不可物化的载荷 |
+| any/object 载荷 | 共用无运行时类型标签的 NBT 载荷；删除 lastVar；已知 any 按实际类型绑定，未知载荷支持复制、传参、返回与显式视图；含编译器专用非 type 字段的 list/dict 通过内部静态载荷传递，普通擦除赋值递归复制；普通字段/集合保存 TypeValue 仍非法 |
 | NBT 数值 | byte / short / long / double 不再隐式进入 int / float 算术；Byte.build 保留实参；修正错误的成员注入 |
 | 声明与值 | 稳定 Symbol；不可变常量快照；独立 TypeKnowledge / ValueKnowledge；StorageAccess 将 Place、TypedView、FlowFacts、StorageVersions 接入实际 NBT 与记分板读写 |
 | 基本块编译 | 无所属模板的 int/bool/any/object、string/byte/long 载荷及可编码 list/dict/map/ImmutableList/NBT 数组形参、返回和普通调用；集合字面量、已知键、动态下标、复制与共享视图接入同一 IR。先在私有调用图上求解效果和控制流事实，再绑定重载并生成命令；分支与循环采用不动点事实，break/continue/return 排除不可达前驱；类型分析独立于折叠开关 |
@@ -159,7 +159,7 @@ fixture的匿名X带@DataOnly、透明Y及捕获旧合法data_N的named声明具
 | 常量与存储 | 基本块路径进行分支汇合与循环不动点分析；常量延迟物化；dynamic 保留运行时表示；分支不物化未修改的无关变量 |
 | 原始命令与调用 | 原始命令前提交延迟数据，之后撤销类型、值事实和同步缓存；受限 IR 调用图求解 Pure/Writes/Unknown 的递归不动点，static 形参写入映射到实际位置，普通参数副本的局部写入不外泄。未迁入调用与未标注 MNI 保守使用未知效果；已审计数值及 list/dict/map/ImmutableList 查询 MNI 标注 NoExternalWrites；list/dict/map 变更标注 WritesReceiver，由存储接口提交并失效受影响位置 |
 | 缓存 | 不可变特化键包含声明、值实参、目标版本和影响生成的选项；真实空值、未知值与错误分离；库索引新增格式头与版本；项目重置清除词法/语法缓存、元数据图缓存、当前编译上下文与旧 load/tick 函数，移除无人读取且保留旧项目的反向子类型列表 |
-| 特化策略 | 普通函数的运行时参数不按常量组合复制函数体；泛型缓存忽略普通参数值，保留泛型、T! 和编译器专用载荷；导入和前向引用的运行时函数体按需编译一次 |
+| 特化策略 | 普通函数的运行时参数不按常量组合复制函数体；泛型缓存忽略普通参数值，保留泛型实参与完整 readonly 泛型快照；非 type 编译器专用载荷的内部快照不构成普通值声明许可；导入和前向引用的运行时函数体按需编译一次 |
 | 成员签名 | int / float / bool / dict / list / map / ImmutableList 的常量与运行时操作共用一份签名；集合成员共用值事实和存储边界实现。删除 NBTMapConcreteData 与 NBTListConcreteData，NBT 数组的两种值状态使用相同成员表 |
 | 显式转换 | 具体数值源重载与来源 NBT 编码；不支持的运行时转换明确报错；支持矩阵与后端限制见 conversions.md |
 | 返回与帧 | IR 调用以独立帧槽捕获参数、返回和活跃临时值，递归标量和集合载荷保持副本独立；static 写回映射实际字段/元素，撤销旧实际类型并传播可证明的输出类型，未改动兄弟字段保留事实。调用返回值有独立 Place，支持直接 as；已知 any 返回可参与运算、条件与重载，保留 any 声明且不计算普通函数的常量返回值。旧 visitor 的模板/其余 NBT 调用适配仍保留 |
@@ -181,7 +181,7 @@ fixture的匿名X带@DataOnly、透明Y及捕获旧合法data_N的named声明具
 | 列表与字典元素 | list/dict 下标接入集中位置读写；已知元素保留实际类型，部分已知字面量保留子事实；普通赋值复制、as 共享；未知下标写入合并可能元素的类型并撤销重叠值；动态下标在右侧调用前捕获，不同下标不共用读寄存器 |
 | 集合 IR 事实 | list/dict/ImmutableList 的已知下标/键在分支和 while 中汇合元素实际类型；读取同时捕获子事实及嵌套长度，后续调用改写来源不改变较早操作数的快照。元素写入保留父列表长度和兄弟事实，整体替换清除旧后代，不同长度的可达路径汇合后撤销长度；已知负索引归一并检查越界。运行时编码和空键能力在后端生成命令前检查 |
 | 动态列表 IR | Location 保存逻辑范围与独立捕获的索引结果；负数运行时下标在 RHS 改写容器前归一，嵌套下标和 static 写回保留原地址。未知范围读取只保留各可能元素共同成立的类型/形状，不保留常量值；单个未知索引写入合并可能类型并撤销重叠后代，不能证明整片范围都已写入。选中集合的普通副本独立，命名视图共享捕获的位置 |
-| 编译器专用集合 | 含 type 等编译器专用元素的集合支持静态已知下标与独立副本；完整静态 as 视图使用 CompilerOnly 布局、共享 Place 与写版本，已知写入重建不可变祖先快照；普通复制读取最新值并脱离来源绑定；可运行时编码性检查实际内容，拒绝 dynamic/显式物化，运行时屏障不物化或失效静态位置；完整静态实参用于不可变特化键；空列表仍有运行时表示 |
+| 编译器专用集合 | 非 type 编译器专用元素的集合支持静态已知下标与独立副本；普通声明不得以集合保存 TypeValue；完整静态 as 视图使用 CompilerOnly 布局、共享 Place 与写版本，已知写入重建不可变祖先快照；普通复制读取最新值并脱离来源绑定；可运行时编码性检查实际内容，拒绝 dynamic/显式物化，运行时屏障不物化或失效静态位置；完整静态实参用于不可变特化键；空列表仍有运行时表示 |
 | 集合编码与键 | 混合字面量保留全部元素的联合身份；NBT 命令编码使用可见列表载荷，不插入工具库的二进制包装；字典已知字符串键按字面名称转义，dynamic 字符串保留常量事实，未知字典键仍明确诊断。map 把键作为字符串值存储；动态读取采用 compound 宏谓词，写入/查找/删除/合并支持无宏目标。字典字面量字段使用独立捕获位置，不覆盖同名参数 |
 | 字典成员 | 删除旧常量成员表；已知键 remove 保留未改动字段事实，完整静态 merge 深合并并保持副本独立，部分已知接收者的已知标量合并保留兄弟事实；整体深合并保留已知标量输入的类型和值，先冻结重叠来源事实。运行时接收者拒绝编译器专用字段；containsKey/remove 与下标使用相同键编码限制；禁止空键路径的目标对已知空键合并输入写入前诊断，未知运行时来源仍按整体路径合并 |
 | 字典成员 IR | 可编码 dict 的 clear/remove/merge/containsKey 复用原生成员签名进行类型绑定，并接入分支/while 与位置效果分析。remove 记录具体字段写入，clear/merge 记录接收者写入，查询只读；合并使用已捕获的来源事实与载荷，已知完整输入递归保留未改动字段，未知输入撤销可能被覆盖的事实。动态接收者索引在实参副作用前捕获，字面量实参按成员泛型上下文绑定 |
@@ -197,11 +197,11 @@ fixture的匿名X带@DataOnly、透明Y及捕获旧合法data_N的named声明具
 | 目标能力 | 显式版本表统一配置检查、包格式、浮点后端、函数宏、return run、异构列表和空键路径能力；未知版本不推测能力；旧目标拒绝混合/未证明共同编码的列表构造与元素写入，空键路径遵循目标限制；不支持 return run 的目标使用独立的递归分支条件栈，包含支持宏的 1.20.2 |
 | NBT 地址与自动宏捕获 | `NBTAddressKey` 冻结地址 source 与 path segments；按快照比较路径段和长度，父子路径同时检查 source，修复 equals 自递归。自动宏使用独立参数槽，从实际绑定或 scoreboard 捕获值；FloatProviders 不再重复预写动态 index。阶段 52 定向复查 17 项通过 |
 | 宿主值对象身份 | `Var`、`Pos3Var`、`Pos2Var`、`PosDimension` 的 8 个 equals/hashCode 覆盖已删除；宿主对象按引用身份比较，语言值仍使用 `CompilerValue`。表达式缓存只移除指定引用，spill 只对同一引用去重；括号子 visitor 共享活跃值列表并保留独立结果字段 |
-| 模板构造器候选 | 构造重载通过 `ParameterMatcher.match` 与 `best` 选择，复用类型、完整值、默认实参与歧义规则；仅 Selected 初始化对象，错误值不重复绑定诊断。阶段 54 的 4 项专项测试覆盖声明顺序、T! 完整值、默认实参和无构造副作用的歧义；阶段 55 已迁移普通构造参数特化与 `this`/`preInit` 帧 |
-| 模板构造 receiver 与初始化 | 固定 `frame0.this` 使用独立 receiver；普通构造实参不再按常量特化，T!/compiler-only 仍遵循 `SpecializationPolicy`。参数只编码入帧；`preInit` 每次运行，包括 AST-null 默认构造；`FrameExit(function,index)` 统一 IR/旧路径出口，caller 写回后 pop。原/特化模板与 static object 构造器均导出；typed nonconst 字段纳入 preInit，静态赋值先 `replacedBy` 再物化，object nonconst 字段动态化。阶段 55 最终 7 项通过；普通模板复制规则保留 |
+| 模板构造器候选 | 构造重载通过 `ParameterMatcher.match` 与 `best` 选择，复用类型、完整值、默认实参与歧义规则；仅 Selected 初始化对象，错误值不重复绑定诊断。阶段 54 的 4 项专项测试覆盖声明顺序、旧 `T!` 完整值后缀规则（阶段129已退役）、默认实参和无构造副作用的歧义；阶段 55 已迁移普通构造参数特化与 `this`/`preInit` 帧 |
+| 模板构造 receiver 与初始化 | 固定 `frame0.this` 使用独立 receiver；普通构造实参不再按常量特化，compiler-only 仍遵循 `SpecializationPolicy`；旧 `T!` 后缀规则已于阶段129退役。参数只编码入帧；`preInit` 每次运行，包括 AST-null 默认构造；`FrameExit(function,index)` 统一 IR/旧路径出口，caller 写回后 pop。原/特化模板与 static object 构造器均导出；typed nonconst 字段纳入 preInit，静态赋值先 `replacedBy` 再物化，object nonconst 字段动态化。阶段 55 最终 7 项通过；普通模板复制规则保留 |
 | 模板初始化表达式库持久化 | `DataTemplateInfo` 保存有序字段 RHS，`preInit` 为 `LinkedHashMap`；`GenericDataTemplateInfo` 复用既有 body AST。源码构造器编译恢复声明文件与命名空间；导入构造器的 transient file 仍为 null，词法 scope 尚未完整保留。Kryo 循环引用 reader 先登记 reference 再读内层对象。生产与字符串测试共用 `MCFPPFile.resolveImports`。MCFL 12，标准库重建与 TemplateInitialization/ConstructorExecution/LibCacheFormat 共 13 项通过；object 自动 load 未验证 |
-| 模板 const 字段真实初始化 | object initializer 在 annotation、完整签名和继承 ready 后、用户函数 body 前编译；真实 constructor `prepareBody` 单次求值 RHS，绑定 field/property/Symbol。typed const 与 inferred const 均支持 runtime 初始化；const 是 readonly，compiler-only snapshot 与 T! 完整值规则独立。两个 receiver（1/2）及 self/forward 诊断已验证；MCFL 12 schema 不变 |
-| 普通模板 inferred field 声明（已接入部分语法支持） | 复用 `PrimitiveCompiler` 私有图的 Lowering/FlowAnalysis/ReturnTypeAnalysis 做纯 AST 声明绑定，不发布 IR、不执行用户函数、不生成命令；普通构造参数与未绑定 T! 保持 Unknown，同字段跨 ctor overload 要求同一 TypeId。支持 `this` 单字段和此前字段；anonymous 共用队列，泛型已绑定实例独立分析，继承后 annotations 与参数/返回 adapter 刷新且保留 Symbol/Place。运行时按声明类型初始化可编码默认字段，Unknown erased 不伪造 snapshot，不可编码 NBT child 返回整体 null；不支持语法仍沿 legacy `extraFunction`，未宣称 native/generic/compiler-only/static、多级 this/member method 已迁移 |
+| 模板 const 字段真实初始化 | object initializer 在 annotation、完整签名和继承 ready 后、用户函数 body 前编译；真实 constructor `prepareBody` 单次求值 RHS，绑定 field/property/Symbol。typed const 与 inferred const 均支持 runtime 初始化；const 是 readonly，compiler-only snapshot与完整readonly泛型快照规则独立；阶段129已退役语言 `T!` 后缀。两个 receiver（1/2）及 self/forward 诊断已验证；MCFL 12 schema 不变 |
+| 普通模板 inferred field 声明（已接入部分语法支持） | 复用 `PrimitiveCompiler` 私有图的 Lowering/FlowAnalysis/ReturnTypeAnalysis 做纯 AST 声明绑定，不发布 IR、不执行用户函数、不生成命令；普通构造参数保持 Unknown；该历史条目不代表语言支持 `T!` 后缀，同字段跨 ctor overload 要求同一 TypeId。支持 `this` 单字段和此前字段；anonymous 共用队列，泛型已绑定实例独立分析，继承后 annotations 与参数/返回 adapter 刷新且保留 Symbol/Place。运行时按声明类型初始化可编码默认字段，Unknown erased 不伪造 snapshot，不可编码 NBT child 返回整体 null；不支持语法仍沿 legacy `extraFunction`，未宣称 native/generic/compiler-only/static、多级 this/member method 已迁移 |
 
 基本块路径先建立控制流并求解类型事实，再绑定操作、检查类型，最后进行值分析和命令生成；它不在分析过程中替换 Var 或 Symbol。
 现有调用方仍通过集中在该路径出口的 Var 适配对象读取编译结果。
@@ -222,7 +222,7 @@ fixture的匿名X带@DataOnly、透明Y及捕获旧合法data_N的named声明具
 - 可变 list / dict / map 的泛型参数不变。ImmutableList 现为只读列表接口，当前类型关系仍采用泛型不变策略，不增加协变转换。
 - `ImmutableList<T>` 支持语言类型语法；它限制列表元素槽和列表变更成员，嵌套元素自身的可变接口由元素类型决定。显式 as 仍按重解释规则建立共享位置，普通只读副本仍独立。
 - `[B;1b,2b]`、`[I;1,2]` 和 `[L;1l,2l]` 不再降为原始 nbt。读取元素使用原格式对应的 byte/int/long；byte/long 参加普通整数运算须显式 toInt，bool 不能赋给 byte 数组元素。
-- `T!` 的完整值要求独立于类型身份；部分已知集合不满足泛型实参及完整编译期值要求。
+- 语言不提供 `T!` 后缀；普通字段、擦除值和集合不得保存 `TypeValue`。readonly 泛型绑定仍要求完整快照，编译器专用非 type 载荷保留内部快照通道。
 
 ### map 数据布局变更
 
@@ -243,8 +243,8 @@ map 现在只保存一份 entry 列表，布局为 `{entries:[{key:"first",value
    语言 as 已从旧 explicitCast 分离；其余内部显式转换适配仍存在，不能重新用作语言 as 入口。
 4. 提供完整 toInt / toFloat / toByte / toShort / toLong / toDouble / toNBT 具体源重载，迁移旧数值 as、标准库及示例；明确每个后端的范围与舍入规则。
    已接入的重载与缺少运行时实现的情况见 [转换 API](./conversions.md)。
-5. 将已有递归效果摘要扩展到其余集合位置、成员、模板、浮点、全局及实体位置，完成递归擦除返回的完整类型不动点，并为 MNI 提供显式上下文与值/位置接口。当前普通自由函数的标量/擦除以及可编码 list/dict/ImmutableList 签名接入实际 IR 调用；static 已知字段和未知列表范围传播无常量值的写入类型证据，未知范围与调用方旧类型合并，条件改写不能借用调用前类型。泛型、T!、原生成员和其余签名保留适配边界；无法证明的函数使用未知屏障，旧反射 MNI 尚未全面迁移。
-6. 将模板构造过程纳入值与位置模型。阶段55 receiver/frame、阶段56有序 RHS持久化已完成；源码构造器编译恢复声明文件/命名空间，导入构造器 transient file仍为null，词法scope缺口保留。阶段57实现 shared `prepareObjectInitializers`：annotations/signatures/inheritance ready后、用户函数 body前编译完整本地 object constructor，复用已有 guard；FieldVisitor不试算 RHS，真实 constructor `prepareBody` 单次求值并补 field/property/Symbol。typed const也登记 RHS，incoming parameters先绑定，const只作 readonly；compiler-only snapshot与T!规则独立。首轮28项27过/1测试夹具失败；修换行后定向方法1项过，未联合复跑28。详见 verification.md。阶段58已为部分受支持语法复用 PrimitiveCompiler 私有图的 Lowering/FlowAnalysis/ReturnTypeAnalysis 做纯 AST 声明绑定：不发布 IR、不执行用户函数、不生成命令；普通构造参数与未绑定 T! 保持 Unknown，同字段跨 ctor overload 要求同一 TypeId。支持 this 单字段/此前字段、anonymous 队列、已绑定 generic 实例、继承后 annotation 与参数/返回 adapter 刷新，保留 Symbol/Place。runtime receiver 按声明类型初始化可编码默认字段，Unknown erased 不伪造 snapshot，不可编码 NBT child 返回整体 null；普通模板局部声明 buildUnConcrete 防 DataOnly 空地址命令。pure AST binding 与 runtime AST generation 分离，不重复执行 RHS。native/generic/compiler-only/static、多级 this/member method 等语法仍走 legacy `extraFunction`。37个不同用例跨轮各自通过，非单次联合37项。阶段59已为导入声明持久化 `namespace` 与 `unsolvedImports`，不保存完整 FileScope/Project；includes 全部读取后，在各自声明文件的 FileScope 恢复 currFile 和声明环境；普通函数、构造器、泛型特化均经统一 compile 入口在各自环境中编译。MCFL13 标准库重建后，TemplateInitialization6、SpecializationPolicy11、IRCall17、LibCacheFormat3、TemplateFieldInference6、ConstructorExecution7 联合50项通过。阶段60新增库导出入口已导出所需的非Native bodyCompiled函数，并按namespace输出，限定磁盘测试通过。阶段61恢复普通/泛型模板方法owner及canonical scope，并恢复FunctionInfo的isAbstract；26个不同用例跨轮各自通过。阶段62修复目录/JAR/ZIP模块resourcePath与资源复制并通过11项联合验证；阶段63将普通/generic/native函数accessModifier持久化，MCFL14真实库往返14项联合全过。阶段64仅为PropertyInfo.accessModifier增加持久化；Var权限原已由Kryo保存，runtime adapter复制声明access/owner而StorageBinding仍Transient。阶段65/66限定的字段权限及当前receiver寻址已验证；imported object自动load仍待解决。
+5. 将已有递归效果摘要扩展到其余集合位置、成员、模板、浮点、全局及实体位置，完成递归擦除返回的完整类型不动点，并为 MNI 提供显式上下文与值/位置接口。当前普通自由函数的标量/擦除以及可编码 list/dict/ImmutableList 签名接入实际 IR 调用；static 已知字段和未知列表范围传播无常量值的写入类型证据，未知范围与调用方旧类型合并，条件改写不能借用调用前类型。泛型、原生成员和其余签名保留适配边界；语言层 `T!` 后缀已于阶段129退役；无法证明的函数使用未知屏障，旧反射 MNI 尚未全面迁移。
+6. 将模板构造过程纳入值与位置模型。阶段55 receiver/frame、阶段56有序 RHS持久化已完成；源码构造器编译恢复声明文件/命名空间，导入构造器 transient file仍为null，词法scope缺口保留。阶段57实现 shared `prepareObjectInitializers`：annotations/signatures/inheritance ready后、用户函数 body前编译完整本地 object constructor，复用已有 guard；FieldVisitor不试算 RHS，真实 constructor `prepareBody` 单次求值并补 field/property/Symbol。typed const也登记 RHS，incoming parameters先绑定，const只作 readonly；compiler-only snapshot与readonly泛型完整快照规则独立；语言 `T!` 后缀已于阶段129退役。首轮28项27过/1测试夹具失败；修换行后定向方法1项过，未联合复跑28。详见 verification.md。阶段58已为部分受支持语法复用 PrimitiveCompiler 私有图的 Lowering/FlowAnalysis/ReturnTypeAnalysis 做纯 AST 声明绑定：不发布 IR、不执行用户函数、不生成命令；普通构造参数保持 Unknown；该历史条目不代表语言支持 `T!` 后缀，同字段跨 ctor overload 要求同一 TypeId。支持 this 单字段/此前字段、anonymous 队列、已绑定 generic 实例、继承后 annotation 与参数/返回 adapter 刷新，保留 Symbol/Place。runtime receiver 按声明类型初始化可编码默认字段，Unknown erased 不伪造 snapshot，不可编码 NBT child 返回整体 null；普通模板局部声明 buildUnConcrete 防 DataOnly 空地址命令。pure AST binding 与 runtime AST generation 分离，不重复执行 RHS。native/generic/compiler-only/static、多级 this/member method 等语法仍走 legacy `extraFunction`。37个不同用例跨轮各自通过，非单次联合37项。阶段59已为导入声明持久化 `namespace` 与 `unsolvedImports`，不保存完整 FileScope/Project；includes 全部读取后，在各自声明文件的 FileScope 恢复 currFile 和声明环境；普通函数、构造器、泛型特化均经统一 compile 入口在各自环境中编译。MCFL13 标准库重建后，TemplateInitialization6、SpecializationPolicy11、IRCall17、LibCacheFormat3、TemplateFieldInference6、ConstructorExecution7 联合50项通过。阶段60新增库导出入口已导出所需的非Native bodyCompiled函数，并按namespace输出，限定磁盘测试通过。阶段61恢复普通/泛型模板方法owner及canonical scope，并恢复FunctionInfo的isAbstract；26个不同用例跨轮各自通过。阶段62修复目录/JAR/ZIP模块resourcePath与资源复制并通过11项联合验证；阶段63将普通/generic/native函数accessModifier持久化，MCFL14真实库往返14项联合全过。阶段64仅为PropertyInfo.accessModifier增加持久化；Var权限原已由Kryo保存，runtime adapter复制声明access/owner而StorageBinding仍Transient。阶段65/66限定的字段权限及当前receiver寻址已验证；imported object自动load仍待解决。
 7. 将版本缓存扩展到全部实体、集合、调用帧和临时值；未知字典键尚无已验证的运行时路径转义后端，当前明确拒绝生成，map 已用字符串值和 compound 谓词避免成员名拼接；旧目标的原生成员操作、原始 nbt/其余集合仍需全面接入编码能力检查；已有标量/擦除递归样例通过不代表完整帧分配已完成，原始命令直接修改其他函数的物理记分板仍需与统一布局规划核实；删除 hasStoredInStack、trackLost、Concrete 双层体系与双成员表。
 8. 阶段55–71模板、库恢复与访问权限结果见verification.md。阶段58的37项、阶段59联合50项、阶段60限定磁盘consumer 13项、阶段61跨轮26项、阶段62联合11项、阶段63联合14项、阶段64跨轮30个不同用例、阶段65联合11项、阶段66联合11项、阶段67跨轮41个不同用例、阶段68跨轮17个不同用例分别按实际轮次记录，不合并描述成一次全过。阶段64仅将PropertyInfo.accessModifier新增持久化并升级至MCFL15，Var权限既有Kryo保存；阶段65/66 MCFL15/bin286207未变。阶段66来源确认普通实例和真实this receiver后，修复受支持的未限定字段读写及nested body路径，不改变全局Internal lookup/putVar。阶段67已限定接通generic类readonly签名/源码实例化和namespace generic类别恢复；完整snapshot冻结SpecializationKey及prototype TypeId，readonly实参保持CompilerOnly静态绑定，已知完整动态局部值可用；MCFL16/bin286243真实库往返通过。阶段68未注解普通generic类类型实参限定绑定通过；阶段69显式类型/跨库canonical特化19个不同用例跨轮通过，MCFL17/bin289989。阶段70声明scope及绑定T/N限定路径36个不同用例跨轮各自通过（29+Logic6+最终1），MCFL17/bin289989未变；阶段69提交`10267379e30bd43af6c38bcd7e6a673d195a6102`，阶段70提交记录见Git历史。阶段71有限Declaration/Applied TypeValue恢复及普通typed模板字段未知adapter已通过source/fresh canonical和磁盘4/9/7/frame0验证，6个不同用例跨轮各自通过，最终必要2项复查；阶段70提交`1d593d19c71f5c42a3adb4aaf0e2dbdaae5c1b16`，阶段71已提交`baa8f0704d58fcbc29706cb28181d821c9cc6138`。阶段72完整静态类型集合限定路径已验证，5个不同用例跨轮各自通过；阶段73冻结Specialized类型值已限定验证，最终必要联合2项全过；阶段74源码联合类型与冻结身份已限定验证，必要联合4项全过；阶段75冻结向量TypeValue已限定验证，必要联合2项全过；阶段76冻结SelectorTypeValue已限定验证，最终仅1项通过；阶段77 direct Union TypeValue表达式已限定验证，最终必要1项通过；阶段78 alias有根匿名冻结身份已限定验证，四个不同用例跨轮各自通过、最终仅新1复查；阶段79 generic用户函数自身readonly依赖Box<(T)> normal/return已限定验证，最终必要联合5全绿；阶段80 generic object静态N/方法已限定验证，三用例跨轮各过、最终新1复查；阶段81 generic interface静态TypeValue已限定验证，三case跨轮各过、最终新1；阶段82 source磁盘导出限定通过、最终联合3全绿；阶段83 generated-vs-legal名字隔离限定通过、四case跨轮各过/最终新1；阶段84静态字段/显式constructor已限定通过、最终联合2；阶段85 source/fresh abstract/final flags已限定通过、MCFL18/stdlib287554及最终联合3；阶段86 actual generic父项已限定通过、MCFL19/stdlib292301及最终联合3；阶段87 `TypeUsage`普通值位置拒绝规则已限定验证；详见本文件当前状态与verification.md。阶段88–90共24个集合原生方法、阶段91共28个int/float/bool运算符已接入显式NativeCallContext并完成限定验证，分轮证据见verification.md。其余dependent类型表达式/重载等价、generic object直接库fieldtype及generic interface继承/runtime布局/shape转换/annotations、Opaque/Selector及全集身份、imported object autoLoad、未覆盖generic语法、未知range端点和浮点/混合迭代仍保留缺口。阶段64提交`bda4d5a`、阶段65提交`d181e10`；更早提交以Git历史为准。未运行完整check或服务端，整体17项迁移未完成。
 
@@ -253,7 +253,7 @@ map 现在只保存一份 entry 列表，布局为 `{entries:[{key:"first",value
 
 ## 库索引
 
-当前库索引采用MCFL格式头与版本36：在保留既有generic kind/readonly绑定、权限与类型身份后，包含阶段88–106的原生函数/运算符/转换、文本签名、delegated-int `typeAs`及Time operator信息。generic类型专用serializer仍只序列化冻结身份，不写Compiled/prototype/AST/cache或可变实参图；声明Info仍保存body AST和有序RHS。canonical参数、父类及Time签名恢复遵循各自读取阶段；版本35及更早索引要求重新编译。旧浮点用户持久化数据不会自动迁移。
+当前库索引采用MCFL格式头与版本59：在保留既有generic kind/readonly绑定、权限与类型身份后，包含阶段20–129受测原生签名与本阶段enum快照路径。generic类型专用serializer仍只序列化冻结身份，不写Compiled/prototype/AST/cache或可变实参图；声明Info仍保存body AST和有序RHS。canonical参数、父类、Time签名及闭合枚举恢复遵循各自读取阶段；版本58及更早索引要求重新编译。旧浮点用户持久化数据不会自动迁移。
 集合 IR、形状事实与动态索引的 Location 属于瞬态分析数据；Function.typedIR、runtimeEffect 与 Var.storageBinding 不序列化。MCFL17的generic Type wire仅保存稳定immutable身份；泛型参数/父类canonicalization延迟到COMPILE。该generic类型serializer不写Compiled/prototype/Var或template cache图；声明元数据仍沿既有Info保存body AST和有序RHS。runtime IR与StorageBinding仍为Transient。本次不自动转换用户已有的持久化范围或浮点载荷。
 类型布局、语言签名或 MNI 元数据改变后，运行：
 

@@ -125,8 +125,6 @@ class TypeKernelTest {
         assertNotEquals(a, b)
         assertEquals(a, DataTemplate("Point", "one").getType())
         assertNotEquals<MCFPPType>(a, MCFPPInterfaceType(a.template, arrayListOf()))
-        assertEquals<MCFPPType>(a, MCFPPDeclaredConcreteType(a))
-        assertEquals(a.hashCode(), MCFPPDeclaredConcreteType(a).hashCode())
     }
 
     @Test fun containersAreInvariantAndHaveConstructorSensitiveHashes() {
@@ -253,8 +251,8 @@ class TypeKernelTest {
         assertTrue(Project.errorCount > 0)
         MCFPPStringTest.readFromString("func arithmetic(){ var value as object = 3; value.toText(); }", version = "26.3")
         assertTrue(Project.errorCount > 0)
-        assertFalse(ParameterMatcher.accepts(MCInt("runtime"), MCFPPDeclaredConcreteType(MCFPPBaseType.Int)))
-        assertTrue(ParameterMatcher.accepts(MCIntConcrete(1), MCFPPDeclaredConcreteType(MCFPPBaseType.Int)))
+        assertTrue(ParameterMatcher.accepts(MCInt("runtime"), MCFPPBaseType.Int))
+        assertTrue(ParameterMatcher.accepts(MCIntConcrete(1), MCFPPBaseType.Int))
     }
 
     @Test fun severalGenericBindingsUseTheSameDirectionalConversionQuery() {
@@ -270,8 +268,6 @@ class TypeKernelTest {
         val readonly = listOf(top.mcfpp.core.lang.MCFPPTypeVar(MCFPPBaseType.Int), top.mcfpp.core.lang.MCFPPTypeVar(MCFPPBaseType.Float))
         assertTrue(function.isSelf("generic", readonly, listOf(MCFPPListType(MCFPPBaseType.Int).buildUnConcrete("items"), MCInt("promoted"))))
         assertFalse(function.isSelf("generic", readonly, listOf(MCFPPListType(MCFPPBaseType.Float).buildUnConcrete("items"), MCInt("promoted"))))
-        function.normalParams[1].type = MCFPPDeclaredConcreteType(u)
-        assertFalse(function.isSelf("generic", readonly, listOf(MCFPPListType(MCFPPBaseType.Int).buildUnConcrete("items"), MCInt("promoted"))))
         assertTrue(function.isSelf("generic", readonly, listOf(MCFPPListType(MCFPPBaseType.Int).buildUnConcrete("items"), MCIntConcrete(1))))
     }
 

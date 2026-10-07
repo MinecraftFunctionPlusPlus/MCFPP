@@ -6,13 +6,13 @@
 
 显示名不参与类型身份。内建类型有固定 TypeId；模板、接口和枚举采用类别、命名空间与声明名。
 泛型实例的身份包含构造器及全部参数。联合类型去重、展开嵌套并规范排序。
-T! 与 T 具有同一类型身份；完整编译期值要求是声明约束。
+语言不提供 `T!` 类型后缀。类型值只能作为泛型参数声明，例如 `data T<t as type>`；普通值声明 `x as type=int` 非法。`const` 只限制重赋，不要求初始化值在编译期已知；readonly 泛型绑定仍要求完整编译期快照。
 别名解析后透明地使用被指向类型的身份。
 未解析类型、泛型占位符、void 和内部静态成员视图不属于普通值类型。
 
 ## object、any 与 DataObject
 
-object 是统一静态超类型。int、float、bool、string、NBT 映射类型、集合、模板、any 及编译器值均可向上解释为 object。
+object 是统一静态超类型。int、float、bool、string、NBT 映射类型、集合、模板、any 及非 type 编译器载荷均可向上解释为 object；TypeValue 不能借 object/any 绕过普通值位置限制。
 object 的成员由其公共签名决定，知道来源类型不会增加其成员。
 any 是擦除类型：已知实际类型时使用实际类型绑定操作；未知时只能传递给 any 或 object，具体操作须显式 as。
 DataObject 仍是数据模板基类，位于 object 下；nbt 表示原始 NBT，不是所有可编码类型的父类。
