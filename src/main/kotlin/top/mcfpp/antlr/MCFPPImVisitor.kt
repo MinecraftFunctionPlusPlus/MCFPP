@@ -19,6 +19,8 @@ import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.MCFloat
 import top.mcfpp.core.lang.MCNumber
 import top.mcfpp.core.lang.PropertyVar
+import top.mcfpp.core.lang.RangeVar
+import top.mcfpp.core.lang.RangeVarConcrete
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.bool.BaseBool
 import top.mcfpp.core.lang.bool.ExecuteBool
@@ -936,14 +938,33 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
 
     override fun visitForeachStatement(ctx: mcfppParser.ForeachStatementContext): Any? {
         val id = ctx.Identifier().text
-        val qwq = MCFPPExprVisitor().visitExpression(ctx.expression())
+        val iterable = MCFPPExprVisitor().visitExpression(ctx.expression())
+        if (iterable is RangeVar) {
+            val range = StorageAccess.read(iterable) as? RangeVarConcrete
+            if (range == null) {
+                LogProcessor.error("Runtime range iteration requires typed IR with proven integer endpoints")
+                return null
+            }
+            val left = range.value.first
+            val right = range.value.second
+            if (left == null || right == null) {
+                LogProcessor.error("Both sides of the range must exist")
+                return null
+            }
+            if (left !is Int || right !is Int) {
+                LogProcessor.error("Both sides of the range must be 32-bit integers")
+                return null
+            }
+            visitConcreteForeach(id, ConcreteIterator.fromIntRange(left, right), ctx.block())
+            return null
+        }
         // try to get iterator
-        val func = MCFPPFuncGetter.getFunction(qwq, "iterator", emptyList(), arrayListOf())
+        val func = MCFPPFuncGetter.getFunction(iterable, "iterator", emptyList(), arrayListOf())
         if(func is UnknownFunction){
             LogProcessor.error("Not iterable")
             return null
         }
-        func.invoke(arrayListOf(), qwq)
+        func.invoke(arrayListOf(), iterable)
         val iterator = (func.returnVar as JavaVar).value
         if(iterator is ConcreteIterator<*>){
             visitConcreteForeach(id, iterator, ctx.block())

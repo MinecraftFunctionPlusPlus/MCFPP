@@ -1,7 +1,6 @@
 package top.mcfpp.core.lang.iterator
 
 import top.mcfpp.core.lang.MCIntConcrete
-import top.mcfpp.core.lang.RangeVarConcrete
 import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.bool.BaseBool
 import top.mcfpp.core.lang.bool.ScoreBoolConcrete
@@ -29,10 +28,8 @@ class ConcreteIterator<T: Var<*>>(identifier: String, val iterator: Iterator<T>)
 
     companion object {
 
-        @JvmStatic
-        @JvmOverloads
-        fun fromIntRange(identifier: String = TempPool.getVarIdentify(), range: RangeVarConcrete): ConcreteIterator<MCIntConcrete> {
-            val values = (range.value.first!!.toInt()..range.value.second!!.toInt()).asSequence().map {
+        fun fromIntRange(first: Int, last: Int, identifier: String = TempPool.getVarIdentify()): ConcreteIterator<MCIntConcrete> {
+            val values = (first..last).asSequence().map {
                 MCIntConcrete(it)
             }
             return ConcreteIterator(identifier, values.iterator())

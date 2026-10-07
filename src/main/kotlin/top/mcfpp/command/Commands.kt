@@ -12,9 +12,9 @@ import top.mcfpp.lib.EntitySource
 import top.mcfpp.lib.NBTPath
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.Function.Companion.addCommand
-import top.mcfpp.model.function.InternalFunction
 import top.mcfpp.model.function.NoStackFunction
 import top.mcfpp.model.scope.GlobalScope
+import top.mcfpp.model.scope.FunctionScope
 import top.mcfpp.nbt.tags.Tag
 import top.mcfpp.nbt.tags.collection.IntArrayTag
 import top.mcfpp.nbt.tags.primitive.StringTag
@@ -342,11 +342,8 @@ object Commands {
 
     @JvmStatic
     fun internalFunction(parent: Function , operation: (fakeFunction: Function) -> Unit) : Array<Command>{
-        val l = Function.currFunction
-        val f = InternalFunction("fake", parent)
-        Function.currFunction = f
-        operation(f)
-        Function.currFunction = l
+        val f = NoStackFunction("", parent).apply { scope = FunctionScope(parent.scope) }
+        f.runInFunction { operation(f) }
         return f.commands.toTypedArray()
     }
 

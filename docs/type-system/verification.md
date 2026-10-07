@@ -1,8 +1,30 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段135，MCFL64；旧CommandReturn类型/注解与旧void wrapper均为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段136，MCFL65；旧CommandReturn链引用/注解与旧void wrapper均为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
 
-## 当前阶段 135：退役旧命令结果载体与未注册入口（已限定验证）
+## 当前阶段 136：退役范围迭代的宿主返回接口（已限定验证）
+
+删除`RangeVarData.iterator`公共MNI及`Range`注入；legacy foreach读取完整范围端点，仅对完整Int已知端点在编译器内部构造`ConcreteIterator`，其他iterable沿用旧路径。三条负例直接检查两端存在、32-bit Int及runtime typedIR证明。
+
+stdlib `mcfpp-internal-range-iterator-stdlib.log` native exit0、SUCCESSFUL in1m、Project0/0。joint1 native exit1、FAILED45s、Executors32/33正常结束；Range XML `2026-10-07T11:54:11.455Z` 2/2/0/0，Cache `11:54:09.610Z` 1/0/0/0。正例因生成的stack_frame[1]没有对应帧而越界；负例因for块后缺少分隔而发生语法错误，未注册main。
+
+修正负例为多行源码；`Commands.internalFunction`改用NoStackFunction和独立FunctionScope，内联命令不增加帧层级且循环变量不泄露。整数原生运算为concrete左操作数创建独立临时副本，避免core原地改值后publish仍读取旧binding常量。native结果已产生时，`publishResult`先标记hasAssigned，再建立ValueRef，确保新布尔/浮点临时值的facts为INITIALIZED/Unknown；保留未初始化输入的capture拒绝检查。
+
+joint2 native exit1、FAILED35s、Executors34/35正常结束；Range两项通过，XML `2026-10-07T12:02:41.800Z` 2/0/0/0；Lib XML `12:02:51.132Z` 1/1/0/0，integer operator回归producer53 errors，首个诊断是已生成临时结果被误判未初始化。修复publishResult后joint3仅复查primitive operator与coordinate tp：native exit0、SUCCESSFUL32s、Executor36正常结束，Lib XML `12:09:58.250Z` 2/0/0/0。Project依序0/9118、0/9119（primitive source/fresh）、0/9118、0/9119、10/9119（coordinate source/fresh/negative）；position/anchor未初始化capture拒绝实际出现。范围正例执行结果3，两个NBT端点及返回副本均为精确16777217/16777218；执行器检查frame0。负例用例覆盖原三项typedIR拒绝和新增三项真实legacy拒绝，后者bodyCompiled且typedIR为空、无循环体marker；未做Range fresh-library往返。
+
+五个不同测试跨轮各自通过，最终joint3仅联合两项Lib回归；Cache仅joint1，Range仅joint2通过。瞬态修复没有重复标准库或Cache检查。三份bin一致：MCFL65、488316 bytes，header `4c46434d41000000`，SHA256 `CAE2E7113055DBBEEC4D8AC29C14900D262F904E5D06D39D9146593BF56EE360`。共14路径（9个源码/测试、bin及四份文档）。无Minecraft world/fullcheck。
+
+| 自评维度 | 分数 | 本阶段证据与边界 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 区分首两轮失败、修复原因及各项跨轮通过的范围。 |
+| 完整性 | 3/5 | 覆盖范围及两个必要回归；whole17仍未完成。 |
+| 清晰性 | 4/5 | 说明无栈作用域、冻结常量及native结果初始化；capture输入检查保留。 |
+| 可操作性 | 4/5 | 提供唯一日志、XML、Project计数及bin身份。 |
+| 简洁性 | 4/5 | 仅记录受测路径和未覆盖边界。 |
+
+平均3.8/5；whole17仍未完成。
+
+## 历史阶段 135：退役旧命令结果载体与未注册入口（已限定验证）
 
 删除`PlayerVarData`未注册旧clear/spawnpoint包装、`Debug.function`旧桥、`CommandReturn.kt`三旧carrier、`Commands.processMacroCommandReturn`及私有类型工厂/typeCache引用。新的qualified `CommandResult`不使用旧carrier；保留`processMacroCommand`与`NativeFunction.ValueWrapper`，因为其他旧MNI仍在使用。全源码旧carrier/helper/private type引用已清零，但这不表示旧MNI整体迁移完成。
 

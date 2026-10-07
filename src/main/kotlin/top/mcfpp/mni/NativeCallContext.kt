@@ -70,6 +70,7 @@ class NativeCallContext internal constructor(
 
     internal fun publishResult(value: Var<*>) {
         val adapter = normalize(value)
+        adapter.hasAssigned = true
         val reference = reference(adapter)
         result = StorageAccess.snapshot(adapter)?.let { ValueRef.Constant(adapter.type.typeId, it) } ?: reference
         publishedResult = adapter

@@ -242,7 +242,6 @@ class MCFPPBaseType {
         override val instanceData by lazy {
             CompoundData("range","mcfpp.lang").apply {
                 extends(Any.instanceData)
-                injectedBy(RangeVarData::class.java)
             }
         }
 

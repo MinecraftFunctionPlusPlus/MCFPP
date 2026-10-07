@@ -1,6 +1,6 @@
-# 下一阶段：退役范围迭代的宿主返回接口（阶段136）
+# 下一阶段：迁移 Random 整数结果接口（阶段137）
 
-阶段87普通值位置type拒绝规则继续生效；阶段129已移除语言层 `T!` 后缀。阶段88–135完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及实体命令路径的限定迁移；当前库格式MCFL64，旧 `CommandReturn` 类型/注解与旧void wrapper均为0。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效；阶段129已移除语言层 `T!` 后缀。阶段88–136完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及实体命令路径的限定迁移；当前库格式MCFL65，旧 `CommandReturn` 类型/注解与旧void wrapper均为0。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -184,9 +184,13 @@ BossBar的add/remove/listAll/setColor/setName/setVisiblePlayers/setStyle七个�
 
 删除未注册的`PlayerVarData`旧clear/spawnpoint包装、`Debug.function`旧桥、`core/lang/CommandReturn.kt`三carrier、`Commands.processMacroCommandReturn`及对应的`MCFPPPrivateType.CommandReturn`/typeCache入口。新的qualified `CommandResult`不依赖旧carrier；保留`processMacroCommand`及`NativeFunction.ValueWrapper`桥，因为其他旧MNI仍使用。MCFL63→64。stdlib一次成功（1m1s，Project0/0）；joint仅运行两个既有命令fixture与Cache用例，SUCCESSFUL in47s，Executors30/31正常结束。LibFieldAccess XML `2026-10-07T11:37:38.129Z` 2/0/0/0、Cache XML `11:37:35.764Z` 1/0/0/0；PlayerState/Ride source/fresh Project0/9118、0/9119，negative12/9119；StaticCommands source/fresh 0/9118、0/9119。三份bin均MCFL64、488316 bytes，header `4c46434d40000000`，SHA256 `4D6436B77BFF85C324D1BD43D9FB579F76CEC34A4B3004DF5B2C24CC13743B2C`。未验证world/frame0或完整旧MNI迁移。
 
-### 阶段 136 计划：退役范围迭代的宿主返回接口
+### 阶段 136：退役范围迭代的宿主返回接口（已限定验证）
 
-删除`RangeVarData.iterator`公共MNI及`Range`注入；legacy foreach先以`StorageAccess.read`读取范围两端，仅对完整已知的Int端点在编译器内部构造`ConcreteIterator`，与typedIR的整数端点要求一致。未知或不兼容端点在生成命令前拒绝，其他iterable沿用旧路径。复用既有`legacyMaterializationAndIterationUseIndependentExactBounds`的`main.typedIR == null`及实际执行断言，并扩展`missingOrUnprovenEndpointsAreRejectedBeforeCommands`负例。尚未实施或验证；需确认库变更后的标准库与缓存回归。
+删除`RangeVarData.iterator`公共MNI及`Range`注入；legacy foreach使用`StorageAccess.read`读取范围两端，仅在完整Int端点已知时由编译器内部构造`ConcreteIterator`，与typedIR的整数端点要求一致。其余iterable沿用旧路径。stdlib成功（1m，Project0/0）。joint1 FAILED45s/Executors32、33正常结束：Range XML `2026-10-07T11:54:11.455Z` 2/2/0/0，Cache XML `11:54:09.610Z` 1/0/0/0；一次positive在执行器读取地址时IndexOutOfBounds，negative取不存在的main命令。joint2 Range两项通过（XML `2026-10-07T12:02:41.800Z` 2/0/0/0），但整数运算回归source有53 errors。joint3复查primitive operators与coordinate tp：SUCCESSFUL32s/Executor36正常结束，XML `12:09:58.250Z` 2/0/0/0；source/fresh 0/9118、0/9119，coordinate negative10/9119，position/anchor未初始化捕获拒绝。五个不同测试跨轮各自通过，最终joint3仅联合两项Lib回归；Cache仅joint1。MCFL64→65；三份bin 488316 bytes，header `4c46434d41000000`，SHA256 `CAE2E7113055DBBEEC4D8AC29C14900D262F904E5D06D39D9146593BF56EE360`。未验证Minecraft world。
+
+### 阶段 137 计划：迁移 Random 整数结果接口
+
+迁移`RandomData`与`RandomObjectData`的`rand`/`roll`四个入口到单context，返回独立且值未知的int score；读取真实receiver `id`，静态入口无receiver。完整已知Int范围先作校验，扩展现有reset fixture覆盖四项取值与缺失/Float/unknown负例；不模拟RNG。预计MCFL65→66并重建标准库、回归Cache；尚未实施或验证。
 
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。

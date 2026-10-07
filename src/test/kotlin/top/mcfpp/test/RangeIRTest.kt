@@ -126,6 +126,43 @@ class RangeIRTest {
             assertTrue(Project.errorCount > 0, source)
             assertNotNull(GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single().typedIR)
         }
+        for ((source, name) in listOf(
+            """
+                func main(){
+                    var ignored=6/2; var bounds=1 ..;
+                    for(index:bounds){
+                        /say fixture.invalid_range_iteration
+                    }
+                }
+            """.trimIndent() to "main",
+            """
+                func main(){
+                    var ignored=6/2; var bounds=1.0 .. 2.0;
+                    for(index:bounds){
+                        /say fixture.invalid_range_iteration
+                    }
+                }
+            """.trimIndent() to "main",
+            """
+                func iterate(bounds as range){
+                    var ignored=6/2;
+                    for(index:bounds){
+                        /say fixture.invalid_range_iteration
+                    }
+                }
+                func main(){}
+            """.trimIndent() to "iterate"
+        )) {
+            MCFPPStringTest.readFromString(source, version = "26.3")
+            assertTrue(Project.errorCount > 0, source)
+            val function = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue(name).single()
+            assertTrue(function.bodyCompiled)
+            assertNull(function.typedIR)
+            val commands = (GlobalScope.localNamespaces.values + GlobalScope.libNamespaces.values + GlobalScope.stdNamespaces.values)
+                .flatMap { it.scope.functions.values.flatten() }.flatMap { it.commands }
+            assertFalse(commands.any { "fixture.invalid_range_iteration" in it.toString() })
+            assertFalse(Project.macroFunction.values.any { "fixture.invalid_range_iteration" in it })
+        }
     }
 
     @Test fun legacyMaterializationAndIterationUseIndependentExactBounds() {
