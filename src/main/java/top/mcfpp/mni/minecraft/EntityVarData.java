@@ -147,12 +147,6 @@ public class EntityVarData {
         Commands.processMacroCommandReturn(returnValue, command);
     }
 
-    @MNIFunction(normalParams = "entity<1>", returnType = "CommandReturn")
-    public static void tp(EntityVar entity, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
-        var command = Command.Companion.buildAll("tp", caller, entity);
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-
     @MNIFunction(normalParams = {"pos3", "pos2"}, returnType = "CommandReturn")
     public static void tp(Pos3Var pos, Pos2Var rotation, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
         var command = Command.Companion.buildAll("tp", caller, pos, rotation);

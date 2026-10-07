@@ -38,6 +38,19 @@ internal fun captureCommandResult(context: NativeCallContext, build: (List<Var<*
 }
 
 object NativeMinecraftCommandOperations {
+    fun entityTeleportToEntity(context: NativeCallContext) = context.withAdapters { receiver, args ->
+        if (receiver !is SelectorVar) {
+            LogProcessor.error("Entity teleport commands require a selector receiver")
+            return@withAdapters
+        }
+        val destination = args[0]
+        if (destination !is SelectorVar || !destination.value.selectingSingleEntity()) {
+            LogProcessor.error("Entity teleport commands require a single-entity selector destination")
+            return@withAdapters
+        }
+        captureCommandResult(context) { Command.buildAll("tp", receiver, destination) }
+    }
+
     fun playerClearAll(context: NativeCallContext) = context.withAdapters { receiver, _ ->
         val players = playerSelector(receiver) ?: return@withAdapters
         captureCommandResult(context) { Command.buildAll("clear", players) }

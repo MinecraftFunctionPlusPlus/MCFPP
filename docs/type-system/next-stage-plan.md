@@ -1,6 +1,6 @@
-# 下一阶段：迁移实体间传送命令（阶段126）
+# 下一阶段：迁移玩家消息命令（阶段127）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–125完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及EntityTag路径的限定迁移；当前库格式MCFL55，Std外剩余4个Java类、22个CommandReturn注解及7个旧void wrapper。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–126完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及实体命令路径的限定迁移；当前库格式MCFL56，Std外剩余4个Java类、21个CommandReturn注解及7个旧void wrapper。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -134,9 +134,15 @@ BossBar的add/remove/listAll/setColor/setName/setVisiblePlayers/setStyle七个�
 
 `PlayerVarData.clear()`、`clear(string,int)`、`setGamemode`及`EntityRideData.ride`接入单context结果捕获；`PlayerStateData`挂到`EntityData`。Player操作先检查player selector；Gamemode要求`EnumVarConcrete`并输出identifier；ride以普通entity形参保留bare selector，但receiver与目标都须是实际单实体SelectorVar。stdlib与指定source/fresh fixture、Cache回归通过；仅验证生成合同与负向guard，不模拟world或frame0。旧clear谓词重载及PlayerInventory五个void桥待后续处理。
 
-### 阶段 126 计划：实体间传送命令
+### 阶段 126：实体间传送命令（已限定验证）
 
-只迁移`EntityVarData`中entity目标的`tp`入口，新增`EntityTeleportData`单context qualified `CommandResult`并通过`@From`挂到`EntityData`；删除旧entity<1>的实体目标重载，保留坐标tp与setSpawnpoint。receiver允许multi selector，destination要求实际单实体`SelectorVar`；guard先于capture，destination保留普通entity参数，以支持bare `@p`及普通同型转换。按[26.3命令报告](https://raw.githubusercontent.com/misode/mcmeta/26.3-summary/commands/data.json)，核对teleport targets为multiple entities、destination为single entity，并按真实词序生成`tp receiver destination`。fixture计划检查`@a`对`@p`连续调用、独立结果及DTO/multi-target拒绝；不扩展坐标入口、`getLimit`、predicate快照或Pos3恢复，不模拟世界传送。MCFL55→56，尚未实现或验证。
+`EntityTeleportData`将entity-target `tp`迁入单context qualified `CommandResult`并挂到`EntityData`，删除旧entity<1>目标重载；坐标tp和setSpawnpoint保留。fixture验证`@a`到`@p`的两次调用、独立root、canonical readonly/Unknown/null、selector kinds，以及DTO receiver与多实体destination拒绝。stdlib与joint Cache回归成功，MCFL55→56；source/fresh实际命令合同通过，不模拟world/frame0。
+
+### 阶段 127 计划：玩家消息命令
+
+将`PlayerVarData.tell`与`w`迁入单context qualified结果，新增`PlayerMessageData`并通过第九个`@From`挂到`EntityData`；修复旧入口缺caller且不发布结果的问题。capture前限制sender与targets为player selector；按`execute as sender run tell|w targets message`捕获整体执行结果，不声称每个sender各有独立结果。一个普通Box fixture计划用sender `@p`、targets `@a`检查两条消息宏、slot来源与两个root，并验证`@e`和DTO负例；不模拟实际发送。MCFL56→57，尚未实现或验证。
+
+新语言参数为`entity,string`，caller为`entity`，结果为`mcfpp.minecraft.std:CommandResult`。sender的player限制是项目API选择；固定26.3命令树只要求targets为multiple players。消息沿既有string宏参数路径，不转为JSON。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

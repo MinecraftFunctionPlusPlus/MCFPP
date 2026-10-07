@@ -8,6 +8,7 @@ import mcfpp.minecraft.other:Gamemode;
 @From<"top.mcfpp.mni.minecraft.PlayerXpData">
 @From<"top.mcfpp.mni.minecraft.PlayerAdvancementData">
 @From<"top.mcfpp.mni.minecraft.PlayerStateData">
+@From<"top.mcfpp.mni.minecraft.EntityTeleportData">
 data EntityData {
     @Name<"Air">
     air as short;

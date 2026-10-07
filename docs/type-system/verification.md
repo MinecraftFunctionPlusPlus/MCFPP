@@ -1,8 +1,26 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段125，MCFL55；Std外剩余4个Java类含22个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段126，MCFL56；Std外剩余4个Java类含21个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 当前阶段 125：Player 状态与骑乘命令（已限定验证）
+## 当前阶段 126：实体间传送命令（已限定验证）
+
+`EntityTeleportData`将entity-target `tp`接入单context qualified结果并挂到`EntityData`；旧entity<1>目标重载删除，坐标tp与setSpawnpoint保持不变。唯一fixture为`nativeEntityTeleportCommandsCaptureResultsAcrossLibraryRoundTrip`，joint Cache方法为`oldAndUnknownCacheFormatsProduceARecompileDiagnostic`。标准库SUCCESSFUL in11s、Project0/0；joint worker48正常、SUCCESSFUL in24s。LibFieldAccess XML `2026-10-07T06:18:09.483Z` 与Cache XML `2026-10-07T06:18:08.748Z` 均1/0/0/0；source/fresh Project0/9118与0/9119，negative4/9119。MCFL56三份bin均476974 bytes、header `4c46434d38000000`、SHA256 `0AE3A1AA1E626CECC2FCB1A55D5BE6141DEC31AD48C89C7F86EBB5BB8F0922FC`。
+
+fixture实际验证`@a`到`@p`两次直接调用、两个独立root、一次`{}`初始化与双store；结果canonical readonly/Unknown/null，实际selector kind保持ALL_PLAYERS与NEAREST_PLAYER。DTO receiver与多实体destination在capture前拒绝；receiver可为multi。source/fresh生成合同通过，不验证Minecraft world执行、frame0或额外函数返回语义。
+
+两次构建原生退出码均为0；日志前缀`mcfpp-native-entity-teleport-command-results-`。source/fresh均按observe的实际namespaceID读取磁盘文件，两份结果各自仅初始化一次，result为int 1、success为byte 1，实际字段读取也无完整快照；无普通参数特化。四条负向诊断为两个selector guard及两个未发布结果级联诊断。
+
+| 自评维度 | 分数 | 本阶段证据与范围 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 对照两份fresh XML、source/fresh计数和三份bin身份。 |
+| 完整性 | 3/5 | 覆盖实体目标tp限定路径；坐标tp、whole17及world执行未完成。 |
+| 清晰性 | 4/5 | 区分receiver多选、destination单选与负向guard。 |
+| 可操作性 | 4/5 | 下一步限定为Player消息命令及整体execute结果。 |
+| 简洁性 | 4/5 | 保留必要构建、fixture与资源证据。 |
+
+平均3.8/5；whole17仍未完成。
+
+## 历史必要检查：阶段 125 Player 状态与骑乘命令（已限定验证）
 
 `PlayerVarData.clear()`、`clear(string,int)`、`setGamemode`及`EntityRideData.ride`接入单context结果捕获，保留clear语言重载；`PlayerStateData`新增到`EntityData`。Player命令先检查player selector，Gamemode要求`EnumVarConcrete`并输出identifier；ride要求实际receiver与target均为单实体selector。标准库SUCCESSFUL in12s、Project0/0；joint worker47正常、SUCCESSFUL in25s。LibFieldAccess XML `2026-10-07T05:58:41.992Z` 与CacheFormat XML `05:58:41.069Z` 均1/0/0/0；source/fresh Project0/9118与0/9119，negative12/9119，包括2个player guard、1个enum guard、3个ride双端guard及6个未发布结果级联诊断。source/fresh检查clear动态id/count参数宏、clearall/gamemode/ride direct命令；不模拟世界命令或frame0。三份bin均MCFL55、476213 bytes、header `4c46434d37000000`、SHA256 `09DC39D48459E09CCC2B09BFD8184EC0A036670AF74362B6A382768D7958614D`。日志前缀`mcfpp-native-player-state-ride-command-results-`。
 
