@@ -147,11 +147,6 @@ public class EntityVarData {
         Commands.processMacroCommandReturn(returnValue, command);
     }
 
-    @MNIFunction(caller = "entity", returnType = "CommandReturn")
-    public static void stopRide(EntityVar caller, ValueWrapper<CommandReturn> returnValue){
-        var command = Command.Companion.buildAll("ride", caller, "dismount");
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
     //endregion
 
     //region tp

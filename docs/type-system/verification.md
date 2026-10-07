@@ -1,8 +1,24 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段121，MCFL51；Std外剩余4个Java类含43个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段122，MCFL52；Std外剩余4个Java类含42个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 当前阶段 121：Entity effect 授予命令（已限定验证）
+## 当前阶段 122：停止骑乘命令（已限定验证）
+
+11个提交路径含6项源码/测试（88+/6−）、bin及四份文档。唯一新增fixture `nativeEntityStopRideCommandsCaptureResultsAcrossLibraryRoundTrip` 与 `oldAndUnknownCacheFormatsProduceARecompileDiagnostic` 联合通过，原生退出码0；日志前缀为 `mcfpp-native-entity-stop-ride-command-results-`，保留stdlib/final日志。source/fresh检查同一已知SELF选择器两次调用、canonical readonly结果的Unknown事实与空快照、两个独立捕获root及各一次初始化。
+
+`EntityRideData.stopRide`使用单context结果捕获；capture前要求receiver是已证明的单实体selector。stdlib Project0/0、SUCCESSFUL in10s；joint worker44正常、SUCCESSFUL in24s。LibFieldAccess XML `2026-10-07T05:14:47.255Z` 与CacheFormat XML `05:14:46.352Z` 均1/0/0/0；source/fresh Project0/9118与0/9119，negative4/9119，两处各产生selector guard及未发布结果诊断。三份bin均MCFL52、455477 bytes、header `4c46434d34000000`、SHA256 `71BC9EF7BE9E5257B52242542FF6FB431D64EF725CC6C75DF2C27DC768C84D5B`。测试仅检查磁盘命令与负向guard，不模拟世界骑乘或frame0。whole17仍未完成。
+
+| 自评维度 | 分数 | 证据及改进方向 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 依据本轮两个fresh XML、Project计数和实际guard诊断。 |
+| 完整性 | 3/5 | 仅覆盖stopRide限定路径；世界行为与whole17未完成。 |
+| 清晰性 | 4/5 | 区分命令导出、selector guard与世界执行边界。 |
+| 可操作性 | 4/5 | 下一步限定六个Player经验入口及selector范围。 |
+| 简洁性 | 4/5 | 只记录必要测试和资源证据。 |
+
+平均3.8/5；whole17仍未完成。
+
+## 历史必要检查：阶段 121 Entity effect 授予命令（已限定验证）
 
 `EntityVarData.effect`与`effectInfinite`两个入口迁入单context qualified `CommandResult`。常量bool直接生成true/false字面量；动态score读取当前score，未知bool在MCString临时值中先写`false`，条件成立后覆写`true`再捕获参数。默认注解不等于默认实参已接通。
 

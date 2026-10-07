@@ -38,6 +38,14 @@ internal fun captureCommandResult(context: NativeCallContext, build: (List<Var<*
 }
 
 object NativeMinecraftCommandOperations {
+    fun entityStopRide(context: NativeCallContext) = context.withAdapters { receiver, _ ->
+        if (receiver !is SelectorVar || !receiver.value.selectingSingleEntity()) {
+            LogProcessor.error("Entity dismount commands require a single-entity selector receiver")
+            return@withAdapters
+        }
+        captureCommandResult(context) { Command.buildAll("ride", receiver, "dismount") }
+    }
+
     fun entityEffect(context: NativeCallContext) = context.withAdapters { receiver, args ->
         if (receiver !is SelectorVar) {
             LogProcessor.error("Entity effect commands require a selector receiver")
