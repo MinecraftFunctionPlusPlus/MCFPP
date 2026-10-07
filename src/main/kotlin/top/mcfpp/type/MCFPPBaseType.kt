@@ -39,11 +39,7 @@ class MCFPPBaseType {
             }
         }
 
-        override val concreteInstanceData: CompoundData by lazy {
-            CompoundData("any","mcfpp.lang").apply {
-                injectedBy(MCAnyConcreteData::class.java)
-            }
-        }
+        override val concreteInstanceData: CompoundData get() = instanceData
 
         override val typeName: kotlin.String
             get() = "any"

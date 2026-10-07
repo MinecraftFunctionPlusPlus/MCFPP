@@ -1,8 +1,26 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段138，MCFL67；旧CommandReturn链引用/注解与旧void wrapper均为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段139，MCFL68；旧CommandReturn链引用/注解与旧void wrapper均为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
 
-## 当前阶段138：迁移泛型类型联合接口（已限定验证）
+## 当前阶段139：移除Any旧宿主方法（已限定验证）
+
+移除`MCAnyData.getJavaVar`、`getDefault`、`equalNull`和`MCAnyConcreteData.getJavaVar`，删除`MCAnyConcreteData`类；保留共享`toText`单context路径。这不是nullable协议的等价替代，也没有新增runtime标签或宿主桥框架。
+
+标准库native exit0/SUCCESSFUL in1m4s、Project0/0。joint native exit0/SUCCESSFUL in48s，Executors44/45正常开始及结束。Cache XML `2026-10-07T13:19:09.271Z`、LibFieldAccess XML `13:19:11.425Z`，各1/0/0/0。文本fixture source/fresh Project分别0/9119、0/9120；六项磁盘组件断言（常量`4`、`fixed`、`3`及运行时score/string/NBT路径）、返回值7与既有execute helper的frame0检查通过。仅验证共享native文本路径，不覆盖直接语言调用`Any.toText`。
+
+唯一日志为`mcfpp-retire-any-host-methods-stdlib.log`与`mcfpp-retire-any-host-methods-joint.log`。三份bin一致：MCFL68、488120 bytes，header `4c46434d44000000`，SHA256 `AAD3B6D66FE33D9F6946679B31E2D0ACF239DD2AF83C2C032C49EEF85681AF5B`。4个生产文件加bin与4份文档，共9路径；无新测试、fullcheck、nullable支持或world执行。
+
+| 自评维度 | 分数 | 本阶段证据与边界 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录退役范围、同轮两项结果及实际fresh计数。 |
+| 完整性 | 3/5 | 覆盖共享文本路径；未覆盖Any直接语言调用或whole17。 |
+| 清晰性 | 4/5 | 明确不承诺nullable等价替代。 |
+| 可操作性 | 4/5 | 给出日志、XML、Project结果与bin身份。 |
+| 简洁性 | 4/5 | 限定于本阶段实现与验证边界。 |
+
+平均3.8/5；whole17仍未完成。
+
+## 历史阶段138：迁移泛型类型联合接口（已限定验证）
 
 `MCFPPTypeData.union`使用既有`NativeOperatorOperations.unionType`；不新增context API，`NoExternalWrites`与`returnsConstWhenArgsConst`标记保持。union fixture验证`Box<int|string>`表达式分派及canonical特化身份；源码端检查模型，fresh consumer实际执行磁盘命令并得到4/9、frame0。另一既有用例检查普通type局部变量被拒绝且名称未注册。
 

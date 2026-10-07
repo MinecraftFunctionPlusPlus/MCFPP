@@ -1,6 +1,6 @@
-# 下一阶段：移除 Any 的旧宿主方法（阶段139）
+# 下一阶段：迁移 ItemPredicate 的并集操作（阶段140）
 
-阶段87普通值位置type拒绝规则继续生效；阶段129已移除语言层 `T!` 后缀。阶段88–138完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及实体命令路径的限定迁移；当前库格式MCFL67，旧 `CommandReturn` 类型/注解与旧void wrapper均为0。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效；阶段129已移除语言层 `T!` 后缀。阶段88–139完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及实体命令路径的限定迁移；当前库格式MCFL68，旧 `CommandReturn` 类型/注解与旧void wrapper均为0。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -196,9 +196,13 @@ BossBar的add/remove/listAll/setColor/setName/setVisiblePlayers/setStyle七个�
 
 仅迁移`MCFPPTypeData.union`到已有`NativeOperatorOperations.unionType`，无新增context API；`NoExternalWrites`及const返回语义保持。union fixture覆盖`Box<int|string>`表达式分派及canonical特化身份；另一既有用例验证普通type局部变量拒绝。stdlib成功13s/Project0/0；三个限定用例同轮成功，Executors41–43正常结束。Cache XML `2026-10-07T13:03:19.109Z`、union往返 `13:03:22.168Z`、普通type拒绝 `13:03:28.618Z`，各1/0/0/0；union source/fresh 0/9118、0/9119，普通type负例5/9118且名称未注册。三bin一致：MCFL67、488120 bytes，header `4c46434d43000000`，SHA256 `48D79A34AA70366FACB6D9422A83173658AB88F5E046FFD0B422D5B40B33AC10`。没有全量检查或Minecraft world验证；详见verification.md。
 
-### 阶段 139 计划：移除 Any 的旧宿主方法
+### 阶段 139：移除 Any 的旧宿主方法（已限定验证）
 
-退役`MCAnyData.getJavaVar`、`getDefault`、`equalNull`及`MCAnyConcreteData.getJavaVar`四个旧方法；移除`MCAnyConcreteData`类。保留现有`toText`单context成员路径。未知Any仍拒绝具体操作；不承诺nullable协议等价替代，也不新增runtime标签或宿主桥框架。预计MCFL67→68，按实际影响重建标准库并回归现有text方法fixture与Cache；尚未实施或验证。
+退役`MCAnyData.getJavaVar`、`getDefault`、`equalNull`及`MCAnyConcreteData.getJavaVar`四个旧方法，并删除`MCAnyConcreteData`类；保留共享`toText`单context成员路径。这不是nullable协议的等价迁移，不新增runtime标签或宿主桥框架。stdlib SUCCESSFUL in1m4s/Project0/0；text与Cache两项同轮SUCCESSFUL in48s，Executors44/45正常结束。Cache XML `2026-10-07T13:19:09.271Z`、text XML `13:19:11.425Z`均1/0/0/0；text source/fresh 0/9119、0/9120。六项磁盘组件断言及返回7/frame0通过。未覆盖直接语言调用`Any.toText`、nullable等价支持或world执行。MCFL67→68，三bin488120 bytes，header `4c46434d44000000`，SHA256 `AAD3B6D66FE33D9F6946679B31E2D0ACF239DD2AF83C2C032C49EEF85681AF5B`。详见verification.md。
+
+### 阶段 140 计划：迁移 ItemPredicate 的并集操作
+
+仅迁移`ItemPredicatePartData.Or`到既有`NativePredicateOperations.orPart`及`NoExternalWrites`路径。原生实现用`buildUnConcrete`创建canonical Or结果，通过`bindIncomingParameter`建立未知值绑定后初始化root，再分别赋`predicate1`和`predicate2`，调用既有publish；修正旧实现第二次赋值误写`predicate1`的问题。测试应确认joined与普通copy仍保留两个不同`CountMatchPart`，并验证后续分别修改左右值时不串改。不运行旧formatter/factory，也不新增宿主模型。预计MCFL68→69，按实际影响重建标准库并运行限定fixture与Cache；尚未实施或验证。
 
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
