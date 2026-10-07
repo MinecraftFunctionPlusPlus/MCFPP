@@ -309,6 +309,14 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     }
 
     override fun toCommandPart(): Command {
+        val resourceType = GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.resource")?.scope?.getTemplate("ResourceID")?.getType()
+        resourceType?.tryResolve()
+        val actualType = type as MCFPPDataTemplateType
+        actualType.tryResolve()
+        if (resourceType is MCFPPDataTemplateType && actualType.template.isSubOf(resourceType.template)) {
+            val field = DataTemplate.getField(this, "id")!!
+            return (if (field is PropertyVar) field.get() else field).toCommandPart()
+        }
         val f = getMemberFunction("toCommandPart", arrayListOf(), arrayListOf(), Member.AccessModifier.PUBLIC).first
         if(f is UnknownFunction) throw IllegalArgumentException("Cannot find toCommandPart function")
         if(f.isOverride){

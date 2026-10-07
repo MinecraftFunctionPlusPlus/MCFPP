@@ -1,4 +1,3 @@
-@From<"top.mcfpp.mni.resource.ResourceIDData">
 data ResourceID {
     id as string;
 }

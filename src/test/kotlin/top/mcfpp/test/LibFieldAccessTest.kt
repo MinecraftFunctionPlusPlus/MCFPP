@@ -2541,7 +2541,7 @@ class LibFieldAccessTest {
             data Box {
                 func observe(target as string)->int {
                     var pool=TemplatePool();
-                    pool.id="fixture:pool";
+                    pool.id=target;
                     place(pool,"fixture:constant",2);
                     place(pool,target,2);
                     return 7;
@@ -2567,14 +2567,23 @@ class LibFieldAccessTest {
             val commands = functions.getValue(observe.namespaceID.toString())
             val call = Regex("function (mcfpp:dynamic/\\S+) with storage (\\S+) (\\S+)")
             val macros = commands.mapIndexedNotNull { index, command -> call.matchEntire(command)?.let { index to it } }
-            assertTrue(macros.isNotEmpty(), "The unknown target must be supplied through a macro")
+            assertTrue((main.scope.getVar("box") as DataTemplateObject).toCommandPart().isMacro)
+            val poolPath = assertNotNull(assertIs<DataTemplateObject>(observe.scope.getVar("pool")).storageBinding).path.toCommandPart().toString()
+            assertEquals(2, macros.size, "Both unknown pool ids must be supplied through macros")
             val bodies = macros.map { (index, match) ->
                 val id = match.groupValues[1]
                 assertEquals(1, macros.count { it.second.groupValues[1] == id }, id)
                 val preparation = "data modify storage ${match.groupValues[2]} ${match.groupValues[3]}"
                 assertTrue(commands.take(index).any { it.startsWith(preparation) && " set " in it }, id)
+                val poolPreparation = commands.take(index).withIndex().single { it.value.startsWith("$preparation.arg_0 set from ") }
+                val source = poolPreparation.value.substringAfter(" set from ")
+                assertTrue(source.endsWith(".id"), source)
+                val capturedPool = source.removeSuffix(".id")
+                if (capturedPool != poolPath) {
+                    assertEquals(1, commands.take(poolPreparation.index).count { it == "data modify $capturedPool set from $poolPath" }, source)
+                }
                 functions.getValue(id).also { body ->
-                    assertTrue(body.any { it.startsWith("\$place jigsaw ") }, id)
+                    assertTrue(body.any { it.startsWith("\$place jigsaw \$(arg_0) ") }, id)
                     assertFalse(body.any { "return run" in it || it.removePrefix("\$").startsWith("return ") }, id)
                 }
             }

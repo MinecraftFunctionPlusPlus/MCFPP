@@ -1,8 +1,26 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段140，MCFL69；旧CommandReturn链引用/注解与旧void wrapper均为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段141，MCFL70；旧CommandReturn链引用/注解与旧void wrapper均为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
 
-## 当前阶段140：迁移ItemPredicate并集操作（已限定验证）
+## 当前阶段141：退役ResourceID旧宿主formatter入口（已限定验证）
+
+仅删除ResourceID旧formatter签名和`ResourceIDData`实例From；canonical ResourceID `id`进入内部formatter。保留`DataObjectData`全部base/default/override流程，既有Area、ItemPredicate、Slot、Team、BossBar override仍依赖该入口，本阶段不代表这些DTO路径已迁移。
+
+首轮标准库native exit1/FAILED1m2s，Project6/0：AreaData、ItemPredicateData、SlotData、SlotWithWildcardData的Java override及Team、BossBar的语言override均因base目标缺失失败；joint未启动。收窄范围后stdlib2 native exit0/SUCCESSFUL13s、Project0/0；joint native exit0/SUCCESSFUL34s，Executors50/51正常。Cache XML `2026-10-07T14:16:26.397Z`、LibFieldAccess XML `14:16:28.643Z`均1/0/0/0，source/fresh Project0/9118、0/9119。fixture检查普通`target`通过`pool.id`的source来源、宏参数准备及命令导出；没有world执行或frame0声明。
+
+成功轮次日志为`mcfpp-resource-id-internal-format-stdlib2.log`与`mcfpp-resource-id-internal-format-joint.log`；首轮失败保留在`...-stdlib.log`。三份bin一致：MCFL70、481736 bytes，header `4c46434d46000000`，SHA256 `203E4DA5F3DF003D1F6589CCC0A2DC9C5F969A2E7B849ACB4C42D7A95EE2833C`。五个源码/测试路径、bin与四份文档共10路径；没有全量检查或world测试。
+
+| 自评维度 | 分数 | 本阶段证据与边界 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录首轮失败后范围收窄，明确base仍保留。 |
+| 完整性 | 3/5 | 验证ResourceID fixture与Cache；其余旧override仍待处理。 |
+| 清晰性 | 4/5 | 区分ResourceID清理与DataObject父接口迁移。 |
+| 可操作性 | 4/5 | 给出日志、worker、XML、项目计数及bin身份。 |
+| 简洁性 | 4/5 | 仅说明本阶段实际范围。 |
+
+平均3.8/5；whole17仍未完成。
+
+## 历史阶段140：迁移ItemPredicate并集操作（已限定验证）
 
 `ItemPredicatePartData.Or`使用既有`NativePredicateOperations.orPart`与`NoExternalWrites`；原生构造分别赋`predicate1`和`predicate2`后publish。新增`MCFPPDataTemplateType.instanceData`计算getter通过`tryResolve`取得实际template，无backing field或新增schema字段。fixture显式父类型视图，检查canonical Or、无compiledFunctions、joined/copy独立存储及两个`CountMatchPart`字段。
 
