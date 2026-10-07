@@ -2,7 +2,25 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 当前阶段 113：Op/Recipe player-target 命令结果（已限定验证）
+## 当前阶段 114：Worldborder 命令结果（已限定验证）
+
+WorldborderData七个 `MNIFunction`（add、setCenter、setDamageAmount、setDamageBuffer、setSize、setWarningDistance、setWarningTime）迁入单context qualified `CommandResult`。保留参数、注解/default及命令词序，七个backend入口为薄捕获并复用 `FloatProviders`。`Pos2.hasRuntimeRepresentation=false`是计算属性：坐标只用于编译期表示，避免强制NBT编码；无serialized backing field或额外wire变化。fixture source/fresh检查七结果、readonly/unknown模型及六个macro的确切命令词序和参数槽；consumer生成一个direct center命令和六个macro，检查七独立root、双store和一次初始化。amount按真实binding path编码float snapshot；ticks按加载→score复制→NBT编码进入macro参数槽，不是直接从形参读取。
+
+标准库 `mcfpp-native-worldborder-command-results-stdlib.log` exit0/BUILD SUCCESSFUL in34s，Project0/0。首轮joint `mcfpp-native-worldborder-command-results-final.log` exit1/BUILD FAILED in30s、worker19正常；LibFieldAccess XML `2026-10-07T01:49:16.349Z` 为1/1/0/0，producer1 error/9118 warnings，首错是Pos2坐标值在 `NativeFunction.invoke → StorageAccess.flush` 中进入不支持的NBT常量编码，未到命令断言/fresh consumer；CacheFormat XML `01:49:15.410Z` 为1/0/0/0。计算型representation能力修复后final2只复查fixture，exit1/BUILD FAILED in18s、worker20正常，仍在producer命令准备断言失败，XML `01:53:13.213Z` 为1/1/0/0、producer0/9118，fresh未到。调整fixture以检查amount与ticks的真实捕获链后，final3单fixture exit0/BUILD SUCCESSFUL in18s、worker21正常，XML `01:56:02.846Z` 为1/0/0/0；source/fresh Project分别0/9118与0/9119。Cache只首轮通过。三份bin均MCFL43、293933 bytes、header `4c46434d2b000000`、SHA256 `6307C3AFB83610B950BD3014DD4A97850542EA0ACB579908B358677AB6033EF1`。不涉及world、frame0、size accessors/mutators或WorldObjectData，也不据默认注解宣称参数可省略。Std外仍有8个Java类、64个CommandReturn注解和7个旧void wrapper，whole17保持ACTIVE未完成。
+
+### 阶段 114 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 区分Pos2常量编码错误、source准备断言失败与final3成功，并精确描述ticks捕获链。 |
+| 完整性 | 3/5 | 七个方法的受测路径通过；world、size accessors及whole17未完成。 |
+| 清晰性 | 4/5 | 分轮列出XML、Project计数和Cache只首轮通过。 |
+| 可执行性 | 4/5 | 下一阶段限定BossBar七项及enum/selector边界。 |
+| 简洁性 | 4/5 | 保留必要验证与资源证据，没有扩写未测范围。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 阶段 113：Op/Recipe player-target 命令结果（已限定验证）
 
 Op.op/deop、Recipe.give/take/giveAll/takeAll六个入口接入单context qualified `CommandResult`，entity采用普通参数；捕获前由SelectorVar的onlyIncludingPlayers检查玩家限定。查询读取真实EntityType.id的编译期字符串，String工厂按模板要求构造字段值树；不再依赖旧CompoundTag/value构造及带引号的getTagStr比较。保留clone/query行为，不把裸@s或反向player筛选当作证明。Recipe读取DTO实际id；Op.deop现发出deop。source/fresh fixture检查四个direct命令、两个实际id macro及六个独立结果root、readonly/unknown模型、双store和单次初始化；负向四个调用产生预期selector guard与native result未发布诊断，且不发命令。
 

@@ -32,6 +32,14 @@ internal fun captureCommandResult(context: NativeCallContext, build: (List<Var<*
 }
 
 object NativeMinecraftCommandOperations {
+    fun worldborderAdd(context: NativeCallContext) = captureCommandResult(context) { args -> Command.buildAll("worldborder add", args[0], args[1]) }
+    fun worldborderSetCenter(context: NativeCallContext) = captureCommandResult(context) { args -> Command.buildAll("worldborder center", args[0]) }
+    fun worldborderSetDamageAmount(context: NativeCallContext) = captureCommandResult(context) { args -> Command.buildAll("worldborder damage amount", args[0]) }
+    fun worldborderSetDamageBuffer(context: NativeCallContext) = captureCommandResult(context) { args -> Command.buildAll("worldborder damage buffer", args[0]) }
+    fun worldborderSetSize(context: NativeCallContext) = captureCommandResult(context) { args -> Command.buildAll("worldborder set", args[0], args[1]) }
+    fun worldborderSetWarningDistance(context: NativeCallContext) = captureCommandResult(context) { args -> Command.buildAll("worldborder warning distance", args[0]) }
+    fun worldborderSetWarningTime(context: NativeCallContext) = captureCommandResult(context) { args -> Command.buildAll("worldborder warning time", args[0]) }
+
     fun op(context: NativeCallContext) = context.withArguments { args ->
         val players = playerSelector(args[0]) ?: return@withArguments
         captureCommandResult(context) { Command.buildAll("op", players) }

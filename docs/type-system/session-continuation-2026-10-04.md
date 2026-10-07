@@ -4,7 +4,7 @@
 
 ## 当前进度
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段113 Op/Recipe玩家命令入口已完成限定验证，MCFL42；阶段112 Team receiver结果入口已完成限定验证，MCFL41；阶段111 Datapack/Debug结果入口已完成限定验证，MCFL40；阶段110提交`17313ad`，阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段114 Worldborder命令结果入口已完成限定验证，MCFL43；阶段113 Op/Recipe玩家命令入口已完成限定验证，MCFL42；阶段112 Team receiver结果入口已完成限定验证，MCFL41；阶段111 Datapack/Debug结果入口已完成限定验证，MCFL40；阶段110提交`17313ad`，阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
 
 ### 阶段 111：迁移 Datapack 与 Debug 结果接口（已限定验证）
 
@@ -12,7 +12,15 @@ Datapack九个和Debug.start/stop两个命令入口接入单context；Debug.func
 
 首轮stdlib exit0/11s、Project0/0；joint3 worker13正常但1失败，XML `2026-10-07T00:50:12.136Z` tests2/fail1，source检查通过但fresh canonical检查失败；Cache XML `00:50:11.575Z`已通过。修复后stdlib2 exit0/9s、Project0/0；final2仅两个LibFieldAccess fixture，worker14正常、exit0/27s，XML `00:56:50.658Z` tests2/fail0。source/fresh Project 0/9118、0/9119各两次。consumer实际有三个direct命令及enable动态macro准备/调用、root `{}`与双store；无world/executor/frame0。三份MCFL40资源293272 bytes、SHA256 `04023951C6DA76A2DB1C3D0BAB6528A8387D0D8CD5BC92A949B695E390ABAC9A`。Cache只首轮通过。
 
-下一阶段114限定Worldborder七个命令结果入口，按现有默认注解、参数和命令词序迁入；fixture检查一个direct命令及六个macro的参数准备、独立root与双store。复用FloatProviders，不扩浮点实现；计划MCFL43及stdlib/Cache，尚未编码或验证。
+下一阶段115限定BossBar七个命令结果入口；实例DTO的id/name取值、普通entity参数、已有SelectorVar玩家限定和枚举unknown拒绝保持明确。fixture检查六个macro/一个list direct调用与只读未知结果；计划MCFL44及stdlib/Cache，尚未编码或验证。
+
+### 阶段 114：Worldborder命令结果接口（已限定验证）
+
+WorldborderData的add、setCenter、setDamageAmount、setDamageBuffer、setSize、setWarningDistance、setWarningTime七个方法接入单context qualified `CommandResult`；保留普通参数与注解/default/词序，复用 `FloatProviders`。仅计算型Pos2能力标志`hasRuntimeRepresentation=false`，不增加serialized backing field或wire。fixture检查七个结果、readonly/unknown模型和严格参数domain；consumer实际生成一个direct center命令、六个macro、七个独立root/双store/一次初始化。amount的float snapshot从真实binding path捕获；ticks按加载→score复制→NBT编码进入macro参数槽，不能简写成宏直接读取形参。
+
+stdlib exit0/BUILD SUCCESSFUL in34s、Project0/0。首轮joint exit1/BUILD FAILED in30s、worker19正常；LibFieldAccess XML `2026-10-07T01:49:16.349Z` 为1/1/0/0，producer因Pos2字面量被错误送入NBT编码而报1 error/9118 warnings，failure栈在 `NativeFunction.invoke → StorageAccess.flush`，尚未到命令检查/fresh；Cache XML `01:49:15.410Z` 为1/0/0/0。计算型能力标志修复后，final2仅fixture复查仍在source命令断言失败，XML `2026-10-07T01:53:13.213Z` 为1/1/0/0，producer0/9118、fresh未到。fixture改为逐段检查真实float snapshot路径及ticks加载、复制、编码和macro slot后，final3 exit0/BUILD SUCCESSFUL in18s、worker21正常，XML `2026-10-07T01:56:02.846Z` 为1/0/0/0；source/fresh Project0/9118和0/9119。Cache未重跑。三份资源MCFL43、293933 bytes、header `4c46434d2b000000`、SHA256 `6307C3AFB83610B950BD3014DD4A97850542EA0ACB579908B358677AB6033EF1`。未验证world/frame0、size accessor/mutator或WorldObjectData；默认参数不据注解推断可省略。
+
+阶段87普通值位置 `type` 规则继续生效，whole17保持ACTIVE未完成。
 
 ### 阶段 113：Op/Recipe玩家命令结果（已限定验证）
 

@@ -275,6 +275,8 @@ class MCFPPBaseType {
 
     object Pos2: MCFPPType(arrayListOf(Object)){
 
+        override val hasRuntimeRepresentation: Boolean get() = false
+
         override val typeId: TypeId = TypeId.Builtin("MCFPPBaseType.Pos2")
 
         override val instanceData by lazy {

@@ -3368,6 +3368,132 @@ class LibFieldAccessTest {
         assertFalse(rejected.commands.any { "execute store result" in it.toString() || Regex("(op|deop|recipe) .*?").matches(it.toString()) || "set value {}" in it.toString() })
     }
 
+    @Test
+    fun nativeWorldborderCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
+        val defaults = mapOf("add" to listOf("float", "int = 0"), "setCenter" to listOf("pos2 = 0 0"),
+            "setDamageAmount" to listOf("float = 0.2"), "setDamageBuffer" to listOf("float = 5.0"),
+            "setSize" to listOf("float = 29999984", "int = 0"), "setWarningDistance" to listOf("int = 5"), "setWarningTime" to listOf("int = 15"))
+        defaults.forEach { (name, parameters) ->
+            val method = top.mcfpp.mni.minecraft.WorldborderData::class.java.getDeclaredMethod(name, top.mcfpp.mni.NativeCallContext::class.java)
+            val annotation = assertNotNull(method.getAnnotation(top.mcfpp.annotations.MNIFunction::class.java))
+            assertEquals(parameters, annotation.normalParams.toList())
+            assertEquals("mcfpp.minecraft.std:CommandResult", annotation.returnType)
+        }
+        val mainSource = """
+            func main(){ var box=Box(); dynamic var result=box.observe(2.5,4); }
+        """
+        write("""
+            namespace fixture.fields;
+            import mcfpp.minecraft.std:*;
+            @From<"top.mcfpp.mni.minecraft.WorldborderData">
+            object data Border;
+            data Box {
+                func observe(amount as float,ticks as int)->int {
+                    var added=Border.add(amount,ticks); var centered=Border.setCenter(1 2);
+                    var damaged=Border.setDamageAmount(amount); var buffered=Border.setDamageBuffer(amount);
+                    var sized=Border.setSize(amount,ticks); var distance=Border.setWarningDistance(ticks); var time=Border.setWarningTime(ticks);
+                    var addValue=added.result; var centerSuccess=centered.success; var damageValue=damaged.result;
+                    var bufferSuccess=buffered.success; var sizeValue=sized.result; var distanceSuccess=distance.success; var timeValue=time.result;
+                    return 7;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val observe = (main.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("observe").single()
+            assertTrue(observe.compiledFunctions.isEmpty())
+            val parameterPaths = listOf("amount", "ticks").associateWith { name -> assertNotNull(assertNotNull(observe.scope.getVar(name)).storageBinding).path.toCommandPart().toString() }
+            val canonical = assertNotNull(GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.std")).scope.getTemplate("CommandResult")
+            for (name in listOf("added", "centered", "damaged", "buffered", "sized", "distance", "time")) {
+                val value = assertIs<DataTemplateObject>(observe.scope.getVar(name))
+                assertSame(canonical, value.templateType)
+                assertTrue(value.templateType.scope.getVar("result")!!.isConst)
+                assertTrue(value.templateType.scope.getVar("success")!!.isConst)
+                val binding = assertNotNull(value.storageBinding)
+                assertEquals(top.mcfpp.analysis.ValueKnowledge.Unknown, binding.data.facts.read(binding.place)?.value)
+                assertNull(ValueSnapshot.of(value))
+            }
+            for (name in listOf("addValue", "centerSuccess", "damageValue", "bufferSuccess", "sizeValue", "distanceSuccess", "timeValue")) assertNull(ValueSnapshot.of(assertNotNull(observe.scope.getVar(name))))
+            val directory = output.resolve("consumer")
+            DatapackCreator.createDatapack(directory.toString())
+            val data = directory.resolve(Project.config.name).resolve("data")
+            val functions = linkedMapOf<String, List<String>>()
+            Files.walk(data).use { paths ->
+                paths.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".mcfunction") }.forEach { file ->
+                    val relative = data.relativize(file)
+                    if (relative.nameCount >= 3 && relative.getName(1).toString() == "function") {
+                        val id = relative.subpath(2, relative.nameCount).joinToString("/").removeSuffix(".mcfunction")
+                        functions["${relative.getName(0)}:$id"] = Files.readAllLines(file).map(String::trim)
+                    }
+                }
+            }
+            val commands = functions.getValue(observe.namespaceID.toString())
+            val stores = Regex("execute store result storage (\\S+) (\\S+)\\.result int 1 store success storage (\\S+) (\\S+)\\.success byte 1 run (.*)")
+            val direct = commands.mapIndexedNotNull { index, command -> stores.matchEntire(command)?.let { index to it } }
+            assertEquals(1, direct.size)
+            val center = direct.single().second.groupValues[5].split(' ')
+            assertEquals(listOf("worldborder", "center"), center.take(2))
+            assertEquals(listOf(1.0, 2.0), center.drop(2).map(String::toDouble))
+            val expected = mapOf("worldborder add" to listOf("amount", "ticks"), "worldborder damage amount" to listOf("amount"),
+                "worldborder damage buffer" to listOf("amount"), "worldborder set" to listOf("amount", "ticks"),
+                "worldborder warning distance" to listOf("ticks"), "worldborder warning time" to listOf("ticks"))
+            val calls = commands.mapIndexedNotNull { index, command -> Regex("function (mcfpp:dynamic/\\S+) with storage (\\S+) (\\S+)").matchEntire(command)?.let { index to it } }
+            assertEquals(6, calls.size)
+            val domains = mutableSetOf<String>()
+            val macroCaptures = calls.map { (index, call) ->
+                assertEquals(1, commands.count { it == commands[index] })
+                val body = functions.getValue(call.groupValues[1])
+                val capture = assertNotNull(body.singleOrNull { it.startsWith("\$execute store result") }?.removePrefix("\$")?.let(stores::matchEntire))
+                val command = capture.groupValues[5]
+                val domain = command.substringBefore(" $(")
+                val parameters = assertNotNull(expected[domain])
+                assertTrue(domains.add(domain))
+                assertEquals(domain + parameters.indices.joinToString("") { " \$(arg_$it)" }, command)
+                parameters.forEachIndexed { slot, name ->
+                    val prefix = "data modify storage ${call.groupValues[2]} ${call.groupValues[3]}.arg_$slot set from "
+                    val preparation = commands.take(index).withIndex().single { it.value.startsWith(prefix) }
+                    val source = preparation.value.removePrefix(prefix)
+                    assertTrue(Regex("storage \\S+ \\S+").matches(source))
+                    if (name == "amount") {
+                        val captureCommand = "data modify $source set from ${parameterPaths.getValue(name)}"
+                        val captured = commands.take(preparation.index).withIndex().single { it.value == captureCommand }
+                        assertTrue(captured.index < preparation.index)
+                    } else {
+                        val encoded = commands.take(preparation.index).withIndex().mapNotNull { command ->
+                            Regex("execute store result ${Regex.escape(source)} int 1 run scoreboard players get (\\S+) (\\S+)").matchEntire(command.value)?.let { command.index to it }
+                        }.single()
+                        val player = encoded.second.groupValues[1]
+                        val objective = encoded.second.groupValues[2]
+                        val copied = commands.take(encoded.first).withIndex().mapNotNull { command ->
+                            Regex("scoreboard players operation ${Regex.escape(player)} ${Regex.escape(objective)} = (\\S+) (\\S+)").matchEntire(command.value)?.let { command.index to it }
+                        }.last()
+                        val loader = "execute store result score ${copied.second.groupValues[1]} ${copied.second.groupValues[2]} run data get ${parameterPaths.getValue(name)} 1"
+                        val loaded = commands.take(copied.first).withIndex().last { it.value == loader }
+                        assertTrue(loaded.index < copied.first && copied.first < encoded.first && encoded.first < preparation.index)
+                    }
+                    assertTrue(preparation.index < index)
+                }
+                assertFalse(body.any { "return run" in it || it.removePrefix("\$").startsWith("worldborder ") })
+                index to capture
+            }
+            assertEquals(expected.keys, domains)
+            val roots = mutableSetOf<String>()
+            for ((index, capture) in direct + macroCaptures) {
+                assertEquals(capture.groupValues[1], capture.groupValues[3])
+                assertEquals(capture.groupValues[2], capture.groupValues[4])
+                assertTrue(roots.add(capture.groupValues[2]))
+                val initializer = "data modify storage ${capture.groupValues[1]} ${capture.groupValues[2]} set value {}"
+                assertEquals(1, commands.take(index).count { it == initializer })
+            }
+            assertEquals(7, roots.size)
+            assertFalse(commands.any { "return run" in it || it.startsWith("worldborder ") })
+        }
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")
