@@ -261,7 +261,7 @@ open class PosDimension: ConcreteVar<PosDimension, Pair<String, Number>> {
      */
     override fun toCommandPart(): Command{
         val c = Command(prefix)
-        if(number != 0.toDouble()){
+        if(prefix.isEmpty() || number.toDouble() != 0.0){
             c.build(number.toString(), false)
         }
         return c

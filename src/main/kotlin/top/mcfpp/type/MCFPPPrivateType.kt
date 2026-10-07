@@ -56,6 +56,8 @@ abstract class MCFPPPrivateType(parentType: ArrayList<MCFPPType> = arrayListOf()
 
     object MCFPPCoordinateDimension: MCFPPPrivateType(){
 
+        override val hasRuntimeRepresentation: Boolean get() = false
+
         override val typeId: TypeId = TypeId.Builtin("MCFPPPrivateType.MCFPPCoordinateDimension")
         override val typeName: String
             get() = "CoordinateDimension"

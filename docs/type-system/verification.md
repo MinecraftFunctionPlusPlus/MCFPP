@@ -1,8 +1,26 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段131，MCFL60；Std外剩余3个Java类、7个CommandReturn注解、旧void wrapper为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段132，MCFL61；Std外剩余3个Java类、7个CommandReturn注解、旧void wrapper为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
 
-## 当前阶段 131：清理未注册的旧实体命令包装（已限定验证）
+## 当前阶段 132：恢复编译器专用坐标值（已限定验证）
+
+`Pos3`与内部`CoordinateDimension`设为compiler-only，`Pos2`原已具备该标记；复用既有Typed-Sequence载荷读取并恢复闭合快照，不增CompilerValue类型、registry或schema字段。恢复严格校验完整TypeId、维数、prefix及数值种类，并同步x/y/z/value；未知/错误维数拒绝，不以零值补全。absolute double zero输出`0.0`，`~`与`^`前缀零保留。MCFL60→61由坐标参数ABI行为改变触发。
+
+日志`mcfpp-compiler-only-coordinate-values-stdlib.log`：原生exit0、SUCCESSFUL in10s、Project build 0/0。`mcfpp-compiler-only-coordinate-values-joint.log`：原生exit0、SUCCESSFUL in26s，Test Executors20、21、22均正常开始并结束。三个指定测试为`coordinateSnapshotsRestoreCompilerOnlyValuesAndMemberDimensions`、`nativeWorldborderCommandsCaptureResultsAcrossLibraryRoundTrip`与`oldAndUnknownCacheFormatsProduceARecompileDiagnostic`；XML分别为StorageView `2026-10-07T10:25:35.348Z`、LibFieldAccess `10:25:30.314Z`、CacheFormat `10:25:28.847Z`，均1/0/0/0。Worldborder source/fresh Project0/9118与0/9119，StorageView Project0/9118。
+
+StorageView验证whole snapshot读入、ensure/read及坐标维度恢复；未初始化pos3声明在ensure前后均无快照，成员共享位置写入尚未接通；Long.MAX_VALUE与大于2^53的整数不窄化，float负零与double raw bits保留，冻结后host mutation不改快照，错误ID/count/prefix/kind和null拒绝。未验证runtime存储命令、world行为、frame0或新的tp入口。三个bin（源码资源、build资源及build/stdlib-index）由Root一次核对且完全一致：MCFL61、485193 bytes、header `4c46434d3d000000`、SHA256 `7416122ED6E4A9B080B766E4B141C18F07FF6E113E7E14CFE60C1745371197FD`。
+
+| 自评维度 | 分数 | 本阶段证据与边界 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 使用三个fresh XML、Project计数及root核对的bin信息。 |
+| 完整性 | 3/5 | 快照与坐标维度恢复有定向覆盖；共享成员位置写入和whole17仍未完成。 |
+| 清晰性 | 4/5 | 区分compiler-only坐标、ABI版本变化和未覆盖的tp/world路径。 |
+| 可操作性 | 4/5 | 给出具体fixture、日志、XML及负面边界。 |
+| 简洁性 | 4/5 | 仅记录本阶段检查结果与下一阶段相关限制。 |
+
+平均3.8/5；whole17仍未完成。
+
+## 历史阶段 131：清理未注册的旧实体命令包装（已限定验证）
 
 删除未注册且旧ABI不匹配的`PlayerInventoryData`五个void clear wrapper、`WorldObjectData`的weather mutator与`WorldborderData`的size mutator；这不是等价API迁移。`PlayerState.clear`、`World.setWeather`与`Worldborder.setSize`仍可达，其他accessors、Time及宿主模型保留。三个生产路径仅删除71行，无已公开的语言签名、Info、schema或bin变化，当前MCFL60。未重复重建标准库、运行Cache回归或计算资源摘要；资源身份沿用阶段130已核对的记录。
 

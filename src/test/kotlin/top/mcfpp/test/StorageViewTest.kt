@@ -15,6 +15,71 @@ import kotlin.test.*
 import kotlin.test.Test
 
 class StorageViewTest {
+    @Test fun coordinateSnapshotsRestoreCompilerOnlyValuesAndMemberDimensions() {
+        val main = compile("func main(){ var unset as pos3; }")
+        val unset = assertNotNull(main.scope.getVar("unset"))
+        assertFalse(unset.hasAssigned)
+        assertNull(ValueSnapshot.of(unset))
+        assertEquals(StorageLayout.CompilerOnly, StorageAccess.ensure(unset).data.layout)
+        assertNull(ValueSnapshot.of(unset))
+        Function.currFunction = main
+        val before = main.commands.size
+        val two = Pos2Var("two").apply {
+            x = PosDimension("", 0.0, "x"); z = PosDimension("~", Long.MAX_VALUE, "z")
+            value = arrayListOf(x, z)
+        }
+        val three = Pos3Var("three").apply {
+            x = PosDimension("^", -0.0f, "x"); y = PosDimension("", 1.234567890123, "y"); z = PosDimension("~", 9007199254740993L, "z")
+            value = arrayListOf(x, y, z)
+        }
+        for (original in listOf(two, three)) {
+            val snapshot = assertIs<CompilerValue.Typed>(ValueSnapshot.of(original))
+            assertEquals(StorageLayout.CompilerOnly, StorageAccess.ensure(original).data.layout)
+            val restored = assertNotNull(StorageAccess.read(original))
+            assertEquals(snapshot, ValueSnapshot.of(restored))
+            assertEquals(original.toCommandPart().toString(), restored.toCommandPart().toString())
+            val dimensions = if (restored is Pos2Var) {
+                assertSame(restored.x, restored.value[0]); assertSame(restored.z, restored.value[1])
+                listOf("x", "z")
+            } else {
+                assertIs<Pos3Var>(restored)
+                assertSame(restored.x, restored.value[0]); assertSame(restored.y, restored.value[1]); assertSame(restored.z, restored.value[2])
+                listOf("x", "y", "z")
+            }
+            for (name in dimensions) {
+                val member = assertIs<PosDimension>(restored.getMemberVar(name, top.mcfpp.model.Member.AccessModifier.PUBLIC).first)
+                val frozen = assertIs<CompilerValue.Typed>(ValueSnapshot.of(member))
+                assertEquals(StorageLayout.CompilerOnly, StorageAccess.ensure(member).data.layout)
+                val read = assertIs<PosDimension>(StorageAccess.read(member))
+                assertEquals(frozen, ValueSnapshot.of(read))
+                member.value = "~" to 99L
+                val independent = assertIs<PosDimension>(StorageAccess.restore(member.type, frozen, "independent"))
+                assertEquals(frozen, ValueSnapshot.of(independent))
+            }
+            val sequence = assertIs<CompilerValue.Sequence>(snapshot.payload)
+            assertNull(StorageAccess.restore(original.type, CompilerValue.Typed(original.type.typeId, CompilerValue.Sequence(sequence.elements.dropLast(1))), "short"))
+            assertNull(StorageAccess.restore(original.type, CompilerValue.Typed(MCFPPBaseType.Int.typeId, sequence), "foreign"))
+            val wrongMember = CompilerValue.Typed(MCFPPBaseType.Int.typeId, assertIs<CompilerValue.Typed>(sequence.elements[0]).payload)
+            assertNull(StorageAccess.restore(original.type, CompilerValue.Typed(original.type.typeId, CompilerValue.Sequence(listOf(wrongMember) + sequence.elements.drop(1))), "wrongMember"))
+            assertNull(StorageAccess.restore(original.type, CompilerValue.NullValue, "unknown"))
+        }
+        val restoredTwo = assertIs<Pos2Var>(StorageAccess.restore(two.type, assertNotNull(ValueSnapshot.of(two)), "twoCopy"))
+        assertEquals(0.0.toRawBits(), (restoredTwo.x.number as Double).toRawBits())
+        assertEquals(Long.MAX_VALUE, restoredTwo.z.number)
+        assertEquals("0.0", restoredTwo.x.toCommandPart().toString())
+        val restoredThree = assertIs<Pos3Var>(StorageAccess.restore(three.type, assertNotNull(ValueSnapshot.of(three)), "threeCopy"))
+        assertEquals((-0.0f).toRawBits(), (restoredThree.x.number as Float).toRawBits())
+        assertEquals(1.234567890123.toRawBits(), (restoredThree.y.number as Double).toRawBits())
+        assertEquals(9007199254740993L, restoredThree.z.number)
+        assertEquals("^", restoredThree.x.toCommandPart().toString())
+        assertEquals("~", PosDimension("~", 0.0).toCommandPart().toString())
+        val dimension = MCFPPPrivateType.MCFPPCoordinateDimension
+        assertNull(StorageAccess.restore(dimension, CompilerValue.Typed(dimension.typeId, CompilerValue.Sequence(listOf(CompilerValue.Text("?"), CompilerValue.Integral(1)))), "invalidPrefix"))
+        assertNull(StorageAccess.restore(dimension, CompilerValue.Typed(dimension.typeId, CompilerValue.Sequence(listOf(CompilerValue.Text(""), CompilerValue.Bool(true)))), "invalidNumber"))
+        assertEquals(before, main.commands.size, "Compiler-only coordinates must not emit runtime storage")
+        assertEquals(0, Project.errorCount)
+    }
+
     @Test fun enumSnapshotsKeepNominalIdentityAndEncodeMemberPayloads() {
         val main = compile("""
             enum Choice { One="fixture:payload", Two={label:"x"} }

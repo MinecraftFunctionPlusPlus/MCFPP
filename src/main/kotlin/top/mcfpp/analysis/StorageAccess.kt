@@ -937,6 +937,31 @@ object StorageAccess {
     internal fun restore(type: MCFPPType, snapshot: CompilerValue, name: String,
                         types: Map<TypeId, MCFPPType> = emptyMap()): Var<*>? {
         val payload = if (snapshot is CompilerValue.Typed) snapshot.payload else snapshot
+        if (type == MCFPPPrivateType.MCFPPCoordinateDimension || type == MCFPPBaseType.Pos2 || type == MCFPPBaseType.Pos3) {
+            if (snapshot !is CompilerValue.Typed || snapshot.type != type.typeId || payload !is CompilerValue.Sequence) return null
+            if (type == MCFPPPrivateType.MCFPPCoordinateDimension) {
+                if (payload.elements.size != 2) return null
+                val prefix = (payload.elements[0] as? CompilerValue.Text)?.value ?: return null
+                if (prefix !in setOf("", "~", "^")) return null
+                val number: Number = when (val numeric = payload.elements[1]) {
+                    is CompilerValue.Integral -> numeric.value
+                    is CompilerValue.FloatBits -> Float.fromBits(numeric.bits)
+                    is CompilerValue.DoubleBits -> Double.fromBits(numeric.bits)
+                    else -> return null
+                }
+                return PosDimension(prefix, number, name)
+            }
+            val names = if (type == MCFPPBaseType.Pos2) listOf("x", "z") else listOf("x", "y", "z")
+            if (payload.elements.size != names.size) return null
+            val dimensions = payload.elements.mapIndexed { index, part ->
+                restore(MCFPPPrivateType.MCFPPCoordinateDimension, part, names[index], types) as? PosDimension ?: return null
+            }
+            return if (type == MCFPPBaseType.Pos2) Pos2Var(name).apply {
+                x = dimensions[0]; z = dimensions[1]; value = arrayListOf(x, z)
+            } else Pos3Var(name).apply {
+                x = dimensions[0]; y = dimensions[1]; z = dimensions[2]; value = arrayListOf(x, y, z)
+            }
+        }
         val enumType = type as? MCFPPEnumType
         if (enumType != null) {
             if (snapshot !is CompilerValue.Typed || snapshot.type != enumType.typeId || payload !is CompilerValue.Record) return null

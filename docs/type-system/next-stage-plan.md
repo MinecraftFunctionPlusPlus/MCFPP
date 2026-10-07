@@ -1,6 +1,6 @@
-# 下一阶段：恢复编译器专用坐标值（阶段132）
+# 下一阶段：接通坐标成员的共享位置写入（阶段133）
 
-阶段87普通值位置type拒绝规则继续生效；阶段129已移除语言层 `T!` 后缀。阶段88–131完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及实体命令路径的限定迁移；当前库格式MCFL60，Std外剩余3个Java类及7个CommandReturn注解，旧void wrapper为0。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效；阶段129已移除语言层 `T!` 后缀。阶段88–132完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及实体命令路径的限定迁移；当前库格式MCFL61，Std外剩余3个Java类及7个CommandReturn注解，旧void wrapper为0。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -160,9 +160,15 @@ BossBar的add/remove/listAll/setColor/setName/setVisiblePlayers/setStyle七个�
 
 删除未注册且旧ABI不匹配的`PlayerInventoryData`五个void clear wrapper、`WorldObjectData`的weather mutator与`WorldborderData`的size mutator；保留宿主模型、Time及其他accessors/TODO。现有`PlayerState.clear`、`World.setWeather`与`Worldborder.setSize`保持可达。这是移除失效入口，不构成等价API迁移；三个既有fixture回归通过，MCFL60及库资源未变。
 
-### 阶段 132 计划：恢复编译器专用坐标值
+### 阶段 132：恢复编译器专用坐标值（已限定验证）
 
-仅补齐`Pos2`、`Pos3`与单`PosDimension`的闭合快照读取和恢复；将`Pos3`和`CoordinateDimension`设为compiler-only，`Pos2`已有该属性。复用既有Typed-Sequence载荷，恢复时严格校验维数、TypeId、prefix与数值种类，并同步坐标字段；拒绝未知或错误维数，不用零值补全。修复`PosDimension.toCommandPart`的absolute zero输出，同时保留`~`/`^`前缀零。复用StorageView、快照和既有`Worldborder.setCenter`回归；不新增payload/registry，不扩展到新的tp接口。序列化兼容性与MCFL版本待实现时按实际确认，本阶段尚未编码或验证。
+`Pos3`与内部`CoordinateDimension`标记为compiler-only，`Pos2`原已具备此属性。复用Typed-Sequence快照读取/恢复，校验完整TypeId、维数、prefix和数值种类并同步坐标字段；拒绝未知或错误形状，不用零值补全。`PosDimension.toCommandPart`的absolute zero输出为`0.0`，相对/局部前缀零保留`~`/`^`。MCFL60→61由坐标参数ABI行为改变触发，不新增快照字段或payload。
+
+三个定向fixture通过：标准库SUCCESSFUL in10s，Project0/0；joint SUCCESSFUL in26s，Test Executors20–22均正常开始并结束。StorageView XML `2026-10-07T10:25:35.348Z`、LibFieldAccess `10:25:30.314Z`、CacheFormat `10:25:28.847Z`均1/0/0/0；Worldborder source/fresh Project0/9118与0/9119，StorageView Project0/9118。具体范围见verification.md，不代表新tp、world或frame0验证。
+
+### 阶段 133 计划：接通坐标成员的共享位置写入
+
+限定修改`PosVar.kt`与`StorageAccess.kt`：移除`PosDimension`不一致的parent override，将x/y/z成员映射到父binding的Index并登记真实Dim事实；复用既有StoredData写入与祖先重建，不改`ValueModel`/`Var`或引入新框架。验证`position`、共享alias写入x后双方快照为9/2/3且replacement独立。阶段133尚未实现或验证；不预判库版本变化，也不扩展到runtime坐标或新tp入口。
 
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
