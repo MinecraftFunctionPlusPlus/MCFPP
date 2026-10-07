@@ -14,7 +14,6 @@ data Slot{
 }
 
 # 使用了通配符的槽位
-@From<"top.mcfpp.mni.minecraft.SlotWithWildcardData">
 data SlotWithWildcard{
     type as SlotType;
     private constructor(type as SlotType){

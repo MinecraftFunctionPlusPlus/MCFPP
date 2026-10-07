@@ -1,6 +1,6 @@
-# 下一阶段：退役 SlotWithWildcard 的旧宿主格式化入口（阶段144）
+# 下一阶段：清理 Team 与 ItemPredicate 的旧宿主格式化入口（阶段145）
 
-阶段87普通值位置type拒绝规则继续生效；阶段129已移除语言层 `T!` 后缀。阶段88–143完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time、实体命令路径及受测nominal operator lookup；当前库格式MCFL71，旧 `CommandReturn` 类型/注解与旧void wrapper均为0。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效；阶段129已移除语言层 `T!` 后缀。阶段88–144完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time、实体命令路径及受测nominal operator lookup；当前库格式MCFL72，旧 `CommandReturn` 类型/注解与旧void wrapper均为0。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -220,9 +220,17 @@ stdlib SUCCESSFUL8s/Project0/0。joint1失败23s（Executors46/47正常）：pro
 
 仅删除`BossBar.mcfpp`中继承`ResourceID`后多余的inline `toCommandPart`宿主入口；BossBar native commands已读取DTO `id`，继承的ResourceID格式化路径继续可用。既有BossBar跨库fixture和void命令fixture、Cache回归同轮通过。MCFL70→71；没有Minecraft world执行或frame0验证。
 
-### 阶段 144 计划：退役 SlotWithWildcard 的旧宿主格式化入口
+### 阶段 144：退役 SlotWithWildcard 的旧宿主格式化入口（已限定验证）
 
-删除`SlotWithWildcardData`及`Slot.mcfpp`对它的`@From`注册。全源码查询只发现SlotWithWildcard类型定义及七处静态初始化，无普通参数、别名或父类型消费者。保留该类型、private constructor、type字段及静态`SlotWildcard`值；Slot本身和其formatter也保留，不把删除描述为通配符命令迁移。宿主函数缓存签名与注册变化计划MCFL71→72，重建标准库，并以现有void-command和Cache用例作有界回归；尚未实施或验证。
+删除`SlotWithWildcardData`及`Slot.mcfpp`对它的唯一`@From`注册；查询仅发现类型定义及七处静态初始化，没有普通参数、别名或父类型消费者。保留SlotWithWildcard类型、private constructor、type字段、七个静态`SlotWildcard`值以及Slot本身和formatter，不把这次清理描述为通配槽位命令迁移。MCFL71→72。
+
+stdlib native exit0/SUCCESS1m6s、Project0/0；joint native exit0/SUCCESS38s，Executors56/57正常。Cache XML `2026-10-07T15:13:36.217Z`、LibFieldAccess XML `15:13:38.141Z`均1/0/0/0；void fixture source/fresh Project为0/9118、0/9119，验证两条place宏及真实`pool.id`来源。没有Minecraft world或frame0验证。详见verification.md。
+
+### 阶段 145 计划：清理 Team 与 ItemPredicate 的旧宿主格式化入口
+
+删除`TeamData`九个不可从语言调用的旧`MNIMutator`包装及其专用imports，并删除`Team.mcfpp`旧inline formatter；保留三个单context函数`register`、`unregister`、`clear`、DTO字段、两个构造器和枚举。`CompoundData.injectedBy`只注册function/operator/getMembers；Team没有`getMembers`，普通字段通过`SimpleProperty`访问，因此这不是迁移九个setter语言API，也不新增Team modify或ResourceID继承。
+
+同阶段删除`ItemPredicateData.toCommandPart`与仅供它调用的`partCommand`；旧formatter虽已注册，却未写回返回值，且全main检索未发现typed命令消费者。保留六个已注册实例操作、静态工厂和并集实现；不宣称完整谓词命令格式化已迁移。共四个源码路径，缓存统一MCFL72→73；重建标准库并回归现有Team receiver、entity Team join-leave、ItemPredicate并集fixture与Cache四方法。尚未实施或验证。
 
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。

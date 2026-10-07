@@ -1,8 +1,26 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段143，MCFL71；旧CommandReturn链引用/注解与旧void wrapper均为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段144，MCFL72；旧CommandReturn链引用/注解与旧void wrapper均为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
 
-## 当前阶段143：移除 BossBar 的旧宿主格式化入口（已限定验证）
+## 当前阶段144：退役 SlotWithWildcard 的旧宿主格式化入口（已限定验证）
+
+删除旧宿主类`SlotWithWildcardData`及`Slot.mcfpp`唯一`@From`注册。SlotWithWildcard类型仅有定义与七处静态初始化，无普通参数、别名或父类型消费者；保留该类型、private constructor、type字段、七个静态`SlotWildcard`值以及Slot本身/formatter。不是通配槽位命令迁移；无新测试。
+
+标准库native exit0/SUCCESS1m6s、Project0/0；joint native exit0/SUCCESS38s，Executors56/57正常。Cache XML `2026-10-07T15:13:36.217Z`、LibFieldAccess XML `15:13:38.141Z`均1/0/0/0；source/fresh Project为0/9118、0/9119。void fixture导出两条place宏各一次，检查真实`pool.id`来源及Box默认super路径；仅检查生成物，不是world/frame0验证。Cache中的unsupported格式诊断属预期。日志`mcfpp-retire-slot-wildcard-host-formatter-stdlib.log`与`mcfpp-retire-slot-wildcard-host-formatter-joint.log`；阶段共3个实现路径、bin及四文档8路径。
+
+三份bin一致：MCFL72、479084 bytes，header `4c46434d48000000`，SHA256 `B80455216A2A8AEA20DC38D3E8A29A6C9057B2008FD984756BD9568B12641A4D`。
+
+| 自评维度 | 分数 | 本阶段证据与边界 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录删除旧宿主类及唯一注册，保留SlotWithWildcard类型、静态值和Slot formatter。 |
+| 完整性 | 3/5 | 标准库及void/Cache限定回归通过；whole17仍未完成。 |
+| 清晰性 | 4/5 | 明确未迁移通配槽位命令。 |
+| 可操作性 | 4/5 | 给出具体日志、worker、XML与source/fresh计数。 |
+| 简洁性 | 4/5 | 聚焦阶段范围和下一步。 |
+
+平均3.8/5；whole17仍ACTIVE未完成。
+
+## 历史阶段143：移除 BossBar 的旧宿主格式化入口（已限定验证）
 
 删除`BossBar.mcfpp`中冗余inline `toCommandPart`宿主签名。BossBar七个原生命令入口直接读取真实字段；作为ResourceID子类型，其格式化由既有内部路径提供。`DataObjectData` base/default/override仍保留，其他DTO格式化路径未迁移。MCFL70→71。
 

@@ -4,7 +4,13 @@
 
 ## 当前进度
 
-### 阶段 143：移除 BossBar 的旧宿主格式化入口（已限定验证）
+### 阶段 144：退役 SlotWithWildcard 的旧宿主格式化入口（已限定验证）
+
+删除旧宿主类`SlotWithWildcardData`及`Slot.mcfpp`唯一`@From`注册。SlotWithWildcard类型只出现在类型定义和七处静态初始化，无普通参数、别名或父类型消费者；保留该类型、private constructor、type字段、七个`SlotWildcard`静态值以及Slot本身/formatter，不宣称通配槽位命令已迁移。MCFL71→72。
+
+stdlib native exit0/SUCCESS1m6s、Project0/0；joint native exit0/SUCCESS38s、Executors56/57正常。Cache XML `2026-10-07T15:13:36.217Z`、LibFieldAccess XML `15:13:38.141Z`均1/0/0/0；void fixture source/fresh Project为0/9118、0/9119，检查两条place宏各调用一次与`pool.id`字段来源。没有world或frame0验证。日志`mcfpp-retire-slot-wildcard-host-formatter-stdlib.log`与`-joint.log`。
+
+### 历史阶段 143：移除 BossBar 的旧宿主格式化入口（已限定验证）
 
 删除`BossBar.mcfpp`中继承`ResourceID`后冗余的inline `toCommandPart`宿主签名。BossBar原生命令仍读取真实DTO `id`，继承的ResourceID格式化可用；`DataObjectData`及Area、Slot、ItemPredicate、Team等依赖base入口的路径保持不变。
 
@@ -144,7 +150,7 @@ stdlib SUCCESSFUL 11s、Project0/0；joint worker40正常、FAILED19s，LibField
 
 stdlib1成功11s/Project0/0；首轮producer因`ENTITY`保留字导入解析失败，Cache XML `2026-10-07T03:22:31.233Z` 1/0/0/0为MCFL48唯一Cache验证。grammar修复后stdlib2成功26s/0/0；final2 producer189/9118，final3 producer9/9118。final4重复执行并覆盖，当前仅保留worker37、FAILED6s及XML `2026-10-07T03:52:30.253Z` 1/1/0/0、producer8/9118；worker36首轮日志/XML已丢失。final5-debug worker38 FAILED28s，XML `2026-10-07T04:04:19.204Z` 1/1/0/0、producer8/9118，诊断显示bare Selector绑定后value仍为Unknown。最终修复后final6 worker39正常、SUCCESS39s，XML `2026-10-07T04:08:58.285Z` 1/0/0/0；source/fresh Project0/9118与0/9119，negative 2/9119，selector guard与未发布`listTag`结果诊断按预期通过。未覆盖predicate selector、world执行、frame0或whole17。
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段143移除BossBar继承ResourceID后的冗余宿主formatter入口，MCFL71；旧CommandReturn链引用与注解为0、旧void wrapper为0，whole17仍未完成。阶段142统一受测路径的父类型原生操作符解析，MCFL70。阶段141退役ResourceID旧宿主formatter入口并删除ResourceID实例From，保留DataObject base/override；阶段140接通ItemPredicate并集原生操作，MCFL69；阶段139移除Any四个旧宿主方法及`MCAnyConcreteData`，保留共享text路径，MCFL68；阶段138迁移泛型类型联合接口，MCFL67；阶段137迁移Random/RandomObject四个整数结果入口，MCFL66；阶段136退役Range迭代宿主接口，135退役旧CommandReturn载体/helper，134坐标tp及133坐标成员写入均已限定验证。下一步阶段144退役SlotWithWildcard旧宿主formatter，计划MCFL71→72。阶段127 Player消息命令已完成限定验证，MCFL57。阶段126 entity-target tp已完成限定验证，MCFL56。阶段125 Player状态与ride命令已完成限定验证，MCFL55；阶段124 Player advancement十个入口已完成限定验证，MCFL54；阶段123 Player XP六个入口已完成限定验证，MCFL53；阶段122 stopRide入口已完成限定验证，MCFL52；阶段121 Entity effect授予两个入口已完成限定验证，MCFL51；阶段120 EntityEffect两个命令入口已完成限定验证，MCFL50；阶段119 Team加入/离开两个命令入口已完成限定验证，MCFL49；阶段118 EntityTag三个结果入口已完成限定验证，MCFL48；阶段117 Random命令结果入口已完成限定验证，MCFL47；阶段116 WorldObject命令入口已完成限定验证，MCFL46；阶段115 BossBar命令入口已完成限定验证，MCFL45；阶段114 Worldborder命令入口已完成限定验证，MCFL43；阶段113 Op/Recipe玩家命令入口已完成限定验证，MCFL42；阶段112 Team receiver结果入口已完成限定验证，MCFL41；阶段111 Datapack/Debug结果入口已完成限定验证，MCFL40；阶段110提交`17313ad`，阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段144删除SlotWithWildcard旧宿主类及唯一From注册，MCFL72；旧CommandReturn链引用与注解为0、旧void wrapper为0，whole17仍未完成。阶段143移除BossBar继承ResourceID后的冗余宿主formatter入口，MCFL71。阶段142统一受测路径的父类型原生操作符解析，MCFL70。阶段141退役ResourceID旧宿主formatter入口并删除ResourceID实例From，保留DataObject base/override；阶段140接通ItemPredicate并集原生操作，MCFL69；阶段139移除Any四个旧宿主方法及`MCAnyConcreteData`，保留共享text路径，MCFL68；阶段138迁移泛型类型联合接口，MCFL67；阶段137迁移Random/RandomObject四个整数结果入口，MCFL66；阶段136退役Range迭代宿主接口，135退役旧CommandReturn载体/helper，134坐标tp及133坐标成员写入均已限定验证。下一步阶段145合并清理Team不可达旧包装/inline formatter与ItemPredicate旧formatter，计划MCFL72→73。阶段127 Player消息命令已完成限定验证，MCFL57。阶段126 entity-target tp已完成限定验证，MCFL56。阶段125 Player状态与ride命令已完成限定验证，MCFL55；阶段124 Player advancement十个入口已完成限定验证，MCFL54；阶段123 Player XP六个入口已完成限定验证，MCFL53；阶段122 stopRide入口已完成限定验证，MCFL52；阶段121 Entity effect授予两个入口已完成限定验证，MCFL51；阶段120 EntityEffect两个命令入口已完成限定验证，MCFL50；阶段119 Team加入/离开两个命令入口已完成限定验证，MCFL49；阶段118 EntityTag三个结果入口已完成限定验证，MCFL48；阶段117 Random命令结果入口已完成限定验证，MCFL47；阶段116 WorldObject命令入口已完成限定验证，MCFL46；阶段115 BossBar命令入口已完成限定验证，MCFL45；阶段114 Worldborder命令入口已完成限定验证，MCFL43；阶段113 Op/Recipe玩家命令入口已完成限定验证，MCFL42；阶段112 Team receiver结果入口已完成限定验证，MCFL41；阶段111 Datapack/Debug结果入口已完成限定验证，MCFL40；阶段110提交`17313ad`，阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效。重构不要求兼容旧 `.mcfpp` 写法。
 
 ### 阶段 117：Random命令结果接口（已限定验证）
 
