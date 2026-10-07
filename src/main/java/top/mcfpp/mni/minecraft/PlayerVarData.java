@@ -60,31 +60,12 @@ public class PlayerVarData {
     }
 
     //region clear
-    @MNIFunction(caller = "Player", returnType = "CommandReturn")
-    public static void clear(PlayerVar caller, ValueWrapper<CommandReturn> returnValue){
-        Command command = Command.Companion.buildAll("clear", caller);
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-
     @MNIFunction(normalParams = {"string", "ItemPredicate"}, caller = "Player", returnType = "CommandReturn")
     public static void clear(MCString id, DataTemplateObject predicate, PlayerVar caller, ValueWrapper<CommandReturn> returnValue){
         Command command = Command.Companion.buildAll("clear", caller, id, predicate);
         Commands.processMacroCommandReturn(returnValue, command);
     }
-    @MNIFunction(normalParams = {"string", "int = 1"}, caller = "Player", returnType = "CommandReturn")
-    public static void clear(MCString id, MCInt count, PlayerVar caller, ValueWrapper<CommandReturn> returnValue){
-        Command command = Command.Companion.buildAll("clear", caller, id, count);
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
     //TODO check(Item item)->bool
-    //endregion
-
-    //region gameMode
-    @MNIFunction(normalParams = {"Gamemode"}, caller = "Player", returnType = "CommandReturn")
-    public static void setGamemode(EnumVar mode, PlayerVar player, ValueWrapper<CommandReturn> returnValue){
-        Command command = Command.Companion.buildAll("gamemode", mode, player);
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
     //endregion
 
     //region spawnpoint

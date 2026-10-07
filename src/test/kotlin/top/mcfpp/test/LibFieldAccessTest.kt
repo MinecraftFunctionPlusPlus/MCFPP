@@ -4518,6 +4518,114 @@ class LibFieldAccessTest {
         assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("advancement ") || "set value {}" in it.toString() })
     }
 
+    @Test
+    fun nativePlayerStateAndRideCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
+        val mainSource = "func main(){ var box=Box(); dynamic var result=box.observe(\"minecraft:stone\",2); }"
+        write("""
+            namespace fixture.fields;
+            import mcfpp.minecraft.std:*;
+            import mcfpp.minecraft.other:*;
+            data Box {
+                func observe(itemId as string,count as int)->int {
+                    var players=@a; var rider=@s; var mount=@p;
+                    var cleared=players.clear(); var items=players.clear(itemId,count);
+                    var mode=players.setGamemode(Gamemode.creative); var riding=rider.ride(mount);
+                    var a=cleared.result; var b=items.success; var c=mode.result; var d=riding.success;
+                    return 7;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val observe = (main.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("observe").single()
+            assertTrue(observe.compiledFunctions.isEmpty())
+            for ((name, kind) in listOf("players" to top.mcfpp.lib.EntitySelector.Companion.SelectorType.ALL_PLAYERS,
+                "rider" to top.mcfpp.lib.EntitySelector.Companion.SelectorType.SELF,
+                "mount" to top.mcfpp.lib.EntitySelector.Companion.SelectorType.NEAREST_PLAYER)) {
+                val selector = assertIs<top.mcfpp.core.lang.entity.SelectorVar>(observe.scope.getVar(name))
+                assertNotNull(ValueSnapshot.of(selector))
+                assertEquals(kind, selector.value.selectorType)
+            }
+            fun parameter(name: String) = assertNotNull(assertNotNull(observe.scope.getVar(name)).storageBinding).path.toCommandPart().toString()
+            val canonical = assertNotNull(GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.std")).scope.getTemplate("CommandResult")
+            for (name in listOf("cleared", "items", "mode", "riding")) {
+                val value = assertIs<DataTemplateObject>(observe.scope.getVar(name))
+                assertSame(canonical, value.templateType)
+                assertTrue(value.templateType.scope.getVar("result")!!.isConst)
+                assertTrue(value.templateType.scope.getVar("success")!!.isConst)
+                val binding = assertNotNull(value.storageBinding)
+                assertEquals(top.mcfpp.analysis.ValueKnowledge.Unknown, binding.data.facts.read(binding.place)?.value)
+                assertNull(ValueSnapshot.of(value))
+            }
+            for (name in listOf("a", "b", "c", "d")) assertNull(ValueSnapshot.of(assertNotNull(observe.scope.getVar(name))))
+            val directory = output.resolve("consumer")
+            DatapackCreator.createDatapack(directory.toString())
+            val data = directory.resolve(Project.config.name).resolve("data")
+            val functions = linkedMapOf<String, List<String>>()
+            Files.walk(data).use { paths ->
+                paths.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".mcfunction") }.forEach { file ->
+                    val relative = data.relativize(file)
+                    if (relative.nameCount >= 3 && relative.getName(1).toString() == "function") {
+                        val id = relative.subpath(2, relative.nameCount).joinToString("/").removeSuffix(".mcfunction")
+                        functions["${relative.getName(0)}:$id"] = Files.readAllLines(file).map(String::trim)
+                    }
+                }
+            }
+            val commands = functions.getValue(observe.namespaceID.toString())
+            val stores = Regex("execute store result storage (\\S+) (\\S+)\\.result int 1 store success storage (\\S+) (\\S+)\\.success byte 1 run (.*)")
+            val direct = commands.mapIndexedNotNull { index, command -> stores.matchEntire(command)?.let { index to it } }
+            assertEquals(3, direct.size)
+            assertEquals(setOf("clear @a", "gamemode creative @a", "ride @s mount @p"), direct.map { it.second.groupValues[5] }.toSet())
+            val calls = commands.mapIndexedNotNull { index, command -> Regex("function (mcfpp:dynamic/\\S+) with storage (\\S+) (\\S+)").matchEntire(command)?.let { index to it } }
+            val (index, call) = calls.single()
+            assertEquals(1, commands.count { it == commands[index] })
+            val body = functions.getValue(call.groupValues[1])
+            val capture = assertNotNull(body.singleOrNull { it.startsWith("\$execute store result") }?.removePrefix("\$")?.let(stores::matchEntire))
+            assertEquals("clear @a \$(arg_0) \$(arg_1)", capture.groupValues[5])
+            fun preparation(slot: Int): IndexedValue<String> {
+                val prefix = "data modify storage ${call.groupValues[2]} ${call.groupValues[3]}.arg_$slot set from "
+                return commands.take(index).withIndex().single { it.value.startsWith(prefix) }
+            }
+            assertEquals(2, commands.take(index).count { it.startsWith("data modify storage ${call.groupValues[2]} ${call.groupValues[3]}.arg_") })
+            val idPrep = preparation(0)
+            val idSource = idPrep.value.substringAfter(" set from ")
+            if (idSource != parameter("itemId")) assertEquals(1, commands.take(idPrep.index).count { it == "data modify $idSource set from ${parameter("itemId")}" })
+            val countPrep = preparation(1)
+            val source = countPrep.value.substringAfter(" set from ")
+            val encoded = commands.take(countPrep.index).withIndex().mapNotNull { entry -> Regex("execute store result ${Regex.escape(source)} int 1 run scoreboard players get (\\S+) (\\S+)").matchEntire(entry.value)?.let { entry.index to it } }.single()
+            val copied = commands.take(encoded.first).withIndex().mapNotNull { entry -> Regex("scoreboard players operation ${Regex.escape(encoded.second.groupValues[1])} ${Regex.escape(encoded.second.groupValues[2])} = (\\S+) (\\S+)").matchEntire(entry.value)?.let { entry.index to it } }.last()
+            val loader = "execute store result score ${copied.second.groupValues[1]} ${copied.second.groupValues[2]} run data get ${parameter("count")} 1"
+            val loaded = commands.take(copied.first).withIndex().last { it.value == loader }
+            assertTrue(loaded.index < copied.first && copied.first < encoded.first && encoded.first < countPrep.index && countPrep.index < index)
+            val roots = mutableSetOf<String>()
+            for ((position, result) in direct + listOf(index to capture)) {
+                assertEquals(result.groupValues[1], result.groupValues[3])
+                assertEquals(result.groupValues[2], result.groupValues[4])
+                assertTrue(roots.add(result.groupValues[2]))
+                assertEquals(1, commands.take(position).count { it == "data modify storage ${result.groupValues[1]} ${result.groupValues[2]} set value {}" })
+            }
+            assertEquals(4, roots.size)
+            assertFalse((commands + body).any { "return run" in it || Regex("(clear|gamemode|ride) .*?").matches(it.removePrefix("\$")) })
+        }
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+        val rejected = consume("""
+            import mcfpp.minecraft.entity:*;
+            import mcfpp.minecraft.other:*;
+            func reject(mode as Gamemode){
+                var nonPlayers=@e; nonPlayers.clear(); var value=EntityData(); value.setGamemode(Gamemode.creative);
+                var players=@a; players.setGamemode(mode); var rider=@s; var mount=@p;
+                players.ride(mount); rider.ride(players); value.ride(mount);
+            }
+            func main(){}
+        """, output)
+        assertEquals(12, Project.errorCount)
+        val reject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
+        assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || Regex("(clear|gamemode|ride) .*?").matches(it.toString()) || "set value {}" in it.toString() })
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")

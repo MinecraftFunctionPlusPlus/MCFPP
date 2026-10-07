@@ -38,6 +38,31 @@ internal fun captureCommandResult(context: NativeCallContext, build: (List<Var<*
 }
 
 object NativeMinecraftCommandOperations {
+    fun playerClearAll(context: NativeCallContext) = context.withAdapters { receiver, _ ->
+        val players = playerSelector(receiver) ?: return@withAdapters
+        captureCommandResult(context) { Command.buildAll("clear", players) }
+    }
+    fun playerClearItems(context: NativeCallContext) = context.withAdapters { receiver, args ->
+        val players = playerSelector(receiver) ?: return@withAdapters
+        captureCommandResult(context) { Command.buildAll("clear", players, args[0], args[1]) }
+    }
+    fun playerSetGamemode(context: NativeCallContext) = context.withAdapters { receiver, args ->
+        val players = playerSelector(receiver) ?: return@withAdapters
+        val mode = args[0] as? EnumVarConcrete ?: run {
+            LogProcessor.error("Gamemode requires a compile-time enum value")
+            return@withAdapters
+        }
+        captureCommandResult(context) { Command.buildAll("gamemode", mode.value.identifier, players) }
+    }
+    fun entityRide(context: NativeCallContext) = context.withAdapters { receiver, args ->
+        val target = args[0]
+        if (receiver !is SelectorVar || target !is SelectorVar || !receiver.value.selectingSingleEntity() || !target.value.selectingSingleEntity()) {
+            LogProcessor.error("Entity mount commands require single-entity selector receiver and target")
+            return@withAdapters
+        }
+        captureCommandResult(context) { Command.buildAll("ride", receiver, "mount", target) }
+    }
+
     fun playerGrant(context: NativeCallContext) = playerAdvancement(context, "grant", "only")
     fun playerGrantAll(context: NativeCallContext) = playerAdvancement(context, "grant", "everything")
     fun playerGrantFrom(context: NativeCallContext) = playerAdvancement(context, "grant", "from")

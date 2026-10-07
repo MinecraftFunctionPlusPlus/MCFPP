@@ -140,15 +140,6 @@ public class EntityVarData {
         Commands.processMacroCommandReturn(returnValue, command);
     }
 
-    //region ride
-    @MNIFunction(normalParams = "entity<1>", caller = "entity", returnType = "CommandReturn")
-    public static void ride(EntityVar entity, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
-        var command = Command.Companion.buildAll("ride", caller, "mount", entity);
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-
-    //endregion
-
     //region tp
     @MNIFunction(normalParams = "pos3", returnType = "CommandReturn")
     public static void tp(Pos3Var pos, EntityVar caller, ValueWrapper<CommandReturn> returnValue){

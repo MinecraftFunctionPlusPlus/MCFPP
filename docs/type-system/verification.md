@@ -1,8 +1,26 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段124，MCFL54；Std外剩余4个Java类含26个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段125，MCFL55；Std外剩余4个Java类含22个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 当前阶段 124：Player 成就命令（已限定验证）
+## 当前阶段 125：Player 状态与骑乘命令（已限定验证）
+
+`PlayerVarData.clear()`、`clear(string,int)`、`setGamemode`及`EntityRideData.ride`接入单context结果捕获，保留clear语言重载；`PlayerStateData`新增到`EntityData`。Player命令先检查player selector，Gamemode要求`EnumVarConcrete`并输出identifier；ride要求实际receiver与target均为单实体selector。标准库SUCCESSFUL in12s、Project0/0；joint worker47正常、SUCCESSFUL in25s。LibFieldAccess XML `2026-10-07T05:58:41.992Z` 与CacheFormat XML `05:58:41.069Z` 均1/0/0/0；source/fresh Project0/9118与0/9119，negative12/9119，包括2个player guard、1个enum guard、3个ride双端guard及6个未发布结果级联诊断。source/fresh检查clear动态id/count参数宏、clearall/gamemode/ride direct命令；不模拟世界命令或frame0。三份bin均MCFL55、476213 bytes、header `4c46434d37000000`、SHA256 `09DC39D48459E09CCC2B09BFD8184EC0A036670AF74362B6A382768D7958614D`。日志前缀`mcfpp-native-player-state-ride-command-results-`。
+
+本阶段13个提交路径含8个源码/测试文件（155+/29−）、bin及四份文档；唯一fixture为`nativePlayerStateAndRideCommandsCaptureResultsAcrossLibraryRoundTrip`，联合`oldAndUnknownCacheFormatsProduceARecompileDiagnostic`。
+
+联合检查原生退出码0。生产EntityData显式导入Gamemode，语言clear重载使用各自Java方法名；count均显式传入，默认注解未接通。source/fresh按真实绑定核对字符串来源和整数读取、复制、编码、宏参数准备顺序；四次结果捕获各有独立root及一次初始化，readonly结果及实际字段读取保持Unknown与空快照，三个bare选择器保留实际kind。
+
+| 自评维度 | 分数 | 证据及改进方向 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 对照两个fresh XML、source/fresh计数和负向诊断。 |
+| 完整性 | 3/5 | 覆盖指定状态与ride路径；predicate组合及whole17仍未完成。 |
+| 清晰性 | 4/5 | 区分player/enum/ride guard和命令生成边界。 |
+| 可操作性 | 4/5 | 下一步限定entity tp目标和single-selector合同。 |
+| 简洁性 | 4/5 | 记录必要的测试、计数和资源证据。 |
+
+平均3.8/5；whole17仍未完成。
+
+## 历史必要检查：阶段 124 Player 成就命令（已限定验证）
 
 `PlayerVarData`十个grant/revoke入口接入单context qualified `CommandResult`，新增`PlayerAdvancementData`挂到`EntityData`。使用qualified `Advancement`并读取真实`ResourceID.id`；capture前检查player selector。标准库SUCCESSFUL in11s、Project0/0；joint worker46正常、SUCCESSFUL in26s。LibFieldAccess XML `2026-10-07T05:43:00.220Z` 与CacheFormat XML `05:42:59.387Z` 均1/0/0/0；source/fresh Project0/9118与0/9119，negative4/9119（2条player guard及`grantAll`/`revokeAll`未发布结果级联诊断）。source/fresh检查8个动态id宏及2个everything direct调用；不模拟world/criterion或frame0。三份bin均MCFL54、473046 bytes、header `4c46434d36000000`、SHA256 `E2084436826232344C6DE71EC93211F4B5F409E0C5065C2BFF8DF8ECE155F1BB`。日志前缀`mcfpp-native-player-advancement-command-results-`。
 
