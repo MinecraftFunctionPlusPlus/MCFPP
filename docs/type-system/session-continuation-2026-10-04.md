@@ -4,7 +4,15 @@
 
 ## 当前进度
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段109 seed CommandResult结果捕获已完成限定验证，MCFL38；阶段108提交`122d608`，阶段107提交`b4eb5c9`，阶段106提交`cf5e8f9`、阶段105提交`4664c8b`、阶段104提交`c862427`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段110 StdCommands命令结果接口已完成限定验证，MCFL39；阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，阶段106提交`cf5e8f9`、阶段105提交`4664c8b`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+
+### 阶段 110：迁移 StdCommands 命令结果接口（已限定验证）
+
+StdCommands剩余106个旧CommandReturn入口迁到单context；127个Java入口现在均为单context，107个返回qualified CommandResult、20个void。root对比127个语言签名（除返回类型转换）和106条新增命令表达式，映射及文字顺序一致；旧参数名在测试前修正。私有captureResult使用实际declaredReturnType，建立root `{}`和双store，按宏准备顺序单次调用再publish；未知float使用原guard。source/fresh只覆盖seed、help、动态say的模型和导出命令，无世界验证。
+
+stdlib Project0/0、BUILD SUCCESSFUL in11s；joint2 worker12正常、exit0/BUILD SUCCESSFUL in22s。LibFieldAccess/CacheFormat XML分别`2026-10-07T00:38:18.068Z`和`00:38:17.277Z`，均1/0/0/0；source/fresh Project0/9118与0/9119。MCFL39三份资源286624 bytes、SHA256 `A2348C93E75C319D2D6E1B99F62E21A011B4BE7EFA14732C53241442693B1FBD`。没有world、ScoreCommandExecutor或frame0验证。StdCommands外仍有14个Java类（91个CommandReturn注解和7个void wrapper）尚未迁移。
+
+下一阶段111限于Datapack九个方法及Debug.start/stop两个方法，待处理的静态类目前无导出语言对象；Datapack计划以 `@From` 的Packs对象验证，Debug沿现有native声明。FunctionVar/TODO和Op/Recipe的Player!参数合同另列后续；已知 `Op.deop` 构造op命令，后续修正并测试，不声称已修。计划MCFL40；尚未实现或验证。
 
 ### 阶段 109：捕获 seed 的命令结果（已限定验证）
 

@@ -1,6 +1,6 @@
-# 下一阶段：迁移 StdCommands 剩余命令结果接口（阶段110）
+# 下一阶段：迁移 Datapack 与 Debug 接口（阶段111）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–109完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/seed、System print/诊断、delegated-int模板、Time路径及两个legacy分支入口的限定迁移；当前库格式MCFL38。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–110完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、System print/诊断、delegated-int模板、Time路径及两个legacy分支入口的限定迁移；当前库格式MCFL39。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -66,13 +66,17 @@ source/fresh fixture验证DamageType初始化为 `minecraft:generic`、damage宏
 
 普通 `CommandResult` 公开只读 `result:int`/`success:bool`；seed使用单context与真实declaredReturnType建立未知事实，通过root `{}`及一次双 `execute store` 发布。source/fresh模型和磁盘命令合同限定验证通过；不模拟世界结果或声明frame0。MCFL37→38，标准库已重建；详细轮次见verification.md。
 
-### 阶段 110 计划：迁移 StdCommands 剩余命令结果接口
+### 阶段 110：迁移 StdCommands 命令结果接口（已限定验证）
 
-范围限于 `StdCommands` 中剩余106个CommandReturn入口，复用已有单context，不扩成全项目迁移。Java方法使用唯一名称、保留原语言标识、参数默认值、effects与命令词序；Kotlin领域函数通过private `captureResult(context) { args -> command }` 使用真实实参构建命令。seed也使用同一捕获流程。宏按 `buildMacroFunction()` 顺序发出准备命令并最终调用一次。保留当前direct-context dynamic-float guard；不引入新模型、serializer、registry或context API。项目中另有91个CommandReturn返回注解和7个内部void旧wrapper，不属于本阶段。
+StdCommands剩余106个旧CommandReturn入口迁到单context；127个Java入口统一为单context签名，107个返回qualified `CommandResult`、20个void。参数默认值、语言标识、effects和文字顺序保留，宏实参通过真实withArguments捕获，未知float仍受既有guard限制。fixture只覆盖seed/help/say，不代表全部命令world验证。MCFL38→39；stdlib和两项必要测试通过，详见verification.md。
 
-一个source/fresh fixture检查seed、非macro及动态say macro的导出与canonical/readonly/unknown facts、实际context调用合同；不模拟world或frame0。旧/未知缓存格式作为必要回归。Java ABI变化计划MCFL38→39并重建标准库；尚未编码或验证。
+StdCommands以外另有14个Java类：91个CommandReturn返回注解和7个void旧wrapper，未纳入阶段110；whole17仍未完成。
 
-阶段88–109详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL38。
+### 阶段 111 计划：迁移 Datapack 与 Debug
+
+限定Datapack九个方法及Debug.start/stop两个方法。`Op`、`Datapack`、`Debug` 三个静态类当前没有导出的语言对象（MinecraftData为空）；Datapack fixture使用真实 `@From` 对象 `Packs`，Debug两项沿已有显式native声明验证。FunctionVar/TODO及Op/Recipe的Player!参数合同留待后续。已发现 `Op.deop` 当前构造的是 `op` 命令，迁移时应修正并验证，但不把它描述为本阶段已解决。预计Java ABI变化将MCFL39→40并重建标准库；尚未实现或验证。
+
+阶段88–110详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL39。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

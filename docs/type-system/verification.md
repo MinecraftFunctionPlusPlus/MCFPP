@@ -2,7 +2,25 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 阶段 109：捕获 seed 的命令结果（已限定验证）
+## 阶段 110：迁移 StdCommands 命令结果接口（已限定验证）
+
+StdCommands剩余106个旧 `CommandReturn` 入口迁到单context；当前127个Java native入口均使用 `NativeCallContext`，其中107个返回qualified `mcfpp.minecraft.std:CommandResult`、20个void。root对比127个语言签名（仅返回类型按新契约变化）与106个新增命令表达式，参数映射和文字词序一致；16个旧参数名在测试前修正。私有 `captureResult` 使用真实declaredReturnType和root `{}`，双store结果后按宏准备顺序只发一次调用再publish；宏实参继续由真实 `withArguments` 捕获，未知float保留既有guard。没有给未知结果造快照。
+
+`mcfpp-native-commands-result-stdlib.log` exit0/BUILD SUCCESSFUL in11s，Project0/0。joint `mcfpp-native-commands-result-final.log` exit0/BUILD SUCCESSFUL in22s、worker12正常；LibFieldAccess XML `2026-10-07T00:38:18.068Z`与CacheFormat XML `00:38:17.277Z`均1/0/0/0；source/fresh Project分别0/9118与0/9119。source/fresh fixture只覆盖seed、help和动态say：模型保持canonical、readonly与未知facts，导出文件含seed/help双store和say动态macro准备及单次调用。未验证107个命令的world行为，无ScoreCommandExecutor/frame0结论。三份MCFL39资源286624 bytes、raw header `4c46434d27000000`、SHA256 `A2348C93E75C319D2D6E1B99F62E21A011B4BE7EFA14732C53241442693B1FBD`。StdCommands以外仍有14个Java类（91个CommandReturn返回注解及7个void旧wrapper）；whole17仍ACTIVE未完成。
+
+### 阶段 110 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录127个接口比较、106个表达式及两个fresh XML，不扩大为world验证。 |
+| 完整性 | 3/5 | StdCommands受测迁移完成；14个其他Java类与whole17仍未完成。 |
+| 清晰性 | 4/5 | 区分单context覆盖、实际fixture三命令及剩余边界。 |
+| 可执行性 | 4/5 | 下一阶段限Datapack九项和Debug两项，并指出Op.deop已知错误。 |
+| 简洁性 | 4/5 | 保留必要范围、计数和版本证据。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 历史必要检查：捕获 seed 的命令结果（阶段 109）
 
 普通 `CommandResult` 使用既有nominal类型，暴露只读 `result:int` 与 `success:bool`。seed单context根据真实declaredReturnType建立未知事实，通过root `{}`初始化并在一次命令中双 `execute store`，不由ctor/preInit覆盖。consumer读取类型身份、readonly属性与未知事实，并检查实际磁盘命令合同；不模拟seed世界结果，也不声称frame0。
 
