@@ -1,6 +1,6 @@
-# 下一阶段：迁移效果命令结果接口（阶段120）
+# 下一阶段：迁移效果授予命令（阶段121）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–119完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及EntityTag路径的限定迁移；当前库格式MCFL49，Std外剩余4个Java类、47个CommandReturn注解及7个旧void wrapper。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–120完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及EntityTag路径的限定迁移；当前库格式MCFL50，Std外剩余4个Java类、45个CommandReturn注解及7个旧void wrapper。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -110,7 +110,13 @@ BossBar的add/remove/listAll/setColor/setName/setVisiblePlayers/setStyle七个�
 
 `joinTeam(Team)`和`leaveTeam()`接入单context qualified `CommandResult`。已核对[26.3原版命令报告](https://raw.githubusercontent.com/misode/mcmeta/26.3-summary/commands/data.json)：join按Team ID、成员选择器排序，leave仅接成员选择器，并删除旧伪Team参数；[官方26.3 Snapshot 1说明](https://www.minecraft.net/en-us/article/minecraft-26-3-snapshot-1)记录结果为实际加入/离开的实体数。fixture source/fresh验证真实Team.id捕获与命令合同；不宣称world执行。
 
-下一阶段120：迁移`EntityVarData.clearEffect`与`clearAllEffects`两个入口为单context结果捕获；对真实Effect.id取值，并在捕获前验证Selector。按26.3命令报告，分别覆盖指定效果及清除全部效果的命令路径。计划一个source/fresh fixture验证一个specific效果macro、一个all-effects direct命令及DTO负例；尚未实现或验证。
+### 阶段 120：Entity effect 清除命令（已限定验证）
+
+`EntityVarData.clearEffect`与`clearAllEffects`迁入单context qualified `CommandResult`；使用真实`Effect.id`，在结果捕获前检查Selector。单fixture与Cache回归通过，验证specific-effect macro、all-effects direct、source/fresh合同及DTO负例；world执行未验证。
+
+### 阶段 121 计划：授予 Entity effect
+
+只迁移`effect`与`effectInfinite`。按[26.3生成命令报告](https://raw.githubusercontent.com/misode/mcmeta/26.3-summary/commands/data.json)处理Effect、seconds/infinite、amplifier与hideParticles参数。Boolean沿完整`CompilerValue.Bool`快照输出true/false字面值；动态`ScoreBool`使用`StorageAccess.read`读取当前score，未知值绑定为MCString临时值，先写字符串false，条件写字符串true后再捕获宏参数。保留普通bool参数和既有可变性，不扩展context/framework；默认注解不会自动安装默认实参，fixture须显式提供所有参数。阶段121尚未实现或验证。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

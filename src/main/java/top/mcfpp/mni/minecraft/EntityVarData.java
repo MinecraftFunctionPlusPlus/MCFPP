@@ -152,18 +152,6 @@ public class EntityVarData {
         Commands.processMacroCommandReturn(returnValue, command);
     }
 
-    @MNIFunction(caller = "entity", returnType = "CommandReturn")
-    public static void clearAllEffects(EntityVar caller, ValueWrapper<CommandReturn> returnValue){
-        var command = Command.Companion.buildAll("effect clear", caller);
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-
-    @MNIFunction(normalParams = "Effect", caller = "entity", returnType = "CommandReturn")
-    public static void clearEffect(DataTemplateObject effect, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
-        var command = Command.Companion.buildAll("effect clear", caller, effect);
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-
     //region ride
     @MNIFunction(normalParams = "entity<1>", caller = "entity", returnType = "CommandReturn")
     public static void ride(EntityVar entity, EntityVar caller, ValueWrapper<CommandReturn> returnValue){

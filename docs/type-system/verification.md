@@ -1,8 +1,26 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段119，MCFL49；Std外剩余4个Java类含47个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段120，MCFL50；Std外剩余4个Java类含45个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 当前阶段 119：EntityTeam 命令结果（已限定验证）
+## 当前阶段 120：EntityEffect 命令结果（已限定验证）
+
+11个提交路径含6项源码/测试、bin及四份文档；源码/测试新增125行、删除13行。本轮标准库重建后，指定fixture与缓存格式回归联合通过。
+
+`EntityVarData.clearEffect`与`clearAllEffects`接入单context qualified `CommandResult`，读取真实`Effect.id`并在capture前检查Selector。单fixture检查specific-effect macro、all-effects direct、真实字段/参数来源、source/fresh合同及DTO负例；仅限受测命令路径。
+
+标准库SUCCESSFUL in10s、Project0/0；joint worker42正常、SUCCESSFUL in25s。LibFieldAccess XML `2026-10-07T04:42:55.557Z` 与CacheFormat XML `04:42:54.761Z` 均1/0/0/0；source/fresh Project0/9118与0/9119，negative2/9119，预期诊断为`Entity effect commands require a selector receiver`与`Native function 'clearAllEffects' did not publish its result`。MCFL50三份资源451715 bytes、header `4c46434d32000000`、SHA256 `D09790EA77B67656159415475C1E9B9355D871D39C8218D7278D6E4FCAC01D9B`。不涉及world、Executor、frame0或fullcheck/server。
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录两fresh XML、Project计数及两条预期负向诊断。 |
+| 完整性 | 3/5 | 仅两个effect清除入口受测；world行为和whole17未完成。 |
+| 清晰性 | 4/5 | 区分specific macro与all-effects direct合同。 |
+| 可执行性 | 4/5 | 下一阶段只列两个effect授予入口并给出bool捕获边界。 |
+| 简洁性 | 4/5 | 限定记录验证范围，不外推到其他effect/selector路径。 |
+
+平均3.8/5；whole17仍未完成。
+
+## 历史必要检查：阶段 119 EntityTeam 命令结果（已限定验证）
 
 `EntityTeamData.joinTeam(Team)`与`leaveTeam()`接入单context qualified `CommandResult`。join先读取真实`Team.id`再传`@a`，leave移除旧伪Team参数。93行source/fresh fixture验证canonical readonly/unknown模型、整块普通参数副本至id宏slot/单次调用、两个结果root/双store/一次初始化及DTO负例。
 

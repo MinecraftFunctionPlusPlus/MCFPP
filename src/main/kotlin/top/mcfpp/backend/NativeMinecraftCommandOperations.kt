@@ -34,6 +34,21 @@ internal fun captureCommandResult(context: NativeCallContext, build: (List<Var<*
 }
 
 object NativeMinecraftCommandOperations {
+    fun entityClearAllEffects(context: NativeCallContext) = context.withAdapters { receiver, _ ->
+        if (receiver !is SelectorVar) {
+            LogProcessor.error("Entity effect commands require a selector receiver")
+            return@withAdapters
+        }
+        captureCommandResult(context) { Command.buildAll("effect clear", receiver) }
+    }
+    fun entityClearEffect(context: NativeCallContext) = context.withAdapters { receiver, args ->
+        if (receiver !is SelectorVar) {
+            LogProcessor.error("Entity effect commands require a selector receiver")
+            return@withAdapters
+        }
+        captureCommandResult(context) { Command.buildAll("effect clear", receiver, templateField(args[0] as DataTemplateObject, "id")) }
+    }
+
     fun entityJoinTeam(context: NativeCallContext) = context.withAdapters { receiver, args ->
         if (receiver !is SelectorVar) {
             LogProcessor.error("Entity team commands require a selector receiver")

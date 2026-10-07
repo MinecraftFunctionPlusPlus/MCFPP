@@ -5,7 +5,7 @@
 
 ## 当前规则（截至2026-10-07，Asia/Shanghai）
 
-用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–119按验证记录接入受测集合、数值/文本/命令、seed结果、Datapack/Debug、delegated-int、Time、诊断接口及受测legacy入口；当前MCFL49；Std外剩余4个Java类、47个CommandReturn注解及7个旧void wrapper；whole17未完成。
+用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–120按验证记录接入受测集合、数值/文本/命令、seed结果、Datapack/Debug、delegated-int、Time、诊断接口及受测legacy入口；当前MCFL50；Std外剩余4个Java类、45个CommandReturn注解及7个旧void wrapper；whole17未完成。
 
 ## 当前已接入
 
@@ -47,7 +47,7 @@
 
 阶段103：四个damage void入口迁入显式context，保留语言标识及默认语义，处理ResourceID DamageType与SelectorVar签名差异。动态float受现有 `FloatProviders.enabled` 限制；不新增浮点引擎。damage fixture与Cache回归均通过，source/fresh生成宏及MCFL32资源已验证；未验证world/float执行。详细边界见verification.md。
 
-阶段104迁移System九种print语言入口并完成限定验证；最终fixture复查通过，Cache仅首轮通过，未验证macro/world执行或tellraw渲染。阶段105 delegated-int、阶段106 Time及阶段107两个legacy分支入口已限定验证，细节见verification.md。阶段108删除 `System.typeOf` 并迁移四个诊断void接口；阶段109接通seed的普通CommandResult结果捕获；阶段110迁移StdCommands剩余106个结果入口；阶段111迁移Datapack九项及Debug两项；阶段112迁移Team三个receiver结果入口；阶段113迁移Op/Recipe六个player-target入口；阶段114迁移Worldborder七个命令结果入口；阶段115迁移BossBar七个结果入口；阶段116迁移WorldObject两个结果入口；阶段117迁移Random三个reset结果入口；阶段118迁移EntityTag三个结果入口；阶段119迁移实体joinTeam/leaveTeam。当前MCFL49，下一阶段迁移两个Entity effect清除入口，详见next-stage-plan.md。
+阶段104迁移System九种print语言入口并完成限定验证；最终fixture复查通过，Cache仅首轮通过，未验证macro/world执行或tellraw渲染。阶段105 delegated-int、阶段106 Time及阶段107两个legacy分支入口已限定验证，细节见verification.md。阶段108删除 `System.typeOf` 并迁移四个诊断void接口；阶段109接通seed的普通CommandResult结果捕获；阶段110迁移StdCommands剩余106个结果入口；阶段111迁移Datapack九项及Debug两项；阶段112迁移Team三个receiver结果入口；阶段113迁移Op/Recipe六个player-target入口；阶段114迁移Worldborder七个命令结果入口；阶段115迁移BossBar七个结果入口；阶段116迁移WorldObject两个结果入口；阶段117迁移Random三个reset结果入口；阶段118迁移EntityTag三个结果入口；阶段119迁移实体joinTeam/leaveTeam。阶段120迁移Entity effect清除两个入口。当前MCFL50，下一阶段迁移effect命令授予入口，详见next-stage-plan.md。
 
 阶段108：debug/info/warn/error四个void方法迁入显式context并标记 `NoExternalWrites`；诊断保留编译期concrete内容及runtime宿主 `toString` 语义，不生成runtime NBT。删除 `System.typeOf`，以符合普通值位置禁止保存 `type` 的规则。两个定向方法与标准库均通过，三份MCFL37资源为289476 bytes且SHA256一致；详见verification.md。whole17仍未完成。
 
@@ -74,6 +74,8 @@
 阶段118：`EntityVarData.addTag`、`removeTag`、`listTag`三个入口接入单context qualified `CommandResult`；新增命名空间解析仅识别`ENTITY`片段，bare `SelectorVar`可保存并恢复完整immutable快照，MNI只在显式qualified解析失败后查找已加载canonical模板。最终fixture的source/fresh往返与DTO负向检查通过，producer/fresh分别0/9118与0/9119，negative 2/9119。predicate selector等其他形式不据此宣称完整快照支持。MCFL48；whole17仍未完成。
 
 阶段119：`joinTeam(Team)`与`leaveTeam()`接入单context qualified `CommandResult`，join从真实`Team.id`捕获参数，leave移除旧伪Team参数。唯一fixture的source/fresh命令合同及DTO负向检查通过；MCFL49。Std外剩余4个Java类、47个CommandReturn注解和7个旧void wrapper；whole17未完成。
+
+阶段120：`EntityVarData.clearEffect`与`clearAllEffects`接入单context qualified `CommandResult`，使用真实`Effect.id`并在捕获前验证Selector。指定fixture与Cache回归通过，source/fresh命令合同和DTO负向断言均通过；MCFL50。仅覆盖这两个入口，未验证world执行或完整Selector/effect行为；whole17未完成。
 
 重构不要求兼容旧 `.mcfpp` 写法；显式引用新旧语法无需并行保留。
 
