@@ -12,10 +12,14 @@ import top.mcfpp.core.lang.Var
 import top.mcfpp.core.lang.obj.DataTemplateObject
 import top.mcfpp.core.lang.obj.EnumVarConcrete
 import top.mcfpp.core.lang.entity.SelectorVar
+import top.mcfpp.core.lang.bool.ScoreBool
+import top.mcfpp.core.lang.nbt.MCString
+import top.mcfpp.core.lang.nbt.MCStringConcrete
 import top.mcfpp.mni.NativeCallContext
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.nbt.tags.CompoundTag
+import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 
@@ -34,6 +38,35 @@ internal fun captureCommandResult(context: NativeCallContext, build: (List<Var<*
 }
 
 object NativeMinecraftCommandOperations {
+    fun entityEffect(context: NativeCallContext) = context.withAdapters { receiver, args ->
+        if (receiver !is SelectorVar) {
+            LogProcessor.error("Entity effect commands require a selector receiver")
+            return@withAdapters
+        }
+        val hide = effectBooleanWord(context, args[3], 3)
+        captureCommandResult(context) { Command.buildAll("effect give", receiver, templateField(args[0] as DataTemplateObject, "id"), args[1], args[2], hide) }
+    }
+    fun entityEffectInfinite(context: NativeCallContext) = context.withAdapters { receiver, args ->
+        if (receiver !is SelectorVar) {
+            LogProcessor.error("Entity effect commands require a selector receiver")
+            return@withAdapters
+        }
+        val hide = effectBooleanWord(context, args[2], 2)
+        captureCommandResult(context) { Command.buildAll("effect give", receiver, templateField(args[0] as DataTemplateObject, "id"), "infinite", args[1], hide) }
+    }
+
+    private fun effectBooleanWord(context: NativeCallContext, value: Var<*>, index: Int): MCString {
+        var snapshot = context.argumentSnapshot(index)
+        while (snapshot is CompilerValue.Typed) snapshot = snapshot.payload
+        if (snapshot is CompilerValue.Bool) return MCStringConcrete(StringTag(snapshot.value.toString()))
+        val score = StorageAccess.read(value) as ScoreBool
+        val word = MCString(TempPool.getVarIdentify()).apply { isTemp = true }
+        val binding = StorageAccess.bindIncomingParameter(word)
+        Function.addCommand(Commands.dataSetValue(binding.path, StringTag("false")))
+        Function.addCommand(Command("execute if").build(score.toCommandPart()).build("run").build(Commands.dataSetValue(binding.path, StringTag("true"))))
+        return word
+    }
+
     fun entityClearAllEffects(context: NativeCallContext) = context.withAdapters { receiver, _ ->
         if (receiver !is SelectorVar) {
             LogProcessor.error("Entity effect commands require a selector receiver")

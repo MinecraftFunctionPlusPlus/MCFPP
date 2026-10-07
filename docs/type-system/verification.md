@@ -1,8 +1,26 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段120，MCFL50；Std外剩余4个Java类含45个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段121，MCFL51；Std外剩余4个Java类含43个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 当前阶段 120：EntityEffect 命令结果（已限定验证）
+## 当前阶段 121：Entity effect 授予命令（已限定验证）
+
+`EntityVarData.effect`与`effectInfinite`两个入口迁入单context qualified `CommandResult`。常量bool直接生成true/false字面量；动态score读取当前score，未知bool在MCString临时值中先写`false`，条件成立后覆写`true`再捕获参数。默认注解不等于默认实参已接通。
+
+标准库SUCCESSFUL in10s、Project0/0；joint worker43正常、SUCCESSFUL in25s。LibFieldAccess XML `2026-10-07T04:59:00.799Z` 与CacheFormat XML `04:59:00.083Z` 均1/0/0/0；source/fresh Project0/9118、0/9119，DTO negative2/9119。指定fixture与Cache回归通过；仅验证受测命令/参数准备，不代表Minecraft世界效果、完整返回行为或帧恢复。
+
+10个提交路径含5项源码/测试（174+/13−）、bin及四份文档。唯一新增fixture `nativeEntityEffectGiveCommandsCaptureResultsAcrossLibraryRoundTrip` 与 `oldAndUnknownCacheFormatsProduceARecompileDiagnostic` 联合通过；日志前缀为 `mcfpp-native-entity-effect-give-command-results-`，保留stdlib/final两份日志。source/fresh各真实执行bool准备前缀，输入0b/1b时两处宏参数均为字符串false/true；同时核对常量分支、独立结果捕获与DTO拒绝。三份bin均MCFL51、454764 bytes、header `4c46434d33000000`、SHA256 `5BD4DF48FD5BD8553AB4D5D091566E2187F7A2D22F39D69E1017A01D752E6FD1`。
+
+| 自评维度 | 分数 | 证据及改进方向 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 新XML与日志一致，实际执行bool准备；后续需验证世界效果。 |
+| 完整性 | 3/5 | 两个授予入口已受测；其余legacy入口与whole17仍待迁移。 |
+| 清晰性 | 4/5 | 区分常量文字、动态字符串准备与MNI默认参数限制。 |
+| 可操作性 | 4/5 | 记录唯一fixture与日志，下一步限定stopRide。 |
+| 简洁性 | 4/5 | 只运行必要联合检查并保留本轮证据。 |
+
+平均3.8/5；whole17仍未完成。
+
+## 历史必要检查：阶段 120 EntityEffect 清除命令（已限定验证）
 
 11个提交路径含6项源码/测试、bin及四份文档；源码/测试新增125行、删除13行。本轮标准库重建后，指定fixture与缓存格式回归联合通过。
 

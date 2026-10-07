@@ -140,18 +140,6 @@ public class EntityVarData {
         Commands.processMacroCommandReturn(returnValue, command);
     }
 
-    @MNIFunction(normalParams = {"Effect", "int = 30", "int = 0", "bool hideParticles = false"}, caller = "entity", returnType = "CommandReturn")
-    public static void effect(DataTemplateObject effect, int time, int amplifier, boolean hideParticles, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
-        var command = Command.Companion.buildAll("effect give", caller, effect, time, amplifier, hideParticles);
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-
-    @MNIFunction(normalParams = {"Effect", "int = 0", "bool = false"}, caller = "entity", returnType = "CommandReturn")
-    public static void effectInfinite(DataTemplateObject effect, int amplifier, boolean hideParticles, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
-        var command = Command.Companion.buildAll("effect give", caller, effect, "infinite", amplifier, hideParticles);
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-
     //region ride
     @MNIFunction(normalParams = "entity<1>", caller = "entity", returnType = "CommandReturn")
     public static void ride(EntityVar entity, EntityVar caller, ValueWrapper<CommandReturn> returnValue){

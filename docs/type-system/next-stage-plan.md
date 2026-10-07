@@ -1,6 +1,6 @@
-# 下一阶段：迁移效果授予命令（阶段121）
+# 下一阶段：迁移停止骑乘命令（阶段122）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–120完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及EntityTag路径的限定迁移；当前库格式MCFL50，Std外剩余4个Java类、45个CommandReturn注解及7个旧void wrapper。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–121完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及EntityTag路径的限定迁移；当前库格式MCFL51，Std外剩余4个Java类、43个CommandReturn注解及7个旧void wrapper。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -114,9 +114,13 @@ BossBar的add/remove/listAll/setColor/setName/setVisiblePlayers/setStyle七个�
 
 `EntityVarData.clearEffect`与`clearAllEffects`迁入单context qualified `CommandResult`；使用真实`Effect.id`，在结果捕获前检查Selector。单fixture与Cache回归通过，验证specific-effect macro、all-effects direct、source/fresh合同及DTO负例；world执行未验证。
 
-### 阶段 121 计划：授予 Entity effect
+### 阶段 121：Entity effect 授予命令（已限定验证）
 
-只迁移`effect`与`effectInfinite`。按[26.3生成命令报告](https://raw.githubusercontent.com/misode/mcmeta/26.3-summary/commands/data.json)处理Effect、seconds/infinite、amplifier与hideParticles参数。Boolean沿完整`CompilerValue.Bool`快照输出true/false字面值；动态`ScoreBool`使用`StorageAccess.read`读取当前score，未知值绑定为MCString临时值，先写字符串false，条件写字符串true后再捕获宏参数。保留普通bool参数和既有可变性，不扩展context/framework；默认注解不会自动安装默认实参，fixture须显式提供所有参数。阶段121尚未实现或验证。
+`effect`与`effectInfinite`两个入口迁入单context。常量bool直接输出字面值；动态score读取当前score，未知bool使用MCString临时值先写`false`、条件成立时写`true`后捕获参数。stdlib、指定fixture及Cache回归通过；不声称MNI默认参数接通或world效果验证。
+
+### 阶段 122 计划：停止骑乘
+
+仅迁移`stopRide`。复用`SelectorVar`现有`selectingSingleEntity`证明；只允许单实体selector，`@a`及DTO接收者应拒绝。按[26.3生成命令报告](https://raw.githubusercontent.com/misode/mcmeta/26.3-summary/commands/data.json)核对`ride.target`为single entity及`dismount`命令合同。限制在此入口，不扩展ride mount、limit谓词快照、typeId或默认参数；尚未实现或验证。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 
