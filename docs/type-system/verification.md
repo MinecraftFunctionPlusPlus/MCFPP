@@ -2,7 +2,29 @@
 
 最新状态日期：2026-10-07（Asia/Shanghai）。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 阶段 110：迁移 StdCommands 命令结果接口（已限定验证）
+## 阶段 111：Datapack 与 Debug 结果接口（已限定验证）
+
+新增11个显式单context qualified `CommandResult` 入口：Datapack九个，Debug.start/stop两个；旧Debug.function TODO保留。内部 `captureCommandResult` 从Std共享逻辑抽取；Std的107处调用仅更名、删旧helper/import，root已逐处确认其他行为未变。无新context API或生产语言对象。fixture以真实 `@From Packs` 对象、显式native profileStart/profileStop和 `Box.observe(name as string)` 验证。
+
+首轮stdlib exit0/BUILD SUCCESSFUL in11s、Project0/0；joint3 worker13正常结束但exit1/BUILD FAILED in27s。LibFieldAccess XML `2026-10-07T00:50:12.136Z` tests2/fail1/error0/skip0：旧Std fixture通过，新fixture source Project0/9118，模型及source磁盘检查通过；fresh Project0/9119后在fresh模型 `assertSame(canonical, value.templateType)` 失败，尚未到fresh磁盘检查。CacheFormat XML `00:50:11.575Z` 为1/0/0/0。根因是Kryo嵌入Info产生独立DataTemplate对象；`MCFPPDataTemplateType.tryResolve`现按完整Declaration identity复用已加载namespace内真实template/interface，并同步parentType，未改变Info/serializer/wire/context。
+
+修复后stdlib2 exit0/BUILD SUCCESSFUL in9s、Project0/0。final2仅复跑两个LibFieldAccess fixture：worker14正常，exit0/BUILD SUCCESSFUL in27s；XML `2026-10-07T00:56:50.658Z` tests2/fail0/error0/skip0。四个Project摘要依序0/9118、0/9119、0/9118、0/9119。source/fresh模型canonical身份、readonly属性、未知facts及空snapshot通过；consumer磁盘文件含debug start/datapack list/debug stop三次直接调用，以及enable动态macro的准备与单次调用；root `{}`初始化与同root双store int1/byte1符合合同。未验证world、ScoreExecutor或frame0。Cache在首轮MCFL40已通过，模板恢复修复未改格式，因此第二轮没有重复运行。
+
+MCFL39→40，三份bin均293272 bytes、raw header `4c46434d28000000`、SHA256 `04023951C6DA76A2DB1C3D0BAB6528A8387D0D8CD5BC92A949B695E390ABAC9A`。Std之外还有13个Java类（80个CommandReturn注解及7个void旧wrapper），whole17保持ACTIVE未完成；无fullcheck/server。
+
+### 阶段 111 自检
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 记录首轮canonical失败边界、修复和最终fresh XML，不称最终联合3项全绿。 |
+| 完整性 | 3/5 | 11个Datapack/Debug入口受测完成；其他13个Java类与whole17仍未完成。 |
+| 清晰性 | 4/5 | 区分source检查与首轮fresh失败，并限定无world/frame结论。 |
+| 可执行性 | 4/5 | 下一阶段限定三个Team receiver方法并列明MNIMutator边界。 |
+| 简洁性 | 4/5 | 仅记录两轮必要运行及库版本证据。 |
+
+平均3.8/5，whole17完整性仍为3/5。
+
+## 历史必要检查：迁移 StdCommands 命令结果接口（阶段 110）
 
 StdCommands剩余106个旧 `CommandReturn` 入口迁到单context；当前127个Java native入口均使用 `NativeCallContext`，其中107个返回qualified `mcfpp.minecraft.std:CommandResult`、20个void。root对比127个语言签名（仅返回类型按新契约变化）与106个新增命令表达式，参数映射和文字词序一致；16个旧参数名在测试前修正。私有 `captureResult` 使用真实declaredReturnType和root `{}`，双store结果后按宏准备顺序只发一次调用再publish；宏实参继续由真实 `withArguments` 捕获，未知float保留既有guard。没有给未知结果造快照。
 

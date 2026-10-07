@@ -5,7 +5,7 @@
 
 ## 当前规则（截至2026-10-07，Asia/Shanghai）
 
-用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–110按验证记录接入受测集合、数值/文本/命令、seed结果、StdCommands结果接口、delegated-int、Time、诊断接口及两个legacy分支入口；当前MCFL39，whole17未完成。
+用户规则：`type` 仅作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数和返回值，以及擦除值与集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留。旧字段/集合正向假设已撤回，不作为合法性证据。重构不要求兼容旧 `.mcfpp` 写法。阶段87已实现并限定验证；阶段88–111按验证记录接入受测集合、数值/文本/命令、seed结果、StdCommands结果接口、Datapack/Debug、delegated-int、Time、诊断接口及两个legacy分支入口；当前MCFL40，whole17未完成。
 
 ## 当前已接入
 
@@ -47,13 +47,15 @@
 
 阶段103：四个damage void入口迁入显式context，保留语言标识及默认语义，处理ResourceID DamageType与SelectorVar签名差异。动态float受现有 `FloatProviders.enabled` 限制；不新增浮点引擎。damage fixture与Cache回归均通过，source/fresh生成宏及MCFL32资源已验证；未验证world/float执行。详细边界见verification.md。
 
-阶段104迁移System九种print语言入口并完成限定验证；最终fixture复查通过，Cache仅首轮通过，未验证macro/world执行或tellraw渲染。阶段105 delegated-int、阶段106 Time及阶段107两个legacy分支入口已限定验证，细节见verification.md。阶段108删除无合法普通type返回消费路径的 `System.typeOf` 并迁移四个诊断void接口；阶段109接通seed的普通CommandResult结果捕获；阶段110迁移StdCommands剩余106个命令结果入口。当前MCFL39，下一阶段范围为Datapack与Debug接口，详见next-stage-plan.md。
+阶段104迁移System九种print语言入口并完成限定验证；最终fixture复查通过，Cache仅首轮通过，未验证macro/world执行或tellraw渲染。阶段105 delegated-int、阶段106 Time及阶段107两个legacy分支入口已限定验证，细节见verification.md。阶段108删除 `System.typeOf` 并迁移四个诊断void接口；阶段109接通seed的普通CommandResult结果捕获；阶段110迁移StdCommands剩余106个结果入口；阶段111迁移Datapack九项及Debug两项。当前MCFL40，下一阶段限定三个Team receiver方法，详见next-stage-plan.md。
 
 阶段108：debug/info/warn/error四个void方法迁入显式context并标记 `NoExternalWrites`；诊断保留编译期concrete内容及runtime宿主 `toString` 语义，不生成runtime NBT。删除 `System.typeOf`，以符合普通值位置禁止保存 `type` 的规则。两个定向方法与标准库均通过，三份MCFL37资源为289476 bytes且SHA256一致；详见verification.md。whole17仍未完成。
 
 阶段109：普通 `CommandResult` 的只读 `result:int` 与 `success:bool` 由seed单context发布；按真实declaredReturnType保留未知事实，以root `{}`和一次双execute-store生成磁盘命令。source/fresh模型及导出合同通过，不模拟世界结果或frame0。MCFL37→38；stdlib、Cache与fixture分轮验证细节见verification.md。StdCommands剩余106个CommandReturn入口仍待迁移，whole17未完成。
 
 阶段110：`StdCommands`剩余106个旧CommandReturn入口已接入单context；当前127个Java入口都为单context签名，含107个CommandResult结果和20个void。源签名（返回类型变化除外）、表达式参数映射及文字词序已比较；source/fresh仅验证seed/help/say导出，不宣称全部命令world验证。MCFL38→39，stdlib与Cache/新fixture指定检查通过；其他Java类中91个CommandReturn注解和7个void wrapper仍未迁移。whole17未完成，详见verification.md。
+
+阶段111：Datapack九个与Debug.start/stop两个静态命令入口迁入单context；Debug.function旧TODO保留。`captureCommandResult`从Std共享抽取，Kryo嵌套Info跨库恢复时按Declaration身份重用已加载namespace canonical模板；不改wire/context。source/fresh受限fixture与MCFL40验证通过，Cache只首轮通过。其他13个Java类仍含80个CommandReturn注解与7个void wrapper，whole17未完成；详见verification.md。
 
 重构不要求兼容旧 `.mcfpp` 写法；显式引用新旧语法无需并行保留。
 

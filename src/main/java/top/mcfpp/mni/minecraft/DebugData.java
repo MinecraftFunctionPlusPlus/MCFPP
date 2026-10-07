@@ -1,6 +1,8 @@
 package top.mcfpp.mni.minecraft;
 
 import top.mcfpp.annotations.MNIFunction;
+import top.mcfpp.backend.NativeMinecraftCommandOperations;
+import top.mcfpp.mni.NativeCallContext;
 import top.mcfpp.command.Command;
 import top.mcfpp.command.Commands;
 import top.mcfpp.core.lang.CommandReturn;
@@ -8,15 +10,13 @@ import top.mcfpp.core.lang.FunctionVar;
 import top.mcfpp.util.ValueWrapper;
 
 public class DebugData {
-    @MNIFunction(returnType = "CommandReturn")
-    public static void start(ValueWrapper<CommandReturn> re){
-        var command = new Command("debug start");
-        Commands.processMacroCommandReturn(re, command);
+    @MNIFunction(returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void start(NativeCallContext context){
+        NativeMinecraftCommandOperations.INSTANCE.debugStart(context);
     }
-    @MNIFunction(returnType = "CommandReturn")
-    public static void stop(ValueWrapper<CommandReturn> re){
-        var command = new Command("debug stop");
-        Commands.processMacroCommandReturn(re, command);
+    @MNIFunction(returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void stop(NativeCallContext context){
+        NativeMinecraftCommandOperations.INSTANCE.debugStop(context);
     }
 
     //TODO函数类型

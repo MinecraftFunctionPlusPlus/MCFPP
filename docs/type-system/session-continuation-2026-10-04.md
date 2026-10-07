@@ -4,7 +4,15 @@
 
 ## 当前进度
 
-当前状态更新：2026-10-07（Asia/Shanghai）。阶段110 StdCommands命令结果接口已完成限定验证，MCFL39；阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，阶段106提交`cf5e8f9`、阶段105提交`4664c8b`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+当前状态更新：2026-10-07（Asia/Shanghai）。阶段111 Datapack/Debug结果入口已完成限定验证，MCFL40；阶段110提交`17313ad`，阶段109提交`7806fab`，阶段108提交`122d608`，阶段107提交`b4eb5c9`，其余提交状态以Git历史为准。阶段87普通值位置 `type` 拒绝规则继续生效，whole17仍未完成。重构不要求兼容旧 `.mcfpp` 写法。
+
+### 阶段 111：迁移 Datapack 与 Debug 结果接口（已限定验证）
+
+Datapack九个和Debug.start/stop两个命令入口接入单context；Debug.function旧TODO不动。共享captureCommandResult从Std抽出，Std的107处调用只更名并删除旧helper/import，行为保持不变。Kryo嵌入Info跨库后fresh模板身份不一致，经 `MCFPPDataTemplateType.tryResolve` 按完整Declaration身份复用已加载namespace的真实template/interface并同步parentType；不改Info、serializer、wire或context。fixture用真实 `@From Packs`、显式native profileStart/profileStop和普通Box.observe验证source/fresh。
+
+首轮stdlib exit0/11s、Project0/0；joint3 worker13正常但1失败，XML `2026-10-07T00:50:12.136Z` tests2/fail1，source检查通过但fresh canonical检查失败；Cache XML `00:50:11.575Z`已通过。修复后stdlib2 exit0/9s、Project0/0；final2仅两个LibFieldAccess fixture，worker14正常、exit0/27s，XML `00:56:50.658Z` tests2/fail0。source/fresh Project 0/9118、0/9119各两次。consumer实际有三个direct命令及enable动态macro准备/调用、root `{}`与双store；无world/executor/frame0。三份MCFL40资源293272 bytes、SHA256 `04023951C6DA76A2DB1C3D0BAB6528A8387D0D8CD5BC92A949B695E390ABAC9A`。Cache只首轮通过。
+
+下一阶段112限定Team.register/unregister/clear三项receiver方法；复用withAdapters解包DTO字段及captureCommandResult，fixture走真实@From对象，尚未实现。MNIMutator不因普通字段赋值而声称可用；Op.deop已知构造错误及Op/Recipe Player!合同另待处理。
 
 ### 阶段 110：迁移 StdCommands 命令结果接口（已限定验证）
 

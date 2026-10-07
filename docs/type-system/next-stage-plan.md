@@ -1,6 +1,6 @@
-# 下一阶段：迁移 Datapack 与 Debug 接口（阶段111）
+# 下一阶段：迁移 Team receiver 命令接口（阶段112）
 
-阶段87普通值位置type拒绝规则继续生效。阶段88–110完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、System print/诊断、delegated-int模板、Time路径及两个legacy分支入口的限定迁移；当前库格式MCFL39。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效。阶段88–111完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time路径及两个legacy分支入口的限定迁移；当前库格式MCFL40。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -72,11 +72,15 @@ StdCommands剩余106个旧CommandReturn入口迁到单context；127个Java入口
 
 StdCommands以外另有14个Java类：91个CommandReturn返回注解和7个void旧wrapper，未纳入阶段110；whole17仍未完成。
 
-### 阶段 111 计划：迁移 Datapack 与 Debug
+### 阶段 111：迁移 Datapack 与 Debug 结果接口（已限定验证）
 
-限定Datapack九个方法及Debug.start/stop两个方法。`Op`、`Datapack`、`Debug` 三个静态类当前没有导出的语言对象（MinecraftData为空）；Datapack fixture使用真实 `@From` 对象 `Packs`，Debug两项沿已有显式native声明验证。FunctionVar/TODO及Op/Recipe的Player!参数合同留待后续。已发现 `Op.deop` 当前构造的是 `op` 命令，迁移时应修正并验证，但不把它描述为本阶段已解决。预计Java ABI变化将MCFL39→40并重建标准库；尚未实现或验证。
+新增Datapack九个与Debug.start/stop两个显式context `CommandResult` 入口，保留Debug.function旧TODO。共用Std的结果捕获实现；跨库新fixture首次fresh canonical对象不一致，经按完整Declaration身份复用namespace模板后限定验证通过。MCFL39→40；Cache只首轮通过，详见verification.md。`Op.deop`已知仍会构造op命令，尚待后续修正验证。
 
-阶段88–110详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL39。
+### 阶段 112 计划：迁移 Team receiver 命令接口
+
+限定 `Team.register`/`unregister`/`clear` 三个receiver方法；用现有 `withAdapters` 捕获DTO的真实id/displayName并解包PropertyVar，避免宿主JavaVar `toCommandPart` override；复用 `captureCommandResult`，不重复参数准备或发射。普通 `Team(name,label.toText())` 通过字段赋值，不假定9个MNIMutator已可由语言直接调用；当前仅真实`@From`对象绑定MNIFunction/MNIOperator。一个source/fresh `Box.observe(unknownName)` fixture检查三个实际宏与CommandResult，尚未实现或验证。计划MCFL40→41并重建标准库。`Op.deop`及Op/Recipe的Player!参数合同仍待处理。
+
+阶段88–111详细实施与分轮验证见verification.md；source/fresh consumer磁盘断言范围见各阶段记录。标准库和项目资源当前使用MCFL40。
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。
 

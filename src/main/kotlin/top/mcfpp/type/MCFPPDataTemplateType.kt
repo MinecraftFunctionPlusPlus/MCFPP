@@ -8,6 +8,7 @@ import top.mcfpp.mni.annotation.NoInstance
 import top.mcfpp.model.compound.CompoundData
 import top.mcfpp.model.compound.DataTemplate
 import top.mcfpp.model.compound.UnsolvedTemplate
+import top.mcfpp.model.scope.GlobalScope
 import top.mcfpp.util.LogProcessor
 
 /**
@@ -33,6 +34,18 @@ open class MCFPPDataTemplateType(
     override fun tryResolve() {
         if(template is UnsolvedTemplate){
             template = (template as UnsolvedTemplate).resolve()
+        }
+        val id = typeId as? TypeId.Declaration ?: return
+        val scope = GlobalScope.getUnsolvedImportNamespace(id.namespace)?.scope
+        val canonical = when (id.kind) {
+            "template" -> scope?.getTemplate(id.name)
+            "interface" -> scope?.getInterface(id.name)
+            else -> null
+        } ?: return
+        val canonicalType = canonical.getType()
+        if (canonicalType.typeId == id) {
+            template = canonical
+            parentType = canonicalType.parentType
         }
     }
 

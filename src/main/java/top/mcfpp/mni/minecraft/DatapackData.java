@@ -1,56 +1,44 @@
 package top.mcfpp.mni.minecraft;
 
 import top.mcfpp.annotations.MNIFunction;
-import top.mcfpp.command.Command;
-import top.mcfpp.command.Commands;
-import top.mcfpp.core.lang.CommandReturn;
-import top.mcfpp.core.lang.nbt.MCString;
-import top.mcfpp.util.ValueWrapper;
+import top.mcfpp.backend.NativeMinecraftCommandOperations;
+import top.mcfpp.mni.NativeCallContext;
 
 public class DatapackData {
-    @MNIFunction(normalParams = "string",returnType = "CommandReturn")
-    public static void disable(MCString s, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("datapack", "disable", s);
-        Commands.processMacroCommandReturn(re, command);
+    @MNIFunction(normalParams = "string",returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void disable(NativeCallContext context){
+        NativeMinecraftCommandOperations.INSTANCE.datapackDisable(context);
     }
-    @MNIFunction(normalParams = "string",returnType = "CommandReturn")
-    public static void enable(MCString s, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("datapack enable", s);
-        Commands.processMacroCommandReturn(re, command);
+    @MNIFunction(normalParams = "string",returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void enable(NativeCallContext context){
+        NativeMinecraftCommandOperations.INSTANCE.datapackEnable(context);
     }
-    @MNIFunction(normalParams = "string",returnType = "CommandReturn")
-    public static void enableFirst(MCString s, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("datapack enable", s, "first");
-        Commands.processMacroCommandReturn(re, command);
+    @MNIFunction(normalParams = "string",returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void enableFirst(NativeCallContext context){
+        NativeMinecraftCommandOperations.INSTANCE.datapackEnableFirst(context);
     }
-    @MNIFunction(normalParams = "string",returnType = "CommandReturn")
-    public static void enableLast(MCString s, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("datapack enable", s, "last");
-        Commands.processMacroCommandReturn(re, command);
+    @MNIFunction(normalParams = "string",returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void enableLast(NativeCallContext context){
+        NativeMinecraftCommandOperations.INSTANCE.datapackEnableLast(context);
     }
-    @MNIFunction(normalParams = {"string", "string"},returnType = "CommandReturn")
-    public static void enableBefore(MCString d1, MCString d2, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("datapack enable", d1, "before", d2);
-        Commands.processMacroCommandReturn(re, command);
+    @MNIFunction(normalParams = {"string", "string"},returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void enableBefore(NativeCallContext context){
+        NativeMinecraftCommandOperations.INSTANCE.datapackEnableBefore(context);
     }
-    @MNIFunction(normalParams = {"string", "string"},returnType = "CommandReturn")
-    public static void enableAfter(MCString d1, MCString d2, ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("datapack enable", d1, "after", d2);
-        Commands.processMacroCommandReturn(re, command);
+    @MNIFunction(normalParams = {"string", "string"},returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void enableAfter(NativeCallContext context){
+        NativeMinecraftCommandOperations.INSTANCE.datapackEnableAfter(context);
     }
-    @MNIFunction(returnType = "CommandReturn")
-    public static void listAll(ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("datapack list");
-        Commands.processMacroCommandReturn(re, command);
+    @MNIFunction(returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void listAll(NativeCallContext context){
+        NativeMinecraftCommandOperations.INSTANCE.datapackListAll(context);
     }
-    @MNIFunction(returnType = "CommandReturn")
-    public static void listEnabled(ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("datapack list enabled");
-        Commands.processMacroCommandReturn(re, command);
+    @MNIFunction(returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void listEnabled(NativeCallContext context){
+        NativeMinecraftCommandOperations.INSTANCE.datapackListEnabled(context);
     }
-    @MNIFunction(returnType = "CommandReturn")
-    public static void listAvailable(ValueWrapper<CommandReturn> re){
-        var command = Command.Companion.buildAll("datapack list available");
-        Commands.processMacroCommandReturn(re, command);
+    @MNIFunction(returnType = "mcfpp.minecraft.std:CommandResult")
+    public static void listAvailable(NativeCallContext context){
+        NativeMinecraftCommandOperations.INSTANCE.datapackListAvailable(context);
     }
 }

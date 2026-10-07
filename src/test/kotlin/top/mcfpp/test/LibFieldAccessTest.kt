@@ -3082,6 +3082,91 @@ class LibFieldAccessTest {
         check(main)
     }
 
+    @Test
+    fun nativeStaticCommandsCaptureResultsAcrossLibraryRoundTrip() = withLibrary { output ->
+        val methods = top.mcfpp.mni.minecraft.DatapackData::class.java.declaredMethods.toList() +
+            top.mcfpp.mni.minecraft.DebugData::class.java.declaredMethods.filter { it.name in listOf("start", "stop") }
+        assertEquals(11, methods.size)
+        methods.forEach { method ->
+            assertContentEquals(arrayOf(top.mcfpp.mni.NativeCallContext::class.java), method.parameterTypes)
+            assertEquals("mcfpp.minecraft.std:CommandResult", assertNotNull(method.getAnnotation(top.mcfpp.annotations.MNIFunction::class.java)).returnType)
+        }
+        val mainSource = """
+            func main(){ var box=Box(); dynamic var result=box.observe("fixture:pack"); }
+        """
+        write("""
+            namespace fixture.fields;
+            import mcfpp.minecraft.std:*;
+            @From<"top.mcfpp.mni.minecraft.DatapackData">
+            object data Packs;
+            func profileStart()->CommandResult = top.mcfpp.mni.minecraft.DebugData.start;
+            func profileStop()->CommandResult = top.mcfpp.mni.minecraft.DebugData.stop;
+            data Box {
+                func observe(name as string)->int {
+                    var started=profileStart(); var listed=Packs.listAll();
+                    var enabled=Packs.enable(name); var stopped=profileStop();
+                    var startValue=started.result; var listSuccess=listed.success;
+                    var enableValue=enabled.result; var stopSuccess=stopped.success;
+                    return 7;
+                }
+            }
+            $mainSource
+        """, output)
+        fun check(main: Function) {
+            val observe = (main.scope.getVar("box") as DataTemplateObject).templateType.scope.functions.getValue("observe").single()
+            assertTrue(observe.compiledFunctions.isEmpty())
+            val canonical = assertNotNull(GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.std")).scope.getTemplate("CommandResult")
+            for (name in listOf("started", "listed", "enabled", "stopped")) {
+                val value = assertIs<DataTemplateObject>(observe.scope.getVar(name))
+                assertSame(canonical, value.templateType)
+                assertTrue(value.templateType.scope.getVar("result")!!.isConst)
+                assertTrue(value.templateType.scope.getVar("success")!!.isConst)
+                val binding = assertNotNull(value.storageBinding)
+                assertEquals(top.mcfpp.analysis.ValueKnowledge.Unknown, binding.data.facts.read(binding.place)?.value)
+                assertNull(ValueSnapshot.of(value))
+            }
+            for (name in listOf("startValue", "listSuccess", "enableValue", "stopSuccess")) assertNull(ValueSnapshot.of(assertNotNull(observe.scope.getVar(name))))
+            val directory = output.resolve("consumer")
+            DatapackCreator.createDatapack(directory.toString())
+            val data = directory.resolve(Project.config.name).resolve("data")
+            val functions = linkedMapOf<String, List<String>>()
+            Files.walk(data).use { paths ->
+                paths.filter { Files.isRegularFile(it) && it.fileName.toString().endsWith(".mcfunction") }.forEach { file ->
+                    val relative = data.relativize(file)
+                    if (relative.nameCount >= 3 && relative.getName(1).toString() == "function") {
+                        val id = relative.subpath(2, relative.nameCount).joinToString("/").removeSuffix(".mcfunction")
+                        functions["${relative.getName(0)}:$id"] = Files.readAllLines(file).map(String::trim)
+                    }
+                }
+            }
+            val commands = functions.getValue(observe.namespaceID.toString())
+            val stores = Regex("execute store result storage (\\S+) (\\S+)\\.result int 1 store success storage (\\S+) (\\S+)\\.success byte 1 run (.*)")
+            val direct = commands.mapIndexedNotNull { index, command -> stores.matchEntire(command)?.let { index to it } }
+            assertEquals(3, direct.size)
+            assertEquals(setOf("debug start", "datapack list", "debug stop"), direct.map { it.second.groupValues[5] }.toSet())
+            val calls = commands.mapIndexedNotNull { index, command -> Regex("function (mcfpp:dynamic/\\S+) with storage (\\S+) (\\S+)").matchEntire(command)?.let { index to it } }
+            assertEquals(1, calls.size)
+            val (callIndex, call) = calls.single()
+            assertEquals(1, commands.count { it == commands[callIndex] })
+            assertTrue(commands.take(callIndex).any { it.startsWith("data modify storage ${call.groupValues[2]} ${call.groupValues[3]}") && " set " in it })
+            assertTrue(commands.take(callIndex).any { "set from storage mcfpp:system stack_frame[0].name" in it })
+            val body = functions.getValue(call.groupValues[1])
+            val macro = assertNotNull(body.singleOrNull { it.startsWith("\$execute store result") }?.removePrefix("\$")?.let(stores::matchEntire))
+            assertTrue(macro.groupValues[5].startsWith("datapack enable $("))
+            for ((index, match) in direct + listOf(callIndex to macro)) {
+                assertEquals(match.groupValues[1], match.groupValues[3])
+                assertEquals(match.groupValues[2], match.groupValues[4])
+                val initializer = "data modify storage ${match.groupValues[1]} ${match.groupValues[2]} set value {}"
+                assertEquals(1, commands.take(index).count { it == initializer })
+            }
+            assertFalse((commands + body).any { "return run" in it || it.startsWith("debug ") || it.startsWith("datapack ") })
+        }
+        check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
+        val main = consume("import fixture.fields:*;\n$mainSource", output)
+        assertEquals(0, Project.errorCount)
+        check(main)
+    }
+
     private fun write(source: String, output: Path) {
         Project.config.includes = arrayListOf()
         MCFPPStringTest.readFromString(source.trimIndent(), targetPath = output.toString(), version = "26.3")
