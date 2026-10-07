@@ -1,6 +1,6 @@
-# 下一阶段：统一父类型原生操作符解析（阶段142）
+# 下一阶段：移除 BossBar 的旧宿主格式化入口（阶段143）
 
-阶段87普通值位置type拒绝规则继续生效；阶段129已移除语言层 `T!` 后缀。阶段88–141完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time及实体命令路径的限定迁移；当前库格式MCFL70，旧 `CommandReturn` 类型/注解与旧void wrapper均为0。whole17仍未完成。
+阶段87普通值位置type拒绝规则继续生效；阶段129已移除语言层 `T!` 后缀。阶段88–142完成受测集合、数值、文本转换/拼接、predicate、StdCommands void/命令结果、Datapack/Debug、System print/诊断、delegated-int模板、Time、实体命令路径及受测nominal operator lookup；当前库格式MCFL70，旧 `CommandReturn` 类型/注解与旧void wrapper均为0。whole17仍未完成。
 
 阶段90已验证13个方法：Dictionary 4、Map 6、ImmutableList 3，复用既有context/API，不新增context入口或扩展operator。保持字典已知key限制，Map允许dynamic key，readonly list允许dynamic needle。fixture与旧/未知缓存格式回归跨轮各自通过，最终fresh fixture单项复查source/fresh磁盘结果及frame0。MCFL22重建成功，具体轮次见verification.md。
 
@@ -212,9 +212,13 @@ stdlib SUCCESSFUL8s/Project0/0。joint1失败23s（Executors46/47正常）：pro
 
 首轮stdlib失败1m2s、Project6/0，六个legacy override目标缺失（AreaData、ItemPredicateData、SlotData、SlotWithWildcardData、Team、BossBar），joint未启动。收窄到ResourceID并恢复DataObject后，stdlib2 SUCCESSFUL13s/Project0/0；void与Cache联合SUCCESSFUL34s、Executors50/51正常。Cache XML `2026-10-07T14:16:26.397Z`、LibFieldAccess XML `14:16:28.643Z`均1/0/0/0；source/fresh 0/9118、0/9119。MCFL69→70。三bin481736 bytes、header `4c46434d46000000`，SHA256 `203E4DA5F3DF003D1F6589CCC0A2DC9C5F969A2E7B849ACB4C42D7A95EE2833C`。无world/frame0/fullcheck，详见verification.md。
 
-### 阶段 142 计划：统一父类型原生操作符解析
+### 阶段 142：统一父类型原生操作符解析（已限定验证）
 
-操作符候选父类型遍历使用`CompoundData.parent`链，不使用`scope.parent`。`ParameterMatcher.selectOperatorTypes`严格匹配实参子类型到形参及最佳精确候选，不引入数值提升；修复`SimpleScope`过早返回。将`Var`的四个操作符查询接入该父类型解析。用阶段140并集fixture直接验证`left | right`，并在既有TypeKernel类增加两项必要模型测试，检查方向、无数值提升、精确/歧义/最近候选行为。预计不改ABI/schema，按限定用例验证；尚未实施或验证。
+操作符候选父类型遍历使用`CompoundData.parent`链，不使用`scope.parent`；按Function/node identity去重并在最近可用父层处理歧义。`ParameterMatcher.selectOperatorTypes`严格匹配实参子类型到形参并选择最佳精确候选，不引入数值提升；`SimpleScope`遍历不再过早返回。`Var`四个查询接入此解析。阶段140 fixture验证`left | right`，TypeKernel两项模型测试验证方向、无数值提升、最近父项和歧义；三项同轮通过。source/fresh磁盘保留`4/9`并集/copy、后续值`91/92`、返回7及frame0；项目计数0/9118与0/9119。MCFL70不变；未覆盖所有后端操作符或world行为。
+
+### 阶段 143 计划：移除 BossBar 的旧宿主格式化入口
+
+仅移除`BossBar.mcfpp`中继承`ResourceID`后多余的inline `toCommandPart`宿主入口；BossBar原生命令实现已读取真实DTO `id`，继承路径可直接使用ResourceID格式化。用现有BossBar跨库fixture回归；不扩展到不继承ResourceID的Team及Area、Slot、ItemPredicate等仍依赖`DataObjectData` base入口的类型，不新增注册表或formatter框架。该入口移除会改变库签名，计划MCFL70→71并重建标准库；尚未实施或验证。
 
 先阅读 [最新续接记录](./session-continuation-2026-10-04.md) 与 [迁移状态](./migration.md)，原始用户约束保留在 [上一会话交接](./session-handoff-2026-10-04.md)。
 上一会话的 140 项测试是此次基线；最新完整结果以 [验证记录](./verification.md) 为准。

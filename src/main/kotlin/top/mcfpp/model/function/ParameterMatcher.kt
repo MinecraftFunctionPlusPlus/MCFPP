@@ -97,6 +97,22 @@ object ParameterMatcher {
         }
     }
 
+    fun selectOperatorTypes(candidates: List<Pair<MCFPPType?, Function>>, actual: MCFPPType?): TypeSelection {
+        val matches = candidates.mapNotNull { (formal, function) ->
+            when {
+                formal == actual -> Match(function, listOf(0), listOfNotNull(formal), 0)
+                formal != null && actual != null && actual.isSubOf(formal) -> Match(function, listOf(1), listOf(formal), 0)
+                else -> null
+            }
+        }
+        val selected = best(matches)
+        return when (selected.size) {
+            0 -> TypeSelection.Missing
+            1 -> TypeSelection.Selected(selected.single().function)
+            else -> TypeSelection.Ambiguous(selected.map { it.function })
+        }
+    }
+
     /** Preliminary type-only binding; value requirements remain the responsibility of the IR boundary. */
     fun selectTypes(functions: List<Function>, key: String, normal: List<MCFPPType>): TypeSelection {
         val matches = functions.mapNotNull { function ->

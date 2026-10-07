@@ -11,6 +11,7 @@ import top.mcfpp.model.WithDocument
 import top.mcfpp.model.annotation.Annotation
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.NativeFunction
+import top.mcfpp.model.function.ParameterMatcher
 import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.model.property.Property
 import top.mcfpp.model.scope.CompoundDataScope
@@ -295,6 +296,26 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
         val (namespace, identifier) = typeName.splitNamespaceID()
         if (namespace == null) return null
         return GlobalScope.getUnsolvedImportNamespace(namespace)?.scope?.getTemplate(identifier)?.getType()
+    }
+
+    fun getOperator(identifier: String, type: MCFPPType?): Function? {
+        val visited = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<CompoundData, Boolean>())
+        var level = listOf(this)
+        while (level.isNotEmpty()) {
+            val nodes = level.filter { visited.add(it) }
+            val functions = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Function, Boolean>())
+            val candidates = nodes.flatMap { it.scope.operators[identifier]?.map { entry -> entry.key to entry.value } ?: emptyList() }
+                .filter { functions.add(it.second) }
+            when (val selected = ParameterMatcher.selectOperatorTypes(candidates, type)) {
+                is ParameterMatcher.TypeSelection.Selected -> return selected.function
+                is ParameterMatcher.TypeSelection.Ambiguous -> {
+                    LogProcessor.error("Ambiguous operator '$identifier'")
+                    return UnknownFunction(identifier)
+                }
+                ParameterMatcher.TypeSelection.Missing -> level = nodes.flatMap { it.parent }
+            }
+        }
+        return null
     }
 
     private fun addMNIMethod(method: Method, mniRegister: MNIFunction, tag: Array<String>? = null){

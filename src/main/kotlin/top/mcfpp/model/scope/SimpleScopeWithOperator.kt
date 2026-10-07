@@ -2,7 +2,10 @@ package top.mcfpp.model.scope
 
 import org.jetbrains.annotations.Nullable
 import top.mcfpp.model.function.Function
+import top.mcfpp.model.function.ParameterMatcher
+import top.mcfpp.model.function.UnknownFunction
 import top.mcfpp.type.MCFPPType
+import top.mcfpp.util.LogProcessor
 
 interface SimpleScopeWithOperator: IScopeWithOperator {
 
@@ -28,20 +31,14 @@ interface SimpleScopeWithOperator: IScopeWithOperator {
 
     @Nullable
     override fun getOperator(identifier: String, type: MCFPPType?): Function? {
-        //注意重载
-        operators[identifier]?.forEach { function ->
-            if(function.key == type){
-                return function.value
+        return when (val selection = ParameterMatcher.selectOperatorTypes(operators[identifier]?.map { it.key to it.value } ?: emptyList(), type)) {
+            is ParameterMatcher.TypeSelection.Selected -> selection.function
+            is ParameterMatcher.TypeSelection.Ambiguous -> {
+                LogProcessor.error("Ambiguous operator '$identifier'")
+                UnknownFunction(identifier)
             }
+            ParameterMatcher.TypeSelection.Missing -> null
         }
-        operators[identifier]?.forEach { function ->
-            return if(function.key != null && type != null && function.key!!.isSubOf(type)){
-                function.value
-            }else{
-                null
-            }
-        }
-        return null
     }
 
     override fun addOperator(identifier: String, type: MCFPPType?, operator: Function, force: Boolean): Boolean {

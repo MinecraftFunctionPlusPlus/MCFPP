@@ -205,6 +205,50 @@ class TypeKernelTest {
         }
     }
 
+    @Test fun operatorLookupUsesSubtypeDirectionWithoutNumericPromotion() {
+        val parent = DataTemplate("Parent", "operator.test")
+        val child = DataTemplate("Child", "operator.test").apply { extends(parent) }
+        val formal = parent.getType()
+        val actual = child.getType()
+        val inherited = overload(formal)
+        val unrelated = overload(MCFPPBaseType.String)
+        val exact = overload(actual)
+        assertSame(inherited, assertIs<ParameterMatcher.TypeSelection.Selected>(ParameterMatcher.selectOperatorTypes(
+            listOf(MCFPPBaseType.String to unrelated, formal to inherited), actual)).function)
+        assertSame(exact, assertIs<ParameterMatcher.TypeSelection.Selected>(ParameterMatcher.selectOperatorTypes(
+            listOf(formal to inherited, actual to exact), actual)).function)
+        assertEquals(ParameterMatcher.TypeSelection.Missing, ParameterMatcher.selectOperatorTypes(
+            listOf(MCFPPBaseType.Float to overload(MCFPPBaseType.Float)), MCFPPBaseType.Int))
+        parent.scope.addOperator("|", formal, inherited, true)
+        assertSame(inherited, parent.scope.getOperator("|", actual))
+        assertNull(parent.scope.getOperator("|", null))
+    }
+
+    @Test fun nominalOperatorLookupHandlesNearestParentsAndAmbiguity() {
+        val base = DataTemplate("Base", "operator.nominal")
+        val left = DataTemplate("Left", "operator.nominal").apply { extends(base) }
+        val right = DataTemplate("Right", "operator.nominal").apply { extends(base) }
+        val diamond = DataTemplate("Diamond", "operator.nominal").apply { extends(left); extends(right) }
+        val shared = overload(base.getType())
+        left.scope.addOperator("|", base.getType(), shared, true)
+        right.scope.addOperator("|", base.getType(), shared, true)
+        assertSame(shared, diamond.getOperator("|", diamond.getType()))
+
+        val farther = overload(diamond.getType())
+        base.scope.addOperator("|", diamond.getType(), farther, true)
+        assertSame(shared, diamond.getOperator("|", diamond.getType()))
+        left.scope.addOperator("&", left.getType(), overload(left.getType()), true)
+        right.scope.addOperator("&", right.getType(), overload(right.getType()), true)
+        val errors = Project.errorCount
+        assertIs<UnknownFunction>(diamond.getOperator("&", diamond.getType()))
+        assertEquals(errors + 1, Project.errorCount)
+
+        val lexical = DataTemplate("Lexical", "operator.nominal")
+        lexical.scope.addOperator("+", diamond.getType(), farther, true)
+        diamond.scope.parent.add(lexical.scope)
+        assertNull(diamond.getOperator("+", diamond.getType()))
+    }
+
     @Test fun overloadsPreferExactThenPromotionThenObjectThenAny() {
         val int = overload(MCFPPBaseType.Int)
         val float = overload(MCFPPBaseType.Float)

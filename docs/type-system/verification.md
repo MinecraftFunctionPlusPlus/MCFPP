@@ -1,8 +1,24 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段141，MCFL70；旧CommandReturn链引用/注解与旧void wrapper均为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段142，MCFL70；旧CommandReturn链引用/注解与旧void wrapper均为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
 
-## 当前阶段141：退役ResourceID旧宿主formatter入口（已限定验证）
+## 当前阶段142：统一父类型原生操作符解析（已限定验证）
+
+操作符候选沿`CompoundData.parent`链查找，不使用`scope.parent`；按Function/node identity去重，并在最近可用父层选择候选或报告歧义。`ParameterMatcher.selectOperatorTypes`只接受实参子类型到形参的匹配并选择最佳精确候选，不引入数值提升；`SimpleScope`不再过早返回，`Var`四个查询接入统一解析。无ABI、schema或MCFL变化。
+
+阶段140并集fixture直接检查`left | right`；source/fresh磁盘结果均为4/9，copy保留4/9且原`left`/`right`后续写入91/92，返回7与frame0断言通过；source/fresh Project为0/9118、0/9119。另两项TypeKernel测试验证子类型方向/禁止数值提升及最近父项/歧义处理。三项联合native exit0、SUCCESSFUL39s，Executors52/53正常结束；LibFieldAccess XML `2026-10-07T14:37:07.611Z` 1/0/0/0，TypeKernel XML `14:37:14.018Z` 2/0/0/0，其中歧义用例记录预期`Ambiguous operator '&'`诊断。日志`mcfpp-nominal-operator-lookup-joint.log`。未验证所有后端operator、全量测试或Minecraft world行为。
+
+| 自评维度 | 分数 | 本阶段证据与边界 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 区分parent查找与scope，记录了预期歧义诊断。 |
+| 完整性 | 3/5 | 四处查询已接入；用例覆盖并集调用与两项模型规则，未逐项覆盖一元运算；whole17仍未完成。 |
+| 清晰性 | 4/5 | 说明候选方向、最近父层、歧义和无数值提升。 |
+| 可操作性 | 4/5 | 给出三项测试、日志、worker与XML结果。 |
+| 简洁性 | 4/5 | 只报告本阶段实现和验证范围。 |
+
+平均3.8/5；whole17仍ACTIVE未完成。
+
+## 历史阶段141：退役ResourceID旧宿主formatter入口（已限定验证）
 
 仅删除ResourceID旧formatter签名和`ResourceIDData`实例From；canonical ResourceID `id`进入内部formatter。保留`DataObjectData`全部base/default/override流程，既有Area、ItemPredicate、Slot、Team、BossBar override仍依赖该入口，本阶段不代表这些DTO路径已迁移。
 

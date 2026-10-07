@@ -5187,7 +5187,7 @@ class LibFieldAccessTest {
                 func observe(first as int,second as int)->int {
                     var left=CountMatchPart(); var right=CountMatchPart();
                     left.count=first; right.count=second;
-                    var joined=(left as ItemPredicatePart)|(right as ItemPredicatePart); var copy=joined;
+                    var joined=left|right; var copy=joined;
                     left.count=91; right.count=92;
                     /data modify storage fixture:observed joinedFirst set from storage mcfpp:system stack_frame[0].joined.predicate1.count
                     /data modify storage fixture:observed joinedSecond set from storage mcfpp:system stack_frame[0].joined.predicate2.count
