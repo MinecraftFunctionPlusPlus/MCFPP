@@ -1,8 +1,26 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段136，MCFL65；旧CommandReturn链引用/注解与旧void wrapper均为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段137，MCFL66；旧CommandReturn链引用/注解与旧void wrapper均为0，whole17仍ACTIVE未完成。语言不提供 `T!` 后缀；`type` 仅能作为泛型参数，普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`const`只限制重赋；readonly泛型完整快照及非type编译器专用内部快照保留。`typealias`与内部`TypeVar`解析保留。
 
-## 当前阶段 136：退役范围迭代的宿主返回接口（已限定验证）
+## 当前阶段137：迁移Random整数结果入口（已限定验证）
+
+`RandomData`与`RandomObjectData`的四个`rand`/`roll`入口使用单context并返回未知int score；receiver入口读取真实`id`，静态入口无receiver。完整已知Int范围先校验，四个结果经表达式临时值两段复制到独立局部。未模拟RNG或world。
+
+标准库首轮编译失败12s（`command.build(sequence)`）；修正为`sequence.toCommandPart`后stdlib2成功15s、Project0/0。joint1失败24s，Executors37/38正常结束；Cache XML `2026-10-07T12:36:57.924Z` 1/0/0/0，Random XML `12:37:00.975Z` 1/1/0/0，source0/9118，fixture绑定断言失败。joint2失败18s、Executor39正常结束，Random XML `12:43:03.779Z` 1/1/0/0、source0/9118，直接复制断言失败。
+
+joint3仅复查Random方法，native exit0/SUCCESSFUL22s、Executor40正常结束；XML `2026-10-07T12:47:48.366Z` 1/0/0/0，source/fresh 0/9118与0/9119，negative 2/9119及6/9119。三项guard和三项未发布结果诊断均命中。Cache仅joint1通过；final joint3只运行Random方法。唯一日志前缀`mcfpp-native-random-integer-results-`。三份bin一致：MCFL66、488122 bytes，header `4c46434d42000000`，SHA256 `AB24128672583831C37EF884F5FB1DCCD93A58825E856901C72D9EE06611FAA0`。范围不包含RNG执行、world、whole17。
+
+| 自评维度 | 分数 | 本阶段证据与边界 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 分开记录三轮fixture结果、Cache仅首轮通过及最终单项复查。 |
+| 完整性 | 3/5 | 覆盖source/fresh和负例；whole17仍未完成。 |
+| 清晰性 | 4/5 | 说明未知int结果的表达式临时值复制路径。 |
+| 可操作性 | 4/5 | 保留日志前缀、worker、XML、Project与bin身份。 |
+| 简洁性 | 4/5 | 限于受测入口和明确未覆盖边界。 |
+
+平均3.8/5；whole17仍未完成。
+
+## 历史阶段 136：退役范围迭代的宿主返回接口（已限定验证）
 
 删除`RangeVarData.iterator`公共MNI及`Range`注入；legacy foreach读取完整范围端点，仅对完整Int已知端点在编译器内部构造`ConcreteIterator`，其他iterable沿用旧路径。三条负例直接检查两端存在、32-bit Int及runtime typedIR证明。
 

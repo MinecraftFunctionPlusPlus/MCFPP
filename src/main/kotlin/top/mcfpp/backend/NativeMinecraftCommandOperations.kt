@@ -6,6 +6,8 @@ import top.mcfpp.command.Command
 import top.mcfpp.command.Commands
 import top.mcfpp.command.FloatProviders
 import top.mcfpp.core.lang.MCFloat
+import top.mcfpp.core.lang.MCInt
+import top.mcfpp.core.lang.RangeVarConcrete
 import top.mcfpp.core.lang.MCFPPValue
 import top.mcfpp.core.lang.PropertyVar
 import top.mcfpp.core.lang.Pos2Var
@@ -25,6 +27,7 @@ import top.mcfpp.nbt.tags.primitive.StringTag
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.util.TempPool
 import top.mcfpp.type.MCFPPBaseType
+import top.mcfpp.lib.SbObject
 
 internal fun captureCommandResult(context: NativeCallContext, build: (List<Var<*>>) -> Command) = context.withArguments { args ->
     if (!FloatProviders.enabled && args.any { it is MCFloat && it !is MCFPPValue<*> }) {
@@ -303,6 +306,28 @@ object NativeMinecraftCommandOperations {
             if (operation == "list") Command.buildAll("tag", receiver, operation)
             else Command.buildAll("tag", receiver, operation, args[0])
         }
+    }
+
+    fun randomValue(context: NativeCallContext) = randomNumber(context, "value")
+    fun randomRoll(context: NativeCallContext) = randomNumber(context, "roll")
+    fun randomSequenceValue(context: NativeCallContext) = context.withAdapters { receiver, _ ->
+        randomNumber(context, "value", templateField(receiver as DataTemplateObject, "id"))
+    }
+    fun randomSequenceRoll(context: NativeCallContext) = context.withAdapters { receiver, _ ->
+        randomNumber(context, "roll", templateField(receiver as DataTemplateObject, "id"))
+    }
+
+    private fun randomNumber(context: NativeCallContext, mode: String, sequence: Var<*>? = null) = context.withArguments { args ->
+        val range = context.argumentSnapshot(0)?.let { StorageAccess.restore(args[0].type, it, args[0].identifier) } as? RangeVarConcrete
+        if (range == null || range.value.first !is Int || range.value.second !is Int) {
+            LogProcessor.error("Random commands require a complete range with integer endpoints")
+            return@withArguments
+        }
+        val result = MCInt().apply { sbObject = SbObject.MCFPP_TEMP; hasAssigned = true; isDynamic = true; isTemp = true }
+        val command = Command.buildAll("execute store result score", result.name, result.sbObject, "run random", mode, range)
+        if (sequence != null) command.build(sequence.toCommandPart())
+        Function.addCommands(command.buildMacroFunction())
+        context.publishResult(result)
     }
 
     fun randomReset(context: NativeCallContext) = context.withAdapters { receiver, args ->

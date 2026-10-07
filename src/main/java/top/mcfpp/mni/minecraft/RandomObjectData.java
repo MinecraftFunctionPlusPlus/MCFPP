@@ -1,24 +1,18 @@
 package top.mcfpp.mni.minecraft;
 
 import top.mcfpp.annotations.MNIFunction;
-import top.mcfpp.command.Command;
 import top.mcfpp.backend.NativeMinecraftCommandOperations;
 import top.mcfpp.mni.NativeCallContext;
-import top.mcfpp.core.lang.MCFPPValue;
-import top.mcfpp.core.lang.MCInt;
-import top.mcfpp.util.ValueWrapper;
 
 public class RandomObjectData {
     @MNIFunction(normalParams = "range",  returnType = "int")
-    public static void rand(MCFPPValue<Integer> range, ValueWrapper<MCInt> re){
-        var i = re.get();
-        Command.Companion.buildAll("execute store result scores",i.getName(), i.getSbObject(), "run random value", range);
+    public static void rand(NativeCallContext context){
+        NativeMinecraftCommandOperations.INSTANCE.randomValue(context);
     }
 
     @MNIFunction(normalParams = "range", returnType = "int")
-    public static void roll(MCFPPValue<Integer> range, ValueWrapper<MCInt> re){
-        var i = re.get();
-        Command.Companion.buildAll("execute store result scores",i.getName(), i.getSbObject(), "run random roll", range);
+    public static void roll(NativeCallContext context){
+        NativeMinecraftCommandOperations.INSTANCE.randomRoll(context);
     }
 
     @MNIFunction(returnType = "mcfpp.minecraft.std:CommandResult")

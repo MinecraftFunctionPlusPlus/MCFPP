@@ -3734,6 +3734,8 @@ class LibFieldAccessTest {
                     var own=sequence.reset<true,false>(seed);
                     var all=Random.reset<false,true>(seed); var cleared=Random.resetAll();
                     var ownValue=own.result; var allSuccess=all.success; var clearedValue=cleared.result;
+                    var staticValue=Random.rand(1 .. 6); var staticRoll=Random.roll(2 .. 7);
+                    var sequenceValue=sequence.rand(3 .. 8); var sequenceRoll=sequence.roll(4 .. 9);
                     return 7;
                 }
             }
@@ -3756,6 +3758,15 @@ class LibFieldAccessTest {
                 assertNull(ValueSnapshot.of(value))
             }
             for (name in listOf("ownValue", "allSuccess", "clearedValue")) assertNull(ValueSnapshot.of(assertNotNull(observe.scope.getVar(name))))
+            val numbers = listOf("staticValue", "staticRoll", "sequenceValue", "sequenceRoll").map { name ->
+                val value = assertIs<MCInt>(observe.scope.getVar(name))
+                assertEquals(top.mcfpp.type.MCFPPBaseType.Int.typeId, value.type.typeId)
+                assertTrue(value.hasAssigned)
+                assertNull(ValueSnapshot.of(value))
+                assertNotNull(value.symbol)
+                value
+            }
+            assertEquals(4, numbers.map { it.symbol!!.id }.toSet().size)
             val directory = output.resolve("consumer")
             DatapackCreator.createDatapack(directory.toString())
             val data = directory.resolve(Project.config.name).resolve("data")
@@ -3778,7 +3789,8 @@ class LibFieldAccessTest {
             val direct = commands.mapIndexedNotNull { index, command -> stores.matchEntire(command)?.let { index to it } }
             assertEquals(1, direct.size)
             assertEquals("random reset *", direct.single().second.groupValues[5])
-            val calls = commands.mapIndexedNotNull { index, command -> Regex("function (mcfpp:dynamic/\\S+) with storage (\\S+) (\\S+)").matchEntire(command)?.let { index to it } }
+            val allCalls = commands.mapIndexedNotNull { index, command -> Regex("function (mcfpp:dynamic/\\S+) with storage (\\S+) (\\S+)").matchEntire(command)?.let { index to it } }
+            val calls = allCalls.filter { (_, call) -> functions.getValue(call.groupValues[1]).any { stores.matches(it.removePrefix("\$")) } }
             assertEquals(2, calls.size)
             val domains = mutableSetOf<String>()
             val macroCaptures = calls.map { (index, call) ->
@@ -3818,6 +3830,32 @@ class LibFieldAccessTest {
             }
             assertEquals(3, roots.size)
             assertFalse(commands.any { "return run" in it || it.startsWith("random reset ") })
+            val scores = Regex("execute store result score (\\S+) (\\S+) run random (value|roll) (\\S+)(?: (\\S+))?")
+            val directNumbers = commands.mapNotNull(scores::matchEntire)
+            assertEquals(listOf("value" to "1..6", "roll" to "2..7"), directNumbers.map { it.groupValues[3] to it.groupValues[4] })
+            assertTrue(directNumbers.all { it.groupValues[5].isEmpty() })
+            val numberCalls = allCalls.filter { (_, call) -> functions.getValue(call.groupValues[1]).any { scores.matches(it.removePrefix("\$")) } }
+            assertEquals(2, numberCalls.size)
+            val outputs = directNumbers.map { it.groupValues[1] to it.groupValues[2] }.toMutableList()
+            for ((entry, expected) in numberCalls.zip(listOf("value" to "3..8", "roll" to "4..9"))) {
+                val (index, call) = entry
+                assertEquals(1, commands.count { it == commands[index] })
+                val body = functions.getValue(call.groupValues[1])
+                val capture = assertNotNull(body.singleOrNull()?.removePrefix("\$")?.let(scores::matchEntire))
+                assertEquals(expected, capture.groupValues[3] to capture.groupValues[4])
+                assertEquals("\$(arg_0)", capture.groupValues[5])
+                outputs.add(capture.groupValues[1] to capture.groupValues[2])
+                assertEquals(1, commands.take(index).count { it == "data modify storage ${call.groupValues[2]} ${call.groupValues[3]}.arg_0 set from $idPath" })
+                assertFalse(body.any { "return run" in it || it.removePrefix("\$").startsWith("random ") })
+            }
+            assertEquals(4, outputs.toSet().size)
+            for ((value, outputScore) in numbers.zip(outputs)) {
+                val bridgePattern = Regex("scoreboard players operation (\\S+) (\\S+) = ${Regex.escape(outputScore.first)} ${Regex.escape(outputScore.second)}")
+                val bridge = commands.withIndex().mapNotNull { entry -> bridgePattern.matchEntire(entry.value)?.let { entry.index to it } }.single()
+                val copy = "scoreboard players operation ${value.name} ${value.sbObject} = ${bridge.second.groupValues[1]} ${bridge.second.groupValues[2]}"
+                val copied = commands.withIndex().single { it.value == copy }
+                assertTrue(bridge.first < copied.index, "RNG result must cross the expression temporary before assigning ${value.identifier}")
+            }
         }
         check(GlobalScope.localNamespaces.getValue("fixture.fields").scope.functions.getValue("main").single())
         val main = consume("import fixture.fields:*;\n$mainSource", output)
@@ -3832,6 +3870,15 @@ class LibFieldAccessTest {
         assertEquals(2, Project.errorCount)
         val reject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
         assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("random reset ") || "set value {}" in it.toString() })
+        val badRanges = consume("""
+            import mcfpp.minecraft:*;
+            func reject(bounds as range){ Random.rand(1 ..); Random.roll(1.0 .. 2.0); Random.rand(bounds); }
+            func main(){}
+        """, output)
+        assertEquals(6, Project.errorCount)
+        val rangeReject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
+        assertTrue(rangeReject.bodyCompiled)
+        assertFalse((rangeReject.commands + badRanges.commands).any { "run random" in it.toString() || "execute store result score" in it.toString() })
     }
 
     @Test
