@@ -178,20 +178,6 @@ public class EntityVarData {
     }
     //endregion
 
-    //region team
-    @MNIFunction(normalParams = "Team",caller = "entity", returnType = "CommandReturn")
-    public static void joinTeam(DataTemplateObject team, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
-        var command = Command.Companion.buildAll("team join", caller, team);
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-
-    @MNIFunction(normalParams = "Team",caller = "entity", returnType = "CommandReturn")
-    public static void leaveTeam(DataTemplateObject team, EntityVar caller, ValueWrapper<CommandReturn> returnValue){
-        var command = Command.Companion.buildAll("team leave", caller, team);
-        Commands.processMacroCommandReturn(returnValue, command);
-    }
-    //endregion
-
     //region tp
     @MNIFunction(normalParams = "pos3", returnType = "CommandReturn")
     public static void tp(Pos3Var pos, EntityVar caller, ValueWrapper<CommandReturn> returnValue){

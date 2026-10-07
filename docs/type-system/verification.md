@@ -1,8 +1,26 @@
 # 当前阶段验证记录
 
-最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段118，MCFL48；Std外剩余4个Java类含49个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
+最新状态日期：2026-10-07（Asia/Shanghai）。当前阶段119，MCFL49；Std外剩余4个Java类含47个CommandReturn注解与7个旧void wrapper，whole17仍ACTIVE未完成。`type` 仅能作为泛型参数；普通 typed/inferred/const 变量、data/object 字段、普通参数与返回值，以及擦除值和集合中的 `TypeValue` 均拒绝。`typealias`、内部 `TypeVar` 解析和现有 readonly 泛型绑定保留；普通值位置一律拒绝。
 
-## 当前阶段 118：EntityTag 命令结果（已限定验证）
+## 当前阶段 119：EntityTeam 命令结果（已限定验证）
+
+`EntityTeamData.joinTeam(Team)`与`leaveTeam()`接入单context qualified `CommandResult`。join先读取真实`Team.id`再传`@a`，leave移除旧伪Team参数。93行source/fresh fixture验证canonical readonly/unknown模型、整块普通参数副本至id宏slot/单次调用、两个结果root/双store/一次初始化及DTO负例。
+
+stdlib SUCCESSFUL in11s，Project0/0。首轮joint worker40正常、FAILED19s；LibFieldAccess XML `2026-10-07T04:24:52.599Z` 1/1/0/0，source Project0/9118后严格Team.id参数准备断言失败，未到fresh/negative；Cache XML `04:24:51.843Z` 1/0/0/0。仅fixture修为检查真实参数副本来源后，final2 worker41正常、SUCCESSFUL in21s，XML `2026-10-07T04:28:36.594Z` 1/0/0/0，source/fresh Project0/9118与0/9119，negative2/9119。MCFL49三份资源449537 bytes，header `4c46434d31000000`，SHA256 `4ED10AC79FF327A131A85E1FBDC5205A0807E0BBD3E83A38373331B536EEC2B1`。不涉及world执行或frame0。
+
+| 维度 | 评分 | 证据与改进 |
+| --- | --- | --- |
+| 准确性 | 4/5 | 区分首轮参数断言失败与fixture修正后单项复查；Cache仅首轮验证。 |
+| 完整性 | 3/5 | 仅两个Team命令入口受测，其他入口及whole17未完成。 |
+| 清晰性 | 4/5 | 列明参数来源、导出合同和未覆盖的world执行。 |
+| 可执行性 | 4/5 | 下一阶段限定为两个Entity effect清除入口及selector检查。 |
+| 简洁性 | 4/5 | 保留足以复核的日志时间和边界，不扩写项目历史。 |
+
+11个提交路径含6项源码/测试、bin及四份文档。MCFL49的Cache仅首轮通过；最终只复查fixture，无额外stdlib、fullcheck或server验证。
+
+平均3.8/5；whole17仍未完成。
+
+## 历史必要检查：阶段 118 EntityTag 命令结果（已限定验证）
 
 `EntityVarData.addTag`、`removeTag`、`listTag`三个入口迁入`EntityTagData`，使用单context qualified `CommandResult`。grammar只新增`ENTITY`命名空间片段；修正SelectorData的27个旧ABI注解caller/return为entity及6个qualified resource参数，Selector公共父模板接入已加载EntityData。MNI仅在显式qualified解析失败后查询已加载canonical模板。bare Selector保存/恢复immutable完整快照，但不代表predicate selector等形式均支持。
 

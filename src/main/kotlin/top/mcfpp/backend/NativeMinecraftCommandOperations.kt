@@ -34,6 +34,21 @@ internal fun captureCommandResult(context: NativeCallContext, build: (List<Var<*
 }
 
 object NativeMinecraftCommandOperations {
+    fun entityJoinTeam(context: NativeCallContext) = context.withAdapters { receiver, args ->
+        if (receiver !is SelectorVar) {
+            LogProcessor.error("Entity team commands require a selector receiver")
+            return@withAdapters
+        }
+        captureCommandResult(context) { Command.buildAll("team join", templateField(args[0] as DataTemplateObject, "id"), receiver) }
+    }
+    fun entityLeaveTeam(context: NativeCallContext) = context.withAdapters { receiver, _ ->
+        if (receiver !is SelectorVar) {
+            LogProcessor.error("Entity team commands require a selector receiver")
+            return@withAdapters
+        }
+        captureCommandResult(context) { Command.buildAll("team leave", receiver) }
+    }
+
     fun entityAddTag(context: NativeCallContext) = entityTag(context, "add")
     fun entityRemoveTag(context: NativeCallContext) = entityTag(context, "remove")
     fun entityListTag(context: NativeCallContext) = entityTag(context, "list")
