@@ -29,11 +29,15 @@ class TemplateConstInitializationTest {
             functions[function.namespaceID.toString()] = function.commands.analyzeAll()
             function.compiledFunctions.values.forEach(::collect)
         }
-        GlobalScope.localNamespaces.values.forEach { namespace ->
+        (GlobalScope.localNamespaces.values + GlobalScope.libNamespaces.values + GlobalScope.stdNamespaces.values).forEach { namespace ->
             namespace.scope.functions.values.flatten().forEach(::collect)
             (namespace.scope.template.values + namespace.scope.objects.filterIsInstance<DataTemplate>()).forEach { template ->
                 template.constructors.forEach(::collect)
                 template.scope.forEachFunction(::collect)
+                (template as? top.mcfpp.model.compound.GenericDataTemplate)?.compiledTemplates?.values?.forEach { actual ->
+                    actual.constructors.forEach(::collect)
+                    actual.scope.forEachFunction(::collect)
+                }
             }
         }
         functions.putAll(Project.macroFunction.mapKeys { "mcfpp:dynamic/${it.key}" }.mapValues { listOf(it.value) })

@@ -15,9 +15,9 @@ import top.mcfpp.util.StringHelper.splitNamespaceID
 
 /** Declaration variance and explicit nominal companion pairing share declaration identities. */
 internal object GenericDeclarationContract {
-    fun checkVariance(template: GenericDataTemplate) {
+    fun checkVariance(template: GenericDataTemplate, inferred: Map<String, String> = emptyMap(), inferredOnly: Boolean = false) {
         val parameters = template.readOnlyParams.associateBy { it.identifier }
-        parameters.values.filter { it.variance != DeclarationVariance.INVARIANT && it.type != MCFPPConcreteType.Type }
+        parameters.values.filter { !inferredOnly && it.variance != DeclarationVariance.INVARIANT && it.type != MCFPPConcreteType.Type }
             .forEach { LogProcessor.error("Variance requires a type parameter: ${it.identifier}") }
 
         fun occurrence(name: String, position: Int, shadowed: Set<String>) {
@@ -68,7 +68,7 @@ internal object GenericDeclarationContract {
             params.normalParams().parameterList()?.parameter()?.forEach { visit(it.type(), -1, shadowed) }
             result?.type()?.let { visit(it, 1, shadowed) }
         }
-        for (parent in template.parentID) {
+        for (parent in if (inferredOnly) emptyList() else template.parentID) {
             val parser = mcfppParser(CommonTokenStream(mcfppLexer(CharStreams.fromString(parent))))
             visit(parser.type(), 1, emptySet())
         }
@@ -78,8 +78,12 @@ internal object GenericDeclarationContract {
                 val accessor = field.accessor()
                 val position = if (field.CONST() != null || accessor != null && accessor.setter() == null) 1
                     else if (accessor != null && accessor.getter() == null) -1 else 0
-                field.templateType()?.let { visit(it, position, emptySet()) }
+                if (!inferredOnly) field.templateType()?.let { visit(it, position, emptySet()) }
+                if (field.templateType() == null) inferred[field.Identifier().text]?.let { text ->
+                    visit(mcfppParser(CommonTokenStream(mcfppLexer(CharStreams.fromString(text)))).type(), position, emptySet())
+                }
             }
+            if (inferredOnly) continue
             declaration.templateFunctionDeclaration()?.functionDeclarationPart()?.let { function ->
                 signature(function.functionParams(), function.functionReturnType())
             }

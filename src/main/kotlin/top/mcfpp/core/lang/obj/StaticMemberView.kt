@@ -39,6 +39,7 @@ class StaticMemberView(type: CanSelectMember, identifier: String = TempPool.getV
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
         val objectOwner = (value as? MCFPPType)?.objectData as? ObjectCompoundData
+        (objectOwner as? DataTemplate)?.let(top.mcfpp.Project::prepareObjectInitializer)
         if (objectOwner is DataTemplate) {
             val template = objectOwner
             if (template.deferredFields.containsKey(key)) {
@@ -64,6 +65,7 @@ class StaticMemberView(type: CanSelectMember, identifier: String = TempPool.getV
         normalArgs: List<Var<*>>,
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
+        ((value as? MCFPPType)?.objectData as? DataTemplate)?.let(top.mcfpp.Project::prepareObjectInitializer)
         return value.getMemberFunction(key, readOnlyArgs, normalArgs, accessModifier)
     }
 

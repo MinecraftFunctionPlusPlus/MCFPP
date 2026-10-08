@@ -11,11 +11,13 @@ data class FunctionParamInfo(
     var isStatic: Boolean = false,
     var hasDefault: Boolean = false,
     var isReadOnly: Boolean = false,
-    var defaultVar: Var<*>? = null
+    var defaultVar: Var<*>? = null,
+    var defaultContext: top.mcfpp.antlr.mcfppParser.ValueContext? = null
 ): ModelInfo<FunctionParam>{
     override fun get(): FunctionParam {
         return FunctionParam(type, identifier, AbstractFunctionInfo.currFunction!!, isStatic, hasDefault, isReadOnly).apply {
             this.defaultVar = this@FunctionParamInfo.defaultVar
+            this.defaultContext = this@FunctionParamInfo.defaultContext
         }
     }
 
@@ -27,7 +29,8 @@ data class FunctionParamInfo(
                 param.isStatic,
                 param.hasDefault,
                 param.isReadOnly,
-                param.defaultVar
+                param.defaultVar,
+                param.defaultContext
             )
         }
     }
@@ -36,10 +39,11 @@ data class FunctionParamInfo(
 data class DataTemplateParamInfo(
     var identifier: String,
     var type: MCFPPType,
+    val typeIdentifier: String,
     val variance: top.mcfpp.model.compound.DeclarationVariance = top.mcfpp.model.compound.DeclarationVariance.INVARIANT
 ): ModelInfo<DataTemplateParam> {
     override fun get(): DataTemplateParam {
-        return DataTemplateParam(type.typeName ,identifier, type, variance)
+        return DataTemplateParam(typeIdentifier, identifier, type, variance)
     }
 
     companion object {
@@ -47,6 +51,7 @@ data class DataTemplateParamInfo(
             return DataTemplateParamInfo(
                 param.identifier,
                 param.type!!,
+                param.typeIdentifier,
                 param.variance
             )
         }

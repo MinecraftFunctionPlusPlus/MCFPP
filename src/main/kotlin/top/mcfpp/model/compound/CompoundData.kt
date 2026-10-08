@@ -262,6 +262,7 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
             LogProcessor.error("Operator definition ${method.name} in class ${method.declaringClass.name} is not allowed in ObjectCompoundData")
         }
         val nf = NativeFunction(method.name, javaMethod = method)
+        nf.owner = this
         //解析MNIMethod注解成员
         val paramType = if(mniBinaryOperator.paramType.isEmpty()) null else MCFPPType.parseFromString(mniBinaryOperator.paramType, nf.scope)?: run {
             if(mniBinaryOperator.paramType == "null"){
@@ -295,7 +296,8 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
         MCFPPType.parseFromString(typeName, function.scope)?.let { return it }
         val (namespace, identifier) = typeName.splitNamespaceID()
         if (namespace == null) return null
-        return GlobalScope.getUnsolvedImportNamespace(namespace)?.scope?.getTemplate(identifier)?.getType()
+        return (GlobalScope.getCanonicalTemplate(namespace, identifier)
+            ?: GlobalScope.getCanonicalTemplate(namespace, identifier, true))?.getType()
     }
 
     fun getOperator(identifier: String, type: MCFPPType?): Function? {
@@ -328,6 +330,7 @@ open class CompoundData : FieldContainer, Serializable, WithDocument {
             return
         }
         val nf = NativeFunction(mniRegister.identifier.ifEmpty { method.name }, javaMethod = method)
+        nf.owner = this
         //解析MNIMethod注解成员
         mniRegister.genericType.map {
             nf.scope.putType(it, MCFPPGenericParamType(it, arrayListOf()))

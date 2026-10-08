@@ -123,9 +123,19 @@ class FloatIRTest {
         assertEquals(FloatTag(2.5f), machine.readNbt("mcfpp:system", "temp.bounds.right"))
     }
 
-    @Test fun nonFiniteConstantsAndLossyStaticWritebackAreRejected() {
+    @Test fun arithmeticFailuresBecomePositiveZeroAndInvalidRangesAndStaticWritebackAreRejected() {
+        modes {
+            val main = compile("""
+                func main(){
+                    var value = 1.0 / 0.0;
+                    /data modify storage fixture:float_contract zero set from storage mcfpp:system stack_frame[0].value
+                }
+            """)
+            assertNotNull(main.typedIR)
+            val value = execute(main).readNbt("fixture:float_contract", "zero") as FloatTag
+            assertEquals(0f.toRawBits(), value.value.toRawBits())
+        }
         for (source in listOf(
-            "func main(){ var value = 1.0 / 0.0; }",
             "func main(){ var bounds = 2.5 .. 1.5; }",
             "func change(static value as float){ value = 1.5; }\nfunc main(){ var value = 1; change(value); }")) {
             MCFPPStringTest.readFromString(source, version = "26.3")

@@ -115,6 +115,8 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         f = InlineFunction(identifier, Project.currNamespace, ctx.curlBlock())
         //解析参数
         f.addParamsFromContext(ctx.functionDeclarationPart().functionParams())
+        f.returnType = ctx.functionDeclarationPart().functionReturnType()?.type()?.let(f::parseDeclaredReturnType)
+            ?: MCFPPPrivateType.Void
         //不是类的成员
         f.ownerType = Function.Companion.OwnerType.NONE
         //写入域
@@ -613,10 +615,6 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             }
         }
 
-        if(isConst && ctx.expression() == null){
-            LogProcessor.error("Const template field ${ctx.Identifier().text} must have an initializer")
-            return null to null
-        }
         if(`var` == null && ctx.expression() == null){
             LogProcessor.error("Template field ${ctx.Identifier().text} must have a type or an initializer")
             return null to null
@@ -637,7 +635,8 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
         val isConst = ctx.CONST() != null
         `var`.isStatic = isInObject
         `var`.isConst = isConst
-        if (isInObject) `var`.isDynamic = !isConst
+        if (isConst && ctx.expression() == null) `var`.hasAssigned = false
+        // Object lifetime does not impose an explicit dynamic-value contract on each field.
         `var`.bindDeclaration()
         //属性访问器
         val properties = Property.fromContext(ctx.accessor(), `var`, DataTemplate.currTemplate!!)
@@ -647,7 +646,7 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
     }
 
     internal fun completeTemplateFields(template: DataTemplate) {
-        if (template is ObjectCompoundData || template.deferredFields.isEmpty()) return
+        if (template.deferredFields.isEmpty()) return
         val previousTemplate = DataTemplate.currTemplate
         val previousFile = MCFPPFile.currFile
         val previousNamespace = Project.currNamespace
@@ -664,29 +663,48 @@ open class MCFPPFieldVisitor : mcfppParserBaseVisitor<Any?>() {
             }
             if (template.deferredFields.isEmpty()) return
             val declared = template.scope.allVars.associate { it.identifier to it.type }
-            val bindings = template.constructors.map { PrimitiveCompiler.prepareInitializers(it, template.preInit, declared) }
-            if (bindings.all { it != null }) {
-                val diagnostics = bindings.flatMap { it!!.diagnostics }.distinct()
-                diagnostics.forEach(LogProcessor::error)
-                if (diagnostics.isNotEmpty()) return
-                for ((name, declaration) in template.deferredFields.toMap()) {
-                    val types = bindings.mapNotNull { it!!.inferredTypes[name] }.distinctBy { it.typeId }
-                    if (types.size != 1 || bindings.any { name !in it!!.inferredTypes }) {
+            val contexts = template.constructors.ifEmpty { listOf(Function("field-declarations", template, null)) }
+            val inferredDeclarations = linkedMapOf<String, String>()
+            val failedInitializers = hashSetOf<String>()
+            val bindings = contexts.map { function ->
+                val known = linkedMapOf<String, top.mcfpp.analysis.DeclarationBinding.Bound>()
+                val types = declared.toMutableMap()
+                for ((name, initializer) in template.preInit) {
+                    try {
+                        val binder = top.mcfpp.analysis.DeclarationBinding(function, types, known)
+                        var bound = binder.expression(initializer)
+                        if (name in declared) {
+                            val origin = (template as? top.mcfpp.model.compound.CompiledGenericDataTemplate)?.originTemplate ?: template
+                            fun declarationText(node: org.antlr.v4.runtime.tree.ParseTree): String? {
+                                if (node is mcfppParser.TemplateFieldDeclarationContext && node.Identifier().text == name)
+                                    return node.templateType()?.singleTemplateFieldType()?.type()?.text
+                                for (index in 0 until node.childCount) declarationText(node.getChild(index))?.let { return it }
+                                return null
+                            }
+                            val syntax = (origin as? top.mcfpp.model.compound.GenericDataTemplate)?.ctx ?: initializer.parent
+                            bound = binder.constrain(bound, declared.getValue(name), declarationText(syntax))
+                        }
+                        known[name] = bound
+                        bound.declaredTypeText?.let { inferredDeclarations[name] = it }
+                        if (name !in types) types[name] = bound.type
+                    } catch (failure: top.mcfpp.analysis.DeclarationBinding.Failure) {
+                        failedInitializers.add(name)
+                        LogProcessor.error(failure.message ?: "Cannot bind initializer '$name'")
+                    }
+                }
+                types
+            }
+            for ((name, declaration) in template.deferredFields.toMap()) {
+                val types = bindings.mapNotNull { it[name] }.distinctBy { it.typeId }
+                if (types.size != 1 || bindings.any { name !in it }) {
+                    if (name !in failedInitializers)
                         LogProcessor.error("Cannot infer one declaration type for template field '$name' across its constructors")
-                        continue
-                    }
-                    completeTemplateField(template, declaration, types.single())
+                    continue
                 }
-            } else {
-                // Types outside the current IR boundary retain the legacy probe until their lowering is migrated.
-                for ((_, declaration) in template.deferredFields.toMap()) {
-                    val errors = Project.errorCount
-                    var value: Var<*>? = null
-                    Function.extraFunction.runInFunction {
-                        value = MCFPPExprVisitor().visitExpression(declaration.context.expression())
-                    }
-                    value?.let { if (!it.isError && Project.errorCount == errors) completeTemplateField(template, declaration, it.type) }
-                }
+                completeTemplateField(template, declaration, types.single())
+            }
+            (template as? top.mcfpp.model.compound.CompiledGenericDataTemplate)?.originTemplate?.let {
+                top.mcfpp.model.compound.GenericDeclarationContract.checkVariance(it, inferredDeclarations, inferredOnly = true)
             }
         } finally {
             DataTemplate.currTemplate = previousTemplate

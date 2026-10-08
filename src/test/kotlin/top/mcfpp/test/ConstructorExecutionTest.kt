@@ -92,7 +92,10 @@ class ConstructorExecutionTest {
             val machine = ScoreCommandExecutor(listOf("function ${constructor.namespaceID}"),
                 mapOf(constructor.namespaceID.toString() to body.lines().filter { it.isNotBlank() }))
             assertEquals(top.mcfpp.nbt.tags.primitive.IntTag(4), machine.readNbt("mcfpp:system", fieldPath.pathToCommandPart().toString()))
-            assertTrue(defaults.scope.getVar("value")!!.isDynamic)
+            val storedField = defaults.scope.getVar("value")!!
+            assertTrue(storedField.isStatic)
+            assertNotNull(storedField.storageBinding)
+            assertEquals(fieldPath, storedField.nbtPath)
             assertTrue(constructor.namespaceID.toString().contains("defaults/static/"))
         } finally { output.toFile().deleteRecursively() }
     }

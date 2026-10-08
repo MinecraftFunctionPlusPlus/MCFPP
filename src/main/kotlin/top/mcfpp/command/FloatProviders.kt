@@ -110,18 +110,22 @@ object FloatProviders {
     fun arithmetic(left: MCFloat, right: MCFloat, operation: String): Var<*> {
         if (!valid(left, right)) return invalidFloat()
         if (left is MCFloatConcrete && right is MCFloatConcrete) {
-            val value = when (operation) {
-                "+" -> left.value + right.value
-                "-" -> left.value - right.value
-                "*" -> left.value * right.value
-                "/" -> left.value / right.value
-                "%" -> left.value % right.value
-                else -> error("Unsupported float operation: $operation")
-            }
-            val result = MCFloatConcrete(value)
-            return if (valid(result)) result else invalidFloat()
+            return MCFloatConcrete(arithmeticValue(left.value, right.value, operation))
         }
         return evaluate(arithmeticProvider(provider(left), provider(right), operation))
+    }
+
+    /** The selected data-set provider uses safe getFloat; invalid results become positive zero. */
+    internal fun arithmeticValue(left: Float, right: Float, operation: String): Float {
+        val result = when (operation) {
+            "+" -> (0f + left) + right // Sum starts at +0, including for two negative zero inputs.
+            "*" -> (1f * left) * right
+            "-" -> left - right
+            "/" -> left / right
+            "%" -> left % right
+            else -> error("Unsupported float operation: $operation")
+        }
+        return if (result.isFinite()) result else 0f
     }
 
     fun negate(value: MCFloat): Var<*> {

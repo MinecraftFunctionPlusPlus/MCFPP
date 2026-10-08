@@ -10,14 +10,17 @@ import top.mcfpp.type.MCFPPTypeWithGeneric
 import top.mcfpp.util.LogProcessor
 import top.mcfpp.model.scope.FunctionScope
 import top.mcfpp.type.UnresolvedType
+import top.mcfpp.type.TypeRelations
 
 /** Ordinary runtime constants never cause a new function body. */
 object SpecializationPolicy {
     /** A compiler-only interpretation of an erased formal needs its static payload binding. */
     fun needsStaticErasedBindings(function: Function): Boolean {
         val body = function.ast ?: return false
-        val erased = function.normalParams.filter { it.type == top.mcfpp.type.MCFPPBaseType.Any || it.type == top.mcfpp.type.MCFPPBaseType.Object }
-            .map { it.identifier }.toSet()
+        val erasedTypes = setOf(top.mcfpp.type.MCFPPBaseType.Any, top.mcfpp.type.MCFPPBaseType.Object)
+        val erased = function.normalParams.filter { it.type in erasedTypes }.map { it.identifier }.toMutableSet()
+        (function.owner as? top.mcfpp.model.compound.DataTemplate)?.scope?.allVars
+            ?.filter { it.type in erasedTypes }?.forEach { erased.add(it.identifier); erased.add("this.${it.identifier}") }
         if (erased.isEmpty()) return false
         fun inspect(tree: org.antlr.v4.runtime.tree.ParseTree): Boolean {
             if (tree is top.mcfpp.antlr.mcfppParser.CastExpressionContext && tree.type() != null &&
@@ -39,6 +42,45 @@ object SpecializationPolicy {
     data class BoundSignature(val readonlyValues: List<Var<*>>, val readonlyTypes: List<MCFPPType>,
                               val normalTypes: List<MCFPPType>, val returnType: MCFPPType)
 
+    internal data class DeclaredSignature(val normalTypes: List<MCFPPType>, val returnType: MCFPPType)
+
+    /** Signature queries consume immutable payloads, without constructing ordinary values. */
+    internal fun resolveDeclaredSignature(function: Function, readonly: List<FunctionParam>,
+                                          supplied: List<DeclarationBinding.Bound>,
+                                          receiverTypes: Map<String, MCFPPType> = emptyMap()): DeclaredSignature? {
+        if (supplied.size > readonly.size || readonly.drop(supplied.size).any { !it.hasDefault }) return null
+        val resolve = resolve@ {
+            val values = linkedMapOf<String, DeclarationBinding.Bound>()
+            val types = linkedMapOf<String, MCFPPType>().apply { putAll(receiverTypes) }
+            for ((index, parameter) in readonly.withIndex()) {
+                val binder = DeclarationBinding(function, emptyMap(), values, types)
+                val target = binder.declaredType(parameter.type)
+                val argument = supplied.getOrNull(index) ?: parameter.defaultContext?.let(binder::value) ?: parameter.defaultVar?.let {
+                    ValueSnapshot.of(it)?.let { snapshot -> DeclarationBinding.Bound(it.type, snapshot) }
+                } ?: return@resolve null
+                if (TypeRelations.resolveImplicitConversion(argument.type, target) == null || argument.constant == null) return@resolve null
+                val payload = (argument.constant as? CompilerValue.Typed)?.payload ?: argument.constant
+                val converted = if (argument.type == top.mcfpp.type.MCFPPBaseType.Int && target == top.mcfpp.type.MCFPPBaseType.Float && payload is CompilerValue.Integral)
+                    CompilerValue.FloatBits(payload.value.toFloat().toRawBits()) else payload
+                val bound = argument.copy(type = target, constant = CompilerValue.Typed(target.typeId, converted))
+                values[parameter.identifier] = bound
+                if (converted is CompilerValue.TypeValue) types[parameter.identifier] = MCFPPType.resolveTypeId(converted.id) ?: return@resolve null
+            }
+            val binder = DeclarationBinding(function, emptyMap(), values, types)
+            val normal = function.normalParams.map { binder.declaredType(it.type) }
+            val result = binder.declaredType(function.returnType)
+            if ((normal + result).any { TypeUsage.ordinaryDiagnostic(it) != null }) return@resolve null
+            DeclaredSignature(normal, result)
+        }
+        return try {
+            val file = function.restoreDeclarationEnvironment()
+            if (file == null) resolve() else file.withDeclarationContext(resolve)
+        } catch (failure: DeclarationBinding.Failure) {
+            LogProcessor.error(failure.message ?: "Invalid bound declaration signature")
+            null
+        }
+    }
+
     fun resolveBoundSignature(function: Function, readonly: List<FunctionParam>, supplied: List<Var<*>>): BoundSignature? {
         if (supplied.size > readonly.size || readonly.drop(supplied.size).any { !it.hasDefault }) return null
         val resolve = resolve@ {
@@ -52,7 +94,8 @@ object SpecializationPolicy {
             val values = ArrayList<Var<*>>()
             val types = ArrayList<MCFPPType>()
             for ((index, param) in readonly.withIndex()) {
-                val value = supplied.getOrNull(index) ?: param.defaultVar ?: return@resolve null
+                val value = supplied.getOrNull(index) ?: function.readonlyDefault(param,
+                    readonly.take(index).zip(values).associate { it.first.identifier to it.second }) ?: return@resolve null
                 val type = resolveType(param.type) ?: return@resolve null
                 if (!ParameterMatcher.accepts(value, type) || !SpecializationKeys.isConstant(value)) return@resolve null
                 val cast = value.implicitCast(type)
@@ -91,7 +134,9 @@ object SpecializationPolicy {
             if (param.type is UnresolvedType && value === param.defaultVar) value.implicitCast(types[i]) else value
         }
         if (normalArgs.any { it.isError }) return UnknownFunction(function.identifier) to args
-        val normalSpecialized = types.zip(normalArgs).map { (type, value) -> requiresParameter(type, value) }
+        // Only declared readonly arguments select a generic function body. Ordinary
+        // compiler-only payloads are bound by its actual invocation, not its cache key.
+        val normalSpecialized = List(types.size) { false }
         val allArgs = readonlyArgs + normalArgs
         val specialized = List(readonlyArgs.size) { true } + normalSpecialized
         if (allArgs.indices.any { specialized[it] && !SpecializationKeys.isConstant(allArgs[it]) }) {
@@ -103,6 +148,7 @@ object SpecializationPolicy {
         val cacheKey = key(function, allArgs, specialized)
         function.compiledFunctions[cacheKey]?.let { return it to runtimeArgs }
         val compiled = Function(function)
+        compiled.boundReadonlyNames = readonly.map { it.identifier }.toSet()
         for ((param, value) in readonly.zip(readonlyArgs)) {
             compiled.scope.removeVar(param.identifier)
             compiled.scope.putVar(param.identifier, value, true)
@@ -113,6 +159,7 @@ object SpecializationPolicy {
             val original = function.normalParams[i]
             val param = FunctionParam(types[i], original.identifier, compiled, original.isStatic, original.hasDefault)
             param.defaultVar = original.defaultVar
+            param.defaultContext = original.defaultContext
             val storage = param.buildVar()
             compiled.scope.putVar(param.identifier, if (normalSpecialized[i]) storage.assignedBy(normalArgs[i]) else storage, true)
             if (!normalSpecialized[i]) runtimeParams.add(param)
@@ -122,9 +169,11 @@ object SpecializationPolicy {
         compiled.returnVar = compiled.buildReturnVar(compiled.returnType)
         compiled.commands.clear()
         compiled.identifier = function.identifier + "-" + function.compiledFunctions.size
-        compiled.ast = null
+        compiled.ast = function.ast
         function.compiledFunctions[cacheKey] = compiled
-        function.compileBody(compiled, function.ast)
+        if (types.all { it.hasRuntimeRepresentation } &&
+            (function.owner as? top.mcfpp.model.compound.DataTemplate)?.getType()?.hasRuntimeRepresentation != false)
+            function.compileBody(compiled, function.ast)
         return compiled to runtimeArgs
     }
 

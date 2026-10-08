@@ -58,6 +58,7 @@ data class DataTemplateInfo(
         // Self-typed native signatures must resolve to this canonical model while its scope is restored.
         infoCache[this] = template
         template.scope = field.get(template)
+        template.restoredFlattenedFields = false
         if (parentExpressions != null) template.parentID.addAll(parentExpressions)
         else parents.forEach {
             template.extends(it.get())

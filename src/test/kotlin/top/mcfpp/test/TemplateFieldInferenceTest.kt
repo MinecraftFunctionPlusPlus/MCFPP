@@ -73,7 +73,7 @@ class TemplateFieldInferenceTest {
         val main = compile("""
             data Box {
                 var erased as any = produce(initial);
-                const value = this.erased + 1;
+                const value = (this.erased as int) + 1;
                 constructor(initial as int){}
             }
             func produce(value as int) -> any { return value; }

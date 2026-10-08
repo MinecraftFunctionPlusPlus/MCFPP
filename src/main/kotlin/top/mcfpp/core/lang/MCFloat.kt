@@ -58,8 +58,6 @@ open class MCFloat : MCNumber<Float> {
         exp = MCInt(name).setObj(SbObject.MCS_float_exp) as MCInt
         if (FloatProviders.enabled) {
             nbtPath = NBTPath.getNormalStackPath(this)
-        } else {
-            Project.enableModulePackage("math.float", "stdlib")
         }
     }
 
@@ -72,7 +70,6 @@ open class MCFloat : MCNumber<Float> {
         int0 = MCInt(b.int0)
         int1 = MCInt(b.int1)
         exp = MCInt(b.exp)
-        if (!FloatProviders.enabled) Project.enableModulePackage("math.float", "stdlib")
     }
 
     override var type: MCFPPType = MCFPPBaseType.Float
@@ -84,6 +81,7 @@ open class MCFloat : MCNumber<Float> {
     @InsertCommand
     open fun toTempEntity() : MCFloat{
         if (FloatProviders.enabled) return this
+        requireLegacyBackend()
         Function.addCommand("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_exp} = ${exp.name} ${exp.sbObject}")
         Function.addCommand("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_sign} = ${sign.name} ${sign.sbObject}")
         Function.addCommand("scoreboard players operation $tempFloatEntityUUID ${SbObject.Math_float_int0} = ${int0.name} ${int0.sbObject}")
@@ -120,6 +118,7 @@ open class MCFloat : MCNumber<Float> {
         return if(a is MCFloatConcrete){
             MCFloatConcrete(this, a.value)
         }else {
+            requireLegacyBackend()
             // Runtime assignment must discard a declaration's concrete default value.
             if (this is MCFloatConcrete) return MCFloat(this).assignCommand(a)
             //this = a
@@ -147,12 +146,7 @@ open class MCFloat : MCNumber<Float> {
     @InsertCommand
     override fun plus(a: Var<*>): Var<*> {
         if (FloatProviders.enabled) return FloatProviders.arithmetic(this, a as MCFloat, "+")
-        //t = t + a
-        if(!isTemp) return getTempVar().plus(a)
-        val operand = a as MCFloat
-        if (operand !== tempFloat) operand.toTempEntity()
-        Function.addCommand("execute as $tempFloatEntityUUID run function math.float:hpo/float/_add")
-        return this
+        return legacyArithmetic(a as MCFloat, "_add")
     }
 
     /**
@@ -163,12 +157,7 @@ open class MCFloat : MCNumber<Float> {
     @InsertCommand
     override fun minus(a: Var<*>): Var<*> {
         if (FloatProviders.enabled) return FloatProviders.arithmetic(this, a as MCFloat, "-")
-        //t = t - a
-        if(!isTemp) return getTempVar().minus(a)
-        val operand = a as MCFloat
-        if (operand !== tempFloat) operand.toTempEntity()
-        Function.addCommand("execute as $tempFloatEntityUUID run function math.float:hpo/float/_rmv")
-        return this
+        return legacyArithmetic(a as MCFloat, "_rmv")
     }
 
     /**
@@ -179,12 +168,7 @@ open class MCFloat : MCNumber<Float> {
     @InsertCommand
     override fun times(a: Var<*>): Var<*> {
         if (FloatProviders.enabled) return FloatProviders.arithmetic(this, a as MCFloat, "*")
-        //t = t * a
-        if(!isTemp) return getTempVar().times(a)
-        val operand = a as MCFloat
-        if (operand !== tempFloat) operand.toTempEntity()
-        Function.addCommand("execute as $tempFloatEntityUUID run function math.float:hpo/float/_mult")
-        return this
+        return legacyArithmetic(a as MCFloat, "_mult")
     }
 
     /**
@@ -195,12 +179,22 @@ open class MCFloat : MCNumber<Float> {
     @InsertCommand
     override fun div(a: Var<*>): Var<*> {
         if (FloatProviders.enabled) return FloatProviders.arithmetic(this, a as MCFloat, "/")
-        //t = t - a
-        if(!isTemp) return getTempVar().div(a)
-        val operand = a as MCFloat
-        if (operand !== tempFloat) operand.toTempEntity()
-        Function.addCommand("execute as $tempFloatEntityUUID run function math.float:hpo/float/_div")
-        return this
+        return legacyArithmetic(a as MCFloat, "_div")
+    }
+
+    private fun legacyArithmetic(other: MCFloat, helper: String): MCFloat {
+        val left = if (storageBinding != null) top.mcfpp.analysis.StorageAccess.read(this) as MCFloat else this
+        val right = if (other.storageBinding != null) top.mcfpp.analysis.StorageAccess.read(other) as MCFloat else other
+        if (left.isError || right.isError) return MCFloat().apply { isError = true }
+        if (listOf(left, right).any { it is MCFloatConcrete && !it.value.isFinite() }) {
+            LogProcessor.error("Legacy float arithmetic requires finite inputs")
+            return MCFloat().apply { isError = true }
+        }
+        // The library owns fixed work registers. Capture the right side before loading the left.
+        right.toTempEntity()
+        val work = left.getTempVar()
+        Function.addCommand("execute as $tempFloatEntityUUID run function math.float:hpo/float/$helper")
+        return MCFloat().apply { isTemp = true }.assignedBy(work) as MCFloat
     }
 
     override fun rem(a: Var<*>): Var<*> {
@@ -259,9 +253,14 @@ open class MCFloat : MCNumber<Float> {
 
     private fun compare(other: MCFloat, operation: String): Var<*> {
         if (FloatProviders.enabled) return FloatProviders.compare(this, other, operation)
+        if ((this is MCFloatConcrete && !value.isFinite()) ||
+            (other is MCFloatConcrete && !other.value.isFinite())) {
+            LogProcessor.error("Legacy float comparisons require finite inputs")
+            return ScoreBool().apply { isError = true }
+        }
         fun prepare(value: MCFloat): MCFloat {
             val loaded = top.mcfpp.analysis.StorageAccess.read(value) as MCFloat
-            return if (loaded is MCFloatConcrete) loaded.toDynamic(false) as MCFloat else loaded
+            return if (loaded is MCFloatConcrete) MCFloatConcrete(loaded.value).toDynamic(false) as MCFloat else loaded
         }
         val left = prepare(this)
         val right = prepare(other)
@@ -298,6 +297,7 @@ open class MCFloat : MCNumber<Float> {
     override fun getTempVar(): MCFloat {
         // Native operations always produce a fresh result, so an operand view is sufficient.
         if (FloatProviders.enabled) return MCFloat(this).apply { isTemp = true }
+        requireLegacyBackend()
         Function.addCommand("scoreboard players operation float_exp int = ${exp.name} ${exp.sbObject}")
         Function.addCommand("scoreboard players operation float_int0 int = ${int0.name} ${int0.sbObject}")
         Function.addCommand("scoreboard players operation float_int1 int = ${int1.name} ${int1.sbObject}")
@@ -322,6 +322,7 @@ open class MCFloat : MCNumber<Float> {
     }
 
     override fun storeToStack() {
+        if (!FloatProviders.enabled) requireLegacyBackend()
         storageBinding?.let { it.data.materialize(); return }
         if (FloatProviders.enabled) return // The runtime value already lives in NBT.
         if (nbtPath.pathList.isEmpty()) nbtPath = NBTPath.getNormalStackPath(this)
@@ -336,6 +337,7 @@ open class MCFloat : MCNumber<Float> {
     }
 
     override fun getFromStack() {
+        if (!FloatProviders.enabled) requireLegacyBackend()
         storageBinding?.let { binding ->
             if (!FloatProviders.enabled) {
                 for ((key, score) in listOf("sign" to sign, "int0" to int0, "int1" to int1, "exp" to exp))
@@ -363,6 +365,10 @@ open class MCFloat : MCNumber<Float> {
     }
 
     companion object{
+
+        internal fun requireLegacyBackend() {
+            if (!FloatProviders.enabled) Project.enableModulePackage("math.float", "stdlib")
+        }
 
         const val tempFloatEntityUUID = "53aa19cc-a067-402b-8ba1-9328cc5fb6c1"
         const val tempFloatEntityUUIDNBT = "[I;1403656652,-1603846101,-1952345304,-866142527]"
@@ -456,6 +462,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
             LogProcessor.error("Float materialization requires a finite input")
             return MCFloat(this).apply { isError = true }
         }
+        if (!FloatProviders.enabled) requireLegacyBackend()
         if (storageBinding != null) {
             val re = top.mcfpp.analysis.StorageAccess.read(MCFloat(this).apply { isDynamic = true })
             if (replace) replacedBy(re)
@@ -501,6 +508,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
     @InsertCommand
     override fun toTempEntity() : MCFloat{
         if (FloatProviders.enabled) return this
+        requireLegacyBackend()
         Function.addCommand("scoreboard players set $tempFloatEntityUUID ${SbObject.Math_float_sign} ${(sign as MCIntConcrete).value}")
         Function.addCommand("scoreboard players set $tempFloatEntityUUID ${SbObject.Math_float_int0} ${(int0 as MCIntConcrete).value}")
         Function.addCommand("scoreboard players set $tempFloatEntityUUID ${SbObject.Math_float_int1} ${(int1 as MCIntConcrete).value}")
@@ -518,6 +526,7 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
     @InsertCommand
     override fun getTempVar(): MCFloat {
         if (FloatProviders.enabled) return MCFloatConcrete(this).apply { isTemp = true }
+        requireLegacyBackend()
         val qwq = floatToMCFloat(value)
         Function.addCommand("scoreboard players set float_sign int ${qwq[0]}")
         Function.addCommand("scoreboard players set float_int0 int ${qwq[1]}")
@@ -530,26 +539,26 @@ class MCFloatConcrete : MCFloat, MCFPPValue<Float> {
     @InsertCommand
     override fun plus(a: Var<*>): Var<*> =
         if (FloatProviders.enabled) FloatProviders.arithmetic(this, a as MCFloat, "+")
-        else getTempVar().plus(a)
+        else super.plus(a)
 
     @InsertCommand
     override fun minus(a: Var<*>): Var<*> =
         if (FloatProviders.enabled) FloatProviders.arithmetic(this, a as MCFloat, "-")
-        else getTempVar().minus(a)
+        else super.minus(a)
 
     @InsertCommand
     override fun times(a: Var<*>): Var<*> =
         if (FloatProviders.enabled) FloatProviders.arithmetic(this, a as MCFloat, "*")
-        else getTempVar().times(a)
+        else super.times(a)
 
     @InsertCommand
     override fun div(a: Var<*>): Var<*> =
         if (FloatProviders.enabled) FloatProviders.arithmetic(this, a as MCFloat, "/")
-        else getTempVar().div(a)
+        else super.div(a)
 
     @InsertCommand
     override fun rem(a: Var<*>): Var<*> =
         if (FloatProviders.enabled) FloatProviders.arithmetic(this, a as MCFloat, "%")
-        else getTempVar().rem(a)
+        else super.rem(a)
 
 }

@@ -327,6 +327,7 @@ open class MCFPPCompoundType(
 }
 
 class MCFPPDictType(generic: MCFPPType): MCFPPCompoundType(generic){
+    override val instanceData get() = NBTDictionary.data
     override val typeName: String
         get() = "dict"
 
@@ -364,6 +365,7 @@ class MCFPPDictType(generic: MCFPPType): MCFPPCompoundType(generic){
 }
 
 class MCFPPMapType(generic: MCFPPType): MCFPPCompoundType(generic){
+    override val instanceData get() = NBTMap.data
     override val typeName: String
         get() = "map"
 

@@ -7,12 +7,9 @@ object PrimitiveEvaluation {
             if (!top.mcfpp.command.FloatProviders.enabled) return null
             val a = Float.fromBits(left.bits)
             val b = Float.fromBits(right.bits)
+            if (!a.isFinite() || !b.isFinite()) return null
             return when (operation) {
-                "+" -> CompilerValue.FloatBits((a + b).toRawBits())
-                "-" -> CompilerValue.FloatBits((a - b).toRawBits())
-                "*" -> CompilerValue.FloatBits((a * b).toRawBits())
-                "/" -> CompilerValue.FloatBits((a / b).toRawBits())
-                "%" -> CompilerValue.FloatBits((a % b).toRawBits())
+                "+", "-", "*", "/", "%" -> CompilerValue.FloatBits(top.mcfpp.command.FloatProviders.arithmeticValue(a, b, operation).toRawBits())
                 "==" -> CompilerValue.Bool(a == b)
                 "!=" -> CompilerValue.Bool(a != b)
                 "<" -> CompilerValue.Bool(a < b)

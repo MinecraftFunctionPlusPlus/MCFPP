@@ -28,32 +28,31 @@ class FileScope: SimpleLibScope(){
      */
     val importedNamespaceField = HashMap<String, NamespaceScope>()
 
+    private fun declarations(scope: NamespaceScope): List<NamespaceScope> =
+        (listOfNotNull(GlobalScope.localNamespaces[scope.identifier]?.scope,
+            GlobalScope.libNamespaces[scope.identifier]?.scope, GlobalScope.stdNamespaces[scope.identifier]?.scope) + scope).distinct()
+
+    private fun accessibleScopes(): List<NamespaceScope> =
+        (declarations(namespaceField) + importField.values + importedNamespaceField.values.flatMap(::declarations)).distinct()
+
+    private fun qualifiedScopes(namespace: String): List<NamespaceScope> =
+        if (namespaceField.identifier == namespace) declarations(namespaceField)
+        else importedNamespaceField[namespace]?.let(::declarations).orEmpty() + listOfNotNull(importField[namespace])
+
     fun getAccessibleInterface(identifier: String): DataTemplate? {
-        return namespaceField.getInterface(identifier)
-           ?: importField.values.firstNotNullOfOrNull { it.getInterface(identifier) }
-           ?: importedNamespaceField.values.firstNotNullOfOrNull { it.getInterface(identifier) }
+        return accessibleScopes().firstNotNullOfOrNull { it.getInterface(identifier) }
     }
 
     fun getAccessibleInterface(namespace:String, identifier: String): DataTemplate? {
-        if(namespaceField.identifier == namespace){
-            return namespaceField.getInterface(identifier)
-        }
-        return importedNamespaceField[namespace]?.getInterface(identifier)
-            ?:importField[namespace]?.getInterface(identifier)
+        return qualifiedScopes(namespace).firstNotNullOfOrNull { it.getInterface(identifier) }
     }
 
     fun getAccessibleTemplate(identifier: String): DataTemplate? {
-        return namespaceField.getTemplate(identifier)
-          ?: importField.values.firstNotNullOfOrNull { it.getTemplate(identifier) }
-          ?: importedNamespaceField.values.firstNotNullOfOrNull { it.getTemplate(identifier) }
+        return accessibleScopes().firstNotNullOfOrNull { it.getTemplate(identifier) }
     }
 
     fun getAccessibleTemplate(namespace:String, identifier: String): DataTemplate? {
-        if(namespaceField.identifier == namespace){
-            return namespaceField.getTemplate(identifier)
-        }
-        return importedNamespaceField[namespace]?.getTemplate(identifier)
-            ?:importField[namespace]?.getTemplate(identifier)
+        return qualifiedScopes(namespace).firstNotNullOfOrNull { it.getTemplate(identifier) }
     }
 
     fun getAccessibleAnnotation(identifier: String): Class<out Annotation>? {
@@ -71,72 +70,46 @@ class FileScope: SimpleLibScope(){
     }
 
     fun getAccessibleEnum(identifier: String): Enum? {
-        return namespaceField.getEnum(identifier)
-         ?: importField.values.firstNotNullOfOrNull { it.getEnum(identifier) }
-         ?: importedNamespaceField.values.firstNotNullOfOrNull { it.getEnum(identifier) }
+        return accessibleScopes().firstNotNullOfOrNull { it.getEnum(identifier) }
     }
 
     fun getAccessibleEnum(namespace:String, identifier: String): Enum? {
-        if(namespaceField.identifier == namespace){
-            return namespaceField.getEnum(identifier)
-        }
-        return importedNamespaceField[namespace]?.getEnum(identifier)
-            ?:importField[namespace]?.getEnum(identifier)
+        return qualifiedScopes(namespace).firstNotNullOfOrNull { it.getEnum(identifier) }
     }
 
     fun getAccessibleObject(identifier: String): CompoundData? {
-        return namespaceField.getObject(identifier)
-        ?: importField.values.firstNotNullOfOrNull { it.getObject(identifier) }
-        ?: importedNamespaceField.values.firstNotNullOfOrNull { it.getObject(identifier) }
+        return accessibleScopes().firstNotNullOfOrNull { it.getObject(identifier) }
     }
 
     fun getAccessibleObject(namespace:String, identifier: String): CompoundData? {
-        if(namespaceField.identifier == namespace){
-            return namespaceField.getObject(identifier)
-        }
-        return importedNamespaceField[namespace]?.getObject(identifier)
-            ?:importField[namespace]?.getObject(identifier)
+        return qualifiedScopes(namespace).firstNotNullOfOrNull { it.getObject(identifier) }
     }
 
     fun getAccessibleFunction(key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): Function {
-        var qwq = namespaceField.getFunction(key, readOnlyArgs, normalArgs)
-        if(qwq !is UnknownFunction) return qwq
-        for (i in importField.values) {
-            qwq = i.getFunction(key, readOnlyArgs, normalArgs)
-            if(qwq!is UnknownFunction) return qwq
-        }
-        for (i in importedNamespaceField.values) {
-            qwq = i.getFunction(key, readOnlyArgs, normalArgs)
-            if(qwq!is UnknownFunction) return qwq
-        }
-        return qwq
+        return top.mcfpp.model.function.ParameterMatcher.select(getAccessibleFunctionCandidates(key), key, readOnlyArgs, normalArgs)
+            ?: UnknownFunction(key)
     }
 
     fun getAccessibleFunctionByTypes(key: String, normalArgs: List<MCFPPType>): top.mcfpp.model.function.ParameterMatcher.TypeSelection {
-        for (scope in listOf(namespaceField) + importField.values + importedNamespaceField.values) {
-            val candidate = scope.getFunctionByTypes(key, normalArgs)
-            if (candidate != top.mcfpp.model.function.ParameterMatcher.TypeSelection.Missing) return candidate
-        }
-        return top.mcfpp.model.function.ParameterMatcher.TypeSelection.Missing
+        return top.mcfpp.model.function.ParameterMatcher.selectTypes(getAccessibleFunctionCandidates(key), key, normalArgs)
     }
 
-    fun getAccessibleFunctionCandidates(key: String): List<Function> =
-        (listOf(namespaceField) + importField.values + importedNamespaceField.values).flatMap { it.getFunctionCandidates(key) }
+    fun getAccessibleFunctionCandidates(key: String): List<Function> = accessibleScopes().groupBy { it.identifier }
+        .values.flatMap { scopes -> scopes.firstNotNullOfOrNull { scope ->
+            scope.getFunctionCandidates(key).takeIf { it.isNotEmpty() }
+        }.orEmpty() }
 
      fun getAccessibleFunction(namespace:String, key: String, readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): Function {
-         if(namespaceField.identifier == namespace){
-             return namespaceField.getFunction(key, readOnlyArgs, normalArgs)
-         }
-         var qwq = importField[namespace]?.getFunction(key, readOnlyArgs, normalArgs)
-         if(qwq !is UnknownFunction && qwq != null) return qwq
-         qwq = importedNamespaceField[namespace]?.getFunction(key, readOnlyArgs, normalArgs)
-         return qwq?:UnknownFunction(key)
+         val candidates=qualifiedScopes(namespace).firstNotNullOfOrNull { scope ->
+             scope.getFunctionCandidates(key).takeIf { it.isNotEmpty() }
+         }.orEmpty()
+         return top.mcfpp.model.function.ParameterMatcher.select(candidates,key,readOnlyArgs,normalArgs) ?: UnknownFunction(key)
     }
 
-    override fun getType(key: String): MCFPPType? = super.getType(key)
-        ?: namespaceField.getType(key)
-        ?: importField.values.firstNotNullOfOrNull { it.getType(key) }
-        ?: importedNamespaceField.values.firstNotNullOfOrNull { it.getType(key) }
+    override fun getType(key: String): MCFPPType? {
+        if (super.containType(key)) return super.getType(key)
+        return accessibleScopes().firstOrNull { it.containType(key) }?.getType(key)
+    }
 
     override fun containType(id: String): Boolean = super.containType(id)
         || namespaceField.containType(id)

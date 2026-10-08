@@ -17,11 +17,13 @@ object LegacyFloatCommands {
         "sign" to components.sign, "int0" to components.int0, "int1" to components.int1, "exp" to components.exp)
 
     fun load(source: NBTPath, components: LegacyFloatComparison.Components, emit: (Command) -> Unit) {
+        MCFloat.requireLegacyBackend()
         for ((field, score) in fields(components))
             emit(Command("execute store result score $score run data get").build(source.memberIndex(field).toCommandPart()).build("1"))
     }
 
     fun store(destination: NBTPath, components: LegacyFloatComparison.Components, emit: (Command) -> Unit) {
+        MCFloat.requireLegacyBackend()
         emit(Commands.dataSetValue(destination, CompoundTag()))
         for ((field, score) in fields(components))
             emit(Command("execute store result").build(destination.memberIndex(field).toCommandPart())
@@ -29,6 +31,7 @@ object LegacyFloatCommands {
     }
 
     fun fromInt(source: String, destination: NBTPath, emit: (Command) -> Unit) {
+        MCFloat.requireLegacyBackend()
         emit(Command("scoreboard players operation inp int = $source"))
         emit(Command("function math.float:hpo/float/_scoreto"))
         store(destination, work, emit)

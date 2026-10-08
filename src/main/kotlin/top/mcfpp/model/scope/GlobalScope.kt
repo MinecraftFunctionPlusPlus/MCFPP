@@ -158,46 +158,23 @@ object GlobalScope : FieldContainer, IScope {
      */
     @JvmStatic
     fun getFunction(namespace:String?, identifier: String, readOnlyParams: List<Var<*>>, normalParams : List<Var<*>>): Function {
-        if(namespace == null){
-            val f = MCFPPFile.currFile?.field?.getAccessibleFunction(identifier, readOnlyParams, normalParams)
-            if(f != null && f !is UnknownFunction) return f
-            for (n in stdNamespaces.values){
-                val f1 = n.scope.getFunction(identifier, readOnlyParams, normalParams)
-                if(f1 !is UnknownFunction) return f1
-            }
-            return UnknownFunction(identifier)
-        }
-        var np = localNamespaces[namespace]
-        if(np == null){
-            np = libNamespaces[namespace]
-        }
-        if(np == null){
-            np = stdNamespaces[namespace]
-        }
-        return np?.scope?.getFunction(identifier, readOnlyParams, normalParams)?: UnknownFunction(identifier)
+        return top.mcfpp.model.function.ParameterMatcher.select(getFunctionCandidates(namespace,identifier,MCFPPFile.currFile?.field),
+            identifier,readOnlyParams,normalParams) ?: UnknownFunction(identifier)
     }
 
     fun getFunctionByTypes(namespace: String?, identifier: String, normalParams: List<MCFPPType>,
                            file: FileScope? = MCFPPFile.currFile?.field): top.mcfpp.model.function.ParameterMatcher.TypeSelection {
-        if (namespace == null) {
-            file?.getAccessibleFunctionByTypes(identifier, normalParams)?.let {
-                if (it != top.mcfpp.model.function.ParameterMatcher.TypeSelection.Missing) return it
-            }
-            for (scope in stdNamespaces.values) {
-                val candidate = scope.scope.getFunctionByTypes(identifier, normalParams)
-                if (candidate != top.mcfpp.model.function.ParameterMatcher.TypeSelection.Missing) return candidate
-            }
-            return top.mcfpp.model.function.ParameterMatcher.TypeSelection.Missing
-        }
-        val scope = localNamespaces[namespace] ?: libNamespaces[namespace] ?: stdNamespaces[namespace]
-        return scope?.scope?.getFunctionByTypes(identifier, normalParams) ?: top.mcfpp.model.function.ParameterMatcher.TypeSelection.Missing
+        return top.mcfpp.model.function.ParameterMatcher.selectTypes(getFunctionCandidates(namespace,identifier,file),identifier,normalParams)
     }
 
     fun getFunctionCandidates(namespace: String?, identifier: String, file: FileScope?): List<Function> {
-        if (namespace == null) return file?.getAccessibleFunctionCandidates(identifier).orEmpty() +
-            stdNamespaces.values.flatMap { it.scope.getFunctionCandidates(identifier) }
-        return (localNamespaces[namespace] ?: libNamespaces[namespace] ?: stdNamespaces[namespace])?.scope
-            ?.getFunctionCandidates(identifier).orEmpty()
+        if (namespace == null) {
+            val accessible = file?.getAccessibleFunctionCandidates(identifier).orEmpty()
+            val seen = accessible.map { it.namespace }.toSet()
+            return accessible + stdNamespaces.values.filter { it.identifier !in seen }.flatMap { it.scope.getFunctionCandidates(identifier) }
+        }
+        return listOfNotNull(localNamespaces[namespace], libNamespaces[namespace], stdNamespaces[namespace])
+            .firstNotNullOfOrNull { it.scope.getFunctionCandidates(identifier).takeIf { functions -> functions.isNotEmpty() } }.orEmpty()
     }
 
     fun getData(namespace: String? = null, identifier: String): DataTemplate? {
@@ -205,6 +182,13 @@ object GlobalScope : FieldContainer, IScope {
             ?: getObject(namespace, identifier)?.let { if(it !is DataTemplate) null else it }
             ?: getInterface(namespace, identifier)
     }
+
+    /** Metadata lookup uses declaration indexes, independently of a calling file's imports. */
+    internal fun getCanonicalTemplate(namespace: String, identifier: String, isInterface: Boolean = false): DataTemplate? =
+        listOfNotNull(localNamespaces[namespace], libNamespaces[namespace], stdNamespaces[namespace])
+            .firstNotNullOfOrNull { declaration ->
+                if (isInterface) declaration.scope.getInterface(identifier) else declaration.scope.getTemplate(identifier)
+            }
 
     /**
      * 从当前的全局域中获取一个接口。若不存在，则返回null
@@ -228,14 +212,9 @@ object GlobalScope : FieldContainer, IScope {
             return null
         }
         //按照指定的命名空间寻找
-        var np = localNamespaces[namespace]
-        if(np == null){
-            np = importedLibNamespaces[namespace]
-        }
-        if(np == null){
-            np = stdNamespaces[namespace]
-        }
-        return np?.scope?.getInterface(identifier)
+        MCFPPFile.currFile?.field?.getAccessibleInterface(namespace,identifier)?.let { return it }
+        return listOfNotNull(localNamespaces[namespace],importedLibNamespaces[namespace],stdNamespaces[namespace])
+            .firstNotNullOfOrNull { it.scope.getInterface(identifier) }
     }
 
     /**

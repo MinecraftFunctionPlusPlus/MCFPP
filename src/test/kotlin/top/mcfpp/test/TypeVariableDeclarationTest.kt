@@ -14,6 +14,20 @@ import kotlin.test.*
 import kotlin.test.Test
 
 class TypeVariableDeclarationTest {
+    @Test fun ordinaryContainerElementSlotsRejectMetaTypesWithoutNeedingValueSnapshots() {
+        for (source in listOf(
+            "func main(){var invalid as list<type>;}",
+            "func main(){var invalid as list<type>=[];}",
+            "data Holder{values as dict<list<type>>;}\nfunc main(){}",
+            "func invalid(values as list<type>){}\nfunc main(){}",
+            "func invalid()->list<type>{return [];}\nfunc main(){}",
+            "data Box<T as type>{values as list<T>;}\nfunc main(){var invalid=Box<type>();}")) {
+            MCFPPStringTest.readFromString(source.replace(">=", "> = "),version="26.3")
+            assertTrue(Project.errorCount>0,source)
+        }
+        MCFPPStringTest.readFromString("data Bundle<Types as list<type>>{constructor(){}}\nfunc main(){var legal=Bundle<[int,bool]>();}",version="26.3")
+        assertEquals(0,Project.errorCount)
+    }
     @Test fun ordinaryTypeLocalsAreRejectedWithoutRegisteringNames() {
         MCFPPStringTest.readFromString("""
             func main(){

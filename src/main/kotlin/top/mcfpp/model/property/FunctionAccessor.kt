@@ -13,20 +13,17 @@ class FunctionAccessor: AbstractAccessor {
 
     constructor(function: Function): super() {
         this.function = function
+        function.accessorField = function.identifier.substringAfter("get-").substringBefore("-call-")
     }
 
     constructor(field: Var<*>, d: CompoundData, context: mcfppParser.CurlBlockContext? = null): super() {
-        function = Function("get_${field.identifier}", d.namespace, context)
+        function = Function("get-${field.identifier}", d as DataTemplate, context)
+        function.accessModifier = top.mcfpp.model.Member.AccessModifier.PRIVATE
         function.returnType = field.type
-        function.scope.putVar("field", field)
-        function.appendNormalParam(field.type, "field")
-        val thisObj = DataTemplate.currTemplate!!.getType().build("this", function)
-        function.scope.putVar("this",thisObj)
-        field.parent = thisObj
-        function.owner = d
+        function.accessorField = field.identifier
     }
 
     override fun getter(caller: CanSelectMember, field: Var<*>): Var<*> {
-        return function.invoke(arrayListOf(field), caller)
+        return function.invoke(emptyList(), caller)
     }
 }

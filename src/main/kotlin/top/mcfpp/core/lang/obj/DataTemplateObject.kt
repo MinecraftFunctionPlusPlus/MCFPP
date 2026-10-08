@@ -30,9 +30,36 @@ import top.mcfpp.util.TextTranslator.translate
  */
 open class DataTemplateObject : Var<DataTemplateObject> {
 
-    val templateType: DataTemplate
+    // The actual instance declaration survives nominal parent views. Its type
+    // serializer stores declaration metadata, never an instance scope or call graph.
+    private lateinit var instanceType: top.mcfpp.type.MCFPPDataTemplateType
+
+    var templateType: DataTemplate
+        get() = run {
+            instanceType.tryResolve()
+            instanceType.template
+        }
+        set(value) {
+            instanceType = value.getType()
+            instanceFieldCache = null
+        }
+
+    @Transient
+    private var instanceFieldCache: CompoundDataScope? = null
 
     var instanceField: CompoundDataScope
+        get() = instanceFieldCache ?: run {
+            templateType.scope.createDataTemplateInstance(this)
+        }.also { field ->
+            instanceFieldCache = field
+            if (this is DataTemplateObjectConcrete) {
+                value.forEach { (name, member) ->
+                    member.parent = this
+                    field.putVar(name, member, true)
+                }
+            }
+        }
+        set(value) { instanceFieldCache = value }
 
     final override var type: MCFPPType
 
@@ -42,10 +69,10 @@ open class DataTemplateObject : Var<DataTemplateObject> {
      * @param identifier 标识符
      */
     constructor(template: DataTemplate, identifier: String = TempPool.getVarIdentify()): super(identifier) {
+        type = template.getType()
         this.templateType = template
         this.identifier = identifier
         instanceField = template.scope.createDataTemplateInstance(this)
-        type = templateType.getType()
     }
 
     /**
@@ -53,9 +80,9 @@ open class DataTemplateObject : Var<DataTemplateObject> {
      * @param templateObject 被复制的模板对象
      */
     constructor(templateObject: DataTemplateObject) : super(templateObject) {
+        type = templateObject.type
         templateType = templateObject.templateType
-        instanceField = templateObject.instanceField
-        type = templateType.getType()
+        instanceField = CompoundDataScope(templateObject.instanceField)
     }
 
     override fun doAssignedBy(b: Var<*>): DataTemplateObject {
@@ -63,13 +90,15 @@ open class DataTemplateObject : Var<DataTemplateObject> {
             StorageAccess.ensure(b)
             val copy = DataTemplateObject(templateType, identifier).apply {
                 setAs(this@DataTemplateObject)
+                templateType = b.templateType
                 storageBinding = null
                 storageReadVersion = null
                 if (nbtPath.pathList.isEmpty()) nbtPath = NBTPath.temp.memberIndex(identifier)
                 bindDeclaration()
             }
-            if (!copy.type.hasRuntimeRepresentation) {
+            if (!StorageAccess.hasRuntimeRepresentation(b)) {
                 StorageAccess.ensure(copy)
+                copy.storageBinding!!.data.retainCompilerValue()
                 val assigned = StorageAccess.write(copy, b)
                 return assigned as? DataTemplateObject ?: copy.apply { isError = true }
             }
@@ -77,13 +106,15 @@ open class DataTemplateObject : Var<DataTemplateObject> {
             val place = Place(copy.symbol!!.id)
             val data = StoredData(place, copy.nbtPath.clone())
             data.types[copy.type.typeId] = copy.type
-            data.facts.initialize(place, ValueFacts(TypeKnowledge.Exact(copy.type.typeId), ValueKnowledge.Unknown))
+            data.types[b.templateType.getType().typeId] = b.templateType.getType()
+            data.facts.initialize(place, ValueFacts(TypeKnowledge.Exact(b.templateType.getType().typeId), ValueKnowledge.Unknown))
             copy.storageBinding = StorageBinding(data, place, data.path)
             return copy
         }
         when (b) {
             is DataTemplateObjectConcrete -> {
-                if ((b.type as MCFPPDataTemplateType).template.isSubOf(this.templateType)) {
+                if (b.templateType.isSubOf((type as MCFPPDataTemplateType).template)) {
+                    templateType = b.templateType
                     this.assignMembers(b)
                     return this
                 } else {
@@ -204,6 +235,7 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     override fun getTempVar(): DataTemplateObject {
         if(isTemp) return this
         val re = DataTemplateObject(templateType)
+        re.type = type
         re.isTemp = true
         re.nbtPath = NBTPath.temp.memberIndex(re.identifier)
         return re.assignedBy(this)
@@ -214,9 +246,11 @@ open class DataTemplateObject : Var<DataTemplateObject> {
     override fun getFromStack() {}
 
     override fun getMemberVar(key: String, accessModifier: Member.AccessModifier): Pair<Var<*>?, Boolean> {
+        val declarationType = type as MCFPPDataTemplateType
+        declarationType.tryResolve()
+        val declaration = declarationType.template.scope.getVar(key) ?: return null to true
+        val property = declarationType.template.scope.getProperty(key) ?: return null to true
         storageBinding?.let { binding ->
-            val declaration = templateType.scope.getVar(key) ?: return null to true
-            val property = templateType.scope.getProperty(key) ?: return null to true
             val field = top.mcfpp.analysis.StorageAccess.adapter(declaration.type, key,
                 top.mcfpp.analysis.StorageAccess.inFrame(binding, stackIndex).field(key))
             field.accessModifier = declaration.accessModifier
@@ -224,16 +258,15 @@ open class DataTemplateObject : Var<DataTemplateObject> {
             field.parent = this
             field.isConst = declaration.isConst
             field.nullable = declaration.nullable
-            field.isDynamic = binding.data.layout != top.mcfpp.analysis.StorageLayout.CompilerOnly && templateType.alwaysDynamic
+            field.isDynamic = declaration.isDynamic
             return PropertyVar(property, field, this) to (accessModifier >= property.accessModifier)
         }
         val v = instanceField.getVar(key)?.clone(this)
         v?.parent = this
-        val property = instanceField.getProperty(key)
-        return if(property == null){
+        return if(v == null){
             Pair(null, true)
         }else{
-            v!!.isDynamic = templateType.alwaysDynamic
+            v.isDynamic = declaration.isDynamic
             v.nbtPath = this.nbtPath.memberIndex(v.identifier)
             Pair(PropertyVar(property, v, this), accessModifier >= property.accessModifier)
         }
@@ -256,7 +289,9 @@ open class DataTemplateObject : Var<DataTemplateObject> {
         accessModifier: Member.AccessModifier
     ): Pair<Function, Boolean> {
         //获取函数
-        val member = templateType.scope.getFunction(key, readOnlyArgs, normalArgs)
+        val declarationType = type as MCFPPDataTemplateType
+        declarationType.tryResolve()
+        val member = declarationType.template.scope.getFunction(key, readOnlyArgs, normalArgs)
         return if(member is UnknownFunction){
             Pair(UnknownFunction(key), true)
         }else{

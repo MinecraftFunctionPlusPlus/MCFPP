@@ -40,7 +40,7 @@ open class DataTemplateConstructor(val data: DataTemplate, ctx: CurlBlockContext
     }
 
     override fun invoke(normalArgs: LinkedHashMap<String, Var<*>>, caller: CanSelectMember?): Var<*> {
-        if (ast == null && !bodyCompiled && !bodyBeingCompiled) compileBody()
+        if (ast == null && !needsActualBinding() && !bodyCompiled && !bodyBeingCompiled) compileBody()
         val result = super.invoke(normalArgs, caller)
         return if (caller is DataTemplateObject) caller else result
     }

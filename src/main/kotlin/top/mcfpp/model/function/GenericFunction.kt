@@ -37,20 +37,24 @@ class GenericFunction : Function, Generic<Function> {
     }
 
     private fun invoke(readOnlyArgs: LinkedHashMap<String, Var<*>>, normalArgs: LinkedHashMap<String, Var<*>>, caller: CanSelectMember?): Var<*> {
-        return compile(completeDefaultValue((readOnlyArgs + normalArgs) as LinkedHashMap)).let {(k, v) -> k.invoke(v, caller)}
+        val completed = completeDefaultValue((readOnlyArgs + normalArgs) as LinkedHashMap, caller)
+        val (compiled, arguments) = compile(completed)
+        return compiled.invoke(arguments, caller)
     }
 
     /**
      * 补全缺省参数
      */
-    override fun completeDefaultValue(args: LinkedHashMap<String, Var<*>>): LinkedHashMap<String, Var<*>>{
-        val completedArgs = LinkedHashMap<String, Var<*>>()
+    override fun completeDefaultValue(args: LinkedHashMap<String, Var<*>>, receiver: CanSelectMember?,
+                                      readonlyBindings: Map<String, Var<*>>): LinkedHashMap<String, Var<*>>{
+        val completedReadonly = LinkedHashMap<String, Var<*>>(readonlyBindings)
         for (p in readOnlyParams){
-            completedArgs[p.identifier] = args[p.identifier]?:p.defaultVar!!
+            completedReadonly[p.identifier] = args[p.identifier] ?: readonlyDefault(p, completedReadonly)
+                ?: top.mcfpp.core.lang.UnknownVar(p.identifier)
         }
-        for (p in normalParams){
-            completedArgs[p.identifier] = args[p.identifier]?:p.defaultVar!!
-        }
+        val normalArgs = LinkedHashMap(args.filterKeys { name -> normalParams.any { it.identifier == name } })
+        val completedArgs = LinkedHashMap(completedReadonly)
+        completedArgs.putAll(super.completeDefaultValue(normalArgs, receiver, completedReadonly))
         return completedArgs
     }
 
@@ -73,7 +77,7 @@ class GenericFunction : Function, Generic<Function> {
         for (param in n?.parameter()?: emptyList()) {
             var (p,v) = parseParam(param)
             normalParams.add(p)
-            if(v is MCFPPValue<*>) v = v.toDynamic(false)
+            if(v is MCFPPValue<*> && p.type.hasRuntimeRepresentation) v = v.toDynamic(false)
             scope.putVar(p.identifier, v)
         }
     }

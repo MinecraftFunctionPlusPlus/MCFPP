@@ -26,6 +26,28 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 class FloatProviderTest {
+    @Test
+    fun declarationsArePureAndLegacyConsumersEnableTheFloatModule() {
+        for (version in listOf("1.20.1", "1.20.2", "26.3")) {
+            MCFPPStringTest.readFromString("func signature(value as float)->float { return value; }\nfunc main(){}", version = version)
+            assertEquals(0, Project.errorCount)
+            val module = Project.modules.single { it.id == "stdlib" }
+            val floatPackage = module.packages.keys.single { it.id == "math.float" }
+            module.packages[floatPackage] = false
+            val entry = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("main").single()
+            entry.runInFunction {
+                val declaration = MCFPPBaseType.Float.buildUnConcrete("declaration") as MCFloat
+                MCFloat(declaration)
+                MCFloatConcrete(2f)
+                MCFPPBaseType.Float.instanceData.getFunction("toInt", emptyList(), emptyList())
+                assertFalse(module.packages.getValue(floatPackage))
+                val result = top.mcfpp.backend.NumericConversions.promoteToFloat(top.mcfpp.core.lang.MCIntConcrete(2))
+                assertFalse(result.isError)
+                assertEquals(version != "26.3", module.packages.getValue(floatPackage))
+            }
+        }
+    }
+
     private fun compile(body: String, version: String = "26.3"): Pair<Function, List<String>> {
         MCFPPStringTest.readFromString("func arithmetic(){\n$body\n}", version = version)
         assertEquals(0, Project.errorCount)
@@ -330,10 +352,11 @@ class FloatProviderTest {
             val field = MCFloat("field").apply { isDataOnly = true }
             assertFalse(field.assignedBy(MCFloatConcrete(-0.25f)) is MCFloatConcrete)
             val errors = Project.errorCount
-            assertTrue(FloatProviders.arithmetic(MCFloatConcrete(1f), MCFloatConcrete(0f), "/").isError)
+            val division = FloatProviders.arithmetic(MCFloatConcrete(1f), MCFloatConcrete(0f), "/") as MCFloatConcrete
+            assertEquals(0f.toRawBits(), division.value.toRawBits())
             assertTrue(MCFloatConcrete(Float.POSITIVE_INFINITY).toDynamic(false).isError)
             assertTrue(MCFloatConcrete(Float.MAX_VALUE).explicitCast(MCFPPBaseType.Int).isError)
-            assertEquals(errors + 3, Project.errorCount)
+            assertEquals(errors + 2, Project.errorCount)
         }
         assertTrue(function.commands.analyzeAll().any { it.endsWith("stack_frame[0].field set value -0.25f") })
     }

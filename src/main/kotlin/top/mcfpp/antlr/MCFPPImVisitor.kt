@@ -1,5 +1,8 @@
 package top.mcfpp.antlr
 
+import top.mcfpp.model.compound.DataTemplate
+import top.mcfpp.model.compound.ObjectCompoundData
+
 import top.mcfpp.analysis.TypeUsage
 import top.mcfpp.analysis.CompilerValue
 import top.mcfpp.analysis.StorageAccess
@@ -111,7 +114,7 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     private fun exitFunctionDeclaration() {
         //函数是否有返回值
         if(Function.currFunction !is Generic<*> && Function.currFunction.returnType !=  MCFPPPrivateType.Void && !Function.currFunction.hasReturnStatement &&
-            !SpecializationPolicy.needsStaticErasedBindings(Function.currFunction)){
+            !SpecializationPolicy.needsStaticErasedBindings(Function.currFunction) && !Function.currFunction.needsActualBinding()){
             LogProcessor.error("Function should return a value: " + Function.currFunction.namespaceID)
         }
         //释放指针
@@ -127,7 +130,8 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     fun compileFunctionBody(ctx: mcfppParser.CurlBlockContext?, beforeBody: () -> Unit = {}) {
         if(Function.currFunction !is Generic<*>){
             val function = Function.currFunction
-            if (SpecializationPolicy.needsStaticErasedBindings(function)) return
+            if (function.needsActualBinding()) return
+            if (!function.actualCallBody && SpecializationPolicy.needsStaticErasedBindings(function)) return
             if (function.bodyCompiled || function.bodyBeingCompiled) return
             function.bodyBeingCompiled = true
             try {
@@ -163,6 +167,14 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         val fieldModifier = ctx.fieldModifier()?.text
         var type = ctx.type()?.let {
             MCFPPType.parseFromContextNotNull(it, Function.currFunction.scope)
+        }
+        if (type == null && ctx.expression() != null) {
+            try {
+                type = top.mcfpp.analysis.DeclarationBinding(Function.currFunction, emptyMap()).expression(ctx.expression()).type
+            } catch (failure: top.mcfpp.analysis.DeclarationBinding.Failure) {
+                LogProcessor.error(failure.message ?: "Cannot bind variable declaration")
+                return null
+            }
         }
         var init: Var<*>? = null
         if (ctx.expression() != null) {
@@ -250,7 +262,12 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
         Function.addComment("expression: " + ctx.text)
         if(ctx.varWithSelector() != null){
             val left: Var<*> = MCFPPExprVisitor().visitAssignableVarWithSelector(ctx.varWithSelector())
-            if (left.isConst || (left is PropertyVar && left.field.isConst)) {
+            if (left.isError || left is top.mcfpp.core.lang.UnknownVar) return null
+            val declarationTarget = if (left is PropertyVar) left.field else left
+            val initialized = declarationTarget.storageBinding?.let { binding ->
+                binding.data.facts.read(binding.place)?.state != top.mcfpp.analysis.ValueState.UNINITIALIZED
+            } ?: declarationTarget.hasAssigned
+            if ((left.isConst || declarationTarget.isConst) && initialized) {
                 LogProcessor.error("Cannot assign a constant repeatedly: " + left.identifier)
                 return null
             }
@@ -306,18 +323,18 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     fun enterExtensionFunctionDeclaration(ctx: mcfppParser.ExtensionFunctionDeclarationContext) {
         val f: Function
         val data = MCFPPType.parseFromContext(ctx.type(), MCFPPFile.currFile!!.field)?.instanceData?: return
-        //解析参数
-        val types = FunctionParam.parseReadonlyAndNormalParamTypes(ctx.functionParams())
         val field = data.scope
         //获取缓存中的对象
-        f = field.getFunction(ctx.Identifier().text, types.first.map { it.build("") }, types.second.map { it.build("") })
+        f = field.getFunctionCandidates(ctx.Identifier().text).firstOrNull { it.ast === ctx.curlBlock() }
+            ?: UnknownFunction(ctx.Identifier().text)
 
         Function.currFunction = f
     }
 
     fun exitExtensionFunctionDeclaration() {
         //函数是否有返回值
-        if (Function.currFunction.returnType != MCFPPPrivateType.Void && !Function.currFunction.hasReturnStatement) {
+        if (Function.currFunction !is Generic<*> && Function.currFunction.returnType != MCFPPPrivateType.Void &&
+            !Function.currFunction.needsActualBinding() && !Function.currFunction.hasReturnStatement) {
             LogProcessor.error("A 'return' expression required in function: " + Function.currFunction.namespaceID)
         }
         //释放指针
@@ -370,20 +387,27 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     private var breakIf = ConditionType.NORMAL
+    private fun compilerOnlyCallPlaces(): List<top.mcfpp.analysis.StorageBinding> {
+        val function = Function.currFunction
+        val receiver = listOfNotNull(function.scope.getVar("this")?.storageBinding)
+        val owner = function.owner as? DataTemplate
+        val fields = if (owner is ObjectCompoundData) owner.scope.allVars.mapNotNull { it.storageBinding } else emptyList()
+        return (receiver + fields).filter { it.data.layout == top.mcfpp.analysis.StorageLayout.CompilerOnly }
+            .distinctBy { it.data to it.place }
+    }
     override fun visitIfStatement(ctx: mcfppParser.IfStatementContext): Any? = withCompilationContext(ctx) {
         val enclosingCondition = breakIf
-        val receiver = Function.currFunction.scope.getVar("this")?.storageBinding
-            ?.takeIf { it.data.layout == top.mcfpp.analysis.StorageLayout.CompilerOnly }
-        val receiverBefore = receiver?.data?.facts?.fork()
-        val receiverPaths = ArrayList<top.mcfpp.analysis.FlowFacts>()
+        val receivers = compilerOnlyCallPlaces()
+        val receiverBefore = receivers.associateWith { it.data.facts.fork() }
+        val receiverPaths = receivers.associateWith { arrayListOf<top.mcfpp.analysis.FlowFacts>() }
         fun restoreReceiver() {
-            if (receiver != null && receiverBefore != null) {
+            for (receiver in receivers) {
                 receiver.data.facts.forgetDescendants(receiver.place)
-                receiver.data.facts.copyFrom(receiverBefore, receiver.place, receiver.place)
+                receiver.data.facts.copyFrom(receiverBefore.getValue(receiver), receiver.place, receiver.place)
                 receiver.data.versions.invalidate(receiver.place)
             }
         }
-        fun recordReceiver() { receiver?.data?.facts?.fork()?.let(receiverPaths::add) }
+        fun recordReceiver() { receivers.forEach { receiverPaths.getValue(it).add(it.data.facts.fork()) } }
         try {
         //进入if函数
         breakIf = ConditionType.NORMAL
@@ -480,8 +504,8 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
             }
             Function.addComment("else branch end")
         }while (false)
-        if (receiver != null && receiverPaths.isNotEmpty()) {
-            val joined = receiverPaths.reduce { left, right -> left.join(right) }
+        for (receiver in receivers) if (receiverPaths.getValue(receiver).isNotEmpty()) {
+            val joined = receiverPaths.getValue(receiver).reduce { left, right -> left.join(right) }
             receiver.data.facts.forgetDescendants(receiver.place)
             receiver.data.facts.copyFrom(joined, receiver.place, receiver.place)
             receiver.data.versions.invalidate(receiver.place)
@@ -621,14 +645,13 @@ open class MCFPPImVisitor: mcfppParserBaseVisitor<Any?>() {
     }
 
     override fun visitWhileStatement(ctx: mcfppParser.WhileStatementContext): Any? = withCompilationContext(ctx) {
-        val receiver = Function.currFunction.scope.getVar("this")?.storageBinding
-            ?.takeIf { it.data.layout == top.mcfpp.analysis.StorageLayout.CompilerOnly }
-        val before = receiver?.data?.facts?.fork()
+        val receivers = compilerOnlyCallPlaces()
+        val before = receivers.associateWith { it.data.facts.fork() }
         enterWhileStatement()
         visitWhileBlock(ctx.block())
         exitWhileStatement()
-        if (receiver != null && before != null) {
-            val joined = before.join(receiver.data.facts)
+        for (receiver in receivers) {
+            val joined = before.getValue(receiver).join(receiver.data.facts)
             receiver.data.facts.forgetDescendants(receiver.place)
             receiver.data.facts.copyFrom(joined, receiver.place, receiver.place)
             receiver.data.versions.invalidate(receiver.place)

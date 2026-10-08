@@ -114,12 +114,24 @@ object ParameterMatcher {
     }
 
     /** Preliminary type-only binding; value requirements remain the responsibility of the IR boundary. */
-    fun selectTypes(functions: List<Function>, key: String, normal: List<MCFPPType>): TypeSelection {
+    fun selectTypes(functions: List<Function>, key: String, normal: List<MCFPPType>): TypeSelection =
+        selectTypes(functions, key, emptyList(), normal)
+
+    /** Declaration binding never manufactures ordinary argument values. */
+    internal fun selectTypes(functions: List<Function>, key: String, suppliedReadonly: List<Var<*>>, normal: List<MCFPPType>): TypeSelection {
         val matches = functions.mapNotNull { function ->
             val readonly = (function as? Generic<*>)?.readOnlyParams ?: (function as? NativeFunction)?.readOnlyParams ?: emptyList()
-            if (function.identifier != key || readonly.isNotEmpty() || normal.size > function.normalParams.size ||
+            if (!(function.identifier == key || key.isEmpty() && function is DataTemplateConstructor) || suppliedReadonly.size > readonly.size || readonly.drop(suppliedReadonly.size).any { !it.hasDefault } ||
+                normal.size > function.normalParams.size ||
                 function.normalParams.drop(normal.size).any { !it.hasDefault }) return@mapNotNull null
-            val targets = function.normalParams.take(normal.size).map { it.type }
+            val signature = if (function is GenericFunction)
+                SpecializationPolicy.resolveBoundSignature(function, readonly, suppliedReadonly) ?: return@mapNotNull null else null
+            if (signature == null && readonly.zip(suppliedReadonly).any { (parameter, value) ->
+                    !top.mcfpp.analysis.SpecializationKeys.isConstant(value) || !accepts(value, parameter.type) }) return@mapNotNull null
+            val bindings = readonly.zip(suppliedReadonly).mapNotNull { (parameter, value) ->
+                (value as? MCFPPTypeVar)?.let { parameter.identifier to it.value }
+            }.toMap()
+            val targets = (signature?.normalTypes ?: function.normalParams.map { SpecializationPolicy.bind(it.type, bindings) }).take(normal.size)
             val ranks = normal.zip(targets).map { (source, target) -> conversion(source, target)?.rank ?: return@mapNotNull null }
             Match(function, ranks, targets, function.normalParams.size - normal.size)
         }
@@ -140,5 +152,25 @@ object ParameterMatcher {
             return a.targets == b.targets && a.defaults < b.defaults
         }
         return matches.filter { candidate -> matches.none { other -> other !== candidate && better(other, candidate) } }
+    }
+
+    internal fun selectDeclaredTypes(functions: List<Function>, key: String,
+                                     readonlyArguments: List<top.mcfpp.analysis.DeclarationBinding.Bound>, normal: List<MCFPPType>,
+                                     receiverTypes: Map<String, MCFPPType> = emptyMap()): TypeSelection {
+        val matches = functions.mapNotNull { function ->
+            val readonly = (function as? Generic<*>)?.readOnlyParams ?: (function as? NativeFunction)?.readOnlyParams.orEmpty()
+            if (!(function.identifier == key || key.isEmpty() && function is DataTemplateConstructor) || normal.size > function.normalParams.size ||
+                function.normalParams.drop(normal.size).any { !it.hasDefault }) return@mapNotNull null
+            val signature = SpecializationPolicy.resolveDeclaredSignature(function, readonly, readonlyArguments, receiverTypes) ?: return@mapNotNull null
+            val targets = signature.normalTypes.take(normal.size)
+            val ranks = normal.zip(targets).map { (source, target) -> conversion(source, target)?.rank ?: return@mapNotNull null }
+            Match(function, ranks, targets, function.normalParams.size - normal.size)
+        }
+        val selected = best(matches)
+        return when (selected.size) {
+            0 -> TypeSelection.Missing
+            1 -> TypeSelection.Selected(selected.single().function)
+            else -> TypeSelection.Ambiguous(selected.map { it.function })
+        }
     }
 }

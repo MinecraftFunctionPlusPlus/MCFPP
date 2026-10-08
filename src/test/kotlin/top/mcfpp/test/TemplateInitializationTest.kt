@@ -36,7 +36,7 @@ class TemplateInitializationTest {
         }
         for (template in listOf(DataTemplate("Receiver", "fixture.cycles"), ObjectDataTemplate("ObjectReceiver", "fixture.cycles"))) {
             val type = template.getType()
-            template.scope.addFunction(NativeFunction("receiver", "fixture.cycles").apply { caller = type }, true)
+            template.scope.addFunction(NativeFunction("receiver", "fixture.cycles").apply { caller = type; owner = template }, true)
             val restored = roundTrip(type) as MCFPPDataTemplateType
             val info = when (val declaration = restored.template) {
                 is UnsolvedObjectTemplate -> declaration.info
@@ -46,7 +46,7 @@ class TemplateInitializationTest {
             assertSame(restored, info.field.functions.filterIsInstance<NativeFunctionInfo>().single().caller)
         }
         val declaration = DataTemplate("FieldOwner", "fixture.cycles")
-        declaration.scope.addFunction(NativeFunction("receiver", "fixture.cycles").apply { caller = declaration.getType() }, true)
+        declaration.scope.addFunction(NativeFunction("receiver", "fixture.cycles").apply { caller = declaration.getType(); owner = declaration }, true)
         val restored = roundTrip(declaration) as UnsolvedTemplate
         val caller = restored.info.field.functions.filterIsInstance<NativeFunctionInfo>().single().caller as MCFPPDataTemplateType
         assertSame(restored.info, (caller.template as UnsolvedTemplate).info)

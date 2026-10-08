@@ -51,6 +51,7 @@ class FunctionParam(
     var typeName: String = type.toString()
 
     var defaultVar: Var<*>? = null
+    var defaultContext: mcfppParser.ValueContext? = null
 
     fun buildVar(): Var<*>{
         if (type is top.mcfpp.type.UnresolvedType || type is MCFPPGenericParamType)

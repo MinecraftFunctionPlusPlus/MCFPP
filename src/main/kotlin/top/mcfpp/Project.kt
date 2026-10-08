@@ -168,6 +168,10 @@ object Project {
      * 初始化
      */
     fun init() {
+        preparedObjectInitializers.clear()
+        objectInitializerBodies.clear()
+        objectInitializerDependencies.clear()
+        activeObjectInitializers.clear()
         compileStage = CompileStage.INIT
         //全局缓存初始化
         MCFPPFile.currFile = null
@@ -627,7 +631,7 @@ object Project {
             function.normalParams.forEach { it.type.tryResolve() }
             function.returnType.tryResolve()
         }
-        val templates = GlobalScope.localNamespaces.values.flatMap { it.scope.template.values }.filterNot { it is GenericDataTemplate } +
+        val templates = GlobalScope.localNamespaces.values.flatMap { it.scope.template.values + it.scope.objects.filterIsInstance<DataTemplate>() }.filterNot { it is GenericDataTemplate } +
             (GlobalScope.libNamespaces.values + GlobalScope.stdNamespaces.values)
                 .flatMap { it.scope.template.values + it.scope.interfaces.values + it.scope.objects.filterIsInstance<DataTemplate>() }
                 .filter { it !is GenericDataTemplate && it.parentID.isNotEmpty() } +
@@ -647,6 +651,7 @@ object Project {
             it.normalParams.forEach { param -> param.type.tryResolve() }
             it.returnType.tryResolve()
             it.refreshTemplateSignature()
+            it.validateDefaultDeclarations()
         }
         templateDeclarationsReady = true
     }
@@ -661,10 +666,65 @@ object Project {
         }
     }
 
-    fun prepareObjectInitializers() {
-        GlobalScope.localNamespaces.values.flatMap { it.scope.objects }.filterIsInstance<ObjectDataTemplate>().forEach { template ->
-            template.constructors.filter { it !is Native }.forEach { it.compileBody() }
+    private val preparedObjectInitializers = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<DataTemplate, Boolean>())
+    private val objectInitializerBodies = java.util.IdentityHashMap<DataTemplate, Function>()
+    private val objectInitializerDependencies = java.util.IdentityHashMap<DataTemplate, MutableSet<DataTemplate>>()
+    private val activeObjectInitializers = arrayListOf<DataTemplate>()
+
+    private fun actualObjects(): List<DataTemplate> {
+        val declarations = linkedMapOf<Pair<String, String>, DataTemplate>()
+        for (namespace in GlobalScope.localNamespaces.values + GlobalScope.libNamespaces.values + GlobalScope.stdNamespaces.values) {
+            namespace.scope.objects.filterIsInstance<DataTemplate>().forEach { template ->
+                declarations.putIfAbsent(template.namespace to template.identifier, template)
+            }
         }
+        val actual = linkedMapOf<top.mcfpp.type.TypeId, DataTemplate>()
+        declarations.values.forEach { template ->
+            val owners = if (template is GenericDataTemplate) template.compiledTemplates.values.toList() else listOf(template)
+            owners.forEach { actual.putIfAbsent(it.getType().typeId, it) }
+        }
+        return actual.values.toList()
+    }
+
+    internal fun prepareObjectInitializer(template: DataTemplate) {
+        if (template !is top.mcfpp.model.compound.ObjectCompoundData || template is GenericDataTemplate) return
+        val dependent = activeObjectInitializers.lastOrNull()
+        if (dependent != null && dependent !== template) {
+            objectInitializerDependencies.getOrPut(dependent) {
+                java.util.Collections.newSetFromMap(java.util.IdentityHashMap<DataTemplate, Boolean>())
+            }.add(template)
+            if (activeObjectInitializers.any { it === template }) {
+                LogProcessor.error("Cyclic object initialization dependency: '${dependent.identifier}' and '${template.identifier}'")
+                return
+            }
+        }
+        if (!preparedObjectInitializers.add(template)) return
+        val constructors = template.constructors.filter { it.normalParams.isEmpty() }
+        if (constructors.size != 1) {
+            LogProcessor.error("Object '${template.identifier}' requires one unambiguous startup constructor")
+            return
+        }
+        val constructor = constructors.single()
+        activeObjectInitializers.add(template)
+        try {
+            val body = if (constructor is Native) constructor else constructor.prepareInitializerBody()
+            if (body != null) objectInitializerBodies[template] = body
+        } finally { activeObjectInitializers.removeAt(activeObjectInitializers.lastIndex) }
+    }
+
+    fun prepareObjectInitializers() = actualObjects().forEach(::prepareObjectInitializer)
+
+    private fun orderedObjectInitializers(): List<DataTemplate> {
+        val result = arrayListOf<DataTemplate>()
+        val seen = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<DataTemplate, Boolean>())
+        fun visit(template: DataTemplate) {
+            if (!seen.add(template)) return
+            prepareObjectInitializer(template)
+            objectInitializerDependencies[template].orEmpty().forEach(::visit)
+            result.add(template)
+        }
+        actualObjects().forEach(::visit)
+        return result
     }
 
     fun compile() {
@@ -728,8 +788,9 @@ object Project {
             }
 
             //execute object constructor
-            for(obj in GlobalScope.localNamespaces.values.flatMap { it.scope.objects }.filterIsInstance<ObjectDataTemplate>()){
-                obj.constructors.first.invoke(emptyList(), null)
+            for(obj in orderedObjectInitializers()){
+                prepareObjectInitializer(obj)
+                objectInitializerBodies[obj]?.invoke(emptyList(), null)
             }
         }
 

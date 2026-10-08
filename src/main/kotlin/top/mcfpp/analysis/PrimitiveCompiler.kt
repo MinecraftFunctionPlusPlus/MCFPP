@@ -938,7 +938,10 @@ object PrimitiveCompiler {
             target.normalParams.forEach { register(it.type) }
             if (target.returnType !== MCFPPPrivateType.Void) register(target.returnType)
             for (parameter in target.normalParams.drop(args.size)) {
-                val constant = ValueSnapshot.of(parameter.defaultVar) as? CompilerValue.Typed ?: unsupported()
+                val constant = (parameter.defaultContext?.let {
+                    try { DeclarationBinding(target, emptyMap()).value(it).constant }
+                    catch (_: DeclarationBinding.Failure) { null }
+                } ?: ValueSnapshot.of(parameter.defaultVar)) as? CompilerValue.Typed ?: unsupported()
                 if (constant.type !in setOf(int, bool, float)) unsupported()
                 args += ValueRef.Constant(constant.type, constant.payload)
             }

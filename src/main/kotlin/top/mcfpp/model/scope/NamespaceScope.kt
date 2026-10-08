@@ -182,8 +182,9 @@ class NamespaceScope: SimpleLibScope{
     }
 
     override fun getType(key: String): MCFPPType? {
-        return (getEnum(key) ?: getTemplate(key) ?: getInterface(key))?.getType() ?: resolveAlias(key)
-        ?: fileFields.firstOrNull { it.containType(key) }?.getType(key)
+        (getEnum(key) ?: getTemplate(key) ?: getInterface(key))?.getType()?.let { return it }
+        if (typeAlias.containsKey(key)) return resolveAlias(key)
+        return fileFields.firstOrNull { it.containType(key) }?.getType(key)
     }
 
     override fun containType(id: String): Boolean {

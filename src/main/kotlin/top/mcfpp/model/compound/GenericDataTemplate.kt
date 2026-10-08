@@ -187,7 +187,10 @@ open class GenericDataTemplate : DataTemplate {
         if (Project.templateDeclarationsReady) {
             MCFPPFieldVisitor().completeTemplateFields(template)
             template.applyDeclarationAnnotations()
-            (template.constructors + template.scope.functions.values.flatten()).forEach { it.refreshTemplateSignature() }
+            (template.constructors + template.scope.functions.values.flatten()).forEach {
+                it.refreshTemplateSignature()
+                it.validateDefaultDeclarations()
+            }
         }
         index ++
 

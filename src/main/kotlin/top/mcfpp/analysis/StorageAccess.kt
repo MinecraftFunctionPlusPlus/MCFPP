@@ -45,13 +45,18 @@ data class StorageBinding(
 }
 
 class StoredData(val root: Place, val path: NBTPath, private var initialize: (() -> Unit)? = null,
-                 val layout: StorageLayout = StorageLayout.Nbt(path.source.toString(), path.toCommandPart().toString())) {
+                 var layout: StorageLayout = StorageLayout.Nbt(path.source.toString(), path.toCommandPart().toString())) {
     val facts = FlowFacts()
     val versions = StorageVersions()
     val types = mutableMapOf<TypeId, MCFPPType>()
     val listSizes = mutableMapOf<Place, Int>()
     val selectorExpressions = mutableMapOf<Place, top.mcfpp.lib.SelectorExpression>()
     private val registers = mutableMapOf<Pair<Place, TypeId>, StorageLayout.Scoreboard>()
+    internal fun retainCompilerValue() {
+        layout = StorageLayout.CompilerOnly
+        initialize = null
+        versions.invalidate(root)
+    }
     fun materialize() {
         if (layout == StorageLayout.CompilerOnly) {
             LogProcessor.error("Compiler-only place cannot be materialized")
@@ -60,6 +65,8 @@ class StoredData(val root: Place, val path: NBTPath, private var initialize: (()
         initialize?.let { it(); initialize = null }
         versions.materialize(root, layout)
     }
+
+    internal fun overwriteRoot() { initialize = null }
 
     fun register(place: Place, type: TypeId, objective: String): StorageLayout.Scoreboard =
         if (PathSegment.UnknownIndex in place.path) StorageLayout.Scoreboard(TempPool.getVarIdentify(), objective)
@@ -146,7 +153,8 @@ object StorageAccess {
         val data = if (value.type.hasRuntimeRepresentation) StoredData(place, value.nbtPath.clone())
             else StoredData(place, value.nbtPath.clone(), layout = StorageLayout.CompilerOnly)
         data.types[value.type.typeId] = value.type
-        data.facts.initialize(place, ValueFacts(if (value is MCAny) TypeKnowledge.Unknown else TypeKnowledge.Exact(value.type.typeId),
+        data.types[actualType(value).typeId] = actualType(value)
+        data.facts.initialize(place, ValueFacts(if (value is MCAny) TypeKnowledge.Unknown else TypeKnowledge.Exact(actualType(value).typeId),
             ValueKnowledge.Unknown))
         seedParts(data, place, value)
         data.facts.invalidate(place)
@@ -185,7 +193,7 @@ object StorageAccess {
         val path = value.nbtPath.clone()
         // Capture constants and physical addresses now. A delayed write never captures a mutable Var.
         val initial: (() -> Unit)? = if (!encodingSupported || !hasRuntimeRepresentation(value)) null
-            else if (frozen != null) ({ emit(Commands.dataSetValue(path, Tag.toNBT(frozen))) })
+            else if (frozen != null) ({ emit(Command.buildAll("data modify", path, "set value", frozen)) })
             else when (value) {
                 is top.mcfpp.core.lang.obj.TypeDataTemplateObject -> frozenWriter(value.delegateVar, path)
                 is MCInt -> if (!value.isDataOnly) scoreWriter(path, value.name, value.sbObject.toString(), numericTag(value.type)) else null
@@ -204,7 +212,7 @@ object StorageAccess {
             else StoredData(place, path, layout = StorageLayout.CompilerOnly)
         data.types[actualType(value).typeId] = actualType(value)
         val binding = StorageBinding(data, place, path)
-        data.facts.write(place, ValueFacts(if (value is MCAny) value.typeKnowledge else TypeKnowledge.Exact(value.type.typeId),
+        data.facts.write(place, ValueFacts(if (value is MCAny) value.typeKnowledge else TypeKnowledge.Exact(actualType(value).typeId),
             snapshot?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown,
             if (value.symbol != null && !value.hasAssigned) ValueState.UNINITIALIZED else ValueState.INITIALIZED))
         seedParts(data, place, value)
@@ -284,7 +292,7 @@ object StorageAccess {
         if (!collectionEncodingSupported(value)) { reportListEncoding(); return {} }
         constantEncoding(value)?.let { tag ->
             val snbt = top.mcfpp.backend.NbtEncoding.snbt(tag)
-            return { emit(Commands.dataSetValue(path, Tag.toNBT(snbt))) }
+            return { emit(Command.buildAll("data modify", path, "set value", snbt)) }
         }
         value.storageBinding?.let { binding ->
             val source = binding.path.clone()
@@ -346,7 +354,7 @@ object StorageAccess {
         val path = target.nbtPath.clone()
         val frozen = constantEncoding(source)?.let { top.mcfpp.backend.NbtEncoding.snbt(it) }
         val data = if (original.data.layout == StorageLayout.CompilerOnly && !target.isDynamic) StoredData(place, path, layout = StorageLayout.CompilerOnly)
-            else StoredData(place, path, frozen?.let { snbt -> { emit(Commands.dataSetValue(path, Tag.toNBT(snbt))) } })
+            else StoredData(place, path, frozen?.let { snbt -> { emit(Command.buildAll("data modify", path, "set value", snbt)) } })
         data.types.putAll(original.data.types)
         data.types[target.type.typeId] = target.type
         val root = original.data.facts.read(original.place) ?: ValueFacts(TypeKnowledge.Unknown, ValueKnowledge.Unknown)
@@ -468,6 +476,10 @@ object StorageAccess {
                 if (type.hasRuntimeRepresentation) type.buildUnConcrete(name) else UnknownVar(name).apply { this.type = type }
             } else restore(type, constant, name, binding.data.types) ?: return error(type, "Compiler-only layout is inaccessible as '$type'")
         } else type.buildUnConcrete(name)
+        if (value is DataTemplateObject) {
+            ((binding.data.facts.read(binding.place)?.type as? TypeKnowledge.Exact)?.type
+                ?.let(binding.data.types::get) as? MCFPPDataTemplateType)?.let { value.templateType = it.template }
+        }
         value.type = type
         value.storageBinding = if (binding.view != null) binding.copy(view = ValueRef.TypedView(type.typeId,
             if (binding.view.place == binding.place) binding.view.source else ValueRef.Read(
@@ -512,11 +524,15 @@ object StorageAccess {
             }
             CompilerValue.Typed(type.typeId, CompilerValue.Record(fields))
         }
-        if (constant is CompilerValue.Typed && constant.type == type.typeId) return constant
+        var represented = constant
+        if (type !in erasedTypes) while (represented is CompilerValue.Typed &&
+            represented.type in erasedTypes.map { it.typeId } && represented.payload is CompilerValue.Typed)
+            represented = represented.payload
+        if (represented is CompilerValue.Typed && represented.type == type.typeId) return represented
         val payload = if (type in erasedTypes) {
-            if (constant is CompilerValue.Typed) constant else (fact.type as? TypeKnowledge.Exact)?.type
-                ?.let { CompilerValue.Typed(it, constant) } ?: return null
-        } else if (constant is CompilerValue.Typed) constant.payload else constant
+            if (represented is CompilerValue.Typed) represented else (fact.type as? TypeKnowledge.Exact)?.type
+                ?.let { CompilerValue.Typed(it, represented) } ?: return null
+        } else if (represented is CompilerValue.Typed) represented.payload else represented
         if (binding.data.layout == StorageLayout.CompilerOnly && type is MCFPPDataTemplateType &&
             type !is MCFPPTypeDataTemplateType && payload is CompilerValue.Record) {
             val fields = linkedMapOf<String, CompilerValue>()
@@ -621,6 +637,13 @@ object StorageAccess {
     /** Receiver calls mutate the same payload without changing the source's nominal type. */
     fun writeReceiver(target: Var<*>, source: Var<*>) {
         val binding = target.storageBinding ?: error("Missing receiver storage binding")
+        if (binding.data.layout != StorageLayout.CompilerOnly && !hasRuntimeRepresentation(source) && snapshot(source) != null) {
+            if (binding.view != null) {
+                LogProcessor.error("A reinterpretation view cannot change its source storage layout")
+                return
+            }
+            binding.data.retainCompilerValue()
+        }
         if (binding.data.layout == StorageLayout.CompilerOnly) {
             val assigned = write(target, source)
             if (!assigned.isError) target.hasAssigned = true
@@ -649,8 +672,15 @@ object StorageAccess {
                 expression.snapshot(source.type.typeId)?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown))
             return adapter(source.type, target.identifier, binding).apply { setAs(target); hasAssigned = true }
         }
-        val static = binding.data.layout == StorageLayout.CompilerOnly
         val snapshot = ValueSnapshot.of(source)
+        if (binding.data.layout != StorageLayout.CompilerOnly && !hasRuntimeRepresentation(source) && snapshot != null) {
+            val receiver = Function.currFunction.constructedReceiver
+            val actualConstructorField = binding.view == null && Function.currFunction.actualCallBody &&
+                receiver?.storageBinding?.data === binding.data
+            val erasedRoot = binding.view == null && target.type in erasedTypes && binding.place == binding.data.root
+            if (actualConstructorField || erasedRoot) binding.data.retainCompilerValue()
+        }
+        val static = binding.data.layout == StorageLayout.CompilerOnly
         if (static && snapshot == null) {
             LogProcessor.error("Compiler-only place requires a complete compile-time value")
             return target.clone().apply { isError = true }
@@ -673,6 +703,8 @@ object StorageAccess {
             seedParts(it, binding.place, source)
         } else null
         if (!static) {
+            if (binding.place == binding.data.root && source.storageBinding?.data !== binding.data)
+                binding.data.overwriteRoot()
             binding.data.materialize()
             encodeTo(binding.path, source)
         }
@@ -683,7 +715,7 @@ object StorageAccess {
         val writtenSnapshot = if (represented != null && snapshot != null) CompilerValue.Typed(represented.typeId,
             if (snapshot is CompilerValue.Typed) snapshot.payload else snapshot) else snapshot
         binding.data.write(binding.place, ValueFacts(if (represented != null) TypeKnowledge.Exact(represented.typeId)
-            else if (source is MCAny) source.typeKnowledge else TypeKnowledge.Exact(source.type.typeId),
+            else if (source is MCAny) source.typeKnowledge else TypeKnowledge.Exact(actualType(source).typeId),
             writtenSnapshot?.let(ValueKnowledge::Constant) ?: ValueKnowledge.Unknown))
         if (PathSegment.UnknownIndex !in binding.place.path) {
             binding.data.facts.forgetDescendants(binding.place)
@@ -742,6 +774,7 @@ object StorageAccess {
             else if (FloatProviders.enabled) FloatProviders.snapshot(loaded)
             else MCFloat().apply { isTemp = true }.assignedBy(loaded)
         } else if (loaded is MCInt || loaded is ScoreBool || loaded is NBTBasedData) {
+            if (loaded is NBTBasedData) ensure(loaded).data.materialize()
             loaded.type.buildUnConcrete(TempPool.getVarIdentify()).apply {
                 isTemp = true
                 nbtPath = NBTPath.temp.memberIndex(identifier)
@@ -908,21 +941,36 @@ object StorageAccess {
             val parts = MCFloat.floatToMCFloat(value.value)
             return CompoundTag().apply { for ((i, key) in listOf("sign", "int0", "int1", "exp").withIndex()) put(key, IntTag(parts[i])) }
         }
+        if (value is NBTListConcrete || value is NBTDictionaryConcrete || value is NBTMapConcrete)
+            return snapshotTag(snapshot)
         return NBTUtil.varToNBT(value)?.copy()
     }
 
     /** A representable declared type may still carry compiler-only parts through erased fields. */
-    fun hasRuntimeRepresentation(value: Var<*>): Boolean {
+    fun hasRuntimeRepresentation(value: Var<*>): Boolean = hasRuntimeRepresentation(value,
+        java.util.Collections.newSetFromMap(java.util.IdentityHashMap<Var<*>, Boolean>()))
+
+    private fun hasRuntimeRepresentation(value: Var<*>, seen: MutableSet<Var<*>>): Boolean {
+        if (!seen.add(value)) return true
         if (!actualType(value).hasRuntimeRepresentation) return false
         if (value.storageBinding?.data?.layout == StorageLayout.CompilerOnly)
-            return snapshot(value)?.let { snapshotTag(it) != null } == true
+            return snapshot(value)?.let { runtimeSnapshot(it, value.storageBinding!!.data.types) && snapshotTag(it) != null } == true
         return when (value) {
             is MCAny -> value.compilerPayload == null
-            is NBTListConcrete -> value.value.all(::hasRuntimeRepresentation)
-            is NBTDictionaryConcrete -> value.value.values.all(::hasRuntimeRepresentation)
-            is NBTMapConcrete -> value.physicalValue().value.values.all(::hasRuntimeRepresentation)
+            is NBTListConcrete -> value.value.all { hasRuntimeRepresentation(it, seen) }
+            is NBTDictionaryConcrete -> value.value.values.all { hasRuntimeRepresentation(it, seen) }
+            is NBTMapConcrete -> value.physicalValue().value.values.all { hasRuntimeRepresentation(it, seen) }
+            is DataTemplateObject -> value.instanceField.allVars.filterNot { it.isStatic }.all { hasRuntimeRepresentation(it, seen) }
             else -> true
         }
+    }
+
+    private fun runtimeSnapshot(value: CompilerValue, types: Map<TypeId, MCFPPType>): Boolean = when (value) {
+        is CompilerValue.Typed -> types[value.type]?.hasRuntimeRepresentation != false && runtimeSnapshot(value.payload, types)
+        is CompilerValue.Sequence -> value.elements.all { runtimeSnapshot(it, types) }
+        is CompilerValue.Record -> value.fields.values.all { runtimeSnapshot(it, types) }
+        is CompilerValue.TypeValue -> false
+        else -> true
     }
 
     private val supportsMixedLists get() = top.mcfpp.command.TargetCapabilities
@@ -1033,7 +1081,11 @@ object StorageAccess {
         else -> "int"
     }
 
-    fun actualType(value: Var<*>) = if (value is MCAny) value.inferredType ?: value.type else value.type
+    fun actualType(value: Var<*>): MCFPPType = when (value) {
+        is MCAny -> value.inferredType ?: value.type
+        is DataTemplateObject -> value.templateType.getType()
+        else -> value.type
+    }
 
     internal fun restore(type: MCFPPType, snapshot: CompilerValue, name: String,
                         types: Map<TypeId, MCFPPType> = emptyMap()): Var<*>? {
@@ -1108,7 +1160,7 @@ object StorageAccess {
             return RangeVarConcrete(endpoint("left") to endpoint("right"), name)
         }
         if (type in erasedTypes) {
-            var actual = payload
+            var actual = if (snapshot is CompilerValue.Typed && snapshot.type !in erasedTypes.map { it.typeId }) snapshot else payload
             while (actual is CompilerValue.Typed && actual.type in erasedTypes.map { it.typeId }) actual = actual.payload
             if (actual !is CompilerValue.Typed) return null
             val actualType = types[actual.type] ?: return null

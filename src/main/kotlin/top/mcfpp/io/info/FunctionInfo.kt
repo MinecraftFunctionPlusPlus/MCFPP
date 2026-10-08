@@ -6,6 +6,8 @@ import top.mcfpp.model.Member
 import top.mcfpp.model.function.Function
 import top.mcfpp.model.function.GenericFunction
 import top.mcfpp.model.function.NativeFunction
+import top.mcfpp.model.function.ExtensionFunction
+import top.mcfpp.model.function.GenericExtensionFunction
 import top.mcfpp.type.MCFPPType
 
 interface AbstractFunctionInfo<T: Function>: ModelInfo<T> {
@@ -18,6 +20,7 @@ interface AbstractFunctionInfo<T: Function>: ModelInfo<T> {
         fun from(function: Function): AbstractFunctionInfo<*> {
             return when(function){
                 is NativeFunction -> NativeFunctionInfo.from(function)
+                is ExtensionFunction -> ExtensionFunctionInfo.from(function)
                 is GenericFunction -> GenericFunctionInfo.from(function)
                 else -> FunctionInfo.from(function)
             }
@@ -184,5 +187,43 @@ data class NativeFunctionInfo(
                 function.accessModifier
             )
         }
+    }
+}
+
+/** An extension declaration, without compiled instances or the active call graph. */
+data class ExtensionFunctionInfo(
+    val declaration: FunctionInfo,
+    val ownerType: MCFPPType,
+    val readonlyParams: List<FunctionParamInfo>?,
+): AbstractFunctionInfo<ExtensionFunction> {
+    override fun get(): ExtensionFunction {
+        ownerType.tryResolve()
+        val owner = ownerType.instanceData
+        val context = requireNotNull(declaration.context) { "Extension declaration has no body" }
+        val function = if (readonlyParams != null) {
+            GenericExtensionFunction(declaration.identifier, owner, declaration.namespace, context)
+        } else ExtensionFunction(declaration.identifier, owner, declaration.namespace, context)
+        function.declarationFile = null
+        function.declarationEnvironment = declaration.declarationEnvironment
+        function.returnType = declaration.returnType
+        currFunction = function
+        try {
+            declaration.normalParams.forEach { function.normalParams.add(it.get()) }
+            if (function is GenericExtensionFunction) readonlyParams!!.forEach { function.readOnlyParams.add(it.get()) }
+            declaration.tags.forEach { function.addTag(it.get()) }
+            function.isOverride = declaration.isOverride
+            function.isAbstract = declaration.isAbstract
+            function.accessModifier = declaration.accessModifier
+            function.buildParamVar()
+        } finally { currFunction = null }
+        return function
+    }
+
+    companion object {
+        fun from(function: ExtensionFunction) = ExtensionFunctionInfo(
+            FunctionInfo.from(function),
+            requireNotNull(function.owner).getType(),
+            (function as? GenericExtensionFunction)?.readOnlyParams?.map { FunctionParamInfo.from(it) },
+        )
     }
 }

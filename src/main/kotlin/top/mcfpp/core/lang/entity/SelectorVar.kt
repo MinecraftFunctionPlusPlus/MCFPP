@@ -178,6 +178,18 @@ open class SelectorVar : ConcreteVar<SelectorVar, EntitySelector> {
 
     companion object {
 
+        internal fun declarationData(type: MCFPPEntityType): DataTemplate {
+            val excluded = type.types.orEmpty().filter { it.startsWith("!minecraft:") }
+                .map { it.substringAfter(':').toCamelCase(true) + "Data" }
+            return AllEntityDataTemplate(excluded).apply {
+                type.types.orEmpty().filter { it.startsWith("minecraft:") }.forEach { name ->
+                    GlobalScope.getCanonicalTemplate("mcfpp.minecraft.entity", name.substringAfter(':').toCamelCase(true) + "Data")
+                        ?.let { extends(it) }
+                }
+                extends(MCFPPEntityType.data)
+            }
+        }
+
         private val cache = HashMap<List<String>, AllEntityDataTemplate>()
 
         private class AllEntityDataTemplate(excluded: List<String>): DataTemplate("AllEntity","mcfpp"){

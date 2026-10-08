@@ -20,8 +20,11 @@ import top.mcfpp.nbt.tags.primitive.FloatTag
 import top.mcfpp.nbt.tags.primitive.DoubleTag
 
 /** Strict executor for the scoreboard and control-flow command subset covered by these tests. */
-class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<String>> = emptyMap(), targetVersion: String = "26.3") {
-    val values = mutableMapOf<String, Int>()
+class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<String>> = emptyMap(), targetVersion: String = "26.3",
+                           initialScores: Map<String, Int> = emptyMap(), commandBudget: Int = 10000) {
+    val values = initialScores.toMutableMap()
+    val objectives = linkedSetOf<String>()
+    val bootstrapMarkers = mutableListOf<CompoundTag>()
     val messages = mutableListOf<String>()
     val failedScoreOperations = mutableListOf<String>()
     val branchGuards = mutableListOf<Int>()
@@ -31,6 +34,15 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
     private val storage = mutableMapOf<String, MutableMap<String, Tag<*>>>()
     val failedComputations = mutableListOf<String>()
     private data class Segment(val name: String?, val index: Int?, val end: Int, val predicate: CompoundTag? = null)
+    private fun literalTag(snbt: String): Tag<*> {
+        // The library's SNBT parser normalizes negative zero; Minecraft parses these numeric tokens directly.
+        val numeric = Regex("[+-]?(?:\\d+(?:\\.\\d*)?|\\.\\d+)(?:[eE][+-]?\\d+)?[fFdD]")
+        if (numeric.matches(snbt)) return when (snbt.last().lowercaseChar()) {
+            'f' -> FloatTag(snbt.dropLast(1).toFloat())
+            else -> DoubleTag(snbt.dropLast(1).toDouble())
+        }
+        return Tag.toNBT(snbt)
+    }
     private fun segments(path: String): List<Segment> {
         val result = mutableListOf<Segment>()
         var cursor = 0
@@ -173,8 +185,8 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             "minecraft:score" -> values.getValue("${value.getJSONObject("target").getString("name")} ${value.getString("score")}").toFloat()
             "minecraft:from_int" -> input("input")
             "minecraft:from_float" -> input("input").toInt().toFloat()
-            "minecraft:add" -> value.getJSONArray("inputs").map(::provider).reduce(Float::plus)
-            "minecraft:mul" -> value.getJSONArray("inputs").map(::provider).reduce(Float::times)
+            "minecraft:add" -> value.getJSONArray("inputs").map(::provider).fold(0f, Float::plus)
+            "minecraft:mul" -> value.getJSONArray("inputs").map(::provider).fold(1f, Float::times)
             "minecraft:sub" -> input("left") - input("right")
             "minecraft:div" -> input("left") / input("right")
             "minecraft:mod" -> input("left") % input("right")
@@ -216,6 +228,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
         val conditionalNbt = Regex("execute (if|unless) data storage (\\S+) ($nbtPath) run (.*)")
         val macroCall = Regex("function (\\S+) with storage (\\S+) ($nbtPath)")
         var steps = 0
+        val recentCommands = ArrayDeque<String>()
         var branchStackInitialized = false
         var identity: String? = null
         fun scoreKey(key: String): String {
@@ -263,7 +276,30 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
             }
         }
         execute = command@{ command ->
-            check(++steps < 10000) { "Command execution did not terminate" }
+            recentCommands.addLast(command)
+            if (recentCommands.size > 24) recentCommands.removeFirst()
+            check(++steps < commandBudget) {
+                "Command execution did not terminate: target=$targetVersion steps=$steps frameDepth=$stackDepth\n" +
+                    recentCommands.joinToString("\n")
+            }
+            Regex("scoreboard objectives add (\\S+) (\\S+)(?: (.+))?").matchEntire(command)?.let {
+                check(objectives.add(it.groupValues[1])) { "Objective already exists: ${it.groupValues[1]}" }
+                return@command false
+            }
+            if (command.startsWith("summon ")) {
+                check(command.startsWith("summon item 0 0 0 ")) { "Unsupported summon: $command" }
+                val marker = Tag.toNBT(command.removePrefix("summon item 0 0 0 ")) as? CompoundTag
+                    ?: error("Invalid bootstrap marker")
+                val tags = marker.value["Tags"] as? ListTag ?: error("Missing bootstrap tags")
+                check(tags.value.size == 1 && (tags.value.single() as? StringTag)?.value == "mcfpp_ptr_marker")
+                check((marker.value["UUID"] as? IntArrayTag)?.value?.size == 4)
+                check((marker.value["Age"]?.value as? Number)?.toInt() == -32768)
+                check((marker.value["NoGravity"] as? ByteTag)?.value?.toInt() == 1)
+                check((marker.value["Invulnerable"] as? ByteTag)?.value?.toInt() == 1)
+                check(((marker.value["Item"] as? CompoundTag)?.value?.get("id") as? StringTag)?.value == "stone")
+                bootstrapMarkers.add(marker.copy() as CompoundTag)
+                return@command false
+            }
             asIdentity.matchEntire(command)?.let {
                 val next = it.groupValues[1]
                 check(!next.startsWith("@")) { "Only one explicit executor identity is supported" }
@@ -365,7 +401,7 @@ class ScoreCommandExecutor(commands: List<String>, functions: Map<String, List<S
                 return@command false
             }
             setNbt.matchEntire(command)?.let {
-                writeNbt(it.groupValues[1], it.groupValues[2], Tag.toNBT(it.groupValues[3])); return@command false
+                writeNbt(it.groupValues[1], it.groupValues[2], literalTag(it.groupValues[3])); return@command false
             }
             sliceString.matchEntire(command)?.let {
                 val value = (readNbt(it.groupValues[3], it.groupValues[4]) as StringTag).value

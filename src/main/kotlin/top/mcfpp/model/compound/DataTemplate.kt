@@ -110,13 +110,17 @@ open class DataTemplate : FieldContainer, CompoundData {
     @Transient
     val pendingFieldAnnotations = LinkedHashMap<String, MutableList<top.mcfpp.model.annotation.Annotation>>()
 
+    @Transient
+    val pendingDeclarationAnnotations = arrayListOf<top.mcfpp.model.annotation.Annotation>()
+
     /** Apply source annotations after inheritance and inferred fields have their canonical declarations. */
     internal fun applyDeclarationAnnotations() {
         val apply = {
             val callerTemplate = currTemplate
             currTemplate = this
             try {
-                annotations.forEach { it.on(this) }
+                pendingDeclarationAnnotations.forEach { it.on(this) }
+                pendingDeclarationAnnotations.clear()
                 for ((name, annotations) in pendingFieldAnnotations) {
                     val field = scope.getVar(name)
                     if (field == null) {
@@ -245,8 +249,15 @@ open class DataTemplate : FieldContainer, CompoundData {
         return super.getAccess(compoundData)
     }
 
+    @Transient
+    private val flattenedParents = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<CompoundData, Boolean>())
+    /** FieldInfo restores inherited members as part of the declaration's saved scope. */
+    @Transient internal var restoredFlattenedFields = false
+
     fun flatExtends(): CompoundData {
         for (compoundData in parent){
+            if (!flattenedParents.add(compoundData)) continue
+            if (restoredFlattenedFields) continue
             val readonlyNames = (compoundData as? CompiledGenericDataTemplate)?.originTemplate
                 ?.readOnlyParams?.map { it.identifier }.orEmpty()
             //把所有成员都塞进去

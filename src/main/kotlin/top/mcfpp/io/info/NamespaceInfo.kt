@@ -45,7 +45,7 @@ data class NamespaceInfo (
             val enums = ArrayList<EnumInfo>()
             val objects = ArrayList<AbstractTemplateInfo<*>>()
             namespace.scope.forEachFunction {
-                functions.add(AbstractFunctionInfo.from(it))
+                if (!it.actualCallBody) functions.add(AbstractFunctionInfo.from(it))
             }
             namespace.scope.forEachTemplate {
                 templates.add(AbstractTemplateInfo.from(it))

@@ -1733,7 +1733,8 @@ class LibFieldAccessTest {
                 val field = assertIs<MCInt>(compiled.scope.getVar("value"))
                 assertSame(compiled, field.declaredParentTemplate)
                 assertTrue(field.isStatic)
-                assertTrue(field.isDynamic)
+                assertNotNull(field.storageBinding)
+                assertEquals(compiled.nbtPath.memberIndex("value"), field.nbtPath)
                 field
             }
             assertNotEquals(fields[0].nbtPath, fields[1].nbtPath)
@@ -3382,7 +3383,7 @@ class LibFieldAccessTest {
             import mcfpp.minecraft.resource:*;
             func main(){ Operators.op(@e); Operators.deop(@s); Recipe.giveAll(@e); Recipe.takeAll(@s); }
         """, output)
-        assertEquals(8, Project.errorCount)
+        assertEquals(4, Project.errorCount)
         assertFalse(rejected.commands.any { "execute store result" in it.toString() || Regex("(op|deop|recipe) .*?").matches(it.toString()) || "set value {}" in it.toString() })
     }
 
@@ -3732,7 +3733,7 @@ class LibFieldAccessTest {
             }
             func main(){}
         """, output)
-        assertEquals(4, Project.errorCount)
+        assertEquals(2, Project.errorCount)
         val reject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
         assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || Regex("(difficulty|weather) .*?").matches(it.toString()) || "set value {}" in it.toString() })
     }
@@ -3893,7 +3894,7 @@ class LibFieldAccessTest {
             func reject(bounds as range){ Random.rand(1 ..); Random.roll(1.0 .. 2.0); Random.rand(bounds); }
             func main(){}
         """, output)
-        assertEquals(6, Project.errorCount)
+        assertEquals(3, Project.errorCount)
         val rangeReject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
         assertTrue(rangeReject.bodyCompiled)
         assertFalse((rangeReject.commands + badRanges.commands).any { "run random" in it.toString() || "execute store result score" in it.toString() })
@@ -3990,7 +3991,7 @@ class LibFieldAccessTest {
             func reject(){ var value=EntityData(); value.listTag(); }
             func main(){}
         """, output)
-        assertEquals(2, Project.errorCount)
+        assertEquals(1, Project.errorCount)
         val reject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
         assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("tag ") || "set value {}" in it.toString() })
     }
@@ -4083,7 +4084,7 @@ class LibFieldAccessTest {
             func reject(){ var value=EntityData(); value.leaveTeam(); }
             func main(){}
         """, output)
-        assertEquals(2, Project.errorCount)
+        assertEquals(1, Project.errorCount)
         val reject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
         assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("team ") || "set value {}" in it.toString() })
     }
@@ -4174,7 +4175,7 @@ class LibFieldAccessTest {
             func reject(){ var value=EntityData(); value.clearAllEffects(); }
             func main(){}
         """, output)
-        assertEquals(2, Project.errorCount)
+        assertEquals(1, Project.errorCount)
         val reject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
         assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("effect clear ") || "set value {}" in it.toString() })
     }
@@ -4304,7 +4305,7 @@ class LibFieldAccessTest {
             func reject(){ var value=EntityData(); var effect=Effect(); value.effect(effect,30,2,true); }
             func main(){}
         """, output)
-        assertEquals(2, Project.errorCount)
+        assertEquals(1, Project.errorCount)
         val reject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
         assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("effect give ") || "set value {}" in it.toString() })
     }
@@ -4370,7 +4371,7 @@ class LibFieldAccessTest {
             func reject(){ var multiple=@a; multiple.stopRide(); var value=EntityData(); value.stopRide(); }
             func main(){}
         """, output)
-        assertEquals(4, Project.errorCount)
+        assertEquals(2, Project.errorCount)
         val reject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
         assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("ride ") || "set value {}" in it.toString() })
     }
@@ -4474,7 +4475,7 @@ class LibFieldAccessTest {
             func reject(){ var multiple=@a; multiple.queryXpPoints(); var nonPlayers=@e; nonPlayers.addXpPoints(1); var value=EntityData(); value.setXpPoints(1); }
             func main(){}
         """, output)
-        assertEquals(6, Project.errorCount)
+        assertEquals(3, Project.errorCount)
         val reject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
         assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("xp ") || "set value {}" in it.toString() })
     }
@@ -4578,7 +4579,7 @@ class LibFieldAccessTest {
             func reject(){ var nonPlayers=@e; nonPlayers.grantAll(); var value=EntityData(); value.revokeAll(); }
             func main(){}
         """, output)
-        assertEquals(4, Project.errorCount)
+        assertEquals(2, Project.errorCount)
         val reject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
         assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("advancement ") || "set value {}" in it.toString() })
     }
@@ -4686,7 +4687,7 @@ class LibFieldAccessTest {
             }
             func main(){}
         """, output)
-        assertEquals(12, Project.errorCount)
+        assertEquals(6, Project.errorCount)
         val reject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
         assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || Regex("(clear|gamemode|ride) .*?").matches(it.toString()) || "set value {}" in it.toString() })
     }
@@ -4757,7 +4758,7 @@ class LibFieldAccessTest {
             func reject(){ var targets=@a; var multiple=@a; targets.tp(multiple); var value=EntityData(); var one=@p; value.tp(one); }
             func main(){}
         """, output)
-        assertEquals(4, Project.errorCount)
+        assertEquals(2, Project.errorCount)
         val reject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
         assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("tp ") || "set value {}" in it.toString() })
     }
@@ -4838,7 +4839,7 @@ class LibFieldAccessTest {
             func reject(){ var sender=@e; var players=@a; sender.tell(players,"x"); var one=@p; var entities=@e; one.w(entities,"x"); var value=EntityData(); value.tell(players,"x"); }
             func main(){}
         """, output)
-        assertEquals(6, Project.errorCount)
+        assertEquals(3, Project.errorCount)
         val reject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
         assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("execute as ") || "set value {}" in it.toString() })
     }
@@ -4932,7 +4933,7 @@ class LibFieldAccessTest {
             func reject(modifier as AttributeModifier){ var multiple=@a; multiple.getAttribute("fixture:attribute",1.0); var value=EntityData(); value.removeAttributeModifier("fixture:attribute",modifier); }
             func main(){}
         """, output)
-        assertEquals(4, Project.errorCount)
+        assertEquals(2, Project.errorCount)
         val reject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
         assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("attribute ") || "set value {}" in it.toString() })
     }
@@ -5103,7 +5104,7 @@ class LibFieldAccessTest {
             }
             func main(){}
         """, output)
-        assertEquals(6, Project.errorCount)
+        assertEquals(4, Project.errorCount)
         val reject = GlobalScope.localNamespaces.getValue("default.test").scope.functions.getValue("reject").single()
         assertFalse((reject.commands + rejected.commands).any { "execute store result" in it.toString() || it.toString().startsWith("attribute ") || "set value {}" in it.toString() })
     }
@@ -5215,7 +5216,9 @@ class LibFieldAccessTest {
             val canonical = assertNotNull(GlobalScope.getUnsolvedImportNamespace("mcfpp.minecraft.item")).scope.getTemplate("OrItemPredicatePart")
             val joined = assertIs<DataTemplateObject>(observe.scope.getVar("joined"))
             val copy = assertIs<DataTemplateObject>(observe.scope.getVar("copy"))
-            assertSame(canonical, joined.templateType)
+            val indexedSame = GlobalScope.getCanonicalTemplate("mcfpp.minecraft.item", "OrItemPredicatePart") === canonical
+            assertSame(canonical, joined.templateType,
+                "joined type=${joined.type.javaClass.name}:${joined.type.typeId}; template=${joined.templateType.namespaceID}; canonical=${canonical?.namespaceID}; indexedSame=$indexedSame")
             assertSame(canonical, copy.templateType)
             assertNull(ValueSnapshot.of(joined))
             assertNull(ValueSnapshot.of(copy))

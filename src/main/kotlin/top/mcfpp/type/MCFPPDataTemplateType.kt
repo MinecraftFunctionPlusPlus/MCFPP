@@ -16,9 +16,25 @@ import top.mcfpp.util.LogProcessor
  * @see DataTemplate
  */
 open class MCFPPDataTemplateType(
-    var template: DataTemplate,
+    template: DataTemplate,
     parentType: ArrayList<out MCFPPType>
 ) : MCFPPType(parentType) {
+
+    @Transient private var resolvingTemplate = false
+
+    var template: DataTemplate = template
+        get() {
+            if (this is MCFPPGenericDataTemplateType &&
+                field !is top.mcfpp.model.compound.CompiledGenericDataTemplate && !resolvingTemplate) {
+                resolvingTemplate = true
+                try {
+                    tryResolve()
+                } finally {
+                    resolvingTemplate = false
+                }
+            }
+            return field
+        }
 
     override val typeId: TypeId get() = TypeId.Declaration(if (template.isInterface) "interface" else "template", template.namespace, template.identifier)
 
@@ -72,10 +88,9 @@ open class MCFPPDataTemplateType(
             template = (template as UnsolvedTemplate).resolve()
         }
         val id = typeId as? TypeId.Declaration ?: return
-        val scope = GlobalScope.getUnsolvedImportNamespace(id.namespace)?.scope
         val canonical = when (id.kind) {
-            "template" -> scope?.getTemplate(id.name)
-            "interface" -> scope?.getInterface(id.name)
+            "template" -> GlobalScope.getCanonicalTemplate(id.namespace, id.name)
+            "interface" -> GlobalScope.getCanonicalTemplate(id.namespace, id.name, true)
             else -> null
         } ?: return
         val canonicalType = canonical.getType()

@@ -69,7 +69,7 @@ class NativeFunction : Function, Native {
     }
 
     fun invoke(readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>, caller: CanSelectMember?): Var<*> {
-        val list = argPass(readOnlyArgs, normalArgs)
+        val list = argPass(readOnlyArgs, normalArgs,caller)
         val noWrites = javaMethod.isAnnotationPresent(top.mcfpp.mni.annotation.NoExternalWrites::class.java) ||
             javaMethod.declaringClass.isAnnotationPresent(top.mcfpp.mni.annotation.NoExternalWrites::class.java)
         val writesReceiver = javaMethod.isAnnotationPresent(top.mcfpp.mni.annotation.WritesReceiver::class.java)
@@ -134,24 +134,26 @@ class NativeFunction : Function, Native {
         }
     }
 
-    private fun argPass(readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>): ArrayList<Var<*>>{
+    private fun argPass(readOnlyArgs: List<Var<*>>, normalArgs: List<Var<*>>, receiver: CanSelectMember?): ArrayList<Var<*>>{
         val list = ArrayList<Var<*>>()
         for (index in readOnlyParams.indices){
             val param = readOnlyParams[index]
-            val arg = if (index < readOnlyArgs.size) readOnlyArgs[index] else param.defaultVar!!.clone()
+            val bindings=readOnlyParams.take(index).mapIndexed { previous,parameter -> parameter.identifier to list[previous] }.toMap()
+            val arg = if (index < readOnlyArgs.size) readOnlyArgs[index] else readonlyDefault(param,bindings)
+                ?: UnknownVar(param.identifier).apply { isError=true }
             list.add(if (param.type is MCFPPNotCompiledGenericType) arg else arg.implicitCast(param.type))
 
         }
+        val provided=LinkedHashMap<String,Var<*>>()
+        normalArgs.forEachIndexed { index,value -> provided[normalParams[index].identifier]=value }
+        val readonly=readOnlyParams.mapIndexed { index,param -> param.identifier to list[index] }.toMap()
+        val completed=completeDefaultValue(provided,receiver,readonly)
         for (index in normalParams.indices){
             if(normalParams[index].type is MCFPPNotCompiledGenericType){
-                list.add(normalArgs[index])
+                list.add(completed.getValue(normalParams[index].identifier))
                 continue
             }
-            if(index < normalArgs.size){
-                list.add(normalArgs[index].implicitCast(normalParams[index].type))
-            }else{
-                list.add(normalParams[index].defaultVar!!.clone())
-            }
+            list.add(completed.getValue(normalParams[index].identifier).implicitCast(normalParams[index].type))
         }
         return list
     }
@@ -232,7 +234,7 @@ class NativeFunction : Function, Native {
         for (param in n.parameter()) {
             var (p,v) = parseParam(param)
             normalParams.add(p)
-            if(v is MCFPPValue<*>) v = v.toDynamic(false)
+            if(v is MCFPPValue<*> && p.type.hasRuntimeRepresentation) v = v.toDynamic(false)
             scope.putVar(p.identifier, v)
         }
     }

@@ -98,8 +98,9 @@ class Namespace(val identifier: String): Serializable, FieldContainer {
 
     private fun resolveVar(v: Var<*>){
         v.type.tryResolve()
-        if(v is DataTemplateObject && v.templateType is UnsolvedTemplate){
-            v.templateType.resolve()
+        if (v is DataTemplateObject) {
+            val template = v.templateType
+            if (template is UnsolvedTemplate) v.templateType = template.resolve()
         }
     }
 

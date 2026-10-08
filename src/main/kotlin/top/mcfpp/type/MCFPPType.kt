@@ -240,7 +240,15 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             is TypeId.Builtin -> builtinTypesById()[id]
                 ?: MCFPPPrivateType.Wildcard.takeIf { it.typeId == id }
             is TypeId.Declaration -> {
-                val scope = GlobalScope.getUnsolvedImportNamespace(id.namespace)?.scope
+                val scopes = listOfNotNull(GlobalScope.localNamespaces[id.namespace], GlobalScope.libNamespaces[id.namespace],
+                    GlobalScope.stdNamespaces[id.namespace]).map { it.scope }
+                val scope = scopes.firstOrNull { scope -> when (id.kind) {
+                    "template" -> scope.getTemplate(id.name) != null || scope.cachedAliasTargets().filterIsInstance<MCFPPDataTemplateType>().any { it.typeId == id }
+                    "object" -> scope.getObject(id.name) != null
+                    "interface" -> scope.getInterface(id.name) != null
+                    "enum" -> scope.getEnum(id.name) != null
+                    else -> false
+                } }
                 if (id.kind == "template") {
                     val matches = (listOfNotNull(scope?.getTemplate(id.name)?.getType() as? MCFPPDataTemplateType) +
                         scope?.cachedAliasTargets().orEmpty().filterIsInstance<MCFPPDataTemplateType>())
@@ -286,7 +294,13 @@ open class MCFPPType(open var parentType: ArrayList<out MCFPPType> = ArrayList()
             // Includes must all restore their declaration imports before specialization.
             if (Project.compileStage == Project.CompileStage.READ_LIB) return null
             val declaration = id.constructor as? TypeId.Declaration ?: return null
-            val scope = GlobalScope.getUnsolvedImportNamespace(declaration.namespace)?.scope ?: return null
+            val scope = listOfNotNull(GlobalScope.localNamespaces[declaration.namespace], GlobalScope.libNamespaces[declaration.namespace],
+                GlobalScope.stdNamespaces[declaration.namespace]).map { it.scope }.firstOrNull { scope -> when (declaration.kind) {
+                    "template" -> scope.getTemplate(declaration.name) != null
+                    "object" -> scope.getObject(declaration.name) != null
+                    "interface" -> scope.getInterface(declaration.name) != null
+                    else -> false
+                } } ?: return null
             val prototype = when (declaration.kind) {
                 "template" -> scope.getTemplate(declaration.name) as? GenericDataTemplate
                 "object" -> scope.getObject(declaration.name) as? GenericObjectDataTemplate

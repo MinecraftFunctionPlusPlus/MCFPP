@@ -83,8 +83,11 @@ data class Property(val identifier: String, val accessor: AbstractAccessor?, val
             if (ctx == null) return buildSimpleProperty(field)
             val getter = ctx.getter()?.let { declaration ->
                 when {
-                    declaration.javaRefer() != null -> NativeAccessor(declaration.javaRefer().text, template, field)
-                    declaration.expression() != null -> ExpressionAccessor(declaration.expression())
+                    declaration.javaRefer() != null && !languageReference(declaration.javaRefer().text, field, template) && nativeReference(declaration.javaRefer().text, field.identifier, true) -> NativeAccessor(declaration.javaRefer().text, template, field)
+                    declaration.javaRefer() != null || declaration.expression() != null -> FunctionAccessor(field.clone(), template,
+                        expressionBody(declaration, "return ${source(declaration.expression() ?: declaration.javaRefer())};")).apply {
+                        template.scope.addFunction(function, false)
+                    }
                     declaration.curlBlock() != null -> FunctionAccessor(field.clone(), template, declaration.curlBlock()).apply {
                         template.scope.addFunction(function, false)
                     }
@@ -93,8 +96,11 @@ data class Property(val identifier: String, val accessor: AbstractAccessor?, val
             }
             val setter = ctx.setter()?.let { declaration ->
                 when {
-                    declaration.javaRefer() != null -> NativeMutator(declaration.javaRefer().text, template, field)
-                    declaration.expression() != null -> ExpressionMutator(declaration.expression())
+                    declaration.javaRefer() != null && !languageReference(declaration.javaRefer().text, field, template) && nativeReference(declaration.javaRefer().text, field.identifier, false) -> NativeMutator(declaration.javaRefer().text, template, field)
+                    declaration.javaRefer() != null || declaration.expression() != null -> FunctionMutator(field.clone(), template,
+                        expressionBody(declaration, "field = ${source(declaration.expression() ?: declaration.javaRefer())};")).apply {
+                        template.scope.addFunction(function, false)
+                    }
                     declaration.curlBlock() != null -> FunctionMutator(field.clone(), template, declaration.curlBlock()).apply {
                         template.scope.addFunction(function, false)
                     }
@@ -102,6 +108,48 @@ data class Property(val identifier: String, val accessor: AbstractAccessor?, val
                 }
             }
             return Property(field.identifier, getter, setter).apply { isStatic = field.isStatic }
+        }
+
+        private fun languageReference(name: String, field: Var<*>, template: DataTemplate): Boolean {
+            val root = name.substringBefore('.')
+            return root in setOf("this", "field", "value", field.identifier) || template.scope.getVar(root) != null ||
+                template.scope.getProperty(root) != null || template.declarationFile?.field?.getType(root) != null
+        }
+
+        private fun source(context: org.antlr.v4.runtime.ParserRuleContext): String {
+            context.start.inputStream?.let { return it.getText(org.antlr.v4.runtime.misc.Interval(context.start.startIndex, context.stop.stopIndex)) }
+            val tokens = arrayListOf<org.antlr.v4.runtime.Token>()
+            fun collect(node: org.antlr.v4.runtime.tree.ParseTree) {
+                if (node is org.antlr.v4.runtime.tree.TerminalNode) tokens.add(node.symbol)
+                else for (index in 0 until node.childCount) collect(node.getChild(index))
+            }
+            collect(context)
+            return buildString {
+                var previous: org.antlr.v4.runtime.Token? = null
+                for (token in tokens) {
+                    previous?.let { last ->
+                        if (token.line > last.line) append("\n".repeat(token.line - last.line))
+                        else append(" ".repeat((token.startIndex - last.stopIndex - 1).coerceAtLeast(0)))
+                    }
+                    append(token.text)
+                    previous = token
+                }
+            }
+        }
+
+        private fun nativeReference(name: String, field: String, getter: Boolean): Boolean = try {
+            top.mcfpp.Project.classLoader.loadClass(name).methods.any { method ->
+                java.lang.reflect.Modifier.isStatic(method.modifiers) &&
+                    method.parameterTypes.contentEquals(arrayOf(top.mcfpp.mni.NativeCallContext::class.java)) &&
+                    if (getter) method.getAnnotation(top.mcfpp.annotations.MNIAccessor::class.java)?.value == field
+                    else method.getAnnotation(top.mcfpp.annotations.MNIMutator::class.java)?.value == field
+            }
+        } catch (_: ClassNotFoundException) { false }
+
+        private fun expressionBody(context: org.antlr.v4.runtime.ParserRuleContext, statement: String): mcfppParser.CurlBlockContext {
+            val source = "\n".repeat((context.start.line - 1).coerceAtLeast(0)) + "{$statement}"
+            return mcfppParser(org.antlr.v4.runtime.CommonTokenStream(top.mcfpp.antlr.mcfppLexer(
+                org.antlr.v4.runtime.CharStreams.fromString(source)))).curlBlock()
         }
 
         fun buildSimpleProperty(field: Var<*>): Property {

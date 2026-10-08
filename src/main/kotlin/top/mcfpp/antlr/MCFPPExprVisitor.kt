@@ -363,6 +363,7 @@ class MCFPPExprVisitor(
             val value = visitExpression(operator.expression())
             val member = re.getMemberVar(identifier, Function.currFunction)   //获取字段
             val field = Var.checkMember(member, identifier)
+            if (field.isError || field is UnknownVar || value.isError) return@withCompilationContext UnknownVar(identifier).apply { isError = true }
             field.replacedBy(field.assignedBy(value))
         }
         return re

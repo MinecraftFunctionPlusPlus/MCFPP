@@ -13,22 +13,21 @@ class FunctionMutator: AbstractMutator {
 
     constructor(function: Function){
         this.function = function
+        function.accessorField = function.identifier.substringAfter("set-").substringBefore("-call-")
     }
 
     constructor(field: Var<*>, d: CompoundData, context: mcfppParser.CurlBlockContext? = null) {
-        function = Function("set_${field.identifier}", d.namespace, context)
-        function.returnType = field.type
-        function.scope.putVar("field", field)
+        function = Function("set-${field.identifier}", d as DataTemplate, context)
+        function.accessModifier = top.mcfpp.model.Member.AccessModifier.PRIVATE
+        function.returnType = top.mcfpp.type.MCFPPPrivateType.Void
+        function.accessorField = field.identifier
         function.appendNormalParam(field.type, "value")
-        function.scope.putVar("value", field.type.buildUnConcrete("value"))
-        val thisObj = DataTemplate.currTemplate!!.getType().build("this", function)
-        function.scope.putVar("this",thisObj)
-        field.parent = thisObj
-        function.owner = d
+        function.scope.putVar("value", function.normalParams.single().buildVar(), true)
     }
 
     override fun setter(caller: CanSelectMember, field: Var<*>, b: Var<*>): Var<*> {
-        return function.invoke(arrayListOf(b), caller)
+        function.invoke(arrayListOf(b), caller)
+        return field
     }
 
 }

@@ -55,7 +55,7 @@ class MCFPPAnnotationVisitor: mcfppParserBaseVisitor<Unit>(){
         }
         if (template is GenericDataTemplate || template is ObjectDataTemplate) {
             annotationCache.forEach { it.on(template) }
-        }
+        } else template.pendingDeclarationAnnotations.addAll(annotationCache)
         template.annotations.addAll(annotationCache)
         annotationCache.clear()
         DataTemplate.currTemplate = template
